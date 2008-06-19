@@ -33,23 +33,64 @@ public:
   virtual TObject* clone(const char* newname) const { return new RooHistPdf(*this,newname); }
   inline virtual ~RooHistPdf() { }
 
-  RooDataHist& dataHist()  { return *_dataHist ; }
-  const RooDataHist& dataHist() const { return *_dataHist ; }
+  RooDataHist& dataHist()  { 
+    // Return RooDataHist that is represented
+    return *_dataHist ; 
+  }
+  const RooDataHist& dataHist() const { 
+    // Return RooDataHist that is represented
+    return *_dataHist ; 
+  }
   
-  void setInterpolationOrder(Int_t order) { _intOrder = order ; }
-  Int_t getInterpolationOrder() const { return _intOrder ; }
+  void setInterpolationOrder(Int_t order) { 
+    // Set histogram interpolation order 
+    _intOrder = order ; 
+  }
+  Int_t getInterpolationOrder() const { 
+    // Return histogram interpolation order
+    return _intOrder ; 
+  }
 
   Int_t getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* rangeName=0) const ;
   Double_t analyticalIntegral(Int_t code, const char* rangeName=0) const ;
 
+  void setCdfBoundaries(Bool_t flag) { 
+    // Set use of special boundary conditions for c.d.f.s
+    _cdfBoundaries = flag ; 
+  }
+  Bool_t getCdfBoundaries() const { 
+    // If true, special boundary conditions for c.d.f.s are used
+    return _cdfBoundaries ; 
+  }
+
+  void setUnitNorm(Bool_t flag) { 
+    // Declare contents to have unit normalization
+    _unitNorm = flag ; 
+  }
+  Bool_t haveUnitNorm() const { 
+    // Return true if contents is declared to be unit normalized
+    return _unitNorm ; 
+  }
+
+  virtual Bool_t selfNormalized() const { return _unitNorm ; }
+
+  virtual Int_t getMaxVal(const RooArgSet& vars) const ;
+  virtual Double_t maxVal(Int_t code) ;
+
 protected:
 
   Double_t evaluate() const;
+  Double_t totalVolume() const ;
+  friend class RooAbsCachedPdf ;
+  Double_t totVolume() const ;
 
-  RooSetProxy  _depList ;   // List of dependents defining dimensions of histogram
-  RooDataHist* _dataHist ;  // Unowned pointer to underlying histogram
+  RooSetProxy       _depList ;   // List of dependents defining dimensions of histogram
+  RooDataHist*      _dataHist ;  // Unowned pointer to underlying histogram
   mutable RooAICRegistry _codeReg ; //! Auxiliary class keeping tracking of analytical integration code
-  Int_t        _intOrder ; // Interpolation order
+  Int_t             _intOrder ; // Interpolation order
+  Bool_t            _cdfBoundaries ; // Use boundary conditions for CDFs.
+  mutable Double_t  _totVolume ; //! Total volume of space (product of ranges of observables)
+  Bool_t            _unitNorm  ; //! Assume contents is unit normalized (for use as pdf cache)
 
   ClassDef(RooHistPdf,1) // Histogram based PDF
 };

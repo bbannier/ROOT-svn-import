@@ -55,7 +55,7 @@ TEveManager* gEve = 0;
 ClassImp(TEveManager);
 
 //______________________________________________________________________________
-TEveManager::TEveManager(UInt_t w, UInt_t h) :
+TEveManager::TEveManager(UInt_t w, UInt_t h, Bool_t map_window) :
    fExcHandler  (0),
    fVizDB       (0),
    fGeometries  (0),
@@ -82,7 +82,10 @@ TEveManager::TEveManager(UInt_t w, UInt_t h) :
 
    fStampedElements(),
    fSelection      (0),
-   fHighlight      (0)
+   fHighlight      (0),
+
+   fOrphanage      (0),
+   fUseOrphanage   (kFALSE)
 {
    // Constructor.
 
@@ -100,8 +103,13 @@ TEveManager::TEveManager(UInt_t w, UInt_t h) :
    fVizDB           = new TMap; fVizDB->SetOwnerKeyValue();
 
    fSelection = new TEveSelection("Global Selection");
+   fSelection->IncDenyDestroy();
    fHighlight = new TEveSelection("Global Highlight");
    fHighlight->SetHighlightMode();
+   fHighlight->IncDenyDestroy();
+
+   fOrphanage = new TEveElementList("Global Orphanage");
+   fOrphanage->IncDenyDestroy();
 
    fRedrawTimer.Connect("Timeout()", "TEveManager", this, "DoRedraw3D()");
    fMacroFolder = new TFolder("EVE", "Visualization macros");
@@ -129,7 +137,8 @@ TEveManager::TEveManager(UInt_t w, UInt_t h) :
 
    // Finalize it
    fBrowser->InitPlugins();
-   fBrowser->MapWindow();
+   if (map_window)
+      fBrowser->MapWindow();
 
    // --------------------------------
 
@@ -172,10 +181,25 @@ TEveManager::~TEveManager()
 {
    // Destructor.
 
+   fOrphanage->DecDenyDestroy();
+   fHighlight->DecDenyDestroy();
+   fSelection->DecDenyDestroy();
+
    delete fGeometryAliases;
    delete fGeometries;
    delete fVizDB;
    delete fExcHandler;
+}
+
+//______________________________________________________________________________
+void TEveManager::ClearOrphanage()
+{
+   // Clear the orphanage.
+
+   Bool_t old_state = fUseOrphanage;
+   fUseOrphanage = kFALSE;
+   fOrphanage->DestroyElements();
+   fUseOrphanage = old_state;
 }
 
 /******************************************************************************/
@@ -467,6 +491,11 @@ void TEveManager::PreDeleteElement(TEveElement* element)
    TEveElement::Set_i sei = fStampedElements.find(element);
    if (sei != fStampedElements.end())
       fStampedElements.erase(sei);
+
+   if (element->fImpliedSelected > 0)
+      fSelection->RemoveImpliedSelected(element);
+   if (element->fImpliedHighlighted > 0)
+      fHighlight->RemoveImpliedSelected(element);
 }
 
 /******************************************************************************/
@@ -501,14 +530,18 @@ Bool_t TEveManager::ElementPaste(TEveElement* element)
 
 //______________________________________________________________________________
 Bool_t TEveManager::InsertVizDBEntry(const TString& tag, TEveElement* model,
-                                     Bool_t replace)
+                                     Bool_t replace, Bool_t update)
 {
    // Insert a new visualization-parameter database entry. Returns
    // true if the element is inserted successfully.
    // If entry with the same key already exists the behaviour depends on the
    // 'replace' flag:
-   //   true  - the old model is deleted and new one is inserted (default);
-   //   false - the old model is kept, false is returned.
+   //   true  - The old model is deleted and new one is inserted (default).
+   //           Clients of the old model are transferred to the new one and
+   //           if 'update' flag is true (default), the new model's parameters
+   //           are assigned to all clients.
+   //   false - The old model is kept, false is returned.
+   //
    // If insert is successful, the ownership of the model-element is
    // transferred to the manager.
 
@@ -518,6 +551,12 @@ Bool_t TEveManager::InsertVizDBEntry(const TString& tag, TEveElement* model,
       if (replace)
       {
          TEveElement* old_model = dynamic_cast<TEveElement*>(pair->Value());
+         for (TEveElement::List_i i = old_model->BeginChildren(); i != old_model->EndChildren(); ++i)
+         {
+            (*i)->SetVizModel(model);
+            if (update)
+               (*i)->CopyVizParams(model);
+         }
          old_model->DecDenyDestroy();
          old_model->Destroy();
          model->IncDenyDestroy();
@@ -657,7 +696,7 @@ void TEveManager::SetStatusLine(const char* text)
 /******************************************************************************/
 
 //______________________________________________________________________________
-TEveManager* TEveManager::Create()
+TEveManager* TEveManager::Create(Bool_t map_window)
 {
    // If global TEveManager* gEve is not set initialize it.
    // Returns gEve.
@@ -673,7 +712,7 @@ TEveManager* TEveManager::Create()
 
       TEveUtil::SetupEnvironment();
       TEveUtil::SetupGUI();
-      gEve = new TEveManager(w, h);
+      gEve = new TEveManager(w, h, map_window);
    }
    return gEve;
 }

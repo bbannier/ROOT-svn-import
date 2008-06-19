@@ -40,6 +40,7 @@
 #pragma link C++ class TEveRecTrack+;
 #pragma link C++ class TEveRecKink+;
 #pragma link C++ class TEveRecV0+;
+#pragma link C++ class TEveRecCascade+;
 #pragma link C++ class TEveMCRecCrossRef+;
 
 // TEveTrans
@@ -190,6 +191,11 @@
 #pragma link C++ class TEveProjectable+;
 #pragma link C++ class TEveProjected+;
 #pragma link C++ class TEveProjection+;
+#pragma link C++ class TEveProjection::PreScaleEntry_t+;
+#pragma link C++ class std::vector<TEveProjection::PreScaleEntry_t>;
+#pragma link C++ class std::vector<TEveProjection::PreScaleEntry_t>::iterator;
+#pragma link C++ typedef TEveProjection::vPreScale_t;
+#pragma link C++ typedef TEveProjection::vPreScale_i;
 #pragma link C++ class TEveRhoZProjection+;
 #pragma link C++ class TEveRPhiProjection+;
 
@@ -211,6 +217,7 @@
 
 // Generic calorimeter representation
 #pragma link C++ class TEveCaloData+;
+#pragma link C++ class TEveCaloData::SliceInfo_t+;
 #pragma link C++ class TEveCaloDataHist+;
 #pragma link C++ class TEveCaloViz+;
 #pragma link C++ class TEveCaloVizEditor+;

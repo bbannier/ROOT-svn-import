@@ -6,7 +6,7 @@
 //   Date: Oct. 22, 2004
 //   Modified by O.Couet (Nov. 26, 2004)
 
-void ContourList(){
+TCanvas *ContourList(){
  
    const Double_t PI = TMath::Pi(); 
     
@@ -131,6 +131,9 @@ void ContourList(){
    }
    c1->Update();
    printf("\n\n\tExtracted %d Contours and %d Graphs \n", TotalConts, nGraphs );
+   gStyle->SetTitleW(0.);
+   gStyle->SetTitleH(0.);
+   return c1;
 }
 
 

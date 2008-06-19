@@ -56,8 +56,11 @@
 #define GL_BGRA GL_BGRA_EXT
 #endif
 
-//______________________________________________________________________
+//==============================================================================
 // TGLViewer
+//==============================================================================
+
+//______________________________________________________________________
 //
 // Base GL viewer object - used by both standalone and embedded (in pad)
 // GL. Contains core viewer objects :
@@ -80,7 +83,7 @@
 // manager. For standalone the derived TGLSAViewer is.
 //
 
-ClassImp(TGLViewer)
+ClassImp(TGLViewer);
 
 //______________________________________________________________________________
 TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
@@ -231,7 +234,8 @@ TGLViewer::~TGLViewer()
    delete fRedrawTimer;
 
    if (fEventHandler) {
-      fGLWidget->SetEventHandler(0);
+      if (fGLWidget)
+         fGLWidget->SetEventHandler(0);
       delete fEventHandler;
    }
 
@@ -407,7 +411,7 @@ void TGLViewer::RequestDraw(Short_t LODInput)
    fLOD = LODInput;
 
    if (!gVirtualX->IsCmdThread())
-      gROOT->ProcessLineFast(Form("((TGLViewer *)0x%x)->DoDraw()", this));
+      gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoDraw()", this));
    else
       DoDraw();
 }
@@ -482,9 +486,11 @@ void TGLViewer::DoDraw()
 
    PreRender();
 
-   Render();
-
+   RenderNonSelected();
    DrawGuides();
+   glClear(GL_DEPTH_BUFFER_BIT);
+   RenderSelected();
+
    glClear(GL_DEPTH_BUFFER_BIT);
    RenderOverlay();
    DrawCameraMarkup();
@@ -602,7 +608,7 @@ void TGLViewer::DrawGuides()
       TGLUtil::DrawSphere(fCamera->GetCenterVec(), radius, rgba);
       disabled = kTRUE;
    }
-   if(fAxesDepthTest && disabled)
+   if (fAxesDepthTest && disabled)
    {
       glEnable(GL_DEPTH_TEST);
       disabled = kFALSE;
@@ -613,7 +619,7 @@ void TGLViewer::DrawGuides()
       disabled = kTRUE;
    }
    TGLUtil::DrawSimpleAxes(*fCamera, fOverallBoundingBox, fAxesType);
-   if(disabled)
+   if (disabled)
       glEnable(GL_DEPTH_TEST);
 }
 
@@ -758,7 +764,7 @@ Bool_t TGLViewer::RequestSelect(Int_t x, Int_t y, Bool_t trySecSel)
    }
 
    if (!gVirtualX->IsCmdThread())
-      return Bool_t(gROOT->ProcessLineFast(Form("((TGLViewer *)0x%x)->DoSelect(%d, %d, %s)", this, x, y, trySecSel ? "kTRUE" : "kFALSE")));
+      return Bool_t(gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoSelect(%d, %d, %s)", this, x, y, trySecSel ? "kTRUE" : "kFALSE")));
    else
       return DoSelect(x, y, trySecSel);
 }
@@ -908,7 +914,7 @@ Bool_t TGLViewer::RequestOverlaySelect(Int_t x, Int_t y)
    }
 
    if (!gVirtualX->IsCmdThread())
-      return Bool_t(gROOT->ProcessLineFast(Form("((TGLViewer *)0x%x)->DoSelect(%d, %d)", this, x, y)));
+      return Bool_t(gROOT->ProcessLineFast(Form("((TGLViewer *)0x%lx)->DoSelect(%d, %d)", this, x, y)));
    else
       return DoOverlaySelect(x, y);
 }

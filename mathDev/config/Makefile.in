@@ -138,6 +138,8 @@ GLITELIBDIR    := @glitelibdir@
 GAWLIB         := @glitelib@
 GAW_CPPFLAGS   := $(filter-out /usr/include, @gaw_cppflags@)
 
+BUILDMEMSTAT   := @buildmemstat@
+
 BUILDCHIRP     := @buildchirp@
 CHIRPLIBDIR    := @chirplibdir@
 CHIRPCLILIB    := @chirplib@
@@ -233,9 +235,6 @@ BUILDMONALISA  := @buildmonalisa@
 MONALISALIBDIR := @monalisalibdir@
 MONALISACLILIB := @monalisalib@
 MONALISAINCDIR := $(filter-out /usr/include, @monalisaincdir@)
-MONALISAWSLIBDIR := @monalisawslibdir@
-MONALISAWSCLILIB := @monalisawslib@
-MONALISAWSINCDIR := $(filter-out /usr/include, @monalisawsincdir@)
 
 SSLLIB         := @ssllib@
 SSLLIBDIR      := @ssllibdir@

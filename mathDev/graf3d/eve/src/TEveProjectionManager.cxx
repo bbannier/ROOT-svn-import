@@ -45,12 +45,14 @@ TEveProjectionManager::TEveProjectionManager():
    TEveElementList("TEveProjectionManager",""),
    TAttBBox(),
    fProjection  (0),
-   fCurrentDepth(0)
+   fCurrentDepth(0),
+   fImportEmpty (kFALSE)
 {
    // Constructor.
 
-   fProjection = new TEveRPhiProjection(fCenter);
-   UpdateName();
+   for (Int_t i = 0; i < TEveProjection::kPT_End; ++i)
+      fProjections[i] = 0;
+   SetProjection(TEveProjection::kPT_RPhi);
 }
 
 //______________________________________________________________________________
@@ -59,7 +61,10 @@ TEveProjectionManager::~TEveProjectionManager()
    // Destructor.
    // Destroys also dependent elements.
 
-   if (fProjection) delete fProjection;
+   for (Int_t i = 0; i < TEveProjection::kPT_End; ++i)
+   {
+      delete fProjections[i];
+   }
    while ( ! fDependentEls.empty())
    {
       fDependentEls.front()->Destroy();
@@ -91,32 +96,33 @@ void TEveProjectionManager::UpdateName()
 }
 
 //______________________________________________________________________________
-void TEveProjectionManager::SetProjection(TEveProjection::EPType_e type, Float_t distort)
+void TEveProjectionManager::SetProjection(TEveProjection::EPType_e type)
 {
    // Set projection type and distortion.
 
    static const TEveException eH("TEveProjectionManager::SetProjection ");
 
-   delete fProjection;
-   fProjection = 0;
-
-   switch (type)
+   if (fProjections[type] == 0)
    {
-      case TEveProjection::kPT_RPhi:
+      switch (type)
       {
-         fProjection  = new TEveRPhiProjection(fCenter);
-         break;
+         case TEveProjection::kPT_RPhi:
+         {
+            fProjections[type] = new TEveRPhiProjection();
+            break;
+         }
+         case TEveProjection::kPT_RhoZ:
+         {
+            fProjections[type] = new TEveRhoZProjection();
+            break;
+         }
+         default:
+            throw(eH + "projection type not valid.");
+            break;
       }
-      case TEveProjection::kPT_RhoZ:
-      {
-         fProjection  = new TEveRhoZProjection(fCenter);
-         break;
-      }
-      default:
-         throw(eH + "projection type not valid.");
-         break;
    }
-   fProjection->SetDistortion(distort);
+   fProjection = fProjections[type];
+   fProjection->SetCenter(fCenter);
    UpdateName();
 }
 
@@ -144,7 +150,14 @@ Bool_t TEveProjectionManager::HandleElementPaste(TEveElement* el)
 //______________________________________________________________________________
 Bool_t TEveProjectionManager::ShouldImport(TEveElement* el)
 {
-   // Returns true if el or any of its children is NTLProjectable.
+   // Returns true if element el should be imported.
+   //
+   // Behaviour depends on the value of the fImportEmpty member:
+   //   false - el or any of its children must be projectable (default);
+   //   true  - always import.
+
+   if (fImportEmpty)
+      return kTRUE;
 
    if (el->IsA()->InheritsFrom(TEveProjectable::Class()))
       return kTRUE;
@@ -299,7 +312,7 @@ void TEveProjectionManager::ComputeBBox()
 
    static const TEveException eH("TEveProjectionManager::ComputeBBox ");
 
-   if (GetNChildren() == 0) {
+   if (HasChildren() == kFALSE) {
       BBoxZero();
       return;
    }

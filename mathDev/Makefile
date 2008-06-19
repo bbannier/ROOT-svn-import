@@ -133,6 +133,9 @@ endif
 ifeq ($(BUILDCHIRP),yes)
 MODULES      += io/chirp
 endif
+ifeq ($(BUILDMEMSTAT),yes)
+MODULES      += misc/memstat
+endif
 ifeq ($(BUILDASIMAGE),yes)
 MODULES      += graf2d/asimage
 endif
@@ -250,7 +253,7 @@ MODULES      += core/unix core/winnt graf2d/x11 graf2d/x11ttf \
                 sql/oracle io/xmlparser math/mathmore cint/reflex cint/cintex \
                 roofit/roofitcore roofit/roofit \
                 math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
-                geom/gdml graf3d/eve montecarlo/g4root net/glite
+                geom/gdml graf3d/eve montecarlo/g4root net/glite misc/memstat
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -414,7 +417,6 @@ endif
 
 ##### Utilities #####
 
-ROOTCINTTMP  ?= $(ROOTCINTTMPEXE) -$(ROOTDICTTYPE)
 MAKEDEP       = $(RMKDEP)
 MAKELIB       = build/unix/makelib.sh $(MKLIBOPTIONS)
 MAKEDIST      = build/unix/makedist.sh
@@ -453,9 +455,6 @@ COREMAP      := $(CORELIB:.$(SOEXT)=.rootmap)
 ifneq ($(BUILTINZLIB),yes)
 CORELIBEXTRA += $(ZLIBCLILIB)
 endif
-
-##### Dependencies for all dictionaries
-ROOTCINTTMPDEP = $(ROOTCINTTMPO) $(ORDER_) $(ROOTCINTTMPEXE)
 
 ##### In case shared libs need to resolve all symbols (e.g.: aix, win32) #####
 
@@ -549,6 +548,7 @@ fast:           rootexecs
 skip:
 		@true;
 
+-include $(patsubst %,%/ModuleVars.mk,$(MODULES))
 include $(patsubst %,%/Module.mk,$(MODULES))
 include cint/ROOT/cintdlls.mk
 
@@ -782,9 +782,8 @@ distclean:: clean
 	@rm -f bin/*.dll bin/*.exp bin/*.lib bin/*.pdb \
                lib/*.def lib/*.exp lib/*.lib lib/*.dll.a \
                *.def .def
-ifeq ($(subst $(MACOSX_MINOR),,1234),1234)
+ifeq ($(PLATFORM),macosx)
 	@rm -f lib/*.dylib
-else
 	@rm -f lib/*.so
 endif
 	-@mv -f tutorials/gallery.root tutorials/gallery.root-

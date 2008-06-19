@@ -14,19 +14,24 @@
  * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
 
-// -- CLASS DESCRIPTION [PDF] --
-// RooHistPdf implements a probablity density function sample from a 
+//////////////////////////////////////////////////////////////////////////////
+//
+// BEGIN_HTML
+// RooHistPdf implements a probablity density function sampled from a 
 // multidimensional histogram. The histogram distribution is explicitly
 // normalized by RooHistPdf and can have an arbitrary number of real or 
 // discrete dimensions.
+// END_HTML
+//
 
 #include "RooFit.h"
 #include "Riostream.h"
 
 #include "RooHistPdf.h"
-#include "RooHistPdf.h"
 #include "RooDataHist.h"
 #include "RooMsgService.h"
+#include "RooRealVar.h"
+#include "RooCategory.h"
 
 
 
@@ -34,17 +39,25 @@ ClassImp(RooHistPdf)
 ;
 
 
-RooHistPdf::RooHistPdf() : _dataHist(0) 
+
+//_____________________________________________________________________________
+RooHistPdf::RooHistPdf() : _dataHist(0), _totVolume(0)
 {
+  // Default constructor
 }
 
+
+//_____________________________________________________________________________
 RooHistPdf::RooHistPdf(const char *name, const char *title, const RooArgSet& vars, 
 		       const RooDataHist& dhist, Int_t intOrder) :
   RooAbsPdf(name,title), 
   _depList("depList","List of dependents",this),
   _dataHist((RooDataHist*)&dhist), 
   _codeReg(10),
-  _intOrder(intOrder)
+  _intOrder(intOrder),
+  _cdfBoundaries(kFALSE),
+  _totVolume(0),
+  _unitNorm(kFALSE)
 {
   // Constructor from a RooDataHist. The variable listed in 'vars' control the dimensionality of the
   // PDF. Any additional dimensions present in 'dhist' will be projected out. RooDataHist dimensions
@@ -74,30 +87,75 @@ RooHistPdf::RooHistPdf(const char *name, const char *title, const RooArgSet& var
 }
 
 
+
+//_____________________________________________________________________________
 RooHistPdf::RooHistPdf(const RooHistPdf& other, const char* name) :
   RooAbsPdf(other,name), 
   _depList("depList",this,other._depList),
   _dataHist(other._dataHist),
   _codeReg(other._codeReg),
-  _intOrder(other._intOrder)
+  _intOrder(other._intOrder),
+  _cdfBoundaries(other._cdfBoundaries),
+  _totVolume(other._totVolume),
+  _unitNorm(other._unitNorm)
 {
   // Copy constructor
 }
 
 
+
+//_____________________________________________________________________________
 Double_t RooHistPdf::evaluate() const
 {
   // Return the current value: The value of the bin enclosing the current coordinates
-  // of the dependents, normalized by the histograms contents
-  Double_t ret =  _dataHist->weight(_depList,_intOrder,kTRUE) ;
+  // of the observables, normalized by the histograms contents. Interpolation
+  // is applied if the RooHistPdf is configured to do that
+
+  Double_t ret =  _dataHist->weight(_depList,_intOrder,kFALSE,_cdfBoundaries) ;  
+  if (ret<0) {
+    ret=0 ;
+  }
   return ret ;
 }
 
 
+//_____________________________________________________________________________
+Double_t RooHistPdf::totVolume() const
+{
+  // Return the total volume spanned by the observables of the RooHistPdf
+
+  // Return previously calculated value, if any
+  if (_totVolume>0) {
+    return _totVolume ;
+  }
+  _totVolume = 1. ;
+  TIterator* iter = _depList.createIterator() ;
+  RooAbsArg* arg ;
+  while((arg=(RooAbsArg*)iter->Next())) {
+    RooRealVar* real = dynamic_cast<RooRealVar*>(arg) ;
+    if (real) {
+      _totVolume *= (real->getMax()-real->getMin()) ;
+    } else {
+      RooCategory* cat = dynamic_cast<RooCategory*>(arg) ;
+      if (cat) {
+	_totVolume *= cat->numTypes() ;
+      }
+    }
+  }
+  delete iter ;
+  return _totVolume ;
+}
+
+
+
+//_____________________________________________________________________________
 Int_t RooHistPdf::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* rangeName) const 
 {
-  // Determine integration scenario. RooHistPdf can perform all integrals over 
-  // its dependents analytically via partial or complete summation of the input histogram.
+  // Determine integration scenario. If no interpolation is used,
+  // RooHistPdf can perform all integrals over its dependents
+  // analytically via partial or complete summation of the input
+  // histogram. If interpolation is used on the integral over
+  // all histogram observables is supported
 
   // Only analytical integrals over the full range are defined
   if (rangeName!=0) {
@@ -105,8 +163,11 @@ Int_t RooHistPdf::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars,
   }
 
   // Simplest scenario, integrate over all dependents
-  if ((allVars.getSize()==_depList.getSize()) && 
-      matchArgs(allVars,analVars,_depList)) return 1000 ;
+  RooAbsCollection *allVarsCommon = allVars.selectCommon(_depList) ;  
+  Bool_t intAllObs = (allVarsCommon->getSize()==_depList.getSize()) ;
+  if (intAllObs && matchArgs(allVars,analVars,_depList)) {
+    return 1000 ;
+  }
 
   // Disable partial analytical integrals if interpolation is used
   if (_intOrder>0) {
@@ -132,14 +193,13 @@ Int_t RooHistPdf::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars,
   delete iter ;
   analVars.add(*allVarsSel) ;
 
-  // Register bit pattern and store with associated argset of variable to be integrated
-  Int_t masterCode =  _codeReg.store(&code,1,new RooArgSet(*allVarsSel))+1 ;
-  delete allVarsSel ;
-  return masterCode ;
+  return code ;
+
 }
 
 
 
+//_____________________________________________________________________________
 Double_t RooHistPdf::analyticalIntegral(Int_t code, const char* /*rangeName*/) const 
 {
   // Return integral identified by 'code'. The actual integration
@@ -147,15 +207,44 @@ Double_t RooHistPdf::analyticalIntegral(Int_t code, const char* /*rangeName*/) c
   // or complete summation over the histograms contents
 
   // WVE needs adaptation for rangeName feature
-
   // Simplest scenario, integration over all dependents
-  if (code==1000) return _dataHist->sum(kFALSE) ;
+  if (code==1000) {
+    return _dataHist->sum(kTRUE) ;
+  }
 
   // Partial integration scenario, retrieve set of variables, calculate partial sum
-  RooArgSet* intSet = 0;
-  _codeReg.retrieve(code-1,intSet) ;
 
-  return _dataHist->sum(*intSet,_depList,kTRUE) ;
+  RooArgSet intSet ;
+  TIterator* iter = _depList.createIterator() ;
+  RooAbsArg* arg ;
+  Int_t n(0) ;
+  while((arg=(RooAbsArg*)iter->Next())) {
+    if (code & (1<<n)) {
+      intSet.add(*arg) ;
+    }
+    n++ ;
+  }
+  delete iter ;
+
+  Double_t ret =  _dataHist->sum(intSet,_depList,kTRUE) ;
+  return ret ;
+}
+
+
+
+//_____________________________________________________________________________
+Int_t RooHistPdf::getMaxVal(const RooArgSet& /*vars*/) const 
+{
+  // Not implemented yet
+  return 0 ;
+}
+
+
+//_____________________________________________________________________________
+Double_t RooHistPdf::maxVal(Int_t /*code*/) 
+{
+  // Not implemented yet
+  return 0 ;
 }
 
 

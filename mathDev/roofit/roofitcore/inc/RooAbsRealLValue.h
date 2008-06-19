@@ -41,13 +41,14 @@ public:
   virtual RooAbsArg& operator=(const RooAbsReal& other) ;
   virtual RooAbsArg& operator=(Double_t newValue);
   virtual RooAbsArg& operator=(Int_t ival) { return operator=((Double_t)ival) ; }
-  virtual void randomize();
 
   // Implementation of RooAbsLValue
-  virtual void setBin(Int_t ibin) ;
-  virtual Int_t getBin() const { return getBinning().binNumber(getVal()) ; }
-  virtual Int_t numBins() const { return getBins() ; }
-  virtual Double_t getBinWidth(Int_t i) const { return getBinning().binWidth(i) ; }
+  virtual void setBin(Int_t ibin, const char* rangeName=0) ;
+  virtual Int_t getBin(const char* rangeName=0) const { return getBinning(rangeName).binNumber(getVal()) ; }
+  virtual Int_t numBins(const char* rangeName=0) const { return getBins(rangeName) ; }
+  virtual Double_t getBinWidth(Int_t i, const char* rangeName=0) const { return getBinning(rangeName).binWidth(i) ; }
+  virtual Double_t volume(const char* rangeName) const { return getMax(rangeName)-getMin(rangeName) ; }
+  virtual void randomize(const char* rangeName=0);
   
   // Get fit range limits
   virtual const RooAbsBinning& getBinning(const char* name=0, Bool_t verbose=kTRUE, Bool_t createOnTheFly=kFALSE) const = 0 ;
@@ -61,14 +62,7 @@ public:
   virtual Bool_t inRange(const char* name) const ;
   virtual Bool_t hasRange(const char* name) const { return hasBinning(name) ; }
 
-  // Backward compatibility functions
-  Int_t getFitBins() const ;
-  Int_t numFitBins() const ;
-  Double_t getFitMin() const ;
-  Double_t getFitMax() const ;
-  Bool_t hasFitMin() const ;
-  Bool_t hasFitMax() const ;
-
+  // Jacobian term management
   virtual Bool_t isJacobianOK(const RooArgSet& depList) const ;
   virtual Double_t jacobian() const { return 1 ; }
 
@@ -126,13 +120,15 @@ public:
 protected:
 
   friend class RooRealBinding ;
-  virtual void setVal(Double_t value, const char* /*rangeName*/) { return setVal(value) ; }
 
+  virtual void setVal(Double_t value, const char* /*rangeName*/) { 
+    // Set object value to 'value'
+    return setVal(value) ; 
+  }
   Bool_t fitRangeOKForPlotting() const ;
-
   void copyCache(const RooAbsArg* source) ;
 
-  ClassDef(RooAbsRealLValue,1) // Abstract modifiable real-valued variable
+  ClassDef(RooAbsRealLValue,1) // Abstract modifiable real-valued object
 };
 
 #endif

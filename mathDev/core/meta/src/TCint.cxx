@@ -1070,7 +1070,7 @@ Long_t TCint::ExecuteMacro(const char *filename, EErrorCode *error)
 }
 
 //______________________________________________________________________________
-const char *TCint::GetTopLevelMacroName()
+const char *TCint::GetTopLevelMacroName() const
 {
    // Return the file name of the current un-included interpreted file.
    // See the documentation for GetCurrentMacroName().
@@ -1083,7 +1083,7 @@ const char *TCint::GetTopLevelMacroName()
 }
 
 //______________________________________________________________________________
-const char *TCint::GetCurrentMacroName()
+const char *TCint::GetCurrentMacroName() const
 {
    // Return the file name of the currently interpreted file,
    // included or not. Example to illustrate the difference between
@@ -2945,12 +2945,28 @@ void  TCint::TypeInfo_Init(TypeInfo_t *tinfo, const char *funcname) const
    info->Init(funcname);
 }
 //______________________________________________________________________________
+bool  TCint::TypeInfo_IsValid(TypeInfo_t *tinfo) const
+{
+   // Interface to CINT function 
+   
+   G__TypeInfo *info = (G__TypeInfo*)tinfo;
+   return info->IsValid();
+}
+//______________________________________________________________________________
 Long_t  TCint::TypeInfo_Property(TypeInfo_t *tinfo) const
 {
    // Interface to CINT function 
    
    G__TypeInfo *info = (G__TypeInfo*)tinfo;
    return info->Property();
+}
+//______________________________________________________________________________
+int   TCint::TypeInfo_Size(TypeInfo_t *tinfo) const
+{
+   // Interface to CINT function 
+   
+   G__TypeInfo *info = (G__TypeInfo*)tinfo;
+   return info->Size();
 }
 //______________________________________________________________________________
 const char *TCint::TypeInfo_TrueName(TypeInfo_t *tinfo) const

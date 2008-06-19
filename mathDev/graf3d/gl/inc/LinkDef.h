@@ -21,6 +21,9 @@
 #pragma link C++ class TGLPlane;
 #pragma link C++ class TGLMatrix;
 #pragma link C++ class TGLUtil;
+#pragma link C++ class TGLUtil::TColorLocker;
+#pragma link C++ class TGLUtil::TDrawQualityModifier;
+#pragma link C++ class TGLUtil::TDrawQualityScaler;
 #pragma link C++ class TGLQuadric;
 
 #pragma link C++ class TGLStopwatch;
@@ -102,7 +105,6 @@
 #pragma link C++ class TGLBoxCut;
 #pragma link C++ class TGLParametricEquation;
 #pragma link C++ class TGLParametricPlot;
-#pragma link C++ class TGLWidgetContainer;
 #pragma link C++ class TGLWidget;
 #pragma link C++ class TGLContext;
 #pragma link C++ class TGLContextIdentity;

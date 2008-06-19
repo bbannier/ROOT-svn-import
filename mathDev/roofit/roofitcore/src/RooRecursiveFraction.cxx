@@ -14,12 +14,15 @@
  * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
 
-// -- CLASS DESCRIPTION [REAL] --
+//////////////////////////////////////////////////////////////////////////////
 //
-// RooRecursiveFraction calculates the sum of a set of RooAbsReal terms, or
-// when constructed with two sets, it sums the product of the terms
-// in the two sets. This class does not (yet) do any smart handling of integrals, 
-// i.e. all integrals of the product are handled numerically
+// BEGIN_HTML
+// Class RooRecursiveFraction is a RooAbsReal implementation that
+// calculates the plain fraction of sum of RooAddPdf components
+// from a set of recursive fractions: for a given set of input fractions
+// a_i it returns a_0 * Prod_i (1 - a_i). 
+// END_HTML
+//
 
 
 #include "RooFit.h"
@@ -40,17 +43,22 @@
 ClassImp(RooRecursiveFraction)
 ;
 
+
+//_____________________________________________________________________________
 RooRecursiveFraction::RooRecursiveFraction()
 {
+  // Default constructor
   _listIter = _list.createIterator() ;
 }
 
 
+
+//_____________________________________________________________________________
 RooRecursiveFraction::RooRecursiveFraction(const char* name, const char* title, const RooArgList& fracList) :
   RooAbsReal(name, title),
   _list("list","First set of components",this)
 {
-  // Constructor
+  // Constructor of plain RooAddPdf fraction from list of recursive fractions
   _listIter = _list.createIterator() ;
 
   TIterator* inputIter = fracList.createIterator() ;
@@ -68,24 +76,33 @@ RooRecursiveFraction::RooRecursiveFraction(const char* name, const char* title, 
 
 
 
+//_____________________________________________________________________________
 RooRecursiveFraction::RooRecursiveFraction(const RooRecursiveFraction& other, const char* name) :
   RooAbsReal(other, name), 
   _list("list",this,other._list)
 {
   // Copy constructor
+
   _listIter = _list.createIterator() ;
 }
 
 
+
+//_____________________________________________________________________________
 RooRecursiveFraction::~RooRecursiveFraction() 
 {
+  // Destructor
+
   if (_listIter) delete _listIter ;
 }
 
 
 
+//_____________________________________________________________________________
 Double_t RooRecursiveFraction::evaluate() const 
 {
+  // Calculate and return value of 1 - prod_i (1 - f_i )
+
   RooAbsReal* comp ;
   const RooArgSet* nset = _list.nset() ;
 

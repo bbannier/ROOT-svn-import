@@ -14,8 +14,8 @@
  * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
 
-// -- CLASS DESCRIPTION [PDF] --
-//
+//////////////////////////////////////////////////////////////////////////////
+// 
 // RooAbsPdf is the abstract interface for all probability density
 // functions The class provides hybrid analytical/numerical
 // normalization for its implementations, error tracing and a MC
@@ -32,7 +32,7 @@
 // probability density function, normalization is treated separately
 // in RooAbsPdf. The reason is that a RooAbsPdf object is more than a
 // PDF: it can be a building block for a more complex, composite PDF
-// if any of its variables are functions instead of fundamentals. In
+// if any of its variables are functions instead of variables. In
 // such cases the normalization of the composite may not be simply the
 // integral over the dependents of the top level PDF as these are
 // functions with potentially non-trivial Jacobian terms themselves.
@@ -85,20 +85,20 @@
 //
 //
 //
-// [Direct generation of dependents]
+// [Direct generation of observables]
 //
 // Any PDF dependent can be generated with the accept/reject method,
 // but for certain PDFs more efficient methods may be implemented. To
-// implement direct generation of one or more dependents, two
+// implement direct generation of one or more observables, two
 // functions need to be implemented, similar to those for analytical
 // integrals:
 //
 // Int_t getGenerator(const RooArgSet& generateVars, RooArgSet& directVars) and
 // void generateEvent(Int_t code)
 //
-// The first function advertises dependents that can be generated,
+// The first function advertises observables that can be generated,
 // similar to the way analytical integrals are advertised. The second
-// function implements the generator for the advertised dependents
+// function implements the generator for the advertised observables
 //
 // The generated dependent values should be store in the proxy
 // objects. For this the assignment operator can be used (i.e. xProxy
@@ -141,6 +141,8 @@
 #include "RooCustomizer.h"
 #include "RooConstraintSum.h"
 #include "RooParamBinning.h"
+#include "RooNumCdf.h"
+#include <string>
 
 ClassImp(RooAbsPdf) 
 ;
@@ -150,54 +152,67 @@ Int_t RooAbsPdf::_verboseEval = 0;
 Bool_t RooAbsPdf::_globalSelectComp = kFALSE ;
 Bool_t RooAbsPdf::_evalError = kFALSE ;
 
+//_____________________________________________________________________________
 RooAbsPdf::RooAbsPdf() : _norm(0), _normSet(0)
 {
+  // Default constructor
 }
 
 
+
+//_____________________________________________________________________________
 RooAbsPdf::RooAbsPdf(const char *name, const char *title) : 
   RooAbsReal(name,title), _norm(0), _normSet(0), _normMgr(this,10), _selectComp(kTRUE)
 {
   // Constructor with name and title only
+
   resetErrorCounters() ;
   setTraceCounter(0) ;
 }
 
 
+
+//_____________________________________________________________________________
 RooAbsPdf::RooAbsPdf(const char *name, const char *title, 
 		     Double_t plotMin, Double_t plotMax) :
   RooAbsReal(name,title,plotMin,plotMax), _norm(0), _normSet(0), _normMgr(this,10), _selectComp(kTRUE)
 {
   // Constructor with name, title, and plot range
+
   resetErrorCounters() ;
   setTraceCounter(0) ;
 }
 
 
 
+//_____________________________________________________________________________
 RooAbsPdf::RooAbsPdf(const RooAbsPdf& other, const char* name) : 
   RooAbsReal(other,name), _norm(0), _normSet(0), _normMgr(other._normMgr,this), _selectComp(other._selectComp)
 
 {
   // Copy constructor
+
   resetErrorCounters() ;
   setTraceCounter(other._traceCount) ;
 }
 
 
+
+//_____________________________________________________________________________
 RooAbsPdf::~RooAbsPdf()
 {
   // Destructor
-  //if (_norm) delete _norm ;
 }
 
 
+
+//_____________________________________________________________________________
 Double_t RooAbsPdf::getVal(const RooArgSet* nset) const
 {
   // Return current value, normalizated by integrating over
-  // the dependents in 'nset'. If 'nset' is 0, the unnormalized value. 
+  // the observables in 'nset'. If 'nset' is 0, the unnormalized value. 
   // is returned. All elements of 'nset' must be lvalues
-
+  //
   // Unnormalized values are not cached
   // Doing so would be complicated as _norm->getVal() could
   // spoil the cache and interfere with returning the cached
@@ -265,6 +280,8 @@ Double_t RooAbsPdf::getVal(const RooArgSet* nset) const
 }
 
 
+
+//_____________________________________________________________________________
 Double_t RooAbsPdf::analyticalIntegralWN(Int_t code, const RooArgSet* normSet, const char* rangeName) const
 {
   // Analytical integral with normalization (see RooAbsReal::analyticalIntegralWN() for further information)
@@ -285,11 +302,13 @@ Double_t RooAbsPdf::analyticalIntegralWN(Int_t code, const RooArgSet* normSet, c
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooAbsPdf::traceEvalPdf(Double_t value) const
 {
-  // Check that passed value is positive and not 'not-a-number'.
-  // If not, print an error, until the error counter reaches
-  // its set maximum.
+  // Check that passed value is positive and not 'not-a-number'.  If
+  // not, print an error, until the error counter reaches its set
+  // maximum.
 
   cxcoutD(Tracing) << "RooAbsPdf::traceEvalPdf(" << GetName() << ") value = " << value << endl ;
 
@@ -320,9 +339,11 @@ Bool_t RooAbsPdf::traceEvalPdf(Double_t value) const
 
 
 
+
+//_____________________________________________________________________________
 Double_t RooAbsPdf::getNorm(const RooArgSet* nset) const
 {
-  // Return the integral of this PDF over all elements of 'nset'. 
+  // Return the integral of this PDF over all observables listed in 'nset'. 
 
   if (!nset) return 1 ;
 
@@ -341,8 +362,14 @@ Double_t RooAbsPdf::getNorm(const RooArgSet* nset) const
 }
 
 
+
+//_____________________________________________________________________________
 const RooAbsReal* RooAbsPdf::getNormObj(const RooArgSet* nset, const RooArgSet* iset, const TNamed* rangeName) const 
 {
+  // Return pointer to RooAbsReal object that implements calculation of integral over observables iset in range
+  // rangeName, optionally taking the integrand normalized over observables nset
+
+
   // Check normalization is already stored
   CacheElem* cache = (CacheElem*) _normMgr.getObj(nset,iset,0,rangeName) ;
   if (cache) {
@@ -364,10 +391,11 @@ const RooAbsReal* RooAbsPdf::getNormObj(const RooArgSet* nset, const RooArgSet* 
 
 
 
+//_____________________________________________________________________________
 Bool_t RooAbsPdf::syncNormalization(const RooArgSet* nset, Bool_t adjustProxies) const
 {
   // Verify that the normalization integral cached with this PDF
-  // is valid for given set of normalization dependents
+  // is valid for given set of normalization observables
   //
   // If not, the cached normalization integral (if any) is deleted
   // and a new integral is constructed for use with 'nset'
@@ -417,7 +445,6 @@ Bool_t RooAbsPdf::syncNormalization(const RooArgSet* nset, Bool_t adjustProxies)
     TString nname(GetName()) ; nname.Append("_UnitNorm") ;
     _norm = new RooRealVar(nname.Data(),ntitle.Data(),1) ;
   } else {
-
     _norm = createIntegral(*depList,*getIntegratorConfig()) ;
   }
 
@@ -431,6 +458,7 @@ Bool_t RooAbsPdf::syncNormalization(const RooArgSet* nset, Bool_t adjustProxies)
 
 
 
+//_____________________________________________________________________________
 Bool_t RooAbsPdf::traceEvalHook(Double_t value) const 
 {
   // WVE 08/21/01 Probably obsolete now.
@@ -463,6 +491,7 @@ Bool_t RooAbsPdf::traceEvalHook(Double_t value) const
 
 
 
+//_____________________________________________________________________________
 void RooAbsPdf::resetErrorCounters(Int_t resetValue)
 {
   // Reset error counter to given value, limiting the number
@@ -474,10 +503,12 @@ void RooAbsPdf::resetErrorCounters(Int_t resetValue)
 
 
 
+//_____________________________________________________________________________
 void RooAbsPdf::setTraceCounter(Int_t value, Bool_t allNodes)
 {
   // Reset trace counter to given value, limiting the
   // number of future trace messages for this pdf to 'value'
+
   if (!allNodes) {
     _traceCount = value ;
     return ; 
@@ -498,6 +529,7 @@ void RooAbsPdf::setTraceCounter(Int_t value, Bool_t allNodes)
 
 
 
+//_____________________________________________________________________________
 Double_t RooAbsPdf::getLogVal(const RooArgSet* nset) const 
 {
   // Return the log of the current value with given normalization
@@ -508,24 +540,6 @@ Double_t RooAbsPdf::getLogVal(const RooArgSet* nset) const
 
     logEvalError("getLogVal() top-level p.d.f evaluates to zero or negative number") ;
 
-    if (_negCount-- > 0) {     
-
-//       RooArgSet* params = getParameters(nset) ;
-//       RooArgSet* depends = getObservables(nset) ;	 
-
-//       coutW(Eval) << endl 
-// 		  << "RooAbsPdf::getLogVal(" << GetName() << ") WARNING: PDF evaluates to zero or negative value (" << prob << ")" << endl ;
-//       if (dologW(Eval)) {
-// 	coutW(Eval) << "  Current values of PDF dependents:" << endl ;
-// 	depends->Print("v") ;
-// 	coutW(Eval) << "  Current values of PDF parameters:" ;
-// 	params->Print("v") ;
-//       }
-//       delete params ;
-//       delete depends ;
-
-//       if(_negCount == 0) coutW(Eval) << "(no more such warnings will be printed) "<<endl;
-    }
     return 0;
   }
   return log(prob);
@@ -533,6 +547,7 @@ Double_t RooAbsPdf::getLogVal(const RooArgSet* nset) const
 
 
 
+//_____________________________________________________________________________
 Double_t RooAbsPdf::extendedTerm(UInt_t observed, const RooArgSet* nset) const 
 {
   // Returned the extended likelihood term (Nexpect - Nobserved*log(NExpected)
@@ -569,6 +584,8 @@ Double_t RooAbsPdf::extendedTerm(UInt_t observed, const RooArgSet* nset) const
 }
 
 
+
+//_____________________________________________________________________________
 RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, RooCmdArg arg1, RooCmdArg arg2, RooCmdArg arg3, RooCmdArg arg4, 
                                                  RooCmdArg arg5, RooCmdArg arg6, RooCmdArg arg7, RooCmdArg arg8) 
 {
@@ -584,6 +601,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, RooCmdArg arg1, RooCmdArg arg2,
   // Extended(Bool_t flag)           -- Add extended likelihood term, off by default
   // Range(const char* name)         -- Fit only data inside range with given name
   // Range(Double_t lo, Double_t hi) -- Fit only data inside given range. A range named "fit" is created on the fly on all observables.
+  //                                    Multiple comma separated range names can be specified.
   // SumCoefRange(const char* name)  -- Set the range in which to interpret the coefficients of RooAddPdf components 
   // NumCPU(int num)                 -- Parallelize NLL calculation on num CPUs
   // Optimize(Bool_t flag)           -- Activate constant term optimization (on by default)
@@ -624,6 +642,9 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, RooCmdArg arg1, RooCmdArg arg2,
   return fitTo(data,l) ;
 }
 
+
+
+//_____________________________________________________________________________
 RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList) 
 {
   // Fit PDF to given dataset. If dataset is unbinned, an unbinned maximum likelihood is performed. If the dataset
@@ -834,12 +855,17 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
 
 
 
+//_____________________________________________________________________________
 RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, Option_t *fitOpt, Option_t *optOpt, const char* fitRange) 
 {
+  // OLD STYLE INTERFACE, PLEASE USE NEW INTERFACE fitTo(RooAbsData& data, RooCmdArg arg1,...,RooCmdArg arg8) 
+ 
   return fitTo(data,RooArgSet(),fitOpt,optOpt,fitRange) ;
 }
 
 
+
+//_____________________________________________________________________________
 RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooArgSet& projDeps, Option_t *fitOpt, Option_t *optOpt, const char* fitRange) 
 {
   // Fit this PDF to given data set
@@ -918,8 +944,13 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooArgSet& projDeps, Opti
   
 }
 
+
+
+//_____________________________________________________________________________
 void RooAbsPdf::printValue(ostream& os) const
 {
+  // Print value of p.d.f, also print normalization integral that was last used, if any
+
   if (_norm) {
     os << evaluate() << "/" << _norm->getVal() ;
   } else {
@@ -928,8 +959,12 @@ void RooAbsPdf::printValue(ostream& os) const
 }
 
 
+
+//_____________________________________________________________________________
 void RooAbsPdf::printMultiline(ostream& os, Int_t contents, Bool_t verbose, TString indent) const
 {
+  // Print multi line detailed information of this RooAbsPdf
+
   RooAbsReal::printMultiline(os,contents,verbose,indent);
   os << indent << "--- RooAbsPdf ---" << endl;
   os << indent << "Cached value = " << _value << endl ;
@@ -940,13 +975,20 @@ void RooAbsPdf::printMultiline(ostream& os, Int_t contents, Bool_t verbose, TStr
   }
 }
 
+
+
+//_____________________________________________________________________________
 RooAbsGenContext* RooAbsPdf::genContext(const RooArgSet &vars, const RooDataSet *prototype, 
 					const RooArgSet* auxProto, Bool_t verbose) const 
 {
+  // Interface function to create a generator context from a p.d.f. This default
+  // implementation returns a 'standard' context that works for any p.d.f
   return new RooGenContext(*this,vars,prototype,auxProto,verbose) ;
 }
 
 
+
+//_____________________________________________________________________________
 RooDataSet *RooAbsPdf::generate(const RooArgSet& whatVars, Int_t nEvents, const RooCmdArg& arg1,
 				const RooCmdArg& arg2, const RooCmdArg& arg3,const RooCmdArg& arg4, const RooCmdArg& arg5) 
 {
@@ -977,6 +1019,9 @@ RooDataSet *RooAbsPdf::generate(const RooArgSet& whatVars, Int_t nEvents, const 
   return generate(whatVars,RooFit::NumEvents(nEvents),arg1,arg2,arg3,arg4,arg5) ;
 }
 
+
+
+//_____________________________________________________________________________
 RooDataSet *RooAbsPdf::generate(const RooArgSet& whatVars, const RooCmdArg& arg1,const RooCmdArg& arg2,
 				const RooCmdArg& arg3,const RooCmdArg& arg4, const RooCmdArg& arg5,const RooCmdArg& arg6) 
 {
@@ -1072,7 +1117,9 @@ RooDataSet *RooAbsPdf::generate(const RooArgSet& whatVars, const RooCmdArg& arg1
 
 
 
-RooDataSet *RooAbsPdf::generate(const RooArgSet &whatVars, Int_t nEvents, Bool_t verbose) const {
+//_____________________________________________________________________________
+RooDataSet *RooAbsPdf::generate(const RooArgSet &whatVars, Int_t nEvents, Bool_t verbose) const 
+{
   // Generate a new dataset containing the specified variables with
   // events sampled from our distribution. Generate the specified
   // number of events or else try to use expectedEvents() if nEvents <= 0.
@@ -1093,8 +1140,12 @@ RooDataSet *RooAbsPdf::generate(const RooArgSet &whatVars, Int_t nEvents, Bool_t
   return generated;
 }
 
+
+
+//_____________________________________________________________________________
 RooDataSet *RooAbsPdf::generate(const RooArgSet &whatVars, const RooDataSet &prototype,
-				Int_t nEvents, Bool_t verbose, Bool_t randProtoOrder, Bool_t resampleProto) const {
+				Int_t nEvents, Bool_t verbose, Bool_t randProtoOrder, Bool_t resampleProto) const 
+{
   // Generate a new dataset with values of the whatVars variables
   // sampled from our distribution. Use the specified existing dataset
   // as a prototype: the new dataset will contain the same number of
@@ -1135,6 +1186,7 @@ RooDataSet *RooAbsPdf::generate(const RooArgSet &whatVars, const RooDataSet &pro
 
 
 
+//_____________________________________________________________________________
 Int_t* RooAbsPdf::randomizeProtoOrder(Int_t nProto, Int_t, Bool_t resampleProto) const
 {
   // Return lookup table with randomized access order for prototype events,
@@ -1173,7 +1225,10 @@ Int_t* RooAbsPdf::randomizeProtoOrder(Int_t nProto, Int_t, Bool_t resampleProto)
 }
 
 
-Int_t RooAbsPdf::getGenerator(const RooArgSet &/*directVars*/, RooArgSet &/*generatedVars*/, Bool_t /*staticInitOK*/) const {
+
+//_____________________________________________________________________________
+Int_t RooAbsPdf::getGenerator(const RooArgSet &/*directVars*/, RooArgSet &/*generatedVars*/, Bool_t /*staticInitOK*/) const 
+{
   // Load generatedVars with the subset of directVars that we can generate events for,
   // and return a code that specifies the generator algorithm we will use. A code of
   // zero indicates that we cannot generate any of the directVars (in this case, nothing
@@ -1187,22 +1242,34 @@ Int_t RooAbsPdf::getGenerator(const RooArgSet &/*directVars*/, RooArgSet &/*gene
 }
 
 
+
+//_____________________________________________________________________________
 void RooAbsPdf::initGenerator(Int_t /*code*/) 
 {  
-  // One-time initialization to setup the generator for the specified code.
+  // Interface for one-time initialization to setup the generator for the specified code.
 }
 
-void RooAbsPdf::generateEvent(Int_t /*code*/) {
-  // Generate an event using the algorithm corresponding to the specified code. The
-  // meaning of each code is defined by the getGenerator() implementation. The default
+
+
+//_____________________________________________________________________________
+void RooAbsPdf::generateEvent(Int_t /*code*/) 
+{
+  // Interface for generation of anan event using the algorithm
+  // corresponding to the specified code. The meaning of each code is
+  // defined by the getGenerator() implementation. The default
   // implementation does nothing.
 }
 
 
 
+//_____________________________________________________________________________
 Bool_t RooAbsPdf::isDirectGenSafe(const RooAbsArg& arg) const 
 {
-  // Check if PDF depends via more than route on given arg
+  // Check if given observable can be safely generated using the
+  // pdfs internal generator mechanism (if that existsP). Observables
+  // on which a PDF depends via more than route are not safe
+  // for use with internal generators because they introduce
+  // correlations not known to the internal generator
 
   // Arg must be direct server of self
   if (!findServer(arg.GetName())) return kFALSE ;
@@ -1224,6 +1291,7 @@ Bool_t RooAbsPdf::isDirectGenSafe(const RooAbsArg& arg) const
 
 
 
+//_____________________________________________________________________________
 RooPlot* RooAbsPdf::plotOn(RooPlot* frame, RooLinkedList& cmdList) const
 {
   // Plot (project) PDF on specified frame. If a PDF is plotted in an empty frame, it
@@ -1315,11 +1383,25 @@ RooPlot* RooAbsPdf::plotOn(RooPlot* frame, RooLinkedList& cmdList) const
   const RooArgSet* compSet = (const RooArgSet*) pc.getObject("compSet") ;
   Bool_t haveCompSel = (strlen(compSpec)>0 || compSet) ;
 
+  // Suffix for curve name
+  TString nameSuffix ;
+  if (compSpec && strlen(compSpec)>0) {
+    nameSuffix.Append("_Comp[") ;
+    nameSuffix.Append(compSpec) ;
+    nameSuffix.Append("]") ;    
+  } else if (compSet) {
+    nameSuffix.Append("_Comp[") ;
+    nameSuffix.Append(compSet->contentsString().c_str()) ;
+    nameSuffix.Append("]") ;    
+  }
+
   // Remove PDF-only commands from command list
   pc.stripCmdList(cmdList,"SelectCompSet,SelectCompSpec") ;
   
   // Adjust normalization, if so requested
   if (asymCat) {
+    RooCmdArg cnsuffix("CurveNameSuffix",0,0,0,0,nameSuffix.Data(),0,0,0) ;
+    cmdList.Add(&cnsuffix);
     return  RooAbsReal::plotOn(frame,cmdList) ;
   }
 
@@ -1414,7 +1496,10 @@ RooPlot* RooAbsPdf::plotOn(RooPlot* frame, RooLinkedList& cmdList) const
 
     delete dirSelNodes ;
   }
-  
+
+  RooCmdArg cnsuffix("CurveNameSuffix",0,0,0,0,nameSuffix.Data(),0,0,0) ;
+  cmdList.Add(&cnsuffix);
+
   RooPlot* ret =  RooAbsReal::plotOn(frame,cmdList) ;
   
   // Restore selection status ;
@@ -1425,8 +1510,15 @@ RooPlot* RooAbsPdf::plotOn(RooPlot* frame, RooLinkedList& cmdList) const
 
 
 
+//_____________________________________________________________________________
 void RooAbsPdf::plotOnCompSelect(RooArgSet* selNodes) const
 {
+  // Helper function for plotting of composite p.d.fs. Given
+  // a set of selected components that should be plotted,
+  // find all nodes that (in)directly depend on these selected
+  // nodes. Mark all directly and indirecty selected nodes
+  // as 'selected' using the selectComp() method
+
   // Get complete set of tree branch nodes
   RooArgSet branchNodeSet ;
   branchNodeServerList(&branchNodeSet) ;
@@ -1493,6 +1585,7 @@ void RooAbsPdf::plotOnCompSelect(RooArgSet* selNodes) const
 
 
 
+//_____________________________________________________________________________
 RooPlot* RooAbsPdf::plotOn(RooPlot *frame, PlotOpt o) const
 {
   // Plot oneself on 'frame'. In addition to features detailed in  RooAbsReal::plotOn(),
@@ -1540,221 +1633,8 @@ RooPlot* RooAbsPdf::plotOn(RooPlot *frame, PlotOpt o) const
 
 
 
-RooPlot* RooAbsPdf::plotCompOn(RooPlot *frame, const RooArgSet& compSet, Option_t* drawOptions,
-			       Double_t scaleFactor, ScaleType stype, const RooAbsData* projData, 
-			       const RooArgSet* projSet) const 
-{
-  // THIS FUNCTION IS OBSOLETE AND ONLY RETAINED FOR BACKWARD COMPATIBILITY. 
-  // PLEASE USE plotOn(frame,Componenents(...),...)
-  //
-  // Plot only the PDF components listed in 'compSet' of this PDF on 'frame'. 
-  // See RooAbsReal::plotOn() for a description of the remaining arguments and other features
 
-  // Sanity checks
-  if (plotSanityChecks(frame)) return frame ;
-
-  // Get complete set of tree branch nodes
-  RooArgSet branchNodeSet ;
-  branchNodeServerList(&branchNodeSet) ;
-
-  // Discard any non-PDF nodes
-  TIterator* iter = branchNodeSet.createIterator() ;
-  RooAbsArg* arg ;
-  while((arg=(RooAbsArg*)iter->Next())) {
-    if (!dynamic_cast<RooAbsPdf*>(arg)) {
-      branchNodeSet.remove(*arg) ;
-    }
-  }
-  delete iter ;
-
-  // Get list of directly selected nodes
-  RooArgSet* selNodes = (RooArgSet*) branchNodeSet.selectCommon(compSet) ;
-  coutI(Plotting) << "RooAbsPdf::plotCompOn(" << GetName() << ") directly selected PDF components: " << *selNodes << endl ;
-  
-  return plotCompOnEngine(frame,selNodes,drawOptions,scaleFactor,stype,projData,projSet) ;
-}
-
-
-
-
-RooPlot* RooAbsPdf::plotCompOn(RooPlot *frame, const char* compNameList, Option_t* drawOptions,
-			       Double_t scaleFactor, ScaleType stype, const RooAbsData* projData, 
-			       const RooArgSet* projSet) const 
-{
-  // THIS FUNCTION IS OBSOLETE AND ONLY RETAINED FOR BACKWARD COMPATIBILITY. 
-  // PLEASE USE plotOn(frame,Componenents(...),...)
-  //
-  // Plot only the PDF components listed in 'compSet' of this PDF on 'frame'. 
-  // See RooAbsReal::plotOn() for a description of the remaining arguments and other features
-
-  // Sanity checks
-  if (plotSanityChecks(frame)) return frame ;
-
-  // Get complete set of tree branch nodes
-  RooArgSet branchNodeSet ;
-  branchNodeServerList(&branchNodeSet) ;
-
-  // Discard any non-PDF nodes
-  TIterator* iter = branchNodeSet.createIterator() ;
-  RooAbsArg* arg ;
-  while((arg=(RooAbsArg*)iter->Next())) {
-    if (!dynamic_cast<RooAbsPdf*>(arg)) {
-      branchNodeSet.remove(*arg) ;
-    }
-  }
-  delete iter ;
-
-  // Get list of directly selected nodes
-  RooArgSet* selNodes = (RooArgSet*) branchNodeSet.selectByName(compNameList) ;
-  coutI(Plotting) << "RooAbsPdf::plotCompOn(" << GetName() << ") directly selected PDF components: " << *selNodes << endl ;
-
-  return plotCompOnEngine(frame,selNodes,drawOptions,scaleFactor,stype,projData,projSet) ;
-}
-
-
-RooPlot* RooAbsPdf::plotCompOnEngine(RooPlot *frame, RooArgSet* selNodes, Option_t* drawOptions,
-			       Double_t scaleFactor, ScaleType stype, const RooAbsData* projData, 
-			       const RooArgSet* projSet) const 
-{
-  // Get complete set of tree branch nodes
-  RooArgSet branchNodeSet ;
-  branchNodeServerList(&branchNodeSet) ;
-
-  // Discard any non-PDF nodes
-  TIterator* iter = branchNodeSet.createIterator() ;
-  RooAbsArg* arg ;
-  while((arg=(RooAbsArg*)iter->Next())) {
-    if (!dynamic_cast<RooAbsPdf*>(arg)) {
-      branchNodeSet.remove(*arg) ;
-    }
-  }
-
-  // Add all nodes below selected nodes
-  iter->Reset() ;
-  TIterator* sIter = selNodes->createIterator() ;
-  RooArgSet tmp ;
-  while((arg=(RooAbsArg*)iter->Next())) {
-    sIter->Reset() ;
-    RooAbsArg* selNode ;
-    while((selNode=(RooAbsArg*)sIter->Next())) {
-      if (selNode->dependsOn(*arg)) {
-	tmp.add(*arg,kTRUE) ;
-      }      
-    }      
-  }
-  delete sIter ;
-
-  // Add all nodes that depend on selected nodes
-  iter->Reset() ;
-  while((arg=(RooAbsArg*)iter->Next())) {
-    if (arg->dependsOn(*selNodes)) {
-      tmp.add(*arg,kTRUE) ;
-    }
-  }
-
-  tmp.remove(*selNodes,kTRUE) ;
-  tmp.remove(*this) ;
-  selNodes->add(tmp) ;
-//   cout << "RooAbsPdf::plotCompOn(" << GetName() << ") indirectly selected PDF components: " ;
-//   tmp.Print("1") ;
-
-  // Set PDF selection bits according to selNodes
-  iter->Reset() ;
-  while((arg=(RooAbsArg*)iter->Next())) {
-    Bool_t select = selNodes->find(arg->GetName()) ? kTRUE : kFALSE ;
-    ((RooAbsPdf*)arg)->selectComp(select) ;
-  }
- 
-  // Plot function in selected state
-  PlotOpt o ;
-  o.drawOptions = drawOptions ;
-  o.scaleFactor = scaleFactor ;
-  o.stype = stype ;
-  o.projData = projData ;
-  o.projSet = projSet ;
-  frame = plotOn(frame,0) ;
-
-  // Reset PDF selection bits to kTRUE
-  iter->Reset() ;
-  while((arg=(RooAbsArg*)iter->Next())) {
-    ((RooAbsPdf*)arg)->selectComp(kTRUE) ;
-  }
-
-  delete selNodes ;
-  delete iter ;
-  return frame ;
-}
-
-
-
-
-RooPlot* RooAbsPdf::plotCompSliceOn(RooPlot *frame, const char* compNameList, const RooArgSet& sliceSet,
-				    Option_t* drawOptions, Double_t scaleFactor, ScaleType stype, 
-				    const RooAbsData* projData) const 
-{
-  // THIS FUNCTION IS OBSOLETE AND ONLY RETAINED FOR BACKWARD COMPATIBILITY. 
-  // PLEASE USE plotOn(frame,Componenents(...),Slice(...),...)
-  //
-  // Plot ourselves on given frame, as done in plotOn(), except that the variables 
-  // listed in 'sliceSet' are taken out from the default list of projected dimensions created
-  // by plotOn().
-
-  RooArgSet projectedVars ;
-  makeProjectionSet(frame->getPlotVar(),frame->getNormVars(),projectedVars,kTRUE) ;
-  
-  // Take out the sliced variables
-  TIterator* iter = sliceSet.createIterator() ;
-  RooAbsArg* sliceArg ;
-  while((sliceArg=(RooAbsArg*)iter->Next())) {
-    RooAbsArg* arg = projectedVars.find(sliceArg->GetName()) ;
-    if (arg) {
-      projectedVars.remove(*arg) ;
-    } else {
-      coutW(Plotting) << "RooAddPdf::plotCompSliceOn(" << GetName() << ") slice variable " 
-		      << sliceArg->GetName() << " was not projected anyway" << endl ;
-    }
-  }
-  delete iter ;
-
-  return plotCompOn(frame,compNameList,drawOptions,scaleFactor,stype,projData,&projectedVars) ;
-}
-
-
-
-
-
-RooPlot* RooAbsPdf::plotCompSliceOn(RooPlot *frame, const RooArgSet& compSet, const RooArgSet& sliceSet,
-				    Option_t* drawOptions, Double_t scaleFactor, ScaleType stype, 
-				    const RooAbsData* projData) const 
-{
-  // THIS FUNCTION IS OBSOLETE AND ONLY RETAINED FOR BACKWARD COMPATIBILITY. 
-  // PLEASE USE plotOn(frame,Componenents(...),Slice(...),...)
-  //
-  // Plot ourselves on given frame, as done in plotOn(), except that the variables 
-  // listed in 'sliceSet' are taken out from the default list of projected dimensions created
-  // by plotOn().
-
-  RooArgSet projectedVars ;
-  makeProjectionSet(frame->getPlotVar(),frame->getNormVars(),projectedVars,kTRUE) ;
-  
-  // Take out the sliced variables
-  TIterator* iter = sliceSet.createIterator() ;
-  RooAbsArg* sliceArg ;
-  while((sliceArg=(RooAbsArg*)iter->Next())) {
-    RooAbsArg* arg = projectedVars.find(sliceArg->GetName()) ;
-    if (arg) {
-      projectedVars.remove(*arg) ;
-    } else {
-      coutW(Plotting) << "RooAddPdf::plotCompSliceOn(" << GetName() << ") slice variable " 
-		      << sliceArg->GetName() << " was not projected anyway" << endl ;
-    }
-  }
-  delete iter ;
-
-  return plotCompOn(frame,compSet,drawOptions,scaleFactor,stype,projData,&projectedVars) ;
-}
-
-
+//_____________________________________________________________________________
 RooPlot* RooAbsPdf::paramOn(RooPlot* frame, const RooCmdArg& arg1, const RooCmdArg& arg2, 
 			    const RooCmdArg& arg3, const RooCmdArg& arg4, const RooCmdArg& arg5, 
 			    const RooCmdArg& arg6, const RooCmdArg& arg7, const RooCmdArg& arg8)
@@ -1850,6 +1730,7 @@ RooPlot* RooAbsPdf::paramOn(RooPlot* frame, const RooCmdArg& arg1, const RooCmdA
 
 
 
+//_____________________________________________________________________________
 RooPlot* RooAbsPdf::paramOn(RooPlot* frame, const RooAbsData* data, const char *label,
 			    Int_t sigDigits, Option_t *options, Double_t xmin,
 			    Double_t xmax ,Double_t ymax) 
@@ -1863,12 +1744,15 @@ RooPlot* RooAbsPdf::paramOn(RooPlot* frame, const RooAbsData* data, const char *
   return frame ;
 }
 
+
+
+//_____________________________________________________________________________
 RooPlot* RooAbsPdf::paramOn(RooPlot* frame, const RooArgSet& params, Bool_t showConstants, const char *label,
 			    Int_t sigDigits, Option_t *options, Double_t xmin,
 			    Double_t xmax ,Double_t ymax, const RooCmdArg* formatCmd) 
 {
   // Add a text box with the current parameter values and their errors to the frame.
-  // Dependents of this PDF appearing in the 'data' dataset will be omitted.
+  // Observables of this PDF appearing in the 'data' dataset will be omitted.
   //
   // Optional label will be inserted as first line of the text box. Use 'sigDigits'
   // to modify the default number of significant digits printed. The 'xmin,xmax,ymax'
@@ -1925,47 +1809,52 @@ RooPlot* RooAbsPdf::paramOn(RooPlot* frame, const RooArgSet& params, Bool_t show
 
 
 
-RooPlot* RooAbsPdf::plotNLLOn(RooPlot* frame, RooDataSet* data, Bool_t extended, const RooArgSet& /*projDeps*/,
-			      Option_t* /*drawOptions*/, Double_t prec, Bool_t fixMinToZero) {
-  
-  RooNLLVar nll("nll","-log(L)",*this,*data,extended) ;
-  if (fixMinToZero) {
-    nll.plotOn(frame,RooFit::DrawOption("L"),RooFit::Precision(prec),RooFit::ShiftToZero()) ;
-  } else {
-    nll.plotOn(frame,RooFit::DrawOption("L"),RooFit::Precision(prec)) ;
-  }
 
-  return frame ;
-}
-
-
-
+//_____________________________________________________________________________
 Double_t RooAbsPdf::expectedEvents(const RooArgSet*) const 
 { 
+  // Return expected number of events from this p.d.f for use in extended
+  // likelihood calculations. This default implementation returns zero
   return 0 ; 
 } 
 
 
+
+//_____________________________________________________________________________
 void RooAbsPdf::verboseEval(Int_t stat) 
 { 
   // Change global level of verbosity for p.d.f. evaluations
+
   _verboseEval = stat ; 
 }
 
+
+
+//_____________________________________________________________________________
 Int_t RooAbsPdf::verboseEval() 
 { 
   // Return global level of verbosity for p.d.f. evaluations
+
   return _verboseEval ;
 }
 
 
+
+//_____________________________________________________________________________
 void RooAbsPdf::CacheElem::operModeHook(RooAbsArg::OperMode) 
 {
+  // Dummy implementation
 }
 
 
+
+//_____________________________________________________________________________
 RooAbsPdf::CacheElem::~CacheElem() 
 { 
+  // Destructor of normalization cache element. If this element 
+  // provides the 'current' normalization stored in RooAbsPdf::_norm
+  // zero _norm pointer here before object pointed to is deleted here
+
   // Zero _norm pointer in RooAbsPdf if it is points to our cache payload
   if (_owner) {
     RooAbsPdf* pdfOwner = static_cast<RooAbsPdf*>(_owner) ;
@@ -1978,8 +1867,12 @@ RooAbsPdf::CacheElem::~CacheElem()
 } 
 
 
+
+//_____________________________________________________________________________
 RooAbsPdf* RooAbsPdf::createProjection(const RooArgSet& iset) 
 {
+  // Return a p.d.f that represent a projection of this p.d.f integrated over given observables
+
   // Construct name for new object
   TString name(GetName()) ;
   name.Append("_Proj[") ;
@@ -2004,70 +1897,116 @@ RooAbsPdf* RooAbsPdf::createProjection(const RooArgSet& iset)
 }
 
 
-  // Make CDF from PDF
+
+//_____________________________________________________________________________
 RooAbsReal* RooAbsPdf::createCdf(const RooArgSet& iset, const RooArgSet& nset) 
 {
-  // Make list of input arguments keeping only RooRealVars
-  RooArgList ilist ;
-  TIterator* iter2 = iset.createIterator() ;
-  RooAbsArg* arg ;
-  while((arg=(RooAbsArg*)iter2->Next())) {
-    if (dynamic_cast<RooRealVar*>(arg)) {
-      ilist.add(*arg) ;
-    } else {
-      coutW(InputArguments) << "RooAbsPdf::createCdf(" << GetName() << ") WARNING ignoring non-RooRealVar input argument " << arg->GetName() << endl ;      
-    }
-  }
-  delete iter2 ;
+  // Create a cumulative distribution function of this p.d.f in terms
+  // of the observables listed in iset. If no nset argument is given
+  // the c.d.f normalization is constructed over the integrated
+  // observables, so that its maximum value is precisely 1. It is also
+  // possible to choose a different normalization for
+  // multi-dimensional p.d.f.s: eg. for a pdf f(x,y,z) one can
+  // construct a partial cdf c(x,y) that only when integrated itself
+  // over z results in a maximum value of 1. To construct such a cdf pass
+  // z as argument to the optional nset argument
 
-  RooArgList cloneList ;
-  RooArgList loList ;
-  RooArgSet clonedBranchNodes ;
-
-  // Setup customizer that stores all cloned branches in our non-owning list
-  RooCustomizer cust(*this,"cdf") ;
-  cust.setCloneBranchSet(clonedBranchNodes) ;
-  cust.setOwning(kFALSE) ;
-
-  // Make integration observable x_prime for each observable x as well as an x_lowbound 
-  TIterator* iter = ilist.createIterator() ;
-  RooRealVar* rrv ;
-  while((rrv=(RooRealVar*)iter->Next())) {
-
-    // Make clone x_prime of each c.d.f observable x represening running integral
-    RooRealVar* cloneArg = (RooRealVar*) rrv->clone(Form("%s_prime",rrv->GetName())) ;
-    cloneList.add(*cloneArg) ;
-    cust.replaceArg(*rrv,*cloneArg) ;
-
-    // Make clone x_lowbound of each c.d.f observable representing low bound of x
-    RooRealVar* cloneLo = (RooRealVar*) rrv->clone(Form("%s_lowbound",rrv->GetName())) ;
-    cloneLo->setVal(rrv->getMin()) ;
-    loList.add(*cloneLo) ;
-
-    // Make parameterized binning from [x_lowbound,x] for each x_prime
-    RooParamBinning pb(*cloneLo,*rrv,100) ;
-    cloneArg->setBinning(pb,"CDF") ;
-    
-  }
-  delete iter ;
-
-  RooAbsReal* tmp = (RooAbsReal*) cust.build() ;
-
-  // Construct final normalization set for c.d.f = integrated observables + any extra specified by user
-  RooArgSet finalNset(nset) ;
-  finalNset.add(cloneList,kTRUE) ;
-  RooAbsReal* cdf = tmp->createIntegral(cloneList,finalNset,"CDF") ;
-
-  // Transfer ownership of cloned items to top-level c.d.f object
-  cdf->addOwnedComponents(clonedBranchNodes) ;
-  cdf->addOwnedComponents(cloneList) ;
-  cdf->addOwnedComponents(loList) ;
-
-  return cdf ;
+  return createCdf(iset,RooFit::SupNormSet(nset)) ;
 }
 
+
+
+//_____________________________________________________________________________
+RooAbsReal* RooAbsPdf::createCdf(const RooArgSet& iset, const RooCmdArg arg1, const RooCmdArg arg2,
+				 const RooCmdArg arg3, const RooCmdArg arg4, const RooCmdArg arg5, 
+				 const RooCmdArg arg6, const RooCmdArg arg7, const RooCmdArg arg8) 
+{
+  // Create an object that represents the integral of the function over one or more observables listed in iset
+  // The actual integration calculation is only performed when the return object is evaluated. The name
+  // of the integral object is automatically constructed from the name of the input function, the variables
+  // it integrates and the range integrates over
+  //
+  // The following named arguments are accepted
+  //
+  // SupNormSet(const RooArgSet&)         -- Observables over which should be normalized _in_addition_ to the
+  //                                         integration observables
+  // ScanParameters(Int_t nbins,          -- Parameters for scanning technique of making CDF: number
+  //                Int_t intOrder)          of sampled bins and order of interpolation applied on numeric cdf
+  // ScanNum()                            -- Apply scanning technique if cdf integral involves numeric integration
+  // ScanAll()                            -- Always apply scanning technique 
+  // ScanNone()                           -- Never apply scanning technique                  
+
+  // Define configuration for this method
+  RooCmdConfig pc(Form("RooAbsReal::createCdf(%s)",GetName())) ;
+  pc.defineObject("supNormSet","SupNormSet",0,0) ;
+  pc.defineInt("numScanBins","ScanParameters",0,1000) ;
+  pc.defineInt("intOrder","ScanParameters",1,2) ;
+  pc.defineInt("doScanNum","ScanNumCdf",0,1) ;
+  pc.defineInt("doScanAll","ScanAllCdf",0,0) ;
+  pc.defineInt("doScanNon","ScanNoCdf",0,0) ;
+  pc.defineMutex("ScanNumCdf","ScanAllCdf","ScanNoCdf") ;
+
+  // Process & check varargs 
+  pc.process(arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8) ;
+  if (!pc.ok(kTRUE)) {
+    return 0 ;
+  }
+
+  // Extract values from named arguments
+  const RooArgSet* snset = static_cast<const RooArgSet*>(pc.getObject("supNormSet",0)) ;
+  RooArgSet nset ;
+  if (snset) {
+    nset.add(*snset) ;
+  }
+  Int_t numScanBins = pc.getInt("numScanBins") ;
+  Int_t intOrder = pc.getInt("intOrder") ;
+  Int_t doScanNum = pc.getInt("doScanNum") ;
+  Int_t doScanAll = pc.getInt("doScanAll") ;
+  Int_t doScanNon = pc.getInt("doScanNon") ;
+
+  // If scanning technique is not requested make integral-based cdf and return
+  if (doScanNon) {
+    return createIntRI(iset,nset) ;
+  }
+  if (doScanAll) {
+    return createScanCdf(iset,nset,numScanBins,intOrder) ;
+  }
+  if (doScanNum) {
+    RooRealIntegral* tmp = (RooRealIntegral*) createIntegral(iset) ;
+    Int_t isNum= (tmp->numIntRealVars().getSize()>0) ;
+    delete tmp ;
+
+    if (isNum) {
+      coutI(NumIntegration) << "RooAbsPdf::createCdf(" << GetName() << ") integration over observable(s) " << iset << " involves numeric integration," << endl 
+			    << "      constructing cdf though numeric integration of sampled pdf in " << numScanBins << " bins and applying order " 
+			    << intOrder << " interpolation on integrated histogram." << endl 
+			    << "      To override this choice of technique use argument ScanNone(), to change scan parameters use ScanParameters(nbins,order) argument" << endl ;
+    }
+    
+    return isNum ? createScanCdf(iset,nset,numScanBins,intOrder) : createIntRI(iset,nset) ;
+  }
+  return 0 ;
+}
+
+RooAbsReal* RooAbsPdf::createScanCdf(const RooArgSet& iset, const RooArgSet& nset, Int_t numScanBins, Int_t intOrder) 
+{
+  string name = string(GetName()) + "_NUMCDF_" + integralNameSuffix(iset,&nset).Data() ;  
+  RooRealVar* ivar = (RooRealVar*) iset.first() ;
+  ivar->setBins(numScanBins,"numcdf") ;
+  RooNumCdf* ret = new RooNumCdf(name.c_str(),name.c_str(),*this,*ivar,"numcdf") ;
+  ret->setInterpolationOrder(intOrder) ;
+  return ret ;
+}
+
+
+
+
+//_____________________________________________________________________________
 RooArgSet* RooAbsPdf::getAllConstraints(const RooArgSet& observables, const RooArgSet& constrainedParams) const 
 {
+  // This helper function finds and collects all constraints terms of all coponent p.d.f.s
+  // and returns a RooArgSet with all those terms
+
   RooArgSet* ret = new RooArgSet("AllConstraints") ;
 
   RooArgSet* comps = getComponents() ;
@@ -2089,29 +2028,47 @@ RooArgSet* RooAbsPdf::getAllConstraints(const RooArgSet& observables, const RooA
   return ret ;
 }
 
+
+
+//_____________________________________________________________________________
 void RooAbsPdf::clearEvalError() 
 { 
+  // Clear the evaluation error flag
   _evalError = kFALSE ; 
 }
 
+
+
+//_____________________________________________________________________________
 Bool_t RooAbsPdf::evalError() 
 { 
+  // Return the evaluation error flag
   return _evalError ; 
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooAbsPdf::isSelectedComp() const 
 { 
+  // If true, the current pdf is a selected component (for use in plotting)
   return _selectComp || _globalSelectComp ; 
 }
 
 
+
+//_____________________________________________________________________________
 void RooAbsPdf::globalSelectComp(Bool_t flag) 
 { 
+  // Global switch controlling the activation of the selectComp() functionality
   _globalSelectComp = flag ; 
 }
 
+
+
+//_____________________________________________________________________________
 void RooAbsPdf::raiseEvalError() 
 { 
+  // Raise the evaluation error flag
   _evalError = kTRUE ; 
 }

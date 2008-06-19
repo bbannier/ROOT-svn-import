@@ -46,11 +46,11 @@ public:
    void           PaintGraphAsymmErrors(TGraph *theGraph, Option_t *option);
    void           PaintGraphBentErrors(TGraph *theGraph, Option_t *option);
    void           PaintGraphErrors(TGraph *theGraph, Option_t *option);
+   void           PaintGraphPolar(TGraph *theGraph, Option_t *option);
    void           PaintGraphSimple(TGraph *theGraph, Option_t *option);
    void           PaintPolyLineHatches(TGraph *theGraph, Int_t n, const Double_t *x, const Double_t *y);
    void           PaintStats(TGraph *theGraph, TF1 *fit);
    void           Smooth(TGraph *theGraph, Int_t npoints, Double_t *x, Double_t *y, Int_t drawtype);
-   void           Zero(Int_t &k,Double_t AZ,Double_t BZ,Double_t E2,Double_t &X,Double_t &Y,Int_t maxiterations);
 
    ClassDef(TGraphPainter,0)  // TGraph painter
 };

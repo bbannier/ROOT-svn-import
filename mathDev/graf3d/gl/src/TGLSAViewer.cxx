@@ -125,12 +125,14 @@ MANIPULATORS\n\n\
    cannot be selected/dragged.\n";
 
 
-//////////////////////////////////////////////////////////////////////////
-//                                                                      //
-// TGLSAViewer                                                          //
-//                                                                      //
-// The top level standalone viewer object - created via plugin manager. //
-//////////////////////////////////////////////////////////////////////////
+//==============================================================================
+// TGLSAViewer
+//==============================================================================
+
+//______________________________________________________________________________
+//
+// The top level standalone GL-viewer - created via plugin manager.
+
 
 ClassImp(TGLSAViewer);
 
@@ -244,6 +246,7 @@ TGLSAViewer::~TGLSAViewer()
    delete fFileSaveMenu;
    delete fFileMenu;
    delete fFrame;
+   fGLWidget = 0;
 }
 
 //______________________________________________________________________________
@@ -341,7 +344,7 @@ void TGLSAViewer::CreateFrames()
    TGVerticalFrame *rightVerticalFrame = new TGVerticalFrame(compositeFrame, 10, 10, kSunkenFrame);
    compositeFrame->AddFrame(rightVerticalFrame, new TGLayoutHints(kLHintsRight | kLHintsExpandX | kLHintsExpandY,0,2,2,2));
 
-   fGLWidget = new TGLWidget(*rightVerticalFrame, kTRUE, 10, 10, 0);
+   fGLWidget = TGLWidget::Create(rightVerticalFrame, kTRUE, kTRUE, 0, 10, 10);
 
    SetEventHandler(new TGLEventHandler("Default", fGLWidget, this));
 

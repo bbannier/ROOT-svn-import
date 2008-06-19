@@ -125,6 +125,8 @@ public:
    virtual Long_t GetExecByteCode() const {return 0;}
    virtual Long_t Getgvp() const {return 0;}
    virtual const char *Getp2f2funcname(void * /* receiver */) const {return 0;}
+   virtual const char *GetTopLevelMacroName() const {return 0;};
+   virtual const char *GetCurrentMacroName()  const {return 0;};
    virtual int    GetSecurityError() const{return 0;}
    virtual int    LoadFile(const char * /* path */) const {return 0;}
    virtual void   LoadText(const char * /* text */) const {;}
@@ -262,7 +264,9 @@ public:
    virtual void   TypeInfo_Delete(TypeInfo_t * /* tinfo */) const {;}
    virtual void  *TypeInfo_Factory() const {return 0;}
    virtual void   TypeInfo_Init(TypeInfo_t * /* tinfo */, const char * /* funcname */) const {;}
+   virtual bool   TypeInfo_IsValid(TypeInfo_t * /* tinfo */) const {return 0;}
    virtual Long_t TypeInfo_Property(TypeInfo_t * /* tinfo */) const {return 0;}
+   virtual int    TypeInfo_Size(TypeInfo_t * /* tinfo */) const {return 0;}
    virtual const char *TypeInfo_TrueName(TypeInfo_t * /* tinfo */) const {return 0;}
    
                   
