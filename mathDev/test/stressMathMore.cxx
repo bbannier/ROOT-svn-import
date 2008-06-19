@@ -245,7 +245,7 @@ int StatFunction::TestIntegral() {
    double dx = (xmax-xmin)/NFuncTest; 
 
    // create Integrator 
-   Integrator ig(IntegrationOneDim::ADAPTIVESINGULAR, 1.E-12,1.E-12,100000);
+   Integrator ig(IntegrationOneDim::kADAPTIVESINGULAR, 1.E-12,1.E-12,100000);
    ig.SetFunction(*this);
 
    for (int i = 0; i < NFuncTest; ++i) { 
