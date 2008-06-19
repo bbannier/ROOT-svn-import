@@ -277,6 +277,7 @@ private:
    static String           DefError;
    static String           GMAPFile;
    static int              GMAPOpt;
+   static XrdSysPlugin    *GMAPPlugin;
    static XrdSecgsiGMAP_t  GMAPFun;
    static int              PxyReqOpts;
    //

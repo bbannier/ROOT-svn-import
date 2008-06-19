@@ -116,6 +116,7 @@ String XrdSecProtocolgsi::DefCipher= "aes-128-cbc:bf-cbc:des-ede3-cbc";
 String XrdSecProtocolgsi::DefMD    = "sha1:md5";
 String XrdSecProtocolgsi::DefError = "invalid credentials ";
 int    XrdSecProtocolgsi::PxyReqOpts = 0;
+XrdSysPlugin   *XrdSecProtocolgsi::GMAPPlugin = 0;
 XrdSecgsiGMAP_t XrdSecProtocolgsi::GMAPFun = 0;
 //
 // Crypto related info
@@ -4088,11 +4089,14 @@ XrdSecgsiGMAP_t XrdSecProtocolgsi::LoadGMAPFun(const char *plugin,
    }
 
    // Create the plug-in instance
-   XrdSysPlugin pin(&XrdSecProtocolgsi::eDest, plugin);
+   if (!(GMAPPlugin = new XrdSysPlugin(&XrdSecProtocolgsi::eDest, plugin))) {
+      PRINT("could not create plugin instance for "<<plugin);
+      return (XrdSecgsiGMAP_t)0;
+   }
 
    // Get the function
    XrdSecgsiGMAP_t ep = 0;
-   if (!(ep = (XrdSecgsiGMAP_t) pin.getPlugin("XrdSecgsiGMAPFun"))) {
+   if (!(ep = (XrdSecgsiGMAP_t) GMAPPlugin->getPlugin("XrdSecgsiGMAPFun"))) {
       PRINT("could not find 'XrdSecgsiGMAPFun()' in "<<plugin);
       return (XrdSecgsiGMAP_t)0;
    }
