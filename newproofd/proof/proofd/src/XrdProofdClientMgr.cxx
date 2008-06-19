@@ -953,18 +953,42 @@ int XrdProofdClientMgr::Auth(XrdProofdProtocol *p)
 
    // Now try to authenticate the client using the current protocol
    if (!(rc = p->AuthProt()->Authenticate(&cred, &parm, &eMsg))) {
-      const char *msg = (p->Status() & XPD_ADMINUSER) ? " admin login as " : " login as ";
-      rc = response->Send();
-      char status = p->Status();
-      status &= ~XPD_NEED_AUTH;
-      p->SetStatus(status);
-      p->SetAuthEntity(&(p->AuthProt()->Entity));
-      if (p->AuthProt()->Entity.name) {
-         TRACEP(p, LOGIN, p->Link()->ID << msg << p->AuthProt()->Entity.name);
+
+      // Make sure that the user name that we want is allowed
+      if (p->AuthProt()->Entity.name && strlen(p->AuthProt()->Entity.name) > 0) {
+         rc  = -1;
+         if (p->Client() && p->Client()->User() && strlen(p->Client()->User()) > 0) {
+            XrdOucString usrs(p->AuthProt()->Entity.name);
+            XrdOucString usr;
+            int from = 0;
+            while ((from = usrs.tokenize(usr, from, ',')) != STR_NPOS) {
+               if ((usr == p->Client()->User())) {
+                  rc = 0;
+                  break;
+               }
+            }
+         } else {
+            TRACEP(p, XERR, "user name is empty: protocol error?");
+         }
       } else {
-         TRACEP(p, LOGIN, p->Link()->ID << msg << " nobody");
+         TRACEP(p, XERR, "name of the authenticated entity is empty: protocol error?");
+         rc = -1;
       }
-      return rc;
+
+      if (rc == 0) {
+         const char *msg = (p->Status() & XPD_ADMINUSER) ? " admin login as " : " login as ";
+         rc = response->Send();
+         char status = p->Status();
+         status &= ~XPD_NEED_AUTH;
+         p->SetStatus(status);
+         p->SetAuthEntity(&(p->AuthProt()->Entity));
+         if (p->AuthProt()->Entity.name) {
+            TRACEP(p, LOGIN, p->Link()->ID << msg << p->AuthProt()->Entity.name);
+         } else {
+            TRACEP(p, LOGIN, p->Link()->ID << msg << " nobody");
+         }
+         return rc;
+      }
    }
 
    // If we need to continue authentication, tell the client as much
