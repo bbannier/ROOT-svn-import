@@ -39,7 +39,10 @@ public:
       Float_t    fLon;
       Float_t    fDepth;
       Float_t    fStr;
+      Float_t    fDist;
       Float_t    fX, fY;
+
+      QData_t() : fDist(0), fX(0), fY(0) {}
 
       void Print() const;
    };
@@ -52,10 +55,11 @@ protected:
 
    TTimeStamp fMinTime;
    TTimeStamp fMaxTime;
-   Float_t    fMinLat,   fMaxLat,   fScaleLat;
-   Float_t    fMinLon,   fMaxLon,   fScaleLon;
-   Float_t    fMinDepth, fMaxDepth, fScaleDepth;
-   Float_t    fMinStr,   fMaxStr,   fScaleStr;
+   Float_t    fMinLat,   fMaxLat;
+   Float_t    fMinLon,   fMaxLon;
+   Float_t    fMinDepth, fMaxDepth;
+   Float_t    fMinStr,   fMaxStr;
+   Float_t    fMinDist,  fMaxDist;  
 
    UChar_t    fTransparency;
 
@@ -75,6 +79,10 @@ protected:
    Int_t            fHour;
    Int_t            fDaysShown;
    Int_t            fYearsShown;
+
+   Float_t          fCenterLat, fCenterLon;
+   Float_t          fFactorLat, fFactorLon;
+   Float_t          fFactorDepth;
 
 public:
    TQuakeViz();
