@@ -1954,7 +1954,7 @@ int XrdSecProtocolgsi::AddSerialized(char opt, kXR_int32 step, String ID,
    if (brt && sessionKsig) {
       //
       // Encrypt random tag with session cipher
-      if (sessionKsig->EncryptPrivate(*brt) == 0) {
+      if (sessionKsig->EncryptPrivate(*brt) <= 0) {
          DEBUG("error encrypting random tag");
          return -1;
       }
@@ -3068,7 +3068,7 @@ bool XrdSecProtocolgsi::CheckRtag(XrdSutBuffer *bm, String &emsg)
             return 0;
          }
          // Decrypt it with the counter part public key
-         if (sessionKver->DecryptPublic(*brt) != 0) {
+         if (sessionKver->DecryptPublic(*brt) <= 0) {
             emsg = "error decrypting random tag with public key";
             return 0;
          }
