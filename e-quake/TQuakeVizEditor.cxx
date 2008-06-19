@@ -195,7 +195,7 @@ void TQuakeVizEditor::SetModel(TObject* obj)
    fYearsShown->SetValue(fM->GetYearsShown());
 
    fLabStart->SetText(Form("Start: %s", fM->GetLimitTimeMin() .AsString("s")));
-   fLabNow  ->SetText(Form("Now:  %s",  fM->GetLimitTimeMean().AsString("s")));
+   fLabNow  ->SetText(Form("Mean:  %s",  fM->GetLimitTimeMean().AsString("s")));
    fLabEnd  ->SetText(Form("End:  %s",  fM->GetLimitTimeMax() .AsString("s")));
 }
 
