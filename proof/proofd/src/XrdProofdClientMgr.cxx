@@ -953,7 +953,7 @@ int XrdProofdClientMgr::Auth(XrdProofdProtocol *p)
 
    // Now try to authenticate the client using the current protocol
    if (!(rc = p->AuthProt()->Authenticate(&cred, &parm, &eMsg))) {
-      const char *msg = (p->Status() & XPD_ADMINUSER ? "admin login as" : "login as");
+      const char *msg = (p->Status() & XPD_ADMINUSER) ? " admin login as " : " login as ";
       rc = response->Send();
       char status = p->Status();
       status &= ~XPD_NEED_AUTH;
@@ -1044,7 +1044,7 @@ XrdSecService *XrdProofdClientMgr::LoadSecurity()
    // Get the server object
    XrdSecService *cia = 0;
    if (!(cia = (*ep)((fEDest ? fEDest->logger() : (XrdSysLogger *)0), rcfn))) {
-      TRACE(XERR, "Unable to create security service object via" << seclib);
+      TRACE(XERR, "Unable to create security service object via " << seclib);
       return 0;
    }
    // Notify
