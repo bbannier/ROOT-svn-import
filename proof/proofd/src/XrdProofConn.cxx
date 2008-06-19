@@ -459,8 +459,7 @@ XrdClientMessage *XrdProofConn::SendRecv(XPClientRequest *req, const void *reqDa
       // NB: Xmsg contains ALSO the information about the result of
       // the communication at low level.
       kXR_int16 xst = kXR_error;
-      if (!(xmsg = ReadMsg()) ||
-          xmsg->IsError()) {
+      if (!(xmsg = ReadMsg()) || xmsg->IsError()) {
          TRACE(XERR, "reading msg from connmgr (server "<<URLTAG<<")");
       } else {
          // Dump header, if required
@@ -1282,6 +1281,8 @@ XrdSecProtocol *XrdProofConn::Authenticate(char *plist, int plsiz)
             // Print error msg, if any
             if (GetLastErr())
                TRACE(XERR, fHost << ": "<< GetLastErr());
+            protocol->Delete();
+            protocol = 0;
          }
          // Cleanup message
          SafeDelete(xrsp);
