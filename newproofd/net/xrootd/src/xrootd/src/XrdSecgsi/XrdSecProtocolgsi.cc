@@ -695,7 +695,8 @@ char *XrdSecProtocolgsi::Init(gsiOptions opt, XrdOucErrInfo *erp)
       //
       // Load function be used to map DN to usernames, if specified
       if (opt.gmapfun && GMAPOpt > 0) {
-         if (!(GMAPFun = LoadGMAPFun((const char *) opt.gmapfun))) {
+         if (!(GMAPFun = LoadGMAPFun((const char *) opt.gmapfun,
+                                     (const char *) opt.gmapfunparms))) {
             PRINT("Could not load plug-in: "<<opt.gmapfun<<": ignore");
          } else {
             // Init or reset the cache
@@ -1512,8 +1513,8 @@ int XrdSecProtocolgsi::Authenticate(XrdSecCredentials *cred,
 
       if (GMAPOpt > 0) {
          // Get name from gridmap
-         char *name = QueryGMAP(hs->Chain->EECname(), hs->TimeStamp);
-         if (!name) {
+         String name = QueryGMAP(hs->Chain->EECname(), hs->TimeStamp);
+         if (name.length() <= 0) {
             // Grid map lookup failure
             if (GMAPOpt == 2) {
                // It was required, so we fail
@@ -1525,14 +1526,14 @@ int XrdSecProtocolgsi::Authenticate(XrdSecCredentials *cred,
             }
          } else {
             DEBUG("grid map lookup successful: name is '"<<name<<"'");
-            Entity.name = strdup(name);
+            Entity.name = strdup(name.c_str());
          }
       }
       // If not set, use DN
       if (!Entity.name || (strlen(Entity.name) <= 0)) {
-         // No grid map: set the client DN as name
-         if (hs->Chain->EECname()) {
-            Entity.name = strdup(hs->Chain->EECname());
+         // No grid map: set the hash of the client DN as name
+         if (hs->Chain->EEChash()) {
+            Entity.name = strdup(hs->Chain->EEChash());
          } else {
             DEBUG("WARNING: DN missing: corruption? ");
          }
@@ -1791,6 +1792,7 @@ char *XrdSecProtocolgsiInit(const char mode,
       //              [-crl:<crl_check_level>]
       //              [-gridmap:<grid_map_file>]
       //              [-gmapfun:<grid_map_function>]
+      //              [-gmapfunparms:<grid_map_function_init_parameters>]
       //              [-gmapopt:<grid_map_check_option>]
       //              [-dlgpxy:<proxy_req_option>]
       //
@@ -1805,6 +1807,7 @@ char *XrdSecProtocolgsiInit(const char mode,
       String md = "";
       String gridmap = "";
       String gmapfun = "";
+      String gmapfunparms = "";
       int ca = 1;
       int crl = 1;
       int ogmap = 1;
@@ -1840,6 +1843,8 @@ char *XrdSecProtocolgsiInit(const char mode,
                gridmap = (const char *)(op+9);
             } else if (!strncmp(op, "-gmapfun:",9)) {
                gmapfun = (const char *)(op+9);
+            } else if (!strncmp(op, "-gmapfunparms:",14)) {
+               gmapfunparms = (const char *)(op+14);
             } else if (!strncmp(op, "-dlgpxy:",8)) {
                dlgpxy = atoi(op+8);
             }
@@ -1874,6 +1879,8 @@ char *XrdSecProtocolgsiInit(const char mode,
          opts.gridmap = (char *)gridmap.c_str();
       if (gmapfun.length() > 0)
          opts.gmapfun = (char *)gmapfun.c_str();
+      if (gmapfunparms.length() > 0)
+         opts.gmapfunparms = (char *)gmapfunparms.c_str();
       //
       // Setup the plug-in with the chosen options
       return XrdSecProtocolgsi::Init(opts,erp);
@@ -4011,20 +4018,23 @@ int XrdSecProtocolgsi::LoadGMAP(int now)
 }
 
 //__________________________________________________________________________
-char *XrdSecProtocolgsi::QueryGMAP(const char *dn, int now)
+XrdOucString XrdSecProtocolgsi::QueryGMAP(const char *dn, int now)
 {
    // Lookup for 'dn' in the grid mapfile and return the associated username
    // or 0. The cache is refreshed if the grid map file has been modified
    // since last check
    EPNAME("QueryGMAP");
 
+   // List of user names attached to the entity
+   XrdOucString usrs;
+
    XrdSutPFEntry *cent = 0;
    // We set the client name from the map function first, if any
    if (GMAPFun) {
       // We may have it in the cache
       if (!(cent = cacheGMAPFun.Get(dn))) {
-         char *name = 0;
-         if ((*GMAPFun)(dn, now, &name) == 0) {
+         char *name = (*GMAPFun)(dn, now);
+         if (name) {
             cent = cacheGMAPFun.Add(dn);
             if (cent) {
                cent->status = kPFE_ok;
@@ -4041,23 +4051,32 @@ char *XrdSecProtocolgsi::QueryGMAP(const char *dn, int now)
       }
    }
 
-   // Try also the map file, if any
-   if (!cent) {
-      if (LoadGMAP(now) != 0) {
-         DEBUG("error loading/ refreshing grid map file");
-         return (char *)0;
-      }
+   // Save the result, if any
+   if (cent)
+      usrs = (const char *)(cent->buf1.buf);
 
-      // Lookup for 'dn' in the cache
-      cent = cacheGMAP.Get(dn);
+   // Try also the map file, if any
+   if (LoadGMAP(now) != 0) {
+      DEBUG("error loading/ refreshing grid map file");
+      return (char *)0;
+   }
+
+   // Lookup for 'dn' in the cache
+   cent = cacheGMAP.Get(dn);
+
+   // Add / Save the result, if any
+   if (cent) {
+      if (usrs.length() > 0) usrs += ",";
+      usrs += (const char *)(cent->buf1.buf);
    }
 
    // Done
-   return ((cent) ? (char *)(cent->buf1.buf) : (char *)0);
+   return usrs;
 }
 
 //_____________________________________________________________________________
-XrdSecgsiGMAP_t XrdSecProtocolgsi::LoadGMAPFun(const char *plugin)
+XrdSecgsiGMAP_t XrdSecProtocolgsi::LoadGMAPFun(const char *plugin,
+                                               const char *parms)
 {
    // Load the DN-Username mapping function from the specified plug-in
    EPNAME("LoadGMAPFun");
@@ -4075,6 +4094,12 @@ XrdSecgsiGMAP_t XrdSecProtocolgsi::LoadGMAPFun(const char *plugin)
    XrdSecgsiGMAP_t ep = 0;
    if (!(ep = (XrdSecgsiGMAP_t) pin.getPlugin("XrdSecgsiGMAPFun"))) {
       PRINT("could not find 'XrdSecgsiGMAPFun()' in "<<plugin);
+      return (XrdSecgsiGMAP_t)0;
+   }
+
+   // Init it
+   if ((*ep)(parms, 0) == (char *)-1) {
+      PRINT("could not initialize 'XrdSecgsiGMAPFun()'");
       return (XrdSecgsiGMAP_t)0;
    }
 
