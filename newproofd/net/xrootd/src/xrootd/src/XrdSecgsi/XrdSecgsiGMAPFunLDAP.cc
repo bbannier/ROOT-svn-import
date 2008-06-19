@@ -106,8 +106,8 @@ int XrdSecgsiGMAPInit(const char *cfg)
       }
       fclose(fcf);
    } else {
-      fprintf(stderr, " +++ XrdSecgsiGMAPInit (LDAP): error: config file path"
-                      " could not be open (errno: %d) +++\n", errno);
+      fprintf(stderr, " +++ XrdSecgsiGMAPInit (LDAP): error: config file '%s'"
+                      " could not be open (errno: %d) +++\n", cfg, errno);
       return -1;
    }
    // Done
