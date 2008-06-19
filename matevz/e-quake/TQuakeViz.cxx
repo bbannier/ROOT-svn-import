@@ -194,27 +194,27 @@ TEveRGBAPalette* TQuakeViz::AssertPalette()
 
 Long64_t TQuakeViz::GetLimitTimeDelta()
 {
-  return 24*3600*(fDaysShown + 365*fYearsShown);
+  return 24ll*3600*(fDaysShown + 365*fYearsShown);
 }
 
-TTimeStamp TQuakeViz::GetLimitTimeMean()
+TTimeStamp64 TQuakeViz::GetLimitTimeMean()
 {
-  TTimeStamp t;
-  t.SetSec(GetLimitTimeMin().GetSec() + GetLimitTimeDelta()/2);
+  TTimeStamp64 t;
+  t.SetSec(GetLimitTimeMin().GetSec()/2 + GetLimitTimeMax().GetSec()/2);
   return t;
 }
 
-TTimeStamp TQuakeViz::GetLimitTimeMin()
+TTimeStamp64 TQuakeViz::GetLimitTimeMin()
 {
-  return TTimeStamp(fYear, fMonth, fDay, fHour, 0, 0);
+  return TTimeStamp64(fYear, fMonth, fDay, fHour, 0, 0);
 }
 
-TTimeStamp TQuakeViz::GetLimitTimeMax()
+TTimeStamp64 TQuakeViz::GetLimitTimeMax()
 {
-  TTimeStamp t;
+  TTimeStamp64 t;
   t.SetSec(GetLimitTimeMin().GetSec() + GetLimitTimeDelta());
-  if (t < fMinTime)
-    t.SetSec(9223229239929568800ll);
+  if (t < fMinTime || t > fMaxTime)
+    t = fMaxTime;
   return t;
 }
 

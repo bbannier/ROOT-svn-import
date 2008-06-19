@@ -26,15 +26,21 @@ private:
    TQuakeVizGL& operator=(const TQuakeVizGL&); // Not implemented
 
 protected:
-   TQuakeViz             *fM;  // Model object.
+   TQuakeViz             *fM;        // Model object.
+   mutable UInt_t         fSphereDL; // Display-list for sphere.
 
 public:
    TQuakeVizGL();
    virtual ~TQuakeVizGL() {}
 
+   virtual Bool_t ShouldDLCache(const TGLRnrCtx & rnrCtx) const;
+   virtual void   DLCacheDrop();
+   virtual void   DLCachePurge();
+
    virtual Bool_t SetModel(TObject* obj, const Option_t* opt=0);
    virtual void   SetBBox();
 
+   void         MakeSphereDL(TGLRnrCtx& rnrCtx) const;
    virtual void DirectDraw(TGLRnrCtx & rnrCtx) const;
 
    // To support two-level selection

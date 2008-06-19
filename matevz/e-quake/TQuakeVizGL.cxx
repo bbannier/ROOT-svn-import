@@ -17,7 +17,9 @@
 #include "TMath.h"
 
 #include "TGLRnrCtx.h"
+#include "TGLContext.h"
 #include "TGLSelectRecord.h"
+#include "TGLScene.h"
 #include "TGLIncludes.h"
 
 //______________________________________________________________________________
@@ -28,11 +30,56 @@ ClassImp(TQuakeVizGL);
 
 //______________________________________________________________________________
 TQuakeVizGL::TQuakeVizGL() :
-   TGLObject(), fM(0)
+   TGLObject(), fM(0), fSphereDL(0)
 {
    // Constructor.
 
-   fDLCache = kFALSE; // Disable display list.
+   // We lie here so that DLCacheDrop/Purge() will get called.
+   // In ShouldDLCache() we always return false.
+   fDLCache    = kTRUE;
+
+   fMultiColor = kTRUE;
+}
+
+/******************************************************************************/
+
+//______________________________________________________________________________
+Bool_t TQuakeVizGL::ShouldDLCache(const TGLRnrCtx& rnrCtx) const
+{
+   // Don't use display-lists ... we use one internally for sphere-rendering.
+   // Virtual from TGLLogicalShape.
+
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+void TQuakeVizGL::DLCacheDrop()
+{
+   // Called when display lists have been destroyed externally and the
+   // internal display-list data needs to be cleare.
+   // Virtual from TGLLogicalShape.
+
+   fSphereDL = 0;
+}
+
+//______________________________________________________________________________
+void TQuakeVizGL::DLCachePurge()
+{
+   // Called when display-lists need to be returned to the system.
+   // Virtual from TGLLogicalShape.
+
+   static const TEveException eH("TQuakeVizGL::DLCachePurge ");
+
+   if (fSphereDL == 0) return;
+   if (fScene)
+   {
+      fScene->GetGLCtxIdentity()->RegisterDLNameRangeToWipe(fSphereDL, 1);
+   }
+   else
+   {
+      Warning(eH, "TEveScene unknown, attempting direct deletion.");
+      glDeleteLists(fSphereDL, 1);
+   }
 }
 
 /******************************************************************************/
@@ -61,6 +108,18 @@ void TQuakeVizGL::SetBBox()
 /******************************************************************************/
 
 //______________________________________________________________________________
+void TQuakeVizGL::MakeSphereDL(TGLRnrCtx& rnrCtx) const
+{
+   // Create display-list for unit-sphere.
+   // Only called when fSphereDL is undefined.
+
+   fSphereDL = glGenLists(1);
+   glNewList(fSphereDL, GL_COMPILE);
+   gluSphere(rnrCtx.GetGluQuadric(), 1, 18, 18);
+   glEndList();
+}
+
+//______________________________________________________________________________
 void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 {
    // Render with OpenGL.
@@ -68,6 +127,9 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    // printf("TQuakeVizGL::DirectDraw LOD %d\n", rnrCtx.CombiLOD());
 
    if (rnrCtx.Highlight()) return;
+
+   if (fSphereDL == 0)
+      MakeSphereDL(rnrCtx);
 
    TEveRGBAPalette* pal = fM->AssertPalette();
 
@@ -78,18 +140,18 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    // Palette initialized to 100 values, need 2*delta.
    Double_t pfac = 100.0 / (maxTime - minTime);
 
-   TGLCapabilitySwitch light_switch(GL_LIGHTING, fM->fLighting);
-   TGLCapabilitySwitch auto_norm(GL_NORMALIZE, kTRUE);
+   TGLCapabilitySwitch lights(GL_LIGHTING,  fM->fLighting);
+   TGLCapabilitySwitch norms (GL_NORMALIZE, kTRUE);
 
    UChar_t c[4], alpha = UChar_t(255 * (1.0 - 0.01*fM->fTransparency));
    UChar_t mc[4];
    TEveUtil::ColorFromIdx(fM->GetMainColor(), mc);
    mc[3] = alpha;
 
-   glPushName(0);
-   Int_t idx = 0;
+   if (rnrCtx.Selection()) glPushName(0);
    if (fM->fLimitRange)
    {
+      Int_t idx = 0;
       for (TQuakeViz::vQData_i i = fM->fData.begin(); i != fM->fData.end(); ++i, ++idx)
       {
          if (fM->AcceptForDraw(*i) &&
@@ -97,26 +159,31 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          {
             Float_t relStr  = (i->fStr  - fM->fMinStr)  / (fM->fMaxStr  - fM->fMinStr);
             Float_t relDist = (i->fDist - fM->fMinDist) / (fM->fMaxDist - fM->fMinDist);
-            Float_t colFac  = 1.0f - 0.6f*relDist;
+            // Float_t colFac  = 1.0f - 0.6f*relDist;
+            Float_t colFac  = 0.2 + 0.8*relDist;
 
             glPushMatrix();
             glTranslatef(i->fX, i->fY, i->fDepth);
 
             Int_t val = TMath::Nint(pfac*(i->fTime.GetSec() - minTime));
             pal->ColorFromValue(val, -1, c);
+            c[0] = TMath::Nint(colFac*c[0]);
+            c[1] = TMath::Nint(colFac*c[1]);
+            c[2] = TMath::Nint(colFac*c[2]);
             c[3] = alpha;
-            c[0] *= colFac; c[1] *= colFac; c[2] *= colFac;
             TGLUtil::Color4ubv(c);
 
-            glLoadName(idx);
-            // Draw sphere: void gluSphere(GLUquadric* quad, double radius, int slices, int stacks)
-            gluSphere(rnrCtx.GetGluQuadric(), 0.5f + 4.5f*relStr, 8, 8);
+            Float_t radius = 0.5f + 4.5f*relStr;
+            glScalef(radius, radius, radius);
+            if (rnrCtx.Selection()) glLoadName(idx);
+            glCallList(fSphereDL);
             glPopMatrix();
          }
       }
    }
    else
    {
+      Int_t idx = 0;
       for (TQuakeViz::vQData_i i = fM->fData.begin(); i != fM->fData.end(); ++i, ++idx)
       {
          if (fM->AcceptForDraw(*i))
@@ -126,19 +193,25 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 
             Float_t relStr  = (i->fStr  - fM->fMinStr)  / (fM->fMaxStr  - fM->fMinStr);
             Float_t relDist = (i->fDist - fM->fMinDist) / (fM->fMaxDist - fM->fMinDist);
-            Float_t colFac  = 1.0f - 0.6*relDist;
+            // Float_t colFac  = 1.0f - 0.6*relDist;
+            Float_t colFac  = 0.2 + 0.8*relDist;
 
-            c[0] = mc[0]*colFac; c[1] = mc[0]*colFac; c[2] = mc[0]*colFac;
+            c[0] = TMath::Nint(mc[0]*colFac);
+            c[1] = TMath::Nint(mc[1]*colFac);
+            c[2] = TMath::Nint(mc[2]*colFac);
+            c[3] = alpha;
+            // c[3] = TMath::Nint(alpha*(1.0f - colFac)); // ? without factor?
             TGLUtil::Color4ubv(c);
 
-            glLoadName(idx);
-            // Draw sphere: void gluSphere(GLUquadric* quad, double radius, int slices, int stacks)
-            gluSphere(rnrCtx.GetGluQuadric(), 0.5f + 4.5f*relStr, 8, 8);
+            Float_t radius = 0.5f + 4.5f*relStr;
+            glScalef(radius, radius, radius);
+            if (rnrCtx.Selection()) glLoadName(idx);
+            glCallList(fSphereDL);
             glPopMatrix();
          }
       }
    }
-   glPopName();
+   if (rnrCtx.Selection()) glPopName();
 }
 
 //______________________________________________________________________________

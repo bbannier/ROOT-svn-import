@@ -15,7 +15,7 @@
 #include "TEveElement.h"
 #include "TAttBBox.h"
 
-#include "TTimeStamp.h"
+#include "TTimeStamp64.h"
 
 #include <vector>
 
@@ -34,7 +34,7 @@ private:
 public:
    struct QData_t
    {
-      TTimeStamp fTime;
+      TTimeStamp64 fTime;
       Float_t    fLat;
       Float_t    fLon;
       Float_t    fDepth;
@@ -53,8 +53,8 @@ public:
 protected:
    vQData_t   fData;
 
-   TTimeStamp fMinTime;
-   TTimeStamp fMaxTime;
+   TTimeStamp64 fMinTime;
+   TTimeStamp64 fMaxTime;
    Float_t    fMinLat,   fMaxLat;
    Float_t    fMinLon,   fMaxLon;
    Float_t    fMinDepth, fMaxDepth;
@@ -141,9 +141,9 @@ public:
    void SetYearsShown(Int_t x) { fYearsShown = x; }
 
    Long64_t   GetLimitTimeDelta();
-   TTimeStamp GetLimitTimeMean();
-   TTimeStamp GetLimitTimeMin();
-   TTimeStamp GetLimitTimeMax();
+   TTimeStamp64 GetLimitTimeMean();
+   TTimeStamp64 GetLimitTimeMin();
+   TTimeStamp64 GetLimitTimeMax();
 
    ClassDef(TQuakeViz, 1); // Short description.
 };

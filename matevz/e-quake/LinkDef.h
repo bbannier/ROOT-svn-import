@@ -4,6 +4,8 @@
 #pragma link off all globals;
 #pragma link off all classes;
 
+#pragma link C++ class TTimeStamp64+;
+
 #pragma link C++ class TQuakeViz+;
 #pragma link C++ class TQuakeViz::QData_t+;
 #pragma link C++ class std::vector<TQuakeViz::QData_t>;
