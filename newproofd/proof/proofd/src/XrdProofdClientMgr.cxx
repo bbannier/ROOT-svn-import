@@ -952,6 +952,7 @@ int XrdProofdClientMgr::Auth(XrdProofdProtocol *p)
    }
 
    // Now try to authenticate the client using the current protocol
+   XrdOucString namsg;
    if (!(rc = p->AuthProt()->Authenticate(&cred, &parm, &eMsg))) {
 
       // Make sure that the user name that we want is allowed
@@ -963,9 +964,17 @@ int XrdProofdClientMgr::Auth(XrdProofdProtocol *p)
             int from = 0;
             while ((from = usrs.tokenize(usr, from, ',')) != STR_NPOS) {
                if ((usr == p->Client()->User())) {
+                  free(p->AuthProt()->Entity.name);
+                  p->AuthProt()->Entity.name = strdup(usr.c_str());
                   rc = 0;
                   break;
                }
+            }
+            if (rc != 0) {
+               namsg = "user ";
+               namsg += p->Client()->User();
+               namsg += " not authorized to connect";
+               TRACEP(p, XERR, namsg.c_str());
             }
          } else {
             TRACEP(p, XERR, "user name is empty: protocol error?");
@@ -1013,7 +1022,7 @@ int XrdProofdClientMgr::Auth(XrdProofdProtocol *p)
       p->AuthProt()->Delete();
       p->SetAuthProt(0);
    }
-   eText = eMsg.getErrText(rc);
+   eText = (namsg.length() > 0) ? namsg.c_str() : eMsg.getErrText(rc);
    TRACEP(p, XERR, "user authentication failed; "<<eText);
    response->Send(kXR_NotAuthorized, eText);
    return -EACCES;
