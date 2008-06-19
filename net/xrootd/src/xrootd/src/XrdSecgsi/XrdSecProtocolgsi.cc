@@ -1238,7 +1238,9 @@ XrdSecCredentials *XrdSecProtocolgsi::getCredentials(XrdSecParameters *parm,
    stepstr = ServerStepStr(step);
    // Dump, if requested
    if (QTRACE(Authen)) {
-      bpar->Dump(stepstr);
+      XrdOucString msg("IN: ");
+      msg += stepstr;
+      bpar->Dump(msg.c_str());
    }
    //
    // Parse input buffer
@@ -1246,6 +1248,11 @@ XrdSecCredentials *XrdSecProtocolgsi::getCredentials(XrdSecParameters *parm,
       DEBUG(Emsg<<" CF: "<<sessionCF);
       return ErrC(ei,bpar,bmai,0,kGSErrParseBuffer,Emsg.c_str(),stepstr);
    }
+   // Dump, if requested
+   if (QTRACE(Authen)) {
+      if (bmai)
+         bmai->Dump("IN: main");
+    }
    //
    // Version
    DEBUG("version run by server: "<< hs->RemVers);
@@ -1344,8 +1351,11 @@ XrdSecCredentials *XrdSecProtocolgsi::getCredentials(XrdSecParameters *parm,
    int nser = bpar->Serialized(&bser,'f');
 
    if (QTRACE(Authen)) {
-      bpar->Dump(ClientStepStr(bpar->GetStep()));
-      bmai->Dump("Main OUT");
+      XrdOucString msg("OUT: ");
+      msg += ClientStepStr(bpar->GetStep());
+      bpar->Dump(msg.c_str());
+      msg.replace(ClientStepStr(bpar->GetStep()), "main");
+      bmai->Dump(msg.c_str());
    }
    //
    // Remove to avoid destruction
@@ -1434,7 +1444,9 @@ int XrdSecProtocolgsi::Authenticate(XrdSecCredentials *cred,
    stepstr = ClientStepStr(step);
    // Dump, if requested
    if (QTRACE(Authen)) {
-      bpar->Dump(stepstr);
+      XrdOucString msg("IN: ");
+      msg += stepstr;
+      bpar->Dump(msg.c_str());
    }
    //
    // Parse input buffer
@@ -1450,7 +1462,7 @@ int XrdSecProtocolgsi::Authenticate(XrdSecCredentials *cred,
    // Dump, if requested
    if (QTRACE(Authen)) {
       if (bmai)
-         bmai->Dump("main IN");
+         bmai->Dump("IN: main");
    }
    //
    // Check random challenge
@@ -1575,8 +1587,11 @@ int XrdSecProtocolgsi::Authenticate(XrdSecCredentials *cred,
       //
       // Dump, if requested
       if (QTRACE(Authen)) {
-         bpar->Dump(ServerStepStr(bpar->GetStep()));
-         bmai->Dump("Main OUT");
+         XrdOucString msg("OUT: ");
+         msg += ServerStepStr(bpar->GetStep());
+         bpar->Dump(msg.c_str());
+         msg.replace(ServerStepStr(bpar->GetStep()), "main");
+         bmai->Dump(msg.c_str());
       }
       //
       // Create buffer for client
