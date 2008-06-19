@@ -14,13 +14,17 @@
  * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
 
-// -- CLASS DESCRIPTION [PDF] --
+//////////////////////////////////////////////////////////////////////////////
+//
+// BEGIN_HTML
 // Class RooNLLVar implements a a -log(likelihood) calculation from a dataset
 // and a PDF. The NLL is calculated as 
-//
+// <pre>
 //  Sum[data] -log( pdf(x_data) )
-//
+// </pre>
 // In extended mode, a (Nexpect - Nobserved*log(NExpected) term is added
+// END_HTML
+//
 
 #include "RooFit.h"
 #include "Riostream.h"
@@ -38,6 +42,8 @@ ClassImp(RooNLLVar)
 
 RooArgSet RooNLLVar::_emptySet ;
 
+
+//_____________________________________________________________________________
 RooNLLVar::RooNLLVar(const char *name, const char* title, RooAbsPdf& pdf, RooAbsData& data,
 		     const RooCmdArg& arg1, const RooCmdArg& arg2,const RooCmdArg& arg3,
 		     const RooCmdArg& arg4, const RooCmdArg& arg5,const RooCmdArg& arg6,
@@ -52,7 +58,7 @@ RooNLLVar::RooNLLVar(const char *name, const char* title, RooAbsPdf& pdf, RooAbs
 			 RooCmdConfig::decodeIntOnTheFly("RooNLLVar::RooNLLVar","Verbose",0,1,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9),
 			 RooCmdConfig::decodeIntOnTheFly("RooNLLVar::RooNLLVar","SplitRange",0,0,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9))             
 {
-  // RooNLLVar constructor. Optional arguments taken
+  // Construct likelihood from given p.d.f and (binned or unbinned dataset)
   //
   //  Extended()     -- Include extended term in calculation
   //  NumCPU()       -- Activate parallel processing feature
@@ -75,40 +81,59 @@ RooNLLVar::RooNLLVar(const char *name, const char* title, RooAbsPdf& pdf, RooAbs
 
 
 
+//_____________________________________________________________________________
 RooNLLVar::RooNLLVar(const char *name, const char *title, RooAbsPdf& pdf, RooAbsData& data,
 		     Bool_t extended, const char* rangeName, const char* addCoefRangeName,
 		     Int_t nCPU, Bool_t interleave, Bool_t verbose, Bool_t splitRange) : 
   RooAbsOptTestStatistic(name,title,pdf,data,RooArgSet(),rangeName,addCoefRangeName,nCPU,interleave,verbose,splitRange),
   _extended(extended)
 {
-  
+  // Construct likelihood from given p.d.f and (binned or unbinned dataset)
+  // For internal use.
 }
 
 
+
+//_____________________________________________________________________________
 RooNLLVar::RooNLLVar(const char *name, const char *title, RooAbsPdf& pdf, RooAbsData& data,
 		     const RooArgSet& projDeps, Bool_t extended, const char* rangeName,const char* addCoefRangeName, 
 		     Int_t nCPU,Bool_t interleave,Bool_t verbose, Bool_t splitRange) : 
   RooAbsOptTestStatistic(name,title,pdf,data,projDeps,rangeName,addCoefRangeName,nCPU,interleave,verbose,splitRange),
   _extended(extended)
 {
-  
+  // Construct likelihood from given p.d.f and (binned or unbinned dataset)
+  // For internal use.  
 }
 
 
+
+//_____________________________________________________________________________
 RooNLLVar::RooNLLVar(const RooNLLVar& other, const char* name) : 
   RooAbsOptTestStatistic(other,name),
   _extended(other._extended)
 {
+  // Copy constructor
 }
 
 
+
+
+//_____________________________________________________________________________
 RooNLLVar::~RooNLLVar()
 {
+  // Destructor
 }
 
 
+
+//_____________________________________________________________________________
 Double_t RooNLLVar::evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_t stepSize) const 
 {
+  // Calculate and return likelihood on subset of data from firstEvent to lastEvent
+  // processed with a step size of 'stepSize'. If this an extended likelihood and
+  // and the zero event is processed the extended term is added to the return
+  // likelihood.
+
   Int_t i ;
   Double_t result(0) ;
   
@@ -121,8 +146,6 @@ Double_t RooNLLVar::evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_t s
     _dataClone->get(i);
     if (_dataClone->weight()==0) continue ;
 
-    //cout << "RooNLLVar(" << GetName() << ") wgt[" << i << "] = " << _dataClone->weight() << endl ;
-    
     //cout << "evaluating nll for event #" << i << " of " << lastEvent-firstEvent << endl ;
     Double_t term = _dataClone->weight() * pdfClone->getLogVal(_normSet);
     sumWeight += _dataClone->weight() ;

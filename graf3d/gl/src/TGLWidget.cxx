@@ -28,137 +28,6 @@
 #include "TGLEventHandler.h"
 
 /******************************************************************************/
-//TGLWidgetContainer
-/******************************************************************************/
-
-//______________________________________________________________________________
-//
-// Auxiliary "widget container" class.
-// Does not throw (base classe can throw?).
-// Immutable - after constructed, fOwner is
-// invariant, cannot change.
-// Non-copyable.
-
-ClassImp(TGLWidgetContainer)
-
-//______________________________________________________________________________
-TGLWidgetContainer::TGLWidgetContainer(TGLWidget *owner, Window_t id, const TGWindow *parent)
-                     : TGCompositeFrame(gClient, id, parent),
-                       fOwner(owner), fEventHandler(0)
-{
-   //Constructor.
-}
-
-//______________________________________________________________________________
-Bool_t TGLWidgetContainer::HandleCrossing(Event_t *ev)
-{
-   // Handle mouse crossing event.
-   if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidgetContainer *)0x%lx)->HandleCrossing((Event_t *)0x%lx)", this, ev));
-      return kTRUE;
-   }
-   if ((ev->fType == kEnterNotify) &&
-       (!gVirtualX->InheritsFrom("TGX11")) &&
-       (gVirtualX->GetInputFocus() != GetId())) {
-      gVirtualX->SetInputFocus(GetId());
-   }
-   if (fEventHandler)
-      return fEventHandler->HandleCrossing(ev);
-   return kFALSE;
-}
-
-//______________________________________________________________________________
-Bool_t TGLWidgetContainer::HandleButton(Event_t *ev)
-{
-   //Delegate call to the owner.
-   if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidgetContainer *)0x%lx)->HandleButton((Event_t *)0x%lx)", this, ev));
-      return kTRUE;
-   }
-   if (fEventHandler)
-      return fEventHandler->HandleButton(ev);
-   return kFALSE;
-}
-
-//______________________________________________________________________________
-Bool_t TGLWidgetContainer::HandleDoubleClick(Event_t *ev)
-{
-   //Delegate call to the owner.
-   if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidgetContainer *)0x%lx)->HandleDoubleClick((Event_t *)0x%lx)", this, ev));
-      return kTRUE;
-   }
-   if (fEventHandler)
-      return fEventHandler->HandleDoubleClick(ev);
-   return kFALSE;
-}
-
-//______________________________________________________________________________
-Bool_t TGLWidgetContainer::HandleConfigureNotify(Event_t *ev)
-{
-   //Delegate call to the owner.
-   if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidgetContainer *)0x%lx)->HandleConfigureNotify((Event_t *)0x%lx)", this, ev));
-      return kTRUE;
-   }
-   if (fEventHandler)
-      return fEventHandler->HandleConfigureNotify(ev);
-   return kFALSE;
-}
-
-//______________________________________________________________________________
-Bool_t TGLWidgetContainer::HandleFocusChange(Event_t *ev)
-{
-   //Delegate call to the owner.
-   if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidgetContainer *)0x%lx)->HandleFocusChange((Event_t *)0x%lx)", this, ev));
-      return kTRUE;
-   }
-   if (fEventHandler)
-      return fEventHandler->HandleFocusChange(ev);
-   return kFALSE;
-}
-
-//______________________________________________________________________________
-Bool_t TGLWidgetContainer::HandleKey(Event_t *ev)
-{
-   //Delegate call to the owner.
-   if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidgetContainer *)0x%lx)->HandleKey((Event_t *)0x%lx)", this, ev));
-      return kTRUE;
-   }
-   if (fEventHandler)
-      return fEventHandler->HandleKey(ev);
-   return kFALSE;
-}
-
-//______________________________________________________________________________
-Bool_t TGLWidgetContainer::HandleMotion(Event_t *ev)
-{
-   //Delegate call to the owner.
-   if (!gVirtualX->IsCmdThread()) {
-      gROOT->ProcessLineFast(Form("((TGLWidgetContainer *)0x%lx)->HandleMotion((Event_t *)0x%lx)", this, ev));
-      return kTRUE;
-   }
-   if (fEventHandler)
-      return fEventHandler->HandleMotion(ev);
-   return kFALSE;
-}
-
-//______________________________________________________________________________
-void TGLWidgetContainer::DoRedraw()
-{
-   //Delegate call to the owner.
-//   if (!gVirtualX->IsCmdThread()) {
-//      gROOT->ProcessLineFast(Form("((TGLWidgetContainer *)0x%lx)->DoRedraw()", this));
-//      return;
-//   }
-   if (fEventHandler)
-      return fEventHandler->Repaint();
-}
-
-
-/******************************************************************************/
 // TGLWidget
 /******************************************************************************/
 
@@ -181,7 +50,7 @@ void TGLWidgetContainer::DoRedraw()
 // Resources (and invariants):
 // -fContainer (TGLWidgetContainer) - controlled by std::auto_ptr
 // -fWindowIndex - controlled manually (see CreateWidget and dtor)
-// -fGLContext - controlled by std::auto_ptr
+// -fGLContext - controlled manually (see CreateWidget and dtor)
 // -visual info for X11 version, controlled manually (see CreateGLContainer and dtor)
 //
 // Exceptions:
@@ -197,122 +66,91 @@ void TGLWidgetContainer::DoRedraw()
 //
 // Non-copyable.
 
-ClassImp(TGLWidget)
+ClassImp(TGLWidget);
+
+//==============================================================================
+// TGLWidget - system-independent methods
+//==============================================================================
 
 //______________________________________________________________________________
-TGLWidget::TGLWidget(const TGWindow &p, Bool_t select,
-                     const TGLPaintDevice *shareDevice,
-                     UInt_t w, UInt_t h, UInt_t opt, Pixel_t back)
-              : TGCanvas(&p, w, h, opt, back),
-                fWindowIndex(-1),
-                fFromCtor(kTRUE)
+TGLWidget* TGLWidget::Create(const TGWindow* parent, Bool_t selectInput,
+              Bool_t shareDefault, const TGLPaintDevice *shareDevice,
+              UInt_t width, UInt_t height)
 {
-   //Creates widget with default pixel format.
-   CreateWidget(shareDevice);
+   // Static constructor for creating widget with default pixel format.
 
-   if (select) {
-      gVirtualX->GrabButton(
-                            fContainer->GetId(), kAnyButton, kAnyModifier,
-                            kButtonPressMask | kButtonReleaseMask, kNone, kNone
-                           );
-      gVirtualX->SelectInput(
-                             fContainer->GetId(), kKeyPressMask | kExposureMask | kPointerMotionMask
-                             | kStructureNotifyMask | kFocusChangeMask
-                             | kEnterWindowMask | kLeaveWindowMask
-                            );
-      gVirtualX->SetInputFocus(fContainer->GetId());
-   }
+   TGLFormat format;
 
-   fFromCtor = kFALSE;
+   return Create(format, parent, selectInput, shareDefault, shareDevice,
+                 width, height);
 }
 
 //______________________________________________________________________________
-TGLWidget::TGLWidget(const TGLFormat &format, const TGWindow &p, Bool_t select,
-                     const TGLPaintDevice *shareDevice,
-                     UInt_t w, UInt_t h, UInt_t opt, Pixel_t back)
-              : TGCanvas(&p, w, h, opt, back),
-                fWindowIndex(-1),
-                fGLFormat(format),
-                fFromCtor(kTRUE)
+TGLWidget* TGLWidget::Create(const TGLFormat &format,
+             const TGWindow* parent, Bool_t selectInput,
+             Bool_t shareDefault, const TGLPaintDevice *shareDevice,
+             UInt_t width, UInt_t height)
 {
-   //Create widget with the requested pixel format.
-   CreateWidget(shareDevice);
+   // Static constructor for creating widget with given pixel format.
 
-   if (select) {
-      gVirtualX->GrabButton(
-                            fContainer->GetId(), kAnyButton, kAnyModifier,
-                            kButtonPressMask | kButtonReleaseMask, kNone, kNone
-                           );
-      gVirtualX->SelectInput(
-                             fContainer->GetId(), kKeyPressMask | kExposureMask | kPointerMotionMask
-                             | kStructureNotifyMask | kFocusChangeMask
-                             | kEnterWindowMask | kLeaveWindowMask
-                            );
-      gVirtualX->SetInputFocus(fContainer->GetId());
+   std::pair<void *, void *> innerData;
+
+   Window_t wid = CreateWindow(parent, format, width, height, innerData);
+
+   TGLWidget* glw = new TGLWidget(wid, parent, selectInput);
+
+#ifdef WIN32
+   glw->fWindowIndex = (Int_t) innerData.second;
+#else
+   glw->fWindowIndex = gVirtualX->AddWindow(wid, width, height);
+   glw->fInnerData   = innerData;
+#endif
+   glw->fGLFormat  = format;
+   
+   try
+   {
+      glw->SetFormat();
+      glw->fGLContext = new TGLContext
+         (glw, shareDefault, shareDevice && !shareDefault ? shareDevice->GetContext() : 0);
+   }
+   catch (const std::exception &)
+   {
+      delete glw;
+      throw;
    }
 
-   fFromCtor = kFALSE;
+   glw->fFromInit = kFALSE;
+
+   return glw;
 }
 
 //______________________________________________________________________________
-TGLWidget::TGLWidget(const TGWindow &p, Bool_t select,
-                     UInt_t w, UInt_t h, UInt_t opt, Pixel_t back)
-              : TGCanvas(&p, w, h, opt, back),
-                fWindowIndex(-1),
-                fFromCtor(kTRUE)
+TGLWidget::TGLWidget(Window_t glw, const TGWindow* p, Bool_t selectInput)
+   : TGFrame(gClient, glw, p),
+     fGLContext(0),
+     fWindowIndex(-1),
+     fFromInit(kTRUE),
+     fEventHandler(0)
 {
-   //Creates widget with default pixel format, default shareList.
-   CreateWidget();
+   // Creates widget with default pixel format.
 
-   if (select) {
-      gVirtualX->GrabButton(
-                            fContainer->GetId(), kAnyButton, kAnyModifier,
-                            kButtonPressMask | kButtonReleaseMask, kNone, kNone
-                           );
-      gVirtualX->SelectInput(
-                             fContainer->GetId(), kKeyPressMask | kExposureMask | kPointerMotionMask
+   if (selectInput)
+   {
+      gVirtualX->GrabButton(GetId(), kAnyButton, kAnyModifier,
+                            kButtonPressMask | kButtonReleaseMask, kNone, kNone);
+      gVirtualX->SelectInput(GetId(),
+                             kKeyPressMask | kExposureMask | kPointerMotionMask
                              | kStructureNotifyMask | kFocusChangeMask
-                             | kEnterWindowMask | kLeaveWindowMask
-                            );
-      gVirtualX->SetInputFocus(fContainer->GetId());
+                             | kEnterWindowMask | kLeaveWindowMask);
+      gVirtualX->SetInputFocus(GetId());
    }
-
-   fFromCtor = kFALSE;
-}
-
-//______________________________________________________________________________
-TGLWidget::TGLWidget(const TGLFormat &format, const TGWindow &p, Bool_t select,
-                     UInt_t w, UInt_t h, UInt_t opt, Pixel_t back)
-              : TGCanvas(&p, w, h, opt, back),
-                fWindowIndex(-1),
-                fGLFormat(format),
-                fFromCtor(kTRUE)
-{
-   //Create widget with the requested pixel format, default shareList.
-   CreateWidget();
-
-   if (select) {
-      gVirtualX->GrabButton(
-                            fContainer->GetId(), kAnyButton, kAnyModifier,
-                            kButtonPressMask | kButtonReleaseMask, kNone, kNone
-                           );
-      gVirtualX->SelectInput(
-                             fContainer->GetId(), kKeyPressMask | kExposureMask | kPointerMotionMask
-                             | kStructureNotifyMask | kFocusChangeMask
-                             | kEnterWindowMask | kLeaveWindowMask
-                            );
-      gVirtualX->SetInputFocus(fContainer->GetId());
-   }
-
-   fFromCtor = kFALSE;
 }
 
 //______________________________________________________________________________
 TGLWidget::~TGLWidget()
 {
    //Destructor. Deletes window ???? and XVisualInfo
-   gVirtualX->SelectWindow(fWindowIndex);
-   gVirtualX->CloseWindow();
+
 #ifndef WIN32
    XFree(fInnerData.second);//free XVisualInfo
 #endif
@@ -325,6 +163,10 @@ TGLWidget::~TGLWidget()
    for (; it != fValidContexts.end(); ++it) {
       (*it)->Release();
    }
+   delete fGLContext;
+
+   gVirtualX->SelectWindow(fWindowIndex); 	 
+   gVirtualX->CloseWindow();
 }
 
 //______________________________________________________________________________
@@ -357,14 +199,7 @@ void TGLWidget::SwapBuffers()
 const TGLContext *TGLWidget::GetContext()const
 {
    //Get gl context.
-   return fGLContext.get();
-}
-
-//______________________________________________________________________________
-Int_t TGLWidget::GetWindowIndex()const
-{
-   //Index of window, registered by gVirtualX.
-   return fWindowIndex;
+   return fGLContext;
 }
 
 //______________________________________________________________________________
@@ -375,20 +210,45 @@ const TGLFormat *TGLWidget::GetPixelFormat()const
 }
 
 //______________________________________________________________________________
-Int_t TGLWidget::GetContId()const
-{
-   //Id of container.
-   return fContainer->GetId();
-}
-
-//______________________________________________________________________________
 std::pair<void *, void *> TGLWidget::GetInnerData()const
 {
    //Dpy*, XVisualInfo *
    return fInnerData;
 }
 
+//______________________________________________________________________________
+void TGLWidget::AddContext(TGLContext *ctx)
+{
+   //Register gl-context created for this window.
+   fValidContexts.insert(ctx);
+}
+
+//______________________________________________________________________________
+void TGLWidget::RemoveContext(TGLContext *ctx)
+{
+   //Remove context (no real deletion, done by TGLContex dtor).
+   std::set<TGLContext *>::iterator it = fValidContexts.find(ctx);
+   if (it != fValidContexts.end())
+      fValidContexts.erase(it);
+}
+
+//______________________________________________________________________________
+void TGLWidget::ExtractViewport(Int_t *vp)const
+{
+   //For camera.
+   vp[0] = 0;
+   vp[1] = 0;
+   vp[2] = GetWidth();
+   vp[3] = GetHeight();
+}
+
+//==============================================================================
+// System specific methods and helper functions
+//==============================================================================
+
+//==============================================================================
 #ifdef WIN32
+//==============================================================================
 
 namespace {
 
@@ -443,66 +303,42 @@ namespace {
 }
 
 //______________________________________________________________________________
-void TGLWidget::CreateWidget(const TGLPaintDevice *shareDevice)
+Window_t TGLWidget::CreateWindow(const TGWindow* parent, const TGLFormat& /*format*/,
+                                 UInt_t width, UInt_t  height,
+                                 std::pair<void *, void *>& innerData)
 {
-   //CreateWidget. This function called only during construction,
-   //I've extracted this code from ctors to make WIN32/X11
-   //separation simpler and because of gInterpreter usage.
-   //new, TGLContext can throw
-   //std::bad_alloc and std::runtime_error. Before try block, the only
-   //resource allocated is pointed by fWindowIndex (InitWindow cannot throw).
-   //In try block (and after successful constraction)
-   //resources are controlled by std::auto_ptrs and dtor.
-   fWindowIndex = gVirtualX->InitWindow((ULong_t)GetViewPort()->GetId());
+   // CreateWidget.
+   // Static function called prior to widget construction,
+   // I've extracted this code from ctors to make WIN32/X11
+   // separation simpler and because of gInterpreter usage.
+   // new, TGLContext can throw
+   // std::bad_alloc and std::runtime_error. Before try block, the only
+   // resource allocated is pointed by fWindowIndex (InitWindow cannot throw).
+   // In try block (and after successful constraction)
+   // resources are controlled by std::auto_ptrs and dtor.
 
-   try {
-      if (!gVirtualX->IsCmdThread())
-         gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->SetFormat()", this));
-      else
-         SetFormat();
-      fGLContext.reset(new TGLContext(this, shareDevice ? shareDevice->GetContext() : 0));
-      fContainer.reset(new TGLWidgetContainer(this, gVirtualX->GetWindowID(fWindowIndex), GetViewPort()));
-      SetContainer(fContainer.get());
-   } catch (std::exception &) {
-      gVirtualX->SelectWindow(fWindowIndex);
-      gVirtualX->CloseWindow();
-      throw;
-   }
-}
-
-//______________________________________________________________________________
-void TGLWidget::CreateWidget()
-{
-   //CreateWidget. Copy of the above for default shareList.
-   fWindowIndex = gVirtualX->InitWindow((ULong_t)GetViewPort()->GetId());
-
-   try {
-      if (!gVirtualX->IsCmdThread())
-         gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->SetFormat()", this));
-      else
-         SetFormat();
-      fGLContext.reset(new TGLContext(this));
-      fContainer.reset(new TGLWidgetContainer(this, gVirtualX->GetWindowID(fWindowIndex), GetViewPort()));
-      SetContainer(fContainer.get());
-   } catch (std::exception &) {
-      gVirtualX->SelectWindow(fWindowIndex);
-      gVirtualX->CloseWindow();
-      throw;
-   }
+   Int_t widx = gVirtualX->InitWindow((ULong_t)parent->GetId());
+   innerData.second = (void*) widx;
+   Window_t win = gVirtualX->GetWindowID(widx);
+   gVirtualX->ResizeWindow(win, width, height);
+   return win;
 }
 
 //______________________________________________________________________________
 void TGLWidget::SetFormat()
 {
-   //Set pixel format.
-   //Resource - hDC, owned and freed by guard object.
-   if (!fFromCtor) {
+   // Set pixel format.
+   // Resource - hDC, owned and freed by guard object.
+
+   if (!fFromInit) {
       Error("TGLWidget::SetFormat", "Sorry, you should not call this function");
       return;
    }
+   if (!gVirtualX->IsCmdThread())
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->SetFormat()", this));
 
    LayoutCompatible_t *trick =
-      reinterpret_cast<LayoutCompatible_t *>(gVirtualX->GetWindowID(GetWindowIndex()));
+      reinterpret_cast<LayoutCompatible_t *>(GetId());
    HWND hWND = *trick->fPHwnd;
    HDC  hDC  = GetWindowDC(hWND);
 
@@ -528,7 +364,9 @@ void TGLWidget::SetFormat()
    }
 }
 
-#else
+//==============================================================================
+#else // Non WIN32
+//==============================================================================
 
 namespace {
 
@@ -566,151 +404,178 @@ namespace {
 
       format.push_back(None);
    }
-
-   XSetWindowAttributes dummyAttr;
-
 }
 
 //______________________________________________________________________________
-void TGLWidget::CreateWidget(const TGLPaintDevice *shareDevice)
+Window_t TGLWidget::CreateWindow(const TGWindow* parent, const TGLFormat &format,
+                                 UInt_t width, UInt_t height,
+                                 std::pair<void *, void *>& innerData)
 {
-   //CreateWidget - X11 version.
-   //This function called only during construction,
-   //This function, new, TGLContext ctor can throw
-   //std::bad_alloc and std::runtime_error.
-   //This version is bad - I do not check the results of
-   //X11 calls.
-   std::vector<Int_t> format;
-   fill_format(format, fGLFormat);
+   // CreateWidget - X11 version.
+   // Static function called prior to construction.
+   // Can throw std::bad_alloc and std::runtime_error.
+   // This version is bad - I do not check the results of
+   // X11 calls.
 
-   Window_t winID = GetViewPort()->GetId();
+   std::vector<Int_t> glxfmt;
+   fill_format(glxfmt, format);
+
    Display *dpy = reinterpret_cast<Display *>(gVirtualX->GetDisplay());
-   XVisualInfo *visInfo = glXChooseVisual(dpy, DefaultScreen(dpy), &format[0]);
+   XVisualInfo *visInfo = glXChooseVisual(dpy, DefaultScreen(dpy), &glxfmt[0]);
 
    if (!visInfo) {
-      Error("CreateGLContainer", "No good visual found!");
+      ::Error("TGLWidget::CreateGLContainer", "No good visual found!");
       throw std::runtime_error("No good visual found!");
    }
 
-   Int_t  x = 0, y = 0;
-   UInt_t w = 0, h = 0, b = 0, d = 0;
-   Window root = 0;
-   XGetGeometry(dpy, winID, &root, &x, &y, &w, &h, &b, &d);
+   Window_t winID = parent->GetId();
 
-   XSetWindowAttributes attr(dummyAttr);
-   attr.colormap = XCreateColormap(dpy, root, visInfo->visual, AllocNone); // Can fail?
-   attr.event_mask = NoEventMask;
-   attr.backing_store = Always;
-   attr.bit_gravity = NorthWestGravity;
+   XSetWindowAttributes attr;
+   attr.colormap         = XCreateColormap(dpy, winID, visInfo->visual, AllocNone); // Can fail?
+   attr.background_pixel = 0;
+   attr.event_mask       = NoEventMask;
+   attr.backing_store    = Always;
+   attr.bit_gravity      = NorthWestGravity;
 
-   ULong_t mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask | CWBackingStore | CWBitGravity;
-   Window glWin = XCreateWindow(dpy, winID, x, y, w, h, 0, visInfo->depth,
+   ULong_t mask = CWBackPixel | CWColormap | CWEventMask | CWBackingStore | CWBitGravity;
+   Window glWin = XCreateWindow(dpy, winID, 0, 0, width, height, 0,
+                                visInfo->depth,
                                 InputOutput, visInfo->visual, mask, &attr);
-   XMapWindow(dpy, glWin);
-   // Register window for gVirtualX.
-   fWindowIndex = gVirtualX->AddWindow(glWin, w, h);
-   fInnerData.first  = dpy;
-   fInnerData.second = visInfo;
 
-   try {
-      fGLContext.reset(new TGLContext(this, shareDevice ? shareDevice->GetContext() : 0));
-      fContainer.reset(new TGLWidgetContainer(this, gVirtualX->GetWindowID(fWindowIndex), GetViewPort()));
-      SetContainer(fContainer.get());
-   } catch (const std::exception &) {
-      gVirtualX->SelectWindow(fWindowIndex);
-      gVirtualX->CloseWindow();
-      XFree(fInnerData.second);
-      throw;
-   }
-}
+   innerData.first  = dpy;
+   innerData.second = visInfo;
 
-//______________________________________________________________________________
-void TGLWidget::CreateWidget()
-{
-   //CreateWidget - X11 version. Copy of above for default context.
-   std::vector<Int_t> format;
-   fill_format(format, fGLFormat);
-
-   Window_t winID = GetViewPort()->GetId();
-   Display *dpy = reinterpret_cast<Display *>(gVirtualX->GetDisplay());
-   XVisualInfo *visInfo = glXChooseVisual(dpy, DefaultScreen(dpy), &format[0]);
-
-   if (!visInfo) {
-      Error("CreateGLContainer", "No good visual found!");
-      throw std::runtime_error("No good visual found!");
-   }
-
-   Int_t  x = 0, y = 0;
-   UInt_t w = 0, h = 0, b = 0, d = 0;
-   Window root = 0;
-   XGetGeometry(dpy, winID, &root, &x, &y, &w, &h, &b, &d);
-
-   XSetWindowAttributes attr(dummyAttr);
-   attr.colormap = XCreateColormap(dpy, root, visInfo->visual, AllocNone); // Can fail?
-   attr.event_mask = NoEventMask;
-   attr.backing_store = Always;
-   attr.bit_gravity = NorthWestGravity;
-
-   ULong_t mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask | CWBackingStore | CWBitGravity;
-   Window glWin = XCreateWindow(dpy, winID, x, y, w, h, 0, visInfo->depth,
-                                InputOutput, visInfo->visual, mask, &attr);
-   XMapWindow(dpy, glWin);
-   // Register window for gVirtualX.
-   fWindowIndex = gVirtualX->AddWindow(glWin, w, h);
-   fInnerData.first  = dpy;
-   fInnerData.second = visInfo;
-
-   try {
-      fGLContext.reset(new TGLContext(this));
-      fContainer.reset(new TGLWidgetContainer(this, gVirtualX->GetWindowID(fWindowIndex), GetViewPort()));
-      SetContainer(fContainer.get());
-   } catch (const std::exception &) {
-      gVirtualX->SelectWindow(fWindowIndex);
-      gVirtualX->CloseWindow();
-      XFree(fInnerData.second);
-      throw;
-   }
+   return glWin;
 }
 
 //______________________________________________________________________________
 void TGLWidget::SetFormat()
 {
-   //Set pixel format.
-   //Empty version for X11.
+   // Set pixel format.
+   // Empty version for X11.
 }
 
+//==============================================================================
 #endif
+//==============================================================================
 
-//______________________________________________________________________________
-void TGLWidget::AddContext(TGLContext *ctx)
-{
-   //Register gl-context created for this window.
-   fValidContexts.insert(ctx);
-}
 
-//______________________________________________________________________________
-void TGLWidget::RemoveContext(TGLContext *ctx)
-{
-   //Remove context (no real deletion, done by TGLContex dtor).
-   std::set<TGLContext *>::iterator it = fValidContexts.find(ctx);
-   if (it != fValidContexts.end())
-      fValidContexts.erase(it);
-}
-
-//______________________________________________________________________________
-void TGLWidget::ExtractViewport(Int_t *vp)const
-{
-   //For camera.
-   vp[0] = 0;
-   vp[1] = 0;
-   vp[2] = GetWidth();
-   vp[3] = GetHeight();
-}
+//==============================================================================
+// Event handling
+//==============================================================================
 
 //______________________________________________________________________________
 void TGLWidget::SetEventHandler(TGEventHandler *eh)
 {
    //Set event-handler. All events are passed to this object.
    fEventHandler = eh;
-   fContainer->SetEventHandler(eh);
 }
+
+//______________________________________________________________________________
+Bool_t TGLWidget::HandleCrossing(Event_t *ev)
+{
+   // Handle mouse crossing event.
+   if (!gVirtualX->IsCmdThread()) {
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleCrossing((Event_t *)0x%lx)", this, ev));
+      return kTRUE;
+   }
+   if ((ev->fType == kEnterNotify) &&
+       (!gVirtualX->InheritsFrom("TGX11")) &&
+       (gVirtualX->GetInputFocus() != GetId())) {
+      gVirtualX->SetInputFocus(GetId());
+   }
+   if (fEventHandler)
+      return fEventHandler->HandleCrossing(ev);
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+Bool_t TGLWidget::HandleButton(Event_t *ev)
+{
+   //Delegate call to the owner.
+   if (!gVirtualX->IsCmdThread()) {
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleButton((Event_t *)0x%lx)", this, ev));
+      return kTRUE;
+   }
+   if (fEventHandler)
+      return fEventHandler->HandleButton(ev);
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+Bool_t TGLWidget::HandleDoubleClick(Event_t *ev)
+{
+   //Delegate call to the owner.
+   if (!gVirtualX->IsCmdThread()) {
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleDoubleClick((Event_t *)0x%lx)", this, ev));
+      return kTRUE;
+   }
+   if (fEventHandler)
+      return fEventHandler->HandleDoubleClick(ev);
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+Bool_t TGLWidget::HandleConfigureNotify(Event_t *ev)
+{
+   //Delegate call to the owner.
+   if (!gVirtualX->IsCmdThread()) {
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleConfigureNotify((Event_t *)0x%lx)", this, ev));
+      return kTRUE;
+   }
+   if (fEventHandler)
+      return fEventHandler->HandleConfigureNotify(ev);
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+Bool_t TGLWidget::HandleFocusChange(Event_t *ev)
+{
+   //Delegate call to the owner.
+   if (!gVirtualX->IsCmdThread()) {
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleFocusChange((Event_t *)0x%lx)", this, ev));
+      return kTRUE;
+   }
+   if (fEventHandler)
+      return fEventHandler->HandleFocusChange(ev);
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+Bool_t TGLWidget::HandleKey(Event_t *ev)
+{
+   //Delegate call to the owner.
+   if (!gVirtualX->IsCmdThread()) {
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleKey((Event_t *)0x%lx)", this, ev));
+      return kTRUE;
+   }
+   if (fEventHandler)
+      return fEventHandler->HandleKey(ev);
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+Bool_t TGLWidget::HandleMotion(Event_t *ev)
+{
+   //Delegate call to the owner.
+   if (!gVirtualX->IsCmdThread()) {
+      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->HandleMotion((Event_t *)0x%lx)", this, ev));
+      return kTRUE;
+   }
+   if (fEventHandler)
+      return fEventHandler->HandleMotion(ev);
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+void TGLWidget::DoRedraw()
+{
+   //Delegate call to the owner.
+//   if (!gVirtualX->IsCmdThread()) {
+//      gROOT->ProcessLineFast(Form("((TGLWidget *)0x%lx)->DoRedraw()", this));
+//      return;
+//   }
+   if (fEventHandler)
+      return fEventHandler->Repaint();
+}
+

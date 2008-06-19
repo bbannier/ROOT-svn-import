@@ -31,6 +31,8 @@ TEveCalo3DGL::TEveCalo3DGL() :
    TGLObject(), fM(0)
 {
    // Constructor.
+
+   fMultiColor = kTRUE;
 }
 
 //______________________________________________________________________________
@@ -52,21 +54,6 @@ void TEveCalo3DGL::SetBBox()
 
    // !! This ok if master sub-classed from TAttBBox
    SetAxisAlignedBBox(((TEveCalo3D*)fExternalObj)->AssertBBox());
-}
-
-//______________________________________________________________________________
-Bool_t TEveCalo3DGL::ShouldDLCache(const TGLRnrCtx & rnrCtx) const
-{
-   // Check if display-lists should be used.
-   // Compared to TGLLogicalShape version we also don't use them
-   // for outline-pass as colors are set internally.
-
-   if (!fScene || rnrCtx.SecSelection() ||
-       rnrCtx.DrawPass() == TGLRnrCtx::kPassOutlineLine)
-   {
-      return kFALSE;
-   }
-   return fDLCache;
 }
 
 //______________________________________________________________________________
@@ -225,7 +212,8 @@ Float_t TEveCalo3DGL::RenderBarrelCell(const TEveCaloData::CellData_t &cellData,
 
    RenderBox(box);
 
-   return offset + towerH*sin1;
+   return offset + towerH*Sin(cellData.ThetaMin());
+
 }// end RenderBarrelCell
 
 //______________________________________________________________________________
@@ -301,24 +289,18 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx &rnrCtx) const
 {
    // GL rendering.
 
-   fM->AssertPalette();
-
-   if (fM->fCacheOK == kFALSE)
-   {
-      fM->ResetCache();
-      fM->fData->GetCellList(fM->fPalette->GetMinVal(), fM->fPalette->GetMaxVal(),
-                             fM->GetEta(), fM->GetEtaRng(), fM->GetPhi(), fM->GetPhiRng(), fM->fCellList);
-      fM->fCacheOK= kTRUE;
-   }
+   if (fM->fCellIdCacheOK == kFALSE)
+      fM->BuildCellIdCache();
 
    glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
    glEnable(GL_NORMALIZE);
    glEnable(GL_LIGHTING);
 
+   fM->AssertPalette();
+
    TEveCaloData::CellData_t cellData;
    Float_t transEta = fM->GetTransitionEta();
    Float_t towerH;
-   Bool_t  visible;
    Int_t   prevTower = 0;
    Float_t offset = 0;
 
@@ -332,15 +314,12 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx &rnrCtx) const
          offset = 0;
          prevTower = fM->fCellList[i].fTower;
       }
-      fM->SetupColorHeight(cellData.Value(), fM->fCellList[i].fSlice, towerH, visible);
-      if (visible)
-      {
-         if (rnrCtx.SecSelection()) glLoadName(i);
-         if (TMath::Abs(cellData.EtaMax()) < transEta)
-            offset = RenderBarrelCell(cellData, towerH, offset);
-         else
-            offset = RenderEndCapCell(cellData, towerH, offset);
-      }
+      fM->SetupColorHeight(cellData.Value(fM->fPlotEt), fM->fCellList[i].fSlice, towerH);
+      if (rnrCtx.SecSelection()) glLoadName(i);
+      if (TMath::Abs(cellData.EtaMax()) < transEta)
+         offset = RenderBarrelCell(cellData, towerH, offset);
+      else
+         offset = RenderEndCapCell(cellData, towerH, offset);
    }
    if (rnrCtx.SecSelection()) glPopName();
 

@@ -35,7 +35,6 @@ class RooAbsProxy ;
 class RooArgProxy ;
 class RooSetProxy ;
 class RooListProxy ;
-//class RooSimCloneTool ;
 
 class RooAbsArg : public TNamed, public RooPrintable {
 public:
@@ -47,49 +46,97 @@ public:
   RooAbsArg(const RooAbsArg& other, const char* name=0) ;
   virtual TObject* clone(const char* newname) const = 0 ;
   virtual TObject* Clone(const char* newname=0) const { 
-//     cout << "RooAbsArg::Clone(" << GetName() << "," << this << ") newname=" << (newname?newname:"<none>") << endl ;
     return clone(newname?newname:GetName()) ; 
   }
+  virtual RooAbsArg* cloneTree(const char* newname=0) ;
 
   // Accessors to client-server relation information 
-  virtual Bool_t isDerived() const { return _serverList.GetSize()?kTRUE:kFALSE; }
+  virtual Bool_t isDerived() const { 
+    // Does value or shape of this arg depend on any other arg?
+    return _serverList.GetSize()?kTRUE:kFALSE; 
+  }
   Bool_t isCloneOf(const RooAbsArg& other) const ; 
-  Bool_t dependsOnValue(const RooAbsCollection& serverList, const RooAbsArg* ignoreArg=0) const { return dependsOn(serverList,ignoreArg,kTRUE) ; }
-  Bool_t dependsOnValue(const RooAbsArg& server, const RooAbsArg* ignoreArg=0) const { return dependsOn(server,ignoreArg,kTRUE) ; }
+  Bool_t dependsOnValue(const RooAbsCollection& serverList, const RooAbsArg* ignoreArg=0) const { 
+    // Does this arg depend on the value of any of of the values in serverList?
+    return dependsOn(serverList,ignoreArg,kTRUE) ; 
+  }
+  Bool_t dependsOnValue(const RooAbsArg& server, const RooAbsArg* ignoreArg=0) const { 
+    // Does this arg depend on the value of server?
+    return dependsOn(server,ignoreArg,kTRUE) ; 
+  }
   Bool_t dependsOn(const RooAbsCollection& serverList, const RooAbsArg* ignoreArg=0, Bool_t valueOnly=kFALSE) const ;
   Bool_t dependsOn(const RooAbsArg& server, const RooAbsArg* ignoreArg=0, Bool_t valueOnly=kFALSE) const ;
   Bool_t overlaps(const RooAbsArg& testArg) const ;
-  inline TIterator* clientIterator() const { return _clientList.MakeIterator() ; }
-  inline TIterator* valueClientIterator() const { return _clientListValue.MakeIterator() ; }
-  inline TIterator* shapeClientIterator() const { return _clientListShape.MakeIterator() ; }
-  inline TIterator* serverIterator() const { return _serverList.MakeIterator() ; }
-  inline RooAbsArg* findServer(const char *name) const { return (RooAbsArg*)_serverList.FindObject(name); }
-  inline RooAbsArg* findServer(const RooAbsArg& arg) const { return (RooAbsArg*)_serverList.FindObject(&arg); }
-  inline RooAbsArg* findServer(Int_t index) const { return (RooAbsArg*)_serverList.At(index); }
-  inline Bool_t isValueServer(const RooAbsArg& arg) const { return _clientListValue.FindObject(&arg)?kTRUE:kFALSE ; }
-  inline Bool_t isValueServer(const char* name) const { return _clientListValue.FindObject(name)?kTRUE:kFALSE ; }
-  inline Bool_t isShapeServer(const RooAbsArg& arg) const { return _clientListShape.FindObject(&arg)?kTRUE:kFALSE ; }
-  inline Bool_t isShapeServer(const char* name) const { return _clientListShape.FindObject(name)?kTRUE:kFALSE ; }
+  inline TIterator* clientIterator() const { 
+    // Return iterator over all client RooAbsArgs
+    return _clientList.MakeIterator() ; 
+  }
+  inline TIterator* valueClientIterator() const { 
+    // Return iterator over all value client RooAbsArgs
+    return _clientListValue.MakeIterator() ; 
+  }
+  inline TIterator* shapeClientIterator() const { 
+    // Return iterator over all shape client RooAbsArgs
+    return _clientListShape.MakeIterator() ; 
+  }
+  inline TIterator* serverIterator() const { 
+    // Return iterator over all server RooAbsArgs
+    return _serverList.MakeIterator() ; 
+  }
+  inline RooAbsArg* findServer(const char *name) const { 
+    // Return server of this arg with given name. Returns null if not found
+    return (RooAbsArg*)_serverList.FindObject(name); 
+  }
+  inline RooAbsArg* findServer(const RooAbsArg& arg) const { 
+    // Return server of this arg with name of given input arg. Returns null if not found
+    return (RooAbsArg*)_serverList.FindObject(&arg); 
+  }
+  inline RooAbsArg* findServer(Int_t index) const { 
+    // Return i-th server from server list
+    return (RooAbsArg*)_serverList.At(index); 
+  }
+  inline Bool_t isValueServer(const RooAbsArg& arg) const { 
+    // If true, arg is a value server of self
+    return _clientListValue.FindObject(&arg)?kTRUE:kFALSE ; 
+  }
+  inline Bool_t isValueServer(const char* name) const { 
+    // If true, we have a server with given name
+    return _clientListValue.FindObject(name)?kTRUE:kFALSE ; 
+  }
+  inline Bool_t isShapeServer(const RooAbsArg& arg) const { 
+    // If true arg is a shape server of self
+    return _clientListShape.FindObject(&arg)?kTRUE:kFALSE ; 
+  }
+  inline Bool_t isShapeServer(const char* name) const { 
+    // If true, we have a shape server with given name
+    return _clientListShape.FindObject(name)?kTRUE:kFALSE ; 
+  }
   void leafNodeServerList(RooAbsCollection* list, const RooAbsArg* arg=0, Bool_t recurseNonDerived=kFALSE) const ;
   void branchNodeServerList(RooAbsCollection* list, const RooAbsArg* arg=0) const ;
   void treeNodeServerList(RooAbsCollection* list, const RooAbsArg* arg=0, 
 			  Bool_t doBranch=kTRUE, Bool_t doLeaf=kTRUE, 
 			  Bool_t valueOnly=kFALSE, Bool_t recurseNonDerived=kFALSE) const ;
   
-  // Is this object a fundamental type that can be added to a dataset?
-  // Fundamental-type subclasses override this method to return kTRUE.
-  // Note that this test is subtlely different from the dynamic isDerived()
-  // test, e.g. a constant is not derived but is also not fundamental.
-  inline virtual Bool_t isFundamental() const { return kFALSE; }
+
+  inline virtual Bool_t isFundamental() const { 
+    // Is this object a fundamental type that can be added to a dataset?
+    // Fundamental-type subclasses override this method to return kTRUE.
+    // Note that this test is subtlely different from the dynamic isDerived()
+    // test, e.g. a constant is not derived but is also not fundamental.
+    return kFALSE; 
+  }
+
   // Create a fundamental-type object that stores our type of value. The
   // created object will have a valid value, but not necessarily the same
   // as our value. The caller is responsible for deleting the returned object.
   virtual RooAbsArg *createFundamental(const char* newname=0) const = 0;
 
-  // Is this argument an l-value, ie, can it appear on the left-hand side
-  // of an assignment expression? LValues are also special since they can
-  // potentially be analytically integrated and generated.
-  inline virtual Bool_t isLValue() const { return kFALSE; }
+  inline virtual Bool_t isLValue() const { 
+    // Is this argument an l-value, ie, can it appear on the left-hand side
+    // of an assignment expression? LValues are also special since they can
+    // potentially be analytically integrated and generated.
+    return kFALSE; 
+  }
 
   // Parameter & observable interpretation of servers
   friend class RooProdPdf ;
@@ -97,12 +144,24 @@ public:
   friend class RooAddPdfOrig ;
   RooArgSet* getVariables() const ;
   RooArgSet* getParameters(const RooAbsData* data) const ;
-  RooArgSet* getParameters(const RooAbsData& data) const { return getParameters(&data) ; }
-  RooArgSet* getParameters(const RooArgSet& set) const { return getParameters(&set) ; }
+  RooArgSet* getParameters(const RooAbsData& data) const { 
+    // Return the parameters of this p.d.f when used in conjuction with dataset 'data'
+    return getParameters(&data) ; 
+  }
+  RooArgSet* getParameters(const RooArgSet& set) const { 
+    // Return the parameters of the p.d.f given the provided set of observables
+    return getParameters(&set) ; 
+  }
   virtual RooArgSet* getParameters(const RooArgSet* depList) const ;
-  RooArgSet* getObservables(const RooArgSet& set) const { return getObservables(&set) ; }
+  RooArgSet* getObservables(const RooArgSet& set) const { 
+    // Return the observables of _this_ pdf given a set of observables
+    return getObservables(&set) ; 
+  }
   RooArgSet* getObservables(const RooAbsData* data) const ;
-  RooArgSet* getObservables(const RooAbsData& data) const { return getObservables(&data) ; }
+  RooArgSet* getObservables(const RooAbsData& data) const { 
+    // Return the observables of _this_ pdf given the observables defined by 'data'
+    return getObservables(&data) ; 
+  }
   virtual RooArgSet* getObservables(const RooArgSet* depList) const ;
   Bool_t observableOverlaps(const RooAbsData* dset, const RooAbsArg& testArg) const ;
   Bool_t observableOverlaps(const RooArgSet* depList, const RooAbsArg& testArg) const ;
@@ -126,8 +185,8 @@ public:
   virtual Bool_t readFromStream(istream& is, Bool_t compact, Bool_t verbose=kFALSE) = 0 ;
   virtual void writeToStream(ostream& os, Bool_t compact) const = 0 ;
 
-  // Printing interface (human readable)
   inline virtual void Print(Option_t *options= 0) const {
+    // Printing interface (human readable)
     printStream(defaultPrintStream(),defaultPrintContents(options),defaultPrintStyle(options));
   }
 
@@ -139,29 +198,42 @@ public:
   virtual void printTree(ostream& os, TString indent="") const ;
 
   virtual Int_t defaultPrintContents(Option_t* opt) const ;
-  virtual StyleOption defaultPrintStyle(Option_t* opt) const ;
-
 
   // Accessors to attributes
   void setAttribute(const Text_t* name, Bool_t value=kTRUE) ;
   Bool_t getAttribute(const Text_t* name) const ;
-  inline const std::set<std::string>& attributes() const { return _boolAttrib ; }
+  inline const std::set<std::string>& attributes() const { 
+    // Returns set of names of boolean attributes defined
+    return _boolAttrib ; 
+  }
 
   void setStringAttribute(const Text_t* key, const Text_t* value) ;
   const Text_t* getStringAttribute(const Text_t* key) const ;
-  inline const std::map<std::string,std::string>& stringAttributes() const { return _stringAttrib ; }
+  inline const std::map<std::string,std::string>& stringAttributes() const { 
+    // Returns map<string,string> with all string attributes defined
+    return _stringAttrib ; 
+  }
 
   // Accessors to transient attributes
   void setTransientAttribute(const Text_t* name, Bool_t value=kTRUE) ;
   Bool_t getTransientAttribute(const Text_t* name) const ;
-  inline const std::set<std::string>& transientAttributes() const { return _boolAttribTransient ; }
+  inline const std::set<std::string>& transientAttributes() const { 
+    // Return set of transient boolean attributes 
+    return _boolAttribTransient ; 
+  }
 
-  inline Bool_t isConstant() const { return getAttribute("Constant") ; }
+  inline Bool_t isConstant() const { 
+    // Returns true if 'Constant' attribute is set
+    return getAttribute("Constant") ; 
+  }
   RooLinkedList getCloningAncestors() const ;
 
   // Sorting
   Int_t Compare(const TObject* other) const ;
-  virtual Bool_t IsSortable() const { return kTRUE ; }
+  virtual Bool_t IsSortable() const { 
+    // Object is sortable in ROOT container class
+    return kTRUE ; 
+  }
 
   //Debug hooks
   static void verboseDirty(Bool_t flag) ;
@@ -174,8 +246,14 @@ public:
   virtual Bool_t operator==(const RooAbsArg& other) = 0 ;
 
   // Range management
-  virtual Bool_t inRange(const char*) const { return kTRUE ; }
-  virtual Bool_t hasRange(const char*) const { return kFALSE ; }
+  virtual Bool_t inRange(const char*) const { 
+    // Is value in range (dummy interface always returns true)
+    return kTRUE ; 
+  }
+  virtual Bool_t hasRange(const char*) const { 
+    // Has this argument a defined range (dummy interface always returns flase)
+    return kFALSE ; 
+  }
 
   enum ConstOpCode { Activate=0, DeActivate=1, ConfigChange=2, ValueChange=3 } ;
   
@@ -202,12 +280,13 @@ public:
   void printCompactTree(ostream& os, const char* indent="", const char* namePat=0, RooAbsArg* client=0) ;
   virtual void printCompactTreeHook(ostream& os, const char *ind="") ;
 
-  inline void setDeleteWatch(Bool_t flag=kTRUE) { _deleteWatch = flag ; } ;
-  Bool_t deleteWatch() const { return _deleteWatch ; }
-
   // Dirty state accessor
-  inline Bool_t isShapeDirty() const { return isDerived()?_shapeDirty:kFALSE ; } 
+  inline Bool_t isShapeDirty() const { 
+    // Return true is shape has been invalidated by server value change
+    return isDerived()?_shapeDirty:kFALSE ; 
+  } 
   inline Bool_t isValueDirty() const { 
+    // Returns true of value has been invalidated by server value change
     if (inhibitDirty()) return kTRUE ;
     switch(_operMode) {
     case AClean: return kFALSE ;
@@ -253,6 +332,7 @@ public:
   virtual void getObservablesHook(const RooArgSet* /*nset*/, RooArgSet* /*list*/) const {} ;
 
   // Dirty state modifiers
+ public:
   inline void setValueDirty() const { setValueDirty(0) ; }
   inline void setShapeDirty() const { setShapeDirty(0) ; } 
   inline void clearValueDirty() const { 
@@ -261,6 +341,7 @@ public:
   inline void clearShapeDirty() const { 
     _shapeDirty=kFALSE ; 
   }
+ protected:
 
   // Client-Server relatation and Proxy management 
   friend class RooArgSet ;
@@ -276,32 +357,20 @@ public:
   TIterator* _clientValueIter ; //! Iterator over _clientListValue 
 
   // Server redirection interface
-  friend class RooAbsCachedPdf ;
-  friend class RooWorkspace ;
-  friend class RooAcceptReject;
-  friend class RooGenContext;
-  friend class RooResolutionModel ;
-  friend class RooSimultaneous ;
-  friend class RooSimGenContext ;  
-  friend class RooEffGenContext ;  
-  friend class RooSimPdfBuilder ;
-  friend class RooAbsOptTestStatistic ;
-  friend class RooAbsPdf ;
-  friend class RooGenProdProj ;
-
+ public:
   Bool_t redirectServers(const RooAbsCollection& newServerList, Bool_t mustReplaceAll=kFALSE, Bool_t nameChange=kFALSE, Bool_t isRecursionStep=kFALSE) ;
   Bool_t recursiveRedirectServers(const RooAbsCollection& newServerList, Bool_t mustReplaceAll=kFALSE, Bool_t nameChange=kFALSE, Bool_t recurseInNewSet=kTRUE) ;
   virtual Bool_t redirectServersHook(const RooAbsCollection& /*newServerList*/, Bool_t /*mustReplaceAll*/, Bool_t /*nameChange*/, Bool_t /*isRecursive*/) { return kFALSE ; } ;
   virtual void serverNameChangeHook(const RooAbsArg* /*oldServer*/, const RooAbsArg* /*newServer*/) { } ;
 
-  friend class RooFormula ;
-  friend class RooParamBinning ;
   void addServer(RooAbsArg& server, Bool_t valueProp=kTRUE, Bool_t shapeProp=kFALSE) ;
   void addServerList(RooAbsCollection& serverList, Bool_t valueProp=kTRUE, Bool_t shapeProp=kFALSE) ;
   void replaceServer(RooAbsArg& oldServer, RooAbsArg& newServer, Bool_t valueProp, Bool_t shapeProp) ;
   void changeServer(RooAbsArg& server, Bool_t valueProp, Bool_t shapeProp) ;
   void removeServer(RooAbsArg& server, Bool_t force=kFALSE) ;
   RooAbsArg *findNewServer(const RooAbsCollection &newSet, Bool_t nameChange) const;
+
+ protected:
 
   // Proxy management
   friend class RooAddModel ;
@@ -347,18 +416,17 @@ void printAttribList(ostream& os) const;
   Bool_t _deleteWatch ; //! Delete watch flag 
 
   static Bool_t inhibitDirty() ;
-
-private:
-
+  
   // Value and Shape dirty state bits
   void setValueDirty(const RooAbsArg* source) const ; 
   void setShapeDirty(const RooAbsArg* source) const ; 
   mutable Bool_t _valueDirty ;  // Flag set if value needs recalculating because input values modified
   mutable Bool_t _shapeDirty ;  // Flag set if value needs recalculating because input shapes modified
+
   mutable OperMode _operMode ; // Dirty state propagation mode
 
   // Owned components
-  RooArgSet* _ownedComponents ; //!
+  RooArgSet* _ownedComponents ; //! Set of owned component
 
   mutable Bool_t _prohibitServerRedirect ; //! Prohibit server redirects -- Debugging tool
   

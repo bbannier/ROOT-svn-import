@@ -14,14 +14,21 @@
  * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
 
-// -- CLASS DESCRIPTION [CAT] --
+//////////////////////////////////////////////////////////////////////////////
+//
+// BEGIN_HTML
 // RooSuperCategory consolidates several RooAbsCategoryLValue objects into
 // a single category. The states of the super category consist of all the permutations
-// of the input categories. The super category is an lvalue itself and a modification
+// of the input categories. The super category is an lvalue and requires that
+// all input categories are lvalues as well as modification
 // of its state will back propagate into a modification of its input categories.
-//
+// To define a consolidated category of multiple non-lvalye categories
+// use class RooMultiCategory
+// <p>
 // RooSuperCategory state are automatically defined and updated whenever an input
 // category modifies its list of states
+// END_HTML
+//
 
 #include "RooFit.h"
 
@@ -41,10 +48,14 @@
 ClassImp(RooSuperCategory)
 ;
 
+
+//_____________________________________________________________________________
 RooSuperCategory::RooSuperCategory(const char *name, const char *title, const RooArgSet& inInputCatList) :
-  RooAbsCategoryLValue(name, title), _catSet("catSet","Input category set",this,kTRUE,kTRUE)
+  RooAbsCategoryLValue(name, title), _catSet("input","Input category set",this,kTRUE,kTRUE)
 {  
-  // Constructor from list of input categories
+  // Construct a lvalue product of the given set of input RooAbsCategoryLValues in 'inInputCatList'
+  // The state names of this product category are {S1;S2,S3,...Sn} where Si are the state names
+  // of the input categories. A RooSuperCategory is an lvalue.
 
   // Copy category list
   TIterator* iter = inInputCatList.createIterator() ;
@@ -63,10 +74,13 @@ RooSuperCategory::RooSuperCategory(const char *name, const char *title, const Ro
 }
 
 
+
+//_____________________________________________________________________________
 RooSuperCategory::RooSuperCategory(const RooSuperCategory& other, const char *name) :
-  RooAbsCategoryLValue(other,name), _catSet("catSet",this,other._catSet)
+  RooAbsCategoryLValue(other,name), _catSet("input",this,other._catSet)
 {
   // Copy constructor
+
   _catIter = _catSet.createIterator() ;
   updateIndexList() ;
   setIndex(other.getIndex()) ;
@@ -74,28 +88,33 @@ RooSuperCategory::RooSuperCategory(const RooSuperCategory& other, const char *na
 
 
 
+//_____________________________________________________________________________
 RooSuperCategory::~RooSuperCategory() 
 {
   // Destructor
+
   delete _catIter ;
 }
 
 
 
+//_____________________________________________________________________________
 TIterator* RooSuperCategory::MakeIterator() const 
 {
   // Make an iterator over all state permutations of 
   // the input categories of this supercategory
+
   return new RooMultiCatIter(_catSet) ;
 }
 
 
 
+//_____________________________________________________________________________
 void RooSuperCategory::updateIndexList()
 {
-  // Update the list of super-category states 
+  // Update the list of possible states of this super category
+  
   clearTypes() ;
-//   RooArgSet* catListClone = (RooArgSet*) _catSet.snapshot(kTRUE) ;
 
   RooMultiCatIter mcIter(_catSet) ;
   TObjString* obj ;
@@ -104,14 +123,14 @@ void RooSuperCategory::updateIndexList()
     // Register composite label
     defineTypeUnchecked(obj->String(),i++) ;
   }
-//   _catSet = *catListClone ;
-//   delete catListClone ;
 
   // Renumbering will invalidate cache
   setValueDirty() ;
 }
 
 
+
+//_____________________________________________________________________________
 TString RooSuperCategory::currentLabel() const
 {
   // Return the name of the current state, 
@@ -134,10 +153,12 @@ TString RooSuperCategory::currentLabel() const
 }
 
 
-RooCatType
-RooSuperCategory::evaluate() const
+
+//_____________________________________________________________________________
+RooCatType RooSuperCategory::evaluate() const
 {
-  // Calculate the current value 
+  // Calculate and return the current value 
+
   if (isShapeDirty()) {
     const_cast<RooSuperCategory*>(this)->updateIndexList() ;
   }
@@ -150,30 +171,38 @@ RooSuperCategory::evaluate() const
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooSuperCategory::setIndex(Int_t index, Bool_t /*printError*/) 
 {
   // Set the value of the super category by specifying the state index code
-  // Indirectly sets the values of the input categories
+  // by setting the states of the corresponding input category lvalues
+
   const RooCatType* type = lookupType(index,kTRUE) ;
   if (!type) return kTRUE ;
   return setType(type) ;
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooSuperCategory::setLabel(const char* label, Bool_t /*printError*/) 
 {
   // Set the value of the super category by specifying the state name
-  // Indirectly sets the values of the input categories
+  // by setting the state names of the corresponding input category lvalues
+
   const RooCatType* type = lookupType(label,kTRUE) ;
   if (!type) return kTRUE ;
   return setType(type) ;
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooSuperCategory::setType(const RooCatType* type, Bool_t /*printError*/)
 {
   // Set the value of the super category by specifying the state object
-  // Indirectly sets the values of the input categories
+  // by setting the state names of the corresponding input category lvalues
 
   char buf[1024] ;
   strcpy(buf,type->GetName()) ;
@@ -217,6 +246,7 @@ Bool_t RooSuperCategory::setType(const RooCatType* type, Bool_t /*printError*/)
 
 
 
+//_____________________________________________________________________________
 void RooSuperCategory::printMultiline(ostream& os, Int_t content, Bool_t verbose, TString indent) const
 {
   // Print the state of this object to the specified output stream.
@@ -232,22 +262,28 @@ void RooSuperCategory::printMultiline(ostream& os, Int_t content, Bool_t verbose
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooSuperCategory::readFromStream(istream& /*is*/, Bool_t /*compact*/, Bool_t /*verbose*/) 
 {
   // Read object contents from given stream
+
   return kTRUE ;
 }
 
 
 
+//_____________________________________________________________________________
 void RooSuperCategory::writeToStream(ostream& os, Bool_t compact) const
 {
   // Write object contents to given stream
+
   RooAbsCategory::writeToStream(os,compact) ;
 }
 
 
 
+//_____________________________________________________________________________
 Bool_t RooSuperCategory::inRange(const char* rangeName) const 
 {
   // Return true of all of the input category states are in the given range
@@ -263,8 +299,13 @@ Bool_t RooSuperCategory::inRange(const char* rangeName) const
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooSuperCategory::hasRange(const char* rangeName) const 
 {
+  // Return true if any of the input categories has a range
+  // named 'rangeName'
+
   _catIter->Reset() ;
   RooAbsCategoryLValue* cat ;
   while((cat = (RooAbsCategoryLValue*)_catIter->Next())) {

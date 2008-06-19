@@ -143,8 +143,6 @@ public:
    static void  UpdateClassInfo(char *name, Long_t tagnum);
    static void  UpdateClassInfoWork(const char *name, Long_t tagnum);
    static void  UpdateAllCanvases();
-   static const char *GetTopLevelMacroName();
-   static const char *GetCurrentMacroName();
 
    // Misc
    virtual int    DisplayClass(FILE *fout,char *name,int base,int start) const;
@@ -154,6 +152,8 @@ public:
    virtual Long_t GetExecByteCode() const;
    virtual Long_t Getgvp() const;
    virtual const char *Getp2f2funcname(void *receiver) const;
+   virtual const char *GetTopLevelMacroName() const;
+   virtual const char *GetCurrentMacroName() const;
    virtual int    GetSecurityError() const;
    virtual int    LoadFile(const char *path) const;
    virtual void   LoadText(const char *text) const;
@@ -291,7 +291,9 @@ public:
    virtual void   TypeInfo_Delete(TypeInfo_t *tinfo) const;
    virtual void  *TypeInfo_Factory() const;
    virtual void   TypeInfo_Init(TypeInfo_t *tinfo, const char *funcname) const;
+   virtual bool   TypeInfo_IsValid(TypeInfo_t *tinfo) const;
    virtual Long_t TypeInfo_Property(TypeInfo_t *tinfo) const;
+   virtual int    TypeInfo_Size(TypeInfo_t *tinfo) const;
    virtual const char *TypeInfo_TrueName(TypeInfo_t *tinfo) const;
    
                   

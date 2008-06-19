@@ -14,7 +14,8 @@
  * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
 
-// -- CLASS DESCRIPTION [AUX] --
+//////////////////////////////////////////////////////////////////////////////
+//
 // RooStreamParser is a utility class to parse istreams into tokens and optionally
 // convert them into basic types (double,int,string)
 // 
@@ -30,6 +31,7 @@
 // The parser is aware of floating point notation and will assign leading
 // minus signs, decimal points etc to a value token when this is obvious
 // from the context. The definition of what is punctuation can be redefined.
+//
 
 
 #include "RooFit.h"
@@ -50,42 +52,59 @@
 
 ClassImp(RooStreamParser)
 
+
+//_____________________________________________________________________________
 RooStreamParser::RooStreamParser(istream& is) : 
   _is(&is), _atEOF(kFALSE), _prefix(""), _punct("()[]<>|/\\:?.,=+-&^%$#@!`~")
 {
-  // Constructor
+  // Construct parser on given input stream
 }
 
+
+//_____________________________________________________________________________
 RooStreamParser::RooStreamParser(istream& is, const TString& errorPrefix) : 
   _is(&is), _atEOF(kFALSE), _prefix(errorPrefix), _punct("()[]<>|/\\:?.,=+-&^%$#@!`~")
 {
-  // Constructor with error message prefix
+  // Construct parser on given input stream. Use given errorPrefix to 
+  // prefix any parsing error messages
 }
 
 
+
+//_____________________________________________________________________________
 RooStreamParser::~RooStreamParser()
 {
   // Destructor
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooStreamParser::atEOL() 
 { 
+  // If true, parser is at end of line in stream
+
   Int_t nc(_is->peek()) ; 
   return (nc=='\n'||nc==-1) ; 
 }
 
 
+
+//_____________________________________________________________________________
 void RooStreamParser::setPunctuation(const TString& punct) 
 {
-  // Change list of punctuation characters
+  // Change list of characters interpreted as punctuation
+
   _punct = punct ;
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooStreamParser::isPunctChar(char c) const 
 {
   // Check if given char is considered punctuation
+
   const char* punct = _punct.Data() ;
   for (int i=0 ; i<_punct.Length() ; i++)
     if (punct[i] == c) {
@@ -95,9 +114,16 @@ Bool_t RooStreamParser::isPunctChar(char c) const
 }
 
 
+
+//_____________________________________________________________________________
 TString RooStreamParser::readToken() 
 {
-  // Read one token
+  // Read one token separated by any of the know punctuation characters
+  // This function recognizes and handles comment lines in the istream (those
+  // starting with '#', quoted strings ("") the content of which is not tokenized
+  // and '+-.' characters that are part of a floating point numbers and are exempt
+  // from being interpreted as a token separator in case '+-.' are defined as
+  // token separators.
 
   // Smart tokenizer. Absorb white space and token must be either punctuation or alphanum
   Bool_t first(kTRUE), quotedString(kFALSE), lineCont(kFALSE) ;
@@ -252,9 +278,13 @@ TString RooStreamParser::readToken()
 }
 
 
+
+//_____________________________________________________________________________
 TString RooStreamParser::readLine() 
 {
-  // Read an entire line
+  // Read an entire line from the stream and return as TString
+  // This method recognizes the use of '\\' in the istream 
+  // as line continuation token.
 
   char c,buffer[10240] ;
   Int_t nfree(10239) ; 
@@ -297,8 +327,14 @@ TString RooStreamParser::readLine()
 }
 
 
+
+//_____________________________________________________________________________
 void RooStreamParser::zapToEnd(Bool_t inclContLines) 
 {
+  // Eat all characters up to and including then end of the
+  // current line. If inclContLines is kTRUE, all continuation lines
+  // marked by the '\\' token are zapped as well
+
   // Skip over everything until the end of the current line
   if (_is->peek()!='\n') {
 
@@ -327,9 +363,12 @@ void RooStreamParser::zapToEnd(Bool_t inclContLines)
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooStreamParser::expectToken(const TString& expected, Bool_t zapOnError) 
 {
-  // Read a token and check if it matches the given expected value
+  // Read the next token and return kTRUE if it is identical to the given 'expected' token.
+
   TString token(readToken()) ;
 
   Bool_t error=token.CompareTo(expected) ;
@@ -342,9 +381,13 @@ Bool_t RooStreamParser::expectToken(const TString& expected, Bool_t zapOnError)
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooStreamParser::readDouble(Double_t& value, Bool_t /*zapOnError*/) 
 {
-  // Read a token and convert it to a Double_t
+  // Read the next token and convert it to a Double_t. Returns true
+  // if an error occurred in reading or conversion
+
   TString token(readToken()) ;
   if (token.IsNull()) return kTRUE ;
   return convertToDouble(token,value) ;
@@ -352,9 +395,12 @@ Bool_t RooStreamParser::readDouble(Double_t& value, Bool_t /*zapOnError*/)
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooStreamParser::convertToDouble(const TString& token, Double_t& value) 
 {
-  // Convert given string to a double
+  // Convert given string to a double. Return true if the conversion fails.
+
   char* endptr = 0;
   const char* data=token.Data() ;
 
@@ -375,18 +421,26 @@ Bool_t RooStreamParser::convertToDouble(const TString& token, Double_t& value)
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooStreamParser::readInteger(Int_t& value, Bool_t /*zapOnError*/) 
 {
-  // Read a token and convert it to an Int_t
+  // Read a token and convert it to an Int_t. Returns true
+  // if an error occurred in reading or conversion
+
   TString token(readToken()) ;
   if (token.IsNull()) return kTRUE ;
   return convertToInteger(token,value) ;
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooStreamParser::convertToInteger(const TString& token, Int_t& value) 
 {
-  // Convert given string to an Int_t
+  // Convert given string to an Int_t. Returns true if an error
+  // occurred in conversion
+
   char* endptr = 0;
   const char* data=token.Data() ;
   value = strtol(data,&endptr,10) ;
@@ -400,15 +454,22 @@ Bool_t RooStreamParser::convertToInteger(const TString& token, Int_t& value)
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooStreamParser::readString(TString& value, Bool_t /*zapOnError*/) 
 {
-  // Read a string token
+  // Read a string token. Returns true if an error occurred in reading
+  // or conversion.  If a the read token is enclosed in quotation
+  // marks those are stripped in the returned value
+
   TString token(readToken()) ;
   if (token.IsNull()) return kTRUE ;
   return convertToString(token,value) ;
 }
 
 
+
+//_____________________________________________________________________________
 Bool_t RooStreamParser::convertToString(const TString& token, TString& string) 
 {
   // Convert given token to a string (i.e. remove eventual quotation marks)

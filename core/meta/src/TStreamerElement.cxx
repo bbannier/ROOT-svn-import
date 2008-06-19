@@ -660,7 +660,7 @@ Int_t TStreamerBase::WriteBuffer (TBuffer &b, char *pointer)
    args[0] = (ULong_t)&b;
    fMethod->SetParamPtrs(args);
    fMethod->Execute((void*)(pointer+fOffset));
-   fBaseClass->GetStreamerInfo()->ForceWriteInfo((TFile *)b.GetParent());
+   b.ForceWriteInfo(fBaseClass->GetStreamerInfo(),kFALSE);
    return 0;
 }
 
@@ -1426,7 +1426,6 @@ TStreamerSTL::TStreamerSTL()
 
 }
 
-#include "Api.h"
 //______________________________________________________________________________
 TStreamerSTL::TStreamerSTL(const char *name, const char *title, Int_t offset,
                            const char *typeName, const char *trueType, Bool_t dmPointer)

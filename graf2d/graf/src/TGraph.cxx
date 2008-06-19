@@ -36,7 +36,6 @@
 #include <stdlib.h>
 #include <string>
 
-Double_t *gxwork, *gywork, *gxworkl, *gyworkl;
 
 extern void H1LeastSquareSeqnd(Int_t n, Double_t *a, Int_t idim, Int_t &ifail, Int_t k, Double_t *b);
 
@@ -81,7 +80,6 @@ TGraph::TGraph(): TNamed(), TAttLine(), TAttFill(1,1001), TAttMarker()
    // Graph default constructor.
 
    fNpoints = -1;  //will be reset to 0 in CtorAllocate
-///   fPainter = 0;
    CtorAllocate();
 }
 
@@ -94,7 +92,6 @@ TGraph::TGraph(Int_t n)
    // the arrsys x and y will be set later
 
    fNpoints = n;
-///   fPainter = 0;
    if (!CtorAllocate()) return;
    FillZero(0, fNpoints);
 }
@@ -111,7 +108,6 @@ TGraph::TGraph(Int_t n, const Int_t *x, const Int_t *y)
    } else {
       fNpoints = n;
    }
-///   fPainter = 0;
    if (!CtorAllocate()) return;
    for (Int_t i=0;i<n;i++) {
       fX[i] = (Double_t)x[i];
@@ -131,7 +127,6 @@ TGraph::TGraph(Int_t n, const Float_t *x, const Float_t *y)
    } else {
       fNpoints = n;
    }
-///   fPainter = 0;
    if (!CtorAllocate()) return;
    for (Int_t i=0;i<n;i++) {
       fX[i] = x[i];
@@ -151,7 +146,6 @@ TGraph::TGraph(Int_t n, const Double_t *x, const Double_t *y)
    } else {
       fNpoints = n;
    }
-///   fPainter = 0;
    if (!CtorAllocate()) return;
    n = fNpoints*sizeof(Double_t);
    memcpy(fX, x, n);
@@ -233,7 +227,6 @@ TGraph::TGraph(const TVectorF &vx, const TVectorF &vy)
    // in vx and vy.
 
    fNpoints = TMath::Min(vx.GetNrows(), vy.GetNrows());
-///   fPainter = 0;
    if (!CtorAllocate()) return;
    Int_t ivxlow  = vx.GetLwb();
    Int_t ivylow  = vy.GetLwb();
@@ -254,7 +247,6 @@ TGraph::TGraph(const TVectorD &vx, const TVectorD &vy)
    // in vx and vy.
 
    fNpoints = TMath::Min(vx.GetNrows(), vy.GetNrows());
-///   fPainter = 0;
    if (!CtorAllocate()) return;
    Int_t ivxlow  = vx.GetLwb();
    Int_t ivylow  = vy.GetLwb();
@@ -275,7 +267,6 @@ TGraph::TGraph(const TH1 *h)
       Error("TGraph", "Pointer to histogram is null");
       fNpoints = 0;
    }
-///   fPainter = 0;
    if (h->GetDimension() != 1) {
       Error("TGraph", "Histogram must be 1-D; h %s is %d-D",h->GetName(),h->GetDimension());
       fNpoints = 0;
@@ -322,7 +313,6 @@ TGraph::TGraph(const TF1 *f, Option_t *option)
       if (option) coption = *option;
       if (coption == 'i' || coption == 'I') fNpoints++;
    }
-///   fPainter = 0;
    if (!CtorAllocate()) return;
 
    Double_t xmin = f->GetXmin();
@@ -374,7 +364,6 @@ TGraph::TGraph(const char *filename, const char *format, Option_t *)
    } else {
       fNpoints = 100;  //initial number of points
    }
-///   fPainter = 0;
    if (!CtorAllocate()) return;
    std::string line;
    Int_t np=0;
@@ -1602,7 +1591,6 @@ TAxis *TGraph::GetXaxis() const
 {
    // Get x axis of the graph.
 
-   //if (!gPad) return 0;
    TH1 *h = GetHistogram();
    if (!h) return 0;
    return h->GetXaxis();
@@ -1614,7 +1602,6 @@ TAxis *TGraph::GetYaxis() const
 {
    // Get y axis of the graph.
 
-   //if (!gPad) return 0;
    TH1 *h = GetHistogram();
    if (!h) return 0;
    return h->GetYaxis();
@@ -2318,4 +2305,131 @@ Int_t TGraph::Merge(TCollection* li)
       }
    }
    return GetN();
+}
+
+
+//______________________________________________________________________________
+void TGraph::Zero(Int_t &k,Double_t AZ,Double_t BZ,Double_t E2,Double_t &X,Double_t &Y
+                 ,Int_t maxiterations)
+{
+   // Find zero of a continuous function.
+   // This function finds a real zero of the continuous real
+   // function Y(X) in a given interval (A,B). See accompanying
+   // notes for details of the argument list and calling sequence
+
+   static Double_t a, b, ya, ytest, y1, x1, h;
+   static Int_t j1, it, j3, j2;
+   Double_t yb, x2;
+   yb = 0;
+
+   //       Calculate Y(X) at X=AZ.
+   if (k <= 0) {
+      a  = AZ;
+      b  = BZ;
+      X  = a;
+      j1 = 1;
+      it = 1;
+      k  = j1;
+      return;
+   }
+
+   //       Test whether Y(X) is sufficiently small.
+
+   if (TMath::Abs(Y) <= E2) { k = 2; return; }
+
+   //       Calculate Y(X) at X=BZ.
+
+   if (j1 == 1) {
+      ya = Y;
+      X  = b;
+      j1 = 2;
+      return;
+   }
+   //       Test whether the signs of Y(AZ) and Y(BZ) are different.
+   //       if not, begin the binary subdivision.
+
+   if (j1 != 2) goto L100;
+   if (ya*Y < 0) goto L120;
+   x1 = a;
+   y1 = ya;
+   j1 = 3;
+   h  = b - a;
+   j2 = 1;
+   x2 = a + 0.5*h;
+   j3 = 1;
+   it++;      //*-*-   Check whether (maxiterations) function values have been calculated.
+   if (it >= maxiterations) k = j1;
+   else                     X = x2;
+   return;
+
+   //      Test whether a bracket has been found .
+   //      If not,continue the search
+
+L100:
+   if (j1 > 3) goto L170;
+   if (ya*Y >= 0) {
+      if (j3 >= j2) {
+         h  = 0.5*h; j2 = 2*j2;
+         a  = x1;  ya = y1;  x2 = a + 0.5*h; j3 = 1;
+      }
+      else {
+         a  = X;   ya = Y;   x2 = X + h;     j3++;
+      }
+      it++;
+      if (it >= maxiterations) k = j1;
+      else                     X = x2;
+      return;
+   }
+
+   //       The first bracket has been found.calculate the next X by the
+   //       secant method based on the bracket.
+
+L120:
+   b  = X;
+   yb = Y;
+   j1 = 4;
+L130:
+   if (TMath::Abs(ya) > TMath::Abs(yb)) { x1 = a; y1 = ya; X  = b; Y  = yb; }
+   else                                 { x1 = b; y1 = yb; X  = a; Y  = ya; }
+
+   //       Use the secant method based on the function values y1 and Y.
+   //       check that x2 is inside the interval (a,b).
+
+L150:
+   x2    = X-Y*(X-x1)/(Y-y1);
+   x1    = X;
+   y1    = Y;
+   ytest = 0.5*TMath::Min(TMath::Abs(ya),TMath::Abs(yb));
+   if ((x2-a)*(x2-b) < 0) {
+      it++;
+      if (it >= maxiterations) k = j1;
+      else                     X = x2;
+      return;
+   }
+
+   //       Calculate the next value of X by bisection . Check whether
+   //       the maximum accuracy has been achieved.
+
+L160:
+   x2    = 0.5*(a+b);
+   ytest = 0;
+   if ((x2-a)*(x2-b) >= 0) { k = 2;  return; }
+   it++;
+   if (it >= maxiterations) k = j1;
+   else                     X = x2;
+   return;
+
+
+   //       Revise the bracket (a,b).
+
+L170:
+   if (j1 != 4) return;
+   if (ya*Y < 0) { b  = X; yb = Y; }
+   else          { a  = X; ya = Y; }
+
+   //       Use ytest to decide the method for the next value of X.
+
+   if (ytest <= 0) goto L130;
+   if (TMath::Abs(Y)-ytest <= 0) goto L150;
+   goto L160;
 }

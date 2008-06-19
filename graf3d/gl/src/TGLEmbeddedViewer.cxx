@@ -20,6 +20,14 @@
 #include "TGLEmbeddedViewer.h"
 #include "TGLEventHandler.h"
 
+//==============================================================================
+// TGLEmbeddedViewer
+//==============================================================================
+
+//______________________________________________________________________________
+//
+// Minimal GL-viewer that can be embedded in a standard ROOT frames.
+
 ClassImp(TGLEmbeddedViewer);
 
 //______________________________________________________________________________
@@ -44,6 +52,7 @@ TGLEmbeddedViewer::~TGLEmbeddedViewer()
    // Destroy standalone viewer object.
 
    delete fFrame;
+   fGLWidget = 0;
 }
 
 //______________________________________________________________________________
@@ -51,7 +60,7 @@ void TGLEmbeddedViewer::CreateFrames()
 {
    // Internal frames creation.
 
-   fGLWidget = new TGLWidget(*fFrame, kTRUE, 10, 10, 0);
+   fGLWidget = TGLWidget::Create(fFrame, kTRUE, kTRUE, 0, 10, 10);
    // Direct events from the TGWindow directly to the base viewer
 
    fEventHandler = new TGLEventHandler("Default", fGLWidget, this);

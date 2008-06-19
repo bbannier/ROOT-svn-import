@@ -112,14 +112,22 @@ protected:
    TEveSelection            *fSelection;
    TEveSelection            *fHighlight;
 
+   TEveElementList          *fOrphanage;
+   Bool_t                    fUseOrphanage;
+
 public:
-   TEveManager(UInt_t w, UInt_t h);
+   TEveManager(UInt_t w, UInt_t h, Bool_t map_window=kTRUE);
    virtual ~TEveManager();
 
    TExceptionHandler* GetExcHandler() const { return fExcHandler; }
 
    TEveSelection*     GetSelection() const { return fSelection; }
    TEveSelection*     GetHighlight() const { return fHighlight; }
+
+   TEveElementList*   GetOrphanage()    const { return fOrphanage;    }
+   Bool_t             GetUseOrphanage() const { return fUseOrphanage; }
+   void               SetUseOrphanage(Bool_t o) { fUseOrphanage = o;  }
+   void               ClearOrphanage();
 
    TEveBrowser*      GetBrowser()   const { return fBrowser;   }
    TEveGListTreeEditorFrame* GetLTEFrame()  const { return fLTEFrame;  }
@@ -184,8 +192,9 @@ public:
    Bool_t ElementPaste(TEveElement* element);
 
    // VizDB - Visualization-parameter data-base.
-   Bool_t       InsertVizDBEntry(const TString& tag, TEveElement* model, Bool_t replace=kTRUE);
-   TEveElement* FindVizDBEntry(const TString& tag);
+   Bool_t       InsertVizDBEntry(const TString& tag, TEveElement* model,
+                                 Bool_t replace=kTRUE, Bool_t update=kTRUE);
+   TEveElement* FindVizDBEntry  (const TString& tag);
 
    // Geometry management.
    TGeoManager* GetGeometry(const TString& filename);
@@ -195,7 +204,7 @@ public:
 
    void SetStatusLine(const char* text);
 
-   static TEveManager* Create();
+   static TEveManager* Create(Bool_t map_window=kTRUE);
 
    ClassDef(TEveManager, 0); // Eve application manager.
 };

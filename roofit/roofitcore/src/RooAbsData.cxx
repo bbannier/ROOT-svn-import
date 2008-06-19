@@ -14,11 +14,16 @@
  * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
  *****************************************************************************/
 
-// -- CLASS DESCRIPTION [DATA] --
+//////////////////////////////////////////////////////////////////////////////
+// 
+// BEGIN_HTML
 // RooAbsData is the common abstract base class for binned and unbinned
 // datasets. The abstract interface defines plotting and tabulating entry
 // points for its contents and provides an iterator over its elements
 // (bins for binned data sets, data points for unbinned datasets).
+// END_HTML
+//
+//
 
 #include "RooFit.h"
 #include "Riostream.h"
@@ -38,14 +43,18 @@ ClassImp(RooAbsData)
 ;
 
 
+//_____________________________________________________________________________
 RooAbsData::RooAbsData() 
 {
   // Default constructor
+
   _iterator = _vars.createIterator() ;
   _cacheIter = _cachedVars.createIterator() ;
 }
 
 
+
+//_____________________________________________________________________________
 RooAbsData::RooAbsData(const char *name, const char *title, const RooArgSet& vars) :
   TNamed(name,title), _vars("Dataset Variables"), _cachedVars("Cached Variables"), 
   _doDirtyProp(kTRUE) 
@@ -73,19 +82,22 @@ RooAbsData::RooAbsData(const char *name, const char *title, const RooArgSet& var
 
 
 
-
+//_____________________________________________________________________________
 RooAbsData::RooAbsData(const RooAbsData& other, const char* newname) : 
   TNamed(newname?newname:other.GetName(),other.GetTitle()), 
   RooPrintable(other), _vars(),
   _cachedVars("Cached Variables"), _doDirtyProp(kTRUE)
 {
   // Copy constructor
+
   _vars.addClone(other._vars) ;
   _iterator= _vars.createIterator();
   _cacheIter = _cachedVars.createIterator() ;
 }
 
 
+
+//_____________________________________________________________________________
 RooAbsData::~RooAbsData() 
 {
   // Destructor
@@ -97,6 +109,7 @@ RooAbsData::~RooAbsData()
 
 
 
+//_____________________________________________________________________________
 RooAbsData* RooAbsData::reduce(RooCmdArg arg1,RooCmdArg arg2,RooCmdArg arg3,RooCmdArg arg4,
 			       RooCmdArg arg5,RooCmdArg arg6,RooCmdArg arg7,RooCmdArg arg8) 
 {
@@ -189,6 +202,8 @@ RooAbsData* RooAbsData::reduce(RooCmdArg arg1,RooCmdArg arg2,RooCmdArg arg3,RooC
 }
 
 
+
+//_____________________________________________________________________________
 RooAbsData* RooAbsData::reduce(const char* cut) 
 { 
   // Create a subset of the data set by applying the given cut on the data points.
@@ -202,18 +217,19 @@ RooAbsData* RooAbsData::reduce(const char* cut)
 
 
 
-
+//_____________________________________________________________________________
 RooAbsData* RooAbsData::reduce(const RooFormulaVar& cutVar) 
 {
   // Create a subset of the data set by applying the given cut on the data points.
   // The 'cutVar' formula variable is used to select the subset of data points to be 
   // retained in the reduced data collection.
+
   return reduceEng(*get(),&cutVar,0,0,2000000000,kFALSE) ;
 }
 
 
 
-
+//_____________________________________________________________________________
 RooAbsData* RooAbsData::reduce(const RooArgSet& varSubset, const char* cut) 
 {
   // Create a subset of the data set by applying the given cut on the data points
@@ -245,7 +261,7 @@ RooAbsData* RooAbsData::reduce(const RooArgSet& varSubset, const char* cut)
 
 
 
-
+//_____________________________________________________________________________
 RooAbsData* RooAbsData::reduce(const RooArgSet& varSubset, const RooFormulaVar& cutVar) 
 {
   // Create a subset of the data set by applying the given cut on the data points
@@ -271,17 +287,26 @@ RooAbsData* RooAbsData::reduce(const RooArgSet& varSubset, const RooFormulaVar& 
 }
 
 
+
+//_____________________________________________________________________________
 Double_t RooAbsData::weightError(ErrorType) const 
 { 
+  // Return error on current weight (dummy implementation returning zero)
   return 0 ; 
 } 
 
+
+
+//_____________________________________________________________________________
 void RooAbsData::weightError(Double_t& lo, Double_t& hi, ErrorType) const 
 { 
+  // Return asymmetric error on weight. (Dummy implementation returning zero)
   lo=0 ; hi=0 ; 
 } 
 
 
+
+//_____________________________________________________________________________
 RooPlot* RooAbsData::plotOn(RooPlot* frame, const RooCmdArg& arg1, const RooCmdArg& arg2,
 			    const RooCmdArg& arg3, const RooCmdArg& arg4, const RooCmdArg& arg5, 
 			    const RooCmdArg& arg6, const RooCmdArg& arg7, const RooCmdArg& arg8) const
@@ -334,6 +359,9 @@ RooPlot* RooAbsData::plotOn(RooPlot* frame, const RooCmdArg& arg1, const RooCmdA
   return plotOn(frame,l) ;  
 }
 
+
+
+//_____________________________________________________________________________
 TH1 *RooAbsData::createHistogram(const char *name, const RooAbsRealLValue& xvar,
 				 const RooCmdArg& arg1, const RooCmdArg& arg2, const RooCmdArg& arg3, const RooCmdArg& arg4, 
 				 const RooCmdArg& arg5, const RooCmdArg& arg6, const RooCmdArg& arg7, const RooCmdArg& arg8) const 
@@ -398,57 +426,39 @@ TH1 *RooAbsData::createHistogram(const char *name, const RooAbsRealLValue& xvar,
 }
 
 
+
+//_____________________________________________________________________________
 void RooAbsData::printName(ostream& os) const 
 {
+  // Print name of dataset
+
   os << GetName() ;
 }
 
+
+
+//_____________________________________________________________________________
 void RooAbsData::printTitle(ostream& os) const 
 {
+  // Print title of dataset
   os << GetTitle() ;
 }
 
+
+
+//_____________________________________________________________________________
 void RooAbsData::printClassName(ostream& os) const 
 {
+  // Print class name of dataset
   os << IsA()->GetName() ;
 }
 
-void RooAbsData::printArgs(ostream& os) const 
-{
-  os << "[" ;    
-  _iterator->Reset() ;
-  RooAbsArg* arg ;
-  Bool_t first(kTRUE) ;
-  while((arg=(RooAbsArg*)_iterator->Next())) {
-    if (first) {
-      first=kFALSE ;
-    } else {
-      os << "," ;
-    }
-    os << arg->GetName() ;
-  }
-  os << "]" ;
-}
-
-void RooAbsData::printValue(ostream& os) const 
-{
-  os << numEntries(kTRUE) << " entries" << (isWeighted()?" (sum of weights)":"") ;
-}
 
 
-Int_t RooAbsData::defaultPrintContents(Option_t* opt) const 
+//_____________________________________________________________________________
+Int_t RooAbsData::defaultPrintContents(Option_t* /*opt*/) const 
 {
-  if (opt && TString(opt)=="I") {
-    return kName|kClassName|kArgs ;
-  }
-  
-  return kName|kClassName|kValue ;
-}
+  // Define default print options, for a given print style
 
-RooPrintable::StyleOption RooAbsData::defaultPrintStyle(Option_t* opt) const 
-{
-  if (opt && TString(opt).Contains("v")) {
-    return kVerbose ;
-  } 
-  return kStandard ;
+  return kName|kClassName|kArgs|kValue ;
 }

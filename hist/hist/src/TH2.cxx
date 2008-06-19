@@ -1396,7 +1396,7 @@ Long64_t TH2::Merge(TCollection *list)
    }
 
    //merge bin contents and errors
-   const Int_t kNstat = 7;
+   const Int_t kNstat = 11;
    Double_t stats[kNstat], totstats[kNstat];
    for (Int_t i=0;i<kNstat;i++) {totstats[i] = stats[i] = 0;}
    GetStats(totstats);
@@ -1543,14 +1543,21 @@ TH2 *TH2::Rebin2D(Int_t nxgroup, Int_t nygroup, const char *newname)
       hnew->SetName(newname);
    }
 
+   // save original statistics
+   const Int_t kNstat = 7;
+   Double_t stat[kNstat]; 
+   GetStats(stat); 
+   bool resetStat = false; 
+
+
    // change axis specs and rebuild bin contents array
    if(newxbins*nxgroup != nxbins) {
       xmax = fXaxis.GetBinUpEdge(newxbins*nxgroup);
-      hnew->fTsumw = 0; //stats must be reset because top bins will be moved to overflow bin
+      resetStat = true; //stats must be reset because top bins will be moved to overflow bin
    }
    if(newybins*nygroup != nybins) {
       ymax = fYaxis.GetBinUpEdge(newybins*nygroup);
-      hnew->fTsumw = 0; //stats must be reset because top bins will be moved to overflow bin
+      resetStat = true; //stats must be reset because top bins will be moved to overflow bin
    }
    // save the TAttAxis members (reset by SetBins) for x axis
    Int_t    nXdivisions  = fXaxis.GetNdivisions();
@@ -1674,7 +1681,9 @@ TH2 *TH2::Rebin2D(Int_t nxgroup, Int_t nygroup, const char *newname)
    fYaxis.SetTitleColor(yTitleColor);
    fYaxis.SetTitleFont(yTitleFont);
 
-   hnew->SetEntries(entries); //was modified by SetBinContent
+   //restore statistics and entries  modified by SetBinContent
+   hnew->SetEntries(entries); 
+   if (!resetStat) hnew->PutStats(stat);
 
    delete [] oldBins;
    if (oldErrors) delete [] oldErrors;
@@ -2167,7 +2176,7 @@ TH1 *TH2::ShowBackground(Int_t niter, Option_t *option)
 //   to be implemented (may be)
 
 
-   return (TH1*)gROOT->ProcessLineFast(Form("TSpectrum2::StaticBackground((TH1*)0x%x,%d,\"%s\")",this,niter,option));
+   return (TH1*)gROOT->ProcessLineFast(Form("TSpectrum2::StaticBackground((TH1*)0x%lx,%d,\"%s\")",this,niter,option));
 }
 
 //______________________________________________________________________________
@@ -2181,7 +2190,7 @@ Int_t TH2::ShowPeaks(Double_t sigma, Option_t *option, Double_t threshold)
    //option="" by default (instead of "goff")
 
 
-   return (Int_t)gROOT->ProcessLineFast(Form("TSpectrum2::StaticSearch((TH1*)0x%x,%g,\"%s\",%g)",this,sigma,option,threshold));
+   return (Int_t)gROOT->ProcessLineFast(Form("TSpectrum2::StaticSearch((TH1*)0x%lx,%g,\"%s\",%g)",this,sigma,option,threshold));
 }
 
 

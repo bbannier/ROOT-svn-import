@@ -21,7 +21,6 @@
 #include "TGLUtil.h"
 #include "TAxis.h"
 
-using namespace TMath;
 
 //______________________________________________________________________________
 // OpenGL renderer class for TEveCalo2D.
@@ -37,6 +36,7 @@ TEveCalo2DGL::TEveCalo2DGL() :
    // Constructor.
 
    // fDLCache = kFALSE; // Disable display list.
+   fMultiColor = kTRUE;
 }
 
 /******************************************************************************/
@@ -58,140 +58,83 @@ void TEveCalo2DGL::SetBBox()
 {
    // Set bounding box.
 
-   // !! This ok if master sub-classed from TAttBBox
    SetAxisAlignedBBox(((TEveCalo2D*)fExternalObj)->AssertBBox());
 }
 
-//______________________________________________________________________________
-Bool_t TEveCalo2DGL::ShouldDLCache(const TGLRnrCtx & rnrCtx) const
-{
-   // Check if display-lists should be used.
-   // Compared to TGLLogicalShape version we also don't use them
-   // for outline-pass as colors are set internally.
-
-   if (!fScene || rnrCtx.SecSelection() ||
-       rnrCtx.DrawPass() == TGLRnrCtx::kPassOutlineLine)
-   {
-      return kFALSE;
-   }
-   return fDLCache;
-}
 /******************************************************************************/
 
 //______________________________________________________________________________
-Float_t TEveCalo2DGL::MakeRPhiCell(Float_t phiMin, Float_t phiMax, Float_t towerH, Float_t offset) const
+Float_t TEveCalo2DGL::MakeRPhiCell(Float_t phiMin, Float_t phiMax,
+                                   Float_t towerH, Float_t offset) const
 {
    // Calculate vertices for the calorimeter cell in RPhi projection.
+   // Returns outside radius of the tower.
+
+   using namespace TMath;
 
    Float_t r1 = fM->fBarrelRadius + offset;
    Float_t r2 = r1 + towerH;
 
    Float_t pnts[8];
-   Float_t *p = pnts;
 
-   p[0] = r1*Cos(phiMin);
-   p[1] = r1*Sin(phiMin);
-   p +=2;
-   p[0] = r2*Cos(phiMin);
-   p[1] = r2*Sin(phiMin);
-   p +=2;
-   p[0] = r2*Cos(phiMax);
-   p[1] = r2*Sin(phiMax);
-   p +=2;
-   p[0] = r1*Cos(phiMax);
-   p[1] = r1*Sin(phiMax);
+   pnts[0] = r1*Cos(phiMin); pnts[1] = r1*Sin(phiMin);
+   pnts[2] = r2*Cos(phiMin); pnts[3] = r2*Sin(phiMin);
+   pnts[4] = r2*Cos(phiMax); pnts[5] = r2*Sin(phiMax);
+   pnts[6] = r1*Cos(phiMax); pnts[7] = r1*Sin(phiMax);
 
    Float_t x, y, z;
-   for (Int_t i=0; i<4; i++){
+   for (Int_t i = 0; i < 4; ++i)
+   {
       x = pnts[2*i];
       y = pnts[2*i+1];
       z = 0.f;
       fM->fManager->GetProjection()->ProjectPoint(x, y, z);
       glVertex3f(x, y, fM->fDepth);
    }
-   return offset+towerH;
+
+   return offset + towerH;
 }
 
 //______________________________________________________________________________
 void TEveCalo2DGL::DrawRPhi(TGLRnrCtx & rnrCtx) const
 {
-  // Draw calorimeter cells in RPhi projection.
+   // Draw calorimeter cells in RPhi projection.
 
    TEveCaloData* data = fM->GetData();
-   const TAxis* ax = data->GetPhiBins();
-
-   if (fM->fCacheOK == kFALSE) {
-      fM->ResetCache();
-      Float_t eta = fM->GetEta();
-      Float_t etaRng = fM->GetEtaRng();
-      Float_t pr[4];
-      // calculate the two intervals when circle is cut
-      Float_t phi1 = fM->GetPhiMin();
-      Float_t phi2 = fM->GetPhiMax();
-      if (phi2 >Pi() && phi1<-Pi()) {
-         pr[0] =  phi1;
-         pr[1] =  Pi();
-         pr[2] =  -Pi();
-         pr[3] =  -TwoPi()+phi2;
-      }
-      else if (phi1<-Pi() && phi2<=Pi()) {
-         pr[0] = -Pi();
-         pr[1] =  phi2;
-         pr[2] =  TwoPi()+phi1;
-         pr[3] =  Pi();
-      } else {
-         pr[0] = pr[2] = phi1;
-         pr[1] = pr[3] = phi2;
-      }
-
-      Int_t nBins = ax->GetNbins();
-      for (Int_t ibin=1; ibin<=nBins; ibin++) {
-         if ( (   ax->GetBinLowEdge(ibin)>=pr[0] && ax->GetBinUpEdge(ibin)<pr[1])
-              || (ax->GetBinLowEdge(ibin)>=pr[2] && ax->GetBinUpEdge(ibin)<pr[3]))
-         {
-            TEveCaloData::vCellId_t* clv = new TEveCaloData::vCellId_t();
-            Int_t nc = data->GetCellList(fM->fPalette->GetMinVal(), fM->fPalette->GetMaxVal(),
-                                         eta, etaRng, fM->fPhi+ax->GetBinCenter(ibin), ax->GetBinWidth(ibin),*clv);
-            if (nc)
-               fM->fCellLists.push_back(clv);
-            else
-               delete clv;
-         }
-      }
-      fM->fCacheOK= kTRUE;
-   }
-
-   Int_t nSlices = data->GetNSlices();
+   Int_t    nSlices  = data->GetNSlices();
    Float_t *sliceVal = new Float_t[nSlices];
    TEveCaloData::CellData_t cellData;
    Float_t towerH;
-   Bool_t visible;
+
    if (rnrCtx.SecSelection()) glPushName(0);
-   for(UInt_t vi=0; vi<fM->fCellLists.size(); vi++) {
+
+   for(UInt_t vi = 0; vi < fM->fCellLists.size(); ++vi)
+   {
       // reset values
       Float_t off = 0;
-      for (Int_t s=0; s<nSlices; s++)
-         sliceVal[s]=0;
+      for (Int_t s = 0; s < nSlices; ++s)
+         sliceVal[s] = 0;
+
       // loop through eta bins
       TEveCaloData::vCellId_t* cids = fM->fCellLists[vi];
-      for (TEveCaloData::vCellId_i it = cids->begin(); it != cids->end(); it++) {
+      for (TEveCaloData::vCellId_i it = cids->begin(); it != cids->end(); it++)
+      {
          data->GetCellData(*it, cellData);
-         sliceVal[(*it).fSlice] += cellData.Value();
+         sliceVal[(*it).fSlice] += cellData.Value(fM->fPlotEt);
       }
       // draw
       if (rnrCtx.SecSelection()) {
          glLoadName(vi);
          glPushName(0);
       }
-      for (Int_t s=0; s<nSlices; s++) {
-         fM->SetupColorHeight(sliceVal[s], s, towerH, visible);
-         if (visible)
-         {
-            if (rnrCtx.SecSelection()) glLoadName(s);
-            glBegin(GL_QUADS);
-            off = MakeRPhiCell(cellData.PhiMin(), cellData.PhiMax(), towerH, off);
-            glEnd();
-         }
+
+      for (Int_t s = 0; s < nSlices; ++s)
+      {
+         fM->SetupColorHeight(sliceVal[s], s, towerH);
+         if (rnrCtx.SecSelection()) glLoadName(s);
+         glBegin(GL_QUADS);
+         off = MakeRPhiCell(cellData.PhiMin(), cellData.PhiMax(), towerH, off);
+         glEnd();
       }
       if (rnrCtx.SecSelection()) glPopName(); // slice
    }
@@ -203,9 +146,12 @@ void TEveCalo2DGL::DrawRPhi(TGLRnrCtx & rnrCtx) const
 /*******************************************************************************/
 
 //______________________________________________________________________________
-void TEveCalo2DGL::MakeRhoZCell(const TEveCaloData::CellData_t &cell, Float_t& offset, Bool_t phiPlus, Float_t towerH) const
+void TEveCalo2DGL::MakeRhoZCell(const TEveCaloData::CellData_t &cell,
+                                Float_t& offset, Bool_t phiPlus, Float_t towerH) const
 {
    // Draw cell in RhoZ projection.
+
+   using namespace TMath;
 
    Float_t pnts[8];
 
@@ -240,7 +186,8 @@ void TEveCalo2DGL::MakeRhoZCell(const TEveCaloData::CellData_t &cell, Float_t& o
    glPushName(phiPlus);
    glBegin(GL_QUADS);
    Float_t x, y, z;
-   for (Int_t i=0; i<4; i++) {
+   for (Int_t i = 0; i < 4; ++i)
+   {
       x = 0.f;
       y = phiPlus ? Abs(pnts[2*i]): -Abs(pnts[2*i]);
       z = pnts[2*i+1];
@@ -258,52 +205,35 @@ void TEveCalo2DGL::DrawRhoZ(TGLRnrCtx & rnrCtx) const
 {
    // Draw calorimeter in RhoZ projection.
 
-   TEveCaloData* data = fM->GetData();
-
-   if (fM->fCacheOK == kFALSE)
-   {
-      fM->ResetCache();
-      const TAxis* ax = data->GetEtaBins();
-      Int_t nBins = ax->GetNbins();
-      for (Int_t ibin=1; ibin<=nBins; ibin++){
-         if (ax->GetBinLowEdge(ibin)>fM->fEtaMin && ax->GetBinUpEdge(ibin)<=fM->fEtaMax)
-         {
-            TEveCaloData::vCellId_t* aa = new TEveCaloData::vCellId_t();
-            data->GetCellList(fM->fPalette->GetMinVal(), fM->fPalette->GetMaxVal(),
-                              fM->GetEta() + ax->GetBinCenter(ibin), ax->GetBinWidth(ibin),
-                              fM->fPhi, fM->fPhiOffset, *aa);
-            if (aa->size()) fM->fCellLists.push_back(aa);
-         }
-      }
-      fM->fCacheOK= kTRUE;
-   }
-
    TEveCaloData::CellData_t cellData;
    Float_t towerH;
-   Bool_t visible;
+   TEveCaloData* data = fM->GetData();
    Int_t nSlices = data->GetNSlices();
+
    Float_t *sliceValsUp  = new Float_t[nSlices];
    Float_t *sliceValsLow = new Float_t[nSlices];
 
-
    if (rnrCtx.SecSelection()) glPushName(0);
-   for (UInt_t vi=0; vi<fM->fCellLists.size(); vi++) {
 
+   for (UInt_t vi = 0; vi < fM->fCellLists.size(); ++vi)
+   {
       // clear
       Float_t offUp  = 0;
       Float_t offLow = 0;
-      for (Int_t s=0; s<nSlices; s++) {
+      for (Int_t s = 0; s < nSlices; ++s) {
          sliceValsUp[s]  = 0;
          sliceValsLow[s] = 0;
       }
 
       // values
-      for (TEveCaloData::vCellId_i it = fM->fCellLists[vi]->begin(); it !=  fM->fCellLists[vi]->end(); it++) {
+      for (TEveCaloData::vCellId_i it = fM->fCellLists[vi]->begin();
+           it != fM->fCellLists[vi]->end(); ++it)
+      {
          data->GetCellData(*it, cellData);
          if (cellData.Phi() > 0)
-            sliceValsUp[(*it).fSlice]  += cellData.Value();
+            sliceValsUp[(*it).fSlice]  += cellData.Value(fM->fPlotEt);
          else
-            sliceValsLow[(*it).fSlice] += cellData.Value();
+            sliceValsLow[(*it).fSlice] += cellData.Value(fM->fPlotEt);
       }
 
       // draw
@@ -313,20 +243,23 @@ void TEveCalo2DGL::DrawRhoZ(TGLRnrCtx & rnrCtx) const
          glPushName(0); // slice
       }
 
-      for (Int_t s=0; s<nSlices; s++) {
-         if (rnrCtx.SecSelection())glLoadName(s);
+      for (Int_t s = 0; s < nSlices; ++s)
+      {
+         if (rnrCtx.SecSelection()) glLoadName(s);
          //  phi +
-         fM->SetupColorHeight(sliceValsUp[s], s, towerH, visible);
-         if (visible) MakeRhoZCell(cellData, offUp, kTRUE , towerH);
+         fM->SetupColorHeight(sliceValsUp[s], s, towerH);
+         MakeRhoZCell(cellData, offUp, kTRUE , towerH);
 
          // phi -
-         fM->SetupColorHeight(sliceValsLow[s], s, towerH, visible);
-         if (visible) MakeRhoZCell(cellData, offLow, kFALSE , towerH);
+         fM->SetupColorHeight(sliceValsLow[s], s, towerH);
+         MakeRhoZCell(cellData, offLow, kFALSE , towerH);
       }
 
       if (rnrCtx.SecSelection()) glPopName(); // slice
    }
+
    if (rnrCtx.SecSelection()) glPopName(); // phi bin
+
    delete [] sliceValsUp;
    delete [] sliceValsLow;
 }
@@ -336,8 +269,11 @@ void TEveCalo2DGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 {
    // Render with OpenGL.
 
-   TGLCapabilitySwitch light_off  (GL_LIGHTING,  kFALSE);
-   TGLCapabilitySwitch culling_ogg(GL_CULL_FACE, kFALSE);
+   TGLCapabilitySwitch light_off(GL_LIGHTING,  kFALSE);
+   TGLCapabilitySwitch cull_off (GL_CULL_FACE, kFALSE);
+
+   if (fM->fCellIdCacheOK == kFALSE)
+      fM->BuildCellIdCache();
 
    fM->AssertPalette();
 
@@ -381,17 +317,21 @@ void TEveCalo2DGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & re
    if (rec.GetN() == 4)
    {
       if(rec.GetItem(3))
-      printf("Cell in selected positive phi half \n");
+         printf("Cell in selected positive phi half \n");
       else
-      printf("Cell in selected negative phi half \n");
+         printf("Cell in selected negative phi half \n");
 
-      for (TEveCaloData::vCellId_i it =fM->fCellLists[id]->begin(); it!=fM->fCellLists[id]->end(); it++)
+      for (TEveCaloData::vCellId_i it = fM->fCellLists[id]->begin();
+           it != fM->fCellLists[id]->end(); ++it)
       {
          fM->fData->GetCellData(*it, cellData);
-         if ((*it).fSlice == slice) {
-            if ( (rec.GetItem(3) && cellData.Phi()> 0)
-                 || (rec.GetItem(3)== kFALSE && cellData.Phi()<0) )
+         if ((*it).fSlice == slice)
+         {
+            if ((rec.GetItem(3) && cellData.Phi() > 0) ||
+                (rec.GetItem(3) == kFALSE && cellData.Phi() < 0))
+            {
                cellData.Dump();
+            }
          }
       }
    }
