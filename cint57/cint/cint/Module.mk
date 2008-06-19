@@ -276,7 +276,8 @@ $(IOSENUMA):    $(CINTTMP)
 all-$(MODNAME): $(CINTLIB) $(CINT) $(CINTTMP) $(MAKECINT) $(IOSENUM)
 
 clean-$(MODNAME):
-		@rm -f $(CINTTMPO) $(CINTALLO) $(CINTEXEO) $(MAKECINTO)
+		@rm -f $(CINTTMPO) $(CINTALLO) $(CINTEXEO) $(MAKECINTO) \
+		   $(CINTHT:include/cint/%=include/%)
 
 clean::         clean-$(MODNAME)
 
@@ -285,7 +286,7 @@ distclean-$(MODNAME): clean-$(MODNAME)
 		   $(CINT) $(CINTTMP) $(MAKECINT) $(CINTDIRM)/*.exp \
 		   $(CINTDIRM)/*.lib $(CINTDIRS)/loadfile_tmp.cxx \
 		   $(CINTDIRDLLS)/sys/types.h $(CINTDIRDLLS)/systypes.h \
-		   $(CINTHT) $(CINTCONF) $(CINTHT:include/cint/%=include/%)
+		   $(CINTHT) $(CINTCONF)
 		@rm -rf include/cint
 
 distclean::     distclean-$(MODNAME)
