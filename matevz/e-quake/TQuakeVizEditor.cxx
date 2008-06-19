@@ -174,8 +174,8 @@ void TQuakeVizEditor::SetModel(TObject* obj)
    fLimitStr->SetLimits(fM->fMinStr, fM->fMaxStr);
    fLimitStr->SetValues(fM->fLimitStrMin, fM->fLimitStrMax);
 
-   fLimitDepth->SetLimits(100*fM->fMinDepth, 100*fM->fMaxDepth);
-   fLimitDepth->SetValues(100*fM->fLimitDepthMin, 100*fM->fLimitDepthMax);
+   fLimitDepth->SetLimits(fM->fMinDepth, fM->fMaxDepth);
+   fLimitDepth->SetValues(fM->fLimitDepthMin, fM->fLimitDepthMax);
 
    // --------------------------------
 
@@ -226,7 +226,7 @@ void TQuakeVizEditor::DoLimitDepth()
 {
    // Slot for setting strength/magnitude range.
 
-   fM->SetLimitDepth(0.01*fLimitDepth->GetMin(), 0.01*fLimitDepth->GetMax());
+   fM->SetLimitDepth(fLimitDepth->GetMin(), fLimitDepth->GetMax());
    Update();
 }
 

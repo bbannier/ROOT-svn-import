@@ -38,9 +38,14 @@ TQuakeViz::TQuakeViz() :
    fLimitDepthMin(0), fLimitDepthMax(500),
    fLimitRange(kFALSE),
    fYear(2007), fMonth(1), fDay(1), fHour(0),
-   fDaysShown(300),  fYearsShown(0)
+   fDaysShown(300),  fYearsShown(0),
+   fCenterLat(45),   fCenterLon(26),
+   fFactorLat(111.1329444), fFactorLon(78.5534),
+   fFactorDepth(-1)
 {
    // Constructor.
+
+  InitMainTrans();
 }
 
 //______________________________________________________________________________
@@ -52,19 +57,19 @@ void TQuakeViz::ReadData(const Text_t* file)
    Int_t   year, month, day, hour, min;
    Float_t sec;
 
-   fMinLat = fMinLon = fMinDepth = fMinStr =  1e6;
-   fMaxLat = fMaxLon = fMaxDepth = fMaxStr = -1e6;
+   fMinLat = fMinLon = fMinDepth = fMinStr = fMinDist =  1e6;
+   fMaxLat = fMaxLon = fMaxDepth = fMaxStr = fMaxDist = -1e6;
 
    FILE* fp = fopen(file, "r");
    while (fscanf(fp,
                  "%d %d %d %d %d %f "
-                 "%f %f %f %f",
+                 "%f %f %f %f %f",
                  &year, &month, &day, &hour, &min, &sec,
-                 &q.fLat, &q.fLon, &q.fDepth, &q.fStr
-                 ) == 10)
+                 &q.fLat, &q.fLon, &q.fDepth, &q.fStr, &q.fDist
+                 ) == 11)
    {
       q.fTime.Set(year, month, day, hour, min, TMath::Nint(sec), 0, kTRUE, 0);
-      q.fDepth *= -0.01f; // Brutal fix of depth-scale.
+      q.fDepth *= fFactorDepth; // Fix of depth-scale.
 
       if (q.fLat < fMinLat) fMinLat = q.fLat;
       if (q.fLat > fMaxLat) fMaxLat = q.fLat;
@@ -74,8 +79,13 @@ void TQuakeViz::ReadData(const Text_t* file)
       if (q.fDepth > fMaxDepth) fMaxDepth = q.fDepth;
       if (q.fStr < fMinStr) fMinStr = q.fStr;
       if (q.fStr > fMaxStr) fMaxStr = q.fStr;
+      if (q.fDist < fMinDist) fMinDist = q.fDist;
+      if (q.fDist > fMaxDist) fMaxDist = q.fDist;
 
       if (q.fLat < 45) printf("foo %d\n", (Int_t) fData.size());
+
+      q.fX = fFactorLat * (q.fLat - fCenterLat);
+      q.fY = fFactorLon * (q.fLon - fCenterLon);
 
       fData.push_back(q);
    }
@@ -92,11 +102,6 @@ void TQuakeViz::ReadData(const Text_t* file)
    fLimitStrMax   = fMaxStr;
    fLimitDepthMin = fMinDepth;
    fLimitDepthMax = fMaxDepth;
-
-   // Loop over entries and calculate x, y coordinates in the local region.
-   // const Float_t R = 6300;
-   // Float_t x_c = R * TMath::XXX(0.5*(fMaxLon + fMinLon));
-   // Float_t y_c = R * TMath::XXX(0.5*(fMaxLat + fMinLat));
 }
 
 //______________________________________________________________________________
@@ -133,7 +138,7 @@ void TQuakeViz::ComputeBBox()
    BBoxInit();
    for (vQData_i i = fData.begin(); i != fData.end(); ++i)
    {
-      BBoxCheckPoint(i->fLat, i->fLon, i->fDepth);
+      BBoxCheckPoint(i->fX, i->fY, i->fDepth);
    }
 }
 
@@ -218,6 +223,6 @@ TTimeStamp TQuakeViz::GetLimitTimeMax()
 
 void TQuakeViz::QData_t::Print() const
 {
-   printf("Time: %s\nLat=%.2f, Lon=%.2f, Depth=%.1f, Magnitude=%.1f\n",
-          fTime.AsString("s"), fLat, fLon, 100*fDepth, fStr);
+   printf("Time: %s\nLat=%.2f, Lon=%.2f, Depth=%.1f, Magnitude=%.1f, Dist=%.1f\n",
+          fTime.AsString("s"), fLat, fLon, fDepth, fStr, fDist);
 }

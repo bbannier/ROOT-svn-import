@@ -78,9 +78,13 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    // Palette initialized to 100 values, need 2*delta.
    Double_t pfac = 100.0 / (maxTime - minTime);
 
-   TGLCapabilitySwitch lights_off(GL_LIGHTING, fM->fLighting);
+   TGLCapabilitySwitch light_switch(GL_LIGHTING, fM->fLighting);
+   TGLCapabilitySwitch auto_norm(GL_NORMALIZE, kTRUE);
 
    UChar_t c[4], alpha = UChar_t(255 * (1.0 - 0.01*fM->fTransparency));
+   UChar_t mc[4];
+   TEveUtil::ColorFromIdx(fM->GetMainColor(), mc);
+   mc[3] = alpha;
 
    glPushName(0);
    Int_t idx = 0;
@@ -91,19 +95,22 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          if (fM->AcceptForDraw(*i) &&
              i->fTime.GetSec() >= minTime && i->fTime.GetSec() <= maxTime)
          {
+            Float_t relStr  = (i->fStr  - fM->fMinStr)  / (fM->fMaxStr  - fM->fMinStr);
+            Float_t relDist = (i->fDist - fM->fMinDist) / (fM->fMaxDist - fM->fMinDist);
+            Float_t colFac  = 1.0f - 0.6f*relDist;
+
             glPushMatrix();
-            glTranslatef(i->fLat, i->fLon, i->fDepth);
+            glTranslatef(i->fX, i->fY, i->fDepth);
 
             Int_t val = TMath::Nint(pfac*(i->fTime.GetSec() - minTime));
             pal->ColorFromValue(val, -1, c);
             c[3] = alpha;
+            c[0] *= colFac; c[1] *= colFac; c[2] *= colFac;
             TGLUtil::Color4ubv(c);
 
             glLoadName(idx);
             // Draw sphere: void gluSphere(GLUquadric* quad, double radius, int slices, int stacks)
-            gluSphere(rnrCtx.GetGluQuadric(),
-                      0.005f + (i->fStr - fM->fMinStr)*0.045f/(fM->fMaxStr - fM->fMinStr),
-                      8, 8);
+            gluSphere(rnrCtx.GetGluQuadric(), 0.5f + 4.5f*relStr, 8, 8);
             glPopMatrix();
          }
       }
@@ -115,13 +122,18 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          if (fM->AcceptForDraw(*i))
          {
             glPushMatrix();
-            glTranslatef(i->fLat, i->fLon, i->fDepth);
+            glTranslatef(i->fX, i->fY, i->fDepth);
+
+            Float_t relStr  = (i->fStr  - fM->fMinStr)  / (fM->fMaxStr  - fM->fMinStr);
+            Float_t relDist = (i->fDist - fM->fMinDist) / (fM->fMaxDist - fM->fMinDist);
+            Float_t colFac  = 1.0f - 0.6*relDist;
+
+            c[0] = mc[0]*colFac; c[1] = mc[0]*colFac; c[2] = mc[0]*colFac;
+            TGLUtil::Color4ubv(c);
 
             glLoadName(idx);
             // Draw sphere: void gluSphere(GLUquadric* quad, double radius, int slices, int stacks)
-            gluSphere(rnrCtx.GetGluQuadric(),
-                      0.005f + (i->fStr - fM->fMinStr)*0.045f/(fM->fMaxStr - fM->fMinStr),
-                      8, 8);
+            gluSphere(rnrCtx.GetGluQuadric(), 0.5f + 4.5f*relStr, 8, 8);
             glPopMatrix();
          }
       }

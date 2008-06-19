@@ -14,7 +14,7 @@ TQuakeViz* equake()
   qv->SetMainColor(Color_t(kCyan - 10));
   qv->SetMainTransparency(50);
 
-  qv->ReadData("data");
+  qv->ReadData("data_new");
   qv->InitVizState(300);
 
   gEve->AddElement(qv);
