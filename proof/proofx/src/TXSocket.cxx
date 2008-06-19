@@ -183,6 +183,9 @@ TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
       }
    }
 
+   // Set the asynchronous handler
+   fHandler = handler;
+
    if (url) {
 
       // Create connection (for managers the type of the connection is the same
@@ -196,9 +199,6 @@ TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
                                  " to server [%s]: %s", url, fConn->GetLastErr());
          return;
       }
-
-      // We are connected, we can set the handler
-      fHandler = handler;
 
       // Create new proofserv if not client manager or administrator or internal mode
       if (fMode == 'm' || fMode == 's' || fMode == 'M' || fMode == 'A') {
