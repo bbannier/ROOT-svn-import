@@ -1900,19 +1900,21 @@ const char *TCint::GetIncludePath()
 const char *TCint::GetSTLIncludePath() const
 {
    // Return the directory containing CINT's stl cintdlls.
-   TString stldir;
+   static TString stldir;
+   if (!stldir.Length()) {
 #ifdef CINTINCDIR
-   stldir = CINTINCDIR;
+      stldir = CINTINCDIR;
 #else
-   stldir = gRootDir; stldir += "/cint";
+      stldir = gRootDir; stldir += "/cint";
 #endif
-   if (!stldir.EndsWith("/"))
-      stldir += '/';
+      if (!stldir.EndsWith("/"))
+         stldir += '/';
 #ifdef R__BUILDING_CINT7
-   stldir += "cint7/stl";
+      stldir += "cint7/stl";
 #else
-   stldir += "cint/stl";
+      stldir += "cint/stl";
 #endif
+   }
    return stldir;
 }
 
