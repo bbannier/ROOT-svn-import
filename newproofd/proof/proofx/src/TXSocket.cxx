@@ -174,7 +174,6 @@ TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
    // This is used by external code to create a link between this object
    // and another one
    fReference = 0;
-   fHandler = handler;
 
    // The global pipe
    if (fgPipe[0] == -1) {
@@ -197,6 +196,9 @@ TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
                                  " to server [%s]: %s", url, fConn->GetLastErr());
          return;
       }
+
+      // We are connected, we can set the handler
+      fHandler = handler;
 
       // Create new proofserv if not client manager or administrator or internal mode
       if (fMode == 'm' || fMode == 's' || fMode == 'M' || fMode == 'A') {
@@ -385,7 +387,8 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
             Info("ProcessUnsolicitedMsg","%p: got error from underlying connection", this);
          XHandleErr_t herr = {1, 0};
          if (!fHandler || fHandler->HandleError((const void *)&herr)) {
-            Error("ProcessUnsolicitedMsg","%p: handler undefined or recovery failed", this);
+            if (gDebug > 0)
+               Info("ProcessUnsolicitedMsg","%p: handler undefined or recovery failed", this);
             // Avoid to contact the server any more
             fSessionID = -1;
          }
