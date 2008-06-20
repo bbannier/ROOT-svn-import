@@ -274,7 +274,7 @@ public:
                            evtrti, mbrti); } // *SIGNAL*
    void           Feedback(TList *objs); // *SIGNAL*
    TDSetElement  *GetNextPacket(TSlave *slave, TMessage *r);
-
+   TVirtualPacketizer   *GetPacketizer() const { return fPacketizer; }
    Bool_t         IsClient() const;
 
    void           SetInitTime();

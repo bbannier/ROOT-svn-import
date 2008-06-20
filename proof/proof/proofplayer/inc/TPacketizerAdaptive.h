@@ -70,7 +70,7 @@ private:
    Float_t        fCumProcTime;   // sum of proc time of all packets so far
    Float_t        fBaseLocalPreference;   // indicates how much more likely
    // the nodes will be to open their local files (1 means indifferent)
-   Bool_t          fForceLocal;   // if 1 - eliminate the remote processing
+   Bool_t         fForceLocal;    // if 1 - eliminate the remote processing
 
    TPacketizerAdaptive();
    TPacketizerAdaptive(const TPacketizerAdaptive&);    // no implementation, will generate
@@ -88,6 +88,8 @@ private:
 
    void           Reset();
    void           ValidateFiles(TDSet *dset, TList *slaves);
+   void           SplitPerHost(TList *elements,
+                               TList **listOfMissingFiles);
 
 public:
    static Long_t  fgMaxSlaveCnt;  // maximum number of workers per filenode (Long_t to avoid
@@ -109,7 +111,7 @@ public:
    Int_t         GetEstEntriesProcessed(Float_t t, Long64_t &ent, Long64_t &bytes);
    Int_t         CalculatePacketSize(TObject *slstat);
    TDSetElement *GetNextPacket(TSlave *sl, TMessage *r);
-
+   void          MarkBad(TSlave *s, TList **);
    ClassDef(TPacketizerAdaptive,0)  //Generate work packets for parallel processing
 };
 
