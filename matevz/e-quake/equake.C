@@ -1,5 +1,10 @@
 class TQuakeViz;
 
+// Pointer to last-created quake-viz.
+TQuakeViz* qviz = 0;
+// This can be used directly from the root command line, e.g.:
+// root[1] qviz->ParaCords()
+
 TQuakeViz* equake()
 {
   TEveManager::Create();
@@ -30,6 +35,7 @@ TQuakeViz* equake()
   TEveLine* line = read_midline();
   line->SetRnrSelf(kFALSE);
 
+  qviz = qv;
   return qv;
 }
 
