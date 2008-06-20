@@ -1636,10 +1636,6 @@ char *XrdSecProtocolgsiInit(const char mode,
    char *rc = (char *)"";
    char *cenv = 0;
 
-   // Take into account xrootd debug flag
-   cenv = getenv("XRDDEBUG");
-   if (cenv && !strcmp(cenv,"1")) opts.debug = 1;
-
    //
    // Clients first
    if (mode == 'c') {
@@ -1683,7 +1679,7 @@ char *XrdSecProtocolgsiInit(const char mode,
       // debug
       char *cenv = getenv("XrdSecDEBUG");
       if (cenv)
-         if (cenv[0] >= 49 && cenv[0] <= 51) opts.debug = atoi(cenv);  
+         if (cenv[0] >= 49 && cenv[0] <= 51) opts.debug = atoi(cenv);
 
       // directory with CA certificates
       cenv = getenv("XrdSecGSICADIR");
@@ -1766,6 +1762,10 @@ char *XrdSecProtocolgsiInit(const char mode,
       // We are done
       return rc;
    }
+
+   // Take into account xrootd debug flag
+   cenv = getenv("XRDDEBUG");
+   if (cenv && !strcmp(cenv,"1")) opts.debug = 1;
 
    //
    // Server initialization
