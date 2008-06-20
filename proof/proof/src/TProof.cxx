@@ -56,7 +56,7 @@
 #include "TParameter.h"
 #include "TProof.h"
 #include "TProofNodeInfo.h"
-#include "TVirtualProofPlayer.h"
+#include "TProofPlayer.h"
 #include "TProofServ.h"
 #include "TPluginManager.h"
 #include "TQueryResult.h"
@@ -72,6 +72,7 @@
 #include "TTree.h"
 #include "TUrl.h"
 #include "TFileCollection.h"
+#include "TPacketizerAdaptive.h"
 
 TProof *gProof = 0;
 TVirtualMutex *gProofMutex = 0;
@@ -2672,6 +2673,19 @@ void TProof::MarkBad(TSlave *sl)
    // Add a bad slave server to the bad slave list and remove it from
    // the active list and from the two monitor objects.
 
+   if (!IsMaster())
+      Error("MarkBad", "Can be called only on the master");
+   TList *listOfMissingFiles = 0;
+   if (!(listOfMissingFiles = (TList *)GetOutput("MissingFiles"))) {
+      listOfMissingFiles = new TList();
+      listOfMissingFiles->SetName("MissingFiles");
+      fPlayer->AddOutputObject(listOfMissingFiles);
+   }
+
+   TVirtualPacketizer *packetizer = ((TProofPlayerRemote*)fPlayer)->GetPacketizer();
+   if (packetizer->ClassName() == "TPacketizerAdaptive")
+      ((TPacketizerAdaptive *)packetizer)->MarkBad(sl,
+         &listOfMissingFiles);
    fActiveSlaves->Remove(sl);
    FindUniqueSlaves();
    fBadSlaves->Add(sl);
