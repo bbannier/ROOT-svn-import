@@ -61,6 +61,7 @@ options="                    \
    enable_ldap               \
    enable_genvector          \
    enable_mathmore           \
+   enable_memstat            \
    enable_monalisa           \
    enable_mysql              \
    enable_odbc               \
@@ -119,8 +120,8 @@ enable_shadowpw=
 enable_soversion=no
 enable_table=no
 enable_thread=yes        # cannot be disabled (not in above options list)
-no_stubs=no         # Complete Dictionaries by default (All stubs)
-no_stubs_test=no    # Complete Dictionaries by default (All stubs)
+no_stubs=no              # complete Dictionaries by default (All stubs)
+no_stubs_test=no         # complete Dictionaries by default (All stubs)
 enable_unuran=no
 enable_winrtdebug=
 enable_xrootd=           # must be set explicitely via --enable-xrootd
@@ -155,6 +156,7 @@ ASIMAGE          \
 LDAP             \
 GLOBUS_LOCATION  \
 GLITE            \
+MEMSTAT          \
 MONALISA         \
 SRP              \
 SSL              \
@@ -760,7 +762,6 @@ guess_architecture () {
     esac
     if [ "$arch" = "macosx" ]; then
        if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -ge 5 ]; then
-          macosx105=yes
           if `sysctl machdep.cpu.extfeatures | grep "64" > /dev/null  2>&1` ; then
              arch=macosx64
           fi
@@ -918,6 +919,7 @@ enable/disable options, prefix with either --enable- or --disable-
   ldap               LDAP support, requires (Open)LDAP libs
   genvector          Build the new libGenVector library
   mathmore           Build the new libMathMore extended math library, requires GSL (vers. >= 1.8)
+  memstat            A memory statistics utility, helps to detect memory leaks
   minuit2            Build the new libMinuit2 minimizer library
   monalisa           Monalisa monitoring support, requires libapmoncpp
   mysql              MySQL support, requires libmysqlclient
@@ -1112,6 +1114,10 @@ if test "x$platform" = "xmacosx" ; then
    logmsg "Checking Fink directory"
    finkdir=`$cwhich fink 2>&1 | sed -ne "s/\/bin\/fink//p"`
    logmsg "$finkdir"
+
+   if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -ge 5 ]; then
+      macosx105=yes
+   fi
 fi
 
 ######################################################################
@@ -1525,7 +1531,7 @@ win32)
     ;;
 macosx)
     if test "x$enable_thread" = "x" || test "x$enable_thread" = "xyes"; then
-        if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -ge 5 ]; then
+        if test ! "x$macosx105" = "x"; then
             enable_thread="yes"
             threadflag="-D_REENTRANT -pthread"
             threadlib="-pthread"
@@ -1755,7 +1761,7 @@ if test ! "x$enable_opengl" = "xno" && test ! "x$platform" = "xwin32" ; then
 
     # Mac OS X 10.5.0 problem
     if test "x$platform" = "xmacosx"; then
-       if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -eq 5 ]; then
+       if test ! "x$macosx105" = "x"; then
           opengllib="-dylib_file /usr/X11R6/lib/libGL.dylib:/usr/X11R6/lib/libGL.dylib"
        fi
     fi
@@ -4203,6 +4209,23 @@ fi
 
 ######################################################################
 #
+### echo %%% MemStat Library - check for memory leaks in application.
+#
+message "Checking whether to build libMemStat"
+if test "x$enable_memstat" = "xyes" || test ! "x$MEMSTAT" = "x"; then
+    case $platform in
+    linux)
+       enable_memstat="yes" ;;
+    *)
+       enable_memstat="no" ;;
+    esac
+else
+    enable_memstat="no"
+fi
+result $enable_memstat
+
+######################################################################
+#
 ### echo %%% Clarens Support - Third party libraries
 #
 # (See http://clarens.sourceforge.net/)
@@ -4704,6 +4727,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@no_stubs@|$no_stubs|"                \
     -e "s|@no_stubs_test@|$no_stubs_test|"      \
     -e "s|@buildtable@|$enable_table|"          \
+    -e "s|@buildmemstat@|$enable_memstat|"      \
     -e "s|@enable_thread@|$enable_thread|"      \
     -e "s|@etcdir@|$etcdir|"                    \
     -e "s|@exceptions@|$enable_exceptions|"     \

@@ -484,7 +484,7 @@ Bool_t TUnixSystem::Init()
    UnixSignal(kSigWindowChanged,         SigHandler);
 
 #if defined(R__MACOSX)
-   // trap loading of all dylibs to register dylib name
+   // trap loading of all dylibs to register dylib name,
    // sets also ROOTSYS if built without ROOTPREFIX
    _dyld_register_func_for_add_image(DylibAdded);
 #elif defined(HAVE_DLADDR)
@@ -2070,16 +2070,8 @@ void TUnixSystem::StackTrace()
    // take care of demangling
    Bool_t demangle = kTRUE;
 
-   // check for c++filt (g++), iccfilt (icc) or eccfilt (ecc)
-#if defined(R__INTEL_COMPILER_SKIP)
-#if defined(R__B64)
-   const char *cppfilt = "eccfilt";
-#else
-   const char *cppfilt = "iccfilt";
-#endif
-#else
+   // check for c++filt
    const char *cppfilt = "c++filt";
-#endif
    const char *cppfiltarg = "";
 #ifdef R__B64
    const char *format1 = " 0x%016lx in %.200s %s 0x%lx from %.200s\n";
@@ -2097,7 +2089,7 @@ void TUnixSystem::StackTrace()
    if (!filter)
       demangle = kFALSE;
 
-#if (__GNUC__ >= 3) && !defined(R__INTEL_COMPILER_SKIP)
+#if (__GNUC__ >= 3)
    // try finding supported format option for g++ v3
    if (filter) {
       FILE *p = OpenPipe(Form("%s --help 2>&1", filter), "r");
@@ -4144,11 +4136,6 @@ static const char *DynamicPath(const char *newpath = 0, Bool_t reset = kFALSE)
          dynpath = rdynpath; dynpath += ":"; dynpath += ldpath;
       }
 
-#ifdef CINTINCDIR
-         dynpath += ":"; dynpath += CINTINCDIR; dynpath += "/cint/stl";
-#else
-         dynpath += ":"; dynpath += gRootDir; dynpath += "/cint/cint/stl";
-#endif
 #ifdef ROOTLIBDIR
       if (!dynpath.Contains(ROOTLIBDIR)) {
          dynpath += ":"; dynpath += ROOTLIBDIR;
@@ -4157,6 +4144,11 @@ static const char *DynamicPath(const char *newpath = 0, Bool_t reset = kFALSE)
       if (!dynpath.Contains(Form("%s/lib", gRootDir))) {
          dynpath += ":"; dynpath += gRootDir; dynpath += "/lib";
       }
+#endif
+#ifdef CINTINCDIR
+      dynpath += ":"; dynpath += CINTINCDIR; dynpath += "/cint/stl";
+#else
+      dynpath += ":"; dynpath += gRootDir; dynpath += "/cint/cint/stl";
 #endif
    }
    return dynpath;
