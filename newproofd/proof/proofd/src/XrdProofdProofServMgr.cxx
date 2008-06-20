@@ -2734,8 +2734,7 @@ int XrdProofdProofServMgr::CleanupProofServ(bool all, const char *usr)
             if (xppid && strstr(line, "PPid:")) {
                ppid = (int) XrdProofdAux::GetLong(&line[strlen("PPid:")]);
                // Parent process must be us or be dead
-               if (ppid != getpid() &&
-                   XrdProofdAux::VerifyProcessByID(ppid, "xrootd"))
+               if (ppid != getpid() && XrdProofdAux::VerifyProcessByID(ppid, "xrootd"))
                   // Process created by another running xrootd
                   break;
                xppid = 0;
@@ -2823,11 +2822,10 @@ int XrdProofdProofServMgr::CleanupProofServ(bool all, const char *usr)
          }
          // Parent process must be us or be dead
          int ppid = psi.pr_ppid;
-         if (ppid != getpid() &&
-             fMgr->VerifyProcessByID(ppid, "xrootd")) {
-             // Process created by another running xrootd
-             continue;
-             xppid = 0;
+         if (ppid != getpid() && XrdProofdAux::VerifyProcessByID(ppid, "xrootd")) {
+            // Process created by another running xrootd
+            continue;
+            xppid = 0;
          }
 
          // If this is a good candidate, kill it
@@ -2837,12 +2835,12 @@ int XrdProofdProofServMgr::CleanupProofServ(bool all, const char *usr)
                // We need to check the user name: we may be the owner of somebody
                // else process; if no session is attached , we kill it
                muok = 0;
-               XrdProofdProofServ *srv = fMgr->GetActiveSession(psi.pr_pid);
+               XrdProofdProofServ *srv = GetActiveSession(psi.pr_pid);
                if (!srv || (srv && !strcmp(usr, srv->Client())))
                   muok = 1;
             }
             if (muok)
-               if (XrdProofdAux::KillProcess(psi.pr_pid, 1, p->Client()->UI(), fMgr->ChangeOwn()) == 0)
+               if (XrdProofdAux::KillProcess(psi.pr_pid, 1, ui, fMgr->ChangeOwn()) == 0)
                   nk++;
          }
       }
@@ -2887,13 +2885,13 @@ int XrdProofdProofServMgr::CleanupProofServ(bool all, const char *usr)
                   // We need to check the user name: we may be the owner of somebody
                   // else process; if no session is attached, we kill it
                   muok = 0;
-                  XrdProofdProofServ *srv = fMgr->GetActiveSession(pl[np].kp_proc.p_pid);
+                  XrdProofdProofServ *srv = GetActiveSession(pl[np].kp_proc.p_pid);
                   if (!srv || (srv && !strcmp(usr, srv->Client())))
                      muok = 1;
                }
                if (muok)
                   // Good candidate to be shot
-                  if (XrdProofdAux::KillProcess(pl[np].kp_proc.p_pid, 1, p->Client()->UI(), fMgr->ChangeOwn()))
+                  if (XrdProofdAux::KillProcess(pl[np].kp_proc.p_pid, 1, ui, fMgr->ChangeOwn()))
                      nk++;
             }
          }
@@ -2942,7 +2940,7 @@ int XrdProofdProofServMgr::CleanupProofServ(bool all, const char *usr)
             int ppid = (int) XrdProofdAux::GetLong(pi);
             TRACE(HDBG, "found alternative parent ID: "<< ppid);
             // If still running then skip
-            if (fMgr->VerifyProcessByID(ppid, "xrootd"))
+            if (XrdProofdAux::VerifyProcessByID(ppid, "xrootd"))
                continue;
          }
          // Get pid now
@@ -2955,13 +2953,13 @@ int XrdProofdProofServMgr::CleanupProofServ(bool all, const char *usr)
             // We need to check the user name: we may be the owner of somebody
             // else process; if no session is attached, we kill it
             muok = 0;
-            XrdProofdProofServ *srv = fMgr->GetActiveSession(pid);
+            XrdProofdProofServ *srv = GetActiveSession(pid);
             if (!srv || (srv && !strcmp(usr, srv->Client())))
                muok = 1;
          }
          if (muok)
             // Kill it
-            if (XrdProofdAux::KillProcess(pid, 1, p->Client()->UI(), fMgr->ChangeOwn()) == 0)
+            if (XrdProofdAux::KillProcess(pid, 1, ui, fMgr->ChangeOwn()) == 0)
                nk++;
       }
       pclose(fp);

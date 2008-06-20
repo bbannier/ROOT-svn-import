@@ -767,7 +767,7 @@ int XrdProofdAux::VerifyProcessByID(int pid, const char *pname)
          TRACE(DBG, "VerifyProcessByID: process does not exists anymore");
          return 0;
       } else {
-         emsg.form("cannot open %s; errno: %d", fn, errno);
+         emsg.form("cannot open %s; errno: %d", fn.c_str(), errno);
          TRACE(XERR, emsg);
          return -1;
       }
@@ -775,7 +775,7 @@ int XrdProofdAux::VerifyProcessByID(int pid, const char *pname)
    // Get the information
    psinfo_t psi;
    if (read(ffd, &psi, sizeof(psinfo_t)) != sizeof(psinfo_t)) {
-      emsg.form("cannot read %s; errno: %d", fn, errno);
+      emsg.form("cannot read %s; errno: %d", fn.c_str(), errno);
       TRACE(XERR, emsg);
       close(ffd);
       return -1;

@@ -19,6 +19,8 @@
 // Used by XrdProofdProtocol.                                           //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
+#include <sys/stat.h>
+
 #include "XrdNet/XrdNet.hh"
 #include "XrdSys/XrdSysPriv.hh"
 
