@@ -71,6 +71,8 @@ TMVA::GeneticAlgorithm::GeneticAlgorithm( IFitterTarget& target, Int_t populatio
    // Purpose: 
    //     Creates a random population with individuals of the size ranges.size()
    fPopulation.SetRandomSeed( seed );
+
+   cout << "New version of TMVA" << endl;
 }
 
 //_______________________________________________________________________
@@ -153,6 +155,8 @@ Double_t TMVA::GeneticAlgorithm::CalculateFitness()
    }
 
 #endif
+
+   fPopulation.Sort();
 
    return fBestFitness; 
 }
