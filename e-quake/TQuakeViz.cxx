@@ -19,6 +19,7 @@
 #include "TVirtualViewer3D.h"
 
 #include "TMath.h"
+#include "TTree.h"
 
 #include <cstdio>
 
@@ -41,7 +42,8 @@ TQuakeViz::TQuakeViz() :
    fDaysShown(300),  fYearsShown(0),
    fCenterLat(45),   fCenterLon(26),
    fFactorLat(111.1329444), fFactorLon(78.5534),
-   fFactorDepth(-1)
+   fFactorDepth(-1),
+   fTree(0)
 {
    // Constructor.
 
@@ -216,6 +218,38 @@ TTimeStamp64 TQuakeViz::GetLimitTimeMax()
   if (t < fMinTime || t > fMaxTime)
     t = fMaxTime;
   return t;
+}
+
+//==============================================================================
+
+TTree* TQuakeViz::CreateTree()
+{
+  TTree* t = new TTree("EQuake", "Ntuple holding earth-quake data.");
+
+  QData_t* data = 0;
+  t->Branch("Q", &data);
+
+  for (vQData_i i = fData.begin(); i != fData.end(); ++i)
+  {
+    *data = *i;
+    t->Fill();
+  }
+
+  return t;
+}
+
+//------------------------------------------------------------------------------
+
+TTree* TQuakeViz::GetTree()
+{
+  if (!fTree)
+    fTree = CreateTree();
+  return fTree;
+}
+
+void TQuakeViz::ParaCords()
+{
+  GetTree()->Draw("fLat:fLon:fDepth:fStr", "", "PARA");
 }
 
 //==============================================================================

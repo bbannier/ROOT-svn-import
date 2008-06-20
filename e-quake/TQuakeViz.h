@@ -20,6 +20,7 @@
 #include <vector>
 
 class TEveRGBAPalette;
+class TTree;
 
 class TQuakeViz : public TEveElementList,
 		  public TAttBBox
@@ -84,6 +85,8 @@ protected:
    Float_t          fFactorLat, fFactorLon;
    Float_t          fFactorDepth;
 
+   TTree           *fTree;
+
 public:
    TQuakeViz();
    virtual ~TQuakeViz() {}
@@ -144,6 +147,11 @@ public:
    TTimeStamp64 GetLimitTimeMean();
    TTimeStamp64 GetLimitTimeMin();
    TTimeStamp64 GetLimitTimeMax();
+
+   TTree* CreateTree();
+
+   TTree* GetTree();
+   void   ParaCords();
 
    ClassDef(TQuakeViz, 1); // Short description.
 };
