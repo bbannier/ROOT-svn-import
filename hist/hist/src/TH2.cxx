@@ -1925,14 +1925,14 @@ TH1D *TH2::Projection(const char *name, bool onX, Int_t firstbin, Int_t lastbin,
 
    if ( onX )
    {
-      expectedName = "_px";
+      expectedName = (char *) "_px";
       outNbin = fXaxis.GetNbins();
       inNbin = fYaxis.GetNbins();
       outAxis = GetXaxis();
    }
    else
    {
-      expectedName = "_py";
+      expectedName = (char *) "_py";
       outNbin = fYaxis.GetNbins();
       inNbin = fXaxis.GetNbins();
       outAxis = GetYaxis();
@@ -2044,8 +2044,8 @@ TH1D *TH2::Projection(const char *name, bool onX, Int_t firstbin, Int_t lastbin,
 //______________________________________________________________________________
 TH1D *TH2::ProjectionX(const char *name, Int_t firstybin, Int_t lastybin, Option_t *option) const
 {
-   //*-*-*-*-*Project a 2-D histogram into a 1-D histogram along X*-*-*-*-*-*-*
-   //*-*      ====================================================
+   // *-*-*-*-*Project a 2-D histogram into a 1-D histogram along X*-*-*-*-*-*-*
+   // *-*      ====================================================
    //
    //   The projection is always of the type TH1D.
    //   The projection is made from the channels along the Y axis
@@ -2074,14 +2074,23 @@ TH1D *TH2::ProjectionX(const char *name, Int_t firstybin, Int_t lastybin, Option
    //   the histogram is reset and filled again with the current contents of the TH2.
    //   The X axis attributes of the TH2 are copied to the X axis of the projection.
 
-      return Projection(name, true, firstybin, lastybin, option);
+   Double_t th2Stats[7];
+   GetStats(th2Stats);
+   Double_t th1Stats[] = {th2Stats[0],
+                          th2Stats[1],
+                          th2Stats[2],
+                          th2Stats[3]};
+   TH1D* h1 = Projection(name, true, firstybin, lastybin, option);
+   h1->SetStats(&th1Stats[0]);
+
+   return h1;
 }
 
 //______________________________________________________________________________
 TH1D *TH2::ProjectionY(const char *name, Int_t firstxbin, Int_t lastxbin, Option_t *option) const
 {
-   //*-*-*-*-*Project a 2-D histogram into a 1-D histogram along Y*-*-*-*-*-*-*
-   //*-*      ====================================================
+   // *-*-*-*-*Project a 2-D histogram into a 1-D histogram along Y*-*-*-*-*-*-*
+   // *-*      ====================================================
    //
    //   The projection is always of the type TH1D.
    //   The projection is made from the channels along the X axis
@@ -2110,7 +2119,17 @@ TH1D *TH2::ProjectionY(const char *name, Int_t firstxbin, Int_t lastxbin, Option
    //   the histogram is reset and filled again with the current contents of the TH2.
    //   The Y axis attributes of the TH2 are copied to the X axis of the projection.
 
-      return Projection(name, false, firstxbin, lastxbin, option);
+   Double_t th2Stats[7];
+   GetStats(th2Stats);
+   Double_t th1Stats[] = {th2Stats[0],
+                          th2Stats[1],
+                          th2Stats[4],
+                          th2Stats[5]};
+
+   TH1D* h1 = Projection(name, false, firstxbin, lastxbin, option);
+   h1->SetStats(&th1Stats[0]);
+
+   return h1;
 }
 
 //______________________________________________________________________________
