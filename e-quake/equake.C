@@ -27,5 +27,42 @@ TQuakeViz* equake()
 
   gEve->EditElement(qv);
 
+  TEveLine* line = read_midline();
+  line->SetRnrSelf(kFALSE);
+
   return qv;
+}
+
+TEveLine*
+read_midline(const char* file      = "mid_line",
+             Int_t       min_n_fit = 2,
+             Float_t     depth_off = 49.5)
+{
+  FILE* fp = fopen(file, "r");
+  if (!fp) {
+    Warning("read_midline", "Can't open file '%s'.", file);
+    return;
+  }
+
+  TEveLine* line = new TEveLine("MidLine");
+  line->SetMainColor(kBlack);
+
+  Int_t   depth_idx, n_fit;
+  Float_t x, y;
+
+  while (fscanf(fp, "%d %d %f %f", &depth_idx, &n_fit, &x, &y) == 4)
+  {
+    if (n_fit >= min_n_fit)
+    {
+      line->SetNextPoint(0.785534 * x, 1.111329444 * y,
+                         -(depth_off + depth_idx));
+    }
+  }
+
+  fclose(fp);
+
+  gEve->AddElement(line);
+  gEve->Redraw3D();
+
+  return line;
 }

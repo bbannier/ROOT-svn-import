@@ -84,8 +84,8 @@ void TQuakeViz::ReadData(const Text_t* file)
 
       if (q.fLat < 45) printf("foo %d\n", (Int_t) fData.size());
 
-      q.fX = fFactorLat * (q.fLat - fCenterLat);
-      q.fY = fFactorLon * (q.fLon - fCenterLon);
+      q.fX = fFactorLon * (q.fLon - fCenterLon);
+      q.fY = fFactorLat * (q.fLat - fCenterLat);
 
       fData.push_back(q);
    }
@@ -223,6 +223,9 @@ TTimeStamp64 TQuakeViz::GetLimitTimeMax()
 
 void TQuakeViz::QData_t::Print() const
 {
-   printf("Time: %s\nLat=%.2f, Lon=%.2f, Depth=%.1f, Magnitude=%.1f, Dist=%.1f\n",
-          fTime.AsString("s"), fLat, fLon, fDepth, fStr, fDist);
+   printf("Time: %s\n"
+          "Lat=%.2f, Lon=%.2f, Depth=%.1f, Magnitude=%.1f, Dist=%.1f\n"
+          "X=%.3f, Y=%.3f\n",
+          fTime.AsString("s"), fLat, fLon, fDepth, fStr, fDist,
+          fX, fY);
 }

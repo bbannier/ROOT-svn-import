@@ -159,8 +159,8 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          {
             Float_t relStr  = (i->fStr  - fM->fMinStr)  / (fM->fMaxStr  - fM->fMinStr);
             Float_t relDist = (i->fDist - fM->fMinDist) / (fM->fMaxDist - fM->fMinDist);
-            // Float_t colFac  = 1.0f - 0.6f*relDist;
-            Float_t colFac  = 0.2 + 0.8*relDist;
+            Float_t colFac  = 1.0f - 0.8f*relDist;
+            //Float_t colFac  = 0.2 + 0.8*relDist;
 
             glPushMatrix();
             glTranslatef(i->fX, i->fY, i->fDepth);
@@ -193,8 +193,8 @@ void TQuakeVizGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 
             Float_t relStr  = (i->fStr  - fM->fMinStr)  / (fM->fMaxStr  - fM->fMinStr);
             Float_t relDist = (i->fDist - fM->fMinDist) / (fM->fMaxDist - fM->fMinDist);
-            // Float_t colFac  = 1.0f - 0.6*relDist;
-            Float_t colFac  = 0.2 + 0.8*relDist;
+            Float_t colFac  = 1.0f - 0.8*relDist;
+            // Float_t colFac  = 0.2 + 0.8*relDist;
 
             c[0] = TMath::Nint(mc[0]*colFac);
             c[1] = TMath::Nint(mc[1]*colFac);
