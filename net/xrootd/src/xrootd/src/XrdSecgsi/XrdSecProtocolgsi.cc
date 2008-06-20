@@ -615,13 +615,13 @@ char *XrdSecProtocolgsi::Init(gsiOptions opt, XrdOucErrInfo *erp)
                cent->mtime = xsrv->NotAfter(); // expiration time
                // Save pointer to certificate
                cent->buf1.buf = (char *)xsrv;
-               cent->buf1.len = 1;  // just a flag
+               cent->buf1.len = 0;  // just a flag
                // Save pointer to key
                cent->buf2.buf = (char *)(xsrv->PKI());
-               cent->buf2.len = 1;  // just a flag
+               cent->buf2.len = 0;  // just a flag
                // Save pointer to bucket
                cent->buf3.buf = (char *)(xbck);
-               cent->buf3.len = 1;  // just a flag
+               cent->buf3.len = 0;  // just a flag
                // Save CA hash in list to communicate to clients
                if (certcalist.find(xsrv->IssuerHash()) == STR_NPOS) {
                   if (certcalist.length() > 0)
@@ -3192,10 +3192,10 @@ int XrdSecProtocolgsi::LoadCADir(int timestamp)
                XrdSutPFEntry *cent = ca->Add(tag.c_str());
                if (cent) {
                   cent->buf1.buf = (char *)chain;
-                  cent->buf1.len = 1;      // Just a flag
+                  cent->buf1.len = 0;      // Just a flag
                   if (crl) {
                      cent->buf2.buf = (char *)crl;
-                     cent->buf2.len = 1;      // Just a flag
+                     cent->buf2.len = 0;      // Just a flag
                   }
                   cent->mtime = timestamp;
                   cent->status = kPFE_ok;
@@ -3511,10 +3511,10 @@ int XrdSecProtocolgsi::GetCA(const char *cahash)
             cent = cacheCA.Add(tag.c_str());
             if (cent) {
                cent->buf1.buf = (char *)(hs->Chain);
-               cent->buf1.len = 1;      // Just a flag
+               cent->buf1.len = 0;      // Just a flag
                if (hs->Crl) {
                   cent->buf2.buf = (char *)(hs->Crl);
-                  cent->buf2.len = 1;      // Just a flag
+                  cent->buf2.len = 0;      // Just a flag
                }
                cent->mtime = hs->TimeStamp;
                cent->status = kPFE_ok;
@@ -3901,13 +3901,13 @@ int XrdSecProtocolgsi::QueryProxy(bool checkcache, XrdSutCache *cache,
       cent->cnt = 0;
       // The chain
       cent->buf1.buf = (char *)(po->chain);
-      cent->buf1.len = 1;      // Just a flag
+      cent->buf1.len = 0;      // Just a flag
       // The key
       cent->buf2.buf = (char *)(po->chain->End()->PKI());
-      cent->buf2.len = 1;      // Just a flag
+      cent->buf2.len = 0;      // Just a flag
       // The export bucket
       cent->buf3.buf = (char *)(po->cbck);
-      cent->buf3.len = 1;      // Just a flag
+      cent->buf3.len = 0;      // Just a flag
 
       // Rehash cache
       cache->Rehash(1);
