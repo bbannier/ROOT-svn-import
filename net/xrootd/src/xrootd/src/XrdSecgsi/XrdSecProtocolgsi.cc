@@ -1682,12 +1682,14 @@ char *XrdSecProtocolgsiInit(const char mode,
          if (cenv[0] >= 49 && cenv[0] <= 51) opts.debug = atoi(cenv);
 
       // directory with CA certificates
-      cenv = getenv("XrdSecGSICADIR");
+      cenv = (getenv("XrdSecGSICADIR") ? getenv("XrdSecGSICADIR")
+                                       : getenv("X509_CERT_DIR"));
       if (cenv)
          opts.certdir = strdup(cenv);
 
       // directory with CRL info
-      cenv = getenv("XrdSecGSICRLDIR");
+      cenv = (getenv("XrdSecGSICRLDIR") ? getenv("XrdSecGSICRLDIR")
+                                        : getenv("X509_CERT_DIR"));
       if (cenv)
          opts.crldir = strdup(cenv);
 
@@ -1697,17 +1699,20 @@ char *XrdSecProtocolgsiInit(const char mode,
          opts.crlext = strdup(cenv);
 
       // file with user cert
-      cenv = getenv("XrdSecGSIUSERCERT");
+      cenv = (getenv("XrdSecGSIUSERCERT") ? getenv("XrdSecGSIUSERCERT")
+                                          : getenv("X509_USER_CERT"));
       if (cenv)
          opts.cert = strdup(cenv);  
 
       // file with user key
-      cenv = getenv("XrdSecGSIUSERKEY");
+      cenv = (getenv("XrdSecGSIUSERKEY") ? getenv("XrdSecGSIUSERKEY")
+                                         : getenv("X509_USER_KEY"));
       if (cenv)
          opts.key = strdup(cenv);
 
       // file with user proxy
-      cenv = getenv("XrdSecGSIUSERPROXY");
+      cenv = (getenv("XrdSecGSIUSERPROXY") ? getenv("XrdSecGSIUSERPROXY")
+                                           : getenv("X509_USER_PROXY"));
       if (cenv)
          opts.proxy = strdup(cenv);
 
