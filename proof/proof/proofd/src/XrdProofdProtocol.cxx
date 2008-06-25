@@ -5197,6 +5197,7 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file,
 
    XrdOucString cmd("grep ");
    if (pat && strlen(pat) > 0) {
+      if (opt == 2) cmd += " -v ";
       cmd += pat;
       cmd += " ";
    } else {
@@ -5236,7 +5237,6 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file,
          emsg = "ReadBufferLocal: could not allocate enough memory on the heap: errno: ";
          emsg += (int)errno;
          XPDERR(emsg);
-         //fclose(fp);
          pclose(fp);
          return (char *)0;
       }
