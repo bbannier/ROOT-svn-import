@@ -2081,7 +2081,7 @@ TH1D *TH2::ProjectionX(const char *name, Int_t firstybin, Int_t lastybin, Option
                           th2Stats[2],
                           th2Stats[3]};
    TH1D* h1 = Projection(name, true, firstybin, lastybin, option);
-   h1->SetStats(&th1Stats[0]);
+   h1->PutStats(&th1Stats[0]);
 
    return h1;
 }
@@ -2125,9 +2125,8 @@ TH1D *TH2::ProjectionY(const char *name, Int_t firstxbin, Int_t lastxbin, Option
                           th2Stats[1],
                           th2Stats[4],
                           th2Stats[5]};
-
    TH1D* h1 = Projection(name, false, firstxbin, lastxbin, option);
-   h1->SetStats(&th1Stats[0]);
+   h1->PutStats(&th1Stats[0]);
 
    return h1;
 }
