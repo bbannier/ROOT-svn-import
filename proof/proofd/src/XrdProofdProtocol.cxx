@@ -5198,7 +5198,7 @@ char *XrdProofdProtocol::ReadBufferLocal(const char *file,
    XrdOucString cmd("grep ");
    if (pat && strlen(pat) > 0) {
       cmd += pat;
-      cmd = " ";
+      cmd += " ";
    } else {
       cmd = "cat ";
    }
