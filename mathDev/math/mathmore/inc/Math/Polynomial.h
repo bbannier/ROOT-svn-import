@@ -35,6 +35,10 @@
 
 #include "Math/ParamFunction.h"
 
+#ifdef _WIN32
+#pragma warning(disable : 4250)
+#endif
+
 namespace ROOT {
 namespace Math {
 
@@ -53,7 +57,7 @@ namespace Math {
      since it provides the analytical gradient with respect to x
      
 
-     @ingroup CppFunctions
+     @ingroup ParamFunc
   */
 
 class Polynomial : public ParamFunction<IParamGradFunction>,  

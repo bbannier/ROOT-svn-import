@@ -64,7 +64,7 @@ TBranchObject::TBranchObject(TBranch *parent, const char* name, const char* clas
 }
 
 //______________________________________________________________________________
-void TBranchObject::Init(TTree *tree, TBranch *parent, const char* name, const char* classname, void* addobj, Int_t basketsize, Int_t splitlevel, Int_t compress, Bool_t isptrptr)
+void TBranchObject::Init(TTree *tree, TBranch *parent, const char* name, const char* classname, void* addobj, Int_t basketsize, Int_t /*splitlevel*/, Int_t compress, Bool_t isptrptr)
 {
    // Initialization routine (run from the constructor so do not make this function virtual)
 
@@ -142,11 +142,6 @@ void TBranchObject::Init(TTree *tree, TBranch *parent, const char* name, const c
    fDirectory = fTree->GetDirectory();
    fFileName = "";
 
-   // Create the first basket.
-   if (!splitlevel) {
-      TBasket* basket = new TBasket(name, fTree->GetName(), this);
-      fBaskets.Add(basket);
-   }
 }
 
 //______________________________________________________________________________

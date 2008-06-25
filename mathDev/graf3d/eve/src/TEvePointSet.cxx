@@ -331,6 +331,17 @@ void TEvePointSet::CopyVizParams(const TEveElement* el)
    TEveElement::CopyVizParams(el);
 }
 
+//______________________________________________________________________________
+void TEvePointSet::WriteVizParams(ostream& out, const TString& var)
+{
+   // Write visualization parameters.
+
+   TEveElement::WriteVizParams(out, var);
+
+   TAttMarker::SaveMarkerAttributes(out, var);
+}
+
+//******************************************************************************
 
 //______________________________________________________________________________
 TClass* TEvePointSet::ProjectedClass() const
@@ -343,10 +354,11 @@ TClass* TEvePointSet::ProjectedClass() const
 //______________________________________________________________________________
 void TEvePointSet::PointSelected(Int_t id)
 {
-   // Virtual method of base class TPointSet3D. The fuction call is invoked with secondary selection
-   // in TPointSet3DGL.
+   // Virtual method of base class TPointSet3D. The fuction call is
+   // invoked with secondary selection in TPointSet3DGL.
 
    Emit("PointSelected(Int_t)", id);
+   TPointSet3D::PointSelected(id);
 }
 
 
