@@ -14,11 +14,10 @@
 #define ROOT_Fit_Fitter
 
 /**
-@defgroup Fit Fitter classes
+@defgroup Fit Fitting and Parameter Estimation
 
-Classes used for fitting
+Classes used for fitting (regression analysis) and estimation of parameter values given a data sample. 
 */
-
 
 #ifndef ROOT_Fit_DataVectorfwd
 #include "Fit/DataVectorfwd.h"
@@ -45,19 +44,30 @@ namespace ROOT {
       class Minimizer;
    } 
 
+   /**
+      Namespace for the fitting classes
+      @ingroup Fit
+    */
+
    namespace Fit { 
+
+/**
+   @defgroup FitMain User Fitting classes
+
+   Main Classes used for fitting a given data set
+   @ingroup Fit
+*/
 
 //___________________________________________________________________________________
 /** 
-   Fitter class. 
+   Fitter class, entry point for performing all type of fits. 
    Fits are performed using the generic ROOT::Fit::Fitter::Fit method. 
    The inputs are the data points and a model function (using a ROOT::Math::IParamFunction)
    The result of the fit is returned and kept internally in the  ROOT::Fit::FitResult class. 
    The configuration of the fit (parameters, options, etc...) are specified in the 
    ROOT::Math::FitConfig class. 
 
-   @ingroup Fit
-
+   @ingroup FitMain
 */ 
 class Fitter {
 

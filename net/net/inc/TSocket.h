@@ -94,7 +94,7 @@ protected:
    TString       fUrl;            // needs this for special authentication options
    TBits         fBitsInfo;       // bits array to mark TStreamerInfo classes already sent
    TList        *fUUIDs;          // list of TProcessIDs already sent through the socket
-      
+
    static ULong64_t fgBytesRecv;  // total bytes received by all socket objects
    static ULong64_t fgBytesSent;  // total bytes sent by all socket objects
 
@@ -103,10 +103,14 @@ protected:
    TSocket() : fAddress(), fBytesRecv(0), fBytesSent(0), fCompress(0),
       fLocalAddress(), fRemoteProtocol(), fSecContext(0), fService(),
      fServType(kSOCKD), fSocket(-1), fTcpWindowSize(0), fUrl(),
-     fBitsInfo () { }
+     fBitsInfo(), fUUIDs(0) { }
 
    Bool_t       Authenticate(const char *user);
    void         SetDescriptor(Int_t desc) { fSocket = desc; }
+   void         SendStreamerInfos(const TMessage &mess);
+   Bool_t       RecvStreamerInfos(TMessage *mess);
+   void         SendProcessIDs(const TMessage &mess);
+   Bool_t       RecvProcessIDs(TMessage *mess);
 
 private:
    TSocket&      operator=(const TSocket &);  // not implemented
@@ -145,6 +149,7 @@ public:
    virtual Int_t         Recv(char *mess, Int_t max);
    virtual Int_t         Recv(char *mess, Int_t max, Int_t &kind);
    virtual Int_t         RecvRaw(void *buffer, Int_t length, ESendRecvOptions opt = kDefault);
+   virtual Int_t         Reconnect() { return -1; }
    virtual Int_t         Select(Int_t interest = kRead, Long_t timeout = -1);
    virtual Int_t         Send(const TMessage &mess);
    virtual Int_t         Send(Int_t kind);
