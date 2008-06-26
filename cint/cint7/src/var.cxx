@@ -7068,7 +7068,7 @@ void Cint::Internal::G__returnvartype(G__value* presult, const ::Reflex::Member&
          basen = 0;
       }
       // Search for variable name and access rule match. 
-      static const Reflex::Type ZType = Reflex::Type::ByName("codeBreak$");
+      const Reflex::Type ZType = Reflex::Type::ByName("codeBreak$");
       do {
          next_base:
          ::Reflex::Member var = varscope.DataMemberByName(varname);
@@ -7360,7 +7360,7 @@ void Cint::Internal::G__get_stack_varname(std::string& output, const char* varna
             }
             //--
 */
-            static const Reflex::Type ZType = ::Reflex::PointerBuilder(Reflex::Type::ByName("codeBreak$"));
+            const Reflex::Type ZType = ::Reflex::PointerBuilder(Reflex::Type::ByName("codeBreak$"));
             if (*iter && !strcmp(iter->Name().c_str(), varname.c_str())) {
                if (
                   iter->TypeOf() != ZType && // This is to exclude the 'Z' type coming from a SpecialObject lookup
