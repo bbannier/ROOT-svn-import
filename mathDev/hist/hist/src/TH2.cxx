@@ -1937,21 +1937,12 @@ TH1D *TH2::DoProjection(const char *name, bool onX, Int_t firstbin, Int_t lastbi
    TAxis* outAxis;
 
 
-   Double_t th2Stats[7];
-   GetStats(th2Stats);
-   Double_t th1Stats[4];
-   th1Stats[0] = th2Stats[0];
-   th1Stats[1] = th2Stats[1];
-   
    if ( onX )
    {
       expectedName = "_px";
       outNbin = fXaxis.GetNbins();
       inNbin = fYaxis.GetNbins();
       outAxis = GetXaxis();
-
-      th1Stats[2] = th2Stats[2];
-      th1Stats[3] = th2Stats[3];
    }
    else
    {
@@ -1959,10 +1950,16 @@ TH1D *TH2::DoProjection(const char *name, bool onX, Int_t firstbin, Int_t lastbi
       outNbin = fYaxis.GetNbins();
       inNbin = fXaxis.GetNbins();
       outAxis = GetYaxis();
-
-      th1Stats[2] = th2Stats[4];
-      th1Stats[3] = th2Stats[5];
    }
+
+   
+   Double_t th2Stats[7];
+   GetStats(th2Stats);
+   Double_t th1Stats[4];
+   th1Stats[0] = th2Stats[0];
+   th1Stats[1] = th2Stats[1];
+   th1Stats[2] = th2Stats[(onX) ? 2 : 4];
+   th1Stats[3] = th2Stats[(onX) ? 3 : 5];
 
    TString opt = option;
    if (firstbin < 0) firstbin = 0;
@@ -2063,6 +2060,9 @@ TH1D *TH2::DoProjection(const char *name, bool onX, Int_t firstbin, Int_t lastbi
       if (padsav) padsav->cd();
    }
 
+
+   if ( ( fgStatOverflows == false && firstbin == 1 && lastbin == outAxis->GetNbins()     ) ||
+        ( fgStatOverflows == true  && firstbin == 0 && lastbin == outAxis->GetNbins() + 1 ) )
    h1->PutStats(&th1Stats[0]);
 
    return h1;
