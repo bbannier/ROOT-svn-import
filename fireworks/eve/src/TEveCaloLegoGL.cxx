@@ -757,7 +757,7 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
    fM->AssertPalette();
 
    UChar_t col[4];
-   Color_t defCol = fM->GetDataSliceColor(0);  // default color is first slice color
+   Color_t defCol = fM->GetTopViewTowerColor();
    Int_t es = GetGridStep(0, rnrCtx);
    Int_t ps = GetGridStep(1, rnrCtx);
    if (es==1 && ps==1)
