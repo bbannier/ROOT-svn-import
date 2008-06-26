@@ -150,6 +150,25 @@ void TEveCaloLegoGL::DLCachePurge()
 }
 
 //______________________________________________________________________________
+void TEveCaloLegoGL::GetCellData(TEveCaloData::CellId_t id, TEveCaloData::CellData_t &cell) const
+{
+   // Adjust cell value according to fM->fPhi shift.
+
+   fM->fData->GetCellData(id, cell);
+
+   if (fM->GetPhiMax()>TMath::Pi() && cell.fPhiMax<=fM->GetPhiMin())
+   {
+      cell.fPhiMin += TMath::TwoPi(); 
+      cell.fPhiMax += TMath::TwoPi();
+   }
+   else if (fM->GetPhiMin()<-TMath::Pi() && cell.fPhiMin>=fM->GetPhiMax())
+   {
+      cell.fPhiMin -= TMath::TwoPi(); 
+      cell.fPhiMax -= TMath::TwoPi();
+   }
+}
+
+//______________________________________________________________________________
 void TEveCaloLegoGL::MakeQuad(Float_t x1, Float_t y1, Float_t z1,
                               Float_t xw, Float_t yw, Float_t h) const
 {
@@ -176,7 +195,6 @@ void TEveCaloLegoGL::MakeQuad(Float_t x1, Float_t y1, Float_t z1,
 
    if (y1<fM->GetPhiMin()) y1= fM->GetPhiMin();
    if (y2>fM->GetPhiMax()) y2= fM->GetPhiMax();
-
 
    glBegin(GL_QUADS);
    {
@@ -249,7 +267,7 @@ void TEveCaloLegoGL::MakeDisplayList() const
             prevTower = fM->fCellList[i].fTower;
          }
 
-         fM->fData->GetCellData(fM->fCellList[i], fM->fPhi, fM->fPhiOffset, cellData);
+         GetCellData(fM->fCellList[i], cellData);
          if (s == fM->fCellList[i].fSlice)
          {
             glLoadName(i);
@@ -444,7 +462,7 @@ void TEveCaloLegoGL::DrawZScales3D(TGLRnrCtx & rnrCtx,
    {
       // left most corner of the picked tower
       TEveCaloData::CellData_t cd;
-      fM->fData->GetCellData(fM->fCellList[fTowerPicked], fM->fPhi, fM->fPhiOffset, cd);
+      GetCellData(fM->fCellList[fTowerPicked], cd);
       switch(idxLeft)
       {
          case 0:
@@ -634,10 +652,13 @@ void TEveCaloLegoGL::DrawHistBase(TGLRnrCtx &rnrCtx) const
    glVertex2f(eta1, phi1);
 
    // eta grid
+   Int_t eFirst = fEtaAxis->FindBin(eta0);
+   Int_t eLast  = fEtaAxis->FindBin(eta1);
+
    if ((es == 1 && ps == 1) || fM->fProjection == TEveCaloLego::k3D)
    {
       // original eta
-      for (Int_t i=fEtaAxis->GetFirst(); i<fEtaAxis->GetLast(); i+= es)
+      for (Int_t i=eFirst; i<eLast; i+= es)
       {
          glVertex2f(fEtaAxis->GetBinUpEdge(i), phi0);
          glVertex2f(fEtaAxis->GetBinUpEdge(i), phi1);
@@ -646,7 +667,7 @@ void TEveCaloLegoGL::DrawHistBase(TGLRnrCtx &rnrCtx) const
    else
    {
       // scaled eta
-      Int_t   nEta = CeilNint((fEtaAxis->GetLast()-fEtaAxis->GetFirst())/es);
+      Int_t   nEta = CeilNint((eLast-eFirst)/es);
       Float_t etaStep = (eta1-eta0)/nEta;
       Float_t eta = eta0;
       while (eta < eta1)
@@ -747,17 +768,17 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
       Float_t x1=0, x2=0, y1=0, y2=0;
       TGLUtil::Color(defCol);
       TEveCaloData::vCellId_t::iterator currentCell = fM->fCellList.begin();
-      TEveCaloData::vCellId_t::iterator nextCell = currentCell;
+      TEveCaloData::vCellId_t::iterator nextCell    = currentCell;
       ++nextCell;
       while (currentCell != fM->fCellList.end())
       {
          TEveCaloData::CellData_t currentCellData;
          TEveCaloData::CellData_t nextCellData;
-         fM->fData->GetCellData(*currentCell, fM->fPhi, fM->fPhiOffset, currentCellData);
+         GetCellData(*currentCell, currentCellData);
          sum += currentCellData.Value(fM->fPlotEt);
          while (nextCell != fM->fCellList.end() && currentCell->fTower == nextCell->fTower)
          {
-            fM->fData->GetCellData(*nextCell, fM->fPhi, fM->fPhiOffset, nextCellData);
+            GetCellData(*nextCell, nextCellData);
             sum += nextCellData.Value(fM->fPlotEt);
             ++nextCell;
          }
@@ -816,7 +837,7 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
       Float_t phi0 = fM->GetPhiMin();
       Float_t phi1 = fM->GetPhiMax();
 
-      Int_t   nEta = CeilNint((fEtaAxis->GetLast()-fEtaAxis->GetFirst())/es);
+      Int_t   nEta = CeilNint((fEtaAxis->FindBin(eta1)-fEtaAxis->FindBin(eta0))/es);
       Int_t   nPhi = CeilNint((phi1-phi0)/(fPhiAxis->GetBinWidth(1)*ps));
       Float_t etaStep = (eta1-eta0)/nEta;
       Float_t phiStep = (phi1-phi0)/nPhi;
@@ -827,7 +848,7 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
       Float_t left, right, up, down; // cell corners
       for (TEveCaloData::vCellId_t::iterator it=fM->fCellList.begin(); it!=fM->fCellList.end(); it++)
       {
-         fM->fData->GetCellData(*it, fM->fPhi, fM->fPhiOffset, cd);
+         GetCellData(*it, cd);
          Int_t iMin = FloorNint((cd.EtaMin() - eta0)/etaStep);
          Int_t iMax = CeilNint ((cd.EtaMax() - eta0)/etaStep);
          Int_t jMin = FloorNint((cd.PhiMin() - phi0)/phiStep);

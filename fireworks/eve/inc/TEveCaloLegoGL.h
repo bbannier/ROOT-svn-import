@@ -55,6 +55,8 @@ protected:
                     Float_t xw, Float_t yw, Float_t zh) const;
    void    MakeDisplayList() const;
 
+   void    GetCellData(TEveCaloData::CellId_t id, TEveCaloData::CellData_t &cell) const;
+
    mutable Bool_t                   fDLCacheOK;
 
    typedef std::map<Int_t, UInt_t>           SliceDLMap_t;
@@ -70,7 +72,7 @@ protected:
 
    // event handling
    Int_t                    fTowerPicked;
-
+ 
 public:
    TEveCaloLegoGL();
    virtual ~TEveCaloLegoGL();
@@ -88,6 +90,7 @@ public:
 
    virtual Bool_t SupportsSecondarySelect() const { return kTRUE; }
    virtual void   ProcessSelection(TGLRnrCtx & rnrCtx, TGLSelectRecord & rec);
+
 
 
    ClassDef(TEveCaloLegoGL, 0); // GL renderer class for TEveCaloLego.

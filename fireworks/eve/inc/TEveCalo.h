@@ -171,7 +171,8 @@ private:
 
 protected:
    std::vector<TEveCaloData::vCellId_t*>   fCellLists;
-
+   std::vector<Int_t>                      fBinIds;  
+ 
    virtual void BuildCellIdCache();
 
 public:
