@@ -12,6 +12,10 @@
 #define LOWER_LIMIT 0
 #define UPPER_LIMIT 10
 
+// In case of deviation, the profiles' content will not work anymore
+// try only for testing the statistics
+#define CENTRE_DEVIATION 0.0
+
 #define ERRORLIMIT 1E-15
 
 using std::cout;
@@ -37,6 +41,10 @@ private:
    TH1D* h1X;
    TH1D* h1Y;
    TH1D* h1Z;
+
+   TH1D* h1XStats;
+   TH1D* h1YStats;
+   TH1D* h1ZStats;
    
    TProfile2D* pe2XY;
    TProfile2D* pe2XZ;
@@ -98,9 +106,16 @@ public:
       h2ZY = new TH2D("h2ZY", "h2ZY", BINSIZE, LOWER_LIMIT, UPPER_LIMIT, 
                                       BINSIZE, LOWER_LIMIT, UPPER_LIMIT);
 
+      // The bit is set for all the histograms (It's a statistic variable)
+      TH1::StatOverflows(kTRUE);
+
       h1X = new TH1D("h1X", "h1X", BINSIZE, LOWER_LIMIT, UPPER_LIMIT);
       h1Y = new TH1D("h1Y", "h1Y", BINSIZE, LOWER_LIMIT, UPPER_LIMIT);
       h1Z = new TH1D("h1Z", "h1Z", BINSIZE, LOWER_LIMIT, UPPER_LIMIT);
+
+      h1XStats = new TH1D("h1XStats", "h1XStats", BINSIZE, LOWER_LIMIT, UPPER_LIMIT);
+      h1YStats = new TH1D("h1YStats", "h1YStats", BINSIZE, LOWER_LIMIT, UPPER_LIMIT);
+      h1ZStats = new TH1D("h1ZStats", "h1ZStats", BINSIZE, LOWER_LIMIT, UPPER_LIMIT);
 
       pe2XY = new TProfile2D("pe2XY", "pe2XY", BINSIZE, LOWER_LIMIT, UPPER_LIMIT, 
                                                BINSIZE, LOWER_LIMIT, UPPER_LIMIT);
@@ -178,6 +193,10 @@ public:
       delete h1Y;
       delete h1Z;
       
+      delete h1XStats;
+      delete h1YStats;
+      delete h1ZStats;
+
       delete pe2XY;
       delete pe2XZ;
       delete pe2YX;
@@ -218,11 +237,11 @@ public:
    void buildHistograms()
    {
       for ( int ix = 0; ix <= h3->GetXaxis()->GetNbins() + 1; ++ix ) {
-         double x = h3->GetXaxis()->GetBinCenter(ix);
+         double x = CENTRE_DEVIATION * h3->GetXaxis()->GetBinWidth(ix) + h3->GetXaxis()->GetBinCenter(ix);
          for ( int iy = 0; iy <= h3->GetYaxis()->GetNbins() + 1; ++iy ) {
-            double y = h3->GetYaxis()->GetBinCenter(iy);
+            double y = CENTRE_DEVIATION * h3->GetYaxis()->GetBinWidth(iy) + h3->GetYaxis()->GetBinCenter(iy);
             for ( int iz = 0; iz <= h3->GetZaxis()->GetNbins() + 1; ++iz ) {
-               double z = h3->GetZaxis()->GetBinCenter(iz);
+               double z = CENTRE_DEVIATION * h3->GetZaxis()->GetBinWidth(iz) + h3->GetZaxis()->GetBinCenter(iz);
                for ( int i = 0; i < (int) r.Uniform(1,3); ++i )
                {
                   h3->Fill(x,y,z);
@@ -240,7 +259,16 @@ public:
                   h1X->Fill(x);
                   h1Y->Fill(y);
                   h1Z->Fill(z);
-                  
+
+                  if ( ix > 0 && ix < h3->GetXaxis()->GetNbins() + 1 &&
+                       iy > 0 && iy < h3->GetYaxis()->GetNbins() + 1 &&
+                       iz > 0 && iz < h3->GetZaxis()->GetNbins() + 1 )
+                  {
+                     h1XStats->Fill(x);
+                     h1YStats->Fill(y);
+                     h1ZStats->Fill(z);
+                  }
+
                   pe2XY->Fill(x,y,z);
                   pe2XZ->Fill(x,z,y);
                   pe2YX->Fill(y,x,z);
@@ -279,11 +307,11 @@ public:
    void buildHistogramsWithWeights()
    {
       for ( int ix = 0; ix <= h3->GetXaxis()->GetNbins() + 1; ++ix ) {
-         double x = h3->GetXaxis()->GetBinCenter(ix);
+         double x = CENTRE_DEVIATION * h3->GetXaxis()->GetBinWidth(ix) + h3->GetXaxis()->GetBinCenter(ix);
          for ( int iy = 0; iy <= h3->GetYaxis()->GetNbins() + 1; ++iy ) {
-            double y = h3->GetYaxis()->GetBinCenter(iy);
+            double y = CENTRE_DEVIATION * h3->GetYaxis()->GetBinWidth(iy) + h3->GetYaxis()->GetBinCenter(iy);
             for ( int iz = 0; iz <= h3->GetZaxis()->GetNbins() + 1; ++iz ) {
-               double z = h3->GetZaxis()->GetBinCenter(iz);
+               double z = CENTRE_DEVIATION * h3->GetZaxis()->GetBinWidth(iz) + h3->GetZaxis()->GetBinCenter(iz);
                Double_t w = (Double_t) r.Uniform(1,3);
 
                h3->Fill(x,y,z,w);
@@ -301,7 +329,16 @@ public:
                h1X->Fill(x,w);
                h1Y->Fill(y,w);
                h1Z->Fill(z,w);
-               
+                   
+               if ( ix > 0 && ix < h3->GetXaxis()->GetNbins() + 1 &&
+                    iy > 0 && iy < h3->GetYaxis()->GetNbins() + 1 &&
+                    iz > 0 && iz < h3->GetZaxis()->GetNbins() + 1 )
+               {
+                  h1XStats->Fill(x,w);
+                  h1YStats->Fill(y,w);
+                  h1ZStats->Fill(z,w);
+               }              
+
                pe2XY->Fill(x,y,z,w);
                pe2XZ->Fill(x,z,y,w);
                pe2YX->Fill(y,x,z,w);
@@ -341,11 +378,11 @@ public:
                         int zmin, int zmax)
    {
       for ( int ix = 0; ix <= h3->GetXaxis()->GetNbins() + 1; ++ix ) {
-         double x = h3->GetXaxis()->GetBinCenter(ix);
+         double x = CENTRE_DEVIATION * h3->GetXaxis()->GetBinCenter(ix);
          for ( int iy = 0; iy <= h3->GetYaxis()->GetNbins() + 1; ++iy ) {
-            double y = h3->GetYaxis()->GetBinCenter(iy);
+            double y = CENTRE_DEVIATION * h3->GetYaxis()->GetBinCenter(iy);
             for ( int iz = 0; iz <= h3->GetZaxis()->GetNbins() + 1; ++iz ) {
-               double z = h3->GetZaxis()->GetBinCenter(iz);
+               double z = CENTRE_DEVIATION * h3->GetZaxis()->GetBinCenter(iz);
                for ( int i = 0; i < (int) r.Uniform(1,3); ++i )
                {
                   h3->Fill(x,y,z);
@@ -444,12 +481,14 @@ public:
       int options = 0;
       
       // TH2 derived from TH3
-      status += equals("TH3 -> XY", h2XY, (TH2D*) h3->Project3D("yx"));
-      status += equals("TH3 -> XZ", h2XZ, (TH2D*) h3->Project3D("zx"));
-      status += equals("TH3 -> YX", h2YX, (TH2D*) h3->Project3D("XY"));
-      status += equals("TH3 -> YZ", h2YZ, (TH2D*) h3->Project3D("ZY"));
-      status += equals("TH3 -> ZX", h2ZX, (TH2D*) h3->Project3D("XZ"));
-      status += equals("TH3 -> ZY", h2ZY, (TH2D*) h3->Project3D("YZ"));
+      options = cmpOptStats;
+      status += equals("TH3 -> XY", h2XY, (TH2D*) h3->Project3D("yx"), options);
+      status += equals("TH3 -> XZ", h2XZ, (TH2D*) h3->Project3D("zx"), options);
+      status += equals("TH3 -> YX", h2YX, (TH2D*) h3->Project3D("XY"), options);
+      status += equals("TH3 -> YZ", h2YZ, (TH2D*) h3->Project3D("ZY"), options);
+      status += equals("TH3 -> ZX", h2ZX, (TH2D*) h3->Project3D("XZ"), options);
+      status += equals("TH3 -> ZY", h2ZY, (TH2D*) h3->Project3D("YZ"), options);
+      options = 0;
       cout << "----------------------------------------------" << endl;
       
       // TH1 derived from TH3
@@ -478,93 +517,117 @@ public:
       status += equals("TH2ZX -> X", h1X, (TH1D*) h2ZX->ProjectionY("x"), options);
       // TH1 derived from h2ZY
       status += equals("TH2ZY -> Z", h1Z, (TH1D*) h2ZY->ProjectionX("z"), options);
-      status += equals("TH2ZY -> Y", h1Y, (TH1D*) h2ZY->ProjectionY("y"), options | cmpOptDebug);
+      status += equals("TH2ZY -> Y", h1Y, (TH1D*) h2ZY->ProjectionY("y"), options);
       options = 0;
       cout << "----------------------------------------------" << endl;
       
       // Now the histograms comming from the Profiles!
-      status += equals("TH3 -> PBXY", h2XY, (TH2D*) h3->Project3DProfile("yx")->ProjectionXY("1", "B"));
-      status += equals("TH3 -> PBXZ", h2XZ, (TH2D*) h3->Project3DProfile("zx")->ProjectionXY("2", "B"));
-      status += equals("TH3 -> PBYX", h2YX, (TH2D*) h3->Project3DProfile("xy")->ProjectionXY("3", "B"));
-      status += equals("TH3 -> PBYZ", h2YZ, (TH2D*) h3->Project3DProfile("zy")->ProjectionXY("4", "B"));
-      status += equals("TH3 -> PBZX", h2ZX, (TH2D*) h3->Project3DProfile("xz")->ProjectionXY("5", "B"));
-      status += equals("TH3 -> PBZY", h2ZY, (TH2D*) h3->Project3DProfile("yz")->ProjectionXY("6", "B"));
+      options = cmpOptStats;
+      status += equals("TH3 -> PBXY", h2XY, (TH2D*) h3->Project3DProfile("yx")->ProjectionXY("1", "B"), options);
+      status += equals("TH3 -> PBXZ", h2XZ, (TH2D*) h3->Project3DProfile("zx")->ProjectionXY("2", "B"), options);
+      status += equals("TH3 -> PBYX", h2YX, (TH2D*) h3->Project3DProfile("xy")->ProjectionXY("3", "B"), options);
+      status += equals("TH3 -> PBYZ", h2YZ, (TH2D*) h3->Project3DProfile("zy")->ProjectionXY("4", "B"), options);
+      status += equals("TH3 -> PBZX", h2ZX, (TH2D*) h3->Project3DProfile("xz")->ProjectionXY("5", "B"), options);
+      status += equals("TH3 -> PBZY", h2ZY, (TH2D*) h3->Project3DProfile("yz")->ProjectionXY("6", "B"), options);
+      options = 0;
       cout << "----------------------------------------------" << endl;
       
       // test directly project3dprofile
-      status += equals("TH3 -> PXY", (TH2D*) pe2XY, (TH2D*) h3->Project3DProfile("yx"));
-      status += equals("TH3 -> PXZ", (TH2D*) pe2XZ, (TH2D*) h3->Project3DProfile("zx"));
-      status += equals("TH3 -> PYX", (TH2D*) pe2YX, (TH2D*) h3->Project3DProfile("xy"));
-      status += equals("TH3 -> PYZ", (TH2D*) pe2YZ, (TH2D*) h3->Project3DProfile("zy"));
-      status += equals("TH3 -> PZX", (TH2D*) pe2ZX, (TH2D*) h3->Project3DProfile("xz"));
-      status += equals("TH3 -> PZY", (TH2D*) pe2ZY, (TH2D*) h3->Project3DProfile("yz"));
+      options = cmpOptStats;
+      status += equals("TH3 -> PXY", (TH2D*) pe2XY, (TH2D*) h3->Project3DProfile("yx"), options);
+      status += equals("TH3 -> PXZ", (TH2D*) pe2XZ, (TH2D*) h3->Project3DProfile("zx"), options);
+      status += equals("TH3 -> PYX", (TH2D*) pe2YX, (TH2D*) h3->Project3DProfile("xy"), options);
+      status += equals("TH3 -> PYZ", (TH2D*) pe2YZ, (TH2D*) h3->Project3DProfile("zy"), options);
+      status += equals("TH3 -> PZX", (TH2D*) pe2ZX, (TH2D*) h3->Project3DProfile("xz"), options);
+      status += equals("TH3 -> PZY", (TH2D*) pe2ZY, (TH2D*) h3->Project3DProfile("yz"), options);
+      options = 0;
       cout << "----------------------------------------------" << endl;
       
       // test option E of ProjectionXY
-      status += equals("TH3 -> PEXY", (TH2D*) pe2XY, (TH2D*) h3->Project3DProfile("yx")->ProjectionXY("1", "E"));
-      status += equals("TH3 -> PEXZ", (TH2D*) pe2XZ, (TH2D*) h3->Project3DProfile("zx")->ProjectionXY("2", "E"));
-      status += equals("TH3 -> PEYX", (TH2D*) pe2YX, (TH2D*) h3->Project3DProfile("xy")->ProjectionXY("3", "E"));
-      status += equals("TH3 -> PEYZ", (TH2D*) pe2YZ, (TH2D*) h3->Project3DProfile("zy")->ProjectionXY("4", "E"));
-      status += equals("TH3 -> PEZX", (TH2D*) pe2ZX, (TH2D*) h3->Project3DProfile("xz")->ProjectionXY("5", "E"));
-      status += equals("TH3 -> PEZY", (TH2D*) pe2ZY, (TH2D*) h3->Project3DProfile("yz")->ProjectionXY("6", "E"));
+      options = 0;
+      status += equals("TH3 -> PEXY", (TH2D*) pe2XY, (TH2D*) h3->Project3DProfile("yx")->ProjectionXY("1", "E"), options);
+      status += equals("TH3 -> PEXZ", (TH2D*) pe2XZ, (TH2D*) h3->Project3DProfile("zx")->ProjectionXY("2", "E"), options);
+      status += equals("TH3 -> PEYX", (TH2D*) pe2YX, (TH2D*) h3->Project3DProfile("xy")->ProjectionXY("3", "E"), options);
+      status += equals("TH3 -> PEYZ", (TH2D*) pe2YZ, (TH2D*) h3->Project3DProfile("zy")->ProjectionXY("4", "E"), options);
+      status += equals("TH3 -> PEZX", (TH2D*) pe2ZX, (TH2D*) h3->Project3DProfile("xz")->ProjectionXY("5", "E"), options);
+      status += equals("TH3 -> PEZY", (TH2D*) pe2ZY, (TH2D*) h3->Project3DProfile("yz")->ProjectionXY("6", "E"), options);
+      options = 0;
       cout << "----------------------------------------------" << endl;
       
       // test option W of ProjectionXY
       
       // The error fails when built with weights. It is not properly calculated
       if ( buildWithWeights ) options = cmpOptNoError;
-      status += equals("TH3 -> PWXY", (TH2D*) h2wXY, (TH2D*) h3->Project3DProfile("yx")->ProjectionXY("1", "W"), options );
-      status += equals("TH3 -> PWXZ", (TH2D*) h2wXZ, (TH2D*) h3->Project3DProfile("zx")->ProjectionXY("2", "W"), options );
-      status += equals("TH3 -> PWYX", (TH2D*) h2wYX, (TH2D*) h3->Project3DProfile("xy")->ProjectionXY("3", "W"), options );
-      status += equals("TH3 -> PWYZ", (TH2D*) h2wYZ, (TH2D*) h3->Project3DProfile("zy")->ProjectionXY("4", "W"), options );
-      status += equals("TH3 -> PWZX", (TH2D*) h2wZX, (TH2D*) h3->Project3DProfile("xz")->ProjectionXY("5", "W"), options );
-      status += equals("TH3 -> PWZY", (TH2D*) h2wZY, (TH2D*) h3->Project3DProfile("yz")->ProjectionXY("6", "W"), options );
+      status += equals("TH3 -> PWXY", (TH2D*) h2wXY, (TH2D*) h3->Project3DProfile("yx")->ProjectionXY("1", "W"), options);
+      status += equals("TH3 -> PWXZ", (TH2D*) h2wXZ, (TH2D*) h3->Project3DProfile("zx")->ProjectionXY("2", "W"), options);
+      status += equals("TH3 -> PWYX", (TH2D*) h2wYX, (TH2D*) h3->Project3DProfile("xy")->ProjectionXY("3", "W"), options);
+      status += equals("TH3 -> PWYZ", (TH2D*) h2wYZ, (TH2D*) h3->Project3DProfile("zy")->ProjectionXY("4", "W"), options);
+      status += equals("TH3 -> PWZX", (TH2D*) h2wZX, (TH2D*) h3->Project3DProfile("xz")->ProjectionXY("5", "W"), options);
+      status += equals("TH3 -> PWZY", (TH2D*) h2wZY, (TH2D*) h3->Project3DProfile("yz")->ProjectionXY("6", "W"), options);
       options = 0;
       cout << "----------------------------------------------" << endl;
       
       // test 1D histograms
-      status += equals("TH2XY -> PBX", h1X, (TH1D*) h2XY->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"));
-      status += equals("TH2XY -> PBX", h1Y, (TH1D*) h2XY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"));
-      status += equals("TH2XZ -> PBX", h1X, (TH1D*) h2XZ->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"));
-      status += equals("TH2XZ -> PBZ", h1Z, (TH1D*) h2XZ->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"));
-      status += equals("TH2YX -> PBY", h1Y, (TH1D*) h2YX->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"));
-      status += equals("TH2YX -> PBX", h1X, (TH1D*) h2YX->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"));
-      status += equals("TH2YZ -> PBY", h1Y, (TH1D*) h2YZ->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"));
-      status += equals("TH2YZ -> PBZ", h1Z, (TH1D*) h2YZ->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"));
-      status += equals("TH2ZX -> PBZ", h1Z, (TH1D*) h2ZX->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"));
-      status += equals("TH2ZX -> PBX", h1X, (TH1D*) h2ZX->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"));
-      status += equals("TH2ZY -> PBZ", h1Z, (TH1D*) h2ZY->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"));
-      status += equals("TH2ZY -> PBY", h1Y, (TH1D*) h2ZY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"));
+      options = cmpOptStats;
+      status += equals("TH2XY -> PBX", h1X, (TH1D*) h2XY->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2XY -> PBX", h1Y, (TH1D*) h2XY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2XZ -> PBX", h1X, (TH1D*) h2XZ->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2XZ -> PBZ", h1Z, (TH1D*) h2XZ->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2YX -> PBY", h1Y, (TH1D*) h2YX->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2YX -> PBX", h1X, (TH1D*) h2YX->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2YZ -> PBY", h1Y, (TH1D*) h2YZ->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2YZ -> PBZ", h1Z, (TH1D*) h2YZ->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2ZX -> PBZ", h1Z, (TH1D*) h2ZX->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2ZX -> PBX", h1X, (TH1D*) h2ZX->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2ZY -> PBZ", h1Z, (TH1D*) h2ZY->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2ZY -> PBY", h1Y, (TH1D*) h2ZY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      options = 0;
       cout << "----------------------------------------------" << endl;
 
       // 1D testing direct profiles 
-      status += equals("TH2XY -> PX", pe1XY, (TH1D*) h2XY->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1));
-      status += equals("TH2XY -> PX", pe1YX, (TH1D*) h2XY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1));
-      status += equals("TH2XZ -> PX", pe1XZ, (TH1D*) h2XZ->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1));
-      status += equals("TH2XZ -> PZ", pe1ZX, (TH1D*) h2XZ->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1));
-      status += equals("TH2YX -> PY", pe1YX, (TH1D*) h2YX->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1));
-      status += equals("TH2YX -> PX", pe1XY, (TH1D*) h2YX->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1));
-      status += equals("TH2YZ -> PY", pe1YZ, (TH1D*) h2YZ->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1));
-      status += equals("TH2YZ -> PZ", pe1ZY, (TH1D*) h2YZ->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1));
-      status += equals("TH2ZX -> PZ", pe1ZX, (TH1D*) h2ZX->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1));
-      status += equals("TH2ZX -> PX", pe1XZ, (TH1D*) h2ZX->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1));
-      status += equals("TH2ZY -> PZ", pe1ZY, (TH1D*) h2ZY->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1));
-      status += equals("TH2ZY -> PY", pe1YZ, (TH1D*) h2ZY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1));
+      options = cmpOptStats;
+      status += equals("TH2XY -> PX", pe1XY, (TH1D*) h2XY->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1), options);
+      status += equals("TH2XY -> PX", pe1YX, (TH1D*) h2XY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1), options);
+      status += equals("TH2XZ -> PX", pe1XZ, (TH1D*) h2XZ->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1), options);
+      status += equals("TH2XZ -> PZ", pe1ZX, (TH1D*) h2XZ->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1), options);
+      status += equals("TH2YX -> PY", pe1YX, (TH1D*) h2YX->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1), options);
+      status += equals("TH2YX -> PX", pe1XY, (TH1D*) h2YX->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1), options);
+      status += equals("TH2YZ -> PY", pe1YZ, (TH1D*) h2YZ->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1), options);
+      status += equals("TH2YZ -> PZ", pe1ZY, (TH1D*) h2YZ->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1), options);
+      status += equals("TH2ZX -> PZ", pe1ZX, (TH1D*) h2ZX->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1), options);
+      status += equals("TH2ZX -> PX", pe1XZ, (TH1D*) h2ZX->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1), options);
+      status += equals("TH2ZY -> PZ", pe1ZY, (TH1D*) h2ZY->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1), options);
+      status += equals("TH2ZY -> PY", pe1YZ, (TH1D*) h2ZY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1), options);
+      options = 0;
       cout << "----------------------------------------------" << endl;
 
       // 1D testing e profiles
-      status += equals("TH2XY -> PEX", pe1XY, (TH1D*) h2XY->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"));
-      status += equals("TH2XY -> PEX", pe1YX, (TH1D*) h2XY->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"));
-      status += equals("TH2XZ -> PEX", pe1XZ, (TH1D*) h2XZ->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"));
-      status += equals("TH2XZ -> PEZ", pe1ZX, (TH1D*) h2XZ->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"));
-      status += equals("TH2YX -> PEY", pe1YX, (TH1D*) h2YX->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"));
-      status += equals("TH2YX -> PEX", pe1XY, (TH1D*) h2YX->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"));
-      status += equals("TH2YZ -> PEY", pe1YZ, (TH1D*) h2YZ->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"));
-      status += equals("TH2YZ -> PEZ", pe1ZY, (TH1D*) h2YZ->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"));
-      status += equals("TH2ZX -> PEZ", pe1ZX, (TH1D*) h2ZX->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"));
-      status += equals("TH2ZX -> PEX", pe1XZ, (TH1D*) h2ZX->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"));
-      status += equals("TH2ZY -> PEZ", pe1ZY, (TH1D*) h2ZY->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"));
-      status += equals("TH2ZY -> PEY", pe1YZ, (TH1D*) h2ZY->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"));
+      options = 0;
+      status += equals("TH2XY -> PEX", pe1XY, 
+                       (TH1D*) h2XY->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+      status += equals("TH2XY -> PEX", pe1YX, 
+                       (TH1D*) h2XY->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+      status += equals("TH2XZ -> PEX", pe1XZ, 
+                       (TH1D*) h2XZ->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+      status += equals("TH2XZ -> PEZ", pe1ZX, 
+                       (TH1D*) h2XZ->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+      status += equals("TH2YX -> PEY", pe1YX, 
+                       (TH1D*) h2YX->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+      status += equals("TH2YX -> PEX", pe1XY, 
+                       (TH1D*) h2YX->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+      status += equals("TH2YZ -> PEY", pe1YZ, 
+                       (TH1D*) h2YZ->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+      status += equals("TH2YZ -> PEZ", pe1ZY, 
+                       (TH1D*) h2YZ->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+      status += equals("TH2ZX -> PEZ", pe1ZX, 
+                       (TH1D*) h2ZX->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+      status += equals("TH2ZX -> PEX", pe1XZ, 
+                       (TH1D*) h2ZX->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+      status += equals("TH2ZY -> PEZ", pe1ZY, 
+                       (TH1D*) h2ZY->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+      status += equals("TH2ZY -> PEY", pe1YZ, 
+                       (TH1D*) h2ZY->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+      options = 0;
       cout << "----------------------------------------------" << endl;
 
       // 1D testing w profiles
@@ -598,18 +661,22 @@ public:
       cout << "----------------------------------------------" << endl;
       
       // TH2 derived from STH3
-      status += equals("STH3 -> XY", h2XY, (TH2D*) s3->Projection(1,0));
-      status += equals("STH3 -> XZ", h2XZ, (TH2D*) s3->Projection(2,0));
-      status += equals("STH3 -> YX", h2YX, (TH2D*) s3->Projection(0,1));
-      status += equals("STH3 -> YZ", h2YZ, (TH2D*) s3->Projection(2,1));
-      status += equals("STH3 -> ZX", h2ZX, (TH2D*) s3->Projection(0,2));
-      status += equals("STH3 -> ZY", h2ZY, (TH2D*) s3->Projection(1,2));
+      options = cmpOptStats;
+      status += equals("STH3 -> XY", h2XY, (TH2D*) s3->Projection(1,0), options);
+      status += equals("STH3 -> XZ", h2XZ, (TH2D*) s3->Projection(2,0), options);
+      status += equals("STH3 -> YX", h2YX, (TH2D*) s3->Projection(0,1), options);
+      status += equals("STH3 -> YZ", h2YZ, (TH2D*) s3->Projection(2,1), options);
+      status += equals("STH3 -> ZX", h2ZX, (TH2D*) s3->Projection(0,2), options);
+      status += equals("STH3 -> ZY", h2ZY, (TH2D*) s3->Projection(1,2), options);
+      options = 0;
       cout << "----------------------------------------------" << endl;
 
       // TH1 derived from STH3
-      status += equals("STH3 -> X", h1X, (TH1D*) s3->Projection(0));
-      status += equals("STH3 -> Y", h1Y, (TH1D*) s3->Projection(1));
-      status += equals("STH3 -> Z", h1Z, (TH1D*) s3->Projection(2));
+      options = cmpOptStats;
+      status += equals("STH3 -> X", h1X, (TH1D*) s3->Projection(0), options);
+      status += equals("STH3 -> Y", h1Y, (TH1D*) s3->Projection(1), options);
+      status += equals("STH3 -> Z", h1Z, (TH1D*) s3->Projection(2), options);
+      options = 0;
       cout << "----------------------------------------------" << endl;
 
       return status;
