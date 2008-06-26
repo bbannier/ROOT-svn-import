@@ -112,7 +112,7 @@ public:
    Long64_t      GetBytesRead() const { return fBytesRead; }
    Float_t       GetInitTime() const { return fInitTime; }
    Float_t       GetProcTime() const { return fProcTime; }
-
+   void          MarkBad(TSlave *, TList **) { return; }
    ClassDef(TVirtualPacketizer,0)  //Generate work packets for parallel processing
 };
 

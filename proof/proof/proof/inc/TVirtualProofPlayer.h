@@ -39,7 +39,7 @@ class TSlave;
 class TMessage;
 class TProof;
 class TSocket;
-
+class TVirtualPacketizer;
 
 class TVirtualProofPlayer : public TObject, public TQObject {
 
@@ -111,6 +111,8 @@ public:
    virtual void      SetStopTimer(Bool_t on = kTRUE,
                                   Bool_t abort = kFALSE, Int_t timeout = 0) = 0;
    virtual void      SetInitTime() = 0;
+
+   TVirtualPacketizer   *GetPacketizer() const { return 0; }
 
    static TVirtualProofPlayer *Create(const char *player, TProof *p, TSocket *s = 0);
 
