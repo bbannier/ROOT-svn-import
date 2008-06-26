@@ -195,7 +195,9 @@ void TEveUtil::ColorFromIdx(Color_t ci, UChar_t col[4], Bool_t alpha)
    // ROOT's indexed color palette does not support transparency.
 
    if (ci < 0) {
-      col[0] = col[1] = col[2] = col[3] = 0;
+      // Set to magenta.
+      col[0] = 255; col[1] = 0; col[2] = 255;
+      if (alpha) col[3] = 255;
       return;
    }
    TColor* c = gROOT->GetColor(ci);
@@ -204,6 +206,27 @@ void TEveUtil::ColorFromIdx(Color_t ci, UChar_t col[4], Bool_t alpha)
       col[1] = (UChar_t)(255*c->GetGreen());
       col[2] = (UChar_t)(255*c->GetBlue());
       if (alpha) col[3] = 255;
+   }
+}
+
+//______________________________________________________________________________
+void TEveUtil::ColorFromIdx(Color_t ci, UChar_t col[4], UChar_t transparency)
+{
+   // Fill col with RGBA values corresponding to index ci and transparency.
+   // ROOT's indexed color palette does not support transparency.
+
+   UChar_t alpha = (255*(100 - transparency))/100;
+   if (ci < 0) {
+      // Set to magenta.
+      col[0] = 255; col[1] = 0; col[2] = 255; col[3] = alpha;
+      return;
+   }
+   TColor* c = gROOT->GetColor(ci);
+   if (c) {
+      col[0] = (UChar_t)(255*c->GetRed());
+      col[1] = (UChar_t)(255*c->GetGreen());
+      col[2] = (UChar_t)(255*c->GetBlue());
+      col[3] = alpha;
    }
 }
 

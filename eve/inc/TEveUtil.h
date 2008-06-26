@@ -49,6 +49,7 @@ public:
    // Color management
 
    static void     ColorFromIdx(Color_t ci, UChar_t col[4], Bool_t alpha=kTRUE);
+   static void     ColorFromIdx(Color_t ci, UChar_t col[4], UChar_t transparency);
    static void     ColorFromIdx(Float_t f1, Color_t c1, Float_t f2, Color_t c2,
                                 UChar_t col[4], Bool_t alpha=kTRUE);
    static Color_t* FindColorVar(TObject* obj, const Text_t* varname);
