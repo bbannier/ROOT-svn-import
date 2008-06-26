@@ -56,7 +56,8 @@
 #include "TParameter.h"
 #include "TProof.h"
 #include "TProofNodeInfo.h"
-#include "TProofPlayer.h"
+#include "TVirtualProofPlayer.h"
+#include "TVirtualPacketizer.h"
 #include "TProofServ.h"
 #include "TPluginManager.h"
 #include "TQueryResult.h"
@@ -72,7 +73,6 @@
 #include "TTree.h"
 #include "TUrl.h"
 #include "TFileCollection.h"
-#include "TPacketizerAdaptive.h"
 
 TProof *gProof = 0;
 TVirtualMutex *gProofMutex = 0;
@@ -2682,10 +2682,9 @@ void TProof::MarkBad(TSlave *sl)
       fPlayer->AddOutputObject(listOfMissingFiles);
    }
 
-   TVirtualPacketizer *packetizer = ((TProofPlayerRemote*)fPlayer)->GetPacketizer();
-   if (packetizer->ClassName() == "TPacketizerAdaptive")
-      ((TPacketizerAdaptive *)packetizer)->MarkBad(sl,
-         &listOfMissingFiles);
+   TVirtualPacketizer *packetizer = fPlayer->GetPacketizer();
+   if (packetizer)
+      packetizer->MarkBad(sl, &listOfMissingFiles);
    fActiveSlaves->Remove(sl);
    FindUniqueSlaves();
    fBadSlaves->Add(sl);
