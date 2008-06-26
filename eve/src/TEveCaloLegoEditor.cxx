@@ -30,6 +30,7 @@ TEveCaloLegoEditor::TEveCaloLegoEditor(const TGWindow *p, Int_t width, Int_t hei
                                        UInt_t options, Pixel_t back) :
    TGedFrame(p, width, height, options | kVerticalFrame, back),
    fM(0),
+   fTopViewTowerColor(0),
    fGridColor(0),
    fFontColor(0),
    fPlaneColor(0),
@@ -47,8 +48,18 @@ TEveCaloLegoEditor::TEveCaloLegoEditor(const TGWindow *p, Int_t width, Int_t hei
 
    MakeTitle("TEveCaloLego");
 
-   {
-      // grid color
+   {  // tower color in 2d, top-view
+      TGHorizontalFrame* f = new TGHorizontalFrame(this);
+      TGLabel* lab = new TGLabel(f, "Tower-2D:");
+      f->AddFrame(lab, new TGLayoutHints(kLHintsLeft|kLHintsBottom, 1, 8, 1, 1));
+
+      fTopViewTowerColor = new TGColorSelect(f, 0, -1);
+      f->AddFrame(fTopViewTowerColor, new TGLayoutHints(kLHintsLeft|kLHintsTop, 3, 1, 0, 1));
+      fTopViewTowerColor->Connect("ColorSelected(Pixel_t)", "TEveCaloLegoEditor", this, "DoTopViewTowerColor(Pixel_t)");
+
+      AddFrame(f, new TGLayoutHints(kLHintsTop, 1, 1, 1, 0));
+   }
+   {  // grid color
       TGHorizontalFrame* f = new TGHorizontalFrame(this);
       TGLabel* lab = new TGLabel(f, "GridColor:");
       f->AddFrame(lab, new TGLayoutHints(kLHintsLeft|kLHintsBottom, 1, 10, 1, 1));
@@ -163,6 +174,8 @@ void TEveCaloLegoEditor::SetModel(TObject* obj)
    // Set model object.
 
    fM = dynamic_cast<TEveCaloLego*>(obj);
+
+   fTopViewTowerColor->SetColor(TColor::Number2Pixel(fM->GetTopViewTowerColor()), kFALSE);
    fGridColor->SetColor(TColor::Number2Pixel(fM->GetGridColor()), kFALSE);
    fFontColor->SetColor(TColor::Number2Pixel(fM->GetFontColor()), kFALSE);
 
@@ -175,6 +188,15 @@ void TEveCaloLegoEditor::SetModel(TObject* obj)
    fProjection->Select(fM->GetProjection(), kFALSE);
    f2DMode->Select(fM->Get2DMode(), kFALSE);
    fBoxMode->Select(fM->GetBoxMode(), kFALSE);
+}
+
+//______________________________________________________________________________
+void TEveCaloLegoEditor::DoTopViewTowerColor(Pixel_t pixel)
+{
+   // Slot for TopViewTowerColor.
+
+   fM->SetTopViewTowerColor(Color_t(TColor::GetColor(pixel)));
+   Update();
 }
 
 //______________________________________________________________________________

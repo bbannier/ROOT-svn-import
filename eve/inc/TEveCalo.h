@@ -206,6 +206,7 @@ private:
 protected:
    TEveCaloData::vCellId_t fCellList;
 
+   Color_t                 fTopViewTowerColor;
    Color_t                 fFontColor;
    Color_t                 fGridColor;
    Color_t                 fPlaneColor;
@@ -230,6 +231,9 @@ public:
    TEveCaloLego(TEveCaloData* data);
 
    virtual ~TEveCaloLego(){}
+
+   Color_t  GetTopViewTowerColor() const { return fTopViewTowerColor; }
+   void     SetTopViewTowerColor(Color_t x) { fTopViewTowerColor = x; }
 
    Color_t  GetFontColor() const { return fFontColor; }
    void     SetFontColor(Color_t ci) { fFontColor=ci; }
