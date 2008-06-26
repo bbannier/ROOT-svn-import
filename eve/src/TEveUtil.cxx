@@ -339,6 +339,26 @@ Bool_t TEveUtil::IsU1IntervalOverlappingByMinMax(Float_t minM, Float_t maxM,
    return maxQ >= minM && minQ <= maxM;
 }
 
+//______________________________________________________________________________
+Float_t TEveUtil::GetFraction(Float_t minM, Float_t maxM, Float_t minQ, Float_t maxQ)
+{
+   // Get fraction of interval [minQ, maxQ] in [minM, maxM]
+
+   if (minQ<minM && maxQ>maxM)
+      return (maxM-minM)/(maxQ-minQ);
+
+   if (minQ>=minM && maxQ<=maxM)
+      return 1;
+
+   if (minQ<minM && maxQ>minM)
+      return (maxQ-minM)/(maxQ-minQ);
+
+   if (minQ<maxM && maxQ>maxM)
+      return (maxM-minQ)/(maxQ-minQ);
+
+   return 0;
+}
+
 
 /******************************************************************************/
 // TEveException
