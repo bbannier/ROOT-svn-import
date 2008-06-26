@@ -500,10 +500,10 @@ endif
 
 $(STRESSPROOF): $(STRESSPROOFO)
 ifeq ($(PLATFORM),win32)
-		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libProof.lib' '$(ROOTSYS)/lib/libProofPlayer.lib' '$(ROOTSYS)/lib/libThread.lib' $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libProof.lib' '$(ROOTSYS)/lib/libThread.lib' $(OutPutOpt)$@
 		$(MT_EXE)
 else
-		$(LD) $(LDFLAGS) $(STRESSPROOFO) $(LIBS) -lProof -lProofPlayer -lThread $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $(STRESSPROOFO) $(LIBS) -lProof -lThread $(OutPutOpt)$@
 endif
 		@echo "$@ done"
 
