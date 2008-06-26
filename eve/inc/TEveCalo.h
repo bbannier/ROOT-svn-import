@@ -62,8 +62,6 @@ protected:
 
    void SetupColorHeight(Float_t value, Int_t slice, Float_t& height) const;
 
-   virtual Float_t GetValToHeight() const;
-
    virtual void BuildCellIdCache() = 0;
 
 public:
@@ -75,6 +73,8 @@ public:
    TEveCaloData* GetData() const { return fData; }
    virtual void  SetData(TEveCaloData* d);
    virtual void  DataChanged();
+
+   virtual Float_t GetValToHeight() const;
 
    Float_t GetDataSliceThreshold(Int_t slice) const;
    void    SetDataSliceThreshold(Int_t slice, Float_t val);

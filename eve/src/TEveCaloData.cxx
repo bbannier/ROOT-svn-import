@@ -188,35 +188,35 @@ void TEveCaloDataHist::DataChanged()
    // update max E/Et values
    fMaxValE = 0;
    fMaxValEt = 0;
-
-   if (fHStack->GetHists()->First())
-   {  
-      TH2 *ah = (TH2*)fHStack->GetHists()->First();
-      fEtaAxis = ah->GetXaxis();
-      fPhiAxis = ah->GetYaxis();
-
-      Int_t bin;
-      Double_t value, cos, eta;
-      TH2 *stack =  (TH2*)fHStack->GetStack()->Last();
-      for (Int_t ieta=1; ieta<=fEtaAxis->GetNbins(); ieta++) 
+   
+   if (GetNSlices() < 1) return;
+   
+   TH2  *ah = (TH2*) RefSliceInfo(0).fHist;
+   fEtaAxis = ah->GetXaxis();
+   fPhiAxis = ah->GetYaxis();
+   
+   for (Int_t ieta=1; ieta<=fEtaAxis->GetNbins(); ieta++) 
+   {
+      Double_t eta = fEtaAxis->GetBinCenter(ieta); // conversion E/Et
+      for (Int_t iphi=1; iphi<=fPhiAxis->GetNbins(); iphi++)  
       {
-         eta = fEtaAxis->GetBinCenter(ieta); // conversion E/Et
-         for (Int_t iphi=1; iphi<=fPhiAxis->GetNbins(); iphi++)  
+         Double_t value = 0;
+         for (Int_t i = 0; i < GetNSlices(); ++i)
          {
-            bin = stack->GetBin(ieta, iphi);
-            value = stack->GetBinContent(bin);
-
-            if (value > fMaxValEt ) fMaxValEt = value;
-
-            cos = Cos(2*ATan(Exp( -Abs(eta))));
-            value /= Abs(cos);
-            if (value > fMaxValE) fMaxValE = value;
+            Int_t bin = RefSliceInfo(i).fHist->GetBin(ieta, iphi);
+            value += RefSliceInfo(i).fHist->GetBinContent(bin);
          }
+	     
+         if (value > fMaxValEt ) fMaxValEt = value;
+
+         Double_t cos = Cos(2*ATan(Exp(-Abs(eta))));
+         value /= Abs(cos);
+         if (value > fMaxValE) fMaxValE = value;
       }
    }
-
    TEveCaloData::DataChanged();
-} 
+}
+
 
 //______________________________________________________________________________
 void TEveCaloDataHist::GetCellList(Float_t eta, Float_t etaD,
