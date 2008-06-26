@@ -71,8 +71,6 @@ TMVA::GeneticAlgorithm::GeneticAlgorithm( IFitterTarget& target, Int_t populatio
    // Purpose: 
    //     Creates a random population with individuals of the size ranges.size()
    fPopulation.SetRandomSeed( seed );
-
-   cout << "New version of TMVA" << endl;
 }
 
 //_______________________________________________________________________
@@ -114,7 +112,7 @@ Double_t TMVA::GeneticAlgorithm::CalculateFitness()
    //
    // this function calls implicitly (many times) the "fitnessFunction" which
    // has been overridden by the user. 
-    fBestFitness = DBL_MAX;
+   fBestFitness = DBL_MAX;
 #ifdef _GLIBCXX_PARALLEL
 
    const int nt = omp_get_num_threads();
