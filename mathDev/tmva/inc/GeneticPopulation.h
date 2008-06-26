@@ -81,7 +81,8 @@ namespace TMVA {
       // To keep compatibility: These methods might be reimplemented
       // or just eliminated later on. They are used by the
       // GeneticFitter class.
-
+     
+      void NextGeneration() {};
       void AddPopulation( GeneticPopulation *strangers );
       void AddPopulation( GeneticPopulation &strangers );
       void TrimPopulation();

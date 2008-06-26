@@ -93,6 +93,7 @@ void TMVA::GeneticPopulation::MakeChildren()
 #endif
    for ( int it = 0; it < (int) (fGenePool.size() / 2); ++it )
    {
+      //fGenePool[it].SetFitness(0);
       Int_t pos = (Int_t)fRandomGenerator->Integer( fGenePool.size()/2 );
       fGenePool[(fGenePool.size() / 2) + it] = MakeSex( fGenePool[it], fGenePool[pos] );
    }
@@ -107,7 +108,7 @@ TMVA::GeneticGenes TMVA::GeneticPopulation::MakeSex( TMVA::GeneticGenes male,
    //
    vector< Double_t > child(fRanges.size());
    for (unsigned int i = 0; i < fRanges.size(); ++i) {
-      if (fRandomGenerator->Integer( 2 )) {
+      if (fRandomGenerator->Integer( 2 ) == 0) {
          child[i] = male.GetFactors()[i];
       }else{
          child[i] = female.GetFactors()[i];
@@ -149,8 +150,8 @@ void TMVA::GeneticPopulation::Mutate( Double_t probability , Int_t startIndex,
       for (vec = (fGenePool[it].GetFactors()).begin(); vec < (fGenePool[it].GetFactors()).end(); ++vec) {
          if (fRandomGenerator->Uniform( 100 ) <= probability) {
             (*vec) = (*vecRange)->Random( near, (*vec), spread, mirror );
-         ++vecRange;
          }
+         ++vecRange;
       }
    }
 }
