@@ -186,6 +186,7 @@
 #pragma link C++ class TEveStraightLineSetGL+;
 #pragma link C++ class TEveStraightLineSetEditor+;
 #pragma link C++ class TEveStraightLineSetProjected+;
+#pragma link C++ class TEveScalableStraightLineSet+;
 
 // Projections / non-linear transformations
 #pragma link C++ class TEveProjectable+;
