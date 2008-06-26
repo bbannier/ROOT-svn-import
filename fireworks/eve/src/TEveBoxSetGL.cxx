@@ -64,7 +64,7 @@ inline Bool_t TEveBoxSetGL::SetupColor(const TEveDigitSet::DigitBase_t& q) const
       UChar_t c[4];
       Bool_t visible = fM->fPalette->ColorFromValue(q.fValue, fM->fDefaultValue, c);
       if (visible)
-         TGLUtil::Color4ubv(c);
+         TGLUtil::Color3ubv(c);
       return visible;
    }
 }
