@@ -112,7 +112,7 @@ public:
                                   Bool_t abort = kFALSE, Int_t timeout = 0) = 0;
    virtual void      SetInitTime() = 0;
 
-   TVirtualPacketizer   *GetPacketizer() const { return 0; }
+   virtual TVirtualPacketizer   *GetPacketizer() const = 0;
 
    static TVirtualProofPlayer *Create(const char *player, TProof *p, TSocket *s = 0);
 

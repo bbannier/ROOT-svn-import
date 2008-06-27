@@ -2729,6 +2729,8 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
       TVirtualPacketizer *packetizer = fPlayer ? fPlayer->GetPacketizer() : 0;
       if (packetizer)
          packetizer->MarkBad(wrk, &listOfMissingFiles);
+      else
+         Info("MarkBad", "No packetizer received form the player!");
    }
 
    fActiveSlaves->Remove(wrk);

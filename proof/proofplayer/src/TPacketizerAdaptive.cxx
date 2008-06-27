@@ -641,6 +641,35 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
                                   fTotalEntries, files, fFileNodes->GetSize());
    Reset();
 
+   InitStats();
+
+   if (!fValid)
+      SafeDelete(fProgress);
+
+   PDB(kPacketizer,1) Info("TPacketizerAdaptive", "return");
+}
+
+//______________________________________________________________________________
+TPacketizerAdaptive::~TPacketizerAdaptive()
+{
+   // Destructor.
+
+   if (fSlaveStats) {
+      fSlaveStats->DeleteValues();
+   }
+
+   SafeDelete(fSlaveStats);
+   SafeDelete(fUnAllocated);
+   SafeDelete(fActive);
+   SafeDelete(fFileNodes);
+}
+
+//______________________________________________________________________________
+void TPacketizerAdaptive::InitStats()
+{
+   // (re)initialise the statistics
+   // called at the begining or after a worker dies.
+
    // calculating how many files from TDSet are not cached on
    // any slave
    Int_t noRemoteFiles = 0;
@@ -662,29 +691,9 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
       return;
    }
 
-   fFractionOfRemoteFiles = noRemoteFiles / totalNumberOfFiles;
+   fFractionOfRemoteFiles = (1.0 * noRemoteFiles) / totalNumberOfFiles;
    Info("TPacketizerAdaptive",
         "fraction of remote files %f", fFractionOfRemoteFiles);
-
-   if (!fValid)
-      SafeDelete(fProgress);
-
-   PDB(kPacketizer,1) Info("TPacketizerAdaptive", "return");
-}
-
-//______________________________________________________________________________
-TPacketizerAdaptive::~TPacketizerAdaptive()
-{
-   // Destructor.
-
-   if (fSlaveStats) {
-      fSlaveStats->DeleteValues();
-   }
-
-   SafeDelete(fSlaveStats);
-   SafeDelete(fUnAllocated);
-   SafeDelete(fActive);
-   SafeDelete(fFileNodes);
 }
 
 //______________________________________________________________________________
@@ -1481,7 +1490,7 @@ void TPacketizerAdaptive::MarkBad(TSlave *s, TList **listOfMissingFiles)
 {
    // Split the work performed by worker 's' back to the filenodes.
    // Assume that the filenodes for which we have a TFileNode object
-   // are srill up and running.
+   // are still up and running.
    // TODO: add a filenode failure detecting mechanism.
 
    TSlaveStat *slaveStat = (TSlaveStat *)(fSlaveStats->GetValue(s));
@@ -1496,10 +1505,17 @@ void TPacketizerAdaptive::MarkBad(TSlave *s, TList **listOfMissingFiles)
    if (slaveStat->fCurElem) {
       subSet->Add(slaveStat->fCurElem);
    }
-   // reassign the packets assign to the bad slave and save the size;
+   // reassign the packets assigned to the bad slave and save the size;
    if (subSet)
       SplitPerHost(subSet, listOfMissingFiles);
    fProcessed -= slaveStat->fProcessed;
+   // remove slavestat from the map
+   fSlaveStats->Remove(s);
+   // the elements were reassigned so should not be deleted
+   subSet->SetOwner(0);
+   delete slaveStat;
+   // recalculate fNEventsOnRemLoc and others
+   InitStats();
 }
 
 //______________________________________________________________________________
@@ -1546,7 +1562,7 @@ void TPacketizerAdaptive::SplitPerHost(TList *elements,
       } else {
          // remove from the list in order to delete it.
          if (elements->Remove(e))
-            Error("Lookup", "Error removing a missing file");
+            Error("SplitPerHost", "Error removing a missing file");
          TFileInfo *fi = e->GetFileInfo();
          if (listOfMissingFiles)
             (*listOfMissingFiles)->Add((TObject *)fi);
