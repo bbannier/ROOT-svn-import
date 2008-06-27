@@ -74,6 +74,7 @@ private:
 
    TPacketizerAdaptive();
    TPacketizerAdaptive(const TPacketizerAdaptive&);    // no implementation, will generate
+   void           InitStats();                         // initialise the stats
    void operator=(const TPacketizerAdaptive&);         // error on accidental usage
 
    TFileNode     *NextNode();
