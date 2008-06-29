@@ -1926,8 +1926,21 @@ Int_t TProof::CollectInputFrom(TSocket *s)
    Int_t     what;
    Bool_t    delete_mess = kTRUE;
 
-   if (s->Recv(mess) < 0) {
-      MarkBad(s, "problems receiving a message in TProof::CollectInputFrom(...)");
+   if ((rc = s->Recv(mess)) < 0) {
+      PDB(kGlobal,2)
+         Info("CollectInputFrom","%p: got %d from Recv()", s, rc);
+      Bool_t bad = kTRUE;
+      if (rc == -5) {
+         // Broken connection: try reconnection
+         if (fCurrentMonitor) fCurrentMonitor->Remove(s);
+         if (s->Reconnect() == 0) {
+            if (fCurrentMonitor) fCurrentMonitor->Add(s);
+            bad = kFALSE;
+         }
+      }
+      if (bad)
+         MarkBad(s, "problems receiving a message in TProof::CollectInputFrom(...)");
+      // Ignore this wake up
       return -1;
    }
    if (!mess) {
@@ -1940,7 +1953,7 @@ Int_t TProof::CollectInputFrom(TSocket *s)
 
    PDB(kGlobal,3) {
       sl = FindSlave(s);
-      Info("CollectInputFrom","got %d from %s", what, (sl ? sl->GetOrdinal() : "undef"));
+      Info("CollectInputFrom","got type %d from '%s'", what, (sl ? sl->GetOrdinal() : "undef"));
    }
 
    switch (what) {
@@ -2686,10 +2699,7 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
                            : TUrl(gSystem->HostName()).GetHostFQDN();
    }
 
-   Bool_t terminatingworker = (reason && !strcmp(reason, "+++ terminating +++"))
-                            ? kTRUE : kFALSE;
-
-   if (!reason || !terminatingworker) {
+   if (!reason || strcmp(reason, kPROOF_TerminateWorker)) {
       // Message for notification
       const char *mastertype = (gProofServ && gProofServ->IsTopMaster()) ? "top master" : "master";
       TString src = IsMaster() ? Form("%s at %s", mastertype, thisurl.Data()) : "local session";
@@ -2717,7 +2727,7 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
       }
    }
 
-   if (IsMaster() && !terminatingworker) {
+   if (IsMaster() && strcmp(reason, kPROOF_TerminateWorker)) {
       TList *listOfMissingFiles = 0;
       if (!(listOfMissingFiles = (TList *)GetOutput("MissingFiles"))) {
          listOfMissingFiles = new TList();
@@ -2787,7 +2797,7 @@ void TProof::TerminateWorker(TSlave *wrk)
    }
 
    // This is a bad worker from now on
-   MarkBad(wrk, "+++ terminating +++");
+   MarkBad(wrk, kPROOF_TerminateWorker);
 }
 
 //______________________________________________________________________________
@@ -2841,10 +2851,11 @@ Int_t TProof::Ping(ESlaves list)
    TSlave *sl;
    while ((sl = (TSlave *)next())) {
       if (sl->IsValid()) {
-         if (sl->Ping() == -1)
+         if (sl->Ping() == -1) {
             MarkBad(sl, "ping unsuccessful");
-         else
+         } else {
             nsent++;
+         }
       }
    }
 
@@ -7391,7 +7402,7 @@ TProof *TProof::Open(const char *cluster, const char *conffile,
             else
                d = (TProofDesc *) mgr->GetProofDesc(locid);
             if (d) {
-               proof = (TProof*) mgr->AttachSession(d->GetLocalId());
+               proof = (TProof*) mgr->AttachSession(d);
                if (!proof || !proof->IsValid()) {
                   if (locid)
                      ::Error(pn, "new session could not be attached");
@@ -7427,14 +7438,14 @@ TProofMgr *TProof::Mgr(const char *url)
 }
 
 //_____________________________________________________________________________
-void TProof::Reset(const char *url)
+void TProof::Reset(const char *url, Bool_t hard)
 {
-   // Wrapper around TProofMgr::Reset().
+   // Wrapper around TProofMgr::Reset(...).
 
    if (url) {
       TProofMgr *mgr = TProof::Mgr(url);
       if (mgr && mgr->IsValid())
-         mgr->Reset();
+         mgr->Reset(hard);
       else
          ::Error("TProof::Reset",
                  "unable to initialize a valid manager instance");
