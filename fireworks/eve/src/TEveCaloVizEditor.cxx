@@ -135,7 +135,7 @@ TEveCaloVizEditor::TEveCaloVizEditor(const TGWindow *p, Int_t width, Int_t heigh
    fPhi->SetLabelWidth(labelW);
    fPhi->SetNELength(6);
    fPhi->Build();
-   fPhi->SetLimits(-180, 180);
+   fPhi->SetLimits(-TMath::Pi(), TMath::Pi(), TGNumberFormat::kNESRealTwo);
    fPhi->Connect("ValueSet(Double_t)", "TEveCaloVizEditor", this, "DoPhi()");
    fTowerFrame->AddFrame(fPhi, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
 
@@ -143,7 +143,7 @@ TEveCaloVizEditor::TEveCaloVizEditor(const TGWindow *p, Int_t width, Int_t heigh
    fPhiOffset->SetLabelWidth(labelW);
    fPhiOffset->SetNELength(6);
    fPhiOffset->Build();
-   fPhiOffset->SetLimits(0, 180);
+   fPhiOffset->SetLimits(0, TMath::Pi(), TGNumberFormat::kNESRealTwo);
    fPhiOffset->Connect("ValueSet(Double_t)", "TEveCaloVizEditor", this, "DoPhi()");
    fTowerFrame->AddFrame(fPhiOffset, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
 
@@ -235,20 +235,19 @@ void TEveCaloVizEditor::SetModel(TObject* obj)
    fMaxValAbs->SetValue(fM->GetMaxValAbs());
    fMaxTowerH->SetValue(fM->GetMaxTowerH());
 
-
    Double_t min, max;
    fM->GetData()->GetEtaLimits(min, max);
    fEtaRng->SetLimits((Float_t)min, (Float_t)max);
    fEtaRng->SetValues(fM->fEtaMin, fM->fEtaMax);
 
    fM->GetData()->GetPhiLimits(min, max);
-   min = TMath::Ceil (min*TMath::RadToDeg());
-   max = TMath::Floor(max*TMath::RadToDeg());
-   fPhi->SetLimits((Int_t)min, (Int_t)max, (Int_t)(max - min + 1));
-   fPhi->SetValue(fM->fPhi*TMath::RadToDeg());
-   Int_t delta = ((Int_t)(max - min + 1))/2;
-   fPhiOffset->SetLimits(0, delta, delta + 1);
-   fPhiOffset->SetValue(fM->fPhiOffset*TMath::RadToDeg());
+   fPhi->SetLimits(min, max, 101, TGNumberFormat::kNESRealTwo);
+   fPhi->SetValue(fM->fPhi);
+   fPhi->SetToolTip("Center angle in radians");
+
+   fPhiOffset->SetLimits(0, TMath::Pi(), 101, TGNumberFormat::kNESRealTwo);
+   fPhiOffset->SetValue(fM->fPhiOffset);
+   fPhiOffset->SetToolTip("Phi range in radians");
 
    MakeSliceInfo();
 }
@@ -311,7 +310,7 @@ void TEveCaloVizEditor::DoPhi()
 {
   // Slot for setting phi range.
 
-   fM->SetPhiWithRng(fPhi->GetValue()*TMath::DegToRad(), fPhiOffset->GetValue()*TMath::DegToRad());
+   fM->SetPhiWithRng(fPhi->GetValue(), fPhiOffset->GetValue());
    Update();
 }
 
