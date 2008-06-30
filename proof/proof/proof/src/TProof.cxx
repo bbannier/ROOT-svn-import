@@ -2738,7 +2738,10 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
 
       TVirtualPacketizer *packetizer = fPlayer ? fPlayer->GetPacketizer() : 0;
       if (packetizer)
-         packetizer->MarkBad(wrk, &listOfMissingFiles);
+         // if the worker is being terminated, don't resubmit the packets
+         packetizer->MarkBad(wrk,
+                             strcmp(reason, kPROOF_TerminateWorker) != 0,
+                             &listOfMissingFiles);
       else
          Info("MarkBad", "No packetizer received form the player!");
    }

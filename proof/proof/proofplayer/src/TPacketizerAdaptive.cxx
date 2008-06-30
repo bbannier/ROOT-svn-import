@@ -1486,11 +1486,16 @@ Int_t TPacketizerAdaptive::GetEstEntriesProcessed(Float_t t,
 }
 
 //______________________________________________________________________________
-void TPacketizerAdaptive::MarkBad(TSlave *s, TList **listOfMissingFiles)
+void TPacketizerAdaptive::MarkBad(TSlave *s, Bool_t resubmit,
+                                  TList **listOfMissingFiles)
 {
-   // Split the work performed by worker 's' back to the filenodes.
+   // This method can be called at any time during processing.
+   // If the output list from this worker was sent back to the master,
+   // the 'resubmit' flag should be set to kFALSE.
+   // Otherwise we split the work performed by worker 's' back to the filenodes.
    // Assume that the filenodes for which we have a TFileNode object
    // are still up and running.
+   // Also assume that if 'resubmit' is kFALSE, the fCurElem was processed.
    // TODO: add a filenode failure detecting mechanism.
 
    TSlaveStat *slaveStat = (TSlaveStat *)(fSlaveStats->GetValue(s));
@@ -1499,20 +1504,22 @@ void TPacketizerAdaptive::MarkBad(TSlave *s, TList **listOfMissingFiles)
       return;
    }
 
-   // Get the subset processed by the bad worker.
-   TList *subSet = slaveStat->GetProcessedSubSet();
-   // Take care of the current packet
-   if (slaveStat->fCurElem) {
-      subSet->Add(slaveStat->fCurElem);
+   if (resubmit) {
+      // Get the subset processed by the bad worker.
+      TList *subSet = slaveStat->GetProcessedSubSet();
+      // Take care of the current packet
+      if (slaveStat->fCurElem) {
+         subSet->Add(slaveStat->fCurElem);
+      }
+      // reassign the packets assigned to the bad slave and save the size;
+      if (subSet)
+         SplitPerHost(subSet, listOfMissingFiles);
+      fProcessed -= slaveStat->fProcessed;
+      // the elements were reassigned so should not be deleted
+      subSet->SetOwner(0);
    }
-   // reassign the packets assigned to the bad slave and save the size;
-   if (subSet)
-      SplitPerHost(subSet, listOfMissingFiles);
-   fProcessed -= slaveStat->fProcessed;
    // remove slavestat from the map
    fSlaveStats->Remove(s);
-   // the elements were reassigned so should not be deleted
-   subSet->SetOwner(0);
    delete slaveStat;
    // recalculate fNEventsOnRemLoc and others
    InitStats();

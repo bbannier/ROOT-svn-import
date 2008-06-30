@@ -112,7 +112,7 @@ public:
    Int_t         GetEstEntriesProcessed(Float_t t, Long64_t &ent, Long64_t &bytes);
    Int_t         CalculatePacketSize(TObject *slstat);
    TDSetElement *GetNextPacket(TSlave *sl, TMessage *r);
-   void          MarkBad(TSlave *s, TList **);
+   void          MarkBad(TSlave *s, Bool_t resubmit, TList **);
    ClassDef(TPacketizerAdaptive,0)  //Generate work packets for parallel processing
 };
 
