@@ -43,6 +43,8 @@ protected:
 
    Double_t      fPhi;
    Double_t      fPhiOffset;     // phi range +/- offset
+
+   Bool_t        fAutoRange;     // set eta phi limits on DataChanged()
   
    Float_t       fBarrelRadius;  // barrel raidus in cm
    Float_t       fEndCapPos;     // end cap z coordinate in cm
@@ -122,6 +124,9 @@ public:
    Float_t GetPhiMin() const {return fPhi-fPhiOffset;}
    Float_t GetPhiMax() const {return fPhi+fPhiOffset;}
    Float_t GetPhiRng() const {return fPhiOffset*2;}
+
+   Bool_t  GetAutoRange() const {return fAutoRange;}
+   void    SetAutoRange(Bool_t x) {fAutoRange=x;}
 
    void InvalidateCellIdCache() { fCellIdCacheOK=kFALSE; ResetBBox(); } // compute bbox
 

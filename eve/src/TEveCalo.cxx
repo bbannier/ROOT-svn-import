@@ -27,6 +27,7 @@
 
 #include "TGLUtil.h"
 
+#include <cassert>
 
 //==============================================================================
 // TEveCaloViz
@@ -52,6 +53,8 @@ TEveCaloViz::TEveCaloViz(const Text_t* n, const Text_t* t) :
 
    fPhi(0.),
    fPhiOffset(TMath::Pi()),
+
+   fAutoRange(kTRUE),
 
    fBarrelRadius(-1.f),
    fEndCapPos(-1.f),
@@ -84,6 +87,8 @@ TEveCaloViz::TEveCaloViz(TEveCaloData* data, const Text_t* n, const Text_t* t) :
 
    fPhi(0.),
    fPhiOffset(TMath::Pi()),
+
+   fAutoRange(kTRUE),
 
    fBarrelRadius(-1.f),
    fEndCapPos(-1.f),
@@ -239,7 +244,7 @@ void TEveCaloViz::DataChanged()
 
    fData->GetPhiLimits(min, max);
    delta = 0.5*(max - min);
-   if (fPhi < min || fPhi > max) {
+   if (fAutoRange || fPhi < min || fPhi > max) {
       fPhi       = 0.5*(max + min);
       fPhiOffset = delta;
    } else {
@@ -480,6 +485,7 @@ void TEveCalo2D::BuildCellIdCache()
    {
       // build list on basis of phi bins
       const TAxis* ay = fData->GetPhiBins();
+      assert(ay);
       Int_t nBins = ay->GetNbins();
       for (Int_t ibin = 1; ibin <= nBins; ++ibin)
       {
@@ -503,6 +509,7 @@ void TEveCalo2D::BuildCellIdCache()
    {
       // build list on basis of eta bins
       const TAxis *ax    = fData->GetEtaBins();
+      assert(ax);
       const Int_t  nBins = ax->GetNbins();
       for (Int_t ibin = 1; ibin <= nBins; ++ibin)
       {

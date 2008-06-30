@@ -94,6 +94,8 @@ public:
       Float_t ThetaMax() const { return fThetaMax; }
       Float_t Theta() const { return (fThetaMax+fThetaMin)*0.5f; }
       Float_t ThetaDelta() const { return fThetaMax-fThetaMin; }
+
+      virtual void  Dump() const;
    };
 
    struct CellData_t : public CellGeom_t
@@ -105,7 +107,7 @@ public:
       CellData_t() : CellGeom_t(), fValue(0) {}
 
       Float_t Value(Bool_t) const;
-      void Dump() const;
+      virtual void Dump() const;
    };
 
    /**************************************************************************/
@@ -151,10 +153,10 @@ public:
    SliceInfo_t&   RefSliceInfo(Int_t s) { return fSliceInfos[s]; }
 
    virtual void   GetEtaLimits(Double_t &min, Double_t &max) const = 0;
+
    virtual void   GetPhiLimits(Double_t &min, Double_t &max) const = 0;
 
    virtual Float_t GetMaxVal(Bool_t et) const {return (et)? fMaxValEt:fMaxValE;}
-
 
    virtual TAxis* GetEtaBins() const { return fEtaAxis;}
    virtual void   SetEtaBins(TAxis* ax){ fEtaAxis=ax;} 

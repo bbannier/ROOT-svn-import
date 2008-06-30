@@ -18,6 +18,8 @@
 #include "TMath.h"
 #include "TList.h"
 
+#include <cassert>
+
 //==============================================================================
 // TEveCaloData
 //==============================================================================
@@ -108,6 +110,7 @@ Float_t TEveCaloData::EtaToTheta(Float_t eta)
       return 2*ATan(Exp(- Abs(eta)));
 }
 
+
 //------------------------------------------------------------------------------
 // TEveCaloData::CellGeom_t
 //------------------------------------------------------------------------------
@@ -125,6 +128,18 @@ void TEveCaloData::CellGeom_t::Configure(Float_t etaMin, Float_t etaMax, Float_t
    fThetaMax = EtaToTheta(fEtaMin);
 }
 
+
+//______________________________________________________________________________
+void TEveCaloData::CellGeom_t::Dump() const
+{
+   // Print member data.
+
+   printf("%f, %f %f, %f \n", fEtaMin, fEtaMax, fPhiMin, fPhiMax);
+}
+
+//------------------------------------------------------------------------------
+// TEveCaloData::CellData_t
+//------------------------------------------------------------------------------
 
 //______________________________________________________________________________
 Float_t TEveCaloData::CellData_t::Value(Bool_t isEt) const
@@ -188,16 +203,19 @@ Int_t TEveCaloDataVec::AddTower(Float_t etaMin, Float_t etaMax, Float_t phiMin, 
 {
    // Add tower within eta/phi range.
 
+   assert (etaMin < etaMax);
+   assert (phiMin < phiMax);
+
    fGeomVec.push_back(CellGeom_t(etaMin, etaMax, phiMin, phiMax));
 
    for (vvFloat_i it=fSliceVec.begin(); it!=fSliceVec.end(); ++it)
       (*it).push_back(0);
 
-   if (etaMin<fEtaMin) fEtaMin=etaMin;
-   if (etaMax>fEtaMax) fEtaMax=etaMax;
-   if (phiMin<fPhiMin) fPhiMin=phiMin;
-   if (phiMax>fPhiMax) fPhiMax=phiMax;
+   if (etaMin < fEtaMin) fEtaMin = etaMin;
+   if (etaMax > fEtaMax) fEtaMax = etaMax;
 
+   if (phiMin < fPhiMin) fPhiMin = phiMin;
+   if (phiMax > fPhiMax) fPhiMax = phiMax;
 
    fTower = fGeomVec.size() - 1;
    return fTower;
@@ -409,7 +427,7 @@ void TEveCaloDataHist::GetCellList(Float_t eta, Float_t etaD,
       {
          for (Int_t iphi = 1; iphi <= nPhi; ++iphi)
          {
-            if (TEveUtil::IsU1IntervalOverlappingByMinMax
+            if (TEveUtil::IsU1IntervalContainedByMinMax
                 (phiMin, phiMax, fPhiAxis->GetBinLowEdge(iphi), fPhiAxis->GetBinUpEdge(iphi)))
             {
 
