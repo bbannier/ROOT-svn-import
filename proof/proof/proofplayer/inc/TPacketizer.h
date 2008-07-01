@@ -91,7 +91,7 @@ public:
 
    TDSetElement *GetNextPacket(TSlave *sl, TMessage *r);
    Long64_t      GetEntriesProcessed(TSlave *sl) const;
-   void          MarkBad(TSlave *, Bool_t resubmit, TList **) { return; }
+   void          MarkBad(TSlave *, Bool_t /*resubmit*/, TList **) { return; }
 
    ClassDef(TPacketizer,0)  //Generate work packets for parallel processing
 };
