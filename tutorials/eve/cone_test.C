@@ -73,11 +73,11 @@ elliptic_cone_test(Float_t x=0, Float_t y=0, Float_t z=0,
   lines->SetLineWidth(2);
 
   TRandom r(0);
-  gStyle->SetPalette(1, 0);
-  TEveRGBAPalette* pal = new TEveRGBAPalette(0, 500);
+
   TEveBoxSet* cones = new TEveBoxSet("EllipticConeSet");
-  cones->SetPalette(pal);
-  cones->Reset(TEveBoxSet::kBT_EllipticCone, kFALSE, 64);
+  cones->Reset(TEveBoxSet::kBT_EllipticCone, kTRUE, 64);
+
+  cones->SetPickable(kTRUE);
 
   Float_t a = 40; // max distance between cones
   TEveVector dir, pos;
@@ -93,7 +93,7 @@ elliptic_cone_test(Float_t x=0, Float_t y=0, Float_t z=0,
     pos.Set(r.Uniform(-a,a), r.Uniform(-a, a), r.Uniform(-a, a));
 
     cones->AddEllipticCone(pos, dir, rad, 0.5*rad, r.Uniform(0,360));
-    cones->DigitValue(r.Uniform(0, 500));
+    cones->DigitColor(r.Uniform(20, 255), r.Uniform(20, 255), r.Uniform(20, 255), r.Uniform(20, 255));
 
     // draw axis line 30% longer than cone height
     TEveVector end = pos + dir*1.3;
