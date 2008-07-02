@@ -96,6 +96,7 @@
 TProofServ *gProofServ = 0;
 
 Bool_t TProofServ::fgLogToSysLog = kFALSE;      //true if logs should be sent to syslog too
+Bool_t TProofServ::fgSendLogToMaster = kFALSE; // On workers, controls logs sending to master
 
 // debug hook
 static volatile Int_t gProofServDebug = 1;
@@ -341,8 +342,10 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    // overloading.
 
    // Read session specific rootrc file
-   if (!gSystem->AccessPathName("session.rootrc", kReadPermission))
-      gEnv->ReadFile("session.rootrc", kEnvChange);
+   TString rcfile = gSystem->Getenv("ROOTRCFILE") ? gSystem->Getenv("ROOTRCFILE")
+                                                  : "session.rootrc";
+   if (!gSystem->AccessPathName(rcfile, kReadPermission))
+      gEnv->ReadFile(rcfile, kEnvChange);
 
    // Wait (loop) to allow debugger to connect
    Bool_t test = (*argc >= 4 && !strcmp(argv[3], "test")) ? kTRUE : kFALSE;
@@ -477,6 +480,7 @@ Int_t TProofServ::CreateServer()
 
    if (Setup() != 0) {
       // Setup failure
+      fgSendLogToMaster = kTRUE;
       SendLogFile();
       Terminate(0);
       return -1;
@@ -494,6 +498,7 @@ Int_t TProofServ::CreateServer()
       // If for some reason we failed setting a redirection fole for the logs
       // we cannot continue
       if (!fLogFile || (fLogFileDes = fileno(fLogFile)) < 0) {
+         fgSendLogToMaster = kTRUE;
          SendLogFile(-98);
          Terminate(0);
          return -1;
@@ -501,6 +506,7 @@ Int_t TProofServ::CreateServer()
    } else {
       // Use the file already open by pmain
       if ((fLogFileDes = fileno(fLogFile)) < 0) {
+         fgSendLogToMaster = kTRUE;
          SendLogFile(-98);
          Terminate(0);
          return -1;
@@ -510,6 +516,7 @@ Int_t TProofServ::CreateServer()
    // Send message of the day to the client
    if (IsMaster()) {
       if (CatMotd() == -1) {
+         fgSendLogToMaster = kTRUE;
          SendLogFile(-99);
          Terminate(0);
          return -1;
@@ -602,8 +609,7 @@ Int_t TProofServ::CreateServer()
                                                           fLogLevel, 0));
       if (!fProof || !fProof->IsValid()) {
          Error("CreateServer", "plugin for TProof could not be executed");
-         delete fProof;
-         fProof = 0;
+         SafeDelete(fProof);
          SendLogFile(-99);
          Terminate(0);
          return -1;
@@ -888,6 +894,8 @@ void TProofServ::HandleSocketInput()
    }
 
    what = mess->What();
+   PDB(kGlobal, 1)
+      Info("HandleSocketInput", "got type %d from '%s'", what, fSocket->GetTitle());
 
    timer.Start();
    fNcmd++;
@@ -905,6 +913,7 @@ void TProofServ::HandleSocketInput()
                Info("HandleSocketInput:kMESS_CINT", "processing: %s...", str);
             ProcessLine(str);
          }
+         fgSendLogToMaster = kTRUE;
          SendLogFile();
          break;
 
@@ -942,6 +951,7 @@ void TProofServ::HandleSocketInput()
       case kPROOF_PRINT:
          mess->ReadString(str, sizeof(str));
          Print(str);
+         fgSendLogToMaster = kTRUE;
          SendLogFile();
          break;
 
@@ -965,7 +975,18 @@ void TProofServ::HandleSocketInput()
          break;
 
       case kPROOF_STOP:
-         Terminate(0);
+         {  if (IsMaster()) {
+               TString ord;
+               *mess >> ord;
+               PDB(kGlobal, 1)
+                  Info("HandleSocketInput:kPROOF_STOP", "request for worker %s", ord.Data());
+               if (fProof) fProof->TerminateWorker(ord);
+            } else {
+               PDB(kGlobal, 1)
+                  Info("HandleSocketInput:kPROOF_STOP", "got request to terminate");
+               Terminate(0);
+            }
+         }
          break;
 
       case kPROOF_STOPPROCESS:
@@ -1112,6 +1133,7 @@ void TProofServ::HandleSocketInput()
                Info("HandleSocketInput:kPROOF_LOGFILE",
                     "Logfile request - byte range: %d - %d", start, end);
 
+            fgSendLogToMaster = kTRUE;
             SendLogFile(0, start, end);
          }
          break;
@@ -1352,6 +1374,7 @@ void TProofServ::HandleSocketInputDuringProcess()
                Info("HandleSocketInputDuringProcess:kPROOF_LOGFILE",
                     "Logfile request - byte range: %d - %d", start, end);
 
+            fgSendLogToMaster = kTRUE;
             SendLogFile(0, start, end);
          }
          break;
@@ -1793,6 +1816,17 @@ void TProofServ::SendLogFile(Int_t status, Int_t start, Int_t end)
    // Determine the number of bytes left to be read from the log file.
    fflush(stdout);
 
+   // On workers we do not send the logs to masters (to avoid duplication of
+   // text) unless asked explicitely, e.g. after an Exec(...) request.
+   if (!IsMaster()) {
+      if (!fgSendLogToMaster) {
+         FlushLogFile();
+      } else {
+         // Decide case by case 
+         fgSendLogToMaster = kFALSE;
+      }
+   }
+
    off_t ltot=0, lnow=0;
    Int_t left = -1;
    Bool_t adhoc = kFALSE;
@@ -2074,6 +2108,7 @@ Int_t TProofServ::Setup()
    // Session tag
    fSessionTag = Form("%s-%s-%d-%d", fOrdinal.Data(), host.Data(),
                       TTimeStamp().GetSec(),gSystem->GetPid());
+   fTopSessionTag = fSessionTag;
 
    // create session directory and make it the working directory
    fSessionDir = fWorkDir;
@@ -2221,7 +2256,7 @@ Int_t TProofServ::SetupCommon()
       fQueryDir += TString("/") + kPROOF_QueryDir;
       if (gSystem->AccessPathName(fQueryDir))
          gSystem->MakeDirectory(fQueryDir);
-      fQueryDir += TString("/session-") + fSessionTag;
+      fQueryDir += TString("/session-") + fTopSessionTag;
       if (gSystem->AccessPathName(fQueryDir))
          gSystem->MakeDirectory(fQueryDir);
       if (gProofDebugLevel > 0)
@@ -2230,13 +2265,13 @@ Int_t TProofServ::SetupCommon()
       // Create 'queries' locker instance and lock it
       fQueryLock = new TProofLockPath(Form("%s/%s%s-%s",
                        gSystem->TempDirectory(),
-                       kPROOF_QueryLockFile, fSessionTag.Data(),
+                       kPROOF_QueryLockFile, fTopSessionTag.Data(),
                        TString(fQueryDir).ReplaceAll("/","%").Data()));
       fQueryLock->Lock();
 
       // Send session tag to client
       TMessage m(kPROOF_SESSIONTAG);
-      m << fSessionTag;
+      m << fTopSessionTag;
       fSocket->Send(m);
    }
 
@@ -2735,7 +2770,7 @@ Int_t TProofServ::CleanupQueriesDir()
          continue;
 
       // We do not want this session at this level
-      if (strstr(sess, fSessionTag))
+      if (strstr(sess, fTopSessionTag))
          continue;
 
       // Remove the directory
@@ -2772,7 +2807,7 @@ void TProofServ::ScanPreviousQueries(const char *dir)
          continue;
 
       // We do not want this session at this level
-      if (strstr(sess, fSessionTag))
+      if (strstr(sess, fTopSessionTag))
          continue;
 
       // Loop over query dirs
@@ -2859,7 +2894,7 @@ Int_t TProofServ::ApplyMaxQueries()
          continue;
 
       // We do not want this session at this level
-      if (strstr(sess, fSessionTag))
+      if (strstr(sess, fTopSessionTag))
          continue;
 
       // Loop over query dirs
@@ -2942,7 +2977,7 @@ Int_t TProofServ::LockSession(const char *sessiontag, TProofLockPath **lck)
    // unlocked via UnlockQueryFile(fid).
 
    // We do not need to lock our own session
-   if (strstr(sessiontag, fSessionTag))
+   if (strstr(sessiontag, fTopSessionTag))
       return 0;
 
    if (!lck) {
@@ -2977,7 +3012,7 @@ Int_t TProofServ::LockSession(const char *sessiontag, TProofLockPath **lck)
 
    // Lock the query lock file
    TString qlock = fQueryLock->GetName();
-   qlock.ReplaceAll(fSessionTag, stag);
+   qlock.ReplaceAll(fTopSessionTag, stag);
 
    if (!gSystem->AccessPathName(qlock)) {
       *lck = new TProofLockPath(qlock);
@@ -3004,7 +3039,7 @@ Int_t TProofServ::CleanupSession(const char *sessiontag)
 
    // Query dir
    TString qdir = fQueryDir;
-   qdir.ReplaceAll(Form("session-%s", fSessionTag.Data()), sessiontag);
+   qdir.ReplaceAll(Form("session-%s", fTopSessionTag.Data()), sessiontag);
    Int_t idx = qdir.Index(":q");
    if (idx != kNPOS)
       qdir.Remove(idx);
@@ -3144,7 +3179,7 @@ TProofQueryResult *TProofServ::LocateQuery(TString queryref, Int_t &qry, TString
    qry = -1;
    if (queryref.IsDigit()) {
       qry = queryref.Atoi();
-   } else if (queryref.Contains(fSessionTag)) {
+   } else if (queryref.Contains(fTopSessionTag)) {
       Int_t i1 = queryref.Index(":q");
       if (i1 != kNPOS) {
          queryref.Remove(0,i1+2);
@@ -3228,7 +3263,7 @@ void TProofServ::HandleArchive(TMessage *mess)
       }
       if (qry > 0) {
          path = Form("%s/session-%s-%d.root",
-                     fArchivePath.Data(), fSessionTag.Data(), qry);
+                     fArchivePath.Data(), fTopSessionTag.Data(), qry);
       } else {
          path = queryref;
          path.ReplaceAll(":q","-");
@@ -3362,7 +3397,7 @@ void TProofServ::HandleProcess(TMessage *mess)
             // Isolate the real name
             dsname.ReplaceAll("TFileCollection:", "");
             // Get the object
-            dataset = (TFileCollection *) input->FindObject(dset->GetName());
+            dataset = (TFileCollection *) input->FindObject(dsname);
             if (!dataset) {
                SendAsynMessage(Form("HandleProcess on %s: TFileCollection %s not"
                                     " found in input list",
@@ -3371,6 +3406,7 @@ void TProofServ::HandleProcess(TMessage *mess)
                                       dset->GetName());
                return;
             }
+            input->Remove(dataset);
             dsTree = dataset->GetDefaultTreeName();
             // Make sure we lookup everything (unless the client or the administartor
             // required something else)
@@ -3383,28 +3419,30 @@ void TProofServ::HandleProcess(TMessage *mess)
          // The received message included an empty dataset, with only the name
          // defined: assume that a dataset, stored on the PROOF master by that
          // name, should be processed.
-         if (!dataset && fDataSetManager) {
-            dataset = fDataSetManager->GetDataSet(dset->GetName());
-            if (!dataset) {
-               SendAsynMessage(Form("HandleProcess on %s: no such dataset: %s",
-                                    fPrefix.Data(), dset->GetName()));
-               Error("HandleProcess", "no such dataset on the master: %s",
-                     dset->GetName());
+         if (!dataset) {
+            if (fDataSetManager) {
+               dataset = fDataSetManager->GetDataSet(dset->GetName());
+               if (!dataset) {
+                  SendAsynMessage(Form("HandleProcess on %s: no such dataset: %s",
+                                       fPrefix.Data(), dset->GetName()));
+                  Error("HandleProcess", "no such dataset on the master: %s",
+                        dset->GetName());
+                  return;
+               }
+               if (!(fDataSetManager->ParseUri(dset->GetName(), 0, 0, 0, &dsTree)))
+                  dsTree = "";
+   
+               // Apply the lookup option requested by the client or the administartor
+               // (by default we trust the information in the dataset)
+               if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
+                  lookupopt = gEnv->GetValue("Proof.LookupOpt", "stagedOnly");
+                  input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
+               }
+            } else {
+               SendAsynMessage(Form("HandleProcess on %s: no dataset manager!", fPrefix.Data()));
+               Error("HandleProcess", "no dataset manager: cannot proceed");
                return;
             }
-            if (!(fDataSetManager->ParseUri(dset->GetName(), 0, 0, 0, &dsTree)))
-               dsTree = "";
-
-            // Apply the lookup option requested by the client or the administartor
-            // (by default we trust the information in the dataset)
-            if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
-               lookupopt = gEnv->GetValue("Proof.LookupOpt", "stagedOnly");
-               input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
-            }
-         } else {
-            SendAsynMessage(Form("HandleProcess on %s: no dataset manager!", fPrefix.Data()));
-            Error("HandleProcess", "no dataset manager: cannot proceed");
-            return;
          }
 
          // Transfer the list now
@@ -3651,7 +3689,11 @@ void TProofServ::HandleProcess(TMessage *mess)
                   fQueries->Add(pqr);
                // Remove from the fQueries list
                fQueries->Remove(pq);
-               SafeDelete(pq);
+               // These removes 'pq' from the internal player list and
+               // deletes it; in this way we do not attempt a double delete
+               // when destroying the player
+               fPlayer->RemoveQueryResult(Form("%s:%s",
+                                          pq->GetTitle(), pq->GetName()));
             }
          }
 
@@ -4847,6 +4889,10 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
    if (level < gErrorIgnoreLevel)
       return;
 
+   // Always communicate errors via SendLogFile
+   if (level >= kError)
+      fgSendLogToMaster = kTRUE;
+
    static TString syslogService;
 
    if (syslogService.IsNull()) {
@@ -4862,7 +4908,7 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
    const char *type   = 0;
    ELogLevel loglevel = kLogInfo;
 
-   Int_t ipos = 0;
+   Int_t ipos = (location) ? strlen(location) : 0;
 
    if (level >= kPrint) {
       loglevel = kLogInfo;
@@ -4906,7 +4952,7 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
    TTimeStamp ts;
    TString st(ts.AsString("lc"),19);
 
-   if (!location || strlen(location) == 0 ||
+   if (!location || ipos == 0 ||
        (level >= kPrint && level < kInfo) ||
        (level >= kBreak && level < kSysError)) {
       fprintf(stderr, "%s %5d %s | %s: %s\n", st(11,8).Data(), gSystem->GetPid(),

@@ -138,6 +138,8 @@ public:
    void        IncProcessed(Long64_t nEvents)
                   { fProcessed += nEvents; }
    Long64_t    GetProcessed() const { return fProcessed; }
+   void        DecProcessed(Long64_t nEvents)
+                  { fProcessed -= nEvents; }
    // this method is used by Compare() it adds 1, so it returns a number that
    // would be true if one more slave is added.
    Long64_t    GetEventsLeftPerSlave() const
@@ -639,6 +641,35 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
                                   fTotalEntries, files, fFileNodes->GetSize());
    Reset();
 
+   InitStats();
+
+   if (!fValid)
+      SafeDelete(fProgress);
+
+   PDB(kPacketizer,1) Info("TPacketizerAdaptive", "return");
+}
+
+//______________________________________________________________________________
+TPacketizerAdaptive::~TPacketizerAdaptive()
+{
+   // Destructor.
+
+   if (fSlaveStats) {
+      fSlaveStats->DeleteValues();
+   }
+
+   SafeDelete(fSlaveStats);
+   SafeDelete(fUnAllocated);
+   SafeDelete(fActive);
+   SafeDelete(fFileNodes);
+}
+
+//______________________________________________________________________________
+void TPacketizerAdaptive::InitStats()
+{
+   // (re)initialise the statistics
+   // called at the begining or after a worker dies.
+
    // calculating how many files from TDSet are not cached on
    // any slave
    Int_t noRemoteFiles = 0;
@@ -660,29 +691,9 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
       return;
    }
 
-   fFractionOfRemoteFiles = noRemoteFiles / totalNumberOfFiles;
+   fFractionOfRemoteFiles = (1.0 * noRemoteFiles) / totalNumberOfFiles;
    Info("TPacketizerAdaptive",
         "fraction of remote files %f", fFractionOfRemoteFiles);
-
-   if (!fValid)
-      SafeDelete(fProgress);
-
-   PDB(kPacketizer,1) Info("TPacketizerAdaptive", "return");
-}
-
-//______________________________________________________________________________
-TPacketizerAdaptive::~TPacketizerAdaptive()
-{
-   // Destructor.
-
-   if (fSlaveStats) {
-      fSlaveStats->DeleteValues();
-   }
-
-   SafeDelete(fSlaveStats);
-   SafeDelete(fUnAllocated);
-   SafeDelete(fActive);
-   SafeDelete(fFileNodes);
 }
 
 //______________________________________________________________________________
@@ -986,7 +997,7 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
          // A socket got invalid during validation
          Error("ValidateFiles", "worker-%s (%s) got invalid - STOP",
                slave->GetOrdinal(), slave->GetName());
-         ((TProof*)gProof)->MarkBad(slave);
+         ((TProof*)gProof)->MarkBad(slave, "socket got invalid during validation");
          fValid = kFALSE;
          break;
       }
@@ -995,7 +1006,7 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
 
       if (sock->Recv(reply) <= 0) {
          // Help! lost a slave?
-         ((TProof*)gProof)->MarkBad(slave);
+         ((TProof*)gProof)->MarkBad(slave, "receive failed during validation");
          fValid = kFALSE;
          Error("ValidateFiles", "Recv failed! for worker-%s (%s)",
                slave->GetOrdinal(), slave->GetName());
@@ -1005,7 +1016,7 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
       if (reply->What() == kPROOF_FATAL) {
          Error("ValidateFiles", "kPROOF_FATAL from worker-%s (%s)",
                slave->GetOrdinal(), slave->GetName());
-         ((TProof*)gProof)->MarkBad(slave);
+         ((TProof*)gProof)->MarkBad(slave, "received kPROOF_FATAL during validation");
          fValid = kFALSE;
          continue;
       } else if (reply->What() == kPROOF_LOGFILE) {
@@ -1024,7 +1035,7 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
          Error("ValidateFiles",
                "unexpected message type (%d) from worker-%s (%s)",
                reply->What(), slave->GetOrdinal(), slave->GetName());
-         ((TProof*)gProof)->MarkBad(slave);
+         ((TProof*)gProof)->MarkBad(slave, "unexpected message type during validation");
          fValid = kFALSE;
          continue;
       }
@@ -1472,4 +1483,97 @@ Int_t TPacketizerAdaptive::GetEstEntriesProcessed(Float_t t,
 
    // Done
    return 0;
+}
+
+//______________________________________________________________________________
+void TPacketizerAdaptive::MarkBad(TSlave *s, Bool_t resubmit,
+                                  TList **listOfMissingFiles)
+{
+   // This method can be called at any time during processing.
+   // If the output list from this worker was sent back to the master,
+   // the 'resubmit' flag should be set to kFALSE.
+   // Otherwise we split the work performed by worker 's' back to the filenodes.
+   // Assume that the filenodes for which we have a TFileNode object
+   // are still up and running.
+   // Also assume that if 'resubmit' is kFALSE, the fCurElem was processed.
+   // TODO: add a filenode failure detecting mechanism.
+
+   TSlaveStat *slaveStat = (TSlaveStat *)(fSlaveStats->GetValue(s));
+   if (!slaveStat) {
+      Error("MarkBad", "Worker does not exist");
+      return;
+   }
+
+   if (resubmit) {
+      // Get the subset processed by the bad worker.
+      TList *subSet = slaveStat->GetProcessedSubSet();
+      // Take care of the current packet
+      if (slaveStat->fCurElem) {
+         subSet->Add(slaveStat->fCurElem);
+      }
+      // reassign the packets assigned to the bad slave and save the size;
+      if (subSet)
+         SplitPerHost(subSet, listOfMissingFiles);
+      fProcessed -= slaveStat->fProcessed;
+      // the elements were reassigned so should not be deleted
+      subSet->SetOwner(0);
+   }
+   // remove slavestat from the map
+   fSlaveStats->Remove(s);
+   delete slaveStat;
+   // recalculate fNEventsOnRemLoc and others
+   InitStats();
+}
+
+//______________________________________________________________________________
+void TPacketizerAdaptive::SplitPerHost(TList *elements,
+                                       TList **listOfMissingFiles)
+{
+   // Split into per host entries
+   // The files in the listOfMissingFiles can appear several times;
+   // in order to fix that, a TDSetElement::Merge method is needed.
+
+   if (!elements) {
+      Error("SplitPerHost", "Empty list of packets!");
+      return;
+   }
+   if (elements->GetSize() <= 0) {
+      Error("SplitPerHost", "The input list contains no elements");
+      return;
+   }
+   TIter subSetIter(elements);
+   TDSetElement *e;
+   while ((e = (TDSetElement*) subSetIter.Next())) {
+      // check the old filenode
+      TUrl url = e->GetFileName();
+      // Check the host from which 'e' was previously read.
+      // Map non URL filenames to dummy host
+      TString host;
+      if ( !url.IsValid() ||
+          (strncmp(url.GetProtocol(),"root", 4) &&
+           strncmp(url.GetProtocol(),"rfio", 4))) {
+         host = "no-host";
+      } else {
+         host = url.GetHost();
+      }
+
+      // if accessible add it back to the old node
+      // and do DecProcessed
+      TFileNode *node = (TFileNode*) fFileNodes->FindObject( host );
+      if (node) {
+         // the packet 'e' was processing data from this node.
+         node->DecProcessed(e->GetNum());
+         node->Add( e );
+         if (!fUnAllocated->FindObject(node))
+             fUnAllocated->Add(node);
+      } else {
+         // remove from the list in order to delete it.
+         if (elements->Remove(e))
+            Error("SplitPerHost", "Error removing a missing file");
+         TFileInfo *fi = e->GetFileInfo();
+         if (listOfMissingFiles)
+            (*listOfMissingFiles)->Add((TObject *)fi);
+         delete e;
+      }
+   }
 }

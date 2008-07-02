@@ -121,6 +121,7 @@ public:
    Long64_t  Process(TDSet *set,
                      const char *selector, Option_t *option = "",
                      Long64_t nentries = -1, Long64_t firstentry = 0);
+   TVirtualPacketizer   *GetPacketizer() const { Info("GetPacketizer", "This method should not be called"); return 0; }
    Long64_t  Finalize(Bool_t force = kFALSE, Bool_t sync = kFALSE);
    Long64_t  Finalize(TQueryResult *qr);
    Long64_t  DrawSelect(TDSet *set, const char *varexp,
@@ -274,6 +275,7 @@ public:
                            evtrti, mbrti); } // *SIGNAL*
    void           Feedback(TList *objs); // *SIGNAL*
    TDSetElement  *GetNextPacket(TSlave *slave, TMessage *r);
+   TVirtualPacketizer   *GetPacketizer() const { return fPacketizer; }
 
    Bool_t         IsClient() const;
 

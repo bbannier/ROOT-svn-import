@@ -57,32 +57,12 @@
 // debug hook
 static volatile Int_t gProofServDebug = 1;
 
-//----- Interrupt signal handler -----------------------------------------------
-//______________________________________________________________________________
-class TXProofServInterruptHandler : public TSignalHandler {
-   TXProofServ  *fServ;
-public:
-   TXProofServInterruptHandler(TXProofServ *s)
-      : TSignalHandler(kSigUrgent, kFALSE) { fServ = s; }
-   Bool_t  Notify();
-};
-
-//______________________________________________________________________________
-Bool_t TXProofServInterruptHandler::Notify()
-{
-   fServ->HandleUrgentData();
-   if (TROOT::Initialized()) {
-      Throw(GetSignal());
-   }
-   return kTRUE;
-}
-
 //----- SigPipe signal handler -------------------------------------------------
 //______________________________________________________________________________
 class TXProofServSigPipeHandler : public TSignalHandler {
    TXProofServ  *fServ;
 public:
-   TXProofServSigPipeHandler(TXProofServ *s) : TSignalHandler(kSigPipe, kFALSE)
+   TXProofServSigPipeHandler(TXProofServ *s) : TSignalHandler(kSigInterrupt, kFALSE)
       { fServ = s; }
    Bool_t  Notify();
 };
@@ -193,6 +173,9 @@ Int_t TXProofServ::CreateServer()
          Error("CreateServer", "resolving the log file description number");
          return -1;
       }
+      // Hide the session start-up logs unless we are in verbose mode 
+      if (gProofDebugLevel <= 0)
+         lseek(fLogFileDes, (off_t) 0, SEEK_END);
    }
 
    // Global location string in TXSocket
@@ -242,15 +225,21 @@ Int_t TXProofServ::CreateServer()
       return -1;
    }
 
+   // Set the title for debugging
+   TString tgt("client");
+   if (fOrdinal != "0") {
+      tgt = fOrdinal;
+      if (tgt.Last('.') != kNPOS) tgt.Remove(tgt.Last('.'));
+   }
+   fSocket->SetTitle(tgt);
+
    // Set the this as reference of this socket
    ((TXSocket *)fSocket)->fReference = this;
 
    // Get socket descriptor
    Int_t sock = fSocket->GetDescriptor();
 
-   // Install interrupt and message input handlers
-   fInterruptHandler = new TXProofServInterruptHandler(this);
-   gSystem->AddSignalHandler(fInterruptHandler);
+   // Install message input handlers
    fInputHandler =
       TXSocketHandler::GetSocketHandler(new TXProofServInputHandler(this, sock), fSocket);
    gSystem->AddFileHandler(fInputHandler);
@@ -285,8 +274,9 @@ Int_t TXProofServ::CreateServer()
 
    if (Setup() == -1) {
       // Setup failure
-      Terminate(0);
+      fgSendLogToMaster = kTRUE;
       SendLogFile();
+      Terminate(0);
       return -1;
    }
 
@@ -295,8 +285,9 @@ Int_t TXProofServ::CreateServer()
       // If for some reason we failed setting a redirection file for the logs
       // we cannot continue
       if (!fLogFile || (fLogFileDes = fileno(fLogFile)) < 0) {
-         Terminate(0);
+         fgSendLogToMaster = kTRUE;
          SendLogFile(-98);
+         Terminate(0);
          return -1;
       }
    }
@@ -304,8 +295,9 @@ Int_t TXProofServ::CreateServer()
    // Send message of the day to the client
    if (IsMaster()) {
       if (CatMotd() == -1) {
-         Terminate(0);
+         fgSendLogToMaster = kTRUE;
          SendLogFile(-99);
+         Terminate(0);
          return -1;
       }
    }
@@ -392,7 +384,7 @@ Int_t TXProofServ::CreateServer()
                                                           fConfFile.Data(),
                                                           fConfDir.Data(),
                                                           fLogLevel,
-                                                          fSessionTag.Data()));
+                                                          fTopSessionTag.Data()));
       if (!fProof || !fProof->IsValid()) {
          Error("CreateServer", "plugin for TProof could not be executed");
          delete fProof;
@@ -613,12 +605,26 @@ Int_t TXProofServ::Setup()
    fWorkDir = gEnv->GetValue("ProofServ.Sandbox", kPROOF_WorkDir);
 
    // Get Session tag
-   if ((fSessionTag = gEnv->GetValue("ProofServ.SessionTag", "-1")) == "-1") {
+   if ((fTopSessionTag = gEnv->GetValue("ProofServ.SessionTag", "-1")) == "-1") {
       Error("Setup", "Session tag missing");
       return -1;
    }
+   fSessionTag = fTopSessionTag;
+   // Make sure the process ID is in the tag
+   TString spid = Form("-%d", gSystem->GetPid());
+   if (!fSessionTag.EndsWith(spid)) {
+      Int_t nd = 0;
+      if ((nd = fSessionTag.CountChar('-')) >= 2) {
+         Int_t id = fSessionTag.Index("-", fSessionTag.Index("-") + 1);
+         if (id != kNPOS) fSessionTag.Remove(id);
+      } else if (nd != 1) {
+         Warning("Setup", "Wrong number of '-' in session tag: protocol error? %s", fSessionTag.Data());
+      }
+      // Add this process ID
+      fSessionTag += spid;
+   }
    if (gProofDebugLevel > 0)
-      Info("Setup", "session tag is %s", fSessionTag.Data());
+      Info("Setup", "session tags: %s, %s", fTopSessionTag.Data(), fSessionTag.Data());
 
    // Get Session dir (sandbox)
    if ((fSessionDir = gEnv->GetValue("ProofServ.SessionDir", "-1")) == "-1") {
@@ -653,80 +659,6 @@ Int_t TXProofServ::Setup()
 
    // Done
    return 0;
-}
-
-//______________________________________________________________________________
-void TXProofServ::SendLogFile(Int_t status, Int_t start, Int_t end)
-{
-   // Send log file to master.
-   // If start > -1 send only bytes in the range from start to end,
-   // if end <= start send everything from start.
-
-   // Determine the number of bytes left to be read from the log file.
-   fflush(stdout);
-
-   off_t ltot, lnow;
-   Int_t left;
-
-   ltot = lseek(fileno(stdout),   (off_t) 0, SEEK_END);
-   lnow = lseek(fLogFileDes, (off_t) 0, SEEK_CUR);
-
-   Bool_t adhoc = kFALSE;
-   if (start > -1) {
-      lseek(fLogFileDes, (off_t) start, SEEK_SET);
-      if (end <= start || end > ltot)
-         end = ltot;
-      left = (Int_t)(end - start);
-      if (end < ltot)
-         left++;
-      adhoc = kTRUE;
-   } else {
-      left = (Int_t)(ltot - lnow);
-   }
-
-   if (left > 0) {
-      fSocket->Send(left, kPROOF_LOGFILE);
-
-      const Int_t kMAXBUF = 32768;  //16384  //65536;
-      char buf[kMAXBUF];
-      Int_t wanted = (left > kMAXBUF) ? kMAXBUF : left;
-      Int_t len;
-      do {
-         while ((len = read(fLogFileDes, buf, wanted)) < 0 &&
-                TSystem::GetErrno() == EINTR)
-            TSystem::ResetErrno();
-
-         if (len < 0) {
-            SysError("SendLogFile", "error reading log file");
-            break;
-         }
-
-         if (end == ltot && len == wanted)
-            buf[len-1] = '\n';
-
-         if (fSocket->SendRaw(buf, len, kDontBlock) < 0) {
-            SysError("SendLogFile", "error sending log file");
-            break;
-         }
-
-         // Update counters
-         left -= len;
-         wanted = (left > kMAXBUF) ? kMAXBUF : left;
-
-      } while (len > 0 && left > 0);
-   }
-
-   // Restore initial position if partial send
-   if (adhoc)
-      lseek(fLogFileDes, lnow, SEEK_SET);
-
-   TMessage mess(kPROOF_LOGDONE);
-   if (IsMaster())
-      mess << status << (fProof ? fProof->GetParallel() : 0);
-   else
-      mess << status << (Int_t) 1;
-
-   fSocket->Send(mess);
 }
 
 //______________________________________________________________________________
@@ -959,7 +891,6 @@ void TXProofServ::Terminate(Int_t status)
    // Remove input and signal handlers to avoid spurious "signals"
    // for closing activities executed upon exit()
    gSystem->RemoveFileHandler(fInputHandler);
-   gSystem->RemoveSignalHandler(fInterruptHandler);
 
    // Stop processing events (set a flag to exit the event loop)
    gSystem->ExitLoop();
@@ -984,7 +915,7 @@ Int_t TXProofServ::LockSession(const char *sessiontag, TProofLockPath **lck)
    // unlocked via UnlockQueryFile(fid).
 
    // We do not need to lock our own session
-   if (strstr(sessiontag, fSessionTag))
+   if (strstr(sessiontag, fTopSessionTag))
       return 0;
 
    if (!lck) {
@@ -1019,7 +950,7 @@ Int_t TXProofServ::LockSession(const char *sessiontag, TProofLockPath **lck)
 
    // Lock the query lock file
    TString qlock = fQueryLock->GetName();
-   qlock.ReplaceAll(fSessionTag, stag);
+   qlock.ReplaceAll(fTopSessionTag, stag);
 
    if (!gSystem->AccessPathName(qlock)) {
       *lck = new TProofLockPath(qlock);

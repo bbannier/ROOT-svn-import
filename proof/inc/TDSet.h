@@ -113,6 +113,7 @@ public:
    Bool_t           GetValid() const { return fValid; }
    const char      *GetObjName() const { return GetTitle(); }
    const char      *GetDirectory() const;
+   ULong_t          Hash() const;
    void             Print(Option_t *options="") const;
    Long64_t         GetTDSetOffset() const { return fTDSetOffset; }
    void             SetTDSetOffset(Long64_t offset) { fTDSetOffset = offset; }
@@ -127,7 +128,6 @@ public:
    Int_t            Lookup(Bool_t force = kFALSE);
    void             SetLookedUp() { SetBit(kHasBeenLookedUp); }
    TFileInfo       *GetFileInfo(const char *type = "TTree");
-   ULong_t          Hash() const;
 
    ClassDef(TDSetElement,6)  // A TDSet element
 };
