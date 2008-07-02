@@ -122,6 +122,7 @@ const char* const kPROOF_DataSetDir      = "datasets";    // dataset dir, under 
 const char* const kPROOF_CacheLockFile   = "proof-cache-lock-";   // cache lock file
 const char* const kPROOF_PackageLockFile = "proof-package-lock-"; // package lock file
 const char* const kPROOF_QueryLockFile   = "proof-query-lock-";   // query lock file
+const char* const kPROOF_TerminateWorker = "+++ terminating +++"; // signal worker termination in MarkBad
 
 #ifndef R__WIN32
 const char* const kCP     = "/bin/cp -fp";
@@ -537,8 +538,10 @@ private:
 
    void     SetRunStatus(ERunStatus rst) { fRunStatus = rst; }
 
-   void     MarkBad(TSlave *sl);
-   void     MarkBad(TSocket *s);
+   void     MarkBad(TSlave *wrk, const char *reason = 0);
+   void     MarkBad(TSocket *s, const char *reason = 0);
+   void     TerminateWorker(TSlave *wrk);
+   void     TerminateWorker(const char *ord);
 
    void     ActivateAsyncInput();
    void     DeActivateAsyncInput();
@@ -800,7 +803,7 @@ public:
    static TProof       *Open(const char *url = 0, const char *conffile = 0,
                              const char *confdir = 0, Int_t loglevel = 0);
    static TProofMgr    *Mgr(const char *url);
-   static void          Reset(const char *url);
+   static void          Reset(const char *url, Bool_t hard = kFALSE);
 
    static void          AddEnvVar(const char *name, const char *value);
    static void          DelEnvVar(const char *name);

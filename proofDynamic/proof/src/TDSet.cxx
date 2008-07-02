@@ -187,7 +187,7 @@ ULong_t TDSetElement::Hash() const
 {
    // Hash based on the name and the ranges
    // to support the mutiple ranges in a file in a TDSet
-   
+
    TString tmp = fName;
    if (fFirst)
       tmp += fFirst;
