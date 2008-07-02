@@ -58,6 +58,7 @@ public:
    void  Reset(Int_t n_points=0, Int_t n_int_ids=0);
    Int_t GrowFor(Int_t n_points);
 
+   virtual const Text_t* GetTitle()         const { return fTitle; }
    virtual const Text_t* GetElementName()   const { return TPointSet3D::GetName(); }
    virtual const Text_t* GetElementTitle()  const { return fTitle; }
    virtual void  SetElementName (const Text_t* n) { fName  = n; }
