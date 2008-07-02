@@ -587,6 +587,102 @@ void TH2::FillRandom(TH1 *h, Int_t ntimes)
    }
 }
 
+//______________________________________________________________________________
+void TH2::DoFitSlices(bool onX,
+                      TF1 *f1, Int_t firstbin, Int_t lastbin, Int_t cut, Option_t *option, TObjArray* arr)
+{
+   TAxis& outerAxis = (onX ? fYaxis : fXaxis);
+   TAxis& innerAxis = (onX ? fXaxis : fYaxis);
+
+   Int_t nbins  = outerAxis.GetNbins();
+   if (firstbin < 0) firstbin = 0;
+   if (lastbin < 0 || lastbin > nbins + 1) lastbin = nbins + 1;
+   if (lastbin < firstbin) {firstbin = 0; lastbin = nbins + 1;}
+   TString opt = option;
+   opt.ToLower();
+   Int_t ngroup = 1;
+   if (opt.Contains("g2")) {ngroup = 2; opt.ReplaceAll("g2","");}
+   if (opt.Contains("g3")) {ngroup = 3; opt.ReplaceAll("g3","");}
+   if (opt.Contains("g4")) {ngroup = 4; opt.ReplaceAll("g4","");}
+   if (opt.Contains("g5")) {ngroup = 5; opt.ReplaceAll("g5","");}
+
+   //default is to fit with a gaussian
+   if (f1 == 0) {
+      f1 = (TF1*)gROOT->GetFunction("gaus");
+      if (f1 == 0) f1 = new TF1("gaus","gaus",innerAxis.GetXmin(),innerAxis.GetXmax());
+      else         f1->SetRange(innerAxis.GetXmin(),innerAxis.GetXmax());
+   }
+   Int_t npar = f1->GetNpar();
+   if (npar <= 0) return;
+   Double_t *parsave = new Double_t[npar];
+   f1->GetParameters(parsave);
+
+   if (arr) {
+      arr->SetOwner();
+      arr->Expand(npar + 1);
+   }
+
+   //Create one histogram for each function parameter
+   Int_t ipar;
+   TH1D **hlist = new TH1D*[npar];
+   char *name   = new char[2000];
+   char *title  = new char[2000];
+   const TArrayD *bins = outerAxis.GetXbins();
+   for (ipar=0;ipar<npar;ipar++) {
+      sprintf(name,"%s_%d",GetName(),ipar);
+      sprintf(title,"Fitted value of par[%d]=%s",ipar,f1->GetParName(ipar));
+      delete gDirectory->FindObject(name);
+      if (bins->fN == 0) {
+         hlist[ipar] = new TH1D(name,title, nbins, outerAxis.GetXmin(), outerAxis.GetXmax());
+      } else {
+         hlist[ipar] = new TH1D(name,title, nbins,bins->fArray);
+      }
+      hlist[ipar]->GetXaxis()->SetTitle(outerAxis.GetTitle());
+      if (arr)
+         (*arr)[ipar] = hlist[ipar];
+   }
+   sprintf(name,"%s_chi2",GetName());
+   delete gDirectory->FindObject(name);
+   TH1D *hchi2 = 0;
+   if (bins->fN == 0) {
+      hchi2 = new TH1D(name,"chisquare", nbins, outerAxis.GetXmin(), outerAxis.GetXmax());
+   } else {
+      hchi2 = new TH1D(name,"chisquare", nbins, bins->fArray);
+   }
+   hchi2->GetXaxis()->SetTitle(outerAxis.GetTitle());
+   if (arr)
+      (*arr)[npar] = hchi2;
+
+   //Loop on all bins in Y, generate a projection along X
+   Int_t bin;
+   Int_t nentries;
+   for (bin=firstbin;bin<=lastbin;bin += ngroup) {
+      TH1D *hp;
+      if (onX)
+         hp= ProjectionX("_temp",bin,bin+ngroup-1,"e");
+      else
+         hp= ProjectionY("_temp",bin,bin+ngroup-1,"e");
+      if (hp == 0) continue;
+      nentries = Int_t(hp->GetEntries());
+      if (nentries == 0 || nentries < cut) {delete hp; continue;}
+      f1->SetParameters(parsave);
+      hp->Fit(f1,opt.Data());
+      Int_t npfits = f1->GetNumberFitPoints();
+      if (npfits > npar && npfits >= cut) {
+         Int_t binOn = bin + ngroup/2;
+         for (ipar=0;ipar<npar;ipar++) {
+            hlist[ipar]->Fill(outerAxis.GetBinCenter(binOn),f1->GetParameter(ipar));
+            hlist[ipar]->SetBinError(binOn,f1->GetParError(ipar));
+         }
+         hchi2->Fill(outerAxis.GetBinCenter(binOn),f1->GetChisquare()/(npfits-npar));
+      }
+      delete hp;
+   }
+   delete [] parsave;
+   delete [] name;
+   delete [] title;
+   delete [] hlist;
+}
 
 //______________________________________________________________________________
 void TH2::FitSlicesX(TF1 *f1, Int_t firstybin, Int_t lastybin, Int_t cut, Option_t *option, TObjArray* arr)
@@ -638,90 +734,92 @@ void TH2::FitSlicesX(TF1 *f1, Int_t firstybin, Int_t lastybin, Int_t cut, Option
    //  NOTE: To access the generated histograms in the current directory, do eg:
    //     TH1D *h2_1 = (TH1D*)gDirectory->Get("h2_1");
 
-   Int_t nbins  = fYaxis.GetNbins();
-   if (firstybin < 0) firstybin = 0;
-   if (lastybin < 0 || lastybin > nbins + 1) lastybin = nbins + 1;
-   if (lastybin < firstybin) {firstybin = 0; lastybin = nbins + 1;}
-   TString opt = option;
-   opt.ToLower();
-   Int_t ngroup = 1;
-   if (opt.Contains("g2")) {ngroup = 2; opt.ReplaceAll("g2","");}
-   if (opt.Contains("g3")) {ngroup = 3; opt.ReplaceAll("g3","");}
-   if (opt.Contains("g4")) {ngroup = 4; opt.ReplaceAll("g4","");}
-   if (opt.Contains("g5")) {ngroup = 5; opt.ReplaceAll("g5","");}
+   DoFitSlices(true, f1, firstybin, lastybin, cut, option, arr);
 
-   //default is to fit with a gaussian
-   if (f1 == 0) {
-      f1 = (TF1*)gROOT->GetFunction("gaus");
-      if (f1 == 0) f1 = new TF1("gaus","gaus",fXaxis.GetXmin(),fXaxis.GetXmax());
-      else         f1->SetRange(fXaxis.GetXmin(),fXaxis.GetXmax());
-   }
-   Int_t npar = f1->GetNpar();
-   if (npar <= 0) return;
-   Double_t *parsave = new Double_t[npar];
-   f1->GetParameters(parsave);
+//    Int_t nbins  = fYaxis.GetNbins();
+//    if (firstybin < 0) firstybin = 0;
+//    if (lastybin < 0 || lastybin > nbins + 1) lastybin = nbins + 1;
+//    if (lastybin < firstybin) {firstybin = 0; lastybin = nbins + 1;}
+//    TString opt = option;
+//    opt.ToLower();
+//    Int_t ngroup = 1;
+//    if (opt.Contains("g2")) {ngroup = 2; opt.ReplaceAll("g2","");}
+//    if (opt.Contains("g3")) {ngroup = 3; opt.ReplaceAll("g3","");}
+//    if (opt.Contains("g4")) {ngroup = 4; opt.ReplaceAll("g4","");}
+//    if (opt.Contains("g5")) {ngroup = 5; opt.ReplaceAll("g5","");}
 
-   if (arr) {
-      arr->SetOwner();
-      arr->Expand(npar + 1);
-   }
+//    //default is to fit with a gaussian
+//    if (f1 == 0) {
+//       f1 = (TF1*)gROOT->GetFunction("gaus");
+//       if (f1 == 0) f1 = new TF1("gaus","gaus",fXaxis.GetXmin(),fXaxis.GetXmax());
+//       else         f1->SetRange(fXaxis.GetXmin(),fXaxis.GetXmax());
+//    }
+//    Int_t npar = f1->GetNpar();
+//    if (npar <= 0) return;
+//    Double_t *parsave = new Double_t[npar];
+//    f1->GetParameters(parsave);
 
-   //Create one histogram for each function parameter
-   Int_t ipar;
-   TH1D **hlist = new TH1D*[npar];
-   char *name   = new char[2000];
-   char *title  = new char[2000];
-   const TArrayD *bins = fYaxis.GetXbins();
-   for (ipar=0;ipar<npar;ipar++) {
-      sprintf(name,"%s_%d",GetName(),ipar);
-      sprintf(title,"Fitted value of par[%d]=%s",ipar,f1->GetParName(ipar));
-      delete gDirectory->FindObject(name);
-      if (bins->fN == 0) {
-         hlist[ipar] = new TH1D(name,title, nbins, fYaxis.GetXmin(), fYaxis.GetXmax());
-      } else {
-         hlist[ipar] = new TH1D(name,title, nbins,bins->fArray);
-      }
-      hlist[ipar]->GetXaxis()->SetTitle(fYaxis.GetTitle());
-      if (arr)
-         (*arr)[ipar] = hlist[ipar];
-   }
-   sprintf(name,"%s_chi2",GetName());
-   delete gDirectory->FindObject(name);
-   TH1D *hchi2 = 0;
-   if (bins->fN == 0) {
-      hchi2 = new TH1D(name,"chisquare", nbins, fYaxis.GetXmin(), fYaxis.GetXmax());
-   } else {
-      hchi2 = new TH1D(name,"chisquare", nbins, bins->fArray);
-   }
-   hchi2->GetXaxis()->SetTitle(fYaxis.GetTitle());
-   if (arr)
-      (*arr)[npar] = hchi2;
+//    if (arr) {
+//       arr->SetOwner();
+//       arr->Expand(npar + 1);
+//    }
 
-   //Loop on all bins in Y, generate a projection along X
-   Int_t bin;
-   Int_t nentries;
-   for (bin=firstybin;bin<=lastybin;bin += ngroup) {
-      TH1D *hpx = ProjectionX("_temp",bin,bin+ngroup-1,"e");
-      if (hpx == 0) continue;
-      nentries = Int_t(hpx->GetEntries());
-      if (nentries == 0 || nentries < cut) {delete hpx; continue;}
-      f1->SetParameters(parsave);
-      hpx->Fit(f1,opt.Data());
-      Int_t npfits = f1->GetNumberFitPoints();
-      if (npfits > npar && npfits >= cut) {
-         Int_t binx = bin + ngroup/2;
-         for (ipar=0;ipar<npar;ipar++) {
-            hlist[ipar]->Fill(fYaxis.GetBinCenter(binx),f1->GetParameter(ipar));
-            hlist[ipar]->SetBinError(binx,f1->GetParError(ipar));
-         }
-         hchi2->Fill(fYaxis.GetBinCenter(binx),f1->GetChisquare()/(npfits-npar));
-      }
-      delete hpx;
-   }
-   delete [] parsave;
-   delete [] name;
-   delete [] title;
-   delete [] hlist;
+//    //Create one histogram for each function parameter
+//    Int_t ipar;
+//    TH1D **hlist = new TH1D*[npar];
+//    char *name   = new char[2000];
+//    char *title  = new char[2000];
+//    const TArrayD *bins = fYaxis.GetXbins();
+//    for (ipar=0;ipar<npar;ipar++) {
+//       sprintf(name,"%s_%d",GetName(),ipar);
+//       sprintf(title,"Fitted value of par[%d]=%s",ipar,f1->GetParName(ipar));
+//       delete gDirectory->FindObject(name);
+//       if (bins->fN == 0) {
+//          hlist[ipar] = new TH1D(name,title, nbins, fYaxis.GetXmin(), fYaxis.GetXmax());
+//       } else {
+//          hlist[ipar] = new TH1D(name,title, nbins,bins->fArray);
+//       }
+//       hlist[ipar]->GetXaxis()->SetTitle(fYaxis.GetTitle());
+//       if (arr)
+//          (*arr)[ipar] = hlist[ipar];
+//    }
+//    sprintf(name,"%s_chi2",GetName());
+//    delete gDirectory->FindObject(name);
+//    TH1D *hchi2 = 0;
+//    if (bins->fN == 0) {
+//       hchi2 = new TH1D(name,"chisquare", nbins, fYaxis.GetXmin(), fYaxis.GetXmax());
+//    } else {
+//       hchi2 = new TH1D(name,"chisquare", nbins, bins->fArray);
+//    }
+//    hchi2->GetXaxis()->SetTitle(fYaxis.GetTitle());
+//    if (arr)
+//       (*arr)[npar] = hchi2;
+
+//    //Loop on all bins in Y, generate a projection along X
+//    Int_t bin;
+//    Int_t nentries;
+//    for (bin=firstybin;bin<=lastybin;bin += ngroup) {
+//       TH1D *hpx = ProjectionX("_temp",bin,bin+ngroup-1,"e");
+//       if (hpx == 0) continue;
+//       nentries = Int_t(hpx->GetEntries());
+//       if (nentries == 0 || nentries < cut) {delete hpx; continue;}
+//       f1->SetParameters(parsave);
+//       hpx->Fit(f1,opt.Data());
+//       Int_t npfits = f1->GetNumberFitPoints();
+//       if (npfits > npar && npfits >= cut) {
+//          Int_t binx = bin + ngroup/2;
+//          for (ipar=0;ipar<npar;ipar++) {
+//             hlist[ipar]->Fill(fYaxis.GetBinCenter(binx),f1->GetParameter(ipar));
+//             hlist[ipar]->SetBinError(binx,f1->GetParError(ipar));
+//          }
+//          hchi2->Fill(fYaxis.GetBinCenter(binx),f1->GetChisquare()/(npfits-npar));
+//       }
+//       delete hpx;
+//    }
+//    delete [] parsave;
+//    delete [] name;
+//    delete [] title;
+//    delete [] hlist;
 }
 
 //______________________________________________________________________________
@@ -782,90 +880,92 @@ void TH2::FitSlicesY(TF1 *f1, Int_t firstxbin, Int_t lastxbin, Int_t cut, Option
    */
    //End_Html
 
-   Int_t nbins  = fXaxis.GetNbins();
-   if (firstxbin < 0) firstxbin = 0;
-   if (lastxbin < 0 || lastxbin > nbins + 1) lastxbin = nbins + 1;
-   if (lastxbin < firstxbin) {firstxbin = 0; lastxbin = nbins + 1;}
-   TString opt = option;
-   opt.ToLower();
-   Int_t ngroup = 1;
-   if (opt.Contains("g2")) {ngroup = 2; opt.ReplaceAll("g2","");}
-   if (opt.Contains("g3")) {ngroup = 3; opt.ReplaceAll("g3","");}
-   if (opt.Contains("g4")) {ngroup = 4; opt.ReplaceAll("g4","");}
-   if (opt.Contains("g5")) {ngroup = 5; opt.ReplaceAll("g5","");}
+   DoFitSlices(false, f1, firstxbin, lastxbin, cut, option, arr);
 
-   //default is to fit with a gaussian
-   if (f1 == 0) {
-      f1 = (TF1*)gROOT->GetFunction("gaus");
-      if (f1 == 0) f1 = new TF1("gaus","gaus",fYaxis.GetXmin(),fYaxis.GetXmax());
-      else         f1->SetRange(fYaxis.GetXmin(),fYaxis.GetXmax());
-   }
-   Int_t npar = f1->GetNpar();
-   if (npar <= 0) return;
-   Double_t *parsave = new Double_t[npar];
-   f1->GetParameters(parsave);
+//    Int_t nbins  = fXaxis.GetNbins();
+//    if (firstxbin < 0) firstxbin = 0;
+//    if (lastxbin < 0 || lastxbin > nbins + 1) lastxbin = nbins + 1;
+//    if (lastxbin < firstxbin) {firstxbin = 0; lastxbin = nbins + 1;}
+//    TString opt = option;
+//    opt.ToLower();
+//    Int_t ngroup = 1;
+//    if (opt.Contains("g2")) {ngroup = 2; opt.ReplaceAll("g2","");}
+//    if (opt.Contains("g3")) {ngroup = 3; opt.ReplaceAll("g3","");}
+//    if (opt.Contains("g4")) {ngroup = 4; opt.ReplaceAll("g4","");}
+//    if (opt.Contains("g5")) {ngroup = 5; opt.ReplaceAll("g5","");}
 
-   if (arr) {
-      arr->SetOwner();
-      arr->Expand(npar + 1);
-   }
+//    //default is to fit with a gaussian
+//    if (f1 == 0) {
+//       f1 = (TF1*)gROOT->GetFunction("gaus");
+//       if (f1 == 0) f1 = new TF1("gaus","gaus",fYaxis.GetXmin(),fYaxis.GetXmax());
+//       else         f1->SetRange(fYaxis.GetXmin(),fYaxis.GetXmax());
+//    }
+//    Int_t npar = f1->GetNpar();
+//    if (npar <= 0) return;
+//    Double_t *parsave = new Double_t[npar];
+//    f1->GetParameters(parsave);
 
-   //Create one histogram for each function parameter
-   Int_t ipar;
-   TH1D **hlist = new TH1D*[npar];
-   char *name   = new char[2000];
-   char *title  = new char[2000];
-   const TArrayD *bins = fXaxis.GetXbins();
-   for (ipar=0;ipar<npar;ipar++) {
-      sprintf(name,"%s_%d",GetName(),ipar);
-      sprintf(title,"Fitted value of par[%d]=%s",ipar,f1->GetParName(ipar));
-      delete gDirectory->FindObject(name);
-      if (bins->fN == 0) {
-         hlist[ipar] = new TH1D(name,title, nbins, fXaxis.GetXmin(), fXaxis.GetXmax());
-      } else {
-         hlist[ipar] = new TH1D(name,title, nbins, bins->fArray);
-      }
-      hlist[ipar]->GetXaxis()->SetTitle(fXaxis.GetTitle());
-      if (arr)
-         (*arr)[ipar] = hlist[ipar];
-   }
-   sprintf(name,"%s_chi2",GetName());
-   delete gDirectory->FindObject(name);
-   TH1D *hchi2 = 0;
-   if (bins->fN == 0) {
-      hchi2 = new TH1D(name,"chisquare", nbins, fXaxis.GetXmin(), fXaxis.GetXmax());
-   } else {
-      hchi2 = new TH1D(name,"chisquare", nbins, bins->fArray);
-   }
-   hchi2->GetXaxis()->SetTitle(fXaxis.GetTitle());
-   if (arr)
-      (*arr)[npar] = hchi2;
+//    if (arr) {
+//       arr->SetOwner();
+//       arr->Expand(npar + 1);
+//    }
 
-   //Loop on all bins in X, generate a projection along Y
-   Int_t bin;
-   Int_t nentries;
-   for (bin=firstxbin;bin<=lastxbin;bin += ngroup) {
-      TH1D *hpy = ProjectionY("_temp",bin,bin+ngroup-1,"e");
-      if (hpy == 0) continue;
-      nentries = Int_t(hpy->GetEntries());
-      if (nentries == 0 || nentries < cut) {delete hpy; continue;}
-      f1->SetParameters(parsave);
-      hpy->Fit(f1,opt.Data());
-      Int_t npfits = f1->GetNumberFitPoints();
-      if (npfits > npar && npfits >= cut) {
-         Int_t biny = bin + ngroup/2;
-         for (ipar=0;ipar<npar;ipar++) {
-            hlist[ipar]->Fill(fXaxis.GetBinCenter(biny),f1->GetParameter(ipar));
-            hlist[ipar]->SetBinError(biny,f1->GetParError(ipar));
-         }
-         hchi2->Fill(fXaxis.GetBinCenter(biny),f1->GetChisquare()/(npfits-npar));
-      }
-      delete hpy;
-   }
-   delete [] parsave;
-   delete [] name;
-   delete [] title;
-   delete [] hlist;
+//    //Create one histogram for each function parameter
+//    Int_t ipar;
+//    TH1D **hlist = new TH1D*[npar];
+//    char *name   = new char[2000];
+//    char *title  = new char[2000];
+//    const TArrayD *bins = fXaxis.GetXbins();
+//    for (ipar=0;ipar<npar;ipar++) {
+//       sprintf(name,"%s_%d",GetName(),ipar);
+//       sprintf(title,"Fitted value of par[%d]=%s",ipar,f1->GetParName(ipar));
+//       delete gDirectory->FindObject(name);
+//       if (bins->fN == 0) {
+//          hlist[ipar] = new TH1D(name,title, nbins, fXaxis.GetXmin(), fXaxis.GetXmax());
+//       } else {
+//          hlist[ipar] = new TH1D(name,title, nbins, bins->fArray);
+//       }
+//       hlist[ipar]->GetXaxis()->SetTitle(fXaxis.GetTitle());
+//       if (arr)
+//          (*arr)[ipar] = hlist[ipar];
+//    }
+//    sprintf(name,"%s_chi2",GetName());
+//    delete gDirectory->FindObject(name);
+//    TH1D *hchi2 = 0;
+//    if (bins->fN == 0) {
+//       hchi2 = new TH1D(name,"chisquare", nbins, fXaxis.GetXmin(), fXaxis.GetXmax());
+//    } else {
+//       hchi2 = new TH1D(name,"chisquare", nbins, bins->fArray);
+//    }
+//    hchi2->GetXaxis()->SetTitle(fXaxis.GetTitle());
+//    if (arr)
+//       (*arr)[npar] = hchi2;
+
+//    //Loop on all bins in X, generate a projection along Y
+//    Int_t bin;
+//    Int_t nentries;
+//    for (bin=firstxbin;bin<=lastxbin;bin += ngroup) {
+//       TH1D *hpy = ProjectionY("_temp",bin,bin+ngroup-1,"e");
+//       if (hpy == 0) continue;
+//       nentries = Int_t(hpy->GetEntries());
+//       if (nentries == 0 || nentries < cut) {delete hpy; continue;}
+//       f1->SetParameters(parsave);
+//       hpy->Fit(f1,opt.Data());
+//       Int_t npfits = f1->GetNumberFitPoints();
+//       if (npfits > npar && npfits >= cut) {
+//          Int_t biny = bin + ngroup/2;
+//          for (ipar=0;ipar<npar;ipar++) {
+//             hlist[ipar]->Fill(fXaxis.GetBinCenter(biny),f1->GetParameter(ipar));
+//             hlist[ipar]->SetBinError(biny,f1->GetParError(ipar));
+//          }
+//          hchi2->Fill(fXaxis.GetBinCenter(biny),f1->GetChisquare()/(npfits-npar));
+//       }
+//       delete hpy;
+//    }
+//    delete [] parsave;
+//    delete [] name;
+//    delete [] title;
+//    delete [] hlist;
 }
 
 //______________________________________________________________________________
