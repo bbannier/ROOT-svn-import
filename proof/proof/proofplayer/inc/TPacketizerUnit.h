@@ -71,7 +71,7 @@ public:
    Long64_t      GetEntriesProcessed(TSlave *sl) const;
 
    Double_t	 GetCurrentTime();
-
+   void          MarkBad(TSlave *, Bool_t /*resubmit*/, TList **) { return; }
    ClassDef(TPacketizerUnit,0)  //Generate work packets for parallel processing
 };
 
