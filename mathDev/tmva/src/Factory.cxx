@@ -1095,6 +1095,6 @@ void TMVA::Factory::EvaluateAllMethods( void )
    fLogger << kINFO << Endl;  
    fLogger << kINFO << "Write Test Tree '"<< Data().GetTestTree()->GetName()<<"' to file" << Endl;
    Data().BaseRootDir()->cd();
-   Data().GetTestTree()->Write("",TObject::kOverwrite);
+//   Data().GetTestTree()->Write("",TObject::kOverwrite);
 }
 

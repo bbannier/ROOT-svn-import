@@ -78,6 +78,22 @@ void TMVA::GeneticPopulation::SetRandomSeed( UInt_t seed )
 }
 
 //_______________________________________________________________________
+void TMVA::GeneticPopulation::MakeCopies( int number )
+{
+   // produces offspring which is are copies of their parents
+   // Parameters:
+   //         int number : the number of the last individual to be copied
+   //
+   
+   int i=0; 
+   for (std::vector<TMVA::GeneticGenes>::iterator it = fGenePool.begin();
+        it != fGenePool.end() && i < number; 
+        ++it, ++i ) {
+      GiveHint( it->GetFactors(), it->GetFitness() );
+   }
+}
+
+//_______________________________________________________________________
 void TMVA::GeneticPopulation::MakeChildren()
 {
    // does what the name says,... it creates children out of members of the
