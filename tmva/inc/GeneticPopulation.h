@@ -82,6 +82,7 @@ namespace TMVA {
       // or just eliminated later on. They are used by the
       // GeneticFitter class.
      
+      void MakeCopies( int number );
       void NextGeneration() {};
       void AddPopulation( GeneticPopulation *strangers );
       void AddPopulation( GeneticPopulation &strangers );

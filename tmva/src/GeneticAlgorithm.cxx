@@ -166,8 +166,9 @@ void TMVA::GeneticAlgorithm::Evolution()
    // individuals. 
    // the function can be overridden to change the parameters for mutation rate
    // sexual reproduction and so on.
+   fPopulation.MakeCopies( 5 );  
    fPopulation.MakeChildren();
-   
+
    fPopulation.Mutate( 10, 3, kTRUE, fSpread, fMirror );
    fPopulation.Mutate( 40, fPopulation.GetPopulationSize()*3/4 );
 }
