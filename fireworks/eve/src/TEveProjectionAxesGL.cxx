@@ -243,6 +243,8 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    TEveVector zeroPos;
    fProjection->ProjectVector(zeroPos);
 
+   glLineWidth(1);
+
    // axes lines
    glBegin(GL_LINES);
    glVertex3f(bbox[0], bbox[2], 0.);
