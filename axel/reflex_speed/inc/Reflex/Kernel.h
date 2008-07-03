@@ -17,13 +17,14 @@
 #define REFLEX_API_VERSION 100001
 
 // Keywords corresponding to the above revision
-#define REFLEX_API_REVISION_RAW "$Revision: 1"
-#define REFLEX_API_DATE_RAW     "$Date: "
-#define REFLEX_API_HEADURL_RAW  "$HeadURL: "
-#define REFLEX_API_ID_RAW       "$Id: "
+#define REFLEX_API_REVISION_RAW "$Revision$"
+#define REFLEX_API_DATE_RAW     "$Date$"
+#define REFLEX_API_HEADURL_RAW  "$HeadURL$"
+#define REFLEX_API_ID_RAW       "$Id$"
 
 // User readable version of the keywords:
 // they do not include the tags themselves but only their values
+// (and a trailing '$')
 #define REFLEX_API_REVISION     (REFLEX_API_REVISION_RAW + 11)
 #define REFLEX_API_DATE         (REFLEX_API_DATE_RAW + 7)
 #define REFLEX_API_HEADURL      (REFLEX_API_HEADURL_RAW + 10)
