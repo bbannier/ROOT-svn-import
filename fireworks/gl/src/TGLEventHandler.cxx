@@ -730,7 +730,7 @@ Bool_t TGLEventHandler::HandleMotion(Event_t * event)
    }
    else if (fGLViewer->fDragAction == TGLViewer::kDragCameraRotate)
    {
-      processed = fGLViewer->CurrentCamera().Rotate(xDelta, -yDelta, mod1, mod2);
+      processed = Rotate(xDelta, -yDelta, mod1, mod2);
    }
    else if (fGLViewer->fDragAction == TGLViewer::kDragCameraTruck)
    {
@@ -761,6 +761,14 @@ Bool_t TGLEventHandler::HandleMotion(Event_t * event)
    }
 
    return processed;
+}
+
+//______________________________________________________________________________
+Bool_t TGLEventHandler::Rotate(Int_t xDelta, Int_t yDelta, Bool_t mod1, Bool_t mod2)
+{
+   // Method to handle action TGLViewer::kDragCameraRotate.
+
+   return fGLViewer->CurrentCamera().Rotate(xDelta, -yDelta, mod1, mod2);
 }
 
 //______________________________________________________________________________

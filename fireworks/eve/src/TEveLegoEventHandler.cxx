@@ -27,6 +27,8 @@
 // TEveLegoEventHandler
 //==============================================================================
 
+ClassImp(TEveLegoEventHandler);
+
 //______________________________________________________________________________
 //
 // A base class of TGLEventHandler. Switches current camera from perspective
@@ -94,64 +96,6 @@ Bool_t TEveLegoEventHandler::HandleDoubleClick(Event_t *event)
 }
 
 //______________________________________________________________________________
-Bool_t TEveLegoEventHandler::HandleMotion(Event_t * event)
-{
-   // Virtual from TGLEventHandler.
-   // Jumps into/out-of orhographic view during kDragCameraRotate when
-   // angle reaches the transition value.
-
-   fGLViewer->MouseIdle(0, 0, 0);
-   if (fGLViewer->IsLocked()) {
-      if (gDebug>3) {
-         Info("TEveLegoEventHandler::HandleMotion", "ignored - viewer is %s",
-            fGLViewer->LockName(fGLViewer->CurrentLock()));
-      }
-      return kFALSE;
-   }
-
-   assert (event); // was if event==0 return
-
-   Bool_t processed = kFALSE, changed = kFALSE;
-   Short_t lod = TGLRnrCtx::kLODMed;
-
-   // Camera interface requires GL coords - Y inverted
-   Int_t  xDelta = event->fX - fLastPos.fX;
-   Int_t  yDelta = event->fY - fLastPos.fY;
-   Bool_t mod1   = event->fState & kKeyControlMask;
-   Bool_t mod2   = event->fState & kKeyShiftMask;
-
-   if (fGLViewer->GetDragAction() == TGLViewer::kDragNone)
-   {
-      changed = fGLViewer->RequestOverlaySelect(event->fX, event->fY);
-      if (fGLViewer->GetCurrentOvlElm())
-         processed = fGLViewer->GetCurrentOvlElm()->Handle(*fGLViewer->GetRnrCtx(), fGLViewer->GetOvlSelRec(), event);
-      lod = TGLRnrCtx::kLODHigh;
-   } else if (fGLViewer->GetDragAction() == TGLViewer::kDragCameraRotate) {
-      processed = Rotate(xDelta, -yDelta, mod1, mod2);
-   } else if (fGLViewer->GetDragAction() == TGLViewer::kDragCameraTruck) {
-      processed = fGLViewer->CurrentCamera().Truck(xDelta, -yDelta, mod1, mod2);
-   } else if (fGLViewer->GetDragAction() == TGLViewer::kDragCameraDolly) {
-      processed = fGLViewer->CurrentCamera().Dolly(xDelta, mod1, mod2);
-   } else if (fGLViewer->GetDragAction() == TGLViewer::kDragOverlay) {
-      processed = fGLViewer->GetCurrentOvlElm()->Handle(*fGLViewer->GetRnrCtx(), fGLViewer->GetOvlSelRec(), event);
-   }
-
-   fLastPos.fX = event->fX;
-   fLastPos.fY = event->fY;
-
-   if (processed || changed) {
-      if (fGLViewer->GetDev() != -1) {
-         gGLManager->MarkForDirectCopy(fGLViewer->GetDev(), kTRUE);
-         gVirtualX->SetDrawMode(TVirtualX::kCopy);
-      }
-
-      fGLViewer->RequestDraw(lod);
-   }
-
-   return processed;
-}
-
-//______________________________________________________________________________
 Bool_t TEveLegoEventHandler::Rotate(Int_t xDelta, Int_t yDelta, Bool_t mod1, Bool_t mod2)
 {
    // Method to handle action TGLViewer::kDragCameraRotate. It switches from standard perspective
@@ -175,14 +119,14 @@ Bool_t TEveLegoEventHandler::Rotate(Int_t xDelta, Int_t yDelta, Bool_t mod1, Boo
    }
    else
    {
-      Double_t theta = cam.GetTheta();
-      Double_t thetaN = theta+hRotate;
-      if(thetaN > Pi()-cam.GetVAxisMinAngle()) thetaN = Pi()-cam.GetVAxisMinAngle();
-      else if (thetaN <cam.GetVAxisMinAngle()) thetaN = cam.GetVAxisMinAngle();
+      Double_t theta  = cam.GetTheta();
+      Double_t thetaN = theta + hRotate;
+      if (thetaN > Pi() - cam.GetVAxisMinAngle()) thetaN = Pi() - cam.GetVAxisMinAngle();
+      else if (thetaN < cam.GetVAxisMinAngle())   thetaN = cam.GetVAxisMinAngle();
 
       fTheta = thetaN;
 
-      if (thetaN<fTransTheta)
+      if (thetaN < fTransTheta)
       {
          fGLViewer->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
          fMode = kLocked;

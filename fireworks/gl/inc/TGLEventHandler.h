@@ -48,6 +48,8 @@ protected:
    Bool_t            fTooltipShown;
    Int_t             fTooltipPixelTolerance;
 
+   virtual Bool_t Rotate(Int_t xDelta, Int_t yDelta, Bool_t mod1, Bool_t mod2);
+
 public:
    TGLEventHandler(const char *name, TGWindow *w, TObject *obj, const char *title="");
    virtual ~TGLEventHandler();
