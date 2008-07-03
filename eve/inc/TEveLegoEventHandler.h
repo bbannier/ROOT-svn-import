@@ -33,14 +33,13 @@ protected:
 
    TEveCaloLegoGL*  fLastPickedLego;
 
-   Bool_t   Rotate(Int_t xDelta, Int_t yDelta, Bool_t mod1, Bool_t mod2);
+   virtual Bool_t Rotate(Int_t xDelta, Int_t yDelta, Bool_t mod1, Bool_t mod2);
 
 public:
    TEveLegoEventHandler(const char *name, TGWindow *w, TObject *obj, const char *title="");
    virtual ~TEveLegoEventHandler() {}
 
    virtual Bool_t HandleKey(Event_t *event);
-   virtual Bool_t HandleMotion(Event_t *event);
    virtual Bool_t HandleDoubleClick(Event_t *event);
 
    Float_t GetTransTheta() {return fTransTheta;}
