@@ -60,7 +60,10 @@ TGLEventHandler::TGLEventHandler(const char *name, TGWindow *w, TObject *obj,
    fTooltip            (0),
    fActiveButtonID     (0),
    fLastEventState     (0),
-   fInPointerGrab      (kFALSE)
+   fInPointerGrab      (kFALSE),
+   fMouseTimerRunning  (kFALSE),
+   fTooltipShown       (kFALSE),
+   fTooltipPixelTolerance (3)
 {
    // Constructor.
 
@@ -698,8 +701,6 @@ Bool_t TGLEventHandler::HandleMotion(Event_t * event)
       return kFALSE;
    }
 
-   StopMouseTimer();
-
    Bool_t processed = kFALSE, changed = kFALSE;
    Short_t lod = TGLRnrCtx::kLODMed;
 
@@ -709,13 +710,22 @@ Bool_t TGLEventHandler::HandleMotion(Event_t * event)
    Bool_t mod1   = event->fState & kKeyControlMask;
    Bool_t mod2   = event->fState & kKeyShiftMask;
 
+   if (fMouseTimerRunning) StopMouseTimer();
+
+   if (fTooltipShown && 
+       ( TMath::Abs(event->fXRoot - fTooltipPos.fX) > fTooltipPixelTolerance ||
+         TMath::Abs(event->fYRoot - fTooltipPos.fY) > fTooltipPixelTolerance ))
+   {
+      RemoveTooltip();
+   }
+
    if (fGLViewer->fDragAction == TGLViewer::kDragNone)
    {
       changed = fGLViewer->RequestOverlaySelect(event->fX, event->fY);
       if (fGLViewer->fCurrentOvlElm)
          processed = fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event);
       lod = TGLRnrCtx::kLODHigh;
-      if ( ! processed)
+      if ( ! processed && ! fMouseTimerRunning)
          StartMouseTimer();
    }
    else if (fGLViewer->fDragAction == TGLViewer::kDragCameraRotate)
@@ -758,7 +768,10 @@ Bool_t TGLEventHandler::HandleTimer(TTimer *t)
 {
    // If mouse delay timer times out emit signal.
 
-   if (t != fMouseTimer) return kTRUE;
+   if (t != fMouseTimer) return kFALSE;
+
+   fMouseTimerRunning = kFALSE;
+
    if (fGLViewer->fDragAction == TGLViewer::kDragNone)
    {
       if (fLastMouseOverPos != fLastPos)
@@ -782,6 +795,7 @@ void TGLEventHandler::StartMouseTimer()
    // Start mouse timer in single-shot mode.
 
    fMouseTimer->Start(-1, kTRUE);
+   fMouseTimerRunning = kTRUE;
 }
 
 //______________________________________________________________________________
@@ -789,8 +803,8 @@ void TGLEventHandler::StopMouseTimer()
 {
    // Make sure mouse timers are not running.
 
+   fMouseTimerRunning = kFALSE;
    fMouseTimer->Stop();
-   fTooltip->Hide();
 }
 
 //______________________________________________________________________________
@@ -827,7 +841,34 @@ void TGLEventHandler::TriggerTooltip(const char* text)
 {
    // Trigger display of tooltip.
 
+   fTooltipPos   = fLastGlobalPos;
+   fTooltipShown = kTRUE;
    fTooltip->SetText(text);
-   fTooltip->SetPosition(fLastGlobalPos.fX + 16, fLastGlobalPos.fY - 16);
+   fTooltip->SetPosition(fTooltipPos.fX + 16, fTooltipPos.fY - 16);
    fTooltip->Reset();
+}
+
+//______________________________________________________________________________
+void TGLEventHandler::RemoveTooltip()
+{
+   // Hide the tooltip.
+
+   fTooltip->Hide();
+   fTooltipShown = kFALSE;
+}
+
+//______________________________________________________________________________
+void TGLEventHandler::SetMouseOverSelectDelay(Int_t ms)
+{
+   // Set delay of mouse-over probe (highlight).
+
+   fMouseTimer->SetTime(ms);
+}
+
+//______________________________________________________________________________
+void TGLEventHandler::SetMouseOverTooltipDelay(Int_t ms)
+{
+   // Set delay of tooltip timer.
+
+   fTooltip->SetDelay(ms);
 }

@@ -285,13 +285,20 @@ void TEveViewerList::OnMouseOver(TGLPhysicalShape *pshape, UInt_t state)
       el = 0;
    gEve->GetHighlight()->UserPickedElement(el, kFALSE);
 
-   if (fShowTooltip && gEve->GetHighlight()->NumChildren() == 1)
+   if (fShowTooltip)
    {
       TGLViewer       *glw = dynamic_cast<TGLViewer*>((TQObject*) gTQSender);
       TGLEventHandler *glh = (TGLEventHandler*) glw->GetEventHandler();
-      TString title(gEve->GetHighlight()->FirstChild()->GetElementTitle());
-      if ( ! title.IsNull())
-         glh->TriggerTooltip(title);
+      if (gEve->GetHighlight()->NumChildren() == 1)
+      {
+         TString title(gEve->GetHighlight()->FirstChild()->GetElementTitle());
+         if ( ! title.IsNull())
+            glh->TriggerTooltip(title);
+      }
+      else
+      {
+         glh->RemoveTooltip();
+      }
    }
 }
 
