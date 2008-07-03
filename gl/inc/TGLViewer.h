@@ -280,6 +280,7 @@ public:
    TGLSelectRecord&    GetSelRec()    { return fSelRec; }
    TGLOvlSelectRecord& GetOvlSelRec() { return fOvlSelRec; }
    TGLOverlayElement*  GetCurrentOvlElm() const { return fCurrentOvlElm; }
+   void                ClearCurrentOvlElm();
 
    ClassDef(TGLViewer,0) // Standard ROOT GL viewer.
 };

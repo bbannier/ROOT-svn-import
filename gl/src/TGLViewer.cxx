@@ -1374,10 +1374,28 @@ void TGLViewer::PrintObjects()
 //______________________________________________________________________________
 void TGLViewer::SetEventHandler(TGEventHandler *handler)
 {
+   // Set the event-handler.
+   // If GLWidget is set, the handler is propagated to it.
+
    if (fEventHandler)
       delete fEventHandler;
 
    fEventHandler = handler;
    if (fGLWidget)
       fGLWidget->SetEventHandler(fEventHandler);
+}
+
+//______________________________________________________________________________
+void TGLViewer::ClearCurrentOvlElm()
+{
+   // Reset current overlay-element to zero, eventually notifying the
+   // old one that the mouse has left.
+   // Usually called when mouse leaves the window.
+
+   if (fCurrentOvlElm)
+   {
+      fCurrentOvlElm->MouseLeave();
+      fCurrentOvlElm = 0;
+      RequestDraw();
+   }
 }

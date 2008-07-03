@@ -797,11 +797,14 @@ void TGLEventHandler::StopMouseTimer()
 void TGLEventHandler::ClearMouseOver()
 {
    // Clear mouse-over state and emit mouse-over signals.
+   // Current overlay element is also told the mouse has left.
 
    fLastMouseOverPos.fX = fLastMouseOverPos.fY = -1;
    fLastMouseOverShape = 0;
    fGLViewer->MouseOver(fLastMouseOverShape);
-   fGLViewer->MouseOver(fLastMouseOverShape, fLastEventState);  
+   fGLViewer->MouseOver(fLastMouseOverShape, fLastEventState);
+
+   fGLViewer->ClearCurrentOvlElm();
 }
 
 //______________________________________________________________________________
