@@ -46,6 +46,8 @@
 #pragma link C++ class Reflex::UnnamedStruct;
 #pragma link C++ class Reflex::UnnamedUnion;
 
+#pragma link C++ class Reflex::Catalog;
+
 #ifndef G__SUNPRO_CC
 // cannot distinguish ::exception and std::exception
 #pragma link C++ class Reflex::RuntimeError;
