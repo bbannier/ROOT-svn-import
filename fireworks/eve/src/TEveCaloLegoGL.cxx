@@ -86,6 +86,8 @@ TEveCaloLegoGL::TEveCaloLegoGL() :
    fZAxisAtt.SetTextAlign(TGLAxisAttrib::kLeft);
    fZAxisAtt.SetRelativeFontSize(kTRUE);
    fZAxisAtt.SetLabelSize(0.07);
+   fZAxisAtt.SetTitle("Et");
+   fZAxisAtt.SetTitleUnits("GeV");
    fZAxisAtt.SetTitleSize(0.07);
 }
 
@@ -298,7 +300,6 @@ void TEveCaloLegoGL::DrawZAxis(TGLRnrCtx &rnrCtx, Float_t azX, Float_t azY) cons
    fZAxisAtt.SetRng(0, fDataMax);
    fZAxisAtt.SetNdivisions( fM->fNZSteps*100+10);
    fZAxisAtt.RefTMOff(0) = rnrCtx.RefCamera().ViewportDeltaToWorld(worldRef, -10, 0, &modview);
-   fZAxisAtt.SetTitle(Form("Et[GeV] %s", TEveUtil::FormAxisValue(fDataMax)));
    fZAxisAtt.RefTitlePos().Set(0, 0, fDataMax*1.05);
    fAxisPainter.Paint(rnrCtx, fZAxisAtt);
 
