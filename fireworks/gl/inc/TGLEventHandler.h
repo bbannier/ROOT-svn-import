@@ -40,9 +40,13 @@ protected:
    TGLPhysicalShape *fLastMouseOverShape;
    TGToolTip        *fTooltip;        // tooltip for highlight
    TPoint            fLastGlobalPos;
+   TPoint            fTooltipPos;
    UInt_t            fActiveButtonID;
    UInt_t            fLastEventState;
    Bool_t            fInPointerGrab;
+   Bool_t            fMouseTimerRunning;
+   Bool_t            fTooltipShown;
+   Int_t             fTooltipPixelTolerance;
 
 public:
    TGLEventHandler(const char *name, TGWindow *w, TObject *obj, const char *title="");
@@ -65,6 +69,13 @@ public:
    virtual void   Repaint();
 
    virtual void   TriggerTooltip(const char* text);
+   virtual void   RemoveTooltip();
+
+   void SetMouseOverSelectDelay(Int_t ms);
+   void SetMouseOverTooltipDelay(Int_t ms);
+
+   Int_t GetTooltipPixelTolerance()  const { return fTooltipPixelTolerance; }
+   void  SetTooltipPixelTolerance(Int_t t) { fTooltipPixelTolerance = t; }
 
    ClassDef(TGLEventHandler, 0); // Base-class and default implementation of event-handler for TGLViewer.
 };
