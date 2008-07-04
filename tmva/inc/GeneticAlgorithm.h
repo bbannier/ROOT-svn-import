@@ -77,6 +77,9 @@ namespace TMVA {
       Double_t GetSpread() const { return fSpread; }
       void     SetSpread(Double_t s) { fSpread = s; }
 
+      void   SetMakeCopies(Bool_t s) { fMakeCopies = s; }
+      Bool_t GetMakeCopies() { return fMakeCopies; }
+
       Int_t    fConvCounter;              // converging? ... keeps track of the number of improvements
 
    protected:
@@ -94,6 +97,8 @@ namespace TMVA {
       Double_t          fSpread;          // regulates the spread of the value change at mutation (sigma)
       Bool_t            fMirror;          // new values for mutation are mirror-mapped if outside of constraints
       Bool_t            fFirstTime;       // if true its the first time, so no evolution yet
+      Bool_t            fMakeCopies;      // if true, the population will make copies of the first individuals
+                                          // avoid for speed performance.
       Int_t             fPopulationSize;  // the size of the population
 
       const std::vector<TMVA::Interval*>& fRanges; // parameter ranges

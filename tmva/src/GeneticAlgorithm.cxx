@@ -56,6 +56,7 @@ TMVA::GeneticAlgorithm::GeneticAlgorithm( IFitterTarget& target, Int_t populatio
      fSpread(0.1),
      fMirror(kTRUE),
      fFirstTime(kTRUE),
+     fMakeCopies(kFALSE),
      fPopulationSize(populationSize),
      fRanges( ranges ),
      fPopulation(ranges, populationSize, seed),
@@ -166,7 +167,8 @@ void TMVA::GeneticAlgorithm::Evolution()
    // individuals. 
    // the function can be overridden to change the parameters for mutation rate
    // sexual reproduction and so on.
-   fPopulation.MakeCopies( 5 );  
+   if ( fMakeCopies ) 
+      fPopulation.MakeCopies( 5 );
    fPopulation.MakeChildren();
 
    fPopulation.Mutate( 10, 3, kTRUE, fSpread, fMirror );
