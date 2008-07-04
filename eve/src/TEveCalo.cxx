@@ -15,6 +15,7 @@
 #include "TEveProjectionManager.h"
 #include "TEveRGBAPalette.h"
 #include "TEveText.h"
+#include "TEveTrans.h"
 
 #include "TClass.h"
 #include "TMathBase.h"
