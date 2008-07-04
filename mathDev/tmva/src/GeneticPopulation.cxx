@@ -101,15 +101,12 @@ void TMVA::GeneticPopulation::MakeChildren()
    // children have a combination of the coefficients of their parents
    //
 
-   std::sort(fGenePool.begin(), fGenePool.end());
-
 #ifdef _GLIBCXX_PARALLEL
 #pragma omp parallel
 #pragma omp for
 #endif
    for ( int it = 0; it < (int) (fGenePool.size() / 2); ++it )
    {
-      //fGenePool[it].SetFitness(0);
       Int_t pos = (Int_t)fRandomGenerator->Integer( fGenePool.size()/2 );
       fGenePool[(fGenePool.size() / 2) + it] = MakeSex( fGenePool[it], fGenePool[pos] );
    }

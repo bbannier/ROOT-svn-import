@@ -99,7 +99,8 @@ Double_t TMVA::GeneticFitter::Run( std::vector<Double_t>& pars )
    fLogger << kINFO << "<GeneticFitter> Optimisation, please be patient "
            << "... (note: inaccurate progress timing for GA)" << Endl;
 
-   GeneticAlgorithm gstore( GetFitterTarget(),  fPopSize, fRanges, 50);
+   GeneticAlgorithm gstore( GetFitterTarget(),  fPopSize, fRanges);
+   gstore.SetMakeCopies(kTRUE);
 
    // timing of GA
    Timer timer( 100*(fCycles), GetName() ); 
@@ -112,6 +113,7 @@ Double_t TMVA::GeneticFitter::Run( std::vector<Double_t>& pars )
          
       // "m_ga_spread" times the number of variables
       GeneticAlgorithm ga( GetFitterTarget(), fPopSize, fRanges, fSeed ); 
+      ga.SetMakeCopies(kTRUE);
 
       if ( pars.size() == fRanges.size() ){
           ga.GetGeneticPopulation().GiveHint( pars, 0.0 );
