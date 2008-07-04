@@ -109,8 +109,8 @@ void TGPack::ResizeExistingFrames(Int_t amount)
       ExpandExistingFrames(amount);
    else if (amount < 0)
       ShrinkExistingFrames(-amount);
-   else
-      RefitFramesToPack();
+
+   RefitFramesToPack();
 }
 
 //______________________________________________________________________________
