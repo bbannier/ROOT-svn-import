@@ -75,9 +75,10 @@ public:
       Float_t fThetaMin; // cached
       Float_t fThetaMax; // cached
 
-
       CellGeom_t(): fPhiMin(0), fPhiMax(0), fEtaMin(0), fEtaMax(0), fThetaMin(0), fThetaMax(0) {}
       CellGeom_t(Float_t etaMin, Float_t etaMax, Float_t phiMin, Float_t phiMax) {Configure(etaMin, etaMax, phiMin, phiMax);}
+      virtual ~CellGeom_t() {}
+
       void Configure(Float_t etaMin, Float_t etaMax, Float_t phiMin, Float_t phiMax);
 
       Float_t EtaMin()   const { return fEtaMin; }
@@ -105,6 +106,7 @@ public:
       Float_t fValue;
 
       CellData_t() : CellGeom_t(), fValue(0) {}
+      virtual ~CellData_t() {}
 
       Float_t Value(Bool_t) const;
       virtual void Dump() const;
