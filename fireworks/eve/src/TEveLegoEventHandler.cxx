@@ -133,7 +133,7 @@ Bool_t TEveLegoEventHandler::Rotate(Int_t xDelta, Int_t yDelta, Bool_t mod1, Boo
       }
       else
       {
-         fGLViewer->CurrentCamera().Rotate(xDelta, yDelta, mod1, mod2);
+         fGLViewer->CurrentCamera().Rotate(xDelta, -yDelta, mod1, mod2);
       }
    }
    return kTRUE;
