@@ -556,7 +556,8 @@ protected:
                         const char *confdir, Int_t loglevel,
                         const char *alias = 0);
    virtual Bool_t  StartSlaves(Bool_t parallel, Bool_t attach = kFALSE);
-   Int_t AddWorkers(TList* wrks);
+   Int_t AddWorkers(TList *wrks);
+   Int_t RemoveWorkers(TList *wrks);
 
    void                         SetPlayer(TVirtualProofPlayer *player);
    TVirtualProofPlayer         *GetPlayer() const { return fPlayer; }

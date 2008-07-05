@@ -539,7 +539,11 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
    fEnabledPackagesOnClient = 0;
    fLoadedMacros            = 0;
    fGlobalPackageDirList    = 0;
-   if (!IsMaster()) {
+
+   if (IsMaster()) {
+      fPackageDir = gSystem->DirName(fWorkDir);
+      fPackageDir = gSystem->DirName(fPackageDir) + TString("/") + kPROOF_PackDir;
+   } else {
       fPackageDir = kPROOF_WorkDir;
       gSystem->ExpandPathName(fPackageDir);
       if (gSystem->AccessPathName(fPackageDir)) {
@@ -549,13 +553,16 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
          }
       }
       fPackageDir += TString("/") + kPROOF_PackDir;
-      if (gSystem->AccessPathName(fPackageDir)) {
-         if (gSystem->MakeDirectory(fPackageDir) == -1) {
-            Error("Init", "failure creating directory %s", fPackageDir.Data());
-            return 0;
-         }
-      }
+   }
 
+   if (gSystem->AccessPathName(fPackageDir)) {
+      if (gSystem->MakeDirectory(fPackageDir) == -1) {
+         Error("Init", "failure creating directory %s", fPackageDir.Data());
+         return 0;
+      }
+   }
+
+   if (!IsMaster()) {
       // List of directories where to look for global packages
       TString globpack = gEnv->GetValue("Proof.GlobalPackageDirs","");
       if (globpack.Length() > 0) {
@@ -849,6 +856,54 @@ for parllel*/
 
    return kTRUE;
 
+}
+
+//______________________________________________________________________________
+Int_t TProof::RemoveWorkers(TList *workerList)
+{
+   // Used for shuting down the workres after a query is finished.
+   // Sends each of the workers from the workerList, a kPROOF_STOP message.
+   // If the workerList == 0, shutdown all the workers.
+
+   if (!IsMaster()) {
+      Error("RemoveWorkers", "RemoveWorkers can only be called on the master!");
+      return -1;
+   }
+
+   fFileMap.clear(); // This could be avoided if CopyFromCache was used in SendFile
+
+   if (!workerList) {
+      // shutdown all the workers
+      TIter nxsl(fSlaves);
+      TSlave *sl = 0;
+      while ((sl = (TSlave *) nxsl())) {
+         // Shut down the worker assumig that it is not processing
+         TerminateWorker(sl);
+      }
+      return 0;
+   } else if (!(workerList->GetSize())) {
+      Error("RemoveWorkers", "The list of workers should not be empty!");
+      return -2;
+   }
+
+   // Loop over all the workers and stop them
+   TListIter next(workerList);
+   TObject *to;
+   TProofNodeInfo *worker;
+   while ((to = next())) {
+      // Get the next worker from the list
+      worker = (TProofNodeInfo *)to;
+      TIter nxsl(fSlaves);
+         TSlave *sl = 0;
+         while ((sl = (TSlave *) nxsl())) {
+            // Shut down the worker assumig that it is not processing
+            if (sl->GetName() == worker->GetNodeName())
+            // TODO: use STOPPROCESS in case the processing is not finished
+            // sl->StopProcess(kFALSE, -1);
+               TerminateWorker(sl);
+         }
+   }
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -2907,28 +2962,7 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
       }
    }
 
-   if (IsMaster() && strcmp(reason, kPROOF_TerminateWorker)) {
-      TList *listOfMissingFiles = 0;
-      if (!(listOfMissingFiles = (TList *)GetOutput("MissingFiles"))) {
-         listOfMissingFiles = new TList();
-         listOfMissingFiles->SetName("MissingFiles");
-         if (fPlayer)
-            fPlayer->AddOutputObject(listOfMissingFiles);
-      }
-
-      TVirtualPacketizer *packetizer = fPlayer ? fPlayer->GetPacketizer() : 0;
-      if (packetizer)
-         // if the worker is being terminated, don't resubmit the packets
-         packetizer->MarkBad(wrk,
-                             strcmp(reason, kPROOF_TerminateWorker) != 0,
-                             &listOfMissingFiles);
-      else
-         Info("MarkBad", "No packetizer received form the player!");
-   }
-
    fActiveSlaves->Remove(wrk);
-   FindUniqueSlaves();
-   fBadSlaves->Add(wrk);
 
    fAllMonitor->Remove(wrk->GetSocket());
    fActiveMonitor->Remove(wrk->GetSocket());
@@ -2947,6 +2981,41 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
       if (fManager)
          fManager->ShutdownSession(this);
    }
+
+   if (IsMaster()) {
+      if (strcmp(reason, kPROOF_TerminateWorker)) {
+         TList *listOfMissingFiles = 0;
+         if (!(listOfMissingFiles = (TList *)GetOutput("MissingFiles"))) {
+            listOfMissingFiles = new TList();
+            listOfMissingFiles->SetName("MissingFiles");
+            if (fPlayer)
+               fPlayer->AddOutputObject(listOfMissingFiles);
+         }
+         TVirtualPacketizer *packetizer = fPlayer ? fPlayer->GetPacketizer() : 0;
+         if (packetizer)
+            // the worker is not terminated intentionally - do resubmit the packets
+            packetizer->MarkBad(wrk, kTRUE, &listOfMissingFiles);
+         else
+            Info("MarkBad", "No packetizer received form the player!");
+         fBadSlaves->Add(wrk);
+      } else {
+         // Assume that an idle worker is being termianted
+         // TODO handle termination while processing and do packetizer->MarkBad
+         fSlaves->Remove(wrk);
+         SafeDelete(wrk);
+      }
+      // Update session workers files
+      SaveWorkerInfo();
+   } else {
+      // On clients the proof session should be removed from the lists
+      // and deleted, since it is not valid anymore
+      fSlaves->Remove(wrk);
+      if (fManager)
+         fManager->ShutdownSession(this);
+   }
+
+   FindUniqueSlaves();
+
 }
 
 //______________________________________________________________________________

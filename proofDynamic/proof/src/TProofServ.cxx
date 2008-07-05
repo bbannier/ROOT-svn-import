@@ -1822,7 +1822,7 @@ void TProofServ::SendLogFile(Int_t status, Int_t start, Int_t end)
       if (!fgSendLogToMaster) {
          FlushLogFile();
       } else {
-         // Decide case by case 
+         // Decide case by case
          fgSendLogToMaster = kFALSE;
       }
    }
@@ -1905,6 +1905,7 @@ void TProofServ::SendStatistics()
       bytesread = TFile::GetFileBytesRead();
 
    TMessage mess(kPROOF_GETSTATS);
+
    TString workdir = gSystem->WorkingDirectory();  // expect TString on other side
    mess << bytesread << fRealTime << fCpuTime << workdir;
    if (fProtocol >= 4) mess << TString(gProofServ->GetWorkDir());
@@ -3431,7 +3432,7 @@ void TProofServ::HandleProcess(TMessage *mess)
                }
                if (!(fDataSetManager->ParseUri(dset->GetName(), 0, 0, 0, &dsTree)))
                   dsTree = "";
-   
+
                // Apply the lookup option requested by the client or the administartor
                // (by default we trust the information in the dataset)
                if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
@@ -3700,7 +3701,7 @@ void TProofServ::HandleProcess(TMessage *mess)
          DeletePlayer();
          if (IsMaster() && fProof->GetDynamicStartup())
             // stop the workers
-            fProof->Close();
+            fProof->RemoveWorkers(0);
 
       } // Loop on submitted queries
 
