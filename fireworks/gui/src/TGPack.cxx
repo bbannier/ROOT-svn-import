@@ -266,14 +266,46 @@ void TGPack::AddFrame(TGFrame* f, TGLayoutHints* l)
    TGCompositeFrame::AddFrame(f, l);
 
    Layout();
+   MapSubwindows();
 }
 
 //______________________________________________________________________________
-void TGPack::RemoveFrame(TGFrame* /*f*/)
+void TGPack::RemoveFrame(TGFrame* f)
 {
-   // Blabla blu.
+   // Remove frame f and refit existing frames to pack size.
 
-   Error("RemoveFrame", "not yet supported.");
+//   Error("RemoveFrame", "not yet supported.");
+   Bool_t found = kFALSE;
+   TGFrame *s;
+   TGFrameElement *el;
+   TIter next(fList, kIterBackward);
+
+   while ((el = (TGFrameElement *) next())) {
+      if (el->fFrame == f) {
+         found = kTRUE;
+         break;
+      }
+   }
+   if (!found) return;
+   el = (TGFrameElement *) next();
+   s = el->fFrame;
+   
+   TGCompositeFrame::RemoveFrame(f);
+   TGCompositeFrame::RemoveFrame(s);
+
+   delete f;
+   delete s;
+
+   Int_t n     = NumberOfRealFrames();
+   Int_t nflen = (GetLength() - (fUseSplitters ? 4*n : 0)) / (n + 1);
+
+   printf("Remove frame, n=%d, new_frame_len=%d\n", n, nflen);
+
+   if (n > 0)
+      ExpandExistingFrames(nflen-1);
+
+   RefitFramesToPack();
+   Layout();
 }
 
 //______________________________________________________________________________
