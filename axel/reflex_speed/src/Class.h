@@ -371,12 +371,6 @@ public:
    virtual Reverse_TypeTemplate_Iterator SubTypeTemplate_REnd() const;
 
 
-   /**
-   * UpdateMembers2 will update the list of Function/Data/Members with all
-   * MemberAt of BaseAt classes currently availabe in the system
-   */
-   virtual void UpdateMembers() const;
-
 public:
 
    /**
@@ -458,17 +452,6 @@ private:
    /** map with the class as a key and the path to it as the value
    the key (void*) is a pointer to the unique ScopeName */
    typedef std::map<void*, std::vector<OffsetFunction>* > PathsToBase;
-
-   /**
-   * UpdateMembers2 will update the list of Function/Data/Members with all
-   * MemberAt of BaseAt classes currently availabe in the system
-   * @param members the list of members
-   * @param dataMembers the list of data members
-   * @param functionMembers the list of function members
-   * @param pathsToBase the cache storing pathes to all known bases
-   * @param basePath the current path to the BaseAt class
-   */
-   void UpdateMembers2(OMembers& members, Members& dataMembers, Members& functionMembers, PathsToBase& pathsToBase, std::vector<OffsetFunction>& basePath) const;
 
    /**
    * NewBases will return true if new BaseAt classes have been discovered
