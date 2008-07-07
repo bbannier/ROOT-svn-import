@@ -42,7 +42,7 @@
 ClassImp(TEveCaloViz);
 
 //______________________________________________________________________________
-TEveCaloViz::TEveCaloViz(const Text_t* n, const Text_t* t) :
+TEveCaloViz::TEveCaloViz(TEveCaloData* data, const Text_t* n, const Text_t* t) :
    TEveElement(),
    TNamed(n, t),
    TEveProjectable(),
@@ -73,41 +73,7 @@ TEveCaloViz::TEveCaloViz(const Text_t* n, const Text_t* t) :
 {
    // Constructor.
 
-   SetElementName("TEveCaloViz");
-}
-
-//______________________________________________________________________________
-TEveCaloViz::TEveCaloViz(TEveCaloData* data, const Text_t* n, const Text_t* t) :
-   TEveElement(),
-   TNamed(n, t),
-
-   fData(0),
-
-   fEtaMin(-10),
-   fEtaMax(10),
-
-   fPhi(0.),
-   fPhiOffset(TMath::Pi()),
-
-   fAutoRange(kTRUE),
-
-   fBarrelRadius(-1.f),
-   fEndCapPos(-1.f),
-
-   fPlotEt(kTRUE),
-
-   fMaxTowerH(100),
-   fScaleAbs(kFALSE),
-   fMaxValAbs(100),
-
-   fValueIsColor(kFALSE),
-   fPalette(0),
-
-   fCellIdCacheOK(kFALSE)
-{
-   // Constructor.
-
-   SetElementName("TEveCaloViz");
+   SetElementNameTitle(n, t);
    SetData(data);
 }
 
@@ -226,9 +192,11 @@ void TEveCaloViz::SetData(TEveCaloData* data)
    if (data == fData) return;
    if (fData) fData->DecRefCount(this);
    fData = data;
-   if (fData) fData->IncRefCount(this);
-
-   DataChanged();
+   if (fData)
+   {
+      fData->IncRefCount(this);
+      DataChanged();
+   }
 }
 
 //______________________________________________________________________________
@@ -413,8 +381,8 @@ void TEveCalo3D::ComputeBBox()
    // If member 'TEveFrameBox* fFrame' is set, frame's corners are used as bbox.
 
    BBoxInit();
-
-   Float_t th = GetValToHeight() * fData->GetMaxVal(fPlotEt);
+  
+   Float_t th = (fData) ? GetValToHeight() * fData->GetMaxVal(fPlotEt) : 0;
 
    fBBox[0] = -fBarrelRadius - th;
    fBBox[1] =  fBarrelRadius + th;
@@ -437,7 +405,7 @@ ClassImp(TEveCalo2D);
 
 //______________________________________________________________________________
 TEveCalo2D::TEveCalo2D(const Text_t* n, const Text_t* t):
-   TEveCaloViz(n, t),
+   TEveCaloViz(0, n, t),
    TEveProjected(),
    fOldProjectionType(TEveProjection::kPT_Unknown)
 {
@@ -541,7 +509,7 @@ void TEveCalo2D::ComputeBBox()
    BBoxZero();
 
    Float_t x, y, z;
-   Float_t th = GetValToHeight()*fData->GetMaxVal(fPlotEt);
+   Float_t th = fData ? GetValToHeight()*fData->GetMaxVal(fPlotEt) :0;
    Float_t r  = fBarrelRadius + th;
    Float_t ze = fEndCapPos + th;
 
@@ -584,8 +552,8 @@ void TEveCalo2D::ComputeBBox()
 ClassImp(TEveCaloLego);
 
 //______________________________________________________________________________
-TEveCaloLego::TEveCaloLego(const Text_t* n, const Text_t* t):
-   TEveCaloViz(n, t),
+TEveCaloLego::TEveCaloLego(TEveCaloData* d, const Text_t* n, const Text_t* t):
+   TEveCaloViz(d, n, t),
 
    fTopViewTowerColor(kGreen),
    fFontColor(0),
@@ -600,34 +568,6 @@ TEveCaloLego::TEveCaloLego(const Text_t* n, const Text_t* t):
 
    fProjection(kAuto),
    f2DMode(kValColor),
-
-   fDrawHPlane(kFALSE),
-   fHPlaneVal(0)
-{
-   // Constructor.
-
-   fMaxTowerH = 1;
-   SetElementNameTitle("TEveCaloLego", "TEveCaloLego");
-}
-
-//______________________________________________________________________________
-TEveCaloLego::TEveCaloLego(TEveCaloData* data):
-   TEveCaloViz(),
-
-   fTopViewTowerColor(kGreen),
-   fFontColor(0),
-   fGridColor(kGray+2),
-   fPlaneColor(kRed-5),
-   fPlaneTransparency(60),
-
-   fNZSteps(6),
-   fZAxisStep(0.f),
-
-   fBinWidth(4),
-
-   fProjection(kAuto),
-   f2DMode(kValColor),
-
    fBoxMode(kBack),
 
    fDrawHPlane(kFALSE),
@@ -637,7 +577,6 @@ TEveCaloLego::TEveCaloLego(TEveCaloData* data):
 
    fMaxTowerH = 1;
    SetElementNameTitle("TEveCaloLego", "TEveCaloLego");
-   SetData(data);
 }
 
 //______________________________________________________________________________
@@ -657,7 +596,7 @@ void TEveCaloLego::ComputeBBox()
    // Fill bounding-box information of the base-class TAttBBox (virtual method).
    // If member 'TEveFrameBox* fFrame' is set, frame's corners are used as bbox.
 
-   BBoxInit();
+   BBoxZero();
 
    // Float_t[6] X(min,max), Y(min,max), Z(min,max)
 

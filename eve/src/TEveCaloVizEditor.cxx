@@ -17,6 +17,7 @@
 
 #include "TGClient.h"
 #include "TGFont.h"
+#include "TGedEditor.h"
 
 #include "TGLabel.h"
 #include "TGNumberEntry.h"
@@ -117,7 +118,7 @@ TEveCaloVizEditor::TEveCaloVizEditor(const TGWindow *p, Int_t width, Int_t heigh
    
    //______________________________________________________________________________
 
-   fTowerFrame = CreateEditorTabSubFrame("Towers");
+   fTowerFrame = CreateEditorTabSubFrame("Data");
    Int_t  labelW = 45;
 
    // eta
@@ -231,25 +232,40 @@ void TEveCaloVizEditor::SetModel(TObject* obj)
       fPlotEt->SetState(kButtonUp, kFALSE);
    }
 
-   fScaleAbs->SetState(fM->GetScaleAbs() ? kButtonDown : kButtonUp);
-   fMaxValAbs->SetValue(fM->GetMaxValAbs());
-   fMaxTowerH->SetValue(fM->GetMaxTowerH());
+   if (fM->fData)
+   {
+      TGCompositeFrame* p = GetGedEditor()->GetEditorTab("Data");
+      if (p->GetList()->IsEmpty())
+      {
+         p->MapWindow();
+         p->MapSubwindows();
+      }
 
-   Double_t min, max;
-   fM->GetData()->GetEtaLimits(min, max);
-   fEtaRng->SetLimits((Float_t)min, (Float_t)max);
-   fEtaRng->SetValues(fM->fEtaMin, fM->fEtaMax);
+      fScaleAbs->SetState(fM->GetScaleAbs() ? kButtonDown : kButtonUp);
+      fMaxValAbs->SetValue(fM->GetMaxValAbs());
+      fMaxTowerH->SetValue(fM->GetMaxTowerH());
 
-   fM->GetData()->GetPhiLimits(min, max);
-   fPhi->SetLimits(min, max, 101, TGNumberFormat::kNESRealTwo);
-   fPhi->SetValue(fM->fPhi);
-   fPhi->SetToolTip("Center angle in radians");
+      Double_t min, max;
+      fM->GetData()->GetEtaLimits(min, max);
+      fEtaRng->SetLimits((Float_t)min, (Float_t)max);
+      fEtaRng->SetValues(fM->fEtaMin, fM->fEtaMax);
 
-   fPhiOffset->SetLimits(0, TMath::Pi(), 101, TGNumberFormat::kNESRealTwo);
-   fPhiOffset->SetValue(fM->fPhiOffset);
-   fPhiOffset->SetToolTip("Phi range in radians");
+      fM->GetData()->GetPhiLimits(min, max);
+      fPhi->SetLimits(min, max, 101, TGNumberFormat::kNESRealTwo);
+      fPhi->SetValue(fM->fPhi);
+      fPhi->SetToolTip("Center angle in radians");
 
-   MakeSliceInfo();
+      fPhiOffset->SetLimits(0, TMath::Pi(), 101, TGNumberFormat::kNESRealTwo);
+      fPhiOffset->SetValue(fM->fPhiOffset);
+      fPhiOffset->SetToolTip("Phi range in radians");
+
+      MakeSliceInfo();
+   }
+   else
+   {
+
+      fTowerFrame->UnmapWindow();
+   }
 }
 
 //______________________________________________________________________________

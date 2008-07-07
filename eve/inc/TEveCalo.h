@@ -67,8 +67,7 @@ protected:
    virtual void BuildCellIdCache() = 0;
 
 public:
-   TEveCaloViz(const Text_t* n="TEveCaloViz", const Text_t* t="");
-   TEveCaloViz(TEveCaloData* data, const Text_t* n="TEveCaloViz", const Text_t* t="");
+   TEveCaloViz(TEveCaloData* data=0, const Text_t* n="TEveCaloViz", const Text_t* t="");
 
    virtual ~TEveCaloViz();
 
@@ -153,8 +152,7 @@ protected:
    virtual void BuildCellIdCache();
 
 public:
-   TEveCalo3D(const Text_t* n="TEveCalo3D", const Text_t* t=""):TEveCaloViz(n, t){}
-   TEveCalo3D(TEveCaloData* data): TEveCaloViz(data) { SetElementName("TEveCalo3D");}
+   TEveCalo3D(TEveCaloData* d=0, const Text_t* n="TEveCalo3D", const Text_t* t="xx"):TEveCaloViz(d, n, t){}
    virtual ~TEveCalo3D() {}
    virtual void ComputeBBox();
 
@@ -232,8 +230,7 @@ protected:
    virtual void BuildCellIdCache();
 
 public:
-   TEveCaloLego(const Text_t* n="TEveCaloLego", const Text_t* t="");
-   TEveCaloLego(TEveCaloData* data);
+   TEveCaloLego(TEveCaloData* data=0, const Text_t* n="TEveCaloLego", const Text_t* t="");
 
    virtual ~TEveCaloLego(){}
 
