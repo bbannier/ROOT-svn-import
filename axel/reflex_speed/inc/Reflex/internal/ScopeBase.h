@@ -19,7 +19,7 @@
 #include "Reflex/internal/OwnedPropertyList.h"
 #include <vector>
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #pragma warning( push )
 #pragma warning( disable : 4251 )
 #endif
@@ -1133,7 +1133,7 @@ inline Reflex::Reverse_Scope_Iterator Reflex::ScopeBase::UsingDirective_REnd() c
 }
 
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #pragma warning( pop )
 #endif
 

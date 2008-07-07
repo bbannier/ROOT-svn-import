@@ -19,7 +19,7 @@
 #include <map>
 #include <iostream>
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #pragma warning( push )
 #pragma warning( disable : 4251 )
 #endif
@@ -339,7 +339,7 @@ inline void Reflex::PropertyListImpl::RemoveProperty( size_t key ) {
 }
 
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #pragma warning( pop )
 #endif
 

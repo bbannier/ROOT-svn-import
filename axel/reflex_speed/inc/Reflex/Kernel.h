@@ -25,7 +25,7 @@
 #  define REFLEX_DLL
 #endif
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #  define RFLX_IMPORT __declspec(dllimport)
 #  define RFLX_EXPORT __declspec(dllexport)
 #  define RFLX_DLLLOCAL
@@ -86,7 +86,7 @@
 #undef CONST
 #endif
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 // Some pragmas to avoid warnings in MSVisualC
 // Disable warning C4786: identifier was truncated to '255' characters in the debug information
 #pragma warning ( disable : 4786 )
@@ -129,7 +129,7 @@ namespace Reflex {
    // the dictionaries pull it in via "using namespace Reflex".
 
    // Large integer definition depends of the platform
-#if defined(_WIN32) && !defined(__CINT__)
+#if defined(_MSC_VER) && !defined(__CINT__)
    typedef __int64 longlong;
    typedef unsigned __int64 ulonglong;
 #else

@@ -16,7 +16,7 @@
 #include "Reflex/Kernel.h"
 #include "Reflex/Scope.h"
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #pragma warning( push )
 #pragma warning( disable : 4251 )
 #endif
@@ -288,7 +288,7 @@ inline Reflex::Reverse_StdString_Iterator Reflex::MemberTemplateImpl::TemplatePa
 }
 
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #pragma warning( pop )
 #endif
 
