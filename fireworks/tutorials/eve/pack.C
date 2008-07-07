@@ -13,7 +13,7 @@ void pack()
 
    b = new TGTextButton(hp, "Ailaaha");  hp->AddFrame(b);
 
-   vp = new TGPack(mf, mf->GetWidth(), mf->GetHeight());
+   vp = new TGPack(hp, hp->GetWidth(), hp->GetHeight());
    b = new TGTextButton(vp, "Blaaaaa");  vp->AddFrame(b);
    b = new TGTextButton(vp, "Blooooo");  vp->AddFrame(b);
    b = new TGTextButton(vp, "Bleeeee");  vp->AddFrame(b);
