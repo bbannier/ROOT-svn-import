@@ -105,13 +105,13 @@ Bool_t TEveLegoEventHandler::Rotate(Int_t xDelta, Int_t yDelta, Bool_t mod1, Boo
    using namespace TMath;
 
    TGLCamera &cam =  fGLViewer->GetRnrCtx()->RefCamera();
-   Double_t hRotate = cam.AdjustDelta(yDelta, Pi()/cam.RefViewport().Height(), mod1, mod2);
+   Double_t hRotate = cam.AdjustDelta(-yDelta, Pi()/cam.RefViewport().Height(), mod1, mod2);
 
    if (fMode == kLocked)
    {
       fTheta += hRotate;
-      if (fTheta<0) fTheta=0;
-      if (fTheta>fTransTheta)
+      if (fTheta < 0) fTheta = 0;
+      if (fTheta > fTransTheta)
       {
          fGLViewer->SetCurrentCamera(TGLViewer::kCameraPerspXOY);
          fMode = kFree;
