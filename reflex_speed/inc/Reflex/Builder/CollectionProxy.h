@@ -35,7 +35,7 @@ namespace __gnu_cxx {  // GNU GCC
    template <class K, class T, class F, class E, class A>  class hash_map;
    template <class K, class T, class F, class E, class A>  class hash_multimap;
 }
-#elif  defined(_WIN32)
+#elif  defined(_MSC_VER)
 namespace stdext {     // Visual C++
    template <class K, class T, class A>  class hash_set;
    template <class K, class T, class A>  class hash_multiset;
@@ -404,7 +404,7 @@ namespace Reflex  {
          return CFTGenerator<MapInsert<__gnu_cxx::hash_multimap<K,T,F,E,A> > >::Generate();
       }
    };
-#elif defined(_WIN32)
+#elif defined(_MSC_VER)
    // Specialization for stdext::hash_multiset 
    template <class K, class T, class A> struct Proxy< stdext::hash_multiset<K,T,A> > {
       static CollFuncTable* Generate()  {

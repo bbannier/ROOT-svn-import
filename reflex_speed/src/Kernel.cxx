@@ -153,7 +153,7 @@ Reflex::Instance::Instance() {
    tb->Properties().AddProperty( "Description", "fundamental type" );
 
       // Large integer definition depends of the platform
-#if defined(_WIN32) && !defined(__CINT__)
+#if defined(_MSC_VER) && !defined(__CINT__)
    typedef __int64 longlong;
    typedef unsigned __int64 ulonglong;
 #else
