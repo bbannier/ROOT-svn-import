@@ -33,11 +33,12 @@ private:
 protected:
    TEveCaloLego      *fM; // Model object.
 
-   TGColorSelect*     fTopViewTowerColor;
-   TGColorSelect*     fGridColor;
-   TGColorSelect*     fFontColor;
-   TGColorSelect*     fPlaneColor;
-   TGNumberEntry*     fTransparency;
+   TGCheckButton     *fTopViewUseMaxColor;
+   TGColorSelect     *fTopViewTowerColor;
+   TGColorSelect     *fGridColor;
+   TGColorSelect     *fFontColor;
+   TGColorSelect     *fPlaneColor;
+   TGNumberEntry     *fTransparency;
 
    TEveGValuator     *fNZSteps;
    TEveGValuator     *fBinWidth;
@@ -54,6 +55,7 @@ public:
    virtual void SetModel(TObject* obj);
 
    // Declare callback/slot methods
+   void DoTopViewUseMaxColor();
    void DoTopViewTowerColor(Pixel_t color);
    void DoGridColor(Pixel_t color);
    void DoFontColor(Pixel_t color);

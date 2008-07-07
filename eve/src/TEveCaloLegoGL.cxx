@@ -752,8 +752,17 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
 
    using namespace TMath;
 
+   typedef std::vector<TEveVector>            vTEveVec_t;
+   typedef std::vector<TEveVector>::iterator  vTEveVec_i;
+   typedef std::vector<vTEveVec_t>           vvTEveVec_t;
+   typedef std::vector<vTEveVec_t>::iterator vvTEveVec_i;
+
    // When kValSize is used, plot gl-points at tower-centers avoid flickering.
-   std::vector<TEveVector> antiFlick;
+   vvTEveVec_t antiFlick(1);
+   if (fM->f2DMode == TEveCaloLego::kValSize && fM->fTopViewUseMaxColor)
+   {
+      antiFlick.resize(fM->GetData()->GetNSlices());
+   }
 
    fM->AssertPalette();
 
@@ -761,12 +770,11 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
    Color_t defCol = fM->GetTopViewTowerColor();
    Int_t es = GetGridStep(0, rnrCtx);
    Int_t ps = GetGridStep(1, rnrCtx);
-   if (es==1 && ps==1)
+   if (es == 1 && ps == 1)
    {
       // draw in original binning
-      Int_t name = 0;
-      Float_t sum = 0;
-      Float_t x1=0, x2=0, y1=0, y2=0;
+      Int_t   name = 0, max_energy_slice;
+      Float_t sum, max_energy, x1, x2, y1, y2;
       TGLUtil::Color(defCol);
       TEveCaloData::vCellId_t::iterator currentCell = fM->fCellList.begin();
       TEveCaloData::vCellId_t::iterator nextCell    = currentCell;
@@ -775,12 +783,20 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
       {
          TEveCaloData::CellData_t currentCellData;
          TEveCaloData::CellData_t nextCellData;
+
          GetCellData(*currentCell, currentCellData);
-         sum += currentCellData.Value(fM->fPlotEt);
+         sum = max_energy = currentCellData.Value(fM->fPlotEt);
+         max_energy_slice = currentCell->fSlice;
+
          while (nextCell != fM->fCellList.end() && currentCell->fTower == nextCell->fTower)
          {
             GetCellData(*nextCell, nextCellData);
-            sum += nextCellData.Value(fM->fPlotEt);
+            Float_t energy = nextCellData.Value(fM->fPlotEt);
+            sum += energy;
+            if (fM->fTopViewUseMaxColor && energy > max_energy) {
+               max_energy       = energy;
+               max_energy_slice = nextCell->fSlice;
+            }
             ++nextCell;
          }
 
@@ -800,7 +816,6 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
          }
          else if (fM->f2DMode == TEveCaloLego::kValSize)
          {
-            TGLUtil::Color(defCol);
             Double_t scaleFactor = 0;
             Double_t range = 100;
             if (range*sum/fDataMax > 1) scaleFactor = Log(range*sum/fDataMax)/Log(range);
@@ -812,22 +827,28 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
 
             y1 = Max(fM->GetPhiMin(), currentCellData.Phi() - phiW);
             y2 = Min(fM->GetPhiMax(), currentCellData.Phi() + phiW);
+
+            if (fM->fTopViewUseMaxColor)
+            {
+               TGLUtil::Color(fM->GetData()->GetSliceColor(max_energy_slice));
+               antiFlick[max_energy_slice].push_back(TEveVector(0.5f*(x1+x2), 0.5f*(y1+y2), sum));
+            }
+            else
+            {
+               antiFlick[0].push_back(TEveVector(0.5f*(x1+x2), 0.5f*(y1+y2), sum));
+            }
          }
-         
+
          glVertex3f(x1, y1, sum);
          glVertex3f(x2, y1, sum);
          glVertex3f(x2, y2, sum);
          glVertex3f(x1, y2, sum);
-         
-         if (fM->f2DMode == TEveCaloLego::kValSize)
-            antiFlick.push_back(TEveVector(0.5f*(x1+x2), 0.5f*(y1+y2), sum));
 
          glEnd();
 
          currentCell = nextCell;
          ++nextCell;
          ++name;
-         sum = 0;
       }
    }
    else
@@ -844,7 +865,13 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
       Float_t phiStep = (phi1-phi0)/nPhi;
 
       std::vector<Float_t> vec;
-      vec.assign((nEta)*(nPhi), 0.f);
+      vec.assign(nEta * nPhi, 0.f);
+      std::vector<Float_t> max_e;
+      std::vector<Int_t>   max_e_slice;
+      if (fM->fTopViewUseMaxColor) {
+         max_e.assign(nEta * nPhi, 0.f);
+         max_e_slice.assign(nEta * nPhi, -1);
+      }
       TEveCaloData::CellData_t cd;
       Float_t left, right, up, down; // cell corners
       for (TEveCaloData::vCellId_t::iterator it=fM->fCellList.begin(); it!=fM->fCellList.end(); it++)
@@ -854,25 +881,25 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
          Int_t iMax = CeilNint ((cd.EtaMax() - eta0)/etaStep);
          Int_t jMin = FloorNint((cd.PhiMin() - phi0)/phiStep);
          Int_t jMax = CeilNint ((cd.PhiMax() - phi0)/phiStep);
-         for (Int_t i=iMin; i<iMax; i++)
+         for (Int_t i=iMin; i<iMax; ++i)
          {
-            if (i<0 || iMax>nEta) continue;
+            if (i < 0 || iMax > nEta) continue;
 
             left  = i*etaStep;
             right = (i+1)*etaStep;
 
             if (i == iMin)
-               left = cd.EtaMin()-eta0;
+               left = cd.EtaMin() - eta0;
 
-            if (i == (iMax-1))
-               right = cd.EtaMax()-eta0;
+            if (i == iMax - 1)
+               right = cd.EtaMax() - eta0;
 
-            for (Int_t j=jMin; j<jMax; j++)
+            for (Int_t j=jMin; j<jMax; ++j)
             {
                if (j<0 || jMax>nPhi) continue;
 
                down = j*phiStep;
-               up = down +phiStep;
+               up   = down + phiStep;
 
                if (j == jMin)
                   down = cd.PhiMin() - phi0;
@@ -880,7 +907,14 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
                if (j == (jMax-1))
                   up = cd.PhiMax() - phi0;
 
-               vec[i*nPhi+j]  += cd.Value(fM->fPlotEt)*(right-left)*(up-down);
+	       Int_t   index = i*nPhi+j;
+	       Float_t value = cd.Value(fM->fPlotEt)*(right-left)*(up-down);
+               vec[index] += value;
+	       if (fM->fTopViewUseMaxColor && value > max_e[index])
+               {
+		  max_e[index]       = value;
+		  max_e_slice[index] = it->fSlice;
+	       }
             }
          }
       }
@@ -910,7 +944,8 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
       Int_t cid = 0;
       TGLUtil::Color(defCol);
       glBegin(GL_QUADS);
-      for (std::vector<Float_t>::iterator it=vec.begin(); it !=vec.end(); it++)
+      Int_t entry = 0;
+      for (std::vector<Float_t>::iterator it=vec.begin(); it !=vec.end(); ++it, ++entry)
       {
          if (*it > threshold)
          {
@@ -936,12 +971,20 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
                phiW = phiStep*0.5f*logVal/logMax;
                sum  = (*it)*scale;
 
+               if (fM->fTopViewUseMaxColor)
+               {
+                  TGLUtil::Color(fM->GetData()->GetSliceColor(max_e_slice[entry]));
+                  antiFlick[max_e_slice[entry]].push_back(TEveVector(eta, phi, sum));
+               }
+               else
+               {
+                  antiFlick[0].push_back(TEveVector(eta, phi, sum));
+               }
+
                glVertex3f(eta - etaW, phi - phiW, sum);
                glVertex3f(eta + etaW, phi - phiW, sum);
                glVertex3f(eta + etaW, phi + phiW, sum);
                glVertex3f(eta - etaW, phi + phiW, sum);
-
-               antiFlick.push_back(TEveVector(eta, phi, sum));
             }
          }
          ++cid;
@@ -949,14 +992,21 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
       glEnd();
    }
 
-   if ( ! antiFlick.empty())
+   if (fM->f2DMode == TEveCaloLego::kValSize)
    {
       TGLUtil::Color(defCol);
       glPointSize(1);
       glBegin(GL_POINTS);
-      for (std::vector<TEveVector>::iterator i = antiFlick.begin(); i != antiFlick.end(); ++i)
+      Int_t slice = 0;
+      for (vvTEveVec_i i = antiFlick.begin(); i != antiFlick.end(); ++i, ++slice)
       {
-         glVertex3fv(i->Arr());
+         if (fM->fTopViewUseMaxColor)
+            TGLUtil::Color(fM->GetData()->GetSliceColor(slice));
+
+         for (vTEveVec_i j = i->begin(); j != i->end(); ++j)
+         {
+            glVertex3fv(j->Arr());
+         }
       }
       glEnd();
    }

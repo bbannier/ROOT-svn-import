@@ -30,6 +30,7 @@ TEveCaloLegoEditor::TEveCaloLegoEditor(const TGWindow *p, Int_t width, Int_t hei
                                        UInt_t options, Pixel_t back) :
    TGedFrame(p, width, height, options | kVerticalFrame, back),
    fM(0),
+   fTopViewUseMaxColor(0),
    fTopViewTowerColor(0),
    fGridColor(0),
    fFontColor(0),
@@ -56,6 +57,10 @@ TEveCaloLegoEditor::TEveCaloLegoEditor(const TGWindow *p, Int_t width, Int_t hei
       fTopViewTowerColor = new TGColorSelect(f, 0, -1);
       f->AddFrame(fTopViewTowerColor, new TGLayoutHints(kLHintsLeft|kLHintsTop, 3, 1, 0, 1));
       fTopViewTowerColor->Connect("ColorSelected(Pixel_t)", "TEveCaloLegoEditor", this, "DoTopViewTowerColor(Pixel_t)");
+
+      fTopViewUseMaxColor = new TGCheckButton(f, "Auto color");
+      f->AddFrame(fTopViewUseMaxColor); // new TGLayoutHints());
+      fTopViewUseMaxColor->Connect("Clicked()", "TEveCaloLegoEditor", this, "DoTopViewUseMaxColor()");
 
       AddFrame(f, new TGLayoutHints(kLHintsTop, 1, 1, 1, 0));
    }
@@ -175,6 +180,7 @@ void TEveCaloLegoEditor::SetModel(TObject* obj)
 
    fM = dynamic_cast<TEveCaloLego*>(obj);
 
+   fTopViewUseMaxColor->SetState(fM->GetTopViewUseMaxColor() ? kButtonDown : kButtonUp);
    fTopViewTowerColor->SetColor(TColor::Number2Pixel(fM->GetTopViewTowerColor()), kFALSE);
    fGridColor->SetColor(TColor::Number2Pixel(fM->GetGridColor()), kFALSE);
    fFontColor->SetColor(TColor::Number2Pixel(fM->GetFontColor()), kFALSE);
@@ -188,6 +194,15 @@ void TEveCaloLegoEditor::SetModel(TObject* obj)
    fProjection->Select(fM->GetProjection(), kFALSE);
    f2DMode->Select(fM->Get2DMode(), kFALSE);
    fBoxMode->Select(fM->GetBoxMode(), kFALSE);
+}
+
+//______________________________________________________________________________
+void TEveCaloLegoEditor::DoTopViewUseMaxColor()
+{
+   // Slot for TopViewUseMaxColor.
+
+   fM->SetTopViewUseMaxColor(fTopViewUseMaxColor->IsOn());
+   Update();
 }
 
 //______________________________________________________________________________
