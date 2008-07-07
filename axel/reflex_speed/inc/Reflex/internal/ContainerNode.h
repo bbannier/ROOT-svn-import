@@ -26,7 +26,8 @@ namespace Reflex {
          public:
 
             // Default constructor, optionally setting previous and next Link
-            Link(const Link* prev = 0, const Link* next = 0): fLink((ptrdiff_t)prev ^ (ptrdiff_t)next), fRefCount(0), fDebugPrev(prev), fDebugNext(next) {}
+            Link(const Link* prev = 0, const Link* next = 0):
+               fLink((ptrdiff_t)prev ^ (ptrdiff_t)next), fRefCount(0) {}
 
             // Return next Link* given the previous one
             Link* Next(const Link* prev) const { return (Link*)(fLink ^ (XorLink_t)prev); }
@@ -58,7 +59,7 @@ namespace Reflex {
             bool IsReferenced() const { return fRefCount; }
 
             // Set previous and next
-            void Set(const Link* prev, const Link* next) { fLink = (XorLink_t)prev ^ (XorLink_t)next; fDebugPrev = prev; fDebugNext = next; }
+            void Set(const Link* prev, const Link* next) { fLink = (XorLink_t)prev ^ (XorLink_t)next;}
 
          private:
             // type for XOR'ed pointers
@@ -66,9 +67,6 @@ namespace Reflex {
 
          private:
             XorLink_t fLink; // XOR of prev, next
-
-            const Link* fDebugPrev;
-            const Link* fDebugNext;
 
             mutable AtomicCount fRefCount; // number of iterator references
          }; // class Link
