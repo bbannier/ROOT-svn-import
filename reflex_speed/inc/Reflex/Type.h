@@ -1039,12 +1039,6 @@ namespace Reflex {
       void Unload() const;
 
 
-      /** 
-      * UpdateMembers will update the list of Function/Data/Members with all
-      * members of base classes currently availabe in the system
-      */
-      void UpdateMembers() const;
-
    public:
 
       /**
@@ -1990,13 +1984,6 @@ inline std::string Reflex::Type::TypeTypeAsString() const {
 //-------------------------------------------------------------------------------
    if ( * this ) return fTypeName->fTypeBase->TypeTypeAsString(); 
    return "UNRESOLVED";
-}
-
-
-//-------------------------------------------------------------------------------
-inline void Reflex::Type::UpdateMembers() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) fTypeName->fTypeBase->UpdateMembers();
 }
 
 

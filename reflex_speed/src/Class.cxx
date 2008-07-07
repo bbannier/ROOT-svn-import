@@ -343,20 +343,6 @@ bool Reflex::Class::NewBases() const
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Class::UpdateMembers() const
-{
-//-------------------------------------------------------------------------------
-// Update information for function and data members.
-   std::vector < OffsetFunction > basePath = std::vector < OffsetFunction >();
-   UpdateMembers2(fMembers,
-                  fDataMembers,
-                  fFunctionMembers,
-                  fPathsToBase,
-                  basePath);
-}
-
-
-//-------------------------------------------------------------------------------
 const std::vector < Reflex::OffsetFunction > &
 Reflex::Class::PathToBase(const Scope & bas) const
 {
@@ -364,78 +350,9 @@ Reflex::Class::PathToBase(const Scope & bas) const
 // Return a vector of offset functions from the current class to the base class.
    std::vector < OffsetFunction > * pathToBase = fPathsToBase[ bas.Id()];
    if (! pathToBase) {
-      UpdateMembers();
       pathToBase = fPathsToBase[ bas.Id()];
-      /* fixme can Get rid of UpdateMembers() ?
-         std::cerr << Reflex::Argv0() << ": WARNING: No path found from "
-         << this->Name() << " to " << bas.Name() << std::endl;
-         if ( NewBases()) {
-         std::cerr << Reflex::Argv0() << ": INFO: Not all base classes have resolved, "
-         << "do Class::UpdateMembers() and try again " << std::endl;
-         }
-      */
    }
    return * pathToBase;
-}
-
-
-//-------------------------------------------------------------------------------
-void Reflex::Class::UpdateMembers2(OMembers & members,
-                                   Members & dataMembers,
-                                   Members & functionMembers,
-                                   PathsToBase & pathsToBase,
-                                   std::vector < OffsetFunction > & basePath) const
-{
-//-------------------------------------------------------------------------------
-// Internal function to update the data and function member information.
-   std::vector < Base >::const_iterator bIter;
-   for (bIter = fBases.begin(); bIter != fBases.end(); ++bIter) {
-      Type bType = bIter->ToType().FinalType();
-      basePath.push_back(bIter->OffsetFP());
-      if (bType) {
-         void * id = (dynamic_cast<const Class*>(bType.ToTypeBase()))->ThisScope().Id();
-         PathsToBase::iterator it = pathsToBase.find(id);
-         if (it != pathsToBase.end()) delete it->second;
-         pathsToBase[ id ] = new std::vector < OffsetFunction >(basePath);
-         size_t i = 0;
-         for (i = 0; i < bType.DataMemberSize(); ++i) {
-            Member dm = bType.DataMemberAt(i);
-            if (std::find(dataMembers.begin(),
-                          dataMembers.end(),
-                          dm) == dataMembers.end()) {
-               members.push_back(OwnedMember(dm));
-               dataMembers.push_back(dm);
-            }
-         }
-         for (i = 0; i < bType.FunctionMemberSize(); ++i) {
-            Member fm = bType.FunctionMemberAt(i);
-            if (std::find(functionMembers.begin(),
-                          functionMembers.end(),
-                          fm) == functionMembers.end()) {
-               members.push_back(OwnedMember(fm));
-               functionMembers.push_back(fm);
-            }
-         }
-         if (bType)(dynamic_cast<const Class*>(bType.ToTypeBase()))->UpdateMembers2(members,
-                  dataMembers,
-                  functionMembers,
-                  pathsToBase,
-                  basePath);
-      }
-      basePath.pop_back();
-   }
-   /*
-   // breath first search to find the "lowest" members in the hierarchy
-   for ( bIter = fBases.begin(); bIter != fBases.end(); ++bIter ) {
-   const Class * bClass = (*bIter)->toClass();
-   if ( bClass ) {  bClass->UpdateMembers2( members,
-   dataMembers,
-   functionMembers,
-   pathsToBase,
-   basePath );
-   }
-   }
-   */
 }
 
 
