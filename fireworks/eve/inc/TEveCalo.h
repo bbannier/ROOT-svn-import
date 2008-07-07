@@ -106,28 +106,28 @@ public:
    void             SetPalette(TEveRGBAPalette* p);
    TEveRGBAPalette* AssertPalette();
 
-   Bool_t  GetValueIsColor() const { return fValueIsColor;}
-   void  SetValueIsColor(Bool_t x) { fValueIsColor = x;}
+   Bool_t GetValueIsColor()   const { return fValueIsColor;}
+   void   SetValueIsColor(Bool_t x) { fValueIsColor = x;}
 
 
-   void SetEta(Float_t l, Float_t u);
-   Float_t GetEta() const { return (fEtaMin+fEtaMax)*0.5f;}
-   Float_t GetEtaMin() const {return fEtaMin;}
-   Float_t GetEtaMax() const {return fEtaMax;}
-   Float_t GetEtaRng() const {return fEtaMax-fEtaMin;}
+   void    SetEta(Float_t l, Float_t u);
+   Float_t GetEta()    const { return 0.5f*(fEtaMin+fEtaMax); }
+   Float_t GetEtaMin() const { return fEtaMin; }
+   Float_t GetEtaMax() const { return fEtaMax; }
+   Float_t GetEtaRng() const { return fEtaMax-fEtaMin; }
 
    virtual void SetPhi(Float_t phi)    { SetPhiWithRng(phi, fPhiOffset); }
    virtual void SetPhiRng(Float_t rng) { SetPhiWithRng(fPhi, rng); }
    virtual void SetPhiWithRng(Float_t x, Float_t r);
-   Float_t GetPhi() const { return fPhi;}
-   Float_t GetPhiMin() const {return fPhi-fPhiOffset;}
-   Float_t GetPhiMax() const {return fPhi+fPhiOffset;}
-   Float_t GetPhiRng() const {return fPhiOffset*2;}
+   Float_t GetPhi()    const { return fPhi; }
+   Float_t GetPhiMin() const { return fPhi-fPhiOffset; }
+   Float_t GetPhiMax() const { return fPhi+fPhiOffset; }
+   Float_t GetPhiRng() const { return 2.0f*fPhiOffset; }
 
-   Bool_t  GetAutoRange() const {return fAutoRange;}
-   void    SetAutoRange(Bool_t x) {fAutoRange=x;}
+   Bool_t  GetAutoRange()   const { return fAutoRange; }
+   void    SetAutoRange(Bool_t x) { fAutoRange = x; }
 
-   void InvalidateCellIdCache() { fCellIdCacheOK=kFALSE; ResetBBox(); } // compute bbox
+   void InvalidateCellIdCache() { fCellIdCacheOK=kFALSE; ResetBBox(); }
 
    virtual void Paint(Option_t* option="");
 
@@ -209,6 +209,7 @@ private:
 protected:
    TEveCaloData::vCellId_t fCellList;
 
+   Bool_t                  fTopViewUseMaxColor;
    Color_t                 fTopViewTowerColor;
    Color_t                 fFontColor;
    Color_t                 fGridColor;
@@ -233,6 +234,9 @@ public:
    TEveCaloLego(TEveCaloData* data=0, const Text_t* n="TEveCaloLego", const Text_t* t="");
 
    virtual ~TEveCaloLego(){}
+
+   Bool_t   GetTopViewUseMaxColor() const { return fTopViewUseMaxColor; }
+   void     SetTopViewUseMaxColor(Bool_t x) { fTopViewUseMaxColor = x; }
 
    Color_t  GetTopViewTowerColor() const { return fTopViewTowerColor; }
    void     SetTopViewTowerColor(Color_t x) { fTopViewTowerColor = x; }

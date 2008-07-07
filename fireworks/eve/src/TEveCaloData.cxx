@@ -57,12 +57,28 @@ void TEveCaloData::SetSliceThreshold(Int_t slice, Float_t val)
 }
 
 //______________________________________________________________________________
+Float_t TEveCaloData::GetSliceThreshold(Int_t slice) const
+{
+   // Get threshold for given slice.
+
+   return fSliceInfos[slice].fThreshold;
+}
+
+//______________________________________________________________________________
 void TEveCaloData::SetSliceColor(Int_t slice, Color_t col)
 {
    // Set color for given slice.
 
    fSliceInfos[slice].fColor = col;
    StampBackPtrElements(TEveElement::kCBObjProps);
+}
+
+//______________________________________________________________________________
+Color_t TEveCaloData::GetSliceColor(Int_t slice) const
+{
+   // Get color for given slice.
+
+   return fSliceInfos[slice].fColor;
 }
 
 //______________________________________________________________________________
