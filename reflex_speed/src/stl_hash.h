@@ -30,7 +30,7 @@
 #  include <backward/hash_set>
 #  include <backward/hash_map>
 # endif
-#elif defined (_WIN32)
+#elif defined (_MSC_VER)
 // MSDEV.NET has hash_map and hash_set, but different hash functions!
 #include <hash_map>
 #include <hash_set>
@@ -57,7 +57,7 @@ namespace std {
 #include <cstring>
 
 
-#if defined (_WIN32)
+#if defined (_MSC_VER)
 
 namespace __gnu_cxx {
    
@@ -92,7 +92,7 @@ namespace __gnu_cxx {
    */
 } // namespace __gnu_cxx  
 
-#endif // __ICC, __ECC, _WIN32
+#endif // __ICC, __ECC, _MSC_VER
 
 
 
