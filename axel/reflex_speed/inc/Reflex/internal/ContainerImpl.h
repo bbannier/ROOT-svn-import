@@ -9,8 +9,8 @@
 //
 // This software is provided "as is" without express or implied warranty.
 
-#ifndef Reflex_Container
-#define Reflex_Container
+#ifndef Reflex_ContainerImpl
+#define Reflex_ContainerImpl
 
 #include <string>
 #include "Reflex/internal/ContainerBase.h"
@@ -23,16 +23,15 @@
 #endif
 
 namespace Reflex {
+namespace Internal {
    //-------------------------------------------------------------------------------
    //-------------------------------------------------------------------------------
    //-------------------------------------------------------------------------------
    // A hash map container (its type-safe layer)
    //
 
-   namespace Internal {
-      template <typename VALUE, typename NODE> class RFLX_API Container_iterator;
-      template <typename VALUE, typename NODE> class RFLX_API Container_const_iterator;
-   }
+   template <typename VALUE, typename NODE> class RFLX_API Container_iterator;
+   template <typename VALUE, typename NODE> class RFLX_API Container_const_iterator;
 
    // Base class of adaptor; allows function-wise specialization
    struct RFLX_API ContainerAdaptor {
@@ -100,11 +99,11 @@ namespace Reflex {
    
    // specialization for std::string key: hash uses Reflex's Hash()
    template <>
-   Hash_t ContainerAdaptor::Hash(const std::string& key) const { return Reflex::Internal::StringHash(key); }
+   Hash_t ContainerAdaptor::Hash(const std::string& key) const { return StringHash(key); }
 
    // specialization for std::string key: hash uses Reflex's Hash()
    template <>
-   Hash_t ContainerAdaptor::Hash(const char* const & key) const { return Reflex::Internal::StringHash(key); }
+   Hash_t ContainerAdaptor::Hash(const char* const & key) const { return StringHash(key); }
 
    enum RFLX_API EUniqueness {
       kMANY   = 0, // for UNIQUENESS: allow multiple instances of the same object in the container
@@ -112,15 +111,15 @@ namespace Reflex {
    };
 
    template <typename KEY, typename VALUE, EUniqueness UNIQUENESS = kUNIQUE, class ADAPTOR = ContainerAdaptorT<KEY, VALUE> >
-   class RFLX_API Container: public Internal::ContainerBase {
+   class RFLX_API ContainerImpl: public ContainerBase {
    private:
-      class Node: public Internal::ContainerBase::Link {
+      class Node: public ContainerBase::Link {
       public:
          Node(const VALUE& obj): fObj(obj) {}
          VALUE  fObj;
       }; // class Node
 
-      class NodeHelper: public Internal::ContainerTools::INodeHelper {
+      class NodeHelper: public ContainerTools::INodeHelper {
       public:
          bool IsInvalidated(const Link* link) const {
             return fAdaptor.IsInvalidated(static_cast<const Node*>(link)->fObj);
@@ -132,21 +131,21 @@ namespace Reflex {
 
       //-------------------------------------------------------------------------------
 
-      typedef ::Reflex::Internal::Container_iterator<VALUE, Node> iterator;
-      typedef ::Reflex::Internal::Container_const_iterator<VALUE, Node> const_iterator;
+      typedef Container_iterator<VALUE, Node> iterator;
+      typedef Container_const_iterator<VALUE, Node> const_iterator;
 
       //-------------------------------------------------------------------------------
 
       // Initialize a default container holding VALUE objects retrievable by KEY.
       // Allocate 17 chunks for now.
-      Container(/*size_t size = 17*/): ContainerBase(sizeof(Node)) {};
+      ContainerImpl(/*size_t size = 17*/): ContainerBase(sizeof(Node)) {};
 
       // Initialize a default container holding VALUE objects retrievable by KEY.
       // Allocate psize chunks for now; psize the next element of fgPrimeArraySqrt3
       // greater or equal than the size parameter.
-      Container(size_t size): ContainerBase(sizeof(Node), size) {}
+      ContainerImpl(size_t size): ContainerBase(sizeof(Node), size) {}
       // Destruct a container
-      virtual ~Container() {
+      virtual ~ContainerImpl() {
          REFLEX_RWLOCK_W(fLock);
          RemoveAllNodes();
       }
@@ -210,7 +209,7 @@ namespace Reflex {
          REFLEX_RWLOCK_R(fLock);
          int posBuckets = hash % fBuckets.size();
          std::string name;
-         for (Internal::ContainerTools::LinkIter i = fBuckets[posBuckets].Begin(GetNodeHelper(), fNodeArena); i; ++i) {
+         for (ContainerTools::LinkIter i = fBuckets[posBuckets].Begin(GetNodeHelper(), fNodeArena); i; ++i) {
             if (fAdaptor.KeyMatches(key, static_cast<const Node*>(i.Curr())->fObj))
                return iterator(i, fBuckets.IterAt(posBuckets), End());
          }
@@ -221,7 +220,7 @@ namespace Reflex {
          // Find next match, starting the search after a first match at start.
          // Used as
          //   while (start = Find(key, start) && !check(*start));
-         using namespace Internal::ContainerTools;
+         using namespace ContainerTools;
          if (!start) return End();
          KEY buf;
          LinkIter startbucket = start.CurrentBucket();
@@ -265,8 +264,8 @@ namespace Reflex {
       bool ContainsValue(const VALUE& obj) const { return ContainsValue(obj, fAdaptor.ValueHash(obj)); }
       bool ContainsValue(const VALUE& obj, Hash_t hash) const { return FindValue(obj, hash); }
 
-      void SetNext(const Container<KEY, VALUE, UNIQUENESS, ADAPTOR>* next) { fNext = next; }
-      const Container<KEY, VALUE, UNIQUENESS, ADAPTOR>* GetNext() const { return fNext; }
+      void SetNext(const ContainerImpl<KEY, VALUE, UNIQUENESS, ADAPTOR>* next) { fNext = next; }
+      const ContainerImpl<KEY, VALUE, UNIQUENESS, ADAPTOR>* GetNext() const { return fNext; }
 
    protected:
       void RemoveAllNodes() {
@@ -288,20 +287,20 @@ namespace Reflex {
 
    private:
       ADAPTOR fAdaptor;
-      const Container<KEY, VALUE, UNIQUENESS, ADAPTOR>* fNext; // next container for chained iteration
+      const ContainerImpl<KEY, VALUE, UNIQUENESS, ADAPTOR>* fNext; // next container for chained iteration
 
-   }; // class Container
+   }; // class ContainerImpl
 
    //-------------------------------------------------------------------------------
 
    namespace Internal {
       template <typename VALUE, class NODE>
-      class RFLX_API Container_const_iterator: public Internal::ContainerBase_iterator {
+      class RFLX_API Container_const_iterator: public ContainerBase_iterator {
       public:
-         typedef Internal::ContainerBase_iterator CBIter;
-         typedef Internal::ContainerTools::LinkIter LinkIter;
-         typedef Internal::ContainerTools::LinkIter BucketIter;
-         typedef Internal::ContainerTools::INodeHelper INodeHelper;
+         typedef ContainerBase_iterator CBIter;
+         typedef ContainerTools::LinkIter LinkIter;
+         typedef ContainerTools::LinkIter BucketIter;
+         typedef ContainerTools::INodeHelper INodeHelper;
 
          Container_const_iterator() {}
 
@@ -336,10 +335,10 @@ namespace Reflex {
       template <typename VALUE, class NODE>
       class RFLX_API Container_iterator: public Container_const_iterator<VALUE, NODE> {
       public:
-         typedef Internal::ContainerBase_iterator CBIter;
-         typedef Internal::ContainerTools::LinkIter LinkIter;
-         typedef Internal::ContainerTools::LinkIter BucketIter;
-         typedef Internal::ContainerTools::INodeHelper INodeHelper;
+         typedef ContainerBase_iterator CBIter;
+         typedef ContainerTools::LinkIter LinkIter;
+         typedef ContainerTools::LinkIter BucketIter;
+         typedef ContainerTools::INodeHelper INodeHelper;
          typedef Container_const_iterator<VALUE, NODE> ConstIter;
 
          Container_iterator() {}
