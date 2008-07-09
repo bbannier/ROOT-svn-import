@@ -12,6 +12,7 @@
 #ifndef Reflex_Container
 #define Reflex_Container
 
+#include <iterator>
 
 namespace Reflex {
 
@@ -49,9 +50,9 @@ namespace Reflex {
    }
 
    template <typename T>
-   class ConstIterator: public ConstIteratorBase, public std::iterator<bidirectional_iterator_tag, T> {
+   class ConstIterator: public Internal::ConstIteratorBase, public std::iterator<std::bidirectional_iterator_tag, T> {
    public:
-      ConstIterator(Internal::IConstIteratorImpl* ii): ConstIteratorBase(ii) {}
+      ConstIterator(Internal::IConstIteratorImpl* ii): Internal::ConstIteratorBase(ii) {}
 
       bool operator==(const ConstIterator& other) const { return *fIter == *other.fIter; }
       bool operator!=(const ConstIterator& other) const { return *fIter != *other.fIter; }
@@ -65,7 +66,19 @@ namespace Reflex {
       const T* operator->() const { return  (T*) fIter->operator->(); }
    };
 
-   typedef ConstIterator ConstReverseIterator;
+   template <class T>
+   class ConstReverseIterator: public ConstIterator<T> {
+   public:
+      ConstReverseIterator(Internal::IConstIteratorImpl* ii): ConstIterator<T>(ii) {}
+
+      bool operator==(const ConstReverseIterator& other) const { return ConstIterator<T>::operator==(other); }
+      bool operator!=(const ConstReverseIterator& other) const { return ConstIterator<T>::operator!=(other); }
+
+      ConstReverseIterator& operator++() { ConstIterator<T>::operator++(); return *this; }
+      ConstReverseIterator& operator--() { ConstIterator<T>::operator--(); return *this; }
+      ConstReverseIterator  operator++(int) { ConstReverseIterator ret(*this); ++(*this); return ret; }
+      ConstReverseIterator  operator--(int) { ConstReverseIterator ret(*this); --(*this); return ret; }
+   };
 
 
    namespace Internal {
@@ -73,7 +86,7 @@ namespace Reflex {
       public:
          virtual ~IContainerImpl() {};
 
-         virtual IConstIteratorImpl& Begin() const = 0
+         virtual IConstIteratorImpl& Begin() const = 0;
          virtual IConstIteratorImpl& End() const = 0;
 
          virtual IConstReverseIteratorImpl& RBegin() const = 0;
