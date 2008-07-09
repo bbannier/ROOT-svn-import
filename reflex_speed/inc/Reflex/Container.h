@@ -39,18 +39,31 @@ namespace Reflex {
       // get the key for a value
       template <typename KEY, typename VALUE>
       KEY Key(const VALUE& value) const { return (KEY) value; }
+
       // get the key for a value, using a pre-allocated key buffer
       template <typename KEY, typename VALUE>
-      KEY& Key(const VALUE& value, KEY& buf) const { return (buf = Key<KEY, VALUE>(value)); }
+      const KEY& Key(const VALUE& value, KEY& buf) const { return (buf = Key<KEY, VALUE>(value)); }
+
+      // test whether the key for a value matches the given key
+      template <typename KEY, typename VALUE>
+      bool KeyMatches(const KEY& key, const VALUE& value) const { return (key == Key<KEY, VALUE>(value)); }
+
+      // test whether the key for a value matches the given key, using a pre-allocated key buffer
+      template <typename KEY, typename VALUE>
+      bool KeyMatches(const KEY& key, const VALUE& value, KEY& buf) const { return (key == Key<KEY, VALUE>(value, buf)); }
+
       // get the hash for a key
       template <typename KEY>
       Hash_t Hash(const KEY& key) const { return (Hash_t) key; }
+
       // get the hash for a value
       template <typename KEY, typename VALUE>
       Hash_t ValueHash(const VALUE& value) const { return Hash<KEY>( Key<KEY, VALUE>(value) ); }
+
       // set a value to invalid (e.g. for iterators pointing to removed nodes)
       template <typename VALUE>
       void Invalidate(VALUE& value) const { value = VALUE(); }
+
       // check whether a value is invalidated (e.g. for iterators pointing to removed nodes)
       template <typename VALUE>
       bool IsInvalidated(const VALUE& value) const { return value == VALUE(); }
@@ -68,7 +81,12 @@ namespace Reflex {
       // get the key for a value
       KEY Key(const VALUE& value) const { return ContainerAdaptor::Key<KEY, VALUE>(value); }
       // get the key for a value, using a pre-allocated key buffer
-      KEY& Key(const VALUE& value, KEY& buf) const { return ContainerAdaptor::Key<KEY, VALUE>(value, buf); }
+      const KEY& Key(const VALUE& value, KEY& buf) const { return ContainerAdaptor::Key<KEY, VALUE>(value, buf); }
+      // test whether the key for a value matches the given key
+      bool KeyMatches(const KEY& key, const VALUE& value) const { return ContainerAdaptor::KeyMatches<KEY, VALUE>(key, value); }
+      // test whether the key for a value matches the given key, using a pre-allocated key buffer
+      bool KeyMatches(const KEY& key, const VALUE& value, KEY& buf) const { return ContainerAdaptor::KeyMatches<KEY, VALUE>(key, value, buf); }
+
       // get the hash for a key
       Hash_t Hash(const KEY& key) const { return ContainerAdaptor::Hash<KEY>(key); }
       // get the hash for a value
@@ -84,12 +102,16 @@ namespace Reflex {
    template <>
    Hash_t ContainerAdaptor::Hash(const std::string& key) const { return Reflex::Internal::StringHash(key); }
 
+   // specialization for std::string key: hash uses Reflex's Hash()
+   template <>
+   Hash_t ContainerAdaptor::Hash(const char* const & key) const { return Reflex::Internal::StringHash(key); }
+
    enum RFLX_API EUniqueness {
-      MANY   = 0, // for UNIQUENESS: allow multiple instances of the same object in the container
-      UNIQUE = 1 // for UNIQUENESS: allow container to hold only one instance of each object
+      kMANY   = 0, // for UNIQUENESS: allow multiple instances of the same object in the container
+      kUNIQUE = 1 // for UNIQUENESS: allow container to hold only one instance of each object
    };
 
-   template <typename KEY, typename VALUE, EUniqueness UNIQUENESS = UNIQUE, class ADAPTOR = ContainerAdaptorT<KEY, VALUE> >
+   template <typename KEY, typename VALUE, EUniqueness UNIQUENESS = kUNIQUE, class ADAPTOR = ContainerAdaptorT<KEY, VALUE> >
    class RFLX_API Container: public Internal::ContainerBase {
    private:
       class Node: public Internal::ContainerBase::Link {
@@ -136,7 +158,7 @@ namespace Reflex {
       const VALUE* Insert(const VALUE& obj) { return Insert(obj, fAdaptor.ValueHash(obj)); }
       // Insert VALUE obj with hash into container; return & obj or 0 if not inserted
       const VALUE* Insert(const VALUE& obj, Hash_t hash) {
-         bool canInsert = (UNIQUENESS == MANY);
+         bool canInsert = (UNIQUENESS == kMANY);
          if (!canInsert) {
             canInsert = !ContainsValue(obj, hash);
          }
@@ -189,7 +211,7 @@ namespace Reflex {
          int posBuckets = hash % fBuckets.size();
          std::string name;
          for (Internal::ContainerTools::LinkIter i = fBuckets[posBuckets].Begin(GetNodeHelper(), fNodeArena); i; ++i) {
-            if (fAdaptor.Key(static_cast<const Node*>(i.Curr())->fObj) == key)
+            if (fAdaptor.KeyMatches(key, static_cast<const Node*>(i.Curr())->fObj))
                return iterator(i, fBuckets.IterAt(posBuckets), End());
          }
          return End();
@@ -205,7 +227,7 @@ namespace Reflex {
          LinkIter startbucket = start.CurrentBucket();
          iterator ret(start.CurrentLink(), startbucket, End());
          while (++ret && ret.CurrentBucket() == startbucket)
-            if (fAdaptor.Key(*ret, buf) == key)
+            if (fAdaptor.KeyMatches(key, *ret, buf))
                return ret;
          if (start.NextContainerBegin()) {
             LinkIter iBucket(start.NextContainerBegin().CurrentBucket());
@@ -224,7 +246,7 @@ namespace Reflex {
                   if (substart.CurrentLink()) {
                      // Already the substart could match; Find(key, substart) would skip it, so test here:
                      const Node* subfirstnode = static_cast<const Node*>(substart.CurrentLink().Curr());
-                     if (fAdaptor.Key(subfirstnode->fObj, buf) == key)
+                     if (fAdaptor.KeyMatches(key, subfirstnode->fObj, buf))
                         return substart;
                      return Find(key, substart);
                   }
@@ -277,6 +299,9 @@ namespace Reflex {
       class RFLX_API Container_const_iterator: public Internal::ContainerBase_iterator {
       public:
          typedef Internal::ContainerBase_iterator CBIter;
+         typedef Internal::ContainerTools::LinkIter LinkIter;
+         typedef Internal::ContainerTools::LinkIter BucketIter;
+         typedef Internal::ContainerTools::INodeHelper INodeHelper;
 
          Container_const_iterator() {}
 
@@ -312,7 +337,10 @@ namespace Reflex {
       class RFLX_API Container_iterator: public Container_const_iterator<VALUE, NODE> {
       public:
          typedef Internal::ContainerBase_iterator CBIter;
-         typedef  Container_const_iterator<VALUE, NODE> ConstIter;
+         typedef Internal::ContainerTools::LinkIter LinkIter;
+         typedef Internal::ContainerTools::LinkIter BucketIter;
+         typedef Internal::ContainerTools::INodeHelper INodeHelper;
+         typedef Container_const_iterator<VALUE, NODE> ConstIter;
 
          Container_iterator() {}
 

@@ -282,27 +282,29 @@ namespace Reflex {
       FINAL     = (1<<0),
       QUALIFIED = (1<<1),
       SCOPED    = (1<<2),
-      F         = (1<<4),
-      Q         = (1<<5),
-      S         = (1<<6)
+      F         = FINAL,
+      Q         = QUALIFIED,
+      S         = SCOPED
    };
 
 
    /** enum containing all possible types and scopes */
    enum TYPE {
-      CLASS = 0,
+      CLASS,
       STRUCT,
       ENUM,
+      UNION,
+      NAMESPACE,
+      kScopeEndTag = NAMESPACE,
+
       FUNCTION,
       ARRAY,
       FUNDAMENTAL,
       POINTER,
       POINTERTOMEMBER,
       TYPEDEF,
-      UNION,
       TYPETEMPLATEINSTANCE,
       MEMBERTEMPLATEINSTANCE,
-      NAMESPACE,
       DATAMEMBER,
       FUNCTIONMEMBER,
       UNRESOLVED
@@ -311,6 +313,8 @@ namespace Reflex {
 
    /** the max unsigned int */
    size_t NPos();
+
+   const std::string& TYPEName(TYPE type);
 
 
    /**

@@ -28,9 +28,6 @@ namespace Reflex {
 
    // forward declarations
    class Scope;
-   class ScopeName;
-   class Namespace;
-   class Class;
    class Member;
    class OwnedMember;
    class TypeTemplate;
@@ -38,6 +35,13 @@ namespace Reflex {
    class OwnedMemberTemplate;
    class Type;
    class DictionaryGenerator;
+
+namespace Internal {
+
+   // forward declarations
+   class ScopeName;
+   class Namespace;
+   class Class;
 
 
    /**
@@ -790,193 +794,194 @@ namespace Reflex {
       size_t fBasePosition;
 
    }; // class ScopeBase
+} //namespace Internal
 } //namespace Reflex
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::ScopeBase::BaseSize() const {
+inline size_t Reflex::Internal::ScopeBase::BaseSize() const {
 //-------------------------------------------------------------------------------
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Base_Iterator Reflex::ScopeBase::Base_Begin() const {
+inline Reflex::Base_Iterator Reflex::Internal::ScopeBase::Base_Begin() const {
 //-------------------------------------------------------------------------------
    return Dummy::BaseCont().begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Base_Iterator Reflex::ScopeBase::Base_End() const {
+inline Reflex::Base_Iterator Reflex::Internal::ScopeBase::Base_End() const {
 //-------------------------------------------------------------------------------
    return Dummy::BaseCont().end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Base_Iterator Reflex::ScopeBase::Base_RBegin() const {
+inline Reflex::Reverse_Base_Iterator Reflex::Internal::ScopeBase::Base_RBegin() const {
 //-------------------------------------------------------------------------------
    return Dummy::BaseCont().rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Base_Iterator Reflex::ScopeBase::Base_REnd() const {
+inline Reflex::Reverse_Base_Iterator Reflex::Internal::ScopeBase::Base_REnd() const {
 //-------------------------------------------------------------------------------
    return Dummy::BaseCont().rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope Reflex::ScopeBase::DeclaringScope() const {
+inline Reflex::Scope Reflex::Internal::ScopeBase::DeclaringScope() const {
 //-------------------------------------------------------------------------------
    return fDeclaringScope;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::ScopeBase::DataMember_Begin() const {
+inline Reflex::Member_Iterator Reflex::Internal::ScopeBase::DataMember_Begin() const {
 //-------------------------------------------------------------------------------
    return fDataMembers.begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::ScopeBase::DataMember_End() const {
+inline Reflex::Member_Iterator Reflex::Internal::ScopeBase::DataMember_End() const {
 //-------------------------------------------------------------------------------
    return fDataMembers.end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::ScopeBase::DataMember_RBegin() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::ScopeBase::DataMember_RBegin() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<Member>&)fDataMembers).rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::ScopeBase::DataMember_REnd() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::ScopeBase::DataMember_REnd() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<Member>&)fDataMembers).rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::ScopeBase::FunctionMember_Begin() const {
+inline Reflex::Member_Iterator Reflex::Internal::ScopeBase::FunctionMember_Begin() const {
 //-------------------------------------------------------------------------------
    return fFunctionMembers.begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::ScopeBase::FunctionMember_End() const {
+inline Reflex::Member_Iterator Reflex::Internal::ScopeBase::FunctionMember_End() const {
 //-------------------------------------------------------------------------------
    return fFunctionMembers.end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::ScopeBase::FunctionMember_RBegin() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::ScopeBase::FunctionMember_RBegin() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<Member>&)fFunctionMembers).rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::ScopeBase::FunctionMember_REnd() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::ScopeBase::FunctionMember_REnd() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<Member>&)fFunctionMembers).rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope_Iterator Reflex::ScopeBase::SubScope_Begin() const {
+inline Reflex::Scope_Iterator Reflex::Internal::ScopeBase::SubScope_Begin() const {
 //-------------------------------------------------------------------------------
    return fSubScopes.begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope_Iterator Reflex::ScopeBase::SubScope_End() const {
+inline Reflex::Scope_Iterator Reflex::Internal::ScopeBase::SubScope_End() const {
 //-------------------------------------------------------------------------------
    return fSubScopes.end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Scope_Iterator Reflex::ScopeBase::SubScope_RBegin() const {
+inline Reflex::Reverse_Scope_Iterator Reflex::Internal::ScopeBase::SubScope_RBegin() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<Scope>&)fSubScopes).rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Scope_Iterator Reflex::ScopeBase::SubScope_REnd() const {
+inline Reflex::Reverse_Scope_Iterator Reflex::Internal::ScopeBase::SubScope_REnd() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<Scope>&)fSubScopes).rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::ScopeBase::SubType_Begin() const {
+inline Reflex::Type_Iterator Reflex::Internal::ScopeBase::SubType_Begin() const {
 //-------------------------------------------------------------------------------
    return fSubTypes.begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::ScopeBase::SubType_End() const {
+inline Reflex::Type_Iterator Reflex::Internal::ScopeBase::SubType_End() const {
 //-------------------------------------------------------------------------------
    return fSubTypes.end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::ScopeBase::SubType_RBegin() const {
+inline Reflex::Reverse_Type_Iterator Reflex::Internal::ScopeBase::SubType_RBegin() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<Type>&)fSubTypes).rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::ScopeBase::SubType_REnd() const {
+inline Reflex::Reverse_Type_Iterator Reflex::Internal::ScopeBase::SubType_REnd() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<Type>&)fSubTypes).rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate_Iterator Reflex::ScopeBase::SubTypeTemplate_Begin() const {
+inline Reflex::TypeTemplate_Iterator Reflex::Internal::ScopeBase::SubTypeTemplate_Begin() const {
 //-------------------------------------------------------------------------------
    return fTypeTemplates.begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate_Iterator Reflex::ScopeBase::SubTypeTemplate_End() const {
+inline Reflex::TypeTemplate_Iterator Reflex::Internal::ScopeBase::SubTypeTemplate_End() const {
 //-------------------------------------------------------------------------------
    return fTypeTemplates.end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_TypeTemplate_Iterator Reflex::ScopeBase::SubTypeTemplate_RBegin() const {
+inline Reflex::Reverse_TypeTemplate_Iterator Reflex::Internal::ScopeBase::SubTypeTemplate_RBegin() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<TypeTemplate>&)fTypeTemplates).rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_TypeTemplate_Iterator Reflex::ScopeBase::SubTypeTemplate_REnd() const {
+inline Reflex::Reverse_TypeTemplate_Iterator Reflex::Internal::ScopeBase::SubTypeTemplate_REnd() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<TypeTemplate>&)fTypeTemplates).rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::ScopeBase::IsClass() const {
+inline bool Reflex::Internal::ScopeBase::IsClass() const {
 //-------------------------------------------------------------------------------
    return ( fScopeType == CLASS || 
             fScopeType == TYPETEMPLATEINSTANCE ||
@@ -985,14 +990,14 @@ inline bool Reflex::ScopeBase::IsClass() const {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::ScopeBase::IsEnum() const {
+inline bool Reflex::Internal::ScopeBase::IsEnum() const {
 //-------------------------------------------------------------------------------
    return ( fScopeType == ENUM );
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::ScopeBase::IsNamespace() const {
+inline bool Reflex::Internal::ScopeBase::IsNamespace() const {
 //-------------------------------------------------------------------------------
    return ( fScopeType == NAMESPACE );
 }
@@ -1000,48 +1005,48 @@ inline bool Reflex::ScopeBase::IsNamespace() const {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::ScopeBase::IsPrivate() const {
+inline bool Reflex::Internal::ScopeBase::IsPrivate() const {
 //-------------------------------------------------------------------------------
    return false;
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::ScopeBase::IsProtected() const {
+inline bool Reflex::Internal::ScopeBase::IsProtected() const {
 //-------------------------------------------------------------------------------
    return false;
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::ScopeBase::IsPublic() const {
+inline bool Reflex::Internal::ScopeBase::IsPublic() const {
 //-------------------------------------------------------------------------------
    return true;
 }
 
 
-inline bool ROOT::Reflex::ScopeBase::IsTemplateInstance() const {
+inline bool ROOT::Reflex::Internal::ScopeBase::IsTemplateInstance() const {
 //-------------------------------------------------------------------------------
    return ( fScopeType == TYPETEMPLATEINSTANCE );
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::ScopeBase::IsUnion() const {
+inline bool Reflex::Internal::ScopeBase::IsUnion() const {
 //-------------------------------------------------------------------------------
    return ( fScopeType == UNION );
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TYPE Reflex::ScopeBase::ScopeType() const {
+inline Reflex::TYPE Reflex::Internal::ScopeBase::ScopeType() const {
 //-------------------------------------------------------------------------------
    return fScopeType;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope Reflex::ScopeBase::SubScopeAt( size_t nth ) const {
+inline Reflex::Scope Reflex::Internal::ScopeBase::SubScopeAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    if ( nth < fSubScopes.size() ) { return fSubScopes[ nth ]; }
    return Dummy::Scope();
@@ -1049,49 +1054,49 @@ inline Reflex::Scope Reflex::ScopeBase::SubScopeAt( size_t nth ) const {
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::ScopeBase::SubScopeSize() const {
+inline size_t Reflex::Internal::ScopeBase::SubScopeSize() const {
 //-------------------------------------------------------------------------------
    return fSubScopes.size();
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::ScopeBase::TemplateArgumentSize() const {
+inline size_t Reflex::Internal::ScopeBase::TemplateArgumentSize() const {
 //-------------------------------------------------------------------------------
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::ScopeBase::TemplateArgument_Begin() const {
+inline Reflex::Type_Iterator Reflex::Internal::ScopeBase::TemplateArgument_Begin() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::ScopeBase::TemplateArgument_End() const {
+inline Reflex::Type_Iterator Reflex::Internal::ScopeBase::TemplateArgument_End() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::ScopeBase::TemplateArgument_RBegin() const {
+inline Reflex::Reverse_Type_Iterator Reflex::Internal::ScopeBase::TemplateArgument_RBegin() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::ScopeBase::TemplateArgument_REnd() const {
+inline Reflex::Reverse_Type_Iterator Reflex::Internal::ScopeBase::TemplateArgument_REnd() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope Reflex::ScopeBase::UsingDirectiveAt( size_t nth ) const {
+inline Reflex::Scope Reflex::Internal::ScopeBase::UsingDirectiveAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    if ( nth < fUsingDirectives.size() ) { return fUsingDirectives[ nth ]; }
    return Dummy::Scope();
@@ -1099,35 +1104,35 @@ inline Reflex::Scope Reflex::ScopeBase::UsingDirectiveAt( size_t nth ) const {
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::ScopeBase::UsingDirectiveSize() const {
+inline size_t Reflex::Internal::ScopeBase::UsingDirectiveSize() const {
 //-------------------------------------------------------------------------------
    return fUsingDirectives.size();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope_Iterator Reflex::ScopeBase::UsingDirective_Begin() const {
+inline Reflex::Scope_Iterator Reflex::Internal::ScopeBase::UsingDirective_Begin() const {
 //-------------------------------------------------------------------------------
    return fUsingDirectives.begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope_Iterator Reflex::ScopeBase::UsingDirective_End() const {
+inline Reflex::Scope_Iterator Reflex::Internal::ScopeBase::UsingDirective_End() const {
 //-------------------------------------------------------------------------------
    return fUsingDirectives.end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Scope_Iterator Reflex::ScopeBase::UsingDirective_RBegin() const {
+inline Reflex::Reverse_Scope_Iterator Reflex::Internal::ScopeBase::UsingDirective_RBegin() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<Scope>&)fUsingDirectives).rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Scope_Iterator Reflex::ScopeBase::UsingDirective_REnd() const {
+inline Reflex::Reverse_Scope_Iterator Reflex::Internal::ScopeBase::UsingDirective_REnd() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<Scope>&)fUsingDirectives).rend();
 }

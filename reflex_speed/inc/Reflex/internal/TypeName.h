@@ -20,8 +20,12 @@
 namespace Reflex {
 
    // forward declarations 
-   class TypeBase;
    class Type;
+
+namespace Internal {
+
+   // forward declarations 
+   class TypeBase;
 
    /** 
    * class TypeName TypeName.h Reflex/TypeName.h
@@ -31,7 +35,7 @@ namespace Reflex {
    */
    class RFLX_API TypeName {
 
-      friend class Type;
+      friend class Reflex::Type;
       friend class TypeBase;
 
    public:
@@ -152,17 +156,18 @@ namespace Reflex {
 
    }; // class TypeName
 
+} // namespace Internal
 } // namespace Reflex
 
 //-------------------------------------------------------------------------------
-inline const std::string & Reflex::TypeName::Name() const {
+inline const std::string & Reflex::Internal::TypeName::Name() const {
 //-------------------------------------------------------------------------------
    return fName;
 }
 
 
 //-------------------------------------------------------------------------------
-inline const char * Reflex::TypeName::Name_c_str() const {
+inline const char * Reflex::Internal::TypeName::Name_c_str() const {
 //-------------------------------------------------------------------------------
    return fName.c_str();
 }

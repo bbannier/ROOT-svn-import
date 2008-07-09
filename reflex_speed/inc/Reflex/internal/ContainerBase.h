@@ -34,15 +34,18 @@ namespace Reflex {
    namespace Internal {
 
       // Simple and fast hashing routine for std::string
-      inline Hash_t StringHash(const std::string& s) {
+      inline Hash_t StringHash(const char* str) {
          Hash_t hash = 5381;
-         const char* str = s.c_str();
-
          while (*str) {
             hash *= 5;
             hash += *(str++);
          }
          return hash;
+      }
+
+      // Simple and fast hashing routine for std::string
+      inline Hash_t StringHash(const std::string& s) {
+         return StringHash(s.c_str());
       }
 
       class ContainerBase_iterator;
@@ -78,7 +81,7 @@ namespace Reflex {
          ContainerBase(size_t nodeSize, size_t size = 17);
 
          // Destruct a ContainerBase
-         ~ContainerBase();
+         virtual ~ContainerBase();
 
          void InsertNode(Link* node, Hash_t hash);
 

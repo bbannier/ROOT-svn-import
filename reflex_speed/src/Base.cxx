@@ -18,8 +18,8 @@
 
 //-------------------------------------------------------------------------------
 Reflex::Base::Base( const Type &    baseType,
-                          OffsetFunction  offsetfp,
-                          unsigned int    modifiers )
+                    OffsetFunction  offsetfp,
+                    unsigned int    modifiers )
    : fOffsetFP( offsetfp ),
      fModifiers( modifiers ),
      fBaseType( Type() ),
@@ -32,12 +32,12 @@ Reflex::Base::Base( const Type &    baseType,
 
 
 //-------------------------------------------------------------------------------
-const Reflex::Class * Reflex::Base::BaseClass() const {
+const Reflex::Internal::Class * Reflex::Base::BaseClass() const {
 //-------------------------------------------------------------------------------
 // Return the pointer to the base class. Set on first access.
    if ( fBaseClass ) return fBaseClass;
    if ( fBaseType ) {
-      fBaseClass = dynamic_cast< const Class * >(fBaseType.ToTypeBase());
+      fBaseClass = dynamic_cast< const Internal::Class * >(fBaseType.ToTypeBase());
       return fBaseClass;
    }
    return 0;

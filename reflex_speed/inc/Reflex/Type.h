@@ -23,25 +23,20 @@
 namespace Reflex {
 
    // forward declarations
-   class Array;
    class Base;
-   class Class;
-   class Fundamental;
-   class Function;
-   class Enum;
-   class InstantiatedTemplateFunction;
-   class InstantiatedTemplateClass;
+   class EntityProperty;
    class Member;
    class Object;
-   class Pointer;
    class PropertyList;
    class Scope;
-   class TypeBase;
-   class Typedef;
-   class TypeName;
    class MemberTemplate;
    class TypeTemplate;
    class DictionaryGenerator;
+
+   namespace Internal {
+      class TypeBase;
+      class TypeName;
+   }
 
    /**
    * @class Type Type.h Reflex/Type.h
@@ -60,7 +55,7 @@ namespace Reflex {
       };
 
       /** default constructor */
-      Type( const TypeName * typName = 0,
+      Type( const Internal::TypeName * typName = 0,
          unsigned int modifiers = 0 );
 
 
@@ -457,21 +452,15 @@ namespace Reflex {
 
 
       /**
-      * IsAbstract will return true if the the class is abstract
-      * @return true if the class is abstract
+      * Check whether the entity property is set for the data member. You can
+      * combine checks, e.g. t.Is(gCLASS && gPUBLIC)
+      * @param descr the entity property to check for; see EntityProperty.
+      * @return whether descr is set.
       */
-      bool IsAbstract() const;
-
+      bool Is(const EntityProperty& descr) const;
 
       /** 
-      * IsArray returns true if the type represents a array
-      * @return true if type represents a array
-      */
-      bool IsArray() const;
-
-
-      /** 
-      * IsClass returns true if the type represents a class
+      * IsClass returns true if the type represents a class or a struct
       * @return true if type represents a class
       */
       bool IsClass() const;
@@ -482,27 +471,6 @@ namespace Reflex {
       * class are resolved and fully known in the system
       */
       bool IsComplete() const;
-
-
-      /** 
-      * IsConst returns true if the type represents a const type
-      * @return true if type represents a const type
-      */
-      bool IsConst() const;
-
-
-      /** 
-      * IsConstVolatile returns true if the type represents a const volatile type
-      * @return true if type represents a const volatile type
-      */
-      bool IsConstVolatile() const;
-
-
-      /** 
-      * IsEnum returns true if the type represents a enum
-      * @return true if type represents a enum
-      */
-      bool IsEnum() const;
 
 
       /** 
@@ -527,108 +495,10 @@ namespace Reflex {
 
 
       /** 
-      * IsFunction returns true if the type represents a function
-      * @return true if type represents a function
-      */
-      bool IsFunction() const;
-
-
-      /** 
-      * IsFundamental returns true if the type represents a fundamental
-      * @return true if type represents a fundamental
-      */
-      bool IsFundamental() const;
-
-
-      /** 
-      * IsPrivate will check if the scope access is private
-      * @return true if scope access is private
-      */
-      bool IsPrivate() const;
-
-
-      /** 
-      * IsProtected will check if the scope access is protected
-      * @return true if scope access is protected
-      */
-      bool IsProtected() const;
-
-
-      /** 
-      * IsPublic will check if the scope access is public
-      * @return true if scope access is public
-      */
-      bool IsPublic() const;
-
-
-      /** 
-      * IsPointer returns true if the type represents a pointer
-      * @return true if type represents a pointer
-      */
-      bool IsPointer() const;
-
-
-      /** 
-      * IsPointerToMember returns true if the type represents a pointer to member
-      * @return true if type represents a pointer to member
-      */
-      bool IsPointerToMember() const;
-
-
-      /** 
-      * IsReference returns true if the type represents a reference
-      * @return true if type represents a reference
-      */
-      bool IsReference() const;
-
-
-      /**
-      * IsStruct will return true if the type represents a struct (not a class)
-      * @return true if type represents a struct
-      */
-      bool IsStruct() const;
-
-
-      /**
-      * IsTemplateInstance will return true if the the class is templated
-      * @return true if the class is templated
-      */
-      bool IsTemplateInstance() const;
-
-
-      /** 
-      * IsTypedef returns true if the type represents a typedef
-      * @return true if type represents a typedef
-      */
-      bool IsTypedef() const;
-
-
-      /** 
-      * IsUnion returns true if the type represents a union
-      * @return true if type represents a union
-      */
-      bool IsUnion() const;
-
-
-      /** 
       * IsUnqualified returns true if the type represents an unqualified type
       * @return true if type represents an unqualified type
       */
       bool IsUnqualified() const;
-
-
-      /**
-      * IsVirtual will return true if the class contains a virtual table
-      * @return true if the class contains a virtual table
-      */
-      bool IsVirtual() const;
-
-
-      /** 
-      * IsVolatile returns true if the type represents a volatile type
-      * @return true if type represents a volatile type
-      */
-      bool IsVolatile() const;
 
 
       /**
@@ -735,7 +605,19 @@ namespace Reflex {
       *   QUALIFIED - cv, reference qualification 
       * @return name of the type
       */
-      std::string Name( unsigned int mod = 0 ) const;
+      std::string Name( unsigned int mod = SCOPED | QUALIFIED ) const;
+
+
+      /**
+      * Name returns the name of the type
+      * @param  buf buffer to be used for calculating name
+      * @param  mod qualifiers can be or'ed 
+      *   FINAL     - resolve typedefs
+      *   SCOPED    - fully scoped name 
+      *   QUALIFIED - cv, reference qualification 
+      * @return name of the type
+      */
+      const std::string& Name(std::string& buf, unsigned int mod = SCOPED | QUALIFIED ) const;
 
 
       /**
@@ -1168,7 +1050,7 @@ namespace Reflex {
 
 
       /** */
-      const TypeBase * ToTypeBase() const;
+      const Internal::TypeBase * ToTypeBase() const;
 
    private:
 
@@ -1178,7 +1060,7 @@ namespace Reflex {
       * @supplierCardinality 1
       * @clientCardinality 1..
       **/
-      const TypeName * fTypeName;
+      const Internal::TypeName * fTypeName;
 
 
       /** modifiers */
@@ -1232,7 +1114,7 @@ inline Reflex::Type::operator bool () const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type::Type( const TypeName * typName,
+inline Reflex::Type::Type( const Internal::TypeName * typName,
                                  unsigned int modifiers ) 
 //-------------------------------------------------------------------------------
    : fTypeName( typName ),
@@ -1421,22 +1303,6 @@ inline void * Reflex::Type::Id() const {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsAbstract() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeName->fTypeBase->IsAbstract();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsArray() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeName->fTypeBase->IsArray();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
 inline bool Reflex::Type::IsClass() const {
 //-------------------------------------------------------------------------------
    if ( * this ) return fTypeName->fTypeBase->IsClass();
@@ -1453,141 +1319,9 @@ inline bool Reflex::Type::IsComplete() const {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsConst() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & CONST);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsConstVolatile() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & CONST & VOLATILE);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsEnum() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeName->fTypeBase->IsEnum();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsFunction() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeName->fTypeBase->IsFunction();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsFundamental() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeName->fTypeBase->IsFundamental();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsPointer() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeName->fTypeBase->IsPointer();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsPointerToMember() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeName->fTypeBase->IsPointerToMember();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsPrivate() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeName->fTypeBase->IsPrivate();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsProtected() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeName->fTypeBase->IsProtected();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsPublic() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeName->fTypeBase->IsPublic();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsReference() const {
-//-------------------------------------------------------------------------------
-   return 0 != ( fModifiers & REFERENCE );
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsStruct() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeName->fTypeBase->IsStruct();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsTemplateInstance() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeName->fTypeBase->IsTemplateInstance();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsTypedef() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeName->fTypeBase->IsTypedef();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsUnion() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeName->fTypeBase->IsUnion();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
 inline bool Reflex::Type::IsUnqualified() const {
 //-------------------------------------------------------------------------------
    return 0 == fModifiers;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsVirtual() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeName->fTypeBase->IsVirtual();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Type::IsVolatile() const {
-//-------------------------------------------------------------------------------
-   return 0 != ( fModifiers & VOLATILE );
 }
 
 
@@ -1898,28 +1632,28 @@ inline Reflex::Type Reflex::Type::ToType() const {
 //-------------------------------------------------------------------------------
 inline Reflex::Type_Iterator Reflex::Type::Type_Begin() {
 //-------------------------------------------------------------------------------
-   return TypeName::Type_Begin();
+   return Internal::TypeName::Type_Begin();
 }
 
 
 //-------------------------------------------------------------------------------
 inline Reflex::Type_Iterator Reflex::Type::Type_End() {
 //-------------------------------------------------------------------------------
-   return TypeName::Type_End();
+   return Internal::TypeName::Type_End();
 }
 
 
 //-------------------------------------------------------------------------------
 inline Reflex::Reverse_Type_Iterator Reflex::Type::Type_RBegin() {
 //-------------------------------------------------------------------------------
-   return TypeName::Type_RBegin();
+   return Internal::TypeName::Type_RBegin();
 }
 
 
 //-------------------------------------------------------------------------------
 inline Reflex::Reverse_Type_Iterator Reflex::Type::Type_REnd() {
 //-------------------------------------------------------------------------------
-   return TypeName::Type_REnd();
+   return Internal::TypeName::Type_REnd();
 }
 
 
@@ -2012,7 +1746,7 @@ inline Reflex::TypeTemplate Reflex::Type::TemplateFamily() const {
 
 
 //-------------------------------------------------------------------------------
-inline const Reflex::TypeBase * Reflex::Type::ToTypeBase() const {
+inline const Reflex::Internal::TypeBase * Reflex::Type::ToTypeBase() const {
 //-------------------------------------------------------------------------------
    if ( * this ) return fTypeName->fTypeBase;
    return 0;

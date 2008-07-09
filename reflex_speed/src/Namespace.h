@@ -13,7 +13,7 @@
 #define Reflex_Namespace
 
 // Include files
-#include "Reflex/Scope.h"
+#include "Reflex/internal/ScopeBase.h"
 
 namespace Reflex {
 
@@ -22,6 +22,8 @@ namespace Reflex {
    class Scope;
    class DictionaryGenerator;
 
+
+namespace Internal {
 
    /**
    * @class Namespace Namespace.h Reflex/Namespace.h
@@ -59,6 +61,7 @@ namespace Reflex {
       Namespace();
 
    }; // class Namespace
+} //namespace Internal
 } //namespace Reflex
 
 #endif // Reflex_Namespace

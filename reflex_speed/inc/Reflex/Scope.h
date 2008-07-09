@@ -20,18 +20,18 @@
 namespace Reflex {
 
    // forward declarations
-   class Class;
    class Base;
-   class InstantiatedTemplateClass;
    class Member;
-   class Namespace;
    class PropertyList;
    class Type;
-   class ScopeBase;
-   class ScopeName;
    class TypeTemplate;
    class MemberTemplate;
    class DictionaryGenerator;
+
+   namespace Internal {
+      class ScopeBase;
+      class ScopeName;
+   }
 
 
    /**
@@ -45,7 +45,7 @@ namespace Reflex {
    public:
 
       /** constructor */
-      Scope( const ScopeName * scopeName = 0 );
+      Scope( const Internal::ScopeName * scopeName = 0 );
 
 
       /** copy constructor */
@@ -510,14 +510,26 @@ namespace Reflex {
 
 
       /**
-      * Name returns the name of the type 
+      * Name returns the name of the scope 
       * @param  mod qualifiers can be or'ed 
       *   FINAL     - resolve typedefs
       *   SCOPED    - fully scoped name 
       *   QUALIFIED - cv, reference qualification 
       * @return name of the type
       */
-      std::string Name( unsigned int mod = 0 ) const;
+      std::string Name( unsigned int mod = SCOPED | QUALIFIED ) const;
+
+
+      /**
+      * Name returns the name of the scope
+      * @param  buf buffer to be used for calculating name
+      * @param  mod qualifiers can be or'ed 
+      *   FINAL     - resolve typedefs
+      *   SCOPED    - fully scoped name 
+      *   QUALIFIED - cv, reference qualification 
+      * @return name of the type
+      */
+      const std::string& Name(std::string& buf, unsigned int mod = SCOPED | QUALIFIED ) const;
 
 
       /**
@@ -986,7 +998,7 @@ namespace Reflex {
 
 
       /** */
-      const ScopeBase * ToScopeBase() const;
+      const Internal::ScopeBase * ToScopeBase() const;
 
    public:
 
@@ -1005,7 +1017,7 @@ namespace Reflex {
       * @supplierCardinality 1
       * @clientCardinality 1
       */
-      const ScopeName * fScopeName;
+      const Internal::ScopeName * fScopeName;
 
    }; // class Scope
 
@@ -1046,7 +1058,7 @@ inline bool Reflex::operator == ( const Scope & lh,
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope::Scope( const ScopeName * scopeName ) 
+inline Reflex::Scope::Scope( const Internal::ScopeName * scopeName ) 
 //-------------------------------------------------------------------------------
    : fScopeName( scopeName ) {}
 
@@ -1179,7 +1191,7 @@ inline Reflex::Reverse_Member_Iterator Reflex::Scope::FunctionMember_REnd() cons
 //-------------------------------------------------------------------------------
 inline Reflex::Scope Reflex::Scope::GlobalScope() {
 //-------------------------------------------------------------------------------
-  return ScopeBase::GlobalScope();
+  return Internal::ScopeBase::GlobalScope();
 }
 
 
@@ -1337,28 +1349,28 @@ inline std::string Reflex::Scope::ScopeTypeAsString() const {
 //-------------------------------------------------------------------------------
 inline Reflex::Scope_Iterator Reflex::Scope::Scope_Begin() {
 //-------------------------------------------------------------------------------
-   return ScopeName::Scope_Begin();
+   return Internal::ScopeName::Scope_Begin();
 }
 
 
 //-------------------------------------------------------------------------------
 inline Reflex::Scope_Iterator Reflex::Scope::Scope_End() {
 //-------------------------------------------------------------------------------
-   return ScopeName::Scope_End();
+   return Internal::ScopeName::Scope_End();
 }
 
 
 //-------------------------------------------------------------------------------
 inline Reflex::Reverse_Scope_Iterator Reflex::Scope::Scope_RBegin() {
 //-------------------------------------------------------------------------------
-   return ScopeName::Scope_RBegin();
+   return Internal::ScopeName::Scope_RBegin();
 }
 
 
 //-------------------------------------------------------------------------------
 inline Reflex::Reverse_Scope_Iterator Reflex::Scope::Scope_REnd() {
 //-------------------------------------------------------------------------------
-   return ScopeName::Scope_REnd();
+   return Internal::ScopeName::Scope_REnd();
 }
 
 
@@ -1460,7 +1472,7 @@ inline Reflex::Reverse_Type_Iterator Reflex::Scope::SubType_REnd() const {
 
 
 //-------------------------------------------------------------------------------
-inline const Reflex::ScopeBase * Reflex::Scope::ToScopeBase() const {
+inline const Reflex::Internal::ScopeBase * Reflex::Scope::ToScopeBase() const {
 //-------------------------------------------------------------------------------
    if ( * this ) return fScopeName->fScopeBase;
    return 0;

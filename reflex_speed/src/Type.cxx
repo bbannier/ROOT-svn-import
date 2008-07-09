@@ -336,7 +336,7 @@ std::string Reflex::Type::Name( unsigned int mod ) const {
 //-------------------------------------------------------------------------------
 // Return the name of the type (qualified and scoped if requested)
 
-   if (( mod & ( QUALIFIED | Q ))==0 && (* this) ) { 
+   if ( (mod & QUALIFIED) == 0 && (* this) ) { 
       // most common case
       return fTypeName->fTypeBase->Name( mod );
    }
@@ -345,7 +345,7 @@ std::string Reflex::Type::Name( unsigned int mod ) const {
    std::string cv = "";
 
    /** apply qualifications if wanted */
-   if ( 0 != ( mod & ( QUALIFIED | Q ))) {
+   if ( mod & QUALIFIED ) {
       if ( IsConst() && IsVolatile()) cv = "const volatile";
       else if ( IsConst())            cv = "const";
       else if ( IsVolatile())         cv = "volatile";
@@ -360,7 +360,7 @@ std::string Reflex::Type::Name( unsigned int mod ) const {
    else {
       if ( fTypeName ) {
          /** unscoped At Name */
-         if ( 0 != ( mod & ( SCOPED | S ))) s += fTypeName->Name();
+         if ( mod & SCOPED ) s += fTypeName->Name();
          else  s += Tools::GetBaseName(fTypeName->Name());
       } 
       else { 
@@ -372,11 +372,18 @@ std::string Reflex::Type::Name( unsigned int mod ) const {
    if ( cv.length() && ( TypeType() == POINTER || TypeType() == FUNCTION) ) s += " " + cv;
 
    /** apply reference if qualifications wanted */
-   if ( ( 0 != ( mod & ( QUALIFIED | Q ))) && IsReference()) s += "&";
+   if ( ( mod & QUALIFIED ) && IsReference()) s += "&";
 
    return s;
 }
 
+
+//-------------------------------------------------------------------------------
+const std::string& Reflex::Type::Name( std::string& buf, unsigned int mod ) const {
+//-------------------------------------------------------------------------------
+// Return the name of the type (qualified and scoped if requested)
+   return (buf = Name(mod));
+}
 
 //-------------------------------------------------------------------------------
 Reflex::Scope Reflex::Type::PointerToMemberScope() const {

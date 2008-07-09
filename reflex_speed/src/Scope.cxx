@@ -275,12 +275,20 @@ std::string Reflex::Scope::Name( unsigned int mod ) const {
 // Return the name of this scope, scoped if requested.
    if ( * this ) return fScopeName->fScopeBase->Name( mod );
    else if ( fScopeName ) {
-      if ( 0 != ( mod & ( SCOPED | S ))) return fScopeName->Name();
-      else                               return Tools::GetBaseName( fScopeName->Name());
+      if ( mod & SCOPED ) return fScopeName->Name();
+      else                return Tools::GetBaseName( fScopeName->Name());
    }
    else {
       return "";
    }
+}
+
+
+//-------------------------------------------------------------------------------
+const std::string& Reflex::Scope::Name(std::string& buf, unsigned int mod ) const {
+//-------------------------------------------------------------------------------
+// Return the name of this scope, scoped if requested.
+   return (buf = Name(mod));
 }
 
 
