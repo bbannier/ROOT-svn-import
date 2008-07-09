@@ -28,6 +28,13 @@ namespace Reflex {
    class Object;
    class MemberTemplate;
    class TypeTemplate;
+   class ClassTemplateInstance;
+   class FunctionMemberTemplateInstance;
+   class DictionaryGenerator;
+
+namespace Internal {
+
+   // forward declarations
    class Fundamental;
    class Function;
    class Array;
@@ -35,10 +42,7 @@ namespace Reflex {
    class Enum;
    class Typedef;
    class Pointer;
-   class ClassTemplateInstance;
-   class FunctionMemberTemplateInstance;
    class TypeName;
-   class DictionaryGenerator;
 
    /**
    * @class TypeBase TypeBase.h Reflex/TypeBase.h
@@ -812,125 +816,126 @@ namespace Reflex {
          Type * fRawType;
 
    }; // class TypeBase
+} //namespace Internal
 } //namespace Reflex
 
 #include "Reflex/TypeTemplate.h"
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Base_Iterator Reflex::TypeBase::Base_Begin() const {
+inline Reflex::Base_Iterator Reflex::Internal::TypeBase::Base_Begin() const {
 //-------------------------------------------------------------------------------
    return Dummy::BaseCont().begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Base_Iterator Reflex::TypeBase::Base_End() const {
+inline Reflex::Base_Iterator Reflex::Internal::TypeBase::Base_End() const {
 //-------------------------------------------------------------------------------
    return Dummy::BaseCont().end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Base_Iterator Reflex::TypeBase::Base_RBegin() const {
+inline Reflex::Reverse_Base_Iterator Reflex::Internal::TypeBase::Base_RBegin() const {
 //-------------------------------------------------------------------------------
    return Dummy::BaseCont().rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Base_Iterator Reflex::TypeBase::Base_REnd() const {
+inline Reflex::Reverse_Base_Iterator Reflex::Internal::TypeBase::Base_REnd() const {
 //-------------------------------------------------------------------------------
    return Dummy::BaseCont().rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::TypeBase::DataMemberSize() const {
+inline size_t Reflex::Internal::TypeBase::DataMemberSize() const {
 //-------------------------------------------------------------------------------
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::TypeBase::DataMember_Begin() const {
+inline Reflex::Member_Iterator Reflex::Internal::TypeBase::DataMember_Begin() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberCont().begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::TypeBase::DataMember_End() const {
+inline Reflex::Member_Iterator Reflex::Internal::TypeBase::DataMember_End() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberCont().end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::TypeBase::DataMember_RBegin() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::TypeBase::DataMember_RBegin() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberCont().rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::TypeBase::DataMember_REnd() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::TypeBase::DataMember_REnd() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberCont().rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::TypeBase::FunctionMemberSize() const {
+inline size_t Reflex::Internal::TypeBase::FunctionMemberSize() const {
 //-------------------------------------------------------------------------------
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::TypeBase::FunctionMember_Begin() const {
+inline Reflex::Member_Iterator Reflex::Internal::TypeBase::FunctionMember_Begin() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberCont().begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::TypeBase::FunctionMember_End() const {
+inline Reflex::Member_Iterator Reflex::Internal::TypeBase::FunctionMember_End() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberCont().end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::TypeBase::FunctionMember_RBegin() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::TypeBase::FunctionMember_RBegin() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberCont().rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::TypeBase::FunctionMember_REnd() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::TypeBase::FunctionMember_REnd() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberCont().rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsAbstract() const {
+inline bool Reflex::Internal::TypeBase::IsAbstract() const {
 //-------------------------------------------------------------------------------
    return false;
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsArray() const {
+inline bool Reflex::Internal::TypeBase::IsArray() const {
 //-------------------------------------------------------------------------------
    return ( fTypeType == ARRAY );
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsClass() const {
+inline bool Reflex::Internal::TypeBase::IsClass() const {
 //-------------------------------------------------------------------------------
    return ( fTypeType == CLASS || 
             fTypeType == TYPETEMPLATEINSTANCE || 
@@ -939,56 +944,56 @@ inline bool Reflex::TypeBase::IsClass() const {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsComplete() const {
+inline bool Reflex::Internal::TypeBase::IsComplete() const {
 //-------------------------------------------------------------------------------
    return true;
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsEnum() const {
+inline bool Reflex::Internal::TypeBase::IsEnum() const {
 //-------------------------------------------------------------------------------
    return ( fTypeType == ENUM );
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsFunction() const {
+inline bool Reflex::Internal::TypeBase::IsFunction() const {
 //-------------------------------------------------------------------------------
    return ( fTypeType == FUNCTION );
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsFundamental() const {
+inline bool Reflex::Internal::TypeBase::IsFundamental() const {
 //-------------------------------------------------------------------------------
    return ( fTypeType == FUNDAMENTAL );
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsPointer() const {
+inline bool Reflex::Internal::TypeBase::IsPointer() const {
 //-------------------------------------------------------------------------------
    return ( fTypeType == POINTER );
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsStruct() const {
+inline bool Reflex::Internal::TypeBase::IsStruct() const {
 //-------------------------------------------------------------------------------
    return ( fTypeType == STRUCT );
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsPointerToMember() const {
+inline bool Reflex::Internal::TypeBase::IsPointerToMember() const {
 //-------------------------------------------------------------------------------
    return ( fTypeType == POINTERTOMEMBER );
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsTemplateInstance() const {
+inline bool Reflex::Internal::TypeBase::IsTemplateInstance() const {
 //-------------------------------------------------------------------------------
    return ( fTypeType == TYPETEMPLATEINSTANCE || 
             fTypeType == MEMBERTEMPLATEINSTANCE );
@@ -996,315 +1001,315 @@ inline bool Reflex::TypeBase::IsTemplateInstance() const {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsTypedef() const {
+inline bool Reflex::Internal::TypeBase::IsTypedef() const {
 //-------------------------------------------------------------------------------
    return ( fTypeType == TYPEDEF );
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsUnion() const {
+inline bool Reflex::Internal::TypeBase::IsUnion() const {
 //-------------------------------------------------------------------------------
    return ( fTypeType == UNION );
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsPrivate() const {
+inline bool Reflex::Internal::TypeBase::IsPrivate() const {
 //-------------------------------------------------------------------------------
    return false;
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsProtected() const {
+inline bool Reflex::Internal::TypeBase::IsProtected() const {
 //-------------------------------------------------------------------------------
    return false;
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsPublic() const {
+inline bool Reflex::Internal::TypeBase::IsPublic() const {
 //-------------------------------------------------------------------------------
    return false;
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeBase::IsVirtual() const {
+inline bool Reflex::Internal::TypeBase::IsVirtual() const {
 //-------------------------------------------------------------------------------
    return false;
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::TypeBase::MemberSize() const {
+inline size_t Reflex::Internal::TypeBase::MemberSize() const {
 //-------------------------------------------------------------------------------
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::TypeBase::Member_Begin() const {
+inline Reflex::Member_Iterator Reflex::Internal::TypeBase::Member_Begin() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberCont().begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::TypeBase::Member_End() const {
+inline Reflex::Member_Iterator Reflex::Internal::TypeBase::Member_End() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberCont().end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::TypeBase::Member_RBegin() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::TypeBase::Member_RBegin() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberCont().rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::TypeBase::Member_REnd() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::TypeBase::Member_REnd() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberCont().rend();  
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::TypeBase::MemberTemplateSize() const {
+inline size_t Reflex::Internal::TypeBase::MemberTemplateSize() const {
 //-------------------------------------------------------------------------------
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::MemberTemplate_Iterator Reflex::TypeBase::MemberTemplate_Begin() const {
+inline Reflex::MemberTemplate_Iterator Reflex::Internal::TypeBase::MemberTemplate_Begin() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberTemplateCont().begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::MemberTemplate_Iterator Reflex::TypeBase::MemberTemplate_End() const {
+inline Reflex::MemberTemplate_Iterator Reflex::Internal::TypeBase::MemberTemplate_End() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberTemplateCont().end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_MemberTemplate_Iterator Reflex::TypeBase::MemberTemplate_RBegin() const {
+inline Reflex::Reverse_MemberTemplate_Iterator Reflex::Internal::TypeBase::MemberTemplate_RBegin() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberTemplateCont().rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_MemberTemplate_Iterator Reflex::TypeBase::MemberTemplate_REnd() const {
+inline Reflex::Reverse_MemberTemplate_Iterator Reflex::Internal::TypeBase::MemberTemplate_REnd() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberTemplateCont().rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::TypeBase::FunctionParameter_Begin() const {
+inline Reflex::Type_Iterator Reflex::Internal::TypeBase::FunctionParameter_Begin() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::TypeBase::FunctionParameter_End() const {
+inline Reflex::Type_Iterator Reflex::Internal::TypeBase::FunctionParameter_End() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::TypeBase::FunctionParameter_RBegin() const {
+inline Reflex::Reverse_Type_Iterator Reflex::Internal::TypeBase::FunctionParameter_RBegin() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::TypeBase::FunctionParameter_REnd() const {
+inline Reflex::Reverse_Type_Iterator Reflex::Internal::TypeBase::FunctionParameter_REnd() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::TypeBase::SizeOf() const { 
+inline size_t Reflex::Internal::TypeBase::SizeOf() const { 
 //-------------------------------------------------------------------------------
    return fSize; 
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::TypeBase::SubScopeSize() const {
+inline size_t Reflex::Internal::TypeBase::SubScopeSize() const {
 //-------------------------------------------------------------------------------
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope_Iterator Reflex::TypeBase::SubScope_Begin() const {
+inline Reflex::Scope_Iterator Reflex::Internal::TypeBase::SubScope_Begin() const {
 //-------------------------------------------------------------------------------
    return Dummy::ScopeCont().begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope_Iterator Reflex::TypeBase::SubScope_End() const {
+inline Reflex::Scope_Iterator Reflex::Internal::TypeBase::SubScope_End() const {
 //-------------------------------------------------------------------------------
    return Dummy::ScopeCont().end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Scope_Iterator Reflex::TypeBase::SubScope_RBegin() const {
+inline Reflex::Reverse_Scope_Iterator Reflex::Internal::TypeBase::SubScope_RBegin() const {
 //-------------------------------------------------------------------------------
    return Dummy::ScopeCont().rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Scope_Iterator Reflex::TypeBase::SubScope_REnd() const {
+inline Reflex::Reverse_Scope_Iterator Reflex::Internal::TypeBase::SubScope_REnd() const {
 //-------------------------------------------------------------------------------
    return Dummy::ScopeCont().rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::TypeBase::SubTypeSize() const {
+inline size_t Reflex::Internal::TypeBase::SubTypeSize() const {
 //-------------------------------------------------------------------------------
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::TypeBase::SubType_Begin() const {
+inline Reflex::Type_Iterator Reflex::Internal::TypeBase::SubType_Begin() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::TypeBase::SubType_End() const {
+inline Reflex::Type_Iterator Reflex::Internal::TypeBase::SubType_End() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::TypeBase::SubType_RBegin() const {
+inline Reflex::Reverse_Type_Iterator Reflex::Internal::TypeBase::SubType_RBegin() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::TypeBase::SubType_REnd() const {
+inline Reflex::Reverse_Type_Iterator Reflex::Internal::TypeBase::SubType_REnd() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::TypeBase::TemplateArgumentSize() const {
+inline size_t Reflex::Internal::TypeBase::TemplateArgumentSize() const {
 //-------------------------------------------------------------------------------
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::TypeBase::TemplateArgument_Begin() const {
+inline Reflex::Type_Iterator Reflex::Internal::TypeBase::TemplateArgument_Begin() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::TypeBase::TemplateArgument_End() const {
+inline Reflex::Type_Iterator Reflex::Internal::TypeBase::TemplateArgument_End() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::TypeBase::TemplateArgument_RBegin() const {
+inline Reflex::Reverse_Type_Iterator Reflex::Internal::TypeBase::TemplateArgument_RBegin() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::TypeBase::TemplateArgument_REnd() const {
+inline Reflex::Reverse_Type_Iterator Reflex::Internal::TypeBase::TemplateArgument_REnd() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate Reflex::TypeBase::TemplateFamily() const {
+inline Reflex::TypeTemplate Reflex::Internal::TypeBase::TemplateFamily() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeTemplate();
 }
 
 
 //-------------------------------------------------------------------------------
-inline const std::type_info & Reflex::TypeBase::TypeInfo() const {
+inline const std::type_info & Reflex::Internal::TypeBase::TypeInfo() const {
 //-------------------------------------------------------------------------------
    return *fTypeInfo;
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::TypeBase::SubTypeTemplateSize() const {
+inline size_t Reflex::Internal::TypeBase::SubTypeTemplateSize() const {
 //-------------------------------------------------------------------------------
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate_Iterator Reflex::TypeBase::SubTypeTemplate_Begin() const {
+inline Reflex::TypeTemplate_Iterator Reflex::Internal::TypeBase::SubTypeTemplate_Begin() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeTemplateCont().begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate_Iterator Reflex::TypeBase::SubTypeTemplate_End() const {
+inline Reflex::TypeTemplate_Iterator Reflex::Internal::TypeBase::SubTypeTemplate_End() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeTemplateCont().end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_TypeTemplate_Iterator Reflex::TypeBase::SubTypeTemplate_RBegin() const {
+inline Reflex::Reverse_TypeTemplate_Iterator Reflex::Internal::TypeBase::SubTypeTemplate_RBegin() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeTemplateCont().rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_TypeTemplate_Iterator Reflex::TypeBase::SubTypeTemplate_REnd() const {
+inline Reflex::Reverse_TypeTemplate_Iterator Reflex::Internal::TypeBase::SubTypeTemplate_REnd() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeTemplateCont().rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::TypeBase::AddDataMember( const Member & /* dm */ ) const {
+inline void Reflex::Internal::TypeBase::AddDataMember( const Member & /* dm */ ) const {
 //-------------------------------------------------------------------------------
    throw RuntimeError("Function AddDataMember  not callable on this object");
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::TypeBase::AddDataMember( const char * /* nam */,
+inline void Reflex::Internal::TypeBase::AddDataMember( const char * /* nam */,
                                                    const Type & /* typ */,
                                                    size_t /* offs */,
                                                    unsigned int /* modifiers */ ) const {
@@ -1314,14 +1319,14 @@ inline void Reflex::TypeBase::AddDataMember( const char * /* nam */,
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::TypeBase::AddFunctionMember( const Member & /* fm */ ) const {
+inline void Reflex::Internal::TypeBase::AddFunctionMember( const Member & /* fm */ ) const {
 //-------------------------------------------------------------------------------
    throw RuntimeError("Function AddFunctionMember not callable on this object");
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::TypeBase::AddFunctionMember( const char * /* nam */,
+inline void Reflex::Internal::TypeBase::AddFunctionMember( const char * /* nam */,
                                                        const Type & /* typ */,
                                                        StubFunction /* stubFP */,
                                                        void * /* stubCtx */,
@@ -1333,14 +1338,14 @@ inline void Reflex::TypeBase::AddFunctionMember( const char * /* nam */,
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::TypeBase::AddSubScope( const Scope & /* sc */ ) const {
+inline void Reflex::Internal::TypeBase::AddSubScope( const Scope & /* sc */ ) const {
 //-------------------------------------------------------------------------------
    throw RuntimeError("Function AddSubScope not callable on this object");
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::TypeBase::AddSubScope( const char * /* scop */,
+inline void Reflex::Internal::TypeBase::AddSubScope( const char * /* scop */,
                                                  TYPE /* scopeTyp */ ) const {
 //-------------------------------------------------------------------------------
    throw RuntimeError("Function AddSubScope not callable on this object");
@@ -1348,14 +1353,14 @@ inline void Reflex::TypeBase::AddSubScope( const char * /* scop */,
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::TypeBase::AddSubType( const Type & /* ty */ ) const {
+inline void Reflex::Internal::TypeBase::AddSubType( const Type & /* ty */ ) const {
 //-------------------------------------------------------------------------------
    throw RuntimeError("Function AddSubType not callable on this object");
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::TypeBase::AddSubType( const char * /* typ */,
+inline void Reflex::Internal::TypeBase::AddSubType( const char * /* typ */,
                                                 size_t /* size */,
                                                 TYPE /* typeTyp */,
                                                 const std::type_info & /* ti */,
@@ -1366,42 +1371,42 @@ inline void Reflex::TypeBase::AddSubType( const char * /* typ */,
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::TypeBase::RemoveDataMember( const Member & /* dm */ ) const {
+inline void Reflex::Internal::TypeBase::RemoveDataMember( const Member & /* dm */ ) const {
 //-------------------------------------------------------------------------------
    throw RuntimeError("Function RemoveDataMember not callable on this object");
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::TypeBase::RemoveFunctionMember( const Member & /* fm */ ) const {
+inline void Reflex::Internal::TypeBase::RemoveFunctionMember( const Member & /* fm */ ) const {
 //-------------------------------------------------------------------------------
    throw RuntimeError("Function RemoveFunctionMember not callable on this object");
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::TypeBase::RemoveSubScope( const Scope & /* sc */ ) const {
+inline void Reflex::Internal::TypeBase::RemoveSubScope( const Scope & /* sc */ ) const {
 //-------------------------------------------------------------------------------
    throw RuntimeError("Function RemoveSubScope not callable on this object");
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::TypeBase::RemoveSubType( const Type & /* ty */ ) const {
+inline void Reflex::Internal::TypeBase::RemoveSubType( const Type & /* ty */ ) const {
 //-------------------------------------------------------------------------------
    throw RuntimeError("Function RemoveSubType not callable on this object");
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::TypeBase::SetSize( size_t s ) const {
+inline void Reflex::Internal::TypeBase::SetSize( size_t s ) const {
 //-------------------------------------------------------------------------------
    fSize = s;
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::TypeBase::SetTypeInfo( const std::type_info & ti ) const {
+inline void Reflex::Internal::TypeBase::SetTypeInfo( const std::type_info & ti ) const {
 //-------------------------------------------------------------------------------
    fTypeInfo = &ti;
 }

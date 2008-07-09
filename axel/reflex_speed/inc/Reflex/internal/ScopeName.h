@@ -19,8 +19,12 @@
 namespace Reflex {
 
    // forward declarations
-   class ScopeBase;
    class Scope;
+
+namespace Internal {
+
+   // forward declarations
+   class ScopeBase;
 
    /**
    * @class ScopeName ScopeName.h Reflex/ScopeName.h
@@ -30,7 +34,7 @@ namespace Reflex {
    */
    class RFLX_API ScopeName {
 
-      friend class Scope;
+      friend class Reflex::Scope;
       friend class ScopeBase;
 
    public:
@@ -131,18 +135,19 @@ namespace Reflex {
       Scope * fThisScope;
 
    }; // class ScopeName
+} // namespace Internal
 } // namespace Reflex
 
 
 //-------------------------------------------------------------------------------
-inline const std::string & Reflex::ScopeName::Name() const {
+inline const std::string & Reflex::Internal::ScopeName::Name() const {
 //-------------------------------------------------------------------------------
    return fName;
 }
 
 
 //-------------------------------------------------------------------------------
-inline const char * Reflex::ScopeName::Name_c_str() const {
+inline const char * Reflex::Internal::ScopeName::Name_c_str() const {
 //-------------------------------------------------------------------------------
    return fName.c_str();
 }

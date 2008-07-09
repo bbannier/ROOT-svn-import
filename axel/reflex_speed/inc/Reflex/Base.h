@@ -18,7 +18,10 @@
 
 namespace Reflex {
 
-   // forward declarations
+   namespace Internal {
+      // forward declarations
+      class Class;
+   }
 
    /**
    * @class Base Base.h Reflex/Base.h
@@ -28,7 +31,7 @@ namespace Reflex {
    */
    class RFLX_API Base {
 
-      friend class Class;
+      friend class Internal::Class;
 
    public:
 
@@ -120,7 +123,7 @@ namespace Reflex {
 
    private:
 
-      const Class * BaseClass() const;
+      const Internal::Class * BaseClass() const;
 
    private:
 
@@ -150,7 +153,7 @@ namespace Reflex {
       * @supplierCardinality 0..1
       **/
       mutable
-         const Class * fBaseClass;
+         const Internal::Class * fBaseClass;
 
    }; // class Base
 } // namespace Reflex

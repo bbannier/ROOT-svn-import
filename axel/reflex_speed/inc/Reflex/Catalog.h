@@ -25,13 +25,87 @@ namespace Reflex {
    class Catalog;
 
    namespace Internal {
-      class TypeImpl;
-      class ScopeImpl;
+      class TypeName;
+      class ScopeName;
+
+      class PairTypeInfoType {
+      public:
+         PairTypeInfoType(): fType(), fTI(typeid(UnknownType)) {}
+         PairTypeInfoType(const Type& type): fType(type), fTI(type.TypeInfo()) {}
+         PairTypeInfoType(const Type& type, const std::type_info& ti): fType(type), fTI(ti) {}
+         operator const char* () const { return TypeName(); } // for ContainerAdaptor::Key()
+         const char* TypeName() const { return fTI.name(); }
+         operator const Type& () const { return fType; }
+
+         void Invalidate() { fType = Type(); }
+         bool IsInvalidated() const { return !fType.Id(); }
+
+      private:
+         Reflex::Type fType;
+         const std::type_info& fTI;
+      };
+
    }
+
+   //---- Container Adaptor for PairTypeInfoType ----
+
+   template <>
+   bool
+   ContainerAdaptor::KeyMatches(const char* const & name, const Internal::PairTypeInfoType& pti) const {
+      return !strcmp(name, pti.TypeName());
+   }
+
+   template <>
+   bool
+   ContainerAdaptor::KeyMatches(const char* const & name, const Internal::PairTypeInfoType& pti, const char* &) const {
+      return !strcmp(name, pti.TypeName());
+   }
+
+   template <>
+   void
+   ContainerAdaptor::Invalidate(Internal::PairTypeInfoType& pti) const {
+      pti.Invalidate();
+   }
+
+   template <>
+   bool
+   ContainerAdaptor::IsInvalidated(const Internal::PairTypeInfoType& pti) const {
+      return pti.IsInvalidated();
+   }
+
+   //---- Container Adaptor for Type ----
+
+   template <>
+   std::string
+   ContainerAdaptor::Key(const Type& type) const {
+      return type.Name();
+   }
+
+   template <>
+   const std::string&
+   ContainerAdaptor::Key(const Type& type, std::string& buf) const {
+      return type.Name(buf);
+   }
+
+   //---- Container Adaptor for Scope ----
+
+   template <>
+   std::string
+   ContainerAdaptor::Key(const Scope& scope) const {
+      return scope.Name();
+   }
+
+   template <>
+   const std::string&
+   ContainerAdaptor::Key(const Scope& scope, std::string& buf) const {
+      return scope.Name(buf);
+   }
+
+
 
    class TypeCatalog {
    public:
-      typedef Container<Type> TypeContainer_t;
+      typedef Container<std::string, Type> TypeContainer_t;
 
       TypeCatalog(const Catalog* catalog = 0): fCatalog(catalog) {}
       ~TypeCatalog() {}
@@ -47,28 +121,14 @@ namespace Reflex {
       static const Type& Get_float() {return Get(kFLOAT);}
       static const Type& Get(EFUNDAMENTALTYPE);
 
-      void Add(const Internal::TypeImpl& type, const std::type_info * ti);
-      void UpdateTypeId(const Internal::TypeImpl& type, const std::type_info & newti,
+      void Add(const Internal::TypeName& type, const std::type_info * ti);
+      void UpdateTypeId(const Internal::TypeName& type, const std::type_info & newti,
          const std::type_info & oldti = typeid(NullType));
-      void Remove(const Internal::TypeImpl& type);
+      void Remove(const Internal::TypeName& type);
 
 
    private:
-      class PairTypeInfoType {
-      public:
-         PairTypeInfoType(const Type& type): fType(type), fTI(type.TypeId()) {}
-         PairTypeInfoType(const Type& type, const std::type_info& ti): fType(type), fTI(ti) {}
-         const char* Name() const { return fType.TypeId().name(); }
-         const char* Name(std::string&) const { return Name(); }
-         operator const Type& () const { return fType; }
-         bool operator!=(const PairTypeInfoType& rhs) const { return fType != rhs.fType; }
-
-      private:
-         Reflex::Type fType;
-         const std::type_info& fTI;
-      };
-
-      typedef Container<PairTypeInfoType> TypeInfoTypeMap_t;
+      typedef Container<const char*, Internal::PairTypeInfoType> TypeInfoTypeMap_t;
 
       const Catalog*    fCatalog;
       TypeContainer_t   fAllTypes;
@@ -77,8 +137,7 @@ namespace Reflex {
 
    class ScopeCatalog {
    public:
-      typedef Container<Scope>            ScopeContainer_t;
-      typedef Container<Member>           MemberContainer_t;
+      typedef Container<std::string, Scope>            ScopeContainer_t;
 
       ScopeCatalog(const Catalog* catalog = 0): fCatalog(catalog) {}
       ~ScopeCatalog() {}
@@ -89,10 +148,10 @@ namespace Reflex {
       Scope ByName(const std::string& name) const;
       void CleanUp() const;
 
-      void Add(const Internal::ScopeImpl& scope);
-      void Remove(const Internal::ScopeImpl& scope);
+      void Add(const Internal::ScopeName& scope);
+      void Remove(const Internal::ScopeName& scope);
 
-      static const Scope& GlobalScope();
+      static Scope GlobalScope();
 
    private:
       const Catalog*    fCatalog;
@@ -108,8 +167,8 @@ namespace Reflex {
 
    private:
       // allow access to non-const getters, updating scopes and types
-      friend class Internal::ScopeImpl;
-      friend class Internal::TypeImpl;
+      friend class Internal::ScopeName;
+      friend class Internal::TypeName;
 
       ScopeCatalog& Scopes() {return fScopes;}
       TypeCatalog&  Types()  {return fTypes;}

@@ -33,7 +33,7 @@
 
 
 //-------------------------------------------------------------------------------
-Reflex::Class::Class(const char *           typ,
+Reflex::Internal::Class::Class(const char *           typ,
                      size_t                 size,
                      const std::type_info & ti,
                      unsigned int           modifiers,
@@ -51,7 +51,7 @@ Reflex::Class::Class(const char *           typ,
 
 
 //-------------------------------------------------------------------------------
-Reflex::Class::~Class()
+Reflex::Internal::Class::~Class()
 {
 //-------------------------------------------------------------------------------
    for (PathsToBase::iterator it = fPathsToBase.begin(); it != fPathsToBase.end(); ++it) {
@@ -61,7 +61,7 @@ Reflex::Class::~Class()
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Class::AddBase(const Type &   bas,
+void Reflex::Internal::Class::AddBase(const Type &   bas,
                             OffsetFunction offsFP,
                             unsigned int   modifiers) const
 {
@@ -73,7 +73,7 @@ void Reflex::Class::AddBase(const Type &   bas,
 
 
 //-------------------------------------------------------------------------------
-Reflex::Object Reflex::Class::CastObject(const Type & to,
+Reflex::Object Reflex::Internal::Class::CastObject(const Type & to,
       const Object & obj) const
 {
 //-------------------------------------------------------------------------------
@@ -118,7 +118,7 @@ Reflex::Object Reflex::Class::CastObject(const Type & to,
 
 
 /*/-------------------------------------------------------------------------------
-  Reflex::Object Reflex::Class::Construct( const Type & signature,
+  Reflex::Object Reflex::Internal::Class::Construct( const Type & signature,
                                                        const std::vector < Object > & args,
                                                        void * mem ) const {
 //-------------------------------------------------------------------------------
@@ -151,7 +151,7 @@ Reflex::Object Reflex::Class::CastObject(const Type & to,
 
 
 //-------------------------------------------------------------------------------
-Reflex::Object Reflex::Class::Construct(const Type & sig,
+Reflex::Object Reflex::Internal::Class::Construct(const Type & sig,
                                         const std::vector < void * > & args,
                                         void * mem) const
 {
@@ -178,7 +178,7 @@ Reflex::Object Reflex::Class::Construct(const Type & sig,
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Class::Destruct(void * instance,
+void Reflex::Internal::Class::Destruct(void * instance,
                              bool dealloc) const
 {
 //-------------------------------------------------------------------------------
@@ -221,7 +221,7 @@ struct DynType_t {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Type Reflex::Class::DynamicType(const Object & obj) const
+Reflex::Type Reflex::Internal::Class::DynamicType(const Object & obj) const
 {
 //-------------------------------------------------------------------------------
 // Discover the dynamic type of a class object and return it.
@@ -244,7 +244,7 @@ Reflex::Type Reflex::Class::DynamicType(const Object & obj) const
 
 
 //-------------------------------------------------------------------------------
-bool Reflex::Class::HasBase(const Type & cl) const
+bool Reflex::Internal::Class::HasBase(const Type & cl) const
 {
 //-------------------------------------------------------------------------------
 // Return true if this class has a base class of type cl.
@@ -254,7 +254,7 @@ bool Reflex::Class::HasBase(const Type & cl) const
 
 
 //-------------------------------------------------------------------------------
-bool Reflex::Class::HasBase(const Type & cl,
+bool Reflex::Internal::Class::HasBase(const Type & cl,
                             std::vector< Base > & path) const
 {
 //-------------------------------------------------------------------------------
@@ -284,7 +284,7 @@ bool Reflex::Class::HasBase(const Type & cl,
 
 
 //-------------------------------------------------------------------------------
-bool Reflex::Class::IsComplete() const
+bool Reflex::Internal::Class::IsComplete() const
 {
 //-------------------------------------------------------------------------------
 // Return true if this class is complete. I.e. all dictionary information for all
@@ -295,7 +295,7 @@ bool Reflex::Class::IsComplete() const
 
 
 //-------------------------------------------------------------------------------
-bool Reflex::Class::IsComplete2() const
+bool Reflex::Internal::Class::IsComplete2() const
 {
 //-------------------------------------------------------------------------------
 // Return true if this class is complete. I.e. all dictionary information for all
@@ -310,7 +310,7 @@ bool Reflex::Class::IsComplete2() const
 
 
 //-------------------------------------------------------------------------------
-size_t Reflex::Class::AllBases() const
+size_t Reflex::Internal::Class::AllBases() const
 {
 //-------------------------------------------------------------------------------
 // Return the number of base classes.
@@ -326,7 +326,7 @@ size_t Reflex::Class::AllBases() const
 
 
 //-------------------------------------------------------------------------------
-bool Reflex::Class::NewBases() const
+bool Reflex::Internal::Class::NewBases() const
 {
 //-------------------------------------------------------------------------------
 // Check if information for new base classes has been added.
@@ -344,7 +344,7 @@ bool Reflex::Class::NewBases() const
 
 //-------------------------------------------------------------------------------
 const std::vector < Reflex::OffsetFunction > &
-Reflex::Class::PathToBase(const Scope & bas) const
+Reflex::Internal::Class::PathToBase(const Scope & bas) const
 {
 //-------------------------------------------------------------------------------
 // Return a vector of offset functions from the current class to the base class.
@@ -357,7 +357,7 @@ Reflex::Class::PathToBase(const Scope & bas) const
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Class::AddDataMember(const Member & dm) const
+void Reflex::Internal::Class::AddDataMember(const Member & dm) const
 {
 //-------------------------------------------------------------------------------
 // Add data member dm to this class
@@ -366,7 +366,7 @@ void Reflex::Class::AddDataMember(const Member & dm) const
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Class::AddDataMember(const char * nam,
+void Reflex::Internal::Class::AddDataMember(const char * nam,
                                   const Type & typ,
                                   size_t offs,
                                   unsigned int modifiers) const
@@ -378,7 +378,7 @@ void Reflex::Class::AddDataMember(const char * nam,
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Class::RemoveDataMember(const Member & dm) const
+void Reflex::Internal::Class::RemoveDataMember(const Member & dm) const
 {
 //-------------------------------------------------------------------------------
 // Remove data member dm from this class
@@ -387,7 +387,7 @@ void Reflex::Class::RemoveDataMember(const Member & dm) const
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Class::AddFunctionMember(const Member & fm) const
+void Reflex::Internal::Class::AddFunctionMember(const Member & fm) const
 {
 //-------------------------------------------------------------------------------
 // Add function member fm to this class
@@ -398,7 +398,7 @@ void Reflex::Class::AddFunctionMember(const Member & fm) const
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Class::AddFunctionMember(const char * nam,
+void Reflex::Internal::Class::AddFunctionMember(const char * nam,
                                       const Type & typ,
                                       StubFunction stubFP,
                                       void * stubCtx,
@@ -414,7 +414,7 @@ void Reflex::Class::AddFunctionMember(const char * nam,
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Class::RemoveFunctionMember(const Member & fm) const
+void Reflex::Internal::Class::RemoveFunctionMember(const Member & fm) const
 {
 //-------------------------------------------------------------------------------
 // Remove function member from this class.
@@ -425,7 +425,7 @@ void Reflex::Class::RemoveFunctionMember(const Member & fm) const
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Class::GenerateDict(DictionaryGenerator & generator) const
+void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) const
 {
 //-------------------------------------------------------------------------------
    // Generate Dictionary information about itself.

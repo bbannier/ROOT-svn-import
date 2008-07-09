@@ -33,6 +33,32 @@
 #include <typeinfo>
 
 
+
+//-------------------------------------------------------------------------------
+const std::string&
+Reflex::TYPEName(TYPE type) {
+//-------------------------------------------------------------------------------
+   const std::string sTYPENames[] = {
+      "CLASS",
+      "STRUCT",
+      "ENUM",
+      "UNION",
+      "NAMESPACE",
+      "FUNCTION",
+      "ARRAY",
+      "FUNDAMENTAL",
+      "POINTER",
+      "POINTERTOMEMBER",
+      "TYPEDEF",
+      "DATAMEMBER",
+      "FUNCTIONMEMBER",
+      "UNRESOLVED"
+   };
+
+   return sTYPEnames[type];
+}
+
+
 //-------------------------------------------------------------------------------
 Reflex::Instance::Instance() {
 //-------------------------------------------------------------------------------

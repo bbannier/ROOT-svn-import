@@ -16,12 +16,13 @@
 #include "Array.h"
 
 #include "Reflex/Type.h"
+#include "Reflex/EntityProperty.h"
 #include "Reflex/internal/OwnedMember.h"
 
 #include <sstream>
 
 //-------------------------------------------------------------------------------
-Reflex::Array::Array( const Type & arrayType,
+Reflex::Internal::Array::Array( const Type & arrayType,
                             size_t len,
                             const std::type_info & typeinfo ) 
 //-------------------------------------------------------------------------------
@@ -33,7 +34,7 @@ Reflex::Array::Array( const Type & arrayType,
 
 
 //-------------------------------------------------------------------------------
-std::string Reflex::Array::Name( unsigned int mod ) const {
+std::string Reflex::Internal::Array::Name( unsigned int mod ) const {
 //-------------------------------------------------------------------------------
 // Return the name of the array type.
    return BuildTypeName( fArrayType, fLength, mod );
@@ -41,7 +42,7 @@ std::string Reflex::Array::Name( unsigned int mod ) const {
 
 
 //-------------------------------------------------------------------------------
-std::string Reflex::Array::BuildTypeName( const Type & typ, 
+std::string Reflex::Internal::Array::BuildTypeName( const Type & typ, 
                                                 size_t len,
                                                 unsigned int mod ) {
 //-------------------------------------------------------------------------------
@@ -49,7 +50,7 @@ std::string Reflex::Array::BuildTypeName( const Type & typ,
    std::ostringstream ost; 
    Type t = typ;
    ost << "[" << len << "]";
-   while ( t.IsArray() ) {
+   while ( t.Is(gARRAY) ) {
       ost << "[" << t.ArrayLength() << "]";
       t = t.ToType();
    }

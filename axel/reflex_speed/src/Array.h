@@ -17,6 +17,7 @@
 #include "Reflex/Type.h"
 
 namespace Reflex {
+namespace Internal {
 
    // forward declarations
 
@@ -83,18 +84,19 @@ namespace Reflex {
       size_t fLength;
 
    }; // class Array
+} //namespace Internal
 } //namespace Reflex
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::Array::ArrayLength() const { 
+inline size_t Reflex::Internal::Array::ArrayLength() const { 
 //-------------------------------------------------------------------------------
    return fLength; 
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type Reflex::Array::ToType() const {
+inline Reflex::Type Reflex::Internal::Array::ToType() const {
 //-------------------------------------------------------------------------------
    return fArrayType;
 }
