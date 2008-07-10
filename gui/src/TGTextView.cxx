@@ -856,7 +856,8 @@ Bool_t TGTextView::HandleButton(Event_t *event)
    } else if (event->fCode == kButton4) {
       // move three lines up
       if (fVisible.fY > 0) {
-         SetVsbPosition(fVisible.fY / fScrollVal.fY - 3);
+         Long_t amount = fVisible.fY / fScrollVal.fY - 3;
+         SetVsbPosition((amount >= 0) ? amount : 0);
          //Mark(fMousePos.fX, fMarkedStart.fY - 3);
       }
    } else if (event->fCode == kButton5) {
