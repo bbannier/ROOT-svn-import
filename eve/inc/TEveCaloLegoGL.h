@@ -25,10 +25,8 @@ class TEveCaloLegoGL : public TGLObject
 private:
    TEveCaloLegoGL(const TEveCaloLegoGL&);            // Not implemented
    TEveCaloLegoGL& operator=(const TEveCaloLegoGL&); // Not implemented
-
-   // cached variables
-   mutable Float_t   fDataMax;
-   mutable Double_t  fZAxisStep;
+ 
+   mutable Float_t   fDataMax; // cached
 
    mutable TAxis*    fEtaAxis;
    mutable TAxis*    fPhiAxis;
