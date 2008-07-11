@@ -1,4 +1,4 @@
-// @(#)root/net:$Id$
+// @(#)root/netx:$Id$
 // Author: A. Peters, G. Ganis   7/2/2007
 
 /*************************************************************************
@@ -43,8 +43,7 @@ public:
    Int_t   Locate(const char *path, TString &endpath);
    Bool_t  Matches(const char *s);
    Bool_t  Stage(const char *path, Option_t *opt = 0);
-   Bool_t  Stage(TCollection *pathlist, Option_t *opt = 0)
-              { return TFileStager::Stage(pathlist, opt); }
+   Bool_t  Stage(TCollection *pathlist, Option_t *opt = 0);
 
    Bool_t  IsValid() const { return (fSystem ? kTRUE : kFALSE); }
 

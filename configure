@@ -689,6 +689,105 @@ EOF
 }
 
 #_____________________________________________________________________
+check_comp() {
+    # This function will try to locate the default or alt compiler
+    # type [$1] in the PATH.
+    # The result of the check is stored in found_comp, 1 if true,
+    # 0 otherwise, which should be immediately copied, since the variable
+    # will be overwritten at next invocation of this function.
+
+    # Assert that we got enough arguments
+    if test $# -ne 1 ; then
+        echo "check_comp: not 1 argument"
+        found_comp=0
+        return 1
+    fi
+
+    comptype="$1"
+
+    if test "x$comptype" = "xLD" ; then
+       message "Checking for linker (LD)"
+    else
+       message "Checking for $comptype compiler"
+    fi
+
+    found_comp=0
+    case $comptype in
+    C)
+        if test "x$altcc" = "x" ; then
+            altcc=`grep '^CC ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; nextfile} }'`
+        fi
+        if `$cwhich $altcc > /dev/null 2>&1` ; then
+            found_comp=1
+            result "$altcc"
+        else
+            nocomp="$altcc"
+        fi
+        ;;
+    C++)
+        if test "x$altcxx" = "x" ; then
+            altcxx=`grep '^CXX ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; nextfile} }'`
+        fi
+        if `$cwhich $altcxx > /dev/null 2>&1` ; then
+            found_comp=1
+            result "$altcxx"
+        else
+            nocomp="$altcxx"
+        fi
+        ;;
+    LD)
+        if test "x$altld" = "x" ; then
+            altld=`grep '^LD ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; nextfile} }'`
+            if test "x$arch" = "xwin32" ; then
+                altldorg="link"
+                altldtmp="$altld"
+                altld="$altldorg"
+            fi
+            if test "x$arch" = "xwin32gcc" ; then
+                altldorg="g++"
+                altldtmp="$altld"
+                altld="$altldorg"
+            fi
+        fi
+        if `$cwhich $altld > /dev/null 2>&1` ; then
+            found_comp=1
+            if test ! "x$altldtmp" = "x" ; then
+                altld="$altldtmp"
+            fi
+            result "$altld"
+        else
+            nocomp="$altld"
+            altldorg=""
+        fi
+        ;;
+    F77)
+        if test "x$altf77" = "x" ; then
+            altf77=`grep '^F77 ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; nextfile} }'`
+            if test "x$arch" = "xwin32" ; then
+                altf77org="fl32"
+                altf77tmp="$altf77"
+                altf77="$altf77org"
+            fi
+        fi
+        if `$cwhich $altf77 > /dev/null 2>&1` ; then
+            found_comp=1
+            if test ! "x$altf77tmp" = "x" ; then
+                altf77="$altf77tmp"
+            fi
+            result "$altf77"
+        else
+            nocomp="$altf77"
+            altf77org=""
+        fi
+        ;;
+    esac
+
+    if test $found_comp -eq 0 ; then
+       result "no $comptype compiler $nocomp found"
+    fi
+}
+
+#_____________________________________________________________________
 check_explicit()
 {
     feat=$1 ; shift
@@ -1371,6 +1470,16 @@ fi
 
 ######################################################################
 #
+### echo %%% On MacOS X >=10.5 always enable_rpath in case of non-prefix install
+#
+if test ! "x$macosx105" = "x"; then
+    if test "x$enable_rpath" = "xno" && test "x$haveconfig" = "x" ; then
+        enable_rpath="yes"
+    fi
+fi
+
+######################################################################
+#
 ### echo %%% check for GNU make >= 3.79.1 - Mandatory version of make
 #
 # Mandatory test, must succeed
@@ -1396,6 +1505,34 @@ if test ! "x$gnumake" = "x" ; then
 else
     result "`basename $0`: GNU Make >= 3.79.1 MUST be installed"
     exit 1
+fi
+
+######################################################################
+#
+### echo %%% check for compilers
+#
+# Mandatory test, must succeed
+# Check for C, C++ compilers, and optionally FORTRAN
+#
+check_comp C
+if test $found_comp -eq 0 ; then
+   result "`basename $0`: C compiler MUST be installed"
+   exit 1
+fi
+check_comp C++
+if test $found_comp -eq 0 ; then
+   result "`basename $0`: C++ compiler MUST be installed"
+   exit 1
+fi
+check_comp LD
+if test $found_comp -eq 0 ; then
+   result "`basename $0`: Linker MUST be installed"
+   exit 1
+fi
+check_comp F77
+if test $found_comp -eq 0 ; then
+   # missing F77 is not fatal
+   altf77=
 fi
 
 ######################################################################
@@ -2567,7 +2704,7 @@ if test ! "x$enable_pythia8" = "xno" ; then
     check_header "Pythia.h" "$pythia8incdir" $PYTHIA8 $PYTHIA8/include \
         /opt/pythia8/include /usr/local/include /usr/include
     pythia8incdir=$found_dir
-    
+
     check_library "libpythia8" "$enable_shared" "$pythia8libdir" \
        $PYTHIA8 $PYTHIA8/lib /opt/pythia8/lib /usr/local/lib /usr/lib
     pythia8lib=$found_lib
@@ -2864,9 +3001,11 @@ if test ! "x$enable_python" = "xno" ; then
     pythoninc=$found_hdr
     pythonincdir=$found_dir
     if test "x$platform" = "xwin32"; then
-       pythonvers=`python -c 'import sys; print sys.version[:3].replace(".","")' | tr -d '\r'`
-       if test ! "x$pythonincdir" = "x" ; then
-          pythonincdir=`cygpath -m $pythonincdir`
+       if test ! "x$mypython" = "x" && test -x "$mypython" ; then
+          pythonvers=`python -c 'import sys; print sys.version[:3].replace(".","")' | tr -d '\r'`
+          if test ! "x$pythonincdir" = "x" ; then
+             pythonincdir=`cygpath -m $pythonincdir`
+          fi
        fi
     fi
 
@@ -4033,14 +4172,16 @@ if test ! "x$enable_mathmore" = "xno"; then
     fi
     # skip cygwin gsl-config when in pure Win32 mode
     if test "x$platform" = "xwin32"; then
-        case `$cwhich gsl-config` in
-            /bin/*|/usr/bin/*)
-	        if (test "x$gslincdir" = "x" || test "x$gsllibs" = "x"); then
-                    gslskip="skip"
-                    enable_mathmore="no"
-                fi
-                ;;
-        esac
+	if `$cwhich gsl-config > /dev/null 2>&1` ; then
+            case `$cwhich gsl-config` in
+                /bin/*|/usr/bin/*)
+	            if (test "x$gslincdir" = "x" || test "x$gsllibs" = "x"); then
+                        gslskip="skip"
+                        enable_mathmore="no"
+                    fi
+                    ;;
+            esac
+        fi
     fi
     if (test "x$gslincdir" = "x" || test "x$gsllibs" = "x") && \
         test ! "x$gslskip" = "xskip"; then
@@ -4997,6 +5138,17 @@ if test "$prefix2" = "\$(ROOTSYS)" ; then
     mandir2=\$ROOTSYS/man/man1
 fi
 
+if test ! "x$altf77org" = "x" ; then
+    altf772="$altf77org"
+else
+    altf772="$altf77"
+fi
+if test ! "x$altldorg" = "x" ; then
+    altld2="$altldorg"
+else
+    altld2="$altld"
+fi
+
 features=""
 for f in $options ; do
     bar="$`echo $f`"
@@ -5022,8 +5174,8 @@ sed -e "s|@architecture@|$arch|"           \
     -e "s|@pythonvers@|$pythonvers|"       \
     -e "s|@altcc@|$altcc|"                 \
     -e "s|@altcxx@|$altcxx|"               \
-    -e "s|@altf77@|$altf77|"               \
-    -e "s|@altld@|$altld|"                 \
+    -e "s|@altf77@|$altf772|"              \
+    -e "s|@altld@|$altld2|"                \
     -e "s|@no_stubs@|$no_stubs|"           \
     -e "s|@no_stubs_test@|$no_stubs_test|" \
    < root-config.tmp > $RCONFOUT
@@ -5209,7 +5361,7 @@ fi
 if test "x$enable_reflex" = "xyes"; then
     message "Writing $GENREFLEXSHOUT"
     libdirreflex=$libdir
-    if test "$prefix" = "\$(ROOTSYS)" ; then
+    if test "x$haveconfig" = "x" ; then
         libdirreflex='`dirname $0`/../lib'
     fi
 
@@ -5232,7 +5384,7 @@ if test "x$enable_reflex" = "xyes"; then
 
     if test "x$platform" = "xwin32"; then
         message "Writing $GENREFLEXBATOUT"
-        if test "$prefix" = "\$(ROOTSYS)" ; then
+        if test "x$haveconfig" = "x" ; then
             libdirreflex='%~d0%~p0\\..\\lib'
         else
             libdirreflex=`cygpath -m $libdir`
@@ -5245,7 +5397,7 @@ if test "x$enable_reflex" = "xyes"; then
 
     message "Writing $GENREFLEXROOTCINTSHOUT"
     libdirreflex=$libdir
-    if test "$prefix" = "\$(ROOTSYS)" ; then
+    if test "x$haveconfig" = "x" ; then
         libdirreflex='`dirname $0`/../lib'
     fi
     cat $GENREFLEXROOTCINTSHIN | sed -e "s|@libdir@|$libdirreflex|g" $GCCXML06SED > $GENREFLEXROOTCINTSHOUT
@@ -5254,7 +5406,7 @@ if test "x$enable_reflex" = "xyes"; then
 
     if test "x$platform" = "xwin32"; then
         message "Writing $GENREFLEXROOTCINTBATOUT"
-        if test "$prefix" = "\$(ROOTSYS)" ; then
+        if test "x$haveconfig" = "x" ; then
             libdirreflex='%~d0%~p0\\..\\lib'
         else
             libdirreflex=`cygpath -m $libdir`
@@ -5340,4 +5492,3 @@ fi
 result ""
 
 exit 0
-

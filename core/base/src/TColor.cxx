@@ -307,6 +307,7 @@ void TColor::InitializeColors()
    }
    // If fgPalette.fN !=0 SetPalette has been called already
    // (from rootlogon.C for instance)
+
    if (!fgPalette.fN) SetPalette(0,0);
 }
 
@@ -319,10 +320,10 @@ const char *TColor::AsHexString() const
    // copy immediately if needed.
 
    Int_t r, g, b, a;
-   r = Int_t(fRed   * 255);
-   g = Int_t(fGreen * 255);
-   b = Int_t(fBlue  * 255);
-   a = Int_t(fAlpha  * 255);
+   r = Int_t(GetRed()   * 255);
+   g = Int_t(GetGreen() * 255);
+   b = Int_t(GetBlue()  * 255);
+   a = Int_t(fAlpha     * 255);
 
    return (a != 255) ? Form("#%02x%02x%02x%02x", a, r, g, b) : Form("#%02x%02x%02x", r, g, b);
 }
@@ -838,6 +839,7 @@ void TColor::Allocate()
    // Make this color known to the graphics system.
 
    if (gVirtualX && !gROOT->IsBatch())
+
       gVirtualX->SetRGB(fNumber, GetRed(), GetGreen(), GetBlue());
 }
 
@@ -1212,6 +1214,8 @@ Int_t TColor::CreateGradientColorTable(UInt_t Number, Double_t* Length,
   // 0.79 - 0.62 => 17 % of the total palette area between these colors
   //
   //  Original code by Andreas Zoglauer <zog@mpe.mpg.de>
+
+   TColor::InitializeColors();
 
    UInt_t g, c;
    UInt_t nPalette = 0;
