@@ -678,7 +678,7 @@ void TPacketizerAdaptive::InitStats()
    TIter next(fFileNodes);
    while (TFileNode *fn = (TFileNode*)next()) {
       totalNumberOfFiles += fn->GetNumberOfFiles();
-      if (fn->GetSlaveCnt() == 0) {
+      if (fn->GetMySlaveCnt() == 0) {
          noRemoteFiles += fn->GetNumberOfFiles();
          fNEventsOnRemLoc += (fn->GetNEvents() - fn->GetProcessed());
       }
