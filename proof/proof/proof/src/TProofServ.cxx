@@ -95,9 +95,6 @@
 // global proofserv handle
 TProofServ *gProofServ = 0;
 
-Bool_t TProofServ::fgLogToSysLog = kFALSE;      //true if logs should be sent to syslog too
-Bool_t TProofServ::fgSendLogToMaster = kFALSE; // On workers, controls logs sending to master
-
 // debug hook
 static volatile Int_t gProofServDebug = 1;
 
@@ -313,13 +310,33 @@ TProofServLogHandlerGuard::~TProofServLogHandlerGuard()
 //______________________________________________________________________________
 Bool_t TShutdownTimer::Notify()
 {
-   // Handle expiration of the shutdown timer. The Terminate() method is called
-   // which will exit the main loop.
+   // Handle expiration of the shutdown timer. In the case of low activity the
+   // process will be aborted.
 
    if (gDebug > 0)
-      Info ("Notify","called!");
+      Info ("Notify","checking activity on the input socket");
 
-   fProofServ->HandleTermination();
+   // Check activity on the socket
+   TSocket *xs = 0;
+   if (fProofServ && (xs = fProofServ->GetSocket())) {
+      TTimeStamp now;
+      TTimeStamp ts = xs->GetLastUsage();
+      Long_t dt = (Long_t)(now.GetSec() - ts.GetSec()) * 1000 +
+                  (Long_t)(now.GetNanoSec() - ts.GetNanoSec()) / 1000000 ;
+      Int_t to = gEnv->GetValue("ProofServ.ShutdonwTimeout", 20);
+      if (dt > to * 60000) {
+         Fatal("Notify", "input socket: %p: did not show any activity"
+                         " during the last %d mins: aborting", xs, to);
+         // At this point we lost our controller: we need to abort to avoid
+         // hidden timeouts or loops
+         gSystem->Abort();
+      } else {
+         if (gDebug > 0)
+            Info("Notify", "input socket: %p: show activity"
+                           " %ld secs ago", xs, dt / 60000);
+      }
+   }
+   Start(-1, kFALSE);
    return kTRUE;
 }
 
@@ -366,6 +383,13 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
       exit(1);
    }
 
+   // Set global to this instance
+   gProofServ = this;
+
+   // Log vontrol flags
+   fLogToSysLog     = (gEnv->GetValue("ProofServ.LogToSysLog", 0) != 0) ? kTRUE : kFALSE;
+   fSendLogToMaster = kFALSE;
+
    // abort on higher than kSysError's and set error handler
    gErrorAbortLevel = kSysError + 1;
    SetErrorHandler(ErrorHandler);
@@ -389,7 +413,6 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
 
    fLogFile         = flog;
    fLogFileDes      = -1;
-   fgLogToSysLog    = (gEnv->GetValue("ProofServ.LogToSysLog", 0) != 0) ? kTRUE : kFALSE;
 
    fArchivePath     = "";
 
@@ -408,9 +431,7 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
 
    fRealTimeLog     = kFALSE;
 
-   fShutdownWhenIdle = kTRUE;
    fShutdownTimer   = 0;
-   fShutdownTimerMtx = 0;
 
    fInflateFactor   = 1000;
 
@@ -436,9 +457,6 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    if (fOrdinal != "-1")
       fPrefix += fOrdinal;
    TProofServLogHandler::SetDefaultPrefix(fPrefix);
-
-   // Set global to this instance
-   gProofServ = this;
 }
 
 //______________________________________________________________________________
@@ -480,7 +498,7 @@ Int_t TProofServ::CreateServer()
 
    if (Setup() != 0) {
       // Setup failure
-      fgSendLogToMaster = kTRUE;
+      LogToMaster();
       SendLogFile();
       Terminate(0);
       return -1;
@@ -498,7 +516,7 @@ Int_t TProofServ::CreateServer()
       // If for some reason we failed setting a redirection fole for the logs
       // we cannot continue
       if (!fLogFile || (fLogFileDes = fileno(fLogFile)) < 0) {
-         fgSendLogToMaster = kTRUE;
+         LogToMaster();
          SendLogFile(-98);
          Terminate(0);
          return -1;
@@ -506,7 +524,7 @@ Int_t TProofServ::CreateServer()
    } else {
       // Use the file already open by pmain
       if ((fLogFileDes = fileno(fLogFile)) < 0) {
-         fgSendLogToMaster = kTRUE;
+         LogToMaster();
          SendLogFile(-98);
          Terminate(0);
          return -1;
@@ -516,7 +534,7 @@ Int_t TProofServ::CreateServer()
    // Send message of the day to the client
    if (IsMaster()) {
       if (CatMotd() == -1) {
-         fgSendLogToMaster = kTRUE;
+         LogToMaster();
          SendLogFile(-99);
          Terminate(0);
          return -1;
@@ -618,6 +636,13 @@ Int_t TProofServ::CreateServer()
       fEndMaster = fProof->IsEndMaster();
 
       SendLogFile();
+   }
+
+   // Setup the shutdown timer
+   if (!fShutdownTimer) {
+      // Check activity on socket every 5 mins
+      fShutdownTimer = new TShutdownTimer(this, 300000);
+      fShutdownTimer->Start(-1, kFALSE);
    }
 
    // Done
@@ -893,6 +918,9 @@ void TProofServ::HandleSocketInput()
       return;
    }
 
+   // We use to check in the end if something wrong went on during processing
+   Bool_t parallel = IsParallel();
+
    what = mess->What();
    PDB(kGlobal, 1)
       Info("HandleSocketInput", "got type %d from '%s'", what, fSocket->GetTitle());
@@ -913,7 +941,7 @@ void TProofServ::HandleSocketInput()
                Info("HandleSocketInput:kMESS_CINT", "processing: %s...", str);
             ProcessLine(str);
          }
-         fgSendLogToMaster = kTRUE;
+         LogToMaster();
          SendLogFile();
          break;
 
@@ -951,7 +979,7 @@ void TProofServ::HandleSocketInput()
       case kPROOF_PRINT:
          mess->ReadString(str, sizeof(str));
          Print(str);
-         fgSendLogToMaster = kTRUE;
+         LogToMaster();
          SendLogFile();
          break;
 
@@ -1133,7 +1161,7 @@ void TProofServ::HandleSocketInput()
                Info("HandleSocketInput:kPROOF_LOGFILE",
                     "Logfile request - byte range: %d - %d", start, end);
 
-            fgSendLogToMaster = kTRUE;
+            LogToMaster();
             SendLogFile(0, start, end);
          }
          break;
@@ -1311,6 +1339,12 @@ void TProofServ::HandleSocketInput()
    recursive--;
 
    if (fProof) {
+      // If something wrong went on during processing and we do not have
+      // any worker anymore, we shutdown this session
+      if (parallel != IsParallel()) {
+         SendAsynMessage(" *** No workers left: cannot continue! Terminating ... *** ");
+         Terminate(0);
+      }
       fProof->SetActive(kFALSE);
       // Reset PROOF to running state
       fProof->SetRunStatus(TProof::kRunning);
@@ -1318,10 +1352,6 @@ void TProofServ::HandleSocketInput()
 
    fRealTime += (Float_t)timer.RealTime();
    fCpuTime  += (Float_t)timer.CpuTime();
-
-   // Check if we have been asked to shutdown
-   // (we will do nothing if not set)
-   SetShutdownTimer(kTRUE, -1);
 
    delete mess;
 }
@@ -1374,7 +1404,7 @@ void TProofServ::HandleSocketInputDuringProcess()
                Info("HandleSocketInputDuringProcess:kPROOF_LOGFILE",
                     "Logfile request - byte range: %d - %d", start, end);
 
-            fgSendLogToMaster = kTRUE;
+            LogToMaster();
             SendLogFile(0, start, end);
          }
          break;
@@ -1651,7 +1681,7 @@ Bool_t TProofServ::IsParallel() const
 {
    // True if in parallel mode.
 
-   if (IsMaster())
+   if (IsMaster() && fProof)
       return fProof->IsParallel();
 
    // false in case we are a slave
@@ -1663,10 +1693,10 @@ void TProofServ::Print(Option_t *option) const
 {
    // Print status of slave server.
 
-   if (IsMaster())
+   if (IsMaster() && fProof)
       fProof->Print(option);
    else
-      Printf("This is slave %s", gSystem->HostName());
+      Printf("This is worker %s", gSystem->HostName());
 }
 
 //______________________________________________________________________________
@@ -1819,11 +1849,11 @@ void TProofServ::SendLogFile(Int_t status, Int_t start, Int_t end)
    // On workers we do not send the logs to masters (to avoid duplication of
    // text) unless asked explicitely, e.g. after an Exec(...) request.
    if (!IsMaster()) {
-      if (!fgSendLogToMaster) {
+      if (!fSendLogToMaster) {
          FlushLogFile();
       } else {
          // Decide case by case 
-         fgSendLogToMaster = kFALSE;
+         LogToMaster(kFALSE);
       }
    }
 
@@ -4240,13 +4270,14 @@ void TProofServ::HandleCheckFile(TMessage *mess)
       TMD5 *md5local = TMD5::FileChecksum(cachef);
       if (md5local && md5 == (*md5local)) {
          // copy file from cache to working directory
-         CopyFromCache(filenam);
+         Bool_t cpbin = (!IsMaster() || !IsParallel()) ? kTRUE : kFALSE;
+         CopyFromCache(filenam, cpbin);
          fSocket->Send(kPROOF_CHECKFILE);
-         PDB(kPackage, 1)
+         PDB(kCache, 1)
             Info("HandleCheckFile", "file %s already on node", filenam.Data());
       } else {
          fSocket->Send(kPROOF_FATAL);
-         PDB(kPackage, 1)
+         PDB(kCache, 1)
             Info("HandleCheckFile", "file %s not yet on node", filenam.Data());
       }
       delete md5local;
@@ -4280,13 +4311,18 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          printf("*** File cache %s:%s ***\n", gSystem->HostName(),
                 fCacheDir.Data());
          fflush(stdout);
-         gSystem->Exec(Form("%s %s", kLS, fCacheDir.Data()));
+         PDB(kCache, 1) {
+            gSystem->Exec(Form("%s -a %s", kLS, fCacheDir.Data()));
+         } else {
+            gSystem->Exec(Form("%s %s", kLS, fCacheDir.Data()));
+         }
          if (IsMaster() && all)
             fProof->ShowCache(all);
+         LogToMaster();
          break;
       case TProof::kClearCache:
          fCacheLock->Lock();
-         gSystem->Exec(Form("%s %s/*", kRM, fCacheDir.Data()));
+         gSystem->Exec(Form("%s %s/* %s/.*.binversion", kRM, fCacheDir.Data(), fCacheDir.Data()));
          fCacheLock->Unlock();
          if (IsMaster())
             fProof->ClearCache();
@@ -4312,6 +4348,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          gSystem->Exec(Form("%s %s", kLS, fPackageDir.Data()));
          if (IsMaster() && all)
             fProof->ShowPackages(all);
+         LogToMaster();
          break;
       case TProof::kClearPackages:
          status = UnloadPackages();
@@ -4589,11 +4626,13 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          }
          if (IsMaster() && all)
             fProof->ShowEnabledPackages(all);
+         LogToMaster();
          break;
       case TProof::kShowSubCache:
          (*mess) >> all;
          if (IsMaster() && all)
             fProof->ShowCache(all);
+         LogToMaster();
          break;
       case TProof::kClearSubCache:
          if (IsMaster())
@@ -4603,6 +4642,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          (*mess) >> all;
          if (IsMaster() && all)
             fProof->ShowPackages(all);
+         LogToMaster();
          break;
       case TProof::kDisableSubPackages:
          if (IsMaster())
@@ -4684,7 +4724,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
 
          // Load locally; the implementation and header files (and perhaps
          // the binaries) are already in the cache
-         CopyFromCache(package);
+         CopyFromCache(package, kTRUE);
 
          {  TProofServLogHandlerGuard hg(fLogFile, fSocket);
             PDB(kGlobal, 1) Info("HandleCache:kLoadMacro", "enter");
@@ -4872,19 +4912,22 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
       return;
 
    // Always communicate errors via SendLogFile
-   if (level >= kError)
-      fgSendLogToMaster = kTRUE;
+   if (level >= kError && gProofServ)
+      gProofServ->LogToMaster();
 
    static TString syslogService;
 
-   if (syslogService.IsNull()) {
-      syslogService = gProofServ != 0 ? gProofServ->GetService() : "proof";
-      gSystem->Openlog(syslogService, kLogPid | kLogCons, kLogLocal5);
+   Bool_t tosyslog = (gProofServ && gProofServ->LogToSysLog()) ? kTRUE : kFALSE;
 
-   } else if (gProofServ != 0 && syslogService != gProofServ->GetService()) {
-      // re-initialize if proper service is now know
-      syslogService = gProofServ->GetService();
-      gSystem->Openlog(syslogService, kLogPid | kLogCons, kLogLocal5);
+   if (tosyslog) {
+      if (syslogService.IsNull()) {
+         syslogService = gProofServ != 0 ? gProofServ->GetService() : "proof";
+         gSystem->Openlog(syslogService, kLogPid | kLogCons, kLogLocal5);
+      } else if (gProofServ != 0 && syslogService != gProofServ->GetService()) {
+         // re-initialize if proper service is now know
+         syslogService = gProofServ->GetService();
+         gSystem->Openlog(syslogService, kLogPid | kLogCons, kLogLocal5);
+      }
    }
 
    const char *type   = 0;
@@ -4939,7 +4982,7 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
        (level >= kBreak && level < kSysError)) {
       fprintf(stderr, "%s %5d %s | %s: %s\n", st(11,8).Data(), gSystem->GetPid(),
                      (gProofServ ? gProofServ->GetPrefix() : "proof"), type, msg);
-      if (fgLogToSysLog)
+      if (tosyslog)
          buf.Form("%s:%s:%s:%s", (gProofServ ? gProofServ->GetUser() : "unknown"),
                                  (gProofServ ? gProofServ->GetPrefix() : "proof"),
                                  type, msg);
@@ -4947,14 +4990,14 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
       fprintf(stderr, "%s %5d %s | %s in <%.*s>: %s\n", st(11,8).Data(), gSystem->GetPid(),
                       (gProofServ ? gProofServ->GetPrefix() : "proof"),
                       type, ipos, location, msg);
-      if (fgLogToSysLog)
+      if (tosyslog)
          buf.Form("%s:%s:%s:<%.*s>:%s", (gProofServ ? gProofServ->GetUser() : "unknown"),
                                         (gProofServ ? gProofServ->GetPrefix() : "proof"),
                                         type, ipos, location, msg);
    }
    fflush(stderr);
 
-   if (fgLogToSysLog)
+   if (tosyslog)
      gSystem->Syslog(loglevel, buf);
 
    if (abort) {
@@ -4975,10 +5018,10 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
 }
 
 //______________________________________________________________________________
-Int_t TProofServ::CopyFromCache(const char *macro)
+Int_t TProofServ::CopyFromCache(const char *macro, Bool_t cpbin)
 {
-   // Retrieve any files (source and binaries) related to 'macro' from the cache
-   // directory.
+   // Retrieve any files related to 'macro' from the cache directory.
+   // If 'cpbin' is true, the associated binaries are retrieved as well.
    // Returns 0 on success, -1 otherwise
 
    if (!macro || strlen(macro) <= 0)
@@ -4997,10 +5040,17 @@ Int_t TProofServ::CopyFromCache(const char *macro)
    fCacheLock->Lock();
 
    // Get source from the cache
-   PDB(kGlobal,2)
+   PDB(kCache,1)
       Info("CopyFromCache",
            "retrieving %s/%s from cache", fCacheDir.Data(), name.Data());
    gSystem->Exec(Form("%s %s/%s .", kCP, fCacheDir.Data(), name.Data()));
+
+   // Check if we are done
+   if (!cpbin) {
+      // End of atomicity
+      fCacheLock->Unlock();
+      return 0;
+   }
 
    // Create binary name template
    TString binname = name;
@@ -5009,7 +5059,7 @@ Int_t TProofServ::CopyFromCache(const char *macro)
       binname.Replace(dot,1,"_");
       binname += ".";
    } else {
-      PDB(kGlobal,2)
+      PDB(kCache,1)
          Info("CopyFromCache",
               "non-standard name structure: %s ('.' missing)", name.Data());
       // Done
@@ -5036,8 +5086,13 @@ Int_t TProofServ::CopyFromCache(const char *macro)
       fclose(f);
    }
 
-   if (!f || v != gROOT->GetVersion() ||
-      (gROOT->GetSvnRevision() > 0 && rev != gROOT->GetSvnRevision())) {
+   Bool_t okver = (v != gROOT->GetVersion()) ? kFALSE : kTRUE;
+   Bool_t okrev = (gROOT->GetSvnRevision() > 0 && rev != gROOT->GetSvnRevision()) ? kFALSE : kTRUE;
+   if (!f || !okver || !okrev) {
+   PDB(kCache,1)
+      Info("CopyFromCache",
+           "removing binaries: 'f': %p, 'ROOT version': %s, 'ROOT revision': %s",
+           f, (okver ? "OK" : "not OK"), (okrev ? "OK" : "not OK") );
       // Remove all existing binaries
       binname += "*";
       gSystem->Exec(Form("%s %s/%s", kRM, fCacheDir.Data(), binname.Data()));
@@ -5064,7 +5119,7 @@ Int_t TProofServ::CopyFromCache(const char *macro)
                // Copy the file, if needed
                if (docp) {
                   gSystem->Exec(Form("%s %s", kRM, e));
-                  PDB(kGlobal,2)
+                  PDB(kCache,1)
                      Info("CopyFromCache",
                           "retrieving %s from cache", fncache.Data());
                   gSystem->Exec(Form("%s %s %s", kCP, fncache.Data(), e));
@@ -5127,13 +5182,15 @@ Int_t TProofServ::CopyToCache(const char *macro, Int_t opt)
    // Action depends on 'opt'
    if (opt == 0) {
       // Save name to cache
-      PDB(kGlobal,2)
-         Info("CopyFromCache",
+      PDB(kCache,1)
+         Info("CopyToCache",
               "caching %s/%s ...", fCacheDir.Data(), name.Data());
       gSystem->Exec(Form("%s %s %s", kCP, name.Data(), fCacheDir.Data()));
       // If needed, remove from the cache any existing binary related to 'name'
       if (dot != kNPOS) {
          binname += ".*";
+         PDB(kCache,1)
+            Info("CopyToCache", "opt = 0: removing binaries '%s'", binname.Data());
          gSystem->Exec(Form("%s %s/%s", kRM, fCacheDir.Data(), binname.Data()));
          gSystem->Exec(Form("%s %s/%s", kRM, fCacheDir.Data(), vername.Data()));
       }
@@ -5156,7 +5213,7 @@ Int_t TProofServ::CopyToCache(const char *macro, Int_t opt)
                      // Copy the file, if needed
                      if (docp) {
                         gSystem->Exec(Form("%s %s", kRM, fncache.Data()));
-                        PDB(kGlobal,2)
+                        PDB(kCache,1)
                            Info("CopyToCache","caching %s ...", e);
                         gSystem->Exec(Form("%s %s %s", kCP, e, fncache.Data()));
                         savever = kTRUE;
@@ -5168,6 +5225,8 @@ Int_t TProofServ::CopyToCache(const char *macro, Int_t opt)
          }
          // Save binary version if requested
          if (savever) {
+            PDB(kCache,1)
+               Info("CopyToCache","updating version file %s ...", vername.Data());
             FILE *f = fopen(Form("%s/%s", fCacheDir.Data(), vername.Data()), "w");
             if (f) {
                fputs(gROOT->GetVersion(), f);

@@ -1800,7 +1800,9 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout)
    fStatus = 0;
    fRecvMessages->Clear();
 
-   if (!mon->GetActive()) return 0;
+   Long_t actto = (Long_t)(gEnv->GetValue("Proof.SocketActivityTimeout", 600) * 1000);
+
+   if (!mon->GetActive(actto)) return 0;
 
    DeActivateAsyncInput();
 
@@ -1828,7 +1830,10 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout)
    if (fIntHandler)
       fIntHandler->Add();
 
-   while (mon->GetActive() && (nto < 0 || nto > 0)) {
+   // Sockets w/o activity during the last 'sto' millisecs are deactivated
+   Long_t sto = -1;
+   Int_t nsto = 60;
+   while (mon->GetActive(sto) && (nto < 0 || nto > 0)) {
 
       // Wait for a ready socket
       TSocket *s = mon->Select(1000);
@@ -1857,6 +1862,12 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout)
          // Decrease the timeout counter if requested
          if (s == (TSocket *)(-1) && nto > 0)
             nto--;
+      }
+      // Check if we need to check the socket activity (we do it every 10 cycles ~ 10 sec)
+      sto = -1;
+      if (--nsto <= 0) {
+         sto = (Long_t) actto;
+         nsto = 60;
       }
    }
 
@@ -1970,6 +1981,17 @@ Int_t TProof::CollectInputFrom(TSocket *s)
 
       case kPROOF_FATAL:
          MarkBad(s, "received kPROOF_FATAL");
+         if (fProgressDialogStarted) {
+            // Finalize the progress dialog
+            Emit("StopProcess(Bool_t)", kTRUE);
+         }
+         break;
+
+      case kPROOF_TOUCH:
+         // send a request for touching the remote admin file
+         {  sl = FindSlave(s);
+            sl->Touch();
+         }
          break;
 
       case kPROOF_GETOBJECT:
@@ -2443,8 +2465,6 @@ Int_t TProof::CollectInputFrom(TSocket *s)
                (*mess) >> events;
             if (!abort) {
                fPlayer->AddEventsProcessed(events);
-            } else if (IsMaster()) {
-               fPlayer->StopProcess(kTRUE);
             }
             if (!IsMaster())
                Emit("StopProcess(Bool_t)", abort);
@@ -2562,7 +2582,11 @@ Int_t TProof::CollectInputFrom(TSocket *s)
          break;
 
       default:
-         Error("Collect", "unknown command received from slave (what = %d)", what);
+         {
+            sl = FindSlave(s);
+            Error("Collect", "unknown command received from '%s' (what = %d)",
+                            (sl ? sl->GetOrdinal() : "undef"), what);
+         }
          break;
    }
 
@@ -2694,9 +2718,13 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
    // Local URL
    static TString thisurl;
    if (thisurl.IsNull()) {
-      Int_t port = gEnv->GetValue("ProofServ.XpdPort",-1);
-      thisurl = (port > 0) ? Form("%s:%d", TUrl(gSystem->HostName()).GetHostFQDN(), port)
-                           : TUrl(gSystem->HostName()).GetHostFQDN();
+      if (IsMaster()) {
+         Int_t port = gEnv->GetValue("ProofServ.XpdPort",-1);
+         thisurl = (port > 0) ? Form("%s:%d", TUrl(gSystem->HostName()).GetHostFQDN(), port)
+                              : TUrl(gSystem->HostName()).GetHostFQDN();
+      } else {
+         thisurl = Form("%s@%s:%d", fUrl.GetUser(), fUrl.GetHost(), fUrl.GetPort());
+      }
    }
 
    if (!reason || strcmp(reason, kPROOF_TerminateWorker)) {
@@ -2709,16 +2737,24 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
                   (reason && strlen(reason)) ? reason : "unknown");
       Info("MarkBad", "%s", msg.Data());
       // Notify one level up, if the case
+      // Add some hint for diagnostics
       if (gProofServ) {
-         // Add some hint for diagnostics
          msg += Form("\n\n +++ Most likely your code crashed on worker %s at %s:%d.\n",
                      wrk->GetOrdinal(), wrk->GetName(), wrk->GetPort());
-         msg += Form(" +++ Please check the session logs for error messages either using\n");
-         msg += Form(" +++ the 'Show logs' button or executing\n");
-         msg += Form(" +++\n");
+      } else {
+         msg = Form("\n\n +++ Most likely your code crashed\n");
+      }
+      msg += Form(" +++ Please check the session logs for error messages either using\n");
+      msg += Form(" +++ the 'Show logs' button or executing\n");
+      msg += Form(" +++\n");
+      if (gProofServ) {
          msg += Form(" +++ root [] TProof::Mgr(\"%s\")->GetSessionLogs()->Display(\"%s\",0)\n\n",
                      thisurl.Data(), wrk->GetOrdinal());
          gProofServ->SendAsynMessage(msg, kTRUE);
+      } else {
+         msg += Form(" +++ root [] TProof::Mgr(\"%s\")->GetSessionLogs()->Display(\"*\")\n\n",
+                     thisurl.Data());
+         Printf("%s", msg.Data());
       }
    } else if (reason) {
       if (gDebug > 0) {
@@ -2863,6 +2899,27 @@ Int_t TProof::Ping(ESlaves list)
    }
 
    return nsent;
+}
+
+//______________________________________________________________________________
+void TProof::Touch()
+{
+   // Ping PROOF slaves. Returns the number of slaves that responded.
+
+   TList *slaves = fSlaves;
+
+   if (slaves->GetSize() == 0) return;
+
+   TIter next(slaves);
+
+   TSlave *sl;
+   while ((sl = (TSlave *)next())) {
+      if (sl->IsValid()) {
+         sl->Touch();
+      }
+   }
+
+   return;
 }
 
 //______________________________________________________________________________
@@ -6486,8 +6543,8 @@ void TProof::Detach(Option_t *opt)
 
    // Get worker and socket instances
    TSlave *sl = (TSlave *) fActiveSlaves->First();
-   TSocket *s = sl->GetSocket();
-   if (!sl || !(sl->IsValid()) || !s) {
+   TSocket *s = 0;
+   if (!sl || !(sl->IsValid()) || !(s = sl->GetSocket())) {
       Error("Detach","corrupted worker instance: wrk:%p, sock:%p", sl, s);
       return;
    }

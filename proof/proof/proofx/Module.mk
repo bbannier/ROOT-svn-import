@@ -114,9 +114,13 @@ ifneq ($(ICC_GE_9),)
 # remove when xrootd has moved from strstream.h -> sstream.
 $(PROOFXO) $(PROOFXDO): CXXFLAGS += -Wno-deprecated $(PROOFXINCEXTRA) $(EXTRA_XRDFLAGS)
 else
+ifneq ($(GCC_MAJOR),)
 ifneq ($(GCC_MAJOR),2)
 # remove when xrootd has moved from strstream.h -> sstream.
 $(PROOFXO) $(PROOFXDO): CXXFLAGS += -Wno-deprecated $(PROOFXINCEXTRA) $(EXTRA_XRDFLAGS)
+else
+$(PROOFXO) $(PROOFXDO): CXXFLAGS += $(PROOFXINCEXTRA) $(EXTRA_XRDFLAGS)
+endif
 else
 $(PROOFXO) $(PROOFXDO): CXXFLAGS += $(PROOFXINCEXTRA) $(EXTRA_XRDFLAGS)
 endif

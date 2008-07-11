@@ -1251,6 +1251,7 @@ static TString R__GetBranchPointerName(TLeaf *leaf)
    if (twodim) *twodim = 0;
    while (*bname) {
       if (*bname == '.') *bname='_';
+      if (*bname == ',') *bname='_';
       if (*bname == ':') *bname='_';
       if (*bname == '<') *bname='_';
       if (*bname == '>') *bname='_';
@@ -1395,6 +1396,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
       bname = &blen[0];
       while (*bname) {
          if (*bname == '.') *bname='_';
+         if (*bname == ',') *bname='_';
          if (*bname == ':') *bname='_';
          if (*bname == '<') *bname='_';
          if (*bname == '>') *bname='_';
@@ -1466,6 +1468,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
       bname = branchname;
       while (*bname) {
          if (*bname == '.') *bname='_';
+         if (*bname == ',') *bname='_';
          if (*bname == ':') *bname='_';
          if (*bname == '<') *bname='_';
          if (*bname == '>') *bname='_';
@@ -1486,6 +1489,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
          bname = &blen[0];
          while (*bname) {
             if (*bname == '.') *bname='_';
+            if (*bname == ',') *bname='_';
             if (*bname == ':') *bname='_';
             if (*bname == '<') *bname='_';
             if (*bname == '>') *bname='_';
@@ -1590,6 +1594,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
             bname = &b2len[0];
             while (*bname) {
                if (*bname == '.') *bname='_';
+               if (*bname == ',') *bname='_';
                if (*bname == ':') *bname='_';
                if (*bname == '<') *bname='_';
                if (*bname == '>') *bname='_';
@@ -1788,6 +1793,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
          bname = branchname;
          while (*bname) {
             if (*bname == '.') *bname='_';
+            if (*bname == ',') *bname='_';
             if (*bname == ':') *bname='_';
             if (*bname == '<') *bname='_';
             if (*bname == '>') *bname='_';
@@ -1840,6 +1846,7 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
       char *twodim = (char*)strstr(bname,"["); if (twodim) *twodim = 0;
       while (*bname) {
          if (*bname == '.') *bname='_';
+         if (*bname == ',') *bname='_';
          if (*bname == ':') *bname='_';
          if (*bname == '<') *bname='_';
          if (*bname == '>') *bname='_';
@@ -2185,6 +2192,7 @@ Int_t TTreePlayer::MakeCode(const char *filename)
       bname = branchname;
       while (*bname) {
          if (*bname == '.') *bname='_';
+         if (*bname == ',') *bname='_';
          if (*bname == ':') *bname='_';
          if (*bname == '<') *bname='_';
          if (*bname == '>') *bname='_';
@@ -2252,6 +2260,7 @@ Int_t TTreePlayer::MakeCode(const char *filename)
       bname = branchname;
       while (*bname) {
          if (*bname == '.') *bname='_';
+         if (*bname == ',') *bname='_';
          if (*bname == ':') *bname='_';
          if (*bname == '<') *bname='_';
          if (*bname == '>') *bname='_';
