@@ -39,7 +39,6 @@ TEveCaloLegoGL::TEveCaloLegoGL() :
    TGLObject(),
 
    fDataMax(0),
-   fZAxisStep(0),
 
    fEtaAxis(0),
    fPhiAxis(0),
@@ -440,13 +439,16 @@ void TEveCaloLegoGL::DrawZScales3D(TGLRnrCtx & rnrCtx,
       glPopAttrib();
 
       // box horizontals stippled
+      Int_t ondiv;
+      Double_t omin, omax, bw1;
+      THLimitsFinder::Optimize(0, fDataMax, fM->fNZSteps, omin, omax, ondiv, bw1);
+
       glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT);
       glLineStipple(1, 0x5555);
       glEnable(GL_LINE_STIPPLE);
       glBegin(GL_LINES);
-      Int_t nhs = TMath::CeilNint(fDataMax/fZAxisStep);
       Float_t hz  = 0;
-      for (Int_t i = 1; i <= nhs; ++i, hz += fZAxisStep)
+      for (Int_t i = 1; i <= ondiv; ++i, hz += bw1)
       {
          glVertex3f(x0, axY, hz); glVertex3f(x1, axY, hz);
          glVertex3f(ayX, y0, hz); glVertex3f(ayX, y1, hz);
@@ -702,18 +704,23 @@ void TEveCaloLegoGL::DrawHistBase(TGLRnrCtx &rnrCtx) const
    glEnd();
 
 
-   // scales
+   // XYZ axes
+
    glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT | GL_POLYGON_BIT);
    glLineWidth(2);
-   if ( fM->fProjection == TEveCaloLego::k3D || rnrCtx.RefCamera().GetCamBase().GetBaseVec(1).Z() == 0)
-      DrawZScales3D(rnrCtx, eta0, eta1, phi0, phi1);
 
-   if (fM->fProjection == TEveCaloLego::k2D || rnrCtx.RefCamera().GetCamBase().GetBaseVec(1).Z() != 0)
-      fXAxisAtt.SetRelativeFontSize(kTRUE);
-   else
-      fXAxisAtt.SetRelativeFontSize(kFALSE);
+   if (!fM->fData->Empty())
+   {
+      if ( fM->fProjection == TEveCaloLego::k3D || rnrCtx.RefCamera().GetCamBase().GetBaseVec(1).Z() == 0)
+         DrawZScales3D(rnrCtx, eta0, eta1, phi0, phi1);
+
+      if (fM->fProjection == TEveCaloLego::k2D || rnrCtx.RefCamera().GetCamBase().GetBaseVec(1).Z() != 0)
+         fXAxisAtt.SetRelativeFontSize(kTRUE);
+      else
+         fXAxisAtt.SetRelativeFontSize(kFALSE);
+   }
+
    DrawXYScales(rnrCtx, eta0, eta1, phi0, phi1);
-
    glPopAttrib();
 }
 
@@ -1017,6 +1024,9 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 {
    // Draw the object.
 
+   if ( fM->fData && fM->fData->GetEtaBins() && fM->fData->GetPhiBins() == kFALSE )
+      return;
+
    fEtaAxis = fM->fData->GetEtaBins();
    fPhiAxis = fM->fData->GetPhiBins();
 
@@ -1029,12 +1039,9 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    else
       cells3D = kTRUE;
 
-   // init cached variables
+   // cached variable
    fDataMax = fM->GetMaxVal();
-   Int_t ondiv;
-   Double_t omin, omax;
-   THLimitsFinder::Optimize(0, fDataMax, fM->fNZSteps, omin, omax, ondiv,  fZAxisStep);
-
+ 
    // cache
    if (fM->fCellIdCacheOK == kFALSE)
    {
@@ -1044,8 +1051,6 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    if (cells3D && fDLCacheOK == kFALSE) MakeDisplayList();
 
    // modelview matrix
-   glPushMatrix();
-
    Double_t em, eM, pm, pM;
    fM->fData->GetEtaLimits(em, eM);
    fM->fData->GetPhiLimits(pm, pM);
@@ -1053,24 +1058,28 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    // scale due to shortest XY axis
    Double_t unit = ((eM-em) < (pM-pm)) ? (eM-em):(pM-pm);
 
+   glPushMatrix();
+
    // scale from rebinning
    Float_t sx = (eM-em)/fM->GetEtaRng();
    Float_t sy = (pM-pm)/fM->GetPhiRng();
-   glScalef(sx/unit, sy/unit, fM->GetValToHeight());
+   glScalef(sx/unit, sy/unit, fM->fData->Empty() ? 1: fM->GetValToHeight());
    glTranslatef(-fM->GetEta(), -fM->fPhi, 0);
 
    // draw cells
-   glPushAttrib(GL_LINE_BIT | GL_POLYGON_BIT);
-   glLineWidth(1);
-   glDisable(GL_LIGHTING);
-   glEnable(GL_NORMALIZE);
-   glEnable(GL_POLYGON_OFFSET_FILL);
-   glPushName(0);
-   glPolygonOffset(0.8, 1);
-   cells3D ? DrawCells3D(rnrCtx):DrawCells2D(rnrCtx);
-   glPopName();
-   glPopAttrib();
-
+   if (!fM->fData->Empty())
+   {
+      glPushAttrib(GL_LINE_BIT | GL_POLYGON_BIT);
+      glLineWidth(1);
+      glDisable(GL_LIGHTING);
+      glEnable(GL_NORMALIZE);
+      glEnable(GL_POLYGON_OFFSET_FILL);
+      glPushName(0);
+      glPolygonOffset(0.8, 1);
+      cells3D ? DrawCells3D(rnrCtx):DrawCells2D(rnrCtx);
+      glPopName();
+      glPopAttrib();
+   }
    // draw histogram base
    if (rnrCtx.Selection() == kFALSE && rnrCtx.Highlight() == kFALSE)
    {

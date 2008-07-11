@@ -161,6 +161,7 @@ public:
    virtual void    GetPhiLimits(Double_t &min, Double_t &max) const = 0;
 
    virtual Float_t GetMaxVal(Bool_t et) const { return et ? fMaxValEt : fMaxValE; }
+   Bool_t  Empty() const { return fMaxValEt < 1e-5; }
 
    virtual TAxis*  GetEtaBins()    const { return fEtaAxis; }
    virtual void    SetEtaBins(TAxis* ax) { fEtaAxis=ax; } 
