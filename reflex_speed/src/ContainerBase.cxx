@@ -13,14 +13,14 @@
 #define REFLEX_BUILD
 #endif
 
-#include "Reflex/internal/ContainerBase.h"
-#include "Reflex/internal/ContainerArena.h"
+#include "ContainerImplBase.h"
+#include "ContainerArena.h"
 #include <iostream>
 #include <cmath>
 
 
 //-------------------------------------------------------------------------------
-const int Reflex::Internal::ContainerBase::fgPrimeArraySqrt3[19] = {
+const int Reflex::Internal::ContainerImplBase::fgPrimeArraySqrt3[19] = {
 //-------------------------------------------------------------------------------
    2,7,23,71,223,673,2027,6089,18269,54829,164503,493523,1480571,4441721,
    13325171,39975553,119926691,359780077,1079340313
@@ -28,12 +28,12 @@ const int Reflex::Internal::ContainerBase::fgPrimeArraySqrt3[19] = {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::ContainerBase::ContainerBase(size_t nodeSize, size_t size):
+Reflex::Internal::ContainerImplBase::ContainerImplBase(size_t nodeSize, size_t size):
 //-------------------------------------------------------------------------------
    fBuckets(GetBucketSize(size)), fRehashPaused(false), fCollisions(0),
    fSize(0)
 {
-   // Initialize a ContainerBase with a minimum size.
+   // Initialize a ContainerImplBase with a minimum size.
    // The actual size will be the next element in fgPrimeArraySqrt3
    // greater or equal to the size given.
    fNodeArena = NodeArena::Instance(nodeSize);
@@ -41,7 +41,7 @@ Reflex::Internal::ContainerBase::ContainerBase(size_t nodeSize, size_t size):
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::ContainerBase::~ContainerBase() {
+Reflex::Internal::ContainerImplBase::~ContainerImplBase() {
 //-------------------------------------------------------------------------------
    // NEEDS TO BE DONE BY DERIVED CLASS!
    // The buckets d'tor needs to access the virtual DeleteNode()
@@ -52,7 +52,7 @@ Reflex::Internal::ContainerBase::~ContainerBase() {
 
 //-------------------------------------------------------------------------------
 size_t
-Reflex::Internal::ContainerBase::GetBucketSize(size_t requested) {
+Reflex::Internal::ContainerImplBase::GetBucketSize(size_t requested) {
 //-------------------------------------------------------------------------------
 // Static function returning the next element in fgPrimeArraySqrt3
 // greater of equal to requested.
@@ -74,7 +74,7 @@ Reflex::Internal::ContainerBase::GetBucketSize(size_t requested) {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Internal::ContainerBase::Rehash() {
+Reflex::Internal::ContainerImplBase::Rehash() {
 //-------------------------------------------------------------------------------
 // Resize fNodesList to reduce collisions. Check with NeedRehash() before
 // calling this function. We assume that we have reached the amoutn of collisions
@@ -115,7 +115,7 @@ Reflex::Internal::ContainerBase::Rehash() {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Internal::ContainerBase::Clear() {
+Reflex::Internal::ContainerImplBase::Clear() {
 //-------------------------------------------------------------------------------
    REFLEX_RWLOCK_W(fLock);
    RemoveAllNodes();
@@ -129,7 +129,7 @@ Reflex::Internal::ContainerBase::Clear() {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Internal::ContainerBase::InsertNode(Link* node, Hash_t hash) {
+Reflex::Internal::ContainerImplBase::InsertNode(Link* node, Hash_t hash) {
 //-------------------------------------------------------------------------------
 // Insert node with hash into the container. The hash defines
 // the container's bucket to store the node in.
@@ -148,7 +148,7 @@ Reflex::Internal::ContainerBase::InsertNode(Link* node, Hash_t hash) {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Internal::ContainerBase::GetStatistics(Statistics& stat) const {
+Reflex::Internal::ContainerImplBase::GetStatistics(Statistics& stat) const {
 //-------------------------------------------------------------------------------
 // Collect statistics about the collection, see the Statistics class.
 
@@ -192,9 +192,9 @@ Reflex::Internal::ContainerBase::GetStatistics(Statistics& stat) const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::ContainerBase_iterator::ContainerBase_iterator(
+Reflex::Internal::ContainerImplBase_iterator::ContainerImplBase_iterator(
    const LinkIter& linkiter, const LinkIter& bucketiter,
-   const ContainerBase_iterator& nextContainer):
+   const ContainerImplBase_iterator& nextContainer):
 //-------------------------------------------------------------------------------
 fLinkIter(linkiter), fBucketIter(bucketiter), fNextContainerBegin(0)
 {
@@ -206,14 +206,14 @@ fLinkIter(linkiter), fBucketIter(bucketiter), fNextContainerBegin(0)
    }
 
    if (nextContainer)
-      fNextContainerBegin = new ContainerBase_iterator(nextContainer);
+      fNextContainerBegin = new ContainerImplBase_iterator(nextContainer);
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::ContainerBase_iterator::ContainerBase_iterator(
-   const ContainerBase& container, const INodeHelper& helper,
-   const ContainerBase_iterator& nextContainer):
+Reflex::Internal::ContainerImplBase_iterator::ContainerImplBase_iterator(
+   const ContainerImplBase& container, const INodeHelper& helper,
+   const ContainerImplBase_iterator& nextContainer):
 //-------------------------------------------------------------------------------
    fBucketIter(container.Buckets().Begin()), fNextContainerBegin(0)
 {
@@ -224,19 +224,19 @@ Reflex::Internal::ContainerBase_iterator::ContainerBase_iterator(
    }
 
    if (nextContainer)
-      fNextContainerBegin = new ContainerBase_iterator(nextContainer);
+      fNextContainerBegin = new ContainerImplBase_iterator(nextContainer);
 }
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::ContainerBase_iterator::~ContainerBase_iterator() {
+Reflex::Internal::ContainerImplBase_iterator::~ContainerImplBase_iterator() {
 //-------------------------------------------------------------------------------
-// destruct a ContainerBase_iterator
+// destruct a ContainerImplBase_iterator
    delete fNextContainerBegin;
 }
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::ContainerBase_iterator&
-Reflex::Internal::ContainerBase_iterator::operator++() {
+Reflex::Internal::ContainerImplBase_iterator&
+Reflex::Internal::ContainerImplBase_iterator::operator++() {
 //-------------------------------------------------------------------------------
 // Prefix increment: move to next node, which might be in the next
 // bucket or even in the next container.
@@ -251,7 +251,7 @@ Reflex::Internal::ContainerBase_iterator::operator++() {
          fLinkIter = static_cast<ContainerTools::Bucket*>(fBucketIter.Curr())->Begin(fLinkIter.Helper(), fLinkIter.Arena());
       } else if (fNextContainerBegin) {
          // out of buckets, try next container
-         ContainerBase_iterator* tobedeleted = fNextContainerBegin;
+         ContainerImplBase_iterator* tobedeleted = fNextContainerBegin;
          *this = *fNextContainerBegin;
          delete tobedeleted;
       } else
