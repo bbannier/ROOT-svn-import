@@ -17,12 +17,15 @@
 #include "Reflex/Kernel.h"
 #include "Reflex/Type.h"
 #include "Reflex/Scope.h"
+#include "Reflex/Tools.h"
 
 namespace Reflex {
 
    namespace Internal {
       class CatalogImpl;
    }
+
+   template <typename T> class Collection;
 
    class RFLX_API Catalog {
    public:
@@ -33,6 +36,10 @@ namespace Reflex {
       Type ByTypeInfo(const std::type_info & ti) const;
       Scope ScopeByName(const std::string& name) const;
 
+      // iterator access
+      const Collection<Type>&  Types() const;
+      const Collection<Scope>& Scopes() const;
+
       // shortcut access:
       static Scope GlobalScope();
       static Type Get_int() {return Get(kINT);}
@@ -41,7 +48,7 @@ namespace Reflex {
 
 
    private:
-      const Internal::Catalog*    fCatalog;
+      const Internal::CatalogImpl* fImpl;
    };
 
 } // namespace Reflex

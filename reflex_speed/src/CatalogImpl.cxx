@@ -13,10 +13,11 @@
 #define REFLEX_BUILD
 #endif
 
-#include "Reflex/Catalog.h"
+#include "CatalogImpl.h"
+
 #include "Reflex/internal/ScopeName.h"
-#include "Namespace.h"
 #include "Reflex/EntityProperty.h"
+#include "Namespace.h"
 
 //-------------------------------------------------------------------------------
 Reflex::Catalog&

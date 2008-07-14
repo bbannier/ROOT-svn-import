@@ -13,6 +13,8 @@
 #define Reflex_ContainerImpl
 
 #include <string>
+#include "Reflex/Container.h"
+
 #include "ContainerImplBase.h"
 #include "ContainerArena.h"
 #include "ContainerNode.h"
@@ -111,7 +113,7 @@ namespace Internal {
    };
 
    template <typename KEY, typename VALUE, EUniqueness UNIQUENESS = kUNIQUE, class ADAPTOR = ContainerAdaptorT<KEY, VALUE> >
-   class RFLX_API ContainerImpl: public ContainerBase, public IContainerImpl {
+   class RFLX_API ContainerImpl: public ContainerImplBase, public IContainerImpl {
    private:
       class Node: public ContainerImplBase::Link {
       public:
@@ -318,82 +320,81 @@ namespace Internal {
 
    //-------------------------------------------------------------------------------
 
-   namespace Internal {
-      template <typename VALUE, class NODE>
-      class RFLX_API Container_const_iterator: public ContainerImplBase_iterator {
-      public:
-         typedef ContainerImplBase_iterator CBIter;
-         typedef ContainerTools::LinkIter LinkIter;
-         typedef ContainerTools::LinkIter BucketIter;
-         typedef ContainerTools::INodeHelper INodeHelper;
+   template <typename VALUE, class NODE>
+   class RFLX_API Container_const_iterator: public ContainerImplBase_iterator {
+   public:
+      typedef ContainerImplBase_iterator CBIter;
+      typedef ContainerTools::LinkIter LinkIter;
+      typedef ContainerTools::LinkIter BucketIter;
+      typedef ContainerTools::INodeHelper INodeHelper;
 
-         Container_const_iterator() {}
+      Container_const_iterator() {}
 
-         Container_const_iterator(const LinkIter& linkiter, const BucketIter& bucketiter,
-            const CBIter& nextContainer):
+      Container_const_iterator(const LinkIter& linkiter, const BucketIter& bucketiter,
+                               const CBIter& nextContainer):
          CBIter(linkiter, bucketiter, nextContainer) {}
 
-         Container_const_iterator(const ContainerImplBase& container, const INodeHelper& helper,
-            const CBIter& nextContainer):
+      Container_const_iterator(const ContainerImplBase& container, const INodeHelper& helper,
+                               const CBIter& nextContainer):
          CBIter(container, helper, nextContainer) {}
 
-         Container_const_iterator& operator++() {
-            CBIter::operator++();
-            return *this;
-         }
+      Container_const_iterator& operator++() {
+         CBIter::operator++();
+         return *this;
+      }
 
-         Container_const_iterator operator++(int) {
-            Container_const_iterator ret = *this;
-            CBIter::operator++();
-            return ret;
-         }
+      Container_const_iterator operator++(int) {
+         Container_const_iterator ret = *this;
+         CBIter::operator++();
+         return ret;
+      }
 
-         const NODE* Prev() const { return static_cast<NODE*>(CBIter::CurrentLink().Prev()); }
-         const NODE* Curr() const { return static_cast<NODE*>(CBIter::CurrentLink().Curr()); }
+      const NODE* Prev() const { return static_cast<NODE*>(CBIter::CurrentLink().Prev()); }
+      const NODE* Curr() const { return static_cast<NODE*>(CBIter::CurrentLink().Curr()); }
 
-         const VALUE* operator->() const { return &(Curr()->fObj); }
-         const VALUE& operator*() const  { return Curr()->fObj; }
-      }; // class Container_const_iterator
+      const VALUE* operator->() const { return &(Curr()->fObj); }
+      const VALUE& operator*() const  { return Curr()->fObj; }
+   }; // class Container_const_iterator
 
-      //-------------------------------------------------------------------------------
+   //-------------------------------------------------------------------------------
 
-      template <typename VALUE, class NODE>
-      class RFLX_API Container_iterator: public Container_const_iterator<VALUE, NODE> {
-      public:
-         typedef ContainerImplBase_iterator CBIter;
-         typedef ContainerTools::LinkIter LinkIter;
-         typedef ContainerTools::LinkIter BucketIter;
-         typedef ContainerTools::INodeHelper INodeHelper;
-         typedef Container_const_iterator<VALUE, NODE> ConstIter;
+   template <typename VALUE, class NODE>
+   class RFLX_API Container_iterator: public Container_const_iterator<VALUE, NODE> {
+   public:
+      typedef ContainerImplBase_iterator CBIter;
+      typedef ContainerTools::LinkIter LinkIter;
+      typedef ContainerTools::LinkIter BucketIter;
+      typedef ContainerTools::INodeHelper INodeHelper;
+      typedef Container_const_iterator<VALUE, NODE> ConstIter;
 
-         Container_iterator() {}
+      Container_iterator() {}
 
-         Container_iterator(const LinkIter& linkiter, const BucketIter& bucketiter,
-            const CBIter& nextContainer):
+      Container_iterator(const LinkIter& linkiter, const BucketIter& bucketiter,
+                         const CBIter& nextContainer):
          ConstIter(linkiter, bucketiter, nextContainer) {}
 
-         Container_iterator(const ContainerImplBase& container, const INodeHelper& helper,
-            const CBIter& nextContainer):
+      Container_iterator(const ContainerImplBase& container, const INodeHelper& helper,
+                         const CBIter& nextContainer):
          ConstIter(container, helper, nextContainer) {}
 
-         Container_iterator& operator++() {
-            CBIter::operator++();
-            return *this;
-         }
+      Container_iterator& operator++() {
+         CBIter::operator++();
+         return *this;
+      }
 
-         Container_iterator operator++(int) {
-            Container_iterator ret = *this;
-            CBIter::operator++();
-            return ret;
-         }
+      Container_iterator operator++(int) {
+         Container_iterator ret = *this;
+         CBIter::operator++();
+         return ret;
+      }
 
-         NODE* Prev() const { return static_cast<NODE*>(CBIter::CurrentLink().Prev()); }
-         NODE* Curr() const { return static_cast<NODE*>(CBIter::CurrentLink().Curr()); }
+      NODE* Prev() const { return static_cast<NODE*>(CBIter::CurrentLink().Prev()); }
+      NODE* Curr() const { return static_cast<NODE*>(CBIter::CurrentLink().Curr()); }
 
-         VALUE* operator->() const { return &(Curr()->fObj); }
-         VALUE& operator*() const  { return Curr()->fObj; }
-      }; // class Container_iterator
-   } // namespace Internal
+      VALUE* operator->() const { return &(Curr()->fObj); }
+      VALUE& operator*() const  { return Curr()->fObj; }
+   }; // class Container_iterator
+} // namespace Internal
 } // namespace Reflex
 
 #endif
