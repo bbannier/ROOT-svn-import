@@ -13,9 +13,9 @@
 #define Reflex_ContainerImpl
 
 #include <string>
-#include "Reflex/internal/ContainerBase.h"
-#include "Reflex/internal/ContainerArena.h"
-#include "Reflex/internal/ContainerNode.h"
+#include "ContainerImplBase.h"
+#include "ContainerArena.h"
+#include "ContainerNode.h"
 
 // re-hash level
 #ifndef REFLEX_CONTAINER_REHASH_LEVEL
@@ -111,9 +111,9 @@ namespace Internal {
    };
 
    template <typename KEY, typename VALUE, EUniqueness UNIQUENESS = kUNIQUE, class ADAPTOR = ContainerAdaptorT<KEY, VALUE> >
-   class RFLX_API ContainerImpl: public ContainerBase {
+   class RFLX_API ContainerImpl: public ContainerBase, public IContainerImpl {
    private:
-      class Node: public ContainerBase::Link {
+      class Node: public ContainerImplBase::Link {
       public:
          Node(const VALUE& obj): fObj(obj) {}
          VALUE  fObj;
@@ -138,12 +138,12 @@ namespace Internal {
 
       // Initialize a default container holding VALUE objects retrievable by KEY.
       // Allocate 17 chunks for now.
-      ContainerImpl(/*size_t size = 17*/): ContainerBase(sizeof(Node)) {};
+      ContainerImpl(/*size_t size = 17*/): ContainerImplBase(sizeof(Node)) {};
 
       // Initialize a default container holding VALUE objects retrievable by KEY.
       // Allocate psize chunks for now; psize the next element of fgPrimeArraySqrt3
       // greater or equal than the size parameter.
-      ContainerImpl(size_t size): ContainerBase(sizeof(Node), size) {}
+      ContainerImpl(size_t size): ContainerImplBase(sizeof(Node), size) {}
       // Destruct a container
       virtual ~ContainerImpl() {
          REFLEX_RWLOCK_W(fLock);
@@ -202,6 +202,31 @@ namespace Internal {
       // leave out const_iterator overloads as these are not part of the API anyway.
       iterator Begin() const { return iterator(*this, *GetNodeHelper(), End()); }
       iterator End() const { return iterator(); }
+
+      // NEED TO IMPLEMENT!!!
+      iterator RBegin() const { return iterator(*this, *GetNodeHelper(), End()); }
+      iterator REnd() const { return iterator(); }
+
+      virtual void ProxyBegin(ConstIteratorBase& i) const { i.SetImpl(new iterator(Begin(), true)); }
+      virtual void ProxyEnd(ConstIteratorBase& i) const {
+         static iterator sEnd = End();
+         i.SetImpl(new iterator(&sEnd, false));
+      }
+
+      virtual void ProxyRBegin(ConstIteratorBase& i) const { i.SetImpl(new iterator(RBegin(), true)); }
+      virtual void ProxyREnd(ConstIteratorBase& i) const {
+         static iterator sREnd = REnd();
+         i.SetImpl(new iterator(&sREnd, false));
+      }
+
+      // return the size of the container via the API
+      virtual size_t ProxySize() const { return Size(); }
+      virtual bool ProxyEmpty() const {
+         // return whether the container is empty via the API
+         return !Size();
+      }
+
+
 
       iterator Find(const KEY& key) const { return Find(key, fAdaptor.Hash(key)); }
       iterator Find(const KEY& key, Hash_t hash) const {
@@ -295,9 +320,9 @@ namespace Internal {
 
    namespace Internal {
       template <typename VALUE, class NODE>
-      class RFLX_API Container_const_iterator: public ContainerBase_iterator {
+      class RFLX_API Container_const_iterator: public ContainerImplBase_iterator {
       public:
-         typedef ContainerBase_iterator CBIter;
+         typedef ContainerImplBase_iterator CBIter;
          typedef ContainerTools::LinkIter LinkIter;
          typedef ContainerTools::LinkIter BucketIter;
          typedef ContainerTools::INodeHelper INodeHelper;
@@ -308,7 +333,7 @@ namespace Internal {
             const CBIter& nextContainer):
          CBIter(linkiter, bucketiter, nextContainer) {}
 
-         Container_const_iterator(const ContainerBase& container, const INodeHelper& helper,
+         Container_const_iterator(const ContainerImplBase& container, const INodeHelper& helper,
             const CBIter& nextContainer):
          CBIter(container, helper, nextContainer) {}
 
@@ -335,7 +360,7 @@ namespace Internal {
       template <typename VALUE, class NODE>
       class RFLX_API Container_iterator: public Container_const_iterator<VALUE, NODE> {
       public:
-         typedef ContainerBase_iterator CBIter;
+         typedef ContainerImplBase_iterator CBIter;
          typedef ContainerTools::LinkIter LinkIter;
          typedef ContainerTools::LinkIter BucketIter;
          typedef ContainerTools::INodeHelper INodeHelper;
@@ -347,7 +372,7 @@ namespace Internal {
             const CBIter& nextContainer):
          ConstIter(linkiter, bucketiter, nextContainer) {}
 
-         Container_iterator(const ContainerBase& container, const INodeHelper& helper,
+         Container_iterator(const ContainerImplBase& container, const INodeHelper& helper,
             const CBIter& nextContainer):
          ConstIter(container, helper, nextContainer) {}
 

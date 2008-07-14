@@ -67,7 +67,7 @@ namespace Reflex {
       // fast retrieval, and non-fragmentation of memory. Thread safety will be
       // implemented soon.
 
-      class ContainerImplBase: public IContainerImpl {
+      class ContainerImplBase {
       //-------------------------------------------------------------------------------
       //-------------------------------------------------------------------------------
       protected:
@@ -118,12 +118,6 @@ namespace Reflex {
          iterator RBegin(const INodeHelper& helper, const ContainerImplBase_iterator& prevContainer) const;
          iterator REnd() const;
 
-         virtual const IConstIteratorImpl& ProxyBegin() const;
-         virtual const IConstIteratorImpl& ProxyEnd() const;
-
-         virtual const IConstReverseIteratorImpl& ProxyRBegin() const;
-         virtual const IConstReverseIteratorImpl& ProxyREnd() const;
-
          // Reset the elements
          void Clear();
 
@@ -139,15 +133,10 @@ namespace Reflex {
          const BucketVector& Buckets() const { return fBuckets; }
          BucketVector& Buckets() { return fBuckets; }
 
-         virtual size_t Size() const {
+         size_t Size() const {
             // Number of elements stored in the container
             REFLEX_RWLOCK_R(fLock);
             return fSize;
-         }
-
-         virtual bool Empty() const {
-            // return whether the container is empty
-            return !Size();
          }
 
          // Statistics holder for the collection
@@ -188,7 +177,7 @@ namespace Reflex {
          NodeArena*    fNodeArena; // the container's node storage manager
          mutable ContainerImplBase* fNext; // next container (used for chained searches)
          mutable RWLock fLock; // Read/Write lock for this container
-         static const int fgPrimeArraySqrt3[19]; // a pre-computed array of prime numbers used for growing the buckets
+         static const size_t fgPrimeArraySqrt3[19]; // a pre-computed array of prime numbers used for growing the buckets
 
          friend class ContainerImplBase_iterator;
       }; // class ContainerImplBase
