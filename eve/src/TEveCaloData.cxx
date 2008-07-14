@@ -193,10 +193,10 @@ TEveCaloDataVec::TEveCaloDataVec(Int_t nslices):
    TEveCaloData(),
 
    fTower(0),
-   fEtaMin(0),
-   fEtaMax(0),
-   fPhiMin(0),
-   fPhiMax(0)
+   fEtaMin( 10),
+   fEtaMax(-10),
+   fPhiMin( 10),
+   fPhiMax(-10)
 {
    // Constructor.
 

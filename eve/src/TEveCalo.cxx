@@ -208,8 +208,13 @@ void TEveCaloViz::DataChanged()
    Double_t min, max, delta;
 
    fData->GetEtaLimits(min, max);
-   if (fEtaMin < min) fEtaMin = min;
-   if (fEtaMax > max) fEtaMax = max;
+   if (fAutoRange) {
+      fEtaMin = min;
+      fEtaMax = max;
+   } else {
+      if (fEtaMin < min) fEtaMin = min;
+      if (fEtaMax > max) fEtaMax = max;
+   }
 
    fData->GetPhiLimits(min, max);
    delta = 0.5*(max - min);
