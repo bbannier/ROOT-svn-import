@@ -1024,7 +1024,7 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 {
    // Draw the object.
 
-   if ( fM->fData && fM->fData->GetEtaBins() && fM->fData->GetPhiBins() == kFALSE )
+   if ( ! fM->fData || ! fM->fData->GetEtaBins() || ! fM->fData->GetPhiBins())
       return;
 
    fEtaAxis = fM->fData->GetEtaBins();
