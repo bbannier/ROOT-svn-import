@@ -16,8 +16,9 @@
 #include <string>
 
 #include "Reflex/Kernel.h"
-#include "Reflex/internal/RWLock.h"
-#include "Reflex/internal/ContainerBucket.h"
+
+#include "RWLock.h"
+#include "ContainerBucket.h"
 
 // re-hash level
 #ifndef REFLEX_CONTAINER_REHASH_LEVEL
@@ -117,11 +118,11 @@ namespace Reflex {
          iterator RBegin(const INodeHelper& helper, const ContainerImplBase_iterator& prevContainer) const;
          iterator REnd() const;
 
-         const IConstIteratorImpl& ProxyBegin() const = 0;
-         virtual const IConstIteratorImpl& ProxyEnd() const = 0;
+         virtual const IConstIteratorImpl& ProxyBegin() const;
+         virtual const IConstIteratorImpl& ProxyEnd() const;
 
-         virtual const IConstReverseIteratorImpl& ProxyRBegin() const = 0;
-         virtual const IConstReverseIteratorImpl& ProxyREnd() const = 0;
+         virtual const IConstReverseIteratorImpl& ProxyRBegin() const;
+         virtual const IConstReverseIteratorImpl& ProxyREnd() const;
 
          // Reset the elements
          void Clear();
