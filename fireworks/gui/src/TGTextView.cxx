@@ -549,9 +549,9 @@ void TGTextView::DrawRegion(Int_t x, Int_t y, UInt_t w, UInt_t h)
    Int_t yloc = rect.fY + (Int_t)fScrollVal.fY;
    pos.fY = ToObjYCoord(fVisible.fY + rect.fY);
 
-   while (pos.fY < line_count &&
-          yloc - fScrollVal.fY < (Int_t)fCanvas->GetHeight() &&
-          yloc  < rect.fY + rect.fHeight) {
+   while (pos.fY <= line_count &&
+          yloc - fScrollVal.fY <= (Int_t)fCanvas->GetHeight() &&
+          yloc <= rect.fY + rect.fHeight) {
 
       pos.fX = ToObjXCoord(fVisible.fX + rect.fX, pos.fY);
       xoffset = ToScrXCoord(pos.fX, pos.fY);
