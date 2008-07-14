@@ -9,8 +9,8 @@
 //
 // This software is provided "as is" without express or implied warranty.
 
-#ifndef Reflex_ContainerBase
-#define Reflex_ContainerBase
+#ifndef Reflex_ContainerImplBase
+#define Reflex_ContainerImplBase
 
 #include <vector>
 #include <string>
@@ -48,7 +48,7 @@ namespace Reflex {
          return StringHash(s.c_str());
       }
 
-      class ContainerBase_iterator;
+      class ContainerImplBase_iterator;
       namespace ContainerTools {
          class Link;
          class NodeArena;
@@ -59,14 +59,14 @@ namespace Reflex {
       //
       // Base class for Reflex::Container.
       // Contains the non-templated part of Reflex::Container (against code bloat).
-      // ContainerBase implements a hash map. It containes elements deriving from
-      // class ContainerBase::Link (e.g. Container::Node<T>).
+      // ContainerImplBase implements a hash map. It containes elements deriving from
+      // class ContainerImplBase::Link (e.g. Container::Node<T>).
       //
       // It provides memory management optimized for a large number of small elements,
       // fast retrieval, and non-fragmentation of memory. Thread safety will be
       // implemented soon.
 
-      class RFLX_API ContainerBase {
+      class ContainerImplBase: public IContainerImpl {
       //-------------------------------------------------------------------------------
       //-------------------------------------------------------------------------------
       protected:
@@ -75,13 +75,13 @@ namespace Reflex {
          typedef ContainerTools::BucketVector BucketVector;
          typedef ContainerTools::INodeHelper INodeHelper;
 
-         // Initialize a ContainerBase object giving its node size and an initialial 
+         // Initialize a ContainerImplBase object giving its node size and an initialial 
          // number of buckets. The number of buckets should be a prime for performance
          // reasons; check fgPrimeArraySqrt3 for precalculated, possibly optimal values.
-         ContainerBase(size_t nodeSize, size_t size = 17);
+         ContainerImplBase(size_t nodeSize, size_t size = 17);
 
-         // Destruct a ContainerBase
-         virtual ~ContainerBase();
+         // Destruct a ContainerImplBase
+         virtual ~ContainerImplBase();
 
          void InsertNode(Link* node, Hash_t hash);
 
@@ -109,18 +109,27 @@ namespace Reflex {
          static size_t GetBucketSize(size_t requested);
 
       public:
-         typedef ContainerBase_iterator iterator;
+         typedef ContainerImplBase_iterator iterator;
 
-         iterator Begin(const INodeHelper& helper, const ContainerBase_iterator& nextContainer) const;
+         iterator Begin(const INodeHelper& helper, const ContainerImplBase_iterator& nextContainer) const;
          iterator End() const;
+
+         iterator RBegin(const INodeHelper& helper, const ContainerImplBase_iterator& prevContainer) const;
+         iterator REnd() const;
+
+         const IConstIteratorImpl& ProxyBegin() const = 0;
+         virtual const IConstIteratorImpl& ProxyEnd() const = 0;
+
+         virtual const IConstReverseIteratorImpl& ProxyRBegin() const = 0;
+         virtual const IConstReverseIteratorImpl& ProxyREnd() const = 0;
 
          // Reset the elements
          void Clear();
 
          // Set the next container (for extending containers)
-         void SetNext(ContainerBase* next) const { fNext = next; }
+         void SetNext(ContainerImplBase* next) const { fNext = next; }
          // Get the next container (for extending containers)
-         ContainerBase* Next() const { return fNext; }
+         ContainerImplBase* Next() const { return fNext; }
 
          // Arena used for the collection's nodes
          NodeArena* Arena() const { return fNodeArena; }
@@ -129,10 +138,15 @@ namespace Reflex {
          const BucketVector& Buckets() const { return fBuckets; }
          BucketVector& Buckets() { return fBuckets; }
 
-         size_t Size() const {
+         virtual size_t Size() const {
             // Number of elements stored in the container
             REFLEX_RWLOCK_R(fLock);
             return fSize;
+         }
+
+         virtual bool Empty() const {
+            // return whether the container is empty
+            return !Size();
          }
 
          // Statistics holder for the collection
@@ -171,62 +185,62 @@ namespace Reflex {
          size_t        fCollisions; // number of nodes sharing a bucket with other nodes
          size_t        fSize; // number of elements this container holds
          NodeArena*    fNodeArena; // the container's node storage manager
-         mutable ContainerBase* fNext; // next container (used for chained searches)
+         mutable ContainerImplBase* fNext; // next container (used for chained searches)
          mutable RWLock fLock; // Read/Write lock for this container
          static const int fgPrimeArraySqrt3[19]; // a pre-computed array of prime numbers used for growing the buckets
 
-         friend class ContainerBase_iterator;
-      }; // class ContainerBase
+         friend class ContainerImplBase_iterator;
+      }; // class ContainerImplBase
 
 
       //-------------------------------------------------------------------------------
-      class ContainerBase_iterator {
+      class ContainerImplBase_iterator {
       public:
          typedef ContainerTools::Link Link;
          typedef ContainerTools::LinkIter LinkIter;
          typedef ContainerTools::LinkIter BucketIter;
          typedef ContainerTools::INodeHelper INodeHelper;
 
-         ContainerBase_iterator(): fNextContainerBegin(0) {}
+         ContainerImplBase_iterator(): fNextContainerBegin(0) {}
 
-         ContainerBase_iterator(const LinkIter& linkiter, const BucketIter& bucketiter,
-            const ContainerBase_iterator& nextContainer);
+         ContainerImplBase_iterator(const LinkIter& linkiter, const BucketIter& bucketiter,
+            const ContainerImplBase_iterator& nextContainer);
 
-         ContainerBase_iterator(const ContainerBase& container, const INodeHelper& helper,
-            const ContainerBase_iterator& nextContainer);
+         ContainerImplBase_iterator(const ContainerImplBase& container, const INodeHelper& helper,
+            const ContainerImplBase_iterator& nextContainer);
 
-         ~ContainerBase_iterator();
+         ~ContainerImplBase_iterator();
 
          operator bool() const { return fLinkIter; }
 
-         ContainerBase_iterator& operator++();
+         ContainerImplBase_iterator& operator++();
 
-         ContainerBase_iterator operator++(int) {
-            ContainerBase_iterator ret = *this;
+         ContainerImplBase_iterator operator++(int) {
+            ContainerImplBase_iterator ret = *this;
             ++(*this);
             return ret;
          }
 
-         bool operator == (const ContainerBase_iterator& rhs) const {
+         bool operator == (const ContainerImplBase_iterator& rhs) const {
             return (rhs.fLinkIter == fLinkIter);
          }
-         bool operator != (const ContainerBase_iterator& rhs) const {
+         bool operator != (const ContainerImplBase_iterator& rhs) const {
             return (rhs.fLinkIter != fLinkIter);
          }
 
          const LinkIter& CurrentLink() const { return fLinkIter; }
          const BucketIter& CurrentBucket() const { return fBucketIter; }
-         ContainerBase_iterator NextContainerBegin() const {
+         ContainerImplBase_iterator NextContainerBegin() const {
             if (fNextContainerBegin)
                return *fNextContainerBegin;
-            return ContainerBase_iterator();
+            return ContainerImplBase_iterator();
          }
 
       protected:
          LinkIter fLinkIter;
          BucketIter fBucketIter;
-         ContainerBase_iterator* fNextContainerBegin; // Begin() of the next container
-      }; // class ContainerBase_iterator
+         ContainerImplBase_iterator* fNextContainerBegin; // Begin() of the next container
+      }; // class ContainerImplBase_iterator
 
    } // namespace Internal
 
@@ -235,9 +249,9 @@ namespace Reflex {
 
 //-------------------------------------------------------------------------------
 inline
-Reflex::Internal::ContainerBase::iterator
-Reflex::Internal::ContainerBase::Begin(const INodeHelper& helper,
-                                       const ContainerBase_iterator& nextContainer) const {
+Reflex::Internal::ContainerImplBase::iterator
+Reflex::Internal::ContainerImplBase::Begin(const INodeHelper& helper,
+                                       const ContainerImplBase_iterator& nextContainer) const {
 //-------------------------------------------------------------------------------
    return iterator(*this, helper, nextContainer);
 }
@@ -245,8 +259,8 @@ Reflex::Internal::ContainerBase::Begin(const INodeHelper& helper,
 
 //-------------------------------------------------------------------------------
 inline
-Reflex::Internal::ContainerBase::iterator
-Reflex::Internal::ContainerBase::End() const {
+Reflex::Internal::ContainerImplBase::iterator
+Reflex::Internal::ContainerImplBase::End() const {
 //-------------------------------------------------------------------------------
  return iterator();
 }

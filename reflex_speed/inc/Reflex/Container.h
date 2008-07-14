@@ -13,6 +13,7 @@
 #define Reflex_Container
 
 #include <iterator>
+#include "Kernel.h"
 
 namespace Reflex {
 
@@ -24,7 +25,7 @@ namespace Reflex {
    //   scope.GetMembers().Begin()
 
    namespace Internal {
-      class IConstIteratorImpl {
+      class RFLX_API IConstIteratorImpl {
       public:
          virtual ~IConstIteratorImpl() {}
 
@@ -39,7 +40,7 @@ namespace Reflex {
 
       typedef IConstIteratorImpl IConstReverseIteratorImpl;
 
-      class ConstIteratorBase {
+      class RFLX_API ConstIteratorBase {
       public:
          ConstIteratorBase(IConstIteratorImpl* ii): fIter(ii) {}
          ~ConstIteratorBase(); // deletes fIter
@@ -50,7 +51,7 @@ namespace Reflex {
    }
 
    template <typename T>
-   class ConstIterator: public Internal::ConstIteratorBase, public std::iterator<std::bidirectional_iterator_tag, T> {
+   class RFLX_API ConstIterator: public Internal::ConstIteratorBase, public std::iterator<std::bidirectional_iterator_tag, T> {
    public:
       ConstIterator(Internal::IConstIteratorImpl* ii): Internal::ConstIteratorBase(ii) {}
 
@@ -67,7 +68,7 @@ namespace Reflex {
    };
 
    template <class T>
-   class ConstReverseIterator: public ConstIterator<T> {
+   class RFLX_API ConstReverseIterator: public ConstIterator<T> {
    public:
       ConstReverseIterator(Internal::IConstIteratorImpl* ii): ConstIterator<T>(ii) {}
 
@@ -82,24 +83,24 @@ namespace Reflex {
 
 
    namespace Internal {
-      class IContainerImpl {
+      class RFLX_API IContainerImpl {
       public:
          virtual ~IContainerImpl() {};
 
-         virtual IConstIteratorImpl& Begin() const = 0;
-         virtual IConstIteratorImpl& End() const = 0;
+         // gets copied into a ConstReverseIterator<T> by Container<T>
+         virtual const IConstIteratorImpl& ProxyBegin() const = 0;
+         virtual const IConstIteratorImpl& ProxyEnd() const = 0;
 
-         virtual IConstReverseIteratorImpl& RBegin() const = 0;
-         virtual IConstReverseIteratorImpl& REnd() const = 0;
+         virtual const IConstReverseIteratorImpl& ProxyRBegin() const = 0;
+         virtual const IConstReverseIteratorImpl& ProxyREnd() const = 0;
 
          virtual size_t Size() const = 0;
          virtual bool   Empty() const = 0;
       };
 
-      class ContainerBase {
+      class RFLX_API ContainerBase {
       public:
          ContainerBase(IContainerImpl* coll): fCont(coll) {}
-         ~ContainerBase(); // deletes fCont
 
       protected:
          Internal::IContainerImpl* fCont; // actual collection wrapper
@@ -107,7 +108,7 @@ namespace Reflex {
    }
 
    template <typename T>
-   class Container: public Internal::ContainerBase {
+   class RFLX_API Container: public Internal::ContainerBase {
    private:
       const Container* operator&() const;  // intentionally not implemented
       Container* operator&();  // intentionally not implemented
@@ -117,11 +118,11 @@ namespace Reflex {
    public:
       Container(Internal::IContainerImpl* coll): Internal::ContainerBase(coll) {}
          
-      ConstIterator<T> Begin() const { return (ConstIterator<T>&) fCont->Begin(); }
-      ConstIterator<T> End() const   { return (ConstIterator<T>&) fCont->End(); }
+      ConstIterator<T> Begin() const { return (ConstIterator<T>&) fCont->ProxyBegin(); }
+      ConstIterator<T> End() const   { return (ConstIterator<T>&) fCont->ProxyEnd(); }
 
-      ConstReverseIterator<T> RBegin() const { return (ConstReverseIterator<T>&) fCont->RBegin(); }
-      ConstReverseIterator<T> REnd() const { return (ConstReverseIterator<T>&) fCont->REnd(); }
+      ConstReverseIterator<T> RBegin() const { return (ConstReverseIterator<T>&) fCont->ProxyRBegin(); }
+      ConstReverseIterator<T> REnd() const { return (ConstReverseIterator<T>&) fCont->ProxyREnd(); }
 
       size_t Size() const  { return fCont->Size(); }
       bool   Empty() const { return fCont->Empty(); }
