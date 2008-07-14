@@ -1724,9 +1724,6 @@ void TGListTree::PDeleteItem(TGListTreeItem *item)
       MouseOver(0);
       MouseOver(0,fLastEventState);
    }
-   if (!fUserControlled) {
-      fCurrent = fBelowMouse = 0; // ???? WHY
-   }
 
    delete item; 
 }
@@ -1974,6 +1971,9 @@ Int_t TGListTree::DeleteItem(TGListTreeItem *item)
 {
    // Delete item from list tree.
 
+   if (!fUserControlled)
+      fCurrent = fBelowMouse = 0;
+
    PDeleteChildren(item);
    RemoveReference(item);
    PDeleteItem(item);
@@ -2043,13 +2043,8 @@ Int_t TGListTree::DeleteChildren(TGListTreeItem *item)
 {
    // Delete children of item from list.
 
-   if (!fUserControlled) {
-      //if (fCurrent)
-      //   DrawOutline(fId, fCurrent, 0xffffff, kTRUE);
-      //if (fBelowMouse)
-      //   DrawOutline(fId, fBelowMouse, 0xffffff, kTRUE);
-      fCurrent = fBelowMouse = 0; // ???? WHY? Now also done in PDeleteItem.
-   }
+   if (!fUserControlled)
+      fCurrent = fBelowMouse = 0;
 
    PDeleteChildren(item);
 
