@@ -9,8 +9,8 @@
 //
 // This software is provided "as is" without express or implied warranty.
 
-#ifndef Reflex_Catalog
-#define Reflex_Catalog
+#ifndef Reflex_CatalogImpl
+#define Reflex_CatalogImpl
 
 #include <string>
 #include <typeinfo>
@@ -21,8 +21,9 @@
 #include "Reflex/Tools.h"
 
 namespace Reflex {
+namespace Internal {
 
-   class Catalog;
+   class CatalogImpl;
 
    namespace Internal {
       class TypeName;
@@ -107,10 +108,10 @@ namespace Reflex {
    public:
       typedef Container<std::string, Type> TypeContainer_t;
 
-      TypeCatalog(const Catalog* catalog = 0): fCatalog(catalog) {}
+      TypeCatalog(const CatalogImpl* catalog = 0): fCatalog(catalog) {}
       ~TypeCatalog() {}
 
-      void SetCatalog(const Catalog* catalog) { fCatalog = catalog; };
+      void SetCatalog(const CatalogImpl* catalog) { fCatalog = catalog; };
 
       const TypeContainer_t& All() const { return fAllTypes; }
       Type ByName(const std::string& name) const;
@@ -130,7 +131,7 @@ namespace Reflex {
    private:
       typedef Container<const char*, Internal::PairTypeInfoType> TypeInfoTypeMap_t;
 
-      const Catalog*    fCatalog;
+      const CatalogImpl*    fCatalog;
       TypeContainer_t   fAllTypes;
       TypeInfoTypeMap_t fTypeInfoTypeMap;
    };
@@ -139,10 +140,10 @@ namespace Reflex {
    public:
       typedef Container<std::string, Scope>            ScopeContainer_t;
 
-      ScopeCatalog(const Catalog* catalog = 0): fCatalog(catalog) {}
+      ScopeCatalog(const CatalogImpl* catalog = 0): fCatalog(catalog) {}
       ~ScopeCatalog() {}
 
-      void SetCatalog(const Catalog* catalog) { fCatalog = catalog; };
+      void SetCatalog(const CatalogImpl* catalog) { fCatalog = catalog; };
 
       const ScopeContainer_t& All() const { return fAllScopes; }
       Scope ByName(const std::string& name) const;
@@ -154,13 +155,13 @@ namespace Reflex {
       static Scope GlobalScope();
 
    private:
-      const Catalog*    fCatalog;
+      const CatalogImpl*    fCatalog;
       ScopeContainer_t  fAllScopes;
    };
 
-   class Catalog {
+   class CatalogImpl {
    public:
-      static Catalog& Instance();
+      static CatalogImpl& Instance();
 
       const ScopeCatalog& Scopes() const {return fScopes;}
       const TypeCatalog&  Types() const  {return fTypes;}
@@ -173,12 +174,12 @@ namespace Reflex {
       ScopeCatalog& Scopes() {return fScopes;}
       TypeCatalog&  Types()  {return fTypes;}
 
-      Catalog() { fScopes.SetCatalog(this); fTypes.SetCatalog(this); }
-      ~Catalog() {}
+      CatalogImpl() { fScopes.SetCatalog(this); fTypes.SetCatalog(this); }
+      ~CatalogImpl() {}
       ScopeCatalog fScopes;
       TypeCatalog  fTypes;
    };
-
-}
+} // namespace Internal
+} // namespace Reflex
 
 #endif

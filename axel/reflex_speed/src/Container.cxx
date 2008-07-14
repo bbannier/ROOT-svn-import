@@ -19,6 +19,6 @@
 Reflex::Internal::ConstIteratorBase::~ConstIteratorBase(){
 //-------------------------------------------------------------------------------
 // Deletes the interator implementation
-   delete fIter;
+   if (fDeleteImpl) delete fImpl;
 }
 

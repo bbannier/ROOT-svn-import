@@ -30,7 +30,6 @@ namespace Reflex {
          virtual ~IConstIteratorImpl() {}
 
          virtual bool operator==(const IConstIteratorImpl& other) const = 0;
-         virtual bool operator!=(const IConstIteratorImpl& other) const = 0;
 
          virtual IConstIteratorImpl& operator++() = 0;
          virtual IConstIteratorImpl& operator--() = 0;
@@ -41,30 +40,37 @@ namespace Reflex {
       typedef IConstIteratorImpl IConstReverseIteratorImpl;
 
       class RFLX_API ConstIteratorBase {
-      public:
-         ConstIteratorBase(IConstIteratorImpl* ii): fIter(ii) {}
-         ~ConstIteratorBase(); // deletes fIter
+         ConstIteratorBase(IConstIteratorImpl* ii, bool owned = true):
+            fDeleteImpl(owned), fImpl(ii) {}
+         ~ConstIteratorBase();
+
+         void SetImpl(IConstIteratorImpl* impl, bool owned = true) {
+            fImpl = impl; fDeleteImpl = owned;
+         }
+
+         bool operator==(const ConstIteratorBase& other) const { return  fImpl->operator==(*other.fImpl); }
+         bool operator!=(const ConstIteratorBase& other) const { return !fImpl->operator==(*other.fImpl); }
 
       protected:
-         IConstIteratorImpl* fIter;
+         bool fDeleteImpl; // whether to delete fImpl in the destructor usually false for End()
+         IConstIteratorImpl* fImpl; // collection's implementation of the interface
       };
    }
 
    template <typename T>
-   class RFLX_API ConstIterator: public Internal::ConstIteratorBase, public std::iterator<std::bidirectional_iterator_tag, T> {
+   class RFLX_API ConstIterator: public Internal::ConstIteratorBase,
+                                 public std::iterator<std::bidirectional_iterator_tag, T> {
    public:
-      ConstIterator(Internal::IConstIteratorImpl* ii): Internal::ConstIteratorBase(ii) {}
+      ConstIterator(Internal::IConstIteratorImpl* ii, bool owned = true):
+         Internal::ConstIteratorBase(ii, owned) {}
 
-      bool operator==(const ConstIterator& other) const { return *fIter == *other.fIter; }
-      bool operator!=(const ConstIterator& other) const { return *fIter != *other.fIter; }
-
-      ConstIterator& operator++() { ++(*fIter); return *this; }
-      ConstIterator& operator--() { --(*fIter); return *this; }
+      ConstIterator& operator++() { fImpl->operator++(); return *this; }
+      ConstIterator& operator--() { fImpl->operator--(); return *this; }
       ConstIterator  operator++(int) { ConstIterator ret(*this); ++(*this); return ret; }
       ConstIterator  operator--(int) { ConstIterator ret(*this); --(*this); return ret; }
 
-      const T& operator* () const { return *(T*) fIter->operator->(); }
-      const T* operator->() const { return  (T*) fIter->operator->(); }
+      const T* operator->() const { return  (T*) fImpl->operator->(); }
+      const T& operator* () const { return *operator->(); }
    };
 
    template <class T>
@@ -88,14 +94,14 @@ namespace Reflex {
          virtual ~IContainerImpl() {};
 
          // gets copied into a ConstReverseIterator<T> by Container<T>
-         virtual const IConstIteratorImpl& ProxyBegin() const = 0;
-         virtual const IConstIteratorImpl& ProxyEnd() const = 0;
+         virtual void ProxyBegin(ConstIteratorBase& i) const = 0;
+         virtual void ProxyEnd(ConstIteratorBase& i) const = 0;
 
-         virtual const IConstReverseIteratorImpl& ProxyRBegin() const = 0;
-         virtual const IConstReverseIteratorImpl& ProxyREnd() const = 0;
+         virtual void ProxyRBegin(ConstIteratorBase& ) const = 0;
+         virtual void ProxyREnd(ConstIteratorBase& ) const = 0;
 
-         virtual size_t Size() const = 0;
-         virtual bool   Empty() const = 0;
+         virtual size_t ProxySize() const = 0;
+         virtual bool   ProxyEmpty() const = 0;
       };
 
       class RFLX_API ContainerBase {
@@ -118,14 +124,14 @@ namespace Reflex {
    public:
       Container(Internal::IContainerImpl* coll): Internal::ContainerBase(coll) {}
          
-      ConstIterator<T> Begin() const { return (ConstIterator<T>&) fCont->ProxyBegin(); }
-      ConstIterator<T> End() const   { return (ConstIterator<T>&) fCont->ProxyEnd(); }
+      ConstIterator<T> Begin() const { ConstIterator<T> ret; fCont->ProxyBegin(ret); return ret; }
+      ConstIterator<T> End() const   { ConstIterator<T> ret; fCont->ProxyEnd(ret);   return ret; }
 
-      ConstReverseIterator<T> RBegin() const { return (ConstReverseIterator<T>&) fCont->ProxyRBegin(); }
-      ConstReverseIterator<T> REnd() const { return (ConstReverseIterator<T>&) fCont->ProxyREnd(); }
+      ConstReverseIterator<T> RBegin() const { ConstReverseIterator<T> ret; fCont->ProxyRBegin(ret); return ret; }
+      ConstReverseIterator<T> REnd() const   { ConstReverseIterator<T> ret; fCont->ProxyREnd(ret);   return ret; }
 
-      size_t Size() const  { return fCont->Size(); }
-      bool   Empty() const { return fCont->Empty(); }
+      size_t Size() const  { return fCont->ProxySize(); }
+      bool   Empty() const { return fCont->ProxyEmpty(); }
    };
 
 } // namespace Reflex

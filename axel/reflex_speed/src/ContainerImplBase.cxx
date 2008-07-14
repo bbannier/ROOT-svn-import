@@ -20,7 +20,7 @@
 
 
 //-------------------------------------------------------------------------------
-const int Reflex::Internal::ContainerImplBase::fgPrimeArraySqrt3[19] = {
+const size_t Reflex::Internal::ContainerImplBase::fgPrimeArraySqrt3[19] = {
 //-------------------------------------------------------------------------------
    2,7,23,71,223,673,2027,6089,18269,54829,164503,493523,1480571,4441721,
    13325171,39975553,119926691,359780077,1079340313
@@ -82,7 +82,7 @@ Reflex::Internal::ContainerImplBase::Rehash() {
 // by at least (Rehash level * Rehash level); the new size will be the next
 // prime larger than the current size * (Rehash level * Rehash level).
    REFLEX_RWLOCK_W(fLock);
-   int newSize = fBuckets.size() * REFLEX_CONTAINER_REHASH_LEVEL;
+   size_t newSize = fBuckets.size() * REFLEX_CONTAINER_REHASH_LEVEL;
    int i = 0;
    while (i < 19 && fgPrimeArraySqrt3[i] < newSize) ++i;
    if (i == 19) // exceeds max supported entries...
@@ -156,7 +156,7 @@ Reflex::Internal::ContainerImplBase::GetStatistics(Statistics& stat) const {
    int maxcoll = 0;
    double squared = 0.;
    const ContainerTools::Bucket* maxcollisionbucket = 0;
-   for (long b = 0; b < fBuckets.size(); ++b) {
+   for (size_t b = 0; b < fBuckets.size(); ++b) {
       const Link* p = 0;
       const Link* c = fBuckets[b].fFirst.Next(0);
       int listEntries = 0;
