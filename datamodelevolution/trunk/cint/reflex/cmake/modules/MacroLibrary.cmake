@@ -1,0 +1,3 @@
+INCLUDE(MacroEnsureOutOfSourceBuild)
+INCLUDE(MacroFindPackageIf)
+INCLUDE(MacroGenreflex)
