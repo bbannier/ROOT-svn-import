@@ -44,7 +44,7 @@ ClassImp(TMVA::SimulatedAnnealing)
 //_______________________________________________________________________
 TMVA::SimulatedAnnealing::SimulatedAnnealing( IFitterTarget& target, const std::vector<Interval*>& ranges )
    : fFitterTarget          ( target ),
-     fRandom                ( new TRandom3(100) ),
+     fRandom                ( new TRandom3(100/*0*/) ),
      fRanges                ( ranges ),
      fMaxCalls              ( 500000 ),
      fInitialTemperature    ( 1000 ),
@@ -390,7 +390,8 @@ Double_t TMVA::SimulatedAnnealing::Minimize( std::vector<Double_t>& parameters )
             bestFit = currentFit;
          }
       }
-      else ReWriteParameters( oldParameters, parameters ); //we never try worse parameters
+      //else ReWriteParameters( oldParameters, parameters ); //we never try worse parameters
+      else parameters=oldParameters;
 
       currentTemperature-=(startingTemperature - fEps)/optimizeCalls;
    }
