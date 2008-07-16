@@ -157,7 +157,6 @@ TXNetFile::~TXNetFile()
       Close(0);
 
    SafeDelete(fInitMtx);
-   SafeDelete(fClient);
 }
 
 //_____________________________________________________________________________
@@ -246,6 +245,7 @@ void TXNetFile::CreateXClient(const char *url, Option_t *option, Int_t netopt,
 #endif
 
    fClient = 0;
+   fNetopt = netopt;
 
    // Set the timeout (default 999999999 secs, i.e. far, far in the future)
    gSystem->Setenv("XRDCLIENTMAXWAIT", Form("%d",TFile::GetOpenTimeout()));
@@ -862,7 +862,7 @@ void TXNetFile::Init(Bool_t create)
    if (fIsRootd) {
       if (gDebug > 1)
          Info("Init","rootd: calling directly TFile::Init");
-      return TFile::Init(create);
+      return TNetFile::Init(create);
    }
 
    if (fClient) {
@@ -881,6 +881,8 @@ void TXNetFile::Init(Bool_t create)
          bool usecachesave = fClient->UseCache(0);
          // Note that Init will trigger recursive calls
          TFile::Init(create);
+         // so TFile::IsOpen() returns true when in TFile::~TFile
+         fD = -2;
          // Restore requested behaviour
          fClient->UseCache(usecachesave);
 
@@ -971,9 +973,17 @@ void TXNetFile::Close(const Option_t *opt)
       return;
    }
 
+   if (!fClient) return;
+
    TFile::Close(opt);
 
    fIsRootd = kFALSE;
+
+   if (IsOpen())
+      fClient->Close();
+   SafeDelete(fClient);
+
+   fD = -1;  // so TFile::IsOpen() returns false when in TFile::~TFile
 }
 
 //_____________________________________________________________________________
@@ -1028,8 +1038,15 @@ Int_t TXNetFile::SysStat(Int_t fd, Long_t *id, Long64_t *size, Long_t *flags,
 
    if (fIsRootd) {
       if (gDebug > 1)
-         Info("SysStat","Calling TNetFile::SysStat");
+         Info("SysStat", "calling TNetFile::SysStat");
       return TNetFile::SysStat(fd, id, size, flags, modtime);
+   }
+
+   if (!IsOpen()) {
+      if (gDebug > 1)
+         Info("SysStat", "could not stat remote file, file not open");
+      *id = -1;
+      return 1;
    }
 
    // Return file stat information. The interface and return value is
@@ -1044,13 +1061,8 @@ Int_t TXNetFile::SysStat(Int_t fd, Long_t *id, Long64_t *size, Long_t *flags,
          Info("SysStat", "got stats = %ld %lld %ld %ld",
                          *id, *size, *flags, *modtime);
    } else {
-      if (gDebug > 1) {
-         if (!IsOpen())
-            Info("SysStat", "could not stat remote file. File not open.");
-         else
-            Info("SysStat", "could not stat remote file");
-      }
-
+      if (gDebug > 1)
+         Info("SysStat", "could not stat remote file");
       *id = -1;
       return 1;
    }
@@ -1094,16 +1106,24 @@ Int_t TXNetFile::SysOpen(const char* pathname, Int_t flags, UInt_t mode)
       return TNetFile::SysOpen(pathname, flags, mode);
    }
 
-   // url is not needed because already stored
-   // fOption is set in TFile::ReOpen
-   Open(fOption.Data(), kFALSE);
+   if (!fClient) {
+
+      // Create an instance of XrdClient
+      CreateXClient(fUrl.GetUrl(), fOption, fNetopt, kFALSE);
+
+   } else {
+
+      // url is not needed because already stored
+      // fOption is set in TFile::ReOpen
+      Open(fOption.Data(), kFALSE);
+   }
 
    // If not successful, flag it
    if (!IsOpen())
       return -1;
 
    // This means ok for net files
-   return -2;
+   return -2;  // set as fD in ReOpen
 }
 
 //_____________________________________________________________________________
@@ -1311,6 +1331,7 @@ void TXNetFile::ResetCache()
 Int_t TXNetFile::GetBytesToPrefetch() const
 {
    // Max number of bytes to prefetch.
+
 #ifndef OLDXRDLOCATE
    Int_t size;
    Long64_t bytessubmitted, byteshit, misscount, readreqcnt;
@@ -1331,7 +1352,8 @@ Int_t TXNetFile::GetBytesToPrefetch() const
 //______________________________________________________________________________
 void TXNetFile::Print(Option_t *option) const
 {
-   // Print the local statistics
+   // Print the local statistics.
+
 #ifndef OLDXRDLOCATE
   Printf("TXNetFile caching information:\n");
 

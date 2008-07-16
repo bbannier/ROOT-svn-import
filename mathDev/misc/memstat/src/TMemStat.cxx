@@ -9,94 +9,88 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-//______________________________________________________________________________
-/* Begin_Html
-<center><h2>Mem stat class</h2></center>
-TMemStat  - class for visualization of the memory usage
-<p>
+////////////////////////////////////////////////////////////////////////////////
+/* BEGIN_HTML
+<center><h2>The TMemStat class</h2></center>
+TMemStat  - a class for visualization of the memory usage.
+<br/>
 Principle:
-Hook functions for alloc and free are used.
-All calls to alloc (new) and free (delete) are catched and the statistical information is collected.
-The information is collected per stack trace (Unique identifier and per functions). Following informations are collected as function of time:
+Hook functions for malloc and free are used.
+All calls to malloc and free are caught and the statistical information is collected.
+The information is collected per stack trace (Unique identifier and per functions).<br/>
+Following information are collected as function of time:
 <ul>
-<li>Total number of allocations </li>
-<li>Total allocation size </li>
-<li>Allocation count </li>
-<li>Allocation size </li>
+    <li>Total number of allocations</li>
+    <li>Total allocation size</li>
+    <li>Allocation count</li>
+    <li>Allocation size</li>
 </ul>
-
-How to use it:
- <n> Create memstat object
- TMemStat memstat(autoStamSize=10000, autoStampCount=1000);
- <ul>
- <li> autoStamSize - The increase - decrease of size of memory after which stamps are generated  </li>
- <li>  autoStampCount - The increase - decrease of memory allocation counter after which stamps are generated</li>
- </ul>
-User request for adding the named memory stamp is supported.
-<p> memstat.AddStamp("mystamp")
-<p>
-
-The file "memstat.root" is created after destruction of object.
+How to use it:<br/>
+To create a memstat object use the following:
+<pre>
+    TMemStat memstat("new");
+</pre>
+Possible options:
+<ul>
+    <li> "new" - Start new data collection. In the current release a hard-coded "memstat.root" file will be created or overwritten if exists.</li>
+    <li> "read" - "read" - analyze previously collected data.</li>
+    <li>"gnubuildin" - if declared, then TMemStat will use gcc build-in function, otherwise glibc backtrace will be used.</li>
+</ul>
+A user may want to request for adding the named memory stamp:
+<pre>
+    memstat.AddStamp("STEMPNAME")
+</pre>
+The file "memstat.root" is created after destruction of object.<br/>
 This class supports following  functions for standard user:
 <ul>
-<li> constructor - TMemStat memstat.(filename) </li>
-<li> Report </li>
-<li> Draw </li>
-<li> SelectCode(libname, functionname) </li>
-<li> SelectStack() </li>
+    <li> Report </li>
+    <li> Draw </li>
+    <li> SelectCode(libname, functionname) </li>
+    <li> SelectStack() </li>
 </ul>
 The various format options to draw a Graph  can be accessed calling
-<p>
+<pre>
     TMemStat memstat;
-<p>
     memstat.Report("?")
+</pre>
 
-
-<p>
-Supported options:
+Supported options for TMemStat::Report:
 <ul>
-<li> order     : 0 - increasing 1 - decreasing</li>
-<li> sortstat  : 0 - TotalAllocCount 1 -  TotalAlocSize  2 - AllocCount 3 - AllocSize</li>
-<li> sortstamp : 0 - Current 1 -  MaxSize  2 - MaxCount</li>
-<li> sortdeep  : (0-inf) number of info to print</li>
-<li> stackdeep : (0-inf) deepnes of stack</li>
-<li> Example   : order 0 sortstat 3 sortstamp 0 sortdeep 10 stackdeep 5 maxlength 50 </li>
-
+    <li> order     : 0 - increasing 1 - decreasing</li>
+    <li> sortstat  : 0 - TotalAllocCount 1 -  TotalAlocSize  2 - AllocCount 3 - AllocSize</li>
+    <li> sortstamp : 0 - Current 1 -  MaxSize  2 - MaxCount</li>
+    <li> sortdeep  : (0-inf) number of info to print</li>
+    <li> stackdeep : (0-inf) deepness of stack</li>
+    <li> Example   : order 0 sortstat 3 sortstamp 0 sortdeep 10 stackdeep 5 maxlength 50 </li>
 </ul>
-<p>
+
 
 The picture below gives an example:
-End_Html
-Begin_Macro(source)
+END_HTML
+BEGIN_MACRO(source)
 {
-   TCanvas *c1 = new TCanvas("c1","A Simple MemStat Example",200,10,700,1000);
+   {
+      TMemStat memstat("new,gnubuildin");
 
-   TMemStat *memstat = new TMemStat("new");
-   for (Int_t i=0;i<11000;i++) {
-      TObjString * object = new TObjString(Form("Object%d",i));
-      if (i%2) delete object;
+      for (Int_t i=0;i<11000;i++) {
+         TObjString * object = new TObjString(Form("Object%d",i));
+         if (i%2) delete object;
+      }
+      for (Int_t i=0;i<12000;i++) {
+         TString * object2 = new TString(i);
+         if (i%2) delete object2;
+      }
+      for (Int_t i=0;i<1300;i++) {
+         TClonesArray  *array = new TClonesArray("TVectorD");
+         //array.ExpandCreatFast(i);
+      }
    }
-   for (Int_t i=0;i<12000;i++) {
-      TString * object2 = new TString(i);
-      if (i%2) delete object2;
-   }
-   for (Int_t i=0;i<1300;i++) {
-      TClonesArray  *array = new TClonesArray("TVectorD");
-      //array.ExpandCreatFast(i);
-   }
-   delete memstat;
-   memstat = new TMemStat();
-   c1->Divide(1,2);
-   c1->cd(1);
-   memstat->Report("order 0 sortstat 2 sortstamp 1 sortdeep 10 stackdeep 5 maxlength 50");
-   memstat->Draw("order 0 sortstat 2 sortstamp 1 sortdeep 10 stackdeep 5 maxlength 50");
-   c1->cd(2);
-   memstat->Report("order 0 sortstat 3 sortstamp 2 sortdeep 10 stackdeep 5 maxlength 50");
-   memstat->Draw("order 0 sortstat 3 sortstamp 2 sortdeep 10 stackdeep 5 maxlength 50");
 
-   return c1;
+   TMemStat report;
+   report->Report();
 }
-End_Macro */
+END_MACRO */
+////////////////////////////////////////////////////////////////////////////////
 
 // STD
 #include <map>
@@ -148,7 +142,7 @@ struct SFillSelection: public binary_function<
       case TMemStat::kFunction:
          return _code_info.fFunction.Data();
       case TMemStat::kLibrary:
-         // we need only names of libraies
+         // we need only names of libraries
          return gSystem->BaseName(_code_info.fLib.Data());
       default:
          return string();
@@ -191,7 +185,7 @@ TMemStat::TMemStat(Option_t* option):
 
    //preserve context. When exiting will restore the current directory
    TDirectory::TContext context(gDirectory);
-   
+
    string opt(option);
    transform( opt.begin(), opt.end(), opt.begin(),
               Memstat::ToLower_t() );
@@ -222,7 +216,6 @@ TMemStat::TMemStat(Option_t* option):
    {
       Error("TMemStat", "Invalid option");
    }
-
 }
 
 //______________________________________________________________________________
@@ -467,7 +460,7 @@ void TMemStat::PrintStack(Int_t nentries, UInt_t deep) const
 {
    // Print information about n selected stack traces
    // If the number of function selected is bigger than number n
-   // the only top (sorted accoring some creteria,) n are displayed
+   // the only top (sorted according some criteria) n are displayed
    // e.g draw.SortCode(TMemStat::kAllocSize,TMemStat::kCurrent);
    if (fSelectedStackIndex.empty())
       return;
@@ -522,7 +515,7 @@ void TMemStat::Report(Option_t* option)
    // sortstat  : 0 - TotalAllocCount 1 -  TotalAlocSize  2 - AllocCount 3 - AllocSize
    // sortstamp : 0 - Current 1 -  MaxSize  2 - MaxCount
    // sortdeep  : (0-inf) number of info to print
-   // stackdeep : (0-inf) deepnes of stack
+   // stackdeep : (0-inf) deepness of stack
    // Example   : order 0 sortstat 3 sortstamp 0 sortdeep 10 stackdeep 5 maxlength 50
 
    ProcessOption(option);
@@ -594,7 +587,7 @@ void TMemStat::SelectCode(const char *contlib, const char *contfunction, OperTyp
    // select code with given mask
    // contlib       - select only code containing contlib in library path
    // contfunction  - select only code with function name containing contfunction
-   // oType         - logiacal operation - AND and Or is suported
+   // oType         - logical operation - AND and Or is supported
    // By default all code is enabled
 
    if (!fManager) {
@@ -652,7 +645,7 @@ void TMemStat::SelectCode(const char *contlib, const char *contfunction, OperTyp
 //______________________________________________________________________________
 void TMemStat::SelectStack(OperType oType)
 {
-   // select stack containig the selected code
+   // select stack containing the selected code
    // oType - And and OR is supported (AND, OR in respect with previous selection)
 
    if (!fSelectedCodeBitmap || !fManager)
@@ -1009,7 +1002,7 @@ void TMemStat::MakeCodeArray()
 //______________________________________________________________________________
 void TMemStat::MakeStackArray()
 {
-   //   PRIVATE: make code index accoring tbit mask
+   //   PRIVATE: make code index according tbit mask
 
    if (!fManager)
       return;
@@ -1181,7 +1174,7 @@ TGraph *TMemStat::MakeGraph(StatType statType, Int_t id, Int_t type, Double_t &x
       sWhatName = "AllocSize (MBy)";
       break;
    case kUndef:
-      // TODO: check this case; in originalk code it wasn't handled
+      // TODO: check this case; in original code it wasn't handled
       break;
    }
    ostringstream ssWhere;

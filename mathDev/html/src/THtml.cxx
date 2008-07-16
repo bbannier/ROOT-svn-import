@@ -265,6 +265,13 @@ bool THtml::TFileDefinition::GetFileName(const TClass* cl, bool decl, TString& o
       // check that clfile doesn't start with one of the include paths;
       // that's not what we want (include/TObject.h), we want the actual file
       // if it exists (core/base/inc/TObject.h)
+
+      // special case for TMath namespace:
+      if (clfile == "include/TMathBase.h") {
+         clfile = "math/mathcore/inc/TMath.h";
+         out_filename = clfile;
+      }
+
       TString inclDir;
       TString inclPath(GetOwner()->GetPathInfo().fIncludePath);
       Ssiz_t pos = 0;
@@ -342,6 +349,7 @@ bool THtml::TFileDefinition::GetFileName(const TClass* cl, bool decl, TString& o
             // of course there are exceptions from the exceptions:
             // TComplex and TRandom, TRandom1,...
             if (strcmp(cl->GetName(), "TComplex")
+                && strcmp(cl->GetName(), "TMath")
                 && strncmp(cl->GetName(), "TRandom", 7)) {
                out_filename = "";
                return false;
@@ -383,6 +391,7 @@ bool THtml::TFileDefinition::GetFileName(const TClass* cl, bool decl, TString& o
 
    if (possiblePath.Length())
       ExpandSearchPath(possiblePath);
+   else possiblePath=".";
 
    out_fsys = gSystem->FindFile(possiblePath, possibleFileName, kReadPermission);
    if (out_fsys.Length()) return true;
@@ -1410,7 +1419,8 @@ void THtml::CreateListOfClasses(const char* filter)
 
    // start from begining
    gClassTable->Init();
-
+   if (filter && (!filter[0] || !strcmp(filter, "*")))
+      filter = ".*";
    TString reg = filter;
    TPMERegexp re(reg);
 
@@ -1427,6 +1437,8 @@ void THtml::CreateListOfClasses(const char* filter)
       // want those classes without decl file name!
       TClass *classPtr = TClass::GetClass((const char *) cname, kTRUE);
       if (!classPtr) continue;
+
+      Bool_t matchesSelection = re.Match(s);
 
       TString hdr;
       TString hdrFS;
@@ -1446,8 +1458,8 @@ void THtml::CreateListOfClasses(const char* filter)
       if (!hdrFS.Length()) {
          if (!GetFileDefinition().GetDeclFileName(classPtr, hdr, hdrFS)) {
             // we don't even know where the class is defined;
-            // just skip
-            if (!classPtr->GetDeclFileName() || !strstr(classPtr->GetDeclFileName(),"prec_stl/"))
+            // just skip. Silence if it doesn't match the selection anyway
+            if (matchesSelection && (!classPtr->GetDeclFileName() || !strstr(classPtr->GetDeclFileName(),"prec_stl/")))
                Warning("CreateListOfClasses",
                   "Cannot determine declaration file name for %s!", cname);
             continue;
@@ -1477,7 +1489,7 @@ void THtml::CreateListOfClasses(const char* filter)
          cdi->SetHtmlFileName(htmlfilename);
       }
 
-      cdi->SetSelected(!(filter && filter[0] && strcmp(filter,"*") && !re.Match(s)));
+      cdi->SetSelected(matchesSelection);
 
       TString modulename;
       GetModuleDefinition().GetModule(classPtr, modulename);
@@ -1579,6 +1591,13 @@ void THtml::CreateListOfClasses(const char* filter)
 
    if (fProductName == "(UNKNOWN PRODUCT)")
       Warning("CreateListOfClasses", "Product not set. You should call gHtml->SetProduct(\"MyProductName\");");
+
+   if (fDocEntityInfo.fModules.GetEntries() == 1
+      && fDocEntityInfo.fModules.At(0)->GetName()
+      && !strcmp(fDocEntityInfo.fModules.At(0)->GetName(), "(UNKNOWN)"))
+      // Only one module, and its name is not known.
+      // Let's call it "MAIN":
+      ((TModuleDocInfo*) fDocEntityInfo.fModules.At(0))->SetName("MAIN");
 
    Info("CreateListOfClasses", "Initializing - DONE.");
 }

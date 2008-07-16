@@ -1504,7 +1504,7 @@ TList *TProof::GetListOfSlaveInfos()
       } else if (slave->GetSlaveType() == TSlave::kMaster) {
          if (slave->IsValid()) {
             if (slave->GetSocket()->Send(kPROOF_GETSLAVEINFO) == -1)
-               MarkBad(slave);
+               MarkBad(slave, "could not send kPROOF_GETSLAVEINFO message");
             else
                masters.Add(slave);
          }
@@ -1569,7 +1569,7 @@ Int_t TProof::BroadcastGroupPriority(const char *grp, Int_t priority, TList *wor
    while ((wrk = (TSlave *)next())) {
       if (wrk->IsValid()) {
          if (wrk->SendGroupPriority(grp, priority) == -1)
-            MarkBad(wrk);
+            MarkBad(wrk, "could not send group priority");
          else
             nsent++;
       }
@@ -1612,7 +1612,7 @@ Int_t TProof::Broadcast(const TMessage &mess, TList *slaves)
    while ((sl = (TSlave *)next())) {
       if (sl->IsValid()) {
          if (sl->GetSocket()->Send(mess) == -1)
-            MarkBad(sl);
+            MarkBad(sl, "could not broadcast request");
          else
             nsent++;
       }
@@ -1704,7 +1704,7 @@ Int_t TProof::BroadcastRaw(const void *buffer, Int_t length, TList *slaves)
    while ((sl = (TSlave *)next())) {
       if (sl->IsValid()) {
          if (sl->GetSocket()->SendRaw(buffer, length) == -1)
-            MarkBad(sl);
+            MarkBad(sl, "could not send broadcast-raw request");
          else
             nsent++;
       }
@@ -1799,7 +1799,9 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout)
    fStatus = 0;
    fRecvMessages->Clear();
 
-   if (!mon->GetActive()) return 0;
+   Long_t actto = (Long_t)(gEnv->GetValue("Proof.SocketActivityTimeout", 600) * 1000);
+
+   if (!mon->GetActive(actto)) return 0;
 
    DeActivateAsyncInput();
 
@@ -1827,7 +1829,10 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout)
    if (fIntHandler)
       fIntHandler->Add();
 
-   while (mon->GetActive() && (nto < 0 || nto > 0)) {
+   // Sockets w/o activity during the last 'sto' millisecs are deactivated
+   Long_t sto = -1;
+   Int_t nsto = 60;
+   while (mon->GetActive(sto) && (nto < 0 || nto > 0)) {
 
       // Wait for a ready socket
       TSocket *s = mon->Select(1000);
@@ -1856,6 +1861,12 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout)
          // Decrease the timeout counter if requested
          if (s == (TSocket *)(-1) && nto > 0)
             nto--;
+      }
+      // Check if we need to check the socket activity (we do it every 10 cycles ~ 10 sec)
+      sto = -1;
+      if (--nsto <= 0) {
+         sto = (Long_t) actto;
+         nsto = 60;
       }
    }
 
@@ -1925,13 +1936,26 @@ Int_t TProof::CollectInputFrom(TSocket *s)
    Int_t     what;
    Bool_t    delete_mess = kTRUE;
 
-   if (s->Recv(mess) < 0) {
-      MarkBad(s);
+   if ((rc = s->Recv(mess)) < 0) {
+      PDB(kGlobal,2)
+         Info("CollectInputFrom","%p: got %d from Recv()", s, rc);
+      Bool_t bad = kTRUE;
+      if (rc == -5) {
+         // Broken connection: try reconnection
+         if (fCurrentMonitor) fCurrentMonitor->Remove(s);
+         if (s->Reconnect() == 0) {
+            if (fCurrentMonitor) fCurrentMonitor->Add(s);
+            bad = kFALSE;
+         }
+      }
+      if (bad)
+         MarkBad(s, "problems receiving a message in TProof::CollectInputFrom(...)");
+      // Ignore this wake up
       return -1;
    }
    if (!mess) {
       // we get here in case the remote server died
-      MarkBad(s);
+      MarkBad(s, "undefined message in TProof::CollectInputFrom(...)");
       return -1;
    }
 
@@ -1939,7 +1963,7 @@ Int_t TProof::CollectInputFrom(TSocket *s)
 
    PDB(kGlobal,3) {
       sl = FindSlave(s);
-      Info("CollectInputFrom","got %d from %s", what, (sl ? sl->GetOrdinal() : "undef"));
+      Info("CollectInputFrom","got type %d from '%s'", what, (sl ? sl->GetOrdinal() : "undef"));
    }
 
    switch (what) {
@@ -1955,7 +1979,18 @@ Int_t TProof::CollectInputFrom(TSocket *s)
          break;
 
       case kPROOF_FATAL:
-         MarkBad(s);
+         MarkBad(s, "received kPROOF_FATAL");
+         if (fProgressDialogStarted) {
+            // Finalize the progress dialog
+            Emit("StopProcess(Bool_t)", kTRUE);
+         }
+         break;
+
+      case kPROOF_TOUCH:
+         // send a request for touching the remote admin file
+         {  sl = FindSlave(s);
+            sl->Touch();
+         }
          break;
 
       case kPROOF_GETOBJECT:
@@ -2429,8 +2464,6 @@ Int_t TProof::CollectInputFrom(TSocket *s)
                (*mess) >> events;
             if (!abort) {
                fPlayer->AddEventsProcessed(events);
-            } else if (IsMaster()) {
-               fPlayer->StopProcess(kTRUE);
             }
             if (!IsMaster())
                Emit("StopProcess(Bool_t)", abort);
@@ -2548,7 +2581,11 @@ Int_t TProof::CollectInputFrom(TSocket *s)
          break;
 
       default:
-         Error("Collect", "unknown command received from slave (what = %d)", what);
+         {
+            sl = FindSlave(s);
+            Error("Collect", "unknown command received from '%s' (what = %d)",
+                            (sl ? sl->GetOrdinal() : "undef"), what);
+         }
          break;
    }
 
@@ -2667,34 +2704,143 @@ void TProof::HandleAsyncInput(TSocket *sl)
 }
 
 //______________________________________________________________________________
-void TProof::MarkBad(TSlave *sl)
+void TProof::MarkBad(TSlave *wrk, const char *reason)
 {
    // Add a bad slave server to the bad slave list and remove it from
    // the active list and from the two monitor objects.
 
-   fActiveSlaves->Remove(sl);
+   if (!wrk) {
+      Error("MarkBad", "worker instance undefined: protocol error? ");
+      return;
+   }
+
+   // Local URL
+   static TString thisurl;
+   if (thisurl.IsNull()) {
+      if (IsMaster()) {
+         Int_t port = gEnv->GetValue("ProofServ.XpdPort",-1);
+         thisurl = (port > 0) ? Form("%s:%d", TUrl(gSystem->HostName()).GetHostFQDN(), port)
+                              : TUrl(gSystem->HostName()).GetHostFQDN();
+      } else {
+         thisurl = Form("%s@%s:%d", fUrl.GetUser(), fUrl.GetHost(), fUrl.GetPort());
+      }
+   }
+
+   if (!reason || strcmp(reason, kPROOF_TerminateWorker)) {
+      // Message for notification
+      const char *mastertype = (gProofServ && gProofServ->IsTopMaster()) ? "top master" : "master";
+      TString src = IsMaster() ? Form("%s at %s", mastertype, thisurl.Data()) : "local session";
+      TString msg(Form("\n +++ Message from %s : ", src.Data()));
+      msg += Form("marking %s:%d (%s) as bad\n +++ Reason: %s",
+                  wrk->GetName(), wrk->GetPort(), wrk->GetOrdinal(),
+                  (reason && strlen(reason)) ? reason : "unknown");
+      Info("MarkBad", "%s", msg.Data());
+      // Notify one level up, if the case
+      // Add some hint for diagnostics
+      if (gProofServ) {
+         msg += Form("\n\n +++ Most likely your code crashed on worker %s at %s:%d.\n",
+                     wrk->GetOrdinal(), wrk->GetName(), wrk->GetPort());
+      } else {
+         msg = Form("\n\n +++ Most likely your code crashed\n");
+      }
+      msg += Form(" +++ Please check the session logs for error messages either using\n");
+      msg += Form(" +++ the 'Show logs' button or executing\n");
+      msg += Form(" +++\n");
+      if (gProofServ) {
+         msg += Form(" +++ root [] TProof::Mgr(\"%s\")->GetSessionLogs()->Display(\"%s\",0)\n\n",
+                     thisurl.Data(), wrk->GetOrdinal());
+         gProofServ->SendAsynMessage(msg, kTRUE);
+      } else {
+         msg += Form(" +++ root [] TProof::Mgr(\"%s\")->GetSessionLogs()->Display(\"*\")\n\n",
+                     thisurl.Data());
+         Printf("%s", msg.Data());
+      }
+   } else if (reason) {
+      if (gDebug > 0) {
+         Info("MarkBad", "worker %s at %s:%d asked to terminate",
+                         wrk->GetOrdinal(), wrk->GetName(), wrk->GetPort());
+      }
+   }
+
+   fActiveSlaves->Remove(wrk);
    FindUniqueSlaves();
-   fBadSlaves->Add(sl);
+   fBadSlaves->Add(wrk);
 
-   fAllMonitor->Remove(sl->GetSocket());
-   fActiveMonitor->Remove(sl->GetSocket());
+   fAllMonitor->Remove(wrk->GetSocket());
+   fActiveMonitor->Remove(wrk->GetSocket());
 
-   sl->Close();
+   wrk->Close();
 
    fSendGroupView = kTRUE;
 
-   // Update session workers files
-   SaveWorkerInfo();
+   if (IsMaster()) {
+      // Update session workers files
+      SaveWorkerInfo();
+   } else {
+      // On clients the proof session should be removed from the lists
+      // and deleted, since it is not valid anymore
+      fSlaves->Remove(wrk);
+      if (fManager)
+         fManager->ShutdownSession(this);
+   }
 }
 
 //______________________________________________________________________________
-void TProof::MarkBad(TSocket *s)
+void TProof::MarkBad(TSocket *s, const char *reason)
 {
    // Add slave with socket s to the bad slave list and remove if from
    // the active list and from the two monitor objects.
 
-   TSlave *sl = FindSlave(s);
-   MarkBad(sl);
+   TSlave *wrk = FindSlave(s);
+   MarkBad(wrk, reason);
+}
+
+//______________________________________________________________________________
+void TProof::TerminateWorker(TSlave *wrk)
+{
+   // Ask an active worker 'wrk' to terminate, i.e. to shutdown
+
+   if (!wrk) {
+      Warning("TerminateWorker", "worker instance undefined: protocol error? ");
+      return;
+   }
+
+   // Send stop message
+   if (wrk->GetSocket() && wrk->GetSocket()->IsValid()) {
+      TMessage mess(kPROOF_STOP);
+      wrk->GetSocket()->Send(mess);
+   } else {
+      if (gDebug > 0)
+         Info("TerminateWorker", "connection to worker is already down: cannot"
+                                 " send termination message");
+   }
+
+   // This is a bad worker from now on
+   MarkBad(wrk, kPROOF_TerminateWorker);
+}
+
+//______________________________________________________________________________
+void TProof::TerminateWorker(const char *ord)
+{
+   // Ask an active worker 'ord' to terminate, i.e. to shutdown
+
+   if (ord && strlen(ord) > 0) {
+      Bool_t all = (ord[0] == '*') ? kTRUE : kFALSE;
+      if (IsMaster()) {
+         TIter nxw(fSlaves);
+         TSlave *wrk = 0;
+         while ((wrk = (TSlave *)nxw())) {
+            if (all || !strcmp(wrk->GetOrdinal(), ord)) {
+               TerminateWorker(wrk);
+               if (!all) break;
+            }
+         }
+      } else {
+         TMessage mess(kPROOF_STOP);
+         mess << TString(ord);
+         Broadcast(mess);
+      }
+   }
 }
 
 //______________________________________________________________________________
@@ -2724,14 +2870,36 @@ Int_t TProof::Ping(ESlaves list)
    TSlave *sl;
    while ((sl = (TSlave *)next())) {
       if (sl->IsValid()) {
-         if (sl->Ping() == -1)
-            MarkBad(sl);
-         else
+         if (sl->Ping() == -1) {
+            MarkBad(sl, "ping unsuccessful");
+         } else {
             nsent++;
+         }
       }
    }
 
    return nsent;
+}
+
+//______________________________________________________________________________
+void TProof::Touch()
+{
+   // Ping PROOF slaves. Returns the number of slaves that responded.
+
+   TList *slaves = fSlaves;
+
+   if (slaves->GetSize() == 0) return;
+
+   TIter next(slaves);
+
+   TSlave *sl;
+   while ((sl = (TSlave *)next())) {
+      if (sl->IsValid()) {
+         sl->Touch();
+      }
+   }
+
+   return;
 }
 
 //______________________________________________________________________________
@@ -2821,7 +2989,7 @@ void TProof::Print(Option_t *option) const
                TMessage mess(kPROOF_PRINT);
                mess.WriteString(option);
                if (sl->GetSocket()->Send(mess) == -1)
-                  const_cast<TProof*>(this)->MarkBad(sl);
+                  const_cast<TProof*>(this)->MarkBad(sl, "could not send kPROOF_PRINT request");
                else
                   masters.Add(sl);
             } else {
@@ -3617,7 +3785,7 @@ Int_t TProof::SendGroupView()
    while ((sl = (TSlave *)next())) {
       sprintf(str, "%d %d", cnt, size);
       if (sl->GetSocket()->Send(str, kPROOF_GROUPVIEW) == -1) {
-         MarkBad(sl);
+         MarkBad(sl, "could not send kPROOF_GROUPVIEW message");
          bad++;
       } else
          cnt++;
@@ -3926,7 +4094,7 @@ Int_t TProof::SendFile(const char *file, Int_t opt, const char *rfile, TSlave *w
 
       sprintf(buf, "%s %d %lld %d", fnam, bin, siz, fw);
       if (sl->GetSocket()->Send(buf, kPROOF_SENDFILE) == -1) {
-         MarkBad(sl);
+         MarkBad(sl, "could not send kPROOF_SENDFILE request");
          continue;
       }
 
@@ -3950,7 +4118,7 @@ Int_t TProof::SendFile(const char *file, Int_t opt, const char *rfile, TSlave *w
          if (len > 0 && sl->GetSocket()->SendRaw(buf, len) == -1) {
             SysError("SendFile", "error writing to slave %s:%s (now offline)",
                      sl->GetName(), sl->GetOrdinal());
-            MarkBad(sl);
+            MarkBad(sl, "sendraw failure");
             break;
          }
 
@@ -4142,7 +4310,7 @@ Int_t TProof::GoParallel(Int_t nodes, Bool_t attach, Bool_t random)
             mess << -1 << -1;
          }
          if (sl->GetSocket()->Send(mess) == -1) {
-            MarkBad(sl);
+            MarkBad(sl, "could not send kPROOF_PARALLEL or kPROOF_LOGFILE request");
             slavenodes = 0;
          } else {
             Collect(sl, fCollectTimeout);
@@ -4157,7 +4325,7 @@ Int_t TProof::GoParallel(Int_t nodes, Bool_t attach, Bool_t random)
                   slavenodes = 0;
                }
             } else {
-               MarkBad(sl);
+               MarkBad(sl, "collect failed after kPROOF_PARALLEL or kPROOF_LOGFILE request");
                slavenodes = 0;
             }
          }
@@ -4397,12 +4565,13 @@ Int_t TProof::DisablePackageOnClient(const char *package)
       gSystem->Exec(Form("%s %s/%s", kRM, fPackageDir.Data(), package));
       gSystem->Exec(Form("%s %s/%s.par", kRM, fPackageDir.Data(), package));
       fPackageLock->Unlock();
-      if (gSystem->AccessPathName(Form("%s/%s.par", fPackageDir.Data(), package))
-          && gSystem->AccessPathName(Form("%s/%s", fPackageDir.Data(), package)))
-         return 0;
+      if (!gSystem->AccessPathName(Form("%s/%s.par", fPackageDir.Data(), package)))
+         Warning("DisablePackageOnClient", "unable to remove package PAR file for %s", package);
+      if (!gSystem->AccessPathName(Form("%s/%s", fPackageDir.Data(), package)))
+         Warning("DisablePackageOnClient", "unable to remove package directory for %s", package);
    }
 
-   return -1;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -5993,7 +6162,7 @@ TList *TProof::GetOutputNames()
       mon.DeActivate(sock);
       TMessage *reply;
       if (sock->Recv(reply) <= 0) {
-         MarkBad(slave);
+         MarkBad(slave, "receive failed after kPROOF_GETOUTPUTLIST request");
 //         Error("GetOutputList","Recv failed! for slave-%d (%s)",
 //               slave->GetOrdinal(), slave->GetName());
          continue;
@@ -6001,7 +6170,7 @@ TList *TProof::GetOutputNames()
       if (reply->What() != kPROOF_GETOUTPUTNAMES ) {
 //         Error("GetOutputList","unexpected message %d from slawe-%d (%s)",  reply->What(),
 //               slave->GetOrdinal(), slave->GetName());
-         MarkBad(slave);
+         MarkBad(slave, "wrong reply to kPROOF_GETOUTPUTLIST request");
          continue;
       }
       TList* l;
@@ -6355,8 +6524,8 @@ void TProof::Detach(Option_t *opt)
 
    // Get worker and socket instances
    TSlave *sl = (TSlave *) fActiveSlaves->First();
-   TSocket *s = sl->GetSocket();
-   if (!sl || !(sl->IsValid()) || !s) {
+   TSocket *s = 0;
+   if (!sl || !(sl->IsValid()) || !(s = sl->GetSocket())) {
       Error("Detach","corrupted worker instance: wrk:%p, sock:%p", sl, s);
       return;
    }
@@ -7274,7 +7443,7 @@ TProof *TProof::Open(const char *cluster, const char *conffile,
             else
                d = (TProofDesc *) mgr->GetProofDesc(locid);
             if (d) {
-               proof = (TProof*) mgr->AttachSession(d->GetLocalId());
+               proof = (TProof*) mgr->AttachSession(d);
                if (!proof || !proof->IsValid()) {
                   if (locid)
                      ::Error(pn, "new session could not be attached");
@@ -7310,14 +7479,14 @@ TProofMgr *TProof::Mgr(const char *url)
 }
 
 //_____________________________________________________________________________
-void TProof::Reset(const char *url)
+void TProof::Reset(const char *url, Bool_t hard)
 {
-   // Wrapper around TProofMgr::Reset().
+   // Wrapper around TProofMgr::Reset(...).
 
    if (url) {
       TProofMgr *mgr = TProof::Mgr(url);
       if (mgr && mgr->IsValid())
-         mgr->Reset();
+         mgr->Reset(hard);
       else
          ::Error("TProof::Reset",
                  "unable to initialize a valid manager instance");

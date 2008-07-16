@@ -578,7 +578,7 @@ void TStreamerInfo::BuildCheck()
          Bool_t match = kTRUE;
          Bool_t done = kFALSE;
          Bool_t oldIsNonVersioned = kFALSE;
-         if (!fClass->TestBit(TClass::kWarned) && (fClassVersion == info->GetClassVersion()) && (fCheckSum != info->GetCheckSum())) {
+         if (fClassVersion!=0 && !fClass->TestBit(TClass::kWarned) && (fClassVersion == info->GetClassVersion()) && (fCheckSum != info->GetCheckSum())) {
             // The TStreamerInfo's checksum is different from the checksum for the compile class.
 
             match = kFALSE;
@@ -695,6 +695,7 @@ void TStreamerInfo::BuildCheck()
       // loaded version of the class
       if (fClass->IsLoaded() 
           && fClass->GetListOfDataMembers() 
+          && (fClassVersion != 0) // We don't care about transient classes
           && (fClassVersion == fClass->GetClassVersion()) 
           && (fCheckSum != fClass->GetCheckSum()) 
           && (fClass->GetClassInfo())) {

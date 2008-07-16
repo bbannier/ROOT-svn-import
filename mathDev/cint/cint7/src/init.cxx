@@ -64,8 +64,9 @@ extern "C" void G__add_setup_func(const char *libname,G__incsetup func)
      for (int i = 0; i < G__MAXSTRUCT; i++){
         G__struct.incsetup_memvar[i] = 0;
         G__struct.incsetup_memfunc[i] = 0;
-        G__memsetup_init=1;
      }
+     G__memsetup_init=1;
+     G__init_globals();
      G__platformMacro();
   }
 
@@ -1814,7 +1815,7 @@ int Cint::Internal::G__init_globals()
   //G__default.isconst = G__CONSTVAR;
 #endif
 
-  // in platform macro: ::Reflex::TypedefTypeBuilder("codeBreak$",::Reflex::Type::ByName("int"));  // 'Z' type
+  ::Reflex::TypedefTypeBuilder("codeBreak$",::Reflex::Type::ByName("int"));  // 'Z' type
   G__letint(&G__block_break,'Z',G__BLOCK_BREAK); /* set default value */
   G__block_break.ref = 0;
 #ifndef G__OLDIMPLEMENTATION1259
@@ -2028,8 +2029,8 @@ static void G__defineMacro(const char* name, long value,
 ******************************************************************/
 static void G__platformMacro()
 {
-     // Those are not really 'types' but so far they are used as such.
-  // They correspond to the cint 'type' value:
+   // Those are not really 'types' but so far they are used as such  .
+   // They correspond to the cint 'type' value:
       /****************************************************
        * Automatic variable and macro
        *   p : macro int
@@ -2043,8 +2044,6 @@ static void G__platformMacro()
   ::Reflex::TypedefTypeBuilder("autoDouble$",::Reflex::Type::ByName("double"));
   ::Reflex::TypedefTypeBuilder("macroChar*$",::Reflex::PointerBuilder(::Reflex::ConstBuilder(::Reflex::Type::ByName("char")))); 
   ::Reflex::TypedefTypeBuilder("macro$",::Reflex::PointerBuilder(::Reflex::ConstBuilder(::Reflex::Type::ByName("char")))); 
-
-  ::Reflex::TypedefTypeBuilder("codeBreak$",::Reflex::Type::ByName("int"));  // 'Z' type
 
   G__StrBuf temp_sb(G__ONELINE);
   char *temp = temp_sb;

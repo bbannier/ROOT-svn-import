@@ -748,8 +748,7 @@ void TFile::Close(Option_t *option)
 
    opt.ToLower();
 
-   if (!TFile::IsOpen()) return;
-
+   if (!IsOpen()) return;
 
    if (fIsArchive || !fIsRootFile) {
       FlushWriteCache();
@@ -792,7 +791,7 @@ void TFile::Close(Option_t *option)
       fFree->Delete();
    }
 
-   if (IsOpen() && fD > 0) {
+   if (IsOpen()) {
       SysClose(fD);
       fD = -1;
    }
@@ -815,7 +814,6 @@ void TFile::Close(Option_t *option)
    R__LOCKGUARD2(gROOTMutex);
    gROOT->GetListOfFiles()->Remove(this);
    gROOT->GetListOfBrowsers()->RecursiveRemove(this);
-
 }
 
 //____________________________________________________________________________________
@@ -1558,7 +1556,8 @@ Int_t TFile::Recover()
       for (i = 0;i < nwhc; i++) frombuf(buffer, &classname[i]);
       classname[nwhci] = '\0';
       TDatime::GetDateTime(datime, date, time);
-      if (seekpdir == fSeekDir && strcmp(classname,"TFile") && strcmp(classname,"TBasket")) {
+      if (seekpdir == fSeekDir && !TClass::GetClass(classname)->InheritsFrom("TFile")
+                               && strcmp(classname,"TBasket")) {
          key = new TKey(this);
          key->ReadKeyBuffer(bufread);
          if (!strcmp(key->GetName(),"StreamerInfo")) {

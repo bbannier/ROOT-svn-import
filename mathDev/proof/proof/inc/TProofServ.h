@@ -79,13 +79,15 @@ private:
    TString       fConfFile;         //file containing config information
    TString       fWorkDir;          //directory containing all proof related info
    TString       fImage;            //image name of the session
-   TString       fSessionTag;       //tag for the session
+   TString       fSessionTag;       //tag for the server session
+   TString       fTopSessionTag;    //tag for the global session
    TString       fSessionDir;       //directory containing session dependent files
    TString       fPackageDir;       //directory containing packages and user libs
    THashList    *fGlobalPackageDirList;  //list of directories containing global packages libs
    TString       fCacheDir;         //directory containing cache of user files
    TString       fQueryDir;         //directory containing query results and status
    TString       fDataSetDir;       //directory containing info about known data sets
+   TString       fAdminPath;        //admin path for this session
    TProofLockPath *fPackageLock;    //package dir locker
    TProofLockPath *fCacheLock;      //cache dir locker
    TProofLockPath *fQueryLock;      //query dir locker
@@ -123,20 +125,19 @@ private:
 
    Bool_t        fRealTimeLog;      //TRUE if log messages should be send back in real-time
 
-   Bool_t        fShutdownWhenIdle; // If TRUE, start shutdown delay countdown when idle
-   TTimer       *fShutdownTimer;    // Timer used for delayed session shutdown
-   TMutex       *fShutdownTimerMtx; // Actions on the timer must be atomic
+   TTimer       *fShutdownTimer;    // Timer used to shutdown out-of-control sessions
 
    Int_t         fInflateFactor;    // Factor in 1/1000 to inflate the CPU time
 
    TProofDataSetManager* fDataSetManager; // dataset manager
 
+   Bool_t        fLogToSysLog;     //true if logs should be sent to syslog too
+   Bool_t        fSendLogToMaster; // On workers, controls logs sending to master
+
    // Quotas (-1 to disable)
    Int_t         fMaxQueries;       //Max number of queries fully kept
    Long64_t      fMaxBoxSize;       //Max size of the sandbox
    Long64_t      fHWMBoxSize;       //High-Water-Mark on the sandbox size
-
-   static Bool_t fgLogToSysLog;     //true if logs should be sent to syslog too
 
    void          RedirectOutput();
    Int_t         CatMotd();
@@ -181,8 +182,6 @@ protected:
    virtual void  MakePlayer();
    virtual void  DeletePlayer();
 
-   virtual void  SetShutdownTimer(Bool_t, Int_t) { }
-
    static void   ErrorHandler(Int_t level, Bool_t abort, const char *location,
                               const char *msg);
 
@@ -200,7 +199,7 @@ public:
    const char    *GetGroup()      const { return fGroup; }
    const char    *GetWorkDir()    const { return fWorkDir; }
    const char    *GetImage()      const { return fImage; }
-   const char    *GetSessionTag() const { return fSessionTag; }
+   const char    *GetSessionTag() const { return fTopSessionTag; }
    const char    *GetSessionDir() const { return fSessionDir; }
    Int_t          GetProtocol()   const { return fProtocol; }
    const char    *GetOrdinal()    const { return fOrdinal; }
@@ -218,7 +217,7 @@ public:
 
    void           FlushLogFile();
 
-   Int_t          CopyFromCache(const char *name);
+   Int_t          CopyFromCache(const char *name, Bool_t cpbin);
    Int_t          CopyToCache(const char *name, Int_t opt = 0);
 
    virtual EQueryAction GetWorkers(TList *workers, Int_t &prioritychange);
@@ -252,6 +251,10 @@ public:
    virtual void   EnableTimeout() { }
 
    virtual void   Terminate(Int_t status);
+
+   // Log control
+   Bool_t         LogToSysLog() { return fLogToSysLog; }
+   void           LogToMaster(Bool_t on = kTRUE) { fSendLogToMaster = on; }
 
    static Bool_t      IsActive();
    static TProofServ *This();
@@ -323,7 +326,7 @@ public:
    virtual ~TProofServLogHandlerGuard();
 };
 
-//--- Special timer to constrol delayed shutdowns
+//--- Special timer to control delayed shutdowns
 //______________________________________________________________________________
 class TShutdownTimer : public TTimer {
 private:

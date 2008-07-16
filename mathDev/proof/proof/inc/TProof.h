@@ -107,10 +107,11 @@ class TMap;
 // 13 -> 14: new proofserv environment setting
 // 14 -> 15: add support for entry lists; new version of TFileInfo
 // 15 -> 16: add support for generic non-data based processing
-// 16 -> 17: new dataset handling system; support for TFileCollection processing 
+// 16 -> 17: new dataset handling system; support for TFileCollection processing
+// 17 -> 18: support for reconnection on daemon restarts 
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 17;            // protocol version number
+const Int_t       kPROOF_Protocol        = 18;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
@@ -122,6 +123,7 @@ const char* const kPROOF_DataSetDir      = "datasets";    // dataset dir, under 
 const char* const kPROOF_CacheLockFile   = "proof-cache-lock-";   // cache lock file
 const char* const kPROOF_PackageLockFile = "proof-package-lock-"; // package lock file
 const char* const kPROOF_QueryLockFile   = "proof-query-lock-";   // query lock file
+const char* const kPROOF_TerminateWorker = "+++ terminating +++"; // signal worker termination in MarkBad
 
 #ifndef R__WIN32
 const char* const kCP     = "/bin/cp -fp";
@@ -535,8 +537,10 @@ private:
 
    void     SetRunStatus(ERunStatus rst) { fRunStatus = rst; }
 
-   void     MarkBad(TSlave *sl);
-   void     MarkBad(TSocket *s);
+   void     MarkBad(TSlave *wrk, const char *reason = 0);
+   void     MarkBad(TSocket *s, const char *reason = 0);
+   void     TerminateWorker(TSlave *wrk);
+   void     TerminateWorker(const char *ord);
 
    void     ActivateAsyncInput();
    void     DeActivateAsyncInput();
@@ -585,6 +589,7 @@ public:
    void        cd(Int_t id = -1);
 
    Int_t       Ping();
+   void        Touch();
    Int_t       Exec(const char *cmd, Bool_t plusMaster = kFALSE);
    Long64_t    Process(TDSet *dset, const char *selector,
                        Option_t *option = "", Long64_t nentries = -1,
@@ -795,7 +800,7 @@ public:
    static TProof       *Open(const char *url = 0, const char *conffile = 0,
                              const char *confdir = 0, Int_t loglevel = 0);
    static TProofMgr    *Mgr(const char *url);
-   static void          Reset(const char *url);
+   static void          Reset(const char *url, Bool_t hard = kFALSE);
 
    static void          AddEnvVar(const char *name, const char *value);
    static void          DelEnvVar(const char *name);

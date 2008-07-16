@@ -500,7 +500,7 @@ void TAutoInspector::Inspect(TClass *cl, const char *tit, const char *name,
    if (!classInfo)               return;
 
    //              Browse data members
-   DataMemberInfo_t *m = gCint->DataMemberInfo_FactoryCopy(classInfo);
+   DataMemberInfo_t *m = gCint->DataMemberInfo_Factory(classInfo);
    TString mname;
 
    int found=0;
@@ -4477,7 +4477,7 @@ TVirtualStreamerInfo *TClass::FindStreamerInfo(UInt_t checksum) const
       TVirtualStreamerInfo *info = (TVirtualStreamerInfo*)GetStreamerInfos()->At(i);
       if (!info) continue;
       if (info->GetCheckSum() == checksum) {
-         R__ASSERT(i==info->GetClassVersion() || (i==-1&&info->GetClassVersion()==1));
+         //R__ASSERT(i==info->GetClassVersion() || (i==-1&&info->GetClassVersion()==1));
          return info;
       }
    }
