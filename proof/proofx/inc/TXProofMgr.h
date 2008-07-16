@@ -54,11 +54,15 @@ public:
    TXProofMgr(const char *url, Int_t loglevel = -1, const char *alias = "");
    virtual ~TXProofMgr();
 
+   Bool_t      HandleInput(const void *);
    Bool_t      HandleError(const void *in = 0);
 
    Bool_t      IsValid() const { return fSocket; }
+   void        SetInvalid();
 
-   TProof     *AttachSession(Int_t id, Bool_t gui = kFALSE);
+   TProof     *AttachSession(Int_t id, Bool_t gui = kFALSE)
+                      { return TProofMgr::AttachSession(id, gui); }
+   TProof     *AttachSession(TProofDesc *d, Bool_t gui = kFALSE);
    void        DetachSession(Int_t, Option_t * = "");
    TProofLog  *GetSessionLogs(Int_t ridx = 0, const char *stag = 0,
                               const char *pattern = 0);
@@ -67,7 +71,7 @@ public:
    TList      *QuerySessions(Option_t *opt = "S");
    TObjString *ReadBuffer(const char *file, Long64_t ofs, Int_t len);
    TObjString *ReadBuffer(const char *file, const char *pattern);
-   Int_t       Reset(const char *usr = 0);
+   Int_t       Reset(Bool_t hard = kFALSE, const char *usr = 0);
    Int_t       SendMsgToUsers(const char *msg, const char *usr = 0);
    void        SetROOTVersion(const char *tag);
    void        ShowWorkers();

@@ -1432,23 +1432,12 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
             break;
          case 'g':
             // bool
-            {
-               switch (result.type) {
-                  case 'd':
-                  case 'f':
-                     result.obj.d = result.obj.d ? 1 : 0;
-                     break;
-                  default:
-                     result.obj.i = result.obj.i ? 1 : 0;
-                     break;
-               }
+            result.obj.i = G__int(result) ? 1 : 0;
 #ifdef G__BOOL4BYTE
-               G__ASSIGN_VAR(G__INTALLOC, int, G__int, result.obj.i);
+            G__ASSIGN_VAR(G__INTALLOC, int, G__int, result.obj.i);
 #else // G__BOOL4BYTE
-               G__ASSIGN_VAR(G__CHARALLOC, unsigned char, G__int, result.obj.i);
+            G__ASSIGN_VAR(G__CHARALLOC, unsigned char, G__int, result.obj.i);
 #endif // G__BOOL4BYTE
-               // --
-            }
          case 'i':
             // int
             G__ASSIGN_VAR(G__INTALLOC, int, G__int, result.obj.i);
@@ -1539,7 +1528,13 @@ G__value G__letvariable(char* item, G__value expression, G__var_array* varglobal
             break;
 #endif // G__OLDIMPLEMENTATION2191
          case 'G':
-            // bool
+            // bool pointer
+#ifdef G__BOOL4BYTE
+            G__ASSIGN_PVAR(int, G__int, result.obj.i);
+#else // G__BOOL4BYTE
+            G__ASSIGN_PVAR(unsigned char, G__int, result.obj.i);
+#endif // G__BOOL4BYTE
+            break;
          case 'B':
             // unsigned char pointer
             G__ASSIGN_PVAR(unsigned char, G__int, result.obj.i);
@@ -4091,7 +4086,7 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
                // LD_FUNC now has 6 parameters 06-06-07
                G__inc_cp_asm(-7, 0);
                for (int ix = 6; ix > -1; --ix) {
-                  G__asm_inst[G__asm_cp+ix+6] = G__asm_inst[G__asm_cp+ix];
+                  G__asm_inst[G__asm_cp+ix+4] = G__asm_inst[G__asm_cp+ix];
                }
 #ifdef G__ASM_DBG
                if (G__asm_dbg) {
@@ -4440,14 +4435,20 @@ static G__value G__allocvariable(G__value result, G__value para[], G__var_array*
 #endif // G__OLDIMPLEMENTATION2191
       case 'g':
          // bool
-         result.obj.i = result.obj.i ? 1 : 0;
+         result.obj.i = G__int(result) ? 1 : 0; // Force the value to 1 or 0.
 #ifdef G__BOOL4BYTE
          G__alloc_var_ref<int>(G__INTALLOC, G__int, item, var, ig15, result);
-         break;
-#endif // G__BOOL4BYTE
-      case 'G':
-         // bool
+#else // G__BOOL4BYTE
          G__alloc_var_ref<unsigned char>(G__CHARALLOC, G__int, item, var, ig15, result);
+#endif // G__BOOL4BYTE
+         break;
+      case 'G':
+         // pointer to bool
+#ifdef G__BOOL4BYTE
+         G__alloc_var_ref<int>(G__INTALLOC, G__int, item, var, ig15, result);
+#else // G__BOOL4BYTE
+         G__alloc_var_ref<unsigned char>(G__CHARALLOC, G__int, item, var, ig15, result);
+#endif // G__BOOL4BYTE
          break;
       case 'b':
          // unsigned char
@@ -5873,8 +5874,8 @@ G__value G__getvariable(char* item, int* known, G__var_array* varglobal, G__var_
 #endif // G__OLDIMPLEMENTATION2191
          case 'G':
             // bool pointer
-            G__GET_PVAR(unsigned char, G__letint, long, 'b', 'B')
-            //G__get_pvar<unsigned char, long>(G__letint, 'b', 'B', var, ig15, G__struct_offset, paran, para, linear_index, secondary_linear_index, &result);
+            //G__GET_PVAR(unsigned char, G__letint, long, 'g', 'G')
+            G__get_pvar<unsigned char, long>(G__letint, 'g', 'G', var, ig15, G__struct_offset, paran, para, linear_index, secondary_linear_index, &result);
             break;
          case 'B':
             // unsigned char pointer

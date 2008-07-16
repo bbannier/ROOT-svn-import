@@ -259,10 +259,18 @@ int Cint::G__DataMemberInfo::Index()
 //______________________________________________________________________________
 const char* Cint::G__DataMemberInfo::Name()
 {
+   // Note: We need a static buffer because the string must continue
+   //       to exist after we exit and Reflex::Member::Name() returns
+   //       a std::string by value.  We cannot use a G__StrBuf for this
+   //       because there is no guarantee that its buffer reservoir has
+   //       been initialized at static initialization time.
+   static char mname[G__MAXNAME];
    if (!IsValid()) {
       return 0;
    }
-   return m_datambr.Name().c_str();
+   mname[0] = '\0';
+   strcpy(mname, m_datambr.Name().c_str());
+   return mname;
 }
 
 //______________________________________________________________________________

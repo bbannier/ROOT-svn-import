@@ -985,7 +985,7 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
          // A socket got invalid during validation
          Error("ValidateFiles", "worker-%s (%s) got invalid - STOP",
                slave->GetOrdinal(), slave->GetName());
-         ((TProof*)gProof)->MarkBad(slave);
+         ((TProof*)gProof)->MarkBad(slave, "socket got invalid during validation");
          fValid = kFALSE;
          break;
       }
@@ -994,7 +994,7 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
 
       if (sock->Recv(reply) <= 0) {
          // Help! lost a slave?
-         ((TProof*)gProof)->MarkBad(slave);
+         ((TProof*)gProof)->MarkBad(slave, "receive failed during validation");
          fValid = kFALSE;
          Error("ValidateFiles", "Recv failed! for worker-%s (%s)",
                slave->GetOrdinal(), slave->GetName());
@@ -1004,7 +1004,7 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
       if (reply->What() == kPROOF_FATAL) {
          Error("ValidateFiles", "kPROOF_FATAL from worker-%s (%s)",
                slave->GetOrdinal(), slave->GetName());
-         ((TProof*)gProof)->MarkBad(slave);
+         ((TProof*)gProof)->MarkBad(slave, "received kPROOF_FATAL during validation");
          fValid = kFALSE;
          continue;
       } else if (reply->What() == kPROOF_LOGFILE) {
@@ -1018,12 +1018,29 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves)
          PDB(kPacketizer,3) Info("ValidateFiles", "got logdone");
          mon.Activate(sock);
          continue;
+      } else if (reply->What() == kPROOF_TOUCH) {
+         PDB(kPacketizer,3) Info("ValidateFiles", "got logdone");
+         slave->Touch();
+         mon.Activate(sock);
+         continue;
+      } else if ( reply->What() == kPROOF_MESSAGE ) {
+         // Send one level up
+         TString s;
+         (*reply) >> s;
+         Bool_t lfeed = kTRUE;
+         if ((reply->BufferSize() > reply->Length()))
+            (*reply) >> lfeed;
+         TMessage m(kPROOF_MESSAGE);
+         m << s << lfeed;
+         gProofServ->GetSocket()->Send(m);
+         mon.Activate(sock);
+         continue;
       } else if (reply->What() != kPROOF_GETENTRIES) {
          // Help! unexpected message type
          Error("ValidateFiles",
                "unexpected message type (%d) from worker-%s (%s)",
                reply->What(), slave->GetOrdinal(), slave->GetName());
-         ((TProof*)gProof)->MarkBad(slave);
+         ((TProof*)gProof)->MarkBad(slave, "unexpected message type during validation");
          fValid = kFALSE;
          continue;
       }

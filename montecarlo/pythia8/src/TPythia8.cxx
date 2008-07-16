@@ -66,7 +66,8 @@
 #include "TPythia8.h"
 
 #include "TClonesArray.h"
-#include <TParticle.h>
+#include "TParticle.h"
+#include "TLorentzVector.h"
 
 ClassImp(TPythia8)
 
@@ -101,13 +102,14 @@ TPythia8::~TPythia8()
 }
 
 //___________________________________________________________________________
-TPythia8* TPythia8::Instance() {
+TPythia8* TPythia8::Instance()
+{
    // Return an instance of TPythia8
    return fgInstance ? fgInstance : (fgInstance = new TPythia8()) ;
 }
 
 //___________________________________________________________________________
-Bool_t TPythia8::Initialize(Int_t  idAin, Int_t idBin, Double_t ecms)
+Bool_t TPythia8::Initialize(Int_t idAin, Int_t idBin, Double_t ecms)
 {
    // Initialization
    AddParticlesToPdgDataBase();
@@ -132,8 +134,11 @@ Int_t TPythia8::ImportParticles(TClonesArray *particles, Option_t *option)
    clonesParticles.Clear();
    Int_t nparts=0;
    Int_t i;
+   fNumberOfParticles  = fPythia->event.size() - 1;
+
    if (!strcmp(option,"") || !strcmp(option,"Final")) {
-      for (i = 1; i <= fNumberOfParticles; i++) {
+      for (i = 0; i <= fNumberOfParticles; i++) {
+	if (fPythia->event[i].id() == 90) continue;
          if (fPythia->event[i].isFinal()) {
             new(clonesParticles[nparts]) TParticle(
                 fPythia->event[i].id(),
@@ -154,7 +159,8 @@ Int_t TPythia8::ImportParticles(TClonesArray *particles, Option_t *option)
 	    } // final state partice
 	} // particle loop
     } else if (!strcmp(option,"All")) {
-	for (i = 1; i <= fNumberOfParticles; i++) {
+	for (i = 0; i <= fNumberOfParticles; i++) {
+	  if (fPythia->event[i].id() == 90) continue;
 	    new(clonesParticles[nparts]) TParticle(
 		fPythia->event[i].id(),
 		fPythia->event[i].isFinal(),
@@ -211,12 +217,18 @@ Int_t TPythia8::GetN() const
 }
 
 //___________________________________________________________________________
-void TPythia8::ReadString(char* string) const
+void TPythia8::ReadString(const char* string) const
 {
    // Configuration
    fPythia->readString(string);
 }
 
+//___________________________________________________________________________
+void  TPythia8::ReadConfigFile(const char* string) const
+{
+  // Configuration
+  fPythia->readFile(string);
+}
 
 //___________________________________________________________________________
 void TPythia8::PrintStatistics() const
@@ -231,7 +243,6 @@ void TPythia8::EventListing() const
    // Event listing
    fPythia->event.list();
 }
-
 
 //___________________________________________________________________________
 void TPythia8::AddParticlesToPdgDataBase()
@@ -256,3 +267,4 @@ void TPythia8::AddParticlesToPdgDataBase()
    pdgDB->AddParticle("p_diffr+","p_diffr+", 0, kTRUE,
                       0, 1, "QCD diffr. state", 9902210);
 }
+

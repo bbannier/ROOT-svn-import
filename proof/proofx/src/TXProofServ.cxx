@@ -28,6 +28,7 @@
 #endif
 #include <sys/types.h>
 #include <netinet/in.h>
+#include <utime.h>
 
 #include "TXProofServ.h"
 #include "TObjString.h"
@@ -57,32 +58,12 @@
 // debug hook
 static volatile Int_t gProofServDebug = 1;
 
-//----- Interrupt signal handler -----------------------------------------------
-//______________________________________________________________________________
-class TXProofServInterruptHandler : public TSignalHandler {
-   TXProofServ  *fServ;
-public:
-   TXProofServInterruptHandler(TXProofServ *s)
-      : TSignalHandler(kSigUrgent, kFALSE) { fServ = s; }
-   Bool_t  Notify();
-};
-
-//______________________________________________________________________________
-Bool_t TXProofServInterruptHandler::Notify()
-{
-   fServ->HandleUrgentData();
-   if (TROOT::Initialized()) {
-      Throw(GetSignal());
-   }
-   return kTRUE;
-}
-
 //----- SigPipe signal handler -------------------------------------------------
 //______________________________________________________________________________
 class TXProofServSigPipeHandler : public TSignalHandler {
    TXProofServ  *fServ;
 public:
-   TXProofServSigPipeHandler(TXProofServ *s) : TSignalHandler(kSigPipe, kFALSE)
+   TXProofServSigPipeHandler(TXProofServ *s) : TSignalHandler(kSigInterrupt, kFALSE)
       { fServ = s; }
    Bool_t  Notify();
 };
@@ -171,7 +152,6 @@ TXProofServ::TXProofServ(Int_t *argc, char **argv, FILE *flog)
    fInterruptHandler = 0;
    fInputHandler = 0;
    fTerminated = kFALSE;
-   fShutdownTimerMtx = new TMutex(kTRUE);
 }
 
 //______________________________________________________________________________
@@ -193,6 +173,9 @@ Int_t TXProofServ::CreateServer()
          Error("CreateServer", "resolving the log file description number");
          return -1;
       }
+      // Hide the session start-up logs unless we are in verbose mode 
+      if (gProofDebugLevel <= 0)
+         lseek(fLogFileDes, (off_t) 0, SEEK_END);
    }
 
    // Global location string in TXSocket
@@ -242,15 +225,21 @@ Int_t TXProofServ::CreateServer()
       return -1;
    }
 
+   // Set the title for debugging
+   TString tgt("client");
+   if (fOrdinal != "0") {
+      tgt = fOrdinal;
+      if (tgt.Last('.') != kNPOS) tgt.Remove(tgt.Last('.'));
+   }
+   fSocket->SetTitle(tgt);
+
    // Set the this as reference of this socket
    ((TXSocket *)fSocket)->fReference = this;
 
    // Get socket descriptor
    Int_t sock = fSocket->GetDescriptor();
 
-   // Install interrupt and message input handlers
-   fInterruptHandler = new TXProofServInterruptHandler(this);
-   gSystem->AddSignalHandler(fInterruptHandler);
+   // Install message input handlers
    fInputHandler =
       TXSocketHandler::GetSocketHandler(new TXProofServInputHandler(this, sock), fSocket);
    gSystem->AddFileHandler(fInputHandler);
@@ -285,8 +274,9 @@ Int_t TXProofServ::CreateServer()
 
    if (Setup() == -1) {
       // Setup failure
-      Terminate(0);
+      LogToMaster();
       SendLogFile();
+      Terminate(0);
       return -1;
    }
 
@@ -295,8 +285,9 @@ Int_t TXProofServ::CreateServer()
       // If for some reason we failed setting a redirection file for the logs
       // we cannot continue
       if (!fLogFile || (fLogFileDes = fileno(fLogFile)) < 0) {
-         Terminate(0);
+         LogToMaster();
          SendLogFile(-98);
+         Terminate(0);
          return -1;
       }
    }
@@ -304,8 +295,9 @@ Int_t TXProofServ::CreateServer()
    // Send message of the day to the client
    if (IsMaster()) {
       if (CatMotd() == -1) {
-         Terminate(0);
+         LogToMaster();
          SendLogFile(-99);
+         Terminate(0);
          return -1;
       }
    }
@@ -392,7 +384,7 @@ Int_t TXProofServ::CreateServer()
                                                           fConfFile.Data(),
                                                           fConfDir.Data(),
                                                           fLogLevel,
-                                                          fSessionTag.Data()));
+                                                          fTopSessionTag.Data()));
       if (!fProof || !fProof->IsValid()) {
          Error("CreateServer", "plugin for TProof could not be executed");
          delete fProof;
@@ -408,6 +400,13 @@ Int_t TXProofServ::CreateServer()
       fProof->SaveWorkerInfo();
 
       SendLogFile();
+   }
+
+   // Setup the shutdown timer
+   if (!fShutdownTimer) {
+      // Check activity on socket every 5 mins
+      fShutdownTimer = new TShutdownTimer(this, 300000);
+      fShutdownTimer->Start(-1, kFALSE);
    }
 
    // Done
@@ -432,7 +431,8 @@ void TXProofServ::HandleUrgentData()
    TProofServLogHandlerGuard hg(fLogFile, fSocket, "", fRealTimeLog);
 
    // Get interrupt
-   Int_t iLev = ((TXSocket *)fSocket)->GetInterrupt();
+   Bool_t fw = kFALSE;
+   Int_t iLev = ((TXSocket *)fSocket)->GetInterrupt(fw);
    if (iLev < 0) {
       Error("HandleUrgentData", "error receiving interrupt");
       return;
@@ -451,19 +451,28 @@ void TXProofServ::HandleUrgentData()
             Info("HandleUrgentData", "*** Ping");
 
          // If master server, propagate interrupt to slaves
-         if (IsMaster()) {
-            Int_t nbad = fProof->fActiveSlaves->GetSize()-fProof->Ping();
+         if (fw && IsMaster()) {
+            Int_t nbad = fProof->fActiveSlaves->GetSize() - fProof->Ping();
             if (nbad > 0) {
                Info("HandleUrgentData","%d slaves did not reply to ping",nbad);
             }
          }
 
-         // Reply to ping
-         ((TXSocket *)fSocket)->Ping();
+         // Touch the admin path to show we are alive
+         if (fAdminPath.IsNull()) {
+            fAdminPath = gEnv->GetValue("ProofServ.AdminPath", "");
+            TString spid = Form(".%d", getpid());
+            if (!fAdminPath.IsNull() && !fAdminPath.EndsWith(spid))
+               fAdminPath += spid;
+         }
 
-         // Send log with result of ping
-         if (IsMaster())
-            SendLogFile();
+         if (!fAdminPath.IsNull()) {
+            // Update file time stamps
+            if (utime(fAdminPath.Data(), 0) != 0)
+               Info("HandleUrgentData", "problems touching path: %s", fAdminPath.Data());
+         } else {
+            Info("HandleUrgentData", "admin path undefined");
+         }
 
          break;
 
@@ -471,7 +480,7 @@ void TXProofServ::HandleUrgentData()
          Info("HandleUrgentData", "*** Hard Interrupt");
 
          // If master server, propagate interrupt to slaves
-         if (IsMaster())
+         if (fw && IsMaster())
             fProof->Interrupt(TProof::kHardInterrupt);
 
          // Flush input socket
@@ -486,7 +495,7 @@ void TXProofServ::HandleUrgentData()
          Info("HandleUrgentData", "Soft Interrupt");
 
          // If master server, propagate interrupt to slaves
-         if (IsMaster())
+         if (fw && IsMaster())
             fProof->Interrupt(TProof::kSoftInterrupt);
 
          Interrupt();
@@ -500,13 +509,13 @@ void TXProofServ::HandleUrgentData()
       case TProof::kShutdownInterrupt:
          Info("HandleUrgentData", "Shutdown Interrupt");
 
-         // When retuning for here connection are closed
+         // When returning for here connection are closed
          HandleTermination();
 
          break;
 
       default:
-         Error("HandleUrgentData", "unexpected type");
+         Error("HandleUrgentData", "unexpected type: %d", iLev);
          break;
    }
 
@@ -520,14 +529,8 @@ void TXProofServ::HandleSigPipe()
    // Called when the client is not alive anymore; terminate the session.
 
    // Real-time notification of messages
-   TProofServLogHandlerGuard hg(fLogFile, fSocket, "", fRealTimeLog);
 
-   // If master server, propagate interrupt to slaves
-   // (shutdown interrupt send internally).
-   if (IsMaster())
-      fProof->Close("S");
-
-   Terminate(0);  // will not return from here....
+   Info("HandleSigPipe","got sigpipe ... do nothing");
 }
 
 //______________________________________________________________________________
@@ -613,12 +616,26 @@ Int_t TXProofServ::Setup()
    fWorkDir = gEnv->GetValue("ProofServ.Sandbox", kPROOF_WorkDir);
 
    // Get Session tag
-   if ((fSessionTag = gEnv->GetValue("ProofServ.SessionTag", "-1")) == "-1") {
+   if ((fTopSessionTag = gEnv->GetValue("ProofServ.SessionTag", "-1")) == "-1") {
       Error("Setup", "Session tag missing");
       return -1;
    }
+   fSessionTag = fTopSessionTag;
+   // Make sure the process ID is in the tag
+   TString spid = Form("-%d", gSystem->GetPid());
+   if (!fSessionTag.EndsWith(spid)) {
+      Int_t nd = 0;
+      if ((nd = fSessionTag.CountChar('-')) >= 2) {
+         Int_t id = fSessionTag.Index("-", fSessionTag.Index("-") + 1);
+         if (id != kNPOS) fSessionTag.Remove(id);
+      } else if (nd != 1) {
+         Warning("Setup", "Wrong number of '-' in session tag: protocol error? %s", fSessionTag.Data());
+      }
+      // Add this process ID
+      fSessionTag += spid;
+   }
    if (gProofDebugLevel > 0)
-      Info("Setup", "session tag is %s", fSessionTag.Data());
+      Info("Setup", "session tags: %s, %s", fTopSessionTag.Data(), fSessionTag.Data());
 
    // Get Session dir (sandbox)
    if ((fSessionDir = gEnv->GetValue("ProofServ.SessionDir", "-1")) == "-1") {
@@ -653,80 +670,6 @@ Int_t TXProofServ::Setup()
 
    // Done
    return 0;
-}
-
-//______________________________________________________________________________
-void TXProofServ::SendLogFile(Int_t status, Int_t start, Int_t end)
-{
-   // Send log file to master.
-   // If start > -1 send only bytes in the range from start to end,
-   // if end <= start send everything from start.
-
-   // Determine the number of bytes left to be read from the log file.
-   fflush(stdout);
-
-   off_t ltot, lnow;
-   Int_t left;
-
-   ltot = lseek(fileno(stdout),   (off_t) 0, SEEK_END);
-   lnow = lseek(fLogFileDes, (off_t) 0, SEEK_CUR);
-
-   Bool_t adhoc = kFALSE;
-   if (start > -1) {
-      lseek(fLogFileDes, (off_t) start, SEEK_SET);
-      if (end <= start || end > ltot)
-         end = ltot;
-      left = (Int_t)(end - start);
-      if (end < ltot)
-         left++;
-      adhoc = kTRUE;
-   } else {
-      left = (Int_t)(ltot - lnow);
-   }
-
-   if (left > 0) {
-      fSocket->Send(left, kPROOF_LOGFILE);
-
-      const Int_t kMAXBUF = 32768;  //16384  //65536;
-      char buf[kMAXBUF];
-      Int_t wanted = (left > kMAXBUF) ? kMAXBUF : left;
-      Int_t len;
-      do {
-         while ((len = read(fLogFileDes, buf, wanted)) < 0 &&
-                TSystem::GetErrno() == EINTR)
-            TSystem::ResetErrno();
-
-         if (len < 0) {
-            SysError("SendLogFile", "error reading log file");
-            break;
-         }
-
-         if (end == ltot && len == wanted)
-            buf[len-1] = '\n';
-
-         if (fSocket->SendRaw(buf, len, kDontBlock) < 0) {
-            SysError("SendLogFile", "error sending log file");
-            break;
-         }
-
-         // Update counters
-         left -= len;
-         wanted = (left > kMAXBUF) ? kMAXBUF : left;
-
-      } while (len > 0 && left > 0);
-   }
-
-   // Restore initial position if partial send
-   if (adhoc)
-      lseek(fLogFileDes, lnow, SEEK_SET);
-
-   TMessage mess(kPROOF_LOGDONE);
-   if (IsMaster())
-      mess << status << (fProof ? fProof->GetParallel() : 0);
-   else
-      mess << status << (Int_t) 1;
-
-   fSocket->Send(mess);
 }
 
 //______________________________________________________________________________
@@ -790,6 +733,17 @@ Bool_t TXProofServ::HandleError(const void *)
 {
    // Handle error on the input socket
 
+   // Try reconnection
+   if (fSocket && !fSocket->IsValid()) {
+
+      fSocket->Reconnect();
+      if (fSocket && fSocket->IsValid()) {
+         if (gDebug > 0)
+            Info("HandleError",
+               "%p: connection to local coordinator re-established", this);
+         return kFALSE;
+      }
+   }
    Printf("TXProofServ::HandleError: %p: got called ...", this);
 
    // If master server, propagate interrupt to slaves
@@ -823,16 +777,6 @@ Bool_t TXProofServ::HandleInput(const void *in)
    if (acod == kXPD_ping || acod == kXPD_interrupt) {
       // Interrupt or Ping
       HandleUrgentData();
-
-   } else if (acod == kXPD_timer) {
-      // Shutdown option
-      fShutdownWhenIdle = (hin->fInt2 == 2) ? kFALSE : kTRUE;
-      if (hin->fInt2 > 0)
-         // Setup Shutdown timer
-         SetShutdownTimer(kTRUE, hin->fInt3);
-      else
-         // Stop Shutdown timer, if any
-         SetShutdownTimer(kFALSE);
 
    } else if (acod == kXPD_flush) {
       // Flush stdout, so that we can access the full log file
@@ -951,15 +895,15 @@ void TXProofServ::Terminate(Int_t status)
          fQueryLock->Unlock();
    } else {
       // Try to stop processing if any
+      Bool_t abort = (status == 0) ? kFALSE : kTRUE;
       if (!fIdle && fPlayer)
-         fPlayer->StopProcess(kTRUE,1);
+         fPlayer->StopProcess(abort,1);
       gSystem->Sleep(2000);
    }
 
    // Remove input and signal handlers to avoid spurious "signals"
    // for closing activities executed upon exit()
    gSystem->RemoveFileHandler(fInputHandler);
-   gSystem->RemoveSignalHandler(fInterruptHandler);
 
    // Stop processing events (set a flag to exit the event loop)
    gSystem->ExitLoop();
@@ -968,9 +912,6 @@ void TXProofServ::Terminate(Int_t status)
    // activity on this socket; this fake activity will make it return and
    // eventually exit the loop.
    TXSocket::PostPipe((TXSocket *)fSocket);
-
-   // Avoid communicating back anything to the coordinator (it is gone)
-   ((TXSocket *)fSocket)->SetSessionID(-1);
 
    // Notify
    Printf("Terminate: termination operations ended: quitting!");
@@ -984,7 +925,7 @@ Int_t TXProofServ::LockSession(const char *sessiontag, TProofLockPath **lck)
    // unlocked via UnlockQueryFile(fid).
 
    // We do not need to lock our own session
-   if (strstr(sessiontag, fSessionTag))
+   if (strstr(sessiontag, fTopSessionTag))
       return 0;
 
    if (!lck) {
@@ -1019,7 +960,7 @@ Int_t TXProofServ::LockSession(const char *sessiontag, TProofLockPath **lck)
 
    // Lock the query lock file
    TString qlock = fQueryLock->GetName();
-   qlock.ReplaceAll(fSessionTag, stag);
+   qlock.ReplaceAll(fTopSessionTag, stag);
 
    if (!gSystem->AccessPathName(qlock)) {
       *lck = new TProofLockPath(qlock);
@@ -1033,56 +974,3 @@ Int_t TXProofServ::LockSession(const char *sessiontag, TProofLockPath **lck)
    // We are done
    return 0;
 }
-
-//______________________________________________________________________________
-void TXProofServ::SetShutdownTimer(Bool_t on, Int_t delay)
-{
-   // Enable/disable the timer for delayed shutdown; the delay will be 'delay'
-   // seconds; depending on fShutdownWhenIdle, the countdown will start
-   // immediately or when the session is idle.
-
-   R__LOCKGUARD(fShutdownTimerMtx);
-
-   if (delay < 0 && !fShutdownTimer)
-      // No shutdown request, nothing to do
-      return;
-
-   // Make sure that 'delay' make sense, i.e. not larger than 10 days
-   if (delay > 864000) {
-      Warning("SetShutdownTimer",
-              "abnormous delay value (%d): corruption? setting to 0", delay);
-      delay = 1;
-   }
-   // Set a minimum value (0 does not seem to start the timer ...)
-   Int_t del = (delay <= 0) ? 10 : delay * 1000;
-
-   if (on) {
-      if (!fShutdownTimer) {
-         // First setup call: create timer
-         fShutdownTimer = new TShutdownTimer(this, del);
-         // Start the countdown if requested
-         if (!fShutdownWhenIdle || fIdle)
-            fShutdownTimer->Start(-1, kTRUE);
-      } else {
-         // Start the countdown
-         fShutdownTimer->Start(-1, kTRUE);
-      }
-      // Notify
-      Info("SetShutdownTimer",
-              "session will be shutdown in %d seconds (%d millisec)", delay, del);
-   } else {
-      if (fShutdownTimer) {
-         // Stop and Clean-up the timer
-         SafeDelete(fShutdownTimer);
-         // Notify
-         Info("SetShutdownTimer", "shutdown countdown timer stopped: resuming session");
-      } else {
-         // Notify
-         Info("SetShutdownTimer", "shutdown countdown timer never started - do nothing");
-      }
-   }
-
-   // To avoid having the client notified about this at reconnection
-   FlushLogFile();
-}
-
