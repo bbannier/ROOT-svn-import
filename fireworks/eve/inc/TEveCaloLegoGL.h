@@ -48,12 +48,12 @@ protected:
    void    DrawXYScales(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
    void    DrawHistBase(TGLRnrCtx &rnrCtx) const;
 
-   void    DrawCells2D(TGLRnrCtx & rnrCtx) const;
+   void    DrawCells2D(TEveCaloData::RebinData_t &rdata) const;
 
    void    DrawCells3D(TGLRnrCtx & rnrCtx) const;
    void    MakeQuad(Float_t x, Float_t y, Float_t z,
                     Float_t xw, Float_t yw, Float_t zh) const;
-   void    MakeDisplayList() const;
+   void    MakeDisplayList(TEveCaloData::RebinData_t &rdata) const;
 
    void    GetCellData(TEveCaloData::CellId_t id, TEveCaloData::CellData_t &cell) const;
 

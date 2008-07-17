@@ -109,7 +109,6 @@ public:
    Bool_t GetValueIsColor()   const { return fValueIsColor;}
    void   SetValueIsColor(Bool_t x) { fValueIsColor = x;}
 
-
    void    SetEta(Float_t l, Float_t u);
    Float_t GetEta()    const { return 0.5f*(fEtaMin+fEtaMax); }
    Float_t GetEtaMin() const { return fEtaMin; }
@@ -265,7 +264,7 @@ public:
    void     SetAutoRebin(Bool_t s) { fAutoRebin = s;}
 
    Bool_t   GetNormalizeRebin() const { return fNormalizeRebin; }
-   void     SetNormalizeRebin(Bool_t s) { fNormalizeRebin = s;}
+   void     SetNormalizeRebin(Bool_t s) { fNormalizeRebin = s; fCellIdCacheOK=kFALSE;}
 
    void           SetProjection(EProjection_e p) { fProjection = p; }
    EProjection_e  GetProjection() { return fProjection; }
