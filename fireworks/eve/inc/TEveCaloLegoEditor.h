@@ -41,7 +41,7 @@ protected:
    TGNumberEntry     *fTransparency;
 
    TEveGValuator     *fNZSteps;
-   TEveGValuator     *fBinWidth;
+   TEveGValuator     *fPixelsPerBin;
 
    TGComboBox        *fProjection;
    TGComboBox        *f2DMode;
@@ -65,7 +65,7 @@ public:
 
    void DoNZSteps();
 
-   void DoBinWidth();
+   void DoPixelsPerBin();
 
    void DoProjection();
    void Do2DMode();

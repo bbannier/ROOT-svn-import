@@ -25,11 +25,12 @@ class TEveCaloLegoGL : public TGLObject
 private:
    TEveCaloLegoGL(const TEveCaloLegoGL&);            // Not implemented
    TEveCaloLegoGL& operator=(const TEveCaloLegoGL&); // Not implemented
- 
+
    mutable Float_t   fDataMax; // cached
 
    mutable TAxis*    fEtaAxis;
    mutable TAxis*    fPhiAxis;
+   mutable Int_t     fBinStep;
 
    mutable TGLAxisAttrib    fXAxisAtt;
    mutable TGLAxisAttrib    fYAxisAtt;
@@ -38,7 +39,8 @@ private:
    mutable TGLAxisPainter   fAxisPainter;
 
 protected:
-   Int_t   GetGridStep(Int_t axId, TGLRnrCtx &rnrCtx) const;
+   Int_t   GetGridStep(TGLRnrCtx &rnrCtx) const;
+   void    SetAxis(TAxis *orig, TAxis *curr) const;
 
    void    DrawZScales3D(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
    void    DrawZAxis(TGLRnrCtx &rnrCtx, Float_t azX, Float_t azY) const;
@@ -64,13 +66,9 @@ protected:
 
    TEveCaloLego            *fM;  // Model object.
 
-   // grid density modes
-   Int_t                    fNBinSteps;
-   Int_t*                   fBinSteps;
-
    // event handling
    Int_t                    fTowerPicked;
- 
+
 public:
    TEveCaloLegoGL();
    virtual ~TEveCaloLegoGL();
