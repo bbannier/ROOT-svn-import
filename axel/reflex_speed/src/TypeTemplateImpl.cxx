@@ -21,7 +21,7 @@
 
 
 //-------------------------------------------------------------------------------
-Reflex::TypeTemplateImpl::TypeTemplateImpl( const char * templateName,
+Reflex::Internal::TypeTemplateImpl::TypeTemplateImpl( const char * templateName,
                                                   const Scope & scop,
                                                   std::vector < std::string > parameterNames,
                                                   std::vector < std::string > parameterDefaults )
@@ -46,7 +46,7 @@ Reflex::TypeTemplateImpl::TypeTemplateImpl( const char * templateName,
 
 
 //-------------------------------------------------------------------------------
-Reflex::TypeTemplateImpl::~TypeTemplateImpl() {
+Reflex::Internal::TypeTemplateImpl::~TypeTemplateImpl() {
 //-------------------------------------------------------------------------------
 // Destructor.
    for ( Type_Iterator ti = TemplateInstance_Begin(); ti != TemplateInstance_End(); ++ti ) {
@@ -57,7 +57,8 @@ Reflex::TypeTemplateImpl::~TypeTemplateImpl() {
 
 
 //-------------------------------------------------------------------------------
-bool Reflex::TypeTemplateImpl::operator == ( const TypeTemplateImpl & tt ) const {
+bool
+Reflex::Internal::TypeTemplateImpl::operator == ( const TypeTemplateImpl & tt ) const {
 //-------------------------------------------------------------------------------
    // Equal operator.
    return ( ( fTypeTemplateName->fName == tt.fTypeTemplateName->fName ) && 
@@ -66,7 +67,8 @@ bool Reflex::TypeTemplateImpl::operator == ( const TypeTemplateImpl & tt ) const
 
 
 //-------------------------------------------------------------------------------
-Reflex::Type_Iterator Reflex::TypeTemplateImpl::TemplateInstance_Begin() const {
+Reflex::Type_Iterator
+Reflex::Internal::TypeTemplateImpl::TemplateInstance_Begin() const {
 //-------------------------------------------------------------------------------
    // Return the begin iterator of the instance container of this type template.
    return fTemplateInstances.begin();
@@ -74,7 +76,8 @@ Reflex::Type_Iterator Reflex::TypeTemplateImpl::TemplateInstance_Begin() const {
 
                                              
 //-------------------------------------------------------------------------------
-Reflex::Type_Iterator Reflex::TypeTemplateImpl::TemplateInstance_End() const {
+Reflex::Type_Iterator
+Reflex::Internal::TypeTemplateImpl::TemplateInstance_End() const {
 //-------------------------------------------------------------------------------
    // Return the end iterator of the instance container of this type template.
    return fTemplateInstances.end();
@@ -82,7 +85,8 @@ Reflex::Type_Iterator Reflex::TypeTemplateImpl::TemplateInstance_End() const {
 
                                              
 //-------------------------------------------------------------------------------
-Reflex::Reverse_Type_Iterator Reflex::TypeTemplateImpl::TemplateInstance_RBegin() const {
+Reflex::Reverse_Type_Iterator
+Reflex::Internal::TypeTemplateImpl::TemplateInstance_RBegin() const {
 //-------------------------------------------------------------------------------
    // Return the rbegin iterator of the instance container of this type template.
    return ((const std::vector<Type>&)fTemplateInstances).rbegin();
@@ -90,7 +94,8 @@ Reflex::Reverse_Type_Iterator Reflex::TypeTemplateImpl::TemplateInstance_RBegin(
 
                                              
 //-------------------------------------------------------------------------------
-Reflex::Reverse_Type_Iterator Reflex::TypeTemplateImpl::TemplateInstance_REnd() const {
+Reflex::Reverse_Type_Iterator
+Reflex::Internal::TypeTemplateImpl::TemplateInstance_REnd() const {
 //-------------------------------------------------------------------------------
    // Return the rend iterator of the instance container of this type template.
    return ((const std::vector<Type>&)fTemplateInstances).rend();
@@ -98,7 +103,8 @@ Reflex::Reverse_Type_Iterator Reflex::TypeTemplateImpl::TemplateInstance_REnd() 
 
                                              
 //-------------------------------------------------------------------------------
-Reflex::Type Reflex::TypeTemplateImpl::TemplateInstanceAt( size_t nth ) const {
+Reflex::Type
+Reflex::Internal::TypeTemplateImpl::TemplateInstanceAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
 // Return the nth template instance of this family.
    if ( nth < fTemplateInstances.size() ) return fTemplateInstances[ nth ];
@@ -107,7 +113,8 @@ Reflex::Type Reflex::TypeTemplateImpl::TemplateInstanceAt( size_t nth ) const {
 
 
 //-------------------------------------------------------------------------------
-size_t Reflex::TypeTemplateImpl::TemplateInstanceSize() const {
+size_t
+Reflex::Internal::TypeTemplateImpl::TemplateInstanceSize() const {
 //-------------------------------------------------------------------------------
 // Return the number of template instances of this family.
    return fTemplateInstances.size();
@@ -115,7 +122,8 @@ size_t Reflex::TypeTemplateImpl::TemplateInstanceSize() const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::TypeTemplate Reflex::TypeTemplateImpl::ThisTypeTemplate() const {
+Reflex::TypeTemplate
+Reflex::Internal::TypeTemplateImpl::ThisTypeTemplate() const {
 //-------------------------------------------------------------------------------
    // Return a ref to this type template.
    return fTypeTemplateName->ThisTypeTemplate();
@@ -123,7 +131,8 @@ Reflex::TypeTemplate Reflex::TypeTemplateImpl::ThisTypeTemplate() const {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::TypeTemplateImpl::AddTemplateInstance( const Type & templateInstance ) const {
+void
+Reflex::Internal::TypeTemplateImpl::AddTemplateInstance( const Type & templateInstance ) const {
 //-------------------------------------------------------------------------------
 // Add template instance to this family.
    fTemplateInstances.push_back( templateInstance );

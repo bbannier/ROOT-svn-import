@@ -23,8 +23,8 @@
 
 
 //-------------------------------------------------------------------------------
-typedef __gnu_cxx::hash_map<const std::string *, Reflex::TypeName * > Name2Type_t;
-typedef __gnu_cxx::hash_map<const char *, Reflex::TypeName * > TypeId2Type_t;
+typedef __gnu_cxx::hash_map<const std::string *, Reflex::Internal::TypeName * > Name2Type_t;
+typedef __gnu_cxx::hash_map<const char *, Reflex::Internal::TypeName * > TypeId2Type_t;
 typedef std::vector< Reflex::Type > TypeVec_t;
 
 

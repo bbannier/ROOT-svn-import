@@ -45,8 +45,8 @@ Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info
    const Type& c = Type::ByName(nam2);
    if (c) {
       // We found a typedef to a class with the same name
-      if (c.IsTypedef()) {
-         nam2 += " @HIDDEN@";
+      if (c.Is(gTYPEDEF)) {
+         nam2 += " @Hidden@";
       }
       // Class already exists. Check if it was a class.
       else if (!c.IsClass()) {
@@ -54,10 +54,10 @@ Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info
       }
    }
    if (Tools::IsTemplated(nam)) {
-      fClass = new ClassTemplateInstance(nam2.c_str(), size, ti, modifiers);
+      fClass = new Internal::ClassTemplateInstance(nam2.c_str(), size, ti, modifiers);
    }
    else {
-      fClass = new Class(nam2.c_str(), size, ti, modifiers, typ);
+      fClass = new Internal::Class(nam2.c_str(), size, ti, modifiers, typ);
    }
 }
 
@@ -79,7 +79,7 @@ void Reflex::ClassBuilderImpl::AddBase(const Type& bas, OffsetFunction offsFP, u
 void Reflex::ClassBuilderImpl::AddDataMember(const char* nam, const Type& typ, size_t offs, unsigned int modifiers)
 {
    // -- Add data member info (internal).
-   fLastMember = Member(new DataMember(nam, typ, offs, modifiers));
+   fLastMember = Member(new Internal::DataMember(nam, typ, offs, modifiers));
    fClass->AddDataMember(fLastMember);
 }
 
@@ -88,10 +88,13 @@ void Reflex::ClassBuilderImpl::AddFunctionMember(const char* nam, const Type& ty
 {
    // -- Add function member info (internal).
    if (Tools::IsTemplated(nam)) {
-      fLastMember = Member(new FunctionMemberTemplateInstance(nam, typ, stubFP, stubCtx, params, modifiers, *(dynamic_cast<ScopeBase*>(fClass))));
+      Internal::ScopeBase* scopebase = dynamic_cast<Internal::ScopeBase*>(fClass);
+      Internal::FunctionMemberTemplateInstance* tmplinst
+         = new Internal::FunctionMemberTemplateInstance(nam, typ, stubFP, stubCtx, params, modifiers, *scopebase);
+      fLastMember = Member(tmplinst);
    }
    else {
-      fLastMember = Member(new FunctionMember(nam, typ, stubFP, stubCtx, params, modifiers));
+      fLastMember = Member(new Internal::FunctionMember(nam, typ, stubFP, stubCtx, params, modifiers));
    }
    fClass->AddFunctionMember(fLastMember);
 }
@@ -102,12 +105,12 @@ void Reflex::ClassBuilderImpl::AddTypedef(const Type& typ, const char* def)
    // -- Add typedef info (internal).
    Type ret = Type::ByName(def);
    // Check for typedef AA AA;
-   if (ret == typ && ! typ.IsTypedef()) {
+   if (ret == typ && ! typ.Is(gTYPEDEF)) {
       if (typ) {
          typ.ToTypeBase()->HideName();
       }
       else {
-         ((TypeName*)typ.Id())->HideName();
+         ((Internal::TypeName*)typ.Id())->HideName();
       }
    }
    // We found the typedef type
@@ -116,7 +119,7 @@ void Reflex::ClassBuilderImpl::AddTypedef(const Type& typ, const char* def)
    }
    // Create a new typedef
    else {
-      new Typedef(def , typ);
+      new Internal::Typedef(def , typ);
    }
 }
 
@@ -129,7 +132,7 @@ void Reflex::ClassBuilderImpl::AddEnum(const char* nam, const char* values, cons
    // not only a declaration. (It is called in the dictionary header already)
    //   EnumTypeBuilder(nam, values, *ti, modifiers);
 
-   Enum* e = new Enum(nam, *ti, modifiers);
+   Internal::Enum* e = new Internal::Enum(nam, *ti, modifiers);
 
    std::vector<std::string> valVec = std::vector<std::string>();
    Tools::StringSplit(valVec, values, ";");
@@ -143,7 +146,7 @@ void Reflex::ClassBuilderImpl::AddEnum(const char* nam, const char* values, cons
       std::string value = "";
       Tools::StringSplitPair(name, value, *it, "=");
       unsigned long int valInt = atol(value.c_str());
-      e->AddDataMember(Member(new DataMember(name.c_str(), Type::ByName("int"), valInt, 0)));
+      e->AddDataMember(Member(new Internal::DataMember(name.c_str(), Type::ByName("int"), valInt, 0)));
    }
 }
 

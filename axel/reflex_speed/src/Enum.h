@@ -21,6 +21,7 @@ namespace Reflex {
    // forward declarations
    class DictionaryGenerator;
 
+namespace Internal {
 
    /**
    * @class Enum Enum.h Reflex/Enum.h
@@ -182,134 +183,152 @@ namespace Reflex {
       unsigned int fModifiers;
 
    }; // class Enum
+} //namespace Internal
 } //namespace Reflex
 
 #include "Reflex/internal/OwnedMember.h"
 
 //-------------------------------------------------------------------------------
-inline Reflex::Enum::operator Reflex::Scope () const {
+inline
+Reflex::Internal::Enum::operator Reflex::Scope () const {
 //-------------------------------------------------------------------------------
    return ScopeBase::operator Scope ();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Enum::operator Reflex::Type () const {
+inline
+Reflex::Internal::Enum::operator Reflex::Type () const {
 //-------------------------------------------------------------------------------
    return TypeBase::operator Type ();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::Enum::DataMember_Begin() const {
+inline Reflex::Member_Iterator
+Reflex::Internal::Enum::DataMember_Begin() const {
 //-------------------------------------------------------------------------------
    return ScopeBase::DataMember_Begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::Enum::DataMember_End() const {
+inline Reflex::Member_Iterator
+Reflex::Internal::Enum::DataMember_End() const {
 //-------------------------------------------------------------------------------
    return ScopeBase::DataMember_End();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::Enum::DataMember_RBegin() const {
+inline Reflex::Reverse_Member_Iterator
+Reflex::Internal::Enum::DataMember_RBegin() const {
 //-------------------------------------------------------------------------------
    return ScopeBase::DataMember_RBegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::Enum::DataMember_REnd() const {
+inline Reflex::Reverse_Member_Iterator
+Reflex::Internal::Enum::DataMember_REnd() const {
 //-------------------------------------------------------------------------------
    return ScopeBase::DataMember_REnd();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::Enum::Member_Begin() const {
+inline Reflex::Member_Iterator
+Reflex::Internal::Enum::Member_Begin() const {
 //-------------------------------------------------------------------------------
    return ScopeBase::Member_Begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::Enum::Member_End() const {
+inline Reflex::Member_Iterator
+Reflex::Internal::Enum::Member_End() const {
 //-------------------------------------------------------------------------------
    return ScopeBase::Member_End();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::Enum::Member_RBegin() const {
+inline Reflex::Reverse_Member_Iterator
+Reflex::Internal::Enum::Member_RBegin() const {
 //-------------------------------------------------------------------------------
    return ScopeBase::Member_RBegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::Enum::Member_REnd() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::Enum::Member_REnd() const {
 //-------------------------------------------------------------------------------
    return ScopeBase::Member_REnd();  
 }
 
 
 //-------------------------------------------------------------------------------
-inline std::string Reflex::Enum::Name( unsigned int mod ) const {
+inline std::string
+Reflex::Internal::Enum::Name( unsigned int mod ) const {
 //-------------------------------------------------------------------------------
    return ScopeBase::Name( mod );
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::Enum::AddDataMember( const Member & dm ) const {
+inline void
+Reflex::Internal::Enum::AddDataMember( const Member & dm ) const {
 //-------------------------------------------------------------------------------
    ScopeBase::AddDataMember( dm );
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::Enum::AddDataMember( const char * nam,
-                                               const Type & typ,
-                                               size_t offs,
-                                               unsigned int modifiers ) const {
+inline void
+Reflex::Internal::Enum::AddDataMember( const char * nam,
+                                       const Type & typ,
+                                       size_t offs,
+                                       unsigned int modifiers ) const {
 //-------------------------------------------------------------------------------
    ScopeBase::AddDataMember(nam, typ, offs, modifiers);
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member Reflex::Enum::DataMemberAt( size_t nth ) const {
+inline Reflex::Member
+Reflex::Internal::Enum::DataMemberAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    return ScopeBase::DataMemberAt( nth );
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member Reflex::Enum::DataMemberByName( const std::string & nam ) const {
+inline Reflex::Member
+Reflex::Internal::Enum::DataMemberByName( const std::string & nam ) const {
 //-------------------------------------------------------------------------------
    return ScopeBase::DataMemberByName( nam );
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::Enum::DataMemberSize() const {
+inline size_t
+Reflex::Internal::Enum::DataMemberSize() const {
 //-------------------------------------------------------------------------------
    return ScopeBase::DataMemberSize();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope Reflex::Enum::DeclaringScope() const {
+inline Reflex::Scope
+Reflex::Internal::Enum::DeclaringScope() const {
 //-------------------------------------------------------------------------------
    return ScopeBase::DeclaringScope();
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::Enum::HideName() const {
+inline void
+Reflex::Internal::Enum::HideName() const {
 //-------------------------------------------------------------------------------
    TypeBase::HideName();
    ScopeBase::HideName();
@@ -317,28 +336,32 @@ inline void Reflex::Enum::HideName() const {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Enum::IsPrivate() const {
+inline bool
+Reflex::Internal::Enum::IsPrivate() const {
 //-------------------------------------------------------------------------------
    return 0 != ( fModifiers & PRIVATE );
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Enum::IsProtected() const {
+inline bool
+Reflex::Internal::Enum::IsProtected() const {
 //-------------------------------------------------------------------------------
    return 0 != ( fModifiers & PROTECTED );
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Enum::IsPublic() const {
+inline bool
+Reflex::Internal::Enum::IsPublic() const {
 //-------------------------------------------------------------------------------
    return 0 != ( fModifiers & PUBLIC );
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member Reflex::Enum::MemberByName( const std::string & nam,
+inline Reflex::Member
+Reflex::Internal::Enum::MemberByName( const std::string & nam,
                                                               const Type & signature ) const {
 //-------------------------------------------------------------------------------
    return ScopeBase::MemberByName( nam, signature );
@@ -346,21 +369,24 @@ inline Reflex::Member Reflex::Enum::MemberByName( const std::string & nam,
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member Reflex::Enum::MemberAt( size_t nth ) const {
+inline Reflex::Member
+Reflex::Internal::Enum::MemberAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    return ScopeBase::MemberAt( nth );
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::Enum::MemberSize() const {
+inline size_t
+Reflex::Internal::Enum::MemberSize() const {
 //-------------------------------------------------------------------------------
    return ScopeBase::MemberSize();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::PropertyList Reflex::Enum::Properties() const {
+inline Reflex::PropertyList
+Reflex::Internal::Enum::Properties() const {
 //-------------------------------------------------------------------------------
    return ScopeBase::Properties();
 }

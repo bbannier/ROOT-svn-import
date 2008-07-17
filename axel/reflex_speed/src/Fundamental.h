@@ -17,6 +17,8 @@
 
 namespace Reflex {
 
+namespace Internal {
+
 
    /**
    * @class Fundamental Fundamental.h Reflex/Fundamental.h
@@ -36,6 +38,7 @@ namespace Reflex {
       virtual ~Fundamental() {}
 
    }; // class Fundamental
+} //namespace Internal
 } //namespace Reflex
 
 #endif // Reflex_Fundamental

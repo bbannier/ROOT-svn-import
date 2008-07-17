@@ -116,9 +116,10 @@
 
 // Include files
 #include <string>
-#include <vector>
 #include <utility>
 #include <exception>
+#include <vector>
+#include "Reflex/Container.h"
 
 namespace Reflex {
 
@@ -149,35 +150,35 @@ namespace Reflex {
    class TypeTemplate;
    class MemberTemplate;
 
-   typedef std::vector<std::string> StdString_Cont_Type_t;
+   typedef Container<std::string> StdString_Cont_Type_t;
    typedef StdString_Cont_Type_t::const_iterator StdString_Iterator;
    typedef StdString_Cont_Type_t::const_reverse_iterator Reverse_StdString_Iterator;
 
-   typedef std::vector< Type > Type_Cont_Type_t;
+   typedef Container< Type > Type_Cont_Type_t;
    typedef Type_Cont_Type_t::const_iterator Type_Iterator;
    typedef Type_Cont_Type_t::const_reverse_iterator Reverse_Type_Iterator;
 
-   typedef std::vector< Base > Base_Cont_Type_t;
+   typedef Container< Base > Base_Cont_Type_t;
    typedef Base_Cont_Type_t::const_iterator Base_Iterator;
    typedef Base_Cont_Type_t::const_reverse_iterator Reverse_Base_Iterator;
 
-   typedef std::vector< Scope > Scope_Cont_Type_t;
+   typedef Container< Scope > Scope_Cont_Type_t;
    typedef Scope_Cont_Type_t::const_iterator Scope_Iterator;
    typedef Scope_Cont_Type_t::const_reverse_iterator Reverse_Scope_Iterator;
 
-   typedef std::vector< Object > Object_Cont_Type_t;
+   typedef Container< Object > Object_Cont_Type_t;
    typedef Object_Cont_Type_t::const_iterator Object_Iterator;
    typedef Object_Cont_Type_t::const_reverse_iterator Reverse_Object_Iterator;
 
-   typedef std::vector< Member > Member_Cont_Type_t;
+   typedef Container< Member > Member_Cont_Type_t;
    typedef Member_Cont_Type_t::const_iterator Member_Iterator;
    typedef Member_Cont_Type_t::const_reverse_iterator Reverse_Member_Iterator;
 
-   typedef std::vector< TypeTemplate > TypeTemplate_Cont_Type_t;
+   typedef Container< TypeTemplate > TypeTemplate_Cont_Type_t;
    typedef TypeTemplate_Cont_Type_t::const_iterator TypeTemplate_Iterator;
    typedef TypeTemplate_Cont_Type_t::const_reverse_iterator Reverse_TypeTemplate_Iterator;
 
-   typedef std::vector< MemberTemplate > MemberTemplate_Cont_Type_t;
+   typedef Container< MemberTemplate > MemberTemplate_Cont_Type_t;
    typedef MemberTemplate_Cont_Type_t::const_iterator MemberTemplate_Iterator;
    typedef MemberTemplate_Cont_Type_t::const_reverse_iterator Reverse_MemberTemplate_Iterator;
 

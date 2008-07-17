@@ -14,8 +14,8 @@
 
 // Include files
 #include "Reflex/Kernel.h"
-
 #include "Reflex/Scope.h"
+
 #include "Reflex/internal/OwnedPropertyList.h"
 #include <vector>
 
@@ -27,21 +27,18 @@
 namespace Reflex {
 
    // forward declarations
-   class Scope;
    class Member;
-   class OwnedMember;
    class TypeTemplate;
    class MemberTemplate;
-   class OwnedMemberTemplate;
    class Type;
    class DictionaryGenerator;
 
 namespace Internal {
 
    // forward declarations
+   class OwnedMember;
+   class OwnedMemberTemplate;
    class ScopeName;
-   class Namespace;
-   class Class;
 
 
    /**
@@ -78,53 +75,17 @@ namespace Internal {
 
 
       /**
-      * nthBase will return the nth BaseAt class information
-      * @param  nth nth BaseAt class
-      * @return pointer to BaseAt class information
+      * BaseAt returns the collection of base class information
+      * @return pointer to base class information
       */
-      virtual Base BaseAt( size_t nth ) const;
+      const Container<Base>& Bases() const;
 
 
       /**
-      * BaseSize will return the number of BaseAt classes
-      * @return number of BaseAt classes
+      * DataMembers returns the data members of the type
+      * @return nth data member 
       */
-      virtual size_t BaseSize() const;
-
-
-      virtual Base_Iterator Base_Begin() const;
-      virtual Base_Iterator Base_End() const;
-      virtual Reverse_Base_Iterator Base_RBegin() const;
-      virtual Reverse_Base_Iterator Base_REnd() const;
-
-
-      /**
-      * nthDataMember will return the nth data MemberAt of the At
-      * @param  nth data MemberAt
-      * @return pointer to data MemberAt
-      */
-      Member DataMemberAt( size_t nth ) const;
-
-
-      /**
-      * DataMemberByName will return the MemberAt with Name
-      * @param  Name of data MemberAt
-      * @return data MemberAt
-      */
-      Member DataMemberByName( const std::string & nam ) const;
-
-
-      /**
-      * DataMemberSize will return the number of data members of this At
-      * @return number of data members
-      */
-      size_t DataMemberSize() const;
-
-
-      Member_Iterator DataMember_Begin() const;
-      Member_Iterator DataMember_End() const;
-      Reverse_Member_Iterator DataMember_RBegin() const;
-      Reverse_Member_Iterator DataMember_REnd() const;
+      const Container<Member>& DataMembers() const;
 
 
       /**
@@ -135,11 +96,10 @@ namespace Internal {
 
 
       /**
-      * nthFunctionMember will return the nth function MemberAt of the At
-      * @param  nth function MemberAt
-      * @return pointer to function MemberAt
+      * FunctionMembers returns the collection of function members of the scope
+      * @return reflection information of nth function member
       */
-      Member FunctionMemberAt( size_t nth ) const;
+      const Container<Member>& FunctionMembers() const;
 
 
       /**
@@ -169,20 +129,6 @@ namespace Internal {
 
 
       /**
-      * FunctionMemberSize will return the number of function members of
-      * this type
-      * @return number of function members
-      */
-      size_t FunctionMemberSize() const;
-
-
-      Member_Iterator FunctionMember_Begin() const;
-      Member_Iterator FunctionMember_End() const;
-      Reverse_Member_Iterator FunctionMember_RBegin() const;
-      Reverse_Member_Iterator FunctionMember_REnd() const;
-
-
-      /**
       * GenerateDict will produce the dictionary information of this type
       * @param generator a reference to the dictionary generator instance
       */
@@ -190,60 +136,20 @@ namespace Internal {
 
 
       /**
-      * GlobalScope will return the global scope representation\
+      * GlobalScope will return the global scope representation
       * @return global scope
       */
       static Scope GlobalScope();
 
 
-      /** 
-      * IsClass returns true if the At represents a Class
-      * @return true if At represents a Class
+      /**
+      * Check whether the entity property is set for the scope. You can
+      * combine checks, e.g. Is(gCLASS && gPUBLIC)
+      * @param descr the entity property to check for; see EntityProperty.
+      * @param mod the modifier as stored by Type (reference,...)
+      * @return whether descr is set.
       */
-      bool IsClass() const;
-
-
-      /** 
-      * IsEnum returns true if the At represents a Enum
-      * @return true if At represents a Enum
-      */
-      bool IsEnum() const;
-
-
-      /** 
-      * IsNamespace returns true if the At represents a Namespace
-      * @return true if At represents a Namespace
-      */
-      bool IsNamespace() const;
-
-
-      /** 
-      * IsPrivate will check if the scope access is private
-      * @return true if scope access is private
-      */
-      virtual bool IsPrivate() const;
-
-
-      /** 
-      * IsProtected will check if the scope access is protected
-      * @return true if scope access is protected
-      */
-      virtual bool IsProtected() const;
-
-
-      /** 
-      * IsPublic will check if the scope access is public
-      * @return true if scope access is public
-      */
-      virtual bool IsPublic() const;
-
-
-      /** 
-      * IsTemplateInstance returns true if the At represents a 
-      * ClassTemplateInstance
-      * @return true if At represents a InstantiatedTemplateClass
-      */
-      bool IsTemplateInstance() const;
+      bool Is(const EntityProperty& descr, int mod) const;
 
 
       /**
@@ -252,13 +158,6 @@ namespace Internal {
       * @return true if current sope is top namespace
       */
       bool IsTopScope() const;
-
-
-      /** 
-      * IsUnion returns true if the At represents a Union
-      * @return true if At represents a 
-      */
-      bool IsUnion() const;
 
 
       /**
@@ -301,61 +200,36 @@ namespace Internal {
 
 
       /**
-      * MemberAt will return the nth MemberAt of the At
-      * @param  nth MemberAt
-      * @return pointer to nth MemberAt
+      * Members eturns the collection of members of the scope
+      * @return reflection information members
       */
-      Member MemberAt( size_t nth ) const;
-
-
-      Member_Iterator Member_Begin() const;
-      Member_Iterator Member_End() const;
-      Reverse_Member_Iterator Member_RBegin() const;
-      Reverse_Member_Iterator Member_REnd() const;
-
-
-      /**
-      * MemberSize will return the number of members
-      * @return number of members
-      */
-      size_t MemberSize() const;
+      const Container<Member>& Members() const;
 
 
       /** 
-      * MemberTemplateAt will return the nth MemberAt template of this At
-      * @param nth MemberAt template
-      * @return nth MemberAt template
+      * MemberTemplates returns the collection of function member templates of this scope
+      * @return collection of member templates
       */
-      MemberTemplate MemberTemplateAt( size_t nth ) const;
-
-
-      /** 
-      * MemberTemplateSize will return the number of MemberAt templates in this socpe
-      * @return number of defined MemberAt templates
-      */
-      size_t MemberTemplateSize() const;
-
-
-      /**
-      * MemberTemplateByName will return the member template representation in this 
-      * scope
-      * @param string representing the member template to look for
-      * @return member template representation of the looked up member
-      */
-      MemberTemplate MemberTemplateByName( const std::string & nam ) const;
-
-
-      MemberTemplate_Iterator MemberTemplate_Begin() const;
-      MemberTemplate_Iterator MemberTemplate_End() const;
-      Reverse_MemberTemplate_Iterator MemberTemplate_RBegin() const;
-      Reverse_MemberTemplate_Iterator MemberTemplate_REnd() const;
+      const Container<MemberTemplate>& MemberTemplates() const;
 
 
       /**
       * Name will return the Name of the At
       * @return Name of At
       */
-      virtual std::string Name( unsigned int mod = 0 ) const;
+      virtual std::string Name( unsigned int mod = SCOPED | QUALIFIED ) const;
+
+
+      /**
+      * Name returns the name of the scope
+      * @param  buf buffer to be used for calculating name
+      * @param  mod qualifiers can be or'ed 
+      *   FINAL     - resolve typedefs
+      *   SCOPED    - fully scoped name 
+      *   QUALIFIED - cv, reference qualification 
+      * @return name of the type
+      */
+      const std::string& Name(std::string& buf, unsigned int mod = SCOPED | QUALIFIED ) const;
 
 
       /**
@@ -368,7 +242,7 @@ namespace Internal {
       * @return name of type
       */
       virtual const std::string & SimpleName( size_t & pos, 
-         unsigned int mod = 0 ) const;
+         unsigned int mod = SCOPED ) const;
 
 
       /**
@@ -402,11 +276,10 @@ namespace Internal {
 
 
       /**
-      * SubScopeAt will return a pointer to a sub-scopes
-      * @param  nth sub-At
-      * @return pointer to nth sub-At
+      * SubScopes returns the collection of scopes declared in this scope.
+      * @return container of reflection information of sub scopes
       */
-      Scope SubScopeAt( size_t nth ) const;
+      const Container<Scope>& SubScopes() const;
 
 
       /**
@@ -418,133 +291,38 @@ namespace Internal {
 
 
       /**
-      * ScopeSize will return the number of sub-scopes
-      * @return number of sub-scopes
+      * SubTypes returns the collection of type declared in this scope.
+      * @return reflection information of sub types
       */
-      size_t SubScopeSize() const;
+      const Container<Type>& SubTypes() const;
 
 
       /** 
-      * SubScopeByName will return a sub scope representing the unscoped name passed
-      * as argument
-      * @param unscoped name of the sub scope to look for
-      * @return Scope representation of the sub scope
+      * SubTypeTemplates returns the collection of templated types declared within this scope
+      * @return type templates
       */
-      Scope SubScopeByName( const std::string & nam ) const;
-
-
-      Scope_Iterator SubScope_Begin() const;
-      Scope_Iterator SubScope_End() const;
-      Reverse_Scope_Iterator SubScope_RBegin() const;
-      Reverse_Scope_Iterator SubScope_REnd() const;
+      const Container<TypeTemplate>& SubTypeTemplates() const;
 
 
       /**
-      * At will return a pointer to the nth sub-At
-      * @param  nth sub-At
-      * @return pointer to nth sub-At
+      * UsingDirectives returns the using directives declared in this scope.
+      * @return using directives
       */
-      Type SubTypeAt( size_t nth ) const;
+      const Container<Scope>& UsingDirectives() const;
 
 
       /**
-      * TypeSize will returnt he number of sub-types
-      * @return number of sub-types
+      * UsingTypeDeclarations returns the using declarations of types of this scope.
+      * @return using declarations of types
       */
-      size_t SubTypeSize() const;
+      const Container<Type>& UsingTypeDeclarations() const;
 
 
       /**
-      * SubTypeByName will return the Type representing the sub type 
-      * @param string of the unscoped sub type to look for
-      * @return Type representation of the sub type
+      * UsingMemberDeclarations returns the using declarations of members of this scope.
+      * @return using declarations of members
       */
-      Type SubTypeByName( const std::string & nam ) const;
-
-
-      Type_Iterator SubType_Begin() const;
-      Type_Iterator SubType_End() const;
-      Reverse_Type_Iterator SubType_RBegin() const;
-      Reverse_Type_Iterator SubType_REnd() const;
-
-
-      /**
-      * TemplateArgumentAt will return a pointer to the nth template argument
-      * @param  nth nth template argument
-      * @return pointer to nth template argument
-      */
-      virtual Type TemplateArgumentAt( size_t nth ) const;
-
-
-      /**
-      * templateArgSize will return the number of template arguments
-      * @return number of template arguments
-      */
-      virtual size_t TemplateArgumentSize() const;
-
-
-      virtual Type_Iterator TemplateArgument_Begin() const;
-      virtual Type_Iterator TemplateArgument_End() const;
-      virtual Reverse_Type_Iterator TemplateArgument_RBegin() const;
-      virtual Reverse_Type_Iterator TemplateArgument_REnd() const;
-
-
-      /**
-      * SubTypeTemplateAt returns the corresponding TypeTemplate if any
-      * @return corresponding TypeTemplate
-      */
-      virtual TypeTemplate TemplateFamily() const;
-
-
-      /** 
-      * SubTypeTemplateAt will return the nth At template of this At
-      * @param  nth sub type template
-      * @return nth sub type template
-      */
-      TypeTemplate SubTypeTemplateAt( size_t nth ) const;
-
-
-      /** 
-      * SubTypeTemplateSize will return the number of At templates in this socpe
-      * @return number of defined sub type templates
-      */
-      size_t SubTypeTemplateSize() const;
-
-
-      /**
-      * SubTypeTemplateByName will return a type template defined in this scope looked up by 
-      * it's unscoped name
-      * @param unscoped name of the type template to look for
-      * @return TypeTemplate representation of the sub type template
-      */
-      TypeTemplate SubTypeTemplateByName( const std::string & nam ) const;
-
-
-      TypeTemplate_Iterator SubTypeTemplate_Begin() const;
-      TypeTemplate_Iterator SubTypeTemplate_End() const;
-      Reverse_TypeTemplate_Iterator SubTypeTemplate_RBegin() const;
-      Reverse_TypeTemplate_Iterator SubTypeTemplate_REnd() const;
-
-
-      /**
-      * UsingDirectiveAt will return the nth using directive
-      * @param  nth using directive
-      * @return nth using directive
-      */
-      Scope UsingDirectiveAt( size_t nth ) const;
-
-
-      /**
-      * UsingDirectiveSize will return the number of using directives of this scope
-      * @return number of using directives declared in this scope
-      */
-      size_t UsingDirectiveSize() const;
-
-
-      Scope_Iterator UsingDirective_Begin() const;
-      Scope_Iterator UsingDirective_End() const;
-      Reverse_Scope_Iterator UsingDirective_RBegin() const;
-      Reverse_Scope_Iterator UsingDirective_REnd() const;
+      const Container<Member>& UsingMemberDdeclaration() const;
 
 
    protected:
@@ -558,8 +336,8 @@ namespace Internal {
       * AddDataMember will add the information about a data MemberAt
       * @param dm pointer to data MemberAt
       */
-      virtual void AddDataMember( const Member & dm ) const;
-      virtual void AddDataMember( const char * name,
+      virtual void AddMember( const Member & dm ) const;
+      virtual void AddMember( const char * name,
          const Type & type,
          size_t offset,
          unsigned int modifiers = 0 ) const;
@@ -569,8 +347,7 @@ namespace Internal {
       * AddFunctionMember will add the information about a function MemberAt
       * @param fm pointer to function MemberAt
       */
-      virtual void AddFunctionMember( const Member & fm ) const;
-      virtual void AddFunctionMember( const char * name,
+      virtual void AddMember( const char * name,
          const Type & type,
          StubFunction stubFP,
          void * stubCtx = 0,
@@ -578,7 +355,7 @@ namespace Internal {
          unsigned int modifiers = 0 ) const;
 
 
-      virtual void AddMemberTemplate( const MemberTemplate & mt ) const ;
+      virtual void AddMember( const MemberTemplate & mt ) const ;
 
 
       /**
@@ -609,20 +386,31 @@ namespace Internal {
 
 
       /**
+      * AddUsingDeclaration adds a using declaration of a type to this scope
+      * @param ud using declaration to add
+      */
+      void AddUsingDeclaration( const Type & ud ) const;
+
+
+      /**
+      * AddUsingDeclaration adds a using declaration of a member to this scope
+      * @param ud using declaration to add
+      */
+      void AddUsingDeclaration( const Member & ud ) const;
+
+
+      /**
       * RemoveDataMember will remove the information about a data MemberAt
       * @param dm pointer to data MemberAt
       */
-      virtual void RemoveDataMember( const Member & dm ) const;
+      virtual void RemoveMember( const Member & dm ) const;
 
 
       /**
       * RemoveFunctionMember will remove the information about a function MemberAt
       * @param fm pointer to function MemberAt
       */
-      virtual void RemoveFunctionMember( const Member & fm ) const;
-
-
-      virtual void RemoveMemberTemplate( const MemberTemplate & mt ) const;
+      virtual void RemoveMember( const MemberTemplate & mt ) const;
 
 
       /**
@@ -645,7 +433,29 @@ namespace Internal {
       void RemoveUsingDirective( const Scope & ud ) const;
 
 
+      /** 
+      * RemoveUsingDeclaration removes a using declaration from this scope
+      * @param ud using declaration to remove
+      */
+      void RemoveUsingDeclaration( const Type & ud ) const;
+
+
+      /** 
+      * RemoveUsingDeclaration removes a using declaration from this scope
+      * @param ud using declaration to remove
+      */
+      void RemoveUsingDeclaration( const Member & ud ) const;
+
+
       virtual void HideName() const;
+
+   protected:
+
+      /**
+      * Retrieve the flags (bit mask of ENTITY_DESCRIPTION) for this type.
+      */
+      int TypeDescriptionFlags() const { return 0; }
+
 
    private:
 
@@ -656,10 +466,6 @@ namespace Internal {
       ScopeBase & operator = ( const ScopeBase & );
 
    protected:
-
-      /** container for all members of the Scope */
-      typedef std::vector < Member > Members;
-      typedef std::vector < OwnedMember > OMembers;
 
       /**
       * pointers to members
@@ -799,342 +605,26 @@ namespace Internal {
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::Internal::ScopeBase::BaseSize() const {
-//-------------------------------------------------------------------------------
-   return 0;
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Base_Iterator Reflex::Internal::ScopeBase::Base_Begin() const {
-//-------------------------------------------------------------------------------
-   return Dummy::BaseCont().begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Base_Iterator Reflex::Internal::ScopeBase::Base_End() const {
-//-------------------------------------------------------------------------------
-   return Dummy::BaseCont().end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Base_Iterator Reflex::Internal::ScopeBase::Base_RBegin() const {
-//-------------------------------------------------------------------------------
-   return Dummy::BaseCont().rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Base_Iterator Reflex::Internal::ScopeBase::Base_REnd() const {
-//-------------------------------------------------------------------------------
-   return Dummy::BaseCont().rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Scope Reflex::Internal::ScopeBase::DeclaringScope() const {
+inline Reflex::Scope
+Reflex::Internal::ScopeBase::DeclaringScope() const {
 //-------------------------------------------------------------------------------
    return fDeclaringScope;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::Internal::ScopeBase::DataMember_Begin() const {
+inline bool
+Reflex::Internal::ScopeBase::Is(const EntityProperty& prop, const int mod) const {
 //-------------------------------------------------------------------------------
-   return fDataMembers.begin();
+   return prop.Eval(TypeDescriptionFlags() | mod, fScopeType);
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::Internal::ScopeBase::DataMember_End() const {
-//-------------------------------------------------------------------------------
-   return fDataMembers.end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::Internal::ScopeBase::DataMember_RBegin() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<Member>&)fDataMembers).rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::Internal::ScopeBase::DataMember_REnd() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<Member>&)fDataMembers).rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::Internal::ScopeBase::FunctionMember_Begin() const {
-//-------------------------------------------------------------------------------
-   return fFunctionMembers.begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::Internal::ScopeBase::FunctionMember_End() const {
-//-------------------------------------------------------------------------------
-   return fFunctionMembers.end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::Internal::ScopeBase::FunctionMember_RBegin() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<Member>&)fFunctionMembers).rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::Internal::ScopeBase::FunctionMember_REnd() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<Member>&)fFunctionMembers).rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Scope_Iterator Reflex::Internal::ScopeBase::SubScope_Begin() const {
-//-------------------------------------------------------------------------------
-   return fSubScopes.begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Scope_Iterator Reflex::Internal::ScopeBase::SubScope_End() const {
-//-------------------------------------------------------------------------------
-   return fSubScopes.end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Scope_Iterator Reflex::Internal::ScopeBase::SubScope_RBegin() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<Scope>&)fSubScopes).rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Scope_Iterator Reflex::Internal::ScopeBase::SubScope_REnd() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<Scope>&)fSubScopes).rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::Internal::ScopeBase::SubType_Begin() const {
-//-------------------------------------------------------------------------------
-   return fSubTypes.begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::Internal::ScopeBase::SubType_End() const {
-//-------------------------------------------------------------------------------
-   return fSubTypes.end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::Internal::ScopeBase::SubType_RBegin() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<Type>&)fSubTypes).rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::Internal::ScopeBase::SubType_REnd() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<Type>&)fSubTypes).rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate_Iterator Reflex::Internal::ScopeBase::SubTypeTemplate_Begin() const {
-//-------------------------------------------------------------------------------
-   return fTypeTemplates.begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate_Iterator Reflex::Internal::ScopeBase::SubTypeTemplate_End() const {
-//-------------------------------------------------------------------------------
-   return fTypeTemplates.end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_TypeTemplate_Iterator Reflex::Internal::ScopeBase::SubTypeTemplate_RBegin() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<TypeTemplate>&)fTypeTemplates).rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_TypeTemplate_Iterator Reflex::Internal::ScopeBase::SubTypeTemplate_REnd() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<TypeTemplate>&)fTypeTemplates).rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Internal::ScopeBase::IsClass() const {
-//-------------------------------------------------------------------------------
-   return ( fScopeType == CLASS || 
-            fScopeType == TYPETEMPLATEINSTANCE ||
-            fScopeType == STRUCT );
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Internal::ScopeBase::IsEnum() const {
-//-------------------------------------------------------------------------------
-   return ( fScopeType == ENUM );
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Internal::ScopeBase::IsNamespace() const {
-//-------------------------------------------------------------------------------
-   return ( fScopeType == NAMESPACE );
-}
-
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Internal::ScopeBase::IsPrivate() const {
-//-------------------------------------------------------------------------------
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Internal::ScopeBase::IsProtected() const {
-//-------------------------------------------------------------------------------
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Internal::ScopeBase::IsPublic() const {
-//-------------------------------------------------------------------------------
-   return true;
-}
-
-
-inline bool ROOT::Reflex::Internal::ScopeBase::IsTemplateInstance() const {
-//-------------------------------------------------------------------------------
-   return ( fScopeType == TYPETEMPLATEINSTANCE );
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Internal::ScopeBase::IsUnion() const {
-//-------------------------------------------------------------------------------
-   return ( fScopeType == UNION );
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::TYPE Reflex::Internal::ScopeBase::ScopeType() const {
+inline Reflex::TYPE
+Reflex::Internal::ScopeBase::ScopeType() const {
 //-------------------------------------------------------------------------------
    return fScopeType;
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Scope Reflex::Internal::ScopeBase::SubScopeAt( size_t nth ) const {
-//-------------------------------------------------------------------------------
-   if ( nth < fSubScopes.size() ) { return fSubScopes[ nth ]; }
-   return Dummy::Scope();
-}
-
-
-//-------------------------------------------------------------------------------
-inline size_t Reflex::Internal::ScopeBase::SubScopeSize() const {
-//-------------------------------------------------------------------------------
-   return fSubScopes.size();
-}
-
-
-//-------------------------------------------------------------------------------
-inline size_t Reflex::Internal::ScopeBase::TemplateArgumentSize() const {
-//-------------------------------------------------------------------------------
-   return 0;
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::Internal::ScopeBase::TemplateArgument_Begin() const {
-//-------------------------------------------------------------------------------
-   return Dummy::TypeCont().begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::Internal::ScopeBase::TemplateArgument_End() const {
-//-------------------------------------------------------------------------------
-   return Dummy::TypeCont().end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::Internal::ScopeBase::TemplateArgument_RBegin() const {
-//-------------------------------------------------------------------------------
-   return Dummy::TypeCont().rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::Internal::ScopeBase::TemplateArgument_REnd() const {
-//-------------------------------------------------------------------------------
-   return Dummy::TypeCont().rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Scope Reflex::Internal::ScopeBase::UsingDirectiveAt( size_t nth ) const {
-//-------------------------------------------------------------------------------
-   if ( nth < fUsingDirectives.size() ) { return fUsingDirectives[ nth ]; }
-   return Dummy::Scope();
-}
-
-
-//-------------------------------------------------------------------------------
-inline size_t Reflex::Internal::ScopeBase::UsingDirectiveSize() const {
-//-------------------------------------------------------------------------------
-   return fUsingDirectives.size();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Scope_Iterator Reflex::Internal::ScopeBase::UsingDirective_Begin() const {
-//-------------------------------------------------------------------------------
-   return fUsingDirectives.begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Scope_Iterator Reflex::Internal::ScopeBase::UsingDirective_End() const {
-//-------------------------------------------------------------------------------
-   return fUsingDirectives.end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Scope_Iterator Reflex::Internal::ScopeBase::UsingDirective_RBegin() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<Scope>&)fUsingDirectives).rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Scope_Iterator Reflex::Internal::ScopeBase::UsingDirective_REnd() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<Scope>&)fUsingDirectives).rend();
 }
 
 

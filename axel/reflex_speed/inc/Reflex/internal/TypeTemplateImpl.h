@@ -26,6 +26,10 @@ namespace Reflex {
    // forward declarations
    class Type;
    class TypeTemplate;
+
+namespace Internal {
+
+   // forward declarations
    class TypeTemplateName;
    class ClassTemplateInstance;
 
@@ -202,17 +206,20 @@ namespace Reflex {
 
    }; // class TypeTemplateImpl
 
+} // namespace Internal
 } // namespace Reflex
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::TypeTemplateImpl::TemplateParameterSize() const {
+inline size_t
+Reflex::Internal::TypeTemplateImpl::TemplateParameterSize() const {
 //-------------------------------------------------------------------------------
    return fParameterNames.size();
 }
 
 
 //-------------------------------------------------------------------------------
-inline std::string Reflex::TypeTemplateImpl::TemplateParameterDefaultAt( size_t nth ) const {
+inline std::string
+Reflex::Internal::TypeTemplateImpl::TemplateParameterDefaultAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    if ( nth < fParameterDefaults.size() ) return fParameterDefaults[ nth ];
    return "";
@@ -220,35 +227,40 @@ inline std::string Reflex::TypeTemplateImpl::TemplateParameterDefaultAt( size_t 
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::TypeTemplateImpl::TemplateParameterDefault_Begin() const {
+inline Reflex::StdString_Iterator
+Reflex::Internal::TypeTemplateImpl::TemplateParameterDefault_Begin() const {
 //-------------------------------------------------------------------------------
    return fParameterDefaults.begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::TypeTemplateImpl::TemplateParameterDefault_End() const {
+inline Reflex::StdString_Iterator
+Reflex::Internal::TypeTemplateImpl::TemplateParameterDefault_End() const {
 //-------------------------------------------------------------------------------
    return fParameterDefaults.end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::TypeTemplateImpl::TemplateParameterDefault_RBegin() const {
+inline Reflex::Reverse_StdString_Iterator
+Reflex::Internal::TypeTemplateImpl::TemplateParameterDefault_RBegin() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<std::string>&)fParameterDefaults).rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::TypeTemplateImpl::TemplateParameterDefault_REnd() const {
+inline Reflex::Reverse_StdString_Iterator
+Reflex::Internal::TypeTemplateImpl::TemplateParameterDefault_REnd() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<std::string>&)fParameterDefaults).rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline std::string Reflex::TypeTemplateImpl::TemplateParameterNameAt( size_t nth ) const {
+inline std::string
+Reflex::Internal::TypeTemplateImpl::TemplateParameterNameAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    if ( nth < fParameterNames.size() ) return fParameterNames[ nth ];
    return "";
@@ -256,28 +268,32 @@ inline std::string Reflex::TypeTemplateImpl::TemplateParameterNameAt( size_t nth
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::TypeTemplateImpl::TemplateParameterName_Begin() const {
+inline Reflex::StdString_Iterator
+Reflex::Internal::TypeTemplateImpl::TemplateParameterName_Begin() const {
 //-------------------------------------------------------------------------------
    return fParameterNames.begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::TypeTemplateImpl::TemplateParameterName_End() const {
+inline Reflex::StdString_Iterator
+Reflex::Internal::TypeTemplateImpl::TemplateParameterName_End() const {
 //-------------------------------------------------------------------------------
    return fParameterNames.end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::TypeTemplateImpl::TemplateParameterName_RBegin() const {
+inline Reflex::Reverse_StdString_Iterator
+Reflex::Internal::TypeTemplateImpl::TemplateParameterName_RBegin() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<std::string>&)fParameterNames).rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::TypeTemplateImpl::TemplateParameterName_REnd() const {
+inline Reflex::Reverse_StdString_Iterator
+Reflex::Internal::TypeTemplateImpl::TemplateParameterName_REnd() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<std::string>&)fParameterNames).rend();
 }

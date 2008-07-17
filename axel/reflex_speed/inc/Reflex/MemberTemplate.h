@@ -19,8 +19,12 @@
 namespace Reflex {
 
    // forward declarations
-   class MemberTemplateName;
    class Member;
+
+   namespace Internal {
+      class MemberTemplateName;
+      class OwnedMemberTemplate;
+   }
 
    /** 
    * @class MemberTemplate MemberTemplate.h Reflex/MemberTemplate.h
@@ -30,12 +34,12 @@ namespace Reflex {
    */
    class RFLX_API MemberTemplate {
 
-      friend class OwnedMemberTemplate;
+      friend class Internal::OwnedMemberTemplate;
 
    public:
 
       /** default constructor */
-      MemberTemplate( const MemberTemplateName * memberTemplateName = 0 );
+      MemberTemplate( const Internal::MemberTemplateName * memberTemplateName = 0 );
 
 
       /** copy constructor */
@@ -268,7 +272,7 @@ namespace Reflex {
       * @clientCardinality 1
       * @supplierCardinality 1
       */
-      const MemberTemplateName * fMemberTemplateName;
+      const Internal::MemberTemplateName * fMemberTemplateName;
 
    }; // class MemberTemplate
 
@@ -278,7 +282,7 @@ namespace Reflex {
 #include "Reflex/internal/MemberTemplateImpl.h"
 
 //-------------------------------------------------------------------------------
-inline Reflex::MemberTemplate::MemberTemplate( const MemberTemplateName * memberTemplateName )
+inline Reflex::MemberTemplate::MemberTemplate( const Internal::MemberTemplateName * memberTemplateName )
 //------------------------------------------------------------------------------- 
    : fMemberTemplateName( memberTemplateName ) {}
 
@@ -319,7 +323,7 @@ inline void * Reflex::MemberTemplate::Id() const {
 //-------------------------------------------------------------------------------
 inline size_t Reflex::MemberTemplate::MemberTemplateSize() {
 //-------------------------------------------------------------------------------
-   return MemberTemplateName::MemberTemplateSize();
+   return Internal::MemberTemplateName::MemberTemplateSize();
 }
 
 

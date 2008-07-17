@@ -20,18 +20,18 @@
 #include "Namespace.h"
 
 //-------------------------------------------------------------------------------
-Reflex::Catalog&
-Reflex::Catalog::Instance() {
+Reflex::Internal::CatalogImpl&
+Reflex::Internal::CatalogImpl::Instance() {
 //-------------------------------------------------------------------------------
 // Return the global instance of the reflection catalog.
-   static Catalog instance;
+   static CatalogImpl instance;
 
    return instance;
 }
 
 //-------------------------------------------------------------------------------
 Reflex::Type
-Reflex::TypeCatalog::ByName( const std::string & name ) const {
+Reflex::Internal::TypeCatalogImpl::ByName( const std::string & name ) const {
 //-------------------------------------------------------------------------------
 // Lookup a type by name.
    size_t pos = 0;
@@ -44,7 +44,7 @@ Reflex::TypeCatalog::ByName( const std::string & name ) const {
 
 //-------------------------------------------------------------------------------
 Reflex::Type
-Reflex::TypeCatalog::ByTypeInfo( const std::type_info & ti ) const {
+Reflex::Internal::TypeCatalogImpl::ByTypeInfo( const std::type_info & ti ) const {
 //-------------------------------------------------------------------------------
 // Lookup a type by type_info.
    TypeInfoTypeMap_t::const_iterator it = fTypeInfoTypeMap.Find(ti.name());
@@ -54,7 +54,7 @@ Reflex::TypeCatalog::ByTypeInfo( const std::type_info & ti ) const {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::TypeCatalog::CleanUp() const {
+void Reflex::Internal::TypeCatalogImpl::CleanUp() const {
 //-------------------------------------------------------------------------------
    // Cleanup memory allocations for types.
    /* SHOULD BE DONE BY ScopeName!
@@ -68,7 +68,7 @@ void Reflex::TypeCatalog::CleanUp() const {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::TypeCatalog::Add(const Reflex::Internal::TypeName& type, const std::type_info * ti) {
+void Reflex::Internal::TypeCatalogImpl::Add(const Reflex::Internal::TypeName& type, const std::type_info * ti) {
 //-------------------------------------------------------------------------------
 // Add a type_info to the map.
    Type t(&type, 0);
@@ -77,7 +77,7 @@ void Reflex::TypeCatalog::Add(const Reflex::Internal::TypeName& type, const std:
 }
 
 //-------------------------------------------------------------------------------
-void Reflex::TypeCatalog::UpdateTypeId(const Reflex::Internal::TypeName& type, const std::type_info & newti, 
+void Reflex::Internal::TypeCatalogImpl::UpdateTypeId(const Reflex::Internal::TypeName& type, const std::type_info & newti, 
                                     const std::type_info & oldti /* =typeid(NullType) */) {
 //-------------------------------------------------------------------------------
 // Update a type_info in the map.
@@ -90,7 +90,7 @@ void Reflex::TypeCatalog::UpdateTypeId(const Reflex::Internal::TypeName& type, c
 
 
 //-------------------------------------------------------------------------------
-void Reflex::ScopeCatalog::Add(const Reflex::Internal::ScopeName& scope) {
+void Reflex::Internal::ScopeCatalogImpl::Add(const Reflex::Internal::ScopeName& scope) {
 //-------------------------------------------------------------------------------
 // Add a scope to the map.
    Scope s(&scope);
@@ -100,7 +100,7 @@ void Reflex::ScopeCatalog::Add(const Reflex::Internal::ScopeName& scope) {
 
 //-------------------------------------------------------------------------------
 Reflex::Scope
-Reflex::ScopeCatalog::ByName( const std::string & name ) const {
+Reflex::Internal::ScopeCatalogImpl::ByName( const std::string & name ) const {
 //-------------------------------------------------------------------------------
 // Lookup a scope by fully qualified name.
    size_t pos = 0;
@@ -122,7 +122,7 @@ Reflex::ScopeCatalog::ByName( const std::string & name ) const {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::ScopeCatalog::CleanUp() const {
+void Reflex::Internal::ScopeCatalogImpl::CleanUp() const {
 //-------------------------------------------------------------------------------
    // Cleanup memory allocations for scopes.
    /* SHOULD BE DONE BY ScopeName!
@@ -134,7 +134,7 @@ void Reflex::ScopeCatalog::CleanUp() const {
 }
 
 //-------------------------------------------------------------------------------
-Reflex::Scope Reflex::ScopeCatalog::GlobalScope() {
+Reflex::Scope Reflex::Internal::ScopeCatalogImpl::GlobalScope() {
 //-------------------------------------------------------------------------------
 // Return the global scope's Scope object.
    return Internal::Namespace::GlobalScope();

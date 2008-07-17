@@ -22,10 +22,11 @@
 
 #include "Function.h"
 #include "Reflex/Tools.h"
+#include "Reflex/EntityProperty.h"
 
 
 //-------------------------------------------------------------------------------
-Reflex::FunctionMember::FunctionMember( const char *  nam,
+Reflex::Internal::FunctionMember::FunctionMember( const char *  nam,
                                         const Type &  typ,
                                         StubFunction  stubFP,
                                         void*         stubCtx,
@@ -46,20 +47,21 @@ Reflex::FunctionMember::FunctionMember( const char *  nam,
 
 
 //-------------------------------------------------------------------------------
-std::string Reflex::FunctionMember::Name( unsigned int mod ) const {
+std::string
+Reflex::Internal::FunctionMember::Name( unsigned int mod ) const {
 //-------------------------------------------------------------------------------
 // Construct the qualified (if requested) name of the function member.
    std::string s = "";
 
    if ( 0 != ( mod & ( QUALIFIED | Q ))) {
-      if ( IsPublic())          { s += "public ";    }
-      if ( IsProtected())       { s += "protected "; }
-      if ( IsPrivate())         { s += "private ";   }  
-      if ( IsExtern())          { s += "extern ";    }
-      if ( IsStatic())          { s += "static ";    }
-      if ( IsInline())          { s += "inline ";    }
-      if ( IsVirtual())         { s += "virtual ";   }
-      if ( IsExplicit())        { s += "explicit ";  }
+      if ( Is(gPUBLIC))          { s += "public ";    }
+      if ( Is(gPROTECTED))       { s += "protected "; }
+      if ( Is(gPRIVATE))         { s += "private ";   }  
+      if ( Is(gEXTERN))          { s += "extern ";    }
+      if ( Is(gSTATIC))          { s += "static ";    }
+      if ( Is(gINLINE))          { s += "inline ";    }
+      if ( Is(gVIRTUAL))         { s += "virtual ";   }
+      if ( Is(gEXPLICIT))        { s += "explicit ";  }
    }
 
    s += MemberBase::Name( mod ); 
@@ -70,7 +72,8 @@ std::string Reflex::FunctionMember::Name( unsigned int mod ) const {
 
 /*/-------------------------------------------------------------------------------
   Reflex::Object
-  Reflex::FunctionMember::Invoke( const Object & obj,
+ 
+Reflex::Internal::FunctionMember::Invoke( const Object & obj,
   const std::vector < Object > & paramList ) const {
 //-----------------------------------------------------------------------------
   if ( paramList.size() < FunctionParameterSize(true)) {
@@ -89,7 +92,7 @@ std::string Reflex::FunctionMember::Name( unsigned int mod ) const {
 
 //-------------------------------------------------------------------------------
 Reflex::Object
-Reflex::FunctionMember::Invoke( const Object & obj,
+Reflex::Internal::FunctionMember::Invoke( const Object & obj,
                                       const std::vector < void * > & paramList ) const {
 //-----------------------------------------------------------------------------
 // Invoke this function member with object obj. 
@@ -105,7 +108,8 @@ Reflex::FunctionMember::Invoke( const Object & obj,
 
 /*/-------------------------------------------------------------------------------
   Reflex::Object
-  Reflex::FunctionMember::Invoke( const std::vector < Object > & paramList ) const {
+ 
+Reflex::Internal::FunctionMember::Invoke( const std::vector < Object > & paramList ) const {
 //-------------------------------------------------------------------------------
   std::vector < void * > paramValues;
   // needs more checking FIXME
@@ -118,7 +122,7 @@ Reflex::FunctionMember::Invoke( const Object & obj,
 
 //-------------------------------------------------------------------------------
 Reflex::Object
-Reflex::FunctionMember::Invoke( const std::vector < void * > & paramList ) const {
+Reflex::Internal::FunctionMember::Invoke( const std::vector < void * > & paramList ) const {
 //-------------------------------------------------------------------------------
 // Call static function 
    // parameters need more checking FIXME
@@ -127,7 +131,8 @@ Reflex::FunctionMember::Invoke( const std::vector < void * > & paramList ) const
 
 
 //-------------------------------------------------------------------------------
-size_t Reflex::FunctionMember::FunctionParameterSize( bool required ) const {
+size_t
+Reflex::Internal::FunctionMember::FunctionParameterSize( bool required ) const {
 //-------------------------------------------------------------------------------
 // Return number of function parameters. If required = true return number without default params.
    if ( required ) return fReqParameters;
@@ -137,7 +142,8 @@ size_t Reflex::FunctionMember::FunctionParameterSize( bool required ) const {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) const {
+void
+Reflex::Internal::FunctionMember::GenerateDict( DictionaryGenerator & generator ) const {
 //-------------------------------------------------------------------------------
 // Generate Dictionary information about itself.   
 
@@ -154,7 +160,7 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
       // Prevents __getNewDelFunctions getting into AddFunctionMember twice
       //if(generator.IsNewType( TypeOf() ) && Name()!="__getNewDelFunctions" ) {
     
-      if( IsPrivate() ) {
+      if( Is(gPRIVATE) ) {
          generator.AddIntoShadow ( Name(SCOPED) + "();\n");
       }
               
@@ -174,7 +180,7 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
       tempcounter<<generator.fMethodCounter;
             
       // Free function, shall be added into Instances-field only
-      if(DeclaringScope().IsNamespace() ) {
+      if(DeclaringScope().Is(gNAMESPACE) ) {
          generator.AddIntoInstances("      Type t" + tempcounter.str() + " = FunctionTypeBuilder(type_" + returntype  );
         
       } else { // "normal" function, inside a class
@@ -188,7 +194,7 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
            params != TypeOf().FunctionParameter_End(); ++params) {
          
          
-         if(DeclaringScope().IsNamespace() ) {
+         if(DeclaringScope().Is(gNAMESPACE) ) {
             generator.AddIntoInstances(", type_" + generator.GetTypeNumber( (*params) )  );
                
          } else {
@@ -199,7 +205,7 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
 
 
       
-      if(DeclaringScope().IsNamespace() ) {
+      if(DeclaringScope().Is(gNAMESPACE) ) {
          generator.AddIntoInstances(");  FunctionBuilder(t" + tempcounter.str() + ", \"" 
                                     + Name() + "\", function_" + number ); //function name
       }
@@ -210,20 +216,20 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
          generator.AddIntoFree("), \"" + Name() + "\"" ); //function name
       }
 
-      if      ( IsConstructor() ) generator.AddIntoFree(", constructor_");
-      else if ( IsDestructor()  ) generator.AddIntoFree(", destructor_");
+      if      ( Is(gCONSTRUCTOR) ) generator.AddIntoFree(", constructor_");
+      else if ( Is(gDESTRUCTOR)  ) generator.AddIntoFree(", destructor_");
 
       
            
-      if ( IsConstructor() ) {
+      if ( Is(gCONSTRUCTOR) ) {
          generator.AddIntoClasses("static void* constructor_" );
               
-      } else if ( IsDestructor() ) {
+      } else if ( Is(gDESTRUCTOR) ) {
          generator.AddIntoClasses("static void* destructor_" );
               
       } else {
               
-         if(! (DeclaringScope().IsNamespace()) ) {
+         if(! (DeclaringScope().Is(gNAMESPACE)) ) {
             generator.AddIntoFree(", method_");
                    
             generator.AddIntoClasses("\nstatic void* method_");
@@ -236,13 +242,13 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
          }
       }
            
-      if(!(DeclaringScope().IsNamespace()) ) generator.AddIntoFree(number); //method_n
+      if(!(DeclaringScope().Is(gNAMESPACE)) ) generator.AddIntoFree(number); //method_n
       
             
       generator.AddIntoClasses(number);
     
       
-      if( IsConstructor() ) {  // these have parameters
+      if( Is(gCONSTRUCTOR) ) {  // these have parameters
 
          generator.AddIntoClasses("(void* mem, const std::vector<void*>&");  
          
@@ -254,7 +260,7 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
        
       }//is constructor/destructor with parameters
 
-      else if ( IsDestructor()) {
+      else if ( Is(gDESTRUCTOR)) {
          generator.AddIntoClasses("(void * o, const std::vector<void*>&, void *) {\n");
          generator.AddIntoClasses("  ((" + namespc + "*)o)->~" + DeclaringScope().Name() + "(");
       }
@@ -262,7 +268,7 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
       else {
          // method function with parameters
        
-         if( DeclaringScope().IsNamespace() ) {
+         if( DeclaringScope().Is(gNAMESPACE) ) {
             generator.AddIntoClasses(" (void*, const std::vector<void*>&");// arg, void*)\n{");
                 
          } else {
@@ -275,20 +281,20 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
 
          if ( retT.Name() != "void" ) {
 
-            if ( retT.IsFundamental() ) {
+            if ( retT.Is(gFUNDAMENTAL) ) {
                generator.AddIntoClasses("static " + retT.Name(SCOPED) + " ret;\n");
                generator.AddIntoClasses("ret = ");
             }
-            else if ( retT.IsReference() || retT.IsPointer()) {
+            else if ( retT.Is(gREFERENCE) || retT.Is(gPOINTER)) {
                generator.AddIntoClasses("return (void*)");
-               if ( retT.IsReference()) generator.AddIntoClasses("&");
+               if ( retT.Is(gREFERENCE)) generator.AddIntoClasses("&");
             }
             else { // compound type
                generator.AddIntoClasses("return new " + retT.Name(SCOPED) + "(");
             }
          }
          
-         if( DeclaringScope().IsNamespace() ) {
+         if( DeclaringScope().Is(gNAMESPACE) ) {
             generator.AddIntoClasses(Name() + "( "); 
                 
          } else {
@@ -314,18 +320,18 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
             temp2<<args;
                            
             // We de-deference parameter only, if it's not a pointer
-            if (! methpara->IsPointer() ) generator.AddIntoClasses("*");
+            if (! methpara->Is(gPOINTER) ) generator.AddIntoClasses("*");
           
             generator.AddIntoClasses("(");
                     
             //if( methpara->IsConst()) generator.AddIntoClasses("const ");
             
             std::string paraT = methpara->Name(SCOPED|QUALIFIED);
-            if ( methpara->IsReference()) paraT = paraT.substr(0,paraT.length()-1);
+            if ( methpara->Is(gREFERENCE)) paraT = paraT.substr(0,paraT.length()-1);
 
             generator.AddIntoClasses( paraT );
 
-            if ( ! methpara->IsPointer()) generator.AddIntoClasses("*");
+            if ( ! methpara->Is(gPOINTER)) generator.AddIntoClasses("*");
 
             generator.AddIntoClasses(") arg[" + temp2.str() + "]" );
                         
@@ -340,7 +346,7 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
       } // funct. params!=0
                  
                   
-      if( IsConstructor()) {
+      if( Is(gCONSTRUCTOR)) {
          generator.AddIntoClasses(");\n} \n");
     
       } else {
@@ -350,10 +356,10 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
          if ( retT.Name() == "void" ) {
             generator.AddIntoClasses(";\n  return 0;\n");
          }
-         else if ( retT.IsFundamental()) {
+         else if ( retT.Is(gFUNDAMENTAL)) {
             generator.AddIntoClasses(";\n  return & ret;\n");
          }
-         else if ( retT.IsPointer() || retT.IsReference()) {
+         else if ( retT.Is(gPOINTER) || retT.Is(gREFERENCE)) {
             generator.AddIntoClasses(";\n");
          }
          else { // compound type
@@ -366,7 +372,7 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
    
       
         
-      if(DeclaringScope().IsNamespace() ) {
+      if(DeclaringScope().Is(gNAMESPACE) ) {
          generator.AddIntoInstances(", 0");
       }
       else {
@@ -374,7 +380,7 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
       }
       
         
-      if( DeclaringScope().IsNamespace() ) generator.AddIntoInstances(", \"");
+      if( DeclaringScope().Is(gNAMESPACE) ) generator.AddIntoInstances(", \"");
       else                                 generator.AddIntoFree(", \"");     
            
          
@@ -395,7 +401,7 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
             // LIKE int i=5 FunctionParameterDefault_Begin(), _End
             //
             
-            if(DeclaringScope().IsNamespace() ) {
+            if(DeclaringScope().Is(gNAMESPACE) ) {
                generator.AddIntoInstances( (*parnam) );
                if((dot+1) < FunctionParameterSize()) {
                   generator.AddIntoInstances(";");
@@ -412,18 +418,18 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
 
       }
     
-      if( DeclaringScope().IsNamespace() ) generator.AddIntoInstances("\"");
+      if( DeclaringScope().Is(gNAMESPACE) ) generator.AddIntoInstances("\"");
       else                                 generator.AddIntoFree("\"");
    
     
-      if(DeclaringScope().IsNamespace() )  { // free func
+      if(DeclaringScope().Is(gNAMESPACE) )  { // free func
          generator.AddIntoInstances(", ");
            
-         if( IsPublic() )         generator.AddIntoInstances("PUBLIC");
-         else if( IsPrivate() )   generator.AddIntoInstances("PRIVATE");
-         else if( IsProtected() ) generator.AddIntoInstances("PROTECTED");
+         if( Is(gPUBLIC) )         generator.AddIntoInstances("PUBLIC");
+         else if( Is(gPRIVATE) )   generator.AddIntoInstances("PRIVATE");
+         else if( Is(gPROTECTED) ) generator.AddIntoInstances("PROTECTED");
            
-         if( IsArtificial())  generator.AddIntoInstances(" | ARTIFICIAL");
+         if( Is(gARTIFICIAL))  generator.AddIntoInstances(" | ARTIFICIAL");
            
          generator.AddIntoInstances(");\n");
          
@@ -432,14 +438,14 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
       } else {
          generator.AddIntoFree(", ");
            
-         if( IsPublic() )         generator.AddIntoFree("PUBLIC");
-         else if( IsPrivate() )   generator.AddIntoFree("PRIVATE");
-         else if( IsProtected() ) generator.AddIntoFree("PROTECTED");
+         if( Is(gPUBLIC) )         generator.AddIntoFree("PUBLIC");
+         else if( Is(gPRIVATE) )   generator.AddIntoFree("PRIVATE");
+         else if( Is(gPROTECTED) ) generator.AddIntoFree("PROTECTED");
            
-         if( IsVirtual() )    generator.AddIntoFree(" | VIRTUAL");
-         if( IsArtificial())  generator.AddIntoFree(" | ARTIFICIAL");
-         if( IsConstructor()) generator.AddIntoFree(" | CONSTRUCTOR");
-         if( IsDestructor())  generator.AddIntoFree(" | DESTRUCTOR");
+         if( Is(gVIRTUAL) )    generator.AddIntoFree(" | VIRTUAL");
+         if( Is(gARTIFICIAL))  generator.AddIntoFree(" | ARTIFICIAL");
+         if( Is(gCONSTRUCTOR)) generator.AddIntoFree(" | CONSTRUCTOR");
+         if( Is(gDESTRUCTOR))  generator.AddIntoFree(" | DESTRUCTOR");
            
          generator.AddIntoFree(")\n");
       }
@@ -447,7 +453,8 @@ void Reflex::FunctionMember::GenerateDict( DictionaryGenerator & generator ) con
 }
 
 //-------------------------------------------------------------------------------
-void Reflex::FunctionMember::UpdateFunctionParameterNames(const char* parameters)
+void
+Reflex::Internal::FunctionMember::UpdateFunctionParameterNames(const char* parameters)
 //-------------------------------------------------------------------------------
 {
    // Obtain the names and default values of the function parameters

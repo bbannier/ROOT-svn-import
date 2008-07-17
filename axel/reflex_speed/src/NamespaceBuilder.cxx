@@ -31,7 +31,7 @@ Reflex::NamespaceBuilder::NamespaceBuilder( const char * nam ) {
       fNamespace       = sc;
    }
    else {
-      fNamespace       = (new Namespace( nam ))->ThisScope();
+      fNamespace       = (new Internal::Namespace( nam ))->ThisScope();
    }
 }
 

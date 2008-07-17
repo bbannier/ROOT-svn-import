@@ -21,6 +21,8 @@ namespace Reflex {
    // forward declarations
    class Type;
 
+namespace Internal {
+
    /**
    * @class FunctionMemberTemplateInstance FunctionMemberTemplateInstance.h Reflex/FunctionMemberTemplateInstance.h
    * @author Stefan Roiser
@@ -93,50 +95,58 @@ namespace Reflex {
       MemberTemplate fTemplateFamily;      
 
    }; // class FunctionMemberTemplateInstance
+} // namespace Internal
 } // namespace Reflex
 
 //-------------------------------------------------------------------------------
-inline Reflex::FunctionMemberTemplateInstance::~FunctionMemberTemplateInstance() {}
+inline
+Reflex::Internal::FunctionMemberTemplateInstance::~FunctionMemberTemplateInstance() {}
 //-------------------------------------------------------------------------------
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::FunctionMemberTemplateInstance::TemplateArgumentSize() const {
+inline size_t
+Reflex::Internal::FunctionMemberTemplateInstance::TemplateArgumentSize() const {
 //-------------------------------------------------------------------------------
    return TemplateInstance::TemplateArgumentSize();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::FunctionMemberTemplateInstance::TemplateArgument_Begin() const {
+inline Reflex::Type_Iterator
+Reflex::Internal::FunctionMemberTemplateInstance::TemplateArgument_Begin() const {
 //-------------------------------------------------------------------------------
    return TemplateInstance::TemplateArgument_Begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::FunctionMemberTemplateInstance::TemplateArgument_End() const {
+inline Reflex::Type_Iterator
+Reflex::Internal::FunctionMemberTemplateInstance::TemplateArgument_End() const {
 //-------------------------------------------------------------------------------
    return TemplateInstance::TemplateArgument_End();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::FunctionMemberTemplateInstance::TemplateArgument_RBegin() const {
+inline Reflex::Reverse_Type_Iterator
+Reflex::Internal::FunctionMemberTemplateInstance::TemplateArgument_RBegin() const {
 //-------------------------------------------------------------------------------
    return TemplateInstance::TemplateArgument_RBegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::FunctionMemberTemplateInstance::TemplateArgument_REnd() const {
+inline Reflex::Reverse_Type_Iterator
+Reflex::Internal::FunctionMemberTemplateInstance::TemplateArgument_REnd() const {
 //-------------------------------------------------------------------------------
    return TemplateInstance::TemplateArgument_REnd();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::MemberTemplate Reflex::FunctionMemberTemplateInstance::TemplateFamily() const {
+inline Reflex::MemberTemplate
+Reflex::Internal::FunctionMemberTemplateInstance::TemplateFamily() const {
 //-------------------------------------------------------------------------------
    return fTemplateFamily;
 }

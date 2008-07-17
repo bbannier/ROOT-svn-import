@@ -18,6 +18,8 @@
 
 namespace Reflex {
 
+namespace Internal {
+
    // forward declarations
 
    /**
@@ -68,11 +70,13 @@ namespace Reflex {
       Type fPointerType;
 
    }; // class Pointer
+} //namespace Internal
 } //namespace Reflex
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type Reflex::Pointer::ToType() const {
+inline Reflex::Type
+Reflex::Internal::Pointer::ToType() const {
 //-------------------------------------------------------------------------------
    return fPointerType;
 }

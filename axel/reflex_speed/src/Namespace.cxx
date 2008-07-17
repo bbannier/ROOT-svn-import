@@ -19,7 +19,7 @@
 
 
 //-------------------------------------------------------------------------------
-Reflex::Namespace::Namespace( const char * scop ) 
+Reflex::Internal::Namespace::Namespace( const char * scop ) 
 //-------------------------------------------------------------------------------
    : ScopeBase( scop, NAMESPACE ) {
    // Create dictionary info for a namespace scope.
@@ -27,7 +27,7 @@ Reflex::Namespace::Namespace( const char * scop )
 
 
 //-------------------------------------------------------------------------------
-Reflex::Namespace::Namespace() 
+Reflex::Internal::Namespace::Namespace() 
 //-------------------------------------------------------------------------------
    : ScopeBase() {
    // Destructor.
@@ -35,7 +35,8 @@ Reflex::Namespace::Namespace()
 
 
 //-------------------------------------------------------------------------------
-const Reflex::Scope & Reflex::Namespace::GlobalScope() {
+const Reflex::Scope &
+Reflex::Internal::Namespace::GlobalScope() {
 //-------------------------------------------------------------------------------
 // Initialise the global namespace at startup.
    static Scope s = (new Namespace())->ThisScope();
@@ -46,7 +47,8 @@ const Reflex::Scope & Reflex::Namespace::GlobalScope() {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Namespace::GenerateDict( DictionaryGenerator & generator ) const {
+void
+Reflex::Internal::Namespace::GenerateDict( DictionaryGenerator & generator ) const {
 //-------------------------------------------------------------------------------
 // Generate Dictionary information about itself.
 

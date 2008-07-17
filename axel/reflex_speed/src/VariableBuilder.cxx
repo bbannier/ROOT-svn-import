@@ -40,10 +40,10 @@ Reflex::VariableBuilderImpl::VariableBuilderImpl( const char * nam,
    Scope sc = Scope::ByName(declScope);
   
    if ( ! sc ) {
-      sc = (new Namespace(declScope.c_str()))->ThisScope();
+      sc = (new Internal::Namespace(declScope.c_str()))->ThisScope();
    }
   
-   if ( ! sc.IsNamespace()) throw RuntimeError("Declaring At is not a namespace");
+   if ( ! sc.Is(gNAMESPACE)) throw RuntimeError("Declaring At is not a namespace");
 
    sc.AddDataMember( memName.c_str(),
                      typ,
@@ -100,12 +100,12 @@ Reflex::VariableBuilder::VariableBuilder( const char * nam,
    Scope sc = Scope::ByName(declScope);
   
    if ( ! sc ) {
-      sc = (new Namespace(declScope.c_str()))->ThisScope();
+      sc = (new Internal::Namespace(declScope.c_str()))->ThisScope();
    }
   
-   if ( ! sc.IsNamespace()) throw RuntimeError("Declaring scope is not a namespace");
+   if ( ! sc.Is(gNAMESPACE)) throw RuntimeError("Declaring scope is not a namespace");
 
-   DataMember* dm = new DataMember( memName.c_str(),
+   DataMember* dm = new Internal::DataMember( memName.c_str(),
                                     typ,
                                     offs,
                                     modifiers );

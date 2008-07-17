@@ -18,6 +18,7 @@
 #include "Reflex/Any.h"
 #include "Reflex/Callback.h"
 #include "Reflex/Member.h"
+#include "Reflex/EntityProperty.h"
 #include "DataMember.h"
 #include "FunctionMemberTemplateInstance.h"
 #include "Union.h"
@@ -40,7 +41,7 @@ Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size, const s
    const Type& c = Type::ByName(nam2);
    if (c) {
       // We found a typedef to a class with the same name
-      if (c.IsTypedef()) {
+      if (c.Is(gTYPEDEF)) {
          nam2 += " @HIDDEN@";
       }
       // Type already exists. Check if it was a class, struct, or union.
@@ -48,7 +49,7 @@ Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size, const s
          throw RuntimeError("Attempt to replace a non-class type with a union"); // FIXME: We should not throw!
       }
    }
-   fUnion = new Union(nam2.c_str(), size, ti, modifiers, typ);
+   fUnion = new Internal::Union(nam2.c_str(), size, ti, modifiers, typ);
 }
 
 //______________________________________________________________________________
@@ -62,7 +63,7 @@ Reflex::UnionBuilderImpl::~UnionBuilderImpl()
 void Reflex::UnionBuilderImpl::AddItem(const char* nam, const Type& typ)
 {
 // Add data member info (internal).  !!! Obsolete, do not use.
-   fLastMember = Member(new DataMember(nam, typ, 0, 0));
+   fLastMember = Member(new Internal::DataMember(nam, typ, 0, 0));
    fUnion->AddDataMember(fLastMember);
 }
 
@@ -70,7 +71,7 @@ void Reflex::UnionBuilderImpl::AddItem(const char* nam, const Type& typ)
 void Reflex::UnionBuilderImpl::AddDataMember(const char* nam, const Type& typ, size_t offs, unsigned int modifiers /*= 0*/)
 {
 // Add data member info (internal).
-   fLastMember = Member(new DataMember(nam, typ, offs, modifiers));
+   fLastMember = Member(new Internal::DataMember(nam, typ, offs, modifiers));
    fUnion->AddDataMember(fLastMember);
 }
 
@@ -79,10 +80,10 @@ void Reflex::UnionBuilderImpl::AddFunctionMember(const char* nam, const Type& ty
 {
 // Add function member info (internal).
    if (Tools::IsTemplated(nam)) {
-      fLastMember = Member(new FunctionMemberTemplateInstance(nam, typ, stubFP, stubCtx, params, modifiers, *(dynamic_cast<ScopeBase*>(fUnion))));
+      fLastMember = Member(new Internal::FunctionMemberTemplateInstance(nam, typ, stubFP, stubCtx, params, modifiers, *(dynamic_cast<ScopeBase*>(fUnion))));
    }
    else {
-      fLastMember = Member(new FunctionMember(nam, typ, stubFP, stubCtx, params, modifiers));
+      fLastMember = Member(new Internal::FunctionMember(nam, typ, stubFP, stubCtx, params, modifiers));
    }
    fUnion->AddFunctionMember(fLastMember);
 }

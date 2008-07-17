@@ -15,11 +15,12 @@
 
 #include "Pointer.h"
 
+#include "Reflex/EntityProperty.h"
 #include "Reflex/internal/OwnedMember.h"
 
 //-------------------------------------------------------------------------------
-Reflex::Pointer::Pointer( const Type & pointerType,
-                                const std::type_info & ti )
+Reflex::Internal::Pointer::Pointer( const Type & pointerType,
+                                    const std::type_info & ti )
 //-------------------------------------------------------------------------------
    : TypeBase( BuildTypeName(pointerType).c_str(), sizeof(void*), POINTER, ti ), 
      fPointerType( pointerType ) { 
@@ -28,7 +29,8 @@ Reflex::Pointer::Pointer( const Type & pointerType,
 
 
 //-------------------------------------------------------------------------------
-std::string Reflex::Pointer::Name( unsigned int mod ) const {
+std::string
+Reflex::Internal::Pointer::Name( unsigned int mod ) const {
 //-------------------------------------------------------------------------------
 // Return the name of the pointer type.
    return BuildTypeName( fPointerType, mod );
@@ -36,11 +38,12 @@ std::string Reflex::Pointer::Name( unsigned int mod ) const {
 
 
 //-------------------------------------------------------------------------------
-std::string Reflex::Pointer::BuildTypeName( const Type & pointerType,
-                                                  unsigned int mod ) {
+std::string
+Reflex::Internal::Pointer::BuildTypeName( const Type & pointerType,
+                                          unsigned int mod ) {
 //-------------------------------------------------------------------------------
 // Build the pointer type name.
-   if ( ! pointerType.IsFunction() ) return pointerType.Name( mod ) + "*";
+   if ( ! pointerType.Is(gFUNCTION) ) return pointerType.Name( mod ) + "*";
    // function pointer and pointer to function members
    else {
       std::string s = pointerType.ReturnType().Name(mod);

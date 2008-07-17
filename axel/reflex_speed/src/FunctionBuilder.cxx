@@ -92,19 +92,19 @@ Reflex::FunctionBuilderImpl::FunctionBuilderImpl( const char * nam,
    Scope sc = Scope::ByName(declScope);
    if ( ! sc ) {
       // Let's create the namespace here
-      sc = (new Namespace(declScope.c_str()))->ThisScope();
+      sc = (new Internal::Namespace(declScope.c_str()))->ThisScope();
    }
 
    if ( ! sc.IsNamespace() ) throw RuntimeError("Declaring scope is not a namespace");
    if ( Tools::IsTemplated( funcName.c_str()))
-      fFunction = Member( new FunctionMemberTemplateInstance( funcName.c_str(),
+      fFunction = Member( new Internal::FunctionMemberTemplateInstance( funcName.c_str(),
                                                               typ,
                                                               stubFP,
                                                               stubCtx,
                                                               params,
                                                               modifiers,
                                                               sc ));
-   else fFunction = Member(new FunctionMember(funcName.c_str(), 
+   else fFunction = Member(new Internal::FunctionMember(funcName.c_str(), 
                                               typ, 
                                               stubFP, 
                                               stubCtx, 
@@ -174,18 +174,18 @@ Reflex::FunctionBuilder::FunctionBuilder( const Type & typ,
    Scope sc = Scope::ByName(declScope);
    if ( ! sc ) {
       // Let's create the namespace here
-      sc = (new Namespace(declScope.c_str()))->ThisScope();
+      sc = (new Internal::Namespace(declScope.c_str()))->ThisScope();
    }
    if ( ! sc.IsNamespace() ) throw RuntimeError("Declaring scope is not a namespace");
    if ( Tools::IsTemplated( funcName.c_str()))
-      fFunction = Member( new FunctionMemberTemplateInstance( funcName.c_str(),
+      fFunction = Member( new Internal::FunctionMemberTemplateInstance( funcName.c_str(),
                                                               typ,
                                                               stubFP,
                                                               stubCtx,
                                                               params,
                                                               modifiers,
                                                               sc ));
-   else fFunction = Member(new FunctionMember( funcName.c_str(), 
+   else fFunction = Member(new Internal::FunctionMember( funcName.c_str(), 
                                                typ, 
                                                stubFP, 
                                                stubCtx, 

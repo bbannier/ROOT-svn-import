@@ -13,6 +13,7 @@
 #define Reflex_Namespace
 
 // Include files
+#include "Reflex/Scope.h"
 #include "Reflex/internal/ScopeBase.h"
 
 namespace Reflex {

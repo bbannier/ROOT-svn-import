@@ -20,6 +20,10 @@ namespace Reflex {
 
    // forward declarations
    class TypeTemplate;
+
+namespace Internal {
+
+   // forward declarations
    class TypeTemplateImpl;
 
    /** 
@@ -30,7 +34,7 @@ namespace Reflex {
    */
    class RFLX_API TypeTemplateName {
 
-      friend class TypeTemplate;
+      friend class Reflex::TypeTemplate;
       friend class TypeTemplateImpl;
 
    public:
@@ -162,12 +166,14 @@ namespace Reflex {
       TypeTemplate * fThisTypeTemplate;
 
    }; // class TypeTemplate
+} // namespace Internal
 } // namespace Reflex
 
 
 
 //-------------------------------------------------------------------------------
-inline const char * Reflex::TypeTemplateName::Name_c_str() const {
+inline const char *
+Reflex::Internal::TypeTemplateName::Name_c_str() const {
 //-------------------------------------------------------------------------------
    return fName.c_str();
 }

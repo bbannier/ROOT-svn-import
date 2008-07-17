@@ -20,6 +20,7 @@
 
 
 namespace Reflex {
+namespace Internal {
 
 
    /**
@@ -103,51 +104,57 @@ namespace Reflex {
       TypeTemplate fTemplateFamily;      
 
    }; // class ClassTemplateInstance
+} // namespace Internal
 } // namespace Reflex
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::ClassTemplateInstance::~ClassTemplateInstance() {}
+inline Reflex::Internal::ClassTemplateInstance::~ClassTemplateInstance() {}
 //-------------------------------------------------------------------------------
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::ClassTemplateInstance::TemplateArgumentSize() const {
+inline size_t
+Reflex::Internal::ClassTemplateInstance::TemplateArgumentSize() const {
 //-------------------------------------------------------------------------------
    return TemplateInstance::TemplateArgumentSize();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::ClassTemplateInstance::TemplateArgument_Begin() const {
+inline Reflex::Type_Iterator
+Reflex::Internal::ClassTemplateInstance::TemplateArgument_Begin() const {
 //-------------------------------------------------------------------------------
    return TemplateInstance::TemplateArgument_Begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::ClassTemplateInstance::TemplateArgument_End() const {
+inline Reflex::Type_Iterator
+Reflex::Internal::ClassTemplateInstance::TemplateArgument_End() const {
 //-------------------------------------------------------------------------------
    return TemplateInstance::TemplateArgument_End();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::ClassTemplateInstance::TemplateArgument_RBegin() const {
+inline Reflex::Reverse_Type_Iterator
+Reflex::Internal::ClassTemplateInstance::TemplateArgument_RBegin() const {
 //-------------------------------------------------------------------------------
    return TemplateInstance::TemplateArgument_RBegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::ClassTemplateInstance::TemplateArgument_REnd() const {
+inline Reflex::Reverse_Type_Iterator
+Reflex::Internal::ClassTemplateInstance::TemplateArgument_REnd() const {
 //-------------------------------------------------------------------------------
    return TemplateInstance::TemplateArgument_REnd();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate Reflex::ClassTemplateInstance::TemplateFamily() const {
+inline Reflex::TypeTemplate Reflex::Internal::ClassTemplateInstance::TemplateFamily() const {
 //-------------------------------------------------------------------------------
    return fTemplateFamily;
 }

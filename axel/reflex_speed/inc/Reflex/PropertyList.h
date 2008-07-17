@@ -20,8 +20,13 @@
 namespace Reflex {
 
    // forward declarations
-   class PropertyListImpl;
    class Any;
+
+   namespace Internal {
+      class PropertyListImpl;
+      class OwnedPropertyList;
+   }
+
 
    /**
    * @class PropertyList PropertyList.h Reflex/PropertyList.h
@@ -31,14 +36,14 @@ namespace Reflex {
    */
    class RFLX_API PropertyList {
 
-      friend class OwnedPropertyList;
+      friend class Internal::OwnedPropertyList;
       friend RFLX_API std::ostream & operator << ( std::ostream & s,
          const PropertyList & p );
 
    public:
 
       /** default constructor */
-      PropertyList( PropertyListImpl * propertyListImpl = 0 );
+      PropertyList( Internal::PropertyListImpl * propertyListImpl = 0 );
 
 
       /** copy constructor */
@@ -287,7 +292,7 @@ namespace Reflex {
       * @supplierCardinality 0..1
       * @label propertylist impl
       */
-      PropertyListImpl * fPropertyListImpl;
+      Internal::PropertyListImpl * fPropertyListImpl;
 
    }; // class Propertylist
 
@@ -311,7 +316,7 @@ inline Reflex::PropertyList::operator bool () const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::PropertyList::PropertyList( PropertyListImpl * propertyListImpl ) 
+inline Reflex::PropertyList::PropertyList( Internal::PropertyListImpl * propertyListImpl ) 
 //-------------------------------------------------------------------------------
    : fPropertyListImpl( propertyListImpl ) {}
 

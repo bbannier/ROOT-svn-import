@@ -23,7 +23,7 @@ Reflex::MemberTemplate Reflex::MemberTemplate::ByName( const std::string & name,
                                                                    size_t nTemplateParams ) {
 //-------------------------------------------------------------------------------
    // Return a member template by name.
-   return MemberTemplateName::ByName( name, nTemplateParams );
+   return Internal::MemberTemplateName::ByName( name, nTemplateParams );
 }
 
 
@@ -31,7 +31,7 @@ Reflex::MemberTemplate Reflex::MemberTemplate::ByName( const std::string & name,
 Reflex::MemberTemplate Reflex::MemberTemplate::MemberTemplateAt( size_t nth ) {
 //-------------------------------------------------------------------------------
    // Return the nth member template defined.
-   return MemberTemplateName::MemberTemplateAt( nth );
+   return Internal::MemberTemplateName::MemberTemplateAt( nth );
 }
 
 
@@ -39,7 +39,7 @@ Reflex::MemberTemplate Reflex::MemberTemplate::MemberTemplateAt( size_t nth ) {
 Reflex::MemberTemplate_Iterator Reflex::MemberTemplate::MemberTemplate_Begin() {
 //-------------------------------------------------------------------------------
    // Return the begin iterator of the member template container.
-   return MemberTemplateName::MemberTemplate_Begin();
+   return Internal::MemberTemplateName::MemberTemplate_Begin();
 }
  
                                              
@@ -47,7 +47,7 @@ Reflex::MemberTemplate_Iterator Reflex::MemberTemplate::MemberTemplate_Begin() {
 Reflex::MemberTemplate_Iterator Reflex::MemberTemplate::MemberTemplate_End() {
 //-------------------------------------------------------------------------------
    // Return the end iterator of the member template container.
-   return MemberTemplateName::MemberTemplate_End();
+   return Internal::MemberTemplateName::MemberTemplate_End();
 }
  
                                              
@@ -55,7 +55,7 @@ Reflex::MemberTemplate_Iterator Reflex::MemberTemplate::MemberTemplate_End() {
 Reflex::Reverse_MemberTemplate_Iterator Reflex::MemberTemplate::MemberTemplate_RBegin() {
 //-------------------------------------------------------------------------------
    // Return the rbegin iterator of the member template container.
-   return MemberTemplateName::MemberTemplate_RBegin();
+   return Internal::MemberTemplateName::MemberTemplate_RBegin();
 }
  
                                              
@@ -63,7 +63,7 @@ Reflex::Reverse_MemberTemplate_Iterator Reflex::MemberTemplate::MemberTemplate_R
 Reflex::Reverse_MemberTemplate_Iterator Reflex::MemberTemplate::MemberTemplate_REnd() {
 //-------------------------------------------------------------------------------
    // Return the rend iterator of the member template container.
-   return MemberTemplateName::MemberTemplate_REnd();
+   return Internal::MemberTemplateName::MemberTemplate_REnd();
 }
  
                                              

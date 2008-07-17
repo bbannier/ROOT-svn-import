@@ -19,7 +19,7 @@
 #include "Reflex/internal/OwnedMember.h"
 
 //-------------------------------------------------------------------------------
-Reflex::Typedef::Typedef( const char * typ,
+Reflex::Internal::Typedef::Typedef( const char * typ,
                                 const Type & typedefType,
                                 TYPE typeTyp,
                                 const Type & finalType )
@@ -29,13 +29,13 @@ Reflex::Typedef::Typedef( const char * typ,
    // Construct typedef info.
 
    Type current = typedefType;
-   while ( current.IsTypedef() ) current = current.ToType();
+   while ( current.Is(gTYPEDEF) ) current = current.ToType();
    if ( current.TypeInfo() != typeid(UnknownType)) fTypeInfo = & current.TypeInfo();
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Typedef::~Typedef() {
+Reflex::Internal::Typedef::~Typedef() {
 //-------------------------------------------------------------------------------
 // Destructor.
 }

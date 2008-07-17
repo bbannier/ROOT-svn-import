@@ -20,6 +20,10 @@ namespace Reflex {
 
    // forward declarations
    class MemberTemplate;
+
+namespace Internal {
+
+   // forward declarations
    class MemberTemplateImpl;
 
    /** 
@@ -30,7 +34,7 @@ namespace Reflex {
    */
    class RFLX_API MemberTemplateName {
 
-      friend class MemberTemplate;
+      friend class Reflex::MemberTemplate;
       friend class MemberTemplateImpl;
 
    public:
@@ -162,11 +166,13 @@ namespace Reflex {
       MemberTemplate * fThisMemberTemplate;
 
    }; // class MemberTemplate
+} // namespace Internal
 } // namespace Reflex
 
 
 //-------------------------------------------------------------------------------
-inline const char * Reflex::MemberTemplateName::Name_c_str() const {
+inline const char *
+Reflex::Internal::MemberTemplateName::Name_c_str() const {
 //-------------------------------------------------------------------------------
    return fName.c_str();
 }

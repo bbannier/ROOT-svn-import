@@ -18,8 +18,10 @@
 
 namespace Reflex{
 
-   // forward declarations
-   class Enum;
+   namespace Internal {
+      // forward declarations
+      class Enum;
+   }
 
    /**
    * @class EnumBuilder EnumBuilder.h Reflex/Builder/EnumBuilder.h
@@ -79,7 +81,7 @@ namespace Reflex{
    private:
 
       /** current enum being built */
-      Enum * fEnum;
+      Internal::Enum * fEnum;
 
       /** last added enum item */
       Member fLastMember;

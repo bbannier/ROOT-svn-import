@@ -32,7 +32,7 @@ std::ostream & Reflex::operator<<( std::ostream & s,
 Reflex::StdString_Iterator Reflex::PropertyList::Key_Begin() {
 //-------------------------------------------------------------------------------
 // Return the begin iterator of the keys container.
-   return PropertyListImpl::Key_Begin();
+   return Internal::PropertyListImpl::Key_Begin();
 }
 
 
@@ -40,7 +40,7 @@ Reflex::StdString_Iterator Reflex::PropertyList::Key_Begin() {
 Reflex::StdString_Iterator Reflex::PropertyList::Key_End() {
 //-------------------------------------------------------------------------------
 // Return the end iterator of the keys container.
-   return PropertyListImpl::Key_End();
+   return Internal::PropertyListImpl::Key_End();
 }
 
 
@@ -48,7 +48,7 @@ Reflex::StdString_Iterator Reflex::PropertyList::Key_End() {
 Reflex::Reverse_StdString_Iterator Reflex::PropertyList::Key_RBegin() {
 //-------------------------------------------------------------------------------
 // Return the rbegin iterator of the keys container.
-   return PropertyListImpl::Key_RBegin();
+   return Internal::PropertyListImpl::Key_RBegin();
 }
 
 
@@ -56,7 +56,7 @@ Reflex::Reverse_StdString_Iterator Reflex::PropertyList::Key_RBegin() {
 Reflex::Reverse_StdString_Iterator Reflex::PropertyList::Key_REnd() {
 //-------------------------------------------------------------------------------
 // Return the rend iterator of the keys container.
-   return PropertyListImpl::Key_REnd();
+   return Internal::PropertyListImpl::Key_REnd();
 }
 
 
@@ -64,7 +64,7 @@ Reflex::Reverse_StdString_Iterator Reflex::PropertyList::Key_REnd() {
 std::string Reflex::PropertyList::KeysAsString() {
 //-------------------------------------------------------------------------------
 // Return all keys as one string concatenation.
-   return PropertyListImpl::KeysAsString();
+   return Internal::PropertyListImpl::KeysAsString();
 }
 
 
@@ -72,7 +72,7 @@ std::string Reflex::PropertyList::KeysAsString() {
 const std::string & Reflex::PropertyList::KeyAt( size_t nth ) {
 //-------------------------------------------------------------------------------
 // Return key at position nth.
-   return PropertyListImpl::KeyAt( nth );
+   return Internal::PropertyListImpl::KeyAt( nth );
 }
 
 
@@ -82,7 +82,7 @@ size_t Reflex::PropertyList::KeyByName( const std::string & key,
 //-------------------------------------------------------------------------------
 // Return the position of a Key. If allocateNew is set to true allocate a new key
 // if necessary.
-   return PropertyListImpl::KeyByName( key, allocateNew );
+   return Internal::PropertyListImpl::KeyByName( key, allocateNew );
 }
 
 
@@ -90,7 +90,7 @@ size_t Reflex::PropertyList::KeyByName( const std::string & key,
 size_t Reflex::PropertyList::KeySize() {
 //-------------------------------------------------------------------------------
 // Return the number of all allocated keys.
-   return PropertyListImpl::KeySize();
+   return Internal::PropertyListImpl::KeySize();
 }
 
 
