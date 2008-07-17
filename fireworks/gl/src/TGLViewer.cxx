@@ -486,10 +486,10 @@ void TGLViewer::DoDraw()
    // GL pre draw setup
    if (!fIsPrinting) PreDraw();
 
+   PreRender();
+
    if (fFader < 1)
    {
-      PreRender();
-
       RenderNonSelected();
       DrawGuides();
       glClear(GL_DEPTH_BUFFER_BIT);
@@ -499,14 +499,15 @@ void TGLViewer::DoDraw()
       RenderOverlay();
       DrawCameraMarkup();
       DrawDebugInfo();
-
-      PostRender();
-
-      if (fFader > 0)
-      {
-         FadeView(fFader);
-      }
    }
+
+   PostRender();
+
+   if (fFader > 0)
+   {
+      FadeView(fFader);
+   }
+
    PostDraw();
 
    fRnrCtx->StopStopwatch();
