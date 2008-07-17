@@ -746,14 +746,14 @@ void TGLViewer::FadeView(Float_t alpha)
    glMatrixMode(GL_MODELVIEW);  glPushMatrix(); glLoadIdentity();
 
    {
-      TGLCapabilitySwitch blend(GL_BLEND, kTRUE);
-      //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      TGLCapabilitySwitch blend(GL_BLEND,    kTRUE);
+      TGLCapabilitySwitch light(GL_LIGHTING, kFALSE);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
       glColor4f(fClearColorRGB[0], fClearColorRGB[1], fClearColorRGB[2], alpha);
       glBegin(GL_QUADS);
       glVertex3f(-1, -1, z);  glVertex3f( 1, -1, z);
       glVertex3f( 1,  1, z);  glVertex3f(-1,  1, z);
       glEnd();
-      //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
    }
 
    glMatrixMode(GL_PROJECTION); glPopMatrix();
