@@ -67,6 +67,7 @@
 
 #pragma link C++ class TGLViewerBase+;
 #pragma link C++ class TGLViewer+;
+#pragma link C++ class TGLFaderHelper+;
 #pragma link C++ class TGLViewerEditor+;
 #pragma link C++ class TGLSAViewer;
 #pragma link C++ class TGLSAFrame;
