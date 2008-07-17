@@ -1558,6 +1558,10 @@ TH1 *TH3::Project3D(Option_t *option) const
    //
    //  NOTE 2: The number of entries in the projected histogram is estimated from the number of 
    //  effective entries for all the cells included in the projection. 
+   //
+   //  NOTE 3: underflow/overflow are included by default in the projection 
+   //  To exclude underflow and/or overflow (for both axis in case of a projection to a 1D histogram) use option "NU" and/or "NO"
+   //          
 
    TString opt = option; opt.ToLower();
    Int_t ixmin = fXaxis.GetFirst();
@@ -1894,6 +1898,22 @@ TH1 *TH3::Project3D(Option_t *option) const
    Bool_t computeErrors = kFALSE;
    if (opt.Contains("e") || GetSumw2N() ) {h->Sumw2(); computeErrors = kTRUE;}
 
+   bool useUF = !opt.Contains("NU");
+   bool useOF = !opt.Contains("NO");
+   // Fill the projected histogram excluding underflow/overflows if considered in the option
+   // if specified in the option (by default they considered)
+   if (!fXaxis.TestBit(TAxis::kAxisRange)) {
+      if (useUF) ixmin--; 
+      if (useOF) ixmax++; 
+   }
+   if (!fYaxis.TestBit(TAxis::kAxisRange)) {
+      if (useUF) iymin--; 
+      if (useOF) iymax++;
+   }
+   if (!fZaxis.TestBit(TAxis::kAxisRange)) {
+      if (useUF) izmin--; 
+      if (useOF) izmax++;
+   }
    // Fill the projected histogram taking into accounts underflow/overflows
    if (!fXaxis.TestBit(TAxis::kAxisRange)) {ixmin--; ixmax++;}
    if (!fYaxis.TestBit(TAxis::kAxisRange)) {iymin--; iymax++;}
@@ -2052,6 +2072,12 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    // option = "zx" return the z versus x projection into a TProfile2D histogram
    // option = "yz" return the y versus z projection into a TProfile2D histogram
    // option = "zy" return the z versus y projection into a TProfile2D histogram
+   // 
+   // N.B. by dfault underflow and overflow are not included since the profile takes 
+   // the bin center into account which is not known a priori for underflow-overflow. 
+   // This is a different behaviour than Project3D on a 2D histogram. 
+   // To include underflow and/or overflow (using as center position the lower (upper) axis edge -(+) 
+   // half of the bin width use option "U" and/or "O"
    //
    // The projection is made for the selected bins only.
    // To select a bin range along an axis, use TAxis::SetRange, eg
@@ -2214,10 +2240,22 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    delete [] title;
    if (p2 == 0) return 0;
 
+   bool useUF = opt.Contains("U");
+   bool useOF = opt.Contains("O");
    // Fill the projected histogram taking into accounts underflow/overflows
-   if (!fXaxis.TestBit(TAxis::kAxisRange)) {ixmin--; ixmax++;}
-   if (!fYaxis.TestBit(TAxis::kAxisRange)) {iymin--; iymax++;}
-   if (!fZaxis.TestBit(TAxis::kAxisRange)) {izmin--; izmax++;}
+   // if specified in the option (by default they are not considered)
+   if (!fXaxis.TestBit(TAxis::kAxisRange)) {
+      if (useUF) ixmin--; 
+      if (useOF) ixmax++; 
+   }
+   if (!fYaxis.TestBit(TAxis::kAxisRange)) {
+      if (useUF) iymin--; 
+      if (useOF) iymax++;
+   }
+   if (!fZaxis.TestBit(TAxis::kAxisRange)) {
+      if (useUF) izmin--; 
+      if (useOF) izmax++;
+   }
    Double_t cont;
    Double_t entries  = 0;
    for (Int_t ixbin=0;ixbin<=1+fXaxis.GetNbins();ixbin++){

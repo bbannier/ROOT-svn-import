@@ -122,6 +122,8 @@ protected:
    virtual void     SavePrimitiveHelp(ostream &out, Option_t *option = "");
    static Bool_t    RecomputeAxisLimits(TAxis& destAxis, const TAxis& anAxis);
    static Bool_t    SameLimitsAndNBins(const TAxis& axis1, const TAxis& axis2);
+
+   virtual Int_t    DoFit(TF1 *f1,Option_t *option,Option_t *goption, Double_t xmin, Double_t xmax);
 public:
    // TH1 status bits
    enum {
