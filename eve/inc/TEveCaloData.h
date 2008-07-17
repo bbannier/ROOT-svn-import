@@ -57,7 +57,7 @@ public:
 
       Int_t fTower;
       Int_t fSlice;
-      
+
       Float_t fFraction;
 
       CellId_t(Int_t t, Int_t s, Float_t fr=1.f):fTower(t), fSlice(s), fFraction(fr){}
@@ -112,6 +112,17 @@ public:
       virtual void Dump() const;
    };
 
+
+   struct RebinData_t
+   {
+      Int_t fNSlices;
+
+      std::vector<Float_t> fSliceData;
+      std::vector<Int_t>   fBinData;
+
+      Float_t* GetSliceVals(Int_t bin);
+   };
+
    /**************************************************************************/
 
    typedef std::vector<CellId_t>               vCellId_t;
@@ -144,6 +155,9 @@ public:
                                Float_t phi,    Float_t phiRng,
                                vCellId_t &out) const = 0;
 
+   virtual void    Rebin(TAxis *ax, TAxis *ay, vCellId_t &in, Bool_t et, RebinData_t &out) const = 0;
+
+
    virtual void    GetCellData(const CellId_t &id, CellData_t& data) const = 0;
 
    virtual void    InvalidateUsersCellIdCache();
@@ -164,7 +178,7 @@ public:
    Bool_t  Empty() const { return fMaxValEt < 1e-5; }
 
    virtual TAxis*  GetEtaBins()    const { return fEtaAxis; }
-   virtual void    SetEtaBins(TAxis* ax) { fEtaAxis=ax; } 
+   virtual void    SetEtaBins(TAxis* ax) { fEtaAxis=ax; }
 
    virtual TAxis*  GetPhiBins()    const { return fPhiAxis; }
    virtual void    SetPhiBins(TAxis* ax) { fPhiAxis=ax; }
@@ -182,7 +196,7 @@ public:
 
 class TEveCaloDataVec: public TEveCaloData
 {
-   
+
 private:
    TEveCaloDataVec(const TEveCaloDataVec&);            // Not implemented
    TEveCaloDataVec& operator=(const TEveCaloDataVec&); // Not implemented
@@ -197,7 +211,7 @@ protected:
    vvFloat_t   fSliceVec;
    vFloat_t    fValVec;
    vCellGeom_t fGeomVec;
-   
+
    Int_t       fTower; // current tower
 
    Float_t     fEtaMin;
@@ -216,6 +230,9 @@ public:
    virtual void GetCellList(Float_t etaMin, Float_t etaMax,
                             Float_t phi,    Float_t phiRng,
                             vCellId_t &out) const;
+
+   virtual void Rebin(TAxis *ax, TAxis *ay, vCellId_t &in, Bool_t et, RebinData_t &out) const;
+
    virtual void GetCellData(const TEveCaloData::CellId_t &id, TEveCaloData::CellData_t& data) const;
    virtual void GetEtaLimits(Double_t &min, Double_t &max) const { min=fEtaMin, max=fEtaMax;}
    virtual void GetPhiLimits(Double_t &min, Double_t &max) const { min=fPhiMin; max=fPhiMax;}
@@ -243,6 +260,8 @@ public:
 
    virtual void GetCellList( Float_t etaMin, Float_t etaMax,
                              Float_t phi, Float_t phiRng, vCellId_t &out) const;
+
+   virtual void Rebin(TAxis *ax, TAxis *ay, vCellId_t &in, Bool_t et, RebinData_t &out) const;
 
    virtual void GetCellData(const TEveCaloData::CellId_t &id, TEveCaloData::CellData_t& data) const;
 

@@ -42,6 +42,7 @@ TEveCaloLegoGL::TEveCaloLegoGL() :
 
    fEtaAxis(0),
    fPhiAxis(0),
+   fBinStep(1),
 
    fXAxisAtt(),
    fYAxisAtt(),
@@ -51,9 +52,6 @@ TEveCaloLegoGL::TEveCaloLegoGL() :
    fDLCacheOK(kFALSE),
    fM(0),
 
-   fNBinSteps(5),
-   fBinSteps(0),
-
    fTowerPicked(-1)
 {
    // Constructor.
@@ -61,12 +59,6 @@ TEveCaloLegoGL::TEveCaloLegoGL() :
    fDLCache = kFALSE;
 
    // modes for different levels of zoom in/out.
-   fBinSteps = new Int_t[fNBinSteps];
-   fBinSteps[0] = 1;
-   fBinSteps[1] = 2;
-   fBinSteps[2] = 5;
-   fBinSteps[3] = 8;
-   fBinSteps[4] = 20;
 
    fXAxisAtt.SetTMNDim(2);
    fXAxisAtt.SetTextAlign(TGLAxisAttrib::kCenterDown);
@@ -88,6 +80,9 @@ TEveCaloLegoGL::TEveCaloLegoGL() :
    fZAxisAtt.SetTitle("Et");
    fZAxisAtt.SetTitleUnits("GeV");
    fZAxisAtt.SetTitleSize(0.07);
+
+   fEtaAxis = new TAxis();
+   fPhiAxis = new TAxis();
 }
 
 //______________________________________________________________________________
@@ -95,7 +90,6 @@ TEveCaloLegoGL::~TEveCaloLegoGL()
 {
    // Destructor.
 
-   delete [] fBinSteps;
 }
 
 //______________________________________________________________________________
@@ -159,12 +153,12 @@ void TEveCaloLegoGL::GetCellData(TEveCaloData::CellId_t id, TEveCaloData::CellDa
 
    if (fM->GetPhiMax()>TMath::Pi() && cell.fPhiMax<=fM->GetPhiMin())
    {
-      cell.fPhiMin += TMath::TwoPi(); 
+      cell.fPhiMin += TMath::TwoPi();
       cell.fPhiMax += TMath::TwoPi();
    }
    else if (fM->GetPhiMin()<-TMath::Pi() && cell.fPhiMin>=fM->GetPhiMax())
    {
-      cell.fPhiMin -= TMath::TwoPi(); 
+      cell.fPhiMin -= TMath::TwoPi();
       cell.fPhiMax -= TMath::TwoPi();
    }
 }
@@ -247,35 +241,57 @@ void TEveCaloLegoGL::MakeDisplayList() const
    // Create display-list that draws histogram bars.
    // It is used for filled and outline passes.
 
-   TEveCaloData::CellData_t cellData;
-   Int_t   prevTower = 0;
-   Float_t offset = 0;
+   fM->BuildCellIdCache();
+   TEveCaloData::RebinData_t rdata;
+   fM->fData->Rebin(fEtaAxis, fPhiAxis, fM->fCellList, fM->fPlotEt, rdata);
 
-   // ids in eta phi rng
+   if (fM->fNormalizeRebin)
+   {
+      Double_t maxVal=0;
+      Double_t sum;
+
+      for (UInt_t i=0; i<rdata.fSliceData.size(); i+=rdata.fNSlices)
+      {
+         sum = 0;
+         for(Int_t s=0; s<rdata.fNSlices; s++)
+            sum+=rdata.fSliceData[i+s];
+
+         if (sum > maxVal) maxVal=sum;
+      }
+
+
+      Float_t scale;
+      scale = maxVal/fM->GetMaxVal();
+      for (std::vector<Float_t>::iterator it=rdata.fSliceData.begin(); it!=rdata.fSliceData.end(); it++)
+         (*it) /= scale;
+   }
+
    Int_t nSlices = fM->fData->GetNSlices();
+   Float_t *vals;
+   Int_t bin;
+   Float_t offset;
    for (Int_t s = 0; s < nSlices; ++s)
    {
       if (fDLMap.empty() || fDLMap[s] == 0)
          fDLMap[s] = glGenLists(1);
       glNewList(fDLMap[s], GL_COMPILE);
 
-      for (UInt_t i = 0; i < fM->fCellList.size(); ++i)
+      for (Int_t i=1; i<=fEtaAxis->GetNbins(); ++i)
       {
-         if (fM->fCellList[i].fSlice > s) continue;
-         if (fM->fCellList[i].fTower != prevTower)
+         for (Int_t j=1; j<=fPhiAxis->GetNbins(); ++j)
          {
-            offset = 0;
-            prevTower = fM->fCellList[i].fTower;
-         }
+            bin = (i)+(j)*(fEtaAxis->GetNbins()+2);
+            if (rdata.fBinData[bin] !=-1)
+            {
+               vals = rdata.GetSliceVals(bin);
+               offset =0;
+               for (Int_t t=0; t<s; t++)
+                  offset+=vals[t];
 
-         GetCellData(fM->fCellList[i], cellData);
-         if (s == fM->fCellList[i].fSlice)
-         {
-            glLoadName(i);
-            MakeQuad(cellData.EtaMin(), cellData.PhiMin(), offset,
-                     cellData.EtaDelta(), cellData.PhiDelta(), cellData.Value(fM->fPlotEt));
+               MakeQuad(fEtaAxis->GetBinLowEdge(i), fPhiAxis->GetBinLowEdge(j), offset,
+                        fEtaAxis->GetBinWidth(i), fPhiAxis->GetBinWidth(j), vals[s]);
+            }
          }
-         offset += cellData.Value(fM->fPlotEt);
       }
       glEndList();
    }
@@ -579,46 +595,82 @@ void TEveCaloLegoGL::DrawXYScales(TGLRnrCtx & rnrCtx,
 } // DrawXYScales
 
 //______________________________________________________________________________
-Int_t TEveCaloLegoGL::GetGridStep(Int_t axId, TGLRnrCtx &rnrCtx) const
+Int_t TEveCaloLegoGL::GetGridStep(TGLRnrCtx &rnrCtx) const
 {
    // Calculate view-dependent grid density.
 
-   GLdouble x0, y0, z0, x1, y1, z1;
+   using namespace TMath;
 
+   GLdouble x0, y0, z0, x1, y1, z1;
    GLdouble mm[16];
    GLint    vp[4];
    glGetDoublev(GL_MODELVIEW_MATRIX,  mm);
    glGetIntegerv(GL_VIEWPORT, vp);
    const GLdouble *pm = rnrCtx.RefCamera().RefLastNoPickProjM().CArr();
 
+   gluProject(fM->fEtaMin, fM->GetPhiMin(), 0.f , mm, pm, vp, &x0, &y0, &z0);
+   gluProject(fM->fEtaMax, fM->GetPhiMax(), 0.f , mm, pm, vp, &x1, &y1, &z1);
+   Float_t d0 = Sqrt((x0-x1)*(x0-x1) + (y0-y1)*(y0-y1) + (z0-z1)*(z0-z1));
 
-   if (axId == 0)
+   gluProject(fM->fEtaMax, fM->GetPhiMin(), 0.f , mm, pm, vp, &x0, &y0, &z0);
+   gluProject(fM->fEtaMin, fM->GetPhiMax(), 0.f , mm, pm, vp, &x1, &y1, &z1);
+   Float_t d1 = Sqrt((x0-x1)*(x0-x1) + (y0-y1)*(y0-y1) + (z0-z1)*(z0-z1));
+
+   Float_t d = d1>d0? d1:d0;
+
+   Int_t i0 = fM->fData->GetEtaBins()->FindBin(fM->GetEtaMin());
+   Int_t i1 = fM->fData->GetEtaBins()->FindBin(fM->GetEtaMax());
+   Int_t j0 = fM->fData->GetPhiBins()->FindBin(fM->GetPhiMin());
+   Int_t j1 = fM->fData->GetPhiBins()->FindBin(fM->GetPhiMax());
+
+   Float_t ppb = d/Sqrt((i0-i1)*(i0-i1)+(j0-j1)*(j0-j1));
+
+   Int_t ngroup;
+   if (ppb < fM->fPixelsPerBin*0.5)
    {
-      Float_t bw = (fEtaAxis->GetXmax()-fEtaAxis->GetXmin())/fEtaAxis->GetNbins();
-      for (Int_t i=0; i<fNBinSteps; ++i)
-      {
-         gluProject(fM->GetEta(),                 fM->GetPhi(), 0, mm, pm, vp, &x0, &y0, &z0);
-         gluProject(fM->GetEta()+fBinSteps[i]*bw, fM->GetPhi(), 0, mm, pm, vp, &x1, &y1, &z1);
+      ngroup = 4;
+   }
+   else if (ppb < fM->fPixelsPerBin)
+   {
+      ngroup = 2;
+   }
+   else
+   {
+      ngroup = 1;
+   }
 
-         Float_t gapsqr = (x0-x1)*(x0-x1) + (y0-y1)*(y0-y1);
-         if (gapsqr > fM->fBinWidth*fM->fBinWidth)
-            return fBinSteps[i];
+   return ngroup;
+}
+
+//___________________________________________________________________________
+void TEveCaloLegoGL::SetAxis(TAxis *orig, TAxis *curr) const
+{
+   // Calculate view-dependent grid density.
+
+   if(orig->GetXbins()->GetSize())
+      curr->Set(orig->GetNbins(), orig->GetXbins()->GetArray());
+   else
+      curr->Set(orig->GetNbins(), orig->GetXmin(), orig->GetXmax());
+
+
+   if (fBinStep>1)
+   {
+      Int_t nb = curr->GetNbins();
+      Int_t newbins = nb/fBinStep;
+      if(curr->GetXbins()->GetSize() > 0)
+      {
+         // variable bin sizes
+         Double_t *bins = new Double_t[newbins+1];
+         for(Int_t i = 0; i <= newbins; ++i)
+            bins[i] = curr->GetBinLowEdge(1+i*fBinStep);
+         curr->Set(newbins,bins);
+         delete [] bins;
+      }
+      else
+      {
+         curr->Set(newbins, curr->GetXmin(), curr->GetXmax());
       }
    }
-   else if (axId == 1)
-   {
-      Double_t bw =  (fPhiAxis->GetXmax()-fPhiAxis->GetXmin())/fPhiAxis->GetNbins();
-      for (Int_t i=0; i<fNBinSteps; ++i)
-      {
-         gluProject(fM->GetEta(), fM->GetPhi(),                 0, mm, pm, vp, &x0, &y0, &z0);
-         gluProject(fM->GetEta(), fM->GetPhi()+fBinSteps[i]*bw, 0, mm, pm, vp, &x1, &y1, &z1);
-
-         Float_t  gapsqr = (x0-x1)*(x0-x1) + (y0-y1)*(y0-y1);
-         if (gapsqr > fM->fBinWidth*fM->fBinWidth)
-            return fBinSteps[i];
-      }
-   }
-   return 1;
 }
 
 //______________________________________________________________________________
@@ -627,9 +679,6 @@ void TEveCaloLegoGL::DrawHistBase(TGLRnrCtx &rnrCtx) const
    // Draw basic histogram components: x-y grid
 
    using namespace TMath;
-
-   Int_t es = GetGridStep(0, rnrCtx);
-   Int_t ps = GetGridStep(1, rnrCtx);
 
    Float_t eta0 = fM->fEtaMin;
    Float_t eta1 = fM->fEtaMax;
@@ -654,55 +703,36 @@ void TEveCaloLegoGL::DrawHistBase(TGLRnrCtx &rnrCtx) const
    glVertex2f(eta0, phi1);
    glVertex2f(eta1, phi1);
 
+   Float_t val;
+   Int_t i;
+
    // eta grid
    Int_t eFirst = fEtaAxis->FindBin(eta0);
-   Int_t eLast  = fEtaAxis->FindBin(eta1);
+   i = eFirst;
+   val= fEtaAxis->GetBinUpEdge(i);
+   while (val < eta1)
+   {
+      glVertex2f(val, phi0);
+      glVertex2f(val, phi1);
 
-   if ((es == 1 && ps == 1) || fM->fProjection == TEveCaloLego::k3D)
-   {
-      // original eta
-      for (Int_t i=eFirst; i<eLast; i+= es)
-      {
-         glVertex2f(fEtaAxis->GetBinUpEdge(i), phi0);
-         glVertex2f(fEtaAxis->GetBinUpEdge(i), phi1);
-      }
-   }
-   else
-   {
-      // scaled eta
-      Int_t   nEta = CeilNint((eLast-eFirst)/es);
-      Float_t etaStep = (eta1-eta0)/nEta;
-      Float_t eta = eta0;
-      while (eta < eta1)
-      {
-         glVertex2f(eta, phi0);
-         glVertex2f(eta, phi1);
-         eta += etaStep;
-      }
+      i++;
+      val= fEtaAxis->GetBinUpEdge(i);
    }
 
    // phi grid
-   Int_t   nPhi = CeilNint((phi1-phi0)/(fPhiAxis->GetBinWidth(1)*ps));
-   Float_t phi, phiStep;
-   if (ps>1)
+   Int_t pFirst = fPhiAxis->FindBin(phi0);
+   i = pFirst;
+   val= fPhiAxis->GetBinUpEdge(i);
+   while (val < phi1)
    {
-      phiStep = (phi1-phi0)/nPhi;
-      phi = phi0;
-   }
-   else
-   {
-      phiStep = fPhiAxis->GetBinWidth(1);
-      phi = phiStep*CeilNint(phi0/phiStep);
-   }
-   while (phi < phi1)
-   {
-      glVertex2f(eta0, phi);
-      glVertex2f(eta1, phi);
-      phi+=phiStep;
+      glVertex2f(eta0, val);
+      glVertex2f(eta1, val);
+
+      i++;
+      val= fPhiAxis->GetBinUpEdge(i);
    }
 
    glEnd();
-
 
    // XYZ axes
 
@@ -775,8 +805,8 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
 
    UChar_t col[4];
    Color_t defCol = fM->GetTopViewTowerColor();
-   Int_t es = GetGridStep(0, rnrCtx);
-   Int_t ps = GetGridStep(1, rnrCtx);
+   Int_t es = GetGridStep(rnrCtx);
+   Int_t ps = es;
    if (es == 1 && ps == 1)
    {
       // draw in original binning
@@ -809,12 +839,12 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
 
          glLoadName(name);
          glBegin(GL_QUADS);
-         
+
          if (fM->f2DMode == TEveCaloLego::kValColor)
          {
             fM->fPalette->ColorFromValue(FloorNint(sum), col);
             TGLUtil::Color4ubv(col);
-              
+
             x1 = Max(fM->GetEtaMin(), currentCellData.EtaMin());
             x2 = Min(fM->GetEtaMax(), currentCellData.EtaMax());
 
@@ -828,7 +858,7 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
             if (range*sum/fDataMax > 1) scaleFactor = Log(range*sum/fDataMax)/Log(range);
             Float_t etaW = (currentCellData.EtaDelta()*0.5f)*scaleFactor;
             Float_t phiW = (currentCellData.PhiDelta()*0.5f)*scaleFactor;
-               
+
             x1 = Max(fM->GetEtaMin(), currentCellData.Eta() - etaW);
             x2 = Min(fM->GetEtaMax(), currentCellData.Eta() + etaW);
 
@@ -1027,8 +1057,6 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    if ( ! fM->fData || ! fM->fData->GetEtaBins() || ! fM->fData->GetPhiBins())
       return;
 
-   fEtaAxis = fM->fData->GetEtaBins();
-   fPhiAxis = fM->fData->GetPhiBins();
 
    // projection type
    Bool_t cells3D;
@@ -1039,32 +1067,40 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    else
       cells3D = kTRUE;
 
-   // cached variable
-   fDataMax = fM->GetMaxVal();
- 
-   // cache
+   // cache ids
    if (fM->fCellIdCacheOK == kFALSE)
    {
       fDLCacheOK = kFALSE;
       fM->BuildCellIdCache();
    }
-   if (cells3D && fDLCacheOK == kFALSE) MakeDisplayList();
+
+   // cache max val
+   fDataMax = fM->GetMaxVal();
 
    // modelview matrix
    Double_t em, eM, pm, pM;
    fM->fData->GetEtaLimits(em, eM);
    fM->fData->GetPhiLimits(pm, pM);
-
-   // scale due to shortest XY axis
    Double_t unit = ((eM-em) < (pM-pm)) ? (eM-em):(pM-pm);
-
    glPushMatrix();
-
-   // scale from rebinning
    Float_t sx = (eM-em)/fM->GetEtaRng();
    Float_t sy = (pM-pm)/fM->GetPhiRng();
    glScalef(sx/unit, sy/unit, fM->fData->Empty() ? 1: fM->GetValToHeight());
    glTranslatef(-fM->GetEta(), -fM->fPhi, 0);
+
+   // set axis
+   Int_t as = GetGridStep(rnrCtx);
+   Bool_t rebin = kFALSE;
+   if (as != fBinStep)
+   {
+      fBinStep = as;
+      rebin = kTRUE;
+   }
+   SetAxis(fM->fData->GetEtaBins(), fEtaAxis);
+   SetAxis(fM->fData->GetPhiBins(), fPhiAxis);
+
+   if (rebin || (cells3D && fDLCacheOK == kFALSE))
+      MakeDisplayList();
 
    // draw cells
    if (!fM->fData->Empty())

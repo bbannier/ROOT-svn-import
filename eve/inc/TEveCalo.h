@@ -45,7 +45,7 @@ protected:
    Double_t      fPhiOffset;     // phi range +/- offset
 
    Bool_t        fAutoRange;     // set eta phi limits on DataChanged()
-  
+
    Float_t       fBarrelRadius;  // barrel raidus in cm
    Float_t       fEndCapPos;     // end cap z coordinate in cm
 
@@ -174,8 +174,8 @@ private:
 
 protected:
    std::vector<TEveCaloData::vCellId_t*>   fCellLists;
-   std::vector<Int_t>                      fBinIds;  
- 
+   std::vector<Int_t>                      fBinIds;
+
    virtual void BuildCellIdCache();
 
 public:
@@ -219,7 +219,8 @@ protected:
    Int_t                   fNZSteps; // Z axis label step in GeV
    Float_t                 fZAxisStep;
 
-   Int_t                   fBinWidth; // distance in pixels of projected up and low edge
+   Int_t                   fPixelsPerBin;
+   Bool_t                  fNormalizeRebin;
 
    EProjection_e           fProjection;
    E2DMode_e               f2DMode;
@@ -256,8 +257,11 @@ public:
    Int_t    GetNZSteps() const { return fNZSteps; }
    void     SetNZSteps(Int_t s) { fNZSteps = s;}
 
-   Int_t    GetBinWidth() const { return fBinWidth; }
-   void     SetBinWidth(Int_t bw) { fBinWidth = bw; }
+   Int_t    GetPixelsPerBin() const { return fPixelsPerBin; }
+   void     SetPixelsPerBin(Int_t bw) { fPixelsPerBin = bw; }
+
+   Bool_t   GetNormalizeRebin() const { return fNormalizeRebin; }
+   void     SetNormalizeRebin(Bool_t s) { fNormalizeRebin = s;}
 
    void           SetProjection(EProjection_e p) { fProjection = p; }
    EProjection_e  GetProjection() { return fProjection; }

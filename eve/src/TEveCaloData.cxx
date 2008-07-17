@@ -20,6 +20,56 @@
 
 #include <cassert>
 
+
+
+//______________________________________________________________________________
+void TEveCaloData::CellGeom_t::Dump() const
+{
+   // Print member data.
+
+   printf("%f, %f %f, %f \n", fEtaMin, fEtaMax, fPhiMin, fPhiMax);
+}
+
+//------------------------------------------------------------------------------
+// TEveCaloData::CellData_t
+//------------------------------------------------------------------------------
+
+//______________________________________________________________________________
+Float_t TEveCaloData::CellData_t::Value(Bool_t isEt) const
+{
+   // Return energy value associated with the cell, usually Et.
+   // If isEt is false it is transformed into energy E.
+
+   if (isEt)
+      return fValue;
+   else
+      return TMath::Abs(fValue/TMath::Cos(Theta()));
+}
+
+//______________________________________________________________________________
+void TEveCaloData::CellData_t::Dump() const
+{
+   // Print member data.
+
+   printf("%f, %f %f, %f \n", fEtaMin, fEtaMax, fPhiMin, fPhiMax);
+}
+
+//______________________________________________________________________________
+Float_t* TEveCaloData::RebinData_t::GetSliceVals(Int_t bin)
+{
+
+   //   printf("get val vec bin %d size %d\n", bin, fBinData.size());
+   if (fBinData[bin] == -1)
+   {
+      fBinData[bin] = fSliceData.size();
+
+      for (Int_t i=0; i<fNSlices; i++)
+         fSliceData.push_back(0.f);
+   }
+
+   return &fSliceData[fBinData[bin]];
+}
+
 //==============================================================================
 // TEveCaloData
 //==============================================================================
@@ -145,39 +195,6 @@ void TEveCaloData::CellGeom_t::Configure(Float_t etaMin, Float_t etaMax, Float_t
 }
 
 
-//______________________________________________________________________________
-void TEveCaloData::CellGeom_t::Dump() const
-{
-   // Print member data.
-
-   printf("%f, %f %f, %f \n", fEtaMin, fEtaMax, fPhiMin, fPhiMax);
-}
-
-//------------------------------------------------------------------------------
-// TEveCaloData::CellData_t
-//------------------------------------------------------------------------------
-
-//______________________________________________________________________________
-Float_t TEveCaloData::CellData_t::Value(Bool_t isEt) const
-{
-   // Return energy value associated with the cell, usually Et.
-   // If isEt is false it is transformed into energy E.
-
-   if (isEt)
-      return fValue;
-   else
-      return TMath::Abs(fValue/TMath::Cos(Theta()));
-}
-
-//______________________________________________________________________________
-void TEveCaloData::CellData_t::Dump() const
-{
-   // Print member data.
-
-   printf("%f, %f %f, %f \n", fEtaMin, fEtaMax, fPhiMin, fPhiMax);
-}
-
-
 //==============================================================================
 // TEveCaloDataVec
 //==============================================================================
@@ -250,7 +267,7 @@ void TEveCaloDataVec::GetCellList(Float_t eta, Float_t etaD,
                                   Float_t phi, Float_t phiD,
                                   TEveCaloData::vCellId_t &out) const
 {
-   // Get list of cell-ids for given eta/phi range. 
+   // Get list of cell-ids for given eta/phi range.
 
    using namespace TMath;
 
@@ -299,6 +316,44 @@ void TEveCaloDataVec::GetCellList(Float_t eta, Float_t etaD,
          }
       }
       tower++;
+   }
+}
+
+//______________________________________________________________________________
+void TEveCaloDataVec::Rebin(TAxis* ax, TAxis* ay, vCellId_t &ids, Bool_t et, RebinData_t& rdata) const
+{
+   rdata.fNSlices = GetNSlices();
+   rdata.fBinData.assign((ax->GetNbins()+2)*(ay->GetNbins()+2), -1);
+
+   CellData_t cd;
+   Float_t left, right, up, down; // cell corners
+   for (TEveCaloData::vCellId_t::iterator it=ids.begin(); it!=ids.end(); ++it)
+   {
+      GetCellData(*it, cd);
+      Int_t iMin = ax->FindBin(cd.EtaMin());
+      Int_t iMax = ax->FindBin(cd.EtaMax());
+      Int_t jMin = ay->FindBin(cd.PhiMin());
+      Int_t jMax = ay->FindBin(cd.PhiMax());
+      for (Int_t i = iMin; i <= iMax; ++i)
+      {
+         if (i < 0 || i > ax->GetNbins()) continue;
+         left  = (i == iMin) ? cd.EtaMin() : ax->GetBinLowEdge(i);
+         right = (i == iMax) ? cd.EtaMax() : ax->GetBinUpEdge(i);
+
+         for (Int_t j = jMin; j <= jMax; ++j)
+         {
+            if (j < 0 || j > ay->GetNbins()) continue;
+            down = (j == jMin) ? cd.PhiMin() : ay->GetBinLowEdge(j);
+            up   = (j == jMax) ? cd.PhiMax() : ay->GetBinUpEdge(j);
+
+            Float_t ratio = ((right-left)*(up-down))/(ax->GetBinWidth(i)*ay->GetBinWidth(j));
+            if (ratio > 1e-6)
+            {
+               Float_t* slices = rdata.GetSliceVals(i+j*(ax->GetNbins()+2));
+               slices[(*it).fSlice] += ratio* cd.Value(et);
+            }
+         }
+      }
    }
 }
 
@@ -377,8 +432,8 @@ TEveCaloDataHist::~TEveCaloDataHist()
 
 //______________________________________________________________________________
 void TEveCaloDataHist::DataChanged()
-{ 
-   // Update limits and notify data users. 
+{
+   // Update limits and notify data users.
 
    using namespace TMath;
 
@@ -457,6 +512,31 @@ void TEveCaloDataHist::GetCellList(Float_t eta, Float_t etaD,
          } // phi bins
       }
    } // eta bins
+}
+
+
+//______________________________________________________________________________
+void TEveCaloDataHist::Rebin(TAxis* ax, TAxis* ay, TEveCaloData::vCellId_t &ids, Bool_t et, RebinData_t &rdata) const
+{
+   rdata.fNSlices = GetNSlices();
+   rdata.fBinData.assign((ax->GetNbins()+2)*(ay->GetNbins()+2), -1);
+   TEveCaloData::CellData_t cd;
+   Float_t *val;
+   Int_t i, j, w;
+   Int_t binx, biny;
+   Int_t bin;
+
+   for (vCellId_i it=ids.begin(); it!=ids.end(); ++it)
+   {
+      GetCellData(*it, cd);
+      fSliceInfos[(*it).fSlice].fHist->GetBinXYZ((*it).fTower, i, j, w);
+      binx = ax->FindBin(fEtaAxis->GetBinCenter(i));
+      biny = ay->FindBin(fPhiAxis->GetBinCenter(j));
+      bin = biny*(ax->GetNbins()+2)+binx;
+      val = rdata.GetSliceVals(bin);
+      Double_t ratio = (fEtaAxis->GetBinWidth(i)*fPhiAxis->GetBinWidth(j))/(ax->GetBinWidth(binx)*ay->GetBinWidth(biny));
+      val[(*it).fSlice] += cd.Value(et)*ratio;
+   }
 }
 
 //______________________________________________________________________________
