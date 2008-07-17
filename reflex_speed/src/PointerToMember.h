@@ -18,6 +18,7 @@
 #include "Reflex/Scope.h"
 
 namespace Reflex {
+namespace Internal {
 
    // forward declarations
 
@@ -91,18 +92,21 @@ namespace Reflex {
 
 
    }; // class PointerToMember
+} // namespace Internal
 } // namespace Reflex
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope Reflex::PointerToMember::PointerToMemberScope() const {
+inline Reflex::Scope
+Reflex::Internal::PointerToMember::PointerToMemberScope() const {
 //-------------------------------------------------------------------------------
    return fPointerToMemberScope;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type Reflex::PointerToMember::ToType() const {
+inline Reflex::Type
+Reflex::Internal::PointerToMember::ToType() const {
 //-------------------------------------------------------------------------------
    return fPointerToMemberType;
 }

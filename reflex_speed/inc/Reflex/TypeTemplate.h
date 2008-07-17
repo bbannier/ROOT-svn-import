@@ -19,7 +19,10 @@ namespace Reflex {
 
    // forward declarations
    class Type;
-   class TypeTemplateName;
+
+   namespace Internal {
+      class TypeTemplateName;
+   }
 
    /** 
    * @class TypeTemplate TypeTemplate.h Reflex/TypeTemplate.h
@@ -32,7 +35,7 @@ namespace Reflex {
    public:
 
       /** default constructor */
-      TypeTemplate( const TypeTemplateName * typeTemplateName = 0 );
+      TypeTemplate( const Internal::TypeTemplateName * typeTemplateName = 0 );
 
 
       /** copy constructor */
@@ -271,7 +274,7 @@ namespace Reflex {
       * @clientCardinality 1
       * @label type template impl
       */
-      const TypeTemplateName * fTypeTemplateName;
+      const Internal::TypeTemplateName * fTypeTemplateName;
 
    }; // class TypeTemplate
 
@@ -281,7 +284,7 @@ namespace Reflex {
 #include "Reflex/internal/TypeTemplateImpl.h"
 
 //-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate::TypeTemplate( const TypeTemplateName * typeTemplateName )
+inline Reflex::TypeTemplate::TypeTemplate( const Internal::TypeTemplateName * typeTemplateName )
 //------------------------------------------------------------------------------- 
    : fTypeTemplateName( typeTemplateName ) {}
 
@@ -418,7 +421,7 @@ inline Reflex::Reverse_StdString_Iterator Reflex::TypeTemplate::TemplateParamete
 //-------------------------------------------------------------------------------
 inline size_t Reflex::TypeTemplate::TypeTemplateSize() {
 //-------------------------------------------------------------------------------
-   return TypeTemplateName::TypeTemplateSize();
+   return Internal::TypeTemplateName::TypeTemplateSize();
 }
 
 

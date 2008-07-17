@@ -18,6 +18,7 @@
 #include "Reflex/Scope.h"
 #include "Reflex/Type.h"
 #include "Reflex/Tools.h"
+#include "Reflex/EntityProperty.h"
 #include "Reflex/internal/OwnedMember.h"
 
 #include <sstream>
@@ -181,7 +182,7 @@ template<class T> T Reflex::NameLookup::LookupInScope()
    int i = 0;
    for (Type_Iterator it = fCurrentScope.SubType_Begin(); i < len; ++it, ++i) {
       const Type& type = *it;
-      const TypeBase* base = type.ToTypeBase();
+      const Internal::TypeBase* base = type.ToTypeBase();
       if (base) {
          size_t pos;
          const std::string &name(base->SimpleName(pos));
@@ -197,7 +198,7 @@ template<class T> T Reflex::NameLookup::LookupInScope()
             if (fPosNamePart == std::string::npos) {
                return type;
             }
-            if (it->IsTypedef()) {
+            if (it->Is(gTYPEDEF)) {
                fCurrentScope = it->FinalType();
             }
             else {
@@ -213,7 +214,7 @@ template<class T> T Reflex::NameLookup::LookupInScope()
       // only take namespaces into account - classes were checked as part of SubType
       if (in->IsNamespace()) {
          const Scope& scope = *in;
-         const ScopeBase* base = scope.ToScopeBase();
+         const Internal::ScopeBase* base = scope.ToScopeBase();
          if (base) {
             size_t pos;
             const std::string& name(base->SimpleName(pos));

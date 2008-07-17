@@ -17,6 +17,7 @@
 #include "Reflex/MemberTemplate.h"
 
 namespace Reflex {
+namespace Internal {
 
    // forward declarations
    class MemberTemplateImpl;
@@ -48,6 +49,7 @@ namespace Reflex {
 
    }; // class OwnedMemberTemplate
 
+} // namespace Internal
 } // namespace Reflex
 
 #endif // Reflex_OwnedMemberTemplate

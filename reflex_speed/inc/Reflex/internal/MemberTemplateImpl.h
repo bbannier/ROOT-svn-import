@@ -27,8 +27,12 @@ namespace Reflex {
    class Member;
    class Scope;
    class MemberTemplate;
-   class MemberTemplateName;
+
+namespace Internal {
+
+   // forward declarations
    class FunctionMemberTemplateInstance;
+   class MemberTemplateName;
 
    /** 
    * @class MemberTemplateImpl MemberTemplateImpl.h Reflex/MemberTemplateImpl.h
@@ -206,18 +210,21 @@ namespace Reflex {
 
    }; // class MemberTemplateImpl
 
+} // namespace Internal
 } // namespace Reflex
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::MemberTemplateImpl::TemplateParameterSize() const {
+inline size_t
+Reflex::Internal::MemberTemplateImpl::TemplateParameterSize() const {
 //-------------------------------------------------------------------------------
    return fParameterNames.size();
 }
 
 
 //-------------------------------------------------------------------------------
-inline std::string Reflex::MemberTemplateImpl::TemplateParameterDefaultAt( size_t nth ) const {
+inline std::string
+Reflex::Internal::MemberTemplateImpl::TemplateParameterDefaultAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    if ( nth < fParameterDefaults.size() ) return fParameterDefaults[ nth ];
    return "";
@@ -225,35 +232,40 @@ inline std::string Reflex::MemberTemplateImpl::TemplateParameterDefaultAt( size_
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::MemberTemplateImpl::TemplateParameterDefault_Begin() const {
+inline Reflex::StdString_Iterator
+Reflex::Internal::MemberTemplateImpl::TemplateParameterDefault_Begin() const {
 //-------------------------------------------------------------------------------
    return fParameterDefaults.begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::MemberTemplateImpl::TemplateParameterDefault_End() const {
+inline Reflex::StdString_Iterator
+Reflex::Internal::MemberTemplateImpl::TemplateParameterDefault_End() const {
 //-------------------------------------------------------------------------------
    return fParameterDefaults.end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::MemberTemplateImpl::TemplateParameterDefault_RBegin() const {
+inline Reflex::Reverse_StdString_Iterator
+Reflex::Internal::MemberTemplateImpl::TemplateParameterDefault_RBegin() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<std::string>&)fParameterDefaults).rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::MemberTemplateImpl::TemplateParameterDefault_REnd() const {
+inline Reflex::Reverse_StdString_Iterator
+Reflex::Internal::MemberTemplateImpl::TemplateParameterDefault_REnd() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<std::string>&)fParameterDefaults).rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline std::string Reflex::MemberTemplateImpl::TemplateParameterNameAt( size_t nth ) const {
+inline std::string
+Reflex::Internal::MemberTemplateImpl::TemplateParameterNameAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    if ( nth < fParameterNames.size() ) return fParameterNames[ nth ];
    return "";
@@ -261,28 +273,32 @@ inline std::string Reflex::MemberTemplateImpl::TemplateParameterNameAt( size_t n
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::MemberTemplateImpl::TemplateParameterName_Begin() const {
+inline Reflex::StdString_Iterator
+Reflex::Internal::MemberTemplateImpl::TemplateParameterName_Begin() const {
 //-------------------------------------------------------------------------------
    return fParameterNames.begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::MemberTemplateImpl::TemplateParameterName_End() const {
+inline Reflex::StdString_Iterator
+Reflex::Internal::MemberTemplateImpl::TemplateParameterName_End() const {
 //-------------------------------------------------------------------------------
    return fParameterNames.end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::MemberTemplateImpl::TemplateParameterName_RBegin() const {
+inline Reflex::Reverse_StdString_Iterator
+Reflex::Internal::MemberTemplateImpl::TemplateParameterName_RBegin() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<std::string>&)fParameterNames).rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::MemberTemplateImpl::TemplateParameterName_REnd() const {
+inline Reflex::Reverse_StdString_Iterator
+Reflex::Internal::MemberTemplateImpl::TemplateParameterName_REnd() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<std::string>&)fParameterNames).rend();
 }

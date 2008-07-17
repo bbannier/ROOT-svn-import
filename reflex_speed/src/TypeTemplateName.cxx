@@ -47,7 +47,7 @@ static TypeTemplateVec_t & sTypeTemplateVec() {
 
 
 //-------------------------------------------------------------------------------
-Reflex::TypeTemplateName::TypeTemplateName( const char * name,
+Reflex::Internal::TypeTemplateName::TypeTemplateName( const char * name,
                                                       TypeTemplateImpl * typeTemplateImpl )
 //-------------------------------------------------------------------------------
    : fName( name ),
@@ -60,14 +60,15 @@ Reflex::TypeTemplateName::TypeTemplateName( const char * name,
 
 
 //-------------------------------------------------------------------------------
-Reflex::TypeTemplateName::~TypeTemplateName() {
+Reflex::Internal::TypeTemplateName::~TypeTemplateName() {
 //-------------------------------------------------------------------------------
    // Destructor.
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::TypeTemplate Reflex::TypeTemplateName::ByName( const std::string & name,
+Reflex::TypeTemplate
+Reflex::Internal::TypeTemplateName::ByName( const std::string & name,
                                                                    size_t nTemplateParams ) {
 //-------------------------------------------------------------------------------
    // Lookup a type template by its name.
@@ -89,7 +90,8 @@ Reflex::TypeTemplate Reflex::TypeTemplateName::ByName( const std::string & name,
 
 
 //-------------------------------------------------------------------------------
-void Reflex::TypeTemplateName::CleanUp() {
+void
+Reflex::Internal::TypeTemplateName::CleanUp() {
 //-------------------------------------------------------------------------------
    // Do the final cleanup for the type templates.  
    for ( TypeTemplateVec_t::iterator it = sTypeTemplateVec().begin(); it != sTypeTemplateVec().end(); ++it ) {
@@ -103,7 +105,8 @@ void Reflex::TypeTemplateName::CleanUp() {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::TypeTemplateName::DeleteTypeTemplate() const {
+void
+Reflex::Internal::TypeTemplateName::DeleteTypeTemplate() const {
 //-------------------------------------------------------------------------------
    // Remove a type template dictionary information.
    delete fTypeTemplateImpl;
@@ -112,7 +115,8 @@ void Reflex::TypeTemplateName::DeleteTypeTemplate() const {
 
 
 //-------------------------------------------------------------------------------
-std::string Reflex::TypeTemplateName::Name( unsigned int mod ) const {
+std::string
+Reflex::Internal::TypeTemplateName::Name( unsigned int mod ) const {
 //-------------------------------------------------------------------------------
    // Return the name of this type template.
    if ( 0 != ( mod & ( SCOPED | S ))) return fName;
@@ -121,7 +125,8 @@ std::string Reflex::TypeTemplateName::Name( unsigned int mod ) const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::TypeTemplate Reflex::TypeTemplateName::ThisTypeTemplate() const {
+Reflex::TypeTemplate
+Reflex::Internal::TypeTemplateName::ThisTypeTemplate() const {
 //-------------------------------------------------------------------------------
    // Return the type template corresponding to this type template name.
    return * fThisTypeTemplate;
@@ -129,7 +134,8 @@ Reflex::TypeTemplate Reflex::TypeTemplateName::ThisTypeTemplate() const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::TypeTemplate Reflex::TypeTemplateName::TypeTemplateAt( size_t nth ) {
+Reflex::TypeTemplate
+Reflex::Internal::TypeTemplateName::TypeTemplateAt( size_t nth ) {
 //-------------------------------------------------------------------------------
    // Return teh nth type template.
    if ( nth < sTypeTemplateVec().size()) return sTypeTemplateVec()[nth];
@@ -138,7 +144,8 @@ Reflex::TypeTemplate Reflex::TypeTemplateName::TypeTemplateAt( size_t nth ) {
 
 
 //-------------------------------------------------------------------------------
-size_t Reflex::TypeTemplateName::TypeTemplateSize() {
+size_t
+Reflex::Internal::TypeTemplateName::TypeTemplateSize() {
 //-------------------------------------------------------------------------------
    // Return the number of type templates declared.
    return sTypeTemplateVec().size();
@@ -146,7 +153,8 @@ size_t Reflex::TypeTemplateName::TypeTemplateSize() {
 
 
 //-------------------------------------------------------------------------------
-Reflex::TypeTemplate_Iterator Reflex::TypeTemplateName::TypeTemplate_Begin() {
+Reflex::TypeTemplate_Iterator
+Reflex::Internal::TypeTemplateName::TypeTemplate_Begin() {
 //-------------------------------------------------------------------------------
    // Return the begin iterator of the type template collection
    return sTypeTemplateVec().begin();
@@ -154,7 +162,8 @@ Reflex::TypeTemplate_Iterator Reflex::TypeTemplateName::TypeTemplate_Begin() {
 
 
 //-------------------------------------------------------------------------------
-Reflex::TypeTemplate_Iterator Reflex::TypeTemplateName::TypeTemplate_End() {
+Reflex::TypeTemplate_Iterator
+Reflex::Internal::TypeTemplateName::TypeTemplate_End() {
 //-------------------------------------------------------------------------------
    // Return the end iterator of the type template collection
    return sTypeTemplateVec().end();
@@ -162,7 +171,8 @@ Reflex::TypeTemplate_Iterator Reflex::TypeTemplateName::TypeTemplate_End() {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Reverse_TypeTemplate_Iterator Reflex::TypeTemplateName::TypeTemplate_RBegin() {
+Reflex::Reverse_TypeTemplate_Iterator
+Reflex::Internal::TypeTemplateName::TypeTemplate_RBegin() {
 //-------------------------------------------------------------------------------
    // Return the RBegin iterator of the type template collection
    return ((const std::vector<TypeTemplate>&)sTypeTemplateVec()).rbegin();
@@ -170,7 +180,8 @@ Reflex::Reverse_TypeTemplate_Iterator Reflex::TypeTemplateName::TypeTemplate_RBe
 
 
 //-------------------------------------------------------------------------------
-Reflex::Reverse_TypeTemplate_Iterator Reflex::TypeTemplateName::TypeTemplate_REnd() {
+Reflex::Reverse_TypeTemplate_Iterator
+Reflex::Internal::TypeTemplateName::TypeTemplate_REnd() {
 //-------------------------------------------------------------------------------
    // Return the rend iterator of the type template collection
    return ((const std::vector<TypeTemplate>&)sTypeTemplateVec()).rend();

@@ -20,6 +20,7 @@
 
 #include "DataMember.h"
 #include "FunctionMember.h"
+#include "Reflex/EntityProperty.h"
 #include "Reflex/Tools.h"
 #include "Reflex/DictionaryGenerator.h"
 
@@ -189,7 +190,7 @@ void Reflex::Internal::Class::Destruct(void * instance,
       for (size_t i = 0; i < ScopeBase::FunctionMemberSize(); ++i) {
          Member fm = ScopeBase::FunctionMemberAt(i);
          // constructor found Set the cache pointer
-         if (fm.IsDestructor()) {
+         if (fm.Is(gDESTRUCTOR)) {
             fDestructor = fm;
             break;
          }
@@ -226,14 +227,14 @@ Reflex::Type Reflex::Internal::Class::DynamicType(const Object & obj) const
 //-------------------------------------------------------------------------------
 // Discover the dynamic type of a class object and return it.
    // If no virtual_function_table return itself
-   if (IsVirtual()) {
+   if (Is(gVIRTUAL)) {
       // Avoid the case that the first word is a virtual_base_offset_table instead of
       // a virtual_function_table
       long int offset = **(long**)obj.Address();
       if (offset == 0) return ThisType();
       else {
          const Type & dytype = Type::ByTypeInfo(typeid(*(DynType_t*)obj.Address()));
-         if (dytype && dytype.IsClass()) return dytype;
+         if (dytype && dytype.Is(gCLASS)) return dytype;
          else                              return ThisType();
       }
    }
@@ -392,8 +393,8 @@ void Reflex::Internal::Class::AddFunctionMember(const Member & fm) const
 //-------------------------------------------------------------------------------
 // Add function member fm to this class
    ScopeBase::AddFunctionMember(fm);
-   if (fm.IsConstructor())    fConstructors.push_back(fm);
-   else if (fm.IsDestructor()) fDestructor = fm;
+   if (fm.Is(gCONSTRUCTOR))    fConstructors.push_back(fm);
+   else if (fm.Is(gDESTRUCTOR)) fDestructor = fm;
 }
 
 
@@ -467,7 +468,7 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
       generator.AddIntoInstances("      " + generator.Replace_colon(ThisType().Name(SCOPED)) + "_dict();\n");
 
       // Outputten only, if inside a namespace
-      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().IsNamespace())) {
+      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().Is(gNAMESPACE))) {
          generator.AddIntoShadow("\nnamespace " + ThisType().Name() + " {");
       }
 
@@ -492,14 +493,14 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
       generator.AddIntoFree("\n\n// ------ Dictionary for class " + ThisType().Name() + "\n");
       generator.AddIntoFree("void " + generator.Replace_colon(ThisType().Name(SCOPED)) + "_dict() {\n");
       generator.AddIntoFree("ClassBuilder(\"" + ThisType().Name(SCOPED));
-      if (IsPublic()) generator.AddIntoFree("\", typeid(" + ThisType().Name(SCOPED) + "), sizeof(" + ThisType().Name(SCOPED) + "), ");
-      else if (IsProtected()) generator.AddIntoFree("\", typeid(Reflex::ProtectedClass), 0,");
-      else if (IsPrivate()) generator.AddIntoFree("\", typeid(Reflex::PrivateClass), 0,");
+      if (Is(gPUBLIC)) generator.AddIntoFree("\", typeid(" + ThisType().Name(SCOPED) + "), sizeof(" + ThisType().Name(SCOPED) + "), ");
+      else if (Is(gPROTECTED)) generator.AddIntoFree("\", typeid(Reflex::ProtectedClass), 0,");
+      else if (Is(gPRIVATE)) generator.AddIntoFree("\", typeid(Reflex::PrivateClass), 0,");
 
-      if (ThisType().IsPublic())  generator.AddIntoFree("PUBLIC");
-      if (ThisType().IsPrivate()) generator.AddIntoFree("PRIVATE");
-      if (ThisType().IsProtected()) generator.AddIntoFree("PROTECTED");
-      if (ThisType().IsVirtual()) generator.AddIntoFree(" | VIRTUAL");
+      if (ThisType().Is(gPUBLIC))  generator.AddIntoFree("PUBLIC");
+      if (ThisType().Is(gPRIVATE)) generator.AddIntoFree("PRIVATE");
+      if (ThisType().Is(gPROTECTED)) generator.AddIntoFree("PROTECTED");
+      if (ThisType().Is(gVIRTUAL)) generator.AddIntoFree(" | VIRTUAL");
       generator.AddIntoFree(" | CLASS)\n");
 
       generator.AddIntoClasses("\n// -- Stub functions for class " + ThisType().Name() + "--\n");
@@ -510,7 +511,7 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
          (*mi).GenerateDict(generator);      // call Members' own gendict
       }
 
-      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().IsNamespace())) {
+      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().Is(gNAMESPACE))) {
          generator.AddIntoShadow("\nnamespace " + ThisType().Name() + " {");
       }
 
@@ -533,7 +534,7 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
 
 //       ++generator.fMethodCounter;
 
-      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().IsNamespace())) {
+      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().Is(gNAMESPACE))) {
          generator.AddIntoShadow("}\n");        // End of top namespace
       }
 

@@ -18,9 +18,9 @@
 #include "Reflex/internal/OwnedMember.h"
 
 //-------------------------------------------------------------------------------
-Reflex::PointerToMember::PointerToMember( const Type & pointerToMemberType,
-                                                const Scope & pointerToMemberScope,
-                                                const std::type_info & ti ) 
+Reflex::Internal::PointerToMember::PointerToMember( const Type & pointerToMemberType,
+                                                    const Scope & pointerToMemberScope,
+                                                    const std::type_info & ti ) 
 //------------------------------------------------------------------------------- 
    : TypeBase( BuildTypeName( pointerToMemberType, pointerToMemberScope ).c_str(), sizeof(void*), POINTERTOMEMBER, ti ),
      fPointerToMemberType( pointerToMemberType ),
@@ -30,7 +30,8 @@ Reflex::PointerToMember::PointerToMember( const Type & pointerToMemberType,
 
 
 //-------------------------------------------------------------------------------
-std::string Reflex::PointerToMember::Name( unsigned int mod ) const { 
+std::string
+Reflex::Internal::PointerToMember::Name( unsigned int mod ) const { 
 //-------------------------------------------------------------------------------
 // Return the name of the pointer to member type.
    return BuildTypeName( fPointerToMemberType, fPointerToMemberScope, mod );
@@ -38,9 +39,10 @@ std::string Reflex::PointerToMember::Name( unsigned int mod ) const {
 
 
 //-------------------------------------------------------------------------------
-std::string Reflex::PointerToMember::BuildTypeName( const Type & pointerToMemberType,
-                                                          const Scope & pointerToMemberScope,
-                                                          unsigned int mod ) {
+std::string
+Reflex::Internal::PointerToMember::BuildTypeName( const Type & pointerToMemberType,
+                                                  const Scope & pointerToMemberScope,
+                                                  unsigned int mod ) {
 //-------------------------------------------------------------------------------
 // Build the pointer to member type name.
    if ( pointerToMemberType.TypeType() == FUNCTION ) {

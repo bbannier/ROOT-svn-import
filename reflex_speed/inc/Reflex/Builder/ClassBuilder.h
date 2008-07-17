@@ -22,14 +22,17 @@
 namespace Reflex {
 
    // forward declarations 
-   class Class;
-
    /** 
    * @class ClassBuilderImpl ClassBuilder.h Reflex/Builder/ClassBuilder.h
    * @author Stefan Roiser
    * @date 30/3/2004
    * @ingroup RefBld
    */
+
+   namespace Internal {
+      class Class;
+   }
+
    class RFLX_API ClassBuilderImpl {
 
    public:
@@ -104,7 +107,7 @@ namespace Reflex {
    private:
 
       /** current class being built */
-      Class * fClass;
+      Internal::Class * fClass;
 
       /** last added MemberAt */
       Member fLastMember;    

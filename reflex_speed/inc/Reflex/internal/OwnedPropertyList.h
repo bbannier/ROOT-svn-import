@@ -17,6 +17,7 @@
 #include "Reflex/PropertyList.h"
 
 namespace Reflex {
+namespace Internal {
 
    // forward declarations
    class PropertyListImpl;
@@ -41,6 +42,7 @@ namespace Reflex {
 
    }; // class OwnedPropertyList
 
+} // namespace Internal
 } // namespace Reflex
 
 #endif // Reflex_OwnedPropertyList

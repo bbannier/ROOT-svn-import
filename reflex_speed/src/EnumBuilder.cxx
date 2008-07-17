@@ -26,7 +26,7 @@ Reflex::EnumBuilder::EnumBuilder( const char * nam,
                                         unsigned int modifiers ) {
 //-------------------------------------------------------------------------------
 // Construct a new enum dictionary info.
-   fEnum = new Enum( nam, ti, modifiers );
+   fEnum = new Internal::Enum( nam, ti, modifiers );
 }
 
 //-------------------------------------------------------------------------------
@@ -42,10 +42,10 @@ Reflex::EnumBuilder & Reflex::EnumBuilder::AddItem( const char * nam,
                                                                 long value ) {  
 //-------------------------------------------------------------------------------
 // Add an item (as data member) to this enum scope.
-   fEnum->AddDataMember( Member(new DataMember( nam, 
-                                                Type::ByName("int"), 
-                                                value, 
-                                                0 )));
+   fEnum->AddDataMember( Member(new Internal::DataMember( nam, 
+                                                          Type::ByName("int"), 
+                                                          value, 
+                                                          0 )));
    return *this;
 }
 

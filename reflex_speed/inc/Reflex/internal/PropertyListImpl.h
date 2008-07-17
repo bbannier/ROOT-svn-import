@@ -25,6 +25,7 @@
 #endif
 
 namespace Reflex {
+namespace Internal {
 
    /**
    * @class PropertyList PropertyList.h Reflex/PropertyList.h
@@ -275,22 +276,26 @@ namespace Reflex {
       const PropertyListImpl & p );
 
 } //namespace Reflex
+} //namespace Internal
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::PropertyListImpl::PropertyListImpl() 
+inline
+Reflex::Internal::PropertyListImpl::PropertyListImpl() 
 //-------------------------------------------------------------------------------
    : fProperties( 0 ) {}
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::PropertyListImpl::PropertyListImpl( const PropertyListImpl & pl ) 
+inline
+Reflex::Internal::PropertyListImpl::PropertyListImpl( const PropertyListImpl & pl ) 
 //-------------------------------------------------------------------------------
    : fProperties( pl.fProperties ) {}
 
   
 //-------------------------------------------------------------------------------
-inline size_t Reflex::PropertyListImpl::AddProperty( const std::string & key,
+inline size_t
+Reflex::Internal::PropertyListImpl::AddProperty( const std::string & key,
                                                            const Any & value ) {
 //-------------------------------------------------------------------------------
    size_t k = PropertyKey( key, true );
@@ -300,7 +305,8 @@ inline size_t Reflex::PropertyListImpl::AddProperty( const std::string & key,
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::PropertyListImpl::AddProperty( size_t key,
+inline void
+Reflex::Internal::PropertyListImpl::AddProperty( size_t key,
                                                          const Any & value ) {
 //-------------------------------------------------------------------------------
    if ( ! fProperties ) fProperties = new Properties();
@@ -310,7 +316,8 @@ inline void Reflex::PropertyListImpl::AddProperty( size_t key,
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::PropertyListImpl::AddProperty( const std::string & key,
+inline size_t
+Reflex::Internal::PropertyListImpl::AddProperty( const std::string & key,
                                                            const char* value ) {
 //-------------------------------------------------------------------------------
    return AddProperty( key, Any(value) );
@@ -318,7 +325,8 @@ inline size_t Reflex::PropertyListImpl::AddProperty( const std::string & key,
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::PropertyListImpl::AddProperty( size_t key,
+inline void
+Reflex::Internal::PropertyListImpl::AddProperty( size_t key,
                                                          const char * value ) {
 //-------------------------------------------------------------------------------
    AddProperty( key, Any(value));
@@ -326,14 +334,16 @@ inline void Reflex::PropertyListImpl::AddProperty( size_t key,
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::PropertyListImpl::RemoveProperty( const std::string & key ) {
+inline void
+Reflex::Internal::PropertyListImpl::RemoveProperty( const std::string & key ) {
 //-------------------------------------------------------------------------------
    RemoveProperty( PropertyKey( key ));
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::PropertyListImpl::RemoveProperty( size_t key ) {
+inline void
+Reflex::Internal::PropertyListImpl::RemoveProperty( size_t key ) {
 //------------------------------------------------------------------------------- 
   if ( fProperties ) fProperties->at(key).Swap(Dummy::Any());
 }

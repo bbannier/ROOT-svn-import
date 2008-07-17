@@ -27,9 +27,9 @@
 
 
 //-------------------------------------------------------------------------------
-Reflex::Member::Member( const MemberBase * memberBase )
+Reflex::Member::Member( const Internal::MemberBase * memberBase )
 //-------------------------------------------------------------------------------
-   : fMemberBase( const_cast<MemberBase*>(memberBase) ) {
+   : fMemberBase( const_cast<Internal::MemberBase*>(memberBase) ) {
    // Construct a member, attaching it to MemberBase.
 }
 
@@ -91,7 +91,7 @@ Reflex::Object Reflex::Member::Get( const Object & obj) const {
 //-------------------------------------------------------------------------------
 Reflex::Object 
 Reflex::Member::Invoke( const Object & obj,
-                              const std::vector < void * > & paramList ) const {
+                        const std::vector < void * > & paramList ) const {
 //-------------------------------------------------------------------------------
 // Invoke a non static data member.
    if ( fMemberBase ) return fMemberBase->Invoke( obj, paramList );

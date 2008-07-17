@@ -21,6 +21,8 @@ namespace Reflex {
    // forward declarations
 
 
+namespace Internal {
+
    /** 
    * @class Function Function.h Reflex/Function.h
    * @author Stefan Roiser
@@ -118,46 +120,53 @@ namespace Reflex {
       unsigned int fModifiers;
 
    }; // class Function
+} // namespace Internal
 } // namespace Reflex
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Function::IsVirtual() const {
+inline bool
+Reflex::Internal::Function::IsVirtual() const {
 //-------------------------------------------------------------------------------
    return 0 != (fModifiers & VIRTUAL);
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::Function::FunctionParameterSize() const {
+inline size_t
+Reflex::Internal::Function::FunctionParameterSize() const {
 //-------------------------------------------------------------------------------
    return fParameters.size();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::Function::FunctionParameter_Begin() const {
+inline Reflex::Type_Iterator
+Reflex::Internal::Function::FunctionParameter_Begin() const {
 //-------------------------------------------------------------------------------
    return fParameters.begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::Function::FunctionParameter_End() const {
+inline Reflex::Type_Iterator
+Reflex::Internal::Function::FunctionParameter_End() const {
 //-------------------------------------------------------------------------------
    return fParameters.end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::Function::FunctionParameter_RBegin() const {
+inline Reflex::Reverse_Type_Iterator
+Reflex::Internal::Function::FunctionParameter_RBegin() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<Type>&)fParameters).rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::Function::FunctionParameter_REnd() const {
+inline Reflex::Reverse_Type_Iterator
+Reflex::Internal::Function::FunctionParameter_REnd() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<Type>&)fParameters).rend();
 }
@@ -165,7 +174,7 @@ inline Reflex::Reverse_Type_Iterator Reflex::Function::FunctionParameter_REnd() 
 
 //-------------------------------------------------------------------------------
 inline Reflex::Type 
-Reflex::Function::FunctionParameterAt( size_t nth ) const {
+Reflex::Internal::Function::FunctionParameterAt( size_t nth ) const {
 //------------------------------------------------------------------------------- 
    if (nth < fParameters.size()) { return fParameters[nth]; }
    return Dummy::Type();
@@ -173,7 +182,8 @@ Reflex::Function::FunctionParameterAt( size_t nth ) const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type Reflex::Function::ReturnType() const {
+inline Reflex::Type
+Reflex::Internal::Function::ReturnType() const {
 //-------------------------------------------------------------------------------
    return fReturnType;
 }

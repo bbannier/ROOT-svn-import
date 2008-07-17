@@ -47,7 +47,7 @@ static MemberTemplateVec_t & sMemberTemplateVec() {
 
 
 //-------------------------------------------------------------------------------
-Reflex::MemberTemplateName::MemberTemplateName( const char * name,
+Reflex::Internal::MemberTemplateName::MemberTemplateName( const char * name,
                                                       MemberTemplateImpl * memberTemplateImpl )
 //-------------------------------------------------------------------------------
    : fName( name ),
@@ -60,14 +60,15 @@ Reflex::MemberTemplateName::MemberTemplateName( const char * name,
 
 
 //-------------------------------------------------------------------------------
-Reflex::MemberTemplateName::~MemberTemplateName() {
+Reflex::Internal::MemberTemplateName::~MemberTemplateName() {
 //-------------------------------------------------------------------------------
    // Destructor.
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::MemberTemplate Reflex::MemberTemplateName::ByName( const std::string & name,
+Reflex::MemberTemplate
+Reflex::Internal::MemberTemplateName::ByName( const std::string & name,
                                                                        size_t nTemplateParams ) {
 //-------------------------------------------------------------------------------
    // Lookup a member template by its name.
@@ -89,7 +90,8 @@ Reflex::MemberTemplate Reflex::MemberTemplateName::ByName( const std::string & n
 
 
 //-------------------------------------------------------------------------------
-void Reflex::MemberTemplateName::CleanUp() {
+void
+Reflex::Internal::MemberTemplateName::CleanUp() {
 //-------------------------------------------------------------------------------
    // Do the final cleanup for the member templates.  
    for ( MemberTemplateVec_t::iterator it = sMemberTemplateVec().begin(); it != sMemberTemplateVec().end(); ++it ) {
@@ -103,7 +105,8 @@ void Reflex::MemberTemplateName::CleanUp() {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::MemberTemplateName::DeleteMemberTemplate() const {
+void
+Reflex::Internal::MemberTemplateName::DeleteMemberTemplate() const {
 //-------------------------------------------------------------------------------
    // Remove a member template dictionary information.
    delete fMemberTemplateImpl;
@@ -112,7 +115,8 @@ void Reflex::MemberTemplateName::DeleteMemberTemplate() const {
 
 
 //-------------------------------------------------------------------------------
-std::string Reflex::MemberTemplateName::Name( unsigned int mod ) const {
+std::string
+Reflex::Internal::MemberTemplateName::Name( unsigned int mod ) const {
 //-------------------------------------------------------------------------------
    // Print the name of this member template.
    if ( 0 != ( mod & ( SCOPED | S ))) return fName;
@@ -121,7 +125,8 @@ std::string Reflex::MemberTemplateName::Name( unsigned int mod ) const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::MemberTemplate Reflex::MemberTemplateName::ThisMemberTemplate() const {
+Reflex::MemberTemplate
+Reflex::Internal::MemberTemplateName::ThisMemberTemplate() const {
 //-------------------------------------------------------------------------------
    // Return the member template corresponding to this member template name.
    return * fThisMemberTemplate;
@@ -129,7 +134,8 @@ Reflex::MemberTemplate Reflex::MemberTemplateName::ThisMemberTemplate() const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::MemberTemplate Reflex::MemberTemplateName::MemberTemplateAt( size_t nth ) {
+Reflex::MemberTemplate
+Reflex::Internal::MemberTemplateName::MemberTemplateAt( size_t nth ) {
 //-------------------------------------------------------------------------------
    // Return teh nth member template.
    if ( nth < sMemberTemplateVec().size()) return sMemberTemplateVec()[nth];
@@ -138,7 +144,8 @@ Reflex::MemberTemplate Reflex::MemberTemplateName::MemberTemplateAt( size_t nth 
 
 
 //-------------------------------------------------------------------------------
-size_t Reflex::MemberTemplateName::MemberTemplateSize() {
+size_t
+Reflex::Internal::MemberTemplateName::MemberTemplateSize() {
 //-------------------------------------------------------------------------------
    // Return the number of member templates declared.
    return sMemberTemplateVec().size();
@@ -146,7 +153,8 @@ size_t Reflex::MemberTemplateName::MemberTemplateSize() {
 
 
 //-------------------------------------------------------------------------------
-Reflex::MemberTemplate_Iterator Reflex::MemberTemplateName::MemberTemplate_Begin() {
+Reflex::MemberTemplate_Iterator
+Reflex::Internal::MemberTemplateName::MemberTemplate_Begin() {
 //-------------------------------------------------------------------------------
    // Return the begin iterator of the member template collection
    return sMemberTemplateVec().begin();
@@ -154,7 +162,8 @@ Reflex::MemberTemplate_Iterator Reflex::MemberTemplateName::MemberTemplate_Begin
 
 
 //-------------------------------------------------------------------------------
-Reflex::MemberTemplate_Iterator Reflex::MemberTemplateName::MemberTemplate_End() {
+Reflex::MemberTemplate_Iterator
+Reflex::Internal::MemberTemplateName::MemberTemplate_End() {
 //-------------------------------------------------------------------------------
    // Return the end iterator of the member template collection
    return sMemberTemplateVec().end();
@@ -162,7 +171,8 @@ Reflex::MemberTemplate_Iterator Reflex::MemberTemplateName::MemberTemplate_End()
 
 
 //-------------------------------------------------------------------------------
-Reflex::Reverse_MemberTemplate_Iterator Reflex::MemberTemplateName::MemberTemplate_RBegin() {
+Reflex::Reverse_MemberTemplate_Iterator
+Reflex::Internal::MemberTemplateName::MemberTemplate_RBegin() {
 //-------------------------------------------------------------------------------
    // Return the RBegin iterator of the member template collection
    return ((const std::vector<MemberTemplate>&)sMemberTemplateVec()).rbegin();
@@ -170,7 +180,8 @@ Reflex::Reverse_MemberTemplate_Iterator Reflex::MemberTemplateName::MemberTempla
 
 
 //-------------------------------------------------------------------------------
-Reflex::Reverse_MemberTemplate_Iterator Reflex::MemberTemplateName::MemberTemplate_REnd() {
+Reflex::Reverse_MemberTemplate_Iterator
+Reflex::Internal::MemberTemplateName::MemberTemplate_REnd() {
 //-------------------------------------------------------------------------------
    // Return the rend iterator of the member template collection
    return ((const std::vector<MemberTemplate>&)sMemberTemplateVec()).rend();

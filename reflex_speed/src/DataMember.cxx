@@ -21,13 +21,14 @@
 #include "Reflex/Member.h"
 #include "Reflex/DictionaryGenerator.h"
 
+#include "Reflex/EntityProperty.h"
 #include "Reflex/Tools.h"
 #include "Class.h"
 #include <cstring>
 
 
 //-------------------------------------------------------------------------------
-Reflex::DataMember::DataMember( const char *  nam,
+Reflex::Internal::DataMember::DataMember( const char *  nam,
                                       const Type &  typ,
                                       size_t        offs,
                                       unsigned int  modifiers )
@@ -38,29 +39,30 @@ Reflex::DataMember::DataMember( const char *  nam,
 
 
 //-------------------------------------------------------------------------------
-Reflex::DataMember::~DataMember() {
+Reflex::Internal::DataMember::~DataMember() {
 //-------------------------------------------------------------------------------
 // Data member destructor.
 }
 
 //-------------------------------------------------------------------------------
-std::string Reflex::DataMember::Name( unsigned int mod ) const {
+std::string
+Reflex::Internal::DataMember::Name( unsigned int mod ) const {
 //-------------------------------------------------------------------------------
 // Return the scoped and qualified (if requested with mod) name of the data member
    std::string s = "";
 
    if ( 0 != ( mod & ( QUALIFIED | Q ))) {
-      if ( IsPublic())          { s += "public ";    }
-      if ( IsProtected())       { s += "protected "; }
-      if ( IsPrivate())         { s += "private ";   }
-      if ( IsExtern())          { s += "extern ";    }
-      if ( IsStatic())          { s += "static ";    }
-      if ( IsAuto())            { s += "auto ";      }
-      if ( IsRegister())        { s += "register ";  }
-      if ( IsMutable())         { s += "mutable ";   }
+      if ( Is(gPUBLIC))          { s += "public ";    }
+      if ( Is(gPROTECTED))       { s += "protected "; }
+      if ( Is(gPRIVATE))         { s += "private ";   }
+      if ( Is(gEXTERN))          { s += "extern ";    }
+      if ( Is(gSTATIC))          { s += "static ";    }
+      if ( Is(gAUTO))            { s += "auto ";      }
+      if ( Is(gREGISTER))        { s += "register ";  }
+      if ( Is(gMUTABLE))         { s += "mutable ";   }
    }
 
-   if ( mod & SCOPED && DeclaringScope().IsEnum()) {
+   if ( mod & SCOPED && DeclaringScope().Is(gENUM)) {
       if ( DeclaringScope().DeclaringScope()) {
          std::string sc = DeclaringScope().DeclaringScope().Name(SCOPED);
          if ( sc != "::" ) s += sc + "::";
@@ -76,7 +78,8 @@ std::string Reflex::DataMember::Name( unsigned int mod ) const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Object Reflex::DataMember::Get( const Object & obj ) const {
+Reflex::Object
+Reflex::Internal::DataMember::Get( const Object & obj ) const {
 //-------------------------------------------------------------------------------
 // Get the value of this data member as stored in object obj.
    if (DeclaringScope().ScopeType() == ENUM ) {
@@ -91,7 +94,8 @@ Reflex::Object Reflex::DataMember::Get( const Object & obj ) const {
 
 
 /*/-------------------------------------------------------------------------------
-  void Reflex::DataMember::Set( const Object & instance,
+  void
+Reflex::Internal::DataMember::Set( const Object & instance,
   const Object & value ) const {
 //-------------------------------------------------------------------------------
   void * mem = CalculateBaseObject( instance );
@@ -108,7 +112,8 @@ Reflex::Object Reflex::DataMember::Get( const Object & obj ) const {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::DataMember::Set( const Object & instance,
+void
+Reflex::Internal::DataMember::Set( const Object & instance,
                                     const void * value ) const {
 //-------------------------------------------------------------------------------
 // Set the data member value in object instance.
@@ -125,24 +130,25 @@ void Reflex::DataMember::Set( const Object & instance,
 
 
 //-------------------------------------------------------------------------------
-void Reflex::DataMember::GenerateDict( DictionaryGenerator & generator ) const {
+void
+Reflex::Internal::DataMember::GenerateDict( DictionaryGenerator & generator ) const {
 //-------------------------------------------------------------------------------
 // Generate Dictionary information about itself.
 
    const Scope & declScope = DeclaringScope();
 
-   if ( declScope.IsUnion() ) {
+   if ( declScope.Is(gUNION) ) {
 
       // FIXME
 
    }
 
-   else if ( declScope.IsEnum() ) {
+   else if ( declScope.Is(gENUM) ) {
 
       std::stringstream tmp;
       tmp << Offset();
 
-      if ( declScope.DeclaringScope().IsNamespace() ) { 
+      if ( declScope.DeclaringScope().Is(gNAMESPACE) ) { 
          generator.AddIntoInstances("\n.AddItem(\"" + Name() + "\", " + tmp.str() + ")");
       }
       else { // class, struct
@@ -154,7 +160,7 @@ void Reflex::DataMember::GenerateDict( DictionaryGenerator & generator ) const {
 
       const Type & rType = TypeOf().RawType();
         
-      if( TypeOf().IsArray() ) {      
+      if( TypeOf().Is(gARRAY) ) {      
 
          Type t = TypeOf();
 
@@ -165,7 +171,7 @@ void Reflex::DataMember::GenerateDict( DictionaryGenerator & generator ) const {
 	     
       }
    
-      else if(TypeOf().IsPointer() && TypeOf().RawType().IsFunction()) {
+      else if(TypeOf().Is(gPOINTER) && TypeOf().RawType().Is(gFUNCTION)) {
      
          Type t = TypeOf().ToType();
          generator.AddIntoShadow( t.ReturnType().Name(SCOPED) + "(") ;
@@ -194,7 +200,7 @@ void Reflex::DataMember::GenerateDict( DictionaryGenerator & generator ) const {
    
       else {
          std::string tname = TypeOf().Name(SCOPED);
-         if ( (rType.IsClass() || rType.IsStruct()) && (! rType.IsPublic())) {
+         if ( rType.Is((gCLASS || gSTRUCT) && !gPUBLIC) ) {
             tname = generator.Replace_colon(rType.Name(SCOPED));
             if ( rType != TypeOf()) tname = tname + TypeOf().Name(SCOPED).substr(tname.length());
          }
@@ -209,11 +215,11 @@ void Reflex::DataMember::GenerateDict( DictionaryGenerator & generator ) const {
                             generator.Replace_colon((*this).DeclaringScope().Name(SCOPED)));
       generator.AddIntoFree(", " + Name() + "), ");
       
-      if( IsPublic() )    generator.AddIntoFree("PUBLIC");
-      else if( IsPrivate() )   generator.AddIntoFree("PRIVATE");
-      else if( IsProtected() ) generator.AddIntoFree("PROTECTED");
-      if( IsVirtual() )    generator.AddIntoFree(" | VIRTUAL");
-      if( IsArtificial())  generator.AddIntoFree(" | ARTIFICIAL");
+      if( Is(gPUBLIC) )    generator.AddIntoFree("PUBLIC");
+      else if( Is(gPRIVATE) )   generator.AddIntoFree("PRIVATE");
+      else if( Is(gPROTECTED) ) generator.AddIntoFree("PROTECTED");
+      if( Is(gVIRTUAL) )    generator.AddIntoFree(" | VIRTUAL");
+      if( Is(gARTIFICIAL))  generator.AddIntoFree(" | ARTIFICIAL");
    
       generator.AddIntoFree(")\n");
 

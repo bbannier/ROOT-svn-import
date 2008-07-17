@@ -18,10 +18,13 @@
 namespace Reflex {
 
    // forward declarations
-   class TypeBase;
    class Type;
    class DictionaryGenerator;
 
+namespace Internal {
+
+   // forward declarations
+   class TypeBase;
 
    /**
    * @class DataMember DataMember.h Reflex/DataMember.h
@@ -75,11 +78,12 @@ namespace Reflex {
       size_t fOffset;
 
    }; // class DataMember
+} //namespace Internal
 } //namespace Reflex
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::DataMember::Offset() const {
+inline size_t Reflex::Internal::DataMember::Offset() const {
 //-------------------------------------------------------------------------------
    return fOffset;
 }

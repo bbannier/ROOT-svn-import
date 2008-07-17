@@ -20,7 +20,7 @@
 
 
 //-------------------------------------------------------------------------------
-Reflex::MemberTemplateImpl::MemberTemplateImpl( const char * templateName,
+Reflex::Internal::MemberTemplateImpl::MemberTemplateImpl( const char * templateName,
                                                       const Scope & scope,
                                                       const std::vector < std::string > & parameterNames,
                                                       const std::vector < std::string > & parameterDefaults )
@@ -44,7 +44,7 @@ Reflex::MemberTemplateImpl::MemberTemplateImpl( const char * templateName,
 
 
 //-------------------------------------------------------------------------------
-Reflex::MemberTemplateImpl::~MemberTemplateImpl() {
+Reflex::Internal::MemberTemplateImpl::~MemberTemplateImpl() {
 //-------------------------------------------------------------------------------
 // Destructor.
    if ( fMemberTemplateName->fMemberTemplateImpl == this ) fMemberTemplateName->fMemberTemplateImpl = 0;
@@ -52,7 +52,8 @@ Reflex::MemberTemplateImpl::~MemberTemplateImpl() {
 
 
 //-------------------------------------------------------------------------------
-bool Reflex::MemberTemplateImpl::operator == ( const MemberTemplateImpl & mt ) const {
+bool
+Reflex::Internal::MemberTemplateImpl::operator == ( const MemberTemplateImpl & mt ) const {
 //-------------------------------------------------------------------------------
 // Equal operator.
    return ( ( fMemberTemplateName->fName == mt.fMemberTemplateName->fName ) && 
@@ -61,7 +62,8 @@ bool Reflex::MemberTemplateImpl::operator == ( const MemberTemplateImpl & mt ) c
 
 
 //-------------------------------------------------------------------------------
-Reflex::Member_Iterator Reflex::MemberTemplateImpl::TemplateInstance_Begin() const {
+Reflex::Member_Iterator
+Reflex::Internal::MemberTemplateImpl::TemplateInstance_Begin() const {
 //-------------------------------------------------------------------------------
    // Return the begin iterator of the instance container of this member template.
    return fTemplateInstances.begin();
@@ -69,7 +71,8 @@ Reflex::Member_Iterator Reflex::MemberTemplateImpl::TemplateInstance_Begin() con
 
                                              
 //-------------------------------------------------------------------------------
-Reflex::Member_Iterator Reflex::MemberTemplateImpl::TemplateInstance_End() const {
+Reflex::Member_Iterator
+Reflex::Internal::MemberTemplateImpl::TemplateInstance_End() const {
 //-------------------------------------------------------------------------------
    // Return the end iterator of the instance container of this member template.
    return fTemplateInstances.end();
@@ -77,7 +80,8 @@ Reflex::Member_Iterator Reflex::MemberTemplateImpl::TemplateInstance_End() const
 
                                              
 //-------------------------------------------------------------------------------
-Reflex::Reverse_Member_Iterator Reflex::MemberTemplateImpl::TemplateInstance_RBegin() const {
+Reflex::Reverse_Member_Iterator
+Reflex::Internal::MemberTemplateImpl::TemplateInstance_RBegin() const {
 //-------------------------------------------------------------------------------
    // Return the rbegin iterator of the instance container of this member template.
    return ((const std::vector<Member>&)fTemplateInstances).rbegin();
@@ -85,7 +89,8 @@ Reflex::Reverse_Member_Iterator Reflex::MemberTemplateImpl::TemplateInstance_RBe
 
                                              
 //-------------------------------------------------------------------------------
-Reflex::Reverse_Member_Iterator Reflex::MemberTemplateImpl::TemplateInstance_REnd() const {
+Reflex::Reverse_Member_Iterator
+Reflex::Internal::MemberTemplateImpl::TemplateInstance_REnd() const {
 //-------------------------------------------------------------------------------
    // Return the rend iterator of the instance container of this member template.
    return ((const std::vector<Member>&)fTemplateInstances).rend();
@@ -93,7 +98,8 @@ Reflex::Reverse_Member_Iterator Reflex::MemberTemplateImpl::TemplateInstance_REn
 
                                              
 //-------------------------------------------------------------------------------
-Reflex::Member Reflex::MemberTemplateImpl::TemplateInstanceAt( size_t nth ) const {
+Reflex::Member
+Reflex::Internal::MemberTemplateImpl::TemplateInstanceAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
 // Return the nth template instance of this template family.
    if ( nth < fTemplateInstances.size() ) return fTemplateInstances[ nth ];
@@ -102,7 +108,8 @@ Reflex::Member Reflex::MemberTemplateImpl::TemplateInstanceAt( size_t nth ) cons
 
 
 //-------------------------------------------------------------------------------
-size_t Reflex::MemberTemplateImpl::TemplateInstanceSize() const {
+size_t
+Reflex::Internal::MemberTemplateImpl::TemplateInstanceSize() const {
 //-------------------------------------------------------------------------------
 // Return number of template instances of this family.
    return fTemplateInstances.size();
@@ -110,7 +117,8 @@ size_t Reflex::MemberTemplateImpl::TemplateInstanceSize() const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::MemberTemplate Reflex::MemberTemplateImpl::ThisMemberTemplate() const {
+Reflex::MemberTemplate
+Reflex::Internal::MemberTemplateImpl::ThisMemberTemplate() const {
 //-------------------------------------------------------------------------------
    // Return a ref to this member template.
    return fMemberTemplateName->ThisMemberTemplate();
@@ -118,7 +126,8 @@ Reflex::MemberTemplate Reflex::MemberTemplateImpl::ThisMemberTemplate() const {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::MemberTemplateImpl::AddTemplateInstance( const Member & templateInstance ) const {
+void
+Reflex::Internal::MemberTemplateImpl::AddTemplateInstance( const Member & templateInstance ) const {
 //-------------------------------------------------------------------------------
 // Add template instance to this family.
    fTemplateInstances.push_back( templateInstance );

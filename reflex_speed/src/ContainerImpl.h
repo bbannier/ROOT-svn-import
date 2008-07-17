@@ -209,16 +209,16 @@ namespace Internal {
       iterator RBegin() const { return iterator(*this, *GetNodeHelper(), End()); }
       iterator REnd() const { return iterator(); }
 
-      virtual void ProxyBegin(ConstIteratorBase& i) const { i.SetImpl(new iterator(Begin(), true)); }
+      virtual void ProxyBegin(ConstIteratorBase& i) const { i.SetImpl(new iterator(Begin()), true); }
       virtual void ProxyEnd(ConstIteratorBase& i) const {
          static iterator sEnd = End();
-         i.SetImpl(new iterator(&sEnd, false));
+         i.SetImpl(&sEnd, false);
       }
 
-      virtual void ProxyRBegin(ConstIteratorBase& i) const { i.SetImpl(new iterator(RBegin(), true)); }
+      virtual void ProxyRBegin(ConstIteratorBase& i) const { i.SetImpl(new iterator(RBegin()), true); }
       virtual void ProxyREnd(ConstIteratorBase& i) const {
          static iterator sREnd = REnd();
-         i.SetImpl(new iterator(&sREnd, false));
+         i.SetImpl(&sREnd, false);
       }
 
       // return the size of the container via the API
@@ -359,7 +359,9 @@ namespace Internal {
    //-------------------------------------------------------------------------------
 
    template <typename VALUE, class NODE>
-   class RFLX_API Container_iterator: public Container_const_iterator<VALUE, NODE> {
+   class RFLX_API Container_iterator: public Container_const_iterator<VALUE, NODE>,
+                                      public Reflex::Internal::IConstIteratorImpl
+   {
    public:
       typedef ContainerImplBase_iterator CBIter;
       typedef ContainerTools::LinkIter LinkIter;
@@ -393,6 +395,16 @@ namespace Internal {
 
       VALUE* operator->() const { return &(Curr()->fObj); }
       VALUE& operator*() const  { return Curr()->fObj; }
+
+      // Collection Proxy / IConstIteratorImpl:
+      bool IsEqual(const IConstIteratorImpl& other) const {
+         return *this == ((ContainerImplBase_iterator&)other);
+      }
+
+      void Forward() { ++(*this); }
+
+      void* Element() const { return operator->(); }
+
    }; // class Container_iterator
 } // namespace Internal
 } // namespace Reflex

@@ -22,7 +22,10 @@ namespace Reflex {
 
    // forward declarations
    class Object;
+   class EntityProperty;
    class DictionaryGenerator;
+
+namespace Internal {
 
    /**
    * @class MemberBase MemberBase.h Reflex/internal/MemberBase.h
@@ -90,103 +93,13 @@ namespace Reflex {
          std::vector<void*>()) const;
 
 
-      /** check whether abstract is set for the data member */
-      bool IsAbstract() const;
-
-
-      /** check whether artificial is set for the data member */
-      bool IsArtificial() const;
-
-      /** check whether auto is set for the data member */
-      bool IsAuto() const;
-
-
-      /** check whether the function member is a constructor */
-      bool IsConstructor() const;
-
-
-      /** check whether a member is const qualified */
-      bool IsConst() const;
-
-
-      /** check whether the function member is a user defined conversion function */
-      bool IsConverter() const;
-
-
-      /** check whether the function member is a copy constructor */
-      bool IsCopyConstructor() const;
-
-
-      /** return true if this is a data member */
-      bool IsDataMember() const;
-
-
-      /** check whether the function member is a destructor */
-      bool IsDestructor() const;
-
-
-      /** check whether explicit is set for the function member */
-      bool IsExplicit() const;
-
-
-      /** check whether extern is set for the data member */
-      bool IsExtern() const;
-
-
-      /** return true if this is a function member */
-      bool IsFunctionMember() const;
-
-
-      /** check whether inline is set for the function member */
-      bool IsInline() const;
-
-
-      /** check whether mutable is set for the data member */
-      bool IsMutable() const;
-
-
-      /** check whether the function member is an operator */
-      bool IsOperator() const;
-
-
-      /** check whether the function member is private */
-      bool IsPrivate() const;
-
-
-      /** check whether the function member is protected */
-      bool IsProtected() const;
-
-
-      /** check whether the function member is public */
-      bool IsPublic() const;
-
-
-      /** check whether register is set for the data member */
-      bool IsRegister() const;
-
-
-      /** check whether static is set for the data member */
-      bool IsStatic() const;
-
-
-      /** 
-      * IsTemplateInstance returns true if the type represents a 
-      * ClassTemplateInstance
-      * @return true if type represents a InstantiatedTemplateClass
+      /**
+      * Check whether the entity property is set for the member. You can
+      * combine checks, e.g. t.Is(gCLASS && gPUBLIC)
+      * @param descr the entity property to check for; see EntityProperty.
+      * @return whether descr is set.
       */
-      bool IsTemplateInstance() const;
-
-
-      /** check whether transient is set for the data member */
-      bool IsTransient() const;
-
-
-      /** check whether virtual is set for the function member */
-      bool IsVirtual() const;
-
-
-      /** check whether a member is volatile qualified */
-      bool IsVolatile() const;
+      bool Is(const EntityProperty& descr) const;
 
 
       /** return the type of the member (function or data member) */
@@ -367,6 +280,7 @@ namespace Reflex {
 
    }; // class Member
 
+} //namespace Internal
 } //namespace Reflex
 
 #include "Reflex/Object.h"
@@ -374,7 +288,8 @@ namespace Reflex {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Object Reflex::MemberBase::Get( const Object & /* obj */ ) const {
+inline Reflex::Object
+Reflex::Internal::MemberBase::Get( const Object & /* obj */ ) const {
 //-------------------------------------------------------------------------------
    return Object();
 }
@@ -382,7 +297,7 @@ inline Reflex::Object Reflex::MemberBase::Get( const Object & /* obj */ ) const 
 
 //-------------------------------------------------------------------------------
 //inline Reflex::Object 
-//Reflex::MemberBase::Invoke( const Object & /* obj */ ,
+//Reflex::Internal::MemberBase::Invoke( const Object & /* obj */ ,
 //                                  const std::vector < Object > & /* paramList */ ) const {
 //-------------------------------------------------------------------------------
 //  return Object();
@@ -391,7 +306,7 @@ inline Reflex::Object Reflex::MemberBase::Get( const Object & /* obj */ ) const 
 
 //-------------------------------------------------------------------------------
 inline Reflex::Object 
-Reflex::MemberBase::Invoke( const Object & /* obj */ ,
+Reflex::Internal::MemberBase::Invoke( const Object & /* obj */ ,
                                   const std::vector < void * > & /* paramList */ ) const {
 //-------------------------------------------------------------------------------
    return Object();
@@ -400,7 +315,7 @@ Reflex::MemberBase::Invoke( const Object & /* obj */ ,
 
 //-------------------------------------------------------------------------------
 //inline Reflex::Object 
-//Reflex::MemberBase::Invoke( const std::vector < Object > & /* paramList */ ) const {
+//Reflex::Internal::MemberBase::Invoke( const std::vector < Object > & /* paramList */ ) const {
 //-------------------------------------------------------------------------------
 //  return Object();
 //}
@@ -408,188 +323,23 @@ Reflex::MemberBase::Invoke( const Object & /* obj */ ,
 
 //-------------------------------------------------------------------------------
 inline Reflex::Object 
-Reflex::MemberBase::Invoke( const std::vector < void * > & /* paramList */ ) const {
+Reflex::Internal::MemberBase::Invoke( const std::vector < void * > & /* paramList */ ) const {
 //-------------------------------------------------------------------------------
    return Object();
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsAbstract() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & ABSTRACT);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsArtificial() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & ARTIFICIAL);
-}
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsAuto() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & AUTO);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsConstructor() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & CONSTRUCTOR);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsConst() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & CONST);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsConverter() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & CONVERTER);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsCopyConstructor() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & COPYCONSTRUCTOR);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsDataMember() const {
-//-------------------------------------------------------------------------------
-   return ( fMemberType == DATAMEMBER );
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsDestructor() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & DESTRUCTOR);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsExplicit() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & EXPLICIT);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsExtern() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & EXTERN);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsFunctionMember() const {
-//-------------------------------------------------------------------------------
-   return ( fMemberType == FUNCTIONMEMBER );
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsInline() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & INLINE);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsMutable() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & MUTABLE);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsOperator() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & OPERATOR);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsPrivate() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & PRIVATE);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsProtected() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & PROTECTED);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsPublic() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & PUBLIC);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsRegister() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & REGISTER);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsStatic() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & STATIC);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsTemplateInstance() const {
-//-------------------------------------------------------------------------------
-   return ( fMemberType == MEMBERTEMPLATEINSTANCE );
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsTransient() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & TRANSIENT);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsVirtual() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & VIRTUAL);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::MemberBase::IsVolatile() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & VOLATILE);
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::TYPE Reflex::MemberBase::MemberType() const {
+inline Reflex::TYPE
+Reflex::Internal::MemberBase::MemberType() const {
 //-------------------------------------------------------------------------------
    return fMemberType;
 }
 
 
 //-------------------------------------------------------------------------------
-inline std::string Reflex::MemberBase::Name( unsigned int mod ) const {
+inline std::string
+Reflex::Internal::MemberBase::Name( unsigned int mod ) const {
 //-------------------------------------------------------------------------------
    std::string s = "";
    if ( 0 != ( mod & ( SCOPED | S ))) {
@@ -602,174 +352,199 @@ inline std::string Reflex::MemberBase::Name( unsigned int mod ) const {
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::MemberBase::Offset() const {
+inline size_t
+Reflex::Internal::MemberBase::Offset() const {
 //-------------------------------------------------------------------------------
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::MemberBase::FunctionParameterSize( bool /* required */ ) const {
+inline size_t
+Reflex::Internal::MemberBase::FunctionParameterSize( bool /* required */ ) const {
 //-------------------------------------------------------------------------------
    return 0; 
 }
 
 
 //-------------------------------------------------------------------------------
-inline std::string Reflex::MemberBase::FunctionParameterDefaultAt( size_t /* nth */ ) const {
+inline std::string
+Reflex::Internal::MemberBase::FunctionParameterDefaultAt( size_t /* nth */ ) const {
 //-------------------------------------------------------------------------------
    return "";
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::MemberBase::FunctionParameterDefault_Begin() const {
+inline Reflex::StdString_Iterator
+Reflex::Internal::MemberBase::FunctionParameterDefault_Begin() const {
 //-------------------------------------------------------------------------------
    return Dummy::StdStringCont().begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::MemberBase::FunctionParameterDefault_End() const {
+inline Reflex::StdString_Iterator
+Reflex::Internal::MemberBase::FunctionParameterDefault_End() const {
 //-------------------------------------------------------------------------------
    return Dummy::StdStringCont().end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::MemberBase::FunctionParameterDefault_RBegin() const {
+inline Reflex::Reverse_StdString_Iterator
+Reflex::Internal::MemberBase::FunctionParameterDefault_RBegin() const {
 //-------------------------------------------------------------------------------
    return Dummy::StdStringCont().rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::MemberBase::FunctionParameterDefault_REnd() const {
+inline Reflex::Reverse_StdString_Iterator
+Reflex::Internal::MemberBase::FunctionParameterDefault_REnd() const {
 //-------------------------------------------------------------------------------
    return Dummy::StdStringCont().rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline std::string Reflex::MemberBase::FunctionParameterNameAt( size_t /* nth */ ) const {
+inline std::string
+Reflex::Internal::MemberBase::FunctionParameterNameAt( size_t /* nth */ ) const {
 //-------------------------------------------------------------------------------
    return "";
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::MemberBase::FunctionParameterName_Begin() const {
+inline Reflex::StdString_Iterator
+Reflex::Internal::MemberBase::FunctionParameterName_Begin() const {
 //-------------------------------------------------------------------------------
    return Dummy::StdStringCont().begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::MemberBase::FunctionParameterName_End() const {
+inline Reflex::StdString_Iterator
+Reflex::Internal::MemberBase::FunctionParameterName_End() const {
 //-------------------------------------------------------------------------------
    return Dummy::StdStringCont().end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::MemberBase::FunctionParameterName_RBegin() const {
+inline Reflex::Reverse_StdString_Iterator
+Reflex::Internal::MemberBase::FunctionParameterName_RBegin() const {
 //-------------------------------------------------------------------------------
    return Dummy::StdStringCont().rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::MemberBase::FunctionParameterName_REnd() const {
+inline Reflex::Reverse_StdString_Iterator
+Reflex::Internal::MemberBase::FunctionParameterName_REnd() const {
 //-------------------------------------------------------------------------------
    return Dummy::StdStringCont().rend();
 }
 
 
 //-------------------------------------------------------------------------------
-//inline void Reflex::MemberBase::Set( const Object & /* instance */,
+//inline void
+// Reflex::Internal::MemberBase::Set( const Object & /* instance */,
 //                                           const Object & /* value */ ) const {}
 //-------------------------------------------------------------------------------
 
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::MemberBase::Set( const Object & /* instance */,
-                                           const void * /* value */ ) const {}
+inline void
+Reflex::Internal::MemberBase::Set( const Object & /* instance */,
+                                   const void * /* value */ ) const {}
 //-------------------------------------------------------------------------------
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::MemberBase::SetScope( const Scope & scope ) const {
+inline void
+Reflex::Internal::MemberBase::SetScope( const Scope & scope ) const {
 //-------------------------------------------------------------------------------
    fScope = scope;
 }
 
 
 //-------------------------------------------------------------------------------
-inline void * Reflex::MemberBase::Stubcontext() const {
+inline void *
+Reflex::Internal::MemberBase::Stubcontext() const {
 //-------------------------------------------------------------------------------
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::StubFunction Reflex::MemberBase::Stubfunction() const {
+inline Reflex::StubFunction
+Reflex::Internal::MemberBase::Stubfunction() const {
 //-------------------------------------------------------------------------------
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::MemberBase::TemplateArgumentSize() const {
+inline size_t
+Reflex::Internal::MemberBase::TemplateArgumentSize() const {
 //-------------------------------------------------------------------------------
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::MemberBase::TemplateArgument_Begin() const {
+inline Reflex::Type_Iterator
+Reflex::Internal::MemberBase::TemplateArgument_Begin() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().begin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::MemberBase::TemplateArgument_End() const {
+inline Reflex::Type_Iterator
+Reflex::Internal::MemberBase::TemplateArgument_End() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().end();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::MemberBase::TemplateArgument_RBegin() const {
+inline Reflex::Reverse_Type_Iterator
+Reflex::Internal::MemberBase::TemplateArgument_RBegin() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::MemberBase::TemplateArgument_REnd() const {
+inline Reflex::Reverse_Type_Iterator
+Reflex::Internal::MemberBase::TemplateArgument_REnd() const {
 //-------------------------------------------------------------------------------
    return Dummy::TypeCont().rend();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::MemberTemplate Reflex::MemberBase::TemplateFamily() const {
+inline Reflex::MemberTemplate
+Reflex::Internal::MemberBase::TemplateFamily() const {
 //-------------------------------------------------------------------------------
    return Dummy::MemberTemplate();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type Reflex::MemberBase::TypeOf() const {
+inline Reflex::Type
+Reflex::Internal::MemberBase::TypeOf() const {
 //-------------------------------------------------------------------------------
    return fType;
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::MemberBase::UpdateFunctionParameterNames(const char* /*parameters*/) {}
+inline void
+Reflex::Internal::MemberBase::UpdateFunctionParameterNames(const char* /*parameters*/) {}
 //-------------------------------------------------------------------------------
 
 

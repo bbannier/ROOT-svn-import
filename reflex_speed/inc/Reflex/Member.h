@@ -19,14 +19,18 @@
 namespace Reflex {
 
    // forward declarations
-   class MemberBase;
    class Type;
    class Scope;
+   class EntityProperty;
    class PropertyList;
    class Object;
    class MemberTemplate;
    class DictionaryGenerator;
 
+   namespace Internal {
+      class MemberBase;
+      class OwnedMember;
+   }
 
    /**
    * @class Member Member.h Reflex/Member.h
@@ -36,12 +40,12 @@ namespace Reflex {
    */
    class RFLX_API Member {
 
-      friend class OwnedMember;
+      friend class Internal::OwnedMember;
 
    public:
 
       /** default constructor */
-      Member( const MemberBase * memberBase = 0 );
+      Member( const Internal::MemberBase * memberBase = 0 );
 
 
       /** copy constructor */
@@ -168,181 +172,13 @@ namespace Reflex {
          std::vector<void*>()) const;
 
 
-      /** 
-      * IsAbstract checks whether abstract is set for the data member,
-      * or a function member is pure virtual
-      * @return true if abstract modifier is set for this member
+      /**
+      * Check whether the entity property is set for the member. You can
+      * combine checks, e.g. t.Is(gCLASS && gPUBLIC)
+      * @param descr the entity property to check for; see EntityProperty.
+      * @return whether descr is set.
       */
-      bool IsAbstract() const;
-
-
-      /** 
-      * IsArtificial checks whether artificial is set for the data member 
-      * @return true if artificial modifier is set for this member
-      */
-      bool IsArtificial() const;
-
-      /** 
-      * IsAuto checks whether auto is set for the data member 
-      * @return true if auto modifier is set for this member
-      */
-      bool IsAuto() const;
-
-
-      /** 
-      * IsConstructor checks whether the function member is a constructor 
-      * @return true if member is a constructor
-      */
-      bool IsConstructor() const;
-
-
-      /** 
-      * IsConst will check whether this member is const qualified.
-      * @return true if the member is const qualified
-      */
-      bool IsConst() const;
-
-
-      /** 
-      * IsConverter checks whether the function member is a user defined conversion function 
-      * @return true if member is a conversion operator
-      */
-      bool IsConverter() const;
-
-
-      /** 
-      *IsCopyConstructor checks whether the function member is a copy constructor 
-      * @return true if member is a copy constructor 
-      */
-      bool IsCopyConstructor() const;
-
-
-      /** 
-      * IsDataMember returns true if this is a data member 
-      * @return true if this member is a data member
-      */
-      bool IsDataMember() const;
-
-
-      /** 
-      * check whether the function member is a destructor 
-      * @return true if this member is a destructor
-      */
-      bool IsDestructor() const;
-
-
-      /** 
-      * IsExplicit checks whether explicit is set for the function member 
-      * @return true if explicit modifier is set for this member
-      */
-      bool IsExplicit() const;
-
-
-      /** 
-      * IsExtern checks whether extern is set for the data member 
-      * @return true if extern modifier is set for this member
-      */
-      bool IsExtern() const;
-
-
-      /** 
-      * IsFunctionMember returns true if this is a function member 
-      * @return true if this member is a function member
-      */
-      bool IsFunctionMember() const;
-
-
-      /** 
-      * IsInline checks whether inline is set for the function member 
-      * @return true if inline modifier is set for this member
-      */
-      bool IsInline() const;
-
-
-      /** 
-      * IsMutable check whether mutable is set for the data member 
-      * @return true if mutable modifier is set for this member
-      */
-      bool IsMutable() const;
-
-
-      /** 
-      * IsOperator check whether the function member is an operator 
-      * @return true if this member is an operator function
-      */
-      bool IsOperator() const;
-
-
-      /** 
-      * IsPrivate checks whether the function member is private 
-      * @return true if access to this member is private
-      */
-      bool IsPrivate() const;
-
-
-      /** 
-      * IsProtected checks whether the function member is protected 
-      * @return true if access to this member is protected
-      */
-      bool IsProtected() const;
-
-
-      /** 
-      * IsPublic checks whether the function member is public 
-      * @return true if access to this member is public
-      */
-      bool IsPublic() const;
-
-
-      /** 
-      * IsPureVirtual checks whether the Member is a pure virtual
-      * function.
-      * @return true if function and abstract modifier is set
-      */
-      bool IsPureVirtual() const;
-
-
-      /** 
-      * IsRegister checks whether register is set for the data member 
-      * @return true if register modifier is set for this member
-      */
-      bool IsRegister() const;
-
-
-      /* 
-      * IsStatic checks whether static is set for the data member 
-      * @return true is static modifier is set for this member
-      */
-      bool IsStatic() const;
-
-
-      /** 
-      * IsTemplateInstance returns true if the member represents a 
-      * templated member function
-      * @return true if member represents a templated member function
-      */
-      bool IsTemplateInstance() const;
-
-
-      /** 
-      * IsTransient checks whether the function member is transient 
-      * @return true if transient modifier is set for this member (not a C++ modifier)
-      */
-      bool IsTransient() const;
-
-
-      /** 
-      * IsVirtual checks whether virtual is set for the function member 
-      * @return true if virtual modifier is set for this member
-      */
-      bool IsVirtual() const;
-
-
-      /** 
-      * IsVolatile will check whether this member is volatile qualified.
-      * @return true if the member is volatile qualified
-      */
-      bool IsVolatile() const;
+      bool Is(const EntityProperty& descr) const;
 
 
       /** 
@@ -499,7 +335,7 @@ namespace Reflex {
       * @clientCardinality 0..1
       * @label member base
       */
-      MemberBase * fMemberBase;
+      Internal::MemberBase * fMemberBase;
 
    }; // class Member
 
@@ -573,206 +409,6 @@ inline Reflex::Type Reflex::Member::DeclaringType() const {
 inline void * Reflex::Member::Id() const {
 //-------------------------------------------------------------------------------
    return (void*)fMemberBase;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsAbstract() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsAbstract();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsArtificial() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsArtificial();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsAuto() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsAuto();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsConstructor() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsConstructor();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsConst() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsConst();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsConverter() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsConverter();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsCopyConstructor() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsCopyConstructor();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsDataMember() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsDataMember();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsDestructor() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsDestructor();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsExplicit() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsExplicit();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsExtern() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsExtern();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsFunctionMember() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsFunctionMember();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsInline() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsInline();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsMutable() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsMutable();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsOperator() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsOperator();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsPrivate() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsPrivate();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsProtected() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsProtected();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsPublic() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsPublic();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsPureVirtual() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return IsFunctionMember() && IsAbstract();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsRegister() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsRegister();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsStatic() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsStatic();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsTemplateInstance() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsTemplateInstance();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsTransient() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsTransient();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsVirtual() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsVirtual();
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Member::IsVolatile() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->IsVolatile();
-   return false;
 }
 
 

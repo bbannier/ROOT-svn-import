@@ -16,13 +16,14 @@
 #include "Enum.h"
 
 #include "Reflex/Tools.h"
+#include "Reflex/EntityProperty.h"
 #include "Reflex/DictionaryGenerator.h"
 
 #include <sstream>
 
 
 //-------------------------------------------------------------------------------
-Reflex::Enum::Enum( const char * enumType,
+Reflex::Internal::Enum::Enum( const char * enumType,
                           const std::type_info & ti,
                           unsigned int modifiers )
 //-------------------------------------------------------------------------------
@@ -33,7 +34,7 @@ Reflex::Enum::Enum( const char * enumType,
 
 
 //-------------------------------------------------------------------------------
-Reflex::Enum::~Enum() {
+Reflex::Internal::Enum::~Enum() {
 //-------------------------------------------------------------------------------
 // Destructor for enum dictionary information.
 }
@@ -42,13 +43,14 @@ Reflex::Enum::~Enum() {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Enum::GenerateDict( DictionaryGenerator & generator ) const {
+void
+Reflex::Internal::Enum::GenerateDict( DictionaryGenerator & generator ) const {
 //-------------------------------------------------------------------------------
 // Generate Dictionary information about itself.
          
    size_t lastMember = DataMemberSize()-1;
 
-   if( !(DeclaringScope().IsNamespace()) ) {  
+   if( !(DeclaringScope().Is(gNAMESPACE)) ) {  
 
       generator.AddIntoFree("\n.AddEnum(\"" + Name() + "\", \"");
 
@@ -58,9 +60,9 @@ void Reflex::Enum::GenerateDict( DictionaryGenerator & generator ) const {
       }
 
       generator.AddIntoFree("\",");
-      if      ( IsPublic())    generator.AddIntoFree("typeid(" + Name(SCOPED) + "), PUBLIC)");
-      else if ( IsProtected()) generator.AddIntoFree("typeid(Reflex::ProtectedEnum), PROTECTED)");
-      else if ( IsPrivate())   generator.AddIntoFree("typeid(Reflex::PrivateEnum), PRIVATE)");
+      if      ( Is(gPUBLIC))    generator.AddIntoFree("typeid(" + Name(SCOPED) + "), PUBLIC)");
+      else if ( Is(gPROTECTED)) generator.AddIntoFree("typeid(Reflex::ProtectedEnum), PROTECTED)");
+      else if ( Is(gPRIVATE))   generator.AddIntoFree("typeid(Reflex::PrivateEnum), PRIVATE)");
    }
    else {
 

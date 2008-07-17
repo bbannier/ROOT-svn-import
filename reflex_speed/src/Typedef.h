@@ -15,16 +15,18 @@
 // Include files
 #include "Reflex/internal/TypeBase.h"
 #include "Reflex/Type.h"
+#include "Reflex/EntityProperty.h"
 
 namespace Reflex {
-
    // forward declarations
    class Base;
-   class Object;
    class Member;
-   class MemberTemplate;
    class Scope;
+   class Object;
+   class MemberTemplate;
    class TypeTemplate;
+
+namespace Internal {
 
    /**
    * @class Typedef Typedef.h Reflex/Typedef.h
@@ -389,6 +391,7 @@ namespace Reflex {
       Type fTypedefType;
 
    }; // class Typedef
+} //namespace Internal
 } //namespace Reflex
 
 #include "Reflex/Base.h"
@@ -399,7 +402,7 @@ namespace Reflex {
 #include "Reflex/TypeTemplate.h"
 
 //-------------------------------------------------------------------------------
-inline Reflex::Base Reflex::Typedef::BaseAt( size_t nth ) const {
+inline Reflex::Base Reflex::Internal::Typedef::BaseAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.BaseAt( nth );
    return Dummy::Base();  
@@ -407,7 +410,7 @@ inline Reflex::Base Reflex::Typedef::BaseAt( size_t nth ) const {
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::Typedef::BaseSize() const {
+inline size_t Reflex::Internal::Typedef::BaseSize() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.BaseSize();
    return 0;  
@@ -415,7 +418,7 @@ inline size_t Reflex::Typedef::BaseSize() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Base_Iterator Reflex::Typedef::Base_Begin() const {
+inline Reflex::Base_Iterator Reflex::Internal::Typedef::Base_Begin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.Base_Begin();
    return Base_Iterator();
@@ -423,7 +426,7 @@ inline Reflex::Base_Iterator Reflex::Typedef::Base_Begin() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Base_Iterator Reflex::Typedef::Base_End() const {
+inline Reflex::Base_Iterator Reflex::Internal::Typedef::Base_End() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.Base_End();
    return Base_Iterator();
@@ -431,7 +434,7 @@ inline Reflex::Base_Iterator Reflex::Typedef::Base_End() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Base_Iterator Reflex::Typedef::Base_RBegin() const {
+inline Reflex::Reverse_Base_Iterator Reflex::Internal::Typedef::Base_RBegin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.Base_RBegin();
    return Reverse_Base_Iterator();
@@ -439,7 +442,7 @@ inline Reflex::Reverse_Base_Iterator Reflex::Typedef::Base_RBegin() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Base_Iterator Reflex::Typedef::Base_REnd() const {
+inline Reflex::Reverse_Base_Iterator Reflex::Internal::Typedef::Base_REnd() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.Base_REnd();
    return Reverse_Base_Iterator();
@@ -447,7 +450,7 @@ inline Reflex::Reverse_Base_Iterator Reflex::Typedef::Base_REnd() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Object Reflex::Typedef::CastObject( const Type & to,
+inline Reflex::Object Reflex::Internal::Typedef::CastObject( const Type & to,
                                                                const Object & obj ) const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.CastObject( to, obj );
@@ -456,7 +459,7 @@ inline Reflex::Object Reflex::Typedef::CastObject( const Type & to,
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member Reflex::Typedef::DataMemberAt( size_t nth ) const {
+inline Reflex::Member Reflex::Internal::Typedef::DataMemberAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.DataMemberAt( nth );
    return Dummy::Member();
@@ -464,7 +467,7 @@ inline Reflex::Member Reflex::Typedef::DataMemberAt( size_t nth ) const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member Reflex::Typedef::DataMemberByName( const std::string & name ) const {
+inline Reflex::Member Reflex::Internal::Typedef::DataMemberByName( const std::string & name ) const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.DataMemberByName( name );
    return Dummy::Member();
@@ -472,7 +475,7 @@ inline Reflex::Member Reflex::Typedef::DataMemberByName( const std::string & nam
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::Typedef::DataMemberSize() const {
+inline size_t Reflex::Internal::Typedef::DataMemberSize() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.DataMemberSize();
    return 0;
@@ -480,7 +483,7 @@ inline size_t Reflex::Typedef::DataMemberSize() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::Typedef::DataMember_Begin() const {
+inline Reflex::Member_Iterator Reflex::Internal::Typedef::DataMember_Begin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.DataMember_Begin();
    return Dummy::MemberCont().begin();
@@ -488,7 +491,7 @@ inline Reflex::Member_Iterator Reflex::Typedef::DataMember_Begin() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::Typedef::DataMember_End() const {
+inline Reflex::Member_Iterator Reflex::Internal::Typedef::DataMember_End() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.DataMember_End();
    return Dummy::MemberCont().end();
@@ -496,7 +499,7 @@ inline Reflex::Member_Iterator Reflex::Typedef::DataMember_End() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::Typedef::DataMember_RBegin() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::Typedef::DataMember_RBegin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.DataMember_RBegin();
    return Dummy::MemberCont().rbegin();
@@ -504,7 +507,7 @@ inline Reflex::Reverse_Member_Iterator Reflex::Typedef::DataMember_RBegin() cons
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::Typedef::DataMember_REnd() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::Typedef::DataMember_REnd() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.DataMember_REnd();
    return Dummy::MemberCont().rend();
@@ -512,7 +515,7 @@ inline Reflex::Reverse_Member_Iterator Reflex::Typedef::DataMember_REnd() const 
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::Typedef::Destruct( void * instance,
+inline void Reflex::Internal::Typedef::Destruct( void * instance,
                                              bool dealloc ) const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) fTypedefType.Destruct( instance, dealloc );
@@ -520,7 +523,7 @@ inline void Reflex::Typedef::Destruct( void * instance,
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type Reflex::Typedef::DynamicType( const Object & obj ) const {
+inline Reflex::Type Reflex::Internal::Typedef::DynamicType( const Object & obj ) const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.DynamicType( obj );
    return Dummy::Type();
@@ -528,7 +531,7 @@ inline Reflex::Type Reflex::Typedef::DynamicType( const Object & obj ) const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member Reflex::Typedef::FunctionMemberAt( size_t nth ) const {
+inline Reflex::Member Reflex::Internal::Typedef::FunctionMemberAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.FunctionMemberAt( nth );
    return Dummy::Member();
@@ -536,7 +539,7 @@ inline Reflex::Member Reflex::Typedef::FunctionMemberAt( size_t nth ) const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member Reflex::Typedef::FunctionMemberByName( const std::string & name,
+inline Reflex::Member Reflex::Internal::Typedef::FunctionMemberByName( const std::string & name,
                                                              const Type & signature,
                                                              unsigned int modifiers_mask ) const {
 //-------------------------------------------------------------------------------
@@ -546,7 +549,7 @@ inline Reflex::Member Reflex::Typedef::FunctionMemberByName( const std::string &
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::Typedef::FunctionMemberSize() const {
+inline size_t Reflex::Internal::Typedef::FunctionMemberSize() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.FunctionMemberSize();
    return 0;
@@ -554,7 +557,7 @@ inline size_t Reflex::Typedef::FunctionMemberSize() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::Typedef::FunctionMember_Begin() const {
+inline Reflex::Member_Iterator Reflex::Internal::Typedef::FunctionMember_Begin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.FunctionMember_Begin();
    return Dummy::MemberCont().begin();
@@ -562,7 +565,7 @@ inline Reflex::Member_Iterator Reflex::Typedef::FunctionMember_Begin() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::Typedef::FunctionMember_End() const {
+inline Reflex::Member_Iterator Reflex::Internal::Typedef::FunctionMember_End() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.FunctionMember_End();
    return Dummy::MemberCont().end();
@@ -570,7 +573,7 @@ inline Reflex::Member_Iterator Reflex::Typedef::FunctionMember_End() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::Typedef::FunctionMember_RBegin() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::Typedef::FunctionMember_RBegin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.FunctionMember_RBegin();
    return Dummy::MemberCont().rbegin();
@@ -578,7 +581,7 @@ inline Reflex::Reverse_Member_Iterator Reflex::Typedef::FunctionMember_RBegin() 
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::Typedef::FunctionMember_REnd() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::Typedef::FunctionMember_REnd() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.FunctionMember_REnd();
    return Dummy::MemberCont().rend();
@@ -586,7 +589,7 @@ inline Reflex::Reverse_Member_Iterator Reflex::Typedef::FunctionMember_REnd() co
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Typedef::HasBase( const Type & cl ) const {
+inline bool Reflex::Internal::Typedef::HasBase( const Type & cl ) const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.HasBase( cl );
    return false;
@@ -594,15 +597,15 @@ inline bool Reflex::Typedef::HasBase( const Type & cl ) const {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Typedef::IsAbstract() const {
+inline bool Reflex::Internal::Typedef::IsAbstract() const {
 //-------------------------------------------------------------------------------
-   if ( ForwardStruct()) return fTypedefType.IsAbstract();
+   if ( ForwardStruct()) return fTypedefType.Is(gABSTRACT);
    return false;
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Typedef::IsComplete() const {
+inline bool Reflex::Internal::Typedef::IsComplete() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.IsComplete();
    return false;
@@ -610,15 +613,15 @@ inline bool Reflex::Typedef::IsComplete() const {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Typedef::IsVirtual() const {
+inline bool Reflex::Internal::Typedef::IsVirtual() const {
 //-------------------------------------------------------------------------------
-   if ( ForwardStruct()) return fTypedefType.IsVirtual();
+   if ( ForwardStruct()) return fTypedefType.Is(gVIRTUAL);
    return false;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member Reflex::Typedef::MemberByName( const std::string & name,
+inline Reflex::Member Reflex::Internal::Typedef::MemberByName( const std::string & name,
                                                                          const Type & signature ) const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.MemberByName( name, signature );
@@ -627,7 +630,7 @@ inline Reflex::Member Reflex::Typedef::MemberByName( const std::string & name,
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member Reflex::Typedef::MemberAt( size_t nth ) const {
+inline Reflex::Member Reflex::Internal::Typedef::MemberAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.MemberAt( nth );
    return Dummy::Member();
@@ -635,7 +638,7 @@ inline Reflex::Member Reflex::Typedef::MemberAt( size_t nth ) const {
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::Typedef::MemberSize() const {
+inline size_t Reflex::Internal::Typedef::MemberSize() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.MemberSize();
    return 0;
@@ -643,7 +646,7 @@ inline size_t Reflex::Typedef::MemberSize() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::Typedef::Member_Begin() const {
+inline Reflex::Member_Iterator Reflex::Internal::Typedef::Member_Begin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.Member_Begin();
    return Dummy::MemberCont().begin();
@@ -651,7 +654,7 @@ inline Reflex::Member_Iterator Reflex::Typedef::Member_Begin() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member_Iterator Reflex::Typedef::Member_End() const {
+inline Reflex::Member_Iterator Reflex::Internal::Typedef::Member_End() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.Member_End();
    return Dummy::MemberCont().end();
@@ -659,7 +662,7 @@ inline Reflex::Member_Iterator Reflex::Typedef::Member_End() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::Typedef::Member_RBegin() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::Typedef::Member_RBegin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.Member_RBegin();
    return Dummy::MemberCont().rbegin();
@@ -667,7 +670,7 @@ inline Reflex::Reverse_Member_Iterator Reflex::Typedef::Member_RBegin() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Member_Iterator Reflex::Typedef::Member_REnd() const {
+inline Reflex::Reverse_Member_Iterator Reflex::Internal::Typedef::Member_REnd() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.Member_REnd();
    return Dummy::MemberCont().rend();  
@@ -675,7 +678,7 @@ inline Reflex::Reverse_Member_Iterator Reflex::Typedef::Member_REnd() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::MemberTemplate Reflex::Typedef::MemberTemplateAt( size_t nth ) const {
+inline Reflex::MemberTemplate Reflex::Internal::Typedef::MemberTemplateAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.MemberTemplateAt( nth );
    return Dummy::MemberTemplate();
@@ -683,7 +686,7 @@ inline Reflex::MemberTemplate Reflex::Typedef::MemberTemplateAt( size_t nth ) co
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::Typedef::MemberTemplateSize() const {
+inline size_t Reflex::Internal::Typedef::MemberTemplateSize() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.MemberTemplateSize();
    return 0;
@@ -691,7 +694,7 @@ inline size_t Reflex::Typedef::MemberTemplateSize() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::MemberTemplate_Iterator Reflex::Typedef::MemberTemplate_Begin() const {
+inline Reflex::MemberTemplate_Iterator Reflex::Internal::Typedef::MemberTemplate_Begin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.MemberTemplate_Begin();
    return Dummy::MemberTemplateCont().begin();
@@ -699,7 +702,7 @@ inline Reflex::MemberTemplate_Iterator Reflex::Typedef::MemberTemplate_Begin() c
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::MemberTemplate_Iterator Reflex::Typedef::MemberTemplate_End() const {
+inline Reflex::MemberTemplate_Iterator Reflex::Internal::Typedef::MemberTemplate_End() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.MemberTemplate_End();
    return Dummy::MemberTemplateCont().end();
@@ -707,7 +710,7 @@ inline Reflex::MemberTemplate_Iterator Reflex::Typedef::MemberTemplate_End() con
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_MemberTemplate_Iterator Reflex::Typedef::MemberTemplate_RBegin() const {
+inline Reflex::Reverse_MemberTemplate_Iterator Reflex::Internal::Typedef::MemberTemplate_RBegin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.MemberTemplate_RBegin();
    return Dummy::MemberTemplateCont().rbegin();
@@ -715,7 +718,7 @@ inline Reflex::Reverse_MemberTemplate_Iterator Reflex::Typedef::MemberTemplate_R
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_MemberTemplate_Iterator Reflex::Typedef::MemberTemplate_REnd() const {
+inline Reflex::Reverse_MemberTemplate_Iterator Reflex::Internal::Typedef::MemberTemplate_REnd() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.MemberTemplate_REnd(); 
    return Dummy::MemberTemplateCont().rend();
@@ -723,7 +726,7 @@ inline Reflex::Reverse_MemberTemplate_Iterator Reflex::Typedef::MemberTemplate_R
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::Typedef::FunctionParameter_Begin() const {
+inline Reflex::Type_Iterator Reflex::Internal::Typedef::FunctionParameter_Begin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardFunction()) return fTypedefType.FunctionParameter_Begin();
    return Dummy::TypeCont().begin();
@@ -731,7 +734,7 @@ inline Reflex::Type_Iterator Reflex::Typedef::FunctionParameter_Begin() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::Typedef::FunctionParameter_End() const {
+inline Reflex::Type_Iterator Reflex::Internal::Typedef::FunctionParameter_End() const {
 //-------------------------------------------------------------------------------
    if ( ForwardFunction()) return fTypedefType.FunctionParameter_End();
    return Dummy::TypeCont().end();
@@ -739,7 +742,7 @@ inline Reflex::Type_Iterator Reflex::Typedef::FunctionParameter_End() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::Typedef::FunctionParameter_RBegin() const {
+inline Reflex::Reverse_Type_Iterator Reflex::Internal::Typedef::FunctionParameter_RBegin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardFunction()) return fTypedefType.FunctionParameter_RBegin();
    return Dummy::TypeCont().rbegin();
@@ -747,7 +750,7 @@ inline Reflex::Reverse_Type_Iterator Reflex::Typedef::FunctionParameter_RBegin()
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::Typedef::FunctionParameter_REnd() const {
+inline Reflex::Reverse_Type_Iterator Reflex::Internal::Typedef::FunctionParameter_REnd() const {
 //-------------------------------------------------------------------------------
    if ( ForwardFunction()) return fTypedefType.FunctionParameter_REnd();
    return Dummy::TypeCont().rend();
@@ -755,7 +758,7 @@ inline Reflex::Reverse_Type_Iterator Reflex::Typedef::FunctionParameter_REnd() c
 
 
 //-------------------------------------------------------------------------------
-inline std::string Reflex::Typedef::Name( unsigned int mod ) const {
+inline std::string Reflex::Internal::Typedef::Name( unsigned int mod ) const {
 //-------------------------------------------------------------------------------
    if ( 0 != ( mod & ( FINAL | F ))) return FinalType().Name( mod );
    else                              return TypeBase::Name( mod );
@@ -763,7 +766,7 @@ inline std::string Reflex::Typedef::Name( unsigned int mod ) const {
 
 
 //-------------------------------------------------------------------------------
-inline const std::string&  Reflex::Typedef::SimpleName( size_t & pos, 
+inline const std::string&  Reflex::Internal::Typedef::SimpleName( size_t & pos, 
                                                               unsigned int mod ) const {
 //-------------------------------------------------------------------------------
    return TypeBase::SimpleName( pos, mod );
@@ -771,7 +774,7 @@ inline const std::string&  Reflex::Typedef::SimpleName( size_t & pos,
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope Reflex::Typedef::SubScopeAt( size_t nth ) const {
+inline Reflex::Scope Reflex::Internal::Typedef::SubScopeAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubScopeAt( nth );
    return Dummy::Scope();
@@ -779,7 +782,7 @@ inline Reflex::Scope Reflex::Typedef::SubScopeAt( size_t nth ) const {
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::Typedef::SubScopeSize() const {
+inline size_t Reflex::Internal::Typedef::SubScopeSize() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubScopeSize();
    return 0;
@@ -787,7 +790,7 @@ inline size_t Reflex::Typedef::SubScopeSize() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope_Iterator Reflex::Typedef::SubScope_Begin() const {
+inline Reflex::Scope_Iterator Reflex::Internal::Typedef::SubScope_Begin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubScope_Begin();
    return Dummy::ScopeCont().begin();
@@ -795,7 +798,7 @@ inline Reflex::Scope_Iterator Reflex::Typedef::SubScope_Begin() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope_Iterator Reflex::Typedef::SubScope_End() const {
+inline Reflex::Scope_Iterator Reflex::Internal::Typedef::SubScope_End() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubScope_End();
    return Dummy::ScopeCont().end();
@@ -803,7 +806,7 @@ inline Reflex::Scope_Iterator Reflex::Typedef::SubScope_End() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Scope_Iterator Reflex::Typedef::SubScope_RBegin() const {
+inline Reflex::Reverse_Scope_Iterator Reflex::Internal::Typedef::SubScope_RBegin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubScope_RBegin();
    return Dummy::ScopeCont().rbegin();
@@ -811,7 +814,7 @@ inline Reflex::Reverse_Scope_Iterator Reflex::Typedef::SubScope_RBegin() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Scope_Iterator Reflex::Typedef::SubScope_REnd() const {
+inline Reflex::Reverse_Scope_Iterator Reflex::Internal::Typedef::SubScope_REnd() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubScope_REnd();
    return Dummy::ScopeCont().rend();
@@ -819,7 +822,7 @@ inline Reflex::Reverse_Scope_Iterator Reflex::Typedef::SubScope_REnd() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type Reflex::Typedef::SubTypeAt( size_t nth ) const {
+inline Reflex::Type Reflex::Internal::Typedef::SubTypeAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubTypeAt( nth );
    return Dummy::Type();
@@ -827,7 +830,7 @@ inline Reflex::Type Reflex::Typedef::SubTypeAt( size_t nth ) const {
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::Typedef::SubTypeSize() const {
+inline size_t Reflex::Internal::Typedef::SubTypeSize() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubTypeSize();
    return 0;
@@ -835,7 +838,7 @@ inline size_t Reflex::Typedef::SubTypeSize() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::Typedef::SubType_Begin() const {
+inline Reflex::Type_Iterator Reflex::Internal::Typedef::SubType_Begin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubType_Begin();
    return Dummy::TypeCont().begin();
@@ -843,7 +846,7 @@ inline Reflex::Type_Iterator Reflex::Typedef::SubType_Begin() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::Typedef::SubType_End() const {
+inline Reflex::Type_Iterator Reflex::Internal::Typedef::SubType_End() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubType_End();
    return Dummy::TypeCont().end();
@@ -851,7 +854,7 @@ inline Reflex::Type_Iterator Reflex::Typedef::SubType_End() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::Typedef::SubType_RBegin() const {
+inline Reflex::Reverse_Type_Iterator Reflex::Internal::Typedef::SubType_RBegin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubType_RBegin();
    return Dummy::TypeCont().rbegin();
@@ -859,7 +862,7 @@ inline Reflex::Reverse_Type_Iterator Reflex::Typedef::SubType_RBegin() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::Typedef::SubType_REnd() const {
+inline Reflex::Reverse_Type_Iterator Reflex::Internal::Typedef::SubType_REnd() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubType_REnd();
    return Dummy::TypeCont().rend();
@@ -867,7 +870,7 @@ inline Reflex::Reverse_Type_Iterator Reflex::Typedef::SubType_REnd() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type Reflex::Typedef::TemplateArgumentAt( size_t nth ) const {
+inline Reflex::Type Reflex::Internal::Typedef::TemplateArgumentAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    if ( ForwardTemplate()) return fTypedefType.TemplateArgumentAt( nth );
    return Dummy::Type();
@@ -875,7 +878,7 @@ inline Reflex::Type Reflex::Typedef::TemplateArgumentAt( size_t nth ) const {
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::Typedef::TemplateArgumentSize() const {
+inline size_t Reflex::Internal::Typedef::TemplateArgumentSize() const {
 //-------------------------------------------------------------------------------
    if ( ForwardTemplate()) return fTypedefType.TemplateArgumentSize();
    return 0;
@@ -883,7 +886,7 @@ inline size_t Reflex::Typedef::TemplateArgumentSize() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::Typedef::TemplateArgument_Begin() const {
+inline Reflex::Type_Iterator Reflex::Internal::Typedef::TemplateArgument_Begin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardTemplate()) return fTypedefType.TemplateArgument_Begin();
    return Dummy::TypeCont().begin();
@@ -891,7 +894,7 @@ inline Reflex::Type_Iterator Reflex::Typedef::TemplateArgument_Begin() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::Typedef::TemplateArgument_End() const {
+inline Reflex::Type_Iterator Reflex::Internal::Typedef::TemplateArgument_End() const {
 //-------------------------------------------------------------------------------
    if ( ForwardTemplate()) return fTypedefType.TemplateArgument_End();
    return Dummy::TypeCont().end();
@@ -899,7 +902,7 @@ inline Reflex::Type_Iterator Reflex::Typedef::TemplateArgument_End() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::Typedef::TemplateArgument_RBegin() const {
+inline Reflex::Reverse_Type_Iterator Reflex::Internal::Typedef::TemplateArgument_RBegin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardTemplate()) return fTypedefType.TemplateArgument_RBegin();
    return Dummy::TypeCont().rbegin();
@@ -907,7 +910,7 @@ inline Reflex::Reverse_Type_Iterator Reflex::Typedef::TemplateArgument_RBegin() 
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::Typedef::TemplateArgument_REnd() const {
+inline Reflex::Reverse_Type_Iterator Reflex::Internal::Typedef::TemplateArgument_REnd() const {
 //-------------------------------------------------------------------------------
    if ( ForwardTemplate()) return fTypedefType.TemplateArgument_REnd();
    return Dummy::TypeCont().rend();
@@ -915,7 +918,7 @@ inline Reflex::Reverse_Type_Iterator Reflex::Typedef::TemplateArgument_REnd() co
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate Reflex::Typedef::TemplateFamily() const {
+inline Reflex::TypeTemplate Reflex::Internal::Typedef::TemplateFamily() const {
 //-------------------------------------------------------------------------------
    if ( ForwardTemplate()) return fTypedefType.TemplateFamily();
    return Dummy::TypeTemplate();
@@ -923,7 +926,7 @@ inline Reflex::TypeTemplate Reflex::Typedef::TemplateFamily() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate Reflex::Typedef::SubTypeTemplateAt( size_t nth ) const {
+inline Reflex::TypeTemplate Reflex::Internal::Typedef::SubTypeTemplateAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubTypeTemplateAt( nth );
    return Dummy::TypeTemplate();
@@ -931,7 +934,7 @@ inline Reflex::TypeTemplate Reflex::Typedef::SubTypeTemplateAt( size_t nth ) con
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::Typedef::SubTypeTemplateSize() const {
+inline size_t Reflex::Internal::Typedef::SubTypeTemplateSize() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubTypeTemplateSize();
    return 0;
@@ -939,7 +942,7 @@ inline size_t Reflex::Typedef::SubTypeTemplateSize() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate_Iterator Reflex::Typedef::SubTypeTemplate_Begin() const {
+inline Reflex::TypeTemplate_Iterator Reflex::Internal::Typedef::SubTypeTemplate_Begin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubTypeTemplate_Begin();
    return Dummy::TypeTemplateCont().begin();
@@ -947,7 +950,7 @@ inline Reflex::TypeTemplate_Iterator Reflex::Typedef::SubTypeTemplate_Begin() co
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate_Iterator Reflex::Typedef::SubTypeTemplate_End() const {
+inline Reflex::TypeTemplate_Iterator Reflex::Internal::Typedef::SubTypeTemplate_End() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubTypeTemplate_End();
    return Dummy::TypeTemplateCont().end();
@@ -955,7 +958,7 @@ inline Reflex::TypeTemplate_Iterator Reflex::Typedef::SubTypeTemplate_End() cons
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_TypeTemplate_Iterator Reflex::Typedef::SubTypeTemplate_RBegin() const {
+inline Reflex::Reverse_TypeTemplate_Iterator Reflex::Internal::Typedef::SubTypeTemplate_RBegin() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubTypeTemplate_RBegin();
    return Dummy::TypeTemplateCont().rbegin();
@@ -963,7 +966,7 @@ inline Reflex::Reverse_TypeTemplate_Iterator Reflex::Typedef::SubTypeTemplate_RB
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Reverse_TypeTemplate_Iterator Reflex::Typedef::SubTypeTemplate_REnd() const {
+inline Reflex::Reverse_TypeTemplate_Iterator Reflex::Internal::Typedef::SubTypeTemplate_REnd() const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) return fTypedefType.SubTypeTemplate_REnd();
    return Dummy::TypeTemplateCont().rend();
@@ -971,7 +974,7 @@ inline Reflex::Reverse_TypeTemplate_Iterator Reflex::Typedef::SubTypeTemplate_RE
 
 
 //-------------------------------------------------------------------------------
-inline const std::type_info & Reflex::Typedef::TypeInfo() const {
+inline const std::type_info & Reflex::Internal::Typedef::TypeInfo() const {
 //-------------------------------------------------------------------------------
    if ( *fTypeInfo != typeid(UnknownType) ) return *fTypeInfo;
    Type current = ThisType();
@@ -982,14 +985,14 @@ inline const std::type_info & Reflex::Typedef::TypeInfo() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type Reflex::Typedef::ToType() const {
+inline Reflex::Type Reflex::Internal::Typedef::ToType() const {
 //-------------------------------------------------------------------------------
    return fTypedefType;
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Typedef::ForwardStruct() const {
+inline bool Reflex::Internal::Typedef::ForwardStruct() const {
 //-------------------------------------------------------------------------------
    switch ( fTypedefType.TypeType()) {
    case TYPEDEF:
@@ -1004,7 +1007,7 @@ inline bool Reflex::Typedef::ForwardStruct() const {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Typedef::ForwardTemplate() const {
+inline bool Reflex::Internal::Typedef::ForwardTemplate() const {
 //-------------------------------------------------------------------------------
    switch ( fTypedefType.TypeType()) {
    case TYPEDEF:
@@ -1018,7 +1021,7 @@ inline bool Reflex::Typedef::ForwardTemplate() const {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Typedef::ForwardFunction() const {
+inline bool Reflex::Internal::Typedef::ForwardFunction() const {
 //-------------------------------------------------------------------------------
    switch ( fTypedefType.TypeType()) {
    case TYPEDEF:

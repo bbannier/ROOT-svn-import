@@ -17,6 +17,7 @@
 
 #include "Reflex/Kernel.h"
 #include "Reflex/Type.h"
+#include "Reflex/EntityProperty.h"
 #include "Reflex/internal/OwnedMember.h"
 #include <cstring>
 
@@ -103,16 +104,16 @@ std::string Tools::BuildTypeName( Type & t,
 //-------------------------------------------------------------------------------
 // Build a complete qualified type name.
    std::string mod = "";
-   if ( t.IsConstVolatile()) mod = "const volatile";
-   else if ( t.IsConst())    mod = "const";
-   else if ( t.IsVolatile()) mod = "volatile";
+   if ( t.Is(gCONST && gVOLATILE)) mod = "const volatile";
+   else if ( t.Is(gCONST))    mod = "const";
+   else if ( t.Is(gVOLATILE)) mod = "volatile";
 
    std::string name = t.Name();
 
-   if (t.IsPointer() || t.IsPointerToMember()) name += " " + mod;
-   else                                        name = mod + " " + name;
+   if (t.Is(gPOINTER || gPOINTERTOMEMBER)) name += " " + mod;
+   else                                    name = mod + " " + name;
 
-   if ( t.IsReference()) name += "&";
+   if ( t.Is(gREFERENCE)) name += "&";
 
    return name;
 }

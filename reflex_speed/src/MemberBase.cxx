@@ -27,7 +27,7 @@
 #include "Class.h"
 
 //-------------------------------------------------------------------------------
-Reflex::MemberBase::MemberBase( const char *  name,
+Reflex::Internal::MemberBase::MemberBase( const char *  name,
                                       const Type &  type,
                                       TYPE          memberType,
                                       unsigned int  modifiers )
@@ -44,7 +44,7 @@ Reflex::MemberBase::MemberBase( const char *  name,
 
 
 //-------------------------------------------------------------------------------
-Reflex::MemberBase::~MemberBase() {
+Reflex::Internal::MemberBase::~MemberBase() {
 //-------------------------------------------------------------------------------
 // Destructor.
    delete fThisMember;
@@ -53,7 +53,7 @@ Reflex::MemberBase::~MemberBase() {
 
 
 //-------------------------------------------------------------------------------
-Reflex::MemberBase::operator Reflex::Member () const {
+Reflex::Internal::MemberBase::operator Reflex::Member () const {
 //-------------------------------------------------------------------------------
 // Conversion operator to Member.
    return *fThisMember;
@@ -61,7 +61,8 @@ Reflex::MemberBase::operator Reflex::Member () const {
 
 
 //-------------------------------------------------------------------------------
-void * Reflex::MemberBase::CalculateBaseObject( const Object & obj ) const {
+void *
+Reflex::Internal::MemberBase::CalculateBaseObject( const Object & obj ) const {
 //-------------------------------------------------------------------------------
 // Return the object address a member lives in.
    char * mem = (char*)obj.Address();
@@ -95,7 +96,8 @@ void * Reflex::MemberBase::CalculateBaseObject( const Object & obj ) const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Scope Reflex::MemberBase::DeclaringScope() const {
+Reflex::Scope
+Reflex::Internal::MemberBase::DeclaringScope() const {
 //-------------------------------------------------------------------------------
 // Return the scope the member lives in.
    return fScope;
@@ -103,7 +105,8 @@ Reflex::Scope Reflex::MemberBase::DeclaringScope() const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Type Reflex::MemberBase::DeclaringType() const {
+Reflex::Type
+Reflex::Internal::MemberBase::DeclaringType() const {
 //-------------------------------------------------------------------------------
 // Return the type the member lives in.
    return DeclaringScope();
@@ -111,7 +114,8 @@ Reflex::Type Reflex::MemberBase::DeclaringType() const {
 
 
 //-------------------------------------------------------------------------------
-std::string Reflex::MemberBase::MemberTypeAsString() const {
+std::string
+Reflex::Internal::MemberBase::MemberTypeAsString() const {
 //-------------------------------------------------------------------------------
 // Remember type of the member as a string.
    switch ( fMemberType ) {
@@ -128,7 +132,8 @@ std::string Reflex::MemberBase::MemberTypeAsString() const {
 }
 
 //-------------------------------------------------------------------------------
-Reflex::PropertyList Reflex::MemberBase::Properties() const {
+Reflex::PropertyList
+Reflex::Internal::MemberBase::Properties() const {
 //-------------------------------------------------------------------------------
 // Return the property list attached to this member.
    return fPropertyList;
@@ -136,7 +141,8 @@ Reflex::PropertyList Reflex::MemberBase::Properties() const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Type Reflex::MemberBase::TemplateArgumentAt( size_t /* nth */ ) const {
+Reflex::Type
+Reflex::Internal::MemberBase::TemplateArgumentAt( size_t /* nth */ ) const {
 //-------------------------------------------------------------------------------
 // Return the nth template argument (in FunMemTemplInstance)
    return Dummy::Type();
@@ -145,7 +151,8 @@ Reflex::Type Reflex::MemberBase::TemplateArgumentAt( size_t /* nth */ ) const {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::MemberBase::GenerateDict( DictionaryGenerator & /* generator */) const {
+void
+Reflex::Internal::MemberBase::GenerateDict( DictionaryGenerator & /* generator */) const {
 //-------------------------------------------------------------------------------
 // Generate Dictionary information about itself.
 }

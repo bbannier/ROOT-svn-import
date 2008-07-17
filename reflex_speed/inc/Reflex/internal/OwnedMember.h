@@ -18,6 +18,7 @@
 #include <vector>
 
 namespace Reflex {
+namespace Internal {
 
    // forward declarations
    class MemberBase;
@@ -51,6 +52,7 @@ namespace Reflex {
 
    }; // class OwnedMember
 
+} // namespace Internal
 } // namespace Reflex
 
 

@@ -20,6 +20,7 @@
 
 #include "Reflex/DictionaryGenerator.h"
 #include "Reflex/Member.h"
+#include "Reflex/EntityProperty.h"
 #include "Class.h"
 
 // For adding the XML parser
@@ -315,11 +316,11 @@ std::string Reflex::DictionaryGenerator::GetParams(const Type & membertype) {
 //-------------------------------------------------------------------------------
 // Get params for the functions
    // Recursive, if it's a reference or a pointer
-   if (membertype.IsReference()) {
+   if (membertype.Is(gREFERENCE)) {
       GetParams(membertype.ToType());
    }
 
-   if (membertype.IsPointer()) {
+   if (membertype.Is(gPOINTER)) {
       GetParams(membertype.ToType());
    }
 
@@ -332,7 +333,7 @@ std::string Reflex::DictionaryGenerator::GetParams(const Type & membertype) {
       //      types2.push_back(membertype);  //TESTING
 
 
-      if (!membertype.IsFunction()) {
+      if (!membertype.Is(gFUNCTION)) {
          // adding into NS this way
          GetTypeNumber(membertype);
       }
@@ -370,7 +371,7 @@ std::string Reflex::DictionaryGenerator::GetTypeNumber(const Type & membertype) 
 
    // when it's a new type, add also into NS field
    // (No function members added)
-   if (newtype && !(membertype.IsFunction())) {
+   if (newtype && !(membertype.Is(gFUNCTION))) {
       AddIntoNS(numberstr.str(), membertype);
    }
 
@@ -406,16 +407,16 @@ void Reflex::DictionaryGenerator::AddIntoNS( const std::string & typenumber,
 
    // if type is also a const, add that extra line
    // No references are supported by the original genreflex.py for datamembers!
-   if (membertype.IsReference()) {
-      if (membertype.IsConst())     mod |= CONST;
-      if (membertype.IsVolatile())  mod |= VOLATILE;
+   if (membertype.Is(gREFERENCE)) {
+      if (membertype.Is(gCONST))     mod |= CONST;
+      if (membertype.Is(gVOLATILE))  mod |= VOLATILE;
       
       fStr_namespaces << "Type type_" + typenumber + " = ReferenceBuilder(type_" +
          GetTypeNumber(Type(membertype, mod)) + ");\n";
    }
 
-   else if (membertype.IsConst()) {
-      if (membertype.IsVolatile())   mod |= VOLATILE;
+   else if (membertype.Is(gCONST)) {
+      if (membertype.Is(gVOLATILE))   mod |= VOLATILE;
 
       fStr_namespaces << "Type type_" + typenumber +
          " = ConstBuilder(type_" + GetTypeNumber(Type(membertype, mod)) + ");\n";
@@ -423,7 +424,7 @@ void Reflex::DictionaryGenerator::AddIntoNS( const std::string & typenumber,
    }
 
 
-   else if (membertype.IsVolatile()) {
+   else if (membertype.Is(gVOLATILE)) {
 
       fStr_namespaces << "Type type_" + typenumber + " = VolatileBuilder(type_" +
          GetTypeNumber(Type(membertype, mod)) + ");\n";
@@ -439,7 +440,7 @@ void Reflex::DictionaryGenerator::AddIntoNS( const std::string & typenumber,
 
    }
 
-   else if (membertype.IsPointer()) {
+   else if (membertype.Is(gPOINTER)) {
       fStr_namespaces << "Type type_" + typenumber +
          " = PointerBuilder(type_" + GetTypeNumber(membertype.ToType()) + ");\n";
    }
