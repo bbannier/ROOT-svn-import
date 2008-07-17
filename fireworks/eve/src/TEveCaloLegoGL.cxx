@@ -241,7 +241,6 @@ void TEveCaloLegoGL::MakeDisplayList() const
    // Create display-list that draws histogram bars.
    // It is used for filled and outline passes.
 
-   fM->BuildCellIdCache();
    TEveCaloData::RebinData_t rdata;
    fM->fData->Rebin(fEtaAxis, fPhiAxis, fM->fCellList, fM->fPlotEt, rdata);
 
@@ -781,7 +780,7 @@ void TEveCaloLegoGL::DrawCells3D(TGLRnrCtx & rnrCtx) const
 }
 
 //______________________________________________________________________________
-void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
+void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & /*rnrCtx*/) const
 {
    // Draw projected histogram.
 
@@ -805,9 +804,7 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
 
    UChar_t col[4];
    Color_t defCol = fM->GetTopViewTowerColor();
-   Int_t es = GetGridStep(rnrCtx);
-   Int_t ps = es;
-   if (es == 1 && ps == 1)
+   if (fBinStep == 1)
    {
       // draw in original binning
       Int_t   name = 0, max_energy_slice;
@@ -891,78 +888,44 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
    else
    {
       // values in the scaled cells
-      Float_t eta0 = fM->fEtaMin;
-      Float_t eta1 = fM->fEtaMax;
-      Float_t phi0 = fM->GetPhiMin();
-      Float_t phi1 = fM->GetPhiMax();
-
-      Int_t   nEta = CeilNint((fEtaAxis->FindBin(eta1)-fEtaAxis->FindBin(eta0))/es);
-      Int_t   nPhi = CeilNint((phi1-phi0)/(fPhiAxis->GetBinWidth(1)*ps));
-      Float_t etaStep = (eta1-eta0)/nEta;
-      Float_t phiStep = (phi1-phi0)/nPhi;
+      Int_t   nEta = fEtaAxis->GetNbins();
+      Int_t   nPhi = fPhiAxis->GetNbins();
 
       std::vector<Float_t> vec;
-      vec.assign(nEta * nPhi, 0.f);
+      vec.assign((nEta+2)*(nPhi+2), 0.f);
       std::vector<Float_t> max_e;
       std::vector<Int_t>   max_e_slice;
       if (fM->fTopViewUseMaxColor) {
-         max_e.assign(nEta * nPhi, 0.f);
-         max_e_slice.assign(nEta * nPhi, -1);
+         max_e.assign((nEta+2) * (nPhi+2), 0.f);
+         max_e_slice.assign((nEta+2) * (nPhi+2), -1);
       }
-      TEveCaloData::CellData_t cd;
-      Float_t left, right, up, down; // cell corners
-      for (TEveCaloData::vCellId_t::iterator it=fM->fCellList.begin(); it!=fM->fCellList.end(); it++)
+
+      TEveCaloData::RebinData_t rdata;
+      fM->fData->Rebin(fEtaAxis, fPhiAxis, fM->fCellList, fM->fPlotEt, rdata);
+      Float_t ssum;
+      Float_t *val;
+      for (UInt_t bin=0; bin<rdata.fBinData.size(); bin++)
       {
-         GetCellData(*it, cd);
-         Int_t iMin = FloorNint((cd.EtaMin() - eta0)/etaStep);
-         Int_t iMax = CeilNint ((cd.EtaMax() - eta0)/etaStep);
-         Int_t jMin = FloorNint((cd.PhiMin() - phi0)/phiStep);
-         Int_t jMax = CeilNint ((cd.PhiMax() - phi0)/phiStep);
-         for (Int_t i=iMin; i<iMax; ++i)
+         ssum = 0;
+         if (rdata.fBinData[bin] != -1)
          {
-            if (i < 0 || iMax > nEta) continue;
-
-            left  = i*etaStep;
-            right = (i+1)*etaStep;
-
-            if (i == iMin)
-               left = cd.EtaMin() - eta0;
-
-            if (i == iMax - 1)
-               right = cd.EtaMax() - eta0;
-
-            for (Int_t j=jMin; j<jMax; ++j)
-            {
-               if (j<0 || jMax>nPhi) continue;
-
-               down = j*phiStep;
-               up   = down + phiStep;
-
-               if (j == jMin)
-                  down = cd.PhiMin() - phi0;
-
-               if (j == (jMax-1))
-                  up = cd.PhiMax() - phi0;
-
-	       Int_t   index = i*nPhi+j;
-	       Float_t value = cd.Value(fM->fPlotEt)*(right-left)*(up-down);
-               vec[index] += value;
-	       if (fM->fTopViewUseMaxColor && value > max_e[index])
+            val = rdata.GetSliceVals(bin);
+            for(Int_t s=0; s<rdata.fNSlices; s++)
+            { 
+               ssum+=val[s];
+               if (fM->fTopViewUseMaxColor && val[s] > max_e[bin])
                {
-		  max_e[index]       = value;
-		  max_e_slice[index] = it->fSlice;
-	       }
+                  max_e[bin]       = val[s];
+                  max_e_slice[bin] = s;
+               }
             }
          }
+         vec[bin] = ssum;
       }
 
-      Float_t surf = etaStep*phiStep;
       Float_t maxv = 0;
       for (UInt_t i =0; i<vec.size(); i++)
-      {
-         vec[i] /= surf;
          if (vec[i] > maxv) maxv=vec[i];
-      }
 
       Float_t scale    = fM->fData->GetMaxVal(fM->fPlotEt)/maxv;
       Float_t logMax   = Log(maxv+1);
@@ -977,58 +940,65 @@ void TEveCaloLegoGL::DrawCells2D(TGLRnrCtx & rnrCtx) const
       }
 
       // draw  scaled
-      Float_t etaW, phiW, sum;
-      Int_t cid = 0;
+      Double_t eta, etaW, phi, phiW, sum;
       TGLUtil::Color(defCol);
       glBegin(GL_QUADS);
       Int_t entry = 0;
-      for (std::vector<Float_t>::iterator it=vec.begin(); it !=vec.end(); ++it, ++entry)
+      Int_t bin;
+      for (Int_t i=1; i<=fEtaAxis->GetNbins(); i++)
       {
-         if (*it > threshold)
+         for (Int_t j=1; j<=fPhiAxis->GetNbins(); j++)
          {
-            Float_t logVal = Log(*it + 1);
-            Float_t eta = Int_t(cid/nPhi)*etaStep + eta0;
-            Float_t phi = (cid -Int_t(cid/nPhi)*nPhi)*phiStep + phi0;
-            if (fM->f2DMode == TEveCaloLego::kValColor)
+            bin = j*(nEta+2)+i;
+            if (vec[bin] > threshold)
             {
-               fM->fPalette->ColorFromValue((Int_t)(logVal*scaleLog), col);
-               TGLUtil::Color4ubv(col);
+               Float_t logVal = Log(vec[bin] + 1);
 
-               glVertex3f(eta        , phi,         (*it)*scale);
-               glVertex3f(eta+etaStep, phi,         (*it)*scale);
-               glVertex3f(eta+etaStep, phi+phiStep, (*it)*scale);
-               glVertex3f(eta        , phi+phiStep, (*it)*scale);
-
-            }
-            else if (fM->f2DMode == TEveCaloLego::kValSize)
-            {
-               eta += etaStep*0.5f;
-               phi += phiStep*0.5f;
-               etaW = etaStep*0.5f*logVal/logMax;
-               phiW = phiStep*0.5f*logVal/logMax;
-               sum  = (*it)*scale;
-
-               if (fM->fTopViewUseMaxColor)
+               if (fM->f2DMode == TEveCaloLego::kValColor)
                {
-                  TGLUtil::Color(fM->GetData()->GetSliceColor(max_e_slice[entry]));
-                  antiFlick[max_e_slice[entry]].push_back(TEveVector(eta, phi, sum));
-               }
-               else
-               {
-                  antiFlick[0].push_back(TEveVector(eta, phi, sum));
-               }
+                  fM->fPalette->ColorFromValue((Int_t)(logVal*scaleLog), col);
+                  TGLUtil::Color4ubv(col);
 
-               glVertex3f(eta - etaW, phi - phiW, sum);
-               glVertex3f(eta + etaW, phi - phiW, sum);
-               glVertex3f(eta + etaW, phi + phiW, sum);
-               glVertex3f(eta - etaW, phi + phiW, sum);
+                  eta  = fEtaAxis->GetBinLowEdge(i);
+                  etaW = fEtaAxis->GetBinWidth(i);
+                  phi  = fPhiAxis->GetBinLowEdge(j);
+                  phiW = fPhiAxis->GetBinWidth(j);
+
+                  glVertex3f(eta     , phi,      vec[bin]*scale);
+                  glVertex3f(eta+etaW, phi,      vec[bin]*scale);
+                  glVertex3f(eta+etaW, phi+phiW, vec[bin]*scale);
+                  glVertex3f(eta     , phi+phiW, vec[bin]*scale);
+
+               }
+               else if (fM->f2DMode == TEveCaloLego::kValSize)
+               {
+                  eta  = fEtaAxis->GetBinCenter(i);
+                  etaW = fEtaAxis->GetBinWidth(i)*0.5f*logVal/logMax;
+                  phi  = fPhiAxis->GetBinCenter(j);
+                  phiW = fPhiAxis->GetBinWidth(j)*0.5f*logVal/logMax;
+
+                  if (fM->fTopViewUseMaxColor)
+                  {
+                     TGLUtil::Color(fM->GetData()->GetSliceColor(max_e_slice[entry]));
+                     antiFlick[max_e_slice[entry]].push_back(TEveVector(eta, phi, sum));
+                  }
+                  else
+                  {
+                     antiFlick[0].push_back(TEveVector(eta, phi, sum));
+                  }
+
+                  glVertex3f(eta - etaW, phi - phiW, sum);
+                  glVertex3f(eta + etaW, phi - phiW, sum);
+                  glVertex3f(eta + etaW, phi + phiW, sum);
+                  glVertex3f(eta - etaW, phi + phiW, sum);
+               }
             }
          }
-         ++cid;
       }
+
       glEnd();
    }
-
+   
    if (fM->f2DMode == TEveCaloLego::kValSize)
    {
       TGLUtil::Color(defCol);
