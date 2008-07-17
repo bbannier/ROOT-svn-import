@@ -41,12 +41,17 @@ protected:
    TGNumberEntry     *fTransparency;
 
    TEveGValuator     *fNZSteps;
-   TEveGValuator     *fPixelsPerBin;
 
    TGComboBox        *fProjection;
    TGComboBox        *f2DMode;
    TGComboBox        *fBoxMode;
 
+   TGVerticalFrame   *fRebinFrame;
+   TGCheckButton     *fAutoRebin;
+   TEveGValuator     *fPixelsPerBin;
+   TGCheckButton     *fNormalizeRebin;
+
+   void               MakeRebinFrame();
 public:
    TEveCaloLegoEditor(const TGWindow* p=0, Int_t width=170, Int_t height=30,
          UInt_t options=kChildFrame, Pixel_t back=GetDefaultFrameBackground());
@@ -62,14 +67,15 @@ public:
    void DoPlaneColor(Pixel_t color);
    void DoTransparency();
 
-
    void DoNZSteps();
-
-   void DoPixelsPerBin();
 
    void DoProjection();
    void Do2DMode();
    void DoBoxMode();
+
+   void DoAutoRebin();
+   void DoPixelsPerBin();
+   void DoNormalize();
 
    ClassDef(TEveCaloLegoEditor, 0); // GUI editor for TEveCaloLego.
 };

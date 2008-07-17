@@ -219,6 +219,7 @@ protected:
    Int_t                   fNZSteps; // Z axis label step in GeV
    Float_t                 fZAxisStep;
 
+   Bool_t                  fAutoRebin;
    Int_t                   fPixelsPerBin;
    Bool_t                  fNormalizeRebin;
 
@@ -259,6 +260,9 @@ public:
 
    Int_t    GetPixelsPerBin() const { return fPixelsPerBin; }
    void     SetPixelsPerBin(Int_t bw) { fPixelsPerBin = bw; }
+
+   Bool_t   GetAutoRebin() const { return fAutoRebin; }
+   void     SetAutoRebin(Bool_t s) { fAutoRebin = s;}
 
    Bool_t   GetNormalizeRebin() const { return fNormalizeRebin; }
    void     SetNormalizeRebin(Bool_t s) { fNormalizeRebin = s;}

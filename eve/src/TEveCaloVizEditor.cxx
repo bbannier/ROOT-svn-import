@@ -53,35 +53,14 @@ TEveCaloVizEditor::TEveCaloVizEditor(const TGWindow *p, Int_t width, Int_t heigh
    fEtaRng(0),
    fPhi(0),
    fPhiOffset(0),
-   fTowerFrame(0),
+   fDataFrame(0),
    fSliceFrame(0)
 {
    // Constructor.
 
    MakeTitle("TEveCaloViz");
 
-   // E/Et Plot
-   {
-      TGHorizontalFrame* group = new   TGHorizontalFrame(this);
-
-      TGCompositeFrame *labfr = new TGHorizontalFrame(group, 28, 20, kFixedSize);
-   
-      TGFont *myfont = gClient->GetFont("-adobe-times-bold-r-*-*-12-*-*-*-*-*-iso8859-1");
-      TGLabel* label = new TGLabel(labfr, "Plot:");
-      label->SetTextFont(myfont);
-      labfr->AddFrame(label, new TGLayoutHints(kLHintsLeft  | kLHintsBottom));
-      group->AddFrame(labfr, new TGLayoutHints(kLHintsLeft));
-
-      fPlotE = new TGRadioButton(group, new TGHotString("E"), 11);
-      fPlotE->Connect("Clicked()", "TEveCaloVizEditor", this, "DoPlot()");
-      group->AddFrame(fPlotE, new TGLayoutHints(kLHintsLeft  | kLHintsBottom, 2, 2, 0, 0));
-
-      fPlotEt = new TGRadioButton(group, new TGHotString("Et"), 22);
-      fPlotEt->Connect("Clicked()", "TEveCaloVizEditor", this, "DoPlot()");
-      group->AddFrame(fPlotEt, new TGLayoutHints(kLHintsLeft  | kLHintsBottom,  2, 2, 0, 0));
-
-      AddFrame(group, new TGLayoutHints(kLHintsTop, 4, 1, 1, 0));
-   }
+ 
    // scaling
    TGHorizontalFrame* scf = new TGHorizontalFrame(this);
 
@@ -118,38 +97,61 @@ TEveCaloVizEditor::TEveCaloVizEditor(const TGWindow *p, Int_t width, Int_t heigh
    
    //______________________________________________________________________________
 
-   fTowerFrame = CreateEditorTabSubFrame("Data");
+   fDataFrame = CreateEditorTabSubFrame("Data");
    Int_t  labelW = 45;
 
+   // E/Et Plot
+   {
+      TGHorizontalFrame* group = new   TGHorizontalFrame(fDataFrame);
+
+      TGCompositeFrame *labfr = new TGHorizontalFrame(group, 28, 20, kFixedSize);
+   
+      TGFont *myfont = gClient->GetFont("-adobe-times-bold-r-*-*-12-*-*-*-*-*-iso8859-1");
+      TGLabel* label = new TGLabel(labfr, "Plot:");
+      label->SetTextFont(myfont);
+      labfr->AddFrame(label, new TGLayoutHints(kLHintsLeft  | kLHintsBottom));
+      group->AddFrame(labfr, new TGLayoutHints(kLHintsLeft));
+
+      fPlotE = new TGRadioButton(group, new TGHotString("E"), 11);
+      fPlotE->Connect("Clicked()", "TEveCaloVizEditor", this, "DoPlot()");
+      group->AddFrame(fPlotE, new TGLayoutHints(kLHintsLeft  | kLHintsBottom, 2, 2, 0, 0));
+
+      fPlotEt = new TGRadioButton(group, new TGHotString("Et"), 22);
+      fPlotEt->Connect("Clicked()", "TEveCaloVizEditor", this, "DoPlot()");
+      group->AddFrame(fPlotEt, new TGLayoutHints(kLHintsLeft  | kLHintsBottom,  2, 2, 0, 0));
+
+      fDataFrame->AddFrame(group, new TGLayoutHints(kLHintsTop, 4, 1, 1, 0));
+   }
+
    // eta
-   fEtaRng = new TEveGDoubleValuator(fTowerFrame,"Eta rng:", 40, 0);
+   fEtaRng = new TEveGDoubleValuator(fDataFrame,"Eta rng:", 40, 0);
    fEtaRng->SetNELength(6);
    fEtaRng->SetLabelWidth(labelW);
    fEtaRng->Build();
    fEtaRng->GetSlider()->SetWidth(195);
    fEtaRng->SetLimits(-5.5, 5.5, TGNumberFormat::kNESRealTwo);
    fEtaRng->Connect("ValueSet()", "TEveCaloVizEditor", this, "DoEtaRange()");
-   fTowerFrame->AddFrame(fEtaRng, new TGLayoutHints(kLHintsTop, 1, 1, 4, 5));
+   fDataFrame->AddFrame(fEtaRng, new TGLayoutHints(kLHintsTop, 1, 1, 4, 5));
 
    // phi
-   fPhi = new TEveGValuator(fTowerFrame, "Phi:", 90, 0);
+   fPhi = new TEveGValuator(fDataFrame, "Phi:", 90, 0);
    fPhi->SetLabelWidth(labelW);
    fPhi->SetNELength(6);
    fPhi->Build();
    fPhi->SetLimits(-TMath::Pi(), TMath::Pi(), TGNumberFormat::kNESRealTwo);
    fPhi->Connect("ValueSet(Double_t)", "TEveCaloVizEditor", this, "DoPhi()");
-   fTowerFrame->AddFrame(fPhi, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
+   fDataFrame->AddFrame(fPhi, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
 
-   fPhiOffset = new TEveGValuator(fTowerFrame, "PhiOff:", 90, 0);
+   fPhiOffset = new TEveGValuator(fDataFrame, "PhiOff:", 90, 0);
    fPhiOffset->SetLabelWidth(labelW);
    fPhiOffset->SetNELength(6);
    fPhiOffset->Build();
    fPhiOffset->SetLimits(0, TMath::Pi(), TGNumberFormat::kNESRealTwo);
    fPhiOffset->Connect("ValueSet(Double_t)", "TEveCaloVizEditor", this, "DoPhi()");
-   fTowerFrame->AddFrame(fPhiOffset, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
+   fDataFrame->AddFrame(fPhiOffset, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
 
-   fSliceFrame = new TGVerticalFrame(fTowerFrame);
-   fTowerFrame->AddFrame(fSliceFrame);
+   fSliceFrame = new TGVerticalFrame(fDataFrame);
+   fDataFrame->AddFrame(fSliceFrame);
 }
 
 //______________________________________________________________________________
@@ -264,7 +266,7 @@ void TEveCaloVizEditor::SetModel(TObject* obj)
    else
    {
 
-      fTowerFrame->UnmapWindow();
+      fDataFrame->UnmapWindow();
    }
 }
 
