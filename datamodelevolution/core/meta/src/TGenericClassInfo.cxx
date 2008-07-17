@@ -261,6 +261,17 @@ namespace ROOT {
       return fInfo;
    }
 
+   const std::vector<TSchemaHelper>& TGenericClassInfo::GetReadRawRules() const
+   {
+      return fReadRawRules;
+   }
+
+
+   const std::vector<TSchemaHelper>& TGenericClassInfo::GetReadRules() const
+   {
+      return fReadRules;
+   }
+
    void *TGenericClassInfo::GetShowMembers() const
    {
       // Return the point of the ShowMembers function
@@ -347,6 +358,17 @@ namespace ROOT {
          fClass->CopyCollectionProxy(*fCollectionProxy);
       }
       return 0;
+   }
+
+   void TGenericClassInfo::SetReadRawRules( const std::vector<TSchemaHelper>& rules )
+   {
+      fReadRawRules = rules;
+   }
+
+
+   void TGenericClassInfo::SetReadRules( const std::vector<TSchemaHelper>& rules )
+   {
+      fReadRules = rules;
    }
 
    Short_t TGenericClassInfo::SetStreamer(ClassStreamerFunc_t streamer)
