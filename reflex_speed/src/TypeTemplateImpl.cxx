@@ -22,15 +22,13 @@
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::TypeTemplateImpl::TypeTemplateImpl( const char * templateName,
-                                                  const Scope & scop,
-                                                  std::vector < std::string > parameterNames,
-                                                  std::vector < std::string > parameterDefaults )
+                                                      const Scope & scop,
+                                                      const std::vector < std::string >& parameterNames)
 //------------------------------------------------------------------------------- 
    : fScope( scop ),
-     fTemplateInstances( std::vector < Type >() ),
      fParameterNames( parameterNames ),
      fParameterDefaults( parameterDefaults ),
-     fReqParameters( parameterNames.size() - parameterDefaults.size()) {
+     fReqParameters( parameterNames.size() - parameterDefaults.size() ) {
    // Construct the type template family info.
 
    TypeTemplate tt = TypeTemplate::ByName( templateName, parameterNames.size() );
@@ -67,61 +65,6 @@ Reflex::Internal::TypeTemplateImpl::operator == ( const TypeTemplateImpl & tt ) 
 
 
 //-------------------------------------------------------------------------------
-Reflex::Type_Iterator
-Reflex::Internal::TypeTemplateImpl::TemplateInstance_Begin() const {
-//-------------------------------------------------------------------------------
-   // Return the begin iterator of the instance container of this type template.
-   return fTemplateInstances.begin();
-}
-
-                                             
-//-------------------------------------------------------------------------------
-Reflex::Type_Iterator
-Reflex::Internal::TypeTemplateImpl::TemplateInstance_End() const {
-//-------------------------------------------------------------------------------
-   // Return the end iterator of the instance container of this type template.
-   return fTemplateInstances.end();
-}
-
-                                             
-//-------------------------------------------------------------------------------
-Reflex::Reverse_Type_Iterator
-Reflex::Internal::TypeTemplateImpl::TemplateInstance_RBegin() const {
-//-------------------------------------------------------------------------------
-   // Return the rbegin iterator of the instance container of this type template.
-   return ((const std::vector<Type>&)fTemplateInstances).rbegin();
-}
-
-                                             
-//-------------------------------------------------------------------------------
-Reflex::Reverse_Type_Iterator
-Reflex::Internal::TypeTemplateImpl::TemplateInstance_REnd() const {
-//-------------------------------------------------------------------------------
-   // Return the rend iterator of the instance container of this type template.
-   return ((const std::vector<Type>&)fTemplateInstances).rend();
-}
-
-                                             
-//-------------------------------------------------------------------------------
-Reflex::Type
-Reflex::Internal::TypeTemplateImpl::TemplateInstanceAt( size_t nth ) const {
-//-------------------------------------------------------------------------------
-// Return the nth template instance of this family.
-   if ( nth < fTemplateInstances.size() ) return fTemplateInstances[ nth ];
-   return Dummy::Type();
-}
-
-
-//-------------------------------------------------------------------------------
-size_t
-Reflex::Internal::TypeTemplateImpl::TemplateInstanceSize() const {
-//-------------------------------------------------------------------------------
-// Return the number of template instances of this family.
-   return fTemplateInstances.size();
-}
-
-
-//-------------------------------------------------------------------------------
 Reflex::TypeTemplate
 Reflex::Internal::TypeTemplateImpl::ThisTypeTemplate() const {
 //-------------------------------------------------------------------------------
@@ -135,5 +78,5 @@ void
 Reflex::Internal::TypeTemplateImpl::AddTemplateInstance( const Type & templateInstance ) const {
 //-------------------------------------------------------------------------------
 // Add template instance to this family.
-   fTemplateInstances.push_back( templateInstance );
+   fTemplateInstances.Insert( templateInstance );
 }

@@ -209,11 +209,11 @@ Reflex::Internal::TypeBase::DetermineFinalType(const Type& t) const {
    }
 
    // copy fModifiers
-   if (t.Is(gCONST))
+   if (t.Is(gConst))
       retType = ConstBuilder(retType);
-   if (t.Is(gREFERENCE))
+   if (t.Is(gReference))
       retType = ReferenceBuilder(retType);
-   if (t.Is(gVOLATILE))
+   if (t.Is(gVolatile))
       retType = VolatileBuilder(retType);
 
    return retType;

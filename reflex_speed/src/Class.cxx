@@ -393,7 +393,7 @@ void Reflex::Internal::Class::AddFunctionMember(const Member & fm) const
 //-------------------------------------------------------------------------------
 // Add function member fm to this class
    ScopeBase::AddFunctionMember(fm);
-   if (fm.Is(gCONSTRUCTOR))    fConstructors.push_back(fm);
+   if (fm.Is(gConstRUCTOR))    fConstructors.push_back(fm);
    else if (fm.Is(gDESTRUCTOR)) fDestructor = fm;
 }
 

@@ -83,123 +83,14 @@ namespace Reflex {
       * all currently available instantiations
       * @return template family Name with all instantiantion
       */
-      std::string Name( unsigned int mod = 0 ) const;
+      std::string Name( unsigned int mod = SCOPED | QUALIFIED ) const;
 
 
       /**
-      * TemplateInstance_Begin returns the begin iterator of the instance container
-      * @return the begin iterator of the instance container
+      * TemplateInstances returns the collection of instances of this template.
+      * @return the collection of the instances
       */
-      Type_Iterator TemplateInstance_Begin() const;
-
-
-      /**
-      * TemplateInstance_End returns the end iterator of the instance container
-      * @return the end iterator of the instance container
-      */
-      Type_Iterator TemplateInstance_End() const;
-
-
-      /**
-      * TemplateInstance_RBegin returns the rbegin iterator of the instance container
-      * @return the rbegin iterator of the instance container
-      */
-      Reverse_Type_Iterator TemplateInstance_RBegin() const;
-
-
-      /**
-      * TemplateInstance_Rend returns the rend iterator of the instance container
-      * @return the rend iterator of the instance container
-      */
-      Reverse_Type_Iterator TemplateInstance_REnd() const;
-
-
-      /**
-      * TemplateInstanceAt will return a pointer to the nth template instantion
-      * @param  nth template instantion
-      * @return pointer to nth template instantion
-      */
-      Type TemplateInstanceAt( size_t nth ) const;
-
-
-      /**
-      * TemplateInstanceSize will return the number of template instantions for
-      * this template family
-      * @return number of template instantions
-      */
-      size_t TemplateInstanceSize() const;
-
-
-      /**
-      * TemplateParameterDefaultAt will return the nth TemplateParameterAt default value as string
-      * @param nth template TemplateParameterAt
-      * @return default value of nth template TemplateParameterAt
-      */
-      std::string TemplateParameterDefaultAt( size_t nth ) const;
-
-
-      /**
-      * TemplateParameterDefault_Begin returns the begin of the container of template parameter default names
-      * @return begin of container of template parameter default names
-      */
-      StdString_Iterator TemplateParameterDefault_Begin() const;
-
-
-      /**
-      * TemplateParameterDefault_End returns the end of the container of template parameter default names
-      * @return end of container of template parameter default names
-      */
-      StdString_Iterator TemplateParameterDefault_End() const;
-
-
-      /**
-      * TemplateParameterDefault_RBegin returns the reverse begin of the container of template parameter default names
-      * @return reverse begin of container of template parameter default names
-      */
-      Reverse_StdString_Iterator TemplateParameterDefault_RBegin() const;
-
-
-      /**
-      * TemplateParameterDefault_REnd returns the reverse end of the container of template parameter default names
-      * @return reverse end of container of template parameter default names
-      */
-      Reverse_StdString_Iterator TemplateParameterDefault_REnd() const;
-
-
-      /**
-      * TemplateParameterNameAt will the Name of the nth TemplateParameterAt
-      * @param  nth template TemplateParameterAt
-      * @return Name of nth template TemplateParameterAt
-      */
-      std::string TemplateParameterNameAt( size_t nth ) const;
-
-
-      /**
-      * TemplateParameterName_Begin returns the begin of the container of template parameter names
-      * @return begin of container of template parameter names
-      */
-      StdString_Iterator TemplateParameterName_Begin() const;
-
-
-      /**
-      * TemplateParameterName_End returns the end of the container of template parameter names
-      * @return end of container of template parameter names
-      */
-      StdString_Iterator TemplateParameterName_End() const;
-
-
-      /**
-      * TemplateParameterName_RBegin returns the reverse begin of the container of template parameter names
-      * @return reverse begin of container of template parameter names
-      */
-      Reverse_StdString_Iterator TemplateParameterName_RBegin() const;
-
-
-      /**
-      * TemplateParameterName_REnd returns the reverse end of the container of template parameter names
-      * @return reverse end of container of template parameter names
-      */
-      Reverse_StdString_Iterator TemplateParameterName_REnd() const;
+      const Container<Type>& TemplateInstances() const;
 
 
       /**
@@ -210,46 +101,24 @@ namespace Reflex {
 
 
       /**
-      * TypeTemplateAt will return the nth type template defined
-      * @param nth type template
-      * @return nth type template
+      * TemplateParameterDefaults returns the collection of template default values as string
+      * @return collection of default value of template parameters
       */
-      static TypeTemplate TypeTemplateAt( size_t nth );
+      const OrderedContainer<std::string>& TemplateParameterDefaults() const;
 
 
       /**
-      * TypeTemplateSize will return the number of type templates defined
-      * @return number of defined type templates
+      * TemplateParameterNames returns the names of the template parameters
+      * @return Collection of names of template template parameters
       */
-      static size_t TypeTemplateSize();
+      const OrderedContainer<std::string>& TemplateParameterNames() const;
 
 
       /**
-      * TypeTemplate_Begin returns the begin iterator of the type template container
-      * @return begin iterator of type template container
+      * TypeTemplates returns the collection of all known type templates
+      * @return collection of type templates
       */
-      static TypeTemplate_Iterator TypeTemplate_Begin();
-
-
-      /**
-      * TypeTemplate_End returns the end iterator of the type template container
-      * @return end iterator of type template container
-      */
-      static TypeTemplate_Iterator TypeTemplate_End();
-
-
-      /**
-      * TypeTemplate_Rbegin returns the rbegin iterator of the type template container
-      * @return rbegin iterator of type template container
-      */
-      static Reverse_TypeTemplate_Iterator TypeTemplate_RBegin();
-
-
-      /**
-      * TypeTemplate_Rend returns the rend iterator of the type template container
-      * @return rend iterator of type template container
-      */
-      static Reverse_TypeTemplate_Iterator TypeTemplate_REnd();
+      static const Container<TypeTemplate>& TypeTemplates();
 
 
       /**
@@ -280,28 +149,30 @@ namespace Reflex {
 
 } // namespace Reflex
 
-#include "Reflex/internal/TypeTemplateName.h"
-#include "Reflex/internal/TypeTemplateImpl.h"
 
 //-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate::TypeTemplate( const Internal::TypeTemplateName * typeTemplateName )
+inline
+Reflex::TypeTemplate::TypeTemplate( const Internal::TypeTemplateName * typeTemplateName )
 //------------------------------------------------------------------------------- 
    : fTypeTemplateName( typeTemplateName ) {}
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate::TypeTemplate( const TypeTemplate & rh ) 
+inline
+Reflex::TypeTemplate::TypeTemplate( const TypeTemplate & rh ) 
 //-------------------------------------------------------------------------------
    : fTypeTemplateName( rh.fTypeTemplateName ) {}
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate::~TypeTemplate() {}
+inline
+Reflex::TypeTemplate::~TypeTemplate() {}
 //-------------------------------------------------------------------------------
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate::operator bool () const {
+inline
+Reflex::TypeTemplate::operator bool () const {
 //-------------------------------------------------------------------------------
    if ( this->fTypeTemplateName && this->fTypeTemplateName->fTypeTemplateImpl ) return true;
    return false;
@@ -309,119 +180,37 @@ inline Reflex::TypeTemplate::operator bool () const {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::TypeTemplate::operator == ( const TypeTemplate & rh ) const {
+inline bool
+Reflex::TypeTemplate::operator == ( const TypeTemplate & rh ) const {
 //-------------------------------------------------------------------------------
    return ( fTypeTemplateName == rh.fTypeTemplateName );
 }
 
 
 //-------------------------------------------------------------------------------
-inline void * Reflex::TypeTemplate::Id() const {
+inline void *
+Reflex::TypeTemplate::Id() const {
 //-------------------------------------------------------------------------------
   return (void*)fTypeTemplateName;
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::TypeTemplate::TemplateInstanceSize() const {
+inline std::string
+Reflex::TypeTemplate::Name( unsigned int mod ) const {
 //-------------------------------------------------------------------------------
-   if ( * this ) return fTypeTemplateName->fTypeTemplateImpl->TemplateInstanceSize();
-   return 0;
+   // Return the name of this type template.
+   std::string buf;
+   return Name(buf, mod);
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::TypeTemplate::TemplateParameterSize() const {
+inline size_t
+Reflex::TypeTemplate::TemplateParameterSitze() const {
 //-------------------------------------------------------------------------------
-   if ( * this ) return fTypeTemplateName->fTypeTemplateImpl->TemplateParameterSize();
-   return 0;
-}
-
-
-//-------------------------------------------------------------------------------
-inline std::string Reflex::TypeTemplate::TemplateParameterDefaultAt( size_t nth ) const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeTemplateName->fTypeTemplateImpl->TemplateParameterDefaultAt( nth );
-   return "";
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::TypeTemplate::TemplateParameterDefault_Begin() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeTemplateName->fTypeTemplateImpl->TemplateParameterDefault_Begin();
-   return Dummy::StdStringCont().begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::TypeTemplate::TemplateParameterDefault_End() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeTemplateName->fTypeTemplateImpl->TemplateParameterDefault_End();
-   return Dummy::StdStringCont().end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::TypeTemplate::TemplateParameterDefault_RBegin() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeTemplateName->fTypeTemplateImpl->TemplateParameterDefault_RBegin();
-   return Dummy::StdStringCont().rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::TypeTemplate::TemplateParameterDefault_REnd() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeTemplateName->fTypeTemplateImpl->TemplateParameterDefault_REnd();
-   return Dummy::StdStringCont().rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline std::string Reflex::TypeTemplate::TemplateParameterNameAt( size_t nth ) const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeTemplateName->fTypeTemplateImpl->TemplateParameterNameAt( nth );
-   return "";
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::TypeTemplate::TemplateParameterName_Begin() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeTemplateName->fTypeTemplateImpl->TemplateParameterName_Begin();
-   return Dummy::StdStringCont().begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::TypeTemplate::TemplateParameterName_End() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeTemplateName->fTypeTemplateImpl->TemplateParameterName_End();
-   return Dummy::StdStringCont().end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::TypeTemplate::TemplateParameterName_RBegin() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeTemplateName->fTypeTemplateImpl->TemplateParameterName_RBegin();
-   return Dummy::StdStringCont().rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::TypeTemplate::TemplateParameterName_REnd() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fTypeTemplateName->fTypeTemplateImpl->TemplateParameterName_REnd();
-   return Dummy::StdStringCont().rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline size_t Reflex::TypeTemplate::TypeTemplateSize() {
-//-------------------------------------------------------------------------------
-   return Internal::TypeTemplateName::TypeTemplateSize();
+   // Return the name of this type template.
+   return TemplateParameterNames().Size();
 }
 
 

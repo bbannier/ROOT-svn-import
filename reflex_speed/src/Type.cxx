@@ -166,11 +166,11 @@ Reflex::Type::DetermineEquivalence( const Type & typ, unsigned int modifiers_mas
    unsigned int mod1 = t1.fModifiers | modifiers_mask;
    unsigned int mod2 = t2.fModifiers | modifiers_mask;
 
-   while (t1.Is(gTYPEDEF)) { 
+   while (t1.Is(gTypedef)) { 
       t1 = t1.ToType();
       mod1 |= t1.fModifiers;
    }
-   while ( t2.Is(gTYPEDEF)) {
+   while ( t2.Is(gTypedef)) {
       t2 = t2.ToType();
       mod2 |= t2.fModifiers;
    }
@@ -180,16 +180,16 @@ Reflex::Type::DetermineEquivalence( const Type & typ, unsigned int modifiers_mas
    if (t1.TypeType() != t2.TypeType())
       return false;
 
-   if (t1.Is(gARRAY) && t1.ArrayLength() != t2.ArrayLength())
+   if (t1.Is(gArray) && t1.ArrayLength() != t2.ArrayLength())
       return false;
 
-   static EntityProperty needToType(gPOINTER || gPOINTERTOMEMBER || gARRAY);
+   static EntityProperty needToType(gPointer || gPointerToMember || gArray);
 
    if (t1.Is(needToType))
       // set alsoReturn to true because we know it's not a function and void(*)() != int(*)()
       return t1.ToType().DetermineEquivalence(t2.ToType(),modifiers_mask, true);
 
-   if (!t1.Is(gFUNCTION))
+   if (!t1.Is(gFunction))
       return t1.fTypeName == t2.fTypeName;
    else {
       if (alsoReturn)
@@ -245,12 +245,12 @@ Reflex::Type::Name( std::string& buf, unsigned int mod ) const {
 
    /** apply qualifications if wanted */
    if (mod & QUALIFIED) {
-      if (Is(gCONST && gVOLATILE)) cv = &sCVcv;
-      else if (Is(gCONST))         cv = &sCVc;
-      else if (Is(gVOLATILE))      cv = &sCVv;
+      if (Is(gConst && gVolatile)) cv = &sCVcv;
+      else if (Is(gConst))         cv = &sCVc;
+      else if (Is(gVolatile))      cv = &sCVv;
    }
 
-   bool isPtrOrFunc = Is(gPOINTER || gFUNCTION);
+   bool isPtrOrFunc = Is(gPointer || gFunction);
 
    /** if At is not a pointer qualifiers can be put before */
    if (cv && !isPtrOrFunc)
@@ -278,7 +278,7 @@ Reflex::Type::Name( std::string& buf, unsigned int mod ) const {
       buf += " " + *cv;
 
    /** apply reference if qualifications wanted */
-   if ((mod & QUALIFIED) && Is(gREFERENCE))
+   if ((mod & QUALIFIED) && Is(gReference))
       buf += "&";
 
    return buf;

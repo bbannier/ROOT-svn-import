@@ -45,7 +45,7 @@ Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info
    const Type& c = Type::ByName(nam2);
    if (c) {
       // We found a typedef to a class with the same name
-      if (c.Is(gTYPEDEF)) {
+      if (c.Is(gTypedef)) {
          nam2 += " @Hidden@";
       }
       // Class already exists. Check if it was a class.
@@ -105,7 +105,7 @@ void Reflex::ClassBuilderImpl::AddTypedef(const Type& typ, const char* def)
    // -- Add typedef info (internal).
    Type ret = Type::ByName(def);
    // Check for typedef AA AA;
-   if (ret == typ && ! typ.Is(gTYPEDEF)) {
+   if (ret == typ && ! typ.Is(gTypedef)) {
       if (typ) {
          typ.ToTypeBase()->HideName();
       }

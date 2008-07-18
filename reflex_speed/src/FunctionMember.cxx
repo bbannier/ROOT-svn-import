@@ -216,12 +216,12 @@ Reflex::Internal::FunctionMember::GenerateDict( DictionaryGenerator & generator 
          generator.AddIntoFree("), \"" + Name() + "\"" ); //function name
       }
 
-      if      ( Is(gCONSTRUCTOR) ) generator.AddIntoFree(", constructor_");
+      if      ( Is(gConstRUCTOR) ) generator.AddIntoFree(", constructor_");
       else if ( Is(gDESTRUCTOR)  ) generator.AddIntoFree(", destructor_");
 
       
            
-      if ( Is(gCONSTRUCTOR) ) {
+      if ( Is(gConstRUCTOR) ) {
          generator.AddIntoClasses("static void* constructor_" );
               
       } else if ( Is(gDESTRUCTOR) ) {
@@ -248,7 +248,7 @@ Reflex::Internal::FunctionMember::GenerateDict( DictionaryGenerator & generator 
       generator.AddIntoClasses(number);
     
       
-      if( Is(gCONSTRUCTOR) ) {  // these have parameters
+      if( Is(gConstRUCTOR) ) {  // these have parameters
 
          generator.AddIntoClasses("(void* mem, const std::vector<void*>&");  
          
@@ -285,9 +285,9 @@ Reflex::Internal::FunctionMember::GenerateDict( DictionaryGenerator & generator 
                generator.AddIntoClasses("static " + retT.Name(SCOPED) + " ret;\n");
                generator.AddIntoClasses("ret = ");
             }
-            else if ( retT.Is(gREFERENCE) || retT.Is(gPOINTER)) {
+            else if ( retT.Is(gReference) || retT.Is(gPointer)) {
                generator.AddIntoClasses("return (void*)");
-               if ( retT.Is(gREFERENCE)) generator.AddIntoClasses("&");
+               if ( retT.Is(gReference)) generator.AddIntoClasses("&");
             }
             else { // compound type
                generator.AddIntoClasses("return new " + retT.Name(SCOPED) + "(");
@@ -320,18 +320,18 @@ Reflex::Internal::FunctionMember::GenerateDict( DictionaryGenerator & generator 
             temp2<<args;
                            
             // We de-deference parameter only, if it's not a pointer
-            if (! methpara->Is(gPOINTER) ) generator.AddIntoClasses("*");
+            if (! methpara->Is(gPointer) ) generator.AddIntoClasses("*");
           
             generator.AddIntoClasses("(");
                     
             //if( methpara->IsConst()) generator.AddIntoClasses("const ");
             
             std::string paraT = methpara->Name(SCOPED|QUALIFIED);
-            if ( methpara->Is(gREFERENCE)) paraT = paraT.substr(0,paraT.length()-1);
+            if ( methpara->Is(gReference)) paraT = paraT.substr(0,paraT.length()-1);
 
             generator.AddIntoClasses( paraT );
 
-            if ( ! methpara->Is(gPOINTER)) generator.AddIntoClasses("*");
+            if ( ! methpara->Is(gPointer)) generator.AddIntoClasses("*");
 
             generator.AddIntoClasses(") arg[" + temp2.str() + "]" );
                         
@@ -346,7 +346,7 @@ Reflex::Internal::FunctionMember::GenerateDict( DictionaryGenerator & generator 
       } // funct. params!=0
                  
                   
-      if( Is(gCONSTRUCTOR)) {
+      if( Is(gConstRUCTOR)) {
          generator.AddIntoClasses(");\n} \n");
     
       } else {
@@ -359,7 +359,7 @@ Reflex::Internal::FunctionMember::GenerateDict( DictionaryGenerator & generator 
          else if ( retT.Is(gFUNDAMENTAL)) {
             generator.AddIntoClasses(";\n  return & ret;\n");
          }
-         else if ( retT.Is(gPOINTER) || retT.Is(gREFERENCE)) {
+         else if ( retT.Is(gPointer) || retT.Is(gReference)) {
             generator.AddIntoClasses(";\n");
          }
          else { // compound type
@@ -444,7 +444,7 @@ Reflex::Internal::FunctionMember::GenerateDict( DictionaryGenerator & generator 
            
          if( Is(gVIRTUAL) )    generator.AddIntoFree(" | VIRTUAL");
          if( Is(gARTIFICIAL))  generator.AddIntoFree(" | ARTIFICIAL");
-         if( Is(gCONSTRUCTOR)) generator.AddIntoFree(" | CONSTRUCTOR");
+         if( Is(gConstRUCTOR)) generator.AddIntoFree(" | CONSTRUCTOR");
          if( Is(gDESTRUCTOR))  generator.AddIntoFree(" | DESTRUCTOR");
            
          generator.AddIntoFree(")\n");

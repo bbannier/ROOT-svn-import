@@ -50,7 +50,7 @@ std::string Reflex::Internal::Array::BuildTypeName( const Type & typ,
    std::ostringstream ost; 
    Type t = typ;
    ost << "[" << len << "]";
-   while ( t.Is(gARRAY) ) {
+   while ( t.Is(gArray) ) {
       ost << "[" << t.ArrayLength() << "]";
       t = t.ToType();
    }

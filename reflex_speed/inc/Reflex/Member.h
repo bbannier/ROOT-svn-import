@@ -14,6 +14,7 @@
 
 // Include files
 #include "Reflex/Kernel.h"
+#include "Reflex/Type.h"
 
 
 namespace Reflex {
@@ -25,6 +26,7 @@ namespace Reflex {
    class PropertyList;
    class Object;
    class MemberTemplate;
+   class TemplateArgument;
    class DictionaryGenerator;
 
    namespace Internal {
@@ -139,7 +141,7 @@ namespace Reflex {
       * Get the data member value 
       * @return member value as object
       */
-      Object Get( const Object & obj) const;
+      Object Get(const Object & obj) const;
 
 
       /**
@@ -149,8 +151,6 @@ namespace Reflex {
       void * Id() const;
 
 
-      /*Object Invoke( const Object & obj, 
-      const std::vector < Object > & paramList ) const;*/
       /** 
       * Invoke a member function
       * @param obj the object which owns the member function
@@ -162,7 +162,6 @@ namespace Reflex {
          std::vector<void*>()) const;
 
 
-      //Object Invoke( const std::vector < Object > & paramList ) const;
       /** 
       * Invoke a static function 
       * @param paramList a vector of addresses to parameter values
@@ -203,7 +202,18 @@ namespace Reflex {
       * QUALIFIED - cv and reference qualification
       * @return name of the member
       */
-      std::string Name( unsigned int mod = 0 ) const;
+      const std::string& Name( std::string& buf, unsigned int mod = SCOPED | QUALIFIED ) const;
+
+
+      /** 
+      * Name returns the Name of the member 
+      * @param mod modifiers can be or'ed as argument
+      * SCOPED - fully scoped name
+      * FINAL  - resolve all typedefs
+      * QUALIFIED - cv and reference qualification
+      * @return name of the member
+      */
+      std::string Name( unsigned int mod = SCOPED | QUALIFIED ) const;
 
 
       /** 
@@ -221,29 +231,18 @@ namespace Reflex {
       size_t FunctionParameterSize( bool required = false ) const;
 
 
-      /** FunctionParameterAt nth default value if declared*/
-      std::string FunctionParameterDefaultAt( size_t nth ) const;
-
-
-      StdString_Iterator FunctionParameterDefault_Begin() const;
-      StdString_Iterator FunctionParameterDefault_End() const;
-      Reverse_StdString_Iterator FunctionParameterDefault_RBegin() const;
-      Reverse_StdString_Iterator FunctionParameterDefault_REnd() const;
-
+      /** 
+      * FunctionParameterDefaultss returns the collaction of default values 
+      * (as strings) for function parameters.
+      * @return collection of default values for parameters
+      */
+      const OrderedContainer<std::string>& FunctionParameterDefaults() const;
 
       /** 
-      * FunctionParametertNameAt returns the nth parameter name 
-      * @param nth parameter name
-      * @return nth parameter name
+      * FunctionParametertNames returns a collection of the parameter names
+      * @return parameter names
       */
-      std::string FunctionParameterNameAt( size_t nth ) const;
-
-
-      StdString_Iterator FunctionParameterName_Begin() const;
-      StdString_Iterator FunctionParameterName_End() const;
-      Reverse_StdString_Iterator FunctionParameterName_RBegin() const;
-      Reverse_StdString_Iterator FunctionParameterName_REnd() const;
-
+      const OrderedContainer<std::string>& FunctionParameterNames() const;
 
       /**
       * Properties will return the properties attached to this item
@@ -285,24 +284,10 @@ namespace Reflex {
 
 
       /**
-      * TemplateArgumentAt will return the nth template argument
-      * @param  nth template argument
-      * @return nth template argument
+      * TemplateArguments returns an ordered collection of the template arguments
+      * @return reflection information of template arguments
       */
-      Type TemplateArgumentAt( size_t nth ) const;
-
-
-      /**
-      * TemplateArgumentSize will return the number of template arguments
-      * @return number of template arguments
-      */
-      size_t TemplateArgumentSize() const;
-
-
-      Type_Iterator TemplateArgument_Begin() const;
-      Type_Iterator TemplateArgument_End() const;
-      Reverse_Type_Iterator TemplateArgument_RBegin() const;
-      Reverse_Type_Iterator TemplateArgument_REnd() const;
+      const OrderedContainer<TemplateArgument>& TemplateArguments() const;
 
 
       /**
@@ -341,15 +326,37 @@ namespace Reflex {
 
 } //namespace Reflex
 
-#include "Reflex/internal/MemberBase.h"
-#include "Reflex/Scope.h"
-#include "Reflex/PropertyList.h"
-#include "Reflex/Type.h"
-#include "Reflex/MemberTemplate.h"
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Member::operator < ( const Member & rh ) const {
+inline
+Reflex::Member::Member( const Internal::MemberBase * memberBase )
+//-------------------------------------------------------------------------------
+   : fMemberBase( const_cast<Internal::MemberBase*>(memberBase) ) {
+   // Construct a member, attaching it to MemberBase.
+}
+
+
+//-------------------------------------------------------------------------------
+inline
+Reflex::Member::Member( const Member & rh )
+//-------------------------------------------------------------------------------
+   : fMemberBase( rh.fMemberBase ) {
+   // Member copy constructor.
+}
+
+
+//-------------------------------------------------------------------------------
+inline
+Reflex::Member::~Member() {
+//-------------------------------------------------------------------------------
+// Member desructor.
+}
+
+
+//-------------------------------------------------------------------------------
+inline bool
+Reflex::Member::operator < ( const Member & rh ) const {
 //-------------------------------------------------------------------------------
    if ( (*this) && rh ) 
       return ( TypeOf() < rh.TypeOf() && Name() < rh.Name());
@@ -358,7 +365,8 @@ inline bool Reflex::Member::operator < ( const Member & rh ) const {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Member::operator == ( const Member & rh ) const {
+inline bool
+Reflex::Member::operator == ( const Member & rh ) const {
 //-------------------------------------------------------------------------------
    if ( (*this) && rh ) 
       return ( TypeOf() == rh.TypeOf() && Name() == rh.Name() );
@@ -368,14 +376,16 @@ inline bool Reflex::Member::operator == ( const Member & rh ) const {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Member::operator != ( const Member & rh ) const {
+inline bool
+Reflex::Member::operator != ( const Member & rh ) const {
 //-------------------------------------------------------------------------------
    return ! ( *this == rh );
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member & Reflex::Member::operator = ( const Member & rh ) {
+inline Reflex::Member &
+Reflex::Member::operator = ( const Member & rh ) {
 //-------------------------------------------------------------------------------
    fMemberBase = rh.fMemberBase;
    return * this;
@@ -383,254 +393,29 @@ inline Reflex::Member & Reflex::Member::operator = ( const Member & rh ) {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member::operator bool () const {
+inline
+Reflex::Member::operator bool () const {
 //-------------------------------------------------------------------------------
    return 0 != fMemberBase;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope Reflex::Member::DeclaringScope() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->DeclaringScope();
-   return Dummy::Scope();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type Reflex::Member::DeclaringType() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->DeclaringScope();
-   return Dummy::Type();
-}
-
-
-//-------------------------------------------------------------------------------
-inline void * Reflex::Member::Id() const {
+inline void *
+Reflex::Member::Id() const {
 //-------------------------------------------------------------------------------
    return (void*)fMemberBase;
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TYPE Reflex::Member::MemberType() const {
+inline std::string
+Reflex::Member::Name( unsigned int mod ) const {
 //-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->MemberType();
-   return UNRESOLVED;
+   std::string buf;
+   return Name(buf, mod);
 }
 
-
-//-------------------------------------------------------------------------------
-inline std::string Reflex::Member::MemberTypeAsString() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->MemberTypeAsString();
-   return "";
-}
-
-
-//-------------------------------------------------------------------------------
-inline std::string Reflex::Member::Name( unsigned int mod ) const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->Name( mod );
-   return "";
-}
-
-
-//-------------------------------------------------------------------------------
-inline size_t Reflex::Member::Offset() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->Offset();
-   return 0;
-}
-
-
-//-------------------------------------------------------------------------------
-inline size_t Reflex::Member::FunctionParameterSize( bool required ) const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->FunctionParameterSize( required );
-   return 0;
-}
-
-
-//-------------------------------------------------------------------------------
-inline std::string Reflex::Member::FunctionParameterDefaultAt( size_t nth ) const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->FunctionParameterDefaultAt( nth );
-   return "";
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::Member::FunctionParameterDefault_Begin() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->FunctionParameterDefault_Begin();
-   return Dummy::StdStringCont().begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::Member::FunctionParameterDefault_End() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->FunctionParameterDefault_End();
-   return Dummy::StdStringCont().end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::Member::FunctionParameterDefault_RBegin() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->FunctionParameterDefault_RBegin();
-   return Dummy::StdStringCont().rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::Member::FunctionParameterDefault_REnd() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->FunctionParameterDefault_REnd();
-   return Dummy::StdStringCont().rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline std::string Reflex::Member::FunctionParameterNameAt( size_t nth ) const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->FunctionParameterNameAt( nth );
-   return "";
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::Member::FunctionParameterName_Begin() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->FunctionParameterName_Begin();
-   return Dummy::StdStringCont().begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator Reflex::Member::FunctionParameterName_End() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->FunctionParameterName_End();
-   return Dummy::StdStringCont().end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::Member::FunctionParameterName_RBegin() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->FunctionParameterName_RBegin();
-   return Dummy::StdStringCont().rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator Reflex::Member::FunctionParameterName_REnd() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->FunctionParameterName_REnd();
-   return Dummy::StdStringCont().rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::PropertyList Reflex::Member::Properties() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->Properties();
-   return Dummy::PropertyList();
-}
-
-
-//-------------------------------------------------------------------------------
-inline void Reflex::Member::SetScope( const Scope & sc ) const  {
-//-------------------------------------------------------------------------------
-   if ( *this ) fMemberBase->SetScope( sc );
-}
-
-
-//-------------------------------------------------------------------------------
-inline void * Reflex::Member::Stubcontext() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->Stubcontext();
-   return 0;
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StubFunction Reflex::Member::Stubfunction() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->Stubfunction();
-   return 0;
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type Reflex::Member::TemplateArgumentAt( size_t nth ) const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fMemberBase->TemplateArgumentAt( nth );
-   return Dummy::Type();
-}
-
-
-//-------------------------------------------------------------------------------
-inline size_t Reflex::Member::TemplateArgumentSize() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fMemberBase->TemplateArgumentSize();
-   return 0;
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::Member::TemplateArgument_Begin() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fMemberBase->TemplateArgument_Begin();
-   return Dummy::TypeCont().begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::Member::TemplateArgument_End() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fMemberBase->TemplateArgument_End();
-   return Dummy::TypeCont().end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::Member::TemplateArgument_RBegin() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fMemberBase->TemplateArgument_RBegin();
-   return Dummy::TypeCont().rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::Member::TemplateArgument_REnd() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fMemberBase->TemplateArgument_REnd();
-   return Dummy::TypeCont().rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::MemberTemplate Reflex::Member::TemplateFamily() const {
-//-------------------------------------------------------------------------------
-   if ( * this ) return fMemberBase->TemplateFamily();
-   return Dummy::MemberTemplate();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type Reflex::Member::TypeOf() const {
-//-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->TypeOf();
-   return Dummy::Type();
-}
-
-//-------------------------------------------------------------------------------
-inline void Reflex::Member::UpdateFunctionParameterNames(const char* parameters) {
-//-------------------------------------------------------------------------------
-   if (*this) return fMemberBase->UpdateFunctionParameterNames(parameters);
-}
 
 #ifdef REFLEX_CINT_MERGE
 inline bool operator&&(bool b, const Reflex::Member & rh) {

@@ -128,7 +128,7 @@ namespace Reflex {
 
    template <typename T>
    class RFLX_API Container: public Internal::ContainerBase {
-   private:
+   protected:
       const Container* operator&() const;  // intentionally not implemented
       Container* operator&();  // intentionally not implemented
       Container(const Container&); // intentionally not implemented
@@ -159,6 +159,23 @@ namespace Reflex {
          if (ret) return *ret;
          return T();
       }
+   };
+
+
+   // OrderedContainer is used as a tag (mainly for the user)
+   // to signal that the elements keep their order. Because
+   // the containers are read-only this is irrelevant for
+   // their interface.
+   template <typename T>
+   class RFLX_API OrderedContainer: public Container<T>
+   {
+   protected:
+      const OrderedContainer* operator&() const;  // intentionally not implemented
+      OrderedContainer* operator&();  // intentionally not implemented
+      OrderedContainer(const OrderedContainer&); // intentionally not implemented
+      OrderedContainer& operator=(const OrderedContainer& rhs); // intentionally not implemented
+
+      OrderedContainer(Internal::IContainerImpl* coll): Container<T>(coll) {}
    };
 
 } // namespace Reflex

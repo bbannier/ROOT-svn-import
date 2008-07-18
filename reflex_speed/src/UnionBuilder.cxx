@@ -41,7 +41,7 @@ Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size, const s
    const Type& c = Type::ByName(nam2);
    if (c) {
       // We found a typedef to a class with the same name
-      if (c.Is(gTYPEDEF)) {
+      if (c.Is(gTypedef)) {
          nam2 += " @HIDDEN@";
       }
       // Type already exists. Check if it was a class, struct, or union.

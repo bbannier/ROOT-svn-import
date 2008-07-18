@@ -87,9 +87,9 @@ Reflex::Internal::ScopeName::ByName( const std::string & name ) {
       // HERE STARTS AN UGLY HACK WHICH HAS TO BE UNDONE ASAP
       // (also remove inlcude Reflex/Type.h)
       Type t = Type::ByName(name);
-      if ( t && t.Is(gTYPEDEF)) {
-         while ( t.Is(gTYPEDEF)) t = t.ToType();
-         if ( t.Is(gCLASS || gENUM || gUNION) )
+      if ( t && t.Is(gTypedef)) {
+         while ( t.Is(gTypedef)) t = t.ToType();
+         if ( t.Is(gCLASS || gEnum || gUnion) )
             return t.operator Scope ();
       }
       return Dummy::Scope();

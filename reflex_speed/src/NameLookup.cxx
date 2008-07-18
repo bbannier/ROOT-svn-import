@@ -198,7 +198,7 @@ template<class T> T Reflex::NameLookup::LookupInScope()
             if (fPosNamePart == std::string::npos) {
                return type;
             }
-            if (it->Is(gTYPEDEF)) {
+            if (it->Is(gTypedef)) {
                fCurrentScope = it->FinalType();
             }
             else {

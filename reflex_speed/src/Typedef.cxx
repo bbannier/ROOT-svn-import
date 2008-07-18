@@ -29,7 +29,7 @@ Reflex::Internal::Typedef::Typedef( const char * typ,
    // Construct typedef info.
 
    Type current = typedefType;
-   while ( current.Is(gTYPEDEF) ) current = current.ToType();
+   while ( current.Is(gTypedef) ) current = current.ToType();
    if ( current.TypeInfo() != typeid(UnknownType)) fTypeInfo = & current.TypeInfo();
 }
 
