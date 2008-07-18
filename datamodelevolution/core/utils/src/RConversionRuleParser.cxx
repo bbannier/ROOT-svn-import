@@ -274,10 +274,11 @@ namespace ROOT
    }
 
    //--------------------------------------------------------------------------
-   void WriteAutoVariables( const std::list<std::string>& target,
-                            const std::list<std::string>& source,
-                            MembersMap_t& members, std::string& mappedName,
-                            std::ostream& output )
+   static void WriteAutoVariables( const std::list<std::string>& target,
+                                   const std::list<std::string>& source,
+                                   MembersMap_t& members,
+                                   std::string& className,
+                                   std::ostream& output )
    {
       //-----------------------------------------------------------------------
       // Write down the sources
@@ -292,14 +293,17 @@ namespace ROOT
       // Write down the targets
       //-----------------------------------------------------------------------
       if( !target.empty() ) {
-         output << "      ::ROOT::Shadow::" << mappedName << " *shadowObj = ";
-         output << "0x64;" << std::endl; 
+         output << "      static TClass *cls = TClass::GetClass(\"";
+         output << className << "\");" << std::endl;
       }
       for( it = target.begin(); it != target.end(); ++it ) {
          std::string memData = members[*it];
+         output << "      static Long_t offset_" << *it << " = ";
+         output << "cls->GetDataMemberOffset(\"" << *it << "\");";
+         output << std::endl;
          output << "      " << memData << "& " << *it << " = ";
-         output << "*(" << memData << "*)(target+(&shadowObj->";
-         output << memData << ")-0x64);" << std::endl;
+         output << "*(" << memData << "*)(target+offset_" << *it;
+         output << ");" << std::endl;
       }
 
    }
@@ -338,7 +342,7 @@ namespace ROOT
       TSchemaRuleProcessor::SplitList( rule["source"], source );
       TSchemaRuleProcessor::SplitList( rule["target"], target );
 
-      WriteAutoVariables( target, source, members, mappedName, output );
+      WriteAutoVariables( target, source, members, className, output );
       output << "      " << className << "* newObj = (" << className;
       output << "*)target;" << std::endl << std::endl;
 
@@ -385,7 +389,7 @@ namespace ROOT
       std::list<std::string> target;
       TSchemaRuleProcessor::SplitList( rule["target"], target );
 
-      WriteAutoVariables( target, source, members, mappedName, output );
+      WriteAutoVariables( target, source, members, className, output );
       output << "      " << className << "* newObj = (" << className;
       output << "*)target;" << std::endl << std::endl;
 
