@@ -493,11 +493,19 @@ class genDictionary(object) :
     f = open(file,'w') 
     f.write(self.genHeaders(cppinfo))
 
+    #------------------------------------------------------------------------------
+    # Process includes relevent to the IO rules
+    #------------------------------------------------------------------------------
     if ioReadRules or ioReadRawRules:
       f.write( '#include "TBuffer.h"\n' )
       f.write( 'class TVirtualObject;\n' )
       f.write( '#include <vector>\n' )
       f.write( '#include "TSchemaHelper.h"\n\n' )
+
+      includes = self.getIncludes( ioReadRules, ioReadRawRules )
+      for inc in includes:
+        f.write( '#include <%s>\n' % (inc,) )
+      f.write( '\n' )
 
     f_buffer = ''
     f_shadow =  '\n// Shadow classes to obtain the data member offsets \n'
@@ -779,24 +787,29 @@ class genDictionary(object) :
     sc = ''
     i = 0
     for rule in rules:
-      #sc += '  %s.push_back( ROOT::TSchemaHelper() );\n' %(listname,)
+      attrs = rule['attrs']
       sc += '  rule = &%s[%d];\n' %(listname, i)
       i += 1
-      sc += '  rule->fTarget      = "%s";\n' % (rule['attrs']['target'],)
-      sc += '  rule->fSource      = "%s";\n' % (rule['attrs']['source'],)
-      sc += '  rule->fSourceClass = "%s";\n' % (rule['attrs']['sourceClass'],)
+      sc += '  rule->fTarget      = "%s";\n' % (attrs['target'],)
+      sc += '  rule->fSource      = "%s";\n' % (attrs['source'],)
+      sc += '  rule->fSourceClass = "%s";\n' % (attrs['sourceClass'],)
         
       if rule.has_key( 'funcname' ):
         sc += '  rule->fFunctionPtr = (void *)%s;\n' % (rule['funcname'],)
+        sc += '  rule->fCode        = "%s";\n' % (rule['code'].replace( '\n', '\\n' ), )
 
-      if rule['attrs'].has_key( 'version' ):
-        sc += '  rule->fVersion     = "%s";\n' % (rule['attrs']['version'],)
+      if attrs.has_key( 'version' ):
+        sc += '  rule->fVersion     = "%s";\n' % (attrs['version'],)
 
-      if rule['attrs'].has_key( 'checksum' ):
-        sc += '  rule->fChecksum    = "%s";\n' % (rule['attrs']['checksum'],)
+      if attrs.has_key( 'checksum' ):
+        sc += '  rule->fChecksum    = "%s";\n' % (attrs['checksum'],)
 
-      if rule['attrs'].has_key( 'embed' ):
-        sc += '  rule->fEmbed       = "%s";\n' % (rule['attrs']['embed'],)
+      if attrs.has_key( 'embed' ):
+        sc += '  rule->fEmbed       = "%s";\n' % (attrs['embed'],)
+
+      if attrs.has_key( 'include' ):
+        sc += '  rule->fInclude     = "%s";\n' % (attrs['include'],)
+
     return sc
 #---------------------------------------------------------------------------------
   def processIOAutoVariables( self, cl, source, target, memTypes ):
@@ -868,6 +881,23 @@ class genDictionary(object) :
         print '- data member', t, 'appears on the target list but does not seem',
         print 'to be present in the target class'
         rules.remove( rule )
+#---------------------------------------------------------------------------------
+  def getIncludes( self, readRules, readRawRules ):
+    testDict = {}
+    rulesets = []
+
+    if readRules: rulesets.append( readRules )
+    if readRawRules: rulesets.append( readRawRules )
+
+    for ruleset in rulesets:
+      for ruleList in ruleset.values():
+        for rule in ruleList:
+          if not rule['attrs'].has_key( 'include' ):
+            continue
+          lst = [r.strip() for r in rule['attrs']['include'].split( ',' )]
+          for r in lst:
+            testDict[r] = 1
+    return testDict.keys()
 #---------------------------------------------------------------------------------
   def translate_typedef (self, id):
     while self.xref[id]['elem'] in ['CvQualifiedType', 'Typedef']:
