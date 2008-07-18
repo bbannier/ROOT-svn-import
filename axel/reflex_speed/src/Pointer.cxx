@@ -43,7 +43,7 @@ Reflex::Internal::Pointer::BuildTypeName( const Type & pointerType,
                                           unsigned int mod ) {
 //-------------------------------------------------------------------------------
 // Build the pointer type name.
-   if ( ! pointerType.Is(gFUNCTION) ) return pointerType.Name( mod ) + "*";
+   if ( ! pointerType.Is(gFunction) ) return pointerType.Name( mod ) + "*";
    // function pointer and pointer to function members
    else {
       std::string s = pointerType.ReturnType().Name(mod);

@@ -206,7 +206,7 @@ namespace Internal {
       * returns a reference to the dummy container if this type is not a function.
       * @return reflection information of nth function parameter
       */
-      const Container<Type> FunctionParameters() const;
+      const OrderedContainer<Type> FunctionParameters() const;
 
 
       /**
@@ -250,7 +250,7 @@ namespace Internal {
       * TemplateArguments returns an ordered collection of the template arguments
       * @return reflection information of template arguments
       */
-      const Container<TemplateArgument>& TemplateArguments() const;
+      const OrderedContainer<TemplateArgument>& TemplateArguments() const;
 
 
       /**

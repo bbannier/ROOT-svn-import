@@ -85,7 +85,7 @@ namespace Internal {
       * DataMembers returns the data members of the type
       * @return nth data member 
       */
-      const Container<Member>& DataMembers() const;
+      const OrderedContainer<Member>& DataMembers() const;
 
 
       /**
@@ -99,7 +99,7 @@ namespace Internal {
       * FunctionMembers returns the collection of function members of the scope
       * @return reflection information of nth function member
       */
-      const Container<Member>& FunctionMembers() const;
+      const OrderedContainer<Member>& FunctionMembers() const;
 
 
       /**
@@ -203,14 +203,14 @@ namespace Internal {
       * Members eturns the collection of members of the scope
       * @return reflection information members
       */
-      const Container<Member>& Members() const;
+      const OrderedContainer<Member>& Members() const;
 
 
       /** 
       * MemberTemplates returns the collection of function member templates of this scope
       * @return collection of member templates
       */
-      const Container<MemberTemplate>& MemberTemplates() const;
+      const OrderedContainer<MemberTemplate>& MemberTemplates() const;
 
 
       /**
@@ -279,7 +279,7 @@ namespace Internal {
       * SubScopes returns the collection of scopes declared in this scope.
       * @return container of reflection information of sub scopes
       */
-      const Container<Scope>& SubScopes() const;
+      const OrderedContainer<Scope>& SubScopes() const;
 
 
       /**
@@ -294,14 +294,14 @@ namespace Internal {
       * SubTypes returns the collection of type declared in this scope.
       * @return reflection information of sub types
       */
-      const Container<Type>& SubTypes() const;
+      const OrderedContainer<Type>& SubTypes() const;
 
 
       /** 
       * SubTypeTemplates returns the collection of templated types declared within this scope
       * @return type templates
       */
-      const Container<TypeTemplate>& SubTypeTemplates() const;
+      const OrderedContainer<TypeTemplate>& SubTypeTemplates() const;
 
 
       /**

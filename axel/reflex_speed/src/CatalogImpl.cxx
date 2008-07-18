@@ -112,9 +112,9 @@ Reflex::Internal::ScopeCatalogImpl::ByName( const std::string & name ) const {
    // HERE STARTS AN UGLY HACK WHICH HAS TO BE UNDONE ASAP
    // (also remove inlcude Reflex/Type.h)
    Type t = fCatalog->Types().ByName(name);
-   if ( t && t.Is(gTYPEDEF)) {
-      while ( t.Is(gTYPEDEF)) t = t.ToType();
-      if ( t.IsClass() || t.Is(gENUM || gUNION) ) return t.operator Scope ();
+   if ( t && t.Is(gTypedef)) {
+      while ( t.Is(gTypedef)) t = t.ToType();
+      if ( t.IsClass() || t.Is(gEnum || gUnion) ) return t.operator Scope ();
    }
    return Dummy::Scope();
    // END OF UGLY HACK

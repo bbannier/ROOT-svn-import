@@ -15,6 +15,7 @@
 // Include files
 #include "Reflex/Kernel.h"
 #include "Reflex/Scope.h"
+#include "ContainerImpl.h"
 
 #ifdef _MSC_VER
 #pragma warning( push )
@@ -46,8 +47,8 @@ namespace Internal {
       /** default constructor */
       TypeTemplateImpl( const char * templateName,
          const Scope & scop,
-         std::vector < std::string > parameterNames, 
-         std::vector < std::string > parameterDefaults = std::vector<std::string>());
+         const std::vector < std::string >& parameterNames, 
+         const std::vector < std::string >& parameterDefaults = std::vector< std::string >());
 
 
       /** destructor */
@@ -62,82 +63,24 @@ namespace Internal {
 
 
       /**
-      * TemplateInstance_Begin returns the begin iterator of the instance container
-      * @return the begin iterator of the instance container
+      * TemplateInstances returns collecvtion of the instances of this template
+      * @return the collection of the instances
       */
-      Type_Iterator TemplateInstance_Begin() const;
+      const Container<Type>& TemplateInstances() const;
 
 
       /**
-      * TemplateInstance_End returns the end iterator of the instance container
-      * @return the end iterator of the instance container
+      * TemplateParameterDefaults returns the collection of template default values as string
+      * @return collection of default value of template parameters
       */
-      Type_Iterator TemplateInstance_End() const;
+      const OrderedContainer<std::string>& TemplateParameterDefaults() const;
 
 
       /**
-      * TemplateInstance_RBegin returns the rbegin iterator of the instance container
-      * @return the rbegin iterator of the instance container
+      * TemplateParameterNames returns the names of the template parameters
+      * @return Collection of names of template template parameters
       */
-      Reverse_Type_Iterator TemplateInstance_RBegin() const;
-
-
-      /**
-      * TemplateInstance_Rend returns the rend iterator of the instance container
-      * @return the rend iterator of the instance container
-      */
-      Reverse_Type_Iterator TemplateInstance_REnd() const;
-
-
-      /**
-      * instantion will return a pointer to the nth template instantion
-      * @param  nth template instantion
-      * @return pointer to nth template instantion
-      */
-      Type TemplateInstanceAt( size_t nth ) const;
-
-
-      /**
-      * instantionSize will return the number of template instantions for
-      * this template family
-      * @return number of template instantions
-      */
-      size_t TemplateInstanceSize() const;
-
-
-      /**
-      * TemplateParameterSize will return the number of template parameters
-      * @return number of template parameters
-      */
-      size_t TemplateParameterSize() const;
-
-
-      /**
-      * TemplateParameterDefaultAt will return the nth FunctionParameterAt default value as string
-      * @param nth template FunctionParameterAt
-      * @return default value of nth template FunctionParameterAt
-      */
-      std::string TemplateParameterDefaultAt( size_t nth ) const;
-
-
-      StdString_Iterator TemplateParameterDefault_Begin() const;
-      StdString_Iterator TemplateParameterDefault_End() const;
-      Reverse_StdString_Iterator TemplateParameterDefault_RBegin() const;
-      Reverse_StdString_Iterator TemplateParameterDefault_REnd() const;
-
-
-      /**
-      * TemplateParameterNameAt will the Name of the nth FunctionParameterAt
-      * @param  nth template FunctionParameterAt
-      * @return Name of nth template FunctionParameterAt
-      */
-      std::string TemplateParameterNameAt( size_t nth ) const;
-
-
-      StdString_Iterator TemplateParameterName_Begin() const;
-      StdString_Iterator TemplateParameterName_End() const;
-      Reverse_StdString_Iterator TemplateParameterName_RBegin() const;
-      Reverse_StdString_Iterator TemplateParameterName_REnd() const;
+      const OrderedContainer<std::string>& TemplateParameterNames() const;
 
 
       /**
@@ -172,7 +115,7 @@ namespace Internal {
       * @label template instances
       */
       mutable
-         std::vector < Type > fTemplateInstances;
+         ContainerImpl < std::string, Type > fTemplateInstances;
 
 
       /**
@@ -208,95 +151,6 @@ namespace Internal {
 
 } // namespace Internal
 } // namespace Reflex
-
-//-------------------------------------------------------------------------------
-inline size_t
-Reflex::Internal::TypeTemplateImpl::TemplateParameterSize() const {
-//-------------------------------------------------------------------------------
-   return fParameterNames.size();
-}
-
-
-//-------------------------------------------------------------------------------
-inline std::string
-Reflex::Internal::TypeTemplateImpl::TemplateParameterDefaultAt( size_t nth ) const {
-//-------------------------------------------------------------------------------
-   if ( nth < fParameterDefaults.size() ) return fParameterDefaults[ nth ];
-   return "";
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator
-Reflex::Internal::TypeTemplateImpl::TemplateParameterDefault_Begin() const {
-//-------------------------------------------------------------------------------
-   return fParameterDefaults.begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator
-Reflex::Internal::TypeTemplateImpl::TemplateParameterDefault_End() const {
-//-------------------------------------------------------------------------------
-   return fParameterDefaults.end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator
-Reflex::Internal::TypeTemplateImpl::TemplateParameterDefault_RBegin() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<std::string>&)fParameterDefaults).rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator
-Reflex::Internal::TypeTemplateImpl::TemplateParameterDefault_REnd() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<std::string>&)fParameterDefaults).rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline std::string
-Reflex::Internal::TypeTemplateImpl::TemplateParameterNameAt( size_t nth ) const {
-//-------------------------------------------------------------------------------
-   if ( nth < fParameterNames.size() ) return fParameterNames[ nth ];
-   return "";
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator
-Reflex::Internal::TypeTemplateImpl::TemplateParameterName_Begin() const {
-//-------------------------------------------------------------------------------
-   return fParameterNames.begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator
-Reflex::Internal::TypeTemplateImpl::TemplateParameterName_End() const {
-//-------------------------------------------------------------------------------
-   return fParameterNames.end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator
-Reflex::Internal::TypeTemplateImpl::TemplateParameterName_RBegin() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<std::string>&)fParameterNames).rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator
-Reflex::Internal::TypeTemplateImpl::TemplateParameterName_REnd() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<std::string>&)fParameterNames).rend();
-}
 
 
 #ifdef _MSC_VER

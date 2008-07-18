@@ -62,7 +62,7 @@ Reflex::Internal::DataMember::Name( unsigned int mod ) const {
       if ( Is(gMUTABLE))         { s += "mutable ";   }
    }
 
-   if ( mod & SCOPED && DeclaringScope().Is(gENUM)) {
+   if ( mod & SCOPED && DeclaringScope().Is(gEnum)) {
       if ( DeclaringScope().DeclaringScope()) {
          std::string sc = DeclaringScope().DeclaringScope().Name(SCOPED);
          if ( sc != "::" ) s += sc + "::";
@@ -137,13 +137,13 @@ Reflex::Internal::DataMember::GenerateDict( DictionaryGenerator & generator ) co
 
    const Scope & declScope = DeclaringScope();
 
-   if ( declScope.Is(gUNION) ) {
+   if ( declScope.Is(gUnion) ) {
 
       // FIXME
 
    }
 
-   else if ( declScope.Is(gENUM) ) {
+   else if ( declScope.Is(gEnum) ) {
 
       std::stringstream tmp;
       tmp << Offset();
@@ -160,7 +160,7 @@ Reflex::Internal::DataMember::GenerateDict( DictionaryGenerator & generator ) co
 
       const Type & rType = TypeOf().RawType();
         
-      if( TypeOf().Is(gARRAY) ) {      
+      if( TypeOf().Is(gArray) ) {      
 
          Type t = TypeOf();
 
@@ -171,7 +171,7 @@ Reflex::Internal::DataMember::GenerateDict( DictionaryGenerator & generator ) co
 	     
       }
    
-      else if(TypeOf().Is(gPOINTER) && TypeOf().RawType().Is(gFUNCTION)) {
+      else if(TypeOf().Is(gPointer) && TypeOf().RawType().Is(gFunction)) {
      
          Type t = TypeOf().ToType();
          generator.AddIntoShadow( t.ReturnType().Name(SCOPED) + "(") ;
