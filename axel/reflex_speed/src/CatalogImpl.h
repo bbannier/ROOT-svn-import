@@ -73,36 +73,6 @@ namespace Internal {
       return pti.IsInvalidated();
    }
 
-   //---- Container Adaptor for Type ----
-
-   template <>
-   std::string
-   ContainerAdaptor::Key(const Type& type) const {
-      return type.Name();
-   }
-
-   template <>
-   const std::string&
-   ContainerAdaptor::Key(const Type& type, std::string& buf) const {
-      return type.Name(buf);
-   }
-
-   //---- Container Adaptor for Scope ----
-
-   template <>
-   std::string
-   ContainerAdaptor::Key(const Scope& scope) const {
-      return scope.Name();
-   }
-
-   template <>
-   const std::string&
-   ContainerAdaptor::Key(const Scope& scope, std::string& buf) const {
-      return scope.Name(buf);
-   }
-
-
-
    class TypeCatalogImpl {
    public:
       typedef ContainerImpl<std::string, Type> TypeContainer_t;

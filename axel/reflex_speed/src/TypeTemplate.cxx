@@ -15,10 +15,19 @@
 
 #include "Reflex/TypeTemplate.h"
 #include "Reflex/Type.h"
-#include "Reflex/internal/OwnedMember.h"
-#include "Reflex/internal/TypeTemplateName.h"                                                             
+#include "OwnedMember.h"
+#include "TypeTemplateName.h"                                                             
+#include "TypeTemplateImpl.h"                                                             
 
-///-------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------
+Reflex::TypeTemplate::operator bool () const {
+//-------------------------------------------------------------------------------
+   if ( this->fTypeTemplateName && this->fTypeTemplateName->fTypeTemplateImpl ) return true;
+   return false;
+}
+
+
+//-------------------------------------------------------------------------------
 const std::string&
 Reflex::TypeTemplate::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
