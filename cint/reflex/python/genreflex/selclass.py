@@ -189,7 +189,6 @@ class selClass :
       for chk in lst:
         try:
           i = int( chk )
-          print 'chk:', i
         except:
           print warning, chk, 'is not a valid value of checksum parameter - an integer expected'
           return False
@@ -221,6 +220,15 @@ class selClass :
             if b >= e:
               print warning, '-', v, 'is not a valid version range'
               return False
+
+    #------------------------------------------------------------------------------
+    # Check if the include list is not empty
+    #------------------------------------------------------------------------------
+    if attrs.has_key( 'include' ):
+      if len( attrs['include'] ) == 0:
+        print warning, 'empty include list specified'
+        return False
+
     return True
 
 #----------------------------------------------------------------------------------
