@@ -42,6 +42,8 @@ protected:
    Int_t   GetGridStep(TGLRnrCtx &rnrCtx) const;
    void    SetAxis(TAxis *orig, TAxis *curr) const;
 
+   Bool_t  PhiShiftInterval(Float_t &min, Float_t &max) const;
+
    void    DrawZScales3D(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
    void    DrawZAxis(TGLRnrCtx &rnrCtx, Float_t azX, Float_t azY) const;
 
@@ -54,8 +56,6 @@ protected:
    void    MakeQuad(Float_t x, Float_t y, Float_t z,
                     Float_t xw, Float_t yw, Float_t zh) const;
    void    MakeDisplayList(TEveCaloData::RebinData_t &rdata) const;
-
-   void    GetCellData(TEveCaloData::CellId_t id, TEveCaloData::CellData_t &cell) const;
 
    mutable Bool_t                   fDLCacheOK;
 
