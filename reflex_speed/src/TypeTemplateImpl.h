@@ -16,6 +16,7 @@
 #include "Reflex/Kernel.h"
 #include "Reflex/Scope.h"
 #include "ContainerImpl.h"
+#include "ContainerAdaptorImpl.h"
 
 #ifdef _MSC_VER
 #pragma warning( push )

@@ -112,6 +112,10 @@ namespace Internal {
       kUNIQUE = 1 // for UNIQUENESS: allow container to hold only one instance of each object
    };
 
+
+
+
+
    template <typename KEY, typename VALUE, EUniqueness UNIQUENESS = kUNIQUE, class ADAPTOR = ContainerAdaptorT<KEY, VALUE> >
    class RFLX_API ContainerImpl: public ContainerImplBase, public IContainerImpl {
    private:
@@ -397,16 +401,23 @@ namespace Internal {
       VALUE& operator*() const  { return Curr()->fObj; }
 
       // Collection Proxy / IConstIteratorImpl:
-      bool IsEqual(const IConstIteratorImpl& other) const {
+      bool ProxyIsEqual(const IConstIteratorImpl& other) const {
          return *this == ((ContainerImplBase_iterator&)other);
       }
 
-      void Forward() { ++(*this); }
+      void ProxyForward() { ++(*this); }
 
-      void* Element() const { return operator->(); }
+      void* ProxyElement() const { return operator->(); }
+      IConstIteratorImpl* ProxyClone() const { return new Container_iterator(*this); }
 
    }; // class Container_iterator
+
 } // namespace Internal
 } // namespace Reflex
+
+
+
+// reflex-specific specializations etc:
+#include "ContainerAdaptorImpl.h"
 
 #endif

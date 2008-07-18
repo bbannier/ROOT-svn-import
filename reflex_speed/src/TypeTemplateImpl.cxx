@@ -13,17 +13,19 @@
 #define REFLEX_BUILD
 #endif
 
-#include "Reflex/internal/TypeTemplateImpl.h"
+#include "TypeTemplateImpl.h"
 
 #include "Reflex/Type.h"
 #include "Reflex/TypeTemplate.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "TypeTemplateName.h"
+#include "OwnedMember.h"
 
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::TypeTemplateImpl::TypeTemplateImpl( const char * templateName,
                                                       const Scope & scop,
-                                                      const std::vector < std::string >& parameterNames)
+                                                      const std::vector < std::string >& parameterNames, 
+                                                      const std::vector < std::string >& parameterDefaults)
 //------------------------------------------------------------------------------- 
    : fScope( scop ),
      fParameterNames( parameterNames ),
@@ -47,7 +49,7 @@ Reflex::Internal::TypeTemplateImpl::TypeTemplateImpl( const char * templateName,
 Reflex::Internal::TypeTemplateImpl::~TypeTemplateImpl() {
 //-------------------------------------------------------------------------------
 // Destructor.
-   for ( Type_Iterator ti = TemplateInstance_Begin(); ti != TemplateInstance_End(); ++ti ) {
+   for ( Type_Iterator ti = TemplateInstances().Begin(); ti != TemplateInstances().End(); ++ti ) {
       ti->Unload();
    }
    if ( fTypeTemplateName->fTypeTemplateImpl == this ) fTypeTemplateName->fTypeTemplateImpl = 0;

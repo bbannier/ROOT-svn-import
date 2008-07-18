@@ -87,6 +87,14 @@ namespace Reflex {
 
 
       /**
+      * Name will return the Name of the template family and a list of
+      * all currently available instantiations
+      * @return template family Name with all instantiantion
+      */
+      const std::string& Name(std::string& buf, unsigned int mod = SCOPED | QUALIFIED ) const;
+
+
+      /**
       * TemplateInstances returns the collection of instances of this template.
       * @return the collection of the instances
       */
@@ -171,15 +179,6 @@ Reflex::TypeTemplate::~TypeTemplate() {}
 
 
 //-------------------------------------------------------------------------------
-inline
-Reflex::TypeTemplate::operator bool () const {
-//-------------------------------------------------------------------------------
-   if ( this->fTypeTemplateName && this->fTypeTemplateName->fTypeTemplateImpl ) return true;
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
 inline bool
 Reflex::TypeTemplate::operator == ( const TypeTemplate & rh ) const {
 //-------------------------------------------------------------------------------
@@ -207,7 +206,7 @@ Reflex::TypeTemplate::Name( unsigned int mod ) const {
 
 //-------------------------------------------------------------------------------
 inline size_t
-Reflex::TypeTemplate::TemplateParameterSitze() const {
+Reflex::TypeTemplate::TemplateParameterSize() const {
 //-------------------------------------------------------------------------------
    // Return the name of this type template.
    return TemplateParameterNames().Size();
