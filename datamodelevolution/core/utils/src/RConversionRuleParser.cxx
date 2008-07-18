@@ -222,6 +222,17 @@ namespace ROOT
             }
       }
 
+      //-----------------------------------------------------------------------
+      // Check if the include list is not empty
+      //-----------------------------------------------------------------------
+      it1 = rule.find( "include" );
+      if( it1 != rule.end() ) {
+         if( it1->second.empty() ) {
+            std::cout << warning << " - the include list is empty" << std::endl;
+            return false;
+         }
+      }
+
       return true;
    }
 
@@ -387,6 +398,25 @@ namespace ROOT
       output << "   }" << std::endl;
    }
 
+   //--------------------------------------------------------------------------
+   static void StrReplace( std::string& proc, const std::string& pat,
+                           const std::string& tr )
+   {
+      // Replace all accurances of given string with other string
+      std::string::size_type it = 0;
+      std::string::size_type s  = pat.size();
+
+      if( s == 0 ) return;
+
+      while( 1 ) {
+         it = proc.find( pat, it );
+         if( it == std::string::npos )
+            break;
+
+         proc.replace( it, s, tr );
+         ++it;
+      }
+   }
 
    //--------------------------------------------------------------------------
    void WriteSchemaList( std::list<SchemaRuleMap_t>& rules,
@@ -417,8 +447,13 @@ namespace ROOT
          // Deal with nonmandatory keys
          //--------------------------------------------------------------------
          if( it->find( "funcname" ) != it->end() ) {
+            std::string code = (*it)["code"];
+            StrReplace( code, "\n", "\\n" );
+
             output << "      rule->fFunctionPtr = (void *)";
             output << (*it)["funcname"] << ";" << std::endl;
+            output << "      rule->fCode        = \"" << code;
+            output << "\";" << std::endl;
          }
  
          if( it->find( "version" ) != it->end() ) {
@@ -435,7 +470,52 @@ namespace ROOT
             output << "      rule->fEmbed       = \"" <<  (*it)["embed"];
             output << "\";" << std::endl;
          }
+
+         if( it->find( "include" ) != it->end() ) {
+            output << "      rule->fInclude     = \"" << (*it)["include"];
+            output << "\";" << std::endl;
+         }
       }
+   }
+
+   //--------------------------------------------------------------------------
+   void GetRuleIncludes( std::list<std::string> &result )
+   {
+      // Get the list of includes specified in the shema rules
+      std::list<std::string>               tmp;
+      std::list<SchemaRuleMap_t>::iterator rule;
+      SchemaRuleMap_t::iterator            attr;
+      SchemaRuleClassMap_t::iterator       it;
+
+      //-----------------------------------------------------------------------
+      // Processing read rules
+      //-----------------------------------------------------------------------
+      for( it = G__ReadRules.begin(); it != G__ReadRules.end(); ++it ) {
+         for( rule = it->second.begin(); rule != it->second.end(); ++rule ) {
+            attr = rule->find( "include" );
+            if( attr == rule->end() ) continue;
+            TSchemaRuleProcessor::SplitList( attr->second, tmp );
+            result.splice( result.begin(), tmp, tmp.begin(), tmp.end() );
+         }
+      }
+
+      //-----------------------------------------------------------------------
+      // Processing read raw rules
+      //-----------------------------------------------------------------------
+      for( it = G__ReadRawRules.begin(); it != G__ReadRawRules.end(); ++it ) {
+         for( rule = it->second.begin(); rule != it->second.end(); ++rule ) {
+            attr = rule->find( "include" );
+            if( attr == rule->end() ) continue;
+            TSchemaRuleProcessor::SplitList( attr->second, tmp );
+            result.splice( result.begin(), tmp, tmp.begin(), tmp.end() );
+         }
+      }
+
+      //-----------------------------------------------------------------------
+      // Removing duplicates
+      //-----------------------------------------------------------------------
+      result.sort();
+      result.unique();
    }
 
    //--------------------------------------------------------------------------
