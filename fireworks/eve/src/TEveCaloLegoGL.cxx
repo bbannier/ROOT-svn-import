@@ -145,22 +145,20 @@ void TEveCaloLegoGL::DLCachePurge()
 }
 
 //______________________________________________________________________________
-void TEveCaloLegoGL::GetCellData(TEveCaloData::CellId_t id, TEveCaloData::CellData_t &cell) const
+Bool_t TEveCaloLegoGL::PhiShiftInterval(Float_t &min, Float_t &max) const
 {
-   // Adjust cell value according to fM->fPhi shift.
-
-   fM->fData->GetCellData(id, cell);
-
-   if (fM->GetPhiMax()>TMath::Pi() && cell.fPhiMax<=fM->GetPhiMin())
+   if (fM->GetPhiMax()>TMath::Pi() && max<=fM->GetPhiMin())
    {
-      cell.fPhiMin += TMath::TwoPi();
-      cell.fPhiMax += TMath::TwoPi();
+      min += TMath::TwoPi();
+      max += TMath::TwoPi();
    }
-   else if (fM->GetPhiMin()<-TMath::Pi() && cell.fPhiMin>=fM->GetPhiMax())
+   else if (fM->GetPhiMin()<-TMath::Pi() && min>=fM->GetPhiMax())
    {
-      cell.fPhiMin -= TMath::TwoPi();
-      cell.fPhiMax -= TMath::TwoPi();
+      min -= TMath::TwoPi();
+      max -= TMath::TwoPi();
    }
+
+   return min>=fM->GetPhiMin() && max<=fM->GetPhiMax();
 }
 
 //______________________________________________________________________________
@@ -247,6 +245,7 @@ void TEveCaloLegoGL::MakeDisplayList(TEveCaloData::RebinData_t &rdata) const
       Float_t *vals;
       Int_t bin;
       Float_t offset;
+      Float_t y0, y1;
       for (Int_t s = 0; s < nSlices; ++s)
       {
          if (fDLMap.empty() || fDLMap[s] == 0)
@@ -265,8 +264,13 @@ void TEveCaloLegoGL::MakeDisplayList(TEveCaloData::RebinData_t &rdata) const
                   for (Int_t t=0; t<s; t++)
                      offset+=vals[t];
 
-                  MakeQuad(fEtaAxis->GetBinLowEdge(i), fPhiAxis->GetBinLowEdge(j), offset,
-                           fEtaAxis->GetBinWidth(i), fPhiAxis->GetBinWidth(j), vals[s]);
+                  y0 = fPhiAxis->GetBinLowEdge(j);
+                  y1 = fPhiAxis->GetBinUpEdge(j);
+                  if (PhiShiftInterval(y0, y1))
+                  {
+                     MakeQuad(fEtaAxis->GetBinLowEdge(i), y0, offset,
+                              fEtaAxis->GetBinWidth(i), y1-y0, vals[s]);
+                  }
                }
             }
          }
@@ -296,10 +300,11 @@ void TEveCaloLegoGL::MakeDisplayList(TEveCaloData::RebinData_t &rdata) const
                prevTower = fM->fCellList[i].fTower;
             }
 
-            GetCellData(fM->fCellList[i], cellData);
+            fM->fData->GetCellData(fM->fCellList[i], cellData);
             if (s == fM->fCellList[i].fSlice)
             {
                glLoadName(i);
+               PhiShiftInterval(cellData.fPhiMin, cellData.fPhiMax);
                MakeQuad(cellData.EtaMin(), cellData.PhiMin(), offset,
                         cellData.EtaDelta(), cellData.PhiDelta(), cellData.Value(fM->fPlotEt));
             }
@@ -494,7 +499,8 @@ void TEveCaloLegoGL::DrawZScales3D(TGLRnrCtx & rnrCtx,
    {
       // left most corner of the picked tower
       TEveCaloData::CellData_t cd;
-      GetCellData(fM->fCellList[fTowerPicked], cd);
+      fM->fData->GetCellData(fM->fCellList[fTowerPicked], cd);
+      PhiShiftInterval(cd.fPhiMin, cd.fPhiMax);
       switch(idxLeft)
       {
          case 0:
@@ -735,16 +741,16 @@ void TEveCaloLegoGL::DrawHistBase(TGLRnrCtx &rnrCtx) const
    }
 
    // phi grid
-   Int_t pFirst = fPhiAxis->FindBin(phi0);
-   i = pFirst;
-   val= fPhiAxis->GetBinUpEdge(i);
-   while (val < phi1)
+   Float_t y0, y1;
+   for (Int_t i=1; i<=fPhiAxis->GetNbins(); i++)
    {
-      glVertex2f(eta0, val);
-      glVertex2f(eta1, val);
-
-      i++;
-      val= fPhiAxis->GetBinUpEdge(i);
+      y0 = fPhiAxis->GetBinUpEdge(i);
+      y1 = fPhiAxis->GetBinUpEdge(i);
+      if (PhiShiftInterval(y0, y1))
+      {
+         glVertex2f(eta0, y0);
+         glVertex2f(eta1, y0);
+      }
    }
 
    glEnd();
@@ -834,13 +840,13 @@ void TEveCaloLegoGL::DrawCells2D(TEveCaloData::RebinData_t &rdata) const
          TEveCaloData::CellData_t currentCellData;
          TEveCaloData::CellData_t nextCellData;
 
-         GetCellData(*currentCell, currentCellData);
+        fM->fData->GetCellData(*currentCell, currentCellData);
          sum = max_energy = currentCellData.Value(fM->fPlotEt);
          max_energy_slice = currentCell->fSlice;
 
          while (nextCell != fM->fCellList.end() && currentCell->fTower == nextCell->fTower)
          {
-            GetCellData(*nextCell, nextCellData);
+            fM->fData->GetCellData(*nextCell, nextCellData);
             Float_t energy = nextCellData.Value(fM->fPlotEt);
             sum += energy;
             if (fM->fTopViewUseMaxColor && energy > max_energy) {
@@ -852,7 +858,7 @@ void TEveCaloLegoGL::DrawCells2D(TEveCaloData::RebinData_t &rdata) const
 
          glLoadName(name);
          glBegin(GL_QUADS);
-
+         PhiShiftInterval(currentCellData.fPhiMin,currentCellData.fPhiMax);
          if (fM->f2DMode == TEveCaloLego::kValColor)
          {
             fM->fPalette->ColorFromValue(FloorNint(sum), col);
@@ -958,6 +964,8 @@ void TEveCaloLegoGL::DrawCells2D(TEveCaloData::RebinData_t &rdata) const
       glBegin(GL_QUADS);
       Int_t entry = 0;
       Int_t bin;
+
+      Float_t y0, y1;
       for (Int_t i=1; i<=fEtaAxis->GetNbins(); i++)
       {
          for (Int_t j=1; j<=fPhiAxis->GetNbins(); j++)
@@ -966,6 +974,10 @@ void TEveCaloLegoGL::DrawCells2D(TEveCaloData::RebinData_t &rdata) const
             if (vec[bin] > threshold)
             {
                Float_t logVal = Log(vec[bin] + 1);
+               y0 = fPhiAxis->GetBinLowEdge(j);
+               y1 = fPhiAxis->GetBinUpEdge(j);
+
+               if(!PhiShiftInterval(y0, y1)) continue;
 
                if (fM->f2DMode == TEveCaloLego::kValColor)
                {
@@ -974,21 +986,19 @@ void TEveCaloLegoGL::DrawCells2D(TEveCaloData::RebinData_t &rdata) const
 
                   eta  = fEtaAxis->GetBinLowEdge(i);
                   etaW = fEtaAxis->GetBinWidth(i);
-                  phi  = fPhiAxis->GetBinLowEdge(j);
-                  phiW = fPhiAxis->GetBinWidth(j);
 
-                  glVertex3f(eta     , phi,      vec[bin]*scale);
-                  glVertex3f(eta+etaW, phi,      vec[bin]*scale);
-                  glVertex3f(eta+etaW, phi+phiW, vec[bin]*scale);
-                  glVertex3f(eta     , phi+phiW, vec[bin]*scale);
+                  glVertex3f(eta     , y0, vec[bin]*scale);
+                  glVertex3f(eta+etaW, y0, vec[bin]*scale);
+                  glVertex3f(eta+etaW, y1, vec[bin]*scale);
+                  glVertex3f(eta     , y1, vec[bin]*scale);
 
                }
                else if (fM->f2DMode == TEveCaloLego::kValSize)
                {
                   eta  = fEtaAxis->GetBinCenter(i);
                   etaW = fEtaAxis->GetBinWidth(i)*0.5f*logVal/logMax;
-                  phi  = fPhiAxis->GetBinCenter(j);
-                  phiW = fPhiAxis->GetBinWidth(j)*0.5f*logVal/logMax;
+                  phi  = 0.5*(y0+y1);
+                  phiW = (y1-y0)*0.5f*logVal/logMax;
 
                   if (fM->fTopViewUseMaxColor)
                   {
@@ -1101,7 +1111,6 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
             {
                Double_t maxVal=0;
                Double_t sum;
-
                for (UInt_t i=0; i<rdata.fSliceData.size(); i+=rdata.fNSlices)
                {
                   sum = 0;
@@ -1110,10 +1119,8 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
 
                   if (sum > maxVal) maxVal=sum;
                }
+               Float_t scale = maxVal/fM->GetMaxVal();
 
-
-               Float_t scale;
-               scale = maxVal/fM->GetMaxVal();
                for (std::vector<Float_t>::iterator it=rdata.fSliceData.begin(); it!=rdata.fSliceData.end(); it++)
                   (*it) /= scale;
             }
