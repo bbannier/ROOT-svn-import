@@ -61,6 +61,11 @@ namespace ROOT
                          const std::string& listName, std::ostream& output );
 
    //---------------------------------------------------------------------------
+   // Get the list of includes defined in schema rules
+   //---------------------------------------------------------------------------
+   void GetRuleIncludes( std::list<std::string> &result );
+
+   //---------------------------------------------------------------------------
    // Parse read pragma
    //---------------------------------------------------------------------------
    void ProcessReadPragma( char* args );

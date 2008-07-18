@@ -4934,6 +4934,13 @@ int main(int argc, char **argv)
       (*dictSrcOut) << "class TVirtualObject;" << std::endl;
       (*dictSrcOut) << "#include <vector>" << std::endl;
       (*dictSrcOut) << "#include \"TSchemaHelper.h\"" << std::endl << std::endl;
+
+      std::list<std::string>           includes;
+      std::list<std::string>::iterator it;
+      GetRuleIncludes( includes );
+      for( it = includes.begin(); it != includes.end(); ++it )
+         (*dictSrcOut) << "#include <" << *it << ">" << std::endl;
+      (*dictSrcOut) << std::endl;
    }
 
    // Loop over all command line arguments and write include statements.
