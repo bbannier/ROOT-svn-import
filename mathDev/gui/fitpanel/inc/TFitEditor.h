@@ -119,7 +119,6 @@ protected:
    Float_t              fZmin;             // z-min
    Float_t              fZmax;             // z-max
 
-   TString              fPlus;             // string for addition ('+' or "++")
    TString              fFunction;         // selected function to fit
    TString              fFitOption;        // fitting options
    TString              fDrawOption;       // graphics option for drawing
@@ -158,6 +157,8 @@ private:
    TFitEditor(const TFitEditor&);              // not implemented
    TFitEditor& operator=(const TFitEditor&);   // not implemented
 
+   void RetrieveOptions(TString&, TString&);
+
 public:
    TFitEditor(TVirtualPad* pad, TObject *obj);
    virtual ~TFitEditor();
@@ -184,13 +185,9 @@ public:
 
    // slot methods 'General' tab
    virtual void   DoAddition(Bool_t on);
-   virtual void   DoAddtoList();
    virtual void   DoAdvancedOptions();
    virtual void   DoAllWeights1();
-   virtual void   DoBestErrors();
-   virtual void   DoBound(Bool_t set);
    virtual void   DoClose();
-   virtual void   DoDrawSame();
    virtual void   DoEmptyBinsAllWeights1();
    virtual void   DoEnteredFunction();
    virtual void   DoFit();
@@ -198,17 +195,12 @@ public:
    virtual void   DoMaxTolerance();
    virtual void   DoMaxIterations();
    virtual void   DoFunction(Int_t sel);
-   virtual void   DoImproveResults();
-   virtual void   DoIntegral();
    virtual void   DoLinearFit();
-   virtual void   DoMethod(Int_t id);
    virtual void   DoNoChi2();
-   virtual void   DoNoDrawing();
    virtual void   DoNoOperation(Bool_t on);
    virtual void   DoNoSelection();
    virtual void   DoNoStoreDrawing();
    virtual void   DoReset();
-   virtual void   DoRobust();
    virtual void   DoSetParameters();
    virtual void   DoSliderXMoved();
    virtual void   DoSliderXPressed();
@@ -220,7 +212,6 @@ public:
    virtual void   DoSliderZPressed();
    virtual void   DoSliderZReleased();
    virtual void   DoUserDialog();
-   virtual void   DoUseRange();
 
    // slot methods 'Minimization' tab
    virtual void   DoLibrary(Bool_t on);

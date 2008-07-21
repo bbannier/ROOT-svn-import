@@ -119,6 +119,10 @@
 //End_Html
 //////////////////////////////////////////////////////////////////////////
 
+#include <iostream>
+
+using std::cout; using std::endl;
+
 #include "TFitEditor.h"
 #include "TROOT.h"
 #include "TClass.h"
@@ -194,7 +198,6 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
    fYmax        (0),
    fZmin        (0),
    fZmax        (0),
-   fPlus        ('+'),
    fFunction    (""),
    fFitOption   (""),
    fDrawOption  (""),
@@ -280,7 +283,6 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
    if (pad && obj) {
       fParentPad = (TPad *)pad;
       fFitObject = (TObject *)obj;
-      fDrawOption = GetDrawOption();
       SetCanvas(pad->GetCanvas());
       pad->GetCanvas()->Selected(pad, obj, kButton1Down);
    } else {
@@ -756,27 +758,15 @@ void TFitEditor::ConnectSlots()
    fAdd->Connect("Toggled(Bool_t)","TFitEditor", this, "DoAddition(Bool_t)");
 
    // fit options
-   fIntegral->Connect("Toggled(Bool_t)","TFitEditor",this,"DoIntegral()");
-   fBestErrors->Connect("Toggled(Bool_t)","TFitEditor",this,"DoBestErrors()");
-   fUseRange->Connect("Toggled(Bool_t)","TFitEditor",this,"DoUseRange()");
-   fAdd2FuncList->Connect("Toggled(Bool_t)","TFitEditor",this,"DoAddtoList()");
    fAllWeights1->Connect("Toggled(Bool_t)","TFitEditor",this,"DoAllWeights1()");
    fEmptyBinsWghts1->Connect("Toggled(Bool_t)","TFitEditor",this,"DoEmptyBinsAllWeights1()");
-   fImproveResults->Connect("Toggled(Bool_t)","TFitEditor",this,"DoImproveResults()");
 
    // linear fit
    fLinearFit->Connect("Toggled(Bool_t)","TFitEditor",this,"DoLinearFit()");
    fNoChi2->Connect("Toggled(Bool_t)","TFitEditor",this,"DoNoChi2()");
-   fRobustValue->Connect("ValueSet(Long_t)", "TFitEditor", this, "DoRobust()");
-   (fRobustValue->GetNumberEntry())->Connect("ReturnPressed()", "TFitEditor",
-                                              this, "DoRobust()");
 
    // draw options
    fNoStoreDrawing->Connect("Toggled(Bool_t)","TFitEditor",this,"DoNoStoreDrawing()");
-   fNoDrawing->Connect("Toggled(Bool_t)","TFitEditor",this,"DoNoDrawing()");
-   fDrawSame->Connect("Toggled(Bool_t)","TFitEditor",this,"DoDrawSame()");
-   // fit method
-   fMethodList->Connect("Selected(Int_t)", "TFitEditor", this, "DoMethod(Int_t)");
 
    // fit, reset, close buttons
    fFitButton->Connect("Clicked()", "TFitEditor", this, "DoFit()");
@@ -843,27 +833,15 @@ void TFitEditor::DisconnectSlots()
    fAdd->Disconnect("Toggled(Bool_t)");
 
    // fit options
-   fIntegral->Disconnect("Toggled(Bool_t)");
-   fBestErrors->Disconnect("Toggled(Bool_t)");
-   fUseRange->Disconnect("Toggled(Bool_t)");
-   fAdd2FuncList->Disconnect("Toggled(Bool_t)");
    fAllWeights1->Disconnect("Toggled(Bool_t)");
    fEmptyBinsWghts1->Disconnect("Toggled(Bool_t)");
-   fImproveResults->Disconnect("Toggled(Bool_t)");
 
    // linear fit
    fLinearFit->Disconnect("Toggled(Bool_t)");
    fNoChi2->Disconnect("Toggled(Bool_t)");
-   fRobustValue->Disconnect("ValueSet(Long_t)");
-   (fRobustValue->GetNumberEntry())->Disconnect("ReturnPressed()");
 
    // draw options
    fNoStoreDrawing->Disconnect("Toggled(Bool_t)");
-   fNoDrawing->Disconnect("Toggled(Bool_t)");
-   fDrawSame->Disconnect("Toggled(Bool_t)");
-
-   // fit method
-   fMethodList->Disconnect("Selected(Int_t)");
 
    // fit, reset, close buttons
    fFitButton->Disconnect("Clicked()");
@@ -1177,7 +1155,6 @@ void TFitEditor::SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event)
 
    fParentPad = pad;
    fFitObject = obj;
-   fDrawOption = GetDrawOption();
    ShowObjectName(obj);
    UpdateGUI();
 
@@ -1326,19 +1303,6 @@ TGComboBox* TFitEditor::BuildMethodList(TGFrame* parent, Int_t id)
 }
 
 //______________________________________________________________________________
-void TFitEditor::DoAddtoList()
-{
-   // Slot connected to 'add to list of function' setting.
-
-   if (fAdd2FuncList->GetState() == kButtonDown)
-      fFitOption += '+';
-   else {
-      Int_t eq = fFitOption.First('+');
-      fFitOption.Remove(eq, 1);
-   }
-}
-
-//______________________________________________________________________________
 void TFitEditor::DoAdvancedOptions()
 {
    // Slot connected to advanced option button (opens a dialog).
@@ -1353,15 +1317,9 @@ void TFitEditor::DoEmptyBinsAllWeights1()
 {
    // Slot connected to 'include emtry bins and forse all weights to 1' setting.
 
-   if (fEmptyBinsWghts1->GetState() == kButtonDown) {
-      if (fAllWeights1->GetState() == kButtonDown) {
+   if (fEmptyBinsWghts1->GetState() == kButtonDown)
+      if (fAllWeights1->GetState() == kButtonDown)
          fAllWeights1->SetState(kButtonUp, kTRUE);
-      }
-      fFitOption += "WW";
-   } else {
-      Int_t eq = fFitOption.First("WW");
-      fFitOption.Remove(eq, 2);
-   }
 }
 
 //______________________________________________________________________________
@@ -1369,15 +1327,9 @@ void TFitEditor::DoAllWeights1()
 {
    // Slot connected to 'set all weights to 1' setting.
 
-   if (fAllWeights1->GetState() == kButtonDown) {
-      if (fEmptyBinsWghts1->GetState() == kButtonDown) {
+   if (fAllWeights1->GetState() == kButtonDown)
+      if (fEmptyBinsWghts1->GetState() == kButtonDown)
          fEmptyBinsWghts1->SetState(kButtonUp, kTRUE);
-      }
-      fFitOption += 'W';
-   } else {
-      Int_t eq = fFitOption.First('W');
-      fFitOption.Remove(eq, 1);
-   }
 }
 
 //______________________________________________________________________________
@@ -1386,24 +1338,6 @@ void TFitEditor::DoClose()
    // Close the fit panel.
 
    Hide();
-}
-
-//______________________________________________________________________________
-void TFitEditor::DoDrawSame()
-{
-   // Slot connected to 'same' draw option.
-
-   fFitOption.ToUpper();
-   
-   if (fDrawSame->GetState() == kButtonDown) {
-      if (fDrawOption.Contains("SAME"))
-         return;
-      else
-         fDrawOption += "SAME";
-   } else {
-      if (fDrawOption.Contains("SAME"))
-         fDrawOption.ReplaceAll("SAME", "");
-   }
 }
 
 //______________________________________________________________________________
@@ -1419,6 +1353,8 @@ void TFitEditor::DoFit()
                    fFunction.Data()), kMBIconExclamation, kMBClose, 0);
       return;
    }
+
+   RetrieveOptions(fFitOption, fDrawOption);
 
    fFitButton->SetState(kButtonEngaged);
    if (gPad) gPad->GetVirtCanvas()->SetCursor(kWatch);
@@ -1439,7 +1375,6 @@ void TFitEditor::DoFit()
          xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
          xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
          fFitFunc->SetRange(xmin,xmax);
-         fDrawOption = GetDrawOption();
          h1->Fit(fFitFunc, fFitOption.Data(), fDrawOption.Data(), xmin, xmax);
          break;
       }
@@ -1460,7 +1395,6 @@ void TFitEditor::DoFit()
             if (xmax > gxmax) xmax = gxmax;
          }
          fFitFunc->SetRange(xmin,xmax);
-         fDrawOption = GetDrawOption();
          gr->Fit(fFitFunc, fFitOption.Data(), fDrawOption.Data(), xmin, xmax);
          break;
       }
@@ -1588,12 +1522,6 @@ void TFitEditor::DoFunction(Int_t)
    } else {
       fLinearFit->SetState(kButtonUp, kTRUE);
    }
-/*   if (fFunction.Contains("user")) {
-      fFitOption += 'U';
-   } else if (fFitOption.Contains('U')) {
-      Int_t eq = fFitOption.First('U');
-      fFitOption.Remove(eq, 1);
-   }*/
 
    fEnteredFunc->SelectAll();
    fSelLabel->SetText(fFunction.Data());
@@ -1636,55 +1564,16 @@ void TFitEditor::DoEnteredFunction()
 }
 
 //______________________________________________________________________________
-void TFitEditor::DoImproveResults()
-{
-   // Slot connected to 'improve fit results' option settings.
-
-   if (fImproveResults->GetState() == kButtonDown)
-      fFitOption += 'M';
-   else if (fFitOption.Contains('M'))
-      fFitOption.ReplaceAll('M', "");
-}
-
-//______________________________________________________________________________
-void TFitEditor::DoBestErrors()
-{
-   // Slot connected to 'best errors' option settings.
-
-   if (fBestErrors->GetState() == kButtonDown)
-      fFitOption += 'E';
-   else if (fFitOption.Contains('E'))
-      fFitOption.ReplaceAll('E', "");
-}
-
-//______________________________________________________________________________
-void TFitEditor::DoIntegral()
-{
-   // Slot connected to 'integral' option settings.
-
-   if (fIntegral->GetState() == kButtonDown)
-      fFitOption += 'I';
-   else if (fFitOption.Contains('I'))
-      fFitOption.ReplaceAll('I', "");
-}
-
-//______________________________________________________________________________
 void TFitEditor::DoLinearFit()
 {
    // Slot connected to linear fit settings.
 
    if (fLinearFit->GetState() == kButtonDown) {
-      fPlus = "++";
-      if (fFitOption.Contains('F'))
-         fFitOption.ReplaceAll('F', "");
       fSetParam->SetState(kButtonDisabled);
       fBestErrors->SetState(kButtonDisabled);
       fImproveResults->SetState(kButtonDisabled);
       fRobustValue->SetState(kTRUE);
    } else {
-      fPlus = '+';
-      if (fFunction.Contains("pol") || fFunction.Contains("++"))
-         fFitOption += 'F';
       fSetParam->SetState(kButtonUp);
       fBestErrors->SetState(kButtonUp);
       fImproveResults->SetState(kButtonUp);
@@ -1693,53 +1582,18 @@ void TFitEditor::DoLinearFit()
 }
 
 //______________________________________________________________________________
-void TFitEditor::DoMethod(Int_t id)
-{
-   // Slot connected to fit method settings.
-
-   if (id == kFP_MCHIS) {
-      if (fFitOption.Contains('L'))
-         fFitOption.ReplaceAll('L', "");
-   } else {
-      fFitOption += 'L';
-   }
-}
-
-//______________________________________________________________________________
 void TFitEditor::DoNoChi2()
 {
    // Slot connected to 'no chi2' option settings.
-
-   if (fNoChi2->GetState() == kButtonDown)
-      fFitOption += 'C';
-   else if (fFitOption.Contains('C'))
-      fFitOption.ReplaceAll('C', "");
 
    if (fLinearFit->GetState() == kButtonUp)
       fLinearFit->SetState(kButtonDown, kTRUE);
 }
 
 //______________________________________________________________________________
-void TFitEditor::DoNoDrawing()
-{
-   // Slot connected to 'no drawing' settings.
-
-   if (fNoDrawing->GetState() == kButtonDown)
-      fFitOption += '0';
-   else if (fFitOption.Contains('0'))
-      fFitOption.ReplaceAll('0', "");
-}
-
-//______________________________________________________________________________
 void TFitEditor::DoNoStoreDrawing()
 {
    // Slot connected to 'no storing, no drawing' settings.
-
-   if (fNoStoreDrawing->GetState() == kButtonDown)
-      fFitOption += 'N';
-   else if (fFitOption.Contains('N'))
-      fFitOption.ReplaceAll('N', "");
-
    if (fNoDrawing->GetState() == kButtonUp)
       fNoDrawing->SetState(kButtonDown);
 }
@@ -1757,12 +1611,6 @@ void TFitEditor::DoPrintOpt(Bool_t on)
             fOptDefault->SetState(kButtonDown);
             fOptVerbose->SetState(kButtonUp);
             fOptQuiet->SetState(kButtonUp);
-            if (fFitOption.Contains('Q')) {
-               fFitOption.ReplaceAll('Q', "");
-            }
-            if (fFitOption.Contains('V')) {
-               fFitOption.ReplaceAll('V', "");
-            }
          }
          fStatusBar->SetText("Prn: DEF",3);
          break;
@@ -1771,10 +1619,6 @@ void TFitEditor::DoPrintOpt(Bool_t on)
             fOptVerbose->SetState(kButtonDown);
             fOptDefault->SetState(kButtonUp);
             fOptQuiet->SetState(kButtonUp);
-            if (fFitOption.Contains('Q')) {
-               fFitOption.ReplaceAll('Q', "");
-            }
-            fFitOption += 'V';
          }
          fStatusBar->SetText("Prn: VER",3);
          break;
@@ -1783,10 +1627,6 @@ void TFitEditor::DoPrintOpt(Bool_t on)
             fOptQuiet->SetState(kButtonDown);
             fOptDefault->SetState(kButtonUp);
             fOptVerbose->SetState(kButtonUp);
-            if (fFitOption.Contains('V')) {
-               fFitOption.ReplaceAll('V', "");
-            }
-            fFitOption += 'Q';
          }
          fStatusBar->SetText("Prn: QT",3);
       default:
@@ -1802,7 +1642,7 @@ void TFitEditor::DoReset()
    fParentPad->Modified();
    fParentPad->Update();
    fFitOption = "";
-   fDrawOption = GetDrawOption();
+   fDrawOption = "";
    fFunction = "gaus";
    if (fFitFunc) {
       fFitFunc->SetParent(0);
@@ -1817,7 +1657,6 @@ void TFitEditor::DoReset()
       fSliderX->SetRange(1,fXrange);
       fSliderX->SetPosition(fXmin,fXmax);
    }
-   fPlus = '+';
    if (fLinearFit->GetState() == kButtonDown)
       fLinearFit->SetState(kButtonUp, kTRUE);
    if (fBestErrors->GetState() == kButtonDown)
@@ -1866,46 +1705,6 @@ void TFitEditor::DoReset()
 }
 
 //______________________________________________________________________________
-void TFitEditor::DoRobust()
-{
-   // Slot connected to robust setting of linear fit.
-
-   if (fType != kObjectGraph) return;
-
-   fRobustValue->SetState(kTRUE);
-   if (fFitOption.Contains("ROB")) {
-      Int_t pos = fFitOption.Index("=");
-      fFitOption.Replace(pos+1, 4, Form("%g",fRobustValue->GetNumber()));
-   } else {
-      fFitOption += Form("ROB=%g", fRobustValue->GetNumber());
-   }
-}
-
-//______________________________________________________________________________
-void TFitEditor::DoBound(Bool_t on)
-{
-   // Slot connected to 'B' option setting.
-
-   TString s = fFitOption;
-   if (s.Contains("ROB")) {
-      s.ReplaceAll("ROB", "H");
-   }
-   if (on) {
-      if (s.Contains('B'))
-         return;
-      else 
-         fFitOption += 'B';
-   } else {
-      if (s.Contains('B')) {
-      Int_t pos = fFitOption.First('B');
-      Int_t rob = fFitOption.Index("ROB");
-      if (pos != rob+2)
-         fFitOption.Remove(pos, 1);
-      }
-   }
-}
-
-//______________________________________________________________________________
 void TFitEditor::DoSetParameters()
 {
    // Open set parameters dialog.
@@ -1924,11 +1723,16 @@ void TFitEditor::DoSetParameters()
    TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
    if ((fNone->GetState() == kButtonDown) && 
        strcmp(te->GetTitle(), "user")) {
+      // DoBound would set the fFitOption with +B if there was any
+      // bound parameter. However, this option was not working fine
+      // and we removed until we can guarantee it will work.
+      /*
       if (ret == kFPDBounded) {
          DoBound(kTRUE);
       } else {
          DoBound(kFALSE);
       }
+      */
    }
    fParentPad->Connect("RangeAxisChanged()", "TFitEditor", this, "UpdateGUI()");
 }
@@ -2192,21 +1996,6 @@ void TFitEditor::DoUserDialog()
    new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
                 "Info", "Dialog of user method is not implemented yet",
                 kMBIconAsterisk,kMBOk, 0);
-}
-
-//______________________________________________________________________________
-void TFitEditor::DoUseRange()
-{
-   // Slot connected to fit range settings.
-
-   if (fUseRange->GetState() == kButtonDown)
-      fFitOption.Insert(0,'R');
-   else  {
-      Int_t pos = fFitOption.First('R');
-      Int_t rob = fFitOption.Index("ROB");
-      if (pos != rob)
-         fFitOption.Remove(pos, 1);
-   }
 }
 
 //______________________________________________________________________________
@@ -2641,5 +2430,64 @@ void TFitEditor::CheckRange(TF1 *f1)
       fSliderX->Connect("Pressed()","TFitEditor",this, "DoSliderXPressed()");
       fSliderX->Connect("Released()","TFitEditor",this, "DoSliderXReleased()");
    }
+}
+
+//______________________________________________________________________________
+void TFitEditor::RetrieveOptions(TString& fitOpts, TString& drawOpts)
+{
+   fitOpts = drawOpts = "";
+
+   if (fUseRange->GetState() == kButtonDown)
+      fitOpts += 'R';
+
+   if (fIntegral->GetState() == kButtonDown)
+      fitOpts += 'I';
+
+   if (fImproveResults->GetState() == kButtonDown)
+      fitOpts += 'M';
+
+   if (fBestErrors->GetState() == kButtonDown)
+      fitOpts += 'E';
+
+   if (fMethodList->GetSelected() != kFP_MCHIS)
+      fitOpts += 'L';
+
+   if (fEmptyBinsWghts1->GetState() == kButtonDown)
+      fitOpts += "WW";
+   else if (fAllWeights1->GetState() == kButtonDown)
+      fitOpts += 'W';
+
+   if ( !(fLinearFit->GetState() == kButtonDown) &&
+        (fFunction.Contains("pol") || fFunction.Contains("++")) )
+      fitOpts += 'F';
+
+   if (fNoChi2->GetState() == kButtonDown)
+      fitOpts += 'C';
+
+   if (fNoStoreDrawing->GetState() == kButtonDown)
+      fitOpts += 'N';
+
+   if (fNoDrawing->GetState() == kButtonDown)
+      fitOpts += '0';
+
+   if (fAdd2FuncList->GetState() == kButtonDown)
+      fitOpts += '+';
+
+   if ( fOptQuiet->GetState() == kButtonDown )
+      fitOpts += 'Q'; 
+
+   if ( fOptVerbose->GetState() == kButtonDown ) 
+      fitOpts += 'V';
+
+   if ( !(fType != kObjectGraph) && (fLinearFit->GetState() == kButtonDown) )
+      fitOpts += Form("ROB=%g", fRobustValue->GetNumber());
+
+   if (fDrawSame->GetState() == kButtonDown)
+      drawOpts += "SAME";
+
+   drawOpts = GetDrawOption();
+
+   cout << "fFitOption: " << fitOpts 
+        << "\tfDrawOption: " << drawOpts << endl;   
 }
 
