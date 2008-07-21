@@ -78,16 +78,18 @@ namespace ROOT
             std::string            first;
             std::string            second;
 
-            if( source.empty() )
+            std::string version = Trim( source );
+
+            if( version.empty() )
                return false;
 
             //------------------------------------------------------------------
             // Check if we have a minus somewhere, if not then single version
             // number was specified
             //------------------------------------------------------------------
-            hyphenI = source.find( '-' );
-            if( hyphenI == std::string::npos && IsANumber( source ) ) {
-               result.first = result.second = atoi( source.c_str() );
+            hyphenI = version.find( '-' );
+            if( hyphenI == std::string::npos && IsANumber( version ) ) {
+               result.first = result.second = atoi( version.c_str() );
                return true;
             }
 
@@ -95,7 +97,7 @@ namespace ROOT
             // We start with the hyphen
             //------------------------------------------------------------------
             if( hyphenI == 0 ) {
-               second = Trim( source.substr( 1 ) );
+               second = Trim( version.substr( 1 ) );
                if( IsANumber( second ) ) {
                   result.first  = -10;
                   result.second = atoi( second.c_str() );
@@ -106,8 +108,8 @@ namespace ROOT
             //------------------------------------------------------------------
             // We end with the hyphen
             //------------------------------------------------------------------
-            if( hyphenI == source.size()-1 ) {
-               first = Trim( source.substr( 0, source.size()-1 ) );
+            if( hyphenI == version.size()-1 ) {
+               first = Trim( version.substr( 0, version.size()-1 ) );
                if( IsANumber( first ) ) {
                   result.first  = atoi( first.c_str() );
                   result.second = 50000;
@@ -118,11 +120,11 @@ namespace ROOT
             //------------------------------------------------------------------
             // We have the hyphen somewhere in the middle
             //------------------------------------------------------------------
-            first  = Trim( source.substr( 0, hyphenI ) );
-            second = Trim( source.substr( hyphenI+1, source.size()-hyphenI-1 ) );
+            first  = Trim( version.substr( 0, hyphenI ) );
+            second = Trim( version.substr( hyphenI+1, version.size()-hyphenI-1 ) );
             if( IsANumber( first ) && IsANumber( second ) ) {
                result.first  = atoi( first.c_str() );
-               result.second = atoi( first.c_str() );
+               result.second = atoi( second.c_str() );
                return true;
             }
 
