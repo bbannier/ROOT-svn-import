@@ -206,8 +206,6 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
    fZmin        (0),
    fZmax        (0),
    fFunction    (""),
-   fFitOption   (""),
-   fDrawOption  (""),
    fFitFunc     (0)
 
 {
@@ -1169,7 +1167,7 @@ void TFitEditor::SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event)
    
    Bool_t hasf = HasFitFunction(obj);
    if (hasf) {
-      fFunction = fFitFunc->GetTitle();
+      fFunction = fFitFunc->GetExpFormula();
       fEnteredFunc->SetText(fFunction.Data());
       TGLBEntry *en = fFuncList->FindEntry(fFunction.Data());
       if (en) fFuncList->Select(en->EntryId());
@@ -1361,7 +1359,8 @@ void TFitEditor::DoFit()
       return;
    }
 
-   RetrieveOptions(fFitOption, fDrawOption);
+   TString strDrawOpts, strFitOpts;
+   RetrieveOptions(strFitOpts, strDrawOpts);
 
    fFitButton->SetState(kButtonEngaged);
    if (gPad) gPad->GetVirtCanvas()->SetCursor(kWatch);
@@ -1385,8 +1384,8 @@ void TFitEditor::DoFit()
          // Still temporal until the same algorithm is implemented for
          // graph. Then it could be done in a more elegant way.
          Foption_t fitOpts;
-         TH1::FitOptionsMake(fFitOption,fitOpts);
-         TH1Fit::Fit(h1, fFitFunc, fitOpts, fDrawOption, xmin, xmax);
+         TH1::FitOptionsMake(strFitOpts,fitOpts);
+         TH1Fit::Fit(h1, fFitFunc, fitOpts, strDrawOpts, xmin, xmax);
          break;
       }
       case kObjectGraph: {
@@ -1406,7 +1405,7 @@ void TFitEditor::DoFit()
             if (xmax > gxmax) xmax = gxmax;
          }
          fFitFunc->SetRange(xmin,xmax);
-         gr->Fit(fFitFunc, fFitOption.Data(), fDrawOption.Data(), xmin, xmax);
+         gr->Fit(fFitFunc, strFitOpts.Data(), strDrawOpts.Data(), xmin, xmax);
          break;
       }
       case kObjectGraph2D: {
@@ -1490,7 +1489,7 @@ void TFitEditor::DoNoOperation(Bool_t on)
    // Slot connected to NOP of predefined functions.
 
    TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-   if (on) {
+   if (on && te) {
       fEnteredFunc->SetText(te->GetTitle());
    }
    fFunction = fEnteredFunc->GetText();
@@ -1652,8 +1651,6 @@ void TFitEditor::DoReset()
 
    fParentPad->Modified();
    fParentPad->Update();
-   fFitOption = "";
-   fDrawOption = "";
    fFunction = "gaus";
    if (fFitFunc) {
       fFitFunc->SetParent(0);
@@ -1731,20 +1728,20 @@ void TFitEditor::DoSetParameters()
    new TFitParametersDialog(gClient->GetDefaultRoot(), GetMainFrame(), 
                             fFitFunc, fParentPad, xmin, xmax, &ret);
 
-   TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-   if ((fNone->GetState() == kButtonDown) && 
-       strcmp(te->GetTitle(), "user")) {
-      // DoBound would set the fFitOption with +B if there was any
-      // bound parameter. However, this option was not working fine
-      // and we removed until we can guarantee it will work.
-      /*
-      if (ret == kFPDBounded) {
-         DoBound(kTRUE);
-      } else {
-         DoBound(kFALSE);
-      }
-      */
-   }
+//    TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
+//    if ((fNone->GetState() == kButtonDown) && te != 0 &&
+//        strcmp(te->GetTitle(), "user")) {
+//       // DoBound would set the fFitOption with +B if there was any
+//       // bound parameter. However, this option was not working fine
+//       // and we removed until we can guarantee it will work.
+//       /*
+//       if (ret == kFPDBounded) {
+//          DoBound(kTRUE);
+//       } else {
+//          DoBound(kFALSE);
+//       }
+//       */
+//    }
    fParentPad->Connect("RangeAxisChanged()", "TFitEditor", this, "UpdateGUI()");
 }
 
