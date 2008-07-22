@@ -22,7 +22,7 @@
 #include "Reflex/MemberTemplate.h"
 #include "Reflex/Tools.h"
 
-#include "Reflex/internal/MemberBase.h"
+#include "MemberBase.h"
 
 #include "Class.h"
 

@@ -13,9 +13,9 @@
 #define Reflex_Class
 
 // Include files
-#include "Reflex/internal/TypeBase.h"
-#include "Reflex/internal/ScopeBase.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "TypeBase.h"
+#include "ScopeBase.h"
+#include "OwnedMember.h"
 #include <map>
 #include <vector>
 

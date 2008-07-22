@@ -17,6 +17,7 @@
 #include "Reflex/PropertyList.h"
 #include "Reflex/Type.h"
 #include "Reflex/Scope.h"
+#include "OwnedPropertyList.h"
 
 namespace Reflex {
 
@@ -111,7 +112,7 @@ namespace Internal {
 
 
       /** return the name of the member */
-      virtual std::string Name( unsigned int mod = 0 ) const;
+      virtual const std::string& Name(std::string& buf, unsigned int mod = SCOPED ) const;
 
 
       /** return the offset of the member */

@@ -15,7 +15,7 @@
 // Include files
 #include "Reflex/Kernel.h"
 #include "Reflex/Scope.h"
-#include "Reflex/internal/OwnedPropertyList.h"
+#include "OwnedPropertyList.h"
 #include <vector>
 #include <typeinfo>
 
@@ -171,13 +171,6 @@ namespace Internal {
       * @return size of array
       */
       virtual size_t ArrayLength() const;
-
-
-      /**
-      * Name returns the name of the type
-      * @return name of type
-      */
-      virtual std::string Name( unsigned int mod = SCOPED | QUALIFIED ) const;
 
 
       /**
@@ -501,16 +494,6 @@ Reflex::Internal::TypeBase::Is(const EntityProperty& prop, const int mod) const 
 inline bool Reflex::Internal::TypeBase::IsComplete() const {
 //-------------------------------------------------------------------------------
    return true;
-}
-
-
-//-------------------------------------------------------------------------------
-inline std::string
-Reflex::Internal::TypeBase::Name( unsigned int mod ) const {
-//-------------------------------------------------------------------------------
-// Return the name of the type.
-   std::string buf;
-   return Name(buf, mod);
 }
 
 

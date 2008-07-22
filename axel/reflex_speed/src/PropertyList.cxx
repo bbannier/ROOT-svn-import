@@ -15,7 +15,7 @@
 
 #include "Reflex/PropertyList.h"
 
-#include "Reflex/internal/PropertyListImpl.h"
+#include "PropertyListImpl.h"
 #include "Reflex/Any.h"
 
 //-------------------------------------------------------------------------------
@@ -29,34 +29,116 @@ std::ostream & Reflex::operator<<( std::ostream & s,
 
 
 //-------------------------------------------------------------------------------
-Reflex::StdString_Iterator Reflex::PropertyList::Key_Begin() {
+inline size_t Reflex::PropertyList::AddProperty( const std::string & key,
+                                                       const Any & value ) const {
 //-------------------------------------------------------------------------------
-// Return the begin iterator of the keys container.
-   return Internal::PropertyListImpl::Key_Begin();
+   if ( fPropertyListImpl ) return fPropertyListImpl->AddProperty( key, value );
+   return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::StdString_Iterator Reflex::PropertyList::Key_End() {
+inline void Reflex::PropertyList::AddProperty( size_t key,
+                                                     const Any & value ) const {
 //-------------------------------------------------------------------------------
-// Return the end iterator of the keys container.
-   return Internal::PropertyListImpl::Key_End();
+   if ( fPropertyListImpl ) return fPropertyListImpl->AddProperty( key, value );
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Reverse_StdString_Iterator Reflex::PropertyList::Key_RBegin() {
+inline size_t Reflex::PropertyList::AddProperty( const std::string & key,
+                                                       const char* value ) const {
 //-------------------------------------------------------------------------------
-// Return the rbegin iterator of the keys container.
-   return Internal::PropertyListImpl::Key_RBegin();
+   if ( fPropertyListImpl ) return fPropertyListImpl->AddProperty( key, value );
+   return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Reverse_StdString_Iterator Reflex::PropertyList::Key_REnd() {
+inline void Reflex::PropertyList::AddProperty( size_t key,
+                                                     const char* value ) const {
 //-------------------------------------------------------------------------------
-// Return the rend iterator of the keys container.
-   return Internal::PropertyListImpl::Key_REnd();
+   if ( fPropertyListImpl ) return fPropertyListImpl->AddProperty( key, value );
+}
+
+
+//-------------------------------------------------------------------------------
+inline void Reflex::PropertyList::ClearProperties() const {
+//-------------------------------------------------------------------------------
+   if ( fPropertyListImpl ) fPropertyListImpl->ClearProperties();
+}
+
+
+//-------------------------------------------------------------------------------
+inline bool Reflex::PropertyList::HasProperty(const std::string & key) const {
+//-------------------------------------------------------------------------------
+   if ( fPropertyListImpl ) return fPropertyListImpl->HasProperty( key );
+   return false;
+}
+
+
+//-------------------------------------------------------------------------------
+inline bool Reflex::PropertyList::HasProperty( size_t key) const {
+//-------------------------------------------------------------------------------
+   if ( fPropertyListImpl ) return fPropertyListImpl->HasProperty( key );
+   return false;
+}
+
+
+//-------------------------------------------------------------------------------
+inline std::string 
+Reflex::PropertyList::PropertyAsString( const std::string & key ) const {
+//-------------------------------------------------------------------------------
+   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyAsString( key );
+   return "";
+}
+
+
+//-------------------------------------------------------------------------------
+inline std::string 
+Reflex::PropertyList::PropertyAsString( size_t key ) const {
+//-------------------------------------------------------------------------------
+   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyAsString( key );
+   return "";
+}
+
+
+//-------------------------------------------------------------------------------
+inline size_t Reflex::PropertyList::PropertyKey( const std::string & key,
+                                                       bool allocateNew ) const {
+//-------------------------------------------------------------------------------
+   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyKey( key, allocateNew );
+   return 0;
+}
+
+
+//-------------------------------------------------------------------------------
+inline std::string Reflex::PropertyList::PropertyKeys() const {
+//-------------------------------------------------------------------------------
+   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyKeys();
+   return "";
+}
+
+
+//-------------------------------------------------------------------------------
+inline size_t Reflex::PropertyList::PropertyCount() const {
+//-------------------------------------------------------------------------------
+   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyCount();
+   return 0;
+}
+
+
+//-------------------------------------------------------------------------------
+inline void Reflex::PropertyList::RemoveProperty( const std::string & key ) const {
+//-------------------------------------------------------------------------------
+   if ( fPropertyListImpl ) fPropertyListImpl->RemoveProperty( key );
+}
+
+
+//-------------------------------------------------------------------------------
+inline void Reflex::PropertyList::RemoveProperty( size_t key ) const {
+//-------------------------------------------------------------------------------
+   if ( fPropertyListImpl ) fPropertyListImpl->RemoveProperty( key );
 }
 
 
@@ -83,14 +165,6 @@ size_t Reflex::PropertyList::KeyByName( const std::string & key,
 // Return the position of a Key. If allocateNew is set to true allocate a new key
 // if necessary.
    return Internal::PropertyListImpl::KeyByName( key, allocateNew );
-}
-
-
-//-------------------------------------------------------------------------------
-size_t Reflex::PropertyList::KeySize() {
-//-------------------------------------------------------------------------------
-// Return the number of all allocated keys.
-   return Internal::PropertyListImpl::KeySize();
 }
 
 
