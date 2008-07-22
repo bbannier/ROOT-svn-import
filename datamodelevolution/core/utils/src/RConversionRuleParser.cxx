@@ -377,7 +377,7 @@ namespace ROOT
       // Write the header
       //-----------------------------------------------------------------------
       output << "   static void " << func.str();
-      output << "( char* target, TBuffer *oldObj )" << std::endl;
+      output << "( char* target, TBuffer &b )" << std::endl;
       output << "   {" << std::endl;
       output << "#if 0" << std::endl;
       output << "      //--- Automatically generated variables ---" << std::endl;
