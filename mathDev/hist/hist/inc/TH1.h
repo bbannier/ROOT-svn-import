@@ -104,10 +104,12 @@ protected:
     static Bool_t fgStatOverflows;  //!flag to use under/overflows in statistics
     static Bool_t fgDefaultSumw2;   //!flag to call TH1::Sumw2 automatically at histogram creation time
 
+public:
+   static Int_t FitOptionsMake(Option_t *option, Foption_t &Foption);
+
 private:
    Int_t   AxisChoice(Option_t *axis) const;
    void    Build();
-   Int_t   FitOptionsMake(Option_t *option, Foption_t &Foption);
 
    TH1& operator=(const TH1&); // Not implemented
 
