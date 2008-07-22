@@ -28,7 +28,7 @@ namespace ROOT {
          }  RuleType_t;
 
          typedef void (*ReadFuncPtr_t)( char*, TVirtualObject* );
-         typedef void (*ReadRawFuncPtr_t)(char*, TBuffer*);
+         typedef void (*ReadRawFuncPtr_t)( char*, TBuffer&);
 
          TSchemaRule();
          virtual ~TSchemaRule();
