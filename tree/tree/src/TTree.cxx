@@ -1442,6 +1442,8 @@ TBranch* TTree::BranchOld(const char* name, const char* classname, void* addobj,
    //       real data list includes all data members of
    //       data members.
    while ((rd = (TRealData*) next())) {
+      if (rd->TestBit(TRealData::kTransient)) continue;
+
       // Loop over all data members creating branches for each one.
       TDataMember* dm = rd->GetDataMember();
       if (!dm->IsPersistent()) {
@@ -1555,6 +1557,8 @@ TBranch* TTree::BranchOld(const char* name, const char* classname, void* addobj,
                }
                nexti.Reset();
                while ((rdi = (TRealData*) nexti())) {
+                  if (rdi->TestBit(TRealData::kTransient)) continue;
+
                   if (!strcmp(rdi->GetName(), index)) {
                      break;
                   }

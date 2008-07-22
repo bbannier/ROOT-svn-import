@@ -310,7 +310,7 @@ void TStreamerInfo::Build()
          if (lbracket && rbracket) {
             const char* counterName = dm->GetArrayIndex();
             TRealData* rdCounter = (TRealData*) fClass->GetListOfRealData()->FindObject(counterName);
-            if (!rdCounter) {
+            if (!rdCounter || rdCounter->TestBit(TRealData::kTransient)) {
                Error("Build", "%s, discarding: %s %s, illegal %s\n", GetName(), dmFull, dmName, dmTitle);
                continue;
             }
