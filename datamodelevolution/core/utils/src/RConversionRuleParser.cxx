@@ -268,7 +268,7 @@ namespace ROOT
          std::cout << " data member: " << *it << " was specified as a ";
          std::cout << "target in the rule but doesn't seem to appear in ";
          std::cout << "target class" << std::endl;
-         return false;
+         //return false;
       }
       return true;
    }
@@ -293,7 +293,7 @@ namespace ROOT
       // Write down the targets
       //-----------------------------------------------------------------------
       if( !target.empty() ) {
-         output << "      static TClass *cls = TClass::GetClass(\"";
+         output << "      static TClassRef cls(\"";
          output << className << "\");" << std::endl;
       }
       for( it = target.begin(); it != target.end(); ++it ) {
