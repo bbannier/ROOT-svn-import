@@ -552,8 +552,6 @@ namespace Reflex {
 
 } // namespace Reflex
 
-#include "Reflex/internal/ScopeBase.h"
-#include "Reflex/internal/ScopeName.h"
 #include "Reflex/PropertyList.h"
 
 
@@ -593,13 +591,6 @@ inline Reflex::Scope::Scope( const Scope & rh )
 //-------------------------------------------------------------------------------
 inline Reflex::Scope::~Scope() {
 //-------------------------------------------------------------------------------
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Scope::operator bool () const {
-//-------------------------------------------------------------------------------
-   return ( this->fScopeName && this->fScopeName->fScopeBase );
 }
 
 

@@ -16,7 +16,7 @@
 #include "Reflex/Kernel.h"
 #include "Reflex/Scope.h"
 
-#include "Reflex/internal/OwnedPropertyList.h"
+#include "OwnedPropertyList.h"
 #include <vector>
 
 #ifdef _MSC_VER
@@ -214,13 +214,6 @@ namespace Internal {
 
 
       /**
-      * Name will return the Name of the At
-      * @return Name of At
-      */
-      virtual std::string Name( unsigned int mod = SCOPED | QUALIFIED ) const;
-
-
-      /**
       * Name returns the name of the scope
       * @param  buf buffer to be used for calculating name
       * @param  mod qualifiers can be or'ed 
@@ -229,7 +222,7 @@ namespace Internal {
       *   QUALIFIED - cv, reference qualification 
       * @return name of the type
       */
-      const std::string& Name(std::string& buf, unsigned int mod = SCOPED | QUALIFIED ) const;
+      virtual const std::string& Name(std::string& buf, unsigned int mod = SCOPED | QUALIFIED ) const;
 
 
       /**

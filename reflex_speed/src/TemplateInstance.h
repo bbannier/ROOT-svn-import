@@ -47,7 +47,7 @@ namespace Reflex {
       * @param  typedefexp expand typedefs or not
       * @return full Name of template collection
       */
-      std::string Name( unsigned int mod = 0 ) const;
+      std::string Name( unsigned int mod = SCOPED | QUALIFIED) const;
 
 
       /**

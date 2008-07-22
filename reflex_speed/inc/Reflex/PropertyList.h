@@ -15,6 +15,7 @@
 
 // Include files
 #include "Reflex/Kernel.h"
+#include "Reflex/Container.h"
 #include <iostream>
 
 namespace Reflex {
@@ -134,31 +135,10 @@ namespace Reflex {
 
 
       /**
-      * Key_Begin will return the begin iterator of the key container
+      * Keys returns the collection of all known keys
       * @return begin iterator of key container
       */
-      static StdString_Iterator Key_Begin(); 
-
-
-      /**
-      * Key_End will return the end iterator of the key container
-      * @return end iterator of key container
-      */
-      static StdString_Iterator Key_End(); 
-
-
-      /**
-      * Key_RBegin will return the rbegin iterator of the key container
-      * @return rbegin iterator of key container
-      */
-      static Reverse_StdString_Iterator Key_RBegin(); 
-
-
-      /**
-      * Key_REnd will return the rend iterator of the key container
-      * @return rend iterator of key container
-      */
-      static Reverse_StdString_Iterator Key_REnd(); 
+      static const Container<std::string>& Keys(); 
 
 
       /**
@@ -186,13 +166,6 @@ namespace Reflex {
       */
       static size_t KeyByName( const std::string & key,
          bool allocateNew = false );
-
-
-      /**
-      * KeySize will return the number of currently allocated keys
-      * @return number of allocated keys
-      */
-      static size_t KeySize();
 
 
       /**
@@ -306,8 +279,6 @@ namespace Reflex {
 
 } //namespace Reflex
 
-#include "Reflex/internal/PropertyListImpl.h"
-
 //-------------------------------------------------------------------------------
 inline Reflex::PropertyList::operator bool () const {
 //-------------------------------------------------------------------------------
@@ -334,63 +305,6 @@ inline Reflex::PropertyList::~PropertyList() {
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::PropertyList::AddProperty( const std::string & key,
-                                                       const Any & value ) const {
-//-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->AddProperty( key, value );
-   return 0;
-}
-
-
-//-------------------------------------------------------------------------------
-inline void Reflex::PropertyList::AddProperty( size_t key,
-                                                     const Any & value ) const {
-//-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->AddProperty( key, value );
-}
-
-
-//-------------------------------------------------------------------------------
-inline size_t Reflex::PropertyList::AddProperty( const std::string & key,
-                                                       const char* value ) const {
-//-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->AddProperty( key, value );
-   return 0;
-}
-
-
-//-------------------------------------------------------------------------------
-inline void Reflex::PropertyList::AddProperty( size_t key,
-                                                     const char* value ) const {
-//-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->AddProperty( key, value );
-}
-
-
-//-------------------------------------------------------------------------------
-inline void Reflex::PropertyList::ClearProperties() const {
-//-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) fPropertyListImpl->ClearProperties();
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::PropertyList::HasProperty(const std::string & key) const {
-//-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->HasProperty( key );
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::PropertyList::HasProperty( size_t key) const {
-//-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->HasProperty( key );
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
 inline bool Reflex::PropertyList::HasKey(const std::string & key) const {
 //-------------------------------------------------------------------------------
    return HasProperty( key );
@@ -398,66 +312,9 @@ inline bool Reflex::PropertyList::HasKey(const std::string & key) const {
 
 
 //-------------------------------------------------------------------------------
-inline std::string 
-Reflex::PropertyList::PropertyAsString( const std::string & key ) const {
-//-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyAsString( key );
-   return "";
-}
-
-
-//-------------------------------------------------------------------------------
-inline std::string 
-Reflex::PropertyList::PropertyAsString( size_t key ) const {
-//-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyAsString( key );
-   return "";
-}
-
-
-//-------------------------------------------------------------------------------
-inline size_t Reflex::PropertyList::PropertyKey( const std::string & key,
-                                                       bool allocateNew ) const {
-//-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyKey( key, allocateNew );
-   return 0;
-}
-
-
-//-------------------------------------------------------------------------------
-inline std::string Reflex::PropertyList::PropertyKeys() const {
-//-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyKeys();
-   return "";
-}
-
-
-//-------------------------------------------------------------------------------
-inline size_t Reflex::PropertyList::PropertyCount() const {
-//-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyCount();
-   return 0;
-}
-
-
-//-------------------------------------------------------------------------------
 inline size_t Reflex::PropertyList::PropertySize() const {
 //-------------------------------------------------------------------------------
    return PropertyCount();
-}
-
-
-//-------------------------------------------------------------------------------
-inline void Reflex::PropertyList::RemoveProperty( const std::string & key ) const {
-//-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) fPropertyListImpl->RemoveProperty( key );
-}
-
-
-//-------------------------------------------------------------------------------
-inline void Reflex::PropertyList::RemoveProperty( size_t key ) const {
-//-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) fPropertyListImpl->RemoveProperty( key );
 }
 
 

@@ -198,11 +198,9 @@ namespace Reflex {
       * Name returns the Name of the member 
       * @param mod modifiers can be or'ed as argument
       * SCOPED - fully scoped name
-      * FINAL  - resolve all typedefs
-      * QUALIFIED - cv and reference qualification
       * @return name of the member
       */
-      const std::string& Name( std::string& buf, unsigned int mod = SCOPED | QUALIFIED ) const;
+      const std::string& Name( std::string& buf, unsigned int mod = SCOPED ) const;
 
 
       /** 
