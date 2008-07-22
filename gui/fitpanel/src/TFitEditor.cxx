@@ -166,6 +166,13 @@ enum EFitPanel {
    kFP_FIT,   kFP_RESET, kFP_CLOSE
 };
 
+// Taken from hist/hist/TH1Fit.cxx: Interface for fitting. Temporal
+// until the same is made for graphs!
+namespace TH1Fit { 
+
+   Int_t Fit(TH1 * h1, TF1 *f1 , Foption_t & option ,Option_t *goption, Double_t xxmin, Double_t xxmax); 
+} 
+
 ClassImp(TFitEditor)
 
 TFitEditor *TFitEditor::fgFitDialog = 0;
@@ -1375,7 +1382,11 @@ void TFitEditor::DoFit()
          xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
          xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
          fFitFunc->SetRange(xmin,xmax);
-         h1->Fit(fFitFunc, fFitOption.Data(), fDrawOption.Data(), xmin, xmax);
+         // Still temporal until the same algorithm is implemented for
+         // graph. Then it could be done in a more elegant way.
+         Foption_t fitOpts;
+         TH1::FitOptionsMake(fFitOption,fitOpts);
+         TH1Fit::Fit(h1, fFitFunc, fitOpts, fDrawOption, xmin, xmax);
          break;
       }
       case kObjectGraph: {
