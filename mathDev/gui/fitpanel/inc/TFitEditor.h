@@ -120,8 +120,6 @@ protected:
    Float_t              fZmax;             // z-max
 
    TString              fFunction;         // selected function to fit
-   TString              fFitOption;        // fitting options
-   TString              fDrawOption;       // graphics option for drawing
    TF1                 *fFitFunc;          // function used for fitting
    TList               *fFitFuncList;      // list of 
    Int_t                fPx1old,
