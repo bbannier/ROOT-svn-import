@@ -52,6 +52,7 @@ Bool_t TSchemaRuleSet::AddRule( TSchemaRule* rule, Bool_t checkConsistency )
       else
          fRemainingRules->Add( rule );
       fAllRules->Add( rule );
+      return kTRUE;
    }
 
    //---------------------------------------------------------------------------
@@ -59,8 +60,8 @@ Bool_t TSchemaRuleSet::AddRule( TSchemaRule* rule, Bool_t checkConsistency )
    // present int the target class
    //---------------------------------------------------------------------------
    TObject*      obj;
-   TObjArrayIter it( rule->GetTarget() );
-   while( (obj = it.Next()) ) {
+   TObjArrayIter titer( rule->GetTarget() );
+   while( (obj = titer.Next()) ) {
       TObjString* str = (TObjString*)obj;
       if( !fClass->GetDataMember( str->GetString() ) )
          return kFALSE;
@@ -69,6 +70,27 @@ Bool_t TSchemaRuleSet::AddRule( TSchemaRule* rule, Bool_t checkConsistency )
    //---------------------------------------------------------------------------
    // Check if there is a rule conflicting with this one
    //---------------------------------------------------------------------------
+   const TObjArray* rules = FindRules( rule->GetSourceClass() );
+   TObjArrayIter it( rules );
+   TSchemaRule *r;
+
+   while( (obj = it.Next()) ) {
+      r = (TSchemaRule *) obj;
+      if( rule->Conflicts( r ) ) {
+         delete rules;
+         return kFALSE;
+      }
+   }
+   delete rules;
+
+   //---------------------------------------------------------------------------
+   // No conflicts - insert the rules
+   //---------------------------------------------------------------------------
+   if( rule->GetEmbed() )
+      fPersistentRules->Add( rule );
+   else
+      fRemainingRules->Add( rule );
+   fAllRules->Add( rule );
 
    return kTRUE;
 }
@@ -76,6 +98,17 @@ Bool_t TSchemaRuleSet::AddRule( TSchemaRule* rule, Bool_t checkConsistency )
 //------------------------------------------------------------------------------
 Bool_t TSchemaRuleSet::AddRules( TObjArray* rules, Bool_t checkConsistency )
 {
+#if 0
+   TObject*      obj;
+   TObjArrayIter it( rules );
+   TSchemaRule*  rule;
+
+   while( (obj = it.Next()) ) {
+      rule = (TSchemaRule*)obj;
+      if( !AddRule( rule, checkConsistency ) )
+         return kFALSE;
+   }
+#endif
    return kFALSE;
 }
 
@@ -83,7 +116,6 @@ Bool_t TSchemaRuleSet::AddRules( TObjArray* rules, Bool_t checkConsistency )
 const TObjArray* TSchemaRuleSet::FindRules( TString source ) const
 {
    // User has to delete the returned array
-
    TObject*      obj;
    TObjArrayIter it( fAllRules );
    TObjArray*    arr = new TObjArray();
@@ -172,11 +204,24 @@ const TObjArray* TSchemaRuleSet::GetPersistentRules() const
 //------------------------------------------------------------------------------
 void TSchemaRuleSet::RemoveRule( TSchemaRule* rule )
 {
+   // Remove given rule from the set - the rule is not being deleted!
+   fPersistentRules->Remove( rule );
+   fRemainingRules->Remove( rule );
+   fAllRules->Remove( rule );
 }
 
 //------------------------------------------------------------------------------
 void TSchemaRuleSet::RemoveRules( TObjArray* rules )
 {
+   // remove given array of rules from the set - the rules are not being deleted!
+   TObject*      obj;
+   TObjArrayIter it( rules );
+
+   while( (obj = it.Next()) ) {
+      fPersistentRules->Remove( obj );
+      fRemainingRules->Remove( obj );
+      fAllRules->Remove( obj );
+   }
 }
 
 //------------------------------------------------------------------------------
