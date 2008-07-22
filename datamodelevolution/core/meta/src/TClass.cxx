@@ -378,9 +378,18 @@ void TBuildRealData::Inspect(TClass* cl, const char* pname, const char* mname, c
    // This method is called from ShowMembers() via BuildRealdata().
 
    TDataMember* dm = cl->GetDataMember(mname);
-   if (!dm || !dm->IsPersistent()) {
+   if (!dm) {
       return;
    }
+
+   Bool_t isTransient = kFALSE;
+
+   if (!dm->IsPersistent()) {
+      // For the DataModelEvolution we need access to the transient member.
+      // so we now record them in the list of RealData.
+      isTransient = kTRUE;
+   }
+
    char rname[512];
    strcpy(rname, pname);
    // Take into account cases like TPaveStats->TPaveText->TPave->TBox.
@@ -422,15 +431,18 @@ void TBuildRealData::Inspect(TClass* cl, const char* pname, const char* mname, c
       if (!dm->IsBasic()) {
          // Pointer to class object.
          TRealData* rd = new TRealData(rname, offset, dm);
+         if (isTransient) { rd->SetBit(TRealData::kTransient); };
          fRealDataClass->GetListOfRealData()->Add(rd);
       } else {
          // Pointer to basic data type.
          TRealData* rd = new TRealData(rname, offset, dm);
+         if (isTransient) { rd->SetBit(TRealData::kTransient); };
          fRealDataClass->GetListOfRealData()->Add(rd);
       }
    } else {
       // Data Member is a basic data type.
       TRealData* rd = new TRealData(rname, offset, dm);
+      if (isTransient) { rd->SetBit(TRealData::kTransient); };
       if (!dm->IsBasic()) {
          rd->SetIsObject(kTRUE);
 

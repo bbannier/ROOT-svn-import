@@ -2304,7 +2304,7 @@ void TBranchElement::InitializeOffsets()
             // a lookup by name in the dictionary meta info
             // for our parent class.
             TRealData* rd = pClass->GetRealData(dataName);
-            if (rd) {
+            if (rd && !rd->TestBit(TRealData::kTransient)) {
                // -- Data member exists in the dictionary meta info, get the offset.
                offset = rd->GetThisOffset();
             } else {
