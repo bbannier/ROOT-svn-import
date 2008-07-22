@@ -321,3 +321,64 @@ TSchemaRule::RuleType_t TSchemaRule::GetRuleType() const
    return fRuleType;
 }
 
+//------------------------------------------------------------------------------
+Bool_t TSchemaRule::Conflicts( const TSchemaRule* rule ) const
+{
+   // Check if this rule conflicts with the given one
+
+   //---------------------------------------------------------------------------
+   // If the rules have different sources then the don't conflict
+   //---------------------------------------------------------------------------
+   if( GetSourceClass() != rule->GetSourceClass() )
+      return kFALSE;
+
+   //---------------------------------------------------------------------------
+   // Check if the rules has common target
+   //---------------------------------------------------------------------------
+   Bool_t         haveCommonTargets = kFALSE;
+   TObjArrayIter  titer( rule->fTargetVect );
+   TObjString    *str;
+   TObject       *obj;
+
+   while( (obj = titer.Next() ) ) {
+      str = (TObjString*)obj;
+      if( HasTarget( str->String() ) )
+         haveCommonTargets = kTRUE;
+   }
+
+   if( !haveCommonTargets )
+      return kFALSE;
+
+   //---------------------------------------------------------------------------
+   // Check if there are conflicting checksums
+   //---------------------------------------------------------------------------
+   if( fChecksumVect ) {
+      std::vector<UInt_t>::iterator it;
+      for( it = fChecksumVect->begin(); it != fChecksumVect->end(); ++it )
+         if( rule->TestChecksum( *it ) )
+            return kTRUE;
+   }
+
+   //---------------------------------------------------------------------------
+   // Check if there are conflicting versions
+   //---------------------------------------------------------------------------
+   if( fVersionVect && rule->fVersionVect )
+   {
+      std::vector<std::pair<Int_t, Int_t> >::iterator it1;
+      std::vector<std::pair<Int_t, Int_t> >::iterator it2;
+      for( it1 = fVersionVect->begin(); it1 != fVersionVect->end(); ++it1 ) {
+         for( it2 = rule->fVersionVect->begin();
+              it2 != rule->fVersionVect->end(); ++it2 ) {
+            //------------------------------------------------------------------
+            // the rules conflict it their version ranges intersect
+            //------------------------------------------------------------------
+            if( it1->first >= it2->first && it1->first <= it2->second )
+               return kTRUE;
+
+            if( it1->first < it2->first && it1->second >= it2->first )
+               return kTRUE;
+         }
+      }
+   }
+   return kFALSE;
+}
