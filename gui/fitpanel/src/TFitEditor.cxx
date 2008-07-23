@@ -1351,9 +1351,9 @@ void TFitEditor::DoFit()
    if (!fFitObject) return;
    if (!fParentPad) return;
 
-   TF1* fitFunc = new TF1("tmp",fFunction.Data(),fXmin,fXmax);
+   TF1 fitFunc("tmp",fFunction.Data(),fXmin,fXmax);
    if ( fFuncPars )
-   fitFunc->SetParameters(fFuncPars);
+   fitFunc.SetParameters(fFuncPars);
 
    TString strDrawOpts, strFitOpts;
    RetrieveOptions(strFitOpts, strDrawOpts);
@@ -1376,12 +1376,12 @@ void TFitEditor::DoFit()
          TH1 *h1 = (TH1*)fFitObject;
          xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
          xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
-         fitFunc->SetRange(xmin,xmax);
+         fitFunc.SetRange(xmin,xmax);
          // Still temporal until the same algorithm is implemented for
          // graph. Then it could be done in a more elegant way.
          Foption_t fitOpts;
          TH1::FitOptionsMake(strFitOpts,fitOpts);
-         TH1Fit::Fit(h1, fitFunc, fitOpts, strDrawOpts, xmin, xmax);
+         TH1Fit::Fit(h1, &fitFunc, fitOpts, strDrawOpts, xmin, xmax);
          break;
       }
       case kObjectGraph: {
@@ -1400,8 +1400,8 @@ void TFitEditor::DoFit()
             if (xmin < gxmin) xmin = gxmin;
             if (xmax > gxmax) xmax = gxmax;
          }
-         fitFunc->SetRange(xmin,xmax);
-         gr->Fit(fitFunc, strFitOpts.Data(), strDrawOpts.Data(), xmin, xmax);
+         fitFunc.SetRange(xmin,xmax);
+         gr->Fit(&fitFunc, strFitOpts.Data(), strDrawOpts.Data(), xmin, xmax);
          break;
       }
       case kObjectGraph2D: {
@@ -1438,13 +1438,8 @@ Int_t TFitEditor::CheckFunctionString(const char *fname)
 {
    // Check entered function string.
 
-   TF1 *form = 0;
-   form = new TF1("fitFunc", fname, fXmin, fXmax);
-   if (form) {
-      return form->Compile();
-   }
-   delete form;
-   return -1;
+   TF1 form("tmpCheck", fname, fXmin, fXmax);
+   return form.Compile();
 }
 
 //______________________________________________________________________________
