@@ -124,6 +124,7 @@ namespace ROOT {
 
       //   protected:
    private:
+      void ProcessSchemaInfo( std::vector<TSchemaHelper>& vect, Bool_t read );
       TGenericClassInfo(const TGenericClassInfo&); // Not implemented
       TGenericClassInfo& operator=(const TGenericClassInfo&); // Not implemented
       

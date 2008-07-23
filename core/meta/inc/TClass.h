@@ -49,7 +49,11 @@ class TVirtualIsAProxy;
 class TVirtualRefProxy;
 class THashTable;
 
-namespace ROOT { class TGenericClassInfo; class TCollectionProxyInfo; }
+namespace ROOT {
+   class TGenericClassInfo;
+   class TCollectionProxyInfo;
+   class TSchemaRuleSet;
+}
 
 namespace ROOT {
    class TMapTypeToTClass;
@@ -120,6 +124,8 @@ private:
    mutable TVirtualStreamerInfo     *fCurrentInfo;     //!cached current streamer info.
    TClassRef         *fRefStart;        //!List of references to this object
    TVirtualRefProxy  *fRefProxy;        //!Pointer to reference proxy if this class represents a reference
+   ROOT::TSchemaRuleSet *fSchemaRules;  //! Schema evolution rules
+
    TMethod           *GetClassMethod(Long_t faddr);
    TMethod           *GetClassMethod(const char *name, const char *signature);
    Int_t              GetBaseClassOffsetRecurse(const TClass *base);
@@ -248,6 +254,8 @@ public:
    Int_t              GetNmethods();
    TRealData         *GetRealData(const char *name) const;
    TVirtualRefProxy  *GetReferenceProxy()  const   {  return fRefProxy; }
+   const ROOT::TSchemaRuleSet *GetSchemaRules() const { return fSchemaRules; };
+   ROOT::TSchemaRuleSet *GetSchemaRules() { return fSchemaRules; };
    const char        *GetSharedLibs();
    ShowMembersFunc_t  GetShowMembersWrapper() const { return fShowMembers; }
    TClassStreamer    *GetStreamer() const; 
@@ -290,6 +298,7 @@ public:
    void               SetImplFileName(const char *implFileName) { fImplFileName = implFileName; }
    void               SetNew(ROOT::NewFunc_t newFunc);
    void               SetNewArray(ROOT::NewArrFunc_t newArrayFunc);
+   void               SetSchemaRules( ROOT::TSchemaRuleSet *rules );
    TVirtualStreamerInfo     *SetStreamerInfo(Int_t version, const char *info="");
    void               SetUnloaded();
    Int_t              WriteBuffer(TBuffer &b, void *pointer, const char *info="");

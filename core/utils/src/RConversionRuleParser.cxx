@@ -471,8 +471,8 @@ namespace ROOT
          }
 
          if( it->find( "embed" ) != it->end() ) {
-            output << "      rule->fEmbed       = \"" <<  (*it)["embed"];
-            output << "\";" << std::endl;
+            output << "      rule->fEmbed       = " <<  (*it)["embed"];
+            output << ";" << std::endl;
          }
 
          if( it->find( "include" ) != it->end() ) {

@@ -56,6 +56,7 @@
 #include "TVirtualMutex.h"
 #include "TVirtualPad.h"
 #include "THashTable.h"
+#include "TSchemaRuleSet.h"
 
 #include "TGenericClassInfo.h"
 
@@ -638,7 +639,7 @@ ClassImp(TClass)
 TClass::TClass() : TDictionary(), fNew(0), fNewArray(0), fDelete(0),
                    fDeleteArray(0), fDestructor(0), fDirAutoAdd(0), fSizeof(-1),
                    fVersionUsed(kFALSE), fOffsetStreamer(0), fStreamerType(kNone),
-                   fCurrentInfo(0), fRefStart(0), fRefProxy(0)
+                   fCurrentInfo(0), fRefStart(0), fRefProxy(0), fSchemaRules( 0 )
 {
    // Default ctor.
 
@@ -674,7 +675,8 @@ TClass::TClass(const char *name) : TDictionary(), fNew(0), fNewArray(0),
                                    fDirAutoAdd(0),
                                    fSizeof(-1), fVersionUsed(kFALSE),
                                    fOffsetStreamer(0), fStreamerType(kNone),
-                                   fCurrentInfo(0), fRefStart(0), fRefProxy(0)
+                                   fCurrentInfo(0), fRefStart(0), fRefProxy(0),
+                                   fSchemaRules(0)
 {
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
@@ -738,7 +740,8 @@ TClass::TClass(const char *name, Version_t cversion,
                const char *dfil, const char *ifil, Int_t dl, Int_t il)
    : TDictionary(), fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
      fDestructor(0), fDirAutoAdd(0), fSizeof(-1), fVersionUsed(kFALSE), fOffsetStreamer(0),
-     fStreamerType(kNone), fCurrentInfo(0), fRefStart(0), fRefProxy(0)
+     fStreamerType(kNone), fCurrentInfo(0), fRefStart(0), fRefProxy(0),
+     fSchemaRules( 0 )
 {
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
@@ -754,7 +757,8 @@ TClass::TClass(const char *name, Version_t cversion,
                const char *dfil, const char *ifil, Int_t dl, Int_t il)
    : TDictionary(), fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
      fDestructor(0), fDirAutoAdd(0), fSizeof(-1), fVersionUsed(kFALSE), fOffsetStreamer(0),
-     fStreamerType(kNone), fCurrentInfo(0), fRefStart(0), fRefProxy(0)
+     fStreamerType(kNone), fCurrentInfo(0), fRefStart(0), fRefProxy(0),
+     fSchemaRules( 0 )
 {
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
@@ -1162,6 +1166,15 @@ TClass::~TClass()
    delete fStreamer;
    delete fCollectionProxy;
    delete fIsAMethod;
+   delete fSchemaRules;
+}
+
+//------------------------------------------------------------------------------
+void TClass::SetSchemaRules( ROOT::TSchemaRuleSet *rules )
+{
+   // Set the schema rules - since now TClass owns the TSchemaRuleSet object
+   fSchemaRules = rules;
+   fSchemaRules->SetClass( this );
 }
 
 //______________________________________________________________________________
