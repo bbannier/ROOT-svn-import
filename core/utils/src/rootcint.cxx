@@ -2394,10 +2394,9 @@ void WriteClassInit(G__ClassInfo &cl)
          //---------------------------------------------------------------------
          // Write the conversion function if necassary
          //---------------------------------------------------------------------
-         if( rIt->find( "code" ) == rIt->end() )
-            continue;
-
-         WriteReadRuleFunc( *rIt, i++, mappedname, nameTypeMap, *dictSrcOut );
+         if( rIt->find( "code" ) != rIt->end() ) {
+           WriteReadRuleFunc( *rIt, i++, mappedname, nameTypeMap, *dictSrcOut );
+         }
          ++rIt;
       }
    }

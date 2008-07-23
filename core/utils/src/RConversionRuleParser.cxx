@@ -242,8 +242,9 @@ namespace ROOT
       // Create the data member name-type map for given class
 
       G__DataMemberInfo member( cl );
-      while( member.Next() )
+      while( member.Next() ) {
          nameType[member.Name()] = member.Type()->Name();
+      }
    }
 
    //---------------------------------------------------------------------------
@@ -261,14 +262,13 @@ namespace ROOT
       // Loop over the data members
       //-----------------------------------------------------------------------
       for( it = mem.begin(); it != mem.end(); ++it ) {
-         if( members.find( *it ) != members.end() )
-            continue;
-
-         std::cout << "WARNING: IO rule for class " + rule["targetClass"];
-         std::cout << " data member: " << *it << " was specified as a ";
-         std::cout << "target in the rule but doesn't seem to appear in ";
-         std::cout << "target class" << std::endl;
-         //return false;
+         if( members.find( *it ) == members.end() ) {
+            std::cout << "WARNING: IO rule for class " + rule["targetClass"];
+            std::cout << " data member: " << *it << " was specified as a ";
+            std::cout << "target in the rule but doesn't seem to appear in ";
+            std::cout << "target class" << std::endl;
+            return false;
+         }
       }
       return true;
    }
