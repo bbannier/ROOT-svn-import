@@ -1742,3 +1742,35 @@ void TStreamerSTLstring::Streamer(TBuffer &R__b)
       R__b.WriteClassBuffer(TStreamerSTLstring::Class(),this);
    }
 }
+
+//______________________________________________________________________________
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// TStreamerArtificial implements StreamerElement injected by a TSchemaRule. //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+ClassImp(TStreamerSTLstring);
+
+void TStreamerArtificial::Streamer(TBuffer &R__b)
+{
+   // Avoid streaming the synthetic/artificial streamer elements.
+
+   // Intentionally, nothing to do at all.
+   return;
+}
+
+ROOT::TSchemaRule::ReadFuncPtr_t     TStreamerArtificial::GetReadFunc()
+{
+   // Return the read function if any.
+
+   return fReadFunc;
+}
+
+ROOT::TSchemaRule::ReadRawFuncPtr_t  TStreamerArtificial::GetReadRawFunc()
+{
+   // Return the raw read function if any.
+
+   return fReadRawFunc;
+}

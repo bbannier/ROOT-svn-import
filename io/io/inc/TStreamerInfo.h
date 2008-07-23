@@ -217,12 +217,15 @@ public:
    Int_t               ReadBuffer(TBuffer &b,  char** const &arrptr, Int_t first,Int_t narr=1,Int_t eoffset=0,Int_t mode=0);
    Int_t               ReadBufferSkip(TBuffer &b, char** const &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
    Int_t               ReadBufferConv(TBuffer &b, char** const &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
+   Int_t               ReadBufferArtificial(TBuffer &b, char** const &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
    Int_t               ReadBuffer(TBuffer &b, const TVirtualCollectionProxy &arrptr, Int_t first,Int_t narr=1,Int_t eoffset=0,Int_t mode=0);
    Int_t               ReadBufferSkip(TBuffer &b, const TVirtualCollectionProxy &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
    Int_t               ReadBufferConv(TBuffer &b, const TVirtualCollectionProxy &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
+   Int_t               ReadBufferArtificial(TBuffer &b, const TVirtualCollectionProxy &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
    Int_t               ReadBuffer(TBuffer &b, const TPointerCollectionAdapter &arrptr, Int_t first,Int_t narr=1,Int_t eoffset=0,Int_t mode=0);
    Int_t               ReadBufferSkip(TBuffer &b, const TPointerCollectionAdapter &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
    Int_t               ReadBufferConv(TBuffer &b, const TPointerCollectionAdapter &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
+   Int_t               ReadBufferArtificial(TBuffer &b, const TPointerCollectionAdapter &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
 #else
    template <class T>
    Int_t               ReadBuffer(TBuffer &b, const T &arrptr, Int_t first,Int_t narr=1,Int_t eoffset=0,Int_t mode=0);
@@ -230,6 +233,8 @@ public:
    Int_t               ReadBufferSkip(TBuffer &b, const T &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
    template <class T>
    Int_t               ReadBufferConv(TBuffer &b, const T &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
+   template <class T>
+   Int_t               ReadBufferArtificial(TBuffer &b, const T &arrptr, Int_t i,Int_t kase, TStreamerElement *aElement, Int_t narr, Int_t eoffset);
 #endif
 
    Int_t               ReadBufferClones(TBuffer &b, TClonesArray *clones, Int_t nc, Int_t first, Int_t eoffset);

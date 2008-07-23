@@ -464,6 +464,50 @@ Int_t TStreamerInfo::ReadBufferSkip(TBuffer &b, const T &arr, Int_t i, Int_t kas
 #ifdef R__BROKEN_FUNCTION_TEMPLATES
 // Support for non standard compilers
 template <class T>
+Int_t TStreamerInfo__ReadBufferArtificialImp(TBuffer &b, const T &arr,  Int_t i, Int_t kase,
+                                             TStreamerElement *aElement, Int_t narr,
+                                             Int_t eoffset,
+                                             ULong_t *&fMethod, ULong_t *& /*fElem*/,Int_t *&fLength,
+                                             TClass *& /*fClass*/, Int_t *&fOffset, Int_t *&fNewType,
+                                             Int_t & /*fNdata*/, Int_t *& /*fType*/, TStreamerElement *& /*fgElement*/,
+                                             TStreamerInfo::TCompInfo *& /*fComp*/,
+                                             Version_t & /* fOldVersion */ )
+#else
+template <class T>
+Int_t TStreamerInfo::ReadBufferArtificial(TBuffer &b, const T &arr,  Int_t i, Int_t kase,
+                                          TStreamerElement *aElement, Int_t narr,
+                                          Int_t eoffset)
+#endif
+{
+   // Handle Artificial StreamerElement
+
+   TStreamerArtificial *artElement = (TStreamerArtificial*)aElement;
+   
+   ROOT::TSchemaRule::ReadRawFuncPtr_t rawfunc = artElement->GetReadRawFunc();
+   
+   if (rawfunc) {
+      for(Int_t k=0; k<narr; ++k) {
+         rawfunc( arr[k], b ); // Intentionally pass the object, so that the member can be set from other members.
+      }
+      return 0;
+   }
+
+   ROOT::TSchemaRule::ReadFuncPtr_t readfunc = artElement->GetReadFunc();
+   // Process the result
+   if (readfunc) {
+      for(Int_t k=0; k<narr; ++k) {
+         readfunc( arr[0], 0 );
+      }
+      return 0;
+   }
+   
+   return 0;
+}
+
+//______________________________________________________________________________
+#ifdef R__BROKEN_FUNCTION_TEMPLATES
+// Support for non standard compilers
+template <class T>
 Int_t TStreamerInfo__ReadBufferConvImp(TBuffer &b, const T &arr,  Int_t i, Int_t kase,
                                        TStreamerElement *aElement, Int_t narr,
                                        Int_t eoffset,
@@ -1403,6 +1447,14 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
 
          default: {
             int ans = -1;
+            
+            if (TStreamerInfo::kCache <= kase && kase < TStreamerInfo::kArtificial) {
+               
+               //thisVar->ReadBuffer(b,cache_addr,i,kase-TStreamerInfo::kCache,aElement,narr,eoffset)
+               
+               continue;
+            }
+
             if (kase >= TStreamerInfo::kConv)
                ans = thisVar->ReadBufferConv(b,arr,i,kase,aElement,narr,eoffset);
             if (ans==0) continue;
@@ -1410,6 +1462,11 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
             if (kase >= TStreamerInfo::kSkip)
                ans = thisVar->ReadBufferSkip(b,arr,i,kase,aElement,narr,eoffset);
             if (ans==0) continue;
+
+            if (kase >= TStreamerInfo::kArtificial) {
+               ans = thisVar->ReadBufferArtificial(b,arr,i,kase,aElement,narr,eoffset);
+            }
+            if (ans==0) continue;          
          }
          if (aElement)
             Error("ReadBuffer","The element %s::%s type %d (%s) is not supported yet\n",
