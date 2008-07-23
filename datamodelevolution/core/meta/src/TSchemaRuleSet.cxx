@@ -7,8 +7,6 @@
 #include "TObjString.h"
 #include "TClass.h"
 
-#include <iostream>
-
 ClassImp(TSchemaRule)
 
 using namespace ROOT;
@@ -34,6 +32,8 @@ TSchemaRuleSet::~TSchemaRuleSet()
 //------------------------------------------------------------------------------
 Bool_t TSchemaRuleSet::AddRule( TSchemaRule* rule, Bool_t checkConsistency )
 {
+   // The consistency check always fails if the TClass object was not set!
+
    //---------------------------------------------------------------------------
    // Cannot verify the consistency if the TClass object is not present
    //---------------------------------------------------------------------------

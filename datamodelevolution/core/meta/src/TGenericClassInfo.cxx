@@ -18,8 +18,7 @@
 #include "TCollectionProxyInfo.h"
 #include "TSchemaRule.h"
 #include "TSchemaRuleSet.h"
-
-#include <iostream>
+#include "TError.h"
 
 namespace ROOT {
 
@@ -235,15 +234,15 @@ namespace ROOT {
          //---------------------------------------------------------------------
          // Attach the schema evolution information
          //---------------------------------------------------------------------
-         ProcessSchemaInfo( fReadRules, true );
-         ProcessSchemaInfo( fReadRawRules, false );
+         CreateRuleSet( fReadRules, true );
+         CreateRuleSet( fReadRawRules, false );
       }
       return fClass;
    }
 
    //---------------------------------------------------------------------------
-   void TGenericClassInfo::ProcessSchemaInfo( std::vector<TSchemaHelper>& vect,
-                                              Bool_t read )
+   void TGenericClassInfo::CreateRuleSet( std::vector<TSchemaHelper>& vect,
+                                              Bool_t ProcessReadRules )
    {
       // Attach the schema evolution information to TClassObject
 
@@ -272,7 +271,7 @@ namespace ROOT {
          rule->SetEmbed( it->fEmbed );
          rule->SetInclude( it->fInclude );
 
-         if( read ) {
+         if( ProcessReadRules ) {
             rule->SetRuleType( TSchemaRule::kReadRule );
             rule->SetReadFunctionPointer( (TSchemaRule::ReadFuncPtr_t)it->fFunctionPtr );
          }
@@ -280,7 +279,11 @@ namespace ROOT {
             rule->SetRuleType( TSchemaRule::kReadRawRule );
             rule->SetReadRawFunctionPointer( (TSchemaRule::ReadRawFuncPtr_t)it->fFunctionPtr );
          }
-         rset->AddRule( rule );
+         if( !rset->AddRule( rule ) ) {
+            ::Warning( "TGenericClassInfo", "The rul for class: \"%s\": version, \"%s\" and data members: \"%s\" has been skipped because it conflicts with one of the other rules.",
+                        GetClassName(), it->fVersion, it->fTarget );
+            delete rule;
+         }
       }
    }
 
