@@ -120,7 +120,7 @@ protected:
    Float_t              fZmax;             // z-max
 
    TString              fFunction;         // selected function to fit
-   TF1                 *fFitFunc;          // function used for fitting
+   Double_t            *fFuncPars;         // Parameters of the function
    TList               *fFitFuncList;      // list of 
    Int_t                fPx1old,
                         fPy1old,
@@ -147,7 +147,7 @@ protected:
    void        CreateGeneralTab();
    void        CreateMinimizationTab();
    void        MakeTitle(TGCompositeFrame *parent, const char *title);
-   Bool_t      HasFitFunction(TObject *obj);
+   TF1*        HasFitFunction(TObject *obj);
    void        GetFunctionsFromList(TList *list);
    void        CheckRange(TF1 *f1);
 

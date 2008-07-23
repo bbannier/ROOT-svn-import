@@ -206,7 +206,7 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
    fZmin        (0),
    fZmax        (0),
    fFunction    (""),
-   fFitFunc     (0)
+   fFuncPars    (0)
 
 {
    // Constructor of fit editor.
@@ -322,7 +322,6 @@ TFitEditor::~TFitEditor()
    TQObject::Disconnect("TCanvas", "Selected(TVirtualPad *, TObject *, Int_t)");
    gROOT->GetListOfCleanups()->Remove(this);
 
-   if (fFitFunc) delete fFitFunc;
    Cleanup();
    delete fLayoutNone;
    delete fLayoutAdd;
@@ -1165,9 +1164,11 @@ void TFitEditor::SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event)
 
    ConnectSlots();
    
-   Bool_t hasf = HasFitFunction(obj);
-   if (hasf) {
-      fFunction = fFitFunc->GetExpFormula();
+   TF1* fitFunc = HasFitFunction(obj);
+   if (fitFunc) {
+      fFunction = fitFunc->GetExpFormula();
+      fFuncPars = new Double_t[fitFunc->GetNpar()];
+      fitFunc->GetParameters(fFuncPars);
       fEnteredFunc->SetText(fFunction.Data());
       TGLBEntry *en = fFuncList->FindEntry(fFunction.Data());
       if (en) fFuncList->Select(en->EntryId());
@@ -1181,9 +1182,6 @@ void TFitEditor::SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event)
       }
       fEnteredFunc->SetText(fFunction.Data());
       fEnteredFunc->SelectAll();
-      if (!fFitFunc) {
-         fFitFunc = new TF1("fitFunc",fFunction.Data(),fXmin,fXmax);
-      }
    }
 
    // Update the information about the selected object.
@@ -1352,12 +1350,10 @@ void TFitEditor::DoFit()
 
    if (!fFitObject) return;
    if (!fParentPad) return;
-   if (!fFitFunc) {
-      new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
-                   "Error", Form("Function with name '%s' does not exist",
-                   fFunction.Data()), kMBIconExclamation, kMBClose, 0);
-      return;
-   }
+
+   TF1* fitFunc = new TF1("tmp",fFunction.Data(),fXmin,fXmax);
+   if ( fFuncPars )
+   fitFunc->SetParameters(fFuncPars);
 
    TString strDrawOpts, strFitOpts;
    RetrieveOptions(strFitOpts, strDrawOpts);
@@ -1380,12 +1376,12 @@ void TFitEditor::DoFit()
          TH1 *h1 = (TH1*)fFitObject;
          xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
          xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
-         fFitFunc->SetRange(xmin,xmax);
+         fitFunc->SetRange(xmin,xmax);
          // Still temporal until the same algorithm is implemented for
          // graph. Then it could be done in a more elegant way.
          Foption_t fitOpts;
          TH1::FitOptionsMake(strFitOpts,fitOpts);
-         TH1Fit::Fit(h1, fFitFunc, fitOpts, strDrawOpts, xmin, xmax);
+         TH1Fit::Fit(h1, fitFunc, fitOpts, strDrawOpts, xmin, xmax);
          break;
       }
       case kObjectGraph: {
@@ -1404,8 +1400,8 @@ void TFitEditor::DoFit()
             if (xmin < gxmin) xmin = gxmin;
             if (xmax > gxmax) xmax = gxmax;
          }
-         fFitFunc->SetRange(xmin,xmax);
-         gr->Fit(fFitFunc, strFitOpts.Data(), strDrawOpts.Data(), xmin, xmax);
+         fitFunc->SetRange(xmin,xmax);
+         gr->Fit(fitFunc, strFitOpts.Data(), strDrawOpts.Data(), xmin, xmax);
          break;
       }
       case kObjectGraph2D: {
@@ -1442,10 +1438,6 @@ Int_t TFitEditor::CheckFunctionString(const char *fname)
 {
    // Check entered function string.
 
-   fFitFunc = (TF1 *)gROOT->GetListOfFunctions()->FindObject(fname);
-   if (fFitFunc) 
-      return fFitFunc->Compile();
-   
    TF1 *form = 0;
    form = new TF1("fitFunc", fname, fXmin, fXmax);
    if (form) {
@@ -1495,9 +1487,6 @@ void TFitEditor::DoNoOperation(Bool_t on)
    fFunction = fEnteredFunc->GetText();
    fSelLabel->SetText(fFunction.Data());
    ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
-   fFitFunc = (TF1 *) gROOT->GetListOfFunctions()->FindObject(fFunction.Data());
-   if (!fFitFunc) 
-      fFitFunc = new TF1("fitFunc",fFunction.Data(),fXmin,fXmax);
 }
 
 //______________________________________________________________________________
@@ -1537,9 +1526,6 @@ void TFitEditor::DoFunction(Int_t)
    fSelLabel->SetText(fFunction.Data());
    ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
 
-   fFitFunc = (TF1 *) gROOT->GetListOfFunctions()->FindObject(fFunction.Data());
-   if (!fFitFunc) 
-      fFitFunc = new TF1("fitFunc",fFunction.Data(),fXmin,fXmax);
 }
 
 //______________________________________________________________________________
@@ -1558,8 +1544,6 @@ void TFitEditor::DoEnteredFunction()
    }
 
    fFunction = fEnteredFunc->GetText();
-
-   fFitFunc = (TF1 *) gROOT->GetListOfFunctions()->FindObject(fFunction.Data());
 
    fSelLabel->SetText(fFunction.Data());
    ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
@@ -1652,12 +1636,7 @@ void TFitEditor::DoReset()
    fParentPad->Modified();
    fParentPad->Update();
    fFunction = "gaus";
-   if (fFitFunc) {
-      fFitFunc->SetParent(0);
-      fFitFunc = (TF1 *) gROOT->GetListOfFunctions()->FindObject(fFunction.Data());
-      if (!fFitFunc) 
-         fFitFunc = new TF1("fitFunc",fFunction.Data(),fXmin,fXmax);
-   }
+
    if (fXmin > 1 || fXmax < fXrange) {
       fSliderX->SetRange(fXmin,fXmax);
       fSliderX->SetPosition(fXmin, fXmax);
@@ -1717,16 +1696,19 @@ void TFitEditor::DoSetParameters()
 {
    // Open set parameters dialog.
 
-   if (!fFitFunc) {
-      printf("SetParamters - create fit function %s\n",fFunction.Data());
-      fFitFunc = new TF1("fitFunc",Form("%s",fFunction.Data()), fXmin, fXmax);
-   }
+   TF1 fitFunc("tmpPars",fFunction.Data(), fXmin, fXmax);
+   if ( fFuncPars ) fitFunc.SetParameters(fFuncPars);
+
    fParentPad->Disconnect("RangeAxisChanged()");
    Double_t xmin, xmax;
-   fFitFunc->GetRange(xmin, xmax);
+   fitFunc.GetRange(xmin, xmax);
    Int_t ret = 0;
    new TFitParametersDialog(gClient->GetDefaultRoot(), GetMainFrame(), 
-                            fFitFunc, fParentPad, xmin, xmax, &ret);
+                            &fitFunc, fParentPad, xmin, xmax, &ret);
+
+   if ( fFuncPars ) delete fFuncPars;
+   fFuncPars = new Double_t[fitFunc.GetNpar()];
+   fitFunc.GetParameters(fFuncPars);
 
 //    TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
 //    if ((fNone->GetState() == kButtonDown) && te != 0 &&
@@ -2285,9 +2267,9 @@ void TFitEditor::MakeTitle(TGCompositeFrame *parent, const char *title)
 }
 
 //______________________________________________________________________________
-Bool_t TFitEditor::HasFitFunction(TObject *obj)
+TF1* TFitEditor::HasFitFunction(TObject *obj)
 {
-   // Look in the list of function for TF1 and set fFitFunc. If a TF1 is
+   // Look in the list of function for TF1. If a TF1 is
    // found in the list of functions, returns kTRUE; if not returns kFALSE.
    
    TF1 *func = 0;
@@ -2320,8 +2302,6 @@ Bool_t TFitEditor::HasFitFunction(TObject *obj)
    }
    if (func) {
       if (lf) GetFunctionsFromList(lf);
-      fFitFunc = new TF1();
-      func->Copy(*fFitFunc);
       CheckRange(func);
       
       TGLBEntry *le = fFuncList->FindEntry(Form("%s",func->GetName()));
@@ -2329,7 +2309,7 @@ Bool_t TFitEditor::HasFitFunction(TObject *obj)
          fFuncList->Select(le->EntryId(), kFALSE);
          fSelLabel->SetText(le->GetTitle());
       }
-      return kTRUE;
+      return func;
    } 
    if (lf) {
       GetFunctionsFromList(lf);
@@ -2338,19 +2318,17 @@ Bool_t TFitEditor::HasFitFunction(TObject *obj)
       while ((obj2 = next())) {
          if (obj2->InheritsFrom(TF1::Class())) {
             func = (TF1 *)obj2;
-            fFitFunc = new TF1();
-            func->Copy(*fFitFunc);
             CheckRange(func);
             TGLBEntry *le = fFuncList->FindEntry(Form("%s",func->GetName()));
             if (le) {
                fFuncList->Select(le->EntryId(), kTRUE);
                
             }
-            return kTRUE;
+            return func;
          }
       }
    }
-   return kFALSE;
+   return 0;
 }
 
 //______________________________________________________________________________
