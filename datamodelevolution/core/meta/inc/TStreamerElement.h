@@ -331,4 +331,29 @@ public:
    ClassDef(TStreamerSTLstring,2)  //Streamer element of type  C++ string
 };
 
+class TVirtualObject;
+class TBuffer;
+
+#include "TSchemaRule.h"
+
+//________________________________________________________________________
+class TStreamerArtificial : public TStreamerElement {
+protected:
+   TStreamerElement                    *fElement;
+   ROOT::TSchemaRule::ReadFuncPtr_t     fReadFunc;    //!
+   ROOT::TSchemaRule::ReadRawFuncPtr_t  fReadRawFunc; //!
+
+public:
+
+   TStreamerArtificial(const char *name, const char *title, Int_t offset, Int_t dtype, const char *typeName) : TStreamerElement(name,title,offset,dtype,typeName), fElement(0), fReadFunc(0), fReadRawFunc(0) {}
+
+   void SetReadFunc( ROOT::TSchemaRule::ReadFuncPtr_t val ) { fReadFunc = val; };
+   void SetReadRawFunc( ROOT::TSchemaRule::ReadRawFuncPtr_t val ) { fReadRawFunc = val; };
+
+   ROOT::TSchemaRule::ReadFuncPtr_t     GetReadFunc();
+   ROOT::TSchemaRule::ReadRawFuncPtr_t  GetReadRawFunc(); 
+
+   ClassDef(TStreamerArtificial, 0); // StreamerElement injected by a TSchemaRule. Transient only to preverse forward compatibility.
+};
+
 #endif
