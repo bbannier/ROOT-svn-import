@@ -17,8 +17,8 @@ namespace ROOT
       std::string fCode;
       std::string fVersion;
       std::string fChecksum;
-      std::string fEmbed;
       std::string fInclude;
+      bool        fEmbed;
       void*       fFunctionPtr;
    };
 }

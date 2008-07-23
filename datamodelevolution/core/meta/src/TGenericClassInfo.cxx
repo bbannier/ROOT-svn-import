@@ -16,6 +16,10 @@
 #include "TVirtualIsAProxy.h"
 #include "TVirtualCollectionProxy.h"
 #include "TCollectionProxyInfo.h"
+#include "TSchemaRule.h"
+#include "TSchemaRuleSet.h"
+
+#include <iostream>
 
 namespace ROOT {
 
@@ -201,7 +205,6 @@ namespace ROOT {
    TClass *TGenericClassInfo::GetClass()
    {
       // Generate and return the TClass object.
-
       if (!fClass && fAction) {
          fClass = GetAction().CreateClass(GetClassName(),
                                           GetVersion(),
@@ -228,8 +231,57 @@ namespace ROOT {
             }
          }
          fClass->SetClassSize(fSizeof);
+
+         //---------------------------------------------------------------------
+         // Attach the schema evolution information
+         //---------------------------------------------------------------------
+         ProcessSchemaInfo( fReadRules, true );
+         ProcessSchemaInfo( fReadRawRules, false );
       }
       return fClass;
+   }
+
+   //---------------------------------------------------------------------------
+   void TGenericClassInfo::ProcessSchemaInfo( std::vector<TSchemaHelper>& vect,
+                                              Bool_t read )
+   {
+      // Attach the schema evolution information to TClassObject
+
+      //------------------------------------------------------------------------
+      // Get the rules set
+      //------------------------------------------------------------------------
+      TSchemaRuleSet* rset = fClass->GetSchemaRules();
+      if( !rset ) {
+         fClass->SetSchemaRules( new TSchemaRuleSet() );
+         rset = fClass->GetSchemaRules();
+      }
+
+      //------------------------------------------------------------------------
+      // Process the rules
+      //------------------------------------------------------------------------
+      TSchemaRule* rule;
+      std::vector<TSchemaHelper>::iterator it;
+      for( it = vect.begin(); it != vect.end(); ++it ) {
+         rule = new TSchemaRule();
+         rule->SetTarget( it->fTarget );
+         rule->SetSourceClass( it->fSourceClass );
+         rule->SetSource( it->fSource );
+         rule->SetCode( it->fCode );
+         rule->SetVersion( it->fVersion );
+         rule->SetChecksum( it->fChecksum );
+         rule->SetEmbed( it->fEmbed );
+         rule->SetInclude( it->fInclude );
+
+         if( read ) {
+            rule->SetRuleType( TSchemaRule::kReadRule );
+            rule->SetReadFunctionPointer( (TSchemaRule::ReadFuncPtr_t)it->fFunctionPtr );
+         }
+         else {
+            rule->SetRuleType( TSchemaRule::kReadRawRule );
+            rule->SetReadRawFunctionPointer( (TSchemaRule::ReadRawFuncPtr_t)it->fFunctionPtr );
+         }
+         rset->AddRule( rule );
+      }
    }
 
    const char *TGenericClassInfo::GetClassName() const

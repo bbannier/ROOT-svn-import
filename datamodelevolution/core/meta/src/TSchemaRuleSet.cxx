@@ -96,23 +96,6 @@ Bool_t TSchemaRuleSet::AddRule( TSchemaRule* rule, Bool_t checkConsistency )
 }
 
 //------------------------------------------------------------------------------
-Bool_t TSchemaRuleSet::AddRules( TObjArray* rules, Bool_t checkConsistency )
-{
-#if 0
-   TObject*      obj;
-   TObjArrayIter it( rules );
-   TSchemaRule*  rule;
-
-   while( (obj = it.Next()) ) {
-      rule = (TSchemaRule*)obj;
-      if( !AddRule( rule, checkConsistency ) )
-         return kFALSE;
-   }
-#endif
-   return kFALSE;
-}
-
-//------------------------------------------------------------------------------
 const TObjArray* TSchemaRuleSet::FindRules( TString source ) const
 {
    // User has to delete the returned array

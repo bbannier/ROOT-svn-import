@@ -23,7 +23,6 @@ namespace ROOT {
          virtual ~TSchemaRuleSet();
 
          Bool_t           AddRule( TSchemaRule* rule, Bool_t checkConsistency = kTRUE );
-         Bool_t           AddRules( TObjArray* rules, Bool_t checkConsistency = kTRUE );
          const TObjArray* FindRules( TString source ) const;
          const TObjArray* FindRules( TString source, Int_t version ) const;
          const TObjArray* FindRules( TString source, UInt_t checksum ) const;

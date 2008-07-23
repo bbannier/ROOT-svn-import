@@ -18,7 +18,8 @@ using namespace ROOT;
 
 //------------------------------------------------------------------------------
 TSchemaRule::TSchemaRule(): fVersionVect( 0 ), fChecksumVect( 0 ),
-                            fTargetVect( 0 ), fSourceVect( 0 )
+                            fTargetVect( 0 ), fSourceVect( 0 ),
+                            fIncludeVect( 0 )
 {
 }
 
@@ -29,52 +30,44 @@ TSchemaRule::~TSchemaRule()
    delete fChecksumVect;
    delete fTargetVect;
    delete fSourceVect;
+   delete fIncludeVect;
 }
 
 //------------------------------------------------------------------------------
-Bool_t TSchemaRule::SetVersion( TString version )
+TSchemaRule::TSchemaRule( const TSchemaRule& rhs ): TObject( rhs )
+{
+   *this = rhs;
+}
+
+//------------------------------------------------------------------------------
+TSchemaRule& TSchemaRule::operator = ( const TSchemaRule& rhs )
+{
+   if( this != &rhs ) {
+      fVersion        = rhs.fVersion;
+      fChecksum       = rhs.fChecksum;
+      fSourceClass    = rhs.fSourceClass;
+      fTarget         = rhs.fTarget;
+      fSource         = rhs.fSource;
+      fInclude        = rhs.fInclude;
+      fCode           = rhs.fCode;
+      fEmbed          = rhs.fEmbed;
+      fReadFuncPtr    = rhs.fReadFuncPtr;
+      fReadRawFuncPtr = rhs.fReadRawFuncPtr;
+      fRuleType       = rhs.fRuleType;
+   }
+   return *this;
+}
+
+//------------------------------------------------------------------------------
+Bool_t TSchemaRule::SetVersion( const TString& version )
 {
    // Set the version string - returns kFALSE if the format is incorrect
 
-   //---------------------------------------------------------------------------
-   // Check if we have valid list
-   //---------------------------------------------------------------------------
-   std::string ver = (const char*)version;
-   if( ver[0] != '[' || ver[ver.size()-1] != ']' )
-      return kFALSE;
-
-   std::list<std::string> versions;
-   ROOT::TSchemaRuleProcessor::SplitList( ver.substr( 1, ver.size()-2), versions );
-
-   if( versions.empty() )
-   {
-      delete fVersionVect;
-      fVersionVect = 0;
-      fVersion = "";
-      return kFALSE;
-   }
-
-   if( !fVersionVect )
-      fVersionVect = new std::vector<std::pair<Int_t, Int_t> >;
-   fVersionVect->clear();
    fVersion = "";
-
-   //---------------------------------------------------------------------------
-   // Check the validity of each list element
-   //---------------------------------------------------------------------------
-   std::list<std::string>::iterator it;
-   for( it = versions.begin(); it != versions.end(); ++it ) {
-      std::pair<Int_t, Int_t> ver;
-      if( !ROOT::TSchemaRuleProcessor::ProcessVersion( *it, ver ) )
-      {
-         delete fVersionVect;
-         fVersionVect = 0;
-         return kFALSE;
-      }
-      fVersionVect->push_back( ver );
-   }
-   fVersion = version;
-   return kTRUE;
+   Bool_t ret = ProcessVersion( version );
+   if( ret )
+      fVersion = version;
+   return ret;
 }
 
 //------------------------------------------------------------------------------
@@ -82,8 +75,11 @@ Bool_t TSchemaRule::TestVersion( Int_t version ) const
 {
    // Check if given version number is defined in this rule
 
-   if( !fVersionVect )
+   if( fVersion == "" )
       return kFALSE;
+
+   if( !fVersionVect )
+      ProcessVersion( fVersion ); // At this point the version string should always be correct
 
    std::vector<std::pair<Int_t, Int_t> >::iterator it;
    for( it = fVersionVect->begin(); it != fVersionVect->end(); ++it ) {
@@ -94,46 +90,14 @@ Bool_t TSchemaRule::TestVersion( Int_t version ) const
 }
 
 //------------------------------------------------------------------------------
-Bool_t TSchemaRule::SetChecksum( TString checksum )
+Bool_t TSchemaRule::SetChecksum( const TString& checksum )
 {
    // Set the checksum string - returns kFALSE if the format is incorrect
-
-   //---------------------------------------------------------------------------
-   // Check if we have valid list
-   //---------------------------------------------------------------------------
-   std::string chk = (const char*)checksum;
-   if( chk[0] != '[' || chk[chk.size()-1] != ']' )
-      return kFALSE;
-
-   std::list<std::string> checksums;
-   ROOT::TSchemaRuleProcessor::SplitList( chk.substr( 1, chk.size()-2), checksums );
-
-   if( checksums.empty() ) {
-      delete fChecksumVect;
-      fChecksumVect = 0;
-      fChecksum = "";
-      return kFALSE; 
-   }
-
-   if( !fChecksumVect )
-      fChecksumVect = new std::vector<UInt_t>;
-   fChecksumVect->clear();
    fChecksum = "";
-
-   //---------------------------------------------------------------------------
-   // Check the validity of each list element
-   //---------------------------------------------------------------------------
-   std::list<std::string>::iterator it;
-   for( it = checksums.begin(); it != checksums.end(); ++it ) {
-      if( !ROOT::TSchemaRuleProcessor::IsANumber( *it ) ) {
-         delete fChecksumVect;
-         fChecksumVect = 0;
-         return kFALSE;
-      }
-      fChecksumVect->push_back( atoi( it->c_str() ) );
-   }
-   fChecksum = checksum;
-   return kTRUE;
+   Bool_t ret = ProcessChecksum( checksum );
+   if( ret )
+      fVersion = "";
+   return ret;
 }
 
 //------------------------------------------------------------------------------
@@ -141,8 +105,11 @@ Bool_t TSchemaRule::TestChecksum( UInt_t checksum ) const
 {
    // Check if given checksum is defined in this rule
 
-   if( !fChecksumVect )
+   if( fChecksum == "" )
       return kFALSE;
+
+   if( !fChecksumVect )
+      ProcessChecksum( fChecksum ); // At this point the checksum string should always be correct
 
    std::vector<UInt_t>::iterator it;
    for( it = fChecksumVect->begin(); it != fChecksumVect->end(); ++it ) {
@@ -153,7 +120,7 @@ Bool_t TSchemaRule::TestChecksum( UInt_t checksum ) const
 }
 
 //------------------------------------------------------------------------------
-void TSchemaRule::SetSourceClass( TString classname )
+void TSchemaRule::SetSourceClass( const TString& classname )
 {
    fSourceClass = classname;
 }
@@ -165,67 +132,95 @@ TString TSchemaRule::GetSourceClass() const
 }
 
 //------------------------------------------------------------------------------
-void TSchemaRule::SetTarget( TString target )
+void TSchemaRule::SetTarget( const TString& target )
 {
-   std::list<std::string>           targets;
-   std::list<std::string>::iterator it;
-   ROOT::TSchemaRuleProcessor::SplitList( (const char*)target, targets );
+   fTarget = target;
 
-   if( targets.empty() )
-   {
+   if( target == "" ) {
       delete fTargetVect;
       fTargetVect = 0;
-      fTarget = "";
+      return;
    }
 
    if( !fTargetVect )
       fTargetVect = new TObjArray();
-   fTargetVect->Clear();
 
-   for( it = targets.begin(); it != targets.end(); ++it ) {
-      TObjString *str = new TObjString;
-      *str = it->c_str();
-      fTargetVect->Add( str );
-   }
-   fTarget = target;
+   ProcessList( fTargetVect, target );
 }
 
 //------------------------------------------------------------------------------
 const TObjArray*  TSchemaRule::GetTarget() const
 {
+   if( fTarget == "" )
+      return 0;
+
+   if( !fTargetVect ) {
+      fTargetVect = new TObjArray();
+      ProcessList( fTargetVect, fTarget );
+   }
+
    return fTargetVect;
 }
 
 //------------------------------------------------------------------------------
-void TSchemaRule::SetSource( TString source )
+void TSchemaRule::SetSource( const TString& source )
 {
-   std::list<std::string>           sources;
-   std::list<std::string>::iterator it;
-   ROOT::TSchemaRuleProcessor::SplitList( (const char*)source, sources );
+   fSource = source;
 
-   if( sources.empty() )
-   {
+   if( source == "" ) {
       delete fSourceVect;
       fSourceVect = 0;
-      fSource = "";
+      return;
    }
 
    if( !fSourceVect )
       fSourceVect = new TObjArray();
-   fSourceVect->Clear();
 
-   for( it = sources.begin(); it != sources.end(); ++it ) {
-      TObjString *str = new TObjString;
-      *str = it->c_str();
-      fSourceVect->Add( str );
-   }
-   fSource = source;
+   ProcessList( fSourceVect, source );
 }
 
 //------------------------------------------------------------------------------
 const TObjArray* TSchemaRule::GetSource() const
 {
+   if( fSource == "" )
+      return 0;
+
+   if( !fSourceVect ) {
+      fSourceVect = new TObjArray();
+      ProcessList( fSourceVect, fSource );
+   }
    return fSourceVect;
+}
+
+//------------------------------------------------------------------------------
+void TSchemaRule::SetInclude( const TString& incl )
+{
+   fInclude = incl;
+
+   if( incl == "" ) {
+      delete fIncludeVect;
+      fIncludeVect = 0;
+      return;
+   }
+
+   if( !fIncludeVect )
+      fIncludeVect = new TObjArray();
+
+   ProcessList( fIncludeVect, incl );
+}
+
+//------------------------------------------------------------------------------
+const TObjArray* TSchemaRule::GetInclude() const
+{
+   if( fInclude == "" )
+      return 0;
+
+   if( !fIncludeVect ) {
+      fIncludeVect = new TObjArray();
+      ProcessList( fIncludeVect, fInclude );
+   }
+
+   return fIncludeVect;
 }
 
 //------------------------------------------------------------------------------
@@ -248,7 +243,7 @@ Bool_t TSchemaRule::IsValid() const
 }
 
 //------------------------------------------------------------------------------
-void TSchemaRule::SetCode( TString code )
+void TSchemaRule::SetCode( const TString& code )
 {
    fCode = code;
 }
@@ -260,8 +255,11 @@ TString TSchemaRule::GetCode() const
 }
 
 //------------------------------------------------------------------------------
-Bool_t TSchemaRule::HasTarget( TString target ) const
+Bool_t TSchemaRule::HasTarget( const TString& target ) const
 {
+   if( !fTarget )
+      return kFALSE;
+
    TObject*      obj;
    TObjArrayIter it( fTargetVect );
    while( (obj = it.Next()) ) {
@@ -273,8 +271,11 @@ Bool_t TSchemaRule::HasTarget( TString target ) const
 }
 
 //------------------------------------------------------------------------------
-Bool_t TSchemaRule::HasSource( TString source ) const
+Bool_t TSchemaRule::HasSource( const TString& source ) const
 {
+   if( !fSource )
+      return kFALSE;
+
    TObject*      obj;
    TObjArrayIter it( fSourceVect );
    while( (obj = it.Next()) ) {
@@ -333,10 +334,13 @@ Bool_t TSchemaRule::Conflicts( const TSchemaRule* rule ) const
       return kFALSE;
 
    //---------------------------------------------------------------------------
-   // Check if the rules has common target
+   // Check if the rules have common target
    //---------------------------------------------------------------------------
+   if( !rule->GetTarget() )
+      return kFALSE;
+
    Bool_t         haveCommonTargets = kFALSE;
-   TObjArrayIter  titer( rule->fTargetVect );
+   TObjArrayIter  titer( rule->GetTarget() );
    TObjString    *str;
    TObject       *obj;
 
@@ -381,4 +385,106 @@ Bool_t TSchemaRule::Conflicts( const TSchemaRule* rule ) const
       }
    }
    return kFALSE;
+}
+
+//------------------------------------------------------------------------------
+Bool_t TSchemaRule::ProcessVersion( const TString& version ) const
+{
+   // Check if specified version string is correct and build version vector
+
+   //---------------------------------------------------------------------------
+   // Check if we have valid list
+   //---------------------------------------------------------------------------
+   std::string ver = (const char*)version;
+   if( ver[0] != '[' || ver[ver.size()-1] != ']' )
+      return kFALSE;
+
+   std::list<std::string> versions;
+   ROOT::TSchemaRuleProcessor::SplitList( ver.substr( 1, ver.size()-2), versions );
+
+   if( versions.empty() )
+   {
+      delete fVersionVect;
+      fVersionVect = 0;
+      return kFALSE;
+   }
+
+   if( !fVersionVect )
+      fVersionVect = new std::vector<std::pair<Int_t, Int_t> >;
+   fVersionVect->clear();
+
+   //---------------------------------------------------------------------------
+   // Check the validity of each list element
+   //---------------------------------------------------------------------------
+   std::list<std::string>::iterator it;
+   for( it = versions.begin(); it != versions.end(); ++it ) {
+      std::pair<Int_t, Int_t> ver;
+      if( !ROOT::TSchemaRuleProcessor::ProcessVersion( *it, ver ) )
+      {
+         delete fVersionVect;
+         fVersionVect = 0;
+         return kFALSE;
+      }
+      fVersionVect->push_back( ver );
+   }
+   return kTRUE;
+}
+
+//------------------------------------------------------------------------------
+Bool_t TSchemaRule::ProcessChecksum( const TString& checksum ) const
+{
+   //---------------------------------------------------------------------------
+   // Check if we have valid list
+   //---------------------------------------------------------------------------
+   std::string chk = (const char*)checksum;
+   if( chk[0] != '[' || chk[chk.size()-1] != ']' )
+      return kFALSE;
+
+   std::list<std::string> checksums;
+   ROOT::TSchemaRuleProcessor::SplitList( chk.substr( 1, chk.size()-2), checksums );
+
+   if( checksums.empty() ) {
+      delete fChecksumVect;
+      fChecksumVect = 0;
+      return kFALSE; 
+   }
+
+   if( !fChecksumVect )
+      fChecksumVect = new std::vector<UInt_t>;
+   fChecksumVect->clear();
+
+   //---------------------------------------------------------------------------
+   // Check the validity of each list element
+   //---------------------------------------------------------------------------
+   std::list<std::string>::iterator it;
+   for( it = checksums.begin(); it != checksums.end(); ++it ) {
+      if( !ROOT::TSchemaRuleProcessor::IsANumber( *it ) ) {
+         delete fChecksumVect;
+         fChecksumVect = 0;
+         return kFALSE;
+      }
+      fChecksumVect->push_back( atoi( it->c_str() ) );
+   }
+   return kTRUE;
+}
+
+//------------------------------------------------------------------------------
+void TSchemaRule::ProcessList( TObjArray* array, const TString& list ) const
+{
+   // process given list of strings
+
+   std::list<std::string>           elems;
+   std::list<std::string>::iterator it;
+   ROOT::TSchemaRuleProcessor::SplitList( (const char*)list, elems );
+
+   array->Clear();
+
+   if( elems.empty() )
+      return;
+
+   for( it = elems.begin(); it != elems.end(); ++it ) {
+      TObjString *str = new TObjString;
+      *str = it->c_str();
+      array->Add( str );
+   }
 }

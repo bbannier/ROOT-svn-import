@@ -805,7 +805,7 @@ class genDictionary(object) :
         sc += '  rule->fChecksum    = "%s";\n' % (attrs['checksum'],)
 
       if attrs.has_key( 'embed' ):
-        sc += '  rule->fEmbed       = "%s";\n' % (attrs['embed'],)
+        sc += '  rule->fEmbed       = %s;\n' % (attrs['embed'],)
 
       if attrs.has_key( 'include' ):
         sc += '  rule->fInclude     = "%s";\n' % (attrs['include'],)
