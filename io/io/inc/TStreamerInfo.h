@@ -80,6 +80,12 @@ protected:
    private:
      TVirtualCollectionProxy *fProxy;
    };
+#ifndef __CINT__
+   static TStreamerInfo::TPointerCollectionAdapter R__PeekDataCache( const TBuffer &b, TStreamerInfo::TPointerCollectionAdapter *dummy);
+   static TVirtualCollectionProxy &TStreamerInfo::R__PeekDataCache( const TBuffer &b, const TVirtualCollectionProxy *dummy) ;
+   static  char **TStreamerInfo::R__PeekDataCache( const TBuffer &b, TClonesArray* dummy );
+   static char **TStreamerInfo::R__PeekDataCache( const TBuffer &b, char*** dummy );
+#endif
 
 private:
    UInt_t            fCheckSum;          //checksum of original class

@@ -57,7 +57,8 @@ public:
                    kSTLset    =  5,  kSTLmultimap=6,     kSTLmultiset=7};
    // TStreamerElement status bits
    enum {
-      kHasRange     = BIT(6)
+      kHasRange     = BIT(6),
+      kCache        = BIT(9)
    };
 
    TStreamerElement();
