@@ -281,7 +281,7 @@ namespace ROOT {
          }
          if( !rset->AddRule( rule ) ) {
             ::Warning( "TGenericClassInfo", "The rul for class: \"%s\": version, \"%s\" and data members: \"%s\" has been skipped because it conflicts with one of the other rules.",
-                        GetClassName(), it->fVersion, it->fTarget );
+                        GetClassName(), it->fVersion.c_str(), it->fTarget.c_str() );
             delete rule;
          }
       }
