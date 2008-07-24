@@ -109,7 +109,6 @@ private:
 
    static  Int_t     fgCount;            //Number of TStreamerInfo instances
    static TStreamerElement *fgElement;   //Pointer to current TStreamerElement
-   void              BuildUserInfo(const char *info);
    static Double_t   GetValueAux(Int_t type, void *ladd, int k, Int_t len);
    static void       PrintValueAux(char *ladd, Int_t atype, TStreamerElement * aElement, Int_t aleng, Int_t *count);
 
