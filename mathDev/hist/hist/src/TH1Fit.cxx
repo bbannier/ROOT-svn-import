@@ -5,6 +5,8 @@
 #include "TH1.h"
 #include "TF1.h"
 #include "TError.h"
+#include "TGraph.h"
+#include "TGraph2D.h"
 
 #include "Fit/Fitter.h"
 #include "Fit/BinData.h"
@@ -16,6 +18,7 @@
 #include "TList.h"
 #include "TF2.h"
 #include "TF3.h"
+#include "TMath.h"
 
 #include "TClass.h"
 
@@ -27,14 +30,24 @@
 
 namespace TH1Fit { 
 
-   Int_t CheckFitFunction(const TH1 * h1, const TF1 * f1);
+   int GetDimension(const TH1 * h1) { return h1->GetDimension(); }
+   int GetDimension(const TGraph * ) { return 1; }
+   int GetDimension(const TGraph2D * ) { return 2; }
+
+   int CheckFitFunction(const TF1 * f1, int hdim);
+
+   void FitOptionsMake(Option_t *option, Foption_t &fitOption);
+
 
    void DrawFitFunction(TH1 * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool, bool, Option_t *goption);
-   
-   Int_t Fit(TH1 * h1, TF1 *f1 , Foption_t & option ,Option_t *goption, Double_t xxmin, Double_t xxmax); 
+
+   void DrawFitFunction(TGraph * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool, bool, Option_t *goption);
+
+   template <class FitObject>
+   int Fit(FitObject * h1, TF1 *f1 , Foption_t & option ,Option_t *goption, Double_t xxmin, Double_t xxmax); 
 } 
 
-Int_t TH1Fit::CheckFitFunction(const TH1 * h1, const TF1 * f1) { 
+int TH1Fit::CheckFitFunction(const TF1 * f1, int dim) { 
    // Check validity of fitted function
    if (!f1) {
       Error("Fit", "function may not be null pointer");
@@ -52,9 +65,9 @@ Int_t TH1Fit::CheckFitFunction(const TH1 * h1, const TF1 * f1) {
    }
 
    // Check that function has same dimension as histogram
-   if (f1->GetNdim() > h1->GetDimension()) {
-      Error("Fit","function %s dimension, %d, is greater than histogram dimension, %d",
-            f1->GetName(), f1->GetNdim(), h1->GetDimension());
+   if (f1->GetNdim() > dim) {
+      Error("Fit","function %s dimension, %d, is greater than fit object dimension, %d",
+            f1->GetName(), f1->GetNdim(), dim);
       return -4;
    }
    // t.b.d what to do if dimension is less 
@@ -63,23 +76,25 @@ Int_t TH1Fit::CheckFitFunction(const TH1 * h1, const TF1 * f1) {
 
 }
 
-
-Int_t TH1Fit::Fit(TH1 * h1, TF1 *f1 , Foption_t & fitOption ,Option_t *goption, Double_t xxmin, Double_t xxmax)
+template<class FitObject>
+int TH1Fit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption ,Option_t *goption, Double_t xxmin, Double_t xxmax)
 {
-   // perform fit using new fitting classes 
+   // perform fit of histograms, or graphs using new fitting classes 
+   // use same routines for fitting both graphs and histograms
 
 #ifdef DEBUG
    printf("fit function %s\n",f1->GetName() ); 
 #endif
 
    // replacement function using  new fitter
-   int iret = TH1Fit::CheckFitFunction(h1,f1);
+   int hdim = TH1Fit::GetDimension(h1); 
+   int iret = TH1Fit::CheckFitFunction(f1, hdim);
    if (iret != 0) return iret; 
 
 
 
    // why this ???? (special care should be taken for functions with less dimension than histograms)
-   if (f1->GetNdim() < h1->GetDimension() ) fitOption.Integral = 0; 
+   if (f1->GetNdim() < hdim ) fitOption.Integral = 0; 
 
    Int_t special = f1->GetNumber();
    Bool_t linear = f1->IsLinear();
@@ -102,7 +117,7 @@ Int_t TH1Fit::Fit(TH1 * h1, TF1 *f1 , Foption_t & fitOption ,Option_t *goption, 
 
    // check if a range is given or is in the function
    ROOT::Fit::DataRange range; 
-   if (xxmin != xxmax) {
+   if (xxmin < xxmax) {
       range.AddRange(xxmin,xxmax,0);
    }
 
@@ -148,7 +163,8 @@ Int_t TH1Fit::Fit(TH1 * h1, TF1 *f1 , Foption_t & fitOption ,Option_t *goption, 
    else 
       fitter->SetFunction(ROOT::Math::WrappedMultiTF1(*f1) );
 
-
+   // error normalization in case of zero error in the data
+   if (fitdata.GetErrorType() == ROOT::Fit::BinData::kNoError) fitConfig.SetNormErrors(true);
 
 
    if (!fitOption.Verbose) fitConfig.MinimizerOptions().SetPrintLevel(0); 
@@ -235,6 +251,7 @@ Int_t TH1Fit::Fit(TH1 * h1, TF1 *f1 , Foption_t & fitOption ,Option_t *goption, 
 
       return iret; 
 }
+
 
 void TH1Fit::DrawFitFunction(TH1 * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool delOldFunction, bool drawFunction, Option_t *goption) { 
 //   - Store fitted function in histogram functions list and draw
@@ -332,9 +349,103 @@ void TH1Fit::DrawFitFunction(TH1 * h1, const TF1 * f1, const ROOT::Fit::DataRang
    return; 
 }
 
+
+void TH1Fit::DrawFitFunction(TGraph * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool delOldFunction, bool drawFunction, Option_t *goption) { 
+//   - Store fitted function in graph functions list and draw
+#ifndef OLD
+
+   TH1 * h = h1->GetHistogram(); 
+   TH1Fit::DrawFitFunction(h, f1, range, delOldFunction, drawFunction, goption); 
+
+#else
+
+   // get fit range for TF1::Save method
+   double xmin = 0, xmax = 0;
+   if (range.Size(0) == 0) { 
+      TAxis  & xaxis = *(h1->GetXaxis()); 
+      Int_t hxfirst = xaxis.GetFirst();
+      Int_t hxlast  = xaxis.GetLast();
+      Double_t binwidx = xaxis.GetBinWidth(hxlast);
+      xmin    = xaxis.GetBinLowEdge(hxfirst);
+      xmax    = xaxis.GetBinLowEdge(hxlast) +binwidx;
+   } else  { 
+      range.GetRange(0,xmin,xmax);
+   }
+
+   TList * fFunctions = h1->GetListOfFunctions();
+   if (!fFunctions) fFunctions = new TList;
+
+   if (delOldFunction) {
+      TIter next(fFunctions, kIterBackward);
+      TObject *obj;
+      while ((obj = next())) {
+         if (obj->InheritsFrom(TF1::Class())) delete obj;
+      }
+   }
+
+   // add fit function to the list 
+   TF1 * fnew1 = new TF1();
+   f1->Copy(*fnew1);
+   fFunctions->Add(fnew1);
+   fnew1->SetParent(h1);
+   fnew1->Save(xmin,xmax,0,0,0,0);
+   if (fitOption.Nograph) fnew1->SetBit(TF1::kNotDraw);
+   fnew1->SetBit(TFormula::kNotGlobal);
+   
+   if (TestBit(kCanDelete)) return fitResult;
+   if (gPad) gPad->Modified();
+#endif
+}
+
+
 Int_t TH1::DoFit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax) { 
 //   - Decode list of options into fitOption
    Foption_t fitOption;
    if (!FitOptionsMake(option,fitOption)) return 0;
    return TH1Fit::Fit(this, f1 , fitOption , goption, xxmin, xxmax); 
+}
+
+void TH1Fit::FitOptionsMake(Option_t *option, Foption_t &fitOption) { 
+   //   - Decode list of options into fitOption (used by the TGraph)
+   Double_t h=0;
+   TString opt = option;
+   opt.ToUpper();
+   opt.ReplaceAll("ROB", "H");
+
+   //for robust fitting, see if # of good points is defined
+   // decode parameters for robust fitting
+   if (opt.Contains("H=0.")) {
+      int start = opt.Index("H=0.");
+      int numpos = start + strlen("H=0.");
+      int numlen = 0;
+      int len = opt.Length();
+      while( (numpos+numlen<len) && isdigit(opt[numpos+numlen]) ) numlen++;
+      TString num = opt(numpos,numlen);
+      opt.Remove(start+strlen("H"),strlen("=0.")+numlen);
+      h = atof(num.Data());
+      h*=TMath::Power(10, -numlen);
+   }
+
+   if (opt.Contains("U")) fitOption.User    = 1;
+   if (opt.Contains("Q")) fitOption.Quiet   = 1;
+   if (opt.Contains("V")){fitOption.Verbose = 1; fitOption.Quiet   = 0;}
+   if (opt.Contains("W")) fitOption.W1      = 1;
+   if (opt.Contains("E")) fitOption.Errors  = 1;
+   if (opt.Contains("R")) fitOption.Range   = 1;
+   if (opt.Contains("N")) fitOption.Nostore = 1;
+   if (opt.Contains("0")) fitOption.Nograph = 1;
+   if (opt.Contains("+")) fitOption.Plus    = 1;
+   if (opt.Contains("B")) fitOption.Bound   = 1;
+   if (opt.Contains("C")) fitOption.Nochisq = 1;
+   if (opt.Contains("F")) fitOption.Minuit  = 1;
+   if (opt.Contains("H")) { fitOption.Robust  = 1;   fitOption.hRobust = h; } 
+
+}
+
+Int_t TGraph::DoFit(TF1 *f1 ,Option_t *option ,Option_t *goption, Axis_t rxmin, Axis_t rxmax) { 
+   // internal graph fitting methods
+   Foption_t fitOption;
+   TH1Fit::FitOptionsMake(option,fitOption);
+
+   return TH1Fit::Fit(this, f1 , fitOption , goption, rxmin, rxmax); 
 }

@@ -129,7 +129,7 @@ public:
    /**
       flag to check if resulting errors are be normalized according to chi2/ndf 
    */
-   bool NormalizeErrors(){ return fNormErrors; } 
+   bool NormalizeErrors() const { return fNormErrors; } 
 
    /**
       set the option to normalize the error on the result  according to chi2/ndf
