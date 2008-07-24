@@ -712,9 +712,9 @@ void TFitParametersDialog::DoParValue()
 
    for (Int_t i = 0; i < fNP; i++ ) {
       if (id == kVAL*fNP+i)  {
-         fParSld[i]->SetPointerPosition(fParVal[i]->GetNumber());
          if (fParVal[i]->GetNumber() < fParMin[i]->GetNumber()) {
-            fParMin[i]->SetNumber(fParVal[i]->GetNumber());
+            Double_t extraIncrement = (fParMax[i]->GetNumber() - fParMin[i]->GetNumber()) / 4;
+            fParMin[i]->SetNumber(fParVal[i]->GetNumber() - extraIncrement );
             fClient->NeedRedraw(fParMin[i]);
             fParSld[i]->SetRange(fParMin[i]->GetNumber(),
                                  fParMax[i]->GetNumber());
@@ -722,13 +722,15 @@ void TFitParametersDialog::DoParValue()
                                     fParMax[i]->GetNumber());
          }
          if (fParVal[i]->GetNumber() > fParMax[i]->GetNumber()) {
-            fParMax[i]->SetNumber(fParVal[i]->GetNumber());
+            Double_t extraIncrement = (fParMax[i]->GetNumber() - fParMin[i]->GetNumber()) / 4;
+            fParMax[i]->SetNumber(fParVal[i]->GetNumber()  + extraIncrement );
             fClient->NeedRedraw(fParMax[i]);
             fParSld[i]->SetRange(fParMin[i]->GetNumber(),
                                  fParMax[i]->GetNumber());
             fParSld[i]->SetPosition(fParMin[i]->GetNumber(),
                                     fParMax[i]->GetNumber());
          }
+         fParSld[i]->SetPointerPosition(fParVal[i]->GetNumber());
          fClient->NeedRedraw(fParSld[i]);
          fFunc->SetParameter(i,fParSld[i]->GetPointerPosition());
          if (fParBnd[i]->GetState() == kButtonDown)
