@@ -121,7 +121,7 @@ protected:
 
    TString              fFunction;         // selected function to fit
    Double_t            *fFuncPars;         // Parameters of the function
-   TList               *fFitFuncList;      // list of 
+//   TList               *fFitFuncList;      // list of 
    Int_t                fPx1old,
                         fPy1old,
                         fPx2old,
