@@ -72,6 +72,9 @@ FitResult::FitResult() :
             fCovMatrix.push_back(min.CovMatrix(i,j) );
       
       assert (fCovMatrix.size() == r ); 
+
+      // normalize errors if requested in configuration
+      if (fconfig.NormalizeErrors() ) NormalizeErrors();
    }
 
    // minos errors 
