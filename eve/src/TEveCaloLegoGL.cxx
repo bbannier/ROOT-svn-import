@@ -962,7 +962,6 @@ void TEveCaloLegoGL::DrawCells2D(TEveCaloData::RebinData_t &rdata) const
       Double_t eta, etaW, phi, phiW, sum;
       TGLUtil::Color(defCol);
       glBegin(GL_QUADS);
-      Int_t entry = 0;
       Int_t bin;
 
       Float_t y0, y1;
@@ -971,7 +970,7 @@ void TEveCaloLegoGL::DrawCells2D(TEveCaloData::RebinData_t &rdata) const
          for (Int_t j=1; j<=fPhiAxis->GetNbins(); j++)
          {
             bin = j*(nEta+2)+i;
-            if (vec[bin] > threshold)
+            if (vec[bin] > threshold && rdata.fBinData[bin] != -1)
             {
                Float_t logVal = Log(vec[bin] + 1);
                y0 = fPhiAxis->GetBinLowEdge(j);
@@ -1002,8 +1001,8 @@ void TEveCaloLegoGL::DrawCells2D(TEveCaloData::RebinData_t &rdata) const
 
                   if (fM->fTopViewUseMaxColor)
                   {
-                     TGLUtil::Color(fM->GetData()->GetSliceColor(max_e_slice[entry]));
-                     antiFlick[max_e_slice[entry]].push_back(TEveVector(eta, phi, sum));
+                     TGLUtil::Color(fM->GetData()->GetSliceColor(max_e_slice[bin]));
+                     antiFlick[max_e_slice[bin]].push_back(TEveVector(eta, phi, sum));
                   }
                   else
                   {
