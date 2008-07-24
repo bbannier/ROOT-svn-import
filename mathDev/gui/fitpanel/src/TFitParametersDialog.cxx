@@ -609,7 +609,7 @@ void TFitParametersDialog::DoReset()
       else if (fPerr[i])
          fParMin[i]->SetNumber(fPval[i]-3*fPerr[i]);
       else if (fPval[i])
-         fParMin[i]->SetNumber(fPval[i]-0.1*fPval[i]);
+         fParMin[i]->SetNumber(-3*TMath::Abs(fPval[i]));
       else
          fParMin[i]->SetNumber(1.0);
 
@@ -618,7 +618,7 @@ void TFitParametersDialog::DoReset()
       else if (fPerr[i])
          fParMax[i]->SetNumber(fPval[i]+3*fPerr[i]);
       else if (fPval[i])
-         fParMax[i]->SetNumber(fPval[i]+0.1*fPval[i]);
+         fParMax[i]->SetNumber(3*TMath::Abs(fPval[i]));
       else
          fParMax[i]->SetNumber(1.0);
       if (fParMax[i]->GetNumber() < fParMin[i]->GetNumber()){
