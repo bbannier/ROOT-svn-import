@@ -7,7 +7,7 @@
 #include "Math/Minimizer.h"
 #include "Math/GeneticMinimizer.h"
 #include "Math/Factory.h"
-#include "THFitInterface.h"
+#include "HFitInterface.h"
 
 #include "TMath.h"
 

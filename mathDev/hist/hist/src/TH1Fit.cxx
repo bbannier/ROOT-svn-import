@@ -8,7 +8,7 @@
 
 #include "Fit/Fitter.h"
 #include "Fit/BinData.h"
-#include "THFitInterface.h"
+#include "HFitInterface.h"
 
 #include "Math/WrappedTF1.h"
 #include "Math/WrappedMultiTF1.h"

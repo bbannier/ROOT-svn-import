@@ -1,5 +1,5 @@
 // @(#)root/hist:$Id$
-// Author: L. Moneta Thu Nov 15 17:04:20 2007
+// Author: L. Moneta Thu Aug 31 10:40:20 2006
 
 /**********************************************************************
  *                                                                    *
@@ -8,23 +8,37 @@
  *                                                                    *
  **********************************************************************/
 
-// Header file for class TGraphFitInterface
+// Header file for class TH1Interface
 
-#ifndef ROOT_TGraphFitInterface
-#define ROOT_TGraphFitInterface
+#ifndef ROOT_HFitInterface
+#define ROOT_HFitInterface
 
-#ifndef ROOT_Fit_DataVectorfwd
-#include "Fit/DataVectorfwd.h"
-#endif
 
+class TH1; 
+class TF1;
 class TGraph; 
+class TGraph2D;  
 class TMultiGraph; 
-class TF1; 
+
 
 namespace ROOT { 
 
    namespace Fit { 
 
+      class BinData; 
+
+
+      /** 
+          fill the data vector from a TH1. Pass also the TF1 function which is 
+          needed in case of integral option and to reject points rejected by the function
+      */ 
+      void FillData ( BinData  & dv, const TH1 * hist, TF1 * func = 0); 
+
+      /** 
+          fill the data vector from a TGraph2D. Pass also the TF1 function which is 
+          needed in case of integral option and to reject points rejected by the function
+      */ 
+      void FillData ( BinData  & dv, const TGraph2D * gr, TF1 * func = 0); 
 
 
       /** 
@@ -39,6 +53,13 @@ namespace ROOT {
       void FillData ( BinData  & dv, const TMultiGraph * gr,  TF1 * func = 0); 
 
       
+
+      /** 
+          compute initial parameter for gaussian function given the fit data
+          Set the sigma limits for zero top 10* initial rms values 
+          Set the initial parameter values in the TF1
+       */ 
+      void InitGaus(const ROOT::Fit::BinData & data, TF1 * f1 ); 
       
 
    } // end namespace Fit
@@ -46,4 +67,4 @@ namespace ROOT {
 } // end namespace ROOT
 
 
-#endif /* ROOT_Fit_TGraphFitInterface */
+#endif /* ROOT_Fit_TH1Interface */

@@ -11,8 +11,7 @@
 #include "Fit/UnBinData.h"
 //#include "Fit/BinPoint.h"
 #include "Fit/Fitter.h"
-#include "THFitInterface.h"
-#include "TGraphFitInterface.h"
+#include "HFitInterface.h"
 
 #include "Math/IParamFunction.h"
 #include "Math/WrappedTF1.h"
