@@ -119,10 +119,6 @@
 //End_Html
 //////////////////////////////////////////////////////////////////////////
 
-#include <iostream>
-
-using std::cout; using std::endl;
-
 #include "TFitEditor.h"
 #include "TROOT.h"
 #include "TClass.h"
@@ -2467,8 +2463,5 @@ void TFitEditor::RetrieveOptions(TString& fitOpts, TString& drawOpts)
       drawOpts += "SAME";
 
    drawOpts = GetDrawOption();
-
-   cout << "fFitOption: " << fitOpts 
-        << "\tfDrawOption: " << drawOpts << endl;   
 }
 
