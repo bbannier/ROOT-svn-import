@@ -209,8 +209,6 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
 
    SetCleanup(kDeepCleanup);
    
-   fFitFuncList = new TList();
-
    TString name = obj->GetName();
    name.Append("::");
    name.Append(obj->ClassName());
@@ -2318,29 +2316,17 @@ void TFitEditor::GetFunctionsFromList(TList *list)
    // Scan the list of functions of the selected object and include them 
    // by name in the combobox holding the predefined functions.
    
-   TF1 *f1 = 0;
    TObject *obj;
    Int_t newid = kFP_USER*30;
    if (fLastEntryId != kFP_USER) {
       fFuncList->RemoveEntries(newid, fLastEntryId);
-      TIter next(fFitFuncList);
-      while ((obj = next())) {
-         ((TF1 *)obj)->SetParent(0);
-         fFitFuncList->Remove(obj);
-         delete obj;
-      }
    }
+
    TIter next(list, kIterBackward);
    while ((obj = next())) {
       if (obj->InheritsFrom(TF1::Class())) {
          if (!strcmp(obj->GetName(), "fitFunc")) continue;
-         fFuncList->AddEntry(obj->GetName(), newid);
-         newid++;
-         f1 = new TF1();
-         TF1 *f2 = (TF1 *)obj;
-         f2->Copy(*f1);
-         f1->SetParent(fFitObject);
-         fFitFuncList->Add(f1);
+         fFuncList->AddEntry(obj->GetName(), newid++);
       }
    } 
    fLastEntryId = newid - 1;
