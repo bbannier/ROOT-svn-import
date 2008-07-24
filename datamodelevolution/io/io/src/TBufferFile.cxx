@@ -155,6 +155,46 @@ void TBufferFile::DecrementLevel(TVirtualStreamerInfo* /*info*/)
    fInfo = fInfoStack.back();
    fInfoStack.pop_back();
 }
+
+//______________________________________________________________________________
+void TBufferFile::PushDataCache(void *obj)
+{
+   // Push a new data cache area onto the list of area to be used for 
+   // temporarily store 'missing' data members.
+
+   fCacheStack.push_back(obj);
+}
+
+//______________________________________________________________________________
+void *TBufferFile::PeekDataCache() const 
+{
+   // Return the 'current' data cache area from the list of area to be used for 
+   // temporarily store 'missing' data members.
+
+   return fCacheStack.back();
+}
+
+//______________________________________________________________________________
+void **TBufferFile::PeekDataCachePtr() const 
+{
+   // Return the 'current' data cache area from the list of area to be used for 
+   // temporarily store 'missing' data members.
+
+   return (void**)&(fCacheStack.back());
+}
+
+
+//______________________________________________________________________________
+void *TBufferFile::PopDataCache() 
+{
+   // Pop and Return the 'current' data cache area from the list of area to be used for 
+   // temporarily store 'missing' data members.
+
+   void *val = PeekDataCache();
+   fCacheStack.pop_back();
+   return val;
+}
+
 //______________________________________________________________________________
 static void frombufOld(char *&buf, Long_t *x)
 {

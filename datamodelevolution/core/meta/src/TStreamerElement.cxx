@@ -356,7 +356,7 @@ void TStreamerElement::ls(Option_t *) const
 
    sprintf(gIncludeName,GetTypeName());
    if (IsaPointer() && !fTypeName.Contains("*")) strcat(gIncludeName,"*");
-   printf("  %-14s %-15s offset=%3d type=%2d %-20s\n",gIncludeName,GetFullName(),fOffset,fType,GetTitle());
+   printf("  %-14s %-15s offset=%3d type=%2d %s%-20s\n",gIncludeName,GetFullName(),fOffset,fType,TestBit(kCache)?"(cached) ":"",GetTitle());
 }
 
 //______________________________________________________________________________
@@ -569,7 +569,7 @@ void TStreamerBase::ls(Option_t *) const
 {
    // Print the content of the element.
 
-   printf("  %-14s %-15s offset=%3d type=%2d %-20s\n",GetFullName(),GetTypeName(),fOffset,fType,GetTitle());
+   printf("  %-14s %-15s offset=%3d type=%2d %s%-20s\n",GetFullName(),GetTypeName(),fOffset,fType,TestBit(kCache)?"(cached) ":"",GetTitle());
 }
 
 //______________________________________________________________________________
@@ -1601,7 +1601,7 @@ void TStreamerSTL::ls(Option_t *) const
       sprintf(cdim,"[%d]",fMaxIndex[i]);
       strcat(name,cdim);
    }
-   printf("  %-14s %-15s offset=%3d type=%2d ,stl=%d, ctype=%d, %-20s",GetTypeName(),name,fOffset,fType,fSTLtype,fCtype,GetTitle());
+   printf("  %-14s %-15s offset=%3d type=%2d %s,stl=%d, ctype=%d, %-20s",GetTypeName(),name,fOffset,fType,TestBit(kCache)?"(cached)":"",fSTLtype,fCtype,GetTitle());
    printf("\n");
 }
 

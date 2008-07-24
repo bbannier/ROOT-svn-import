@@ -48,6 +48,7 @@ class TBufferFile : public TBuffer {
 
 protected:
    typedef std::vector<TStreamerInfo*> InfoList_t;
+   typedef std::vector<void*> CacheList_t;
 
    Int_t           fMapCount;      //Number of objects or classes in map
    Int_t           fMapSize;       //Default size of map
@@ -57,6 +58,7 @@ protected:
    TExMap         *fClassMap;      //Map containing object,class pairs for reading
    TStreamerInfo  *fInfo;          //Pointer to TStreamerInfo object writing/reading the buffer
    InfoList_t      fInfoStack;     //Stack of pointers to the TStreamerInfos
+   CacheList_t     fCacheStack;    //Stack of pointers to the cache where to temporarily store the value of 'missing' data members
 
    static Int_t    fgMapSize;      //Default map size for all TBuffer objects
 
@@ -120,6 +122,11 @@ public:
    virtual void       ClassBegin(const TClass*, Version_t = -1) {}
    virtual void       ClassEnd(const TClass*) {}
    virtual void       ClassMember(const char*, const char* = 0, Int_t = -1, Int_t = -1) {}
+
+   virtual void      *PeekDataCache() const;
+   virtual void     **PeekDataCachePtr() const;
+   virtual void      *PopDataCache();
+   virtual void       PushDataCache(void *);
 
    virtual Int_t      ReadBuf(void *buf, Int_t max);
    virtual void       WriteBuf(const void *buf, Int_t max);
