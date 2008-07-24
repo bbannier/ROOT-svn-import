@@ -1274,16 +1274,6 @@ TGComboBox* TFitEditor::BuildFunctionList(TGFrame* parent, Int_t id)
    c->AddEntry("user",   kFP_USER);
    fLastEntryId = kFP_USER;
 
-   if (!gROOT->GetFunction("gaus")) {
-      Float_t xmin = 1.;
-      Float_t xmax = 2.;
-      new TF1("gaus","gaus",xmin,xmax);
-      new TF1("landau","landau",xmin,xmax);
-      new TF1("expo","expo",xmin,xmax);
-      for (Int_t i=0; i<10; i++) {
-         new TF1(Form("pol%d",i),Form("pol%d",i),xmin,xmax);
-      }
-   }
    return c;
 }
 
