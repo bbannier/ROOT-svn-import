@@ -166,8 +166,7 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
       // hugly but no other solutions
       if (func != 0) { 
          func->RejectPoint(false);
-         func->InitArgs( &x[0],0 ); 
-         func->EvalPar( &x[0],0 ); 
+         (*func)( &x[0] );  // evaluate using stored function parameters
          if (func->RejectedPoint() ) continue; 
       }
 
@@ -357,14 +356,26 @@ void DoFillData ( BinData  & dv,  const TGraph * gr,  BinData::ErrorType type, T
    double *gy = gr->GetY();
 
    dv.Initialize(nPoints,1, type); 
+   
+#ifdef DEBUG
+   std::cout << "DoFillData: graph npoints = " << nPoints << " type " << type << std::endl;
+   double a1,a2; func->GetRange(a1,a2); std::cout << "func range " << a1 << "  " << a2 << std::endl;
+#endif
 
    double x[1]; 
    for ( int i = 0; i < nPoints; ++i) { 
       
       x[0] = gx[i];
-      // neglect error in x (it is a different chi2 function) 
 
-      if (func && !func->IsInside( x )) continue;
+
+      // need to evaluate function to know about rejected points
+      // hugly but no other solutions
+      if (func) { 
+         func->RejectPoint(false);
+         (*func)( &x[0] ); // evaluate using stored function parameters 
+         if (func->RejectedPoint() ) continue; 
+      }
+
 
       if (fitOpt.fErrors1)  
          dv.Add( gx[i], gy[i] ); 
@@ -376,6 +387,12 @@ void DoFillData ( BinData  & dv,  const TGraph * gr,  BinData::ErrorType type, T
          // consider error = 0 as 1 
          if (!HFitInterface::AdjustError(fitOpt,errorY) ) continue; 
          dv.Add( gx[i], gy[i], errorY );
+
+#ifdef DEBUG
+         std::cout << "Point " << i << "  " << gx[i] <<  "  " << gy[i] << "  " << errorY << std::endl; 
+//         std::cout << "Added Point " << i <<  "  error adjusted to   " << errorY << std::endl; 
+#endif
+
       }
       else { // case use error in x or asym errors 
          double errorX = 0; 
