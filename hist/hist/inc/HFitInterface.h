@@ -19,6 +19,7 @@ class TF1;
 class TGraph; 
 class TGraph2D;  
 class TMultiGraph; 
+class Foption_t; 
 
 
 namespace ROOT { 
@@ -26,6 +27,19 @@ namespace ROOT {
    namespace Fit { 
 
       class BinData; 
+
+
+
+      /**
+         fitting function for a TH1 (called from TH1::Fit)
+       */
+      int FitObject(TH1 * h1, TF1 *f1 , Foption_t & option ,const char *goption, double xxmin, double xxmax); 
+
+      /**
+         fitting function for a TGraph (called from TGraph::Fit)
+       */
+      int FitObject(TGraph * h1, TF1 *f1 , Foption_t & option ,const char *goption, double xxmin, double xxmax); 
+
 
 
       /** 
@@ -60,6 +74,8 @@ namespace ROOT {
           Set the initial parameter values in the TF1
        */ 
       void InitGaus(const ROOT::Fit::BinData & data, TF1 * f1 ); 
+
+
       
 
    } // end namespace Fit

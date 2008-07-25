@@ -1,4 +1,4 @@
-// new TH1Fit function 
+// new HFit function 
 //______________________________________________________________________________
 
 
@@ -28,7 +28,7 @@
 
 // utility functions used in TH1::Fit
 
-namespace TH1Fit { 
+namespace HFit { 
 
    int GetDimension(const TH1 * h1) { return h1->GetDimension(); }
    int GetDimension(const TGraph * ) { return 1; }
@@ -36,18 +36,18 @@ namespace TH1Fit {
 
    int CheckFitFunction(const TF1 * f1, int hdim);
 
-   void FitOptionsMake(Option_t *option, Foption_t &fitOption);
+   void FitOptionsMake(const char *option, Foption_t &fitOption);
 
 
-   void DrawFitFunction(TH1 * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool, bool, Option_t *goption);
+   void DrawFitFunction(TH1 * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool, bool, const char *goption);
 
-   void DrawFitFunction(TGraph * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool, bool, Option_t *goption);
+   void DrawFitFunction(TGraph * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool, bool, const char *goption);
 
    template <class FitObject>
-   int Fit(FitObject * h1, TF1 *f1 , Foption_t & option ,Option_t *goption, Double_t xxmin, Double_t xxmax); 
+   int Fit(FitObject * h1, TF1 *f1 , Foption_t & option ,const char *goption, Double_t xxmin, Double_t xxmax); 
 } 
 
-int TH1Fit::CheckFitFunction(const TF1 * f1, int dim) { 
+int HFit::CheckFitFunction(const TF1 * f1, int dim) { 
    // Check validity of fitted function
    if (!f1) {
       Error("Fit", "function may not be null pointer");
@@ -76,8 +76,9 @@ int TH1Fit::CheckFitFunction(const TF1 * f1, int dim) {
 
 }
 
+
 template<class FitObject>
-int TH1Fit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption ,Option_t *goption, Double_t xxmin, Double_t xxmax)
+int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption ,const char *goption, Double_t xxmin, Double_t xxmax)
 {
    // perform fit of histograms, or graphs using new fitting classes 
    // use same routines for fitting both graphs and histograms
@@ -87,8 +88,8 @@ int TH1Fit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption ,Option_t *gopti
 #endif
 
    // replacement function using  new fitter
-   int hdim = TH1Fit::GetDimension(h1); 
-   int iret = TH1Fit::CheckFitFunction(f1, hdim);
+   int hdim = HFit::GetDimension(h1); 
+   int iret = HFit::CheckFitFunction(f1, hdim);
    if (iret != 0) return iret; 
 
 
@@ -143,7 +144,7 @@ int TH1Fit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption ,Option_t *gopti
    ROOT::Fit::FillData(fitdata, h1, f1); 
 
 #ifdef DEBUG
-   printf("TH1Fit:: data size is %d \n",fitdata.Size());
+   printf("HFit:: data size is %d \n",fitdata.Size());
 #endif   
 
    // this functions use the TVirtualFitter
@@ -247,13 +248,13 @@ int TH1Fit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption ,Option_t *gopti
 
 //   - Store fitted function in histogram functions list and draw
       if (!fitOption.Nostore) 
-         TH1Fit::DrawFitFunction(h1, f1, range, !fitOption.Plus, !fitOption.Nograph, goption); 
+         HFit::DrawFitFunction(h1, f1, range, !fitOption.Plus, !fitOption.Nograph, goption); 
 
       return iret; 
 }
 
 
-void TH1Fit::DrawFitFunction(TH1 * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool delOldFunction, bool drawFunction, Option_t *goption) { 
+void HFit::DrawFitFunction(TH1 * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool delOldFunction, bool drawFunction, const char *goption) { 
 //   - Store fitted function in histogram functions list and draw
 // should have separate functions for 1,2,3d ? t.b.d in case
 
@@ -350,12 +351,12 @@ void TH1Fit::DrawFitFunction(TH1 * h1, const TF1 * f1, const ROOT::Fit::DataRang
 }
 
 
-void TH1Fit::DrawFitFunction(TGraph * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool delOldFunction, bool drawFunction, Option_t *goption) { 
+void HFit::DrawFitFunction(TGraph * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool delOldFunction, bool drawFunction, const char *goption) { 
 //   - Store fitted function in graph functions list and draw
 #ifndef OLD
 
    TH1 * h = h1->GetHistogram(); 
-   TH1Fit::DrawFitFunction(h, f1, range, delOldFunction, drawFunction, goption); 
+   HFit::DrawFitFunction(h, f1, range, delOldFunction, drawFunction, goption); 
 
 #else
 
@@ -398,14 +399,7 @@ void TH1Fit::DrawFitFunction(TGraph * h1, const TF1 * f1, const ROOT::Fit::DataR
 }
 
 
-Int_t TH1::DoFit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax) { 
-//   - Decode list of options into fitOption
-   Foption_t fitOption;
-   if (!FitOptionsMake(option,fitOption)) return 0;
-   return TH1Fit::Fit(this, f1 , fitOption , goption, xxmin, xxmax); 
-}
-
-void TH1Fit::FitOptionsMake(Option_t *option, Foption_t &fitOption) { 
+void HFit::FitOptionsMake(const char *option, Foption_t &fitOption) { 
    //   - Decode list of options into fitOption (used by the TGraph)
    Double_t h=0;
    TString opt = option;
@@ -442,10 +436,28 @@ void TH1Fit::FitOptionsMake(Option_t *option, Foption_t &fitOption) {
 
 }
 
+// implementations of DoFit member functions in data objects (TH1, TGrah, etc...)
+
+Int_t TH1::DoFit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax) { 
+//   - Decode list of options into fitOption
+   Foption_t fitOption;
+   if (!FitOptionsMake(option,fitOption)) return 0;
+   return ROOT::Fit::FitObject(this, f1 , fitOption , goption, xxmin, xxmax); 
+}
+
 Int_t TGraph::DoFit(TF1 *f1 ,Option_t *option ,Option_t *goption, Axis_t rxmin, Axis_t rxmax) { 
    // internal graph fitting methods
    Foption_t fitOption;
-   TH1Fit::FitOptionsMake(option,fitOption);
+   HFit::FitOptionsMake(option,fitOption);
 
-   return TH1Fit::Fit(this, f1 , fitOption , goption, rxmin, rxmax); 
+   return ROOT::Fit::FitObject(this, f1 , fitOption , goption, rxmin, rxmax); 
+}
+
+// implementations of ROOT::Fit::FitObject functions (defined in HFitInterface) in terms of the template HFit::Fit
+
+int ROOT::Fit::FitObject(TH1 * h1, TF1 *f1 , Foption_t & option ,const char *goption, Double_t xxmin, Double_t xxmax) { 
+   return HFit::Fit(h1,f1,option,goption,xxmin,xxmax); 
+}
+int ROOT::Fit::FitObject(TGraph * gr, TF1 *f1 , Foption_t & option ,const char *goption, Double_t xxmin, Double_t xxmax) { 
+   return HFit::Fit(gr,f1,option,goption,xxmin,xxmax); 
 }
