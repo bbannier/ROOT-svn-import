@@ -21,6 +21,7 @@
 #include "TMath.h"
 
 #include "TClass.h"
+#include "TVirtualPad.h" // for gPad
 
 #include <cmath>
 
@@ -39,12 +40,16 @@ namespace HFit {
    void FitOptionsMake(const char *option, Foption_t &fitOption);
 
 
-   void DrawFitFunction(TH1 * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool, bool, const char *goption);
+   void GetDrawingRange(TH1 * h1, ROOT::Fit::DataRange & range);
+   void GetDrawingRange(TGraph * h1, ROOT::Fit::DataRange & range);
 
-   void DrawFitFunction(TGraph * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool, bool, const char *goption);
 
    template <class FitObject>
    int Fit(FitObject * h1, TF1 *f1 , Foption_t & option ,const char *goption, Double_t xxmin, Double_t xxmax); 
+
+   template <class FitObject>
+   void StoreAndDrawFitFunction(FitObject * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool, bool, const char *goption);
+
 } 
 
 int HFit::CheckFitFunction(const TF1 * f1, int dim) { 
@@ -75,7 +80,6 @@ int HFit::CheckFitFunction(const TF1 * f1, int dim) {
    return 0; 
 
 }
-
 
 template<class FitObject>
 int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption ,const char *goption, Double_t xxmin, Double_t xxmax)
@@ -206,7 +210,9 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption ,const char *gopti
    // do fitting 
 
 #ifdef DEBUG
-   printf("do now fit...\n");
+   if (fitOption.Like)   printf("do  likelihood fit...\n");
+   if (linear)    printf("do linear fit...\n");
+   printf("do now  fit...\n");
 #endif   
  
    bool fitok = false; 
@@ -247,26 +253,21 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption ,const char *gopti
 //    }
 
 //   - Store fitted function in histogram functions list and draw
-      if (!fitOption.Nostore) 
-         HFit::DrawFitFunction(h1, f1, range, !fitOption.Plus, !fitOption.Nograph, goption); 
+      if (!fitOption.Nostore) {
+         HFit::GetDrawingRange(h1, range);
+         HFit::StoreAndDrawFitFunction(h1, f1, range, !fitOption.Plus, !fitOption.Nograph, goption); 
+      }
 
       return iret; 
 }
 
 
-void HFit::DrawFitFunction(TH1 * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool delOldFunction, bool drawFunction, const char *goption) { 
-//   - Store fitted function in histogram functions list and draw
-// should have separate functions for 1,2,3d ? t.b.d in case
+void HFit::GetDrawingRange(TH1 * h1, ROOT::Fit::DataRange & range) { 
+   // get range from histogram and update the DataRange class  
+   // if a ranges already exist in that dimension use that one
 
- 
-   TF1 *fnew1;
-   TF2 *fnew2;
-   TF3 *fnew3;
+   Int_t ndim = GetDimension(h1);
 
-   Int_t ndim = h1->GetDimension();
-
-   // get range for the function 
-   // support so far only one range / coordinate
    double xmin = 0, xmax = 0, ymin = 0, ymax = 0, zmin = 0, zmax = 0; 
    if (range.Size(0) == 0) { 
       TAxis  & xaxis = *(h1->GetXaxis()); 
@@ -275,9 +276,9 @@ void HFit::DrawFitFunction(TH1 * h1, const TF1 * f1, const ROOT::Fit::DataRange 
       Double_t binwidx = xaxis.GetBinWidth(hxlast);
       xmin    = xaxis.GetBinLowEdge(hxfirst);
       xmax    = xaxis.GetBinLowEdge(hxlast) +binwidx;
-   } else  { 
-      range.GetRange(0,xmin,xmax);
-   }
+      range.AddRange(xmin,xmax);
+   } 
+
    if (ndim > 1) {
       if (range.Size(1) == 0) { 
          TAxis  & yaxis = *(h1->GetYaxis()); 
@@ -286,8 +287,7 @@ void HFit::DrawFitFunction(TH1 * h1, const TF1 * f1, const ROOT::Fit::DataRange 
          Double_t binwidy = yaxis.GetBinWidth(hylast);
          ymin    = yaxis.GetBinLowEdge(hyfirst);
          ymax    = yaxis.GetBinLowEdge(hylast) +binwidy;
-      } else  { 
-         range.GetRange(1,ymin,ymax);
+         range.AddRange(ymin,ymax,1);
       }
    }      
    if (ndim > 2) {
@@ -298,10 +298,40 @@ void HFit::DrawFitFunction(TH1 * h1, const TF1 * f1, const ROOT::Fit::DataRange 
          Double_t binwidz = zaxis.GetBinWidth(hzlast);
          zmin    = zaxis.GetBinLowEdge(hzfirst);
          zmax    = zaxis.GetBinLowEdge(hzlast) +binwidz;
-      } else  { 
-         range.GetRange(2,zmin,zmax);
+         range.AddRange(zmin,zmax,2);
       }
    }      
+#ifdef DEBUG
+   std::cout << "xmin,xmax" << xmin << "  " << xmax << std::endl;
+#endif
+
+}
+
+void HFit::GetDrawingRange(TGraph * gr,  ROOT::Fit::DataRange & range) { 
+   // get range for graph (used sub-set histogram)
+   HFit::GetDrawingRange(gr->GetHistogram(), range);
+}
+
+
+template<class FitObject>
+void HFit::StoreAndDrawFitFunction(FitObject * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool delOldFunction, bool drawFunction, const char *goption) { 
+//   - Store fitted function in histogram functions list and draw
+// should have separate functions for 1,2,3d ? t.b.d in case
+
+#ifdef DEBUG
+   std::cout <<"draw fit function " << f1->GetName() << std::endl;
+#endif
+ 
+   TF1 *fnew1;
+   TF2 *fnew2;
+   TF3 *fnew3;
+
+   Int_t ndim = GetDimension(h1);
+   double xmin = 0, xmax = 0, ymin = 0, ymax = 0, zmin = 0, zmax = 0; 
+   range.GetRange(0,xmin,xmax); 
+   if (ndim>1)    range.GetRange(1,ymin,ymax); 
+   if (ndim>2)    range.GetRange(2,zmin,zmax); 
+
 
    TList * fFunctions = h1->GetListOfFunctions();
 
@@ -323,6 +353,7 @@ void HFit::DrawFitFunction(TH1 * h1, const TF1 * f1, const ROOT::Fit::DataRange 
       f1->Copy(*fnew1);
       fFunctions->Add(fnew1);
       fnew1->SetParent( h1 );
+      fnew1->SetRange(xmin,xmax);
       fnew1->Save(xmin,xmax,0,0,0,0);
       if (!drawFunction) fnew1->SetBit(TF1::kNotDraw);
       fnew1->SetBit(TFormula::kNotGlobal);
@@ -331,6 +362,7 @@ void HFit::DrawFitFunction(TH1 * h1, const TF1 * f1, const ROOT::Fit::DataRange 
       f1->Copy(*fnew2);
       fnew2 = (TF2*)f1->Clone();
       fFunctions->Add(fnew2);
+      fnew2->SetRange(xmin,xmax,ymin,ymax);
       fnew2->SetParent( h1 );
       fnew2->Save(xmin,xmax,ymin,ymax,0,0);
       if (!drawFunction) fnew2->SetBit(TF1::kNotDraw);
@@ -341,29 +373,35 @@ void HFit::DrawFitFunction(TH1 * h1, const TF1 * f1, const ROOT::Fit::DataRange 
       f1->Copy(*fnew3);
       fnew3 = (TF3*)f1->Clone();
       fFunctions->Add(fnew3);
+      fnew3->SetRange(xmin,xmax,ymin,ymax,zmin,zmax);
       fnew3->SetParent( h1 );
       fnew3->SetBit(TFormula::kNotGlobal);
    }
    if (h1->TestBit(kCanDelete)) return;
-   if (drawFunction && ndim < 3) h1->Draw(goption);
+   // draw only in case of histograms
+   if (drawFunction && ndim < 3 && h1->InheritsFrom(TH1::Class() ) ) h1->Draw(goption);
+   if (gPad) gPad->Modified(); // this is not in TH1 code (needed ??)
    
    return; 
 }
 
+#ifdef OLD
 
-void HFit::DrawFitFunction(TGraph * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool delOldFunction, bool drawFunction, const char *goption) { 
+void HFit::DrawFitFunction(TGraph * h1, const TF1 * f1, ROOT::Fit::DataRange & range, bool delOldFunction, bool drawFunction, const char *goption) { 
 //   - Store fitted function in graph functions list and draw
-#ifndef OLD
+//#define OLD
 
-   TH1 * h = h1->GetHistogram(); 
-   HFit::DrawFitFunction(h, f1, range, delOldFunction, drawFunction, goption); 
+   //TH1 * h = h1->GetHistogram(); 
+//    HFit::GetDrawingRange(h1->GetHistogram(),f1,range);
+//    HFit::DrawFitFunction(h1, f1, range, delOldFunction, drawFunction, goption); 
 
-#else
+//#else
 
    // get fit range for TF1::Save method
+   TH1 * h = h1->GetHistogram(); 
    double xmin = 0, xmax = 0;
    if (range.Size(0) == 0) { 
-      TAxis  & xaxis = *(h1->GetXaxis()); 
+      TAxis  & xaxis = *(h->GetXaxis()); 
       Int_t hxfirst = xaxis.GetFirst();
       Int_t hxlast  = xaxis.GetLast();
       Double_t binwidx = xaxis.GetBinWidth(hxlast);
@@ -372,6 +410,8 @@ void HFit::DrawFitFunction(TGraph * h1, const TF1 * f1, const ROOT::Fit::DataRan
    } else  { 
       range.GetRange(0,xmin,xmax);
    }
+
+   std::cout << "xmin ,xmax " << xmin << " , " << xmax << "  " << delOldFunction << "  " << drawFunction << std::endl;
 
    TList * fFunctions = h1->GetListOfFunctions();
    if (!fFunctions) fFunctions = new TList;
@@ -388,15 +428,32 @@ void HFit::DrawFitFunction(TGraph * h1, const TF1 * f1, const ROOT::Fit::DataRan
    TF1 * fnew1 = new TF1();
    f1->Copy(*fnew1);
    fFunctions->Add(fnew1);
+   fnew1->SetRange(xmin,xmax);
    fnew1->SetParent(h1);
    fnew1->Save(xmin,xmax,0,0,0,0);
-   if (fitOption.Nograph) fnew1->SetBit(TF1::kNotDraw);
+   if (!drawFunction) fnew1->SetBit(TF1::kNotDraw);
    fnew1->SetBit(TFormula::kNotGlobal);
    
-   if (TestBit(kCanDelete)) return fitResult;
-   if (gPad) gPad->Modified();
+   if (h1->TestBit(kCanDelete)) return ;
+   //if (gPad) gPad->Modified(); // this is not in TH1 code
+
+#ifdef DEBUG
+   std::cout << "stored function " << fnew1 << "in graph" << std::endl; 
+
+   fFunctions = h1->GetListOfFunctions();
+   TIter next(fFunctions, kIterBackward);
+   TObject *obj;
+   while ((obj = next())) {
+      if (obj->InheritsFrom(TF1::Class())) { 
+         TF1 * ff = (TF1*) obj; 
+         std::cout << obj << "  " << ff->GetName() << "  " << ff->GetTitle() << std::endl;
+      }
+   }
+ 
 #endif
+   
 }
+#endif
 
 
 void HFit::FitOptionsMake(const char *option, Foption_t &fitOption) { 
