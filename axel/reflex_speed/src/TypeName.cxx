@@ -13,10 +13,10 @@
 #define REFLEX_BUILD
 #endif
 
-#include "Reflex/internal/TypeName.h"
+#include "TypeName.h"
 
 #include "Reflex/Type.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 
 #include "stl_hash.h"
 #include <vector>

@@ -20,7 +20,7 @@
 #include "Reflex/Any.h"
 #include "Reflex/Type.h"
 #include "Reflex/Tools.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 
 #include "FunctionMember.h"
 #include "FunctionMemberTemplateInstance.h"

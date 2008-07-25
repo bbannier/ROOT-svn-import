@@ -13,10 +13,10 @@
 #define REFLEX_BUILD
 #endif
 
-#include "Reflex/internal/MemberTemplateName.h"
+#include "MemberTemplateName.h"
 
 #include "Reflex/MemberTemplate.h"
-#include "Reflex/internal/MemberTemplateImpl.h"
+#include "MemberTemplateImpl.h"
 #include "Reflex/Member.h"
 #include "Reflex/Tools.h"
 

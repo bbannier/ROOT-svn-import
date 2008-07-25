@@ -16,7 +16,7 @@
 #include "Fundamental.h"
 
 #include "Reflex/Type.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::Fundamental::Fundamental( const char * typ,

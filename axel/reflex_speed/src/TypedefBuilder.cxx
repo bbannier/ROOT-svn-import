@@ -18,7 +18,7 @@
 
 #include "Typedef.h"
 
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 
 
 //-------------------------------------------------------------------------------

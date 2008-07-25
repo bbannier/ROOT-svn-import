@@ -13,14 +13,14 @@
 #define REFLEX_BUILD
 #endif
 
-#include "Reflex/internal/MemberBase.h"
+#include "MemberBase.h"
 
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 #include "Reflex/Scope.h"
 #include "Reflex/Type.h"
 #include "Reflex/Base.h"
 #include "Reflex/Object.h"
-#include "Reflex/internal/OwnedPropertyList.h"
+#include "OwnedPropertyList.h"
 #include "Reflex/DictionaryGenerator.h"
 
 #include "Reflex/Tools.h"

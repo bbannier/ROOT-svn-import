@@ -15,9 +15,9 @@
 
 #include "Reflex/MemberTemplate.h"
 
-#include "Reflex/internal/MemberTemplateName.h"
-#include "Reflex/internal/MemberTemplateImpl.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "MemberTemplateName.h"
+#include "MemberTemplateImpl.h"
+#include "OwnedMember.h"
 
 
 //-------------------------------------------------------------------------------

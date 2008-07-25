@@ -17,7 +17,7 @@
 
 #include "Reflex/Scope.h"
 #include "Reflex/Object.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 #include "Reflex/DictionaryGenerator.h"
 
 #include "Function.h"

@@ -32,11 +32,11 @@ namespace Internal {
    // A hash map container (its type-safe layer)
    //
 
-   template <typename VALUE, typename NODE> class RFLX_API Container_iterator;
-   template <typename VALUE, typename NODE> class RFLX_API Container_const_iterator;
+   template <typename VALUE, typename NODE> class Container_iterator;
+   template <typename VALUE, typename NODE> class Container_const_iterator;
 
    // Base class of adaptor; allows function-wise specialization
-   struct RFLX_API ContainerAdaptor {
+   struct ContainerAdaptor {
       // get the key for a value
       template <typename KEY, typename VALUE>
       KEY Key(const VALUE& value) const { return (KEY) value; }
@@ -78,7 +78,7 @@ namespace Internal {
 
    // Adaptor class used by Container
    template <typename KEY, typename VALUE>
-   struct RFLX_API ContainerAdaptorT: public ContainerAdaptor {
+   struct ContainerAdaptorT: public ContainerAdaptor {
       // get the key for a value
       KEY Key(const VALUE& value) const { return ContainerAdaptor::Key<KEY, VALUE>(value); }
       // get the key for a value, using a pre-allocated key buffer
@@ -107,17 +107,17 @@ namespace Internal {
    template <>
    Hash_t ContainerAdaptor::Hash(const char* const & key) const { return StringHash(key); }
 
-   enum RFLX_API EUniqueness {
-      kMANY   = 0, // for UNIQUENESS: allow multiple instances of the same object in the container
-      kUNIQUE = 1 // for UNIQUENESS: allow container to hold only one instance of each object
+   enum EUniqueness {
+      kMany   = 0, // for UNIQUENESS: allow multiple instances of the same object in the container
+      kUnique = 1 // for UNIQUENESS: allow container to hold only one instance of each object
    };
 
 
 
 
 
-   template <typename KEY, typename VALUE, EUniqueness UNIQUENESS = kUNIQUE, class ADAPTOR = ContainerAdaptorT<KEY, VALUE> >
-   class RFLX_API ContainerImpl: public ContainerImplBase, public IContainerImpl {
+   template <typename KEY, typename VALUE, EUniqueness UNIQUENESS = kMany, class ADAPTOR = ContainerAdaptorT<KEY, VALUE> >
+   class ContainerImpl: public ContainerImplBase, public IContainerImpl {
    private:
       class Node: public ContainerImplBase::Link {
       public:
@@ -156,6 +156,10 @@ namespace Internal {
          RemoveAllNodes();
       }
 
+      // leave out const_iterator overloads as these are not part of the API anyway.
+      iterator Begin() const { return iterator(*this, *GetNodeHelper(), End()); }
+      iterator End() const { return iterator(); }
+
       Hash_t Hash(const KEY& key) const { return fAdaptor.Hash(key); }
       Hash_t ValueHash(const VALUE& obj) const { return fAdaptor.ValueHash(obj); }
 
@@ -163,7 +167,7 @@ namespace Internal {
       const VALUE* Insert(const VALUE& obj) { return Insert(obj, fAdaptor.ValueHash(obj)); }
       // Insert VALUE obj with hash into container; return & obj or 0 if not inserted
       const VALUE* Insert(const VALUE& obj, Hash_t hash) {
-         bool canInsert = (UNIQUENESS == kMANY);
+         bool canInsert = (UNIQUENESS == kMany);
          if (!canInsert) {
             canInsert = !ContainsValue(obj, hash);
          }
@@ -204,35 +208,6 @@ namespace Internal {
             fAdaptor.Invalidate(node->fObj);
          }
       }
-
-      // leave out const_iterator overloads as these are not part of the API anyway.
-      iterator Begin() const { return iterator(*this, *GetNodeHelper(), End()); }
-      iterator End() const { return iterator(); }
-
-      // NEED TO IMPLEMENT!!!
-      iterator RBegin() const { return iterator(*this, *GetNodeHelper(), End()); }
-      iterator REnd() const { return iterator(); }
-
-      virtual void ProxyBegin(ConstIteratorBase& i) const { i.SetImpl(new iterator(Begin()), true); }
-      virtual void ProxyEnd(ConstIteratorBase& i) const {
-         static iterator sEnd = End();
-         i.SetImpl(&sEnd, false);
-      }
-
-      virtual void ProxyRBegin(ConstIteratorBase& i) const { i.SetImpl(new iterator(RBegin()), true); }
-      virtual void ProxyREnd(ConstIteratorBase& i) const {
-         static iterator sREnd = REnd();
-         i.SetImpl(&sREnd, false);
-      }
-
-      // return the size of the container via the API
-      virtual size_t ProxySize() const { return Size(); }
-      virtual bool ProxyEmpty() const {
-         // return whether the container is empty via the API
-         return !Size();
-      }
-
-
 
       iterator Find(const KEY& key) const { return Find(key, fAdaptor.Hash(key)); }
       iterator Find(const KEY& key, Hash_t hash) const {
@@ -298,6 +273,27 @@ namespace Internal {
       void SetNext(const ContainerImpl<KEY, VALUE, UNIQUENESS, ADAPTOR>* next) { fNext = next; }
       const ContainerImpl<KEY, VALUE, UNIQUENESS, ADAPTOR>* GetNext() const { return fNext; }
 
+
+
+      virtual void ProxyBegin(ConstIteratorBase& i) const { i.SetImpl(new iterator(Begin()), true); }
+      virtual void ProxyEnd(ConstIteratorBase& i) const {
+         static iterator sEnd = End();
+         i.SetImpl(&sEnd, false);
+      }
+
+      // return the size of the container via the API
+      virtual size_t ProxySize() const { return Size(); }
+      virtual bool ProxyEmpty() const {
+         // return whether the container is empty via the API
+         return !Size();
+      }
+
+      static NodeHelper* GetNodeHelper() {
+         static NodeHelper helper;
+         return &helper;
+      }
+
+
    protected:
       void RemoveAllNodes() {
          for (iterator iNode = Begin(); iNode; ++iNode)
@@ -311,11 +307,6 @@ namespace Internal {
          return fAdaptor.IsInvalidated(static_cast<const Node*>(node)->fObj);
       }
 
-      static NodeHelper* GetNodeHelper() {
-         static NodeHelper helper;
-         return &helper;
-      }
-
    private:
       ADAPTOR fAdaptor;
       const ContainerImpl<KEY, VALUE, UNIQUENESS, ADAPTOR>* fNext; // next container for chained iteration
@@ -325,7 +316,7 @@ namespace Internal {
    //-------------------------------------------------------------------------------
 
    template <typename VALUE, class NODE>
-   class RFLX_API Container_const_iterator: public ContainerImplBase_iterator {
+   class Container_const_iterator: public ContainerImplBase_iterator {
    public:
       typedef ContainerImplBase_iterator CBIter;
       typedef ContainerTools::LinkIter LinkIter;
@@ -363,7 +354,7 @@ namespace Internal {
    //-------------------------------------------------------------------------------
 
    template <typename VALUE, class NODE>
-   class RFLX_API Container_iterator: public Container_const_iterator<VALUE, NODE>,
+   class Container_iterator: public Container_const_iterator<VALUE, NODE>,
                                       public Reflex::Internal::IConstIteratorImpl
    {
    public:
@@ -407,7 +398,7 @@ namespace Internal {
 
       void ProxyForward() { ++(*this); }
 
-      void* ProxyElement() const { return operator->(); }
+      const void* ProxyElement() const { return operator->(); }
       IConstIteratorImpl* ProxyClone() const { return new Container_iterator(*this); }
 
    }; // class Container_iterator

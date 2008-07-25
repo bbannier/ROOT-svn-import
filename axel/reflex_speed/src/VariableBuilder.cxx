@@ -15,7 +15,7 @@
 
 #include "Reflex/Builder/VariableBuilder.h"
 
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 
 #include "Namespace.h"
 #include "DataMember.h"
@@ -37,18 +37,15 @@ Reflex::VariableBuilderImpl::VariableBuilderImpl( const char * nam,
       memName = memName.substr( pos + 2 );
    }
 
-   Scope sc = Scope::ByName(declScope);
+   Scope sc = Scope::Scopes().ByName(declScope);
   
    if ( ! sc ) {
       sc = (new Internal::Namespace(declScope.c_str()))->ThisScope();
    }
   
-   if ( ! sc.Is(gNAMESPACE)) throw RuntimeError("Declaring At is not a namespace");
+   if ( ! sc.Is(gNamespace)) throw RuntimeError("Declaring At is not a namespace");
 
-   sc.AddDataMember( memName.c_str(),
-                     typ,
-                     offs,
-                     modifiers );
+   sc.AddMember( memName.c_str(), typ, offs,modifiers );
 }
 
 
@@ -97,19 +94,19 @@ Reflex::VariableBuilder::VariableBuilder( const char * nam,
    std::string declScope = Tools::GetScopeName(nam);
    std::string memName = Tools::GetBaseName(nam);
    
-   Scope sc = Scope::ByName(declScope);
+   Scope sc = Scope::Scopes().ByName(declScope);
   
    if ( ! sc ) {
       sc = (new Internal::Namespace(declScope.c_str()))->ThisScope();
    }
   
-   if ( ! sc.Is(gNAMESPACE)) throw RuntimeError("Declaring scope is not a namespace");
+   if (!sc.Is(gNamespace)) throw RuntimeError("Declaring scope is not a namespace");
 
-   DataMember* dm = new Internal::DataMember( memName.c_str(),
+   Internal::DataMember* dm = new Internal::DataMember( memName.c_str(),
                                     typ,
                                     offs,
                                     modifiers );
-   sc.AddDataMember(Member(dm));
+   sc.AddMember(Member(dm));
    fDataMember = Member(dm);
 }
 

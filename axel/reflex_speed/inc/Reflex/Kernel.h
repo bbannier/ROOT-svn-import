@@ -119,7 +119,6 @@
 #include <utility>
 #include <exception>
 #include <vector>
-#include "Reflex/Container.h"
 
 namespace Reflex {
 
@@ -150,48 +149,13 @@ namespace Reflex {
    class TypeTemplate;
    class MemberTemplate;
 
-   typedef Container<std::string> StdString_Cont_Type_t;
-   typedef StdString_Cont_Type_t::const_iterator StdString_Iterator;
-   typedef StdString_Cont_Type_t::const_reverse_iterator Reverse_StdString_Iterator;
-
-   typedef Container< Type > Type_Cont_Type_t;
-   typedef Type_Cont_Type_t::const_iterator Type_Iterator;
-   typedef Type_Cont_Type_t::const_reverse_iterator Reverse_Type_Iterator;
-
-   typedef Container< Base > Base_Cont_Type_t;
-   typedef Base_Cont_Type_t::const_iterator Base_Iterator;
-   typedef Base_Cont_Type_t::const_reverse_iterator Reverse_Base_Iterator;
-
-   typedef Container< Scope > Scope_Cont_Type_t;
-   typedef Scope_Cont_Type_t::const_iterator Scope_Iterator;
-   typedef Scope_Cont_Type_t::const_reverse_iterator Reverse_Scope_Iterator;
-
-   typedef Container< Object > Object_Cont_Type_t;
-   typedef Object_Cont_Type_t::const_iterator Object_Iterator;
-   typedef Object_Cont_Type_t::const_reverse_iterator Reverse_Object_Iterator;
-
-   typedef Container< Member > Member_Cont_Type_t;
-   typedef Member_Cont_Type_t::const_iterator Member_Iterator;
-   typedef Member_Cont_Type_t::const_reverse_iterator Reverse_Member_Iterator;
-
-   typedef Container< TypeTemplate > TypeTemplate_Cont_Type_t;
-   typedef TypeTemplate_Cont_Type_t::const_iterator TypeTemplate_Iterator;
-   typedef TypeTemplate_Cont_Type_t::const_reverse_iterator Reverse_TypeTemplate_Iterator;
-
-   typedef Container< MemberTemplate > MemberTemplate_Cont_Type_t;
-   typedef MemberTemplate_Cont_Type_t::const_iterator MemberTemplate_Iterator;
-   typedef MemberTemplate_Cont_Type_t::const_reverse_iterator Reverse_MemberTemplate_Iterator;
-
+   namespace Internal {
+      class IContainerImpl;
+   }
+   typedef Internal::IContainerImpl EmptyCont_Type_t;
 
    namespace Dummy {
-      RFLX_API const StdString_Cont_Type_t & StdStringCont();
-      RFLX_API const Type_Cont_Type_t & TypeCont();
-      RFLX_API const Base_Cont_Type_t & BaseCont();
-      RFLX_API const Scope_Cont_Type_t & ScopeCont();
-      RFLX_API const Object_Cont_Type_t & ObjectCont();
-      RFLX_API const Member_Cont_Type_t & MemberCont();
-      RFLX_API const TypeTemplate_Cont_Type_t & TypeTemplateCont();
-      RFLX_API const MemberTemplate_Cont_Type_t & MemberTemplateCont();
+      RFLX_API const EmptyCont_Type_t & EmptyContainer();
       RFLX_API Any & Any();
       RFLX_API const Object & Object();
       RFLX_API const Type & Type();
@@ -370,6 +334,10 @@ inline size_t Reflex::NPos() {
 //-------------------------------------------------------------------------------
    return (size_t) -1;
 }
+
+// includes that should be available to all of Reflex
+#include "Reflex/Container.h"
+#include "Reflex/EntityProperty.h"
 
 #endif // Reflex_Kernel
 

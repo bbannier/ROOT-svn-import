@@ -15,7 +15,7 @@
 
 #include "CatalogImpl.h"
 
-#include "Reflex/internal/ScopeName.h"
+#include "ScopeName.h"
 #include "Reflex/EntityProperty.h"
 #include "Namespace.h"
 

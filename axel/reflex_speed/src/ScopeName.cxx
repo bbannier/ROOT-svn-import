@@ -13,15 +13,15 @@
 #define REFLEX_BUILD
 #endif
 
-#include "Reflex/internal/ScopeName.h"
+#include "ScopeName.h"
 
 #include "Reflex/Scope.h"
-#include "Reflex/internal/ScopeBase.h"
+#include "ScopeBase.h"
 #include "Reflex/Type.h"
 
 #include "Reflex/EntityProperty.h"
 #include "Reflex/Tools.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 
 #include "stl_hash.h"
 #include <vector>

@@ -15,7 +15,7 @@
 
 #include "PointerToMember.h"
 
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::PointerToMember::PointerToMember( const Type & pointerToMemberType,

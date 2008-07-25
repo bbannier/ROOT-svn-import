@@ -38,14 +38,14 @@ Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size, const s
 {
 // Construct union info.
    std::string nam2(nam);
-   const Type& c = Type::ByName(nam2);
+   const Type& c = Type::Types().ByName(nam2);
    if (c) {
       // We found a typedef to a class with the same name
       if (c.Is(gTypedef)) {
          nam2 += " @HIDDEN@";
       }
       // Type already exists. Check if it was a class, struct, or union.
-      else if (!c.IsClass()) {
+      else if (!c.Is(gClass)) {
          throw RuntimeError("Attempt to replace a non-class type with a union"); // FIXME: We should not throw!
       }
    }
@@ -80,7 +80,8 @@ void Reflex::UnionBuilderImpl::AddFunctionMember(const char* nam, const Type& ty
 {
 // Add function member info (internal).
    if (Tools::IsTemplated(nam)) {
-      fLastMember = Member(new Internal::FunctionMemberTemplateInstance(nam, typ, stubFP, stubCtx, params, modifiers, *(dynamic_cast<ScopeBase*>(fUnion))));
+      Internal::ScopeBase* sb = dynamic_cast<Internal::ScopeBase*>(fUnion);
+      fLastMember = Member(new Internal::FunctionMemberTemplateInstance(nam, typ, stubFP, stubCtx, params, modifiers, *sb));
    }
    else {
       fLastMember = Member(new Internal::FunctionMember(nam, typ, stubFP, stubCtx, params, modifiers));

@@ -15,6 +15,7 @@
 // Include files
 #include "Reflex/Kernel.h"
 #include "Reflex/Type.h"
+#include "Reflex/TemplateArgument.h"
 
 namespace Reflex {
 
@@ -51,24 +52,11 @@ namespace Reflex {
 
 
       /**
-      * TemplateArgumentAt will return a pointer to the nth template argument
-      * @param  nth nth template argument
-      * @return pointer to nth template argument
+      * TemplateArguments returns an ordered collection of the template arguments
+      * @return reflection information of template arguments
       */
-      Type TemplateArgumentAt( size_t nth ) const;
+      const OrderedContainer<TemplateArgument>& TemplateArguments() const;
 
-
-      /**
-      * templateArgSize will return the number of template arguments
-      * @return number of template arguments
-      */
-      size_t TemplateArgumentSize() const;
-
-
-      Type_Iterator TemplateArgument_Begin() const;
-      Type_Iterator TemplateArgument_End() const;
-      Reverse_Type_Iterator TemplateArgument_RBegin() const;
-      Reverse_Type_Iterator TemplateArgument_REnd() const;
 
    private:
 
@@ -80,7 +68,7 @@ namespace Reflex {
       * @clientCardinality 1..*
       */
       mutable
-         std::vector < Type > fTemplateArguments;
+         std::vector < TemplateArgument > fTemplateArguments;
 
    }; // class TemplateInstance
 
@@ -88,55 +76,8 @@ namespace Reflex {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TemplateInstance::TemplateInstance() 
+inline Reflex::TemplateInstance::TemplateInstance() {}
 //-------------------------------------------------------------------------------
-   : fTemplateArguments( std::vector<Type>()) {}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type
-Reflex::TemplateInstance::TemplateArgumentAt( size_t nth ) const {
-//-------------------------------------------------------------------------------
-   if ( nth < fTemplateArguments.size() ) { return fTemplateArguments[ nth ]; }
-   return Dummy::Type();
-}
-
-
-//-------------------------------------------------------------------------------
-inline size_t Reflex::TemplateInstance::TemplateArgumentSize() const {
-//-------------------------------------------------------------------------------
-   return fTemplateArguments.size();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::TemplateInstance::TemplateArgument_Begin() const {
-//-------------------------------------------------------------------------------
-   return fTemplateArguments.begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator Reflex::TemplateInstance::TemplateArgument_End() const {
-//-------------------------------------------------------------------------------
-   return fTemplateArguments.end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::TemplateInstance::TemplateArgument_RBegin() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<Type>&)fTemplateArguments).rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator Reflex::TemplateInstance::TemplateArgument_REnd() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<Type>&)fTemplateArguments).rend();
-}
-
-
 
 
 #endif // Reflex_TemplateInstance

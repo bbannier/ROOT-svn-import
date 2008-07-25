@@ -13,7 +13,7 @@
 #define Reflex_Fundamental
 
 // Include files
-#include "Reflex/internal/TypeBase.h"
+#include "TypeBase.h"
 
 namespace Reflex {
 

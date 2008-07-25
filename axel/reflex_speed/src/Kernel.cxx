@@ -16,7 +16,7 @@
 #include "Reflex/Kernel.h"
 
 #include "Reflex/Scope.h"
-#include "Reflex/internal/ScopeName.h"
+#include "ScopeName.h"
 #include "Reflex/PropertyList.h"
 #include "Reflex/Type.h"
 #include "Reflex/Base.h"
@@ -233,10 +233,38 @@ Reflex::Instance::~Instance() {
 
 
 //-------------------------------------------------------------------------------
-const Reflex::StdString_Cont_Type_t & Reflex::Dummy::StdStringCont() {
+const Reflex::EmptyCont_Type_t & Reflex::Dummy::EmptyCont() {
 //-------------------------------------------------------------------------------
-// static wrapper for an empty container of std strings.
-   return Get< StdString_Cont_Type_t >();
+// static wrapper for an empty container.
+
+   static class EmptyContainer: public EmptyCont_Type_t {
+   public:
+      static class iterator: public IConstIteratorImpl {
+      public:
+         virtual ~iterator() {}
+
+         virtual bool ProxyIsEqual(const IConstIteratorImpl& other) const { return true; }
+         virtual void ProxyForward() { }
+         virtual void* ProxyElement() const { }
+         virtual IConstIteratorImpl* ProxyClone() const { return 0; }
+      } sBeginEnd;
+
+      virtual void ProxyBegin(ConstIteratorBase& i) const { i.SetImpl(&sBeginEnd, false); }
+      virtual void ProxyEnd(ConstIteratorBase& i) const { i.SetImpl(&sBeginEnd, false); }
+
+      // empty implementation for unordered container
+      virtual void ProxyRBegin(ConstIteratorBase& ) const { i.SetImpl(&sBeginEnd, false); }
+      virtual void ProxyREnd(ConstIteratorBase& ) const { i.SetImpl(&sBeginEnd, false); }
+
+      virtual size_t ProxySize() const { return 0; }
+      virtual bool   ProxyEmpty() const { return true; }
+
+      virtual void*  ProxyByName(const std::string& /*name*/) const { return 0; }
+      virtual void*  ProxyByTypeInfo(const std::type_info& /*ti*/) const { return 0; }
+
+   } sEmptyCont;
+
+   return sEmptyCont;
 }
 
 

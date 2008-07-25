@@ -48,18 +48,6 @@ namespace Reflex {
          virtual ~Class();
 
          /**
-          * operator Scope will return the corresponding scope of this type if
-          * applicable (i.e. if the Type is also a Scope e.g. Class, Union, Enum)
-          */
-         operator Scope() const;
-
-         /**
-          * the operator Type will return a corresponding Type object to the At if
-          * applicable (i.e. if the Scope is also a Type e.g. Class, Union, Enum)
-          */
-         operator Type() const;
-
-         /**
           * nthBase will return the nth BaseAt class information
           * @param  nth nth BaseAt class
           * @return pointer to BaseAt class information
@@ -522,22 +510,6 @@ namespace Reflex {
 #include "Reflex/Base.h"
 #include "Reflex/MemberTemplate.h"
 #include "Reflex/TypeTemplate.h"
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Internal::Class::operator Reflex::Scope() const
-{
-//-------------------------------------------------------------------------------
-   return ScopeBase::operator Scope();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Internal::Class::operator Reflex::Type() const
-{
-//-------------------------------------------------------------------------------
-   return TypeBase::operator Type();
-}
 
 
 //-------------------------------------------------------------------------------

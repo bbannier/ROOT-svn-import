@@ -16,8 +16,8 @@
 #include "FunctionMemberTemplateInstance.h"
 
 #include "Reflex/MemberTemplate.h"
-#include "Reflex/internal/MemberTemplateImpl.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "MemberTemplateImpl.h"
+#include "OwnedMember.h"
 
 #include "Reflex/Tools.h"
 

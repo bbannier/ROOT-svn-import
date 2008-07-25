@@ -13,10 +13,10 @@
 #define REFLEX_BUILD
 #endif
 
-#include "Reflex/internal/TypeTemplateName.h"
+#include "TypeTemplateName.h"
 
 #include "Reflex/TypeTemplate.h"
-#include "Reflex/internal/TypeTemplateImpl.h"
+#include "TypeTemplateImpl.h"
 #include "Reflex/Type.h"
 #include "Reflex/Tools.h"
 

@@ -13,7 +13,7 @@
 #define Reflex_DataMember
 
 // Include files
-#include "Reflex/internal/MemberBase.h"
+#include "MemberBase.h"
 
 namespace Reflex {
 

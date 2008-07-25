@@ -14,7 +14,7 @@
 #endif
 
 #include "Namespace.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 #include "Reflex/DictionaryGenerator.h"
 
 

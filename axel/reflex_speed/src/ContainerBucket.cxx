@@ -13,8 +13,8 @@
 #define REFLEX_BUILD
 #endif
 
-#include "Reflex/internal/ContainerBucket.h"
-#include "Reflex/internal/ContainerArena.h"
+#include "ContainerBucket.h"
+#include "ContainerArena.h"
 
 
 //-------------------------------------------------------------------------------

@@ -13,7 +13,7 @@
 #define Reflex_ContainerNode
 
 #include <stddef.h>
-#include "Reflex/internal/AtomicCount.h"
+#include "AtomicCount.h"
 
 namespace Reflex {
    namespace Internal {
@@ -129,6 +129,14 @@ namespace Reflex {
                   DecRef(fPrev);
                   fCurr = fCurr->Progress(fPrev);
                   IncRef(fCurr);
+                  return *this;
+               }
+
+               LinkIter& Reverse() {
+               // Convert a forward iterator into a backward iterator and vice versa
+                  Link* oldprev = fPrev;
+                  fPrev = fCurr;
+                  fCurr = oldprev;
                   return *this;
                }
 

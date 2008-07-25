@@ -42,7 +42,7 @@ namespace Internal {
    * @date 24/11/2003
    * @ingroup Ref
    */
-   class RFLX_API TypeBase {
+   class TypeBase {
 
    public:
 
@@ -561,7 +561,8 @@ Reflex::Internal::TypeBase::TypeTypeAsString() const {
 // Return the kind of type as a string.
    const std::string& s = TYPEName(fTypeType);
    if (s.empty())
-      return "Type " + Name() + "is not assigned to a TYPE";
+      // re-use s as buffer
+      return "Type " + Name(std::string()) + "is not assigned to a TYPE";
    return s;
 }
 

@@ -13,7 +13,7 @@
 #define Reflex_Typedef
 
 // Include files
-#include "Reflex/internal/TypeBase.h"
+#include "TypeBase.h"
 #include "Reflex/Type.h"
 #include "Reflex/EntityProperty.h"
 

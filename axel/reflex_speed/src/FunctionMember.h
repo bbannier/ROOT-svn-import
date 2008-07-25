@@ -13,7 +13,7 @@
 #define Reflex_FunctionMember
 
 // Include files
-#include "Reflex/internal/MemberBase.h"
+#include "MemberBase.h"
 
 
 namespace Reflex {
@@ -56,8 +56,13 @@ namespace Internal {
       virtual void GenerateDict(DictionaryGenerator &generator) const;
 
 
-      /** return full Name of function MemberAt */
-      std::string Name( unsigned int mod = 0 ) const;
+      /** 
+      * Name returns the Name of the member 
+      * @param mod modifiers can be or'ed as argument
+      * SCOPED - fully scoped name
+      * @return name of the member
+      */
+      const std::string& Name( std::string& buf, unsigned int mod = SCOPED ) const;
 
 
       /** Invoke the function (if return At as void*) */
@@ -78,24 +83,19 @@ namespace Internal {
       size_t FunctionParameterSize( bool required = false ) const;
 
 
-      /** FunctionParameterAt nth default value if declared*/
-      std::string FunctionParameterDefaultAt( size_t nth ) const;
+      /** 
+      * FunctionParameterDefaultss returns the collaction of default values 
+      * (as strings) for function parameters.
+      * @return collection of default values for parameters
+      */
+      const OrderedContainer<std::string>& FunctionParameterDefaults() const;
 
 
-      virtual StdString_Iterator FunctionParameterDefault_Begin() const;
-      virtual StdString_Iterator FunctionParameterDefault_End() const;
-      virtual Reverse_StdString_Iterator FunctionParameterDefault_RBegin() const;
-      virtual Reverse_StdString_Iterator FunctionParameterDefault_REnd() const;
-
-
-      /** FunctionParameterAt nth Name if declared*/
-      std::string FunctionParameterNameAt( size_t nth ) const;
-
-
-      virtual StdString_Iterator FunctionParameterName_Begin() const;
-      virtual StdString_Iterator FunctionParameterName_End() const;
-      virtual Reverse_StdString_Iterator FunctionParameterName_RBegin() const;
-      virtual Reverse_StdString_Iterator FunctionParameterName_REnd() const;
+      /** 
+      * FunctionParametertNames returns a collection of the parameter names
+      * @return parameter names
+      */
+      const OrderedContainer<std::string>& FunctionParameterNames() const;
 
 
       /** return a pointer to the context */
@@ -138,85 +138,6 @@ namespace Internal {
    }; // class FunctionMember
 } //namespace Internal
 } //namespace Reflex
-
-//-------------------------------------------------------------------------------
-inline std::string 
-Reflex::Internal::FunctionMember::FunctionParameterDefaultAt( size_t nth ) const {
-//-------------------------------------------------------------------------------
-   return fParameterDefaults[nth];
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator
-Reflex::Internal::FunctionMember::FunctionParameterDefault_Begin() const {
-//-------------------------------------------------------------------------------
-   return fParameterDefaults.begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator
-Reflex::Internal::FunctionMember::FunctionParameterDefault_End() const {
-//-------------------------------------------------------------------------------
-   return fParameterDefaults.end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator
-Reflex::Internal::FunctionMember::FunctionParameterDefault_RBegin() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<std::string>&)fParameterDefaults).rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator
-Reflex::Internal::FunctionMember::FunctionParameterDefault_REnd() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<std::string>&)fParameterDefaults).rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator
-Reflex::Internal::FunctionMember::FunctionParameterName_Begin() const {
-//-------------------------------------------------------------------------------
-   return fParameterNames.begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator
-Reflex::Internal::FunctionMember::FunctionParameterName_End() const {
-//-------------------------------------------------------------------------------
-   return fParameterNames.end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator
-Reflex::Internal::FunctionMember::FunctionParameterName_RBegin() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<std::string>&)fParameterNames).rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator
-Reflex::Internal::FunctionMember::FunctionParameterName_REnd() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<std::string>&)fParameterNames).rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline std::string 
-Reflex::Internal::FunctionMember::FunctionParameterNameAt( size_t nth ) const {
-//-------------------------------------------------------------------------------
-   return fParameterNames[nth];
-}
 
 
 //-------------------------------------------------------------------------------

@@ -56,6 +56,13 @@ namespace Internal {
 
 
       /**
+      * MemberTemplates returns the collection of known member templates
+      * @return collection of member templates
+      */
+      static const Container<MemberTemplate>& MemberTemplates();
+
+
+      /**
       * CleanUp is called at the end of the process
       */
       static void CleanUp();
@@ -72,14 +79,7 @@ namespace Internal {
       * Name will return the name of the member template
       * @return name of member template
       */
-      std::string Name( unsigned int mod ) const;
-
-
-      /**
-      * Name_c_str will return a char * pointer to the member template name
-      * @return member template name as char *
-      */
-      const char * Name_c_str() const;
+      const std::string& Name( std::string& buf, unsigned int mod ) const;
 
 
       /**
@@ -88,48 +88,6 @@ namespace Internal {
       */
       MemberTemplate ThisMemberTemplate() const;
 
-
-      /**
-      * MemberTemplateAt will return the nth member template defined
-      * @param nth member template
-      * @return nth member template
-      */
-      static MemberTemplate MemberTemplateAt( size_t nth );
-
-
-      /**
-      * MemberTemplateSize will return the number of member templates defined
-      * @return number of defined member templates
-      */
-      static size_t MemberTemplateSize();
-
-
-      /**
-      * MemberTemplate_Begin returns the begin iterator of the member template container
-      * @return begin iterator of member template container
-      */
-      static MemberTemplate_Iterator MemberTemplate_Begin();
-
-
-      /**
-      * MemberTemplate_End returns the end iterator of the member template container
-      * @return end iterator of member template container
-      */
-      static MemberTemplate_Iterator MemberTemplate_End();
-
-
-      /**
-      * MemberTemplate_Rbegin returns the rbegin iterator of the member template container
-      * @return rbegin iterator of member template container
-      */
-      static Reverse_MemberTemplate_Iterator MemberTemplate_RBegin();
-
-
-      /**
-      * MemberTemplate_Rend returns the rend iterator of the member template container
-      * @return rend iterator of member template container
-      */
-      static Reverse_MemberTemplate_Iterator MemberTemplate_REnd();
 
    private:
 
@@ -169,12 +127,5 @@ namespace Internal {
 } // namespace Internal
 } // namespace Reflex
 
-
-//-------------------------------------------------------------------------------
-inline const char *
-Reflex::Internal::MemberTemplateName::Name_c_str() const {
-//-------------------------------------------------------------------------------
-   return fName.c_str();
-}
 
 #endif // Reflex_MemberTemplateName

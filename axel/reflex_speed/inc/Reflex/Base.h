@@ -15,6 +15,7 @@
 // Include files
 #include "Reflex/Kernel.h"
 #include "Reflex/Type.h"
+#include "Reflex/Scope.h"
 
 namespace Reflex {
 

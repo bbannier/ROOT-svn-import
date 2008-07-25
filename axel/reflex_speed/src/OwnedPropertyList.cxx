@@ -13,7 +13,7 @@
 #define REFLEX_BUILD
 #endif
 
-#include "Reflex/internal/OwnedPropertyList.h"
+#include "OwnedPropertyList.h"
 
 //-------------------------------------------------------------------------------
 void

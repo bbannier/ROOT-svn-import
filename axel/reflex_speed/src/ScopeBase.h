@@ -17,6 +17,10 @@
 #include "Reflex/Scope.h"
 
 #include "OwnedPropertyList.h"
+#include "OwnedMember.h"
+#include "OwnedMemberTemplate.h"
+#include "ContainerImpl.h"
+#include "OrderedContainerImpl.h"
 #include <vector>
 
 #ifdef _MSC_VER
@@ -36,8 +40,6 @@ namespace Reflex {
 namespace Internal {
 
    // forward declarations
-   class OwnedMember;
-   class OwnedMemberTemplate;
    class ScopeName;
 
 
@@ -78,14 +80,14 @@ namespace Internal {
       * BaseAt returns the collection of base class information
       * @return pointer to base class information
       */
-      const Container<Base>& Bases() const;
+      virtual const IContainerImpl* Bases() const;
 
 
       /**
       * DataMembers returns the data members of the type
       * @return nth data member 
       */
-      const OrderedContainer<Member>& DataMembers() const;
+      const IContainerImpl* DataMembers() const;
 
 
       /**
@@ -97,9 +99,9 @@ namespace Internal {
 
       /**
       * FunctionMembers returns the collection of function members of the scope
-      * @return reflection information of nth function member
+      * @return reflection information of function members
       */
-      const OrderedContainer<Member>& FunctionMembers() const;
+      const IContainerImpl* FunctionMembers() const;
 
 
       /**
@@ -144,7 +146,7 @@ namespace Internal {
 
       /**
       * Check whether the entity property is set for the scope. You can
-      * combine checks, e.g. Is(gCLASS && gPUBLIC)
+      * combine checks, e.g. Is(gClass && gPublic)
       * @param descr the entity property to check for; see EntityProperty.
       * @param mod the modifier as stored by Type (reference,...)
       * @return whether descr is set.
@@ -203,14 +205,14 @@ namespace Internal {
       * Members eturns the collection of members of the scope
       * @return reflection information members
       */
-      const OrderedContainer<Member>& Members() const;
+      const IContainerImpl* Members() const;
 
 
       /** 
       * MemberTemplates returns the collection of function member templates of this scope
       * @return collection of member templates
       */
-      const OrderedContainer<MemberTemplate>& MemberTemplates() const;
+      const IContainerImpl* MemberTemplates() const;
 
 
       /**
@@ -272,7 +274,7 @@ namespace Internal {
       * SubScopes returns the collection of scopes declared in this scope.
       * @return container of reflection information of sub scopes
       */
-      const OrderedContainer<Scope>& SubScopes() const;
+      const IContainerImpl* SubScopes() const;
 
 
       /**
@@ -287,35 +289,35 @@ namespace Internal {
       * SubTypes returns the collection of type declared in this scope.
       * @return reflection information of sub types
       */
-      const OrderedContainer<Type>& SubTypes() const;
+      const IContainerImpl* SubTypes() const;
 
 
       /** 
       * SubTypeTemplates returns the collection of templated types declared within this scope
       * @return type templates
       */
-      const OrderedContainer<TypeTemplate>& SubTypeTemplates() const;
+      const IContainerImpl* SubTypeTemplates() const;
 
 
       /**
       * UsingDirectives returns the using directives declared in this scope.
       * @return using directives
       */
-      const Container<Scope>& UsingDirectives() const;
+      const IContainerImpl* UsingDirectives() const;
 
 
       /**
       * UsingTypeDeclarations returns the using declarations of types of this scope.
       * @return using declarations of types
       */
-      const Container<Type>& UsingTypeDeclarations() const;
+      const IContainerImpl* UsingTypeDeclarations() const;
 
 
       /**
       * UsingMemberDeclarations returns the using declarations of members of this scope.
       * @return using declarations of members
       */
-      const Container<Member>& UsingMemberDdeclaration() const;
+      const IContainerImpl* UsingMemberDdeclaration() const;
 
 
    protected:
@@ -355,17 +357,16 @@ namespace Internal {
       * AddSubScope will add a sub-At to this one
       * @param sc pointer to Scope
       */
-      virtual void AddSubScope( const Scope & sc ) const;
-      virtual void AddSubScope( const char * scope,
-         TYPE scopeType ) const;
+      void AddSubScope( const Scope & sc ) const;
+      void AddSubScope( const char * scope, TYPE scopeType ) const;
 
 
       /**
       * AddSubType will add a sub-At to this At
       * @param sc pointer to Type
       */
-      virtual void AddSubType( const Type & ty ) const;
-      virtual void AddSubType( const char * type,
+      void AddSubType( const Type & ty ) const;
+      void AddSubType( const char * type,
          size_t size,
          TYPE typeType,
          const std::type_info & ti,
@@ -410,17 +411,17 @@ namespace Internal {
       * RemoveSubScope will remove a sub-At to this one
       * @param sc pointer to Scope
       */
-      virtual void RemoveSubScope( const Scope & sc ) const;
+      void RemoveSubScope( const Scope & sc ) const;
 
 
       /**
       * RemoveSubType will remove a sub-At to this At
       * @param sc pointer to Type
       */
-      virtual void RemoveSubType( const Type & ty ) const;
+      void RemoveSubType( const Type & ty ) const;
 
 
-      virtual void RemoveSubTypeTemplate( const TypeTemplate & tt ) const;
+      void RemoveSubTypeTemplate( const TypeTemplate & tt ) const;
 
 
       void RemoveUsingDirective( const Scope & ud ) const;
@@ -442,14 +443,6 @@ namespace Internal {
 
       virtual void HideName() const;
 
-   protected:
-
-      /**
-      * Retrieve the flags (bit mask of ENTITY_DESCRIPTION) for this type.
-      */
-      int TypeDescriptionFlags() const { return 0; }
-
-
    private:
 
       /* no copying */
@@ -468,7 +461,7 @@ namespace Internal {
       * @clientCardinality 1
       */
       mutable
-         std::vector< OwnedMember > fMembers;
+         OrderedContainerImpl< std::string, OwnedMember > fMembers;
 
       /**
       * container with pointers to all data members in this scope
@@ -478,7 +471,7 @@ namespace Internal {
       * @supplierCardinality 0..*
       */
       mutable
-         std::vector< Member > fDataMembers;
+         OrderedContainerImpl< std::string, Member > fDataMembers;
 
       /**
       * container with pointers to all function members in this scope
@@ -488,7 +481,7 @@ namespace Internal {
       * @clientCardinality 1
       */
       mutable
-         std::vector< Member > fFunctionMembers;
+         OrderedContainerImpl< std::string, Member > fFunctionMembers;
 
    private:
 
@@ -530,7 +523,7 @@ namespace Internal {
       * @clientCardinality 1
       */
       mutable
-         std::vector< Scope > fSubScopes;
+         OrderedContainerImpl< std::string, Scope > fSubScopes;
 
 
       /**
@@ -541,7 +534,7 @@ namespace Internal {
       * @clientCardinality 1
       */
       mutable
-         std::vector < Type > fSubTypes;
+         OrderedContainerImpl< std::string, Type > fSubTypes;
 
 
       /**
@@ -552,7 +545,7 @@ namespace Internal {
       * @clientCardinality 1
       */
       mutable
-         std::vector < TypeTemplate > fTypeTemplates;
+         OrderedContainerImpl< std::string, TypeTemplate > fTypeTemplates;
 
 
       /**
@@ -563,7 +556,7 @@ namespace Internal {
       * @clientCardinality 1
       */
       mutable
-         std::vector < OwnedMemberTemplate > fMemberTemplates;
+         OrderedContainerImpl< std::string, OwnedMemberTemplate > fMemberTemplates;
 
 
       /** 
@@ -574,7 +567,29 @@ namespace Internal {
       * @clientCardinality 1
       */
       mutable
-         std::vector < Scope > fUsingDirectives;
+         ContainerImpl< std::string, Scope > fUsingDirectives;
+
+
+      /** 
+      * container for type using declarations of this scope
+      * @label using directives
+      * @linkScope aggregation
+      * @supplierCardinality 0..*
+      * @clientCardinality 1
+      */
+      mutable
+         OrderedContainerImpl< std::string, Type > fTypeUsingDeclarations;
+
+
+      /** 
+      * container for member using declarations of this scope
+      * @label using directives
+      * @linkScope aggregation
+      * @supplierCardinality 0..*
+      * @clientCardinality 1
+      */
+      mutable
+         OrderedContainerImpl< std::string, Member > fMemberUsingDeclarations;
 
 
       /**
@@ -592,9 +607,31 @@ namespace Internal {
       */
       size_t fBasePosition;
 
+
+      /**
+      * description flags (bit mask of ENTITY_DESCRIPTION) for this type
+      */
+      int fTypeDescriptionFlags;
+
    }; // class ScopeBase
 } //namespace Internal
 } //namespace Reflex
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl*
+Reflex::Internal::ScopeBase::Bases() const {
+//-------------------------------------------------------------------------------
+   return 0;
+}
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl*
+Reflex::Internal::ScopeBase::DataMembers() const {
+//-------------------------------------------------------------------------------
+   return &fDataMembers;
+}
 
 
 //-------------------------------------------------------------------------------
@@ -606,10 +643,34 @@ Reflex::Internal::ScopeBase::DeclaringScope() const {
 
 
 //-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl*
+Reflex::Internal::ScopeBase::FunctionMembers() const {
+//-------------------------------------------------------------------------------
+   return &fFunctionMembers;
+}
+
+
+//-------------------------------------------------------------------------------
 inline bool
 Reflex::Internal::ScopeBase::Is(const EntityProperty& prop, const int mod) const {
 //-------------------------------------------------------------------------------
-   return prop.Eval(TypeDescriptionFlags() | mod, fScopeType);
+   return prop.Eval(fTypeDescriptionFlags | mod, fScopeType);
+}
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl*
+Reflex::Internal::ScopeBase::Members() const {
+//-------------------------------------------------------------------------------
+   return &fMembers;
+}
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl*
+Reflex::Internal::ScopeBase::MemberTemplates() const {
+//-------------------------------------------------------------------------------
+   return &fMemberTemplates;
 }
 
 
@@ -618,6 +679,14 @@ inline Reflex::TYPE
 Reflex::Internal::ScopeBase::ScopeType() const {
 //-------------------------------------------------------------------------------
    return fScopeType;
+}
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl*
+Reflex::Internal::ScopeBase::SubScopes() const {
+//-------------------------------------------------------------------------------
+   return &fSubScopes;
 }
 
 

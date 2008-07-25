@@ -15,7 +15,7 @@
 #include <iterator>
 #include <typeinfo>
 #include <string>
-#include "Kernel.h"
+#include "Reflex/Kernel.h"
 
 namespace Reflex {
 
@@ -33,7 +33,7 @@ namespace Reflex {
 
          virtual bool ProxyIsEqual(const IConstIteratorImpl& other) const = 0;
          virtual void ProxyForward() = 0;
-         virtual void* ProxyElement() const = 0;
+         virtual const void* ProxyElement() const = 0;
          virtual IConstIteratorImpl* ProxyClone() const = 0;
       };
 
@@ -81,7 +81,7 @@ namespace Reflex {
       ConstIterator& operator++() { fImpl->ProxyForward(); return *this; }
       ConstIterator  operator++(int) { ConstIterator ret(*this); ++(*this); return ret; }
 
-      const T* operator->() const { return (T*) fImpl->ProxyElement(); }
+      const T* operator->() const { return (const T*) fImpl->ProxyElement(); }
       const T& operator* () const { return *operator->(); }
    };
 
@@ -103,12 +103,12 @@ namespace Reflex {
       public:
          virtual ~IContainerImpl() {};
 
-         // gets copied into a ConstReverseIterator<T> by Container<T>
          virtual void ProxyBegin(ConstIteratorBase& i) const = 0;
          virtual void ProxyEnd(ConstIteratorBase& i) const = 0;
 
-         virtual void ProxyRBegin(ConstIteratorBase& ) const = 0;
-         virtual void ProxyREnd(ConstIteratorBase& ) const = 0;
+         // empty implementation for unordered container
+         virtual void ProxyRBegin(ConstIteratorBase& ) const {};
+         virtual void ProxyREnd(ConstIteratorBase& ) const {};
 
          virtual size_t ProxySize() const = 0;
          virtual bool   ProxyEmpty() const = 0;
@@ -119,10 +119,10 @@ namespace Reflex {
 
       class RFLX_API ContainerBase {
       public:
-         ContainerBase(IContainerImpl* coll): fCont(coll) {}
+         ContainerBase(const IContainerImpl* coll): fCont(coll) {}
 
       protected:
-         Internal::IContainerImpl* fCont; // actual collection wrapper
+         const Internal::IContainerImpl* fCont; // actual collection wrapper
       };
    }
 
@@ -136,15 +136,11 @@ namespace Reflex {
 
    public:
       typedef ConstIterator<T> const_iterator;
-      typedef ConstReverseIterator<T> const_reverse_iterator;
 
-      Container(Internal::IContainerImpl* coll): Internal::ContainerBase(coll) {}
+      Container(const Internal::IContainerImpl* coll): Internal::ContainerBase(coll) {}
          
-      ConstIterator<T> Begin() const { ConstIterator<T> ret; fCont->ProxyBegin(ret); return ret; }
-      ConstIterator<T> End() const   { ConstIterator<T> ret; fCont->ProxyEnd(ret);   return ret; }
-
-      ConstReverseIterator<T> RBegin() const { ConstReverseIterator<T> ret; fCont->ProxyRBegin(ret); return ret; }
-      ConstReverseIterator<T> REnd() const   { ConstReverseIterator<T> ret; fCont->ProxyREnd(ret);   return ret; }
+      const_iterator Begin() const { const_iterator ret; fCont->ProxyBegin(ret); return ret; }
+      const_iterator End() const   { const_iterator ret; fCont->ProxyEnd(ret);   return ret; }
 
       size_t Size() const  { return fCont->ProxySize(); }
       bool   Empty() const { return fCont->ProxyEmpty(); }
@@ -159,6 +155,10 @@ namespace Reflex {
          if (ret) return *ret;
          return T();
       }
+
+      template <typename CONT>
+      friend const CONT&
+         Dummy::Get();
    };
 
 
@@ -175,7 +175,14 @@ namespace Reflex {
       OrderedContainer(const OrderedContainer&); // intentionally not implemented
       OrderedContainer& operator=(const OrderedContainer& rhs); // intentionally not implemented
 
-      OrderedContainer(Internal::IContainerImpl* coll): Container<T>(coll) {}
+   public:
+      typedef ConstReverseIterator<T> const_reverse_iterator;
+
+      OrderedContainer(const Internal::IContainerImpl* coll): Container<T>(coll) {}
+
+      // reverse iteration only possible for ordered container
+      const_reverse_iterator RBegin() const { const_reverse_iterator ret; fCont->ProxyRBegin(ret); return ret; }
+      const_reverse_iterator REnd() const   { const_reverse_iterator ret; fCont->ProxyREnd(ret);   return ret; }
    };
 
 } // namespace Reflex

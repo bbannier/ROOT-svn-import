@@ -105,46 +105,6 @@ Reflex::Internal::FunctionMemberTemplateInstance::~FunctionMemberTemplateInstanc
 
 
 //-------------------------------------------------------------------------------
-inline size_t
-Reflex::Internal::FunctionMemberTemplateInstance::TemplateArgumentSize() const {
-//-------------------------------------------------------------------------------
-   return TemplateInstance::TemplateArgumentSize();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator
-Reflex::Internal::FunctionMemberTemplateInstance::TemplateArgument_Begin() const {
-//-------------------------------------------------------------------------------
-   return TemplateInstance::TemplateArgument_Begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator
-Reflex::Internal::FunctionMemberTemplateInstance::TemplateArgument_End() const {
-//-------------------------------------------------------------------------------
-   return TemplateInstance::TemplateArgument_End();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator
-Reflex::Internal::FunctionMemberTemplateInstance::TemplateArgument_RBegin() const {
-//-------------------------------------------------------------------------------
-   return TemplateInstance::TemplateArgument_RBegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator
-Reflex::Internal::FunctionMemberTemplateInstance::TemplateArgument_REnd() const {
-//-------------------------------------------------------------------------------
-   return TemplateInstance::TemplateArgument_REnd();
-}
-
-
-//-------------------------------------------------------------------------------
 inline Reflex::MemberTemplate
 Reflex::Internal::FunctionMemberTemplateInstance::TemplateFamily() const {
 //-------------------------------------------------------------------------------
