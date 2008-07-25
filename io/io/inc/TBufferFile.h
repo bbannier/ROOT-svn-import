@@ -43,12 +43,13 @@ class TStreamerInfo;
 class TStreamerElement;
 class TClass;
 class TExMap;
+class TVirtualArray;
 
 class TBufferFile : public TBuffer {
 
 protected:
    typedef std::vector<TStreamerInfo*> InfoList_t;
-   typedef std::vector<void*> CacheList_t;
+   typedef std::vector<TVirtualArray*> CacheList_t;
 
    Int_t           fMapCount;      //Number of objects or classes in map
    Int_t           fMapSize;       //Default size of map
@@ -123,10 +124,9 @@ public:
    virtual void       ClassEnd(const TClass*) {}
    virtual void       ClassMember(const char*, const char* = 0, Int_t = -1, Int_t = -1) {}
 
-   virtual void      *PeekDataCache() const;
-   virtual void     **PeekDataCachePtr() const;
-   virtual void      *PopDataCache();
-   virtual void       PushDataCache(void *);
+   virtual TVirtualArray *PeekDataCache() const;
+   virtual TVirtualArray *PopDataCache();
+   virtual void           PushDataCache(TVirtualArray *);
 
    virtual Int_t      ReadBuf(void *buf, Int_t max);
    virtual void       WriteBuf(const void *buf, Int_t max);

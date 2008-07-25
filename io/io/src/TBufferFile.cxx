@@ -157,7 +157,7 @@ void TBufferFile::DecrementLevel(TVirtualStreamerInfo* /*info*/)
 }
 
 //______________________________________________________________________________
-void TBufferFile::PushDataCache(void *obj)
+void TBufferFile::PushDataCache(TVirtualArray *obj)
 {
    // Push a new data cache area onto the list of area to be used for 
    // temporarily store 'missing' data members.
@@ -166,7 +166,7 @@ void TBufferFile::PushDataCache(void *obj)
 }
 
 //______________________________________________________________________________
-void *TBufferFile::PeekDataCache() const 
+TVirtualArray *TBufferFile::PeekDataCache() const 
 {
    // Return the 'current' data cache area from the list of area to be used for 
    // temporarily store 'missing' data members.
@@ -175,22 +175,12 @@ void *TBufferFile::PeekDataCache() const
 }
 
 //______________________________________________________________________________
-void **TBufferFile::PeekDataCachePtr() const 
-{
-   // Return the 'current' data cache area from the list of area to be used for 
-   // temporarily store 'missing' data members.
-
-   return (void**)&(fCacheStack.back());
-}
-
-
-//______________________________________________________________________________
-void *TBufferFile::PopDataCache() 
+TVirtualArray *TBufferFile::PopDataCache() 
 {
    // Pop and Return the 'current' data cache area from the list of area to be used for 
    // temporarily store 'missing' data members.
 
-   void *val = PeekDataCache();
+   TVirtualArray *val = PeekDataCache();
    fCacheStack.pop_back();
    return val;
 }
