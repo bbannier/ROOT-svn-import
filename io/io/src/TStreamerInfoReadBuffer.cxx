@@ -476,7 +476,7 @@ Int_t TStreamerInfo__ReadBufferArtificialImp(TBuffer &b, const T &arr,  Int_t i,
                                              Version_t & /* fOldVersion */ )
 #else
 template <class T>
-Int_t TStreamerInfo::ReadBufferArtificial(TBuffer &b, const T &arr,  Int_t i, Int_t kase,
+Int_t TStreamerInfo::ReadBufferArtificial(TBuffer &b, const T &arr,  Int_t /* i */, Int_t kase,
                                           TStreamerElement *aElement, Int_t narr,
                                           Int_t eoffset)
 #endif
@@ -516,12 +516,18 @@ Int_t TStreamerInfo::ReadBufferArtificial(TBuffer &b, const T &arr,  Int_t i, In
    if (readfunc) {
       TVirtualObject obj(0);
       TVirtualArray *objarr = ((TBufferFile&)b).PeekDataCache();
-      obj.fClass = objarr->fClass;
-      for(Int_t k=0; k<narr; ++k) {
-         obj.fObject = objarr->GetObjectAt(k);
-         readfunc(arr[0], &obj);
-      }
-      obj.fObject = 0; // Prevent auto deletion
+      if (objarr) {
+         obj.fClass = objarr->fClass;
+         for(Int_t k=0; k<narr; ++k) {
+            obj.fObject = objarr->GetObjectAt(k);
+            readfunc(arr[k]+eoffset, &obj);
+         }
+         obj.fObject = 0; // Prevent auto deletion
+      } else {
+         for(Int_t k=0; k<narr; ++k) {
+            readfunc(arr[k]+eoffset, &obj);
+         }
+      }         
       return 0;
    }
    

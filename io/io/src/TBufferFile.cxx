@@ -171,6 +171,7 @@ TVirtualArray *TBufferFile::PeekDataCache() const
    // Return the 'current' data cache area from the list of area to be used for 
    // temporarily store 'missing' data members.
 
+   if (fCacheStack.empty()) return 0;
    return fCacheStack.back();
 }
 
