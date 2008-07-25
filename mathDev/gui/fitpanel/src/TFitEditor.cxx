@@ -140,6 +140,7 @@
 #include "TGraph.h"
 #include "TGraph2D.h"
 #include "TH1.h"
+#include "HFitInterface.h"
 #include "TF1.h"
 #include "TTimer.h"
 #include "THStack.h"
@@ -161,13 +162,6 @@ enum EFitPanel {
    
    kFP_FIT,   kFP_RESET, kFP_CLOSE
 };
-
-// Taken from hist/hist/TH1Fit.cxx: Interface for fitting. Temporal
-// until the same is made for graphs!
-namespace TH1Fit { 
-
-   Int_t Fit(TH1 * h1, TF1 *f1 , Foption_t & option ,Option_t *goption, Double_t xxmin, Double_t xxmax); 
-} 
 
 ClassImp(TFitEditor)
 
@@ -1365,7 +1359,7 @@ void TFitEditor::DoFit()
          // graph. Then it could be done in a more elegant way.
          Foption_t fitOpts;
          TH1::FitOptionsMake(strFitOpts,fitOpts);
-         TH1Fit::Fit(h1, &fitFunc, fitOpts, strDrawOpts, xmin, xmax);
+         ROOT::Fit::FitObject(h1, &fitFunc, fitOpts, strDrawOpts, xmin, xmax);
          break;
       }
       case kObjectGraph: {
@@ -2440,4 +2434,3 @@ void TFitEditor::RetrieveOptions(TString& fitOpts, TString& drawOpts)
 
    drawOpts = GetDrawOption();
 }
-
