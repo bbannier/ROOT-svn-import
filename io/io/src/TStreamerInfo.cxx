@@ -97,7 +97,7 @@ TStreamerInfo::TStreamerInfo()
 }
 
 //______________________________________________________________________________
-TStreamerInfo::TStreamerInfo(TClass *cl, const char *info)
+TStreamerInfo::TStreamerInfo(TClass *cl)
 : TVirtualStreamerInfo(cl)
 {
    // Create a TStreamerInfo object.
@@ -122,7 +122,6 @@ TStreamerInfo::TStreamerInfo(TClass *cl, const char *info)
    fOnFileClassVersion = 0;
    fOldVersion = Class()->GetClassVersion();
 
-   //if (info) BuildUserInfo(info);
 }
 
 //______________________________________________________________________________

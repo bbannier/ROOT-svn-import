@@ -168,7 +168,7 @@ public:
 
 
    TStreamerInfo();
-   TStreamerInfo(TClass *cl, const char *info);
+   TStreamerInfo(TClass *cl);
    virtual            ~TStreamerInfo();
    void                Build();
    void                BuildCheck();
@@ -208,7 +208,7 @@ public:
    Bool_t              IsOptimized() const {return fOptimized;}
    Int_t               IsRecovered() const {return TestBit(kRecovered);}
    void                ls(Option_t *option="") const;
-   TVirtualStreamerInfo *NewInfo(TClass *cl) {return new TStreamerInfo(cl,0);}
+   TVirtualStreamerInfo *NewInfo(TClass *cl) {return new TStreamerInfo(cl);}
    void               *New(void *obj = 0);
    void               *NewArray(Long_t nElements, void* ary = 0);
    void                Destructor(void* p, Bool_t dtorOnly = kFALSE);
