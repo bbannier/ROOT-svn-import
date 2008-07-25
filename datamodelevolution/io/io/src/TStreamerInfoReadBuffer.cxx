@@ -483,6 +483,23 @@ Int_t TStreamerInfo::ReadBufferArtificial(TBuffer &b, const T &arr,  Int_t i, In
 
    TStreamerArtificial *artElement = (TStreamerArtificial*)aElement;
    
+   // If this is an alloc, we must allocate enough to old all the information.
+   // So either an array or a collection of size 'narr'.
+
+   if (kase == TStreamerInfo::kCacheNew) {
+      
+
+      ((TBufferFile&)b).PushDataCache( new TVirtualArray( aElement->GetClassPointer(), narr ) );
+
+       return 0;
+   } else if (kase == TStreamerInfo::kCacheDelete ) {
+
+       delete ((TBufferFile&)b).PopDataCache();
+
+       return 0;
+   }
+
+
    ROOT::TSchemaRule::ReadRawFuncPtr_t rawfunc = artElement->GetReadRawFunc();
    
    if (rawfunc) {
@@ -495,9 +512,14 @@ Int_t TStreamerInfo::ReadBufferArtificial(TBuffer &b, const T &arr,  Int_t i, In
    ROOT::TSchemaRule::ReadFuncPtr_t readfunc = artElement->GetReadFunc();
    // Process the result
    if (readfunc) {
+      TVirtualObject obj(0);
+      TVirtualArray *objarr = ((TBufferFile&)b).PeekDataCache();
+      obj.fClass = objarr->fClass;
       for(Int_t k=0; k<narr; ++k) {
-         readfunc( arr[0], 0 );
+         obj.fObject = objarr->GetObjectAt(k);
+         readfunc(arr[0], &obj);
       }
+      obj.fObject = 0; // Prevent auto deletion
       return 0;
    }
    
@@ -602,34 +624,25 @@ Int_t TStreamerInfo::ReadBufferConv(TBuffer &b, const T &arr,  Int_t i, Int_t ka
    return 0;
 }
 
- TVirtualCollectionProxy &TStreamerInfo::R__PeekDataCache( const TBuffer &b, const TVirtualCollectionProxy *dummy) 
+#include "TVirtualObject.h"
+#include "TVirtualArray.h"
+
+ template <class T> Bool_t R__TestUseCache(TStreamerElement *element) 
 {
-   return *(TVirtualCollectionProxy*)((TBufferFile&)b).PeekDataCache();
+   return element->TestBit(TStreamerElement::kCache);
 }
 
-char **TStreamerInfo::R__PeekDataCache( const TBuffer &b, TClonesArray* dummy ) 
+template <> Bool_t R__TestUseCache<TVirtualArray>(TStreamerElement*)
 {
-   return (char **)((TClonesArray*)((TBufferFile&)b).PeekDataCache())->GetObjectRef(0);
+   return kFALSE;
 }
-
- char **TStreamerInfo::R__PeekDataCache( const TBuffer &b, char*** dummy )
-{
-   return (char**)(((TBufferFile&)b).PeekDataCachePtr());
-}
-
-TStreamerInfo::TPointerCollectionAdapter TStreamerInfo::R__PeekDataCache( const TBuffer &b, TStreamerInfo::TPointerCollectionAdapter *dummy) 
-{
-   //R__ASSERT(kFALSE /* Not implemented yet */);
-   return TPointerCollectionAdapter((TVirtualCollectionProxy*)((TBufferFile&)b).PeekDataCache());
-}
-
 
 //______________________________________________________________________________
 #ifdef R__BROKEN_FUNCTION_TEMPLATES
 // Support for non standard compilers
 template <class T>
 Int_t TStreamerInfo__ReadBufferImp(TStreamerInfo *thisVar,
-                                   TBuffer &b, const T &in_arr, Int_t first,
+                                   TBuffer &b, const T &arr, Int_t first,
                                    Int_t narr, Int_t eoffset, Int_t arrayMode,
                                    ULong_t *&fMethod, ULong_t *&fElem, Int_t *&fLength,
                                    TClass *&fClass, Int_t *&fOffset, Int_t *& /*fNewType*/,
@@ -646,7 +659,7 @@ Int_t TStreamerInfo__ReadBufferImp(TStreamerInfo *thisVar,
 
 #else
 template <class T>
-Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &in_arr, Int_t first,
+Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
                                 Int_t narr, Int_t eoffset, Int_t arrayMode)
 {
    //  Deserialize information from buffer b into object at pointer
@@ -664,7 +677,7 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &in_arr, Int_t first,
    Int_t last;
 
    if (!fType) {
-      char *ptr = (arrayMode&1)? 0:in_arr[0];
+      char *ptr = (arrayMode&1)? 0:arr[0];
       fClass->BuildRealData(ptr);
       thisVar->BuildOld();
    }
@@ -689,9 +702,10 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &in_arr, Int_t first,
       TStreamerElement * aElement  = (TStreamerElement*)fElem[i];
       fgElement = aElement;
 
-      const T& arr( aElement->TestBit(TStreamerElement::kCache) ?
-         R__PeekDataCache( b, (T*)0x0 ) :
-         in_arr );
+      if (R__TestUseCache<T>(aElement)) {
+         thisVar->ReadBuffer(b,*((TBufferFile&)b).PeekDataCache(),i,narr,eoffset);
+         continue;
+      }
       const Int_t ioffset = fOffset[i]+eoffset;
 
       if (gDebug > 1) {
