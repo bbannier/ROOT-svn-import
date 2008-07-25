@@ -2541,7 +2541,7 @@ void* TStreamerInfo::NewArray(Long_t nElements, void *ary)
    char* p = (char*) ary;
 
    if (!p) {
-      Long_t len = nElements * size;
+      Long_t len = nElements * size + sizeof(Long_t)*2;
       p = new char[len];
       memset(p, 0, len);
    }
