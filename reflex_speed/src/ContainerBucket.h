@@ -12,7 +12,7 @@
 #ifndef Reflex_ContainerBucket
 #define Reflex_ContainerBucket
 
-#include "Reflex/internal/ContainerNode.h"
+#include "ContainerNode.h"
 #include <vector>
 
 namespace Reflex {

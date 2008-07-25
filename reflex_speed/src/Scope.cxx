@@ -15,15 +15,15 @@
 
 #include "Reflex/Scope.h"
 
-#include "Reflex/internal/ScopeBase.h"
 #include "Reflex/Member.h"
 #include "Reflex/Type.h"
 #include "Reflex/TypeTemplate.h"
 #include "Reflex/MemberTemplate.h"
-#include "Reflex/Base.h"
-
 #include "Reflex/Tools.h"
-#include "Class.h"
+
+#include "ScopeBase.h"
+#include "ScopeName.h"
+
 
 //-------------------------------------------------------------------------------
 Reflex::Scope::operator bool () const {
@@ -50,12 +50,20 @@ Reflex::Scope::operator Reflex::Type () const {
 }
 
 
-
 //-------------------------------------------------------------------------------
 Reflex::Scope Reflex::Scope::DeclaringScope() const {
 //-------------------------------------------------------------------------------
    if ( * this ) return fScopeName->fScopeBase->DeclaringScope(); 
    return Dummy::Scope();
+}
+
+
+//-------------------------------------------------------------------------------
+const Reflex::OrderedContainer<Reflex::Base>
+Reflex::Scope::Bases() const {
+//-------------------------------------------------------------------------------
+   if ( * this ) return fScopeName->fScopeBase->Bases(); 
+   return &Dummy::EmptyContainer();
 }
 
 
@@ -157,14 +165,6 @@ const std::string& Reflex::Scope::Name(std::string& buf, unsigned int mod ) cons
       else              return (buf = Tools::GetBaseName(fScopeName->Name()));
    }
    return (buf = "");
-}
-
-
-//-------------------------------------------------------------------------------
-const char * Reflex::Scope::Name_c_str() const {
-//-------------------------------------------------------------------------------
-   if ( fScopeName ) return fScopeName->Name_c_str();
-   return "";
 }
 
 

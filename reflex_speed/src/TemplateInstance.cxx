@@ -16,7 +16,7 @@
 #include "TemplateInstance.h"
 
 #include "Reflex/Builder/TypeBuilder.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 
 
 //-------------------------------------------------------------------------------

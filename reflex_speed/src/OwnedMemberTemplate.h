@@ -15,6 +15,7 @@
 // Include files
 #include "Reflex/Kernel.h"
 #include "Reflex/MemberTemplate.h"
+#include "MemberTemplateName.h"
 
 namespace Reflex {
 namespace Internal {

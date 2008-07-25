@@ -27,15 +27,18 @@ namespace Reflex {
          kValue // non-type template parameter
       };
 
-      TemplateArgument(Type type): fKindOf(kType), fValue(type, 0) {}
-      TemplateArgument(const ValueObject& value): fKindOf(kValue), fValue(value) {}
+      TemplateArgument(Type type): fKindOf(kType), fType(type) {}
+      TemplateArgument(Type type, const Object& value): fKindOf(kValue), fValue(value), fType(type) {}
 
       EKindOf KindOf() const { return fKindOf; }
-      const ValueObject& AsValue() const { return fValue; }
-      Type               AsType() const { return fType; }
+      const Object& AsValue() const { return fValue; }
+      Type          AsType() const { return fType; }
 
    private:
       EKindOf     fKindOf; // type of template parameter
-      ValueObject fValue;  // value for kValue; also used to store the type for kType.
+      Object      fValue;  // value for kValue; also used to store the type for kType.
+      Type        fType;   // type of the value (for kValue) or type template argument (for kType)
    };
 } // namespace Reflex;
+
+#endif // Reflex_TemplateArgument

@@ -16,7 +16,7 @@
 #include "Typedef.h"
 
 #include "Reflex/Tools.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::Typedef::Typedef( const char * typ,

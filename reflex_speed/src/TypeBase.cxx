@@ -13,13 +13,13 @@
 #define REFLEX_BUILD
 #endif
 
-#include "Reflex/internal/TypeBase.h"
+#include "TypeBase.h"
 
 #include "Reflex/Type.h"
-#include "Reflex/internal/OwnedPropertyList.h"
+#include "OwnedPropertyList.h"
 #include "Reflex/Object.h"
 #include "Reflex/Scope.h"
-#include "Reflex/internal/TypeName.h"
+#include "TypeName.h"
 #include "Reflex/Base.h"
 #include "Reflex/TypeTemplate.h"
 #include "Reflex/DictionaryGenerator.h"

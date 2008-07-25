@@ -13,7 +13,7 @@
 #define REFLEX_BUILD
 #endif
 
-#include "Reflex/internal/ContainerArena.h"
+#include "ContainerArena.h"
 #include <iostream>
 #include <algorithm>
 

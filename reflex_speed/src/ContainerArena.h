@@ -14,8 +14,8 @@
 
 #include <list>
 #include <vector>
-#include "Reflex/internal/ContainerNode.h"
-#include "Reflex/internal/RWLock.h"
+#include "ContainerNode.h"
+#include "RWLock.h"
 
 namespace Reflex {
    namespace Internal {

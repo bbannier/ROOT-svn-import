@@ -24,8 +24,8 @@
 #include "Reflex/PropertyList.h"
 #include "Reflex/DictionaryGenerator.h"
 
-#include "Reflex/internal/TypeName.h"
-#include "Reflex/internal/TypeBase.h"
+#include "TypeName.h"
+#include "TypeBase.h"
 
 
 #include "Enum.h"

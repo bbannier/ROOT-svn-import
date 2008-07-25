@@ -236,11 +236,13 @@ namespace Reflex {
       */
       const OrderedContainer<std::string>& FunctionParameterDefaults() const;
 
+
       /** 
       * FunctionParametertNames returns a collection of the parameter names
       * @return parameter names
       */
       const OrderedContainer<std::string>& FunctionParameterNames() const;
+
 
       /**
       * Properties will return the properties attached to this item

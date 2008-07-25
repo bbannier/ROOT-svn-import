@@ -109,14 +109,7 @@ namespace Reflex {
       * TemplateInstances returns the collection of known template instances
       * @return collection of the instances
       */
-      const Container<Member>& TemplateInstances() const;
-
-
-      /**
-      * TemplateParameterDefaults returns a collection of template parameters' default values as string
-      * @return default values of template parameters
-      */
-      const OrderedContainer<std::string>& TemplateParameterDefaults() const;
+      const Container<Member> TemplateInstances() const;
 
 
       /**
@@ -124,6 +117,13 @@ namespace Reflex {
       * @return collection of names of the template parameters
       */
       const OrderedContainer<std::string> TemplateParameterNames() const;
+
+
+      /**
+      * TemplateParameterDefaults returns a collection of template parameters' default values as string
+      * @return default values of template parameters
+      */
+      const OrderedContainer<std::string> TemplateParameterDefaults() const;
 
 
    public:

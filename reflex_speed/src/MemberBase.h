@@ -123,24 +123,19 @@ namespace Internal {
       virtual size_t FunctionParameterSize( bool required = false ) const;
 
 
-      /** FunctionParameterDefaultAt returns the nth default value if declared*/
-      virtual std::string FunctionParameterDefaultAt( size_t nth ) const;
+      /** 
+      * FunctionParameterDefaultss returns the collaction of default values 
+      * (as strings) for function parameters.
+      * @return collection of default values for parameters
+      */
+      const OrderedContainer<std::string>& FunctionParameterDefaults() const;
 
 
-      virtual StdString_Iterator FunctionParameterDefault_Begin() const;
-      virtual StdString_Iterator FunctionParameterDefault_End() const;
-      virtual Reverse_StdString_Iterator FunctionParameterDefault_RBegin() const;
-      virtual Reverse_StdString_Iterator FunctionParameterDefault_REnd() const;
-
-
-      /** FunctionParameterNameAt returns the nth name if declared*/
-      virtual std::string FunctionParameterNameAt( size_t nth ) const;
-
-
-      virtual StdString_Iterator FunctionParameterName_Begin() const;
-      virtual StdString_Iterator FunctionParameterName_End() const;
-      virtual Reverse_StdString_Iterator FunctionParameterName_RBegin() const;
-      virtual Reverse_StdString_Iterator FunctionParameterName_REnd() const;
+      /** 
+      * FunctionParametertNames returns a collection of the parameter names
+      * @return parameter names
+      */
+      const OrderedContainer<std::string>& FunctionParameterNames() const;
 
 
       /**
@@ -152,8 +147,6 @@ namespace Internal {
 
 
       /** Set the member value */
-      /*virtual void Set( const Object & instance,
-      const Object & value ) const;*/
       virtual void Set( const Object & instance,
          const void * value ) const;
 
@@ -171,24 +164,10 @@ namespace Internal {
 
 
       /**
-      * TemplateArgumentAt will return a pointer to the nth template argument
-      * @param  nth nth template argument
-      * @return pointer to nth template argument
+      * TemplateArguments returns an ordered collection of the template arguments
+      * @return reflection information of template arguments
       */
-      virtual Type TemplateArgumentAt( size_t nth ) const;
-
-
-      /**
-      * TemplateArgumentSize will return the number of template arguments
-      * @return number of template arguments
-      */
-      virtual size_t TemplateArgumentSize() const;
-
-
-      virtual Type_Iterator TemplateArgument_Begin() const;
-      virtual Type_Iterator TemplateArgument_End() const;
-      virtual Reverse_Type_Iterator TemplateArgument_RBegin() const;
-      virtual Reverse_Type_Iterator TemplateArgument_REnd() const;
+      const OrderedContainer<TemplateArgument>& TemplateArguments() const;
 
 
       /**
@@ -297,29 +276,12 @@ Reflex::Internal::MemberBase::Get( const Object & /* obj */ ) const {
 
 
 //-------------------------------------------------------------------------------
-//inline Reflex::Object 
-//Reflex::Internal::MemberBase::Invoke( const Object & /* obj */ ,
-//                                  const std::vector < Object > & /* paramList */ ) const {
-//-------------------------------------------------------------------------------
-//  return Object();
-//}
-
-
-//-------------------------------------------------------------------------------
 inline Reflex::Object 
 Reflex::Internal::MemberBase::Invoke( const Object & /* obj */ ,
                                   const std::vector < void * > & /* paramList */ ) const {
 //-------------------------------------------------------------------------------
    return Object();
 }
-
-
-//-------------------------------------------------------------------------------
-//inline Reflex::Object 
-//Reflex::Internal::MemberBase::Invoke( const std::vector < Object > & /* paramList */ ) const {
-//-------------------------------------------------------------------------------
-//  return Object();
-//}
 
 
 //-------------------------------------------------------------------------------
@@ -339,16 +301,17 @@ Reflex::Internal::MemberBase::MemberType() const {
 
 
 //-------------------------------------------------------------------------------
-inline std::string
-Reflex::Internal::MemberBase::Name( unsigned int mod ) const {
+inline const std::string&
+Reflex::Internal::MemberBase::Name(std::string& buf, unsigned int mod ) const {
 //-------------------------------------------------------------------------------
-   std::string s = "";
-   if ( 0 != ( mod & ( SCOPED | S ))) {
-      s += DeclaringScope().Name( mod );
-      if ( ! DeclaringScope().IsTopScope()) s += "::";
+   if (mod & SCOPED) {
+      if (!DeclaringScope().IsTopScope()) {
+         buf += DeclaringScope().Name( mod );
+         buf += "::";
+      }
    }
-   s += fName;
-   return s;
+   buf += fName;
+   return buf;
 }
 
 
@@ -358,102 +321,6 @@ Reflex::Internal::MemberBase::Offset() const {
 //-------------------------------------------------------------------------------
    return 0;
 }
-
-
-//-------------------------------------------------------------------------------
-inline size_t
-Reflex::Internal::MemberBase::FunctionParameterSize( bool /* required */ ) const {
-//-------------------------------------------------------------------------------
-   return 0; 
-}
-
-
-//-------------------------------------------------------------------------------
-inline std::string
-Reflex::Internal::MemberBase::FunctionParameterDefaultAt( size_t /* nth */ ) const {
-//-------------------------------------------------------------------------------
-   return "";
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator
-Reflex::Internal::MemberBase::FunctionParameterDefault_Begin() const {
-//-------------------------------------------------------------------------------
-   return Dummy::StdStringCont().begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator
-Reflex::Internal::MemberBase::FunctionParameterDefault_End() const {
-//-------------------------------------------------------------------------------
-   return Dummy::StdStringCont().end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator
-Reflex::Internal::MemberBase::FunctionParameterDefault_RBegin() const {
-//-------------------------------------------------------------------------------
-   return Dummy::StdStringCont().rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator
-Reflex::Internal::MemberBase::FunctionParameterDefault_REnd() const {
-//-------------------------------------------------------------------------------
-   return Dummy::StdStringCont().rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline std::string
-Reflex::Internal::MemberBase::FunctionParameterNameAt( size_t /* nth */ ) const {
-//-------------------------------------------------------------------------------
-   return "";
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator
-Reflex::Internal::MemberBase::FunctionParameterName_Begin() const {
-//-------------------------------------------------------------------------------
-   return Dummy::StdStringCont().begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::StdString_Iterator
-Reflex::Internal::MemberBase::FunctionParameterName_End() const {
-//-------------------------------------------------------------------------------
-   return Dummy::StdStringCont().end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator
-Reflex::Internal::MemberBase::FunctionParameterName_RBegin() const {
-//-------------------------------------------------------------------------------
-   return Dummy::StdStringCont().rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_StdString_Iterator
-Reflex::Internal::MemberBase::FunctionParameterName_REnd() const {
-//-------------------------------------------------------------------------------
-   return Dummy::StdStringCont().rend();
-}
-
-
-//-------------------------------------------------------------------------------
-//inline void
-// Reflex::Internal::MemberBase::Set( const Object & /* instance */,
-//                                           const Object & /* value */ ) const {}
-//-------------------------------------------------------------------------------
-
 
 
 //-------------------------------------------------------------------------------
@@ -484,46 +351,6 @@ inline Reflex::StubFunction
 Reflex::Internal::MemberBase::Stubfunction() const {
 //-------------------------------------------------------------------------------
    return 0;
-}
-
-
-//-------------------------------------------------------------------------------
-inline size_t
-Reflex::Internal::MemberBase::TemplateArgumentSize() const {
-//-------------------------------------------------------------------------------
-   return 0;
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator
-Reflex::Internal::MemberBase::TemplateArgument_Begin() const {
-//-------------------------------------------------------------------------------
-   return Dummy::TypeCont().begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator
-Reflex::Internal::MemberBase::TemplateArgument_End() const {
-//-------------------------------------------------------------------------------
-   return Dummy::TypeCont().end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator
-Reflex::Internal::MemberBase::TemplateArgument_RBegin() const {
-//-------------------------------------------------------------------------------
-   return Dummy::TypeCont().rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator
-Reflex::Internal::MemberBase::TemplateArgument_REnd() const {
-//-------------------------------------------------------------------------------
-   return Dummy::TypeCont().rend();
 }
 
 

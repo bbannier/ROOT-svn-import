@@ -13,7 +13,7 @@
 #define REFLEX_BUILD
 #endif
 
-#include "Reflex/internal/PropertyListImpl.h"
+#include "PropertyListImpl.h"
 #include "Reflex/Any.h"
 #include "Reflex/Tools.h"
 

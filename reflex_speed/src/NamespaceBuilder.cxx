@@ -20,7 +20,7 @@
 
 #include "Namespace.h"
 
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 
 //-------------------------------------------------------------------------------
 Reflex::NamespaceBuilder::NamespaceBuilder( const char * nam ) {

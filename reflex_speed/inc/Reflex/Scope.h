@@ -99,10 +99,10 @@ namespace Reflex {
 
 
       /**
-      * BaseAt returns the collection of base class information
-      * @return pointer to base class information
+      * Bases returns the collection of base class information
+      * @return collection of base class information
       */
-      const Container<Base>& Bases() const;
+      const OrderedContainer<Base> Bases() const;
 
 
       /**
@@ -110,14 +110,14 @@ namespace Reflex {
       * known by the global catalog.
       * @return collection of reflection information of all known scopes
       */
-      static const Container<Scope>& Scopes();
+      static const Container<Scope> Scopes();
 
 
       /**
       * DataMembers returns the data members of the type
       * @return nth data member 
       */
-      const OrderedContainer<Member>& DataMembers() const;
+      const OrderedContainer<Member> DataMembers() const;
 
 
       /**
@@ -131,7 +131,7 @@ namespace Reflex {
       * FunctionMembers returns the collection of function members of the scope
       * @return reflection information of nth function member
       */
-      const OrderedContainer<Member>& FunctionMembers() const;
+      const OrderedContainer<Member> FunctionMembers() const;
 
 
       /**
@@ -227,7 +227,7 @@ namespace Reflex {
       * Members eturns the collection of members of the scope
       * @return reflection information members
       */
-      const OrderedContainer<Member>& Members() const;
+      const OrderedContainer<Member> Members() const;
 
 
       /**
@@ -245,7 +245,7 @@ namespace Reflex {
       * MemberTemplates returns the collection of function member templates of this scope
       * @return collection of member templates
       */
-      const OrderedContainer<MemberTemplate>& MemberTemplates() const;
+      const OrderedContainer<MemberTemplate> MemberTemplates() const;
 
 
       /**
@@ -269,13 +269,6 @@ namespace Reflex {
       * @return name of the type
       */
       const std::string& Name(std::string& buf, unsigned int mod = SCOPED | QUALIFIED ) const;
-
-
-      /**
-      * Name_c_str returns a char* pointer to the unqualified type name
-      * @return c string to unqualified type name
-      */
-      const char * Name_c_str() const;
 
 
       /**
@@ -310,21 +303,21 @@ namespace Reflex {
       * SubScopes returns the collection of scopes declared in this scope.
       * @return container of reflection information of sub scopes
       */
-      const OrderedContainer<Scope>& SubScopes() const;
+      const OrderedContainer<Scope> SubScopes() const;
 
 
       /**
       * SubTypes returns the collection of type declared in this scope.
       * @return reflection information of sub types
       */
-      const OrderedContainer<Type>& SubTypes() const;
+      const OrderedContainer<Type> SubTypes() const;
 
 
       /** 
       * SubTypeTemplates returns the collection of templated types declared within this scope
       * @return type templates
       */
-      const OrderedContainer<TypeTemplate>& SubTypeTemplates() const;
+      const OrderedContainer<TypeTemplate> SubTypeTemplates() const;
 
 
       /**
@@ -337,21 +330,21 @@ namespace Reflex {
       * UsingDirectives returns the using directives declared in this scope.
       * @return using directives
       */
-      const Container<Scope>& UsingDirectives() const;
+      const Container<Scope> UsingDirectives() const;
 
 
       /**
       * UsingTypeDeclarations returns the using declarations of types of this scope.
       * @return using declarations of types
       */
-      const Container<Type>& UsingTypeDeclarations() const;
+      const Container<Type> UsingTypeDeclarations() const;
 
 
       /**
       * UsingMemberDeclarations returns the using declarations of members of this scope.
       * @return using declarations of members
       */
-      const Container<Member>& UsingMemberDeclarations() const;
+      const Container<Member> UsingMemberDeclarations() const;
 
 
    public:

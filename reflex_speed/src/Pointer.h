@@ -13,7 +13,7 @@
 #define Reflex_Pointer
 
 // Include files
-#include "Reflex/internal/TypeBase.h"
+#include "TypeBase.h"
 #include "Reflex/Type.h"
 
 namespace Reflex {

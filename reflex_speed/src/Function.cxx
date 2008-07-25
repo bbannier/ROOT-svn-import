@@ -16,7 +16,7 @@
 #include "Function.h"
 
 #include "Reflex/Tools.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::Function::Function( const Type & retType,

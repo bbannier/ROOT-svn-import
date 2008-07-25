@@ -23,8 +23,6 @@ Reflex::Internal::Union::Union(const char* typ, size_t size, const std::type_inf
 , ScopeBase(typ, unionType)
 , fModifiers(modifiers)
 , fCompleteType(false)
-, fConstructors(std::vector<Member>())
-, fDestructor(Member())
 {
 // Construct union info.
 }
@@ -57,125 +55,11 @@ Reflex::Internal::Union::HideName() const
 }
 
 //______________________________________________________________________________
-Reflex::Member
-Reflex::Internal::Union::DataMemberAt(size_t nth) const
-{
-// Return the nth datamember of the union
-   return ScopeBase::DataMemberAt(nth);
-}
-
-//______________________________________________________________________________
-Reflex::Member
-Reflex::Internal::Union::DataMemberByName(const std::string& nam) const
-{
-// Return the first data member of the union named nam.
-   return ScopeBase::DataMemberByName(nam);
-}
-
-//______________________________________________________________________________
-size_t
-Reflex::Internal::Union::DataMemberSize() const
-{
-// Return the number of data members.
-   return ScopeBase::DataMemberSize();
-}
-
-//______________________________________________________________________________
-Reflex::Member_Iterator
-Reflex::Internal::Union::DataMember_Begin() const
-{
-// Return an iterator to the first data member.
-   return ScopeBase::DataMember_Begin();
-}
-
-//-------------------------------------------------------------------------------
-Reflex::Member_Iterator
-Reflex::Internal::Union::DataMember_End() const
-{
-// Return an iterator pointing beyond the last data member.
-   return ScopeBase::DataMember_End();
-}
-
-//-------------------------------------------------------------------------------
-Reflex::Reverse_Member_Iterator
-Reflex::Internal::Union::DataMember_RBegin() const
-{
-// Return a reverse iterator to the last data member.
-   return ScopeBase::DataMember_RBegin();
-}
-
-//______________________________________________________________________________
-Reflex::Reverse_Member_Iterator
-Reflex::Internal::Union::DataMember_REnd() const
-{
-// Return a reverse iterator pointing beyond the first data member.
-   return ScopeBase::DataMember_REnd();
-}
-
-//______________________________________________________________________________
 Reflex::Scope
 Reflex::Internal::Union::DeclaringScope() const
 {
 // Return the scope the union is a member of.
    return ScopeBase::DeclaringScope();
-}
-
-//______________________________________________________________________________
-Reflex::Member
-Reflex::Internal::Union::FunctionMemberAt(size_t nth) const
-{
-// Return the nth function member of the union.
-   return ScopeBase::FunctionMemberAt(nth);
-}
-
-//______________________________________________________________________________
-Reflex::Member
-Reflex::Internal::Union::FunctionMemberByName(const std::string& nam, const Type& signature, unsigned int modifiers_mask) const
-{
-// Return the first function member named nam, with a given function signature,
-// where mask determines which modifiers (see ENTITY_DESCRIPTION) to ignore in
-// the signature matching.
-   return ScopeBase::FunctionMemberByName(nam, signature, modifiers_mask);
-}
-
-//______________________________________________________________________________
-size_t
-Reflex::Internal::Union::FunctionMemberSize() const
-{
-// Return the number of function members.
-   return ScopeBase::FunctionMemberSize();
-}
-
-//______________________________________________________________________________
-inline Reflex::Member_Iterator
-Reflex::Internal::Union::FunctionMember_Begin() const
-{
-// Return an iterator pointing to the first function member.
-   return ScopeBase::FunctionMember_Begin();
-}
-
-//______________________________________________________________________________
-Reflex::Member_Iterator
-Reflex::Internal::Union::FunctionMember_End() const
-{
-// Return an iterator pointing beyond the last function member.
-   return ScopeBase::FunctionMember_End();
-}
-
-//______________________________________________________________________________
-Reflex::Reverse_Member_Iterator
-Reflex::Internal::Union::FunctionMember_RBegin() const
-{
-// Return a reverse iterator pointing to the last function member.
-   return ScopeBase::FunctionMember_RBegin();
-}
-
-//______________________________________________________________________________
-Reflex::Reverse_Member_Iterator
-Reflex::Internal::Union::FunctionMember_REnd() const
-{
-// Return a reverse iterator pointing beyond the first function member.
-   return ScopeBase::FunctionMember_REnd();
 }
 
 //______________________________________________________________________________
@@ -191,94 +75,14 @@ Reflex::Internal::Union::IsComplete() const
 }
 
 //______________________________________________________________________________
-bool
-Reflex::Internal::Union::IsPrivate() const
-{
-// Return whether the union has private access.
-   return fModifiers & PRIVATE;
-}
-
-//______________________________________________________________________________
-bool
-Reflex::Internal::Union::IsProtected() const
-{
-// Return whether the union has protected access.
-   return fModifiers & PROTECTED;
-}
-
-//______________________________________________________________________________
-bool
-Reflex::Internal::Union::IsPublic() const
-{
-// Return whether the union has public access.
-   return fModifiers & PUBLIC;
-}
-
-//______________________________________________________________________________
-Reflex::Member
-Reflex::Internal::Union::MemberByName(const std::string& nam, const Type& signature) const
-{
-// Return the first member matching nam with a given signature.
-   return ScopeBase::MemberByName(nam, signature);
-}
-
-//______________________________________________________________________________
-Reflex::Member
-Reflex::Internal::Union::MemberAt(size_t nth) const
-{
-// Return nth member of this union.
-   return ScopeBase::MemberAt(nth);
-}
-
-//______________________________________________________________________________
-size_t
-Reflex::Internal::Union::MemberSize() const
-{
-// Return the number of members.
-   return ScopeBase::MemberSize();
-}
-
-//______________________________________________________________________________
-Reflex::Member_Iterator
-Reflex::Internal::Union::Member_Begin() const
-{
-// Return an iterator pointing to the first member.
-   return ScopeBase::Member_Begin();
-}
-
-//______________________________________________________________________________
-Reflex::Member_Iterator
-Reflex::Internal::Union::Member_End() const
-{
-// Return an iterator pointing beyond the last member.
-   return ScopeBase::Member_End();
-}
-
-//______________________________________________________________________________
-Reflex::Reverse_Member_Iterator
-Reflex::Internal::Union::Member_RBegin() const
-{
-// Return a reverse iterator pointing to the last member.
-   return ScopeBase::Member_RBegin();
-}
-
-//______________________________________________________________________________
-Reflex::Reverse_Member_Iterator
-Reflex::Internal::Union::Member_REnd() const
-{
-// Return a reverse iterator pointing beyond the first member.
-   return ScopeBase::Member_REnd();
-}
-
-//______________________________________________________________________________
-std::string
-Reflex::Internal::Union::Name(unsigned int mod /*= 0*/) const
+const std::string&
+Reflex::Internal::Union::Name(std::string& buf, unsigned int mod /*= 0*/) const
 {
 // Return the name of the union; possible modifiers:
 //      *   FINAL     - resolve typedefs
 //      *   SCOPED    - fully scoped name 
 //      *   QUALIFIED - cv, reference qualification 
-   return ScopeBase::Name(mod);
+   return ScopeBase::Name(buf, mod);
 }
 
 //______________________________________________________________________________
@@ -304,40 +108,24 @@ Reflex::Internal::Union::Properties() const
 
 //______________________________________________________________________________
 void
-Reflex::Internal::Union::AddDataMember(const Member& dm) const
+Reflex::Internal::Union::AddMember(const Member & m) const
 {
-// Add a data memebr to the union.
-   ScopeBase::AddDataMember(dm);
-}
-
-//______________________________________________________________________________
-void
-Reflex::Internal::Union::AddDataMember(const char* nam, const Type& typ, size_t offs, unsigned int modifiers /*= 0*/) const
-{
-// Add a data memebr to the union.
-   ScopeBase::AddDataMember(nam, typ, offs, modifiers);
-}
-
-//______________________________________________________________________________
-void
-Reflex::Internal::Union::AddFunctionMember(const Member & fm) const
-{
-// Add function member fm to this union
-   ScopeBase::AddFunctionMember(fm);
-   if (fm.IsConstructor()) {
-      fConstructors.push_back(fm);
+// Add data or function member fm to this union
+   ScopeBase::AddMember(m);
+   if (m.Is(gConstructor)) {
+      fConstructors.push_back(m);
    }
-   else if (fm.IsDestructor()) {
-      fDestructor = fm;
+   else if (fm.Is(gDestructor)) {
+      fDestructor = m;
    }
 }
 
 //______________________________________________________________________________
 void
-Reflex::Internal::Union::AddFunctionMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx, const char* params, unsigned int modifiers) const
+Reflex::Internal::Union::AddMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx, const char* params, unsigned int modifiers) const
 {
 // Add function member to this union.
-   ScopeBase::AddFunctionMember(nam, typ, stubFP, stubCtx, params, modifiers);
+   ScopeBase::AddMember(nam, typ, stubFP, stubCtx, params, modifiers);
    if (modifiers & CONSTRUCTOR) {
       fConstructors.push_back(fFunctionMembers[fFunctionMembers.size()-1]);
    }
@@ -345,23 +133,7 @@ Reflex::Internal::Union::AddFunctionMember(const char* nam, const Type& typ, Stu
 }
 
 //______________________________________________________________________________
-void
-Reflex::Internal::Union::RemoveDataMember(const Member& dm) const
-{
-// Remove data member dm from this union.
-   ScopeBase::RemoveDataMember(dm);
-}
-
-//______________________________________________________________________________
-void
-Reflex::Internal::Union::RemoveFunctionMember(const Member& fm) const
-{
-// Remove function member from this union.
-   ScopeBase::RemoveFunctionMember(fm);
-}
-
-//______________________________________________________________________________
-inline Reflex::TypeName*
+inline Reflex::Internal::TypeName*
 Reflex::Internal::Union::TypeNameGet() const
 {
 // Return the TypeName* of this union.

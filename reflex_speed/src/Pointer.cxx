@@ -16,7 +16,7 @@
 #include "Pointer.h"
 
 #include "Reflex/EntityProperty.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::Pointer::Pointer( const Type & pointerType,

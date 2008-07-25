@@ -19,7 +19,7 @@
 #include "Reflex/Type.h"
 #include "Reflex/Tools.h"
 #include "Reflex/EntityProperty.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 
 #include <sstream>
 #include <string.h>

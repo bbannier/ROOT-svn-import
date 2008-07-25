@@ -15,14 +15,14 @@
 
 #include "Reflex/Scope.h"
 
-#include "Reflex/internal/ScopeBase.h"
+#include "ScopeBase.h"
 
 #include "Reflex/Type.h"
-#include "Reflex/internal/OwnedMember.h"
-#include "Reflex/internal/ScopeName.h"
+#include "OwnedMember.h"
+#include "ScopeName.h"
 #include "Reflex/TypeTemplate.h"
-#include "Reflex/internal/OwnedMemberTemplate.h"
-#include "Reflex/internal/InternalTools.h"
+#include "OwnedMemberTemplate.h"
+#include "InternalTools.h"
 #include "Reflex/Tools.h"
 #include "Reflex/DictionaryGenerator.h"
 

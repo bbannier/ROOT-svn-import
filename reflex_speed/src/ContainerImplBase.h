@@ -115,9 +115,6 @@ namespace Reflex {
          iterator Begin(const INodeHelper& helper, const ContainerImplBase_iterator& nextContainer) const;
          iterator End() const;
 
-         iterator RBegin(const INodeHelper& helper, const ContainerImplBase_iterator& prevContainer) const;
-         iterator REnd() const;
-
          // Reset the elements
          void Clear();
 

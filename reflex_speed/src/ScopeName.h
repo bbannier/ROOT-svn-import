@@ -40,20 +40,7 @@ namespace Internal {
    public:
 
       /** constructor */
-      ScopeName( const char * name, 
-         ScopeBase * scopeBase );
-
-
-      /**
-      * ByName will return a pointer to a At which is given as an argument
-      * or 0 if none is found
-      * @param  Name fully qualified Name of At
-      * @return pointer to At or 0 if none is found
-      */
-      static Scope ByName( const std::string & name );
-
-
-      static void CleanUp();
+      ScopeName( const char * name, ScopeBase * scopeBase );
 
 
       /**
@@ -74,40 +61,12 @@ namespace Internal {
       const std::string & Name() const;
 
 
-      /**
-      * Name_c_str returns a char* pointer to the unqualified Scope Name
-      * @return c string to unqualified Scope Name
-      */
-      const char * Name_c_str() const;
-
-
       /** 
       * ThisScope will return the unqualified Scope object of this ScopeName
       * @return corresponding Scope
       */
       Scope ThisScope() const;
 
-
-      /**
-      * ScopeAt will return the nth defined scope
-      * @param  nth scope defined in the system
-      * @return nth scope defined in the system
-      */
-      static Scope ScopeAt( size_t nth );
-
-
-      /**
-      * ScopeSize will return the number of currently defined scopes
-      * (resolved and unresolved ones)
-      * @return number of currently defined scopes
-      */
-      static size_t ScopeSize();
-
-
-      static Scope_Iterator Scope_Begin();
-      static Scope_Iterator Scope_End();
-      static Reverse_Scope_Iterator Scope_RBegin();
-      static Reverse_Scope_Iterator Scope_REnd();
 
    private:
 
@@ -143,13 +102,6 @@ namespace Internal {
 inline const std::string & Reflex::Internal::ScopeName::Name() const {
 //-------------------------------------------------------------------------------
    return fName;
-}
-
-
-//-------------------------------------------------------------------------------
-inline const char * Reflex::Internal::ScopeName::Name_c_str() const {
-//-------------------------------------------------------------------------------
-   return fName.c_str();
 }
 
 #endif //Reflex_ScopeName

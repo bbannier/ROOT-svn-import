@@ -13,8 +13,8 @@
 #define Reflex_Enum
 
 // Include files
-#include "Reflex/internal/TypeBase.h"
-#include "Reflex/internal/ScopeBase.h"
+#include "TypeBase.h"
+#include "ScopeBase.h"
 
 namespace Reflex {
 
@@ -186,7 +186,7 @@ namespace Internal {
 } //namespace Internal
 } //namespace Reflex
 
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 
 //-------------------------------------------------------------------------------
 inline

@@ -16,7 +16,7 @@
 #include "Reflex/Builder/TypeBuilder.h"
 
 #include "Reflex/Type.h"
-#include "Reflex/internal/TypeName.h"
+#include "TypeName.h"
 
 #include "Pointer.h"
 #include "Function.h"

@@ -62,6 +62,9 @@ namespace Internal {
       return member.Name(buf);
    }
 
+   //---- Container Adaptor for Member ----
+
+
 } // namespace Internal
 } // namespace Reflex
 

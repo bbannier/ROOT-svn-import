@@ -18,7 +18,7 @@
 #include "Reflex/Kernel.h"
 #include "Reflex/Type.h"
 #include "Reflex/EntityProperty.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "OwnedMember.h"
 #include <cstring>
 
 #if defined(__GNUC__)
