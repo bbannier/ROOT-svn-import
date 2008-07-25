@@ -122,7 +122,7 @@ TStreamerInfo::TStreamerInfo(TClass *cl, const char *info)
    fOnFileClassVersion = 0;
    fOldVersion = Class()->GetClassVersion();
 
-   if (info) BuildUserInfo(info);
+   //if (info) BuildUserInfo(info);
 }
 
 //______________________________________________________________________________
