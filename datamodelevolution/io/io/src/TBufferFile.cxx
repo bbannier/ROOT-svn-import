@@ -3298,7 +3298,7 @@ Int_t TBufferFile::ReadClassBuffer(TClass *cl, void *pointer, Int_t version, UIn
    TStreamerInfo *sinfo = (TStreamerInfo*)infos->At(version);
    if (sinfo == 0) {
       cl->BuildRealData(pointer);
-      sinfo = new TStreamerInfo(cl, "");
+      sinfo = new TStreamerInfo(cl);
       infos->AddAtAndExpand(sinfo, version);
       if (gDebug > 0) printf("Creating StreamerInfo for class: %s, version: %d\n", cl->GetName(), version);
       sinfo->Build();
@@ -3350,7 +3350,7 @@ Int_t TBufferFile::ReadClassBuffer(TClass *cl, void *pointer)
    TStreamerInfo *sinfo = (TStreamerInfo*) infos->At(version);
    if (sinfo == 0) {
       cl->BuildRealData(pointer);
-      sinfo = new TStreamerInfo(cl, "");
+      sinfo = new TStreamerInfo(cl);
       infos->AddAtAndExpand(sinfo,version);
       if (gDebug > 0) printf("Creating StreamerInfo for class: %s, version: %d\n", cl->GetName(), version);
       sinfo->Build();
@@ -3388,7 +3388,7 @@ Int_t TBufferFile::WriteClassBuffer(TClass *cl, void *pointer)
    TStreamerInfo *sinfo = (TStreamerInfo*)cl->GetCurrentStreamerInfo();
    if (sinfo == 0) {
       cl->BuildRealData(pointer);
-      sinfo = new TStreamerInfo(cl,"");
+      sinfo = new TStreamerInfo(cl);
       cl->SetCurrentStreamerInfo(sinfo);
       cl->GetStreamerInfos()->AddAtAndExpand(sinfo,cl->GetClassVersion());
       if (gDebug > 0) printf("Creating StreamerInfo for class: %s, version: %d\n",cl->GetName(),cl->GetClassVersion());
