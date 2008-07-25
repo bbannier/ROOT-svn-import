@@ -22,6 +22,8 @@
 #include "TStreamerInfo.h"
 #include "TVirtualCollectionProxy.h"
 #include "TContainerConverters.h"
+#include "TVirtualArray.h"
+#include "TVirtualObject.h"
 
 //==========CPP macros
 
@@ -624,17 +626,18 @@ Int_t TStreamerInfo::ReadBufferConv(TBuffer &b, const T &arr,  Int_t i, Int_t ka
    return 0;
 }
 
-#include "TVirtualObject.h"
-#include "TVirtualArray.h"
+// Helper function for TStreamerInfo::ReadBuffer
+namespace {
+   template <class T> Bool_t R__TestUseCache(TStreamerElement *element) 
+   {
+      return element->TestBit(TStreamerElement::kCache);
+   }
 
- template <class T> Bool_t R__TestUseCache(TStreamerElement *element) 
-{
-   return element->TestBit(TStreamerElement::kCache);
-}
-
-template <> Bool_t R__TestUseCache<TVirtualArray>(TStreamerElement*)
-{
-   return kFALSE;
+   template <> Bool_t R__TestUseCache<TVirtualArray>(TStreamerElement*)
+   {
+      // We are already using the cache, no need to recurse one more time.
+      return kFALSE;
+   }
 }
 
 //______________________________________________________________________________
