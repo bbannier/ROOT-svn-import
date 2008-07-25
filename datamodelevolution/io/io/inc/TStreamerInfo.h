@@ -81,10 +81,10 @@ protected:
      TVirtualCollectionProxy *fProxy;
    };
 #ifndef __CINT__
-   static TStreamerInfo::TPointerCollectionAdapter R__PeekDataCache( const TBuffer &b, TStreamerInfo::TPointerCollectionAdapter *dummy);
-   static TVirtualCollectionProxy &TStreamerInfo::R__PeekDataCache( const TBuffer &b, const TVirtualCollectionProxy *dummy) ;
-   static  char **TStreamerInfo::R__PeekDataCache( const TBuffer &b, TClonesArray* dummy );
-   static char **TStreamerInfo::R__PeekDataCache( const TBuffer &b, char*** dummy );
+   static TStreamerInfo::TPointerCollectionAdapter R__PeekDataCache( const TBuffer &b, TPointerCollectionAdapter *dummy);
+   static TVirtualCollectionProxy &R__PeekDataCache( const TBuffer &b, const TVirtualCollectionProxy *dummy) ;
+   static char **R__PeekDataCache( const TBuffer &b, TClonesArray* dummy );
+   static char **R__PeekDataCache( const TBuffer &b, char*** dummy );
 #endif
 
 private:
