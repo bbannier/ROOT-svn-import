@@ -1329,7 +1329,7 @@ void TFitEditor::DoFit()
    if (!fFitObject) return;
    if (!fParentPad) return;
 
-   TF1 fitFunc("tmp",fFunction.Data(),fXmin,fXmax);
+   TF1 fitFunc("lastFitFunc",fFunction.Data(),fXmin,fXmax);
    if ( fFuncPars )
    fitFunc.SetParameters(fFuncPars);
 
@@ -1469,7 +1469,24 @@ void TFitEditor::DoFunction(Int_t)
 
    TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
    if (fNone->GetState() == kButtonDown) {
-      fEnteredFunc->SetText(te->GetTitle());
+      TF1* tmpTF1 = 0;
+      switch (fType) {
+      case kObjectHisto: {
+         TH1* h1 = (TH1*) fFitObject;
+         tmpTF1 = (TF1*) h1->GetListOfFunctions()->FindObject(te->GetTitle());
+         break;
+      }
+      case kObjectGraph: {
+         TGraph* gr = (TGraph*)fFitObject;
+         tmpTF1 = (TF1*) gr->GetListOfFunctions()->FindObject(te->GetTitle());
+         break;
+      }
+      default: { break; }
+      }
+      if ( tmpTF1 ) 
+         fEnteredFunc->SetText(tmpTF1->GetExpFormula());
+      else
+         fEnteredFunc->SetText(te->GetTitle());
    } else if (fAdd->GetState() == kButtonDown) {
       Int_t np = 0;
       TString s = "";
@@ -2319,7 +2336,6 @@ void TFitEditor::GetFunctionsFromList(TList *list)
    TIter next(list, kIterBackward);
    while ((obj = next())) {
       if (obj->InheritsFrom(TF1::Class())) {
-         if (!strcmp(obj->GetName(), "fitFunc")) continue;
          fFuncList->AddEntry(obj->GetName(), newid++);
       }
    } 
