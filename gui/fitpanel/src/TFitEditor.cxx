@@ -1327,6 +1327,15 @@ void TFitEditor::DoFit()
    if (!fFitObject) return;
    if (!fParentPad) return;
 
+   if ( CheckFunctionString(fEnteredFunc->GetText()) )
+   {
+      new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
+                   "Error...", "Verify the entered function string!",
+                   kMBIconStop,kMBOk, 0);
+      return;
+   }
+   
+   DoEnteredFunction();
    TF1 fitFunc("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
    if ( fFuncPars )
    fitFunc.SetParameters(fFuncPars);
@@ -1527,6 +1536,7 @@ void TFitEditor::DoEnteredFunction()
       new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
                    "Error...", "Verify the entered function string!",
                    kMBIconStop,kMBOk, 0);
+      return;
    }
 
    fSelLabel->SetText(fEnteredFunc->GetText());
