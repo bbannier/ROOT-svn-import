@@ -195,7 +195,6 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
    fYmax        (0),
    fZmin        (0),
    fZmax        (0),
-   fFunction    (""),
    fFuncPars    (0)
 
 {
@@ -372,7 +371,6 @@ void TFitEditor::CreateGeneralTab()
    fEnteredFunc->SetMaxLength(250);
    fEnteredFunc->SetAlignment(kTextLeft);
    TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-   fFunction = te->GetTitle();
    fEnteredFunc->SetText(te->GetTitle());
    fEnteredFunc->SetToolTipText("Enter file_name/function_name or a function expression");
    fEnteredFunc->Resize(250,fEnteredFunc->GetDefaultHeight());
@@ -1169,7 +1167,6 @@ void TFitEditor::SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event)
          tmpStr +=te->GetTitle();
          fEnteredFunc->SetText(tmpStr);
       }
-      fFunction = fEnteredFunc->GetText();
       fEnteredFunc->SelectAll();
    }
 
@@ -1330,7 +1327,7 @@ void TFitEditor::DoFit()
    if (!fFitObject) return;
    if (!fParentPad) return;
 
-   TF1 fitFunc("lastFitFunc",fFunction.Data(),fXmin,fXmax);
+   TF1 fitFunc("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
    if ( fFuncPars )
    fitFunc.SetParameters(fFuncPars);
 
@@ -1431,7 +1428,6 @@ void TFitEditor::DoAddition(Bool_t on)
    if (sel > kFP_USER) {
       //no addition for user defined functions
       fEnteredFunc->Clear();
-      fFunction = "";
       fFuncList->Select(kFP_GAUS, kTRUE);
       return;
    }
@@ -1458,7 +1454,6 @@ void TFitEditor::DoNoOperation(Bool_t on)
    if (on && te) {
       fEnteredFunc->SetText(te->GetTitle());
    }
-   fFunction = fEnteredFunc->GetText();
    fSelLabel->SetText(fEnteredFunc->GetText());
    ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
 }
@@ -1504,7 +1499,6 @@ void TFitEditor::DoFunction(Int_t)
          s += Form("%s(%d)", te->GetTitle(), np);
       fEnteredFunc->SetText(s.Data());
    }
-   fFunction = fEnteredFunc->GetText();
    TString tmpStr = fEnteredFunc->GetText();
 
    // create TF1 with the passed string. Delete previous one if existing
@@ -1534,8 +1528,6 @@ void TFitEditor::DoEnteredFunction()
                    "Error...", "Verify the entered function string!",
                    kMBIconStop,kMBOk, 0);
    }
-
-   fFunction = fEnteredFunc->GetText();
 
    fSelLabel->SetText(fEnteredFunc->GetText());
    ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
@@ -1629,7 +1621,7 @@ void TFitEditor::DoReset()
 
    fParentPad->Modified();
    fParentPad->Update();
-   fFunction = "gaus";
+   fEnteredFunc->SetText("gaus");
 
    if (fXmin > 1 || fXmax < fXrange) {
       fSliderX->SetRange(fXmin,fXmax);
@@ -1662,7 +1654,6 @@ void TFitEditor::DoReset()
       fNoStoreDrawing->SetState(kButtonUp, kFALSE);
    fNone->SetState(kButtonDown, kTRUE);
    fFuncList->Select(1, kTRUE);
-   fEnteredFunc->SetText("gaus");
 
    // minimization tab
    if (fLibMinuit->GetState() != kButtonDown)
@@ -1690,7 +1681,7 @@ void TFitEditor::DoSetParameters()
 {
    // Open set parameters dialog.
 
-   TF1 fitFunc("tmpPars",fFunction.Data(), fXmin, fXmax);
+   TF1 fitFunc("tmpPars",fEnteredFunc->GetText(), fXmin, fXmax);
    if ( fFuncPars ) fitFunc.SetParameters(fFuncPars);
 
    fParentPad->Disconnect("RangeAxisChanged()");
@@ -1987,7 +1978,6 @@ void TFitEditor::SetFunction(const char *function)
 {
    // Set the function to be used in performed fit.
 
-   fFunction = function;
    fEnteredFunc->SetText(function);
 }
 
