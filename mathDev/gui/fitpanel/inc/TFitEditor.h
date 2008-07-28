@@ -119,7 +119,6 @@ protected:
    Float_t              fZmin;             // z-min
    Float_t              fZmax;             // z-max
 
-   TString              fFunction;         // selected function to fit
    Double_t            *fFuncPars;         // Parameters of the function
    Int_t                fPx1old,
                         fPy1old,
