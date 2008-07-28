@@ -119,7 +119,7 @@ protected:
    Float_t              fZmin;             // z-min
    Float_t              fZmax;             // z-max
 
-   Double_t            *fFuncPars;         // Parameters of the function
+   Double_t           (*fFuncPars)[3];         // Parameters of the function
    Int_t                fPx1old,
                         fPy1old,
                         fPx2old,
@@ -153,7 +153,7 @@ private:
    TFitEditor(const TFitEditor&);              // not implemented
    TFitEditor& operator=(const TFitEditor&);   // not implemented
 
-   void RetrieveOptions(TString&, TString&);
+   void RetrieveOptions(TString&, TString&, Int_t);
 
 public:
    TFitEditor(TVirtualPad* pad, TObject *obj);

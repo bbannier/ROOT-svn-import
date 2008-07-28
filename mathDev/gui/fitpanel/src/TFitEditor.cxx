@@ -163,6 +163,34 @@ enum EFitPanel {
    kFP_FIT,   kFP_RESET, kFP_CLOSE
 };
 
+enum EParStruct {
+   PAR_VAL = 0,
+   PAR_MIN = 1,
+   PAR_MAX = 2
+};
+
+void GetParameters(Double_t (*pars)[3], TF1* func)
+{
+   for ( Int_t i = 0; i < func->GetNpar(); ++i )
+   {
+      Double_t par_min, par_max;
+      pars[i][PAR_VAL] = func->GetParameter(i);
+      func->GetParLimits(i, par_min, par_max);
+      pars[i][PAR_MIN] = par_min;
+      pars[i][PAR_MAX] = par_max;
+   }
+}
+
+void SetParameters(Double_t (*pars)[3], TF1* func)
+{
+   for ( Int_t i = 0; i < func->GetNpar(); ++i )
+   {
+      func->SetParameter(i, pars[i][PAR_VAL]);
+      func->SetParLimits(i, pars[i][PAR_MIN], pars[i][PAR_MAX]);
+   }
+}
+
+
 ClassImp(TFitEditor)
 
 TFitEditor *TFitEditor::fgFitDialog = 0;
@@ -1152,8 +1180,10 @@ void TFitEditor::SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event)
    
    TF1* fitFunc = HasFitFunction(obj);
    if (fitFunc) {
-      fFuncPars = new Double_t[fitFunc->GetNpar()];
-      fitFunc->GetParameters(fFuncPars);
+      if ( fFuncPars ) delete fFuncPars;
+      fFuncPars = new Double_t[fitFunc->GetNpar()][3];
+      GetParameters(fFuncPars, fitFunc);
+
       fEnteredFunc->SetText(fitFunc->GetExpFormula().Data());
       TGLBEntry *en = fFuncList->FindEntry(fitFunc->GetExpFormula().Data());
       if (en) fFuncList->Select(en->EntryId());
@@ -1335,13 +1365,11 @@ void TFitEditor::DoFit()
       return;
    }
    
-   DoEnteredFunction();
    TF1 fitFunc("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
-   if ( fFuncPars )
-   fitFunc.SetParameters(fFuncPars);
+   if ( fFuncPars ) SetParameters(fFuncPars, &fitFunc);
 
    TString strDrawOpts, strFitOpts;
-   RetrieveOptions(strFitOpts, strDrawOpts);
+   RetrieveOptions(strFitOpts, strDrawOpts, fitFunc.GetNpar());
 
    fFitButton->SetState(kButtonEngaged);
    if (gPad) gPad->GetVirtCanvas()->SetCursor(kWatch);
@@ -1692,7 +1720,7 @@ void TFitEditor::DoSetParameters()
    // Open set parameters dialog.
 
    TF1 fitFunc("tmpPars",fEnteredFunc->GetText(), fXmin, fXmax);
-   if ( fFuncPars ) fitFunc.SetParameters(fFuncPars);
+   if ( fFuncPars ) SetParameters(fFuncPars, &fitFunc);
 
    fParentPad->Disconnect("RangeAxisChanged()");
    Double_t xmin, xmax;
@@ -1702,23 +1730,9 @@ void TFitEditor::DoSetParameters()
                             &fitFunc, fParentPad, xmin, xmax, &ret);
 
    if ( fFuncPars ) delete fFuncPars;
-   fFuncPars = new Double_t[fitFunc.GetNpar()];
-   fitFunc.GetParameters(fFuncPars);
+   fFuncPars = new Double_t[fitFunc.GetNpar()][3];
+   GetParameters(fFuncPars, &fitFunc);
 
-//    TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-//    if ((fNone->GetState() == kButtonDown) && te != 0 &&
-//        strcmp(te->GetTitle(), "user")) {
-//       // DoBound would set the fFitOption with +B if there was any
-//       // bound parameter. However, this option was not working fine
-//       // and we removed until we can guarantee it will work.
-//       /*
-//       if (ret == kFPDBounded) {
-//          DoBound(kTRUE);
-//       } else {
-//          DoBound(kFALSE);
-//       }
-//       */
-//    }
    fParentPad->Connect("RangeAxisChanged()", "TFitEditor", this, "UpdateGUI()");
 }
 
@@ -2401,7 +2415,7 @@ void TFitEditor::CheckRange(TF1 *f1)
 }
 
 //______________________________________________________________________________
-void TFitEditor::RetrieveOptions(TString& fitOpts, TString& drawOpts)
+void TFitEditor::RetrieveOptions(TString& fitOpts, TString& drawOpts, Int_t npar)
 {
    fitOpts = drawOpts = "";
 
@@ -2429,6 +2443,13 @@ void TFitEditor::RetrieveOptions(TString& fitOpts, TString& drawOpts)
    if ( !(fLinearFit->GetState() == kButtonDown) &&
         (tmpStr.Contains("pol") || tmpStr.Contains("++")) )
       fitOpts += 'F';
+
+   for ( Int_t i = 0; i < npar; ++i )
+      if ( fFuncPars[i][PAR_MIN] != fFuncPars[i][PAR_MAX] )
+      {
+         fitOpts +='B';
+         break;
+      }
 
    if (fNoChi2->GetState() == kButtonDown)
       fitOpts += 'C';
