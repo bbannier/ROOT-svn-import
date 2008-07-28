@@ -373,7 +373,7 @@ void TFitEditor::CreateGeneralTab()
    fEnteredFunc->SetAlignment(kTextLeft);
    TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
    fFunction = te->GetTitle();
-   fEnteredFunc->SetText(fFunction.Data());
+   fEnteredFunc->SetText(te->GetTitle());
    fEnteredFunc->SetToolTipText("Enter file_name/function_name or a function expression");
    fEnteredFunc->Resize(250,fEnteredFunc->GetDefaultHeight());
    tf2->AddFrame(fEnteredFunc, new TGLayoutHints(kLHintsLeft    |
@@ -1154,21 +1154,22 @@ void TFitEditor::SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event)
    
    TF1* fitFunc = HasFitFunction(obj);
    if (fitFunc) {
-      fFunction = fitFunc->GetExpFormula();
       fFuncPars = new Double_t[fitFunc->GetNpar()];
       fitFunc->GetParameters(fFuncPars);
-      fEnteredFunc->SetText(fFunction.Data());
-      TGLBEntry *en = fFuncList->FindEntry(fFunction.Data());
+      fEnteredFunc->SetText(fitFunc->GetExpFormula().Data());
+      TGLBEntry *en = fFuncList->FindEntry(fitFunc->GetExpFormula().Data());
       if (en) fFuncList->Select(en->EntryId());
    } else {
       TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
       if (fNone->GetState() == kButtonDown)
-         fFunction = te->GetTitle();
+         fEnteredFunc->SetText(te->GetTitle());
       else if (fAdd->GetState() == kButtonDown) {
-         fFunction += '+';
-         fFunction +=te->GetTitle();
+         TString tmpStr = fEnteredFunc->GetText();
+         tmpStr += '+';
+         tmpStr +=te->GetTitle();
+         fEnteredFunc->SetText(tmpStr);
       }
-      fEnteredFunc->SetText(fFunction.Data());
+      fFunction = fEnteredFunc->GetText();
       fEnteredFunc->SelectAll();
    }
 
@@ -1438,9 +1439,9 @@ void TFitEditor::DoAddition(Bool_t on)
    if (on) {
       if (!first) {
          s += "(0)";
+         fSelLabel->SetText(fEnteredFunc->GetText());
          fEnteredFunc->SetText(s.Data());
          first = kTRUE;
-         fSelLabel->SetText(fFunction.Data());
          ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
       }
    } else {
@@ -1458,7 +1459,7 @@ void TFitEditor::DoNoOperation(Bool_t on)
       fEnteredFunc->SetText(te->GetTitle());
    }
    fFunction = fEnteredFunc->GetText();
-   fSelLabel->SetText(fFunction.Data());
+   fSelLabel->SetText(fEnteredFunc->GetText());
    ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
 }
 
@@ -1491,10 +1492,10 @@ void TFitEditor::DoFunction(Int_t)
       Int_t np = 0;
       TString s = "";
       if (!strcmp(fEnteredFunc->GetText(), "")) {
-         fFunction = te->GetTitle();
+         fEnteredFunc->SetText(te->GetTitle());
       } else {
          s = fEnteredFunc->GetTitle();
-         TFormula tmp("tmp", fFunction.Data());
+         TFormula tmp("tmp", fEnteredFunc->GetText());
          np = tmp.GetNpar();
       }
       if (np)
@@ -1504,16 +1505,17 @@ void TFitEditor::DoFunction(Int_t)
       fEnteredFunc->SetText(s.Data());
    }
    fFunction = fEnteredFunc->GetText();
+   TString tmpStr = fEnteredFunc->GetText();
 
    // create TF1 with the passed string. Delete previous one if existing
-   if (fFunction.Contains("pol") || fFunction.Contains("++")) {
+   if (tmpStr.Contains("pol") || tmpStr.Contains("++")) {
       fLinearFit->SetState(kButtonDown, kTRUE);
    } else {
       fLinearFit->SetState(kButtonUp, kTRUE);
    }
 
    fEnteredFunc->SelectAll();
-   fSelLabel->SetText(fFunction.Data());
+   fSelLabel->SetText(fEnteredFunc->GetText());
    ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
 
 }
@@ -1535,12 +1537,14 @@ void TFitEditor::DoEnteredFunction()
 
    fFunction = fEnteredFunc->GetText();
 
-   fSelLabel->SetText(fFunction.Data());
+   fSelLabel->SetText(fEnteredFunc->GetText());
    ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
-   if (fFunction.Contains("++")) {
+
+   TString tmpStr = fEnteredFunc->GetText();
+   if (tmpStr.Contains("++")) {
       fLinearFit->SetState(kButtonDown, kTRUE);
       fAdd->SetState(kButtonDown, kTRUE);
-   } else if (fFunction.Contains('+')) {
+   } else if (tmpStr.Contains('+')) {
       fAdd->SetState(kButtonDown, kTRUE);
    } else {
       fNone->SetState(kButtonDown, kTRUE);
@@ -1984,6 +1988,7 @@ void TFitEditor::SetFunction(const char *function)
    // Set the function to be used in performed fit.
 
    fFunction = function;
+   fEnteredFunc->SetText(function);
 }
 
 //______________________________________________________________________________
@@ -2420,8 +2425,9 @@ void TFitEditor::RetrieveOptions(TString& fitOpts, TString& drawOpts)
    else if (fAllWeights1->GetState() == kButtonDown)
       fitOpts += 'W';
 
+   TString tmpStr = fEnteredFunc->GetText();
    if ( !(fLinearFit->GetState() == kButtonDown) &&
-        (fFunction.Contains("pol") || fFunction.Contains("++")) )
+        (tmpStr.Contains("pol") || tmpStr.Contains("++")) )
       fitOpts += 'F';
 
    if (fNoChi2->GetState() == kButtonDown)
