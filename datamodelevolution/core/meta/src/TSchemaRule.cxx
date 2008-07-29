@@ -19,7 +19,9 @@ using namespace ROOT;
 //------------------------------------------------------------------------------
 TSchemaRule::TSchemaRule(): fVersionVect( 0 ), fChecksumVect( 0 ),
                             fTargetVect( 0 ), fSourceVect( 0 ),
-                            fIncludeVect( 0 )
+                            fIncludeVect( 0 ), fEmbed( kFALSE ), 
+                            fReadFuncPtr( 0 ), fReadRawFuncPtr( 0 ),
+                            fRuleType( kNone )
 {
 }
 
@@ -239,7 +241,8 @@ Bool_t TSchemaRule::GetEmbed() const
 Bool_t TSchemaRule::IsValid() const
 {
    return (fVersionVect || fChecksumVect) && (fSourceClass.Length() != 0)
-          && fTargetVect && fSourceVect;
+          && fTargetVect; 
+   // It is okay to not have a source (transient member setting) 
 }
 
 //------------------------------------------------------------------------------
