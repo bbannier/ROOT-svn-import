@@ -108,6 +108,7 @@ private:
 
    UInt_t            GenerateIncludes(FILE *fp, char *inclist);
    void              GenerateDeclaration(FILE *fp, FILE *sfp, const TList *subClasses, Bool_t top = kTRUE);
+   void              InsertArtificialElements(const TObjArray *rules);
 
 protected:
    TStreamerInfo(const TStreamerInfo&);

@@ -62,6 +62,9 @@
 
 #include "TMakeProject.h"
 
+#include "TSchemaRuleSet.h"
+#include "TSchemaRule.h"
+
 TStreamerElement *TStreamerInfo::fgElement = 0;
 Int_t   TStreamerInfo::fgCount = 0;
 
@@ -70,6 +73,13 @@ const Int_t kRegrouped = TStreamerInfo::kOffsetL;
 const Int_t kMaxLen = 1024;
 
 ClassImp(TStreamerInfo)
+
+struct TObjArrayPtr { 
+   const TObjArray *fArray;
+   TObjArrayPtr(const TObjArray*in) : fArray(in) {}
+   ~TObjArrayPtr() { delete fArray; };
+   const TObjArray *operator->() { return fArray; }
+};
 
 //______________________________________________________________________________
 TStreamerInfo::TStreamerInfo()
@@ -219,6 +229,8 @@ void TStreamerInfo::Build()
    fClass->BuildRealData();
 
    fCheckSum = fClass->GetCheckSum();
+
+   TObjArrayPtr rules( fClass->GetSchemaRules()->FindRules(fClass->GetName(), fClassVersion) );
 
    //
    // Iterate over base classes.
@@ -425,10 +437,13 @@ void TStreamerInfo::Build()
       fElements->Add(element);
    } // end of member loop
 
+   // Now add artificial TStreamerElement (i.e. rules that creates new members or set transient members).
+   InsertArtificialElements(rules.fArray);
+
+
    //
    // Make a more compact version.
    //
-
    Compile();
 }
 
@@ -987,6 +1002,8 @@ void TStreamerInfo::BuildOld()
       fClass->GetStreamerInfo();
    }
 
+   TObjArrayPtr rules( fClass->GetSchemaRules()->FindRules(fClass->GetName(), fOnFileClassVersion) );
+
    TIter next(fElements);
    TStreamerElement* element;
    Int_t offset = 0;
@@ -1002,6 +1019,8 @@ void TStreamerInfo::BuildOld()
    if (fClass->GetCollectionProxy() && (fElements->GetEntries() == 1) && !strcmp(fElements->At(0)->GetName(), "This")) {
       next();
    }
+
+   TString allocClassName;
 
    while ((element = (TStreamerElement*) next())) {
       element->SetNewType(element->GetType());
@@ -1305,6 +1324,24 @@ void TStreamerInfo::BuildOld()
       for (kel = 0; jel < narr;) {
          arr[jel++] = tai[kel++];
       }
+   }
+   
+   // Now add artificial TStreamerElement (i.e. rules that creates new members or set transient members).
+   InsertArtificialElements(rules.fArray);
+
+   if (allocClassName.Length()) {
+
+      // Slide by one.
+      Int_t last = fElements->GetLast();
+      fElements->AddAtAndExpand(fElements->At(last),last+1);
+      for(Int_t ind = last-1; ind >= 0; --ind) {
+         fElements->AddAt( fElements->At(ind), ind+1);
+      };
+      TStreamerElement *el = new TStreamerArtificial("@@alloc","", 0, TStreamerInfo::kCacheNew, allocClassName);
+      fElements->AddAt( el, 0 );
+
+      el = new TStreamerArtificial("@@dealloc","", 0, TStreamerInfo::kCacheDelete, allocClassName);
+      fElements->Add( el );
    }
 
    Compile();
@@ -2401,6 +2438,39 @@ Double_t TStreamerInfo::GetValueSTLP(TVirtualCollectionProxy *cont, Int_t i, Int
 
    char *ladd    = pointer + eoffset + fOffset[i];
    return GetValueAux(fType[i],ladd,k,((TStreamerElement*)fElem[i])->GetArrayLength());
+}
+
+//______________________________________________________________________________
+void TStreamerInfo::InsertArtificialElements(const TObjArray *rules) 
+{
+   // Insert new members as expressed in the array of TSchemaRule(s).
+
+   TIter next(fElements);
+
+   for(Int_t art = 0; art < rules->GetEntries(); ++art) {
+      ROOT::TSchemaRule *rule = (ROOT::TSchemaRule*)rules->At(art);
+      next.Reset();
+      Bool_t match = kFALSE;
+      TStreamerElement *element;
+      while ((element = (TStreamerElement*) next())) {
+         if ( rule->HasTarget( element->GetName() ) ) {
+            match = kTRUE;
+            break;
+         }
+      }
+      if (!match) {
+         TStreamerArtificial *newel;
+         TObjString *first = (TObjString*)(rule->GetTarget()->At(0));
+         if ( fClass->GetDataMember( first->GetString() ) ) {
+            newel = new TStreamerArtificial(first->GetString(),"", 
+               fClass->GetDataMemberOffset(first->GetString()), TStreamerInfo::kArtificial, 
+               fClass->GetDataMember( first->GetString() )->GetTypeName());
+            newel->SetReadFunc( rule->GetReadFunctionPointer() );
+            newel->SetReadRawFunc( rule->GetReadRawFunctionPointer() );
+            fElements->Add(newel);
+         }
+      }
+   }
 }
 
 //______________________________________________________________________________

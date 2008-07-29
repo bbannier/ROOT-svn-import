@@ -23,9 +23,9 @@ namespace ROOT {
          virtual ~TSchemaRuleSet();
 
          Bool_t           AddRule( TSchemaRule* rule, Bool_t checkConsistency = kTRUE );
-         const TObjArray* FindRules( TString source ) const;
-         const TObjArray* FindRules( TString source, Int_t version ) const;
-         const TObjArray* FindRules( TString source, UInt_t checksum ) const;
+         const TObjArray* FindRules( const TString &source ) const;
+         const TObjArray* FindRules( const TString &source, Int_t version ) const;
+         const TObjArray* FindRules( const TString &source, UInt_t checksum ) const;
          TClass*          GetClass();
          UInt_t           GetClassChecksum() const;
          TString          GetClassName() const;

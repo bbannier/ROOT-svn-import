@@ -96,7 +96,7 @@ Bool_t TSchemaRuleSet::AddRule( TSchemaRule* rule, Bool_t checkConsistency )
 }
 
 //------------------------------------------------------------------------------
-const TObjArray* TSchemaRuleSet::FindRules( TString source ) const
+const TObjArray* TSchemaRuleSet::FindRules( const TString &source ) const
 {
    // User has to delete the returned array
    TObject*      obj;
@@ -113,7 +113,7 @@ const TObjArray* TSchemaRuleSet::FindRules( TString source ) const
 }
 
 //------------------------------------------------------------------------------
-const TObjArray* TSchemaRuleSet::FindRules( TString source, Int_t version ) const
+const TObjArray* TSchemaRuleSet::FindRules( const TString &source, Int_t version ) const
 {
    // User has to delete the returned array
 
@@ -131,7 +131,7 @@ const TObjArray* TSchemaRuleSet::FindRules( TString source, Int_t version ) cons
 }
 
 //------------------------------------------------------------------------------
-const TObjArray* TSchemaRuleSet::FindRules( TString source, UInt_t checksum ) const
+const TObjArray* TSchemaRuleSet::FindRules( const TString &source, UInt_t checksum ) const
 {
    // User has to delete the returned array
 

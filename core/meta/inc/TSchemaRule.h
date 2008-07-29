@@ -24,7 +24,8 @@ namespace ROOT {
          typedef enum
          {
             kReadRule    = 0,
-            kReadRawRule = 1
+            kReadRawRule = 1,
+            kNone        = 99999
          }  RuleType_t;
 
          typedef void (*ReadFuncPtr_t)( char*, TVirtualObject* );
