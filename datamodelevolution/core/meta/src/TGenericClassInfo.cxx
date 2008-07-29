@@ -280,7 +280,7 @@ namespace ROOT {
             rule->SetReadRawFunctionPointer( (TSchemaRule::ReadRawFuncPtr_t)it->fFunctionPtr );
          }
          if( !rset->AddRule( rule ) ) {
-            ::Warning( "TGenericClassInfo", "The rul for class: \"%s\": version, \"%s\" and data members: \"%s\" has been skipped because it conflicts with one of the other rules.",
+            ::Warning( "TGenericClassInfo", "The rule for class: \"%s\": version, \"%s\" and data members: \"%s\" has been skipped because it conflicts with one of the other rules.",
                         GetClassName(), it->fVersion.c_str(), it->fTarget.c_str() );
             delete rule;
          }
