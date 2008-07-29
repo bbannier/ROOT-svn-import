@@ -283,29 +283,46 @@ namespace ROOT
       //-----------------------------------------------------------------------
       // Write down the sources
       //-----------------------------------------------------------------------
-      std::list<std::string>::const_iterator it;
-      for( it = source.begin(); it != source.end(); ++it ) {
-         output << "      static int id_" << *it << " = oldObj->GetId(\"";
-         output << *it << "\");" << std::endl;
-      }
+      if (!source.empty()) {
+         std::list<std::string>::const_iterator it;
+         output << "      " << "struct " << className << "_Onfile {\n";
+         for( it = source.begin(); it != source.end(); ++it ) {
+            output << "      " << "   int " << *it << ";\n"; 
+         };
+         output << "      " << "};\n";
 
+         for( it = source.begin(); it != source.end(); ++it ) {
+            output << "      static Long_t offset_Onfile_" << className << "_" << *it << " = oldObj->GetClass()->GetDataMemberOffset(\"";
+            output << *it << "\");\n";
+         }
+         output << "      " << "char *onfile_add = oldObj->GetObject();\n";
+         output << "      " << className << "_Onfile onfile( \n";
+         bool start = true;
+         for( it = source.begin(); it != source.end(); ++it ) {
+            if (!start) { output << ",\n";}
+            else { start = false; }
+            output << "      " << "   *("<< "int" << "*)(onfile_add+offset_Onfile_" << className << "_" << *it << ")";  
+         }
+         output << " );\n\n";
+      }
       //-----------------------------------------------------------------------
       // Write down the targets
       //-----------------------------------------------------------------------
       if( !target.empty() ) {
          output << "      static TClassRef cls(\"";
          output << className << "\");" << std::endl;
-      }
-      for( it = target.begin(); it != target.end(); ++it ) {
-         std::string memData = members[*it];
-         output << "      static Long_t offset_" << *it << " = ";
-         output << "cls->GetDataMemberOffset(\"" << *it << "\");";
-         output << std::endl;
-         output << "      " << memData << "& " << *it << " = ";
-         output << "*(" << memData << "*)(target+offset_" << *it;
-         output << ");" << std::endl;
-      }
 
+         std::list<std::string>::const_iterator it;
+         for( it = target.begin(); it != target.end(); ++it ) {
+            std::string memData = members[*it];
+            output << "      static Long_t offset_" << *it << " = ";
+            output << "cls->GetDataMemberOffset(\"" << *it << "\");";
+            output << std::endl;
+            output << "      " << memData << "& " << *it << " = ";
+            output << "*(" << memData << "*)(target+offset_" << *it;
+            output << ");" << std::endl;
+         }
+      }
    }
 
    //--------------------------------------------------------------------------
@@ -331,7 +348,6 @@ namespace ROOT
       output << "   static void " << func.str();
       output << "( char* target, TVirtualObject *oldObj )" << std::endl;
       output << "   {" << std::endl;
-      output << "#if 0" << std::endl;
       output << "      //--- Automatically generated variables ---" << std::endl;
 
       //-----------------------------------------------------------------------
@@ -350,8 +366,7 @@ namespace ROOT
       // Write the user's code
       //-----------------------------------------------------------------------
       output << "      //--- User's code ---" << std::endl;
-      output << rule["code"] << std::endl;
-      output << "#endif" << std::endl;
+      output << "     " << rule["code"] << std::endl;
       output << "   }" << std::endl;
    }
 
