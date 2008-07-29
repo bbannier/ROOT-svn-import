@@ -57,7 +57,6 @@
 #include "TVirtualPad.h"
 #include "THashTable.h"
 #include "TSchemaRuleSet.h"
-
 #include "TGenericClassInfo.h"
 
 #include <cstdio>
@@ -667,6 +666,7 @@ TClass::TClass() : TDictionary(), fNew(0), fNewArray(0), fDelete(0),
    fClassMenuList  = new TList();
    fClassMenuList->Add(new TClassMenuItem(TClassMenuItem::kPopupStandardList, this));
    fContextMenuTitle = "";
+   fForeignStreamerInfo = new std::map<std::string, TObjArray*>();
 }
 
 //______________________________________________________________________________
@@ -733,6 +733,7 @@ TClass::TClass(const char *name) : TDictionary(), fNew(0), fNewArray(0),
       ResetBit(kLoading);
    }
    if (fClassInfo) SetTitle(gCint->ClassInfo_Title(fClassInfo));
+   fForeignStreamerInfo = new std::map<std::string, TObjArray*>();
 }
 
 //______________________________________________________________________________
@@ -745,7 +746,7 @@ TClass::TClass(const char *name, Version_t cversion,
 {
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
-
+   fForeignStreamerInfo = new std::map<std::string, TObjArray*>();
    Init(name,cversion, 0, 0, 0, dfil, ifil, dl, il);
    SetBit(kUnloaded);
 }
@@ -763,7 +764,8 @@ TClass::TClass(const char *name, Version_t cversion,
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
 
-   // use info
+   // use inf
+   fForeignStreamerInfo = new std::map<std::string, TObjArray*>();
    Init(name, cversion, &info, isa, showmembers, dfil, ifil, dl, il);
 }
 
@@ -986,6 +988,7 @@ void TClass::Init(const char *name, Version_t cversion,
 TClass::TClass(const TClass& cl) :
   TDictionary(cl),
   fStreamerInfo(cl.fStreamerInfo),
+  fForeignStreamerInfo( cl.fForeignStreamerInfo ),
   fRealData(cl.fRealData),
   fBase(cl.fBase),
   fData(cl.fData),
@@ -1075,6 +1078,7 @@ TClass& TClass::operator=(const TClass& cl)
       fStreamerType=cl.fStreamerType;
       fCurrentInfo=cl.fCurrentInfo;
       fRefStart=cl.fRefStart;
+      fForeignStreamerInfo=cl.fForeignStreamerInfo;
    }
    return *this;
 }
@@ -1167,6 +1171,7 @@ TClass::~TClass()
    delete fCollectionProxy;
    delete fIsAMethod;
    delete fSchemaRules;
+   delete fForeignStreamerInfo;
 }
 
 //------------------------------------------------------------------------------
@@ -4491,15 +4496,22 @@ void TClass::SetDirectoryAutoAdd(ROOT::DirAutoAdd_t autoAddFunc)
 }
 
 //______________________________________________________________________________
-TVirtualStreamerInfo *TClass::FindStreamerInfo(UInt_t checksum) const
+TVirtualStreamerInfo *TClass::FindStreamerInfo( UInt_t checksum) const
+{
+   // Find the TVirtualStreamerInfo in the StreamerInfos corresponding to checksum
+   return FindStreamerInfo( GetStreamerInfos(), checksum );
+}
+
+//______________________________________________________________________________
+TVirtualStreamerInfo *TClass::FindStreamerInfo( TObjArray* arr, UInt_t checksum) const
 {
    // Find the TVirtualStreamerInfo in the StreamerInfos corresponding to checksum
 
-   Int_t ninfos = GetStreamerInfos()->GetEntriesFast();
+   Int_t ninfos = arr->GetEntriesFast();
    for (Int_t i=-1;i<ninfos;i++) {
       // TClass::fStreamerInfos has a lower bound not equal to 0,
       // so we have to use At and should not use UncheckedAt
-      TVirtualStreamerInfo *info = (TVirtualStreamerInfo*)GetStreamerInfos()->At(i);
+      TVirtualStreamerInfo *info = (TVirtualStreamerInfo*)arr->At(i);
       if (!info) continue;
       if (info->GetCheckSum() == checksum) {
          //R__ASSERT(i==info->GetClassVersion() || (i==-1&&info->GetClassVersion()==1));
@@ -4507,6 +4519,119 @@ TVirtualStreamerInfo *TClass::FindStreamerInfo(UInt_t checksum) const
       }
    }
    return 0;
+}
+
+//______________________________________________________________________________
+TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, Int_t version ) const
+{
+   // Find the streamer info for the foreign class
+
+   //----------------------------------------------------------------------------
+   // Check if we already have it
+   //----------------------------------------------------------------------------
+   std::map<std::string, TObjArray*>::iterator it;
+   TObjArray* arr;
+
+   it = fForeignStreamerInfo->find( classname );
+
+   if( it != fForeignStreamerInfo->end() ) {
+      arr = it->second;
+   }
+   else {
+      arr = new TObjArray();
+      (*fForeignStreamerInfo)[classname] = arr;       
+   }
+
+   if( version > -1 && version < arr->GetSize() )
+      return (TVirtualStreamerInfo*) arr->At( version );
+
+   //----------------------------------------------------------------------------
+   // We don't have the streamer info so find it in other class
+   //----------------------------------------------------------------------------
+   TVirtualStreamerInfo* info;
+   TClass *cl = TClass::GetClass( classname );
+   if( !cl )
+      return 0;
+
+   info = cl->GetStreamerInfo( version );
+
+   if( !info )
+      return 0;
+
+   //----------------------------------------------------------------------------
+   // We have the right info so we need to clone it to create new object with
+   // non artificial streamer elements and we should build it for current class
+   //----------------------------------------------------------------------------
+   info = info->MakeClone();
+
+   if( !info->BuildFor( this ) ) {
+      delete info;
+      return 0;
+   }
+
+   //----------------------------------------------------------------------------
+   // Cache this treamer info
+   //----------------------------------------------------------------------------
+   arr->AddAtAndExpand( info, info->GetClassVersion() );
+   return info;
+}
+
+//______________________________________________________________________________
+TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, UInt_t checksum ) const
+{
+   // Find the streamer info from the foreign class
+
+   //----------------------------------------------------------------------------
+   // Check if we already have it
+   //----------------------------------------------------------------------------
+   std::map<std::string, TObjArray*>::iterator it;
+   TObjArray* arr;
+
+   it = fForeignStreamerInfo->find( classname );
+
+   if( it != fForeignStreamerInfo->end() ) {
+      arr = it->second;
+   }
+   else {
+      arr = new TObjArray();
+      (*fForeignStreamerInfo)[classname] = arr;       
+   }
+
+   TVirtualStreamerInfo* info;
+   info = FindStreamerInfo( arr, checksum );
+
+   if( info )
+      return info;
+
+   //----------------------------------------------------------------------------
+   // Get it from the foreign class
+   //----------------------------------------------------------------------------
+   TClass *cl = TClass::GetClass( classname );
+   if( !cl )
+      return 0;
+
+   info = cl->FindStreamerInfo( checksum );
+
+   if( !info )
+      return 0;
+
+   //----------------------------------------------------------------------------
+   // We have the right info so we need to clone it to create new object with
+   // non artificial streamer elements and we should build it for current class
+   //----------------------------------------------------------------------------
+   info = info->MakeClone();
+
+   if( !info->BuildFor( this ) ) {
+      delete info;
+      return 0;
+   }
+
+   //----------------------------------------------------------------------------
+   // Cache this treamer info
+   //----------------------------------------------------------------------------
+   arr->AddAtAndExpand( info, info->GetClassVersion() );
+
+   return info;
 }
 
 //______________________________________________________________________________

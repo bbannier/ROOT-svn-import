@@ -102,6 +102,7 @@ public:
    virtual void        BuildCheck() = 0;
    virtual void        BuildEmulated(TFile *file) = 0;
    virtual void        BuildOld() = 0;
+   virtual Bool_t      BuildFor( const TClass *cl ) = 0;
    virtual void        Clear(Option_t *) = 0;
    virtual void        Compile() = 0;
    virtual void        ForceWriteInfo(TFile *file, Bool_t force=kFALSE) = 0;
@@ -123,6 +124,7 @@ public:
    virtual Int_t       IsRecovered() const {return TestBit(kRecovered);}
    virtual void        ls(Option_t *option="") const = 0;
    virtual TVirtualStreamerInfo *NewInfo(TClass *cl) = 0;
+   virtual TVirtualStreamerInfo *MakeClone() = 0;
    virtual void       *New(void *obj = 0) = 0;
    virtual void       *NewArray(Long_t nElements, void* ary = 0) = 0;
    virtual void        Destructor(void* p, Bool_t dtorOnly = kFALSE) = 0;

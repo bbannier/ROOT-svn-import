@@ -33,6 +33,8 @@
 #ifndef ROOT_TObjString
 #include "TObjString.h"
 #endif
+#include <map>
+#include <string>
 
 class TBaseClass;
 class TBrowser;
@@ -80,6 +82,7 @@ public:
 private:
 
    mutable TObjArray *fStreamerInfo;    //Array of TVirtualStreamerInfo
+   mutable std::map<std::string, TObjArray*> *fForeignStreamerInfo; //Array of the streamer infos derived from foreign classes
    TList             *fRealData;        //linked list for persistent members including base classes
    TList             *fBase;            //linked list for base classes
    TList             *fData;            //linked list for data members
@@ -179,6 +182,7 @@ private:
 protected:
    TClass(const TClass& tc);
    TClass& operator=(const TClass&);   
+   TVirtualStreamerInfo     *FindStreamerInfo(TObjArray* arr, UInt_t checksum) const;
 
 public:
    TClass();
@@ -208,6 +212,8 @@ public:
    void               Dump(void *obj) const;
    char              *EscapeChars(const char *text) const;
    TVirtualStreamerInfo     *FindStreamerInfo(UInt_t checksum) const;
+   TVirtualStreamerInfo     *GetForeignStreamerInfo( const char* classname, Int_t version ) const;
+   TVirtualStreamerInfo     *GetForeignStreamerInfo( const char* classname, UInt_t checksum ) const;
    Bool_t             HasDefaultConstructor() const;
    UInt_t             GetCheckSum(UInt_t code=0) const;
    TVirtualCollectionProxy *GetCollectionProxy() const;
