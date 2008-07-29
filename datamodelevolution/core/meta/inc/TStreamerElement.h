@@ -340,13 +340,14 @@ class TBuffer;
 //________________________________________________________________________
 class TStreamerArtificial : public TStreamerElement {
 protected:
-   TStreamerElement                    *fElement;
    ROOT::TSchemaRule::ReadFuncPtr_t     fReadFunc;    //!
    ROOT::TSchemaRule::ReadRawFuncPtr_t  fReadRawFunc; //!
 
 public:
 
-   TStreamerArtificial(const char *name, const char *title, Int_t offset, Int_t dtype, const char *typeName) : TStreamerElement(name,title,offset,dtype,typeName), fElement(0), fReadFunc(0), fReadRawFunc(0) {}
+   // TStreamerArtificial() : fReadFunc(0),fReadRawFunc(0) {}
+
+   TStreamerArtificial(const char *name, const char *title, Int_t offset, Int_t dtype, const char *typeName) : TStreamerElement(name,title,offset,dtype,typeName), fReadFunc(0), fReadRawFunc(0) {}
 
    void SetReadFunc( ROOT::TSchemaRule::ReadFuncPtr_t val ) { fReadFunc = val; };
    void SetReadRawFunc( ROOT::TSchemaRule::ReadRawFuncPtr_t val ) { fReadRawFunc = val; };

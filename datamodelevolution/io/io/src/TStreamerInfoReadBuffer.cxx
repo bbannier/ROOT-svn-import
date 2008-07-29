@@ -712,6 +712,12 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
       fgElement = aElement;
 
       if (R__TestUseCache<T>(aElement)) {
+         if (gDebug > 1) {
+           printf("ReadBuffer, class:%s, name=%s, fType[%d]=%d,"
+                " %s, bufpos=%d, arr=%p, eoffset=%d, Redirect=%ld\n",
+                fClass->GetName(),aElement->GetName(),i,fType[i],
+                aElement->ClassName(),b.Length(),arr[0], eoffset,((TBufferFile&)b).PeekDataCache()->GetObjectAt(0));
+         }
          thisVar->ReadBuffer(b,*((TBufferFile&)b).PeekDataCache(),i,narr,eoffset);
          continue;
       }
@@ -1174,7 +1180,8 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
             if (pstreamer) {
                DOLOOP {(*pstreamer)(b,arr[k]+ioffset,0);}
             } else {
-               DOLOOP { cle->Streamer(arr[k]+ioffset,b);}}
+               DOLOOP { cle->Streamer(arr[k]+ioffset,b);}
+            }
             continue;
 
          case TStreamerInfo::kObject+TStreamerInfo::kOffsetL:  {

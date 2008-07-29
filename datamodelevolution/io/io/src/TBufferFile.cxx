@@ -3241,7 +3241,7 @@ Int_t TBufferFile::WriteClones(TClonesArray *a, Int_t nobjects)
 }
 
 //______________________________________________________________________________
-Int_t TBufferFile::ReadClassEmulated(TClass *cl, void *object)
+Int_t TBufferFile::ReadClassEmulated(TClass *cl, void *object, TClass *onfile_class)
 {
    // Read emulated class.
 
@@ -3251,6 +3251,8 @@ Int_t TBufferFile::ReadClassEmulated(TClass *cl, void *object)
    Version_t v = ReadVersion(&start,&count);
    void *ptr = &object;
    if (count) {
+       if (onfile_class) v = 1000; // This __MUST__ be replaced by a look-up into Lukasz new structure.
+
       TStreamerInfo *sinfo = (TStreamerInfo*)cl->GetStreamerInfo(v);
       sinfo->ReadBuffer(*this,(char**)ptr,-1);
       if (sinfo->IsRecovered()) count=0;
@@ -3310,7 +3312,7 @@ Int_t TBufferFile::ReadClassBuffer(TClass *cl, void *pointer, Int_t version, UIn
 }
 
 //______________________________________________________________________________
-Int_t TBufferFile::ReadClassBuffer(TClass *cl, void *pointer)
+Int_t TBufferFile::ReadClassBuffer(TClass *cl, void *pointer, TClass *onfile_class)
 {
    // Deserialize information from a buffer into an object.
    //
@@ -3330,11 +3332,13 @@ Int_t TBufferFile::ReadClassBuffer(TClass *cl, void *pointer)
    }
 
    // The StreamerInfo should exist at this point.
+   if (onfile_class) version = 1000; // This __MUST__ be replaced by a look-up into Lukasz new structure.
+
    TObjArray *infos = cl->GetStreamerInfos();
    Int_t ninfos = infos->GetSize();
    if (version < -1 || version >= ninfos) {
       Error("ReadBuffer2","class: %s, attempting to access a wrong version: %d, object skipped at offset %d",
-            cl->GetName(), version,Length());
+         cl->GetName(), version,Length());
       CheckByteCount(R__s, R__c, cl);
       return 0;
    }
