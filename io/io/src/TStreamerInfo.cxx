@@ -807,6 +807,12 @@ void TStreamerInfo::BuildEmulated(TFile *file)
 }
 
 //______________________________________________________________________________
+Bool_t TStreamerInfo::BuildFor( const TClass *cl )
+{
+   return kFALSE;
+}
+
+//______________________________________________________________________________
 // Helper function for BuildOld
 namespace {
    Bool_t ClassWasMovedToNamespace(TClass *oldClass, TClass *newClass)
@@ -1324,6 +1330,16 @@ void TStreamerInfo::Clear(Option_t *option)
       fNdata = 0;
       fSize = 0;
    }
+}
+
+//______________________________________________________________________________
+TStreamerInfo* TStreamerInfo::MakeClone()
+{
+   // Creates a copy of this streamer info - the user is then responsible
+   // for deleting this object
+   TStreamerInfo* si = new TStreamerInfo( *this );
+   si->fIsBuilt = kFALSE;
+   return si;
 }
 
 //______________________________________________________________________________
