@@ -155,7 +155,7 @@ TFitParametersDialog::TFitParametersDialog(const TGWindow *p,
       fContBnd->AddFrame(fParBnd[i], new TGLayoutHints(kLHintsLeft | kLHintsCenterY,
                                                        15, 5, 10, 7));
       fParBnd[i]->Connect("Toggled(Bool_t)", "TFitParametersDialog", this, "DoParBound(Bool_t)");
-      if (fParMin[i] < fParMax[i])
+      if ( ((fPmin[i] != fPmax[i]) && (fPmin[i] || fPmax[i])) || (fParMin[i] < fParMax[i]) )
          fParBnd[i]->SetState(kButtonDown, kFALSE);
       else
          fParBnd[i]->SetState(kButtonUp, kFALSE);
