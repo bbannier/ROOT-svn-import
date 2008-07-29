@@ -4351,7 +4351,7 @@ Int_t TClass::WriteBuffer(TBuffer &b, void *pointer, const char * /*info*/)
 }
 
 //______________________________________________________________________________
-void TClass::Streamer(void *object, TBuffer &b)
+void TClass::Streamer(void *object, TBuffer &b, TClass *onfile_class)
 {
    // Stream object of this class to or from buffer.
 
@@ -4375,7 +4375,7 @@ void TClass::Streamer(void *object, TBuffer &b)
       return;
 
       case kTObject|kEmulated : {
-         b.ReadClassEmulated(this, object);
+         b.ReadClassEmulated(this, object, onfile_class);
       }
       return;
 
@@ -4406,7 +4406,7 @@ void TClass::Streamer(void *object, TBuffer &b)
       case kEmulated:
       {
          if (b.IsReading()) {
-            b.ReadClassBuffer(this, object);
+            b.ReadClassBuffer(this, object, onfile_class);
             //ReadBuffer (b, object);
          } else {
             //WriteBuffer(b, object);

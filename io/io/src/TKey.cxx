@@ -58,6 +58,7 @@
 #include "Bytes.h"
 #include "TInterpreter.h"
 #include "TError.h"
+#include "TVirtualStreamerInfo.h"
 
 extern "C" void R__zip (Int_t cxlevel, Int_t *nin, char *bufin, Int_t *lout, char *bufout, Int_t *nout);
 extern "C" void R__unzip(Int_t *nin, UChar_t *bufin, Int_t *lout, char *bufout, Int_t *nout);
@@ -942,6 +943,7 @@ void *TKey::ReadObjectAny(const TClass* expectedClass)
 
    fBufferRef->SetBufferOffset(fKeylen);
    TClass *cl = TClass::GetClass(fClassName.Data());
+   TClass *oldcl = 0;
    if (!cl) {
       Error("ReadObjectAny", "Unknown class %s", fClassName.Data());
       return 0;
@@ -951,7 +953,18 @@ void *TKey::ReadObjectAny(const TClass* expectedClass)
        // baseOffset will be -1 if cl does not inherit from expectedClass
       baseOffset = cl->GetBaseClassOffset(expectedClass);
       if (baseOffset == -1) {
-         return 0;
+         // The 2 classes are unrelated, maybe there is a converter between the
+         // 2.  
+         // This test MUST be replaced with using Lukasz's new code.
+         TVirtualStreamerInfo *newinfo = (TVirtualStreamerInfo*)expectedClass->GetStreamerInfos()->At(1000);
+         if (!newinfo || strcmp(newinfo->GetName(),cl->GetName())!=0) {
+            // There is no converter
+            return 0;
+         }
+         baseOffset = 0; // For now we do not support requesting from a class that is the base of one of the class for which there is transformation to ....
+         oldcl = cl;
+         cl = const_cast<TClass*>(expectedClass);
+         Info("ReadObjectAny","Using Converter StreamerInfo from %s to %s",oldcl->GetName(),expectedClass->GetName());
       }
       if (cl->GetClassInfo() && !expectedClass->GetClassInfo()) {
          //we cannot mix a compiled class with an emulated class in the inheritance
@@ -987,7 +1000,7 @@ void *TKey::ReadObjectAny(const TClass* expectedClass)
          objbuf += nout;
       }
       if (nout) {
-         cl->Streamer((void*)pobj, *fBufferRef);    //read object
+         cl->Streamer((void*)pobj, *fBufferRef, oldcl);    //read object
          delete [] fBuffer;
       } else {
          delete [] fBuffer;
@@ -996,7 +1009,7 @@ void *TKey::ReadObjectAny(const TClass* expectedClass)
          goto CLEAR;
       }
    } else {
-      cl->Streamer((void*)pobj, *fBufferRef);    //read object
+      cl->Streamer((void*)pobj, *fBufferRef, oldcl);    //read object
    }
 
    if (cl->InheritsFrom(TObject::Class())) {

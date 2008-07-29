@@ -281,8 +281,8 @@ public:
    virtual   Int_t    WriteClones(TClonesArray *a, Int_t nobjects) = 0;
 
    // Utilities for TClass
-   virtual   Int_t    ReadClassEmulated(TClass *cl, void *object) = 0;
-   virtual   Int_t    ReadClassBuffer(TClass *cl, void *pointer) = 0;
+   virtual   Int_t    ReadClassEmulated(TClass *cl, void *object, TClass *onfile_class = 0) = 0;
+   virtual   Int_t    ReadClassBuffer(TClass *cl, void *pointer, TClass *onfile_class = 0) = 0;
    virtual   Int_t    ReadClassBuffer(TClass *cl, void *pointer, Int_t version, UInt_t start, UInt_t count) = 0;
    virtual   Int_t    WriteClassBuffer(TClass *cl, void *pointer) = 0;
 

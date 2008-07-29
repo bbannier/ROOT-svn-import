@@ -335,7 +335,7 @@ public:
    void               Destructor(void *obj, Bool_t dtorOnly = kFALSE);
    void              *DynamicCast(const TClass *base, void *obj, Bool_t up = kTRUE);
    Bool_t             IsFolder(void *obj) const;
-   void               Streamer(void *obj, TBuffer &b);
+   void               Streamer(void *obj, TBuffer &b, TClass *onfile_class = 0);
 
    ClassDef(TClass,0)  //Dictionary containing class information
 };
