@@ -484,24 +484,6 @@ Int_t TStreamerInfo::ReadBufferArtificial(TBuffer &b, const T &arr,  Int_t /* i 
    // Handle Artificial StreamerElement
 
    TStreamerArtificial *artElement = (TStreamerArtificial*)aElement;
-   
-   // If this is an alloc, we must allocate enough to old all the information.
-   // So either an array or a collection of size 'narr'.
-
-   if (kase == TStreamerInfo::kCacheNew) {
-      
-
-      ((TBufferFile&)b).PushDataCache( new TVirtualArray( aElement->GetClassPointer(), narr ) );
-
-       return 0;
-   } else if (kase == TStreamerInfo::kCacheDelete ) {
-
-       delete ((TBufferFile&)b).PopDataCache();
-
-       return 0;
-   }
-
-
    ROOT::TSchemaRule::ReadRawFuncPtr_t rawfunc = artElement->GetReadRawFunc();
    
    if (rawfunc) {
@@ -1499,6 +1481,13 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
             b.CheckByteCount(start, count, aElement->GetFullName());
             continue;
          }
+
+         case TStreamerInfo::kCacheNew:
+            ((TBufferFile&)b).PushDataCache( new TVirtualArray( aElement->GetClassPointer(), narr ) );
+            continue;
+         case TStreamerInfo::kCacheDelete:
+            delete ((TBufferFile&)b).PopDataCache();
+            continue;
 
          default: {
             int ans = -1;
