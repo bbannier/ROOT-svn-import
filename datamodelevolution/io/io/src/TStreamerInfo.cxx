@@ -2460,16 +2460,34 @@ void TStreamerInfo::InsertArtificialElements(const TObjArray *rules)
       }
       if (!match) {
          TStreamerArtificial *newel;
-         TObjString *first = (TObjString*)(rule->GetTarget()->At(0));
-         if ( fClass->GetDataMember( first->GetString() ) ) {
-            newel = new TStreamerArtificial(first->GetString(),"", 
-               fClass->GetDataMemberOffset(first->GetString()), TStreamerInfo::kArtificial, 
-               fClass->GetDataMember( first->GetString() )->GetTypeName());
-            newel->SetReadFunc( rule->GetReadFunctionPointer() );
-            newel->SetReadRawFunc( rule->GetReadRawFunctionPointer() );
-            fElements->Add(newel);
+         TObjString * objstr = (TObjString*)(rule->GetTarget()->At(0));
+         if (objstr) {
+            TString newName = objstr->String();
+            if ( fClass->GetDataMember( newName ) ) {
+               newel = new TStreamerArtificial(newName,"", 
+                  fClass->GetDataMemberOffset(newName), TStreamerInfo::kArtificial, 
+                  fClass->GetDataMember( newName )->GetTypeName());
+               newel->SetReadFunc( rule->GetReadFunctionPointer() );
+               newel->SetReadRawFunc( rule->GetReadRawFunctionPointer() );
+               fElements->Add(newel);
+            } else {
+               // This would be a completely new member (so it would need to be cached)
+               // TOBEDONE
+            }
+            for(Int_t other = 1; other < rule->GetTarget()->GetEntries(); ++other) {
+               objstr = (TObjString*)(rule->GetTarget()->At(other));
+               if (objstr) {
+                  newName = objstr->String();
+                  if ( fClass->GetDataMember( newName ) ) {
+                     newel = new TStreamerArtificial(newName,"", 
+                        fClass->GetDataMemberOffset(newName), TStreamerInfo::kArtificial, 
+                        fClass->GetDataMember( newName )->GetTypeName());
+                     fElements->Add(newel);
+                  }
+               }
+            } // For each target of the rule
          }
-      }
+      } // None of the target of the rule are on file.
    }
 }
 
