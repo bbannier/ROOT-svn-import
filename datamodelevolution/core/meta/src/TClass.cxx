@@ -728,7 +728,7 @@ TClass::TClass(const char *name) : TDictionary(), fNew(0), fNewArray(0),
          gInterpreter->InitializeDictionaries();
          gInterpreter->SetClassInfo(this);
       }
-      if (!fClassInfo)
+      if (!fClassInfo && fName.First('@')==kNPOS) 
          ::Warning("TClass::TClass", "no dictionary for class %s is available", name);
       ResetBit(kLoading);
    }
@@ -900,7 +900,7 @@ void TClass::Init(const char *name, Version_t cversion,
          }
       }
    }
-   if (!fClassInfo && !isStl)
+   if (!fClassInfo && !isStl && fName.First('@')==kNPOS)
       ::Warning("TClass::TClass", "no dictionary for class %s is available", name);
 
    fgClassCount++;
