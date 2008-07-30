@@ -94,12 +94,12 @@ namespace ROOT
             // Trim the whitespaces at the beginning and at the end of
             // given source string
 
-            std::string::size_type f, l;
-            f = source.find_first_not_of( character );
-            if( f == std::string::npos )
+            std::string::size_type start, end;
+            for( start = 0; start < source.size() && isspace(source[start]); ++start) {}
+            if( start == source.size() )
                return "";
-            for( l = source.size()-1; l > f && source[l] == character; --l ) ;
-            return source.substr( f, l-f+1 );
+            for( end = source.size()-1; end > start && source[end] == character; --end ) ;
+            return source.substr( start, end-start+1 );
          }
 
          //---------------------------------------------------------------------
