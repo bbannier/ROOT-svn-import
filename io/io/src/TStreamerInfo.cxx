@@ -79,6 +79,17 @@ struct TObjArrayPtr {
    TObjArrayPtr(const TObjArray*in) : fArray(in) {}
    ~TObjArrayPtr() { delete fArray; };
    const TObjArray *operator->() { return fArray; }
+
+   Bool_t HasRuleWithSource(const TString &member) {
+      if (fArray) {
+         for(Int_t i=0; i<fArray->GetEntries(); ++i) {
+            ROOT::TSchemaRule *rule = (ROOT::TSchemaRule*)fArray->At(i);
+            if (rule->HasSource( member )) return kTRUE;
+         }
+      }
+      return kFALSE;
+   }
+   //TSchemaRule *FindRuleWith
 };
 
 //______________________________________________________________________________
@@ -1002,7 +1013,7 @@ void TStreamerInfo::BuildOld()
       fClass->GetStreamerInfo();
    }
 
-   TObjArrayPtr rules( fClass->GetSchemaRules()->FindRules(fClass->GetName(), fOnFileClassVersion) );
+   TObjArrayPtr rules( fClass->GetSchemaRules() ? fClass->GetSchemaRules()->FindRules(fClass->GetName(), fOnFileClassVersion) : 0 );
 
    TIter next(fElements);
    TStreamerElement* element;
@@ -1020,7 +1031,7 @@ void TStreamerInfo::BuildOld()
       next();
    }
 
-   TString allocClassName;
+   TClass *allocClass = 0;
 
    while ((element = (TStreamerElement*) next())) {
       element->SetNewType(element->GetType());
@@ -1286,6 +1297,17 @@ void TStreamerInfo::BuildOld()
          element->SetOffset(kMissing);
       }
 
+      if ( rules.HasRuleWithSource( element->GetName() ) ) {
+         if (allocClass == 0) {
+            TVirtualStreamerInfo *infoalloc  = (TVirtualStreamerInfo *)Clone(TString::Format("%s@@%d",fClass->GetName(),GetOnFileClassVersion()));
+            infoalloc->BuildCheck();
+            allocClass = infoalloc->GetClass();
+         }
+         element->SetBit(TStreamerElement::kCache);
+         element->SetNewType(element->GetType() );
+         element->SetOffset(allocClass->GetDataMemberOffset(element->GetName()));
+      }
+
       if (element->GetNewType() == -2) {
          Warning("BuildOld", "Cannot convert %s::%s from type:%s to type:%s, skip element", GetName(), element->GetName(), element->GetTypeName(), newClass->GetName());
       }
@@ -1329,7 +1351,7 @@ void TStreamerInfo::BuildOld()
    // Now add artificial TStreamerElement (i.e. rules that creates new members or set transient members).
    InsertArtificialElements(rules.fArray);
 
-   if (allocClassName.Length()) {
+   if (allocClass) {
 
       // Slide by one.
       Int_t last = fElements->GetLast();
@@ -1337,10 +1359,10 @@ void TStreamerInfo::BuildOld()
       for(Int_t ind = last-1; ind >= 0; --ind) {
          fElements->AddAt( fElements->At(ind), ind+1);
       };
-      TStreamerElement *el = new TStreamerArtificial("@@alloc","", 0, TStreamerInfo::kCacheNew, allocClassName);
+      TStreamerElement *el = new TStreamerArtificial("@@alloc","", 0, TStreamerInfo::kCacheNew, allocClass->GetName());
       fElements->AddAt( el, 0 );
 
-      el = new TStreamerArtificial("@@dealloc","", 0, TStreamerInfo::kCacheDelete, allocClassName);
+      el = new TStreamerArtificial("@@dealloc","", 0, TStreamerInfo::kCacheDelete, allocClass->GetName());
       fElements->Add( el );
    }
 
@@ -2444,6 +2466,8 @@ Double_t TStreamerInfo::GetValueSTLP(TVirtualCollectionProxy *cont, Int_t i, Int
 void TStreamerInfo::InsertArtificialElements(const TObjArray *rules) 
 {
    // Insert new members as expressed in the array of TSchemaRule(s).
+
+   if (!rules) return;
 
    TIter next(fElements);
 
