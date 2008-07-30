@@ -5,12 +5,15 @@
 #include "TSchemaRuleProcessor.h"
 #include "TObjArray.h"
 #include "TObjString.h"
+#include "TNamed.h"
 #include <utility>
 #include <iostream>
 #include <vector>
 #include <list>
 #include <string>
 #include <cstdlib>
+
+#include "RConversionRuleParser.h"
 
 ClassImp(TSchemaRule)
 
@@ -178,7 +181,7 @@ void TSchemaRule::SetSource( const TString& source )
    if( !fSourceVect )
       fSourceVect = new TObjArray();
 
-   ProcessList( fSourceVect, source );
+   ProcessDeclaration( fSourceVect, source );
 }
 
 //------------------------------------------------------------------------------
@@ -189,7 +192,7 @@ const TObjArray* TSchemaRule::GetSource() const
 
    if( !fSourceVect ) {
       fSourceVect = new TObjArray();
-      ProcessList( fSourceVect, fSource );
+      ProcessDeclaration( fSourceVect, fSource );
    }
    return fSourceVect;
 }
@@ -282,8 +285,8 @@ Bool_t TSchemaRule::HasSource( const TString& source ) const
    TObject*      obj;
    TObjArrayIter it( fSourceVect );
    while( (obj = it.Next()) ) {
-      TObjString* str = (TObjString*)obj;
-      if( str->GetString() == source )
+      TNamed* var = (TNamed*)obj;
+      if( var->GetName() == source )
          return kTRUE;
    }
    return kFALSE;
@@ -472,7 +475,7 @@ Bool_t TSchemaRule::ProcessChecksum( const TString& checksum ) const
 }
 
 //------------------------------------------------------------------------------
-void TSchemaRule::ProcessList( TObjArray* array, const TString& list ) const
+void TSchemaRule::ProcessList( TObjArray* array, const TString& list )
 {
    // process given list of strings
 
@@ -491,3 +494,52 @@ void TSchemaRule::ProcessList( TObjArray* array, const TString& list ) const
       array->Add( str );
    }
 }
+
+//------------------------------------------------------------------------------
+void TSchemaRule::ProcessDeclaration( TObjArray* array, const TString& list )
+{
+   // process given list of strings
+
+   std::list<std::pair<std::string,std::string> >           elems;
+   std::list<std::pair<std::string,std::string> >::iterator it;
+   ROOT::TSchemaRuleProcessor::SplitDeclaration( (const char*)list, elems );
+
+   array->Clear();
+
+   if( elems.empty() )
+      return;
+
+   for( it = elems.begin(); it != elems.end(); ++it ) {
+      TNamed *type = new TNamed(it->second.c_str(), it->first.c_str());
+      array->Add( type );
+   }
+}
+
+#if 0
+//------------------------------------------------------------------------------
+Bool_t TSchemaRule::GenerateFor( TStreamerInfo *info )
+{
+   // Generate the actual function for the rule.
+
+   String funcname = fSourceClass + "_to_" + fTargetClass;
+   if (info) funcname += "_v" + info->GetClassVersion();
+   TString names = fSource + "_" + fTarget; 
+   name.ReplaceAll(',','_');
+   name.ReplaceAll(':','_');
+   funcname += "_" + name;
+
+   String filename = funcname + ".C";
+   if (!false) {
+      filename += '+';
+   }
+
+   std::ofstream fileout(filename);
+
+
+      ROOT::WriteReadRawRuleFunc( *rIt, 0, mappedname, nameTypeMap, fileout );
+      ROOT::WriteReadRuleFunc( *rIt, 0, mappedname, nameTypeMap, fileout );
+
+   gROOT->LoadMacro(filename);
+}
+
+#endif

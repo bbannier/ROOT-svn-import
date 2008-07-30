@@ -64,13 +64,16 @@ namespace ROOT {
          RuleType_t       GetRuleType() const;
          Bool_t           Conflicts( const TSchemaRule* rule ) const;
 
+          // Bool_t           GenerateFor( const TStreamerInfo *info );
+
          ClassDef( TSchemaRule, 1 );
 
       private:
 
          Bool_t ProcessVersion( const TString& version ) const;
          Bool_t ProcessChecksum( const TString& checksum ) const;
-         void   ProcessList( TObjArray* array, const TString& list ) const;
+         static void ProcessList( TObjArray* array, const TString& list );
+         static void ProcessDeclaration( TObjArray* array, const TString& list );
 
          TString                      fVersion;        //  Source version string
          mutable std::vector<std::pair<Int_t, Int_t> >* fVersionVect;    //! Source version vector (for searching purposes)
