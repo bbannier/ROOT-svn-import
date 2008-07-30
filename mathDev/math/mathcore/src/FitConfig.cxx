@@ -119,13 +119,14 @@ ROOT::Math::Minimizer * FitConfig::CreateMinimizer() {
    if (min == 0) { 
       std::string minim2 = "Minuit2";
       if (fMinimizerType != minim2 ) {
-         std::string msg = "Could not create Minimizer " + fMinimizerType + " trying using minimizer " + minim2; 
+         std::string msg = "Could not create the " + fMinimizerType + " minimizer. Try using the minimizer " + minim2; 
          MATH_WARN_MSG("FitConfig::CreateMinimizer",msg.c_str());
-         min = ROOT::Math::Factory::CreateMinimizer(minim2); 
+         min = ROOT::Math::Factory::CreateMinimizer(minim2,"Migrad"); 
          if (min == 0) { 
             MATH_ERROR_MSG("FitConfig::CreateMinimizer","Could not create the Minuit2 minimizer");
             return 0; 
          }
+         fMinimizerType = "Minuit2"; fMinimAlgoType = "Migrad"; 
       }
       else {
          std::string msg = "Could not create the Minimizer " + fMinimizerType; 

@@ -64,6 +64,7 @@ ClassImp(TLinearMinimizer)
 
 
 TLinearMinimizer::TLinearMinimizer(int ) : 
+   fRobust(false), 
    fDim(0),
    fObjFunc(0),
    fFitter(0)
@@ -72,6 +73,21 @@ TLinearMinimizer::TLinearMinimizer(int ) :
    // type is not used - needed for consistency with other minimizer plug-ins
 }
 
+TLinearMinimizer::TLinearMinimizer ( const char * type ) : 
+   fRobust(false),
+   fDim(0),
+   fObjFunc(0),
+   fFitter(0)
+{
+   // constructor passing a type of algorithm, (supported now robust via LTS regression)
+
+   // select type from the string
+   std::string algoname(type);
+   std::transform(algoname.begin(), algoname.end(), algoname.begin(), (int(*)(int)) tolower ); 
+
+   if (algoname == "robust") fRobust = true;
+
+}
 
 TLinearMinimizer::~TLinearMinimizer() 
 {
@@ -165,8 +181,16 @@ bool TLinearMinimizer::Minimize() {
 
    if (fFitter == 0 || fObjFunc == 0) return false;
 
-   int iret = fFitter->Eval(); 
-   
+   int iret = 0; 
+   if (!fRobust) 
+      iret = fFitter->Eval(); 
+   else { 
+      // robust fitting - get h parameter using tolerance (t.b. improved)
+      double h = Tolerance(); 
+      std::cout << "do robust fitting with h = " << h << std::endl; 
+      iret = fFitter->EvalRobust(h); 
+   }
+ 
    if (iret != 0) { 
       Warning("Minimize","TLinearFitter failed in finding the solution");  
       return false; 

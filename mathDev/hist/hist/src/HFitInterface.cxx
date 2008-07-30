@@ -31,7 +31,7 @@
 #include "TError.h"
 
 
-#define DEBUG
+//#define DEBUG
 #ifdef DEBUG
 #include "TClass.h"
 #include <iostream> 
@@ -363,15 +363,20 @@ BinData::ErrorType GetDataType(const TGraph * gr, const DataOptions & fitOpt) {
       type =  BinData::kNoError; 
    }
    else if ( ex != 0 && fitOpt.fCoordErrors)  { 
-      type = BinData::kCoordError; 
+      // check that all errors are not zero
+      int i = 0; 
+      while (i < gr->GetN() && type != BinData::kCoordError) { 
+         if (ex[i] > 0) type = BinData::kCoordError; 
+         ++i;
+      }
    }
    else if ( ( eyl != 0 && eyh != 0)  && fitOpt.fAsymErrors)  { 
       type = BinData::kAsymError; 
    }
 
+
 #ifdef DEBUG
-   std::cout << "type is " << type << std::endl; 
-   std::cout << ex << "  " << ey << "  " << eyl << "  " << eyh << std::endl;
+   std::cout << "type is " << type << " graph type is " << gr->IsA()->GetName() << std::endl; 
 #endif
 
    return type; 
@@ -424,9 +429,9 @@ void DoFillData ( BinData  & dv,  const TGraph * gr,  BinData::ErrorType type, T
          dv.Add( gx[i], gy[i], errorY );
 
 #ifdef DEBUG
-         std::cout << "Point " << i << "  " << gx[i] <<  "  " << gy[i] << "  " << errorY << std::endl; 
-//         std::cout << "Added Point " << i <<  "  error adjusted to   " << errorY << std::endl; 
+         std::cout << "Point " << i << "  " << gx[i] <<  "  " << gy[i]  << "  " << errorY << std::endl; 
 #endif
+
 
       }
       else { // case use error in x or asym errors 
@@ -468,7 +473,10 @@ void FillData ( BinData  & dv, const TGraph * gr,  TF1 * func ) {
    DataOptions & fitOpt = dv.Opt();
 
    BinData::ErrorType type = GetDataType(gr,fitOpt); 
-   if (type == BinData::kNoError) fitOpt.fErrors1 = true;
+   // adjust option according to type
+   fitOpt.fErrors1 = (type == BinData::kNoError);
+   fitOpt.fCoordErrors = (type ==  BinData::kCoordError);
+   fitOpt.fAsymErrors = (type ==  BinData::kAsymError);
 
    // if data are filled already do a re-initialization
    // need to 
@@ -499,10 +507,12 @@ void FillData ( BinData  & dv, const TMultiGraph * mg, TF1 * func ) {
 
    TList * grList = mg->GetListOfGraphs(); 
    assert(grList != 0);
+
 #ifdef DEBUG
 //   grList->Print();
    TIter itr(grList, kIterBackward);
    TObject *obj;
+   std::cout << "multi-graph list of graps: " << std::endl;
    while ((obj = itr())) {
       std::cout << obj->IsA()->GetName() << std::endl; 
    }
@@ -521,6 +531,11 @@ void FillData ( BinData  & dv, const TMultiGraph * mg, TF1 * func ) {
       BinData::ErrorType t = GetDataType(gr,fitOpt); 
       if (t > type ) type = t; 
    }
+   // adjust option according to type
+   fitOpt.fErrors1 = (type == BinData::kNoError);
+   fitOpt.fCoordErrors = (type ==  BinData::kCoordError);
+   fitOpt.fAsymErrors = (type ==  BinData::kAsymError);
+
 
 #ifdef DEBUG
    std::cout << "Fitting MultiGraph of type  " << type << std::endl; 
