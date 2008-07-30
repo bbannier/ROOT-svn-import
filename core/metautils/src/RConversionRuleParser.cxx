@@ -275,7 +275,7 @@ namespace ROOT
 
    //--------------------------------------------------------------------------
    static void WriteAutoVariables( const std::list<std::string>& target,
-                                   const std::list<std::string>& source,
+                                   const std::list<std::pair<std::string,std::string> >& source,
                                    MembersMap_t& members,
                                    std::string& className,
                                    std::ostream& output )
@@ -284,24 +284,40 @@ namespace ROOT
       // Write down the sources
       //-----------------------------------------------------------------------
       if (!source.empty()) {
-         std::list<std::string>::const_iterator it;
-         output << "      " << "struct " << className << "_Onfile {\n";
+         bool start = true;
+         std::list<std::pair<std::string,std::string> >::const_iterator it;
+         std::string onfileStructName = className + "_Onfile";
+
+         output << "      " << "struct " << onfileStructName << " {\n";
          for( it = source.begin(); it != source.end(); ++it ) {
-            output << "      " << "   int " << *it << ";\n"; 
+            output << "      " << "   " << (*it).first << " &" << (*it).second << ";\n"; 
          };
+         output << "      " << "   " << onfileStructName << "(";
+         for( start = true, it = source.begin(); it != source.end(); ++it ) {
+            if (!start) { output << ",";}
+            else { start = false; }
+            output << (*it).first << " &onfile_" << (*it).second;
+         }
+         output << " ) : ";
+         for( start = true, it = source.begin(); it != source.end(); ++it ) {
+            if (!start) { output << ",";}
+            else { start = false; }
+            output << (*it).second << "(onfile_" << (*it).second << ")";
+         }
+         output << " {}\n";
          output << "      " << "};\n";
 
          for( it = source.begin(); it != source.end(); ++it ) {
-            output << "      static Long_t offset_Onfile_" << className << "_" << *it << " = oldObj->GetClass()->GetDataMemberOffset(\"";
-            output << *it << "\");\n";
+            output << "      static Long_t offset_Onfile_" << className << "_" << (*it).second << " = oldObj->GetClass()->GetDataMemberOffset(\"";
+            output << (*it).second << "\");\n";
          }
-         output << "      " << "char *onfile_add = oldObj->GetObject();\n";
+         output << "      " << "char *onfile_add = (char*)oldObj->GetObject();\n";
          output << "      " << className << "_Onfile onfile( \n";
-         bool start = true;
-         for( it = source.begin(); it != source.end(); ++it ) {
+       
+         for( start = true, it = source.begin(); it != source.end(); ++it ) {
             if (!start) { output << ",\n";}
             else { start = false; }
-            output << "      " << "   *("<< "int" << "*)(onfile_add+offset_Onfile_" << className << "_" << *it << ")";  
+            output << "      " << "   *("<< "int" << "*)(onfile_add+offset_Onfile_" << className << "_" << (*it).second << ")";  
          }
          output << " );\n\n";
       }
@@ -353,9 +369,9 @@ namespace ROOT
       //-----------------------------------------------------------------------
       // Write the automatically generated variables
       //-----------------------------------------------------------------------
-      std::list<std::string> source;
+      std::list<std::pair<std::string,std::string> > source;
       std::list<std::string> target;
-      TSchemaRuleProcessor::SplitList( rule["source"], source );
+      TSchemaRuleProcessor::SplitDeclaration( rule["source"], source );
       TSchemaRuleProcessor::SplitList( rule["target"], target );
 
       WriteAutoVariables( target, source, members, className, output );
@@ -400,7 +416,7 @@ namespace ROOT
       //-----------------------------------------------------------------------
       // Write the automatically generated variables
       //-----------------------------------------------------------------------
-      std::list<std::string> source;
+      std::list<std::pair<std::string,std::string> > source;
       std::list<std::string> target;
       TSchemaRuleProcessor::SplitList( rule["target"], target );
 
