@@ -27,7 +27,7 @@ namespace ROOT {
       // section (the dictionaries) and inline would lead to too much
       // repetition of the code (once per class!).
 
-      const TInitBehavior      *fAction;
+      const TInitBehavior        *fAction;
       TClass                     *fClass;
       const char                 *fClassName;
       const char                 *fDeclFileName;
