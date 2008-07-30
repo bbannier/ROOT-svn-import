@@ -16,6 +16,7 @@
 
 class TH1; 
 class TF1;
+class TF2;
 class TGraph; 
 class TGraph2D;  
 class TMultiGraph; 
@@ -38,7 +39,17 @@ namespace ROOT {
       /**
          fitting function for a TGraph (called from TGraph::Fit)
        */
-      int FitObject(TGraph * h1, TF1 *f1 , Foption_t & option ,const char *goption, double xxmin, double xxmax); 
+      int FitObject(TGraph * gr, TF1 *f1 , Foption_t & option ,const char *goption, double xxmin, double xxmax); 
+
+      /**
+         fitting function for a MultiGraph (called from TMultiGraph::Fit)
+       */
+      int FitObject(TMultiGraph * mg, TF1 *f1 , Foption_t & option ,const char *goption, double xxmin, double xxmax); 
+
+      /**
+         fitting function for a TGraph2D (called from TGraph2D::Fit)
+       */
+      int FitObject(TGraph2D * gr, TF2 *f2 , Foption_t & option ,const char *goption); 
 
 
 
