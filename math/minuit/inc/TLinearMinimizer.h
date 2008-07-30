@@ -40,6 +40,10 @@ public:
    */ 
    TLinearMinimizer (int type = 0); 
 
+   /** 
+      Constructor from a char * (used by PM)
+   */ 
+   TLinearMinimizer ( const char * type ); 
 
    /** 
       Destructor (no operations)
@@ -123,6 +127,7 @@ protected:
 
 private: 
 
+   bool fRobust; 
    unsigned int fDim; 
    unsigned int fNFree;
    double fMinVal;

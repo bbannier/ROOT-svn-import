@@ -207,10 +207,21 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption ,const char *gopti
 //       sumw2 += ey*ey;
 //    }
 
-   // set some minimizer options
-   if (linear) fitConfig.SetMinimizer("Linear");
-   if (fitOption.More) fitConfig.SetMinimizer("Minuit","MigradImproved");
-   //fitConfig.MinimizerOptions().SetTolerance(sumw2*1.);
+
+
+   if (linear) { 
+      if (fitOption.Robust) { 
+         fitConfig.SetMinimizer("Linear","Robust");
+         fitConfig.MinimizerOptions().SetTolerance(fitOption.hRobust); // use tolerance for passing robust parameter
+      }
+      else 
+         fitConfig.SetMinimizer("Linear","");
+   }
+   else { 
+      // set some minimizer options
+      if (fitOption.More) fitConfig.SetMinimizer("Minuit","MigradImproved");
+      // set tolerance, max iterations, etc...
+   }
 
    // do fitting 
 

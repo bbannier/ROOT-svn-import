@@ -259,7 +259,7 @@ public:
    int Strategy() const { return fStrategy; }
 
    /// return the statistical scale used for calculate the error
-   /// is typically 1 for Chi2 minimizetion and 0.5 for likelihood's
+   /// is typically 1 for Chi2 and 0.5 for likelihood minimization
    double ErrorUp() const { return fUp; } 
 
    ///return true if Minimizer has performed a detailed error validation (e.g. run Hesse for Minuit)

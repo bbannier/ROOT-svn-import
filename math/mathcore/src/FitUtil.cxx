@@ -398,8 +398,10 @@ double FitUtil::EvaluateChi2Residual(const IModelFunction & func, const BinData 
    //  integral option is also not yet implemented
    //  one can use in that case normal chi2 method
   
-   if (data.Opt().fCoordErrors ) 
+   if (data.GetErrorType() == BinData::kCoordError && data.Opt().fCoordErrors ) { 
       MATH_ERROR_MSG("FitUtil::EvaluateChi2Residual","Error on the coordinates are not used in calculating Chi2 residual");
+      return 0; // it will assert otherwise later in GetPoint
+   }
 
    if (data.Opt().fIntegral )
       MATH_WARN_MSG("FitUtil::EvaluateChi2Residual","Bin integral is not used in calculating Chi2 residual");
@@ -456,8 +458,9 @@ void FitUtil::EvaluateChi2Gradient(const IModelFunction & f, const BinData & dat
    if (data.Opt().fIntegral )
       MATH_WARN_MSG("FitUtil::EvaluateChi2Residual","Bin integral is not used in calculating Chi2 gradient");
 
-   if (data.Opt().fCoordErrors ) 
-      MATH_ERROR_MSG("FitUtil::EvaluateChi2Residual","Error on the coordinates are not used in calculating Chi2 gradient");
+   if ( data.GetErrorType() == BinData::kCoordError && data.Opt().fCoordErrors ) {
+      MATH_ERROR_MSG("FitUtil::EvaluateChi2Residual","Error on the coordinates are not used in calculating Chi2 gradient");            return; // it will assert otherwise later in GetPoint
+   }
 
    unsigned int nRejected = 0; 
 
