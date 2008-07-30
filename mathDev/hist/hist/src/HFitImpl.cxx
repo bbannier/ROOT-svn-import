@@ -3,9 +3,13 @@
 
 
 #include "TH1.h"
+#include "TH2.h"
 #include "TF1.h"
+#include "TF2.h"
+#include "TF3.h"
 #include "TError.h"
 #include "TGraph.h"
+#include "TMultiGraph.h"
 #include "TGraph2D.h"
 
 #include "Fit/Fitter.h"
@@ -16,8 +20,6 @@
 #include "Math/WrappedMultiTF1.h"
 
 #include "TList.h"
-#include "TF2.h"
-#include "TF3.h"
 #include "TMath.h"
 
 #include "TClass.h"
@@ -33,6 +35,7 @@ namespace HFit {
 
    int GetDimension(const TH1 * h1) { return h1->GetDimension(); }
    int GetDimension(const TGraph * ) { return 1; }
+   int GetDimension(const TMultiGraph * ) { return 1; }
    int GetDimension(const TGraph2D * ) { return 2; }
 
    int CheckFitFunction(const TF1 * f1, int hdim);
@@ -41,7 +44,9 @@ namespace HFit {
 
 
    void GetDrawingRange(TH1 * h1, ROOT::Fit::DataRange & range);
-   void GetDrawingRange(TGraph * h1, ROOT::Fit::DataRange & range);
+   void GetDrawingRange(TGraph * gr, ROOT::Fit::DataRange & range);
+   void GetDrawingRange(TMultiGraph * mg, ROOT::Fit::DataRange & range);
+   void GetDrawingRange(TGraph2D * gr, ROOT::Fit::DataRange & range);
 
 
    template <class FitObject>
@@ -309,6 +314,17 @@ void HFit::GetDrawingRange(TH1 * h1, ROOT::Fit::DataRange & range) {
 
 void HFit::GetDrawingRange(TGraph * gr,  ROOT::Fit::DataRange & range) { 
    // get range for graph (used sub-set histogram)
+   // N.B. : this is different than in previous implementation of TGraph::Fit where range used was from xmin to xmax.
+   HFit::GetDrawingRange(gr->GetHistogram(), range);
+}
+void HFit::GetDrawingRange(TMultiGraph * mg,  ROOT::Fit::DataRange & range) { 
+   // get range for multi-graph (used sub-set histogram)
+   // N.B. : this is different than in previous implementation of TMultiGraph::Fit where range used was from data xmin to xmax.
+   HFit::GetDrawingRange(mg->GetHistogram(), range);
+}
+void HFit::GetDrawingRange(TGraph2D * gr,  ROOT::Fit::DataRange & range) { 
+   // get range for graph2D (used sub-set histogram)
+   // N.B. : this is different than in previous implementation of TGraph2D::Fit. There range used was always(0,0)
    HFit::GetDrawingRange(gr->GetHistogram(), range);
 }
 
@@ -319,7 +335,7 @@ void HFit::StoreAndDrawFitFunction(FitObject * h1, const TF1 * f1, const ROOT::F
 // should have separate functions for 1,2,3d ? t.b.d in case
 
 #ifdef DEBUG
-   std::cout <<"draw fit function " << f1->GetName() << std::endl;
+   std::cout <<"draw and store fit function " << f1->GetName() << std::endl;
 #endif
  
    TF1 *fnew1;
@@ -333,15 +349,18 @@ void HFit::StoreAndDrawFitFunction(FitObject * h1, const TF1 * f1, const ROOT::F
    if (ndim>2)    range.GetRange(2,zmin,zmax); 
 
 
-   TList * fFunctions = h1->GetListOfFunctions();
-
+   TList * funcList = h1->GetListOfFunctions();
+   if (funcList == 0){
+      Error("StoreAndDrawFitFunction","Empty funciton list- cannot store fitted function");
+      return;
+   } 
 
    if (delOldFunction) {
-      TIter next(fFunctions, kIterBackward);
+      TIter next(funcList, kIterBackward);
       TObject *obj;
       while ((obj = next())) {
          if (obj->InheritsFrom(TF1::Class())) {
-            fFunctions->Remove(obj);
+            funcList->Remove(obj);
             delete obj;
          }
       }
@@ -351,7 +370,7 @@ void HFit::StoreAndDrawFitFunction(FitObject * h1, const TF1 * f1, const ROOT::F
    if (ndim < 2) {
       fnew1 = (TF1*)f1->IsA()->New();
       f1->Copy(*fnew1);
-      fFunctions->Add(fnew1);
+      funcList->Add(fnew1);
       fnew1->SetParent( h1 );
       fnew1->SetRange(xmin,xmax);
       fnew1->Save(xmin,xmax,0,0,0,0);
@@ -361,8 +380,8 @@ void HFit::StoreAndDrawFitFunction(FitObject * h1, const TF1 * f1, const ROOT::F
       fnew2 = (TF2*)f1->IsA()->New();
       f1->Copy(*fnew2);
       fnew2 = (TF2*)f1->Clone();
-      fFunctions->Add(fnew2);
-      fnew2->SetRange(xmin,xmax,ymin,ymax);
+      funcList->Add(fnew2);
+      fnew2->SetRange(xmin,ymin,xmax,ymax);
       fnew2->SetParent( h1 );
       fnew2->Save(xmin,xmax,ymin,ymax,0,0);
       if (!drawFunction) fnew2->SetBit(TF1::kNotDraw);
@@ -372,8 +391,8 @@ void HFit::StoreAndDrawFitFunction(FitObject * h1, const TF1 * f1, const ROOT::F
       fnew3 = (TF3*)f1->IsA()->New();
       f1->Copy(*fnew3);
       fnew3 = (TF3*)f1->Clone();
-      fFunctions->Add(fnew3);
-      fnew3->SetRange(xmin,xmax,ymin,ymax,zmin,zmax);
+      funcList->Add(fnew3);
+      fnew3->SetRange(xmin,ymin,zmin,xmax,ymax,zmax);
       fnew3->SetParent( h1 );
       fnew3->SetBit(TFormula::kNotGlobal);
    }
@@ -384,76 +403,6 @@ void HFit::StoreAndDrawFitFunction(FitObject * h1, const TF1 * f1, const ROOT::F
    
    return; 
 }
-
-#ifdef OLD
-
-void HFit::DrawFitFunction(TGraph * h1, const TF1 * f1, ROOT::Fit::DataRange & range, bool delOldFunction, bool drawFunction, const char *goption) { 
-//   - Store fitted function in graph functions list and draw
-//#define OLD
-
-   //TH1 * h = h1->GetHistogram(); 
-//    HFit::GetDrawingRange(h1->GetHistogram(),f1,range);
-//    HFit::DrawFitFunction(h1, f1, range, delOldFunction, drawFunction, goption); 
-
-//#else
-
-   // get fit range for TF1::Save method
-   TH1 * h = h1->GetHistogram(); 
-   double xmin = 0, xmax = 0;
-   if (range.Size(0) == 0) { 
-      TAxis  & xaxis = *(h->GetXaxis()); 
-      Int_t hxfirst = xaxis.GetFirst();
-      Int_t hxlast  = xaxis.GetLast();
-      Double_t binwidx = xaxis.GetBinWidth(hxlast);
-      xmin    = xaxis.GetBinLowEdge(hxfirst);
-      xmax    = xaxis.GetBinLowEdge(hxlast) +binwidx;
-   } else  { 
-      range.GetRange(0,xmin,xmax);
-   }
-
-   std::cout << "xmin ,xmax " << xmin << " , " << xmax << "  " << delOldFunction << "  " << drawFunction << std::endl;
-
-   TList * fFunctions = h1->GetListOfFunctions();
-   if (!fFunctions) fFunctions = new TList;
-
-   if (delOldFunction) {
-      TIter next(fFunctions, kIterBackward);
-      TObject *obj;
-      while ((obj = next())) {
-         if (obj->InheritsFrom(TF1::Class())) delete obj;
-      }
-   }
-
-   // add fit function to the list 
-   TF1 * fnew1 = new TF1();
-   f1->Copy(*fnew1);
-   fFunctions->Add(fnew1);
-   fnew1->SetRange(xmin,xmax);
-   fnew1->SetParent(h1);
-   fnew1->Save(xmin,xmax,0,0,0,0);
-   if (!drawFunction) fnew1->SetBit(TF1::kNotDraw);
-   fnew1->SetBit(TFormula::kNotGlobal);
-   
-   if (h1->TestBit(kCanDelete)) return ;
-   //if (gPad) gPad->Modified(); // this is not in TH1 code
-
-#ifdef DEBUG
-   std::cout << "stored function " << fnew1 << "in graph" << std::endl; 
-
-   fFunctions = h1->GetListOfFunctions();
-   TIter next(fFunctions, kIterBackward);
-   TObject *obj;
-   while ((obj = next())) {
-      if (obj->InheritsFrom(TF1::Class())) { 
-         TF1 * ff = (TF1*) obj; 
-         std::cout << obj << "  " << ff->GetName() << "  " << ff->GetTitle() << std::endl;
-      }
-   }
- 
-#endif
-   
-}
-#endif
 
 
 void HFit::FitOptionsMake(const char *option, Foption_t &fitOption) { 
@@ -493,6 +442,23 @@ void HFit::FitOptionsMake(const char *option, Foption_t &fitOption) {
 
 }
 
+// implementations of ROOT::Fit::FitObject functions (defined in HFitInterface) in terms of the template HFit::Fit
+
+int ROOT::Fit::FitObject(TH1 * h1, TF1 *f1 , Foption_t & option ,const char *goption, Double_t xxmin, Double_t xxmax) { 
+   return HFit::Fit(h1,f1,option,goption,xxmin,xxmax); 
+}
+int ROOT::Fit::FitObject(TGraph * gr, TF1 *f1 , Foption_t & option ,const char *goption, Double_t xxmin, Double_t xxmax) { 
+   return HFit::Fit(gr,f1,option,goption,xxmin,xxmax); 
+}
+int ROOT::Fit::FitObject(TMultiGraph * mg, TF1 *f1 , Foption_t & option ,const char *goption, Double_t xxmin, Double_t xxmax) { 
+   // fitting multi-graph
+   return HFit::Fit(mg,f1,option,goption,xxmin,xxmax); 
+}
+int ROOT::Fit::FitObject(TGraph2D * gr, TF2 *f2 , Foption_t & option ,const char *goption) { 
+   return HFit::Fit(gr,f2,option,goption,0,0); 
+}
+
+
 // implementations of DoFit member functions in data objects (TH1, TGrah, etc...)
 
 Int_t TH1::DoFit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax) { 
@@ -506,15 +472,21 @@ Int_t TGraph::DoFit(TF1 *f1 ,Option_t *option ,Option_t *goption, Axis_t rxmin, 
    // internal graph fitting methods
    Foption_t fitOption;
    HFit::FitOptionsMake(option,fitOption);
-
    return ROOT::Fit::FitObject(this, f1 , fitOption , goption, rxmin, rxmax); 
 }
 
-// implementations of ROOT::Fit::FitObject functions (defined in HFitInterface) in terms of the template HFit::Fit
+Int_t TMultiGraph::DoFit(TF1 *f1 ,Option_t *option ,Option_t *goption, Axis_t rxmin, Axis_t rxmax) { 
+   // internal multigraph fitting methods
+   Foption_t fitOption;
+   HFit::FitOptionsMake(option,fitOption);
+   return ROOT::Fit::FitObject(this, f1 , fitOption , goption, rxmin, rxmax); 
+}
 
-int ROOT::Fit::FitObject(TH1 * h1, TF1 *f1 , Foption_t & option ,const char *goption, Double_t xxmin, Double_t xxmax) { 
-   return HFit::Fit(h1,f1,option,goption,xxmin,xxmax); 
+
+Int_t TGraph2D::DoFit(TF2 *f2 ,Option_t *option ,Option_t *goption) { 
+   // internal graph2D fitting methods
+   Foption_t fitOption;
+   HFit::FitOptionsMake(option,fitOption);
+   return ROOT::Fit::FitObject(this, f2 , fitOption , goption); 
 }
-int ROOT::Fit::FitObject(TGraph * gr, TF1 *f1 , Foption_t & option ,const char *goption, Double_t xxmin, Double_t xxmax) { 
-   return HFit::Fit(gr,f1,option,goption,xxmin,xxmax); 
-}
+

@@ -43,6 +43,8 @@ protected:
 
    TMultiGraph(const TMultiGraph&);
    TMultiGraph& operator=(const TMultiGraph&);
+
+   virtual Int_t     DoFit(TF1 *f1,Option_t *option,Option_t *goption, Axis_t xmin, Axis_t xmax);
   
 public:
    TMultiGraph();
@@ -65,7 +67,8 @@ public:
    TH1F             *GetHistogram() const;
    TF1              *GetFunction(const char *name) const;
    TList            *GetListOfGraphs() const { return fGraphs; }
-   TList            *GetListOfFunctions() const { return fFunctions; } 
+   TList            *GetListOfFunctions();  // non const method (create list if empty)
+   const TList      *GetListOfFunctions() const { return fFunctions; } 
    TAxis            *GetXaxis() const;
    TAxis            *GetYaxis() const;
    virtual void      Paint(Option_t *chopt="");
