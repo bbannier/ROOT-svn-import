@@ -142,6 +142,7 @@
 #include "TH1.h"
 #include "HFitInterface.h"
 #include "TF1.h"
+#include "TF2.h"
 #include "TTimer.h"
 #include "THStack.h"
 #include "TVirtualFitter.h"
@@ -283,8 +284,6 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
    gROOT->GetListOfCleanups()->Add(this);
 
    MapSubwindows();
-   // not ready yet for 2 & 3 dim
-   fGeneral->HideFrame(fSliderYParent);
    fGeneral->HideFrame(fSliderZParent);
 
    // do not allow resizing
@@ -348,7 +347,7 @@ TFitEditor::~TFitEditor()
 void TFitEditor::CreateGeneralTab()
 {
    // Create 'General' tab.
-   
+
    fTabContainer = fTab->AddTab("General");
    fGeneral = new TGCompositeFrame(fTabContainer, 10, 10, kVerticalFrame);
    fTabContainer->AddFrame(fGeneral, new TGLayoutHints(kLHintsTop |
@@ -980,7 +979,6 @@ void TFitEditor::CloseWindow()
 TFitEditor *&TFitEditor::GetFP()
 {
    // Static: return main fit panel
-
    return fgFitDialog;
 }
 
@@ -1184,8 +1182,18 @@ void TFitEditor::SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event)
       fFuncPars = new Double_t[fitFunc->GetNpar()][3];
       GetParameters(fFuncPars, fitFunc);
 
-      fEnteredFunc->SetText(fitFunc->GetExpFormula().Data());
-      TGLBEntry *en = fFuncList->FindEntry(fitFunc->GetExpFormula().Data());
+      TString tmpStr = fitFunc->GetExpFormula();
+      TGLBEntry *en = 0;
+      if ( tmpStr.Length() == 0 )
+      {
+         fEnteredFunc->SetText(fitFunc->GetName());
+         en= fFuncList->FindEntry(fitFunc->GetName());
+      }
+      else
+      {
+         fEnteredFunc->SetText(fitFunc->GetExpFormula().Data());
+         en= fFuncList->FindEntry(fitFunc->GetExpFormula().Data());
+      }
       if (en) fFuncList->Select(en->EntryId());
    } else {
       TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
@@ -1365,12 +1373,6 @@ void TFitEditor::DoFit()
       return;
    }
    
-   TF1 fitFunc("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
-   if ( fFuncPars ) SetParameters(fFuncPars, &fitFunc);
-
-   TString strDrawOpts, strFitOpts;
-   RetrieveOptions(strFitOpts, strDrawOpts, fitFunc.GetNpar());
-
    fFitButton->SetState(kButtonEngaged);
    if (gPad) gPad->GetVirtCanvas()->SetCursor(kWatch);
    gVirtualX->SetCursor(GetId(), gVirtualX->CreateCursor(kWatch));
@@ -1386,15 +1388,48 @@ void TFitEditor::DoFit()
    Double_t xmax = 0;
    switch (fType) {
       case kObjectHisto: {
-         TH1 *h1 = (TH1*)fFitObject;
-         xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
-         xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
-         fitFunc.SetRange(xmin,xmax);
-         // Still temporal until the same algorithm is implemented for
-         // graph. Then it could be done in a more elegant way.
-         Foption_t fitOpts;
-         TH1::FitOptionsMake(strFitOpts,fitOpts);
-         ROOT::Fit::FitObject(h1, &fitFunc, fitOpts, strDrawOpts, xmin, xmax);
+         if ( fDim == 1 )
+         {
+            TString strDrawOpts, strFitOpts;
+            Foption_t fitOpts;
+            xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
+            xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
+            
+            TF1 fitFunc("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
+            if ( fFuncPars ) SetParameters(fFuncPars, &fitFunc);
+            
+            RetrieveOptions(strFitOpts, strDrawOpts, fitFunc.GetNpar());
+            fitFunc.SetRange(xmin,xmax);
+            
+            TH1 *h1 = (TH1*)fFitObject;
+            // Still temporal until the same algorithm is implemented for
+            // graph. Then it could be done in a more elegant way.
+            
+            TH1::FitOptionsMake(strFitOpts,fitOpts);
+            ROOT::Fit::FitObject(h1, &fitFunc, fitOpts, strDrawOpts, xmin, xmax);
+         }
+         else if ( fDim == 2 )
+         {
+            // AKI! to be changed!
+            TString strDrawOpts, strFitOpts;
+            Foption_t fitOpts;
+            xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
+            xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
+            
+            TF1 fitFunc("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
+            if ( fFuncPars ) SetParameters(fFuncPars, &fitFunc);
+            
+            RetrieveOptions(strFitOpts, strDrawOpts, fitFunc.GetNpar());
+            fitFunc.SetRange(xmin,xmax);
+            
+            TH1 *h1 = (TH1*)fFitObject;
+            // Still temporal until the same algorithm is implemented for
+            // graph. Then it could be done in a more elegant way.
+            
+            TH1::FitOptionsMake(strFitOpts,fitOpts);
+            ROOT::Fit::FitObject(h1, &fitFunc, fitOpts, strDrawOpts, xmin, xmax);
+         }
+
          break;
       }
       case kObjectGraph: {
@@ -1413,6 +1448,10 @@ void TFitEditor::DoFit()
             if (xmin < gxmin) xmin = gxmin;
             if (xmax > gxmax) xmax = gxmax;
          }
+         TF1 fitFunc("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
+         if ( fFuncPars ) SetParameters(fFuncPars, &fitFunc);
+         TString strDrawOpts, strFitOpts;
+         RetrieveOptions(strFitOpts, strDrawOpts, fitFunc.GetNpar());
          fitFunc.SetRange(xmin,xmax);
          gr->Fit(&fitFunc, strFitOpts.Data(), strDrawOpts.Data(), xmin, xmax);
          break;
@@ -1450,9 +1489,16 @@ void TFitEditor::DoFit()
 Int_t TFitEditor::CheckFunctionString(const char *fname)
 {
    // Check entered function string.
+   Int_t rvalue = 0;
+   if ( fDim == 1 ) {
+      TF1 form("tmpCheck", fname);
+      rvalue = form.Compile();
+   } else if ( fDim == 2 ) {
+      TF2 form("tmpCheck", fname);
+      rvalue = form.Compile();
+   }
 
-   TF1 form("tmpCheck", fname, fXmin, fXmax);
-   return form.Compile();
+   return rvalue;
 }
 
 //______________________________________________________________________________
@@ -1516,7 +1562,8 @@ void TFitEditor::DoFunction(Int_t)
       }
       default: { break; }
       }
-      if ( tmpTF1 ) 
+
+      if ( tmpTF1 && strcmp(tmpTF1->GetExpFormula(), "") ) 
          fEnteredFunc->SetText(tmpTF1->GetExpFormula());
       else
          fEnteredFunc->SetText(te->GetTitle());
@@ -1719,21 +1766,28 @@ void TFitEditor::DoSetParameters()
 {
    // Open set parameters dialog.
 
-   TF1 fitFunc("tmpPars",fEnteredFunc->GetText(), fXmin, fXmax);
-   if ( fFuncPars ) SetParameters(fFuncPars, &fitFunc);
+   TF1 * fitFunc = 0;
+   if ( fDim == 1 )
+      fitFunc = new TF1("tmpPars",fEnteredFunc->GetText(), fXmin, fXmax);
+   else if ( fDim == 2 )
+      fitFunc = new TF2("tmpPars",fEnteredFunc->GetText(), fXmin, fXmax);
+
+   if ( fFuncPars ) SetParameters(fFuncPars, fitFunc);
 
    fParentPad->Disconnect("RangeAxisChanged()");
    Double_t xmin, xmax;
-   fitFunc.GetRange(xmin, xmax);
+   fitFunc->GetRange(xmin, xmax);
    Int_t ret = 0;
    new TFitParametersDialog(gClient->GetDefaultRoot(), GetMainFrame(), 
-                            &fitFunc, fParentPad, xmin, xmax, &ret);
+                            fitFunc, fParentPad, xmin, xmax, &ret);
 
    if ( fFuncPars ) delete fFuncPars;
-   fFuncPars = new Double_t[fitFunc.GetNpar()][3];
-   GetParameters(fFuncPars, &fitFunc);
+   fFuncPars = new Double_t[fitFunc->GetNpar()][3];
+   GetParameters(fFuncPars, fitFunc);
 
    fParentPad->Connect("RangeAxisChanged()", "TFitEditor", this, "UpdateGUI()");
+
+   delete fitFunc;
 }
 
 //______________________________________________________________________________
@@ -2058,6 +2112,18 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
          fMethodList->AddEntry("Chi-square", kFP_MCHIS);
       fMethodList->Select(kFP_MCHIS, kFALSE);
    }
+
+   if ( fDim < 2 )
+      fGeneral->HideFrame(fSliderYParent);
+   else
+      fGeneral->ShowFrame(fSliderYParent);
+
+// This line makes it change the size when setting a new object to
+// fit, but it does not pick it up until the frame has been drawn!
+// AKI
+ 
+//   Resize(GetDefaultSize());
+
    return set;
 }
 
@@ -2065,7 +2131,7 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
 void TFitEditor::ShowObjectName(TObject* obj)
 {
    // Show object name on the top.
-   
+
    TString name;
    
    if (obj) {
@@ -2444,13 +2510,14 @@ void TFitEditor::RetrieveOptions(TString& fitOpts, TString& drawOpts, Int_t npar
         (tmpStr.Contains("pol") || tmpStr.Contains("++")) )
       fitOpts += 'F';
 
-   for ( Int_t i = 0; i < npar; ++i )
-      if ( fFuncPars[i][PAR_MIN] != fFuncPars[i][PAR_MAX] )
-      {
-         fitOpts +='B';
-         break;
-      }
-
+   if ( fFuncPars )
+      for ( Int_t i = 0; i < npar; ++i )
+         if ( fFuncPars[i][PAR_MIN] != fFuncPars[i][PAR_MAX] )
+         {
+            fitOpts +='B';
+            break;
+         }
+   
    if (fNoChi2->GetState() == kButtonDown)
       fitOpts += 'C';
 
