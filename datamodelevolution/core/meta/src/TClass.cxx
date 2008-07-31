@@ -4562,7 +4562,7 @@ TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, Int
    // We have the right info so we need to clone it to create new object with
    // non artificial streamer elements and we should build it for current class
    //----------------------------------------------------------------------------
-   info = info->MakeClone();
+   info = (TVirtualStreamerInfo*)info->Clone();
 
    if( !info->BuildFor( this ) ) {
       delete info;
@@ -4619,7 +4619,7 @@ TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, UIn
    // We have the right info so we need to clone it to create new object with
    // non artificial streamer elements and we should build it for current class
    //----------------------------------------------------------------------------
-   info = info->MakeClone();
+   info = (TVirtualStreamerInfo*)info->Clone();
 
    if( !info->BuildFor( this ) ) {
       delete info;
