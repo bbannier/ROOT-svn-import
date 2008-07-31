@@ -59,7 +59,7 @@ public:
    enum {
       kHasRange     = BIT(6),
       kCache        = BIT(9),
-      kRepeat       = BIT(10
+      kRepeat       = BIT(10)
    };
 
    TStreamerElement();
