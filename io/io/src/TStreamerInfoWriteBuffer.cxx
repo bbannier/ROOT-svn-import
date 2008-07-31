@@ -159,7 +159,7 @@ Int_t TStreamerInfo::WriteBufferAux(TBuffer &b, const T &arr, Int_t first,
       if (R__TestUseCache<T>(aElement)) {
          if (gDebug > 1) {
            printf("ReadBuffer, class:%s, name=%s, fType[%d]=%d,"
-                " %s, bufpos=%d, arr=%p, eoffset=%d, Redirect=%ld\n",
+                " %s, bufpos=%d, arr=%p, eoffset=%d, Redirect=%p\n",
                 fClass->GetName(),aElement->GetName(),i,fType[i],
                 aElement->ClassName(),b.Length(),arr[0], eoffset,((TBufferFile&)b).PeekDataCache()->GetObjectAt(0));
          }
