@@ -1509,7 +1509,19 @@ void TBranchElement::InitInfo()
                ULong_t* elems = fInfo->GetElems();
                for (size_t i = 0; i < ndata; ++i) {
                   if (((TStreamerElement*) elems[i]) == elt) {
-                     fID = i;
+                     if (elt->TestBit (TStreamerElement::kCache)
+                         && elt->TestBit(TStreamerElement::kRepeat)
+                         && (i+1) < ndata
+                         && s == ((TStreamerElement*) elems[i])->GetName())
+                     {
+                        // If the TStreamerElement we found is storing the information in the
+                        // cache and is a repeater, we need to use the real one (the next one).
+                        // (At least until the cache/repeat mechanism is properly handle by
+                        // ReadLeaves).
+                        fID = i+1;
+                     } else {
+                        fID = i;
+                     }
                      break;
                   }
                }
