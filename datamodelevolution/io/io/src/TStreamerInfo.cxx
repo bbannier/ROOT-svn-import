@@ -1028,6 +1028,8 @@ void TStreamerInfo::BuildOld()
       printf("\n====>Rebuilding TStreamerInfo for class: %s, version: %d\n", GetName(), fClassVersion);
    }
 
+   Bool_t wasBuilt = fIsBuilt;
+
    // This is used to avoid unwanted recursive call to Build
    fIsBuilt = kTRUE;
 
@@ -1355,7 +1357,7 @@ void TStreamerInfo::BuildOld()
          offset += asize;
       }
 
-      if ( rules.HasRuleWithSource( element->GetName() ) ) {
+      if ( !wasBuilt && rules.HasRuleWithSource( element->GetName() ) ) {
          if (allocClass == 0) {
             TVirtualStreamerInfo *infoalloc  = (TVirtualStreamerInfo *)Clone(TString::Format("%s@@%d",fClass->GetName(),GetOnFileClassVersion()));
             infoalloc->BuildCheck();
@@ -1375,7 +1377,7 @@ void TStreamerInfo::BuildOld()
             // Warning("BuildOld","%s::%s is not set from the version %d of %s (You must add a rule for it)\n",GetName(), element->GetName(), GetClassVersion(), GetName() );
          }
          element->SetBit(TStreamerElement::kCache);
-         element->SetNewType(element->GetType() );
+         element->SetNewType( element->GetType() );
          element->SetOffset(allocClass->GetDataMemberOffset(element->GetName()));
       }
 
@@ -1407,9 +1409,9 @@ void TStreamerInfo::BuildOld()
    }
    
    // Now add artificial TStreamerElement (i.e. rules that creates new members or set transient members).
-   InsertArtificialElements(rules.fArray);
+   if (!wasBuilt) InsertArtificialElements(rules.fArray);
 
-   if (allocClass) {
+   if (!wasBuilt && allocClass) {
 
       TStreamerElement *el = new TStreamerArtificial("@@alloc","", 0, TStreamerInfo::kCacheNew, allocClass->GetName());
       R__TObjArray_InsertAt( fElements, el, 0 );
