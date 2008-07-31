@@ -1392,16 +1392,6 @@ void TStreamerInfo::Clear(Option_t *option)
 }
 
 //______________________________________________________________________________
-TStreamerInfo* TStreamerInfo::MakeClone()
-{
-   // Creates a copy of this streamer info - the user is then responsible
-   // for deleting this object
-   TStreamerInfo* si = new TStreamerInfo( *this );
-   si->fIsBuilt = kFALSE;
-   return si;
-}
-
-//______________________________________________________________________________
 void TStreamerInfo::Compile()
 {
    // loop on the TStreamerElement list
@@ -2940,8 +2930,17 @@ void TStreamerInfo::Streamer(TBuffer &R__b)
          R__b.ClassMember("fClassVersion","Int_t");
          R__b >> fClassVersion;
          fOnFileClassVersion = fClassVersion;
-         R__b.ClassMember("fElements","TObjArray*");
-         R__b >> fElements;
+
+         //---------------------------------------------------------------------
+         // Unstream the streamer elements
+         //---------------------------------------------------------------------
+         Int_t num;
+         R__b >> num;
+         TStreamerElement *el;
+         for( Int_t i = 0; i < num; ++i ) {
+            R__b >> el;
+            fElements->Add( el );
+         }
          R__b.ClassEnd(TStreamerInfo::Class());
          R__b.SetBufferOffset(R__s+R__c+sizeof(UInt_t));
          return;
@@ -2963,8 +2962,18 @@ void TStreamerInfo::Streamer(TBuffer &R__b)
       R__b << fCheckSum;
       R__b.ClassMember("fClassVersion","Int_t");
       R__b << ((fClassVersion > 0) ? fClassVersion : -fClassVersion);
-      R__b.ClassMember("fElements","TObjArray*");
-      R__b << fElements;
+
+      //------------------------------------------------------------------------
+      // Stream non-artificial streamer elements
+      //------------------------------------------------------------------------
+      R__b.ClassMember( "fNumElements", "Int_t" );
+      R__b << fElements->GetEntries();
+      TIter next( fElements );
+      TStreamerElement *el;
+      while( (el = (TStreamerElement*)next()) ) {
+         if( el->GetType() != kArtificial )
+            R__b << el;
+      }
       R__b.ClassEnd(TStreamerInfo::Class());
       R__b.SetByteCount(R__c, kTRUE);
    }
