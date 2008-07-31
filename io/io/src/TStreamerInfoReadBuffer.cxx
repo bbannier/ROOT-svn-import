@@ -694,14 +694,19 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
       fgElement = aElement;
 
       if (R__TestUseCache<T>(aElement)) {
-         if (gDebug > 1) {
-           printf("ReadBuffer, class:%s, name=%s, fType[%d]=%d,"
-                " %s, bufpos=%d, arr=%p, eoffset=%d, Redirect=%ld\n",
-                fClass->GetName(),aElement->GetName(),i,fType[i],
-                aElement->ClassName(),b.Length(),arr[0], eoffset,((TBufferFile&)b).PeekDataCache()->GetObjectAt(0));
-         }
          Int_t bufpos = b.Length();
-         thisVar->ReadBuffer(b,*((TBufferFile&)b).PeekDataCache(),i,narr,eoffset);
+         if (((TBufferFile&)b).PeekDataCache()==0) {
+            Warning("ReadBuffer","Skipping %s::%s because the cache is missing.",GetName(),aElement->GetName());
+            thisVar->ReadBufferSkip(b,arr,i,fType[i]+TStreamerInfo::kSkip,aElement,narr,eoffset);
+         } else {
+            if (gDebug > 1) {
+               printf("ReadBuffer, class:%s, name=%s, fType[%d]=%d,"
+                  " %s, bufpos=%d, arr=%p, eoffset=%d, Redirect=%ld\n",
+                  fClass->GetName(),aElement->GetName(),i,fType[i],
+                  aElement->ClassName(),b.Length(),arr[0], eoffset,((TBufferFile&)b).PeekDataCache()->GetObjectAt(0));
+            }
+            thisVar->ReadBuffer(b,*((TBufferFile&)b).PeekDataCache(),i,narr,eoffset);
+         }
          if (aElement->TestBit(TStreamerElement::kRepeat)) { b.SetBufferOffset(bufpos); }
          continue;
       }
