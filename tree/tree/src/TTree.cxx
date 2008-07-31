@@ -1916,6 +1916,9 @@ TBranch* TTree::BronchExec(const char* name, const char* classname, void* addr, 
       TStreamerElement* element = 0;
       TString bname;
       for (id = 0; (element = (TStreamerElement*) next()); ++id) {
+         if (element->IsA() == TStreamerArtificial::Class()) {
+            continue;
+         }
          char* pointer = (char*) (objptr + element->GetOffset());
          // FIXME: This is not good enough, an STL container can be
          //        a base, and the test will fail.
