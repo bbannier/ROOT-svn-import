@@ -39,10 +39,10 @@ namespace Internal {
    public:
 
       /** default constructor */
-      MemberBase( const char *   name,
+      MemberBase(const char *   name,
          const Type &   type,
-         TYPE           memberType,
-         unsigned int   modifiers );
+         ETYPE           memberType,
+         unsigned int   modifiers);
 
 
       /** destructor */
@@ -77,26 +77,26 @@ namespace Internal {
 
 
       /** Get the member value */
-      virtual Object Get( const Object & obj ) const;
+      virtual Object Get(const Object & obj) const;
 
 
       /** Invoke the member function */
-      /*virtual Object Invoke( const Object & obj, 
-      const std::vector < Object > & paramList ) const;*/
-      virtual Object Invoke( const Object & obj, 
+      /*virtual Object Invoke(const Object & obj, 
+      const std::vector < Object > & paramList) const;*/
+      virtual Object Invoke(const Object & obj, 
          const std::vector < void * > & paramList = 
          std::vector<void*>()) const;
 
 
       /** Invoke the function (for static functions) */
-      //virtual Object Invoke( const std::vector < Object > & paramList ) const;
-      virtual Object Invoke( const std::vector < void * > & paramList = 
+      //virtual Object Invoke(const std::vector < Object > & paramList) const;
+      virtual Object Invoke(const std::vector < void * > & paramList = 
          std::vector<void*>()) const;
 
 
       /**
       * Check whether the entity property is set for the member. You can
-      * combine checks, e.g. t.Is(gCLASS && gPUBLIC)
+      * combine checks, e.g. t.Is(gClass && gPUBLIC)
       * @param descr the entity property to check for; see EntityProperty.
       * @return whether descr is set.
       */
@@ -104,7 +104,7 @@ namespace Internal {
 
 
       /** return the type of the member (function or data member) */
-      TYPE MemberType() const;
+      ETYPE MemberType() const;
 
 
       /** returns the string representation of the member species */
@@ -112,7 +112,7 @@ namespace Internal {
 
 
       /** return the name of the member */
-      virtual const std::string& Name(std::string& buf, unsigned int mod = SCOPED ) const;
+      virtual const std::string& Name(std::string& buf, unsigned int mod = kScoped) const;
 
 
       /** return the offset of the member */
@@ -120,7 +120,7 @@ namespace Internal {
 
 
       /** number of parameters */
-      virtual size_t FunctionParameterSize( bool required = false ) const;
+      virtual size_t FunctionParameterSize(bool required = false) const;
 
 
       /** 
@@ -147,12 +147,12 @@ namespace Internal {
 
 
       /** Set the member value */
-      virtual void Set( const Object & instance,
-         const void * value ) const;
+      virtual void Set(const Object & instance,
+         const void * value) const;
 
 
       /** Set the type of the member */
-      void SetScope( const Scope & scope ) const;
+      void SetScope(const Scope & scope) const;
 
 
       /** return the context of the member */
@@ -195,7 +195,7 @@ namespace Internal {
       * @param obj the object from which the calculation should start
       * @return memory address of new local object relative to obj
       */
-      void * CalculateBaseObject( const Object & obj ) const;
+      void * CalculateBaseObject(const Object & obj) const;
 
    protected:
 
@@ -230,13 +230,13 @@ namespace Internal {
 
 
       /** 
-      * the kind of member ( data/function-member)
+      * the kind of member (data/function-member)
       * @label member type
       * @link aggregation
       * @clientCardinality 1
       * @supplierCardinality 1
       */
-      TYPE fMemberType;
+      ETYPE fMemberType;
 
 
       /**
@@ -269,7 +269,7 @@ namespace Internal {
 
 //-------------------------------------------------------------------------------
 inline Reflex::Object
-Reflex::Internal::MemberBase::Get( const Object & /* obj */ ) const {
+Reflex::Internal::MemberBase::Get(const Object & /* obj */) const {
 //-------------------------------------------------------------------------------
    return Object();
 }
@@ -277,8 +277,8 @@ Reflex::Internal::MemberBase::Get( const Object & /* obj */ ) const {
 
 //-------------------------------------------------------------------------------
 inline Reflex::Object 
-Reflex::Internal::MemberBase::Invoke( const Object & /* obj */ ,
-                                  const std::vector < void * > & /* paramList */ ) const {
+Reflex::Internal::MemberBase::Invoke(const Object & /* obj */ ,
+                                  const std::vector < void * > & /* paramList */) const {
 //-------------------------------------------------------------------------------
    return Object();
 }
@@ -286,14 +286,14 @@ Reflex::Internal::MemberBase::Invoke( const Object & /* obj */ ,
 
 //-------------------------------------------------------------------------------
 inline Reflex::Object 
-Reflex::Internal::MemberBase::Invoke( const std::vector < void * > & /* paramList */ ) const {
+Reflex::Internal::MemberBase::Invoke(const std::vector < void * > & /* paramList */) const {
 //-------------------------------------------------------------------------------
    return Object();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TYPE
+inline Reflex::ETYPE
 Reflex::Internal::MemberBase::MemberType() const {
 //-------------------------------------------------------------------------------
    return fMemberType;
@@ -302,11 +302,11 @@ Reflex::Internal::MemberBase::MemberType() const {
 
 //-------------------------------------------------------------------------------
 inline const std::string&
-Reflex::Internal::MemberBase::Name(std::string& buf, unsigned int mod ) const {
+Reflex::Internal::MemberBase::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
-   if (mod & SCOPED) {
+   if (mod & kScoped) {
       if (!DeclaringScope().IsTopScope()) {
-         buf += DeclaringScope().Name( mod );
+         buf += DeclaringScope().Name(mod);
          buf += "::";
       }
    }
@@ -325,14 +325,14 @@ Reflex::Internal::MemberBase::Offset() const {
 
 //-------------------------------------------------------------------------------
 inline void
-Reflex::Internal::MemberBase::Set( const Object & /* instance */,
-                                   const void * /* value */ ) const {}
+Reflex::Internal::MemberBase::Set(const Object & /* instance */,
+                                   const void * /* value */) const {}
 //-------------------------------------------------------------------------------
 
 
 //-------------------------------------------------------------------------------
 inline void
-Reflex::Internal::MemberBase::SetScope( const Scope & scope ) const {
+Reflex::Internal::MemberBase::SetScope(const Scope & scope) const {
 //-------------------------------------------------------------------------------
    fScope = scope;
 }

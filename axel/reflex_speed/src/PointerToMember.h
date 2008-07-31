@@ -33,9 +33,9 @@ namespace Internal {
    public:
 
       /** default constructor */
-      PointerToMember( const Type & pointerToMemberType,
+      PointerToMember(const Type & pointerToMemberType,
          const Scope & pointerToMemberScope,
-         const std::type_info & ti );
+         const std::type_info & ti);
 
 
       /** destructor */
@@ -47,7 +47,7 @@ namespace Internal {
       * @param  typedefexp expand typedefs or not
       * @return fully qualified Name of pointer At
       */
-      std::string Name( unsigned int mod = 0 ) const;
+      std::string Name(unsigned int mod = 0) const;
 
 
       /**
@@ -65,9 +65,9 @@ namespace Internal {
 
 
       /** static funtion that composes the At Name */
-      static std::string BuildTypeName( const Type & pointerToMemberType,
+      static std::string BuildTypeName(const Type & pointerToMemberType,
          const Scope & pointerToMemberScope,
-         unsigned int mod = SCOPED | QUALIFIED );
+         unsigned int mod = kScoped | kQualified);
 
    private:
 

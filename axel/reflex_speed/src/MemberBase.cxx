@@ -27,17 +27,17 @@
 #include "Class.h"
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::MemberBase::MemberBase( const char *  name,
+Reflex::Internal::MemberBase::MemberBase(const char *  name,
                                       const Type &  type,
-                                      TYPE          memberType,
-                                      unsigned int  modifiers )
+                                      ETYPE          memberType,
+                                      unsigned int  modifiers)
 //-------------------------------------------------------------------------------
-   : fType( type, modifiers & ( CONST | VOLATILE | REFERENCE ) , Type::APPEND ),
-     fModifiers( modifiers ),
-     fName( name ),
-     fScope( Scope() ),
-     fMemberType( memberType ),
-     fPropertyList( OwnedPropertyList(new PropertyListImpl())) {
+   : fType(type, modifiers & (kConst | kVolatile | kReference) , Type::kAppend),
+     fModifiers(modifiers),
+     fName(name),
+     fScope(Scope()),
+     fMemberType(memberType),
+     fPropertyList(OwnedPropertyList(new PropertyListImpl())) {
 // Construct the dictionary info for a member
    fThisMember = new Member(this);
 }
@@ -62,33 +62,33 @@ Reflex::Internal::MemberBase::operator Reflex::Member () const {
 
 //-------------------------------------------------------------------------------
 void *
-Reflex::Internal::MemberBase::CalculateBaseObject( const Object & obj ) const {
+Reflex::Internal::MemberBase::CalculateBaseObject(const Object & obj) const {
 //-------------------------------------------------------------------------------
 // Return the object address a member lives in.
    char * mem = (char*)obj.Address();
    // check if its a dummy object 
    Type cl = obj.TypeOf();
    // if the object type is not implemented return the Address of the object
-   if ( ! cl ) return mem; 
-   if ( cl.IsClass() ) {
-      if ( DeclaringScope() && ( cl.Id() != (dynamic_cast<const Class*>(DeclaringScope().ToScopeBase()))->ThisType().Id())) {
+   if (! cl) return mem; 
+   if (cl.IsClass()) {
+      if (DeclaringScope() && (cl.Id() != (dynamic_cast<const Class*>(DeclaringScope().ToScopeBase()))->ThisType().Id())) {
          // now we know that the Member type is an inherited one
-         std::vector < OffsetFunction > basePath = (dynamic_cast<const Class*>(cl.ToTypeBase()))->PathToBase( DeclaringScope());
-         if ( basePath.size() ) {
+         std::vector < OffsetFunction > basePath = (dynamic_cast<const Class*>(cl.ToTypeBase()))->PathToBase(DeclaringScope());
+         if (basePath.size()) {
             // there is a path described from the object to the class containing the Member
             std::vector < OffsetFunction >::iterator pIter;
-            for ( pIter = basePath.begin(); pIter != basePath.end(); ++pIter ) {
+            for (pIter = basePath.begin(); pIter != basePath.end(); ++pIter) {
                mem += (*pIter)(mem);
             }
          }
          else {
             throw RuntimeError(std::string(": ERROR: There is no path available from class ")
-                               + cl.Name(SCOPED) + " to " + Name(SCOPED));
+                               + cl.Name(kScoped) + " to " + Name(kScoped));
          }
       }
    }
    else {
-      throw RuntimeError(std::string("Object ") + cl.Name(SCOPED) + " does not represent a class");
+      throw RuntimeError(std::string("Object ") + cl.Name(kScoped) + " does not represent a class");
    }
    return (void*)mem;
 }
@@ -118,11 +118,11 @@ std::string
 Reflex::Internal::MemberBase::MemberTypeAsString() const {
 //-------------------------------------------------------------------------------
 // Remember type of the member as a string.
-   switch ( fMemberType ) {
-   case DATAMEMBER:
+   switch (fMemberType) {
+   case kDataMember:
       return "DataMember";
       break;
-   case FUNCTIONMEMBER:
+   case kFunctionMember:
       return "FunctionMember";
       break;
    default:
@@ -142,7 +142,7 @@ Reflex::Internal::MemberBase::Properties() const {
 
 //-------------------------------------------------------------------------------
 Reflex::Type
-Reflex::Internal::MemberBase::TemplateArgumentAt( size_t /* nth */ ) const {
+Reflex::Internal::MemberBase::TemplateArgumentAt(size_t /* nth */) const {
 //-------------------------------------------------------------------------------
 // Return the nth template argument (in FunMemTemplInstance)
    return Dummy::Type();
@@ -152,7 +152,7 @@ Reflex::Internal::MemberBase::TemplateArgumentAt( size_t /* nth */ ) const {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Internal::MemberBase::GenerateDict( DictionaryGenerator & /* generator */) const {
+Reflex::Internal::MemberBase::GenerateDict(DictionaryGenerator & /* generator */) const {
 //-------------------------------------------------------------------------------
 // Generate Dictionary information about itself.
 }

@@ -37,7 +37,7 @@ namespace Internal {
    public:
 
       /** default constructor */
-      Namespace( const char * scop );
+      Namespace(const char * scop);
 
 
       /** destructor */

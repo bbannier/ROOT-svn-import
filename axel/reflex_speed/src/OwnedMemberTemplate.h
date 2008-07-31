@@ -34,13 +34,13 @@ namespace Internal {
    public:
 
       /** constructor */
-      OwnedMemberTemplate( const MemberTemplateName * memberTemplateName )
-         : MemberTemplate( memberTemplateName ) {}
+      OwnedMemberTemplate(const MemberTemplateName * memberTemplateName = 0)
+         : MemberTemplate(memberTemplateName) {}
 
 
       /** take ownership */
-      OwnedMemberTemplate( const MemberTemplate & rh )
-         : MemberTemplate( rh ) {}
+      OwnedMemberTemplate(const MemberTemplate & rh)
+         : MemberTemplate(rh) {}
 
 
       /** delete info */

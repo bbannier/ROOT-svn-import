@@ -24,22 +24,22 @@ namespace Reflex {
       public:
 
          template < typename CONT > 
-         static typename std::vector<TO>::iterator Begin( const CONT & cont ) {
+         static typename std::vector<TO>::iterator Begin(const CONT & cont) {
             return ((typename std::vector<TO> &)const_cast<CONT &>(cont)).begin();
          }
 
          template < typename CONT >
-         static typename std::vector<TO>::iterator End( const CONT & cont ) {
+         static typename std::vector<TO>::iterator End(const CONT & cont) {
             return ((typename std::vector<TO> &)const_cast<CONT &>(cont)).end();
          }
 
          template < typename CONT > 
-         static typename std::vector<TO>::const_reverse_iterator RBegin( const CONT & cont ) {
+         static typename std::vector<TO>::const_reverse_iterator RBegin(const CONT & cont) {
             return ((const typename std::vector<TO> &)cont).rbegin();
          }
 
          template < typename CONT >
-         static typename std::vector<TO>::const_reverse_iterator REnd( const CONT & cont ) {
+         static typename std::vector<TO>::const_reverse_iterator REnd(const CONT & cont) {
             return ((const typename std::vector<TO> &)cont).rend();
          }
 

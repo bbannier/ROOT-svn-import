@@ -35,7 +35,7 @@ namespace Internal {
       PairTypeInfoType(): fType(), fTI(typeid(UnknownType)) {}
       PairTypeInfoType(const Type& type): fType(type), fTI(type.TypeInfo()) {}
       PairTypeInfoType(const Type& type, const std::type_info& ti): fType(type), fTI(ti) {}
-      operator const char* () const { return TypeName(); } // for ContainerAdaptor::Key()
+      operator const char* () const { return TypeName(); } // for ContainerTraits::Key()
       const char* TypeName() const { return fTI.name(); }
       operator const Type& () const { return fType; }
 
@@ -47,35 +47,35 @@ namespace Internal {
       const std::type_info& fTI;
    };
 
-   //---- Container Adaptor for PairTypeInfoType ----
+   //---- Container Traits for PairTypeInfoType ----
 
    template <>
    bool
-   ContainerAdaptor::KeyMatches(const char* const & name, const PairTypeInfoType& pti) const {
+   ContainerTraits::KeyMatches(const char* const & name, const PairTypeInfoType& pti) const {
       return !strcmp(name, pti.TypeName());
    }
 
    template <>
    bool
-   ContainerAdaptor::KeyMatches(const char* const & name, const PairTypeInfoType& pti, const char* &) const {
+   ContainerTraits::KeyMatches(const char* const & name, const PairTypeInfoType& pti, const char* &) const {
       return !strcmp(name, pti.TypeName());
    }
 
    template <>
    void
-   ContainerAdaptor::Invalidate(PairTypeInfoType& pti) const {
+   ContainerTraits::Invalidate(PairTypeInfoType& pti) const {
       pti.Invalidate();
    }
 
    template <>
    bool
-   ContainerAdaptor::IsInvalidated(const PairTypeInfoType& pti) const {
+   ContainerTraits::IsInvalidated(const PairTypeInfoType& pti) const {
       return pti.IsInvalidated();
    }
 
    class TypeCatalogImpl {
    public:
-      typedef ContainerImpl<std::string, Type> TypeContainer_t;
+      typedef ContainerImpl<std::string, Type, kUnique> TypeContainer_t;
 
       TypeCatalogImpl(const CatalogImpl* catalog = 0): fCatalog(catalog) {}
       ~TypeCatalogImpl() {}
@@ -87,8 +87,6 @@ namespace Internal {
       Type ByTypeInfo(const std::type_info & ti) const;
       void CleanUp() const;
 
-      static const Type& Get_int() {return Get(kINT);}
-      static const Type& Get_float() {return Get(kFLOAT);}
       static const Type& Get(EFUNDAMENTALTYPE);
 
       void Add(const TypeName& type, const std::type_info * ti);
@@ -98,11 +96,11 @@ namespace Internal {
 
 
    private:
-      typedef ContainerImpl<const char*, PairTypeInfoType> TypeInfoTypeMap_t;
+      typedef ContainerImpl<const char*, PairTypeInfoType, kUnique> TypeInfoTypeMap_t;
 
-      const CatalogImpl*    fCatalog;
-      TypeContainer_t   fAllTypes;
-      TypeInfoTypeMap_t fTypeInfoTypeMap;
+      const CatalogImpl* fCatalog;
+      TypeContainer_t    fAllTypes;
+      TypeInfoTypeMap_t  fTypeInfoTypeMap;
    };
 
    class ScopeCatalogImpl {
@@ -121,30 +119,27 @@ namespace Internal {
       void Add(const ScopeName& scope);
       void Remove(const ScopeName& scope);
 
-      static Scope GlobalScope();
+      Scope GlobalScope() const;
 
    private:
-      const CatalogImpl*    fCatalog;
-      ScopeContainer_t  fAllScopes;
+      const CatalogImpl* fCatalog;
+      ScopeContainer_t   fAllScopes;
    };
 
    class CatalogImpl {
    public:
+      CatalogImpl() { fScopes.SetCatalog(this); fTypes.SetCatalog(this); }
+      ~CatalogImpl() {}
+
       static CatalogImpl& Instance();
 
       const ScopeCatalogImpl& Scopes() const {return fScopes;}
       const TypeCatalogImpl&  Types() const  {return fTypes;}
 
-   private:
-      // allow access to non-const getters, updating scopes and types
-      friend class ScopeName;
-      friend class TypeName;
-
       ScopeCatalogImpl& Scopes() {return fScopes;}
       TypeCatalogImpl&  Types()  {return fTypes;}
 
-      CatalogImpl() { fScopes.SetCatalog(this); fTypes.SetCatalog(this); }
-      ~CatalogImpl() {}
+   private:
       ScopeCatalogImpl fScopes;
       TypeCatalogImpl  fTypes;
    };

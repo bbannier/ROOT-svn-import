@@ -21,52 +21,52 @@
 #include "Enum.h"
 
 //-------------------------------------------------------------------------------
-Reflex::EnumBuilder::EnumBuilder( const char * nam,
+Reflex::EnumBuilder::EnumBuilder(const char * nam,
                                         const std::type_info & ti,
-                                        unsigned int modifiers ) {
+                                        unsigned int modifiers) {
 //-------------------------------------------------------------------------------
 // Construct a new enum dictionary info.
-   fEnum = new Internal::Enum( nam, ti, modifiers );
+   fEnum = new Internal::Enum(nam, ti, modifiers);
 }
 
 //-------------------------------------------------------------------------------
 Reflex::EnumBuilder::~EnumBuilder() {
 //-------------------------------------------------------------------------------
 // Destructor of enum builder. Used for call back functions.
-   FireClassCallback( *fEnum );
+   FireClassCallback(*fEnum);
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::EnumBuilder & Reflex::EnumBuilder::AddItem( const char * nam,
-                                                                long value ) {  
+Reflex::EnumBuilder & Reflex::EnumBuilder::AddItem(const char * nam,
+                                                                long value) {  
 //-------------------------------------------------------------------------------
 // Add an item (as data member) to this enum scope.
-   fEnum->AddDataMember( Member(new Internal::DataMember( nam, 
+   fEnum->AddDataMember(Member(new Internal::DataMember(nam, 
                                                           Type::ByName("int"), 
                                                           value, 
-                                                          0 )));
+                                                          0)));
    return *this;
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::EnumBuilder & Reflex::EnumBuilder::AddProperty( const char * key,
-                                                                    Any value ) {
+Reflex::EnumBuilder & Reflex::EnumBuilder::AddProperty(const char * key,
+                                                                    Any value) {
 //-------------------------------------------------------------------------------
 // Add a property info to this enum as any object.
-   if ( fLastMember ) fLastMember.Properties().AddProperty( key , value );
-   else                fEnum->Properties().AddProperty( key, value );
+   if (fLastMember) fLastMember.Properties().AddProperty(key , value);
+   else                fEnum->Properties().AddProperty(key, value);
    return *this;
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::EnumBuilder &  Reflex::EnumBuilder::AddProperty( const char * key,
-                                                                     const char * value ) {
+Reflex::EnumBuilder &  Reflex::EnumBuilder::AddProperty(const char * key,
+                                                                     const char * value) {
 //-------------------------------------------------------------------------------
 // Add a property info to this enum as string.
-   AddProperty( key, Any(value));
+   AddProperty(key, Any(value));
    return *this;
 }
 

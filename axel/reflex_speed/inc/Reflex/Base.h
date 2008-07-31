@@ -41,9 +41,9 @@ namespace Reflex {
 
 
       /** constructor */
-      Base( const Type &   baseType,
+      Base(const Type &   baseType,
          OffsetFunction offsetFP,
-         unsigned int   modifiers = 0 );
+         unsigned int   modifiers = 0);
 
 
       /** destructor */
@@ -62,7 +62,7 @@ namespace Reflex {
       * @param  typedefexp expand typedefs or not
       * @return string represenation of base class
       */
-      std::string Name( unsigned int mod = 0 ) const;
+      std::string Name(unsigned int mod = 0) const;
 
 
       /**
@@ -163,17 +163,17 @@ namespace Reflex {
 //-------------------------------------------------------------------------------
 inline Reflex::Base::Base() 
 //-------------------------------------------------------------------------------
-   : fOffsetFP( 0 ),
-     fModifiers( 0 ),
-     fBaseType( 0, 0 ),
-     fBaseClass( 0 ) {}
+   : fOffsetFP(0),
+     fModifiers(0),
+     fBaseType(0, 0),
+     fBaseClass(0) {}
 
 
 
 //-------------------------------------------------------------------------------
 inline Reflex::Base::operator bool () const {
 //-------------------------------------------------------------------------------
-   if ( fBaseType ) return true;
+   if (fBaseType) return true;
    return false;
 }
 
@@ -181,35 +181,35 @@ inline Reflex::Base::operator bool () const {
 //-------------------------------------------------------------------------------
 inline bool Reflex::Base::IsPrivate() const {
 //-------------------------------------------------------------------------------
-   return 0 != (fModifiers & PRIVATE);
+   return 0 != (fModifiers & kPrivate);
 }
 
 
 //-------------------------------------------------------------------------------
 inline bool Reflex::Base::IsProtected() const {
 //-------------------------------------------------------------------------------
-   return 0 != (fModifiers & PROTECTED);
+   return 0 != (fModifiers & kProtected);
 }
 
 
 //-------------------------------------------------------------------------------
 inline bool Reflex::Base::IsPublic() const {
 //-------------------------------------------------------------------------------
-   return 0 != (fModifiers & PUBLIC);
+   return 0 != (fModifiers & kPublic);
 }
 
 
 //-------------------------------------------------------------------------------
 inline bool Reflex::Base::IsVirtual() const {
 //-------------------------------------------------------------------------------
-   return 0 != (fModifiers & VIRTUAL);
+   return 0 != (fModifiers & kVirtual);
 }
 
 
 //-------------------------------------------------------------------------------
 inline size_t Reflex::Base::Offset(void * mem) const {
 //-------------------------------------------------------------------------------
-   return fOffsetFP( mem );
+   return fOffsetFP(mem);
 }
 
 

@@ -19,18 +19,18 @@
 #include "OwnedMember.h"
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::Typedef::Typedef( const char * typ,
+Reflex::Internal::Typedef::Typedef(const char * typ,
                                 const Type & typedefType,
-                                TYPE typeTyp,
-                                const Type & finalType )
+                                ETYPE typeTyp,
+                                const Type & finalType)
 //-------------------------------------------------------------------------------
    : TypeBase(typ, typedefType.SizeOf() , typeTyp, typeid(UnknownType), finalType), //typedefType.TypeInfo()),
      fTypedefType(typedefType) { 
    // Construct typedef info.
 
    Type current = typedefType;
-   while ( current.Is(gTypedef) ) current = current.ToType();
-   if ( current.TypeInfo() != typeid(UnknownType)) fTypeInfo = & current.TypeInfo();
+   while (current.Is(gTypedef)) current = current.ToType();
+   if (current.TypeInfo() != typeid(UnknownType)) fTypeInfo = & current.TypeInfo();
 }
 
 

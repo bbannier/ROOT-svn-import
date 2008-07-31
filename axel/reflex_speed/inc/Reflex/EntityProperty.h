@@ -16,6 +16,8 @@
 
 namespace Reflex {
 
+   // Bitset-style class that allows to test for a combination of
+   // EntityProperty enum constants via its operators &&, ||, !.
    class EntityProperty {
    public:
       enum EOP {
@@ -26,8 +28,8 @@ namespace Reflex {
          kNot
       };
 
-      EntityProperty(ENTITY_DESCRIPTION desc): fOp(kDesc), fValue(desc), fLHS(fgNIL), fRHS(fgNIL) {};
-      EntityProperty(TYPE type): fOp(kType), fValue(type), fLHS(fgNIL), fRHS(fgNIL) {};
+      EntityProperty(EENTITY_DESCRIPTION desc): fOp(kDesc), fValue(desc), fLHS(fgNIL), fRHS(fgNIL) {};
+      EntityProperty(ETYPE type): fOp(kType), fValue(type), fLHS(fgNIL), fRHS(fgNIL) {};
       EntityProperty(EOP op, const EntityProperty& lhs, const EntityProperty& rhs = fgNIL):
       fOp(op), fValue(0), fLHS(lhs), fRHS(rhs) {}
 
@@ -52,45 +54,45 @@ namespace Reflex {
       static EntityProperty fgNIL;
    };
 
-   static EntityProperty gPublic(PUBLIC);
-   static EntityProperty gProtected(PROTECTED);
-   static EntityProperty gPrivate(PRIVATE);
-   static EntityProperty gRegister(REGISTER);
-   static EntityProperty gStatic(STATIC);
-   static EntityProperty gConstructor(CONSTRUCTOR);
-   static EntityProperty gDestructor(DESTRUCTOR);
-   static EntityProperty gExplicit(EXPLICIT);
-   static EntityProperty gExtern(EXTERN);
-   static EntityProperty gCopyconstructor(COPYCONSTRUCTOR);
-   static EntityProperty gOperator(OPERATOR);
-   static EntityProperty gInline(INLINE);
-   static EntityProperty gConverter(CONVERTER);
-   static EntityProperty gAuto(AUTO);
-   static EntityProperty gMutable(MUTABLE);
-   static EntityProperty gConst(CONST);
-   static EntityProperty gVolatile(VOLATILE);
-   static EntityProperty gReference(REFERENCE);
-   static EntityProperty gAbstract(ABSTRACT);
-   static EntityProperty gVirtual(VIRTUAL);
-   static EntityProperty gTransient(TRANSIENT);
-   static EntityProperty gArtificial(ARTIFICIAL);
+   static EntityProperty gPublic(kPublic);
+   static EntityProperty gProtected(kProtected);
+   static EntityProperty gPrivate(kPrivate);
+   static EntityProperty gRegister(kRegister);
+   static EntityProperty gStatic(kStatic);
+   static EntityProperty gConstructor(kConstructor);
+   static EntityProperty gDestructor(kDestructor);
+   static EntityProperty gExplicit(kExplicit);
+   static EntityProperty gExtern(kExtern);
+   static EntityProperty gCopyconstructor(kCopyConstructor);
+   static EntityProperty gOperator(kOperator);
+   static EntityProperty gInline(kInline);
+   static EntityProperty gConverter(kConverter);
+   static EntityProperty gAuto(kAuto);
+   static EntityProperty gMutable(kMutable);
+   static EntityProperty gConst(kConst);
+   static EntityProperty gVolatile(kVolatile);
+   static EntityProperty gReference(kReference);
+   static EntityProperty gAbstract(kAbstract);
+   static EntityProperty gVirtual(kVirtual);
+   static EntityProperty gTransient(kTransient);
+   static EntityProperty gArtificial(kArtificial);
 
-   static EntityProperty gClass(CLASS);
-   static EntityProperty gStruct(STRUCT);
-   static EntityProperty gEnum(ENUM);
-   static EntityProperty gUnion(UNION);
-   static EntityProperty gNamespace(NAMESPACE);
-   static EntityProperty gFunction(FUNCTION);
-   static EntityProperty gArray(ARRAY);
-   static EntityProperty gFundamental(FUNDAMENTAL);
-   static EntityProperty gPointer(POINTER);
-   static EntityProperty gPointerToMember(POINTERTOMEMBER);
-   static EntityProperty gTypedef(TYPEDEF);
-   static EntityProperty gTypeTemplateInstance(TYPETEMPLATEINSTANCE);
-   static EntityProperty gMemberTemplateInstance(MEMBERTEMPLATEINSTANCE);
-   static EntityProperty gDataMember(DATAMEMBER);
-   static EntityProperty gFunctionMember(FUNCTIONMEMBER);
-   static EntityProperty gUnresolved(UNRESOLVED);
+   static EntityProperty gClass(kClass);
+   static EntityProperty gStruct(kStruct);
+   static EntityProperty gEnum(kEnum);
+   static EntityProperty gUnion(kUnion);
+   static EntityProperty gNamespace(kNamespace);
+   static EntityProperty gFunction(kFunction);
+   static EntityProperty gArray(kArray);
+   static EntityProperty gFundamental(kFundamental);
+   static EntityProperty gPointer(kPointer);
+   static EntityProperty gPointerToMember(kPointerToMember);
+   static EntityProperty gTypedef(kTypedef);
+   static EntityProperty gTypeTemplateInstance(kTypeTemplateInstance);
+   static EntityProperty gMemberTemplateInstance(kMemberTemplateInstance);
+   static EntityProperty gDataMember(kDataMember);
+   static EntityProperty gFunctionMember(kFunctionMember);
+   static EntityProperty gUnresolved(kUnresolved);
 
    static EntityProperty gTemplateInstance(gTypeTemplateInstance || gMemberTemplateInstance);
    static EntityProperty gClassOrStruct(gClass || gTypeTemplateInstance || gStruct);

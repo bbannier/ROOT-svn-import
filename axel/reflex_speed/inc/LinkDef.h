@@ -56,9 +56,9 @@
 #pragma link C++ function Reflex::NPos();
 
 
-#pragma link C++ option=nomap enum Reflex::ENTITY_DESCRIPTION;
-#pragma link C++ option=nomap enum Reflex::ENTITY_HANDLING;
-#pragma link C++ option=nomap enum Reflex::TYPE;
+#pragma link C++ option=nomap enum Reflex::EENTITY_DESCRIPTION;
+#pragma link C++ option=nomap enum Reflex::EENTITY_HANDLING;
+#pragma link C++ option=nomap enum Reflex::ETYPE;
 #pragma link C++ option=nomap enum Reflex::EFUNDAMENTALTYPE;
 
 #pragma link C++ option=nomap typedef Reflex::StdString_Cont_Type_t;
@@ -105,16 +105,16 @@
 #pragma link C++ class Reflex::VariableBuilder;
 #pragma link C++ class Reflex::VariableBuilderImpl;
 
-#pragma link C++ function Reflex::TypeBuilder( const char *,unsigned int );
-#pragma link C++ function Reflex::ConstBuilder( const Type & );
-#pragma link C++ function Reflex::VolatileBuilder( const Type & );
-#pragma link C++ function Reflex::PointerBuilder( const Type &, const std::type_info &);
-#pragma link C++ function Reflex::PointerToMemberBuilder( const Type &, const Scope &, const std::type_info &);
-#pragma link C++ function Reflex::ReferenceBuilder( const Type& );
-#pragma link C++ function Reflex::ArrayBuilder( const Type&, size_t, const std::type_info & );
-#pragma link C++ function Reflex::EnumTypeBuilder( const char *, const char *, const std::type_info &, unsigned int );
-#pragma link C++ function Reflex::TypedefTypeBuilder( const char *, const Type& );
-#pragma link C++ function Reflex::FunctionTypeBuilder( const Type&, const std::vector<Type> &, const std::type_info & );
+#pragma link C++ function Reflex::TypeBuilder(const char *,unsigned int);
+#pragma link C++ function Reflex::ConstBuilder(const Type &);
+#pragma link C++ function Reflex::VolatileBuilder(const Type &);
+#pragma link C++ function Reflex::PointerBuilder(const Type &, const std::type_info &);
+#pragma link C++ function Reflex::PointerToMemberBuilder(const Type &, const Scope &, const std::type_info &);
+#pragma link C++ function Reflex::ReferenceBuilder(const Type&);
+#pragma link C++ function Reflex::ArrayBuilder(const Type&, size_t, const std::type_info &);
+#pragma link C++ function Reflex::EnumTypeBuilder(const char *, const char *, const std::type_info &, unsigned int);
+#pragma link C++ function Reflex::TypedefTypeBuilder(const char *, const Type&);
+#pragma link C++ function Reflex::FunctionTypeBuilder(const Type&, const std::vector<Type> &, const std::type_info &);
 
 #pragma link C++ function Reflex::FunctionTypeBuilder(const Type&);
 #pragma link C++ function Reflex::FunctionTypeBuilder(const Type&, const Type&);
@@ -156,7 +156,7 @@
 #pragma link C++ struct Reflex::CollFuncTable;
 
 #pragma link C++ class Reflex::Selection::NO_SELF_AUTOSELECT;
-#pragma link C++ class Reflex::Selection::TRANSIENT;
+#pragma link C++ class Reflex::Selection::kTransient;
 #pragma link C++ class Reflex::Selection::AUTOSELECT;
 #pragma link C++ class Reflex::Selection::NODEFAULT;
 

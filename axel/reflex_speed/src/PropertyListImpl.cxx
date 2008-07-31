@@ -35,14 +35,14 @@ Keys_t & sKeys() {
 
 
 //-------------------------------------------------------------------------------
-std::ostream & Reflex::Internal::operator<<( std::ostream & s,
-                                             const PropertyListImpl & p ) {
+std::ostream & Reflex::Internal::operator<<(std::ostream & s,
+                                             const PropertyListImpl & p) {
 //-------------------------------------------------------------------------------
 // Operator to put properties on the ostream.
-   if ( p.fProperties ) {
-      for ( size_t i = 0; i < p.fProperties->size(); ++i ) {
-         Any & a = p.PropertyValue( i );
-         if ( a ) s << sKeys()[i] << " : " << a << std::endl;
+   if (p.fProperties) {
+      for (size_t i = 0; i < p.fProperties->size(); ++i) {
+         Any & a = p.PropertyValue(i);
+         if (a) s << sKeys()[i] << " : " << a << std::endl;
       }
    }
    return s;
@@ -62,28 +62,28 @@ void
 Reflex::Internal::PropertyListImpl::ClearProperties() {
 //-------------------------------------------------------------------------------
 // Clear, remove all properties.
-   if ( fProperties ) delete fProperties;
+   if (fProperties) delete fProperties;
    fProperties = 0;
 }
 
 
 //-------------------------------------------------------------------------------
 bool
-Reflex::Internal::PropertyListImpl::HasProperty( const std::string & key ) const {
+Reflex::Internal::PropertyListImpl::HasProperty(const std::string & key) const {
 //-------------------------------------------------------------------------------
    // Return true if property has key.
    size_t i = KeyByName(key);
-   if ( i == NPos() ) return false;
-   else               return PropertyValue( i );
+   if (i == NPos()) return false;
+   else               return PropertyValue(i);
 }
 
 
 //-------------------------------------------------------------------------------
 bool
-Reflex::Internal::PropertyListImpl::HasProperty( size_t key ) const {
+Reflex::Internal::PropertyListImpl::HasProperty(size_t key) const {
 //-------------------------------------------------------------------------------
    // Return true if property has key.
-   return PropertyValue( key );
+   return PropertyValue(key);
 }
 
 
@@ -134,24 +134,24 @@ Reflex::Internal::PropertyListImpl::KeysAsString() {
 
 //-------------------------------------------------------------------------------
 const std::string &
-Reflex::Internal::PropertyListImpl::KeyAt( size_t nth ) {
+Reflex::Internal::PropertyListImpl::KeyAt(size_t nth) {
 //-------------------------------------------------------------------------------
    // Return the nth property key.
-   return sKeys().at( nth );
+   return sKeys().at(nth);
 }
 
 
 //-------------------------------------------------------------------------------
 size_t
-Reflex::Internal::PropertyListImpl::KeyByName( const std::string & key,
-                                            bool allocateNew ) {
+Reflex::Internal::PropertyListImpl::KeyByName(const std::string & key,
+                                            bool allocateNew) {
 //-------------------------------------------------------------------------------
 // Return a key by it's name.
-   Keys_t::iterator it = std::find( sKeys().begin(), sKeys().end(), key );
-   if ( it != sKeys().end() ) {
+   Keys_t::iterator it = std::find(sKeys().begin(), sKeys().end(), key);
+   if (it != sKeys().end()) {
       return std::distance(sKeys().begin(), it);
    }
-   else if ( allocateNew ) {
+   else if (allocateNew) {
       sKeys().push_back(key);
       return sKeys().size() - 1;
    }
@@ -170,21 +170,21 @@ Reflex::Internal::PropertyListImpl::KeySize() {
 
 //-------------------------------------------------------------------------------
 std::string 
-Reflex::Internal::PropertyListImpl::PropertyAsString( const std::string & key ) const {
+Reflex::Internal::PropertyListImpl::PropertyAsString(const std::string & key) const {
 //-------------------------------------------------------------------------------
 // Return a property as a string.
-   return PropertyAsString( PropertyKey( key ));
+   return PropertyAsString(PropertyKey(key));
 }
 
 
 
 //-------------------------------------------------------------------------------
 std::string 
-Reflex::Internal::PropertyListImpl::PropertyAsString( size_t key ) const {
+Reflex::Internal::PropertyListImpl::PropertyAsString(size_t key) const {
 //-------------------------------------------------------------------------------
    // Return a string representation of the property with key.
-   Any & a = PropertyValue( key );
-   if ( a ) {
+   Any & a = PropertyValue(key);
+   if (a) {
       std::ostringstream o;
       o << a;
       return o.str();
@@ -196,11 +196,11 @@ Reflex::Internal::PropertyListImpl::PropertyAsString( size_t key ) const {
 
 //-------------------------------------------------------------------------------
 size_t
-Reflex::Internal::PropertyListImpl::PropertyKey( const std::string & key,
-                                              bool allocateNew ) const {
+Reflex::Internal::PropertyListImpl::PropertyKey(const std::string & key,
+                                              bool allocateNew) const {
 //-------------------------------------------------------------------------------
    // return the index of property key, allocate a new one if allocateNew = true
-   return KeyByName( key, allocateNew );
+   return KeyByName(key, allocateNew);
 }
 
 
@@ -210,8 +210,8 @@ Reflex::Internal::PropertyListImpl::PropertyKeys() const {
 //-------------------------------------------------------------------------------
 // Return a string containing all property keys.
    std::vector<std::string> kv;
-   for ( size_t i = 0; i < KeySize(); ++i ) {
-      if ( PropertyValue(i)) kv.push_back(KeyAt(i));
+   for (size_t i = 0; i < KeySize(); ++i) {
+      if (PropertyValue(i)) kv.push_back(KeyAt(i));
    }
    return Tools::StringVec2String(kv);
 }
@@ -224,9 +224,9 @@ Reflex::Internal::PropertyListImpl::PropertyCount() const {
 // Returns the number of properties attached to this item. Don't use the output
 // for iteration. Use KeySize() instead.
    size_t s = 0;
-   if ( fProperties ) {
-      for ( size_t i = 0; i < fProperties->size(); ++i ) {
-         if ( PropertyValue( i ) ) ++s;
+   if (fProperties) {
+      for (size_t i = 0; i < fProperties->size(); ++i) {
+         if (PropertyValue(i)) ++s;
       }
    }
    return s;
@@ -235,19 +235,19 @@ Reflex::Internal::PropertyListImpl::PropertyCount() const {
 
 //-------------------------------------------------------------------------------
 Reflex::Any &
-Reflex::Internal::PropertyListImpl::PropertyValue( const std::string & key ) const {
+Reflex::Internal::PropertyListImpl::PropertyValue(const std::string & key) const {
 //-------------------------------------------------------------------------------
 // Return a property as an Any object.
-   return PropertyValue( PropertyKey( key ));
+   return PropertyValue(PropertyKey(key));
 }
 
 
 //-------------------------------------------------------------------------------
 Reflex::Any &
-Reflex::Internal::PropertyListImpl::PropertyValue( size_t key ) const {
+Reflex::Internal::PropertyListImpl::PropertyValue(size_t key) const {
 //-------------------------------------------------------------------------------
    // Return property as Any object
-   if ( fProperties && key < fProperties->size()) return (*fProperties)[ key ];
+   if (fProperties && key < fProperties->size()) return (*fProperties)[ key ];
    return Dummy::Any();
 }
 

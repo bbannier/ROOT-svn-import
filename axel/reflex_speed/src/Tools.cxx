@@ -49,21 +49,21 @@ namespace FTypes {
 }
 
 //-------------------------------------------------------------------------------
-static std::string splitScopedName( const std::string & nam, 
+static std::string splitScopedName(const std::string & nam, 
                                     bool returnScope,
-                                    bool startFromLeft = false ) {
+                                    bool startFromLeft = false) {
 //-------------------------------------------------------------------------------
 // Split a scoped name. If returnScope is true return the scope part otherwise
 // the base part. If startFromLeft is true, parse from left otherwise from the end.
    size_t pos = 0;
-   if ( startFromLeft ) pos = Tools::GetFirstScopePosition( nam );
-   else                 pos = Tools::GetBasePosition( nam ); 
-   if ( pos != 0 ) {
-      if ( returnScope )  return nam.substr(0,pos-2);
+   if (startFromLeft) pos = Tools::GetFirstScopePosition(nam);
+   else                 pos = Tools::GetBasePosition(nam); 
+   if (pos != 0) {
+      if (returnScope)  return nam.substr(0,pos-2);
       else                return nam.substr(pos);
    }
    else {
-      if ( returnScope )  return "";
+      if (returnScope)  return "";
       else                return nam;
    }
 
@@ -71,71 +71,71 @@ static std::string splitScopedName( const std::string & nam,
 
 
 //-------------------------------------------------------------------------------
-EFUNDAMENTALTYPE Tools::FundamentalType( const Type & typ ) {
+EFUNDAMENTALTYPE Tools::FundamentalType(const Type & typ) {
 //-------------------------------------------------------------------------------
 // Return an enum representing the fundamental type passed in.
    const std::type_info & tid = typ.FinalType().TypeInfo();
    
-   if ( tid == FTypes::Char() )         return kCHAR;
-   if ( tid == FTypes::SigChar() )      return kSIGNED_CHAR; 
-   if ( tid == FTypes::ShoInt() )       return kSHORT_INT; 
-   if ( tid == FTypes::Int() )          return kINT; 
-   if ( tid == FTypes::LonInt() )       return kLONG_INT; 
-   if ( tid == FTypes::UnsChar() )      return kUNSIGNED_CHAR; 
-   if ( tid == FTypes::UnsShoInt() )    return kUNSIGNED_SHORT_INT; 
-   if ( tid == FTypes::UnsInt() )       return kUNSIGNED_INT; 
-   if ( tid == FTypes::UnsLonInt() )    return kUNSIGNED_LONG_INT; 
-   if ( tid == FTypes::Bool() )         return kBOOL; 
-   if ( tid == FTypes::Float() )        return kFLOAT; 
-   if ( tid == FTypes::Double() )       return kDOUBLE; 
-   if ( tid == FTypes::LonDouble() )    return kLONG_DOUBLE; 
-   if ( tid == FTypes::Void() )         return kVOID; 
-   if ( tid == FTypes::LonLong() )      return kLONGLONG; 
-   if ( tid == FTypes::UnsLonLong() )   return kULONGLONG; 
+   if (tid == FTypes::Char())         return kChar;
+   if (tid == FTypes::SigChar())      return kSignedChar; 
+   if (tid == FTypes::ShoInt())       return kShortInt; 
+   if (tid == FTypes::Int())          return kInt; 
+   if (tid == FTypes::LonInt())       return kLongInt; 
+   if (tid == FTypes::UnsChar())      return kUnsignedChar; 
+   if (tid == FTypes::UnsShoInt())    return kUnsignedShortInt; 
+   if (tid == FTypes::UnsInt())       return kUnsignedInt; 
+   if (tid == FTypes::UnsLonInt())    return kUnsignedLongInt; 
+   if (tid == FTypes::Bool())         return kBool; 
+   if (tid == FTypes::Float())        return kFloat; 
+   if (tid == FTypes::Double())       return kDouble; 
+   if (tid == FTypes::LonDouble())    return kLongDouble; 
+   if (tid == FTypes::Void())         return kVoid; 
+   if (tid == FTypes::LonLong())      return kLongLong; 
+   if (tid == FTypes::UnsLonLong())   return kULongLong; 
    
-   return kNOTFUNDAMENTAL;
+   return kNotFundamental;
 
 }
 
 
 //-------------------------------------------------------------------------------
-std::string Tools::BuildTypeName( Type & t,
-                                  unsigned int /* modifiers */ ) {
+std::string Tools::BuildTypeName(Type & t,
+                                  unsigned int /* modifiers */) {
 //-------------------------------------------------------------------------------
 // Build a complete qualified type name.
    std::string mod = "";
-   if ( t.Is(gConst && gVolatile)) mod = "const volatile";
-   else if ( t.Is(gConst))    mod = "const";
-   else if ( t.Is(gVolatile)) mod = "volatile";
+   if (t.Is(gConst && gVolatile)) mod = "const volatile";
+   else if (t.Is(gConst))    mod = "const";
+   else if (t.Is(gVolatile)) mod = "volatile";
 
    std::string name = t.Name();
 
    if (t.Is(gPointer || gPointerToMember)) name += " " + mod;
    else                                    name = mod + " " + name;
 
-   if ( t.Is(gReference)) name += "&";
+   if (t.Is(gReference)) name += "&";
 
    return name;
 }
 
 
 //-------------------------------------------------------------------------------
-std::vector<std::string> Tools::GenTemplateArgVec( const std::string & Name ) {
+std::vector<std::string> Tools::GenTemplateArgVec(const std::string & Name) {
 //-------------------------------------------------------------------------------
 // Return a vector of template arguments from a template type string.
 
    std::vector<std::string> vec;
    std::string tname;
-   GetTemplateComponents( Name, tname, vec);
+   GetTemplateComponents(Name, tname, vec);
    return vec;
 }
 
-void Tools::GetTemplateComponents( const std::string & Name, std::string &templatename, std::vector<std::string> &args) {
+void Tools::GetTemplateComponents(const std::string & Name, std::string &templatename, std::vector<std::string> &args) {
 
    // Return the template name and a vector of template arguments.
 
-   size_t basepos = Tools::GetBasePosition( Name );
-   const char *argpos = strstr( Name.c_str()+basepos, "<" );
+   size_t basepos = Tools::GetBasePosition(Name);
+   const char *argpos = strstr(Name.c_str()+basepos, "<");
 
    if (!argpos) return;
 
@@ -145,7 +145,7 @@ void Tools::GetTemplateComponents( const std::string & Name, std::string &templa
    
    size_t pos2 = Name.rfind(">");
 
-   if ( pos2 == std::string::npos ) return; 
+   if (pos2 == std::string::npos) return; 
 
    std::string tpl = Name.substr(pos1+1, pos2-pos1-1);
    if (tpl[tpl.size()-1] == ' ') {
@@ -156,8 +156,8 @@ void Tools::GetTemplateComponents( const std::string & Name, std::string &templa
    char c = 0;
    for (std::string::size_type i = 0; i < tpl.length(); ++i) {
       c = tpl[i];
-      if ( c == ',' ) {
-         if ( ! par ) {
+      if (c == ',') {
+         if (! par) {
             StringStrip(argName);
             args.push_back(argName);
             argName = "";
@@ -168,11 +168,11 @@ void Tools::GetTemplateComponents( const std::string & Name, std::string &templa
       }
       else {
          argName += c;
-         if ( c == '<' ) ++par;
-         else if ( c == '>' ) --par;
+         if (c == '<') ++par;
+         else if (c == '>') --par;
       }
    }
-   if ( argName.length() ) {
+   if (argName.length()) {
       StringStrip(argName);
       args.push_back(argName);
    }
@@ -208,7 +208,7 @@ size_t Tools::GetBasePosition(const std::string& name) {
                      --j;
                   }
                }
-               for ( ; (j > -1) && (name[j] == ' '); --j) {}
+               for (; (j > -1) && (name[j] == ' '); --j) {}
                if ((j > -1) && (name[j] == 'r') && ((j - 7) > -1)) {
                   // -- We may have an operator name.
                   if (name.substr(j - 7, 8) == "operator") {
@@ -227,7 +227,7 @@ size_t Tools::GetBasePosition(const std::string& name) {
                      --j;
                   }
                }
-               for ( ; (j > -1) && (name[j] == ' '); --j) {}
+               for (; (j > -1) && (name[j] == ' '); --j) {}
                if ((j > -1) && (name[j] == 'r') && ((j - 7) > -1)) {
                   // -- We may have an operator name.
                   if (name.substr(j - 7, 8) == "operator") {
@@ -241,11 +241,11 @@ size_t Tools::GetBasePosition(const std::string& name) {
          case ')':
             {
                int j = i - 1;
-               for ( ; (j > -1) && (name[j] == ' '); --j) {}
+               for (; (j > -1) && (name[j] == ' '); --j) {}
                if (j > -1) {
                   if (name[j] == '(') {
                      --j;
-                     for ( ; (j > -1) && (name[j] == ' '); --j) {}
+                     for (; (j > -1) && (name[j] == ' '); --j) {}
                      if ((j > -1) && (name[j] == 'r') && ((j - 7) > -1)) {
                         // -- We may have an operator name.
                         if (name.substr(j - 7, 8) == "operator") {
@@ -261,7 +261,7 @@ size_t Tools::GetBasePosition(const std::string& name) {
          case '(':
             {
                int j = i - 1;
-               for ( ; (j > -1) && (name[j] == ' '); --j) {}
+               for (; (j > -1) && (name[j] == ' '); --j) {}
                if ((j > -1) && (name[j] == 'r') && ((j - 7) > -1)) {
                   // -- We may have an operator name.
                   if (name.substr(j - 7, 8) == "operator") {
@@ -284,14 +284,14 @@ size_t Tools::GetBasePosition(const std::string& name) {
 
 
 //-------------------------------------------------------------------------------
-size_t Tools::GetFirstScopePosition( const std::string & name ) {
+size_t Tools::GetFirstScopePosition(const std::string & name) {
 //-------------------------------------------------------------------------------
 // Get the position of the first scope of a scoped name.
    int b = 0;
    size_t pos = 0;
    unsigned int i = 0;
 
-   for ( i = 0; i < name.size(); ++i ) {
+   for (i = 0; i < name.size(); ++i) {
       switch (name[i]) {
       case '<':
       case '(':
@@ -300,38 +300,38 @@ size_t Tools::GetFirstScopePosition( const std::string & name ) {
       case ')':
          b--; break;
       case ':':
-         if ( b == 0 && name[i+1] == ':' ) {
+         if (b == 0 && name[i+1] == ':') {
             pos = i + 2;
             break;
          }
       default: continue;
       }
-      if ( pos ) break;
+      if (pos) break;
    }
    return pos;
 }
 
 
 //-------------------------------------------------------------------------------
-std::string Tools::GetScopeName( const std::string & name,
-                                 bool startFromLeft ){
+std::string Tools::GetScopeName(const std::string & name,
+                                 bool startFromLeft){
 //-------------------------------------------------------------------------------
 // Get the scope of a name. Start either from the beginning (startfFromLeft=true) or end.
-   return splitScopedName( name, true, startFromLeft );
+   return splitScopedName(name, true, startFromLeft);
 }
 
 
 //-------------------------------------------------------------------------------
-std::string Tools::GetBaseName( const std::string & name,
-                                bool startFromLeft ) {
+std::string Tools::GetBaseName(const std::string & name,
+                                bool startFromLeft) {
 //-------------------------------------------------------------------------------
 // Get the base of a name. Start either from the beginning (startFromLeft=true) or end.
-   return splitScopedName( name, false, startFromLeft );
+   return splitScopedName(name, false, startFromLeft);
 }
 
 
 //-------------------------------------------------------------------------------
-bool Tools::IsTemplated(const char * name ) {
+bool Tools::IsTemplated(const char * name) {
 //-------------------------------------------------------------------------------
 // Check if a type name is templated.
 // Only check the current scope, i.e. IsTemplated("A<T>::B") will return false!
@@ -386,16 +386,16 @@ bool Tools::IsTemplated(const char * name ) {
    /* alpha 
       size_t i = strlen(name)-1;
       while (name[i] == ' ') --i;
-      if (( name[i] == '>' ) && ( strchr(name,'<') != 0 )) return true;
+      if ((name[i] == '>') && (strchr(name,'<') != 0)) return true;
       return false;
    */
 }
 
 
 //-------------------------------------------------------------------------------
-void Tools::StringSplit( std::vector < std::string > & splitValues, 
+void Tools::StringSplit(std::vector < std::string > & splitValues, 
                          const std::string & str,
-                         const std::string & delim ) {
+                         const std::string & delim) {
 //-------------------------------------------------------------------------------
 // Split a string by a delimiter and return it's vector of strings.
    if (!str.size()) {
@@ -406,38 +406,38 @@ void Tools::StringSplit( std::vector < std::string > & splitValues,
   
    size_t pos = 0;
   
-   while (( pos = str2.find_first_of( delim )) != std::string::npos ) {
+   while ((pos = str2.find_first_of(delim)) != std::string::npos) {
       std::string s = str2.substr(0, pos);
-      StringStrip( s );
-      splitValues.push_back( s );
-      str2 = str2.substr( pos + delim.length());
+      StringStrip(s);
+      splitValues.push_back(s);
+      str2 = str2.substr(pos + delim.length());
    }
   
-   StringStrip( str2 );
-   splitValues.push_back( str2 );
+   StringStrip(str2);
+   splitValues.push_back(str2);
 }
 
 
 //-------------------------------------------------------------------------------
-std::string Tools::StringVec2String( const std::vector<std::string> & vec ) {
+std::string Tools::StringVec2String(const std::vector<std::string> & vec) {
 //-------------------------------------------------------------------------------
    std::string s = "";
    StdString_Iterator lastbutone = vec.end()-1;
-   for( StdString_Iterator it = vec.begin(); it != vec.end(); ++it) {
+   for(StdString_Iterator it = vec.begin(); it != vec.end(); ++it) {
       s += *it;
-      if (it != lastbutone ) s += ", "; 
+      if (it != lastbutone) s += ", "; 
    }
    return s;
 }
 
 
 //-------------------------------------------------------------------------------
-std::string Tools::Demangle( const std::type_info & ti ) { 
+std::string Tools::Demangle(const std::type_info & ti) { 
 //-------------------------------------------------------------------------------
 // Demangle a type_info object.
 #if defined(_WIN32)
    static std::vector<std::string> keywords;
-   if ( 0 == keywords.size() ) {
+   if (0 == keywords.size()) {
       keywords.push_back("class ");
       keywords.push_back("struct ");
       keywords.push_back("enum ");
@@ -445,7 +445,7 @@ std::string Tools::Demangle( const std::type_info & ti ) {
       keywords.push_back("__cdecl");
    }
    std::string r = ti.name();
-   for ( size_t i = 0; i < keywords.size(); i ++ ) {
+   for (size_t i = 0; i < keywords.size(); i ++) {
       while (r.find(keywords[i]) != std::string::npos) 
          r = r.replace(r.find(keywords[i]), keywords[i].size(), "");
       while (r.find(" *") != std::string::npos) 
@@ -463,19 +463,19 @@ std::string Tools::Demangle( const std::type_info & ti ) {
 
    // if the At Name is string return the final string Name 
    // abi::Demangle would return "std::string" instead
-   if ( mangled == "Ss" ) return "std::basic_string<char>";
+   if (mangled == "Ss") return "std::basic_string<char>";
 
 #if __GNUC__ <= 3 && __GNUC_MINOR__ <= 3
    // Function types are not decoded at all. We are an extra 'P' to convert it to a pointer
    // and remove it at the end.
-   if ( mangled[0] == 'F' ) {
+   if (mangled[0] == 'F') {
       mangled.insert(0,"P");
       remove_additional_pointer = true;
    }
 #elif __GNUC__ >= 4
    // From gcc 4.0 on the fundamental types are not demangled anymore by the dynamic demangler
    if (mangled.length() == 1) {
-      switch ( mangled[0] ) {
+      switch (mangled[0]) {
       case 'a': return "signed char";        break;
       case 'b': return "bool";               break;
       case 'c': return "char";               break;
@@ -506,24 +506,24 @@ std::string Tools::Demangle( const std::type_info & ti ) {
       }
    }
 #endif
-   char * c_demangled = abi::__cxa_demangle( mangled.c_str(), 0, 0, & status );
-   if ( status == -1 ) {
+   char * c_demangled = abi::__cxa_demangle(mangled.c_str(), 0, 0, & status);
+   if (status == -1) {
       throw RuntimeError("Memory allocation failure while demangling ");
    }
-   else if ( status == -2 ) {
-      throw RuntimeError( std::string(mangled) + " is not a valid Name under the C++ ABI");
+   else if (status == -2) {
+      throw RuntimeError(std::string(mangled) + " is not a valid Name under the C++ ABI");
    }
-   else if ( status == -3 ) {
-      throw RuntimeError( std::string("Failure while demangling ") + mangled +
+   else if (status == -3) {
+      throw RuntimeError(std::string("Failure while demangling ") + mangled +
                           ". One of the arguments is invalid ");
    }
    else {
       std::string demangled = c_demangled;
-      free( c_demangled );
-      if ( remove_additional_pointer ) {
+      free(c_demangled);
+      if (remove_additional_pointer) {
          demangled = demangled.replace(demangled.find("(*)"), 3, "");
       }
-      while ( demangled.find(", ") != std::string::npos ) {
+      while (demangled.find(", ") != std::string::npos) {
          demangled = demangled.replace(demangled.find(", "), 2, ",");
       }
       return demangled;
@@ -534,14 +534,14 @@ std::string Tools::Demangle( const std::type_info & ti ) {
    const char* mangled = ti.name();
    size_t buffer = 1024;
    char * c_demangled = new char[buffer];
-   int ret = cplus_demangle( mangled, c_demangled, buffer);
-   while ( ret == -1 ) {
+   int ret = cplus_demangle(mangled, c_demangled, buffer);
+   while (ret == -1) {
       buffer = buffer*2;
       delete[] c_demangled;
       c_demangled = new char[buffer];
-      ret = cplus_demangle( mangled, c_demangled, buffer);
+      ret = cplus_demangle(mangled, c_demangled, buffer);
    }
-   if ( ret == 1 ) {
+   if (ret == 1) {
       throw RuntimeError(std::string("Symbol ") + mangled + " not mangled correctly");
    }
    else {
@@ -560,40 +560,40 @@ std::string Tools::Demangle( const std::type_info & ti ) {
 
 
 //-------------------------------------------------------------------------------
-void Tools::StringSplitPair( std::string & val1,
+void Tools::StringSplitPair(std::string & val1,
                              std::string & val2,
                              const std::string & str,
-                             const std::string & delim ) { 
+                             const std::string & delim) { 
 //-------------------------------------------------------------------------------
 // Split a string by a delimiter into a pair and return them as val1 and val2.
    std::string str2 = str;
-   size_t pos = str2.rfind( delim );
-   if ( pos != std::string::npos ) { 
-      val1 = str2.substr( 0, pos ); 
-      val2 = str2.substr( pos + delim.length());
+   size_t pos = str2.rfind(delim);
+   if (pos != std::string::npos) { 
+      val1 = str2.substr(0, pos); 
+      val2 = str2.substr(pos + delim.length());
    }
    else { 
       val1 = str2; 
    }
-   StringStrip( val1 );
-   StringStrip( val2 );
+   StringStrip(val1);
+   StringStrip(val2);
 }
 
 
 //-------------------------------------------------------------------------------
-void Tools::StringStrip( std::string & str ) {
+void Tools::StringStrip(std::string & str) {
 //-------------------------------------------------------------------------------
 // Strip spaces at the beginning and the end from a string.
    size_t sPos = 0;
    size_t ePos = str.length();
-   while ( str[sPos] == ' ' ) { ++sPos; }
-   while ( str[ePos] == ' ' ) { --ePos; }
-   str = str.substr( sPos, ePos - sPos );
+   while (str[sPos] == ' ') { ++sPos; }
+   while (str[ePos] == ' ') { --ePos; }
+   str = str.substr(sPos, ePos - sPos);
 }
 
 
 //-------------------------------------------------------------------------------
-std::string Tools::GetTemplateArguments( const char * name ) {
+std::string Tools::GetTemplateArguments(const char * name) {
 //-------------------------------------------------------------------------------
 // Return the template arguments part of a templated type name.
    std::string baseName = GetBaseName(name);
@@ -602,13 +602,13 @@ std::string Tools::GetTemplateArguments( const char * name ) {
 
 
 //-------------------------------------------------------------------------------
-std::string Tools::GetTemplateName( const char * name ) {
+std::string Tools::GetTemplateName(const char * name) {
 //-------------------------------------------------------------------------------
 // Return the fully qualified scope name without template arguments.
-   std::string scopeName = GetScopeName( name );
-   std::string baseName = GetBaseName( name );
+   std::string scopeName = GetScopeName(name);
+   std::string baseName = GetBaseName(name);
    std::string templateName = baseName.substr(0, baseName.find('<'));
-   if ( scopeName.length()) return scopeName + "::" + templateName;
+   if (scopeName.length()) return scopeName + "::" + templateName;
   
    return templateName;
 }
@@ -623,7 +623,7 @@ bool isalphanum(int i) {
 
 
 //-------------------------------------------------------------------------------
-std::string Tools::NormalizeName( const char * nam ) {
+std::string Tools::NormalizeName(const char * nam) {
 //-------------------------------------------------------------------------------
 // Normalize a type name.
    std::string norm_name;
@@ -649,7 +649,7 @@ std::string Tools::NormalizeName( const char * nam ) {
 
 
 //-------------------------------------------------------------------------------
-std::string Tools::NormalizeName( const std::string & nam ) {
+std::string Tools::NormalizeName(const std::string & nam) {
 //-------------------------------------------------------------------------------
    return Tools::NormalizeName(nam.c_str());
 }

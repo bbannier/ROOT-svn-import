@@ -31,28 +31,28 @@
 Reflex::FunctionBuilder::~FunctionBuilder() {
 //-------------------------------------------------------------------------------
 // Functionbuilder destructor used for call backs.
-   FireFunctionCallback( fFunction );
+   FireFunctionCallback(fFunction);
 }
 
 
 //-------------------------------------------------------------------------------
 Reflex::FunctionBuilder & 
-Reflex::FunctionBuilder::AddProperty( const char * key, 
-                                            const char * value ) {
+Reflex::FunctionBuilder::AddProperty(const char * key, 
+                                            const char * value) {
 //-------------------------------------------------------------------------------
 // Add property info to this function as string.
-   fFunction.Properties().AddProperty( key , value );
+   fFunction.Properties().AddProperty(key , value);
    return * this;
 }
 
 
 //-------------------------------------------------------------------------------
 Reflex::FunctionBuilder & 
-Reflex::FunctionBuilder::AddProperty( const char * key, 
-                                            Any value ) {
+Reflex::FunctionBuilder::AddProperty(const char * key, 
+                                            Any value) {
 //-------------------------------------------------------------------------------
 // Add property info to this function as Any object.
-   fFunction.Properties().AddProperty( key , value );
+   fFunction.Properties().AddProperty(key , value);
    return * this;
 }
 
@@ -66,23 +66,23 @@ Reflex::Member Reflex::FunctionBuilder::ToMember() {
 
 
 //-------------------------------------------------------------------------------
-Reflex::FunctionBuilderImpl::FunctionBuilderImpl( const char * nam, 
+Reflex::FunctionBuilderImpl::FunctionBuilderImpl(const char * nam, 
                                                         const Type & typ,
                                                         StubFunction stubFP,
                                                         void * stubCtx,
                                                         const char * params, 
                                                         unsigned char modifiers) 
-   : fFunction( Member(0)) {
+   : fFunction(Member(0)) {
 //-------------------------------------------------------------------------------
 // Create function type dictionary info (internal).
-   std::string fullname( nam );
+   std::string fullname(nam);
    std::string declScope;
    std::string funcName;
-   size_t pos = Tools::GetTemplateName(nam).rfind( "::" );
+   size_t pos = Tools::GetTemplateName(nam).rfind("::");
    // Name contains declaring At
-   if ( pos != std::string::npos ) {   
-      funcName  = fullname.substr( pos + 2 );
-      declScope = fullname.substr( 0, pos ); 
+   if (pos != std::string::npos) {   
+      funcName  = fullname.substr(pos + 2);
+      declScope = fullname.substr(0, pos); 
    }
    else {
       funcName  = nam;
@@ -90,20 +90,20 @@ Reflex::FunctionBuilderImpl::FunctionBuilderImpl( const char * nam,
    }
 
    Scope sc = Scope::ByName(declScope);
-   if ( ! sc ) {
+   if (! sc) {
       // Let's create the namespace here
       sc = (new Internal::Namespace(declScope.c_str()))->ThisScope();
    }
 
-   if ( ! sc.IsNamespace() ) throw RuntimeError("Declaring scope is not a namespace");
-   if ( Tools::IsTemplated( funcName.c_str()))
-      fFunction = Member( new Internal::FunctionMemberTemplateInstance( funcName.c_str(),
+   if (! sc.IsNamespace()) throw RuntimeError("Declaring scope is not a namespace");
+   if (Tools::IsTemplated(funcName.c_str()))
+      fFunction = Member(new Internal::FunctionMemberTemplateInstance(funcName.c_str(),
                                                               typ,
                                                               stubFP,
                                                               stubCtx,
                                                               params,
                                                               modifiers,
-                                                              sc ));
+                                                              sc));
    else fFunction = Member(new Internal::FunctionMember(funcName.c_str(), 
                                               typ, 
                                               stubFP, 
@@ -118,25 +118,25 @@ Reflex::FunctionBuilderImpl::FunctionBuilderImpl( const char * nam,
 Reflex::FunctionBuilderImpl::~FunctionBuilderImpl() {
 //-------------------------------------------------------------------------------
 // FunctionBuilder destructor.
-   FireFunctionCallback( fFunction );
+   FireFunctionCallback(fFunction);
 }
  
 
 //-------------------------------------------------------------------------------
-void Reflex::FunctionBuilderImpl::AddProperty( const char * key, 
-                                                     const char * value ) {
+void Reflex::FunctionBuilderImpl::AddProperty(const char * key, 
+                                                     const char * value) {
 //-------------------------------------------------------------------------------
 // Add property info to this function type.
-   fFunction.Properties().AddProperty( key , value );
+   fFunction.Properties().AddProperty(key , value);
 }
 
 
 //-------------------------------------------------------------------------------
-void Reflex::FunctionBuilderImpl::AddProperty( const char * key, 
-                                                     Any value ) {
+void Reflex::FunctionBuilderImpl::AddProperty(const char * key, 
+                                                     Any value) {
 //-------------------------------------------------------------------------------
 // Add property info to this function type.
-   fFunction.Properties().AddProperty( key , value );
+   fFunction.Properties().AddProperty(key , value);
 }
 
 
@@ -149,7 +149,7 @@ Reflex::Member Reflex::FunctionBuilderImpl::ToMember() {
 
 
 //-------------------------------------------------------------------------------
-Reflex::FunctionBuilder::FunctionBuilder( const Type & typ,
+Reflex::FunctionBuilder::FunctionBuilder(const Type & typ,
                                                 const char * nam, 
                                                 StubFunction stubFP,
                                                 void * stubCtx,
@@ -158,34 +158,34 @@ Reflex::FunctionBuilder::FunctionBuilder( const Type & typ,
    : fFunction(Member(0)) {
 //-------------------------------------------------------------------------------
 // Create function dictionary type information.
-   std::string fullname( nam );
+   std::string fullname(nam);
    std::string declScope;
    std::string funcName;
-   size_t pos = Tools::GetTemplateName( nam ).rfind( "::" );
+   size_t pos = Tools::GetTemplateName(nam).rfind("::");
    // Name contains declaring scope
-   if ( pos != std::string::npos ) {   
-      funcName  = fullname.substr( pos + 2 );
-      declScope = fullname.substr( 0, pos ); 
+   if (pos != std::string::npos) {   
+      funcName  = fullname.substr(pos + 2);
+      declScope = fullname.substr(0, pos); 
    }
    else {
       funcName  = nam;
       declScope = "";
    }
    Scope sc = Scope::ByName(declScope);
-   if ( ! sc ) {
+   if (! sc) {
       // Let's create the namespace here
       sc = (new Internal::Namespace(declScope.c_str()))->ThisScope();
    }
-   if ( ! sc.IsNamespace() ) throw RuntimeError("Declaring scope is not a namespace");
-   if ( Tools::IsTemplated( funcName.c_str()))
-      fFunction = Member( new Internal::FunctionMemberTemplateInstance( funcName.c_str(),
+   if (! sc.IsNamespace()) throw RuntimeError("Declaring scope is not a namespace");
+   if (Tools::IsTemplated(funcName.c_str()))
+      fFunction = Member(new Internal::FunctionMemberTemplateInstance(funcName.c_str(),
                                                               typ,
                                                               stubFP,
                                                               stubCtx,
                                                               params,
                                                               modifiers,
-                                                              sc ));
-   else fFunction = Member(new Internal::FunctionMember( funcName.c_str(), 
+                                                              sc));
+   else fFunction = Member(new Internal::FunctionMember(funcName.c_str(), 
                                                typ, 
                                                stubFP, 
                                                stubCtx, 

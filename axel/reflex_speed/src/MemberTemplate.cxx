@@ -23,36 +23,36 @@
 //-------------------------------------------------------------------------------
 Reflex::MemberTemplate::operator bool () const {
 //-------------------------------------------------------------------------------
-   if ( this->fMemberTemplateName && this->fMemberTemplateName->fMemberTemplateImpl ) return true;
+   if (this->fMemberTemplateName && this->fMemberTemplateName->fMemberTemplateImpl) return true;
    return false;
 }
 
 
 //-------------------------------------------------------------------------------
 Reflex::MemberTemplate
-Reflex::MemberTemplate::ByName( const std::string & name,
-                                                                   size_t nTemplateParams ) {
+Reflex::MemberTemplate::ByName(const std::string & name,
+                                                                   size_t nTemplateParams) {
 //-------------------------------------------------------------------------------
    // Return a member template by name.
-   return Internal::MemberTemplateName::ByName( name, nTemplateParams );
+   return Internal::MemberTemplateName::ByName(name, nTemplateParams);
 }
 
 
 //-------------------------------------------------------------------------------
 std::string
-Reflex::MemberTemplate::Name( unsigned int mod ) const {
+Reflex::MemberTemplate::Name(unsigned int mod) const {
 //-------------------------------------------------------------------------------
    // Return the name of the member template.
-   if ( fMemberTemplateName ) return fMemberTemplateName->Name( mod );
+   if (fMemberTemplateName) return fMemberTemplateName->Name(mod);
    else                       return "";
 }
 
 
 //-------------------------------------------------------------------------------
 void
-Reflex::MemberTemplate::AddTemplateInstance( const Member & templateInstance ) const {
+Reflex::MemberTemplate::AddTemplateInstance(const Member & templateInstance) const {
 //-------------------------------------------------------------------------------
 // Add member templateInstance to this template family.
-   if ( * this ) fMemberTemplateName->fMemberTemplateImpl->AddTemplateInstance( templateInstance );
+   if (* this) fMemberTemplateName->fMemberTemplateImpl->AddTemplateInstance(templateInstance);
 }
 

@@ -35,13 +35,13 @@ namespace Reflex {
 
    public:
 
-      SharedLibrary( const std::string & libname );
+      SharedLibrary(const std::string & libname);
 
       bool Load();
 
       bool Unload();
 
-      bool Symbol( const std::string & symname, void * & sym );
+      bool Symbol(const std::string & symname, void * & sym);
 
       const std::string Error();
 
@@ -61,7 +61,7 @@ namespace Reflex {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::SharedLibrary::SharedLibrary( const std::string & libname ) :
+inline Reflex::SharedLibrary::SharedLibrary(const std::string & libname) :
 //-------------------------------------------------------------------------------
    fHandle(0), fLibName(libname) {}
 
@@ -73,17 +73,17 @@ inline const std::string Reflex::SharedLibrary::Error() {
 #ifdef _WIN32
   int error =  ::GetLastError();
   LPVOID lpMessageBuffer;
-  ::FormatMessage( 
+  ::FormatMessage(
     FORMAT_MESSAGE_ALLOCATE_BUFFER |  FORMAT_MESSAGE_FROM_SYSTEM,
     NULL,
     error,
     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), //The user default language
     (LPTSTR) &lpMessageBuffer,
     0,
-    NULL );
+    NULL);
   errString = (const char*)lpMessageBuffer;
   // Free the buffer allocated by the system
-  ::LocalFree( lpMessageBuffer ); 
+  ::LocalFree(lpMessageBuffer); 
 #else
   errString = std::string(dlerror());
 #endif
@@ -99,26 +99,26 @@ inline bool Reflex::SharedLibrary::Load() {
    ::SetErrorMode(0);
    fHandle = ::LoadLibrary(fLibName.c_str());
 #else
-   fHandle = ::dlopen(fLibName.c_str(), RTLD_LAZY | RTLD_GLOBAL );
+   fHandle = ::dlopen(fLibName.c_str(), RTLD_LAZY | RTLD_GLOBAL);
 #endif
 
-   if ( ! fHandle ) return false;
+   if (! fHandle) return false;
    else return true;
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::SharedLibrary::Symbol( const std::string & symname, 
-                                                 void * & sym ) {
+inline bool Reflex::SharedLibrary::Symbol(const std::string & symname, 
+                                                 void * & sym) {
 //-------------------------------------------------------------------------------
 
-   if ( fHandle ) {
+   if (fHandle) {
 #ifdef _WIN32
       sym = GetProcAddress(fHandle, symname.c_str());
 #else 
       sym = dlsym(fHandle, symname.c_str());
 #endif
-      if ( sym )  return true;
+      if (sym)  return true;
    }
    return false;
 }
@@ -129,9 +129,9 @@ inline bool Reflex::SharedLibrary::Unload() {
 //-------------------------------------------------------------------------------
 
 #ifdef _WIN32
-   if ( FreeLibrary(fHandle) == 0 ) return false;
+   if (FreeLibrary(fHandle) == 0) return false;
 #else 
-   if ( dlclose(fHandle) == -1 ) return false;
+   if (dlclose(fHandle) == -1) return false;
 #endif
    else return true;
 }

@@ -34,10 +34,10 @@ namespace Reflex {
       ValueObject();
 
       /** constructor */
-      template <typename T> explicit ValueObject( T& v);
+      template <typename T> explicit ValueObject(T& v);
 
       /** constructor */
-      ValueObject( const ValueObject& o);
+      ValueObject(const ValueObject& o);
 
       /** destructor */
       ~ValueObject();
@@ -64,31 +64,31 @@ inline Reflex::ValueObject::ValueObject() {
 
 //-------------------------------------------------------------------------------
 template <typename T> 
-inline Reflex::ValueObject::ValueObject( T& v) 
-   : Object( GetType<T>(), 0 ), 
+inline Reflex::ValueObject::ValueObject(T& v) 
+   : Object(GetType<T>(), 0), 
      fValue(v)  {
 //-------------------------------------------------------------------------------
-   if ( TypeOf().Is(gPointer) ) fAddress = *(void**)fValue.Address();
+   if (TypeOf().Is(gPointer)) fAddress = *(void**)fValue.Address();
    else                         fAddress = fValue.Address();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::ValueObject::ValueObject( const ValueObject& o) 
-   : Object( o.TypeOf(), 0 ), 
+inline Reflex::ValueObject::ValueObject(const ValueObject& o) 
+   : Object(o.TypeOf(), 0), 
      fValue(o.fValue)  {
 //-------------------------------------------------------------------------------
-   if ( TypeOf().Is(gPointer) ) fAddress = *(void**)fValue.Address();
+   if (TypeOf().Is(gPointer)) fAddress = *(void**)fValue.Address();
    else                         fAddress = fValue.Address();
 }
 
 //-------------------------------------------------------------------------------
 template < typename T >
-inline Reflex::ValueObject& Reflex::ValueObject::operator=( const T& v)  {
+inline Reflex::ValueObject& Reflex::ValueObject::operator=(const T& v)  {
 //-------------------------------------------------------------------------------
   fValue = Any(v);
   fType = GetType<T>();
-  if ( TypeOf().Is(gPointer) ) fAddress = *(void**)fValue.Address();
+  if (TypeOf().Is(gPointer)) fAddress = *(void**)fValue.Address();
   else                         fAddress = fValue.Address();
   return *this;
 }

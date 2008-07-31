@@ -34,35 +34,35 @@ namespace Internal {
 
    // Container Adapter spacializations:
    // get the key for a value
-   template < typename KEY, typename VALUE, typename ADAPTOR >
-   struct ContainerAdaptorLinkedObjT {
-      static ADAPTOR fValueAdaptor;
+   template < typename KEY, typename VALUE, typename TRAITS >
+   struct ContainerTraitsLinkedObjT {
+      static TRAITS fValueTraits;
       // get the key for a value
-      KEY Key(const LinkedObj<VALUE>& value) const { return fValueAdaptor.Key(value.fObj); }
+      KEY Key(const LinkedObj<VALUE>& value) const { return fValueTraits.Key(value.fObj); }
       // get the key for a value, using a pre-allocated key buffer
-      const KEY& Key(const LinkedObj<VALUE>& value, KEY& buf) const { return fValueAdaptor.Key(value.fObj, buf); }
+      const KEY& Key(const LinkedObj<VALUE>& value, KEY& buf) const { return fValueTraits.Key(value.fObj, buf); }
       // test whether the key for a value matches the given key
-      bool KeyMatches(const KEY& key, const LinkedObj<VALUE>& value) const { return fValueAdaptor.KeyMatches(key, value.fObj); }
+      bool KeyMatches(const KEY& key, const LinkedObj<VALUE>& value) const { return fValueTraits.KeyMatches(key, value.fObj); }
       // test whether the key for a value matches the given key, using a pre-allocated key buffer
-      bool KeyMatches(const KEY& key, const LinkedObj<VALUE>& value, KEY& buf) const { return fValueAdaptor.KeyMatches(key, value.fObj, buf); }
+      bool KeyMatches(const KEY& key, const LinkedObj<VALUE>& value, KEY& buf) const { return fValueTraits.KeyMatches(key, value.fObj, buf); }
 
       // get the hash for a key
-      Hash_t Hash(const KEY& key) const { return fValueAdaptor.Hash(key); }
+      Hash_t Hash(const KEY& key) const { return fValueTraits.Hash(key); }
       // get the hash for a value
-      Hash_t ValueHash(const LinkedObj<VALUE>& value) const { return fValueAdaptor.ValueHash(value.fObj); }
+      Hash_t ValueHash(const LinkedObj<VALUE>& value) const { return fValueTraits.ValueHash(value.fObj); }
       // get a value that signals an invalidated value (e.g. for iterators pointing to removed nodes)
-      void Invalidate(LinkedObj<VALUE>& value) const { fValueAdaptor.Invalidate(value.fObj); }
+      void Invalidate(LinkedObj<VALUE>& value) const { fValueTraits.Invalidate(value.fObj); }
       // check whether a value is invalidated (e.g. for iterators pointing to removed nodes)
-      bool IsInvalidated(const LinkedObj<VALUE>& value) const { return fValueAdaptor.IsInvalidated(value.fObj); }
+      bool IsInvalidated(const LinkedObj<VALUE>& value) const { return fValueTraits.IsInvalidated(value.fObj); }
    };
 
-   template <typename KEY, typename VALUE, EUniqueness UNIQUENESS = kMany, class ADAPTOR = ContainerAdaptorT<KEY, VALUE> >
+   template <typename KEY, typename VALUE, EUniqueness UNIQUENESS = kMany, class TRAITS = ContainerTraitsT<KEY, VALUE> >
    class OrderedContainerImpl: public IContainerImpl {
    protected:
       typedef ContainerTools::Link Link_t;
       typedef ContainerTools::LinkIter LinkIter_t;
       typedef LinkedObj<VALUE> LinkedObj_t;
-      typedef typename ContainerImpl< KEY, LinkedObj_t, UNIQUENESS, ContainerAdaptorLinkedObjT<KEY, VALUE, ADAPTOR > > Cont_t;
+      typedef typename ContainerImpl< KEY, LinkedObj_t, UNIQUENESS, ContainerTraitsLinkedObjT<KEY, VALUE, TRAITS > > Cont_t;
       typedef typename Cont_t::iterator ContIter_t;
 
    public:
@@ -76,6 +76,7 @@ namespace Internal {
          bool operator == (const iterator& rhs) const
          { return rhs.fLinkIter == fLinkIter; }
          bool operator != (const iterator& rhs) const { return !operator==(rhs); }
+         operator bool() const { return fLinkIter; }
 
          iterator& operator++() { ++fLinkIter; return *this; }
 
@@ -144,7 +145,7 @@ namespace Internal {
 
       iterator FindValue(const VALUE& obj) const {
          return fHashMap.FindValue(obj); }
-      iterator FindValue(const VALUE& obj, Hash_t hash) const { return Find(fAdaptor.Key(obj), hash); }
+      iterator FindValue(const VALUE& obj, Hash_t hash) const { return Find(fTraits.Key(obj), hash); }
 
       bool Contains(const VALUE& obj) const {return Find(obj, fHashMe(obj));}
       bool Contains(const VALUE& obj, Hash_t hash) const { return fHashMap.Contains(obj, hash); }

@@ -31,24 +31,24 @@ Reflex::Internal::CatalogImpl::Instance() {
 
 //-------------------------------------------------------------------------------
 Reflex::Type
-Reflex::Internal::TypeCatalogImpl::ByName( const std::string & name ) const {
+Reflex::Internal::TypeCatalogImpl::ByName(const std::string & name) const {
 //-------------------------------------------------------------------------------
 // Lookup a type by name.
    size_t pos = 0;
    while (name[pos] == ':') ++pos;
    TypeContainer_t::const_iterator it = fAllTypes.Find(name.substr(pos));
-   if (it != fAllTypes.End()) return *it;
+   if (it) return *it;
    return Dummy::Type();
 }
 
 
 //-------------------------------------------------------------------------------
 Reflex::Type
-Reflex::Internal::TypeCatalogImpl::ByTypeInfo( const std::type_info & ti ) const {
+Reflex::Internal::TypeCatalogImpl::ByTypeInfo(const std::type_info & ti) const {
 //-------------------------------------------------------------------------------
 // Lookup a type by type_info.
    TypeInfoTypeMap_t::const_iterator it = fTypeInfoTypeMap.Find(ti.name());
-   if (it != fTypeInfoTypeMap.End()) return *it;
+   if (it) return *it;
    return Dummy::Type();
 }
 
@@ -58,10 +58,10 @@ void Reflex::Internal::TypeCatalogImpl::CleanUp() const {
 //-------------------------------------------------------------------------------
    // Cleanup memory allocations for types.
    /* SHOULD BE DONE BY ScopeName!
-   for ( TypeContainer_t::const_iterator it = fAllTypes.Begin(); it != fAllTypes.End(); ++it ) {
+   for (TypeContainer_t::const_iterator it = fAllTypes.Begin(); it != fAllTypes.End(); ++it) {
       TypeName * tn = (TypeName*)it->Id();
       Type * t = tn->fThisType;
-      if ( *t ) t->Unload();
+      if (*t) t->Unload();
    }
    */
 }
@@ -100,21 +100,22 @@ void Reflex::Internal::ScopeCatalogImpl::Add(const Reflex::Internal::ScopeName& 
 
 //-------------------------------------------------------------------------------
 Reflex::Scope
-Reflex::Internal::ScopeCatalogImpl::ByName( const std::string & name ) const {
+Reflex::Internal::ScopeCatalogImpl::ByName(const std::string & name) const {
 //-------------------------------------------------------------------------------
 // Lookup a scope by fully qualified name.
    size_t pos = 0;
    while (name[pos] == ':') ++pos;
    const std::string & k = name.substr(pos);
    ScopeContainer_t::const_iterator it = fAllScopes.Find(k);
-   if (it != fAllScopes.End() ) return *it;
+   if (it) return *it;
    //else                        return Dummy::Scope();
    // HERE STARTS AN UGLY HACK WHICH HAS TO BE UNDONE ASAP
    // (also remove inlcude Reflex/Type.h)
    Type t = fCatalog->Types().ByName(name);
-   if ( t && t.Is(gTypedef)) {
-      while ( t.Is(gTypedef)) t = t.ToType();
-      if ( t.IsClass() || t.Is(gEnum || gUnion) ) return t.operator Scope ();
+   if (t && t.Is(gTypedef)) {
+      while (t.Is(gTypedef)) t = t.ToType();
+      if (t.Is(gClassOrStruct || gEnum || gUnion))
+         return t.operator Scope ();
    }
    return Dummy::Scope();
    // END OF UGLY HACK
@@ -122,19 +123,27 @@ Reflex::Internal::ScopeCatalogImpl::ByName( const std::string & name ) const {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Internal::ScopeCatalogImpl::CleanUp() const {
+void
+Reflex::Internal::ScopeCatalogImpl::CleanUp() const {
 //-------------------------------------------------------------------------------
    // Cleanup memory allocations for scopes.
+
    /* SHOULD BE DONE BY ScopeName!
    ScopeVec_t::iterator it;
-   for ( it = fAllScopes.Begin(); it != fAllScopes.End(); ++it ) {
+   for (it = sScopeVec().begin(); it != sScopeVec().end(); ++it) {
       Scope * s = ((ScopeName*)it->Id())->fThisScope;
-      if ( *s ) s->Unload();
-   }*/
+      if (*s) s->Unload();
+      delete s;
+   }
+   for (it = sScopeVec().begin(); it != sScopeVec().end(); ++it) {
+      delete ((ScopeName*)it->Id());
+   }
+   */
 }
 
 //-------------------------------------------------------------------------------
-Reflex::Scope Reflex::Internal::ScopeCatalogImpl::GlobalScope() {
+Reflex::Scope
+Reflex::Internal::ScopeCatalogImpl::GlobalScope() const {
 //-------------------------------------------------------------------------------
 // Return the global scope's Scope object.
    return Internal::Namespace::GlobalScope();

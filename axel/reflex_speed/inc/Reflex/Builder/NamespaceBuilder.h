@@ -29,7 +29,7 @@ namespace Reflex{
    public:            
 
       /** constructor */
-      NamespaceBuilder( const char * nam );
+      NamespaceBuilder(const char * nam);
 
 
       /** destructor */
@@ -40,8 +40,8 @@ namespace Reflex{
       * @param  value the value of the PropertyNth
       * @return a reference to the building class
       */
-      NamespaceBuilder & AddProperty( const char * key, Any value );
-      NamespaceBuilder & AddProperty( const char * key, const char * value );
+      NamespaceBuilder & AddProperty(const char * key, Any value);
+      NamespaceBuilder & AddProperty(const char * key, const char * value);
 
       /**
       * ToScope will return the currently being built namespace

@@ -25,33 +25,33 @@
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::FunctionMemberTemplateInstance::
-FunctionMemberTemplateInstance( const char * nam,
+FunctionMemberTemplateInstance(const char * nam,
                                 const Type & typ,
                                 StubFunction stubFP,
                                 void * stubCtx,
                                 const char * params,
                                 unsigned int modifiers,
-                                const Scope & scop )
-   : FunctionMember( nam,
+                                const Scope & scop)
+   : FunctionMember(nam,
                      typ,
                      stubFP,
                      stubCtx,
                      params,
                      modifiers,
-                     MEMBERTEMPLATEINSTANCE ),
-     TemplateInstance( Tools::GetTemplateArguments( nam )),
-     fTemplateFamily( MemberTemplate()) {
+                     kMemberTemplateInstance),
+     TemplateInstance(Tools::GetTemplateArguments(nam)),
+     fTemplateFamily(MemberTemplate()) {
 //-------------------------------------------------------------------------------
 // Create the dictionary information for a templated function member.  
-   std::string templateName = Tools::GetTemplateName( nam );
-   std::string scopeName = scop.Name(SCOPED);
+   std::string templateName = Tools::GetTemplateName(nam);
+   std::string scopeName = scop.Name(kScoped);
    std::string scopedTemplateName = "";
-   if ( scopeName != "" ) scopedTemplateName = scopeName + "::" + templateName;
+   if (scopeName != "") scopedTemplateName = scopeName + "::" + templateName;
    else                   scopedTemplateName = templateName;
 
-//    for ( size_t i = 0; i < scop.MemberTemplateSize(); ++i ) {
-//       MemberTemplate mtl = scop.MemberTemplateAt( i );
-//       if ( mtl.Name(SCOPED) == scopedTemplateName && 
+//    for (size_t i = 0; i < scop.MemberTemplateSize(); ++i) {
+//       MemberTemplate mtl = scop.MemberTemplateAt(i);
+//       if (mtl.Name(kScoped) == scopedTemplateName && 
 //            mtl.TemplateParameterSize() == TemplateArgumentSize()) {
 //          fTemplateFamily = mtl;
 //          break;
@@ -60,15 +60,15 @@ FunctionMemberTemplateInstance( const char * nam,
 
    fTemplateFamily = MemberTemplate::ByName(scopedTemplateName, TemplateArgumentSize());
 
-   if ( ! fTemplateFamily ) {
+   if (! fTemplateFamily) {
       std::vector < std::string > parameterNames = std::vector < std::string > ();
-      for ( size_t i = 65; i < 65 + TemplateArgumentSize(); ++i ) 
+      for (size_t i = 65; i < 65 + TemplateArgumentSize(); ++i) 
          parameterNames.push_back("typename " + std::string(1,char(i)));
-      MemberTemplateImpl * mti = new MemberTemplateImpl( scopedTemplateName.c_str(),
+      MemberTemplateImpl * mti = new MemberTemplateImpl(scopedTemplateName.c_str(),
                                                          scop,
-                                                         parameterNames );
+                                                         parameterNames);
       fTemplateFamily = mti->ThisMemberTemplate();
-      scop.AddMemberTemplate( fTemplateFamily );
+      scop.AddMemberTemplate(fTemplateFamily);
    }
    
    fTemplateFamily.AddTemplateInstance((Member)(*this));
@@ -77,18 +77,18 @@ FunctionMemberTemplateInstance( const char * nam,
 
 //-------------------------------------------------------------------------------
 std::string 
-Reflex::Internal::FunctionMemberTemplateInstance::Name( unsigned int mod ) const {
+Reflex::Internal::FunctionMemberTemplateInstance::Name(unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Return the name of the function member.
-   return FunctionMember::Name( mod );
+   return FunctionMember::Name(mod);
 }
 
 
 
 //-------------------------------------------------------------------------------
 Reflex::Type
-Reflex::Internal::FunctionMemberTemplateInstance::TemplateArgumentAt( size_t nth ) const {
+Reflex::Internal::FunctionMemberTemplateInstance::TemplateArgumentAt(size_t nth) const {
 //-------------------------------------------------------------------------------
 // Return nth template argument of this function member.
-   return TemplateInstance::TemplateArgumentAt( nth );
+   return TemplateInstance::TemplateArgumentAt(nth);
 }

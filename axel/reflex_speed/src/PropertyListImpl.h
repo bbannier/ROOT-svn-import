@@ -20,12 +20,15 @@
 #include <iostream>
 
 #ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4251 )
+#pragma warning(push)
+#pragma warning(disable : 4251)
 #endif
 
 namespace Reflex {
 namespace Internal {
+
+   typedef std::vector<std::string>::const_iterator StdString_Iterator;
+   typedef std::vector<std::string>::const_reverse_iterator Reverse_StdString_Iterator;
 
    /**
    * @class PropertyList PropertyList.h Reflex/PropertyList.h
@@ -35,8 +38,8 @@ namespace Internal {
    */
    class RFLX_API PropertyListImpl {
 
-      friend RFLX_API std::ostream & operator << ( std::ostream & s,
-         const PropertyListImpl & p );
+      friend RFLX_API std::ostream & operator << (std::ostream & s,
+         const PropertyListImpl & p);
    public:
 
       /** default constructor */
@@ -44,7 +47,7 @@ namespace Internal {
 
 
       /** copy constructor */
-      PropertyListImpl( const PropertyListImpl & pl);
+      PropertyListImpl(const PropertyListImpl & pl);
 
 
       /** destructor */
@@ -57,8 +60,8 @@ namespace Internal {
       * @param value the value of the PropertyNth (as any object)
       * @return the property key of this property
       */
-      size_t AddProperty( const std::string & key,
-         const Any & value );
+      size_t AddProperty(const std::string & key,
+         const Any & value);
 
 
       /**
@@ -66,8 +69,8 @@ namespace Internal {
       * @param key the key of the property
       * @param value the value of the property (as any object)
       */
-      void AddProperty( size_t key,
-         const Any & value );
+      void AddProperty(size_t key,
+         const Any & value);
 
 
       /**
@@ -76,8 +79,8 @@ namespace Internal {
       * @param value the value of the PropertyNth (as any object)
       * @return the property key of this property
       */
-      size_t AddProperty( const std::string & key,
-         const char * value );
+      size_t AddProperty(const std::string & key,
+         const char * value);
 
 
       /**
@@ -85,8 +88,8 @@ namespace Internal {
       * @param key the key of the property
       * @param value the value of the property (as any object)
       */
-      void AddProperty( size_t key,
-         const char * value );
+      void AddProperty(size_t key,
+         const char * value);
 
 
       /**
@@ -101,7 +104,7 @@ namespace Internal {
       * @param  key to look for 
       * @return true if a valid property for key exists
       */
-      bool HasProperty( const std::string & key ) const;
+      bool HasProperty(const std::string & key) const;
 
 
       /**
@@ -110,7 +113,7 @@ namespace Internal {
       * @param  key to look for 
       * @return true if a valid property for key exists
       */
-      bool HasProperty( size_t key ) const;
+      bool HasProperty(size_t key) const;
 
 
       /**
@@ -153,7 +156,7 @@ namespace Internal {
       * @param nth key currently allocated
       * @return key as a string
       */
-      static const std::string & KeyAt( size_t nth );
+      static const std::string & KeyAt(size_t nth);
 
 
       /**
@@ -164,8 +167,8 @@ namespace Internal {
       * @param allocateNew allocate a new key if the key doesn't exist
       * @return key index or 0 if no key exists and allocateNew is set to false
       */
-      static size_t KeyByName( const std::string & key,
-         bool allocateNew = false );
+      static size_t KeyByName(const std::string & key,
+         bool allocateNew = false);
 
 
       /**
@@ -189,7 +192,7 @@ namespace Internal {
       * @param key property key to look for
       * @return string representation of the property
       */
-      std::string PropertyAsString( size_t key ) const;
+      std::string PropertyAsString(size_t key) const;
 
 
       /**
@@ -199,8 +202,8 @@ namespace Internal {
       if set to false and the key doesn't exist the function returns 0
       * @return the key value corresponding to the key param
       */
-      size_t PropertyKey( const std::string & key,
-         bool allocateNew = false ) const;
+      size_t PropertyKey(const std::string & key,
+         bool allocateNew = false) const;
 
 
       /**
@@ -232,21 +235,21 @@ namespace Internal {
       * @param key property key to look for
       * @return Any representation of the property
       */
-      Any & PropertyValue( size_t key ) const;
+      Any & PropertyValue(size_t key) const;
 
 
       /**
       * RemoveProperty will remove a key value pair to the PropertyNth lsit
       * @param key the key of the PropertyNth
       */
-      void RemoveProperty( const std::string & key );
+      void RemoveProperty(const std::string & key);
 
 
       /**
       * RemoveProperty will remove a property value from the property list 
       * @param key of the property identified by the property key number
       */
-      void RemoveProperty( size_t key );
+      void RemoveProperty(size_t key);
 
    private:
 
@@ -272,8 +275,8 @@ namespace Internal {
    * @param s the reference to the stream
    * @return the stream
    */
-   RFLX_API std::ostream & operator << ( std::ostream & s,
-      const PropertyListImpl & p );
+   RFLX_API std::ostream & operator << (std::ostream & s,
+      const PropertyListImpl & p);
 
 } //namespace Reflex
 } //namespace Internal
@@ -283,74 +286,74 @@ namespace Internal {
 inline
 Reflex::Internal::PropertyListImpl::PropertyListImpl() 
 //-------------------------------------------------------------------------------
-   : fProperties( 0 ) {}
+   : fProperties(0) {}
 
 
 //-------------------------------------------------------------------------------
 inline
-Reflex::Internal::PropertyListImpl::PropertyListImpl( const PropertyListImpl & pl ) 
+Reflex::Internal::PropertyListImpl::PropertyListImpl(const PropertyListImpl & pl) 
 //-------------------------------------------------------------------------------
-   : fProperties( pl.fProperties ) {}
+   : fProperties(pl.fProperties) {}
 
   
 //-------------------------------------------------------------------------------
 inline size_t
-Reflex::Internal::PropertyListImpl::AddProperty( const std::string & key,
-                                                           const Any & value ) {
+Reflex::Internal::PropertyListImpl::AddProperty(const std::string & key,
+                                                           const Any & value) {
 //-------------------------------------------------------------------------------
-   size_t k = PropertyKey( key, true );
-   AddProperty( k, value);
+   size_t k = PropertyKey(key, true);
+   AddProperty(k, value);
    return k;
 }
 
 
 //-------------------------------------------------------------------------------
 inline void
-Reflex::Internal::PropertyListImpl::AddProperty( size_t key,
-                                                         const Any & value ) {
+Reflex::Internal::PropertyListImpl::AddProperty(size_t key,
+                                                         const Any & value) {
 //-------------------------------------------------------------------------------
-   if ( ! fProperties ) fProperties = new Properties();
-   if ( key >= fProperties->size() ) fProperties->resize( key+1, Dummy::Any());
+   if (! fProperties) fProperties = new Properties();
+   if (key >= fProperties->size()) fProperties->resize(key+1, Dummy::Any());
    (*fProperties)[key] = value;
 }
 
 
 //-------------------------------------------------------------------------------
 inline size_t
-Reflex::Internal::PropertyListImpl::AddProperty( const std::string & key,
-                                                           const char* value ) {
+Reflex::Internal::PropertyListImpl::AddProperty(const std::string & key,
+                                                           const char* value) {
 //-------------------------------------------------------------------------------
-   return AddProperty( key, Any(value) );
+   return AddProperty(key, Any(value));
 }
 
 
 //-------------------------------------------------------------------------------
 inline void
-Reflex::Internal::PropertyListImpl::AddProperty( size_t key,
-                                                         const char * value ) {
+Reflex::Internal::PropertyListImpl::AddProperty(size_t key,
+                                                         const char * value) {
 //-------------------------------------------------------------------------------
-   AddProperty( key, Any(value));
+   AddProperty(key, Any(value));
 }
 
 
 //-------------------------------------------------------------------------------
 inline void
-Reflex::Internal::PropertyListImpl::RemoveProperty( const std::string & key ) {
+Reflex::Internal::PropertyListImpl::RemoveProperty(const std::string & key) {
 //-------------------------------------------------------------------------------
-   RemoveProperty( PropertyKey( key ));
+   RemoveProperty(PropertyKey(key));
 }
 
 
 //-------------------------------------------------------------------------------
 inline void
-Reflex::Internal::PropertyListImpl::RemoveProperty( size_t key ) {
+Reflex::Internal::PropertyListImpl::RemoveProperty(size_t key) {
 //------------------------------------------------------------------------------- 
-  if ( fProperties ) fProperties->at(key).Swap(Dummy::Any());
+  if (fProperties) fProperties->at(key).Swap(Dummy::Any());
 }
 
 
 #ifdef _MSC_VER
-#pragma warning( pop )
+#pragma warning(pop)
 #endif
 
 #endif // Reflex_PropertyListImpl

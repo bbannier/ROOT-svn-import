@@ -25,30 +25,54 @@ namespace Reflex {
       class CatalogImpl;
    }
 
-   template <typename T> class Collection;
+   template <typename T> class Container;
 
    class RFLX_API Catalog {
    public:
-      Catalog(const Internal::CatalogImpl* catalog = 0): fImpl(catalog) {}
+      Catalog(Internal::CatalogImpl* catalog = 0): fImpl(catalog) {}
       ~Catalog() {}
+
+
+      // static instance
+      static const Catalog& Instance();
 
       Type ByName(const std::string& name) const;
       Type ByTypeInfo(const std::type_info & ti) const;
       Scope ScopeByName(const std::string& name) const;
 
       // iterator access
-      const Collection<Type>&  Types() const;
-      const Collection<Scope>& Scopes() const;
+      const Container<Type>  Types() const;
+      const Container<Scope> Scopes() const;
 
       // shortcut access:
-      static Scope GlobalScope();
-      static Type Get_int() {return Get(kINT);}
-      static Type Get_float() {return Get(kFLOAT);}
+      Scope GlobalScope() const;
+
+      // for internal use:
+      Internal::CatalogImpl* Impl() const { return fImpl; }
+
       static Type Get(EFUNDAMENTALTYPE);
 
+      static Type Get_char() {return Get(kChar);}
+      static Type Get_signed_char() {return Get(kSignedChar);}
+      static Type Get_uchar() {return Get(kUnsignedChar);}
+      static Type Get_short() {return Get(kShortInt);}
+      static Type Get_ushort() {return Get(kUnsignedShortInt);}
+      static Type Get_int() {return Get(kInt);}
+      static Type Get_uint() {return Get(kUnsignedInt);}
+      static Type Get_long() {return Get(kLongInt);}
+      static Type Get_ulong() {return Get(kUnsignedLongInt);}
+      static Type Get_longlong() {return Get(kLongLong);}
+      static Type Get_ulonglong() {return Get(kULongLong);}
+
+      static Type Get_bool() {return Get(kBool);}
+      static Type Get_void() {return Get(kVoid);}
+
+      static Type Get_float() {return Get(kFloat);}
+      static Type Get_double() {return Get(kDouble);}
+      static Type Get_long_double() {return Get(kLongDouble);}
 
    private:
-      const Internal::CatalogImpl* fImpl;
+      Internal::CatalogImpl* fImpl; // non-const so it can be used internally
    };
 
 } // namespace Reflex

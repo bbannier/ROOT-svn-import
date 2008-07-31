@@ -21,6 +21,7 @@ namespace Reflex {
 
    // forward declarations 
    class Type;
+   class Catalog;
 
 namespace Internal {
 
@@ -35,45 +36,27 @@ namespace Internal {
    */
    class RFLX_API TypeName {
 
-      friend class Reflex::Type;
-      friend class TypeBase;
-
    public:
 
       /** default constructor */
-      TypeName( const char * nnam,
+      TypeName(const char * nnam,
          TypeBase * typeBas,
-         const std::type_info * ti = 0 );
+         const std::type_info * ti = 0,
+         const Catalog* catalog = 0);
 
 
       /**
-      * ByName will look for a At given as a string and return a pointer to
-      * its reflexion At
-      * @param  key fully qualified Name of the At as string
-      * @return pointer to At or 0 if none is found
+      * UpdateTypeBase calls the destructor of the TypeBase this TypeName is
+      * pointing to and removes its information from the data structures. The
+      * TypeName information will be set to the new tb if != NULL.
       */
-      static Type ByName( const std::string & key );
+      void UpdateTypeBase(TypeBase* tb);
 
 
       /**
-      * byTypeId will look for a At given as a string representation of a
-      * type_info and return a pointer to its reflexion At
-      * @param  tid string representation of the type_info At
-      * @return pointer to At or 0 if none is found
+      * Retrieve the Catalog containing the type.
       */
-      static Type ByTypeInfo( const std::type_info & ti );
-
-
-      static void CleanUp();
-
-
-
-      /**
-      * DeleteType will call the destructor of the TypeBase this TypeName is
-      * pointing to and remove it's information from the data structures. The
-      * TypeName information will remain.
-      */
-      void DeleteType() const;
+      const Catalog* InCatalog() const { return fCatalog; }
 
 
       void HideName();
@@ -86,13 +69,6 @@ namespace Internal {
       const std::string & Name() const;
 
 
-      /**
-      * Name_c_str returns a char* pointer to the unqualified At Name
-      * @ return c string to unqualified At Name
-      */
-      const char * Name_c_str() const;
-
-
       /** 
       * At returns the At object of this TypeName
       * @return corresponding Type to this TypeName
@@ -101,33 +77,16 @@ namespace Internal {
 
 
       /**
-      * At will return a pointer to the nth Type in the system
-      * @param  nth number of At to return
-      * @return pointer to nth Type in the system
+      * Return the type implementation for this name
       */
-      static Type TypeAt( size_t nth );
+      TypeBase* ToTypeBase() const { return fTypeBase; }
 
-
-      /**
-      * Size will return the number of currently defined types in
-      * the system
-      * @return number of currently defined types
-      */
-      static size_t TypeSize();
-
-
-      static Type_Iterator Type_Begin();
-      static Type_Iterator Type_End();
-      static Reverse_Type_Iterator Type_RBegin();
-      static Reverse_Type_Iterator Type_REnd();
-
-   private:
 
       /** destructor */
       ~TypeName();
 
       /** Set the type_info in the hash_map to this */
-      void SetTypeId( const std::type_info & ti ) const;
+      void SetTypeId(const std::type_info & ti) const;
 
    private:
 
@@ -136,14 +95,13 @@ namespace Internal {
 
 
       /**
-      * pointer to a TypebeBase if the At is implemented
+      * pointer to a TypeBase if the At is implemented
       * @label type base
       * @link aggregation
       * @supplierCardinality 1
       * @clientCardinality 1
       */
-      mutable 
-         TypeBase * fTypeBase;
+      TypeBase * fTypeBase;
 
       /**
       * Pointer back to the type
@@ -154,22 +112,22 @@ namespace Internal {
       */
       Type * fThisType;
 
+
+      /**
+      * Catalog containing the type
+      */
+      const Catalog* fCatalog;
+
    }; // class TypeName
 
 } // namespace Internal
 } // namespace Reflex
 
 //-------------------------------------------------------------------------------
-inline const std::string & Reflex::Internal::TypeName::Name() const {
+inline const std::string&
+Reflex::Internal::TypeName::Name() const {
 //-------------------------------------------------------------------------------
    return fName;
-}
-
-
-//-------------------------------------------------------------------------------
-inline const char * Reflex::Internal::TypeName::Name_c_str() const {
-//-------------------------------------------------------------------------------
-   return fName.c_str();
 }
 
 #endif // Reflex_TypeName

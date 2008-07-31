@@ -36,7 +36,7 @@ namespace Internal {
    template <typename VALUE, typename NODE> class Container_const_iterator;
 
    // Base class of adaptor; allows function-wise specialization
-   struct ContainerAdaptor {
+   struct ContainerTraits {
       // get the key for a value
       template <typename KEY, typename VALUE>
       KEY Key(const VALUE& value) const { return (KEY) value; }
@@ -59,7 +59,7 @@ namespace Internal {
 
       // get the hash for a value
       template <typename KEY, typename VALUE>
-      Hash_t ValueHash(const VALUE& value) const { return Hash<KEY>( Key<KEY, VALUE>(value) ); }
+      Hash_t ValueHash(const VALUE& value) const { return Hash<KEY>(Key<KEY, VALUE>(value)); }
 
       // set a value to invalid (e.g. for iterators pointing to removed nodes)
       template <typename VALUE>
@@ -76,36 +76,36 @@ namespace Internal {
       void IsInvalidated(const U* &u) const { return !u; }
    };
 
-   // Adaptor class used by Container
+   // Traits class used by Container
    template <typename KEY, typename VALUE>
-   struct ContainerAdaptorT: public ContainerAdaptor {
+   struct ContainerTraitsT: public ContainerTraits {
       // get the key for a value
-      KEY Key(const VALUE& value) const { return ContainerAdaptor::Key<KEY, VALUE>(value); }
+      KEY Key(const VALUE& value) const { return ContainerTraits::Key<KEY, VALUE>(value); }
       // get the key for a value, using a pre-allocated key buffer
-      const KEY& Key(const VALUE& value, KEY& buf) const { return ContainerAdaptor::Key<KEY, VALUE>(value, buf); }
+      const KEY& Key(const VALUE& value, KEY& buf) const { return ContainerTraits::Key<KEY, VALUE>(value, buf); }
       // test whether the key for a value matches the given key
-      bool KeyMatches(const KEY& key, const VALUE& value) const { return ContainerAdaptor::KeyMatches<KEY, VALUE>(key, value); }
+      bool KeyMatches(const KEY& key, const VALUE& value) const { return ContainerTraits::KeyMatches<KEY, VALUE>(key, value); }
       // test whether the key for a value matches the given key, using a pre-allocated key buffer
-      bool KeyMatches(const KEY& key, const VALUE& value, KEY& buf) const { return ContainerAdaptor::KeyMatches<KEY, VALUE>(key, value, buf); }
+      bool KeyMatches(const KEY& key, const VALUE& value, KEY& buf) const { return ContainerTraits::KeyMatches<KEY, VALUE>(key, value, buf); }
 
       // get the hash for a key
-      Hash_t Hash(const KEY& key) const { return ContainerAdaptor::Hash<KEY>(key); }
+      Hash_t Hash(const KEY& key) const { return ContainerTraits::Hash<KEY>(key); }
       // get the hash for a value
-      Hash_t ValueHash(const VALUE& value) const { return ContainerAdaptor::ValueHash<KEY, VALUE>(value); }
+      Hash_t ValueHash(const VALUE& value) const { return ContainerTraits::ValueHash<KEY, VALUE>(value); }
       // get a value that signals an invalidated value (e.g. for iterators pointing to removed nodes)
-      void Invalidate(VALUE& value) const { ContainerAdaptor::Invalidate<VALUE>(value); }
+      void Invalidate(VALUE& value) const { ContainerTraits::Invalidate<VALUE>(value); }
       // check whether a value is invalidated (e.g. for iterators pointing to removed nodes)
-      bool IsInvalidated(const VALUE& value) const { return ContainerAdaptor::IsInvalidated<VALUE>(value); }
+      bool IsInvalidated(const VALUE& value) const { return ContainerTraits::IsInvalidated<VALUE>(value); }
    };
 
    
    // specialization for std::string key: hash uses Reflex's Hash()
    template <>
-   Hash_t ContainerAdaptor::Hash(const std::string& key) const { return StringHash(key); }
+   Hash_t ContainerTraits::Hash(const std::string& key) const { return StringHash(key); }
 
    // specialization for std::string key: hash uses Reflex's Hash()
    template <>
-   Hash_t ContainerAdaptor::Hash(const char* const & key) const { return StringHash(key); }
+   Hash_t ContainerTraits::Hash(const char* const & key) const { return StringHash(key); }
 
    enum EUniqueness {
       kMany   = 0, // for UNIQUENESS: allow multiple instances of the same object in the container
@@ -116,7 +116,7 @@ namespace Internal {
 
 
 
-   template <typename KEY, typename VALUE, EUniqueness UNIQUENESS = kMany, class ADAPTOR = ContainerAdaptorT<KEY, VALUE> >
+   template <typename KEY, typename VALUE, EUniqueness UNIQUENESS = kMany, class TRAITS = ContainerTraitsT<KEY, VALUE> >
    class ContainerImpl: public ContainerImplBase, public IContainerImpl {
    private:
       class Node: public ContainerImplBase::Link {
@@ -128,10 +128,10 @@ namespace Internal {
       class NodeHelper: public ContainerTools::INodeHelper {
       public:
          bool IsInvalidated(const Link* link) const {
-            return fAdaptor.IsInvalidated(static_cast<const Node*>(link)->fObj);
+            return fTraits.IsInvalidated(static_cast<const Node*>(link)->fObj);
          }
       private:
-         ADAPTOR fAdaptor;
+         TRAITS fTraits;
       };
    public:
 
@@ -160,11 +160,11 @@ namespace Internal {
       iterator Begin() const { return iterator(*this, *GetNodeHelper(), End()); }
       iterator End() const { return iterator(); }
 
-      Hash_t Hash(const KEY& key) const { return fAdaptor.Hash(key); }
-      Hash_t ValueHash(const VALUE& obj) const { return fAdaptor.ValueHash(obj); }
+      Hash_t Hash(const KEY& key) const { return fTraits.Hash(key); }
+      Hash_t ValueHash(const VALUE& obj) const { return fTraits.ValueHash(obj); }
 
       // Insert VALUE obj into container; return &obj or 0 if not inserted
-      const VALUE* Insert(const VALUE& obj) { return Insert(obj, fAdaptor.ValueHash(obj)); }
+      const VALUE* Insert(const VALUE& obj) { return Insert(obj, fTraits.ValueHash(obj)); }
       // Insert VALUE obj with hash into container; return & obj or 0 if not inserted
       const VALUE* Insert(const VALUE& obj, Hash_t hash) {
          bool canInsert = (UNIQUENESS == kMany);
@@ -179,7 +179,7 @@ namespace Internal {
          return 0;
       }
 
-      void Remove(const VALUE& obj) {Remove(obj, fAdaptor.ValueHash(obj));}
+      void Remove(const VALUE& obj) {Remove(obj, fTraits.ValueHash(obj));}
       void Remove(const VALUE& obj, Hash_t hash) {
          iterator it = FindValue(obj, hash);
          if (it) Remove(it);
@@ -205,18 +205,18 @@ namespace Internal {
             // fRefCount cannot change between the line above and the deletion.
             fNodeArena->Delete(node);
          } else {
-            fAdaptor.Invalidate(node->fObj);
+            fTraits.Invalidate(node->fObj);
          }
       }
 
-      iterator Find(const KEY& key) const { return Find(key, fAdaptor.Hash(key)); }
+      iterator Find(const KEY& key) const { return Find(key, fTraits.Hash(key)); }
       iterator Find(const KEY& key, Hash_t hash) const {
          // Find first entry matching key with given hash
          REFLEX_RWLOCK_R(fLock);
          int posBuckets = hash % fBuckets.size();
          std::string name;
          for (ContainerTools::LinkIter i = fBuckets[posBuckets].Begin(GetNodeHelper(), fNodeArena); i; ++i) {
-            if (fAdaptor.KeyMatches(key, static_cast<const Node*>(i.Curr())->fObj))
+            if (fTraits.KeyMatches(key, static_cast<const Node*>(i.Curr())->fObj))
                return iterator(i, fBuckets.IterAt(posBuckets), End());
          }
          return End();
@@ -232,14 +232,14 @@ namespace Internal {
          LinkIter startbucket = start.CurrentBucket();
          iterator ret(start.CurrentLink(), startbucket, End());
          while (++ret && ret.CurrentBucket() == startbucket)
-            if (fAdaptor.KeyMatches(key, *ret, buf))
+            if (fTraits.KeyMatches(key, *ret, buf))
                return ret;
          if (start.NextContainerBegin()) {
             LinkIter iBucket(start.NextContainerBegin().CurrentBucket());
             if (iBucket) {
                const Bucket* bucket0 = static_cast<const Bucket*>(iBucket.Curr());
                const int numBuckets = bucket0->fIndex;
-               int posBuckets = fAdaptor.Hash(key) % numBuckets;
+               int posBuckets = fTraits.Hash(key) % numBuckets;
                while(posBuckets--)
                   ++iBucket;
                if (iBucket) {
@@ -251,7 +251,7 @@ namespace Internal {
                   if (substart.CurrentLink()) {
                      // Already the substart could match; Find(key, substart) would skip it, so test here:
                      const Node* subfirstnode = static_cast<const Node*>(substart.CurrentLink().Curr());
-                     if (fAdaptor.KeyMatches(key, subfirstnode->fObj, buf))
+                     if (fTraits.KeyMatches(key, subfirstnode->fObj, buf))
                         return substart;
                      return Find(key, substart);
                   }
@@ -261,17 +261,17 @@ namespace Internal {
          return End();
       }
 
-      iterator FindValue(const VALUE& obj) const { return Find(fAdaptor.Key(obj), fAdaptor.ValueHash(obj)); }
-      iterator FindValue(const VALUE& obj, Hash_t hash) const { return Find(fAdaptor.Key(obj), hash); }
+      iterator FindValue(const VALUE& obj) const { return Find(fTraits.Key(obj), fTraits.ValueHash(obj)); }
+      iterator FindValue(const VALUE& obj, Hash_t hash) const { return Find(fTraits.Key(obj), hash); }
 
-      bool Contains(const KEY& key) const { return Contains(key, fAdaptor.Hash(key)); }
+      bool Contains(const KEY& key) const { return Contains(key, fTraits.Hash(key)); }
       bool Contains(const KEY& key, Hash_t hash) const { return Find(key, hash); }
 
-      bool ContainsValue(const VALUE& obj) const { return ContainsValue(obj, fAdaptor.ValueHash(obj)); }
+      bool ContainsValue(const VALUE& obj) const { return ContainsValue(obj, fTraits.ValueHash(obj)); }
       bool ContainsValue(const VALUE& obj, Hash_t hash) const { return FindValue(obj, hash); }
 
-      void SetNext(const ContainerImpl<KEY, VALUE, UNIQUENESS, ADAPTOR>* next) { fNext = next; }
-      const ContainerImpl<KEY, VALUE, UNIQUENESS, ADAPTOR>* GetNext() const { return fNext; }
+      void SetNext(const ContainerImpl<KEY, VALUE, UNIQUENESS, TRAITS>* next) { fNext = next; }
+      const ContainerImpl<KEY, VALUE, UNIQUENESS, TRAITS>* GetNext() const { return fNext; }
 
 
 
@@ -301,15 +301,15 @@ namespace Internal {
       }
 
       virtual Hash_t GetHash(const Link* node) const
-      { return fAdaptor.ValueHash(static_cast< const Node* >(node)->fObj); }
+      { return fTraits.ValueHash(static_cast< const Node* >(node)->fObj); }
 
       virtual bool IsNodeInvalidated(const Link* node) const {
-         return fAdaptor.IsInvalidated(static_cast<const Node*>(node)->fObj);
+         return fTraits.IsInvalidated(static_cast<const Node*>(node)->fObj);
       }
 
    private:
-      ADAPTOR fAdaptor;
-      const ContainerImpl<KEY, VALUE, UNIQUENESS, ADAPTOR>* fNext; // next container for chained iteration
+      TRAITS fTraits;
+      const ContainerImpl<KEY, VALUE, UNIQUENESS, TRAITS>* fNext; // next container for chained iteration
 
    }; // class ContainerImpl
 
@@ -409,6 +409,6 @@ namespace Internal {
 
 
 // reflex-specific specializations etc:
-#include "ContainerAdaptorImpl.h"
+#include "ContainerTraitsImpl.h"
 
 #endif

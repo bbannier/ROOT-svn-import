@@ -18,7 +18,7 @@
 #include "Reflex/Tools.h"
 
 //______________________________________________________________________________
-Reflex::Internal::Union::Union(const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers, TYPE unionType /*=UNION*/)
+Reflex::Internal::Union::Union(const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers, ETYPE unionType /*=kUnion*/)
 : TypeBase(typ, size, unionType, ti)
 , ScopeBase(typ, unionType)
 , fModifiers(modifiers)
@@ -80,8 +80,8 @@ Reflex::Internal::Union::Name(std::string& buf, unsigned int mod /*= 0*/) const
 {
 // Return the name of the union; possible modifiers:
 //      *   FINAL     - resolve typedefs
-//      *   SCOPED    - fully scoped name 
-//      *   QUALIFIED - cv, reference qualification 
+//      *   kScoped    - fully scoped name 
+//      *   kQualified - cv, reference qualification 
    return ScopeBase::Name(buf, mod);
 }
 
@@ -92,8 +92,8 @@ Reflex::Internal::Union::SimpleName(size_t& pos, unsigned int mod /*=0*/) const
 // Return the "simple" name of the union (only the left-most part of the scoped name)
 // possible modifiers:
 //      *   FINAL     - resolve typedefs
-//      *   SCOPED    - fully scoped name 
-//      *   QUALIFIED - cv, reference qualification 
+//      *   kScoped    - fully scoped name 
+//      *   kQualified - cv, reference qualification 
 // See ScopeBase::SimpleName().
    return ScopeBase::SimpleName(pos, mod);
 }
@@ -126,7 +126,7 @@ Reflex::Internal::Union::AddMember(const char* nam, const Type& typ, StubFunctio
 {
 // Add function member to this union.
    ScopeBase::AddMember(nam, typ, stubFP, stubCtx, params, modifiers);
-   if (modifiers & CONSTRUCTOR) {
+   if (modifiers & kConstructor) {
       fConstructors.push_back(fFunctionMembers[fFunctionMembers.size()-1]);
    }
    // setting the destructor is not needed because it is always provided when building the union

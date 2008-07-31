@@ -22,24 +22,24 @@
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::TypeTemplateImpl::TypeTemplateImpl( const char * templateName,
+Reflex::Internal::TypeTemplateImpl::TypeTemplateImpl(const char * templateName,
                                                       const Scope & scop,
                                                       const std::vector < std::string >& parameterNames, 
                                                       const std::vector < std::string >& parameterDefaults)
 //------------------------------------------------------------------------------- 
-   : fScope( scop ),
-     fParameterNames( parameterNames ),
-     fParameterDefaults( parameterDefaults ),
-     fReqParameters( parameterNames.size() - parameterDefaults.size() ) {
+   : fScope(scop),
+     fParameterNames(parameterNames),
+     fParameterDefaults(parameterDefaults),
+     fReqParameters(parameterNames.size() - parameterDefaults.size()) {
    // Construct the type template family info.
 
-   TypeTemplate tt = TypeTemplate::ByName( templateName, parameterNames.size() );
-   if ( tt.Id() == 0 ) {
-      fTypeTemplateName = new TypeTemplateName( templateName, this );
+   TypeTemplate tt = TypeTemplate::ByName(templateName, parameterNames.size());
+   if (tt.Id() == 0) {
+      fTypeTemplateName = new TypeTemplateName(templateName, this);
    }
    else {
       fTypeTemplateName = (TypeTemplateName*)tt.Id();
-      if ( fTypeTemplateName->fTypeTemplateImpl ) delete fTypeTemplateName->fTypeTemplateImpl;
+      if (fTypeTemplateName->fTypeTemplateImpl) delete fTypeTemplateName->fTypeTemplateImpl;
       fTypeTemplateName->fTypeTemplateImpl = this;
    }
 }
@@ -49,20 +49,20 @@ Reflex::Internal::TypeTemplateImpl::TypeTemplateImpl( const char * templateName,
 Reflex::Internal::TypeTemplateImpl::~TypeTemplateImpl() {
 //-------------------------------------------------------------------------------
 // Destructor.
-   for ( Type_Iterator ti = TemplateInstances().Begin(); ti != TemplateInstances().End(); ++ti ) {
+   for (Type_Iterator ti = TemplateInstances().Begin(); ti != TemplateInstances().End(); ++ti) {
       ti->Unload();
    }
-   if ( fTypeTemplateName->fTypeTemplateImpl == this ) fTypeTemplateName->fTypeTemplateImpl = 0;
+   if (fTypeTemplateName->fTypeTemplateImpl == this) fTypeTemplateName->fTypeTemplateImpl = 0;
 }
 
 
 //-------------------------------------------------------------------------------
 bool
-Reflex::Internal::TypeTemplateImpl::operator == ( const TypeTemplateImpl & tt ) const {
+Reflex::Internal::TypeTemplateImpl::operator == (const TypeTemplateImpl & tt) const {
 //-------------------------------------------------------------------------------
    // Equal operator.
-   return ( ( fTypeTemplateName->fName == tt.fTypeTemplateName->fName ) && 
-            ( fParameterNames.size() == tt.fParameterNames.size() ) );
+   return ((fTypeTemplateName->fName == tt.fTypeTemplateName->fName) && 
+            (fParameterNames.size() == tt.fParameterNames.size()));
 }
 
 
@@ -77,8 +77,8 @@ Reflex::Internal::TypeTemplateImpl::ThisTypeTemplate() const {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Internal::TypeTemplateImpl::AddTemplateInstance( const Type & templateInstance ) const {
+Reflex::Internal::TypeTemplateImpl::AddTemplateInstance(const Type & templateInstance) const {
 //-------------------------------------------------------------------------------
 // Add template instance to this family.
-   fTemplateInstances.Insert( templateInstance );
+   fTemplateInstances.Insert(templateInstance);
 }

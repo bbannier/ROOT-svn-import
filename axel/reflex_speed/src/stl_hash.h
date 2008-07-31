@@ -19,7 +19,7 @@
 #define __gnu_cxx              std
 #endif
 #elif defined(__GNUC__)
-# if (__GNUC__ < 4) || ( (__GNUC__ == 4) && (__GNUC_MINOR__ < 3) )
+# if (__GNUC__ < 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ < 3))
   // For gcc, the hash_map and hash_set classes are in the extensions area
 #  include <ext/hash_set>
 #  include <ext/hash_map>
@@ -63,7 +63,7 @@ namespace __gnu_cxx {
    
    inline size_t __gnu_cxx_hash_string(const char* s)  {
       unsigned long __h = 0; 
-      for ( ; *s; ++s) __h = 5*__h + *s;    
+      for (; *s; ++s) __h = 5*__h + *s;    
       return size_t(__h);  
    }
 
@@ -72,8 +72,8 @@ namespace __gnu_cxx {
    public:
       static const size_t bucket_size = 4;
       static const size_t min_buckets = 8;
-      size_t operator( )( const Key& k ) const { return __gnu_cxx_hash_string(k);}
-      bool operator( )( const Key& k1, const Key& k2 ) const { return strcmp(k1 ,k2) < 0; }
+      size_t operator()(const Key& k) const { return __gnu_cxx_hash_string(k);}
+      bool operator()(const Key& k1, const Key& k2) const { return strcmp(k1 ,k2) < 0; }
    };
 
    template<> class hash_compare< const std::string *> {
@@ -81,12 +81,12 @@ namespace __gnu_cxx {
    public:
       static const size_t bucket_size = 4;
       static const size_t min_buckets = 8;
-      size_t operator( )( const Key& k ) const { return __gnu_cxx_hash_string(k->c_str());}
-      bool operator( )( const Key& k1, const Key& k2 ) const { return *k1 < *k2; }
+      size_t operator()(const Key& k) const { return __gnu_cxx_hash_string(k->c_str());}
+      bool operator()(const Key& k1, const Key& k2) const { return *k1 < *k2; }
    };
 
    /*
-   inline size_t hash_value( const std::string * s ) {
+   inline size_t hash_value(const std::string * s) {
      return hash_value(s->c_str());
    }
    */
@@ -114,16 +114,16 @@ namespace std {
 
    template<> struct equal_to< const char * >
       : public binary_function< const char *, const char *, bool > {
-      bool operator()( const char * const & _Left, 
-                       const char * const & _Right ) const {
+      bool operator()(const char * const & _Left, 
+                       const char * const & _Right) const {
          return strcmp(_Left, _Right) == 0;
       }
    };
 
    template<> struct equal_to< const std::string * > 
       : public binary_function< const std::string *, const std::string *, bool > {
-      bool operator()( const std::string * const & _Left, 
-                       const std::string * const & _Right ) const {
+      bool operator()(const std::string * const & _Left, 
+                       const std::string * const & _Right) const {
          return *_Left == *_Right; 
       }
    };
@@ -141,8 +141,8 @@ namespace __gnu_cxx {
    public:
       static const size_t bucket_size = 4;
       static const size_t min_buckets = 8;
-      size_t operator( )( const Key& k ) const { return hash_value(k);}
-      bool operator( )( const Key& k1, const Key& k2 ) const { return strcmp(k1 ,k2) < 0; }
+      size_t operator()(const Key& k) const { return hash_value(k);}
+      bool operator()(const Key& k1, const Key& k2) const { return strcmp(k1 ,k2) < 0; }
    };
 
    template<> class hash_compare< const std::string *> {
@@ -150,8 +150,8 @@ namespace __gnu_cxx {
    public:
       static const size_t bucket_size = 4;
       static const size_t min_buckets = 8;
-      size_t operator( )( const Key& k ) const { return hash_value(*k);}
-      bool operator( )( const Key& k1, const Key& k2 ) const { return *k1 < *k2; }
+      size_t operator()(const Key& k) const { return hash_value(*k);}
+      bool operator()(const Key& k1, const Key& k2) const { return *k1 < *k2; }
    };
 
    template<> struct less<const std::string *> {

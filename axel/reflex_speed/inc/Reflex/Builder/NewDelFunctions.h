@@ -10,11 +10,11 @@
 
 namespace Reflex {
 
-   typedef void* (*NewFunc_t)( void* );
-   typedef void* (*NewArrFunc_t)( size_t size, void *arena );
-   typedef void  (*DelFunc_t)( void* );
-   typedef void  (*DelArrFunc_t)( void* );
-   typedef void  (*DesFunc_t)( void* ); 
+   typedef void* (*NewFunc_t)(void*);
+   typedef void* (*NewArrFunc_t)(size_t size, void *arena);
+   typedef void  (*DelFunc_t)(void*);
+   typedef void  (*DelArrFunc_t)(void*);
+   typedef void  (*DesFunc_t)(void*); 
 
    struct RFLX_API NewDelFunctions {
       NewFunc_t    fNew;             //pointer to a function newing one object.

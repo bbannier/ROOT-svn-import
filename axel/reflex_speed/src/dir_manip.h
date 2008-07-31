@@ -27,7 +27,7 @@
 
 typedef _finddata_t dirent;
 inline const char* directoryname(const dirent* e) {  return e->name;  }
-inline int mkdir(const char* d, int )             {  return mkdir(d); }
+inline int mkdir(const char* d, int)             {  return mkdir(d); }
 
 #define S_ISDIR(x)   ((x&_S_IFDIR)==_S_IFDIR)
 #define PATH_MAX _MAX_PATH
@@ -49,25 +49,25 @@ inline DIR* opendir(const char* specs)  {
   std::auto_ptr<DIR> dir(new DIR);
   dir->start = true;
   dir->handle = _findfirst(path.c_str(),&dir->data);
-  if ( dir->handle != -1 )  {
+  if (dir->handle != -1)  {
     return dir.release();
   }
   return 0;
 }
 inline dirent* readdir(DIR* dir)  {
-  if ( dir )  {
-    if ( dir->start ) {
+  if (dir)  {
+    if (dir->start) {
       dir->start = false;
       return &dir->data;
     }
-    else if ( _findnext(dir->handle,&dir->data)==0 )  {
+    else if (_findnext(dir->handle,&dir->data)==0)  {
       return &dir->data;
     }
   }
   return 0;
 }
 inline int closedir(DIR* dir)  {
-  if ( dir )  {
+  if (dir)  {
     int sc = _findclose(dir->handle);
     delete dir;
     return sc;
@@ -78,11 +78,11 @@ inline const char* dirnameEx(const std::string& path) {
   static std::string p;
   std::string tmp = path;
   std::string::size_type idx = tmp.rfind("/");
-  if ( idx != std::string::npos ) {
+  if (idx != std::string::npos) {
     p = tmp.substr(0,idx);
     return p.c_str();
   } 
-  if ( (idx=tmp.rfind("\\")) != std::string::npos ) {
+  if ((idx=tmp.rfind("\\")) != std::string::npos) {
     p = tmp.substr(0,idx);
     return p.c_str();
   } 
@@ -92,7 +92,7 @@ inline const char* dirnameEx(const std::string& path) {
 inline const char* basenameEx(const std::string& path) {
   static std::string p;
   std::string tmp = path;
-  if ( tmp.rfind("/") != std::string::npos ) {
+  if (tmp.rfind("/") != std::string::npos) {
     p = tmp.substr(tmp.rfind("/")+1);
     return p.c_str();
   } 

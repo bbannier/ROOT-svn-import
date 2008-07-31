@@ -32,8 +32,8 @@ namespace Internal {
    public:
 
       /** default constructor */
-      Pointer( const Type & pointerType, 
-         const std::type_info & ti );
+      Pointer(const Type & pointerType, 
+         const std::type_info & ti);
 
       /** destructor */
       virtual ~Pointer() {}
@@ -44,7 +44,7 @@ namespace Internal {
       * @param  typedefexp expand typedefs or not
       * @return fully qualified Name of pointer At
       */
-      std::string Name( unsigned int mod = 0 ) const;
+      std::string Name(unsigned int mod = 0) const;
 
 
       /**
@@ -55,8 +55,8 @@ namespace Internal {
 
 
       /** static funtion that composes the typename */
-      static std::string BuildTypeName( const Type & pointerType,
-         unsigned int mod = SCOPED | QUALIFIED );
+      static std::string BuildTypeName(const Type & pointerType,
+         unsigned int mod = kScoped | kQualified);
 
    private:
 

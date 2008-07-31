@@ -22,27 +22,27 @@
 
 //-------------------------------------------------------------------------------
 Reflex::Object 
-Reflex::Object::Get( const std::string & dm ) const {
+Reflex::Object::Get(const std::string & dm) const {
 //-------------------------------------------------------------------------------
 // Get a data member value of this object.
-   Member m = TypeOf().MemberByName( dm );
-   if ( !m )
-      throw RuntimeError("No such MemberAt " + dm );
-   return m.Get( * this );
+   Member m = TypeOf().MemberByName(dm);
+   if (!m)
+      throw RuntimeError("No such MemberAt " + dm);
+   return m.Get(* this);
 }
 
 
 /*/-------------------------------------------------------------------------------
   Reflex::Object
-  Reflex::Object::Invoke( const std::string & fm,
-  std::vector< Object > args ) const {
+  Reflex::Object::Invoke(const std::string & fm,
+  std::vector< Object > args) const {
 //-------------------------------------------------------------------------------
-  Member m = TypeOf().FunctionMemberAt( fm );
-  if ( m ) {
-  if ( args.size() ) return m.Invoke( * this, args );
-  else               return m.Invoke( * this );
+  Member m = TypeOf().FunctionMemberAt(fm);
+  if (m) {
+  if (args.size()) return m.Invoke(* this, args);
+  else               return m.Invoke(* this);
   }
-  else throw RuntimeError("No such MemberAt " + fm );
+  else throw RuntimeError("No such MemberAt " + fm);
   return Object();
   }
 */
@@ -50,18 +50,18 @@ Reflex::Object::Get( const std::string & dm ) const {
 
 //-------------------------------------------------------------------------------
 Reflex::Object
-Reflex::Object::Invoke( const std::string & fm,
-                              std::vector < void * > args ) const {
+Reflex::Object::Invoke(const std::string & fm,
+                              std::vector < void * > args) const {
 //-------------------------------------------------------------------------------
 // Invoke a data member of this object.
    return Invoke(fm,Type(),args);
    /*
-     m = TypeOf().FunctionMemberAt( fm );
-     if ( m ) {
-     if ( args.size() ) return m.Invoke( * this, args );
-     else               return m.Invoke( * this );
+     m = TypeOf().FunctionMemberAt(fm);
+     if (m) {
+     if (args.size()) return m.Invoke(* this, args);
+     else               return m.Invoke(* this);
      }
-     else throw RuntimeError("No such MemberAt " + fm );
+     else throw RuntimeError("No such MemberAt " + fm);
      return Object();
    */
 }
@@ -69,38 +69,38 @@ Reflex::Object::Invoke( const std::string & fm,
 
 //-------------------------------------------------------------------------------
 Reflex::Object
-Reflex::Object::Invoke( const std::string & fm,
+Reflex::Object::Invoke(const std::string & fm,
                               const Type & sign,
-                              std::vector < void * > args ) const {
+                              std::vector < void * > args) const {
 //-------------------------------------------------------------------------------
 // Invoke a data member of this object. Sign can be used for finding overloaded funs.
-   Member m = TypeOf().FunctionMemberByName( fm, sign );
-   if ( !m )
-      throw RuntimeError("No such MemberAt " + fm );
+   Member m = TypeOf().FunctionMemberByName(fm, sign);
+   if (!m)
+      throw RuntimeError("No such MemberAt " + fm);
 
-   if ( args.size() )
-      return m.Invoke( * this, args );
+   if (args.size())
+      return m.Invoke(* this, args);
 
-   return m.Invoke( * this );
+   return m.Invoke(* this);
 }
 
 
 //-------------------------------------------------------------------------------
-//void Reflex::Object::Set( const std::string & dm,
-//                                const Object & value ) const {
+//void Reflex::Object::Set(const std::string & dm,
+//                                const Object & value) const {
 //-------------------------------------------------------------------------------
-//  Member m = TypeOf().MemberAt( dm );
-//  if ( m ) m.Set( * this, value );
-//  else throw RuntimeError("No such MemberAt " + dm );
+//  Member m = TypeOf().MemberAt(dm);
+//  if (m) m.Set(* this, value);
+//  else throw RuntimeError("No such MemberAt " + dm);
 //}
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Object::Set2( const std::string & dm,
-                                 const void * value ) const {
+void Reflex::Object::Set2(const std::string & dm,
+                                 const void * value) const {
 //-------------------------------------------------------------------------------
 // Internal set method. Wrapped from Set methods.
-   Member m = TypeOf().MemberByName( dm );
-   if ( m ) m.Set( * this, value );
-   else throw RuntimeError("No such MemberAt " + dm );
+   Member m = TypeOf().MemberByName(dm);
+   if (m) m.Set(* this, value);
+   else throw RuntimeError("No such MemberAt " + dm);
 }

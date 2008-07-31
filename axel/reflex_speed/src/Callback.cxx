@@ -41,37 +41,37 @@ static CbList & sClassCallbacks() {
 }
 
 //-------------------------------------------------------------------------------
-void Reflex::InstallClassCallback( Reflex::ICallback * cb ) {
+void Reflex::InstallClassCallback(Reflex::ICallback * cb) {
 //-------------------------------------------------------------------------------
 // Install a class callback.
-   sClassCallbacks().push_back( cb );
+   sClassCallbacks().push_back(cb);
 }
 
 //-------------------------------------------------------------------------------
-void Reflex::UninstallClassCallback( Reflex::ICallback * cb ) {
+void Reflex::UninstallClassCallback(Reflex::ICallback * cb) {
 //-------------------------------------------------------------------------------
 // Uninstall a class callback.
-   if( sClassCallbacks().IsAlive() ) {
-      sClassCallbacks().remove( cb );
+   if (sClassCallbacks().IsAlive()) {
+      sClassCallbacks().remove(cb);
    }
 }
 
 //-------------------------------------------------------------------------------
-void Reflex::FireClassCallback( const Reflex::Type & ty ) {
+void Reflex::FireClassCallback(const Reflex::Type & ty) {
 //-------------------------------------------------------------------------------
 // Activate a class callback.
-   for ( CbList::const_iterator i = sClassCallbacks().begin(); 
-         i != sClassCallbacks().end(); i++ ) {
+   for (CbList::const_iterator i = sClassCallbacks().begin(); 
+         i != sClassCallbacks().end(); i++) {
       (**i)(ty);
    }
 }
 
 //-------------------------------------------------------------------------------
-void Reflex::FireFunctionCallback( const Reflex::Member & mem ) {
+void Reflex::FireFunctionCallback(const Reflex::Member & mem) {
 //-------------------------------------------------------------------------------
 // Activate a function callback.
-   for ( CbList::const_iterator i = sClassCallbacks().begin(); 
-         i != sClassCallbacks().end(); i++ ) {
+   for (CbList::const_iterator i = sClassCallbacks().begin(); 
+         i != sClassCallbacks().end(); i++) {
       (**i)(mem);
    }
 }

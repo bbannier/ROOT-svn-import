@@ -31,8 +31,8 @@ namespace Reflex{
    public:
 
       /** constructor */
-      TypedefBuilderImpl( const char * typ,
-         const Type & typedefType );
+      TypedefBuilderImpl(const char * typ,
+         const Type & typedefType);
 
 
       /** destructor */
@@ -44,8 +44,8 @@ namespace Reflex{
       * @param  key the PropertyNth key
       * @param  value the value of the PropertyNth
       */
-      void AddProperty( const char * key,
-         Any value );
+      void AddProperty(const char * key,
+         Any value);
 
 
       /** 
@@ -53,8 +53,8 @@ namespace Reflex{
       * @param  key the PropertyNth key
       * @param  value the value of the PropertyNth
       */
-      void AddProperty( const char * key,
-         const char * value );
+      void AddProperty(const char * key,
+         const char * value);
 
 
       /*
@@ -97,8 +97,8 @@ namespace Reflex{
       * @return a reference to the building class
       */
       template < typename P >
-      TypedefBuilder & AddProperty( const char * key, 
-         P value );
+      TypedefBuilder & AddProperty(const char * key, 
+         P value);
 
 
       /*
@@ -118,18 +118,18 @@ namespace Reflex{
 
 //-------------------------------------------------------------------------------
 template < typename T >
-inline Reflex::TypedefBuilder<T>::TypedefBuilder( const char * nam ) 
+inline Reflex::TypedefBuilder<T>::TypedefBuilder(const char * nam) 
 //-------------------------------------------------------------------------------
-   : fTypedefBuilderImpl( nam, TypeDistiller<T>::Get()) {}
+   : fTypedefBuilderImpl(nam, TypeDistiller<T>::Get()) {}
 
 
 //-------------------------------------------------------------------------------
 template < typename T > template < typename P >
 inline Reflex::TypedefBuilder<T> & 
-Reflex::TypedefBuilder<T>::AddProperty( const char * key, 
-                                              P value ) {
+Reflex::TypedefBuilder<T>::AddProperty(const char * key, 
+                                              P value) {
 //-------------------------------------------------------------------------------
-   fTypedefBuilderImpl.AddProperty( key, value );
+   fTypedefBuilderImpl.AddProperty(key, value);
    return * this;
 }
 

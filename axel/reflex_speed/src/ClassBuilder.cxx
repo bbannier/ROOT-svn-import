@@ -36,7 +36,7 @@
 //
 
 //______________________________________________________________________________
-Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, TYPE typ)
+Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, ETYPE typ)
 : fClass(0)
 , fLastMember()
 {
@@ -141,7 +141,7 @@ void Reflex::ClassBuilderImpl::AddEnum(const char* nam, const char* values, cons
       std::vector<std::string>::const_iterator it = valVec.begin();
       it != valVec.end();
       ++it
-   ) {
+  ) {
       std::string name = "";
       std::string value = "";
       Tools::StringSplitPair(name, value, *it, "=");
@@ -192,7 +192,7 @@ Reflex::Type Reflex::ClassBuilderImpl::ToType()
 //
 
 //______________________________________________________________________________
-Reflex::ClassBuilder::ClassBuilder(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, TYPE typ)
+Reflex::ClassBuilder::ClassBuilder(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, ETYPE typ)
 : fClassBuilderImpl(nam, ti, size, modifiers, typ)
 {
    // -- Constructor

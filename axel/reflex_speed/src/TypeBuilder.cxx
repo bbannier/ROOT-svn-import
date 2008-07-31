@@ -29,17 +29,17 @@
 
 
 //-------------------------------------------------------------------------------
-Reflex::Type Reflex::TypeBuilder( const char * n, 
-                                              unsigned int modifiers ) {
+Reflex::Type Reflex::TypeBuilder(const char * n, 
+                                              unsigned int modifiers) {
 //-------------------------------------------------------------------------------
 // Construct the type information for a type.
    const Type & ret = Type::ByName(n);
-   if ( ret.Id() ) return Type(ret, modifiers);
+   if (ret.Id()) return Type(ret, modifiers);
    else {
       Internal::TypeName* tname = new Internal::TypeName(n, 0);
       std::string sname = Tools::GetScopeName(n);
-      if ( ! Scope::ByName( sname ).Id() )
-         new Internal::ScopeName( sname.c_str(), 0 );
+      if (! Scope::ByName(sname).Id())
+         new Internal::ScopeName(sname.c_str(), 0);
       return Type(tname, modifiers);
    }
 }
@@ -49,8 +49,8 @@ Reflex::Type Reflex::TypeBuilder( const char * n,
 Reflex::Type Reflex::ConstBuilder(const Type & t) {
 //-------------------------------------------------------------------------------
 // Construct a const qualified type.
-   unsigned int mod = CONST;
-   if ( t.Is(gVolatile) ) mod |= VOLATILE;
+   unsigned int mod = kConst;
+   if (t.Is(gVolatile)) mod |= kVolatile;
    return Type(t,mod);    
 }
 
@@ -58,31 +58,31 @@ Reflex::Type Reflex::ConstBuilder(const Type & t) {
 Reflex::Type Reflex::VolatileBuilder(const Type & t) {
 //-------------------------------------------------------------------------------
 // Construct a volatile qualified type.
-   unsigned int mod = VOLATILE;
-   if ( t.Is(gConst) )    mod |= CONST;
+   unsigned int mod = kVolatile;
+   if (t.Is(gConst))    mod |= kConst;
    return Type(t,mod);    
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Type Reflex::PointerBuilder( const Type & t,
-                                                 const std::type_info & ti ) {
+Reflex::Type Reflex::PointerBuilder(const Type & t,
+                                                 const std::type_info & ti) {
 //-------------------------------------------------------------------------------
 // Construct a pointer type.
-   const Type & ret = Type::ByName( Internal::Pointer::BuildTypeName(t));
-   if ( ret ) return ret;
+   const Type & ret = Type::ByName(Internal::Pointer::BuildTypeName(t));
+   if (ret) return ret;
    else       return (new Internal::Pointer(t, ti))->ThisType();
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Type Reflex::PointerToMemberBuilder( const Type & t,
+Reflex::Type Reflex::PointerToMemberBuilder(const Type & t,
                                                          const Scope & s,
-                                                         const std::type_info & ti ) {
+                                                         const std::type_info & ti) {
 //-------------------------------------------------------------------------------
 // Construct a pointer type.
-   const Type & ret = Type::ByName( Internal::PointerToMember::BuildTypeName(t,s));
-   if ( ret ) return ret;
+   const Type & ret = Type::ByName(Internal::PointerToMember::BuildTypeName(t,s));
+   if (ret) return ret;
    else       return (new Internal::PointerToMember(t, s, ti))->ThisType();
 }
 
@@ -91,52 +91,52 @@ Reflex::Type Reflex::PointerToMemberBuilder( const Type & t,
 Reflex::Type Reflex::ReferenceBuilder(const Type & t) {
 //-------------------------------------------------------------------------------
 // Construct a "reference qualified" type.
-   unsigned int mod = REFERENCE;
-   if ( t.Is(gConst) )    mod |= CONST;
-   if ( t.Is(gVolatile) ) mod |= VOLATILE;
+   unsigned int mod = kReference;
+   if (t.Is(gConst))    mod |= kConst;
+   if (t.Is(gVolatile)) mod |= kVolatile;
    return Type(t,mod);    
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Type Reflex::ArrayBuilder( const Type & t, 
+Reflex::Type Reflex::ArrayBuilder(const Type & t, 
                                                size_t n,
-                                               const std::type_info & ti ) {
+                                               const std::type_info & ti) {
 //-------------------------------------------------------------------------------
 // Construct an array type.
    const Type & ret = Type::ByName(Internal::Array::BuildTypeName(t,n));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Array(t, n, ti))->ThisType();
 }
 
 //-------------------------------------------------------------------------------
-Reflex::Type Reflex::EnumTypeBuilder( const char * nam, 
+Reflex::Type Reflex::EnumTypeBuilder(const char * nam, 
                                                   const char * values,
                                                   const std::type_info & ti,
-                                                  unsigned int modifiers ) {
+                                                  unsigned int modifiers) {
 //-------------------------------------------------------------------------------
 // Construct an enum type.
 
    std::string nam2(nam);
 
    const Type & ret = Type::ByName(nam2);
-   if ( ret ) {
-      if ( ret.Is(gTypedef) ) nam2 += " @HIDDEN@";
+   if (ret) {
+      if (ret.Is(gTypedef)) nam2 += " @HIDDEN@";
       else return ret;
    }
 
-   Internal::Enum * e = new Internal::Enum(nam2.c_str(), ti, modifiers );
+   Internal::Enum * e = new Internal::Enum(nam2.c_str(), ti, modifiers);
 
    std::vector<std::string> valVec;
    Tools::StringSplit(valVec, values, ";");
 
    const Type & int_t = Type::ByName("int");
    for (std::vector<std::string>::const_iterator it = valVec.begin(); 
-        it != valVec.end(); ++it ) {
+        it != valVec.end(); ++it) {
       std::string iname, ivalue;
       Tools::StringSplitPair(iname, ivalue, *it, "=");
       long val = atol(ivalue.c_str());
-      e->AddDataMember( iname.c_str(), int_t, val, 0);
+      e->AddDataMember(iname.c_str(), int_t, val, 0);
    }  
    return e->ThisType();
 }
@@ -148,23 +148,23 @@ Reflex::Type Reflex::TypedefTypeBuilder(const char * nam,
 // Construct a typedef type.
    Type ret = Type::ByName(nam);
    // Check for typedef AA AA;
-   if ( ret == t && ! t.Is(gTypedef) ) 
-      if ( t ) t.ToTypeBase()->HideName();
+   if (ret == t && ! t.Is(gTypedef)) 
+      if (t) t.ToTypeBase()->HideName();
       else ((Internal::TypeName*)t.Id())->HideName();
    // We found the typedef type
-   else if ( ret ) return ret;
+   else if (ret) return ret;
    // Create a new typedef
-   return (new Internal::Typedef( nam , t ))->ThisType();        
+   return (new Internal::Typedef(nam , t))->ThisType();        
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Type Reflex::FunctionTypeBuilder( const Type & r,
+Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                                       const std::vector<Type> & p,
-                                                      const std::type_info & ti ) {
+                                                      const std::type_info & ti) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
-   return (new Internal::Function( r, p, ti))->ThisType();
+   return (new Internal::Function(r, p, ti))->ThisType();
 }
 
 
@@ -174,7 +174,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r) {
 // Construct a function type.
    std::vector< Type > v;
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -186,7 +186,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -199,7 +199,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -213,7 +213,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -228,7 +228,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -244,7 +244,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
  
@@ -261,7 +261,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -279,7 +279,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -298,7 +298,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -318,7 +318,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -339,7 +339,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
  
@@ -361,7 +361,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -384,7 +384,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
  
@@ -408,7 +408,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 // Construct a function type.
    std::vector< Type > v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
  
@@ -433,7 +433,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -459,7 +459,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
  
@@ -486,7 +486,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -515,7 +515,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
                                            t16);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -545,7 +545,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
                                            t16, t17);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -576,7 +576,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
                                            t16, t17, t18);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -608,7 +608,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
                                            t16, t17, t18, t19);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -641,7 +641,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
                                            t16, t17, t18, t19, t20);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -675,7 +675,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
                                            t16, t17, t18, t19, t20, t21);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -710,7 +710,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
                                            t16, t17, t18, t19, t20, t21, t22);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -746,7 +746,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
                                            t16, t17, t18, t19, t20, t21, t22, t23);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -783,7 +783,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
                                            t16, t17, t18, t19, t20, t21, t22, t23, t24);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -821,7 +821,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
                                            t16, t17, t18, t19, t20, t21, t22, t23, t24, t25);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -860,7 +860,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
                                            t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -900,7 +900,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
                                            t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -941,7 +941,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
                                            t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -983,7 +983,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
                                            t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -1027,7 +1027,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                            t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29,
                                            t30);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 
@@ -1072,7 +1072,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                            t16, t17, t18, t19, t20, t21, t22, t23, t24, t25, t26, t27, t28, t29,
                                            t30, t31);
    const Type & ret = Type::ByName(Internal::Function::BuildTypeName(r,v));
-   if ( ret ) return ret;
+   if (ret) return ret;
    else       return (new Internal::Function(r, v, typeid(UnknownType)))->ThisType();
 }
 

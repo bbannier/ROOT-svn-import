@@ -44,31 +44,31 @@ namespace Reflex {
 
    public:
 
-      enum TYPE_MODIFICATION {
-         REPLACE = 0,
-         APPEND  = 1,
-         MASK    = 2
+      enum ETYPE_MODIFICATION {
+         kReplace = 0,
+         kAppend  = 1,
+         kMask    = 2
       };
 
       /** default constructor */
-      Type( const Internal::TypeName * typName = 0,
-         unsigned int modifiers = 0 );
+      Type(const Internal::TypeName * typName = 0,
+         unsigned int modifiers = 0);
 
 
       /** copy constructor */
-      Type( const Type & rh );
+      Type(const Type & rh);
 
 
       /** 
       * copy constructor applying qualification 
       * @param rh the right hand type
       * @param modifiers to be applied
-      * @param operation, the default is to replace the modifiers, you can also APPEND or MASK them.
-      *        MASK removes the modifiers specified in the 2nd argument
+      * @param operation, the default is to replace the modifiers, you can also kAppend or kMask them.
+      *        kMask removes the modifiers specified in the 2nd argument
       */
-      Type( const Type & rh,
+      Type(const Type & rh,
          unsigned int modifiers,
-         TYPE_MODIFICATION operation = REPLACE );
+         ETYPE_MODIFICATION operation = kReplace);
 
 
       /** destructor */
@@ -78,25 +78,25 @@ namespace Reflex {
       /** 
       * assignment operator
       */
-      Type & operator = ( const Type & rh );
+      Type & operator = (const Type & rh);
 
 
       /** 
       * equal operator 
       */
-      bool operator == ( const Type & rh ) const;
+      bool operator == (const Type & rh) const;
 
 
       /** 
       * not equal operator
       */
-      bool operator != ( const Type & rh ) const;
+      bool operator != (const Type & rh) const;
 
 
       /**
       * lesser than operator
       */
-      bool operator < ( const Type & rh) const; 
+      bool operator < (const Type & rh) const; 
 
 
       /**
@@ -152,8 +152,8 @@ namespace Reflex {
       * @param  to is the class type to cast into
       * @param  obj the memory address of the object to be casted
       */
-      Object CastObject( const Type & to, 
-         const Object & obj ) const;
+      Object CastObject(const Type & to, 
+         const Object & obj) const;
 
 
       /**
@@ -164,16 +164,16 @@ namespace Reflex {
       * @param  mem place in memory for implicit construction
       * @return new object 
       */
-      Object Construct( const Type & signature = Type(0,0),
+      Object Construct(const Type & signature = Type(0,0),
          const std::vector < void * > & values = std::vector < void * > (),
-         void * mem = 0 ) const;
+         void * mem = 0) const;
 
 
       /**
       * Deallocate will deallocate the memory for a given object
       * @param  instance of the type in memory
       */
-      void Deallocate( void * instance ) const;
+      void Deallocate(void * instance) const;
 
 
       /**
@@ -189,8 +189,8 @@ namespace Reflex {
       * @param  instance of the type in memory
       * @param  dealloc for also deallacoting the memory
       */
-      void Destruct( void * instance, 
-         bool dealloc = true ) const;
+      void Destruct(void * instance, 
+         bool dealloc = true) const;
 
 
       /**
@@ -199,7 +199,7 @@ namespace Reflex {
       * @param  mem is the memory address of the object to checked
       * @return the actual class of the object
       */
-      Type DynamicType( const Object & obj ) const;
+      Type DynamicType(const Object & obj) const;
 
 
       /**
@@ -221,7 +221,7 @@ namespace Reflex {
       * GenerateDict will produce the dictionary information of this type
       * @param generator a reference to the dictionary generator instance
       */
-      void GenerateDict( DictionaryGenerator & generator) const;
+      void GenerateDict(DictionaryGenerator & generator) const;
 
 
       /**
@@ -233,18 +233,11 @@ namespace Reflex {
 
       /**
       * Check whether the entity property is set for the type. You can
-      * combine checks, e.g. t.Is(gCLASS && gPUBLIC)
+      * combine checks, e.g. t.Is(gClass && gPUBLIC)
       * @param descr the entity property to check for; see EntityProperty.
       * @return whether descr is set.
       */
       bool Is(const EntityProperty& descr) const;
-
-
-      /** 
-      * IsComplete will return true if all classes and base classes of this 
-      * class are resolved and fully known in the system
-      */
-      bool IsComplete() const;
 
 
       /** 
@@ -253,8 +246,8 @@ namespace Reflex {
       * @modifiers_mask do not compare the listed modifiers
       * @return true if two types are equivalent
       */
-      bool IsEquivalentTo( const Type & typ, 
-         unsigned int modifiers_mask = 0 ) const;
+      bool IsEquivalentTo(const Type & typ, 
+         unsigned int modifiers_mask = 0) const;
 
 
       /** 
@@ -264,8 +257,8 @@ namespace Reflex {
       * @modifiers_mask do not compare the listed modifiers
       * @return true if two types are equivalent
       */
-      bool IsSignatureEquivalentTo( const Type & typ, 
-         unsigned int modifiers_mask = 0 ) const;
+      bool IsSignatureEquivalentTo(const Type & typ, 
+         unsigned int modifiers_mask = 0) const;
 
 
       /** 
@@ -279,11 +272,11 @@ namespace Reflex {
       * Name returns the name of the type 
       * @param  mod qualifiers can be or'ed 
       *   FINAL     - resolve typedefs
-      *   SCOPED    - fully scoped name 
-      *   QUALIFIED - cv, reference qualification 
+      *   kScoped    - fully scoped name 
+      *   kQualified - cv, reference qualification 
       * @return name of the type
       */
-      std::string Name( unsigned int mod = SCOPED | QUALIFIED ) const;
+      std::string Name(unsigned int mod = kScoped | kQualified) const;
 
 
       /**
@@ -291,18 +284,11 @@ namespace Reflex {
       * @param  buf buffer to be used for calculating name
       * @param  mod qualifiers can be or'ed 
       *   FINAL     - resolve typedefs
-      *   SCOPED    - fully scoped name 
-      *   QUALIFIED - cv, reference qualification 
+      *   kScoped    - fully scoped name 
+      *   kQualified - cv, reference qualification 
       * @return name of the type
       */
-      const std::string& Name(std::string& buf, unsigned int mod = SCOPED | QUALIFIED ) const;
-
-
-      /**
-      * Name_c_str returns a char* pointer to the unqualified type name
-      * @return c string to unqualified type name
-      */
-      const char * Name_c_str() const;
+      const std::string& Name(std::string& buf, unsigned int mod = kScoped | kQualified) const;
 
 
       /**
@@ -345,7 +331,7 @@ namespace Reflex {
       * TemplateArguments returns an ordered collection of the template arguments
       * @return reflection information of template arguments
       */
-      const OrderedContainer<TemplateArgument>& TemplateArguments() const;
+      const OrderedContainer<TemplateArgument> TemplateArguments() const;
 
 
       /**
@@ -367,7 +353,7 @@ namespace Reflex {
       * the system within the global catalog.
       * @return number of currently defined types
       */
-      static const Container<Type>& Types();
+      static const Container<Type> Types();
 
 
       /**
@@ -381,13 +367,13 @@ namespace Reflex {
       * TypeType will return the enum information about this type
       * @return enum information of this type
       */
-      TYPE TypeType() const;
+      ETYPE TypeType() const;
 
 
       /**
-      * TypeTypeAsString will return the string representation of the ENUM
-      * representing the real type of the Type (e.g. "CLASS")
-      * @return string representation of the TYPE enum of the Type
+      * TypeTypeAsString will return the string representation of the kEnum
+      * representing the real type of the Type (e.g. "kClass")
+      * @return string representation of the ETYPE enum of the Type
       */
       std::string TypeTypeAsString() const;
 
@@ -403,7 +389,7 @@ namespace Reflex {
       * be used with care. It will change the reflection information
       * of this type.
       */
-      void SetSize( size_t s ) const;
+      void SetSize(size_t s) const;
 
 
       /**
@@ -411,7 +397,7 @@ namespace Reflex {
       * Attention: This will change the reflection information
       * of this type.
       */
-      void SetTypeInfo( const std::type_info & ti ) const;
+      void SetTypeInfo(const std::type_info & ti) const;
 
 
       /** */
@@ -443,7 +429,7 @@ namespace Reflex {
 } //namespace Reflex
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type & Reflex::Type::operator = ( const Type & rh ) {
+inline Reflex::Type & Reflex::Type::operator = (const Type & rh) {
 //-------------------------------------------------------------------------------
    fTypeName = rh.fTypeName;
    fModifiers = rh.fModifiers;
@@ -452,49 +438,49 @@ inline Reflex::Type & Reflex::Type::operator = ( const Type & rh ) {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Type::operator == ( const Type & rh ) const {
+inline bool Reflex::Type::operator == (const Type & rh) const {
 //-------------------------------------------------------------------------------
-   return ( fTypeName == rh.fTypeName && fModifiers == rh.fModifiers );
+   return (fTypeName == rh.fTypeName && fModifiers == rh.fModifiers);
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Type::operator != ( const Type & rh ) const {
+inline bool Reflex::Type::operator != (const Type & rh) const {
 //-------------------------------------------------------------------------------
-   return ( fTypeName != rh.fTypeName || fModifiers != rh.fModifiers );
+   return (fTypeName != rh.fTypeName || fModifiers != rh.fModifiers);
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Type::operator < ( const Type & rh ) const {
+inline bool Reflex::Type::operator < (const Type & rh) const {
 //-------------------------------------------------------------------------------
    return Id() < rh.Id();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type::Type( const Internal::TypeName * typName,
-                                 unsigned int modifiers ) 
+inline Reflex::Type::Type(const Internal::TypeName * typName,
+                                 unsigned int modifiers) 
 //-------------------------------------------------------------------------------
-   : fTypeName( typName ),
-     fModifiers( modifiers ) {}
+   : fTypeName(typName),
+     fModifiers(modifiers) {}
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type::Type( const Type & rh )
+inline Reflex::Type::Type(const Type & rh)
 //-------------------------------------------------------------------------------
-   : fTypeName ( rh.fTypeName ),
-     fModifiers ( rh.fModifiers ) {}
+   : fTypeName (rh.fTypeName),
+     fModifiers (rh.fModifiers) {}
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type::Type( const Type & rh, 
+inline Reflex::Type::Type(const Type & rh, 
                                  unsigned int modifiers,
-                                 TYPE_MODIFICATION operation ) 
+                                 ETYPE_MODIFICATION operation) 
 //-------------------------------------------------------------------------------
-   : fTypeName( rh.fTypeName ),
-     fModifiers( operation == APPEND ? rh.fModifiers | modifiers : 
-                 ( operation == MASK ? rh.fModifiers & (~modifiers): modifiers ) ) {}
+   : fTypeName(rh.fTypeName),
+     fModifiers(operation == kAppend ? rh.fModifiers | modifiers : 
+                 (operation == kMask ? rh.fModifiers & (~modifiers): modifiers)) {}
 
 
 //-------------------------------------------------------------------------------
@@ -512,7 +498,7 @@ inline void * Reflex::Type::Id() const {
 
 //-------------------------------------------------------------------------------
 inline bool
-Reflex::Type::IsEquivalentTo( const Type & typ, unsigned int modifiers_mask ) const {
+Reflex::Type::IsEquivalentTo(const Type & typ, unsigned int modifiers_mask) const {
 //-------------------------------------------------------------------------------
    return DetermineEquivalence(typ, modifiers_mask, true);
 }
@@ -520,7 +506,7 @@ Reflex::Type::IsEquivalentTo( const Type & typ, unsigned int modifiers_mask ) co
 
 //-------------------------------------------------------------------------------
 inline bool
-Reflex::Type::IsSignatureEquivalentTo( const Type & typ, unsigned int modifiers_mask ) const {
+Reflex::Type::IsSignatureEquivalentTo(const Type & typ, unsigned int modifiers_mask) const {
 //-------------------------------------------------------------------------------
    return DetermineEquivalence(typ, modifiers_mask, false);
 }

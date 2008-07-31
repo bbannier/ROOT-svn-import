@@ -34,7 +34,7 @@ namespace Internal {
    public:
 
       /** default constructor */
-      FunctionMemberTemplateInstance( const char * nam,
+      FunctionMemberTemplateInstance(const char * nam,
          const Type & typ,
          StubFunction stubFP,
          void * stubCtx = 0,
@@ -53,7 +53,7 @@ namespace Internal {
       * @param  typedefexp expand typedefs or not
       * @return fully qualified Name of templated function
       */
-      std::string Name( unsigned int mod = 0 ) const;
+      std::string Name(unsigned int mod = 0) const;
 
 
       /**
@@ -61,7 +61,7 @@ namespace Internal {
       * @param  nth nth template argument
       * @return pointer to nth template argument
       */
-      Type TemplateArgumentAt( size_t nth ) const;
+      Type TemplateArgumentAt(size_t nth) const;
 
 
       /**

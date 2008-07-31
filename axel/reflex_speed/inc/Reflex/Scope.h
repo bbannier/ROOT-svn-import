@@ -47,11 +47,11 @@ namespace Reflex {
    public:
 
       /** constructor */
-      Scope( const Internal::ScopeName * scopeName = 0 );
+      Scope(const Internal::ScopeName * scopeName = 0);
 
 
       /** copy constructor */
-      Scope( const Scope & rh );
+      Scope(const Scope & rh);
 
 
       /** destructor */
@@ -61,7 +61,7 @@ namespace Reflex {
       /**
       * inequal operator 
       */
-      bool operator != ( const Scope & rh ) const;
+      bool operator != (const Scope & rh) const;
 
 
       /**
@@ -143,7 +143,7 @@ namespace Reflex {
       * @return reflection information of the function member
       */
       // this overloading is unfortunate but I can't include Type.h here
-      Member FunctionMemberByName( const std::string & name,
+      Member FunctionMemberByName(const std::string & name,
          const Type & signature,
          unsigned int modifers_mask = 0) const;
 
@@ -157,7 +157,7 @@ namespace Reflex {
       * @return reflection information of the function member
       */
       // this overloading is unfortunate but I can't include Type.h here
-      Member FunctionMemberByNameAndSignature( const std::string & name,
+      Member FunctionMemberByNameAndSignature(const std::string & name,
          const Type & signature,
          unsigned int modifers_mask = 0) const;
 
@@ -176,6 +176,14 @@ namespace Reflex {
       static Scope GlobalScope();
 
 
+      /* HasBase will check whether this class has a base class given
+      * as argument
+      * @param  cl the base-class to check for
+      * @return the Base info if it is found, an empty base otherwise (can be tested for bool)
+      */
+      bool HasBase(const Type & cl) const;
+
+
       /**
       * Id returns a unique identifier of the type in the system
       * @return unique identifier
@@ -185,11 +193,17 @@ namespace Reflex {
 
       /**
       * Check whether the entity property is set for the scope. You can
-      * combine checks, e.g. Is(gCLASS && gPUBLIC)
+      * combine checks, e.g. Is(gClass && gPUBLIC)
       * @param descr the entity property to check for; see EntityProperty.
       * @return whether descr is set.
       */
       bool Is(const EntityProperty& descr) const;
+
+
+      /* IsComplete will return true if all classes and base classes of this 
+      * class are resolved and fully known in the system
+      */
+      bool IsComplete() const;
 
 
       /** 
@@ -204,7 +218,7 @@ namespace Reflex {
       * @param nam the string representation of the member to lookup
       * @return if a matching member is found return it, otherwise return empty member
       */
-      Member LookupMember( const std::string & nam ) const;
+      Member LookupMember(const std::string & nam) const;
 
 
       /**
@@ -212,7 +226,7 @@ namespace Reflex {
       * @param nam the string representation of the type to lookup
       * @return if a matching type is found return it, otherwise return empty type
       */
-      Type LookupType( const std::string & nam ) const;
+      Type LookupType(const std::string & nam) const;
 
 
       /**
@@ -220,7 +234,7 @@ namespace Reflex {
       * @param nam the string representation of the scope to lookup
       * @return if a matching scope is found return it, otherwise return empty scope
       */
-      Scope LookupScope( const std::string & nam ) const;
+      Scope LookupScope(const std::string & nam) const;
 
 
       /**
@@ -237,8 +251,8 @@ namespace Reflex {
       * @return reflection information of the member
       */
       // this overloading is unfortunate but I can't include Type.h here
-      Member MemberByName( const std::string & name,
-         const Type & signature ) const;
+      Member MemberByName(const std::string & name,
+         const Type & signature) const;
 
 
       /** 
@@ -252,11 +266,11 @@ namespace Reflex {
       * Name returns the name of the scope 
       * @param  mod qualifiers can be or'ed 
       *   FINAL     - resolve typedefs
-      *   SCOPED    - fully scoped name 
-      *   QUALIFIED - cv, reference qualification 
+      *   kScoped    - fully scoped name 
+      *   kQualified - cv, reference qualification 
       * @return name of the type
       */
-      std::string Name( unsigned int mod = SCOPED | QUALIFIED ) const;
+      std::string Name(unsigned int mod = kScoped | kQualified) const;
 
 
       /**
@@ -264,11 +278,11 @@ namespace Reflex {
       * @param  buf buffer to be used for calculating name
       * @param  mod qualifiers can be or'ed 
       *   FINAL     - resolve typedefs
-      *   SCOPED    - fully scoped name 
-      *   QUALIFIED - cv, reference qualification 
+      *   kScoped    - fully scoped name 
+      *   kQualified - cv, reference qualification 
       * @return name of the type
       */
-      const std::string& Name(std::string& buf, unsigned int mod = SCOPED | QUALIFIED ) const;
+      const std::string& Name(std::string& buf, unsigned int mod = kScoped | kQualified) const;
 
 
       /**
@@ -282,13 +296,13 @@ namespace Reflex {
       * ScopeType will return the enum information about this scope
       * @return enum information of this scope
       */
-      TYPE ScopeType() const;
+      ETYPE ScopeType() const;
 
 
       /**
-      * ScopeTypeAsString will return the string representation of the ENUM
-      * representing the real type of the scope (e.g. "CLASS")
-      * @return string representation of the TYPE enum of the scope
+      * ScopeTypeAsString will return the string representation of the kEnum
+      * representing the real type of the scope (e.g. "kClass")
+      * @return string representation of the ETYPE enum of the scope
       */
       std::string ScopeTypeAsString() const;
 
@@ -353,7 +367,7 @@ namespace Reflex {
       * AddMember adds the information about a member
       * @param dm member to add
       */
-      void AddMember( const Member & dm ) const;
+      void AddMember(const Member & dm) const;
 
 
       /**
@@ -363,10 +377,10 @@ namespace Reflex {
       * @param offs the offset of the member relative to the beginning of the scope
       * @param modifiers of the member
       */
-      void AddMember( const char * name,
+      void AddMember(const char * name,
          const Type & type,
          size_t offset,
-         unsigned int modifiers = 0 ) const;
+         unsigned int modifiers = 0) const;
 
 
       /**
@@ -378,26 +392,26 @@ namespace Reflex {
       * @param params a semi colon separated list of parameters 
       * @param modifiers of the function member
       */ 
-      void AddMember( const char * name,
+      void AddMember(const char * name,
          const Type & type,
          StubFunction stubFP,
          void * stubCtx = 0,
          const char * params = 0,
-         unsigned int modifiers = 0 ) const;
+         unsigned int modifiers = 0) const;
 
 
       /** 
       * AddMember will add a member template to this scope
       * @param mt member template to add
       */
-      void AddMember( const MemberTemplate & mt ) const ;
+      void AddMember(const MemberTemplate & mt) const ;
 
 
       /**
       * AddSubScope will add a sub scope to this one
       * @param sc sub scope to add
       */
-      void AddSubScope( const Scope & sc ) const;
+      void AddSubScope(const Scope & sc) const;
 
 
       /**
@@ -405,15 +419,15 @@ namespace Reflex {
       * @param scop the name of the sub scope
       * @param scopeType enum value of the scope type
       */
-      void AddSubScope( const char * scope,
-         TYPE scopeType ) const;
+      void AddSubScope(const char * scope,
+         ETYPE scopeType) const;
 
 
       /**
       * AddSubType will add a sub type to this type
       * @param ty sub type to add
       */
-      void AddSubType( const Type & ty ) const;
+      void AddSubType(const Type & ty) const;
 
 
       /**
@@ -424,95 +438,95 @@ namespace Reflex {
       * @param ti the type_info of the sub type
       * @param modifiers of the sub type
       */
-      void AddSubType( const char * type,
+      void AddSubType(const char * type,
          size_t size,
-         TYPE typeType,
+         ETYPE typeType,
          const std::type_info & typeInfo,
-         unsigned int modifiers = 0 ) const;
+         unsigned int modifiers = 0) const;
 
 
       /** 
       * AddTypeTemplate will add a sub type template to this scope
       * @param tt type template to add
       */
-      void AddSubTypeTemplate( const TypeTemplate & mt ) const ;
+      void AddSubTypeTemplate(const TypeTemplate & mt) const ;
 
 
       /**
       * AddUsingDirective will add a using namespace directive to this scope
       * @param ud using directive to add
       */
-      void AddUsingDirective( const Scope & ud ) const;
+      void AddUsingDirective(const Scope & ud) const;
 
 
       /**
       * AddUsingDeclaration adds a using declaration of a type to this scope
       * @param ud using declaration to add
       */
-      void AddUsingDeclaration( const Type & ud ) const;
+      void AddUsingDeclaration(const Type & ud) const;
 
 
       /**
       * AddUsingDeclaration adds a using declaration of a member to this scope
       * @param ud using declaration to add
       */
-      void AddUsingDeclaration( const Member & ud ) const;
+      void AddUsingDeclaration(const Member & ud) const;
 
 
       /**
       * RemoveMember removes the information about a member
       * @param dm member to remove
       */
-      void RemoveMember( const Member & dm ) const;
+      void RemoveMember(const Member & dm) const;
 
 
       /** 
       * RemoveMemberTemplate will remove a member template from this scope
       * @param mt member template to remove
       */
-      void RemoveMember( const MemberTemplate & mt ) const;
+      void RemoveMember(const MemberTemplate & mt) const;
 
 
       /**
       * RemoveSubScope will remove a sub scope from this type
       * @param sc sub scope to remove
       */
-      void RemoveSubScope( const Scope & sc ) const;
+      void RemoveSubScope(const Scope & sc) const;
 
 
       /**
       * RemoveSubType will remove a sub type from this type
       * @param sc sub type to remove
       */
-      void RemoveSubType( const Type & ty ) const;     
+      void RemoveSubType(const Type & ty) const;     
 
 
       /**
       * RemoveSubTypeTemplate will remove a sub type template from this scope
       * @param tt sub type template to remove
       */
-      void RemoveSubTypeTemplate( const TypeTemplate & tt ) const;
+      void RemoveSubTypeTemplate(const TypeTemplate & tt) const;
 
 
       /** 
       * RemoveUsingDirective will remove a using namespace directive from this scope
       * @param ud using namespace directive to remove
       */
-      void RemoveUsingDirective( const Scope & ud ) const;
+      void RemoveUsingDirective(const Scope & ud) const;
 
 
       /** 
       * RemoveUsingDeclaration removes a using declaration from this scope
       * @param ud using declaration to remove
       */
-      void RemoveUsingDeclaration( const Type & ud ) const;
+      void RemoveUsingDeclaration(const Type & ud) const;
 
 
       /** 
       * RemoveUsingDeclaration removes a using declaration from this scope
       * @param ud using declaration to remove
       */
-      void RemoveUsingDeclaration( const Member & ud ) const;
+      void RemoveUsingDeclaration(const Member & ud) const;
 
 
       /** */
@@ -549,36 +563,36 @@ namespace Reflex {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Scope::operator != ( const Scope & rh ) const {
+inline bool Reflex::Scope::operator != (const Scope & rh) const {
 //-------------------------------------------------------------------------------
-   return ( fScopeName != rh.fScopeName );
+   return (fScopeName != rh.fScopeName);
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::operator < ( const Scope & lh, const Scope & rh ) {
+inline bool Reflex::operator < (const Scope & lh, const Scope & rh) {
 //-------------------------------------------------------------------------------
    return const_cast<Scope*>(&lh)->Id() < const_cast<Scope*>(&rh)->Id();
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::operator == ( const Scope & lh,const Scope & rh ) {
+inline bool Reflex::operator == (const Scope & lh,const Scope & rh) {
 //-------------------------------------------------------------------------------
    return const_cast<Scope*>(&lh)->Id() == const_cast<Scope*>(&rh)->Id();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope::Scope( const Internal::ScopeName * scopeName ) 
+inline Reflex::Scope::Scope(const Internal::ScopeName * scopeName) 
 //-------------------------------------------------------------------------------
-   : fScopeName( scopeName ) {}
+   : fScopeName(scopeName) {}
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Scope::Scope( const Scope & rh ) 
+inline Reflex::Scope::Scope(const Scope & rh) 
 //-------------------------------------------------------------------------------
-   : fScopeName( rh.fScopeName ) {}
+   : fScopeName(rh.fScopeName) {}
 
 
 //-------------------------------------------------------------------------------

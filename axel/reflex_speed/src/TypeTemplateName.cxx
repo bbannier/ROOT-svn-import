@@ -47,15 +47,15 @@ static TypeTemplateVec_t & sTypeTemplateVec() {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::TypeTemplateName::TypeTemplateName( const char * name,
-                                                      TypeTemplateImpl * typeTemplateImpl )
+Reflex::Internal::TypeTemplateName::TypeTemplateName(const char * name,
+                                                      TypeTemplateImpl * typeTemplateImpl)
 //-------------------------------------------------------------------------------
-   : fName( name ),
-     fTypeTemplateImpl( typeTemplateImpl ) {
+   : fName(name),
+     fTypeTemplateImpl(typeTemplateImpl) {
    // Constructor.
-   fThisTypeTemplate = new TypeTemplate( this );
-   sTypeTemplates().insert(std::make_pair<const std::string * const, TypeTemplate>( &fName, *fThisTypeTemplate));
-   sTypeTemplateVec().push_back( * fThisTypeTemplate );
+   fThisTypeTemplate = new TypeTemplate(this);
+   sTypeTemplates().insert(std::make_pair<const std::string * const, TypeTemplate>(&fName, *fThisTypeTemplate));
+   sTypeTemplateVec().push_back(* fThisTypeTemplate);
 }
 
 
@@ -68,18 +68,18 @@ Reflex::Internal::TypeTemplateName::~TypeTemplateName() {
 
 //-------------------------------------------------------------------------------
 Reflex::TypeTemplate
-Reflex::Internal::TypeTemplateName::ByName( const std::string & name,
-                                                                   size_t nTemplateParams ) {
+Reflex::Internal::TypeTemplateName::ByName(const std::string & name,
+                                                                   size_t nTemplateParams) {
 //-------------------------------------------------------------------------------
    // Lookup a type template by its name.
    typedef Name2TypeTemplate_t::iterator IT;
    IT lower = sTypeTemplates().find(&name);
-   if ( lower != sTypeTemplates().end()) {
-      if ( ! nTemplateParams ) return lower->second;
+   if (lower != sTypeTemplates().end()) {
+      if (! nTemplateParams) return lower->second;
       else {
          std::pair<IT,IT> bounds = sTypeTemplates().equal_range(&name);
-         for ( IT it = bounds.first; it != bounds.second; ++it ) {
-            if ( it->second.TemplateParameterSize() == nTemplateParams ) {
+         for (IT it = bounds.first; it != bounds.second; ++it) {
+            if (it->second.TemplateParameterSize() == nTemplateParams) {
                return it->second;
             }
          }
@@ -94,10 +94,10 @@ void
 Reflex::Internal::TypeTemplateName::CleanUp() {
 //-------------------------------------------------------------------------------
    // Do the final cleanup for the type templates.  
-   for ( TypeTemplateVec_t::iterator it = sTypeTemplateVec().begin(); it != sTypeTemplateVec().end(); ++it ) {
+   for (TypeTemplateVec_t::iterator it = sTypeTemplateVec().begin(); it != sTypeTemplateVec().end(); ++it) {
       TypeTemplateName * tn = (TypeTemplateName*)it->Id();
       TypeTemplate * t = tn->fThisTypeTemplate;
-      if ( t ) t->Unload();
+      if (t) t->Unload();
       delete t;
       delete tn;
    }
@@ -116,11 +116,11 @@ Reflex::Internal::TypeTemplateName::DeleteTypeTemplate() const {
 
 //-------------------------------------------------------------------------------
 std::string
-Reflex::Internal::TypeTemplateName::Name( unsigned int mod ) const {
+Reflex::Internal::TypeTemplateName::Name(unsigned int mod) const {
 //-------------------------------------------------------------------------------
    // Return the name of this type template.
-   if ( 0 != ( mod & ( SCOPED | S ))) return fName;
-   else                               return Tools::GetBaseName( fName );
+   if (0 != (mod & (kScoped | S))) return fName;
+   else                               return Tools::GetBaseName(fName);
 }
 
 
@@ -135,10 +135,10 @@ Reflex::Internal::TypeTemplateName::ThisTypeTemplate() const {
 
 //-------------------------------------------------------------------------------
 Reflex::TypeTemplate
-Reflex::Internal::TypeTemplateName::TypeTemplateAt( size_t nth ) {
+Reflex::Internal::TypeTemplateName::TypeTemplateAt(size_t nth) {
 //-------------------------------------------------------------------------------
    // Return teh nth type template.
-   if ( nth < sTypeTemplateVec().size()) return sTypeTemplateVec()[nth];
+   if (nth < sTypeTemplateVec().size()) return sTypeTemplateVec()[nth];
    return Dummy::TypeTemplate();
 }
 

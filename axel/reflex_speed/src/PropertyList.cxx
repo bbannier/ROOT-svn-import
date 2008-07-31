@@ -19,95 +19,95 @@
 #include "Reflex/Any.h"
 
 //-------------------------------------------------------------------------------
-std::ostream & Reflex::operator<<( std::ostream & s,
-                                         const PropertyList & p ) {
+std::ostream & Reflex::operator<<(std::ostream & s,
+                                         const PropertyList & p) {
 //-------------------------------------------------------------------------------
 // Operator to put a property list on the ostream.
-   if ( p.fPropertyListImpl ) s << *(p.fPropertyListImpl); 
+   if (p.fPropertyListImpl) s << *(p.fPropertyListImpl); 
    return s;
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::PropertyList::AddProperty( const std::string & key,
-                                                       const Any & value ) const {
+inline size_t Reflex::PropertyList::AddProperty(const std::string & key,
+                                                       const Any & value) const {
 //-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->AddProperty( key, value );
+   if (fPropertyListImpl) return fPropertyListImpl->AddProperty(key, value);
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::PropertyList::AddProperty( size_t key,
-                                                     const Any & value ) const {
+inline void Reflex::PropertyList::AddProperty(size_t key,
+                                                     const Any & value) const {
 //-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->AddProperty( key, value );
+   if (fPropertyListImpl) return fPropertyListImpl->AddProperty(key, value);
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::PropertyList::AddProperty( const std::string & key,
-                                                       const char* value ) const {
+inline size_t Reflex::PropertyList::AddProperty(const std::string & key,
+                                                       const char* value) const {
 //-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->AddProperty( key, value );
+   if (fPropertyListImpl) return fPropertyListImpl->AddProperty(key, value);
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::PropertyList::AddProperty( size_t key,
-                                                     const char* value ) const {
+inline void Reflex::PropertyList::AddProperty(size_t key,
+                                                     const char* value) const {
 //-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->AddProperty( key, value );
+   if (fPropertyListImpl) return fPropertyListImpl->AddProperty(key, value);
 }
 
 
 //-------------------------------------------------------------------------------
 inline void Reflex::PropertyList::ClearProperties() const {
 //-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) fPropertyListImpl->ClearProperties();
+   if (fPropertyListImpl) fPropertyListImpl->ClearProperties();
 }
 
 
 //-------------------------------------------------------------------------------
 inline bool Reflex::PropertyList::HasProperty(const std::string & key) const {
 //-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->HasProperty( key );
+   if (fPropertyListImpl) return fPropertyListImpl->HasProperty(key);
    return false;
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::PropertyList::HasProperty( size_t key) const {
+inline bool Reflex::PropertyList::HasProperty(size_t key) const {
 //-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->HasProperty( key );
+   if (fPropertyListImpl) return fPropertyListImpl->HasProperty(key);
    return false;
 }
 
 
 //-------------------------------------------------------------------------------
 inline std::string 
-Reflex::PropertyList::PropertyAsString( const std::string & key ) const {
+Reflex::PropertyList::PropertyAsString(const std::string & key) const {
 //-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyAsString( key );
+   if (fPropertyListImpl) return fPropertyListImpl->PropertyAsString(key);
    return "";
 }
 
 
 //-------------------------------------------------------------------------------
 inline std::string 
-Reflex::PropertyList::PropertyAsString( size_t key ) const {
+Reflex::PropertyList::PropertyAsString(size_t key) const {
 //-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyAsString( key );
+   if (fPropertyListImpl) return fPropertyListImpl->PropertyAsString(key);
    return "";
 }
 
 
 //-------------------------------------------------------------------------------
-inline size_t Reflex::PropertyList::PropertyKey( const std::string & key,
-                                                       bool allocateNew ) const {
+inline size_t Reflex::PropertyList::PropertyKey(const std::string & key,
+                                                       bool allocateNew) const {
 //-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyKey( key, allocateNew );
+   if (fPropertyListImpl) return fPropertyListImpl->PropertyKey(key, allocateNew);
    return 0;
 }
 
@@ -115,7 +115,7 @@ inline size_t Reflex::PropertyList::PropertyKey( const std::string & key,
 //-------------------------------------------------------------------------------
 inline std::string Reflex::PropertyList::PropertyKeys() const {
 //-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyKeys();
+   if (fPropertyListImpl) return fPropertyListImpl->PropertyKeys();
    return "";
 }
 
@@ -123,22 +123,22 @@ inline std::string Reflex::PropertyList::PropertyKeys() const {
 //-------------------------------------------------------------------------------
 inline size_t Reflex::PropertyList::PropertyCount() const {
 //-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyCount();
+   if (fPropertyListImpl) return fPropertyListImpl->PropertyCount();
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::PropertyList::RemoveProperty( const std::string & key ) const {
+inline void Reflex::PropertyList::RemoveProperty(const std::string & key) const {
 //-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) fPropertyListImpl->RemoveProperty( key );
+   if (fPropertyListImpl) fPropertyListImpl->RemoveProperty(key);
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::PropertyList::RemoveProperty( size_t key ) const {
+inline void Reflex::PropertyList::RemoveProperty(size_t key) const {
 //-------------------------------------------------------------------------------
-   if ( fPropertyListImpl ) fPropertyListImpl->RemoveProperty( key );
+   if (fPropertyListImpl) fPropertyListImpl->RemoveProperty(key);
 }
 
 
@@ -151,39 +151,39 @@ std::string Reflex::PropertyList::KeysAsString() {
 
 
 //-------------------------------------------------------------------------------
-const std::string & Reflex::PropertyList::KeyAt( size_t nth ) {
+const std::string & Reflex::PropertyList::KeyAt(size_t nth) {
 //-------------------------------------------------------------------------------
 // Return key at position nth.
-   return Internal::PropertyListImpl::KeyAt( nth );
+   return Internal::PropertyListImpl::KeyAt(nth);
 }
 
 
 //-------------------------------------------------------------------------------
-size_t Reflex::PropertyList::KeyByName( const std::string & key,
-                                              bool allocateNew ) {
+size_t Reflex::PropertyList::KeyByName(const std::string & key,
+                                              bool allocateNew) {
 //-------------------------------------------------------------------------------
 // Return the position of a Key. If allocateNew is set to true allocate a new key
 // if necessary.
-   return Internal::PropertyListImpl::KeyByName( key, allocateNew );
+   return Internal::PropertyListImpl::KeyByName(key, allocateNew);
 }
 
 
 //-------------------------------------------------------------------------------
 Reflex::Any &
-Reflex::PropertyList::PropertyValue( const std::string & key ) const {
+Reflex::PropertyList::PropertyValue(const std::string & key) const {
 //-------------------------------------------------------------------------------
 // Get the value of a property as Any object.
-   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyValue( key );
+   if (fPropertyListImpl) return fPropertyListImpl->PropertyValue(key);
    return Dummy::Any();
 }
 
 
 //-------------------------------------------------------------------------------
 Reflex::Any &
-Reflex::PropertyList::PropertyValue( size_t key ) const {
+Reflex::PropertyList::PropertyValue(size_t key) const {
 //-------------------------------------------------------------------------------
 // Get the value of a property as Any object.
-   if ( fPropertyListImpl ) return fPropertyListImpl->PropertyValue( key );
+   if (fPropertyListImpl) return fPropertyListImpl->PropertyValue(key);
    return Dummy::Any();
 }
 

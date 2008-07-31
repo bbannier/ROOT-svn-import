@@ -36,7 +36,7 @@ namespace Reflex {
 
       void FillMap(const std::string& filename);
 
-      static void SetDebug( int );
+      static void SetDebug(int);
 
       static int Debug();
 
