@@ -32,7 +32,7 @@
 //
 
 //______________________________________________________________________________
-Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size, const std::type_info& ti, unsigned int modifiers /*= 0*/, TYPE typ /*=UNION*/)
+Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size, const std::type_info& ti, unsigned int modifiers /*= 0*/, ETYPE typ /*=kUnion*/)
 : fUnion(0)
 , fLastMember()
 {
@@ -131,7 +131,7 @@ Reflex::Type Reflex::UnionBuilderImpl::ToType()
 //
 
 //______________________________________________________________________________
-Reflex::UnionBuilder::UnionBuilder(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers /*= 0*/, TYPE typ /*= UNION*/)
+Reflex::UnionBuilder::UnionBuilder(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers /*= 0*/, ETYPE typ /*= kUnion*/)
 : fUnionBuilderImpl(nam, size, ti, modifiers, typ)
 {
 // Constructor.

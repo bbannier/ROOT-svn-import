@@ -34,13 +34,13 @@ namespace Internal {
    public:
 
       /** constructor */
-      OwnedMember( const MemberBase * memberBase = 0 ) 
-         : Member ( memberBase ) {
+      OwnedMember(const MemberBase * memberBase = 0) 
+         : Member (memberBase) {
       }
 
       /** take ownership */
-      OwnedMember( const Member & rh ) 
-         : Member ( rh ) {}
+      OwnedMember(const Member & rh) 
+         : Member (rh) {}
 
 
       /** delete info */

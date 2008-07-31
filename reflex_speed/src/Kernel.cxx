@@ -36,28 +36,28 @@
 
 //-------------------------------------------------------------------------------
 const std::string&
-Reflex::TYPEName(TYPE type) {
+Reflex::TYPEName(ETYPE type) {
 //-------------------------------------------------------------------------------
    static const std::string sTYPENames[] = {
-      "CLASS",
-      "STRUCT",
-      "ENUM",
-      "UNION",
-      "NAMESPACE",
-      "FUNCTION",
-      "ARRAY",
-      "FUNDAMENTAL",
-      "POINTER",
-      "POINTERTOMEMBER",
-      "TYPEDEF",
-      "DATAMEMBER",
-      "FUNCTIONMEMBER",
-      "UNRESOLVED",
+      "kClass",
+      "kStruct",
+      "kEnum",
+      "kUnion",
+      "kNamespace",
+      "kFunction",
+      "kArray",
+      "kFundamental",
+      "kPointer",
+      "kPointerToMember",
+      "kTypedef",
+      "kDataMember",
+      "kFunctionMember",
+      "kUnresolved",
       ""
    };
 
-   if (type > UNRESOLVED + 1)
-      type = UNRESOLVED + 1;
+   if (type > kUnresolved + 1)
+      type = kUnresolved + 1;
    return sTYPENames[type];
 }
 
@@ -75,111 +75,111 @@ Reflex::Instance::Instance() {
    Type t = Type();
  
    // char [3.9.1.1]
-   tb = new Internal::Fundamental( "char", 
-                         sizeof( char ), 
-                         typeid( char ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   tb = new Internal::Fundamental("char", 
+                         sizeof(char), 
+                         typeid(char));
+   tb->Properties().AddProperty("Description", "fundamental type");
 
    // signed integer types [3.9.1.2]
-   tb = new Internal::Fundamental( "signed char", 
-                         sizeof( signed char ), 
-                         typeid( signed char ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   tb = new Internal::Fundamental("signed char", 
+                         sizeof(signed char), 
+                         typeid(signed char));
+   tb->Properties().AddProperty("Description", "fundamental type");
 
-   tb = new Internal::Fundamental( "short int", 
-                         sizeof( short int ), 
-                         typeid( short int ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   tb = new Internal::Fundamental("short int", 
+                         sizeof(short int), 
+                         typeid(short int));
+   tb->Properties().AddProperty("Description", "fundamental type");
    t = tb->ThisType();
-   new Internal::Typedef( "short", t, FUNDAMENTAL, t );
-   new Internal::Typedef( "signed short", t, FUNDAMENTAL, t );
-   new Internal::Typedef( "short signed", t, FUNDAMENTAL, t );
-   new Internal::Typedef( "signed short int", t, FUNDAMENTAL, t );
-   new Internal::Typedef( "short signed int", t, FUNDAMENTAL, t );
+   new Internal::Typedef("short", t, kFundamental, t);
+   new Internal::Typedef("signed short", t, kFundamental, t);
+   new Internal::Typedef("short signed", t, kFundamental, t);
+   new Internal::Typedef("signed short int", t, kFundamental, t);
+   new Internal::Typedef("short signed int", t, kFundamental, t);
 
-   tb = new Internal::Fundamental( "int", 
-                         sizeof( int ), 
-                         typeid( int ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   tb = new Internal::Fundamental("int", 
+                         sizeof(int), 
+                         typeid(int));
+   tb->Properties().AddProperty("Description", "fundamental type");
    t = tb->ThisType();
-   new Internal::Typedef( "signed", t, FUNDAMENTAL, t );
-   new Internal::Typedef( "signed int", t, FUNDAMENTAL, t );
+   new Internal::Typedef("signed", t, kFundamental, t);
+   new Internal::Typedef("signed int", t, kFundamental, t);
 
-   tb = new Internal::Fundamental( "long int", 
-                         sizeof( long int ), 
-                         typeid( long int ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   tb = new Internal::Fundamental("long int", 
+                         sizeof(long int), 
+                         typeid(long int));
+   tb->Properties().AddProperty("Description", "fundamental type");
    t = tb->ThisType();
-   new Internal::Typedef( "long", t, FUNDAMENTAL, t );
-   new Internal::Typedef( "signed long", t, FUNDAMENTAL, t );
-   new Internal::Typedef( "long signed", t, FUNDAMENTAL, t );
-   new Internal::Typedef( "signed long int", t, FUNDAMENTAL, t );
-   new Internal::Typedef( "long signed int", t, FUNDAMENTAL, t );
+   new Internal::Typedef("long", t, kFundamental, t);
+   new Internal::Typedef("signed long", t, kFundamental, t);
+   new Internal::Typedef("long signed", t, kFundamental, t);
+   new Internal::Typedef("signed long int", t, kFundamental, t);
+   new Internal::Typedef("long signed int", t, kFundamental, t);
 
    // unsigned integer types [3.9.1.3]
-   tb = new Internal::Fundamental( "unsigned char", 
-                         sizeof( unsigned char ), 
-                         typeid( unsigned char ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   tb = new Internal::Fundamental("unsigned char", 
+                         sizeof(unsigned char), 
+                         typeid(unsigned char));
+   tb->Properties().AddProperty("Description", "fundamental type");
 
-   tb = new Internal::Fundamental( "unsigned short int", 
-                         sizeof( unsigned short int ), 
-                         typeid( unsigned short int ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   tb = new Internal::Fundamental("unsigned short int", 
+                         sizeof(unsigned short int), 
+                         typeid(unsigned short int));
+   tb->Properties().AddProperty("Description", "fundamental type");
    t = tb->ThisType();
-   new Internal::Typedef( "unsigned short", t, FUNDAMENTAL, t );
-   new Internal::Typedef( "short unsigned int", t, FUNDAMENTAL, t );
+   new Internal::Typedef("unsigned short", t, kFundamental, t);
+   new Internal::Typedef("short unsigned int", t, kFundamental, t);
 
-   tb = new Internal::Fundamental( "unsigned int", 
-                         sizeof( unsigned int ), 
-                         typeid( unsigned int ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   tb = new Internal::Fundamental("unsigned int", 
+                         sizeof(unsigned int), 
+                         typeid(unsigned int));
+   tb->Properties().AddProperty("Description", "fundamental type");
    t = tb->ThisType();
-   new Internal::Typedef( "unsigned", t, FUNDAMENTAL, t );
+   new Internal::Typedef("unsigned", t, kFundamental, t);
 
-   tb = new Internal::Fundamental( "unsigned long int", 
-                         sizeof( unsigned long int ), 
-                         typeid( unsigned long int ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   tb = new Internal::Fundamental("unsigned long int", 
+                         sizeof(unsigned long int), 
+                         typeid(unsigned long int));
+   tb->Properties().AddProperty("Description", "fundamental type");
    t = tb->ThisType();
-   new Internal::Typedef( "unsigned long", t, FUNDAMENTAL, t );
-   new Internal::Typedef( "long unsigned", t, FUNDAMENTAL, t );
-   new Internal::Typedef( "long unsigned int", t, FUNDAMENTAL, t );
+   new Internal::Typedef("unsigned long", t, kFundamental, t);
+   new Internal::Typedef("long unsigned", t, kFundamental, t);
+   new Internal::Typedef("long unsigned int", t, kFundamental, t);
 
    /*/ w_chart [3.9.1.5]
-     tb = new Internal::Fundamental( "w_chart", 
-     sizeof( w_chart ), 
-     & typeid( w_chart ));
-     tb->Properties().AddProperty( "Description", "fundamental type" );
+     tb = new Internal::Fundamental("w_chart", 
+     sizeof(w_chart), 
+     & typeid(w_chart));
+     tb->Properties().AddProperty("Description", "fundamental type");
    */
 
    // bool [3.9.1.6]
-   tb = new Internal::Fundamental( "bool", 
-                         sizeof( bool ), 
-                         typeid( bool ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   tb = new Internal::Fundamental("bool", 
+                         sizeof(bool), 
+                         typeid(bool));
+   tb->Properties().AddProperty("Description", "fundamental type");
 
    // floating point types [3.9.1.8]
-   tb = new Internal::Fundamental( "float", 
-                         sizeof( float ), 
-                         typeid( float ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   tb = new Internal::Fundamental("float", 
+                         sizeof(float), 
+                         typeid(float));
+   tb->Properties().AddProperty("Description", "fundamental type");
 
-   tb = new Internal::Fundamental( "double", 
-                         sizeof( double ), 
-                         typeid( double ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   tb = new Internal::Fundamental("double", 
+                         sizeof(double), 
+                         typeid(double));
+   tb->Properties().AddProperty("Description", "fundamental type");
 
-   tb = new Internal::Fundamental( "long double", 
-                         sizeof( long double ), 
-                         typeid( long double ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   tb = new Internal::Fundamental("long double", 
+                         sizeof(long double), 
+                         typeid(long double));
+   tb->Properties().AddProperty("Description", "fundamental type");
 
    // void [3.9.1.9]
-   tb = new Internal::Fundamental( "void", 
+   tb = new Internal::Fundamental("void", 
                          0, 
-                         typeid( void ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+                         typeid(void));
+   tb->Properties().AddProperty("Description", "fundamental type");
 
       // Large integer definition depends of the platform
 #if defined(_MSC_VER) && !defined(__CINT__)
@@ -191,21 +191,21 @@ Reflex::Instance::Instance() {
 #endif
 
    // non fundamental types but also supported at initialisation
-   tb = new Internal::Fundamental( "long long", 
-                         sizeof( longlong ), 
-                         typeid( longlong ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   tb = new Internal::Fundamental("long long", 
+                         sizeof(longlong), 
+                         typeid(longlong));
+   tb->Properties().AddProperty("Description", "fundamental type");
    t = tb->ThisType();
-   new Internal::Typedef( "long long int", t, FUNDAMENTAL, t );
+   new Internal::Typedef("long long int", t, kFundamental, t);
 
-   tb = new Internal::Fundamental( "unsigned long long", 
-                         sizeof( ulonglong ), 
-                         typeid( ulonglong ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   tb = new Internal::Fundamental("unsigned long long", 
+                         sizeof(ulonglong), 
+                         typeid(ulonglong));
+   tb->Properties().AddProperty("Description", "fundamental type");
    t = tb->ThisType();
-   new Internal::Typedef( "long long unsigned", t, FUNDAMENTAL, t );
-   new Internal::Typedef( "unsigned long long int", t, FUNDAMENTAL, t );
-   new Internal::Typedef( "long long unsigned int", t, FUNDAMENTAL, t );
+   new Internal::Typedef("long long unsigned", t, kFundamental, t);
+   new Internal::Typedef("unsigned long long int", t, kFundamental, t);
+   new Internal::Typedef("long long unsigned int", t, kFundamental, t);
 
 }
 
@@ -253,8 +253,8 @@ const Reflex::EmptyCont_Type_t & Reflex::Dummy::EmptyCont() {
       virtual void ProxyEnd(ConstIteratorBase& i) const { i.SetImpl(&sBeginEnd, false); }
 
       // empty implementation for unordered container
-      virtual void ProxyRBegin(ConstIteratorBase& ) const { i.SetImpl(&sBeginEnd, false); }
-      virtual void ProxyREnd(ConstIteratorBase& ) const { i.SetImpl(&sBeginEnd, false); }
+      virtual void ProxyRBegin(ConstIteratorBase&) const { i.SetImpl(&sBeginEnd, false); }
+      virtual void ProxyREnd(ConstIteratorBase&) const { i.SetImpl(&sBeginEnd, false); }
 
       virtual size_t ProxySize() const { return 0; }
       virtual bool   ProxyEmpty() const { return true; }
@@ -329,7 +329,7 @@ Reflex::Any & Reflex::Dummy::Any() {
 //-------------------------------------------------------------------------------
    // static wrapper for an empty Any object 
    static Reflex::Any i;
-   if ( i ) i.Clear();
+   if (i) i.Clear();
    return i;
 }
 

@@ -19,44 +19,44 @@
 #include "OwnedMember.h"
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::Pointer::Pointer( const Type & pointerType,
-                                    const std::type_info & ti )
+Reflex::Internal::Pointer::Pointer(const Type & pointerType,
+                                    const std::type_info & ti)
 //-------------------------------------------------------------------------------
-   : TypeBase( BuildTypeName(pointerType).c_str(), sizeof(void*), POINTER, ti ), 
-     fPointerType( pointerType ) { 
+   : TypeBase(BuildTypeName(pointerType).c_str(), sizeof(void*), kPointer, ti), 
+     fPointerType(pointerType) { 
    // Construct the dictionary info for a pointer type.
 }
 
 
 //-------------------------------------------------------------------------------
 std::string
-Reflex::Internal::Pointer::Name( unsigned int mod ) const {
+Reflex::Internal::Pointer::Name(unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Return the name of the pointer type.
-   return BuildTypeName( fPointerType, mod );
+   return BuildTypeName(fPointerType, mod);
 }
 
 
 //-------------------------------------------------------------------------------
 std::string
-Reflex::Internal::Pointer::BuildTypeName( const Type & pointerType,
-                                          unsigned int mod ) {
+Reflex::Internal::Pointer::BuildTypeName(const Type & pointerType,
+                                          unsigned int mod) {
 //-------------------------------------------------------------------------------
 // Build the pointer type name.
-   if ( ! pointerType.Is(gFunction) ) return pointerType.Name( mod ) + "*";
+   if (! pointerType.Is(gFunction)) return pointerType.Name(mod) + "*";
    // function pointer and pointer to function members
    else {
       std::string s = pointerType.ReturnType().Name(mod);
       s += " (";
       const Scope & decl = pointerType.DeclaringScope();
-      if ( decl ) s += decl.Name(SCOPED) + ":: ";
+      if (decl) s += decl.Name(kScoped) + ":: ";
       s += "*)(";
-      if ( pointerType.FunctionParameterSize() ) {
+      if (pointerType.FunctionParameterSize()) {
          Type_Iterator pend = pointerType.FunctionParameter_End();
-         for ( Type_Iterator ti = pointerType.FunctionParameter_Begin();
-               ti != pend; ) {
-            s += ti->Name( mod );
-            if ( ++ti != pend ) s += ",";
+         for (Type_Iterator ti = pointerType.FunctionParameter_Begin();
+               ti != pend;) {
+            s += ti->Name(mod);
+            if (++ti != pend) s += ",";
          }
       }
       else s += "void";

@@ -147,7 +147,7 @@
  *
  @endcode
  *
- * @Reflex::selection::TRANSIENT
+ * @Reflex::selection::kTransient
  *
  *   This declaration marks the corresponding MemberAt in @c C with
  *   the same Name as transient.  This allows the transient flag
@@ -168,7 +168,7 @@
  *       namespace selection {
  *         class C
  *         {
- *           TRANSIENT fY; // Don't save C::fY.
+ *           kTransient fY; // Don't save C::fY.
  *         };
  *       }
  *     }
@@ -239,7 +239,7 @@ namespace Reflex {
       * This should be used in a selection class.  This marks the corresponding
       * MemberAt as being transient.  See the header comments for examples.
       */
-      class RFLX_API TRANSIENT {};
+      class RFLX_API kTransient {};
 
 
       /*

@@ -34,9 +34,9 @@ namespace Reflex{
    public:
 
       /** constructor */
-      EnumBuilder( const char * name,
+      EnumBuilder(const char * name,
          const std::type_info & ti,
-         unsigned int modifiers = 0 );
+         unsigned int modifiers = 0);
 
 
       /** destructor */
@@ -50,8 +50,8 @@ namespace Reflex{
       * @param  value the value of the PropertyNth
       * @return a reference to the building class
       */
-      EnumBuilder &  AddItem ( const char * nam,
-         long value );
+      EnumBuilder &  AddItem (const char * nam,
+         long value);
 
 
       /** 
@@ -59,8 +59,8 @@ namespace Reflex{
       * @param  key the PropertyNth key
       * @param  value the value of the PropertyNth
       */
-      EnumBuilder & AddProperty( const char * key,
-         Any value );
+      EnumBuilder & AddProperty(const char * key,
+         Any value);
 
 
       /** 
@@ -68,8 +68,8 @@ namespace Reflex{
       * @param  key the PropertyNth key
       * @param  value the value of the PropertyNth
       */
-      EnumBuilder &  AddProperty( const char * key,
-         const char * value );
+      EnumBuilder &  AddProperty(const char * key,
+         const char * value);
 
 
       /*
@@ -101,12 +101,12 @@ namespace Reflex{
    public:            
 
       /** constructor */
-      EnumBuilderT( unsigned int modifiers = 0 );
+      EnumBuilderT(unsigned int modifiers = 0);
 
 
       /** constructor */
-      EnumBuilderT( const char * nam, 
-         unsigned int modifiers = 0 );
+      EnumBuilderT(const char * nam, 
+         unsigned int modifiers = 0);
 
 
       /** destructor */
@@ -119,8 +119,8 @@ namespace Reflex{
       * @param  value the value of the item
       * @return a reference to the building class
       */
-      EnumBuilderT & AddItem( const char * nam, 
-         long value );
+      EnumBuilderT & AddItem(const char * nam, 
+         long value);
 
 
       /** 
@@ -131,8 +131,8 @@ namespace Reflex{
       * @return a reference to the building class
       */
       template  < typename P >
-      EnumBuilderT & AddProperty( const char * key, 
-         P value );
+      EnumBuilderT & AddProperty(const char * key, 
+         P value);
 
 
       /*
@@ -152,30 +152,30 @@ namespace Reflex{
 
 //-------------------------------------------------------------------------------
 template < typename T >
-inline Reflex::EnumBuilderT<T>::EnumBuilderT( unsigned int modifiers ) 
+inline Reflex::EnumBuilderT<T>::EnumBuilderT(unsigned int modifiers) 
 //-------------------------------------------------------------------------------
-   : fEnumBuilderImpl( Tools::Demangle( typeid(T) ).c_str(), 
+   : fEnumBuilderImpl(Tools::Demangle(typeid(T)).c_str(), 
                        typeid(T),
-                       modifiers ) {}
+                       modifiers) {}
 
 
 //-------------------------------------------------------------------------------
 template < typename T >
-inline Reflex::EnumBuilderT<T>::EnumBuilderT( const char * nam, 
-                                                    unsigned int modifiers )
+inline Reflex::EnumBuilderT<T>::EnumBuilderT(const char * nam, 
+                                                    unsigned int modifiers)
 //-------------------------------------------------------------------------------
-   : fEnumBuilderImpl( nam, 
+   : fEnumBuilderImpl(nam, 
                        typeid(UnknownType),
-                       modifiers ) {}
+                       modifiers) {}
 
 
 //-------------------------------------------------------------------------------
 template < typename T >
 inline Reflex::EnumBuilderT<T> & 
-Reflex::EnumBuilderT<T>::AddItem( const char * nam, 
-                                        long value ) {
+Reflex::EnumBuilderT<T>::AddItem(const char * nam, 
+                                        long value) {
 //-------------------------------------------------------------------------------
-   fEnumBuilderImpl.AddItem( nam, value );
+   fEnumBuilderImpl.AddItem(nam, value);
    return * this;
 }
 
@@ -183,10 +183,10 @@ Reflex::EnumBuilderT<T>::AddItem( const char * nam,
 //-------------------------------------------------------------------------------
 template < typename T > template < typename P >
 inline Reflex::EnumBuilderT<T> & 
-Reflex::EnumBuilderT<T>::AddProperty( const char * key, 
-                                            P value ) {
+Reflex::EnumBuilderT<T>::AddProperty(const char * key, 
+                                            P value) {
 //-------------------------------------------------------------------------------
-   fEnumBuilderImpl.AddProperty( key, value );
+   fEnumBuilderImpl.AddProperty(key, value);
    return * this;
 }
 

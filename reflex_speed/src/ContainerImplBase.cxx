@@ -43,7 +43,7 @@ Reflex::Internal::ContainerImplBase::ContainerImplBase(size_t nodeSize, size_t s
 //-------------------------------------------------------------------------------
 Reflex::Internal::ContainerImplBase::~ContainerImplBase() {
 //-------------------------------------------------------------------------------
-   // NEEDS TO BE DONE BY DERIVED CLASS!
+   // NEEDS TO BE DONE BY DERIVED kClass!
    // The buckets d'tor needs to access the virtual DeleteNode()
    //   fBuckets.clear();
    fNodeArena->ReleaseInstance();

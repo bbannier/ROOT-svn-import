@@ -22,35 +22,35 @@
 #include <sstream>
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::Array::Array( const Type & arrayType,
+Reflex::Internal::Array::Array(const Type & arrayType,
                             size_t len,
-                            const std::type_info & typeinfo ) 
+                            const std::type_info & typeinfo) 
 //-------------------------------------------------------------------------------
 // Constructs an array type.
-   : TypeBase( BuildTypeName(arrayType, len ).c_str(), 
-               len*(arrayType.SizeOf()), ARRAY, typeinfo ), 
-     fArrayType( arrayType ), 
-     fLength( len ) { }
+   : TypeBase(BuildTypeName(arrayType, len).c_str(), 
+               len*(arrayType.SizeOf()), kArray, typeinfo), 
+     fArrayType(arrayType), 
+     fLength(len) { }
 
 
 //-------------------------------------------------------------------------------
-std::string Reflex::Internal::Array::Name( unsigned int mod ) const {
+std::string Reflex::Internal::Array::Name(unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Return the name of the array type.
-   return BuildTypeName( fArrayType, fLength, mod );
+   return BuildTypeName(fArrayType, fLength, mod);
 }
 
 
 //-------------------------------------------------------------------------------
-std::string Reflex::Internal::Array::BuildTypeName( const Type & typ, 
+std::string Reflex::Internal::Array::BuildTypeName(const Type & typ, 
                                                 size_t len,
-                                                unsigned int mod ) {
+                                                unsigned int mod) {
 //-------------------------------------------------------------------------------
 // Build an array type name.
    std::ostringstream ost; 
    Type t = typ;
    ost << "[" << len << "]";
-   while ( t.Is(gArray) ) {
+   while (t.Is(gArray)) {
       ost << "[" << t.ArrayLength() << "]";
       t = t.ToType();
    }

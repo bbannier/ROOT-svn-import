@@ -40,8 +40,8 @@ namespace Internal {
    public:
 
       /** constructor */
-      TypeTemplateName( const char * name,
-         TypeTemplateImpl * typeTemplImpl );
+      TypeTemplateName(const char * name,
+         TypeTemplateImpl * typeTemplImpl);
 
 
       /**
@@ -51,8 +51,8 @@ namespace Internal {
       *        if it is set to 0, the first occurence of the template family name will be returned
       * @return corresponding type template to name
       */
-      static TypeTemplate ByName( const std::string & name,
-         size_t nTemplateParams = 0 );
+      static TypeTemplate ByName(const std::string & name,
+         size_t nTemplateParams = 0);
 
 
       /**
@@ -72,7 +72,7 @@ namespace Internal {
       * Name will return the name of the type template
       * @return name of type template
       */
-      std::string Name( unsigned int mod ) const;
+      std::string Name(unsigned int mod) const;
 
 
       /**
@@ -94,7 +94,7 @@ namespace Internal {
       * @param nth type template
       * @return nth type template
       */
-      static TypeTemplate TypeTemplateAt( size_t nth );
+      static TypeTemplate TypeTemplateAt(size_t nth);
 
 
       /**

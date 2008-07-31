@@ -36,7 +36,7 @@ namespace Reflex {
    public:
 
       template < typename R > 
-      static R Create(const std::string& name ) {
+      static R Create(const std::string& name) {
          return (R)Create(name, GetType<R>(), std::vector<ValueObject>());
       }  
 
@@ -80,7 +80,7 @@ namespace Reflex {
       template < typename R, typename A0, typename A1, typename A2, typename A3,
          typename A4 > 
          static R Create(const std::string& name, const A0& a0, const A1& a1, 
-         const A2& a2, const A3& a3, const A4& a4 ) {
+         const A2& a2, const A3& a3, const A4& a4) {
             return (R)Create(name, GetType<R>(), 
                Tools::MakeVector(ValueObject(a0), 
                ValueObject(a1), 
@@ -93,7 +93,7 @@ namespace Reflex {
       template < typename R, typename A0, typename A1, typename A2, typename A3,
          typename A4, typename A5 > 
          static R Create(const std::string& name, const A0& a0, const A1& a1, 
-         const A2& a2, const A3& a3, const A4& a4, const A5& a5 ) {
+         const A2& a2, const A3& a3, const A4& a4, const A5& a5) {
             return (R)Create(name, GetType<R>(), 
                Tools::MakeVector(ValueObject(a0), 
                ValueObject(a1), 
@@ -108,7 +108,7 @@ namespace Reflex {
          typename A4, typename A5, typename A6 > 
          static R Create(const std::string& name, const A0& a0, const A1& a1, 
          const A2& a2, const A3& a3, const A4& a4, const A5& a5, 
-         const A6& a6 ) {
+         const A6& a6) {
             return (R)Create(name, GetType<R>(), 
                Tools::MakeVector(ValueObject(a0), 
                ValueObject(a1), 
@@ -124,7 +124,7 @@ namespace Reflex {
          typename A4, typename A5, typename A6, typename A7 > 
          static R Create(const std::string& name, const A0& a0, const A1& a1, 
          const A2& a2, const A3& a3, const A4& a4, const A5& a5, 
-         const A6& a6, const A7& a7 ) {
+         const A6& a6, const A7& a7) {
             return (R)Create(name, GetType<R>(), 
                Tools::MakeVector(ValueObject(a0), 
                ValueObject(a1), 
@@ -144,23 +144,23 @@ namespace Reflex {
 
       template < typename T > 
       static bool CompareId(const Any& id1, 
-         const Any& id2 ) {
+         const Any& id2) {
             try { return id1.TypeInfo()   == id2.TypeInfo() && 
                any_cast<T>(id1) == any_cast<T>(id2); }
-            catch ( const BadAnyCast& ) { return false; }
+            catch (const BadAnyCast&) { return false; }
       }
 
 
-      template < typename T > static std::string StringId(const Any& id ){
+      template < typename T > static std::string StringId(const Any& id){
          std::stringstream s;
          try { s << any_cast<T>(id); }
-         catch ( const BadAnyCast& ) { }
+         catch (const BadAnyCast&) { }
          return s.str();
       }
 
 
       template < typename R, typename T > 
-      static R CreateWithId(const T& id ) {
+      static R CreateWithId(const T& id) {
          return (R)CreateWithId(id, StringId<T>, CompareId<T>, GetType<R>(), 
             std::vector<ValueObject>());
       }  
@@ -203,7 +203,7 @@ namespace Reflex {
          const std::vector<ValueObject>& arg);
 
 
-      static std::string FactoryName(const std::string& n );
+      static std::string FactoryName(const std::string& n);
 
       static int  Debug();
 
@@ -242,42 +242,42 @@ namespace {
   };
 
   template < typename T > struct Arg<T*> {
-     static T* Cast(void* a ) { return (T*)a; }
+     static T* Cast(void* a) { return (T*)a; }
   };  
 
   template< typename P, typename S > class Factory;
 
   template< typename P, typename R > class Factory<P, R(void)> {
   public: 
-     static void* Func( void*, const std::vector<void*>& /* arg */, void*) {
+     static void* Func(void*, const std::vector<void*>& /* arg */, void*) {
         return (R) ::new P;
      }
   };
   
   template < typename P, typename R, typename A0 > class Factory<P, R(A0)> {
   public: 
-     static void* Func( void*, const std::vector<void*>& arg, void*) {
+     static void* Func(void*, const std::vector<void*>& arg, void*) {
         return (R) ::new P(Arg<A0>::Cast(arg[0]));
      }
   };
 
   template < typename P, typename R, typename A0, typename A1 > class Factory<P, R(A0, A1)> {
   public: 
-     static void* Func( void*, const std::vector<void*>& arg, void*) {
+     static void* Func(void*, const std::vector<void*>& arg, void*) {
         return (R) ::new P(Arg<A0>::Cast(arg[0]), Arg<A1>::Cast(arg[1]));
      }
   };
 
   template < typename P, typename R, typename A0, typename A1, typename A2 > class Factory<P, R(A0, A1, A2)> {
   public: 
-     static void* Func( void*, const std::vector<void*>& arg, void*) {
+     static void* Func(void*, const std::vector<void*>& arg, void*) {
         return (R) ::new P(Arg<A0>::Cast(arg[0]), Arg<A1>::Cast(arg[1]), Arg<A2>::Cast(arg[2]));
      }
   };
 
   template < typename P, typename R, typename A0, typename A1, typename A2, typename A3 > class Factory<P, R(A0, A1, A2, A3)> {
   public: 
-     static void* Func( void*, const std::vector<void*>& arg, void*) {
+     static void* Func(void*, const std::vector<void*>& arg, void*) {
         return (R) ::new P(Arg<A0>::Cast(arg[0]), Arg<A1>::Cast(arg[1]), Arg<A2>::Cast(arg[2]), Arg<A3>::Cast(arg[3]));
      }
   };
@@ -289,17 +289,17 @@ namespace {
 #define PLUGINSVC_FACTORY(type, signature) _PLUGINSVC_FACTORY(type, signature, __LINE__)
 #define PLUGINSVC_FACTORY_WITH_ID(type, id, signature) _PLUGINSVC_FACTORY_WITH_ID(type, id, signature, __LINE__)
 
-#define _PLUGINSVC_FACTORY(type, signature, serial ) \
+#define _PLUGINSVC_FACTORY(type, signature, serial) \
 namespace {\
   struct PLUGINSVC_CNAME(type, serial) {\
     PLUGINSVC_CNAME(type, serial)() {\
-      std::string name = Reflex::GetType<type>().Name(Reflex::SCOPED); \
+      std::string name = Reflex::GetType<type>().Name(Reflex::kScoped); \
       Reflex::Type sig = Reflex::FunctionDistiller<signature>::Get(); \
       std::string fname = (std::string(PLUGINSVC_FACTORY_NS "::")+Reflex::PluginService::FactoryName(name));\
-      Reflex::FunctionBuilder( sig, fname.c_str(), \
-        Factory<type, signature>::Func , 0, "", Reflex::PUBLIC)\
+      Reflex::FunctionBuilder(sig, fname.c_str(), \
+        Factory<type, signature>::Func , 0, "", Reflex::kPublic)\
         .AddProperty("name",name); \
-      if ( Reflex::PluginService::Debug() ) std::cout << "PluginService: Declared factory for class " << name << " with signature " << sig.Name() << std::endl; \
+      if (Reflex::PluginService::Debug()) std::cout << "PluginService: Declared factory for class " << name << " with signature " << sig.Name() << std::endl; \
     }\
   };\
   PLUGINSVC_CNAME(type, serial) PLUGINSVC_CNAME(s_##type, serial);\
@@ -309,15 +309,15 @@ namespace {\
 namespace {\
   struct PLUGINSVC_CNAME(type, serial) {\
     PLUGINSVC_CNAME(type, serial)() {\
-      std::string name = Reflex::GetType<type>().Name(Reflex::SCOPED); \
+      std::string name = Reflex::GetType<type>().Name(Reflex::kScoped); \
       Reflex::Type sig = Reflex::FunctionDistiller<signature>::Get(); \
       std::stringstream s; s << id; \
       std::string fname = (std::string(PLUGINSVC_FACTORY_NS "::")+Reflex::PluginService::FactoryName(s.str()));\
-      Reflex::FunctionBuilder( sig, fname.c_str(), \
-        Factory<type, signature>::Func , 0, "", Reflex::PUBLIC)\
+      Reflex::FunctionBuilder(sig, fname.c_str(), \
+        Factory<type, signature>::Func , 0, "", Reflex::kPublic)\
         .AddProperty("name",name) \
         .AddProperty("id",id); \
-      if ( Reflex::PluginService::Debug() ) std::cout << "PluginService: Declared factory for id " << fname << " with signature " << sig.Name() << std::endl; \
+      if (Reflex::PluginService::Debug()) std::cout << "PluginService: Declared factory for id " << fname << " with signature " << sig.Name() << std::endl; \
     }\
   };\
   PLUGINSVC_CNAME(type, serial) PLUGINSVC_CNAME(s_##type, serial);\

@@ -17,13 +17,13 @@
 #include "Class.h"
 
 //-------------------------------------------------------------------------------
-Reflex::Base::Base( const Type &    baseType,
+Reflex::Base::Base(const Type &    baseType,
                     OffsetFunction  offsetfp,
-                    unsigned int    modifiers )
-   : fOffsetFP( offsetfp ),
-     fModifiers( modifiers ),
-     fBaseType( Type() ),
-     fBaseClass( 0 ) {
+                    unsigned int    modifiers)
+   : fOffsetFP(offsetfp),
+     fModifiers(modifiers),
+     fBaseType(Type()),
+     fBaseClass(0) {
 //-------------------------------------------------------------------------------
 // Construct the information for a base. The pointer to the base class (type Class)
 // is set to 0 initially and set on first access.
@@ -35,8 +35,8 @@ Reflex::Base::Base( const Type &    baseType,
 const Reflex::Internal::Class * Reflex::Base::BaseClass() const {
 //-------------------------------------------------------------------------------
 // Return the pointer to the base class. Set on first access.
-   if ( fBaseClass ) return fBaseClass;
-   if ( fBaseType ) {
+   if (fBaseClass) return fBaseClass;
+   if (fBaseType) {
       fBaseClass = dynamic_cast< const Internal::Class * >(fBaseType.ToTypeBase());
       return fBaseClass;
    }
@@ -45,16 +45,16 @@ const Reflex::Internal::Class * Reflex::Base::BaseClass() const {
 
 
 //-------------------------------------------------------------------------------
-std::string Reflex::Base::Name( unsigned int mod ) const {
+std::string Reflex::Base::Name(unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Construct the name of the base. Qualify if requested.
    std::string s = "";
-   if ( 0 != ( mod & ( QUALIFIED | Q ))) {
-      if ( IsPublic())    { s += "public "; }
-      if ( IsProtected()) { s += "protected "; }
-      if ( IsPrivate())   { s += "private "; }
-      if ( IsVirtual())   { s += "virtual "; }
+   if (mod & kQualified) {
+      if (IsPublic())    { s += "public "; }
+      if (IsProtected()) { s += "protected "; }
+      if (IsPrivate())   { s += "private "; }
+      if (IsVirtual())   { s += "virtual "; }
    }
-   s += fBaseType.Name( mod );
+   s += fBaseType.Name(mod);
    return s;
 }

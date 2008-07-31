@@ -107,8 +107,8 @@ namespace Reflex {
          virtual void ProxyEnd(ConstIteratorBase& i) const = 0;
 
          // empty implementation for unordered container
-         virtual void ProxyRBegin(ConstIteratorBase& ) const {};
-         virtual void ProxyREnd(ConstIteratorBase& ) const {};
+         virtual void ProxyRBegin(ConstIteratorBase&) const {};
+         virtual void ProxyREnd(ConstIteratorBase&) const {};
 
          virtual size_t ProxySize() const = 0;
          virtual bool   ProxyEmpty() const = 0;
@@ -159,6 +159,8 @@ namespace Reflex {
       template <typename CONT>
       friend const CONT&
          Dummy::Get();
+      friend class Scope;
+      friend class Type;
    };
 
 

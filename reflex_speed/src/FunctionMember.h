@@ -36,13 +36,13 @@ namespace Internal {
    public:
 
       /** default constructor */
-      FunctionMember( const char *   nam,
+      FunctionMember(const char *   nam,
          const Type &   typ,
          StubFunction   stubFP,
          void *         stubCtx = 0,
          const char *   params = 0,
          unsigned int   modifiers = 0,
-         TYPE           memType = FUNCTIONMEMBER );
+         ETYPE           memType = kFunctionMember);
 
 
       /** destructor */
@@ -59,28 +59,28 @@ namespace Internal {
       /** 
       * Name returns the Name of the member 
       * @param mod modifiers can be or'ed as argument
-      * SCOPED - fully scoped name
+      * kScoped - fully scoped name
       * @return name of the member
       */
-      const std::string& Name( std::string& buf, unsigned int mod = SCOPED ) const;
+      const std::string& Name(std::string& buf, unsigned int mod = kScoped) const;
 
 
       /** Invoke the function (if return At as void*) */
-      /*Object Invoke( const Object & obj, 
-      const std::vector < Object > & paramList ) const;*/
-      Object Invoke( const Object & obj, 
+      /*Object Invoke(const Object & obj, 
+      const std::vector < Object > & paramList) const;*/
+      Object Invoke(const Object & obj, 
          const std::vector < void * > & paramList = 
          std::vector<void*>()) const;
 
 
       /** Invoke the function (for static functions) */
-      //Object Invoke( const std::vector < Object > & paramList ) const;
-      Object Invoke( const std::vector < void * > & paramList = 
+      //Object Invoke(const std::vector < Object > & paramList) const;
+      Object Invoke(const std::vector < void * > & paramList = 
          std::vector<void*>()) const;
 
 
       /** number of parameters */
-      size_t FunctionParameterSize( bool required = false ) const;
+      size_t FunctionParameterSize(bool required = false) const;
 
 
       /** 

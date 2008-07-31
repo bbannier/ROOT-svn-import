@@ -41,16 +41,16 @@ namespace Reflex {
       /**
       * operator call (virtual)
       */
-      virtual void operator () ( const Type & ) = 0;
-      virtual void operator () ( const Member & ) = 0;
+      virtual void operator () (const Type &) = 0;
+      virtual void operator () (const Member &) = 0;
 
    }; // class ICallback
 
 
-   RFLX_API void InstallClassCallback( ICallback * cb );
-   RFLX_API void UninstallClassCallback( ICallback * cb );
-   RFLX_API void FireClassCallback( const Type & );
-   RFLX_API void FireFunctionCallback( const Member & );
+   RFLX_API void InstallClassCallback(ICallback * cb);
+   RFLX_API void UninstallClassCallback(ICallback * cb);
+   RFLX_API void FireClassCallback(const Type &);
+   RFLX_API void FireFunctionCallback(const Member &);
 
 } // namespace Reflex
 

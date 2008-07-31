@@ -40,8 +40,8 @@
 using namespace std;
 
 //-------------------------------------------------------------------------------
-std::ostream & Reflex::operator << ( std::ostream & s,
-                                           const Reflex::DictionaryGenerator & obj ) {
+std::ostream & Reflex::operator << (std::ostream & s,
+                                           const Reflex::DictionaryGenerator & obj) {
 //-------------------------------------------------------------------------------
 
    time_t rawtime;
@@ -95,7 +95,7 @@ std::string Reflex::DictionaryGenerator::Replace_colon(std::string scoped_name) 
 //-------------------------------------------------------------------------------
 // Replaces :: with __ , in a string
    std::string lname = scoped_name;
-   for( unsigned i=0; i<lname.size(); ++i) {
+   for(unsigned i=0; i<lname.size(); ++i) {
       switch (lname[i]) {
       case '<':
       case '>':
@@ -164,7 +164,7 @@ bool Reflex::DictionaryGenerator::Use_selection(const std::string & filename) {
        TDOMParser parseri; 
        parseri.SetValidate(kFALSE);
   
-       if( parseri.ParseFile("/home/ahahto/root2/test_selection.xml") !=0)
+       if (parseri.ParseFile("/home/ahahto/root2/test_selection.xml") !=0)
        {
        std::cerr<< "Error: no valid lcgdict XML file.\n";
        // return EXIT_FAILURE;
@@ -176,7 +176,7 @@ bool Reflex::DictionaryGenerator::Use_selection(const std::string & filename) {
        std::string rootnodename =  rootnode->GetNodeName();
        std::cout<<"Rootnode: ["<< rootnodename <<"]\n";
 
-       if( rootnodename != "lcgdict")
+       if (rootnodename != "lcgdict")
        {
        std::cerr<< "Error: no valid lcgdict XML file.\n";
        // return EXIT_FAILURE;
@@ -184,20 +184,20 @@ bool Reflex::DictionaryGenerator::Use_selection(const std::string & filename) {
 
        //  TXMLNode *childnode = node->GetChildren();
        
-       for ( TXMLNode *childnode = rootnode->GetChildren(); childnode !=0;  childnode = childnode ->GetNextNode())
+       for (TXMLNode *childnode = rootnode->GetChildren(); childnode !=0;  childnode = childnode ->GetNextNode())
        {  
        std::cout<< "\n* " << childnode->GetNodeName(); 
 
-       if(childnode !=0) 
+       if (childnode !=0) 
        {
 
        TList* lista =  childnode->GetAttributes();
-       if(lista!=0) 
+       if (lista!=0) 
        {
        //TObject* objekti = lista -> First();
-       for(TObject* objekti = lista -> First(); objekti !=0; objekti = lista -> After(objekti) )
+       for(TObject* objekti = lista -> First(); objekti !=0; objekti = lista -> After(objekti))
        {
-       if(objekti!=0) 
+       if (objekti!=0) 
        {
        std::cout<< " [" << objekti ->GetName() <<"]";
        }
@@ -281,7 +281,7 @@ bool Reflex::DictionaryGenerator::IsNewType(const Type & searchtype) {
 
 
        // pred is a comparing function used, IsEqual
-       iter = find_if(start,end, searchtype, pred );
+       iter = find_if(start,end, searchtype, pred);
 
 
        if (iter == end)
@@ -383,8 +383,8 @@ std::string Reflex::DictionaryGenerator::GetTypeNumber(const Type & membertype) 
 
 
 //-------------------------------------------------------------------------------
-void Reflex::DictionaryGenerator::AddIntoNS( const std::string & typenumber,
-                                                   const Type & membertype ) {
+void Reflex::DictionaryGenerator::AddIntoNS(const std::string & typenumber,
+                                                   const Type & membertype) {
 //-------------------------------------------------------------------------------
 // Namespaces field of the generated file
 
@@ -394,12 +394,12 @@ void Reflex::DictionaryGenerator::AddIntoNS( const std::string & typenumber,
       fStr_namespaces << "\nnamespace {  \n";
       fStr_namespaces << "Type type_void = TypeBuilder(\"void\");\n";
    }
-   // Name(SCOPED)  adds also the namespace into name
+   // Name(kScoped)  adds also the namespace into name
 
    //     forward declarations
-   if (membertype.TypeType() == STRUCT || membertype.TypeType() == CLASS
-       || membertype.TypeType() == TYPEDEF) {
-      fStr_shadow2 << (membertype).Name(SCOPED) << ";\n";
+   if (membertype.TypeType() == kStruct || membertype.TypeType() == kClass
+       || membertype.TypeType() == kTypedef) {
+      fStr_shadow2 << (membertype).Name(kScoped) << ";\n";
    }
 
 
@@ -408,15 +408,15 @@ void Reflex::DictionaryGenerator::AddIntoNS( const std::string & typenumber,
    // if type is also a const, add that extra line
    // No references are supported by the original genreflex.py for datamembers!
    if (membertype.Is(gReference)) {
-      if (membertype.Is(gConst))     mod |= CONST;
-      if (membertype.Is(gVolatile))  mod |= VOLATILE;
+      if (membertype.Is(gConst))     mod |= kConst;
+      if (membertype.Is(gVolatile))  mod |= kVolatile;
       
       fStr_namespaces << "Type type_" + typenumber + " = ReferenceBuilder(type_" +
          GetTypeNumber(Type(membertype, mod)) + ");\n";
    }
 
    else if (membertype.Is(gConst)) {
-      if (membertype.Is(gVolatile))   mod |= VOLATILE;
+      if (membertype.Is(gVolatile))   mod |= kVolatile;
 
       fStr_namespaces << "Type type_" + typenumber +
          " = ConstBuilder(type_" + GetTypeNumber(Type(membertype, mod)) + ");\n";
@@ -432,11 +432,11 @@ void Reflex::DictionaryGenerator::AddIntoNS( const std::string & typenumber,
    }
 
 
-   else if (membertype.TypeType() == CLASS) {
+   else if (membertype.TypeType() == kClass) {
 
-      fStr_namespaces << "Type type_" + typenumber + " = TypeBuilder(\"" + membertype.Name(SCOPED) + "\"); //class\n";
+      fStr_namespaces << "Type type_" + typenumber + " = TypeBuilder(\"" + membertype.Name(kScoped) + "\"); //class\n";
       //membertype
-      fStr_instances2 << ("    type_" + typenumber + ".Unload(); //class " + (membertype).Name(SCOPED) + "\n");
+      fStr_instances2 << ("    type_" + typenumber + ".Unload(); //class " + (membertype).Name(kScoped) + "\n");
 
    }
 
@@ -446,11 +446,11 @@ void Reflex::DictionaryGenerator::AddIntoNS( const std::string & typenumber,
    }
 
    // void type
-   else if (membertype.Name(SCOPED) == "") {
+   else if (membertype.Name(kScoped) == "") {
    }
 
    else {
-      fStr_namespaces << "Type type_" + typenumber + " = TypeBuilder(\"" + membertype.Name(SCOPED) + "\");\n";
+      fStr_namespaces << "Type type_" + typenumber + " = TypeBuilder(\"" + membertype.Name(kScoped) + "\");\n";
 
    }
 
@@ -468,7 +468,7 @@ void Reflex::DictionaryGenerator::Print(const std::string & filename) {
 //-------------------------------------------------------------------------------
 // Outputs the results into standard stream / file
 
-   if ( filename.length() ) {
+   if (filename.length()) {
 
       std::ofstream outfile(filename.c_str(), std::ios_base::out);
 

@@ -24,8 +24,8 @@
 #include <vector>
 
 #ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4251 )
+#pragma warning(push)
+#pragma warning(disable : 4251)
 #endif
 
 namespace Reflex {
@@ -54,8 +54,9 @@ namespace Internal {
    public:
 
       /** constructor within a At*/
-      ScopeBase( const char * scope, 
-         TYPE scopeType );
+      ScopeBase(const char * scope,
+         unsigned int modifiers,
+         ETYPE scopeType);
 
 
       /** destructor */
@@ -94,7 +95,7 @@ namespace Internal {
       * DeclaringScope will return a pointer to the At of this one
       * @return pointer to declaring At
       */
-      Scope DeclaringScope() const;
+      virtual Scope DeclaringScope() const;
 
 
       /**
@@ -112,7 +113,7 @@ namespace Internal {
       * @modifiers_mask When matching, do not compare the listed modifiers
       * @return function MemberAt
       */
-      Member FunctionMemberByName( const std::string & name,
+      Member FunctionMemberByName(const std::string & name,
          const Type & signature,
          unsigned int modifiers_mask = 0) const;
 
@@ -125,7 +126,7 @@ namespace Internal {
       * @modifiers_mask When matching, do not compare the listed modifiers
       * @return function MemberAt
       */
-      Member FunctionMemberByNameAndSignature( const std::string & name,
+      Member FunctionMemberByNameAndSignature(const std::string & name,
          const Type & signature,
          unsigned int modifiers_mask = 0) const;
 
@@ -144,6 +145,14 @@ namespace Internal {
       static Scope GlobalScope();
 
 
+      /* HasBase will check whether this class has a base class given
+      * as argument
+      * @param  cl the base-class to check for
+      * @return the Base info if it is found, an empty base otherwise (can be tested for bool)
+      */
+      virtual bool HasBase(const Type & cl) const;
+
+
       /**
       * Check whether the entity property is set for the scope. You can
       * combine checks, e.g. Is(gClass && gPublic)
@@ -151,7 +160,13 @@ namespace Internal {
       * @param mod the modifier as stored by Type (reference,...)
       * @return whether descr is set.
       */
-      bool Is(const EntityProperty& descr, int mod) const;
+      virtual bool Is(const EntityProperty& descr, int mod) const;
+
+
+      /* IsComplete will return true if all classes and base classes of this 
+      * class are resolved and fully known in the system
+      */
+      virtual bool IsComplete() const;
 
 
       /**
@@ -168,8 +183,8 @@ namespace Internal {
       * @param current the current scope
       * @return if a matching member is found return it, otherwise return empty member
       */
-      Member LookupMember( const std::string & nam,
-         const Scope & current ) const;
+      Member LookupMember(const std::string & nam,
+         const Scope & current) const;
 
 
       /**
@@ -178,8 +193,8 @@ namespace Internal {
       * @param current the current scope
       * @return if a matching type is found return it, otherwise return empty type
       */
-      Type LookupType( const std::string & nam,
-         const Scope & current ) const;
+      Type LookupType(const std::string & nam,
+         const Scope & current) const;
 
 
       /**
@@ -188,8 +203,8 @@ namespace Internal {
       * @param current the current scope
       * @return if a matching scope is found return it, otherwise return empty scope
       */
-      Scope LookupScope( const std::string & nam,
-         const Scope & current ) const;
+      Scope LookupScope(const std::string & nam,
+         const Scope & current) const;
 
 
       /**
@@ -197,8 +212,8 @@ namespace Internal {
       * @param Name  MemberAt Name
       * @return pointer to MemberAt
       */
-      Member MemberByName( const std::string & name,
-         const Type & signature ) const;
+      Member MemberByName(const std::string & name,
+         const Type & signature) const;
 
 
       /**
@@ -220,24 +235,11 @@ namespace Internal {
       * @param  buf buffer to be used for calculating name
       * @param  mod qualifiers can be or'ed 
       *   FINAL     - resolve typedefs
-      *   SCOPED    - fully scoped name 
-      *   QUALIFIED - cv, reference qualification 
+      *   kScoped    - fully scoped name 
+      *   kQualified - cv, reference qualification 
       * @return name of the type
       */
-      virtual const std::string& Name(std::string& buf, unsigned int mod = SCOPED | QUALIFIED ) const;
-
-
-      /**
-      * SimpleName returns the name of the type as a reference. It provides a 
-      * simplified but faster generation of a type name. Attention currently it
-      * is not guaranteed that Name() and SimpleName() return the same character 
-      * layout of a name (ie. spacing, commas, etc. )
-      * @param pos will indicate where in the returned reference the requested name starts
-      * @param mod The only 'mod' support is SCOPED
-      * @return name of type
-      */
-      virtual const std::string & SimpleName( size_t & pos, 
-         unsigned int mod = SCOPED ) const;
+      virtual const std::string& Name(std::string& buf, unsigned int mod = kScoped | kQualified) const;
 
 
       /**
@@ -259,12 +261,12 @@ namespace Internal {
       * ScopeType will return which kind of At is represented
       * @return At of At
       */
-      TYPE ScopeType() const;
+      ETYPE ScopeType() const;
 
 
       /**
       * ScopeTypeAsString will return the string representation of the enum
-      * representing the current Scope (e.g. "CLASS")
+      * representing the current Scope (e.g. "kClass")
       * @return string representation of enum for Scope
       */
       std::string ScopeTypeAsString() const;
@@ -317,7 +319,7 @@ namespace Internal {
       * UsingMemberDeclarations returns the using declarations of members of this scope.
       * @return using declarations of members
       */
-      const IContainerImpl* UsingMemberDdeclaration() const;
+      const IContainerImpl* UsingMemberDeclarations() const;
 
 
    protected:
@@ -328,117 +330,119 @@ namespace Internal {
    public:
 
       /**
-      * AddDataMember will add the information about a data MemberAt
-      * @param dm pointer to data MemberAt
+      * AddDataMember adds the information about a member
+      * virtual so Class can keep track of constructors, destructors.
+      * @param dm member to add
       */
-      virtual void AddMember( const Member & dm ) const;
-      virtual void AddMember( const char * name,
+      virtual void AddMember(const Member & dm) const;
+      void AddMember(const char * name,
          const Type & type,
          size_t offset,
-         unsigned int modifiers = 0 ) const;
+         unsigned int modifiers = 0) const;
 
 
       /**
-      * AddFunctionMember will add the information about a function MemberAt
-      * @param fm pointer to function MemberAt
+      * AddMember will add the information about a function member.
+      * virtual so Class can keep track of constructors, destructors.
       */
-      virtual void AddMember( const char * name,
+      virtual void AddMember(const char * name,
          const Type & type,
          StubFunction stubFP,
          void * stubCtx = 0,
          const char * params = 0,
-         unsigned int modifiers = 0 ) const;
+         unsigned int modifiers = 0) const;
 
 
-      virtual void AddMember( const MemberTemplate & mt ) const ;
+      void AddMember(const MemberTemplate & mt) const;
 
 
       /**
       * AddSubScope will add a sub-At to this one
       * @param sc pointer to Scope
       */
-      void AddSubScope( const Scope & sc ) const;
-      void AddSubScope( const char * scope, TYPE scopeType ) const;
+      void AddSubScope(const Scope & sc) const;
+      void AddSubScope(const char * scope, ETYPE scopeType) const;
 
 
       /**
       * AddSubType will add a sub-At to this At
       * @param sc pointer to Type
       */
-      void AddSubType( const Type & ty ) const;
-      void AddSubType( const char * type,
+      void AddSubType(const Type & ty) const;
+      void AddSubType(const char * type,
          size_t size,
-         TYPE typeType,
+         ETYPE typeType,
          const std::type_info & ti,
-         unsigned int modifiers = 0 ) const;
+         unsigned int modifiers = 0) const;
 
 
-      void AddSubTypeTemplate( const TypeTemplate & tt ) const;
+      void AddSubTypeTemplate(const TypeTemplate & tt) const;
 
 
-      void AddUsingDirective( const Scope & ud ) const;
+      void AddUsingDirective(const Scope & ud) const;
 
 
       /**
       * AddUsingDeclaration adds a using declaration of a type to this scope
       * @param ud using declaration to add
       */
-      void AddUsingDeclaration( const Type & ud ) const;
+      void AddUsingDeclaration(const Type & ud) const;
 
 
       /**
       * AddUsingDeclaration adds a using declaration of a member to this scope
       * @param ud using declaration to add
       */
-      void AddUsingDeclaration( const Member & ud ) const;
+      void AddUsingDeclaration(const Member & ud) const;
 
 
       /**
       * RemoveDataMember will remove the information about a data MemberAt
+      * virtual so Class can keep track of constructors, destructors.
       * @param dm pointer to data MemberAt
       */
-      virtual void RemoveMember( const Member & dm ) const;
+      virtual void RemoveMember(const Member & dm) const;
 
 
       /**
       * RemoveFunctionMember will remove the information about a function MemberAt
       * @param fm pointer to function MemberAt
       */
-      virtual void RemoveMember( const MemberTemplate & mt ) const;
+      void RemoveMember(const MemberTemplate & mt) const;
 
 
       /**
       * RemoveSubScope will remove a sub-At to this one
       * @param sc pointer to Scope
       */
-      void RemoveSubScope( const Scope & sc ) const;
+      void RemoveSubScope(const Scope & sc) const;
 
 
       /**
       * RemoveSubType will remove a sub-At to this At
       * @param sc pointer to Type
       */
-      void RemoveSubType( const Type & ty ) const;
+      void RemoveSubType(const Type & ty) const;
 
 
-      void RemoveSubTypeTemplate( const TypeTemplate & tt ) const;
+      void RemoveSubTypeTemplate(const TypeTemplate & tt) const;
 
 
-      void RemoveUsingDirective( const Scope & ud ) const;
-
-
-      /** 
-      * RemoveUsingDeclaration removes a using declaration from this scope
-      * @param ud using declaration to remove
-      */
-      void RemoveUsingDeclaration( const Type & ud ) const;
+      void RemoveUsingDirective(const Scope & ud) const;
 
 
       /** 
       * RemoveUsingDeclaration removes a using declaration from this scope
       * @param ud using declaration to remove
       */
-      void RemoveUsingDeclaration( const Member & ud ) const;
+      void RemoveUsingDeclaration(const Type & ud) const;
+
+
+      /** 
+      * RemoveUsingDeclaration removes a using declaration from this scope
+      * @param ud using declaration to remove
+      */
+      void RemoveUsingDeclaration(const Member & ud) const;
 
 
       virtual void HideName() const;
@@ -446,12 +450,13 @@ namespace Internal {
    private:
 
       /* no copying */
-      ScopeBase( const ScopeBase & );
+      ScopeBase(const ScopeBase &);
 
       /* no assignment */
-      ScopeBase & operator = ( const ScopeBase & );
+      ScopeBase & operator = (const ScopeBase &);
 
    protected:
+      typedef OrderedContainerImpl<std::string, Member> MemberCont_t;
 
       /**
       * pointers to members
@@ -471,7 +476,7 @@ namespace Internal {
       * @supplierCardinality 0..*
       */
       mutable
-         OrderedContainerImpl< std::string, Member > fDataMembers;
+         MemberCont_t fDataMembers;
 
       /**
       * container with pointers to all function members in this scope
@@ -481,7 +486,13 @@ namespace Internal {
       * @clientCardinality 1
       */
       mutable
-         OrderedContainerImpl< std::string, Member > fFunctionMembers;
+         MemberCont_t fFunctionMembers;
+
+
+      /**
+      * description flags (bit mask of EENTITY_DESCRIPTION) for this scope
+      */
+      unsigned int fScopeModifiers;
 
    private:
 
@@ -502,7 +513,7 @@ namespace Internal {
       * @clientCardinality 1
       * @supplierCardinality 1
       */
-      TYPE fScopeType;
+      ETYPE fScopeType;
 
 
       /**
@@ -607,12 +618,6 @@ namespace Internal {
       */
       size_t fBasePosition;
 
-
-      /**
-      * description flags (bit mask of ENTITY_DESCRIPTION) for this type
-      */
-      int fTypeDescriptionFlags;
-
    }; // class ScopeBase
 } //namespace Internal
 } //namespace Reflex
@@ -652,9 +657,25 @@ Reflex::Internal::ScopeBase::FunctionMembers() const {
 
 //-------------------------------------------------------------------------------
 inline bool
+Reflex::Internal::ScopeBase::HasBase(const Type & cl) const {
+//-------------------------------------------------------------------------------
+   return false;
+}
+
+
+//-------------------------------------------------------------------------------
+inline bool
+Reflex::Internal::ScopeBase::IsComplete() const {
+//-------------------------------------------------------------------------------
+   return true;
+}
+
+
+//-------------------------------------------------------------------------------
+inline bool
 Reflex::Internal::ScopeBase::Is(const EntityProperty& prop, const int mod) const {
 //-------------------------------------------------------------------------------
-   return prop.Eval(fTypeDescriptionFlags | mod, fScopeType);
+   return prop.Eval(fScopeModifiers | mod, fScopeType);
 }
 
 
@@ -675,7 +696,7 @@ Reflex::Internal::ScopeBase::MemberTemplates() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::TYPE
+inline Reflex::ETYPE
 Reflex::Internal::ScopeBase::ScopeType() const {
 //-------------------------------------------------------------------------------
    return fScopeType;
@@ -691,7 +712,7 @@ Reflex::Internal::ScopeBase::SubScopes() const {
 
 
 #ifdef _MSC_VER
-#pragma warning( pop )
+#pragma warning(pop)
 #endif
 
 #endif // Reflex_ScopeBase

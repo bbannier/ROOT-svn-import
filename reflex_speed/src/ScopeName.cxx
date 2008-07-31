@@ -16,16 +16,17 @@
 #include "ScopeName.h"
 
 #include "Reflex/Scope.h"
-#include "ScopeBase.h"
 #include "Reflex/Type.h"
-
 #include "Reflex/EntityProperty.h"
 #include "Reflex/Tools.h"
-#include "OwnedMember.h"
 
+#include "ScopeBase.h"
+#include "OwnedMember.h"
+#include "CatalogImpl.h"
+
+/*
 #include "stl_hash.h"
 #include <vector>
-
 
 //-------------------------------------------------------------------------------
 typedef __gnu_cxx::hash_map < const std::string *, Reflex::Scope > Name2Scope_t;
@@ -47,22 +48,33 @@ static ScopeVec_t & sScopeVec() {
    static ScopeVec_t m;
    return m;
 }
+*/
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::ScopeName::ScopeName( const char * name,
-                                    ScopeBase * scopeBase ) 
+Reflex::Internal::ScopeName::ScopeName(const char* name,
+                                        ScopeBase* scopeBase,
+                                        const Catalog* catalog)
    : fName(name),
-     fScopeBase(scopeBase) {
+     fScopeBase(scopeBase),
+     fCatalog(catalog) {
 //-------------------------------------------------------------------------------
 // Create the scope name dictionary info.
    fThisScope = new Scope(this);
+   /*
    sScopes() [ &fName ] = *fThisScope;
    sScopeVec().push_back(*fThisScope);
+   */
+   if (!fCatalog)
+      fCatalog = &Catalog::Instance();
+   CatalogImpl* cati = catalog->Impl();
+   cati->Scopes().Add(*this);
+
    //---Build recursively the declaring scopeNames
-   if( fName != "@N@I@R@V@A@N@A@" ) {
+   if (fName != "@N@I@R@V@A@N@A@") {
       std::string decl_name = Tools::GetScopeName(fName);
-      if ( ! Scope::ByName( decl_name ).Id() )  new ScopeName( decl_name.c_str(), 0 );
+      if (! cati->Scopes().ByName(decl_name).Id())
+         new ScopeName(decl_name.c_str(), 0);
    }
 }
 
@@ -71,47 +83,6 @@ Reflex::Internal::ScopeName::ScopeName( const char * name,
 Reflex::Internal::ScopeName::~ScopeName() {
 //-------------------------------------------------------------------------------
 // Destructor.
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Scope
-Reflex::Internal::ScopeName::ByName( const std::string & name ) {
-//-------------------------------------------------------------------------------
-// Lookup a scope by fully qualified name.
-   size_t pos =  name.substr(0,2) == "::" ?  2 : 0;
-   const std::string & k = name.substr(pos);
-   Name2Scope_t::iterator it = sScopes().find(&k);
-   if (it != sScopes().end() ) return it->second;
-   else {
-      // HERE STARTS AN UGLY HACK WHICH HAS TO BE UNDONE ASAP
-      // (also remove inlcude Reflex/Type.h)
-      Type t = Type::ByName(name);
-      if ( t && t.Is(gTypedef)) {
-         while ( t.Is(gTypedef)) t = t.ToType();
-         if ( t.Is(gCLASS || gEnum || gUnion) )
-            return t.operator Scope ();
-      }
-      return Dummy::Scope();
-   }
-   // END OF UGLY HACK
-}
-
-
-//-------------------------------------------------------------------------------
-void
-Reflex::Internal::ScopeName::CleanUp() {
-//-------------------------------------------------------------------------------
-   // Cleanup memory allocations for scopes.
-   ScopeVec_t::iterator it;
-   for ( it = sScopeVec().begin(); it != sScopeVec().end(); ++it ) {
-      Scope * s = ((ScopeName*)it->Id())->fThisScope;
-      if ( *s ) s->Unload();
-      delete s;
-   }
-   for ( it = sScopeVec().begin(); it != sScopeVec().end(); ++it ) {
-      delete ((ScopeName*)it->Id());
-   }
 }
 
 
@@ -130,10 +101,10 @@ void
 Reflex::Internal::ScopeName::HideName() {
 //-------------------------------------------------------------------------------
 // Append the string " @HIDDEN@" to a scope name.
-   if ( fName.length() == 0 || fName[fName.length()-1] != '@' ) {
-      sScopes().erase(&fName);
+   if (fName.empty() || fName[fName.length()-1] != '@') {
+      fCatalog->Impl()->Scopes().Remove(*this);
       fName += " @HIDDEN@";
-      sScopes()[&fName] = this;
+      fCatalog->Impl()->Scopes().Add(*this);
    }
 }
 
@@ -145,60 +116,3 @@ Reflex::Internal::ScopeName::ThisScope() const {
 // Return the scope corresponding to this scope.
    return *fThisScope;
 }
-
-
-//-------------------------------------------------------------------------------
-Reflex::Scope
-Reflex::Internal::ScopeName::ScopeAt( size_t nth ) {
-//-------------------------------------------------------------------------------
-// Return the nth scope defined in Reflex.
-   if ( nth < sScopeVec().size()) return sScopeVec()[nth];
-   return Dummy::Scope();
-}
-
-
-//-------------------------------------------------------------------------------
-size_t
-Reflex::Internal::ScopeName::ScopeSize() {
-//-------------------------------------------------------------------------------
-// Return the number of scopes defined in Reflex.
-   return sScopeVec().size();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Scope_Iterator
-Reflex::Internal::ScopeName::Scope_Begin() {
-//-------------------------------------------------------------------------------
-// Return the begin iterator of the scope collection.
-   return sScopeVec().begin();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Scope_Iterator
-Reflex::Internal::ScopeName::Scope_End() {
-//-------------------------------------------------------------------------------
-// Return the end iterator of the scope collection.
-   return sScopeVec().end();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Reverse_Scope_Iterator
-Reflex::Internal::ScopeName::Scope_RBegin() {
-//-------------------------------------------------------------------------------
-// Return the rbegin iterator of the scope collection.
-   return ((const std::vector<Scope>&)sScopeVec()).rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Reverse_Scope_Iterator
-Reflex::Internal::ScopeName::Scope_REnd() {
-//-------------------------------------------------------------------------------
-// Return the rend iterator of the scope collection.
-   return ((const std::vector<Scope>&)sScopeVec()).rend();
-}
-
-

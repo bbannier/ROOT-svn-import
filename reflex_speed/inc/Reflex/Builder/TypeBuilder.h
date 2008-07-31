@@ -26,42 +26,42 @@
 
 namespace Reflex {
 
-   RFLX_API Type TypeBuilder( const char * n,
-      unsigned int modifiers = 0 );
+   RFLX_API Type TypeBuilder(const char * n,
+      unsigned int modifiers = 0);
 
 
-   RFLX_API Type ConstBuilder( const Type & t );
+   RFLX_API Type ConstBuilder(const Type & t);
 
 
-   RFLX_API Type VolatileBuilder( const Type & t );
+   RFLX_API Type VolatileBuilder(const Type & t);
 
 
-   RFLX_API Type PointerBuilder( const Type & t,
+   RFLX_API Type PointerBuilder(const Type & t,
       const std::type_info & ti = typeid(UnknownType));
 
 
-   RFLX_API Type PointerToMemberBuilder( const Type & t,
+   RFLX_API Type PointerToMemberBuilder(const Type & t,
       const Scope & s,
       const std::type_info & ti = typeid(UnknownType));
 
 
-   RFLX_API Type ReferenceBuilder( const Type & t );
+   RFLX_API Type ReferenceBuilder(const Type & t);
 
 
-   RFLX_API Type ArrayBuilder( const Type & t, 
+   RFLX_API Type ArrayBuilder(const Type & t, 
       size_t n,
       const std::type_info & ti = typeid(UnknownType));
 
-   RFLX_API Type EnumTypeBuilder( const char *, 
+   RFLX_API Type EnumTypeBuilder(const char *, 
       const char * items = "",
       const std::type_info & ti = typeid(UnknownType),
-      unsigned int modifiers = 0 );
+      unsigned int modifiers = 0);
 
-   RFLX_API Type TypedefTypeBuilder( const char * Name, 
-      const Type & t );
+   RFLX_API Type TypedefTypeBuilder(const char * Name, 
+      const Type & t);
 
 
-   RFLX_API Type FunctionTypeBuilder( const Type & r,
+   RFLX_API Type FunctionTypeBuilder(const Type & r,
       const std::vector<Reflex::Type> & p,
       const std::type_info & ti = typeid(UnknownType));
 
@@ -337,7 +337,7 @@ namespace Reflex {
    * @return the Offset of the data MemberAt
    */
    template < typename C, typename M >
-   size_t offsetOf( M C::* member )  {
+   size_t offsetOf(M C::* member)  {
       return (size_t) &((((C*)0)->*member));
    }
 
@@ -349,7 +349,7 @@ namespace Reflex {
    template < typename C, typename B >
    class BaseOffset {
    public:
-      static size_t Offset (void * o ) { return (size_t)(B*)(C*)o - (size_t)(C*)o; } 
+      static size_t Offset (void * o) { return (size_t)(B*)(C*)o - (size_t)(C*)o; } 
       static OffsetFunction Get() { return  & BaseOffset::Offset; }
    };
 
@@ -364,8 +364,8 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T));
-         if ( ! t.Id() ) t = Type::ByName(Tools::Demangle(typeid(T)));
-         if ( t.Id() ) return t;
+         if (! t.Id()) t = Type::ByName(Tools::Demangle(typeid(T)));
+         if (t.Id()) return t;
          else return TypeBuilder(Tools::Demangle(typeid(T)).c_str());
       }
    };
@@ -376,7 +376,7 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T*));
-         if ( t ) return t;
+         if (t) return t;
          else return PointerBuilder(TypeDistiller<T>::Get(),typeid(T *));
       }
    };
@@ -387,7 +387,7 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T*));
-         if ( t ) return t;
+         if (t) return t;
          else return ArrayBuilder(TypeDistiller<T>::Get(),N,typeid(NullType));
       }
    };
@@ -398,8 +398,8 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T));
-         if ( t ) return Type( t, CONST );
-         else return Type(TypeDistiller<T>::Get(),CONST);
+         if (t) return Type(t, kConst);
+         else return Type(TypeDistiller<T>::Get(),kConst);
       }
    };
 
@@ -409,8 +409,8 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T));
-         if ( t ) return Type( t, VOLATILE );
-         else return Type(TypeDistiller<T>::Get(),VOLATILE);
+         if (t) return Type(t, kVolatile);
+         else return Type(TypeDistiller<T>::Get(),kVolatile);
       }
    };
 
@@ -420,8 +420,8 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T));
-         if ( t ) return Type( t, CONST | VOLATILE );
-         else return Type(TypeDistiller<T>::Get(),CONST|VOLATILE);
+         if (t) return Type(t, kConst | kVolatile);
+         else return Type(TypeDistiller<T>::Get(),kConst|kVolatile);
       }
    };
 
@@ -431,8 +431,8 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T));
-         if ( t ) return Type( t, REFERENCE );
-         else return Type(TypeDistiller<T>::Get(),REFERENCE);
+         if (t) return Type(t, kReference);
+         else return Type(TypeDistiller<T>::Get(),kReference);
       }
    };
 
@@ -442,8 +442,8 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T));
-         if ( t ) return Type( t, CONST | REFERENCE );
-         else return Type(TypeDistiller<T>::Get(),CONST|REFERENCE);
+         if (t) return Type(t, kConst | kReference);
+         else return Type(TypeDistiller<T>::Get(),kConst|kReference);
       }
    };
 
@@ -453,8 +453,8 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T));
-         if ( t ) return Type( t, VOLATILE | REFERENCE );
-         else return Type(TypeDistiller<T>::Get(),VOLATILE|REFERENCE);
+         if (t) return Type(t, kVolatile | kReference);
+         else return Type(TypeDistiller<T>::Get(),kVolatile|kReference);
       }
    };
 
@@ -464,8 +464,8 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T));
-         if ( t ) return Type( t, CONST | VOLATILE | REFERENCE );
-         else return Type(TypeDistiller<T>::Get(),CONST|VOLATILE|REFERENCE);
+         if (t) return Type(t, kConst | kVolatile | kReference);
+         else return Type(TypeDistiller<T>::Get(),kConst|kVolatile|kReference);
       }
    };
 
@@ -499,7 +499,7 @@ namespace Reflex {
    template< typename S > class FunctionDistiller;
 
    // This define is necessary for all Sun Forte compilers with version < 5.5 (SunWSpro8)
-#if ( (defined(__SUNPRO_CC)) && (__SUNPRO_CC<0x550) )
+#if ((defined(__SUNPRO_CC)) && (__SUNPRO_CC<0x550))
 #define __R_TN__ typename
 #else
 #define __R_TN__
@@ -511,8 +511,8 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(void)));
-         if ( t ) return t;
-         else     return FunctionTypeBuilder( TypeDistiller<R>::Get(), 
+         if (t) return t;
+         else     return FunctionTypeBuilder(TypeDistiller<R>::Get(), 
                                               std::vector<Type>(), 
                                               typeid(R(void))); 
       }
@@ -524,9 +524,9 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(T0)));
-         if ( t ) return t;
-         else     return FunctionTypeBuilder( TypeDistiller<R>::Get(), 
-            Tools::MakeVector( TypeDistiller<T0>::Get() ), 
+         if (t) return t;
+         else     return FunctionTypeBuilder(TypeDistiller<R>::Get(), 
+            Tools::MakeVector(TypeDistiller<T0>::Get()), 
             typeid(R(T0))); 
       }
    };
@@ -537,9 +537,9 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(T0, T1)));
-         if ( t ) return t;
-         else return FunctionTypeBuilder( TypeDistiller<R>::Get(), 
-            Tools::MakeVector( TypeDistiller<T0>::Get(), 
+         if (t) return t;
+         else return FunctionTypeBuilder(TypeDistiller<R>::Get(), 
+            Tools::MakeVector(TypeDistiller<T0>::Get(), 
             TypeDistiller<T1>::Get()),
             typeid(R(T0, T1))); 
       }
@@ -551,9 +551,9 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2)));
-         if ( t ) return t;
-         else     return FunctionTypeBuilder( TypeDistiller<R>::Get(),
-            Tools::MakeVector( TypeDistiller<T0>::Get(),
+         if (t) return t;
+         else     return FunctionTypeBuilder(TypeDistiller<R>::Get(),
+            Tools::MakeVector(TypeDistiller<T0>::Get(),
             TypeDistiller<T1>::Get(),
             TypeDistiller<T2>::Get()), 
             typeid(R(T0, T1, T2))); 
@@ -567,9 +567,9 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3)));
-         if ( t ) return t;
-         else     return FunctionTypeBuilder( TypeDistiller<R>::Get(),
-            Tools::MakeVector( TypeDistiller<T0>::Get(),
+         if (t) return t;
+         else     return FunctionTypeBuilder(TypeDistiller<R>::Get(),
+            Tools::MakeVector(TypeDistiller<T0>::Get(),
             TypeDistiller<T1>::Get(),
             TypeDistiller<T2>::Get(), 
             TypeDistiller<T3>::Get()), 
@@ -585,9 +585,9 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4)));
-         if ( t ) return t;
-         else     return FunctionTypeBuilder( TypeDistiller<R>::Get(),
-            Tools::MakeVector( TypeDistiller<T0>::Get(),
+         if (t) return t;
+         else     return FunctionTypeBuilder(TypeDistiller<R>::Get(),
+            Tools::MakeVector(TypeDistiller<T0>::Get(),
             TypeDistiller<T1>::Get(),
             TypeDistiller<T2>::Get(), 
             TypeDistiller<T3>::Get(), 
@@ -604,9 +604,9 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5)));
-         if ( t ) return t;
-         else     return FunctionTypeBuilder( TypeDistiller<R>::Get(),
-            Tools::MakeVector( TypeDistiller<T0>::Get(),
+         if (t) return t;
+         else     return FunctionTypeBuilder(TypeDistiller<R>::Get(),
+            Tools::MakeVector(TypeDistiller<T0>::Get(),
             TypeDistiller<T1>::Get(),
             TypeDistiller<T2>::Get(), 
             TypeDistiller<T3>::Get(), 
@@ -625,9 +625,9 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6)));
-         if ( t ) return t;
-         else     return FunctionTypeBuilder( TypeDistiller<R>::Get(),
-            Tools::MakeVector( TypeDistiller<T0>::Get(),
+         if (t) return t;
+         else     return FunctionTypeBuilder(TypeDistiller<R>::Get(),
+            Tools::MakeVector(TypeDistiller<T0>::Get(),
             TypeDistiller<T1>::Get(),
             TypeDistiller<T2>::Get(), 
             TypeDistiller<T3>::Get(), 
@@ -647,9 +647,9 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7)));
-         if ( t ) return t;
-         else     return FunctionTypeBuilder( TypeDistiller<R>::Get(),
-            Tools::MakeVector( TypeDistiller<T0>::Get(),
+         if (t) return t;
+         else     return FunctionTypeBuilder(TypeDistiller<R>::Get(),
+            Tools::MakeVector(TypeDistiller<T0>::Get(),
             TypeDistiller<T1>::Get(),
             TypeDistiller<T2>::Get(), 
             TypeDistiller<T3>::Get(), 
@@ -657,7 +657,7 @@ namespace Reflex {
             TypeDistiller<T5>::Get(), 
             TypeDistiller<T6>::Get(),
             TypeDistiller<T7>::Get()), 
-            typeid(R( T0, T1, T2, T3, T4, T5, T6, T7))); 
+            typeid(R(T0, T1, T2, T3, T4, T5, T6, T7))); 
       }
    };
 
@@ -671,9 +671,9 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8)));
-         if ( t ) return t;
-         else     return FunctionTypeBuilder( TypeDistiller<R>::Get(),
-            Tools::MakeVector( TypeDistiller<T0>::Get(),
+         if (t) return t;
+         else     return FunctionTypeBuilder(TypeDistiller<R>::Get(),
+            Tools::MakeVector(TypeDistiller<T0>::Get(),
             TypeDistiller<T1>::Get(),
             TypeDistiller<T2>::Get(), 
             TypeDistiller<T3>::Get(), 
@@ -682,7 +682,7 @@ namespace Reflex {
             TypeDistiller<T6>::Get(),
             TypeDistiller<T7>::Get(), 
             TypeDistiller<T8>::Get()), 
-            typeid(R( T0, T1, T2, T3, T4, T5, T6, T7, T8)));
+            typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8)));
       }
    };
 
@@ -697,9 +697,9 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9)));
-         if ( t ) return t;
-         else     return FunctionTypeBuilder( TypeDistiller<R>::Get(),
-            Tools::MakeVector( TypeDistiller<T0>::Get(),
+         if (t) return t;
+         else     return FunctionTypeBuilder(TypeDistiller<R>::Get(),
+            Tools::MakeVector(TypeDistiller<T0>::Get(),
             TypeDistiller<T1>::Get(),
             TypeDistiller<T2>::Get(), 
             TypeDistiller<T3>::Get(), 
@@ -709,7 +709,7 @@ namespace Reflex {
             TypeDistiller<T7>::Get(), 
             TypeDistiller<T8>::Get(), 
             TypeDistiller<T9>::Get()), 
-            typeid(R( T0, T1, T2, T3, T4, T5, T6, T7, T8, T9))); 
+            typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9))); 
       }
    };
 
@@ -724,9 +724,9 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10)));
-         if ( t ) return t;
-         else     return FunctionTypeBuilder( TypeDistiller<R>::Get(),
-            Tools::MakeVector( TypeDistiller<T0>::Get(),
+         if (t) return t;
+         else     return FunctionTypeBuilder(TypeDistiller<R>::Get(),
+            Tools::MakeVector(TypeDistiller<T0>::Get(),
             TypeDistiller<T1>::Get(),
             TypeDistiller<T2>::Get(), 
             TypeDistiller<T3>::Get(), 
@@ -737,7 +737,7 @@ namespace Reflex {
             TypeDistiller<T8>::Get(), 
             TypeDistiller<T9>::Get(), 
             TypeDistiller<T10>::Get()), 
-            typeid(R( T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10))); 
+            typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10))); 
       }
    };
 
@@ -752,9 +752,9 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11)));
-         if ( t ) return t;
-         else     return FunctionTypeBuilder( TypeDistiller<R>::Get(),
-            Tools::MakeVector( TypeDistiller<T0>::Get(),
+         if (t) return t;
+         else     return FunctionTypeBuilder(TypeDistiller<R>::Get(),
+            Tools::MakeVector(TypeDistiller<T0>::Get(),
             TypeDistiller<T1>::Get(),
             TypeDistiller<T2>::Get(), 
             TypeDistiller<T3>::Get(), 
@@ -766,7 +766,7 @@ namespace Reflex {
             TypeDistiller<T9>::Get(), 
             TypeDistiller<T10>::Get(), 
             TypeDistiller<T11>::Get()), 
-            typeid(R( T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11))); 
+            typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11))); 
       }
    };
 
@@ -783,9 +783,9 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12)));
-         if ( t ) return t;
-         else     return FunctionTypeBuilder( TypeDistiller<R>::Get(),
-            Tools::MakeVector( TypeDistiller<T0>::Get(),
+         if (t) return t;
+         else     return FunctionTypeBuilder(TypeDistiller<R>::Get(),
+            Tools::MakeVector(TypeDistiller<T0>::Get(),
             TypeDistiller<T1>::Get(),
             TypeDistiller<T2>::Get(), 
             TypeDistiller<T3>::Get(), 
@@ -798,7 +798,7 @@ namespace Reflex {
             TypeDistiller<T10>::Get(), 
             TypeDistiller<T11>::Get(), 
             TypeDistiller<T12>::Get()), 
-            typeid(R( T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12))); 
+            typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12))); 
       }
    };
 
@@ -815,9 +815,9 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13)));
-         if ( t ) return t;
-         else     return FunctionTypeBuilder( TypeDistiller<R>::Get(),
-            Tools::MakeVector( TypeDistiller<T0>::Get(),
+         if (t) return t;
+         else     return FunctionTypeBuilder(TypeDistiller<R>::Get(),
+            Tools::MakeVector(TypeDistiller<T0>::Get(),
             TypeDistiller<T1>::Get(),
             TypeDistiller<T2>::Get(), 
             TypeDistiller<T3>::Get(), 
@@ -831,7 +831,7 @@ namespace Reflex {
             TypeDistiller<T11>::Get(), 
             TypeDistiller<T12>::Get(), 
             TypeDistiller<T13>::Get()), 
-            typeid(R( T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13))); 
+            typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13))); 
       }
    };
 
@@ -848,9 +848,9 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14)));
-         if ( t ) return t;
-         else     return FunctionTypeBuilder( TypeDistiller<R>::Get(),
-            Tools::MakeVector( TypeDistiller<T0>::Get(),
+         if (t) return t;
+         else     return FunctionTypeBuilder(TypeDistiller<R>::Get(),
+            Tools::MakeVector(TypeDistiller<T0>::Get(),
             TypeDistiller<T1>::Get(),
             TypeDistiller<T2>::Get(), 
             TypeDistiller<T3>::Get(), 
@@ -865,7 +865,7 @@ namespace Reflex {
             TypeDistiller<T12>::Get(), 
             TypeDistiller<T13>::Get(), 
             TypeDistiller<T14>::Get()), 
-            typeid(R( T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14))); 
+            typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14))); 
       }
    };
 
@@ -883,9 +883,9 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15)));
-         if ( t ) return t;
-         else     return FunctionTypeBuilder( TypeDistiller<R>::Get(),
-            Tools::MakeVector( TypeDistiller<T0>::Get(),
+         if (t) return t;
+         else     return FunctionTypeBuilder(TypeDistiller<R>::Get(),
+            Tools::MakeVector(TypeDistiller<T0>::Get(),
             TypeDistiller<T1>::Get(),
             TypeDistiller<T2>::Get(), 
             TypeDistiller<T3>::Get(), 
@@ -901,7 +901,7 @@ namespace Reflex {
             TypeDistiller<T13>::Get(), 
             TypeDistiller<T14>::Get(), 
             TypeDistiller<T15>::Get()), 
-            typeid(R( T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15))); 
+            typeid(R(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15))); 
       }
    };
 

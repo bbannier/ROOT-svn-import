@@ -15,6 +15,7 @@
 // Include files
 #include "TypeBase.h"
 #include "Reflex/Type.h"
+#include "ContainerSTLAdaptor.h"
 
 namespace Reflex {
 
@@ -35,10 +36,10 @@ namespace Internal {
 
 
       /** default constructor */
-      Function( const Type & retType,
+      Function(const Type & retType,
          const std::vector< Type > & parameters,
          const std::type_info & ti,
-         TYPE functionType = FUNCTION );
+         ETYPE functionType = kFunction);
 
 
       /** destructor */
@@ -46,39 +47,19 @@ namespace Internal {
 
 
       /**
-      * IsVirtual will return true if the class contains a virtual table
-      * @return true if the class contains a virtual table
-      */
-      virtual bool IsVirtual() const;
-
-
-      /**
       * Name will return the Name of the function
       * @param  mod modifiers to be applied when generating the Name
       * @return Name of function
       */
-      virtual std::string Name( unsigned int mod = 0 ) const;
+      const std::string& Name(std::string& buf, unsigned int mod = kScoped | kQualified) const;
 
 
       /**
-      * FunctionParameterAt returns the nth FunctionParameterAt
-      * @param  nth nth FunctionParameterAt
-      * @return pointer to nth FunctionParameterAt At
+      * FunctionParameters returns an ordered container of the type of the function parameters;
+      * returns a reference to the dummy container if this type is not a function.
+      * @return reflection information of nth function parameter
       */
-      virtual Type FunctionParameterAt( size_t nth ) const;
-
-
-      /**
-      * FunctionParameterSize will return the number of parameters of this function
-      * @return number of parameters
-      */
-      virtual size_t FunctionParameterSize() const;
-
-
-      virtual Type_Iterator FunctionParameter_Begin() const;
-      virtual Type_Iterator FunctionParameter_End() const;
-      virtual Reverse_Type_Iterator FunctionParameter_RBegin() const;
-      virtual Reverse_Type_Iterator FunctionParameter_REnd() const;
+      const IContainerImpl* FunctionParameters() const;
 
 
       /**
@@ -89,9 +70,11 @@ namespace Internal {
 
 
       /** static funtion that composes the At Name */
-      static std::string BuildTypeName( const Type & ret, 
+      static const std::string& BuildTypeName(std::string& buf,
+         const Type & ret, const Scope & scope,
          const std::vector< Type > & param,
-         unsigned int mod = SCOPED | QUALIFIED );
+         unsigned int typemod = 0,
+         unsigned int mod = kScoped | kQualified);
 
    private:
 
@@ -103,8 +86,12 @@ namespace Internal {
       * @supplierCardinality 0..*
       */
       mutable
-         std::vector < Type > fParameters;
+         std::vector<Type> fParameters;
 
+      /** 
+      * IContainerImpl interface for container of parameter types
+      */
+      ContainerSTLAdaptor< std::vector<Type> > fParametersAdaptor;
 
       /**
       * return type
@@ -115,69 +102,16 @@ namespace Internal {
       */
       Type fReturnType;
 
-
-      /** modifiers of function and return At */
-      unsigned int fModifiers;
-
    }; // class Function
 } // namespace Internal
 } // namespace Reflex
 
 
 //-------------------------------------------------------------------------------
-inline bool
-Reflex::Internal::Function::IsVirtual() const {
+inline const Reflex::Internal::IContainerImpl*
+Reflex::Internal::Function::FunctionParameters() const {
 //-------------------------------------------------------------------------------
-   return 0 != (fModifiers & VIRTUAL);
-}
-
-
-//-------------------------------------------------------------------------------
-inline size_t
-Reflex::Internal::Function::FunctionParameterSize() const {
-//-------------------------------------------------------------------------------
-   return fParameters.size();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator
-Reflex::Internal::Function::FunctionParameter_Begin() const {
-//-------------------------------------------------------------------------------
-   return fParameters.begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator
-Reflex::Internal::Function::FunctionParameter_End() const {
-//-------------------------------------------------------------------------------
-   return fParameters.end();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator
-Reflex::Internal::Function::FunctionParameter_RBegin() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<Type>&)fParameters).rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator
-Reflex::Internal::Function::FunctionParameter_REnd() const {
-//-------------------------------------------------------------------------------
-   return ((const std::vector<Type>&)fParameters).rend();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type 
-Reflex::Internal::Function::FunctionParameterAt( size_t nth ) const {
-//------------------------------------------------------------------------------- 
-   if (nth < fParameters.size()) { return fParameters[nth]; }
-   return Dummy::Type();
+   return &fParametersAdaptor;
 }
 
 

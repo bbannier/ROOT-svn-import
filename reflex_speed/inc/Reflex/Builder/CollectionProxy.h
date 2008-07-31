@@ -103,7 +103,7 @@ namespace Reflex  {
          // Assume iterators do not need destruction
          ::new(e->buff) Iter_t(c->begin()); 
          e->size  = c->size();
-         if ( 0 == e->size ) return e->start = 0;
+         if (0 == e->size) return e->start = 0;
 #ifdef _KCC  // KAI compiler
          typename T::value_type& ref = *(e->iter());
 #else
@@ -114,9 +114,9 @@ namespace Reflex  {
       static void* next(void* env)  {
          PEnv_t  e = PEnv_t(env);
          PCont_t c = PCont_t(e->object);
-         for ( ; e->idx > 0 && e->iter() != c->end(); ++(e->iter()), --e->idx ) {}
+         for (; e->idx > 0 && e->iter() != c->end(); ++(e->iter()), --e->idx) {}
          // TODO: Need to find something for going backwards....
-         if ( e->iter() == c->end() ) return 0;
+         if (e->iter() == c->end()) return 0;
 #ifdef _KCC  // KAI compiler
          typename T::value_type& ref = *(e->iter());
 #else
@@ -135,14 +135,14 @@ namespace Reflex  {
          PEnv_t   e = PEnv_t(env);
          PCont_t  c = PCont_t(e->object);
          PValue_t m = PValue_t(e->start);
-         for (Iter_t i=c->begin(); i != c->end(); ++i, ++m )
+         for (Iter_t i=c->begin(); i != c->end(); ++i, ++m)
             ::new(m) Value_t(*i);
          return 0;
       }
       static void* destruct(void* env)  {
          PEnv_t   e = PEnv_t(env);
          PValue_t m = PValue_t(e->start);
-         for (size_t i=0; i < e->size; ++i, ++m )
+         for (size_t i=0; i < e->size; ++i, ++m)
             m->~Value_t();
          return 0;
       }
@@ -210,7 +210,7 @@ namespace Reflex  {
             c->insert(*m);
          return 0;
       }
-      static void* resize(void* /* env */ )  {
+      static void* resize(void* /* env */)  {
          return 0;
       }
       static int value_offset()  {
@@ -243,7 +243,7 @@ namespace Reflex  {
             c->insert(*m);
          return 0;
       }
-      static void* resize(void* /* env */ )  {
+      static void* resize(void* /* env */)  {
          return 0;
       }
       static int value_offset()  {
@@ -253,7 +253,7 @@ namespace Reflex  {
 
 #ifndef __CINT__
    // Need specialization for boolean references due to stupid STL vector<bool>
-   template<> inline void* Reflex::Address<std::vector<bool,std::allocator<bool> >::const_reference>::address(std::vector<bool,std::allocator<bool> >::const_reference ) {
+   template<> inline void* Reflex::Address<std::vector<bool,std::allocator<bool> >::const_reference>::address(std::vector<bool,std::allocator<bool> >::const_reference) {
       return 0;
    }
 #endif

@@ -38,7 +38,7 @@ namespace Reflex {
    public:
 
       /** constructor */
-      ClassBuilderImpl(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers = 0, TYPE typ = CLASS);
+      ClassBuilderImpl(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers = 0, ETYPE typ = kClass);
 
       /** destructor */
       virtual ~ClassBuilderImpl();
@@ -126,7 +126,7 @@ namespace Reflex {
    public:
 
       /** constructor */
-      ClassBuilder(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers = 0, TYPE typ = CLASS); 
+      ClassBuilder(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers = 0, ETYPE typ = kClass); 
 
       /** destructor */
       virtual ~ClassBuilder();
@@ -166,7 +166,7 @@ namespace Reflex {
       ClassBuilder& AddFunctionMember(const Type& typ, const char* nam, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0);
 
       template <typename TD> ClassBuilder& AddTypedef(const char* def);
-      ClassBuilder& AddTypedef( const Type& typ, const char* def);
+      ClassBuilder& AddTypedef(const Type& typ, const char* def);
       ClassBuilder& AddTypedef(const char* typ, const char* def);
 
       template <typename E> ClassBuilder& AddEnum(const char* values, unsigned int modifiers = 0);
@@ -216,14 +216,14 @@ namespace Reflex {
    public:
 
       /** constructor */
-      ClassBuilderT( unsigned int modifiers = 0, 
-         TYPE typ = CLASS );
+      ClassBuilderT(unsigned int modifiers = 0, 
+         ETYPE typ = kClass);
 
 
       /** constructor */
-      ClassBuilderT( const char* nam, 
+      ClassBuilderT(const char* nam, 
          unsigned int modifiers = 0,
-         TYPE typ = CLASS );
+         ETYPE typ = kClass);
 
 
       /** 
@@ -233,10 +233,10 @@ namespace Reflex {
       * @param  modifiers the modifiers of the class
       */
       template < class B >
-      ClassBuilderT &  AddBase( unsigned int modifiers = 0 );
-      ClassBuilderT & AddBase( const Type & bas,
+      ClassBuilderT &  AddBase(unsigned int modifiers = 0);
+      ClassBuilderT & AddBase(const Type & bas,
          OffsetFunction offsFP,
-         unsigned int modifiers = 0 );
+         unsigned int modifiers = 0);
 
 
       /** AddDataMember will add the information about one data
@@ -248,13 +248,13 @@ namespace Reflex {
       * @return a reference to the ClassBuilderT
       */
       template < class T > 
-      ClassBuilderT & AddDataMember( const char * nam,
+      ClassBuilderT & AddDataMember(const char * nam,
          size_t offs,
-         unsigned int modifiers = 0 );
-      ClassBuilderT & AddDataMember( const Type & typ,
+         unsigned int modifiers = 0);
+      ClassBuilderT & AddDataMember(const Type & typ,
          const char * nam, 
          size_t offs,
-         unsigned int modifiers = 0 );
+         unsigned int modifiers = 0);
 
 
       /** AddFunctionMember will add the information about one
@@ -269,36 +269,36 @@ namespace Reflex {
       * @return a reference to the ClassBuilder
       */
       template < class F > 
-      ClassBuilderT & AddFunctionMember( const char * nam,
+      ClassBuilderT & AddFunctionMember(const char * nam,
          StubFunction stubFP,
          void *  stubCtx = 0, 
          const char * params = 0,
-         unsigned int modifiers  = 0 );
-      ClassBuilderT & AddFunctionMember( const Type & typ,
+         unsigned int modifiers  = 0);
+      ClassBuilderT & AddFunctionMember(const Type & typ,
          const char * nam,
          StubFunction stubFP,
          void *  stubCtx = 0, 
          const char * params = 0,
-         unsigned int modifiers  = 0 );
+         unsigned int modifiers  = 0);
 
       template < typename TD >
-      ClassBuilderT & AddTypedef( const char * def );
-      ClassBuilderT & AddTypedef( const Type & typ,
-         const char * def );
-      ClassBuilderT & AddTypedef( const char * typ,
-         const char * def );
+      ClassBuilderT & AddTypedef(const char * def);
+      ClassBuilderT & AddTypedef(const Type & typ,
+         const char * def);
+      ClassBuilderT & AddTypedef(const char * typ,
+         const char * def);
 
       template < typename E >
-      ClassBuilderT & AddEnum( const char * values,
-         unsigned int modifiers = 0 );
-      ClassBuilderT & AddEnum( const char * nam,
+      ClassBuilderT & AddEnum(const char * values,
+         unsigned int modifiers = 0);
+      ClassBuilderT & AddEnum(const char * nam,
          const char * values,
          const std::type_info * ti = 0,
-         unsigned int modifiers = 0 );
+         unsigned int modifiers = 0);
 
-      //ClassBuilderT & addUnion( const char * nam,
+      //ClassBuilderT & addUnion(const char * nam,
       //                          const char * values,
-      //                          unsigned int modifiers );
+      //                          unsigned int modifiers);
 
 
       /** AddProperty will add a PropertyNth to the last defined
@@ -308,8 +308,8 @@ namespace Reflex {
       * @return a reference to the building class
       */
       template < typename P >
-      ClassBuilderT & AddProperty( const char * key, 
-         P value );
+      ClassBuilderT & AddProperty(const char * key, 
+         P value);
 
 
       /** SetSizeOf will set the SizeOf property for this class.
@@ -375,13 +375,13 @@ template <typename P> inline Reflex::ClassBuilder& Reflex::ClassBuilder::AddProp
 }
 
 //______________________________________________________________________________
-template <typename C> inline Reflex::ClassBuilderT<C>::ClassBuilderT(unsigned int modifiers, TYPE typ) 
+template <typename C> inline Reflex::ClassBuilderT<C>::ClassBuilderT(unsigned int modifiers, ETYPE typ) 
 : fClassBuilderImpl(Tools::Demangle(typeid(C)).c_str(), typeid(C), sizeof(C), modifiers, typ)
 {
 }
 
 //______________________________________________________________________________
-template <class C> inline Reflex::ClassBuilderT<C>::ClassBuilderT(const char* nam, unsigned int modifiers, TYPE typ)
+template <class C> inline Reflex::ClassBuilderT<C>::ClassBuilderT(const char* nam, unsigned int modifiers, ETYPE typ)
 : fClassBuilderImpl(nam, typeid(C), sizeof(C), modifiers, typ)
 {
 }
@@ -424,20 +424,20 @@ template <typename C> template <typename F> inline Reflex::ClassBuilderT<C>& Ref
 //-------------------------------------------------------------------------------
 template < class C >
 inline Reflex::ClassBuilderT<C> & 
-Reflex::ClassBuilderT<C>::AddFunctionMember( const Type & typ,
+Reflex::ClassBuilderT<C>::AddFunctionMember(const Type & typ,
                                                    const char * nam,
                                                    StubFunction stubFP,
                                                    void * stubCtx,
                                                    const char * params, 
-                                                   unsigned int modifiers ) 
+                                                   unsigned int modifiers) 
 //-------------------------------------------------------------------------------
 {
-   fClassBuilderImpl.AddFunctionMember( nam,
+   fClassBuilderImpl.AddFunctionMember(nam,
                                         typ,
                                         stubFP,
                                         stubCtx,
                                         params,
-                                        modifiers );
+                                        modifiers);
    return * this;
 }
 
@@ -445,10 +445,10 @@ Reflex::ClassBuilderT<C>::AddFunctionMember( const Type & typ,
 //-------------------------------------------------------------------------------
 template < class C > template < typename TD > 
 inline Reflex::ClassBuilderT<C> &
-Reflex::ClassBuilderT<C>::AddTypedef( const char * def ) {
+Reflex::ClassBuilderT<C>::AddTypedef(const char * def) {
 //-------------------------------------------------------------------------------
-   fClassBuilderImpl.AddTypedef( TypeDistiller<TD>::Get(),
-                                 def );
+   fClassBuilderImpl.AddTypedef(TypeDistiller<TD>::Get(),
+                                 def);
    return * this;
 }
 
@@ -456,11 +456,11 @@ Reflex::ClassBuilderT<C>::AddTypedef( const char * def ) {
 //-------------------------------------------------------------------------------
 template < class C > 
 inline Reflex::ClassBuilderT<C> & 
-Reflex::ClassBuilderT<C>::AddTypedef( const char * typ,
-                                            const char * def ) {
+Reflex::ClassBuilderT<C>::AddTypedef(const char * typ,
+                                            const char * def) {
 //-------------------------------------------------------------------------------
-   fClassBuilderImpl.AddTypedef( TypeBuilder( typ ),
-                                 def );
+   fClassBuilderImpl.AddTypedef(TypeBuilder(typ),
+                                 def);
    return * this;
 }
 
@@ -468,11 +468,11 @@ Reflex::ClassBuilderT<C>::AddTypedef( const char * typ,
 //-------------------------------------------------------------------------------
 template < class C > 
 inline Reflex::ClassBuilderT<C> & 
-Reflex::ClassBuilderT<C>::AddTypedef( const Type & typ,
-                                            const char * def ) {
+Reflex::ClassBuilderT<C>::AddTypedef(const Type & typ,
+                                            const char * def) {
 //-------------------------------------------------------------------------------
-   fClassBuilderImpl.AddTypedef( typ,
-                                 def );
+   fClassBuilderImpl.AddTypedef(typ,
+                                 def);
    return * this;
 }
 
@@ -480,13 +480,13 @@ Reflex::ClassBuilderT<C>::AddTypedef( const Type & typ,
 //-------------------------------------------------------------------------------
 template < class C > template < typename E >
 inline Reflex::ClassBuilderT<C> &
-Reflex::ClassBuilderT<C>::AddEnum( const char * values,
-                                         unsigned int modifiers ) {
+Reflex::ClassBuilderT<C>::AddEnum(const char * values,
+                                         unsigned int modifiers) {
 //-------------------------------------------------------------------------------
-   fClassBuilderImpl.AddEnum( Tools::Demangle(typeid(E)).c_str(),
+   fClassBuilderImpl.AddEnum(Tools::Demangle(typeid(E)).c_str(),
                               values,
                               & typeid(E),
-                              modifiers );
+                              modifiers);
    return * this;
 }
 
@@ -494,15 +494,15 @@ Reflex::ClassBuilderT<C>::AddEnum( const char * values,
 //-------------------------------------------------------------------------------
 template < class C > 
 inline Reflex::ClassBuilderT<C> &
-Reflex::ClassBuilderT<C>::AddEnum( const char * nam,
+Reflex::ClassBuilderT<C>::AddEnum(const char * nam,
                                          const char * values,
                                          const std::type_info * ti,
-                                         unsigned int modifiers ) {
+                                         unsigned int modifiers) {
 //-------------------------------------------------------------------------------
-   fClassBuilderImpl.AddEnum( nam, 
+   fClassBuilderImpl.AddEnum(nam, 
                               values, 
                               ti,
-                              modifiers );
+                              modifiers);
    return * this;
 }
 
@@ -510,11 +510,11 @@ Reflex::ClassBuilderT<C>::AddEnum( const char * nam,
 /*/-------------------------------------------------------------------------------
   template < class C > 
   inline Reflex::ClassBuilderT<C> &
-  Reflex::ClassBuilderT<C>::addUnion( const char * nam,
+  Reflex::ClassBuilderT<C>::addUnion(const char * nam,
   const char * values,
-  unsigned int modifiers ) {
+  unsigned int modifiers) {
 //-------------------------------------------------------------------------------
-  fClassBuilderImpl.addUnion( nam, values, modifiers );
+  fClassBuilderImpl.addUnion(nam, values, modifiers);
   return * this;
   }
 */
@@ -523,8 +523,8 @@ Reflex::ClassBuilderT<C>::AddEnum( const char * nam,
 //-------------------------------------------------------------------------------
 template < class C > template < class P >
 inline Reflex::ClassBuilderT<C> & 
-Reflex::ClassBuilderT<C>::AddProperty( const char * key, 
-                                             P value )
+Reflex::ClassBuilderT<C>::AddProperty(const char * key, 
+                                             P value)
 //-------------------------------------------------------------------------------
 {
    fClassBuilderImpl.AddProperty(key , value);

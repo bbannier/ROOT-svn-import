@@ -39,11 +39,11 @@ namespace Reflex {
    public:
 
       /** default constructor */
-      MemberTemplate( const Internal::MemberTemplateName * memberTemplateName = 0 );
+      MemberTemplate(const Internal::MemberTemplateName * memberTemplateName = 0);
 
 
       /** copy constructor */
-      MemberTemplate( const MemberTemplate & rh );
+      MemberTemplate(const MemberTemplate & rh);
 
 
       /** destructor */
@@ -61,7 +61,7 @@ namespace Reflex {
       * operator == will return true if two member templates are the same
       * @return true if member templates match
       */
-      bool operator == ( const MemberTemplate & rh ) const;
+      bool operator == (const MemberTemplate & rh) const;
 
 
       /**
@@ -71,8 +71,8 @@ namespace Reflex {
       *        if it is set to 0, the first occurence of the template family name will be returned
       * @return corresponding member template to name
       */
-      static MemberTemplate ByName( const std::string & name,
-         size_t nTemplateParams = 0 );
+      static MemberTemplate ByName(const std::string & name,
+         size_t nTemplateParams = 0);
 
 
       /**
@@ -94,7 +94,7 @@ namespace Reflex {
       * all currently available instantiations
       * @return template family name with all instantiantion
       */
-      const std::string& Name(std::string& buf, unsigned int mod = 0 ) const;
+      const std::string& Name(std::string& buf, unsigned int mod = 0) const;
 
 
       /**
@@ -102,7 +102,7 @@ namespace Reflex {
       * all currently available instantiations
       * @return template family name with all instantiantion
       */
-      std::string Name( unsigned int mod = 0 ) const;
+      std::string Name(unsigned int mod = 0) const;
 
 
       /**
@@ -132,7 +132,7 @@ namespace Reflex {
       * AddTemplateInstance adds one TemplateInstanceAt of the template to the local container
       * @param templateInstance the template TemplateInstanceAt
       */
-      void AddTemplateInstance( const Member & templateInstance ) const;
+      void AddTemplateInstance(const Member & templateInstance) const;
 
    private:
 
@@ -152,16 +152,16 @@ namespace Reflex {
 
 //-------------------------------------------------------------------------------
 inline
-Reflex::MemberTemplate::MemberTemplate( const Internal::MemberTemplateName * memberTemplateName )
+Reflex::MemberTemplate::MemberTemplate(const Internal::MemberTemplateName * memberTemplateName)
 //------------------------------------------------------------------------------- 
-   : fMemberTemplateName( memberTemplateName ) {}
+   : fMemberTemplateName(memberTemplateName) {}
 
 
 //-------------------------------------------------------------------------------
 inline
-Reflex::MemberTemplate::MemberTemplate( const MemberTemplate & rh ) 
+Reflex::MemberTemplate::MemberTemplate(const MemberTemplate & rh) 
 //-------------------------------------------------------------------------------
-   : fMemberTemplateName( rh.fMemberTemplateName ) {}
+   : fMemberTemplateName(rh.fMemberTemplateName) {}
 
 
 //-------------------------------------------------------------------------------
@@ -172,9 +172,9 @@ Reflex::MemberTemplate::~MemberTemplate() {}
 
 //-------------------------------------------------------------------------------
 inline bool
-Reflex::MemberTemplate::operator == ( const MemberTemplate & rh ) const {
+Reflex::MemberTemplate::operator == (const MemberTemplate & rh) const {
 //-------------------------------------------------------------------------------
-   return ( fMemberTemplateName == rh.fMemberTemplateName );
+   return (fMemberTemplateName == rh.fMemberTemplateName);
 }
 
 
@@ -188,7 +188,7 @@ Reflex::MemberTemplate::Id() const {
 
 //-------------------------------------------------------------------------------
 inline std::string
-Reflex::MemberTemplate::Name( unsigned int mod ) const {
+Reflex::MemberTemplate::Name(unsigned int mod) const {
 //-------------------------------------------------------------------------------
    // Return the name of the member template.
    std::string buf;

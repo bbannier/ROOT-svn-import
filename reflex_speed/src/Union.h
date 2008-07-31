@@ -32,7 +32,7 @@ namespace Internal {
    public:
 
       /** constructor */
-      Union(const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers, TYPE unionType = UNION);
+      Union(const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers, ETYPE unionType = kUnion);
 
       /** destructor */
       virtual ~Union();
@@ -173,9 +173,9 @@ namespace Internal {
        * SimpleName returns the name of the type as a reference. It provides a
        * simplified but faster generation of a type name. Attention currently it
        * is not guaranteed that Name() and SimpleName() return the same character
-       * layout of a name (ie. spacing, commas, etc. )
+       * layout of a name (ie. spacing, commas, etc.)
        * @param pos will indicate where in the returned reference the requested name starts
-       * @param mod The only 'mod' support is SCOPED
+       * @param mod The only 'mod' support is kScoped
        * @return name of type
        */
       virtual const std::string& SimpleName(size_t& pos, unsigned int mod = 0) const;

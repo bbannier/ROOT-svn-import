@@ -29,9 +29,9 @@ namespace Internal {
    public:
 
       /** default constructor */
-      Fundamental( const char * typ,
+      Fundamental(const char * typ,
          size_t size,
-         const std::type_info & ti ) ;
+         const std::type_info & ti) ;
 
 
       /** destructor */

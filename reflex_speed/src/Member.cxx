@@ -33,7 +33,7 @@
 Reflex::Scope
 Reflex::Member::DeclaringScope() const {
 //-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->DeclaringScope();
+   if (*this) return fMemberBase->DeclaringScope();
    return Dummy::Scope();
 }
 
@@ -42,7 +42,7 @@ Reflex::Member::DeclaringScope() const {
 Reflex::Type
 Reflex::Member::DeclaringType() const {
 //-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->DeclaringScope();
+   if (*this) return fMemberBase->DeclaringScope();
    return Dummy::Type();
 }
 
@@ -59,10 +59,10 @@ Reflex::Member::Delete() {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Member::GenerateDict( DictionaryGenerator & generator) const {
+Reflex::Member::GenerateDict(DictionaryGenerator & generator) const {
 //-------------------------------------------------------------------------------
 // Generate Dictionary information about itself.
-   if ( * this ) fMemberBase->GenerateDict( generator );
+   if (* this) fMemberBase->GenerateDict(generator);
 }
                            
 
@@ -71,48 +71,48 @@ Reflex::Object
 Reflex::Member::Get() const {
 //-------------------------------------------------------------------------------
 // Get the value of a static member.
-   if ( fMemberBase ) return fMemberBase->Get( Object());
+   if (fMemberBase) return fMemberBase->Get(Object());
    return Object();
 }
 
 
 //-------------------------------------------------------------------------------
 Reflex::Object
-Reflex::Member::Get( const Object & obj) const {
+Reflex::Member::Get(const Object & obj) const {
 //-------------------------------------------------------------------------------
 // Get the value of a non static data member.
-   if ( fMemberBase ) return fMemberBase->Get( obj );
+   if (fMemberBase) return fMemberBase->Get(obj);
    return Object();
 }
 
 
 //-------------------------------------------------------------------------------
 Reflex::Object 
-Reflex::Member::Invoke( const Object & obj,
-                        const std::vector < void * > & paramList ) const {
+Reflex::Member::Invoke(const Object & obj,
+                        const std::vector < void * > & paramList) const {
 //-------------------------------------------------------------------------------
 // Invoke a non static data member.
-   if ( fMemberBase ) return fMemberBase->Invoke( obj, paramList );
+   if (fMemberBase) return fMemberBase->Invoke(obj, paramList);
    return Object();
 }
 
 
 //-------------------------------------------------------------------------------
 Reflex::Object 
-Reflex::Member::Invoke( const std::vector < void * > & paramList ) const {
+Reflex::Member::Invoke(const std::vector < void * > & paramList) const {
 //-------------------------------------------------------------------------------
 // Invoke a static data member.
-   if ( fMemberBase ) return fMemberBase->Invoke( paramList );
+   if (fMemberBase) return fMemberBase->Invoke(paramList);
    return Object();
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::TYPE
+Reflex::ETYPE
 Reflex::Member::MemberType() const {
 //-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->MemberType();
-   return UNRESOLVED;
+   if (*this) return fMemberBase->MemberType();
+   return kUnresolved;
 }
 
 
@@ -120,7 +120,7 @@ Reflex::Member::MemberType() const {
 std::string
 Reflex::Member::MemberTypeAsString() const {
 //-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->MemberTypeAsString();
+   if (*this) return fMemberBase->MemberTypeAsString();
    return "";
 }
 
@@ -129,7 +129,7 @@ Reflex::Member::MemberTypeAsString() const {
 const std::string&
 Reflex::Member::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->Name(buf, mod);
+   if (*this) return fMemberBase->Name(buf, mod);
    return buf;
 }
 
@@ -138,7 +138,7 @@ Reflex::Member::Name(std::string& buf, unsigned int mod) const {
 size_t
 Reflex::Member::Offset() const {
 //-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->Offset();
+   if (*this) return fMemberBase->Offset();
    return 0;
 }
 
@@ -147,26 +147,26 @@ Reflex::Member::Offset() const {
 Reflex::PropertyList
 Reflex::Member::Properties() const {
 //-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->Properties();
+   if (*this) return fMemberBase->Properties();
    return Dummy::PropertyList();
 }
 
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Member::Set( const Object & instance,
-                                const void * value ) const {
+Reflex::Member::Set(const Object & instance,
+                                const void * value) const {
 //-------------------------------------------------------------------------------
 // Set a non static data member.
-   if (fMemberBase ) fMemberBase->Set( instance, value );
+   if (fMemberBase) fMemberBase->Set(instance, value);
 }
 
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Member::SetScope( const Scope & sc ) const  {
+Reflex::Member::SetScope(const Scope & sc) const  {
 //-------------------------------------------------------------------------------
-   if ( *this ) fMemberBase->SetScope( sc );
+   if (*this) fMemberBase->SetScope(sc);
 }
 
 
@@ -174,7 +174,7 @@ Reflex::Member::SetScope( const Scope & sc ) const  {
 void *
 Reflex::Member::Stubcontext() const {
 //-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->Stubcontext();
+   if (*this) return fMemberBase->Stubcontext();
    return 0;
 }
 
@@ -183,7 +183,7 @@ Reflex::Member::Stubcontext() const {
 Reflex::StubFunction
 Reflex::Member::Stubfunction() const {
 //-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->Stubfunction();
+   if (*this) return fMemberBase->Stubfunction();
    return 0;
 }
 
@@ -192,7 +192,7 @@ Reflex::Member::Stubfunction() const {
 Reflex::MemberTemplate
 Reflex::Member::TemplateFamily() const {
 //-------------------------------------------------------------------------------
-   if ( * this ) return fMemberBase->TemplateFamily();
+   if (* this) return fMemberBase->TemplateFamily();
    return Dummy::MemberTemplate();
 }
 
@@ -201,7 +201,7 @@ Reflex::Member::TemplateFamily() const {
 Reflex::Type
 Reflex::Member::TypeOf() const {
 //-------------------------------------------------------------------------------
-   if ( *this ) return fMemberBase->TypeOf();
+   if (*this) return fMemberBase->TypeOf();
    return Dummy::Type();
 }
 

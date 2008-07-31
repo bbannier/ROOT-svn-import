@@ -53,7 +53,7 @@ Reflex::Scope Reflex::NameLookup::LookupScope(const std::string& nam, const Scop
 
 /*
 //______________________________________________________________________________
-Reflex::Member LookupMember(const std::string& nam, const Scope& current )
+Reflex::Member LookupMember(const std::string& nam, const Scope& current)
 {
    // Lookup up a (possibly scoped) member name appearing in the scope context
    // current. This is the public interface for member lookup.
@@ -94,34 +94,34 @@ template<class T> T Reflex::NameLookup::Lookup(bool isTemplateExpanded /* = fals
       std::ostringstream tmp;
       for(size_t i = 0, level = 0, sofar = 0; i < fLookupName.size(); ++i) {
          if (level==0) {
-            tmp << fLookupName.substr( sofar, i+1 - sofar );
+            tmp << fLookupName.substr(sofar, i+1 - sofar);
             sofar = i+1;
          }
-         switch( fLookupName[i] ) {
+         switch(fLookupName[i]) {
             case '<': ++level; break;
             case '>': --level; // intentional fall through to the ',' case
             case ',':
                if (level == (1 - (int)(fLookupName[i]=='>'))) {
-                  std::string arg( fLookupName.substr( sofar, i-sofar) );
+                  std::string arg(fLookupName.substr(sofar, i-sofar));
                   
                   size_t p = arg.size();
          
-                  while (p > 0 && (arg[p-1] == '*' || arg[p-1] == '&' || arg[p-1] == ' ') )
+                  while (p > 0 && (arg[p-1] == '*' || arg[p-1] == '&' || arg[p-1] == ' '))
                      --p;
                   
-                  std::string end( arg.substr( p ) );
-                  arg.erase( p  );
+                  std::string end(arg.substr(p));
+                  arg.erase(p );
 
                   const char *start = arg.c_str();
                   while(strncmp(start,"const ",6)==0) start+=6;
 
-                  tmp << arg.substr( 0, start - arg.c_str() );
+                  tmp << arg.substr(0, start - arg.c_str());
 
                   while(strncmp(start,"std::",5)==0) start+=5;
 
-                  arg.erase(0, start - arg.c_str() ); 
+                  arg.erase(0, start - arg.c_str()); 
 
-                  Reflex::Type type( LookupType(arg , startScope) );
+                  Reflex::Type type(LookupType(arg , startScope));
 
                   if (type) {
                      if (type.Name()!="Double32_t" && type.Name()!="Float16_t") {
@@ -129,7 +129,7 @@ template<class T> T Reflex::NameLookup::Lookup(bool isTemplateExpanded /* = fals
                         // this is Double32_t or Float16_t
                         type = type.FinalType();
                      }
-		     tmp << type.Name(Reflex::SCOPED|Reflex::QUALIFIED);
+                     tmp << type.Name(Reflex::kScoped|Reflex::kQualified);
                   } else {
                      tmp << arg;
                   }
@@ -142,7 +142,7 @@ template<class T> T Reflex::NameLookup::Lookup(bool isTemplateExpanded /* = fals
                break;
          }      
       }
-      NameLookup next( tmp.str(), startScope );
+      NameLookup next(tmp.str(), startScope);
       return next.Lookup<T>(true);
    }
 
@@ -190,7 +190,7 @@ template<class T> T Reflex::NameLookup::LookupInScope()
          if (
             (fLookupName[fPosNamePart] == name[pos]) &&
             !fLookupName.compare(fPosNamePart, fPosNamePartLen, name, pos, name.length())
-         ) {
+        ) {
             //fprintf(stderr, "Reflex::NameLookup::LookupInScope<T>: lookup up '%s', partial success with subscope '%s' ...\n", fLookupName.c_str(), name.c_str());
             fPartialSuccess = true;
             fLookedAtUsingDir.clear();
@@ -221,7 +221,7 @@ template<class T> T Reflex::NameLookup::LookupInScope()
             if (
                (fLookupName[fPosNamePart] == name[pos]) &&
                !fLookupName.compare(fPosNamePart, fPosNamePartLen, name, pos, name.length())
-            ) {
+           ) {
                fPartialSuccess = true;
                fLookedAtUsingDir.clear();
                FindNextScopePos();

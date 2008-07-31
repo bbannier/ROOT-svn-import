@@ -16,48 +16,66 @@
 #include "Function.h"
 
 #include "Reflex/Tools.h"
+#include "TypeName.h"
 #include "OwnedMember.h"
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::Function::Function( const Type & retType,
+Reflex::Internal::Function::Function(const Type & retType,
                                       const std::vector< Type > & parameters,
                                       const std::type_info & ti,
-                                      TYPE functionType) 
+                                      ETYPE functionType) 
 //-------------------------------------------------------------------------------
 // Default constructor for a function type.
-   : TypeBase( BuildTypeName(retType, parameters, QUALIFIED | SCOPED).c_str(), 0, functionType, ti ),
+: TypeBase(BuildTypeName(std::string(), retType, Scope(), parameters, 0, kQualified | kScoped).c_str(), 0, 0, functionType, ti),
      fParameters(parameters),
-     fReturnType(retType),
-     fModifiers(0) { }
+     fParametersAdaptor(fParameters),
+     fReturnType(retType)
+     { }
 
 
 //-------------------------------------------------------------------------------
-std::string
-Reflex::Internal::Function::Name( unsigned int mod ) const {
+const std::string&
+Reflex::Internal::Function::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Return the name of the function type.
-   return BuildTypeName( fReturnType, fParameters, mod );
+   if (! mod)
+      return (buf = fTypeName->Name());
+   return BuildTypeName(buf, fReturnType, DeclaringScope(), fParameters, fModifiers, mod);
+
 }
 
 
 //-------------------------------------------------------------------------------
-std::string
-Reflex::Internal::Function::BuildTypeName( const Type & ret, 
-                                           const std::vector< Type > & pars,
-                                           unsigned int mod ) {
+const std::string&
+Reflex::Internal::Function::BuildTypeName(std::string& buf, const Type & ret,
+                                           const Scope& scope, const std::vector< Type > & pars,
+                                           unsigned int typemod, unsigned int mod) {
 //-------------------------------------------------------------------------------
 // Build the name of the function type in the form <returntype><space>(<param>*)
-   std::string tyname = ret.Name( mod )+ " (";
-   if ( pars.size() > 0 ) {
+// Return type and parameter types will always be scoped and qualified, even if
+// mod specifies non-scoped, non-qualified; the modification only changes the
+// function name itself, i.e. "a::b a::() const" becomes "a::b ()" for non-scoped,
+// non-qualified.
+   ret.Name(buf, kScoped | kQualified);
+   if (mod & kScoped)
+      scope.Name(buf, kScoped);
+   buf += " (";
+   if (pars.size() > 0) {
       std::vector< Type >::const_iterator it;
-      for ( it = pars.begin(); it != pars.end(); ) {
-         tyname += it->Name( mod );
-         if ( ++it != pars.end() ) tyname += ", ";
+      for (it = pars.begin(); it != pars.end();) {
+         it->Name(buf, kScoped | kQualified);
+         if (++it != pars.end()) buf += ", ";
       }
    }
-   else {
-      tyname += "void";
-   }
-   tyname += ")";
-   return tyname;
+   // leave it blank - the shorter the string the better.
+   //else {
+   //   buf += "void";
+   //}
+   buf += ")";
+   if ((mod & kQualified) && (fModifiers & kConst))
+      buf += " const";
+   // should we or should we not? It's part of the type but overloading with
+   // throiw / no throw is not allowed.
+   // if (Is(gThrows)) buf += " throw()";
+   return buf;
 }

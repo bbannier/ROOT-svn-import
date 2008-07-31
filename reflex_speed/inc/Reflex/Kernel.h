@@ -81,20 +81,20 @@
 #endif
 #endif
 
-// windows.h and oracle define CONST
-#ifdef CONST
-#undef CONST
+// windows.h and oracle define kConst
+#ifdef kConst
+#undef kConst
 #endif
 
 #ifdef _MSC_VER
 // Some pragmas to avoid warnings in MSVisualC
 // Disable warning C4786: identifier was truncated to '255' characters in the debug information
-#pragma warning ( disable : 4786 )
+#pragma warning (disable : 4786)
 // Disable warning C4291: no matching operator delete found; memory will not be freed if
 // initialization throws an exception
-#pragma warning ( disable : 4291 )
+#pragma warning (disable : 4291)
 // Disable warning C4250: inheritance via dominance
-#pragma warning ( disable : 4250 )
+#pragma warning (disable : 4250)
 #endif
 
 // some compilers define the macros below in limits
@@ -148,11 +148,30 @@ namespace Reflex {
    class PropertyList;
    class TypeTemplate;
    class MemberTemplate;
+   class TemplateArgument;
+   template <typename T> class ConstIterator;
+   template <typename T> class ConstReverseIterator;
 
    namespace Internal {
       class IContainerImpl;
    }
    typedef Internal::IContainerImpl EmptyCont_Type_t;
+
+   typedef ConstIterator<Type> Type_Iterator;
+   typedef ConstIterator<Scope> Scope_Iterator;
+   typedef ConstIterator<Member> Member_Iterator;
+   typedef ConstIterator<Base> Base_Iterator;
+   typedef ConstIterator<TypeTemplate> TypeTemplate_Iterator;
+   typedef ConstIterator<MemberTemplate> MemberTemplate_Iterator;
+   typedef ConstIterator<TemplateArgument> TemplateArgument_Iterator;
+
+   typedef ConstReverseIterator<Type> Reverse_Type_Iterator;
+   typedef ConstReverseIterator<Scope> Reverse_Scope_Iterator;
+   typedef ConstReverseIterator<Member> Reverse_Member_Iterator;
+   typedef ConstReverseIterator<Base> Reverse_Base_Iterator;
+   typedef ConstReverseIterator<TypeTemplate> Reverse_TypeTemplate_Iterator;
+   typedef ConstReverseIterator<MemberTemplate> Reverse_MemberTemplate_Iterator;
+   typedef ConstReverseIterator<TemplateArgument> Reverse_TemplateArgument_Iterator;
 
    namespace Dummy {
       RFLX_API const EmptyCont_Type_t & EmptyContainer();
@@ -193,103 +212,103 @@ namespace Reflex {
    // these defines are used for the modifiers they are used in the following
    // classes
    // BA = BASE
-   // CL = CLASS
-   // FU = FUNCTION
-   // DM = DATAMEMBER
-   // FM = FUNCTIONMEMBER
-   // TY = TYPE
+   // CL = kClass
+   // FU = kFunction
+   // DM = kDataMember
+   // FM = kFunctionMember
+   // TY = ETYPE
    // ME = MEMBER
    //                                BA  CL  DM  FM  TY  ME
-   enum ENTITY_DESCRIPTION {
-      PUBLIC          = (1<<0),  //  X       X   X       X
-      PROTECTED       = (1<<1),  //  X       X   X       X
-      PRIVATE         = (1<<2),  //  X       X   X       X
-      REGISTER        = (1<<3),  //          X   X       X
-      STATIC          = (1<<4),  //          X   X       X
-      CONSTRUCTOR     = (1<<5),  //              X       X
-      DESTRUCTOR      = (1<<6) , //              X       X
-      EXPLICIT        = (1<<7),  //              X       X
-      EXTERN          = (1<<8) , //          X   X       X
-      COPYCONSTRUCTOR = (1<<9) , //              X       X
-      OPERATOR        = (1<<10), //              X       X
-      INLINE          = (1<<11), //              X       X
-      CONVERTER       = (1<<12), //              X       X
-      AUTO            = (1<<13), //          X           X
-      MUTABLE         = (1<<14), //          X           X
-      CONST           = (1<<15), //          X       X   X
-      VOLATILE        = (1<<16), //          X       X   X
-      REFERENCE       = (1<<17), //          X           X
-      ABSTRACT        = (1<<18), //      X       X   X
-      VIRTUAL         = (1<<19), //  X   X           X
-      TRANSIENT       = (1<<20), //          X           X
-      ARTIFICIAL      = (1<<21), //  X   X   X   X   X   X
+   enum EENTITY_DESCRIPTION {
+      kPublic          = (1<<0),  //  X       X   X       X
+      kProtected       = (1<<1),  //  X       X   X       X
+      kPrivate         = (1<<2),  //  X       X   X       X
+      kRegister        = (1<<3),  //          X   X       X
+      kStatic          = (1<<4),  //          X   X       X
+      kConstructor     = (1<<5),  //              X       X
+      kDestructor      = (1<<6) , //              X       X
+      kExplicit        = (1<<7),  //              X       X
+      kExtern          = (1<<8) , //          X   X       X
+      kCopyConstructor = (1<<9) , //              X       X
+      kOperator        = (1<<10), //              X       X
+      kInline          = (1<<11), //              X       X
+      kConverter       = (1<<12), //              X       X
+      kAuto            = (1<<13), //          X           X
+      kMutable         = (1<<14), //          X           X
+      kConst           = (1<<15), //          X       X   X
+      kVolatile        = (1<<16), //          X       X   X
+      kReference       = (1<<17), //          X           X
+      kAbstract        = (1<<18), //      X       X   X
+      kVirtual         = (1<<19), //  X   X           X
+      kTransient       = (1<<20), //          X           X
+      kArtificial      = (1<<21), //  X   X   X   X   X   X
       // the bits 31 - 28 are reserved for template default arguments
-      TEMPLATEDEFAULTS1  = (0<<31)&(0<<30)&(0<<29)&(1<<28),
-      TEMPLATEDEFAULTS2  = (0<<31)&(0<<30)&(1<<29)&(0<<28),
-      TEMPLATEDEFAULTS3  = (0<<31)&(0<<30)&(1<<29)&(1<<28),
-      TEMPLATEDEFAULTS4  = (0<<31)&(1<<30)&(0<<29)&(0<<28),
-      TEMPLATEDEFAULTS5  = (0<<31)&(1<<30)&(0<<29)&(1<<28),
-      TEMPLATEDEFAULTS6  = (0<<31)&(1<<30)&(1<<29)&(0<<28),
-      TEMPLATEDEFAULTS7  = (0<<31)&(1<<30)&(1<<29)&(1<<28),
-      TEMPLATEDEFAULTS8  = (1<<31)&(0<<30)&(0<<29)&(0<<28),
-      TEMPLATEDEFAULTS9  = (1<<31)&(0<<30)&(0<<29)&(1<<28),
-      TEMPLATEDEFAULTS10 = (1<<31)&(0<<30)&(1<<29)&(0<<28),
-      TEMPLATEDEFAULTS11 = (1<<31)&(0<<30)&(1<<29)&(1<<28),
-      TEMPLATEDEFAULTS12 = (1<<31)&(1<<30)&(0<<29)&(0<<28),
-      TEMPLATEDEFAULTS13 = (1<<31)&(1<<30)&(0<<29)&(1<<28),
-      TEMPLATEDEFAULTS14 = (1<<31)&(1<<30)&(1<<29)&(0<<28),
-      TEMPLATEDEFAULTS15 = (1<<31)&(1<<30)&(1<<29)&(1<<28)
+      kTemplateDefaults1  = (0<<31)&(0<<30)&(0<<29)&(1<<28),
+      kTemplateDefaults2  = (0<<31)&(0<<30)&(1<<29)&(0<<28),
+      kTemplateDefaults3  = (0<<31)&(0<<30)&(1<<29)&(1<<28),
+      kTemplateDefaults4  = (0<<31)&(1<<30)&(0<<29)&(0<<28),
+      kTemplateDefaults5  = (0<<31)&(1<<30)&(0<<29)&(1<<28),
+      kTemplateDefaults6  = (0<<31)&(1<<30)&(1<<29)&(0<<28),
+      kTemplateDefaults7  = (0<<31)&(1<<30)&(1<<29)&(1<<28),
+      kTemplateDefaults8  = (1<<31)&(0<<30)&(0<<29)&(0<<28),
+      kTemplateDefaults9  = (1<<31)&(0<<30)&(0<<29)&(1<<28),
+      kTemplateDefaults10 = (1<<31)&(0<<30)&(1<<29)&(0<<28),
+      kTemplateDefaults11 = (1<<31)&(0<<30)&(1<<29)&(1<<28),
+      kTemplateDefaults12 = (1<<31)&(1<<30)&(0<<29)&(0<<28),
+      kTemplateDefaults13 = (1<<31)&(1<<30)&(0<<29)&(1<<28),
+      kTemplateDefaults14 = (1<<31)&(1<<30)&(1<<29)&(0<<28),
+      kTemplateDefaults15 = (1<<31)&(1<<30)&(1<<29)&(1<<28)
    };
 
 
    /** enum for printing names */
-   enum ENTITY_HANDLING {
-      FINAL     = (1<<0),
-      QUALIFIED = (1<<1),
-      SCOPED    = (1<<2),
-      F         = FINAL,
-      Q         = QUALIFIED,
-      S         = SCOPED
+   enum EENTITY_HANDLING {
+      kFinal     = (1<<0),
+      kQualified = (1<<1),
+      kScoped    = (1<<2),
+      kF         = kFinal,
+      kQ         = kQualified,
+      kS         = kScoped
    };
 
 
    /** enum containing all possible types and scopes */
-   enum TYPE {
-      CLASS,
-      STRUCT,
-      ENUM,
-      UNION,
-      NAMESPACE,
-      kScopeEndTag = NAMESPACE,
+   enum ETYPE {
+      kClass,
+      kStruct,
+      kEnum,
+      kUnion,
+      kNamespace,
+      kScopeEndTag = kNamespace,
 
-      FUNCTION,
-      ARRAY,
-      FUNDAMENTAL,
-      POINTER,
-      POINTERTOMEMBER,
-      TYPEDEF,
-      TYPETEMPLATEINSTANCE,
-      MEMBERTEMPLATEINSTANCE,
-      DATAMEMBER,
-      FUNCTIONMEMBER,
-      UNRESOLVED
+      kFunction,
+      kArray,
+      kFundamental,
+      kPointer,
+      kPointerToMember,
+      kTypedef,
+      kTypeTemplateInstance,
+      kMemberTemplateInstance,
+      kDataMember,
+      kFunctionMember,
+      kUnresolved
    };
 
 
    /** the max unsigned int */
    size_t NPos();
 
-   const std::string& TYPEName(TYPE type);
+   const std::string& TYPEName(ETYPE type);
 
 
    /**
    * typedef for function member type (necessary for return value of
    * getter function)
    */
-   typedef void * (* StubFunction) ( void *, const std::vector < void * > &, void *);
+   typedef void * (* StubFunction) (void *, const std::vector < void * > &, void *);
 
    /** typedef for function for Offset calculation */
-   typedef size_t (* OffsetFunction) ( void * );
+   typedef size_t (* OffsetFunction) (void *);
 
    /** dummy types for type_info purposes */
    class RFLX_API NullType {};
@@ -316,7 +335,7 @@ namespace Reflex {
    public:
       RuntimeError(const std::string& msg) : fMsg(Reflex::Argv0() + ": " + msg) { }
       ~RuntimeError() throw() {}
-      virtual const char * what() const throw( ) { return fMsg.c_str();}
+      virtual const char * what() const throw() { return fMsg.c_str();}
       std::string fMsg;
    };
 

@@ -17,8 +17,8 @@
 #include "Reflex/Scope.h"
 
 #ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4251 )
+#pragma warning(push)
+#pragma warning(disable : 4251)
 #endif
 
 namespace Reflex {
@@ -45,7 +45,7 @@ namespace Internal {
    public:
 
       /** default constructor */
-      MemberTemplateImpl( const char * templateName,
+      MemberTemplateImpl(const char * templateName,
          const Scope & scope,
          const std::vector < std::string > & parameterNames, 
          const std::vector < std::string > & parameterDefaults = std::vector<std::string>());
@@ -59,7 +59,7 @@ namespace Internal {
       * operator == will return true if two At templates are the same
       * @return true if At templates match
       */
-      bool operator == ( const MemberTemplateImpl & rh ) const;
+      bool operator == (const MemberTemplateImpl & rh) const;
 
 
       /**
@@ -95,7 +95,7 @@ namespace Internal {
       * AddTemplateInstance adds one TemplateInstanceAt of the template to the local container
       * @param templateInstance the template TemplateInstanceAt
       */
-      void AddTemplateInstance( const Member & templateInstance ) const;
+      void AddTemplateInstance(const Member & templateInstance) const;
 
    private:
 
@@ -157,7 +157,7 @@ namespace Internal {
 
 
 #ifdef _MSC_VER
-#pragma warning( pop )
+#pragma warning(pop)
 #endif
 
 #endif // Reflex_MemberTemplateImpl

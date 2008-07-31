@@ -40,8 +40,8 @@ namespace Internal {
    public:
 
       /** constructor */
-      MemberTemplateName( const char * name,
-         MemberTemplateImpl * memberTemplImpl );
+      MemberTemplateName(const char * name,
+         MemberTemplateImpl * memberTemplImpl);
 
 
       /**
@@ -51,8 +51,8 @@ namespace Internal {
       *        if it is set to 0, the first occurence of the template family name will be returned
       * @return corresponding member template to name
       */
-      static MemberTemplate ByName( const std::string & name,
-         size_t nTemplateParams = 0 );
+      static MemberTemplate ByName(const std::string & name,
+         size_t nTemplateParams = 0);
 
 
       /**
@@ -79,7 +79,7 @@ namespace Internal {
       * Name will return the name of the member template
       * @return name of member template
       */
-      const std::string& Name( std::string& buf, unsigned int mod ) const;
+      const std::string& Name(std::string& buf, unsigned int mod) const;
 
 
       /**

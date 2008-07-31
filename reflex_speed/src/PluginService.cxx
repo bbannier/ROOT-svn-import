@@ -83,7 +83,7 @@ using namespace std;
 //  ICommon* myc;
 //  myc = PluginSvc::create<ICommon*>(“MyClass”,10, svc);
 //  // or PluginSvc::createWithId<ICommon*>(666,10, svc);
-//  if ( myc ) {
+//  if (myc) {
 //    myc->doSomething();
 //  }
 // </pre>
@@ -93,7 +93,7 @@ using namespace std;
 
 
 //-------------------------------------------------------------------------------
-void* Reflex::PluginService::Create( const string & name, 
+void* Reflex::PluginService::Create(const string & name, 
                                        const Type & ret, 
                                        const vector<ValueObject> & arg) {
 //-------------------------------------------------------------------------------
@@ -101,25 +101,25 @@ void* Reflex::PluginService::Create( const string & name,
    static Object dummy; 
    vector<void*> argv;
    vector<Type>  argt;
-   for ( vector<ValueObject>::const_iterator i = arg.begin(); i != arg.end(); i++ ){
+   for (vector<ValueObject>::const_iterator i = arg.begin(); i != arg.end(); i++){
       argv.push_back(i->Address());
       argt.push_back(Type(i->TypeOf(),0));  // Ignore argument CV qualifiers
    }
    Type signature = FunctionTypeBuilder(ret, argt);
    string factoryname = FactoryName(name);
    //---Look first is the member exists ----
-   if( ! Instance().fFactories.FunctionMemberByName(factoryname) ) {
+   if (! Instance().fFactories.FunctionMemberByName(factoryname)) {
       string mapname = string(PLUGINSVC_FACTORY_NS) + "@@" + factoryname;
       
       int rett = Instance().LoadFactoryLib(mapname);
-      if ( ! rett ) {
-         if ( Debug() ) cout << "PluginService: Could not load library associated to plugin " << name << endl;
+      if (! rett) {
+         if (Debug()) cout << "PluginService: Could not load library associated to plugin " << name << endl;
          return 0;
       }
    }
    Member m = Instance().fFactories.FunctionMemberByName(FactoryName(name), signature);
-   if ( !m ) {
-      if ( Debug() > 1 ) cout << "PluginService: Could not find factory for " << name << " with signature " << signature.Name() << endl;
+   if (!m) {
+      if (Debug() > 1) cout << "PluginService: Could not find factory for " << name << " with signature " << signature.Name() << endl;
       return 0; 
    }
    else {
@@ -140,7 +140,7 @@ void* Reflex::PluginService::CreateWithId(const Any& id,
    static Object dummy; 
    vector<void*> argv;
    vector<Type>  argt;
-   for ( vector<ValueObject>::const_iterator i = arg.begin(); i != arg.end(); i++ ){
+   for (vector<ValueObject>::const_iterator i = arg.begin(); i != arg.end(); i++){
       argv.push_back(i->Address());
       argt.push_back(Type(i->TypeOf(),0));  // Ignore argument CV qualifiers
    }
@@ -148,11 +148,11 @@ void* Reflex::PluginService::CreateWithId(const Any& id,
 
    string factoryname = FactoryName(str(id));
    
-   if( ! Instance().fFactories.FunctionMemberByName(factoryname) ) {
+   if (! Instance().fFactories.FunctionMemberByName(factoryname)) {
       string mapname = string(PLUGINSVC_FACTORY_NS) + "@@" + factoryname;
       int rett = Instance().LoadFactoryLib(mapname);
-      if ( ! rett ) {
-         if ( Debug() ) cout << "PluginSvc: Could not load library associated to plugin with ID" << str(id) << endl;
+      if (! rett) {
+         if (Debug()) cout << "PluginSvc: Could not load library associated to plugin with ID" << str(id) << endl;
          return 0;
       }
    }
@@ -160,9 +160,9 @@ void* Reflex::PluginService::CreateWithId(const Any& id,
    //--- loop over members
    Member m;
    for (Member_Iterator it = Instance().fFactories.FunctionMember_Begin(); 
-        it != Instance().fFactories.FunctionMember_End(); ++it ) {
+        it != Instance().fFactories.FunctionMember_End(); ++it) {
       if (it->Properties().HasProperty("id")) {
-         if ( cmp(it->Properties().PropertyValue("id"),id) ) {
+         if (cmp(it->Properties().PropertyValue("id"),id)) {
             if (signature.IsEquivalentTo(it->TypeOf())) {
                m = *it;
                break;
@@ -171,8 +171,8 @@ void* Reflex::PluginService::CreateWithId(const Any& id,
       }
    }
    
-   if ( !m ) {
-      if ( Debug() > 1 ) cout << "PluginService: Could not find factory for " << str(id) << " with signature " << signature.Name() << endl;
+   if (!m) {
+      if (Debug() > 1) cout << "PluginService: Could not find factory for " << str(id) << " with signature " << signature.Name() << endl;
       return 0; 
    }
    else {
@@ -191,8 +191,8 @@ string Reflex::PluginService::FactoryName(const string& name) {
    string::size_type pos2 = name.find_last_not_of(' ');
    string res = name.substr(pos1 == string::npos ? 0 : pos1, 
                             pos2 == string::npos ? name.length() - 1 : pos2 - pos1 + 1);
-   for ( string::iterator i = res.begin(); i != res.end(); i++ ) 
-      if ( chars.find(*i) != string::npos ) *i = '_';
+   for (string::iterator i = res.begin(); i != res.end(); i++) 
+      if (chars.find(*i) != string::npos) *i = '_';
    return res;
 }
 
@@ -246,13 +246,13 @@ int Reflex::PluginService::LoadFactoryLib(const string& name) {
 //-------------------------------------------------------------------------------
 // Load libraries needed for a plugin to instantiate. 
    list<string> libs = Instance().fFactoryMap->GetLibraries(name);
-   for ( list<string>::reverse_iterator i = libs.rbegin(); i != libs.rend(); i++ ) {
+   for (list<string>::reverse_iterator i = libs.rbegin(); i != libs.rend(); i++) {
       SharedLibrary sl(*i);
-      if ( sl.Load() ) {
-         if ( Debug() ) cout << "PluginService: Loaded library  " << *i << endl;
+      if (sl.Load()) {
+         if (Debug()) cout << "PluginService: Loaded library  " << *i << endl;
       }
       else {
-         if ( Debug() ) cout << "PluginService: Error loading library " << *i <<
+         if (Debug()) cout << "PluginService: Error loading library " << *i <<
                            endl << sl.Error() <<  endl;
          return 0;
       }

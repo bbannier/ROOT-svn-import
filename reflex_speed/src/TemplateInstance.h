@@ -36,7 +36,7 @@ namespace Reflex {
 
 
       /** constructor */
-      TemplateInstance( const std::string & templateArguments );
+      TemplateInstance(const std::string & templateArguments);
 
 
       /** destructor */
@@ -48,7 +48,7 @@ namespace Reflex {
       * @param  typedefexp expand typedefs or not
       * @return full Name of template collection
       */
-      std::string Name( unsigned int mod = SCOPED | QUALIFIED) const;
+      std::string Name(unsigned int mod = kScoped | kQualified) const;
 
 
       /**

@@ -34,22 +34,22 @@ namespace Reflex {
    */
    class RFLX_API Any {
 
-      friend RFLX_API std::ostream& operator << ( std::ostream&, 
-         const Any& );
+      friend RFLX_API std::ostream& operator << (std::ostream&, 
+         const Any&);
 
    public: 
 
       /** Constructor */
       Any() 
-         : fContent( 0 ) {}
+         : fContent(0) {}
 
       /** Constructor */
-      template< typename ValueType > Any( const ValueType & value ) 
-         : fContent( new Holder<ValueType>( value )) {}
+      template< typename ValueType > Any(const ValueType & value) 
+         : fContent(new Holder<ValueType>(value)) {}
 
       /** Copy Constructor */
       Any(const Any & other)
-         : fContent( other.fContent ? other.fContent->Clone() : 0 ) {}
+         : fContent(other.fContent ? other.fContent->Clone() : 0) {}
 
       /** Dtor */
       ~Any() {
@@ -58,7 +58,7 @@ namespace Reflex {
 
       /** Clear the content */
       void Clear() {
-         if ( ! Empty() ) {
+         if (! Empty()) {
             delete fContent;
             fContent = 0;
          }
@@ -70,20 +70,20 @@ namespace Reflex {
       }
 
       /** Modifier */
-      Any & Swap( Any & rhs ) {
-         std::swap( fContent, rhs.fContent);
+      Any & Swap(Any & rhs) {
+         std::swap(fContent, rhs.fContent);
          return *this;
       }
 
       /** Modifier */
-      template< typename ValueType > Any & operator=( const ValueType & rhs ) {
-         Any( rhs ).Swap( * this );
+      template< typename ValueType > Any & operator=(const ValueType & rhs) {
+         Any(rhs).Swap(* this);
          return * this;
       }
 
       /** Modifier */
-      Any & operator=( const Any & rhs ) {
-         Any( rhs ).Swap( * this );
+      Any & operator=(const Any & rhs) {
+         Any(rhs).Swap(* this);
          return * this;
       }
 
@@ -94,7 +94,7 @@ namespace Reflex {
 
       /** Query */
       const std::type_info & TypeInfo() const {
-         return fContent ? fContent->TypeInfo() : typeid( void );
+         return fContent ? fContent->TypeInfo() : typeid(void);
       }
 
       /** Adress */
@@ -136,17 +136,17 @@ namespace Reflex {
       public: 
 
          /** Constructor */
-         Holder( const ValueType & value )
-            : fHeld( value ) {}
+         Holder(const ValueType & value)
+            : fHeld(value) {}
 
          /** Query */
          virtual const std::type_info & TypeInfo() const {
-            return typeid( ValueType );
+            return typeid(ValueType);
          }
 
          /** Clone */
          virtual Placeholder * Clone() const {
-            return new Holder( fHeld );
+            return new Holder(fHeld);
          }
 
          /** Address */
@@ -161,7 +161,7 @@ namespace Reflex {
 
 
       /** representation */
-      template< typename ValueType > friend ValueType * any_cast( Any * );
+      template< typename ValueType > friend ValueType * any_cast(Any *);
 
       // or  public:  
 
@@ -188,31 +188,31 @@ namespace Reflex {
    };
 
    /** throw */
-   template < class E > void throw_exception( const E & e ) {
+   template < class E > void throw_exception(const E & e) {
       throw e;
    }
 
    /** value */
-   template< typename ValueType > ValueType * any_cast( Any * operand ) {
-      return operand && operand->TypeInfo() == typeid( ValueType ) 
-         ? & static_cast< Any::Holder< ValueType > * >( operand->fContent )->fHeld : 0;
+   template< typename ValueType > ValueType * any_cast(Any * operand) {
+      return operand && operand->TypeInfo() == typeid(ValueType) 
+         ? & static_cast< Any::Holder< ValueType > * >(operand->fContent)->fHeld : 0;
    }
 
    /** value */
-   template< typename ValueType > const ValueType * any_cast( const Any * operand ) {
-      return any_cast< ValueType >( const_cast< Any * >( operand ));
+   template< typename ValueType > const ValueType * any_cast(const Any * operand) {
+      return any_cast< ValueType >(const_cast< Any * >(operand));
    }
 
    /** value */
-   template< typename ValueType > ValueType any_cast( const Any & operand ) {
-      const ValueType * result = any_cast< ValueType >( & operand );
-      if ( ! result ) { throw_exception( BadAnyCast()); }
+   template< typename ValueType > ValueType any_cast(const Any & operand) {
+      const ValueType * result = any_cast< ValueType >(& operand);
+      if (! result) { throw_exception(BadAnyCast()); }
       return * result;
    }
 
    /** stream operator */
-   RFLX_API std::ostream& operator << ( std::ostream&, 
-      const Any& );
+   RFLX_API std::ostream& operator << (std::ostream&, 
+      const Any&);
 
 } // namespace Reflex
 

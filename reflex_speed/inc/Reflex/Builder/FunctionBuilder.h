@@ -32,12 +32,12 @@ namespace Reflex {
    public:    
 
       /** constructor */
-      FunctionBuilder( const Type & typ,
+      FunctionBuilder(const Type & typ,
          const char * nam,
          StubFunction stubFP,
          void * stubCtx,
          const char * params, 
-         unsigned char modifiers );
+         unsigned char modifiers);
 
 
       /** destructor */
@@ -49,10 +49,10 @@ namespace Reflex {
       * @param  value the value of the property
       * @return a reference to the building class
       */
-      FunctionBuilder & AddProperty( const char * key, 
-         Any value );
-      FunctionBuilder & AddProperty( const char * key,
-         const char * value );
+      FunctionBuilder & AddProperty(const char * key, 
+         Any value);
+      FunctionBuilder & AddProperty(const char * key,
+         const char * value);
 
 
       /**
@@ -80,12 +80,12 @@ namespace Reflex {
    public:
 
       /** constructor */
-      FunctionBuilderImpl( const char * nam, 
+      FunctionBuilderImpl(const char * nam, 
          const Type & typ,
          StubFunction stubFP,
          void * stubCtx,
          const char * params, 
-         unsigned char modifiers = 0 );
+         unsigned char modifiers = 0);
 
 
       /** destructor */
@@ -97,10 +97,10 @@ namespace Reflex {
       * @param  value the value of the property
       * @return a reference to the building class
       */
-      void AddProperty( const char * key, 
-         Any value );
-      void AddProperty( const char * key, 
-         const char * value );
+      void AddProperty(const char * key, 
+         Any value);
+      void AddProperty(const char * key, 
+         const char * value);
 
 
       /**
@@ -128,11 +128,11 @@ namespace Reflex {
    public:    
 
       /** constructor */
-      FunctionBuilderT( const char * nam,
+      FunctionBuilderT(const char * nam,
          StubFunction stubFP,
          void * stubCtx,
          const char * params, 
-         unsigned char modifiers );
+         unsigned char modifiers);
 
       /** destructor */
       virtual ~FunctionBuilderT() {}
@@ -144,7 +144,7 @@ namespace Reflex {
       * @return a reference to the building class
       */
       template < typename P >
-      FunctionBuilderT & AddProperty( const char * key, P value );
+      FunctionBuilderT & AddProperty(const char * key, P value);
 
 
       /**
@@ -166,25 +166,25 @@ namespace Reflex {
 
 //-------------------------------------------------------------------------------
 template < typename  F > 
-inline Reflex::FunctionBuilderT<F>::FunctionBuilderT( const char * nam, 
+inline Reflex::FunctionBuilderT<F>::FunctionBuilderT(const char * nam, 
                                                             StubFunction stubFP,
                                                             void * stubCtx,
                                                             const char * params, 
-                                                            unsigned char modifiers )
+                                                            unsigned char modifiers)
 //-------------------------------------------------------------------------------
-   : fFunctionBuilderImpl( nam,
+   : fFunctionBuilderImpl(nam,
                            FunctionDistiller<F>::Get(),
                            stubFP,
                            stubCtx,
                            params,
-                           modifiers ) { }
+                           modifiers) { }
       
 
 //-------------------------------------------------------------------------------
 template <  typename F > template < typename P >
 inline Reflex::FunctionBuilderT<F> & 
-Reflex::FunctionBuilderT<F>::AddProperty( const char * key, 
-                                                P value )
+Reflex::FunctionBuilderT<F>::AddProperty(const char * key, 
+                                                P value)
 //-------------------------------------------------------------------------------
 { 
    fFunctionBuilderImpl.AddProperty(key , value);

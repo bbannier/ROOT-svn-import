@@ -19,9 +19,9 @@
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::Namespace::Namespace( const char * scop ) 
+Reflex::Internal::Namespace::Namespace(const char * scop) 
 //-------------------------------------------------------------------------------
-   : ScopeBase( scop, NAMESPACE ) {
+   : ScopeBase(scop, kNamespace) {
    // Create dictionary info for a namespace scope.
 }
 
@@ -48,19 +48,19 @@ Reflex::Internal::Namespace::GlobalScope() {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Internal::Namespace::GenerateDict( DictionaryGenerator & generator ) const {
+Reflex::Internal::Namespace::GenerateDict(DictionaryGenerator & generator) const {
 //-------------------------------------------------------------------------------
 // Generate Dictionary information about itself.
 
    
  
-   if( (*this).Name()!="" && generator.IsNewType((*this)) )
+   if ((*this).Name()!="" && generator.IsNewType((*this)))
       {
          std::stringstream tempcounter;
          tempcounter << generator.fMethodCounter;
          
          generator.fStr_namespaces<<"NamespaceBuilder nsb" + tempcounter.str() + 
-            " (\"" << (*this).Name(SCOPED) << "\");\n" ;
+            " (\"" << (*this).Name(kScoped) << "\");\n" ;
          
          ++generator.fMethodCounter;
       }

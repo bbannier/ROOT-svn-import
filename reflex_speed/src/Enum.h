@@ -34,9 +34,9 @@ namespace Internal {
    public:
 
       /** default constructor */
-      Enum( const char * enumType,
+      Enum(const char * enumType,
          const std::type_info & ti,
-         unsigned int modifiers );
+         unsigned int modifiers);
 
 
       /** destructor */
@@ -61,11 +61,11 @@ namespace Internal {
       * AddDataMember will add the information about a data MemberAt
       * @param dm pointer to data MemberAt
       */
-      virtual void AddDataMember( const Member & dm ) const;
-      virtual void AddDataMember( const char * nam,
+      virtual void AddDataMember(const Member & dm) const;
+      virtual void AddDataMember(const char * nam,
          const Type & typ,
          size_t offs,
-         unsigned int modifiers = 0 ) const;
+         unsigned int modifiers = 0) const;
 
 
       /**
@@ -73,7 +73,7 @@ namespace Internal {
       * @param  nth data MemberAt
       * @return pointer to data MemberAt
       */
-      virtual Member DataMemberAt( size_t nth ) const;
+      virtual Member DataMemberAt(size_t nth) const;
 
 
       /**
@@ -81,7 +81,7 @@ namespace Internal {
       * @param  Name of data MemberAt
       * @return data MemberAt
       */
-      virtual Member DataMemberByName( const std::string & nam ) const;
+      virtual Member DataMemberByName(const std::string & nam) const;
 
 
       /**
@@ -140,8 +140,8 @@ namespace Internal {
       * @param  MemberAt Name
       * @return pointer to MemberAt
       */
-      virtual Member MemberByName( const std::string & nam,
-         const Type & signature ) const;
+      virtual Member MemberByName(const std::string & nam,
+         const Type & signature) const;
 
 
       /**
@@ -149,7 +149,7 @@ namespace Internal {
       * @param  nth MemberAt
       * @return pointer to nth MemberAt
       */
-      virtual Member MemberAt( size_t nth ) const;
+      virtual Member MemberAt(size_t nth) const;
 
 
       /**
@@ -165,7 +165,7 @@ namespace Internal {
       virtual Reverse_Member_Iterator Member_REnd() const;
 
 
-      virtual std::string Name( unsigned int mod = 0 ) const;
+      virtual std::string Name(unsigned int mod = 0) const;
 
 
       /**
@@ -269,26 +269,26 @@ inline Reflex::Reverse_Member_Iterator Reflex::Internal::Enum::Member_REnd() con
 
 //-------------------------------------------------------------------------------
 inline std::string
-Reflex::Internal::Enum::Name( unsigned int mod ) const {
+Reflex::Internal::Enum::Name(unsigned int mod) const {
 //-------------------------------------------------------------------------------
-   return ScopeBase::Name( mod );
+   return ScopeBase::Name(mod);
 }
 
 
 //-------------------------------------------------------------------------------
 inline void
-Reflex::Internal::Enum::AddDataMember( const Member & dm ) const {
+Reflex::Internal::Enum::AddDataMember(const Member & dm) const {
 //-------------------------------------------------------------------------------
-   ScopeBase::AddDataMember( dm );
+   ScopeBase::AddDataMember(dm);
 }
 
 
 //-------------------------------------------------------------------------------
 inline void
-Reflex::Internal::Enum::AddDataMember( const char * nam,
+Reflex::Internal::Enum::AddDataMember(const char * nam,
                                        const Type & typ,
                                        size_t offs,
-                                       unsigned int modifiers ) const {
+                                       unsigned int modifiers) const {
 //-------------------------------------------------------------------------------
    ScopeBase::AddDataMember(nam, typ, offs, modifiers);
 }
@@ -296,17 +296,17 @@ Reflex::Internal::Enum::AddDataMember( const char * nam,
 
 //-------------------------------------------------------------------------------
 inline Reflex::Member
-Reflex::Internal::Enum::DataMemberAt( size_t nth ) const {
+Reflex::Internal::Enum::DataMemberAt(size_t nth) const {
 //-------------------------------------------------------------------------------
-   return ScopeBase::DataMemberAt( nth );
+   return ScopeBase::DataMemberAt(nth);
 }
 
 
 //-------------------------------------------------------------------------------
 inline Reflex::Member
-Reflex::Internal::Enum::DataMemberByName( const std::string & nam ) const {
+Reflex::Internal::Enum::DataMemberByName(const std::string & nam) const {
 //-------------------------------------------------------------------------------
-   return ScopeBase::DataMemberByName( nam );
+   return ScopeBase::DataMemberByName(nam);
 }
 
 
@@ -339,7 +339,7 @@ Reflex::Internal::Enum::HideName() const {
 inline bool
 Reflex::Internal::Enum::IsPrivate() const {
 //-------------------------------------------------------------------------------
-   return 0 != ( fModifiers & PRIVATE );
+   return 0 != (fModifiers & kPrivate);
 }
 
 
@@ -347,7 +347,7 @@ Reflex::Internal::Enum::IsPrivate() const {
 inline bool
 Reflex::Internal::Enum::IsProtected() const {
 //-------------------------------------------------------------------------------
-   return 0 != ( fModifiers & PROTECTED );
+   return 0 != (fModifiers & kProtected);
 }
 
 
@@ -355,24 +355,24 @@ Reflex::Internal::Enum::IsProtected() const {
 inline bool
 Reflex::Internal::Enum::IsPublic() const {
 //-------------------------------------------------------------------------------
-   return 0 != ( fModifiers & PUBLIC );
+   return 0 != (fModifiers & kPublic);
 }
 
 
 //-------------------------------------------------------------------------------
 inline Reflex::Member
-Reflex::Internal::Enum::MemberByName( const std::string & nam,
-                                                              const Type & signature ) const {
+Reflex::Internal::Enum::MemberByName(const std::string & nam,
+                                                              const Type & signature) const {
 //-------------------------------------------------------------------------------
-   return ScopeBase::MemberByName( nam, signature );
+   return ScopeBase::MemberByName(nam, signature);
 }
 
 
 //-------------------------------------------------------------------------------
 inline Reflex::Member
-Reflex::Internal::Enum::MemberAt( size_t nth ) const {
+Reflex::Internal::Enum::MemberAt(size_t nth) const {
 //-------------------------------------------------------------------------------
-   return ScopeBase::MemberAt( nth );
+   return ScopeBase::MemberAt(nth);
 }
 
 

@@ -31,10 +31,10 @@ namespace Reflex {
    public:
 
       /** constructor */
-      VariableBuilder( const char * nam,
+      VariableBuilder(const char * nam,
          const Type & typ,
          size_t offs,
-         unsigned int modifiers = 0 );
+         unsigned int modifiers = 0);
 
 
       /** destructor */
@@ -47,10 +47,10 @@ namespace Reflex {
       * @param  value the value of the property
       * @return a reference to the building class
       */
-      VariableBuilder & AddProperty( const char * key, 
-         Any value );
-      VariableBuilder & AddProperty( const char * key,
-         const char * value );
+      VariableBuilder & AddProperty(const char * key, 
+         Any value);
+      VariableBuilder & AddProperty(const char * key,
+         const char * value);
 
 
       /**
@@ -78,10 +78,10 @@ namespace Reflex {
    public:
 
       /** constructor */
-      VariableBuilderImpl( const char * nam,
+      VariableBuilderImpl(const char * nam,
          const Type & typ,
          size_t offs,
-         unsigned int modifiers = 0 );
+         unsigned int modifiers = 0);
 
 
       /** destructor */
@@ -93,10 +93,10 @@ namespace Reflex {
       * @param  value the value of the property
       * @return a reference to the building class
       */
-      void AddProperty( const char * key, 
-         Any value );
-      void AddProperty( const char * key, 
-         const char * value );
+      void AddProperty(const char * key, 
+         Any value);
+      void AddProperty(const char * key, 
+         const char * value);
 
 
       /**
@@ -124,9 +124,9 @@ namespace Reflex {
    public:
 
       /** constructor */
-      VariableBuilderT( const char * nam,
+      VariableBuilderT(const char * nam,
          size_t offs,
-         unsigned int modifiers = 0 );
+         unsigned int modifiers = 0);
 
 
       /** destructor */
@@ -140,7 +140,7 @@ namespace Reflex {
       * @return a reference to the building class
       */
       template < typename P >
-      VariableBuilderT & AddProperty( const char * key, P value );
+      VariableBuilderT & AddProperty(const char * key, P value);
 
 
       /**
@@ -162,21 +162,21 @@ namespace Reflex {
 
 //-------------------------------------------------------------------------------
 template < typename D > 
-inline Reflex::VariableBuilderT<D>::VariableBuilderT( const char * nam,
+inline Reflex::VariableBuilderT<D>::VariableBuilderT(const char * nam,
                                                             size_t offs,
-                                                            unsigned int modifiers ) 
+                                                            unsigned int modifiers) 
 //-------------------------------------------------------------------------------
-   : fDataMemberBuilderImpl( nam,
+   : fDataMemberBuilderImpl(nam,
                              TypeDistiller<D>::Get(),
                              offs,
-                             modifiers ) {}
+                             modifiers) {}
 
 
 //-------------------------------------------------------------------------------
 template < typename D > template < typename P >
 inline Reflex::VariableBuilderT<D> &
-Reflex::VariableBuilderT<D>::AddProperty( const char * key, 
-                                                P value ) {
+Reflex::VariableBuilderT<D>::AddProperty(const char * key, 
+                                                P value) {
 //-------------------------------------------------------------------------------
    fDataMemberBuilderImpl.AddProperty(key, value);
    return * this;

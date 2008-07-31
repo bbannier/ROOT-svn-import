@@ -47,15 +47,15 @@ static MemberTemplateVec_t & sMemberTemplateVec() {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::MemberTemplateName::MemberTemplateName( const char * name,
-                                                      MemberTemplateImpl * memberTemplateImpl )
+Reflex::Internal::MemberTemplateName::MemberTemplateName(const char * name,
+                                                      MemberTemplateImpl * memberTemplateImpl)
 //-------------------------------------------------------------------------------
-   : fName( name ),
-     fMemberTemplateImpl( memberTemplateImpl ) {
+   : fName(name),
+     fMemberTemplateImpl(memberTemplateImpl) {
    // Constructor.
-   fThisMemberTemplate = new MemberTemplate( this );
-   sMemberTemplates().insert(std::make_pair<const std::string * const,MemberTemplate>( &fName, *fThisMemberTemplate));
-   sMemberTemplateVec().push_back( * fThisMemberTemplate );
+   fThisMemberTemplate = new MemberTemplate(this);
+   sMemberTemplates().insert(std::make_pair<const std::string * const,MemberTemplate>(&fName, *fThisMemberTemplate));
+   sMemberTemplateVec().push_back(* fThisMemberTemplate);
 }
 
 
@@ -68,18 +68,18 @@ Reflex::Internal::MemberTemplateName::~MemberTemplateName() {
 
 //-------------------------------------------------------------------------------
 Reflex::MemberTemplate
-Reflex::Internal::MemberTemplateName::ByName( const std::string & name,
-                                                                       size_t nTemplateParams ) {
+Reflex::Internal::MemberTemplateName::ByName(const std::string & name,
+                                                                       size_t nTemplateParams) {
 //-------------------------------------------------------------------------------
    // Lookup a member template by its name.
    typedef Name2MemberTemplate_t::iterator IT;
    IT lower = sMemberTemplates().find(&name);
-   if ( lower != sMemberTemplates().end()) {
-      if ( ! nTemplateParams ) return lower->second;
+   if (lower != sMemberTemplates().end()) {
+      if (! nTemplateParams) return lower->second;
       else {
          std::pair<IT,IT> bounds = sMemberTemplates().equal_range(&name);
-         for ( IT it = bounds.first; it != bounds.second; ++it ) {
-            if ( it->second.TemplateParameterSize() == nTemplateParams ) {
+         for (IT it = bounds.first; it != bounds.second; ++it) {
+            if (it->second.TemplateParameterSize() == nTemplateParams) {
                return it->second;
             }
          }
@@ -94,7 +94,7 @@ void
 Reflex::Internal::MemberTemplateName::CleanUp() {
 //-------------------------------------------------------------------------------
    // Do the final cleanup for the member templates.  
-   for ( MemberTemplateVec_t::iterator it = sMemberTemplateVec().begin(); it != sMemberTemplateVec().end(); ++it ) {
+   for (MemberTemplateVec_t::iterator it = sMemberTemplateVec().begin(); it != sMemberTemplateVec().end(); ++it) {
       MemberTemplateName * tn = (MemberTemplateName*)it->Id();
       MemberTemplate * t = tn->fThisMemberTemplate;
       tn->DeleteMemberTemplate();
@@ -116,11 +116,11 @@ Reflex::Internal::MemberTemplateName::DeleteMemberTemplate() const {
 
 //-------------------------------------------------------------------------------
 std::string
-Reflex::Internal::MemberTemplateName::Name( unsigned int mod ) const {
+Reflex::Internal::MemberTemplateName::Name(unsigned int mod) const {
 //-------------------------------------------------------------------------------
    // Print the name of this member template.
-   if ( 0 != ( mod & ( SCOPED | S ))) return fName;
-   else                               return Tools::GetBaseName( fName );
+   if (0 != (mod & (kScoped | S))) return fName;
+   else                               return Tools::GetBaseName(fName);
 }
 
 
@@ -135,10 +135,10 @@ Reflex::Internal::MemberTemplateName::ThisMemberTemplate() const {
 
 //-------------------------------------------------------------------------------
 Reflex::MemberTemplate
-Reflex::Internal::MemberTemplateName::MemberTemplateAt( size_t nth ) {
+Reflex::Internal::MemberTemplateName::MemberTemplateAt(size_t nth) {
 //-------------------------------------------------------------------------------
    // Return teh nth member template.
-   if ( nth < sMemberTemplateVec().size()) return sMemberTemplateVec()[nth];
+   if (nth < sMemberTemplateVec().size()) return sMemberTemplateVec()[nth];
    return Dummy::MemberTemplate();
 }
 

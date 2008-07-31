@@ -32,12 +32,12 @@ namespace Reflex {
    public:
 
       /** constructor */
-      Object( const Type & type = Type(), 
-         void * mem = 0 );
+      Object(const Type & type = Type(), 
+         void * mem = 0);
 
 
       /** constructor */
-      Object( const Object & );
+      Object(const Object &);
 
 
       /** destructor */
@@ -47,19 +47,19 @@ namespace Reflex {
       /**
       * operator assigment 
       */
-      Object operator = ( const Object & obj );
+      Object operator = (const Object & obj);
 
 
       /**
       * operator ==
       */
-      bool operator == ( const Object & obj );
+      bool operator == (const Object & obj);
 
 
       /**
       * inequal operator 
       */
-      bool operator != ( const Object & obj );
+      bool operator != (const Object & obj);
 
 
       /** 
@@ -80,7 +80,7 @@ namespace Reflex {
       * @param  to is the class type to cast into
       * @param  obj the memory address of the object to be casted
       */
-      Object CastObject( const Type & to ) const;
+      Object CastObject(const Type & to) const;
 
 
       /**
@@ -103,7 +103,7 @@ namespace Reflex {
       * @param dm name of the data member to get
       * @return member value as object
       */
-      Object Get( const std::string & dm ) const ;
+      Object Get(const std::string & dm) const ;
 
 
       /**
@@ -112,7 +112,7 @@ namespace Reflex {
       * @param args a vector of memory addresses to parameter values
       * @return the return value of the function as object
       */
-      Object Invoke( const std::string & fm, 
+      Object Invoke(const std::string & fm, 
          std::vector< void * > args = std::vector<void*>()) const;
 
 
@@ -123,15 +123,15 @@ namespace Reflex {
       * @param args a vector of memory addresses to parameter values
       * @return the return value of the function as object
       */
-      Object Invoke( const std::string & fm, 
+      Object Invoke(const std::string & fm, 
          const Type & sign,
          std::vector< void * > args = std::vector<void*>()) const;
 
 
       /*
-      Object Invoke( const std::string & fm, 
+      Object Invoke(const std::string & fm, 
       std::vector< Object > args = std::vector< Object>()) const;
-      Object Invoke( const std::string & fm, 
+      Object Invoke(const std::string & fm, 
       const Type & ft,
       std::vector< Object > args = std::vector< Object>()) const;
       */
@@ -144,8 +144,8 @@ namespace Reflex {
       * @return the return value of the function as object
       */
       template < class T0 >
-      Object Invoke( const std::string & fm,
-         const T0 & p0 ) const ;
+      Object Invoke(const std::string & fm,
+         const T0 & p0) const ;
 
 
       /**
@@ -156,9 +156,9 @@ namespace Reflex {
       * @return the return value of the function as object
       */
       template < class T0 >
-      Object Invoke( const std::string & fm,
+      Object Invoke(const std::string & fm,
          const Type & sign,
-         const T0 & p0 ) const ;
+         const T0 & p0) const ;
 
 
       /**
@@ -169,9 +169,9 @@ namespace Reflex {
       * @return the return value of the function as object
       */
       template < class T0, class T1 >
-      Object Invoke( const std::string & fm,
+      Object Invoke(const std::string & fm,
          const T0 & p0,
-         const T1 & p1 ) const ;
+         const T1 & p1) const ;
 
 
       /**
@@ -183,10 +183,10 @@ namespace Reflex {
       * @return the return value of the function as object
       */
       template < class T0, class T1 >
-      Object Invoke( const std::string & fm,
+      Object Invoke(const std::string & fm,
          const Type & sign,
          const T0 & p0,
-         const T1 & p1 ) const ;
+         const T1 & p1) const ;
 
 
       /**
@@ -195,12 +195,12 @@ namespace Reflex {
       * @param value the memory address of the value to set
       */
       void Set(const std::string & dm,
-         const void * value ) const;
+         const void * value) const;
 
 
       /*
       void Set(const std::string & dm,
-      const Object & value ) const;
+      const Object & value) const;
       */
 
 
@@ -211,7 +211,7 @@ namespace Reflex {
       */
       template < class T >
       void Set(const std::string & dm,
-         const T & value ) const;
+         const T & value) const;
 
 
       /**
@@ -225,8 +225,8 @@ namespace Reflex {
       friend class ValueObject;
 
       /** */
-      void Set2( const std::string & dm,
-         const void * value ) const;
+      void Set2(const std::string & dm,
+         const void * value) const;
 
       /** 
       * the type of the object 
@@ -253,7 +253,7 @@ namespace Reflex {
    * @param o the object to be casted 
    * @return the address of the object casted into type T
    */
-   template < class T > T Object_Cast( const Object & o );
+   template < class T > T Object_Cast(const Object & o);
 
 
 } // namespace Reflex
@@ -263,29 +263,29 @@ namespace Reflex {
 
 //-------------------------------------------------------------------------------
 template < class T >
-inline T Reflex::Object_Cast( const Object & o ) {
+inline T Reflex::Object_Cast(const Object & o) {
 //-------------------------------------------------------------------------------
    return *(T*)o.Address();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Object::Object( const Type & type,
-                                     void * mem ) 
+inline Reflex::Object::Object(const Type & type,
+                                     void * mem) 
 //-------------------------------------------------------------------------------
-   : fType( type ),
-     fAddress( mem ) {}
+   : fType(type),
+     fAddress(mem) {}
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Object::Object( const Object & obj )
+inline Reflex::Object::Object(const Object & obj)
 //-------------------------------------------------------------------------------
-   : fType( obj.fType ),
-     fAddress( obj.fAddress ) {}
+   : fType(obj.fType),
+     fAddress(obj.fAddress) {}
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Object Reflex::Object::operator = ( const Object & obj ) {
+inline Reflex::Object Reflex::Object::operator = (const Object & obj) {
 //-------------------------------------------------------------------------------
    fType    = obj.fType;
    fAddress = obj.fAddress;
@@ -294,23 +294,23 @@ inline Reflex::Object Reflex::Object::operator = ( const Object & obj ) {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Object::operator == ( const Object & obj ) {
+inline bool Reflex::Object::operator == (const Object & obj) {
 //-------------------------------------------------------------------------------
-   return ( fType == obj.fType && fAddress == obj.fAddress );
+   return (fType == obj.fType && fAddress == obj.fAddress);
 }
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Object::operator != ( const Object & obj ) {
+inline bool Reflex::Object::operator != (const Object & obj) {
 //-------------------------------------------------------------------------------
-   return ( fType != obj.fType || fAddress != obj.fAddress );
+   return (fType != obj.fType || fAddress != obj.fAddress);
 }
 
 
 //-------------------------------------------------------------------------------
 inline Reflex::Object::operator bool () const {
 //-------------------------------------------------------------------------------
-   if ( fType && fAddress ) return true;
+   if (fType && fAddress) return true;
    return false;
 }
 
@@ -323,9 +323,9 @@ inline void * Reflex::Object::Address() const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Object Reflex::Object::CastObject( const Type & to ) const {
+inline Reflex::Object Reflex::Object::CastObject(const Type & to) const {
 //-------------------------------------------------------------------------------
-   if ( * this ) return fType.CastObject(to, *this);
+   if (* this) return fType.CastObject(to, *this);
    return Object();
 }
 
@@ -333,7 +333,7 @@ inline Reflex::Object Reflex::Object::CastObject( const Type & to ) const {
 //-------------------------------------------------------------------------------
 inline void Reflex::Object::Destruct() const {
 //-------------------------------------------------------------------------------
-   if ( * this ) {
+   if (* this) {
       fType.Destruct(fAddress);
       fAddress = 0;
    }
@@ -350,18 +350,18 @@ inline Reflex::Type Reflex::Object::DynamicType() const {
 //-------------------------------------------------------------------------------
 template < class T0 > 
 inline Reflex::Object
-Reflex::Object::Invoke( const std::string & fm,
-                              const T0 & p0 ) const {
+Reflex::Object::Invoke(const std::string & fm,
+                              const T0 & p0) const {
 //-------------------------------------------------------------------------------
    return Invoke(fm,Tools::MakeVector<void*>(Tools::CheckPointer<T0>::Get(p0)));
    /*
-     m = TypeOf().FunctionMemberAt( fm );
-     if ( m ) {
+     m = TypeOf().FunctionMemberAt(fm);
+     if (m) {
      std::vector< void* > argList;
-     argList.push_back( (void*)&p0 );
-     return m.Invoke( * this, argList );
+     argList.push_back((void*)&p0);
+     return m.Invoke(* this, argList);
      }
-     else throw RuntimeError("No such MemberAt " + fm );
+     else throw RuntimeError("No such MemberAt " + fm);
      return Object();
    */
 }
@@ -370,9 +370,9 @@ Reflex::Object::Invoke( const std::string & fm,
 //-------------------------------------------------------------------------------
 template < class T0 > 
 inline Reflex::Object
-Reflex::Object::Invoke( const std::string & fm,
+Reflex::Object::Invoke(const std::string & fm,
                               const Type & sign,
-                              const T0 & p0 ) const {
+                              const T0 & p0) const {
 //-------------------------------------------------------------------------------
    return Invoke(fm,sign,Tools::MakeVector<void*>(Tools::CheckPointer<T0>::Get(p0)));
 }
@@ -381,21 +381,21 @@ Reflex::Object::Invoke( const std::string & fm,
 //-------------------------------------------------------------------------------
 template < class T0, class T1 > 
 inline Reflex::Object
-Reflex::Object::Invoke( const std::string & fm,
+Reflex::Object::Invoke(const std::string & fm,
                               const T0 & p0,
-                              const T1 & p1 ) const {
+                              const T1 & p1) const {
 //-------------------------------------------------------------------------------
   return Invoke(fm,Tools::MakeVector<void*>(Tools::CheckPointer<T0>::Get(p0), 
                                             Tools::CheckPointer<T1>::Get(p1)));
 /*
-  m = TypeOf().FunctionMemberAt( fm );
-  if ( m ) {
+  m = TypeOf().FunctionMemberAt(fm);
+  if (m) {
     std::vector< void* > argList;
-    argList.push_back( (void*)&p0 );
-    argList.push_back( (void*)&p1 );
-    return m.Invoke( * this, argList );
+    argList.push_back((void*)&p0);
+    argList.push_back((void*)&p1);
+    return m.Invoke(* this, argList);
   }
-  else throw RuntimeError("No such MemberAt " + fm );
+  else throw RuntimeError("No such MemberAt " + fm);
   return Object();
 */
 }
@@ -404,10 +404,10 @@ Reflex::Object::Invoke( const std::string & fm,
 //-------------------------------------------------------------------------------
 template < class T0, class T1 > 
 inline Reflex::Object
-Reflex::Object::Invoke( const std::string & fm,
+Reflex::Object::Invoke(const std::string & fm,
                               const Type & sign, 
                               const T0 & p0,
-                              const T1 & p1 ) const {
+                              const T1 & p1) const {
 //-------------------------------------------------------------------------------
   return Invoke(fm,sign,Tools::MakeVector<void*>(Tools::CheckPointer<T0>::Get(p0), 
                                                  Tools::CheckPointer<T1>::Get(p1)));
@@ -415,19 +415,19 @@ Reflex::Object::Invoke( const std::string & fm,
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::Object::Set( const std::string & dm,
-                                       const void * value ) const {
+inline void Reflex::Object::Set(const std::string & dm,
+                                       const void * value) const {
 //-------------------------------------------------------------------------------
-  Set2( dm, value );
+  Set2(dm, value);
 }
 
 
 //-------------------------------------------------------------------------------
 template < class T >
-inline void Reflex::Object::Set( const std::string & dm,
-                                       const T & value ) const {
+inline void Reflex::Object::Set(const std::string & dm,
+                                       const T & value) const {
 //-------------------------------------------------------------------------------
-  Set2( dm, & value );
+  Set2(dm, & value);
 }
 
 

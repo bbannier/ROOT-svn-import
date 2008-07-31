@@ -47,11 +47,11 @@ namespace Reflex {
    public:
 
       /** default constructor */
-      Member( const Internal::MemberBase * memberBase = 0 );
+      Member(const Internal::MemberBase * memberBase = 0);
 
 
       /** copy constructor */
-      Member( const Member & rh );
+      Member(const Member & rh);
 
 
       /** destructor */
@@ -61,25 +61,25 @@ namespace Reflex {
       /**
       * lesser than operator 
       */
-      bool operator < ( const Member & rh ) const;
+      bool operator < (const Member & rh) const;
 
 
       /** 
       * equal operator 
       */
-      bool operator == ( const Member & rh ) const;
+      bool operator == (const Member & rh) const;
 
 
       /**
       * not equal operator 
       */
-      bool operator != ( const Member & rh ) const;
+      bool operator != (const Member & rh) const;
 
 
       /** 
       * assignment operator 
       */
-      Member & operator = ( const Member & rh );
+      Member & operator = (const Member & rh);
 
 
       /** 
@@ -157,7 +157,7 @@ namespace Reflex {
       * @param paramList a vector of addresses to paramter values
       * @return the return value of the function as object
       */
-      Object Invoke( const Object & obj, 
+      Object Invoke(const Object & obj, 
          const std::vector < void * > & paramList = 
          std::vector<void*>()) const;
 
@@ -167,13 +167,13 @@ namespace Reflex {
       * @param paramList a vector of addresses to parameter values
       * @return the return value of the function as object
       */
-      Object Invoke( const std::vector < void * > & paramList = 
+      Object Invoke(const std::vector < void * > & paramList = 
          std::vector<void*>()) const;
 
 
       /**
       * Check whether the entity property is set for the member. You can
-      * combine checks, e.g. t.Is(gCLASS && gPUBLIC)
+      * combine checks, e.g. t.Is(gClass && gPUBLIC)
       * @param descr the entity property to check for; see EntityProperty.
       * @return whether descr is set.
       */
@@ -184,7 +184,7 @@ namespace Reflex {
       * MemberType return the type of the member as enum value (function or data member) 
       * @return member type as enum
       */
-      TYPE MemberType() const;
+      ETYPE MemberType() const;
 
 
       /** 
@@ -197,21 +197,21 @@ namespace Reflex {
       /** 
       * Name returns the Name of the member 
       * @param mod modifiers can be or'ed as argument
-      * SCOPED - fully scoped name
+      * kScoped - fully scoped name
       * @return name of the member
       */
-      const std::string& Name( std::string& buf, unsigned int mod = SCOPED ) const;
+      const std::string& Name(std::string& buf, unsigned int mod = kScoped) const;
 
 
       /** 
       * Name returns the Name of the member 
       * @param mod modifiers can be or'ed as argument
-      * SCOPED - fully scoped name
+      * kScoped - fully scoped name
       * FINAL  - resolve all typedefs
-      * QUALIFIED - cv and reference qualification
+      * kQualified - cv and reference qualification
       * @return name of the member
       */
-      std::string Name( unsigned int mod = SCOPED | QUALIFIED ) const;
+      std::string Name(unsigned int mod = kScoped | kQualified) const;
 
 
       /** 
@@ -226,7 +226,7 @@ namespace Reflex {
       * @param required if true only returns the number of required parameters
       * @return number of parameters
       */
-      size_t FunctionParameterSize( bool required = false ) const;
+      size_t FunctionParameterSize(bool required = false) const;
 
 
       /** 
@@ -251,22 +251,22 @@ namespace Reflex {
       PropertyList Properties() const;
 
 
-      /*void Set( const Object & instance,
-      const Object & value ) const;*/
+      /*void Set(const Object & instance,
+      const Object & value) const;*/
       /**
       * Set will set the value of a data member
       * @param instance of the object owning the data member
       * @param value the memory address of the value to set
       */
-      void Set( const Object & instance,
-         const void * value ) const;
+      void Set(const Object & instance,
+         const void * value) const;
 
 
       /** 
       * SetScope will set the Scope of the member 
       * @param sc scope to set
       */
-      void SetScope( const Scope & sc ) const;
+      void SetScope(const Scope & sc) const;
 
 
       /** 
@@ -330,18 +330,18 @@ namespace Reflex {
 
 //-------------------------------------------------------------------------------
 inline
-Reflex::Member::Member( const Internal::MemberBase * memberBase )
+Reflex::Member::Member(const Internal::MemberBase * memberBase)
 //-------------------------------------------------------------------------------
-   : fMemberBase( const_cast<Internal::MemberBase*>(memberBase) ) {
+   : fMemberBase(const_cast<Internal::MemberBase*>(memberBase)) {
    // Construct a member, attaching it to MemberBase.
 }
 
 
 //-------------------------------------------------------------------------------
 inline
-Reflex::Member::Member( const Member & rh )
+Reflex::Member::Member(const Member & rh)
 //-------------------------------------------------------------------------------
-   : fMemberBase( rh.fMemberBase ) {
+   : fMemberBase(rh.fMemberBase) {
    // Member copy constructor.
 }
 
@@ -356,20 +356,20 @@ Reflex::Member::~Member() {
 
 //-------------------------------------------------------------------------------
 inline bool
-Reflex::Member::operator < ( const Member & rh ) const {
+Reflex::Member::operator < (const Member & rh) const {
 //-------------------------------------------------------------------------------
-   if ( (*this) && rh ) 
-      return ( TypeOf() < rh.TypeOf() && Name() < rh.Name());
+   if ((*this) && rh) 
+      return (TypeOf() < rh.TypeOf() && Name() < rh.Name());
    return false;
 }
 
 
 //-------------------------------------------------------------------------------
 inline bool
-Reflex::Member::operator == ( const Member & rh ) const {
+Reflex::Member::operator == (const Member & rh) const {
 //-------------------------------------------------------------------------------
-   if ( (*this) && rh ) 
-      return ( TypeOf() == rh.TypeOf() && Name() == rh.Name() );
+   if ((*this) && rh) 
+      return (TypeOf() == rh.TypeOf() && Name() == rh.Name());
    // both invalid is equal, too
    return (!(*this)) && (!rh);
 }
@@ -377,15 +377,15 @@ Reflex::Member::operator == ( const Member & rh ) const {
 
 //-------------------------------------------------------------------------------
 inline bool
-Reflex::Member::operator != ( const Member & rh ) const {
+Reflex::Member::operator != (const Member & rh) const {
 //-------------------------------------------------------------------------------
-   return ! ( *this == rh );
+   return ! (*this == rh);
 }
 
 
 //-------------------------------------------------------------------------------
 inline Reflex::Member &
-Reflex::Member::operator = ( const Member & rh ) {
+Reflex::Member::operator = (const Member & rh) {
 //-------------------------------------------------------------------------------
    fMemberBase = rh.fMemberBase;
    return * this;
@@ -410,7 +410,7 @@ Reflex::Member::Id() const {
 
 //-------------------------------------------------------------------------------
 inline std::string
-Reflex::Member::Name( unsigned int mod ) const {
+Reflex::Member::Name(unsigned int mod) const {
 //-------------------------------------------------------------------------------
    std::string buf;
    return Name(buf, mod);

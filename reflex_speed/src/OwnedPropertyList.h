@@ -33,8 +33,8 @@ namespace Internal {
    public:
 
       /** constructor */
-      OwnedPropertyList( PropertyListImpl * propertyListImpl = 0 )
-         : PropertyList( propertyListImpl ) {}
+      OwnedPropertyList(PropertyListImpl * propertyListImpl = 0)
+         : PropertyList(propertyListImpl) {}
 
 
       /** delete */

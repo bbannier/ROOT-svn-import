@@ -42,8 +42,8 @@
 
 
 #ifdef _MSC_VER
-#pragma warning( push )
-#pragma warning( disable : 4251 )
+#pragma warning(push)
+#pragma warning(disable : 4251)
 #endif
 
 namespace Reflex 
@@ -71,8 +71,8 @@ namespace Reflex
       /* destructor */
       ~DictionaryGenerator();
 
-      friend std::ostream & operator << ( std::ostream & s,
-         const DictionaryGenerator & obj );
+      friend std::ostream & operator << (std::ostream & s,
+         const DictionaryGenerator & obj);
 
 
       /**
@@ -110,7 +110,7 @@ namespace Reflex
       * @param mebertype
       * @return 
       */         
-      std::string GetTypeNumber( const Type & membertype);
+      std::string GetTypeNumber(const Type & membertype);
 
 
       /**
@@ -181,7 +181,7 @@ namespace Reflex
       * @param searchtype
       * @return
       */
-      bool IsNewType( const Type & searchtype);
+      bool IsNewType(const Type & searchtype);
 
 
       /**
@@ -203,7 +203,7 @@ namespace Reflex
       */
       std::vector <std::string> fPattern_selections;
 
-      bool IsNewType2 ( const Type & searchtype);  // testing; work-in-progress
+      bool IsNewType2 (const Type & searchtype);  // testing; work-in-progress
 
    private:
 
@@ -212,13 +212,13 @@ namespace Reflex
       * GetSubScopes one scope can include multiple subscopes
       * @param allscopes
       */
-      void GetSubScopes (Scope_Iterator allscopes );
+      void GetSubScopes (const Scope_Iterator& allscopes);
 
 
       /** 
       * GetMembers and subscope can include members
       */
-      void GetMembers ( Scope_Iterator subsco);
+      void GetMembers (const Scope_Iterator& subsco);
 
 
       /**
@@ -307,8 +307,8 @@ namespace Reflex
 
 
       /** stream operator */
-      std::ostream & operator << ( std::ostream & s,
-                                   const DictionaryGenerator & obj );
+      std::ostream & operator << (std::ostream & s,
+                                   const DictionaryGenerator & obj);
 
 } // namespace Reflex
 
@@ -369,7 +369,7 @@ inline Reflex::DictionaryGenerator::~DictionaryGenerator() {
 
 
 #ifdef _MSC_VER
-#pragma warning( pop )
+#pragma warning(pop)
 #endif
         
 #endif // Reflex_DictionaryGenerator

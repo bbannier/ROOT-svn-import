@@ -20,6 +20,7 @@ namespace Reflex {
 
    // forward declarations
    class Scope;
+   class Catalog;
 
 namespace Internal {
 
@@ -40,7 +41,7 @@ namespace Internal {
    public:
 
       /** constructor */
-      ScopeName( const char * name, ScopeBase * scopeBase );
+      ScopeName(const char * name, ScopeBase * scopeBase, const Catalog* catalog = 0);
 
 
       /**
@@ -52,6 +53,12 @@ namespace Internal {
 
 
       void HideName();
+
+
+      /**
+      * Retrieve the Catalog containing the type.
+      */
+      const Catalog& InCatalog() const { return *fCatalog; }
 
 
       /**
@@ -92,6 +99,11 @@ namespace Internal {
       * This scope
       */
       Scope * fThisScope;
+
+      /**
+      * Catalog containing the scope
+      */
+      const Catalog* fCatalog;
 
    }; // class ScopeName
 } // namespace Internal

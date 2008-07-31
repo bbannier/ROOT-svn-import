@@ -19,11 +19,11 @@
 #include "OwnedMember.h"
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::Fundamental::Fundamental( const char * typ,
+Reflex::Internal::Fundamental::Fundamental(const char * typ,
                                         size_t size,
-                                        const std::type_info & ti ) 
+                                        const std::type_info & ti) 
 //-------------------------------------------------------------------------------
-   : TypeBase( typ, size, FUNDAMENTAL, ti ) {
+   : TypeBase(typ, size, kFundamental, ti) {
    // Create dictionary info for this fundamental type.
 }
 

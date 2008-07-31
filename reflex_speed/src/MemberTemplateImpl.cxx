@@ -20,24 +20,24 @@
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::MemberTemplateImpl::MemberTemplateImpl( const char * templateName,
+Reflex::Internal::MemberTemplateImpl::MemberTemplateImpl(const char * templateName,
                                                       const Scope & scope,
                                                       const std::vector < std::string > & parameterNames,
-                                                      const std::vector < std::string > & parameterDefaults )
+                                                      const std::vector < std::string > & parameterDefaults)
 //------------------------------------------------------------------------------- 
-   : fScope( scope ),
-     fTemplateInstances( std::vector < Member >() ),
-     fParameterNames( parameterNames ),
-     fParameterDefaults( parameterDefaults ),
-     fReqParameters( parameterNames.size() - parameterDefaults.size() ) {
+   : fScope(scope),
+     fTemplateInstances(std::vector < Member >()),
+     fParameterNames(parameterNames),
+     fParameterDefaults(parameterDefaults),
+     fReqParameters(parameterNames.size() - parameterDefaults.size()) {
 // Construct dictionary info for this template member function.
-   MemberTemplate mt = MemberTemplate::ByName( templateName, parameterNames.size() );
-   if ( mt.Id() == 0 ) {
-      fMemberTemplateName = new MemberTemplateName( templateName, this );
+   MemberTemplate mt = MemberTemplate::ByName(templateName, parameterNames.size());
+   if (mt.Id() == 0) {
+      fMemberTemplateName = new MemberTemplateName(templateName, this);
    }
    else {
       fMemberTemplateName = (MemberTemplateName*)mt.Id();
-      if ( fMemberTemplateName->fMemberTemplateImpl ) delete fMemberTemplateName->fMemberTemplateImpl;
+      if (fMemberTemplateName->fMemberTemplateImpl) delete fMemberTemplateName->fMemberTemplateImpl;
       fMemberTemplateName->fMemberTemplateImpl = this;
    }
 }
@@ -47,17 +47,17 @@ Reflex::Internal::MemberTemplateImpl::MemberTemplateImpl( const char * templateN
 Reflex::Internal::MemberTemplateImpl::~MemberTemplateImpl() {
 //-------------------------------------------------------------------------------
 // Destructor.
-   if ( fMemberTemplateName->fMemberTemplateImpl == this ) fMemberTemplateName->fMemberTemplateImpl = 0;
+   if (fMemberTemplateName->fMemberTemplateImpl == this) fMemberTemplateName->fMemberTemplateImpl = 0;
 }
 
 
 //-------------------------------------------------------------------------------
 bool
-Reflex::Internal::MemberTemplateImpl::operator == ( const MemberTemplateImpl & mt ) const {
+Reflex::Internal::MemberTemplateImpl::operator == (const MemberTemplateImpl & mt) const {
 //-------------------------------------------------------------------------------
 // Equal operator.
-   return ( ( fMemberTemplateName->fName == mt.fMemberTemplateName->fName ) && 
-            ( fParameterNames.size() == mt.fParameterNames.size() ) );
+   return ((fMemberTemplateName->fName == mt.fMemberTemplateName->fName) && 
+            (fParameterNames.size() == mt.fParameterNames.size()));
 }
 
 
@@ -99,10 +99,10 @@ Reflex::Internal::MemberTemplateImpl::TemplateInstance_REnd() const {
                                              
 //-------------------------------------------------------------------------------
 Reflex::Member
-Reflex::Internal::MemberTemplateImpl::TemplateInstanceAt( size_t nth ) const {
+Reflex::Internal::MemberTemplateImpl::TemplateInstanceAt(size_t nth) const {
 //-------------------------------------------------------------------------------
 // Return the nth template instance of this template family.
-   if ( nth < fTemplateInstances.size() ) return fTemplateInstances[ nth ];
+   if (nth < fTemplateInstances.size()) return fTemplateInstances[ nth ];
    return Dummy::Member();
 }
 
@@ -127,9 +127,9 @@ Reflex::Internal::MemberTemplateImpl::ThisMemberTemplate() const {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Internal::MemberTemplateImpl::AddTemplateInstance( const Member & templateInstance ) const {
+Reflex::Internal::MemberTemplateImpl::AddTemplateInstance(const Member & templateInstance) const {
 //-------------------------------------------------------------------------------
 // Add template instance to this family.
-   fTemplateInstances.push_back( templateInstance );
+   fTemplateInstances.push_back(templateInstance);
 }
 

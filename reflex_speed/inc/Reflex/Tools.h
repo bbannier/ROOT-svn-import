@@ -25,23 +25,24 @@ namespace Reflex {
    class Type;
 
    enum EFUNDAMENTALTYPE {
-      kCHAR,
-      kSIGNED_CHAR,
-      kSHORT_INT,
-      kINT,
-      kLONG_INT,
-      kUNSIGNED_CHAR,
-      kUNSIGNED_SHORT_INT,
-      kUNSIGNED_INT,
-      kUNSIGNED_LONG_INT,
-      kBOOL,
-      kFLOAT,
-      kDOUBLE,
-      kLONG_DOUBLE,
-      kVOID,
-      kLONGLONG,
-      kULONGLONG,
-      kNOTFUNDAMENTAL
+      kChar,
+      kSignedChar,
+      kShortInt,
+      kInt,
+      kLongInt,
+      kUnsignedChar,
+      kUnsignedShortInt,
+      kUnsignedInt,
+      kUnsignedLongInt,
+      kBool,
+      kFloat,
+      kDouble,
+      kLongDouble,
+      kVoid,
+      kLongLong,
+      kULongLong,
+      kUnsignedLongLong = kULongLong,
+      kNotFundamental
    };
 
 
@@ -53,7 +54,7 @@ namespace Reflex {
       * @param typ the type passed into the system
       * @return enum representing kind of fundamental type
       */
-      RFLX_API EFUNDAMENTALTYPE FundamentalType( const Type & typ );
+      RFLX_API EFUNDAMENTALTYPE FundamentalType(const Type & typ);
 
 
 
@@ -63,7 +64,7 @@ namespace Reflex {
       * @param ti the mangled At string
       * @return the demangled string
       */
-      RFLX_API std::string Demangle( const std::type_info & ti );
+      RFLX_API std::string Demangle(const std::type_info & ti);
 
 
       /**
@@ -103,43 +104,43 @@ namespace Reflex {
       * @param vec the vector to be converted
       * @return string of comma concatenated containees 
       */
-      RFLX_API std::string StringVec2String( const std::vector<std::string> & vec );
+      RFLX_API std::string StringVec2String(const std::vector<std::string> & vec);
 
 
-      RFLX_API std::string BuildTypeName( Type & t, 
-         unsigned int modifiers );
+      RFLX_API std::string BuildTypeName(Type & t, 
+         unsigned int modifiers);
 
 
-      RFLX_API std::vector<std::string> GenTemplateArgVec( const std::string & name );
+      RFLX_API std::vector<std::string> GenTemplateArgVec(const std::string & name);
 
       /**
        * GetTemplateComponents extract from 'Name' a template name and a vector containing its argument.
        *
        */
-      RFLX_API void GetTemplateComponents( const std::string & Name, std::string &templatename, std::vector<std::string> &args );
+      RFLX_API void GetTemplateComponents(const std::string & Name, std::string &templatename, std::vector<std::string> &args);
 
       /**
       * getUnscopedPosition will return the position in a
       * string where the unscoped At begins
       */
-      RFLX_API size_t GetBasePosition( const std::string & name );
+      RFLX_API size_t GetBasePosition(const std::string & name);
 
 
-      RFLX_API size_t GetFirstScopePosition( const std::string & name );
+      RFLX_API size_t GetFirstScopePosition(const std::string & name);
 
 
       /**
       * Get the At part of a given At/member Name
       */
-      RFLX_API std::string GetScopeName( const std::string & name,
-         bool startFromLeft = false );
+      RFLX_API std::string GetScopeName(const std::string & name,
+         bool startFromLeft = false);
 
 
       /** 
       * Get the BaseAt (unscoped) Name of a At/member Name
       */
-      RFLX_API std::string GetBaseName( const std::string & name,
-         bool startFromLeft = false );
+      RFLX_API std::string GetBaseName(const std::string & name,
+         bool startFromLeft = false);
 
 
       /**
@@ -147,7 +148,7 @@ namespace Reflex {
       * @param Name the At Name
       * @return true if At is templated
       */
-      RFLX_API bool IsTemplated( const char * name );
+      RFLX_API bool IsTemplated(const char * name);
 
 
       /**
@@ -156,7 +157,7 @@ namespace Reflex {
       * @param Name the Name of the templated At
       * @return template arguments of the templated At
       */
-      RFLX_API std::string GetTemplateArguments( const char * name );
+      RFLX_API std::string GetTemplateArguments(const char * name);
 
 
       /** 
@@ -164,13 +165,13 @@ namespace Reflex {
       * @param Name the Name of the template At
       * @return template Name
       */
-      RFLX_API std::string GetTemplateName( const char * name );
+      RFLX_API std::string GetTemplateName(const char * name);
 
 
-      RFLX_API std::string NormalizeName( const std::string & name );
+      RFLX_API std::string NormalizeName(const std::string & name);
 
 
-      RFLX_API std::string NormalizeName( const char * name );
+      RFLX_API std::string NormalizeName(const char * name);
 
 
       /**
@@ -240,7 +241,7 @@ namespace Reflex {
 
       template <typename T >
       inline std::vector<T> MakeVector(T t0, T t1, T t2, T t3, T t4, T t5, T t6, T t7,
-         T t8 ) {
+         T t8) {
             std::vector<T> v;
             v.push_back(t0); v.push_back(t1); v.push_back(t2); v.push_back(t3); v.push_back(t4);
             v.push_back(t5); v.push_back(t6); v.push_back(t7), v.push_back(t8);
@@ -249,7 +250,7 @@ namespace Reflex {
 
       template <typename T >
       inline std::vector<T> MakeVector(T t0, T t1, T t2, T t3, T t4, T t5, T t6, T t7,
-         T t8, T t9 ) {
+         T t8, T t9) {
             std::vector<T> v;
             v.push_back(t0); v.push_back(t1); v.push_back(t2); v.push_back(t3); v.push_back(t4);
             v.push_back(t5); v.push_back(t6); v.push_back(t7), v.push_back(t8); v.push_back(t9);
@@ -258,7 +259,7 @@ namespace Reflex {
 
       template <typename T >
       inline std::vector<T> MakeVector(T t0, T t1, T t2, T t3, T t4, T t5, T t6, T t7,
-         T t8, T t9, T t10 ) {
+         T t8, T t9, T t10) {
             std::vector<T> v;
             v.push_back(t0); v.push_back(t1); v.push_back(t2); v.push_back(t3); v.push_back(t4);
             v.push_back(t5); v.push_back(t6); v.push_back(t7), v.push_back(t8); v.push_back(t9);
@@ -268,7 +269,7 @@ namespace Reflex {
 
       template <typename T >
       inline std::vector<T> MakeVector(T t0, T t1, T t2, T t3, T t4, T t5, T t6, T t7,
-         T t8, T t9, T t10, T t11 ) {
+         T t8, T t9, T t10, T t11) {
             std::vector<T> v;
             v.push_back(t0);  v.push_back(t1); v.push_back(t2); v.push_back(t3); v.push_back(t4);
             v.push_back(t5);  v.push_back(t6); v.push_back(t7), v.push_back(t8); v.push_back(t9);
@@ -278,7 +279,7 @@ namespace Reflex {
 
       template <typename T >
       inline std::vector<T> MakeVector(T t0, T t1, T t2, T t3, T t4, T t5, T t6, T t7,
-         T t8, T t9, T t10, T t11, T t12 ) {
+         T t8, T t9, T t10, T t11, T t12) {
             std::vector<T> v;
             v.push_back(t0);  v.push_back(t1);  v.push_back(t2); v.push_back(t3); v.push_back(t4);
             v.push_back(t5);  v.push_back(t6);  v.push_back(t7), v.push_back(t8); v.push_back(t9);
@@ -288,7 +289,7 @@ namespace Reflex {
 
       template <typename T >
       inline std::vector<T> MakeVector(T t0, T t1, T t2, T t3, T t4, T t5, T t6, T t7,
-         T t8, T t9, T t10, T t11, T t12, T t13 ) {
+         T t8, T t9, T t10, T t11, T t12, T t13) {
             std::vector<T> v;
             v.push_back(t0);  v.push_back(t1);  v.push_back(t2);  v.push_back(t3); v.push_back(t4);
             v.push_back(t5);  v.push_back(t6);  v.push_back(t7),  v.push_back(t8); v.push_back(t9);
@@ -298,7 +299,7 @@ namespace Reflex {
 
       template <typename T >
       inline std::vector<T> MakeVector(T t0, T t1, T t2, T t3, T t4, T t5, T t6, T t7,
-         T t8, T t9, T t10, T t11, T t12, T t13, T t14 ) {
+         T t8, T t9, T t10, T t11, T t12, T t13, T t14) {
             std::vector<T> v;
             v.push_back(t0);  v.push_back(t1);  v.push_back(t2);  v.push_back(t3);  v.push_back(t4);
             v.push_back(t5);  v.push_back(t6);  v.push_back(t7),  v.push_back(t8);  v.push_back(t9);
@@ -309,7 +310,7 @@ namespace Reflex {
       template <typename T >
       inline std::vector<T> MakeVector(T t0, T t1, T t2, T t3, T t4, T t5, T t6, T t7,
          T t8, T t9, T t10, T t11, T t12, T t13, T t14, 
-         T t15 ) {
+         T t15) {
             std::vector<T> v;
             v.push_back(t0);  v.push_back(t1);  v.push_back(t2);  v.push_back(t3);  v.push_back(t4);
             v.push_back(t5);  v.push_back(t6);  v.push_back(t7),  v.push_back(t8);  v.push_back(t9);
@@ -321,7 +322,7 @@ namespace Reflex {
       template <typename T >
       inline std::vector<T> MakeVector(T t0, T t1, T t2, T t3, T t4, T t5, T t6, T t7,
          T t8, T t9, T t10, T t11, T t12, T t13, T t14, 
-         T t15, T t16 ) {
+         T t15, T t16) {
             std::vector<T> v;
             v.push_back(t0);  v.push_back(t1);  v.push_back(t2);  v.push_back(t3);  v.push_back(t4);
             v.push_back(t5);  v.push_back(t6);  v.push_back(t7),  v.push_back(t8);  v.push_back(t9);

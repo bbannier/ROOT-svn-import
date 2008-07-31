@@ -38,17 +38,17 @@ namespace Reflex {
    class RFLX_API PropertyList {
 
       friend class Internal::OwnedPropertyList;
-      friend RFLX_API std::ostream & operator << ( std::ostream & s,
-         const PropertyList & p );
+      friend RFLX_API std::ostream & operator << (std::ostream & s,
+         const PropertyList & p);
 
    public:
 
       /** default constructor */
-      PropertyList( Internal::PropertyListImpl * propertyListImpl = 0 );
+      PropertyList(Internal::PropertyListImpl * propertyListImpl = 0);
 
 
       /** copy constructor */
-      PropertyList( const PropertyList & pl );
+      PropertyList(const PropertyList & pl);
 
 
       /** destructor */
@@ -68,8 +68,8 @@ namespace Reflex {
       * @param value the value of the property (as any object)
       * @return the property key of this property
       */
-      size_t AddProperty( const std::string & key,
-         const Any & value ) const;
+      size_t AddProperty(const std::string & key,
+         const Any & value) const;
 
 
       /**
@@ -77,8 +77,8 @@ namespace Reflex {
       * @param key the key of the property
       * @param value the value of the property (as any object)
       */
-      void AddProperty( size_t key,
-         const Any & value ) const;
+      void AddProperty(size_t key,
+         const Any & value) const;
 
 
       /**
@@ -87,8 +87,8 @@ namespace Reflex {
       * @param value the value of the property (as any object)
       * @return the property key of this property
       */
-      size_t AddProperty( const std::string & key,
-         const char * value ) const;
+      size_t AddProperty(const std::string & key,
+         const char * value) const;
 
 
       /**
@@ -96,8 +96,8 @@ namespace Reflex {
       * @param key the key of the property
       * @param value the value of the property (as any object)
       */
-      void AddProperty( size_t key,
-         const char * value ) const;
+      void AddProperty(size_t key,
+         const char * value) const;
 
 
       /**
@@ -111,7 +111,7 @@ namespace Reflex {
       * The reason for deprecating this function is the misleading name. The function checks
       * if a given property (with a key) is attached to this item.
       */
-      bool HasKey( const std::string & key ) const
+      bool HasKey(const std::string & key) const
 #if defined(__GNUC__) && !defined(__CINT__)
          __attribute__((deprecated))
 #endif
@@ -123,7 +123,7 @@ namespace Reflex {
       * @param  key the property key
       * @return true if key exists and property for key is valid
       */
-      bool HasProperty( const std::string & key ) const;
+      bool HasProperty(const std::string & key) const;
 
 
       /**
@@ -131,7 +131,7 @@ namespace Reflex {
       * @param  key the property key
       * @return true if key exists and property for key is valid
       */
-      bool HasProperty( size_t key ) const;
+      bool HasProperty(size_t key) const;
 
 
       /**
@@ -153,7 +153,7 @@ namespace Reflex {
       * @param nth key currently allocated
       * @return key as a string
       */
-      static const std::string & KeyAt( size_t nth );
+      static const std::string & KeyAt(size_t nth);
 
 
       /**
@@ -164,8 +164,8 @@ namespace Reflex {
       * @param allocateNew allocate a new key if the key doesn't exist
       * @return key index or 0 if no key exists and allocateNew is set to false
       */
-      static size_t KeyByName( const std::string & key,
-         bool allocateNew = false );
+      static size_t KeyByName(const std::string & key,
+         bool allocateNew = false);
 
 
       /**
@@ -182,7 +182,7 @@ namespace Reflex {
       * @param key property key to look for
       * @return string representation of the property
       */
-      std::string PropertyAsString( size_t key ) const;        
+      std::string PropertyAsString(size_t key) const;        
 
 
       /**
@@ -192,8 +192,8 @@ namespace Reflex {
       if set to false and the key doesn't exist the function returns 0
       * @return the key value corresponding to the key param
       */
-      size_t PropertyKey( const std::string & key,
-         bool allocateNew = false ) const;
+      size_t PropertyKey(const std::string & key,
+         bool allocateNew = false) const;
 
 
       /**
@@ -240,21 +240,21 @@ namespace Reflex {
       * @param key property key to look for
       * @return Any representation of the property
       */
-      Any & PropertyValue( size_t key ) const;
+      Any & PropertyValue(size_t key) const;
 
 
       /**
       * RemoveProperty will remove property value from the property list
       * @param key of the property identified by the string 
       */
-      void RemoveProperty( const std::string & key ) const;
+      void RemoveProperty(const std::string & key) const;
 
 
       /**
       * RemoveProperty will remove a property value from the property list 
       * @param key of the property identified by the property key number
       */
-      void RemoveProperty( size_t key ) const;
+      void RemoveProperty(size_t key) const;
 
    private:
 
@@ -274,8 +274,8 @@ namespace Reflex {
    * @param s the reference to the stream
    * @return the stream
    */
-   RFLX_API std::ostream & operator << ( std::ostream & s,
-      const PropertyList & p );
+   RFLX_API std::ostream & operator << (std::ostream & s,
+      const PropertyList & p);
 
 } //namespace Reflex
 
@@ -287,15 +287,15 @@ inline Reflex::PropertyList::operator bool () const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::PropertyList::PropertyList( Internal::PropertyListImpl * propertyListImpl ) 
+inline Reflex::PropertyList::PropertyList(Internal::PropertyListImpl * propertyListImpl) 
 //-------------------------------------------------------------------------------
-   : fPropertyListImpl( propertyListImpl ) {}
+   : fPropertyListImpl(propertyListImpl) {}
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::PropertyList::PropertyList( const PropertyList & pl) 
+inline Reflex::PropertyList::PropertyList(const PropertyList & pl) 
 //-------------------------------------------------------------------------------
-   : fPropertyListImpl( pl.fPropertyListImpl ) {}
+   : fPropertyListImpl(pl.fPropertyListImpl) {}
 
   
 //-------------------------------------------------------------------------------
@@ -307,7 +307,7 @@ inline Reflex::PropertyList::~PropertyList() {
 //-------------------------------------------------------------------------------
 inline bool Reflex::PropertyList::HasKey(const std::string & key) const {
 //-------------------------------------------------------------------------------
-   return HasProperty( key );
+   return HasProperty(key);
 }
 
 

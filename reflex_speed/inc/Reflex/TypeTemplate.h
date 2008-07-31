@@ -35,11 +35,11 @@ namespace Reflex {
    public:
 
       /** default constructor */
-      TypeTemplate( const Internal::TypeTemplateName * typeTemplateName = 0 );
+      TypeTemplate(const Internal::TypeTemplateName * typeTemplateName = 0);
 
 
       /** copy constructor */
-      TypeTemplate( const TypeTemplate & rh );
+      TypeTemplate(const TypeTemplate & rh);
 
 
       /** destructor */
@@ -57,7 +57,7 @@ namespace Reflex {
       * operator == will return true if two type templates are the same
       * @return true if type templates match
       */
-      bool operator == ( const TypeTemplate & rh ) const;
+      bool operator == (const TypeTemplate & rh) const;
 
 
       /**
@@ -67,8 +67,8 @@ namespace Reflex {
       *        if it is set to 0, the first occurence of the template family name will be returned
       * @return corresponding type template to name
       */
-      static TypeTemplate ByName( const std::string & name,
-         size_t nTemplateParams = 0 );
+      static TypeTemplate ByName(const std::string & name,
+         size_t nTemplateParams = 0);
 
 
       /**
@@ -83,7 +83,7 @@ namespace Reflex {
       * all currently available instantiations
       * @return template family Name with all instantiantion
       */
-      std::string Name( unsigned int mod = SCOPED | QUALIFIED ) const;
+      std::string Name(unsigned int mod = kScoped | kQualified) const;
 
 
       /**
@@ -91,7 +91,7 @@ namespace Reflex {
       * all currently available instantiations
       * @return template family Name with all instantiantion
       */
-      const std::string& Name(std::string& buf, unsigned int mod = SCOPED | QUALIFIED ) const;
+      const std::string& Name(std::string& buf, unsigned int mod = kScoped | kQualified) const;
 
 
       /**
@@ -140,7 +140,7 @@ namespace Reflex {
       * AddTemplateInstance adds one TemplateInstanceAt of the template to the local container
       * @param templateInstance the template TemplateInstanceAt
       */
-      void AddTemplateInstance( const Type & templateInstance ) const;
+      void AddTemplateInstance(const Type & templateInstance) const;
 
    private:
 
@@ -160,16 +160,16 @@ namespace Reflex {
 
 //-------------------------------------------------------------------------------
 inline
-Reflex::TypeTemplate::TypeTemplate( const Internal::TypeTemplateName * typeTemplateName )
+Reflex::TypeTemplate::TypeTemplate(const Internal::TypeTemplateName * typeTemplateName)
 //------------------------------------------------------------------------------- 
-   : fTypeTemplateName( typeTemplateName ) {}
+   : fTypeTemplateName(typeTemplateName) {}
 
 
 //-------------------------------------------------------------------------------
 inline
-Reflex::TypeTemplate::TypeTemplate( const TypeTemplate & rh ) 
+Reflex::TypeTemplate::TypeTemplate(const TypeTemplate & rh) 
 //-------------------------------------------------------------------------------
-   : fTypeTemplateName( rh.fTypeTemplateName ) {}
+   : fTypeTemplateName(rh.fTypeTemplateName) {}
 
 
 //-------------------------------------------------------------------------------
@@ -180,9 +180,9 @@ Reflex::TypeTemplate::~TypeTemplate() {}
 
 //-------------------------------------------------------------------------------
 inline bool
-Reflex::TypeTemplate::operator == ( const TypeTemplate & rh ) const {
+Reflex::TypeTemplate::operator == (const TypeTemplate & rh) const {
 //-------------------------------------------------------------------------------
-   return ( fTypeTemplateName == rh.fTypeTemplateName );
+   return (fTypeTemplateName == rh.fTypeTemplateName);
 }
 
 
@@ -196,7 +196,7 @@ Reflex::TypeTemplate::Id() const {
 
 //-------------------------------------------------------------------------------
 inline std::string
-Reflex::TypeTemplate::Name( unsigned int mod ) const {
+Reflex::TypeTemplate::Name(unsigned int mod) const {
 //-------------------------------------------------------------------------------
    // Return the name of this type template.
    std::string buf;

@@ -37,10 +37,10 @@ namespace Internal {
    public:
 
       /** default constructor */
-      DataMember( const char *   nam,
+      DataMember(const char *   nam,
          const Type &   typ, 
          size_t         offs,
-         unsigned int   modifiers = 0 );
+         unsigned int   modifiers = 0);
 
 
       /** destructor */
@@ -48,11 +48,11 @@ namespace Internal {
 
 
       /** return Name of data MemberAt */
-      std::string Name( unsigned int mod = 0 ) const;
+      std::string Name(unsigned int mod = 0) const;
 
 
       /** Get the MemberAt value (as void*) */
-      Object Get( const Object & obj ) const;
+      Object Get(const Object & obj) const;
 
 
       /**
@@ -67,10 +67,10 @@ namespace Internal {
 
 
       /** Set the MemberAt value */
-      /*void Set( const Object & instance,
-      const Object & value ) const;*/
-      void Set( const Object & instance,
-         const void * value ) const;
+      /*void Set(const Object & instance,
+      const Object & value) const;*/
+      void Set(const Object & instance,
+         const void * value) const;
 
    private:
 

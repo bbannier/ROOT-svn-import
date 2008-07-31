@@ -22,29 +22,29 @@
 
 
 //-------------------------------------------------------------------------------
-Reflex::TypedefBuilderImpl::TypedefBuilderImpl( const char * typ,
-                                                      const Type & typedefType ) {
+Reflex::TypedefBuilderImpl::TypedefBuilderImpl(const char * typ,
+                                                      const Type & typedefType) {
 //-------------------------------------------------------------------------------
 // Construct typedef info.
-   fTypedef = TypedefTypeBuilder( typ, typedefType );
+   fTypedef = TypedefTypeBuilder(typ, typedefType);
 }
 
 
 //-------------------------------------------------------------------------------
-void Reflex::TypedefBuilderImpl::AddProperty( const char * key,
-                                                    Any value ) {
+void Reflex::TypedefBuilderImpl::AddProperty(const char * key,
+                                                    Any value) {
 //-------------------------------------------------------------------------------
 // Attach a property to this typedef as Any object.
-   fTypedef.Properties().AddProperty( key, value );
+   fTypedef.Properties().AddProperty(key, value);
 }
 
 
 //-------------------------------------------------------------------------------
-void Reflex::TypedefBuilderImpl::AddProperty( const char * key,
-                                                    const char * value ) {
+void Reflex::TypedefBuilderImpl::AddProperty(const char * key,
+                                                    const char * value) {
 //-------------------------------------------------------------------------------
 // Attach a property to this typedef as string.
-   AddProperty( key, Any(value));
+   AddProperty(key, Any(value));
 }
 
 

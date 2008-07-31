@@ -22,7 +22,7 @@
 //-------------------------------------------------------------------------------
 Reflex::TypeTemplate::operator bool () const {
 //-------------------------------------------------------------------------------
-   if ( this->fTypeTemplateName && this->fTypeTemplateName->fTypeTemplateImpl ) return true;
+   if (this->fTypeTemplateName && this->fTypeTemplateName->fTypeTemplateImpl) return true;
    return false;
 }
 
@@ -32,27 +32,27 @@ const std::string&
 Reflex::TypeTemplate::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
    // Return the name of this type template.
-   if ( fTypeTemplateName ) return fTypeTemplateName->Name(buf, mod);
+   if (fTypeTemplateName) return fTypeTemplateName->Name(buf, mod);
    else                     return buf;
 }
 
 
 //-------------------------------------------------------------------------------
 Reflex::TypeTemplate
-Reflex::TypeTemplate::ByName( const std::string & name,
-                                                               size_t nTemplateParams ) {
+Reflex::TypeTemplate::ByName(const std::string & name,
+                                                               size_t nTemplateParams) {
 //-------------------------------------------------------------------------------
    // Lookup a type template by name.
-   return TypeTemplateName::ByName( name, nTemplateParams );
+   return TypeTemplateName::ByName(name, nTemplateParams);
 }
 
 
 //-------------------------------------------------------------------------------
 void
-Reflex::TypeTemplate::AddTemplateInstance( const Type & templateInstance ) const {
+Reflex::TypeTemplate::AddTemplateInstance(const Type & templateInstance) const {
 //-------------------------------------------------------------------------------
    // Add template instance to this template family.
-   if ( * this ) fTypeTemplateName->fTypeTemplateImpl->AddTemplateInstance( templateInstance );
+   if (* this) fTypeTemplateName->fTypeTemplateImpl->AddTemplateInstance(templateInstance);
 }
 
 
@@ -61,6 +61,6 @@ void
 Reflex::TypeTemplate::Unload() const {
 //-------------------------------------------------------------------------------
 //  Unload a type template, i.e. delete the TypeTemplateName's TypeTemaplteImpl object.
-   if ( * this ) delete fTypeTemplateName->fTypeTemplateImpl;
+   if (* this) delete fTypeTemplateName->fTypeTemplateImpl;
    fTypeTemplateName->fTypeTemplateImpl = 0;
 }

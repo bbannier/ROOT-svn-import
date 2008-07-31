@@ -32,9 +32,9 @@ namespace Internal {
    public:
 
       /** default constructor */
-      Array( const Type & arrayType,
+      Array(const Type & arrayType,
          size_t len,
-         const std::type_info & typeinfo );
+         const std::type_info & typeinfo);
 
 
       /** destructor */
@@ -46,7 +46,7 @@ namespace Internal {
       * @param  typedefexp expand typedefs or not
       * @return string representation of At
       */
-      std::string Name( unsigned int mod = 0 ) const;
+      std::string Name(unsigned int mod = 0) const;
 
 
       /**
@@ -64,9 +64,9 @@ namespace Internal {
 
 
       /** static funtion that composes the At Name */
-      static std::string BuildTypeName( const Type & typ, 
+      static std::string BuildTypeName(const Type & typ, 
          size_t len,
-         unsigned int mod = SCOPED | QUALIFIED );
+         unsigned int mod = kScoped | kQualified);
 
    private:
 
