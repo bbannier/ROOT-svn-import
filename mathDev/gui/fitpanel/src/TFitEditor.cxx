@@ -1058,7 +1058,7 @@ void TFitEditor::UpdateGUI()
       fSliderX->Connect("Released()","TFitEditor",this, "DoSliderXReleased()");
    }
 
-/*  no implemented functionality for y & z sliders yet 
+//  no implemented functionality for y & z sliders yet 
    if (fDim > 1) {
       fSliderY->Disconnect("PositionChanged()");
       fSliderY->Disconnect("Pressed()");
@@ -1100,6 +1100,7 @@ void TFitEditor::UpdateGUI()
       fSliderY->SetScale(5);
    }
 
+/*
    if (fDim > 2) {
       fSliderZ->Disconnect("PositionChanged()");
       fSliderZ->Disconnect("Pressed()");
@@ -1715,6 +1716,15 @@ void TFitEditor::DoReset()
       fSliderX->SetRange(1,fXrange);
       fSliderX->SetPosition(fXmin,fXmax);
    }
+
+   if (fYmin > 1 || fYmax < fYrange) {
+      fSliderY->SetRange(fYmin,fYmax);
+      fSliderY->SetPosition(fYmin, fYmax);
+   } else {
+      fSliderY->SetRange(1,fYrange);
+      fSliderY->SetPosition(fYmin,fYmax);
+   }
+
    if (fLinearFit->GetState() == kButtonDown)
       fLinearFit->SetState(kButtonUp, kTRUE);
    if (fBestErrors->GetState() == kButtonDown)
@@ -1926,27 +1936,28 @@ void TFitEditor::DoSliderYPressed()
 {
    // Slot connected to range settings on y-axis.
 
+   if (!fParentPad) return;
+
+   TVirtualPad *save = 0;
+   save = gPad;
+   gPad = fParentPad;
    fParentPad->cd();
+
+   fParentPad->GetCanvas()->FeedbackMode(kFALSE);
+   fParentPad->SetLineWidth(1);
+   fParentPad->SetLineColor(2);
+   Float_t ybottom = 0;
+   Float_t ytop = 0;
    switch (fType) {
       case kObjectHisto: {
-         if (!fParentPad) return;
-         fParentPad->cd();
-         fParentPad->GetCanvas()->FeedbackMode(kFALSE);
-         fParentPad->SetLineWidth(1);
-         fParentPad->SetLineColor(2);
          //hist 1dim
-         Float_t ybottom = fYaxis->GetBinLowEdge((Int_t)((fSliderY->GetMinPosition())+0.5));
-         Float_t ytop = fYaxis->GetBinUpEdge((Int_t)((fSliderY->GetMaxPosition())+0.5));
-         Float_t xmin = fParentPad->GetUxmin();
-         Float_t xmax = fParentPad->GetUxmax();
-         fPx1old = fParentPad->XtoAbsPixel(xmin);
-         fPy1old = fParentPad->YtoAbsPixel(ybottom);
-         fPx2old = fParentPad->XtoAbsPixel(xmax);
-         fPy2old = fParentPad->YtoAbsPixel(ytop);
-         gVirtualX->DrawBox(fPx1old, fPy1old, fPx2old, fPy2old, TVirtualX::kHollow);
+         ybottom = fYaxis->GetBinLowEdge((Int_t)((fSliderY->GetMinPosition())+0.5));
+         ytop = fYaxis->GetBinUpEdge((Int_t)((fSliderY->GetMaxPosition())+0.5));
       }
       case kObjectGraph: {
-         // N/A
+         // graph
+         ybottom = fYaxis->GetBinLowEdge((Int_t)((fSliderY->GetMinPosition())+0.5));
+         ytop = fYaxis->GetBinUpEdge((Int_t)((fSliderY->GetMaxPosition())+0.5));
          break;
       }
       case kObjectGraph2D: {
@@ -1962,6 +1973,15 @@ void TFitEditor::DoSliderYPressed()
          break;
       }
    }
+   Float_t xmin = fXaxis->GetBinLowEdge((Int_t)((fSliderX->GetMinPosition())+0.5));//fParentPad->GetUxmin();
+   Float_t xmax = fParentPad->GetUxmax();
+   fPx1old = fParentPad->XtoAbsPixel(xmin);
+   fPy1old = fParentPad->YtoAbsPixel(ybottom);
+   fPx2old = fParentPad->XtoAbsPixel(xmax);
+   fPy2old = fParentPad->YtoAbsPixel(ytop);
+   gVirtualX->DrawBox(fPx1old, fPy1old, fPx2old, fPy2old, TVirtualX::kHollow);
+
+   if(save) gPad = save;
 }
 
 //______________________________________________________________________________
@@ -1969,31 +1989,24 @@ void TFitEditor::DoSliderYMoved()
 {
    // Slot connected to range settings on y-axis.
 
+   Int_t px1,py1,px2,py2;
+   Float_t ybottom = 0;
+   Float_t ytop = 0;
+
+   TVirtualPad *save = 0;
+   save = gPad;
+   gPad = fParentPad;
+   gPad->cd();
+
    switch (fType) {
       case kObjectHisto: {
-         Int_t px1,py1,px2,py2;
-         Float_t ybottom = fYaxis->GetBinLowEdge((Int_t)((fSliderY->GetMinPosition())+0.5));
-         Float_t ytop = fYaxis->GetBinUpEdge((Int_t)((fSliderY->GetMaxPosition())+0.5));
-         Float_t xmin = fParentPad->GetUxmin();
-         Float_t xmax = fParentPad->GetUxmax();
-         px1 = fParentPad->XtoAbsPixel(xmin);
-         py1 = fParentPad->YtoAbsPixel(ybottom);
-         px2 = fParentPad->XtoAbsPixel(xmax);
-         py2 = fParentPad->YtoAbsPixel(ytop);
-         fParentPad->GetCanvas()->FeedbackMode(kTRUE);
-         fParentPad->cd();
-         fParentPad->SetLineWidth(1);
-         fParentPad->SetLineColor(2);
-         gVirtualX->DrawBox(fPx1old, fPy1old, fPx2old, fPy2old, TVirtualX::kHollow);
-         gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
-         fPx1old = px1;
-         fPy1old = py1;
-         fPx2old = px2 ;
-         fPy2old = py2;
-         gVirtualX->Update(0);
+         ybottom = fYaxis->GetBinLowEdge((Int_t)((fSliderY->GetMinPosition())+0.5));
+         ytop = fYaxis->GetBinUpEdge((Int_t)((fSliderY->GetMaxPosition())+0.5));
       }
       case kObjectGraph: {
-         // N/A
+         // graph
+         ybottom = fYaxis->GetBinLowEdge((Int_t)((fSliderY->GetMinPosition())+0.5));
+         ytop = fYaxis->GetBinUpEdge((Int_t)((fSliderY->GetMaxPosition())+0.5));
          break;
       }
       case kObjectGraph2D: {
@@ -2009,6 +2022,23 @@ void TFitEditor::DoSliderYMoved()
          break;
       }
    }
+   Float_t xmin = fParentPad->GetUxmin();
+   Float_t xmax = fParentPad->GetUxmax();
+   px1 = fParentPad->XtoAbsPixel(xmin);
+   py1 = fParentPad->YtoAbsPixel(ybottom);
+   px2 = fParentPad->XtoAbsPixel(xmax);
+   py2 = fParentPad->YtoAbsPixel(ytop);
+   gPad->GetCanvas()->FeedbackMode(kTRUE);
+   gPad->SetLineWidth(1);
+   gPad->SetLineColor(2);
+   gVirtualX->DrawBox(fPx1old, fPy1old, fPx2old, fPy2old, TVirtualX::kHollow);
+   gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+   fPx1old = px1;
+   fPy1old = py1;
+   fPx2old = px2 ;
+   fPy2old = py2;
+
+   if(save) gPad = save;
 }
 
 //______________________________________________________________________________
@@ -2016,8 +2046,7 @@ void TFitEditor::DoSliderYReleased()
 {
    // Slot connected to range settings on y-axis.
 
-   fParentPad->Modified();
-   fParentPad->Update();
+   gVirtualX->Update(0);
 }
 
 //______________________________________________________________________________
