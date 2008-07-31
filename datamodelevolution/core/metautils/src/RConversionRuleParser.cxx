@@ -317,7 +317,7 @@ namespace ROOT
          for( start = true, it = source.begin(); it != source.end(); ++it ) {
             if (!start) { output << ",\n";}
             else { start = false; }
-            output << "      " << "   *("<< "int" << "*)(onfile_add+offset_Onfile_" << className << "_" << (*it).second << ")";  
+            output << "      " << "   *("<< (*it).first << "*)(onfile_add+offset_Onfile_" << className << "_" << (*it).second << ")";  
          }
          output << " );\n\n";
       }
