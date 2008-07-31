@@ -2930,17 +2930,8 @@ void TStreamerInfo::Streamer(TBuffer &R__b)
          R__b.ClassMember("fClassVersion","Int_t");
          R__b >> fClassVersion;
          fOnFileClassVersion = fClassVersion;
-
-         //---------------------------------------------------------------------
-         // Unstream the streamer elements
-         //---------------------------------------------------------------------
-         Int_t num;
-         R__b >> num;
-         TStreamerElement *el;
-         for( Int_t i = 0; i < num; ++i ) {
-            R__b >> el;
-            fElements->Add( el );
-         }
+         R__b.ClassMember("fElements","TObjArray*"); 	 
+         R__b >> fElements;
          R__b.ClassEnd(TStreamerInfo::Class());
          R__b.SetBufferOffset(R__s+R__c+sizeof(UInt_t));
          return;
@@ -2953,7 +2944,6 @@ void TStreamerInfo::Streamer(TBuffer &R__b)
       R__b >> fElements;
       R__b.CheckByteCount(R__s, R__c, TStreamerInfo::IsA());
    } else {
-//      R__b.WriteClassBuffer(TStreamerInfo::Class(),this);
       R__c = R__b.WriteVersion(TStreamerInfo::IsA(), kTRUE);
       R__b.ClassBegin(TStreamerInfo::Class());
       R__b.ClassMember("TNamed");
@@ -2964,15 +2954,28 @@ void TStreamerInfo::Streamer(TBuffer &R__b)
       R__b << ((fClassVersion > 0) ? fClassVersion : -fClassVersion);
 
       //------------------------------------------------------------------------
-      // Stream non-artificial streamer elements
+      // Stream only non-artificial streamer elements
       //------------------------------------------------------------------------
-      R__b.ClassMember( "fNumElements", "Int_t" );
-      R__b << fElements->GetEntries();
-      TIter next( fElements );
-      TStreamerElement *el;
-      while( (el = (TStreamerElement*)next()) ) {
-         if( el->GetType() != kArtificial )
-            R__b << el;
+      R__b.ClassMember("fElements","TObjArray*");
+#if NOTYET
+      if (has_no_artificial_member) {
+         R__b << fElements;
+      } else 
+#endif
+      { 
+         Int_t nobjects = fElements->GetEntriesFast();
+         TObjArray *shorten = new TObjArray( nobjects, fElements->LowerBound());
+         shorten->SetUniqueID( fElements->GetUniqueID() );
+         shorten->SetName( fElements->GetName() );
+         TStreamerElement *el;
+         for (Int_t i = 0; i < nobjects; i++) {
+            el = (TStreamerElement*)fElements->UncheckedAt(i);
+            if( el == 0 || el->GetType() != kArtificial ) {
+               shorten->Add( el );
+            }
+         }
+         R__b << shorten;
+         delete shorten;
       }
       R__b.ClassEnd(TStreamerInfo::Class());
       R__b.SetByteCount(R__c, kTRUE);
