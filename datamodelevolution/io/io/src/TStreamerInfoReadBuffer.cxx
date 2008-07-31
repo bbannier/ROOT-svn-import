@@ -476,7 +476,7 @@ Int_t TStreamerInfo__ReadBufferArtificialImp(TBuffer &b, const T &arr,  Int_t i,
                                              Version_t & /* fOldVersion */ )
 #else
 template <class T>
-Int_t TStreamerInfo::ReadBufferArtificial(TBuffer &b, const T &arr,  Int_t /* i */, Int_t kase,
+Int_t TStreamerInfo::ReadBufferArtificial(TBuffer &b, const T &arr,  Int_t /* i */, Int_t /* kase */,
                                           TStreamerElement *aElement, Int_t narr,
                                           Int_t eoffset)
 #endif
@@ -701,7 +701,7 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
          } else {
             if (gDebug > 1) {
                printf("ReadBuffer, class:%s, name=%s, fType[%d]=%d,"
-                  " %s, bufpos=%d, arr=%p, eoffset=%d, Redirect=%ld\n",
+                  " %s, bufpos=%d, arr=%p, eoffset=%d, Redirect=%p\n",
                   fClass->GetName(),aElement->GetName(),i,fType[i],
                   aElement->ClassName(),b.Length(),arr[0], eoffset,((TBufferFile&)b).PeekDataCache()->GetObjectAt(0));
             }
