@@ -700,7 +700,9 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
                 fClass->GetName(),aElement->GetName(),i,fType[i],
                 aElement->ClassName(),b.Length(),arr[0], eoffset,((TBufferFile&)b).PeekDataCache()->GetObjectAt(0));
          }
+         Int_t bufpos = b.Length();
          thisVar->ReadBuffer(b,*((TBufferFile&)b).PeekDataCache(),i,narr,eoffset);
+         if (aElement->TestBit(TStreamerElement::kRepeat)) { b.SetBufferOffset(bufpos); }
          continue;
       }
       const Int_t ioffset = fOffset[i]+eoffset;

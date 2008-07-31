@@ -89,8 +89,53 @@ struct TObjArrayPtr {
       }
       return kFALSE;
    }
+   Bool_t HasRuleWithTarget(const TString &member) {
+      if (fArray) {
+         for(Int_t i=0; i<fArray->GetEntries(); ++i) {
+            ROOT::TSchemaRule *rule = (ROOT::TSchemaRule*)fArray->At(i);
+            if (rule->HasTarget( member )) return kTRUE;
+         }
+      }
+      return kFALSE;
+   }
    //TSchemaRule *FindRuleWith
 };
+
+static void R__TObjArray_InsertAt(TObjArray *arr, TObject *obj, Int_t at)
+{
+   // Slide by one.
+   Int_t last = arr->GetLast();
+   arr->AddAtAndExpand(arr->At(last),last+1);
+   for(Int_t ind = last-1; ind >= at; --ind) {
+      arr->AddAt( arr->At(ind), ind+1);
+   };
+   arr->AddAt( obj, at);
+}
+
+static void R__TObjArray_InsertAfter(TObjArray *arr, TObject *newobj, TObject *oldobj)
+{
+   // Slide by one.
+   Int_t last = arr->GetLast();
+   Int_t at = 0;
+   while (at<last && arr->At(at) != oldobj) {
+      ++at;
+   }
+   if (at!=0) { 
+      ++at; // we found the object, insert after it 
+   }
+   R__TObjArray_InsertAt(arr, newobj, at);
+}
+
+static void R__TObjArray_InsertBefore(TObjArray *arr, TObject *newobj, TObject *oldobj)
+{
+   // Slide by one.
+   Int_t last = arr->GetLast();
+   Int_t at = 0;
+   while (at<last && arr->At(at) != oldobj) {
+      ++at;
+   }
+   R__TObjArray_InsertAt(arr, newobj, at);
+}
 
 //______________________________________________________________________________
 TStreamerInfo::TStreamerInfo()
@@ -1297,21 +1342,6 @@ void TStreamerInfo::BuildOld()
          element->SetOffset(kMissing);
       }
 
-      if ( rules.HasRuleWithSource( element->GetName() ) ) {
-         if (allocClass == 0) {
-            TVirtualStreamerInfo *infoalloc  = (TVirtualStreamerInfo *)Clone(TString::Format("%s@@%d",fClass->GetName(),GetOnFileClassVersion()));
-            infoalloc->BuildCheck();
-            allocClass = infoalloc->GetClass();
-         }
-         element->SetBit(TStreamerElement::kCache);
-         element->SetNewType(element->GetType() );
-         element->SetOffset(allocClass->GetDataMemberOffset(element->GetName()));
-      }
-
-      if (element->GetNewType() == -2) {
-         Warning("BuildOld", "Cannot convert %s::%s from type:%s to type:%s, skip element", GetName(), element->GetName(), element->GetTypeName(), newClass->GetName());
-      }
-
       if (fClass->GetDeclFileLine() < 0) {
          // Note the initilization in this case are
          // delayed until __after__ the schema evolution
@@ -1323,6 +1353,34 @@ void TStreamerInfo::BuildOld()
          }
          element->SetOffset(offset);
          offset += asize;
+      }
+
+      if ( rules.HasRuleWithSource( element->GetName() ) ) {
+         if (allocClass == 0) {
+            TVirtualStreamerInfo *infoalloc  = (TVirtualStreamerInfo *)Clone(TString::Format("%s@@%d",fClass->GetName(),GetOnFileClassVersion()));
+            infoalloc->BuildCheck();
+            allocClass = infoalloc->GetClass();
+         }
+
+         // Now that we are caching the unconverted element, we do not assign it to the real type even if we could have!
+         if (element->GetNewType()>0 /* intentionally not including base class for now */ 
+              && !rules.HasRuleWithTarget( element->GetName() ) ) 
+         {
+            TStreamerElement *copy = (TStreamerElement*)element->Clone();
+            R__TObjArray_InsertBefore( fElements, copy, element );
+            next(); // move the cursor passed the insert object.
+            copy->SetBit(TStreamerElement::kRepeat);
+            element = copy;
+
+            // Warning("BuildOld","%s::%s is not set from the version %d of %s (You must add a rule for it)\n",GetName(), element->GetName(), GetClassVersion(), GetName() );
+         }
+         element->SetBit(TStreamerElement::kCache);
+         element->SetNewType(element->GetType() );
+         element->SetOffset(allocClass->GetDataMemberOffset(element->GetName()));
+      }
+
+      if (element->GetNewType() == -2) {
+         Warning("BuildOld", "Cannot convert %s::%s from type:%s to type:%s, skip element", GetName(), element->GetName(), element->GetTypeName(), newClass->GetName());
       }
    }
 
@@ -1353,14 +1411,8 @@ void TStreamerInfo::BuildOld()
 
    if (allocClass) {
 
-      // Slide by one.
-      Int_t last = fElements->GetLast();
-      fElements->AddAtAndExpand(fElements->At(last),last+1);
-      for(Int_t ind = last-1; ind >= 0; --ind) {
-         fElements->AddAt( fElements->At(ind), ind+1);
-      };
       TStreamerElement *el = new TStreamerArtificial("@@alloc","", 0, TStreamerInfo::kCacheNew, allocClass->GetName());
-      fElements->AddAt( el, 0 );
+      R__TObjArray_InsertAt( fElements, el, 0 );
 
       el = new TStreamerArtificial("@@dealloc","", 0, TStreamerInfo::kCacheDelete, allocClass->GetName());
       fElements->Add( el );
@@ -2968,7 +3020,7 @@ void TStreamerInfo::Streamer(TBuffer &R__b)
          TStreamerElement *el;
          for (Int_t i = 0; i < nobjects; i++) {
             el = (TStreamerElement*)fElements->UncheckedAt(i);
-            if( el != 0 && el->GetType() == kArtificial ) {
+            if( el != 0 && el->IsA() == TStreamerArtificial::Class() ) {
                fElements->RemoveAt( i );
             }
          }
