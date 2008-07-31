@@ -2964,18 +2964,18 @@ void TStreamerInfo::Streamer(TBuffer &R__b)
 #endif
       { 
          Int_t nobjects = fElements->GetEntriesFast();
-         TObjArray *shorten = new TObjArray( nobjects, fElements->LowerBound());
-         shorten->SetUniqueID( fElements->GetUniqueID() );
-         shorten->SetName( fElements->GetName() );
+         TObjArray shorten( *fElements );
          TStreamerElement *el;
          for (Int_t i = 0; i < nobjects; i++) {
             el = (TStreamerElement*)fElements->UncheckedAt(i);
-            if( el == 0 || el->GetType() != kArtificial ) {
-               shorten->Add( el );
+            if( el != 0 && el->GetType() == kArtificial ) {
+               fElements->RemoveAt( i );
             }
          }
-         R__b << shorten;
-         delete shorten;
+         fElements->Compress();
+         R__b << fElements;
+         R__ASSERT(!fElements->IsOwner());
+         *fElements = shorten;
       }
       R__b.ClassEnd(TStreamerInfo::Class());
       R__b.SetByteCount(R__c, kTRUE);
