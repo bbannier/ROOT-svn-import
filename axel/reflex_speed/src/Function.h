@@ -59,7 +59,7 @@ namespace Internal {
       * returns a reference to the dummy container if this type is not a function.
       * @return reflection information of nth function parameter
       */
-      const IContainerImpl* FunctionParameters() const;
+      const IContainerImpl& FunctionParameters() const;
 
 
       /**
@@ -69,12 +69,23 @@ namespace Internal {
       virtual Type ReturnType() const;
 
 
-      /** static funtion that composes the At Name */
+      /** static function that composes the At Name */
       static const std::string& BuildTypeName(std::string& buf,
-         const Type & ret, const Scope & scope,
+         const Type & ret,
          const std::vector< Type > & param,
          unsigned int typemod = 0,
-         unsigned int mod = kScoped | kQualified);
+         unsigned int mod = kScoped | kQualified,
+         const Scope & scope = Scope());
+
+      /** static function that composes the At Name */
+      static std::string BuildTypeName(const Type & ret,
+         const std::vector< Type > & param,
+         unsigned int typemod = 0,
+         unsigned int mod = kScoped | kQualified,
+         const Scope & scope = Scope()) {
+            std::string buf;
+            return BuildTypeName(buf, ret, param, typemod, mod, scope);
+      }
 
    private:
 
@@ -108,10 +119,10 @@ namespace Internal {
 
 
 //-------------------------------------------------------------------------------
-inline const Reflex::Internal::IContainerImpl*
+inline const Reflex::Internal::IContainerImpl&
 Reflex::Internal::Function::FunctionParameters() const {
 //-------------------------------------------------------------------------------
-   return &fParametersAdaptor;
+   return fParametersAdaptor;
 }
 
 

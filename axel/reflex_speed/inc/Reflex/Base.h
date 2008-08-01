@@ -110,7 +110,7 @@ namespace Reflex {
 
       /**
       * ToType will return this base classes type
-      * @param mod accepts FINAL to go to the final type for a typedef
+      * @param mod accepts kFinal to go to the final type for a typedef
       * @return type of base class
       */
       Type ToType() const;

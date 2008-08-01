@@ -40,7 +40,7 @@ Reflex::Internal::Function::Name(std::string& buf, unsigned int mod) const {
 // Return the name of the function type.
    if (! mod)
       return (buf = fTypeName->Name());
-   return BuildTypeName(buf, fReturnType, DeclaringScope(), fParameters, fModifiers, mod);
+   return BuildTypeName(buf, fReturnType, DeclaringScope(), fParameters, fTypeModifiers, mod);
 
 }
 
@@ -48,8 +48,9 @@ Reflex::Internal::Function::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
 const std::string&
 Reflex::Internal::Function::BuildTypeName(std::string& buf, const Type & ret,
-                                           const Scope& scope, const std::vector< Type > & pars,
-                                           unsigned int typemod, unsigned int mod) {
+                                          const std::vector< Type > & pars,
+                                          unsigned int typemod, unsigned int mod,
+                                          const Scope& scope) {
 //-------------------------------------------------------------------------------
 // Build the name of the function type in the form <returntype><space>(<param>*)
 // Return type and parameter types will always be scoped and qualified, even if
@@ -72,7 +73,7 @@ Reflex::Internal::Function::BuildTypeName(std::string& buf, const Type & ret,
    //   buf += "void";
    //}
    buf += ")";
-   if ((mod & kQualified) && (fModifiers & kConst))
+   if ((mod & kQualified) && (typemod & kConst))
       buf += " const";
    // should we or should we not? It's part of the type but overloading with
    // throiw / no throw is not allowed.

@@ -119,10 +119,10 @@ namespace Reflex {
 
       class RFLX_API ContainerBase {
       public:
-         ContainerBase(const IContainerImpl* coll): fCont(coll) {}
+         ContainerBase(const IContainerImpl& coll): fCont(coll) {}
 
       protected:
-         const Internal::IContainerImpl* fCont; // actual collection wrapper
+         const Internal::IContainerImpl& fCont; // actual collection wrapper
       };
    }
 
@@ -137,21 +137,21 @@ namespace Reflex {
    public:
       typedef ConstIterator<T> const_iterator;
 
-      Container(const Internal::IContainerImpl* coll): Internal::ContainerBase(coll) {}
+      Container(const Internal::IContainerImpl& coll): Internal::ContainerBase(coll) {}
          
-      const_iterator Begin() const { const_iterator ret; fCont->ProxyBegin(ret); return ret; }
-      const_iterator End() const   { const_iterator ret; fCont->ProxyEnd(ret);   return ret; }
+      const_iterator Begin() const { const_iterator ret; fCont.ProxyBegin(ret); return ret; }
+      const_iterator End() const   { const_iterator ret; fCont.ProxyEnd(ret);   return ret; }
 
-      size_t Size() const  { return fCont->ProxySize(); }
-      bool   Empty() const { return fCont->ProxyEmpty(); }
+      size_t Size() const  { return fCont.ProxySize(); }
+      bool   Empty() const { return fCont.ProxyEmpty(); }
 
       T ByName(const std::string& name) const {
-         const T* ret = (const T*)fCont->ProxyByName(name);
+         const T* ret = (const T*)fCont.ProxyByName(name);
          if (ret) return *ret;
          return T();
       }
       T ByTypeInfo(const std::type_info& ti) const {
-         const T* ret = (const T*)fCont->ProxyByTypeInfo(ti);
+         const T* ret = (const T*)fCont.ProxyByTypeInfo(ti);
          if (ret) return *ret;
          return T();
       }
@@ -180,11 +180,11 @@ namespace Reflex {
    public:
       typedef ConstReverseIterator<T> const_reverse_iterator;
 
-      OrderedContainer(const Internal::IContainerImpl* coll): Container<T>(coll) {}
+      OrderedContainer(const Internal::IContainerImpl& coll): Container<T>(coll) {}
 
       // reverse iteration only possible for ordered container
-      const_reverse_iterator RBegin() const { const_reverse_iterator ret; fCont->ProxyRBegin(ret); return ret; }
-      const_reverse_iterator REnd() const   { const_reverse_iterator ret; fCont->ProxyREnd(ret);   return ret; }
+      const_reverse_iterator RBegin() const { const_reverse_iterator ret; fCont.ProxyRBegin(ret); return ret; }
+      const_reverse_iterator REnd() const   { const_reverse_iterator ret; fCont.ProxyREnd(ret);   return ret; }
    };
 
 } // namespace Reflex

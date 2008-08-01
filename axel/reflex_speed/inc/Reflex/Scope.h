@@ -112,6 +112,8 @@ namespace Reflex {
       */
       static const Container<Scope> Scopes();
 
+      static Scope ByName(const std::string& name) { return Scopes().ByName(name); }
+
 
       /**
       * DataMembers returns the data members of the type
@@ -193,7 +195,7 @@ namespace Reflex {
 
       /**
       * Check whether the entity property is set for the scope. You can
-      * combine checks, e.g. Is(gClass && gPUBLIC)
+      * combine checks, e.g. Is(gClass && gPublic)
       * @param descr the entity property to check for; see EntityProperty.
       * @return whether descr is set.
       */
@@ -265,7 +267,7 @@ namespace Reflex {
       /**
       * Name returns the name of the scope 
       * @param  mod qualifiers can be or'ed 
-      *   FINAL     - resolve typedefs
+      *   kFinal     - resolve typedefs
       *   kScoped    - fully scoped name 
       *   kQualified - cv, reference qualification 
       * @return name of the type
@@ -277,7 +279,7 @@ namespace Reflex {
       * Name returns the name of the scope
       * @param  buf buffer to be used for calculating name
       * @param  mod qualifiers can be or'ed 
-      *   FINAL     - resolve typedefs
+      *   kFinal     - resolve typedefs
       *   kScoped    - fully scoped name 
       *   kQualified - cv, reference qualification 
       * @return name of the type

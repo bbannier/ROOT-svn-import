@@ -54,11 +54,11 @@ Reflex::Internal::FunctionMember::Name(unsigned int mod) const {
    std::string s = "";
 
    if (mod & kQualified) {
-      if (Is(gPUBLIC))          { s += "public ";    }
-      if (Is(gPROTECTED))       { s += "protected "; }
-      if (Is(gPRIVATE))         { s += "private ";   }  
-      if (Is(gEXTERN))          { s += "extern ";    }
-      if (Is(gSTATIC))          { s += "static ";    }
+      if (Is(gPublic))          { s += "public ";    }
+      if (Is(gProtected))       { s += "protected "; }
+      if (Is(gPrivate))         { s += "private ";   }  
+      if (Is(gExtern))          { s += "extern ";    }
+      if (Is(gStatic))          { s += "static ";    }
       if (Is(gINLINE))          { s += "inline ";    }
       if (Is(gVirtual))         { s += "virtual ";   }
       if (Is(gEXPLICIT))        { s += "explicit ";  }
@@ -157,10 +157,10 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
       // Get function return type, register that to "used types"  
       std::string returntype = generator.GetTypeNumber(TypeOf().ReturnType());
     
-      // Prevents __getNewDelFunctions getting into AddFunctionMember twice
+      // Prevents __getNewDelFunctions getting into AddMember twice
       //if (generator.IsNewType(TypeOf()) && Name()!="__getNewDelFunctions") {
     
-      if (Is(gPRIVATE)) {
+      if (Is(gPrivate)) {
          generator.AddIntoShadow (Name(kScoped) + "();\n");
       }
               
@@ -180,12 +180,12 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
       tempcounter<<generator.fMethodCounter;
             
       // Free function, shall be added into Instances-field only
-      if (DeclaringScope().Is(gNAMESPACE)) {
+      if (DeclaringScope().Is(gNamespace)) {
          generator.AddIntoInstances("      Type t" + tempcounter.str() + " = FunctionTypeBuilder(type_" + returntype );
         
       } else { // "normal" function, inside a class
          
-         generator.AddIntoFree(".AddFunctionMember(FunctionTypeBuilder(type_" + returntype );
+         generator.AddIntoFree(".AddMember(FunctionTypeBuilder(type_" + returntype );
       }
             
       
@@ -194,7 +194,7 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
            params != TypeOf().FunctionParameter_End(); ++params) {
          
          
-         if (DeclaringScope().Is(gNAMESPACE)) {
+         if (DeclaringScope().Is(gNamespace)) {
             generator.AddIntoInstances(", type_" + generator.GetTypeNumber((*params)) );
                
          } else {
@@ -205,7 +205,7 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
 
 
       
-      if (DeclaringScope().Is(gNAMESPACE)) {
+      if (DeclaringScope().Is(gNamespace)) {
          generator.AddIntoInstances(");  FunctionBuilder(t" + tempcounter.str() + ", \"" 
                                     + Name() + "\", function_" + number); //function name
       }
@@ -229,7 +229,7 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
               
       } else {
               
-         if (! (DeclaringScope().Is(gNAMESPACE))) {
+         if (! (DeclaringScope().Is(gNamespace))) {
             generator.AddIntoFree(", method_");
                    
             generator.AddIntoClasses("\nstatic void* method_");
@@ -242,7 +242,7 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
          }
       }
            
-      if (!(DeclaringScope().Is(gNAMESPACE))) generator.AddIntoFree(number); //method_n
+      if (!(DeclaringScope().Is(gNamespace))) generator.AddIntoFree(number); //method_n
       
             
       generator.AddIntoClasses(number);
@@ -268,7 +268,7 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
       else {
          // method function with parameters
        
-         if (DeclaringScope().Is(gNAMESPACE)) {
+         if (DeclaringScope().Is(gNamespace)) {
             generator.AddIntoClasses(" (void*, const std::vector<void*>&");// arg, void*)\n{");
                 
          } else {
@@ -294,7 +294,7 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
             }
          }
          
-         if (DeclaringScope().Is(gNAMESPACE)) {
+         if (DeclaringScope().Is(gNamespace)) {
             generator.AddIntoClasses(Name() + "("); 
                 
          } else {
@@ -372,7 +372,7 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
    
       
         
-      if (DeclaringScope().Is(gNAMESPACE)) {
+      if (DeclaringScope().Is(gNamespace)) {
          generator.AddIntoInstances(", 0");
       }
       else {
@@ -380,7 +380,7 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
       }
       
         
-      if (DeclaringScope().Is(gNAMESPACE)) generator.AddIntoInstances(", \"");
+      if (DeclaringScope().Is(gNamespace)) generator.AddIntoInstances(", \"");
       else                                 generator.AddIntoFree(", \"");     
            
          
@@ -401,7 +401,7 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
             // LIKE int i=5 FunctionParameterDefault_Begin(), _End
             //
             
-            if (DeclaringScope().Is(gNAMESPACE)) {
+            if (DeclaringScope().Is(gNamespace)) {
                generator.AddIntoInstances((*parnam));
                if ((dot+1) < FunctionParameterSize()) {
                   generator.AddIntoInstances(";");
@@ -418,18 +418,18 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
 
       }
     
-      if (DeclaringScope().Is(gNAMESPACE)) generator.AddIntoInstances("\"");
+      if (DeclaringScope().Is(gNamespace)) generator.AddIntoInstances("\"");
       else                                 generator.AddIntoFree("\"");
    
     
-      if (DeclaringScope().Is(gNAMESPACE))  { // free func
+      if (DeclaringScope().Is(gNamespace))  { // free func
          generator.AddIntoInstances(", ");
            
-         if (Is(gPUBLIC))         generator.AddIntoInstances("kPublic");
-         else if (Is(gPRIVATE))   generator.AddIntoInstances("kPrivate");
-         else if (Is(gPROTECTED)) generator.AddIntoInstances("kProtected");
+         if (Is(gPublic))         generator.AddIntoInstances("kPublic");
+         else if (Is(gPrivate))   generator.AddIntoInstances("kPrivate");
+         else if (Is(gProtected)) generator.AddIntoInstances("kProtected");
            
-         if (Is(gARTIFICIAL))  generator.AddIntoInstances(" | kArtificial");
+         if (Is(gArtificial))  generator.AddIntoInstances(" | kArtificial");
            
          generator.AddIntoInstances(");\n");
          
@@ -438,12 +438,12 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
       } else {
          generator.AddIntoFree(", ");
            
-         if (Is(gPUBLIC))         generator.AddIntoFree("kPublic");
-         else if (Is(gPRIVATE))   generator.AddIntoFree("kPrivate");
-         else if (Is(gPROTECTED)) generator.AddIntoFree("kProtected");
+         if (Is(gPublic))         generator.AddIntoFree("kPublic");
+         else if (Is(gPrivate))   generator.AddIntoFree("kPrivate");
+         else if (Is(gProtected)) generator.AddIntoFree("kProtected");
            
          if (Is(gVirtual))    generator.AddIntoFree(" | kVirtual");
-         if (Is(gARTIFICIAL))  generator.AddIntoFree(" | kArtificial");
+         if (Is(gArtificial))  generator.AddIntoFree(" | kArtificial");
          if (Is(gConstructor)) generator.AddIntoFree(" | kConstructor");
          if (Is(gDestructor))  generator.AddIntoFree(" | kDestructor");
            

@@ -160,12 +160,12 @@ namespace Internal {
 
       /**
       * Check whether the entity property is set for the type. You can
-      * combine checks, e.g. t.Is(gClass && gPUBLIC)
+      * combine checks, e.g. t.Is(gClass && gPublic)
       * @param descr the entity property to check for; see EntityProperty.
       * @param mod the modifier as stored by Type (reference,...)
       * @return whether descr is set.
       */
-      virtual bool Is(const EntityProperty& descr, int mod) const;
+      virtual bool Is(const EntityProperty& descr, int mod = 0) const;
 
 
       /** Array
@@ -188,7 +188,7 @@ namespace Internal {
       * returns a reference to the dummy container if this type is not a function.
       * @return reflection information of nth function parameter
       */
-      virtual const IContainerImpl* FunctionParameters() const;
+      virtual const IContainerImpl& FunctionParameters() const;
 
 
       /**
@@ -232,7 +232,7 @@ namespace Internal {
       * TemplateArguments returns an ordered collection of the template arguments
       * @return reflection information of template arguments
       */
-      virtual const IContainerImpl* TemplateArguments() const;
+      virtual const IContainerImpl& TemplateArguments() const;
 
 
       /**
@@ -451,11 +451,20 @@ Reflex::Internal::TypeBase::DynamicType(const Object & /* obj */) const {
 
 
 //-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl&
+Reflex::Internal::TypeBase::FunctionParameters() const {
+//-------------------------------------------------------------------------------
+   return Dummy::EmptyContainer();
+}
+
+
+//-------------------------------------------------------------------------------
 inline void
 Reflex::Internal::TypeBase::GenerateDict(DictionaryGenerator & /* generator */) const {
 //-------------------------------------------------------------------------------
 // Generate Dictionary information about itself.
 }
+
 
 //-------------------------------------------------------------------------------
 inline bool
@@ -493,12 +502,35 @@ Reflex::Internal::TypeBase::ReturnType() const {
 
 
 //-------------------------------------------------------------------------------
+inline void
+Reflex::Internal::TypeBase::SetSize(size_t s) const {
+//-------------------------------------------------------------------------------
+   fSize = s;
+}
+
+
+//-------------------------------------------------------------------------------
+inline void
+Reflex::Internal::TypeBase::SetTypeInfo(const std::type_info & ti) const {
+//-------------------------------------------------------------------------------
+   fTypeInfo = &ti;
+}
+
+
+//-------------------------------------------------------------------------------
 inline size_t
 Reflex::Internal::TypeBase::SizeOf() const { 
 //-------------------------------------------------------------------------------
    return fSize; 
 }
 
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl&
+Reflex::Internal::TypeBase::TemplateArguments() const {
+//-------------------------------------------------------------------------------
+   return Dummy::EmptyContainer();
+}
 
 //-------------------------------------------------------------------------------
 inline Reflex::TypeTemplate
@@ -546,29 +578,6 @@ Reflex::Internal::TypeBase::TypeTypeAsString() const {
    return s;
 }
 
-
-//-------------------------------------------------------------------------------
-inline void
-Reflex::Internal::TypeBase::SetSize(size_t s) const {
-//-------------------------------------------------------------------------------
-   fSize = s;
-}
-
-
-//-------------------------------------------------------------------------------
-inline void
-Reflex::Internal::TypeBase::SetTypeInfo(const std::type_info & ti) const {
-//-------------------------------------------------------------------------------
-   fTypeInfo = &ti;
-}
-
-
-//-------------------------------------------------------------------------------
-inline const Reflex::Internal::IContainerImpl*
-Reflex::Internal::TypeBase::TemplateArguments() const {
-//-------------------------------------------------------------------------------
-   return &Dummy::EmptyContainer();
-}
 
 #endif // Reflex_TypeBase
 

@@ -47,8 +47,12 @@ namespace Internal {
       virtual ~DataMember();
 
 
-      /** return Name of data MemberAt */
-      std::string Name(unsigned int mod = 0) const;
+      /**
+      * Name will return the Name of the template family and a list of
+      * all currently available instantiations
+      * @return template family Name with all instantiantion
+      */
+      const std::string& Name(std::string& buf, unsigned int mod = kScoped | kQualified) const;
 
 
       /** Get the MemberAt value (as void*) */

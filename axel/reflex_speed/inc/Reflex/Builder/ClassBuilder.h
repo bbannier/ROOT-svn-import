@@ -51,7 +51,7 @@ namespace Reflex {
       */
       void AddBase(const Type& bas, OffsetFunction offsFP, unsigned int modifiers = 0);
 
-      /** AddDataMember will add the information about one data
+      /** AddMember will add the information about one data
       * MemberAt of the class
       *
       * @param  Name of the data MemberAt
@@ -59,9 +59,9 @@ namespace Reflex {
       * @param  Offset of the data MemberAt
       * @param  modifiers the modifiers of the data MemberAt
       */ 
-      void AddDataMember(const char* nam, const Type& typ, size_t offs, unsigned int modifiers = 0);
+      void AddMember(const char* nam, const Type& typ, size_t offs, unsigned int modifiers = 0);
 
-      /** AddFunctionMember will add the information about one
+      /** AddMember will add the information about one
       * function MemberAt of the class
       *
       * @param  Name of the function MemberAt
@@ -71,7 +71,7 @@ namespace Reflex {
       * @param  params parameter names and default values (semi-colon separated)
       * @param  modifiers the modifiers of the function MemberAt
       */
-      void AddFunctionMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0);
+      void AddMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0);
 
       void AddTypedef(const Type& typ, const char* def);
 
@@ -140,7 +140,7 @@ namespace Reflex {
       template <class C, class B> ClassBuilder& AddBase(unsigned int modifiers = 0);
       ClassBuilder& AddBase(const Type& bas, OffsetFunction offsFP, unsigned int modifiers = 0);
 
-      /** AddDataMember will add the information about one data
+      /** AddMember will add the information about one data
       * MemberAt of the class
       *
       * @param  Name of the data MemberAt
@@ -148,10 +148,10 @@ namespace Reflex {
       * @param  modifiers the modifiers of the data MemberAt
       * @return a reference to the ClassBuilder
       */
-      template <class T> ClassBuilder& AddDataMember(const char* nam, size_t offs, unsigned int modifiers = 0);
-      ClassBuilder& AddDataMember(const Type& typ, const char* nam, size_t offs, unsigned int modifiers = 0);
+      template <class T> ClassBuilder& AddMember(const char* nam, size_t offs, unsigned int modifiers = 0);
+      ClassBuilder& AddMember(const Type& typ, const char* nam, size_t offs, unsigned int modifiers = 0);
 
-      /** AddFunctionMember will add the information about one
+      /** AddMember will add the information about one
       * function MemberAt of the class
       *
       * @param  Name of the function MemberAt
@@ -162,8 +162,8 @@ namespace Reflex {
       * @param  modifiers the modifiers of the data MemberAt
       * @return a reference to the ClassBuilder
       */
-      template <class F> ClassBuilder& AddFunctionMember(const char* nam, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers  = 0);
-      ClassBuilder& AddFunctionMember(const Type& typ, const char* nam, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0);
+      template <class F> ClassBuilder& AddMember(const char* nam, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers  = 0);
+      ClassBuilder& AddMember(const Type& typ, const char* nam, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0);
 
       template <typename TD> ClassBuilder& AddTypedef(const char* def);
       ClassBuilder& AddTypedef(const Type& typ, const char* def);
@@ -239,7 +239,7 @@ namespace Reflex {
          unsigned int modifiers = 0);
 
 
-      /** AddDataMember will add the information about one data
+      /** AddMember will add the information about one data
       * MemberAt of the class
       *
       * @param  Name of the data MemberAt
@@ -248,16 +248,16 @@ namespace Reflex {
       * @return a reference to the ClassBuilderT
       */
       template < class T > 
-      ClassBuilderT & AddDataMember(const char * nam,
+      ClassBuilderT & AddMember(const char * nam,
          size_t offs,
          unsigned int modifiers = 0);
-      ClassBuilderT & AddDataMember(const Type & typ,
+      ClassBuilderT & AddMember(const Type & typ,
          const char * nam, 
          size_t offs,
          unsigned int modifiers = 0);
 
 
-      /** AddFunctionMember will add the information about one
+      /** AddMember will add the information about one
       * function MemberAt of the class
       *
       * @param  Name of the function MemberAt
@@ -269,12 +269,12 @@ namespace Reflex {
       * @return a reference to the ClassBuilder
       */
       template < class F > 
-      ClassBuilderT & AddFunctionMember(const char * nam,
+      ClassBuilderT & AddMember(const char * nam,
          StubFunction stubFP,
          void *  stubCtx = 0, 
          const char * params = 0,
          unsigned int modifiers  = 0);
-      ClassBuilderT & AddFunctionMember(const Type & typ,
+      ClassBuilderT & AddMember(const Type & typ,
          const char * nam,
          StubFunction stubFP,
          void *  stubCtx = 0, 
@@ -340,16 +340,16 @@ template<typename C, typename B> inline Reflex::ClassBuilder& Reflex::ClassBuild
 }
 
 //______________________________________________________________________________
-template<typename T> inline Reflex::ClassBuilder& Reflex::ClassBuilder::AddDataMember(const char* nam, size_t offs, unsigned int modifiers)
+template<typename T> inline Reflex::ClassBuilder& Reflex::ClassBuilder::AddMember(const char* nam, size_t offs, unsigned int modifiers)
 {
-   fClassBuilderImpl.AddDataMember(nam, TypeDistiller<T>::Get(), offs, modifiers);
+   fClassBuilderImpl.AddMember(nam, TypeDistiller<T>::Get(), offs, modifiers);
    return *this;
 }
 
 //______________________________________________________________________________
-template <typename F> inline Reflex::ClassBuilder& Reflex::ClassBuilder::AddFunctionMember(const char* nam, StubFunction stubFP, void* stubCtx, const char* params, unsigned int modifiers)
+template <typename F> inline Reflex::ClassBuilder& Reflex::ClassBuilder::AddMember(const char* nam, StubFunction stubFP, void* stubCtx, const char* params, unsigned int modifiers)
 {
-   fClassBuilderImpl.AddFunctionMember(nam, FunctionDistiller<F>::Get(), stubFP, stubCtx, params, modifiers);
+   fClassBuilderImpl.AddMember(nam, FunctionDistiller<F>::Get(), stubFP, stubCtx, params, modifiers);
    return *this;
 }
 
@@ -401,30 +401,30 @@ template <class C> inline Reflex::ClassBuilderT<C>& Reflex::ClassBuilderT<C>::Ad
 }
 
 //______________________________________________________________________________
-template <class C> template<class T> inline Reflex::ClassBuilderT<C>& Reflex::ClassBuilderT<C>::AddDataMember(const char*  nam, size_t offs, unsigned int  modifiers)
+template <class C> template<class T> inline Reflex::ClassBuilderT<C>& Reflex::ClassBuilderT<C>::AddMember(const char*  nam, size_t offs, unsigned int  modifiers)
 {
-   fClassBuilderImpl.AddDataMember(nam, TypeDistiller<T>::Get(), offs, modifiers);
+   fClassBuilderImpl.AddMember(nam, TypeDistiller<T>::Get(), offs, modifiers);
    return *this;
 }
 
 //-------------------------------------------------------------------------------
-template <class C> inline Reflex::ClassBuilderT<C>& Reflex::ClassBuilderT<C>::AddDataMember(const Type& typ, const char* nam, size_t offs, unsigned int  modifiers)
+template <class C> inline Reflex::ClassBuilderT<C>& Reflex::ClassBuilderT<C>::AddMember(const Type& typ, const char* nam, size_t offs, unsigned int  modifiers)
 {
-   fClassBuilderImpl.AddDataMember(nam, typ, offs, modifiers);
+   fClassBuilderImpl.AddMember(nam, typ, offs, modifiers);
    return *this;
 }
 
 //______________________________________________________________________________
-template <typename C> template <typename F> inline Reflex::ClassBuilderT<C>& Reflex::ClassBuilderT<C>::AddFunctionMember(const char* nam, StubFunction stubFP, void* stubCtx, const char* params, unsigned int modifiers)
+template <typename C> template <typename F> inline Reflex::ClassBuilderT<C>& Reflex::ClassBuilderT<C>::AddMember(const char* nam, StubFunction stubFP, void* stubCtx, const char* params, unsigned int modifiers)
 {
-   fClassBuilderImpl.AddFunctionMember(nam, FunctionDistiller<F>::Get(), stubFP, stubCtx, params, modifiers);
+   fClassBuilderImpl.AddMember(nam, FunctionDistiller<F>::Get(), stubFP, stubCtx, params, modifiers);
    return *this;
 }
 
 //-------------------------------------------------------------------------------
 template < class C >
 inline Reflex::ClassBuilderT<C> & 
-Reflex::ClassBuilderT<C>::AddFunctionMember(const Type & typ,
+Reflex::ClassBuilderT<C>::AddMember(const Type & typ,
                                                    const char * nam,
                                                    StubFunction stubFP,
                                                    void * stubCtx,
@@ -432,7 +432,7 @@ Reflex::ClassBuilderT<C>::AddFunctionMember(const Type & typ,
                                                    unsigned int modifiers) 
 //-------------------------------------------------------------------------------
 {
-   fClassBuilderImpl.AddFunctionMember(nam,
+   fClassBuilderImpl.AddMember(nam,
                                         typ,
                                         stubFP,
                                         stubCtx,

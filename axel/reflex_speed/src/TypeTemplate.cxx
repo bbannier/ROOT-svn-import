@@ -33,7 +33,7 @@ Reflex::TypeTemplate::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
    // Return the name of this type template.
    if (fTypeTemplateName) return fTypeTemplateName->Name(buf, mod);
-   else                     return buf;
+   else                   return buf;
 }
 
 
@@ -43,7 +43,7 @@ Reflex::TypeTemplate::ByName(const std::string & name,
                                                                size_t nTemplateParams) {
 //-------------------------------------------------------------------------------
    // Lookup a type template by name.
-   return TypeTemplateName::ByName(name, nTemplateParams);
+   return Internal::TypeTemplateName::ByName(name, nTemplateParams);
 }
 
 

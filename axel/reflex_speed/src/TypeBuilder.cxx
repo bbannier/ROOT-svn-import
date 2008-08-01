@@ -24,6 +24,7 @@
 #include "Enum.h"
 #include "Typedef.h"
 #include "PointerToMember.h"
+#include "ScopeName.h"
 #include "Reflex/Tools.h"
 #include "Reflex/EntityProperty.h"
 
@@ -106,7 +107,7 @@ Reflex::Type Reflex::ArrayBuilder(const Type & t,
 // Construct an array type.
    const Type & ret = Type::ByName(Internal::Array::BuildTypeName(t,n));
    if (ret) return ret;
-   else       return (new Internal::Array(t, n, ti))->ThisType();
+   else       return (new Internal::Array(t, 0, n, ti))->ThisType();
 }
 
 //-------------------------------------------------------------------------------
@@ -136,7 +137,7 @@ Reflex::Type Reflex::EnumTypeBuilder(const char * nam,
       std::string iname, ivalue;
       Tools::StringSplitPair(iname, ivalue, *it, "=");
       long val = atol(ivalue.c_str());
-      e->AddDataMember(iname.c_str(), int_t, val, 0);
+      e->AddMember(iname.c_str(), int_t, val, 0);
    }  
    return e->ThisType();
 }

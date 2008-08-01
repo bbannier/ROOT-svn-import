@@ -45,45 +45,18 @@ namespace Internal {
 
 
       /**
-      * Name returns the fully qualified Name of the templated class
-      * @param  typedefexp expand typedefs or not
-      * @return fully qualified Name of templated class
-      */
-      std::string Name(unsigned int mod = 0) const;
-
-
-      /**
-      * SimpleName returns the name of the type as a reference. It provides a 
-      * simplified but faster generation of a type name. Attention currently it
-      * is not guaranteed that Name() and SimpleName() return the same character 
-      * layout of a name (ie. spacing, commas, etc.)
-      * @param pos will indicate where in the returned reference the requested name starts
-      * @param mod The only 'mod' support is kScoped
+      * Name returns the name of the type
+      * @param buf preallocated buffer to work on when calculating the name
       * @return name of type
       */
-      virtual const std::string & SimpleName(size_t & pos, 
-         unsigned int mod = 0) const;
+      virtual const std::string& Name(std::string& buf, unsigned int mod = kScoped | kQualified) const;
 
 
       /**
-      * TemplateArgumentAt will return a pointer to the nth template argument
-      * @param  nth nth template argument
-      * @return pointer to nth template argument
+      * TemplateArguments returns an ordered collection of the template arguments
+      * @return reflection information of template arguments
       */
-      Type TemplateArgumentAt(size_t nth) const;
-
-
-      /**
-      * templateArgSize will return the number of template arguments
-      * @return number of template arguments
-      */
-      size_t TemplateArgumentSize() const;
-
-
-      virtual Type_Iterator TemplateArgument_Begin() const;
-      virtual Type_Iterator TemplateArgument_End() const;
-      virtual Reverse_Type_Iterator TemplateArgument_RBegin() const;
-      virtual Reverse_Type_Iterator TemplateArgument_REnd() const;
+      virtual const IContainerImpl& TemplateArguments() const;
 
 
       /**
@@ -114,49 +87,25 @@ inline Reflex::Internal::ClassTemplateInstance::~ClassTemplateInstance() {}
 
 
 //-------------------------------------------------------------------------------
-inline size_t
-Reflex::Internal::ClassTemplateInstance::TemplateArgumentSize() const {
+inline const Reflex::Internal::IContainerImpl&
+Reflex::Internal::ClassTemplateInstance::TemplateArguments() const {
 //-------------------------------------------------------------------------------
-   return TemplateInstance::TemplateArgumentSize();
+   return TemplateInstance::TemplateArguments();
 }
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator
-Reflex::Internal::ClassTemplateInstance::TemplateArgument_Begin() const {
-//-------------------------------------------------------------------------------
-   return TemplateInstance::TemplateArgument_Begin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Type_Iterator
-Reflex::Internal::ClassTemplateInstance::TemplateArgument_End() const {
-//-------------------------------------------------------------------------------
-   return TemplateInstance::TemplateArgument_End();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator
-Reflex::Internal::ClassTemplateInstance::TemplateArgument_RBegin() const {
-//-------------------------------------------------------------------------------
-   return TemplateInstance::TemplateArgument_RBegin();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Reverse_Type_Iterator
-Reflex::Internal::ClassTemplateInstance::TemplateArgument_REnd() const {
-//-------------------------------------------------------------------------------
-   return TemplateInstance::TemplateArgument_REnd();
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::TypeTemplate Reflex::Internal::ClassTemplateInstance::TemplateFamily() const {
+inline Reflex::TypeTemplate
+Reflex::Internal::ClassTemplateInstance::TemplateFamily() const {
 //-------------------------------------------------------------------------------
    return fTemplateFamily;
+}
+
+//-------------------------------------------------------------------------------
+const std::string&
+Reflex::Internal::ClassTemplateInstance::Name(std::string& buf, unsigned int mod) const {
+//-------------------------------------------------------------------------------
+   return Class::Name(buf, mod);
 }
 
 #endif // Reflex_ClassTemplateInstance

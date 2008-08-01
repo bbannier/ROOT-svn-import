@@ -23,36 +23,41 @@
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::Array::Array(const Type & arrayType,
-                            size_t len,
-                            const std::type_info & typeinfo) 
+                               unsigned int modifiers,
+                               size_t len,
+                               const std::type_info & typeinfo) 
 //-------------------------------------------------------------------------------
 // Constructs an array type.
-   : TypeBase(BuildTypeName(arrayType, len).c_str(), 
-               len*(arrayType.SizeOf()), kArray, typeinfo), 
+   : TypeBase((arrayType.FinalType().Name() + (fNameArraySizeSuffix = BuildTypeNameSuffix(arrayType, len))).c_str(),
+              modifiers, len*(arrayType.SizeOf()), kArray, typeinfo),
      fArrayType(arrayType), 
      fLength(len) { }
 
 
 //-------------------------------------------------------------------------------
-std::string Reflex::Internal::Array::Name(unsigned int mod) const {
+const std::string&
+Reflex::Internal::Array::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Return the name of the array type.
-   return BuildTypeName(fArrayType, fLength, mod);
+   if (fNameArraySizeSuffix.empty())
+      fNameArraySizeSuffix = BuildTypeNameSuffix(fArrayType, fLength);
+   fArrayType.Name(buf, mod);
+   buf += fNameArraySizeSuffix;
+   return buf;
 }
 
 
 //-------------------------------------------------------------------------------
-std::string Reflex::Internal::Array::BuildTypeName(const Type & typ, 
-                                                size_t len,
-                                                unsigned int mod) {
+std::string
+Reflex::Internal::Array::BuildTypeNameSuffix(Type arraytype,
+                                             size_t len) {
 //-------------------------------------------------------------------------------
-// Build an array type name.
+// Build an array type name's size suffix, i.e. "[12][10][2]".
    std::ostringstream ost; 
-   Type t = typ;
    ost << "[" << len << "]";
-   while (t.Is(gArray)) {
-      ost << "[" << t.ArrayLength() << "]";
-      t = t.ToType();
+   while (arraytype.Is(gArray)) {
+      ost << "[" << arraytype.ArrayLength() << "]";
+      arraytype = arraytype.ToType();
    }
-   return t.Name(mod) + ost.str();
+   return ost.str();
 }

@@ -13,8 +13,7 @@
 #define Reflex_Class
 
 // Include files
-#include "TypeBase.h"
-#include "ScopeBase.h"
+#include "Constructable.h"
 #include "OwnedMember.h"
 #include "ContainerSTLAdaptor.h"
 #include <map>
@@ -25,8 +24,6 @@ namespace Reflex {
    // forward declarations
    class Base;
    class Member;
-   class MemberTemplate;
-   class TypeTemplate;
    class DictionaryGenerator;
 
 namespace Internal {
@@ -37,7 +34,7 @@ namespace Internal {
     * @date 24/11/2003
     * @ingroup Ref
     */
-   class Class : public TypeBase, public ScopeBase
+   class Class : public Constructable
    {
 
    public:
@@ -52,7 +49,7 @@ namespace Internal {
       * BaseAt returns the collection of base class information
       * @return pointer to base class information
       */
-      virtual const IContainerImpl* Bases() const;
+      virtual const IContainerImpl& Bases() const;
 
 
       /**
@@ -61,31 +58,6 @@ namespace Internal {
        * @param  obj the memory AddressGet of the object to be casted
        */
       virtual Object CastObject(const Type& to, const Object& obj) const;
-
-      /**
-       * Construct will call the constructor of a given At and Allocate the
-       * memory for it
-       * @param  signature of the constructor
-       * @param  values for parameters of the constructor
-       * @param  mem place in memory for implicit construction
-       * @return pointer to new instance
-       */
-      //virtual Object Construct(const Type& signature, const std::vector<Object>& values, void* mem = 0) const;
-      virtual Object Construct(const Type& signature = Type(), const std::vector<void*>& values = std::vector<void*>(), void* mem = 0) const;
-
-      /**
-       * DeclaringScope will return a pointer to the At of this one
-       * @return pointer to declaring At
-       */
-      virtual Scope DeclaringScope() const;
-
-      /**
-       * Destruct will call the destructor of a At and remove its memory
-       * allocation if desired
-       * @param  instance of the At in memory
-       * @param  dealloc for also deallacoting the memory
-       */
-      virtual void Destruct(void* instance, bool dealloc = true) const;
 
       /**
        * DynamicType is used to discover whether an object represents the
@@ -118,25 +90,10 @@ namespace Internal {
        */
       bool HasBase(const Type& cl, std::vector<Base>& path) const;
 
-      virtual void HideName() const;
-
-      virtual bool Is(const EntityProperty& descr, int mod) const;
-
       /* IsComplete will return true if all classes and base classes of this 
       * class are resolved and fully known in the system
       */
       bool IsComplete() const;
-
-      /**
-      * Name returns the name of the scope
-      * @param  buf buffer to be used for calculating name
-      * @param  mod qualifiers can be or'ed 
-      *   FINAL     - resolve typedefs
-      *   kScoped    - fully scoped name 
-      *   kQualified - cv, reference qualification 
-      * @return name of the type
-      */
-      virtual const std::string& Name(std::string& buf, unsigned int mod = kScoped | kQualified) const;
 
       /**
        * PathToBase will return a vector of function pointers to the base class
@@ -145,13 +102,6 @@ namespace Internal {
        * @return vector of function pointers to calculate base offset
        */
       const std::vector<OffsetFunction>& PathToBase(const Scope& bas) const;
-
-      /**
-       * Properties will return a pointer to the PropertyNth list attached
-       * to this item
-       * @return pointer to PropertyNth list
-       */
-      virtual PropertyList Properties() const;
 
       /**
        * AddBase will add the information about a BaseAt class
@@ -167,25 +117,6 @@ namespace Internal {
        * @param b the pointer to the BaseAt class info
        */
       virtual void AddBase(const Base& b) const;
-
-
-      /**
-      * AddFunctionMember will add the information about a function MemberAt
-      */
-      virtual void AddMember(const Member & dm) const;
-      virtual void AddMember(const char * name,
-         const Type & type,
-         StubFunction stubFP,
-         void * stubCtx = 0,
-         const char * params = 0,
-         unsigned int modifiers = 0) const;
-
-
-      /**
-      * RemoveDataMember will remove the information about a data MemberAt
-      * @param dm pointer to data MemberAt
-      */
-      virtual void RemoveMember(const Member & dm) const;
 
 
    private:
@@ -237,29 +168,6 @@ namespace Internal {
       /** boolean is true if the whole object is resolved */
       mutable bool fCompleteType;
 
-      /**
-       * short cut to constructors
-       * @label constructors
-       * @link aggregation
-       * @clientCardinality 1
-       * @supplierCardinality 1..*
-       */
-      mutable std::vector<Member> fConstructors;
-
-      /** 
-      * IContainerImpl interface for container of constructors
-      */
-      ContainerSTLAdaptor< std::vector<Member> > fConstructorsAdaptor;
-
-      /**
-       * short cut to destructor
-       * @label destructor
-       * @link aggregation
-       * @clientCardinality 1
-       * @supplierCardinality 1
-       */
-      mutable Member fDestructor;
-
       /** map to all inherited datamembers and their inheritance path */
       mutable PathsToBase fPathsToBase;
 
@@ -268,8 +176,6 @@ namespace Internal {
 } //namespace Reflex
 
 #include "Reflex/Base.h"
-#include "Reflex/MemberTemplate.h"
-#include "Reflex/TypeTemplate.h"
 
 
 //-------------------------------------------------------------------------------
@@ -281,19 +187,11 @@ inline void Reflex::Internal::Class::AddBase(const Base & b) const
 
 
 //-------------------------------------------------------------------------------
-inline const Reflex::Internal::IContainerImpl*
+inline const Reflex::Internal::IContainerImpl&
 Reflex::Internal::Class::Bases() const
 {
 //-------------------------------------------------------------------------------
-   return &fBasesAdaptor;
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Scope Reflex::Internal::Class::DeclaringScope() const
-{
-//-------------------------------------------------------------------------------
-   return ScopeBase::DeclaringScope();
+   return fBasesAdaptor;
 }
 
 
@@ -305,42 +203,6 @@ bool Reflex::Internal::Class::HasBase(const Type & cl) const
    std::vector<Base> v;
    return HasBase(cl, v);
 }
-
-
-//-------------------------------------------------------------------------------
-inline void Reflex::Internal::Class::HideName() const
-{
-//-------------------------------------------------------------------------------
-   TypeBase::HideName();
-   ScopeBase::HideName();
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool
-Reflex::Internal::Class::Is(const EntityProperty& descr, int mod) const
-{
-//-------------------------------------------------------------------------------
-   return TypeBase::Is(descr, mod | fScopeModifiers);
-}
-
-
-//-------------------------------------------------------------------------------
-inline const std::string&
-Reflex::Internal::Class::Name(std::string& buf, unsigned int mod) const
-{
-//-------------------------------------------------------------------------------
-   return ScopeBase::Name(buf, mod);
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::PropertyList Reflex::Internal::Class::Properties() const
-{
-//-------------------------------------------------------------------------------
-   return ScopeBase::Properties();
-}
-
 
 #endif // Reflex_Class
 

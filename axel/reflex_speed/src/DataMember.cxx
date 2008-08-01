@@ -16,6 +16,7 @@
 
 #include "DataMember.h"
 
+#include "Reflex/Catalog.h"
 #include "Reflex/Scope.h"
 #include "Reflex/Object.h"
 #include "Reflex/Member.h"
@@ -45,32 +46,30 @@ Reflex::Internal::DataMember::~DataMember() {
 }
 
 //-------------------------------------------------------------------------------
-std::string
-Reflex::Internal::DataMember::Name(unsigned int mod) const {
+const std::string&
+Reflex::Internal::DataMember::Name(std::string& s, unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Return the scoped and qualified (if requested with mod) name of the data member
-   std::string s = "";
-
    if (mod & kQualified) {
-      if (Is(gPUBLIC))    s += "public ";
-      if (Is(gPROTECTED)) s += "protected ";
-      if (Is(gPRIVATE))   s += "private ";
-      if (Is(gEXTERN))    s += "extern ";
-      if (Is(gSTATIC))    s += "static ";
-      if (Is(gAUTO))      s += "auto ";
-      if (Is(gREGISTER))  s += "register ";
-      if (Is(gMUTABLE))   s += "mutable ";
+      if (Is(gPublic))    s += "public ";
+      if (Is(gProtected)) s += "protected ";
+      if (Is(gPrivate))   s += "private ";
+      if (Is(gExtern))    s += "extern ";
+      if (Is(gStatic))    s += "static ";
+      if (Is(gAuto))      s += "auto ";
+      if (Is(gRegister))  s += "register ";
+      if (Is(gMutable))   s += "mutable ";
    }
 
    if (mod & kScoped && DeclaringScope().Is(gEnum)) {
-      if (DeclaringScope().DeclaringScope()) {
-         std::string sc = DeclaringScope().DeclaringScope().Name(kScoped);
-         if (sc != "::") s += sc + "::";
+      if (DeclaringScope().DeclaringScope() && !DeclaringScope().DeclaringScope().IsTopScope()) {
+         DeclaringScope().DeclaringScope().Name(s,kScoped);
+         s += "::";
       }
-      s += MemberBase::Name(mod & ~kScoped);
+      MemberBase::Name(s, mod & ~kScoped);
    }
    else {
-      s += MemberBase::Name(mod);
+      MemberBase::Name(s, mod);
    }
 
    return s;
@@ -83,7 +82,7 @@ Reflex::Internal::DataMember::Get(const Object & obj) const {
 //-------------------------------------------------------------------------------
 // Get the value of this data member as stored in object obj.
    if (DeclaringScope().ScopeType() == kEnum) {
-      return Object(Type::ByName("int"), (void*)&fOffset);
+      return Object(Catalog::Instance().Get_int(), (void*)&fOffset);
    }
    else {
       void * mem = CalculateBaseObject(obj);
@@ -119,7 +118,7 @@ Reflex::Internal::DataMember::Set(const Object & instance,
 // Set the data member value in object instance.
    void * mem = CalculateBaseObject(instance);
    mem = (char*)mem + Offset();
-   if (TypeOf().IsClass()) {
+   if (TypeOf().Is(gClassOrStruct)) {
       // Should use the asigment operator if exists (FIX-ME)
       memcpy(mem, value, TypeOf().SizeOf());
    }
@@ -144,21 +143,25 @@ Reflex::Internal::DataMember::GenerateDict(DictionaryGenerator & generator) cons
    }
 
    else if (declScope.Is(gEnum)) {
+      std::string name;
+      Name(name);
 
       std::stringstream tmp;
       tmp << Offset();
 
-      if (declScope.DeclaringScope().Is(gNAMESPACE)) { 
-         generator.AddIntoInstances("\n.AddItem(\"" + Name() + "\", " + tmp.str() + ")");
+      if (declScope.DeclaringScope().Is(gNamespace)) { 
+         generator.AddIntoInstances("\n.AddItem(\"" + name + "\", " + tmp.str() + ")");
       }
       else { // class, struct
-         generator.AddIntoFree(Name() + "=" + tmp.str());
+         generator.AddIntoFree(name + "=" + tmp.str());
       }
    }
 
    else { // class, struct
 
       const Type & rType = TypeOf().RawType();
+      std::string name;
+      Name(name);
         
       if (TypeOf().Is(gArray)) {      
 
@@ -167,7 +170,8 @@ Reflex::Internal::DataMember::GenerateDict(DictionaryGenerator & generator) cons
          std::stringstream temp;
          temp<< t.ArrayLength();
 
-         generator.AddIntoShadow(t.ToType().Name(kScoped) + " " + Name() + "[" + temp.str() + "];\n");
+         std::string name;
+         generator.AddIntoShadow(t.ToType().Name(kScoped) + " " + name + "[" + temp.str() + "];\n");
 	     
       }
    
@@ -177,19 +181,19 @@ Reflex::Internal::DataMember::GenerateDict(DictionaryGenerator & generator) cons
          generator.AddIntoShadow(t.ReturnType().Name(kScoped) + "(") ;
 	
 	
-         if (t.DeclaringScope().IsClass()) {
+         if (t.DeclaringScope().Is(gClassOrStruct)) {
             generator.AddIntoShadow(t.DeclaringScope().Name(kScoped) + "::");
          }
 	
          generator.AddIntoShadow("*"+ t.Name()+")(");
 	  
 	
-         for (size_t parameters = 0; parameters<  t.FunctionParameterSize();
-              ++parameters) {
+         for (OrderedContainer<Type>::const_iterator iPar = t.FunctionParameters().Begin();
+            iPar != t.FunctionParameters().End();) {
 	       
-            generator.AddIntoShadow(t.FunctionParameterAt(parameters).Name());
-	       
-            if (t.FunctionParameterSize()>parameters) {
+            generator.AddIntoShadow(iPar->Name());
+	    ++iPar;
+            if (iPar != t.FunctionParameters().End()) {
                generator.AddIntoShadow(",");
             }	    
          }
@@ -199,27 +203,28 @@ Reflex::Internal::DataMember::GenerateDict(DictionaryGenerator & generator) cons
       }
    
       else {
-         std::string tname = TypeOf().Name(kScoped);
-         if (rType.Is((gClass || gSTRUCT) && !gPUBLIC)) {
+         std::string tname;
+         TypeOf().Name(tname, kScoped);
+         if (rType.Is((gClassOrStruct) && !gPublic)) {
             tname = generator.Replace_colon(rType.Name(kScoped));
             if (rType != TypeOf()) tname = tname + TypeOf().Name(kScoped).substr(tname.length());
          }
-         generator.AddIntoShadow(tname + " " + Name() + ";\n");
+         generator.AddIntoShadow(tname + " " + name + ";\n");
       }
 
       //register type and get its number
       std::string typenumber = generator.GetTypeNumber(TypeOf());
    
-      generator.AddIntoFree(".AddDataMember(type_" + typenumber + ", \"" + Name() + "\", ") ;
+      generator.AddIntoFree(".AddMember(type_" + typenumber + ", \"" + name + "\", ") ;
       generator.AddIntoFree("OffsetOf (__shadow__::" + 
                             generator.Replace_colon((*this).DeclaringScope().Name(kScoped)));
-      generator.AddIntoFree(", " + Name() + "), ");
+      generator.AddIntoFree(", " + name + "), ");
       
-      if (Is(gPUBLIC))    generator.AddIntoFree("kPublic");
-      else if (Is(gPRIVATE))   generator.AddIntoFree("kPrivate");
-      else if (Is(gPROTECTED)) generator.AddIntoFree("kProtected");
+      if (Is(gPublic))    generator.AddIntoFree("kPublic");
+      else if (Is(gPrivate))   generator.AddIntoFree("kPrivate");
+      else if (Is(gProtected)) generator.AddIntoFree("kProtected");
       if (Is(gVirtual))    generator.AddIntoFree(" | kVirtual");
-      if (Is(gARTIFICIAL))  generator.AddIntoFree(" | kArtificial");
+      if (Is(gArtificial))  generator.AddIntoFree(" | kArtificial");
    
       generator.AddIntoFree(")\n");
 
