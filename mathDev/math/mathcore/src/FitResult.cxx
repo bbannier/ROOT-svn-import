@@ -14,11 +14,17 @@
 
 #include "Fit/FitConfig.h"
 
+#include "Fit/BinData.h"
+
 #include "Math/Minimizer.h"
 
 #include "Math/IParamFunction.h"
+#include "Math/OneDimFunctionAdapter.h"
 
 #include "Math/DistFunc.h"
+
+#include "TMath.h"  
+#include "Math/RichardsonDerivator.h"
 
 #include <cassert>
 #include <cmath>
@@ -167,6 +173,74 @@ void FitResult::PrintCovMatrix(std::ostream &os) const {
       }
       os << std::endl;
    }
+}
+
+void FitResult::GetConfidenceIntervals(unsigned int n, unsigned int stride1, unsigned int stride2, const double * x, double * ci, double cl ) const {     
+   // stride1 stride in coordinate  stride2 stride in dimension space
+   // i.e. i-th point in k-dimension is x[ stride1 * i + stride2 * k]
+   // compute the confidence interval of the fit on the given data points
+   // the dimension of the data points must match the dimension of the fit function
+   // confidence intervals are returned in array ci
+
+   // use student quantile
+   //double t = - TMath::StudentQuantile((1.-cl)/2, f->GetNDF()); 
+   double t = TMath::StudentQuantile(0.5 + cl/2, fNdf); 
+   double chidf = TMath::Sqrt(fChi2/fNdf);
+
+   unsigned int ndim = fFitFunc->NDim(); 
+   unsigned int npar = fFitFunc->NPar(); 
+
+   std::vector<double> xpoint(ndim); 
+   std::vector<double> grad(npar); 
+   std::vector<double> vsum(npar); 
+
+   // loop on the points
+   for (unsigned int ipoint = 0; ipoint < n; ++ipoint) { 
+
+      for (unsigned int kdim = 0; kdim < ndim; ++kdim) 
+         xpoint[kdim] = x[ipoint * stride1 + kdim * stride2]; 
+      // calculate gradient of fitted function w.r.t the parameters
+
+      // check first if fFitFunction provides parameter gradient or not 
+      
+      // does not provide gradient
+      // t.b.d : skip calculation for fixed parameters
+      ROOT::Math::RichardsonDerivator d; 
+      for (unsigned int ipar = 0; ipar < npar; ++ipar) { 
+         ROOT::Math::OneDimParamFunctionAdapter<const ROOT::Math::IParamMultiFunction &> fadapter(*fFitFunc,&xpoint.front(),&fParams.front(),ipar);
+         d.SetFunction(fadapter); 
+         grad[ipar] = d(fParams[ipar] ); // evaluate df/dp
+      }
+      // multiply covariance matrix with gradient
+      vsum.assign(0,npar);
+      for (unsigned int ipar = 0; ipar < npar; ++ipar) { 
+         for (unsigned int jpar = 0; jpar < npar; ++jpar) {
+            vsum[ipar] += CovMatrix(ipar,jpar) * grad[jpar]; 
+         }
+      }
+      // multiply gradient by vsum
+      double r2 = 0; 
+      for (unsigned int ipar = 0; ipar < npar; ++ipar) { 
+         r2 += grad[ipar] * vsum[ipar]; 
+      }
+      double r = std::sqrt(r2); 
+      ci[ipoint] = r * t * chidf; 
+   }
+}
+
+void FitResult::GetConfidenceIntervals(const BinData & data, double * ci, double cl ) const { 
+   // implement confidence intervals from a given bin data sets
+   // currently copy the data from Bindata. 
+   // could implement otherwise directly
+   unsigned int ndim = data.NDim(); 
+   unsigned int np = data.NPoints(); 
+   std::vector<double> xdata( ndim * np ); 
+   for (unsigned int i = 0; i < np ; ++i) { 
+      const double * x = data.Coords(i); 
+      std::vector<double>::iterator itr = xdata.begin()+ ndim * i;
+      std::copy(x,x+ndim,itr);
+   }
+   GetConfidenceIntervals(np,ndim,1,&xdata.front(),ci,cl);
 }
 
    } // end namespace Fit
