@@ -18,6 +18,7 @@ class TH1;
 class TF1;
 class TF2;
 class TGraph; 
+class TGraphErrors; 
 class TGraph2D;  
 class TMultiGraph; 
 class Foption_t; 
@@ -28,6 +29,7 @@ namespace ROOT {
    namespace Fit { 
 
       class BinData; 
+      class FitResult;
 
 
 
@@ -87,6 +89,10 @@ namespace ROOT {
       void InitGaus(const ROOT::Fit::BinData & data, TF1 * f1 ); 
 
 
+      /**
+         compute confidence intervals at level cl for a fitted histogram h1 in a TGraphErrors gr
+      */
+      bool GetConfidenceIntervals(const TH1 * h1, const ROOT::Fit::FitResult & r, TGraphErrors * gr, double cl = 0.95); 
       
 
    } // end namespace Fit

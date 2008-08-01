@@ -13,7 +13,8 @@
 #include "HFitInterface.h"
 
 #include "Fit/BinData.h"
-
+#include "Fit/FitResult.h"
+#include "Math/IParamFunction.h"
 
 
 #include <cassert> 
@@ -23,6 +24,7 @@
 #include "TF1.h"
 #include "TGraph2D.h"
 #include "TGraph.h" 
+#include "TGraphErrors.h" 
 // #include "TGraphErrors.h" 
 // #include "TGraphBentErrors.h" 
 // #include "TGraphAsymmErrors.h" 
@@ -551,6 +553,28 @@ void FillData ( BinData  & dv, const TMultiGraph * mg, TF1 * func ) {
    std::cout << "TGraphFitInterface::FillData MultiGraph FitData size is " << dv.Size() << std::endl;
 #endif
  
+}
+
+
+// confidence intervals
+bool GetConfidenceIntervals(const TH1 * h1, const ROOT::Fit::FitResult  & result, TGraphErrors * gr, double cl ) { 
+   if (h1->GetDimension() != 1) { 
+      Error("GetConfidenceIntervals","Invalid object used for storing confidence intervals"); 
+      return false; 
+   }
+   // fill fit data sets with points to estimate cl. 
+   BinData d;
+   FillData(d,h1,0);
+   gr->Set(d.NPoints() );
+   double * ci = gr->GetEY(); // make CL values error of the graph
+   result.GetConfidenceIntervals(d,ci,cl);
+   // put function value as abscissa of the graph
+   for (unsigned int ipoint = 0; ipoint < d.NPoints(); ++ipoint) { 
+      const double * x = d.Coords(ipoint);
+      const ROOT::Math::IParamMultiFunction * func = result.FittedFunction();
+      gr->SetPoint(ipoint, x[0], (*func)(x) );
+   }
+   return true;
 }
 
 

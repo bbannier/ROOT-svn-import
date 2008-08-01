@@ -33,7 +33,8 @@ namespace ROOT {
 
    namespace Fit { 
 
-   class FitConfig; 
+      class FitConfig; 
+      class BinData;
 
 //___________________________________________________________________________________
 /** 
@@ -170,6 +171,26 @@ public:
          }
       }
    }
+
+   /**
+      get confidence intervals for an array of n points x. 
+      stride1 indicates the stride in the coordinate space while stride2 the stride in dimension space. 
+      For 1-dim points : stride1=1, stride2=1
+      for multi-dim points arranged as (x0,x1,...,xN,y0,....yN)          stride1=1      stride2=n
+      for multi-dim points arraged  as (x0,y0,..,x1,y1,...,xN,yN,..)     stride1=ndim,  stride2=1
+      
+      the confidence interval are returned in the array ci
+      cl is the desired confidedence interval value
+      
+    */
+   void FitResult::GetConfidenceIntervals(unsigned int n, unsigned int stride1, unsigned int stride2, const double * x,  double * ci, double cl=0.95 ) const;     
+
+   /**
+      evaluate confidence interval for the point specified in the passed data sets
+      the confidence interval are returned in the array ci
+      cl is the desired confidedence interval value
+    */
+   void FitResult::GetConfidenceIntervals(const BinData & data, double * ci, double cl=0.95 ) const;
 
 
    /// get index for parameter name (return -1 if not found)
