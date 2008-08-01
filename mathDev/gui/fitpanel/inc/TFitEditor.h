@@ -199,14 +199,8 @@ public:
    virtual void   DoReset();
    virtual void   DoSetParameters();
    virtual void   DoSliderXMoved();
-   virtual void   DoSliderXPressed();
-   virtual void   DoSliderXReleased();
    virtual void   DoSliderYMoved();
-   virtual void   DoSliderYPressed();
-   virtual void   DoSliderYReleased();
    virtual void   DoSliderZMoved();
-   virtual void   DoSliderZPressed();
-   virtual void   DoSliderZReleased();
    virtual void   DoUserDialog();
 
    // slot methods 'Minimization' tab

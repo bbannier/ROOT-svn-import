@@ -795,21 +795,13 @@ void TFitEditor::ConnectSlots()
    // advanced draw options
    fDrawAdvanced->Connect("Clicked()", "TFitEditor", this, "DoAdvancedOptions()");
 
-   if (fDim > 0) {
+   if (fDim > 0)
       fSliderX->Connect("PositionChanged()","TFitEditor",this, "DoSliderXMoved()");
-      fSliderX->Connect("Pressed()","TFitEditor",this, "DoSliderXPressed()");
-      fSliderX->Connect("Released()","TFitEditor",this, "DoSliderXReleased()");
-   }
-   if (fDim > 1) {
+   if (fDim > 1)
       fSliderY->Connect("PositionChanged()","TFitEditor",this, "DoSliderYMoved()");
-      fSliderY->Connect("Pressed()","TFitEditor",this, "DoSliderYPressed()");
-      fSliderY->Connect("Released()","TFitEditor",this, "DoSliderYReleased()");
-   }
-   if (fDim > 2) {
+   if (fDim > 2)
       fSliderZ->Connect("PositionChanged()","TFitEditor",this, "DoSliderZMoved()");
-      fSliderZ->Connect("Pressed()","TFitEditor",this, "DoSliderZPressed()");
-      fSliderZ->Connect("Released()","TFitEditor",this, "DoSliderZReleased()");
-   }
+
    fParentPad->Connect("RangeAxisChanged()", "TFitEditor", this, "UpdateGUI()");
    
    // 'Minimization' tab
@@ -868,21 +860,12 @@ void TFitEditor::DisconnectSlots()
    fUserButton->Disconnect("Clicked()");
    fDrawAdvanced->Disconnect("Clicked()");
 
-   if (fDim > 0) {
+   if (fDim > 0)
       fSliderX->Disconnect("PositionChanged()");
-      fSliderX->Disconnect("Pressed()");
-      fSliderX->Disconnect("Released()");
-   }
-   if (fDim > 1) {
+   if (fDim > 1)
       fSliderY->Disconnect("PositionChanged()");
-      fSliderY->Disconnect("Pressed()");
-      fSliderY->Disconnect("Released()");
-   }
-   if (fDim > 2) {
+   if (fDim > 2) 
       fSliderZ->Disconnect("PositionChanged()");
-      fSliderZ->Disconnect("Pressed()");
-      fSliderZ->Disconnect("Released()");
-   }
    
    // slots related to 'Minimization' tab
    fLibMinuit->Disconnect("Toggled(Bool_t)");
@@ -999,11 +982,14 @@ void TFitEditor::UpdateGUI()
 
    if (!fFitObject) return;
 
+   fPx1old = fParentPad->XtoAbsPixel(fParentPad->GetUxmin());
+   fPy1old = fParentPad->YtoAbsPixel(fParentPad->GetUymin());
+   fPx2old = fParentPad->XtoAbsPixel(fParentPad->GetUxmax());
+   fPy2old = fParentPad->YtoAbsPixel(fParentPad->GetUymax());
+
    // sliders
    if (fDim > 0) {
       fSliderX->Disconnect("PositionChanged()");
-      fSliderX->Disconnect("Pressed()");
-      fSliderX->Disconnect("Released()");
 
       switch (fType) {
          case kObjectHisto: {
@@ -1054,15 +1040,11 @@ void TFitEditor::UpdateGUI()
          fSliderX->SetPosition(fXmin,fXmax);
       fSliderX->SetScale(5);
       fSliderX->Connect("PositionChanged()","TFitEditor",this, "DoSliderXMoved()");
-      fSliderX->Connect("Pressed()","TFitEditor",this, "DoSliderXPressed()");
-      fSliderX->Connect("Released()","TFitEditor",this, "DoSliderXReleased()");
    }
 
 //  no implemented functionality for y & z sliders yet 
    if (fDim > 1) {
       fSliderY->Disconnect("PositionChanged()");
-      fSliderY->Disconnect("Pressed()");
-      fSliderY->Disconnect("Released()");
 
       if (!fSliderYParent->IsMapped())
          fSliderYParent->MapWindow();
@@ -1098,6 +1080,7 @@ void TFitEditor::UpdateGUI()
       fSliderY->SetRange(1,fYrange);
       fSliderY->SetPosition(fYmin,fYmax);
       fSliderY->SetScale(5);
+      fSliderY->Connect("PositionChanged()","TFitEditor",this, "DoSliderYMoved()");
    }
 
 /*
@@ -1725,6 +1708,11 @@ void TFitEditor::DoReset()
       fSliderY->SetPosition(fYmin,fYmax);
    }
 
+   fPx1old = fParentPad->XtoAbsPixel(fParentPad->GetUxmin());
+   fPy1old = fParentPad->YtoAbsPixel(fParentPad->GetUymin());
+   fPx2old = fParentPad->XtoAbsPixel(fParentPad->GetUxmax());
+   fPy2old = fParentPad->YtoAbsPixel(fParentPad->GetUymax());
+
    if (fLinearFit->GetState() == kButtonDown)
       fLinearFit->SetState(kButtonUp, kTRUE);
    if (fBestErrors->GetState() == kButtonDown)
@@ -1801,185 +1789,50 @@ void TFitEditor::DoSetParameters()
 }
 
 //______________________________________________________________________________
-void TFitEditor::DoSliderXPressed()
-{
-   // Slot connected to range settings on x-axis.
-
-   if (!fParentPad) return;
-
-   TVirtualPad *save = 0;
-   save = gPad;
-   gPad = fParentPad;
-   fParentPad->cd();
-
-   fParentPad->GetCanvas()->FeedbackMode(kFALSE);
-   fParentPad->SetLineWidth(1);
-   fParentPad->SetLineColor(2);
-   Float_t xleft = 0;
-   Double_t xright = 0;
-   switch (fType) {
-      case kObjectHisto: {
-         //hist 1dim
-         xleft  = fXaxis->GetBinLowEdge((Int_t)((fSliderX->GetMinPosition())+0.5));
-         xright = fXaxis->GetBinUpEdge((Int_t)((fSliderX->GetMaxPosition())+0.5));
-         break;
-      }
-      case kObjectGraph: {
-         // graph
-         xleft  = fXaxis->GetBinLowEdge((Int_t)((fSliderX->GetMinPosition())+0.5));
-         xright = fXaxis->GetBinUpEdge((Int_t)((fSliderX->GetMaxPosition())+0.5));
-         break;
-      }
-      case kObjectGraph2D: {
-         // N/A
-         break;
-      }
-      case kObjectHStack: {
-         // N/A
-         break;
-      }
-      case kObjectTree:  {
-         // N/A
-         break;
-      }
-   }
-   Float_t ymin = fParentPad->GetUymin();
-   Float_t ymax = fParentPad->GetUymax();
-   fPx1old = fParentPad->XtoAbsPixel(xleft);
-   fPy1old = fParentPad->YtoAbsPixel(ymin);
-   fPx2old = fParentPad->XtoAbsPixel(xright);
-   fPy2old = fParentPad->YtoAbsPixel(ymax);
-   gVirtualX->DrawBox(fPx1old, fPy1old, fPx2old, fPy2old, TVirtualX::kHollow);
-
-   if(save) gPad = save;
-}
-
-//______________________________________________________________________________
 void TFitEditor::DoSliderXMoved()
 {
    // Slot connected to range settings on x-axis.
 
    Int_t px1,py1,px2,py2;
-   Float_t xleft = 0;
-   Double_t xright = 0;
 
    TVirtualPad *save = 0;
    save = gPad;
    gPad = fParentPad;
    gPad->cd();
 
-   switch (fType) {
-      case kObjectHisto: {
-         xleft  = fXaxis->GetBinLowEdge((Int_t)((fSliderX->GetMinPosition())+0.5));
-         xright = fXaxis->GetBinUpEdge((Int_t)((fSliderX->GetMaxPosition())+0.5));
-         break;
-      }
-      case kObjectGraph: {
-         // graph
-         xleft  = fXaxis->GetBinLowEdge((Int_t)((fSliderX->GetMinPosition())+0.5));
-         xright = fXaxis->GetBinUpEdge((Int_t)((fSliderX->GetMaxPosition())+0.5));
-/*         TGraph *gr = (TGraph *)fFitObject;
-         Int_t np = gr->GetN();
-         Double_t *x = gr->GetX();
-         xleft  = x[0];
-         xright = x[0];
-         for(Int_t i=0; i<np; i++) {
-            if (xleft > x[i])
-               xleft = x[i];
-            if (xright < x[i])
-               xright = x[i];
-         }*/
-         break;
-      }
-      case kObjectGraph2D: {
-         // N/A
-         break;
-      }
-      case kObjectHStack: {
-         // N/A
-         break;
-      }
-      case kObjectTree:  {
-         // N/A
-         break;
-      }
+   Float_t xleft = 0;
+   Double_t xright = 0;
+   xleft  = fXaxis->GetBinLowEdge((Int_t)((fSliderX->GetMinPosition())+0.5));
+   xright = fXaxis->GetBinUpEdge((Int_t)((fSliderX->GetMaxPosition())+0.5));
+
+   Float_t ymin, ymax;
+   if ( fDim > 1 )
+   {
+      ymin = fYaxis->GetBinLowEdge((Int_t)((fSliderY->GetMinPosition())+0.5));//gPad->GetUymin();
+      ymax = fYaxis->GetBinUpEdge((Int_t)((fSliderY->GetMaxPosition())+0.5));//gPad->GetUymax();
    }
-   Float_t ymin = gPad->GetUymin();
-   Float_t ymax = gPad->GetUymax();
+   else 
+   {
+      ymin = gPad->GetUymin();
+      ymax = gPad->GetUymax();
+   }
+
    px1 = gPad->XtoAbsPixel(xleft);
    py1 = gPad->YtoAbsPixel(ymin);
    px2 = gPad->XtoAbsPixel(xright);
    py2 = gPad->YtoAbsPixel(ymax);
+
    gPad->GetCanvas()->FeedbackMode(kTRUE);
    gPad->SetLineWidth(1);
    gPad->SetLineColor(2);
+   
    gVirtualX->DrawBox(fPx1old, fPy1old, fPx2old, fPy2old, TVirtualX::kHollow);
    gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+
    fPx1old = px1;
    fPy1old = py1;
    fPx2old = px2 ;
    fPy2old = py2;
-
-   if(save) gPad = save;
-}
-
-//______________________________________________________________________________
-void TFitEditor::DoSliderXReleased()
-{
-   // Slot connected to range settings on x-axis.
-
-   gVirtualX->Update(0);
-}
-
-//______________________________________________________________________________
-void TFitEditor::DoSliderYPressed()
-{
-   // Slot connected to range settings on y-axis.
-
-   if (!fParentPad) return;
-
-   TVirtualPad *save = 0;
-   save = gPad;
-   gPad = fParentPad;
-   fParentPad->cd();
-
-   fParentPad->GetCanvas()->FeedbackMode(kFALSE);
-   fParentPad->SetLineWidth(1);
-   fParentPad->SetLineColor(2);
-   Float_t ybottom = 0;
-   Float_t ytop = 0;
-   switch (fType) {
-      case kObjectHisto: {
-         //hist 1dim
-         ybottom = fYaxis->GetBinLowEdge((Int_t)((fSliderY->GetMinPosition())+0.5));
-         ytop = fYaxis->GetBinUpEdge((Int_t)((fSliderY->GetMaxPosition())+0.5));
-      }
-      case kObjectGraph: {
-         // graph
-         ybottom = fYaxis->GetBinLowEdge((Int_t)((fSliderY->GetMinPosition())+0.5));
-         ytop = fYaxis->GetBinUpEdge((Int_t)((fSliderY->GetMaxPosition())+0.5));
-         break;
-      }
-      case kObjectGraph2D: {
-         // N/A
-         break;
-      }
-      case kObjectHStack: {
-         // N/A
-         break;
-      }
-      case kObjectTree:  {
-         // N/A
-         break;
-      }
-   }
-   Float_t xmin = fXaxis->GetBinLowEdge((Int_t)((fSliderX->GetMinPosition())+0.5));//fParentPad->GetUxmin();
-   Float_t xmax = fParentPad->GetUxmax();
-   fPx1old = fParentPad->XtoAbsPixel(xmin);
-   fPy1old = fParentPad->YtoAbsPixel(ybottom);
-   fPx2old = fParentPad->XtoAbsPixel(xmax);
-   fPy2old = fParentPad->YtoAbsPixel(ytop);
-   gVirtualX->DrawBox(fPx1old, fPy1old, fPx2old, fPy2old, TVirtualX::kHollow);
 
    if(save) gPad = save;
 }
@@ -1990,49 +1843,32 @@ void TFitEditor::DoSliderYMoved()
    // Slot connected to range settings on y-axis.
 
    Int_t px1,py1,px2,py2;
-   Float_t ybottom = 0;
-   Float_t ytop = 0;
 
    TVirtualPad *save = 0;
    save = gPad;
    gPad = fParentPad;
    gPad->cd();
 
-   switch (fType) {
-      case kObjectHisto: {
-         ybottom = fYaxis->GetBinLowEdge((Int_t)((fSliderY->GetMinPosition())+0.5));
-         ytop = fYaxis->GetBinUpEdge((Int_t)((fSliderY->GetMaxPosition())+0.5));
-      }
-      case kObjectGraph: {
-         // graph
-         ybottom = fYaxis->GetBinLowEdge((Int_t)((fSliderY->GetMinPosition())+0.5));
-         ytop = fYaxis->GetBinUpEdge((Int_t)((fSliderY->GetMaxPosition())+0.5));
-         break;
-      }
-      case kObjectGraph2D: {
-         // N/A
-         break;
-      }
-      case kObjectHStack: {
-         // N/A
-         break;
-      }
-      case kObjectTree:  {
-         // N/A
-         break;
-      }
-   }
-   Float_t xmin = fParentPad->GetUxmin();
-   Float_t xmax = fParentPad->GetUxmax();
+   Float_t ybottom = 0;
+   Float_t ytop = 0;
+   ybottom = fYaxis->GetBinLowEdge((Int_t)((fSliderY->GetMinPosition())+0.5));
+   ytop = fYaxis->GetBinUpEdge((Int_t)((fSliderY->GetMaxPosition())+0.5));
+
+   Float_t xmin = fXaxis->GetBinLowEdge((Int_t)((fSliderX->GetMinPosition())+0.5));//fParentPad->GetUxmin();
+   Float_t xmax = fXaxis->GetBinUpEdge((Int_t)((fSliderX->GetMaxPosition())+0.5));//fParentPad->GetUxmax();
+
    px1 = fParentPad->XtoAbsPixel(xmin);
    py1 = fParentPad->YtoAbsPixel(ybottom);
    px2 = fParentPad->XtoAbsPixel(xmax);
    py2 = fParentPad->YtoAbsPixel(ytop);
+
    gPad->GetCanvas()->FeedbackMode(kTRUE);
    gPad->SetLineWidth(1);
    gPad->SetLineColor(2);
+
    gVirtualX->DrawBox(fPx1old, fPy1old, fPx2old, fPy2old, TVirtualX::kHollow);
    gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+
    fPx1old = px1;
    fPy1old = py1;
    fPx2old = px2 ;
@@ -2042,29 +1878,7 @@ void TFitEditor::DoSliderYMoved()
 }
 
 //______________________________________________________________________________
-void TFitEditor::DoSliderYReleased()
-{
-   // Slot connected to range settings on y-axis.
-
-   gVirtualX->Update(0);
-}
-
-//______________________________________________________________________________
-void TFitEditor::DoSliderZPressed()
-{
-   // Slot connected to range settings on z-axis.
-
-}
-
-//______________________________________________________________________________
 void TFitEditor::DoSliderZMoved()
-{
-   // Slot connected to range settings on z-axis.
-
-}
-
-//______________________________________________________________________________
-void TFitEditor::DoSliderZReleased()
 {
    // Slot connected to range settings on z-axis.
 
@@ -2493,10 +2307,10 @@ void TFitEditor::CheckRange(TF1 *f1)
       fXmax = fXaxis->FindBin(xmax);
       fUseRange->SetState(kButtonUp);
    }
+
+   // Something to do with fSliderY ?? (AKI)
    if (fDim > 0) {
       fSliderX->Disconnect("PositionChanged()");
-      fSliderX->Disconnect("Pressed()");
-      fSliderX->Disconnect("Released()");
       fSliderX->SetRange(1,fXrange);
       if (!fXmin && !fXmax)
          fSliderX->SetPosition(1,fXrange);
@@ -2504,8 +2318,6 @@ void TFitEditor::CheckRange(TF1 *f1)
          fSliderX->SetPosition(fXmin,fXmax);
       fSliderX->SetScale(5);
       fSliderX->Connect("PositionChanged()","TFitEditor",this, "DoSliderXMoved()");
-      fSliderX->Connect("Pressed()","TFitEditor",this, "DoSliderXPressed()");
-      fSliderX->Connect("Released()","TFitEditor",this, "DoSliderXReleased()");
    }
 }
 
