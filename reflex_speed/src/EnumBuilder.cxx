@@ -16,6 +16,7 @@
 #include "Reflex/Builder/EnumBuilder.h"
 #include "Reflex/Member.h"
 #include "Reflex/Callback.h"
+#include "Reflex/Catalog.h"
 
 #include "DataMember.h"
 #include "Enum.h"
@@ -42,10 +43,10 @@ Reflex::EnumBuilder & Reflex::EnumBuilder::AddItem(const char * nam,
                                                                 long value) {  
 //-------------------------------------------------------------------------------
 // Add an item (as data member) to this enum scope.
-   fEnum->AddDataMember(Member(new Internal::DataMember(nam, 
-                                                          Type::ByName("int"), 
-                                                          value, 
-                                                          0)));
+   fEnum->AddMember(Member(new Internal::DataMember(nam, 
+      Catalog::Instance().Get_int(),
+      value, 
+      0)));
    return *this;
 }
 

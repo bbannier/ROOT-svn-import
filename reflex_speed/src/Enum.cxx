@@ -28,18 +28,7 @@ Reflex::Internal::Enum::Enum(const char * enumType,
                           unsigned int modifiers)
 //-------------------------------------------------------------------------------
 // Construct the dictionary information for an enum
-   : TypeBase(enumType, sizeof(int), kEnum, ti),
-     ScopeBase(enumType, kEnum),
-     fModifiers(modifiers) {}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Internal::Enum::~Enum() {
-//-------------------------------------------------------------------------------
-// Destructor for enum dictionary information.
-}
-
-
+: ScopedType(enumType, modifiers, sizeof(int), kEnum, ti) {}
 
 
 //-------------------------------------------------------------------------------
@@ -47,27 +36,29 @@ void
 Reflex::Internal::Enum::GenerateDict(DictionaryGenerator & generator) const {
 //-------------------------------------------------------------------------------
 // Generate Dictionary information about itself.
-         
-   size_t lastMember = DataMemberSize()-1;
 
-   if (!(DeclaringScope().Is(gNAMESPACE))) {  
+   std::string name;
+   if (!(DeclaringScope().Is(gNamespace))) {  
 
-      generator.AddIntoFree("\n.AddEnum(\"" + Name() + "\", \"");
+      generator.AddIntoFree("\n.AddEnum(\"" + Name(name) + "\", \"");
 
-      for (size_t i = 0; i < DataMemberSize(); ++i) {
-         DataMemberAt(i).GenerateDict(generator);
-         if (i < lastMember) generator.AddIntoFree(";");
+      for (OrdMemberCont_t::iterator i = DataMembers()->Begin(); i; ++i) {
+         i->GenerateDict(generator);
       }
+      generator.AddIntoFree(";");
 
       generator.AddIntoFree("\",");
-      if      (Is(gPUBLIC))    generator.AddIntoFree("typeid(" + Name(kScoped) + "), kPublic)");
-      else if (Is(gPROTECTED)) generator.AddIntoFree("typeid(Reflex::ProtectedEnum), kProtected)");
-      else if (Is(gPRIVATE))   generator.AddIntoFree("typeid(Reflex::PrivateEnum), kPrivate)");
+      name.clear();
+      if      (Is(gPublic))    generator.AddIntoFree("typeid(" + Name(name, kScoped) + "), kPublic)");
+      else if (Is(gProtected)) generator.AddIntoFree("typeid(Reflex::ProtectedEnum), kProtected)");
+      else if (Is(gPrivate))   generator.AddIntoFree("typeid(Reflex::PrivateEnum), kPrivate)");
    }
    else {
-
-      generator.AddIntoInstances("      EnumBuilder(\"" + Name(kScoped) + "\", typeid(" + Name(kScoped) + "), kPublic)");
-      for (size_t i = 0; i < DataMemberSize(); ++i) DataMemberAt(i).GenerateDict(generator);
+      Name(name, kScoped);
+      generator.AddIntoInstances("      EnumBuilder(\"" + name + "\", typeid(" + name + "), kPublic)");
+      for (OrdMemberCont_t::iterator i = DataMembers()->Begin(); i; ++i) {
+         i->GenerateDict(generator);
+      }
       generator.AddIntoInstances(";\n");
 
    }   

@@ -173,7 +173,7 @@ namespace Reflex {
 
       /**
       * Check whether the entity property is set for the member. You can
-      * combine checks, e.g. t.Is(gClass && gPUBLIC)
+      * combine checks, e.g. t.Is(gClass && gPublic)
       * @param descr the entity property to check for; see EntityProperty.
       * @return whether descr is set.
       */
@@ -207,7 +207,7 @@ namespace Reflex {
       * Name returns the Name of the member 
       * @param mod modifiers can be or'ed as argument
       * kScoped - fully scoped name
-      * FINAL  - resolve all typedefs
+      * kFinal  - resolve all typedefs
       * kQualified - cv and reference qualification
       * @return name of the member
       */

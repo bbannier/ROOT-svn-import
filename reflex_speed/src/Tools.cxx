@@ -20,6 +20,7 @@
 #include "Reflex/EntityProperty.h"
 #include "OwnedMember.h"
 #include <cstring>
+#include <iostream>
 
 #if defined(__GNUC__)
 #include <cxxabi.h>
@@ -422,8 +423,8 @@ void Tools::StringSplit(std::vector < std::string > & splitValues,
 std::string Tools::StringVec2String(const std::vector<std::string> & vec) {
 //-------------------------------------------------------------------------------
    std::string s = "";
-   StdString_Iterator lastbutone = vec.end()-1;
-   for(StdString_Iterator it = vec.begin(); it != vec.end(); ++it) {
+   std::vector<std::string> lastbutone = vec.end()-1;
+   for(std::vector<std::string> it = vec.begin(); it != vec.end(); ++it) {
       s += *it;
       if (it != lastbutone) s += ", "; 
    }

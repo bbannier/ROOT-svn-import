@@ -19,9 +19,8 @@
 
 //______________________________________________________________________________
 Reflex::Internal::Union::Union(const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers, ETYPE unionType /*=kUnion*/)
-: TypeBase(typ, size, unionType, ti)
-, ScopeBase(typ, unionType)
-, fModifiers(modifiers)
+: TypeBase(typ, modifiers, size, unionType, ti)
+, ScopeBase(typ, modifiers, unionType)
 , fCompleteType(false)
 {
 // Construct union info.

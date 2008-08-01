@@ -22,20 +22,10 @@
 Reflex::Internal::Typedef::Typedef(const char * typ,
                                 const Type & typedefType,
                                 ETYPE typeTyp,
+                                unsigned int modifiers,
                                 const Type & finalType)
 //-------------------------------------------------------------------------------
-   : TypeBase(typ, typedefType.SizeOf() , typeTyp, typeid(UnknownType), finalType), //typedefType.TypeInfo()),
+   : TypeBase(typ, modifiers, typedefType.SizeOf(), typeTyp, typedefType.TypeInfo(), finalType),
      fTypedefType(typedefType) { 
    // Construct typedef info.
-
-   Type current = typedefType;
-   while (current.Is(gTypedef)) current = current.ToType();
-   if (current.TypeInfo() != typeid(UnknownType)) fTypeInfo = & current.TypeInfo();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Internal::Typedef::~Typedef() {
-//-------------------------------------------------------------------------------
-// Destructor.
 }

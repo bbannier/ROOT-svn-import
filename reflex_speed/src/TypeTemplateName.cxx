@@ -16,9 +16,11 @@
 #include "TypeTemplateName.h"
 
 #include "Reflex/TypeTemplate.h"
-#include "TypeTemplateImpl.h"
 #include "Reflex/Type.h"
 #include "Reflex/Tools.h"
+
+#include "TypeTemplateImpl.h"
+#include "ContainerSTLAdaptor.h"
 
 #include "stl_hash.h"
 #include <vector>
@@ -36,12 +38,19 @@ static Name2TypeTemplate_t & sTypeTemplates() {
    return t;
 }
 
-
 //-------------------------------------------------------------------------------
 static TypeTemplateVec_t & sTypeTemplateVec() {
 //-------------------------------------------------------------------------------
    // Static wrapper around the type template vector.
    static TypeTemplateVec_t t;
+   return t;
+}
+
+
+//-------------------------------------------------------------------------------
+static const Reflex::Internal::ContainerSTLAdaptor<TypeTemplateVec_t>& sTypeTemplateVecAdaptor() {
+//-------------------------------------------------------------------------------
+   static Reflex::Internal::ContainerSTLAdaptor<TypeTemplateVec_t> t(sTypeTemplateVec());
    return t;
 }
 
@@ -115,12 +124,15 @@ Reflex::Internal::TypeTemplateName::DeleteTypeTemplate() const {
 
 
 //-------------------------------------------------------------------------------
-std::string
-Reflex::Internal::TypeTemplateName::Name(unsigned int mod) const {
+const std::string&
+Reflex::Internal::TypeTemplateName::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
    // Return the name of this type template.
-   if (0 != (mod & (kScoped | S))) return fName;
-   else                               return Tools::GetBaseName(fName);
+   if (mod & kScoped)
+      buf += fName;
+   else
+      buf += Tools::GetBaseName(fName);
+   return buf;
 }
 
 
@@ -134,57 +146,9 @@ Reflex::Internal::TypeTemplateName::ThisTypeTemplate() const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::TypeTemplate
-Reflex::Internal::TypeTemplateName::TypeTemplateAt(size_t nth) {
+const Reflex::Internal::IContainerImpl&
+Reflex::Internal::TypeTemplateName::TypeTemplates() {
 //-------------------------------------------------------------------------------
    // Return teh nth type template.
-   if (nth < sTypeTemplateVec().size()) return sTypeTemplateVec()[nth];
-   return Dummy::TypeTemplate();
+   return sTypeTemplateVecAdaptor();
 }
-
-
-//-------------------------------------------------------------------------------
-size_t
-Reflex::Internal::TypeTemplateName::TypeTemplateSize() {
-//-------------------------------------------------------------------------------
-   // Return the number of type templates declared.
-   return sTypeTemplateVec().size();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::TypeTemplate_Iterator
-Reflex::Internal::TypeTemplateName::TypeTemplate_Begin() {
-//-------------------------------------------------------------------------------
-   // Return the begin iterator of the type template collection
-   return sTypeTemplateVec().begin();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::TypeTemplate_Iterator
-Reflex::Internal::TypeTemplateName::TypeTemplate_End() {
-//-------------------------------------------------------------------------------
-   // Return the end iterator of the type template collection
-   return sTypeTemplateVec().end();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Reverse_TypeTemplate_Iterator
-Reflex::Internal::TypeTemplateName::TypeTemplate_RBegin() {
-//-------------------------------------------------------------------------------
-   // Return the RBegin iterator of the type template collection
-   return ((const std::vector<TypeTemplate>&)sTypeTemplateVec()).rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Reverse_TypeTemplate_Iterator
-Reflex::Internal::TypeTemplateName::TypeTemplate_REnd() {
-//-------------------------------------------------------------------------------
-   // Return the rend iterator of the type template collection
-   return ((const std::vector<TypeTemplate>&)sTypeTemplateVec()).rend();
-}
-
-

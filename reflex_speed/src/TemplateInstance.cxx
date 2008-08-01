@@ -20,12 +20,8 @@
 
 
 //-------------------------------------------------------------------------------
-//Reflex::TemplateInstance::~TemplateInstance() {}
-//-------------------------------------------------------------------------------
-
-
-//-------------------------------------------------------------------------------
-Reflex::TemplateInstance::TemplateInstance(const std::string & templateArguments) {
+Reflex::Internal::TemplateInstance::TemplateInstance(const std::string & templateArguments):
+   fTemplateArgumentsAdaptor(fTemplateArguments) {
 //-------------------------------------------------------------------------------
 // Create the dictionary info for a template instance.
    std::vector<std::string> templArgStrVec = Tools::GenTemplateArgVec(templateArguments);
@@ -37,16 +33,18 @@ Reflex::TemplateInstance::TemplateInstance(const std::string & templateArguments
 
 
 //-------------------------------------------------------------------------------
-std::string Reflex::TemplateInstance::Name(unsigned int mod) const {
+const std::string&
+Reflex::Internal::TemplateInstance::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Return the name of the template instance.
-   std::string s = "<";
+   buf += "<";
    for (size_t i = 0; i < fTemplateArguments.size(); ++i) {
-      s += fTemplateArguments[ i ].Name(mod);
-      if (i < (fTemplateArguments.size() - 1)) { s += ","; }
+      if (i)
+         buf += ",";
+      fTemplateArguments[ i ].Name(buf, mod);
    }
-   s += ">";
-   return s;
+   buf += ">";
+   return buf;
 }
 
 

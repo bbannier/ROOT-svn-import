@@ -64,19 +64,19 @@ void Reflex::UnionBuilderImpl::AddItem(const char* nam, const Type& typ)
 {
 // Add data member info (internal).  !!! Obsolete, do not use.
    fLastMember = Member(new Internal::DataMember(nam, typ, 0, 0));
-   fUnion->AddDataMember(fLastMember);
+   fUnion->AddMember(fLastMember);
 }
 
 //______________________________________________________________________________
-void Reflex::UnionBuilderImpl::AddDataMember(const char* nam, const Type& typ, size_t offs, unsigned int modifiers /*= 0*/)
+void Reflex::UnionBuilderImpl::AddMember(const char* nam, const Type& typ, size_t offs, unsigned int modifiers /*= 0*/)
 {
 // Add data member info (internal).
    fLastMember = Member(new Internal::DataMember(nam, typ, offs, modifiers));
-   fUnion->AddDataMember(fLastMember);
+   fUnion->AddMember(fLastMember);
 }
 
 //______________________________________________________________________________
-void Reflex::UnionBuilderImpl::AddFunctionMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx /*= 0*/, const char* params /*= 0*/, unsigned int modifiers /*= 0*/)
+void Reflex::UnionBuilderImpl::AddMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx /*= 0*/, const char* params /*= 0*/, unsigned int modifiers /*= 0*/)
 {
 // Add function member info (internal).
    if (Tools::IsTemplated(nam)) {
@@ -86,7 +86,7 @@ void Reflex::UnionBuilderImpl::AddFunctionMember(const char* nam, const Type& ty
    else {
       fLastMember = Member(new Internal::FunctionMember(nam, typ, stubFP, stubCtx, params, modifiers));
    }
-   fUnion->AddFunctionMember(fLastMember);
+   fUnion->AddMember(fLastMember);
 }
 
 //______________________________________________________________________________
@@ -152,18 +152,18 @@ Reflex::UnionBuilder& Reflex::UnionBuilder::AddItem(const char* nam, const char*
 }
 
 //______________________________________________________________________________
-Reflex::UnionBuilder& Reflex::UnionBuilder::AddDataMember(const Type& typ, const char* nam, size_t offs, unsigned int modifiers /*= 0*/)
+Reflex::UnionBuilder& Reflex::UnionBuilder::AddMember(const Type& typ, const char* nam, size_t offs, unsigned int modifiers /*= 0*/)
 {
 // Add data member info to this union.
-   fUnionBuilderImpl.AddDataMember(nam, typ, offs, modifiers);
+   fUnionBuilderImpl.AddMember(nam, typ, offs, modifiers);
    return *this;
 }
 
 //______________________________________________________________________________
-Reflex::UnionBuilder& Reflex::UnionBuilder::AddFunctionMember(const Type& typ, const char* nam, StubFunction stubFP, void* stubCtx, const char* params, unsigned int modifiers)
+Reflex::UnionBuilder& Reflex::UnionBuilder::AddMember(const Type& typ, const char* nam, StubFunction stubFP, void* stubCtx, const char* params, unsigned int modifiers)
 {
 // Add function member info to this union.
-   fUnionBuilderImpl.AddFunctionMember(nam, typ, stubFP, stubCtx, params, modifiers);
+   fUnionBuilderImpl.AddMember(nam, typ, stubFP, stubCtx, params, modifiers);
    return *this;
 }
 

@@ -19,13 +19,14 @@
 #include "DataMember.h"
 #include "FunctionMember.h"
 
+#include <sstream>
 
 //-------------------------------------------------------------------------------
 Reflex::Object 
 Reflex::Object::Get(const std::string & dm) const {
 //-------------------------------------------------------------------------------
 // Get a data member value of this object.
-   Member m = TypeOf().MemberByName(dm);
+   Member m = ((Scope)TypeOf()).Members().ByName(dm);
    if (!m)
       throw RuntimeError("No such MemberAt " + dm);
    return m.Get(* this);
@@ -74,7 +75,7 @@ Reflex::Object::Invoke(const std::string & fm,
                               std::vector < void * > args) const {
 //-------------------------------------------------------------------------------
 // Invoke a data member of this object. Sign can be used for finding overloaded funs.
-   Member m = TypeOf().FunctionMemberByName(fm, sign);
+   Member m = ((Scope)TypeOf()).FunctionMemberByNameAndSignature(fm, sign);
    if (!m)
       throw RuntimeError("No such MemberAt " + fm);
 
@@ -100,7 +101,20 @@ void Reflex::Object::Set2(const std::string & dm,
                                  const void * value) const {
 //-------------------------------------------------------------------------------
 // Internal set method. Wrapped from Set methods.
-   Member m = TypeOf().MemberByName(dm);
+   Member m = ((Scope)TypeOf()).Members().ByName(dm);
    if (m) m.Set(* this, value);
    else throw RuntimeError("No such MemberAt " + dm);
 }
+
+//-------------------------------------------------------------------------------
+const std::string&
+Reflex::Object::ToString(std::string& buf, unsigned int mod) const {
+//-------------------------------------------------------------------------------
+   buf += "(*((";
+   fType.Name(buf, mod);
+   std::ostringstream oss;
+   oss << "*)" << Address() << "))";
+   buf += oss.str();
+   return buf;
+}
+

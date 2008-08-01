@@ -57,7 +57,7 @@ const Reflex::OrderedContainer<Reflex::Base>
 Reflex::Scope::Bases() const {
 //-------------------------------------------------------------------------------
    if (* this) return fScopeName->fScopeBase->Bases(); 
-   return &Dummy::EmptyContainer();
+   return Dummy::EmptyContainer();
 }
 
 
@@ -66,7 +66,7 @@ const Reflex::OrderedContainer<Reflex::Member>
 Reflex::Scope::DataMembers() const {
 //-------------------------------------------------------------------------------
    if (* this) return fScopeName->fScopeBase->DataMembers(); 
-   return &Dummy::EmptyContainer();
+   return Dummy::EmptyContainer();
 }
 
 

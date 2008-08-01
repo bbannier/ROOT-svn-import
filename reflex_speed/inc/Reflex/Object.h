@@ -213,6 +213,19 @@ namespace Reflex {
       void Set(const std::string & dm,
          const T & value) const;
 
+      /**
+      * Convert this object to a string as a valid C++ expression, e.g.
+      * (type&)0xabc12345.
+      * @param buf preallocated buffer to work on when calculating the string
+      * @param  mod qualifiers for the type part of the string representation; can be or'ed
+      *   kFinal     - resolve typedefs
+      *   kScoped    - fully scoped name 
+      *   kQualified - cv, reference qualification 
+      * @return string representation of the value
+      */
+      const std::string& ToString(std::string& buf, unsigned int mod = kScoped | kQualified) const;
+
+      std::string ToString(unsigned int mod = kScoped | kQualified) const;
 
       /**
       * TypeOf will return the type of the object
@@ -430,6 +443,13 @@ inline void Reflex::Object::Set(const std::string & dm,
   Set2(dm, & value);
 }
 
+//-------------------------------------------------------------------------------
+inline std::string
+Reflex::Object::ToString(unsigned int mod) const {
+//-------------------------------------------------------------------------------
+   std::string buf;
+   return ToString(buf, mod);
+}
 
 //-------------------------------------------------------------------------------
 inline Reflex::Type Reflex::Object::TypeOf() const {

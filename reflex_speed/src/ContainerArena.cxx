@@ -75,7 +75,7 @@ Reflex::Internal::ContainerTools::NodeArena*
 Reflex::Internal::ContainerTools::NodeArena::Instance(int elementsize) {
 //-------------------------------------------------------------------------------
 // Return the instance of NodeArena for a given elementsize
-   int index = elementsize;
+   size_t index = elementsize;
    index -= sizeof(Link); // we always store that, so factor it out
    index -= 1; // and the object is expected to use at least one byte!
    bool needresize = false;
@@ -114,7 +114,7 @@ Reflex::Internal::ContainerTools::NodeArena::New() {
    }
    char* n = fWatermark;
    fWatermark += fElementSize;
-   if (fWatermark - fPages.back() >= fgElementsPerPage * fElementSize) {
+   if ((size_t)(fWatermark - fPages.back()) >= fgElementsPerPage * fElementSize) {
       fWatermark = new char[fgElementsPerPage * fElementSize];
       fPages.push_back(fWatermark);
    }
@@ -132,7 +132,7 @@ Reflex::Internal::ContainerTools::NodeArena::ReleaseInstance() {
 // the memory was freed.
    REFLEX_RWLOCK_W(fLock);
    REFLEX_RWLOCK_W(fgLock);
-   int index = fElementSize;
+   size_t index = fElementSize;
    index -= sizeof(Link); // we always store that, so factor it out
    index -= 1; // and the object is expected to use at least one byte!
    if (index < fgInstances.size()) {
@@ -140,7 +140,7 @@ Reflex::Internal::ContainerTools::NodeArena::ReleaseInstance() {
          = std::find(fgInstances[index].begin(), fgInstances[index].end(), this);
       if (fgDebug > 0) {
          int instances = 0;
-         for (int i = 0; i < fgInstances.size(); ++i)
+         for (size_t i = 0; i < fgInstances.size(); ++i)
             instances += fgInstances[i].size();
 
          std::cout << "NodeArena DEBUG:  Releasing with..." << std::endl

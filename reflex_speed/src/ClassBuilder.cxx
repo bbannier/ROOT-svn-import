@@ -17,10 +17,13 @@
 
 #include "Reflex/Type.h"
 #include "Reflex/Member.h"
+#include "Reflex/Catalog.h"
+
+#include "Reflex/Tools.h"
 
 #include "Class.h"
 #include "ClassTemplateInstance.h"
-#include "Reflex/Tools.h"
+#include "TypeName.h"
 #include "Typedef.h"
 #include "Enum.h"
 #include "DataMember.h"
@@ -42,14 +45,14 @@ Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info
 {
    // -- Construct a class information (internal).
    std::string nam2(nam);
-   const Type& c = Type::ByName(nam2);
+   Type c = Type::Types().ByName(nam2);
    if (c) {
       // We found a typedef to a class with the same name
       if (c.Is(gTypedef)) {
          nam2 += " @Hidden@";
       }
       // Class already exists. Check if it was a class.
-      else if (!c.IsClass()) {
+      else if (!c.Is(gClassOrStruct)) {
          throw RuntimeError("Attempt to replace a non-class type with a class"); // FIXME: We should not throw!
       }
    }
@@ -76,15 +79,15 @@ void Reflex::ClassBuilderImpl::AddBase(const Type& bas, OffsetFunction offsFP, u
 }
 
 //______________________________________________________________________________
-void Reflex::ClassBuilderImpl::AddDataMember(const char* nam, const Type& typ, size_t offs, unsigned int modifiers)
+void Reflex::ClassBuilderImpl::AddMember(const char* nam, const Type& typ, size_t offs, unsigned int modifiers)
 {
    // -- Add data member info (internal).
    fLastMember = Member(new Internal::DataMember(nam, typ, offs, modifiers));
-   fClass->AddDataMember(fLastMember);
+   fClass->AddMember(fLastMember);
 }
 
 //______________________________________________________________________________
-void Reflex::ClassBuilderImpl::AddFunctionMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx, const char* params, unsigned int modifiers)
+void Reflex::ClassBuilderImpl::AddMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx, const char* params, unsigned int modifiers)
 {
    // -- Add function member info (internal).
    if (Tools::IsTemplated(nam)) {
@@ -96,14 +99,14 @@ void Reflex::ClassBuilderImpl::AddFunctionMember(const char* nam, const Type& ty
    else {
       fLastMember = Member(new Internal::FunctionMember(nam, typ, stubFP, stubCtx, params, modifiers));
    }
-   fClass->AddFunctionMember(fLastMember);
+   fClass->AddMember(fLastMember);
 }
 
 //______________________________________________________________________________
 void Reflex::ClassBuilderImpl::AddTypedef(const Type& typ, const char* def)
 {
    // -- Add typedef info (internal).
-   Type ret = Type::ByName(def);
+   Type ret = Type::Types().ByName(def);
    // Check for typedef AA AA;
    if (ret == typ && ! typ.Is(gTypedef)) {
       if (typ) {
@@ -146,7 +149,7 @@ void Reflex::ClassBuilderImpl::AddEnum(const char* nam, const char* values, cons
       std::string value = "";
       Tools::StringSplitPair(name, value, *it, "=");
       unsigned long int valInt = atol(value.c_str());
-      e->AddDataMember(Member(new Internal::DataMember(name.c_str(), Type::ByName("int"), valInt, 0)));
+      e->AddMember(Member(new Internal::DataMember(name.c_str(), Catalog::Instance().Get_int(), valInt, 0)));
    }
 }
 
@@ -213,18 +216,18 @@ Reflex::ClassBuilder& Reflex::ClassBuilder::AddBase(const Type& bas, OffsetFunct
 }
 
 //______________________________________________________________________________
-Reflex::ClassBuilder& Reflex::ClassBuilder::AddDataMember(const Type&  typ, const char*  nam, size_t offs, unsigned int modifiers)
+Reflex::ClassBuilder& Reflex::ClassBuilder::AddMember(const Type&  typ, const char*  nam, size_t offs, unsigned int modifiers)
 {
    // -- Add data member info to this class.
-   fClassBuilderImpl.AddDataMember(nam, typ, offs, modifiers);
+   fClassBuilderImpl.AddMember(nam, typ, offs, modifiers);
    return *this;
 }
 
 //______________________________________________________________________________
-Reflex::ClassBuilder& Reflex::ClassBuilder::AddFunctionMember(const Type& typ, const char* nam, StubFunction stubFP, void* stubCtx, const char* params, unsigned int modifiers)
+Reflex::ClassBuilder& Reflex::ClassBuilder::AddMember(const Type& typ, const char* nam, StubFunction stubFP, void* stubCtx, const char* params, unsigned int modifiers)
 {
    // -- Add function member info to this class.
-   fClassBuilderImpl.AddFunctionMember(nam, typ, stubFP, stubCtx, params, modifiers);
+   fClassBuilderImpl.AddMember(nam, typ, stubFP, stubCtx, params, modifiers);
    return *this;
 }
 

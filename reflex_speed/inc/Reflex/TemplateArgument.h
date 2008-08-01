@@ -30,6 +30,27 @@ namespace Reflex {
       TemplateArgument(Type type): fKindOf(kType), fType(type) {}
       TemplateArgument(Type type, const Object& value): fKindOf(kValue), fValue(value), fType(type) {}
 
+      /**
+      * Name returns the name of the type
+      * @param  mod qualifiers can be or'ed 
+      *   kFinal     - resolve typedefs
+      *   kScoped    - fully scoped name 
+      *   kQualified - cv, reference qualification 
+      * @return name of template argument (type or value)
+      */
+      std::string Name(unsigned int mod = kScoped | kQualified) const;
+
+      /**
+      * Name returns the name of the type
+      * @param buf preallocated buffer to work on when calculating the name
+      * @param  mod qualifiers can be or'ed 
+      *   kFinal     - resolve typedefs
+      *   kScoped    - fully scoped name 
+      *   kQualified - cv, reference qualification 
+      * @return name of template argument (type or value)
+      */
+      virtual const std::string& Name(std::string& buf, unsigned int mod = kScoped | kQualified) const;
+
       EKindOf KindOf() const { return fKindOf; }
       const Object& AsValue() const { return fValue; }
       Type          AsType() const { return fType; }
@@ -40,5 +61,22 @@ namespace Reflex {
       Type        fType;   // type of the value (for kValue) or type template argument (for kType)
    };
 } // namespace Reflex;
+
+
+//-------------------------------------------------------------------------------
+inline std::string
+Reflex::TemplateArgument::Name(unsigned int mod) const {
+//-------------------------------------------------------------------------------
+   std::string buf;
+   return Name(buf, mod);
+}
+
+//-------------------------------------------------------------------------------
+const std::string& Reflex::TemplateArgument::Name(std::string& buf, unsigned int mod) const {
+//-------------------------------------------------------------------------------
+   if (fKindOf == kType)
+      return AsType().Name(buf);
+   return AsValue().ToString(buf);
+}
 
 #endif // Reflex_TemplateArgument

@@ -42,12 +42,10 @@ Reflex::Internal::Class::Class(const char *           typ,
                      ETYPE                   classType)
 //-------------------------------------------------------------------------------
 // Construct a Class instance.
-      : TypeBase(typ, modifiers, size, classType, ti),
-      ScopeBase(typ, modifiers, classType),
+      : Constructable(typ, modifiers, size, classType, ti),
       fBasesAdaptor(fBases),
       fAllBases(0),
-      fCompleteType(false),
-      fConstructorsAdaptor(fConstructors) {}
+      fCompleteType(false) {}
 
 
 //-------------------------------------------------------------------------------
@@ -118,101 +116,6 @@ Reflex::Object Reflex::Internal::Class::CastObject(const Type & to,
 }
 
 
-/*/-------------------------------------------------------------------------------
-  Reflex::Object Reflex::Internal::Class::Construct(const Type & signature,
-                                                       const std::vector < Object > & args,
-                                                       void * mem) const {
-//-------------------------------------------------------------------------------
-  static Type defSignature = Type::ByName("void (void)");
-  Type signature2 = signature;
-
-  Member constructor = Member();
-  if (!signature &&  fConstructors.size() > 1)
-  signature2 = defSignature;
-
-  for (size_t i = 0; i < fConstructors.size(); ++ i) {
-  if (!signature2 || fConstructors[i].TypeOf().Id() == signature2.Id()) {
-  constructor = fConstructors[i];
-  break;
-  }
-  }
-
-  if (constructor.TypeOf()) {
-  // no memory Address passed -> Allocate memory for class
-  if (mem == 0) mem = Allocate();
-  Object obj = Object(TypeOf(), mem);
-  constructor.Invoke(obj, args);
-  return obj;
-  }
-  else {
-  throw RuntimeError("No suitable constructor found");
-  }
-  }
-*/
-
-
-//-------------------------------------------------------------------------------
-Reflex::Object Reflex::Internal::Class::Construct(const Type & sig,
-                                        const std::vector < void * > & args,
-                                        void * mem) const
-{
-//-------------------------------------------------------------------------------
-// Construct an object of this class type. The signature of the constructor function
-// can be given as the first argument. Furhter arguments are a vector of memory
-// addresses for non default constructors and a memory address for in place construction.
-   static Type defSignature = InCatalog()->ByName("void (void)");
-   Type signature = (!sig &&  fConstructors.size() > 1) ? defSignature : sig;
-
-   for (size_t i = 0; i < fConstructors.size(); ++ i) {
-      if (!signature || fConstructors[i].TypeOf().Id() == signature.Id()) {
-         Member constructor = fConstructors[i];
-         if (mem == 0) mem = Allocate();
-         Object obj = Object(ThisType(), mem);
-         constructor.Invoke(obj, args);
-         return obj;
-      }
-   }
-   std::stringstream s;
-   s << "No suitable constructor found with signature '" << signature.Name() << "'";
-   throw RuntimeError(s.str());
-}
-
-
-//-------------------------------------------------------------------------------
-void Reflex::Internal::Class::Destruct(void * instance,
-                             bool dealloc) const
-{
-//-------------------------------------------------------------------------------
-// Call the destructor for this class type on a memory address (instance). Deallocate
-// memory if dealloc = true (i.e. default).
-   if (! fDestructor.TypeOf()) {
-      // destructor for this class not yet revealed
-      MemberCont_t* funmem
-         = (MemberCont_t*) FunctionMembers();
-      for (MemberCont_t::iterator i = funmem->Begin(); i; ++i) {
-         Member fm = *i;
-         // constructor found Set the cache pointer
-         if (fm.Is(gDestructor)) {
-            fDestructor = fm;
-            break;
-         }
-      }
-   }
-   if (fDestructor.TypeOf()) {
-      // we found a destructor -> Invoke it
-      Object dummy = Object(Type(), instance);
-      fDestructor.Invoke(dummy);
-      // if deallocation of memory wanted
-      if (dealloc) {
-         Deallocate(instance);
-      }
-   }
-   else {
-      // this class has no destructor defined we call the operator delete on it
-      ::operator delete(instance);
-   }
-}
-
 namespace {
    //-------------------------------------------------------------------------------
    struct DynType_t {
@@ -230,7 +133,7 @@ Reflex::Type Reflex::Internal::Class::DynamicType(const Object & obj) const
 //-------------------------------------------------------------------------------
 // Discover the dynamic type of a class object and return it.
    // If no virtual_function_table return itself
-   if (Is(gVirtual, 0)) {
+   if (Is(gVirtual)) {
       // Avoid the case that the first word is a virtual_base_offset_table instead of
       // a virtual_function_table
       long int offset = **(long**)obj.Address();
@@ -350,49 +253,6 @@ Reflex::Internal::Class::PathToBase(const Scope & bas) const
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Internal::Class::AddMember(const Member & m) const
-{
-//-------------------------------------------------------------------------------
-// Add member m to this class
-   ScopeBase::AddMember(m);
-   if (m.Is(gConstructor))      fConstructors.push_back(m);
-   else if (m.Is(gDestructor)) fDestructor = m;
-}
-
-
-//-------------------------------------------------------------------------------
-void Reflex::Internal::Class::AddMember(const char * nam,
-                                      const Type & typ,
-                                      StubFunction stubFP,
-                                      void * stubCtx,
-                                      const char * params,
-                                      unsigned int modifiers) const
-{
-//-------------------------------------------------------------------------------
-// Add member to this class
-   ScopeBase::AddMember(nam, typ, stubFP, stubCtx, params, modifiers);
-   if (modifiers & kConstructor)
-      fConstructors.push_back(fFunctionMembers[fFunctionMembers.Size()-1]);
-   // setting the destructor is not needed because it is always provided when building the class
-}
-
-
-//-------------------------------------------------------------------------------
-void Reflex::Internal::Class::RemoveMember(const Member & m) const
-{
-//-------------------------------------------------------------------------------
-// Remove member from this class.
-   if (m.Is(gConstructor)) {
-      std::vector<Member>::const_iterator iCtor = fConstructors.find(m);
-      if (m != fConstructors.end())
-         fConstructors.erase(m);
-   } else (m.Is(gDestructor) && m == fDestructor) {
-      fDestructor = Member();
-   }
-   ScopeBase::RemoveMember(m);
-}
-
-
 //-------------------------------------------------------------------------------
 void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) const
 {
@@ -430,18 +290,18 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
       std::string typenumber = generator.GetTypeNumber(ThisType());
 
       if (generator.fSelections.size() != 0 || generator.fPattern_selections.size() != 0) {
-         std::cout << "  * selecting class " << (*this).Name(kScoped) << "\n";
+         std::cout << "  * selecting class " << Name(std::string(), kScoped) << "\n";
       }
 
       generator.AddIntoInstances("      " + generator.Replace_colon(ThisType().Name(kScoped)) + "_dict();\n");
 
       // Outputten only, if inside a namespace
-      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().Is(gNAMESPACE))) {
+      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().Is(gNamespace))) {
          generator.AddIntoShadow("\nnamespace " + ThisType().Name() + " {");
       }
 
       // new
-      if (ThisType().DeclaringScope().IsClass()) {
+      if (ThisType().DeclaringScope().Is(gClassOrStruct)) {
          generator.AddIntoShadow("};");
       }
 
@@ -454,32 +314,31 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
 
 
 
-      if ((ThisType().DeclaringScope().IsClass())) {
+      if (ThisType().DeclaringScope().Is(gClassOrStruct)) {
          generator.AddIntoFree(";\n}\n");
       }
 
       generator.AddIntoFree("\n\n// ------ Dictionary for class " + ThisType().Name() + "\n");
       generator.AddIntoFree("void " + generator.Replace_colon(ThisType().Name(kScoped)) + "_dict() {\n");
       generator.AddIntoFree("ClassBuilder(\"" + ThisType().Name(kScoped));
-      if (Is(gPUBLIC)) generator.AddIntoFree("\", typeid(" + ThisType().Name(kScoped) + "), sizeof(" + ThisType().Name(kScoped) + "), ");
-      else if (Is(gPROTECTED)) generator.AddIntoFree("\", typeid(Reflex::ProtectedClass), 0,");
-      else if (Is(gPRIVATE)) generator.AddIntoFree("\", typeid(Reflex::PrivateClass), 0,");
+      if (Is(gPublic)) generator.AddIntoFree("\", typeid(" + ThisType().Name(kScoped) + "), sizeof(" + ThisType().Name(kScoped) + "), ");
+      else if (Is(gProtected)) generator.AddIntoFree("\", typeid(Reflex::ProtectedClass), 0,");
+      else if (Is(gPrivate)) generator.AddIntoFree("\", typeid(Reflex::PrivateClass), 0,");
 
-      if (ThisType().Is(gPUBLIC))  generator.AddIntoFree("kPublic");
-      if (ThisType().Is(gPRIVATE)) generator.AddIntoFree("kPrivate");
-      if (ThisType().Is(gPROTECTED)) generator.AddIntoFree("kProtected");
+      if (ThisType().Is(gPublic))  generator.AddIntoFree("kPublic");
+      if (ThisType().Is(gPrivate)) generator.AddIntoFree("kPrivate");
+      if (ThisType().Is(gProtected)) generator.AddIntoFree("kProtected");
       if (ThisType().Is(gVirtual)) generator.AddIntoFree(" | kVirtual");
       generator.AddIntoFree(" | kClass)\n");
 
       generator.AddIntoClasses("\n// -- Stub functions for class " + ThisType().Name() + "--\n");
 
 
-      for (Member_Iterator mi = (*this).Member_Begin();
-            mi != (*this).Member_End(); ++mi) {
-         (*mi).GenerateDict(generator);      // call Members' own gendict
+      for (OrdOwnedMemberCont_t::iterator mi = Members()->Begin(); mi; ++mi) {
+         mi->GenerateDict(generator);      // call Members' own gendict
       }
 
-      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().Is(gNAMESPACE))) {
+      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().Is(gNamespace))) {
          generator.AddIntoShadow("\nnamespace " + ThisType().Name() + " {");
       }
 
@@ -489,7 +348,7 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
 //       generator.AddIntoClasses(" (void*, const std::vector<void*>&, void*)\n{\n");
 //       generator.AddIntoClasses("  static NewDelFunctions s_funcs;\n");
 
-//       generator.AddIntoFree(".AddFunctionMember<void*(void)>(\"__getNewDelFunctions\", method_x" + tempcounter.str());
+//       generator.AddIntoFree(".AddMember<void*(void)>(\"__getNewDelFunctions\", method_x" + tempcounter.str());
 //       generator.AddIntoFree(", 0, 0, kPublic | kArtificial)");
 
 //       std::string temp = "NewDelFunctionsT< ::" + ThisType().Name(kScoped) + " >::";
@@ -502,7 +361,7 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
 
 //       ++generator.fMethodCounter;
 
-      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().Is(gNAMESPACE))) {
+      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().Is(gNamespace))) {
          generator.AddIntoShadow("}\n");        // End of top namespace
       }
 
@@ -510,12 +369,8 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
       this->ScopeBase::GenerateDict(generator);
 
 
-      if (!(ThisType().DeclaringScope().IsClass())) {
+      if (!ThisType().DeclaringScope().Is(gClassOrStruct)) {
          generator.AddIntoShadow("};\n");
-      }
-
-
-      if (!(ThisType().DeclaringScope().IsClass())) {
          generator.AddIntoFree(";\n}\n");
       }
 

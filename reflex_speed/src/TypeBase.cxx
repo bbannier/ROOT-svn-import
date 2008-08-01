@@ -38,7 +38,7 @@ Reflex::Internal::TypeBase::TypeBase(const char * nam,
                                      const Type & finalType,
                                      const Catalog* catalog)
    : fTypeInfo(&ti),
-     fModifiers(modifiers),
+     fTypeModifiers(modifiers),
      fScope(Scope::__NIRVANA__()),
      fSize(size),
      fTypeType(typeTyp),

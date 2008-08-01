@@ -139,7 +139,7 @@ const Reflex::OrderedContainer<Reflex::Type>
 Reflex::Type::FunctionParameters() const {
 //-------------------------------------------------------------------------------
    if (* this) return fTypeName->ToTypeBase()->FunctionParameters();
-   return &Dummy::EmptyContainer();
+   return Dummy::EmptyContainer();
 }
 
 
@@ -342,7 +342,7 @@ const Reflex::OrderedContainer<Reflex::TemplateArgument>
 Reflex::Type::TemplateArguments() const {
 //-------------------------------------------------------------------------------
    if (* this) return fTypeName->ToTypeBase()->TemplateArguments();
-   return &Dummy::EmptyContainer();
+   return Dummy::EmptyContainer();
 }
 
 

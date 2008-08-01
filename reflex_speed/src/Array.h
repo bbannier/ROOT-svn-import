@@ -33,6 +33,7 @@ namespace Internal {
 
       /** default constructor */
       Array(const Type & arrayType,
+         unsigned int modifiers,
          size_t len,
          const std::type_info & typeinfo);
 
@@ -42,11 +43,11 @@ namespace Internal {
 
 
       /**
-      * Name will return the string representation of the array At
-      * @param  typedefexp expand typedefs or not
-      * @return string representation of At
+      * Name returns the name of the type
+      * @param buf preallocated buffer to work on when calculating the name
+      * @return name of type
       */
-      std::string Name(unsigned int mod = 0) const;
+      virtual const std::string& Name(std::string& buf, unsigned int mod = kScoped | kQualified) const;
 
 
       /**
@@ -64,9 +65,12 @@ namespace Internal {
 
 
       /** static funtion that composes the At Name */
-      static std::string BuildTypeName(const Type & typ, 
-         size_t len,
-         unsigned int mod = kScoped | kQualified);
+      static std::string BuildTypeNameSuffix(Type arraytype, size_t len);
+
+      /** static funtion that composes the At Name */
+      static std::string BuildTypeName(Type arraytype, size_t len) {
+         return arraytype.FinalType().Name() + BuildTypeNameSuffix(arraytype, len);
+      }
 
    private:
 
@@ -82,6 +86,10 @@ namespace Internal {
 
       /** the Length of the array */
       size_t fLength;
+
+      /** trailing name string representing the array size */
+      mutable
+         std::string fNameArraySizeSuffix;
 
    }; // class Array
 } //namespace Internal

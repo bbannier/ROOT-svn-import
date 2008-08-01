@@ -60,7 +60,6 @@ namespace Internal {
       */
       static void CleanUp();
 
-
       /*
       * DeleteTypeTemplate will remove the dictionary information
       * of one type template from memory
@@ -72,14 +71,7 @@ namespace Internal {
       * Name will return the name of the type template
       * @return name of type template
       */
-      std::string Name(unsigned int mod) const;
-
-
-      /**
-      * Name_c_str will return a char * pointer to the type template name
-      * @return type template name as char *
-      */
-      const char * Name_c_str() const;
+      const std::string& Name(std::string& buf, unsigned int mod) const;
 
 
       /**
@@ -90,46 +82,11 @@ namespace Internal {
 
 
       /**
-      * TypeTemplateAt will return the nth type template defined
-      * @param nth type template
-      * @return nth type template
+      * TypeTemplates returns collection of defined templates
+      * @return type templates
       */
-      static TypeTemplate TypeTemplateAt(size_t nth);
+      static const IContainerImpl& TypeTemplates();
 
-
-      /**
-      * TypeTemplateSize will return the number of type templates defined
-      * @return number of defined type templates
-      */
-      static size_t TypeTemplateSize();
-
-
-      /**
-      * TypeTemplate_Begin returns the begin iterator of the type template container
-      * @return begin iterator of type template container
-      */
-      static TypeTemplate_Iterator TypeTemplate_Begin();
-
-
-      /**
-      * TypeTemplate_End returns the end iterator of the type template container
-      * @return end iterator of type template container
-      */
-      static TypeTemplate_Iterator TypeTemplate_End();
-
-
-      /**
-      * TypeTemplate_Rbegin returns the rbegin iterator of the type template container
-      * @return rbegin iterator of type template container
-      */
-      static Reverse_TypeTemplate_Iterator TypeTemplate_RBegin();
-
-
-      /**
-      * TypeTemplate_Rend returns the rend iterator of the type template container
-      * @return rend iterator of type template container
-      */
-      static Reverse_TypeTemplate_Iterator TypeTemplate_REnd();
 
    private:
 
@@ -169,13 +126,5 @@ namespace Internal {
 } // namespace Internal
 } // namespace Reflex
 
-
-
-//-------------------------------------------------------------------------------
-inline const char *
-Reflex::Internal::TypeTemplateName::Name_c_str() const {
-//-------------------------------------------------------------------------------
-   return fName.c_str();
-}
 
 #endif // Reflex_TypeTemplateName

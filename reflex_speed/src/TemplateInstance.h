@@ -17,7 +17,10 @@
 #include "Reflex/Type.h"
 #include "Reflex/TemplateArgument.h"
 
+#include "ContainerSTLAdaptor.h"
+
 namespace Reflex {
+   namespace Internal {
 
    // forward declarations
 
@@ -32,7 +35,7 @@ namespace Reflex {
    public:
 
       /** default constructor */
-      TemplateInstance();
+      TemplateInstance(): fTemplateArgumentsAdaptor(fTemplateArguments) {}
 
 
       /** constructor */
@@ -44,21 +47,21 @@ namespace Reflex {
 
 
       /**
-      * Name returns the full Name of the templated collection
-      * @param  typedefexp expand typedefs or not
-      * @return full Name of template collection
+      * Name returns the name of the type
+      * @param buf preallocated buffer to work on when calculating the name
+      * @return name of type
       */
-      std::string Name(unsigned int mod = kScoped | kQualified) const;
+      virtual const std::string& Name(std::string& buf, unsigned int mod = kScoped | kQualified) const;
 
 
       /**
       * TemplateArguments returns an ordered collection of the template arguments
       * @return reflection information of template arguments
       */
-      const OrderedContainer<TemplateArgument>& TemplateArguments() const;
+      virtual const IContainerImpl& TemplateArguments() const;
 
 
-   private:
+   protected:
 
       /** 
       * vector of template arguments 
@@ -67,17 +70,15 @@ namespace Reflex {
       * @supplierCardinality 1
       * @clientCardinality 1..*
       */
-      mutable
-         std::vector < TemplateArgument > fTemplateArguments;
+      std::vector < TemplateArgument > fTemplateArguments;
+
+      /** adaptor for IContainerImpl **/
+      ContainerSTLAdaptor< std::vector < TemplateArgument > > fTemplateArgumentsAdaptor;
 
    }; // class TemplateInstance
 
+} // namespace Internal
 } // namespace Reflex
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::TemplateInstance::TemplateInstance() {}
-//-------------------------------------------------------------------------------
 
 
 #endif // Reflex_TemplateInstance

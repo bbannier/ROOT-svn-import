@@ -89,13 +89,13 @@ Reflex::FunctionBuilderImpl::FunctionBuilderImpl(const char * nam,
       declScope = "";
    }
 
-   Scope sc = Scope::ByName(declScope);
+   Scope sc = Scope::Scopes().ByName(declScope);
    if (! sc) {
       // Let's create the namespace here
       sc = (new Internal::Namespace(declScope.c_str()))->ThisScope();
    }
 
-   if (! sc.IsNamespace()) throw RuntimeError("Declaring scope is not a namespace");
+   if (! sc.Is(gNamespace)) throw RuntimeError("Declaring scope is not a namespace");
    if (Tools::IsTemplated(funcName.c_str()))
       fFunction = Member(new Internal::FunctionMemberTemplateInstance(funcName.c_str(),
                                                               typ,
@@ -110,7 +110,7 @@ Reflex::FunctionBuilderImpl::FunctionBuilderImpl(const char * nam,
                                               stubCtx, 
                                               params, 
                                               modifiers));
-   sc.AddFunctionMember(fFunction);
+   sc.AddMember(fFunction);
 }
 
 
@@ -171,12 +171,12 @@ Reflex::FunctionBuilder::FunctionBuilder(const Type & typ,
       funcName  = nam;
       declScope = "";
    }
-   Scope sc = Scope::ByName(declScope);
+   Scope sc = Scope::Scopes().ByName(declScope);
    if (! sc) {
       // Let's create the namespace here
       sc = (new Internal::Namespace(declScope.c_str()))->ThisScope();
    }
-   if (! sc.IsNamespace()) throw RuntimeError("Declaring scope is not a namespace");
+   if (! sc.Is(gNamespace)) throw RuntimeError("Declaring scope is not a namespace");
    if (Tools::IsTemplated(funcName.c_str()))
       fFunction = Member(new Internal::FunctionMemberTemplateInstance(funcName.c_str(),
                                                               typ,
@@ -191,6 +191,6 @@ Reflex::FunctionBuilder::FunctionBuilder(const Type & typ,
                                                stubCtx, 
                                                params, 
                                                modifiers));
-   sc.AddFunctionMember(fFunction);
+   sc.AddMember(fFunction);
 }
 

@@ -18,6 +18,7 @@
 #include "Reflex/Scope.h"
 
 #include "TemplateInstance.h"
+#include "TypeTemplateImpl.h"
 #include "Reflex/Tools.h"
 
 #include <vector>
@@ -53,11 +54,11 @@ ClassTemplateInstance(const char * typ,
 //       }
 //    }
 
-   fTemplateFamily = TypeTemplate::ByName(templateName, TemplateArgumentSize());
+   fTemplateFamily = TypeTemplate::ByName(templateName, fTemplateArguments.size());
 
    if (! fTemplateFamily) {
-      std::vector < std::string > parameterNames = std::vector < std::string > ();
-      for (size_t i = 65; i < 65 + TemplateArgumentSize(); ++i) {
+      std::vector < std::string > parameterNames(fTemplateArguments.size());
+      for (size_t i = 65; i < 65 + fTemplateArguments.size(); ++i) {
          parameterNames.push_back("typename " + char(i));      
       }
       TypeTemplateImpl * tti = new TypeTemplateImpl(templateName.c_str(),
@@ -70,30 +71,3 @@ ClassTemplateInstance(const char * typ,
    fTemplateFamily.AddTemplateInstance((Type)(*this));
 }
 
-
-//-------------------------------------------------------------------------------
-std::string
-Reflex::Internal::ClassTemplateInstance::Name(unsigned int mod) const {
-//-------------------------------------------------------------------------------
-// Return the name of the template class.
-   return Class::Name(mod);
-}
-
-
-//-------------------------------------------------------------------------------
-const std::string&
-Reflex::Internal::ClassTemplateInstance::SimpleName(size_t & pos, 
-                                                                    unsigned int mod) const {
-//-------------------------------------------------------------------------------
-// Return the name of the template class.
-   return Class::SimpleName(pos, mod);
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Type
-Reflex::Internal::ClassTemplateInstance::TemplateArgumentAt(size_t nth) const {
-//-------------------------------------------------------------------------------
-// Return the nth template argument type.
-   return TemplateInstance::TemplateArgumentAt(nth);
-}

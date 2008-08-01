@@ -233,7 +233,7 @@ namespace Reflex {
 
       /**
       * Check whether the entity property is set for the type. You can
-      * combine checks, e.g. t.Is(gClass && gPUBLIC)
+      * combine checks, e.g. t.Is(gClass && gPublic)
       * @param descr the entity property to check for; see EntityProperty.
       * @return whether descr is set.
       */
@@ -271,7 +271,7 @@ namespace Reflex {
       /**
       * Name returns the name of the type 
       * @param  mod qualifiers can be or'ed 
-      *   FINAL     - resolve typedefs
+      *   kFinal     - resolve typedefs
       *   kScoped    - fully scoped name 
       *   kQualified - cv, reference qualification 
       * @return name of the type
@@ -283,7 +283,7 @@ namespace Reflex {
       * Name returns the name of the type
       * @param  buf buffer to be used for calculating name
       * @param  mod qualifiers can be or'ed 
-      *   FINAL     - resolve typedefs
+      *   kFinal     - resolve typedefs
       *   kScoped    - fully scoped name 
       *   kQualified - cv, reference qualification 
       * @return name of the type
@@ -354,6 +354,8 @@ namespace Reflex {
       * @return number of currently defined types
       */
       static const Container<Type> Types();
+
+      static Type ByName(const std::string& name) { return Types().ByName(name); }
 
 
       /**
