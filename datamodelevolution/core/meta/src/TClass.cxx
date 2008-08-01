@@ -4526,6 +4526,16 @@ TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, Int
 {
    // Find the streamer info for the foreign class
 
+   //---------------------------------------------------------------------------
+   // Check if the classname was specified correctly
+   //---------------------------------------------------------------------------
+   if( std::string( classname ) == std::string( GetName() ) )
+      return GetStreamerInfo( version );
+
+   TClass *cl = TClass::GetClass( classname );
+   if( !cl )
+      return 0;
+
    //----------------------------------------------------------------------------
    // Check if we already have it
    //----------------------------------------------------------------------------
@@ -4542,18 +4552,13 @@ TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, Int
       (*fForeignStreamerInfo)[classname] = arr;       
    }
 
-   if( version > -1 && version < arr->GetSize() )
+   if( version > -1 && version < arr->GetSize() && arr->At( version ) )
       return (TVirtualStreamerInfo*) arr->At( version );
 
    //----------------------------------------------------------------------------
    // We don't have the streamer info so find it in other class
    //----------------------------------------------------------------------------
-   TVirtualStreamerInfo* info;
-   TClass *cl = TClass::GetClass( classname );
-   if( !cl )
-      return 0;
-
-   info = cl->GetStreamerInfo( version );
+   TVirtualStreamerInfo* info = cl->GetStreamerInfo( version );
 
    if( !info )
       return 0;
@@ -4581,6 +4586,16 @@ TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, UIn
 {
    // Find the streamer info from the foreign class
 
+   //---------------------------------------------------------------------------
+   // Check if the classname was specified correctly
+   //---------------------------------------------------------------------------
+   if( std::string( classname ) == std::string( GetName() ) )
+      return FindStreamerInfo( checksum );
+
+   TClass *cl = TClass::GetClass( classname );
+   if( !cl )
+      return 0;
+
    //----------------------------------------------------------------------------
    // Check if we already have it
    //----------------------------------------------------------------------------
@@ -4606,10 +4621,6 @@ TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, UIn
    //----------------------------------------------------------------------------
    // Get it from the foreign class
    //----------------------------------------------------------------------------
-   TClass *cl = TClass::GetClass( classname );
-   if( !cl )
-      return 0;
-
    info = cl->FindStreamerInfo( checksum );
 
    if( !info )
