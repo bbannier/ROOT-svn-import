@@ -312,6 +312,10 @@ namespace ROOT
             output << (*it).second << "\");\n";
          }
          output << "      " << "char *onfile_add = (char*)oldObj->GetObject();\n";
+         output << "      " << "if (onfile_add==0) {\n";
+         output << "      " << "   ::Error(\"IO Rule function\",\"Onfile object missing for a rule for " << className << "\");\n";
+         output << "      " << "   return;\n";
+         output << "      " << "}\n";
          output << "      " << className << "_Onfile onfile( \n";
        
          for( start = true, it = source.begin(); it != source.end(); ++it ) {
