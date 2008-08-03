@@ -1081,6 +1081,17 @@ void TStreamerInfo::BuildOld()
    TClass *allocClass = 0;
 
    while ((element = (TStreamerElement*) next())) {
+      if (element->IsA()==TStreamerArtificial::Class() 
+          || element->TestBit(TStreamerElement::kCache) ) 
+      {
+         // Prevent BuildOld from modifying existing ArtificialElement (We need to review when and why BuildOld 
+         // needs to be re-run; it might be needed if the 'current' class change (for example from being an onfile 
+         // version to being a version loaded from a shared library) and we thus may have to remove the artifical 
+         // element at the beginning of BuildOld)
+
+         continue;
+      };
+
       element->SetNewType(element->GetType());
       element->Init();
 
@@ -2572,7 +2583,15 @@ void TStreamerInfo::ls(Option_t *option) const
    if (fElements) fElements->ls(option);
    for (Int_t i=0;i < fNdata;i++) {
       TStreamerElement *element = (TStreamerElement*)fElem[i];
-      Printf("   i=%2d, %-15s type=%3d, offset=%3d, len=%d, method=%ld, cached=%d",i,element->GetName(),fType[i],fOffset[i],fLength[i],fMethod[i],element->TestBit(TStreamerElement::kCache));
+      TString sequenceType;
+      if (element->TestBit(TStreamerElement::kCache) && element->TestBit(TStreamerElement::kRepeat)) {
+         sequenceType = " [cached,repeat]";
+      } else if (element->TestBit(TStreamerElement::kCache)) {
+         sequenceType = " [cached]";
+      } else if (element->TestBit(TStreamerElement::kRepeat)) {
+         sequenceType = " [repeat]";
+      }
+      Printf("   i=%2d, %-15s type=%3d, offset=%3d, len=%d, method=%ld%s",i,element->GetName(),fType[i],fOffset[i],fLength[i],fMethod[i],sequenceType.Data());
    }
 }
 
