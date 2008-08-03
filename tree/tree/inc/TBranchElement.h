@@ -29,9 +29,12 @@
 #include "TClassRef.h"
 #endif
 
+#include <vector>
+
 class TFolder;
 class TStreamerInfo;
 class TVirtualCollectionProxy;
+class TVirtualArray;
 
 class TBranchElement : public TBranch {
 
@@ -42,7 +45,9 @@ class TBranchElement : public TBranch {
 protected:
    enum {
       kBranchFolder = BIT(14),
-      kDeleteObject = BIT(16)               //  We are the owner of fObject.
+      kDeleteObject = BIT(16),  //  We are the owner of fObject.
+      kCache        = BIT(18),  //  Need to pushd/pop fOnfileObject.
+      kOwnOnfileObj = BIT(19)   //  We are the owner of fOnfileObject.
    };
 
 // Data Members
@@ -54,6 +59,7 @@ protected:
    UInt_t                   fCheckSum;      //  CheckSum of class
    Int_t                    fClassVersion;  //  Version number of class
    Int_t                    fID;            //  element serial number in fInfo
+   std::vector<Int_t>       fIDs;           //! List of the serial number of all the StreamerInfo to be used.
    Int_t                    fType;          //  branch type
    Int_t                    fStreamerType;  //  branch streamer type
    Int_t                    fMaximum;       //  Maximum entries for a TClonesArray or variable array
@@ -63,6 +69,7 @@ protected:
    TBranchElement          *fBranchCount2;  //  pointer to secondary branchcount branch
    TStreamerInfo           *fInfo;          //! Pointer to StreamerInfo
    char                    *fObject;        //! Pointer to object at *fAddress
+   TVirtualArray           *fOnfileObject;  //! Place holder for the onfile representation of data members.
    Bool_t                   fInit;          //! Initialization flag for branch assignment
    Bool_t                   fInitOffsets;   //! Initialization flag to not endlessly recalculate offsets
    TClassRef                fCurrentClass;  //! Reference to current (transient) class definition
