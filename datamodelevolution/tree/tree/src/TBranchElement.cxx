@@ -56,8 +56,8 @@ namespace {
       }
    }
    struct R__PushCache {
-      TVirtualArray *fOnfileObject;
       TBufferFile &fBuffer;
+      TVirtualArray *fOnfileObject;
 
       R__PushCache(TBufferFile &b, TVirtualArray *in) : fBuffer(b), fOnfileObject(in) { 
          if (fOnfileObject) fBuffer.PushDataCache( fOnfileObject ); 
@@ -2559,7 +2559,7 @@ void TBranchElement::Print(Option_t* option) const
       if (fID>=0) {
          ULong_t* elems = GetInfo()->GetElems();
          ((TStreamerElement*) elems[fID])->ls();
-         for(Int_t i=0; i< fIDs.size(); ++i) {
+         for(UInt_t i=0; i< fIDs.size(); ++i) {
             ((TStreamerElement*) elems[fIDs[i]])->ls();
          }
       }
@@ -3004,12 +3004,12 @@ void TBranchElement::ReadLeaves(TBuffer& b)
       TVirtualCollectionProxy::TPushPop helper(GetCollectionProxy(), fObject);
       if( fSplitLevel >= 100 ) {
          info->ReadBufferSTLPtrs(b, GetCollectionProxy(), fNdata, fID, fOffset);
-         for(Int_t ii=0; ii < fIDs.size(); ++ii) {
+         for(UInt_t ii=0; ii < fIDs.size(); ++ii) {
             info->ReadBufferSTLPtrs(b, GetCollectionProxy(), fNdata, fIDs[ii], fOffset);
          }
       } else {
          info->ReadBufferSTL(b, GetCollectionProxy(), fNdata, fID, fOffset);
-         for(Int_t ii=0; ii < fIDs.size(); ++ii) {
+         for(UInt_t ii=0; ii < fIDs.size(); ++ii) {
             info->ReadBufferSTL(b, GetCollectionProxy(), fNdata, fIDs[ii], fOffset);
          }
       }
@@ -3049,7 +3049,7 @@ void TBranchElement::ReadLeaves(TBuffer& b)
       }
       TStreamerInfo *info = GetInfo();
       info->ReadBufferClones(b, clones, fNdata, fID, fOffset);
-      for(Int_t ii=0; ii < fIDs.size(); ++ii) {
+      for(UInt_t ii=0; ii < fIDs.size(); ++ii) {
          info->ReadBufferClones(b, clones, fNdata, fIDs[ii], fOffset);
       }
    } else if (fType <= 2) {
@@ -3064,7 +3064,7 @@ void TBranchElement::ReadLeaves(TBuffer& b)
          return;
       }
       info->ReadBuffer(b, (char**) &fObject, fID);
-      for(Int_t ii=0; ii < fIDs.size(); ++ii) {
+      for(UInt_t ii=0; ii < fIDs.size(); ++ii) {
          info->ReadBuffer(b, (char**) &fObject, fIDs[ii]);
       }
       if (fStreamerType == TVirtualStreamerInfo::kCounter) {

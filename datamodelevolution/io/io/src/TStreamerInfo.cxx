@@ -112,6 +112,7 @@ static void R__TObjArray_InsertAt(TObjArray *arr, TObject *obj, Int_t at)
    arr->AddAt( obj, at);
 }
 
+#if 0
 static void R__TObjArray_InsertAfter(TObjArray *arr, TObject *newobj, TObject *oldobj)
 {
    // Slide by one.
@@ -125,6 +126,7 @@ static void R__TObjArray_InsertAfter(TObjArray *arr, TObject *newobj, TObject *o
    }
    R__TObjArray_InsertAt(arr, newobj, at);
 }
+#endif
 
 static void R__TObjArray_InsertBefore(TObjArray *arr, TObject *newobj, TObject *oldobj)
 {
