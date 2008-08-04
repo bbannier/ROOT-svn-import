@@ -68,6 +68,6 @@ ClassTemplateInstance(const char * typ,
       s.AddSubTypeTemplate(fTemplateFamily);
    }
   
-   fTemplateFamily.AddTemplateInstance((Type)(*this));
+   fTemplateFamily.AddTemplateInstance(TypeBase::operator Type());
 }
 

@@ -14,6 +14,7 @@
 #endif
 
 #include "Reflex/Version.h"
+#include <stdlib.h>
 
 //-------------------------------------------------------------------------------
 unsigned int

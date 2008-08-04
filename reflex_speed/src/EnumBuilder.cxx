@@ -34,7 +34,7 @@ Reflex::EnumBuilder::EnumBuilder(const char * nam,
 Reflex::EnumBuilder::~EnumBuilder() {
 //-------------------------------------------------------------------------------
 // Destructor of enum builder. Used for call back functions.
-   FireClassCallback(*fEnum);
+   FireClassCallback(fEnum->TypeBase::operator Type());
 }
 
 
