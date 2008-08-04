@@ -33,7 +33,8 @@ MATHCOREDH1  := $(MODDIRI)/TComplex.h \
                 $(MODDIRI)/TRandom.h \
                 $(MODDIRI)/TRandom1.h \
                 $(MODDIRI)/TRandom2.h \
-                $(MODDIRI)/TRandom3.h
+                $(MODDIRI)/TRandom3.h \
+                $(MODDIRI)/TKDTree.h
 MATHCOREDH2  := $(MODDIRI)/Math/SpecFuncMathCore.h \
                 $(MODDIRI)/Math/DistFuncMathCore.h \
                 $(MODDIRI)/Math/IParamFunction.h \
@@ -132,14 +133,14 @@ distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -f $(MATHCOREDEP) $(MATHCOREDS) $(MATHCOREDH) \
 		   $(MATHCORELIB) $(MATHCOREMAP)
 		@rm -rf include/Math include/Fit
-		@cd $(MATHCOREDIR)/test; make distclean
-		@cd $(MATHCOREDIR)/test/fit; make distclean
+		@cd $(MATHCOREDIR)/test; $(MAKE) distclean
+		@cd $(MATHCOREDIR)/test/fit; $(MAKE) distclean
 
 distclean::     distclean-$(MODNAME)
 
 test-$(MODNAME): all-$(MODNAME)
-		@cd $(MATHCOREDIR)/test; make
-		@cd $(MATHCOREDIR)/test/fit; make
+		@cd $(MATHCOREDIR)/test; $(MAKE)
+		@cd $(MATHCOREDIR)/test/fit; $(MAKE)
 
 ##### extra rules ######
 $(MATHCOREO): CXXFLAGS += -DUSE_ROOT_ERROR

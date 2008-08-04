@@ -45,6 +45,7 @@ XrdProofdClient::XrdProofdClient(XrdProofUI ui, bool master, bool changeown,
    fUNIXSockSaved = 0;
    fROOT = 0;
    fIsValid = 0;
+   fAskedToTouch = 0;
    fChangeOwn = changeown;
 
    // Make sure the admin path exists
@@ -96,7 +97,7 @@ int XrdProofdClient::GetClientID(XrdProofdProtocol *p)
    {  XrdSysMutexHelper mh(fMutex);
       // Search for free places in the existing vector
       for (ic = 0; ic < (int)fClients.size() ; ic++) {
-         if (!fClients[ic]) {
+         if (fClients[ic] && !fClients[ic]->IsValid()) {
             cid = fClients[ic];
             cid->Reset();
             break;
@@ -370,9 +371,10 @@ XrdProofdProofServ *XrdProofdClient::GetFreeServObj()
          newsz = 2 * fProofServs.capacity();
          fProofServs.reserve(newsz);
       }
-
-      // Allocate new element
-      fProofServs.push_back(new XrdProofdProofServ());
+      if (ic >= (int)fProofServs.size()) {
+         // Allocate new element
+         fProofServs.push_back(new XrdProofdProofServ());
+      }
       sz = fProofServs.size();
 
       xps = fProofServs[ic];
@@ -521,6 +523,25 @@ void XrdProofdClient::EraseServer(int psid)
 }
 
 //______________________________________________________________________________
+void XrdProofdClient::CheckServerSlots()
+{
+   // Free slots corresponding to invalid server instances
+   XPDLOC(CMGR, "Client::CheckServerSlots")
+
+   XrdSysMutexHelper mh(fMutex);
+
+   std::vector<XrdProofdProofServ *>::iterator ip;
+   for (ip = fProofServs.begin(); ip != fProofServs.end(); ++ip) {
+      TRACE(DBG, "found: " << *ip);
+      if (*ip && !(*ip)->IsValid()) {
+         fProofServs.erase(ip);
+         break;
+      }
+   }
+}
+
+
+//______________________________________________________________________________
 int XrdProofdClient::GetTopProofServ()
 {
    // Return the number of valid proofserv topmaster sessions in the list
@@ -629,11 +650,25 @@ void XrdProofdClient::Broadcast(const char *msg)
 }
 
 //______________________________________________________________________________
-void XrdProofdClient::Touch()
+int XrdProofdClient::Touch(bool reset)
 {
    // Send a touch the connected clients: this will remotely touch the associated
-   // TSocket instance and schedule an asynchronous touch of the client admin file
+   // TSocket instance and schedule an asynchronous touch of the client admin file.
+   // This request is only sent once per client: this is controlled by the flag
+   // fAskedToTouch, whcih can reset to FALSE by calling this function with reset
+   // TRUE.
+   // Return 0 if the request is sent or if asked to reset.
+   // Retunn 1 if the request was already sent.
 
+   // If we are asked to reset, just do that and return
+   if (reset) {
+      fAskedToTouch = 0;
+      return 0;
+   }
+
+   // If already asked to touch say it by return 1
+   if (fAskedToTouch) return 1;
+   
    // Notify the attached clients
    int ic = 0;
    XrdClientID *cid = 0;
@@ -647,10 +682,14 @@ void XrdProofdClient::Touch()
          }
       }
    }
+   // Do it only once a time
+   fAskedToTouch = 1;
+   // Done 
+   return 0;
 }
 
 //______________________________________________________________________________
-bool XrdProofdClient::VerifySession(XrdProofdProofServ *xps)
+bool XrdProofdClient::VerifySession(XrdProofdProofServ *xps, XrdProofdResponse *r)
 {
    // Quick verification of session 'xps' to avoid attaching clients to
    // non responding sessions. We do here a sort of loose ping.
@@ -687,6 +726,7 @@ bool XrdProofdClient::VerifySession(XrdProofdProofServ *xps)
       }
       // Wait for the action for fgMgr->SessionMgr()->VerifyTimeOut() secs,
       // checking every 1 sec
+      XrdOucString notmsg;
       struct stat st1;
       int ns = 10;
       while (ns--) {
@@ -698,6 +738,10 @@ bool XrdProofdClient::VerifySession(XrdProofdProofServ *xps)
          // Wait 1 sec
          TRACE(HDBG, "waiting "<<ns<<" secs for session "<<pid<<
                      " to touch the admin path");
+         if (r && ns == 5) {
+            notmsg.form("verifying existing sessions, %d seconds ...", ns);
+            r->Send(kXR_attn, kXPD_srvmsg, 0, (char *) notmsg.c_str(), notmsg.length());
+         }
          sleep(1);
       }
    }
@@ -708,7 +752,7 @@ bool XrdProofdClient::VerifySession(XrdProofdProofServ *xps)
 
 //______________________________________________________________________________
 void XrdProofdClient::SkipSessionsCheck(std::list<XrdProofdProofServ *> *active,
-                                        XrdOucString &emsg)
+                                        XrdOucString &emsg, XrdProofdResponse *r)
 {
    // Skip the next sessions status check. This is used, for example, when
    // somebody has shown interest in these sessions to give more time for the
@@ -720,7 +764,7 @@ void XrdProofdClient::SkipSessionsCheck(std::list<XrdProofdProofServ *> *active,
    std::vector<XrdProofdProofServ *>::iterator ip;
    for (ip = fProofServs.begin(); ip != fProofServs.end(); ++ip) {
       if ((xps = *ip) && xps->IsValid() && (xps->SrvType() == kXPD_TopMaster)) {
-         if (VerifySession(xps)) {
+         if (VerifySession(xps, r)) {
             xps->SetSkipCheck(); // Skip next validity check
             if (active) active->push_back(xps);
          } else {
@@ -743,7 +787,8 @@ void XrdProofdClient::SkipSessionsCheck(std::list<XrdProofdProofServ *> *active,
 }
 
 //______________________________________________________________________________
-XrdOucString XrdProofdClient::ExportSessions(XrdOucString &emsg)
+XrdOucString XrdProofdClient::ExportSessions(XrdOucString &emsg,
+                                             XrdProofdResponse *r)
 {
    // Return a string describing the existing sessions
 
@@ -751,7 +796,7 @@ XrdOucString XrdProofdClient::ExportSessions(XrdOucString &emsg)
 
    // Protect from next session check and get the list of actives
    std::list<XrdProofdProofServ *> active;
-   SkipSessionsCheck(&active, emsg);
+   SkipSessionsCheck(&active, emsg, r);
 
    // Fill info
    XrdProofdProofServ *xps = 0;

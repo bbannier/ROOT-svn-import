@@ -339,13 +339,14 @@ int XrdProofConn::TryConnect()
       fConnected = 0;
       return -1;
    }
-   TRACE(DBG, "connect to "<<URLTAG<<" returned "<<logid );
 
    // Set some vars
    fLogConnID = logid;
    fStreamid = fgConnMgr->GetConnection(fLogConnID)->Streamid();
    fPhyConn = fgConnMgr->GetConnection(fLogConnID)->GetPhyConnection();
    fConnected = 1;
+
+   TRACE(DBG, "connect to "<<URLTAG<<" returned {"<<fLogConnID<<", "<< fStreamid<<"}");
 
    // Fill in the remote protocol: either it was received during handshake
    // or it was saved in the underlying physical connection
@@ -1289,8 +1290,6 @@ XrdSecProtocol *XrdProofConn::Authenticate(char *plist, int plsiz)
             // Print error msg, if any
             if (GetLastErr())
                TRACE(XERR, fHost << ": "<< GetLastErr());
-            protocol->Delete();
-            protocol = 0;
             protocol->Delete();
             protocol = 0;
          }
