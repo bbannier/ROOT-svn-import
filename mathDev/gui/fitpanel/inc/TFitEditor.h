@@ -81,6 +81,7 @@ protected:
    TGCheckButton       *fBestErrors;       // switch on/off option 'improve errors'
    TGCheckButton       *fUseRange;         // switch on/off option 'use function range'
    TGCheckButton       *fAdd2FuncList;     // switch on/off option 'add to list'
+   TGCheckButton       *fUseGradient ;     // switch on/off option 'use gradient'
    TGCheckButton       *fAllWeights1;      // switch on/off option 'all weights=1'
    TGCheckButton       *fImproveResults;   // switch on/off option 'improve fit results'
    TGCheckButton       *fEmptyBinsWghts1;  // switch on/off option 'include empry bins'
