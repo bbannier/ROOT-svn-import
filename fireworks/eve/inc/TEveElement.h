@@ -250,7 +250,7 @@ public:
 
    TRef&    GetSource()                 { return fSource; }
    TObject* GetSourceObject()     const { return fSource.GetObject(); }
-   void     SetSourceObject(TObject* o) { fSource.SetObject(o); }
+   void     SetSourceObject(TObject* o) { fSource = o; }
    /*
      void DumpSourceObject();    // *MENU*
      void InspectSourceObject(); // *MENU*
