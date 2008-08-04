@@ -37,10 +37,8 @@
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::ScopeBase::ScopeBase(const char * scope,
-                                       unsigned int modifiers,
                                        ETYPE scopeType)
-   : fScopeModifiers(modifiers),
-     fScopeName(0),
+   : fScopeName(0),
      fScopeType(scopeType),
      fPropertyList(OwnedPropertyList(new PropertyListImpl())),
      fBasePosition(Tools::GetBasePosition(scope)) {
@@ -142,7 +140,7 @@ Reflex::Internal::ScopeBase::operator Reflex::Type () const {
 
 //-------------------------------------------------------------------------------
 Reflex::Member
-Reflex::Internal::ScopeBase::FunctionMemberByNameAndSignature(const std::string & name,
+Reflex::Internal::ScopeBase::FunctionMemberByName(const std::string & name,
                                                const Type & signature,
                                                unsigned int modifiers_mask) const {
 //-------------------------------------------------------------------------------
@@ -249,6 +247,20 @@ Reflex::Internal::ScopeBase::Properties() const {
 //-------------------------------------------------------------------------------
    // Return property list attached to this scope.
    return fPropertyList;
+}
+
+
+//-------------------------------------------------------------------------------
+const std::string &
+Reflex::Internal::ScopeBase::SimpleName(size_t & pos, 
+                                       unsigned int mod) const {
+//-------------------------------------------------------------------------------
+// Return the name of the type.
+   if (mod & kScoped)
+      pos = 0;
+   else
+      pos = fBasePosition;
+   return fScopeName->Name();
 }
 
 
@@ -376,11 +388,10 @@ Reflex::Internal::ScopeBase::AddSubScope(const Scope & subscope) const {
 //-------------------------------------------------------------------------------
 void
 Reflex::Internal::ScopeBase::AddSubScope(const char * scope,
-                                         unsigned int modifiers,
                                          ETYPE scopeType) const {
 //-------------------------------------------------------------------------------
    // Add sub scope to this scope.
-   AddSubScope(*(new ScopeBase(scope, modifiers, scopeType)));
+   AddSubScope(*(new ScopeBase(scope, scopeType)));
 }
 
 
@@ -496,7 +507,7 @@ Reflex::Internal::ScopeBase::GenerateDict(DictionaryGenerator & generator) const
    // Generate Dictionary information about itself.
 
    if (generator.Use_recursive()) {
-      for(OrdScopeUniqueCont_t::iterator iSubScope = SubScopes()->RBegin();
+      for(OrdScopeUniqueCont_t::iterator iSubScope = SubScopes().RBegin();
          iSubScope; ++iSubScope)
          iSubScope->GenerateDict(generator);
    }

@@ -268,6 +268,14 @@ namespace Internal {
 
 
 //-------------------------------------------------------------------------------
+inline size_t
+Reflex::Internal::MemberBase::FunctionParameterSize(bool required) const {
+//-------------------------------------------------------------------------------
+   return 0;
+}
+
+
+//-------------------------------------------------------------------------------
 inline Reflex::Object
 Reflex::Internal::MemberBase::Get(const Object & /* obj */) const {
 //-------------------------------------------------------------------------------
@@ -289,6 +297,14 @@ inline Reflex::Object
 Reflex::Internal::MemberBase::Invoke(const std::vector < void * > & /* paramList */) const {
 //-------------------------------------------------------------------------------
    return Object();
+}
+
+
+//-------------------------------------------------------------------------------
+inline bool
+Reflex::Internal::MemberBase::Is(const EntityProperty& prop) const {
+//-------------------------------------------------------------------------------
+   return prop.Eval(fModifiers, fMemberType);
 }
 
 

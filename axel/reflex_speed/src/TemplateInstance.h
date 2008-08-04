@@ -73,12 +73,19 @@ namespace Reflex {
       std::vector < TemplateArgument > fTemplateArguments;
 
       /** adaptor for IContainerImpl **/
-      ContainerSTLAdaptor< std::vector < TemplateArgument > > fTemplateArgumentsAdaptor;
+      const ContainerSTLAdaptor< std::vector < TemplateArgument > > fTemplateArgumentsAdaptor;
 
    }; // class TemplateInstance
 
 } // namespace Internal
 } // namespace Reflex
 
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl&
+Reflex::Internal::TemplateInstance::TemplateArguments() const {
+//-------------------------------------------------------------------------------
+   return fTemplateArgumentsAdaptor;
+}
 
 #endif // Reflex_TemplateInstance

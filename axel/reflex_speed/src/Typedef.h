@@ -101,6 +101,16 @@ namespace Internal {
 #include "Reflex/TypeTemplate.h"
 
 //-------------------------------------------------------------------------------
+inline Reflex::Object
+Reflex::Internal::Typedef::CastObject(const Type & to,
+                                      const Object & obj) const {
+//-------------------------------------------------------------------------------
+   if (ForwardStruct()) return fTypedefType.CastObject(to, obj);
+   return Dummy::Object();
+}
+
+
+//-------------------------------------------------------------------------------
 inline const std::type_info & Reflex::Internal::Typedef::TypeInfo() const {
 //-------------------------------------------------------------------------------
    if (*fTypeInfo != typeid(UnknownType)) return *fTypeInfo;

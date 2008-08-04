@@ -16,13 +16,15 @@
 #include "PointerToMember.h"
 
 #include "OwnedMember.h"
+#include "Function.h"
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::PointerToMember::PointerToMember(const Type & pointerToMemberType,
+                                                   unsigned int modifiers,
                                                     const Scope & pointerToMemberScope,
                                                     const std::type_info & ti) 
 //------------------------------------------------------------------------------- 
-   : TypeBase(BuildTypeName(pointerToMemberType, pointerToMemberScope).c_str(), sizeof(void*), kPointerToMember, ti),
+   : TypeBase(BuildTypeName(pointerToMemberType, pointerToMemberScope).c_str(), modifiers, sizeof(void*), kPointerToMember, ti),
      fPointerToMemberType(pointerToMemberType),
      fPointerToMemberScope(pointerToMemberScope) {
    // Construct dictionary info for a pointer to member type.
@@ -30,36 +32,32 @@ Reflex::Internal::PointerToMember::PointerToMember(const Type & pointerToMemberT
 
 
 //-------------------------------------------------------------------------------
-std::string
-Reflex::Internal::PointerToMember::Name(unsigned int mod) const { 
+const std::string&
+Reflex::Internal::PointerToMember::Name(std::string& buf, unsigned int mod) const { 
 //-------------------------------------------------------------------------------
 // Return the name of the pointer to member type.
-   return BuildTypeName(fPointerToMemberType, fPointerToMemberScope, mod);
+   return BuildTypeName(buf, fPointerToMemberType, fPointerToMemberScope, mod);
 }
 
 
 //-------------------------------------------------------------------------------
-std::string
-Reflex::Internal::PointerToMember::BuildTypeName(const Type & pointerToMemberType,
-                                                  const Scope & pointerToMemberScope,
-                                                  unsigned int mod) {
+const std::string&
+Reflex::Internal::PointerToMember::BuildTypeName(std::string& buf, const Type & pointerToMemberType,
+                                                 const Scope & pointerToMemberScope,
+                                                 unsigned int mod) {
 //-------------------------------------------------------------------------------
 // Build the pointer to member type name.
    if (pointerToMemberType.TypeType() == kFunction) {
 
-      std::string nam = pointerToMemberType.ReturnType().Name(mod) + " (" + 
-         pointerToMemberScope.Name(mod) + "::*)(";
-
-      Type_Iterator lastbutone = pointerToMemberType.FunctionParameter_End()-1;
-      for (Type_Iterator ti = pointerToMemberType.FunctionParameter_Begin();
-           ti != pointerToMemberType.FunctionParameter_End(); ++ti) {
-         nam += (*ti).Name(mod);
-         if (ti != lastbutone) nam += ", ";
-      }
-      nam += ")";
-      return nam;
+      return Function::BuildPointerTypeName(buf, pointerToMemberType.ReturnType(), "",
+         pointerToMemberType.FunctionParameters(), pointerToMemberType.Is(gConst) ? kConst : 0,
+         mod, pointerToMemberScope);
 
    }
-   return pointerToMemberType.Name(mod) + " " + pointerToMemberScope.Name(mod) + " ::*";
+   pointerToMemberType.Name(buf, kQualified | kScoped);
+   buf += " ";
+   pointerToMemberScope.Name(buf, mod);
+   buf += " ::*";
+   return buf;
 }
                                                           

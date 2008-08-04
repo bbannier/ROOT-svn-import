@@ -16,6 +16,8 @@
 #include "MemberTemplateImpl.h"
 
 #include "Reflex/MemberTemplate.h"
+
+#include "MemberTemplateName.h"
 #include "OwnedMember.h"
 
 
@@ -26,9 +28,10 @@ Reflex::Internal::MemberTemplateImpl::MemberTemplateImpl(const char * templateNa
                                                       const std::vector < std::string > & parameterDefaults)
 //------------------------------------------------------------------------------- 
    : fScope(scope),
-     fTemplateInstances(std::vector < Member >()),
      fParameterNames(parameterNames),
+     fParameterNamesAdaptor(fParameterNames),
      fParameterDefaults(parameterDefaults),
+     fParameterDefaultsAdaptor(fParameterDefaults),
      fReqParameters(parameterNames.size() - parameterDefaults.size()) {
 // Construct dictionary info for this template member function.
    MemberTemplate mt = MemberTemplate::ByName(templateName, parameterNames.size());
@@ -62,61 +65,6 @@ Reflex::Internal::MemberTemplateImpl::operator == (const MemberTemplateImpl & mt
 
 
 //-------------------------------------------------------------------------------
-Reflex::Member_Iterator
-Reflex::Internal::MemberTemplateImpl::TemplateInstance_Begin() const {
-//-------------------------------------------------------------------------------
-   // Return the begin iterator of the instance container of this member template.
-   return fTemplateInstances.begin();
-}
-
-                                             
-//-------------------------------------------------------------------------------
-Reflex::Member_Iterator
-Reflex::Internal::MemberTemplateImpl::TemplateInstance_End() const {
-//-------------------------------------------------------------------------------
-   // Return the end iterator of the instance container of this member template.
-   return fTemplateInstances.end();
-}
-
-                                             
-//-------------------------------------------------------------------------------
-Reflex::Reverse_Member_Iterator
-Reflex::Internal::MemberTemplateImpl::TemplateInstance_RBegin() const {
-//-------------------------------------------------------------------------------
-   // Return the rbegin iterator of the instance container of this member template.
-   return ((const std::vector<Member>&)fTemplateInstances).rbegin();
-}
-
-                                             
-//-------------------------------------------------------------------------------
-Reflex::Reverse_Member_Iterator
-Reflex::Internal::MemberTemplateImpl::TemplateInstance_REnd() const {
-//-------------------------------------------------------------------------------
-   // Return the rend iterator of the instance container of this member template.
-   return ((const std::vector<Member>&)fTemplateInstances).rend();
-}
-
-                                             
-//-------------------------------------------------------------------------------
-Reflex::Member
-Reflex::Internal::MemberTemplateImpl::TemplateInstanceAt(size_t nth) const {
-//-------------------------------------------------------------------------------
-// Return the nth template instance of this template family.
-   if (nth < fTemplateInstances.size()) return fTemplateInstances[ nth ];
-   return Dummy::Member();
-}
-
-
-//-------------------------------------------------------------------------------
-size_t
-Reflex::Internal::MemberTemplateImpl::TemplateInstanceSize() const {
-//-------------------------------------------------------------------------------
-// Return number of template instances of this family.
-   return fTemplateInstances.size();
-}
-
-
-//-------------------------------------------------------------------------------
 Reflex::MemberTemplate
 Reflex::Internal::MemberTemplateImpl::ThisMemberTemplate() const {
 //-------------------------------------------------------------------------------
@@ -130,6 +78,6 @@ void
 Reflex::Internal::MemberTemplateImpl::AddTemplateInstance(const Member & templateInstance) const {
 //-------------------------------------------------------------------------------
 // Add template instance to this family.
-   fTemplateInstances.push_back(templateInstance);
+   fTemplateInstances.Insert(templateInstance);
 }
 

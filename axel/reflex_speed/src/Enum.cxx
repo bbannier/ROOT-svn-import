@@ -42,7 +42,7 @@ Reflex::Internal::Enum::GenerateDict(DictionaryGenerator & generator) const {
 
       generator.AddIntoFree("\n.AddEnum(\"" + Name(name) + "\", \"");
 
-      for (OrdMemberCont_t::iterator i = DataMembers()->Begin(); i; ++i) {
+      for (OrdMemberCont_t::iterator i = DataMembers().Begin(); i; ++i) {
          i->GenerateDict(generator);
       }
       generator.AddIntoFree(";");
@@ -56,7 +56,7 @@ Reflex::Internal::Enum::GenerateDict(DictionaryGenerator & generator) const {
    else {
       Name(name, kScoped);
       generator.AddIntoInstances("      EnumBuilder(\"" + name + "\", typeid(" + name + "), kPublic)");
-      for (OrdMemberCont_t::iterator i = DataMembers()->Begin(); i; ++i) {
+      for (OrdMemberCont_t::iterator i = DataMembers().Begin(); i; ++i) {
          i->GenerateDict(generator);
       }
       generator.AddIntoInstances(";\n");

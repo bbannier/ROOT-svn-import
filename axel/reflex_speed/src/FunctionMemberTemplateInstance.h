@@ -53,28 +53,14 @@ namespace Internal {
       * @param  typedefexp expand typedefs or not
       * @return fully qualified Name of templated function
       */
-      std::string Name(unsigned int mod = 0) const;
+      const std::string& Name(std::string& buf, unsigned int mod = 0) const;
 
 
       /**
-      * TemplateArgumentAt will return a pointer to the nth template argument
-      * @param  nth nth template argument
-      * @return pointer to nth template argument
+      * TemplateArguments returns an ordered collection of the template arguments
+      * @return reflection information of template arguments
       */
-      Type TemplateArgumentAt(size_t nth) const;
-
-
-      /**
-      * templateArgSize will return the number of template arguments
-      * @return number of template arguments
-      */
-      size_t TemplateArgumentSize() const;
-
-
-      virtual Type_Iterator TemplateArgument_Begin() const;
-      virtual Type_Iterator TemplateArgument_End() const;
-      virtual Reverse_Type_Iterator TemplateArgument_RBegin() const;
-      virtual Reverse_Type_Iterator TemplateArgument_REnd() const;
+      const IContainerImpl& TemplateArguments() const;
 
 
       /**
@@ -110,5 +96,14 @@ Reflex::Internal::FunctionMemberTemplateInstance::TemplateFamily() const {
 //-------------------------------------------------------------------------------
    return fTemplateFamily;
 }
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl&
+Reflex::Internal::FunctionMemberTemplateInstance::TemplateArguments() const {
+//-------------------------------------------------------------------------------
+   return TemplateInstance::TemplateArguments();
+}
+
 
 #endif // Reflex_FunctionMemberTemplateInstance

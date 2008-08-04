@@ -70,21 +70,24 @@ Reflex::Type Reflex::PointerBuilder(const Type & t,
                                                  const std::type_info & ti) {
 //-------------------------------------------------------------------------------
 // Construct a pointer type.
-   const Type & ret = Type::ByName(Internal::Pointer::BuildTypeName(t));
+   std::string buf;
+   const Type & ret = Type::ByName(Internal::Pointer::BuildTypeName(buf, t));
    if (ret) return ret;
-   else       return (new Internal::Pointer(t, ti))->ThisType();
+   else       return (new Internal::Pointer(t, 0, ti))->ThisType();
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Type Reflex::PointerToMemberBuilder(const Type & t,
-                                                         const Scope & s,
-                                                         const std::type_info & ti) {
+Reflex::Type
+Reflex::PointerToMemberBuilder(const Type & t,
+                               const Scope & s,
+                               const std::type_info & ti) {
 //-------------------------------------------------------------------------------
 // Construct a pointer type.
-   const Type & ret = Type::ByName(Internal::PointerToMember::BuildTypeName(t,s));
+   std::string buf;
+   const Type & ret = Type::ByName(Internal::PointerToMember::BuildTypeName(buf, t, s));
    if (ret) return ret;
-   else       return (new Internal::PointerToMember(t, s, ti))->ThisType();
+   else       return (new Internal::PointerToMember(t, 0, s, ti))->ThisType();
 }
 
 
@@ -113,8 +116,7 @@ Reflex::Type Reflex::ArrayBuilder(const Type & t,
 //-------------------------------------------------------------------------------
 Reflex::Type Reflex::EnumTypeBuilder(const char * nam, 
                                                   const char * values,
-                                                  const std::type_info & ti,
-                                                  unsigned int modifiers) {
+                                                  const std::type_info & ti) {
 //-------------------------------------------------------------------------------
 // Construct an enum type.
 
@@ -126,7 +128,7 @@ Reflex::Type Reflex::EnumTypeBuilder(const char * nam,
       else return ret;
    }
 
-   Internal::Enum * e = new Internal::Enum(nam2.c_str(), ti, modifiers);
+   Internal::Enum * e = new Internal::Enum(nam2.c_str(), ti, 0);
 
    std::vector<std::string> valVec;
    Tools::StringSplit(valVec, values, ";");

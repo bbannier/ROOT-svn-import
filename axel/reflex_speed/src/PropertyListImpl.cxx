@@ -88,7 +88,7 @@ Reflex::Internal::PropertyListImpl::HasProperty(size_t key) const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::StdString_Iterator
+Reflex::Internal::StdString_Iterator
 Reflex::Internal::PropertyListImpl::Key_Begin() {
 //-------------------------------------------------------------------------------
    // Return begin iterator of key container
@@ -97,7 +97,7 @@ Reflex::Internal::PropertyListImpl::Key_Begin() {
 
 
 //-------------------------------------------------------------------------------
-Reflex::StdString_Iterator
+Reflex::Internal::StdString_Iterator
 Reflex::Internal::PropertyListImpl::Key_End() {
 //-------------------------------------------------------------------------------
    // Return end iterator of key container
@@ -106,7 +106,7 @@ Reflex::Internal::PropertyListImpl::Key_End() {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Reverse_StdString_Iterator
+Reflex::Internal::Reverse_StdString_Iterator
 Reflex::Internal::PropertyListImpl::Key_RBegin() {
 //-------------------------------------------------------------------------------
    // Return rbegin iterator of key container
@@ -115,7 +115,7 @@ Reflex::Internal::PropertyListImpl::Key_RBegin() {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Reverse_StdString_Iterator
+Reflex::Internal::Reverse_StdString_Iterator
 Reflex::Internal::PropertyListImpl::Key_REnd() {
 //-------------------------------------------------------------------------------
    // Return rend iterator of key container
@@ -128,7 +128,8 @@ std::string
 Reflex::Internal::PropertyListImpl::KeysAsString() {
 //-------------------------------------------------------------------------------
 // Return a string containing all property keys.
-   return Tools::StringVec2String(sKeys());
+   std::string buf;
+   return Tools::StringVec2String(buf, sKeys());
 }
 
 
@@ -213,7 +214,8 @@ Reflex::Internal::PropertyListImpl::PropertyKeys() const {
    for (size_t i = 0; i < KeySize(); ++i) {
       if (PropertyValue(i)) kv.push_back(KeyAt(i));
    }
-   return Tools::StringVec2String(kv);
+   std::string buf;
+   return Tools::StringVec2String(buf, kv);
 }
 
 

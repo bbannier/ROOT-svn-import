@@ -18,6 +18,8 @@
 #include "ScopeName.h"
 #include "Reflex/EntityProperty.h"
 #include "Namespace.h"
+#include "TypeName.h"
+#include "ScopeName.h"
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::CatalogImpl&
@@ -75,6 +77,16 @@ void Reflex::Internal::TypeCatalogImpl::Add(const Reflex::Internal::TypeName& ty
    fAllTypes.Insert(t);
    if (ti) fTypeInfoTypeMap.Insert(Internal::PairTypeInfoType(t, *ti));
 }
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Internal::TypeCatalogImpl::Remove(const TypeName& type) {
+//-------------------------------------------------------------------------------
+// Remove the type from the list of known types.
+   fAllTypes.Remove(type.ThisType());
+}
+
 
 //-------------------------------------------------------------------------------
 void Reflex::Internal::TypeCatalogImpl::UpdateTypeId(const Reflex::Internal::TypeName& type, const std::type_info & newti, 
@@ -142,9 +154,45 @@ Reflex::Internal::ScopeCatalogImpl::CleanUp() const {
 }
 
 //-------------------------------------------------------------------------------
+const Reflex::Type&
+Reflex::Internal::TypeCatalogImpl::Get(EFUNDAMENTALTYPE type) {
+//-------------------------------------------------------------------------------
+   static Type sFundamentalTypes[kNotFundamental + 1] = {
+      Catalog::Instance().ByName("char"),
+      Catalog::Instance().ByName("signed char"),
+      Catalog::Instance().ByName("short int"),
+      Catalog::Instance().ByName("long int"),
+      Catalog::Instance().ByName("unsigned char"),
+      Catalog::Instance().ByName("unsigned short int"),
+      Catalog::Instance().ByName("unsigned int"),
+      Catalog::Instance().ByName("unsigned long int"),
+      Catalog::Instance().ByName("bool"),
+      Catalog::Instance().ByName("float"),
+      Catalog::Instance().ByName("double"),
+      Catalog::Instance().ByName("long double"),
+      Catalog::Instance().ByName("void"),
+      Catalog::Instance().ByName("long long"),
+      Catalog::Instance().ByName("unsigned long long"),
+      Type() // kNotFundamental
+   };
+
+   return sFundamentalTypes[type];
+}
+
+
+//-------------------------------------------------------------------------------
 Reflex::Scope
 Reflex::Internal::ScopeCatalogImpl::GlobalScope() const {
 //-------------------------------------------------------------------------------
 // Return the global scope's Scope object.
    return Internal::Namespace::GlobalScope();
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Internal::ScopeCatalogImpl::Remove(const ScopeName& scope) {
+//-------------------------------------------------------------------------------
+// Remove the scope from the list of known scopes.
+   fAllScopes.Remove(scope.ThisScope());
 }

@@ -86,7 +86,7 @@ namespace Reflex {
       * MemberTemplates returns the collection of known member templates
       * @return collection of member templates
       */
-      static const Container<MemberTemplate>& MemberTemplates();
+      static const Container<MemberTemplate> MemberTemplates();
 
 
       /**

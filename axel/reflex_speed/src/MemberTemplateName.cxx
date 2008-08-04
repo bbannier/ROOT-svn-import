@@ -16,9 +16,10 @@
 #include "MemberTemplateName.h"
 
 #include "Reflex/MemberTemplate.h"
-#include "MemberTemplateImpl.h"
 #include "Reflex/Member.h"
 #include "Reflex/Tools.h"
+#include "MemberTemplateImpl.h"
+#include "ContainerSTLAdaptor.h"
 
 #include "stl_hash.h"
 #include <vector>
@@ -69,7 +70,7 @@ Reflex::Internal::MemberTemplateName::~MemberTemplateName() {
 //-------------------------------------------------------------------------------
 Reflex::MemberTemplate
 Reflex::Internal::MemberTemplateName::ByName(const std::string & name,
-                                                                       size_t nTemplateParams) {
+                                             size_t nTemplateParams) {
 //-------------------------------------------------------------------------------
    // Lookup a member template by its name.
    typedef Name2MemberTemplate_t::iterator IT;
@@ -79,7 +80,7 @@ Reflex::Internal::MemberTemplateName::ByName(const std::string & name,
       else {
          std::pair<IT,IT> bounds = sMemberTemplates().equal_range(&name);
          for (IT it = bounds.first; it != bounds.second; ++it) {
-            if (it->second.TemplateParameterSize() == nTemplateParams) {
+            if (it->second.TemplateParameterNames().Size() == nTemplateParams) {
                return it->second;
             }
          }
@@ -115,12 +116,21 @@ Reflex::Internal::MemberTemplateName::DeleteMemberTemplate() const {
 
 
 //-------------------------------------------------------------------------------
-std::string
-Reflex::Internal::MemberTemplateName::Name(unsigned int mod) const {
+const Reflex::Internal::IContainerImpl&
+Reflex::Internal::MemberTemplateName::MemberTemplates() {
 //-------------------------------------------------------------------------------
-   // Print the name of this member template.
-   if (0 != (mod & (kScoped | S))) return fName;
-   else                               return Tools::GetBaseName(fName);
+   static ContainerSTLAdaptor<MemberTemplateVec_t> sAdaptor(sMemberTemplateVec());
+   return sAdaptor;
+}
+
+
+//-------------------------------------------------------------------------------
+const std::string&
+Reflex::Internal::MemberTemplateName::Name(std::string& buf, unsigned int mod) const { 
+//-------------------------------------------------------------------------------
+   // Return the name of this member template in buf and as a reference to buf.
+   if (mod & kScoped) return (buf += fName);
+   else return (buf += Tools::GetBaseName(fName));
 }
 
 
@@ -131,60 +141,3 @@ Reflex::Internal::MemberTemplateName::ThisMemberTemplate() const {
    // Return the member template corresponding to this member template name.
    return * fThisMemberTemplate;
 }
-
-
-//-------------------------------------------------------------------------------
-Reflex::MemberTemplate
-Reflex::Internal::MemberTemplateName::MemberTemplateAt(size_t nth) {
-//-------------------------------------------------------------------------------
-   // Return teh nth member template.
-   if (nth < sMemberTemplateVec().size()) return sMemberTemplateVec()[nth];
-   return Dummy::MemberTemplate();
-}
-
-
-//-------------------------------------------------------------------------------
-size_t
-Reflex::Internal::MemberTemplateName::MemberTemplateSize() {
-//-------------------------------------------------------------------------------
-   // Return the number of member templates declared.
-   return sMemberTemplateVec().size();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::MemberTemplate_Iterator
-Reflex::Internal::MemberTemplateName::MemberTemplate_Begin() {
-//-------------------------------------------------------------------------------
-   // Return the begin iterator of the member template collection
-   return sMemberTemplateVec().begin();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::MemberTemplate_Iterator
-Reflex::Internal::MemberTemplateName::MemberTemplate_End() {
-//-------------------------------------------------------------------------------
-   // Return the end iterator of the member template collection
-   return sMemberTemplateVec().end();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Reverse_MemberTemplate_Iterator
-Reflex::Internal::MemberTemplateName::MemberTemplate_RBegin() {
-//-------------------------------------------------------------------------------
-   // Return the RBegin iterator of the member template collection
-   return ((const std::vector<MemberTemplate>&)sMemberTemplateVec()).rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Reverse_MemberTemplate_Iterator
-Reflex::Internal::MemberTemplateName::MemberTemplate_REnd() {
-//-------------------------------------------------------------------------------
-   // Return the rend iterator of the member template collection
-   return ((const std::vector<MemberTemplate>&)sMemberTemplateVec()).rend();
-}
-
-

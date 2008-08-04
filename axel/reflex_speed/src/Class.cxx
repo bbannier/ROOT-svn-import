@@ -88,8 +88,7 @@ Reflex::Object Reflex::Internal::Class::CastObject(const Type & to,
    }
    path.clear();
    Type t = *this;
-   Scope scopeTo = to;
-   if (scopeTo.HasBase(t)) {      // down cast
+   if (to.HasBase(t)) {      // down cast
       // use the internal dynamic casting of the compiler (e.g. libstdc++.so)
       void * obj3 = 0;
 #if defined (__linux) || defined (__APPLE__)
@@ -334,7 +333,7 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
       generator.AddIntoClasses("\n// -- Stub functions for class " + ThisType().Name() + "--\n");
 
 
-      for (OrdOwnedMemberCont_t::iterator mi = Members()->Begin(); mi; ++mi) {
+      for (OrdOwnedMemberCont_t::iterator mi = Members().Begin(); mi; ++mi) {
          mi->GenerateDict(generator);      // call Members' own gendict
       }
 

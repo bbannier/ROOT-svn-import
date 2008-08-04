@@ -15,6 +15,7 @@
 
 #include "Reflex/TypeTemplate.h"
 #include "Reflex/Type.h"
+#include "Reflex/Container.h"
 #include "OwnedMember.h"
 #include "TypeTemplateName.h"                                                             
 #include "TypeTemplateImpl.h"                                                             
@@ -53,6 +54,31 @@ Reflex::TypeTemplate::AddTemplateInstance(const Type & templateInstance) const {
 //-------------------------------------------------------------------------------
    // Add template instance to this template family.
    if (* this) fTypeTemplateName->fTypeTemplateImpl->AddTemplateInstance(templateInstance);
+}
+
+//-------------------------------------------------------------------------------
+const Reflex::OrderedContainer<std::string>
+Reflex::TypeTemplate::TemplateParameterDefaults() const {
+//-------------------------------------------------------------------------------
+   if (*this) return fTypeTemplateName->fTypeTemplateImpl->TemplateParameterDefaults();
+   return Dummy::EmptyContainer();
+}
+
+
+//-------------------------------------------------------------------------------
+const Reflex::OrderedContainer<std::string>
+Reflex::TypeTemplate::TemplateParameterNames() const {
+//-------------------------------------------------------------------------------
+   if (*this) return fTypeTemplateName->fTypeTemplateImpl->TemplateParameterNames();
+   return Dummy::EmptyContainer();
+}
+
+
+//-------------------------------------------------------------------------------
+const Reflex::Container<Reflex::TypeTemplate>
+Reflex::TypeTemplate::TypeTemplates() {
+//-------------------------------------------------------------------------------
+   return Internal::TypeTemplateName::TypeTemplates();
 }
 
 

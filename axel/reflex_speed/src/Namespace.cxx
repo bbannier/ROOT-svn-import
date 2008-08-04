@@ -53,26 +53,24 @@ Reflex::Internal::Namespace::GenerateDict(DictionaryGenerator & generator) const
 // Generate Dictionary information about itself.
 
    
- 
-   if ((*this).Name()!="" && generator.IsNewType((*this)))
-      {
-         std::stringstream tempcounter;
-         tempcounter << generator.fMethodCounter;
-         
-         generator.fStr_namespaces<<"NamespaceBuilder nsb" + tempcounter.str() + 
-            " (\"" << (*this).Name(kScoped) << "\");\n" ;
-         
-         ++generator.fMethodCounter;
-      }
+   std::string name;
+   Name(name);
+   if (name != "" && generator.IsNewType((*this))) {
+      std::string nameScoped;
+      Name(name, kScoped);
+      std::stringstream tempcounter;
+      tempcounter << generator.fMethodCounter;
+      
+      generator.fStr_namespaces<<"NamespaceBuilder nsb" + tempcounter.str() + 
+         " (\"" << nameScoped << "\");\n" ;
+      
+      ++generator.fMethodCounter;
+   }
       
    
-   for (Member_Iterator mi = (*this).Member_Begin(); mi != (*this).Member_End(); ++mi) 
-      {
-         (*mi).GenerateDict(generator); // call Members' own gendict
-      }
+   for (OrdOwnedMemberCont_t::iterator mi = Members().Begin(); mi; ++mi) 
+      mi->GenerateDict(generator); // call Members' own gendict
       
-   this->ScopeBase::GenerateDict(generator);
-   
-   
+   ScopeBase::GenerateDict(generator);
 }
 

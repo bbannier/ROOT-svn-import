@@ -34,6 +34,7 @@ namespace Internal {
 
       /** default constructor */
       PointerToMember(const Type & pointerToMemberType,
+         unsigned int modifiers,
          const Scope & pointerToMemberScope,
          const std::type_info & ti);
 
@@ -43,11 +44,15 @@ namespace Internal {
 
 
       /**
-      * Name will return the fully qualified Name of the pointer At
-      * @param  typedefexp expand typedefs or not
-      * @return fully qualified Name of pointer At
+      * Name returns the name of the scope
+      * @param  buf buffer to be used for calculating name
+      * @param  mod qualifiers can be or'ed 
+      *   kFinal     - resolve typedefs
+      *   kScoped    - fully scoped name 
+      *   kQualified - cv, reference qualification 
+      * @return name of the type
       */
-      std::string Name(unsigned int mod = 0) const;
+      const std::string& Name(std::string& buf, unsigned int mod = kScoped | kQualified) const;
 
 
       /**
@@ -65,9 +70,17 @@ namespace Internal {
 
 
       /** static funtion that composes the At Name */
-      static std::string BuildTypeName(const Type & pointerToMemberType,
+      static const std::string& BuildTypeName(std::string& buf, const Type & pointerToMemberType,
          const Scope & pointerToMemberScope,
          unsigned int mod = kScoped | kQualified);
+
+      /** static funtion that composes the At Name */
+      static const std::string& BuildTypeName(const Type & pointerToMemberType,
+         const Scope & pointerToMemberScope,
+         unsigned int mod = kScoped | kQualified) {
+         std::string buf;
+         return BuildTypeName(buf, pointerToMemberType, pointerToMemberScope, mod);
+      }
 
    private:
 

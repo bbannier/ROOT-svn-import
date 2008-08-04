@@ -75,7 +75,7 @@ Reflex::Object::Invoke(const std::string & fm,
                               std::vector < void * > args) const {
 //-------------------------------------------------------------------------------
 // Invoke a data member of this object. Sign can be used for finding overloaded funs.
-   Member m = ((Scope)TypeOf()).FunctionMemberByNameAndSignature(fm, sign);
+   Member m = ((Scope)TypeOf()).FunctionMemberByName(fm, sign);
    if (!m)
       throw RuntimeError("No such MemberAt " + fm);
 

@@ -37,8 +37,8 @@ Reflex::Internal::FunctionMember::FunctionMember(const char *  nam,
    : MemberBase(nam, typ, memType, modifiers),
      fStubFP(stubFP), 
      fStubCtx(stubCtx),
-     fParameterNames(std::vector<std::string>()),
-     fParameterDefaults(std::vector<std::string>()),
+     fParameterNamesAdaptor(fParameterNames),
+     fParameterDefaultsAdaptor(fParameterDefaults),
      fReqParameters(0)
 {
 // Contruct a FunctionMember (see FunctionBuilder)
@@ -47,26 +47,24 @@ Reflex::Internal::FunctionMember::FunctionMember(const char *  nam,
 
 
 //-------------------------------------------------------------------------------
-std::string
-Reflex::Internal::FunctionMember::Name(unsigned int mod) const {
+const std::string&
+Reflex::Internal::FunctionMember::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Construct the qualified (if requested) name of the function member.
-   std::string s = "";
-
    if (mod & kQualified) {
-      if (Is(gPublic))          { s += "public ";    }
-      if (Is(gProtected))       { s += "protected "; }
-      if (Is(gPrivate))         { s += "private ";   }  
-      if (Is(gExtern))          { s += "extern ";    }
-      if (Is(gStatic))          { s += "static ";    }
-      if (Is(gINLINE))          { s += "inline ";    }
-      if (Is(gVirtual))         { s += "virtual ";   }
-      if (Is(gEXPLICIT))        { s += "explicit ";  }
+      if (Is(gPublic))          { buf += "public ";    }
+      if (Is(gProtected))       { buf += "protected "; }
+      if (Is(gPrivate))         { buf += "private ";   }  
+      if (Is(gExtern))          { buf += "extern ";    }
+      if (Is(gStatic))          { buf += "static ";    }
+      if (Is(gInline))          { buf += "inline ";    }
+      if (Is(gVirtual))         { buf += "virtual ";   }
+      if (Is(gExplicit))        { buf += "explicit ";  }
    }
 
-   s += MemberBase::Name(mod); 
+   MemberBase::Name(buf, mod); 
 
-   return s;
+   return buf;
 }
 
 
@@ -131,23 +129,13 @@ Reflex::Internal::FunctionMember::Invoke(const std::vector < void * > & paramLis
 
 
 //-------------------------------------------------------------------------------
-size_t
-Reflex::Internal::FunctionMember::FunctionParameterSize(bool required) const {
-//-------------------------------------------------------------------------------
-// Return number of function parameters. If required = true return number without default params.
-   if (required) return fReqParameters;
-   else            return TypeOf().FunctionParameterSize();
-}
-
-
-
-//-------------------------------------------------------------------------------
 void
 Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) const {
 //-------------------------------------------------------------------------------
 // Generate Dictionary information about itself.   
 
-   std::string mName = Name();
+   std::string mName;
+   Name(mName, 0);
 
    if (mName != "__getNewDelFunctions"  && mName != "__getBasesTable") {
 
@@ -161,7 +149,8 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
       //if (generator.IsNewType(TypeOf()) && Name()!="__getNewDelFunctions") {
     
       if (Is(gPrivate)) {
-         generator.AddIntoShadow (Name(kScoped) + "();\n");
+         std::string nameScoped;
+         generator.AddIntoShadow(Name(nameScoped, kScoped) + "();\n");
       }
               
       // Get a number for the function type
@@ -174,7 +163,8 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
       ++generator.fMethodCounter;
       
       // Get current Namespace location
-      std::string namespc =  DeclaringScope().Name(kScoped);
+      std::string namespc;
+      DeclaringScope().Name(namespc, kScoped);
         
       std::stringstream tempcounter;
       tempcounter<<generator.fMethodCounter;
@@ -190,15 +180,15 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
             
       
       // Get the parameters for function
-      for (Type_Iterator params = TypeOf().FunctionParameter_Begin();
-           params != TypeOf().FunctionParameter_End(); ++params) {
-         
+      Type_Iterator paramsEnd = TypeOf().FunctionParameters().End();
+      for (Type_Iterator params = TypeOf().FunctionParameters().Begin();
+           params != paramsEnd; ++params) {
          
          if (DeclaringScope().Is(gNamespace)) {
-            generator.AddIntoInstances(", type_" + generator.GetTypeNumber((*params)) );
+            generator.AddIntoInstances(", type_" + generator.GetTypeNumber(*params));
                
          } else {
-            generator.AddIntoFree(", type_" + generator.GetTypeNumber((*params)) );
+            generator.AddIntoFree(", type_" + generator.GetTypeNumber(*params));
          }
          
       }
@@ -207,13 +197,13 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
       
       if (DeclaringScope().Is(gNamespace)) {
          generator.AddIntoInstances(");  FunctionBuilder(t" + tempcounter.str() + ", \"" 
-                                    + Name() + "\", function_" + number); //function name
+                                    + mName + "\", function_" + number); //function name
       }
    
                    
       else {  // normal function
            
-         generator.AddIntoFree("), \"" + Name() + "\""); //function name
+         generator.AddIntoFree("), \"" + mName + "\""); //function name
       }
 
       if      (Is(gConstructor)) generator.AddIntoFree(", constructor_");
@@ -252,7 +242,7 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
 
          generator.AddIntoClasses("(void* mem, const std::vector<void*>&");  
          
-         if (FunctionParameterSize()) generator.AddIntoClasses(" arg");
+         if (fParameterNames.size()) generator.AddIntoClasses(" arg");
          
          generator.AddIntoClasses(", void*)\n{");
          generator.AddIntoClasses("\n  return ::new(mem) " + namespc);
@@ -281,7 +271,7 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
 
          if (retT.Name() != "void") {
 
-            if (retT.Is(gFUNDAMENTAL)) {
+            if (retT.Is(gFundamental)) {
                generator.AddIntoClasses("static " + retT.Name(kScoped) + " ret;\n");
                generator.AddIntoClasses("ret = ");
             }
@@ -295,10 +285,10 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
          }
          
          if (DeclaringScope().Is(gNamespace)) {
-            generator.AddIntoClasses(Name() + "("); 
+            generator.AddIntoClasses(mName + "("); 
                 
          } else {
-            generator.AddIntoClasses("((" + namespc + "*)o)->"+ Name() + "(");   
+            generator.AddIntoClasses("((" + namespc + "*)o)->"+ mName + "(");   
          }
 
       }
@@ -310,8 +300,9 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
          unsigned args = 0;
        
          // Get all parameters
-         for (Type_Iterator methpara = TypeOf().FunctionParameter_Begin();
-              methpara != TypeOf().FunctionParameter_End(); ++methpara) {
+         Type_Iterator methparaEnd = TypeOf().FunctionParameters().End();
+         for (Type_Iterator methpara = TypeOf().FunctionParameters().Begin();
+              methpara != methparaEnd; ++methpara) {
 
             // get params for the function, can include pointers or references
             std::string param = generator.GetParams(*methpara);
@@ -356,7 +347,7 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
          if (retT.Name() == "void") {
             generator.AddIntoClasses(";\n  return 0;\n");
          }
-         else if (retT.Is(gFUNDAMENTAL)) {
+         else if (retT.Is(gFundamental)) {
             generator.AddIntoClasses(";\n  return & ret;\n");
          }
          else if (retT.Is(gPointer) || retT.Is(gReference)) {
@@ -385,31 +376,29 @@ Reflex::Internal::FunctionMember::GenerateDict(DictionaryGenerator & generator) 
            
          
       // Get the names of the function param.types (like MyInt)
-      if (TypeOf().FunctionParameterSize()) {
+      if (!TypeOf().FunctionParameters().Empty()) {
          
          unsigned dot = 0;
          Type_Iterator params;
-         StdString_Iterator parnam;
+         std::vector < std::string >::const_iterator parnam;
+         Type_Iterator paramsEnd = TypeOf().FunctionParameters().End();
 
-         
-
-         for (params = TypeOf().FunctionParameter_Begin(), parnam = FunctionParameterName_Begin();
-              params != TypeOf().FunctionParameter_End(), parnam != FunctionParameterName_End(); 
-              ++params, ++parnam) {
+         for (params = TypeOf().FunctionParameters().Begin(), parnam = fParameterNames.begin();
+              params != paramsEnd; ++params, ++parnam) {
             
             // THESE SHOULD ALSO INCLUDE DEFAULT VALUES,
             // LIKE int i=5 FunctionParameterDefault_Begin(), _End
             //
             
             if (DeclaringScope().Is(gNamespace)) {
-               generator.AddIntoInstances((*parnam));
-               if ((dot+1) < FunctionParameterSize()) {
+               generator.AddIntoInstances(*parnam);
+               if ((dot+1) < fParameterNames.size()) {
                   generator.AddIntoInstances(";");
                }
             }
             else {
-               generator.AddIntoFree((*parnam));
-               if ((dot+1) < FunctionParameterSize()) {
+               generator.AddIntoFree(*parnam);
+               if ((dot+1) < fParameterNames.size()) {
                   generator.AddIntoFree(";");
                }
             }
@@ -463,7 +452,7 @@ Reflex::Internal::FunctionMember::UpdateFunctionParameterNames(const char* param
    fParameterNames.clear();
    bool hadDefaultValues = !fParameterDefaults.empty();
    size_t numDefaultParams = 0;
-   size_t type_npar = MemberBase::TypeOf().FunctionParameterSize();
+   size_t type_npar = MemberBase::TypeOf().FunctionParameters().Size();
    std::vector<std::string> params;
    if (parameters) Tools::StringSplit(params, parameters, ";");
    size_t npar = std::min(type_npar,params.size());

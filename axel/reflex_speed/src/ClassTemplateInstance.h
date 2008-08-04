@@ -102,7 +102,7 @@ Reflex::Internal::ClassTemplateInstance::TemplateFamily() const {
 }
 
 //-------------------------------------------------------------------------------
-const std::string&
+inline const std::string&
 Reflex::Internal::ClassTemplateInstance::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
    return Class::Name(buf, mod);

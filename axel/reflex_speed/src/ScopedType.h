@@ -90,7 +90,7 @@ Reflex::Internal::ScopedType::ScopedType(const char * name,
 //-------------------------------------------------------------------------------
 // Construct the dictionary information for a type that is also a scope
    : TypeBase(name, modifiers, size, type, ti),
-   ScopeBase(name, modifiers, type) {}
+   ScopeBase(name, type) {}
 
 
 //-------------------------------------------------------------------------------
@@ -116,7 +116,7 @@ inline bool
 Reflex::Internal::ScopedType::Is(const EntityProperty& descr, int mod) const
 {
 //-------------------------------------------------------------------------------
-   return TypeBase::Is(descr, mod | fScopeModifiers);
+   return TypeBase::Is(descr, mod);
 }
 
 

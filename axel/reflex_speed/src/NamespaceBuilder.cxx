@@ -17,6 +17,7 @@
 
 #include "Reflex/PropertyList.h"
 #include "Reflex/Scope.h"
+#include "Reflex/Any.h"
 
 #include "Namespace.h"
 
@@ -27,7 +28,7 @@ Reflex::NamespaceBuilder::NamespaceBuilder(const char * nam) {
 //-------------------------------------------------------------------------------
 // Create dictionary info for a namespace.
    Scope sc = Scope::ByName(nam);
-   if (sc && sc.IsNamespace()) {
+   if (sc && sc.Is(gNamespace)) {
       fNamespace       = sc;
    }
    else {
@@ -50,7 +51,7 @@ Reflex::NamespaceBuilder::AddProperty(const char * key,
 //-------------------------------------------------------------------------------
 Reflex::NamespaceBuilder & 
 Reflex::NamespaceBuilder::AddProperty(const char * key, 
-                                             Any value) {
+                                      Any value) {
 //-------------------------------------------------------------------------------
 // Add property to this namespace as Any object.
    fNamespace.Properties().AddProperty(key , value);

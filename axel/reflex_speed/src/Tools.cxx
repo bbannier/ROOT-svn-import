@@ -420,13 +420,13 @@ void Tools::StringSplit(std::vector < std::string > & splitValues,
 
 
 //-------------------------------------------------------------------------------
-std::string Tools::StringVec2String(const std::vector<std::string> & vec) {
+const std::string& Tools::StringVec2String(std::string& s, const std::vector<std::string> & vec) {
 //-------------------------------------------------------------------------------
-   std::string s = "";
-   std::vector<std::string> lastbutone = vec.end()-1;
-   for(std::vector<std::string> it = vec.begin(); it != vec.end(); ++it) {
+// append the elements of vec separated by ", " to s.
+   for(std::vector<std::string>::const_iterator it = vec.begin(); it != vec.end();) {
       s += *it;
-      if (it != lastbutone) s += ", "; 
+      if (++it != vec.end())
+         s += ", "; 
    }
    return s;
 }

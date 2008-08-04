@@ -108,7 +108,7 @@ void* Reflex::PluginService::Create(const string & name,
    Type signature = FunctionTypeBuilder(ret, argt);
    string factoryname = FactoryName(name);
    //---Look first is the member exists ----
-   if (! Instance().fFactories.FunctionMemberByName(factoryname)) {
+   if (! Instance().fFactories.FunctionMembers().ByName(factoryname)) {
       string mapname = string(PLUGINSVC_FACTORY_NS) + "@@" + factoryname;
       
       int rett = Instance().LoadFactoryLib(mapname);
@@ -148,7 +148,7 @@ void* Reflex::PluginService::CreateWithId(const Any& id,
 
    string factoryname = FactoryName(str(id));
    
-   if (! Instance().fFactories.FunctionMemberByName(factoryname)) {
+   if (! Instance().fFactories.FunctionMembers().ByName(factoryname)) {
       string mapname = string(PLUGINSVC_FACTORY_NS) + "@@" + factoryname;
       int rett = Instance().LoadFactoryLib(mapname);
       if (! rett) {
@@ -159,8 +159,8 @@ void* Reflex::PluginService::CreateWithId(const Any& id,
    
    //--- loop over members
    Member m;
-   for (Member_Iterator it = Instance().fFactories.FunctionMember_Begin(); 
-        it != Instance().fFactories.FunctionMember_End(); ++it) {
+   for (Member_Iterator it = Instance().fFactories.FunctionMembers().Begin(); 
+        it != Instance().fFactories.FunctionMembers().End(); ++it) {
       if (it->Properties().HasProperty("id")) {
          if (cmp(it->Properties().PropertyValue("id"),id)) {
             if (signature.IsEquivalentTo(it->TypeOf())) {

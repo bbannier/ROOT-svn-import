@@ -101,11 +101,11 @@ namespace Internal {
    
    // specialization for std::string key: hash uses Reflex's Hash()
    template <>
-   Hash_t ContainerTraits::Hash(const std::string& key) const { return StringHash(key); }
+   inline Hash_t ContainerTraits::Hash(const std::string& key) const { return StringHash(key); }
 
    // specialization for std::string key: hash uses Reflex's Hash()
    template <>
-   Hash_t ContainerTraits::Hash(const char* const & key) const { return StringHash(key); }
+   inline Hash_t ContainerTraits::Hash(const char* const & key) const { return StringHash(key); }
 
    enum EUniqueness {
       kMany   = 0, // for UNIQUENESS: allow multiple instances of the same object in the container

@@ -70,39 +70,12 @@ namespace Reflex {
       */
       operator bool () const;
 
-#ifdef REFLEX_CINT_MERGE
-      // To prevent any un-authorized use as the old type
-      bool operator!() const { return !operator bool(); }
-      bool operator&&(bool right) const { return operator bool() && right; }
-      bool operator&&(int right) const { return operator bool() && right; }
-      bool operator&&(long right) const { return operator bool() && right; }
-      bool operator&&(const Scope &right) const;
-      bool operator&&(const Type &right) const;
-      bool operator&&(const Member &right) const;
-      bool operator||(bool right) const { return operator bool() || right; }
-      bool operator||(int right) const { return operator bool() || right; }
-      bool operator||(long right) const { return operator bool() || right; }
-      bool operator||(const Scope &right) const;
-      bool operator||(const Type &right) const;
-      bool operator||(const Member &right) const;
-   private:
-      operator int () const;
-   public:
-#endif
-
 
       /** 
       * the operator Type will return a corresponding type object to the scope if
       * applicable (i.e. if the Scope is also a Type e.g. Class, Union, Enum)
       */
       operator Type () const;
-
-
-      /**
-      * Bases returns the collection of base class information
-      * @return collection of base class information
-      */
-      const OrderedContainer<Base> Bases() const;
 
 
       /**
@@ -151,20 +124,6 @@ namespace Reflex {
 
 
       /**
-      * FunctionMemberByNameAndSignature will return the member with the name, 
-      * optionally the signature of the function may be given as a type
-      * @param  name of function member
-      * @param  signature of the member function 
-      * @modifiers_mask When matching, do not compare the listed modifiers
-      * @return reflection information of the function member
-      */
-      // this overloading is unfortunate but I can't include Type.h here
-      Member FunctionMemberByNameAndSignature(const std::string & name,
-         const Type & signature,
-         unsigned int modifers_mask = 0) const;
-
-
-      /**
       * GenerateDict will produce the dictionary information of this type
       * @param generator a reference to the dictionary generator instance
       */
@@ -176,14 +135,6 @@ namespace Reflex {
       * @return global scope
       */
       static Scope GlobalScope();
-
-
-      /* HasBase will check whether this class has a base class given
-      * as argument
-      * @param  cl the base-class to check for
-      * @return the Base info if it is found, an empty base otherwise (can be tested for bool)
-      */
-      bool HasBase(const Type & cl) const;
 
 
       /**
@@ -552,6 +503,27 @@ namespace Reflex {
       * @clientCardinality 1
       */
       const Internal::ScopeName * fScopeName;
+
+#ifdef REFLEX_CINT_MERGE
+   public:
+      // To prevent any un-authorized use as the old type
+      bool operator!() const { return !operator bool(); }
+      bool operator&&(bool right) const { return operator bool() && right; }
+      bool operator&&(int right) const { return operator bool() && right; }
+      bool operator&&(long right) const { return operator bool() && right; }
+      bool operator&&(const Scope &right) const;
+      bool operator&&(const Type &right) const;
+      bool operator&&(const Member &right) const;
+      bool operator||(bool right) const { return operator bool() || right; }
+      bool operator||(int right) const { return operator bool() || right; }
+      bool operator||(long right) const { return operator bool() || right; }
+      bool operator||(const Scope &right) const;
+      bool operator||(const Type &right) const;
+      bool operator||(const Member &right) const;
+   private:
+      operator int () const;
+#endif
+
 
    }; // class Scope
 

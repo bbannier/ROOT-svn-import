@@ -62,8 +62,8 @@ Reflex::Catalog::Types() const {
 //-------------------------------------------------------------------------------
 // iterator access
    if (fImpl)
-      return &fImpl->Types().All();
-   return &Dummy::EmptyContainer();
+      return fImpl->Types().All();
+   return Dummy::EmptyContainer();
 }
 
 
@@ -72,8 +72,8 @@ const Reflex::Container<Reflex::Scope>
 Reflex::Catalog::Scopes() const {
 //-------------------------------------------------------------------------------
    if (fImpl)
-      return &fImpl->Scopes().All();
-   return &Dummy::EmptyContainer();
+      return fImpl->Scopes().All();
+   return Dummy::EmptyContainer();
 }
 
 
