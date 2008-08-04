@@ -159,7 +159,7 @@ namespace Internal {
       /** 
       * IContainerImpl interface for container of bases
       */
-      ContainerSTLAdaptor< std::vector<Base> > fBasesAdaptor;
+      const ContainerSTLAdaptor< std::vector<Base> > fBasesAdaptor;
 
       /** caches */
       /** all currently known BaseAt classes */
@@ -196,7 +196,8 @@ Reflex::Internal::Class::Bases() const
 
 
 //-------------------------------------------------------------------------------
-bool Reflex::Internal::Class::HasBase(const Type & cl) const
+inline bool
+Reflex::Internal::Class::HasBase(const Type & cl) const
 {
 //-------------------------------------------------------------------------------
 // Return true if this class has a base class of type cl.

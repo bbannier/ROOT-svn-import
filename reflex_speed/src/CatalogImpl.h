@@ -50,25 +50,25 @@ namespace Internal {
    //---- Container Traits for PairTypeInfoType ----
 
    template <>
-   bool
+   inline bool
    ContainerTraits::KeyMatches(const char* const & name, const PairTypeInfoType& pti) const {
       return !strcmp(name, pti.TypeName());
    }
 
    template <>
-   bool
+   inline bool
    ContainerTraits::KeyMatches(const char* const & name, const PairTypeInfoType& pti, const char* &) const {
       return !strcmp(name, pti.TypeName());
    }
 
    template <>
-   void
+   inline void
    ContainerTraits::Invalidate(PairTypeInfoType& pti) const {
       pti.Invalidate();
    }
 
    template <>
-   bool
+   inline bool
    ContainerTraits::IsInvalidated(const PairTypeInfoType& pti) const {
       return pti.IsInvalidated();
    }

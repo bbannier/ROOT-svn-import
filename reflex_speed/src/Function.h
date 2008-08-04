@@ -87,6 +87,15 @@ namespace Internal {
             return BuildTypeName(buf, ret, param, typemod, mod, scope);
       }
 
+      /** static function that composes the function name as a pointer type */
+      static const std::string& BuildPointerTypeName(std::string& buf,
+         const Type & ret,
+         const std::string& name,
+         const OrderedContainer< Type > & pars,
+         unsigned int typemod = 0,
+         unsigned int mod = kScoped | kQualified,
+         const Scope & scope = Scope());
+
    private:
 
       /** 
@@ -102,7 +111,7 @@ namespace Internal {
       /** 
       * IContainerImpl interface for container of parameter types
       */
-      ContainerSTLAdaptor< std::vector<Type> > fParametersAdaptor;
+      const ContainerSTLAdaptor< std::vector<Type> > fParametersAdaptor;
 
       /**
       * return type

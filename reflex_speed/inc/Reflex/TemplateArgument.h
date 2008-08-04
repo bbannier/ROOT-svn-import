@@ -72,7 +72,8 @@ Reflex::TemplateArgument::Name(unsigned int mod) const {
 }
 
 //-------------------------------------------------------------------------------
-const std::string& Reflex::TemplateArgument::Name(std::string& buf, unsigned int mod) const {
+inline const std::string&
+Reflex::TemplateArgument::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
    if (fKindOf == kType)
       return AsType().Name(buf);

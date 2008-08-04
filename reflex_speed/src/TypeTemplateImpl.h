@@ -16,7 +16,7 @@
 #include "Reflex/Kernel.h"
 #include "Reflex/Scope.h"
 #include "ContainerImpl.h"
-#include "ContainerTraitsImpl.h"
+#include "ContainerSTLAdaptor.h"
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -67,21 +67,21 @@ namespace Internal {
       * TemplateInstances returns collecvtion of the instances of this template
       * @return the collection of the instances
       */
-      const Container<Type>& TemplateInstances() const;
+      const ContainerImpl < std::string, Type >& TemplateInstances() const;
 
 
       /**
       * TemplateParameterDefaults returns the collection of template default values as string
       * @return collection of default value of template parameters
       */
-      const OrderedContainer<std::string>& TemplateParameterDefaults() const;
+      const IContainerImpl& TemplateParameterDefaults() const;
 
 
       /**
       * TemplateParameterNames returns the names of the template parameters
       * @return Collection of names of template template parameters
       */
-      const OrderedContainer<std::string>& TemplateParameterNames() const;
+      const IContainerImpl& TemplateParameterNames() const;
 
 
       /**
@@ -126,11 +126,23 @@ namespace Internal {
          std::vector < std::string > fParameterNames;
 
 
+      /** 
+      * IContainerImpl interface for container of parameter names
+      */
+      const ContainerSTLAdaptor< std::vector<std::string> > fParameterNamesAdaptor;
+
+
       /**
       * template parameter default values
       */
       mutable
          std::vector < std::string > fParameterDefaults;
+
+
+      /** 
+      * IContainerImpl interface for container of parameter defaults
+      */
+      const ContainerSTLAdaptor< std::vector<std::string> > fParameterDefaultsAdaptor;
 
 
       /**
@@ -152,6 +164,31 @@ namespace Internal {
 
 } // namespace Internal
 } // namespace Reflex
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::ContainerImpl< std::string, Reflex::Type >&
+Reflex::Internal::TypeTemplateImpl::TemplateInstances() const {
+//-------------------------------------------------------------------------------
+   return fTemplateInstances;
+}
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl&
+Reflex::Internal::TypeTemplateImpl::TemplateParameterNames() const {
+//-------------------------------------------------------------------------------
+   return fParameterNamesAdaptor;
+}
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl&
+Reflex::Internal::TypeTemplateImpl::TemplateParameterDefaults() const {
+//-------------------------------------------------------------------------------
+   return fParameterDefaultsAdaptor;
+}
+
 
 
 #ifdef _MSC_VER

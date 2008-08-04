@@ -267,6 +267,20 @@ Reflex::Internal::TypeBase::RawType() const {
 
 
 //-------------------------------------------------------------------------------
+const std::string &
+Reflex::Internal::TypeBase::SimpleName(size_t & pos, 
+                                       unsigned int mod) const {
+//-------------------------------------------------------------------------------
+// Return the name of the type.
+   if (mod & kScoped)
+      pos = 0;
+   else
+      pos = fBasePosition;
+   return fTypeName->Name();
+}
+
+
+//-------------------------------------------------------------------------------
 Reflex::Type
 Reflex::Internal::TypeBase::ThisType() const {
 //-------------------------------------------------------------------------------

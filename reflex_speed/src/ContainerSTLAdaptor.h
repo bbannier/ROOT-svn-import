@@ -40,6 +40,13 @@ namespace Internal {
       const std::string& fName;
    };
 
+   template<>
+   struct NameFinderPredicate<std::string> {
+      NameFinderPredicate(const std::string& name): fName(name) {}
+      bool operator()(const std::string& t) const { return fName == t; }
+      const std::string& fName;
+   };
+
    template <class CONTAINER>
    class ContainerSTLAdaptor: public IContainerImpl {
    public:
@@ -115,7 +122,7 @@ namespace Internal {
       = kEndUntested;
 
    template <class CONTAINER>
-   ContainerSTLAdaptor<CONTAINER> Make_ContainerSTLAdaptor(const CONTAINER& cont) {
+   inline ContainerSTLAdaptor<CONTAINER> Make_ContainerSTLAdaptor(const CONTAINER& cont) {
       return ContainerSTLAdaptor<CONTAINER>(cont);
    }
 }

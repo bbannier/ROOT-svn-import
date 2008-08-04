@@ -54,8 +54,7 @@ namespace Reflex {
 
    RFLX_API Type EnumTypeBuilder(const char *, 
       const char * items = "",
-      const std::type_info & ti = typeid(UnknownType),
-      unsigned int modifiers = 0);
+      const std::type_info & ti = typeid(UnknownType));
 
    RFLX_API Type TypedefTypeBuilder(const char * Name, 
       const Type & t);

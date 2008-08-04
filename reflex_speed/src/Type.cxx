@@ -15,6 +15,7 @@
 
 #include "Reflex/Type.h"
 
+#include "Reflex/Catalog.h"
 #include "Reflex/Container.h"
 #include "Reflex/Object.h"
 #include "Reflex/Scope.h"
@@ -59,6 +60,15 @@ Reflex::Type::ArrayLength() const {
 //-------------------------------------------------------------------------------
    if (* this) return fTypeName->ToTypeBase()->ArrayLength();
    return 0;
+}
+
+
+//-------------------------------------------------------------------------------
+const Reflex::OrderedContainer<Reflex::Base>
+Reflex::Type::Bases() const {
+//-------------------------------------------------------------------------------
+   if (* this) return fTypeName->ToTypeBase()->Bases(); 
+   return Dummy::EmptyContainer();
 }
 
 
@@ -203,6 +213,24 @@ Reflex::Type::DetermineEquivalence(const Type & typ, unsigned int modifiers_mask
       }
       return true;
    }
+   return false;
+}
+
+
+bool Reflex::Type::HasBase(const Type & cl) const {
+//-------------------------------------------------------------------------------
+   // Return base info if type has base cl.
+   if (* this) return fTypeName->ToTypeBase()->HasBase(cl);
+   return false;
+}
+
+
+//-------------------------------------------------------------------------------
+bool
+Reflex::Type::Is(const EntityProperty& descr) const {
+//-------------------------------------------------------------------------------
+// Test type for properties.
+   if (*this) return fTypeName->ToTypeBase()->Is(descr);
    return false;
 }
 
@@ -399,6 +427,13 @@ Reflex::Type::TypeTypeAsString() const {
    return "kUnresolved";
 }
 
+//-------------------------------------------------------------------------------
+const Reflex::Container<Reflex::Type>
+Reflex::Type::Types() {
+//-------------------------------------------------------------------------------
+   // Return the collection of known types; forwards to the Catalog.
+   return Catalog::Instance().Types();
+}
 
 //------------------------------------------------------------------------------
 void

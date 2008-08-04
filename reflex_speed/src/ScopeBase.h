@@ -58,13 +58,12 @@ namespace Internal {
       typedef OrderedContainerImpl< std::string, Scope, kUnique> OrdScopeUniqueCont_t;
       typedef OrderedContainerImpl< std::string, Type > OrdTypeCont_t;
       typedef OrderedContainerImpl< std::string, Type, kUnique > OrdTypeUniqueCont_t;
-      typedef OrderedContainerImpl< std::string, TypeTemplate > OrdTypeTemplate_t;
+      typedef OrderedContainerImpl< std::string, TypeTemplate > OrdTypeTemplateCont_t;
       typedef OrderedContainerImpl< std::string, OwnedMemberTemplate > OwnedMemberTemplateCont_t;
       typedef ContainerImpl< std::string, Scope > ScopeCont_t;
 
       /** constructor within a At*/
       ScopeBase(const char * scope,
-         unsigned int modifiers,
          ETYPE scopeType);
 
 
@@ -84,13 +83,6 @@ namespace Internal {
       * applicable (i.e. if the Scope is also a Type e.g. Class, Union, Enum)
       */
       operator Type () const;
-
-
-      /**
-      * BaseAt returns the collection of base class information
-      * @return pointer to base class information
-      */
-      virtual const IContainerImpl& Bases() const;
 
 
       /**
@@ -128,19 +120,6 @@ namespace Internal {
 
 
       /**
-      * FunctionMemberByNameAndSignature will return the MemberAt with the Name, 
-      * optionally the signature of the function may be given
-      * @param  Name of function MemberAt
-      * @param  signature of the MemberAt function
-      * @modifiers_mask When matching, do not compare the listed modifiers
-      * @return function MemberAt
-      */
-      Member FunctionMemberByNameAndSignature(const std::string & name,
-         const Type & signature,
-         unsigned int modifiers_mask = 0) const;
-
-
-      /**
       * GenerateDict will produce the dictionary information of this type
       * @param generator a reference to the dictionary generator instance
       */
@@ -154,14 +133,6 @@ namespace Internal {
       static Scope GlobalScope();
 
 
-      /* HasBase will check whether this class has a base class given
-      * as argument
-      * @param  cl the base-class to check for
-      * @return the Base info if it is found, an empty base otherwise (can be tested for bool)
-      */
-      virtual bool HasBase(const Type & cl) const;
-
-
       /**
       * Check whether the entity property is set for the scope. You can
       * combine checks, e.g. Is(gClass && gPublic)
@@ -169,7 +140,7 @@ namespace Internal {
       * @param mod the modifier as stored by Type (reference,...)
       * @return whether descr is set.
       */
-      virtual bool Is(const EntityProperty& descr, int mod = 0) const;
+      virtual bool Is(const EntityProperty& descr) const;
 
 
       /* IsComplete will return true if all classes and base classes of this 
@@ -281,6 +252,19 @@ namespace Internal {
       std::string ScopeTypeAsString() const;
 
 
+
+      /* SimpleName returns the name of the type as a reference. It provides a 
+      * simplified but faster generation of a type name. Attention currently it
+      * is not guaranteed that Name() and SimpleName() return the same character 
+      * layout of a name (ie. spacing, commas, etc. )
+      * @param pos will indicate where in the returned reference the requested name starts
+      * @param mod The only 'mod' support is SCOPED
+      * @return name of type
+      */
+      const std::string & SimpleName( size_t & pos, 
+         unsigned int mod = 0 ) const;
+
+
       /**
       * SubScopes returns the collection of scopes declared in this scope.
       * @return container of reflection information of sub scopes
@@ -307,7 +291,7 @@ namespace Internal {
       * SubTypeTemplates returns the collection of templated types declared within this scope
       * @return type templates
       */
-      const OrdTypeTemplate_t* SubTypeTemplates() const;
+      const OrdTypeTemplateCont_t& SubTypeTemplates() const;
 
 
       /**
@@ -370,7 +354,7 @@ namespace Internal {
       * @param sc pointer to Scope
       */
       void AddSubScope(const Scope & sc) const;
-      void AddSubScope(const char * scope, unsigned int modifiers, ETYPE scopeType) const;
+      void AddSubScope(const char * scope, ETYPE scopeType) const;
 
 
       /**
@@ -497,11 +481,6 @@ namespace Internal {
          OrdMemberCont_t fFunctionMembers;
 
 
-      /**
-      * description flags (bit mask of EENTITY_DESCRIPTION) for this scope
-      */
-      unsigned int fScopeModifiers;
-
    private:
 
       /**
@@ -564,7 +543,7 @@ namespace Internal {
       * @clientCardinality 1
       */
       mutable
-         OrdTypeTemplate_t fTypeTemplates;
+         OrdTypeTemplateCont_t fTypeTemplates;
 
 
       /**
@@ -632,14 +611,6 @@ namespace Internal {
 
 
 //-------------------------------------------------------------------------------
-inline const Reflex::Internal::IContainerImpl&
-Reflex::Internal::ScopeBase::Bases() const {
-//-------------------------------------------------------------------------------
-   return Dummy::EmptyContainer();
-}
-
-
-//-------------------------------------------------------------------------------
 inline const Reflex::Internal::ScopeBase::OrdMemberCont_t&
 Reflex::Internal::ScopeBase::DataMembers() const {
 //-------------------------------------------------------------------------------
@@ -665,14 +636,6 @@ Reflex::Internal::ScopeBase::FunctionMembers() const {
 
 //-------------------------------------------------------------------------------
 inline bool
-Reflex::Internal::ScopeBase::HasBase(const Type & cl) const {
-//-------------------------------------------------------------------------------
-   return false;
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool
 Reflex::Internal::ScopeBase::IsComplete() const {
 //-------------------------------------------------------------------------------
    return true;
@@ -681,9 +644,9 @@ Reflex::Internal::ScopeBase::IsComplete() const {
 
 //-------------------------------------------------------------------------------
 inline bool
-Reflex::Internal::ScopeBase::Is(const EntityProperty& prop, const int mod) const {
+Reflex::Internal::ScopeBase::Is(const EntityProperty& prop) const {
 //-------------------------------------------------------------------------------
-   return prop.Eval(fScopeModifiers | mod, fScopeType);
+   return prop.Eval(0, fScopeType);
 }
 
 
@@ -716,6 +679,46 @@ inline const Reflex::Internal::ScopeBase::OrdScopeUniqueCont_t&
 Reflex::Internal::ScopeBase::SubScopes() const {
 //-------------------------------------------------------------------------------
    return fSubScopes;
+}
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::ScopeBase::OrdTypeUniqueCont_t&
+Reflex::Internal::ScopeBase::SubTypes() const {
+//-------------------------------------------------------------------------------
+   return fSubTypes;
+}
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::ScopeBase::OrdTypeTemplateCont_t&
+Reflex::Internal::ScopeBase::SubTypeTemplates() const {
+//-------------------------------------------------------------------------------
+   return fTypeTemplates;
+}
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::ScopeBase::ScopeCont_t&
+Reflex::Internal::ScopeBase::UsingDirectives() const {
+//-------------------------------------------------------------------------------
+   return fUsingDirectives;
+}
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::ScopeBase::OrdTypeCont_t&
+Reflex::Internal::ScopeBase::UsingTypeDeclarations() const {
+//-------------------------------------------------------------------------------
+   return fTypeUsingDeclarations;
+}
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::ScopeBase::OrdMemberCont_t&
+Reflex::Internal::ScopeBase::UsingMemberDeclarations() const {
+//-------------------------------------------------------------------------------
+   return fMemberUsingDeclarations;
 }
 
 

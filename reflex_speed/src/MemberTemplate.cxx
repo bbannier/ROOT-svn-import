@@ -29,9 +29,17 @@ Reflex::MemberTemplate::operator bool () const {
 
 
 //-------------------------------------------------------------------------------
+void
+Reflex::MemberTemplate::AddTemplateInstance(const Member & templateInstance) const {
+//-------------------------------------------------------------------------------
+// Add member templateInstance to this template family.
+   if (* this) fMemberTemplateName->fMemberTemplateImpl->AddTemplateInstance(templateInstance);
+}
+
+
+//-------------------------------------------------------------------------------
 Reflex::MemberTemplate
-Reflex::MemberTemplate::ByName(const std::string & name,
-                                                                   size_t nTemplateParams) {
+Reflex::MemberTemplate::ByName(const std::string & name, size_t nTemplateParams) {
 //-------------------------------------------------------------------------------
    // Return a member template by name.
    return Internal::MemberTemplateName::ByName(name, nTemplateParams);
@@ -39,20 +47,51 @@ Reflex::MemberTemplate::ByName(const std::string & name,
 
 
 //-------------------------------------------------------------------------------
-std::string
-Reflex::MemberTemplate::Name(unsigned int mod) const {
+const std::string&
+Reflex::MemberTemplate::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
    // Return the name of the member template.
-   if (fMemberTemplateName) return fMemberTemplateName->Name(mod);
-   else                       return "";
+   if (fMemberTemplateName) return fMemberTemplateName->Name(buf, mod);
+   return buf;
+}
+
+//-------------------------------------------------------------------------------
+const Reflex::Container<Reflex::MemberTemplate>
+Reflex::MemberTemplate::MemberTemplates() {
+//-------------------------------------------------------------------------------
+   Internal::MemberTemplateName::MemberTemplates();
+   return Dummy::EmptyContainer();
 }
 
 
 //-------------------------------------------------------------------------------
-void
-Reflex::MemberTemplate::AddTemplateInstance(const Member & templateInstance) const {
+const Reflex::Container<Reflex::Member>
+Reflex::MemberTemplate::TemplateInstances() const {
 //-------------------------------------------------------------------------------
-// Add member templateInstance to this template family.
-   if (* this) fMemberTemplateName->fMemberTemplateImpl->AddTemplateInstance(templateInstance);
+// TemplateInstances returns the collection of known template instances
+// @return collection of the instances
+   if (*this) return fMemberTemplateName->fMemberTemplateImpl->TemplateInstances();
+   return Dummy::EmptyContainer();
+}
+
+
+//-------------------------------------------------------------------------------
+const Reflex::OrderedContainer<std::string>
+Reflex::MemberTemplate::TemplateParameterNames() const {
+//-------------------------------------------------------------------------------
+// TemplateParameterNames returns a collection of the template parameter names
+// @return collection of names of the template parameters
+   if (*this) return fMemberTemplateName->fMemberTemplateImpl->TemplateParameterNames();
+   return Dummy::EmptyContainer();
+}
+
+
+const Reflex::OrderedContainer<std::string>
+Reflex::MemberTemplate::TemplateParameterDefaults() const {
+//-------------------------------------------------------------------------------
+// TemplateParameterDefaults returns a collection of template parameters' default values as string
+// @return default values of template parameters
+   if (*this) return fMemberTemplateName->fMemberTemplateImpl->TemplateParameterDefaults();
+   return Dummy::EmptyContainer();
 }
 

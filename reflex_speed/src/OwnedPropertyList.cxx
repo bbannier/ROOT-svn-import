@@ -14,6 +14,7 @@
 #endif
 
 #include "OwnedPropertyList.h"
+#include "PropertyListImpl.h"
 
 //-------------------------------------------------------------------------------
 void

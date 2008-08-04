@@ -19,7 +19,10 @@
 #include "Reflex/Type.h"
 #include "Reflex/Tools.h"
 #include "Reflex/EntityProperty.h"
+
 #include "OwnedMember.h"
+#include "TypeBase.h"
+#include "ScopeBase.h"
 
 #include <sstream>
 #include <string.h>
@@ -178,9 +181,9 @@ template<class T> T Reflex::NameLookup::LookupInScope()
       return Dummy::Get<T>();
    }
 
-   int len = fCurrentScope.SubTypeSize();
+   int len = fCurrentScope.SubTypes().Size();
    int i = 0;
-   for (Type_Iterator it = fCurrentScope.SubType_Begin(); i < len; ++it, ++i) {
+   for (Type_Iterator it = fCurrentScope.SubTypes().Begin(); i < len; ++it, ++i) {
       const Type& type = *it;
       const Internal::TypeBase* base = type.ToTypeBase();
       if (base) {
@@ -209,10 +212,10 @@ template<class T> T Reflex::NameLookup::LookupInScope()
       }
    }
 
-   Scope_Iterator subscope_end(fCurrentScope.SubScope_End());
-   for (Scope_Iterator in = fCurrentScope.SubScope_Begin(); in != subscope_end; ++in) {
+   Scope_Iterator subscope_end(fCurrentScope.SubScopes().End());
+   for (Scope_Iterator in = fCurrentScope.SubScopes().Begin(); in != subscope_end; ++in) {
       // only take namespaces into account - classes were checked as part of SubType
-      if (in->IsNamespace()) {
+      if (in->Is(gNamespace)) {
          const Scope& scope = *in;
          const Internal::ScopeBase* base = scope.ToScopeBase();
          if (base) {
@@ -235,11 +238,11 @@ template<class T> T Reflex::NameLookup::LookupInScope()
       }
    }
 
-   if (fCurrentScope.UsingDirectiveSize()) {
+   if (fCurrentScope.UsingDirectives().Size()) {
       fLookedAtUsingDir.insert(fCurrentScope);
       Scope storeCurrentScope = fCurrentScope;
-      Scope_Iterator usingscope_end(storeCurrentScope.UsingDirective_End());
-      for (Scope_Iterator si = storeCurrentScope.UsingDirective_Begin(); si != usingscope_end; ++si) {
+      Scope_Iterator usingscope_end(storeCurrentScope.UsingDirectives().End());
+      for (Scope_Iterator si = storeCurrentScope.UsingDirectives().Begin(); si != usingscope_end; ++si) {
          fCurrentScope = *si;
          T t = LookupInScope<T>();
          if (fPartialSuccess) {
@@ -250,8 +253,9 @@ template<class T> T Reflex::NameLookup::LookupInScope()
    }
 
    if (!fPosNamePart) { // only for "BaseClass...", not for "A::BaseClass..."
-      Base_Iterator base_end(fCurrentScope.Base_End());
-      for (Base_Iterator bi = fCurrentScope.Base_Begin(); bi != base_end; ++bi) {
+      Type currentScopeAsType(fCurrentScope);
+      Base_Iterator base_end(currentScopeAsType.Bases().End());
+      for (Base_Iterator bi = currentScopeAsType.Bases().Begin(); bi != base_end; ++bi) {
          if (!fLookupName.compare(fPosNamePart, fPosNamePartLen, bi->Name())) {
             fPartialSuccess = true;
             fLookedAtUsingDir.clear();
@@ -265,10 +269,11 @@ template<class T> T Reflex::NameLookup::LookupInScope()
       }
    }
 
-   if (fCurrentScope.BaseSize()) {
+   if (((Type)fCurrentScope).Bases().Size()) {
       Scope storeCurrentScope = fCurrentScope;
-      Base_Iterator base_end(storeCurrentScope.Base_End());
-      for (Base_Iterator bi = storeCurrentScope.Base_Begin(); bi != base_end; ++bi) {
+      Type currentScopeAsType(fCurrentScope);
+      Base_Iterator base_end(currentScopeAsType.Bases().End());
+      for (Base_Iterator bi = currentScopeAsType.Bases().Begin(); bi != base_end; ++bi) {
          fCurrentScope = bi->ToScope();
          T t = LookupInScope<T>();
          if (fPartialSuccess) {
@@ -324,18 +329,19 @@ Reflex::Member Reflex::NameLookup::LookupMemberUnqualified(const std::string& na
 {
    // Lookup of an unqualified member.
    {
-      Member m = current.MemberByName(nam);
+      Member m = current.Members().ByName(nam);
       if (m) {
          return m;
       }
    }
-   for (Scope_Iterator si = current.UsingDirective_Begin(); si != current.UsingDirective_End(); ++si) {
+   for (Scope_Iterator si = current.UsingDirectives().Begin(); si != current.UsingDirectives().End(); ++si) {
       Member m = LookupMember(nam, *si);
       if (m) {
          return m;
       }
    }
-   for (Base_Iterator bi = current.Base_Begin(); bi != current.Base_End(); ++bi) {
+   Type currentScopeAsType(current);
+   for (Base_Iterator bi = currentScopeAsType.Bases().Begin(); bi != currentScopeAsType.Bases().End(); ++bi) {
       Member m = LookupMember(nam, bi->ToScope());
       if (m) {
          return m;

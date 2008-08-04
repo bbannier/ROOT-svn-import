@@ -15,6 +15,8 @@
 // Include files
 #include "Reflex/Kernel.h"
 #include "Reflex/Scope.h"
+#include "ContainerImpl.h"
+#include "ContainerSTLAdaptor.h"
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -66,21 +68,21 @@ namespace Internal {
       * TemplateInstances returns the collection of known template instances
       * @return collection of the instances
       */
-      const Container<Member> TemplateInstances() const;
+      const ContainerImpl < std::string, Member >& TemplateInstances() const;
 
 
       /**
       * TemplateParameterNames returns a collection of the template parameter names
       * @return collection of names of the template parameters
       */
-      const OrderedContainer<std::string> TemplateParameterNames() const;
+      const IContainerImpl& TemplateParameterNames() const;
 
 
       /**
       * TemplateParameterDefaults returns a collection of template parameters' default values as string
       * @return default values of template parameters
       */
-      const OrderedContainer<std::string> TemplateParameterDefaults() const;
+      const IContainerImpl& TemplateParameterDefaults() const;
 
 
       /**
@@ -117,8 +119,7 @@ namespace Internal {
       * @label template instances
       */
       mutable
-         std::vector < Member > fTemplateInstances;
-
+         ContainerImpl < std::string, Member > fTemplateInstances;
 
       /**
       * container of function parameter template names
@@ -126,12 +127,22 @@ namespace Internal {
       mutable
          std::vector < std::string > fParameterNames;
 
+      /** 
+      * IContainerImpl interface for container of parameter names
+      */
+      const ContainerSTLAdaptor< std::vector<std::string> > fParameterNamesAdaptor;
+
 
       /**
       * function  parameter template default values
       */
       mutable
          std::vector < std::string > fParameterDefaults;
+
+      /** 
+      * IContainerImpl interface for container of parameter defaults
+      */
+      const ContainerSTLAdaptor< std::vector<std::string> > fParameterDefaultsAdaptor;
 
 
       /**
@@ -154,6 +165,30 @@ namespace Internal {
 
 } // namespace Internal
 } // namespace Reflex
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::ContainerImpl< std::string, Reflex::Member >&
+Reflex::Internal::MemberTemplateImpl::TemplateInstances() const {
+//-------------------------------------------------------------------------------
+   return fTemplateInstances;
+}
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl&
+Reflex::Internal::MemberTemplateImpl::TemplateParameterNames() const {
+//-------------------------------------------------------------------------------
+   return fParameterNamesAdaptor;
+}
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl&
+Reflex::Internal::MemberTemplateImpl::TemplateParameterDefaults() const {
+//-------------------------------------------------------------------------------
+   return fParameterDefaultsAdaptor;
+}
 
 
 #ifdef _MSC_VER

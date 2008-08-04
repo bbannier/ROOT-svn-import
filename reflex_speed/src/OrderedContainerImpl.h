@@ -56,6 +56,9 @@ namespace Internal {
       bool IsInvalidated(const LinkedObj<VALUE>& value) const { return fgValueTraits.IsInvalidated(value.fObj); }
    };
 
+   template < typename KEY, typename VALUE, typename TRAITS >
+   TRAITS ContainerTraitsLinkedObjT<KEY, VALUE, TRAITS>::fgValueTraits;
+
    template <typename KEY, typename VALUE, EUniqueness UNIQUENESS = kMany, class TRAITS = ContainerTraitsT<KEY, VALUE> >
    class OrderedContainerImpl: public IContainerImpl {
    protected:

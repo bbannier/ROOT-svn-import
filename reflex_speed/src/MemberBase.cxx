@@ -15,16 +15,17 @@
 
 #include "MemberBase.h"
 
-#include "OwnedMember.h"
 #include "Reflex/Scope.h"
 #include "Reflex/Type.h"
 #include "Reflex/Base.h"
 #include "Reflex/Object.h"
-#include "OwnedPropertyList.h"
 #include "Reflex/DictionaryGenerator.h"
-
 #include "Reflex/Tools.h"
+
+#include "OwnedMember.h"
+#include "OwnedPropertyList.h"
 #include "Class.h"
+#include "PropertyListImpl.h"
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::MemberBase::MemberBase(const char *  name,
@@ -70,7 +71,7 @@ Reflex::Internal::MemberBase::CalculateBaseObject(const Object & obj) const {
    Type cl = obj.TypeOf();
    // if the object type is not implemented return the Address of the object
    if (! cl) return mem; 
-   if (cl.IsClass()) {
+   if (cl.Is(gClassOrStruct)) {
       if (DeclaringScope() && (cl.Id() != (dynamic_cast<const Class*>(DeclaringScope().ToScopeBase()))->ThisType().Id())) {
          // now we know that the Member type is an inherited one
          std::vector < OffsetFunction > basePath = (dynamic_cast<const Class*>(cl.ToTypeBase()))->PathToBase(DeclaringScope());
@@ -82,8 +83,9 @@ Reflex::Internal::MemberBase::CalculateBaseObject(const Object & obj) const {
             }
          }
          else {
+            std::string name;
             throw RuntimeError(std::string(": ERROR: There is no path available from class ")
-                               + cl.Name(kScoped) + " to " + Name(kScoped));
+                               + cl.Name(kScoped) + " to " + Name(name, kScoped));
          }
       }
    }
@@ -126,8 +128,11 @@ Reflex::Internal::MemberBase::MemberTypeAsString() const {
       return "FunctionMember";
       break;
    default:
-      return Reflex::Argv0() + ": ERROR: Member " + Name() +
-         " has no Species associated";
+      {
+         std::string name;
+         return Reflex::Argv0() + ": ERROR: Member " + Name(name, kScoped) +
+            " has no species associated";
+      }
    }
 }
 
@@ -138,16 +143,6 @@ Reflex::Internal::MemberBase::Properties() const {
 // Return the property list attached to this member.
    return fPropertyList;
 }
-
-
-//-------------------------------------------------------------------------------
-Reflex::Type
-Reflex::Internal::MemberBase::TemplateArgumentAt(size_t /* nth */) const {
-//-------------------------------------------------------------------------------
-// Return the nth template argument (in FunMemTemplInstance)
-   return Dummy::Type();
-}
-
 
 
 //-------------------------------------------------------------------------------

@@ -53,15 +53,6 @@ Reflex::Scope::operator Reflex::Type () const {
 
 
 //-------------------------------------------------------------------------------
-const Reflex::OrderedContainer<Reflex::Base>
-Reflex::Scope::Bases() const {
-//-------------------------------------------------------------------------------
-   if (* this) return fScopeName->fScopeBase->Bases(); 
-   return Dummy::EmptyContainer();
-}
-
-
-//-------------------------------------------------------------------------------
 const Reflex::OrderedContainer<Reflex::Member>
 Reflex::Scope::DataMembers() const {
 //-------------------------------------------------------------------------------
@@ -84,30 +75,18 @@ const Reflex::OrderedContainer<Reflex::Member>
 Reflex::Scope::FunctionMembers() const {
 //-------------------------------------------------------------------------------
    if (* this) return fScopeName->fScopeBase->FunctionMembers(); 
-   return &Dummy::EmptyContainer();
+   return Dummy::EmptyContainer();
 }
 
 
 //-------------------------------------------------------------------------------
 Reflex::Member
 Reflex::Scope::FunctionMemberByName(const std::string & name,
-                                                    const Type & signature,
-                                                    unsigned int modifiers_mask) const {
+                                    const Type & signature,
+                                    unsigned int modifiers_mask) const {
 //------------------------------------------------------------------------------- 
 // Return a function member by it's name, qualified by it's signature type.
    if (* this) return fScopeName->fScopeBase->FunctionMemberByName(name, signature, modifiers_mask); 
-   return Dummy::Member();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Member
-Reflex::Scope::FunctionMemberByNameAndSignature(const std::string & name,
-                                                                const Type & signature,
-                                                                unsigned int modifiers_mask) const {
-//------------------------------------------------------------------------------- 
-// Return a function member by it's name, qualified by it's signature type.
-   if (* this) return fScopeName->fScopeBase->FunctionMemberByNameAndSignature(name, signature, modifiers_mask); 
    return Dummy::Member();
 }
 
@@ -120,10 +99,12 @@ Reflex::Scope::GlobalScope() {
 }
 
 
-bool Reflex::Scope::HasBase(const Type & cl) const {
 //-------------------------------------------------------------------------------
-   // Return base info if type has base cl.
-   if (* this) return fScopeName->fScopeBase->HasBase(cl);
+bool
+Reflex::Scope::Is(const EntityProperty& descr) const {
+//-------------------------------------------------------------------------------
+// Test scope for properties.
+   if (*this) return fScopeName->fScopeBase->Is(descr);
    return false;
 }
 
@@ -181,7 +162,7 @@ const Reflex::OrderedContainer<Reflex::Member>
 Reflex::Scope::Members() const {
 //-------------------------------------------------------------------------------
    if (* this) return fScopeName->fScopeBase->Members(); 
-   return &Dummy::EmptyContainer();
+   return Dummy::EmptyContainer();
 }
 
 
@@ -201,7 +182,7 @@ const Reflex::OrderedContainer<Reflex::MemberTemplate>
 Reflex::Scope::MemberTemplates() const {
 //-------------------------------------------------------------------------------
    if (* this) return fScopeName->fScopeBase->MemberTemplates(); 
-   return &Dummy::EmptyContainer();
+   return Dummy::EmptyContainer();
 }
 
 
@@ -223,10 +204,10 @@ Reflex::Scope::Name(std::string& buf, unsigned int mod) const {
    if (*this)
       return fScopeName->fScopeBase->Name(buf, mod);
    if (fScopeName) {
-      if (mod & kScoped) return (buf = fScopeName->Name());
-      else              return (buf = Tools::GetBaseName(fScopeName->Name()));
+      if (mod & kScoped) return (buf += fScopeName->Name());
+      else               return (buf += Tools::GetBaseName(fScopeName->Name()));
    }
-   return (buf = "");
+   return buf;
 }
 
 
@@ -270,7 +251,7 @@ const Reflex::OrderedContainer<Reflex::Scope>
 Reflex::Scope::SubScopes() const {
 //-------------------------------------------------------------------------------
    if (* this) return fScopeName->fScopeBase->SubScopes(); 
-   return &Dummy::EmptyContainer();
+   return Dummy::EmptyContainer();
 }
 
 
@@ -288,7 +269,7 @@ const Reflex::OrderedContainer<Reflex::Type>
 Reflex::Scope::SubTypes() const {
 //-------------------------------------------------------------------------------
    if (* this) return fScopeName->fScopeBase->SubTypes(); 
-   return &Dummy::EmptyContainer();
+   return Dummy::EmptyContainer();
 }
 
 
@@ -297,7 +278,7 @@ const Reflex::OrderedContainer<Reflex::TypeTemplate>
 Reflex::Scope::SubTypeTemplates() const {
 //-------------------------------------------------------------------------------
    if (* this) return fScopeName->fScopeBase->SubTypeTemplates(); 
-   return &Dummy::EmptyContainer();
+   return Dummy::EmptyContainer();
 }
 
 
@@ -315,7 +296,7 @@ const Reflex::Container<Reflex::Scope>
 Reflex::Scope::UsingDirectives() const {
 //-------------------------------------------------------------------------------
    if (* this) return fScopeName->fScopeBase->UsingDirectives(); 
-   return &Dummy::EmptyContainer();
+   return Dummy::EmptyContainer();
 }
 
 
@@ -324,7 +305,7 @@ const Reflex::Container<Reflex::Type>
 Reflex::Scope::UsingTypeDeclarations() const {
 //-------------------------------------------------------------------------------
    if (* this) return fScopeName->fScopeBase->UsingTypeDeclarations(); 
-   return &Dummy::EmptyContainer();
+   return Dummy::EmptyContainer();
 }
 
 
@@ -333,7 +314,7 @@ const Reflex::Container<Reflex::Member>
 Reflex::Scope::UsingMemberDeclarations() const {
 //-------------------------------------------------------------------------------
    if (* this) return fScopeName->fScopeBase->UsingMemberDeclarations(); 
-   return &Dummy::EmptyContainer();
+   return Dummy::EmptyContainer();
 }
 
 

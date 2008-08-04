@@ -47,13 +47,23 @@ Reflex::Member::DeclaringType() const {
 }
 
 
--------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------
 void
 Reflex::Member::Delete() {
 //-------------------------------------------------------------------------------
 // delete the MemberBase
    delete fMemberBase;
    fMemberBase = 0;
+}
+
+
+//-------------------------------------------------------------------------------
+size_t
+Reflex::Member::FunctionParameterSize(bool required) const {
+//-------------------------------------------------------------------------------
+// delete the MemberBase
+   if (*this) return fMemberBase->FunctionParameterSize(required);
+   return 0;
 }
 
 
@@ -104,6 +114,16 @@ Reflex::Member::Invoke(const std::vector < void * > & paramList) const {
 // Invoke a static data member.
    if (fMemberBase) return fMemberBase->Invoke(paramList);
    return Object();
+}
+
+
+//-------------------------------------------------------------------------------
+bool
+Reflex::Member::Is(const EntityProperty& descr) const {
+//-------------------------------------------------------------------------------
+// Test member for properties.
+   if (fMemberBase) return fMemberBase->Is(descr);
+   return false;
 }
 
 

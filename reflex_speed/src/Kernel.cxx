@@ -16,7 +16,6 @@
 #include "Reflex/Kernel.h"
 
 #include "Reflex/Scope.h"
-#include "ScopeName.h"
 #include "Reflex/PropertyList.h"
 #include "Reflex/Type.h"
 #include "Reflex/Base.h"
@@ -25,11 +24,14 @@
 #include "Reflex/PropertyList.h"
 #include "Reflex/MemberTemplate.h"
 #include "Reflex/Any.h"
+#include "Reflex/Container.h"
 
 #include "Fundamental.h"
 #include "Namespace.h"
 #include "Typedef.h"
 #include "Class.h"
+#include "TypeTemplateName.h"
+#include "CatalogImpl.h"
 #include <typeinfo>
 
 
@@ -57,7 +59,7 @@ Reflex::TYPEName(ETYPE type) {
    };
 
    if (type > kUnresolved + 1)
-      type = kUnresolved + 1;
+      type = (ETYPE) (kUnresolved + 1);
    return sTYPENames[type];
 }
 
@@ -216,8 +218,8 @@ void Reflex::Instance::Shutdown() {
    // function to be called at tear down of Reflex, removes all memory allocations
    Internal::MemberTemplateName::CleanUp();
    Internal::TypeTemplateName::CleanUp();
-   Internal::TypeName::CleanUp();
-   Internal::ScopeName::CleanUp();
+   Catalog::Instance().Impl()->Types().CleanUp();
+   Catalog::Instance().Impl()->Scopes().CleanUp();
 }
 
 
@@ -232,12 +234,9 @@ Reflex::Instance::~Instance() {
 }
 
 
-//-------------------------------------------------------------------------------
-const Reflex::EmptyCont_Type_t & Reflex::Dummy::EmptyCont() {
-//-------------------------------------------------------------------------------
-// static wrapper for an empty container.
-
-   static class EmptyContainer: public EmptyCont_Type_t {
+namespace {
+   using namespace Reflex::Internal;
+   class EmptyContainerImpl: public Reflex::EmptyCont_Type_t {
    public:
       static class iterator: public IConstIteratorImpl {
       public:
@@ -245,7 +244,7 @@ const Reflex::EmptyCont_Type_t & Reflex::Dummy::EmptyCont() {
 
          virtual bool ProxyIsEqual(const IConstIteratorImpl& other) const { return true; }
          virtual void ProxyForward() { }
-         virtual void* ProxyElement() const { }
+         virtual const void* ProxyElement() const { return 0; }
          virtual IConstIteratorImpl* ProxyClone() const { return 0; }
       } sBeginEnd;
 
@@ -253,74 +252,25 @@ const Reflex::EmptyCont_Type_t & Reflex::Dummy::EmptyCont() {
       virtual void ProxyEnd(ConstIteratorBase& i) const { i.SetImpl(&sBeginEnd, false); }
 
       // empty implementation for unordered container
-      virtual void ProxyRBegin(ConstIteratorBase&) const { i.SetImpl(&sBeginEnd, false); }
-      virtual void ProxyREnd(ConstIteratorBase&) const { i.SetImpl(&sBeginEnd, false); }
+      virtual void ProxyRBegin(ConstIteratorBase& i) const { i.SetImpl(&sBeginEnd, false); }
+      virtual void ProxyREnd(ConstIteratorBase& i) const { i.SetImpl(&sBeginEnd, false); }
 
       virtual size_t ProxySize() const { return 0; }
       virtual bool   ProxyEmpty() const { return true; }
 
       virtual void*  ProxyByName(const std::string& /*name*/) const { return 0; }
       virtual void*  ProxyByTypeInfo(const std::type_info& /*ti*/) const { return 0; }
+   };
 
-   } sEmptyCont;
+   EmptyContainerImpl::iterator EmptyContainerImpl::sBeginEnd;
+}
 
+//-------------------------------------------------------------------------------
+const Reflex::EmptyCont_Type_t & Reflex::Dummy::EmptyContainer() {
+//-------------------------------------------------------------------------------
+// static wrapper for an empty container.
+   static EmptyContainerImpl sEmptyCont;
    return sEmptyCont;
-}
-
-
-//-------------------------------------------------------------------------------
-const Reflex::Type_Cont_Type_t & Reflex::Dummy::TypeCont() {
-//-------------------------------------------------------------------------------
-// static wrapper for an empty container of Types.
-   return Get< Type_Cont_Type_t >();
-}
-
-
-//-------------------------------------------------------------------------------
-const Reflex::Base_Cont_Type_t & Reflex::Dummy::BaseCont() {
-//-------------------------------------------------------------------------------
-// static wrapper for an empty container of Bases.
-   return Get< Base_Cont_Type_t >();
-}
-
-
-//-------------------------------------------------------------------------------
-const Reflex::Scope_Cont_Type_t & Reflex::Dummy::ScopeCont() {
-//-------------------------------------------------------------------------------
-// static wrapper for an empty container of Scopes.
-   return Get< Scope_Cont_Type_t >();
-}
-
-
-//-------------------------------------------------------------------------------
-const Reflex::Object_Cont_Type_t & Reflex::Dummy::ObjectCont() {
-//-------------------------------------------------------------------------------
-// static wrapper for an empty container of Objects.
-   return Get< Object_Cont_Type_t >();
-}
-
-
-//-------------------------------------------------------------------------------
-const Reflex::Member_Cont_Type_t & Reflex::Dummy::MemberCont() {
-//-------------------------------------------------------------------------------
-// static wrapper for an empty container of Members.
-   return Get< Member_Cont_Type_t >();
-}
-
-
-//-------------------------------------------------------------------------------
-const Reflex::TypeTemplate_Cont_Type_t & Reflex::Dummy::TypeTemplateCont() {
-//-------------------------------------------------------------------------------
-// static wrapper for an empty container of TypeTemplates.
-   return Get< TypeTemplate_Cont_Type_t >();
-}
-
-
-//-------------------------------------------------------------------------------
-const Reflex::MemberTemplate_Cont_Type_t & Reflex::Dummy::MemberTemplateCont() {
-//-------------------------------------------------------------------------------
-// static wrapper for an empty container of MemberTemplates.
-   return Get< MemberTemplate_Cont_Type_t >();
 }
 
 

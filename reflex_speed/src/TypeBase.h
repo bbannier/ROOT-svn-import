@@ -83,6 +83,13 @@ namespace Internal {
 
 
       /**
+      * BaseAt returns the collection of base class information
+      * @return pointer to base class information
+      */
+      virtual const IContainerImpl& Bases() const;
+
+
+      /**
       * CastObject an object from this class At to another one
       * @param  to is the class At to cast into
       * @param  obj the memory AddressGet of the object to be casted
@@ -152,6 +159,14 @@ namespace Internal {
       virtual void GenerateDict(DictionaryGenerator &generator) const;
 
 
+      /* HasBase will check whether this class has a base class given
+      * as argument
+      * @param  cl the base-class to check for
+      * @return the Base info if it is found, an empty base otherwise (can be tested for bool)
+      */
+      virtual bool HasBase(const Type & cl) const;
+
+
       /**
       * Retrieve the Catalog containing the type.
       */
@@ -219,6 +234,18 @@ namespace Internal {
       * @return pointer to Type of return At
       */
       virtual Type ReturnType() const;
+
+
+      /* SimpleName returns the name of the type as a reference. It provides a 
+      * simplified but faster generation of a type name. Attention currently it
+      * is not guaranteed that Name() and SimpleName() return the same character 
+      * layout of a name (ie. spacing, commas, etc. )
+      * @param pos will indicate where in the returned reference the requested name starts
+      * @param mod The only 'mod' support is SCOPED
+      * @return name of type
+      */
+      const std::string & SimpleName( size_t & pos, 
+         unsigned int mod = 0 ) const;
 
 
       /**
@@ -413,6 +440,14 @@ Reflex::Internal::TypeBase::operator Reflex::Type () const {
 
 
 //-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl&
+Reflex::Internal::TypeBase::Bases() const {
+//-------------------------------------------------------------------------------
+   return Dummy::EmptyContainer();
+}
+
+
+//-------------------------------------------------------------------------------
 inline size_t
 Reflex::Internal::TypeBase::ArrayLength() const {
 //-------------------------------------------------------------------------------
@@ -463,6 +498,14 @@ inline void
 Reflex::Internal::TypeBase::GenerateDict(DictionaryGenerator & /* generator */) const {
 //-------------------------------------------------------------------------------
 // Generate Dictionary information about itself.
+}
+
+
+//-------------------------------------------------------------------------------
+inline bool
+Reflex::Internal::TypeBase::HasBase(const Type & cl) const {
+//-------------------------------------------------------------------------------
+   return false;
 }
 
 

@@ -14,7 +14,7 @@
 
 // Include files
 #include "MemberBase.h"
-
+#include "ContainerSTLAdaptor.h"
 
 namespace Reflex {
 
@@ -88,14 +88,14 @@ namespace Internal {
       * (as strings) for function parameters.
       * @return collection of default values for parameters
       */
-      const OrderedContainer<std::string>& FunctionParameterDefaults() const;
+      const IContainerImpl& FunctionParameterDefaults() const;
 
 
       /** 
       * FunctionParametertNames returns a collection of the parameter names
       * @return parameter names
       */
-      const OrderedContainer<std::string>& FunctionParameterNames() const;
+      const IContainerImpl& FunctionParameterNames() const;
 
 
       /** return a pointer to the context */
@@ -127,9 +127,21 @@ namespace Internal {
          std::vector < std::string > fParameterNames;
 
 
+      /** 
+      * IContainerImpl interface for container of parameter names
+      */
+      const ContainerSTLAdaptor< std::vector<std::string> > fParameterNamesAdaptor;
+
+
       /** FunctionParameterAt names */
       mutable
          std::vector < std::string > fParameterDefaults;
+
+
+      /** 
+      * IContainerImpl interface for container of parameter defaults
+      */
+      const ContainerSTLAdaptor< std::vector<std::string> > fParameterDefaultsAdaptor;
 
 
       /** number of required parameters */
@@ -139,6 +151,28 @@ namespace Internal {
 } //namespace Internal
 } //namespace Reflex
 
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl&
+Reflex::Internal::FunctionMember::FunctionParameterDefaults() const {
+//-------------------------------------------------------------------------------
+   return fParameterDefaultsAdaptor;
+}
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl&
+Reflex::Internal::FunctionMember::FunctionParameterNames() const {
+//-------------------------------------------------------------------------------
+   return fParameterNamesAdaptor;
+}
+
+//-------------------------------------------------------------------------------
+inline size_t
+Reflex::Internal::FunctionMember::FunctionParameterSize(bool required) const {
+//-------------------------------------------------------------------------------
+   if (required) return fReqParameters;
+   return TypeOf().FunctionParameters().Size();
+}
 
 //-------------------------------------------------------------------------------
 inline void *

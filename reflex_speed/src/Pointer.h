@@ -32,7 +32,8 @@ namespace Internal {
    public:
 
       /** default constructor */
-      Pointer(const Type & pointerType, 
+      Pointer(const Type & pointerType,
+         unsigned int modifiers,
          const std::type_info & ti);
 
       /** destructor */
@@ -40,11 +41,15 @@ namespace Internal {
 
 
       /**
-      * Name will return the fully qualified Name of the pointer At
-      * @param  typedefexp expand typedefs or not
-      * @return fully qualified Name of pointer At
+      * Name returns the name of the type
+      * @param  buf buffer to be used for calculating name
+      * @param  mod qualifiers can be or'ed 
+      *   kFinal     - resolve typedefs
+      *   kScoped    - fully scoped name 
+      *   kQualified - cv, reference qualification 
+      * @return name of the type
       */
-      std::string Name(unsigned int mod = 0) const;
+      const std::string& Name(std::string& buf, unsigned int mod = kScoped | kQualified) const;
 
 
       /**
@@ -55,7 +60,16 @@ namespace Internal {
 
 
       /** static funtion that composes the typename */
-      static std::string BuildTypeName(const Type & pointerType,
+      static const std::string& BuildTypeName(
+         const Type & pointerType,
+         unsigned int mod = kScoped | kQualified) {
+         std::string buf;
+         return BuildTypeName(buf, pointerType, mod);
+      }
+
+      /** static funtion that composes the typename */
+      static const std::string& BuildTypeName(std::string& buf,
+         const Type & pointerType,
          unsigned int mod = kScoped | kQualified);
 
    private:
@@ -79,6 +93,13 @@ inline Reflex::Type
 Reflex::Internal::Pointer::ToType() const {
 //-------------------------------------------------------------------------------
    return fPointerType;
+}
+
+//-------------------------------------------------------------------------------
+inline const std::string&
+Reflex::Internal::Pointer::Name(std::string& buf, unsigned int mod) const {
+//-------------------------------------------------------------------------------
+   return BuildTypeName(buf, fPointerType, mod);
 }
 
 #endif // Reflex_Pointer

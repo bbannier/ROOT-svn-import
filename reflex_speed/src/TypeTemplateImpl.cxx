@@ -29,7 +29,9 @@ Reflex::Internal::TypeTemplateImpl::TypeTemplateImpl(const char * templateName,
 //------------------------------------------------------------------------------- 
    : fScope(scop),
      fParameterNames(parameterNames),
+     fParameterNamesAdaptor(fParameterNames),
      fParameterDefaults(parameterDefaults),
+     fParameterDefaultsAdaptor(fParameterDefaults),
      fReqParameters(parameterNames.size() - parameterDefaults.size()) {
    // Construct the type template family info.
 
@@ -49,7 +51,7 @@ Reflex::Internal::TypeTemplateImpl::TypeTemplateImpl(const char * templateName,
 Reflex::Internal::TypeTemplateImpl::~TypeTemplateImpl() {
 //-------------------------------------------------------------------------------
 // Destructor.
-   for (Type_Iterator ti = TemplateInstances().Begin(); ti != TemplateInstances().End(); ++ti) {
+   for (ContainerImpl<std::string, Type>::iterator ti = TemplateInstances().Begin(); ti; ++ti) {
       ti->Unload();
    }
    if (fTypeTemplateName->fTypeTemplateImpl == this) fTypeTemplateName->fTypeTemplateImpl = 0;

@@ -291,7 +291,8 @@ namespace Reflex {
       kMemberTemplateInstance,
       kDataMember,
       kFunctionMember,
-      kUnresolved
+      kUnresolved,
+      kNIL
    };
 
 

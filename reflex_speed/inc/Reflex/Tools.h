@@ -99,12 +99,12 @@ namespace Reflex {
 
 
       /**
-      * StringVec2String will take a vector of strings and return the
-      * vector containees concatenated by commas
+      * StringVec2String takes a vector of strings and appends to s and returns the
+      * concatenated vector containees separated by a comma and a space
       * @param vec the vector to be converted
       * @return string of comma concatenated containees 
       */
-      RFLX_API std::string StringVec2String(const std::vector<std::string> & vec);
+      RFLX_API const std::string& StringVec2String(std::string& s, const std::vector<std::string> & vec);
 
 
       RFLX_API std::string BuildTypeName(Type & t, 

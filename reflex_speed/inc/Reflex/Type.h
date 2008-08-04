@@ -112,27 +112,6 @@ namespace Reflex {
       */
       operator bool () const;
 
-#ifdef REFLEX_CINT_MERGE
-      // To prevent any un-authorized use as the old type
-      bool operator!() const { return !operator bool(); }
-      bool operator&&(bool right) const { return operator bool() && right; }
-      bool operator&&(int right) const { return operator bool() && right; }
-      bool operator&&(long right) const { return operator bool() && right; }
-      bool operator&&(const Scope &right) const;
-      bool operator&&(const Type &right) const;
-      bool operator&&(const Member &right) const;
-      bool operator||(bool right) const { return operator bool() || right; }
-      bool operator||(int right) const { return operator bool() || right; }
-      bool operator||(long right) const { return operator bool() || right; }
-      bool operator||(const Scope &right) const;
-      bool operator||(const Type &right) const;
-      bool operator||(const Member &right) const;
-   private:
-      operator int () const;
-   public:
-#endif
-
-
       /**
       * Allocate will reserve memory for the size of the object
       * @return pointer to allocated memory
@@ -145,6 +124,13 @@ namespace Reflex {
       * @return size of array
       */
       size_t ArrayLength() const;
+
+
+      /**
+      * Bases returns the collection of base class information
+      * @return collection of base class information
+      */
+      const OrderedContainer<Base> Bases() const;
 
 
       /**
@@ -222,6 +208,14 @@ namespace Reflex {
       * @param generator a reference to the dictionary generator instance
       */
       void GenerateDict(DictionaryGenerator & generator) const;
+
+
+      /* HasBase will check whether this class has a base class given
+      * as argument
+      * @param  cl the base-class to check for
+      * @return the Base info if it is found, an empty base otherwise (can be tested for bool)
+      */
+      bool HasBase(const Type & cl) const;
 
 
       /**
@@ -425,6 +419,27 @@ namespace Reflex {
 
       /** modifiers */
       unsigned int fModifiers;
+
+#ifdef REFLEX_CINT_MERGE
+   public:
+      // To prevent any un-authorized use as the old type
+      bool operator!() const { return !operator bool(); }
+      bool operator&&(bool right) const { return operator bool() && right; }
+      bool operator&&(int right) const { return operator bool() && right; }
+      bool operator&&(long right) const { return operator bool() && right; }
+      bool operator&&(const Scope &right) const;
+      bool operator&&(const Type &right) const;
+      bool operator&&(const Member &right) const;
+      bool operator||(bool right) const { return operator bool() || right; }
+      bool operator||(int right) const { return operator bool() || right; }
+      bool operator||(long right) const { return operator bool() || right; }
+      bool operator||(const Scope &right) const;
+      bool operator||(const Type &right) const;
+      bool operator||(const Member &right) const;
+   private:
+      operator int () const;
+#endif
+
 
    }; // class Type
 

@@ -59,7 +59,7 @@ namespace Internal {
       * MemberTemplates returns the collection of known member templates
       * @return collection of member templates
       */
-      static const Container<MemberTemplate>& MemberTemplates();
+      static const IContainerImpl& MemberTemplates();
 
 
       /**

@@ -98,7 +98,7 @@ namespace Reflex {
       * TemplateInstances returns the collection of instances of this template.
       * @return the collection of the instances
       */
-      const Container<Type>& TemplateInstances() const;
+      const Container<Type> TemplateInstances() const;
 
 
       /**
@@ -112,21 +112,21 @@ namespace Reflex {
       * TemplateParameterDefaults returns the collection of template default values as string
       * @return collection of default value of template parameters
       */
-      const OrderedContainer<std::string>& TemplateParameterDefaults() const;
+      const OrderedContainer<std::string> TemplateParameterDefaults() const;
 
 
       /**
       * TemplateParameterNames returns the names of the template parameters
       * @return Collection of names of template template parameters
       */
-      const OrderedContainer<std::string>& TemplateParameterNames() const;
+      const OrderedContainer<std::string> TemplateParameterNames() const;
 
 
       /**
       * TypeTemplates returns the collection of all known type templates
       * @return collection of type templates
       */
-      static const Container<TypeTemplate>& TypeTemplates();
+      static const Container<TypeTemplate> TypeTemplates();
 
 
       /**

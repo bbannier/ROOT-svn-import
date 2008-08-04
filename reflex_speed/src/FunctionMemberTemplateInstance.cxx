@@ -58,17 +58,17 @@ FunctionMemberTemplateInstance(const char * nam,
 //       }
 //    }
 
-   fTemplateFamily = MemberTemplate::ByName(scopedTemplateName, TemplateArgumentSize());
+   fTemplateFamily = MemberTemplate::ByName(scopedTemplateName, TemplateArguments().ProxySize());
 
    if (! fTemplateFamily) {
       std::vector < std::string > parameterNames = std::vector < std::string > ();
-      for (size_t i = 65; i < 65 + TemplateArgumentSize(); ++i) 
+      for (size_t i = 65; i < 65 + TemplateArguments().ProxySize(); ++i) 
          parameterNames.push_back("typename " + std::string(1,char(i)));
       MemberTemplateImpl * mti = new MemberTemplateImpl(scopedTemplateName.c_str(),
                                                          scop,
                                                          parameterNames);
       fTemplateFamily = mti->ThisMemberTemplate();
-      scop.AddMemberTemplate(fTemplateFamily);
+      scop.AddMember(fTemplateFamily);
    }
    
    fTemplateFamily.AddTemplateInstance((Member)(*this));
@@ -76,19 +76,9 @@ FunctionMemberTemplateInstance(const char * nam,
 
 
 //-------------------------------------------------------------------------------
-std::string 
-Reflex::Internal::FunctionMemberTemplateInstance::Name(unsigned int mod) const {
+const std::string&
+Reflex::Internal::FunctionMemberTemplateInstance::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Return the name of the function member.
-   return FunctionMember::Name(mod);
-}
-
-
-
-//-------------------------------------------------------------------------------
-Reflex::Type
-Reflex::Internal::FunctionMemberTemplateInstance::TemplateArgumentAt(size_t nth) const {
-//-------------------------------------------------------------------------------
-// Return nth template argument of this function member.
-   return TemplateInstance::TemplateArgumentAt(nth);
+   return FunctionMember::Name(buf, mod);
 }

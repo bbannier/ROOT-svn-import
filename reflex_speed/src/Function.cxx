@@ -26,7 +26,7 @@ Reflex::Internal::Function::Function(const Type & retType,
                                       ETYPE functionType) 
 //-------------------------------------------------------------------------------
 // Default constructor for a function type.
-: TypeBase(BuildTypeName(std::string(), retType, Scope(), parameters, 0, kQualified | kScoped).c_str(), 0, 0, functionType, ti),
+: TypeBase(BuildTypeName(retType, parameters, 0, kQualified | kScoped).c_str(), 0, 0, functionType, ti),
      fParameters(parameters),
      fParametersAdaptor(fParameters),
      fReturnType(retType)
@@ -39,9 +39,54 @@ Reflex::Internal::Function::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Return the name of the function type.
    if (! mod)
-      return (buf = fTypeName->Name());
-   return BuildTypeName(buf, fReturnType, DeclaringScope(), fParameters, fTypeModifiers, mod);
+      return (buf += fTypeName->Name());
+   return BuildTypeName(buf, fReturnType, fParameters, fTypeModifiers, mod, DeclaringScope());
 
+}
+
+
+//-------------------------------------------------------------------------------
+const std::string&
+Reflex::Internal::Function::BuildPointerTypeName(std::string& buf, const Type & ret,
+                                                 const std::string& name,
+                                                const OrderedContainer< Type > & pars,
+                                                unsigned int typemod, unsigned int mod,
+                                                const Scope& scope) {
+//-------------------------------------------------------------------------------
+// Build the name of the function type in the form <returntype><space>(<scope>::* <name>)(<param>*)
+// Return type and parameter types will always be scoped and qualified, even if
+// mod specifies non-scoped, non-qualified; the modification only changes the
+// function name itself, i.e. "a::b (a::* ptr)() const" becomes "a::b (a::* ptr)()" for 
+// non-qualified (scoped / non-scoped is ignored and must be handled when calulating the
+// the name parameter).
+
+   ret.Name(buf, kScoped | kQualified);
+
+   buf += " (";
+   if (scope && !scope.Is(gNamespace)) {
+      scope.Name(buf, kScoped);
+      buf += "::* ";
+   }
+   buf += name + ")(";
+   if (!pars.Empty()) {
+      Container<Type>::const_iterator iParEnd = pars.End();
+      for (Container<Type>::const_iterator ti = pars.Begin(); ti != iParEnd;) {
+         ti->Name(buf, kQualified | kScoped);
+         if (++ti != iParEnd)
+            buf += ", ";
+      }
+   }
+   // leave it blank - the shorter the string the better.
+   //else {
+   //   buf += "void";
+   //}
+   buf += ")";
+   if ((mod & kQualified) && (typemod & kConst))
+      buf += " const";
+   // should we or should we not? It's part of the type but overloading with
+   // throiw / no throw is not allowed.
+   // if (Is(gThrows)) buf += " throw()";
+   return buf;
 }
 
 

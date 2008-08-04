@@ -100,7 +100,7 @@ namespace Internal {
       /** 
       * IContainerImpl interface for container of constructors
       */
-      ContainerSTLAdaptor< std::vector<Member> > fConstructorsAdaptor;
+      const ContainerSTLAdaptor< std::vector<Member> > fConstructorsAdaptor;
 
       /**
        * short cut to destructor
