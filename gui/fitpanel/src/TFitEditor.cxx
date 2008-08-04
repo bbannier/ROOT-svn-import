@@ -550,6 +550,11 @@ void TFitEditor::CreateGeneralTab()
    fAdd2FuncList->SetToolTipText("'+'- add function to the list without deleting the previous");
    v4->AddFrame(fAdd2FuncList, new TGLayoutHints(kLHintsNormal, 0, 0, 2, 2));
 
+   fUseGradient = new TGCheckButton(v4, "Use Gradient", kFP_ADDLS);
+   fUseGradient->Associate(this);
+   fUseGradient->SetToolTipText("'G'- Use the gradient as an aid for the fitting");
+   v4->AddFrame(fUseGradient, new TGLayoutHints(kLHintsNormal, 0, 0, 2, 2));
+
    h->AddFrame(v4, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY, 20, 0, 0, 0));
    gf->AddFrame(h, new TGLayoutHints(kLHintsExpandX, 20, 0, 0, 0));
 
@@ -1727,6 +1732,8 @@ void TFitEditor::DoReset()
       fImproveResults->SetState(kButtonUp, kFALSE);
    if (fAdd2FuncList->GetState() == kButtonDown)
       fAdd2FuncList->SetState(kButtonUp, kFALSE);
+   if (fUseGradient->GetState() == kButtonDown)
+      fUseGradient->SetState(kButtonUp, kFALSE);
    if (fNoChi2->GetState() == kButtonDown)
       fNoChi2->SetState(kButtonUp, kFALSE);
    if (fDrawSame->GetState() == kButtonDown)
@@ -2370,6 +2377,9 @@ void TFitEditor::RetrieveOptions(TString& fitOpts, TString& drawOpts, Int_t npar
 
    if (fAdd2FuncList->GetState() == kButtonDown)
       fitOpts += '+';
+
+   if (fUseGradient->GetState() == kButtonDown)
+      fitOpts += 'G';
 
    if ( fOptQuiet->GetState() == kButtonDown )
       fitOpts += 'Q'; 
