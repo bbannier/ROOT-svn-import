@@ -140,6 +140,7 @@
 #include "TGraph.h"
 #include "TGraph2D.h"
 #include "TH1.h"
+#include "TH2.h"
 #include "HFitInterface.h"
 #include "TF1.h"
 #include "TF2.h"
@@ -1352,7 +1353,7 @@ void TFitEditor::DoFit()
    if ( CheckFunctionString(fEnteredFunc->GetText()) )
    {
       new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
-                   "Error...", "Verify the entered function string!",
+                   "Error...", "DoFit\nVerify the entered function string!",
                    kMBIconStop,kMBOk, 0);
       return;
    }
@@ -1400,18 +1401,17 @@ void TFitEditor::DoFit()
             xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
             xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
             
-            TF1 fitFunc("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
+            TF2 fitFunc("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
             if ( fFuncPars ) SetParameters(fFuncPars, &fitFunc);
             
             RetrieveOptions(strFitOpts, strDrawOpts, fitFunc.GetNpar());
             fitFunc.SetRange(xmin,xmax);
             
-            TH1 *h1 = (TH1*)fFitObject;
+            TH2 *h2 = (TH2*)fFitObject;
             // Still temporal until the same algorithm is implemented for
             // graph. Then it could be done in a more elegant way.
-            
             TH1::FitOptionsMake(strFitOpts,fitOpts);
-            ROOT::Fit::FitObject(h1, &fitFunc, fitOpts, strDrawOpts, xmin, xmax);
+            ROOT::Fit::FitObject(h2, &fitFunc, fitOpts, strDrawOpts, xmin, xmax);
          }
 
          break;
@@ -1593,7 +1593,7 @@ void TFitEditor::DoEnteredFunction()
 
    if (ok != 0) {
       new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
-                   "Error...", "Verify the entered function string!",
+                   "Error...", "DoEnteredFunction\nVerify the entered function string!",
                    kMBIconStop,kMBOk, 0);
       return;
    }
