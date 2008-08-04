@@ -66,6 +66,7 @@ class XrdProofdClient {
    void                    EraseServer(int psid);
    XrdProofdProofServ     *GetProofServ(int psid);
    int                     GetTopProofServ();
+   void                    CheckServerSlots();
 
    int                     ResetClientSlot(int ic);
    XrdProofdProtocol      *GetProtocol(int ic);
@@ -78,12 +79,12 @@ class XrdProofdClient {
 
    void                    Broadcast(const char *msg);
 
-   XrdOucString            ExportSessions(XrdOucString &emsg);
+   XrdOucString            ExportSessions(XrdOucString &emsg, XrdProofdResponse *r = 0);
    void                    SkipSessionsCheck(std::list<XrdProofdProofServ *> *active,
-                                             XrdOucString &emsg);
+                                             XrdOucString &emsg, XrdProofdResponse *r = 0);
    void                    TerminateSessions(int srvtype, XrdProofdProofServ *ref,
                                              const char *msg, XrdProofdPipe *pipe, bool changeown);
-   bool                    VerifySession(XrdProofdProofServ *xps);
+   bool                    VerifySession(XrdProofdProofServ *xps, XrdProofdResponse *r = 0);
 
    void                    SetGroup(const char *g) { fUI.fGroup = g; }
    void                    SetROOT(XrdROOT *r) { fROOT = r; }
@@ -92,7 +93,7 @@ class XrdProofdClient {
 
    int                     Size() const { return fClients.size(); }
 
-   void                    Touch();
+   int                     Touch(bool reset = 0);
 
    int                     CreateUNIXSock(XrdSysError *edest);
    XrdNet                 *UNIXSock() const { return fUNIXSock; }
@@ -108,6 +109,7 @@ class XrdProofdClient {
 
    bool                    fChangeOwn; // TRUE if ownership must be changed where relevant
    bool                    fIsValid; // TRUE if the instance is complete
+   bool                    fAskedToTouch; // TRUE if a touch request has already been sent for this client
 
    XrdProofUI              fUI;         // user info
    XrdROOT                *fROOT;        // ROOT vers instance to be used for proofserv
