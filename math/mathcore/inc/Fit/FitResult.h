@@ -183,14 +183,14 @@ public:
       cl is the desired confidedence interval value
       
     */
-   void FitResult::GetConfidenceIntervals(unsigned int n, unsigned int stride1, unsigned int stride2, const double * x,  double * ci, double cl=0.95 ) const;     
+   void GetConfidenceIntervals(unsigned int n, unsigned int stride1, unsigned int stride2, const double * x,  double * ci, double cl=0.95 ) const;     
 
    /**
       evaluate confidence interval for the point specified in the passed data sets
       the confidence interval are returned in the array ci
       cl is the desired confidedence interval value
     */
-   void FitResult::GetConfidenceIntervals(const BinData & data, double * ci, double cl=0.95 ) const;
+   void GetConfidenceIntervals(const BinData & data, double * ci, double cl=0.95 ) const;
 
 
    /// get index for parameter name (return -1 if not found)
