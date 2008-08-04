@@ -180,7 +180,7 @@ namespace Internal {
       * @param mod the modifier as stored by Type (reference,...)
       * @return whether descr is set.
       */
-      virtual bool Is(const EntityProperty& descr, int mod = 0) const;
+      virtual bool Is(const EntityProperty& descr, unsigned int mod = 0) const;
 
 
       /** Array
@@ -503,7 +503,7 @@ Reflex::Internal::TypeBase::GenerateDict(DictionaryGenerator & /* generator */) 
 
 //-------------------------------------------------------------------------------
 inline bool
-Reflex::Internal::TypeBase::HasBase(const Type & cl) const {
+Reflex::Internal::TypeBase::HasBase(const Type &) const {
 //-------------------------------------------------------------------------------
    return false;
 }
@@ -511,7 +511,7 @@ Reflex::Internal::TypeBase::HasBase(const Type & cl) const {
 
 //-------------------------------------------------------------------------------
 inline bool
-Reflex::Internal::TypeBase::Is(const EntityProperty& prop, int mod) const {
+Reflex::Internal::TypeBase::Is(const EntityProperty& prop, unsigned int mod) const {
 //-------------------------------------------------------------------------------
    return prop.Eval(fTypeModifiers | mod, fTypeType);
 }
@@ -615,9 +615,10 @@ Reflex::Internal::TypeBase::TypeTypeAsString() const {
 //-------------------------------------------------------------------------------
 // Return the kind of type as a string.
    const std::string& s = TYPEName(fTypeType);
-   if (s.empty())
-      // re-use s as buffer
-      return "Type " + Name(std::string()) + "is not assigned to a ETYPE";
+   if (s.empty()) {
+      std::string name;
+      return "Type " + Name(name) + "is not assigned to a ETYPE";
+   }
    return s;
 }
 

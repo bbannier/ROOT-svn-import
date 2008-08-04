@@ -87,7 +87,7 @@ Reflex::Object Reflex::Internal::Class::CastObject(const Type & to,
       return Object(to, (void*)obj2);
    }
    path.clear();
-   Type t = *this;
+   Type t = TypeBase::operator Type();
    if (to.HasBase(t)) {      // down cast
       // use the internal dynamic casting of the compiler (e.g. libstdc++.so)
       void * obj3 = 0;
@@ -108,7 +108,7 @@ Reflex::Object Reflex::Internal::Class::CastObject(const Type & to,
    // fixme cross cast missing ?? internal cast possible ??
 
    // if the same At was passed return the object
-   if ((Type)(*this) == to) return obj;
+   if (TypeBase::operator Type() == to) return obj;
 
    // if everything fails return the dummy object
    return Object();
@@ -289,7 +289,8 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
       std::string typenumber = generator.GetTypeNumber(ThisType());
 
       if (generator.fSelections.size() != 0 || generator.fPattern_selections.size() != 0) {
-         std::cout << "  * selecting class " << Name(std::string(), kScoped) << "\n";
+         std::string name;
+         std::cout << "  * selecting class " << Name(name, kScoped) << "\n";
       }
 
       generator.AddIntoInstances("      " + generator.Replace_colon(ThisType().Name(kScoped)) + "_dict();\n");

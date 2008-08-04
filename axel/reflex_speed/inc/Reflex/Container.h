@@ -120,8 +120,8 @@ namespace Reflex {
       class RFLX_API ContainerBase {
       public:
          ContainerBase(const IContainerImpl& coll): fCont(coll) {}
-
-      protected:
+         const Internal::IContainerImpl& Cont() const { return fCont; }
+      private:
          const Internal::IContainerImpl& fCont; // actual collection wrapper
       };
    }
@@ -139,19 +139,19 @@ namespace Reflex {
 
       Container(const Internal::IContainerImpl& coll): Internal::ContainerBase(coll) {}
          
-      const_iterator Begin() const { const_iterator ret; fCont.ProxyBegin(ret); return ret; }
-      const_iterator End() const   { const_iterator ret; fCont.ProxyEnd(ret);   return ret; }
+      const_iterator Begin() const { const_iterator ret; Cont().ProxyBegin(ret); return ret; }
+      const_iterator End() const   { const_iterator ret; Cont().ProxyEnd(ret);   return ret; }
 
-      size_t Size() const  { return fCont.ProxySize(); }
-      bool   Empty() const { return fCont.ProxyEmpty(); }
+      size_t Size() const  { return Cont().ProxySize(); }
+      bool   Empty() const { return Cont().ProxyEmpty(); }
 
       T ByName(const std::string& name) const {
-         const T* ret = (const T*)fCont.ProxyByName(name);
+         const T* ret = (const T*)Cont().ProxyByName(name);
          if (ret) return *ret;
          return T();
       }
       T ByTypeInfo(const std::type_info& ti) const {
-         const T* ret = (const T*)fCont.ProxyByTypeInfo(ti);
+         const T* ret = (const T*)Cont().ProxyByTypeInfo(ti);
          if (ret) return *ret;
          return T();
       }
@@ -161,6 +161,9 @@ namespace Reflex {
          Dummy::Get();
       friend class Scope;
       friend class Type;
+      friend class Catalog;
+      friend class MemberTemplate;
+      friend class TypeTemplate;
    };
 
 
@@ -183,8 +186,17 @@ namespace Reflex {
       OrderedContainer(const Internal::IContainerImpl& coll): Container<T>(coll) {}
 
       // reverse iteration only possible for ordered container
-      const_reverse_iterator RBegin() const { const_reverse_iterator ret; fCont.ProxyRBegin(ret); return ret; }
-      const_reverse_iterator REnd() const   { const_reverse_iterator ret; fCont.ProxyREnd(ret);   return ret; }
+      const_reverse_iterator RBegin() const { const_reverse_iterator ret; Internal::ContainerBase::Cont().ProxyRBegin(ret); return ret; }
+      const_reverse_iterator REnd() const   { const_reverse_iterator ret; Internal::ContainerBase::Cont().ProxyREnd(ret);   return ret; }
+
+      template <typename CONT>
+      friend const CONT&
+         Dummy::Get();
+      friend class Scope;
+      friend class Type;
+      friend class Catalog;
+      friend class MemberTemplate;
+      friend class TypeTemplate;
    };
 
 } // namespace Reflex

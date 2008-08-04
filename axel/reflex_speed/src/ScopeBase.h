@@ -137,10 +137,10 @@ namespace Internal {
       * Check whether the entity property is set for the scope. You can
       * combine checks, e.g. Is(gClass && gPublic)
       * @param descr the entity property to check for; see EntityProperty.
-      * @param mod the modifier as stored by Type (reference,...)
+      * @param mod unused; for compatibility with Type::Is().
       * @return whether descr is set.
       */
-      virtual bool Is(const EntityProperty& descr) const;
+      virtual bool Is(const EntityProperty& descr, unsigned int = 0) const;
 
 
       /* IsComplete will return true if all classes and base classes of this 
@@ -644,7 +644,7 @@ Reflex::Internal::ScopeBase::IsComplete() const {
 
 //-------------------------------------------------------------------------------
 inline bool
-Reflex::Internal::ScopeBase::Is(const EntityProperty& prop) const {
+Reflex::Internal::ScopeBase::Is(const EntityProperty& prop, unsigned int) const {
 //-------------------------------------------------------------------------------
    return prop.Eval(0, fScopeType);
 }

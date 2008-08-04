@@ -269,7 +269,7 @@ namespace Internal {
 
 //-------------------------------------------------------------------------------
 inline size_t
-Reflex::Internal::MemberBase::FunctionParameterSize(bool required) const {
+Reflex::Internal::MemberBase::FunctionParameterSize(bool /*required*/) const {
 //-------------------------------------------------------------------------------
    return 0;
 }

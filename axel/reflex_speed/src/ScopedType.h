@@ -54,7 +54,7 @@ namespace Internal {
       virtual void HideName() const;
 
 
-      virtual bool Is(const EntityProperty& descr, int mod = 0) const;
+      virtual bool Is(const EntityProperty& descr, unsigned int mod = 0) const;
 
       /**
       * Name returns the name of the scope
@@ -113,7 +113,7 @@ Reflex::Internal::ScopedType::DeclaringScope() const
 
 //-------------------------------------------------------------------------------
 inline bool
-Reflex::Internal::ScopedType::Is(const EntityProperty& descr, int mod) const
+Reflex::Internal::ScopedType::Is(const EntityProperty& descr, unsigned int mod) const
 {
 //-------------------------------------------------------------------------------
    return TypeBase::Is(descr, mod);

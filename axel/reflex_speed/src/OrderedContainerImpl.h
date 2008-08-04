@@ -66,7 +66,7 @@ namespace Internal {
       typedef ContainerTools::LinkIter LinkIter_t;
       typedef LinkedObj<VALUE> LinkedObj_t;
       typedef ContainerTraitsLinkedObjT< KEY, VALUE, TRAITS > LinkedObjTraits_t;
-      typedef typename ContainerImpl< KEY, LinkedObj_t, UNIQUENESS, LinkedObjTraits_t> Cont_t;
+      typedef ContainerImpl< KEY, LinkedObj_t, UNIQUENESS, LinkedObjTraits_t> Cont_t;
       typedef typename Cont_t::iterator ContIter_t;
 
    public:

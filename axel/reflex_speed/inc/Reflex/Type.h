@@ -350,6 +350,7 @@ namespace Reflex {
       static const Container<Type> Types();
 
       static Type ByName(const std::string& name) { return Types().ByName(name); }
+      static Type ByTypeInfo(const std::type_info& ti) { return Types().ByTypeInfo(ti); }
 
 
       /**

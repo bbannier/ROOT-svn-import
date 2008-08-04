@@ -151,7 +151,7 @@ void Reflex::Internal::Constructable::RemoveMember(const Member & m) const
 //-------------------------------------------------------------------------------
 // Remove member from this class.
    if (m.Is(gConstructor)) {
-      std::vector<Member>::const_iterator iCtor
+      std::vector<Member>::iterator iCtor
          = std::find(fConstructors.begin(), fConstructors.end(), m);
       if (iCtor != fConstructors.end())
          fConstructors.erase(iCtor);

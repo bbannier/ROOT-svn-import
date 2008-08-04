@@ -21,6 +21,7 @@
 #include "OwnedMember.h"
 #include <cstring>
 #include <iostream>
+#include <stdlib.h>
 
 #if defined(__GNUC__)
 #include <cxxabi.h>
