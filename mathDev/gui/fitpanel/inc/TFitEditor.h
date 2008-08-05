@@ -67,7 +67,6 @@ protected:
    TGLabel             *fObjLabel;         // contains fitted object name
    TGLabel             *fSelLabel;         // contains selected fit function
    TGComboBox          *fFuncList;         // contains function list
-   Int_t                fLastEntryId;      // last user function id
    TGTextEntry         *fEnteredFunc;      // contains user function file name
    TGTextButton        *fUserButton;       // opens a dialog for user-defined fit method
    TGRadioButton       *fNone;             // set no operation mode
