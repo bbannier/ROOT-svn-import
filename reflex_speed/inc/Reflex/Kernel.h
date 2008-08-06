@@ -164,6 +164,7 @@ namespace Reflex {
    typedef ConstIterator<TypeTemplate> TypeTemplate_Iterator;
    typedef ConstIterator<MemberTemplate> MemberTemplate_Iterator;
    typedef ConstIterator<TemplateArgument> TemplateArgument_Iterator;
+   typedef ConstIterator<std::string> String_Iterator;
 
    typedef ConstReverseIterator<Type> Reverse_Type_Iterator;
    typedef ConstReverseIterator<Scope> Reverse_Scope_Iterator;
@@ -172,6 +173,7 @@ namespace Reflex {
    typedef ConstReverseIterator<TypeTemplate> Reverse_TypeTemplate_Iterator;
    typedef ConstReverseIterator<MemberTemplate> Reverse_MemberTemplate_Iterator;
    typedef ConstReverseIterator<TemplateArgument> Reverse_TemplateArgument_Iterator;
+   typedef ConstReverseIterator<std::string> Reverse_String_Iterator;
 
    namespace Dummy {
       RFLX_API const EmptyCont_Type_t & EmptyContainer();

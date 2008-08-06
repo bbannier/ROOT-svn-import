@@ -21,15 +21,27 @@
 #include <typeinfo>
 #include <utility>
 
-
 namespace Reflex {
 
    // forward declarations
+   class Base;
    class Object;
    class PropertyList;
    class Scope;
    class TemplateArgument;
    class DictionaryGenerator;
+
+   /*
+   OrderedContainer<Base> d__a__0;
+   OrderedContainer<Type> d__a__1;
+   OrderedContainer<Scope> d__a__2;;
+   OrderedContainer<TemplateArgument> d__a__3;
+   OrderedContainer<Member> d__a__4;
+   OrderedContainer<TypeTemplate> d__a__5;
+   OrderedContainer<MemberTemplate> d__a__6;
+   Container<Type> d__a__7;
+   Container<Scope> d__a__8;
+   */
 
    namespace Internal {
       class TypeBase;
@@ -130,7 +142,7 @@ namespace Reflex {
       * Bases returns the collection of base class information
       * @return collection of base class information
       */
-      const OrderedContainer<Base> Bases() const;
+      const OrderedContainer<Reflex::Base> Bases() const;
 
 
       /**
@@ -200,7 +212,7 @@ namespace Reflex {
       * returns a reference to the dummy container if this type is not a function.
       * @return reflection information of nth function parameter
       */
-      const OrderedContainer<Type> FunctionParameters() const;
+      const OrderedContainer<Reflex::Type> FunctionParameters() const;
 
 
       /**
@@ -325,7 +337,7 @@ namespace Reflex {
       * TemplateArguments returns an ordered collection of the template arguments
       * @return reflection information of template arguments
       */
-      const OrderedContainer<TemplateArgument> TemplateArguments() const;
+      const OrderedContainer<Reflex::TemplateArgument> TemplateArguments() const;
 
 
       /**
@@ -347,7 +359,7 @@ namespace Reflex {
       * the system within the global catalog.
       * @return number of currently defined types
       */
-      static const Container<Type> Types();
+      static const Container<Reflex::Type> Types();
 
       static Type ByName(const std::string& name) { return Types().ByName(name); }
       static Type ByTypeInfo(const std::type_info& ti) { return Types().ByTypeInfo(ti); }

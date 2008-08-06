@@ -41,8 +41,8 @@ namespace Reflex {
       Scope ScopeByName(const std::string& name) const;
 
       // iterator access
-      const Container<Type>  Types() const;
-      const Container<Scope> Scopes() const;
+      const Container<Reflex::Type>  Types() const;
+      const Container<Reflex::Scope> Scopes() const;
 
       // shortcut access:
       Scope GlobalScope() const;

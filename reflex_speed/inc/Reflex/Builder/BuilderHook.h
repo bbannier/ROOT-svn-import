@@ -37,6 +37,23 @@ namespace Reflex {
    */
 
    class RFLX_API BuilderHook {
+   protected:
+      class IMemFuncPtr {
+      public:
+         virtual bool Hook(const Type& setMeUp) const = 0;
+      };
+
+      template <class T>
+      class MemFuncPtrT: public IMemFuncPtr {
+      public:
+         typedef bool (T::* HookMeth_t)(const Type& setMeUp) const;
+         MemFuncPtrT(const T& obj, HookMeth_t meth): fObj(obj), fMeth(meth) {}
+         bool Hook(const Type& setMeUp) const { return (fObj->*fMeth)(setMeUp); }
+      private:
+         const T& fObj;
+         const HookMeth_t fMeth;
+      };
+
    public:
       typedef bool (* HookFun_t)(const Type& setMeUp);
 
@@ -63,7 +80,7 @@ namespace Reflex {
       // the object needs to stay valid for the hook function call!
       template <class T>
       BuilderHook(const T& obj, bool (T::* meth)(const Type& setMeUp) const, BuilderHook* next = 0):
-         fCHook(0), fMemFunc(new MemFuncPtrT(obj, meth)), fNext(next) {}
+         fCHook(0), fMemFunc(new MemFuncPtrT<T>(obj, meth)), fNext(next) {}
 
       ~BuilderHook() {
          delete fMemFunc;
@@ -93,23 +110,6 @@ namespace Reflex {
             fMemFunc = 0;
          }
       }
-
-   protected:
-      class IMemFuncPtr {
-      public:
-         virtual bool Hook(const Type& setMeUp) const = 0;
-      };
-
-      template <class T>
-      class MemFuncPtrT: public IMemFuncPtr {
-      public:
-         typedef bool (T::* HookMeth_t)(const Type& setMeUp) const;
-         MemFuncPtrT(const T& obj, HookMeth_t meth): fObj(obj), fMeth(meth) {}
-         bool Hook(const Type& setMeUp) const { (fObj->*fMeth)(setMeUp); }
-      private:
-         const T& fObj;
-         const HookMeth_t fMeth;
-      };
 
    private:
       HookFun_t    fCHook; // pointer to free function

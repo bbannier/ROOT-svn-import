@@ -21,12 +21,26 @@
 #pragma link C++ class Reflex::Any;
 #pragma link C++ class Reflex::Base;
 #pragma link C++ class Reflex::ICallback;
+#pragma link C++ class Reflex::Catalog;
+#pragma link C++ class Reflex::OrderedContainer<Reflex::Base>;
+#pragma link C++ class Reflex::Container<Reflex::Type>;
+#pragma link C++ class Reflex::OrderedContainer<Reflex::Type>;
+#pragma link C++ class Reflex::Container<Reflex::Scope>;
+#pragma link C++ class Reflex::OrderedContainer<Reflex::Scope>;
+#pragma link C++ class Reflex::Container<Reflex::Member>;
+#pragma link C++ class Reflex::OrderedContainer<Reflex::Member>;
+#pragma link C++ class Reflex::Container<Reflex::TypeTemplate>;
+#pragma link C++ class Reflex::OrderedContainer<Reflex::TypeTemplate>;
+#pragma link C++ class Reflex::Container<Reflex::MemberTemplate>;
+#pragma link C++ class Reflex::OrderedContainer<Reflex::MemberTemplate>;
+#pragma link C++ class Reflex::EntityProperty;
 #pragma link C++ class Reflex::Instance;
 #pragma link C++ class Reflex::Member;
 #pragma link C++ class Reflex::MemberTemplate;
 #pragma link C++ class Reflex::Object;
-#pragma link C++ class Reflex::Object;
+#pragma link C++ class Reflex::PropertyList;
 #pragma link C++ class Reflex::Scope;
+#pragma link C++ class Reflex::TemplateArgument;
 #pragma link C++ class Reflex::Type;
 #pragma link C++ class Reflex::TypeTemplate;
 
@@ -46,8 +60,6 @@
 #pragma link C++ class Reflex::UnnamedStruct;
 #pragma link C++ class Reflex::UnnamedUnion;
 
-#pragma link C++ class Reflex::Catalog;
-
 #ifndef G__SUNPRO_CC
 // cannot distinguish ::exception and std::exception
 #pragma link C++ class Reflex::RuntimeError;
@@ -61,35 +73,21 @@
 #pragma link C++ option=nomap enum Reflex::ETYPE;
 #pragma link C++ option=nomap enum Reflex::EFUNDAMENTALTYPE;
 
-#pragma link C++ option=nomap typedef Reflex::StdString_Cont_Type_t;
-#pragma link C++ option=nomap typedef Reflex::StdString_Iterator;
-#pragma link C++ option=nomap typedef Reflex::Reverse_StdString_Iterator;
-
-#pragma link C++ option=nomap typedef Reflex::Type_Cont_Type_t;
 #pragma link C++ option=nomap typedef Reflex::Type_Iterator;
 #pragma link C++ option=nomap typedef Reflex::Reverse_Type_Iterator;
 
-#pragma link C++ option=nomap typedef Reflex::Base_Cont_Type_t;
 #pragma link C++ option=nomap typedef Reflex::Base_Iterator;
 #pragma link C++ option=nomap typedef Reflex::Reverse_Base_Iterator;
 
-#pragma link C++ option=nomap typedef Reflex::Scope_Cont_Type_t;
 #pragma link C++ option=nomap typedef Reflex::Scope_Iterator;
 #pragma link C++ option=nomap typedef Reflex::Reverse_Scope_Iterator;
 
-#pragma link C++ option=nomap typedef Reflex::Object_Cont_Type_t;
-#pragma link C++ option=nomap typedef Reflex::Object_Iterator;
-#pragma link C++ option=nomap typedef Reflex::Reverse_Object_Iterator;
-
-#pragma link C++ option=nomap typedef Reflex::Member_Cont_Type_t;
 #pragma link C++ option=nomap typedef Reflex::Member_Iterator;
 #pragma link C++ option=nomap typedef Reflex::Reverse_Member_Iterator;
 
-#pragma link C++ option=nomap typedef Reflex::TypeTemplate_Cont_Type_t;
 #pragma link C++ option=nomap typedef Reflex::TypeTemplate_Iterator;
 #pragma link C++ option=nomap typedef Reflex::Reverse_TypeTemplate_Iterator;
 
-#pragma link C++ option=nomap typedef Reflex::MemberTemplate_Cont_Type_t;
 #pragma link C++ option=nomap typedef Reflex::MemberTemplate_Iterator;
 #pragma link C++ option=nomap typedef Reflex::Reverse_MemberTemplate_Iterator;
 
@@ -112,7 +110,7 @@
 #pragma link C++ function Reflex::PointerToMemberBuilder(const Type &, const Scope &, const std::type_info &);
 #pragma link C++ function Reflex::ReferenceBuilder(const Type&);
 #pragma link C++ function Reflex::ArrayBuilder(const Type&, size_t, const std::type_info &);
-#pragma link C++ function Reflex::EnumTypeBuilder(const char *, const char *, const std::type_info &, unsigned int);
+#pragma link C++ function Reflex::EnumTypeBuilder(const char *, const char *, const std::type_info &);
 #pragma link C++ function Reflex::TypedefTypeBuilder(const char *, const Type&);
 #pragma link C++ function Reflex::FunctionTypeBuilder(const Type&, const std::vector<Type> &, const std::type_info &);
 

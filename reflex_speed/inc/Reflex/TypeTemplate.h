@@ -98,7 +98,7 @@ namespace Reflex {
       * TemplateInstances returns the collection of instances of this template.
       * @return the collection of the instances
       */
-      const Container<Type> TemplateInstances() const;
+      const Container<Reflex::Type> TemplateInstances() const;
 
 
       /**
@@ -126,7 +126,7 @@ namespace Reflex {
       * TypeTemplates returns the collection of all known type templates
       * @return collection of type templates
       */
-      static const Container<TypeTemplate> TypeTemplates();
+      static const Container<Reflex::TypeTemplate> TypeTemplates();
 
 
       /**

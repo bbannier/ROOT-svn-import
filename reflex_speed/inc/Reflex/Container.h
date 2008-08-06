@@ -17,6 +17,10 @@
 #include <string>
 #include "Reflex/Kernel.h"
 
+//#ifdef __CINT__
+//#include "../../src/ForCINT.h"
+//#endif
+
 namespace Reflex {
 
    //-------------------------------------------------------------------------------
@@ -37,7 +41,7 @@ namespace Reflex {
          virtual IConstIteratorImpl* ProxyClone() const = 0;
       };
 
-      typedef IConstIteratorImpl IConstReverseIteratorImpl;
+      typedef Reflex::Internal::IConstIteratorImpl IConstReverseIteratorImpl;
 
       class RFLX_API ConstIteratorBase {
       public:
@@ -88,7 +92,8 @@ namespace Reflex {
    template <class T>
    class RFLX_API ConstReverseIterator: public ConstIterator<T> {
    public:
-      ConstReverseIterator(Internal::IConstIteratorImpl* ii): ConstIterator<T>(ii) {}
+      ConstReverseIterator(): ConstIterator<T>() {}
+      ConstReverseIterator(Internal::IConstIteratorImpl* ii, bool owned = true): ConstIterator<T>(ii, owned) {}
 
       bool operator==(const ConstReverseIterator& other) const { return ConstIterator<T>::operator==(other); }
       bool operator!=(const ConstReverseIterator& other) const { return ConstIterator<T>::operator!=(other); }
@@ -119,10 +124,10 @@ namespace Reflex {
 
       class RFLX_API ContainerBase {
       public:
-         ContainerBase(const IContainerImpl& coll): fCont(coll) {}
-         const Internal::IContainerImpl& Cont() const { return fCont; }
+         ContainerBase(const IContainerImpl* coll = 0): fCont(coll) {}
+         const Internal::IContainerImpl& Cont() const { return *fCont; }
       private:
-         const Internal::IContainerImpl& fCont; // actual collection wrapper
+         const Internal::IContainerImpl* fCont; // actual collection wrapper
       };
    }
 
@@ -137,7 +142,8 @@ namespace Reflex {
    public:
       typedef ConstIterator<T> const_iterator;
 
-      Container(const Internal::IContainerImpl& coll): Internal::ContainerBase(coll) {}
+      Container(): Internal::ContainerBase() {}
+      Container(const Internal::IContainerImpl& coll): Internal::ContainerBase(&coll) {}
          
       const_iterator Begin() const { const_iterator ret; Cont().ProxyBegin(ret); return ret; }
       const_iterator End() const   { const_iterator ret; Cont().ProxyEnd(ret);   return ret; }
@@ -183,6 +189,7 @@ namespace Reflex {
    public:
       typedef ConstReverseIterator<T> const_reverse_iterator;
 
+      OrderedContainer(): Container<T>() {}
       OrderedContainer(const Internal::IContainerImpl& coll): Container<T>(coll) {}
 
       // reverse iteration only possible for ordered container

@@ -242,7 +242,7 @@ namespace {
       public:
          virtual ~iterator() {}
 
-         virtual bool ProxyIsEqual(const IConstIteratorImpl& other) const { return true; }
+         virtual bool ProxyIsEqual(const IConstIteratorImpl& /*other*/) const { return true; }
          virtual void ProxyForward() { }
          virtual const void* ProxyElement() const { return 0; }
          virtual IConstIteratorImpl* ProxyClone() const { return 0; }
