@@ -287,7 +287,7 @@ namespace Reflex {
       * TemplateArguments returns an ordered collection of the template arguments
       * @return reflection information of template arguments
       */
-      const OrderedContainer<TemplateArgument>& TemplateArguments() const;
+      const OrderedContainer<Reflex::TemplateArgument>& TemplateArguments() const;
 
 
       /**

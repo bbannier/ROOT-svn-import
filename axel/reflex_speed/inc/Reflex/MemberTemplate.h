@@ -86,7 +86,7 @@ namespace Reflex {
       * MemberTemplates returns the collection of known member templates
       * @return collection of member templates
       */
-      static const Container<MemberTemplate> MemberTemplates();
+      static const Container<Reflex::MemberTemplate> MemberTemplates();
 
 
       /**
@@ -109,7 +109,7 @@ namespace Reflex {
       * TemplateInstances returns the collection of known template instances
       * @return collection of the instances
       */
-      const Container<Member> TemplateInstances() const;
+      const Container<Reflex::Member> TemplateInstances() const;
 
 
       /**

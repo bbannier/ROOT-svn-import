@@ -83,7 +83,7 @@ namespace Reflex {
       * known by the global catalog.
       * @return collection of reflection information of all known scopes
       */
-      static const Container<Scope> Scopes();
+      static const Container<Reflex::Scope> Scopes();
 
       static Scope ByName(const std::string& name) { return Scopes().ByName(name); }
 
@@ -92,7 +92,7 @@ namespace Reflex {
       * DataMembers returns the data members of the type
       * @return nth data member 
       */
-      const OrderedContainer<Member> DataMembers() const;
+      const OrderedContainer<Reflex::Member> DataMembers() const;
 
 
       /**
@@ -106,7 +106,7 @@ namespace Reflex {
       * FunctionMembers returns the collection of function members of the scope
       * @return reflection information of nth function member
       */
-      const OrderedContainer<Member> FunctionMembers() const;
+      const OrderedContainer<Reflex::Member> FunctionMembers() const;
 
 
       /**
@@ -194,7 +194,7 @@ namespace Reflex {
       * Members eturns the collection of members of the scope
       * @return reflection information members
       */
-      const OrderedContainer<Member> Members() const;
+      const OrderedContainer<Reflex::Member> Members() const;
 
 
       /**
@@ -212,7 +212,7 @@ namespace Reflex {
       * MemberTemplates returns the collection of function member templates of this scope
       * @return collection of member templates
       */
-      const OrderedContainer<MemberTemplate> MemberTemplates() const;
+      const OrderedContainer<Reflex::MemberTemplate> MemberTemplates() const;
 
 
       /**
@@ -270,21 +270,21 @@ namespace Reflex {
       * SubScopes returns the collection of scopes declared in this scope.
       * @return container of reflection information of sub scopes
       */
-      const OrderedContainer<Scope> SubScopes() const;
+      const OrderedContainer<Reflex::Scope> SubScopes() const;
 
 
       /**
       * SubTypes returns the collection of type declared in this scope.
       * @return reflection information of sub types
       */
-      const OrderedContainer<Type> SubTypes() const;
+      const OrderedContainer<Reflex::Type> SubTypes() const;
 
 
       /** 
       * SubTypeTemplates returns the collection of templated types declared within this scope
       * @return type templates
       */
-      const OrderedContainer<TypeTemplate> SubTypeTemplates() const;
+      const OrderedContainer<Reflex::TypeTemplate> SubTypeTemplates() const;
 
 
       /**
@@ -297,21 +297,21 @@ namespace Reflex {
       * UsingDirectives returns the using directives declared in this scope.
       * @return using directives
       */
-      const Container<Scope> UsingDirectives() const;
+      const Container<Reflex::Scope> UsingDirectives() const;
 
 
       /**
       * UsingTypeDeclarations returns the using declarations of types of this scope.
       * @return using declarations of types
       */
-      const Container<Type> UsingTypeDeclarations() const;
+      const Container<Reflex::Type> UsingTypeDeclarations() const;
 
 
       /**
       * UsingMemberDeclarations returns the using declarations of members of this scope.
       * @return using declarations of members
       */
-      const Container<Member> UsingMemberDeclarations() const;
+      const Container<Reflex::Member> UsingMemberDeclarations() const;
 
 
    public:

@@ -28,9 +28,17 @@ namespace Reflex {
          kNot
       };
 
+   private:
+      EOP fOp;
+      int fValue;
+      const EntityProperty& fLHS;
+      const EntityProperty& fRHS;
+      static EntityProperty fgNIL;
+
+   public:
       EntityProperty(EENTITY_DESCRIPTION desc): fOp(kDesc), fValue(desc), fLHS(fgNIL), fRHS(fgNIL) {};
       EntityProperty(ETYPE type): fOp(kType), fValue(type), fLHS(fgNIL), fRHS(fgNIL) {};
-      EntityProperty(EOP op, const EntityProperty& lhs, const EntityProperty& rhs = fgNIL):
+      EntityProperty(EOP op, const EntityProperty& lhs, const EntityProperty& rhs = Reflex::EntityProperty::fgNIL):
       fOp(op), fValue(0), fLHS(lhs), fRHS(rhs) {}
 
       bool Eval(int desc, int type) const {
@@ -45,13 +53,6 @@ namespace Reflex {
       EntityProperty operator && (const EntityProperty& rhs) const { return EntityProperty(kAnd, *this, rhs); }
       EntityProperty operator || (const EntityProperty& rhs) const { return EntityProperty(kOr, *this, rhs); }
       EntityProperty operator ! () const { return EntityProperty(kNot, *this); }
-
-   private:
-      EOP fOp;
-      int fValue;
-      const EntityProperty& fLHS;
-      const EntityProperty& fRHS;
-      static EntityProperty fgNIL;
    };
 
    static EntityProperty gPublic(kPublic);
@@ -94,9 +95,13 @@ namespace Reflex {
    static EntityProperty gFunctionMember(kFunctionMember);
    static EntityProperty gUnresolved(kUnresolved);
 
-   static EntityProperty gTemplateInstance(gTypeTemplateInstance || gMemberTemplateInstance);
+   static EntityProperty gTemplateInstance(EntityProperty::kOr, gTypeTemplateInstance, gMemberTemplateInstance);
+#ifndef __CINT__
    static EntityProperty gClassOrStruct(gClass || gTypeTemplateInstance || gStruct);
-
+#else
+   static EntityProperty gClassOrStruct(EntityProperty::kOr, gClass,
+                                        EntityProperty(EntityProperty::kOr, gTypeTemplateInstance, gStruct));
+#endif
 }
 
 #endif // Reflex_EntityProperty
