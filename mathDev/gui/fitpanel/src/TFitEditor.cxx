@@ -289,8 +289,6 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
 
    // do not allow resizing
    TGDimension size = GetDefaultSize();
-   SetWMSize(size.fWidth, size.fHeight);
-   SetWMSizeHints(size.fWidth, size.fHeight, size.fWidth, size.fHeight, 0, 0);
    SetWindowName("Fit Panel");
    SetIconName("Fit Panel");
    SetClassHints("Fit Panel", "Fit Panel");
@@ -321,10 +319,14 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
       MoveResize(gedx, gedy,size.fWidth, size.fHeight);
       SetWMPosition(gedx, gedy);
    } 
-   
+
    Resize(size);
    MapWindow();
    gVirtualX->RaiseWindow(GetId());
+
+   ChangeOptions(GetOptions() | kFixedSize);
+   SetWMSize(size.fWidth, size.fHeight);
+   SetWMSizeHints(size.fWidth, size.fHeight, size.fWidth, size.fHeight, 0, 0);
 }
 
 //______________________________________________________________________________
@@ -1971,7 +1973,7 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
 // fit, but it does not pick it up until the frame has been drawn!
 // AKI
  
-//   Resize(GetDefaultSize());
+   Resize(GetDefaultSize());
 
    return set;
 }
