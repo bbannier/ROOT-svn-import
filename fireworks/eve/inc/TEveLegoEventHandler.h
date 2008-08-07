@@ -16,7 +16,7 @@
 #include "TGLEventHandler.h"
 #include "TGLCamera.h"
 
-class TEveCaloLegoGL;
+class TEveCaloLego;
 
 class TEveLegoEventHandler : public TGLEventHandler
 {
@@ -31,7 +31,7 @@ protected:
    Float_t  fTransTheta; // transition theta
    Float_t  fTheta;
 
-   TEveCaloLegoGL*  fLastPickedLego;
+   TEveCaloLego*  fLastPickedLego;
 
    virtual Bool_t Rotate(Int_t xDelta, Int_t yDelta, Bool_t mod1, Bool_t mod2);
 

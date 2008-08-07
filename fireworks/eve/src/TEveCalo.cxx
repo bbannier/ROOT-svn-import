@@ -578,12 +578,21 @@ TEveCaloLego::TEveCaloLego(TEveCaloData* d, const Text_t* n, const Text_t* t):
    fBoxMode(kBack),
 
    fDrawHPlane(kFALSE),
-   fHPlaneVal(0)
+   fHPlaneVal(0),
+
+   fTowerPicked(-1)
 {
    // Constructor.
 
    fMaxTowerH = 1;
    SetElementNameTitle("TEveCaloLego", "TEveCaloLego");
+}
+
+//______________________________________________________________________________
+void TEveCaloLego::SetData(TEveCaloData* data)
+{
+   TEveCaloViz::SetData(data);
+   fTowerPicked = -1;
 }
 
 //______________________________________________________________________________

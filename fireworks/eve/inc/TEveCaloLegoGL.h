@@ -37,7 +37,6 @@ private:
    mutable TGLAxisAttrib    fZAxisAtt;
 
    mutable TGLAxisPainter   fAxisPainter;
-
 protected:
    Int_t   GetGridStep(TGLRnrCtx &rnrCtx) const;
    void    SetAxis(TAxis *orig, TAxis *curr) const;
@@ -50,12 +49,12 @@ protected:
    void    DrawXYScales(TGLRnrCtx &rnrCtx, Float_t x0, Float_t x1, Float_t y0, Float_t y1) const;
    void    DrawHistBase(TGLRnrCtx &rnrCtx) const;
 
-   void    DrawCells2D(TEveCaloData::RebinData_t &rdata) const;
+   void    DrawCells2D() const;
 
    void    DrawCells3D(TGLRnrCtx & rnrCtx) const;
    void    MakeQuad(Float_t x, Float_t y, Float_t z,
                     Float_t xw, Float_t yw, Float_t zh) const;
-   void    MakeDisplayList(TEveCaloData::RebinData_t &rdata) const;
+   void    MakeDisplayList() const;
 
    mutable Bool_t                   fDLCacheOK;
 
@@ -63,17 +62,15 @@ protected:
    typedef std::map<Int_t, UInt_t>::iterator SliceDLMap_i;
 
    mutable SliceDLMap_t     fDLMap;
+   mutable TEveCaloData::RebinData_t fRebinData;
+
+   mutable Bool_t           fCells3D;
 
    TEveCaloLego            *fM;  // Model object.
-
-   // event handling
-   Int_t                    fTowerPicked;
 
 public:
    TEveCaloLegoGL();
    virtual ~TEveCaloLegoGL();
-
-   void   SetTowerPicked(Int_t t) { fTowerPicked=t; }
 
    virtual Bool_t SetModel(TObject* obj, const Option_t* opt=0);
 
