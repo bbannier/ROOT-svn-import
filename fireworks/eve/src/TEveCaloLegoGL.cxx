@@ -914,28 +914,27 @@ void TEveCaloLegoGL::DrawCells2D() const
    else
    {
       // values in the scaled cells
-      Int_t   nEta = fEtaAxis->GetNbins();
-      Int_t   nPhi = fPhiAxis->GetNbins();
+      const Int_t nEta = fEtaAxis->GetNbins();
+      const Int_t nPhi = fPhiAxis->GetNbins();
       std::vector<Float_t> vec;
       vec.assign((nEta+2)*(nPhi+2), 0.f);
       std::vector<Float_t> max_e;
       std::vector<Int_t>   max_e_slice;
-      if (fM->fTopViewUseMaxColor) {
+      if (fM->fTopViewUseMaxColor)
+      {
          max_e.assign((nEta+2) * (nPhi+2), 0.f);
          max_e_slice.assign((nEta+2) * (nPhi+2), -1);
       }
 
-      Float_t ssum;
-      Float_t *val;
-      for (UInt_t bin=0; bin<fRebinData.fBinData.size(); bin++)
+      for (Int_t bin=0; bin<fRebinData.fBinData.size(); ++bin)
       {
-         ssum = 0;
+         Float_t ssum = 0;
          if (fRebinData.fBinData[bin] != -1)
          {
-            val = fRebinData.GetSliceVals(bin);
-            for(Int_t s=0; s<fRebinData.fNSlices; s++)
+            Float_t *val = fRebinData.GetSliceVals(bin);
+            for (Int_t s=0; s<fRebinData.fNSlices; ++s)
             { 
-               ssum+=val[s];
+               ssum += val[s];
                if (fM->fTopViewUseMaxColor && val[s] > max_e[bin])
                {
                   max_e[bin]       = val[s];
@@ -947,7 +946,7 @@ void TEveCaloLegoGL::DrawCells2D() const
       }
 
       Float_t maxv = 0;
-      for (UInt_t i =0; i<vec.size(); i++)
+      for (UInt_t i =0; i<vec.size(); ++i)
          if (vec[i] > maxv) maxv=vec[i];
 
       Float_t scale    = fM->fData->GetMaxVal(fM->fPlotEt)/maxv;
@@ -956,32 +955,31 @@ void TEveCaloLegoGL::DrawCells2D() const
 
       // take smallest threshold
       Float_t threshold = fM->GetDataSliceThreshold(0);
-      for (Int_t s=1; s<fM->fData->GetNSlices(); s++)
+      for (Int_t s=1; s<fM->fData->GetNSlices(); ++s)
       {
          if (threshold > fM->GetDataSliceThreshold(s))
             threshold = fM->GetDataSliceThreshold(s);
       }
 
       // draw  scaled
-      Double_t eta, etaW, phi, phiW, sum;
       TGLUtil::Color(defCol);
-      Int_t bin;
-
-      Float_t y0, y1;
-      for (Int_t i=1; i<=fEtaAxis->GetNbins(); i++)
+      Float_t y0, y1, eta, etaW, phi, phiW;
+      for (Int_t i=1; i<=fEtaAxis->GetNbins(); ++i)
       {
-         for (Int_t j=1; j<=fPhiAxis->GetNbins(); j++)
+         for (Int_t j=1; j<=fPhiAxis->GetNbins(); ++j)
          {
-            bin = j*(nEta+2)+i;
+            const Int_t bin = j*(nEta+2)+i;
             if (vec[bin] > threshold && fRebinData.fBinData[bin] != -1)
             {
-               glLoadName(bin);
-               glBegin(GL_QUADS);
-               Float_t logVal = Log(vec[bin] + 1);
                y0 = fPhiAxis->GetBinLowEdge(j);
                y1 = fPhiAxis->GetBinUpEdge(j);
+               if (!PhiShiftInterval(y0, y1)) continue;
 
-               if(!PhiShiftInterval(y0, y1)) continue;
+               const Float_t binVal = vec[bin]*scale;
+               const Float_t logVal = Log(vec[bin] + 1);
+
+               glLoadName(bin);
+               glBegin(GL_QUADS);
 
                if (fM->f2DMode == TEveCaloLego::kValColor)
                {
@@ -991,33 +989,33 @@ void TEveCaloLegoGL::DrawCells2D() const
                   eta  = fEtaAxis->GetBinLowEdge(i);
                   etaW = fEtaAxis->GetBinWidth(i);
 
-                  glVertex3f(eta     , y0, vec[bin]*scale);
-                  glVertex3f(eta+etaW, y0, vec[bin]*scale);
-                  glVertex3f(eta+etaW, y1, vec[bin]*scale);
-                  glVertex3f(eta     , y1, vec[bin]*scale);
+                  glVertex3f(eta     , y0, binVal);
+                  glVertex3f(eta+etaW, y0, binVal);
+                  glVertex3f(eta+etaW, y1, binVal);
+                  glVertex3f(eta     , y1, binVal);
 
                }
                else if (fM->f2DMode == TEveCaloLego::kValSize)
                {
                   eta  = fEtaAxis->GetBinCenter(i);
                   etaW = fEtaAxis->GetBinWidth(i)*0.5f*logVal/logMax;
-                  phi  = 0.5*(y0+y1);
-                  phiW = (y1-y0)*0.5f*logVal/logMax;
+                  phi  = 0.5f*(y0 + y1);
+                  phiW = 0.5f*(y1 - y0)*logVal/logMax;
 
                   if (fM->fTopViewUseMaxColor)
                   {
                      TGLUtil::Color(fM->GetData()->GetSliceColor(max_e_slice[bin]));
-                     antiFlick[max_e_slice[bin]].push_back(TEveVector(eta, phi, sum));
+                     antiFlick[max_e_slice[bin]].push_back(TEveVector(eta, phi, binVal));
                   }
                   else
                   {
-                     antiFlick[0].push_back(TEveVector(eta, phi, sum));
+                     antiFlick[0].push_back(TEveVector(eta, phi, binVal));
                   }
 
-                  glVertex3f(eta - etaW, phi - phiW, sum);
-                  glVertex3f(eta + etaW, phi - phiW, sum);
-                  glVertex3f(eta + etaW, phi + phiW, sum);
-                  glVertex3f(eta - etaW, phi + phiW, sum);
+                  glVertex3f(eta - etaW, phi - phiW, binVal);
+                  glVertex3f(eta + etaW, phi - phiW, binVal);
+                  glVertex3f(eta + etaW, phi + phiW, binVal);
+                  glVertex3f(eta - etaW, phi + phiW, binVal);
                }
                glEnd();
             }
@@ -1103,11 +1101,10 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
          fM->fData->Rebin(fEtaAxis, fPhiAxis, fM->fCellList, fM->fPlotEt, fRebinData);
          if (fM->fNormalizeRebin)
          {
-            Double_t maxVal=0;
-            Double_t sum;
+            Double_t maxVal = 0;
             for (UInt_t i=0; i<fRebinData.fSliceData.size(); i+=fRebinData.fNSlices)
             {
-               sum = 0;
+               Double_t sum = 0;
                for(Int_t s=0; s<fRebinData.fNSlices; s++)
                   sum+=fRebinData.fSliceData[i+s];
 
