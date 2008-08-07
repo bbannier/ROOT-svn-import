@@ -131,9 +131,6 @@
 #pragma link C++ class TEveTrackPropagatorSubEditor+;
 #pragma link C++ class TEveTrackPropagatorEditor+;
 #pragma link C++ class TEveTrackPropagator+;
-#pragma link C++ class TEveTrackCounter+;
-#pragma link C++ class TEveTrackCounterEditor+;
-
 
 // TEveText
 #pragma link C++ class TEveText+;
