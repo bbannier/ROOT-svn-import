@@ -19,7 +19,7 @@
 #include "TMath.h"
 #include "TGLUtil.h"
 
-#include "TEveCaloLegoGL.h"
+#include "TEveCalo.h"
 
 
 //==============================================================================
@@ -78,7 +78,7 @@ Bool_t TEveLegoEventHandler::HandleDoubleClick(Event_t *event)
       {
          TGLLogicalShape& lshape = const_cast<TGLLogicalShape&> (*pshape->GetLogical());
          TGLLogicalShape* f = &lshape;
-         TEveCaloLegoGL*  lego   = dynamic_cast<TEveCaloLegoGL*>(f);
+         TEveCaloLego*  lego   = dynamic_cast<TEveCaloLego*>(f->GetExternal());
 
          if (lego)
          {

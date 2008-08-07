@@ -229,12 +229,16 @@ protected:
    Bool_t                  fDrawHPlane;
    Float_t                 fHPlaneVal;
 
+   Int_t                   fTowerPicked;
+
    virtual void BuildCellIdCache();
 
 public:
    TEveCaloLego(TEveCaloData* data=0, const Text_t* n="TEveCaloLego", const Text_t* t="");
 
    virtual ~TEveCaloLego(){}
+
+   virtual void  SetData(TEveCaloData* d);
 
    Bool_t   GetTopViewUseMaxColor() const { return fTopViewUseMaxColor; }
    void     SetTopViewUseMaxColor(Bool_t x) { fTopViewUseMaxColor = x; }
@@ -280,6 +284,9 @@ public:
 
    Float_t  GetHPlaneVal() const { return fHPlaneVal; }
    void     SetHPlaneVal(Float_t s) { fHPlaneVal = s;}
+
+   Int_t    GetTowerPicked() const { return fTowerPicked; }
+   void     SetTowerPicked(Int_t p) { fTowerPicked = p;}
 
    virtual void ComputeBBox();
 
