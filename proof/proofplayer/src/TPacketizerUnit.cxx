@@ -93,7 +93,7 @@ TPacketizerUnit::TSlaveStat::TSlaveStat(TSlave *slave, TList *input)
 {
    // Main constructor
 
-   // Initialize the circularity ntple for speed calculations 
+   // Initialize the circularity ntple for speed calculations
    fCircNtp = new TNtupleD("Speed Circ Ntp", "Circular process info","tm:ev");
    TProof::GetParameter(input, "PROOF_TPacketizerUnitCircularity", fCircLvl);
    fCircLvl = (fCircLvl > 0) ? fCircLvl : 5;
@@ -202,22 +202,6 @@ Double_t TPacketizerUnit::GetCurrentTime()
 }
 
 //______________________________________________________________________________
-Long64_t TPacketizerUnit::GetEntriesProcessed(TSlave *slave) const
-{
-   // Get entries processed by the specified slave.
-
-   if (!fSlaveStats)
-      return 0;
-
-   TSlaveStat *slstat = (TSlaveStat *) fSlaveStats->GetValue(slave);
-
-   if (!slstat)
-      return 0;
-
-   return slstat->GetEntriesProcessed();
-}
-
-//______________________________________________________________________________
 TDSetElement *TPacketizerUnit::GetNextPacket(TSlave *sl, TMessage *r)
 {
    // Get next packet
@@ -245,7 +229,7 @@ TDSetElement *TPacketizerUnit::GetNextPacket(TSlave *sl, TMessage *r)
    Long64_t numev = totev - slstat->fProcessed;
 
    PDB(kPacketizer,2)
-      Info("GetNextPacket","worker-%s: fProcessed %lld\t", sl->GetOrdinal(), fProcessed);
+      Info("GetNextPacket","worker-%s: fProcessed %lld\t", sl->GetOrdinal(), GetEntriesProcessed());
    fProcessing = 0;
 
    PDB(kPacketizer,2)
@@ -258,7 +242,7 @@ TDSetElement *TPacketizerUnit::GetNextPacket(TSlave *sl, TMessage *r)
                               latency, proctime, proccpu, bytesRead);
    }
 
-   if (fProcessed == fTotalEntries) {
+   if (GetEntriesProcessed() == fTotalEntries) {
       // Send last timer message
       HandleTimer(0);
       SafeDelete(fProgress);
@@ -301,7 +285,7 @@ TDSetElement *TPacketizerUnit::GetNextPacket(TSlave *sl, TMessage *r)
       Double_t sumSpeed = 0;
       Double_t sumBusy = 0;
 
-      // The basic idea is to estimate the optimal finishing time for the process, assuming 
+      // The basic idea is to estimate the optimal finishing time for the process, assuming
       // that the currently measured processing speeds of the slaves remain the same in the future.
       // The optTime can be calculated as follows.
       // Let s_i be the speed of worker i. We assume that worker i will be busy in the
@@ -312,7 +296,7 @@ TDSetElement *TPacketizerUnit::GetNextPacket(TSlave *sl, TMessage *r)
 
       while ((tmpSlave = (TSlave *)iter->Next())) {
          tmpStat = (TSlaveStat *)fSlaveStats->GetValue(tmpSlave);
-         // If the slave doesn't response for a long time, its service rate will be considered as 0 
+         // If the slave doesn't response for a long time, its service rate will be considered as 0
          if ((cTime - tmpStat->fTimeInstant) > 4*fTimeLimit)
             tmpStat->fSpeed = 0;
          PDB(kPacketizer,2)
@@ -329,7 +313,7 @@ TDSetElement *TPacketizerUnit::GetNextPacket(TSlave *sl, TMessage *r)
                //  b_i*s_i = (tmpStat->fTimeInstant - cTime)*s_i + tmpStat->fLastProcessed
                Double_t busyspeed =
                   ((tmpStat->fTimeInstant - cTime)*tmpStat->fSpeed + tmpStat->fLastProcessed);
-               if (busyspeed > 0) 
+               if (busyspeed > 0)
                   sumBusy += busyspeed;
             }
          }
@@ -338,20 +322,20 @@ TDSetElement *TPacketizerUnit::GetNextPacket(TSlave *sl, TMessage *r)
          Info("GetNextPacket", "worker-%s: sum speed: %lf, sum busy: %f",
                                sl->GetOrdinal(), sumSpeed, sumBusy);
       // firstly the slave will try to get all of the remaining entries
-      if ((fTotalEntries - fProcessed)/(slstat->fSpeed) < fTimeLimit) {
-         num = (fTotalEntries - fProcessed);
+      if ((fTotalEntries - GetEntriesProcessed())/(slstat->fSpeed) < fTimeLimit) {
+         num = (fTotalEntries - GetEntriesProcessed());
       } else {
          // calculating the optTime
-         Double_t optTime = (fTotalEntries - fProcessed + sumBusy)/sumSpeed;
-         // if optTime is greater than the official time limit, then the slave gets a number 
+         Double_t optTime = (fTotalEntries - GetEntriesProcessed() + sumBusy)/sumSpeed;
+         // if optTime is greater than the official time limit, then the slave gets a number
          // of entries that still fit into the time limit, otherwise it uses the optTime as
-         // a time limit   
+         // a time limit
          num = (optTime > fTimeLimit) ? Nint(fTimeLimit*(slstat->fSpeed)) : Nint(optTime*(slstat->fSpeed));
-         PDB(kPacketizer,2) 
+         PDB(kPacketizer,2)
             Info("GetNextPacket", "opTime %lf", optTime);
       }
    }
-   fProcessing = (num < (fTotalEntries - fProcessed)) ? num : (fTotalEntries - fProcessed);
+   fProcessing = (num < (fTotalEntries - GetEntriesProcessed())) ? num : (fTotalEntries - GetEntriesProcessed());
 
    // Set the informations of the current slave
    slstat->fLastProcessed = fProcessing;
@@ -360,12 +344,12 @@ TDSetElement *TPacketizerUnit::GetNextPacket(TSlave *sl, TMessage *r)
 
    PDB(kPacketizer,2)
       Info("GetNextPacket", "worker-%s: num  %lld processing %lld remained %lld",sl->GetOrdinal(),
-                            num, fProcessing, (fTotalEntries - fProcessed - fProcessing));
+                            num, fProcessing, (fTotalEntries - GetEntriesProcessed() - fProcessing));
    TDSetElement *elem = new TDSetElement("", "", "", 0, fProcessing);
    elem->SetBit(TDSetElement::kEmpty);
 
    // Update the total counter
-   fProcessed += slstat->fLastProcessed;
+   fProgressStatus->IncEntries(slstat->fLastProcessed);
 
    return elem;
 }

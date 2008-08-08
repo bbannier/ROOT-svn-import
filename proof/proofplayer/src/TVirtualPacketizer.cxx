@@ -64,8 +64,7 @@ TVirtualPacketizer::TVirtualPacketizer(TList *input)
 {
    // Constructor.
 
-   fProcessed = 0;
-   fBytesRead = 0;
+   fProgressStatus = 0;
    fTotalEntries = 0;
    fValid = kTRUE;
    fStop = kFALSE;
@@ -115,6 +114,7 @@ TVirtualPacketizer::~TVirtualPacketizer()
    SafeDelete(fCircProg);
    SafeDelete(fProgress);
    SafeDelete(fFailedPackets);
+   fProgressStatus = 0; // belongs to the player
 }
 
 //______________________________________________________________________________
@@ -236,8 +236,8 @@ Bool_t TVirtualPacketizer::HandleTimer(TTimer *)
       // Prepare progress info
       TTime tnow = gSystem->Now();
       Float_t now = (Float_t) (Long_t(tnow) - fStartTime) / (Double_t)1000.;
-      Long64_t estent = fProcessed;
-      Long64_t estmb = fBytesRead;
+      Long64_t estent = GetEntriesProcessed();
+      Long64_t estmb = GetBytesRead();
 
       // Times and counters
       Float_t evtrti = -1., mbrti = -1.;
@@ -282,11 +282,11 @@ Bool_t TVirtualPacketizer::HandleTimer(TTimer *)
 
    } else {
       // Old format
-      m << fTotalEntries << fProcessed;
+      m << fTotalEntries << GetEntriesProcessed();
    }
 
    // Final report only once (to correctly determine the proc time)
-   if (fTotalEntries > 0 && fProcessed >= fTotalEntries)
+   if (fTotalEntries > 0 && GetEntriesProcessed() >= fTotalEntries)
       SetBit(TVirtualPacketizer::kIsDone);
 
    // send message to client;

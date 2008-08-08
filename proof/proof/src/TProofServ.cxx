@@ -91,6 +91,7 @@
 #include "TFileCollection.h"
 #include "TLockFile.h"
 #include "TProofDataSetManagerFile.h"
+#include "TProofProgressStatus.h"
 
 // global proofserv handle
 TProofServ *gProofServ = 0;
@@ -797,11 +798,12 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
          Info("GetNextPacket","slept %d millisec", sleeptime);
    }
 
-   req << fLatency.RealTime() << realtime << cputime
-       << bytesRead << totalEntries;
-   if (fPlayer)
-       req << fPlayer->GetEventsProcessed();
-
+   req << fLatency.RealTime();
+   TProofProgressStatus *status =
+      new TProofProgressStatus((Long64_t)(fPlayer?fPlayer->GetEventsProcessed():(-1)),
+                               bytesRead, realtime, cputime);
+   req << status;
+   delete status;
    fLatency.Start();
    Int_t rc = fSocket->Send(req);
    if (rc <= 0) {
@@ -1451,8 +1453,10 @@ void TProofServ::HandleSocketInputDuringProcess()
                Info("HandleSocketInputDuringProcess:kPROOF_STOPPROCESS",
                     "enter %d, %d", aborted, timeout);
             if (fProof)
+               // On the master: Propagete further
                fProof->StopProcess(aborted, timeout);
             else
+               // Worker: Actually stop processing
                if (fPlayer)
                   fPlayer->StopProcess(aborted, timeout);
          }
@@ -1852,7 +1856,7 @@ void TProofServ::SendLogFile(Int_t status, Int_t start, Int_t end)
       if (!fSendLogToMaster) {
          FlushLogFile();
       } else {
-         // Decide case by case 
+         // Decide case by case
          LogToMaster(kFALSE);
       }
    }
@@ -3446,7 +3450,7 @@ void TProofServ::HandleProcess(TMessage *mess)
                }
                if (!(fDataSetManager->ParseUri(dset->GetName(), 0, 0, 0, &dsTree)))
                   dsTree = "";
-   
+
                // Apply the lookup option requested by the client or the administartor
                // (by default we trust the information in the dataset)
                if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
@@ -3618,16 +3622,22 @@ void TProofServ::HandleProcess(TMessage *mess)
          PDB(kGlobal, 1) Info("HandleProcess", "calling %s::Process()", fPlayer->IsA()->GetName());
          fPlayer->Process(dset, filename, opt, nentries, first);
 
-         // Return number of events processed
+         // Return number of events processed to the client
          if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kFinished) {
             Bool_t abort =
               (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) ? kTRUE : kFALSE;
             m.Reset(kPROOF_STOPPROCESS);
-            if (fProtocol > 8) {
+/*            if (fProtocol > 8) {
                m << fPlayer->GetEventsProcessed() << abort;
             } else {
                m << fPlayer->GetEventsProcessed();
             }
+*/
+            TProofProgressStatus* status =
+               new TProofProgressStatus(fPlayer->GetEventsProcessed(),
+                                        gPerfStats?gPerfStats->GetBytesRead():0);
+            Printf("Sending status");
+            m << status << abort;
             fSocket->Send(m);
          }
 
@@ -3720,6 +3730,7 @@ void TProofServ::HandleProcess(TMessage *mess)
       fSocket->Send(kPROOF_SETIDLE);
 
    } else {
+      // not top master
 
       // Set not idle
       fIdle = kFALSE;
@@ -3748,7 +3759,12 @@ void TProofServ::HandleProcess(TMessage *mess)
       // Return number of events processed
       TMessage m(kPROOF_STOPPROCESS);
       Bool_t abort = (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted) ? kFALSE : kTRUE;
-      m << fPlayer->GetEventsProcessed() << abort;
+      TProofProgressStatus* status =
+         new TProofProgressStatus(fPlayer->GetEventsProcessed(),
+                                  gPerfStats?gPerfStats->GetBytesRead():0);
+      if (status) {
+         m << status << abort;
+      }
       fSocket->Send(m);
 
       // Send back the results
