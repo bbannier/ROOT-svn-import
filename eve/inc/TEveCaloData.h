@@ -226,6 +226,9 @@ public:
 
    Int_t AddTower(Float_t etaMin, Float_t etaMax, Float_t phiMin, Float_t phiMax);
    void  FillSlice(Int_t slice, Float_t value);
+   void  FillSlice(Int_t slice, Int_t tower, Float_t value);
+
+   Int_t GetNCells() { return fGeomVec.size(); }
 
    virtual void GetCellList(Float_t etaMin, Float_t etaMax,
                             Float_t phi,    Float_t phiRng,
