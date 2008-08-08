@@ -4930,7 +4930,7 @@ int main(int argc, char **argv)
    //---------------------------------------------------------------------------
    if( !G__ReadRules.empty() || !G__ReadRawRules.empty() ) {
       (*dictSrcOut) << "#include \"TBuffer.h\"" << std::endl;
-      (*dictSrcOut) << "class TVirtualObject;" << std::endl;
+      (*dictSrcOut) << "#include \"TVirtualObject.h\"" << std::endl;
       (*dictSrcOut) << "#include <vector>" << std::endl;
       (*dictSrcOut) << "#include \"TSchemaHelper.h\"" << std::endl << std::endl;
 

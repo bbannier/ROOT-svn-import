@@ -48,16 +48,16 @@ namespace ROOT
    // Write the conversion function for Read rule
    //---------------------------------------------------------------------------
    void WriteReadRuleFunc( SchemaRuleMap_t& rule, int index,
-                           std::string& mappedName, MembersMap_t& members,
-                           std::ostream& output );
+                           std::string& mappedName,
+                           MembersMap_t& members, std::ostream& output );
 
 
    //---------------------------------------------------------------------------
    // Write the conversion function for ReadRaw rule
    //---------------------------------------------------------------------------
    void WriteReadRawRuleFunc( SchemaRuleMap_t& rule, int index,
-                              std::string& mappedName, MembersMap_t& members,
-                              std::ostream& output );
+                              std::string& mappedName,
+                              MembersMap_t& members, std::ostream& output );
 
    //---------------------------------------------------------------------------
    // Write schema rules
