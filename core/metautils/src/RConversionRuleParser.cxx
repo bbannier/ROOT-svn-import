@@ -389,7 +389,7 @@ namespace ROOT
                output << it->second << "\");\n";
             }
             output << "      " << "char *onfile_add = (char*)oldObj->GetObject();\n";
-            output << "      " << mappedName << "_Onfile onfile( \n";
+            output << "      " << mappedName << "_Onfile onfile(\n";
 
             for( start = true, it = source.begin(); it != source.end(); ++it ) {
                if( it->first == "" )
