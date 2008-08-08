@@ -156,20 +156,13 @@ class selClass :
     className = attrs['targetClass'].strip()
     warning = '--->> genreflex: WARNING: IO rule for class ' + className
 
-    for k in ['target', 'source', 'sourceClass' ]:
-      if not attrs.has_key(k):
-        print warning, '- Required attribute is missing:', k
+    if not attrs.has_key( 'sourceClass' ):
+        print warning, '- sourceClass attribute is missing'
         return False
 
     if not attrs.has_key( 'version' ) and not attrs.has_key( 'checksum' ):
       print warning, '- You need to specify either version or checksum'
       return False
-
-    if attrs.has_key( 'embed' ):
-      if attrs['embed'] != 'true' and attrs['embed'] != 'false':
-        print warning, '- true or false expected as a value of embed parameter'
-        return False
-
 
     #------------------------------------------------------------------------------
     # Check if the checksums are correct
@@ -220,6 +213,25 @@ class selClass :
             if b >= e:
               print warning, '-', v, 'is not a valid version range'
               return False
+
+    #------------------------------------------------------------------------------
+    # Check if we deal with renameing rule
+    #------------------------------------------------------------------------------
+    if len( attrs ) == 3 or (len( attrs ) == 4 and attrs.has_key( 'version' ) and attrs.has_key( 'checksum' )):
+      return True
+
+    #------------------------------------------------------------------------------
+    # Check if we have other parameters specified correctly
+    #------------------------------------------------------------------------------
+    for k in ['target', 'source' ]:
+      if not attrs.has_key(k):
+        print warning, '- Required attribute is missing:', k
+        return False
+
+    if attrs.has_key( 'embed' ):
+      if attrs['embed'] != 'true' and attrs['embed'] != 'false':
+        print warning, '- true or false expected as a value of embed parameter'
+        return False
 
     #------------------------------------------------------------------------------
     # Check if the include list is not empty
