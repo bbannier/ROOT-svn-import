@@ -2453,18 +2453,31 @@ Int_t TProof::CollectInputFrom(TSocket *s)
 
       case kPROOF_STOPPROCESS:
          {
-            // answer contains number of processed events;
+            // This message is sent from a worker that finished processing.
+            // We determine whether it was asked to finish by the
+            // packetizer or stopped during processing a packet
+            // (by TProof::RemoveWorkers() or by an external signal).
+            // In the later case call packetizer->MarkBad.
             PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_STOPPROCESS: enter");
 
-            Long64_t events;
             Bool_t abort = kFALSE;
+            TProofProgressStatus *status = 0;
 
             if ((mess->BufferSize() > mess->Length()) && (fProtocol > 8))
-               (*mess) >> events >> abort;
-            else
-               (*mess) >> events;
+            (*mess) >> status >> abort;
             if (!abort) {
-               fPlayer->AddEventsProcessed(events);
+               sl = FindSlave(s);
+               TList *listOfMissingFiles = 0;
+               if (!(listOfMissingFiles = (TList *)GetOutput("MissingFiles"))) {
+                  listOfMissingFiles = new TList();
+                  listOfMissingFiles->SetName("MissingFiles");
+                  if (fPlayer)
+                     fPlayer->AddOutputObject(listOfMissingFiles);
+               }
+               Int_t ret = fPlayer->GetPacketizer()->AddProcessed(sl, status, &listOfMissingFiles);
+              // fPlayer->AddEventsProcessed(status->GetEntries());
+               if (ret > 0)
+                  fPlayer->GetPacketizer()->MarkBad(sl, status, &listOfMissingFiles);
             }
             if (!IsMaster())
                Emit("StopProcess(Bool_t)", abort);
@@ -2709,6 +2722,7 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
 {
    // Add a bad slave server to the bad slave list and remove it from
    // the active list and from the two monitor objects.
+   // Assume that the work done by this worker was lost and ask packerizer to reassign it.
 
    if (!wrk) {
       Error("MarkBad", "worker instance undefined: protocol error? ");
@@ -2772,11 +2786,12 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
             fPlayer->AddOutputObject(listOfMissingFiles);
       }
 
+      // Assume that the work done by the worker was lost and needs to reassigned.
       TVirtualPacketizer *packetizer = fPlayer ? fPlayer->GetPacketizer() : 0;
       if (packetizer)
-         // if the worker is being terminated, don't resubmit the packets
+         // the worker was lost so do resubmit the packets
          packetizer->MarkBad(wrk,
-                             strcmp(reason, kPROOF_TerminateWorker) != 0,
+                             0,
                              &listOfMissingFiles);
       else
          Info("MarkBad", "No packetizer received form the player!");
