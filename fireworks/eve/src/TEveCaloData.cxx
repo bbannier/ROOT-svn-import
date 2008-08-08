@@ -263,6 +263,15 @@ void TEveCaloDataVec::FillSlice(Int_t slice, Float_t val)
 }
 
 //______________________________________________________________________________
+void TEveCaloDataVec::FillSlice(Int_t slice, Int_t tower, Float_t val)
+{
+   // Fill given slice in a given tower.
+
+   fSliceVec[slice][tower] = val;
+}
+
+
+//______________________________________________________________________________
 void TEveCaloDataVec::GetCellList(Float_t eta, Float_t etaD,
                                   Float_t phi, Float_t phiD,
                                   TEveCaloData::vCellId_t &out) const
