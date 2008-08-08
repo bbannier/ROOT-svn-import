@@ -28,6 +28,12 @@ namespace ROOT
       command = TSchemaRuleProcessor::Trim( command );
 
       //-----------------------------------------------------------------------
+      // Remove the semicolon from the end if declared
+      //-----------------------------------------------------------------------
+      if( command[command.size()-1] == ';' )
+         command = command.substr( 0, command.size()-1 );
+
+      //-----------------------------------------------------------------------
       // Process the input until there are no characters left
       //-----------------------------------------------------------------------
       while( !command.empty() ) {
@@ -78,7 +84,7 @@ namespace ROOT
             l = command.find( "}\"" );
             if( l == std::string::npos ) {
                std::cerr << "Parsing error while processing key: \"" << key << "\"" << std::endl;
-               std::cerr << "Expected }\" at the beginning of the value" << std::endl;
+               std::cerr << "Expected }\" at the end of the value" << std::endl;
                break;
             }
             result[key] = command.substr( 2, l-2 );
@@ -91,7 +97,7 @@ namespace ROOT
             l = command.find( '"', 1 );
             if( l == std::string::npos ) {
                std::cerr << "Parsing error while processing key: \"" << key << "\"" << std::endl;
-               std::cerr << "Expected \" at the beginning of the value" << std::endl;
+               std::cerr << "Expected \" at the end of the value" << std::endl;
                break;
             }
             result[key] = command.substr( 1, l-1 );
@@ -129,30 +135,14 @@ namespace ROOT
       std::string warning = "WARNING: IO rule for class " + className;
 
       //-----------------------------------------------------------------------
-      // Check if we have all the keys we need
+      // Check if we have the source tag
       //-----------------------------------------------------------------------
-      std::string keys[] = {"target", "source", "sourceClass"};
-      for( int i = 0; i < 3; ++i ) {
-         it1 = rule.find( keys[i] );
-         if( it1 == rule.end() ) {
-            std::cout << warning << " - required parameter is missing: ";
-            std::cout << keys[i] << std::endl;
-            return false;
-         }
-      }
-
-      //-----------------------------------------------------------------------
-      // Check if we have an embed aparameter and if so if it has been set to
-      // the right value
-      //-----------------------------------------------------------------------
-      it1 = rule.find( "embed" );
-      if( it1 != rule.end() ) {
-         std::string emValue = TSchemaRuleProcessor::Trim( it1->second );
-         if( emValue != "true" && emValue != "false" ) {
-            std::cout << warning << " - true or false expected as a value ";
-            std::cout << "of embed parameter" << std::endl;
-            return false;
-         }
+      it1 = rule.find( "sourceClass" );
+      if( it1 == rule.end())
+      {
+         std::cout << warning << " - sourceClass parameter is missing";
+         std::cout << std::endl;
+         return false;
       }
 
       //-----------------------------------------------------------------------
@@ -223,6 +213,40 @@ namespace ROOT
       }
 
       //-----------------------------------------------------------------------
+      // Check if we're dealing with renameing declaration - sourceClass,
+      // targetClass and either version or checksum required
+      //-----------------------------------------------------------------------
+      if( rule.size() == 3 || (rule.size() == 4 && it1 != rule.end() && it2 != rule.end()) )
+         return true;
+
+      //-----------------------------------------------------------------------
+      // Check if we have all the keys we need
+      //-----------------------------------------------------------------------
+      std::string keys[] = {"target", "source"};
+      for( int i = 0; i < 2; ++i ) {
+         it1 = rule.find( keys[i] );
+         if( it1 == rule.end() ) {
+            std::cout << warning << " - required parameter is missing: ";
+            std::cout << keys[i] << std::endl;
+            return false;
+         }
+      }
+
+      //-----------------------------------------------------------------------
+      // Check if we have an embed aparameter and if so if it has been set to
+      // the right value
+      //-----------------------------------------------------------------------
+      it1 = rule.find( "embed" );
+      if( it1 != rule.end() ) {
+         std::string emValue = TSchemaRuleProcessor::Trim( it1->second );
+         if( emValue != "true" && emValue != "false" ) {
+            std::cout << warning << " - true or false expected as a value ";
+            std::cout << "of embed parameter" << std::endl;
+            return false;
+         }
+      }
+
+      //-----------------------------------------------------------------------
       // Check if the include list is not empty
       //-----------------------------------------------------------------------
       it1 = rule.find( "include" );
@@ -277,7 +301,7 @@ namespace ROOT
    static void WriteAutoVariables( const std::list<std::string>& target,
                                    const std::list<std::pair<std::string,std::string> >& source,
                                    MembersMap_t& members,
-                                   std::string& className,
+                                   std::string& className, std::string& mappedName,
                                    std::ostream& output )
    {
       //-----------------------------------------------------------------------
@@ -286,45 +310,105 @@ namespace ROOT
       if (!source.empty()) {
          bool start = true;
          std::list<std::pair<std::string,std::string> >::const_iterator it;
-         std::string onfileStructName = className + "_Onfile";
 
-         output << "      " << "struct " << onfileStructName << " {\n";
+         //--------------------------------------------------------------------
+         // Write IDs and check if we should generate the onfile structure
+         // this is done if the type was declared
+         //--------------------------------------------------------------------
+         bool generateOnFile = false;
+         output << "#if 0" << std::endl; // this is to be removed later
          for( it = source.begin(); it != source.end(); ++it ) {
-            output << "      " << "   " << (*it).first << " &" << (*it).second << ";\n"; 
-         };
-         output << "      " << "   " << onfileStructName << "(";
-         for( start = true, it = source.begin(); it != source.end(); ++it ) {
-            if (!start) { output << ",";}
-            else { start = false; }
-            output << (*it).first << " &onfile_" << (*it).second;
-         }
-         output << " ) : ";
-         for( start = true, it = source.begin(); it != source.end(); ++it ) {
-            if (!start) { output << ",";}
-            else { start = false; }
-            output << (*it).second << "(onfile_" << (*it).second << ")";
-         }
-         output << " {}\n";
-         output << "      " << "};\n";
+            output << "      ";
+            output << "static Int_t id_" << it->second << " = oldObj->GetId(";
+            output << "\"" << it->second << "\");" << std::endl;
 
-         for( it = source.begin(); it != source.end(); ++it ) {
-            output << "      static Long_t offset_Onfile_" << className << "_" << (*it).second << " = oldObj->GetClass()->GetDataMemberOffset(\"";
-            output << (*it).second << "\");\n";
+            if( it->first != "" )
+               generateOnFile = true;
          }
-         output << "      " << "char *onfile_add = (char*)oldObj->GetObject();\n";
-         output << "      " << "if (onfile_add==0) {\n";
-         output << "      " << "   ::Error(\"IO Rule function\",\"Onfile object missing for a rule for " << className << "\");\n";
-         output << "      " << "   return;\n";
-         output << "      " << "}\n";
-         output << "      " << className << "_Onfile onfile( \n";
-       
-         for( start = true, it = source.begin(); it != source.end(); ++it ) {
-            if (!start) { output << ",\n";}
-            else { start = false; }
-            output << "      " << "   *("<< (*it).first << "*)(onfile_add+offset_Onfile_" << className << "_" << (*it).second << ")";  
+         output << "#endif" << std::endl; // this is to be removed later
+
+         //--------------------------------------------------------------------
+         // Declare the on-file structure - if needed
+         //--------------------------------------------------------------------
+         if( generateOnFile ) {
+            std::string onfileStructName = mappedName + "_Onfile";
+            output << "      ";
+            output << "struct " << onfileStructName << " {\n";
+
+            //-----------------------------------------------------------------
+            // List the data members with non-empty type declarations
+            //-----------------------------------------------------------------
+            for( it = source.begin(); it != source.end(); ++it ) {
+               if( it->first != "" ) {
+                  output << "         ";
+                  output << it->first << " &" << it->second << ";\n"; 
+               }
+            }
+
+            //-----------------------------------------------------------------
+            // Generate the constructor
+            //-----------------------------------------------------------------
+            output << "         " << onfileStructName << "(";
+            for( start = true, it = source.begin(); it != source.end(); ++it ) {
+               if( it->first == "" )
+                  continue;
+
+               if( !start )
+                  output << ", ";
+               else
+                  start = false;
+
+               output << it->first << " &onfile_" << it->second;
+            }
+            output << " ): ";
+
+            //-----------------------------------------------------------------
+            // Generate the constructor's initializer list
+            //-----------------------------------------------------------------
+            for( start = true, it = source.begin(); it != source.end(); ++it ) {
+               if( it->first == "" )
+                  continue;
+
+               if( !start )
+                  output << ", ";
+               else
+                  start = false;
+
+               output << it->second << "(onfile_" << it->second << ")";
+            }
+            output << " {}\n";
+            output << "      " << "};\n";
+
+            //-----------------------------------------------------------------
+            // Initialize the structure - to be changed later
+            //-----------------------------------------------------------------
+            for( it = source.begin(); it != source.end(); ++it ) {
+               output << "      ";
+               output << "static Long_t offset_Onfile_" << mappedName;
+               output << "_" << it->second << " = oldObj->GetClass()->GetDataMemberOffset(\"";
+               output << it->second << "\");\n";
+            }
+            output << "      " << "char *onfile_add = (char*)oldObj->GetObject();\n";
+            output << "      " << mappedName << "_Onfile onfile( \n";
+
+            for( start = true, it = source.begin(); it != source.end(); ++it ) {
+               if( it->first == "" )
+                  continue;
+
+               if( !start )
+                  output << ",\n";
+
+               else
+                  start = false;
+
+               output << "         ";
+               output << "*(" << it->first << "*)(onfile_add+offset_Onfile_";
+               output << mappedName << "_" << it->second << ")";  
+            }
+            output << " );\n\n";
          }
-         output << " );\n\n";
       }
+
       //-----------------------------------------------------------------------
       // Write down the targets
       //-----------------------------------------------------------------------
@@ -378,7 +462,7 @@ namespace ROOT
       TSchemaRuleProcessor::SplitDeclaration( rule["source"], source );
       TSchemaRuleProcessor::SplitList( rule["target"], target );
 
-      WriteAutoVariables( target, source, members, className, output );
+      WriteAutoVariables( target, source, members, className, mappedName, output );
       output << "      " << className << "* newObj = (" << className;
       output << "*)target;" << std::endl << std::endl;
 
@@ -424,7 +508,7 @@ namespace ROOT
       std::list<std::string> target;
       TSchemaRuleProcessor::SplitList( rule["target"], target );
 
-      WriteAutoVariables( target, source, members, className, output );
+      WriteAutoVariables( target, source, members, className, mappedName, output );
       output << "      " << className << "* newObj = (" << className;
       output << "*)target;" << std::endl << std::endl;
 
@@ -475,12 +559,18 @@ namespace ROOT
          //--------------------------------------------------------------------
          // Write down the mandatory fields
          //--------------------------------------------------------------------
-         output << "      rule->fTarget      = \"" << (*it)["target"];
-         output << "\";" << std::endl;
-         output << "      rule->fSource      = \"" << (*it)["source"];
-         output << "\";" << std::endl;
          output << "      rule->fSourceClass = \"" << (*it)["sourceClass"];
          output << "\";" << std::endl;
+
+         if( it->find( "target" ) != it->end() ) {
+            output << "      rule->fTarget      = \"" << (*it)["target"];
+            output << "\";" << std::endl;
+         }
+
+         if( it->find( "source" ) != it->end() ) {
+            output << "      rule->fSource      = \"" << (*it)["source"];
+            output << "\";" << std::endl;
+         }
 
          //--------------------------------------------------------------------
          // Deal with nonmandatory keys
