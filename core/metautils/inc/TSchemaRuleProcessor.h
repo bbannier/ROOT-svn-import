@@ -50,7 +50,9 @@ namespace ROOT
          static void SplitDeclaration( const std::string& source,
                                        std::list<std::pair<std::string,std::string> >& result)
          {
-            // Split the string producing a list of substrings
+            // Split a declaration string producing a list of substrings
+            // Typically we have:
+            //    int mem; SomeType mem2; SomeTmp<const key, const value> mem3; 
 
             std::string::size_type curr;
             std::string::size_type last = 0;
@@ -61,6 +63,7 @@ namespace ROOT
             result.clear();
 
             while( last != source.size() ) {
+               // Split on semi-colons.
                curr = source.find( ';', last );
 
                if( curr == std::string::npos ) {
@@ -68,11 +71,14 @@ namespace ROOT
                   size = curr-last+1;
                }
                else size = curr-last;
-
+               
+               // Extra spaces.
                elem = Trim( source.substr( last, size ) );
                if( !elem.empty() ) {
                   unsigned int level = 0;
                  
+                  // Split between the typename and the membername
+                  // Take in consideration template names.
                   for(std::string::size_type i=0; i<elem.size(); ++i) {
                      if (elem[i]=='<') { ++level; }
                      else if (elem[i]=='>') { --level; }
