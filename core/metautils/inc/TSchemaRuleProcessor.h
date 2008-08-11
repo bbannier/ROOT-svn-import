@@ -47,38 +47,44 @@ namespace ROOT
             }
          }
 
-         //---------------------------------------------------------------------
          static void SplitDeclaration( const std::string& source,
                                        std::list<std::pair<std::string,std::string> >& result)
          {
             // Split the string producing a list of substrings
 
+            std::string::size_type curr;
+            std::string::size_type last = 0;
+            std::string::size_type size;
+            std::string            elem;
+            std::string            type;
 
             result.clear();
 
-            //------------------------------------------------------------------
-            // Split the list of sources
-            //------------------------------------------------------------------
-            std::list<std::string> sourceList;
-            SplitList( source, sourceList );
+            while( last != source.size() ) {
+               curr = source.find( ';', last );
 
-            //------------------------------------------------------------------
-            // Check if the type was declared
-            //------------------------------------------------------------------
-            std::list<std::string>::iterator it;
-            std::string::size_type           space;
-
-            for( it = sourceList.begin(); it != sourceList.end(); ++it ) {
-               std::string elem = "";
-               std::string type = "";
-
-               if( (space = it->find( " " )) == std::string::npos )
-                  elem = *it;
-               else {
-                  type = it->substr( 0, space );
-                  elem = it->substr( space+1, it->size() );
+               if( curr == std::string::npos ) {
+                  curr = source.size()-1;
+                  size = curr-last+1;
                }
-               result.push_back( std::make_pair( type, elem ) );
+               else size = curr-last;
+
+               elem = Trim( source.substr( last, size ) );
+               if( !elem.empty() ) {
+                  unsigned int level = 0;
+                 
+                  for(std::string::size_type i=0; i<elem.size(); ++i) {
+                     if (elem[i]=='<') { ++level; }
+                     else if (elem[i]=='>') { --level; }
+                     else if (level == 0 && isspace(elem[i])) {
+                        type = elem.substr( 0, i );
+                        elem = Trim( elem.substr(i+1, elem.size()-i+1) );
+                        break;
+                     }
+                  }
+                  result.push_back( make_pair(type,elem) );
+               }
+               last = curr+1;
             }
          }
 
