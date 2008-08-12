@@ -2266,35 +2266,39 @@ void TFitEditor::GetFunctionsFromList(TList *list)
    TObject *obj;
    Int_t newid = kFP_USER*30;
 
-   Int_t selectedEntry = fFuncList->GetSelected();
-   fFuncList->RemoveAll();
-   if ( fDim == 1 ) // Put back the predefined functions for 1D
-                    // objects.
+   static TObject *Object = 0; 
+   if ( Object != fFitObject )
    {
-      fFuncList->AddEntry("gaus" ,  kFP_GAUS);
-      fFuncList->AddEntry("gausn",  kFP_GAUSN);
-      fFuncList->AddEntry("expo",   kFP_EXPO);
-      fFuncList->AddEntry("landau", kFP_LAND);
-      fFuncList->AddEntry("landaun",kFP_LANDN);
-      fFuncList->AddEntry("pol0",   kFP_POL0);
-      fFuncList->AddEntry("pol1",   kFP_POL1);
-      fFuncList->AddEntry("pol2",   kFP_POL2);
-      fFuncList->AddEntry("pol3",   kFP_POL3);
-      fFuncList->AddEntry("pol4",   kFP_POL4);
-      fFuncList->AddEntry("pol5",   kFP_POL5);
-      fFuncList->AddEntry("pol6",   kFP_POL6);
-      fFuncList->AddEntry("pol7",   kFP_POL7);
-      fFuncList->AddEntry("pol8",   kFP_POL8);
-      fFuncList->AddEntry("pol9",   kFP_POL9);
-      fFuncList->AddEntry("user",   kFP_USER);
+      fFuncList->RemoveAll();
+      if ( fDim == 1 ) // Put back the predefined functions for 1D
+         // objects.
+      {
+         fFuncList->AddEntry("gaus" ,  kFP_GAUS);
+         fFuncList->AddEntry("gausn",  kFP_GAUSN);
+         fFuncList->AddEntry("expo",   kFP_EXPO);
+         fFuncList->AddEntry("landau", kFP_LAND);
+         fFuncList->AddEntry("landaun",kFP_LANDN);
+         fFuncList->AddEntry("pol0",   kFP_POL0);
+         fFuncList->AddEntry("pol1",   kFP_POL1);
+         fFuncList->AddEntry("pol2",   kFP_POL2);
+         fFuncList->AddEntry("pol3",   kFP_POL3);
+         fFuncList->AddEntry("pol4",   kFP_POL4);
+         fFuncList->AddEntry("pol5",   kFP_POL5);
+         fFuncList->AddEntry("pol6",   kFP_POL6);
+         fFuncList->AddEntry("pol7",   kFP_POL7);
+         fFuncList->AddEntry("pol8",   kFP_POL8);
+         fFuncList->AddEntry("pol9",   kFP_POL9);
+         fFuncList->AddEntry("user",   kFP_USER);
+      }
+
+      TIter next(list, kIterBackward);
+      while ((obj = next()))
+         if (obj->InheritsFrom(TF1::Class()))
+            fFuncList->AddEntry(obj->GetName(), newid++);
+
+      fFuncList->Select((newid != kFP_USER*30)?newid-1:1);
+      Object = fFitObject;
    }
-
-   TIter next(list, kIterBackward);
-   while ((obj = next()))
-      if (obj->InheritsFrom(TF1::Class()))
-         fFuncList->AddEntry(obj->GetName(), newid++);
-
-   fFuncList->Select((selectedEntry<0)?newid-1:selectedEntry);
 }
 
 //______________________________________________________________________________
