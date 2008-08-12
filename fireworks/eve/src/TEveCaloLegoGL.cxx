@@ -926,7 +926,7 @@ void TEveCaloLegoGL::DrawCells2D() const
          max_e_slice.assign((nEta+2) * (nPhi+2), -1);
       }
 
-      for (Int_t bin=0; bin<fRebinData.fBinData.size(); ++bin)
+      for (UInt_t bin=0; bin<fRebinData.fBinData.size(); ++bin)
       {
          Float_t ssum = 0;
          if (fRebinData.fBinData[bin] != -1)
@@ -1082,17 +1082,18 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    SetAxis(fM->fData->GetPhiBins(), fPhiAxis);
 
    // cache ids
+   Bool_t idCacheChanged = kFALSE; 
    if (fM->fCellIdCacheOK == kFALSE)
    {
-      fDLCacheOK = kFALSE;
       fM->BuildCellIdCache();
+      idCacheChanged = kTRUE;
    }
 
    // rebin data
-   if (oldBinStep != fBinStep)
-   {   
-      if (fCells3D) fDLCacheOK = kFALSE;
-      
+   if (oldBinStep != fBinStep || idCacheChanged)
+   {
+      fDLCacheOK = kFALSE;
+
       fRebinData.fSliceData.clear();
       fRebinData.fSliceData.clear();
 
