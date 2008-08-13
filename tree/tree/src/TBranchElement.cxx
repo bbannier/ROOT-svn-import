@@ -1565,7 +1565,12 @@ void TBranchElement::InitInfo()
             if (fOnfileObject==0 && (fType==31 || fType==41 || fType <=2) && fInfo->GetNdata()
                 && ((TStreamerElement*) fInfo->GetElems()[0])->GetType() == TStreamerInfo::kCacheNew) 
             {
-               fOnfileObject = new TVirtualArray( ((TStreamerElement*) fInfo->GetElems()[0])->GetClassPointer(), 1 );
+               Int_t arrlen = 1;
+               TLeaf *leaf = (TLeaf*)fLeaves.At(0);
+               if (leaf) {
+                  arrlen = leaf->GetMaximum();
+               }
+               fOnfileObject = new TVirtualArray( ((TStreamerElement*) fInfo->GetElems()[0])->GetClassPointer(), arrlen );
                // Propage this to all the other branch of this type.
                TObjArray *branches = GetMother()->GetSubBranch(this)->GetListOfBranches();
                Int_t nbranches = branches->GetEntriesFast();
