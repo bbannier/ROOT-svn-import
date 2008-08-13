@@ -23,6 +23,11 @@
 
 #pragma link C++ class TEveManager::TExceptionHandler+;
 
+
+#pragma link C++ class TEveMagField+;
+#pragma link C++ class TEveMagFieldConst+;
+#pragma link C++ class TEveMagFieldDuo+;
+
 // Basic helper classes
 #pragma link C++ class TEveException+;
 #pragma link C++ class TEvePadHolder+;
