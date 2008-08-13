@@ -20,6 +20,7 @@
 #include "TVirtualPad.h"
 #include "TVirtualFitter.h"
 #include "TClass.h"
+#include "TSystem.h"
 #include <stdlib.h>
 
 ClassImp(TGraph2D)
@@ -662,6 +663,22 @@ Int_t TGraph2D::Fit(TF2 *f2, Option_t *option, Option_t *)
    //  Root > st->SetX2NDC(newx2); //new x end position
 
    return DoFit(f2, option, "");
+}
+
+//______________________________________________________________________________
+void TGraph2D::FitPanel()
+{
+   // Display a GUI panel with all graph fit options.
+   //
+   //   See class TFitEditor for example
+
+   if (!gPad) {
+      Error("FitPanel", "need to draw graph first");
+      return;
+   }
+
+   if (!TClass::GetClass("TFitEditor")) gSystem->Load("libFitPanel");
+   gROOT->ProcessLine(Form("TFitEditor::Open((TVirtualPad*)0x%lx,(TObject*)0x%lx)",gPad,this));
 }
 
 //______________________________________________________________________________
