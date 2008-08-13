@@ -36,7 +36,8 @@ namespace Internal {
       /** default constructor */
       ClassTemplateInstance(const char * typ, 
          size_t size, 
-         const std::type_info & ti, 
+         const std::type_info & ti,
+         const Catalog& catalog,
          unsigned int modifiers);
 
 

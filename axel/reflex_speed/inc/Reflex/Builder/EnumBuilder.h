@@ -15,6 +15,7 @@
 // Include files
 #include "Reflex/Builder/TypeBuilder.h"
 #include "Reflex/Member.h"
+#include "Reflex/Catalog.h"
 
 namespace Reflex{
 
@@ -36,6 +37,7 @@ namespace Reflex{
       /** constructor */
       EnumBuilder(const char * name,
          const std::type_info & ti,
+         const Catalog& catalog = Reflex::Catalog::Instance(),
          unsigned int modifiers = 0);
 
 

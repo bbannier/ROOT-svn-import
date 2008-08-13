@@ -31,18 +31,6 @@ namespace Reflex {
    class TemplateArgument;
    class DictionaryGenerator;
 
-   /*
-   OrderedContainer<Base> d__a__0;
-   OrderedContainer<Type> d__a__1;
-   OrderedContainer<Scope> d__a__2;;
-   OrderedContainer<TemplateArgument> d__a__3;
-   OrderedContainer<Member> d__a__4;
-   OrderedContainer<TypeTemplate> d__a__5;
-   OrderedContainer<MemberTemplate> d__a__6;
-   Container<Type> d__a__7;
-   Container<Scope> d__a__8;
-   */
-
    namespace Internal {
       class TypeBase;
       class TypeName;

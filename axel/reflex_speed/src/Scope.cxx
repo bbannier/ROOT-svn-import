@@ -34,16 +34,6 @@ Reflex::Scope::operator bool () const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Scope &
-Reflex::Scope::__NIRVANA__() {
-//-------------------------------------------------------------------------------
-// static wraper around NIRVANA, the base of the top scope.
-   static Scope s = Scope(new Internal::ScopeName("@N@I@R@V@A@N@A@", 0));
-   return s;
-}
-
-
-//-------------------------------------------------------------------------------
 Reflex::Scope::operator Reflex::Type () const {
 //-------------------------------------------------------------------------------
 // Conversion operator to Type. If this scope is not a Type, returns the empty type.
@@ -88,6 +78,15 @@ Reflex::Scope::FunctionMemberByName(const std::string & name,
 // Return a function member by it's name, qualified by it's signature type.
    if (* this) return fScopeName->fScopeBase->FunctionMemberByName(name, signature, modifiers_mask); 
    return Dummy::Member();
+}
+
+
+//-------------------------------------------------------------------------------
+const Reflex::Catalog&
+Reflex::Scope::InCatalog() const {
+//-------------------------------------------------------------------------------
+   if (fScopeName) return fScopeName->InCatalog();
+   return Catalog::Instance();
 }
 
 

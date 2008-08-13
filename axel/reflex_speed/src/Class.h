@@ -40,7 +40,9 @@ namespace Internal {
    public:
 
       /** constructor */
-      Class(const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers = 0, ETYPE classType = kClass);
+      Class(const char* typ, size_t size, const std::type_info& ti,
+            const Catalog& catalog,
+            unsigned int modifiers = 0, ETYPE classType = kClass);
 
       /** destructor */
       virtual ~Class();

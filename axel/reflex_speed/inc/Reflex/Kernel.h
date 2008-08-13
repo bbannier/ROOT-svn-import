@@ -198,7 +198,7 @@ namespace Reflex {
    public:
 
       /** default constructor */
-     Instance();
+      Instance() {}
 
       /** destructor */
       ~Instance();

@@ -14,13 +14,13 @@
 
 // Include files
 #include "Reflex/Kernel.h"
+#include "Reflex/Catalog.h"
 #include <string>
 
 namespace Reflex {
 
    // forward declarations
    class Scope;
-   class Catalog;
 
 namespace Internal {
 
@@ -41,7 +41,7 @@ namespace Internal {
    public:
 
       /** constructor */
-      ScopeName(const char * name, ScopeBase * scopeBase, const Catalog* catalog = 0);
+      ScopeName(const char * name, ScopeBase * scopeBase, const Catalog& catalog);
 
 
       /**
@@ -58,7 +58,7 @@ namespace Internal {
       /**
       * Retrieve the Catalog containing the type.
       */
-      const Catalog& InCatalog() const { return *fCatalog; }
+      const Catalog& InCatalog() const { return fCatalog; }
 
 
       /**
@@ -103,7 +103,7 @@ namespace Internal {
       /**
       * Catalog containing the scope
       */
-      const Catalog* fCatalog;
+      const Catalog fCatalog;
 
    }; // class ScopeName
 } // namespace Internal

@@ -1,6 +1,6 @@
 #include "Reflex/Reflex.h"
 
-#include "Reflex/internal/OwnedMember.h"
+#include "../../src/OwnedMember.h"
 
 #if 0
 #include "../src/Class.h"

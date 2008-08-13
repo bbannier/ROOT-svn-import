@@ -22,9 +22,10 @@
 //-------------------------------------------------------------------------------
 Reflex::Internal::Pointer::Pointer(const Type & pointerType,
                                    unsigned int modifiers,
-                                    const std::type_info & ti)
+                                   const std::type_info & ti,
+                                   const Catalog& catalog)
 //-------------------------------------------------------------------------------
-: TypeBase(BuildTypeName(pointerType, kQualified).c_str(), modifiers, sizeof(void*), kPointer, ti), 
+: TypeBase(BuildTypeName(pointerType, kQualified).c_str(), modifiers, sizeof(void*), kPointer, ti, catalog), 
      fPointerType(pointerType) { 
    // Construct the dictionary info for a pointer type.
 }

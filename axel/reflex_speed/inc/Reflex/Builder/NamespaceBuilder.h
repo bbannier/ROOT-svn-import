@@ -14,6 +14,7 @@
 
 // Include files
 #include "Reflex/Scope.h"
+#include "Reflex/Catalog.h"
 
 
 namespace Reflex{
@@ -29,7 +30,8 @@ namespace Reflex{
    public:            
 
       /** constructor */
-      NamespaceBuilder(const char * nam);
+      NamespaceBuilder(const char * nam,
+                       const Catalog& catalog = Reflex::Catalog::Instance());
 
 
       /** destructor */

@@ -34,7 +34,8 @@ namespace Internal {
       /** default constructor */
       Pointer(const Type & pointerType,
          unsigned int modifiers,
-         const std::type_info & ti);
+         const std::type_info & ti,
+         const Catalog& catalog);
 
       /** destructor */
       virtual ~Pointer() {}

@@ -253,16 +253,16 @@ namespace a {
 void ReflexBuilderUnitTest::classbuilder()
 {
 
-  ClassBuilderT<a::bar>(STRUCT)
-    .AddFunctionMember<void(void)>("bar", 0, 0, 0, PUBLIC | CONSTRUCTOR )
-    .AddFunctionMember<void(float)>("bar", 0, 0, 0, CONSTRUCTOR )
+  ClassBuilderT<a::bar>(kStruct)
+    .AddFunctionMember<void(void)>("bar", 0, 0, 0, kPublic | kConstructor )
+    .AddFunctionMember<void(float)>("bar", 0, 0, 0, kConstructor )
     .AddDataMember<float>("b", OffsetOf(a::bar,b));
 
   ClassBuilderT<a::foo>()
-    .AddFunctionMember<void(void)>("foo", 0, 0, 0, CONSTRUCTOR )
-    .AddFunctionMember<void(int)>("foo", 0, 0, 0, CONSTRUCTOR )
-    .AddFunctionMember<void(const a::foo &)>("foo", 0, 0, 0, CONSTRUCTOR )
-    .AddFunctionMember<void(void)>("~foo", 0, 0, 0, DESTRUCTOR )
+    .AddFunctionMember<void(void)>("foo", 0, 0, 0, kConstructor )
+    .AddFunctionMember<void(int)>("foo", 0, 0, 0, kConstructor )
+    .AddFunctionMember<void(const a::foo &)>("foo", 0, 0, 0, kConstructor )
+    .AddFunctionMember<void(void)>("~foo", 0, 0, 0, kDestructor )
     .AddFunctionMember<void(void)>("f0", 0 )
     .AddFunctionMember<bool(bool)>("f1", 0 )
     .AddFunctionMember<char(char,char*)>("f2", 0 )
@@ -272,59 +272,59 @@ void ReflexBuilderUnitTest::classbuilder()
     .AddFunctionMember<longlong(bar[10], const bar&, const bar *, bar const *, bar * const, bar **)>("f6", 0 )
     .AddFunctionMember<float(float,float,float,float,float,float,float)>("f7", 0 )
     .AddFunctionMember<double(unsigned int, unsigned long,bool,char,unsigned char,int,int,int)>("f8", 0 )
-    .AddDataMember<bool>("b", OffsetOf(a::foo, b), PUBLIC )
-    .AddDataMember<char>("c", OffsetOf(a::foo, c), PUBLIC )
-    .AddDataMember<short>("s", OffsetOf(a::foo, s), PUBLIC )
-    .AddDataMember<int>("i",   OffsetOf(a::foo, i), PUBLIC )
-    .AddDataMember<float>("f", OffsetOf(a::foo, f), PUBLIC )
-    .AddDataMember<double>("d", OffsetOf(a::foo,d), PUBLIC )
-    .AddDataMember<float*>("fp", OffsetOf(a::foo,fp), PUBLIC )
-    .AddDataMember<a::bar>("ba", OffsetOf(a::foo, ba), PUBLIC )
-    .AddDataMember<a::bar*>("bap", OffsetOf(a::foo, bap), PUBLIC )
-    .AddDataMember<int>("pi",  OffsetOf(a::foo,pi), PRIVATE )
-    .AddDataMember<int*>("ci", OffsetOf(a::foo,ci), PRIVATE )
-    .AddDataMember<volatile bool>("v", OffsetOf(a::foo, v), PRIVATE )
-    .AddDataMember<const volatile char>("cv", OffsetOf(a::foo, cv), PRIVATE )
-    .AddFunctionMember<void(void)>("s0", 0, 0, 0, STATIC | PRIVATE )
-    .AddFunctionMember<void(bool)>("b1", 0, 0, 0, STATIC | PRIVATE )
-    .AddFunctionMember<void(int)>("t1<int>", 0, 0, 0, PRIVATE )
-    .AddFunctionMember<void(float)>("t1<float>", 0, 0, 0, PRIVATE )
-    .AddFunctionMember<int(int,float)>("t2<int,float>", 0, 0, 0, PRIVATE )
-    .AddFunctionMember<int(double,float)>("t2<double,float>", 0, 0, 0, PRIVATE )
-    .AddFunctionMember<void (* (void) )(void)>("g1", 0, 0, 0, PRIVATE )
-    .AddFunctionMember<bool (* (double) )(bool)>("g2", 0, 0, 0, PRIVATE );
-    //fixme//.AddFunctionMember<float (* (float(*)(int)) )(int)>("g3", 0, 0, 0, PRIVATE );
+    .AddDataMember<bool>("b", OffsetOf(a::foo, b), kPublic )
+    .AddDataMember<char>("c", OffsetOf(a::foo, c), kPublic )
+    .AddDataMember<short>("s", OffsetOf(a::foo, s), kPublic )
+    .AddDataMember<int>("i",   OffsetOf(a::foo, i), kPublic )
+    .AddDataMember<float>("f", OffsetOf(a::foo, f), kPublic )
+    .AddDataMember<double>("d", OffsetOf(a::foo,d), kPublic )
+    .AddDataMember<float*>("fp", OffsetOf(a::foo,fp), kPublic )
+    .AddDataMember<a::bar>("ba", OffsetOf(a::foo, ba), kPublic )
+    .AddDataMember<a::bar*>("bap", OffsetOf(a::foo, bap), kPublic )
+    .AddDataMember<int>("pi",  OffsetOf(a::foo,pi), kPrivate )
+    .AddDataMember<int*>("ci", OffsetOf(a::foo,ci), kPrivate )
+    .AddDataMember<volatile bool>("v", OffsetOf(a::foo, v), kPrivate )
+    .AddDataMember<const volatile char>("cv", OffsetOf(a::foo, cv), kPrivate )
+    .AddFunctionMember<void(void)>("s0", 0, 0, 0, kStatic | kPrivate )
+    .AddFunctionMember<void(bool)>("b1", 0, 0, 0, kStatic | kPrivate )
+    .AddFunctionMember<void(int)>("t1<int>", 0, 0, 0, kPrivate )
+    .AddFunctionMember<void(float)>("t1<float>", 0, 0, 0, kPrivate )
+    .AddFunctionMember<int(int,float)>("t2<int,float>", 0, 0, 0, kPrivate )
+    .AddFunctionMember<int(double,float)>("t2<double,float>", 0, 0, 0, kPrivate )
+    .AddFunctionMember<void (* (void) )(void)>("g1", 0, 0, 0, kPrivate )
+    .AddFunctionMember<bool (* (double) )(bool)>("g2", 0, 0, 0, kPrivate );
+    //fixme//.AddFunctionMember<float (* (float(*)(int)) )(int)>("g3", 0, 0, 0, kPrivate );
 
   Type t = Type::ByName("a::foo");  
   Scope s = Scope::ByName("a");
   CPPUNIT_ASSERT(t);
-  CPPUNIT_ASSERT(t.IsClass());
+  CPPUNIT_ASSERT(t.Is(gClassOrStruct));
   CPPUNIT_ASSERT_EQUAL( t.Id(), Type::ByName("::a::foo").Id());
   CPPUNIT_ASSERT_EQUAL( t.Id(), TypeBuilder("::a::foo").Id());
   CPPUNIT_ASSERT_EQUAL( s.Id(), Scope::ByName("::a").Id());
   CPPUNIT_ASSERT_EQUAL( t.Id(), Type::ByTypeInfo(typeid(a::foo)).Id());
-  CPPUNIT_ASSERT_EQUAL(size_t(21),t.FunctionMemberSize());
-  CPPUNIT_ASSERT_EQUAL(size_t(13),t.DataMemberSize());
-  for (size_t i = 0; i < t.FunctionMemberSize(); i++ ) {
-    Member f = t.FunctionMemberAt(i);
-    if( f.Name() == "foo" )  CPPUNIT_ASSERT(f.IsConstructor());
-    else if( f.Name() == "~foo" ) CPPUNIT_ASSERT(f.IsDestructor());
+  CPPUNIT_ASSERT_EQUAL(size_t(21),t.FunctionMembers().Size());
+  CPPUNIT_ASSERT_EQUAL(size_t(13),t.DataMembers().Size());
+  for (size_t i = 0; i < t.FunctionMembers().Size(); i++ ) {
+    Member f = t.FunctionMembers().At(i);
+    if( f.Name() == "foo" )  CPPUNIT_ASSERT(f.Is(gConstructor));
+    else if( f.Name() == "~foo" ) CPPUNIT_ASSERT(f.Is(gDestructor));
     else if( f.Name()[0] == 'f') {
-      CPPUNIT_ASSERT_EQUAL(size_t(f.Name()[1]-'0'), f.TypeOf().FunctionParameterSize());
+      CPPUNIT_ASSERT_EQUAL(size_t(f.Name()[1]-'0'), f.TypeOf().FunctionParameters().Size());
     }
     else if( f.Name()[0] == 's') {
-      CPPUNIT_ASSERT(f.IsStatic() );
-      CPPUNIT_ASSERT(f.IsPrivate() );
+      CPPUNIT_ASSERT(f.Is(gStatic) );
+      CPPUNIT_ASSERT(f.Is(gPrivate) );
     }
     else if (f.Name()[0] == 't' ) {
-      CPPUNIT_ASSERT_EQUAL(size_t(f.Name()[1]-'0'), f.TypeOf().FunctionParameterSize());
+      CPPUNIT_ASSERT_EQUAL(size_t(f.Name()[1]-'0'), f.TypeOf().FunctionParameters().Size());
     }
   }
 
   // Check data members and their offsets....
   a::foo obj;
-  for (size_t i = 0; i < t.DataMemberSize(); i++ ) {
-    Member d = t.DataMemberAt(i);
+  for (size_t i = 0; i < t.DataMembers().Size(); i++ ) {
+    Member d = t.DataMembers().At(i);
     if      ( d.Name() == "b"   ) CPPUNIT_ASSERT_EQUAL((size_t)&obj.b-  (size_t)&obj, d.Offset() );
     else if ( d.Name() == "c"   ) CPPUNIT_ASSERT_EQUAL((size_t)&obj.c-  (size_t)&obj, d.Offset() );
     else if ( d.Name() == "s"   ) CPPUNIT_ASSERT_EQUAL((size_t)&obj.s-  (size_t)&obj, d.Offset() );
@@ -378,7 +378,7 @@ void ReflexBuilderUnitTest::propertybuilder()
     .AddProperty("p1",true);
   Type t = Type::ByName("b::foo");  
   CPPUNIT_ASSERT(t);
-  CPPUNIT_ASSERT(t.IsClass());
+  CPPUNIT_ASSERT(t.Is(gClassOrStruct));
   CPPUNIT_ASSERT(t.Properties().HasProperty("foo_p0"));
   CPPUNIT_ASSERT_EQUAL(string("value"), 
                        string(any_cast<const char*>(t.Properties().PropertyValue("foo_p0"))));
@@ -404,10 +404,10 @@ namespace c {
 
 void ReflexBuilderUnitTest::inheritancebuilder()
 {
-  ClassBuilderT<c::base>(VIRTUAL).AddDataMember<int>("b", OffsetOf(c::base, b));
+  ClassBuilderT<c::base>(kVirtual).AddDataMember<int>("b", OffsetOf(c::base, b));
   ClassBuilderT<c::dev>().AddBase<c::base>().AddDataMember<int>("d", OffsetOf(c::dev, d));
-  ClassBuilderT<c::dev1>().AddBase<c::base>(VIRTUAL).AddDataMember<int>("d1", OffsetOf(c::dev1, d1));
-  ClassBuilderT<c::dev2>().AddBase<c::base>(VIRTUAL).AddDataMember<int>("d2", OffsetOf(c::dev2, d2));
+  ClassBuilderT<c::dev1>().AddBase<c::base>(kVirtual).AddDataMember<int>("d1", OffsetOf(c::dev1, d1));
+  ClassBuilderT<c::dev2>().AddBase<c::base>(kVirtual).AddDataMember<int>("d2", OffsetOf(c::dev2, d2));
   ClassBuilderT<c::dia>().AddBase<c::dev1>().AddBase<c::dev2>().AddDataMember<int>("dd", OffsetOf(c::dia, dd));
   Type base = Type::ByName("c::base");
   Type dev  = Type::ByName("c::dev");
@@ -515,9 +515,9 @@ namespace f {
 void ReflexBuilderUnitTest::objectinstantiation()
 {
   ClassBuilderT<f::foo>()
-    .AddFunctionMember<void(int,float)>("foo", &f::ctor1, 0, 0, CONSTRUCTOR)
-    .AddFunctionMember<void(const f::foo&)>("foo", &f::ctor2, 0, 0, CONSTRUCTOR)
-    .AddFunctionMember<void(void)>("~foo", &f::dtor, 0, 0, DESTRUCTOR | PUBLIC )
+    .AddFunctionMember<void(int,float)>("foo", &f::ctor1, 0, 0, kConstructor)
+    .AddFunctionMember<void(const f::foo&)>("foo", &f::ctor2, 0, 0, kConstructor)
+    .AddFunctionMember<void(void)>("~foo", &f::dtor, 0, 0, kDestructor | kPublic )
     .AddDataMember<int>("fI", OffsetOf(f::foo, fI) )
     .AddDataMember<float>("fF", OffsetOf(f::foo, fF) );
   Type c = Type::ByTypeInfo(typeid(f::foo));
@@ -551,7 +551,7 @@ void ReflexBuilderUnitTest::typedefbuilder()
   TypedefBuilder<int>("MyInt1").AddProperty("owner","me").AddProperty("price",10.0);
   Type t = Type::ByName("MyInt1");
   CPPUNIT_ASSERT(t);
-  CPPUNIT_ASSERT(t.IsTypedef());
+  CPPUNIT_ASSERT(t.Is(gTypedef));
   Type t2 = Type::ByName("int");
   Type t3 = Type::ByTypeInfo(typeid(int));
   Type t4 = t.ToType();
@@ -561,12 +561,12 @@ void ReflexBuilderUnitTest::typedefbuilder()
   TypedefBuilder<float>("AA::MyInt1");
   t = Type::ByName("AA::MyInt1");
   CPPUNIT_ASSERT(t);
-  CPPUNIT_ASSERT(t.IsTypedef());
+  CPPUNIT_ASSERT(t.Is(gTypedef));
   Scope s = Scope::ByName("AA");
   CPPUNIT_ASSERT(s);
   CPPUNIT_ASSERT( s == t.DeclaringScope());
-  CPPUNIT_ASSERT_EQUAL( size_t(1), s.SubTypeSize());
-  CPPUNIT_ASSERT( t == s.SubTypeAt(0));
+  CPPUNIT_ASSERT_EQUAL( size_t(1), s.SubTypes().Size());
+  CPPUNIT_ASSERT( t == s.SubTypes().At(0));
 }
 
 class classWithTypedefs {
@@ -585,21 +585,21 @@ void ReflexBuilderUnitTest::classAddTypedef() {
 
   Type t = Type::ByName("classWithTypedefs");
   CPPUNIT_ASSERT(t);
-  CPPUNIT_ASSERT(!t.DataMemberSize());
-  CPPUNIT_ASSERT(!t.MemberSize());
+  CPPUNIT_ASSERT(!t.DataMembers().Size());
+  CPPUNIT_ASSERT(!t.Members().Size());
   
   Scope s = Scope::ByName("classWithTypedefs");
   CPPUNIT_ASSERT( s );
-  CPPUNIT_ASSERT_EQUAL(3, (int)s.SubTypeSize());
+  CPPUNIT_ASSERT_EQUAL(3, (int)s.SubTypes().Size());
   
   Type td0 = Type::ByName("classWithTypedefs::MyInt2");
   CPPUNIT_ASSERT( td0 );
   CPPUNIT_ASSERT( td0.ToType());
   CPPUNIT_ASSERT(Type::ByName("int") == td0.ToType());
   CPPUNIT_ASSERT("MyInt2" == td0.Name());
-  CPPUNIT_ASSERT("classWithTypedefs::MyInt2" == td0.Name(SCOPED));
+  CPPUNIT_ASSERT("classWithTypedefs::MyInt2" == td0.Name(Reflex::kScoped));
 
-  Type td2 = s.SubTypeAt(2);
+  Type td2 = s.SubTypes().At(2);
   CPPUNIT_ASSERT( td2 );
   CPPUNIT_ASSERT( td2.ToType());
   CPPUNIT_ASSERT( Type::ByName("classWithTypedefs::MyOtherInt") == td2.ToType());
@@ -619,15 +619,15 @@ void ReflexBuilderUnitTest::enumbuilder()
   EnumBuilderT<g::enum2>().AddItem("i", g::i).AddItem("j", g::j).AddItem("k", g::k);
   Type e1 = Type::ByName("enum1");
   CPPUNIT_ASSERT(e1);
-  CPPUNIT_ASSERT(e1.IsEnum());
-  CPPUNIT_ASSERT_EQUAL(size_t(3),e1.MemberSize());
-  CPPUNIT_ASSERT_EQUAL(size_t(val_b) , *(size_t*)e1.MemberAt(1).Get().Address() );
+  CPPUNIT_ASSERT(e1.Is(gEnum));
+  CPPUNIT_ASSERT_EQUAL(size_t(3),e1.Members().Size());
+  CPPUNIT_ASSERT_EQUAL(size_t(val_b) , *(size_t*)e1.Members().At(1).Get().Address() );
 
   Type e2 = Type::ByName("g::enum2");
   CPPUNIT_ASSERT(e2);
-  CPPUNIT_ASSERT(e2.IsEnum());
-  CPPUNIT_ASSERT_EQUAL(size_t(3),e2.MemberSize());
-  CPPUNIT_ASSERT_EQUAL(size_t(g::i) , *(size_t*)e2.MemberAt(0).Get().Address() );
+  CPPUNIT_ASSERT(e2.Is(gEnum));
+  CPPUNIT_ASSERT_EQUAL(size_t(3),e2.Members().Size());
+  CPPUNIT_ASSERT_EQUAL(size_t(g::i) , *(size_t*)e2.Members().At(0).Get().Address() );
 }
 
 class classWithEnums {
@@ -645,25 +645,25 @@ void ReflexBuilderUnitTest::classAddEnum() {
 
   Type t = Type::ByName("classWithEnums");
   CPPUNIT_ASSERT( t );
-  CPPUNIT_ASSERT( "classWithEnums" == t.Name(SCOPED));
+  CPPUNIT_ASSERT( "classWithEnums" == t.Name(Reflex::kScoped));
 
   Scope s = Scope::ByName("classWithEnums");
   CPPUNIT_ASSERT( s );
-  CPPUNIT_ASSERT_EQUAL( 3, (int)s.SubTypeSize());
+  CPPUNIT_ASSERT_EQUAL( 3, (int)s.SubTypes().Size());
   
-  Type e0 = s.SubTypeAt(0);
+  Type e0 = s.SubTypes().At(0);
   CPPUNIT_ASSERT( e0 );
   CPPUNIT_ASSERT( "enum1" == e0.Name());
-  CPPUNIT_ASSERT_EQUAL( 3, (int)e0.DataMemberSize());
-  CPPUNIT_ASSERT_EQUAL( 3, (int)e0.MemberSize());
-  CPPUNIT_ASSERT("classWithEnums::A" == e0.MemberAt(0).Name(SCOPED));
-  CPPUNIT_ASSERT_EQUAL(5, Object_Cast<int>(e0.MemberAt(0).Get(Object())));
+  CPPUNIT_ASSERT_EQUAL( 3, (int)e0.DataMembers().Size());
+  CPPUNIT_ASSERT_EQUAL( 3, (int)e0.Members().Size());
+  CPPUNIT_ASSERT("classWithEnums::A" == e0.Members().At(0).Name(Reflex::kScoped));
+  CPPUNIT_ASSERT_EQUAL(5, Object_Cast<int>(e0.Members().At(0).Get(Object())));
 
-  Type e2 = s.SubTypeAt(2);
+  Type e2 = s.SubTypes().At(2);
   CPPUNIT_ASSERT( e2 );
-  CPPUNIT_ASSERT( "classWithEnums::ENUM3" == e2.Name(SCOPED));
-  CPPUNIT_ASSERT_EQUAL( 3, (int)e2.DataMemberSize());
-  CPPUNIT_ASSERT_EQUAL( 2, Object_Cast<int>(e2.DataMemberAt(2).Get(Object())));
+  CPPUNIT_ASSERT( "classWithEnums::ENUM3" == e2.Name(Reflex::kScoped));
+  CPPUNIT_ASSERT_EQUAL( 3, (int)e2.DataMembers().Size());
+  CPPUNIT_ASSERT_EQUAL( 2, Object_Cast<int>(e2.DataMembers().At(2).Get(Object())));
 
 }
 
@@ -698,7 +698,7 @@ void ReflexBuilderUnitTest::freefunctionbuilder()
   CPPUNIT_ASSERT(m);
   Member f = m;
   CPPUNIT_ASSERT(f);
-  CPPUNIT_ASSERT(!f.IsStatic());
+  CPPUNIT_ASSERT(!f.Is(gStatic));
   int a = 3;
   Object ret = f.Invoke(Tools::MakeVector((void*)&a));
   CPPUNIT_ASSERT( ret.Address() );
@@ -709,33 +709,33 @@ void ReflexBuilderUnitTest::freefunctionbuilder()
   FunctionBuilder(t,"g::func2",func_stub,0,0,0);
   Scope g = Scope::ByName("g");
   CPPUNIT_ASSERT(g);
-  CPPUNIT_ASSERT(g.IsNamespace());
+  CPPUNIT_ASSERT(g.Is(gNamespace));
   Member m2 = g.MemberByName("func2");
   Member f2 = m2;
   CPPUNIT_ASSERT(f2);
-  CPPUNIT_ASSERT(!f2.IsStatic());
+  CPPUNIT_ASSERT(!f2.Is(gStatic));
 }
 
 void ReflexBuilderUnitTest::freevariablebuilder() {
   NamespaceBuilder sh("h");
-  VariableBuilderT<int>("h::s_i",(size_t)&h::s_i,STATIC);
+  VariableBuilderT<int>("h::s_i",(size_t)&h::s_i,kStatic);
 
   // In the follwing ASSERT_EQUALs an additional function 
   // from the previous example has to be added
   Scope h = Scope::ByName("h");
   CPPUNIT_ASSERT(h);
-  CPPUNIT_ASSERT_EQUAL(2,(int)h.MemberSize());
-  CPPUNIT_ASSERT_EQUAL(1,(int)h.DataMemberSize());
-  CPPUNIT_ASSERT_EQUAL(1,(int)h.FunctionMemberSize());
+  CPPUNIT_ASSERT_EQUAL(2,(int)h.Members().Size());
+  CPPUNIT_ASSERT_EQUAL(1,(int)h.DataMembers().Size());
+  CPPUNIT_ASSERT_EQUAL(1,(int)h.FunctionMembers().Size());
   Member m = h.MemberByName("s_i");
   CPPUNIT_ASSERT(m);
 
   VariableBuilderT<int>("s_j",99);
   Scope h2 = Scope::ByName("");
   CPPUNIT_ASSERT(h2);
-  CPPUNIT_ASSERT_EQUAL(2,(int)h2.MemberSize());
-  CPPUNIT_ASSERT_EQUAL(1,(int)h2.DataMemberSize());
-  CPPUNIT_ASSERT_EQUAL(1,(int)h2.FunctionMemberSize());
+  CPPUNIT_ASSERT_EQUAL(2,(int)h2.Members().Size());
+  CPPUNIT_ASSERT_EQUAL(1,(int)h2.DataMembers().Size());
+  CPPUNIT_ASSERT_EQUAL(1,(int)h2.FunctionMembers().Size());
   Member m2 = h2.MemberByName("s_j");
   CPPUNIT_ASSERT(m2);
 
@@ -761,20 +761,20 @@ void ReflexBuilderUnitTest::forwarddeclarations()
   Type t_fr = ReferenceBuilder(t_f);
   Type t_ftb = FunctionTypeBuilder(t_fr,t_fp);
   ClassBuilderT<i::foo>()
-    .AddDataMember(t_fp, "m", OffsetOf(i::foo, m) )
-    .AddFunctionMember(t_ftb, "f", 0 );
+    .AddMember(t_fp, "m", OffsetOf(i::foo, m) )
+    .AddMember(t_ftb, "f", 0 );
   Type t = Type::ByName("i::foo");
   CPPUNIT_ASSERT(t);
-  CPPUNIT_ASSERT(t.IsClass());
+  CPPUNIT_ASSERT(t.Is(gClassOrStruct));
   Member m = t.MemberByName("m");
   CPPUNIT_ASSERT(m);
-  CPPUNIT_ASSERT(m.TypeOf().IsPointer());
+  CPPUNIT_ASSERT(m.TypeOf().Is(gPointer));
   CPPUNIT_ASSERT(m.TypeOf().ToType().Id());
   CPPUNIT_ASSERT_EQUAL(string("ftype"), m.TypeOf().ToType().Name());
   Member f = t.MemberByName("f");
   CPPUNIT_ASSERT(f);
-  CPPUNIT_ASSERT(f.TypeOf().IsFunction());
-  CPPUNIT_ASSERT_EQUAL(string("ftype& (ftype*)"), f.TypeOf().Name(Q));
+  CPPUNIT_ASSERT(f.TypeOf().Is(gFunction));
+  CPPUNIT_ASSERT_EQUAL(string("ftype& (ftype*)"), f.TypeOf().Name(Reflex::kQualified));
   
   
 }
@@ -799,7 +799,7 @@ void ReflexBuilderUnitTest::subscopebuilder()
 
   Scope s = Scope::ByName("j");
   CPPUNIT_ASSERT(s);
-  CPPUNIT_ASSERT_EQUAL(size_t(4), s.SubScopeSize());
+  CPPUNIT_ASSERT_EQUAL(size_t(4), s.SubScopes().Size());
 }
 
 
@@ -811,9 +811,9 @@ void ReflexBuilderUnitTest::type_equivalence() {
   TypedefBuilder<int>("MyInt");
   Type f1 = Type::ByName("int");
   Type f2 = Type::ByName("MyInt");
-  Type f3 = Type(f1, CONST | VOLATILE );
-  Type f4 = Type(f2, VOLATILE );
-  Type f5 = Type(f2, CONST | VOLATILE );
+  Type f3 = Type(f1, kConst | kVolatile );
+  Type f4 = Type(f2, kVolatile );
+  Type f5 = Type(f2, kConst | kVolatile );
   CPPUNIT_ASSERT(f1.IsEquivalentTo(f2));
   CPPUNIT_ASSERT(!f1.IsEquivalentTo(f3));
   CPPUNIT_ASSERT(!f1.IsEquivalentTo(f4));
@@ -861,60 +861,60 @@ void ReflexBuilderUnitTest::type_template() {
   Scope s = Scope::ByName("std");
 
   CPPUNIT_ASSERT( s );
-  CPPUNIT_ASSERT_EQUAL(4, (int)s.SubTypeTemplateSize());
-  CPPUNIT_ASSERT_EQUAL(std::string("std::vector"), s.SubTypeTemplateAt(0).Name(SCOPED));
-  CPPUNIT_ASSERT_EQUAL(std::string("std::map"),    s.SubTypeTemplateAt(1).Name(SCOPED));
-  CPPUNIT_ASSERT_EQUAL(std::string("std::map"),    s.SubTypeTemplateAt(2).Name(SCOPED));
-  CPPUNIT_ASSERT_EQUAL(std::string("std::list"),   s.SubTypeTemplateAt(3).Name(SCOPED));
-  CPPUNIT_ASSERT_EQUAL(std::string("vector"),      s.SubTypeTemplateAt(0).Name());
-  CPPUNIT_ASSERT_EQUAL(std::string("map"),         s.SubTypeTemplateAt(1).Name());
-  CPPUNIT_ASSERT_EQUAL(std::string("map"),         s.SubTypeTemplateAt(2).Name());
-  CPPUNIT_ASSERT_EQUAL(std::string("list"),        s.SubTypeTemplateAt(3).Name());
+  CPPUNIT_ASSERT_EQUAL(4, (int)s.SubTypeTemplates().Size());
+  CPPUNIT_ASSERT_EQUAL(std::string("std::vector"), s.SubTypeTemplates().At(0).Name(Reflex::kScoped));
+  CPPUNIT_ASSERT_EQUAL(std::string("std::map"),    s.SubTypeTemplates().At(1).Name(Reflex::kScoped));
+  CPPUNIT_ASSERT_EQUAL(std::string("std::map"),    s.SubTypeTemplates().At(2).Name(Reflex::kScoped));
+  CPPUNIT_ASSERT_EQUAL(std::string("std::list"),   s.SubTypeTemplates().At(3).Name(Reflex::kScoped));
+  CPPUNIT_ASSERT_EQUAL(std::string("vector"),      s.SubTypeTemplates().At(0).Name());
+  CPPUNIT_ASSERT_EQUAL(std::string("map"),         s.SubTypeTemplates().At(1).Name());
+  CPPUNIT_ASSERT_EQUAL(std::string("map"),         s.SubTypeTemplates().At(2).Name());
+  CPPUNIT_ASSERT_EQUAL(std::string("list"),        s.SubTypeTemplates().At(3).Name());
 
-  TypeTemplate tt0 = s.SubTypeTemplateAt(0);
+  TypeTemplate tt0 = s.SubTypeTemplates().At(0);
   CPPUNIT_ASSERT( tt0 );
   CPPUNIT_ASSERT_EQUAL(2, (int)tt0.TemplateParameterSize());
-  CPPUNIT_ASSERT_EQUAL(2, (int)tt0.TemplateInstanceSize());
+  CPPUNIT_ASSERT_EQUAL(2, (int)tt0.TemplateInstances().Size());
   
-  Type tt0i0 = tt0.TemplateInstanceAt(0);
+  Type tt0i0 = tt0.TemplateInstances().At(0);
   CPPUNIT_ASSERT( tt0i0 );
-  CPPUNIT_ASSERT("std::vector<int,std::allocator<int> >" == tt0i0.Name(SCOPED));
-  CPPUNIT_ASSERT_EQUAL(2, (int)tt0i0.TemplateArgumentSize());
-  CPPUNIT_ASSERT("int" == tt0i0.TemplateArgumentAt(0).Name());
+  CPPUNIT_ASSERT("std::vector<int,std::allocator<int> >" == tt0i0.Name(Reflex::kScoped));
+  CPPUNIT_ASSERT_EQUAL(2, (int)tt0i0.TemplateArguments().Size());
+  CPPUNIT_ASSERT("int" == tt0i0.TemplateArguments().At(0).Name());
 
-  Type tt0i1 = tt0.TemplateInstanceAt(1);
+  Type tt0i1 = tt0.TemplateInstances().At(1);
   CPPUNIT_ASSERT( tt0i1 );
-  CPPUNIT_ASSERT("std::vector<float,std::allocator<float> >" == tt0i1.Name(SCOPED));
-  CPPUNIT_ASSERT_EQUAL(2, (int)tt0i1.TemplateArgumentSize());
-  CPPUNIT_ASSERT("float" == tt0i1.TemplateArgumentAt(0).Name());
+  CPPUNIT_ASSERT("std::vector<float,std::allocator<float> >" == tt0i1.Name(Reflex::kScoped));
+  CPPUNIT_ASSERT_EQUAL(2, (int)tt0i1.TemplateArguments().Size());
+  CPPUNIT_ASSERT("float" == tt0i1.TemplateArguments().At(0).Name());
 
-  TypeTemplate tt1 = s.SubTypeTemplateAt(1);
+  TypeTemplate tt1 = s.SubTypeTemplates().At(1);
   CPPUNIT_ASSERT( tt1 );
   CPPUNIT_ASSERT_EQUAL(4, (int)tt1.TemplateParameterSize());
-  CPPUNIT_ASSERT_EQUAL(2, (int)tt1.TemplateInstanceSize());
+  CPPUNIT_ASSERT_EQUAL(2, (int)tt1.TemplateInstances().Size());
   
-  Type tt1i0 = tt1.TemplateInstanceAt(0);
+  Type tt1i0 = tt1.TemplateInstances().At(0);
   CPPUNIT_ASSERT( tt1i0 );
-  CPPUNIT_ASSERT_EQUAL(4, (int)tt1i0.TemplateArgumentSize());
-  CPPUNIT_ASSERT("int" == tt1i0.TemplateArgumentAt(0).Name());
-  CPPUNIT_ASSERT("int" == tt1i0.TemplateArgumentAt(1).Name());
+  CPPUNIT_ASSERT_EQUAL(4, (int)tt1i0.TemplateArguments().Size());
+  CPPUNIT_ASSERT("int" == tt1i0.TemplateArguments().At(0).Name());
+  CPPUNIT_ASSERT("int" == tt1i0.TemplateArguments().At(1).Name());
 
-  Type tt1i1 = tt1.TemplateInstanceAt(1);
+  Type tt1i1 = tt1.TemplateInstances().At(1);
   CPPUNIT_ASSERT( tt1i1 );
-  CPPUNIT_ASSERT_EQUAL(4, (int)tt1i1.TemplateArgumentSize());
-  CPPUNIT_ASSERT("int"   == tt1i1.TemplateArgumentAt(0).Name());
-  CPPUNIT_ASSERT("float" == tt1i1.TemplateArgumentAt(1).Name());
+  CPPUNIT_ASSERT_EQUAL(4, (int)tt1i1.TemplateArguments().Size());
+  CPPUNIT_ASSERT("int"   == tt1i1.TemplateArguments().At(0).Name());
+  CPPUNIT_ASSERT("float" == tt1i1.TemplateArguments().At(1).Name());
 
-  TypeTemplate tt2 = s.SubTypeTemplateAt(2);
+  TypeTemplate tt2 = s.SubTypeTemplates().At(2);
   CPPUNIT_ASSERT( tt2 );
   CPPUNIT_ASSERT_EQUAL(2, (int)tt2.TemplateParameterSize());
-  CPPUNIT_ASSERT_EQUAL(1, (int)tt2.TemplateInstanceSize());
+  CPPUNIT_ASSERT_EQUAL(1, (int)tt2.TemplateInstances().Size());
 
-  Type tt2i0 = tt2.TemplateInstanceAt(0);
+  Type tt2i0 = tt2.TemplateInstances().At(0);
   CPPUNIT_ASSERT( tt2i0 );
-  CPPUNIT_ASSERT_EQUAL(2, (int)tt2i0.TemplateArgumentSize());
-  CPPUNIT_ASSERT_EQUAL(string("float"), tt2i0.TemplateArgumentAt(0).Name());
-  CPPUNIT_ASSERT_EQUAL(string("std::string"),tt2i0.TemplateArgumentAt(1).Name(SCOPED));
+  CPPUNIT_ASSERT_EQUAL(2, (int)tt2i0.TemplateArguments().Size());
+  CPPUNIT_ASSERT_EQUAL(string("float"), tt2i0.TemplateArguments().At(0).Name());
+  CPPUNIT_ASSERT_EQUAL(string("std::string"),tt2i0.TemplateArguments().At(1).Name(Reflex::kScoped));
 
 }
 
@@ -948,19 +948,19 @@ void ReflexBuilderUnitTest::member_template() {
   Type t = Type::ByName("MyMemberTemplateClass");
 
   CPPUNIT_ASSERT( t );
-  CPPUNIT_ASSERT_EQUAL(3, (int)t.MemberTemplateSize());
+  CPPUNIT_ASSERT_EQUAL(3, (int)t.MemberTemplates().Size());
 
-  MemberTemplate mt0 = t.MemberTemplateAt(0);
-  CPPUNIT_ASSERT_EQUAL(std::string("MyMemberTemplateClass::foo"), mt0.Name(SCOPED));
+  MemberTemplate mt0 = t.MemberTemplates().At(0);
+  CPPUNIT_ASSERT_EQUAL(std::string("MyMemberTemplateClass::foo"), mt0.Name(Reflex::kScoped));
   CPPUNIT_ASSERT_EQUAL(1, (int)mt0.TemplateParameterSize());
-  CPPUNIT_ASSERT_EQUAL(2, (int)mt0.TemplateInstanceSize());
+  CPPUNIT_ASSERT_EQUAL(2, (int)mt0.TemplateInstances().Size());
 
-  Member mt0i0 = mt0.TemplateInstanceAt(0);
+  Member mt0i0 = mt0.TemplateInstances().At(0);
   CPPUNIT_ASSERT( mt0i0 );
-  CPPUNIT_ASSERT( mt0i0.IsTemplateInstance());
-  CPPUNIT_ASSERT_EQUAL(std::string("MyMemberTemplateClass::foo<int>"), mt0i0.Name(SCOPED));
-  CPPUNIT_ASSERT_EQUAL(1, (int)mt0i0.TemplateArgumentSize());
-  CPPUNIT_ASSERT("int" == mt0i0.TemplateArgumentAt(0).Name());
+  CPPUNIT_ASSERT( mt0i0.Is(gTemplateInstance));
+  CPPUNIT_ASSERT_EQUAL(std::string("MyMemberTemplateClass::foo<int>"), mt0i0.Name(Reflex::kScoped));
+  CPPUNIT_ASSERT_EQUAL(1, (int)mt0i0.TemplateArguments().Size());
+  CPPUNIT_ASSERT("int" == mt0i0.TemplateArguments().At(0).Name());
 
 
   FunctionBuilderT<void(int)>("TTT::foo<int>",0,0,"t",0);
@@ -975,27 +975,27 @@ void ReflexBuilderUnitTest::member_template() {
 
   Scope s = Scope::ByName("TTT");
   CPPUNIT_ASSERT( s );
-  CPPUNIT_ASSERT_EQUAL(3, (int)s.MemberTemplateSize());
+  CPPUNIT_ASSERT_EQUAL(3, (int)s.MemberTemplates().Size());
   
-  MemberTemplate mt1 = s.MemberTemplateAt(0);
+  MemberTemplate mt1 = s.MemberTemplates().At(0);
   CPPUNIT_ASSERT( mt1 );
-  CPPUNIT_ASSERT( "TTT::foo" == mt1.Name(SCOPED));
+  CPPUNIT_ASSERT( "TTT::foo" == mt1.Name(Reflex::kScoped));
   CPPUNIT_ASSERT_EQUAL(1, (int)mt1.TemplateParameterSize());
-  CPPUNIT_ASSERT_EQUAL(3, (int)mt1.TemplateInstanceSize());
+  CPPUNIT_ASSERT_EQUAL(3, (int)mt1.TemplateInstances().Size());
 
-  Member mt1i1 = mt1.TemplateInstanceAt(1);
+  Member mt1i1 = mt1.TemplateInstances().At(1);
   CPPUNIT_ASSERT( mt1i1 );
-  CPPUNIT_ASSERT( mt1i1.IsTemplateInstance());
-  CPPUNIT_ASSERT("TTT::foo<float>" == mt1i1.Name(SCOPED));
-  CPPUNIT_ASSERT_EQUAL(1, (int)mt1i1.TemplateArgumentSize());
-  CPPUNIT_ASSERT(mt1i1.TemplateArgumentAt(0));
-  CPPUNIT_ASSERT("float" == mt1i1.TemplateArgumentAt(0).Name(SCOPED | QUALIFIED | FINAL));
+  CPPUNIT_ASSERT( mt1i1.Is(gTemplateInstance));
+  CPPUNIT_ASSERT("TTT::foo<float>" == mt1i1.Name(Reflex::kScoped));
+  CPPUNIT_ASSERT_EQUAL(1, (int)mt1i1.TemplateArguments().Size());
+  CPPUNIT_ASSERT(mt1i1.TemplateArguments().At(0));
+  CPPUNIT_ASSERT("float" == mt1i1.TemplateArguments().At(0).Name(Reflex::kScoped | QUALIFIED | FINAL));
 
-  MemberTemplate mt2 = s.MemberTemplateAt(2);
+  MemberTemplate mt2 = s.MemberTemplates().At(2);
   CPPUNIT_ASSERT( mt2 );
-  CPPUNIT_ASSERT( "TTT::bar" == mt2.Name(SCOPED));
+  CPPUNIT_ASSERT( "TTT::bar" == mt2.Name(Reflex::kScoped));
   CPPUNIT_ASSERT_EQUAL(2, (int)mt2.TemplateParameterSize());
-  CPPUNIT_ASSERT_EQUAL(3, (int)mt2.TemplateInstanceSize());
+  CPPUNIT_ASSERT_EQUAL(3, (int)mt2.TemplateInstances().Size());
 
   ClassBuilderT<std::string>();
   ClassBuilderT<std::string>("std::string");
@@ -1011,29 +1011,29 @@ void ReflexBuilderUnitTest::member_template() {
 
   Scope s1 = Scope::ByName("");
   CPPUNIT_ASSERT( s1 );
-  CPPUNIT_ASSERT_EQUAL(3, (int)s.MemberTemplateSize());
+  CPPUNIT_ASSERT_EQUAL(3, (int)s.MemberTemplates().Size());
   
-  MemberTemplate mt3 = s1.MemberTemplateAt(0);
+  MemberTemplate mt3 = s1.MemberTemplates().At(0);
   CPPUNIT_ASSERT( mt3 );
-  CPPUNIT_ASSERT( "foo" == mt3.Name(SCOPED));
+  CPPUNIT_ASSERT( "foo" == mt3.Name(Reflex::kScoped));
   CPPUNIT_ASSERT_EQUAL(1, (int)mt3.TemplateParameterSize());
-  CPPUNIT_ASSERT_EQUAL(3, (int)mt3.TemplateInstanceSize());
+  CPPUNIT_ASSERT_EQUAL(3, (int)mt3.TemplateInstances().Size());
 
-  Member mt3i2 = mt3.TemplateInstanceAt(2);
+  Member mt3i2 = mt3.TemplateInstances().At(2);
   CPPUNIT_ASSERT( mt3i2 );
-  CPPUNIT_ASSERT( mt3i2.IsTemplateInstance());
-  CPPUNIT_ASSERT("foo<std::string>" == mt3i2.Name(SCOPED));
-  CPPUNIT_ASSERT("foo<std::string>" == mt3i2.Name(SCOPED|FINAL|QUALIFIED));
-  CPPUNIT_ASSERT_EQUAL(1, (int)mt3i2.TemplateArgumentSize());
-  CPPUNIT_ASSERT( mt3i2.TemplateArgumentAt(0) );
-  CPPUNIT_ASSERT("std::string" == mt3i2.TemplateArgumentAt(0).Name(SCOPED|QUALIFIED|FINAL));
-  CPPUNIT_ASSERT("string" == mt3i2.TemplateArgumentAt(0).Name());
+  CPPUNIT_ASSERT( mt3i2.Is(gTemplateInstance));
+  CPPUNIT_ASSERT("foo<std::string>" == mt3i2.Name(Reflex::kScoped));
+  CPPUNIT_ASSERT("foo<std::string>" == mt3i2.Name(Reflex::kScoped|FINAL|QUALIFIED));
+  CPPUNIT_ASSERT_EQUAL(1, (int)mt3i2.TemplateArguments().Size());
+  CPPUNIT_ASSERT( mt3i2.TemplateArguments().At(0) );
+  CPPUNIT_ASSERT("std::string" == mt3i2.TemplateArguments().At(0).Name(Reflex::kScoped|QUALIFIED|FINAL));
+  CPPUNIT_ASSERT("string" == mt3i2.TemplateArguments().At(0).Name());
 
-  MemberTemplate mt4 = s1.MemberTemplateAt(2);
+  MemberTemplate mt4 = s1.MemberTemplates().At(2);
   CPPUNIT_ASSERT( mt4 );
-  CPPUNIT_ASSERT( "bar" == mt4.Name(SCOPED|FINAL));
+  CPPUNIT_ASSERT( "bar" == mt4.Name(Reflex::kScoped|FINAL));
   CPPUNIT_ASSERT_EQUAL(2, (int)mt4.TemplateParameterSize());
-  CPPUNIT_ASSERT_EQUAL(3, (int)mt4.TemplateInstanceSize());
+  CPPUNIT_ASSERT_EQUAL(3, (int)mt4.TemplateInstances().Size());
 
 }
 
@@ -1048,8 +1048,8 @@ namespace cc {
 
 void ReflexBuilderUnitTest::bases() {
 
-   ClassBuilder("cc::dev", typeid(cc::dev), sizeof(cc::dev), PUBLIC | CLASS | ABSTRACT | VIRTUAL)
-      .AddBase(TypeBuilder("cc::base"), BaseOffset<cc::dev, cc::base >::Get(), VIRTUAL | PUBLIC);
+   ClassBuilder("cc::dev", typeid(cc::dev), sizeof(cc::dev), kPublic | kClass | kAbstract | kVirtual)
+      .AddBase(TypeBuilder("cc::base"), BaseOffset<cc::dev, cc::base >::Get(), kVirtual | kPublic);
    
    Type base = Type::ByName("cc::base");
    Type dev  = Type::ByName("cc::dev");
@@ -1064,7 +1064,7 @@ void ReflexBuilderUnitTest::bases() {
    CPPUNIT_ASSERT(dev.HasBase(base));
    CPPUNIT_ASSERT_EQUAL(true, dev.HasBase(base));
 
-   ClassBuilder("cc::base", typeid(cc::base), sizeof(cc::base), PUBLIC | CLASS);
+   ClassBuilder("cc::base", typeid(cc::base), sizeof(cc::base), kPublic | kClass);
 
    CPPUNIT_ASSERT(base);
    CPPUNIT_ASSERT(dev);
@@ -1091,7 +1091,7 @@ void ReflexBuilderUnitTest::hiddentypes() {
    TypedefTypeBuilder("MyType", t0);
    Type t1 = Type::ByName("MyType");
    CPPUNIT_ASSERT( t1 );
-   CPPUNIT_ASSERT( t1.IsTypedef());
+   CPPUNIT_ASSERT( t1.Is(gTypedef));
    CPPUNIT_ASSERT_EQUAL(std::string("MyType"), t1.Name());
    CPPUNIT_ASSERT( t0 != t1 );
    CPPUNIT_ASSERT( ! t1.FinalType() );
@@ -1122,11 +1122,11 @@ void ReflexBuilderUnitTest::hiddentypes() {
    CPPUNIT_ASSERT( t3.FinalType() == t2 );
    Scope s3 = Scope::ByName("MyType");
    CPPUNIT_ASSERT( s3 );
-   CPPUNIT_ASSERT( s3.IsClass());
+   CPPUNIT_ASSERT( s3.Is(gClassOrStruct));
    CPPUNIT_ASSERT_EQUAL( std::string("MyType @HIDDEN@"), s3.Name());
    Scope s4 = Scope::ByName("MyType @HIDDEN@");
    CPPUNIT_ASSERT( s4 );
-   CPPUNIT_ASSERT( s4.IsClass());
+   CPPUNIT_ASSERT( s4.Is(gClassOrStruct));
 
 }
 

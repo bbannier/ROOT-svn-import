@@ -234,14 +234,14 @@ namespace Reflex {
       * (as strings) for function parameters.
       * @return collection of default values for parameters
       */
-      const OrderedContainer<std::string>& FunctionParameterDefaults() const;
+      const OrderedContainer<std::string> FunctionParameterDefaults() const;
 
 
       /** 
       * FunctionParametertNames returns a collection of the parameter names
       * @return parameter names
       */
-      const OrderedContainer<std::string>& FunctionParameterNames() const;
+      const OrderedContainer<std::string> FunctionParameterNames() const;
 
 
       /**
@@ -287,7 +287,7 @@ namespace Reflex {
       * TemplateArguments returns an ordered collection of the template arguments
       * @return reflection information of template arguments
       */
-      const OrderedContainer<Reflex::TemplateArgument>& TemplateArguments() const;
+      const OrderedContainer<Reflex::TemplateArgument> TemplateArguments() const;
 
 
       /**

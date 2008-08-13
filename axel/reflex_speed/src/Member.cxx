@@ -68,6 +68,24 @@ Reflex::Member::FunctionParameterSize(bool required) const {
 
 
 //-------------------------------------------------------------------------------
+const Reflex::OrderedContainer<std::string>
+Reflex::Member::FunctionParameterDefaults() const {
+//-------------------------------------------------------------------------------
+   if (*this) return fMemberBase->FunctionParameterDefaults();
+   return Dummy::EmptyContainer();
+}
+
+
+//-------------------------------------------------------------------------------
+const Reflex::OrderedContainer<std::string>
+Reflex::Member::FunctionParameterNames() const {
+//-------------------------------------------------------------------------------
+   if (*this) return fMemberBase->FunctionParameterNames();
+   return Dummy::EmptyContainer();
+}
+
+
+//-------------------------------------------------------------------------------
 void
 Reflex::Member::GenerateDict(DictionaryGenerator & generator) const {
 //-------------------------------------------------------------------------------
@@ -205,6 +223,15 @@ Reflex::Member::Stubfunction() const {
 //-------------------------------------------------------------------------------
    if (*this) return fMemberBase->Stubfunction();
    return 0;
+}
+
+
+//-------------------------------------------------------------------------------
+const Reflex::OrderedContainer<Reflex::TemplateArgument>
+Reflex::Member::TemplateArguments() const {
+//-------------------------------------------------------------------------------
+   if (*this) return fMemberBase->TemplateArguments();
+   return Dummy::EmptyContainer();
 }
 
 

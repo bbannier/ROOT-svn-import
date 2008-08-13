@@ -14,6 +14,7 @@
 
 // Include files
 #include "Reflex/Reflex.h"
+#include "Reflex/Catalog.h"
 
 namespace Reflex {
 
@@ -36,7 +37,8 @@ namespace Reflex {
          const char * nam,
          StubFunction stubFP,
          void * stubCtx,
-         const char * params, 
+         const char * params,
+         const Catalog& catalog,
          unsigned char modifiers);
 
 
@@ -84,7 +86,8 @@ namespace Reflex {
          const Type & typ,
          StubFunction stubFP,
          void * stubCtx,
-         const char * params, 
+         const char * params,
+         const Catalog& catalog = Reflex::Catalog::Instance(), 
          unsigned char modifiers = 0);
 
 
@@ -132,7 +135,8 @@ namespace Reflex {
          StubFunction stubFP,
          void * stubCtx,
          const char * params, 
-         unsigned char modifiers);
+         unsigned char modifiers,
+         const Catalog& catalog = Reflex::Catalog::Instance());
 
       /** destructor */
       virtual ~FunctionBuilderT() {}
@@ -167,17 +171,19 @@ namespace Reflex {
 //-------------------------------------------------------------------------------
 template < typename  F > 
 inline Reflex::FunctionBuilderT<F>::FunctionBuilderT(const char * nam, 
-                                                            StubFunction stubFP,
-                                                            void * stubCtx,
-                                                            const char * params, 
-                                                            unsigned char modifiers)
+                                                     StubFunction stubFP,
+                                                     void * stubCtx,
+                                                     const char * params, 
+                                                     unsigned char modifiers,
+                                                     const Catalog& catalog)
 //-------------------------------------------------------------------------------
    : fFunctionBuilderImpl(nam,
-                           FunctionDistiller<F>::Get(),
-                           stubFP,
-                           stubCtx,
-                           params,
-                           modifiers) { }
+                          FunctionDistiller<F>::Get(),
+                          stubFP,
+                          stubCtx,
+                          params,
+                          catalog,
+                          modifiers) { }
       
 
 //-------------------------------------------------------------------------------

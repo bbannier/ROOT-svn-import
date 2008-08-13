@@ -16,6 +16,7 @@
 #include "Reflex/Kernel.h"
 #include "Reflex/Type.h"
 #include "Reflex/Scope.h"
+#include "Reflex/EntityProperty.h"
 
 namespace Reflex {
 
@@ -66,31 +67,16 @@ namespace Reflex {
 
 
       /**
-      * IsPrivate will return true if the inheritance is private
-      * @return true if inheritance is private
+      * Check whether the entity property is set for the base. You can
+      * combine checks, e.g. t.Is(gClass && gPublic) would check whether
+      * this is a public base class.
+      * Only public / protected / private and virtual are check with the base;
+      * the ETYPE-like properties (class / struct / ...) are forwarded to
+      * the base's type.
+      * @param descr the entity property to check for; see EntityProperty.
+      * @return whether descr is set.
       */
-      bool IsPrivate() const;
-
-
-      /**
-      * IsProtected will return true if the inheritance is protected
-      * @return true if inheritance is protected
-      */
-      bool IsProtected() const;
-
-
-      /**
-      * IsPublic will return true if the inheritance is public
-      * @return true if inheritance is public
-      */
-      bool IsPublic() const;
-
-
-      /**
-      * IsVirtual will return true if the inheritance is virtual
-      * @return true if inheritance is virtual
-      */
-      bool IsVirtual() const;
+      bool Is(const EntityProperty& prop) const;
 
 
       /**
@@ -179,30 +165,9 @@ inline Reflex::Base::operator bool () const {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Base::IsPrivate() const {
+inline bool Reflex::Base::Is(const EntityProperty& prop) const {
 //-------------------------------------------------------------------------------
-   return 0 != (fModifiers & kPrivate);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Base::IsProtected() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & kProtected);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Base::IsPublic() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & kPublic);
-}
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::Base::IsVirtual() const {
-//-------------------------------------------------------------------------------
-   return 0 != (fModifiers & kVirtual);
+   return prop.Eval(fModifiers, ToType().TypeType());
 }
 
 

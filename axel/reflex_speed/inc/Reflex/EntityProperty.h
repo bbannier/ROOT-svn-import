@@ -41,7 +41,7 @@ namespace Reflex {
       EntityProperty(EOP op, const EntityProperty& lhs, const EntityProperty& rhs = Reflex::EntityProperty::fgNIL):
       fOp(op), fValue(0), fLHS(lhs), fRHS(rhs) {}
 
-      bool Eval(int desc, int type) const {
+      bool Eval(int desc, ETYPE type) const {
          if (fOp == kDesc)  return (desc & fValue);
          if (fOp == kType)  return (type == fValue);
          if (fOp == kOr)    return fLHS.Eval(desc, type) || fRHS.Eval(desc, type);

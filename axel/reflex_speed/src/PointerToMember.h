@@ -36,7 +36,8 @@ namespace Internal {
       PointerToMember(const Type & pointerToMemberType,
          unsigned int modifiers,
          const Scope & pointerToMemberScope,
-         const std::type_info & ti);
+         const std::type_info & ti,
+         const Catalog& catalog);
 
 
       /** destructor */

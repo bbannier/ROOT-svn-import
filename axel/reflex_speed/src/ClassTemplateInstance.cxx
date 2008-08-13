@@ -28,12 +28,14 @@
 //-------------------------------------------------------------------------------
 Reflex::Internal::ClassTemplateInstance::
 ClassTemplateInstance(const char * typ, 
-                       size_t size, 
-                       const std::type_info & ti, 
-                       unsigned int modifiers)
+                      size_t size, 
+                      const std::type_info & ti,
+                      const Catalog& catalog,
+                      unsigned int modifiers)
    : Class(typ, 
             size, 
             ti, 
+            catalog,
             modifiers,
             kTypeTemplateInstance),
      TemplateInstance(Tools::GetTemplateArguments(typ)),

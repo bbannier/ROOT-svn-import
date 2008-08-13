@@ -36,7 +36,9 @@ namespace Reflex {
    public:
 
       /** constructor */
-      UnionBuilderImpl(const char* nam, size_t size, const std::type_info& ti, unsigned int modifiers = 0, ETYPE typ = kUnion);
+      UnionBuilderImpl(const char* nam, size_t size, const std::type_info& ti,
+                       const Catalog& catalog = Reflex::Catalog::Instance(),
+                       unsigned int modifiers = 0, ETYPE typ = kUnion);
 
       /** destructor */
       virtual ~UnionBuilderImpl();
@@ -116,7 +118,9 @@ namespace Reflex {
    public:
 
       /** constructor */
-      UnionBuilder(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers = 0, ETYPE typ = kUnion);
+      UnionBuilder(const char* nam, const std::type_info& ti, size_t size,
+                   const Catalog& catalog = Reflex::Catalog::Instance(),
+                   unsigned int modifiers = 0, ETYPE typ = kUnion);
 
       /** destructor */
       virtual ~UnionBuilder();

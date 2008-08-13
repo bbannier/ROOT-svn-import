@@ -128,14 +128,14 @@ namespace Internal {
       * (as strings) for function parameters.
       * @return collection of default values for parameters
       */
-      const OrderedContainer<std::string>& FunctionParameterDefaults() const;
+      const IContainerImpl& FunctionParameterDefaults() const;
 
 
       /** 
       * FunctionParametertNames returns a collection of the parameter names
       * @return parameter names
       */
-      const OrderedContainer<std::string>& FunctionParameterNames() const;
+      const IContainerImpl& FunctionParameterNames() const;
 
 
       /**
@@ -167,7 +167,7 @@ namespace Internal {
       * TemplateArguments returns an ordered collection of the template arguments
       * @return reflection information of template arguments
       */
-      const OrderedContainer<TemplateArgument>& TemplateArguments() const;
+      const IContainerImpl& TemplateArguments() const;
 
 
       /**
@@ -265,6 +265,22 @@ namespace Internal {
 
 #include "Reflex/Object.h"
 #include "Reflex/MemberTemplate.h"
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl&
+Reflex::Internal::MemberBase::FunctionParameterDefaults() const {
+//-------------------------------------------------------------------------------
+   return Dummy::EmptyContainer();
+}
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl&
+Reflex::Internal::MemberBase::FunctionParameterNames() const {
+//-------------------------------------------------------------------------------
+   return Dummy::EmptyContainer();
+}
 
 
 //-------------------------------------------------------------------------------
@@ -367,6 +383,14 @@ inline Reflex::StubFunction
 Reflex::Internal::MemberBase::Stubfunction() const {
 //-------------------------------------------------------------------------------
    return 0;
+}
+
+
+//-------------------------------------------------------------------------------
+inline const Reflex::Internal::IContainerImpl&
+Reflex::Internal::MemberBase::TemplateArguments() const {
+//-------------------------------------------------------------------------------
+   return Dummy::EmptyContainer();
 }
 
 

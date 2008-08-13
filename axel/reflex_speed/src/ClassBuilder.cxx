@@ -17,6 +17,7 @@
 
 #include "Reflex/Type.h"
 #include "Reflex/Member.h"
+#include "Reflex/Callback.h"
 #include "Reflex/Catalog.h"
 
 #include "Reflex/Tools.h"
@@ -39,11 +40,13 @@
 //
 
 //______________________________________________________________________________
-Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, ETYPE typ)
-: fClass(0)
-, fLastMember()
+Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info& ti,
+                                           size_t size, const Catalog& catalog, 
+                                           unsigned int modifiers, ETYPE typ):
+   fClass(0) , fLastMember(), fCatalog(catalog)
 {
    // -- Construct a class information (internal).
+
    std::string nam2(nam);
    Type c = Type::Types().ByName(nam2);
    if (c) {
@@ -57,10 +60,10 @@ Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info
       }
    }
    if (Tools::IsTemplated(nam)) {
-      fClass = new Internal::ClassTemplateInstance(nam2.c_str(), size, ti, modifiers);
+      fClass = new Internal::ClassTemplateInstance(nam2.c_str(), size, ti, fCatalog, modifiers);
    }
    else {
-      fClass = new Internal::Class(nam2.c_str(), size, ti, modifiers, typ);
+      fClass = new Internal::Class(nam2.c_str(), size, ti, fCatalog, modifiers, typ);
    }
 }
 
@@ -122,7 +125,7 @@ void Reflex::ClassBuilderImpl::AddTypedef(const Type& typ, const char* def)
    }
    // Create a new typedef
    else {
-      new Internal::Typedef(def , typ);
+      new Internal::Typedef(def , typ, fCatalog);
    }
 }
 
@@ -135,7 +138,7 @@ void Reflex::ClassBuilderImpl::AddEnum(const char* nam, const char* values, cons
    // not only a declaration. (It is called in the dictionary header already)
    //   EnumTypeBuilder(nam, values, *ti, modifiers);
 
-   Internal::Enum* e = new Internal::Enum(nam, *ti, modifiers);
+   Internal::Enum* e = new Internal::Enum(nam, *ti, fCatalog, modifiers);
 
    std::vector<std::string> valVec = std::vector<std::string>();
    Tools::StringSplit(valVec, values, ";");
@@ -149,7 +152,7 @@ void Reflex::ClassBuilderImpl::AddEnum(const char* nam, const char* values, cons
       std::string value = "";
       Tools::StringSplitPair(name, value, *it, "=");
       unsigned long int valInt = atol(value.c_str());
-      e->AddMember(Member(new Internal::DataMember(name.c_str(), Catalog::Instance().Get_int(), valInt, 0)));
+      e->AddMember(Member(new Internal::DataMember(name.c_str(), fCatalog.Get_int(), valInt, 0)));
    }
 }
 
@@ -195,8 +198,10 @@ Reflex::Type Reflex::ClassBuilderImpl::ToType()
 //
 
 //______________________________________________________________________________
-Reflex::ClassBuilder::ClassBuilder(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, ETYPE typ)
-: fClassBuilderImpl(nam, ti, size, modifiers, typ)
+Reflex::ClassBuilder::ClassBuilder(const char* nam, const std::type_info& ti,
+                                   size_t size, const Catalog& catalog,
+                                   unsigned int modifiers, ETYPE typ)
+: fClassBuilderImpl(nam, ti, size, catalog, modifiers, typ)
 {
    // -- Constructor
 }

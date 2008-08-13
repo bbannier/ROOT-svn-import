@@ -65,7 +65,7 @@ Reflex::Object Reflex::Internal::Constructable::Construct(const Type & sig,
 // Construct an object of this type. The signature of the constructor function
 // can be given as the first argument. Furhter arguments are a vector of memory
 // addresses for non default constructors and a memory address for in place construction.
-   static Type defSignature = InCatalog()->ByName("void (void)");
+   static Type defSignature = InCatalog().ByName("void (void)");
    Type signature = (!sig &&  fConstructors.size() > 1) ? defSignature : sig;
 
    for (size_t i = 0; i < fConstructors.size(); ++ i) {

@@ -19,31 +19,19 @@
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::Namespace::Namespace(const char * scop) 
+Reflex::Internal::Namespace::Namespace(const char * scop, const Catalog& catalog) 
 //-------------------------------------------------------------------------------
-   : ScopeBase(scop, kNamespace) {
+   : ScopeBase(scop, kNamespace, catalog) {
    // Create dictionary info for a namespace scope.
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::Namespace::Namespace() 
+Reflex::Internal::Namespace::Namespace(const Catalog& catalog) 
 //-------------------------------------------------------------------------------
-   : ScopeBase() {
-   // Destructor.
+   : ScopeBase(catalog) {
+   // Constructor for global namespace initialization.
 }
-
-
-//-------------------------------------------------------------------------------
-const Reflex::Scope &
-Reflex::Internal::Namespace::GlobalScope() {
-//-------------------------------------------------------------------------------
-// Initialise the global namespace at startup.
-   static Scope s = (new Namespace())->ThisScope();
-   return s;
-}
-
-
 
 
 //-------------------------------------------------------------------------------

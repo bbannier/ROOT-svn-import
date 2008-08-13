@@ -21,10 +21,12 @@
 //-------------------------------------------------------------------------------
 Reflex::Internal::PointerToMember::PointerToMember(const Type & pointerToMemberType,
                                                    unsigned int modifiers,
-                                                    const Scope & pointerToMemberScope,
-                                                    const std::type_info & ti) 
+                                                   const Scope & pointerToMemberScope,
+                                                   const std::type_info & ti,
+                                                   const Catalog& catalog) 
 //------------------------------------------------------------------------------- 
-   : TypeBase(BuildTypeName(pointerToMemberType, pointerToMemberScope).c_str(), modifiers, sizeof(void*), kPointerToMember, ti),
+   : TypeBase(BuildTypeName(pointerToMemberType, pointerToMemberScope).c_str(),
+              modifiers, sizeof(void*), kPointerToMember, ti, catalog),
      fPointerToMemberType(pointerToMemberType),
      fPointerToMemberScope(pointerToMemberScope) {
    // Construct dictionary info for a pointer to member type.

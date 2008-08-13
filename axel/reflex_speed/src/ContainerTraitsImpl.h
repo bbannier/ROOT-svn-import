@@ -22,6 +22,8 @@
 
 #include "OwnedMember.h"
 #include "OwnedMemberTemplate.h"
+#include "TypeName.h"
+#include "ScopeName.h"
 
 namespace Reflex {
 namespace Internal {
@@ -126,6 +128,34 @@ namespace Internal {
       return member.Name(buf);
    }
 
+
+   //---- Container Traits for TypeName* ----
+
+   template <>
+   inline std::string
+   ContainerTraits::Key(TypeName* const & type) const {
+      return type->Name();
+   }
+
+   template <>
+   inline const std::string&
+   ContainerTraits::Key(TypeName* const & type, std::string&) const {
+      return type->Name();
+   }
+
+   //---- Container Traits for ScopeName* ----
+
+   template <>
+   inline std::string
+   ContainerTraits::Key(ScopeName* const & scope) const {
+      return scope->Name();
+   }
+
+   template <>
+   inline const std::string&
+   ContainerTraits::Key(ScopeName* const & scope, std::string&) const {
+      return scope->Name();
+   }
 
 } // namespace Internal
 } // namespace Reflex

@@ -35,11 +35,10 @@ Reflex::Internal::TypeBase::TypeBase(const char * nam,
                                      size_t size,
                                      ETYPE typeTyp, 
                                      const std::type_info & ti,
-                                     const Type & finalType,
-                                     const Catalog* catalog)
+                                     const Catalog& catalog,
+                                     const Type & finalType)
    : fTypeInfo(&ti),
      fTypeModifiers(modifiers),
-     fScope(Scope::__NIRVANA__()),
      fSize(size),
      fTypeType(typeTyp),
      fPropertyList(OwnedPropertyList(new PropertyListImpl())),
@@ -48,14 +47,13 @@ Reflex::Internal::TypeBase::TypeBase(const char * nam,
      fRawType(0) {
 //-------------------------------------------------------------------------------
 // Construct the dictinary info for a type.
-   if (!catalog) catalog = &Catalog::Instance();
-   Type t = catalog->ByName(nam);
+   Type t = catalog.ByName(nam);
    if (t.Id() == 0) { 
-      fTypeName = new TypeName(nam, this, &ti, catalog); 
+      fTypeName = new TypeName(nam, this, catalog, &ti); 
    }
    else {
       fTypeName = (TypeName*)t.Id();
-      if (t.Id() != catalog->ByTypeInfo(ti).Id())
+      if (t.Id() != catalog.ByTypeInfo(ti).Id())
          fTypeName->SetTypeId(ti);
       if (fTypeName->ToTypeBase())
          fTypeName->UpdateTypeBase(this);
@@ -64,14 +62,10 @@ Reflex::Internal::TypeBase::TypeBase(const char * nam,
    if (typeTyp != kFundamental && 
         typeTyp != kFunction &&
         typeTyp != kPointer ) {
-      std::string sname = Tools::GetScopeName(nam);
-      fScope = catalog->ScopeByName(sname);
-      if (!fScope.Id())
-         fScope = (new ScopeName(sname.c_str(), 0, catalog))->ThisScope();
-    
-      // Set declaring At
-      if (fScope)
-         fScope.AddSubType(ThisType());
+      Scope declScope = fTypeName->DeclaringScope();
+      // Add to declaring scope
+      if (declScope)
+         declScope.AddSubType(ThisType());
    }
 }
 
@@ -160,13 +154,13 @@ Reflex::Internal::TypeBase::DetermineFinalType(const Type& t) const {
       retType = t.ToType().FinalType();
       break;
    case kPointer:
-      retType = PointerBuilder(t.ToType().FinalType(), t.TypeInfo());
+      retType = PointerBuilder(t.ToType().FinalType(), InCatalog(), t.TypeInfo());
       break;
    case kPointerToMember:
-      retType = PointerToMemberBuilder(t.ToType().FinalType(), t.PointerToMemberScope(), t.TypeInfo());
+      retType = PointerToMemberBuilder(t.ToType().FinalType(), t.PointerToMemberScope(), InCatalog(), t.TypeInfo());
       break;
    case kArray:
-      retType = ArrayBuilder(t.ToType().FinalType(), t.ArrayLength(), t.TypeInfo());
+      retType = ArrayBuilder(t.ToType().FinalType(), t.ArrayLength(), InCatalog(), t.TypeInfo());
       break;
    case kFunction:
       {
@@ -175,7 +169,7 @@ Reflex::Internal::TypeBase::DetermineFinalType(const Type& t) const {
          Type_Iterator iParEnd = t.FunctionParameters().End();
          for (Type_Iterator iPar = t.FunctionParameters().Begin(); iPar != iParEnd; ++iPar, ++idx)
             vecParFinal[idx] = iPar->FinalType();
-         retType = FunctionTypeBuilder(t.ReturnType().FinalType(), vecParFinal, t.TypeInfo());
+         retType = FunctionTypeBuilder(t.ReturnType().FinalType(), vecParFinal, InCatalog(), t.TypeInfo());
          break;
       }
    case kUnresolved:
@@ -218,7 +212,7 @@ Reflex::Internal::TypeBase::HideName() const {
 
 
 //-------------------------------------------------------------------------------
-const Reflex::Catalog*
+const Reflex::Catalog&
 Reflex::Internal::TypeBase::InCatalog() const {
 //-------------------------------------------------------------------------------
 // Retrieve the Catalog containing the type.

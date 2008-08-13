@@ -59,18 +59,20 @@ static TypeVec_t & sTypeVec() {
 //-------------------------------------------------------------------------------
 Reflex::Internal::TypeName::TypeName(const char * nam,
                                       TypeBase * typeBas,
-                                      const std::type_info * ti,
-                                      const Catalog* catalog /*= 0*/)
+                                      const Catalog& catalog,
+                                      const std::type_info * ti)
    : fName(nam),
-     fTypeBase(typeBas),
-     fCatalog(catalog) {
+     fTypeBase(typeBas) {
 //-------------------------------------------------------------------------------
 // Construct a type name.
    fThisType = new Type(this);
-   if (!fCatalog)
-      fCatalog = &Catalog::Instance();
-   CatalogImpl* cati = catalog->Impl();
+   CatalogImpl* cati = catalog.Impl();
    cati->Types().Add(*this, ti);
+
+   std::string sname = Tools::GetScopeName(nam);
+   fScope = catalog.ScopeByName(sname);
+   if (!fScope.Id())
+      fScope = (new ScopeName(sname.c_str(), 0, catalog))->ThisScope();
 }
 
 
@@ -101,7 +103,7 @@ Reflex::Internal::TypeName::UpdateTypeBase(TypeBase* tb) {
 void Reflex::Internal::TypeName::SetTypeId(const std::type_info & ti) const {
 //-------------------------------------------------------------------------------
 // Add a type_info to the map.
-   fCatalog->Impl()->Types().UpdateTypeId(*this, ti);
+   DeclaringScope().InCatalog().Impl()->Types().UpdateTypeId(*this, ti);
 }
 
 
@@ -110,9 +112,9 @@ void Reflex::Internal::TypeName::HideName() {
 //-------------------------------------------------------------------------------
 // Append the string " @HIDDEN@" to a type name.
    if (fName.empty() || fName[fName.length()-1] != '@') {
-      fCatalog->Impl()->Types().Remove(*this);
+      DeclaringScope().InCatalog().Impl()->Types().Remove(*this);
       fName += " @HIDDEN@";
-      fCatalog->Impl()->Types().Add(*this, this->fTypeBase ? &this->fTypeBase->TypeInfo() : 0);
+      DeclaringScope().InCatalog().Impl()->Types().Add(*this, this->fTypeBase ? &this->fTypeBase->TypeInfo() : 0);
    }
 }
 

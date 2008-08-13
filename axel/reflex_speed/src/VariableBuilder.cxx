@@ -23,9 +23,10 @@
 
 //-------------------------------------------------------------------------------
 Reflex::VariableBuilderImpl::VariableBuilderImpl(const char * nam,
-                                                        const Type & typ,
-                                                        size_t offs,
-                                                        unsigned int modifiers) 
+                                                 const Type & typ,
+                                                 size_t offs,
+                                                 const Catalog& catalog,
+                                                 unsigned int modifiers) 
    : fDataMember(Member()) {
 //-------------------------------------------------------------------------------
 // Construct the info for a variable.
@@ -40,7 +41,7 @@ Reflex::VariableBuilderImpl::VariableBuilderImpl(const char * nam,
    Scope sc = Scope::Scopes().ByName(declScope);
   
    if (! sc) {
-      sc = (new Internal::Namespace(declScope.c_str()))->ThisScope();
+      sc = (new Internal::Namespace(declScope.c_str(), catalog))->ThisScope();
    }
   
    if (! sc.Is(gNamespace)) throw RuntimeError("Declaring At is not a namespace");
@@ -85,9 +86,10 @@ Reflex::Member Reflex::VariableBuilderImpl::ToMember() {
 
 //-------------------------------------------------------------------------------
 Reflex::VariableBuilder::VariableBuilder(const char * nam, 
-                                                const Type & typ,
-                                                size_t offs,
-                                                unsigned int modifiers) 
+                                         const Type & typ,
+                                         size_t offs,
+                                         const Catalog& catalog,
+                                         unsigned int modifiers) 
    : fDataMember(Member()) {
 //-------------------------------------------------------------------------------
 // Construct the variable info.
@@ -97,7 +99,7 @@ Reflex::VariableBuilder::VariableBuilder(const char * nam,
    Scope sc = Scope::Scopes().ByName(declScope);
   
    if (! sc) {
-      sc = (new Internal::Namespace(declScope.c_str()))->ThisScope();
+      sc = (new Internal::Namespace(declScope.c_str(), catalog))->ThisScope();
    }
   
    if (!sc.Is(gNamespace)) throw RuntimeError("Declaring scope is not a namespace");

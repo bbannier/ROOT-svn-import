@@ -7,7 +7,7 @@
 #include "Reflex/PluginService.h"
 #include "testPlugins/ICommon.h"
 
-using namespace ROOT::Reflex;
+using namespace Reflex;
 using namespace std;
 
 class PluginServiceUnitTest : public CppUnit::TestFixture {

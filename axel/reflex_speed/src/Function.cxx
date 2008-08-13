@@ -21,12 +21,13 @@
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::Function::Function(const Type & retType,
-                                      const std::vector< Type > & parameters,
-                                      const std::type_info & ti,
-                                      ETYPE functionType) 
+                                     const std::vector< Type > & parameters,
+                                     const std::type_info & ti,
+                                     const Catalog& catalog,
+                                     ETYPE functionType) 
 //-------------------------------------------------------------------------------
 // Default constructor for a function type.
-: TypeBase(BuildTypeName(retType, parameters, 0, kQualified | kScoped).c_str(), 0, 0, functionType, ti),
+: TypeBase(BuildTypeName(retType, parameters, 0, kQualified | kScoped).c_str(), 0, 0, functionType, ti, catalog),
      fParameters(parameters),
      fParametersAdaptor(fParameters),
      fReturnType(retType)

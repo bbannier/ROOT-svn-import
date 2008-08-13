@@ -18,6 +18,7 @@
 #include "Reflex/Type.h"
 #include "Reflex/TemplateArgument.h"
 #include "OwnedPropertyList.h"
+#include "TypeName.h"
 #include <vector>
 #include <typeinfo>
 
@@ -48,13 +49,10 @@ namespace Internal {
    public:
 
       /** default constructor */
-      TypeBase(const char *    nam,
-         unsigned int           modifiers,
-         size_t                 size, 
-         ETYPE                   typeTyp,
-         const std::type_info & ti,
-         const Type &           finalType = Dummy::Type(),
-         const Catalog*         catalog = 0);
+      TypeBase(const char* nam, unsigned int modifiers, size_t size, 
+               ETYPE typeTyp, const std::type_info& ti,
+               const Catalog& catalog,
+               const Type& finalType = Dummy::Type());
 
 
       /** destructor */
@@ -119,6 +117,13 @@ namespace Internal {
 
 
       /**
+      * DeclaringScope will return a pointer to the At of this one
+      * @return pointer to declaring At
+      */
+      virtual Scope DeclaringScope() const;
+
+
+      /**
       * Destruct will call the destructor of a At and remove its memory
       * allocation if desired
       * @param  instance of the At in memory
@@ -126,13 +131,6 @@ namespace Internal {
       */
       virtual void Destruct(void * instance, 
          bool dealloc = true) const;
-
-
-      /**
-      * DeclaringScope will return a pointer to the At of this one
-      * @return pointer to declaring At
-      */
-      virtual Scope DeclaringScope() const;
 
 
       /**
@@ -170,7 +168,7 @@ namespace Internal {
       /**
       * Retrieve the Catalog containing the type.
       */
-      const Catalog* InCatalog() const;
+      const Catalog& InCatalog() const;
 
 
       /**
@@ -361,16 +359,6 @@ namespace Internal {
 
    private:
 
-      /**
-      * The Scope of the Type
-      * @label type scope
-      * @link aggregation
-      * @clientCardinality 1
-      * @supplierCardinality 1
-      */
-      Scope fScope;
-
-
       /** size of the type in int */
       mutable
          size_t fSize;
@@ -460,8 +448,9 @@ Reflex::Internal::TypeBase::ArrayLength() const {
 inline Reflex::Scope
 Reflex::Internal::TypeBase::DeclaringScope() const {
 //-------------------------------------------------------------------------------
-// Return the declaring scope of this type.
-   return fScope;
+// Get the scope containing this type.
+   if (fTypeName) return fTypeName->DeclaringScope();
+   return Scope();
 }
 
 

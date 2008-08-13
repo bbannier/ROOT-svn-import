@@ -198,7 +198,7 @@ class genDictionary(object) :
     for f in self.get_fields (selection):
       tid = f['type']
       tname = self.genTypeName (tid)
-      if tname.startswith (self.selectionname+"::TRANSIENT"):
+      if tname.startswith (self.selectionname+"::kTransient"):
 	transient_fields.append (f['name'])
 
     if transient_fields:
@@ -732,6 +732,9 @@ class genDictionary(object) :
     c += '#pragma warning ( disable : 4786 )\n'
     c += '#pragma warning ( disable : 4345 )\n'
     c += '#endif\n'
+    c += '#ifndef RFLX_DICTIONARY_SOURCE\n'
+    c += '#define RFLX_DICTIONARY_SOURCE\n'
+    c += '#endif\n'
     c += '#include "%s"\n' % self.hfile
     c += '#include "Reflex/Builder/ReflexBuilder.h"\n'
     c += '#include <typeinfo>\n'
@@ -771,12 +774,13 @@ class genDictionary(object) :
     bases = self.getBases( attrs['id'] )
     if 'members' in attrs : members = string.split(attrs['members'])
     mod = self.genModifier(attrs,None)
-    typ = self.xref[attrs['id']]['elem'].upper()
-    if attrs.has_key('abstract') : mod += ' | ABSTRACT'
+    typ = self.xref[attrs['id']]['elem']
+    typ = 'k' + typ[0].upper() + typ[1:]
+    if attrs.has_key('abstract') : mod += ' | kAbstract'
     if self.vtables :
-      if attrs['id'] in self.vtables : mod += ' | VIRTUAL'
+      if attrs['id'] in self.vtables : mod += ' | kVirtual'
     else :  # new in version 0.6.0
-      if self.isClassVirtual(attrs) :  mod += ' | VIRTUAL'
+      if self.isClassVirtual(attrs) :  mod += ' | kVirtual'
     members = filter(self.memberfilter, members)  # Eliminate problematic members
     # Fill the different streams sc: constructor, ss: stub functions
     sc = '//------Dictionary for class %s -------------------------------\n' % cl
@@ -1371,13 +1375,13 @@ class genDictionary(object) :
     else             : xattrs = None
     mod = self.genModifier(attrs,xattrs)
     if attrs['type'][-1] == 'c' :
-      if mod : mod += ' | CONST'
-      else   : mod =  'CONST'
+      if mod : mod += ' | kConst'
+      else   : mod =  'kConst'
     if attrs['type'][-1] == 'v' :
-      if mod : mod += ' | VOLATILE'
-      else   : mod = 'VOLATILE'
+      if mod : mod += ' | kVolatile'
+      else   : mod = 'kVolatile'
     shadow = '__shadow__::' + string.translate( str(cl), self.transtable)
-    c = '  .AddDataMember(%s, "%s", OffsetOf(%s, %s), %s)' % (self.genTypeID(attrs['type']), name, shadow, name, mod)
+    c = '  .AddMember(%s, "%s", OffsetOf(%s, %s), %s)' % (self.genTypeID(attrs['type']), name, shadow, name, mod)
     c += self.genCommentProperty(attrs)
     # Other properties
     if xattrs : 
@@ -1422,13 +1426,13 @@ class genDictionary(object) :
     return c
 #----------------------------------------------------------------------------------
   def genModifier(self, attrs, xattrs ):
-    if   attrs.get('access') == 'public' or 'access' not in attrs : mod = 'PUBLIC'
-    elif attrs['access'] == 'private'   : mod = 'PRIVATE'
-    elif attrs['access'] == 'protected' : mod = 'PROTECTED'
+    if   attrs.get('access') == 'public' or 'access' not in attrs : mod = 'kPublic'
+    elif attrs['access'] == 'private'   : mod = 'kPrivate'
+    elif attrs['access'] == 'protected' : mod = 'kProtected'
     else                                : mod = 'NONE'
-    if 'virtual' in attrs : mod += ' | VIRTUAL'
-    if 'pure_virtual' in attrs : mod += ' | ABSTRACT'
-    if 'static'  in attrs : mod += ' | STATIC'
+    if 'virtual' in attrs : mod += ' | kVirtual'
+    if 'pure_virtual' in attrs : mod += ' | kAbstract'
+    if 'static'  in attrs : mod += ' | kStatic'
     # Extra modifiers
     xtrans = ''
     etrans = ''
@@ -1438,8 +1442,8 @@ class genDictionary(object) :
     if 'extra' in attrs:
       etrans = attrs['extra'].get('transient')
       if etrans : etrans = etrans.lower()
-    if xtrans == 'true' or etrans == 'true' : mod += ' | TRANSIENT'
-    if 'artificial' in attrs : mod += ' | ARTIFICIAL' 
+    if xtrans == 'true' or etrans == 'true' : mod += ' | kTransient'
+    if 'artificial' in attrs : mod += ' | kArtificial' 
     return mod
 #----------------------------------------------------------------------------------
   def genMCODecl( self, type, name, attrs, args ) :
@@ -1452,13 +1456,13 @@ class genDictionary(object) :
     if type == 'constructor' : returns  = 'void'
     else                     : returns  = self.genTypeName(attrs['returns'])
     mod = self.genModifier(attrs, None)
-    if   type == 'constructor' : mod += ' | CONSTRUCTOR'
-    elif type == 'operator' :    mod += ' | OPERATOR'
-    elif type == 'converter' :   mod += ' | CONVERTER'
-    if attrs.get('const')=='1' : mod += ' | CONST'
+    if   type == 'constructor' : mod += ' | kConstructor'
+    elif type == 'operator' :    mod += ' | kOperator'
+    elif type == 'converter' :   mod += ' | kConverter'
+    if attrs.get('const')=='1' : mod += ' | kConst'
     if args : params  = '"'+ string.join( map(self.genParameter, args),';')+'"'
     else    : params  = '0'
-    s = '  .AddFunctionMember(%s, "%s", %s%s, 0, %s, %s)' % (self.genTypeID(id), name, type, id, params, mod)
+    s = '  .AddMember(%s, "%s", %s%s, 0, %s, %s)' % (self.genTypeID(id), name, type, id, params, mod)
     s += self.genCommentProperty(attrs)
     return s
 #----------------------------------------------------------------------------------
@@ -1610,7 +1614,7 @@ class genDictionary(object) :
        self.checkAccessibleType(self.xref[attrs['context']]) : return ''
     mod = self.genModifier(attrs,None)
     id       = attrs['id']
-    s = '  .AddFunctionMember(%s, "~%s", destructor%s, 0, 0, %s | DESTRUCTOR )' % (self.genTypeID(id), attrs['name'], attrs['id'], mod)
+    s = '  .AddMember(%s, "~%s", destructor%s, 0, 0, %s | kDestructor )' % (self.genTypeID(id), attrs['name'], attrs['id'], mod)
     s += self.genCommentProperty(attrs)
     return s
 #----------------------------------------------------------------------------------
@@ -1651,8 +1655,9 @@ class genDictionary(object) :
     return '%s = %s' % (attrs['name'], attrs['init'])
 #----------------------------------------------------------------------------------
   def genBaseClassBuild(self, clf, b ):
-    mod = b['access'].upper()
-    if 'virtual' in b and b['virtual'] == '1' : mod = 'VIRTUAL | ' + mod
+    mod = b['access']
+    mod = 'k' + mod[0].upper() + mod[1:]
+    if 'virtual' in b and b['virtual'] == '1' : mod = 'kVirtual | ' + mod
     return '  .AddBase(%s, BaseOffset< %s, %s >::Get(), %s)' %  (self.genTypeID(b['type']), clf, self.genTypeName(b['type'],colon=True), mod)
 #----------------------------------------------------------------------------------
   def enhanceClass(self, attrs):
@@ -1709,7 +1714,7 @@ class genDictionary(object) :
     return 'static void* method%s( void*, const std::vector<void*>&, void* ); ' % (attrs['id'])
   def genCreateCollFuncTableBuild( self, attrs, args ) :
     mod = self.genModifier(attrs, None)
-    return '  .AddFunctionMember<void*(void)>("createCollFuncTable", method%s, 0, 0, %s)' % ( attrs['id'], mod)
+    return '  .AddMember<void*(void)>("createCollFuncTable", method%s, 0, 0, %s)' % ( attrs['id'], mod)
   def genCreateCollFuncTableDef( self, attrs, args ) :
     cl       = self.genTypeName(attrs['context'], colon=True)
     clt      = string.translate(str(cl), self.transtable)
@@ -1723,7 +1728,7 @@ class genDictionary(object) :
     return 'static void* method%s( void*, const std::vector<void*>&, void* ); ' % (attrs['id'])
   def genGetBasesTableBuild( self, attrs, args ) :
     mod = self.genModifier(attrs, None)
-    return '  .AddFunctionMember<void*(void)>("__getBasesTable", method%s, 0, 0, %s)' % (attrs['id'], mod)
+    return '  .AddMember<void*(void)>("__getBasesTable", method%s, 0, 0, %s)' % (attrs['id'], mod)
   def genGetBasesTableDef( self, attrs, args ) :
     cid      = attrs['context']
     cl       = self.genTypeName(cid, colon=True)
@@ -1771,7 +1776,7 @@ class genDictionary(object) :
     return 'static void* method%s( void*, const std::vector<void*>&, void* ); ' % (attrs['id'])
   def genGetNewDelFunctionsBuild( self, attrs, args ) :
     mod = self.genModifier(attrs, None)  
-    return '  .AddFunctionMember<void*(void)>("__getNewDelFunctions", method%s, 0, 0, %s)' % (attrs['id'], mod)
+    return '  .AddMember<void*(void)>("__getNewDelFunctions", method%s, 0, 0, %s)' % (attrs['id'], mod)
   def genGetNewDelFunctionsDef( self, attrs, args ) :
     cid      = attrs['context']
     cl       = self.genTypeName(cid, colon=True)
@@ -1808,8 +1813,8 @@ class genDictionary(object) :
       if id not in [ bid[0] for bid in bases] :
         if access == 'public' : access = b['access']
         if not virtual : virtual = ( b['virtual'] == '1' )
-        mod = access.upper()
-        if virtual : mod = 'VIRTUAL |' + mod
+        mod = 'k' + access[0].upper() + access[1:];
+        if virtual : mod = 'kVirtual |' + mod
         bases.append( [id,  mod, level] )
         self.getAllBases( id, bases, level+1, access, virtual )
 #----------------------------------------------------------------------------------
