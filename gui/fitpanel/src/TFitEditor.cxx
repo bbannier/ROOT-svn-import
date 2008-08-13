@@ -1180,11 +1180,13 @@ void TFitEditor::SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event)
       {
          fEnteredFunc->SetText(fitFunc->GetName());
          en= fFuncList->FindEntry(fitFunc->GetName());
+         SetEditable(kFALSE);
       }
       else
       {
          fEnteredFunc->SetText(fitFunc->GetExpFormula().Data());
          en= fFuncList->FindEntry(fitFunc->GetExpFormula().Data());
+         SetEditable(kTRUE);
       }
       if (en) fFuncList->Select(en->EntryId());
    } else {
@@ -1532,12 +1534,12 @@ void TFitEditor::DoNoOperation(Bool_t on)
 }
 
 //______________________________________________________________________________
-void TFitEditor::DoFunction(Int_t)
+void TFitEditor::DoFunction(Int_t selected)
 {
    // Slot connected to predefined fit function settings.
 
    TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-   if (fNone->GetState() == kButtonDown) {
+   if (fNone->GetState() == kButtonDown || fNone->GetState() == kButtonDisabled) {
       TF1* tmpTF1 = 0;
       switch (fType) {
       case kObjectHisto: {
@@ -1554,9 +1556,18 @@ void TFitEditor::DoFunction(Int_t)
       }
 
       if ( tmpTF1 && strcmp(tmpTF1->GetExpFormula(), "") ) 
+      {
+         SetEditable(kTRUE);
          fEnteredFunc->SetText(tmpTF1->GetExpFormula());
+      }
       else
+      {
+         if ( selected > kFP_USER && fNone->GetState() != kButtonDisabled )
+            SetEditable(kFALSE);
+         else
+            SetEditable(kTRUE);
          fEnteredFunc->SetText(te->GetTitle());
+      }
    } else if (fAdd->GetState() == kButtonDown) {
       Int_t np = 0;
       TString s = "";
@@ -1585,7 +1596,6 @@ void TFitEditor::DoFunction(Int_t)
    fEnteredFunc->SelectAll();
    fSelLabel->SetText(fEnteredFunc->GetText());
    ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
-
 }
 
 //______________________________________________________________________________
@@ -2418,4 +2428,18 @@ void TFitEditor::RetrieveOptions(TString& fitOpts, TString& drawOpts, Int_t npar
       drawOpts += "SAME";
 
    drawOpts = GetDrawOption();
+}
+
+void TFitEditor::SetEditable(Bool_t state)
+{
+   if ( state )
+   {
+      fEnteredFunc->SetState(kTRUE);
+         fAdd->SetState(kButtonUp, kFALSE);
+         fNone->SetState(kButtonDown, kFALSE);
+   } else {
+      fEnteredFunc->SetState(kFALSE);
+      fAdd->SetState(kButtonDisabled, kFALSE);
+      fNone->SetState(kButtonDisabled, kFALSE);
+   }
 }
