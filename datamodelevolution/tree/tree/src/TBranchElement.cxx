@@ -1554,9 +1554,18 @@ void TBranchElement::InitInfo()
                   }
                }
                for (size_t i = fID+1+(fIDs.size()); i < ndata; ++i) {
+                  TStreamerElement *nextel = ((TStreamerElement*) elems[i]);
                   // Add all (and only) the Artificial Elements that follows this StreamerInfo.
-                  if (((TStreamerElement*) elems[i])->IsA() != TStreamerArtificial::Class()
-                      || ((TStreamerElement*) elems[i])->GetType() == TStreamerInfo::kCacheDelete ) {
+                  if (fType==31||fType==41) {
+                     // The nested objects are unfolded and their branch can not be used to 
+                     // executed StreamerElements of this StreamerInfo.
+                     if (nextel->GetType() == TStreamerInfo::kObject 
+                         || nextel->GetType() == TStreamerInfo::kAny) {
+                        continue;
+                     }
+                  }
+                  if (nextel->IsA() != TStreamerArtificial::Class()
+                      || nextel->GetType() == TStreamerInfo::kCacheDelete ) {
                      break;
                   }
                   fIDs.push_back(i);
