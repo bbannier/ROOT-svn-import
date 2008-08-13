@@ -148,6 +148,7 @@ protected:
    TF1*        HasFitFunction(TObject *obj);
    void        GetFunctionsFromList(TList *list);
    void        CheckRange(TF1 *f1);
+   void        SetEditable(Bool_t);
 
 private:
    TFitEditor(const TFitEditor&);              // not implemented
