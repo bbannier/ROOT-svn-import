@@ -135,10 +135,11 @@ int main ( int argc, char** argv )    {
    if ( factories ) {
       map_gen.genHeader();
       set<string> used_names;
-      for (Member_Iterator it = factories.FunctionMember_Begin(); 
-           it != factories.FunctionMember_End(); ++it ) {
-         //string cname = it->Properties().PropertyAsString("name");
-         string cname = it->Name();
+      const Member_Iterator itEnd = factories.FunctionMembers().End();
+      for (Member_Iterator it = factories.FunctionMembers().Begin(); 
+           it != itEnd; ++it ) {
+         string cname;
+         it->Name(cname);
          if ( used_names.insert(cname).second ) {
             map_gen.genFactory(cname,"");
          }

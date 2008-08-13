@@ -31,8 +31,9 @@ namespace Internal {
    public:
 
       /** constructor */
-      Union(const char* name, size_t size, const std::type_info& ti, unsigned int modifiers, ETYPE unionType = kUnion):
-         Constructable(name, modifiers, size, unionType, ti) {}
+      Union(const char* name, size_t size, const std::type_info& ti,
+            const Catalog& catalog, unsigned int modifiers, ETYPE unionType = kUnion):
+         Constructable(name, modifiers, size, unionType, ti, catalog) {}
 
       /** destructor */
       virtual ~Union() {}

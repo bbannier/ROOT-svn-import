@@ -29,6 +29,7 @@ namespace Reflex {
    class TypeTemplate;
    class MemberTemplate;
    class DictionaryGenerator;
+   class Catalog;
 
    namespace Internal {
       class ScopeBase;
@@ -142,6 +143,12 @@ namespace Reflex {
       * @return unique identifier
       */
       void * Id() const;
+
+
+      /**
+      * Retrieve the Catalog containing the scope.
+      */
+      const Catalog& InCatalog() const;
 
 
       /**

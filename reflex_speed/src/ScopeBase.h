@@ -31,6 +31,7 @@
 namespace Reflex {
 
    // forward declarations
+   class Catalog;
    class Member;
    class TypeTemplate;
    class MemberTemplate;
@@ -64,7 +65,8 @@ namespace Internal {
 
       /** constructor within a At*/
       ScopeBase(const char * scope,
-         ETYPE scopeType);
+                ETYPE scopeType,
+                const Catalog& catalog);
 
 
       /** destructor */
@@ -318,7 +320,7 @@ namespace Internal {
    protected:
 
       /** protected constructor for initialisation of the global namespace */
-      ScopeBase();
+      ScopeBase(const Catalog& catalog);
 
    public:
 

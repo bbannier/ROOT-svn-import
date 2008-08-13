@@ -17,7 +17,7 @@
 #include "Reflex/Tools.h"
 #include "Reflex/Builder/TypeBuilder.h"
 #include "Reflex/Member.h"
-#include "Reflex/Callback.h"
+#include "Reflex/Catalog.h"
 
 namespace Reflex {
 
@@ -38,7 +38,9 @@ namespace Reflex {
    public:
 
       /** constructor */
-      ClassBuilderImpl(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers = 0, ETYPE typ = kClass);
+      ClassBuilderImpl(const char* nam, const std::type_info& ti, size_t size,
+                       const Catalog& catalog,
+                       unsigned int modifiers = 0, ETYPE typ = kClass);
 
       /** destructor */
       virtual ~ClassBuilderImpl();
@@ -110,7 +112,10 @@ namespace Reflex {
       Internal::Class * fClass;
 
       /** last added MemberAt */
-      Member fLastMember;    
+      Member fLastMember;
+
+      /** catalog to add this class to */
+      Catalog fCatalog;
 
    }; // class ClassBuilderImpl
 
@@ -126,7 +131,9 @@ namespace Reflex {
    public:
 
       /** constructor */
-      ClassBuilder(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers = 0, ETYPE typ = kClass); 
+      ClassBuilder(const char* nam, const std::type_info& ti, size_t size,
+                   const Catalog& catalog = Catalog::Instance(),
+                   unsigned int modifiers = 0, ETYPE typ = kClass); 
 
       /** destructor */
       virtual ~ClassBuilder();
@@ -216,12 +223,13 @@ namespace Reflex {
    public:
 
       /** constructor */
-      ClassBuilderT(unsigned int modifiers = 0, 
+      ClassBuilderT(const Catalog& catalog, unsigned int modifiers = 0, 
          ETYPE typ = kClass);
 
 
       /** constructor */
-      ClassBuilderT(const char* nam, 
+      ClassBuilderT(const char* nam,
+         const Catalog& catalog = Catalog::Instance(), 
          unsigned int modifiers = 0,
          ETYPE typ = kClass);
 
@@ -375,14 +383,14 @@ template <typename P> inline Reflex::ClassBuilder& Reflex::ClassBuilder::AddProp
 }
 
 //______________________________________________________________________________
-template <typename C> inline Reflex::ClassBuilderT<C>::ClassBuilderT(unsigned int modifiers, ETYPE typ) 
-: fClassBuilderImpl(Tools::Demangle(typeid(C)).c_str(), typeid(C), sizeof(C), modifiers, typ)
+template <typename C> inline Reflex::ClassBuilderT<C>::ClassBuilderT(const Catalog& catalog, unsigned int modifiers, ETYPE typ) 
+: fClassBuilderImpl(Tools::Demangle(typeid(C)).c_str(), typeid(C), sizeof(C), catalog, modifiers, typ)
 {
 }
 
 //______________________________________________________________________________
-template <class C> inline Reflex::ClassBuilderT<C>::ClassBuilderT(const char* nam, unsigned int modifiers, ETYPE typ)
-: fClassBuilderImpl(nam, typeid(C), sizeof(C), modifiers, typ)
+template <class C> inline Reflex::ClassBuilderT<C>::ClassBuilderT(const char* nam, const Catalog& catalog, unsigned int modifiers, ETYPE typ)
+: fClassBuilderImpl(nam, typeid(C), sizeof(C), catalog, modifiers, typ)
 {
 }
     

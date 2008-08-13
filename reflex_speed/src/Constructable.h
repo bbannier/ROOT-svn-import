@@ -41,10 +41,11 @@ namespace Internal {
 
       /** constructor */
       Constructable(const char* name,
-         unsigned int modifiers,
-         size_t size,
-         ETYPE type,
-         const std::type_info& ti);
+                    unsigned int modifiers,
+                    size_t size,
+                    ETYPE type,
+                    const std::type_info& ti,
+                    const Catalog& catalog);
 
       /** destructor */
       virtual ~Constructable() {}
@@ -119,8 +120,9 @@ namespace Internal {
 //-------------------------------------------------------------------------------
 inline
 Reflex::Internal::Constructable::Constructable(const char* name, unsigned int modifiers,
-                                               size_t size, ETYPE type, const std::type_info& ti):
-   ScopedType(name, modifiers, size, type, ti),
+                                               size_t size, ETYPE type, const std::type_info& ti,
+                                               const Catalog& catalog):
+   ScopedType(name, modifiers, size, type, ti, catalog),
    fConstructorsAdaptor(fConstructors) {}
 //-------------------------------------------------------------------------------
 

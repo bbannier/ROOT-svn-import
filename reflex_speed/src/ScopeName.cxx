@@ -53,8 +53,8 @@ static ScopeVec_t & sScopeVec() {
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::ScopeName::ScopeName(const char* name,
-                                        ScopeBase* scopeBase,
-                                        const Catalog* catalog)
+                                       ScopeBase* scopeBase,
+                                       const Catalog& catalog)
    : fName(name),
      fScopeBase(scopeBase),
      fCatalog(catalog) {
@@ -65,16 +65,14 @@ Reflex::Internal::ScopeName::ScopeName(const char* name,
    sScopes() [ &fName ] = *fThisScope;
    sScopeVec().push_back(*fThisScope);
    */
-   if (!fCatalog)
-      fCatalog = &Catalog::Instance();
-   CatalogImpl* cati = catalog->Impl();
+   CatalogImpl* cati = fCatalog.Impl();
    cati->Scopes().Add(*this);
 
    //---Build recursively the declaring scopeNames
    if (fName != "@N@I@R@V@A@N@A@") {
       std::string decl_name = Tools::GetScopeName(fName);
       if (! cati->Scopes().ByName(decl_name).Id())
-         new ScopeName(decl_name.c_str(), 0);
+         new ScopeName(decl_name.c_str(), 0, catalog);
    }
 }
 
@@ -102,9 +100,9 @@ Reflex::Internal::ScopeName::HideName() {
 //-------------------------------------------------------------------------------
 // Append the string " @HIDDEN@" to a scope name.
    if (fName.empty() || fName[fName.length()-1] != '@') {
-      fCatalog->Impl()->Scopes().Remove(*this);
+      fCatalog.Impl()->Scopes().Remove(*this);
       fName += " @HIDDEN@";
-      fCatalog->Impl()->Scopes().Add(*this);
+      fCatalog.Impl()->Scopes().Add(*this);
    }
 }
 

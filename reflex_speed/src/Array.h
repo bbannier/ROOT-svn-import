@@ -17,6 +17,8 @@
 #include "Reflex/Type.h"
 
 namespace Reflex {
+   class Catalog;
+
 namespace Internal {
 
    // forward declarations
@@ -33,9 +35,10 @@ namespace Internal {
 
       /** default constructor */
       Array(const Type & arrayType,
-         unsigned int modifiers,
-         size_t len,
-         const std::type_info & typeinfo);
+            unsigned int modifiers,
+            size_t len,
+            const std::type_info & typeinfo,
+            const Catalog& catalog);
 
 
       /** destructor */

@@ -32,7 +32,10 @@
 //
 
 //______________________________________________________________________________
-Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size, const std::type_info& ti, unsigned int modifiers /*= 0*/, ETYPE typ /*=kUnion*/)
+Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size,
+                                           const std::type_info& ti,
+                                           const Catalog& catalog,
+                                           unsigned int modifiers /*= 0*/, ETYPE typ /*=kUnion*/)
 : fUnion(0)
 , fLastMember()
 {
@@ -49,7 +52,7 @@ Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size, const s
          throw RuntimeError("Attempt to replace a non-class type with a union"); // FIXME: We should not throw!
       }
    }
-   fUnion = new Internal::Union(nam2.c_str(), size, ti, modifiers, typ);
+   fUnion = new Internal::Union(nam2.c_str(), size, ti, catalog, modifiers, typ);
 }
 
 //______________________________________________________________________________
@@ -131,8 +134,12 @@ Reflex::Type Reflex::UnionBuilderImpl::ToType()
 //
 
 //______________________________________________________________________________
-Reflex::UnionBuilder::UnionBuilder(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers /*= 0*/, ETYPE typ /*= kUnion*/)
-: fUnionBuilderImpl(nam, size, ti, modifiers, typ)
+Reflex::UnionBuilder::UnionBuilder(const char* nam, const std::type_info& ti,
+                                   size_t size,
+                                   const Catalog& catalog,
+                                   unsigned int modifiers /*= 0*/,
+                                   ETYPE typ /*= kUnion*/)
+: fUnionBuilderImpl(nam, size, ti, catalog, modifiers, typ)
 {
 // Constructor.
 }

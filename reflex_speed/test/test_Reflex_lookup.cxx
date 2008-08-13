@@ -19,7 +19,7 @@
 
 #include "testDict2/ClassH.h"
 
-using namespace ROOT::Reflex;
+using namespace Reflex;
 
 /**
  * test_Reflex_lookup.cxx
@@ -100,7 +100,7 @@ void ReflexLookupTest::lookupType() {
 
    Type t10 = s1.LookupType("MyInt");
    CPPUNIT_ASSERT( t10 );
-   CPPUNIT_ASSERT( t10.IsTypedef());
+   CPPUNIT_ASSERT( t10.Is(gTypedef));
 
    Scope s2 = Scope::ByName("");
    CPPUNIT_ASSERT( s2 );

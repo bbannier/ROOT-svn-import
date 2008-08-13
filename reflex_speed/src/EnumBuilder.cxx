@@ -23,11 +23,12 @@
 
 //-------------------------------------------------------------------------------
 Reflex::EnumBuilder::EnumBuilder(const char * nam,
-                                        const std::type_info & ti,
-                                        unsigned int modifiers) {
+                                 const std::type_info & ti,
+                                 const Catalog& catalog,
+                                 unsigned int modifiers) {
 //-------------------------------------------------------------------------------
 // Construct a new enum dictionary info.
-   fEnum = new Internal::Enum(nam, ti, modifiers);
+   fEnum = new Internal::Enum(nam, ti, catalog, modifiers);
 }
 
 //-------------------------------------------------------------------------------

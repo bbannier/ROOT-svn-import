@@ -20,12 +20,13 @@
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::Typedef::Typedef(const char * typ,
-                                const Type & typedefType,
-                                ETYPE typeTyp,
-                                unsigned int modifiers,
-                                const Type & finalType)
+                                   const Type & typedefType,
+                                   const Catalog& catalog,
+                                   ETYPE typeTyp,
+                                   unsigned int modifiers,
+                                   const Type & finalType)
 //-------------------------------------------------------------------------------
-   : TypeBase(typ, modifiers, typedefType.SizeOf(), typeTyp, typedefType.TypeInfo(), finalType),
+   : TypeBase(typ, modifiers, typedefType.SizeOf(), typeTyp, typedefType.TypeInfo(), catalog, finalType),
      fTypedefType(typedefType) { 
    // Construct typedef info.
 }

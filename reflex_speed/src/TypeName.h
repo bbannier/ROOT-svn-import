@@ -14,6 +14,7 @@
 
 // Include files
 #include "Reflex/Kernel.h"
+#include "Reflex/Catalog.h"
 #include <string>
 #include <typeinfo>
 
@@ -21,7 +22,6 @@ namespace Reflex {
 
    // forward declarations 
    class Type;
-   class Catalog;
 
 namespace Internal {
 
@@ -41,8 +41,8 @@ namespace Internal {
       /** default constructor */
       TypeName(const char * nnam,
          TypeBase * typeBas,
-         const std::type_info * ti = 0,
-         const Catalog* catalog = 0);
+         const Catalog& catalog,
+         const std::type_info * ti = 0);
 
 
       /**
@@ -54,9 +54,16 @@ namespace Internal {
 
 
       /**
+      * DeclaringScope will return a pointer to the At of this one
+      * @return pointer to declaring At
+      */
+      Scope DeclaringScope() const;
+
+
+      /**
       * Retrieve the Catalog containing the type.
       */
-      const Catalog* InCatalog() const { return fCatalog; }
+      const Catalog& InCatalog() const { return fScope.InCatalog(); }
 
 
       void HideName();
@@ -95,6 +102,16 @@ namespace Internal {
 
 
       /**
+      * The Scope of the Type
+      * @label type scope
+      * @link aggregation
+      * @clientCardinality 1
+      * @supplierCardinality 1
+      */
+      Scope fScope;
+
+
+      /**
       * pointer to a TypeBase if the At is implemented
       * @label type base
       * @link aggregation
@@ -113,15 +130,19 @@ namespace Internal {
       Type * fThisType;
 
 
-      /**
-      * Catalog containing the type
-      */
-      const Catalog* fCatalog;
-
    }; // class TypeName
 
 } // namespace Internal
 } // namespace Reflex
+
+//-------------------------------------------------------------------------------
+inline Reflex::Scope
+Reflex::Internal::TypeName::DeclaringScope() const {
+//-------------------------------------------------------------------------------
+// Return the declaring scope of this type.
+   return fScope;
+}
+
 
 //-------------------------------------------------------------------------------
 inline const std::string&

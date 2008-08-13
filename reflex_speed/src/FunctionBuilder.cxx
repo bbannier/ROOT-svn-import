@@ -67,11 +67,12 @@ Reflex::Member Reflex::FunctionBuilder::ToMember() {
 
 //-------------------------------------------------------------------------------
 Reflex::FunctionBuilderImpl::FunctionBuilderImpl(const char * nam, 
-                                                        const Type & typ,
-                                                        StubFunction stubFP,
-                                                        void * stubCtx,
-                                                        const char * params, 
-                                                        unsigned char modifiers) 
+                                                 const Type & typ,
+                                                 StubFunction stubFP,
+                                                 void * stubCtx,
+                                                 const char * params,
+                                                 const Catalog& catalog,
+                                                 unsigned char modifiers) 
    : fFunction(Member(0)) {
 //-------------------------------------------------------------------------------
 // Create function type dictionary info (internal).
@@ -92,7 +93,7 @@ Reflex::FunctionBuilderImpl::FunctionBuilderImpl(const char * nam,
    Scope sc = Scope::Scopes().ByName(declScope);
    if (! sc) {
       // Let's create the namespace here
-      sc = (new Internal::Namespace(declScope.c_str()))->ThisScope();
+      sc = (new Internal::Namespace(declScope.c_str(), catalog))->ThisScope();
    }
 
    if (! sc.Is(gNamespace)) throw RuntimeError("Declaring scope is not a namespace");
@@ -150,11 +151,12 @@ Reflex::Member Reflex::FunctionBuilderImpl::ToMember() {
 
 //-------------------------------------------------------------------------------
 Reflex::FunctionBuilder::FunctionBuilder(const Type & typ,
-                                                const char * nam, 
-                                                StubFunction stubFP,
-                                                void * stubCtx,
-                                                const char * params, 
-                                                unsigned char modifiers) 
+                                         const char * nam, 
+                                         StubFunction stubFP,
+                                         void * stubCtx,
+                                         const char * params,
+                                         const Catalog& catalog, 
+                                         unsigned char modifiers) 
    : fFunction(Member(0)) {
 //-------------------------------------------------------------------------------
 // Create function dictionary type information.
@@ -174,7 +176,7 @@ Reflex::FunctionBuilder::FunctionBuilder(const Type & typ,
    Scope sc = Scope::Scopes().ByName(declScope);
    if (! sc) {
       // Let's create the namespace here
-      sc = (new Internal::Namespace(declScope.c_str()))->ThisScope();
+      sc = (new Internal::Namespace(declScope.c_str(), catalog))->ThisScope();
    }
    if (! sc.Is(gNamespace)) throw RuntimeError("Declaring scope is not a namespace");
    if (Tools::IsTemplated(funcName.c_str()))

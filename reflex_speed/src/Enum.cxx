@@ -24,11 +24,12 @@
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::Enum::Enum(const char * enumType,
-                          const std::type_info & ti,
-                          unsigned int modifiers)
+                             const std::type_info & ti,
+                             const Catalog& catalog,
+                             unsigned int modifiers)
 //-------------------------------------------------------------------------------
 // Construct the dictionary information for an enum
-: ScopedType(enumType, modifiers, sizeof(int), kEnum, ti) {}
+: ScopedType(enumType, modifiers, sizeof(int), kEnum, ti, catalog) {}
 
 
 //-------------------------------------------------------------------------------

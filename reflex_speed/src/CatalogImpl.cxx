@@ -19,7 +19,16 @@
 #include "Reflex/EntityProperty.h"
 #include "Namespace.h"
 #include "TypeName.h"
+#include "TypeBase.h"
 #include "ScopeName.h"
+#include "Fundamental.h"
+#include "Typedef.h"
+
+//-------------------------------------------------------------------------------
+Reflex::Internal::PairTypeInfoType::PairTypeInfoType(const TypeName& type):
+   fType(&type), fTI(type.ToTypeBase()->TypeInfo()) {}
+//-------------------------------------------------------------------------------
+
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::CatalogImpl&
@@ -30,6 +39,109 @@ Reflex::Internal::CatalogImpl::Instance() {
 
    return instance;
 }
+
+#define RFLX_TYPECAT_DECLFUND(type) \
+tb = new Internal::Fundamental(#type, sizeof(type), typeid(type), myCatalog);\
+tb->Properties().AddProperty("Description", "fundamental type")
+
+//-------------------------------------------------------------------------------
+Reflex::Internal::TypeCatalogImpl::TypeCatalogImpl(const CatalogImpl* catalog):
+   fCatalog(catalog) {
+//-------------------------------------------------------------------------------
+// Initialize the fundamental types of a catalog
+
+   Internal::Fundamental * tb = 0;
+   Type t;
+   Catalog myCatalog(fCatalog->ThisCatalog());
+ 
+   // char [3.9.1.1]
+   RFLX_TYPECAT_DECLFUND(char);
+
+   // signed integer types [3.9.1.2]
+   RFLX_TYPECAT_DECLFUND(signed char);
+
+   RFLX_TYPECAT_DECLFUND(short int);
+   t = tb->ThisType();
+   new Internal::Typedef("short", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("signed short", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("short signed", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("signed short int", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("short signed int", t, myCatalog, kFundamental, t);
+
+   RFLX_TYPECAT_DECLFUND(int);
+   t = tb->ThisType();
+   new Internal::Typedef("signed", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("signed int", t, myCatalog, kFundamental, t);
+
+   RFLX_TYPECAT_DECLFUND(long int);
+   t = tb->ThisType();
+   new Internal::Typedef("long", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("signed long", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("long signed", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("signed long int", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("long signed int", t, myCatalog, kFundamental, t);
+
+   // unsigned integer types [3.9.1.3]
+   RFLX_TYPECAT_DECLFUND(unsigned char);
+
+   RFLX_TYPECAT_DECLFUND(unsigned short int);
+   t = tb->ThisType();
+   new Internal::Typedef("unsigned short", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("short unsigned int", t, myCatalog, kFundamental, t);
+
+   RFLX_TYPECAT_DECLFUND(unsigned int);
+   t = tb->ThisType();
+   new Internal::Typedef("unsigned", t, myCatalog, kFundamental, t);
+
+   RFLX_TYPECAT_DECLFUND(unsigned long int);
+   t = tb->ThisType();
+   new Internal::Typedef("unsigned long", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("long unsigned", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("long unsigned int", t, myCatalog, kFundamental, t);
+
+   /* // w_chart [3.9.1.5]
+   RFLX_TYPECAT_DECLFUND(w_chart);
+   */
+
+   // bool [3.9.1.6]
+   RFLX_TYPECAT_DECLFUND(bool);
+
+   // floating point types [3.9.1.8]
+   RFLX_TYPECAT_DECLFUND(float);
+
+   RFLX_TYPECAT_DECLFUND(double);
+
+   RFLX_TYPECAT_DECLFUND(long double);
+
+   // void [3.9.1.9]
+   tb = new Internal::Fundamental("void", 0, typeid(void), myCatalog);
+   tb->Properties().AddProperty("Description", "fundamental type");
+
+   // Large integer definition depends of the platform
+#if defined(_MSC_VER) && !defined(__CINT__)
+   typedef __int64 longlong;
+   typedef unsigned __int64 ulonglong;
+#else
+   typedef long long int longlong; /* */
+   typedef unsigned long long int /**/ ulonglong;
+#endif
+
+   // non fundamental types but also supported at initialisation
+   tb = new Internal::Fundamental("long long", sizeof(longlong), 
+                                  typeid(longlong), myCatalog);
+   tb->Properties().AddProperty("Description", "fundamental type");
+   t = tb->ThisType();
+   new Internal::Typedef("long long int", t, myCatalog, kFundamental, t);
+
+   tb = new Internal::Fundamental("unsigned long long", sizeof(ulonglong), 
+                                  typeid(ulonglong), myCatalog);
+   tb->Properties().AddProperty("Description", "fundamental type");
+   t = tb->ThisType();
+   new Internal::Typedef("long long unsigned", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("unsigned long long int", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("long long unsigned int", t, myCatalog, kFundamental, t);
+}
+
 
 //-------------------------------------------------------------------------------
 Reflex::Type
@@ -70,21 +182,20 @@ void Reflex::Internal::TypeCatalogImpl::CleanUp() const {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Internal::TypeCatalogImpl::Add(const Reflex::Internal::TypeName& type, const std::type_info * ti) {
+void Reflex::Internal::TypeCatalogImpl::Add(Reflex::Internal::TypeName& type, const std::type_info * ti) {
 //-------------------------------------------------------------------------------
 // Add a type_info to the map.
-   Type t(&type, 0);
-   fAllTypes.Insert(t);
-   if (ti) fTypeInfoTypeMap.Insert(Internal::PairTypeInfoType(t, *ti));
+   fAllTypes.Insert(&type);
+   if (ti) fTypeInfoTypeMap.Insert(Internal::PairTypeInfoType(type, *ti));
 }
 
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Internal::TypeCatalogImpl::Remove(const TypeName& type) {
+Reflex::Internal::TypeCatalogImpl::Remove(TypeName& type) {
 //-------------------------------------------------------------------------------
 // Remove the type from the list of known types.
-   fAllTypes.Remove(type.ThisType());
+   fAllTypes.Remove(&type);
 }
 
 
@@ -93,20 +204,25 @@ void Reflex::Internal::TypeCatalogImpl::UpdateTypeId(const Reflex::Internal::Typ
                                     const std::type_info & oldti /* =typeid(NullType) */) {
 //-------------------------------------------------------------------------------
 // Update a type_info in the map.
-   Type t(&type, 0);
    if (oldti != typeid(NullType))
-      fTypeInfoTypeMap.Remove(Internal::PairTypeInfoType(t, oldti));
+      fTypeInfoTypeMap.Remove(Internal::PairTypeInfoType(type, oldti));
    if (newti != typeid(NullType))
-      fTypeInfoTypeMap.Insert(Internal::PairTypeInfoType(t, newti));
+      fTypeInfoTypeMap.Insert(Internal::PairTypeInfoType(type, newti));
 }
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Internal::ScopeCatalogImpl::Add(const Reflex::Internal::ScopeName& scope) {
+Reflex::Internal::ScopeCatalogImpl::ScopeCatalogImpl(const CatalogImpl* catalog):
+   fCatalog(catalog) {
+//-------------------------------------------------------------------------------
+   fNirvana = new ScopeName("@N@I@R@V@A@N@A@", 0, fCatalog->ThisCatalog());
+}
+
+//-------------------------------------------------------------------------------
+void Reflex::Internal::ScopeCatalogImpl::Add(Reflex::Internal::ScopeName& scope) {
 //-------------------------------------------------------------------------------
 // Add a scope to the map.
-   Scope s(&scope);
-   fAllScopes.Insert(s);
+   fAllScopes.Insert(&scope);
 }
 
 
@@ -191,8 +307,8 @@ Reflex::Internal::ScopeCatalogImpl::GlobalScope() const {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Internal::ScopeCatalogImpl::Remove(const ScopeName& scope) {
+Reflex::Internal::ScopeCatalogImpl::Remove(ScopeName& scope) {
 //-------------------------------------------------------------------------------
 // Remove the scope from the list of known scopes.
-   fAllScopes.Remove(scope.ThisScope());
+   fAllScopes.Remove(&scope);
 }

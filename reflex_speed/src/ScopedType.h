@@ -38,7 +38,8 @@ namespace Internal {
                  unsigned int modifiers,
                  size_t size,
                  ETYPE type,
-                 const std::type_info & ti);
+                 const std::type_info & ti,
+                 const Catalog& catalog);
 
       /** destructor */
       virtual ~ScopedType() {}
@@ -86,11 +87,12 @@ Reflex::Internal::ScopedType::ScopedType(const char * name,
                                          unsigned int modifiers,
                                          size_t size,
                                          ETYPE type,
-                                         const std::type_info & ti)
+                                         const std::type_info & ti,
+                                         const Catalog& catalog)
 //-------------------------------------------------------------------------------
 // Construct the dictionary information for a type that is also a scope
-   : TypeBase(name, modifiers, size, type, ti),
-   ScopeBase(name, type) {}
+   : TypeBase(name, modifiers, size, type, ti, catalog),
+   ScopeBase(name, type, catalog) {}
 
 
 //-------------------------------------------------------------------------------

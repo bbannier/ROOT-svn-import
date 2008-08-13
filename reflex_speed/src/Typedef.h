@@ -20,6 +20,7 @@
 namespace Reflex {
    // forward declarations
    class Base;
+   class Catalog;
    class Member;
    class Scope;
    class Object;
@@ -41,6 +42,7 @@ namespace Internal {
       /** constructor */
       Typedef(const char * typ,
          const Type & typedefType,
+         const Catalog& catalog,
          ETYPE typeTyp = kTypedef,
          unsigned int modifiers = 0,
          const Type & finalType = Dummy::Type()) ;

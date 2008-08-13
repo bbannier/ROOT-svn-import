@@ -37,7 +37,8 @@
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::ScopeBase::ScopeBase(const char * scope,
-                                       ETYPE scopeType)
+                                       ETYPE scopeType,
+                                       const Catalog& catalog)
    : fScopeName(0),
      fScopeType(scopeType),
      fPropertyList(OwnedPropertyList(new PropertyListImpl())),
@@ -58,17 +59,17 @@ Reflex::Internal::ScopeBase::ScopeBase(const char * scope,
    Scope scopePtr = Scope::Scopes().ByName(sname);
    if (scopePtr.Id() == 0) { 
       // create a new Scope
-      fScopeName = new ScopeName(scope, this); 
+      fScopeName = new ScopeName(scope, this, catalog); 
    }
    else {
       fScopeName = (ScopeName*)scopePtr.Id();
       fScopeName->fScopeBase = this;
    }
 
-   Scope declScopePtr = Scope::Scopes().ByName(declScope);
+   Scope declScopePtr = catalog.Scopes().ByName(declScope);
    if (! declScopePtr) {
-      if (scopeType == kNamespace) declScopePtr = (new Namespace(declScope.c_str()))->ThisScope();
-      else                          declScopePtr = (new ScopeName(declScope.c_str(), 0))->ThisScope();
+      if (scopeType == kNamespace) declScopePtr = (new Namespace(declScope.c_str(), catalog))->ThisScope();
+      else                         declScopePtr = (new ScopeName(declScope.c_str(), 0, catalog))->ThisScope();
    }
 
    // Set declaring Scope and sub-scopes
@@ -78,7 +79,7 @@ Reflex::Internal::ScopeBase::ScopeBase(const char * scope,
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::ScopeBase::ScopeBase() 
+Reflex::Internal::ScopeBase::ScopeBase(const Catalog& catalog) 
    : fScopeName(0),
      fScopeType(kNamespace),
      fDeclaringScope(Scope::__NIRVANA__()),
@@ -86,7 +87,7 @@ Reflex::Internal::ScopeBase::ScopeBase()
      fBasePosition(0) {
 //-------------------------------------------------------------------------------
    // Default constructor for the ScopeBase (used at init time for the global scope)
-   fScopeName = new ScopeName("", this);
+   fScopeName = new ScopeName("", this, catalog);
    fPropertyList.AddProperty("Description", "global namespace");
 }
 
@@ -391,7 +392,7 @@ Reflex::Internal::ScopeBase::AddSubScope(const char * scope,
                                          ETYPE scopeType) const {
 //-------------------------------------------------------------------------------
    // Add sub scope to this scope.
-   AddSubScope(*(new ScopeBase(scope, scopeType)));
+   AddSubScope(*(new ScopeBase(scope, scopeType, fScopeName->InCatalog())));
 }
 
 
@@ -425,13 +426,13 @@ Reflex::Internal::ScopeBase::AddSubType(const char * type,
    TypeBase * tb = 0;
    switch (typeType) {
    case kClass:
-      tb = new Class(type,size,ti,modifiers);
+      tb = new Class(type,size,ti, fScopeName->InCatalog(), modifiers);
       break;
    case kStruct:
-      tb = new Class(type,size,ti,modifiers,kStruct);
+      tb = new Class(type,size,ti, fScopeName->InCatalog(),modifiers,kStruct);
       break;
    case kEnum:
-      tb = new Enum(type,ti,modifiers);
+      tb = new Enum(type,ti, fScopeName->InCatalog(),modifiers);
       break;
    case kFunction:
       break;
@@ -446,10 +447,10 @@ Reflex::Internal::ScopeBase::AddSubType(const char * type,
    case kTypedef:
       break;
    case kUnion:
-      tb = new Union(type,size,ti,modifiers); 
+      tb = new Union(type,size,ti, fScopeName->InCatalog(),modifiers); 
       break;
    default:
-      tb = new TypeBase(type, modifiers, size, typeType, ti);
+      tb = new TypeBase(type, modifiers, size, typeType, ti, fScopeName->InCatalog());
    }
    if (tb) AddSubType(* tb);
 }

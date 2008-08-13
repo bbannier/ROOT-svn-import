@@ -33,17 +33,17 @@ namespace Internal {
    class PairTypeInfoType {
    public:
       PairTypeInfoType(): fType(), fTI(typeid(UnknownType)) {}
-      PairTypeInfoType(const Type& type): fType(type), fTI(type.TypeInfo()) {}
-      PairTypeInfoType(const Type& type, const std::type_info& ti): fType(type), fTI(ti) {}
-      operator const char* () const { return TypeName(); } // for ContainerTraits::Key()
-      const char* TypeName() const { return fTI.name(); }
-      operator const Type& () const { return fType; }
+      PairTypeInfoType(const TypeName& type);
+      PairTypeInfoType(const TypeName& type, const std::type_info& ti): fType(&type), fTI(ti) {}
+      operator const char* () const { return Name(); } // for ContainerTraits::Key()
+      const char* Name() const { return fTI.name(); }
+      operator const Type () const { return fType ? fType->ThisType() : Type(); }
 
-      void Invalidate() { fType = Type(); }
-      bool IsInvalidated() const { return !fType.Id(); }
+      void Invalidate() { fType = 0; }
+      bool IsInvalidated() const { return !fType; }
 
    private:
-      Type fType;
+      const TypeName* fType;
       const std::type_info& fTI;
    };
 
@@ -52,13 +52,13 @@ namespace Internal {
    template <>
    inline bool
    ContainerTraits::KeyMatches(const char* const & name, const PairTypeInfoType& pti) const {
-      return !strcmp(name, pti.TypeName());
+      return !strcmp(name, pti.Name());
    }
 
    template <>
    inline bool
    ContainerTraits::KeyMatches(const char* const & name, const PairTypeInfoType& pti, const char* &) const {
-      return !strcmp(name, pti.TypeName());
+      return !strcmp(name, pti.Name());
    }
 
    template <>
@@ -75,9 +75,9 @@ namespace Internal {
 
    class TypeCatalogImpl {
    public:
-      typedef ContainerImpl<std::string, Type, kUnique> TypeContainer_t;
+      typedef ContainerImpl<std::string, TypeName*, kUnique> TypeContainer_t;
 
-      TypeCatalogImpl(const CatalogImpl* catalog = 0): fCatalog(catalog) {}
+      TypeCatalogImpl(const CatalogImpl* catalog);
       ~TypeCatalogImpl() {}
 
       void SetCatalog(const CatalogImpl* catalog) { fCatalog = catalog; };
@@ -89,10 +89,10 @@ namespace Internal {
 
       static const Type& Get(EFUNDAMENTALTYPE);
 
-      void Add(const TypeName& type, const std::type_info * ti);
+      void Add(TypeName& type, const std::type_info * ti);
       void UpdateTypeId(const TypeName& type, const std::type_info & newti,
          const std::type_info & oldti = typeid(NullType));
-      void Remove(const TypeName& type);
+      void Remove(TypeName& type);
 
 
    private:
@@ -105,9 +105,9 @@ namespace Internal {
 
    class ScopeCatalogImpl {
    public:
-      typedef ContainerImpl<std::string, Scope>            ScopeContainer_t;
+      typedef ContainerImpl<std::string, ScopeName*>            ScopeContainer_t;
 
-      ScopeCatalogImpl(const CatalogImpl* catalog = 0): fCatalog(catalog) {}
+      ScopeCatalogImpl(const CatalogImpl* catalog = 0);
       ~ScopeCatalogImpl() {}
 
       void SetCatalog(const CatalogImpl* catalog) { fCatalog = catalog; };
@@ -116,19 +116,20 @@ namespace Internal {
       Scope ByName(const std::string& name) const;
       void CleanUp() const;
 
-      void Add(const ScopeName& scope);
-      void Remove(const ScopeName& scope);
+      void Add(ScopeName& scope);
+      void Remove(ScopeName& scope);
 
       Scope GlobalScope() const;
 
    private:
       const CatalogImpl* fCatalog;
       ScopeContainer_t   fAllScopes;
+      ScopeName*         fNirvana;
    };
 
    class CatalogImpl {
    public:
-      CatalogImpl() { fScopes.SetCatalog(this); fTypes.SetCatalog(this); }
+      CatalogImpl(): fScopes(this), fTypes(this) {}
       ~CatalogImpl() {}
 
       static CatalogImpl& Instance();
@@ -139,9 +140,12 @@ namespace Internal {
       ScopeCatalogImpl& Scopes() {return fScopes;}
       TypeCatalogImpl&  Types()  {return fTypes;}
 
+      const Catalog& ThisCatalog() const { return fThisCatalog; }
+
    private:
       ScopeCatalogImpl fScopes;
       TypeCatalogImpl  fTypes;
+      Catalog          fThisCatalog;
    };
 } // namespace Internal
 } // namespace Reflex

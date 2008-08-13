@@ -133,7 +133,10 @@ namespace Reflex {
 
    template <typename T>
    class RFLX_API Container: public Internal::ContainerBase {
+   public:
+#ifndef RFLX_DICTIONARY_SOURCE
    protected:
+#endif
       const Container* operator&() const;  // intentionally not implemented
       Container* operator&();  // intentionally not implemented
       Container(const Container&); // intentionally not implemented
@@ -167,6 +170,7 @@ namespace Reflex {
          Dummy::Get();
       friend class Scope;
       friend class Type;
+      friend class Member;
       friend class Catalog;
       friend class MemberTemplate;
       friend class TypeTemplate;
@@ -180,7 +184,10 @@ namespace Reflex {
    template <typename T>
    class RFLX_API OrderedContainer: public Container<T>
    {
+   public:
+#ifndef RFLX_DICTIONARY_SOURCE
    protected:
+#endif
       const OrderedContainer* operator&() const;  // intentionally not implemented
       OrderedContainer* operator&();  // intentionally not implemented
       OrderedContainer(const OrderedContainer&); // intentionally not implemented
@@ -201,6 +208,7 @@ namespace Reflex {
          Dummy::Get();
       friend class Scope;
       friend class Type;
+      friend class Member;
       friend class Catalog;
       friend class MemberTemplate;
       friend class TypeTemplate;

@@ -17,6 +17,8 @@
 
 namespace Reflex {
 
+   class Catalog;
+
 namespace Internal {
 
 
@@ -31,7 +33,8 @@ namespace Internal {
       /** default constructor */
       Fundamental(const char * typ,
          size_t size,
-         const std::type_info & ti) ;
+         const std::type_info & ti,
+         const Catalog& cat) ;
 
 
       /** destructor */

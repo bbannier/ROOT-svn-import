@@ -36,13 +36,14 @@
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::Class::Class(const char *           typ,
-                     size_t                 size,
-                     const std::type_info & ti,
-                     unsigned int           modifiers,
-                     ETYPE                   classType)
+                               size_t                 size,
+                               const std::type_info & ti,
+                               const Catalog& catalog,
+                               unsigned int           modifiers,
+                               ETYPE                   classType)
 //-------------------------------------------------------------------------------
 // Construct a Class instance.
-      : Constructable(typ, modifiers, size, classType, ti),
+   : Constructable(typ, modifiers, size, classType, ti, catalog),
       fBasesAdaptor(fBases),
       fAllBases(0),
       fCompleteType(false) {}
@@ -138,7 +139,7 @@ Reflex::Type Reflex::Internal::Class::DynamicType(const Object & obj) const
       long int offset = **(long**)obj.Address();
       if (offset == 0) return ThisType();
       else {
-         const Type & dytype = InCatalog()->ByTypeInfo(typeid(*(DynType_t*)obj.Address()));
+         const Type & dytype = InCatalog().ByTypeInfo(typeid(*(DynType_t*)obj.Address()));
          if (dytype && dytype.Is(gClass)) return dytype;
          else                              return ThisType();
       }

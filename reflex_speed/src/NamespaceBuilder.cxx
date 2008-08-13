@@ -24,15 +24,16 @@
 #include "OwnedMember.h"
 
 //-------------------------------------------------------------------------------
-Reflex::NamespaceBuilder::NamespaceBuilder(const char * nam) {
+Reflex::NamespaceBuilder::NamespaceBuilder(const char * nam,
+                                           const Catalog& catalog) {
 //-------------------------------------------------------------------------------
 // Create dictionary info for a namespace.
-   Scope sc = Scope::ByName(nam);
+   Scope sc = catalog.Scopes().ByName(nam);
    if (sc && sc.Is(gNamespace)) {
       fNamespace       = sc;
    }
    else {
-      fNamespace       = (new Internal::Namespace(nam))->ThisScope();
+      fNamespace       = (new Internal::Namespace(nam, catalog))->ThisScope();
    }
 }
 

@@ -19,6 +19,7 @@
 namespace Reflex {
 
    // forward declarations
+   class Catalog;
    class Member;
    class Scope;
    class DictionaryGenerator;
@@ -37,7 +38,7 @@ namespace Internal {
    public:
 
       /** default constructor */
-      Namespace(const char * scop);
+      Namespace(const char * scop, const Catalog& catalog);
 
 
       /** destructor */
@@ -51,15 +52,10 @@ namespace Internal {
       virtual void GenerateDict(DictionaryGenerator &generator) const;
 
 
-      /**
-      * function for initialisation of the global namespace
-      */
-      static const Scope & GlobalScope();
-
    private:
 
       /** constructor for initialisation of the global namespace */
-      Namespace();
+      Namespace(const Catalog& catalog);
 
    }; // class Namespace
 } //namespace Internal
