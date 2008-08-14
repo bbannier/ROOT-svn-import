@@ -2026,12 +2026,6 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
    else
       fGeneral->ShowFrame(fSliderYParent);
 
-// This line makes it change the size when setting a new object to
-// fit, but it does not pick it up until the frame has been drawn!
-// AKI
- 
-   Resize(GetDefaultSize());
-
    return set;
 }
 
