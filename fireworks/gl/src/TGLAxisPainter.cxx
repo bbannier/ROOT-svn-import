@@ -346,6 +346,7 @@ void TGLAxisPainter::Paint(TGLRnrCtx &rnrCtx, TGLAxisAttrib &att)
    if (att.fTitle.Length())
    {
       Int_t fs = (att.fRelativeFontSize)? Int_t(att.GetTitleSize()*len) : att.fAbsTitleFontSize;
+      att.fAbsTitleFontSize = TGLFontManager::GetFontSize(fs, 12, 36);
 
       rnrCtx.RegisterFont(TGLFontManager::GetFontSize(fs, 12, 36),
                           att.fTitleFontName.Data(), TGLFont::kPixmap, font);
