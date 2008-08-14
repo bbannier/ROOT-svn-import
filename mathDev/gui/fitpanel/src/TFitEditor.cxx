@@ -1446,7 +1446,7 @@ void TFitEditor::DoFit()
                                kMBIconStop,kMBOk, 0);
                   return;
                }
-               fitFunc = (TF2*) tmpF1->IsA()->New();
+               fitFunc = (TF2*) tmpF2->IsA()->New();
                tmpF2->Copy(*fitFunc);
             }
 
