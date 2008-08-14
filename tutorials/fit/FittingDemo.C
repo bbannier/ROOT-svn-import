@@ -61,7 +61,7 @@ void FittingDemo() {
    // however the non-linear part (lorenzian) does not 
    // respond well.
    fitFcn->SetParameters(1,1,1,1,1,1);
-   histo->Fit("fitFcn","0");
+   histo->Fit("fitFcn","N0");
    
    // second try: set start values for some parameters
    fitFcn->SetParameter(4,0.2); // width
