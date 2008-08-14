@@ -377,7 +377,7 @@ void HFit::StoreAndDrawFitFunction(FitObject * h1, const TF1 * f1, const ROOT::F
       }
    }
 
-
+   // copy TF1 using TClass to avoid slicing in case of derived classes
    if (ndim < 2) {
       fnew1 = (TF1*)f1->IsA()->New();
       f1->Copy(*fnew1);
@@ -390,7 +390,6 @@ void HFit::StoreAndDrawFitFunction(FitObject * h1, const TF1 * f1, const ROOT::F
    } else if (ndim < 3) {
       fnew2 = (TF2*)f1->IsA()->New();
       f1->Copy(*fnew2);
-      fnew2 = (TF2*)f1->Clone();
       funcList->Add(fnew2);
       fnew2->SetRange(xmin,ymin,xmax,ymax);
       fnew2->SetParent( h1 );
@@ -401,7 +400,6 @@ void HFit::StoreAndDrawFitFunction(FitObject * h1, const TF1 * f1, const ROOT::F
       // 3D- why f3d is not saved ???
       fnew3 = (TF3*)f1->IsA()->New();
       f1->Copy(*fnew3);
-      fnew3 = (TF3*)f1->Clone();
       funcList->Add(fnew3);
       fnew3->SetRange(xmin,ymin,zmin,xmax,ymax,zmax);
       fnew3->SetParent( h1 );

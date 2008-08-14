@@ -46,6 +46,7 @@
 #pragma link C++ class ROOT::Math::IParametricFunctionMultiDim+;
 #pragma link C++ class ROOT::Math::IParametricGradFunctionMultiDim+;
 
+#pragma link C++ class ROOT::Math::ParamFunctor-;
 #pragma link C++ class ROOT::Math::Functor-;
 #pragma link C++ class ROOT::Math::GradFunctor-;
 #pragma link C++ class ROOT::Math::Functor1D-;

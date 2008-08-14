@@ -38,6 +38,7 @@ MATHCOREDH2  := $(MODDIRI)/Math/SpecFuncMathCore.h \
                 $(MODDIRI)/Math/DistFuncMathCore.h \
                 $(MODDIRI)/Math/IParamFunction.h \
                 $(MODDIRI)/Math/IFunction.h \
+                $(MODDIRI)/Math/ParamFunctor.h \
                 $(MODDIRI)/Math/Functor.h \
                 $(MODDIRI)/Math/Minimizer.h \
                 $(MODDIRI)/Math/Integrator.h \
