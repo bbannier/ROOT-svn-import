@@ -1394,7 +1394,7 @@ void TFitEditor::DoFit()
          if ( fNone->GetState() == kButtonDisabled )
          {
             TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-            TF1* tmpF1 = (TF1*) hist->GetListOfFunctions()->FindObject(te->GetTitle());
+            TF1* tmpF1 = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
             if ( tmpF1 == 0 )
             {
                new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
@@ -1530,13 +1530,11 @@ void TFitEditor::DoFunction(Int_t selected)
       TF1* tmpTF1 = 0;
       switch (fType) {
       case kObjectHisto: {
-         TH1* h1 = (TH1*) fFitObject;
-         tmpTF1 = (TF1*) h1->GetListOfFunctions()->FindObject(te->GetTitle());
+         tmpTF1 = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
          break;
       }
       case kObjectGraph: {
-         TGraph* gr = (TGraph*)fFitObject;
-         tmpTF1 = (TF1*) gr->GetListOfFunctions()->FindObject(te->GetTitle());
+         tmpTF1 = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
          break;
       }
       default: { break; }
@@ -1763,8 +1761,7 @@ void TFitEditor::DoSetParameters()
    if ( fNone->GetState() == kButtonDisabled )
    {
       TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-      TH1 *h1 = (TH1*)fFitObject;
-      fitFunc = (TF1*) h1->GetListOfFunctions()->FindObject(te->GetTitle());
+      fitFunc = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
    }
    else if ( fDim == 1 )
       fitFunc = new TF1("tmpPars",fEnteredFunc->GetText(), fXmin, fXmax);
