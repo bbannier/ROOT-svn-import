@@ -188,7 +188,7 @@ public:
    /**
       evaluate confidence interval for the point specified in the passed data sets
       the confidence interval are returned in the array ci
-      cl is the desired confidedence interval value
+      cl is the desired confidence interval value
     */
    void GetConfidenceIntervals(const BinData & data, double * ci, double cl=0.95 ) const;
 

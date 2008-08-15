@@ -36,9 +36,6 @@ namespace ROOT {
 namespace Fit { 
 
 
-   static std::string fgDefaultMinimizer = "Minuit2";
-   static std::string fgDefaultMinimAlgo = "Migrad";
-
 
 FitConfig::FitConfig(unsigned int npar) : 
    fNormErrors(false),
@@ -46,9 +43,9 @@ FitConfig::FitConfig(unsigned int npar) :
 {
    // constructor implementation
 
-   // default minimizer type (ue static default values) 
-   fMinimizerType = fgDefaultMinimizer; 
-   fMinimAlgoType = fgDefaultMinimAlgo; 
+   // default minimizer type (use static default values) 
+   fMinimizerType = ROOT::Math::MinimizerOptions::DefaultMinimizerType(); 
+   fMinimAlgoType = ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo();; 
 }
 
 
@@ -158,9 +155,8 @@ ROOT::Math::Minimizer * FitConfig::CreateMinimizer() {
 } 
 
 void FitConfig::SetDefaultMinimizer(const std::string & type, const std::string & algo ) { 
-   // set the default minimizer type and algorithm
-   if (type != "") fgDefaultMinimizer = type; 
-   if (algo != "") fgDefaultMinimAlgo = algo;
+   // set the default minimizer type and algorithms
+   ROOT::Math::MinimizerOptions::SetDefaultMinimizer(type, algo); 
 } 
 
 void FitConfig::SetMinimizerOptions(const ROOT::Math::MinimizerOptions & minopt) {  
