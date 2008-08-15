@@ -194,7 +194,6 @@ public:
    virtual void   DoFunction(Int_t sel);
    virtual void   DoLinearFit();
    virtual void   DoNoChi2();
-   virtual void   DoNoOperation(Bool_t on);
    virtual void   DoNoSelection();
    virtual void   DoNoStoreDrawing();
    virtual void   DoReset();
