@@ -850,6 +850,7 @@ void Cint::Internal::G__clink_header(FILE* fp)
    fprintf(fp, "#define G__ANSIHEADER\n");
 #if defined(G__VAARG_COPYFUNC) || !defined(G__OLDIMPLEMENTATION1530)
    fprintf(fp, "#define G__DICTIONARY\n");
+   fprintf(fp,"#define G__PRIVATE_GVALUE\n");
 #endif
 #if defined(__hpux) && !defined(G__ROOT)
    G__getcintsysdir();
@@ -3859,10 +3860,10 @@ void Cint::Internal::G__cppif_gendefault(FILE* fp, FILE* /*hfp*/, int tagnum, in
       fprintf(fp,   "   }\n");
 
       fprintf(fp,   "   if (n) {\n");
-      fprintf(fp,   "     if (gvp == (char*) G__PVOID) {\n");
+      fprintf(fp,   "     if (gvp == (char*)G__PVOID) {\n");
       fprintf(fp,   "       delete[] (%s*) soff;\n", buf);
       fprintf(fp,   "     } else {\n");
-      fprintf(fp,   "       G__setgvp((long)G__PVOID);\n");
+      fprintf(fp,   "       G__setgvp((long) G__PVOID);\n");
       fprintf(fp,   "       for (int i = n - 1; i >= 0; --i) {\n");
       fprintf(fp,   "         ((%s*) (soff+(sizeof(%s)*i)))->~%s();\n", buf, buf, dtorname);
       fprintf(fp,   "       }\n");
@@ -3873,7 +3874,7 @@ void Cint::Internal::G__cppif_gendefault(FILE* fp, FILE* /*hfp*/, int tagnum, in
       //fprintf(fp, "       G__operator_delete((void*) soff);\n");
       fprintf(fp,   "       delete (%s*) soff;\n", buf);
       fprintf(fp,   "     } else {\n");
-      fprintf(fp,   "       G__setgvp((long)G__PVOID);\n");
+      fprintf(fp,   "       G__setgvp((long) G__PVOID);\n");
       fprintf(fp,   "       ((%s*) (soff))->~%s();\n", buf, dtorname);
       fprintf(fp,   "       G__setgvp((long)gvp);\n");
       fprintf(fp,   "     }\n");
@@ -4148,15 +4149,21 @@ void Cint::Internal::G__cppif_genfunc(FILE* fp, FILE* /*hfp*/, int tagnum, const
          else {
             // we need to convert A::operator T() to A::operator ::T, or
             // the context will be the one of tagnum, i.e. A::T instead of ::T
-            if (tolower(G__get_type(ifunc.TypeOf().ReturnType())) == 'u'
-               && !strncmp(ifunc.Name().c_str(), "operator ", 8)
-               && (isalpha(ifunc.Name().c_str()[9]) || ifunc.Name().c_str()[9] == '_')) {
-                  if (!strncmp(ifunc.Name().c_str() + 9, "const ", 6))
-                     fprintf(fp, "operator const ::%s(", ifunc.Name().c_str() + 15);
-                  else
-                     fprintf(fp, "operator ::%s(", ifunc.Name().c_str() + 9);
-            } else
+            if (
+               (tolower(G__get_type(ifunc.TypeOf().ReturnType())) == 'u') &&
+               !strncmp(ifunc.Name().c_str(), "operator ", 9) &&
+               (isalpha(ifunc.Name().c_str()[9]) || ifunc.Name().c_str()[9] == '_')
+            ) {
+               if (!strncmp(ifunc.Name().c_str() + 9, "const ", 6)) {
+                  fprintf(fp, "operator const ::%s(", ifunc.Name().c_str() + 15);
+               }
+               else {
+                  fprintf(fp, "operator ::%s(", ifunc.Name().c_str() + 9);
+               }
+            }
+            else {
                fprintf(fp, "%s(", ifunc.Name().c_str());
+            }
          }
          //
          // Output the parameters.
@@ -4282,11 +4289,7 @@ int Cint::Internal::G__cppif_returntype(FILE* fp, const ::Reflex::Member& ifunc,
 #endif
       //
       // Output the left-hand side of the assignment.
-      if (1) {
-         // Reference 
-         // Note:  The type string already has the ampersand in it.
-         fprintf(fp, "%s   %s obj = ", indent, rettypestring.c_str());
-      } else if (islower(type) && !isconst) {
+      if (islower(type) && !isconst) {
          // Reference to a non-const object.
          // Note:  The type string already has the ampersand in it.
          fprintf(fp, "%s   const %s obj = ", indent, typestring);
@@ -4297,7 +4300,6 @@ int Cint::Internal::G__cppif_returntype(FILE* fp, const ::Reflex::Member& ifunc,
          fprintf(fp, "%s   %s obj = ", indent, typestring);
       }
       if (ret_type.IsTypedef() && ret_type.ToType().FinalType().IsArray()) {
-         //sprintf(endoffunc, ";\n%s   result7->ref = (long) (&obj);\n%s   result7->obj.i = (long) (obj);\n%s   result7->type = %d;\n%s}", indent, indent, indent, toupper(type), indent);
          sprintf(endoffunc, ";\n%s   result7->ref = (long) (&obj);\n%s   result7->obj.i = (long) (obj);\n%s}", indent, indent, indent);
          return 0;
       }
@@ -4315,7 +4317,7 @@ int Cint::Internal::G__cppif_returntype(FILE* fp, const ::Reflex::Member& ifunc,
             }
             break;
          default:
-            sprintf(endoffunc, ";\n%s   result7->ref = (long) (&obj);\n%s   result7->obj.i = (long) (obj);\n%s}", indent, indent, indent);
+            sprintf(endoffunc, ";\n%s   result7->ref = (long) (&obj);\n%s   G__letint(result7, '%c', (long)obj);\n%s}", indent, indent, type, indent);
             break;
       }
       return 0;
@@ -4324,12 +4326,7 @@ int Cint::Internal::G__cppif_returntype(FILE* fp, const ::Reflex::Member& ifunc,
    // Function return type is a pointer, handle and return.
    if (isupper(type) || (ret_type.IsTypedef() && ret_type.FinalType().IsPointer())) {
       fprintf(fp, "%sG__letint(result7, %d, (long) ", indent, type);
-      // type is now set in G__cpp_callfunc
-      //if (reftype) {
-      //  sprintf(endoffunc, ");\n%sresult7->obj.reftype.reftype = %d;", indent, reftype);
-      //} else {
       sprintf(endoffunc, ");");
-      //}
       return(0);
    }
 

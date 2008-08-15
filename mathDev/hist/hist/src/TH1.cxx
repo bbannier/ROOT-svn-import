@@ -3197,7 +3197,6 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
 //   -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
    return DoFit( f1 , option , goption, xxmin, xxmax); 
-
 }
 
 //______________________________________________________________________________

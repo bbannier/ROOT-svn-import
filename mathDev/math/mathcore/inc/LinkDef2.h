@@ -26,6 +26,19 @@
 //#pragma link C++ class ROOT::Math;
 #endif
 
+#pragma link C++ global gRandom;
+
+#pragma link C++ class TRandom+;
+#pragma link C++ class TRandom1+;
+#pragma link C++ class TRandom2+;
+#pragma link C++ class TRandom3-;
+
+#pragma link C++ class TKDTree<Int_t, Double_t>+;
+#pragma link C++ class TKDTree<Int_t, Float_t>+;
+#pragma link C++ typedef TKDTreeID;
+#pragma link C++ typedef TKDTreeIF;
+
+
 // ROOT::Math namespace
 #pragma link C++ typedef ROOT::Math::IGenFunction;
 #pragma link C++ typedef ROOT::Math::IMultiGenFunction;
@@ -46,14 +59,12 @@
 #pragma link C++ class ROOT::Math::IParametricFunctionMultiDim+;
 #pragma link C++ class ROOT::Math::IParametricGradFunctionMultiDim+;
 
-#pragma link C++ class ROOT::Math::ParamFunctor-;
 #pragma link C++ class ROOT::Math::Functor-;
 #pragma link C++ class ROOT::Math::GradFunctor-;
 #pragma link C++ class ROOT::Math::Functor1D-;
 #pragma link C++ class ROOT::Math::GradFunctor1D-;
 
 #pragma link C++ class ROOT::Math::Minimizer+;
-#pragma link C++ class ROOT::Math::MinimizerOptions+;
 #pragma link C++ class ROOT::Math::IntegratorOneDim+;
 #pragma link C++ class ROOT::Math::IntegratorMultiDim+;
 #pragma link C++ class ROOT::Math::VirtualIntegrator+;

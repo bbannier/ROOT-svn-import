@@ -2322,6 +2322,26 @@ int G__execute_call(G__value *result7,G__param *libp,G__ifunc_table_internal *if
       return -1;
     }
     
+    // Restore the correct type
+//     fprintf(stderr,"%c:%c %d:%d %d:%d %d:%d\n",
+//             result7->type, ifunc->type[ifn],
+//             result7->tagnum, ifunc->p_tagtable[ifn],
+//             result7->typenum, ifunc->p_typetable[ifn],
+//             result7->obj.reftype.reftype, ifunc->reftype[ifn]);
+            
+    if (ifunc->type[ifn]!='y'
+        && !(result7->type=='u' && ifunc->type[ifn]=='i' /* constructor */) ) {
+       result7->type = ifunc->type[ifn];
+    }
+    result7->tagnum = ifunc->p_tagtable[ifn];
+    result7->typenum = ifunc->p_typetable[ifn];
+    if ((result7->typenum != -1) && G__newtype.nindex[result7->typenum]) {
+       result7->type = toupper(result7->type);
+    }
+    if (isupper(ifunc->type[ifn]) && ifunc->reftype[ifn]) {
+       result7->obj.reftype.reftype = ifunc->reftype[ifn];
+    }
+
     return 1;
 
 }
@@ -2950,6 +2970,7 @@ void G__cpplink_header(FILE *fp)
   fprintf(fp,"#define G__ANSIHEADER\n");
 #if defined(G__VAARG_COPYFUNC) || !defined(G__OLDIMPLEMENTATION1530)
   fprintf(fp,"#define G__DICTIONARY\n");
+  fprintf(fp,"#define G__PRIVATE_GVALUE\n");
 #endif
 #if defined(__hpux) && !defined(G__ROOT)
   G__getcintsysdir();
@@ -5816,7 +5837,7 @@ static void G__x8664_vararg(FILE *fp, int ifn, G__ifunc_table_internal *ifunc,
       fprintf(fp, "  lval[icnt] = G__getstructoffset(); icnt++;  // this pointer\n");
 
    fprintf(fp, "  for (i = 0; i < libp->paran; i++) {\n");
-   fprintf(fp, "    type = libp->para[i].type;\n");
+   fprintf(fp, "    type = G__value_get_type(&libp->para[i]);\n");
    fprintf(fp, "    pval = &libp->para[i];\n");
    fprintf(fp, "    if (isupper(type))\n");
    fprintf(fp, "      objsize = G__LONGALLOC;\n");
@@ -6445,8 +6466,7 @@ void G__cppif_genconstructor(FILE *fp, FILE * /* hfp */, int tagnum, int ifn, G_
 
   fprintf(fp,               "   result7->obj.i = (long) p;\n");
   fprintf(fp,               "   result7->ref = (long) p;\n");
-  fprintf(fp,               "   result7->type = 'u';\n");
-  fprintf(fp,               "   result7->tagnum = G__get_linked_tagnum(&%s);\n", G__mark_linked_tagnum(tagnum));
+  fprintf(fp,               "   G__set_tagnum(result7,G__get_linked_tagnum(&%s));\n", G__mark_linked_tagnum(tagnum));
 
   G__if_ary_union_reset(ifn, ifunc);
   G__cppif_dummyfuncname(fp);
@@ -7041,9 +7061,8 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
 
       fprintf(fp,         "   result7->obj.i = (long) p;\n");
       fprintf(fp,         "   result7->ref = (long) p;\n");
-      fprintf(fp,         "   result7->type = 'u';\n");
-      fprintf(fp,         "   result7->tagnum = G__get_linked_tagnum(&%s);\n", G__mark_linked_tagnum(tagnum));
-
+      fprintf(fp,         "   G__set_tagnum(result7,G__get_linked_tagnum(&%s));\n", G__mark_linked_tagnum(tagnum));
+ 
       G__cppif_dummyfuncname(fp);
 
       fprintf(fp,         "}\n\n");
@@ -7148,8 +7167,7 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
 
       fprintf(fp,     "   result7->obj.i = (long) p;\n");
       fprintf(fp,     "   result7->ref = (long) p;\n");
-      fprintf(fp,     "   result7->type = 'u';\n");
-      fprintf(fp,     "   result7->tagnum = G__get_linked_tagnum(&%s);\n", G__mark_linked_tagnum(tagnum));
+      fprintf(fp,     "   G__set_tagnum(result7,G__get_linked_tagnum(&%s));\n", G__mark_linked_tagnum(tagnum));
 
       G__cppif_dummyfuncname(fp);
 
@@ -7863,7 +7881,7 @@ int G__cppif_returntype(FILE *fp, int ifn, G__ifunc_table_internal *ifunc, char 
       fprintf(fp, "%s   %s obj = ", indent, typestring);
     }
     if ((typenum != -1) && G__newtype.nindex[typenum]) {
-      sprintf(endoffunc, ";\n%s   result7->ref = (long) (&obj);\n%s   result7->obj.i = (long) (obj);\n%s   result7->type = %d;\n%s}", indent, indent, indent, toupper(type), indent);
+       sprintf(endoffunc, ";\n%s   result7->ref = (long) (&obj);\n%s   result7->obj.i = (long) (obj);\n%s}", indent, indent, indent);
       return 0;
     }
     switch (type) {
@@ -7879,7 +7897,7 @@ int G__cppif_returntype(FILE *fp, int ifn, G__ifunc_table_internal *ifunc, char 
         }
         break;
       default:
-        sprintf(endoffunc, ";\n%s   result7->ref = (long) (&obj);\n%s   G__letint(result7, result7->type, (long)obj);\n%s}", indent, indent, indent);
+        sprintf(endoffunc, ";\n%s   result7->ref = (long) (&obj);\n%s   G__letint(result7, '%c', (long)obj);\n%s}", indent, indent, type, indent);
         break;
     }
     return 0;
@@ -7888,11 +7906,7 @@ int G__cppif_returntype(FILE *fp, int ifn, G__ifunc_table_internal *ifunc, char 
   // Function return type is a pointer, handle and return.
   if (isupper(type)) {
     fprintf(fp, "%sG__letint(result7, %d, (long) ", indent, type);
-    if (reftype) {
-      sprintf(endoffunc, ");\n%sresult7->obj.reftype.reftype = %d;", indent, reftype);
-    } else {
-      sprintf(endoffunc, ");");
-    }
+    sprintf(endoffunc, ");");
     return(0);
   }
 
@@ -11024,15 +11038,72 @@ int G__memfunc_setup_imp(const char *funcname,int hash
     }
   }
 #else // G__OLDIMPLEMENTATION1702
+ {
+   const char* isTemplate = strchr(funcname, '<');
+   if (isTemplate
+       // no op <()
+       && ( !strncmp(funcname, "operator", 8)
+            // no A<int>()
+            || (tagnum != -1 && !strcmp(funcname, G__struct.name[tagnum]))))
+      isTemplate = 0;
 
-  if(dtorflag) {
-    G__func_now = store_func_now;
-    G__p_ifunc = store_p_ifunc;
-  }
-  else {
-    G__memfunc_next();
-  }
+   if (isTemplate) {
+      G__StrBuf funcname_notmplt(strlen(funcname));
+      strcpy(funcname_notmplt, funcname);
+      *(funcname_notmplt + (isTemplate - funcname)) = 0; // cut at template arg
+      isTemplate = funcname_notmplt;
+      int tmplthash = 0;
+      while (*isTemplate) {
+         tmplthash += *isTemplate;
+         ++isTemplate;
+      }
 
+      struct G__ifunc_table_internal *ifunc;
+      int iexist;
+      char *oldname = G__p_ifunc->funcname[G__func_now];
+      G__p_ifunc->funcname[G__func_now] = funcname_notmplt;
+      G__p_ifunc->hash[G__func_now] = tmplthash;
+
+      if(-1==G__p_ifunc->tagnum)
+         ifunc = G__ifunc_exist(G__p_ifunc,G__func_now
+                                ,&G__ifunc,&iexist,0xffff);
+      else
+         ifunc = G__ifunc_exist(G__p_ifunc,G__func_now
+                                ,G__struct.memfunc[G__p_ifunc->tagnum],&iexist
+                                ,0xffff);
+
+      G__p_ifunc->funcname[G__func_now] = oldname;
+      G__p_ifunc->hash[G__func_now] = hash;
+
+      if(dtorflag) {
+         G__func_now = store_func_now;
+         G__p_ifunc = store_p_ifunc;
+      }
+      else {
+         G__memfunc_next();
+      }
+
+      if (!ifunc) {
+         // create a copy of this function, name without template arguments, if
+         // that function doesn't exist yet.
+         G__memfunc_setup_imp(funcname_notmplt, tmplthash, funcp, type, tagnum, typenum, reftype
+                         , para_nu, ansi, accessin, isconst , paras,  comment
+#ifdef G__TRUEP2F
+                         ,truep2f
+                         ,isvirtual
+#endif // G__TRUEP2F
+                           );
+      }
+   } else {
+      if(dtorflag) {
+         G__func_now = store_func_now;
+         G__p_ifunc = store_p_ifunc;
+      }
+      else {
+         G__memfunc_next();
+      }
+   }
+ }
 #endif // G__OLDIMPLEMENTATION1702
 
 

@@ -510,35 +510,6 @@ void TStreamerInfo::BuildCheck()
             }
          }
       }
-            
-
-
-//       searchOnChecksum = kTRUE;
-
-//       // If we have a foreign class, we need to search for
-//       // a StreamerInfo with same checksum.
-//       Bool_t searchOnChecksum = kFALSE;
-//       if (fClass->IsLoaded()) {
-//          if (fClass->IsForeign()) {
-//             searchOnChecksum = kTRUE;
-//          }
-//       } else {
-//          // When the class is not loaded the result of IsForeign()
-//          // is not what we are looking for (technically it means
-//          // IsLoaded() and there is no Streamer() method).
-//          //
-//          // A foreign class would have the ClassVersion equal to 1.
-//          // Also we only care if a StreamerInfo has already been loaded.
-//          if (fClassVersion == 1) {
-//             TStreamerInfo* v1 = (TStreamerInfo*) array->At(1);
-//             if (v1) {
-//                if (fCheckSum != v1->GetCheckSum()) {
-//                   searchOnChecksum = kTRUE;
-//                   fClassVersion = array->GetLast() + 1;
-//                }
-//             }
-//          }
-//       }
 
       if (!searchOnChecksum) {
          if (fClassVersion < array->GetEntriesFast()) {
@@ -551,7 +522,9 @@ void TStreamerInfo::BuildCheck()
             if (!info) {
                continue;
             }
-            if (fCheckSum == info->GetCheckSum()) {
+            if (fCheckSum == info->GetCheckSum() && (info->GetOnFileClassVersion()==1 || info->GetOnFileClassVersion()==0)) {
+               // We must match on the same checksum, an existing TStreamerInfo
+               // for one of the 'unversioned' class layout (i.e. version was 1).
                fClassVersion = i;
                break;
             }
@@ -2520,7 +2493,12 @@ void TStreamerInfo::ls(Option_t *option) const
       Printf("\nStreamerInfo for class: %s, version=%d, checksum=0x%x",GetName(),fClassVersion,GetCheckSum());
    }
 
-   if (fElements) fElements->ls(option);
+   if (fElements) {
+      TIter    next(fElements);
+      TObject *obj;
+      while ((obj = next()))
+         obj->ls(option);
+   }
    for (Int_t i=0;i < fNdata;i++) {
       TStreamerElement *element = (TStreamerElement*)fElem[i];
       Printf("   i=%2d, %-15s type=%3d, offset=%3d, len=%d, method=%ld",i,element->GetName(),fType[i],fOffset[i],fLength[i],fMethod[i]);

@@ -49,15 +49,17 @@ unset ${EXPORTS[*]}
 # $LD $LDFLAGS $LDOPTFLAGS $LDDBGFLAGS ${LDOUT}@exe@$EXEEXT ${OBJ}@obj@$OBJEXT ${LIBP}@libpath@ $(subst @lib@,$LIBEXT,${LIBL}) $DEFAULTLIBS
 # $LD $SOFLAGS $LDOPTFLAGS $LDDBGFLAGS ${SOOUT}@so@$SOEXT ${OBJ}@obj@$OBJEXT ${LIBP}@libpath@ $(subst @lib@,$LIBEXT,${LIBL}) $DEFAULTLIBS
 
+# common defaults:
+INPUTMODELOCK=off
 INPUTMODE=cint
+COMP=-c
+INCP=-I
 
 function config_GCC_defaults {
     CC=gcc
-    COMP=-c
     CPP="gcc -E -C"
     COUT="-o "
     COUTEXE="-o "
-    INCP=-I
     CDBGFLAGS=-g
     COPTFLAGS=-O2
     CMACROS="$CMACROS -DG__SHAREDLIB -DG__OSFDLL -DG__ANSI -DG__ERRORCALLBACK -DG__SIGNEDCHAR -DG__NEWSTDHEADER -DG__CINT_VER6 -DG__NATIVELONGLONG -DG__P2FCAST -DG__STD_EXCEPTION"
@@ -97,7 +99,6 @@ function config_GCC_defaults {
     else
         STREAMDIR=stream
     fi
-    INPUTMODELOCK=off
 }
 
 function config_linux {
@@ -224,11 +225,9 @@ function config_msvc7 {
     CC=cl
     CFLAGS="-G5 -nologo -wd4996 -GX"
     CMACROS="-DG__REDIRECTIO -DG__SHAREDLIB -DG__UNIX -DG__WIN32 -DWIN32 -D_WIN32 -DG__NEWSTDHEADER"
-    COMP=-c
     CPP="cl -E -C -nologo"
     COUT=-Fo
     COUTEXE=-Fe
-    INCP=-I
     COPTFLAGS="-O2 -MD"
     CDBGFLAGS="-Zi -MDd"
 
@@ -259,8 +258,6 @@ function config_msvc7 {
     PLATFORMO=v6_winnt
     RM="rm -f"
     MV="mv -f"
-    INPUTMODELOCK=off
-
     AR="lib /OUT:"
 }
 
@@ -336,6 +333,7 @@ add_opt "--bindir=" 'where to put user executables [$EPREFIX/bin]'
 add_opt "--libdir=" 'where to put object code libraries [$EPREFIX/lib]'
 add_opt "--includedir=" 'where to put header files [$PREFIX/include]'
 add_opt "--datadir=" 'read-only architecture-independent data [$PREFIX/share]'
+add_opt "--mandir=" 'location of manual files [$PREFIX/share/man]'
 
 add_opt "--sbindir=" 'ignored'
 add_opt "--libexecdir=" 'ignored'
@@ -346,7 +344,6 @@ add_opt "--oldincludedir=" 'ignored'
 add_opt "--datarootdir=" 'ignored'
 add_opt "--infodir=" 'ignored'
 add_opt "--localedir=" 'ignored'
-add_opt "--mandir=" 'ignored'
 add_opt "--docdir=" 'ignored'
 add_opt "--htmldir=" 'ignored'
 add_opt "--dvidir=" 'ignored'
@@ -515,6 +512,11 @@ function processflag_datadir {
     DATADIRCINT=$ABSPATH/cint
 }
 
+function processflag_datadir {
+    pathtoabs $1
+    MANDIR=$ABSPATH
+}
+
 function processflag_debug {
     DEBUG=1
 }
@@ -673,8 +675,9 @@ if [ "x$PREFIX" != "x" ]; then
     [ "$LIBDIR" = "" ]  && LIBDIR=$EPREFIX/lib
     [ "$INCLUDEDIR" = "" ] && INCLUDEDIR=$PREFIX/include && INCLUDEDIRCINT=$PREFIX/include/cint
     [ "$DATADIR" = "" ] && DATADIR=$PREFIX/share && DATADIRCINT=$PREFIX/share/cint
+    [ "$MANDIR" = "" ]  && MANDIR=$PREFIX/share/man
     EXPORTS=(${EXPORTS[*]} PREFIX EPREFIX BINDIR LIBDIR \
-        INCLUDEDIR INCLUDEDIRCINT DATADIR DATADIRCINT)
+        INCLUDEDIR INCLUDEDIRCINT DATADIR DATADIRCINT MANDIR)
 fi
 
 # get actual cint version from int/G__ci.h
