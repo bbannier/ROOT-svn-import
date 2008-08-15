@@ -1380,15 +1380,16 @@ void TFitEditor::DoFit()
 
    // Option Retrieval!
    ROOT::Math::MinimizerOptions mopts;
+   Foption_t fitOpts;
+   TString strDrawOpts;
+
+   Double_t xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
+   Double_t xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
+
    switch (fType) {
       case kObjectHisto: {
          if ( fDim == 1 )
          {
-            TString strDrawOpts, strFitOpts;
-            Foption_t fitOpts;
-            Double_t xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
-            Double_t xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
-
             TH1 *h1 = (TH1*)fFitObject;            
             TF1 *fitFunc = 0;
             if ( fNone->GetState() != kButtonDisabled )
@@ -1410,13 +1411,12 @@ void TFitEditor::DoFit()
                
             if ( fFuncPars ) SetParameters(fFuncPars, fitFunc);
 
-            RetrieveOptions(strFitOpts, strDrawOpts, fitFunc->GetNpar());
+            RetrieveOptions(fitOpts, strDrawOpts, fitFunc->GetNpar());
             fitFunc->SetRange(xmin,xmax);
             
             // Still temporal until the same algorithm is implemented for
             // graph. Then it could be done in a more elegant way.
             
-            TH1::FitOptionsMake(strFitOpts,fitOpts);
             ROOT::Fit::DataRange drange(xmin, xmax);
             ROOT::Fit::FitObject(h1, fitFunc, fitOpts, mopts, strDrawOpts, drange);
 
@@ -1428,11 +1428,6 @@ void TFitEditor::DoFit()
             // a TF1 from a C function, is not redrawn.  The TF2s from
             // a C function do not work well in the fitting. It
             // returns an invalid fit result.
-            TString strDrawOpts, strFitOpts;
-            Foption_t fitOpts;
-            Double_t xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
-            Double_t xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
-
             Double_t ymin = fYaxis->GetBinLowEdge((Int_t)(fSliderY->GetMinPosition()));
             Double_t ymax = fYaxis->GetBinUpEdge((Int_t)(fSliderY->GetMaxPosition()));
             
@@ -1457,12 +1452,11 @@ void TFitEditor::DoFit()
 
             if ( fFuncPars ) SetParameters(fFuncPars, fitFunc);
             
-            RetrieveOptions(strFitOpts, strDrawOpts, fitFunc->GetNpar());
+            RetrieveOptions(fitOpts, strDrawOpts, fitFunc->GetNpar());
             fitFunc->SetRange(xmin,xmax);
             
             // Still temporal until the same algorithm is implemented for
             // graph. Then it could be done in a more elegant way.
-            TH1::FitOptionsMake(strFitOpts,fitOpts);
             ROOT::Fit::DataRange drange(xmin, xmax, ymin, ymax);
             ROOT::Fit::FitObject(h2, fitFunc, fitOpts, mopts, strDrawOpts, drange);
 
@@ -1474,10 +1468,7 @@ void TFitEditor::DoFit()
       case kObjectGraph: {
          TGraph *gr = (TGraph*)fFitObject;
          TH1F *hist = gr->GetHistogram();
-         Double_t xmin, xmax;
          if (hist) { //!!! for many graphs in a pad, use the xmin/xmax of pad!!!
-            xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
-            xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
             Int_t npoints = gr->GetN();
             Double_t *gx = gr->GetX();
             Double_t gxmin, gxmax;
@@ -1490,10 +1481,10 @@ void TFitEditor::DoFit()
          }
          TF1 fitFunc("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
          if ( fFuncPars ) SetParameters(fFuncPars, &fitFunc);
-         TString strDrawOpts, strFitOpts;
-         RetrieveOptions(strFitOpts, strDrawOpts, fitFunc.GetNpar());
+         RetrieveOptions(fitOpts, strDrawOpts, fitFunc.GetNpar());
          fitFunc.SetRange(xmin,xmax);
-         gr->Fit(&fitFunc, strFitOpts.Data(), strDrawOpts.Data(), xmin, xmax);
+         ROOT::Fit::DataRange drange(xmin, xmax);
+         FitObject(gr, &fitFunc, fitOpts, mopts, strDrawOpts, drange);
          break;
       }
       case kObjectGraph2D: {
@@ -2381,66 +2372,47 @@ void TFitEditor::CheckRange(TF1 *f1)
 }
 
 //______________________________________________________________________________
-void TFitEditor::RetrieveOptions(TString& fitOpts, TString& drawOpts, Int_t npar)
+void TFitEditor::RetrieveOptions(Foption_t& fitOpts, TString& drawOpts, Int_t npar)
 {
-   fitOpts = drawOpts = "";
+   drawOpts = "";
 
-   if (fUseRange->GetState() == kButtonDown)
-      fitOpts += 'R';
-
-   if (fIntegral->GetState() == kButtonDown)
-      fitOpts += 'I';
-
-   if (fImproveResults->GetState() == kButtonDown)
-      fitOpts += 'M';
-
-   if (fBestErrors->GetState() == kButtonDown)
-      fitOpts += 'E';
-
-   if (fMethodList->GetSelected() != kFP_MCHIS)
-      fitOpts += 'L';
+   fitOpts.Range    = (fUseRange->GetState() == kButtonDown);
+   fitOpts.Integral = (fIntegral->GetState() == kButtonDown);
+   fitOpts.More     = (fImproveResults->GetState() == kButtonDown);
+   fitOpts.Errors   = (fBestErrors->GetState() == kButtonDown);
+   fitOpts.Like = (fMethodList->GetSelected() != kFP_MCHIS);
 
    if (fEmptyBinsWghts1->GetState() == kButtonDown)
-      fitOpts += "WW";
+      fitOpts.W1 = 2;
    else if (fAllWeights1->GetState() == kButtonDown)
-      fitOpts += 'W';
+      fitOpts.W1 = 1;
 
    TString tmpStr = fEnteredFunc->GetText();
    if ( !(fLinearFit->GetState() == kButtonDown) &&
         (tmpStr.Contains("pol") || tmpStr.Contains("++")) )
-      fitOpts += 'F';
+      fitOpts.Minuit = 1;
 
    if ( fFuncPars )
       for ( Int_t i = 0; i < npar; ++i )
          if ( fFuncPars[i][PAR_MIN] != fFuncPars[i][PAR_MAX] )
          {
-            fitOpts +='B';
+            fitOpts.Bound = 1;
             break;
          }
    
-   if (fNoChi2->GetState() == kButtonDown)
-      fitOpts += 'C';
-
-   if (fNoStoreDrawing->GetState() == kButtonDown)
-      fitOpts += 'N';
-
-   if (fNoDrawing->GetState() == kButtonDown)
-      fitOpts += '0';
-
-   if (fAdd2FuncList->GetState() == kButtonDown)
-      fitOpts += '+';
-
-   if (fUseGradient->GetState() == kButtonDown)
-      fitOpts += 'G';
-
-   if ( fOptQuiet->GetState() == kButtonDown )
-      fitOpts += 'Q'; 
-
-   if ( fOptVerbose->GetState() == kButtonDown ) 
-      fitOpts += 'V';
+   fitOpts.Nochisq  = (fNoChi2->GetState() == kButtonDown);
+   fitOpts.Nostore  = (fNoStoreDrawing->GetState() == kButtonDown);
+   fitOpts.Nograph  = (fNoDrawing->GetState() == kButtonDown);
+   fitOpts.Plus     = (fAdd2FuncList->GetState() == kButtonDown);
+   fitOpts.Gradient = (fUseGradient->GetState() == kButtonDown);
+   fitOpts.Quiet    = ( fOptQuiet->GetState() == kButtonDown );
+   fitOpts.Verbose  = ( fOptVerbose->GetState() == kButtonDown );
 
    if ( !(fType != kObjectGraph) && (fLinearFit->GetState() == kButtonDown) )
-      fitOpts += Form("ROB=%g", fRobustValue->GetNumber());
+   {
+      fitOpts.Robust = 1;
+      fitOpts.hRobust = fRobustValue->GetNumber();
+   }
 
    if (fDrawSame->GetState() == kButtonDown)
       drawOpts += "SAME";

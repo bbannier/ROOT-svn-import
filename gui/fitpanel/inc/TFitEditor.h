@@ -27,6 +27,7 @@
 #include "TGButton.h"
 #endif
 
+#include "Foption.h"
 
 //--- Object types
 enum EObjectType {
@@ -154,7 +155,7 @@ private:
    TFitEditor(const TFitEditor&);              // not implemented
    TFitEditor& operator=(const TFitEditor&);   // not implemented
 
-   void RetrieveOptions(TString&, TString&, Int_t);
+   void RetrieveOptions(Foption_t&, TString&, Int_t);
 
 public:
    TFitEditor(TVirtualPad* pad, TObject *obj);
