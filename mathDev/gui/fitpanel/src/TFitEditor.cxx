@@ -1388,81 +1388,49 @@ void TFitEditor::DoFit()
 
    switch (fType) {
       case kObjectHisto: {
+         TF1 *fitFunc = 0;
+         TH1 *hist = (TH1*)fFitObject;
+
+         if ( fNone->GetState() == kButtonDisabled )
+         {
+            TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
+            TF1* tmpF1 = (TF1*) hist->GetListOfFunctions()->FindObject(te->GetTitle());
+            if ( tmpF1 == 0 )
+            {
+               new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
+                            "Error...", "DoFit\nVerify the entered function string!",
+                            kMBIconStop,kMBOk, 0);
+               return;
+            }
+            fitFunc = (TF1*)tmpF1->IsA()->New();
+            tmpF1->Copy(*fitFunc);
+         } else {
+            if ( fDim == 1 )
+               fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
+            else if ( fDim == 2 )
+               fitFunc = new TF2("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
+         }
+         
+         if ( fFuncPars ) SetParameters(fFuncPars, fitFunc);
+         RetrieveOptions(fitOpts, strDrawOpts, fitFunc->GetNpar());
+
          if ( fDim == 1 )
          {
-            TH1 *h1 = (TH1*)fFitObject;            
-            TF1 *fitFunc = 0;
-            if ( fNone->GetState() != kButtonDisabled )
-               fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
-            else
-            {
-               TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-               TF1* tmpF1 = (TF1*) h1->GetListOfFunctions()->FindObject(te->GetTitle());
-               if ( tmpF1 == 0 )
-               {
-                  new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
-                               "Error...", "DoFit\nVerify the entered function string!",
-                               kMBIconStop,kMBOk, 0);
-                  return;
-               }
-               fitFunc = (TF1*)tmpF1->IsA()->New();
-               tmpF1->Copy(*fitFunc);
-            }
-               
-            if ( fFuncPars ) SetParameters(fFuncPars, fitFunc);
-
-            RetrieveOptions(fitOpts, strDrawOpts, fitFunc->GetNpar());
             fitFunc->SetRange(xmin,xmax);
-            
-            // Still temporal until the same algorithm is implemented for
-            // graph. Then it could be done in a more elegant way.
-            
             ROOT::Fit::DataRange drange(xmin, xmax);
-            ROOT::Fit::FitObject(h1, fitFunc, fitOpts, mopts, strDrawOpts, drange);
-
-            delete fitFunc;
+            ROOT::Fit::FitObject(hist, fitFunc, fitOpts, mopts, strDrawOpts, drange);
          }
          else if ( fDim == 2 )
          {
-            // AKI! to be changed! -> Set the range in Y When one has
-            // a TF1 from a C function, is not redrawn.  The TF2s from
-            // a C function do not work well in the fitting. It
-            // returns an invalid fit result.
             Double_t ymin = fYaxis->GetBinLowEdge((Int_t)(fSliderY->GetMinPosition()));
             Double_t ymax = fYaxis->GetBinUpEdge((Int_t)(fSliderY->GetMaxPosition()));
-            
-            TH2 *h2 = (TH2*)fFitObject;
-            TF2 *fitFunc = 0;
-            if ( fNone->GetState() != kButtonDisabled )
-               fitFunc = new TF2("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
-            else
-            {
-               TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-               TF2* tmpF2 = (TF2*) h2->GetListOfFunctions()->FindObject(te->GetTitle());
-               if ( tmpF2 == 0 )
-               {
-                  new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
-                               "Error...", "DoFit\nVerify the entered function string!",
-                               kMBIconStop,kMBOk, 0);
-                  return;
-               }
-               fitFunc = (TF2*) tmpF2->IsA()->New();
-               tmpF2->Copy(*fitFunc);
-            }
 
-            if ( fFuncPars ) SetParameters(fFuncPars, fitFunc);
-            
-            RetrieveOptions(fitOpts, strDrawOpts, fitFunc->GetNpar());
-            fitFunc->SetRange(xmin,xmax);
-            
-            // Still temporal until the same algorithm is implemented for
-            // graph. Then it could be done in a more elegant way.
+            fitFunc->SetRange(xmin,ymin,xmax,ymax);            
             ROOT::Fit::DataRange drange(xmin, xmax, ymin, ymax);
-            ROOT::Fit::FitObject(h2, fitFunc, fitOpts, mopts, strDrawOpts, drange);
-
-            delete fitFunc;
+            ROOT::Fit::FitObject(hist, fitFunc, fitOpts, mopts, strDrawOpts, drange);
          }
 
+         delete fitFunc;
          break;
       }
       case kObjectGraph: {
