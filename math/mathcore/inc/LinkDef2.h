@@ -59,12 +59,14 @@
 #pragma link C++ class ROOT::Math::IParametricFunctionMultiDim+;
 #pragma link C++ class ROOT::Math::IParametricGradFunctionMultiDim+;
 
+#pragma link C++ class ROOT::Math::ParamFunctor-;
 #pragma link C++ class ROOT::Math::Functor-;
 #pragma link C++ class ROOT::Math::GradFunctor-;
 #pragma link C++ class ROOT::Math::Functor1D-;
 #pragma link C++ class ROOT::Math::GradFunctor1D-;
 
 #pragma link C++ class ROOT::Math::Minimizer+;
+#pragma link C++ class ROOT::Math::MinimizerOptions+;
 #pragma link C++ class ROOT::Math::IntegratorOneDim+;
 #pragma link C++ class ROOT::Math::IntegratorMultiDim+;
 #pragma link C++ class ROOT::Math::VirtualIntegrator+;
