@@ -148,6 +148,8 @@
 #include "THStack.h"
 #include "TVirtualFitter.h"
 #include "TMath.h"
+#include "Math/MinimizerOptions.h"
+#include "Fit/DataRange.h"
 
 enum EFitPanel {
    kFP_FLIST, kFP_GAUS,  kFP_GAUSN, kFP_EXPO,  kFP_LAND,  kFP_LANDN,
@@ -1373,18 +1375,19 @@ void TFitEditor::DoFit()
    save = gPad;
    gPad = fParentPad;
    fParentPad->cd();
-    
+
    fParentPad->GetCanvas()->SetCursor(kWatch);
-   Double_t xmin = 0;
-   Double_t xmax = 0;
+
+   // Option Retrieval!
+   ROOT::Math::MinimizerOptions mopts;
    switch (fType) {
       case kObjectHisto: {
          if ( fDim == 1 )
          {
             TString strDrawOpts, strFitOpts;
             Foption_t fitOpts;
-            xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
-            xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
+            Double_t xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
+            Double_t xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
 
             TH1 *h1 = (TH1*)fFitObject;            
             TF1 *fitFunc = 0;
@@ -1414,7 +1417,8 @@ void TFitEditor::DoFit()
             // graph. Then it could be done in a more elegant way.
             
             TH1::FitOptionsMake(strFitOpts,fitOpts);
-            ROOT::Fit::FitObject(h1, fitFunc, fitOpts, strDrawOpts, xmin, xmax);
+            ROOT::Fit::DataRange drange(xmin, xmax);
+            ROOT::Fit::FitObject(h1, fitFunc, fitOpts, mopts, strDrawOpts, drange);
 
             delete fitFunc;
          }
@@ -1426,8 +1430,11 @@ void TFitEditor::DoFit()
             // returns an invalid fit result.
             TString strDrawOpts, strFitOpts;
             Foption_t fitOpts;
-            xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
-            xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
+            Double_t xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
+            Double_t xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
+
+            Double_t ymin = fYaxis->GetBinLowEdge((Int_t)(fSliderY->GetMinPosition()));
+            Double_t ymax = fYaxis->GetBinUpEdge((Int_t)(fSliderY->GetMaxPosition()));
             
             TH2 *h2 = (TH2*)fFitObject;
             TF2 *fitFunc = 0;
@@ -1456,7 +1463,8 @@ void TFitEditor::DoFit()
             // Still temporal until the same algorithm is implemented for
             // graph. Then it could be done in a more elegant way.
             TH1::FitOptionsMake(strFitOpts,fitOpts);
-            ROOT::Fit::FitObject(h2, fitFunc, fitOpts, strDrawOpts, xmin, xmax);
+            ROOT::Fit::DataRange drange(xmin, xmax, ymin, ymax);
+            ROOT::Fit::FitObject(h2, fitFunc, fitOpts, mopts, strDrawOpts, drange);
 
             delete fitFunc;
          }
@@ -1466,6 +1474,7 @@ void TFitEditor::DoFit()
       case kObjectGraph: {
          TGraph *gr = (TGraph*)fFitObject;
          TH1F *hist = gr->GetHistogram();
+         Double_t xmin, xmax;
          if (hist) { //!!! for many graphs in a pad, use the xmin/xmax of pad!!!
             xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
             xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
