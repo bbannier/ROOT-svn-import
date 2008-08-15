@@ -27,6 +27,7 @@
 #include "TVirtualPad.h" // for gPad
 
 #include <cmath>
+#include <memory>
 
 //#define DEBUG
 
