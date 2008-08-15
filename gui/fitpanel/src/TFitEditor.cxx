@@ -779,7 +779,6 @@ void TFitEditor::ConnectSlots()
    // set parameters dialog
    fSetParam->Connect("Clicked()", "TFitEditor", this, "DoSetParameters()");
    // allowed function operations
-   fNone->Connect("Toggled(Bool_t)","TFitEditor", this, "DoNoOperation(Bool_t)");
    fAdd->Connect("Toggled(Bool_t)","TFitEditor", this, "DoAddition(Bool_t)");
 
    // fit options
@@ -846,7 +845,6 @@ void TFitEditor::DisconnectSlots()
    fFuncList->Disconnect("Selected(Int_t)");
    fEnteredFunc->Disconnect("ReturnPressed()");
    fSetParam->Disconnect("Clicked()");
-   fNone->Disconnect("Toggled(Bool_t)");
    fAdd->Disconnect("Toggled(Bool_t)");
 
    // fit options
@@ -1539,14 +1537,7 @@ void TFitEditor::DoAddition(Bool_t on)
 {
    // Slot connected to addition of predefined functions.
 
-   Int_t sel = fFuncList->GetSelected();
    static Bool_t first = kFALSE;
-   if (sel > kFP_USER) {
-      //no addition for user defined functions
-      fEnteredFunc->Clear();
-      fFuncList->Select(kFP_GAUS, kTRUE);
-      return;
-   }
    TString s = fEnteredFunc->GetText();
    if (on) {
       if (!first) {
@@ -1559,19 +1550,6 @@ void TFitEditor::DoAddition(Bool_t on)
    } else {
       first = kFALSE;
    }
-}
-
-//______________________________________________________________________________
-void TFitEditor::DoNoOperation(Bool_t on)
-{
-   // Slot connected to NOP of predefined functions.
-
-   TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-   if (on && te) {
-      fEnteredFunc->SetText(te->GetTitle());
-   }
-   fSelLabel->SetText(fEnteredFunc->GetText());
-   ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
 }
 
 //______________________________________________________________________________
@@ -1657,16 +1635,6 @@ void TFitEditor::DoEnteredFunction()
 
    fSelLabel->SetText(fEnteredFunc->GetText());
    ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
-
-   TString tmpStr = fEnteredFunc->GetText();
-   if (tmpStr.Contains("++")) {
-      fLinearFit->SetState(kButtonDown, kTRUE);
-      fAdd->SetState(kButtonDown, kTRUE);
-   } else if (tmpStr.Contains('+')) {
-      fAdd->SetState(kButtonDown, kTRUE);
-   } else {
-      fNone->SetState(kButtonDown, kTRUE);
-   }
 }
 
 //______________________________________________________________________________
