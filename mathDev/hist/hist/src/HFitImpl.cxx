@@ -15,6 +15,7 @@
 #include "Fit/Fitter.h"
 #include "Fit/BinData.h"
 #include "HFitInterface.h"
+#include "Math/MinimizerOptions.h"
 
 #include "Math/WrappedTF1.h"
 #include "Math/WrappedMultiTF1.h"
@@ -50,7 +51,7 @@ namespace HFit {
 
 
    template <class FitObject>
-   int Fit(FitObject * h1, TF1 *f1 , Foption_t & option ,const char *goption, Double_t xxmin, Double_t xxmax); 
+   int Fit(FitObject * h1, TF1 *f1 , Foption_t & option , const ROOT::Math::MinimizerOptions & moption, const char *goption,  ROOT::Fit::DataRange & range); 
 
    template <class FitObject>
    void StoreAndDrawFitFunction(FitObject * h1, const TF1 * f1, const ROOT::Fit::DataRange & range, bool, bool, const char *goption);
@@ -87,7 +88,7 @@ int HFit::CheckFitFunction(const TF1 * f1, int dim) {
 }
 
 template<class FitObject>
-int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption ,const char *goption, Double_t xxmin, Double_t xxmax)
+int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math::MinimizerOptions & minOption, const char *goption, ROOT::Fit::DataRange & range)
 {
    // perform fit of histograms, or graphs using new fitting classes 
    // use same routines for fitting both graphs and histograms
@@ -125,12 +126,6 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption ,const char *gopti
    opt.fUseRange = fitOption.Range; 
 
 
-   // check if a range is given or is in the function
-   ROOT::Fit::DataRange range; 
-   if (xxmin < xxmax) {
-      range.AddRange(xxmin,xxmax,0);
-   }
-
 
    if (opt.fUseRange) { 
 #ifdef DEBUG
@@ -140,9 +135,9 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption ,const char *gopti
       Double_t fxmin, fymin, fzmin, fxmax, fymax, fzmax;
       f1->GetRange(fxmin, fymin, fzmin, fxmax, fymax, fzmax);
       // support only one range interval in x ? 
-      if (fxmin < fxmax) range.AddRange(fxmin, fxmax,0);
-      if (fymin < fymax) range.AddRange(fymin, fymax,1);
-      if (fzmin < fzmax) range.AddRange(fzmin, fzmax,2);
+      if (fxmin < fxmax) range.AddRange(0, fxmin, fxmax);
+      if (fymin < fymax) range.AddRange(1, fymin, fymax);
+      if (fzmin < fzmax) range.AddRange(2, fzmin, fzmax);
    }
 #ifdef DEBUG
    printf("range  size %d\n", range.Size(0) ); 
@@ -218,9 +213,9 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption ,const char *gopti
          fitConfig.SetMinimizer("Linear","");
    }
    else { 
-      // set some minimizer options
+      // set all minimizer options (tolerance, max iterations, etc..)
+      fitConfig.SetMinimizerOptions(minOption); 
       if (fitOption.More) fitConfig.SetMinimizer("Minuit","MigradImproved");
-      // set tolerance, max iterations, etc...
    }
 
    // do fitting 
@@ -303,7 +298,7 @@ void HFit::GetDrawingRange(TH1 * h1, ROOT::Fit::DataRange & range) {
          Double_t binwidy = yaxis.GetBinWidth(hylast);
          ymin    = yaxis.GetBinLowEdge(hyfirst);
          ymax    = yaxis.GetBinLowEdge(hylast) +binwidy;
-         range.AddRange(ymin,ymax,1);
+         range.AddRange(1,ymin,ymax);
       }
    }      
    if (ndim > 2) {
@@ -314,7 +309,7 @@ void HFit::GetDrawingRange(TH1 * h1, ROOT::Fit::DataRange & range) {
          Double_t binwidz = zaxis.GetBinWidth(hzlast);
          zmin    = zaxis.GetBinLowEdge(hzfirst);
          zmax    = zaxis.GetBinLowEdge(hzlast) +binwidz;
-         range.AddRange(zmin,zmax,2);
+         range.AddRange(2,zmin,zmax);
       }
    }      
 #ifdef DEBUG
@@ -453,18 +448,24 @@ void HFit::FitOptionsMake(const char *option, Foption_t &fitOption) {
 
 // implementations of ROOT::Fit::FitObject functions (defined in HFitInterface) in terms of the template HFit::Fit
 
-int ROOT::Fit::FitObject(TH1 * h1, TF1 *f1 , Foption_t & option ,const char *goption, Double_t xxmin, Double_t xxmax) { 
-   return HFit::Fit(h1,f1,option,goption,xxmin,xxmax); 
+int ROOT::Fit::FitObject(TH1 * h1, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
+   // histogram fitting
+   return HFit::Fit(h1,f1,foption,moption,goption,range); 
 }
-int ROOT::Fit::FitObject(TGraph * gr, TF1 *f1 , Foption_t & option ,const char *goption, Double_t xxmin, Double_t xxmax) { 
-   return HFit::Fit(gr,f1,option,goption,xxmin,xxmax); 
+
+int ROOT::Fit::FitObject(TGraph * gr, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
+   // TGraph fitting
+   return HFit::Fit(gr,f1,foption,moption,goption,range); 
 }
-int ROOT::Fit::FitObject(TMultiGraph * mg, TF1 *f1 , Foption_t & option ,const char *goption, Double_t xxmin, Double_t xxmax) { 
-   // fitting multi-graph
-   return HFit::Fit(mg,f1,option,goption,xxmin,xxmax); 
+
+int ROOT::Fit::FitObject(TMultiGraph * gr, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
+   // TMultiGraph fitting
+   return HFit::Fit(gr,f1,foption,moption,goption,range); 
 }
-int ROOT::Fit::FitObject(TGraph2D * gr, TF2 *f2 , Foption_t & option ,const char *goption) { 
-   return HFit::Fit(gr,f2,option,goption,0,0); 
+
+int ROOT::Fit::FitObject(TGraph2D * gr, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
+   // TGraph2D fitting
+   return HFit::Fit(gr,f1,foption,moption,goption,range); 
 }
 
 
@@ -473,22 +474,33 @@ int ROOT::Fit::FitObject(TGraph2D * gr, TF2 *f2 , Foption_t & option ,const char
 Int_t TH1::DoFit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Double_t xxmax) { 
 //   - Decode list of options into fitOption
    Foption_t fitOption;
+
    if (!FitOptionsMake(option,fitOption)) return 0;
-   return ROOT::Fit::FitObject(this, f1 , fitOption , goption, xxmin, xxmax); 
+   // create range and minimizer options with default values 
+   ROOT::Fit::DataRange range(xxmin,xxmax); 
+   ROOT::Math::MinimizerOptions minOption; 
+   
+   return ROOT::Fit::FitObject(this, f1 , fitOption , minOption, goption, range); 
 }
 
 Int_t TGraph::DoFit(TF1 *f1 ,Option_t *option ,Option_t *goption, Axis_t rxmin, Axis_t rxmax) { 
    // internal graph fitting methods
    Foption_t fitOption;
    HFit::FitOptionsMake(option,fitOption);
-   return ROOT::Fit::FitObject(this, f1 , fitOption , goption, rxmin, rxmax); 
+   // create range and minimizer options with default values 
+   ROOT::Fit::DataRange range(rxmin,rxmax); 
+   ROOT::Math::MinimizerOptions minOption; 
+   return ROOT::Fit::FitObject(this, f1 , fitOption , minOption, goption, range); 
 }
 
 Int_t TMultiGraph::DoFit(TF1 *f1 ,Option_t *option ,Option_t *goption, Axis_t rxmin, Axis_t rxmax) { 
    // internal multigraph fitting methods
    Foption_t fitOption;
    HFit::FitOptionsMake(option,fitOption);
-   return ROOT::Fit::FitObject(this, f1 , fitOption , goption, rxmin, rxmax); 
+   // create range and minimizer options with default values 
+   ROOT::Fit::DataRange range(rxmin,rxmax); 
+   ROOT::Math::MinimizerOptions minOption; 
+   return ROOT::Fit::FitObject(this, f1 , fitOption , minOption, goption, range); 
 }
 
 
@@ -496,6 +508,9 @@ Int_t TGraph2D::DoFit(TF2 *f2 ,Option_t *option ,Option_t *goption) {
    // internal graph2D fitting methods
    Foption_t fitOption;
    HFit::FitOptionsMake(option,fitOption);
-   return ROOT::Fit::FitObject(this, f2 , fitOption , goption); 
+   // create range and minimizer options with default values 
+   ROOT::Fit::DataRange range(2); 
+   ROOT::Math::MinimizerOptions minOption; 
+   return ROOT::Fit::FitObject(this, f2 , fitOption , minOption, goption, range); 
 }
 

@@ -26,33 +26,37 @@ class Foption_t;
 
 namespace ROOT { 
 
+   namespace Math { 
+      class MinimizerOptions; 
+   }
+
    namespace Fit { 
 
       class BinData; 
       class FitResult;
+      class DataRange; 
 
 
 
       /**
          fitting function for a TH1 (called from TH1::Fit)
        */
-      int FitObject(TH1 * h1, TF1 *f1 , Foption_t & option ,const char *goption, double xxmin, double xxmax); 
+      int FitObject(TH1 * h1, TF1 *f1, Foption_t & option, const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range); 
 
       /**
          fitting function for a TGraph (called from TGraph::Fit)
        */
-      int FitObject(TGraph * gr, TF1 *f1 , Foption_t & option ,const char *goption, double xxmin, double xxmax); 
+      int FitObject(TGraph * gr, TF1 *f1 , Foption_t & option , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range);  
 
       /**
          fitting function for a MultiGraph (called from TMultiGraph::Fit)
        */
-      int FitObject(TMultiGraph * mg, TF1 *f1 , Foption_t & option ,const char *goption, double xxmin, double xxmax); 
+      int FitObject(TMultiGraph * mg, TF1 *f1 , Foption_t & option , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range);  
 
       /**
          fitting function for a TGraph2D (called from TGraph2D::Fit)
        */
-      int FitObject(TGraph2D * gr, TF2 *f2 , Foption_t & option ,const char *goption); 
-
+      int FitObject(TGraph2D * gr, TF1 *f1 , Foption_t & option , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range); 
 
 
       /** 

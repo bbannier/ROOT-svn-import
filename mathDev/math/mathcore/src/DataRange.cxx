@@ -68,7 +68,7 @@ DataRange::DataRange(double xmin, double xmax, double ymin, double ymax, double 
    }
 }
 
-void DataRange::AddRange(double xmin, double xmax, unsigned  int  icoord  ) { 
+void DataRange::AddRange(unsigned  int  icoord , double xmin, double xmax  ) { 
    // add a range [xmin,xmax] for the new coordinate icoord 
 
    if (xmin >= xmax) return;  // no op in case of bad values
