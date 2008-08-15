@@ -1603,10 +1603,10 @@ void TFitEditor::DoFunction(Int_t selected)
       }
       else
       {
-         if ( selected > kFP_USER && fNone->GetState() != kButtonDisabled )
-            SetEditable(kFALSE);
-         else
+         if ( selected <= kFP_USER )
             SetEditable(kTRUE);
+         else       
+            SetEditable(kFALSE);
          fEnteredFunc->SetText(te->GetTitle());
       }
    } else if (fAdd->GetState() == kButtonDown) {
