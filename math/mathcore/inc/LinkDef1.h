@@ -21,13 +21,7 @@
 
 #pragma link C++ global ROOT_TMath;
 
-#pragma link C++ global gRandom;
-
 #pragma link C++ class TComplex+;
-#pragma link C++ class TRandom+;
-#pragma link C++ class TRandom1+;
-#pragma link C++ class TRandom2+;
-#pragma link C++ class TRandom3-;
 
 #pragma link C++ function operator*(Double_t, const TComplex&);
 #pragma link C++ function operator+(Double_t, const TComplex&);

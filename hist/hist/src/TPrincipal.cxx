@@ -1223,13 +1223,14 @@ void TPrincipal::MakeHistograms(const char *name, Option_t *opt)
          // For some reason, the trace of the none-scaled matrix
          // (see TPrincipal::MakeNormalised) should enter here. Taken
          // from LINTRA code.
-         Double_t plowb   = -10 * TMath::Sqrt(fEigenValues(i) * fTrace);
+         Double_t et = TMath::Abs(fEigenValues(i) * fTrace);
+         Double_t plowb   = -10 * TMath::Sqrt(et);
          Double_t phighb  = -plowb;
          Int_t    pbins   = 100;
          hP[i]            = new TH1F(Form("%s_p%03d", name, i),
             Form("Feature space, variable %d", i),
             pbins,plowb,phighb);
-         hX[i]->SetXTitle(Form("p_{%d}",i));
+         hP[i]->SetXTitle(Form("p_{%d}",i));
          fHistograms->Add(hP[i]);
       }
 
@@ -1382,13 +1383,17 @@ void TPrincipal::MakePrincipals()
    // * Transform the covariance matrix into a tridiagonal matrix.
    // * Find the eigenvalues and vectors of the tridiagonal matrix.
 
-   // Normalize matrix covariance matrix
+   // Normalize covariance matrix
    MakeNormalised();
 
    TMatrixDSym sym; sym.Use(fCovarianceMatrix.GetNrows(),fCovarianceMatrix.GetMatrixArray());
    TMatrixDSymEigen eigen(sym);
    fEigenVectors = eigen.GetEigenVectors();
    fEigenValues  = eigen.GetEigenValues();
+   //make sure that eigenvalues are positive
+   for (Int_t i = 0; i < fNumberOfVariables; i++) {
+      if (fEigenValues[i] < 0) fEigenValues[i] = -fEigenValues[i];
+   }
 }
 
 //____________________________________________________________________
@@ -1586,8 +1591,8 @@ void TPrincipal::Print(Option_t *opt) const
    // Options are
    //      M            Print mean values of original data
    //      S            Print sigma values of original data
-   //      E            Print eigenvalues of covarinace matrix
-   //      V            Print eigenvectors of covarinace matrix
+   //      E            Print eigenvalues of covariance matrix
+   //      V            Print eigenvectors of covariance matrix
    // Default is MSE
 
    Bool_t printV = kFALSE;

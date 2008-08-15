@@ -552,9 +552,10 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
          ) {
             // we might have "operator< <>" or "operator< <double>" or "operator<< <>" or "operator<< <double>"
             // with the space missing
-            std::string::size_type pos = funcname.find("<<<");
+            std::string::size_type pos = funcname.find("<<");
             if (pos != std::string::npos) {
-               funcname.insert(pos + 2, 1, ' ');
+               if (funcname[pos+2]=='<') ++pos; // case "operator<< <double>"
+               funcname.insert(pos + 1, 1, ' ');
             }
          }
          // Find the first ">>" after the initial "operator>>" or "operator<<".
@@ -1201,7 +1202,7 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
       G__exec_statement(&brace_level);
       G__def_struct_member = store_def_struct_member;
 #ifdef G__ASM_FUNC
-      G__get_funcproperties(newFunction)->entry.size = G__ifile.line_number - G__get_funcproperties(newFunction)->linenum + 1;
+      G__get_funcproperties(newFunction)->entry.size = G__ifile.line_number - G__get_funcproperties(newFunction)->entry.line_number + 1;
 #endif // G__ASM_FUNC
       // --
 #ifdef G__ASM_WHOLEFUNC
