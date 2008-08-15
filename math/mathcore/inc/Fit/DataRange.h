@@ -110,7 +110,16 @@ public:
    /**
       add a range [xmin,xmax] for the new coordinate icoord 
     */
-   void AddRange(double xmin, double xmax, unsigned  int  icoord = 0 ); 
+   void AddRange(unsigned  int  icoord , double xmin, double xmax ); 
+
+   /**
+      add a range [xmin,xmax] for the first coordinate icoord 
+    */
+   void AddRange(double xmin, double xmax ) { AddRange(0,xmin,xmax); }
+   /**
+      add a range [xmin,xmax] for the first and [ymin,ymax] for the second coordinate
+    */
+   void AddRange(double xmin, double xmax, double ymin, double ymax ) { AddRange(0,xmin,xmax); AddRange(1,ymin,ymax); }
 
    /**
       clear all ranges in one coordinate (is now -inf, +inf)

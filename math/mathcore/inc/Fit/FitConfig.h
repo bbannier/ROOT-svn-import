@@ -34,6 +34,7 @@ namespace ROOT {
    namespace Math { 
 
       class Minimizer;
+      class MinimizerOptions; 
    }
 
    namespace Fit { 
@@ -105,6 +106,11 @@ public:
       access to the minimizer  control parameter (non const method) 
    */
    MinimizerControlParams & MinimizerOptions()  { return fMinimizerOpts; } 
+
+   /**
+      set all the minimizer options using class MinimizerOptions
+    */
+   void SetMinimizerOptions(const ROOT::Math::MinimizerOptions & minopt); 
 
    
    /**

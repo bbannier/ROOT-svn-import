@@ -16,6 +16,7 @@
 #include "Math/Util.h"
 
 #include "Math/Minimizer.h"
+#include "Math/MinimizerOptions.h"
 #include "Math/Factory.h"
 
 #include <cmath> 
@@ -161,6 +162,18 @@ void FitConfig::SetDefaultMinimizer(const std::string & type, const std::string 
    if (type != "") fgDefaultMinimizer = type; 
    if (algo != "") fgDefaultMinimAlgo = algo;
 } 
+
+void FitConfig::SetMinimizerOptions(const ROOT::Math::MinimizerOptions & minopt) {  
+   fMinimizerType = minopt.MinimType; 
+   fMinimAlgoType = minopt.AlgoType; 
+   fMinimizerOpts.SetTolerance(minopt.Tolerance); 
+   fMinimizerOpts.SetMaxFunctionCalls(minopt.MaxFunctionCalls); 
+   fMinimizerOpts.SetMaxIterations(minopt.MaxIterations); 
+   fMinimizerOpts.SetStrategy(minopt.Strategy); 
+   fMinimizerOpts.SetPrintLevel(minopt.PrintLevel); 
+
+   // error up should be added as well
+}
 
    } // end namespace Fit
 
