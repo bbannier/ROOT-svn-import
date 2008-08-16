@@ -87,7 +87,7 @@ void TEveTrackPropagator::Helix_t::Update(const TEveVector& p, const TEveVector&
       }
       if (fraction > 0) fPhiStep *= fraction;
 
-      fStepSize = fR*fPhiStep;
+      fTStepSize = fR*fPhiStep;
       fSin      = Sin(fPhiStep);
       fCos      = Cos(fPhiStep);
    }
@@ -103,9 +103,9 @@ void TEveTrackPropagator::Helix_t::Step(const TEveVector4& v, const TEveVector& 
 
    if (fValid)
    {
-      TEveVector d = fE2*(fR*fSin) + fE3*(fR*(1-fCos)) + fE1*(fLam*fStepSize);
+      TEveVector d = fE2*(fR*fSin) + fE3*(fR*(1-fCos)) + fE1*(fLam*fTStepSize);
       vOut += d;
-      vOut.fT += fStepSize;
+      vOut.fT += fTStepSize;
 
       pOut = fPl + fE2*(fPtMag*fCos) + fE3*(fPtMag*fSin);
 
@@ -116,7 +116,7 @@ void TEveTrackPropagator::Helix_t::Step(const TEveVector4& v, const TEveVector& 
       // case: pT < 1e-6 or B < 1e-7
       // might happen if field directon changes pT ~ 0 or B becomes zero
 
-      vOut += p*(fStepSize/p.Mag());
+      vOut += p*(fTStepSize/p.Mag());
       pOut = p;
    }
 }
@@ -315,10 +315,17 @@ Bool_t TEveTrackPropagator::HelixToVertex(TEveVector& v, TEveVector& p)
    Int_t new_points  = 0;
    Int_t first_point = fPoints.size();
    Int_t np = fPoints.size();
-   while (PositiveDerive(v, currV) && np < fNMax)
+   Bool_t hitBounds = kFALSE;
+   while (!PointOverVertex(v, currV) && np < fNMax)
    {
       StepHelix(currV, p, forwV, forwP);
-      if (IsOutsideBounds(forwV, maxRsq, fMaxZ)) return kFALSE;
+
+      if (IsOutsideBounds(forwV, maxRsq, fMaxZ)) 
+      {
+         hitBounds = kTRUE;
+         TEveVector d = v-forwV;
+         break;
+      }
       currV = forwV;
       p = forwP;
       fPoints.push_back(currV);
@@ -330,13 +337,14 @@ Bool_t TEveTrackPropagator::HelixToVertex(TEveVector& v, TEveVector& p)
    if (0)
    {
       TEveVector d = v-currV;
-      Float_t af = d.Mag()/fH.fStepSize;
+      Float_t af = d.Mag2()/fH.GetStepSize2();
       if (af> 1)
-         printf("Helix propagation ended with %f of step distance \n", af);
+         printf("Helix propagation %d ended with %f of step distance \n",np,  af);
    }
 
    // rotate for remaining time and add offset
-   Float_t af = (v-currV).Mag()/fH.fStepSize;
+
+   Float_t af = (v-currV).Mag()/fH.GetStepSize2();
    fH.Update(p, fH.fB, kTRUE, af);
    StepHelix(currV,p, forwV, forwP);
    p = forwP;
@@ -350,7 +358,8 @@ Bool_t TEveTrackPropagator::HelixToVertex(TEveVector& v, TEveVector& p)
 
    fPoints.push_back(v);
    fV = fPoints.back();
-   return kTRUE;
+
+   return !hitBounds;
 }
 
 //______________________________________________________________________________
