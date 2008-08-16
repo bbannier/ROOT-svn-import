@@ -131,7 +131,7 @@ public:
       TEveVector fPt, fPl;  // transverse, longitudinal momentum
       Float_t fPtMag;       // mag of p transverse
       Float_t fPlDir;       // momenum is in or oposite mag field
-      Float_t fStepSize;    // step size in cm
+      Float_t fTStepSize;    // traverse step size in cm
 
       /**************************************************************************/
 
@@ -140,6 +140,9 @@ public:
 
       void Update(const TEveVector& p, const TEveVector& b, Bool_t fullUpdate, Float_t fraction = -1);
       void Step(const TEveVector4& v, const TEveVector& p, TEveVector4& vOut, TEveVector& pOut);
+
+      Float_t GetStepSize()  {return fTStepSize*TMath::Sqrt(1+fLam*fLam);}
+      Float_t GetStepSize2() {return fTStepSize* fTStepSize*(1+fLam*fLam);}
    };
 
 private:
@@ -193,7 +196,7 @@ protected:
    Bool_t  LineIntersectPlane(const TEveVector& p, const TEveVector& point, const TEveVector& normal,
                               TEveVector& itsect);
 
-   Bool_t PositiveDerive(const TEveVector4& v0, const TEveVector4& v);
+   Bool_t PointOverVertex(const TEveVector4& v0, const TEveVector4& v);
 
 public:
    TEveTrackPropagator(TEveMagField* field = 0);
@@ -275,14 +278,15 @@ inline Bool_t TEveTrackPropagator::IsOutsideBounds(const TEveVector& point,
           point.fX*point.fX + point.fY*point.fY > maxRsqr;
 }
 
-inline Bool_t TEveTrackPropagator::PositiveDerive(const TEveVector4 &v0,
-                                                  const TEveVector4 &v)
+inline Bool_t TEveTrackPropagator::PointOverVertex(const TEveVector4 &v0,
+                                                   const TEveVector4 &v)
 {
-   Float_t dotV = fH.fE1.fX*(v0.fX-v.fX) 
-                + fH.fE1.fY*(v0.fY-v.fY) 
-                + fH.fE1.fZ*(v0.fZ-v.fZ);
+   Float_t dotV = fH.fB.fX*(v0.fX-v.fX) 
+                + fH.fB.fY*(v0.fY-v.fY) 
+                + fH.fB.fZ*(v0.fZ-v.fZ);
 
-   return (fH.fPlDir > 0 && dotV > 0) || (fH.fPlDir < 0 && dotV <0);
+   //printf("PointOverVertex pDotB %f  %f \n", fH.fPlDir , dotV);
+   return (fH.fPlDir > 0 && dotV < 0) || (fH.fPlDir < 0 && dotV >0);
 }
 
 #endif

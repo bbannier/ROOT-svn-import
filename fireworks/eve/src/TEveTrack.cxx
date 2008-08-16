@@ -305,6 +305,10 @@ void TEveTrack::MakeTrack(Bool_t recurse)
             if (fPropagator->GoToVertex(pm->fV, currP)) {
                currP.fX = pm->fP.fX; currP.fY = pm->fP.fY; currP.fZ = pm->fP.fZ;
             }
+            else
+            {
+               break;
+            }
          }
          else if (rTP.GetFitDaughters() && pm->fType == TEvePathMark::kDaughter)
          {
@@ -313,6 +317,10 @@ void TEveTrack::MakeTrack(Bool_t recurse)
             // printf("%s fit daughter  \n", fName.Data());
             if (fPropagator->GoToVertex(pm->fV, currP)) {
                currP.fX -= pm->fP.fX; currP.fY -= pm->fP.fY; currP.fZ -= pm->fP.fZ;
+            }
+            else
+            {
+               break;
             }
          }
          else if (rTP.GetFitDecay() && pm->fType == TEvePathMark::kDecay)
