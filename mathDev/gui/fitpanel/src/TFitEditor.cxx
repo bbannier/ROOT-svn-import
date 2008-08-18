@@ -146,7 +146,6 @@
 #include "TF2.h"
 #include "TTimer.h"
 #include "THStack.h"
-#include "TVirtualFitter.h"
 #include "TMath.h"
 #include "Fit/DataRange.h"
 
@@ -743,7 +742,7 @@ void TFitEditor::CreateMinimizationTab()
                                        TGNumberFormat::kNESReal,
                                        TGNumberFormat::kNEAPositive,
                                        TGNumberFormat::kNELLimitMinMax, 0., 1.);
-   fTolerance->SetNumber(TVirtualFitter::GetPrecision());
+   fTolerance->SetNumber(ROOT::Math::MinimizerOptions::DefaultTolerance());
    hsv2->AddFrame(fTolerance, new TGLayoutHints(kLHintsLeft | kLHintsExpandX, 
                                                 1, 1, 3, 3));
    fIterations = new TGNumberEntryField(hsv2, kFP_MITR, 5000, 
@@ -2299,7 +2298,6 @@ void TFitEditor::CheckRange(TF1 *f1)
       fUseRange->SetState(kButtonUp);
    }
 
-   // Something to do with fSliderY ?? (AKI)
    if (fDim > 0) {
       fSliderX->Disconnect("PositionChanged()");
       fSliderX->SetRange(1,fXrange);
