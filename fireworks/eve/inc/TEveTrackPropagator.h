@@ -53,6 +53,7 @@ protected:
 
 public:
    TEveMagFieldConst(Float_t x, Float_t y, Float_t z):TEveMagField() { fFieldConstant=kTRUE; fB.Set(x, y, z);}
+   virtual ~TEveMagFieldConst(){}
 
    using   TEveMagField::GetField;
    virtual TEveVector GetField(Float_t /*x*/, Float_t /*y*/, Float_t /*z*/) const
@@ -78,6 +79,7 @@ public:
       fBIn.Set(0, 0, bIn);
       fBOut.Set(0, 0, bOut);
    }
+   virtual ~TEveMagFieldDuo(){}
 
    using   TEveMagField::GetField;
 
@@ -137,6 +139,7 @@ public:
 
 
       Helix_t();
+      ~Helix_t(){}
 
       void Update(const TEveVector& p, const TEveVector& b, Bool_t fullUpdate, Float_t fraction = -1);
       void Step(const TEveVector4& v, const TEveVector& p, TEveVector4& vOut, TEveVector& pOut);
@@ -217,7 +220,7 @@ public:
    void   FillPointSet(TEvePointSet* ps) const;
 
    void   SetMagField(Float_t bX, Float_t bY, Float_t bZ);
-   void   SetMagField(Float_t bZ) { SetMagField(0., 0., bZ); }
+   void   SetMagField(Float_t b) { SetMagField(0.f, 0.f, b); }
    void   SetMagFieldObj(TEveMagField * x);
 
    void   SetMaxR(Float_t x);
