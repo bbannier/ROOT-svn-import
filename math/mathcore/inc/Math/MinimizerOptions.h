@@ -29,6 +29,7 @@ struct MinimizerOptions {
    // static methods for setting and retrieving the default options 
 
    static void SetDefaultMinimizer(const std::string & type, const std::string & algo);
+   static void SetDefaultErrorDef( double up); 
    static void SetDefaultTolerance(double tol); 
    static void SetDefaultMaxFunctionCalls(int maxcall);
    static void SetDefaultMaxIterations(int maxiter);
@@ -37,7 +38,7 @@ struct MinimizerOptions {
 
    static const std::string & DefaultMinimizerType();
    static const std::string & DefaultMinimizerAlgo(); 
-   static double DefaultErrorDef() { return 1; } // no need to change this parameter 
+   static double DefaultErrorDef();
    static double DefaultTolerance(); 
    static int DefaultMaxFunctionCalls(); 
    static int DefaultMaxIterations(); 
