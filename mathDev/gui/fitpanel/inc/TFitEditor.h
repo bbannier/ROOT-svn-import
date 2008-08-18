@@ -28,6 +28,7 @@
 #endif
 
 #include "Foption.h"
+#include "Math/MinimizerOptions.h"
 
 //--- Object types
 enum EObjectType {
@@ -155,7 +156,7 @@ private:
    TFitEditor(const TFitEditor&);              // not implemented
    TFitEditor& operator=(const TFitEditor&);   // not implemented
 
-   void RetrieveOptions(Foption_t&, TString&, Int_t);
+   void RetrieveOptions(Foption_t&, TString&, ROOT::Math::MinimizerOptions&, Int_t);
 
 public:
    TFitEditor(TVirtualPad* pad, TObject *obj);
@@ -189,8 +190,6 @@ public:
    virtual void   DoEmptyBinsAllWeights1();
    virtual void   DoEnteredFunction();
    virtual void   DoFit();
-   virtual void   DoErrorsDef();
-   virtual void   DoMaxTolerance();
    virtual void   DoMaxIterations();
    virtual void   DoFunction(Int_t sel);
    virtual void   DoLinearFit();
