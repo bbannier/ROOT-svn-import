@@ -203,6 +203,8 @@ public:
    /// flag to chek if errors are normalized
    bool NormalizedErrors() { return fNormalized; }
 
+   /// get confidence level given an array of x data points
+
 
    /// print the result and optionaly covariance matrix and correlations
    void Print(std::ostream & os, bool covmat = false) const;
