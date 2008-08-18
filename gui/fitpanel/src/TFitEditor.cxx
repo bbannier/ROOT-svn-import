@@ -1393,25 +1393,28 @@ void TFitEditor::DoFit()
    Double_t xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
    Double_t xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
 
-   switch (fType) {
-      case kObjectHisto: {
-         TF1 *fitFunc = 0;
-         TH1 *hist = (TH1*)fFitObject;
-
-         if ( fNone->GetState() == kButtonDisabled )
-         {
-            TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-            TF1* tmpF1 = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
-            if ( tmpF1 == 0 )
-            {
+   TF1 *fitFunc = 0;
+   if ( fNone->GetState() == kButtonDisabled )
+   {
+      TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
+      TF1* tmpF1 = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
+      if ( tmpF1 == 0 )
+      {
                new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
                             "Error...", "DoFit\nVerify the entered function string!",
                             kMBIconStop,kMBOk, 0);
                return;
-            }
-            fitFunc = (TF1*)tmpF1->IsA()->New();
-            tmpF1->Copy(*fitFunc);
-         } else {
+      }
+      fitFunc = (TF1*)tmpF1->IsA()->New();
+      tmpF1->Copy(*fitFunc);
+   }
+
+   switch (fType) {
+      case kObjectHisto: {
+         TH1 *hist = (TH1*)fFitObject;
+
+         if ( fitFunc == 0 )
+         {
             if ( fDim == 1 )
                fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
             else if ( fDim == 2 )
@@ -1437,7 +1440,6 @@ void TFitEditor::DoFit()
             ROOT::Fit::FitObject(hist, fitFunc, fitOpts, mopts, strDrawOpts, drange);
          }
 
-         delete fitFunc;
          break;
       }
       case kObjectGraph: {
@@ -1454,12 +1456,12 @@ void TFitEditor::DoFit()
             if (xmin < gxmin) xmin = gxmin;
             if (xmax > gxmax) xmax = gxmax;
          }
-         TF1 fitFunc("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
-         if ( fFuncPars ) SetParameters(fFuncPars, &fitFunc);
-         RetrieveOptions(fitOpts, strDrawOpts, mopts, fitFunc.GetNpar());
-         fitFunc.SetRange(xmin,xmax);
+         if ( !fitFunc) fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
+         if ( fFuncPars ) SetParameters(fFuncPars, fitFunc);
+         RetrieveOptions(fitOpts, strDrawOpts, mopts, fitFunc->GetNpar());
+         fitFunc->SetRange(xmin,xmax);
          ROOT::Fit::DataRange drange(xmin, xmax);
-         FitObject(gr, &fitFunc, fitOpts, mopts, strDrawOpts, drange);
+         FitObject(gr, fitFunc, fitOpts, mopts, strDrawOpts, drange);
          break;
       }
       case kObjectGraph2D: {
@@ -1475,6 +1477,8 @@ void TFitEditor::DoFit()
          break;
       }
    }
+   delete fitFunc;
+
 
    fParentPad->Modified();
    fParentPad->Update();
