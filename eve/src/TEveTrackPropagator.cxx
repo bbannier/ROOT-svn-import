@@ -167,10 +167,12 @@ TEveTrackPropagator::TEveTrackPropagator(const Text_t* n, const Text_t* t,
    fFitReferences (kTRUE),
    fFitDecay      (kTRUE),
    fFitCluster2Ds (kTRUE),
-   fRnrDaughters  (kTRUE),
-   fRnrReferences (kTRUE),
-   fRnrDecay      (kTRUE),
+
+   fRnrDaughters  (kFALSE),
+   fRnrReferences (kFALSE),
+   fRnrDecay      (kFALSE),
    fRnrFV         (kFALSE),
+
    fPMAtt(),
    fFVAtt(),
 
@@ -178,8 +180,17 @@ TEveTrackPropagator::TEveTrackPropagator(const Text_t* n, const Text_t* t,
 {
    // Default constructor.
 
+   fPMAtt.SetMarkerColor(kYellow);
+   fPMAtt.SetMarkerStyle(2);
+   fPMAtt.SetMarkerSize(2);
+
+   fFVAtt.SetMarkerColor(kRed);
+   fFVAtt.SetMarkerStyle(4);
+   fFVAtt.SetMarkerSize(1.5);
+
+
    if (fMagFieldObj == 0)
-      fMagFieldObj = new TEveMagFieldConst(0., 0., 0.);
+      fMagFieldObj = new TEveMagFieldConst(0., 0., fgDefMagField);
 }
 
 //______________________________________________________________________________
@@ -285,9 +296,9 @@ void TEveTrackPropagator::HelixToBounds(TEveVector& p)
 {
    // Propagate charged particle with momentum p to bounds.
 
-   TEveVector4 currV = fV;
-   TEveVector4 forwV;
-   TEveVector  forwP;
+   TEveVector4 currV(fV);
+   TEveVector4 forwV(fV);
+   TEveVector  forwP (p);
 
 
    Int_t np = fPoints.size();
@@ -309,7 +320,11 @@ void TEveTrackPropagator::HelixToBounds(TEveVector& p)
 
             return;
          }
-         fPoints.push_back(currV + (forwV-currV)*t);
+         TEveVector d(forwV);
+         d -= currV;
+         d *= t;
+         d += currV;
+         fPoints.push_back(d);
          return;
       }
 
@@ -324,12 +339,15 @@ void TEveTrackPropagator::HelixToBounds(TEveVector& p)
                     t, currV.fZ, forwV.fZ, fMaxZ);
             return;
          }
-         fPoints.push_back(currV + (forwV-currV)*t);
+         TEveVector d(forwV -currV);
+         d *= t;
+         d +=currV;
+         fPoints.push_back(d);
          return;
       }
 
       currV = forwV;
-      p = forwP;
+      p =  forwP;
       fPoints.push_back(currV);
       np++;
    }
@@ -344,13 +362,15 @@ Bool_t TEveTrackPropagator::HelixToVertex(TEveVector& v, TEveVector& p)
 
    Float_t maxRsq = fMaxR*fMaxR;
 
-   TEveVector4 currV = fV;
-   TEveVector4 forwV;
-   TEveVector  forwP = p;
+   TEveVector4 currV (fV);
+   TEveVector4 forwV(fV);
+   TEveVector  forwP(p);
+
    Int_t new_points  = 0;
    Int_t first_point = fPoints.size();
    Int_t np = fPoints.size();
    Bool_t hitBounds = kFALSE;
+
    while (!PointOverVertex(v, currV) && np < fNMax)
    {
       StepHelix(currV, p, forwV, forwP);
@@ -566,8 +586,6 @@ void TEveTrackPropagator::RebuildTracks()
       ++i;
    }
 }
-
-/******************************************************************************/
 
 //______________________________________________________________________________
 void TEveTrackPropagator::SetMagField(Float_t bX, Float_t bY, Float_t bZ)
