@@ -14,7 +14,7 @@
 
 #include "TEveVSDStructs.h"
 #include "TEveUtil.h"
-#include "TObject.h"
+#include "TEveElement.h"
 #include "TMarker.h"
 
 #include <vector>
@@ -102,7 +102,7 @@ public:
 
 class TEvePointSet;
 
-class TEveTrackPropagator: public TObject,
+class TEveTrackPropagator: public TEveElementList,
                            public TEveRefBackPtr
 {
    friend class TEveTrackPropagatorSubEditor;
@@ -199,8 +199,11 @@ protected:
    Bool_t PointOverVertex(const TEveVector4& v0, const TEveVector4& v);
 
 public:
-   TEveTrackPropagator(TEveMagField* field = 0);
+   TEveTrackPropagator(const Text_t* n="TEveTrackPropagator", const Text_t* t="",
+                       TEveMagField* field=0);
    virtual ~TEveTrackPropagator();
+
+   virtual void ElementChanged(Bool_t update_scenes=kTRUE, Bool_t redraw=kFALSE);
 
    // propagation
    void   InitTrack(TEveVector &v, TEveVector &p, Float_t beta, Int_t charge);
