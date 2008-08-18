@@ -148,7 +148,6 @@
 #include "THStack.h"
 #include "TVirtualFitter.h"
 #include "TMath.h"
-#include "Math/MinimizerOptions.h"
 #include "Fit/DataRange.h"
 
 enum EFitPanel {
@@ -661,7 +660,6 @@ void TFitEditor::CreateMinimizationTab()
    fLibMinuit->Associate(this);
    fLibMinuit->SetToolTipText("Use minimization from libMinuit (default)");
    hl->AddFrame(fLibMinuit, new TGLayoutHints(kLHintsNormal, 40, 0, 0, 1));
-   fLibMinuit->SetState(kButtonDown);
    fStatusBar->SetText("LIB Minuit",0);
 
    fLibMinuit2 = new TGRadioButton(hl, "Minuit2", kFP_LMIN2);
@@ -682,7 +680,6 @@ void TFitEditor::CreateMinimizationTab()
    fMigrad->Associate(this);
    fMigrad->SetToolTipText("Use MIGRAD as minimization method");
    hm->AddFrame(fMigrad, new TGLayoutHints(kLHintsNormal, 40, 0, 0, 1));
-   fMigrad->SetState(kButtonDown);
    fStatusBar->SetText("MIGRAD",1);
 
    fSimplex = new TGRadioButton(hm, "SIMPLEX", kFP_SIMPLX);
@@ -695,9 +692,25 @@ void TFitEditor::CreateMinimizationTab()
    fFumili = new TGRadioButton(hm, "FUMILI", kFP_FUMILI);
    fFumili->Associate(this);
    fFumili->SetToolTipText("Use FUMILI as minimization method");
-   fFumili->SetState(kButtonDisabled);
    hm->AddFrame(fFumili, new TGLayoutHints(kLHintsNormal, 18, 0, 0, 1));
    fMinimization->AddFrame(hm, new TGLayoutHints(kLHintsExpandX, 20, 0, 5, 1));
+
+   // Set the status to the default minimization options!
+   if ( ROOT::Math::MinimizerOptions::DefaultMinimizerType() == "Minuit" ) {
+      fLibMinuit->SetState(kButtonDown);
+      fFumili->SetState(kButtonDisabled);
+      fMigrad->SetState(kButtonDown);
+   } else if ( ROOT::Math::MinimizerOptions::DefaultMinimizerType() == "Minuit2" ) {
+      fLibMinuit2->SetState(kButtonDown);
+      if ( ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo() == "Fumili" )
+         fFumili->SetState(kButtonDown);
+      else
+         fMigrad->SetState(kButtonDown);
+   } else if ( ROOT::Math::MinimizerOptions::DefaultMinimizerType() == "Fumili" ) {
+      fLibFumili->SetState(kButtonDown);
+      fMigrad->SetState(kButtonDisabled);
+      fFumili->SetState(kButtonDown);
+   }
 
    MakeTitle(fMinimization, "Settings");
    TGLabel *hslabel1 = new TGLabel(fMinimization,"Use ENTER key to validate a new value or click");
@@ -720,13 +733,13 @@ void TFitEditor::CreateMinimizationTab()
    hs->AddFrame(hsv1, new TGLayoutHints(kLHintsNormal, 60, 0, 0, 0));
    
    TGVerticalFrame *hsv2 = new TGVerticalFrame(hs, 90,10, kFixedWidth);
-   fErrorScale = new TGNumberEntryField(hsv2, kFP_MERR, 1.0,
+   fErrorScale = new TGNumberEntryField(hsv2, kFP_MERR, ROOT::Math::MinimizerOptions::DefaultErrorDef(),
                                         TGNumberFormat::kNESRealTwo,
                                         TGNumberFormat::kNEAPositive,
                                         TGNumberFormat::kNELLimitMinMax,0.,100.);
    hsv2->AddFrame(fErrorScale, new TGLayoutHints(kLHintsLeft | kLHintsExpandX, 
                                                  1, 1, 0, 3));
-   fTolerance = new TGNumberEntryField(hsv2, kFP_MTOL, 1.0E-9, 
+   fTolerance = new TGNumberEntryField(hsv2, kFP_MTOL, ROOT::Math::MinimizerOptions::DefaultTolerance(), 
                                        TGNumberFormat::kNESReal,
                                        TGNumberFormat::kNEAPositive,
                                        TGNumberFormat::kNELLimitMinMax, 0., 1.);
@@ -737,13 +750,12 @@ void TFitEditor::CreateMinimizationTab()
                                    TGNumberFormat::kNESInteger,
                                    TGNumberFormat::kNEAPositive,
                                    TGNumberFormat::kNELNoLimits);
-   fIterations->SetNumber(TVirtualFitter::GetMaxIterations());
+   fIterations->SetNumber(ROOT::Math::MinimizerOptions::DefaultMaxIterations());
    hsv2->AddFrame(fIterations, new TGLayoutHints(kLHintsLeft | kLHintsExpandX, 
                                                  1, 1, 3, 3));
    hs->AddFrame(hsv2, new TGLayoutHints(kLHintsNormal, 0, 0, 0, 0));
    fMinimization->AddFrame(hs, new TGLayoutHints(kLHintsExpandX, 0, 0, 1, 1));
-   fStatusBar->SetText("Itr: 5000",2);
-
+   fStatusBar->SetText(Form("Itr: %d",ROOT::Math::MinimizerOptions::DefaultMaxIterations()),2);
 
    MakeTitle(fMinimization, "Print Options");
 
@@ -826,8 +838,6 @@ void TFitEditor::ConnectSlots()
    fFumili->Connect("Toggled(Bool_t)","TFitEditor",this,"DoMinMethod(Bool_t)");
 
    // fitter settings
-   fErrorScale->Connect("ReturnPressed()", "TFitEditor", this, "DoErrorsDef()");
-   fTolerance->Connect("ReturnPressed()", "TFitEditor", this, "DoMaxTolerance()");
    fIterations->Connect("ReturnPressed()", "TFitEditor", this, "DoMaxIterations()");
    
    // print options
@@ -887,8 +897,6 @@ void TFitEditor::DisconnectSlots()
    fFumili->Disconnect("Toggled(Bool_t)");
 
    // fitter settings
-   fErrorScale->Disconnect("ReturnPressed()");
-   fTolerance->Disconnect("ReturnPressed()");
    fIterations->Disconnect("ReturnPressed()");
 
    // print options
@@ -1412,7 +1420,7 @@ void TFitEditor::DoFit()
          }
          
          if ( fFuncPars ) SetParameters(fFuncPars, fitFunc);
-         RetrieveOptions(fitOpts, strDrawOpts, fitFunc->GetNpar());
+         RetrieveOptions(fitOpts, strDrawOpts, mopts, fitFunc->GetNpar());
 
          if ( fDim == 1 )
          {
@@ -1449,7 +1457,7 @@ void TFitEditor::DoFit()
          }
          TF1 fitFunc("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
          if ( fFuncPars ) SetParameters(fFuncPars, &fitFunc);
-         RetrieveOptions(fitOpts, strDrawOpts, fitFunc.GetNpar());
+         RetrieveOptions(fitOpts, strDrawOpts, mopts, fitFunc.GetNpar());
          fitFunc.SetRange(xmin,xmax);
          ROOT::Fit::DataRange drange(xmin, xmax);
          FitObject(gr, &fitFunc, fitOpts, mopts, strDrawOpts, drange);
@@ -1738,16 +1746,16 @@ void TFitEditor::DoReset()
       fMigrad->SetState(kButtonDown, kTRUE);
    if (fOptDefault->GetState() != kButtonDown)
       fOptDefault->SetState(kButtonDown, kTRUE);
-   if (fErrorScale->GetNumber() != 1.0) {
-      fErrorScale->SetNumber(1.0);
+   if (fErrorScale->GetNumber() != ROOT::Math::MinimizerOptions::DefaultErrorDef()) {
+      fErrorScale->SetNumber(ROOT::Math::MinimizerOptions::DefaultErrorDef());
       fErrorScale->ReturnPressed();
    }   
-   if (fTolerance->GetNumber() != 1e-6) {
-      fTolerance->SetNumber(1e-6);
+   if (fTolerance->GetNumber() != ROOT::Math::MinimizerOptions::DefaultTolerance()) {
+      fTolerance->SetNumber(ROOT::Math::MinimizerOptions::DefaultTolerance());
       fTolerance->ReturnPressed();
    }
-   if (fIterations->GetNumber() != 5000) {
-      fIterations->SetIntNumber(5000);
+   if (fIterations->GetNumber() != ROOT::Math::MinimizerOptions::DefaultMaxIterations()) {
+      fIterations->SetIntNumber(ROOT::Math::MinimizerOptions::DefaultMaxIterations());
       fIterations->ReturnPressed();
    }
 }
@@ -2020,7 +2028,6 @@ void TFitEditor::DoLibrary(Bool_t on)
                // Simplex functionality will come with the new fitter design    
                //if (fSimplex->GetState() == kButtonDisabled)
                //   fSimplex->SetState(kButtonUp);
-               TVirtualFitter::SetDefaultFitter("Minuit");
                fStatusBar->SetText("LIB Minuit", 0);
             }
             
@@ -2040,10 +2047,6 @@ void TFitEditor::DoLibrary(Bool_t on)
                   fMigrad->SetState(kButtonUp);
                if (fFumili->GetState() == kButtonDisabled)
                   fFumili->SetState(kButtonUp);
-               if (fMigrad->GetState() == kButtonDown)
-                  TVirtualFitter::SetDefaultFitter("Minuit2");
-               else if (fFumili->GetState() == kButtonDown)
-                  TVirtualFitter::SetDefaultFitter("Fumili2");
                fStatusBar->SetText("LIB Minuit2", 0);
             }
          }
@@ -2059,7 +2062,6 @@ void TFitEditor::DoLibrary(Bool_t on)
                fLibMinuit->SetState(kButtonUp);
                fLibMinuit2->SetState(kButtonUp);
                fLibFumili->SetState(kButtonDown);
-               TVirtualFitter::SetDefaultFitter("Fumili");
                fMigrad->SetDisabledAndSelected(kFALSE);
                // Simplex functionality will come with the new fitter design    
                //fSimplex->SetState(kButtonDisabled);
@@ -2093,9 +2095,6 @@ void TFitEditor::DoMinMethod(Bool_t on)
                   fFumili->SetState(kButtonUp);
                fMigrad->SetState(kButtonDown);
                fStatusBar->SetText("MIGRAD",1);
-               if (fLibMinuit2->GetState() == kButtonDown)
-                  if (strncmp(TVirtualFitter::GetDefaultFitter(),"Minuit2",7) != 0) 
-                     TVirtualFitter::SetDefaultFitter("Minuit2");
             }
          }
          break;
@@ -2123,10 +2122,6 @@ void TFitEditor::DoMinMethod(Bool_t on)
                //fSimplex->SetState(kButtonUp);
                fFumili->SetState(kButtonDown);
                fStatusBar->SetText("FUMILI",1);
-               if (fLibMinuit2->GetState() == kButtonDown)
-                  TVirtualFitter::SetDefaultFitter("Fumili2");
-               else
-                  TVirtualFitter::SetDefaultFitter("Fumili");
             }
          }
          break;
@@ -2135,30 +2130,11 @@ void TFitEditor::DoMinMethod(Bool_t on)
 }
 
 //______________________________________________________________________________
-void TFitEditor::DoErrorsDef()
-{
-   // Set the error definition for default fitter.
-   
-   Double_t err = fErrorScale->GetNumber();
-   TVirtualFitter::SetErrorDef(err);
-}
-
-//______________________________________________________________________________
-void TFitEditor::DoMaxTolerance()
-{
-   // Set the fit relative precision.
-   
-   Double_t tol = fTolerance->GetNumber();
-   TVirtualFitter::SetPrecision(tol);
-}
-
-//______________________________________________________________________________
 void TFitEditor::DoMaxIterations()
 {
    // Set the maximum number of iterations.
 
    Long_t itr = fIterations->GetIntNumber();
-   TVirtualFitter::SetMaxIterations(itr);
    fStatusBar->SetText(Form("Itr: %ld",itr),2);
 }
 
@@ -2337,7 +2313,7 @@ void TFitEditor::CheckRange(TF1 *f1)
 }
 
 //______________________________________________________________________________
-void TFitEditor::RetrieveOptions(Foption_t& fitOpts, TString& drawOpts, Int_t npar)
+void TFitEditor::RetrieveOptions(Foption_t& fitOpts, TString& drawOpts, ROOT::Math::MinimizerOptions& minOpts, Int_t npar)
 {
    drawOpts = "";
 
@@ -2383,6 +2359,25 @@ void TFitEditor::RetrieveOptions(Foption_t& fitOpts, TString& drawOpts, Int_t np
       drawOpts += "SAME";
 
    drawOpts = GetDrawOption();
+
+   if ( fLibMinuit->GetState() == kButtonDown )
+      minOpts.MinimType = (std::string)"Minuit";
+   else if ( fLibMinuit2->GetState() == kButtonDown)
+      minOpts.MinimType = "Minuit2";
+   else if ( fLibFumili->GetState() == kButtonDown )
+      minOpts.MinimType = "Fumili";
+
+   if ( fMigrad->GetState() == kButtonDown )
+      minOpts.AlgoType = "Migrad";
+   else if ( fFumili->GetState() == kButtonDown )
+      if ( fLibMinuit2->GetState() == kButtonDown )
+         minOpts.AlgoType = "Fumili2";
+      else 
+         minOpts.AlgoType = "Fumili";
+
+   minOpts.ErrorDef = fErrorScale->GetNumber();
+   minOpts.Tolerance = fTolerance->GetNumber();
+   minOpts.MaxIterations = fIterations->GetIntNumber();
 }
 
 void TFitEditor::SetEditable(Bool_t state)
