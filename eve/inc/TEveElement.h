@@ -116,7 +116,7 @@ public:
    void           SetVizModel(TEveElement* model);
    Bool_t         FindVizModel();
 
-   Bool_t         ApplyVizTag(const TString& tag);
+   Bool_t         ApplyVizTag(const TString& tag, const TString& fallback_tag="");
 
    virtual void PropagateVizParamsToProjecteds();
    virtual void PropagateVizParamsToElements(TEveElement* el=0);

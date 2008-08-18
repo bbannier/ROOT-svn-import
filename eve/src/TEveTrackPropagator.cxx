@@ -150,8 +150,9 @@ const Float_t       TEveTrackPropagator::fgkB2C        = 0.299792458e-2;
 TEveTrackPropagator TEveTrackPropagator::fgDefStyle;
 
 //______________________________________________________________________________
-TEveTrackPropagator::TEveTrackPropagator(TEveMagField *field) :
-   TObject(),
+TEveTrackPropagator::TEveTrackPropagator(const Text_t* n, const Text_t* t,
+                                         TEveMagField *field) :
+   TEveElementList(n, t),
    TEveRefBackPtr(),
 
    fMagFieldObj(field),
@@ -177,7 +178,8 @@ TEveTrackPropagator::TEveTrackPropagator(TEveMagField *field) :
 {
    // Default constructor.
 
-   fMagFieldObj = new TEveMagFieldConst(0., 0., 0.);
+   if (fMagFieldObj == 0)
+      fMagFieldObj = new TEveMagFieldConst(0., 0., 0.);
 }
 
 //______________________________________________________________________________
@@ -187,6 +189,26 @@ TEveTrackPropagator::~TEveTrackPropagator()
 
    delete fMagFieldObj;
 }
+
+//______________________________________________________________________________
+void TEveTrackPropagator::ElementChanged(Bool_t update_scenes, Bool_t redraw)
+{
+   // Element-change notification.
+   // Stamp all tracks as requiring display-list regeneration.
+   // Virtual from TEveElement.
+
+   TEveTrack* track;
+   std::list<TEveElement*>::iterator i = fBackRefs.begin();
+   while (i != fBackRefs.end())
+   {
+      track = dynamic_cast<TEveTrack*>(*i);
+      track->StampObjProps();
+      ++i;
+   }
+   TEveElementList::ElementChanged(update_scenes, redraw);
+}
+
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveTrackPropagator::InitTrack(TEveVector &v, TEveVector& /*p*/,
@@ -540,7 +562,7 @@ void TEveTrackPropagator::RebuildTracks()
    {
       track = dynamic_cast<TEveTrack*>(*i);
       track->MakeTrack();
-      track->ElementChanged();
+      track->StampObjProps();
       ++i;
    }
 }
