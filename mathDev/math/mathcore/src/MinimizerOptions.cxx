@@ -20,6 +20,7 @@ namespace Math {
 
    static std::string gDefaultMinimizer = "Minuit2";
    static std::string gDefaultMinimAlgo = "Migrad";
+   static double gDefaultErrorDef = 1.;
    static double gDefaultTolerance = 1.E-4; 
    static int  gDefaultMaxCalls = 0; // 0 means leave default values Deaf
    static int  gDefaultMaxIter  = 0; 
@@ -32,6 +33,9 @@ void MinimizerOptions::SetDefaultMinimizer(const std::string & type, const std::
    // set the default minimizer type and algorithm
    if (type != "") gDefaultMinimizer = type; 
    if (algo != "") gDefaultMinimAlgo = algo; 
+}
+void MinimizerOptions::SetDefaultErrorDef(double up) {
+   gDefaultErrorDef = up; 
 }
 void MinimizerOptions::SetDefaultTolerance(double tol) {
    gDefaultTolerance = tol; 
@@ -50,6 +54,7 @@ void MinimizerOptions::SetDefaultPrintLevel(int level) {
 }
 const std::string & MinimizerOptions::DefaultMinimizerType() { return gDefaultMinimizer; }
 const std::string & MinimizerOptions::DefaultMinimizerAlgo() { return gDefaultMinimAlgo; }
+double MinimizerOptions::DefaultErrorDef()         { return gDefaultErrorDef; }
 double MinimizerOptions::DefaultTolerance()        { return gDefaultTolerance; }
 int    MinimizerOptions::DefaultMaxFunctionCalls() { return gDefaultMaxCalls; }
 int    MinimizerOptions::DefaultMaxIterations()    { return gDefaultMaxIter; }
