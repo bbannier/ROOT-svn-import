@@ -25,11 +25,16 @@ TEveTrackPropagator::Helix_t::Helix_t():
    fPhi(0),
    fValid(kTRUE),
 
-   fLam(0),
-   fR(0),
-   fPhiStep(0),
-   fSin(0),
-   fCos(0)
+   fLam(-1),
+   fR(-1),
+   fPhiStep(-1),
+   fSin(-1),
+   fCos(-1),
+
+   fPtMag(-1),
+   fPlDir(-1),
+   fTStepSize(-1)
+
 {
    // Constructor.
 
@@ -116,6 +121,10 @@ void TEveTrackPropagator::Helix_t::Step(const TEveVector4& v, const TEveVector& 
       // case: pT < 1e-6 or B < 1e-7
       // might happen if field directon changes pT ~ 0 or B becomes zero
 
+      if (fTStepSize == -1)
+      {
+         printf("WARNING TEveTrackPropagator::Helix_t::Step step-size not initialised.\n");
+      }
       vOut += p*(fTStepSize/p.Mag());
       pOut = p;
    }
@@ -167,6 +176,8 @@ TEveTrackPropagator::TEveTrackPropagator(TEveMagField *field) :
    fV()
 {
    // Default constructor.
+
+   fMagFieldObj = new TEveMagFieldConst(0., 0., 0.);
 }
 
 //______________________________________________________________________________
@@ -174,7 +185,7 @@ TEveTrackPropagator::~TEveTrackPropagator()
 {
    // Destructor.
 
-   if (fMagFieldObj) delete fMagFieldObj;
+   delete fMagFieldObj;
 }
 
 //______________________________________________________________________________
@@ -206,9 +217,11 @@ void TEveTrackPropagator::ResetTrack()
 Bool_t TEveTrackPropagator::GoToVertex(TEveVector& v, TEveVector& p)
 {
    // Propagate particle with momentum p to vertex v.
-
+  
    Bool_t hit;
-   if (fH.fCharge  && p.Perp2() > 1e-12)
+   fH.Update(p, fMagFieldObj->GetField(fV), kTRUE);
+
+   if (fH.fValid)
       hit = HelixToVertex(v, p);
    else
       hit = LineToVertex(v);
@@ -220,7 +233,9 @@ void TEveTrackPropagator::GoToBounds(TEveVector& p)
 {
    // Propagate particle to bounds.
 
-   if (fH.fCharge  &&  p.Perp2() > 1e-12)
+   fH.Update(p, fMagFieldObj->GetField(fV), kTRUE);
+
+   if (fH.fValid)
       HelixToBounds(p);
    else
       LineToBounds(p);
@@ -247,8 +262,6 @@ void TEveTrackPropagator::StepHelix(TEveVector4 &v, TEveVector &p, TEveVector4 &
 void TEveTrackPropagator::HelixToBounds(TEveVector& p)
 {
    // Propagate charged particle with momentum p to bounds.
-
-   fH.Update(p, fMagFieldObj->GetField(fV), kTRUE);
 
    TEveVector4 currV = fV;
    TEveVector4 forwV;
@@ -344,7 +357,7 @@ Bool_t TEveTrackPropagator::HelixToVertex(TEveVector& v, TEveVector& p)
 
    // rotate for remaining time and add offset
 
-   Float_t af = (v-currV).Mag()/fH.GetStepSize2();
+   Float_t af = (v-currV).Mag()/fH.fTStepSize;
    fH.Update(p, fH.fB, kTRUE, af);
    StepHelix(currV,p, forwV, forwP);
    p = forwP;
