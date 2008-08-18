@@ -206,7 +206,7 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
 
 
    if (linear) { 
-      if (fitOption.Robust) { 
+      if (fitOption.Robust && (fitOption.hRobust > 0 && fitOption.hRobust < 1.) ) { 
          fitConfig.SetMinimizer("Linear","Robust");
          fitConfig.MinimizerOptions().SetTolerance(fitOption.hRobust); // use tolerance for passing robust parameter
       }
