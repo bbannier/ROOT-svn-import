@@ -37,6 +37,7 @@
 #include "TError.h"
 #include "TVirtualHistPainter.h"
 #include "TVirtualFFT.h"
+#include "TSystem.h"
 
 //______________________________________________________________________________
 /* Begin_Html
@@ -3207,7 +3208,22 @@ void TH1::FitPanel()
 //
 //      See class TFitPanel for example
 
-   if (fPainter) fPainter->FitPanel();
+   if (!gPad)
+      gROOT->MakeDefCanvas();
+
+   if (!gPad) {
+      Error("FitPanel", "Unable to create a default canvas");
+      return;
+   }
+
+   if (!TClass::GetClass("TFitEditor")) gSystem->Load("libFitPanel");
+   gROOT->ProcessLine(Form("TFitEditor::Open((TVirtualPad*)0x%lx,(TObject*)0x%lx)",gPad,this));
+
+//  To use the plugin manager in the future.
+//    TPluginHandler *handler = gROOT->GetPluginManager()->FindHandler("TFitPanel");
+//    if (handler && handler->LoadPlugin() != -1)
+//       if (handler->ExecPlugin(2, gPad, this) == 0)
+//          Error("FitPanel", "Unable to crate the FitPanel");
 }
 
 //______________________________________________________________________________
