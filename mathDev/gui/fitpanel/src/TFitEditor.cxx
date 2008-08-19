@@ -298,6 +298,14 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
                kMWMFuncAll  | kMWMFuncResize    | kMWMFuncMaximize |
                               kMWMFuncMinimize,
                kMWMInputModeless);
+
+   if (!pad)
+   {
+      if (!gPad)
+         gROOT->MakeDefCanvas();
+      pad = gPad;
+   }
+
    if (pad && obj) {
       fParentPad = (TPad *)pad;
       fFitObject = (TObject *)obj;
