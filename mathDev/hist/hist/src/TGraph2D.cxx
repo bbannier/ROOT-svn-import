@@ -19,6 +19,7 @@
 #include "TGraphDelaunay.h"
 #include "TVirtualPad.h"
 #include "TVirtualFitter.h"
+#include "TPluginManager.h"
 #include "TClass.h"
 #include "TSystem.h"
 #include <stdlib.h>
@@ -692,14 +693,23 @@ void TGraph2D::FitPanel()
    // Display a GUI panel with all graph fit options.
    //
    //   See class TFitEditor for example
+   if (!gPad)
+      gROOT->MakeDefCanvas();
 
    if (!gPad) {
-      Error("FitPanel", "need to draw graph first");
+      Error("FitPanel", "Unable to create a default canvas");
       return;
    }
 
-   if (!TClass::GetClass("TFitEditor")) gSystem->Load("libFitPanel");
-   gROOT->ProcessLine(Form("TFitEditor::Open((TVirtualPad*)0x%lx,(TObject*)0x%lx)",gPad,this));
+   // use plugin manager to create instance of TFitEditor
+   TPluginHandler *handler = gROOT->GetPluginManager()->FindHandler("TFitEditor");
+   if (handler && handler->LoadPlugin() != -1) {
+      if (handler->ExecPlugin(2, gPad, this) == 0)
+         Error("FitPanel", "Unable to crate the FitPanel");
+   }
+   else 
+         Error("FitPanel", "Unable to find the FitPanel plug-in");
+
 }
 
 //______________________________________________________________________________

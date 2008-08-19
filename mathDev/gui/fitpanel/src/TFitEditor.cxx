@@ -198,7 +198,7 @@ ClassImp(TFitEditor)
 TFitEditor *TFitEditor::fgFitDialog = 0;
 
 //______________________________________________________________________________
-void TFitEditor::Open(TVirtualPad* pad, TObject *obj)
+TFitEditor * TFitEditor::GetInstance(TVirtualPad* pad, TObject *obj)
 {
    // Static method - opens the fit panel.
 
@@ -210,10 +210,11 @@ void TFitEditor::Open(TVirtualPad* pad, TObject *obj)
    }
 
    if (!fgFitDialog) {
-      TFitEditor::GetFP() = new TFitEditor(pad, obj);
+      fgFitDialog = new TFitEditor(pad, obj);
    } else {
       fgFitDialog->Show(pad, obj);
    }
+   return fgFitDialog;
 }
 
 //______________________________________________________________________________
@@ -982,11 +983,11 @@ void TFitEditor::CloseWindow()
 }
 
 //______________________________________________________________________________
-TFitEditor *&TFitEditor::GetFP()
-{
-   // Static: return main fit panel
-   return fgFitDialog;
-}
+// TFitEditor *&TFitEditor::GetFP()
+// {
+//    // Static: return main fit panel
+//    return fgFitDialog;
+// }
 
 //______________________________________________________________________________
 void TFitEditor::Terminate()

@@ -3216,14 +3216,15 @@ void TH1::FitPanel()
       return;
    }
 
-   if (!TClass::GetClass("TFitEditor")) gSystem->Load("libFitPanel");
-   gROOT->ProcessLine(Form("TFitEditor::Open((TVirtualPad*)0x%lx,(TObject*)0x%lx)",gPad,this));
 
-//  To use the plugin manager in the future.
-//    TPluginHandler *handler = gROOT->GetPluginManager()->FindHandler("TFitPanel");
-//    if (handler && handler->LoadPlugin() != -1)
-//       if (handler->ExecPlugin(2, gPad, this) == 0)
-//          Error("FitPanel", "Unable to crate the FitPanel");
+   // use plugin manager to create instance of TFitEditor
+   TPluginHandler *handler = gROOT->GetPluginManager()->FindHandler("TFitEditor");
+   if (handler && handler->LoadPlugin() != -1) {
+      if (handler->ExecPlugin(2, gPad, this) == 0)
+         Error("FitPanel", "Unable to crate the FitPanel");
+   }
+   else 
+         Error("FitPanel", "Unable to find the FitPanel plug-in");
 }
 
 //______________________________________________________________________________

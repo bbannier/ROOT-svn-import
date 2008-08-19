@@ -162,8 +162,8 @@ public:
    TFitEditor(TVirtualPad* pad, TObject *obj);
    virtual ~TFitEditor();
 
-   static TFitEditor *&GetFP();
-   static  void       Open(TVirtualPad* pad, TObject *obj);
+//   static TFitEditor *&GetFP();
+   static  TFitEditor *GetInstance(TVirtualPad* pad, TObject *obj);
    virtual Option_t  *GetDrawOption() const;
    virtual void       Hide();
    virtual void       Show(TVirtualPad* pad, TObject *obj);
