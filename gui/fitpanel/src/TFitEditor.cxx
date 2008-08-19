@@ -202,6 +202,13 @@ void TFitEditor::Open(TVirtualPad* pad, TObject *obj)
 {
    // Static method - opens the fit panel.
 
+   if (!pad)
+   {
+      if (!gPad)
+         gROOT->MakeDefCanvas();
+      pad = gPad;
+   }
+
    if (!fgFitDialog) {
       TFitEditor::GetFP() = new TFitEditor(pad, obj);
    } else {
@@ -298,13 +305,6 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
                kMWMFuncAll  | kMWMFuncResize    | kMWMFuncMaximize |
                               kMWMFuncMinimize,
                kMWMInputModeless);
-
-   if (!pad)
-   {
-      if (!gPad)
-         gROOT->MakeDefCanvas();
-      pad = gPad;
-   }
 
    if (pad && obj) {
       fParentPad = (TPad *)pad;
@@ -1206,14 +1206,15 @@ void TFitEditor::SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event)
       if (en) fFuncList->Select(en->EntryId());
    } else {
       TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-      if (fNone->GetState() == kButtonDown)
+      if (te && fNone->GetState() == kButtonDown)
          fEnteredFunc->SetText(te->GetTitle());
       else if (fAdd->GetState() == kButtonDown) {
          TString tmpStr = fEnteredFunc->GetText();
          tmpStr += '+';
          tmpStr +=te->GetTitle();
          fEnteredFunc->SetText(tmpStr);
-      }
+      } else if ( !te )
+         fEnteredFunc->SetText("");
       fEnteredFunc->SelectAll();
    }
 
