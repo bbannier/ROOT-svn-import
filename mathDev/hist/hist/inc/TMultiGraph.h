@@ -58,6 +58,7 @@ public:
    virtual void      Draw(Option_t *chopt="");
    virtual Int_t     Fit(const char *formula ,Option_t *option="" ,Option_t *goption="", Axis_t xmin=0, Axis_t xmax=0); 
    virtual Int_t     Fit(TF1 *f1 ,Option_t *option="" ,Option_t *goption="", Axis_t rxmin=0, Axis_t rxmax=0); 
+   virtual void      FitPanel(); // *MENU*
    virtual Option_t *GetGraphDrawOption(const TGraph *gr) const;
    virtual void      LeastSquareLinearFit(Int_t ndata, Double_t &a0, Double_t &a1, Int_t &ifail, Double_t xmin, Double_t xmax);
    virtual void      LeastSquareFit(Int_t m, Double_t *a, Double_t xmin, Double_t xmax);

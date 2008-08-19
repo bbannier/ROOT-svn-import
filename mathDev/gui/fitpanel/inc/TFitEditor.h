@@ -36,7 +36,8 @@ enum EObjectType {
    kObjectGraph,
    kObjectGraph2D,
    kObjectHStack,
-   kObjectTree
+   kObjectTree,
+   kObjectMultiGraph
 };
 
 
