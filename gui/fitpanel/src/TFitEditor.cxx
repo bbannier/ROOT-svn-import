@@ -148,6 +148,7 @@
 #include "THStack.h"
 #include "TMath.h"
 #include "Fit/DataRange.h"
+#include "TMultiGraph.h"
 
 enum EFitPanel {
    kFP_FLIST, kFP_GAUS,  kFP_GAUSN, kFP_EXPO,  kFP_LAND,  kFP_LANDN,
@@ -1038,6 +1039,19 @@ void TFitEditor::UpdateGUI()
             }
             break;
          }
+         case kObjectMultiGraph: {
+            TMultiGraph *mg = (TMultiGraph*)fFitObject; //TBV
+            TH1F *hist = mg->GetHistogram();
+            if (hist) {
+               fXaxis = hist->GetXaxis();
+               fYaxis = hist->GetYaxis();
+               fZaxis = hist->GetZaxis();
+               fXrange = fXaxis->GetNbins();
+               fXmin = fXaxis->GetFirst();
+               fXmax = fXaxis->GetLast();
+            }
+            break;
+         }
          case kObjectGraph2D: {
             //not implemented
             break;
@@ -1083,6 +1097,10 @@ void TFitEditor::UpdateGUI()
             break;
          }
          case kObjectGraph: {
+            //not implemented
+            break;
+         }
+         case kObjectMultiGraph: {
             //not implemented
             break;
          }
@@ -1472,6 +1490,20 @@ void TFitEditor::DoFit()
          fitFunc->SetRange(xmin,xmax);
          ROOT::Fit::DataRange drange(xmin, xmax);
          FitObject(gr, fitFunc, fitOpts, mopts, strDrawOpts, drange);
+         break;
+      }
+      case kObjectMultiGraph: {
+         TMultiGraph *mg = (TMultiGraph*)fFitObject;
+
+         if ( !fitFunc) fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
+
+         if ( fFuncPars ) SetParameters(fFuncPars, fitFunc);
+         RetrieveOptions(fitOpts, strDrawOpts, mopts, fitFunc->GetNpar());
+
+         fitFunc->SetRange(xmin,xmax);
+         ROOT::Fit::DataRange drange(xmin, xmax);
+         FitObject(mg, fitFunc, fitOpts, mopts, strDrawOpts, drange);
+
          break;
       }
       case kObjectGraph2D: {
@@ -1973,6 +2005,17 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
       if (!fMethodList->FindEntry("Chi-square"))
          fMethodList->AddEntry("Chi-square", kFP_MCHIS);
       fMethodList->Select(kFP_MCHIS, kFALSE);
+   } else if (obj->InheritsFrom("TMultiGraph")) {
+      fType = kObjectMultiGraph;
+      set = kTRUE;
+      fDim = 1;
+      if (fMethodList->FindEntry("Binned Likelihood"))
+         fMethodList->RemoveEntry(kFP_MBINL);
+      if (!fMethodList->FindEntry("Chi-square"))
+         fMethodList->AddEntry("Chi-square", kFP_MCHIS);
+      fMethodList->Select(kFP_MCHIS, kFALSE);
+      fRobustValue->SetState(kTRUE);
+      fRobustValue->GetNumberEntry()->SetToolTipText("Set robust value");
    }
 
    if ( fDim < 2 )
@@ -2183,6 +2226,11 @@ TF1* TFitEditor::HasFitFunction(TObject *obj)
       case kObjectGraph: {
          func =((TGraph *)obj)->GetFunction("fitFunc");
          lf = ((TGraph *)obj)->GetListOfFunctions();
+         break;
+      }
+      case kObjectMultiGraph: {
+         func =((TMultiGraph *)obj)->GetFunction("fitFunc");
+         lf = ((TMultiGraph *)obj)->GetListOfFunctions();
          break;
       }
       case kObjectGraph2D: {

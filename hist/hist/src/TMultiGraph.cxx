@@ -16,8 +16,10 @@
 #include "TVirtualPad.h"
 #include "Riostream.h"
 #include "TVirtualFitter.h"
+#include "TPluginManager.h"
 #include "TClass.h"
 #include "TMath.h"
+#include "TSystem.h"
 #include <stdlib.h>
 
 #include <ctype.h>
@@ -399,6 +401,31 @@ Int_t TMultiGraph::Fit(TF1 *f1, Option_t *option, Option_t *goption, Axis_t rxmi
 
 }
 
+//______________________________________________________________________________
+void TMultiGraph::FitPanel()
+{
+//   -*-*-*-*-*Display a panel with all histogram fit options*-*-*-*-*-*
+//             ==============================================
+//
+//      See class TFitPanel for example
+
+   if (!gPad)
+      gROOT->MakeDefCanvas();
+
+   if (!gPad) {
+      Error("FitPanel", "Unable to create a default canvas");
+      return;
+   }
+
+   // use plugin manager to create instance of TFitEditor
+   TPluginHandler *handler = gROOT->GetPluginManager()->FindHandler("TFitEditor");
+   if (handler && handler->LoadPlugin() != -1) {
+      if (handler->ExecPlugin(2, gPad, this) == 0)
+         Error("FitPanel", "Unable to crate the FitPanel");
+   }
+   else 
+         Error("FitPanel", "Unable to find the FitPanel plug-in");
+}
 
 //______________________________________________________________________________
 Option_t *TMultiGraph::GetGraphDrawOption(const TGraph *gr) const
