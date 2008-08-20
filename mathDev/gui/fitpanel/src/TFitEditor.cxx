@@ -1053,7 +1053,16 @@ void TFitEditor::UpdateGUI()
             break;
          }
          case kObjectGraph2D: {
-            //not implemented
+            TGraph2D *gr = (TGraph2D*)fFitObject; //TBV
+            TH2D *hist = gr->GetHistogram();
+            if (hist) {
+               fXaxis = hist->GetXaxis();
+               fYaxis = hist->GetYaxis();
+               fZaxis = hist->GetZaxis();
+               fXrange = fXaxis->GetNbins();
+               fXmin = fXaxis->GetFirst();
+               fXmax = fXaxis->GetLast();
+            }
             break;
          }
          case kObjectHStack: {
@@ -1105,7 +1114,9 @@ void TFitEditor::UpdateGUI()
             break;
          }
          case kObjectGraph2D: {
-            //not implemented
+            fYrange = fYaxis->GetNbins();
+            fYmin = fYaxis->GetFirst();
+            fYmax = fYaxis->GetLast();
             break;
          }
          case kObjectHStack: {
@@ -1507,7 +1518,17 @@ void TFitEditor::DoFit()
          break;
       }
       case kObjectGraph2D: {
-         // N/A
+         TGraph2D *mg = (TGraph2D*)fFitObject;
+
+         if ( !fitFunc) fitFunc = new TF2("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
+
+         if ( fFuncPars ) SetParameters(fFuncPars, fitFunc);
+         RetrieveOptions(fitOpts, strDrawOpts, mopts, fitFunc->GetNpar());
+
+         fitFunc->SetRange(xmin,xmax);
+         ROOT::Fit::DataRange drange(xmin, xmax);
+         FitObject(mg, fitFunc, fitOpts, mopts, strDrawOpts, drange);
+
          break;
       }
       case kObjectHStack: {
