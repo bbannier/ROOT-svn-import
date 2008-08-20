@@ -2331,6 +2331,11 @@ void TFitEditor::GetFunctionsFromList(TList *list)
          fFuncList->AddEntry("pol8",   kFP_POL8);
          fFuncList->AddEntry("pol9",   kFP_POL9);
          fFuncList->AddEntry("user",   kFP_USER);
+
+         // Need to be setted this way, otherwise when the functions
+         // are removed, the list doesn't show them.x
+         TGListBox *lb = fFuncList->GetListBox();
+         lb->Resize(lb->GetWidth(), 200);
       }
 
       TIter next(list, kIterBackward);
