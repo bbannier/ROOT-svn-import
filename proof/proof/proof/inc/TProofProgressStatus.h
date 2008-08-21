@@ -1,3 +1,4 @@
+// @(#)root/proof:$Id$
 // Author: Jan Iwaszkiewicz    08/08/08
 
 /*************************************************************************
@@ -33,17 +34,19 @@ public:
                         Double_t fProcTime = 0, Double_t fCPUTime = 0);
    void     Reset() { fEntries = 0, fBytesRead = 0,
    	      fProcTime = 0, fCPUTime = 0; }
-   Long64_t GetEntries() { return fEntries; }
-   Long64_t GetBytesRead() { return fBytesRead; }
-   Double_t GetProcTime() { return fProcTime; }
-   Double_t GetCPUTime() { return fCPUTime; }
+   Long64_t GetEntries() const { return fEntries; }
+   Long64_t GetBytesRead() const { return fBytesRead; }
+   Double_t GetProcTime() const { return fProcTime; }
+   Double_t GetCPUTime() const { return fCPUTime; }
    void     SetEntries(Long64_t entries) { fEntries = entries; }
    void     IncEntries(Long64_t entries = 1) { fEntries += entries; }
    void     SetBytesRead(Long64_t bytesRead) { fBytesRead = bytesRead; }
    void     SetProcTime(Double_t procTime) { fProcTime = procTime; }
    void     SetCPUTime(Double_t procTime) { fCPUTime = procTime; }
-   TProofProgressStatus &operator+=(TProofProgressStatus *st);
-   TProofProgressStatus &operator-=(TProofProgressStatus *st);
+   void     Print(Option_t* option = "") const;
+   TProofProgressStatus operator-(TProofProgressStatus &st);
+   TProofProgressStatus &operator+=(const TProofProgressStatus &st);
+   TProofProgressStatus &operator-=(const TProofProgressStatus &st);
    ClassDef(TProofProgressStatus,1) // Proof progress status class
 };
 

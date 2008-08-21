@@ -799,6 +799,7 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
    }
 
    req << fLatency.RealTime();
+   // TODO: update the status in the player and send that one!
    TProofProgressStatus *status =
       new TProofProgressStatus((Long64_t)(fPlayer?fPlayer->GetEventsProcessed():(-1)),
                                bytesRead, realtime, cputime);
@@ -3757,6 +3758,7 @@ void TProofServ::HandleProcess(TMessage *mess)
       fPlayer->Process(dset, filename, opt, nentries, first);
 
       // Return number of events processed
+      
       TMessage m(kPROOF_STOPPROCESS);
       Bool_t abort = (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted) ? kFALSE : kTRUE;
       TProofProgressStatus* status =

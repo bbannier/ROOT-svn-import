@@ -1,3 +1,4 @@
+// @(#)root/proof:$Id$
 // Author: Jan Iwaszkiewicz    08/08/08
 
 /*************************************************************************
@@ -8,6 +9,7 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#include "Riostream.h"
 #include "TProofProgressStatus.h"
 #include "TObject.h"
 
@@ -29,21 +31,33 @@ TProofProgressStatus::TProofProgressStatus(Long64_t entries,
 }
 
 //______________________________________________________________________________
-TProofProgressStatus& TProofProgressStatus::operator+=(TProofProgressStatus *st)
+TProofProgressStatus& TProofProgressStatus::operator+=(const TProofProgressStatus &st)
 {
-   fEntries += st->GetEntries();
-   fBytesRead += st->GetBytesRead();
-   fProcTime += st->GetProcTime();
-   fCPUTime += st->GetCPUTime();
+   fEntries += st.GetEntries();
+   fBytesRead += st.GetBytesRead();
+   fProcTime += st.GetProcTime();
+   fCPUTime += st.GetCPUTime();
    return *this;
 }
 
 //______________________________________________________________________________
-TProofProgressStatus& TProofProgressStatus::operator-=(TProofProgressStatus *st)
+TProofProgressStatus& TProofProgressStatus::operator-=(const TProofProgressStatus &st)
 {
-   fEntries -= st->GetEntries();
-   fBytesRead -= st->GetBytesRead();
-   fProcTime -= st->GetProcTime();
-   fCPUTime -= st->GetCPUTime();
+   fEntries -= st.GetEntries();
+   fBytesRead -= st.GetBytesRead();
+   fProcTime -= st.GetProcTime();
+   fCPUTime -= st.GetCPUTime();
    return *this;
+}
+
+//______________________________________________________________________________
+TProofProgressStatus TProofProgressStatus::operator-(TProofProgressStatus &st)
+{
+   return TProofProgressStatus(*this) -= st;
+}
+
+//______________________________________________________________________________
+void TProofProgressStatus::Print(Option_t* /*option*/) const
+{
+   cout << "TProofProgressStatus: fEntries: " << fEntries << endl;
 }

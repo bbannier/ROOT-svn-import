@@ -295,7 +295,7 @@ public:
       return fFileNode?(fFileNode->GetEventsLeftPerSlave()):0; }
    TList      *GetProcessedSubSet() { return fDSubSet; }
    TProofProgressStatus *GetProgressStatus() { return fStatus; }
-   Int_t       AddProcessed(TProofProgressStatus *st = 0); // Add curent packet to the list of processed.
+   TProofProgressStatus *AddProcessed(TProofProgressStatus *st = 0);
 };
 
 //______________________________________________________________________________
@@ -341,17 +341,23 @@ void TPacketizerAdaptive::TSlaveStat::UpdateRates(TProofProgressStatus *st)
 }
 
 //______________________________________________________________________________
-Int_t TPacketizerAdaptive::TSlaveStat::AddProcessed(TProofProgressStatus *st)
+TProofProgressStatus *TPacketizerAdaptive::TSlaveStat::AddProcessed(TProofProgressStatus *st)
 {
    // Add the current element to the fDSubSet (subset processed by this worker)
    // and if the status arg is given change the size of the packet.
+   // return the difference (*st - *fStatus)
+
    if (fDSubSet && fCurElem) {
       if (st)
-         fCurElem->SetNum(st->GetEntries() - GetEntriesProcessed());
+         if (fCurElem->GetNum() != st->GetEntries() - GetEntriesProcessed())
+            fCurElem->SetNum(st->GetEntries() - GetEntriesProcessed());
       fDSubSet->Add(fCurElem);
+      TProofProgressStatus *diff = new TProofProgressStatus(*st - *fStatus);
+      return diff;
+   } else {
+      Error("AddProcessed", "Processed subset of current elem undefined");
       return 0;
-   } else
-      return -1;
+   }
 }
 
 //------------------------------------------------------------------------------
@@ -365,8 +371,9 @@ Int_t    TPacketizerAdaptive::fgStrategy = 1;
 
 //______________________________________________________________________________
 TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
-                          Long64_t first, Long64_t num, TList *input)
-                    : TVirtualPacketizer(input)
+                                         Long64_t first, Long64_t num,
+                                         TList *input, TProofProgressStatus *st)
+                    : TVirtualPacketizer(input, st)
 {
    // Constructor
 
@@ -379,6 +386,13 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
    fActive = 0;
    fFileNodes = 0;
    fMaxPerfIdx = 1;
+
+   if (!fProgressStatus) {
+      Error("TPacketizerAdaptive", "No progress status");
+      return;
+   } else
+      fProgressStatus->Print();
+
 
    // The possibility to change packetizer strategy to the basic TPacketizer's
    // one (in which workers always process their local data first).
@@ -1205,8 +1219,8 @@ Int_t TPacketizerAdaptive::AddProcessed(TSlave *sl,
                                         TProofProgressStatus *status,
                                         TList **listOfMissingFiles)
 {
-   // To be used by GetNextPacket but also when the worker was asked to stop
-   // during processing a packet.
+   // To be used by GetNextPacket but also in reaction to kPROOF_STOPPROCESS
+   // message (when the worker was asked to stop processing during a packet).
    // returns the #entries intended in the last packet - #processed entries
 
    // find slave
@@ -1222,8 +1236,6 @@ Int_t TPacketizerAdaptive::AddProcessed(TSlave *sl,
    if ( slstat->fCurElem != 0 ) {
       Long64_t expectedNumEv = slstat->fCurElem->GetNum();
       // Calculate the number of events processed in the last packet
-      // TODO do this insetad of the below and react to the ret val
-      // slstat->AddProcessed(status);
       Long64_t numev;
       if (status && status->GetEntries() > 0)
          numev = status->GetEntries() - slstat->GetEntriesProcessed();
@@ -1232,10 +1244,13 @@ Int_t TPacketizerAdaptive::AddProcessed(TSlave *sl,
 
       if (numev > 0) {
          // This also moves the pointer in the corrsponding TFileInfo
-         slstat->AddProcessed(status);
-         (*fProgressStatus) += status;
-         // update processing rate
-         slstat->UpdateRates(status);
+         TProofProgressStatus *statusDifference = slstat->AddProcessed(status);
+         if (statusDifference) {
+            (*fProgressStatus) += *statusDifference;
+            delete statusDifference;
+            // update processing rate
+            slstat->UpdateRates(status);
+         }
       }
 
 // TODO what happens with the fProcTime ? status include the cumulative proctime
@@ -1259,89 +1274,22 @@ Int_t TPacketizerAdaptive::AddProcessed(TSlave *sl,
          } else
             Error("AddProcessed", "Processed too much?");
 
-// We give up the idea of failed packets list.
-         // Add it to the failed packets list.
-
-//         if (!fFailedPackets) {
-//            fFailedPackets = new TList();
-//         }
-//         fFailedPackets->Add(slstat->fCurElem);
+         // TODO: a signal handler which will send info from the worker
+         // after a packet fails.
+         /* Add it to the failed packets list.
+         if (!fFailedPackets) {
+            fFailedPackets = new TList();
+         }
+         fFailedPackets->Add(slstat->fCurElem);
+         */
       }
-
-/*
-      PDB(kPacketizer,2)
-         Info("AddProcessed","worker-%s (%s): %lld %7.3lf %7.3lf %7.3lf %lld",
-              sl->GetOrdinal(), sl->GetName(), numev, latency,
-              status ? status->GetProcTime() : 0,
-              status ? status->GetCPUTime() : 0,
-              status ? status->GetBytesRead() : -1);
-
-      if (gPerfStats != 0) {
-         gPerfStats->PacketEvent(sl->GetOrdinal(), sl->GetName(), slstat->fCurElem->GetFileName(),
-                                 numev, latency,
-                                 status ? status->GetProcTime() : 0,
-                                 status ? status->GetCPUTime() : 0,
-                                 status ? status->GetBytesRead() : -1);
-      }
-
-*/
       return (expectedNumEv - numev);
    } else {
-      Error("AddProcessed", "No element was processed by this node.");
+      // the kPROOF_STOPPRPOCESS message is send after the worker receives zero
+      // as the reply to kPROOF_GETNEXTPACKET
       return -1;
    }
-/*
-
-
-// second variant; from the markbad;
-   if (status) {
-      // reassign the remaining part of the last packet.
-
-      // Calculate the number of events processed in the last packet
-      Long64_t numev;
-      numev = status->GetEntries() - slaveStat->GetEntriesProcessed();
-
-
-   } else {
-      // Get the subset processed by the bad worker.
-      TList *subSet = slaveStat->GetProcessedSubSet();
-      // Take care of the current packet
-      if (slaveStat->fCurElem) {
-         subSet->Add(slaveStat->fCurElem);
-      }
-      // reassign the packets assigned to the bad slave and save the size;
-      if (subSet)
-         SplitPerHost(subSet, listOfMissingFiles);
-      // TODO REM fProcessed -= slaveStat->fProcessed;
-      (*fProgressStatus) -= slaveStat->GetProgressStatus();
-      // the elements were reassigned so should not be deleted
-      subSet->SetOwner(0);
-   }
-
-*/
-
 }
-
-
-
-//void TPacketizerAdaptive::AddProcessed(TSlaveStat *s, Long64_t numev,
-//                                          Double_t bytesRead)
-//______________________________________________________________________________
-/*void TPacketizerAdaptive::AddProcessed(TProofProgressStatus *s)
-{
-   // From now on consider that results for processed 'entires' are transferreed
-   // to the master server.
-   Long64_t totev = 0;
-   // The last packet was sucessfully or partially processed
-   slstat->AddProcessed(numev);
-
-   fProcessed += ((numev > 0) ? numev : 0);
-   fBytesRead += ((bytesRead > 0) ? bytesRead : 0);
-
-   // update the data in corresponding TFileNode and rates too.
-   slstat->UpdateRates(numev, 0); // TODO: get proctime too!
-}
-*/
 
 //______________________________________________________________________________
 TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
@@ -1378,34 +1326,14 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
       (*r) >> status;
 
       // Calculate the number of events processed in the last packet
-      // TODO do this insetad of the below and react to the ret val
-      // slstat->AddProcessed(status);
       Long64_t numev;
       if (status && status->GetEntries() > 0)
          numev = status->GetEntries() - slstat->GetEntriesProcessed();
       else
          numev = 0;
 
-      //Int_t ret =
-      AddProcessed(sl, status);
-/*
-
-      if (numev == expectedNumEv) {
-         // The last packet was sucessfully processed
-         slstat->AddProcessed();
-         (*fProgressStatus) += status;
-         // update processing rate
-         slstat->UpdateRates(status);
-      } else {
-         // The last packet was not processed properly.
-         // Add it to the failed packets list.
-
-         if (!fFailedPackets) {
-            fFailedPackets = new TList();
-         }
-         fFailedPackets->Add(slstat->fCurElem);
-      }
-*/
+      if (AddProcessed(sl, status))
+         Error("GetNextPacket", "The worker processed diff. no. entries");
       PDB(kPacketizer,2)
          Info("GetNextPacket","worker-%s (%s): %lld %7.3lf %7.3lf %7.3lf %lld",
               sl->GetOrdinal(), sl->GetName(), numev, latency,
@@ -1422,7 +1350,9 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
       }
 
       slstat->fCurElem = 0;
-      if ( fProgressStatus->GetEntries() == fTotalEntries ) {
+      if ( fProgressStatus->GetEntries() >= fTotalEntries ) {
+         if (fProgressStatus->GetEntries() > fTotalEntries)
+            Error("GetNextPacket", "Processed too many entries!");
          HandleTimer(0);   // Send last timer message
          delete fProgress; fProgress = 0;
       }
@@ -1578,8 +1508,8 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
 }
 
 //______________________________________________________________________________
-Int_t TPacketizerAdaptive::GetEstEntriesProcessed(Float_t t,
-                                                  Long64_t &ent, Long64_t &bytes)
+Int_t TPacketizerAdaptive::GetEstEntriesProcessed(Float_t t, Long64_t &ent,
+                                                  Long64_t &bytes)
 {
    // Get estimation for the number of processed entries and bytes read at time t,
    // based on the numbers already processed and the latests worker measured speeds.
@@ -1638,89 +1568,19 @@ Int_t TPacketizerAdaptive::GetEstEntriesProcessed(Float_t t,
    // Done
    return 0;
 }
-/*
-//______________________________________________________________________________
-void TPacketizerAdaptive::MarkBad(TSlave *s, Bool_t resubmit,
-                                  TList **listOfMissingFiles)
-{
-   // This method can be called at any time during processing.
-   // If the output list from this worker is going to be sent back to the master,
-   // the 'entries' should be the number of entries processed by the slave.
-   // From this we calculate the remaining part of the packet.
-   // -1 indicates that the results from that worker were lost completely.
-   // TODO: fix comment   resubmit' flag should be set to kFALSE.
-   // Otherwise we split the work performed by worker 's' back to the filenodes.
-   // Assume that the filenodes for which we have a TFileNode object
-   // are still up and running.
-   // Also assume that if 'resubmit' is kFALSE, the fCurElem was processed.
-   // TODO: add a filenode failure detecting mechanism.
-
-   TSlaveStat *slaveStat = (TSlaveStat *)(fSlaveStats->GetValue(s));
-   if (!slaveStat) {
-      Error("MarkBad", "Worker does not exist");
-      return;
-   }
-
-   Long64_t entries = 0; // TODO use status
-
-   if (entries > 0) {
-      // reassign the remaining part of the last packet.
-      Long64_t prevProcessed = slaveStat->GetEntriesProcessed();
-
-      // Calculate the number of events processed in the last packet
-      Long64_t numev;
-      numev = entries - slaveStat->fProcessed;
-
-      // This also moves the pointer in corrsponding TFileInfo
-     // TODO use status! here AddProcessed(slaveStat, numev, 0); // TODO: get bytes too
-/ *  TDSetElement *newPacket = slaveStat->fCurElem;
-      if (newPacket && numev < newPacket->getNum()) {
-         // create a new packet from the remaining part.
-         slaveStat->fCurElem = 0;
-         Long64_t first = newPacket->GetFirst();
-         newPacket->SetFirst(first + numev);
-
-         // or simply
-         first = slaveStat->fCurFile()->Get;
-      }
-* /
-   } else {
-      // Get the subset processed by the bad worker.
-      TList *subSet = slaveStat->GetProcessedSubSet();
-      // Take care of the current packet
-      if (slaveStat->fCurElem) {
-         subSet->Add(slaveStat->fCurElem);
-      }
-      // reassign the packets assigned to the bad slave and save the size;
-      if (subSet)
-         SplitPerHost(subSet, listOfMissingFiles);
-      fProcessed -= slaveStat->fProcessed;
-      // the elements were reassigned so should not be deleted
-      subSet->SetOwner(0);
-   }
-   // remove slavestat from the map
-   fSlaveStats->Remove(s);
-   delete slaveStat;
-   // recalculate fNEventsOnRemLoc and others
-   InitStats();
-}
-*/
 
 //______________________________________________________________________________
 void TPacketizerAdaptive::MarkBad(TSlave *s, TProofProgressStatus *status,
                                   TList **listOfMissingFiles)
 {
-   // This method can be called at any time during processing.
+   // This method can be called at any time during processing
+   // as an effect of handling kPROOF_STOPPROCESS
    // If the output list from this worker is going to be sent back to the master,
-   // the 'entries' should be the number of entries processed by the slave.
+   // the 'status' includes the number of entries processed by the slave.
    // From this we calculate the remaining part of the packet.
-   // -1 indicates that the results from that worker were lost completely.
-   // TODO: fix comment   resubmit' flag should be set to kFALSE.
-   // Otherwise we split the work performed by worker 's' back to the filenodes.
+   // 0 indicates that the results from that worker were lost completely.
    // Assume that the filenodes for which we have a TFileNode object
    // are still up and running.
-   // Also assume that if 'resubmit' is kFALSE, the fCurElem was processed.
-   // TODO: add a filenode failure detecting mechanism.
 
    TSlaveStat *slaveStat = (TSlaveStat *)(fSlaveStats->GetValue(s));
    if (!slaveStat) {
@@ -1728,33 +1588,9 @@ void TPacketizerAdaptive::MarkBad(TSlave *s, TProofProgressStatus *status,
       return;
    }
 
-   if (status) {
-      // reassign the remaining part of the last packet.
-
-      /* It was all done in AddProcessed called from handling kPROOF_STOPPROCESS
-
-
-      // Calculate the number of events processed in the last packet
-      Long64_t numev;
-      numev = status->GetEntries() - slaveStat->GetEntriesProcessed();
-
-      // This also moves the pointer in the corrsponding TFileInfo
-      // TODO use status! here AddProcessed(slaveStat, numev, 0); // TODO: get bytes too
-
-      // The old packet will be split in two:
-      // Mark the completed part as done
-      if (numev > 0)
-         slaveStat->AddProcessed(status);
-      // Create a new packet with the part to be resubmitted.
-      TDSetElement *newPacket = new TDSetElement(*(slaveStat->fCurElem));
-      if (newPacket && numev < newPacket->GetNum()) {
-         // create a new packet from the remaining part.
-//         slaveStat->fCurElem = 0;
-         Long64_t first = newPacket->GetFirst();
-         newPacket->SetFirst(first + numev);
-         ReassignPacket(newPacket, listOfMissingFiles);
-      } */
-   } else {
+   // If status is defined, the remaining part of the last packet is
+   // reassigned in AddProcessed called from handling kPROOF_STOPPROCESS
+   if (!status) {
       // Get the subset processed by the bad worker.
       TList *subSet = slaveStat->GetProcessedSubSet();
       // Take care of the current packet
@@ -1764,8 +1600,7 @@ void TPacketizerAdaptive::MarkBad(TSlave *s, TProofProgressStatus *status,
       // reassign the packets assigned to the bad slave and save the size;
       if (subSet)
          SplitPerHost(subSet, listOfMissingFiles);
-      // TODO REM fProcessed -= slaveStat->fProcessed;
-      (*fProgressStatus) -= slaveStat->GetProgressStatus();
+      (*fProgressStatus) -= *(slaveStat->GetProgressStatus());
       // the elements were reassigned so should not be deleted
       subSet->SetOwner(0);
    }

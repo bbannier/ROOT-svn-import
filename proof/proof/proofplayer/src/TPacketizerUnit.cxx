@@ -143,8 +143,9 @@ void TPacketizerUnit::TSlaveStat::UpdatePerformance(Double_t time)
 ClassImp(TPacketizerUnit)
 
 //______________________________________________________________________________
-TPacketizerUnit::TPacketizerUnit(TList *slaves, Long64_t num, TList *input)
-                : TVirtualPacketizer(input)
+TPacketizerUnit::TPacketizerUnit(TList *slaves, Long64_t num, TList *input,
+                                 TProofProgressStatus *st)
+                : TVirtualPacketizer(input, st)
 {
    // Constructor
 

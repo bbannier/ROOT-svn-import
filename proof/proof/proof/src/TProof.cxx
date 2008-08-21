@@ -2493,6 +2493,9 @@ Int_t TProof::CollectInputFrom(TSocket *s)
             Bool_t bad = (GetListOfBadSlaves()->FindObject(sl) != 0);
             TList* tmpinfo = 0;
             (*mess) >> tmpinfo;
+            if (tmpinfo == 0) {
+               Error("CollectInputFrom","kPROOF_GETSLAVEINFO: no list received!");
+            } else { //TODO shift right
             tmpinfo->SetOwner(kFALSE);
             Int_t nentries = tmpinfo->GetSize();
             for (Int_t i=0; i<nentries; i++) {
@@ -2509,6 +2512,7 @@ Int_t TProof::CollectInputFrom(TSocket *s)
             }
             delete tmpinfo;
             rc = 1;
+            }
          }
          break;
 
