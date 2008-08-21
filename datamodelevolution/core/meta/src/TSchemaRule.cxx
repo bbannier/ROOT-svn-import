@@ -543,3 +543,4 @@ Bool_t TSchemaRule::GenerateFor( TStreamerInfo *info )
 }
 
 #endif
+
