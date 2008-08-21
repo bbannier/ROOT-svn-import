@@ -30,7 +30,7 @@ public:
    UInt_t     fSize; 
    char      *fArray; //[fSize] 
 
-   TVirtualArray( TClass *cl, UInt_t size ) : fClass(cl), fArray( (char*)( cl ? cl->NewArray(size) : 0) ) {};
+   TVirtualArray( TClass *cl, UInt_t size ) : fClass(cl), fSize(size), fArray( (char*)( cl ? cl->NewArray(size) : 0) ) {};
    ~TVirtualArray() { if (fClass) fClass->DeleteArray( fArray ); }
 
    TClass *GetClass() { return fClass; }
