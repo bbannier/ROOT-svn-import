@@ -1054,7 +1054,7 @@ void TFitEditor::UpdateGUI()
          }
          case kObjectGraph2D: {
             TGraph2D *gr = (TGraph2D*)fFitObject; //TBV
-            TH2D *hist = gr->GetHistogram();
+            TH2D *hist = gr->GetHistogram("empty");
             if (hist) {
                fXaxis = hist->GetXaxis();
                fYaxis = hist->GetYaxis();
