@@ -1039,70 +1039,40 @@ void TFitEditor::UpdateGUI()
    if (fDim > 0) {
       fSliderX->Disconnect("PositionChanged()");
 
+      TH1* hist = 0;
       switch (fType) {
-         case kObjectHisto: {
-            fXaxis = ((TH1*)fFitObject)->GetXaxis();
-            fYaxis = ((TH1*)fFitObject)->GetYaxis();
-            fZaxis = ((TH1*)fFitObject)->GetZaxis();
-            fXrange = fXaxis->GetNbins();
-            fXmin = fXaxis->GetFirst();
-            fXmax = fXaxis->GetLast();
+         case kObjectHisto:
+            hist = (TH1*)fFitObject;
             break;
-         }
-         case kObjectGraph: {
-            TGraph *gr = (TGraph*)fFitObject; //TBV
-            TH1F *hist = gr->GetHistogram();
-            if (hist) {
-               fXaxis = hist->GetXaxis();
-               fYaxis = hist->GetYaxis();
-               fZaxis = hist->GetZaxis();
-               fXrange = fXaxis->GetNbins();
-               fXmin = fXaxis->GetFirst();
-               fXmax = fXaxis->GetLast();
-            }
+
+         case kObjectGraph:
+            hist = ((TGraph*)fFitObject)->GetHistogram();
             break;
-         }
-         case kObjectMultiGraph: {
-            TMultiGraph *mg = (TMultiGraph*)fFitObject; //TBV
-            TH1F *hist = mg->GetHistogram();
-            if (hist) {
-               fXaxis = hist->GetXaxis();
-               fYaxis = hist->GetYaxis();
-               fZaxis = hist->GetZaxis();
-               fXrange = fXaxis->GetNbins();
-               fXmin = fXaxis->GetFirst();
-               fXmax = fXaxis->GetLast();
-            }
+
+         case kObjectMultiGraph:
+            hist = ((TMultiGraph*)fFitObject)->GetHistogram();
             break;
-         }
-         case kObjectGraph2D: {
-            TGraph2D *gr = (TGraph2D*)fFitObject; //TBV
-            TH2D *hist = gr->GetHistogram("empty");
-            if (hist) {
-               fXaxis = hist->GetXaxis();
-               fYaxis = hist->GetYaxis();
-               fZaxis = hist->GetZaxis();
-               fXrange = fXaxis->GetNbins();
-               fXmin = fXaxis->GetFirst();
-               fXmax = fXaxis->GetLast();
-            }
+
+         case kObjectGraph2D:
+            hist = ((TGraph2D*)fFitObject)->GetHistogram("empty");
             break;
-         }
-         case kObjectHStack: {
-            TH1 *hist = (TH1 *)((THStack *)fFitObject)->GetHists()->First();
-            fXaxis = hist->GetXaxis();
-            fYaxis = hist->GetYaxis();
-            fZaxis = hist->GetZaxis();
-            fXrange = fXaxis->GetNbins();
-            fXmin = fXaxis->GetFirst();
-            fXmax = fXaxis->GetLast();
-            break;
-         }
-         case kObjectTree:  {
+
+         case kObjectHStack: 
+            hist = (TH1 *)((THStack *)fFitObject)->GetHists()->First();
+
+         case kObjectTree:
             //not implemented
             break;
-         }
       }
+      if (hist) {
+         fXaxis = hist->GetXaxis();
+         fYaxis = hist->GetYaxis();
+         fZaxis = hist->GetZaxis();
+         fXrange = fXaxis->GetNbins();
+         fXmin = fXaxis->GetFirst();
+         fXmax = fXaxis->GetLast();
+      }
+
       fSliderX->SetRange(1,fXrange);
       if (!fXmin && !fXmax)
          fSliderX->SetPosition(1,fXrange);
@@ -1122,36 +1092,19 @@ void TFitEditor::UpdateGUI()
          fSliderZParent->UnmapWindow();
 
       switch (fType) {
-         case kObjectHisto: {
+         case kObjectHisto: 
+         case kObjectGraph2D:
+         case kObjectHStack: 
             fYrange = fYaxis->GetNbins();
             fYmin = fYaxis->GetFirst();
             fYmax = fYaxis->GetLast();
             break;
-         }
-         case kObjectGraph: {
+         
+         case kObjectGraph: 
+         case kObjectMultiGraph: 
+         case kObjectTree:  
             //not implemented
             break;
-         }
-         case kObjectMultiGraph: {
-            //not implemented
-            break;
-         }
-         case kObjectGraph2D: {
-            fYrange = fYaxis->GetNbins();
-            fYmin = fYaxis->GetFirst();
-            fYmax = fYaxis->GetLast();
-            break;
-         }
-         case kObjectHStack: {
-            fYrange = fYaxis->GetNbins();
-            fYmin = fYaxis->GetFirst();
-            fYmax = fYaxis->GetLast();
-            break;
-         }
-         case kObjectTree:  {
-            //not implemented
-            break;
-         }
       }
       fSliderY->SetRange(1,fYrange);
       fSliderY->SetPosition(fYmin,fYmax);
