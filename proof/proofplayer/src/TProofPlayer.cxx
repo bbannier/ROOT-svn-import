@@ -816,6 +816,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
 
    TRY {
 
+      // The event loop on the worker
       while ((entry = fEvIter->GetNextEvent()) >= 0 && fSelStatus->IsOk()) {
 
          // This is needed by the inflate infrastructure to calculate
@@ -1148,6 +1149,10 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
    PDB(kGlobal,1) Info("Process","Enter");
    fDSet = dset;
    fExitStatus = kFinished;
+   if (!fProgressStatus) {
+      Error("Process", "No progress status");
+      return -1;
+   }
    fProgressStatus->Reset();
 
    //   delete fOutput;
@@ -1210,6 +1215,7 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          callEnv.SetParam((Long_t) fProof->GetListOfActiveSlaves());
          callEnv.SetParam((Long64_t) nentries);
          callEnv.SetParam((Long_t) fInput);
+         callEnv.SetParam((Long_t) fProgressStatus);
 
       } else {
 
@@ -1259,7 +1265,8 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          }
 
          // Init the constructor
-         callEnv.InitWithPrototype(cl, cl->GetName(),"TDSet*,TList*,Long64_t,Long64_t,TList*");
+         callEnv.InitWithPrototype(cl, cl->GetName(),"TDSet*,TList*,Long64_t,"
+                                   "Long64_t,TList*,TProofProgressStatus*");
          if (!callEnv.IsValid()) {
             Error("Process", "cannot find correct constructor for '%s'", cl->GetName());
             fExitStatus = kAborted;
@@ -1271,6 +1278,7 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          callEnv.SetParam((Long64_t) first);
          callEnv.SetParam((Long64_t) nentries);
          callEnv.SetParam((Long_t) fInput);
+         callEnv.SetParam((Long_t) fProgressStatus);
 
          // We are going to test validity during the packetizer initialization
          dset->SetBit(TDSet::kValidityChecked);
@@ -1292,7 +1300,7 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          return -1;
       }
 
-      fPacketizer->SetProgressStatus(fProgressStatus);
+//      fPacketizer->SetProgressStatus(fProgressStatus);
       // Add invalid elements to the list of missing elements
       TDSetElement *elem = 0;
       if (!noData && dset->TestBit(TDSet::kSomeInvalid)) {

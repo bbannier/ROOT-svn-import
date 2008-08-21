@@ -60,11 +60,15 @@
 ClassImp(TVirtualPacketizer)
 
 //______________________________________________________________________________
-TVirtualPacketizer::TVirtualPacketizer(TList *input)
+TVirtualPacketizer::TVirtualPacketizer(TList *input, TProofProgressStatus *st)
 {
    // Constructor.
 
-   fProgressStatus = 0;
+   fProgressStatus = st;
+   if (!fProgressStatus) {
+      Error("TVirtualPacketizer", "No progress status");
+      return;
+   }
    fTotalEntries = 0;
    fValid = kTRUE;
    fStop = kFALSE;

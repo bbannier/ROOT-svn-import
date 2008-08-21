@@ -106,7 +106,7 @@ public:
    static Int_t   fgStrategy; // 0 means the classic and 1 (default) - the adaptive strategy
 
    TPacketizerAdaptive(TDSet *dset, TList *slaves, Long64_t first, Long64_t num,
-                       TList *input);
+                       TList *input, TProofProgressStatus *st);
    virtual ~TPacketizerAdaptive();
 
    Int_t         GetEstEntriesProcessed(Float_t t, Long64_t &ent, Long64_t &bytes);

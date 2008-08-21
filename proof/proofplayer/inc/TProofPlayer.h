@@ -248,7 +248,8 @@ protected:
 public:
    TProofPlayerRemote(TProof *proof = 0) : fProof(proof), fOutputLists(0), fFeedback(0),
                                            fFeedbackLists(0), fPacketizer(0),
-                                           fMergeFiles(kFALSE) {}
+                                           fMergeFiles(kFALSE)
+                                           { fProgressStatus = new TProofProgressStatus(); }
    virtual ~TProofPlayerRemote();   // Owns the fOutput list
    Long64_t       Process(TDSet *set, const char *selector,
                           Option_t *option = "", Long64_t nentries = -1,

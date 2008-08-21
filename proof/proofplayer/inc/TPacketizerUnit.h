@@ -64,7 +64,7 @@ private:
    void operator=(const TPacketizerUnit&);  // error on accidental usage
 
 public:
-   TPacketizerUnit(TList *slaves, Long64_t num, TList *input);
+   TPacketizerUnit(TList *slaves, Long64_t num, TList *input, TProofProgressStatus *st = 0);
    virtual ~TPacketizerUnit();
 
    TDSetElement *GetNextPacket(TSlave *sl, TMessage *r);

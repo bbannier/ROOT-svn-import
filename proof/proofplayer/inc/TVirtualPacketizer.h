@@ -90,7 +90,7 @@ protected:
    Bool_t   fValid;           // Constructed properly?
    Bool_t   fStop;            // Termination of Process() requested?
 
-   TVirtualPacketizer(TList *input);
+   TVirtualPacketizer(TList *input, TProofProgressStatus *st = 0);
    Long64_t GetEntries(Bool_t tree, TDSetElement *e); // Num of entries or objects
 
 public:
