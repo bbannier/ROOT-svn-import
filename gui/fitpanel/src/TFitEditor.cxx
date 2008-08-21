@@ -160,8 +160,8 @@ enum EFitPanel {
    kFP_DSAME, kFP_DNONE, kFP_DADVB, kFP_DNOST, kFP_PDEF,  kFP_PVER,  kFP_PQET,
    kFP_XMIN,  kFP_XMAX,  kFP_YMIN,  kFP_YMAX,  kFP_ZMIN,  kFP_ZMAX,
    
-   kFP_LMIN,  kFP_LMIN2, kFP_LFUM,  kFP_MIGRAD,kFP_SIMPLX,kFP_FUMILI,
-   kFP_MERR,  kFP_MTOL,  kFP_MITR,
+   kFP_LMIN,  kFP_LMIN2, kFP_LFUM,  kFP_MIGRAD,kFP_SIMPLX,kFP_FUMILI, kFP_COMBINATION,
+   kFP_SCAN,  kFP_MERR,  kFP_MTOL,  kFP_MITR,
    
    kFP_FIT,   kFP_RESET, kFP_CLOSE
 };
@@ -694,8 +694,6 @@ void TFitEditor::CreateMinimizationTab()
    fSimplex = new TGRadioButton(hm, "SIMPLEX", kFP_SIMPLX);
    fSimplex->Associate(this);
    fSimplex->SetToolTipText("Use SIMPLEX as minimization method");
-   // Simplex functionality will come with the new fitter design    
-   fSimplex->SetState(kButtonDisabled);
    hm->AddFrame(fSimplex, new TGLayoutHints(kLHintsNormal, 20, 0, 0, 1));
 
    fFumili = new TGRadioButton(hm, "FUMILI", kFP_FUMILI);
@@ -704,22 +702,43 @@ void TFitEditor::CreateMinimizationTab()
    hm->AddFrame(fFumili, new TGLayoutHints(kLHintsNormal, 18, 0, 0, 1));
    fMinimization->AddFrame(hm, new TGLayoutHints(kLHintsExpandX, 20, 0, 5, 1));
 
+   TGHorizontalFrame *hm2 = new TGHorizontalFrame(fMinimization);
+   fScan = new TGRadioButton(hm2, "SCAN", kFP_SCAN);
+   fScan->Associate(this);
+   fScan->SetToolTipText("Use SCAN as minimization method");
+   hm2->AddFrame(fScan, new TGLayoutHints(kLHintsNormal, 40, 0, 0, 1));
+
+   fCombination = new TGRadioButton(hm2, "Combination", kFP_COMBINATION);
+   fCombination->Associate(this);
+   fCombination->SetToolTipText("Use Combination as minimization method");
+   hm2->AddFrame(fCombination, new TGLayoutHints(kLHintsNormal, 34, 0, 0, 1));
+   fMinimization->AddFrame(hm2, new TGLayoutHints(kLHintsExpandX, 20, 0, 5, 1));
+
    // Set the status to the default minimization options!
-   if ( ROOT::Math::MinimizerOptions::DefaultMinimizerType() == "Minuit" ) {
-      fLibMinuit->SetState(kButtonDown);
-      fFumili->SetState(kButtonDisabled);
-      fMigrad->SetState(kButtonDown);
-   } else if ( ROOT::Math::MinimizerOptions::DefaultMinimizerType() == "Minuit2" ) {
-      fLibMinuit2->SetState(kButtonDown);
-      if ( ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo() == "Fumili" )
-         fFumili->SetState(kButtonDown);
-      else
-         fMigrad->SetState(kButtonDown);
-   } else if ( ROOT::Math::MinimizerOptions::DefaultMinimizerType() == "Fumili" ) {
+   if ( ROOT::Math::MinimizerOptions::DefaultMinimizerType() == "Fumili" ) {
       fLibFumili->SetState(kButtonDown);
       fMigrad->SetState(kButtonDisabled);
+      fScan->SetState(kButtonDisabled);
+      fCombination->SetState(kButtonDisabled);
+      fSimplex->SetState(kButtonDisabled);
       fFumili->SetState(kButtonDown);
+   } else if ( ROOT::Math::MinimizerOptions::DefaultMinimizerType() == "Minuit" ) {
+      fLibMinuit->SetState(kButtonDown);
+      fFumili->SetState(kButtonDisabled);
+   } else {
+      fLibMinuit2->SetState(kButtonDown);
    }
+
+   if ( ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo() == "Fumili" )
+      fFumili->SetState(kButtonDown);
+   else if ( ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo() == "Migrad" )
+      fMigrad->SetState(kButtonDown);
+   else if ( ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo() == "Simplex" )
+      fSimplex->SetState(kButtonDown);
+   else if ( ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo() == "Minimize" )
+      fCombination->SetState(kButtonDown);
+   else if ( ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo() == "Scan" )
+      fScan->SetState(kButtonDown);
 
    MakeTitle(fMinimization, "Settings");
    TGLabel *hslabel1 = new TGLabel(fMinimization,"Use ENTER key to validate a new value or click");
@@ -843,8 +862,10 @@ void TFitEditor::ConnectSlots()
    // minimization method
    fMigrad->Connect("Toggled(Bool_t)","TFitEditor",this,"DoMinMethod(Bool_t)");
    // Simplex functionality will come with the new fitter design
-   //fSimplex->Connect("Toggled(Bool_t)","TFitEditor",this,"DoMinMethod(Bool_t)");
+   fSimplex->Connect("Toggled(Bool_t)","TFitEditor",this,"DoMinMethod(Bool_t)");
    fFumili->Connect("Toggled(Bool_t)","TFitEditor",this,"DoMinMethod(Bool_t)");
+   fCombination->Connect("Toggled(Bool_t)","TFitEditor",this,"DoMinMethod(Bool_t)");
+   fScan->Connect("Toggled(Bool_t)","TFitEditor",this,"DoMinMethod(Bool_t)");
 
    // fitter settings
    fIterations->Connect("ReturnPressed()", "TFitEditor", this, "DoMaxIterations()");
@@ -902,9 +923,11 @@ void TFitEditor::DisconnectSlots()
    // minimization method
    fMigrad->Disconnect("Toggled(Bool_t)");
    // Simplex functionality will come with the new fitter design
-   //fSimplex->Disconnect("Toggled(Bool_t)");
+   fSimplex->Disconnect("Toggled(Bool_t)");
    fFumili->Disconnect("Toggled(Bool_t)");
-
+   fCombination->Disconnect("Toggled(Bool_t)");
+   fScan->Disconnect("Toggled(Bool_t)");
+   
    // fitter settings
    fIterations->Disconnect("ReturnPressed()");
 
@@ -2102,9 +2125,9 @@ void TFitEditor::DoLibrary(Bool_t on)
                }
                fMigrad->SetState(kButtonDown);
                fStatusBar->SetText("MIGRAD", 1);
-               // Simplex functionality will come with the new fitter design    
-               //if (fSimplex->GetState() == kButtonDisabled)
-               //   fSimplex->SetState(kButtonUp);
+               fSimplex->SetState(kButtonUp);
+               fCombination->SetState(kButtonUp);
+               fScan->SetState(kButtonUp);
                fStatusBar->SetText("LIB Minuit", 0);
             }
             
@@ -2117,13 +2140,16 @@ void TFitEditor::DoLibrary(Bool_t on)
                fLibMinuit->SetState(kButtonUp);
                fLibMinuit2->SetState(kButtonDown);
                fLibFumili->SetState(kButtonUp);
-               // Simplex functionality will come with the new fitter design    
-               //if (fSimplex->GetState() == kButtonDisabled)
-               //   fSimplex->SetState(kButtonUp);
+               if (fSimplex->GetState() == kButtonDisabled)
+                  fSimplex->SetState(kButtonUp);
                if (fMigrad->GetState() == kButtonDisabled)
                   fMigrad->SetState(kButtonUp);
                if (fFumili->GetState() == kButtonDisabled)
                   fFumili->SetState(kButtonUp);
+               if (fCombination->GetState() == kButtonDisabled)
+                  fCombination->SetState(kButtonUp);
+               if (fScan->GetState() == kButtonDisabled)
+                  fScan->SetState(kButtonUp);
                fStatusBar->SetText("LIB Minuit2", 0);
             }
          }
@@ -2132,23 +2158,24 @@ void TFitEditor::DoLibrary(Bool_t on)
       case kFP_LFUM:
          {
             if (on) {
+               fLibMinuit->SetState(kButtonUp);
+               fLibMinuit2->SetState(kButtonUp);
+               fLibFumili->SetState(kButtonDown);
+
                if (fFumili->GetState() != kButtonDown) {
                   fFumili->SetState(kButtonDown);
                   fStatusBar->SetText("FUMILI", 1);
                }
-               fLibMinuit->SetState(kButtonUp);
-               fLibMinuit2->SetState(kButtonUp);
-               fLibFumili->SetState(kButtonDown);
                fMigrad->SetDisabledAndSelected(kFALSE);
-               // Simplex functionality will come with the new fitter design    
-               //fSimplex->SetState(kButtonDisabled);
+               fSimplex->SetState(kButtonDisabled);
+               fCombination->SetState(kButtonDisabled);
+               fScan->SetState(kButtonDisabled);
                fStatusBar->SetText("LIB Fumili", 0);
             }
          }
       default:
          break;
    }
-   
 }
 
 //______________________________________________________________________________
@@ -2161,48 +2188,83 @@ void TFitEditor::DoMinMethod(Bool_t on)
 
    switch (id) {
 
-      case kFP_MIGRAD:
-         {
-            if (on) {
-               // Simplex functionality will come with the new fitter design    
-               //fSimplex->SetState(kButtonUp);
-               if (fLibMinuit->GetState() == kButtonDown)
-                  fFumili->SetState(kButtonDisabled);
-               else
-                  fFumili->SetState(kButtonUp);
-               fMigrad->SetState(kButtonDown);
-               fStatusBar->SetText("MIGRAD",1);
-            }
-         }
-         break;
-      
-      case kFP_SIMPLX:
-         {
-            if (on) {
-               // Simplex functionality will come with the new fitter design    
-               //fMigrad->SetState(kButtonUp);
-               //if (fLibMinuit->GetState() == kButtonDown)
-               //   fFumili->SetState(kButtonDisabled);
-               //else
-               //   fFumili->SetState(kButtonUp);
-               //fSimplex->SetState(kButtonDown);
-               //fStatusBar->SetText("SIMPLEX",1);
-            }
-         }
-         break;
-      
-      case kFP_FUMILI:
-         {
-            if (on) {
-               fMigrad->SetState(kButtonUp);
-               // Simplex functionality will come with the new fitter design    
-               //fSimplex->SetState(kButtonUp);
-               fFumili->SetState(kButtonDown);
-               fStatusBar->SetText("FUMILI",1);
-            }
-         }
-         break;
-      
+   case kFP_MIGRAD:
+   {
+      if (on) {
+         fSimplex->SetState(kButtonUp);
+         fCombination->SetState(kButtonUp);
+         fScan->SetState(kButtonUp);
+         if (fLibMinuit->GetState() == kButtonDown)
+            fFumili->SetState(kButtonDisabled);
+         else
+            fFumili->SetState(kButtonUp);
+         fMigrad->SetState(kButtonDown);
+         fStatusBar->SetText("MIGRAD",1);
+      }
+   }
+   break;
+   
+   case kFP_SIMPLX:
+   {
+      if (on) {
+         fMigrad->SetState(kButtonUp);
+         fCombination->SetState(kButtonUp);
+         fScan->SetState(kButtonUp);
+         if (fLibMinuit->GetState() == kButtonDown)
+            fFumili->SetState(kButtonDisabled);
+         else
+            fFumili->SetState(kButtonUp);
+         fSimplex->SetState(kButtonDown);
+         fStatusBar->SetText("SIMPLEX",1);
+      }
+   }
+   break;
+   
+   case kFP_COMBINATION:
+   {
+      if (on) {
+         fMigrad->SetState(kButtonUp);
+         fSimplex->SetState(kButtonUp);
+         fScan->SetState(kButtonUp);
+         if (fLibMinuit->GetState() == kButtonDown)
+            fFumili->SetState(kButtonDisabled);
+         else
+            fFumili->SetState(kButtonUp);    
+         fCombination->SetState(kButtonDown);
+         fStatusBar->SetText("Combination",1);
+      }
+   }
+   break;
+
+   case kFP_SCAN:
+   {
+      if (on) {
+         fMigrad->SetState(kButtonUp);
+         fSimplex->SetState(kButtonUp);
+         fCombination->SetState(kButtonUp);
+         if (fLibMinuit->GetState() == kButtonDown)
+            fFumili->SetState(kButtonDisabled);
+         else
+            fFumili->SetState(kButtonUp);    
+         fScan->SetState(kButtonDown);
+         fStatusBar->SetText("SCAN",1);
+      }
+   }
+   break;
+
+   case kFP_FUMILI:
+   {
+      if (on) {
+         fMigrad->SetState(kButtonUp);
+         fSimplex->SetState(kButtonUp);
+         fCombination->SetState(kButtonUp);
+         fScan->SetState(kButtonUp);
+         fFumili->SetState(kButtonDown);
+         fStatusBar->SetText("FUMILI",1);
+      }
+   }
+   break;
+   
    }
 }
 
@@ -2460,6 +2522,12 @@ void TFitEditor::RetrieveOptions(Foption_t& fitOpts, TString& drawOpts, ROOT::Ma
          minOpts.AlgoType = "Fumili2";
       else 
          minOpts.AlgoType = "Fumili";
+   else if ( fSimplex->GetState() == kButtonDown )
+      minOpts.AlgoType = "Simplex";
+   else if ( fScan->GetState() == kButtonDown )
+      minOpts.AlgoType = "Scan";
+   else if ( fCombination->GetState() == kButtonDown )
+      minOpts.AlgoType = "Minimize";
 
    minOpts.ErrorDef = fErrorScale->GetNumber();
    minOpts.Tolerance = fTolerance->GetNumber();

@@ -134,6 +134,8 @@ protected:
    TGRadioButton       *fMigrad;           // set default minimization method (MIGRAD)
    TGRadioButton       *fSimplex;          // set Simplex as minimization method
    TGRadioButton       *fFumili;           // set Fumili as minimization method
+   TGRadioButton       *fCombination;      // set Combination as minimization method
+   TGRadioButton       *fScan;             // set Scan as minimization method
    TGNumberEntryField  *fErrorScale;       // contains error scale set for minimization
    TGNumberEntryField  *fTolerance;        // contains tolerance set for minimization
    TGNumberEntryField  *fIterations;       // contains maximum number of iterations
