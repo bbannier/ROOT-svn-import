@@ -144,6 +144,7 @@
 #include "HFitInterface.h"
 #include "TF1.h"
 #include "TF2.h"
+#include "TF3.h"
 #include "TTimer.h"
 #include "THStack.h"
 #include "TMath.h"
@@ -1112,47 +1113,34 @@ void TFitEditor::UpdateGUI()
       fSliderY->Connect("PositionChanged()","TFitEditor",this, "DoSliderYMoved()");
    }
 
-/*
+   
    if (fDim > 2) {
       fSliderZ->Disconnect("PositionChanged()");
-      fSliderZ->Disconnect("Pressed()");
-      fSliderZ->Disconnect("Released()");
 
       if (!fSliderZParent->IsMapped())
          fSliderZParent->MapWindow();
 
       switch (fType) {
-         case kObjectHisto: {
+         case kObjectHStack:
+         case kObjectHisto:
             fZrange = fZaxis->GetNbins();
             fZmin = fZaxis->GetFirst();
             fZmax = fZaxis->GetLast();
             break;
-         }
-         case kObjectGraph: {
+
+         case kObjectGraph:
+         case kObjectGraph2D:
+         case kObjectMultiGraph:
+         case kObjectTree:
             //not implemented
             break;
-         }
-         case kObjectGraph2D: {
-            //not implemented
-            break;
-         }
-         case kObjectHStack: {
-            //TH1 *hist = (TH1 *)((THStack *)fFitObject)->GetHists()->First();
-            fZrange = fZaxis->GetNbins();
-            fZmin = fZaxis->GetFirst();
-            fZmax = fZaxis->GetLast();
-            break;
-         }
-         case kObjectTree:  {
-            //not implemented
-            break;
-         }
       }
       fSliderZ->SetRange(1,fZrange);
       fSliderZ->SetPosition(fZmin,fZmax);
       fSliderZ->SetScale(5);
+      fSliderZ->Connect("PositionChanged()","TFitEditor",this, "DoSliderZMoved()");
    }
-
+/*
    switch (fDim) {
       case 1:
          fGeneral->HideFrame(fSliderYParent);
@@ -1433,7 +1421,9 @@ void TFitEditor::DoFit()
             if ( fDim == 1 )
                fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
             else if ( fDim == 2 )
-               fitFunc = new TF2("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
+               fitFunc = new TF2("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax,fYmin,fYmax);
+            else if ( fDim == 3 )
+               fitFunc =  new TF3("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax,fYmin,fYmax,fZmin,fZmax);
          }
          
          if ( fFuncPars ) SetParameters(fFuncPars, fitFunc);
@@ -1450,8 +1440,19 @@ void TFitEditor::DoFit()
             Double_t ymin = fYaxis->GetBinLowEdge((Int_t)(fSliderY->GetMinPosition()));
             Double_t ymax = fYaxis->GetBinUpEdge((Int_t)(fSliderY->GetMaxPosition()));
 
-            fitFunc->SetRange(xmin,ymin,xmax,ymax);            
+            fitFunc->SetRange(xmin,ymin,xmax,ymax);
             ROOT::Fit::DataRange drange(xmin, xmax, ymin, ymax);
+            ROOT::Fit::FitObject(hist, fitFunc, fitOpts, mopts, strDrawOpts, drange);
+         }
+         else if ( fDim == 3 )
+         {
+            Double_t ymin = fYaxis->GetBinLowEdge((Int_t)(fSliderY->GetMinPosition()));
+            Double_t ymax = fYaxis->GetBinUpEdge((Int_t)(fSliderY->GetMaxPosition()));
+            Double_t zmin = fZaxis->GetBinLowEdge((Int_t)(fSliderZ->GetMinPosition()));
+            Double_t zmax = fZaxis->GetBinUpEdge((Int_t)(fSliderZ->GetMaxPosition()));
+
+            fitFunc->SetRange(xmin,ymin,zmin,xmax,ymax,zmax);
+            ROOT::Fit::DataRange drange(xmin, xmax, ymin, ymax, zmin, zmax);
             ROOT::Fit::FitObject(hist, fitFunc, fitOpts, mopts, strDrawOpts, drange);
          }
 
@@ -1516,6 +1517,7 @@ void TFitEditor::DoFit()
          break;
       }
    }
+   GetParameters(fFuncPars,fitFunc);
    delete fitFunc;
 
 
