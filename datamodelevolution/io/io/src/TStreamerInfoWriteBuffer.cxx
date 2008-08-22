@@ -549,6 +549,8 @@ Int_t TStreamerInfo::WriteBufferAux(TBuffer &b, const T &arr, Int_t first,
 
                   UInt_t pos = b.WriteVersionMemberWise(thisVar->IsA(),kTRUE);
                   TVirtualCollectionProxy *proxy = cl->GetCollectionProxy();
+                  TClass* vClass = proxy->GetValueClass();
+                  b.WriteVersion( vClass, kFALSE );
                   TStreamerInfo *subinfo = (TStreamerInfo*)proxy->GetValueClass()->GetStreamerInfo();
                   DOLOOP {
                      char *obj = (char*)(arr[k]+ioffset);

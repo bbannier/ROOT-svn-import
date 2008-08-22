@@ -59,12 +59,15 @@ Bool_t TSchemaRuleSet::AddRule( TSchemaRule* rule, Bool_t checkConsistency )
    // Check if all of the target data members specified in the rule are
    // present int the target class
    //---------------------------------------------------------------------------
-   TObject*      obj;
-   TObjArrayIter titer( rule->GetTarget() );
-   while( (obj = titer.Next()) ) {
-      TObjString* str = (TObjString*)obj;
-      if( !fClass->GetDataMember( str->GetString() ) )
-         return kFALSE;
+   TObject* obj;
+   if( rule->GetTarget() ) {
+      TObjArrayIter titer( rule->GetTarget() );
+      while( (obj = titer.Next()) ) {
+         TObjString* str = (TObjString*)obj;
+         if( !fClass->GetDataMember( str->GetString() ) && !fClass->GetBaseClass( str->GetString() ) )
+            return kFALSE;
+ 
+      }
    }
 
    //---------------------------------------------------------------------------
@@ -113,13 +116,13 @@ const TObjArray* TSchemaRuleSet::FindRules( const TString &source ) const
 }
 
 //------------------------------------------------------------------------------
-const TObjArray* TSchemaRuleSet::FindRules( const TString &source, Int_t version ) const
+const TSchemaMatch* TSchemaRuleSet::FindRules( const TString &source, Int_t version ) const
 {
    // User has to delete the returned array
 
    TObject*      obj;
    TObjArrayIter it( fAllRules );
-   TObjArray*    arr = new TObjArray();
+   TSchemaMatch* arr = new TSchemaMatch();
    arr->SetOwner( kFALSE );
 
    while( (obj = it.Next()) ) {
@@ -127,17 +130,23 @@ const TObjArray* TSchemaRuleSet::FindRules( const TString &source, Int_t version
       if( rule->GetSourceClass() == source && rule->TestVersion( version ) )
          arr->Add( rule );
    }
-   return arr;
+
+   if( arr->GetEntriesFast() )
+      return arr;
+   else {
+      delete arr;
+      return 0;
+   }
 }
 
 //------------------------------------------------------------------------------
-const TObjArray* TSchemaRuleSet::FindRules( const TString &source, UInt_t checksum ) const
+const TSchemaMatch* TSchemaRuleSet::FindRules( const TString &source, UInt_t checksum ) const
 {
    // User has to delete the returned array
 
    TObject*      obj;
    TObjArrayIter it( fAllRules );
-   TObjArray*    arr = new TObjArray();
+   TSchemaMatch* arr = new TSchemaMatch();
    arr->SetOwner( kFALSE );
 
    while( (obj = it.Next()) ) {
@@ -145,7 +154,14 @@ const TObjArray* TSchemaRuleSet::FindRules( const TString &source, UInt_t checks
       if( rule->GetSourceClass() == source && rule->TestChecksum( checksum ) )
          arr->Add( rule );
    }
-   return arr;
+
+
+   if( arr->GetEntriesFast() )
+      return arr;
+   else {
+      delete arr;
+      return 0;
+   }
 }
 
 //------------------------------------------------------------------------------
@@ -215,3 +231,45 @@ void TSchemaRuleSet::SetClass( TClass* cls )
    fVersion   = cls->GetClassVersion();
    fChecksum  = cls->GetCheckSum();
 }
+
+
+//------------------------------------------------------------------------------
+const TSchemaRule* TSchemaMatch::GetRuleWithSource( const TString& name ) const
+{
+   for( Int_t i = 0; i < GetEntries(); ++i ) {
+      TSchemaRule* rule = (ROOT::TSchemaRule*)At(i);
+      if( rule->HasSource( name ) ) return rule;
+   }
+   return 0;
+}
+
+//------------------------------------------------------------------------------
+const TSchemaRule* TSchemaMatch::GetRuleWithTarget( const TString& name ) const
+{
+   for( Int_t i=0; i<GetEntries(); ++i) {
+      ROOT::TSchemaRule *rule = (ROOT::TSchemaRule*)At(i);
+      if( rule->HasTarget( name ) ) return rule;
+   }
+   return 0;
+}
+
+//------------------------------------------------------------------------------
+Bool_t TSchemaMatch::HasRuleWithSource( const TString& name ) const
+{
+   for( Int_t i = 0; i < GetEntries(); ++i ) {
+      TSchemaRule* rule = (ROOT::TSchemaRule*)At(i);
+      if( rule->HasSource( name ) ) return kTRUE;
+   }
+   return kFALSE;
+}
+
+//------------------------------------------------------------------------------
+Bool_t TSchemaMatch::HasRuleWithTarget( const TString& name ) const
+{
+   for( Int_t i=0; i<GetEntries(); ++i) {
+      ROOT::TSchemaRule *rule = (ROOT::TSchemaRule*)At(i);
+      if( rule->HasTarget( name ) ) return kTRUE;
+   }
+   return kFALSE;
+}
+

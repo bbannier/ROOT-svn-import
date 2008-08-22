@@ -2584,7 +2584,7 @@ void WriteClassInit(G__ClassInfo &cl)
       (*dictSrcOut) << std::endl;
       (*dictSrcOut) << "      // the io read rules" << std::endl;
       (*dictSrcOut) << "      std::vector<ROOT::TSchemaHelper> readrules(";
-      (*dictSrcOut) << G__ReadRules.size() << ");" << std::endl;
+      (*dictSrcOut) << rulesIt1->second.size() << ");" << std::endl;
       WriteSchemaList( rulesIt1->second, "readrules", *dictSrcOut );
       (*dictSrcOut) << "      instance.SetReadRules( readrules );" << std::endl;
    }
@@ -2593,7 +2593,7 @@ void WriteClassInit(G__ClassInfo &cl)
       (*dictSrcOut) << std::endl;
       (*dictSrcOut) << "      // the io read raw rules" << std::endl;
       (*dictSrcOut) << "      std::vector<ROOT::TSchemaHelper> readrawrules(";
-      (*dictSrcOut) << G__ReadRawRules.size() << ");" << std::endl;
+      (*dictSrcOut) << rulesIt2->second.size() << ");" << std::endl;
       WriteSchemaList( rulesIt2->second, "readrawrules", *dictSrcOut );
       (*dictSrcOut) << "      instance.SetReadRawRules( readrawrules );" << std::endl;
    }

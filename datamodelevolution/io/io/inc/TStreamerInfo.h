@@ -55,6 +55,7 @@ public:
       TCompInfo& operator=(const TCompInfo&); // Not implemented
    public:
       TClass          *fClass;
+      TClass          *fNewClass;
       TString          fClassName;
       TMemberStreamer *fStreamer;
       TCompInfo() : fClass(0), fClassName(""), fStreamer(0) {};
@@ -274,7 +275,7 @@ public:
 #endif
 
    //WARNING this class version must be the same as TVirtualStreamerInfo
-   ClassDef(TStreamerInfo,7)  //Streamer information for one class version
+   ClassDef(TStreamerInfo,8)  //Streamer information for one class version
 };
 
 

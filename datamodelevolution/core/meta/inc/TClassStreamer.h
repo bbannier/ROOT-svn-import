@@ -28,8 +28,11 @@ protected:
    TClassStreamer() : fStreamer(0) {};
 
 public:
-   TClassStreamer(ClassStreamerFunc_t pointer) : fStreamer(pointer) {};
-   TClassStreamer(const TClassStreamer &rhs) : fStreamer(rhs.fStreamer) {};
+   TClassStreamer(ClassStreamerFunc_t pointer) : fStreamer(pointer), fOnFileClass( 0 ) {};
+   TClassStreamer(const TClassStreamer &rhs) : fStreamer(rhs.fStreamer), fOnFileClass( 0 ) {};
+
+   virtual void SetOnFileClass( TClass* cl ) { fOnFileClass = cl; }
+   virtual TClass* GetOnFileClass() const { return fOnFileClass; }
 
    virtual TClassStreamer *Generate() {
       // Virtual copy constructor.
@@ -46,7 +49,10 @@ public:
    }
    
 private:
-   ClassStreamerFunc_t fStreamer; 
+   ClassStreamerFunc_t fStreamer;
+
+protected:
+   TClass*             fOnFileClass;
 };
 
 #endif

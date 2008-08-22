@@ -243,9 +243,7 @@ Bool_t TSchemaRule::GetEmbed() const
 //------------------------------------------------------------------------------
 Bool_t TSchemaRule::IsValid() const
 {
-   return (fVersionVect || fChecksumVect) && (fSourceClass.Length() != 0)
-          && fTargetVect; 
-   // It is okay to not have a source (transient member setting) 
+   return (fVersionVect || fChecksumVect) && (fSourceClass.Length() != 0); 
 }
 
 //------------------------------------------------------------------------------
@@ -263,7 +261,7 @@ TString TSchemaRule::GetCode() const
 //------------------------------------------------------------------------------
 Bool_t TSchemaRule::HasTarget( const TString& target ) const
 {
-   if( !fTarget )
+   if( !fTargetVect )
       return kFALSE;
 
    TObject*      obj;
@@ -279,7 +277,7 @@ Bool_t TSchemaRule::HasTarget( const TString& target ) const
 //------------------------------------------------------------------------------
 Bool_t TSchemaRule::HasSource( const TString& source ) const
 {
-   if( !fSource )
+   if( !fSourceVect )
       return kFALSE;
 
    TObject*      obj;
@@ -320,6 +318,18 @@ TSchemaRule::ReadRawFuncPtr_t TSchemaRule::GetReadRawFunctionPointer() const
 void TSchemaRule::SetRuleType( TSchemaRule::RuleType_t type )
 {
    fRuleType = type;
+}
+
+//------------------------------------------------------------------------------
+Bool_t TSchemaRule::IsAliasRule() const
+{
+   return fSourceClass != "" && (fVersion != "" || fChecksum != "") && fTarget == "" && fSource == "" && fInclude == "" && fCode == "";
+}
+
+//------------------------------------------------------------------------------
+Bool_t TSchemaRule::IsRenameRule() const
+{
+   return fSourceClass != "" && (fVersion != "" || fChecksum != "") && fTarget != "" && fSource != "" && fInclude == "" && fCode == "";
 }
 
 //------------------------------------------------------------------------------
@@ -510,7 +520,7 @@ void TSchemaRule::ProcessDeclaration( TObjArray* array, const TString& list )
       return;
 
    for( it = elems.begin(); it != elems.end(); ++it ) {
-      TNamed *type = new TNamed(it->second.c_str(), it->first.c_str());
+      TNamed *type = new TNamed( it->second.c_str(), it->first.c_str() ) ;
       array->Add( type );
    }
 }
@@ -543,4 +553,3 @@ Bool_t TSchemaRule::GenerateFor( TStreamerInfo *info )
 }
 
 #endif
-

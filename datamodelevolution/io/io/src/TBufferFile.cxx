@@ -1426,7 +1426,7 @@ void TBufferFile::ReadFastArrayDouble32(Double_t *d, Int_t n, TStreamerElement *
 
 //______________________________________________________________________________
 void TBufferFile::ReadFastArray(void  *start, const TClass *cl, Int_t n,
-                                TMemberStreamer *streamer)
+                                TMemberStreamer *streamer, const TClass* onFileClass )
 {
    // Read an array of 'n' objects from the I/O buffer.
    // Stores the objects read starting at the address 'start'.
@@ -1441,7 +1441,7 @@ void TBufferFile::ReadFastArray(void  *start, const TClass *cl, Int_t n,
    char *obj = (char*)start;
    char *end = obj + n*objectSize;
 
-   for(; obj<end; obj+=objectSize) ((TClass*)cl)->Streamer(obj,*this);
+   for(; obj<end; obj+=objectSize) ((TClass*)cl)->Streamer(obj,*this, (TClass*)onFileClass );
 }
 
 //______________________________________________________________________________
@@ -2160,7 +2160,7 @@ void TBufferFile::SkipObjectAny()
 }
 
 //______________________________________________________________________________
-void *TBufferFile::ReadObjectAny(const TClass *clCast)
+void *TBufferFile::ReadObjectAny(const TClass *clCast, const TClass* clCastOnFile)
 {
    // Read object from I/O buffer.
    // A typical use for this function is:
@@ -2181,9 +2181,9 @@ void *TBufferFile::ReadObjectAny(const TClass *clCast)
 
    // attempt to load next object as TClass clCast
    UInt_t tag;       // either tag or byte count
-   TClass *clRef = ReadClass(clCast, &tag);
+   TClass *clRef = ReadClass(clCast, &tag, clCastOnFile);
    Int_t baseOffset = 0;
-   if (clRef && (clRef!=(TClass*)(-1)) && clCast) {
+   if (clRef && (clRef!=(TClass*)(-1)) && clCast && (clRef != clCastOnFile)) {
       //baseOffset will be -1 if clRef does not inherit from clCast.
       baseOffset = clRef->GetBaseClassOffset(clCast);
       if (baseOffset == -1) {
@@ -2241,7 +2241,7 @@ void *TBufferFile::ReadObjectAny(const TClass *clCast)
       obj = (char *) fMap->GetValue(tag);
       clRef = (TClass*) fClassMap->GetValue(tag);
 
-      if (clRef && (clRef!=(TClass*)(-1)) && clCast) {
+      if (clRef && (clRef!=(TClass*)(-1)) && clCast && (clRef != clCastOnFile)) {
          //baseOffset will be -1 if clRef does not inherit from clCast.
          baseOffset = clRef->GetBaseClassOffset(clCast);
          if (baseOffset == -1) {
@@ -2263,7 +2263,10 @@ void *TBufferFile::ReadObjectAny(const TClass *clCast)
    } else {
 
       // allocate a new object based on the class found
-      obj = (char *)clRef->New();
+      if( clRef == clCastOnFile )
+         obj = (char *)((TClass*)clCast)->New();
+      else
+         obj = (char*)clRef->New();
       if (!obj) {
          Error("ReadObject", "could not create object of class %s",
                clRef->GetName());
@@ -2278,7 +2281,10 @@ void *TBufferFile::ReadObjectAny(const TClass *clCast)
          MapObject(obj, clRef, fMapCount);
 
       // let the object read itself
-      clRef->Streamer(obj, *this);
+      if( clRef == clCastOnFile )
+         ((TClass*)clCast)->Streamer(obj, *this, (TClass*)clCastOnFile);
+      else
+         clRef->Streamer( obj, *this );
 
       CheckByteCount(startpos, tag, clRef);
    }
@@ -2423,7 +2429,7 @@ Int_t TBufferFile::WriteObjectAny(const void *obj, const TClass *ptrClass)
 }
 
 //______________________________________________________________________________
-TClass *TBufferFile::ReadClass(const TClass *clReq, UInt_t *objTag)
+TClass *TBufferFile::ReadClass(const TClass *clReq, UInt_t *objTag, const TClass* clCastOnFile )
 {
    // Read class definition from I/O buffer. clReq can be used to cross check
    // if the actually read object is of the requested class. objTag is
@@ -2491,7 +2497,7 @@ TClass *TBufferFile::ReadClass(const TClass *clReq, UInt_t *objTag)
       cl = (TClass *)fMap->GetValue(clTag);
    }
 
-   if (cl && clReq && !cl->InheritsFrom(clReq)) {
+   if (cl && clReq && !cl->InheritsFrom(clReq) && (cl != clCastOnFile)) {
       Error("ReadClass", "got wrong class: %s", cl->GetName());
       // exception
    }
@@ -2706,29 +2712,29 @@ UInt_t TBufferFile::WriteVersionMemberWise(const TClass *cl, Bool_t useBcnt)
 }
 
 //______________________________________________________________________________
-void TBufferFile::StreamObject(void *obj, const type_info &typeinfo)
+void TBufferFile::StreamObject(void *obj, const type_info &typeinfo, const TClass* onFileClass )
 {
    // Stream an object given its C++ typeinfo information.
 
    TClass *cl = TClass::GetClass(typeinfo);
-   cl->Streamer(obj, *this);
+   cl->Streamer(obj, *this, (TClass*)onFileClass );
 }
 
 //______________________________________________________________________________
-void TBufferFile::StreamObject(void *obj, const char *className)
+void TBufferFile::StreamObject(void *obj, const char *className, const TClass* onFileClass)
 {
    // Stream an object given the name of its actual class.
 
    TClass *cl = TClass::GetClass(className);
-   cl->Streamer(obj, *this);
+   cl->Streamer(obj, *this, (TClass*)onFileClass );
 }
 
 //______________________________________________________________________________
-void TBufferFile::StreamObject(void *obj, const TClass *cl)
+void TBufferFile::StreamObject(void *obj, const TClass *cl, const TClass* onFileClass )
 {
    // Stream an object given a pointer to its actual class.
 
-   ((TClass*)cl)->Streamer(obj, *this);
+   ((TClass*)cl)->Streamer(obj, *this, (TClass*)onFileClass );
 }
 
 //______________________________________________________________________________
@@ -3328,7 +3334,13 @@ Int_t TBufferFile::ReadClassBuffer(TClass *cl, void *pointer, TClass *onFileClas
    // Read the class version from the buffer.
    UInt_t R__s = 0; // Start of object.
    UInt_t R__c = 0; // Count of bytes.
-   Version_t version = ReadVersion(&R__s, &R__c, cl);
+   Version_t version;
+
+   if( onFileClass )
+      version = ReadVersion(&R__s, &R__c, onFileClass);
+   else
+      version = ReadVersion(&R__s, &R__c, cl);
+
    Bool_t v2file = kFALSE;
    TFile *file = (TFile*)GetParent();
    if (file && file->GetVersion() < 30000) {
@@ -3343,9 +3355,12 @@ Int_t TBufferFile::ReadClassBuffer(TClass *cl, void *pointer, TClass *onFileClas
    //---------------------------------------------------------------------------
    TStreamerInfo *sinfo = 0;
    if( onFileClass ) {
-      sinfo = (TStreamerInfo*)cl->GetForeignStreamerInfo( onFileClass->GetName(), version );
-      if( !sinfo )
+      sinfo = (TStreamerInfo*)cl->GetForeignStreamerInfo( onFileClass->GetName(), (Int_t)version );
+      if( !sinfo ) {
+         Error( "ReadClassBuffer", "Could not find the right streamer info" );
+         CheckByteCount(R__s, R__c, onFileClass);
          return 0;
+      }
    }
    //---------------------------------------------------------------------------
    // Get local streamer info

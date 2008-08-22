@@ -269,6 +269,11 @@ namespace ROOT
       while( member.Next() ) {
          nameType[member.Name()] = member.Type()->Name();
       }
+
+      G__BaseClassInfo base( cl );
+      while( base.Next() ) {
+         nameType[base.Name()] = base.Name();
+      }
    }
 
    //---------------------------------------------------------------------------

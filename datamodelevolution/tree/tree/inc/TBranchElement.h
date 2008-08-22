@@ -53,6 +53,7 @@ protected:
 // Data Members
 protected:
    TString                  fClassName;     //  Class name of referenced object
+   TString                  fTargetClassName; //! Name of the target in-memory class
    TString                  fParentName;    //  Name of parent class
    TString                  fClonesName;    //  Name of class in TClonesArray (if any)
    TVirtualCollectionProxy *fCollProxy;     //! collection interface (if any)
@@ -136,9 +137,11 @@ public:
            Int_t            GetNdata() const { return fNdata; }
            Int_t            GetType() const { return fType; }
            Int_t            GetStreamerType() const { return fStreamerType; }
+   virtual TString          GetTargetClassName() { return fTargetClassName; }
    virtual const char      *GetTypeName() const;
            Double_t         GetValue(Int_t i, Int_t len, Bool_t subarr = kFALSE) const;
    virtual void            *GetValuePointer() const;
+           Int_t            GetVersion() { return fClassVersion; }
            Bool_t           IsBranchFolder() const { return TestBit(kBranchFolder); }
            Bool_t           IsFolder() const;
    virtual Bool_t           IsObjectOwner() const { return TestBit(kDeleteObject); }
@@ -156,10 +159,11 @@ public:
    virtual void             SetClassName(const char* name) { fClassName = name; }
    inline  void             SetParentClass(TClass* clparent);
    virtual void             SetParentName(const char* name) { fParentName = name; }
+   virtual void             SetTargetClassName( TString name ) { fTargetClassName = name; }
    virtual void             SetupAddresses();
    virtual void             SetType(Int_t btype) { fType = btype; }
 
-   ClassDef(TBranchElement,8)  // Branch in case of an object
+   ClassDef(TBranchElement,9)  // Branch in case of an object
 };
 
 inline void TBranchElement::SetParentClass(TClass* clparent)

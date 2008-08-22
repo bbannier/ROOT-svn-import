@@ -49,6 +49,8 @@ namespace ROOT {
          const TObjArray* GetSource() const;
          void             SetEmbed( const Bool_t embed );
          Bool_t           GetEmbed() const;
+         Bool_t           IsAliasRule() const;
+         Bool_t           IsRenameRule() const;
          Bool_t           IsValid() const;
          void             SetCode( const TString& code );
          TString          GetCode() const;

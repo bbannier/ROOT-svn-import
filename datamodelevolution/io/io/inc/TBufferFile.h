@@ -113,7 +113,7 @@ public:
    virtual UInt_t     WriteVersion(const TClass *cl, Bool_t useBcnt = kFALSE);
    virtual UInt_t     WriteVersionMemberWise(const TClass *cl, Bool_t useBcnt = kFALSE);
 
-   virtual void      *ReadObjectAny(const TClass* cast);
+   virtual void      *ReadObjectAny(const TClass* cast, const TClass* clCastOnFile = 0 );
    virtual void       SkipObjectAny();
 
    virtual void       IncrementLevel(TVirtualStreamerInfo* info);
@@ -134,7 +134,7 @@ public:
    virtual char      *ReadString(char *s, Int_t max);
    virtual void       WriteString(const char *s);
 
-   virtual TClass    *ReadClass(const TClass *cl = 0, UInt_t *objTag = 0);
+   virtual TClass    *ReadClass(const TClass *cl = 0, UInt_t *objTag = 0, const TClass* clCastOnFile = 0);
    virtual void       WriteClass(const TClass *cl);
 
    virtual TObject   *ReadObject(const TClass *cl);
@@ -206,7 +206,7 @@ public:
    virtual   void     ReadFastArray(Double_t  *d, Int_t n);
    virtual   void     ReadFastArrayFloat16(Float_t  *f, Int_t n, TStreamerElement *ele=0);
    virtual   void     ReadFastArrayDouble32(Double_t  *d, Int_t n, TStreamerElement *ele=0);
-   virtual   void     ReadFastArray(void  *start , const TClass *cl, Int_t n=1, TMemberStreamer *s=0);
+   virtual   void     ReadFastArray(void  *start , const TClass *cl, Int_t n=1, TMemberStreamer *s=0, const TClass* onFileClass=0 );
    virtual   void     ReadFastArray(void **startp, const TClass *cl, Int_t n=1, Bool_t isPreAlloc=kFALSE, TMemberStreamer *s=0);
 
    virtual   void     WriteArray(const Bool_t    *b, Int_t n);
@@ -244,9 +244,9 @@ public:
    virtual   void     WriteFastArray(void  *start,  const TClass *cl, Int_t n=1, TMemberStreamer *s=0);
    virtual   Int_t    WriteFastArray(void **startp, const TClass *cl, Int_t n=1, Bool_t isPreAlloc=kFALSE, TMemberStreamer *s=0);
 
-   virtual   void     StreamObject(void *obj, const type_info &typeinfo);
-   virtual   void     StreamObject(void *obj, const char *className);
-   virtual   void     StreamObject(void *obj, const TClass *cl);
+   virtual   void     StreamObject(void *obj, const type_info &typeinfo, const TClass* onFileClass = 0 );
+   virtual   void     StreamObject(void *obj, const char *className, const TClass* onFileClass = 0 );
+   virtual   void     StreamObject(void *obj, const TClass *cl, const TClass* onFileClass = 0 );
    virtual   void     StreamObject(TObject *obj);
 
    virtual   void     ReadBool(Bool_t       &b);
