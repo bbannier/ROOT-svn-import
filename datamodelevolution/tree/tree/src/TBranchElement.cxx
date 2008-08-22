@@ -1462,7 +1462,7 @@ void TBranchElement::InitInfo()
       // Check if we're dealing with the name change
       //------------------------------------------------------------------------
       TClass* targetClass = 0;
-      if( fTargetClassName != "" && fTargetClassName != fClassName ) {
+      if( fTargetClassName.Length() && fTargetClassName != fClassName ) {
          targetClass = TClass::GetClass( fTargetClassName );
          if( !targetClass ) {
             Error( "InitInfo", "The target class dictionary is not present!" );
@@ -3372,9 +3372,9 @@ void TBranchElement::SetAddress(void* addr)
    // Make sure our branch class is instantiated.
    //
    TClass* clOfBranch = fBranchClass.GetClass();
-   if( fTargetClassName )
+   if( fTargetClassName.Length() ) {
       clOfBranch = TClass::GetClass( fTargetClassName );
-
+   }
 
    //
    // Try to build the streamer info.
