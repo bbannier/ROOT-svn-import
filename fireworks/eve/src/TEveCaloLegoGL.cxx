@@ -62,8 +62,8 @@ TEveCaloLegoGL::TEveCaloLegoGL() :
    fXAxisAtt.SetTMNDim(2);
    fXAxisAtt.SetTextAlign(TGLAxisAttrib::kCenterDown);
    fXAxisAtt.SetNdivisions(710);
-   fXAxisAtt.SetLabelSize(0.05);
-   fXAxisAtt.SetTitleSize(0.05);
+   fXAxisAtt.SetLabelSize(0.03);
+   fXAxisAtt.SetTitleSize(0.03);
    fXAxisAtt.SetTitleFontName("symbol");
    fXAxisAtt.SetTitle("h");
 
@@ -75,10 +75,10 @@ TEveCaloLegoGL::TEveCaloLegoGL() :
    fZAxisAtt.RefDir().Set(0., 0., 1.);
    fZAxisAtt.SetTextAlign(TGLAxisAttrib::kLeft);
    fZAxisAtt.SetRelativeFontSize(kTRUE);
-   fZAxisAtt.SetLabelSize(0.07);
+   fZAxisAtt.SetLabelSize(0.03);
    fZAxisAtt.SetTitle("Et");
    fZAxisAtt.SetTitleUnits("GeV");
-   fZAxisAtt.SetTitleSize(0.07);
+   fZAxisAtt.SetTitleSize(0.03);
 
    fEtaAxis = new TAxis();
    fPhiAxis = new TAxis();
