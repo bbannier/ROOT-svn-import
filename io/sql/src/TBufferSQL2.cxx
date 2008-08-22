@@ -1479,7 +1479,7 @@ void TBufferSQL2::ReadFastArrayDouble32(Double_t  *d, Int_t n, TStreamerElement 
 }
 
 //______________________________________________________________________________
-void TBufferSQL2::ReadFastArray(void  *start, const TClass *cl, Int_t n, TMemberStreamer *streamer)
+void TBufferSQL2::ReadFastArray(void  *start, const TClass *cl, Int_t n, TMemberStreamer *streamer, const TClass* onFileClass )
 {
    // Same functionality as TBuffer::ReadFastArray(...) but
    // instead of calling cl->Streamer(obj,buf) call here
@@ -1953,7 +1953,7 @@ Int_t TBufferSQL2::WriteFastArray(void **start, const TClass *cl, Int_t n, Bool_
 }
 
 //______________________________________________________________________________
-void TBufferSQL2::StreamObject(void *obj, const type_info &typeinfo)
+void TBufferSQL2::StreamObject(void *obj, const type_info &typeinfo, const TClass* /* onFileClass */ )
 {
    // steram object to/from buffer
 
@@ -1961,7 +1961,7 @@ void TBufferSQL2::StreamObject(void *obj, const type_info &typeinfo)
 }
 
 //______________________________________________________________________________
-void TBufferSQL2::StreamObject(void *obj, const char *className)
+void TBufferSQL2::StreamObject(void *obj, const char *className, const TClass* /* onFileClass */ )
 {
    // steram object to/from buffer
 
@@ -1969,7 +1969,7 @@ void TBufferSQL2::StreamObject(void *obj, const char *className)
 }
 
 //______________________________________________________________________________
-void TBufferSQL2::StreamObject(void *obj, const TClass *cl)
+void TBufferSQL2::StreamObject(void *obj, const TClass *cl, const TClass* /* onFileClass */ )
 {
    // steram object to/from buffer
 

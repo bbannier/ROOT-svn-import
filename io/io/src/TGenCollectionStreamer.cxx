@@ -152,6 +152,21 @@ void TGenCollectionStreamer::ReadObjects(int nElements, TBuffer &b)
    StreamHelper* itm = 0;
    char   buffer[8096];
    void*  memory = 0;
+   
+   // This should work !!!
+   //TClass* onFileValClass = (fOnFileClass ? fOnFileClass->GetCollectionProxy()->GetValueClass() : 0);
+
+   // This is a temporary workaround
+   TClass* onFileValClass = 0;
+   if( fOnFileClass ) {
+      std::vector<std::string> out;
+      int a;
+      TClassEdit::GetSplit( fOnFileClass->GetName(), out, a );
+      if( fOnFileClass->GetCollectionProxy()->HasPointers() )
+         onFileValClass = TClass::GetClass( out[1].substr( 0, out[1].size() - 1).c_str() );
+      else
+         onFileValClass = TClass::GetClass( out[1].c_str() );
+   }
 
    fEnv->size = nElements;
    switch (fSTL_type)  {
@@ -161,11 +176,11 @@ void TGenCollectionStreamer::ReadObjects(int nElements, TBuffer &b)
          itm = (StreamHelper*)fResize.invoke(fEnv);
          switch (fVal->fCase) {
             case G__BIT_ISCLASS:
-               DOLOOP(b.StreamObject(i, fVal->fType));
+               DOLOOP(b.StreamObject(i, fVal->fType, onFileValClass ));
             case kBIT_ISSTRING:
                DOLOOP(i->read_std_string(b));
             case G__BIT_ISPOINTER | G__BIT_ISCLASS:
-               DOLOOP(i->set(b.ReadObjectAny(fVal->fType)));
+               DOLOOP(i->set(b.ReadObjectAny(fVal->fType, onFileValClass)));
             case G__BIT_ISPOINTER | kBIT_ISSTRING:
                DOLOOP(i->read_std_string_pointer(b));
             case G__BIT_ISPOINTER | kBIT_ISTSTRING | G__BIT_ISCLASS:
@@ -182,7 +197,7 @@ void TGenCollectionStreamer::ReadObjects(int nElements, TBuffer &b)
          fResize.invoke(fEnv);
          switch (fVal->fCase) {
             case G__BIT_ISCLASS:
-               DOLOOP(b.StreamObject(i, fVal->fType));
+               DOLOOP(b.StreamObject(i, fVal->fType, onFileValClass));
             case kBIT_ISSTRING:
                DOLOOP(i->read_std_string(b));
             case G__BIT_ISPOINTER | G__BIT_ISCLASS:
@@ -204,7 +219,7 @@ void TGenCollectionStreamer::ReadObjects(int nElements, TBuffer &b)
          fConstruct.invoke(fEnv);
          switch (fVal->fCase) {
             case G__BIT_ISCLASS:
-               DOLOOP(b.StreamObject(i, fVal->fType));
+               DOLOOP(b.StreamObject(i, fVal->fType, onFileValClass));
                fFeed.invoke(fEnv);
                fDestruct.invoke(fEnv);
                break;

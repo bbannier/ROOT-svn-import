@@ -131,6 +131,15 @@ namespace ROOT
                return false;
 
             //------------------------------------------------------------------
+            // Do we have a star?
+            //------------------------------------------------------------------
+            if( version == "*" ) {
+               result.first  = -10;
+               result.second = 50000;
+               return true;
+            }
+
+            //------------------------------------------------------------------
             // Check if we have a minus somewhere, if not then single version
             // number was specified
             //------------------------------------------------------------------

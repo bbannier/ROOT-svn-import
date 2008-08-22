@@ -260,7 +260,7 @@ public:
    Int_t              GetNmethods();
    TRealData         *GetRealData(const char *name) const;
    TVirtualRefProxy  *GetReferenceProxy()  const   {  return fRefProxy; }
-   const ROOT::TSchemaRuleSet *GetSchemaRules() const { return fSchemaRules; };
+   const ROOT::TSchemaRuleSet *GetSchemaRules() const;
    ROOT::TSchemaRuleSet *GetSchemaRules() { return fSchemaRules; };
    const char        *GetSharedLibs();
    ShowMembersFunc_t  GetShowMembersWrapper() const { return fShowMembers; }

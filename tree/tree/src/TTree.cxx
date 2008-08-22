@@ -2201,14 +2201,17 @@ Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataTyp
    // Let's determine what we need!
    TClass* expectedClass = 0;
    EDataType expectedType = kOther_t;
+   TStreamerInfo* sinfo = 0;
    if (branch->InheritsFrom(TBranchObject::Class())) {
       TLeafObject* lobj = (TLeafObject*) branch->GetListOfLeaves()->At(0);
       expectedClass = lobj->GetClass();
    } else if (branch->InheritsFrom(TBranchElement::Class())) {
       TBranchElement* branchEl = (TBranchElement*) branch;
       Int_t type = branchEl->GetStreamerType();
+      sinfo = branchEl->GetInfo();
       if ((type == -1) || (branchEl->GetID() == -1)) {
-         expectedClass =  branchEl->GetInfo()->GetClass();
+           expectedClass = TClass::GetClass( branchEl->GetClassName() );
+//         expectedClass =  branchEl->GetInfo()->GetClass();
       } else {
          // Case of an object data member.  Here we allow for the
          // variable name to be ommitted.  Eg, for Event.root with split
@@ -2250,9 +2253,28 @@ Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataTyp
    if (datatype == kDouble32_t) {
       datatype = kDouble_t;
    }
+
+   //---------------------------------------------------------------------------
+   // Deal with the class renaming
+   //---------------------------------------------------------------------------
+   if( expectedClass && ptrClass &&
+       expectedClass->GetName() != ptrClass->GetName() &&
+       branch->InheritsFrom( TBranchElement::Class() )) {
+       TBranchElement* bEl = (TBranchElement*)branch;
+
+      if( !ptrClass->GetForeignStreamerInfo( bEl->GetClassName(), bEl->GetVersion() ) &&
+          !ptrClass->GetForeignStreamerInfo( bEl->GetClassName(), bEl->GetCheckSum() ) ) {
+         Error("SetBranchAddress", "The pointer type given \"%s\" does not correspond to the type needed \"%s\" by the branch: %s", ptrClass->GetName(), bEl->GetClassName(), branch->GetName());
+         return kFALSE;
+      }
+      else
+         return kTRUE;
+   }
+
    if (expectedClass && ptrClass && !expectedClass->InheritsFrom(ptrClass)) {
-      Error("SetBranchAddress", "The pointer type give (%s) does not correspond to the class needed (%s) by the branch: %s", ptrClass->GetName(), expectedClass->GetName(), branch->GetName());
-      return kFALSE;
+
+         Error("SetBranchAddress", "The pointer type given (%s) does not correspond to the class needed (%s) by the branch: %s", ptrClass->GetName(), expectedClass->GetName(), branch->GetName());
+         return kFALSE;
    } else if ((expectedType != kOther_t) && (datatype != kOther_t) && (expectedType != kNoType_t) && (datatype != kNoType_t) && (expectedType != datatype)) {
       if (datatype != kChar_t) {
          // For backward compatibility we assume that (char*) was just a cast and/or a generic address
@@ -5597,6 +5619,10 @@ void TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr, TClas
    if (ptr) {
       *ptr = branch;
    }
+
+   if( branch->IsA() == TBranchElement::Class() )
+      ((TBranchElement*)branch)->SetTargetClassName( ptrClass->GetName() );
+
    CheckBranchAddressType(branch, ptrClass, datatype, isptr);
    SetBranchAddress(bname, addr);
 }

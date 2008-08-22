@@ -662,7 +662,6 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
 
    TStreamerInfo *thisVar = this;
 #endif
-
    b.IncrementLevel(thisVar);
 
    Int_t last;
@@ -684,11 +683,11 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
    static const int kHaveLoop = 1024;
    const Int_t typeOffset = arrayMode ? kHaveLoop : 0;
 
-   TClass     *cle      =0;
+   TClass     *cle      = 0;
+   TClass     *newCle   = 0;
    TMemberStreamer *pstreamer=0;
    Int_t isPreAlloc = 0;
    for (Int_t i=first;i<last;i++) {
-
       b.SetStreamerElementNumber(i);
       TStreamerElement * aElement  = (TStreamerElement*)fElem[i];
       fgElement = aElement;
@@ -980,6 +979,7 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
    SWIT:
       isPreAlloc= 0;
       cle       = fComp[i].fClass;
+      newCle    = fComp[i].fNewClass;
       pstreamer = fComp[i].fStreamer;
 
       switch (kase) {
@@ -1109,30 +1109,51 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
          case TStreamerInfo::kSTL:                // Container with no virtual table (stl) and no comment
          case TStreamerInfo::kSTL + TStreamerInfo::kOffsetL:     // array of Container with no virtual table (stl) and no comment
             {
-               UInt_t start,count;
+               UInt_t start, count, startDummy, countDummy;
                Version_t vers = b.ReadVersion(&start, &count, cle);
+               TClass *newClass = aElement->GetNewClass();
+               TClass *oldClass = aElement->GetClassPointer();
+
                if ( vers & TBufferFile::kStreamedMemberWise ) {
                   // Collection was saved member-wise
-
                   vers &= ~( TBufferFile::kStreamedMemberWise );
-                  TVirtualCollectionProxy *proxy = aElement->GetClassPointer()->GetCollectionProxy();
-                  TStreamerInfo *subinfo = (TStreamerInfo*)proxy->GetValueClass()->GetStreamerInfo();
+
+                  Version_t vClVersion;
+                  if( vers >= 8 )
+                     vClVersion = b.ReadVersion( &startDummy, &countDummy, cle->GetCollectionProxy()->GetValueClass() );
+
+                  if( vers < 8 && newClass ) {
+                     Error( "ReadBuffer", "Due to a bug this fill does not contain information necessary to do Schema Evolution, sorry :(" ); 
+                     continue;
+                  }
+
+                  TVirtualCollectionProxy *newProxy = (newClass ? newClass->GetCollectionProxy() : 0);
+                  TVirtualCollectionProxy *oldProxy = oldClass->GetCollectionProxy();
+                  TStreamerInfo *subinfo = 0;
+
+                  if( newProxy )
+                     subinfo = (TStreamerInfo*)newProxy->GetValueClass()->GetForeignStreamerInfo( oldProxy->GetValueClass()->GetName(), vClVersion );
+                  else {
+                     subinfo = (TStreamerInfo*)oldProxy->GetValueClass()->GetStreamerInfo( vClVersion );
+                     newProxy = oldProxy;
+                  }
+
                   DOLOOP {
                      int objectSize = cle->Size();
                      char *obj = arr[k]+ioffset;
                      char *end = obj + fLength[i]*objectSize;
 
                      for(; obj<end; obj+=objectSize) {
-                        TVirtualCollectionProxy::TPushPop helper( proxy, obj );
+                        TVirtualCollectionProxy::TPushPop helper( newProxy, obj );
                         Int_t nobjects;
                         b >> nobjects;
-                        void* env = proxy->Allocate(nobjects,true);
+                        void* env = newProxy->Allocate(nobjects,true);
                         if (vers<7) {
-                           subinfo->ReadBuffer(b,*proxy,-1,nobjects,0,1);
+                           subinfo->ReadBuffer(b,*newProxy,-1,nobjects,0,1);
                         } else {
-                           subinfo->ReadBufferSTL(b,proxy,nobjects,-1,0);
+                           subinfo->ReadBufferSTL(b,newProxy,nobjects,-1,0);
                         }
-                        proxy->Commit(env);
+                        newProxy->Commit(env);
                      }
                   }
                   b.CheckByteCount(start,count,aElement->GetTypeName());
@@ -1148,8 +1169,12 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
                   }
                }
                if (pstreamer == 0) {
+                  if( !newCle ) {
+                     newCle = cle;
+                     cle = 0;
+                  }
                   DOLOOP {
-                     b.ReadFastArray((void*)(arr[k]+ioffset),cle,fLength[i],(TMemberStreamer*)0);
+                     b.ReadFastArray((void*)(arr[k]+ioffset),newCle,fLength[i],(TMemberStreamer*)0, cle );
                   }
                } else {
                   DOLOOP {(*pstreamer)(b,arr[k]+ioffset,fLength[i]);}
@@ -1169,7 +1194,10 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
             if (pstreamer) {
                DOLOOP {(*pstreamer)(b,arr[k]+ioffset,0);}
             } else {
-               DOLOOP { cle->Streamer(arr[k]+ioffset,b);}
+               if( newCle )
+                  DOLOOP { newCle->Streamer( arr[k]+ioffset, b, cle ); }
+               else
+                  DOLOOP { cle->Streamer(arr[k]+ioffset,b);}
             }
             continue;
 
@@ -1198,7 +1226,7 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
                if(pstreamer)  {kase = TStreamerInfo::kStreamer; goto SWIT;}
                DOLOOP { ((TStreamerBase*)aElement)->ReadBuffer(b,arr[k]);}
             } else {
-
+               // FIXME: what is that?
                Int_t clversion = ((TStreamerBase*)aElement)->GetBaseVersion();
                ((TStreamerInfo*)cle->GetStreamerInfo(clversion))->ReadBuffer(b,arr,-1,narr,ioffset,arrayMode);
             }
@@ -1533,7 +1561,6 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
       }
    }
    b.DecrementLevel(thisVar);
-
    return 0;
 }
 

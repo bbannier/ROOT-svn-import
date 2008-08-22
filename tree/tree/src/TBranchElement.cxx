@@ -1457,16 +1457,31 @@ void TBranchElement::InitInfo()
    if (!fInfo) {
       // We did not already have streamer info, so now we must find it.
       TClass* cl = fBranchClass.GetClass();
+
+      //------------------------------------------------------------------------
+      // Check if we're dealing with the name change
+      //------------------------------------------------------------------------
+      TClass* targetClass = 0;
+      if( fTargetClassName != "" && fTargetClassName != fClassName ) {
+         targetClass = TClass::GetClass( fTargetClassName );
+         if( !targetClass ) {
+            Error( "InitInfo", "The target class dictionary is not present!" );
+            return;
+         }
+      }
+
       if (cl) {
-         if (cl == TClonesArray::Class()) {
-            fClassVersion = TClonesArray::Class()->GetClassVersion();
-         }
-         {
-            Bool_t optim = TVirtualStreamerInfo::CanOptimize();
-            TVirtualStreamerInfo::Optimize(kFALSE);
+         //---------------------------------------------------------------------
+         // Get the streamer info for given verision
+         //---------------------------------------------------------------------
+         Bool_t optim = TVirtualStreamerInfo::CanOptimize();
+         TVirtualStreamerInfo::Optimize(kFALSE);
+         if( targetClass )
+            fInfo = (TStreamerInfo*)targetClass->GetForeignStreamerInfo( fClassName, fClassVersion );
+         else
             fInfo = (TStreamerInfo*)cl->GetStreamerInfo(fClassVersion);
-            TVirtualStreamerInfo::Optimize(optim);
-         }
+         TVirtualStreamerInfo::Optimize(optim);
+
          // FIXME: Check that the found streamer info checksum matches our branch class checksum here.
          // Check to see if the class code was unloaded/reloaded
          // since we were created.
@@ -1474,21 +1489,18 @@ void TBranchElement::InitInfo()
             // Try to compensate for a class that got unloaded on us.
             // Search through the streamer infos by checksum
             // and take the first match.
-            Int_t ninfos = cl->GetStreamerInfos()->GetEntriesFast() - 1;
-            for (Int_t i = -1; i < ninfos; ++i) {
-               TVirtualStreamerInfo* info = (TVirtualStreamerInfo*) cl->GetStreamerInfos()->UncheckedAt(i);
-               if (!info) {
-                  continue;
-               }
-               if (info->GetCheckSum() == fCheckSum) {
-                  fClassVersion = i;
-                  Bool_t optim = TVirtualStreamerInfo::CanOptimize();
-                  TVirtualStreamerInfo::Optimize(kFALSE);
-                  fInfo = (TStreamerInfo*)cl->GetStreamerInfo(fClassVersion);
-                  TVirtualStreamerInfo::Optimize(optim);
-                  break;
-               }
+
+            TStreamerInfo* info;
+            Bool_t optim = TVirtualStreamerInfo::CanOptimize();
+            if( targetClass )
+               info = (TStreamerInfo*)targetClass->GetForeignStreamerInfo( fClassName, fCheckSum );
+            else
+               info = (TStreamerInfo*)cl->FindStreamerInfo( fCheckSum );
+            if( info ) {
+               fClassVersion = fInfo->GetClassVersion();
+               fInfo = info;
             }
+            TVirtualStreamerInfo::Optimize(optim);
          }
       }
    }
@@ -3359,8 +3371,10 @@ void TBranchElement::SetAddress(void* addr)
    //
    // Make sure our branch class is instantiated.
    //
-
    TClass* clOfBranch = fBranchClass.GetClass();
+   if( fTargetClassName )
+      clOfBranch = TClass::GetClass( fTargetClassName );
+
 
    //
    // Try to build the streamer info.

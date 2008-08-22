@@ -4,16 +4,26 @@
 #ifndef ROOT_TSchemaRuleSet
 #define ROOT_TSchemaRuleSet
 
-class TObjArray;
 class TClass;
 
 #include "TObject.h"
+#include "TObjArray.h"
 #include "Rtypes.h"
 #include "TString.h"
 
 namespace ROOT {
 
    class TSchemaRule;
+
+   class TSchemaMatch: public TObjArray
+   {
+      public:
+         virtual ~TSchemaMatch() {};
+         const TSchemaRule* GetRuleWithSource( const TString& name ) const;
+         const TSchemaRule* GetRuleWithTarget( const TString& name ) const;
+               Bool_t       HasRuleWithSource( const TString& name ) const;
+               Bool_t       HasRuleWithTarget( const TString& name ) const;
+   };
 
    class TSchemaRuleSet: public TObject
    {
@@ -22,19 +32,19 @@ namespace ROOT {
          TSchemaRuleSet();
          virtual ~TSchemaRuleSet();
 
-         Bool_t           AddRule( TSchemaRule* rule, Bool_t checkConsistency = kTRUE );
-         const TObjArray* FindRules( const TString &source ) const;
-         const TObjArray* FindRules( const TString &source, Int_t version ) const;
-         const TObjArray* FindRules( const TString &source, UInt_t checksum ) const;
-         TClass*          GetClass();
-         UInt_t           GetClassChecksum() const;
-         TString          GetClassName() const;
-         Int_t            GetClassVersion() const;
-         const TObjArray* GetRules() const;
-         const TObjArray* GetPersistentRules() const;
-         void             RemoveRule( TSchemaRule* rule );
-         void             RemoveRules( TObjArray* rules );
-         void             SetClass( TClass* cls );
+         Bool_t              AddRule( TSchemaRule* rule, Bool_t checkConsistency = kTRUE );
+         const TObjArray*    FindRules( const TString &source ) const;
+         const TSchemaMatch* FindRules( const TString &source, Int_t version ) const;
+         const TSchemaMatch* FindRules( const TString &source, UInt_t checksum ) const;
+         TClass*             GetClass();
+         UInt_t              GetClassChecksum() const;
+         TString             GetClassName() const;
+         Int_t               GetClassVersion() const;
+         const TObjArray*    GetRules() const;
+         const TObjArray*    GetPersistentRules() const;
+         void                RemoveRule( TSchemaRule* rule );
+         void                RemoveRules( TObjArray* rules );
+         void                SetClass( TClass* cls );
 
          ClassDef( TSchemaRuleSet, 1 )
 

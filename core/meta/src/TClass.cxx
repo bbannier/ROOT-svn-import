@@ -638,7 +638,8 @@ ClassImp(TClass)
 TClass::TClass() : TDictionary(), fNew(0), fNewArray(0), fDelete(0),
                    fDeleteArray(0), fDestructor(0), fDirAutoAdd(0), fSizeof(-1),
                    fVersionUsed(kFALSE), fOffsetStreamer(0), fStreamerType(kNone),
-                   fCurrentInfo(0), fRefStart(0), fRefProxy(0), fSchemaRules( 0 )
+                   fCurrentInfo(0), fRefStart(0), fRefProxy(0),
+                   fSchemaRules( new ROOT::TSchemaRuleSet() )
 {
    // Default ctor.
 
@@ -676,7 +677,7 @@ TClass::TClass(const char *name) : TDictionary(), fNew(0), fNewArray(0),
                                    fSizeof(-1), fVersionUsed(kFALSE),
                                    fOffsetStreamer(0), fStreamerType(kNone),
                                    fCurrentInfo(0), fRefStart(0), fRefProxy(0),
-                                   fSchemaRules(0)
+                                   fSchemaRules(new ROOT::TSchemaRuleSet())
 {
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
@@ -742,7 +743,7 @@ TClass::TClass(const char *name, Version_t cversion,
    : TDictionary(), fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
      fDestructor(0), fDirAutoAdd(0), fSizeof(-1), fVersionUsed(kFALSE), fOffsetStreamer(0),
      fStreamerType(kNone), fCurrentInfo(0), fRefStart(0), fRefProxy(0),
-     fSchemaRules( 0 )
+     fSchemaRules( new ROOT::TSchemaRuleSet() )
 {
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
@@ -1178,8 +1179,16 @@ TClass::~TClass()
 void TClass::SetSchemaRules( ROOT::TSchemaRuleSet *rules )
 {
    // Set the schema rules - since now TClass owns the TSchemaRuleSet object
+   delete fSchemaRules;
    fSchemaRules = rules;
    fSchemaRules->SetClass( this );
+}
+
+//------------------------------------------------------------------------------
+const ROOT::TSchemaRuleSet* TClass::GetSchemaRules() const
+{
+   // Set the schema rules - since now TClass owns the TSchemaRuleSet object
+   return fSchemaRules;
 }
 
 //______________________________________________________________________________
@@ -2941,6 +2950,7 @@ TVirtualStreamerInfo* TClass::GetStreamerInfo(Int_t version) const
       // When the requested version does not exist we return
       // the TVirtualStreamerInfo for the currently loaded class vesion.
       // FIXME: This arguably makes no sense, we should warn and return nothing instead.
+      // Note: This is done for STL collactions
       // Note: fClassVersion could be -1 here (for an emulated class).
       sinfo = (TVirtualStreamerInfo*) fStreamerInfo->At(fClassVersion);
    }
@@ -4360,8 +4370,9 @@ void TClass::Streamer(void *object, TBuffer &b, TClass *onfile_class)
       case kExternal:
       case kExternal|kEmulated:
          //There is special streamer for the class
-         // (*fStreamer)(b,object);
+         GetStreamer()->SetOnFileClass( onfile_class );
          (*GetStreamer())(b,object);
+
          return;
 
 
@@ -4525,7 +4536,6 @@ TVirtualStreamerInfo *TClass::FindStreamerInfo( TObjArray* arr, UInt_t checksum)
 TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, Int_t version ) const
 {
    // Find the streamer info for the foreign class
-
    //---------------------------------------------------------------------------
    // Check if the classname was specified correctly
    //---------------------------------------------------------------------------
@@ -4548,8 +4558,8 @@ TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, Int
       arr = it->second;
    }
    else {
-      arr = new TObjArray();
-      (*fForeignStreamerInfo)[classname] = arr;       
+      arr = new TObjArray(version+10, -1);
+      (*fForeignStreamerInfo)[classname] = arr;
    }
 
    if( version > -1 && version < arr->GetSize() && arr->At( version ) )
@@ -4558,7 +4568,10 @@ TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, Int
    //----------------------------------------------------------------------------
    // We don't have the streamer info so find it in other class
    //----------------------------------------------------------------------------
-   TVirtualStreamerInfo* info = cl->GetStreamerInfo( version );
+   TObjArray *clSI = cl->GetStreamerInfos();
+   TVirtualStreamerInfo* info = 0;
+   if( version > -1 && version < clSI->GetSize() )
+      info = (TVirtualStreamerInfo*)clSI->At( version );
 
    if( !info )
       return 0;
@@ -4608,7 +4621,7 @@ TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, UIn
       arr = it->second;
    }
    else {
-      arr = new TObjArray();
+      arr = new TObjArray( 20, -1 );
       (*fForeignStreamerInfo)[classname] = arr;       
    }
 
@@ -4631,7 +4644,6 @@ TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, UIn
    // non artificial streamer elements and we should build it for current class
    //----------------------------------------------------------------------------
    info = (TVirtualStreamerInfo*)info->Clone();
-
    if( !info->BuildFor( this ) ) {
       delete info;
       return 0;
