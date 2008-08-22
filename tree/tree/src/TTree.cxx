@@ -5620,8 +5620,9 @@ void TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr, TClas
       *ptr = branch;
    }
 
-   if( branch->IsA() == TBranchElement::Class() )
+   if( branch->IsA() == TBranchElement::Class() ) {
       ((TBranchElement*)branch)->SetTargetClassName( ptrClass->GetName() );
+   }
 
    CheckBranchAddressType(branch, ptrClass, datatype, isptr);
    SetBranchAddress(bname, addr);
