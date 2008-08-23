@@ -1477,7 +1477,7 @@ void TBranchElement::InitInfo()
          Bool_t optim = TVirtualStreamerInfo::CanOptimize();
          TVirtualStreamerInfo::Optimize(kFALSE);
          if( targetClass )
-            fInfo = (TStreamerInfo*)targetClass->GetForeignStreamerInfo( fClassName, fClassVersion );
+            fInfo = (TStreamerInfo*)targetClass->GetTranslatedStreamerInfo( fClassName, fClassVersion );
          else
             fInfo = (TStreamerInfo*)cl->GetStreamerInfo(fClassVersion);
          TVirtualStreamerInfo::Optimize(optim);
@@ -1493,7 +1493,7 @@ void TBranchElement::InitInfo()
             TStreamerInfo* info;
             Bool_t optim = TVirtualStreamerInfo::CanOptimize();
             if( targetClass )
-               info = (TStreamerInfo*)targetClass->GetForeignStreamerInfo( fClassName, fCheckSum );
+               info = (TStreamerInfo*)targetClass->GetTranslatedStreamerInfo( fClassName, fCheckSum );
             else
                info = (TStreamerInfo*)cl->FindStreamerInfo( fCheckSum );
             if( info ) {

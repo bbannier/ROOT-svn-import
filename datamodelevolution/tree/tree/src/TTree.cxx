@@ -2262,8 +2262,8 @@ Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataTyp
        branch->InheritsFrom( TBranchElement::Class() )) {
        TBranchElement* bEl = (TBranchElement*)branch;
 
-      if( !ptrClass->GetForeignStreamerInfo( bEl->GetClassName(), bEl->GetVersion() ) &&
-          !ptrClass->GetForeignStreamerInfo( bEl->GetClassName(), bEl->GetCheckSum() ) ) {
+      if( !ptrClass->GetTranslatedStreamerInfo( bEl->GetClassName(), bEl->GetVersion() ) &&
+          !ptrClass->FindTranslatedStreamerInfo( bEl->GetClassName(), bEl->GetCheckSum() ) ) {
          Error("SetBranchAddress", "The pointer type given \"%s\" does not correspond to the type needed \"%s\" by the branch: %s", ptrClass->GetName(), bEl->GetClassName(), branch->GetName());
          return kFALSE;
       }

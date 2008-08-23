@@ -667,7 +667,7 @@ TClass::TClass() : TDictionary(), fNew(0), fNewArray(0), fDelete(0),
    fClassMenuList  = new TList();
    fClassMenuList->Add(new TClassMenuItem(TClassMenuItem::kPopupStandardList, this));
    fContextMenuTitle = "";
-   fForeignStreamerInfo = new std::map<std::string, TObjArray*>();
+   fTranslatedStreamerInfo = new std::map<std::string, TObjArray*>();
 }
 
 //______________________________________________________________________________
@@ -734,7 +734,7 @@ TClass::TClass(const char *name) : TDictionary(), fNew(0), fNewArray(0),
       ResetBit(kLoading);
    }
    if (fClassInfo) SetTitle(gCint->ClassInfo_Title(fClassInfo));
-   fForeignStreamerInfo = new std::map<std::string, TObjArray*>();
+   fTranslatedStreamerInfo = new std::map<std::string, TObjArray*>();
 }
 
 //______________________________________________________________________________
@@ -747,7 +747,7 @@ TClass::TClass(const char *name, Version_t cversion,
 {
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
-   fForeignStreamerInfo = new std::map<std::string, TObjArray*>();
+   fTranslatedStreamerInfo = new std::map<std::string, TObjArray*>();
    Init(name,cversion, 0, 0, 0, dfil, ifil, dl, il);
    SetBit(kUnloaded);
 }
@@ -766,7 +766,7 @@ TClass::TClass(const char *name, Version_t cversion,
    // of a class. It has list to baseclasses, datamembers and methods.
 
    // use inf
-   fForeignStreamerInfo = new std::map<std::string, TObjArray*>();
+   fTranslatedStreamerInfo = new std::map<std::string, TObjArray*>();
    Init(name, cversion, &info, isa, showmembers, dfil, ifil, dl, il);
 }
 
@@ -989,7 +989,7 @@ void TClass::Init(const char *name, Version_t cversion,
 TClass::TClass(const TClass& cl) :
   TDictionary(cl),
   fStreamerInfo(cl.fStreamerInfo),
-  fForeignStreamerInfo( cl.fForeignStreamerInfo ),
+  fTranslatedStreamerInfo( cl.fTranslatedStreamerInfo ),
   fRealData(cl.fRealData),
   fBase(cl.fBase),
   fData(cl.fData),
@@ -1079,7 +1079,7 @@ TClass& TClass::operator=(const TClass& cl)
       fStreamerType=cl.fStreamerType;
       fCurrentInfo=cl.fCurrentInfo;
       fRefStart=cl.fRefStart;
-      fForeignStreamerInfo=cl.fForeignStreamerInfo;
+      fTranslatedStreamerInfo=cl.fTranslatedStreamerInfo;
    }
    return *this;
 }
@@ -1172,7 +1172,7 @@ TClass::~TClass()
    delete fCollectionProxy;
    delete fIsAMethod;
    delete fSchemaRules;
-   delete fForeignStreamerInfo;
+   delete fTranslatedStreamerInfo;
 }
 
 //------------------------------------------------------------------------------
@@ -4533,18 +4533,27 @@ TVirtualStreamerInfo *TClass::FindStreamerInfo( TObjArray* arr, UInt_t checksum)
 }
 
 //______________________________________________________________________________
-TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, Int_t version ) const
+TVirtualStreamerInfo *TClass::GetTranslatedStreamerInfo( const char* classname, Int_t version ) const
 {
-   // Find the streamer info for the foreign class
-   //---------------------------------------------------------------------------
-   // Check if the classname was specified correctly
-   //---------------------------------------------------------------------------
-   if( std::string( classname ) == std::string( GetName() ) )
-      return GetStreamerInfo( version );
-
    TClass *cl = TClass::GetClass( classname );
    if( !cl )
       return 0;
+   return GetTranslatedStreamerInfo( cl, version );
+}
+
+//______________________________________________________________________________
+TVirtualStreamerInfo *TClass::GetTranslatedStreamerInfo( const TClass* cl, Int_t version ) const
+{
+   // Find the streamer info for the foreign class
+
+   //----------------------------------------------------------------------------
+   // Check if the classname was specified correctly
+   //----------------------------------------------------------------------------
+   if( !cl )
+      return 0;
+
+   if( cl == this )
+      return GetStreamerInfo( version );
 
    //----------------------------------------------------------------------------
    // Check if we already have it
@@ -4552,14 +4561,14 @@ TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, Int
    std::map<std::string, TObjArray*>::iterator it;
    TObjArray* arr;
 
-   it = fForeignStreamerInfo->find( classname );
+   it = fTranslatedStreamerInfo->find( cl->GetName() );
 
-   if( it != fForeignStreamerInfo->end() ) {
+   if( it != fTranslatedStreamerInfo->end() ) {
       arr = it->second;
    }
    else {
       arr = new TObjArray(version+10, -1);
-      (*fForeignStreamerInfo)[classname] = arr;
+      (*fTranslatedStreamerInfo)[cl->GetName()] = arr;
    }
 
    if( version > -1 && version < arr->GetSize() && arr->At( version ) )
@@ -4595,19 +4604,28 @@ TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, Int
 }
 
 //______________________________________________________________________________
-TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, UInt_t checksum ) const
+TVirtualStreamerInfo *TClass::FindTranslatedStreamerInfo( const char* classname, UInt_t checksum ) const
+{
+
+   TClass *cl = TClass::GetClass( classname );
+   if( !cl )
+      return 0;
+   return FindTranslatedStreamerInfo( cl, checksum );
+}
+
+//______________________________________________________________________________
+TVirtualStreamerInfo *TClass::FindTranslatedStreamerInfo( const TClass* cl, UInt_t checksum ) const
 {
    // Find the streamer info from the foreign class
 
    //---------------------------------------------------------------------------
    // Check if the classname was specified correctly
    //---------------------------------------------------------------------------
-   if( std::string( classname ) == std::string( GetName() ) )
-      return FindStreamerInfo( checksum );
-
-   TClass *cl = TClass::GetClass( classname );
    if( !cl )
       return 0;
+
+   if( cl == this )
+      return FindStreamerInfo( checksum );
 
    //----------------------------------------------------------------------------
    // Check if we already have it
@@ -4615,14 +4633,14 @@ TVirtualStreamerInfo *TClass::GetForeignStreamerInfo( const char* classname, UIn
    std::map<std::string, TObjArray*>::iterator it;
    TObjArray* arr;
 
-   it = fForeignStreamerInfo->find( classname );
+   it = fTranslatedStreamerInfo->find( cl->GetName() );
 
-   if( it != fForeignStreamerInfo->end() ) {
+   if( it != fTranslatedStreamerInfo->end() ) {
       arr = it->second;
    }
    else {
       arr = new TObjArray( 20, -1 );
-      (*fForeignStreamerInfo)[classname] = arr;       
+      (*fTranslatedStreamerInfo)[cl->GetName()] = arr;       
    }
 
    TVirtualStreamerInfo* info;
