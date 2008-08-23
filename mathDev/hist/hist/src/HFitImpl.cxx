@@ -142,6 +142,10 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
    }
 #ifdef DEBUG
    printf("range  size %d\n", range.Size(0) ); 
+   if (range.Size(0)) {
+      double x1; double x2; range.GetRange(0,x1,x2); 
+      printf(" range in x = [%f,%f] \n",x1,x2);
+   }
 #endif
 
    // fill data  
@@ -150,6 +154,9 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
 
 #ifdef DEBUG
    printf("HFit:: data size is %d \n",fitdata.Size());
+   for (unsigned int i = 0; i < fitdata.Size(); ++i) { 
+      if (fitdata.NDim() == 1) printf(" x[%d] = %f - value = %f \n", i,*(fitdata.Coords(i)),fitdata.Value(i) ); 
+   }
 #endif   
 
    // this functions use the TVirtualFitter
@@ -173,8 +180,6 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
    if (fitdata.GetErrorType() == ROOT::Fit::BinData::kNoError) fitConfig.SetNormErrors(true);
 
 
-   if (!fitOption.Verbose) fitConfig.MinimizerOptions().SetPrintLevel(0); 
-   else fitConfig.MinimizerOptions().SetPrintLevel(3); 
 
    
    // here need to get some static extra information (like max iterations, error def, etc...)
@@ -218,6 +223,11 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
       fitConfig.SetMinimizerOptions(minOption); 
       if (fitOption.More) fitConfig.SetMinimizer("Minuit","MigradImproved");
    }
+
+   //override case in case print level is defined also in minOption ??
+   if (!fitOption.Verbose) fitConfig.MinimizerOptions().SetPrintLevel(0); 
+   else fitConfig.MinimizerOptions().SetPrintLevel(3); 
+
 
    // do fitting 
 
