@@ -3259,7 +3259,7 @@ Int_t TBufferFile::ReadClassEmulated(TClass *cl, void *object, TClass *onFileCla
    if (count) {
       TStreamerInfo *sinfo = 0;
       if( onFileClass ) {
-         sinfo = (TStreamerInfo*)cl->GetForeignStreamerInfo( onFileClass->GetName(), v );
+         sinfo = (TStreamerInfo*)cl->GetTranslatedStreamerInfo( onFileClass, v );
          if( !sinfo )
             return 0;
       }
@@ -3355,7 +3355,7 @@ Int_t TBufferFile::ReadClassBuffer(TClass *cl, void *pointer, TClass *onFileClas
    //---------------------------------------------------------------------------
    TStreamerInfo *sinfo = 0;
    if( onFileClass ) {
-      sinfo = (TStreamerInfo*)cl->GetForeignStreamerInfo( onFileClass->GetName(), (Int_t)version );
+      sinfo = (TStreamerInfo*)cl->GetTranslatedStreamerInfo( onFileClass, version );
       if( !sinfo ) {
          Error( "ReadClassBuffer", "Could not find the right streamer info" );
          CheckByteCount(R__s, R__c, onFileClass);
