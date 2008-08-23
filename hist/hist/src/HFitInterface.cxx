@@ -100,7 +100,7 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
 
    
    //  get the range (add the function range ??)
-   // to check if inclusion/excluion at end/point
+   // to check if inclusion/exclusion at end/point
    const DataRange & range = dv.Range(); 
    if (range.Size(0) != 0) { 
       double xlow   = range(0).first; 
@@ -108,8 +108,9 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
 #ifdef DEBUG
       std::cout << "xlow " << xlow << " xhigh = " << xhigh << std::endl;
 #endif
-      hxfirst =  hfit->GetXaxis()->FindBin(xlow);
-      hxlast  =  hfit->GetXaxis()->FindBin(xhigh);
+      // consider only range defined with-in histogram not oustide. Always exclude underflow/overflow
+      hxfirst =  std::max( hfit->GetXaxis()->FindBin(xlow), hxfirst);
+      hxlast  =  std::min( hfit->GetXaxis()->FindBin(xhigh), hxlast);
       if (range.Size(0) > 1  ) 
          Warning("ROOT::Fit::THFitInterface","support only one range interval for X coordinate"); 
    }
@@ -117,18 +118,18 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
    if (hfit->GetDimension() > 1 && range.Size(1) != 0) { 
       double ylow   = range(1).first; 
       double yhigh  = range(1).second; 
-      hyfirst =  hfit->GetYaxis()->FindBin(ylow);
-      hylast  =  hfit->GetYaxis()->FindBin(yhigh);
-      if (range.Size(0) > 1  ) 
+      hyfirst =  std::max( hfit->GetYaxis()->FindBin(ylow), hyfirst);
+      hylast  =  std::min( hfit->GetYaxis()->FindBin(yhigh), hylast);
+      if (range.Size(1) > 1  ) 
          Warning("ROOT::Fit::THFitInterface","support only one range interval for Y coordinate"); 
    }
 
    if (hfit->GetDimension() > 2 && range.Size(2) != 0) { 
       double zlow   = range(2).first; 
       double zhigh  = range(2).second; 
-      hzfirst =  hfit->GetZaxis()->FindBin(zlow);
-      hzlast  =  hfit->GetZaxis()->FindBin(zhigh);
-      if (range.Size(0) > 1  ) 
+      hzfirst =  std::max( hfit->GetZaxis()->FindBin(zlow), hzfirst);
+      hzlast  =  std::min( hfit->GetZaxis()->FindBin(zhigh), hzlast);
+      if (range.Size(2) > 1  ) 
          Warning("ROOT::Fit::THFitInterface","support only one range interval for Z coordinate"); 
    }
    
