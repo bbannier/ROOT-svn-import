@@ -2874,16 +2874,16 @@ TString TFormula::GetExpFormula(Option_t *option) const
             // The function name contains return type and parameters types we need
             // to trim them.
             int depth;
-            for(i=0, depth=0;i<funcname.Length();++i) {
-               switch (funcname[i]) {
+            for(j=0, depth=0;j<funcname.Length();++j) {
+               switch (funcname[j]) {
                   case '<':
                      ++depth; break;
                   case '>':
                      --depth; break;
                   case ' ':
                      if (depth==0) {
-                        funcname.Remove(0,i+1);
-                        i = funcname.Length();
+                        funcname.Remove(0,j+1);
+                        j = funcname.Length();
                         break;
                      }
                }
@@ -3927,7 +3927,7 @@ Double_t TFormula::EvalParFast(const Double_t *x, const Double_t *uparams)
          case kFDM       : tab[pos] = (fPredefined[i]->fFuncG)(&x[fOperOffset[i].fType0],&params[fOperOffset[i].fOffset0]); pos++;continue;
          case kFD1       : tab[pos-1]   =(fPredefined[i]->fFunc10)(tab[pos-1]); continue;
          case kFD2       :    pos--; tab[pos-1]   = (fPredefined[i]->fFunc110)(tab[pos-1],tab[pos]); continue;
-         case kFD3       :    pos-=2; tab[pos-1]   = (fPredefined[i]->fFunc1110)(tab[pos-2],tab[pos-1],tab[pos]); continue;
+         case kFD3       :    pos-=2; tab[pos-1]   = (fPredefined[i]->fFunc1110)(tab[pos-1],tab[pos],tab[pos+1]); continue;
       }
       //
       switch(opcode) {

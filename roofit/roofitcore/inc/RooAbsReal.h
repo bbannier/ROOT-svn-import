@@ -151,8 +151,6 @@ public:
 
   virtual void preferredObservableScanOrder(const RooArgSet& obs, RooArgSet& orderedObs) const ;
 
-public:
-
   // User entry point for plotting
   enum ScaleType { Raw, Relative, NumEvent, RelativeExpected } ;
   virtual RooPlot* plotOn(RooPlot* frame, 
@@ -172,6 +170,8 @@ public:
 		     Double_t scaleFactor= 1, const RooArgSet *projectedVars= 0, Bool_t scaling=kTRUE) const;
 
   // Create 1,2, and 3D histograms from and fill it
+  TH1 *createHistogram(const char* varNameList, Int_t xbins=0, Int_t ybins=0, Int_t zbins=0) const ;
+  TH1* createHistogram(const char *name, const RooAbsRealLValue& xvar, RooLinkedList& argList) const ;
   TH1 *createHistogram(const char *name, const RooAbsRealLValue& xvar,
                        const RooCmdArg& arg1=RooCmdArg::none(), const RooCmdArg& arg2=RooCmdArg::none(), 
                        const RooCmdArg& arg3=RooCmdArg::none(), const RooCmdArg& arg4=RooCmdArg::none(), 
@@ -215,6 +215,12 @@ public:
 
   static void clearEvalErrorLog() ;
 
+  virtual std::list<Double_t>* plotSamplingHint(RooAbsRealLValue& /*obs*/, Double_t /*xlo*/, Double_t /*xhi*/) const { 
+    // Interface for returning an optional hint for initial sampling points when constructing a curve 
+    // projected on observable.
+    return 0 ; 
+  }
+
 protected:
 
   // PlotOn with command list
@@ -231,12 +237,17 @@ protected:
 
   TString integralNameSuffix(const RooArgSet& iset, const RooArgSet* nset=0, const char* rangeName=0, Bool_t omitEmpty=kFALSE) const ;
 
+
+  Bool_t isSelectedComp() const ;
+
+
  public:
   const RooAbsReal* createPlotProjection(const RooArgSet& depVars, const RooArgSet& projVars) const ;
   const RooAbsReal* createPlotProjection(const RooArgSet& depVars, const RooArgSet& projVars, RooArgSet*& cloneSet) const ;
   const RooAbsReal *createPlotProjection(const RooArgSet &dependentVars, const RooArgSet *projectedVars,
 				         RooArgSet *&cloneSet, const char* rangeName=0) const;
  protected:
+
 
   // Support interface for subclasses to advertise their analytic integration
   // and generator capabilities in their analticalIntegral() and generateEvent()
@@ -309,7 +320,7 @@ protected:
    PlotOpt() : drawOptions("L"), scaleFactor(1.0), stype(Relative), projData(0), binProjData(kFALSE), projSet(0), precision(1e-3), 
                shiftToZero(kFALSE),projDataSet(0),rangeLo(0),rangeHi(0),postRangeFracScale(kFALSE),wmode(RooCurve::Extended),
                projectionRangeName(0),curveInvisible(kFALSE), curveName(0),addToCurveName(0),addToWgtSelf(1.),addToWgtOther(1.),
-               numCPU(1),interleave(kTRUE),curveNameSuffix("") {} ;
+               numCPU(1),interleave(kTRUE),curveNameSuffix(""), numee(10), eeval(0), doeeval(kFALSE) {} ;
    Option_t* drawOptions ;
    Double_t scaleFactor ;	 
    ScaleType stype ;
@@ -332,6 +343,9 @@ protected:
    Int_t    numCPU ;
    Bool_t interleave ;
    const char* curveNameSuffix ; 
+   Int_t    numee ;
+   Double_t eeval ;
+   Bool_t   doeeval ;
   } ;
 
   // Plot implementation functions
@@ -346,6 +360,19 @@ private:
   Bool_t matchArgsByName(const RooArgSet &allArgs, RooArgSet &matchedArgs, const TList &nameList) const;
 
 protected:
+
+
+  friend class RooRealSumPdf ;
+  friend class RooAddPdf ;
+  friend class RooAddModel ;
+  void selectComp(Bool_t flag) { 
+    // If flag is true, only selected component will be included in evaluates of RooAddPdf components
+    _selectComp = flag ; 
+  }
+  static void globalSelectComp(Bool_t flag) ;
+  Bool_t _selectComp ;               //! Component selection flag for RooAbsPdf::plotCompOn
+  static Bool_t _globalSelectComp ;  // Global activation switch for component selection
+
 
   ClassDef(RooAbsReal,1) // Abstract real-valued variable
 };
