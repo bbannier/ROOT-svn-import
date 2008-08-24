@@ -69,28 +69,37 @@ namespace {
    }
 
 //= PyROOT template proxy callable behavior ==================================
-   PyObject* tpp_call( TemplateProxy* pytmpl, PyObject* args, PyObject* )
+   PyObject* tpp_call( TemplateProxy* pytmpl, PyObject* args, PyObject* kwds )
    {
    // dispatcher to the actual member method, args is self object + template arguments
    // (as in a function call); build full instantiation
+      PyObject* pymeth = 0;
+
       Py_ssize_t nArgs = PyTuple_GET_SIZE( args );
-      if ( nArgs < 1 ) {
-         PyErr_Format( PyExc_TypeError, "too few arguments for template instantiation" );
-         return 0;
+      if ( 1 <= nArgs ) {
+
+      // build "< type, type, ... >" part of method name
+         Py_INCREF( pytmpl->fPyName );
+         PyObject* pyname = pytmpl->fPyName;
+         if ( Utility::BuildTemplateName( pyname, args, 0 ) ) {
+         // lookup method on self (to make sure it propagates), which is readily callable
+            pymeth = PyObject_GetAttr( pytmpl->fSelf, pyname );
+         }
+         Py_XDECREF( pyname );
+
       }
 
-   // build "< type, type, ... >" part of method name
-      Py_INCREF( pytmpl->fPyName );
-      PyObject* pyname = pytmpl->fPyName;
-      if ( ! Utility::BuildTemplateName( pyname, args, 0 ) ) {
-         Py_DECREF( pyname );
-         return 0;
-      }
+      if ( pymeth )
+         return pymeth;       // templated, now called by the user
 
-   // lookup method on self (to make sure it propagates), which is readily callable
-      PyObject* pymeth = PyObject_GetAttr( pytmpl->fSelf, pyname );
-      Py_DECREF( pyname );
+   // if the method lookup fails, try to locate the "generic" version of the template
+      PyErr_Clear();
+      pymeth = PyObject_GetAttrString( pytmpl->fSelf, const_cast< char* >(
+         (std::string( "__generic_" ) + PyString_AS_STRING( pytmpl->fPyName )).c_str()) );
 
+      if ( pymeth )
+         return PyObject_Call( pymeth, args, kwds );   // non-templated, executed as-is
+      
       return pymeth;
    }
 

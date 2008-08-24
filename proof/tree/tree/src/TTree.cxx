@@ -2190,6 +2190,11 @@ Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataTyp
 {
    // Check whether or not the address described by the last 3 parameters matches the content of the branch.
 
+   if (GetMakeClass()) {
+      // If we are in MakeClass mode so we do not really use classes.
+      return kTRUE;
+   }
+
    // Let's determine what we need!
    TClass* expectedClass = 0;
    EDataType expectedType = kOther_t;
@@ -4496,7 +4501,9 @@ Long64_t TTree::LoadTree(Long64_t entry)
    // We already have been visited while recursively looking
    // through the friends tree, let return
    if (kLoadTree & fFriendLockStatus) {
-      return 0;
+      // We need to return a negative value to avoid a circular list of friend
+      // to think that there is always an entry somewhere in the lisst.
+      return -1;
    }
 
    if (fNotify) {
@@ -5329,7 +5336,7 @@ void TTree::Refresh()
    }
    fDirectory->ReadKeys();
    fDirectory->Remove(this);
-   TTree* tree = (TTree*) fDirectory->Get(GetName());
+   TTree* tree; fDirectory->GetObject(GetName(),tree);
    if (!tree) {
       return;
    }
