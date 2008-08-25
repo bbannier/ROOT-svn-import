@@ -133,18 +133,19 @@ public:
 
    virtual void TakeAction(TEvePointSelector*);
 
+   virtual Int_t Size(Bool_t under=kFALSE, Bool_t over=kFALSE) const;
 
-   void InitBins(const Text_t* quant_name, Int_t nbins, Double_t min, Double_t max);
-   void Fill(Double_t x, Double_t y, Double_t z, Double_t quant);
-   void SetPointId(TObject* id);
-   void CloseBins();
+   void   InitBins(const Text_t* quant_name, Int_t nbins, Double_t min, Double_t max);
+   Bool_t Fill(Double_t x, Double_t y, Double_t z, Double_t quant);
+   void   SetPointId(TObject* id);
+   void   CloseBins();
 
-   void SetOwnIds(Bool_t o);
+   void   SetOwnIds(Bool_t o);
 
-   Int_t GetDefPointSetCapacity() const  { return fDefPointSetCapacity; }
-   void  SetDefPointSetCapacity(Int_t c) { fDefPointSetCapacity = c; }
+   Int_t  GetDefPointSetCapacity() const  { return fDefPointSetCapacity; }
+   void   SetDefPointSetCapacity(Int_t c) { fDefPointSetCapacity = c; }
 
-   Int_t     GetNBins()        const { return fNBins; }
+   Int_t         GetNBins()        const { return fNBins; }
    TEvePointSet* GetBin(Int_t bin) const { return fBins[bin]; }
 
    Double_t GetMin()    const { return fMin; }
