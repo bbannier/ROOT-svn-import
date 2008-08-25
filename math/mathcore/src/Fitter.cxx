@@ -16,6 +16,8 @@
 #include "Fit/PoissonLikelihoodFCN.h"
 #include "Fit/LogLikelihoodFCN.h"
 #include "Math/Minimizer.h"
+#include "Math/MinimizerOptions.h"
+#include "Fit/MinimizerControlParams.h"
 #include "Fit/BinData.h"
 #include "Fit/UnBinData.h"
 #include "Math/Error.h"
@@ -45,16 +47,27 @@ Fitter::~Fitter()
    if (fFunc != 0) delete fFunc; 
 }
 
-Fitter::Fitter(const Fitter &) 
+Fitter::Fitter(const Fitter & rhs) 
 {
    // Implementation of copy constructor.
+   // copy FitResult, FitCOnfig and clone fit function
+   (*this) = rhs; 
 }
 
 Fitter & Fitter::operator = (const Fitter &rhs) 
 {
    // Implementation of assignment operator.
    if (this == &rhs) return *this;  // time saving self-test
-   return *this;
+   fUseGradient = rhs.fUseGradient; 
+   if (fFunc) delete fFunc; 
+   fFunc = 0; 
+   if (rhs.fFunc != 0) { 
+      fFunc = dynamic_cast<IModelFunction *>( (rhs.fFunc)->Clone() ); 
+      assert(fFunc != 0); 
+   }
+   fResult = rhs.fResult;
+   fConfig = rhs.fConfig; 
+   return *this; 
 }
 
 void Fitter::SetFunction(const IModelFunction & func) 
@@ -67,7 +80,7 @@ void Fitter::SetFunction(const IModelFunction & func)
    fFunc = dynamic_cast<IModelFunction *> ( func.Clone() ); 
    
    // creates the parameter  settings 
-   fConfig.SetParamsSettings(*fFunc); 
+   fConfig.CreateParamsSettings(*fFunc); 
 }
 
 
@@ -80,7 +93,7 @@ void Fitter::SetFunction(const IModel1DFunction & func)
    fFunc = new ROOT::Math::MultiDimParamFunctionAdapter(func);
 
    // creates the parameter  settings 
-   fConfig.SetParamsSettings(*fFunc); 
+   fConfig.CreateParamsSettings(*fFunc); 
 }
 
 void Fitter::SetFunction(const IGradModelFunction & func) 
@@ -91,7 +104,7 @@ void Fitter::SetFunction(const IGradModelFunction & func)
    fFunc = dynamic_cast<IModelFunction *> ( func.Clone() ); 
 
    // creates the parameter  settings 
-   fConfig.SetParamsSettings(*fFunc); 
+   fConfig.CreateParamsSettings(*fFunc); 
 }
 
 
@@ -103,7 +116,7 @@ void Fitter::SetFunction(const IGradModel1DFunction & func)
    fFunc = new ROOT::Math::MultiDimParamGradFunctionAdapter(func);
 
    // creates the parameter  settings 
-   fConfig.SetParamsSettings(*fFunc); 
+   fConfig.CreateParamsSettings(*fFunc); 
 }
 
 
@@ -111,7 +124,14 @@ bool Fitter::FitFCN(const BaseFunc & fcn, const double * params, unsigned int da
    // fit a user provided FCN function
    // create fit parameter settings
    unsigned int npar  = fcn.NDim(); 
-   if (params != 0 || fConfig.ParamsSettings().size() != npar) fConfig.SetParamsSettings(npar, params);
+   if (params != 0  ) 
+      fConfig.SetParamsSettings(npar, params);
+   else {
+      if ( fConfig.ParamsSettings().size() != npar) { 
+         MATH_ERROR_MSG("Fitter::FitFCN","wrong fit parameter settings");
+         return false;
+      }
+   }
    // create Minimizer  
    std::auto_ptr<ROOT::Math::Minimizer> minimizer = std::auto_ptr<ROOT::Math::Minimizer> ( fConfig.CreateMinimizer() );
    if (minimizer.get() == 0) return false; 
@@ -122,7 +142,14 @@ bool Fitter::FitFCN(const BaseFunc & fcn, const double * params, unsigned int da
 bool Fitter::FitFCN(const BaseGradFunc & fcn, const double * params, unsigned int dataSize) { 
    // fit a user provided FCN gradient function
    unsigned int npar  = fcn.NDim(); 
-   if (params != 0 || fConfig.ParamsSettings().size() != npar) fConfig.SetParamsSettings(npar, params);
+   if (params != 0  ) 
+      fConfig.SetParamsSettings(npar, params);
+   else {
+      if ( fConfig.ParamsSettings().size() != npar) { 
+         MATH_ERROR_MSG("Fitter::FitFCN","wrong fit parameter settings");
+         return false;
+      }
+   }
    // create Minimizer  (need to be done afterwards)
    std::auto_ptr<ROOT::Math::Minimizer> minimizer = std::auto_ptr<ROOT::Math::Minimizer> ( fConfig.CreateMinimizer() );
    if (minimizer.get() == 0) return false; 
@@ -174,8 +201,11 @@ bool Fitter::DoLikelihoodFit(const BinData & data) {
    if (minimizer.get() == 0) return false; 
    if (fFunc == 0) return false; 
 
-   // logl fit (error is 0.5)
-   minimizer->SetErrorUp(0.5);
+   // logl fit (error should be 0.5) set if different than default values (of 1)
+   if (fConfig.MinimizerOptions().ErrorDef() == ROOT::Math::MinimizerOptions::DefaultErrorDef() ) { 
+      fConfig.MinimizerOptions().SetErrorDef(0.5);
+         minimizer->SetErrorUp(0.5);
+   }
 
    // create a chi2 function to be used for the equivalent chi-square
    Chi2FCN<BaseFunc> chi2(data,*fFunc); 
@@ -214,8 +244,11 @@ bool Fitter::DoLikelihoodFit(const UnBinData & data) {
    std::cout << "Fitter ParamSettings " << Config().ParamsSettings()[ipar].IsBound() << " lower limit " <<  Config().ParamsSettings()[ipar].LowerLimit() << " upper limit " <<  Config().ParamsSettings()[ipar].UpperLimit() << std::endl;
 #endif
 
-   // logl fit (error is 0.5)
-   minimizer->SetErrorUp(0.5);
+   // logl fit (error should be 0.5) set if different than default values (of 1)
+   if (fConfig.MinimizerOptions().ErrorDef() == ROOT::Math::MinimizerOptions::DefaultErrorDef() ) {
+      fConfig.MinimizerOptions().SetErrorDef(0.5);
+      minimizer->SetErrorUp(0.5);
+   }
 
    if (!fUseGradient) { 
       // do minimzation without using the gradient
@@ -281,8 +314,8 @@ bool Fitter::DoMinimization(ROOT::Math::Minimizer & minimizer, const ObjFunc & o
 //    } 
 //    return false; 
 
-   // if requested parabolic error ansure correct analysis by the minimizer
-   if (fConfig.MinimizerOptions().ParabErrors()) minimizer.SetValidError(true);
+   // if requested parabolic error do correct error  analysis by the minimizer (call HESSE) 
+   if (fConfig.ParabErrors()) minimizer.SetValidError(true);
 
 
    bool ret = minimizer.Minimize(); 
@@ -292,7 +325,7 @@ bool Fitter::DoMinimization(ROOT::Math::Minimizer & minimizer, const ObjFunc & o
 #endif
    
    unsigned int ncalls = ObjFuncTrait<ObjFunc>::NCalls(objFunc);
-   fResult = FitResult(minimizer,fConfig, *fFunc, ret, dataSize, chi2func, fConfig.MinimizerOptions().MinosErrors(), ncalls );
+   fResult = FitResult(minimizer,fConfig, *fFunc, ret, dataSize, chi2func, fConfig.MinosErrors(), ncalls );
    if (fConfig.NormalizeErrors() ) fResult.NormalizeErrors(); 
    return ret; 
 }
