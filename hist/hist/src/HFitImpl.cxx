@@ -26,6 +26,8 @@
 #include "TClass.h"
 #include "TVirtualPad.h" // for gPad
 
+#include "TBackCompFitter.h"
+
 #include <cmath>
 #include <memory>
 
@@ -252,8 +254,8 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
    // chech if Minos or more options
    if (fitOption.Errors) { 
       // run Hesse and Minos
-      fitConfig.MinimizerOptions().SetParabErrors(true);
-      fitConfig.MinimizerOptions().SetMinosErrors(true);
+      fitConfig.SetParabErrors(true);
+      fitConfig.SetMinosErrors(true);
    }
     
 
@@ -279,6 +281,11 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
          HFit::GetDrawingRange(h1, range);
          HFit::StoreAndDrawFitFunction(h1, f1, range, !fitOption.Plus, !fitOption.Nograph, goption); 
       }
+
+      // store result in the backward compatible VirtualFitter
+      TVirtualFitter * lastFitter = TVirtualFitter::GetFitter(); 
+      if (lastFitter) delete lastFitter; 
+      TVirtualFitter::SetFitter( new TBackCompFitter(*fitter) ); 
 
       return iret; 
 }
