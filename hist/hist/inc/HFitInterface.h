@@ -36,7 +36,7 @@ namespace ROOT {
       class FitResult;
       class DataRange; 
 
-
+#ifndef __CINT__  // does not link on Windows (why ??)
 
       /**
          fitting function for a TH1 (called from TH1::Fit)
@@ -57,7 +57,7 @@ namespace ROOT {
          fitting function for a TGraph2D (called from TGraph2D::Fit)
        */
       int FitObject(TGraph2D * gr, TF1 *f1 , Foption_t & option , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range); 
-
+#endif
 
       /** 
           fill the data vector from a TH1. Pass also the TF1 function which is 
