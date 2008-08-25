@@ -306,6 +306,15 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       font.PostRender();
    }
 
+   // title
+   glPushMatrix();
+   glTranslatef(zeroPos.fX, bbox[3]*1.1, 0);
+   Float_t llx, lly, llz, urx, ury, urz;
+   font.BBox(fM->GetTitle(), llx, lly, llz, urx, ury, urz);
+   RenderText(fM->GetTitle(), -llx, 0, font);
+   glPopMatrix();
+
+
    // projection center and origin marker
    Float_t d = 10;
    if (fM->GetDrawCenter()) {

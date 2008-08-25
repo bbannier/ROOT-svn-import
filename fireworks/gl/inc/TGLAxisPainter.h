@@ -103,10 +103,8 @@ private:
 protected:
    void DrawTick(TGLVector3 &tv, Int_t order) const;
 
-   void SetTextFormat(Double_t binWidth1);
    void RnrText(const char* txt, TGLVector3 pos, TGLFont &font) const;
    void LabelsLimits(const char *label, Int_t &first, Int_t &last) const;
-   void FormAxisValue(Float_t x, char* lab) const;
 
 
    TGLAxisAttrib* fAtt;
@@ -122,6 +120,10 @@ public:
 
    void Paint(TGLRnrCtx& ctx, TGLAxisAttrib &atrib);
 
+   void SetTextFormat(Double_t binWidth);
+   void SetAxisAtt(TGLAxisAttrib* axa){ fAtt = axa; }
+   void FormAxisValue(Float_t x, char* lab) const;
+   
    ClassDef(TGLAxisPainter, 0); // GL axis painter.
 };
 

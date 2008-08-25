@@ -79,28 +79,33 @@ void MakeCalo2D(TEveCalo3D* calo3d)
 //______________________________________________________________________________
 void MakeCaloLego(TEveCaloData* data)
 {
-  TEveViewer* v2 = gEve->SpawnNewViewer("Lego Viewer");
-  TGLViewer*  v  = v2->GetGLViewer();
-  v->SetCurrentCamera(TGLViewer::kCameraPerspXOY);
-  v->SetEventHandler(new TEveLegoEventHandler("Lego", v->GetGLWidget(), v));
-  TEveScene*  s2 = gEve->SpawnNewScene("Lego");
-  v2->AddScene(s2);
+   TEveViewer* v2 = gEve->SpawnNewViewer("Lego Viewer");
+   TGLViewer*  v  = v2->GetGLViewer();
+   v->SetCurrentCamera(TGLViewer::kCameraPerspXOY);
+   v->SetEventHandler(new TEveLegoEventHandler("Lego", v->GetGLWidget(), v));
+   TEveScene*  s2 = gEve->SpawnNewScene("Lego");
+   v2->AddScene(s2);
 
-  // lego
-  TEveCaloLego* lego = new TEveCaloLego(data);
-  lego->SetPlaneColor(kBlue-5);
-  lego->Set2DMode(TEveCaloLego::kValSize);
-  lego->SetName("TwoHistLego");
-  gEve->AddElement(lego, s2);
-  gEve->AddToListTree(lego, kTRUE);
+   // lego
+   TEveCaloLego* lego = new TEveCaloLego(data);
+   lego->SetPlaneColor(kBlue-5);
+   lego->Set2DMode(TEveCaloLego::kValSize);
+   lego->SetName("TwoHistLego");
+   gEve->AddElement(lego, s2);
+   gEve->AddToListTree(lego, kTRUE);
 
-  // overlay lego1
-  gEve->DisableRedraw();
-  TEveLegoOverlay* overlay = new TEveLegoOverlay();
-  overlay->SetCaloLego(lego);
-  v->AddOverlayElement(overlay);
-  gEve->AddElement(overlay, s2);
-  gEve->EnableRedraw();
+   lego->InitMainTrans();
+   Float_t sc = TMath::TwoPi();
+   lego->RefMainTrans().SetScale(sc, sc, sc);
+   // overlay lego1
+   TEveLegoOverlay* overlay = new TEveLegoOverlay();
+   v->AddOverlayElement(overlay);
+   overlay->SetCaloLego(lego);
+
+   TGLCameraOverlay* camInfo = new TGLCameraOverlay();
+   camInfo->SetShowPerspective(kFALSE);
+   v->AddOverlayElement(camInfo);
+   gEve->AddElement(overlay, s2);
 }
 
 //______________________________________________________________________________
