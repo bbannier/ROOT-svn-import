@@ -230,6 +230,14 @@ public:
       return ( tmp < 0) ? 0 : CovMatrix(i,j) / std::sqrt( tmp );  
    }
 
+   /**
+      return global correlation coefficient for variable i
+      This is a number between zero and one which gives 
+      the correlation between the i-th parameter  and that linear combination of all 
+      other parameters which is most strongly correlated with i.
+      Minimizer must overload method if implemented 
+    */
+   virtual double GlobalCC(unsigned int ) const { return -1; }
 
    /// minos error for variable i, return false if Minos failed or not supported 
    virtual bool GetMinosError(unsigned int /* i */, double & errLow, double & errUp) { 

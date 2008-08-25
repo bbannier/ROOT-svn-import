@@ -39,6 +39,8 @@ namespace Fit {
 
 FitConfig::FitConfig(unsigned int npar) : 
    fNormErrors(false),
+   fParabErrors(false), // ensure that in any case correct parabolic errors are estimated
+   fMinosErrors(false),    // do full Minos error analysis for all parameters
    fSettings(std::vector<ParameterSettings>(npar) )  
 {
    // constructor implementation
@@ -54,32 +56,44 @@ FitConfig::~FitConfig()
    // destructor implementation. No Op
 }
 
-void FitConfig::SetParamsSettings(unsigned int npar, const double *params ) { 
+void FitConfig::SetParamsSettings(unsigned int npar, const double *params, const double * vstep ) { 
    // initialize fit config from parameter values
    if (params == 0) { 
       fSettings =  std::vector<ParameterSettings>(npar); 
       return; 
    }
-   // if a vector of parameters is given
-   fSettings.clear(); 
-   fSettings.reserve(npar); 
+   // if a vector of parameters is given and parameters are not existing or are of different size
+   bool createNew = false; 
+   if (npar != fSettings.size() ) { 
+      fSettings.clear(); 
+      fSettings.reserve(npar); 
+      createNew = true; 
+   }
    unsigned int i = 0; 
    const double * end = params+npar;
    for (const double * ipar = params; ipar !=  end; ++ipar) {  
-      double val = *ipar; 
-      double step = 0.3*std::fabs(val);   // step size is 30% of par value
-      //double step = 2.0*std::fabs(val);   // step size is 30% of par value
-      if (val ==  0) step  =  0.3; 
-      
-      fSettings.push_back( ParameterSettings("Par_" + ROOT::Math::Util::ToString(i), val, step ) ); 
-#ifdef DEBUG
-      std::cout << "FitConfig: add parameter " <<  func.ParameterName(i) << " val = " << val << std::endl;
-#endif
+      double val = *ipar;       
+      double step = 0; 
+      if (vstep == 0) {  
+         step = 0.3*std::fabs(val);   // step size is 30% of par value
+         //double step = 2.0*std::fabs(val);   // step size is 30% of par value
+         if (val ==  0) step  =  0.3; 
+      }
+      else 
+         step = vstep[i]; 
+
+      if (createNew) 
+         fSettings.push_back( ParameterSettings("Par_" + ROOT::Math::Util::ToString(i), val, step ) ); 
+      else {
+         fSettings[i].SetValue(val); 
+         fSettings[i].SetStepSize(step); 
+      }
+
       i++;
-   } 
+   }
 }
 
-void FitConfig::SetParamsSettings(const ROOT::Math::IParamMultiFunction & func) { 
+void FitConfig::CreateParamsSettings(const ROOT::Math::IParamMultiFunction & func) { 
    // initialize from model function
    // set the parameters values from the function
    unsigned int npar = func.NPar(); 
@@ -147,8 +161,9 @@ ROOT::Math::Minimizer * FitConfig::CreateMinimizer() {
    min->SetMaxFunctionCalls( fMinimizerOpts.MaxFunctionCalls() ); 
    min->SetMaxIterations( fMinimizerOpts.MaxIterations() ); 
    min->SetTolerance( fMinimizerOpts.Tolerance() ); 
-   min->SetValidError( fMinimizerOpts.ParabErrors() );
+   min->SetValidError( fParabErrors );
    min->SetStrategy( fMinimizerOpts.Strategy() );
+   min->SetErrorUp( fMinimizerOpts.ErrorDef() );
 
 
    return min; 
@@ -167,9 +182,11 @@ void FitConfig::SetMinimizerOptions(const ROOT::Math::MinimizerOptions & minopt)
    fMinimizerOpts.SetMaxIterations(minopt.MaxIterations); 
    fMinimizerOpts.SetStrategy(minopt.Strategy); 
    fMinimizerOpts.SetPrintLevel(minopt.PrintLevel); 
+   fMinimizerOpts.SetErrorDef(minopt.ErrorDef); 
 
    // error up should be added as well
 }
+
 
    } // end namespace Fit
 

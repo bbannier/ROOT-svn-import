@@ -46,6 +46,7 @@ FitResult::FitResult() :
    fVal (min.MinValue()),  
    fEdm (min.Edm()),  
    fNCalls(min.NCalls()),
+   fNFree(min.NFree() ),
    fParams(std::vector<double>(min.X(), min.X() + min.NDim() ) ),  
    fFitFunc(&func)
 {
@@ -71,6 +72,7 @@ FitResult::FitResult() :
 //    // fill error matrix
    // cov matrix rank 
    if (fValid) { 
+
       unsigned int r = n * (  n + 1 )/2;  
       fCovMatrix.reserve(r);
       for (unsigned int i = 0; i < n; ++i) 
@@ -81,17 +83,26 @@ FitResult::FitResult() :
 
       // normalize errors if requested in configuration
       if (fconfig.NormalizeErrors() ) NormalizeErrors();
-   }
 
-   // minos errors 
-   if (minosErr) { 
-      fMinosErrors.reserve(n);
-      for (unsigned int i = 0; i < n; ++i) { 
-         double elow, eup; 
-         bool ret = min.GetMinosError(0, elow, eup); 
-         if (ret) fMinosErrors.push_back(std::make_pair(elow,eup) );
-         else fMinosErrors.push_back(std::make_pair(0.,0.) );
+      // minos errors 
+      if (minosErr) { 
+         fMinosErrors.reserve(n);
+         for (unsigned int i = 0; i < n; ++i) { 
+            double elow, eup; 
+            bool ret = min.GetMinosError(0, elow, eup); 
+            if (ret) fMinosErrors.push_back(std::make_pair(elow,eup) );
+            else fMinosErrors.push_back(std::make_pair(0.,0.) );
+         }
       }
+
+      // globalCC
+      fGlobalCC.reserve(n);
+      for (unsigned int i = 0; i < n; ++i) { 
+         double globcc = min.GlobalCC(i); 
+         if (globcc < 0) break; // it is not supported by that minimizer
+         fGlobalCC.push_back(globcc); 
+      }
+      
    }
 
    fMinimType = fconfig.MinimizerType();
@@ -127,6 +138,7 @@ int FitResult::Index(const std::string & name) const {
 
 void FitResult::Print(std::ostream & os, bool doCovMatrix) const { 
    // print the result in the given stream 
+   // need to add minos errors , globalCC, etc..
    if (!fValid) { 
       os << "\n****************************************\n";
       os << "            Invalid FitResult            ";

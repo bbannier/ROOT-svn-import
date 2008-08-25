@@ -79,6 +79,9 @@ public:
 
    /// True if fit successful, otherwise false.
    bool IsValid() const { return fValid; }
+
+   /// True if a fit result does not exist (even invalid) with parameter values 
+   bool IsEmpty() const { return (fParams.size() == 0);  }
  
    /// Return value of the objective function (chi2 or likelihood) used in the fit
    double MinFcnValue() const { return fVal; } 
@@ -88,6 +91,12 @@ public:
    
    ///Expected distance from minimum 
    double Edm() const { return fEdm; }
+
+   ///   get total number of parameters 
+   unsigned int NTotalParameters() const { return fParams.size(); } 
+   
+   /// get total number of free parameters
+   unsigned int NFreeParameters() const { return fNFree; }
 
    /** fitting quantities **/
 
@@ -115,16 +124,28 @@ public:
    double Value(unsigned int i) const { return fParams[i]; }
 
    /// parameter error by index
-   double Error(unsigned int i) const { return fErrors[i]; } 
+   double Error(unsigned int i) const { 
+      return (i < fErrors.size() ) ? fErrors[i] : 0; 
+   } 
 
 //    /// Minos  Errors 
 //    const std::vector<std::pair<double, double> > MinosErrors() const; 
 
    /// lower Minos error
-   double LowerError(unsigned int i) const { return fMinosErrors[i].first; } 
+   double LowerError(unsigned int i) const { 
+      return (i < fMinosErrors.size() ) ? fMinosErrors[i].first : fErrors[i]; 
+   } 
 
    /// upper Minos error
-   double UpperError(unsigned int i) const { return fMinosErrors[i].second; }  
+   double UpperError(unsigned int i) const { 
+      return (i < fMinosErrors.size() ) ? fMinosErrors[i].second : fErrors[i]; 
+   }
+
+   /// parameter global correlation coefficient 
+   double GlobalCC(unsigned int i) const { 
+      return (i < fGlobalCC.size() ) ? fGlobalCC[i] : -1; 
+   } 
+
 
    /// retrieve covariance matrix element 
    double CovMatrix (unsigned int i, unsigned int j) const { 
@@ -148,7 +169,8 @@ public:
    /// the matrix must be previously allocates with right size (npar * npar) 
    template<class Matrix> 
    void GetCovarianceMatrix(Matrix & mat) { 
-      int npar = fErrors.size(); 
+      int npar = fErrors.size();
+      assert(fCovMatrix.size() == npar*(npar+1)/2);
       for (int i = 0; i< npar; ++i) { 
          for (int j = 0; j<=i; ++i) { 
             mat(i,j) = fCovMatrix[j + i*(i+1)/2 ];
@@ -161,6 +183,7 @@ public:
    template<class Matrix> 
    void GetCorrelationMatrix(Matrix & mat) { 
       int npar = fErrors.size(); 
+      assert(fCovMatrix.size() == npar*(npar+1)/2);
       for (int i = 0; i< npar; ++i) { 
          for (int j = 0; j<=i; ++i) { 
             double tmp = fCovMatrix[i * (i +3)/2 ] * fCovMatrix[ j * (j+3)/2 ]; 
@@ -225,9 +248,11 @@ private:
    std::vector<double> fCov; 
    unsigned int fNdf; 
    unsigned int fNCalls; 
-   std::vector<double> fParams; 
+   unsigned int fNFree;  // free parameters 
+   std::vector<double> fParams;  // parameter value. Size is total number of parameters
    std::vector<double> fErrors; 
    std::vector<double> fCovMatrix; 
+   std::vector<double> fGlobalCC;
    std::vector<std::pair<double,double> > fMinosErrors; 
 
    unsigned int fDataSize; 

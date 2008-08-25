@@ -63,12 +63,12 @@ public:
    /**
       get the parameter settings for the i-th parameter (const method)
    */
-   const ParameterSettings & ParSettings(unsigned int i) const { return fSettings[i]; }
+   const ParameterSettings & ParSettings(unsigned int i) const { return fSettings.at(i); }
 
    /**
       get the parameter settings for the i-th parameter (non-const method)
    */
-   ParameterSettings & ParSettings(unsigned int i) { return fSettings[i]; }
+   ParameterSettings & ParSettings(unsigned int i) { return fSettings.at(i); }
 
    /**
       get the vector of parameter settings  (const method)
@@ -82,14 +82,16 @@ public:
 
 
    /**
-      set the parameter settings from number of params and optionally a vector of values (otherwise are set to zero)
+      set the parameter settings from a model function. 
+      Create always new parameter setting list from a given model function  
    */
-   void SetParamsSettings(unsigned int npar, const double * params = 0); 
+   void CreateParamsSettings(const ROOT::Math::IParamMultiFunction & func); 
 
    /**
-      set the parameter settings from a function
+      set the parameter settings from number of parameters and a vector of values and optionally step values. If there are not existing or number of parameters does not match existing one, create a new parameter setting list. 
    */
-   void SetParamsSettings(const ROOT::Math::IParamMultiFunction & func); 
+   void SetParamsSettings(unsigned int npar, const double * params, const double * vstep = 0); 
+
 
    /**
       create a new minimizer according to chosen configuration
@@ -137,10 +139,23 @@ public:
    */
    bool NormalizeErrors() const { return fNormErrors; } 
 
+   ///do analysis for parabolic errors
+   bool ParabErrors() const { return fParabErrors; }
+
+   ///do minos errros analysis on all parameters
+   bool MinosErrors() const { return fMinosErrors; }
+
    /**
       set the option to normalize the error on the result  according to chi2/ndf
    */
    void SetNormErrors(bool on) { fNormErrors= on; }
+
+   ///set parabolic erros
+   void SetParabErrors(bool on) { fParabErrors = on; } 
+
+   ///set Minos erros
+   void SetMinosErrors(bool on) { fMinosErrors = on; } 
+
 
 
    /**
@@ -155,6 +170,9 @@ protected:
 private: 
 
    bool fNormErrors;    // flag for error normalization
+   bool fParabErrors;   // get correct parabolic errors estimate (call Hesse after minimizing)  
+   bool fMinosErrors;   // do full error analysis using Minos
+
 
    std::vector<ROOT::Fit::ParameterSettings> fSettings;  // vector with the parameter settings
 

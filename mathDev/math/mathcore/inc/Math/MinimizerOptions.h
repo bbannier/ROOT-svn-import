@@ -60,7 +60,7 @@ struct MinimizerOptions {
 
 
    std::string MinimType;   // Minimizer type (Minuit, Minuit2, etc..
-   std::string AlgoType;    // Minimizer algorithmic specification (Migrag. Minimize, ...)
+   std::string AlgoType;    // Minimizer algorithmic specification (Migrad, Minimize, ...)
    double ErrorDef;         // error definition (=1. for getting 1 sigma error for chi2 fits)
    double Tolerance;        // minimize tolerance to reach solution
    int MaxFunctionCalls;    // maximum number of function calls
