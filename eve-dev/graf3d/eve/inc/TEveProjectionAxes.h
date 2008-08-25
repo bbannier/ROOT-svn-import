@@ -37,6 +37,8 @@ private:
 
 protected:
    TEveProjectionManager*  fManager;  // model object
+   
+   TString         fTitle;
 
    Float_t         fBoxOffsetX;     // offset X of bounding Box
    Float_t         fBoxOffsetY;     // offset Y  of bounding Box
@@ -57,6 +59,9 @@ public:
    virtual ~TEveProjectionAxes();
 
    TEveProjectionManager* GetManager(){ return fManager; }
+
+   const   Text_t* GetTitle() const  { return fTitle.Data(); }
+   void            SetTitle(const Text_t* t) { fTitle = t; }
 
    void            SetLabMode(ELabMode x)   { fLabMode = x;     }
    ELabMode        GetLabMode()   const     { return fLabMode;  }
