@@ -834,7 +834,7 @@ void TEveCaloLegoGL::DrawCells2D() const
    {
       // draw in original binning
       Int_t   name = 0, max_energy_slice;
-      Float_t sum, max_energy, x1, x2, y1, y2;
+      Float_t sum, max_energy, x1=0, x2=0, y1=0, y2=0;
       TGLUtil::Color(defCol);
       TEveCaloData::vCellId_t::iterator currentCell = fM->fCellList.begin();
       TEveCaloData::vCellId_t::iterator nextCell    = currentCell;

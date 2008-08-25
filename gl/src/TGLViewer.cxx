@@ -1002,6 +1002,7 @@ Bool_t TGLViewer::DoOverlaySelect(Int_t x, Int_t y)
             selElm = el;
             break;
          }
+         ++idx;
       }
    }
    else
