@@ -20,7 +20,7 @@
 #include "TGraphErrors.h"
 #include "TGraph2DErrors.h"
 #include "TMultiGraph.h"
-#include "Fit/Bindata.h"
+#include "Fit/BinData.h"
 #include "HFitInterface.h"
 
 //#define DEBUG 1
