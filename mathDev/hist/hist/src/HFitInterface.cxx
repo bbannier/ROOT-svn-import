@@ -265,7 +265,7 @@ void FillData ( BinData  & dv, const TGraph2D * gr, TF1 * func ) {
       
       x[0] = gx[i];
       x[1] = gy[i];
-      if (!func->IsInside( x ) ) continue;
+      if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func, x) ) continue;
       // neglect error in x and y (it is a different chi2) 
       double error = gr->GetErrorZ(i); 
       if (!HFitInterface::AdjustError(fitOpt,error) ) continue; 

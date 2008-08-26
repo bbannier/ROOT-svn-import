@@ -286,6 +286,7 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
       TVirtualFitter * lastFitter = TVirtualFitter::GetFitter(); 
       if (lastFitter) delete lastFitter; 
       TVirtualFitter::SetFitter( new TBackCompFitter(*fitter) ); 
+      (TVirtualFitter::GetFitter())->SetObjectFit(h1);
 
       return iret; 
 }
