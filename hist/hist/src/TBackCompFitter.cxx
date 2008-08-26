@@ -329,6 +329,11 @@ void TBackCompFitter::GetConfidenceIntervals(TObject *obj, Double_t cl)
    // get data dimension from fit object
    int datadim = 1; 
    TObject * fitobj = GetObjectFit(); 
+   if (!fitobj) { 
+      Error("GetConfidenceIntervals","Cannot compute confidence intervals without a fitting object");
+      return; 
+   }
+
    if (fitobj->InheritsFrom(TGraph2D::Class())) datadim = 2; 
    if (fitobj->InheritsFrom(TH1::Class())) { 
       TH1 * h1 = dynamic_cast<TH1*>(fitobj); 
@@ -337,19 +342,22 @@ void TBackCompFitter::GetConfidenceIntervals(TObject *obj, Double_t cl)
    } 
 
    if (datadim == 1) { 
-      if (!obj->InheritsFrom(TGraphErrors::Class()) && !obj->InheritsFrom(TH1::Class() ) )  
+      if (!obj->InheritsFrom(TGraphErrors::Class()) && !obj->InheritsFrom(TH1::Class() ) )  {
          Error("GetConfidenceIntervals", "Invalid object passed for storing confidence level data, must be a TGraphErrors or a TH1");
-      return; 
+         return; 
+      }
    } 
    if (datadim == 2) { 
-      if (!obj->InheritsFrom(TGraph2DErrors::Class()) && !obj->InheritsFrom(TH2::Class() ) )  
+      if (!obj->InheritsFrom(TGraph2DErrors::Class()) && !obj->InheritsFrom(TH2::Class() ) )  {
          Error("GetConfidenceIntervals", "Invalid object passed for storing confidence level data, must be a TGraph2DErrors or a TH2");
-      return; 
+         return; 
+      }
    }
-   if (datadim == 2) { 
-      if (!obj->InheritsFrom(TH3::Class() ) )  
+   if (datadim == 3) { 
+      if (!obj->InheritsFrom(TH3::Class() ) )  {
          Error("GetConfidenceIntervals", "Invalid object passed for storing confidence level data, must be a TH3");
-      return; 
+         return; 
+      }
    }
 
    // fill bin data (for the moment use all ranges) 
@@ -367,15 +375,19 @@ void TBackCompFitter::GetConfidenceIntervals(TObject *obj, Double_t cl)
 
    unsigned int n = data.Size(); 
    std::vector<double> ci( n ); 
+
    fFitter.Result().GetConfidenceIntervals(data,&ci[0],cl);         
+
+   
 
    const ROOT::Math::IParamMultiFunction * func =  fFitter.Result().FittedFunction(); 
    assert(func != 0); 
 
    // fill now the object with cl data
-   for (unsigned int i = 0; i < n; ++i) { 
+   for (unsigned int i = 0; i < n; ++i) {
       const double * x = data.Coords(i); 
-      double y = (*func)( x ); // function is having inside stored parameters
+      double y = (*func)( x ); // function is evaluated using its  parameters
+
       if (obj->InheritsFrom(TGraphErrors::Class()) ) { 
          TGraphErrors * gr = dynamic_cast<TGraphErrors *> (obj); 
          assert(gr != 0); 
@@ -395,7 +407,7 @@ void TBackCompFitter::GetConfidenceIntervals(TObject *obj, Double_t cl)
          if (datadim == 1) ibin = h1->FindBin(*x); 
          if (datadim == 2) ibin = h1->FindBin(x[0],x[1]); 
          if (datadim == 3) ibin = h1->FindBin(x[0],x[1],x[2]); 
-         h1->SetBinContent(ibin, ci[i]); 
+         h1->SetBinContent(ibin, y); 
          h1->SetBinError(ibin, ci[i]); 
       }
    }

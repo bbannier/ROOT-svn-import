@@ -43,8 +43,8 @@ Fitter::Fitter() :
 Fitter::~Fitter() 
 {
    // Destructor implementation.
-
-   if (fFunc != 0) delete fFunc; 
+   // since function pointer is normally own by FitResult. delete only if fit result is empty 
+   if (fFunc && fResult.FittedFunction() == 0) delete fFunc; 
 }
 
 Fitter::Fitter(const Fitter & rhs) 
@@ -59,14 +59,15 @@ Fitter & Fitter::operator = (const Fitter &rhs)
    // Implementation of assignment operator.
    if (this == &rhs) return *this;  // time saving self-test
    fUseGradient = rhs.fUseGradient; 
-   if (fFunc) delete fFunc; 
-   fFunc = 0; 
-   if (rhs.fFunc != 0) { 
+   fResult = rhs.fResult;
+   fConfig = rhs.fConfig; 
+   // function is copied and managed by FitResult (maybe should use an auto_ptr)
+   fFunc = fResult.ModelFunction(); 
+   if (rhs.fFunc != 0 && fResult.ModelFunction() == 0) { // case no fit has been done yet - then clone 
+      if (fFunc) delete fFunc; 
       fFunc = dynamic_cast<IModelFunction *>( (rhs.fFunc)->Clone() ); 
       assert(fFunc != 0); 
    }
-   fResult = rhs.fResult;
-   fConfig = rhs.fConfig; 
    return *this; 
 }
 

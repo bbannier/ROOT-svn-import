@@ -60,9 +60,17 @@ public:
    /**
       Construct from a Minimizer instance 
     */
-   FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, const IModelFunction & f, bool isValid, unsigned int sizeOfData = 0, const ROOT::Math::IMultiGenFunction * chi2func = 0, bool minosErr = false, unsigned int ncalls = 0);
+   FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, IModelFunction & f, bool isValid, unsigned int sizeOfData = 0, const ROOT::Math::IMultiGenFunction * chi2func = 0, bool minosErr = false, unsigned int ncalls = 0);
 
-  // use default copy constructor and assignment operator
+   /** 
+      Copy constructor. 
+   */ 
+   FitResult(const FitResult &);
+
+   /** 
+      Assignment operator
+   */ 
+   FitResult & operator = (const FitResult & rhs);  
 
    /** 
       Destructor (no operations)
@@ -241,24 +249,31 @@ protected:
 
 private: 
 
-   bool fValid; 
-   bool fNormalized;
-   double fVal; 
-   double fEdm; 
-   double fChi2;
-   std::vector<double> fCov; 
-   unsigned int fNdf; 
-   unsigned int fNCalls; 
-   unsigned int fNFree;  // free parameters 
-   std::vector<double> fParams;  // parameter value. Size is total number of parameters
-   std::vector<double> fErrors; 
-   std::vector<double> fCovMatrix; 
-   std::vector<double> fGlobalCC;
-   std::vector<std::pair<double,double> > fMinosErrors; 
 
-   unsigned int fDataSize; 
-   const IModelFunction * fFitFunc; 
-   std::string fMinimType; 
+   /// Return pointer non const pointer to model (fit) function with fitted parameter values.
+   /// used by Fitter class 
+   IModelFunction * ModelFunction()  { return fFitFunc; }
+   void SetModelFunction(IModelFunction * func) { fFitFunc = func; }
+
+   friend class Fitter; 
+
+
+   bool fValid;             // flag for indicating valid fit
+   bool fNormalized;        // flag for indicating is errors are normalized
+   unsigned int fNFree;     // number of fit free parameters (total parameters are in size of parameter vector)  
+   unsigned int fNdf;       // number of degree of freedom
+   unsigned int fNCalls;    // number of function calls
+   double fVal;             // minimum function value
+   double fEdm;             // expected distance from mimimum
+   double fChi2;            // fit chi2 value (different than fval in case of chi2 fits)
+   IModelFunction * fFitFunc; // model function result of the fit. It is given by Fitter but it is managed by FitResult
+   std::vector<double> fParams;  // parameter values. Size is total number of parameters
+   std::vector<double> fErrors;  // errors 
+   std::vector<double> fCovMatrix;  // covariance matrix (size is npar*(npar+1)/2) where npar is total parameters
+   std::vector<double> fGlobalCC;   // global Correlation coefficient
+   std::vector<std::pair<double,double> > fMinosErrors;   // vector contains the two Minos errors 
+   std::string fMinimType;          // string indicating type of minimizer
+
 
 }; 
 

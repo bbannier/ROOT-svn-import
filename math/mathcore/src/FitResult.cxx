@@ -25,6 +25,7 @@
 
 #include "TMath.h"  
 #include "Math/RichardsonDerivator.h"
+#include "Math/Error.h"
 
 #include <cassert>
 #include <cmath>
@@ -35,24 +36,29 @@ namespace ROOT {
 
 
 FitResult::FitResult() : 
-   fValid(false), fNormalized(false), fVal(0), fEdm(0), fChi2(0), fNdf(0), fNCalls(0), fDataSize(0), fFitFunc(0)
+   fValid(false), fNormalized(false), fNFree(0), fNdf(0), fNCalls(0), fVal(0), fEdm(0), fChi2(0), fFitFunc(0)
 {
    // Default constructor implementation.
 }
 
-      FitResult::FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, const IModelFunction & func,  bool isValid,  unsigned int sizeOfData, const  ROOT::Math::IMultiGenFunction * chi2func, bool minosErr, unsigned int ncalls ) : 
+      FitResult::FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, IModelFunction & func,  bool isValid,  unsigned int sizeOfData, const  ROOT::Math::IMultiGenFunction * chi2func, bool minosErr, unsigned int ncalls ) : 
    fValid(isValid),
    fNormalized(false),
+   fNFree(min.NFree() ),
+   fNCalls(min.NCalls()),
    fVal (min.MinValue()),  
    fEdm (min.Edm()),  
-   fNCalls(min.NCalls()),
-   fNFree(min.NFree() ),
-   fParams(std::vector<double>(min.X(), min.X() + min.NDim() ) ),  
-   fFitFunc(&func)
+   fFitFunc(&func), 
+   fParams(std::vector<double>(min.X(), min.X() + min.NDim() ) )
 {
-   // Constructor from a minimizer, fill the data
+   // Constructor from a minimizer, fill the data. ModelFunction  is passed as non const 
+   // since it will be managed by the FitResult
 
    if (sizeOfData > 0) fNdf = sizeOfData - min.NFree(); 
+
+   // set right parameters in function (in case minimizer did not do before)
+   // do also when fit is not valid
+   fFitFunc->SetParameters(&fParams.front());
 
    if (min.Errors() != 0) 
       fErrors = std::vector<double>(min.Errors(), min.Errors() + min.NDim() ) ; 
@@ -109,6 +115,46 @@ FitResult::FitResult() :
    if (fconfig.MinimizerAlgoType() != "") fMinimType += " / " + fconfig.MinimizerAlgoType(); 
 }
 
+FitResult::FitResult(const FitResult &rhs) { 
+   // Implementation of copy constructor
+   (*this) = rhs; 
+}
+
+FitResult & FitResult::operator = (const FitResult &rhs) { 
+   // Implementation of assignment operator.
+   if (this == &rhs) return *this;  // time saving self-test
+
+   // Manages the fitted function 
+   if (fFitFunc) delete fFitFunc;
+   fFitFunc = 0; 
+   if (rhs.fFitFunc != 0 ) {
+      fFitFunc = dynamic_cast<IModelFunction *>( (rhs.fFitFunc)->Clone() ); 
+      assert(fFitFunc != 0); 
+   }
+
+   // copy all other data members 
+   fValid = rhs.fValid; 
+   fNormalized = rhs.fNormalized;
+   fNFree = rhs.fNFree; 
+   fNdf = rhs.fNdf; 
+   fNCalls = rhs.fNCalls; 
+   fVal = rhs.fVal;  
+   fEdm = rhs.fEdm; 
+   fChi2 = rhs.fChi2;
+
+   fParams = rhs.fParams; 
+   fErrors = rhs.fErrors; 
+   fCovMatrix = rhs.fCovMatrix; 
+   fGlobalCC = rhs.fGlobalCC;
+   fMinosErrors = rhs.fMinosErrors; 
+
+   fMinimType = rhs.fMinimType; 
+   
+   return *this; 
+
+}  
+
+
 void FitResult::NormalizeErrors() { 
    // normalize errors and covariance matrix according to chi2 value
    if (fNdf == 0 || fChi2 <= 0) return; 
@@ -150,8 +196,8 @@ void FitResult::Print(std::ostream & os, bool doCovMatrix) const {
    os << "            FitResult                   \n\n";
    os << "Minimizer is " << fMinimType << std::endl;
    unsigned int npar = fParams.size(); 
-   os << "Chi2/Likelihood  =\t" << fVal << std::endl;
    if (fVal != fChi2) 
+   os << "Likelihood       =\t" << fVal << std::endl;
    os << "Chi2             =\t" << fChi2<< std::endl;
    os << "NDf              =\t" << fNdf << std::endl; 
    os << "Edm              =\t" << fEdm << std::endl; 
@@ -199,6 +245,11 @@ void FitResult::GetConfidenceIntervals(unsigned int n, unsigned int stride1, uns
    double t = TMath::StudentQuantile(0.5 + cl/2, fNdf); 
    double chidf = TMath::Sqrt(fChi2/fNdf);
 
+   if (!fFitFunc) {
+      MATH_ERROR_MSG("FitResult::GetConfidenceIntervals","cannot compute Confidence Intervals without fitter function");
+      return;
+   }
+
    unsigned int ndim = fFitFunc->NDim(); 
    unsigned int npar = fFitFunc->NPar(); 
 
@@ -209,8 +260,12 @@ void FitResult::GetConfidenceIntervals(unsigned int n, unsigned int stride1, uns
    // loop on the points
    for (unsigned int ipoint = 0; ipoint < n; ++ipoint) { 
 
-      for (unsigned int kdim = 0; kdim < ndim; ++kdim) 
+      for (unsigned int kdim = 0; kdim < ndim; ++kdim) { 
+         unsigned int i = ipoint * stride1 + kdim * stride2; 
+         assert(i < ndim*n); 
          xpoint[kdim] = x[ipoint * stride1 + kdim * stride2]; 
+      }
+
       // calculate gradient of fitted function w.r.t the parameters
 
       // check first if fFitFunction provides parameter gradient or not 
@@ -223,8 +278,9 @@ void FitResult::GetConfidenceIntervals(unsigned int n, unsigned int stride1, uns
          d.SetFunction(fadapter); 
          grad[ipar] = d(fParams[ipar] ); // evaluate df/dp
       }
+
       // multiply covariance matrix with gradient
-      vsum.assign(0,npar);
+      vsum.assign(npar,0.0);
       for (unsigned int ipar = 0; ipar < npar; ++ipar) { 
          for (unsigned int jpar = 0; jpar < npar; ++jpar) {
             vsum[ipar] += CovMatrix(ipar,jpar) * grad[jpar]; 
@@ -252,6 +308,7 @@ void FitResult::GetConfidenceIntervals(const BinData & data, double * ci, double
       std::vector<double>::iterator itr = xdata.begin()+ ndim * i;
       std::copy(x,x+ndim,itr);
    }
+   // points are arraned as x0,y0,z0, ....xN,yN,zN  (stride1=ndim, stride2=1)
    GetConfidenceIntervals(np,ndim,1,&xdata.front(),ci,cl);
 }
 
