@@ -1274,8 +1274,7 @@ TBranch* TTree::Branch(const char* name, void* address, const char* leaflist, In
    //    By default the branch buffers are stored in the same file as the Tree.
    //    use TBranch::SetFile to specify a different file
    //
-   //       * address is the address of the first item of a structure
-   //         or the address of a pointer to an object (see example).
+   //       * address is the address of the first item of a structure.
    //       * leaflist is the concatenation of all the variable names and types
    //         separated by a colon character :
    //         The variable name and the variable type are separated by a slash (/).
@@ -2197,6 +2196,11 @@ TFile* TTree::ChangeFile(TFile* file)
 Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataType datatype, Bool_t isptr)
 {
    // Check whether or not the address described by the last 3 parameters matches the content of the branch.
+
+   if (GetMakeClass()) {
+      // If we are in MakeClass mode so we do not really use classes.
+      return kTRUE;
+   }
 
    // Let's determine what we need!
    TClass* expectedClass = 0;
@@ -4526,7 +4530,9 @@ Long64_t TTree::LoadTree(Long64_t entry)
    // We already have been visited while recursively looking
    // through the friends tree, let return
    if (kLoadTree & fFriendLockStatus) {
-      return 0;
+      // We need to return a negative value to avoid a circular list of friend
+      // to think that there is always an entry somewhere in the lisst.
+      return -1;
    }
 
    if (fNotify) {
@@ -5359,7 +5365,7 @@ void TTree::Refresh()
    }
    fDirectory->ReadKeys();
    fDirectory->Remove(this);
-   TTree* tree = (TTree*) fDirectory->Get(GetName());
+   TTree* tree; fDirectory->GetObject(GetName(),tree);
    if (!tree) {
       return;
    }

@@ -748,7 +748,9 @@ int Cint::Internal::G__basedestructrc(const ::Reflex::Type &type)
        0==mem->isinherit[i] &&
 #endif
        !mem->TypeOf().RawType().IsEnum() &&
-       !G__test_static(*mem,G__LOCALSTATIC)) {
+       !G__test_static(*mem,G__LOCALSTATIC) &&
+       !mem->TypeOf().IsReference()
+       ) {
       
       G__set_G__tagnum(mem->TypeOf().RawType()); 
       G__store_struct_offset=store_struct_offset+(size_t)G__get_offset(*mem);
@@ -944,7 +946,7 @@ long Cint::Internal::G__getvirtualbaseoffset(void *i_pobject,int tagnum
 {
    char *pobject = (char*)i_pobject;
   long (*f)(long);
-  if(pobject==G__STATICRESOLUTION) return(0);
+  if(pobject==(char*)G__STATICRESOLUTION) return(0);
   if(!pobject || G__no_exec_compile
      || G__PVOID==pobject || ((char*)1)==pobject
      ) {

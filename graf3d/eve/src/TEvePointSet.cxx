@@ -370,9 +370,11 @@ void TEvePointSet::PointSelected(Int_t id)
 //______________________________________________________________________________
 //
 // An array of point-sets with each point-set playing a role of a bin
-// in a histogram. When a new point is added to a TEvePointSetArray, an
-// additional separating quantity needs to be specified: it determines
-// into which TEvePointSet (bin) the point will actually be stored.
+// in a histogram. When a new point is added to a TEvePointSetArray,
+// an additional separating quantity needs to be specified: it
+// determines into which TEvePointSet (bin) the point will actually be
+// stored. Underflow and overflow bins are automatically created but
+// they are not drawn by default.
 //
 // By using the TEvePointSelector the points and the separating
 // quantities can be filled directly from a TTree holding the source
@@ -408,21 +410,6 @@ TEvePointSetArray::~TEvePointSetArray()
 
    // printf("TEvePointSetArray::~TEvePointSetArray()\n");
    delete [] fBins; fBins = 0;
-}
-
-//______________________________________________________________________________
-void TEvePointSetArray::Paint(Option_t* option)
-{
-   // Paint the subjugated TEvePointSet's.
-
-   static const TEveException eh("TEvePointSetArray::Paint ");
-
-   if (fRnrSelf) {
-      for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i) {
-         if ((*i)->GetRnrSelf())
-            (*i)->GetObject(eh)->Paint(option);
-      }
-   }
 }
 
 //______________________________________________________________________________
@@ -538,10 +525,30 @@ void TEvePointSetArray::TakeAction(TEvePointSelector* sel)
 /******************************************************************************/
 
 //______________________________________________________________________________
+Int_t TEvePointSetArray::Size(Bool_t under, Bool_t over) const
+{
+   // Get the total of filled points.
+   // 'under' and 'over' flags specify if under/overflow channels
+   // should be added to the sum.
+
+   Int_t size = 0;
+   const Int_t min = under ? 0 : 1;
+   const Int_t max = over  ? fNBins : fNBins - 1;
+   for (Int_t i = min; i < max; ++i)
+   {
+      if (fBins[i])
+         size += fBins[i]->Size();
+   }
+   return size;
+}
+
+//______________________________________________________________________________
 void TEvePointSetArray::InitBins(const Text_t* quant_name,
                                  Int_t nbins, Double_t min, Double_t max)
 {
    // Initialize internal point-sets with given binning parameters.
+   // The actual number of bins is nbins+2, bin 0 corresponding to
+   // underflow and bin nbin+1 to owerflow pointset.
 
    static const TEveException eh("TEvePointSetArray::InitBins ");
 
@@ -551,14 +558,16 @@ void TEvePointSetArray::InitBins(const Text_t* quant_name,
    RemoveElements();
 
    fQuantName = quant_name;
-   fNBins     = nbins;
+   fNBins     = nbins + 2; // under/overflow
    fLastBin   = -1;
    fMin = fCurMin = min;
    fMax = fCurMax = max;
-   fBinWidth  = (fMax - fMin)/fNBins;
+   fBinWidth  = (fMax - fMin)/(fNBins - 2);
 
-   fBins = new TEvePointSet*[fNBins];
-   for (Int_t i=0; i<fNBins; ++i) {
+   fBins = new TEvePointSet* [fNBins];
+
+   for (Int_t i = 0; i < fNBins; ++i)
+   {
       fBins[i] = new TEvePointSet
          (Form("Slice %d [%4.3lf, %4.3lf]", i, fMin + i*fBinWidth, fMin + (i+1)*fBinWidth),
           fDefPointSetCapacity);
@@ -567,19 +576,42 @@ void TEvePointSetArray::InitBins(const Text_t* quant_name,
       fBins[i]->SetMarkerSize(fMarkerSize);
       AddElement(fBins[i]);
    }
+
+   fBins[0]->SetName("Underflow");
+   fBins[0]->SetRnrSelf(kFALSE);
+   
+   fBins[fNBins-1]->SetName("Overflow");
+   fBins[fNBins-1]->SetRnrSelf(kFALSE);
 }
 
 //______________________________________________________________________________
-void TEvePointSetArray::Fill(Double_t x, Double_t y, Double_t z, Double_t quant)
+Bool_t TEvePointSetArray::Fill(Double_t x, Double_t y, Double_t z, Double_t quant)
 {
    // Add a new point. Appropriate point-set will be chosen based on
    // the value of the separating quantity 'quant'.
+   // If the selected bin does not have an associated TEvePointSet
+   // the point is discarded and false is returned.
 
-   fLastBin = Int_t( (quant - fMin)/fBinWidth );
-   if (fLastBin >= 0 && fLastBin < fNBins && fBins[fLastBin] != 0)
+   fLastBin =TMath::FloorNint((quant - fMin)/fBinWidth) + 1;
+
+   if (fLastBin < 0)
+   {
+      fLastBin = 0;
+   }
+   else if (fLastBin > fNBins - 1)
+   {
+      fLastBin = fNBins - 1;
+   }
+
+   if (fBins[fLastBin] != 0)
+   {
       fBins[fLastBin]->SetNextPoint(x, y, z);
+      return kTRUE;
+   }
    else
-      fLastBin = -1;
+   {
+      return kFALSE;
+   }
 }
 
 //______________________________________________________________________________
@@ -600,12 +632,7 @@ void TEvePointSetArray::CloseBins()
 
    for (Int_t i=0; i<fNBins; ++i) {
       if (fBins[i] != 0) {
-         // HACK! PolyMarker3D does half-management of array size.
-         // !!!! In fact, the error is mine, in pointset3d(gl) i use
-         // fN instead of Size(). Fixed in my root, but not
-         // elsewhere.
-         fBins[i]->fN = fBins[i]->fLastPoint;
-
+         fBins[i]->SetTitle(Form("N=%d", fBins[i]->Size()));
          fBins[i]->ComputeBBox();
       }
    }
@@ -633,13 +660,15 @@ void TEvePointSetArray::SetRange(Double_t min, Double_t max)
 {
    // Set active range of the separating quantity.
    // Appropriate point-sets are tagged for rendering.
+   // Over/underflow point-sets are left as they were.
 
    using namespace TMath;
 
    fCurMin = min; fCurMax = max;
    Int_t  low_b = (Int_t) Max(Double_t(0),       Floor((min-fMin)/fBinWidth));
    Int_t high_b = (Int_t) Min(Double_t(fNBins-1), Ceil((max-fMin)/fBinWidth));
-   for (Int_t i=0; i<fNBins; ++i) {
+   for (Int_t i = 1; i < fNBins - 1; ++i)
+   {
       if (fBins[i] != 0)
          fBins[i]->SetRnrSelf(i>=low_b && i<=high_b);
    }

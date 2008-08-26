@@ -19,6 +19,7 @@
 #include "Riosfwd.h"
 #include "RooAbsReal.h"
 #include "RooSetProxy.h"
+#include "RooRealProxy.h"
 #include <string>
 
 class RooArgSet ;
@@ -102,6 +103,8 @@ protected:
   Bool_t _verbose ;                // Verbose messaging if true
 
 private:  
+
+  virtual Bool_t processEmptyDataSets() const { return kTRUE ; }
 
   Bool_t initialize() ;
   void initSimMode(RooSimultaneous* pdf, RooAbsData* data, const RooArgSet* projDeps, const char* rangeName, const char* addCoefRangeName) ;    
