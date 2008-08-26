@@ -1556,9 +1556,8 @@ TH1 *TH3::Project3D(Option_t *option) const
    //    h->Project3D("xy2");
    //  will generate two TH2D histograms named "myhist_xy" and "myhist_xy2"
    //
-   //  NOTE 2: The number of entries in the projected histogram is set to the
-   //  number of entries of the parent histogram if all bins are selected,
-   //  otherwise it is set to the sum of the bin contents.
+   //  NOTE 2: The number of entries in the projected histogram is estimated from the number of 
+   //  effective entries for all the cells included in the projection. 
 
    TString opt = option; opt.ToLower();
    Int_t ixmin = fXaxis.GetFirst();
@@ -1903,13 +1902,13 @@ TH1 *TH3::Project3D(Option_t *option) const
    Double_t entries  = 0;
    Double_t newerror = 0;
    for (Int_t ixbin=0;ixbin<=1+fXaxis.GetNbins();ixbin++){
-      Int_t ix = ixbin-ixmin;
+      Int_t ix = ixbin-ixmin+1;
       if (ix < 0) ix=0; if (ix > nx+1) ix = nx+1;
       for (Int_t iybin=0;iybin<=1+fYaxis.GetNbins();iybin++){
-         Int_t iy = iybin-iymin;
+         Int_t iy = iybin-iymin+1;
          if (iy < 0) iy=0; if (iy > ny+1) iy = ny+1;
          for (Int_t izbin=0;izbin<=1+fZaxis.GetNbins();izbin++){
-            Int_t iz = izbin-izmin;
+            Int_t iz = izbin-izmin+1;
             if (iz < 0) iz=0; if (iz > nz+1) iz = nz+1;
             Int_t bin = GetBin(ixbin,iybin,izbin);
             cont = GetBinContent(bin);
@@ -2037,7 +2036,7 @@ TH1 *TH3::Project3D(Option_t *option) const
          }
       }
    }
-   h->SetEntries(Long64_t(entries + 0.5));
+   h->SetEntries(entries);
    return h;
 }
 
@@ -2067,9 +2066,8 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    //    h->Project3DProfile("xy2");
    //  will generate two TProfile2D histograms named "myhist_pxy" and "myhist_pxy2"
    //
-   //  NOTE 2: The number of entries in the projected profile is set to the
-   //  number of entries of the parent histogram if all bins are selected,
-   //  otherwise it is set to the effective entries in the selected bins.
+   //  NOTE 2: The number of entries in the projected profile is estimated from the number of 
+   //  effective entries for all the cells included in the projection. 
 
    TString opt = option; opt.ToLower();
    Int_t ixmin = fXaxis.GetFirst();
@@ -2223,14 +2221,8 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    Double_t cont;
    Double_t entries  = 0;
    for (Int_t ixbin=0;ixbin<=1+fXaxis.GetNbins();ixbin++){
-      Int_t ix = ixbin-ixmin;
-      if (ix < 0) ix=0; if (ix > nx+1) ix = nx+1;
       for (Int_t iybin=0;iybin<=1+fYaxis.GetNbins();iybin++){
-         Int_t iy = iybin-iymin;
-         if (iy < 0) iy=0; if (iy > ny+1) iy = ny+1;
          for (Int_t izbin=0;izbin<=1+fZaxis.GetNbins();izbin++){
-            Int_t iz = izbin-izmin;
-            if (iz < 0) iz=0; if (iz > nz+1) iz = nz+1;
             Int_t bin = GetBin(ixbin,iybin,izbin);
             cont = GetBinContent(bin);
             switch (pcase) {
@@ -2278,7 +2270,7 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
          }
       }
    }
-   p2->SetEntries(Long64_t(entries + 0.5));
+   p2->SetEntries(entries);
    return p2;
 }
 

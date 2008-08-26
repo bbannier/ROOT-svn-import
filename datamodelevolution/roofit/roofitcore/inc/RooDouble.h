@@ -25,7 +25,7 @@ public:
   RooDouble() {
     // Default constructor
   } ;
-  RooDouble(Double_t value) : TNamed(), _value(value) {} ;
+  RooDouble(Double_t value) ;
   RooDouble(const RooDouble& other) : TNamed(other), _value(other._value) {}
   virtual ~RooDouble() {
     // Destructor
@@ -40,7 +40,7 @@ public:
     // Return true if contained double equals value
     _value = value ; return *this ; 
   }
-  
+
   // Sorting interface ;
   Int_t Compare(const TObject* other) const ;
   virtual Bool_t IsSortable() const { 

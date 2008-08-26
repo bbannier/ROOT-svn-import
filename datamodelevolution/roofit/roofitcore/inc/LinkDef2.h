@@ -3,7 +3,7 @@
 #pragma link off all classes;
 #pragma link off all functions;
 #pragma link C++ function Roo* ;
-#pragma link C++ namespace RooFit ;
+#pragma link C++ namespace RooFit ; 
 #pragma link C++ namespace RooFitShortHand ;
 #pragma link C++ class RooDouble+ ;
 #pragma link C++ class RooEffGenContext+ ;

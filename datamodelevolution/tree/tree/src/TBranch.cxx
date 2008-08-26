@@ -148,8 +148,7 @@ TBranch::TBranch(TTree *tree, const char* name, void* address, const char* leafl
    //*-*-*-*-*-*-*-*-*-*-*-*-*Create a Branch*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
    //*-*                =====================
    //
-   //       * address is the address of the first item of a structure
-   //         or the address of a pointer to an object (see example).
+   //       * address is the address of the first item of a structure.
    //       * leaflist is the concatenation of all the variable names and types
    //         separated by a colon character :
    //         The variable name and the variable type are separated by a slash (/).
@@ -1642,12 +1641,14 @@ void TBranch::Refresh(TBranch* b)
    fBaskets.Delete();
    Int_t nbaskets = b->fBaskets.GetSize();
    fBaskets.Expand(nbaskets);
-   //The current fWritebasket must always be in memory.
-   //Take it (just swap) from the Tree being read
+   // If the current fWritebasket is in memory, take it (just swap)
+   // from the Tree being read
    TBasket *basket = (TBasket*)b->fBaskets.UncheckedAt(fWriteBasket);
    fBaskets.AddAt(basket,fWriteBasket);
-   b->fBaskets.RemoveAt(fWriteBasket);
-   basket->SetBranch(this);
+   if (basket) {
+      b->fBaskets.RemoveAt(fWriteBasket);
+      basket->SetBranch(this);
+   }
 }
 
 //______________________________________________________________________________
@@ -2071,7 +2072,8 @@ Int_t TBranch::WriteBasket(TBasket* basket, Int_t where)
    fBasketBytes[where]  = basket->GetNbytes();
    fBasketSeek[where]   = basket->GetSeekKey();
    Int_t addbytes = basket->GetObjlen() + basket->GetKeylen() ;
-   if (fDirectory && (fDirectory != gROOT) && fDirectory->IsWritable()) {
+   if (nout>0) {
+      // The Basket was written so we can now safely drop it.
       basket->DropBuffers();
       delete basket;
       fBaskets[where] = 0;

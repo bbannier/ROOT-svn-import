@@ -13,10 +13,10 @@ MATHCOREDIRS := $(MATHCOREDIR)/src
 MATHCOREDIRI := $(MATHCOREDIR)/inc
 
 ##### libMathCore #####
-MATHCOREL1   := $(MODDIRI)/LinkDef.h
-MATHCOREL2   := $(MODDIRI)/Math/LinkDef.h
-MATHCORELINC := $(MODDIRI)/Math/LinkDef_Func.h
-MATHCOREL3   := $(MODDIRI)/Fit/LinkDef.h
+MATHCOREL1   := $(MODDIRI)/LinkDef1.h
+MATHCOREL2   := $(MODDIRI)/LinkDef2.h
+MATHCORELINC := $(MODDIRI)/LinkDef_Func.h
+MATHCOREL3   := $(MODDIRI)/LinkDef3.h
 MATHCOREDS1  := $(MODDIRS)/G__Math.cxx
 MATHCOREDS2  := $(MODDIRS)/G__MathCore.cxx
 MATHCOREDS3  := $(MODDIRS)/G__MathFit.cxx
@@ -29,12 +29,13 @@ MATHCOREDO   := $(MATHCOREDO1) $(MATHCOREDO2) $(MATHCOREDO3)
 MATHCOREDH   := $(MATHCOREDS:.cxx=.h)
 
 MATHCOREDH1  := $(MODDIRI)/TComplex.h \
-                $(MODDIRI)/TMath.h \
-                $(MODDIRI)/TRandom.h \
+                $(MODDIRI)/TMath.h 
+MATHCOREDH2  := $(MODDIRI)/TRandom.h \
                 $(MODDIRI)/TRandom1.h \
                 $(MODDIRI)/TRandom2.h \
-                $(MODDIRI)/TRandom3.h
-MATHCOREDH2  := $(MODDIRI)/Math/SpecFuncMathCore.h \
+                $(MODDIRI)/TRandom3.h \
+                $(MODDIRI)/TKDTree.h \
+                $(MODDIRI)/Math/SpecFuncMathCore.h \
                 $(MODDIRI)/Math/DistFuncMathCore.h \
                 $(MODDIRI)/Math/IParamFunction.h \
                 $(MODDIRI)/Math/IFunction.h \
@@ -132,14 +133,14 @@ distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -f $(MATHCOREDEP) $(MATHCOREDS) $(MATHCOREDH) \
 		   $(MATHCORELIB) $(MATHCOREMAP)
 		@rm -rf include/Math include/Fit
-		@cd $(MATHCOREDIR)/test; make distclean
-		@cd $(MATHCOREDIR)/test/fit; make distclean
+		@cd $(MATHCOREDIR)/test; $(MAKE) distclean
+		@cd $(MATHCOREDIR)/test/fit; $(MAKE) distclean
 
 distclean::     distclean-$(MODNAME)
 
 test-$(MODNAME): all-$(MODNAME)
-		@cd $(MATHCOREDIR)/test; make
-		@cd $(MATHCOREDIR)/test/fit; make
+		@cd $(MATHCOREDIR)/test; $(MAKE)
+		@cd $(MATHCOREDIR)/test/fit; $(MAKE)
 
 ##### extra rules ######
 $(MATHCOREO): CXXFLAGS += -DUSE_ROOT_ERROR

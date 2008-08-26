@@ -4525,7 +4525,7 @@ TVirtualStreamerInfo *TClass::FindStreamerInfo( TObjArray* arr, UInt_t checksum)
       TVirtualStreamerInfo *info = (TVirtualStreamerInfo*)arr->At(i);
       if (!info) continue;
       if (info->GetCheckSum() == checksum) {
-         //R__ASSERT(i==info->GetClassVersion() || (i==-1&&info->GetClassVersion()==1));
+         R__ASSERT(i==info->GetClassVersion() || (i==-1&&info->GetClassVersion()==1));
          return info;
       }
    }
