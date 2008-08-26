@@ -153,20 +153,7 @@ void TGenCollectionStreamer::ReadObjects(int nElements, TBuffer &b)
    char   buffer[8096];
    void*  memory = 0;
    
-   // This should work !!!
-   //TClass* onFileValClass = (fOnFileClass ? fOnFileClass->GetCollectionProxy()->GetValueClass() : 0);
-
-   // This is a temporary workaround
-   TClass* onFileValClass = 0;
-   if( fOnFileClass ) {
-      std::vector<std::string> out;
-      int a;
-      TClassEdit::GetSplit( fOnFileClass->GetName(), out, a );
-      if( fOnFileClass->GetCollectionProxy()->HasPointers() )
-         onFileValClass = TClass::GetClass( out[1].substr( 0, out[1].size() - 1).c_str() );
-      else
-         onFileValClass = TClass::GetClass( out[1].c_str() );
-   }
+   TClass* onFileValClass = (fOnFileClass ? fOnFileClass->GetCollectionProxy()->GetValueClass() : 0);
 
    fEnv->size = nElements;
    switch (fSTL_type)  {
