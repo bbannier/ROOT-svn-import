@@ -581,8 +581,13 @@ void TEveCaloLegoGL::DrawXYScales(TGLRnrCtx & rnrCtx,
    }
 
    Float_t zOff  = -fDataMax*0.03;
-   Float_t yOff  =  0.03*TMath::Sign(y1-y0, axY);
-   Float_t xOff  =  0.03*TMath::Sign(x1-x0, ayX);
+
+   Float_t xOff  =  0.03*(x1-x0);
+   if (ayX < x1) xOff = -xOff;
+
+   Float_t yOff  =  0.03*(y1-y0);
+   if (axY < y1) yOff = -yOff;
+
    Float_t rxy = (fPhiAxis->GetXmax()-fPhiAxis->GetXmin())/(fEtaAxis->GetXmax()-fEtaAxis->GetXmin());
    (rxy>1) ? yOff /= rxy : xOff *=rxy;
 
