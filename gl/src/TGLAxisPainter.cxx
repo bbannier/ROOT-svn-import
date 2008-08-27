@@ -251,7 +251,7 @@ void TGLAxisPainter::RnrText(const char* txt, TGLVector3 pos, TGLFont &font) con
          x = -urx*0.5; y = -ury;
          break;
       case TGLAxisAttrib::kCenterUp:
-         x = -urx; y = 0;
+         x = -urx*0.5; y = 0;
          break;
       case TGLAxisAttrib::kLeft:
          x = -urx; y =(lly -ury)*0.5;

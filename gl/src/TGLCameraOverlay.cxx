@@ -71,16 +71,17 @@ void TGLCameraOverlay::RenderPerspective(TGLRnrCtx& rnrCtx, TGLVertex3 &v, const
    Float_t bb[6];
    font.BBox(txt, bb[0], bb[1], bb[2], bb[3], bb[4], bb[5]);
    TGLRect &vp = rnrCtx.GetCamera()->RefViewport();
-   Float_t off = fAxisAtt.GetAbsLabelFontSize()*0.25 ;
+   Float_t off = bb[4]*0.5;
    Float_t x =  vp.Width()  -bb[3] -off;
    Float_t y =  vp.Height() -bb[4] -off;
-
 
    // background polygon
    TGLViewer* vw = dynamic_cast<TGLViewer*> (rnrCtx.GetViewer());
    TGLUtil::Color(vw->GetClearColor());
    Float_t x0 = (x-off)/vp.Width();
    Float_t y0 = (y-off)/vp.Height();
+   TGLCapabilitySwitch poly(GL_POLYGON_OFFSET_FILL, kTRUE); 
+   glPolygonOffset(0.1, 1); // move polygon back
    glBegin(GL_POLYGON);
    glVertex2f(x0, y0);
    glVertex2f(1 , y0);
