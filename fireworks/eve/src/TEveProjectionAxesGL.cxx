@@ -81,25 +81,6 @@ void TEveProjectionAxesGL::DrawTickMarks(Float_t y) const
 
 }
 
-/******************************************************************************/
-
-//______________________________________________________________________________
-void TEveProjectionAxesGL::RenderText(const char* txt, Float_t x, Float_t y, TGLFont &font) const
-{
-   // Render FTFont at given location.
-
-   if (font.GetMode() < TGLFont::kTexture) {
-      glRasterPos3f(0, 0, 0);
-      glBitmap(0, 0, 0, 0, x, y, 0);
-      font.Render(txt);
-   } else {
-      glPushMatrix();
-      glTranslatef(x, y, 0);
-      font.Render(txt);
-      glPopMatrix();
-   }
-}
-
 //______________________________________________________________________________
 void TEveProjectionAxesGL::DrawHInfo(TGLFont &font) const
 {
@@ -119,7 +100,7 @@ void TEveProjectionAxesGL::DrawHInfo(TGLFont &font) const
       Float_t xd = -0.5f*(urx+llx);
       if (txt[0] == '-')
          xd -= 0.5f * (urx-llx) / strlen(txt);
-      RenderText(txt,  xd, -ury, font);
+      font.RenderBitmap(txt,  xd, -ury);
       glPopMatrix();
    }
 
@@ -145,7 +126,7 @@ void TEveProjectionAxesGL::DrawVInfo(TGLFont &font) const
       glTranslatef(-off, (*it).first, 0);
       txt = TEveUtil::FormAxisValue((*it).second);
       font.BBox(txt, llx, lly, llz, urx, ury, urz);
-      RenderText(txt, -urx, -0.38f*(ury+lly), font);
+      font.RenderBitmap(txt, -urx, -0.38f*(ury+lly));
       glPopMatrix();
    }
 
@@ -311,7 +292,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    glTranslatef(zeroPos.fX, bbox[3]*1.1, 0);
    Float_t llx, lly, llz, urx, ury, urz;
    font.BBox(fM->GetTitle(), llx, lly, llz, urx, ury, urz);
-   RenderText(fM->GetTitle(), -llx, 0, font);
+   font.RenderBitmap(fM->GetTitle(), -llx, 0);
    glPopMatrix();
 
 
