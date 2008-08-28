@@ -230,33 +230,21 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
    
    // get fit option and check case if using integral of bins
    const DataOptions & fitOpt = data.Opt();
-   IntegralEvaluator igEval( func, p, fitOpt.fIntegral); 
+   bool useBinIntegral = fitOpt.fIntegral; 
+   IntegralEvaluator igEval( func, p, useBinIntegral); 
 
 
    for (unsigned int i = 0; i < n; ++ i) { 
 
-//#define OLD
-#ifdef OLD
-      const double * x = data.Coords(i);
-      double y = data.Value(i);
-      double invError = data.InvError(i); 
-#else 
 
       double y, invError; 
-      const double * x = 0; 
-      if (!fitOpt.fErrors1) 
-         x = data.GetPoint(i,y, invError);
-      else { 
-         x = data.GetPoint(i,y);
-         invError = 1.;
-      }
-
-#endif 
+      // in case of no error in y invError=1 is returned
+      const double * x = data.GetPoint(i,y, invError);
 
 
       double fval = 0;
 
-      if (!fitOpt.fIntegral ) 
+      if (!useBinIntegral ) 
          fval = func ( x, p ); 
       else { 
          // calculate normalized integral (divided by bin volume)
@@ -267,7 +255,7 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
 
 #ifdef DEBUG      
       std::cout << x[0] << "  " << y << "  " << 1./invError << " params : "; 
-      for (int ipar = 0; ipar < func.NPar(); ++ipar) 
+      for (unsigned int ipar = 0; ipar < func.NPar(); ++ipar) 
          std::cout << p[ipar] << "\t";
       std::cout << "\tfval = " << fval << std::endl; 
 #endif
@@ -276,10 +264,13 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
       double tmp = ( y -fval )* invError;  	  
       double resval = tmp * tmp;
 
+
+      // avoid inifinity or nan in chi2 values due to wrong function values 
       if ( resval < std::numeric_limits<double>::max() )  
          chi2 += resval; 
       else 
          nRejected++; 
+
       
    }
    
@@ -307,7 +298,7 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
 
 #ifdef DEBUG
    std::cout << "\n\nFit data size = " << n << std::endl;
-   std::cout << "evaluate chi2 using function " << &func << "  " << p << std::endl; 
+   std::cout << "evaluate effective chi2 using function " << &func << "  " << p << std::endl; 
 #endif
 
    assert(data.HaveCoordErrors() ); 
@@ -363,8 +354,8 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
       double resval = w2 * ( y - fval ) *  ( y - fval); 
 
 #ifdef DEBUG      
-      std::cout << x[0] << "  " << y << "  " << e2 << " ey  " << ey << " params : "; 
-      for (int ipar = 0; ipar < func.NPar(); ++ipar) 
+      std::cout << x[0] << "  " << y << " ex " << e2 << " ey  " << ey << " params : "; 
+      for (unsigned int ipar = 0; ipar < func.NPar(); ++ipar) 
          std::cout << p[ipar] << "\t";
       std::cout << "\tfval = " << fval << "\tresval = " << resval << std::endl; 
 #endif
@@ -394,7 +385,7 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
 double FitUtil::EvaluateChi2Residual(const IModelFunction & func, const BinData & data, const double * p, unsigned int i, double * g) {  
    // evaluate the chi2 contribution (residual term) only for data with no coord-errors
    // This function is used in the specialized least square algorithms like FUMILI or L.M.
-   // if we have error on the coordinates method is not implemented 
+   // if we have error on the coordinates the method is not yet implemented 
    //  integral option is also not yet implemented
    //  one can use in that case normal chi2 method
   
@@ -447,7 +438,6 @@ double FitUtil::EvaluateChi2Residual(const IModelFunction & func, const BinData 
 
 }
 
-
 void FitUtil::EvaluateChi2Gradient(const IModelFunction & f, const BinData & data, const double * p, double * grad, unsigned int & nPoints) { 
    // evaluate gradient of chi2
    // this function is used when the model function knows how to calculate the derivative and we can  
@@ -478,7 +468,7 @@ void FitUtil::EvaluateChi2Gradient(const IModelFunction & f, const BinData & dat
 
    //int nRejected = 0; 
    // set values of parameters 
-   //func.SetParameters(p); 
+
    unsigned int npar = func.NPar(); 
 //   assert (npar == NDim() );  // npar MUST be  Chi2 dimension
    std::vector<double> gradFunc( npar ); 
@@ -491,12 +481,12 @@ void FitUtil::EvaluateChi2Gradient(const IModelFunction & f, const BinData & dat
       double y, invError = 0; 
       const double * x = data.GetPoint(i,y, invError);
 
-      double fval = func ( x ); 
+      double fval = func ( x, p ); 
       func.ParameterGradient(  x , p, &gradFunc[0] );  
 
 #ifdef DEBUG      
       std::cout << x[0] << "  " << y << "  " << 1./invError << " params : "; 
-      for (int ipar = 0; ipar < npar; ++ipar) 
+      for (unsigned int ipar = 0; ipar < npar; ++ipar) 
          std::cout << p[ipar] << "\t";
       std::cout << "\tfval = " << fval << std::endl; 
 #endif
@@ -532,7 +522,6 @@ void FitUtil::EvaluateChi2Gradient(const IModelFunction & f, const BinData & dat
 
 }
 
-
 //______________________________________________________________________________________________________
 //
 //  Log Likelihood functions       
@@ -559,7 +548,7 @@ double FitUtil::EvaluatePdf(const IModelFunction & func, const UnBinData & data,
    //func.SetParameters(p);
 
    const double * x = data.Coords(i);
-   double fval = func ( x ); 
+   double fval = func ( x, p ); 
    //return EvalLogF(fval);
    if (g == 0) return fval;
 
@@ -579,11 +568,11 @@ double FitUtil::EvaluatePdf(const IModelFunction & func, const UnBinData & data,
 #ifdef DEBUG
    std::cout << x[i] << "\t"; 
    std::cout << "\tpar = [ " << func.NPar() << " ] =  "; 
-   for (int ipar = 0; ipar < func.NPar(); ++ipar) 
+   for (unsigned int ipar = 0; ipar < func.NPar(); ++ipar) 
       std::cout << p[ipar] << "\t";
    std::cout << "\tfval = " << fval;
    std::cout << "\tgrad = [ "; 
-   for (int ipar = 0; ipar < func.NPar(); ++ipar) 
+   for (unsigned int ipar = 0; ipar < func.NPar(); ++ipar) 
       std::cout << g[ipar] << "\t";
    std::cout << " ] "   << std::endl; 
 #endif
@@ -758,7 +747,7 @@ double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData &
    if (nRejected != 0)  nPoints = n - nRejected;
 
 #ifdef DEBUG
-   std::cout << "Logl = " << logl << " np = " << nPoints << std::endl;
+   std::cout << "Loglikelihood  = " << loglike << " np = " << nPoints << std::endl;
 #endif
    
    return loglike;  

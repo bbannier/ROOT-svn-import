@@ -254,6 +254,7 @@ TGraph2D::TGraph2D(TH2 *h2)
 {
    // Graph2D constructor with a TH2 (h2) as input.
    // Only the h2's bins within the X and Y axis ranges are used.
+   // Empty bins, recognized when both content and errors are zero, are excluded. 
 
    Build(10);
 
@@ -267,8 +268,6 @@ TGraph2D::TGraph2D(TH2 *h2)
    Int_t yfirst = yaxis->GetFirst();
    Int_t ylast  = yaxis->GetLast();
 
-   Double_t hmin = h2->GetMinimum();
-   Double_t hmax = h2->GetMaximum();
 
    Double_t x, y, z;
    Int_t k=0;
@@ -278,7 +277,8 @@ TGraph2D::TGraph2D(TH2 *h2)
          x = xaxis->GetBinCenter(i);
          y = yaxis->GetBinCenter(j);
          z = h2->GetBinContent(i,j);
-         if (z>hmin && z<hmax) {
+         Double_t ez = h2->GetBinError(i,j); 
+         if (z != 0. || ez != 0) {
             SetPoint(k, x, y, z);
             k++;
          }
