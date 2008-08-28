@@ -62,8 +62,6 @@ void MakeCalo2D(TEveCalo3D* calo3d)
   v1->AddScene(s1);
   TGLViewer* v = v1->GetGLViewer();
   v->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
-  TGLCameraMarkupStyle* mup = v->GetCameraMarkup();
-  if(mup) mup->SetShow(kFALSE);
   v->SetGuideState(TGLUtil::kAxesOrigin, kTRUE, kFALSE, 0);
   v->SetClearColor(kBlue + 4);
 

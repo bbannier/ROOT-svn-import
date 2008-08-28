@@ -114,6 +114,20 @@ void TGLFont::Render(const char* txt) const
 }
 
 //______________________________________________________________________________
+void TGLFont::RenderBitmap(const char* txt, Float_t x, Float_t y) const
+{
+   // Render pixmap and bitmap text at given window position
+
+   PreRender();
+   glPushMatrix();
+   glRasterPos2i(0, 0);
+   glBitmap(0, 0, 0, 0, x, y, 0);
+   Render(txt);
+   glPopMatrix();
+   PostRender();
+}
+
+//______________________________________________________________________________
 void TGLFont::PreRender(Bool_t autoLight, Bool_t lightOn) const
 {
    // Set-up GL state before FTFont rendering.

@@ -32,7 +32,6 @@ private:
 
    mutable TMList_t   fTMList;    // list of tick-mark position-value pairs
 
-   void               RenderText(const char* txt, Float_t x, Float_t y, TGLFont &font) const;
    void               DrawTickMarks(Float_t tms) const;
    void               DrawHInfo(TGLFont &font) const;
    void               DrawVInfo(TGLFont &fontx) const;
