@@ -286,7 +286,8 @@ TGraph::TGraph(const TH1 *h)
    h->TAttFill::Copy(*this);
    h->TAttMarker::Copy(*this);
 
-   SetName(h->GetName());
+   std::string gname = "Graph_from_" + std::string(h->GetName() ); 
+   SetName(gname.c_str());
    SetTitle(h->GetTitle());
 }
 

@@ -241,43 +241,6 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
    
 }
 
-void FillData ( BinData  & dv, const TGraph2D * gr, TF1 * func ) {  
-   //  fill the data vector from a TGraph2D. Pass also the TF1 function which is 
-   // needed in case to exclude points rejected by the function
-   // in case of a pure TGraph 
-   assert(gr != 0); 
-
-   // get fit option 
-   DataOptions & fitOpt = dv.Opt();
-   
-   int  nPoints = gr->GetN();
-   double *gx = gr->GetX();
-   double *gy = gr->GetY();
-   double *gz = gr->GetZ();
-   
-   // if all errors are zero set option of using errors to 1
-   if ( gr->GetEZ() == 0) fitOpt.fErrors1 = true;
-   
-   double x[2]; 
-   dv.Initialize(nPoints,2); 
-   
-   for ( int i = 0; i < nPoints; ++i) { 
-      
-      x[0] = gx[i];
-      x[1] = gy[i];
-      if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func, x) ) continue;
-      // neglect error in x and y (it is a different chi2) 
-      double error = gr->GetErrorZ(i); 
-      if (!HFitInterface::AdjustError(fitOpt,error) ) continue; 
-      dv.Add( x, gz[i], error );      
-   }
-
-#ifdef DEBUG
-   std::cout << "THFitInterface::FillData Graph FitData size is " << dv.Size() << std::endl;
-#endif
-
-}
-
 
 //______________________________________________________________________________
 void InitGaus(const ROOT::Fit::BinData & data, TF1 * f1)
@@ -352,7 +315,7 @@ void InitGaus(const ROOT::Fit::BinData & data, TF1 * f1)
 // filling fit data from TGraph objects
 
 BinData::ErrorType GetDataType(const TGraph * gr, const DataOptions & fitOpt) { 
-
+   // get type of data for TGraph objects
    double *ex = gr->GetEX();
    double *ey = gr->GetEY();
    double * eyl = gr->GetEYlow();
@@ -385,6 +348,35 @@ BinData::ErrorType GetDataType(const TGraph * gr, const DataOptions & fitOpt) {
    return type; 
 }
 
+BinData::ErrorType GetDataType(const TGraph2D * gr, const DataOptions & fitOpt) { 
+   // get type of data for TGraph2D object
+   double *ex = gr->GetEX();
+   double *ey = gr->GetEY();
+   double *ez = gr->GetEZ();
+  
+   // default case for graphs (when they have errors) 
+   BinData::ErrorType type = BinData::kValueError; 
+   // if all errors are zero set option of using errors to 1
+   if (ez == 0 ) { 
+      type =  BinData::kNoError; 
+   }
+   else if ( ex != 0 && ey!=0 && fitOpt.fCoordErrors)  { 
+      // check that all errors are not zero
+      int i = 0; 
+      while (i < gr->GetN() && type != BinData::kCoordError) { 
+         if (ex[i] > 0 || ey[i] > 0) type = BinData::kCoordError; 
+         ++i;
+      }
+   }
+
+
+#ifdef DEBUG
+   std::cout << "type is " << type << " graph2D type is " << gr->IsA()->GetName() << std::endl; 
+#endif
+
+   return type; 
+}
+
 
 
 void DoFillData ( BinData  & dv,  const TGraph * gr,  BinData::ErrorType type, TF1 * func ) {  
@@ -402,7 +394,9 @@ void DoFillData ( BinData  & dv,  const TGraph * gr,  BinData::ErrorType type, T
 
 #ifdef DEBUG
    std::cout << "DoFillData: graph npoints = " << nPoints << " type " << type << std::endl;
-   double a1,a2; func->GetRange(a1,a2); std::cout << "func range " << a1 << "  " << a2 << std::endl;
+   if (func) { 
+      double a1,a2; func->GetRange(a1,a2); std::cout << "func range " << a1 << "  " << a2 << std::endl;
+   }
 #endif
 
    double x[1]; 
@@ -451,10 +445,8 @@ void DoFillData ( BinData  & dv,  const TGraph * gr,  BinData::ErrorType type, T
          // case sym errors
          else {             
             double errorY =  gr->GetErrorY(i);    
-            if (errorX <= 0 ) { 
-               errorX = 0; 
-               if (!HFitInterface::AdjustError(fitOpt,errorY) ) continue; 
-            }
+            if (errorX <= 0 ) errorX = 0;  
+            if (!HFitInterface::AdjustError(fitOpt,errorY) ) continue; 
             dv.Add( gx[i], gy[i], errorX, errorY );
          }
       }
@@ -554,6 +546,70 @@ void FillData ( BinData  & dv, const TMultiGraph * mg, TF1 * func ) {
    std::cout << "TGraphFitInterface::FillData MultiGraph FitData size is " << dv.Size() << std::endl;
 #endif
  
+}
+
+void FillData ( BinData  & dv, const TGraph2D * gr, TF1 * func ) {  
+   //  fill the data vector from a TGraph2D. Pass also the TF1 function which is 
+   // needed in case to exclude points rejected by the function
+   // in case of a pure TGraph 
+   assert(gr != 0); 
+
+   // get fit option 
+   DataOptions & fitOpt = dv.Opt();
+   BinData::ErrorType type = GetDataType(gr,fitOpt); 
+   // adjust option according to type
+   fitOpt.fErrors1 = (type == BinData::kNoError);
+   fitOpt.fCoordErrors = (type ==  BinData::kCoordError);
+   fitOpt.fAsymErrors = false; // a TGraph2D with asymmetric errors does not exist
+   
+   int  nPoints = gr->GetN();
+   double *gx = gr->GetX();
+   double *gy = gr->GetY();
+   double *gz = gr->GetZ();
+   
+   // if all errors are zero set option of using errors to 1
+   if ( gr->GetEZ() == 0) fitOpt.fErrors1 = true;
+   
+   double x[2]; 
+   double ex[2]; 
+
+   dv.Initialize(nPoints,2, type); 
+   
+   for ( int i = 0; i < nPoints; ++i) { 
+      
+      x[0] = gx[i];
+      x[1] = gy[i];
+      if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func, x) ) continue;
+
+      if (type == BinData::kNoError) {   
+         dv.Add( x, gz[i] ); 
+         continue; 
+      }
+
+      double errorZ = gr->GetErrorZ(i); 
+      if (!HFitInterface::AdjustError(fitOpt,errorZ) ) continue; 
+      
+      if (type == BinData::kValueError)  { 
+         dv.Add( x, gz[i], errorZ );      
+      }
+      else if (type == BinData::kCoordError) { // case use error in coordinates (x and y) 
+         ex[0] = std::max(gr->GetErrorX(i), 0.);
+         ex[1] = std::max(gr->GetErrorY(i), 0.);
+         dv.Add( x, gz[i], ex, errorZ );      
+      }         
+      else 
+         assert(0); // should not go here
+
+#ifdef DEBUG
+         std::cout << "Point " << i << "  " << gx[i] <<  "  " << gy[i]  << "  " << errorZ << std::endl; 
+#endif
+
+   }
+
+#ifdef DEBUG
+   std::cout << "THFitInterface::FillData Graph2D FitData size is " << dv.Size() << std::endl;
+#endif
+
 }
 
 

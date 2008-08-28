@@ -4,7 +4,7 @@
 #include "TF2.h"
 #include "TGraphErrors.h"
 #include "TGraphAsymmErrors.h"
-#include "TGraph2D.h"
+#include "TGraph2DErrors.h"
 #include "TSystem.h"
 #include "TRandom3.h"
 #include "TROOT.h"
@@ -22,6 +22,7 @@
 
 #include <string>
 #include <iostream>
+#include <cmath>
 
 // print the data
 void printData(const ROOT::Fit::BinData & data) {
@@ -52,6 +53,20 @@ void printData(const ROOT::Fit::UnBinData & data) {
    std::cout << "\ndata size is " << data.Size() << std::endl;
 }    
 
+int compareResult(double v1, double v2, std::string s = "", double tol = 0.01) { 
+   // compare v1 with reference v2 
+   // give 1% tolerance
+   if (std::abs(v1-v2) < tol * std::abs(v2) ) return 0; 
+   std::cerr << s << " Failed comparison of fit results \t chi2 = " << v1 << "   it should be = " << v2 << std::endl;
+   return -1; 
+} 
+
+double chi2FromFit(const TF1 * func )  { 
+   // return last chi2 obtained from Fit method function
+   assert(TVirtualFitter::GetFitter() != 0 ); 
+   return (TVirtualFitter::GetFitter()->Chisquare(func->GetNpar(), func->GetParameters() ) );
+}
+
 int testHisto1DFit() { 
 
 
@@ -62,6 +77,8 @@ int testHisto1DFit() {
    func->SetParameter(2,3.0);
 
    TRandom3 rndm;
+   int iret = 0; 
+   double chi2ref = 0; 
 
    // fill an histogram 
    TH1D * h1 = new TH1D("h1","h1",30,-5.,5.);
@@ -100,11 +117,16 @@ int testHisto1DFit() {
       std::cout << "Chi2 Fit Failed " << std::endl;
       return -1; 
    }
+   chi2ref = fitter.Result().Chi2(); 
+
    // compare with TH1::Fit
    TVirtualFitter::SetDefaultFitter("Minuit2"); 
    std::cout << "\n******************************\n\t TH1::Fit Result \n" << std::endl; 
    func->SetParameters(p);   
    h1->Fit(func);
+
+   iret |= compareResult( chi2FromFit(func), chi2ref,"1D histogram chi2 fit");
+
 
    // test using binned likelihood 
    std::cout << "\n\nTest Binned Likelihood Fit" << std::endl; 
@@ -117,11 +139,15 @@ int testHisto1DFit() {
       std::cout << "Binned Likelihood Fit Failed " << std::endl;
       return -1; 
    }
+   iret |= compareResult(fitter.Result().Chi2(), chi2ref,"1D histogram likelihood fit",0.2);
+
    // compare with TH1::Fit
    std::cout << "\n******************************\n\t TH1::Fit Result \n" << std::endl; 
    func->SetParameters(p);   
    h1->Fit(func,"L");
-   std::cout << "Equivalent Chi2 from TF1::Fit " << func->GetChisquare() << std::endl;
+
+   iret |= compareResult(func->GetChisquare(),fitter.Result().Chi2(),"TH1::Fit likelihood ",0.001);
+   //std::cout << "Equivalent Chi2 from TF1::Fit " << func->GetChisquare() << std::endl;
 
    std::cout << "\n\nTest Chi2 Fit using integral option" << std::endl; 
 
@@ -139,10 +165,13 @@ int testHisto1DFit() {
       std::cout << "Integral Chi2 Fit Failed " << std::endl;
       return -1; 
    }
+   iret |= compareResult(fitter.Result().Chi2(), chi2ref,"1D histogram integral chi2 fit",0.2);
+
    // compare with TH1::Fit
    std::cout << "\n******************************\n\t TH1::Fit Result \n" << std::endl; 
    func->SetParameters(p);   
    h1->Fit(func,"I");
+   iret |= compareResult(func->GetChisquare(),fitter.Result().Chi2(),"TH1::Fit integral ",0.001);
 
    f.SetParameters(p); 
    ret = fitter.LikelihoodFit(d2, f);
@@ -152,15 +181,16 @@ int testHisto1DFit() {
       std::cout << "Integral Likelihood Fit Failed " << std::endl;
       return -1; 
    }
+   iret |= compareResult(fitter.Result().Chi2(), chi2ref,"1D histogram integral likelihood fit",0.2);
+
    // compare with TH1::Fit
    std::cout << "\n******************************\n\t TH1::Fit Result \n" << std::endl; 
    func->SetParameters(p);   
    h1->Fit(func,"IL");
-   std::cout << "Equivalent Chi2 from TF1::Fit " << func->GetChisquare() << std::endl;
+   //std::cout << "Equivalent Chi2 from TF1::Fit " << func->GetChisquare() << std::endl;
+   iret |= compareResult(func->GetChisquare(),fitter.Result().Chi2(),"TH1::Fit likelihood integral ",0.001);
 
-
-   
-
+  
    
    // redo chi2fit
    std::cout << "\n\nRedo Chi2 Hist Fit" << std::endl; 
@@ -172,7 +202,7 @@ int testHisto1DFit() {
       std::cout << "Chi2 Fit Failed " << std::endl;
       return -1; 
    }
-
+   iret |= compareResult(fitter.Result().Chi2(), chi2ref,"1D histogram chi2 fit (2)",0.001);
 
 
 
@@ -180,6 +210,7 @@ int testHisto1DFit() {
    std::cout << "\n\nTest Same Fit from a TGraphErrors - no coord errors" << std::endl; 
    TGraphErrors gr(h1); 
    ROOT::Fit::BinData dg; 
+   dg.Opt().fCoordErrors = false;  // do not use coordinate errors (default is using )
    ROOT::Fit::FillData(dg,&gr);
 
    f.SetParameters(p);   
@@ -190,11 +221,14 @@ int testHisto1DFit() {
       std::cout << "Chi2 Graph Errors Fit Failed " << std::endl;
       return -1; 
    }
+   iret |= compareResult(fitter.Result().Chi2(), chi2ref,"TGraphErrors chi2 fit",0.001);
+
 
    // fit using error on X
    std::cout << "\n\nTest Same Fit from a TGraphErrors - use coord errors" << std::endl; 
    ROOT::Fit::BinData dger; 
-   dger.Opt().fCoordErrors = true;  // use coordinate errors
+   // not needed since they are used by default
+   //dger.Opt().fCoordErrors = true;  // use coordinate errors
    ROOT::Fit::FillData(dger,&gr);
 
    f.SetParameters(p);   
@@ -205,12 +239,14 @@ int testHisto1DFit() {
       std::cout << "Chi2 Graph Errors Fit Failed " << std::endl;
       return -1; 
    }
+   iret |= compareResult(fitter.Result().Chi2(), chi2ref,"TGraphErrors effective chi2 fit ",0.7);
 
    // compare with TGraphErrors::Fit
    std::cout << "\n******************************\n\t TGraphErrors::Fit Result \n" << std::endl; 
    func->SetParameters(p);   
    gr.Fit(func); 
    std::cout << "Ndf of TGraphErrors::Fit  = " << func->GetNDF() << std::endl;
+   iret |= compareResult(func->GetChisquare(),fitter.Result().Chi2(),"TGraphErrors::Fit ",0.001);
 
 
    // test graph fit (errors are 1) do a re-normalization
@@ -228,6 +264,7 @@ int testHisto1DFit() {
       std::cout << "Chi2 Graph Fit Failed " << std::endl;
       return -1; 
    }
+   //iret |= compareResult(fitter.Result().Chi2(), chi2ref,"TGraph fit (no errors) ",0.3);
 
 
    // compare with TGraph::Fit (no errors)
@@ -236,9 +273,11 @@ int testHisto1DFit() {
    gr2.Fit(func); 
    std::cout << "Ndf of TGraph::Fit = " << func->GetNDF() << std::endl;
 
+   iret |= compareResult(func->GetChisquare(),fitter.Result().Chi2(),"TGraph::Fit ",0.001);
+
 
    // reddo chi2fit using Fumili
-   std::cout << "\n\nRedo Chi2 Hist Fit using FUMILI" << std::endl; 
+   std::cout << "\n\nRedo Chi2 Hist Fit using FUMILI2" << std::endl; 
    f.SetParameters(p);   
    fitter.Config().SetMinimizer("Minuit2","Fumili");
    ret = fitter.Fit(d, f);
@@ -248,9 +287,10 @@ int testHisto1DFit() {
       std::cout << "Chi2 Fit Failed " << std::endl;
       return -1; 
    }
+   iret |= compareResult(fitter.Result().Chi2(), chi2ref,"1D Histo Fumili2 fit ");
 
 
-   return 0;
+   return iret;
 }
 
 
@@ -294,16 +334,18 @@ public:
    }
 
 private:
+
    double DoEvalPar( const double *x, const double * p) const { 
       return p[0]*x[0]*x[0] + p[1]*x[0] + p[2]*x[1]*x[1] + p[3]*x[1] + p[4]; 
    }
-   double DoDerivative(const double *x,  unsigned int icoord = 0) const { 
-      assert(icoord <= 1); 
-      if (icoord == 0) 
-         return 2. * fp[0] * x[0] + fp[1];
-      else 
-         return 2. * fp[2] * x[1] + fp[3];
-   }
+//    double DoDerivative(const double *x,  unsigned int icoord = 0) const { 
+//       assert(icoord <= 1); 
+//       if (icoord == 0) 
+//          return 2. * fp[0] * x[0] + fp[1];
+//       else 
+//          return 2. * fp[2] * x[1] + fp[3];
+//    }
+
    double DoParameterDerivative(const double * x, const double * p, unsigned int ipar) const { 
       std::vector<double> grad(NPar());
       ParameterGradient(x, p, &grad[0] ); 
@@ -325,6 +367,8 @@ int testHisto1DPolFit() {
    func->SetParameter(2,3.0);
 
    TRandom3 rndm;
+   int iret = 0; 
+   double chi2ref = 0; 
 
    // fill an histogram 
    TH1D * h2 = new TH1D("h2","h2",30,-5.,5.);
@@ -358,11 +402,14 @@ int testHisto1DPolFit() {
       std::cout << " Fit Failed " << std::endl;
       return -1; 
    }
+   chi2ref = fitter.Result().Chi2(); 
 
    // compare with TH1::Fit
    std::cout << "\n******************************\n\t TH1::Fit(pol2) Result with TMinuit \n" << std::endl; 
    func->SetParameters(p);   
    h2->Fit(func,"F"); 
+   iret |= compareResult(func->GetChisquare(),chi2ref,"TH1::Fit ",0.001);
+
 
    std::cout << "\n\nTest histo polynomial linear fit " << std::endl; 
 
@@ -380,15 +427,17 @@ int testHisto1DPolFit() {
       std::cout << " Fit Failed " << std::endl;
       return -1; 
    }
+   iret |= compareResult(fitter.Result().Chi2(),chi2ref,"1D histo linear Fit ");
 
    // compare with TH1::Fit
    std::cout << "\n******************************\n\t TH1::Fit(pol2) Result with TLinearFitter \n" << std::endl; 
    func->SetParameters(p);   
    h2->Fit(func); 
+   iret |= compareResult(func->GetChisquare(),fitter.Result().Chi2(),"TH1::Fit linear",0.001);
 
    
 
-   return 0; 
+   return iret; 
 }
 
 int testHisto2DFit() { 
@@ -403,11 +452,13 @@ int testHisto2DFit() {
    assert(func->GetNpar() == 5); 
 
    TRandom3 rndm;
+   double chi2ref = 0; 
+   int iret = 0;
 
    // fill an histogram 
    TH2D * h2 = new TH2D("h2d","h2d",30,-5.,5.,30,-5.,5.);
 //      h1->FillRandom(fname.c_str(),100);
-   for (int i = 0; i <1000; ++i) {
+   for (int i = 0; i <10000; ++i) {
       double x,y = 0;
       func->GetRandom2(x,y);
       h2->Fill(x,y);
@@ -427,8 +478,10 @@ int testHisto2DFit() {
 
 
    // create the fitter 
-
    ROOT::Fit::Fitter fitter; 
+   //fitter.Config().MinimizerOptions().SetPrintLevel(3);
+
+   std::cout <<"\ntest 2D histo fit using gradient" << std::endl;
    bool ret = fitter.Fit(d, f);
    if (ret)  
       fitter.Result().Print(std::cout); 
@@ -436,6 +489,7 @@ int testHisto2DFit() {
       std::cout << "Gradient Fit Failed " << std::endl;
       return -1; 
    }
+   chi2ref = fitter.Result().Chi2(); 
 
    // test without gradient
    std::cout <<"\ntest result without using gradient" << std::endl;
@@ -447,6 +501,7 @@ int testHisto2DFit() {
       std::cout << " Chi2 Fit Failed " << std::endl;
       return -1; 
    }
+   iret |= compareResult(fitter.Result().Chi2(), chi2ref,"2D histogram chi2 fit");
 
    // test binned likelihood gradient
    std::cout <<"\ntest result using gradient and binned likelihood" << std::endl;
@@ -470,8 +525,10 @@ int testHisto2DFit() {
       std::cout << "Linear 2D Fit Failed " << std::endl;
       return -1; 
    }
+   iret |= compareResult(fitter.Result().Chi2(), chi2ref,"2D histogram linear fit");
 
-   // test fitting using TGraph2D
+   // test fitting using TGraph2D ( chi2 will be larger since errors are 1) 
+   // should test with a TGraph2DErrors 
    TGraph2D g2(h2);
 
    std::cout <<"\ntest using TGraph2D" << std::endl;
@@ -489,6 +546,8 @@ int testHisto2DFit() {
       std::cout << " TGraph2D Fit Failed " << std::endl;
       return -1; 
    }
+   double chi2ref2 = fitter.Result().Chi2(); 
+
    // compare with TGraph2D::Fit
    std::cout << "\n******************************\n\t TGraph::Fit Result \n" << std::endl; 
    func->SetParameters(p);   
@@ -503,10 +562,46 @@ int testHisto2DFit() {
       std::cout << " TGraph2D Grad Fit Failed " << std::endl;
       return -1; 
    }
+   iret |= compareResult(fitter.Result().Chi2(), chi2ref2,"TGraph2D chi2 fit");
+
+   std::cout <<"\ntest using TGraph2DErrors -  error only in Z" << std::endl;
+   TGraph2DErrors g2err(g2.GetN() ); 
+   // need to set error by hand since constructor from TH2 does not exist 
+   for (int i = 0; i < g2.GetN(); ++i) { 
+      double x = g2.GetX()[i]; 
+      double y = g2.GetY()[i]; 
+      g2err.SetPoint(i,x,y,g2.GetZ()[i]);
+      g2err.SetPointError(i,0,0,h2->GetBinError(h2->FindBin(x,y) ) );
+   } 
+   func->SetParameters(p);   
+   // g2err.Fit(func);
+   f.SetParameters(p); 
+   ROOT::Fit::BinData d3; 
+   ROOT::Fit::FillData(d3,&g2err,func);
+   ret = fitter.Fit(d3, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << " TGraph2DErrors Fit Failed " << std::endl;
+      return -1; 
+   }
+ 
+   iret |= compareResult(fitter.Result().Chi2(), chi2ref,"TGraph2DErrors chi2 fit");
 
 
 
-   return 0; 
+   std::cout <<"\ntest using TGraph2DErrors -  with error  in X,Y,Z" << std::endl;
+   for (int i = 0; i < g2err.GetN(); ++i) { 
+      double x = g2.GetX()[i]; 
+      double y = g2.GetY()[i]; 
+      g2err.SetPointError(i,0.5* h2->GetXaxis()->GetBinWidth(1),0.5*h2->GetXaxis()->GetBinWidth(1),h2->GetBinError(h2->FindBin(x,y) ) );
+   } 
+   std::cout << "\n******************************\n\t TGraph2DErrors::Fit Result \n" << std::endl; 
+   func->SetParameters(p);   
+   g2err.Fit(func);
+
+
+   return iret; 
 }
 
 
@@ -559,6 +654,7 @@ int testUnBin1DFit() {
       std::cout << "Unbinned Likelihood Fit Failed " << std::endl; 
       iret |= 1;
    }
+   double lref = fitter.Result().MinFcnValue();
 
    std::cout << "\n\nRedo Fit using FUMILI" << std::endl; 
    f.SetParameters(p);   
@@ -576,6 +672,8 @@ int testUnBin1DFit() {
       std::cout << "Unbinned Likelihood Fit using FUMILI Failed " << std::endl;      
       iret |= 1;
    }
+
+   iret |= compareResult(fitter.Result().MinFcnValue(), lref,"1D unbin FUMILI fit");
 
 
    return iret; 
@@ -626,11 +724,15 @@ int testGraphFit() {
       std::cout << "Chi2 Graph Fit Failed " << std::endl;
       return -1; 
    }
+   double chi2ref = fitter.Result().Chi2(); 
+
 
    // compare with TGraph::Fit
    std::cout << "\n******************************\n\t TGraph::Fit Result \n" << std::endl; 
    func->SetParameters(p);   
    gr.Fit(func,"F"); // use Minuit  
+
+   iret |= compareResult(func->GetChisquare(),fitter.Result().Chi2(),"TGraph::Fit ",0.001);
 
 
    std::cout <<"\ntest TGraphErrors  " << std::endl;
@@ -651,10 +753,16 @@ int testGraphFit() {
       return -1; 
    }
 
+   iret |= compareResult(fitter.Result().Chi2(),chi2ref,"TGraphErrors fit with coord errors",0.8);
+
+
    // compare with TGraph::Fit
    std::cout << "\n******************************\n\t TGraphErrors::Fit Result \n" << std::endl; 
    func->SetParameters(p);   
    grer.Fit(func,"F"); // use Minuit  
+   iret |= compareResult(func->GetChisquare(),fitter.Result().Chi2(),"TGraphErrors::Fit ",0.001);
+
+   chi2ref = fitter.Result().Chi2(); 
 
    std::cout <<"\ntest TGraphAsymmErrors  " << std::endl;
    TGraphAsymmErrors graer(5, x,y,ex,ex,eyl, eyh);  
@@ -674,11 +782,13 @@ int testGraphFit() {
       std::cout << "Chi2 Graph Fit Failed " << std::endl;
       return -1; 
    }
+   //iret |= compareResult(fitter.Result().Chi2(),chi2ref,"TGraphAsymmErrors fit ",0.5);
 
    // compare with TGraph::Fit
    std::cout << "\n******************************\n\t TGraphAsymmErrors::Fit Result \n" << std::endl; 
    func->SetParameters(p);   
    graer.Fit(func,"F"); // use Minuit  
+   iret |= compareResult(func->GetChisquare(),fitter.Result().Chi2(),"TGraphAsymmErrors::Fit ",0.001);
 
 
 
@@ -706,6 +816,10 @@ int main() {
    iret |= testFit( testHisto2DFit, "Histogram2D Gradient Fit");
    iret |= testFit( testUnBin1DFit, "Unbin 1D Fit");
    iret |= testFit( testGraphFit, "Graph 1D Fit");
+
+   std::cout << "\n******************************\n";
+   if (iret) std::cerr << "\n\t testFit FAILED !!!!!!!!!!!!!!!! \n";
+   else std::cout << "\n\t testFit all OK \n"; 
    return iret; 
 }
    
