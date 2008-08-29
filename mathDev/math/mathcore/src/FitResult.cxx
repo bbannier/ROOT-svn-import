@@ -29,6 +29,8 @@
 
 #include <cassert>
 #include <cmath>
+#include <iostream>
+#include <iomanip>
 
 namespace ROOT { 
 
@@ -112,7 +114,14 @@ FitResult::FitResult() :
    }
 
    fMinimType = fconfig.MinimizerType();
-   if (fconfig.MinimizerAlgoType() != "") fMinimType += " / " + fconfig.MinimizerAlgoType(); 
+
+   // append algorithm name for minimizer that support it  
+   if ( (fMinimType.find("Fumili") == std::string::npos) &&
+        (fMinimType.find("GSLMultiFit") == std::string::npos) 
+      ) { 
+      if (fconfig.MinimizerAlgoType() != "") fMinimType += " / " + fconfig.MinimizerAlgoType(); 
+   }
+
 }
 
 FitResult::FitResult(const FitResult &rhs) { 
@@ -193,18 +202,19 @@ void FitResult::Print(std::ostream & os, bool doCovMatrix) const {
    }
 
    os << "\n****************************************\n";
-   os << "            FitResult                   \n\n";
+   //os << "            FitResult                   \n\n";
    os << "Minimizer is " << fMinimType << std::endl;
    unsigned int npar = fParams.size(); 
+   unsigned int nw = 25; 
    if (fVal != fChi2) 
-   os << "Likelihood       =\t" << fVal << std::endl;
-   os << "Chi2             =\t" << fChi2<< std::endl;
-   os << "NDf              =\t" << fNdf << std::endl; 
-   os << "Edm              =\t" << fEdm << std::endl; 
-   os << "NCalls           =\t" << fNCalls << std::endl; 
+      os << std::setw(nw) << std::left << "Likelihood" << " =\t" << fVal << std::endl;
+   os << std::setw(nw) << std::left <<  "Chi2"  << " =\t" << fChi2<< std::endl;
+   os << std::setw(nw) << std::left << "NDf"    << " =\t" << fNdf << std::endl; 
+   os << std::setw(nw) << std::left << "Edm"    << " =\t" << fEdm << std::endl; 
+   os << std::setw(nw) << std::left << "NCalls" << " =\t" << fNCalls << std::endl; 
    assert(fFitFunc != 0); 
    for (unsigned int i = 0; i < npar; ++i) { 
-      os << fFitFunc->ParameterName(i) << "\t\t =\t" << fParams[i] << " \t+/-\t" << fErrors[i] << std::endl; 
+      os << std::setw(nw) << std::left << fFitFunc->ParameterName(i) << " =\t" << fParams[i] << " \t+/-\t" << fErrors[i] << std::endl; 
    }
 
    if (doCovMatrix) PrintCovMatrix(os); 

@@ -32,7 +32,7 @@ namespace Math {
 void MinimizerOptions::SetDefaultMinimizer(const std::string & type, const std::string & algo = "") {   
    // set the default minimizer type and algorithm
    if (type != "") gDefaultMinimizer = type; 
-   if (algo != "") gDefaultMinimAlgo = algo; 
+   if (algo != "") gDefaultMinimAlgo = algo;
 }
 void MinimizerOptions::SetDefaultErrorDef(double up) {
    gDefaultErrorDef = up; 
