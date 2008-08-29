@@ -2464,7 +2464,9 @@ Int_t TProof::CollectInputFrom(TSocket *s)
             TProofProgressStatus *status = 0;
 
             if ((mess->BufferSize() > mess->Length()) && (fProtocol > 8))
-            (*mess) >> status >> abort;
+               (*mess) >> status >> abort;
+            else
+               Error("CollectInputFrom", "Old kPROOF_STOPPROCESS message type");
             if (!abort) {
                sl = FindSlave(s);
                TList *listOfMissingFiles = 0;
@@ -2475,7 +2477,6 @@ Int_t TProof::CollectInputFrom(TSocket *s)
                      fPlayer->AddOutputObject(listOfMissingFiles);
                }
                Int_t ret = fPlayer->GetPacketizer()->AddProcessed(sl, status, &listOfMissingFiles);
-              // fPlayer->AddEventsProcessed(status->GetEntries());
                if (ret > 0)
                   fPlayer->GetPacketizer()->MarkBad(sl, status, &listOfMissingFiles);
             }
@@ -2495,23 +2496,23 @@ Int_t TProof::CollectInputFrom(TSocket *s)
             (*mess) >> tmpinfo;
             if (tmpinfo == 0) {
                Error("CollectInputFrom","kPROOF_GETSLAVEINFO: no list received!");
-            } else { //TODO shift right
-            tmpinfo->SetOwner(kFALSE);
-            Int_t nentries = tmpinfo->GetSize();
-            for (Int_t i=0; i<nentries; i++) {
-               TSlaveInfo* slinfo =
-                  dynamic_cast<TSlaveInfo*>(tmpinfo->At(i));
-               if (slinfo) {
-                  fSlaveInfo->Add(slinfo);
-                  if (slinfo->fStatus != TSlaveInfo::kBad) {
-                     if (!active) slinfo->SetStatus(TSlaveInfo::kNotActive);
-                     if (bad) slinfo->SetStatus(TSlaveInfo::kBad);
+            } else {
+               tmpinfo->SetOwner(kFALSE);
+               Int_t nentries = tmpinfo->GetSize();
+               for (Int_t i=0; i<nentries; i++) {
+                  TSlaveInfo* slinfo =
+                     dynamic_cast<TSlaveInfo*>(tmpinfo->At(i));
+                  if (slinfo) {
+                     fSlaveInfo->Add(slinfo);
+                     if (slinfo->fStatus != TSlaveInfo::kBad) {
+                        if (!active) slinfo->SetStatus(TSlaveInfo::kNotActive);
+                        if (bad) slinfo->SetStatus(TSlaveInfo::kBad);
+                     }
+                     if (!sl->GetMsd().IsNull()) slinfo->fMsd = sl->GetMsd();
                   }
-                  if (!sl->GetMsd().IsNull()) slinfo->fMsd = sl->GetMsd();
                }
-            }
-            delete tmpinfo;
-            rc = 1;
+               delete tmpinfo;
+               rc = 1;
             }
          }
          break;
@@ -2725,8 +2726,8 @@ void TProof::HandleAsyncInput(TSocket *sl)
 void TProof::MarkBad(TSlave *wrk, const char *reason)
 {
    // Add a bad slave server to the bad slave list and remove it from
-   // the active list and from the two monitor objects.
-   // Assume that the work done by this worker was lost and ask packerizer to reassign it.
+   // the active list and from the two monitor objects. Assume that the work
+   // done by this worker was lost and ask packerizer to reassign it.
 
    if (!wrk) {
       Error("MarkBad", "worker instance undefined: protocol error? ");

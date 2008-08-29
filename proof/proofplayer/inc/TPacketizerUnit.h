@@ -70,6 +70,7 @@ public:
    TDSetElement *GetNextPacket(TSlave *sl, TMessage *r);
 
    Double_t	 GetCurrentTime();
+
    ClassDef(TPacketizerUnit,0)  //Generate work packets for parallel processing
 };
 

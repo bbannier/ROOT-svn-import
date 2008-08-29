@@ -40,11 +40,13 @@
 #include "TProofProgressStatus.h"
 #endif
 
+
 class TDSet;
 class TDSetElement;
 class TSlave;
 class TMessage;
 class TNtupleD;
+
 
 
 class TVirtualPacketizer : public TObject {
@@ -99,7 +101,7 @@ public:
 
    Bool_t                  IsValid() const { return fValid; }
    Long64_t                GetEntriesProcessed() const { return (fProgressStatus? fProgressStatus->GetEntries():0); }
-   virtual Long64_t        GetEntriesProcessed(TSlave *sl) const;
+//TODO remove   virtual Long64_t        GetEntriesProcessed(TSlave *sl) const;
    virtual Int_t           GetEstEntriesProcessed(Float_t, Long64_t &ent, Long64_t &bytes)
                            { ent = GetEntriesProcessed(); bytes = GetBytesRead(); return 0; }
    Long64_t                GetTotalEntries() const { return fTotalEntries; }

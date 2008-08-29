@@ -38,11 +38,14 @@ public:
    Long64_t GetBytesRead() const { return fBytesRead; }
    Double_t GetProcTime() const { return fProcTime; }
    Double_t GetCPUTime() const { return fCPUTime; }
+   Double_t GetRate() const { return fProcTime?fEntries/fProcTime:0; }
    void     SetEntries(Long64_t entries) { fEntries = entries; }
    void     IncEntries(Long64_t entries = 1) { fEntries += entries; }
    void     SetBytesRead(Long64_t bytesRead) { fBytesRead = bytesRead; }
    void     SetProcTime(Double_t procTime) { fProcTime = procTime; }
+   void     IncProcTime(Double_t procTime) { fProcTime += procTime; }
    void     SetCPUTime(Double_t procTime) { fCPUTime = procTime; }
+   void     IncCPUTime(Double_t procTime) { fCPUTime += procTime; }
    void     Print(Option_t* option = "") const;
    TProofProgressStatus operator-(TProofProgressStatus &st);
    TProofProgressStatus &operator+=(const TProofProgressStatus &st);

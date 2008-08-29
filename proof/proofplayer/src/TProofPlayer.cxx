@@ -846,7 +846,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
 
          if (fSelStatus->IsOk()) {
             fProgressStatus->IncEntries();
-            fProgressStatus->SetBytesRead(TFile::GetFileBytesRead()-readbytesatstart);
+            fProgressStatus->SetBytesRead(TFile::GetFileBytesRead()-readbytesatstart); //TODO: this should be total; not difference
             if (gMonitoringWriter)
                gMonitoringWriter->SendProcessingProgress(fProgressStatus->GetEntries(),
                        TFile::GetFileBytesRead()-readbytesatstart, kFALSE);
