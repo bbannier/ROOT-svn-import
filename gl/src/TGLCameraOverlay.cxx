@@ -279,7 +279,13 @@ void TGLCameraOverlay::Render(TGLRnrCtx& rnrCtx)
    glMatrixMode(GL_PROJECTION);
    glPushMatrix();
    glLoadIdentity();
-
+   if (rnrCtx.Selection())
+   {
+      TGLRect rect(*rnrCtx.GetPickRectangle());
+      rnrCtx.GetCamera()->WindowToViewport(rect);
+      gluPickMatrix(rect.X(), rect.Y(),
+                    rect.Width(), rect.Height(), cam.RefViewport().CArr());
+   }
    glMatrixMode(GL_MODELVIEW);
    glPushMatrix();
    glLoadIdentity();
