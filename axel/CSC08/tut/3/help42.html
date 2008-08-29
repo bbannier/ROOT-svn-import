@@ -1,0 +1,36 @@
+<html>
+<head><title>ROOT Exercise III - Help Level 2</title></head>
+<body class="help2">
+<h1>ROOT Exercise III - Help Level 2</h1>
+<p>Got stuck? This might help even more:</p>
+<h2>2 My First TSelector</h2>
+
+<div class="exercise">
+Actually you have more than just one file - the tree is spread over several ROOT files.
+So you want to create a TChain from them all.
+How much time of data taking does the tree from all the <tt>beamspot*.root</tt> files correspond to?
+</div>
+
+<p>To create a chain of all files called <tt>beamspot*.root</tt> you create a new TChain object,
+passing the trees' name, and the add the files using a wildcard.
+What you want to draw is the time.
+You could start with drawing the date itself, by drawing the expression <tt>"eventinfo.fTime"</tt>.
+You will see that the axis labels are wrong; you might want to submit a bug report at http://root.cern.ch!
+Either way, this is not very informative - the time span is just too short; it's all on 2008-06-23, within the minute 16:05.
+To get more detail, draw the seconds and microseconds!
+eventinfo.fTime is a TDatime object which is part of ROOT; check its documentation on how to get the seconds from it.
+The microseconds are part of the tree itself.</p>
+
+<p>You will see that the last bin is not completely filled.
+The reason is that the bin goes from e.g. 50.5 to 51.0 seconds,
+but the events only go up to maybe 50.2 seconds.
+If we have 1000 events per second, and if all bins are 0.5 second wide,
+then each bin has 500 entries - but the last one will have only 200 entries
+if data taking stopped at 50.2 seconds.
+The same is valid for the first bin</p>
+
+<p>Do you manage to find out exactly when the first and last event occurred?</p>
+<a href="help4s.html" class="solution">SOLUTION!</a>
+</p>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<html>
+<head><title>ROOT Exercise II</title></head>
+<body>
+<h1>ROOT Exercise II</h1>
+<p>When you are done with today's exercise please do <em>not</em> proceed to the next day.
+Help your colleagues instead!</p>
+<ul>
+  <li>Exercise I: The Basics.</li>
+  <li><span class="today">Exercise II: I/O and Trees.</span></li>
+  <li>Exercise III: Tree-Based Analysis.</li>
+</ul>
+<h3>Overview</h3>
+<p>In this session you will learn how to read and write objects, including TTrees.<p/>
+<p>You need to download the code from <a href="../2.tar.bz2">2.tar.bz2</a> and then run</p>
+<pre>tar xjf 2.tar.bz2
+cd 2</pre>
+<p>These are your exercises for this session:</p>
+<ol>
+  <li>I/O
+    <ol>
+      <li><p>Run the macro <a href="ages_io.C" class="source">ages_io.C</a>
+      For some reason, the histogram does not stay on the canvas.
+      Please repair that!</p>
+      <a href="help21.html" class="help1">HELP!</a></li>
+
+      <li><p>The script creates a ROOT file.
+      Quit ROOT and restart it, then use the TBrowser to look at the ROOT file.
+      Draw the histogram that's stored in it.</p>
+      <a href="help22.html" class="help1">HELP!</a></li>
+    </ol>
+  </li>
+  <li>Reading a TTree
+    <ol>
+      <li><p>Execute <a href="read_tree.C" class="source">read_tree.C<b>+</b?</a> (note the plus!).
+      Modify the macro to read the muons; use the TBrowser to determine the name of the branch.</p>
+      <a href="help31.html" class="help1">HELP!</a></li>
+
+      <li><p>Looking at the macro you probably saw that it reads the ROOT file over the network.
+      Usually there is no difference to reading it from a local disk.
+      You can speed it up (even if you were reading from disk) by enabling only the branches that you really need to read.
+      Well, give it a try!</p>
+      <a href="help31.html" class="help1">HELP!</a></li>
+
+      <li><p>Instead of plotting the Pt distribution, generate a histogram of another value.</p>
+      <a href="help41.html" class="help1">HELP!</a></li>
+
+      <li><p>Use <tt>TTree::Draw()</tt> to draw the same expression.
+      Is the performance comparable to the read performance with all branches enabled?</p>
+      <a href="help51.html" class="help1">HELP!</a></li>
+
+    </ol>
+  </li>
+</ol>
+</body>
+</html>

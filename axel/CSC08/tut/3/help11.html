@@ -1,0 +1,29 @@
+<html>
+<head><title>ROOT Exercise III - Help Level 1</title></head>
+<body class="help1">
+<h1>ROOT Exercise III - Help Level 1</h1>
+<p>Got stuck? This might help:</p>
+<h2>1 Split Level</h2>
+
+<div class="exercise">
+Run the macro <a href="exercise3.C" class="source">exercise3.C</a>
+in compiled mode.
+We, Bertand and Axel, have used that macro to generate yesterday's tree.
+Note the ROOT file's compression factor.
+Note the time it takes to write the tree by using the same mechanism as in 
+<a href="read_tree.C" class="source">read_tree.C</a> from yesterday,
+which we have included in today's sources again for your convenience.
+</div>
+
+<p>You should run both macros in compiled mode by adding a "+" at the end.
+<tt>gROOT-&gt;Time()</tt> is an easy way to determine how long things take,
+see read_tree.C where it's used, too.
+Just surround the relevant part in exercise3.C by calls to <tt>gROOT-&gt;Time()</tt>
+such that you get the time it takes to write the ROOT file.</p>
+<p>You can access the current file using the global <tt>gFile</tt>.
+Check the documentation of <a href="http://root.cern.ch/root/html520/TFile.html"><tt>TFile</tt></a>
+to see the function returning the compression factor<p>
+
+<a href="help1s.html" class="solution">SOLUTION!</a>
+</body>
+</html>

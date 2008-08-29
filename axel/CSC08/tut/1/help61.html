@@ -1,0 +1,43 @@
+<html>
+<head><title>ROOT Exercise I - Help Level 1</title></head>
+<body class="help1">
+<h1>ROOT Exercise I - Help Level 1</h1>
+<p>Got stuck? This might help:</p>
+<h2>3 Drawing and Editing Histograms </h2>
+
+<div class="exercise">
+      <li><p>The style settings you set with the editor are preserved in the .C file.
+      Identify and use the function calls in <tt>styleshist.C</tt> to change ages.C
+      such that it displays the histogram styled like the example picture above.</p>
+</div>
+
+<p>Looking at the saved macro, here are the lines you have to adapt to the original macro:</p>
+<pre>
+
+[...]
+
+   ages->SetBarOffset(0.05);
+   ages->SetBarWidth(0.899);
+
+[...]
+
+   gaus->SetLineColor(2);
+   gaus->SetLineWidth(2);
+
+[...]
+
+   ages->SetFillColor(4);
+   ages->SetFillStyle(3001);
+
+   ages->GetXaxis()->SetRange(4,21);
+   ages->Draw("BAR");
+
+[...]
+
+   ptstats->SetOptFit(10001);
+
+</pre>
+
+<a href="help6s.html" class="solution">SOLUTION!</a>
+</body>
+</html>

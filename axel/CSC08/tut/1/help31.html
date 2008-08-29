@@ -1,0 +1,21 @@
+<html>
+<head><title>ROOT Exercise I - Help Level 1</title></head>
+<body class="help1">
+<h1>ROOT Exercise I - Help Level 1</h1>
+<p>Got stuck? This might help:</p>
+<h2>2 Constructors and alike</h2>
+
+<div class="exercise">
+TMotorcycle prints whenever its constructor or assignment operator etc are called.
+Why did that (mostly) stop when you fixed the macro?
+</div>
+
+<p>You probably changed all the variables of type <tt>TMotorcycle</tt>
+into variables of type <tt>TMotorcycle*</tt>.
+Before you passed objects around, which got copied again and again,
+which in turn invokes the assignment operator and the copy constructor etc.
+How does converting to pointers help here?</p>
+
+<a href="help3s.html" class="solution">SOLUTION!</a>
+</body>
+</html>
