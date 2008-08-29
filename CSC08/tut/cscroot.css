@@ -1,0 +1,83 @@
+.help1 {
+  background-color: #fffda3;
+}
+.help2 {
+  background-color: #ffdfa3;
+}
+.help3 {
+  background-color: #ffc5a3;
+}
+.solution {
+  background-color: #ffa3a3;
+}
+
+a.help1, a.help2, a.help3, a.solution {
+margin-left: 1em;
+margin-top: 1em;
+padding: 1em;
+display:inline-block;
+}
+
+div.exercise {
+  width: 80%;
+  border-style: solid;
+  border-width: 3px;
+  border-color: gray;
+  margin-left: 2em;
+  background-color: white;
+  padding: 1em;
+}
+a.source {
+  background-color: #d0ffd0;
+}
+pre {
+  width: 80%;
+  margin-left: 2em;
+  padding: 1em;
+  border-style: solid;
+  border-width: 3px;
+  border-color: gray; // #fff200;
+  background-color: #fdff9c;
+}
+h1 {
+  margin-left: 1em;
+  margin-top: 1em;
+  margin-bottom: 3em;
+}
+h2 {
+  margin-left: 1em;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  
+}
+ol {
+#  border-style: solid;
+#  border-width: 1px;
+  width: 80%;
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  padding-right: 0.5em;
+}
+li {
+  font-weight: normal;
+  border-left-style: solid;
+  border-color: lightgray;
+  border-width: 8px;
+  padding-bottom: 0.5em;
+  padding-left: 1em;
+}
+
+li.lvl1 {
+  font-weight: bold;
+  padding-left: 1em;
+}
+
+ul {
+  list-style-type: none;
+}
+
+.today {
+  background-color: #d0ffd0;
+  padding: 0.2em;
+  padding-left: 0em;
+}
