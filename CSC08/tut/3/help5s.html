@@ -1,0 +1,26 @@
+<html>
+<head><title>ROOT Exercise III - Solution</title></head>
+<body class="solution">
+<h1>ROOT Exercise III - Solution</h1>
+<p>Got stuck? This is the solution</p>
+<h2>2 My First TSelector</h2>
+
+<div class="exercise">
+We have written a TSelector for you that analyzes this tree; you can find it in <a href="TBeamSpotSel.h" class="source">TBeamSpotSel.h</a> and <a href="TBeamSpotSel.C" class="source">TBeamSpotSel.C</a>.
+Run it in compiled mode, e.g. using <tt>TTree::Process()</tt> on the tree in <a href="beamspot.root" class="source">beamspot.root</a>.
+What does it display?
+</div>
+
+<pre>TChain* ch = new TChain("tree3"); // create the chain, giving the trees' name
+ch-&gt;Add("beamfile*.root"); // add all files
+ch-&gt;Process("TBeamSpotSel.C+"); // process the tree with the compiled selector
+</pre>
+<p>Looking at the histogram title, the plot shows the x vs. the y vs. the z position of the beam spots.
+In other words: it shows the 3D distribution of the primary vertexes.
+You should also look at the code: there are several histogram created in BeginSlave();
+one of them is drawn in Terminate(), called hBeamSpotXYZ.
+It is extracted from the output list so the selector can also work with PROOF.</p>
+
+<p>In Process() you can see that hBeamSpotXYZ is indeed filled with the x, y, and z coordinate of each event's primary vertex.</p>
+</body>
+</html>

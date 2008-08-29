@@ -1,0 +1,98 @@
+<html>
+<head><title>ROOT Exercise I - Solution</title></head>
+<body class="solution">
+<h1>ROOT Exercise I - Solution</h1>
+<p>Got stuck? This is the solution</p>
+<h2>3 Drawing and Editing Histograms </h2>
+
+<div class="exercise">
+      <li><p>The style settings you set with the editor are preserved in the .C file.
+      Identify and use the function calls in <tt>styleshist.C</tt> to change ages.C
+      such that it displays the histogram styled like the example picture above.</p>
+</div>
+
+<p>Your code should more or less look like this:</p>
+<pre>
+#include "TFile.h"
+#include "TStyle.h"
+#include "TLatex.h"
+#include "TH1F.h"
+#include "TF1.h"
+#include "TPad.h"
+
+TH1F *create_histo()
+{
+   // function creating a histogram using the data 
+   // located in ages.txt (ages of CSC08 participants)
+   // and returning a pointer on the created histogram
+
+   FILE *stream;
+   char line[10];
+   // open the text file
+   if ((stream = fopen( "ages.txt", "rt" )) == NULL ) {
+      printf("Error: cannot open file ages.txt\n");
+      return;
+   }
+   // create the 1D histogram of floats 
+   // (25 bins, between 0.0 and 50.0)
+   TH1F *h1 = new TH1F("ages", "ages", 25, 0.0, 50.0);
+   // read each line and fill the histogram
+   while (fgets(line, 10, stream)) {
+      h1->Fill(atof(line));
+   }
+   // set fill style 
+   h1->SetFillStyle(3001);
+   // and fill color
+   h1->SetFillColor(kBlue);
+   // draw (display) the histogram
+   h1->Draw();
+   return h1;
+}
+
+void fit_histo(TH1F *h1)
+{
+   // function fitting a 1D histogram
+
+   // fit histogram using Root's built-in gauss function
+   h1->Fit("gaus");
+   // set line color of the fit
+   h1->GetFunction("gaus")->SetLineColor(kRed);
+   // set line width of the fit
+   h1->GetFunction("gaus")->SetLineWidth(2);
+   // set bar properties for the histogram
+   h1->SetBarOffset(0.05);
+   h1->SetBarWidth(0.9);
+   // draw the histogram with "bar" style
+   h1->Draw("BAR");
+   // create latex legend to display gauss mathematical function
+   TLatex* latex = new TLatex();
+   // set NDC coordinates [0,1] 
+   latex->SetNDC();
+   // set text color
+   latex->SetTextColor(36);
+   // set text size
+   latex->SetTextSize(0.07);
+   // draw the latex function at [0.5,0.55] NDC coordinates
+   latex->DrawLatex(0.15, 0.55, "#font[12]{f(x)}#scale[0.8]{=[a]}#upoint#font[12]{e}^{ - #frac{(#scale[1.2]{#font[12]{x}}-[b])^{2}}{2#upoint[c]^{2}}}");
+   // update the current pad
+   gPad->Update();
+}
+
+void ages()
+{
+   // main function
+   
+   // display mean, constant and sigma fit informations
+   gStyle->SetOptFit(10001);
+   // Display only the following statistics informations:
+   // name, number of entries, mean and rms
+   gStyle->SetOptStat(1111);
+   // call the function creating the histogram
+   TH1F *hist = create_histo();
+   // call the function fitting the histogram
+   fit_histo(hist);
+}
+
+</pre>
+</body>
+</html>

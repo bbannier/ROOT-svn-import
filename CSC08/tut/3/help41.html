@@ -1,0 +1,22 @@
+<html>
+<head><title>ROOT Exercise III - Help Level 1</title></head>
+<body class="help1">
+<h1>ROOT Exercise III - Help Level 1</h1>
+<p>Got stuck? This might help:</p>
+<h2>2 My First TSelector</h2>
+
+<div class="exercise">
+Actually you have more than just one file - the tree is spread over several ROOT files.
+So you want to create a TChain from them all.
+How much time of data taking does the tree from all the <tt>beamspot*.root</tt> files correspond to?
+</div>
+
+<p>You should use a TChain to open a tree spread over multiple files.
+It's part of the lecture.</p>
+<p>Once you have the chain you can draw a part (a "leaf") of it using e.g.
+<tt>TChain::Draw()</tt>.
+Which part to draw should be obvious because you know fromthe previous exercise what's in the tree.</p>
+
+<a href="help42.html" class="solution">MORE HELP!</a>
+</body>
+</html>

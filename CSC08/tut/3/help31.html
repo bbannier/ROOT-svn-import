@@ -1,0 +1,32 @@
+<html>
+<head><title>ROOT Exercise III - Help Level 1</title></head>
+<body class="help1">
+<h1>ROOT Exercise III - Help Level 1</h1>
+<p>Got stuck? This might help:</p>
+<h2>2 My First TSelector</h2>
+
+<div class="exercise">
+Explore the tree in <a href="beamspot.root" class="source">beamspot.root</a>.
+It contains the position of the primary collision of the beam's particles
+("vertex 0" or "primary vertex") for a virtual experiment.
+The position is stored in centimeters relative to the center of the detector.
+For each position (x|y|z) the tree also denotes the time stamp of the collision,
+where everything (year up to second) is in one branch,
+and the fractions of seconds are stored in another branch.
+What branches does it have? What is its structure?
+</div>
+
+<p>You start ROOT and create a TBrowser.
+You switch to the current directory and double click beamspot.root.
+Like that, TBrowser opens it and adds it to the left panel.
+Select it, and double-click your way through it:
+you can e.g. draw the data of the tree by double-clicking its branches.</p>
+<p>You will see that the file contains one tree that is called "tree3".
+It has only one branch, which in turn has several sub-branches and one leaf.
+Note how TBrowser can even offer functions for fTime, but not for fVtx0.
+TBrowser knows the class stored by fTime (<tt>TDatime</tt> is part of ROOT)
+but not the custom (i.e. not part of ROOT) class stored in fVtx.</p>
+
+<a href="help3s.html" class="solution">SOLUTION!</a>
+</body>
+</html>

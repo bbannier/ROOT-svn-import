@@ -1,0 +1,97 @@
+<html>
+<head><title>ROOT Exercise III - Solution</title></head>
+<body class="solution">
+<h1>ROOT Exercise III - Solution</h1>
+<p>Got stuck? This is the solution</p>
+<h2>1 Split Level</h2>
+
+<div class="exercise">
+Now change the macro <a href="exercise3.C" class="source">exercise3.C</a>
+such that the tree is generated with split level 0 instead of 99.
+Did the compression factor change? Why? Did the timing change? Why?
+</div>
+
+<p>Split level 99 makes the same data members being stored close together.
+Same data members often have similar values,
+so the Huffman coding used by the zipping is more successful and generates smaller files.</p>
+<p>More branches means ROOT needs to do more when writing the tree,
+simply because each branch has a buffer (so called bucket) of a certain size,
+and all of those need to be written.
+So using split level 99, which creates one branch for each data member,
+means ROOT is a bit slower when writing the tree,
+compared to split level 0 where ROOT just creates and writes that one branch without sub-branches.</p>
+<p>This is what exercise3.C should look like to write the tree with split level 0:</p>
+
+<pre>
+#include "TFile.h"
+#include "TTree.h"
+#include "TRandom.h"
+#include "TClonesArray.h"
+#include "myparticle.h"
+
+void exercise3(Int_t nevents = 1000)
+{
+   Int_t i, j;
+   gRandom-&gt;SetSeed();
+   // first create a file
+   TFile f("exercise3.root", "recreate");
+   // create a tree
+   TTree MyTree("MyTree","MyEvent Tree");
+   MyTree.SetAutoSave(10000000000);
+   // create clone arrays
+   TClonesArray *electrons = new TClonesArray("Electron");
+   TClonesArray &amp;el = *electrons;
+
+   TClonesArray *muons = new TClonesArray("Muon");
+   TClonesArray &amp;mu = *muons;
+
+   TClonesArray *pions = new TClonesArray("Pion");
+   TClonesArray &amp;pi = *pions;
+   // create a branch holding the vector
+   MyTree.Branch("electrons", &amp;electrons, 32000, <b>0</b>);
+   // create a branch holding the clones array
+   MyTree.Branch("muons", &amp;muons, 32000, <b>0</b>);
+   MyTree.Branch("pions", &amp;pions, 32000, 0);
+
+   // initialize Root's timing mechanism
+   gROOT-&gt;Time();
+
+   for (i=0;i&lt;nevents;i++) {
+      el.Clear();
+      mu.Clear();
+      pi.Clear();
+      // generate a random number of particles
+      Int_t npts = Int_t(gRandom-&gt;Gaus(1000,200));
+      if(npts &lt; 0) npts = 1;
+      for (j=0;j&lt;npts;j++) {
+         Float_t x = gRandom-&gt;Gaus(1.2);
+         Float_t y = gRandom-&gt;Gaus(0.9);
+         Float_t z = gRandom-&gt;Gaus();
+         Float_t e_e = gRandom-&gt;Landau(510,25.0);
+         Float_t e_u = gRandom-&gt;Landau(1056.6,10.0);
+         Float_t e_p = gRandom-&gt;Landau(1349.8,13.0);
+         Float_t p_e = gRandom-&gt;Landau(1.0, 0.1);
+         Float_t p_u = gRandom-&gt;Landau(2.0, 0.2);
+         Float_t p_p = gRandom-&gt;Landau(2.7, 0.27);
+         // create a new particle in the vector
+         Electron *e = new(el[j]) Electron(x, y, z, e_e, p_e);
+         Muon     *u = new(mu[j]) Muon(x, y, z, e_u, p_u);
+         Pion     *p = new(pi[j]) Pion(x, y, z, e_p, p_p);
+      }
+      // fill the tree
+      MyTree.Fill();
+   }
+
+   // display the time elapsed since the first call to gROOT->Time()
+   gROOT-&gt;Time();
+
+   // print the content of the tree
+   MyTree.Print();
+   // write it to the file
+   MyTree.Write();
+}
+
+
+</pre>
+</body>
+</html>

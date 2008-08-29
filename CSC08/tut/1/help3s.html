@@ -1,0 +1,112 @@
+<html>
+<head><title>ROOT Exercise I - Solution</title></head>
+<body class="solution">
+<h1>ROOT Exercise I - Solution</h1>
+<p>Got stuck? This is the solution</p>
+<h2>2 Constructors and alike</h2>
+
+<div class="exercise">
+TMotorcycle prints whenever its constructor or assignment operator etc are called.
+Why did that (mostly) stop when you fixed the macro?
+</div>
+<p>You now pass pointers to an object around, instead of the object itself.
+So the pointer gets copied again and again, but not the <tt>TMotorcycle</tt> object itself.
+And like that <tt>TMotorcycle</tt>'s constructor or assignment operator will not be called anymore!
+</p>
+
+<p>Your code will most probably look like this:</p>
+<pre>
+
+#include "Riostream.h"
+#include "Motorcycle.h"
+
+void setproperties(TMotorcycle *m, const char *brand, const char *model, Int_t cap, Float_t power)
+{
+   // function setting (changing) parameters of the TMotorcycle class
+   // passed in argument
+
+   // declare the pointer on TMotorcycle class
+   TMotorcycle *mybike;
+   // assign it to the one passed in argument
+   mybike = m;
+   // set the brand
+   mybike-&gt;SetBrand(brand);
+   // set the model
+   mybike-&gt;SetModel(model);
+   // set the cubic capacity
+   mybike-&gt;SetCubicCap(cap);
+   // set the power
+   mybike-&gt;SetPower(power);
+}
+
+void printinfos(TMotorcycle *m)
+{
+   // function printing parameters of the TMotorcycle class
+   // pointer passed in argument
+
+   // declare the class pointer (assign it to the one passed in argument)
+   TMotorcycle *mybike = m;
+   // dump infos on the terminal
+   cout &lt;&lt; "Brand: " &lt;&lt; mybike-&gt;GetBrand();
+   cout &lt;&lt; " - Model: " &lt;&lt; mybike-&gt;GetModel();
+   cout &lt;&lt; " - Cubic Capacity: " &lt;&lt; mybike-&gt;GetCubicCap();
+   cout &lt;&lt; " - Power: " &lt;&lt; mybike-&gt;GetPower() &lt;&lt; endl;
+}
+
+void test_motorcycle()
+{
+   // main function
+
+   // load the library containing the TMotorcycle class 
+   // implementation
+   gSystem-&gt;Load("Motorcycle_C");
+   // create a canvas to display pictures of the motorcycles
+   TCanvas *c1 = new TCanvas("c1", "Pictures", 1200, 600);
+   // divide the canvas
+   c1-&gt;Divide(3, 2);
+   // create a new TMotorcycle class with some values
+   TMotorcycle *mybike = new TMotorcycle("Honda", "VTX1300S", 1312, 55);
+   // verify the class member values
+   printinfos(mybike);
+   // go to the 1st pad
+   c1-&gt;cd(1);
+   // display picture of the motorcycle
+   mybike-&gt;ShowPicture();
+   // change the values
+   setproperties(mybike, "Suzuki", "M800Z", 805, 39);
+   // and verify the values have been changed
+   printinfos(mybike);
+   // go to the 2d pad
+   c1-&gt;cd(2);
+   // display picture of the motorcycle
+   mybike-&gt;ShowPicture();
+   // change values
+   setproperties(mybike, "Yamaha", "XVS1300A", 1304, 53.5);
+   // verify
+   printinfos(mybike);
+   // go to the 3rd pad
+   c1-&gt;cd(3);
+   // display picture of the motorcycle
+   mybike-&gt;ShowPicture();
+   // change values
+   setproperties(mybike, "Kawasaki", "VN900C", 903, 37);
+   // verify
+   printinfos(mybike);
+   // go to the 4th pad
+   c1-&gt;cd(4);
+   // display picture of the motorcycle
+   mybike-&gt;ShowPicture();
+   // change values
+   setproperties(mybike, "Harley-Davidson", "FXCWC", 1584, 49.236);
+   // verify
+   printinfos(mybike);
+   // go to the 5th pad
+   c1-&gt;cd(5);
+   // display picture of the motorcycle
+   mybike-&gt;ShowPicture();
+   c1-&gt;cd();
+}
+
+</pre>
+</body>
+</html>

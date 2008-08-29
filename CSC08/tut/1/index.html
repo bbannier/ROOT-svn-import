@@ -1,0 +1,65 @@
+<html>
+<head><title>ROOT Exercise I</title></head>
+<body>
+<h1>ROOT Exercise I</h1>
+<p>When you are done with today's exercise please do <em>not</em> proceed to the next day.
+Help your colleagues instead!</p>
+<ul>
+  <li><span class="today">Exercise I: The Basics.</span></li>
+  <li>Exercise II: I/O and Trees.</li>
+  <li>Exercise III: Tree-Based Analysis.</li>
+</ul>
+<h3>Overview</h3>
+<p>In this session you will learn about scopes, what constructors and assignment operators do, and how to draw histograms and change their style.<p/>
+<p>You need to download the code from <a href="../1.tar.bz2">1.tar.bz2</a> and then run</p>
+<pre>tar xjf 1.tar.bz2
+cd 1</pre>
+<p>These are your exercises for this session:</p>
+<ol>
+  <li>Scopes
+    <ol>
+      <li><p>Run the macro <a href="histogram.C" class="source">histogram.C</a>.
+      It is supposed to display a histogram, but something is wrong.
+      Fix the macro so the histogram gets displayed.</p>
+      <a href="help11.html" class="help1">HELP!</a></li>
+    </ol>
+  </li>
+  <li>Constructors and alike
+    <ol>    
+      <li><p>Execute the macro <a href="test_motorcycle.C" class="source">test_motorcycle.C</a>.
+      This macro loads a library containing the class <tt>TMotorcycle</tt>, and using this class
+      it tries to display several motorcycle branchs and models.
+      As you can see the macro has a bug - it only displays one kind of motorcycles. Fix that!
+      You might want to run it in compiled mode with ACLiC (adding a "+" behind the file name).</p>
+      <a href="help21.html" class="help1">HELP!</a></li>
+
+      <li><p>TMotorcycle prints whenever its constructor or assignment operator etc are called.
+      Why did that (mostly) stop when you fixed the macro?</p>
+      <p>In reality, these functions can be extremely expensive,
+      e.g. for large vectors of large objects,
+      so it is important to learn how to write code that avoids their invocation.</p>
+      <a href="help31.html" class="help1">HELP!</a></li>
+    </ol>
+  </li>
+  <li>Drawing and Editing Histograms
+    <ol>
+      <li><p>Execute <a href="ages.C" class="source">ages.C</a>.
+      It creates and displays a histogram showing teh age distribution of the participants of the CSC08.
+      Use the editor (in the TCanvas's menu under View &gt; Editor) to make the histogram look like this one:</p>
+      <p><img src="ages.png" class="default" alt="goal histogram from ages.C"></p>
+      <a href="help41.html" class="help1">HELP!</a></li>
+      <li><p>Save the histogram to <tt>styledhist.C</tt>
+      (e.g. see the Canvas's file menue, or right-click the histogram)
+      and look at that saved file.
+      Restart ROOT and run <tt>styleshist.C</tt> to check that ROOT really
+      does store the histogram as C++ code.</p>
+      <a href="help51.html" class="help1">HELP!</a></li>
+      <li><p>The style settings you set with the editor are preserved in the .C file.
+      Identify and use the function calls in <tt>styleshist.C</tt> to change ages.C
+      such that it displays the histogram styled like the example picture above.</p>
+      <a href="help61.html" class="help1">HELP!</a></li>
+    </ol>
+  </li>
+</ol>
+</body>
+</html>

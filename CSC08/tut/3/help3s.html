@@ -1,0 +1,27 @@
+<html>
+<head><title>ROOT Exercise III - Solution</title></head>
+<body class="solution">
+<h1>ROOT Exercise III - Solution</h1>
+<p>Got stuck? This is the solution</p>
+<h2>2 My First TSelector</h2>
+
+<div class="exercise">
+Explore the tree in <a href="beamspot.root" class="source">beamspot.root</a>.
+It contains the position of the primary collision of the beam's particles
+("vertex 0" or "primary vertex") for a virtual experiment.
+The position is stored in centimeters relative to the center of the detector.
+For each position (x|y|z) the tree also denotes the time stamp of the collision,
+where everything (year up to second) is in one branch,
+and the fractions of seconds are stored in another branch.
+What branches does it have? What is its structure?
+</div>
+
+<p>The following code is one way of retrieving the information you are looking for:</p>
+<pre>
+TFile* f = new TFile("beamspot.root"); // open the file
+f-&gt;ls(); // the tree is called "tree3"
+TTree* t = (TTree*) f-&gt;Get("tree3"); // extract the tree
+t-&gt;Print(); // dump the tree's structure
+</pre>
+</body>
+</html>

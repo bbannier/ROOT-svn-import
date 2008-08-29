@@ -1,0 +1,94 @@
+<html>
+<head><title>ROOT Exercise III</title></head>
+<body>
+<h1>ROOT Exercise III</h1>
+<p>When you are done with today's exercise please do <em>not</em> proceed to the next day.
+Help your colleagues instead!</p>
+<ul>
+  <li>Exercise I: The Basics.</li>
+  <li>Exercise II: I/O and Trees.</li>
+  <li><span class="today">Exercise III: Tree-Based Analysis.</span></li>
+</ul>
+<h3>Overview</h3>
+<p>In this session you will learn how to analyze trees.<p/>
+<p>You need to download the code from <a href="../3.tar.bz2">3.tar.bz2</a> and then run</p>
+<pre>tar xjf 3.tar.bz2
+cd 3</pre>
+<p>These are your exercises for this session:</p>
+<ol>
+  <li>Split Level
+    <ol>
+      <li><p>Run the macro <a href="exercise3.C" class="source">exercise3.C</a>
+      in compiled mode.
+      We, Bertand and Axel, have used that macro to generate yesterday's tree.
+      Note the ROOT file's compression factor.
+      Note the time it takes to write the tree by using the same mechanism as in 
+      <a href="read_tree.C" class="source">read_tree.C</a> from yesterday,
+      which we have included in today's sources again for your convenience.</p>
+      <a href="help11.html" class="help1">HELP!</a></li>
+
+      <li><p>Now change the macro <a href="exercise3.C" class="source">exercise3.C</a>
+      such that the tree is generated with split level 0 instead of 99.
+      Did the compression factor change? Why? Did the timing change? Why?</p>
+      <a href="help21.html" class="help1">HELP!</a></li>
+    </ol>
+  </li>
+  <li>My First TSelector
+    <ol>    
+      <li><p>Explore the tree in <a href="beamspot.root" class="source">beamspot.root</a>.
+      It contains the position of the primary collision of the beam's particles
+      ("vertex 0" or "primary vertex") for a virtual experiment.
+      The position is stored in centimeters relative to the center of the detector.
+      For each position (x|y|z) the tree also denotes the time stamp of the collision,
+      where everything (year up to second) is in one branch,
+      and the fractions of seconds are stored in another branch.
+      What branches does it have? What is its structure?</p>
+      <a href="help31.html" class="help1">HELP!</a></li>
+
+      <li><p>Actually you have more than just one file - the tree is spread over several ROOT files.
+      So you want to create a TChain from them all.
+      How much time of data taking does the tree from all the <tt>beamspot*.root</tt> files correspond to?</p>
+      <a href="help41.html" class="help1">HELP!</a></li>
+
+      <li><p>We have written a TSelector for you that analyzes this tree; you can find it in <a href="TBeamSpotSel.h" class="source">TBeamSpotSel.h</a> and <a href="TBeamSpotSel.C" class="source">TBeamSpotSel.C</a>.
+      Run it in compiled mode, e.g. using <tt>TTree::Process()</tt> on the tree in <a href="beamspot.root" class="source">beamspot.root</a>.
+      What does it display?</p>
+      <a href="help51.html" class="help1">HELP!</a></li>
+
+      <li><p>One of the experiment's students is a notorious party animal.
+      One day he had to fix a cable close to the detector,
+      but because he didn't have enough sleep he stumbled and fell.
+      Of course he didn't tell anyone - but can you find out the exact time when it happened?
+      Can you tell what has happened, maybe even (roughly) where he was working?
+      Only that much: it happened during the period of time that you have data for.</p>
+      <a href="help61.html" class="help1">HELP!</a></li>
+
+      <li><p>A beam's particles are not always colliding at the same position.
+      What is the width of the beam for this experiment, in x, y, and z?
+      Does it change over time?</p>
+      <a href="help71.html" class="help1">HELP!</a></li>
+
+      <li><p>Does the width change over time?</p>
+      <a href="help81.html" class="help1">HELP!</a></li>
+    </ol>
+  </li>
+  <li>Running a TSelector with PROOF <em>[OPTIONAL!]</em>.
+    <ol>
+      <li><p>Before we can use PROOF you need to start a PROOF daemon from the shell:
+      <pre>xrootd -c $ROOTSYS/etc/proof/xpd.cf.sample -b</pre>
+      You can now start a PROOF job (a <em>session</em> and a <em>query</em>)
+      by running <a href="run.C" class="source">run.C</a> from within ROOT.
+      Look at <a href="run.C" class="source">run.C</a> to see how similar it is compared to a non-PROOF analysis.</p>
+      <a href="help91.html" class="help1">HELP!</a></li>
+
+      <li><p>If you want you can experiment a bit, check the <a href="http://root.cern.ch/twiki/bin/view/ROOT/ProofHowTo">PROOF Wiki</a>.
+      Keep in mind that in your case the PROOF master is <tt>localhost</tt>.</p>
+      <a href="helpA1.html" class="help1">HELP!</a></li>
+
+      <li><p>Can you find out why PROOF spawns the amount of workers it does (from what we have heard it should be four)?</p>
+      <a href="helpB1.html" class="help1">HELP!</a></li>
+    </ol>
+  </li>
+</ol>
+</body>
+</html>
