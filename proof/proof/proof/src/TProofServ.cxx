@@ -800,11 +800,20 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
 
    req << fLatency.RealTime();
    // TODO: update the status in the player and send that one!
-   TProofProgressStatus *status =
-      new TProofProgressStatus((Long64_t)(fPlayer?fPlayer->GetEventsProcessed():(-1)),
-                               bytesRead, realtime, cputime);
+//   TProofProgressStatus *status =
+//      new TProofProgressStatus((Long64_t)(fPlayer?fPlayer->GetEventsProcessed():(-1)),
+//                               bytesRead, realtime, cputime);
+   TProofProgressStatus *status;
+   if (fPlayer)
+      status = fPlayer->GetProgressStatus();
+   else {
+      Error("GetNextPacket", "No progress status object");
+      return 0;
+   }
+   status->IncProcTime(realtime);
+   status->IncCPUTime(cputime);
    req << status;
-   delete status;
+   status = 0; // status is owned by the player.
    fLatency.Start();
    Int_t rc = fSocket->Send(req);
    if (rc <= 0) {
@@ -1457,7 +1466,7 @@ void TProofServ::HandleSocketInputDuringProcess()
                // On the master: Propagete further
                fProof->StopProcess(aborted, timeout);
             else
-               // Worker: Actually stop processing
+               // Worker: actually stop processing
                if (fPlayer)
                   fPlayer->StopProcess(aborted, timeout);
          }
@@ -3623,7 +3632,7 @@ void TProofServ::HandleProcess(TMessage *mess)
          PDB(kGlobal, 1) Info("HandleProcess", "calling %s::Process()", fPlayer->IsA()->GetName());
          fPlayer->Process(dset, filename, opt, nentries, first);
 
-         // Return number of events processed to the client
+         // Return number of events processed (to the client ??)
          if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kFinished) {
             Bool_t abort =
               (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) ? kTRUE : kFALSE;
@@ -3634,11 +3643,13 @@ void TProofServ::HandleProcess(TMessage *mess)
                m << fPlayer->GetEventsProcessed();
             }
 */
-            TProofProgressStatus* status =
-               new TProofProgressStatus(fPlayer->GetEventsProcessed(),
-                                        gPerfStats?gPerfStats->GetBytesRead():0);
-            Printf("Sending status");
+//            TProofProgressStatus* status =
+//               new TProofProgressStatus(fPlayer->GetEventsProcessed(),
+//                                        gPerfStats?gPerfStats->GetBytesRead():0);
+            TProofProgressStatus* status = fPlayer->GetProgressStatus();
+            Printf("Sending status"); // TODO is it called at all?
             m << status << abort;
+            status = 0; // the status belongs to the player.
             fSocket->Send(m);
          }
 
@@ -3758,7 +3769,6 @@ void TProofServ::HandleProcess(TMessage *mess)
       fPlayer->Process(dset, filename, opt, nentries, first);
 
       // Return number of events processed
-      
       TMessage m(kPROOF_STOPPROCESS);
       Bool_t abort = (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted) ? kFALSE : kTRUE;
       TProofProgressStatus* status =

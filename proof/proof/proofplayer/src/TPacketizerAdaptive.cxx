@@ -288,7 +288,7 @@ public:
    TFileStat  *GetCurFile() { return fCurFile; }
    void        SetFileNode(TFileNode *node) { fFileNode = node; }
    void        UpdateRates(TProofProgressStatus *st);
-   Float_t     GetAvgRate() { return ((GetProcTime() > 0) ? GetEntriesProcessed()/GetProcTime():0); }
+   Float_t     GetAvgRate() { return fStatus->GetRate(); }
    Float_t     GetCurRate() {
       return (fCurProcTime?fCurProcessed/fCurProcTime:0); }
    Int_t       GetLocalEventsLeft() {
@@ -344,7 +344,7 @@ void TPacketizerAdaptive::TSlaveStat::UpdateRates(TProofProgressStatus *st)
 TProofProgressStatus *TPacketizerAdaptive::TSlaveStat::AddProcessed(TProofProgressStatus *st)
 {
    // Add the current element to the fDSubSet (subset processed by this worker)
-   // and if the status arg is given change the size of the packet.
+   // and if the status arg is given, then change the size of the packet.
    // return the difference (*st - *fStatus)
 
    if (fDSubSet && fCurElem) {
@@ -390,9 +390,7 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
    if (!fProgressStatus) {
       Error("TPacketizerAdaptive", "No progress status");
       return;
-   } else
-      fProgressStatus->Print();
-
+   }
 
    // The possibility to change packetizer strategy to the basic TPacketizer's
    // one (in which workers always process their local data first).
@@ -1318,7 +1316,6 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
 
    if ( slstat->fCurElem != 0 ) {
       Double_t latency;
-//      Long64_t expectedNumEv = slstat->fCurElem->GetNum();
 
       (*r) >> latency;
 
@@ -1342,7 +1339,8 @@ TDSetElement *TPacketizerAdaptive::GetNextPacket(TSlave *sl, TMessage *r)
               status ? status->GetBytesRead() : -1);
 
       if (gPerfStats != 0) {
-         gPerfStats->PacketEvent(sl->GetOrdinal(), sl->GetName(), slstat->fCurElem->GetFileName(),
+         gPerfStats->PacketEvent(sl->GetOrdinal(), sl->GetName(),
+                                 slstat->fCurElem->GetFileName(),
                                  numev, latency,
                                  status ? status->GetProcTime() : 0,
                                  status ? status->GetCPUTime() : 0,
@@ -1517,8 +1515,8 @@ Int_t TPacketizerAdaptive::GetEstEntriesProcessed(Float_t t, Long64_t &ent,
    // This is needed to smooth the instantaneous rate plot.
 
    // Default value
-   ent = fProgressStatus->GetEntries();
-   bytes = fProgressStatus->GetBytesRead();
+   ent = GetEntriesProcessed();
+   bytes = GetBytesRead();
 
    // Parse option
    if (fUseEstOpt == kEstOff)
