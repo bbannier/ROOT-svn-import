@@ -11,7 +11,7 @@ void read_tree2(const char *what = "muons", Bool_t disable_branches = kFALSE, Bo
    // function reading particles collection in a tree
 
    // open the Root file
-   TFile *f = new TFile("exercise3.root");
+   TFile *f = new TFile("http://server/exercise3.root");
    // get the tree from the file
    TTree *myTree = (TTree*)f->Get("MyTree");
    if (disable_branches) {
