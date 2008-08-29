@@ -25,7 +25,7 @@ void read_tree2(const char *what = "muons", Bool_t disable_branches = kFALSE, Bo
 
    if (use_tree_draw) {
       // use TTree::Draw() mechanism
-      myTree->Draw(Form("%s.fPt>>h1(100,0.0,10.0)", what), "");
+      myTree->Draw(Form("%s.fPt", what), "");
    }
    else {
       // declare a pointer on a TClonesArray 
