@@ -20,7 +20,7 @@ which we have included in today's sources again for your convenience.
 .q
 root
 .x read_tree.C+
-gFile->GetCompressionFactor()
+gFile-&gt;GetCompressionFactor()
 </pre>
 <p>This is what exercise3.C should look like to get the timing information:</p>
 
@@ -84,7 +84,7 @@ void exercise3(Int_t nevents = 1000)
       MyTree.Fill();
    }
 
-   // display the time elapsed since the first call to gROOT->Time()
+   // display the time elapsed since the first call to gROOT-&gt;Time()
    <b>gROOT-&gt;Time();</b>
 
    // print the content of the tree
