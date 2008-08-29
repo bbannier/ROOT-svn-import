@@ -28,15 +28,11 @@ void read_tree()
    TFile *f = new TFile("exercise3.root");
    // get the tree from the file
    TTree *myTree = (TTree*)f-&gt;Get("MyTree");
-   // disable all branches 
-   myTree-&gt;SetBranchStatus("*", 0);
-   // enable only the branch we are interested to read
-   myTree-&gt;SetBranchStatus("muons*", 1);
    // declare a pointer on a TClonesArray 
    // and initialize it to 0
    TClonesArray *particles = 0;
    // assign the branch to the TClonesArray
-   myTree-&gt;SetBranchAddress("muons", &amp;particles);
+   <b>myTree-&gt;SetBranchAddress("muons", &amp;particles);</b>
    
    // initialize Root's timing mechanism
    gROOT-&gt;Time();

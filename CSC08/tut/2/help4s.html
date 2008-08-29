@@ -1,0 +1,33 @@
+<html>
+<head><title>ROOT Exercise II - Solution</title></head>
+<body class="solution">
+<h1>ROOT Exercise II - Solution</h1>
+<p>Got stuck? This is the solution</p>
+<h2>1 Reading a TTree</h2>
+
+<div class="exercise">
+Looking at the macro you probably saw that it reads the ROOT file over the network.
+Usually there is no difference to reading it from a local disk.
+You can speed it up (even if you were reading from disk) by enabling only the branches that you really need to read.
+Well, give it a try!
+</div>
+
+<p>Your the change in the code that selects the branch to read:</p>
+<pre>
+...
+void read_tree()
+{
+   // function reading particles collection in a tree
+
+   // open the Root file
+   TFile *f = new TFile("exercise3.root");
+   // get the tree from the file
+   TTree *myTree = (TTree*)f-&gt;Get("MyTree");
+   <b>// disable all branches 
+   myTree-&gt;SetBranchStatus("*", 0);
+   // enable only the branch we are interested to read
+   myTree-&gt;SetBranchStatus("muons*", 1);</b>
+...
+</pre>
+</body>
+</html>
