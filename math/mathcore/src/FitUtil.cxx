@@ -21,6 +21,7 @@
 #include "Math/IntegratorMultiDim.h"
 
 #include "Math/Error.h"
+#include "Math/Util.h"  // for safe log(x)
 
 #include <limits>
 #include <cmath>
@@ -529,28 +530,19 @@ void FitUtil::EvaluateChi2Gradient(const IModelFunction & f, const BinData & dat
 
 // utility function used by the likelihoods 
 
-inline double EvalLogF(double fval) { 
-   // evaluate the log with a protections against negative argument to the log 
-   // smooth linear extrapolation below function values smaller than  epsilon
-   // (better than a simple cut-off)
-   const static double epsilon = 2.*std::numeric_limits<double>::min();
-   if(fval<= epsilon) 
-      return fval/epsilon + std::log(epsilon) - 1; 
-   else      
-      return std::log(fval);
-}
-
 // for LogLikelihood functions
 
 double FitUtil::EvaluatePdf(const IModelFunction & func, const UnBinData & data, const double * p, unsigned int i, double * g) {  
    // evaluate the pdf contribution to the logl
+   // return actually the log of the pdf and its derivatives 
 
    //func.SetParameters(p);
 
    const double * x = data.Coords(i);
    double fval = func ( x, p ); 
-   //return EvalLogF(fval);
-   if (g == 0) return fval;
+   double logPdf = ROOT::Math::Util::EvalLog(fval);
+   //return 
+   if (g == 0) return logPdf;
 
    const IGradModelFunction * gfunc = dynamic_cast<const IGradModelFunction *>( &func); 
 
@@ -561,9 +553,14 @@ double FitUtil::EvaluatePdf(const IModelFunction & func, const UnBinData & data,
    }
    else { 
       // estimate gradieant numerically with simple 2 point rule 
+      // should probably calculate gradient of log(pdf) is more stable numerically
       SimpleGradientCalculator gc(func); 
       gc.ParameterGradient(x, p, fval, g ); 
    }       
+   // divide gradient by function value since returning the logs
+   for (unsigned int ipar = 0; ipar < func.NPar(); ++i) {
+      g[i] /= fval; // this should be checked against infinities
+   }
 
 #ifdef DEBUG
    std::cout << x[i] << "\t"; 
@@ -578,7 +575,7 @@ double FitUtil::EvaluatePdf(const IModelFunction & func, const UnBinData & data,
 #endif
 
 
-   return fval;
+   return logPdf;
 }
 
 double FitUtil::EvaluateLogL(const IModelFunction & func, const UnBinData & data, const double * p, unsigned int &nPoints) {  
@@ -611,7 +608,7 @@ double FitUtil::EvaluateLogL(const IModelFunction & func, const UnBinData & data
          nRejected++; // reject points with negative pdf (cannot exist)
       }
       else 
-         logl += EvalLogF( fval); 
+         logl += ROOT::Math::Util::EvalLog( fval); 
       
    }
    
@@ -657,7 +654,7 @@ void FitUtil::EvaluateLogLGradient(const IModelFunction & f, const UnBinData & d
 // for binned log likelihood functions      
 //------------------------------------------------------------------------------------------------
 double FitUtil::EvaluatePoissonBinPdf(const IModelFunction & func, const BinData & data, const double * p, unsigned int i, double * g ) {  
-   // evaluate the pdf contribution to the logl
+   // evaluate the pdf contribution to the logl (return actually log of pdf)
    // t.b.d. implement integral option
 
 
@@ -671,13 +668,14 @@ double FitUtil::EvaluatePoissonBinPdf(const IModelFunction & func, const BinData
 
    double fval = func ( x , p); 
 
-   // remove constant term depending on N
-   double logPdf =   y * EvalLogF( fval) - fval;  
+   // logPdf for Poisson: ignore constant term depending on N
+   double logPdf =   y * ROOT::Math::Util::EvalLog( fval) - fval;  
    // need to return the pdf contribution (not the log)
 
-   double pdfval =  std::exp(logPdf);
+   //double pdfval =  std::exp(logPdf);
 
-   if (g == 0) return pdfval; 
+  //if (g == 0) return pdfval; 
+   if (g == 0) return logPdf; 
 
    unsigned int npar = func.NPar(); 
    const IGradModelFunction * gfunc = dynamic_cast<const IGradModelFunction *>( &func); 
@@ -688,27 +686,28 @@ double FitUtil::EvaluatePoissonBinPdf(const IModelFunction & func, const BinData
       gfunc->ParameterGradient(  x , p, g );  
       // correct g[] do be derivative of poisson term 
       for (unsigned int k = 0; k < npar; ++k) {
-         g[k] *= ( y/fval - 1.) * pdfval; 
+         g[k] *= ( y/fval - 1.) ;//* pdfval; 
       }       
    }
    else { 
       // estimate gradient numerically with simple 2 point rule 
-      static const double kEps = 1.0E-4;      
+      static const double kEps = 1.0E-6;      
       std::vector<double> p2(p,p+npar);
       for (unsigned int k = 0; k < npar; ++k) {
-         p2[k] += kEps;
+         p2[k] += kEps*p2[k];
          // t.b.d : treat case of infinities 
          // make derivatives of the log (more stables ) and correct afterwards
          double fval2 = func(x,&p2.front() );    
-         double logPdf2 = y * EvalLogF( fval2) - fval2; 
+         double logPdf2 = y * ROOT::Math::Util::EvalLog( fval2) - fval2; 
          double dlogPdf = (logPdf2 - logPdf)/kEps;
-         g[k] = dlogPdf * pdfval;
+         g[k] = dlogPdf;// * pdfval;
          p2[k] = p[k]; // restore original p value
 
       }       
    }
 
-   return pdfval;
+//   return pdfval;
+   return logPdf;
 }
 
 double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData & data, const double * p, unsigned int &nPoints) {  
@@ -738,7 +737,7 @@ double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData &
       }
 
 
-      loglike +=  fval - y * EvalLogF( fval);  
+      loglike +=  fval - y * ROOT::Math::Util::EvalLog( fval);  
       
       
    }
