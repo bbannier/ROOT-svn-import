@@ -61,8 +61,8 @@ ol {
 li {
   font-weight: normal;
   border-left-style: solid;
-  border-color: lightgray;
-  border-width: 8px;
+  border-left-color: lightgray;
+  border-left-width: 8px;
   padding-bottom: 0.5em;
   padding-left: 1em;
 }
