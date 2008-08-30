@@ -1,0 +1,29 @@
+<html>
+<head><link href="../cscroot.css" rel="stylesheet" type="text/css"><title>ROOT Exercise III - Solution</title></head>
+<body class="help2">
+<h1>ROOT Exercise III - Solution</h1>
+<p>Got stuck? This is the solution</p>
+<h2>Running a TSelector with PROOF <em>[OPTIONAL!]</em> </h2>
+
+<div class="exercise">
+<p>Before we can use PROOF you need to start a PROOF daemon from the shell:
+<pre>xrootd -c xpd.cf -b</pre>
+You can now start a PROOF job (a <em>session</em> and a <em>query</em>)
+by running <a href="run.C" class="source">run.C</a> from within ROOT.
+Look at <a href="run.C" class="source">run.C</a> to see how similar it is compared to a non-PROOF analysis.</p>
+</div>
+
+<p>The following two lines are what you need to use proof:</p>
+<pre>
+   TProof::Open("localhost");
+   chain->SetProof();
+</pre>
+
+<p>Here is what they are really doing</p>
+<ol>
+<li>TProof::Open("localhost"); is starting a proof session
+<li>chain->SetProof(); ist telling the TChain to use the actual proof session
+</ol>
+
+</body>
+</html>
