@@ -12,7 +12,7 @@ How much time of data taking does the tree from all the <tt>beamspot*.root</tt> 
 </div>
 
 <p>To create a chain of all files called <tt>beamspot*.root</tt> you create a new TChain object,
-passing the trees' name, and the add the files using a wildcard.
+passing the trees' name, and then add the files using a wildcard.
 What you want to draw is the time.
 You could start with drawing the date itself, by drawing the expression <tt>"eventinfo.fTime"</tt>.
 You will see that the axis labels are wrong; you might want to submit a bug report at http://root.cern.ch!
@@ -27,10 +27,9 @@ but the events only go up to maybe 50.2 seconds.
 If we have 1000 events per second, and if all bins are 0.5 second wide,
 then each bin has 500 entries - but the last one will have only 200 entries
 if data taking stopped at 50.2 seconds.
-The same is valid for the first bin</p>
+The same is valid for the first bin.</p>
 
 <p>Do you manage to find out exactly when the first and last event occurred?</p>
 <a href="help4s.html" class="solution">SOLUTION!</a>
-</p>
 </body>
 </html>
