@@ -20,11 +20,11 @@ void read_histo()
    // create a file in read mode
    TFile *file = new TFile("ages.root", "READ");
    // get (read) the histogram from the file
-   TH1F *h1 = (TH1F *)file-&gtGet("ages");
+   TH1F *h1 = (TH1F *)file-&gt;Get("ages");
    // remove the association of h1 with file
-   <b>h1-&gtSetDirectory(0);</b>
+   <b>h1-&gt;SetDirectory(0);</b>
    // draw (display) the histogram
-   h1-&gtDraw();
+   h1-&gt;Draw();
    // call the function fitting the histogram
    fit_histo(h1);
    // delete the file. As seen before, this automatically 
