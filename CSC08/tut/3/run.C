@@ -5,7 +5,7 @@
 
 //
 // Run
-//   $ xrootd -c $ROOTSYS/etc/proof/xpd.cf.sample -b
+//   $ xrootd -c xpd.cf -b
 // to start the PROOF daemon before using proof in here!
 //
 

@@ -5,10 +5,13 @@
 <p>Got stuck? This is the solution</p>
 <h2>Running a TSelector with PROOF <em>[OPTIONAL!]</em> </h2>
 
+<div class="exercise">
+<p>Can you find out why PROOF spawns the amount of workers it does (it should be two)?</p>
+</div>
 
 <p>As the proof twiki says, when starting Proof on the localhost, a session with a 
 number of workers equal to the number of CPUs in your machine will be started. 
-So when you start proof, if you see something like this:</p>
+As you have dual-core machines, it starts two workers:</p>
 
 <pre>
 root [0] TProof::Open("localhost")
@@ -20,8 +23,6 @@ PROOF set to parallel mode (2 workers)
 (class TProof*)0x11e77b0
 root [1]
 </pre>
-
-<p>That means your machine has dual core (two CPUs)</p>
 
 </body>
 </html>
