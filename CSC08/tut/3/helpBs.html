@@ -1,0 +1,47 @@
+<html>
+<head><link href="../cscroot.css" rel="stylesheet" type="text/css"><title>ROOT Exercise III - Solution</title></head>
+<body class="help2">
+<h1>ROOT Exercise III - Solution</h1>
+<p>Got stuck? This is the solution</p>
+<h2>Running a TSelector with PROOF <em>[OPTIONAL!]</em> </h2>
+
+<div class="exercise">
+<p>Try to change the number of workers on your computer (e.g set up 6 workers).</p>
+</div>
+
+<p>As stated in the Proof wiki page, the number of workers can be changed using the 
+xpd.localwrks entry in the configuration file (xpd.cf).</p>
+
+<p>If you already started xrootd before, find the process ID with e.g.
+'ps -ax | grep xrootd' and kill it.</p>
+<p>Edit xpd.cf with your preferred editor, 
+uncomment this line: <tt># xpd.localwrks 2</tt> (remove the # sign) and replace 2 by 6.</p>
+So this line:
+<pre>
+# xpd.localwrks 2
+</pre>
+Becomes:
+<pre>
+xpd.localwrks 6
+</pre>
+
+<p>Save the file and now you can restart xrootd deamon:</p>
+<pre>
+xrootd -c xpd.cf -b
+</pre>
+
+<p>Now, when you start Proof with <>TProof::Open("localhost")<>, you must see 6 workers</p>
+
+<pre>
+root [0] TProof::Open("localhost")
+Starting master: opening connection ...
+Starting master: OK
+Opening connections to workers: OK (6 workers)
+Setting up worker servers: OK (6 workers)
+PROOF set to parallel mode (6 workers)
+(class TProof*)0x1fe37d0
+root [1]
+</pre>
+
+</body>
+</html>
