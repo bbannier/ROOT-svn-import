@@ -10,7 +10,11 @@
 </div>
 
 <p>When starting Proof on the localhost, a session with a number of workers equal to the number 
-of CPUs in your machine will be started. As you have dual-core machines, it starts two workers:</p>
+of CPUs in your machine will be started. To check how many CPUs you have, just type:</p>
+<pre>
+cat /proc/cpuinfo
+</pre>
+<p>As you can see, your computer has dual-core, so Proof starts two workers:</p>
 
 <pre>
 root [0] TProof::Open("localhost")
