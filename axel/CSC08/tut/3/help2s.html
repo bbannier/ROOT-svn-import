@@ -15,7 +15,7 @@ Did the compression factor change? Why? Did the timing change? Why?
 Same data members often have similar values,
 so the Huffman coding used by the zipping is more successful and generates smaller files.</p>
 <p>More branches means ROOT needs to do more when writing the tree,
-simply because each branch has a buffer (so called bucket) of a certain size,
+simply because each branch has a buffer (so called basket) of a certain size,
 and all of those need to be written.
 So using split level 99, which creates one branch for each data member,
 means ROOT is a bit slower when writing the tree,

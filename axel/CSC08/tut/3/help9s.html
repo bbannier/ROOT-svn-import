@@ -1,6 +1,6 @@
 <html>
 <head><link href="../cscroot.css" rel="stylesheet" type="text/css"><title>ROOT Exercise III - Solution</title></head>
-<body class="help2">
+<body class="solution">
 <h1>ROOT Exercise III - Solution</h1>
 <p>Got stuck? This is the solution</p>
 <h2>Running a TSelector with PROOF <em>[OPTIONAL!]</em> </h2>
@@ -15,15 +15,9 @@ Look at <a href="run.C" class="source">run.C</a> to see how similar it is compar
 
 <p>The following two lines are what you need to use proof:</p>
 <pre>
-   TProof::Open("localhost");
-   chain->SetProof();
+   TProof::Open("localhost"); // starts a proof session
+   chain->SetProof(); // tells the TChain to use the actual proof session
 </pre>
-
-<p>Here is what they are really doing</p>
-<ol>
-<li>TProof::Open("localhost"); is starting a proof session
-<li>chain->SetProof(); ist telling the TChain to use the actual proof session
-</ol>
 
 </body>
 </html>

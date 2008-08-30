@@ -75,7 +75,7 @@ void TBeamSpotSel::SlaveBegin(TTree * /*tree*/)
 </pre>
 <p>As you have seen, the detector was moved at around 35-36 seconds.
 So we fill the position into index 0 before 35 seconds and into index 1 after 36 seconds;
-we skip the time between 35 and 36 seconds because we don't know exactly when it happened 9and because we don't care enough :-).
+we skip the time between 35 and 36 seconds because we don't know exactly when it happened and because we don't care enough :-).
 So the filling code in TBeamSpotSel::Process() looks like that:</p>
 <pre>
 Bool_t TBeamSpotSel::Process(Long64_t entry)
@@ -130,7 +130,7 @@ void TBeamSpotSel::Terminate()
 <p>This will display the following canvas, note how it's divided ito 6 parts:</p>
 <img src="beamspot_width_xyz.png" alt="beam spot width in x, y, z">
 
-<p>Looking at the RMS values you can see that the beam width is rather stable (up to the percent region),
+<p>Looking at the RMS values you can see that the beam width is rather stable (up to the per mil region),
 so you can claim that it does not change of the time you checked.</p>
 </body>
 </html>
