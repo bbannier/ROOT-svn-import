@@ -50,16 +50,16 @@ void TBeamSpotSel::SlaveBegin(TTree * /*tree*/)
 
    fBeamSpotX_Time
       = new TH2F("hBeamSpotX_Time",
-                 "Beam position vs. time;X [cm]; Seconds since 2008-06-23, 16:05;Entries",
-                 100, -r, r, 60, 0., 60.);
+                 "Beam position vs. time;Seconds since 2008-06-23, 16:05;X [cm];Entries",
+                 60, 0., 60., 100, -r, r);
    fBeamSpotY_Time
       = new TH2F("hBeamSpotY_Time",
-                 "Beam position vs. time;Y [cm]; Seconds since 2008-06-23, 16:05;Entries",
-                 100, -r, r, 60, 0., 60.);
+                 "Beam position vs. time;Seconds since 2008-06-23, 16:05;Y [cm];Entries",
+                 60, 0., 60., 100, -r, r);
    fBeamSpotZ_Time
       = new TH2F("hBeamSpotZ_Time",
-                 "Beam position vs. time;Z [cm]; Seconds since 2008-06-23, 16:05;Entries",
-                 100, -r, r, 60, 0., 60.);
+                 "Beam position vs. time;Seconds since 2008-06-23, 16:05;Z [cm];Entries",
+                 60, 0., 60., 100, -r, r);
    fBeamSpotXYZ
       = new TH3F("hBeamSpotXYZ",
                  "Beam position (X|Y|Z);X [cm]; Y [cm]; Z [cm];Entries",
@@ -109,9 +109,9 @@ Bool_t TBeamSpotSel::Process(Long64_t entry)
    Double_t x = fEventInfo->PrimaryVertex().X();
    Double_t y = fEventInfo->PrimaryVertex().Y();
    Double_t z = fEventInfo->PrimaryVertex().Z();
-   fBeamSpotX_Time->Fill(x, sec);
-   fBeamSpotY_Time->Fill(y, sec);
-   fBeamSpotZ_Time->Fill(z, sec);
+   fBeamSpotX_Time->Fill(sec, x);
+   fBeamSpotY_Time->Fill(sec, y);
+   fBeamSpotZ_Time->Fill(sec, z);
 
    fBeamSpotXYZ->Fill(x, y, z);
 

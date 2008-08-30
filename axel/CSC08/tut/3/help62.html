@@ -1,0 +1,33 @@
+<html>
+<head><link href="../cscroot.css" rel="stylesheet" type="text/css"><title>ROOT Exercise III - Help Level 2</title></head>
+<body class="help2">
+<h1>ROOT Exercise III - Help Level 2</h1>
+<p>Got stuck? This might help even more:</p>
+<h2>2 My First TSelector</h2>
+
+<div class="exercise">
+One of the experiment's students is a notorious party animal.
+One day he had to fix a cable close to the detector,
+but because he didn't have enough sleep he stumbled and fell.
+Of course he didn't tell anyone - but can you find out the exact time when it happened?
+Can you tell what has happened, maybe even (roughly) where he was working?
+Only that much: it happened during the period of time that you have data for.
+</div>
+
+<p>You should look at the Z position vs. the time.
+The selector TBeamSpotSel already stores that in the histogram hBeamSpotZ_Time, so just plot that.
+As we said in the lecture, plotting should be done in Terminate.
+We extract the histogram from the output list (instead of just using fBeamSpotZ_Time) because that is how we can extract results obtained via PROOF.</p>
+<p>When looking at the distribution of the Z position you will notice a sudden change at a certain time stamp.
+This means the the beam position as seen by the experiment has moved.
+A possible cause could be the student.</p>
+<p>Could he have moved the beam? Unlikely.</p>
+<p>Could he have moved the experiment? Maybe - if it's not too big...
+So where would he have to be standing to move the experiment in Z by falling?
+In the Z position next to the experiment!</p>
+
+<p>Do you manage to find out exactly when the first and last event occurred?</p>
+<a href="help6s.html" class="solution">SOLUTION!</a>
+</p>
+</body>
+</html>
