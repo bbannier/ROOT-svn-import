@@ -133,6 +133,7 @@ void runProof(const char *what = "simple",
       TProof::AddEnvVar("PROOF_INITCMD", env.Data());
    }
 
+//   TProof::AddEnvVar("PROOF_WRAPPERCMD","valgrind --leak-check=full --log-file=/tmp/vg");
    // Get the PROOF Session
    TProof *proof = getProof(url, nwrks, tutdir.Data(), "ask");
    if (!proof) {
