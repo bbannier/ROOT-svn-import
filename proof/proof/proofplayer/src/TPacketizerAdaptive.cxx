@@ -138,8 +138,7 @@ public:
    void        IncProcessed(Long64_t nEvents)
                   { fProcessed += nEvents; }
    Long64_t    GetProcessed() const { return fProcessed; }
-   void        DecProcessed(Long64_t nEvents)
-                  { fProcessed -= nEvents; }
+   void        DecreaseProcessed(Long64_t nEvents) { fProcessed -= nEvents; }
    // this method is used by Compare() it adds 1, so it returns a number that
    // would be true if one more slave is added.
    Long64_t    GetEventsLeftPerSlave() const
@@ -432,7 +431,7 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
       Info("TPacketizerAdaptive", "Setting max number of workers per node to %ld",
            fgMaxSlaveCnt);
    } else {
-      // Use number of CPUs (or minimum 2) as default
+      // Use the number of CPUs, if bigger than 2 (default)
       SysInfo_t si;
       gSystem->GetSysInfo(&si);
       if (si.fCpus > 2)
@@ -713,6 +712,11 @@ void TPacketizerAdaptive::InitStats()
    fFractionOfRemoteFiles = (1.0 * noRemoteFiles) / totalNumberOfFiles;
    Info("TPacketizerAdaptive",
         "fraction of remote files %f", fFractionOfRemoteFiles);
+
+   if (!fValid)
+      SafeDelete(fProgress);
+
+   PDB(kPacketizer,1) Info("TPacketizerAdaptive", "return");
 }
 
 //______________________________________________________________________________
@@ -1638,7 +1642,7 @@ Int_t TPacketizerAdaptive::ReassignPacket(TDSetElement *e,
    TFileNode *node = (TFileNode*) fFileNodes->FindObject( host );
    if (node) {
       // the packet 'e' was processing data from this node.
-      node->DecProcessed(e->GetNum());
+      node->DecreaseProcessed(e->GetNum());
       node->Add( e );
       if (!fUnAllocated->FindObject(node))
          fUnAllocated->Add(node);

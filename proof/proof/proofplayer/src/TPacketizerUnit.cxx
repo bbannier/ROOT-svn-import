@@ -344,7 +344,7 @@ TDSetElement *TPacketizerUnit::GetNextPacket(TSlave *sl, TMessage *r)
    slstat->fTimeInstant = cTime;
 
    PDB(kPacketizer,2)
-      Info("GetNextPacket", "worker-%s: num  %lld processing %lld remained %lld",sl->GetOrdinal(),
+      Info("GetNextPacket", "worker-%s: num %lld, processing %lld, remaining %lld",sl->GetOrdinal(),
                             num, fProcessing, (fTotalEntries - GetEntriesProcessed() - fProcessing));
    TDSetElement *elem = new TDSetElement("", "", "", 0, fProcessing);
    elem->SetBit(TDSetElement::kEmpty);
