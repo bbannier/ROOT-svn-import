@@ -121,7 +121,7 @@ namespace ROOT {
             // (found 2 points rule does not work correctly - minuit2FitBench fails) 
             SimpleGradientCalculator(int gdim, const IModelFunction & func,double eps = 2.E-8, int istrat = 1) : 
                fEps(eps),
-               fPrecision(std::numeric_limits<double>::epsilon()  ),
+               fPrecision(1.E-8 ), // sqrt(epsilon)
                fStrategy(istrat), 
                fN(gdim ),
                fFunc(func),

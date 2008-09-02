@@ -400,6 +400,10 @@ bool TFumiliMinimizer::SetVariable(unsigned int ivar, const std::string & name, 
    if (fFumili == 0) { 
       std::cerr << "TFumiliMinimizer: ERROR : invalid TFumili pointer. Set function first " << std::endl;
    }
+#ifdef DEBUG
+   std::cout << "set variable " << ivar << " " << name << " value " << val << " step " << step << std::endl; 
+#endif
+
    fFumili->SetParameter(ivar , name.c_str(), val, step, 0., 0. ); 
    return true; 
 }
@@ -409,6 +413,9 @@ bool TFumiliMinimizer::SetLimitedVariable(unsigned int ivar, const std::string &
    if (fFumili == 0) { 
       std::cerr << "TFumiliMinimizer: ERROR : invalid TFumili pointer. Set function first " << std::endl;
    }
+#ifdef DEBUG
+   std::cout << "set limited variable " << ivar << " " << name << " value " << val << " step " << step << std::endl; 
+#endif
    fFumili->SetParameter(ivar, name.c_str(), val, step, lower, upper ); 
    return true; 
 }
@@ -432,6 +439,11 @@ bool TFumiliMinimizer::SetFixedVariable(unsigned int ivar, const std::string & n
 
    fFumili->SetParameter(ivar, name.c_str(), val, 0., val, val ); 
    fFumili->FixParameter(ivar);
+
+#ifdef DEBUG
+   std::cout << "Fix variable " << ivar << " " << name << " value " << std::endl; 
+#endif
+
    return true; 
 }
 
