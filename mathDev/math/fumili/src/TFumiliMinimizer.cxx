@@ -22,6 +22,92 @@
 #include <algorithm>
 #include <functional>
 
+
+
+#ifdef USE_FUMILI_FUNCTION
+bool gUseFumiliFunction = true;
+//#include "FumiliFunction.h"
+// fit method function used in TFumiliMinimizer 
+
+#include "Fit/PoissonLikelihoodFCN.h"
+#include "Fit/LogLikelihoodFCN.h"
+#include "Fit/Chi2FCN.h"
+#include "TF1.h"
+#include "TFumili.h"
+
+template<class MethodFunc> 
+class FumiliFunction  : public ROOT::Math::FitMethodFunction { 
+
+   typedef ROOT::Math::FitMethodFunction::BaseFunction BaseFunction;
+
+public: 
+   FumiliFunction(TFumili * fumili,  const ROOT::Math::FitMethodFunction * func) : 
+      ROOT::Math::FitMethodFunction(func->NDim(), func->NPoints() ),
+      fFumili(fumili),
+      fObjFunc(0)
+   {
+      fObjFunc = dynamic_cast<const MethodFunc *>(func);
+      assert(fObjFunc != 0);
+
+      // create TF1 class from model function
+      fModFunc = new TF1("modfunc",ROOT::Math::ParamFunctor( &fObjFunc->ModelFunction() ) );
+      fFumili->SetUserFunc(fModFunc);
+   }
+
+   ROOT::Math::FitMethodFunction::Type GetType() const { return fObjFunc->GetType();  }
+
+   FumiliFunction * Clone() const { return new FumiliFunction(fFumili, fObjFunc); }
+
+
+   // recalculate data elemet using Fumili stuff
+   double DataElement(const double *par, unsigned int i, double * g) const {
+      // suppose type is bin likelihood
+      unsigned int npar = fObjFunc->NDim();
+      double  y = 0;
+      double invError = 0; 
+      const double *x = fObjFunc->Data().GetPoint(i,y,invError);
+      double fval  = fFumili->EvalTFN(g,const_cast<double *>( x));
+      fFumili->Derivatives(g, const_cast<double *>( x));
+
+      if ( fObjFunc->GetType() == ROOT::Math::FitMethodFunction::kLogLikelihood) {
+         double logPdf =   y * ROOT::Math::Util::EvalLog( fval) - fval; 
+         for (unsigned int k = 0; k < npar; ++k) {
+            g[k] *= ( y/fval - 1.) ;//* pdfval; 
+         }
+         
+ //         std::cout << "x = " << x[0] << " logPdf = " << logPdf << " grad"; 
+//          for (unsigned int ipar = 0; ipar < npar; ++ipar) 
+//             std::cout << g[ipar] << "\t";
+//          std::cout << std::endl;
+         
+         return logPdf; 
+      }
+      else if (fObjFunc->GetType() == ROOT::Math::FitMethodFunction::kLeastSquare ) { 
+         double resVal = (y-fval)*invError; 
+         for (unsigned int k = 0; k < npar; ++k) {
+            g[k] *= -invError; 
+         }
+         return resVal;
+      }
+
+      return 0;
+   }
+
+
+private: 
+
+   double DoEval(const double *x ) const { 
+      return (*fObjFunc)(x);
+   }
+
+   TFumili * fFumili; 
+   const MethodFunc * fObjFunc; 
+   TF1 * fModFunc; 
+   
+};
+#else 
+bool gUseFumiliFunction = false;
+#endif
 //______________________________________________________________________________
 //
 //  TFumiliMinimizer class implementing the ROOT::Math::Minimizer interface using 
@@ -37,6 +123,7 @@
 ROOT::Math::FitMethodFunction * TFumiliMinimizer::fgFunc = 0; 
 ROOT::Math::FitMethodGradFunction * TFumiliMinimizer::fgGradFunc = 0; 
 TFumili * TFumiliMinimizer::fgFumili = 0; 
+
 
 ClassImp(TFumiliMinimizer)
 
@@ -102,6 +189,15 @@ void TFumiliMinimizer::SetFunction(const  ROOT::Math::IMultiGenFunction & func) 
    fgFunc = const_cast<ROOT::Math::FitMethodFunction *>(fcnfunc); 
    fgGradFunc = 0; 
    fFumili->SetFCN(&TFumiliMinimizer::Fcn);
+
+#ifdef USE_FUMILI_FUNCTION
+   if (gUseFumiliFunction) { 
+      if (fcnfunc->GetType() == ROOT::Math::FitMethodFunction::kLogLikelihood)  
+         fgFunc = new FumiliFunction<ROOT::Fit::PoissonLikelihoodFCN<ROOT::Math::FitMethodFunction::BaseFunction> >(fFumili,fcnfunc);   
+      else if (fcnfunc->GetType() == ROOT::Math::FitMethodFunction::kLeastSquare)
+         fgFunc = new FumiliFunction<ROOT::Fit::Chi2FCN<ROOT::Math::FitMethodFunction::BaseFunction> >(fFumili,fcnfunc);  
+   }
+#endif   
 
 }
 
@@ -177,10 +273,22 @@ double TFumiliMinimizer::EvaluateFCN(const double * x, double * grad) {
    std::vector<double> gf(npar); 
    std::vector<double> hess(npar*(npar+1)/2); 
 
+   // reset gradients
+   for (unsigned int ipar = 0; ipar < npar; ++ipar) 
+      grad[ipar] = 0;
+
  
    //loop on the data points
+//#define DEBUG
+#ifdef DEBUG
+   std::cout << "=============================================";
+   std::cout << "par = ";
+   for (unsigned int ipar = 0; ipar < npar; ++ipar) 
+      std::cout << x[ipar] << "\t";
+   std::cout << std::endl; 
+   if (fgFunc) std::cout << "type " << fgFunc->GetType() << std::endl; 
+#endif
 
-   
 
    // assume for now least-square
    // since TFumili doet not use errodef I must diveide chi2 by 2 
@@ -191,10 +299,15 @@ double TFumiliMinimizer::EvaluateFCN(const double * x, double * grad) {
       for (unsigned int i = 0; i < ndata; ++i) { 
          // calculate data element and gradient
          // DataElement returns (f-y)/s and gf is derivatives of model function multiplied by (-1/sigma)
-         if (fgFunc != 0) 
-            fval = fgFunc->DataElement(x, i, &gf[0]);
-         else 
-            fval = fgGradFunc->DataElement(x, i, &gf[0]);
+         if (gUseFumiliFunction) {
+            fval = fgFunc->DataElement( x, i, &gf[0]);
+         }
+         else { 
+            if (fgFunc != 0) 
+               fval = fgFunc->DataElement(x, i, &gf[0]);
+            else 
+               fval = fgGradFunc->DataElement(x, i, &gf[0]);
+         }
 
          // t.b.d should protect for bad  values of fval
          sum += fval*fval;
@@ -209,21 +322,28 @@ double TFumiliMinimizer::EvaluateFCN(const double * x, double * grad) {
             }
          }
       }
-      sum *= 0.5;
    }
    else if ( (fgFunc && fgFunc->GetType() == ROOT::Math::FitMethodFunction::kLogLikelihood) || 
              (fgGradFunc && fgGradFunc->GetType() == ROOT::Math::FitMethodGradFunction::kLogLikelihood) ) {  
 
+
+
       double fval = 0; 
+
       //std::cout << "\t x "  << x[0] << "  " << x[1] << "  " << x[2] << std::endl; 
 
       for (unsigned int i = 0; i < ndata; ++i) { 
 
-         // calculate data element and gradient 
-         if (fgFunc != 0) 
-            fval = fgFunc->DataElement(x, i, &gf[0]);
-         else 
-            fval = fgGradFunc->DataElement(x, i, &gf[0]);
+         if (gUseFumiliFunction) {
+            fval = fgFunc->DataElement( x, i, &gf[0]);
+         }
+         else { 
+            // calculate data element and gradient 
+            if (fgFunc != 0) 
+               fval = fgFunc->DataElement(x, i, &gf[0]);
+            else 
+               fval = fgGradFunc->DataElement(x, i, &gf[0]);
+         }
 
          // protect for small values of fval
          //      std::cout << i << "  "  << fval << " log " << " grad " << gf[0] << "  " << gf[1] << "  " << gf[2] << std::endl; 
@@ -261,7 +381,15 @@ double TFumiliMinimizer::EvaluateFCN(const double * x, double * grad) {
          }
    }
 
-   return sum; 
+#ifdef DEBUG
+   std::cout << "FCN value " << sum << " grad ";
+   for (unsigned int ipar = 0; ipar < npar; ++ipar) 
+      std::cout << grad[ipar] << "\t";
+   std::cout << std::endl << std::endl;   
+#endif
+
+
+   return 0.5*sum; // fumili multiply then by 2 
 
 }
 
@@ -356,8 +484,10 @@ bool TFumiliMinimizer::Minimize() {
    int nfree; 
    double errdef = 0; // err def is not used by Fumili
    fFumili->GetStats(fMinVal,fEdm,errdef,nfree,ntot);
+
    if (printlevel > 0) 
       fFumili->PrintResults(printlevel,fMinVal);
+
 
    assert (static_cast<unsigned int>(ntot) == fDim); 
    assert( nfree == fFumili->GetNumberFreeParameters() );
