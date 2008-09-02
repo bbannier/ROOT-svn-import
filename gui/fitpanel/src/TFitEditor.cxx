@@ -1517,7 +1517,11 @@ void TFitEditor::DoFit()
          break;
       }
    }
+
+   // update parameters value shown in dialog 
+   if (!fFuncPars) fFuncPars = new Double_t[fitFunc->GetNpar()][3];
    GetParameters(fFuncPars,fitFunc);
+
    delete fitFunc;
 
 
