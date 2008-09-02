@@ -12,7 +12,7 @@ What does it display?
 </div>
 
 <pre>TChain* ch = new TChain("tree3"); // create the chain, giving the trees' name
-ch-&gt;Add("beamfile*.root"); // add all files
+ch-&gt;Add("beamspot*.root"); // add all files
 ch-&gt;Process("TBeamSpotSel.C+"); // process the tree with the compiled selector
 </pre>
 <p>Looking at the histogram title, the plot shows the x vs. the y vs. the z position of the beam spots.

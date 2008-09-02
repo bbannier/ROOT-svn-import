@@ -12,7 +12,7 @@ How much time of data taking does the tree from all the <tt>beamspot*.root</tt> 
 </div>
 
 <pre>TChain* ch = new TChain("tree3"); // create the chain, giving the trees' name
-ch-&gt;Add("beamfile*.root"); // add all files
+ch-&gt;Add("beamspot*.root"); // add all files
 ch-&gt;Draw("eventinfo.fTime"); // draw the date and time. we find 2008-06-23, 16:05.
 
 // there are one million micro seconds in a second,
