@@ -261,20 +261,22 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
 
    const ROOT::Fit::FitResult & fitResult = fitter->Result(); 
    // one could set directly the fit result in TF1
-   //  if (fitResult.IsValid() ) { 
+   if (!fitResult.IsEmpty() ) { 
       // set in f1 the result of the fit      
       f1->SetChisquare(fitResult.Chi2() );
       f1->SetNDF(fitResult.Ndf() );
 
       f1->SetParameters( &(fitResult.Parameters().front()) ); 
-      f1->SetParErrors( &(fitResult.Errors().front()) ); 
+      if ( int( fitResult.Errors().size()) >= f1->GetNpar() ) 
+         f1->SetParErrors( &(fitResult.Errors().front()) ); 
   
       // print results
       if (!fitOption.Quiet) fitResult.Print(std::cout); 
-//   }
-//    else {
-//       iret = -1; 
-//    }
+      if (!fitResult.IsValid() ) iret = 1;
+   }
+   else {
+      iret = -1; 
+   }
 
 //   - Store fitted function in histogram functions list and draw
       if (!fitOption.Nostore) {

@@ -115,51 +115,62 @@ namespace ROOT {
             // construct from function and gradient dimension gdim
             // gdim = npar for parameter gradient
             // gdim = ndim for coordinate gradients
-
-            // construct for parameter gradient calculation (the param values will be passed later)
-            // dimension is npar
-            SimpleGradientCalculator(const IModelFunction & func) : 
-               fEps(1.0E-4),
-               fN(func.NPar() ),
+            // construct (the param values will be passed later)
+            // one can choose between 2 points rule (1 extra evaluation) istrat=1
+            // or two point rule (2 extra evaluation)
+            // (found 2 points rule does not work correctly - minuit2FitBench fails) 
+            SimpleGradientCalculator(int gdim, const IModelFunction & func,double eps = 2.E-8, int istrat = 1) : 
+               fEps(eps),
+               fPrecision(std::numeric_limits<double>::epsilon()  ),
+               fStrategy(istrat), 
+               fN(gdim ),
                fFunc(func),
-               fVec(std::vector<double>(fN) )
+               fVec(std::vector<double>(gdim) ) // this can be probably optimized 
             {}
 
-            // construct for coordinate gradient calculator
-            // dimension is ndim
-            SimpleGradientCalculator(const IModelFunction & func, const double * par) : 
-               fEps(1.0E-4),
-               fN(func.NDim() ),
-               fFunc(func),
-               fVec(std::vector<double>(fN) ), 
-               fPar(std::vector<double>(par, par + func.NPar() ) ) 
-            {}
 
             // calculate gradient at point (x,p) knnowing already value f0 (we gain a function eval.)
             void ParameterGradient(const double * x, const double * p, double f0, double * g) { 
                // fVec are the cached parameter values
                std::copy(p, p+fN, fVec.begin()); 
                for (unsigned int k = 0; k < fN; ++k) {
-                  fVec[k] += fEps;
+                  double p0 = p[k];
+                  double h = std::max( fEps* std::abs(p0), 8.0*fPrecision*(std::abs(p0) + fPrecision) );
+                  fVec[k] += h;
                   // t.b.d : treat case of infinities 
                   //if (fval > - std::numeric_limits<double>::max() && fval < std::numeric_limits<double>::max() ) 
-                  double f2 = fFunc(x, &fVec.front() );
-//         double f2 = invError * ( y - func(x,&p2.front()) );
-                  g[k] = ( f2 - f0 )/fEps;
+                  double f1 = fFunc(x, &fVec.front() );
+                  if (fStrategy > 1) { 
+                     fVec[k] = p0 - h; 
+                     double f2 = fFunc(x, &fVec.front() );
+                     g[k] = 0.5 * ( f2 - f1 )/h;
+                  }
+                  else 
+                     g[k] = ( f1 - f0 )/h;
+
                   fVec[k] = p[k]; // restore original p value
                }
             }
 
             // calculate gradient w.r coordinate values
-            void Gradient(const double * x, double f0, double * g) { 
+            void Gradient(const double * x, const double * p, double f0, double * g) { 
                // fVec are the cached coordinate values
                std::copy(x, x+fN, fVec.begin()); 
                for (unsigned int k = 0; k < fN; ++k) {
-                  fVec[k] += fEps;
+                  double x0 = x[k]; 
+                  double h = std::max( fEps* std::abs(x0), 8.0*fPrecision*(std::abs(x0) + fPrecision) );
+                  fVec[k] += h;
                   // t.b.d : treat case of infinities 
                   //if (fval > - std::numeric_limits<double>::max() && fval < std::numeric_limits<double>::max() ) 
-                  double f2 = fFunc( &fVec.front(), &fPar.front() );
-                  g[k] = ( f2 - f0 )/fEps;
+                  double f1 = fFunc( &fVec.front(), p );
+                  if (fStrategy > 1) { 
+                     fVec[k] = x0 - h; 
+                     double f2 = fFunc( &fVec.front(), p  );
+                     g[k] = 0.5 * ( f2 - f1 )/h;
+                  }
+                  else 
+                     g[k] = ( f1 - f0 )/h;
+
                   fVec[k] = x[k]; // restore original x value
                }
             }
@@ -167,10 +178,11 @@ namespace ROOT {
          private:
 
             double fEps; 
+            double fPrecision;
+            int fStrategy; // strategy in calculation ( =1 use 2 point rule( 1 extra func) , = 2 use r point rule) 
             unsigned int fN; // gradient dimension
             const IModelFunction & fFunc; 
             std::vector<double> fVec; // cached coordinates (or parameter values in case of gradientpar)
-            std::vector<double> fPar; // cached parameter values  
          };
 
 
@@ -311,7 +323,7 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
    //func.SetParameters(p); 
 
    unsigned int ndim = func.NDim();
-   SimpleGradientCalculator gradCalc(func, p );  
+   SimpleGradientCalculator gradCalc(ndim, func );  
    std::vector<double> grad( ndim ); 
 
 
@@ -346,7 +358,7 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
       if (j < ndim) { 
          for (unsigned int icoord = 0; icoord < ndim; ++icoord) { 
             if (ex[icoord] != 0) 
-               gradCalc.Gradient(x, fval, &grad[0]);
+               gradCalc.Gradient(x, p, fval, &grad[0]);
             double edx = ex[icoord] * grad[icoord]; 
             e2 += edx * edx;  
          } 
@@ -426,7 +438,7 @@ double FitUtil::EvaluateChi2Residual(const IModelFunction & func, const BinData 
       gfunc->ParameterGradient(  x , p, g );  
    }
    else { 
-      SimpleGradientCalculator  gc(func); 
+      SimpleGradientCalculator  gc( func.NPar(), func); 
       gc.ParameterGradient(x, p, fval, g); 
    }
    // mutiply by - 1 * weihgt
@@ -554,12 +566,12 @@ double FitUtil::EvaluatePdf(const IModelFunction & func, const UnBinData & data,
    else { 
       // estimate gradieant numerically with simple 2 point rule 
       // should probably calculate gradient of log(pdf) is more stable numerically
-      SimpleGradientCalculator gc(func); 
+      SimpleGradientCalculator gc(func.NPar(), func); 
       gc.ParameterGradient(x, p, fval, g ); 
    }       
    // divide gradient by function value since returning the logs
-   for (unsigned int ipar = 0; ipar < func.NPar(); ++i) {
-      g[i] /= fval; // this should be checked against infinities
+   for (unsigned int ipar = 0; ipar < func.NPar(); ++ipar) {
+      g[ipar] /= fval; // this should be checked against infinities
    }
 
 #ifdef DEBUG
@@ -690,21 +702,34 @@ double FitUtil::EvaluatePoissonBinPdf(const IModelFunction & func, const BinData
       }       
    }
    else { 
-      // estimate gradient numerically with simple 2 point rule 
-      static const double kEps = 1.0E-6;      
-      std::vector<double> p2(p,p+npar);
+//       // estimate gradient numerically with simple 2 point rule 
+//       static const double kEps = 1.0E-6;      
+//       std::vector<double> p2(p,p+npar);
+//       for (unsigned int k = 0; k < npar; ++k) {
+//          p2[k] += kEps*p2[k];
+//          // t.b.d : treat case of infinities 
+//          // make derivatives of the log (more stables ) and correct afterwards
+//          double fval2 = func(x,&p2.front() );    
+//          double logPdf2 = y * ROOT::Math::Util::EvalLog( fval2) - fval2; 
+//          double dlogPdf = (logPdf2 - logPdf)/kEps;
+//          g[k] = dlogPdf;// * pdfval;
+//          p2[k] = p[k]; // restore original p value
+      
+      SimpleGradientCalculator  gc(func.NPar(), func); 
+      gc.ParameterGradient(x, p, fval, g); 
+      // correct g[] do be derivative of poisson term 
       for (unsigned int k = 0; k < npar; ++k) {
-         p2[k] += kEps*p2[k];
-         // t.b.d : treat case of infinities 
-         // make derivatives of the log (more stables ) and correct afterwards
-         double fval2 = func(x,&p2.front() );    
-         double logPdf2 = y * ROOT::Math::Util::EvalLog( fval2) - fval2; 
-         double dlogPdf = (logPdf2 - logPdf)/kEps;
-         g[k] = dlogPdf;// * pdfval;
-         p2[k] = p[k]; // restore original p value
-
+         g[k] *= ( y/fval - 1.) ; 
       }       
+     
    }
+
+#ifdef DEBUG
+   std::cout << "x = " << x[0] << " logPdf = " << logPdf << " grad"; 
+   for (unsigned int ipar = 0; ipar < npar; ++ipar) 
+      std::cout << g[ipar] << "\t";
+   std::cout << std::endl;
+#endif 
 
 //   return pdfval;
    return logPdf;

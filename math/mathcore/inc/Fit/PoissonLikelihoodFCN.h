@@ -113,6 +113,13 @@ public:
    /// get type of fit method function
    virtual  typename BaseObjFunction::Type GetType() const { return BaseObjFunction::kLogLikelihood; }
 
+   /// access to const reference to the data 
+   virtual const BinData & Data() const { return fData; }
+
+   /// access to const reference to the model function
+   virtual const IModelFunction & ModelFunction() const { return fFunc; }
+
+
 protected: 
 
 

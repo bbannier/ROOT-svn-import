@@ -656,9 +656,29 @@ int testUnBin1DFit() {
    }
    double lref = fitter.Result().MinFcnValue();
 
-   std::cout << "\n\nRedo Fit using FUMILI" << std::endl; 
+   std::cout << "\n\nRedo Fit using FUMILI2" << std::endl; 
    f.SetParameters(p);   
    fitter.Config().SetMinimizer("Fumili2");
+   // need to set function first (need to change this)
+   fitter.SetFunction(f);
+   fitter.Config().ParSettings(0).Fix(); //need to re-do it
+   // set range in sigma sigma > 0
+   fitter.Config().ParSettings(2).SetLowerLimit(0);
+
+   ret = fitter.Fit(d);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Unbinned Likelihood Fit using FUMILI2 Failed " << std::endl;      
+      iret |= 1;
+   }
+
+   iret |= compareResult(fitter.Result().MinFcnValue(), lref,"1D unbin FUMILI2 fit");
+
+   std::cout << "\n\nRedo Fit using FUMILI" << std::endl; 
+   f.SetParameters(p);   
+   fitter.Config().SetMinimizer("Fumili");
+   // fitter.Config().MinimizerOptions().SetPrintLevel(3);
    // need to set function first (need to change this)
    fitter.SetFunction(f);
    fitter.Config().ParSettings(0).Fix(); //need to re-do it

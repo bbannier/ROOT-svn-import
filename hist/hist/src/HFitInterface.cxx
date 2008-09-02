@@ -259,6 +259,9 @@ void InitGaus(const ROOT::Fit::BinData & data, TF1 * f1)
    double sumx2 = 0; 
    double allcha = 0;
    double valmax = 0; 
+   double rangex = data.Coords(n-1)[0] - data.Coords(0)[0];
+   double binwidth = rangex;
+   double x0 = 0;
    for (unsigned int i = 0; i < n; ++ i) { 
       double val; 
       double x = *(data.GetPoint(i,val) );
@@ -266,18 +269,22 @@ void InitGaus(const ROOT::Fit::BinData & data, TF1 * f1)
       sumx2 += val*x*x; 
       allcha += val; 
       if (val > valmax) valmax = val; 
+      if (i > 0) { 
+         double dx = x - x0; 
+         if (dx < binwidth) binwidth = dx; 
+      }         
+      x0 = x; 
    }
 
    if (allcha <= 0) return;
    double mean = sumx/allcha;
    double rms  = sumx2/allcha - mean*mean;
 
-   double rangex = *(data.Coords(n-1)) - *(data.Coords(0));
 
    if (rms > 0) 
       rms  = std::sqrt(rms);
    else
-      rms  = rangex/4;
+      rms  = binwidth*n/4;
 
 
     //if the distribution is really gaussian, the best approximation
@@ -286,7 +293,11 @@ void InitGaus(const ROOT::Fit::BinData & data, TF1 * f1)
    //the normalisation constant. In this case the maximum value
    //is a better approximation.
    //We take the average of both quantities
-   double constant = 0.5*(valmax+ rangex/(sqrtpi*rms));
+
+//   printf("valmax %f other %f bw %f allcha %f rms %f  \n",valmax, binwidth*allcha/(sqrtpi*rms), 
+//          binwidth, allcha,rms  );
+
+   double constant = 0.5*(valmax+ binwidth*allcha/(sqrtpi*rms));
 
 
    //In case the mean value is outside the histo limits and
