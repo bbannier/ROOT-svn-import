@@ -19,6 +19,7 @@
 #include "Math/WrappedParamFunction.h"
 #include "Math/WrappedTF1.h"
 //#include "Math/Polynomial.h"
+#include "RConfigure.h"
 
 #include <string>
 #include <iostream>
@@ -276,7 +277,7 @@ int testHisto1DFit() {
    iret |= compareResult(func->GetChisquare(),fitter.Result().Chi2(),"TGraph::Fit ",0.001);
 
 
-   // reddo chi2fit using Fumili
+   // reddo chi2fit using Fumili2
    std::cout << "\n\nRedo Chi2 Hist Fit using FUMILI2" << std::endl; 
    f.SetParameters(p);   
    fitter.Config().SetMinimizer("Minuit2","Fumili");
@@ -289,6 +290,44 @@ int testHisto1DFit() {
    }
    iret |= compareResult(fitter.Result().Chi2(), chi2ref,"1D Histo Fumili2 fit ");
 
+   // reddo chi2fit using old Fumili 
+   std::cout << "\n\nRedo Chi2 Hist Fit using FUMILI" << std::endl; 
+   f.SetParameters(p);   
+   fitter.Config().SetMinimizer("Fumili");
+   ret = fitter.Fit(d, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Chi2 Fit Failed " << std::endl;
+      return -1; 
+   }
+   iret |= compareResult(fitter.Result().Chi2(), chi2ref,"1D Histo Fumili fit ");
+
+   // test using GSL multi fit (L.M. method)
+   std::cout << "\n\nRedo Chi2 Hist Fit using GSLMultiFit" << std::endl; 
+   f.SetParameters(p);   
+   fitter.Config().SetMinimizer("GSLMultiFit");
+   ret = fitter.Fit(d, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Chi2 Fit Failed " << std::endl;
+      return -1; 
+   }
+   iret |= compareResult(fitter.Result().Chi2(), chi2ref,"1D Histo GSL NLS fit ");
+
+   // test using GSL multi min method
+   std::cout << "\n\nRedo Chi2 Hist Fit using GSLMultiMin" << std::endl; 
+   f.SetParameters(p);   
+   fitter.Config().SetMinimizer("GSLMultiMin","BFGS2");
+   ret = fitter.Fit(d, f);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Chi2 Fit Failed " << std::endl;
+      return -1; 
+   }
+   iret |= compareResult(fitter.Result().Chi2(), chi2ref,"1D Histo GSL Minimizer fit ");
 
    return iret;
 }
