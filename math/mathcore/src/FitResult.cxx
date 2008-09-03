@@ -238,8 +238,9 @@ void FitResult::Print(std::ostream & os, bool doCovMatrix) const {
       os << std::setw(nw) << std::left << fFitFunc->ParameterName(i) << " =\t" << fParams[i]; 
       if (IsParameterFixed(i) ) 
          os << " \t(fixed)";
-      else { 
-         os << " \t+/-\t" << fErrors[i]; 
+      else {
+         if (fErrors.size() != 0)
+            os << " \t+/-\t" << fErrors[i]; 
          if (IsParameterBound(i) ) 
             os << " \t (limited)"; 
       }
@@ -252,6 +253,7 @@ void FitResult::Print(std::ostream & os, bool doCovMatrix) const {
 void FitResult::PrintCovMatrix(std::ostream &os) const { 
    // print the covariance and correlation matrix 
    if (!fValid) return;
+   if (fCovMatrix.size() == 0) return; 
    os << "\n****************************************\n";
    os << "\n            Covariance Matrix            \n\n";
    unsigned int npar = fParams.size(); 

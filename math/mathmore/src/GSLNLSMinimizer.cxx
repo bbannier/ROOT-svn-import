@@ -32,7 +32,8 @@ namespace ROOT {
 
 GSLNLSMinimizer::GSLNLSMinimizer( int /* ROOT::Math::EGSLNLSMinimizerType type */ ) : 
    fDim(0), 
-   fObjFunc(0)
+   fObjFunc(0),
+   fCovMatrix(0)
 {
    // Constructor implementation : create GSLMultiFit wrapper object
    fGSLMultiFit = new GSLMultiFit( /*type */ ); 
@@ -191,6 +192,7 @@ bool GSLNLSMinimizer::Minimize() {
    std::copy(x, x +fDim, fValues.begin() ); 
    fMinVal =  (*fObjFunc)(x);
 
+   fErrors.resize(fDim);
       
    if (minFound) { 
       if (debugLevel >=1 ) { 
@@ -203,6 +205,11 @@ bool GSLNLSMinimizer::Minimize() {
          for (unsigned int i = 0; i < fDim; ++i) 
             std::cout << fNames[i] << "\t  = " << fValues[i] << std::endl; 
       }
+      // get errors from cov matrix
+      fCovMatrix = fGSLMultiFit->CovarMatrix(); 
+      for (unsigned int i = 0; i < fDim; ++i)
+         fErrors[i] = std::sqrt(fCovMatrix[i*fDim + i]);
+
       return true; 
    }
    else { 
@@ -221,6 +228,12 @@ const double * GSLNLSMinimizer::MinGradient() const {
    return fGSLMultiFit->Gradient(); 
 }
 
+
+double GSLNLSMinimizer::CovMatrix(unsigned int i , unsigned int j ) const { 
+   if (!fCovMatrix) return 0;  
+   if (i > fDim || j > fDim) return 0; 
+   return fCovMatrix[i*fDim + j];
+}
 
    } // end namespace Math
 
