@@ -272,6 +272,7 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
   
       // print results
       if (!fitOption.Quiet) fitResult.Print(std::cout); 
+      if (fitOption.Verbose) fitResult.PrintCovMatrix(std::cout); 
       if (!fitResult.IsValid() ) iret = 1;
    }
    else {

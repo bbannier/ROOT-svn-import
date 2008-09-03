@@ -244,6 +244,12 @@ public:
    ///print error matrix and correlations
    void PrintCovMatrix(std::ostream & os) const; 
 
+   /// query if a parameter is bound 
+   bool IsParameterBound(unsigned int ipar) const; 
+
+   /// query if a parameter is fixed 
+   bool IsParameterFixed(unsigned int ipar) const; 
+
 protected: 
 
 
@@ -267,10 +273,12 @@ private:
    double fEdm;             // expected distance from mimimum
    double fChi2;            // fit chi2 value (different than fval in case of chi2 fits)
    IModelFunction * fFitFunc; // model function result of the fit. It is given by Fitter but it is managed by FitResult
-   std::vector<double> fParams;  // parameter values. Size is total number of parameters
-   std::vector<double> fErrors;  // errors 
-   std::vector<double> fCovMatrix;  // covariance matrix (size is npar*(npar+1)/2) where npar is total parameters
-   std::vector<double> fGlobalCC;   // global Correlation coefficient
+   std::vector<unsigned int>   fFixedParams; // list of fixed parameters
+   std::vector<unsigned int>   fBoundParams; // list of limited parameters
+   std::vector<double>         fParams;  // parameter values. Size is total number of parameters
+   std::vector<double>         fErrors;  // errors 
+   std::vector<double>         fCovMatrix;  // covariance matrix (size is npar*(npar+1)/2) where npar is total parameters
+   std::vector<double>         fGlobalCC;   // global Correlation coefficient
    std::vector<std::pair<double,double> > fMinosErrors;   // vector contains the two Minos errors 
    std::string fMinimType;          // string indicating type of minimizer
 

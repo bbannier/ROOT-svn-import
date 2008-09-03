@@ -65,6 +65,13 @@ FitResult::FitResult() :
    if (min.Errors() != 0) 
       fErrors = std::vector<double>(min.Errors(), min.Errors() + min.NDim() ) ; 
 
+   // check for fixed or limited parameters
+   for (unsigned int ipar = 0; ipar < fParams.size(); ++ipar) { 
+      const ParameterSettings & par = fconfig.ParSettings(ipar); 
+      if (par.IsFixed() ) fFixedParams.push_back(ipar); 
+      if (par.IsBound() ) fBoundParams.push_back(ipar); 
+   } 
+
    if (chi2func == 0) 
       fChi2 = fVal;
    else { 
@@ -151,6 +158,8 @@ FitResult & FitResult::operator = (const FitResult &rhs) {
    fEdm = rhs.fEdm; 
    fChi2 = rhs.fChi2;
 
+   fFixedParams = rhs.fFixedParams;
+   fBoundParams = rhs.fBoundParams;
    fParams = rhs.fParams; 
    fErrors = rhs.fErrors; 
    fCovMatrix = rhs.fCovMatrix; 
@@ -191,6 +200,18 @@ int FitResult::Index(const std::string & name) const {
    return -1; // case name is not found
 } 
 
+bool FitResult::IsParameterBound(unsigned int ipar) const { 
+   for (unsigned int i = 0; i < fBoundParams.size() ; ++i) 
+      if ( fBoundParams[i] == ipar) return true; 
+   return false; 
+}
+
+bool FitResult::IsParameterFixed(unsigned int ipar) const { 
+   for (unsigned int i = 0; i < fFixedParams.size() ; ++i) 
+      if ( fFixedParams[i] == ipar) return true; 
+   return false; 
+}
+
 void FitResult::Print(std::ostream & os, bool doCovMatrix) const { 
    // print the result in the given stream 
    // need to add minos errors , globalCC, etc..
@@ -214,7 +235,15 @@ void FitResult::Print(std::ostream & os, bool doCovMatrix) const {
    os << std::setw(nw) << std::left << "NCalls" << " =\t" << fNCalls << std::endl; 
    assert(fFitFunc != 0); 
    for (unsigned int i = 0; i < npar; ++i) { 
-      os << std::setw(nw) << std::left << fFitFunc->ParameterName(i) << " =\t" << fParams[i] << " \t+/-\t" << fErrors[i] << std::endl; 
+      os << std::setw(nw) << std::left << fFitFunc->ParameterName(i) << " =\t" << fParams[i]; 
+      if (IsParameterFixed(i) ) 
+         os << " \t(fixed)";
+      else { 
+         os << " \t+/-\t" << fErrors[i]; 
+         if (IsParameterBound(i) ) 
+            os << " \t (limited)"; 
+      }
+      os << std::endl; 
    }
 
    if (doCovMatrix) PrintCovMatrix(os); 
