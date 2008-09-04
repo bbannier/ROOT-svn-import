@@ -30,6 +30,8 @@
 #include "Foption.h"
 #include "Math/MinimizerOptions.h"
 
+#include <vector>
+
 //--- Object types
 enum EObjectType {
    kObjectHisto,
@@ -112,7 +114,8 @@ protected:
    TAxis               *fXaxis;            // x-axis
    TAxis               *fYaxis;            // y-axis
    TAxis               *fZaxis;            // z-axis
-   Float_t              fXrange;           // x-range
+//    are not  these bin numbers ? should be integer  ? 
+   Float_t              fXrange;           // x-range 
    Float_t              fXmin;             // x-min
    Float_t              fXmax;             // x-max
    Float_t              fYrange;           // y-range
@@ -122,11 +125,27 @@ protected:
    Float_t              fZmin;             // z-min
    Float_t              fZmax;             // z-max
 
-   Double_t           (*fFuncPars)[3];         // Parameters of the function
+   // structure holding parameter value and limits
+   struct FuncParamData_t { 
+      FuncParamData_t() {
+         fP[0] = 0; fP[1] = 0; fP[2] = 0; 
+      }
+      Double_t & operator[](UInt_t i) { return fP[i];}
+      Double_t fP[3];
+   };
+   std::vector<FuncParamData_t >  fFuncPars;         // function parameters (value + limits)
+
    Int_t                fPx1old,
                         fPy1old,
                         fPx2old,
                         fPy2old;
+
+   Double_t             fFuncXmin;       // fit function range (min and max) values    
+   Double_t             fFuncXmax;      
+   Double_t             fFuncYmin;      
+   Double_t             fFuncYmax;      
+   Double_t             fFuncZmin;      
+   Double_t             fFuncZmax;      
 
    TGRadioButton       *fLibMinuit;        // set default minimization library (Minuit)
    TGRadioButton       *fLibMinuit2;       // set Minuit2 as minimization library
@@ -211,6 +230,8 @@ public:
    virtual void   DoMinMethod(Bool_t on);
    virtual void   DoPrintOpt(Bool_t on);
    
+   typedef std::vector<FuncParamData_t > FuncParams_t; 
+
    
    ClassDef(TFitEditor,0)  //Fit Panel interface
 };

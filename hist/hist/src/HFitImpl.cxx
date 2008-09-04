@@ -137,10 +137,10 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
       // check if function has range 
       Double_t fxmin, fymin, fzmin, fxmax, fymax, fzmax;
       f1->GetRange(fxmin, fymin, fzmin, fxmax, fymax, fzmax);
-      // support only one range interval in x ? 
-      if (fxmin < fxmax) range.AddRange(0, fxmin, fxmax);
-      if (fymin < fymax) range.AddRange(1, fymin, fymax);
-      if (fzmin < fzmax) range.AddRange(2, fzmin, fzmax);
+      // support only one range - so add only if was not set before
+      if (range.Size(0) == 0) range.AddRange(0,fxmin,fxmax);
+      if (range.Size(1) == 0) range.AddRange(1,fymin,fymax);
+      if (range.Size(2) == 0) range.AddRange(2,fzmin,fzmax);
    }
 #ifdef DEBUG
    printf("range  size %d\n", range.Size(0) ); 
@@ -181,12 +181,9 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
    // error normalization in case of zero error in the data
    if (fitdata.GetErrorType() == ROOT::Fit::BinData::kNoError) fitConfig.SetNormErrors(true);
 
-
-
    
    // here need to get some static extra information (like max iterations, error def, etc...)
 
-   // something in case of gradient functions
 
    // parameter settings and transfer the parameters values, names and limits from the functions
    // is done automatically in the Fitter.cxx 
@@ -372,10 +369,12 @@ void HFit::StoreAndDrawFitFunction(FitObject * h1, const TF1 * f1, const ROOT::F
 
    Int_t ndim = GetDimension(h1);
    double xmin = 0, xmax = 0, ymin = 0, ymax = 0, zmin = 0, zmax = 0; 
-   range.GetRange(0,xmin,xmax); 
-   if (ndim>1)    range.GetRange(1,ymin,ymax); 
-   if (ndim>2)    range.GetRange(2,zmin,zmax); 
+   range.GetRange(xmin,xmax,ymin,ymax,zmin,zmax); 
 
+#ifdef DEBUG
+   std::cout <<"draw and store fit function " << f1->GetName() 
+             << " Range in x = [ " << xmin << " , " << xmax << " ]" << std::endl;
+#endif
 
    TList * funcList = h1->GetListOfFunctions();
    if (funcList == 0){

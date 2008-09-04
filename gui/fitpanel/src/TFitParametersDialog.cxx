@@ -852,7 +852,7 @@ void TFitParametersDialog::DrawFunction()
    opt.ToUpper();
    if (!opt.Contains("SAME"))
       opt += "SAME";
-   fFunc->SetRange(fRXmin, fRXmax);
+   //fFunc->SetRange(fRXmin, fRXmax);
    fFunc->Draw(opt);
    gPad->Modified();
    gPad->Update();

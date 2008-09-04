@@ -173,9 +173,11 @@ enum EParStruct {
    PAR_MAX = 2
 };
 
-void GetParameters(Double_t (*pars)[3], TF1* func)
+void GetParameters(TFitEditor::FuncParams_t & pars, TF1* func)
 {
-   for ( Int_t i = 0; i < func->GetNpar(); ++i )
+   int npar = func->GetNpar(); 
+   if (npar != (int) pars.size() ) pars.resize(npar); 
+   for ( Int_t i = 0; i < npar; ++i )
    {
       Double_t par_min, par_max;
       pars[i][PAR_VAL] = func->GetParameter(i);
@@ -185,15 +187,27 @@ void GetParameters(Double_t (*pars)[3], TF1* func)
    }
 }
 
-void SetParameters(Double_t (*pars)[3], TF1* func)
+void SetParameters(TFitEditor::FuncParams_t & pars, TF1* func)
 {
-   for ( Int_t i = 0; i < func->GetNpar(); ++i )
+   int npar = func->GetNpar(); 
+   if (npar > (int) pars.size() ) pars.resize(npar); 
+   for ( Int_t i = 0; i < npar; ++i )
    {
       func->SetParameter(i, pars[i][PAR_VAL]);
       func->SetParLimits(i, pars[i][PAR_MIN], pars[i][PAR_MAX]);
    }
 }
 
+template<class FitObject>
+void InitParameters(TF1* func, FitObject * fitobj)
+{
+   
+   int special = func->GetNumber(); 
+   if (special == 100 || special == 400) { 
+      ROOT::Fit::InitGaus(fitobj, func);
+      // case gaussian or Landau
+   }
+}
 
 ClassImp(TFitEditor)
 
@@ -1065,20 +1079,31 @@ void TFitEditor::UpdateGUI()
             //not implemented
             break;
       }
+      
+      Int_t ixmin = 0; 
+      Int_t ixmax = 0; 
+      Int_t iymin = 0; 
+      Int_t iymax = 0; 
+      Int_t izmin = 0; 
+      Int_t izmax = 0; 
       if (hist) {
          fXaxis = hist->GetXaxis();
          fYaxis = hist->GetYaxis();
          fZaxis = hist->GetZaxis();
          fXrange = fXaxis->GetNbins();
-         fXmin = fXaxis->GetFirst();
-         fXmax = fXaxis->GetLast();
+         ixmin = fXaxis->GetFirst();
+         ixmax = fXaxis->GetLast();
+         iymin = fYaxis->GetFirst();
+         iymax = fYaxis->GetLast();
+         izmin = fZaxis->GetFirst();
+         izmax = fZaxis->GetLast();
       }
 
       fSliderX->SetRange(1,fXrange);
-      if (!fXmin && !fXmax)
+      if (ixmin == 0 && ixmax == 0)
          fSliderX->SetPosition(1,fXrange);
       else 
-         fSliderX->SetPosition(fXmin,fXmax);
+         fSliderX->SetPosition(ixmin,ixmax);
       fSliderX->SetScale(5);
       fSliderX->Connect("PositionChanged()","TFitEditor",this, "DoSliderXMoved()");
    }
@@ -1178,10 +1203,14 @@ void TFitEditor::SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event)
    ConnectSlots();
    
    TF1* fitFunc = HasFitFunction(obj);
+
    if (fitFunc) {
-      if ( fFuncPars ) delete fFuncPars;
-      fFuncPars = new Double_t[fitFunc->GetNpar()][3];
+      //fFuncPars = FuncParams_t( fitFunc->GetNpar() );
       GetParameters(fFuncPars, fitFunc);
+
+      // get function range
+      fitFunc->GetRange(fFuncXmin, fFuncYmin, fFuncZmin, fFuncXmax,  fFuncYmax,  fFuncZmax);
+
 
       TString tmpStr = fitFunc->GetExpFormula();
       TGLBEntry *en = 0;
@@ -1393,8 +1422,6 @@ void TFitEditor::DoFit()
    Foption_t fitOpts;
    TString strDrawOpts;
 
-   Double_t xmin = fXaxis->GetBinLowEdge((Int_t)(fSliderX->GetMinPosition()));
-   Double_t xmax = fXaxis->GetBinUpEdge((Int_t)(fSliderX->GetMaxPosition()));
 
    TF1 *fitFunc = 0;
    if ( fNone->GetState() == kButtonDisabled )
@@ -1412,98 +1439,90 @@ void TFitEditor::DoFit()
       tmpF1->Copy(*fitFunc);
    }
 
+   ROOT::Fit::DataRange drange; 
+
+   Int_t ixmin = (Int_t)(fSliderX->GetMinPosition()); 
+   Int_t ixmax = (Int_t)(fSliderX->GetMaxPosition()); 
+   if (ixmin > 1 || ixmax < fXaxis->GetNbins() ) { 
+      Double_t xmin = fXaxis->GetBinLowEdge(ixmin);
+      Double_t xmax = fXaxis->GetBinUpEdge(ixmax);
+      drange.AddRange(0,xmin, xmax);
+   }
+
+   if ( fDim > 1 ) {
+      assert(fYaxis); 
+      Int_t iymin = (Int_t)(fSliderY->GetMinPosition()); 
+      Int_t iymax = (Int_t)(fSliderY->GetMaxPosition()); 
+      if (iymin > 1 || iymax < fYaxis->GetNbins() ) { 
+         Double_t ymin = fYaxis->GetBinLowEdge(iymin);
+         Double_t ymax = fYaxis->GetBinUpEdge(iymax);
+         drange.AddRange(1,ymin, ymax);
+      }
+   }
+   if ( fDim > 2 ) {
+      assert(fZaxis); 
+      Int_t izmin = (Int_t)(fSliderZ->GetMinPosition()); 
+      Int_t izmax = (Int_t)(fSliderZ->GetMaxPosition()); 
+      if (izmin > 1 || izmax < fZaxis->GetNbins() ) { 
+         Double_t zmin = fZaxis->GetBinLowEdge(izmin);
+         Double_t zmax = fZaxis->GetBinUpEdge(izmax);
+         drange.AddRange(2,zmin, zmax);
+      }
+   }
+
+   if ( fitFunc == 0 )
+   {
+      // create function with saved range values 
+      if ( fDim == 1 )
+         fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText(),fFuncXmin,fFuncXmax);
+      else if ( fDim == 2 )
+         fitFunc = new TF2("lastFitFunc",fEnteredFunc->GetText(),fFuncXmin,fFuncXmax, fFuncYmin, fFuncYmax);
+      else if ( fDim == 3 )
+         fitFunc =  new TF3("lastFitFunc",fEnteredFunc->GetText(),fFuncXmin,fFuncXmax, fFuncYmin, fFuncYmax, fFuncZmin, fFuncZmax);
+   }
+   
+   //if ( fFuncPars ) 
+   // set parameters from panel in function
+   SetParameters(fFuncPars, fitFunc);
+   RetrieveOptions(fitOpts, strDrawOpts, mopts, fitFunc->GetNpar());
+
+
    switch (fType) {
       case kObjectHisto: {
+
          TH1 *hist = (TH1*)fFitObject;
-
-         if ( fitFunc == 0 )
-         {
-            if ( fDim == 1 )
-               fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
-            else if ( fDim == 2 )
-               fitFunc = new TF2("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax,fYmin,fYmax);
-            else if ( fDim == 3 )
-               fitFunc =  new TF3("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax,fYmin,fYmax,fZmin,fZmax);
-         }
-         
-         if ( fFuncPars ) SetParameters(fFuncPars, fitFunc);
-         RetrieveOptions(fitOpts, strDrawOpts, mopts, fitFunc->GetNpar());
-
-         if ( fDim == 1 )
-         {
-            fitFunc->SetRange(xmin,xmax);
-            ROOT::Fit::DataRange drange(xmin, xmax);
-            ROOT::Fit::FitObject(hist, fitFunc, fitOpts, mopts, strDrawOpts, drange);
-         }
-         else if ( fDim == 2 )
-         {
-            Double_t ymin = fYaxis->GetBinLowEdge((Int_t)(fSliderY->GetMinPosition()));
-            Double_t ymax = fYaxis->GetBinUpEdge((Int_t)(fSliderY->GetMaxPosition()));
-
-            fitFunc->SetRange(xmin,ymin,xmax,ymax);
-            ROOT::Fit::DataRange drange(xmin, xmax, ymin, ymax);
-            ROOT::Fit::FitObject(hist, fitFunc, fitOpts, mopts, strDrawOpts, drange);
-         }
-         else if ( fDim == 3 )
-         {
-            Double_t ymin = fYaxis->GetBinLowEdge((Int_t)(fSliderY->GetMinPosition()));
-            Double_t ymax = fYaxis->GetBinUpEdge((Int_t)(fSliderY->GetMaxPosition()));
-            Double_t zmin = fZaxis->GetBinLowEdge((Int_t)(fSliderZ->GetMinPosition()));
-            Double_t zmax = fZaxis->GetBinUpEdge((Int_t)(fSliderZ->GetMaxPosition()));
-
-            fitFunc->SetRange(xmin,ymin,zmin,xmax,ymax,zmax);
-            ROOT::Fit::DataRange drange(xmin, xmax, ymin, ymax, zmin, zmax);
-            ROOT::Fit::FitObject(hist, fitFunc, fitOpts, mopts, strDrawOpts, drange);
-         }
+         ROOT::Fit::FitObject(hist, fitFunc, fitOpts, mopts, strDrawOpts, drange);
 
          break;
       }
       case kObjectGraph: {
          TGraph *gr = (TGraph*)fFitObject;
-         TH1F *hist = gr->GetHistogram();
-         if (hist) { //!!! for many graphs in a pad, use the xmin/xmax of pad!!!
-            Int_t npoints = gr->GetN();
-            Double_t *gx = gr->GetX();
-            Double_t gxmin, gxmax;
-            const Int_t imin =  TMath::LocMin(npoints,gx);
-            const Int_t imax =  TMath::LocMax(npoints,gx);
-            gxmin = gx[imin];
-            gxmax = gx[imax];
-            if (xmin < gxmin) xmin = gxmin;
-            if (xmax > gxmax) xmax = gxmax;
-         }
-         if ( !fitFunc) fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
-         if ( fFuncPars ) SetParameters(fFuncPars, fitFunc);
-         RetrieveOptions(fitOpts, strDrawOpts, mopts, fitFunc->GetNpar());
-         fitFunc->SetRange(xmin,xmax);
-         ROOT::Fit::DataRange drange(xmin, xmax);
+         // not sure if this is needed 
+//         TH1F *hist = gr->GetHistogram();
+//          if (hist) { //!!! for many graphs in a pad, use the xmin/xmax of pad!!!
+//             Int_t npoints = gr->GetN();
+//             Double_t *gx = gr->GetX();
+//             Double_t gxmin, gxmax;
+//             const Int_t imin =  TMath::LocMin(npoints,gx);
+//             const Int_t imax =  TMath::LocMax(npoints,gx);
+//             gxmin = gx[imin];
+//             gxmax = gx[imax];
+//             if (xmin < gxmin) xmin = gxmin;
+//             if (xmax > gxmax) xmax = gxmax;
+//          }
+
          FitObject(gr, fitFunc, fitOpts, mopts, strDrawOpts, drange);
          break;
       }
       case kObjectMultiGraph: {
          TMultiGraph *mg = (TMultiGraph*)fFitObject;
-
-         if ( !fitFunc) fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
-
-         if ( fFuncPars ) SetParameters(fFuncPars, fitFunc);
-         RetrieveOptions(fitOpts, strDrawOpts, mopts, fitFunc->GetNpar());
-
-         fitFunc->SetRange(xmin,xmax);
-         ROOT::Fit::DataRange drange(xmin, xmax);
          FitObject(mg, fitFunc, fitOpts, mopts, strDrawOpts, drange);
 
          break;
       }
       case kObjectGraph2D: {
+
          TGraph2D *mg = (TGraph2D*)fFitObject;
-
-         if ( !fitFunc) fitFunc = new TF2("lastFitFunc",fEnteredFunc->GetText(),fXmin,fXmax);
-
-         if ( fFuncPars ) SetParameters(fFuncPars, fitFunc);
-         RetrieveOptions(fitOpts, strDrawOpts, mopts, fitFunc->GetNpar());
-
-         fitFunc->SetRange(xmin,xmax);
-         ROOT::Fit::DataRange drange(xmin, xmax);
          FitObject(mg, fitFunc, fitOpts, mopts, strDrawOpts, drange);
 
          break;
@@ -1519,7 +1538,7 @@ void TFitEditor::DoFit()
    }
 
    // update parameters value shown in dialog 
-   if (!fFuncPars) fFuncPars = new Double_t[fitFunc->GetNpar()][3];
+   //if (!fFuncPars) fFuncPars = new Double_t[fitFunc->GetNpar()][3];
    GetParameters(fFuncPars,fitFunc);
 
    delete fitFunc;
@@ -1637,6 +1656,9 @@ void TFitEditor::DoFunction(Int_t selected)
    fEnteredFunc->SelectAll();
    fSelLabel->SetText(fEnteredFunc->GetText());
    ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
+
+   // reset function parameters 
+   fFuncPars.clear();
 }
 
 //______________________________________________________________________________
@@ -1817,24 +1839,57 @@ void TFitEditor::DoSetParameters()
    if ( fNone->GetState() == kButtonDisabled )
    {
       TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
+      std::cout << te << "  " << te->GetTitle() << std::endl;
       fitFunc = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
    }
    else if ( fDim == 1 )
-      fitFunc = new TF1("tmpPars",fEnteredFunc->GetText(), fXmin, fXmax);
+      fitFunc = new TF1("tmpPars",fEnteredFunc->GetText() );
    else if ( fDim == 2 )
-      fitFunc = new TF2("tmpPars",fEnteredFunc->GetText(), fXmin, fXmax);
+      fitFunc = new TF2("tmpPars",fEnteredFunc->GetText() );
+   else if ( fDim == 3 )
+      fitFunc = new TF3("tmpPars",fEnteredFunc->GetText() );
 
-   if ( fFuncPars ) SetParameters(fFuncPars, fitFunc);
+   if (!fitFunc) { Error("DoSetParameters","NUll function"); return; }
+
+   // case of special functions (gaus, expo, etc...)
+   if (fFuncPars.size() == 0) { 
+      switch (fType) {
+      case kObjectHisto:
+         InitParameters( fitFunc, (TH1*)fFitObject) ;
+         break;
+      case kObjectGraph:
+         InitParameters( fitFunc, ((TGraph*)fFitObject));
+         break;
+      case kObjectMultiGraph:
+         InitParameters( fitFunc, ((TMultiGraph*)fFitObject));
+         break;
+      case kObjectGraph2D:
+         InitParameters( fitFunc, ((TGraph2D*)fFitObject));
+         break;
+      case kObjectHStack: 
+         // N/A
+         break;
+      case kObjectTree:  
+         // N/A
+         break;
+      }
+
+      GetParameters(fFuncPars, fitFunc);
+   }                            
+   else {
+      SetParameters(fFuncPars, fitFunc);
+   }
 
    fParentPad->Disconnect("RangeAxisChanged()");
-   Double_t xmin, xmax;
-   fitFunc->GetRange(xmin, xmax);
+
+//    Double_t xmin, xma> x;
+//    fitFunc->GetRange(xmin, xmax);
    Int_t ret = 0;
    new TFitParametersDialog(gClient->GetDefaultRoot(), GetMainFrame(), 
-                            fitFunc, fParentPad, xmin, xmax, &ret);
+                            fitFunc, fParentPad, 0, 0, &ret);
 
-   if ( fFuncPars ) delete fFuncPars;
-   fFuncPars = new Double_t[fitFunc->GetNpar()][3];
+   //if ( fFuncPars ) delete fFuncPars;
+   //fFuncPars = new Double_t[fitFunc->GetNpar()][3];
    GetParameters(fFuncPars, fitFunc);
 
    fParentPad->Connect("RangeAxisChanged()", "TFitEditor", this, "UpdateGUI()");
@@ -1854,7 +1909,7 @@ void TFitEditor::DoSliderXMoved()
    gPad = fParentPad;
    gPad->cd();
 
-   Float_t xleft = 0;
+   Double_t xleft = 0;
    Double_t xright = 0;
    xleft  = fXaxis->GetBinLowEdge((Int_t)((fSliderX->GetMinPosition())+0.5));
    xright = fXaxis->GetBinUpEdge((Int_t)((fSliderX->GetMaxPosition())+0.5));
@@ -2293,7 +2348,7 @@ TF1* TFitEditor::HasFitFunction(TObject *obj)
       if (lf) GetFunctionsFromList(lf);
       CheckRange(func);
       
-      TGLBEntry *le = fFuncList->FindEntry(Form("%s",func->GetName()));
+      TGLBEntry *le = fFuncList->FindEntry(Form(func->GetName()));
       if (le) {
          fFuncList->Select(le->EntryId(), kFALSE);
          fSelLabel->SetText(le->GetTitle());
@@ -2308,10 +2363,12 @@ TF1* TFitEditor::HasFitFunction(TObject *obj)
          if (obj2->InheritsFrom(TF1::Class())) {
             func = (TF1 *)obj2;
             CheckRange(func);
-            TGLBEntry *le = fFuncList->FindEntry(Form("%s",func->GetName()));
+            //LM:  does not work - why ??????
+            //std::cout << "from histo function list  func " << func << "  " << func->GetName() << std::endl; 
+            TGLBEntry *le = fFuncList->FindEntry(func->GetName());
             if (le) {
                fFuncList->Select(le->EntryId(), kTRUE);
-               
+//               std::cout << func->GetName() << "  " << le->EntryId() << " is selected " << std::endl;
             }
             return func;
          }
@@ -2359,10 +2416,12 @@ void TFitEditor::GetFunctionsFromList(TList *list)
          lb->Resize(lb->GetWidth(), 200);
       }
 
-      TIter next(list, kIterBackward);
+      TIter next(list, kIterForward);
       while ((obj = next()))
-         if (obj->InheritsFrom(TF1::Class()))
+         if (obj->InheritsFrom(TF1::Class())) {
             fFuncList->AddEntry(obj->GetName(), newid++);
+         }
+
 
       fFuncList->Select((newid != kFP_USER*30)?newid-1:1);
       Object = fFitObject;
@@ -2440,7 +2499,7 @@ void TFitEditor::RetrieveOptions(Foption_t& fitOpts, TString& drawOpts, ROOT::Ma
         (tmpStr.Contains("pol") || tmpStr.Contains("++")) )
       fitOpts.Minuit = 1;
 
-   if ( fFuncPars )
+   if ( (int) fFuncPars.size() == npar )
       for ( Int_t i = 0; i < npar; ++i )
          if ( fFuncPars[i][PAR_MIN] != fFuncPars[i][PAR_MAX] )
          {
