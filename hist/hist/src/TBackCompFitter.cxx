@@ -220,7 +220,7 @@ Int_t TBackCompFitter::ExecuteCommand(const char *command, Double_t *args, Int_t
    // SET ERR
    else if (strncmp(command,"SET Err",7) == 0 || strncmp(command,"set err",7)  == 0) {
       if (nargs < 1) return -1;  
-      fFitter.Config().MinimizerOptions().SetPrintLevel(args[0] );
+      fFitter.Config().MinimizerOptions().SetPrintLevel(int( args[0]) );
       return 0; 
    } 
    // SET STRATEGY
