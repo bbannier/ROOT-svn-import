@@ -226,7 +226,7 @@ void FitResult::Print(std::ostream & os, bool doCovMatrix) const {
    //os << "            FitResult                   \n\n";
    os << "Minimizer is " << fMinimType << std::endl;
    unsigned int npar = fParams.size(); 
-   unsigned int nw = 25; 
+   const unsigned int nw = 25; 
    if (fVal != fChi2) 
       os << std::setw(nw) << std::left << "Likelihood" << " =\t" << fVal << std::endl;
    os << std::setw(nw) << std::left <<  "Chi2"  << " =\t" << fChi2<< std::endl;
@@ -254,21 +254,26 @@ void FitResult::PrintCovMatrix(std::ostream &os) const {
    // print the covariance and correlation matrix 
    if (!fValid) return;
    if (fCovMatrix.size() == 0) return; 
-   os << "\n****************************************\n";
+//   os << "****************************************\n";
    os << "\n            Covariance Matrix            \n\n";
    unsigned int npar = fParams.size(); 
-   const int kPrec = 8; 
-   const int kWidth = 12; 
+   const int kPrec = 5; 
+   const int kWidth = 10; 
+   const int parw = 12; 
+   const int matw = kWidth+4;
    for (unsigned int i = 0; i < npar; ++i) {
-      for (unsigned int j = 0; j <= i; ++j) {
-         os.precision(kPrec); os.width(kWidth);  os << CovMatrix(i,j); 
+      os << std::setw(parw) << std::left << fFitFunc->ParameterName(i) << "\t";
+      for (unsigned int j = 0; j < npar; ++j) {
+         os.precision(kPrec); os.width(kWidth);  os << std::setw(matw) << CovMatrix(i,j); 
       }
       os << std::endl;
    }
+//   os << "****************************************\n";
    os << "\n            Correlation Matrix         \n\n";
    for (unsigned int i = 0; i < npar; ++i) {
-      for (unsigned int j = 0; j <= i; ++j) {
-         os.precision(kPrec); os.width(kWidth);  os << Correlation(i,j); 
+      os << std::setw(parw) << std::left << fFitFunc->ParameterName(i) << "\t";
+      for (unsigned int j = 0; j < npar; ++j) {
+         os.precision(kPrec); os.width(kWidth);  os << std::setw(matw) << Correlation(i,j); 
       }
       os << std::endl;
    }

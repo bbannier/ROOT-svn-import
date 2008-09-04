@@ -111,8 +111,9 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
       // consider only range defined with-in histogram not oustide. Always exclude underflow/overflow
       hxfirst =  std::max( hfit->GetXaxis()->FindBin(xlow), hxfirst);
       hxlast  =  std::min( hfit->GetXaxis()->FindBin(xhigh), hxlast);
-      if (range.Size(0) > 1  ) 
-         Warning("ROOT::Fit::THFitInterface","support only one range interval for X coordinate"); 
+      if (range.Size(0) > 1  ) { 
+         Warning("ROOT::Fit::FillData","support only one range interval for X coordinate"); 
+      }
    }
 
    if (hfit->GetDimension() > 1 && range.Size(1) != 0) { 
@@ -121,7 +122,7 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
       hyfirst =  std::max( hfit->GetYaxis()->FindBin(ylow), hyfirst);
       hylast  =  std::min( hfit->GetYaxis()->FindBin(yhigh), hylast);
       if (range.Size(1) > 1  ) 
-         Warning("ROOT::Fit::THFitInterface","support only one range interval for Y coordinate"); 
+         Warning("ROOT::Fit::FillData","support only one range interval for Y coordinate"); 
    }
 
    if (hfit->GetDimension() > 2 && range.Size(2) != 0) { 
@@ -130,7 +131,7 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
       hzfirst =  std::max( hfit->GetZaxis()->FindBin(zlow), hzfirst);
       hzlast  =  std::min( hfit->GetZaxis()->FindBin(zhigh), hzlast);
       if (range.Size(2) > 1  ) 
-         Warning("ROOT::Fit::THFitInterface","support only one range interval for Z coordinate"); 
+         Warning("ROOT::Fit::FillData","support only one range interval for Z coordinate"); 
    }
    
    
@@ -191,7 +192,7 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
                      x[2] = zaxis->GetBinLowEdge(binz);
                   else
                      x[2] = zaxis->GetBinCenter(binz);
-                  if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func,&x.front()) ) continue;
+//                  if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func,&x.front()) ) continue;
                   double error =  hfit->GetBinError(binx, biny, binz); 
                   if (!HFitInterface::AdjustError(fitOpt,error) ) continue; 
                   //dv.Add(BinPoint(  x,  hfit->GetBinContent(binx, biny, binz), error ) );
@@ -200,7 +201,7 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
             }
             else if (ndim == 2) { 
                // for dim == 2
-               if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func,&x.front()) ) continue;
+//               if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func,&x.front()) ) continue;
                double error =  hfit->GetBinError(binx, biny); 
                if (!HFitInterface::AdjustError(fitOpt,error) ) continue; 
                dv.Add( &x.front(), hfit->GetBinContent(binx, biny), error  );
@@ -214,7 +215,7 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
          std::cout << "bin " << binx << " add point " << x[0] << "  " << hfit->GetBinContent(binx) << std::endl;
 #endif
          // for 1D 
-         if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func,&x.front()) ) continue;
+//         if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func,&x.front()) ) continue;
          double error =  hfit->GetBinError(binx); 
          if (!HFitInterface::AdjustError(fitOpt,error) ) continue; 
          dv.Add( x.front(),  hfit->GetBinContent(binx), error  );
@@ -401,6 +402,12 @@ void DoFillData ( BinData  & dv,  const TGraph * gr,  BinData::ErrorType type, T
    double *gx = gr->GetX();
    double *gy = gr->GetY();
 
+   const DataRange & range = dv.Range(); 
+   bool useRange = ( range.Size(0) > 0);
+   double xmin = 0; 
+   double xmax = 0; 
+   range.GetRange(xmin,xmax); 
+
    dv.Initialize(nPoints,1, type); 
 
 #ifdef DEBUG
@@ -415,12 +422,14 @@ void DoFillData ( BinData  & dv,  const TGraph * gr,  BinData::ErrorType type, T
       
       x[0] = gx[i];
 
+      
+      if (useRange && (  x[0] < xmin || x[0] > xmax) ) continue;   
 
       // need to evaluate function to know about rejected points
       // hugly but no other solutions
       if (func) { 
          func->RejectPoint(false);
-         (*func)( &x[0] ); // evaluate using stored function parameters 
+         (*func)( x ); // evaluate using stored function parameters 
          if (func->RejectedPoint() ) continue; 
       }
 
@@ -584,13 +593,35 @@ void FillData ( BinData  & dv, const TGraph2D * gr, TF1 * func ) {
    double x[2]; 
    double ex[2]; 
 
+   // look at data  range
+   const DataRange & range = dv.Range(); 
+   bool useRangeX = ( range.Size(0) > 0);
+   bool useRangeY = ( range.Size(1) > 0);
+   double xmin = 0; 
+   double xmax = 0; 
+   double ymin = 0; 
+   double ymax = 0; 
+   range.GetRange(xmin,xmax,ymin,ymax); 
+
    dv.Initialize(nPoints,2, type); 
    
    for ( int i = 0; i < nPoints; ++i) { 
       
       x[0] = gx[i];
       x[1] = gy[i];
-      if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func, x) ) continue;
+
+      //if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func, x) ) continue;
+      if (useRangeX && (  x[0] < xmin || x[0] > xmax) ) continue;   
+      if (useRangeY && (  x[1] < ymin || x[1] > ymax) ) continue;   
+
+      // need to evaluate function to know about rejected points
+      // hugly but no other solutions
+      if (func) { 
+         func->RejectPoint(false);
+         (*func)( x ); // evaluate using stored function parameters 
+         if (func->RejectedPoint() ) continue; 
+      }
+
 
       if (type == BinData::kNoError) {   
          dv.Add( x, gz[i] ); 

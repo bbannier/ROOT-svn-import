@@ -13,6 +13,9 @@
 #ifndef ROOT_HFitInterface
 #define ROOT_HFitInterface
 
+#ifndef ROOT_Fit_BinData
+#include "Fit/BinData.h"
+#endif
 
 class TH1; 
 class TF1;
@@ -32,7 +35,7 @@ namespace ROOT {
 
    namespace Fit { 
 
-      class BinData; 
+      //class BinData; 
       class FitResult;
       class DataRange; 
 
@@ -92,6 +95,12 @@ namespace ROOT {
        */ 
       void InitGaus(const ROOT::Fit::BinData & data, TF1 * f1 ); 
 
+      template <class FitObject> 
+      void InitGaus(FitObject * obj, TF1 * f1) { 
+         BinData dv; 
+         FillData(dv, obj); // no need to function 
+         InitGaus(dv, f1);
+      }
 
       /**
          compute confidence intervals at level cl for a fitted histogram h1 in a TGraphErrors gr
