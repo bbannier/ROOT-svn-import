@@ -231,8 +231,10 @@ void FitResult::Print(std::ostream & os, bool doCovMatrix) const {
       os << std::setw(nw) << std::left << "Likelihood" << " =\t" << fVal << std::endl;
    os << std::setw(nw) << std::left <<  "Chi2"  << " =\t" << fChi2<< std::endl;
    os << std::setw(nw) << std::left << "NDf"    << " =\t" << fNdf << std::endl; 
-   os << std::setw(nw) << std::left << "Edm"    << " =\t" << fEdm << std::endl; 
-   os << std::setw(nw) << std::left << "NCalls" << " =\t" << fNCalls << std::endl; 
+   if (fMinimType.find("Linear") == std::string::npos) {  // no need to print this for linear fits
+      os << std::setw(nw) << std::left << "Edm"    << " =\t" << fEdm << std::endl; 
+      os << std::setw(nw) << std::left << "NCalls" << " =\t" << fNCalls << std::endl; 
+   }
    assert(fFitFunc != 0); 
    for (unsigned int i = 0; i < npar; ++i) { 
       os << std::setw(nw) << std::left << fFitFunc->ParameterName(i) << " =\t" << fParams[i]; 
@@ -261,21 +263,41 @@ void FitResult::PrintCovMatrix(std::ostream &os) const {
    const int kWidth = 10; 
    const int parw = 12; 
    const int matw = kWidth+4;
-   for (unsigned int i = 0; i < npar; ++i) {
-      os << std::setw(parw) << std::left << fFitFunc->ParameterName(i) << "\t";
-      for (unsigned int j = 0; j < npar; ++j) {
-         os.precision(kPrec); os.width(kWidth);  os << std::setw(matw) << CovMatrix(i,j); 
+   os << std::setw(parw) << " " << "\t"; 
+   for (unsigned int i = 0; i < npar; ++i) 
+      if (!IsParameterFixed(i) ) { 
+         os << std::setw(matw)  << fFitFunc->ParameterName(i) ;
       }
-      os << std::endl;
+   os << std::endl;   
+   for (unsigned int i = 0; i < npar; ++i) {
+      if (!IsParameterFixed(i) ) { 
+         os << std::setw(parw) << std::left << fFitFunc->ParameterName(i) << "\t";
+         for (unsigned int j = 0; j < npar; ++j) {
+            if (!IsParameterFixed(j) ) { 
+               os.precision(kPrec); os.width(kWidth);  os << std::setw(matw) << CovMatrix(i,j); 
+            }
+         }
+         os << std::endl;
+      }
    }
 //   os << "****************************************\n";
    os << "\n            Correlation Matrix         \n\n";
-   for (unsigned int i = 0; i < npar; ++i) {
-      os << std::setw(parw) << std::left << fFitFunc->ParameterName(i) << "\t";
-      for (unsigned int j = 0; j < npar; ++j) {
-         os.precision(kPrec); os.width(kWidth);  os << std::setw(matw) << Correlation(i,j); 
+   os << std::setw(parw) << " " << "\t"; 
+   for (unsigned int i = 0; i < npar; ++i) 
+      if (!IsParameterFixed(i) ) { 
+         os << std::setw(matw)  << fFitFunc->ParameterName(i) ;
       }
-      os << std::endl;
+   os << std::endl;   
+   for (unsigned int i = 0; i < npar; ++i) {
+      if (!IsParameterFixed(i) ) { 
+         os << std::setw(parw) << std::left << fFitFunc->ParameterName(i) << "\t";
+         for (unsigned int j = 0; j < npar; ++j) {
+            if (!IsParameterFixed(j) ) {
+               os.precision(kPrec); os.width(kWidth);  os << std::setw(matw) << Correlation(i,j); 
+            }
+         }
+         os << std::endl;
+      }
    }
 }
 

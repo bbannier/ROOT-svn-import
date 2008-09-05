@@ -171,7 +171,7 @@ public:
       if ( i >= fErrors.size() || j >= fErrors.size() ) return 0; 
       if (fCovMatrix.size() == 0) return 0; // no matrix is available in case of non-valid fits
       double tmp = CovMatrix(i,i)*CovMatrix(j,j); 
-      return ( tmp < 0) ? 0 : CovMatrix(i,j)/ std::sqrt(tmp); 
+      return ( tmp > 0) ? CovMatrix(i,j)/ std::sqrt(tmp) : 0; 
    }
    
    /// fill covariance matrix elements using a generic symmetric matrix class implementing operator(i,j)
