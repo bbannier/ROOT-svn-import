@@ -302,7 +302,33 @@ bool TMinuitMinimizer::Minimize() {
    // store global min results (only if minimization is OK)  
    if (ierr == 0) { 
       fCovar.resize(fDim*fDim); 
-      fMinuit->mnemat(&fCovar.front(), fDim); 
+      if (fNFree >= fDim) { // no fixed parameters 
+         fMinuit->mnemat(&fCovar.front(), fDim); 
+      } 
+      else { 
+         // case of fixed params need to take care 
+         std::vector<double> tmpMat(fNFree); 
+         fMinuit->mnemat(&tmpMat.front(), fNFree); 
+
+         unsigned int l = 0; 
+         for (unsigned int i = 0; i < fDim; ++i) { 
+            
+            if ( fMinuit->fNiofex[i] == 0 ) {  // is fixed ?
+               unsigned int m = 0; 
+               for (unsigned int j = 0; j < fDim; ++j) { 
+                  if ( fMinuit->fNiofex[j] == 0 ) {  
+                     if ( j <= i)  
+                        fCovar[i*fDim + j] = tmpMat[l*fNFree + m];
+                     else 
+                        fCovar[i*fDim + j] = fCovar[j*fDim + i];
+                     m++;
+                  }
+               }
+               l++;
+            }
+         }
+
+      }
 
       // need to re-run Minos again if requested
       fMinosRun = false; 

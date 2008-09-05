@@ -147,7 +147,8 @@ void TLinearMinimizer::SetFunction(const  ROOT::Math::IMultiGradFunction & objfu
    // create TLinearFitter (do it now because olny now now the coordinate dimensions)
    if (fFitter) delete fFitter; // reset by deleting previous copy
    fFitter = new TLinearFitter( static_cast<const ModelFunc::BaseFunc&>(modfunc).NDim() ); 
-   fFitter->StoreData(false); 
+
+   fFitter->StoreData(fRobust); //  need a copy of data in case of robust fitting 
 
    fFitter->SetBasisFunctions(&flist); 
 
@@ -199,14 +200,16 @@ bool TLinearMinimizer::Minimize() {
 
    // get parameter values 
    fParams.resize( fDim); 
-   fErrors.resize( fDim); 
+   // no error available for robust fitting
+   if (!fRobust) fErrors.resize( fDim); 
    for (unsigned int i = 0; i < fDim; ++i) { 
       fParams[i] = fFitter->GetParameter( i);
-      fErrors[i] = fFitter->GetParError( i ); 
+      if (!fRobust) fErrors[i] = fFitter->GetParError( i ); 
    }
    fCovar.resize(fDim*fDim); 
    double * cov = fFitter->GetCovarianceMatrix();
-   std::copy(cov,cov+fDim*fDim,fCovar.begin() );
+
+   if (!fRobust && cov) std::copy(cov,cov+fDim*fDim,fCovar.begin() );
 
    // calculate chi2 value
    

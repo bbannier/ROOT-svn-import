@@ -506,7 +506,7 @@ bool TFumiliMinimizer::Minimize() {
    fNFree = nfree;
    
 
-   // get parameter values 
+   // get parameter values and correlation matrix
    fParams.resize( fDim); 
    fErrors.resize( fDim); 
    fCovar.resize(fDim*fDim); 
@@ -515,16 +515,20 @@ bool TFumiliMinimizer::Minimize() {
    for (unsigned int i = 0; i < fDim; ++i) { 
       fParams[i] = fFumili->GetParameter( i );  
       fErrors[i] = fFumili->GetParError( i );  
-      unsigned int m = 0; 
-      for (unsigned int j = 0; j < fDim; ++j) { 
-         if ( j <= i)  
-            fCovar[i*fDim + j] = cv[l*nfree + m];
-         else 
-            fCovar[i*fDim + j] = fCovar[j*fDim + i];
 
-         if (! fFumili->IsFixed(j)) m++; 
+      if ( !fFumili->IsFixed(i) ) { 
+         unsigned int m = 0; 
+         for (unsigned int j = 0; j < fDim; ++j) { 
+            if ( !fFumili->IsFixed(j) ) {  
+               if ( j <= i)  
+                  fCovar[i*fDim + j] = cv[l*nfree + m];
+               else 
+                  fCovar[i*fDim + j] = fCovar[j*fDim + i];
+               m++;
+            }
+         }
+         l++;
       }
-      if (! fFumili->IsFixed(i)) l++; 
    }
 
    return (iret==0) ? true : false;
