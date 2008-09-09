@@ -451,9 +451,9 @@ void TBuildRealData::Inspect(TClass* cl, const char* pname, const char* mname, c
          // classes composing this object (base classes, type of
          // embedded object and same for their data members).
          //
-         TClass* dmclass = TClass::GetClass(dm->GetTypeName());
+         TClass* dmclass = TClass::GetClass(dm->GetTypeName(),kTRUE,kTRUE);
          if (!dmclass) {
-            dmclass = TClass::GetClass(dm->GetTrueTypeName());
+            dmclass = TClass::GetClass(dm->GetTrueTypeName(),kTRUE,kTRUE);
          }
          if (dmclass) {
             if (dmclass->Property()) {
@@ -671,7 +671,7 @@ TClass::TClass() : TDictionary(), fNew(0), fNewArray(0), fDelete(0),
 }
 
 //______________________________________________________________________________
-TClass::TClass(const char *name) : TDictionary(), fNew(0), fNewArray(0),
+TClass::TClass(const char *name, Bool_t silent) : TDictionary(), fNew(0), fNewArray(0),
                                    fDelete(0), fDeleteArray(0), fDestructor(0),
                                    fDirAutoAdd(0),
                                    fSizeof(-1), fVersionUsed(kFALSE),
@@ -729,7 +729,7 @@ TClass::TClass(const char *name) : TDictionary(), fNew(0), fNewArray(0),
          gInterpreter->InitializeDictionaries();
          gInterpreter->SetClassInfo(this);
       }
-      if (!fClassInfo && fName.First('@')==kNPOS) 
+      if (!silent && !fClassInfo && fName.First('@')==kNPOS) 
          ::Warning("TClass::TClass", "no dictionary for class %s is available", name);
       ResetBit(kLoading);
    }
@@ -739,7 +739,7 @@ TClass::TClass(const char *name) : TDictionary(), fNew(0), fNewArray(0),
 
 //______________________________________________________________________________
 TClass::TClass(const char *name, Version_t cversion,
-               const char *dfil, const char *ifil, Int_t dl, Int_t il)
+               const char *dfil, const char *ifil, Int_t dl, Int_t il, Bool_t silent)
    : TDictionary(), fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
      fDestructor(0), fDirAutoAdd(0), fSizeof(-1), fVersionUsed(kFALSE), fOffsetStreamer(0),
      fStreamerType(kNone), fCurrentInfo(0), fRefStart(0), fRefProxy(0),
@@ -748,7 +748,7 @@ TClass::TClass(const char *name, Version_t cversion,
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
    fTranslatedStreamerInfo = new std::map<std::string, TObjArray*>();
-   Init(name,cversion, 0, 0, 0, dfil, ifil, dl, il);
+   Init(name,cversion, 0, 0, 0, dfil, ifil, dl, il,silent);
    SetBit(kUnloaded);
 }
 
@@ -756,7 +756,8 @@ TClass::TClass(const char *name, Version_t cversion,
 TClass::TClass(const char *name, Version_t cversion,
                const type_info &info, TVirtualIsAProxy *isa,
                ShowMembersFunc_t showmembers,
-               const char *dfil, const char *ifil, Int_t dl, Int_t il)
+               const char *dfil, const char *ifil, Int_t dl, Int_t il,
+               Bool_t silent)
    : TDictionary(), fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
      fDestructor(0), fDirAutoAdd(0), fSizeof(-1), fVersionUsed(kFALSE), fOffsetStreamer(0),
      fStreamerType(kNone), fCurrentInfo(0), fRefStart(0), fRefProxy(0),
@@ -767,7 +768,7 @@ TClass::TClass(const char *name, Version_t cversion,
 
    // use inf
    fTranslatedStreamerInfo = new std::map<std::string, TObjArray*>();
-   Init(name, cversion, &info, isa, showmembers, dfil, ifil, dl, il);
+   Init(name, cversion, &info, isa, showmembers, dfil, ifil, dl, il, silent);
 }
 
 //______________________________________________________________________________
@@ -798,7 +799,8 @@ void TClass::ForceReload (TClass* oldcl)
 void TClass::Init(const char *name, Version_t cversion,
                   const type_info *typeinfo, TVirtualIsAProxy *isa,
                   ShowMembersFunc_t showmembers,
-                  const char *dfil, const char *ifil, Int_t dl, Int_t il)
+                  const char *dfil, const char *ifil, Int_t dl, Int_t il,
+                  Bool_t silent)
 {
    // Initialize a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
@@ -901,7 +903,7 @@ void TClass::Init(const char *name, Version_t cversion,
          }
       }
    }
-   if (!fClassInfo && !isStl && fName.First('@')==kNPOS)
+   if (!silent && !fClassInfo && !isStl && fName.First('@')==kNPOS)
       ::Warning("TClass::TClass", "no dictionary for class %s is available", name);
 
    fgClassCount++;
@@ -1950,7 +1952,7 @@ TVirtualIsAProxy* TClass::GetIsAProxy() const
 
 
 //______________________________________________________________________________
-TClass *TClass::GetClass(const char *name, Bool_t load)
+TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
 {
    // Static method returning pointer to TClass of the specified class name.
    // If load is true an attempt is made to obtain the class by loading
@@ -2076,7 +2078,7 @@ TClass *TClass::GetClass(const char *name, Bool_t load)
          delete [] modifiable_name;
          return GetClass(altname,load);
       }
-      TClass *ncl = new TClass(name, 1, 0, 0, -1, -1);
+      TClass *ncl = new TClass(name, 1, 0, 0, -1, -1, silent);
       if (!ncl->IsZombie()) {
          delete [] modifiable_name;
          return ncl;
@@ -2088,7 +2090,7 @@ TClass *TClass::GetClass(const char *name, Bool_t load)
 }
 
 //______________________________________________________________________________
-TClass *TClass::GetClass(const type_info& typeinfo, Bool_t load)
+TClass *TClass::GetClass(const type_info& typeinfo, Bool_t load, Bool_t /* silent */)
 {
    // Return pointer to class with name.
 

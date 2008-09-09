@@ -135,7 +135,8 @@ private:
    void Init(const char *name, Version_t cversion, const type_info *info,
              TVirtualIsAProxy *isa, ShowMembersFunc_t showmember,
              const char *dfil, const char *ifil,
-             Int_t dl, Int_t il);
+             Int_t dl, Int_t il,
+             Bool_t silent);
    void ForceReload (TClass* oldcl);
 
    void               SetClassVersion(Version_t version) { fClassVersion = version; fCurrentInfo = 0; }
@@ -186,15 +187,15 @@ protected:
 
 public:
    TClass();
-   TClass(const char *name);
+   TClass(const char *name, Bool_t silent = kFALSE);
    TClass(const char *name, Version_t cversion,
           const char *dfil = 0, const char *ifil = 0,
-          Int_t dl = 0, Int_t il = 0);
+          Int_t dl = 0, Int_t il = 0, Bool_t silent = kFALSE);
    TClass(const char *name, Version_t cversion,
           const type_info &info, TVirtualIsAProxy *isa,
           ShowMembersFunc_t showmember,
           const char *dfil, const char *ifil,
-          Int_t dl, Int_t il);
+          Int_t dl, Int_t il, Bool_t silent = kFALSE);
    virtual           ~TClass();
 
    void               AddInstance(Bool_t heap = kFALSE) { fInstanceCount++; if (heap) fOnHeap++; }
@@ -319,8 +320,8 @@ public:
    // Function to retrieve the TClass object and dictionary function
    static void           AddClass(TClass *cl);
    static void           RemoveClass(TClass *cl);
-   static TClass        *GetClass(const char *name, Bool_t load = kTRUE);
-   static TClass        *GetClass(const type_info &typeinfo, Bool_t load = kTRUE);
+   static TClass        *GetClass(const char *name, Bool_t load = kTRUE, Bool_t silent = kFALSE);
+   static TClass        *GetClass(const type_info &typeinfo, Bool_t load = kTRUE, Bool_t silent = kFALSE);
    static VoidFuncPtr_t  GetDict (const char *cname);
    static VoidFuncPtr_t  GetDict (const type_info &info);
 
