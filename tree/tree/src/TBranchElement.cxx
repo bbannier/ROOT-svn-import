@@ -1589,9 +1589,11 @@ void TBranchElement::InitInfo()
                 && ((TStreamerElement*) fInfo->GetElems()[0])->GetType() == TStreamerInfo::kCacheNew) 
             {
                Int_t arrlen = 1;
-               TLeaf *leaf = (TLeaf*)fLeaves.At(0);
-               if (leaf) {
-                  arrlen = leaf->GetMaximum();
+               if (fType==31 || fType==41) {
+                  TLeaf *leaf = (TLeaf*)fLeaves.At(0);
+                  if (leaf) {
+                     arrlen = leaf->GetMaximum();
+                  }
                }
                fOnfileObject = new TVirtualArray( ((TStreamerElement*) fInfo->GetElems()[0])->GetClassPointer(), arrlen );
                // Propage this to all the other branch of this type.
