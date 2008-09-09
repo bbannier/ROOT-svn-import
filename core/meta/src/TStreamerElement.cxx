@@ -1763,7 +1763,7 @@ void TStreamerSTLstring::Streamer(TBuffer &R__b)
 
 ClassImp(TStreamerSTLstring);
 
-void TStreamerArtificial::Streamer(TBuffer &R__b)
+void TStreamerArtificial::Streamer(TBuffer& /* R__b */)
 {
    // Avoid streaming the synthetic/artificial streamer elements.
 
