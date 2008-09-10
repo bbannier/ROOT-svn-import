@@ -33,6 +33,7 @@ namespace ROOT {
          virtual ~TSchemaRuleSet();
 
          Bool_t              AddRule( TSchemaRule* rule, Bool_t checkConsistency = kTRUE );
+         Bool_t              HasRuleWithSourceClass( const TString &source) const;
          const TObjArray*    FindRules( const TString &source ) const;
          const TSchemaMatch* FindRules( const TString &source, Int_t version ) const;
          const TSchemaMatch* FindRules( const TString &source, UInt_t checksum ) const;
