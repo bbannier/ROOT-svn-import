@@ -1907,6 +1907,7 @@ namespace {
       }
    };
 }
+
 //______________________________________________________________________________
 TVirtualCollectionProxy *TClass::GetCollectionProxy() const
 {
@@ -2434,6 +2435,8 @@ TList *TClass::GetListOfMethods()
          Fatal("GetListOfMethods", "gInterpreter not initialized");
 
       gInterpreter->CreateListOfMethods(this);
+   } else {
+      gInterpreter->UpdateListOfMethods(this);
    }
    return fMethod;
 }
@@ -3691,6 +3694,24 @@ void TClass::DeleteArray(void *ary, Bool_t dtorOnly)
 }
 
 //______________________________________________________________________________
+void TClass::SetClassVersion(Version_t version) 
+{ 
+   // Private function.  Set the class version for the 'class' represented by
+   // this TClass object.  See the public interface: 
+   //    ROOT::ResetClassVersion 
+   // defined in TClassTable.cxx
+   //
+   // Note on class version numbers:
+   //   If no class number has been specified, TClass::GetVersion will return -1
+   //   The Class Version 0 request the whole object to be transient
+   //   The Class Version 1, unless specified via ClassDef indicates that the
+   //      I/O should use the TClass checksum to distinguish the layout of the class   
+   
+   fClassVersion = version; 
+   fCurrentInfo = 0; 
+}
+
+//______________________________________________________________________________
 void TClass::SetCurrentStreamerInfo(TVirtualStreamerInfo *info)
 {
    // Set pointer to current TVirtualStreamerInfo
@@ -3719,14 +3740,14 @@ TClass *TClass::Load(TBuffer &b)
 
    Int_t pos = b.Length();
 
-   b.ReadString(s, maxsize);
-   while (strlen(s)==maxsize) {
+   b.ReadString(s, maxsize); // Reads at most maxsize - 1 characters, plus null at end.
+   while (strlen(s) == (maxsize - 1)) {
       // The classname is too large, try again with a large buffer.
       b.SetBufferOffset(pos);
       maxsize = 2*maxsize;
       delete [] s;
       s = new char[maxsize];
-      b.ReadString(s, maxsize);
+      b.ReadString(s, maxsize); // Reads at most maxsize - 1 characters, plus null at end.
    }
 
    TClass *cl = TClass::GetClass(s, kTRUE);

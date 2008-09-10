@@ -99,6 +99,21 @@ Bool_t TSchemaRuleSet::AddRule( TSchemaRule* rule, Bool_t checkConsistency )
 }
 
 //------------------------------------------------------------------------------
+Bool_t TSchemaRuleSet::HasRuleWithSourceClass( const TString &source ) const
+{
+   // Return True if we have any rule whose source class is 'source'.
+   
+   TObjArrayIter it( fAllRules );
+   TObject *obj;
+   while( (obj = it.Next()) ) {
+      TSchemaRule* rule = (TSchemaRule*)obj;
+      if( rule->GetSourceClass() == source )
+         return kTRUE;
+   }
+   return kFALSE;
+}
+
+//------------------------------------------------------------------------------
 const TObjArray* TSchemaRuleSet::FindRules( const TString &source ) const
 {
    // User has to delete the returned array
@@ -106,7 +121,7 @@ const TObjArray* TSchemaRuleSet::FindRules( const TString &source ) const
    TObjArrayIter it( fAllRules );
    TObjArray*    arr = new TObjArray();
    arr->SetOwner( kFALSE );
-
+   
    while( (obj = it.Next()) ) {
       TSchemaRule* rule = (TSchemaRule*)obj;
       if( rule->GetSourceClass() == source )
