@@ -141,7 +141,7 @@ public:
    virtual const char      *GetTypeName() const;
            Double_t         GetValue(Int_t i, Int_t len, Bool_t subarr = kFALSE) const;
    virtual void            *GetValuePointer() const;
-           Int_t            GetVersion() { return fClassVersion; }
+           Int_t            GetClassVersion() { return fClassVersion; }
            Bool_t           IsBranchFolder() const { return TestBit(kBranchFolder); }
            Bool_t           IsFolder() const;
    virtual Bool_t           IsObjectOwner() const { return TestBit(kDeleteObject); }
