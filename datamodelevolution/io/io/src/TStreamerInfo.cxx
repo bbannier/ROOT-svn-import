@@ -828,30 +828,28 @@ void TStreamerInfo::BuildEmulated(TFile *file)
 }
 
 //______________________________________________________________________________
-Bool_t TStreamerInfo::BuildFor( const TClass *cl )
+Bool_t TStreamerInfo::BuildFor( const TClass *in_memory_cl )
 {
    //---------------------------------------------------------------------------
    // Check if we can build this for foreign class - do we have some rules
    // to do that
    //---------------------------------------------------------------------------
-   if( !cl )
+   if( !in_memory_cl )
       return kFALSE;
 
    const TObjArray* rules;
 
    if( fOnFileClassVersion >= 2 )
-      rules = cl->GetSchemaRules()->FindRules( GetName(), fOnFileClassVersion );
+      rules = in_memory_cl->GetSchemaRules()->FindRules( GetName(), fOnFileClassVersion );
    else
-      rules = cl->GetSchemaRules()->FindRules( GetName(), fCheckSum );
+      rules = in_memory_cl->GetSchemaRules()->FindRules( GetName(), fCheckSum );
 
-   if( !rules && !TClassEdit::IsSTLCont( cl->GetName() ) ) {
-      Warning( "BuildFor", "The build of %s streamer info for %s has been requested, but no matching conversion rules were specified", GetName(), cl->GetName() );
+   if( !rules && !TClassEdit::IsSTLCont( in_memory_cl->GetName() ) ) {
+      Warning( "BuildFor", "The build of %s streamer info for %s has been requested, but no matching conversion rules were specified", GetName(), in_memory_cl->GetName() );
       return kFALSE;
    }
 
-   fClass = const_cast<TClass*>(cl);
-
-   BuildOld();
+   fClass = const_cast<TClass*>(in_memory_cl);
 
    return kTRUE;
 }

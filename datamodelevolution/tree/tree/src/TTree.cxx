@@ -350,6 +350,7 @@
 #include "TVirtualIndex.h"
 #include "TVirtualPad.h"
 #include "TBranchSTL.h"
+#include "TSchemaRuleSet.h"
 
 #include <cstddef>
 #include <fstream>
@@ -2196,6 +2197,7 @@ TFile* TTree::ChangeFile(TFile* file)
 Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataType datatype, Bool_t isptr)
 {
    // Check whether or not the address described by the last 3 parameters matches the content of the branch.
+   // If a Data Model Evolution conversion is involved, reset the fInfo of the branch.
 
    if (GetMakeClass()) {
       // If we are in MakeClass mode so we do not really use classes.
@@ -2211,6 +2213,7 @@ Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataTyp
       expectedClass = lobj->GetClass();
    } else if (branch->InheritsFrom(TBranchElement::Class())) {
       TBranchElement* branchEl = (TBranchElement*) branch;
+
       Int_t type = branchEl->GetStreamerType();
       sinfo = branchEl->GetInfo();
       if ((type == -1) || (branchEl->GetID() == -1)) {
@@ -2262,20 +2265,25 @@ Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataTyp
    // Deal with the class renaming
    //---------------------------------------------------------------------------
    if( expectedClass && ptrClass &&
-       expectedClass->GetName() != ptrClass->GetName() &&
-       branch->InheritsFrom( TBranchElement::Class() )) {
-       TBranchElement* bEl = (TBranchElement*)branch;
+       expectedClass != ptrClass &&
+       branch->InheritsFrom( TBranchElement::Class() ) &&
+       ptrClass->GetSchemaRules() &&
+       ptrClass->GetSchemaRules()->HasRuleWithSourceClass(expectedClass->GetName() ) ) {
 
-      if( !ptrClass->GetTranslatedStreamerInfo( bEl->GetClassName(), bEl->GetClassVersion() ) &&
-          !ptrClass->FindTranslatedStreamerInfo( bEl->GetClassName(), bEl->GetCheckSum() ) ) {
+      TBranchElement* bEl = (TBranchElement*)branch;
+
+      if( !ptrClass->GetConversionStreamerInfo( expectedClass, bEl->GetClassVersion() ) &&
+          !ptrClass->FindConversionStreamerInfo( expectedClass, bEl->GetCheckSum() ) ) {
          Error("SetBranchAddress", "The pointer type given \"%s\" does not correspond to the type needed \"%s\" by the branch: %s", ptrClass->GetName(), bEl->GetClassName(), branch->GetName());
          return kFALSE;
       }
-      else
+      else {
+         
+         bEl->SetTargetClassName( ptrClass->GetName() );         
          return kTRUE;
-   }
-
-   if (expectedClass && ptrClass && !expectedClass->InheritsFrom(ptrClass)) {
+      }
+      
+   } else if (expectedClass && ptrClass && !expectedClass->InheritsFrom(ptrClass)) {
 
          Error("SetBranchAddress", "The pointer type given (%s) does not correspond to the class needed (%s) by the branch: %s", ptrClass->GetName(), expectedClass->GetName(), branch->GetName());
          return kFALSE;
@@ -5624,10 +5632,6 @@ void TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr, TClas
    }
    if (ptr) {
       *ptr = branch;
-   }
-
-   if( branch->IsA() == TBranchElement::Class() ) {
-      ((TBranchElement*)branch)->SetTargetClassName( ptrClass->GetName() );
    }
 
    CheckBranchAddressType(branch, ptrClass, datatype, isptr);
