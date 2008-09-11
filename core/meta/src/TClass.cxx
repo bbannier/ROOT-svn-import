@@ -667,7 +667,7 @@ TClass::TClass() : TDictionary(), fNew(0), fNewArray(0), fDelete(0),
    fClassMenuList  = new TList();
    fClassMenuList->Add(new TClassMenuItem(TClassMenuItem::kPopupStandardList, this));
    fContextMenuTitle = "";
-   fTranslatedStreamerInfo = new std::map<std::string, TObjArray*>();
+   fConversionStreamerInfo = new std::map<std::string, TObjArray*>();
 }
 
 //______________________________________________________________________________
@@ -734,7 +734,7 @@ TClass::TClass(const char *name, Bool_t silent) : TDictionary(), fNew(0), fNewAr
       ResetBit(kLoading);
    }
    if (fClassInfo) SetTitle(gCint->ClassInfo_Title(fClassInfo));
-   fTranslatedStreamerInfo = new std::map<std::string, TObjArray*>();
+   fConversionStreamerInfo = new std::map<std::string, TObjArray*>();
 }
 
 //______________________________________________________________________________
@@ -747,7 +747,7 @@ TClass::TClass(const char *name, Version_t cversion,
 {
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
-   fTranslatedStreamerInfo = new std::map<std::string, TObjArray*>();
+   fConversionStreamerInfo = new std::map<std::string, TObjArray*>();
    Init(name,cversion, 0, 0, 0, dfil, ifil, dl, il,silent);
    SetBit(kUnloaded);
 }
@@ -767,7 +767,7 @@ TClass::TClass(const char *name, Version_t cversion,
    // of a class. It has list to baseclasses, datamembers and methods.
 
    // use inf
-   fTranslatedStreamerInfo = new std::map<std::string, TObjArray*>();
+   fConversionStreamerInfo = new std::map<std::string, TObjArray*>();
    Init(name, cversion, &info, isa, showmembers, dfil, ifil, dl, il, silent);
 }
 
@@ -991,7 +991,7 @@ void TClass::Init(const char *name, Version_t cversion,
 TClass::TClass(const TClass& cl) :
   TDictionary(cl),
   fStreamerInfo(cl.fStreamerInfo),
-  fTranslatedStreamerInfo( cl.fTranslatedStreamerInfo ),
+  fConversionStreamerInfo( cl.fConversionStreamerInfo ),
   fRealData(cl.fRealData),
   fBase(cl.fBase),
   fData(cl.fData),
@@ -1081,7 +1081,7 @@ TClass& TClass::operator=(const TClass& cl)
       fStreamerType=cl.fStreamerType;
       fCurrentInfo=cl.fCurrentInfo;
       fRefStart=cl.fRefStart;
-      fTranslatedStreamerInfo=cl.fTranslatedStreamerInfo;
+      fConversionStreamerInfo=cl.fConversionStreamerInfo;
    }
    return *this;
 }
@@ -1174,7 +1174,7 @@ TClass::~TClass()
    delete fCollectionProxy;
    delete fIsAMethod;
    delete fSchemaRules;
-   delete fTranslatedStreamerInfo;
+   delete fConversionStreamerInfo;
 }
 
 //------------------------------------------------------------------------------
@@ -4556,16 +4556,16 @@ TVirtualStreamerInfo *TClass::FindStreamerInfo( TObjArray* arr, UInt_t checksum)
 }
 
 //______________________________________________________________________________
-TVirtualStreamerInfo *TClass::GetTranslatedStreamerInfo( const char* classname, Int_t version ) const
+TVirtualStreamerInfo *TClass::GetConversionStreamerInfo( const char* classname, Int_t version ) const
 {
    TClass *cl = TClass::GetClass( classname );
    if( !cl )
       return 0;
-   return GetTranslatedStreamerInfo( cl, version );
+   return GetConversionStreamerInfo( cl, version );
 }
 
 //______________________________________________________________________________
-TVirtualStreamerInfo *TClass::GetTranslatedStreamerInfo( const TClass* cl, Int_t version ) const
+TVirtualStreamerInfo *TClass::GetConversionStreamerInfo( const TClass* cl, Int_t version ) const
 {
    // Find the streamer info for the foreign class
 
@@ -4584,14 +4584,14 @@ TVirtualStreamerInfo *TClass::GetTranslatedStreamerInfo( const TClass* cl, Int_t
    std::map<std::string, TObjArray*>::iterator it;
    TObjArray* arr;
 
-   it = fTranslatedStreamerInfo->find( cl->GetName() );
+   it = fConversionStreamerInfo->find( cl->GetName() );
 
-   if( it != fTranslatedStreamerInfo->end() ) {
+   if( it != fConversionStreamerInfo->end() ) {
       arr = it->second;
    }
    else {
       arr = new TObjArray(version+10, -1);
-      (*fTranslatedStreamerInfo)[cl->GetName()] = arr;
+      (*fConversionStreamerInfo)[cl->GetName()] = arr;
    }
 
    if( version > -1 && version < arr->GetSize() && arr->At( version ) )
@@ -4619,6 +4619,17 @@ TVirtualStreamerInfo *TClass::GetTranslatedStreamerInfo( const TClass* cl, Int_t
       return 0;
    }
 
+   if (!info->GetOffsets()) {
+      // Streamer info has not been compiled, but exists.
+      // Therefore it was read in from a file and we have to do schema evolution?
+      // Or it didn't have a dictionary before, but does now?
+      info->BuildOld();
+   }
+   if (info->IsOptimized() && !TVirtualStreamerInfo::CanOptimize()) {
+      // Undo optimization if the global flag tells us to.
+      info->Compile();
+   }
+   
    //----------------------------------------------------------------------------
    // Cache this treamer info
    //----------------------------------------------------------------------------
@@ -4627,17 +4638,17 @@ TVirtualStreamerInfo *TClass::GetTranslatedStreamerInfo( const TClass* cl, Int_t
 }
 
 //______________________________________________________________________________
-TVirtualStreamerInfo *TClass::FindTranslatedStreamerInfo( const char* classname, UInt_t checksum ) const
+TVirtualStreamerInfo *TClass::FindConversionStreamerInfo( const char* classname, UInt_t checksum ) const
 {
 
    TClass *cl = TClass::GetClass( classname );
    if( !cl )
       return 0;
-   return FindTranslatedStreamerInfo( cl, checksum );
+   return FindConversionStreamerInfo( cl, checksum );
 }
 
 //______________________________________________________________________________
-TVirtualStreamerInfo *TClass::FindTranslatedStreamerInfo( const TClass* cl, UInt_t checksum ) const
+TVirtualStreamerInfo *TClass::FindConversionStreamerInfo( const TClass* cl, UInt_t checksum ) const
 {
    // Find the streamer info from the foreign class
 
@@ -4656,14 +4667,14 @@ TVirtualStreamerInfo *TClass::FindTranslatedStreamerInfo( const TClass* cl, UInt
    std::map<std::string, TObjArray*>::iterator it;
    TObjArray* arr;
 
-   it = fTranslatedStreamerInfo->find( cl->GetName() );
+   it = fConversionStreamerInfo->find( cl->GetName() );
 
-   if( it != fTranslatedStreamerInfo->end() ) {
+   if( it != fConversionStreamerInfo->end() ) {
       arr = it->second;
    }
    else {
       arr = new TObjArray( 20, -1 );
-      (*fTranslatedStreamerInfo)[cl->GetName()] = arr;       
+      (*fConversionStreamerInfo)[cl->GetName()] = arr;       
    }
 
    TVirtualStreamerInfo* info;
@@ -4690,6 +4701,17 @@ TVirtualStreamerInfo *TClass::FindTranslatedStreamerInfo( const TClass* cl, UInt
       return 0;
    }
 
+   if (!info->GetOffsets()) {
+      // Streamer info has not been compiled, but exists.
+      // Therefore it was read in from a file and we have to do schema evolution?
+      // Or it didn't have a dictionary before, but does now?
+      info->BuildOld();
+   }
+   if (info->IsOptimized() && !TVirtualStreamerInfo::CanOptimize()) {
+      // Undo optimization if the global flag tells us to.
+      info->Compile();
+   }
+   
    //----------------------------------------------------------------------------
    // Cache this treamer info
    //----------------------------------------------------------------------------

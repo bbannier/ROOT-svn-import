@@ -90,6 +90,7 @@ namespace {
 TBranchElement::TBranchElement()
 : TBranch()
 , fClassName()
+, fTargetClassName()
 , fParentName()
 , fClonesName()
 , fCollProxy(0)
@@ -122,6 +123,7 @@ TBranchElement::TBranchElement()
 TBranchElement::TBranchElement(TTree *tree, const char* bname, TStreamerInfo* sinfo, Int_t id, char* pointer, Int_t basketsize, Int_t splitlevel, Int_t btype)
 : TBranch()
 , fClassName(sinfo->GetName())
+, fTargetClassName(fClassName)
 , fParentName()
 , fClonesName()
 , fCollProxy(0)
@@ -158,6 +160,7 @@ TBranchElement::TBranchElement(TTree *tree, const char* bname, TStreamerInfo* si
 TBranchElement::TBranchElement(TBranch *parent, const char* bname, TStreamerInfo* sinfo, Int_t id, char* pointer, Int_t basketsize, Int_t splitlevel, Int_t btype)
 : TBranch()
 , fClassName(sinfo->GetName())
+, fTargetClassName( fClassName )
 , fParentName()
 , fClonesName()
 , fCollProxy(0)
@@ -530,6 +533,7 @@ void TBranchElement::Init(TTree *tree, TBranch *parent,const char* bname, TStrea
 TBranchElement::TBranchElement(TTree *tree, const char* bname, TClonesArray* clones, Int_t basketsize, Int_t splitlevel, Int_t compress)
 : TBranch()
 , fClassName("TClonesArray")
+, fTargetClassName( fClassName )
 , fParentName()
 // FIXME: Bad, the streamer info will be optimized here.
 , fInfo((TStreamerInfo*)TClonesArray::Class()->GetStreamerInfo())
@@ -549,6 +553,7 @@ TBranchElement::TBranchElement(TTree *tree, const char* bname, TClonesArray* clo
 TBranchElement::TBranchElement(TBranch *parent, const char* bname, TClonesArray* clones, Int_t basketsize, Int_t splitlevel, Int_t compress)
 : TBranch()
 , fClassName("TClonesArray")
+, fTargetClassName( fClassName )
 , fParentName()
 // FIXME: Bad, the streamer info will be optimized here.
 , fInfo((TStreamerInfo*)TClonesArray::Class()->GetStreamerInfo())
@@ -657,6 +662,7 @@ void TBranchElement::Init(TTree *tree, TBranch *parent, const char* bname, TClon
 TBranchElement::TBranchElement(TTree *tree, const char* bname, TVirtualCollectionProxy* cont, Int_t basketsize, Int_t splitlevel, Int_t compress)
 : TBranch()
 , fClassName(cont->GetCollectionClass()->GetName())
+, fTargetClassName( fClassName )
 , fParentName()
 , fCurrentClass()
 , fParentClass()
@@ -674,6 +680,7 @@ TBranchElement::TBranchElement(TTree *tree, const char* bname, TVirtualCollectio
 TBranchElement::TBranchElement(TBranch *parent, const char* bname, TVirtualCollectionProxy* cont, Int_t basketsize, Int_t splitlevel, Int_t compress)
 : TBranch()
 , fClassName(cont->GetCollectionClass()->GetName())
+, fTargetClassName( fClassName )
 , fParentName()
 , fCurrentClass()
 , fParentClass()
@@ -1470,6 +1477,8 @@ void TBranchElement::InitInfo()
             Error( "InitInfo", "The target class dictionary is not present!" );
             return;
          }
+      } else {
+         targetClass = cl;
       }
 
       if (cl) {
@@ -1478,8 +1487,8 @@ void TBranchElement::InitInfo()
          //---------------------------------------------------------------------
          Bool_t optim = TVirtualStreamerInfo::CanOptimize();
          TVirtualStreamerInfo::Optimize(kFALSE);
-         if( targetClass )
-            fInfo = (TStreamerInfo*)targetClass->GetTranslatedStreamerInfo( fClassName, fClassVersion );
+         if( targetClass != cl )
+            fInfo = (TStreamerInfo*)targetClass->GetConversionStreamerInfo( cl, fClassVersion );
          else
             fInfo = (TStreamerInfo*)cl->GetStreamerInfo(fClassVersion);
          TVirtualStreamerInfo::Optimize(optim);
@@ -1494,8 +1503,8 @@ void TBranchElement::InitInfo()
 
             TStreamerInfo* info;
             Bool_t optim = TVirtualStreamerInfo::CanOptimize();
-            if( targetClass )
-               info = (TStreamerInfo*)targetClass->GetTranslatedStreamerInfo( fClassName, fCheckSum );
+            if( targetClass != cl )
+               info = (TStreamerInfo*)targetClass->GetConversionStreamerInfo( cl, fCheckSum );
             else
                info = (TStreamerInfo*)cl->FindStreamerInfo( fCheckSum );
             if( info ) {
@@ -3800,6 +3809,39 @@ void TBranchElement::SetObject(void* obj)
    SetAddress( &fObject );
 }
 
+
+//______________________________________________________________________________
+void TBranchElement::SetTargetClassName(const char *name)
+{
+   // Set the name of the class of the in-memory object into which the data will 
+   // loaded.
+   
+   if (name == 0) return;
+   
+   if (fTargetClassName != name ) 
+   {
+      // We are changing target class, let's reset the meta information and 
+      // the sub-branches.
+      
+      fInfo = 0;
+      fInit = kFALSE;
+      fInitOffsets = kFALSE;
+
+      Int_t nbranches = fBranches.GetEntriesFast();
+      for (Int_t i = 0; i < nbranches; ++i) {
+         TBranchElement *sub = (TBranchElement*) fBranches[i];
+         if (sub->GetTargetClassName() == fTargetClassName ) {
+            sub->SetTargetClassName(name);
+         }
+         if (sub->fParentClass->GetName() == fTargetClassName ) {
+            sub->SetParentClass(TClass::GetClass(name));
+         }
+      }
+      fTargetClassName = name;
+   }
+   
+}
+
 //______________________________________________________________________________
 void TBranchElement::SetupAddresses()
 {
@@ -3876,6 +3918,7 @@ void TBranchElement::Streamer(TBuffer& R__b)
       R__b.ReadClassBuffer(TBranchElement::Class(), this);
       fParentClass.SetName(fParentName);
       fBranchClass.SetName(fClassName);
+      fTargetClassName = fClassName;
       // The fAddress and fObject data members are not persistent,
       // therefore we do not own anything.
       // Also clear the bit possibly set by the schema evolution.

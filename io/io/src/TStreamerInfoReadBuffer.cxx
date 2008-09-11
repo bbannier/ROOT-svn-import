@@ -1132,7 +1132,7 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
                   TStreamerInfo *subinfo = 0;
 
                   if( newProxy )
-                     subinfo = (TStreamerInfo*)newProxy->GetValueClass()->GetTranslatedStreamerInfo( oldProxy->GetValueClass(), vClVersion );
+                     subinfo = (TStreamerInfo*)newProxy->GetValueClass()->GetConversionStreamerInfo( oldProxy->GetValueClass(), vClVersion );
                   else {
                      subinfo = (TStreamerInfo*)oldProxy->GetValueClass()->GetStreamerInfo( vClVersion );
                      newProxy = oldProxy;

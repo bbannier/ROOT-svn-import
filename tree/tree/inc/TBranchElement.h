@@ -159,7 +159,7 @@ public:
    virtual void             SetClassName(const char* name) { fClassName = name; }
    inline  void             SetParentClass(TClass* clparent);
    virtual void             SetParentName(const char* name) { fParentName = name; }
-   virtual void             SetTargetClassName( TString name ) { fTargetClassName = name; }
+   virtual void             SetTargetClassName(const char *name);
    virtual void             SetupAddresses();
    virtual void             SetType(Int_t btype) { fType = btype; }
 

@@ -3259,7 +3259,7 @@ Int_t TBufferFile::ReadClassEmulated(TClass *cl, void *object, TClass *onFileCla
    if (count) {
       TStreamerInfo *sinfo = 0;
       if( onFileClass ) {
-         sinfo = (TStreamerInfo*)cl->GetTranslatedStreamerInfo( onFileClass, v );
+         sinfo = (TStreamerInfo*)cl->GetConversionStreamerInfo( onFileClass, v );
          if( !sinfo )
             return 0;
       }
@@ -3355,7 +3355,7 @@ Int_t TBufferFile::ReadClassBuffer(TClass *cl, void *pointer, TClass *onFileClas
    //---------------------------------------------------------------------------
    TStreamerInfo *sinfo = 0;
    if( onFileClass ) {
-      sinfo = (TStreamerInfo*)cl->GetTranslatedStreamerInfo( onFileClass, version );
+      sinfo = (TStreamerInfo*)cl->GetConversionStreamerInfo( onFileClass, version );
       if( !sinfo ) {
          Error( "ReadClassBuffer", "Could not find the right streamer info" );
          CheckByteCount(R__s, R__c, onFileClass);
@@ -3369,7 +3369,7 @@ Int_t TBufferFile::ReadClassBuffer(TClass *cl, void *pointer, TClass *onFileClas
       TObjArray *infos = cl->GetStreamerInfos();
       Int_t ninfos = infos->GetSize();
       if (version < -1 || version >= ninfos) {
-         Error("ReadBuffer2","class: %s, attempting to access a wrong version: %d, object skipped at offset %d",
+         Error("ReadClassBuffer","class: %s, attempting to access a wrong version: %d, object skipped at offset %d",
             cl->GetName(), version,Length());
          CheckByteCount(R__s, R__c, cl);
          return 0;
