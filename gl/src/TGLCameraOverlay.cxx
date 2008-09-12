@@ -94,7 +94,7 @@ void TGLCameraOverlay::RenderPlaneIntersect(TGLRnrCtx& rnrCtx, TGLVertex3 &v, co
 
    // render font
    TGLUtil::Color(fAxisAtt.GetLabelColor());
-   font.RenderBitmap(txt, x, y);
+   font.RenderBitmap(txt, x, y, 0,fAxisAtt.GetTextAlign());
 
    // render cross
    Float_t ce = 0.15; //empty space
@@ -143,14 +143,14 @@ void TGLCameraOverlay::RenderAxis(TGLRnrCtx& rnrCtx)
       // left
       glPushMatrix();
       glTranslatef(0, -b, 0);
-      fAxisAtt.SetTextAlign(TGLAxisAttrib::kRight);
+      fAxisAtt.SetTextAlign(TGLFont::kRight);
       fAxisPainter.Paint(rnrCtx, fAxisAtt);
       glPopMatrix();
 
       // right
       glPushMatrix();
       glTranslatef(r-l, -b, 0);
-      fAxisAtt.SetTextAlign(TGLAxisAttrib::kLeft);
+      fAxisAtt.SetTextAlign(TGLFont::kLeft);
       fAxisAtt.RefTMOff(0).X() = -fAxisAtt.RefTMOff(0).X();
       fAxisPainter.Paint(rnrCtx, fAxisAtt);
       glPopMatrix();
@@ -167,13 +167,13 @@ void TGLCameraOverlay::RenderAxis(TGLRnrCtx& rnrCtx)
       // bottom
       glPushMatrix();
       glTranslatef(-l, 0, 0);
-      fAxisAtt.SetTextAlign(TGLAxisAttrib::kCenterUp);
+      fAxisAtt.SetTextAlign(TGLFont::kCenterUp);
       fAxisPainter.Paint(rnrCtx, fAxisAtt);
       glPopMatrix();
       // top
       glPushMatrix();
       glTranslatef(-l, t-b, 0);
-      fAxisAtt.SetTextAlign(TGLAxisAttrib::kCenterDown);
+      fAxisAtt.SetTextAlign(TGLFont::kCenterDown);
       fAxisAtt.RefTMOff(0).Y() = - fAxisAtt.RefTMOff(0).Y();
       fAxisPainter.Paint(rnrCtx, fAxisAtt);
       glPopMatrix();
@@ -218,7 +218,7 @@ void TGLCameraOverlay::RenderBar(TGLRnrCtx&  rnrCtx, const TGLFont &font)
    Float_t off = barsize*0.1;
    glTranslatef(1-barsize -off, 1 -off -bb[4]/vp.Height(), 0);
    off = barsize*0.05;
-   font.RenderBitmap(txt, 0.2, 0.2);
+   font.RenderBitmap(txt, 0.2, 0.2, 0, fAxisAtt.GetTextAlign());
    glTranslatef(-off, -off, 0);
    glLineWidth(2.);
    Double_t mH = barsize*0.1;
