@@ -237,6 +237,8 @@ public:
    virtual Bool_t HandleDragMotion(TGFrame *) { return kFALSE; }
    virtual Bool_t HandleDragDrop(TGFrame *, Int_t /*x*/, Int_t /*y*/, TGLayoutHints*)
                      { return kFALSE; }
+   virtual void   ProcessedConfigure(Event_t *event)
+                     { Emit("ProcessedConfigure(Event_t*)", (Long_t)event); } //*SIGNAL*
    virtual void   ProcessedEvent(Event_t *event)
                      { Emit("ProcessedEvent(Event_t*)", (Long_t)event); } //*SIGNAL*
 
@@ -410,6 +412,8 @@ public:
 
    virtual TGLayoutManager *GetLayoutManager() const { return fLayoutManager; }
    virtual void SetLayoutManager(TGLayoutManager *l);
+
+   virtual TGFrameElement* FindFrameElement(TGFrame *f) const;
 
    virtual void   AddFrame(TGFrame *f, TGLayoutHints *l = 0);
    virtual void   RemoveAll();

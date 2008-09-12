@@ -425,8 +425,10 @@ Bool_t TGFrame::HandleEvent(Event_t *event)
          while (gVirtualX->CheckEvent(fId, kConfigureNotify, *event))
             ;
          // protection
-         if ((event->fWidth < 32768) && (event->fHeight  < 32768))
+         if ((event->fWidth < 32768) && (event->fHeight  < 32768)){
+            ProcessedConfigure(event);  // emit signal
             HandleConfigureNotify(event);
+         }
          break;
 
       case kGKeyPress:
@@ -1037,6 +1039,23 @@ void TGCompositeFrame::SetCleanup(Int_t mode)
 }
 
 //______________________________________________________________________________
+TGFrameElement* TGCompositeFrame::FindFrameElement(TGFrame *f) const
+{
+   // Find frame-element holding frame f.
+
+   if (!fList) return 0;
+
+   TGFrameElement *el;
+   TIter next(fList);
+
+   while ((el = (TGFrameElement *) next()))
+      if (el->fFrame == f)
+         return el;
+
+   return 0;
+}
+
+//______________________________________________________________________________
 void TGCompositeFrame::AddFrame(TGFrame *f, TGLayoutHints *l)
 {
    // Add frame to the composite frame using the specified layout hints.
@@ -1079,19 +1098,13 @@ void TGCompositeFrame::RemoveFrame(TGFrame *f)
 {
    // Remove frame from composite frame.
 
-   if (!fList) return;
+   TGFrameElement *el = FindFrameElement(f);
 
-   TGFrameElement *el;
-   TIter next(fList);
-
-   while ((el = (TGFrameElement *) next())) {
-      if (el->fFrame == f) {
-         fList->Remove(el);
-         if (el->fLayout) el->fLayout->RemoveReference();
-         f->SetFrameElement(0);
-         delete el;
-         break;
-      }
+   if (el) {
+      fList->Remove(el);
+      if (el->fLayout) el->fLayout->RemoveReference();
+      f->SetFrameElement(0);
+      delete el;
    }
 }
 
@@ -1126,18 +1139,13 @@ void TGCompositeFrame::HideFrame(TGFrame *f)
 {
    // Hide sub frame.
 
-   if (!fList) return;
+   TGFrameElement *el = FindFrameElement(f);
 
-   TGFrameElement *el;
-   TIter next(fList);
-
-   while ((el = (TGFrameElement *) next()))
-      if (el->fFrame == f) {
-         el->fState = 0;
-         el->fFrame->UnmapWindow();
-         Layout();
-         break;
-      }
+   if (el) {
+      el->fState = 0;
+      el->fFrame->UnmapWindow();
+      Layout();
+   }
 }
 
 //______________________________________________________________________________
@@ -1145,18 +1153,13 @@ void TGCompositeFrame::ShowFrame(TGFrame *f)
 {
    // Show sub frame.
 
-   if (!fList) return;
+   TGFrameElement *el = FindFrameElement(f);
 
-   TGFrameElement *el;
-   TIter next(fList);
-
-   while ((el = (TGFrameElement *) next()))
-      if (el->fFrame == f) {
-         el->fState = 1;
-         el->fFrame->MapWindow();
-         Layout();
-         break;
-      }
+   if (el) {
+      el->fState = 1;
+      el->fFrame->MapWindow();
+      Layout();
+   }
 }
 
 //______________________________________________________________________________
@@ -1164,16 +1167,12 @@ Int_t TGCompositeFrame::GetState(TGFrame *f) const
 {
    // Get state of sub frame.
 
-   if (!fList) return 0;
+   TGFrameElement *el = FindFrameElement(f);
 
-   TGFrameElement *el;
-   TIter next(fList);
-
-   while ((el = (TGFrameElement *) next()))
-      if (el->fFrame == f)
-         return el->fState;
-
-   return 0;
+   if (el)
+      return el->fState;
+   else
+      return 0;
 }
 
 //______________________________________________________________________________
@@ -1181,16 +1180,12 @@ Bool_t TGCompositeFrame::IsVisible(TGFrame *f) const
 {
    // Get state of sub frame.
 
-   if (!fList) return kFALSE;
+   TGFrameElement *el = FindFrameElement(f);
 
-   TGFrameElement *el;
-   TIter next(fList);
-
-   while ((el = (TGFrameElement *) next()))
-      if (el->fFrame == f)
-         return (el->fState & kIsVisible);
-
-   return kFALSE;
+   if (el)
+      return (el->fState & kIsVisible);
+   else
+      return kFALSE;
 }
 
 //______________________________________________________________________________
@@ -1198,16 +1193,12 @@ Bool_t TGCompositeFrame::IsArranged(TGFrame *f) const
 {
    // Get state of sub frame.
 
-   if (!fList) return kFALSE;
+   TGFrameElement *el = FindFrameElement(f);
 
-   TGFrameElement *el;
-   TIter next(fList);
-
-   while ((el = (TGFrameElement *) next()))
-      if (el->fFrame == f)
-         return (el->fState & kIsArranged);
-
-   return kFALSE;
+   if (el)
+      return (el->fState & kIsArranged);
+   else
+      return kFALSE;
 }
 
 //______________________________________________________________________________
