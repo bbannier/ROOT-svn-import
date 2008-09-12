@@ -507,6 +507,7 @@ bool TFumiliMinimizer::Minimize() {
    
 
    // get parameter values and correlation matrix
+   // fumili stores only lower part of diagonal matrix of the free parameters
    fParams.resize( fDim); 
    fErrors.resize( fDim); 
    fCovar.resize(fDim*fDim); 
@@ -517,17 +518,13 @@ bool TFumiliMinimizer::Minimize() {
       fErrors[i] = fFumili->GetParError( i );  
 
       if ( !fFumili->IsFixed(i) ) { 
-         unsigned int m = 0; 
-         for (unsigned int j = 0; j < fDim; ++j) { 
+         for (unsigned int j = 0; j <=i ; ++j) { 
             if ( !fFumili->IsFixed(j) ) {  
-               if ( j <= i)  
-                  fCovar[i*fDim + j] = cv[l*nfree + m];
-               else 
-                  fCovar[i*fDim + j] = fCovar[j*fDim + i];
-               m++;
+               fCovar[i*fDim + j] = cv[l];
+               fCovar[j*fDim + i] = fCovar[i*fDim + j]; 
+               l++;
             }
          }
-         l++;
       }
    }
 
