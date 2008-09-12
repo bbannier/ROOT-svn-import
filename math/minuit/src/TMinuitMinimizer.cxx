@@ -307,11 +307,10 @@ bool TMinuitMinimizer::Minimize() {
       } 
       else { 
          // case of fixed params need to take care 
-         std::cout << "NFREE PAR = " << fNFree << "  " << &fErrors.front() << std::endl;
          if (fNFree > fDim) return true;
-         std::vector<double> tmpMat(fNFree); 
+         std::vector<double> tmpMat(fNFree*fNFree); 
          fMinuit->mnemat(&tmpMat.front(), fNFree); 
-         std::cout << "NFREE PAR aftwards= " << fNFree << std::endl;
+
 
          unsigned int l = 0; 
          for (unsigned int i = 0; i < fDim; ++i) { 
@@ -322,7 +321,6 @@ bool TMinuitMinimizer::Minimize() {
                   if ( fMinuit->fNiofex[j] > 0 ) {  //not fixed
                      fCovar[i*fDim + j] = tmpMat[l*fNFree + m];
                      fCovar[j*fDim + i] = fCovar[i*fDim + j]; 
-                     std::cout << "l m  " << l  << "  " << m << "  " << fCovar[j*fDim + i] << std::endl;
                      m++;
                   }
                }
