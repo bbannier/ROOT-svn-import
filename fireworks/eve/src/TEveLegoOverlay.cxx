@@ -88,7 +88,7 @@ void TEveLegoOverlay::DrawSlider(TGLRnrCtx& rnrCtx)
 
 
       fAxisAtt.RefDir().Set(0, 1, 0);
-      fAxisAtt.SetTextAlign(TGLAxisAttrib::kLeft);
+      fAxisAtt.SetTextAlign(TGLFont::kLeft);
       fAxisAtt.SetRng(0, maxVal);
       fAxisAtt.RefTMOff(0).X() = -maxVal*0.03;
       fAxisAtt.SetAbsLabelFontSize(fs);
