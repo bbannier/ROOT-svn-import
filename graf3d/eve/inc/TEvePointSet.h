@@ -58,6 +58,7 @@ public:
    void  Reset(Int_t n_points=0, Int_t n_int_ids=0);
    Int_t GrowFor(Int_t n_points);
 
+   virtual const Text_t* GetTitle()         const { return fTitle; }
    virtual const Text_t* GetElementName()   const { return TPointSet3D::GetName(); }
    virtual const Text_t* GetElementTitle()  const { return fTitle; }
    virtual void  SetElementName (const Text_t* n) { fName  = n; }
@@ -124,26 +125,25 @@ public:
    virtual void RemoveElementLocal(TEveElement* el);
    virtual void RemoveElementsLocal();
 
-   virtual void Paint(Option_t* option="");
-
    virtual void SetMarkerColor(Color_t tcolor=1);
    virtual void SetMarkerStyle(Style_t mstyle=1);
    virtual void SetMarkerSize(Size_t msize=1);
 
    virtual void TakeAction(TEvePointSelector*);
 
+   virtual Int_t Size(Bool_t under=kFALSE, Bool_t over=kFALSE) const;
 
-   void InitBins(const Text_t* quant_name, Int_t nbins, Double_t min, Double_t max);
-   void Fill(Double_t x, Double_t y, Double_t z, Double_t quant);
-   void SetPointId(TObject* id);
-   void CloseBins();
+   void   InitBins(const Text_t* quant_name, Int_t nbins, Double_t min, Double_t max);
+   Bool_t Fill(Double_t x, Double_t y, Double_t z, Double_t quant);
+   void   SetPointId(TObject* id);
+   void   CloseBins();
 
-   void SetOwnIds(Bool_t o);
+   void   SetOwnIds(Bool_t o);
 
-   Int_t GetDefPointSetCapacity() const  { return fDefPointSetCapacity; }
-   void  SetDefPointSetCapacity(Int_t c) { fDefPointSetCapacity = c; }
+   Int_t  GetDefPointSetCapacity() const  { return fDefPointSetCapacity; }
+   void   SetDefPointSetCapacity(Int_t c) { fDefPointSetCapacity = c; }
 
-   Int_t     GetNBins()        const { return fNBins; }
+   Int_t         GetNBins()        const { return fNBins; }
    TEvePointSet* GetBin(Int_t bin) const { return fBins[bin]; }
 
    Double_t GetMin()    const { return fMin; }

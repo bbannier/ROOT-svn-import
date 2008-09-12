@@ -449,6 +449,9 @@ void TGClient::RegisterWindow(TGWindow *w)
    // Add a TGWindow to the clients list of windows.
 
    fWlist->Add(w);
+
+   // Emits signal
+   RegisteredWindow(w->GetId());
 }
 
 //______________________________________________________________________________
@@ -467,6 +470,9 @@ void TGClient::RegisterPopup(TGWindow *w)
    // is waited for (see WaitFor()).
 
    fPlist->Add(w);
+
+   // Emits signal
+   RegisteredWindow(w->GetId());
 }
 
 //______________________________________________________________________________
@@ -739,6 +745,11 @@ Bool_t TGClient::HandleEvent(Event_t *event)
 
    TGWindow *w;
 
+   // Emit signal for event recorder(s)
+   if (event->fType != kConfigureNotify) {
+      ProcessedEvent(event, 0);
+   }
+
    // Find window where event happened
    if ((w = GetWindowById(event->fWindow)) == 0) {
       if (fUWHandlers && fUWHandlers->GetSize() > 0) {
@@ -772,6 +783,11 @@ Bool_t TGClient::HandleMaskEvent(Event_t *event, Window_t wid)
    TGWindow *w, *ptr, *pop;
 
    if ((w = GetWindowById(event->fWindow)) == 0) return kFALSE;
+
+   // Emit signal for event recorder(s)
+   if (event->fType != kConfigureNotify) {
+      ProcessedEvent(event, wid);
+   }
 
    // This breaks class member protection, but TGClient is a friend of
    // TGWindow and _should_ know what to do and what *not* to do...
@@ -841,7 +857,7 @@ void TGClient::ProcessLine(TString cmd, Long_t msg, Long_t parm1, Long_t parm2)
 //______________________________________________________________________________
 Bool_t TGClient::IsEditDisabled() const
 {
-   // returns kTRUE if edit/guibuilding is forbidden
+   // Returns kTRUE if edit/guibuilding is forbidden.
 
    return (fDefaultRoot->GetEditDisabled() == 1);
 }
@@ -849,7 +865,29 @@ Bool_t TGClient::IsEditDisabled() const
 //______________________________________________________________________________
 void TGClient::SetEditDisabled(Bool_t on)
 {
-   // if on is kTRUE editting/guibuilding is forbidden
+   // If on is kTRUE editting/guibuilding is forbidden.
 
    fDefaultRoot->SetEditDisabled(on);
+}
+
+//______________________________________________________________________________
+void TGClient::ProcessedEvent(Event_t *event, Window_t wid)
+{
+   // Emits a signal when an event has been processed.
+   // Used in TRecorder.
+
+   Long_t args[2];
+   args[0] = (Long_t) event;
+   args[1] = (Long_t) wid;
+
+   Emit("ProcessedEvent(Event_t*, Window_t)", args);
+}
+
+//______________________________________________________________________________
+void TGClient::RegisteredWindow(Window_t w)
+{
+   // Emits a signal when a Window has been registered in TGClient.
+   // Used in TRecorder.
+
+   Emit("RegisteredWindow(Window_t)", w);
 }
