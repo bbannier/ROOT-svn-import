@@ -111,6 +111,9 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
       // consider only range defined with-in histogram not oustide. Always exclude underflow/overflow
       hxfirst =  std::max( hfit->GetXaxis()->FindBin(xlow), hxfirst);
       hxlast  =  std::min( hfit->GetXaxis()->FindBin(xhigh), hxlast);
+      // exclude bins where range coverage is almsler than half bin width
+      if ( hfit->GetXaxis()->GetBinCenter(hxfirst) < xlow)  hxfirst++;
+      if ( hfit->GetXaxis()->GetBinCenter(hxlast)  > xhigh) hxlast--;
       if (range.Size(0) > 1  ) { 
          Warning("ROOT::Fit::FillData","support only one range interval for X coordinate"); 
       }
@@ -121,6 +124,8 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
       double yhigh  = range(1).second; 
       hyfirst =  std::max( hfit->GetYaxis()->FindBin(ylow), hyfirst);
       hylast  =  std::min( hfit->GetYaxis()->FindBin(yhigh), hylast);
+      if ( hfit->GetYaxis()->GetBinCenter(hyfirst) < ylow)  hyfirst++;
+      if ( hfit->GetYaxis()->GetBinCenter(hylast)  > yhigh) hylast--;
       if (range.Size(1) > 1  ) 
          Warning("ROOT::Fit::FillData","support only one range interval for Y coordinate"); 
    }
@@ -130,6 +135,8 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
       double zhigh  = range(2).second; 
       hzfirst =  std::max( hfit->GetZaxis()->FindBin(zlow), hzfirst);
       hzlast  =  std::min( hfit->GetZaxis()->FindBin(zhigh), hzlast);
+      if ( hfit->GetZaxis()->GetBinCenter(hzfirst) < zlow)  hzfirst++;
+      if ( hfit->GetZaxis()->GetBinCenter(hzlast)  > zhigh) hzlast--;
       if (range.Size(2) > 1  ) 
          Warning("ROOT::Fit::FillData","support only one range interval for Z coordinate"); 
    }
