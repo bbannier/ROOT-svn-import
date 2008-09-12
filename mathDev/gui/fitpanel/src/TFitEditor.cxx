@@ -1687,12 +1687,12 @@ void TFitEditor::DoLinearFit()
    // Slot connected to linear fit settings.
 
    if (fLinearFit->GetState() == kButtonDown) {
-      fSetParam->SetState(kButtonDisabled);
+      //fSetParam->SetState(kButtonDisabled);
       fBestErrors->SetState(kButtonDisabled);
       fImproveResults->SetState(kButtonDisabled);
       fRobustValue->SetState(kTRUE);
    } else {
-      fSetParam->SetState(kButtonUp);
+      //fSetParam->SetState(kButtonUp);
       fBestErrors->SetState(kButtonUp);
       fImproveResults->SetState(kButtonUp);
       fRobustValue->SetState(kFALSE);
