@@ -832,6 +832,12 @@ int testGausFit() {
    iret |= FitUsingTFit<TH1,MINUIT2>(h2,f1);
 
 
+    iret |= FitUsingNewFitter<GSL_FR>(h2,f2);
+    iret |= FitUsingNewFitter<GSL_PR>(h2,f2);
+    iret |= FitUsingNewFitter<GSL_BFGS>(h2,f2);
+    iret |= FitUsingNewFitter<GSL_BFGS2>(h2,f2);
+
+
    // test also fitting a TGraphErrors with histogram data
    gStyle->SetErrorX(0.); // to seto zero error on X
    TGraphErrors * gr = new TGraphErrors(h2);
