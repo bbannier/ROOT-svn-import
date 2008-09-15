@@ -2271,7 +2271,7 @@ Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataTyp
        ptrClass->GetSchemaRules()->HasRuleWithSourceClass(expectedClass->GetName() ) ) {
 
       TBranchElement* bEl = (TBranchElement*)branch;
-
+      
       if( !ptrClass->GetConversionStreamerInfo( expectedClass, bEl->GetClassVersion() ) &&
           !ptrClass->FindConversionStreamerInfo( expectedClass, bEl->GetCheckSum() ) ) {
          Error("SetBranchAddress", "The pointer type given \"%s\" does not correspond to the type needed \"%s\" by the branch: %s", ptrClass->GetName(), bEl->GetClassName(), branch->GetName());
@@ -2285,8 +2285,29 @@ Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataTyp
       
    } else if (expectedClass && ptrClass && !expectedClass->InheritsFrom(ptrClass)) {
 
-         Error("SetBranchAddress", "The pointer type given (%s) does not correspond to the class needed (%s) by the branch: %s", ptrClass->GetName(), expectedClass->GetName(), branch->GetName());
-         return kFALSE;
+      if (expectedClass->GetCollectionProxy() && ptrClass->GetCollectionProxy() &&
+          branch->InheritsFrom( TBranchElement::Class() ) &&
+          expectedClass->GetCollectionProxy()->GetValueClass() && 
+          ptrClass->GetCollectionProxy()->GetValueClass() ) 
+      {
+         // In case of collection, we know how to convert them, if we know how to convert their content.
+         // NOTE: we need to extend this to std::pair ...
+         
+         TClass *onfileValueClass = expectedClass->GetCollectionProxy()->GetValueClass();
+         TClass *inmemValueClass = ptrClass->GetCollectionProxy()->GetValueClass();
+
+         if (inmemValueClass->GetSchemaRules() &&
+             inmemValueClass->GetSchemaRules()->HasRuleWithSourceClass(onfileValueClass->GetName() ) ) 
+         {
+            TBranchElement* bEl = (TBranchElement*)branch;
+            bEl->SetTargetClassName( ptrClass->GetName() );         
+            return kTRUE;
+         }
+      }
+      
+      Error("SetBranchAddress", "The pointer type given (%s) does not correspond to the class needed (%s) by the branch: %s", ptrClass->GetName(), expectedClass->GetName(), branch->GetName());
+      return kFALSE;
+      
    } else if ((expectedType != kOther_t) && (datatype != kOther_t) && (expectedType != kNoType_t) && (datatype != kNoType_t) && (expectedType != datatype)) {
       if (datatype != kChar_t) {
          // For backward compatibility we assume that (char*) was just a cast and/or a generic address
