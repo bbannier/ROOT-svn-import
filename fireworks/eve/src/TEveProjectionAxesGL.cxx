@@ -180,10 +180,16 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    rnrCtx.RegisterFont(fs, "arial", TGLFont::kPixmap, font);
    font.PreRender();
 
-   const char* txt;
-   Float_t tms = rng*0.02;
+   TGLMatrix modview;
+   glGetDoublev(GL_MODELVIEW_MATRIX, modview.Arr());
+   TGLVertex3 worldRef;
+   Float_t tms = rnrCtx.RefCamera().ViewportDeltaToWorld(worldRef, rng*0.01, 0, &modview).Mag();
    Float_t off = 1.5*tms;
 
+   const char* txt;
+   Float_t uLim, dLim;
+   Float_t start, end;
+   Float_t limFac = 0.98;
    //______________________________________________________________________________
    // X-axis
 
@@ -191,11 +197,16 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    if (fM->fAxesMode == TEveProjectionAxes::kAll
        || (fM->fAxesMode == TEveProjectionAxes::kHorizontal))
    {
-      SplitInterval(bbox[2], bbox[3], 1);
+      dLim = fProjection->GetLimit(0, 0)*limFac;
+      uLim = fProjection->GetLimit(0, 1)*limFac;
+      start =  (l > dLim) ?  l : dLim;
+      end =    (r < uLim) ?  r : uLim;
+
+      SplitInterval(start, end, 0);
       {
-         //bottom
+         // bottom
          glPushMatrix();
-         glTranslatef((bbox[0]+bbox[1])*0.5, b, 0);
+         glTranslatef((bbox[1]+bbox[0])*0.5, b, 0);
          DrawTickMarks(kTRUE, tms);
          for (std::list<TM_t>::iterator it = fTMList.begin(); it != fTMList.end(); ++it)
          {
@@ -207,7 +218,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       {
          // top
          glPushMatrix();
-         glTranslatef((bbox[0]+bbox[1])*0.5, t, 0);
+         glTranslatef((bbox[1]+bbox[0])*0.5, t, 0);
          DrawTickMarks(kTRUE, -tms);
          for (std::list<TM_t>::iterator it = fTMList.begin(); it != fTMList.end(); ++it)
          {
@@ -224,10 +235,14 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
        || (fM->fAxesMode == TEveProjectionAxes::kVertical))
    {
       // left
-      SplitInterval(bbox[0], bbox[1], 0);
+      dLim = fProjection->GetLimit(1, 0)*limFac;
+      uLim = fProjection->GetLimit(1, 1)*limFac;
+      start =  (b > dLim) ? b : dLim;
+      end =    (t < uLim) ? t : uLim;
+      SplitInterval(start, end, 0);
       {
          glPushMatrix();
-         glTranslatef(l, (bbox[2]+bbox[3])*0.5, 0);
+         glTranslatef(l, (bbox[3]+bbox[2])*0.5, 0);
          DrawTickMarks(kFALSE, tms);
          for (std::list<TM_t>::iterator it = fTMList.begin(); it != fTMList.end(); ++it)
          {
@@ -239,7 +254,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       // right
       {
          glPushMatrix();
-         glTranslatef(r, (bbox[2]+bbox[3])*0.5, 0);
+         glTranslatef(r, (bbox[3]+bbox[2])*0.5, 0);
          DrawTickMarks(kFALSE, -tms);
          for (std::list<TM_t>::iterator it = fTMList.begin(); it != fTMList.end(); ++it)
          {
