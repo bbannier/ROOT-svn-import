@@ -28,7 +28,7 @@
 #pragma link C++ class TDictionary;
 #pragma link C++ class TFunction;
 #pragma link C++ class ROOT::TSchemaRule+;
-#pragma link C++ class ROOT::TSchemaRuleSet+;
+#pragma link C++ class ROOT::TSchemaRuleSet-;
 #pragma link C++ class TGlobal;
 #pragma link C++ class TMethod;
 #pragma link C++ class TMethodArg;

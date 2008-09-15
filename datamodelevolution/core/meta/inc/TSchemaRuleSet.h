@@ -10,6 +10,7 @@ class TClass;
 #include "TObjArray.h"
 #include "Rtypes.h"
 #include "TString.h"
+#include "TClassRef.h"
 
 namespace ROOT {
 
@@ -38,7 +39,7 @@ namespace ROOT {
          const TSchemaMatch* FindRules( const TString &source, Int_t version ) const;
          const TSchemaMatch* FindRules( const TString &source, UInt_t checksum ) const;
          TClass*             GetClass();
-         UInt_t              GetClassChecksum() const;
+         UInt_t              GetClassCheckSum() const;
          TString             GetClassName() const;
          Int_t               GetClassVersion() const;
          const TObjArray*    GetRules() const;
@@ -53,10 +54,10 @@ namespace ROOT {
          TObjArray*                             fPersistentRules; //  Array of the rules that will be embeded in the file
          TObjArray*                             fRemainingRules;  //! Array of non-persisten rules - just for cleanup purposes - owns the elements
          TObjArray*                             fAllRules;        //! Array of all rules
-         TClass*                                fClass;           //! Target class pointer (for consistency checking)
+         TClassRef                              fClass;           //! Target class pointer (for consistency checking)
          TString                                fClassName;       //  Target class name
          Int_t                                  fVersion;         //  Target class version
-         UInt_t                                 fChecksum;        //  Target class checksum
+         UInt_t                                 fCheckSum;        //  Target class checksum
    };
 
 } // End of Namespace ROOT 
