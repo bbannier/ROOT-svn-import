@@ -261,7 +261,10 @@ void TStreamerInfo::Build()
 
    fCheckSum = fClass->GetCheckSum();
 
-   const ROOT::TSchemaMatch* rules( fClass->GetSchemaRules()->FindRules(fClass->GetName(), fClassVersion) );
+   const ROOT::TSchemaMatch* rules = 0;
+   if (fClass->GetSchemaRules()) {
+       rules = fClass->GetSchemaRules()->FindRules(fClass->GetName(), fClassVersion);
+   }
 
    //
    // Iterate over base classes.
@@ -834,7 +837,7 @@ Bool_t TStreamerInfo::BuildFor( const TClass *in_memory_cl )
    // Check if we can build this for foreign class - do we have some rules
    // to do that
    //---------------------------------------------------------------------------
-   if( !in_memory_cl )
+   if( !in_memory_cl || !in_memory_cl->GetSchemaRules() )
       return kFALSE;
 
    const TObjArray* rules;

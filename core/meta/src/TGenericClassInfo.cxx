@@ -246,6 +246,10 @@ namespace ROOT {
    {
       // Attach the schema evolution information to TClassObject
 
+      if ( vect.empty() ) {
+         return;
+      }
+      
       //------------------------------------------------------------------------
       // Get the rules set
       //------------------------------------------------------------------------

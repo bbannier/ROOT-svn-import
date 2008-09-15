@@ -13,7 +13,7 @@ using namespace ROOT;
 
 //------------------------------------------------------------------------------
 TSchemaRuleSet::TSchemaRuleSet(): fPersistentRules( 0 ), fRemainingRules( 0 ),
-                                  fAllRules( 0 ), fClass( 0 )
+                                  fAllRules( 0 ), fVersion(-3), fCheckSum( 0 )
 {
    fPersistentRules = new TObjArray();
    fRemainingRules  = new TObjArray();
@@ -186,9 +186,12 @@ TClass* TSchemaRuleSet::GetClass()
 }
 
 //------------------------------------------------------------------------------
-UInt_t TSchemaRuleSet::GetClassChecksum() const
+UInt_t TSchemaRuleSet::GetClassCheckSum() const
 {
-   return fChecksum;
+   if (fCheckSum == 0 && fClass) {
+      const_cast<TSchemaRuleSet*>(this)->fCheckSum = fClass->GetCheckSum();
+   }
+   return fCheckSum;
 }
 
 //------------------------------------------------------------------------------
@@ -244,7 +247,6 @@ void TSchemaRuleSet::SetClass( TClass* cls )
    fClass     = cls;
    fClassName = cls->GetName();
    fVersion   = cls->GetClassVersion();
-   fChecksum  = cls->GetCheckSum();
 }
 
 
@@ -286,5 +288,18 @@ Bool_t TSchemaMatch::HasRuleWithTarget( const TString& name ) const
       if( rule->HasTarget( name ) ) return kTRUE;
    }
    return kFALSE;
+}
+
+//______________________________________________________________________________
+void TSchemaRuleSet::Streamer(TBuffer &R__b)
+{
+   // Stream an object of class ROOT::TSchemaRuleSet.
+   
+   if (R__b.IsReading()) {
+      R__b.ReadClassBuffer(ROOT::TSchemaRuleSet::Class(),this);
+   } else {
+      GetClassCheckSum();
+      R__b.WriteClassBuffer(ROOT::TSchemaRuleSet::Class(),this);
+   }
 }
 
