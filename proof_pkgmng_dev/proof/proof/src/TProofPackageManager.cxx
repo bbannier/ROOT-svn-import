@@ -20,16 +20,17 @@
 #include <algorithm>
 #include <string>
 // ROOT
+#include "TList.h"
 #include "TSlave.h"
 #include "TProofPackageManager.h"
 
 using namespace std;
 
 //______________________________________________________________________________
-struct SFindSameArch: public binary_function<TObject*, const string&, bool> {
-   bool operator()(TObject *_obj, const string &_master_arch) const {
+struct SFindSameArch: public binary_function<TObject*, const string *, bool> {
+   bool operator()(TObject *_obj, const string *_master_arch) const {
       TSlave *slave(dynamic_cast<TSlave*>(_obj));
-      return(slave->GetArchCompiler() == _master_arch);
+      return(slave->GetArchCompiler() == *_master_arch);
    }
 };
 
@@ -55,7 +56,7 @@ void TProofPackageManager::BuildSlavesList(TList *_UniqueSlaves)
    // slaves with the same architecture as the master.
    typedef TIterCategory<TList> iterator_t;
    iterator_t iter(_UniqueSlaves);
-   transform(find_if(iter, iterator_t::End(), bind2nd(SFindSameArch(), master_arch)), iterator_t::End(),
+   transform(find_if(iter, iterator_t::End(), bind2nd(SFindSameArch(), &master_arch)), iterator_t::End(),
              inserter(fSlvArcMstr, fSlvArcMstr.begin()),
              SGetSlave());
 }
