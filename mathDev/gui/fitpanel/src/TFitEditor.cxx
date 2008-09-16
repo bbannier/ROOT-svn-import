@@ -1839,7 +1839,7 @@ void TFitEditor::DoSetParameters()
    if ( fNone->GetState() == kButtonDisabled )
    {
       TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-      std::cout << te << "  " << te->GetTitle() << std::endl;
+      //std::cout << te << "  " << te->GetTitle() << std::endl;
       fitFunc = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
    }
    else if ( fDim == 1 )

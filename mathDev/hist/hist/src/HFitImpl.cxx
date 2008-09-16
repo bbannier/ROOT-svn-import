@@ -46,6 +46,8 @@ namespace HFit {
 
    void FitOptionsMake(const char *option, Foption_t &fitOption);
 
+   void CheckGraphFitOptions(const Foption_t &fitOption);
+
 
    void GetDrawingRange(TH1 * h1, ROOT::Fit::DataRange & range);
    void GetDrawingRange(TGraph * gr, ROOT::Fit::DataRange & range);
@@ -454,9 +456,13 @@ void HFit::FitOptionsMake(const char *option, Foption_t &fitOption) {
    if (opt.Contains("U")) fitOption.User    = 1;
    if (opt.Contains("Q")) fitOption.Quiet   = 1;
    if (opt.Contains("V")){fitOption.Verbose = 1; fitOption.Quiet   = 0;}
+   if (opt.Contains("L")) fitOption.Like    = 1;
+   if (opt.Contains("LL")) fitOption.Like   = 2;
    if (opt.Contains("W")) fitOption.W1      = 1;
    if (opt.Contains("E")) fitOption.Errors  = 1;
+   if (opt.Contains("M")) fitOption.More    = 1;
    if (opt.Contains("R")) fitOption.Range   = 1;
+   if (opt.Contains("G")) fitOption.Gradient= 1;
    if (opt.Contains("N")) fitOption.Nostore = 1;
    if (opt.Contains("0")) fitOption.Nograph = 1;
    if (opt.Contains("+")) fitOption.Plus    = 1;
@@ -466,6 +472,12 @@ void HFit::FitOptionsMake(const char *option, Foption_t &fitOption) {
    if (opt.Contains("H")) { fitOption.Robust  = 1;   fitOption.hRobust = h; } 
 
 }
+
+void HFit::CheckGraphFitOptions(const Foption_t & foption) { 
+   if (foption.Like) Info("CheckGraphFitOptions","L (Log Likelihood fit) is an invalid option when fitting a graph. It is ignored");
+   if (foption.Integral) Info("CheckGraphFitOptions","I (use function integral) is an invalid option when fitting a graph. It is ignored");
+   return;
+} 
 
 // implementations of ROOT::Fit::FitObject functions (defined in HFitInterface) in terms of the template HFit::Fit
 
@@ -508,6 +520,8 @@ Int_t TGraph::DoFit(TF1 *f1 ,Option_t *option ,Option_t *goption, Axis_t rxmin, 
    // internal graph fitting methods
    Foption_t fitOption;
    HFit::FitOptionsMake(option,fitOption);
+   // exclude options not valid for graphs
+   HFit::CheckGraphFitOptions(fitOption);
    // create range and minimizer options with default values 
    ROOT::Fit::DataRange range(rxmin,rxmax); 
    ROOT::Math::MinimizerOptions minOption; 
@@ -518,6 +532,8 @@ Int_t TMultiGraph::DoFit(TF1 *f1 ,Option_t *option ,Option_t *goption, Axis_t rx
    // internal multigraph fitting methods
    Foption_t fitOption;
    HFit::FitOptionsMake(option,fitOption);
+   HFit::CheckGraphFitOptions(fitOption);
+
    // create range and minimizer options with default values 
    ROOT::Fit::DataRange range(rxmin,rxmax); 
    ROOT::Math::MinimizerOptions minOption; 
@@ -529,6 +545,8 @@ Int_t TGraph2D::DoFit(TF2 *f2 ,Option_t *option ,Option_t *goption) {
    // internal graph2D fitting methods
    Foption_t fitOption;
    HFit::FitOptionsMake(option,fitOption);
+   HFit::CheckGraphFitOptions(fitOption);
+
    // create range and minimizer options with default values 
    ROOT::Fit::DataRange range(2); 
    ROOT::Math::MinimizerOptions minOption; 
