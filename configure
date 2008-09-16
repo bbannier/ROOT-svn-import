@@ -4313,9 +4313,11 @@ fi
 message "Checking whether to build libMinuit2"
 if test "x$enable_minuit2" = "xyes" || test ! "x$MINUIT2" = "x"; then
     enable_minuit2="yes"
+    hasminuit2="define"
     result "yes"
 else
     enable_minuit2=""
+    hasminuit2="undef"
     result "no"
 fi
 
@@ -5075,6 +5077,7 @@ sed \
     -e "s|@ttffontdir@|$fontdir|"          \
     -e "s|@setresuid@|$setresuid|"         \
     -e "s|@hasmathmore@|$hasmathmore|"     \
+    -e "s|@hasminuit2@|$hasminuit2|"     \
     -e "s|@haspthread@|$haspthread|"       \
     -e "s|@hasxft@|$hasxft|"               \
     < RConfigure.tmp > RConfigure-out.tmp

@@ -9,6 +9,7 @@
  **********************************************************************/
 
 #include "Math/MinimizerOptions.h"
+#include "RConfigure.h"
 
 namespace ROOT { 
    
@@ -17,8 +18,11 @@ namespace Math {
 
 // default minimizer options (static variable) 
 
-
+#ifdef R_HAS_MINUIT2
    static std::string gDefaultMinimizer = "Minuit2";
+#else 
+   static std::string gDefaultMinimizer = "Minuit";
+#endif
    static std::string gDefaultMinimAlgo = "Migrad";
    static double gDefaultErrorDef = 1.;
    static double gDefaultTolerance = 1.E-4; 
