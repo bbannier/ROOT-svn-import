@@ -1405,12 +1405,12 @@ void TGListView::Layout()
    TGCanvas::Layout();
  
    if (fViewMode == kLVDetails) {
+      fVScrollbar->SetRange((Int_t)container->GetHeight(), 
+                            (Int_t)fVport->GetHeight());
       if (fJustChanged) {
          fVport->MoveResize(fBorderWidth, fBorderWidth, fVport->GetWidth(), 
                             fVport->GetHeight());
          container->Move(0, h);
-         fVScrollbar->SetRange((Int_t)container->GetHeight(), 
-                               (Int_t)fVport->GetHeight());
       } else {
          container->DrawRegion(0, 0, fVport->GetWidth(), fVport->GetHeight());
       }
