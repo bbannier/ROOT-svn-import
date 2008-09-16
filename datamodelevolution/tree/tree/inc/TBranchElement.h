@@ -60,7 +60,6 @@ protected:
    UInt_t                   fCheckSum;      //  CheckSum of class
    Int_t                    fClassVersion;  //  Version number of class
    Int_t                    fID;            //  element serial number in fInfo
-   std::vector<Int_t>       fIDs;           //! List of the serial number of all the StreamerInfo to be used.
    Int_t                    fType;          //  branch type
    Int_t                    fStreamerType;  //  branch streamer type
    Int_t                    fMaximum;       //  Maximum entries for a TClonesArray or variable array
@@ -78,6 +77,7 @@ protected:
    TClassRef                fBranchClass;   //! Reference to class definition in fClassName
    Int_t                   *fBranchOffset;  //! Sub-Branch offsets with respect to current transient class
    Int_t                    fBranchID;      //! ID number assigned by a TRefTable.
+   std::vector<Int_t>       fIDs;           //! List of the serial number of all the StreamerInfo to be used.
 
 // Not implemented
 private:
