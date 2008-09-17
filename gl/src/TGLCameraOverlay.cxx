@@ -292,6 +292,9 @@ void TGLCameraOverlay::Render(TGLRnrCtx& rnrCtx)
    glScalef(2, 2, 1); // normalised coordinates
    glTranslatef(-0.5, -0.5, 0);
 
+   // TGLWidget creates one pixel offset
+   glTranslatef(-0.5/cam.RefViewport().Height(), -0.5/cam.RefViewport().Height(), 0);
+
    // font size
    Int_t fs = Int_t(cam.RefViewport().Height()*fAxisAtt.GetLabelSize());
    fAxisAtt.SetAbsLabelFontSize( TGLFontManager::GetFontSize(fs, 12, 36));
