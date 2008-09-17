@@ -201,6 +201,7 @@ public:
    void               AddInstance(Bool_t heap = kFALSE) { fInstanceCount++; if (heap) fOnHeap++; }
    void               AddImplFile(const char *filename, int line);
    void               AddRef(TClassRef *ref); 
+   void               AdoptSchemaRules( ROOT::TSchemaRuleSet *rules );
    virtual void       Browse(TBrowser *b);
    void               BuildRealData(void *pointer=0);
    void               BuildEmulatedRealData(const char *name, Long_t offset, TClass *cl);
@@ -264,7 +265,7 @@ public:
    TRealData         *GetRealData(const char *name) const;
    TVirtualRefProxy  *GetReferenceProxy()  const   {  return fRefProxy; }
    const ROOT::TSchemaRuleSet *GetSchemaRules() const;
-   ROOT::TSchemaRuleSet *GetSchemaRules() { return fSchemaRules; };
+   ROOT::TSchemaRuleSet *GetSchemaRules(Bool_t create = kFALSE);
    const char        *GetSharedLibs();
    ShowMembersFunc_t  GetShowMembersWrapper() const { return fShowMembers; }
    TClassStreamer    *GetStreamer() const; 
@@ -307,7 +308,6 @@ public:
    void               SetImplFileName(const char *implFileName) { fImplFileName = implFileName; }
    void               SetNew(ROOT::NewFunc_t newFunc);
    void               SetNewArray(ROOT::NewArrFunc_t newArrayFunc);
-   void               SetSchemaRules( ROOT::TSchemaRuleSet *rules );
    TVirtualStreamerInfo     *SetStreamerInfo(Int_t version, const char *info="");
    void               SetUnloaded();
    Int_t              WriteBuffer(TBuffer &b, void *pointer, const char *info="");

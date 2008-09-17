@@ -253,11 +253,7 @@ namespace ROOT {
       //------------------------------------------------------------------------
       // Get the rules set
       //------------------------------------------------------------------------
-      TSchemaRuleSet* rset = fClass->GetSchemaRules();
-      if( !rset ) {
-         fClass->SetSchemaRules( new TSchemaRuleSet() );
-         rset = fClass->GetSchemaRules();
-      }
+      TSchemaRuleSet* rset = fClass->GetSchemaRules( kTRUE );
 
       //------------------------------------------------------------------------
       // Process the rules
