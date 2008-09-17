@@ -84,8 +84,8 @@ void TEveLegoOverlay::DrawSlider(TGLRnrCtx& rnrCtx)
       // axis
       Double_t maxVal = fCalo->GetMaxVal();
       TGLRect& wprt = rnrCtx.RefCamera().RefViewport();
-      Int_t fs = Int_t(wprt.Height()*fSliderH* fAxisAtt.GetLabelSize());
-
+      Float_t fs = wprt.Height()*fSliderH* fAxisAtt.GetLabelSize();
+      fAxisAtt.SetAbsLabelFontSize( TGLFontManager::GetFontSize(fs, 8, 36));
 
       fAxisAtt.RefDir().Set(0, 1, 0);
       fAxisAtt.SetTextAlign(TGLFont::kLeft);
