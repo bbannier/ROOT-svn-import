@@ -1981,7 +1981,7 @@ void* TBranchElement::GetValuePointer() const
 
    ValidateAddress();
 
-   Int_t prID;
+   Int_t prID = fID;
    char *object = fObject;
    if (TestBit(kCache)) {
       if (GetInfo()->GetElements()->At(fID)->TestBit(TStreamerElement::kRepeat)) {
@@ -2638,7 +2638,7 @@ void TBranchElement::PrintValue(Int_t lenmax) const
    ValidateAddress();
 
    TStreamerInfo *info = GetInfo();
-   Int_t prID;
+   Int_t prID = fID;
    char *object = fObject;
    if (TestBit(kCache)) {
       if (info->GetElements()->At(fID)->TestBit(TStreamerElement::kRepeat)) {

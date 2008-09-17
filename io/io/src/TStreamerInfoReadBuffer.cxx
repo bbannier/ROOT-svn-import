@@ -1118,22 +1118,22 @@ Int_t TStreamerInfo::ReadBuffer(TBuffer &b, const T &arr, Int_t first,
                   // Collection was saved member-wise
                   vers &= ~( TBufferFile::kStreamedMemberWise );
 
-                  Version_t vClVersion;
-                  if( vers >= 8 )
-                     vClVersion = b.ReadVersion( &startDummy, &countDummy, cle->GetCollectionProxy()->GetValueClass() );
-
                   if( vers < 8 && newClass ) {
                      Error( "ReadBuffer", "Due to a bug this fill does not contain information necessary to do Schema Evolution, sorry :(" ); 
                      continue;
+                  }
+                  Version_t vClVersion = 0; // For vers less than 8, we have to use the current version.
+                  if( vers >= 8 ) {
+                     vClVersion = b.ReadVersion( &startDummy, &countDummy, cle->GetCollectionProxy()->GetValueClass() );
                   }
 
                   TVirtualCollectionProxy *newProxy = (newClass ? newClass->GetCollectionProxy() : 0);
                   TVirtualCollectionProxy *oldProxy = oldClass->GetCollectionProxy();
                   TStreamerInfo *subinfo = 0;
 
-                  if( newProxy )
+                  if( newProxy ) {
                      subinfo = (TStreamerInfo*)newProxy->GetValueClass()->GetConversionStreamerInfo( oldProxy->GetValueClass(), vClVersion );
-                  else {
+                  } else {
                      subinfo = (TStreamerInfo*)oldProxy->GetValueClass()->GetStreamerInfo( vClVersion );
                      newProxy = oldProxy;
                   }
