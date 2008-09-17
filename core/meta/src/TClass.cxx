@@ -639,7 +639,7 @@ TClass::TClass() : TDictionary(), fNew(0), fNewArray(0), fDelete(0),
                    fDeleteArray(0), fDestructor(0), fDirAutoAdd(0), fSizeof(-1),
                    fVersionUsed(kFALSE), fOffsetStreamer(0), fStreamerType(kNone),
                    fCurrentInfo(0), fRefStart(0), fRefProxy(0),
-                   fSchemaRules( new ROOT::TSchemaRuleSet() )
+                   fSchemaRules( 0 )
 {
    // Default ctor.
 
@@ -667,7 +667,7 @@ TClass::TClass() : TDictionary(), fNew(0), fNewArray(0), fDelete(0),
    fClassMenuList  = new TList();
    fClassMenuList->Add(new TClassMenuItem(TClassMenuItem::kPopupStandardList, this));
    fContextMenuTitle = "";
-   fConversionStreamerInfo = new std::map<std::string, TObjArray*>();
+   fConversionStreamerInfo = 0;
 }
 
 //______________________________________________________________________________
@@ -677,7 +677,7 @@ TClass::TClass(const char *name, Bool_t silent) : TDictionary(), fNew(0), fNewAr
                                    fSizeof(-1), fVersionUsed(kFALSE),
                                    fOffsetStreamer(0), fStreamerType(kNone),
                                    fCurrentInfo(0), fRefStart(0), fRefProxy(0),
-                                   fSchemaRules(new ROOT::TSchemaRuleSet())
+                                   fSchemaRules(0) 
 {
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
@@ -734,7 +734,7 @@ TClass::TClass(const char *name, Bool_t silent) : TDictionary(), fNew(0), fNewAr
       ResetBit(kLoading);
    }
    if (fClassInfo) SetTitle(gCint->ClassInfo_Title(fClassInfo));
-   fConversionStreamerInfo = new std::map<std::string, TObjArray*>();
+   fConversionStreamerInfo = 0;
 }
 
 //______________________________________________________________________________
@@ -743,11 +743,10 @@ TClass::TClass(const char *name, Version_t cversion,
    : TDictionary(), fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
      fDestructor(0), fDirAutoAdd(0), fSizeof(-1), fVersionUsed(kFALSE), fOffsetStreamer(0),
      fStreamerType(kNone), fCurrentInfo(0), fRefStart(0), fRefProxy(0),
-     fSchemaRules( new ROOT::TSchemaRuleSet() )
+     fSchemaRules(0) 
 {
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
-   fConversionStreamerInfo = new std::map<std::string, TObjArray*>();
    Init(name,cversion, 0, 0, 0, dfil, ifil, dl, il,silent);
    SetBit(kUnloaded);
 }
@@ -766,8 +765,7 @@ TClass::TClass(const char *name, Version_t cversion,
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
 
-   // use inf
-   fConversionStreamerInfo = new std::map<std::string, TObjArray*>();
+   // use info
    Init(name, cversion, &info, isa, showmembers, dfil, ifil, dl, il, silent);
 }
 
@@ -834,6 +832,7 @@ void TClass::Init(const char *name, Version_t cversion,
    fInterStreamer  = 0;
    fClassMenuList  = 0;
    fContextMenuTitle = "";
+   fConversionStreamerInfo = 0;
 
    ResetInstanceCount();
 
@@ -1178,9 +1177,10 @@ TClass::~TClass()
 }
 
 //------------------------------------------------------------------------------
-void TClass::SetSchemaRules( ROOT::TSchemaRuleSet *rules )
+void TClass::AdoptSchemaRules( ROOT::TSchemaRuleSet *rules )
 {
-   // Set the schema rules - since now TClass owns the TSchemaRuleSet object
+   // Adopt a new set of Data Model Evolution rules.
+
    delete fSchemaRules;
    fSchemaRules = rules;
    fSchemaRules->SetClass( this );
@@ -1189,7 +1189,19 @@ void TClass::SetSchemaRules( ROOT::TSchemaRuleSet *rules )
 //------------------------------------------------------------------------------
 const ROOT::TSchemaRuleSet* TClass::GetSchemaRules() const
 {
-   // Set the schema rules - since now TClass owns the TSchemaRuleSet object
+   // Return the set of the schema rules if any.
+   return fSchemaRules;
+}
+
+//------------------------------------------------------------------------------
+ROOT::TSchemaRuleSet* TClass::GetSchemaRules(Bool_t create)
+{
+   // Return the set of the schema rules if any.
+   // If create is true, create an empty set
+   if (create && fSchemaRules == 0) {
+      fSchemaRules = new ROOT::TSchemaRuleSet();
+      fSchemaRules->SetClass( this );
+   }
    return fSchemaRules;
 }
 
@@ -4586,21 +4598,19 @@ TVirtualStreamerInfo *TClass::GetConversionStreamerInfo( const TClass* cl, Int_t
    //----------------------------------------------------------------------------
    // Check if we already have it
    //----------------------------------------------------------------------------
-   std::map<std::string, TObjArray*>::iterator it;
-   TObjArray* arr;
+   TObjArray* arr = 0;
+   if (fConversionStreamerInfo) {
+      std::map<std::string, TObjArray*>::iterator it;
 
-   it = fConversionStreamerInfo->find( cl->GetName() );
+      it = fConversionStreamerInfo->find( cl->GetName() );
 
-   if( it != fConversionStreamerInfo->end() ) {
-      arr = it->second;
+      if( it != fConversionStreamerInfo->end() ) {
+         arr = it->second;
+      }
+
+      if( version > -1 && version < arr->GetSize() && arr->At( version ) )
+         return (TVirtualStreamerInfo*) arr->At( version );
    }
-   else {
-      arr = new TObjArray(version+10, -1);
-      (*fConversionStreamerInfo)[cl->GetName()] = arr;
-   }
-
-   if( version > -1 && version < arr->GetSize() && arr->At( version ) )
-      return (TVirtualStreamerInfo*) arr->At( version );
 
    //----------------------------------------------------------------------------
    // We don't have the streamer info so find it in other class
@@ -4638,6 +4648,13 @@ TVirtualStreamerInfo *TClass::GetConversionStreamerInfo( const TClass* cl, Int_t
    //----------------------------------------------------------------------------
    // Cache this treamer info
    //----------------------------------------------------------------------------
+   if (!arr) {
+      arr = new TObjArray(version+10, -1);
+      if (!fConversionStreamerInfo) {
+         fConversionStreamerInfo = new std::map<std::string, TObjArray*>();
+      }
+      (*fConversionStreamerInfo)[cl->GetName()] = arr;
+   }
    arr->AddAtAndExpand( info, info->GetClassVersion() );
    return info;
 }
@@ -4669,21 +4686,18 @@ TVirtualStreamerInfo *TClass::FindConversionStreamerInfo( const TClass* cl, UInt
    //----------------------------------------------------------------------------
    // Check if we already have it
    //----------------------------------------------------------------------------
-   std::map<std::string, TObjArray*>::iterator it;
-   TObjArray* arr;
-
-   it = fConversionStreamerInfo->find( cl->GetName() );
-
-   if( it != fConversionStreamerInfo->end() ) {
-      arr = it->second;
+   TObjArray* arr = 0;
+   TVirtualStreamerInfo* info = 0;
+   if (fConversionStreamerInfo) {
+      std::map<std::string, TObjArray*>::iterator it;
+      
+      it = fConversionStreamerInfo->find( cl->GetName() );
+      
+      if( it != fConversionStreamerInfo->end() ) {
+         arr = it->second;
+      }
+      info = FindStreamerInfo( arr, checksum );
    }
-   else {
-      arr = new TObjArray( 20, -1 );
-      (*fConversionStreamerInfo)[cl->GetName()] = arr;       
-   }
-
-   TVirtualStreamerInfo* info;
-   info = FindStreamerInfo( arr, checksum );
 
    if( info )
       return info;
@@ -4720,6 +4734,13 @@ TVirtualStreamerInfo *TClass::FindConversionStreamerInfo( const TClass* cl, UInt
    //----------------------------------------------------------------------------
    // Cache this treamer info
    //----------------------------------------------------------------------------
+   if (!arr) {
+      arr = new TObjArray(16, -1);
+      if (!fConversionStreamerInfo) {
+         fConversionStreamerInfo = new std::map<std::string, TObjArray*>();
+      }
+      (*fConversionStreamerInfo)[cl->GetName()] = arr;
+   }
    arr->AddAtAndExpand( info, info->GetClassVersion() );
 
    return info;
