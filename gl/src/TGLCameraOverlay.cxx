@@ -296,8 +296,9 @@ void TGLCameraOverlay::Render(TGLRnrCtx& rnrCtx)
    glTranslatef(-0.5/cam.RefViewport().Height(), -0.5/cam.RefViewport().Height(), 0);
 
    // font size
-   Int_t fs = Int_t(cam.RefViewport().Height()*fAxisAtt.GetLabelSize());
-   fAxisAtt.SetAbsLabelFontSize( TGLFontManager::GetFontSize(fs, 12, 36));
+   Int_t fs = TGLFontManager::GetFontSize(cam.RefViewport().Height()*fAxisAtt.GetLabelSize());
+   fAxisAtt.SetRelativeFontSize(kFALSE);
+   fAxisAtt.SetAbsLabelFontSize(fs);
    TGLFont font;
    rnrCtx.RegisterFont(fs, fAxisAtt.GetLabelFontName(), TGLFont::kPixmap, font);
    TGLCapabilitySwitch lights_off(GL_LIGHTING, kFALSE);
