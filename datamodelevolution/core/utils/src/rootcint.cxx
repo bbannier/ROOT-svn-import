@@ -779,12 +779,23 @@ extern "C" {
 }
 
 //______________________________________________________________________________
-void EnableAutoLoading()
+void BeforeParseInit()
 {
-   G__set_class_autoloading_table((char*)"ROOT", (char*)"libCore.so");
-   LoadLibraryMap();
-   G__set_class_autoloading_callback(&AutoLoadCallback);
+   // If needed initialize the autoloading hook
+   if (gLiblistPrefix.length()) {
+      G__set_class_autoloading_table((char*)"ROOT", (char*)"libCore.so");
+      LoadLibraryMap();
+      G__set_class_autoloading_callback(&AutoLoadCallback);
+   }
+
+   //---------------------------------------------------------------------------
+   // Add the conversion rule processors
+   //---------------------------------------------------------------------------
+   G__addpragma( "read", ProcessReadPragma );
+   G__addpragma( "readraw", ProcessReadRawPragma );
+   
 }
+
 
 //______________________________________________________________________________
 bool CheckInputOperator(G__ClassInfo &cl, int dicttype)
@@ -4772,16 +4783,10 @@ int main(int argc, char **argv)
    if(insertedBundle) G__setisfilebundled(1);
 #endif
 
-   //---------------------------------------------------------------------------
-   // Add the conversion rule processors
-   //---------------------------------------------------------------------------
-   G__addpragma( "read", ProcessReadPragma );
-   G__addpragma( "readraw", ProcessReadRawPragma );
-
    G__ShadowMaker::VetoShadow(); // we create them ourselves
    G__setothermain(2);
    G__set_ioctortype_handler( (int (*)(const char*))AddConstructorType );
-   if (gLiblistPrefix.length()) G__set_beforeparse_hook (EnableAutoLoading);
+   G__set_beforeparse_hook( BeforeParseInit );
    if (G__main(argcc, argvv) < 0) {
       Error(0, "%s: error loading headers...\n", argv[0]);
       CleanupOnExit(1);

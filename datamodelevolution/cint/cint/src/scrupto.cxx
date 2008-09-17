@@ -1035,6 +1035,9 @@ int G__scratch_upto_work(G__dictposition* dictpos, int doall)
       // --
    }
    if (doall) {
+      // Delete user defined pragma statements.
+      G__freepragma(G__paddpragma);
+      G__paddpragma = 0;
       if (G__allincludepath) {
          free(G__allincludepath);
          G__allincludepath = 0;
