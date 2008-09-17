@@ -13,6 +13,7 @@
 #define ROOT_TClassStreamer_h
 
 #include "Rtypes.h"
+#include "TClassRef.h"
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
@@ -28,11 +29,11 @@ protected:
    TClassStreamer() : fStreamer(0) {};
 
 public:
-   TClassStreamer(ClassStreamerFunc_t pointer) : fStreamer(pointer), fOnFileClass( 0 ) {};
-   TClassStreamer(const TClassStreamer &rhs) : fStreamer(rhs.fStreamer), fOnFileClass( 0 ) {};
+   TClassStreamer(ClassStreamerFunc_t pointer) : fStreamer(pointer), fOnFileClass() {};
+   TClassStreamer(const TClassStreamer &rhs) : fStreamer(rhs.fStreamer), fOnFileClass() {};
 
-   virtual void SetOnFileClass( TClass* cl ) { fOnFileClass = cl; }
-   virtual TClass* GetOnFileClass() const { return fOnFileClass; }
+   virtual void SetOnFileClass( const TClass* cl ) { fOnFileClass = const_cast<TClass*>(cl); }
+   virtual const TClass* GetOnFileClass() const { return fOnFileClass; }
 
    virtual TClassStreamer *Generate() {
       // Virtual copy constructor.
@@ -50,9 +51,8 @@ public:
    
 private:
    ClassStreamerFunc_t fStreamer;
-
 protected:
-   TClass*             fOnFileClass;
+   TClassRef           fOnFileClass;
 };
 
 #endif

@@ -1265,8 +1265,9 @@ Int_t TClass::Browse(void *obj, TBrowser *b) const
    } else if (IsTObject()) {
       // Call TObject::Browse.
 
-      if (!fInterStreamer)
+      if (!fInterStreamer) {
          const_cast<TClass*>(this)->CalculateStreamerOffset();
+      }
       TObject* realTObject = (TObject*)((size_t)obj + fOffsetStreamer);
       realTObject->Browse(b);
    }
@@ -1364,8 +1365,9 @@ void TClass::BuildRealData(void* pointer)
          // have TObject as the leftmost base class.
          //
          if (isATObject) {
-            if (!fInterStreamer)
+            if (!fInterStreamer) {
                CalculateStreamerOffset();
+            }
             TObject* realTObject = (TObject*)((size_t)realDataObject + fOffsetStreamer);
             realTObject->ShowMembers(brd, parent);
          } else {
@@ -3098,7 +3100,7 @@ void *TClass::DynamicCast(const TClass *cl, void *obj, Bool_t up)
 }
 
 //______________________________________________________________________________
-void *TClass::New(ENewType defConstructor)
+void *TClass::New(ENewType defConstructor) const
 {
    // Return a pointer to a newly allocated object of this class.
    // The class must have a default constructor. For meaning of
@@ -3210,7 +3212,7 @@ void *TClass::New(ENewType defConstructor)
 }
 
 //______________________________________________________________________________
-void *TClass::New(void *arena, ENewType defConstructor)
+void *TClass::New(void *arena, ENewType defConstructor) const
 {
    // Return a pointer to a newly allocated object of this class.
    // The class must have a default constructor. For meaning of
@@ -3293,7 +3295,7 @@ void *TClass::New(void *arena, ENewType defConstructor)
 }
 
 //______________________________________________________________________________
-void *TClass::NewArray(Long_t nElements, ENewType defConstructor)
+void *TClass::NewArray(Long_t nElements, ENewType defConstructor) const
 {
    // Return a pointer to a newly allocated array of objects
    // of this class.
@@ -3377,7 +3379,7 @@ void *TClass::NewArray(Long_t nElements, ENewType defConstructor)
 }
 
 //______________________________________________________________________________
-void *TClass::NewArray(Long_t nElements, void *arena, ENewType defConstructor)
+void *TClass::NewArray(Long_t nElements, void *arena, ENewType defConstructor) const
 {
    // Return a pointer to a newly allocated object of this class.
    // The class must have a default constructor. For meaning of
@@ -4384,25 +4386,28 @@ Int_t TClass::WriteBuffer(TBuffer &b, void *pointer, const char * /*info*/)
 }
 
 //______________________________________________________________________________
-void TClass::Streamer(void *object, TBuffer &b, TClass *onfile_class)
+void TClass::Streamer(void *object, TBuffer &b, const TClass *onfile_class) const
 {
    // Stream object of this class to or from buffer.
 
    switch (fStreamerType) {
 
       case kExternal:
-      case kExternal|kEmulated:
+      case kExternal|kEmulated: 
+      {
          //There is special streamer for the class
-         GetStreamer()->SetOnFileClass( onfile_class );
-         (*GetStreamer())(b,object);
+         TClassStreamer *streamer = GetStreamer();
+         streamer->SetOnFileClass( onfile_class );
+         (*streamer)(b,object);
 
          return;
-
+      }
 
       case kTObject:
       {
-         if (!fInterStreamer)
-            CalculateStreamerOffset();
+         if (!fInterStreamer) {
+            const_cast<TClass*>(this)->CalculateStreamerOffset();
+         }
          TObject *tobj = (TObject*)((Long_t)object + fOffsetStreamer);
          tobj->Streamer(b);
       }

@@ -121,8 +121,8 @@ private:
    mutable Bool_t     fVersionUsed;     //!Indicates whether GetClassVersion has been called
    mutable Long_t     fProperty;        //!Property
 
-   void              *fInterStreamer;   //!saved info to call Streamer
-   Long_t             fOffsetStreamer;  //!saved info to call Streamer
+   mutable void      *fInterStreamer;   //!saved info to call Streamer
+   mutable Long_t     fOffsetStreamer;  //!saved info to call Streamer
    Int_t              fStreamerType;    //!cached of the streaming method to use
    mutable TVirtualStreamerInfo     *fCurrentInfo;     //!cached current streamer info.
    TClassRef         *fRefStart;        //!List of references to this object
@@ -281,10 +281,10 @@ public:
    Bool_t             IsTObject() const;
    void               MakeCustomMenuList();
    void               Move(void *arenaFrom, void *arenaTo) const;
-   void              *New(ENewType defConstructor = kClassNew);
-   void              *New(void *arena, ENewType defConstructor = kClassNew);
-   void              *NewArray(Long_t nElements, ENewType defConstructor = kClassNew);
-   void              *NewArray(Long_t nElements, void *arena, ENewType defConstructor = kClassNew);
+   void              *New(ENewType defConstructor = kClassNew) const;
+   void              *New(void *arena, ENewType defConstructor = kClassNew) const;
+   void              *NewArray(Long_t nElements, ENewType defConstructor = kClassNew) const;
+   void              *NewArray(Long_t nElements, void *arena, ENewType defConstructor = kClassNew) const;
    virtual void       PostLoadCheck();
    Long_t             Property() const;
    Int_t              ReadBuffer(TBuffer &b, void *pointer, Int_t version, UInt_t start, UInt_t count);
@@ -338,7 +338,7 @@ public:
    void               Destructor(void *obj, Bool_t dtorOnly = kFALSE);
    void              *DynamicCast(const TClass *base, void *obj, Bool_t up = kTRUE);
    Bool_t             IsFolder(void *obj) const;
-   void               Streamer(void *obj, TBuffer &b, TClass *onfile_class = 0);
+   void               Streamer(void *obj, TBuffer &b, const TClass *onfile_class = 0) const;
 
    ClassDef(TClass,0)  //Dictionary containing class information
 };

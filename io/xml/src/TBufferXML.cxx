@@ -1937,19 +1937,19 @@ void TBufferXML::ReadFastArrayDouble32(Double_t  *d, Int_t n, TStreamerElement *
 }
 
 //______________________________________________________________________________
-void TBufferXML::ReadFastArray(void  *start, const TClass *cl, Int_t n, TMemberStreamer *s, const TClass* /* onFileClass */ )
+void TBufferXML::ReadFastArray(void  *start, const TClass *cl, Int_t n, TMemberStreamer *s, const TClass *onFileClass)
 {
    // redefined here to avoid warning message from gcc
 
-   TBufferFile::ReadFastArray(start, cl, n, s);
+   TBufferFile::ReadFastArray(start, cl, n, s, onFileClass);
 }
 
 //______________________________________________________________________________
-void TBufferXML::ReadFastArray(void **startp, const TClass *cl, Int_t n, Bool_t isPreAlloc, TMemberStreamer *s)
+void TBufferXML::ReadFastArray(void **startp, const TClass *cl, Int_t n, Bool_t isPreAlloc, TMemberStreamer *s, const TClass *onFileClass)
 {
    // redefined here to avoid warning message from gcc
 
-   TBufferFile::ReadFastArray(startp, cl, n, isPreAlloc, s);
+   TBufferFile::ReadFastArray(startp, cl, n, isPreAlloc, s, onFileClass);
 }
 
 // macro to write content of noncompressed array

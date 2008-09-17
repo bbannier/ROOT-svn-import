@@ -945,7 +945,7 @@ void *TKey::ReadObjectAny(const TClass* expectedClass)
 
    fBufferRef->SetBufferOffset(fKeylen);
    TClass *cl = TClass::GetClass(fClassName.Data());
-   TClass *oldcl = 0;
+   TClass *clOnfile = 0;
    if (!cl) {
       Error("ReadObjectAny", "Unknown class %s", fClassName.Data());
       return 0;
@@ -964,9 +964,9 @@ void *TKey::ReadObjectAny(const TClass* expectedClass)
              return 0;
          }
          baseOffset = 0; // For now we do not support requesting from a class that is the base of one of the class for which there is transformation to ....
-         oldcl = cl;
+         clOnfile = cl;
          cl = const_cast<TClass*>(expectedClass);
-         Info("ReadObjectAny","Using Converter StreamerInfo from %s to %s",oldcl->GetName(),expectedClass->GetName());
+         Info("ReadObjectAny","Using Converter StreamerInfo from %s to %s",clOnfile->GetName(),expectedClass->GetName());
       }
       if (cl->GetClassInfo() && !expectedClass->GetClassInfo()) {
          //we cannot mix a compiled class with an emulated class in the inheritance
@@ -1002,7 +1002,7 @@ void *TKey::ReadObjectAny(const TClass* expectedClass)
          objbuf += nout;
       }
       if (nout) {
-         cl->Streamer((void*)pobj, *fBufferRef, oldcl);    //read object
+         cl->Streamer((void*)pobj, *fBufferRef, clOnfile);    //read object
          delete [] fBuffer;
       } else {
          delete [] fBuffer;
@@ -1011,7 +1011,7 @@ void *TKey::ReadObjectAny(const TClass* expectedClass)
          goto CLEAR;
       }
    } else {
-      cl->Streamer((void*)pobj, *fBufferRef, oldcl);    //read object
+      cl->Streamer((void*)pobj, *fBufferRef, clOnfile);    //read object
    }
 
    if (cl->InheritsFrom(TObject::Class())) {
