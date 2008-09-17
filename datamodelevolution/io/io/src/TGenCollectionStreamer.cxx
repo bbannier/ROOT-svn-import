@@ -167,7 +167,7 @@ void TGenCollectionStreamer::ReadObjects(int nElements, TBuffer &b)
             case kBIT_ISSTRING:
                DOLOOP(i->read_std_string(b));
             case G__BIT_ISPOINTER | G__BIT_ISCLASS:
-               DOLOOP(i->set(b.ReadObjectAny(fVal->fType, onFileValClass)));
+               DOLOOP(i->set(b.ReadObjectAny(fVal->fType)));
             case G__BIT_ISPOINTER | kBIT_ISSTRING:
                DOLOOP(i->read_std_string_pointer(b));
             case G__BIT_ISPOINTER | kBIT_ISTSTRING | G__BIT_ISCLASS:

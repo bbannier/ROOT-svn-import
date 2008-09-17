@@ -151,7 +151,7 @@ public:
    virtual void     WriteArrayFloat16(const Float_t  *f, Int_t n, TStreamerElement *ele=0);
    virtual void     WriteArrayDouble32(const Double_t  *d, Int_t n, TStreamerElement *ele=0);
    virtual void     ReadFastArray(void  *start , const TClass *cl, Int_t n=1, TMemberStreamer *s=0, const TClass* onFileClass = 0);
-   virtual void     ReadFastArray(void **startp, const TClass *cl, Int_t n=1, Bool_t isPreAlloc=kFALSE, TMemberStreamer *s=0);
+   virtual void     ReadFastArray(void **startp, const TClass *cl, Int_t n=1, Bool_t isPreAlloc=kFALSE, TMemberStreamer *s=0, const TClass* onFileClass = 0);
 
    virtual void     WriteFastArray(const Bool_t    *b, Int_t n);
    virtual void     WriteFastArray(const Char_t    *c, Int_t n);
