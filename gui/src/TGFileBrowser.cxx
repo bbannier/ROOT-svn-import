@@ -1199,7 +1199,13 @@ void TGFileBrowser::GotoDir(const char *path)
    fListTree->OpenItem(item);
    DoubleClicked(item, 1);
    TObjArray *tokens = sPath.Tokenize("/");
-   for (Int_t i = 0; i < tokens->GetEntriesFast(); ++i) {
+   Int_t iStart = 0;
+   if (tokens->GetEntriesFast() > 1 && ((TObjString*)tokens->At(0))->String() == "afs") {
+      ((TObjString*)tokens->At(1))->String().Prepend("afs/");
+      iStart = 1;
+      fListTree->AddItem(fRootDir, ((TObjString*)tokens->At(1))->GetName());
+   }
+   for (Int_t i = iStart; i < tokens->GetEntriesFast(); ++i) {
       const char *token = ((TObjString*)tokens->At(i))->GetName();
       itm = fListTree->FindChildByName(item, token);
       if (itm) {
