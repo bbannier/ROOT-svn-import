@@ -10,7 +10,7 @@ namespace ROOT
 {
    struct TSchemaHelper
    {
-      TSchemaHelper(): fFunctionPtr( 0 ) {}
+      TSchemaHelper(): fEmbed(kTRUE), fFunctionPtr( 0 ) {}
       std::string fTarget;
       std::string fSourceClass;
       std::string fSource;
