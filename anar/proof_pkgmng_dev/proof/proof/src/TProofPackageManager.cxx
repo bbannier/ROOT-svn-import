@@ -20,9 +20,7 @@
 #include <algorithm>
 #include <string>
 // ROOT
-#include "TList.h"
 #include "TSlave.h"
-#include "TMessage.h"
 #include "TProofPackageManager.h"
 
 using namespace std;

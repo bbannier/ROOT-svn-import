@@ -24,6 +24,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+// ROOT
 #ifndef ROOT_TProof
 #include "TProof.h"
 #endif
@@ -51,7 +52,9 @@
 #ifndef ROOT_TUrl
 #include "TUrl.h"
 #endif
+#include "TProofPackageManager.h"
 
+// STD
 #include <map>
 
 #ifdef R__GLOBALSTL
@@ -253,7 +256,9 @@ public:
    ClassDef(TSlaveInfo,2) //basic info on slave
 };
 
-class TProof : public TNamed, public TQObject {
+class TProof : public TNamed,
+               public TQObject,
+               public TProofPackageHelper<TProof>{
 
 friend class TPacketizer;
 friend class TPacketizerDev;
