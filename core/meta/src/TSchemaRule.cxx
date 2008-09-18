@@ -22,15 +22,19 @@ using namespace ROOT;
 //------------------------------------------------------------------------------
 TSchemaRule::TSchemaRule(): fVersionVect( 0 ), fChecksumVect( 0 ),
                             fTargetVect( 0 ), fSourceVect( 0 ),
-                            fIncludeVect( 0 ), fEmbed( kFALSE ), 
+                            fIncludeVect( 0 ), fEmbed( kTRUE ), 
                             fReadFuncPtr( 0 ), fReadRawFuncPtr( 0 ),
                             fRuleType( kNone )
 {
+   // Default Constructor.
+   
 }
 
 //------------------------------------------------------------------------------
 TSchemaRule::~TSchemaRule()
 {
+   // Destructor.
+   
    delete fVersionVect;
    delete fChecksumVect;
    delete fTargetVect;
@@ -41,12 +45,15 @@ TSchemaRule::~TSchemaRule()
 //------------------------------------------------------------------------------
 TSchemaRule::TSchemaRule( const TSchemaRule& rhs ): TObject( rhs )
 {
+   // Copy Constructor.
    *this = rhs;
 }
 
 //------------------------------------------------------------------------------
 TSchemaRule& TSchemaRule::operator = ( const TSchemaRule& rhs )
 {
+   // Copy operator.
+   
    if( this != &rhs ) {
       fVersion        = rhs.fVersion;
       fChecksum       = rhs.fChecksum;
@@ -127,18 +134,24 @@ Bool_t TSchemaRule::TestChecksum( UInt_t checksum ) const
 //------------------------------------------------------------------------------
 void TSchemaRule::SetSourceClass( const TString& classname )
 {
+   // Set the source class of this rule (i.e. the onfile class).
+
    fSourceClass = classname;
 }
 
 //------------------------------------------------------------------------------
 TString TSchemaRule::GetSourceClass() const
 {
+   // Set the source class of this rule (i.e. the onfile class).
+
    return fSourceClass;
 }
 
 //------------------------------------------------------------------------------
 void TSchemaRule::SetTarget( const TString& target )
 {
+   // Set the target class of this rule (i.e. the in memory class).
+
    fTarget = target;
 
    if( target == "" ) {
@@ -156,6 +169,8 @@ void TSchemaRule::SetTarget( const TString& target )
 //------------------------------------------------------------------------------
 const TObjArray*  TSchemaRule::GetTarget() const
 {
+   // Get the target class of this rule (i.e. the in memory class).
+
    if( fTarget == "" )
       return 0;
 
@@ -170,6 +185,9 @@ const TObjArray*  TSchemaRule::GetTarget() const
 //------------------------------------------------------------------------------
 void TSchemaRule::SetSource( const TString& source )
 {
+   // Set the list of source members.  This should be in the form of a declaration:
+   //     Int_t fOldMember; TNamed fName;
+   
    fSource = source;
 
    if( source == "" ) {
@@ -187,6 +205,9 @@ void TSchemaRule::SetSource( const TString& source )
 //------------------------------------------------------------------------------
 const TObjArray* TSchemaRule::GetSource() const
 {
+   // Get the list of source members as a TObjArray of TNamed object,
+   // with the name being the member name and the title being its type.
+   
    if( fSource == "" )
       return 0;
 
@@ -200,6 +221,9 @@ const TObjArray* TSchemaRule::GetSource() const
 //------------------------------------------------------------------------------
 void TSchemaRule::SetInclude( const TString& incl )
 {
+   // Set the comma separated list of header files to include to be able
+   // to compile this rule.
+   
    fInclude = incl;
 
    if( incl == "" ) {
@@ -217,6 +241,9 @@ void TSchemaRule::SetInclude( const TString& incl )
 //------------------------------------------------------------------------------
 const TObjArray* TSchemaRule::GetInclude() const
 {
+   // Return the list of header files to include to be able to
+   // compile this rule as a TObjArray of TObjString
+   
    if( fInclude == "" )
       return 0;
 
@@ -231,36 +258,48 @@ const TObjArray* TSchemaRule::GetInclude() const
 //------------------------------------------------------------------------------
 void TSchemaRule::SetEmbed( Bool_t embed )
 {
+   // Set whether this rule should be save in the ROOT file (if true)
+   
    fEmbed = embed;
 }
 
 //------------------------------------------------------------------------------
 Bool_t TSchemaRule::GetEmbed() const
 {
+   // Return true if this rule should be saved in the ROOT File.
+   
    return fEmbed;
 }
 
 //------------------------------------------------------------------------------
 Bool_t TSchemaRule::IsValid() const
 {
+   // Return kTRUE if this rule is valid.
+   
    return (fVersionVect || fChecksumVect) && (fSourceClass.Length() != 0); 
 }
 
 //------------------------------------------------------------------------------
 void TSchemaRule::SetCode( const TString& code )
 {
+   // Set the source code of this rule.
+   
    fCode = code;
 }
 
 //------------------------------------------------------------------------------
 TString TSchemaRule::GetCode() const
 {
+   // Get the source code of this rule.
+   
    return fCode;
 }
 
 //------------------------------------------------------------------------------
 Bool_t TSchemaRule::HasTarget( const TString& target ) const
 {
+   // Return true if one of the rule's data member target  is 'target'.
+   
    if( !fTargetVect )
       return kFALSE;
 
@@ -277,6 +316,7 @@ Bool_t TSchemaRule::HasTarget( const TString& target ) const
 //------------------------------------------------------------------------------
 Bool_t TSchemaRule::HasSource( const TString& source ) const
 {
+   // Return true if one of the rule's data member source is 'source'
    if( !fSourceVect )
       return kFALSE;
 
@@ -293,55 +333,71 @@ Bool_t TSchemaRule::HasSource( const TString& source ) const
 //------------------------------------------------------------------------------
 void TSchemaRule::SetReadFunctionPointer( TSchemaRule::ReadFuncPtr_t ptr )
 {
+   // Set the pointer to the function to be run for the rule (if it is a read rule).
+   
    fReadFuncPtr = ptr;
 }
 
 //------------------------------------------------------------------------------
 TSchemaRule::ReadFuncPtr_t TSchemaRule::GetReadFunctionPointer() const
 {
+   // Get the pointer to the function to be run for the rule (if it is a read rule).
+
    return fReadFuncPtr;
 }
 
 //------------------------------------------------------------------------------
 void TSchemaRule::SetReadRawFunctionPointer( TSchemaRule::ReadRawFuncPtr_t ptr )
 {
+   // Set the pointer to the function to be run for the rule (if it is a raw read rule).
+
    fReadRawFuncPtr = ptr;
 }
 
 //------------------------------------------------------------------------------
 TSchemaRule::ReadRawFuncPtr_t TSchemaRule::GetReadRawFunctionPointer() const
 {
+   // Get the pointer to the function to be run for the rule (if it is a raw read rule).
+
    return fReadRawFuncPtr;
 }
 
 //------------------------------------------------------------------------------
 void TSchemaRule::SetRuleType( TSchemaRule::RuleType_t type )
 {
+   // Set the type of the rule.
+   
    fRuleType = type;
 }
 
 //------------------------------------------------------------------------------
 Bool_t TSchemaRule::IsAliasRule() const
 {
+   // Return kTRUE if the rule is a strict renaming of one of the data member of the class.
+
    return fSourceClass != "" && (fVersion != "" || fChecksum != "") && fTarget == "" && fSource == "" && fInclude == "" && fCode == "";
 }
 
 //------------------------------------------------------------------------------
 Bool_t TSchemaRule::IsRenameRule() const
 {
+   // Return kTRUE if the rule is a strict renaming of the class to a new name.
+
    return fSourceClass != "" && (fVersion != "" || fChecksum != "") && fTarget != "" && fSource != "" && fInclude == "" && fCode == "";
 }
 
 //------------------------------------------------------------------------------
 TSchemaRule::RuleType_t TSchemaRule::GetRuleType() const
 {
+   // Return the type of the rule.
+   
    return fRuleType;
 }
 
 //------------------------------------------------------------------------------
 Bool_t TSchemaRule::Conflicts( const TSchemaRule* rule ) const
 {
-   // Check if this rule conflicts with the given one
+   // Check if this rule conflicts with the given one.
 
    //---------------------------------------------------------------------------
    // If the rules have different sources then the don't conflict
@@ -406,7 +462,7 @@ Bool_t TSchemaRule::Conflicts( const TSchemaRule* rule ) const
 //------------------------------------------------------------------------------
 Bool_t TSchemaRule::ProcessVersion( const TString& version ) const
 {
-   // Check if specified version string is correct and build version vector
+   // Check if specified version string is correct and build version vector.
 
    //---------------------------------------------------------------------------
    // Check if we have valid list
@@ -449,6 +505,8 @@ Bool_t TSchemaRule::ProcessVersion( const TString& version ) const
 //------------------------------------------------------------------------------
 Bool_t TSchemaRule::ProcessChecksum( const TString& checksum ) const
 {
+   // Check if specified checksum string is correct and build checksum vector.
+   
    //---------------------------------------------------------------------------
    // Check if we have valid list
    //---------------------------------------------------------------------------
@@ -487,7 +545,7 @@ Bool_t TSchemaRule::ProcessChecksum( const TString& checksum ) const
 //------------------------------------------------------------------------------
 void TSchemaRule::ProcessList( TObjArray* array, const TString& list )
 {
-   // process given list of strings
+   // Split the list as a comma separated list into a TObjArray of TObjString.
 
    std::list<std::string>           elems;
    std::list<std::string>::iterator it;
@@ -508,7 +566,7 @@ void TSchemaRule::ProcessList( TObjArray* array, const TString& list )
 //------------------------------------------------------------------------------
 void TSchemaRule::ProcessDeclaration( TObjArray* array, const TString& list )
 {
-   // process given list of strings
+   // Split the list as a declaration into as a TObjArray of TNamed(name,type).
 
    std::list<std::pair<std::string,std::string> >           elems;
    std::list<std::pair<std::string,std::string> >::iterator it;
