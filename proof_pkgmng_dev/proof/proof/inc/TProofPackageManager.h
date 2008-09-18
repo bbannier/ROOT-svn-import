@@ -36,6 +36,7 @@
 //ROOT
 #include "TSystem.h"
 #include "TList.h"
+#include "TMessage.h"
 
 class TSlave;
 
