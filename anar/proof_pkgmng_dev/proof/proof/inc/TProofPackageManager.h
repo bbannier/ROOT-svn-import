@@ -15,41 +15,48 @@
 //                                                                      //
 // TProofPackageManager                                                 //
 //                                                                      //
+//   A strategy:                                                        //
+//                                                                      //
+//   On Master:                                                         //
+//          - check architecture of unique workers                      //
+//          - upload packages to workers of different architecture      //
+//              (different in compare to master)                        //
+//          - compile packages on workers of different architecture     //
+//          - compile package on master                                 //
+//          - tar package on master and push (SendFile) to unique       //
+//            workers of the same architecture as the master            //
+//  On Workers (of the same architecture):                              //
+//          - untar compiled package                                    //
+//                                                                      //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
 // STD
-#include <set>
 #include <sstream>
 //ROOT
 #include "TSystem.h"
+#include "TList.h"
 
 class TSlave;
-class TList;
 
-class TProofPackageManager
+template<class T>
+class TProofPackageHelper
 {
-   typedef std::set<const TSlave *> SlavesList_t;
-
-public:
-   void BuildSlavesList(TList *_UniqueSlaves);
+protected:
+   void BuildSlavesList(TList *uniqueSlaves);
+   bool NeedToUploadPackage(TSlave *slave) const;
+   void BroadcastUnqArcSlv(const TMessage &msg) const;
 
 private:
-   SlavesList_t fSlvArcMstr; // a list of Slaves with the same architecture as on Master
-   SlavesList_t fSlvArcUnq;  // a list of Slaves with the unique architecture
+   void AddSlave(TSlave *slave);
+   //TODO: maybe we want to exclude this function from the class
+   //      and make it a free inline function
+   void GetMasterArchitecture(std::string *retVal);
+
+private:
+   TList fSlvArcMstr; // a list of Slaves with the same architecture as on Master
+   TList fSlvArcUnq;  // a list of Slaves with the unique architecture
+   std::string fMasterArch; // a build architecture string of the Master
 };
-
-// a helper function, generates a build architecture string
-// example: linux-gcc412
-inline void get_architecture(std::string *_RetVal)
-{
-   if (!_RetVal)
-      return;
-
-   std::ostringstream ss;
-   ss << gSystem->GetBuildArch() << "-" << gSystem->GetBuildCompilerVersion();
-
-   *_RetVal = ss.str();
-}
 
 #endif

@@ -22,41 +22,84 @@
 // ROOT
 #include "TList.h"
 #include "TSlave.h"
+#include "TMessage.h"
 #include "TProofPackageManager.h"
 
 using namespace std;
 
 //______________________________________________________________________________
-struct SFindSameArch: public binary_function<TObject*, const string *, bool> {
-   bool operator()(TObject *_obj, const string *_master_arch) const {
-      TSlave *slave(dynamic_cast<TSlave*>(_obj));
-      return(slave->GetArchCompiler() == *_master_arch);
-   }
-};
-
-//______________________________________________________________________________
-struct SGetSlave {
-   TSlave* operator()(TObject *_obj) const {
-      return(dynamic_cast<TSlave*>(_obj));
-   }
-};
-
-//______________________________________________________________________________
-void TProofPackageManager::BuildSlavesList(TList *_UniqueSlaves)
+template <class T>
+void TProofPackageHelper<T>::BuildSlavesList(TList *uniqueSlaves)
 {
    // The BuildSlavesList function collects a list of unique
    // slaves with the same architecture as the master.
 
    // Architecture of the Master
-   string master_arch;
-   get_architecture(&master_arch);
+   GetMasterArchitecture(&fMasterArch);
+
+   // Clean all internal lists
+   fSlvArcMstr.Clear();
+   fSlvArcUnq.Clear();
 
    // We loop over all selected nodes and check architecture.
    // At the end the fSlvArcMstr must contain a list of unique
    // slaves with the same architecture as the master.
-   typedef TIterCategory<TList> iterator_t;
-   iterator_t iter(_UniqueSlaves);
-   transform(find_if(iter, iterator_t::End(), bind2nd(SFindSameArch(), &master_arch)), iterator_t::End(),
-             inserter(fSlvArcMstr, fSlvArcMstr.begin()),
-             SGetSlave());
+   TIter iter(uniqueSlaves);
+   for_each(iter, TIter::End(),
+            std::bind1st(std::mem_fun(&TProofPackageHelper::AddSlave), this));
+}
+
+//______________________________________________________________________________
+template <class T>
+bool TProofPackageHelper<T>::NeedToUploadPackage(TSlave *slave) const
+{
+   // This function returns true if the package should be uploaded to the given slave.
+   // It returns false in case when slave belongs to the list of slaves of the same architecture
+   // as on master.
+   return (fSlvArcUnq.FindObject(slave) != NULL);
+}
+
+//______________________________________________________________________________
+template <class T>
+void TProofPackageHelper<T>::BroadcastUnqArcSlv(const TMessage &msg) const
+{
+   // This method sends a broadcast message to all unique slaves,
+   // which have a different architecture in compare to a master
+
+   T *pThis = reinterpret_cast<T*>(this);
+   if (!pThis)
+      return;
+
+   pThis->Broadcast(msg, &fSlvArcUnq);
+}
+
+//______________________________________________________________________________
+template <class T>
+void TProofPackageHelper<T>::AddSlave(TSlave *slave)
+{
+   // The AddSlave function collects internal lists of slaves
+
+   if (!slave)
+      return;
+
+   if (slave->GetArchCompiler() == fMasterArch)
+      fSlvArcMstr.Add(slave);
+   else
+      fSlvArcUnq.Add(slave);
+}
+
+//______________________________________________________________________________
+template <class T>
+void TProofPackageHelper<T>::GetMasterArchitecture(std::string *retVal)
+{
+   // a helper function, generates a build architecture string
+   // example: linux-gcc412
+
+   if (!retVal)
+      return;
+
+   std::ostringstream ss;
+   ss << gSystem->GetBuildArch() << "-" << gSystem->GetBuildCompilerVersion();
+
+   *retVal = ss.str();
 }
