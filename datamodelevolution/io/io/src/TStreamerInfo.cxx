@@ -1126,14 +1126,13 @@ void TStreamerInfo::BuildOld()
             }
             baseclass->BuildRealData();
 
-#if 0
-            // FIXME: WTF?
+            // Force the StreamerInfo "Compilation" of the base classes first. This is necessary in 
+            // case the base class contains a member used as an array dimension in the derived classes.
             Int_t version = base->GetBaseVersion();
             TStreamerInfo* infobase = (TStreamerInfo*)baseclass->GetStreamerInfo(version);
             if (infobase->GetTypes() == 0) {
                infobase->BuildOld();
             }
-#endif
             Int_t baseOffset = fClass->GetBaseClassOffset(baseclass);
 
             // FIXME: Presumably we're in emulated mode, but is still does not make any sense
@@ -1386,8 +1385,6 @@ void TStreamerInfo::BuildOld()
             }
             delete rules;
             element->SetNewClass( newClass );
-//            element->Update( oldClass, newClass.GetClass() );
-//            element->SetNewClass( newClass->GetName() );
             
          } else {
             element->SetNewType(-2);
