@@ -51,7 +51,7 @@ void TProofPackageHelper<T>::BuildSlavesList(TList *uniqueSlaves)
 
 //______________________________________________________________________________
 template <class T>
-bool TProofPackageHelper<T>::NeedToUploadPackage(TSlave *slave) const
+bool TProofPackageHelper<T>::NeedToUploadPkg(TSlave *slave) const
 {
    // This function returns true if the package should be uploaded to the given slave.
    // It returns false in case when slave belongs to the list of slaves of the same architecture
@@ -71,6 +71,16 @@ void TProofPackageHelper<T>::BroadcastUnqArcSlv(const TMessage &msg) const
       return;
 
    pThis->Broadcast(msg, &fSlvArcUnq);
+}
+
+//______________________________________________________________________________
+template <class T>
+bool TProofPackageHelper<T>::PrepareAndSendPkg() const
+{
+   // The PrepareAndSendPkg function tars and sends a pre-builded package from
+   // a master to the slaves, which have the same architecture as on master.
+   // returns: true upon success and false if failed
+   return true;
 }
 
 //______________________________________________________________________________

@@ -44,8 +44,9 @@ class TProofPackageHelper
 {
 protected:
    void BuildSlavesList(TList *uniqueSlaves);
-   bool NeedToUploadPackage(TSlave *slave) const;
+   bool NeedToUploadPkg(TSlave *slave) const;
    void BroadcastUnqArcSlv(const TMessage &msg) const;
+   bool PrepareAndSendPkg() const;
 
 private:
    void AddSlave(TSlave *slave);
