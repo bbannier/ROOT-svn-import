@@ -19,7 +19,7 @@
 #include "TMath.h"
 #include "TROOT.h"
 #include "TFrame.h"
-//#include "Fit/FitConfig.h"
+#include "Fit/FitConfig.h"
 
 
 
@@ -50,8 +50,7 @@ void DoFit(const char* fitter, TVirtualPad *pad, Int_t npass) {
    gRandom = new TRandom3();
    TStopwatch timer;
    //   timer.Start();
-   //TVirtualFitter::SetDefaultFitter(fitter);
-   ROOT::Fit::FitConfig::SetDefaultMinimizer(fitter);
+   TVirtualFitter::SetDefaultFitter(fitter);
    //ROOT::Fit::FitConfig::SetDefaultMinimizer(fitter);
    pad->SetGrid();
    pad->SetLogy();

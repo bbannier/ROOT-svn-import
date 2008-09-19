@@ -924,18 +924,25 @@ const char *TSystem::DirName(const char *pathname)
 
       static int len = 0;
       static char *buf = 0;
-      int l = strlen(pathname);
-      if (l > len) {
+      int pathlen = strlen(pathname);
+      if (pathlen > len) {
          delete [] buf;
-         len = l;
+         len = pathlen;
          buf = new char [len+1];
       }
       strcpy(buf, pathname);
-      char *r = strrchr(buf, '/');
-      if (r != buf)
-         *r = '\0';
-      else
-         *(r+1) = '\0';
+      
+      char *r = buf+pathlen-1;
+      // First skip the trailing '/'
+      while ( r>buf && *(r)=='/') { --r; }
+      // Then find the next non slash
+      while ( r>buf && *(r)!='/') { --r; }
+      // Then skip duplicate slashes
+      // Note the 'r>buf' is a strict comparison to allows '/topdir' to return '/'
+      while ( r>buf && *(r)=='/') { --r; }            
+      // And finally terminate the string to drop off the filename
+      *(r+1) = '\0';
+      
       return buf;
    }
    return ".";
@@ -2339,6 +2346,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
          mode=kDebug;
       }
    }
+   
    // if non-zero, build_loc indicates where to build the shared library.
    TString build_loc = ExpandFileName(GetBuildDir());
    if (build_dir && strlen(build_dir)) build_loc = build_dir;
@@ -2406,6 +2414,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       lib_dirname.Prepend(library(0,2));
    }
    TString lib_location( lib_dirname );
+   Bool_t mkdirFailed = kFALSE;
 
    if (build_loc.Length()==0) {
       build_loc = lib_location;
@@ -2419,11 +2428,20 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       if (pos==0) lib_location.Remove(pos,3);
 
       AssignAndDelete( library, ConcatFileName( build_loc, library) );
+
+      Bool_t canWriteBuild_loc = !gSystem->AccessPathName(build_loc,kWritePermission);
+      TString build_loc_store( build_loc );
       AssignAndDelete( build_loc, ConcatFileName( build_loc, lib_location) );
 
-      if (gSystem->AccessPathName(build_loc,kWritePermission)) {
-         mkdir(build_loc, true);
-      }
+      if (gSystem->AccessPathName(build_loc,kFileExists)) {
+         mkdirFailed = (0 != mkdir(build_loc, true));
+         if (mkdirFailed && !canWriteBuild_loc) {
+            // The mkdir failed __and__ we can not write to the target directory,
+            // let make sure the error message will be about the target directory
+            build_loc = build_loc_store;
+            mkdirFailed = kFALSE;
+         }
+      } 
    }
 
    // ======= Check if the library need to loaded or compiled
@@ -2493,8 +2511,14 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 
    }
 
-   TString emergency_loc = TempDirectory();
-
+   TString emergency_loc;
+   UserGroup_t *ug = gSystem->GetUserInfo(gSystem->GetUid());
+   if (ug) {
+      AssignAndDelete( emergency_loc, ConcatFileName( TempDirectory(), ug->fUser ) );
+   } else {
+      emergency_loc = TempDirectory();
+   }
+   
    Bool_t canWrite = !gSystem->AccessPathName(build_loc,kWritePermission);
 
    Bool_t modified = kFALSE;
@@ -2736,8 +2760,13 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 
    if (!canWrite && recompile) {
 
-      ::Warning("ACLiC","%s is not writeable!",
+      if (mkdirFailed) {
+         ::Warning("ACLiC","Could not create the directory: %s",
                 build_loc.Data());
+      } else {
+         ::Warning("ACLiC","%s is not writeable!",
+                   build_loc.Data());         
+      }
       if (emergency_loc == build_dir ) {
          ::Error("ACLiC","%s is the last resort location (i.e. temp location)",build_loc.Data());
          return kFALSE;
