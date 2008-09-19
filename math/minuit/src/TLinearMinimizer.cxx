@@ -191,6 +191,7 @@ bool TLinearMinimizer::Minimize() {
       std::cout << "do robust fitting with h = " << h << std::endl; 
       iret = fFitter->EvalRobust(h); 
    }
+   fStatus = iret; 
  
    if (iret != 0) { 
       Warning("Minimize","TLinearFitter failed in finding the solution");  

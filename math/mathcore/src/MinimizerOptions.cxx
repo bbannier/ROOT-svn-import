@@ -18,7 +18,7 @@ namespace Math {
 
 // default minimizer options (static variable) 
 
-#ifdef R_HAS_MINUIT2
+#ifdef R__HAS_MINUIT2
    static std::string gDefaultMinimizer = "Minuit2";
 #else 
    static std::string gDefaultMinimizer = "Minuit";

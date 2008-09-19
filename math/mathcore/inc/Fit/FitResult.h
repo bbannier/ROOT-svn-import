@@ -107,6 +107,9 @@ public:
    /// get total number of free parameters
    unsigned int NFreeParameters() const { return fNFree; }
 
+   /// minimizer status code 
+   int Status() const { return fStatus; } 
+ 
    /** fitting quantities **/
 
    /// Return pointer to model (fit) function with fitted parameter values.
@@ -122,7 +125,6 @@ public:
    /// p value of the fit (chi2 probability)
    double Prob() const;  
 
- 
    /// parameter errors
    const std::vector<double> & Errors() const { return fErrors; }
 
@@ -269,6 +271,7 @@ private:
    unsigned int fNFree;     // number of fit free parameters (total parameters are in size of parameter vector)  
    unsigned int fNdf;       // number of degree of freedom
    unsigned int fNCalls;    // number of function calls
+   int fStatus;             // minimizer status code
    double fVal;             // minimum function value
    double fEdm;             // expected distance from mimimum
    double fChi2;            // fit chi2 value (different than fval in case of chi2 fits)

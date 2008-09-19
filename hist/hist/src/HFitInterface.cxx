@@ -55,7 +55,7 @@ bool IsPointOutOfRange(const TF1 * func, const double * x) {
 }
 
 bool AdjustError(const DataOptions & option, double & error) {
-   // adjust the given error accoring to the option
+   // adjust the given error according to the option
    //  if false is returned bin must be skipped 
    if (option.fErrors1) error = 1;
    if (error <= 0 ) { 
@@ -154,12 +154,15 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
    // reserve n for more efficient usage
    //dv.Data().reserve(n);
    
-   int ndim =  hfit->GetDimension();
+   int hdim =  hfit->GetDimension();
+   int ndim = hdim; 
+   // case of function dimension less than histogram 
+   if (func !=0 && func->GetNdim() == hdim-1) ndim = hdim-1;
    assert( ndim > 0 );
    //typedef  BinPoint::CoordData CoordData; 
    //CoordData x = CoordData( hfit->GetDimension() );
    dv.Initialize(n,ndim); 
-   std::vector<double> x(ndim); 
+   std::vector<double> x(hdim); 
 
    int binx = 0; 
    int biny = 0; 
@@ -186,14 +189,14 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
          if (func->RejectedPoint() ) continue; 
       }
 
-      if ( ndim > 1 ) { 
+      if ( hdim > 1 ) { 
          for ( biny = hyfirst; biny <= hylast; ++biny) {
             if (fitOpt.fIntegral) 
                x[1] = yaxis->GetBinLowEdge(biny);
             else
                x[1] = yaxis->GetBinCenter(biny);
             
-            if ( ndim >  2 ) { 
+            if ( hdim >  2 ) { 
                for ( binz = hzfirst; binz <= hzlast; ++binz) {
                   if (fitOpt.fIntegral) 
                      x[2] = zaxis->GetBinLowEdge(binz);
@@ -203,15 +206,21 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
                   double error =  hfit->GetBinError(binx, biny, binz); 
                   if (!HFitInterface::AdjustError(fitOpt,error) ) continue; 
                   //dv.Add(BinPoint(  x,  hfit->GetBinContent(binx, biny, binz), error ) );
-                  dv.Add(   &x.front(),  hfit->GetBinContent(binx, biny, binz), error  );
+                  if (ndim < hdim) // case of fitting a function with less dimension
+                     dv.Add(   &x.front(),  x[2], error * zaxis->GetBinWidth(binz)  );
+                  else 
+                     dv.Add(   &x.front(),  hfit->GetBinContent(binx, biny, binz), error  );
                }  // end loop on z bins
             }
-            else if (ndim == 2) { 
+            else if (hdim == 2) { 
                // for dim == 2
 //               if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func,&x.front()) ) continue;
                double error =  hfit->GetBinError(binx, biny); 
                if (!HFitInterface::AdjustError(fitOpt,error) ) continue; 
-               dv.Add( &x.front(), hfit->GetBinContent(binx, biny), error  );
+               if (ndim < hdim) // case of fitting a function with less dimension
+                  dv.Add(   &x.front(),  x[1], error * yaxis->GetBinWidth(biny)  );
+               else 
+                  dv.Add( &x.front(), hfit->GetBinContent(binx, biny), error  );
             }   
             
          }  // end loop on y bins

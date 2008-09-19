@@ -86,7 +86,11 @@ int HFit::CheckFitFunction(const TF1 * f1, int dim) {
             f1->GetName(), f1->GetNdim(), dim);
       return -4;
    }
-   // t.b.d what to do if dimension is less 
+   if (f1->GetNdim() < dim-1) {
+      Error("Fit","function %s dimension, %d, is smaller than fit object dimension -1, %d",
+            f1->GetName(), f1->GetNdim(), dim);
+      return -5;
+   }
 
    return 0; 
 
@@ -109,8 +113,13 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
 
 
 
-   // why this ???? (special care should be taken for functions with less dimension than histograms)
-   if (f1->GetNdim() < hdim ) fitOption.Integral = 0; 
+   // integral option is not supported in this case
+   if (f1->GetNdim() < hdim ) { 
+      if (fitOption.Integral) Info("Fit","Ignore Integral option. Model function dimension is less than the data object dimension");
+      if (fitOption.Like) Info("Fit","Ignore Likelihood option. Model function dimension is less than the data object dimension");
+      fitOption.Integral = 0; 
+      fitOption.Like = 0; 
+   }
 
    Int_t special = f1->GetNumber();
    Bool_t linear = f1->IsLinear();
@@ -260,6 +269,7 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
 
    const ROOT::Fit::FitResult & fitResult = fitter->Result(); 
    // one could set directly the fit result in TF1
+   iret = fitResult.Status(); 
    if (!fitResult.IsEmpty() ) { 
       // set in f1 the result of the fit      
       f1->SetChisquare(fitResult.Chi2() );

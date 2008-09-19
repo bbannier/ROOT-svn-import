@@ -191,6 +191,7 @@ bool GSLNLSMinimizer::Minimize() {
    if (x == 0) return false; 
    std::copy(x, x +fDim, fValues.begin() ); 
    fMinVal =  (*fObjFunc)(x);
+   fStatus = status; 
 
    fErrors.resize(fDim);
       
