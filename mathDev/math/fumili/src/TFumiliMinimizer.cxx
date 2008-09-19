@@ -479,6 +479,7 @@ bool TFumiliMinimizer::Minimize() {
    arglist[0] = MaxFunctionCalls(); 
    arglist[1] = Tolerance(); 
    int iret = fFumili->ExecuteCommand("MIGRAD",arglist,2);
+   fStatus = iret; 
    //int iret = fgFumili->Minimize(); 
    
    // Hesse and IMP not implemented 

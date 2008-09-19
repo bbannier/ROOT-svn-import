@@ -227,6 +227,9 @@ bool TMinuitMinimizer::Minimize() {
    // By default Migrad is used. 
    // Return true if the found minimum is valid and update internal chached values of 
    // minimum values, errors and covariance matrix. 
+   // Status of minimizer is set to: 
+   // migradResult + 10*minosResult + 100*hesseResult + 1000*improveResult
+
 
    assert(fMinuit != 0 );
 
@@ -271,13 +274,18 @@ bool TMinuitMinimizer::Minimize() {
 
    }
 
+   fStatus = ierr; 
+
    // run improved if needed
-   if (ierr == 0 && fType == ROOT::Minuit::kMigradImproved) 
+   if (ierr == 0 && fType == ROOT::Minuit::kMigradImproved) {
       fMinuit->mnexcm("IMPROVE",arglist,1,ierr);
+      fStatus += 1000*ierr; 
+   }
 
    // check if Hesse needs to be run 
    if (ierr == 0 && IsValidError() ) { 
       fMinuit->mnexcm("HESSE",arglist,1,ierr);
+      fStatus += 100*ierr; 
    }
 
 
@@ -364,15 +372,18 @@ bool TMinuitMinimizer::GetMinosError(unsigned int i, double & errLow, double & e
    
       int nargs = 2; 
       fMinuit->mnexcm("MINOS",arglist,nargs,ierr);
-      if (ierr != 0 ) return false; 
+      fStatus += 10*ierr;
 
       fMinosRun = true; 
+
    }
 
    double errParab = 0; 
    double gcor = 0; 
    // what returns if parameter fixed or constant or at limit ? 
    fMinuit->mnerrs(i,errUp,errLow, errParab, gcor); 
+
+   if (fStatus%100 != 0 ) return false; 
    return true; 
 
 }

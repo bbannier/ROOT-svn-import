@@ -38,7 +38,8 @@ namespace ROOT {
 
 
 FitResult::FitResult() : 
-   fValid(false), fNormalized(false), fNFree(0), fNdf(0), fNCalls(0), fVal(0), fEdm(0), fChi2(0), fFitFunc(0)
+   fValid(false), fNormalized(false), fNFree(0), fNdf(0), fNCalls(0), 
+   fStatus(-1), fVal(0), fEdm(0), fChi2(0), fFitFunc(0)
 {
    // Default constructor implementation.
 }
@@ -48,6 +49,7 @@ FitResult::FitResult() :
    fNormalized(false),
    fNFree(min.NFree() ),
    fNCalls(min.NCalls()),
+   fStatus(min.Status() ),
    fVal (min.MinValue()),  
    fEdm (min.Edm()),  
    fFitFunc(&func), 
@@ -154,6 +156,7 @@ FitResult & FitResult::operator = (const FitResult &rhs) {
    fNFree = rhs.fNFree; 
    fNdf = rhs.fNdf; 
    fNCalls = rhs.fNCalls; 
+   fStatus = rhs.fStatus; 
    fVal = rhs.fVal;  
    fEdm = rhs.fEdm; 
    fChi2 = rhs.fChi2;
