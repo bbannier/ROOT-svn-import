@@ -35,6 +35,7 @@
 #include "TGResourcePool.h"
 #include "TGPicture.h"
 #include "TSystem.h"
+#include "TObjString.h"
 #include "Riostream.h"
 
 const TGFont *TGTreeLBEntry::fgDefaultFont = 0;
@@ -231,8 +232,8 @@ TGFSComboBox::TGFSComboBox(const TGWindow *parent, Int_t id, UInt_t options,
 #endif
 
    Int_t idx = 0;
-   TList *volumes = 0; // gSystem->GetVolumes("all");
-   TList *curvol  = 0; // gSystem->GetVolumes("cur");
+   TList *volumes = gSystem->GetVolumes("all");
+   TList *curvol  = gSystem->GetVolumes("cur");
    TString infos;
    const char *curdrive = "";
    if (volumes && curvol) {
