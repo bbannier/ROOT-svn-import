@@ -1550,7 +1550,7 @@ void tmultigraph1()
    TGraphErrors *gr1 = new TGraphErrors(n1,x1,y1,ex1,ey1);
    gr1->SetMarkerColor(kBlue);
    gr1->SetMarkerStyle(21);
-   gr1->Fit("pol6","q");
+   gr1->Fit("pol6","fq");
    mg->Add(gr1);
    Int_t n2 = 10;
    Float_t x2[]  = {-0.28, 0.005, 0.19, 0.29, 0.45, 0.56,0.65,0.80,0.90,1.01};
@@ -1560,7 +1560,7 @@ void tmultigraph1()
    TGraphErrors *gr2 = new TGraphErrors(n2,x2,y2,ex2,ey2);
    gr2->SetMarkerColor(kRed);
    gr2->SetMarkerStyle(20);
-   gr2->Fit("pol5","q");
+   gr2->Fit("pol5","fq");
    mg->Add(gr2);
    mg->Draw("ap");
    C->Update();
@@ -1643,7 +1643,7 @@ void tmultigraph2()
    TGraphErrors *gr22 = new TGraphErrors(n2,x2,y2,exl2,eyl2);
    gr22->SetMarkerColor(kRed+1);
    gr22->SetMarkerStyle(20);
-   gr22->Fit("pol3","q");
+   gr22->Fit("pol3","fq");
    mg2->Add(gr21,"pl");
    mg2->Add(gr22);
    mg2->Draw("ap");
@@ -1658,7 +1658,7 @@ void tmultigraph2()
    TGraphAsymmErrors *gr32 = new TGraphAsymmErrors(n2,x2,y2,exl2,exh2,eyl2,eyh2);
    gr32->SetMarkerColor(kRed-1);
    gr32->SetMarkerStyle(20);
-   gr32->Fit("pol4","q");
+   gr32->Fit("pol4","fq");
    mg3->Add(gr31,"pl");
    mg3->Add(gr32);
    mg3->Draw("ap");
@@ -1673,7 +1673,7 @@ void tmultigraph2()
    TGraphBentErrors *gr42 = new TGraphBentErrors(n2,x2,y2,exl2,exh2,eyl2,eyh2,exld2,exhd2,eyld2,eyhd2);
    gr42->SetMarkerColor(kViolet);
    gr42->SetMarkerStyle(20);
-   gr42->Fit("pol5","q");
+   gr42->Fit("pol5","fq");
    mg4->Add(gr41,"pc");
    mg4->Add(gr42);
    mg4->Draw("ap");
