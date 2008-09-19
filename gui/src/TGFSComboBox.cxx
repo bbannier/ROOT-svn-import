@@ -35,7 +35,6 @@
 #include "TGResourcePool.h"
 #include "TGPicture.h"
 #include "TSystem.h"
-#include "TObjString.h"
 #include "Riostream.h"
 
 const TGFont *TGTreeLBEntry::fgDefaultFont = 0;
@@ -207,8 +206,6 @@ TGFSComboBox::TGFSComboBox(const TGWindow *parent, Int_t id, UInt_t options,
    TGComboBox(parent, id, options | kOwnBackground, back)
 {
    // Create a file system combobox showing system directories.
-
-   Error("TGFSComboBox::TGFSComboBox", "not supported on fireworks branch.");
 
    int   i, indent;
    const TGPicture *pic;
