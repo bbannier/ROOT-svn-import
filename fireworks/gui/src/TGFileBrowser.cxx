@@ -348,8 +348,8 @@ void TGFileBrowser::BrowseObj(TObject *obj)
       fNewBrowser->SetActBrowser(this);
    obj->Browse(fBrowser);
    if (obj == gROOT) {
-      TList *volumes = 0; // gSystem->GetVolumes("all");
-      TList *curvol  = 0; // gSystem->GetVolumes("cur");
+      TList *volumes = gSystem->GetVolumes("all");
+      TList *curvol  = gSystem->GetVolumes("cur");
       if (volumes && curvol) {
          const char *curdrive;
          TNamed *named = (TNamed *)curvol->At(0);
