@@ -84,7 +84,12 @@
 
 
 #pragma link C++ class ROOT::Math::BasicFitMethodFunction<ROOT::Math::IBaseFunctionMultiDim>+;
+#ifndef _WIN32
 #pragma link C++ class ROOT::Math::BasicFitMethodFunction<ROOT::Math::IGradientFunctionMultiDim>+;
+#else
+// problem due to virtual inheritance
+#pragma link C++ class ROOT::Math::BasicFitMethodFunction<ROOT::Math::IGradientFunctionMultiDim>-;
+#endif
 
 #pragma link C++ class ROOT::Math::Factory+;
 
