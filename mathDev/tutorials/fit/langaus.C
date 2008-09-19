@@ -245,7 +245,7 @@ void langaus() {
    Double_t fr[2];
    Double_t sv[4], pllo[4], plhi[4], fp[4], fpe[4];
    fr[0]=0.3*hSNR->GetMean();
-   fr[1]=3.0*hSNR->GetMean();
+   fr[1]=3.0*hSNR->GetMean()-0.3;
 
    pllo[0]=0.5; pllo[1]=5.0; pllo[2]=1.0; pllo[3]=0.4;
    plhi[0]=5.0; plhi[1]=50.0; plhi[2]=1000000.0; plhi[3]=5.0;
@@ -266,8 +266,13 @@ void langaus() {
    gStyle->SetLabelSize(0.03,"x");
    gStyle->SetLabelSize(0.03,"y");
 
-   hSNR->GetXaxis()->SetRange(0,70);
+   hSNR->GetXaxis()->SetRange(0,100);
    hSNR->Draw();
    fitsnr->Draw("lsame");
+
+   TF1 * f2 = new TF1(); 
+   fitsnr->Copy(*f2);
+   f2->SetLineColor(kBlue);
+   hSNR->Fit(f2,"R+");
 }
 

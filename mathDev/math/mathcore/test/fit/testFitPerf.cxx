@@ -54,7 +54,7 @@
 
 #include "MinimizerTypes.h"
 
-//#define DEBUG
+#define DEBUG
 
 int nfit;
 const int N = 20; 
@@ -337,7 +337,7 @@ int FitUsingNewFitter(FitObj * fitobj, Func & func, bool useGrad=false) {
    TStopwatch w; w.Start(); 
 
 #ifdef DEBUG
-   std::cout << "initial Parameters " << iniPar << "  " << *iniPar << "   " <<  *(iniPar+1) << std::endl;
+   // std::cout << "initial Parameters " << iniPar << "  " << *iniPar << "   " <<  *(iniPar+1) << std::endl;
    func.SetParameters(iniPar);
    iret |= DoFit<MinType>(fitobj,func,true, useGrad);
 
