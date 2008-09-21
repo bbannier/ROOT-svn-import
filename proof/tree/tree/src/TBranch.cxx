@@ -787,8 +787,18 @@ Int_t TBranch::Fill()
             *fEntryBuffer >> tag;
          }
          if (tag == kNewClassTag) {
-            char s[80];
-            fEntryBuffer->ReadString(s, 80);
+            UInt_t maxsize = 256;
+            char* s = new char[maxsize];
+            Int_t name_start = fEntryBuffer->Length();
+            fEntryBuffer->ReadString(s, maxsize); // Reads at most maxsize - 1 characters, plus null at end.
+            while (strlen(s) == (maxsize - 1)) {
+               // The classname is too large, try again with a large buffer.
+               fEntryBuffer->SetBufferOffset(name_start);
+               maxsize *= 2;
+               delete[] s;
+               s = new char[maxsize];
+               fEntryBuffer->ReadString(s, maxsize); // Reads at most maxsize - 1 characters, plus null at end
+            }
          } else {
             fEntryBuffer->SetBufferOffset(objectStart);
          }
@@ -1151,6 +1161,10 @@ Int_t TBranch::GetEntry(Long64_t entry, Int_t getall)
    // Are we still in the same ReadBasket?
    if ((entry < first) || (entry > last)) {
       fReadBasket = TMath::BinarySearch(fWriteBasket + 1, fBasketEntry, entry);
+      if (fReadBasket < 0) {
+         Error("In the branch %s, no basket contains the entry %d\n", GetName(), entry);
+         return -1;
+      } 
       first = fBasketEntry[fReadBasket];
    }
    // We have found the basket containing this entry.
