@@ -39,7 +39,7 @@ endif
 
 ##### Xrootd executables #####
 ifneq ($(PLATFORM),win32)
-XRDEXEC     = xrootd olbd xrdcp xrd xrdpwdadmin
+XRDEXEC     = xrootd olbd xrdcp xrd xrdpwdadmin cmsd xrdstagetool xprep
 ifneq ($(BUILDXRDGSI),)
 XRDEXEC    += xrdgsiproxy
 endif
@@ -79,7 +79,7 @@ $(XROOTDMAKE):
 		freebsd*:*)      xopt="--ccflavour=gcc";; \
 		linuxicc:*)      xopt="--ccflavour=icc --use-xrd-strlcpy";; \
 		linuxia64ecc:*)  xopt="--ccflavour=icc --use-xrd-strlcpy";; \
-		linuxia64gcc:*)  xopt="--ccflavour=gcc --use-xrd-strlcpy";; \
+		linuxia64gcc:*)  xopt="--ccflavour=gccia64 --use-xrd-strlcpy";; \
 		linuxx8664gcc:*) xopt="--ccflavour=gccx8664 --use-xrd-strlcpy";; \
 		linuxx8664icc:*) xopt="--ccflavour=iccx8664 --use-xrd-strlcpy";; \
 		linuxppc64gcc:*) xopt="--ccflavour=gccppc64 --use-xrd-strlcpy";; \

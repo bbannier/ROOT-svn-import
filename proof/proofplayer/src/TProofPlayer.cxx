@@ -1773,11 +1773,11 @@ Bool_t TProofPlayerRemote::SendSelector(const char* selector_file)
    }
 
    // Send files now
-   if (fProof->SendFile(selec) == -1) {
+   if (fProof->SendFile(selec, (TProof::kBinary | TProof::kForward)) == -1) {
       Info("SendSelector", "problems sending implementation file %s", selec.Data());
       return kFALSE;
    }
-   if (fProof->SendFile(header) == -1) {
+   if (fProof->SendFile(header, (TProof::kBinary | TProof::kForward)) == -1) {
       Info("SendSelector", "problems sending header file %s", header.Data());
       return kFALSE;
    }
@@ -2466,7 +2466,7 @@ TDSetElement *TProofPlayerRemote::GetNextPacket(TSlave *slave, TMessage *r)
       PDB(kPacketizer,2) Info("GetNextPacket","Waiting");
    } else {
       PDB(kPacketizer,2)
-         Info("GetNextPacket","To slave-%d (%s): '%s' '%s' '%s' %lld %lld",
+         Info("GetNextPacket","To slave-%s (%s): '%s' '%s' '%s' %lld %lld",
               slave->GetOrdinal(), slave->GetName(), e->GetFileName(),
               e->GetDirectory(), e->GetObjName(), e->GetFirst(), e->GetNum());
    }
