@@ -138,7 +138,7 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
    ROOT::Fit::DataOptions opt; 
    opt.fIntegral = fitOption.Integral; 
    opt.fUseRange = fitOption.Range; 
-
+   if (linear) opt.fCoordErrors = false; // cannot use coordinate errors in a linear fit
 
 
    if (opt.fUseRange) { 
