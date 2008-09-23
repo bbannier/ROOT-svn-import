@@ -84,28 +84,28 @@ ClassImp(TProof)
 //----- Helper classes used for parallel startup -------------------------------
 //______________________________________________________________________________
 TProofThreadArg::TProofThreadArg(const char *h, Int_t po, const char *o,
-      Int_t pe, const char *i, const char *w,
-      TList *s, TProof *prf)
-      : fOrd(o), fPerf(pe), fImage(i), fWorkdir(w),
-      fSlaves(s), fProof(prf), fCslave(0), fClaims(0),
-      fType(TSlave::kSlave)
+                                 Int_t pe, const char *i, const char *w,
+                                 TList *s, TProof *prf)
+  : fOrd(o), fPerf(pe), fImage(i), fWorkdir(w),
+    fSlaves(s), fProof(prf), fCslave(0), fClaims(0),
+    fType(TSlave::kSlave)
 {
    // Constructor
 
-   fUrl = new TUrl(Form("%s:%d", h, po));
+   fUrl = new TUrl(Form("%s:%d",h,po));
 }
 
 //______________________________________________________________________________
 TProofThreadArg::TProofThreadArg(TCondorSlave *csl, TList *clist,
-      TList *s, TProof *prf)
-      : fUrl(0), fOrd(0), fPerf(-1), fImage(0), fWorkdir(0),
-      fSlaves(s), fProof(prf), fCslave(csl), fClaims(clist),
-      fType(TSlave::kSlave)
+                                 TList *s, TProof *prf)
+  : fUrl(0), fOrd(0), fPerf(-1), fImage(0), fWorkdir(0),
+    fSlaves(s), fProof(prf), fCslave(csl), fClaims(clist),
+    fType(TSlave::kSlave)
 {
    // Constructor
 
    if (csl) {
-      fUrl     = new TUrl(Form("%s:%d", csl->fHostname.Data(), csl->fPort));
+      fUrl     = new TUrl(Form("%s:%d",csl->fHostname.Data(),csl->fPort));
       fImage   = csl->fImage;
       fOrd     = csl->fOrdinal;
       fWorkdir = csl->fWorkDir;
@@ -115,15 +115,15 @@ TProofThreadArg::TProofThreadArg(TCondorSlave *csl, TList *clist,
 
 //______________________________________________________________________________
 TProofThreadArg::TProofThreadArg(const char *h, Int_t po, const char *o,
-      const char *i, const char *w, const char *m,
-      TList *s, TProof *prf)
-      : fOrd(o), fPerf(-1), fImage(i), fWorkdir(w),
-      fMsd(m), fSlaves(s), fProof(prf), fCslave(0), fClaims(0),
-      fType(TSlave::kSlave)
+                                 const char *i, const char *w, const char *m,
+                                TList *s, TProof *prf)
+  : fOrd(o), fPerf(-1), fImage(i), fWorkdir(w),
+    fMsd(m), fSlaves(s), fProof(prf), fCslave(0), fClaims(0),
+    fType(TSlave::kSlave)
 {
    // Constructor
 
-   fUrl = new TUrl(Form("%s:%d", h, po));
+   fUrl = new TUrl(Form("%s:%d",h,po));
 }
 
 //----- PROOF Interrupt signal handler -----------------------------------------
@@ -132,7 +132,7 @@ Bool_t TProofInterruptHandler::Notify()
 {
    // TProof interrupt handler.
 
-   Info("Notify", "Processing interrupt signal ...");
+   Info("Notify","Processing interrupt signal ...");
 
    // Stop any remote processing
    fProof->StopProcess(kTRUE);
@@ -146,8 +146,8 @@ Bool_t TProofInterruptHandler::Notify()
 //----- Input handler for messages from TProofServ -----------------------------
 //______________________________________________________________________________
 TProofInputHandler::TProofInputHandler(TProof *p, TSocket *s)
-      : TFileHandler(s->GetDescriptor(), 1),
-      fSocket(s), fProof(p)
+                   : TFileHandler(s->GetDescriptor(),1),
+                     fSocket(s), fProof(p)
 {
    // Constructor
 }
@@ -203,8 +203,8 @@ void TSlaveInfo::Print(Option_t *opt) const
    // print all slaves.
 
    TString stat = fStatus == kActive ? "active" :
-         fStatus == kBad ? "bad" :
-         "not active";
+                  fStatus == kBad ? "bad" :
+                  "not active";
    TString msd  = fMsd.IsNull() ? "<null>" : fMsd.Data();
 
    if (!opt) opt = "";
@@ -216,11 +216,11 @@ void TSlaveInfo::Print(Option_t *opt) const
       return;
 
    cout << "Slave: "          << fOrdinal
-   << "  hostname: "     << fHostName
-   << "  msd: "          << msd
-   << "  perf index: "   << fPerfIndex
-   << "  "               << stat
-   << endl;
+        << "  hostname: "     << fHostName
+        << "  msd: "          << msd
+        << "  perf index: "   << fPerfIndex
+        << "  "               << stat
+        << endl;
 }
 
 
@@ -258,8 +258,8 @@ TSemaphore    *TProof::fgSemaphore = 0;
 
 //______________________________________________________________________________
 TProof::TProof(const char *masterurl, const char *conffile, const char *confdir,
-      Int_t loglevel, const char *alias, TProofMgr *mgr)
-      : fUrl(masterurl)
+               Int_t loglevel, const char *alias, TProofMgr *mgr)
+       : fUrl(masterurl)
 {
    // Create a PROOF environment. Starting PROOF involves either connecting
    // to a master server, which in turn will start a set of slave servers, or
@@ -319,7 +319,7 @@ TProof::~TProof()
 {
    // Clean up PROOF environment.
 
-   while (TChain *chain = dynamic_cast<TChain*>(fChains->First())) {
+   while (TChain *chain = dynamic_cast<TChain*> (fChains->First()) ) {
       // remove "chain" from list
       chain->SetProof(0);
       RemoveChain(chain);
@@ -382,7 +382,7 @@ TProof::~TProof()
 
 //______________________________________________________________________________
 Int_t TProof::Init(const char *masterurl, const char *conffile,
-      const char *confdir, Int_t loglevel, const char *alias)
+                   const char *confdir, Int_t loglevel, const char *alias)
 {
    // Start the PROOF environment. Starting PROOF involves either connecting
    // to a master server, which in turn will start a set of slave servers, or
@@ -395,7 +395,7 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
 
    fValid = kFALSE;
 
-   if (strlen(fUrl.GetOptions()) > 0 && !(strncmp(fUrl.GetOptions(), "std", 3))) {
+   if (strlen(fUrl.GetOptions()) > 0 && !(strncmp(fUrl.GetOptions(),"std",3))) {
       fServType = TProofMgr::kProofd;
       fUrl.SetOptions("");
    }
@@ -565,7 +565,7 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
 
    if (!IsMaster()) {
       // List of directories where to look for global packages
-      TString globpack = gEnv->GetValue("Proof.GlobalPackageDirs", "");
+      TString globpack = gEnv->GetValue("Proof.GlobalPackageDirs","");
       if (globpack.Length() > 0) {
          Int_t ng = 0;
          Int_t from = 0;
@@ -573,7 +573,7 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
          while (globpack.Tokenize(ldir, from, ":")) {
             if (gSystem->AccessPathName(ldir, kReadPermission)) {
                Warning("Init", "directory for global packages %s does not"
-                       " exist or is not readable", ldir.Data());
+                               " exist or is not readable", ldir.Data());
             } else {
                // Add to the list, key will be "G<ng>", i.e. "G0", "G1", ...
                TString key = Form("G%d", ng++);
@@ -581,7 +581,7 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
                   fGlobalPackageDirList = new THashList();
                   fGlobalPackageDirList->SetOwner();
                }
-               fGlobalPackageDirList->Add(new TNamed(key, ldir));
+               fGlobalPackageDirList->Add(new TNamed(key,ldir));
             }
          }
       }
@@ -598,8 +598,8 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
    Bool_t parallelStartup = kFALSE;
    if (!attach && IsMaster()) {
       parallelStartup = gEnv->GetValue("Proof.ParallelStartup", kFALSE);
-      PDB(kGlobal, 1) Info("Init", "Parallel Startup: %s",
-            parallelStartup ? "kTRUE" : "kFALSE");
+      PDB(kGlobal,1) Info("Init", "Parallel Startup: %s",
+                          parallelStartup ? "kTRUE" : "kFALSE");
       if (parallelStartup) {
          // Load thread lib, if not done already
          TString threadLib = "libThread";
@@ -622,8 +622,8 @@ Int_t TProof::Init(const char *masterurl, const char *conffile,
          // Get no of parallel requests and set semaphore correspondingly
          Int_t parallelRequests = gEnv->GetValue("Proof.ParallelStartupRequests", 0);
          if (parallelRequests > 0) {
-            PDB(kGlobal, 1)
-            Info("Init", "Parallel Startup Requests: %d", parallelRequests);
+            PDB(kGlobal,1)
+               Info("Init", "Parallel Startup Requests: %d", parallelRequests);
             fgSemaphore = new TSemaphore((UInt_t)(parallelRequests));
          }
       }
@@ -717,7 +717,7 @@ Int_t TProof::AddWorkers(TList *workerList)
    fImage = gProofServ->GetImage();
    if (fImage.IsNull())
       fImage = Form("%s:%s", TUrl(gSystem->HostName()).GetHostFQDN(),
-               gProofServ->GetWorkDir());
+                    gProofServ->GetWorkDir());
 
    // Get all workers
    UInt_t nSlaves = workerList->GetSize();
@@ -744,7 +744,7 @@ Int_t TProof::AddWorkers(TList *workerList)
       TString fullord = TString(gProofServ->GetOrdinal()) + "." + ((Long_t) ord);
 
       // create slave server
-      TUrl u(Form("%s:%d", worker->GetNodeName().Data(), sport));
+      TUrl u(Form("%s:%d",worker->GetNodeName().Data(), sport));
       // Add group info in the password firdl, if any
       if (strlen(gProofServ->GetGroup()) > 0) {
          // Set also the user, otherwise the password is not exported
@@ -753,7 +753,7 @@ Int_t TProof::AddWorkers(TList *workerList)
          u.SetPasswd(gProofServ->GetGroup());
       }
       TSlave *slave = CreateSlave(u.GetUrl(), fullord, perfidx,
-            image, workdir);
+                                  image, workdir);
 
       // Add to global list (we will add to the monitor list after
       // finalizing the server startup)
@@ -765,15 +765,15 @@ Int_t TProof::AddWorkers(TList *workerList)
          fBadSlaves->Add(slave);
       }
 
-      PDB(kGlobal, 3)
-      Info("StartSlaves", "worker on host %s created"
-           " and added to list", worker->GetNodeName().Data());
+      PDB(kGlobal,3)
+         Info("StartSlaves", "worker on host %s created"
+              " and added to list", worker->GetNodeName().Data());
 
       // Notify opening of connection
       nSlavesDone++;
       TMessage m(kPROOF_SERVERSTARTED);
       m << TString("Opening connections to workers") << nSlaves
-      << nSlavesDone << slaveOk;
+        << nSlavesDone << slaveOk;
       gProofServ->GetSocket()->Send(m);
 
       ord++;
@@ -792,7 +792,7 @@ Int_t TProof::AddWorkers(TList *workerList)
 
       // Finalize setup of the server
       if (sl->IsValid())
-         sl->SetupServ(TSlave::kSlave, 0);
+          sl->SetupServ(TSlave::kSlave, 0);
 
       // Monitor good slaves
       Bool_t slaveOk = kTRUE;
@@ -807,7 +807,7 @@ Int_t TProof::AddWorkers(TList *workerList)
       nSlavesDone++;
       TMessage m(kPROOF_SERVERSTARTED);
       m << TString("Setting up worker servers") << nSlaves
-      << nSlavesDone << slaveOk;
+        << nSlavesDone << slaveOk;
       gProofServ->GetSocket()->Send(m);
    }
 
@@ -886,13 +886,13 @@ Int_t TProof::RemoveWorkers(TList *workerList)
       // Get the next worker from the list
       worker = (TProofNodeInfo *)to;
       TIter nxsl(fSlaves);
-      TSlave *sl = 0;
-      while ((sl = (TSlave *) nxsl())) {
-         // Shut down the worker assumig that it is not processing
-         if (sl->GetName() == worker->GetNodeName())
+         TSlave *sl = 0;
+         while ((sl = (TSlave *) nxsl())) {
+            // Shut down the worker assumig that it is not processing
+            if (sl->GetName() == worker->GetNodeName())
             // sl->StopProcess(kFALSE, -1);
-            TerminateWorker(sl);
-      }
+               TerminateWorker(sl);
+         }
    }
    return 0;
 }
@@ -916,7 +916,7 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
       fImage = gProofServ->GetImage();
       if (fImage.IsNull())
          fImage = Form("%s:%s", TUrl(gSystem->HostName()).GetHostFQDN(),
-                  gProofServ->GetWorkDir());
+                                gProofServ->GetWorkDir());
 
       // Get all workers
       UInt_t nSlaves = workerList->GetSize();
@@ -928,9 +928,9 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
       if (parallel) {
          thrHandlers.reserve(nSlaves);
          if (thrHandlers.max_size() < nSlaves) {
-            PDB(kGlobal, 1)
-            Info("StartSlaves", "cannot reserve enough space for thread"
-                 " handlers - switch to serial startup");
+            PDB(kGlobal,1)
+               Info("StartSlaves","cannot reserve enough space for thread"
+                    " handlers - switch to serial startup");
             parallel = kFALSE;
          }
       }
@@ -957,13 +957,13 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
             // Prepare arguments
             TProofThreadArg *ta =
                new TProofThreadArg(worker->GetNodeName().Data(), sport,
-                     fullord, perfidx, image, workdir,
-                     fSlaves, this);
+                                   fullord, perfidx, image, workdir,
+                                   fSlaves, this);
             if (ta) {
                // The type of the thread func makes it a detached thread
                TThread *th = new TThread(SlaveStartupThread, ta);
                if (!th) {
-                  Info("StartSlaves", "Can't create startup thread:"
+                  Info("StartSlaves","Can't create startup thread:"
                        " out of system resources");
                   SafeDelete(ta);
                } else {
@@ -975,18 +975,18 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
                   nSlavesDone++;
                   TMessage m(kPROOF_SERVERSTARTED);
                   m << TString("Opening connections to workers") << nSlaves
-                  << nSlavesDone << kTRUE;
+                    << nSlavesDone << kTRUE;
                   gProofServ->GetSocket()->Send(m);
                }
             } // end if (ta)
             else {
-               Info("StartSlaves", "Can't create thread arguments object:"
+               Info("StartSlaves","Can't create thread arguments object:"
                     " out of system resources");
             }
          } // end if parallel
          else {
             // create slave server
-            TUrl u(Form("%s:%d", worker->GetNodeName().Data(), sport));
+            TUrl u(Form("%s:%d",worker->GetNodeName().Data(), sport));
             // Add group info in the password firdl, if any
             if (strlen(gProofServ->GetGroup()) > 0) {
                // Set also the user, otherwise the password is not exported
@@ -995,7 +995,7 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
                u.SetPasswd(gProofServ->GetGroup());
             }
             TSlave *slave = CreateSlave(u.GetUrl(), fullord, perfidx,
-                  image, workdir);
+                                        image, workdir);
 
             // Add to global list (we will add to the monitor list after
             // finalizing the server startup)
@@ -1007,15 +1007,15 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
                fBadSlaves->Add(slave);
             }
 
-            PDB(kGlobal, 3)
-            Info("StartSlaves", "worker on host %s created"
-                 " and added to list", worker->GetNodeName().Data());
+            PDB(kGlobal,3)
+               Info("StartSlaves", "worker on host %s created"
+                    " and added to list", worker->GetNodeName().Data());
 
             // Notify opening of connection
             nSlavesDone++;
             TMessage m(kPROOF_SERVERSTARTED);
             m << TString("Opening connections to workers") << nSlaves
-            << nSlavesDone << slaveOk;
+              << nSlavesDone << slaveOk;
             gProofServ->GetSocket()->Send(m);
          }
          ord++;
@@ -1034,11 +1034,11 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
 
             // Wait on this condition
             if (pt && pt->fThread->GetState() == TThread::kRunningState) {
-               PDB(kGlobal, 3)
-               Info("Init",
-                    "parallel startup: waiting for worker %s (%s:%d)",
-                    pt->fArgs->fOrd.Data(), pt->fArgs->fUrl->GetHost(),
-                    pt->fArgs->fUrl->GetPort());
+               PDB(kGlobal,3)
+                  Info("Init",
+                       "parallel startup: waiting for worker %s (%s:%d)",
+                        pt->fArgs->fOrd.Data(), pt->fArgs->fUrl->GetHost(),
+                        pt->fArgs->fUrl->GetPort());
                pt->fThread->Join();
             }
 
@@ -1046,7 +1046,7 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
             nSlavesDone++;
             TMessage m(kPROOF_SERVERSTARTED);
             m << TString("Setting up worker servers") << nSlaves
-            << nSlavesDone << kTRUE;
+              << nSlavesDone << kTRUE;
             gProofServ->GetSocket()->Send(m);
          }
 
@@ -1061,7 +1061,7 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
 
          // We can cleanup now
          while (!thrHandlers.empty()) {
-            i = thrHandlers.end() - 1;
+            i = thrHandlers.end()-1;
             if (*i) {
                SafeDelete(*i);
                thrHandlers.erase(i);
@@ -1093,7 +1093,7 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
             nSlavesDone++;
             TMessage m(kPROOF_SERVERSTARTED);
             m << TString("Setting up worker servers") << nSlaves
-            << nSlavesDone << slaveOk;
+              << nSlavesDone << slaveOk;
             gProofServ->GetSocket()->Send(m);
          }
       }
@@ -1101,14 +1101,14 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
    } else {
 
       // create master server
-      fprintf(stderr, "Starting master: opening connection ... \n");
+      fprintf(stderr,"Starting master: opening connection ... \n");
       TSlave *slave = CreateSubmaster(fUrl.GetUrl(), "0", "master", 0);
 
       if (slave->IsValid()) {
 
          // Notify
-         fprintf(stderr, "Starting master:"
-                 " connection open: setting up server ...             \r");
+         fprintf(stderr,"Starting master:"
+                        " connection open: setting up server ...             \r");
          StartupMessage("Connection to master opened", kTRUE, 1, 1);
 
          if (!attach) {
@@ -1122,7 +1122,7 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
             if (slave->IsValid()) {
 
                // Notify
-               fprintf(stderr, "Starting master: OK                                     \n");
+               fprintf(stderr,"Starting master: OK                                     \n");
                StartupMessage("Master started", kTRUE, 1, 1);
 
                // check protocol compatibility
@@ -1174,29 +1174,29 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
 
                if (!gROOT->IsBatch()) {
                   if ((fProgressDialog =
-                           gROOT->GetPluginManager()->FindHandler("TProofProgressDialog")))
+                     gROOT->GetPluginManager()->FindHandler("TProofProgressDialog")))
                      if (fProgressDialog->LoadPlugin() == -1)
                         fProgressDialog = 0;
                }
             } else {
                // Notify
-               fprintf(stderr, "Starting master: failure\n");
+               fprintf(stderr,"Starting master: failure\n");
             }
          } else {
 
             // Notify
             if (attach) {
-               fprintf(stderr, "Starting master: OK                                     \n");
+               fprintf(stderr,"Starting master: OK                                     \n");
                StartupMessage("Master attached", kTRUE, 1, 1);
 
                if (!gROOT->IsBatch()) {
                   if ((fProgressDialog =
-                           gROOT->GetPluginManager()->FindHandler("TProofProgressDialog")))
+                     gROOT->GetPluginManager()->FindHandler("TProofProgressDialog")))
                      if (fProgressDialog->LoadPlugin() == -1)
                         fProgressDialog = 0;
                }
             } else {
-               fprintf(stderr, "Starting manager: OK                                    \n");
+               fprintf(stderr,"Starting manager: OK                                    \n");
                StartupMessage("Manager started", kTRUE, 1, 1);
             }
 
@@ -1262,14 +1262,14 @@ void TProof::Close(Option_t *opt)
 
 //______________________________________________________________________________
 TSlave *TProof::CreateSlave(const char *url, const char *ord,
-      Int_t perf, const char *image, const char *workdir)
+                            Int_t perf, const char *image, const char *workdir)
 {
    // Create a new TSlave of type TSlave::kSlave.
    // Note: creation of TSlave is private with TProof as a friend.
    // Derived classes must use this function to create slaves.
 
    TSlave* sl = TSlave::Create(url, ord, perf, image,
-         this, TSlave::kSlave, workdir, 0);
+                               this, TSlave::kSlave, workdir, 0);
 
    if (sl->IsValid()) {
       sl->SetInputHandler(new TProofInputHandler(this, sl->GetSocket()));
@@ -1283,14 +1283,14 @@ TSlave *TProof::CreateSlave(const char *url, const char *ord,
 
 //______________________________________________________________________________
 TSlave *TProof::CreateSubmaster(const char *url, const char *ord,
-      const char *image, const char *msd)
+                                const char *image, const char *msd)
 {
    // Create a new TSlave of type TSlave::kMaster.
    // Note: creation of TSlave is private with TProof as a friend.
    // Derived classes must use this function to create slaves.
 
    TSlave *sl = TSlave::Create(url, ord, 100, image, this,
-         TSlave::kMaster, 0, msd);
+                               TSlave::kMaster, 0, msd);
 
    if (sl->IsValid()) {
       sl->SetInputHandler(new TProofInputHandler(this, sl->GetSocket()));
@@ -1381,9 +1381,6 @@ void TProof::FindUniqueSlaves()
       }
    }
 
-   // TO_TRACK:
-   BuildSlavesList(fUniqueSlaves);
-
    // will be actiavted in Collect()
    fUniqueMonitor->DeActivateAll();
    fAllUniqueMonitor->DeActivateAll();
@@ -1462,7 +1459,7 @@ TList *TProof::GetListOfQueries(Option_t *opt)
 
    if (!IsValid() || IsMaster()) return (TList *)0;
 
-   Bool_t all = ((strchr(opt, 'A') || strchr(opt, 'a'))) ? kTRUE : kFALSE;
+   Bool_t all = ((strchr(opt,'A') || strchr(opt,'a'))) ? kTRUE : kFALSE;
    TMessage m(kPROOF_QUERYLIST);
    m << all;
    Broadcast(m, kActive);
@@ -1537,7 +1534,7 @@ void TProof::ShowQueries(Option_t *opt)
    //           "H"     print help menu
    // Default ""
 
-   Bool_t help = ((strchr(opt, 'H') || strchr(opt, 'h'))) ? kTRUE : kFALSE;
+   Bool_t help = ((strchr(opt,'H') || strchr(opt,'h'))) ? kTRUE : kFALSE;
    if (help) {
 
       // Help
@@ -1561,7 +1558,7 @@ void TProof::ShowQueries(Option_t *opt)
 
    if (!IsValid()) return;
 
-   Bool_t local = ((strchr(opt, 'L') || strchr(opt, 'l'))) ? kTRUE : kFALSE;
+   Bool_t local = ((strchr(opt,'L') || strchr(opt,'l'))) ? kTRUE : kFALSE;
 
    TObject *pq = 0;
    if (!local) {
@@ -1583,7 +1580,7 @@ void TProof::ShowQueries(Option_t *opt)
       // Queries processed by this session
       Printf("+++");
       Printf("+++ Queries processed during this session: selector: %d, draw: %d",
-             GetNumberOfQueries(), fDrawQueries);
+              GetNumberOfQueries(), fDrawQueries);
       while ((pq = nxq()))
          pq->Print(opt);
 
@@ -1592,7 +1589,7 @@ void TProof::ShowQueries(Option_t *opt)
       // Queries processed by this session
       Printf("+++");
       Printf("+++ Queries processed during this session: selector: %d, draw: %d",
-             GetNumberOfQueries(), fDrawQueries);
+              GetNumberOfQueries(), fDrawQueries);
 
       // Queries available locally
       TList *listlocal = fPlayer->GetListOfResults();
@@ -1638,7 +1635,7 @@ Bool_t TProof::IsDataReady(Long64_t &totalbytes, Long64_t &bytesready)
 
    //PDB(kGlobal,2)
    Info("IsDataReady", "%lld / %lld (%s)",
-        bytesready, totalbytes, fDataReady ? "READY" : "NOT READY");
+        bytesready, totalbytes, fDataReady?"READY":"NOT READY");
 
    return fDataReady;
 }
@@ -1709,8 +1706,8 @@ TList *TProof::GetListOfSlaveInfos()
    while ((slave = (TSlave *) next()) != 0) {
       if (slave->GetSlaveType() == TSlave::kSlave) {
          TSlaveInfo *slaveinfo = new TSlaveInfo(slave->GetOrdinal(),
-               slave->GetName(),
-               slave->GetPerfIdx());
+                                                slave->GetName(),
+                                                slave->GetPerfIdx());
          fSlaveInfo->Add(slaveinfo);
 
          TIter nextactive(GetListOfActiveSlaves());
@@ -2053,7 +2050,7 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout)
    // Timeout counter
    Long_t nto = timeout;
    if (gDebug > 2)
-      Info("Collect", "active: %d", mon->GetActive());
+      Info("Collect","active: %d", mon->GetActive());
 
    // On clients, handle Ctrl-C during collection
    if (fIntHandler)
@@ -2073,9 +2070,9 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout)
             // Deactivate it if we are done with it
             mon->DeActivate(s);
             if (gDebug > 2)
-               Info("Collect", "deactivating %p (active: %d, %p)",
-                    s, mon->GetActive(),
-                    mon->GetListOfActives()->First());
+               Info("Collect","deactivating %p (active: %d, %p)",
+                              s, mon->GetActive(),
+                              mon->GetListOfActives()->First());
          }
 
          // Update counter (if no error occured)
@@ -2105,16 +2102,16 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout)
       TList *al = mon->GetListOfActives();
       if (al && al->GetSize() > 0) {
          // Notify the name of those which did timeout
-         Info("Collect", " %d node(s) went in timeout:", al->GetSize());
+         Info("Collect"," %d node(s) went in timeout:", al->GetSize());
          TIter nxs(al);
          TSocket *xs = 0;
          while ((xs = (TSocket *)nxs())) {
             TSlave *wrk = FindSlave(xs);
             if (wrk)
-               Info("Collect", "   %s", wrk->GetName());
+               Info("Collect","   %s", wrk->GetName());
             else
-               Info("Collect", "   %p: %s:%d", xs, xs->GetInetAddress().GetHostName(),
-                    xs->GetInetAddress().GetPort());
+               Info("Collect","   %p: %s:%d", xs, xs->GetInetAddress().GetHostName(),
+                                                  xs->GetInetAddress().GetPort());
          }
       }
       mon->DeActivateAll();
@@ -2167,8 +2164,8 @@ Int_t TProof::CollectInputFrom(TSocket *s)
    Bool_t    delete_mess = kTRUE;
 
    if ((rc = s->Recv(mess)) < 0) {
-      PDB(kGlobal, 2)
-      Info("CollectInputFrom", "%p: got %d from Recv()", s, rc);
+      PDB(kGlobal,2)
+         Info("CollectInputFrom","%p: got %d from Recv()", s, rc);
       Bool_t bad = kTRUE;
       if (rc == -5) {
          // Broken connection: try reconnection
@@ -2191,9 +2188,9 @@ Int_t TProof::CollectInputFrom(TSocket *s)
 
    what = mess->What();
 
-   PDB(kGlobal, 3) {
+   PDB(kGlobal,3) {
       sl = FindSlave(s);
-      Info("CollectInputFrom", "got type %d from '%s'", what, (sl ? sl->GetOrdinal() : "undef"));
+      Info("CollectInputFrom","got type %d from '%s'", what, (sl ? sl->GetOrdinal() : "undef"));
    }
 
    switch (what) {
@@ -2218,11 +2215,10 @@ Int_t TProof::CollectInputFrom(TSocket *s)
 
       case kPROOF_TOUCH:
          // send a request for touching the remote admin file
-      {
-         sl = FindSlave(s);
-         sl->Touch();
-      }
-      break;
+         {  sl = FindSlave(s);
+            sl->Touch();
+         }
+         break;
 
       case kPROOF_GETOBJECT:
          // send slave object it asks for
@@ -2234,89 +2230,92 @@ Int_t TProof::CollectInputFrom(TSocket *s)
             s->Send(kMESS_NOTOK);
          break;
 
-      case kPROOF_GETPACKET: {
-         TDSetElement *elem = 0;
-         sl = FindSlave(s);
-         elem = fPlayer->GetNextPacket(sl, mess);
+      case kPROOF_GETPACKET:
+         {
+            TDSetElement *elem = 0;
+            sl = FindSlave(s);
+            elem = fPlayer->GetNextPacket(sl, mess);
 
-         if (elem != (TDSetElement*) - 1) {
-            TMessage answ(kPROOF_GETPACKET);
-            answ << elem;
-            s->Send(answ);
+            if (elem != (TDSetElement*) -1) {
+               TMessage answ(kPROOF_GETPACKET);
+               answ << elem;
+               s->Send(answ);
 
-            while (fWaitingSlaves != 0 && fWaitingSlaves->GetSize()) {
-               TPair *p = (TPair*) fWaitingSlaves->First();
-               s = (TSocket*) p->Key();
-               sl = FindSlave(s);
-               TMessage *m = (TMessage*) p->Value();
+               while (fWaitingSlaves != 0 && fWaitingSlaves->GetSize()) {
+                  TPair *p = (TPair*) fWaitingSlaves->First();
+                  s = (TSocket*) p->Key();
+                  sl = FindSlave(s);
+                  TMessage *m = (TMessage*) p->Value();
 
-               elem = fPlayer->GetNextPacket(sl, m);
-               if (elem != (TDSetElement*) - 1) {
-                  TMessage a(kPROOF_GETPACKET);
-                  a << elem;
-                  s->Send(a);
-                  // remove has to happen via Links because TPair does not have
-                  // a Compare() function and therefore RemoveFirst() and
-                  // Remove(TObject*) do not work
-                  fWaitingSlaves->Remove(fWaitingSlaves->FirstLink());
-                  delete p;
-                  delete m;
-               } else {
-                  break;
+                  elem = fPlayer->GetNextPacket(sl, m);
+                  if (elem != (TDSetElement*) -1) {
+                     TMessage a(kPROOF_GETPACKET);
+                     a << elem;
+                     s->Send(a);
+                     // remove has to happen via Links because TPair does not have
+                     // a Compare() function and therefore RemoveFirst() and
+                     // Remove(TObject*) do not work
+                     fWaitingSlaves->Remove(fWaitingSlaves->FirstLink());
+                     delete p;
+                     delete m;
+                  } else {
+                     break;
+                  }
                }
+            } else {
+               if (fWaitingSlaves == 0) fWaitingSlaves = new TList;
+               fWaitingSlaves->Add(new TPair(s, mess));
+               delete_mess = kFALSE;
             }
-         } else {
-            if (fWaitingSlaves == 0) fWaitingSlaves = new TList;
-            fWaitingSlaves->Add(new TPair(s, mess));
-            delete_mess = kFALSE;
          }
-      }
-      break;
+         break;
 
-      case kPROOF_LOGFILE: {
-         Int_t size;
-         (*mess) >> size;
-         PDB(kGlobal, 2)
-         Info("CollectInputFrom", "kPROOF_LOGFILE: size: %d", size);
-         RecvLogFile(s, size);
-      }
-      break;
+      case kPROOF_LOGFILE:
+         {
+            Int_t size;
+            (*mess) >> size;
+            PDB(kGlobal,2)
+               Info("CollectInputFrom","kPROOF_LOGFILE: size: %d", size);
+            RecvLogFile(s, size);
+         }
+         break;
 
       case kPROOF_LOGDONE:
          sl = FindSlave(s);
          (*mess) >> sl->fStatus >> sl->fParallel;
-         PDB(kGlobal, 2)
-         Info("CollectInputFrom", "kPROOF_LOGDONE:%s: status %d  parallel %d",
-              sl->GetOrdinal(), sl->fStatus, sl->fParallel);
+         PDB(kGlobal,2)
+            Info("CollectInputFrom","kPROOF_LOGDONE:%s: status %d  parallel %d",
+                 sl->GetOrdinal(), sl->fStatus, sl->fParallel);
          if (sl->fStatus != 0) fStatus = sl->fStatus; //return last nonzero status
          rc = 1;
          break;
 
-      case kPROOF_GETSTATS: {
-         sl = FindSlave(s);
-         (*mess) >> sl->fBytesRead >> sl->fRealTime >> sl->fCpuTime
-         >> sl->fWorkDir >> sl->fProofWorkDir;
-         TString img;
-         if ((mess->BufferSize() > mess->Length()))
-            (*mess) >> img;
-         // Set image
-         if (img.IsNull()) {
-            if (sl->fImage.IsNull())
-               sl->fImage = Form("%s:%s", TUrl(sl->fName).GetHostFQDN(),
-                     sl->fProofWorkDir.Data());
-         } else {
-            sl->fImage = img;
-         }
-         PDB(kGlobal, 2)
-         Info("CollectInputFrom",
-              "kPROOF_GETSTATS:%s image: %s", sl->GetOrdinal(), sl->GetImage());
+      case kPROOF_GETSTATS:
+         {
+            sl = FindSlave(s);
+            (*mess) >> sl->fBytesRead >> sl->fRealTime >> sl->fCpuTime
+                  >> sl->fWorkDir >> sl->fProofWorkDir;
+            TString img;
+            if ((mess->BufferSize() > mess->Length()))
+               (*mess) >> img;
+            // Set image
+            if (img.IsNull()) {
+               if (sl->fImage.IsNull())
+                  sl->fImage = Form("%s:%s", TUrl(sl->fName).GetHostFQDN(),
+                                             sl->fProofWorkDir.Data());
+            } else {
+               sl->fImage = img;
+            }
+            PDB(kGlobal,2)
+               Info("CollectInputFrom",
+                        "kPROOF_GETSTATS:%s image: %s", sl->GetOrdinal(), sl->GetImage());
 
-         fBytesRead += sl->fBytesRead;
-         fRealTime  += sl->fRealTime;
-         fCpuTime   += sl->fCpuTime;
-         rc = 1;
-      }
-      break;
+            fBytesRead += sl->fBytesRead;
+            fRealTime  += sl->fRealTime;
+            fCpuTime   += sl->fCpuTime;
+            rc = 1;
+         }
+         break;
 
       case kPROOF_GETPARALLEL:
          sl = FindSlave(s);
@@ -2324,11 +2323,12 @@ Int_t TProof::CollectInputFrom(TSocket *s)
          rc = 1;
          break;
 
-      case kPROOF_PACKAGE_LIST: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_PACKAGE_LIST: enter");
-         Int_t type = 0;
-         (*mess) >> type;
-         switch (type) {
+      case kPROOF_PACKAGE_LIST:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_PACKAGE_LIST: enter");
+            Int_t type = 0;
+            (*mess) >> type;
+            switch (type) {
             case TProof::kListEnabledPackages:
                SafeDelete(fEnabledPackages);
                fEnabledPackages = (TList *) mess->ReadObject(TList::Class());
@@ -2340,458 +2340,480 @@ Int_t TProof::CollectInputFrom(TSocket *s)
                fAvailablePackages->SetOwner();
                break;
             default:
-               Info("CollectInputFrom", "kPROOF_PACKAGE_LIST: unknown type: %d", type);
+               Info("CollectInputFrom","kPROOF_PACKAGE_LIST: unknown type: %d", type);
+            }
          }
-      }
-      break;
+         break;
 
-      case kPROOF_OUTPUTOBJECT: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_OUTPUTOBJECT: enter");
-         Int_t type = 0;
-         (*mess) >> type;
-         // If a query result header, add it to the player list
-         if (type == 0) {
-            // Retrieve query result instance (output list not filled)
-            TQueryResult *pq =
-               (TQueryResult *) mess->ReadObject(TQueryResult::Class());
-            if (pq) {
-               // Add query to the result list in TProofPlayer
-               fPlayer->AddQueryResult(pq);
-               fPlayer->SetCurrentQuery(pq);
-               // Add the unique query tag as TNamed object to the input list
-               // so that it is available in TSelectors for monitoring
-               fPlayer->AddInput(new TNamed("PROOF_QueryTag",
-                     Form("%s:%s", pq->GetTitle(), pq->GetName())));
+      case kPROOF_OUTPUTOBJECT:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_OUTPUTOBJECT: enter");
+            Int_t type = 0;
+            (*mess) >> type;
+            // If a query result header, add it to the player list
+            if (type == 0) {
+               // Retrieve query result instance (output list not filled)
+               TQueryResult *pq =
+                  (TQueryResult *) mess->ReadObject(TQueryResult::Class());
+               if (pq) {
+                  // Add query to the result list in TProofPlayer
+                  fPlayer->AddQueryResult(pq);
+                  fPlayer->SetCurrentQuery(pq);
+                  // Add the unique query tag as TNamed object to the input list
+                  // so that it is available in TSelectors for monitoring
+                  fPlayer->AddInput(new TNamed("PROOF_QueryTag",
+                                    Form("%s:%s",pq->GetTitle(),pq->GetName())));
+               } else {
+                  Warning("CollectInputFrom","kPROOF_OUTPUTOBJECT: query result missing");
+               }
+            } else if (type > 0) {
+               // Read object
+               TObject *o = mess->ReadObject(TObject::Class());
+               // Add or merge it
+               if ((fPlayer->AddOutputObject(o) == 1)) {
+                  // Remove the object if it has been merged
+                  SafeDelete(o);
+               }
+
+               if (type > 1 && !IsMaster()) {
+                  TQueryResult *pq = fPlayer->GetCurrentQuery();
+                  pq->SetOutputList(fPlayer->GetOutputList(), kFALSE);
+                  pq->SetInputList(fPlayer->GetInputList(), kFALSE);
+                  // If the last object, notify the GUI that the result arrived
+                  QueryResultReady(Form("%s:%s", pq->GetTitle(), pq->GetName()));
+                  // Processing is over
+                  UpdateDialog();
+               }
+            }
+         }
+         break;
+
+      case kPROOF_OUTPUTLIST:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_OUTPUTLIST: enter");
+            TList *out = 0;
+            if (IsMaster() || fProtocol < 7) {
+               out = (TList *) mess->ReadObject(TList::Class());
             } else {
-               Warning("CollectInputFrom", "kPROOF_OUTPUTOBJECT: query result missing");
+               TQueryResult *pq =
+                  (TQueryResult *) mess->ReadObject(TQueryResult::Class());
+               if (pq) {
+                  // Add query to the result list in TProofPlayer
+                  fPlayer->AddQueryResult(pq);
+                  fPlayer->SetCurrentQuery(pq);
+                  // To avoid accidental cleanups from anywhere else
+                  // remove objects from gDirectory and clone the list
+                  out = pq->GetOutputList();
+                  CleanGDirectory(out);
+                  out = (TList *) out->Clone();
+                  // Notify the GUI that the result arrived
+                  QueryResultReady(Form("%s:%s", pq->GetTitle(), pq->GetName()));
+               } else {
+                  PDB(kGlobal,2)
+                     Info("CollectInputFrom","kPROOF_OUTPUTLIST: query result missing");
+               }
             }
-         } else if (type > 0) {
-            // Read object
-            TObject *o = mess->ReadObject(TObject::Class());
-            // Add or merge it
-            if ((fPlayer->AddOutputObject(o) == 1)) {
-               // Remove the object if it has been merged
-               SafeDelete(o);
+            if (out) {
+               out->SetOwner();
+               fPlayer->AddOutput(out); // Incorporate the list
+               SafeDelete(out);
+            } else {
+               PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_OUTPUTLIST: ouputlist is empty");
             }
 
-            if (type > 1 && !IsMaster()) {
-               TQueryResult *pq = fPlayer->GetCurrentQuery();
-               pq->SetOutputList(fPlayer->GetOutputList(), kFALSE);
-               pq->SetInputList(fPlayer->GetInputList(), kFALSE);
-               // If the last object, notify the GUI that the result arrived
-               QueryResultReady(Form("%s:%s", pq->GetTitle(), pq->GetName()));
-               // Processing is over
+            // On clients at this point processing is over
+            if (!IsMaster())
                UpdateDialog();
-            }
          }
-      }
-      break;
+         break;
 
-      case kPROOF_OUTPUTLIST: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_OUTPUTLIST: enter");
-         TList *out = 0;
-         if (IsMaster() || fProtocol < 7) {
-            out = (TList *) mess->ReadObject(TList::Class());
-         } else {
+      case kPROOF_QUERYLIST:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_QUERYLIST: enter");
+            (*mess) >> fOtherQueries >> fDrawQueries;
+            if (fQueries) {
+               fQueries->Delete();
+               delete fQueries;
+               fQueries = 0;
+            }
+            fQueries = (TList *) mess->ReadObject(TList::Class());
+         }
+         break;
+
+      case kPROOF_RETRIEVE:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_RETRIEVE: enter");
             TQueryResult *pq =
                (TQueryResult *) mess->ReadObject(TQueryResult::Class());
             if (pq) {
-               // Add query to the result list in TProofPlayer
                fPlayer->AddQueryResult(pq);
-               fPlayer->SetCurrentQuery(pq);
-               // To avoid accidental cleanups from anywhere else
-               // remove objects from gDirectory and clone the list
-               out = pq->GetOutputList();
-               CleanGDirectory(out);
-               out = (TList *) out->Clone();
                // Notify the GUI that the result arrived
                QueryResultReady(Form("%s:%s", pq->GetTitle(), pq->GetName()));
             } else {
-               PDB(kGlobal, 2)
-               Info("CollectInputFrom", "kPROOF_OUTPUTLIST: query result missing");
+               PDB(kGlobal,2)
+                  Info("CollectInputFrom","kPROOF_RETRIEVE: query result missing");
             }
          }
-         if (out) {
-            out->SetOwner();
-            fPlayer->AddOutput(out); // Incorporate the list
-            SafeDelete(out);
-         } else {
-            PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_OUTPUTLIST: ouputlist is empty");
-         }
-
-         // On clients at this point processing is over
-         if (!IsMaster())
-            UpdateDialog();
-      }
-      break;
-
-      case kPROOF_QUERYLIST: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_QUERYLIST: enter");
-         (*mess) >> fOtherQueries >> fDrawQueries;
-         if (fQueries) {
-            fQueries->Delete();
-            delete fQueries;
-            fQueries = 0;
-         }
-         fQueries = (TList *) mess->ReadObject(TList::Class());
-      }
-      break;
-
-      case kPROOF_RETRIEVE: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_RETRIEVE: enter");
-         TQueryResult *pq =
-            (TQueryResult *) mess->ReadObject(TQueryResult::Class());
-         if (pq) {
-            fPlayer->AddQueryResult(pq);
-            // Notify the GUI that the result arrived
-            QueryResultReady(Form("%s:%s", pq->GetTitle(), pq->GetName()));
-         } else {
-            PDB(kGlobal, 2)
-            Info("CollectInputFrom", "kPROOF_RETRIEVE: query result missing");
-         }
-      }
-      break;
-
-      case kPROOF_MAXQUERIES: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_MAXQUERIES: enter");
-         Int_t max = 0;
-
-         (*mess) >> max;
-         Printf("Number of queries fully kept remotely: %d", max);
-      }
-      break;
-
-      case kPROOF_SERVERSTARTED: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_SERVERSTARTED: enter");
-
-         UInt_t tot = 0, done = 0;
-         TString action;
-         Bool_t st = kTRUE;
-
-         (*mess) >> action >> tot >> done >> st;
-
-         if (!IsMaster()) {
-            if (tot) {
-               TString type = (action.Contains("submas")) ? "submasters"
-                     : "workers";
-               Int_t frac = (Int_t)(done * 100.) / tot;
-               char msg[512] = {0};
-               if (frac >= 100) {
-                  sprintf(msg, "%s: OK (%d %s)                 \n",
-                          action.Data(), tot, type.Data());
-               } else {
-                  sprintf(msg, "%s: %d out of %d (%d %%)\r",
-                          action.Data(), done, tot, frac);
-               }
-               if (fSync)
-                  fprintf(stderr, "%s", msg);
-               else
-                  NotifyLogMsg(msg, 0);
-            }
-            // Notify GUIs
-            StartupMessage(action.Data(), st, (Int_t)done, (Int_t)tot);
-         } else {
-
-            // Just send the message one level up
-            TMessage m(kPROOF_SERVERSTARTED);
-            m << action << tot << done << st;
-            gProofServ->GetSocket()->Send(m);
-         }
-      }
-      break;
-
-      case kPROOF_DATASET_STATUS: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_DATASET_STATUS: enter");
-
-         UInt_t tot = 0, done = 0;
-         TString action;
-         Bool_t st = kTRUE;
-
-         (*mess) >> action >> tot >> done >> st;
-
-         if (!IsMaster()) {
-            if (tot) {
-               TString type = "files";
-               Int_t frac = (Int_t)(done * 100.) / tot;
-               char msg[512] = {0};
-               if (frac >= 100) {
-                  sprintf(msg, "%s: OK (%d %s)                 \n",
-                          action.Data(), tot, type.Data());
-               } else {
-                  sprintf(msg, "%s: %d out of %d (%d %%)\r",
-                          action.Data(), done, tot, frac);
-               }
-               if (fSync)
-                  fprintf(stderr, "%s", msg);
-               else
-                  NotifyLogMsg(msg, 0);
-            }
-            // Notify GUIs
-            DataSetStatus(action.Data(), st, (Int_t)done, (Int_t)tot);
-         } else {
-
-            // Just send the message one level up
-            TMessage m(kPROOF_DATASET_STATUS);
-            m << action << tot << done << st;
-            gProofServ->GetSocket()->Send(m);
-         }
-      }
-      break;
-
-      case kPROOF_STARTPROCESS: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_STARTPROCESS: enter");
-
-         fIdle = kFALSE;
-
-         // The signal is used on masters by XrdProofdProtocol to catch
-         // the start of processing; on clients it allows to update the
-         // progress dialog
-         if (!IsMaster()) {
-            TString selec;
-            Int_t dsz = -1;
-            Long64_t first = -1, nent = -1;
-            (*mess) >> selec >> dsz >> first >> nent;
-
-            // Start or reset the progress dialog
-            if (!gROOT->IsBatch()) {
-               if (fProgressDialog && !TestBit(kUsingSessionGui)) {
-                  if (!fProgressDialogStarted) {
-                     fProgressDialog->ExecPlugin(5, this,
-                           selec.Data(), dsz, first, nent);
-                     fProgressDialogStarted = kTRUE;
-                  } else {
-                     ResetProgressDialog(selec, dsz, first, nent);
-                  }
-               }
-               ResetBit(kUsingSessionGui);
-            }
-         }
-      }
-      break;
-
-      case kPROOF_ENDINIT: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_ENDINIT: enter");
-
-         if (IsMaster()) {
-            if (fPlayer)
-               fPlayer->SetInitTime();
-         }
-      }
-      break;
-
-      case kPROOF_SETIDLE: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_SETIDLE: enter");
-
-         // The session is idle
-         fIdle = kTRUE;
-      }
-      break;
-
-      case kPROOF_QUERYSUBMITTED: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_QUERYSUBMITTED: enter");
-
-         // We have received the sequential number
-         (*mess) >> fSeqNum;
-
-         rc = 1;
-      }
-      break;
-
-      case kPROOF_SESSIONTAG: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_SESSIONTAG: enter");
-
-         // We have received the unique tag and save it as name of this object
-         TString stag;
-         (*mess) >> stag;
-         SetName(stag);
-      }
-      break;
-
-      case kPROOF_FEEDBACK: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_FEEDBACK: enter");
-         TList *out = (TList *) mess->ReadObject(TList::Class());
-         out->SetOwner();
-         sl = FindSlave(s);
-         if (fPlayer)
-            fPlayer->StoreFeedback(sl, out); // Adopts the list
-         else
-            // Not yet ready: stop collect asap
-            rc = 1;
-      }
-      break;
-
-      case kPROOF_AUTOBIN: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_AUTOBIN: enter");
-
-         TString name;
-         Double_t xmin, xmax, ymin, ymax, zmin, zmax;
-
-         (*mess) >> name >> xmin >> xmax >> ymin >> ymax >> zmin >> zmax;
-
-         fPlayer->UpdateAutoBin(name, xmin, xmax, ymin, ymax, zmin, zmax);
-
-         TMessage answ(kPROOF_AUTOBIN);
-
-         answ << name << xmin << xmax << ymin << ymax << zmin << zmax;
-
-         s->Send(answ);
-      }
-      break;
-
-      case kPROOF_PROGRESS: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_PROGRESS: enter");
-
-         sl = FindSlave(s);
-
-         if (GetRemoteProtocol() > 11) {
-            // New format
-            Long64_t total, processed, bytesread;
-            Float_t initTime, procTime, evtrti, mbrti;
-            (*mess) >> total >> processed >> bytesread
-            >> initTime >> procTime
-            >> evtrti >> mbrti;
-            fPlayer->Progress(sl, total, processed, bytesread,
-                  initTime, procTime, evtrti, mbrti);
-
-         } else {
-            // Old format
-            Long64_t total, processed;
-            (*mess) >> total >> processed;
-            fPlayer->Progress(sl, total, processed);
-         }
-      }
-      break;
-
-      case kPROOF_STOPPROCESS: {
-         // answer contains number of processed events;
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_STOPPROCESS: enter");
-
-         Long64_t events;
-         Bool_t abort = kFALSE;
-
-         if ((mess->BufferSize() > mess->Length()) && (fProtocol > 8))
-            (*mess) >> events >> abort;
-         else
-            (*mess) >> events;
-         if (!abort) {
-            fPlayer->AddEventsProcessed(events);
-         }
-         if (!IsMaster())
-            Emit("StopProcess(Bool_t)", abort);
          break;
-      }
 
-      case kPROOF_GETSLAVEINFO: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_GETSLAVEINFO: enter");
+      case kPROOF_MAXQUERIES:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_MAXQUERIES: enter");
+            Int_t max = 0;
 
-         sl = FindSlave(s);
-         Bool_t active = (GetListOfActiveSlaves()->FindObject(sl) != 0);
-         Bool_t bad = (GetListOfBadSlaves()->FindObject(sl) != 0);
-         TList* tmpinfo = 0;
-         (*mess) >> tmpinfo;
-         tmpinfo->SetOwner(kFALSE);
-         Int_t nentries = tmpinfo->GetSize();
-         for (Int_t i = 0; i < nentries; i++) {
-            TSlaveInfo* slinfo =
-               dynamic_cast<TSlaveInfo*>(tmpinfo->At(i));
-            if (slinfo) {
-               fSlaveInfo->Add(slinfo);
-               if (slinfo->fStatus != TSlaveInfo::kBad) {
-                  if (!active) slinfo->SetStatus(TSlaveInfo::kNotActive);
-                  if (bad) slinfo->SetStatus(TSlaveInfo::kBad);
+            (*mess) >> max;
+            Printf("Number of queries fully kept remotely: %d", max);
+         }
+         break;
+
+      case kPROOF_SERVERSTARTED:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_SERVERSTARTED: enter");
+
+            UInt_t tot = 0, done = 0;
+            TString action;
+            Bool_t st = kTRUE;
+
+            (*mess) >> action >> tot >> done >> st;
+
+            if (!IsMaster()) {
+               if (tot) {
+                  TString type = (action.Contains("submas")) ? "submasters"
+                                                             : "workers";
+                  Int_t frac = (Int_t) (done*100.)/tot;
+                  char msg[512] = {0};
+                  if (frac >= 100) {
+                     sprintf(msg,"%s: OK (%d %s)                 \n",
+                             action.Data(),tot, type.Data());
+                  } else {
+                     sprintf(msg,"%s: %d out of %d (%d %%)\r",
+                             action.Data(), done, tot, frac);
+                  }
+                  if (fSync)
+                     fprintf(stderr,"%s", msg);
+                  else
+                     NotifyLogMsg(msg, 0);
                }
-               if (!sl->GetMsd().IsNull()) slinfo->fMsd = sl->GetMsd();
+               // Notify GUIs
+               StartupMessage(action.Data(), st, (Int_t)done, (Int_t)tot);
+            } else {
+
+               // Just send the message one level up
+               TMessage m(kPROOF_SERVERSTARTED);
+               m << action << tot << done << st;
+               gProofServ->GetSocket()->Send(m);
             }
          }
-         delete tmpinfo;
-         rc = 1;
-      }
-      break;
+         break;
 
-      case kPROOF_VALIDATE_DSET: {
-         PDB(kGlobal, 2)
-         Info("CollectInputFrom", "kPROOF_VALIDATE_DSET: enter");
-         TDSet* dset = 0;
-         (*mess) >> dset;
-         if (!fDSet)
-            Error("CollectInputFrom", "kPROOF_VALIDATE_DSET: fDSet not set");
-         else
-            fDSet->Validate(dset);
-         delete dset;
-      }
-      break;
+      case kPROOF_DATASET_STATUS:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_DATASET_STATUS: enter");
 
-      case kPROOF_DATA_READY: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_DATA_READY: enter");
-         Bool_t dataready = kFALSE;
-         Long64_t totalbytes, bytesready;
-         (*mess) >> dataready >> totalbytes >> bytesready;
-         fTotalBytes += totalbytes;
-         fBytesReady += bytesready;
-         if (dataready == kFALSE) fDataReady = dataready;
-      }
-      break;
+            UInt_t tot = 0, done = 0;
+            TString action;
+            Bool_t st = kTRUE;
+
+            (*mess) >> action >> tot >> done >> st;
+
+            if (!IsMaster()) {
+               if (tot) {
+                  TString type = "files";
+                  Int_t frac = (Int_t) (done*100.)/tot;
+                  char msg[512] = {0};
+                  if (frac >= 100) {
+                     sprintf(msg,"%s: OK (%d %s)                 \n",
+                             action.Data(),tot, type.Data());
+                  } else {
+                     sprintf(msg,"%s: %d out of %d (%d %%)\r",
+                             action.Data(), done, tot, frac);
+                  }
+                  if (fSync)
+                     fprintf(stderr,"%s", msg);
+                  else
+                     NotifyLogMsg(msg, 0);
+               }
+               // Notify GUIs
+               DataSetStatus(action.Data(), st, (Int_t)done, (Int_t)tot);
+            } else {
+
+               // Just send the message one level up
+               TMessage m(kPROOF_DATASET_STATUS);
+               m << action << tot << done << st;
+               gProofServ->GetSocket()->Send(m);
+            }
+         }
+         break;
+
+      case kPROOF_STARTPROCESS:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_STARTPROCESS: enter");
+
+            fIdle = kFALSE;
+
+            // The signal is used on masters by XrdProofdProtocol to catch
+            // the start of processing; on clients it allows to update the
+            // progress dialog
+            if (!IsMaster()) {
+               TString selec;
+               Int_t dsz = -1;
+               Long64_t first = -1, nent = -1;
+               (*mess) >> selec >> dsz >> first >> nent;
+
+               // Start or reset the progress dialog
+               if (!gROOT->IsBatch()) {
+                  if (fProgressDialog && !TestBit(kUsingSessionGui)) {
+                     if (!fProgressDialogStarted) {
+                        fProgressDialog->ExecPlugin(5, this,
+                                                   selec.Data(), dsz, first, nent);
+                        fProgressDialogStarted = kTRUE;
+                     } else {
+                        ResetProgressDialog(selec, dsz, first, nent);
+                     }
+                  }
+                  ResetBit(kUsingSessionGui);
+               }
+            }
+         }
+         break;
+
+      case kPROOF_ENDINIT:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_ENDINIT: enter");
+
+            if (IsMaster()) {
+               if (fPlayer)
+                  fPlayer->SetInitTime();
+            }
+         }
+         break;
+
+      case kPROOF_SETIDLE:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_SETIDLE: enter");
+
+            // The session is idle
+            fIdle = kTRUE;
+         }
+         break;
+
+      case kPROOF_QUERYSUBMITTED:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_QUERYSUBMITTED: enter");
+
+            // We have received the sequential number
+            (*mess) >> fSeqNum;
+
+            rc = 1;
+         }
+         break;
+
+      case kPROOF_SESSIONTAG:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_SESSIONTAG: enter");
+
+            // We have received the unique tag and save it as name of this object
+            TString stag;
+            (*mess) >> stag;
+            SetName(stag);
+         }
+         break;
+
+      case kPROOF_FEEDBACK:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_FEEDBACK: enter");
+            TList *out = (TList *) mess->ReadObject(TList::Class());
+            out->SetOwner();
+            sl = FindSlave(s);
+            if (fPlayer)
+               fPlayer->StoreFeedback(sl, out); // Adopts the list
+            else
+               // Not yet ready: stop collect asap
+               rc = 1;
+         }
+         break;
+
+      case kPROOF_AUTOBIN:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_AUTOBIN: enter");
+
+            TString name;
+            Double_t xmin, xmax, ymin, ymax, zmin, zmax;
+
+            (*mess) >> name >> xmin >> xmax >> ymin >> ymax >> zmin >> zmax;
+
+            fPlayer->UpdateAutoBin(name,xmin,xmax,ymin,ymax,zmin,zmax);
+
+            TMessage answ(kPROOF_AUTOBIN);
+
+            answ << name << xmin << xmax << ymin << ymax << zmin << zmax;
+
+            s->Send(answ);
+         }
+         break;
+
+      case kPROOF_PROGRESS:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_PROGRESS: enter");
+
+            sl = FindSlave(s);
+
+            if (GetRemoteProtocol() > 11) {
+               // New format
+               Long64_t total, processed, bytesread;
+               Float_t initTime, procTime, evtrti, mbrti;
+               (*mess) >> total >> processed >> bytesread
+                       >> initTime >> procTime
+                       >> evtrti >> mbrti;
+               fPlayer->Progress(sl, total, processed, bytesread,
+                                 initTime, procTime, evtrti, mbrti);
+
+            } else {
+               // Old format
+               Long64_t total, processed;
+               (*mess) >> total >> processed;
+               fPlayer->Progress(sl, total, processed);
+            }
+         }
+         break;
+
+      case kPROOF_STOPPROCESS:
+         {
+            // answer contains number of processed events;
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_STOPPROCESS: enter");
+
+            Long64_t events;
+            Bool_t abort = kFALSE;
+
+            if ((mess->BufferSize() > mess->Length()) && (fProtocol > 8))
+               (*mess) >> events >> abort;
+            else
+               (*mess) >> events;
+            if (!abort) {
+               fPlayer->AddEventsProcessed(events);
+            }
+            if (!IsMaster())
+               Emit("StopProcess(Bool_t)", abort);
+            break;
+         }
+
+      case kPROOF_GETSLAVEINFO:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_GETSLAVEINFO: enter");
+
+            sl = FindSlave(s);
+            Bool_t active = (GetListOfActiveSlaves()->FindObject(sl) != 0);
+            Bool_t bad = (GetListOfBadSlaves()->FindObject(sl) != 0);
+            TList* tmpinfo = 0;
+            (*mess) >> tmpinfo;
+            tmpinfo->SetOwner(kFALSE);
+            Int_t nentries = tmpinfo->GetSize();
+            for (Int_t i=0; i<nentries; i++) {
+               TSlaveInfo* slinfo =
+                  dynamic_cast<TSlaveInfo*>(tmpinfo->At(i));
+               if (slinfo) {
+                  fSlaveInfo->Add(slinfo);
+                  if (slinfo->fStatus != TSlaveInfo::kBad) {
+                     if (!active) slinfo->SetStatus(TSlaveInfo::kNotActive);
+                     if (bad) slinfo->SetStatus(TSlaveInfo::kBad);
+                  }
+                  if (!sl->GetMsd().IsNull()) slinfo->fMsd = sl->GetMsd();
+               }
+            }
+            delete tmpinfo;
+            rc = 1;
+         }
+         break;
+
+      case kPROOF_VALIDATE_DSET:
+         {
+            PDB(kGlobal,2)
+               Info("CollectInputFrom","kPROOF_VALIDATE_DSET: enter");
+            TDSet* dset = 0;
+            (*mess) >> dset;
+            if (!fDSet)
+               Error("CollectInputFrom","kPROOF_VALIDATE_DSET: fDSet not set");
+            else
+               fDSet->Validate(dset);
+            delete dset;
+         }
+         break;
+
+      case kPROOF_DATA_READY:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_DATA_READY: enter");
+            Bool_t dataready = kFALSE;
+            Long64_t totalbytes, bytesready;
+            (*mess) >> dataready >> totalbytes >> bytesready;
+            fTotalBytes += totalbytes;
+            fBytesReady += bytesready;
+            if (dataready == kFALSE) fDataReady = dataready;
+         }
+         break;
 
       case kPROOF_PING:
          // do nothing (ping is already acknowledged)
          break;
 
-      case kPROOF_MESSAGE: {
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_MESSAGE: enter");
+      case kPROOF_MESSAGE:
+         {
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_MESSAGE: enter");
 
-         // We have received the unique tag and save it as name of this object
-         TString msg;
-         (*mess) >> msg;
-         Bool_t lfeed = kTRUE;
-         if ((mess->BufferSize() > mess->Length()))
-            (*mess) >> lfeed;
+            // We have received the unique tag and save it as name of this object
+            TString msg;
+            (*mess) >> msg;
+            Bool_t lfeed = kTRUE;
+            if ((mess->BufferSize() > mess->Length()))
+               (*mess) >> lfeed;
 
-         if (!IsMaster()) {
+            if (!IsMaster()) {
 
-            if (fSync) {
-               // Notify locally
-               fprintf(stderr, "%s%c", msg.Data(), (lfeed ? '\n' : '\r'));
+               if (fSync) {
+                  // Notify locally
+                  fprintf(stderr,"%s%c", msg.Data(), (lfeed ? '\n' : '\r'));
+               } else {
+                  // Notify locally taking care of redirection, windows logs, ...
+                  NotifyLogMsg(msg, (lfeed ? "\n" : "\r"));
+               }
             } else {
-               // Notify locally taking care of redirection, windows logs, ...
-               NotifyLogMsg(msg, (lfeed ? "\n" : "\r"));
-            }
-         } else {
 
-            // The message is logged for debugging purposes.
-            fprintf(stderr, "%s%c", msg.Data(), (lfeed ? '\n' : '\r'));
-            if (gProofServ) {
-               // We hide it during normal operations
-               gProofServ->FlushLogFile();
+               // The message is logged for debugging purposes.
+               fprintf(stderr,"%s%c", msg.Data(), (lfeed ? '\n' : '\r'));
+               if (gProofServ) {
+                  // We hide it during normal operations
+                  gProofServ->FlushLogFile();
 
-               // And send the message one level up
-               gProofServ->SendAsynMessage(msg, lfeed);
+                  // And send the message one level up
+                  gProofServ->SendAsynMessage(msg, lfeed);
+               }
             }
          }
-      }
-      break;
+         break;
 
-      case kPROOF_VERSARCHCOMP: {
-         TString vac;
-         (*mess) >> vac;
-         PDB(kGlobal, 2) Info("CollectInputFrom", "kPROOF_VERSARCHCOMP: %s", vac.Data());
-         Int_t from = 0;
-         TString vers, archcomp;
-         if (vac.Tokenize(vers, from, "|"))
-            vac.Tokenize(archcomp, from, "|");
-         if ((sl = FindSlave(s))) {
-            sl->SetArchCompiler(archcomp);
-            vers.ReplaceAll(":", "|");
-            sl->SetROOTVersion(vers);
+      case kPROOF_VERSARCHCOMP:
+         {
+            TString vac;
+            (*mess) >> vac;
+            PDB(kGlobal,2) Info("CollectInputFrom","kPROOF_VERSARCHCOMP: %s", vac.Data());
+            Int_t from = 0;
+            TString vers, archcomp;
+            if (vac.Tokenize(vers, from, "|"))
+               vac.Tokenize(archcomp, from, "|");
+            if ((sl = FindSlave(s))) {
+               sl->SetArchCompiler(archcomp);
+               vers.ReplaceAll(":","|");
+               sl->SetROOTVersion(vers);
+            }
          }
-      }
-      break;
+         break;
 
-      default: {
-         sl = FindSlave(s);
-         Error("Collect", "unknown command received from '%s' (what = %d)",
-               (sl ? sl->GetOrdinal() : "undef"), what);
-      }
-      break;
+      default:
+         {
+            sl = FindSlave(s);
+            Error("Collect", "unknown command received from '%s' (what = %d)",
+                            (sl ? sl->GetOrdinal() : "undef"), what);
+         }
+         break;
    }
 
    // Cleanup
@@ -2845,8 +2867,8 @@ void TProof::UpdateDialog()
    if (GetRemoteProtocol() > 11) {
       // New format
       EmitVA("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)",
-             7, (Long64_t)(-1), (Long64_t)(-1), (Long64_t)(-1),
-             (Float_t)(-1.), (Float_t)(-1.), (Float_t)(-1.), (Float_t)(-1.));
+               7, (Long64_t)(-1), (Long64_t)(-1), (Long64_t)(-1),
+                  (Float_t)(-1.),(Float_t)(-1.),(Float_t)(-1.),(Float_t)(-1.));
    } else {
       EmitVA("Progress(Long64_t,Long64_t)", 2, (Long64_t)(-1), (Long64_t)(-1));
    }
@@ -2923,9 +2945,9 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
    static TString thisurl;
    if (thisurl.IsNull()) {
       if (IsMaster()) {
-         Int_t port = gEnv->GetValue("ProofServ.XpdPort", -1);
+         Int_t port = gEnv->GetValue("ProofServ.XpdPort",-1);
          thisurl = (port > 0) ? Form("%s:%d", TUrl(gSystem->HostName()).GetHostFQDN(), port)
-                   : TUrl(gSystem->HostName()).GetHostFQDN();
+                              : TUrl(gSystem->HostName()).GetHostFQDN();
       } else {
          thisurl = Form("%s@%s:%d", fUrl.GetUser(), fUrl.GetHost(), fUrl.GetPort());
       }
@@ -2963,7 +2985,7 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
    } else if (reason) {
       if (gDebug > 0) {
          Info("MarkBad", "worker %s at %s:%d asked to terminate",
-              wrk->GetOrdinal(), wrk->GetName(), wrk->GetPort());
+                         wrk->GetOrdinal(), wrk->GetName(), wrk->GetPort());
       }
    }
 
@@ -2980,8 +3002,8 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
       if (packetizer)
          // if the worker is being terminated, don't resubmit the packets
          packetizer->MarkBad(wrk,
-               strcmp(reason, kPROOF_TerminateWorker) != 0,
-               &listOfMissingFiles);
+                             strcmp(reason, kPROOF_TerminateWorker) != 0,
+                             &listOfMissingFiles);
       else
          Info("MarkBad", "No packetizer received form the player!");
    }
@@ -3069,7 +3091,7 @@ void TProof::TerminateWorker(TSlave *wrk)
    } else {
       if (gDebug > 0)
          Info("TerminateWorker", "connection to worker is already down: cannot"
-              " send termination message");
+                                 " send termination message");
    }
 
    // This is a bad worker from now on
@@ -3168,7 +3190,7 @@ void TProof::Print(Option_t *option) const
 
    if (!IsMaster()) {
       Printf("Connected to:             %s (%s)", GetMaster(),
-             IsValid() ? "valid" : "invalid");
+                                             IsValid() ? "valid" : "invalid");
       Printf("Port number:              %d", GetPort());
       Printf("User:                     %s", GetUser());
       if (gROOT->GetSvnRevision() > 0)
@@ -3176,13 +3198,13 @@ void TProof::Print(Option_t *option) const
       else
          Printf("ROOT version:             %s", gROOT->GetVersion());
       Printf("Architecture-Compiler:    %s-%s", gSystem->GetBuildArch(),
-             gSystem->GetBuildCompilerVersion());
+                                                gSystem->GetBuildCompilerVersion());
       TSlave *sl = (TSlave *)fActiveSlaves->First();
       if (sl) {
          TString sc;
          if (sl->GetSocket()->GetSecContext())
             Printf("Security context:         %s",
-                   sl->GetSocket()->GetSecContext()->AsString(sc));
+                                      sl->GetSocket()->GetSecContext()->AsString(sc));
          Printf("Proofd protocol version:  %d", sl->GetSocket()->GetRemoteProtocol());
       } else {
          Printf("Security context:         Error - No connection");
@@ -3218,7 +3240,7 @@ void TProof::Print(Option_t *option) const
          ver += Form("|%s", gSystem->Getenv("ROOTVERSIONTAG"));
       Printf("ROOT version|rev|tag:       %s", ver.Data());
       Printf("Architecture-Compiler:      %s-%s", gSystem->GetBuildArch(),
-             gSystem->GetBuildCompilerVersion());
+                                                  gSystem->GetBuildCompilerVersion());
       Printf("Protocol version:           %d", GetClientProtocol());
       Printf("Image name:                 %s", GetImage());
       Printf("Working directory:          %s", gSystem->WorkingDirectory());
@@ -3230,7 +3252,7 @@ void TProof::Print(Option_t *option) const
       Printf("Number of unique workers:   %d", GetNumberOfUniqueSlaves());
       Printf("Number of inactive workers: %d", GetNumberOfInactiveSlaves());
       Printf("Number of bad workers:      %d", GetNumberOfBadSlaves());
-      Printf("Total MB's processed:       %.2f", float(GetBytesRead()) / (1024*1024));
+      Printf("Total MB's processed:       %.2f", float(GetBytesRead())/(1024*1024));
       Printf("Total real time used (s):   %.3f", GetRealTime());
       Printf("Total CPU time used (s):    %.3f", GetCpuTime());
       if (TString(option).Contains("a", TString::kIgnoreCase) && GetNumberOfSlaves()) {
@@ -3261,7 +3283,7 @@ void TProof::Print(Option_t *option) const
 
 //______________________________________________________________________________
 Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
-      Long64_t nentries, Long64_t first)
+                         Long64_t nentries, Long64_t first)
 {
    // Process a data set (TDSet) using the specified selector (.C) file.
    // Entry- or event-lists should be set in the data set object using
@@ -3275,7 +3297,7 @@ Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
    fSync = (GetQueryMode(option) == kSync);
 
    if (fSync && !IsIdle()) {
-      Info("Process", "not idle, cannot submit synchronous query");
+      Info("Process","not idle, cannot submit synchronous query");
       return -1;
    }
 
@@ -3303,7 +3325,7 @@ Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
 
 //______________________________________________________________________________
 Long64_t TProof::Process(TFileCollection *fc, const char *selector,
-      Option_t *option, Long64_t nentries, Long64_t first)
+                         Option_t *option, Long64_t nentries, Long64_t first)
 {
    // Process a data set (TFileCollection) using the specified selector (.C) file.
    // The default tree is analyzed (i.e. the first one found). To specify another
@@ -3315,7 +3337,7 @@ Long64_t TProof::Process(TFileCollection *fc, const char *selector,
 
    if (fProtocol < 17) {
       Info("Process", "server version < 5.18/00:"
-           " processing of TFileCollection not supported");
+                      " processing of TFileCollection not supported");
       return -1;
    }
 
@@ -3323,7 +3345,7 @@ Long64_t TProof::Process(TFileCollection *fc, const char *selector,
    fSync = (GetQueryMode(option) == kSync);
 
    if (fSync && !IsIdle()) {
-      Info("Process", "not idle, cannot submit synchronous query");
+      Info("Process","not idle, cannot submit synchronous query");
       return -1;
    }
 
@@ -3354,8 +3376,8 @@ Long64_t TProof::Process(TFileCollection *fc, const char *selector,
 
 //______________________________________________________________________________
 Long64_t TProof::Process(const char *dsetname, const char *selector,
-      Option_t *option, Long64_t nentries,
-      Long64_t first, TObject *enl)
+                         Option_t *option, Long64_t nentries,
+                         Long64_t first, TObject *enl)
 {
    // Process a dataset which is stored on the master with name 'dsetname'.
    // The syntax for dsetname is name[#[dir/]objname], e.g.
@@ -3383,23 +3405,19 @@ Long64_t TProof::Process(const char *dsetname, const char *selector,
    Int_t idxc = name.Index("#");
    if (idxc != kNPOS) {
       Int_t idxs = name.Index("/", 1, idxc, TString::kExact);
-      if (idxs != kNPOS && idxc != kNPOS) {
-         obj = name(idxs + 1, name.Length());
-         dir = name(idxc + 1, name.Length());
+      if (idxs != kNPOS) {
+         obj = name(idxs+1, name.Length());
+         dir = name(idxc+1, name.Length());
          dir.Remove(dir.Index("/") + 1);
          name.Remove(idxc);
-      } else if (idxc != kNPOS && idxs == kNPOS) {
-         obj = name(idxc + 1, name.Length());
+      } else {
+         obj = name(idxc+1, name.Length());
          name.Remove(idxc);
-      } else if (idxs != kNPOS && idxc == kNPOS) {
-         Error("Process", "bad name syntax (%s): specification of additional"
-               " attributes needs a '#' after the dataset name", dsetname);
-         return -1;
       }
    } else if (name.Index(":") != kNPOS && name.Index("://") == kNPOS) {
       // protection against using ':' instead of '#'
       Error("Process", "bad name syntax (%s): please use"
-            " a '#' after the dataset name", dsetname);
+                       " a '#' after the dataset name", dsetname);
       return -1;
    }
 
@@ -3430,7 +3448,7 @@ Long64_t TProof::Process(const char *selector, Long64_t n, Option_t *option)
    fSync = (GetQueryMode(option) == kSync);
 
    if (fSync && !IsIdle()) {
-      Info("Process", "not idle, cannot submit synchronous query");
+      Info("Process","not idle, cannot submit synchronous query");
       return -1;
    }
 
@@ -3527,7 +3545,7 @@ Long64_t TProof::Finalize(const char *ref, Bool_t force)
                if (force) {
                   retrieve = kTRUE;
                } else {
-                  Info("Finalize", "query already finalized:"
+                  Info("Finalize","query already finalized:"
                        " use Finalize(<qry>,kTRUE) to force new retrieval");
                   qr = 0;
                }
@@ -3557,7 +3575,7 @@ Int_t TProof::Retrieve(Int_t qry, const char *path)
       else
          Info("Retrieve", "query #%d not found", qry);
    } else {
-      Info("Retrieve", "positive argument required - do nothing");
+      Info("Retrieve","positive argument required - do nothing");
    }
    return -1;
 }
@@ -3583,7 +3601,7 @@ Int_t TProof::Retrieve(const char *ref, const char *path)
 
          if (qr) {
 
-            TFile *farc = TFile::Open(path, "UPDATE");
+            TFile *farc = TFile::Open(path,"UPDATE");
             if (!(farc->IsOpen())) {
                Info("Retrieve", "archive file cannot be open (%s)", path);
                return 0;
@@ -3622,7 +3640,7 @@ Int_t TProof::Remove(Int_t qry, Bool_t all)
       else
          Info("Remove", "query #%d not found", qry);
    } else {
-      Info("Remove", "positive argument required - do nothing");
+      Info("Remove","positive argument required - do nothing");
    }
    return -1;
 }
@@ -3664,7 +3682,7 @@ Int_t TProof::Archive(Int_t qry, const char *path)
       else
          Info("Archive", "query #%d not found", qry);
    } else {
-      Info("Archive", "positive argument required - do nothing");
+      Info("Archive","positive argument required - do nothing");
    }
    return -1;
 }
@@ -3710,7 +3728,7 @@ void TProof::SetQueryMode(EQueryMode mode)
    fQueryMode = mode;
 
    if (gDebug > 0)
-      Info("SetQueryMode", "query mode is set to: %s", fQueryMode == kSync ?
+      Info("SetQueryMode","query mode is set to: %s", fQueryMode == kSync ?
            "Sync" : "Async");
 }
 
@@ -3732,7 +3750,7 @@ TProof::EQueryMode TProof::GetQueryMode(Option_t *mode) const
    }
 
    if (gDebug > 0)
-      Info("GetQueryMode", "query mode is set to: %s", qmode == kSync ?
+      Info("GetQueryMode","query mode is set to: %s", qmode == kSync ?
            "Sync" : "Async");
 
    return qmode;
@@ -3740,8 +3758,8 @@ TProof::EQueryMode TProof::GetQueryMode(Option_t *mode) const
 
 //______________________________________________________________________________
 Long64_t TProof::DrawSelect(TDSet *dset, const char *varexp,
-      const char *selection, Option_t *option,
-      Long64_t nentries, Long64_t first)
+                            const char *selection, Option_t *option,
+                            Long64_t nentries, Long64_t first)
 {
    // Execute the specified drawing action on a data set (TDSet).
    // Event- or Entry-lists should be set in the data set object using
@@ -3752,21 +3770,21 @@ Long64_t TProof::DrawSelect(TDSet *dset, const char *varexp,
 
    // Make sure that asynchronous processing is not active
    if (!IsIdle()) {
-      Info("DrawSelect", "not idle, asynchronous Draw not supported");
+      Info("DrawSelect","not idle, asynchronous Draw not supported");
       return -1;
    }
    TString opt(option);
    Int_t idx = opt.Index("ASYN", 0, TString::kIgnoreCase);
    if (idx != kNPOS)
-      opt.Replace(idx, 4, "");
+      opt.Replace(idx,4,"");
 
    return fPlayer->DrawSelect(dset, varexp, selection, opt, nentries, first);
 }
 
 //______________________________________________________________________________
 Long64_t TProof::DrawSelect(const char *dsetname, const char *varexp,
-      const char *selection, Option_t *option,
-      Long64_t nentries, Long64_t first, TObject *enl)
+                            const char *selection, Option_t *option,
+                            Long64_t nentries, Long64_t first, TObject *enl)
 {
    // Execute the specified drawing action on a data set which is stored on the
    // master with name 'dsetname'.
@@ -3796,22 +3814,22 @@ Long64_t TProof::DrawSelect(const char *dsetname, const char *varexp,
    if (idxc != kNPOS) {
       Int_t idxs = name.Index("/", 1, idxc, TString::kExact);
       if (idxs != kNPOS && idxc != kNPOS) {
-         obj = name(idxs + 1, name.Length());
-         dir = name(idxc + 1, name.Length());
+         obj = name(idxs+1, name.Length());
+         dir = name(idxc+1, name.Length());
          dir.Remove(dir.Index("/") + 1);
          name.Remove(idxc);
       } else if (idxc != kNPOS && idxs == kNPOS) {
-         obj = name(idxc + 1, name.Length());
+         obj = name(idxc+1, name.Length());
          name.Remove(idxc);
       } else if (idxs != kNPOS && idxc == kNPOS) {
          Error("DrawSelect", "bad name syntax (%s): specification of additional"
-               " attributes needs a '#' after the dataset name", dsetname);
+                          " attributes needs a '#' after the dataset name", dsetname);
          return -1;
       }
    } else if (name.Index(":") != kNPOS && name.Index("://") == kNPOS) {
       // protection against using ':' instead of '#'
       Error("DrawSelect", "bad name syntax (%s): please use"
-            " a '#' after the dataset name", dsetname);
+                       " a '#' after the dataset name", dsetname);
       return -1;
    }
 
@@ -3828,8 +3846,8 @@ void TProof::StopProcess(Bool_t abort, Int_t timeout)
 {
    // Send STOPPROCESS message to master and workers.
 
-   PDB(kGlobal, 2)
-   Info("StopProcess", "enter %d", abort);
+   PDB(kGlobal,2)
+      Info("StopProcess","enter %d", abort);
 
    if (!IsValid())
       return;
@@ -3981,12 +3999,12 @@ void TProof::LogMessage(const char *msg, Bool_t all)
 {
    // Log a message into the appropriate window by emitting a signal.
 
-   PDB(kGlobal, 1)
-   Info("LogMessage", "Enter ... %s, 'all: %s", msg ? msg : "",
-        all ? "true" : "false");
+   PDB(kGlobal,1)
+      Info("LogMessage","Enter ... %s, 'all: %s", msg ? msg : "",
+           all ? "true" : "false");
 
    if (gROOT->IsBatch()) {
-      PDB(kGlobal, 1) Info("LogMessage", "GUI not started - use TProof::ShowLog()");
+      PDB(kGlobal,1) Info("LogMessage","GUI not started - use TProof::ShowLog()");
       return;
    }
 
@@ -4003,7 +4021,7 @@ void TProof::LogMessage(const char *msg, Bool_t all)
    char buf[kMAXBUF];
    Int_t len;
    do {
-      while ((len = read(fileno(fLogFileR), buf, kMAXBUF - 1)) < 0 &&
+      while ((len = read(fileno(fLogFileR), buf, kMAXBUF-1)) < 0 &&
              TSystem::GetErrno() == EINTR)
          TSystem::ResetErrno();
 
@@ -4092,13 +4110,13 @@ Int_t TProof::Exec(const char *cmd, ESlaves list, Bool_t plusMaster)
       char *fn = gSystem->Which(TROOT::GetMacroPath(), filename, kReadPermission);
       if (fn) {
          if (GetNumberOfUniqueSlaves() > 0) {
-            if (SendFile(fn, kAscii | kForward) < 0) {
+            if (SendFile(fn, kAscii | kForward | kCpBin) < 0) {
                Error("Exec", "file %s could not be transfered", fn);
                delete [] fn;
                return -1;
             }
          } else {
-            TString scmd = s(0, 3) + fn;
+            TString scmd = s(0,3) + fn;
             Int_t n = SendCommand(scmd, list);
             delete [] fn;
             return n;
@@ -4171,7 +4189,7 @@ Int_t TProof::SendInitialState()
 }
 
 //______________________________________________________________________________
-Bool_t TProof::CheckFile(const char *file, TSlave *slave, Long_t modtime)
+Bool_t TProof::CheckFile(const char *file, TSlave *slave, Long_t modtime, Bool_t cpbin)
 {
    // Check if a file needs to be send to the slave. Use the following
    // algorithm:
@@ -4182,6 +4200,8 @@ Bool_t TProof::CheckFile(const char *file, TSlave *slave, Long_t modtime)
    //     - if no, get file's md5 and modtime and store in file map, ask
    //       slave if file exists with specific md5, if yes return kFALSE,
    //       if no return kTRUE.
+   // To retrieve from the cache the binaries associated with the file 'cpbin' should be
+   // set to kTRUE; this is the default behaviour.
    // Returns kTRUE in case file needs to be send, returns kFALSE in case
    // file is already on remote node.
 
@@ -4193,6 +4213,8 @@ Bool_t TProof::CheckFile(const char *file, TSlave *slave, Long_t modtime)
    sn += slave->GetOrdinal();
    sn += ":";
    sn += gSystem->BaseName(file);
+
+   Int_t opt = (cpbin) ? TProof::kCpBin : 0;
 
    // check if file is in map
    FileMap_t::const_iterator it;
@@ -4215,7 +4237,7 @@ Bool_t TProof::CheckFile(const char *file, TSlave *slave, Long_t modtime)
                if (IsMaster()) {
                   sendto = kFALSE;
                   TMessage mess(kPROOF_CHECKFILE);
-                  mess << TString(gSystem->BaseName(file)) << md.fMD5;
+                  mess << TString(gSystem->BaseName(file)) << md.fMD5 << opt;
                   slave->GetSocket()->Send(mess);
 
                   TMessage *reply;
@@ -4245,7 +4267,7 @@ Bool_t TProof::CheckFile(const char *file, TSlave *slave, Long_t modtime)
          return kFALSE;
       }
       TMessage mess(kPROOF_CHECKFILE);
-      mess << TString(gSystem->BaseName(file)) << md.fMD5;
+      mess << TString(gSystem->BaseName(file)) << md.fMD5 << opt;
       slave->GetSocket()->Send(mess);
 
       TMessage *reply;
@@ -4279,6 +4301,8 @@ Int_t TProof::SendFile(const char *file, Int_t opt, const char *rfile, TSlave *w
    //                          UploadPackage, since the check is done elsewhere.
    //       kForward (0x4)     if set, ask server to forward the file to slave
    //                          or submaster (meaningless for slave servers).
+   //       kCpBin   (0x8)     Retrieve from the cache the binaries associated
+   //                          with the file
    //
 
    if (!IsValid()) return -1;
@@ -4319,6 +4343,7 @@ Int_t TProof::SendFile(const char *file, Int_t opt, const char *rfile, TSlave *w
    Bool_t bin   = (opt & kBinary)  ? kTRUE : kFALSE;
    Bool_t force = (opt & kForce)   ? kTRUE : kFALSE;
    Bool_t fw    = (opt & kForward) ? kTRUE : kFALSE;
+   Bool_t cpbin = (opt & kCpBin)   ? kTRUE : kFALSE;
 
    const Int_t kMAXBUF = 32768;  //16384  //65536;
    char buf[kMAXBUF];
@@ -4331,7 +4356,7 @@ Int_t TProof::SendFile(const char *file, Int_t opt, const char *rfile, TSlave *w
       if (!sl->IsValid())
          continue;
 
-      Bool_t sendto = force ? kTRUE : CheckFile(file, sl, modtime);
+      Bool_t sendto = force ? kTRUE : CheckFile(file, sl, modtime, cpbin);
       // Don't send the kPROOF_SENDFILE command to real slaves when sendto
       // is false. Masters might still need to send the file to newly added
       // slaves.
@@ -4341,12 +4366,12 @@ Int_t TProof::SendFile(const char *file, Int_t opt, const char *rfile, TSlave *w
       // reset it to 0 if we are not going to send the file
       Long64_t siz = sendto ? size : 0;
 
-      PDB(kPackage, 2)
-      if (siz > 0) {
-         if (!nsl)
-            Info("SendFile", "sending file %s to:", file);
-         printf("   slave = %s:%s\n", sl->GetName(), sl->GetOrdinal());
-      }
+      PDB(kPackage,2)
+         if (siz > 0) {
+            if (!nsl)
+               Info("SendFile", "sending file %s to:", file);
+            printf("   slave = %s:%s\n", sl->GetName(), sl->GetOrdinal());
+         }
 
       sprintf(buf, "%s %d %lld %d", fnam, bin, siz, fw);
       if (sl->GetSocket()->Send(buf, kPROOF_SENDFILE) == -1) {
@@ -4445,7 +4470,7 @@ void TProof::SetRealTimeLog(Bool_t on)
       mess << on;
       Broadcast(mess);
    } else {
-      Warning("SetRealTimeLog", "session is invalid - do nothing");
+      Warning("SetRealTimeLog","session is invalid - do nothing");
    }
 }
 
@@ -4462,14 +4487,14 @@ Int_t TProof::SetParallelSilent(Int_t nodes, Bool_t random)
       GoParallel(nodes, kFALSE, random);
       return SendCurrentState();
    } else {
-      PDB(kGlobal, 1) Info("SetParallelSilent", "request %d node%s", nodes,
-            nodes == 1 ? "" : "s");
+      PDB(kGlobal,1) Info("SetParallelSilent", "request %d node%s", nodes,
+          nodes == 1 ? "" : "s");
       TMessage mess(kPROOF_PARALLEL);
       mess << nodes << random;
       Broadcast(mess);
       Collect(kActive, fCollectTimeout);
       Int_t n = GetParallel();
-      PDB(kGlobal, 1) Info("SetParallelSilent", "got %d node%s", n, n == 1 ? "" : "s");
+      PDB(kGlobal,1) Info("SetParallelSilent", "got %d node%s", n, n == 1 ? "" : "s");
       return n;
    }
 }
@@ -4521,7 +4546,7 @@ Int_t TProof::GoParallel(Int_t nodes, Bool_t attach, Bool_t random)
       if (sl->IsValid() && !fBadSlaves->FindObject(sl)) {
          if (strcmp("IGNORE", sl->GetImage()) == 0) continue;
          if ((sl->GetSlaveType() != TSlave::kSlave) &&
-               (sl->GetSlaveType() != TSlave::kMaster)) {
+             (sl->GetSlaveType() != TSlave::kMaster)) {
             Error("GoParallel", "TSlave is neither Master nor Slave");
             R__ASSERT(0);
          }
@@ -4538,7 +4563,7 @@ Int_t TProof::GoParallel(Int_t nodes, Bool_t attach, Bool_t random)
    while (cnt < nwrks) {
       // Random choice, if requested
       if (random) {
-         Int_t iwrk = (Int_t)(gRandom->Rndm() * wlst->GetSize());
+         Int_t iwrk = (Int_t) (gRandom->Rndm() * wlst->GetSize());
          sl = (TSlave *) wlst->At(iwrk);
       } else {
          // The first available
@@ -4559,7 +4584,7 @@ Int_t TProof::GoParallel(Int_t nodes, Bool_t attach, Bool_t random)
          fEndMaster = kFALSE;
          TMessage mess(kPROOF_PARALLEL);
          if (!attach) {
-            mess << nodes - cnt;
+            mess << nodes-cnt;
          } else {
             // To get the number of slaves
             mess.SetWhat(kPROOF_LOGFILE);
@@ -4616,7 +4641,7 @@ Int_t TProof::GoParallel(Int_t nodes, Bool_t attach, Bool_t random)
                 n, n == 1 ? "" : "s");
    }
 
-   PDB(kGlobal, 1) Info("GoParallel", "got %d node%s", n, n == 1 ? "" : "s");
+   PDB(kGlobal,1) Info("GoParallel", "got %d node%s", n, n == 1 ? "" : "s");
    return n;
 }
 
@@ -4646,7 +4671,7 @@ void TProof::ShowCache(Bool_t all)
 //______________________________________________________________________________
 void TProof::ClearCache()
 {
-   // Remove files from all file caches.
+    // Remove files from all file caches.
 
    if (!IsValid()) return;
 
@@ -4762,7 +4787,7 @@ Int_t TProof::ClearPackage(const char *package)
    // if name, erroneously, is a par pathname strip off .par and path
    TString pac = package;
    if (pac.EndsWith(".par"))
-      pac.Remove(pac.Length() - 4);
+      pac.Remove(pac.Length()-4);
    pac = gSystem->BaseName(pac);
 
    if (UnloadPackage(pac) == -1)
@@ -4790,7 +4815,7 @@ Int_t TProof::DisablePackage(const char *package)
    // if name, erroneously, is a par pathname strip off .par and path
    TString pac = package;
    if (pac.EndsWith(".par"))
-      pac.Remove(pac.Length() - 4);
+      pac.Remove(pac.Length()-4);
    pac = gSystem->BaseName(pac);
 
    if (DisablePackageOnClient(pac) == -1)
@@ -4880,7 +4905,7 @@ Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
    // if name, erroneously, is a par pathname strip off .par and path
    TString pac = package;
    if (pac.EndsWith(".par"))
-      pac.Remove(pac.Length() - 4);
+      pac.Remove(pac.Length()-4);
    pac = gSystem->BaseName(pac);
 
    Bool_t buildOnClient = kTRUE;
@@ -4892,9 +4917,7 @@ Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
    if (opt <= kBuildAll) {
       TMessage mess(kPROOF_CACHE);
       mess << Int_t(kBuildPackage) << pac;
-      // TO_TRACK: debug
-      ///Broadcast(mess, kUnique);
-      BroadcastUnqArcSlv(mess);
+      Broadcast(mess, kUnique);
 
       TMessage mess2(kPROOF_CACHE);
       mess2 << Int_t(kBuildSubPackage) << pac;
@@ -4926,121 +4949,121 @@ Int_t TProof::BuildPackageOnClient(const TString &package)
    // The code is equivalent to the one in TProofServ.cxx (TProof::kBuildPackage
    // case). Keep in sync in case of changes.
 
-   if (IsMaster())
-      return 0;
+   if (!IsMaster()) {
+      Int_t status = 0;
+      TString pdir, ocwd;
 
-   Int_t status = 0;
-   TString pdir, ocwd;
-
-   // Package path
-   pdir = fPackageDir + "/" + package;
-   if (gSystem->AccessPathName(pdir, kReadPermission) ||
+      // Package path
+      pdir = fPackageDir + "/" + package;
+      if (gSystem->AccessPathName(pdir, kReadPermission) ||
          gSystem->AccessPathName(pdir + "/PROOF-INF", kReadPermission)) {
-      // Is there a global package with this name?
-      if (fGlobalPackageDirList && fGlobalPackageDirList->GetSize() > 0) {
-         // Scan the list of global packages dirs
-         TIter nxd(fGlobalPackageDirList);
-         TNamed *nm = 0;
-         while ((nm = (TNamed *)nxd())) {
-            pdir = Form("%s/%s", nm->GetTitle(), package.Data());
-            if (!gSystem->AccessPathName(pdir, kReadPermission) &&
-                  !gSystem->AccessPathName(pdir + "/PROOF-INF", kReadPermission)) {
-               // Package found, stop searching
-               break;
+         // Is there a global package with this name?
+         if (fGlobalPackageDirList && fGlobalPackageDirList->GetSize() > 0) {
+            // Scan the list of global packages dirs
+            TIter nxd(fGlobalPackageDirList);
+            TNamed *nm = 0;
+            while ((nm = (TNamed *)nxd())) {
+               pdir = Form("%s/%s", nm->GetTitle(), package.Data());
+               if (!gSystem->AccessPathName(pdir, kReadPermission) &&
+                   !gSystem->AccessPathName(pdir + "/PROOF-INF", kReadPermission)) {
+                  // Package found, stop searching
+                  break;
+               }
+               pdir = "";
             }
-            pdir = "";
-         }
-         if (pdir.Length() <= 0) {
-            // Package not found
-            Error("BuildPackageOnClient", "failure locating %s ...", package.Data());
-            return -1;
-         } else {
-            // Package is in the global dirs
-            if (gDebug > 0)
-               Info("BuildPackageOnClient", "found global package: %s", pdir.Data());
-            return 0;
-         }
-      }
-   }
-   PDB(kPackage, 1)
-   Info("BuildPackageOnCLient",
-        "package %s exists and has PROOF-INF directory", package.Data());
-
-   fPackageLock->Lock();
-
-   ocwd = gSystem->WorkingDirectory();
-   gSystem->ChangeDirectory(pdir);
-
-   // check for BUILD.sh and execute
-   if (!gSystem->AccessPathName("PROOF-INF/BUILD.sh")) {
-
-      // read version from file proofvers.txt, and if current version is
-      // not the same do a "BUILD.sh clean"
-      Bool_t savever = kFALSE;
-      Int_t rev = -1;
-      TString v;
-      FILE *f = fopen("PROOF-INF/proofvers.txt", "r");
-      if (f) {
-         TString r;
-         v.Gets(f);
-         r.Gets(f);
-         rev = (!r.IsNull() && r.IsDigit()) ? r.Atoi() : -1;
-         fclose(f);
-      }
-      if (!f || v != gROOT->GetVersion() ||
-            (gROOT->GetSvnRevision() > 0 && rev != gROOT->GetSvnRevision())) {
-         savever = kTRUE;
-         Info("BuildPackageOnCLient",
-              "%s: version change (current: %s:%d, build: %s:%d): cleaning ... ",
-              package.Data(), gROOT->GetVersion(), gROOT->GetSvnRevision(), v.Data(), rev);
-         // Hard cleanup: go up the dir tree
-         gSystem->ChangeDirectory(fPackageDir);
-         // remove package directory
-         gSystem->Exec(Form("%s %s", kRM, pdir.Data()));
-         // find gunzip...
-         char *gunzip = gSystem->Which(gSystem->Getenv("PATH"), kGUNZIP, kExecutePermission);
-         if (gunzip) {
-            TString par = Form("%s.par", pdir.Data());
-            // untar package
-            TString cmd(Form(kUNTAR3, gunzip, par.Data()));
-            status = gSystem->Exec(cmd);
-            if ((status = gSystem->Exec(cmd))) {
-               Error("BuildPackageOnCLient", "failure executing: %s", cmd.Data());
+            if (pdir.Length() <= 0) {
+               // Package not found
+               Error("BuildPackageOnClient", "failure locating %s ...", package.Data());
+               return -1;
             } else {
-               // Go down to the package directory
-               gSystem->ChangeDirectory(pdir);
+               // Package is in the global dirs
+               if (gDebug > 0)
+                  Info("BuildPackageOnClient", "found global package: %s", pdir.Data());
+               return 0;
             }
-            delete [] gunzip;
-         } else {
-            Error("BuildPackageOnCLient", "%s not found", kGUNZIP);
-            status = -1;
          }
       }
+      PDB(kPackage, 1)
+         Info("BuildPackageOnCLient",
+              "package %s exists and has PROOF-INF directory", package.Data());
 
-      if (gSystem->Exec("PROOF-INF/BUILD.sh")) {
-         Error("BuildPackageOnClient", "building package %s on the client failed", package.Data());
-         status = -1;
-      }
+      fPackageLock->Lock();
 
-      if (savever && !status) {
-         f = fopen("PROOF-INF/proofvers.txt", "w");
+      ocwd = gSystem->WorkingDirectory();
+      gSystem->ChangeDirectory(pdir);
+
+      // check for BUILD.sh and execute
+      if (!gSystem->AccessPathName("PROOF-INF/BUILD.sh")) {
+
+         // read version from file proofvers.txt, and if current version is
+         // not the same do a "BUILD.sh clean"
+         Bool_t savever = kFALSE;
+         Int_t rev = -1;
+         TString v;
+         FILE *f = fopen("PROOF-INF/proofvers.txt", "r");
          if (f) {
-            fputs(gROOT->GetVersion(), f);
-            fputs(Form("\n%d", gROOT->GetSvnRevision()), f);
+            TString r;
+            v.Gets(f);
+            r.Gets(f);
+            rev = (!r.IsNull() && r.IsDigit()) ? r.Atoi() : -1;
             fclose(f);
          }
+         if (!f || v != gROOT->GetVersion() ||
+            (gROOT->GetSvnRevision() > 0 && rev != gROOT->GetSvnRevision())) {
+            savever = kTRUE;
+            Info("BuildPackageOnCLient",
+                 "%s: version change (current: %s:%d, build: %s:%d): cleaning ... ",
+                 package.Data(), gROOT->GetVersion(), gROOT->GetSvnRevision(), v.Data(), rev);
+            // Hard cleanup: go up the dir tree
+            gSystem->ChangeDirectory(fPackageDir);
+            // remove package directory
+            gSystem->Exec(Form("%s %s", kRM, pdir.Data()));
+            // find gunzip...
+            char *gunzip = gSystem->Which(gSystem->Getenv("PATH"), kGUNZIP, kExecutePermission);
+            if (gunzip) {
+               TString par = Form("%s.par", pdir.Data());
+               // untar package
+               TString cmd(Form(kUNTAR3, gunzip, par.Data()));
+               status = gSystem->Exec(cmd);
+               if ((status = gSystem->Exec(cmd))) {
+                  Error("BuildPackageOnCLient", "failure executing: %s", cmd.Data());
+               } else {
+                  // Go down to the package directory
+                  gSystem->ChangeDirectory(pdir);
+               }
+               delete [] gunzip;
+            } else {
+               Error("BuildPackageOnCLient", "%s not found", kGUNZIP);
+               status = -1;
+            }
+         }
+
+         if (gSystem->Exec("PROOF-INF/BUILD.sh")) {
+            Error("BuildPackageOnClient", "building package %s on the client failed", package.Data());
+            status = -1;
+         }
+
+         if (savever && !status) {
+            f = fopen("PROOF-INF/proofvers.txt", "w");
+            if (f) {
+               fputs(gROOT->GetVersion(), f);
+               fputs(Form("\n%d",gROOT->GetSvnRevision()), f);
+               fclose(f);
+            }
+         }
+      } else {
+         PDB(kPackage, 1)
+            Info("BuildPackageOnCLient",
+                 "package %s exists but has no PROOF-INF/BUILD.sh script", package.Data());
       }
-   } else {
-      PDB(kPackage, 1)
-      Info("BuildPackageOnCLient",
-           "package %s exists but has no PROOF-INF/BUILD.sh script", package.Data());
+
+      gSystem->ChangeDirectory(ocwd);
+
+      fPackageLock->Unlock();
+
+      return status;
    }
-
-   gSystem->ChangeDirectory(ocwd);
-
-   fPackageLock->Unlock();
-
-   return status;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -5061,7 +5084,7 @@ Int_t TProof::LoadPackage(const char *package, Bool_t notOnClient)
    // if name, erroneously, is a par pathname strip off .par and path
    TString pac = package;
    if (pac.EndsWith(".par"))
-      pac.Remove(pac.Length() - 4);
+      pac.Remove(pac.Length()-4);
    pac = gSystem->BaseName(pac);
 
    if (!notOnClient)
@@ -5132,8 +5155,8 @@ Int_t TProof::LoadPackageOnClient(const TString &package)
             status = -1;
       } else {
          PDB(kPackage, 1)
-         Info("LoadPackageOnCLient",
-              "package %s exists but has no PROOF-INF/SETUP.C script", package.Data());
+            Info("LoadPackageOnCLient",
+                 "package %s exists but has no PROOF-INF/SETUP.C script", package.Data());
       }
 
       gSystem->ChangeDirectory(ocwd);
@@ -5168,8 +5191,8 @@ Int_t TProof::LoadPackageOnClient(const TString &package)
 
          fEnabledPackagesOnClient->Add(new TObjString(package));
          PDB(kPackage, 1)
-         Info("LoadPackageOnClient",
-              "package %s successfully loaded", package.Data());
+            Info("LoadPackageOnClient",
+                 "package %s successfully loaded", package.Data());
       } else
          Error("LoadPackageOnClient", "loading package %s on client failed", package.Data());
 
@@ -5194,7 +5217,7 @@ Int_t TProof::UnloadPackage(const char *package)
    // if name, erroneously, is a par pathname strip off .par and path
    TString pac = package;
    if (pac.EndsWith(".par"))
-      pac.Remove(pac.Length() - 4);
+      pac.Remove(pac.Length()-4);
    pac = gSystem->BaseName(pac);
 
    if (UnloadPackageOnClient(pac) == -1)
@@ -5255,7 +5278,7 @@ Int_t TProof::UnloadPackages()
       // Iterate over packages on the client and remove each package
       TIter nextpackage(fEnabledPackagesOnClient);
       while (TObjString *objstr = dynamic_cast<TObjString*>(nextpackage()))
-         if (UnloadPackageOnClient(objstr->String()) == -1)
+         if (UnloadPackageOnClient(objstr->String()) == -1 )
             return -1;
    }
 
@@ -5286,7 +5309,7 @@ Int_t TProof::EnablePackage(const char *package, Bool_t notOnClient)
    // if name, erroneously, is a par pathname strip off .par and path
    TString pac = package;
    if (pac.EndsWith(".par"))
-      pac.Remove(pac.Length() - 4);
+      pac.Remove(pac.Length()-4);
    pac = gSystem->BaseName(pac);
 
    EBuildPackageOpt opt = kBuildAll;
@@ -5295,9 +5318,6 @@ Int_t TProof::EnablePackage(const char *package, Bool_t notOnClient)
 
    if (BuildPackage(pac, opt) == -1)
       return -1;
-
-   // TO_TRACK
-   PrepareAndSendPkg();
 
    if (LoadPackage(pac, notOnClient) == -1)
       return -1;
@@ -5355,12 +5375,12 @@ Int_t TProof::UploadPackage(const char *pack, EUploadPackageOpt opt)
                // Package is in the global dirs
                if (gDebug > 0)
                   Info("UploadPackage", "global package found (%s): no upload needed",
-                       pdir.Data());
+                                        pdir.Data());
                return 0;
             }
          }
          Error("UploadPackage", "PAR file '%s' not found; paths tried: %s, %s",
-               gSystem->BaseName(par), tried.Data(), par.Data());
+                                gSystem->BaseName(par), tried.Data(), par.Data());
          return -1;
       }
    }
@@ -5384,11 +5404,11 @@ Int_t TProof::UploadPackage(const char *pack, EUploadPackageOpt opt)
    }
 
    TMessage mess(kPROOF_CHECKFILE);
-   mess << TString("+") + TString(gSystem->BaseName(par)) << (*md5);
+   mess << TString("+")+TString(gSystem->BaseName(par)) << (*md5);
    TMessage mess2(kPROOF_CHECKFILE);
-   mess2 << TString("-") + TString(gSystem->BaseName(par)) << (*md5);
+   mess2 << TString("-")+TString(gSystem->BaseName(par)) << (*md5);
    TMessage mess3(kPROOF_CHECKFILE);
-   mess3 << TString("=") + TString(gSystem->BaseName(par)) << (*md5);
+   mess3 << TString("=")+TString(gSystem->BaseName(par)) << (*md5);
    delete md5;
 
    if (fProtocol > 8) {
@@ -5418,16 +5438,16 @@ Int_t TProof::UploadPackage(const char *pack, EUploadPackageOpt opt)
 
          if (fProtocol > 5) {
             // remote directory is locked, upload file over the open channel
-            if (SendFile(par, (kBinary | kForce), Form("%s/%s/%s",
-                  sl->GetProofWorkDir(), kPROOF_PackDir,
-                  gSystem->BaseName(par)), sl) < 0) {
+            if (SendFile(par, (kBinary | kForce | kCpBin), Form("%s/%s/%s",
+                         sl->GetProofWorkDir(), kPROOF_PackDir,
+                         gSystem->BaseName(par)), sl) < 0) {
                Error("UploadPackage", "problems uploading file %s", par.Data());
                SafeDelete(reply);
                return -1;
             }
          } else {
             // old servers receive it via TFTP
-            TFTP ftp(TString("root://") + sl->GetName(), 1);
+            TFTP ftp(TString("root://")+sl->GetName(), 1);
             if (!ftp.IsZombie()) {
                ftp.cd(Form("%s/%s", sl->GetProofWorkDir(), kPROOF_PackDir));
                ftp.put(par, gSystem->BaseName(par));
@@ -5488,77 +5508,76 @@ Int_t TProof::UploadPackageOnClient(const TString &par, EUploadPackageOpt opt, T
 
    Int_t status = 0;
 
-   if (IsMaster())
-      return status;
+   if (!IsMaster()) {
+      // the fPackageDir directory exists (has been created in Init())
 
-   // the fPackageDir directory exists (has been created in Init())
+      // create symlink to the par file in the fPackageDir (needed by
+      // master in case we run on the localhost)
+      fPackageLock->Lock();
 
-   // create symlink to the par file in the fPackageDir (needed by
-   // master in case we run on the localhost)
-   fPackageLock->Lock();
-
-   TString lpar = fPackageDir + "/" + gSystem->BaseName(par);
-   FileStat_t stat;
-   Int_t st = gSystem->GetPathInfo(lpar, stat);
-   // check if symlink, if so unlink, if not give error
-   // NOTE: GetPathInfo() returns 1 in case of symlink that does not point to
-   // existing file, but if fIsLink is true the symlink exists
-   if (stat.fIsLink)
-      gSystem->Unlink(lpar);
-   else if (st == 0) {
-      Error("UploadPackageOnClient", "cannot create symlink %s on client, "
-            "another item with same name already exists",
-            lpar.Data());
-      fPackageLock->Unlock();
-      return -1;
-   }
-   if (!gSystem->IsAbsoluteFileName(par)) {
-      TString fpar = par;
-      gSystem->Symlink(gSystem->PrependPathName(gSystem->WorkingDirectory(), fpar), lpar);
-   } else
-      gSystem->Symlink(par, lpar);
-   // TODO: On Windows need to copy instead of symlink
-
-   // compare md5
-   TString packnam = par(0, par.Length() - 4);  // strip off ".par"
-   packnam = gSystem->BaseName(packnam);        // strip off path
-   TString md5f = fPackageDir + "/" + packnam + "/PROOF-INF/md5.txt";
-   TMD5 *md5local = TMD5::ReadChecksum(md5f);
-   if (!md5local || (*md5) != (*md5local)) {
-      // if not, unzip and untar package in package directory
-      if ((opt & TProof::kRemoveOld)) {
-         // remove any previous package directory with same name
-         if (gSystem->Exec(Form("%s %s/%s", kRM, fPackageDir.Data(),
-               packnam.Data())))
-            Error("UploadPackageOnClient", "failure executing: %s %s/%s",
-                  kRM, fPackageDir.Data(), packnam.Data());
+      TString lpar = fPackageDir + "/" + gSystem->BaseName(par);
+      FileStat_t stat;
+      Int_t st = gSystem->GetPathInfo(lpar, stat);
+      // check if symlink, if so unlink, if not give error
+      // NOTE: GetPathInfo() returns 1 in case of symlink that does not point to
+      // existing file, but if fIsLink is true the symlink exists
+      if (stat.fIsLink)
+         gSystem->Unlink(lpar);
+      else if (st == 0) {
+         Error("UploadPackageOnClient", "cannot create symlink %s on client, "
+               "another item with same name already exists",
+               lpar.Data());
+         fPackageLock->Unlock();
+         return -1;
       }
-      // find gunzip
-      char *gunzip = gSystem->Which(gSystem->Getenv("PATH"), kGUNZIP,
-            kExecutePermission);
-      if (gunzip) {
-         // untar package
-         if (gSystem->Exec(Form(kUNTAR2, gunzip, par.Data(), fPackageDir.Data())))
-            Error("Uploadpackage", "failure executing: %s",
-                  Form(kUNTAR2, gunzip, par.Data(), fPackageDir.Data()));
-         delete [] gunzip;
+      if (!gSystem->IsAbsoluteFileName(par)) {
+         TString fpar = par;
+         gSystem->Symlink(gSystem->PrependPathName(gSystem->WorkingDirectory(), fpar), lpar);
       } else
-         Error("UploadPackageOnClient", "%s not found", kGUNZIP);
+         gSystem->Symlink(par, lpar);
+      // TODO: On Windows need to copy instead of symlink
 
-      // check that fPackageDir/packnam now exists
-      if (gSystem->AccessPathName(fPackageDir + "/" + packnam, kWritePermission)) {
-         // par file did not unpack itself in the expected directory, failure
-         Error("UploadPackageOnClient",
-               "package %s did not unpack into %s/%s", par.Data(), fPackageDir.Data(),
-               packnam.Data());
-         status = -1;
-      } else {
-         // store md5 in package/PROOF-INF/md5.txt
-         TMD5::WriteChecksum(md5f, md5);
+      // compare md5
+      TString packnam = par(0, par.Length() - 4);  // strip off ".par"
+      packnam = gSystem->BaseName(packnam);        // strip off path
+      TString md5f = fPackageDir + "/" + packnam + "/PROOF-INF/md5.txt";
+      TMD5 *md5local = TMD5::ReadChecksum(md5f);
+      if (!md5local || (*md5) != (*md5local)) {
+         // if not, unzip and untar package in package directory
+         if ((opt & TProof::kRemoveOld)) {
+            // remove any previous package directory with same name
+            if (gSystem->Exec(Form("%s %s/%s", kRM, fPackageDir.Data(),
+                                   packnam.Data())))
+               Error("UploadPackageOnClient", "failure executing: %s %s/%s",
+                     kRM, fPackageDir.Data(), packnam.Data());
+         }
+         // find gunzip
+         char *gunzip = gSystem->Which(gSystem->Getenv("PATH"), kGUNZIP,
+                                       kExecutePermission);
+         if (gunzip) {
+            // untar package
+            if (gSystem->Exec(Form(kUNTAR2, gunzip, par.Data(), fPackageDir.Data())))
+               Error("Uploadpackage", "failure executing: %s",
+                     Form(kUNTAR2, gunzip, par.Data(), fPackageDir.Data()));
+            delete [] gunzip;
+         } else
+            Error("UploadPackageOnClient", "%s not found", kGUNZIP);
+
+         // check that fPackageDir/packnam now exists
+         if (gSystem->AccessPathName(fPackageDir + "/" + packnam, kWritePermission)) {
+            // par file did not unpack itself in the expected directory, failure
+            Error("UploadPackageOnClient",
+                  "package %s did not unpack into %s/%s", par.Data(), fPackageDir.Data(),
+                  packnam.Data());
+            status = -1;
+         } else {
+            // store md5 in package/PROOF-INF/md5.txt
+            TMD5::WriteChecksum(md5f, md5);
+         }
       }
+      fPackageLock->Unlock();
+      delete md5local;
    }
-   fPackageLock->Unlock();
-   delete md5local;
    return status;
 }
 
@@ -5605,7 +5624,7 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient)
             hasHeader = kFALSE;
             if (gDebug > 0)
                Info("Load", "no associated header file found: tried: %s %s",
-                    h.Data(), headname.Data());
+                            h.Data(), headname.Data());
          }
       }
 
@@ -5645,7 +5664,7 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient)
       TString basemacro = gSystem->BaseName(macro);
       TMessage mess(kPROOF_CACHE);
       mess << Int_t(kLoadMacro) << basemacro;
-      Broadcast(mess, kUnique);
+      Broadcast(mess);
 
       Printf("Adding loaded macro: %s", macro);
       if (!fLoadedMacros) {
@@ -5734,7 +5753,7 @@ Int_t TProof::RemoveDynamicPath(const char *libpath)
    }
 
    TMessage m(kPROOF_LIB_INC_PATH);
-   m << TString("lib") << (Bool_t)kFALSE;
+   m << TString("lib") <<(Bool_t)kFALSE;
 
    // Add paths
    if (libpath && strlen(libpath))
@@ -5820,11 +5839,11 @@ void TProof::PrintProgress(Long64_t total, Long64_t processed, Float_t procTime)
 
    for (int l = 0; l < 20; l++) {
       if (total > 0) {
-         if (l < 20*processed / total)
+         if (l < 20*processed/total)
             fprintf(stderr, "=");
-         else if (l == 20*processed / total)
+         else if (l == 20*processed/total)
             fprintf(stderr, ">");
-         else if (l > 20*processed / total)
+         else if (l > 20*processed/total)
             fprintf(stderr, ".");
       } else
          fprintf(stderr, "=");
@@ -5832,10 +5851,10 @@ void TProof::PrintProgress(Long64_t total, Long64_t processed, Float_t procTime)
    Float_t evtrti = (procTime > 0. && processed > 0) ? processed / procTime : -1.;
    if (evtrti > 0.)
       fprintf(stderr, "| %.02f %% [%.1f evts/s]\r",
-              (total ? ((100.0*processed) / total) : 100.0), evtrti);
+              (total ? ((100.0*processed)/total) : 100.0), evtrti);
    else
       fprintf(stderr, "| %.02f %%\r",
-              (total ? ((100.0*processed) / total) : 100.0));
+              (total ? ((100.0*processed)/total) : 100.0));
    if (processed >= total)
       fprintf(stderr, "\n");
 }
@@ -5846,8 +5865,8 @@ void TProof::Progress(Long64_t total, Long64_t processed)
    // Get query progress information. Connect a slot to this signal
    // to track progress.
 
-   PDB(kGlobal, 1)
-   Info("Progress", "%2f (%lld/%lld)", 100.*processed / total, processed, total);
+   PDB(kGlobal,1)
+      Info("Progress","%2f (%lld/%lld)", 100.*processed/total, processed, total);
 
    if (gROOT->IsBatch()) {
       // Simple progress bar
@@ -5860,15 +5879,15 @@ void TProof::Progress(Long64_t total, Long64_t processed)
 
 //______________________________________________________________________________
 void TProof::Progress(Long64_t total, Long64_t processed, Long64_t bytesread,
-      Float_t initTime, Float_t procTime,
-      Float_t evtrti, Float_t mbrti)
+                      Float_t initTime, Float_t procTime,
+                      Float_t evtrti, Float_t mbrti)
 {
    // Get query progress information. Connect a slot to this signal
    // to track progress.
 
-   PDB(kGlobal, 1)
-   Info("Progress", "%lld %lld %lld %f %f %f %f", total, processed, bytesread,
-        initTime, procTime, evtrti, mbrti);
+   PDB(kGlobal,1)
+      Info("Progress","%lld %lld %lld %f %f %f %f", total, processed, bytesread,
+                                initTime, procTime, evtrti, mbrti);
 
    if (gROOT->IsBatch()) {
       // Simple progress bar
@@ -5886,10 +5905,10 @@ void TProof::Feedback(TList *objs)
    // Get list of feedback objects. Connect a slot to this signal
    // to monitor the feedback object.
 
-   PDB(kGlobal, 1)
-   Info("Feedback", "%d objects", objs->GetSize());
-   PDB(kFeedback, 1) {
-      Info("Feedback", "%d objects", objs->GetSize());
+   PDB(kGlobal,1)
+      Info("Feedback","%d objects", objs->GetSize());
+   PDB(kFeedback,1) {
+      Info("Feedback","%d objects", objs->GetSize());
       objs->ls();
    }
 
@@ -5901,9 +5920,9 @@ void TProof::CloseProgressDialog()
 {
    // Close progress dialog.
 
-   PDB(kGlobal, 1)
-   Info("CloseProgressDialog",
-        "called: have progress dialog: %d", fProgressDialogStarted);
+   PDB(kGlobal,1)
+      Info("CloseProgressDialog",
+           "called: have progress dialog: %d", fProgressDialogStarted);
 
    // Nothing to do if not there
    if (!fProgressDialogStarted)
@@ -5914,12 +5933,12 @@ void TProof::CloseProgressDialog()
 
 //______________________________________________________________________________
 void TProof::ResetProgressDialog(const char *sel, Int_t sz, Long64_t fst,
-      Long64_t ent)
+                                 Long64_t ent)
 {
    // Reset progress dialog.
 
-   PDB(kGlobal, 1)
-   Info("ResetProgressDialog", "(%s,%d,%lld,%lld)", sel, sz, fst, ent);
+   PDB(kGlobal,1)
+      Info("ResetProgressDialog","(%s,%d,%lld,%lld)", sel, sz, fst, ent);
 
    EmitVA("ResetProgressDialog(const char*,Int_t,Long64_t,Long64_t)",
           4, sel, sz, fst, ent);
@@ -5930,8 +5949,8 @@ void TProof::StartupMessage(const char *msg, Bool_t st, Int_t done, Int_t total)
 {
    // Send startup message.
 
-   PDB(kGlobal, 1)
-   Info("StartupMessage", "(%s,%d,%d,%d)", msg, st, done, total);
+   PDB(kGlobal,1)
+      Info("StartupMessage","(%s,%d,%d,%d)", msg, st, done, total);
 
    EmitVA("StartupMessage(const char*,Bool_t,Int_t,Int_t)",
           4, msg, st, done, total);
@@ -5942,8 +5961,8 @@ void TProof::DataSetStatus(const char *msg, Bool_t st, Int_t done, Int_t total)
 {
    // Send dataset preparation status.
 
-   PDB(kGlobal, 1)
-   Info("DataSetStatus", "(%s,%d,%d,%d)", msg, st, done, total);
+   PDB(kGlobal,1)
+      Info("DataSetStatus","(%s,%d,%d,%d)", msg, st, done, total);
 
    EmitVA("DataSetStatus(const char*,Bool_t,Int_t,Int_t)",
           4, msg, st, done, total);
@@ -5951,7 +5970,7 @@ void TProof::DataSetStatus(const char *msg, Bool_t st, Int_t done, Int_t total)
 
 //______________________________________________________________________________
 void TProof::SendDataSetStatus(const char *msg, UInt_t n,
-      UInt_t tot, Bool_t st)
+                                 UInt_t tot, Bool_t st)
 {
    // Send data set status
 
@@ -5967,10 +5986,10 @@ void TProof::QueryResultReady(const char *ref)
 {
    // Notify availability of a query result.
 
-   PDB(kGlobal, 1)
-   Info("QueryResultReady", "ref: %s", ref);
+   PDB(kGlobal,1)
+      Info("QueryResultReady","ref: %s", ref);
 
-   Emit("QueryResultReady(const char*)", ref);
+   Emit("QueryResultReady(const char*)",ref);
 }
 
 //______________________________________________________________________________
@@ -5998,7 +6017,7 @@ void TProof::ValidateDSet(TDSet *dset)
          sllist->SetName(sl->GetName());
          slholder.Add(sllist);
          TList *elemlist = new TList;
-         elemlist->SetName(TString(sl->GetName()) + "_elem");
+         elemlist->SetName(TString(sl->GetName())+"_elem");
          elemholder.Add(elemlist);
          nodes.Add(new TPair(sllist, elemlist));
       } else {
@@ -6011,11 +6030,11 @@ void TProof::ValidateDSet(TDSet *dset)
    TList nonLocal; // list of nonlocal elements
    // make two iterations - first add local elements - then distribute nonlocals
    for (Int_t i = 0; i < 2; i++) {
-      Bool_t local = i > 0 ? kFALSE : kTRUE;
+      Bool_t local = i>0?kFALSE:kTRUE;
       TIter nextElem(local ? dset->GetListOfElements() : &nonLocal);
       while (TDSetElement *elem = dynamic_cast<TDSetElement*>(nextElem())) {
          if (elem->GetValid()) continue;
-         TPair *p = dynamic_cast<TPair*>(local ? nodes.FindObject(TUrl(elem->GetFileName()).GetHost()) : nodes.At(0));
+         TPair *p = dynamic_cast<TPair*>(local?nodes.FindObject(TUrl(elem->GetFileName()).GetHost()):nodes.At(0));
          if (p) {
             TList *eli = dynamic_cast<TList*>(p->Value());
             TList *sli = dynamic_cast<TList*>(p->Key());
@@ -6036,7 +6055,7 @@ void TProof::ValidateDSet(TDSet *dset)
                }
             }
 
-            if (p2 != p) {
+            if (p2!=p) {
                nodes.Remove(p->Key());
                nodes.AddAfter(p2->Key(), p);
             }
@@ -6063,13 +6082,13 @@ void TProof::ValidateDSet(TDSet *dset)
       // distribute elements over the slaves
       Int_t nslaves = slaves->GetSize();
       Int_t nelements = setelements->GetSize();
-      for (Int_t i = 0; i < nslaves; i++) {
+      for (Int_t i=0; i<nslaves; i++) {
 
          TDSet copyset(dset->GetType(), dset->GetObjName(),
-               dset->GetDirectory());
-         for (Int_t j = (i * nelements) / nslaves;
-               j < ((i + 1)*nelements) / nslaves;
-               j++) {
+                       dset->GetDirectory());
+         for (Int_t j = (i*nelements)/nslaves;
+                    j < ((i+1)*nelements)/nslaves;
+                    j++) {
             TDSetElement *elem =
                dynamic_cast<TDSetElement*>(setelements->At(j));
             copyset.Add(elem->GetFileName(), elem->GetObjName(),
@@ -6077,24 +6096,24 @@ void TProof::ValidateDSet(TDSet *dset)
                         elem->GetNum(), elem->GetMsd());
          }
 
-         if (copyset.GetListOfElements()->GetSize() > 0) {
+         if (copyset.GetListOfElements()->GetSize()>0) {
             TMessage mesg(kPROOF_VALIDATE_DSET);
             mesg << &copyset;
 
             TSlave *sl = dynamic_cast<TSlave*>(slaves->At(i));
-            PDB(kGlobal, 1) Info("ValidateDSet",
-                  "Sending TDSet with %d elements to slave %s"
-                  " to be validated",
-                  copyset.GetListOfElements()->GetSize(),
-                  sl->GetOrdinal());
+            PDB(kGlobal,1) Info("ValidateDSet",
+                                "Sending TDSet with %d elements to slave %s"
+                                " to be validated",
+                                copyset.GetListOfElements()->GetSize(),
+                                sl->GetOrdinal());
             sl->GetSocket()->Send(mesg);
             usedslaves.Add(sl);
          }
       }
    }
 
-   PDB(kGlobal, 1)
-   Info("ValidateDSet", "Calling Collect");
+   PDB(kGlobal,1)
+      Info("ValidateDSet","Calling Collect");
    Collect(&usedslaves);
    SetDSet(0);
 }
@@ -6282,7 +6301,7 @@ void TProof::AddFeedback(const char *name)
    // Add object to feedback list.
 
    PDB(kFeedback, 3)
-   Info("AddFeedback", "Adding object \"%s\" to feedback", name);
+      Info("AddFeedback", "Adding object \"%s\" to feedback", name);
    if (fFeedback->FindObject(name) == 0)
       fFeedback->Add(new TObjString(name));
 }
@@ -6313,7 +6332,7 @@ void TProof::ShowFeedback() const
    // Show items in feedback list.
 
    if (fFeedback->GetSize() == 0) {
-      Info("", "no feedback requested");
+      Info("","no feedback requested");
       return;
    }
 
@@ -6363,7 +6382,7 @@ TTree *TProof::GetTreeHeader(TDSet *dset)
    PDB(kGlobal, 1) {
       if (t) {
          Info("GetTreeHeader", Form("%s, message size: %d, entries: %d\n",
-               s1.Data(), reply->BufferSize(), (int) t->GetMaxEntryLoop()));
+             s1.Data(), reply->BufferSize(), (int) t->GetMaxEntryLoop()));
       } else {
          Info("GetTreeHeader", Form("%s, message size: %d\n", s1.Data(), reply->BufferSize()));
       }
@@ -6404,59 +6423,59 @@ TList *TProof::GetOutputNames()
    //   FIXME: to be written
 
    return 0;
-   /*
-      TMessage msg(kPROOF_GETOUTPUTLIST);
-      TList* slaves = fActiveSlaves;
-      Broadcast(msg, slaves);
-      TMonitor mon;
-      TList* outputList = new TList();
+/*
+   TMessage msg(kPROOF_GETOUTPUTLIST);
+   TList* slaves = fActiveSlaves;
+   Broadcast(msg, slaves);
+   TMonitor mon;
+   TList* outputList = new TList();
 
-      TIter    si(slaves);
-      TSlave   *slave;
-      while ((slave = (TSlave*)si.Next()) != 0) {
-         PDB(kGlobal,4) Info("GetOutputNames","Socket added to monitor: %p (%s)",
-             slave->GetSocket(), slave->GetName());
-         mon.Add(slave->GetSocket());
+   TIter    si(slaves);
+   TSlave   *slave;
+   while ((slave = (TSlave*)si.Next()) != 0) {
+      PDB(kGlobal,4) Info("GetOutputNames","Socket added to monitor: %p (%s)",
+          slave->GetSocket(), slave->GetName());
+      mon.Add(slave->GetSocket());
+   }
+   mon.ActivateAll();
+   ((TProof*)gProof)->DeActivateAsyncInput();
+   ((TProof*)gProof)->fCurrentMonitor = &mon;
+
+   while (mon.GetActive() != 0) {
+      TSocket *sock = mon.Select();
+      if (!sock) {
+         Error("GetOutputList","TMonitor::.Select failed!");
+         break;
       }
-      mon.ActivateAll();
-      ((TProof*)gProof)->DeActivateAsyncInput();
-      ((TProof*)gProof)->fCurrentMonitor = &mon;
-
-      while (mon.GetActive() != 0) {
-         TSocket *sock = mon.Select();
-         if (!sock) {
-            Error("GetOutputList","TMonitor::.Select failed!");
-            break;
-         }
-         mon.DeActivate(sock);
-         TMessage *reply;
-         if (sock->Recv(reply) <= 0) {
-            MarkBad(slave, "receive failed after kPROOF_GETOUTPUTLIST request");
-   //         Error("GetOutputList","Recv failed! for slave-%d (%s)",
-   //               slave->GetOrdinal(), slave->GetName());
-            continue;
-         }
-         if (reply->What() != kPROOF_GETOUTPUTNAMES ) {
-   //         Error("GetOutputList","unexpected message %d from slawe-%d (%s)",  reply->What(),
-   //               slave->GetOrdinal(), slave->GetName());
-            MarkBad(slave, "wrong reply to kPROOF_GETOUTPUTLIST request");
-            continue;
-         }
-         TList* l;
-
-         (*reply) >> l;
-         TIter next(l);
-         TNamed *n;
-         while ( (n = dynamic_cast<TNamed*> (next())) ) {
-            if (!outputList->FindObject(n->GetName()))
-               outputList->Add(n);
-         }
-         delete reply;
+      mon.DeActivate(sock);
+      TMessage *reply;
+      if (sock->Recv(reply) <= 0) {
+         MarkBad(slave, "receive failed after kPROOF_GETOUTPUTLIST request");
+//         Error("GetOutputList","Recv failed! for slave-%d (%s)",
+//               slave->GetOrdinal(), slave->GetName());
+         continue;
       }
-      ((TProof*)gProof)->fCurrentMonitor = 0;
+      if (reply->What() != kPROOF_GETOUTPUTNAMES ) {
+//         Error("GetOutputList","unexpected message %d from slawe-%d (%s)",  reply->What(),
+//               slave->GetOrdinal(), slave->GetName());
+         MarkBad(slave, "wrong reply to kPROOF_GETOUTPUTLIST request");
+         continue;
+      }
+      TList* l;
 
-      return outputList;
-   */
+      (*reply) >> l;
+      TIter next(l);
+      TNamed *n;
+      while ( (n = dynamic_cast<TNamed*> (next())) ) {
+         if (!outputList->FindObject(n->GetName()))
+            outputList->Add(n);
+      }
+      delete reply;
+   }
+   ((TProof*)gProof)->fCurrentMonitor = 0;
+
+   return outputList;
+*/
 }
 
 //______________________________________________________________________________
@@ -6526,22 +6545,22 @@ void *TProof::SlaveStartupThread(void *arg)
 
    TProofThreadArg *ta = (TProofThreadArg *)arg;
 
-   PDB(kGlobal, 1)
-   ::Info("TProof::SlaveStartupThread",
-          "Starting slave %s on host %s", ta->fOrd.Data(), ta->fUrl->GetHost());
+   PDB(kGlobal,1)
+      ::Info("TProof::SlaveStartupThread",
+             "Starting slave %s on host %s", ta->fOrd.Data(), ta->fUrl->GetHost());
 
    TSlave *sl = 0;
    if (ta->fType == TSlave::kSlave) {
       // Open the connection
       sl = ta->fProof->CreateSlave(ta->fUrl->GetUrl(), ta->fOrd,
-            ta->fPerf, ta->fImage, ta->fWorkdir);
+                                   ta->fPerf, ta->fImage, ta->fWorkdir);
       // Finalize setup of the server
       if (sl && sl->IsValid())
          sl->SetupServ(TSlave::kSlave, 0);
    } else {
       // Open the connection
       sl = ta->fProof->CreateSubmaster(ta->fUrl->GetUrl(), ta->fOrd,
-            ta->fImage, ta->fMsd);
+                                       ta->fImage, ta->fMsd);
       // Finalize setup of the server
       if (sl && sl->IsValid())
          sl->SetupServ(TSlave::kMaster, ta->fWorkdir);
@@ -6549,8 +6568,7 @@ void *TProof::SlaveStartupThread(void *arg)
 
    if (sl && sl->IsValid()) {
 
-      {
-         R__LOCKGUARD2(gProofMutex);
+      {  R__LOCKGUARD2(gProofMutex);
 
          // Add to the started slaves list
          ta->fSlaves->Add(sl);
@@ -6563,10 +6581,10 @@ void *TProof::SlaveStartupThread(void *arg)
       }
 
       // Notify we are done
-      PDB(kGlobal, 1)
-      ::Info("TProof::SlaveStartupThread",
-             "slave %s on host %s created and added to list",
-             ta->fOrd.Data(), ta->fUrl->GetHost());
+      PDB(kGlobal,1)
+         ::Info("TProof::SlaveStartupThread",
+                "slave %s on host %s created and added to list",
+                ta->fOrd.Data(), ta->fUrl->GetHost());
    } else {
       // Failure
       SafeDelete(sl);
@@ -6629,7 +6647,7 @@ void TProof::ShowLog(const char *queryref)
             TQueryResult *qr = 0;
             while ((qr = (TQueryResult *) nxq()))
                if (strstr(queryref, qr->GetTitle()) &&
-                     strstr(queryref, qr->GetName()))
+                   strstr(queryref, qr->GetName()))
                   break;
             if (qr) {
                PutLog(qr);
@@ -6694,7 +6712,7 @@ void TProof::ShowLog(Int_t qry)
          return;
       } else {
          if (gDebug > 0)
-            Info("ShowLog", "query %d not found in list", qry);
+            Info("ShowLog","query %d not found in list", qry);
          qry = -1;
       }
    }
@@ -6705,8 +6723,8 @@ void TProof::ShowLog(Int_t qry)
    // Perhaps nothing
    if (tolog <= 0)
 
-      // Set starting point
-      lseek(fileno(fLogFileR), (off_t) startlog, SEEK_SET);
+   // Set starting point
+   lseek(fileno(fLogFileR), (off_t) startlog, SEEK_SET);
 
    // Now we go
    Int_t np = 0;
@@ -6733,7 +6751,7 @@ void TProof::ShowLog(Int_t qry)
          np++;
 
          // Ask if more is wanted
-         if (!(np % 10)) {
+         if (!(np%10)) {
             char *opt = Getline("More (y/n)? [y]");
             if (opt[0] == 'n')
                break;
@@ -6796,11 +6814,11 @@ void TProof::Detach(Option_t *opt)
    TSlave *sl = (TSlave *) fActiveSlaves->First();
    TSocket *s = 0;
    if (!sl || !(sl->IsValid()) || !(s = sl->GetSocket())) {
-      Error("Detach", "corrupted worker instance: wrk:%p, sock:%p", sl, s);
+      Error("Detach","corrupted worker instance: wrk:%p, sock:%p", sl, s);
       return;
    }
 
-   Bool_t shutdown = (strchr(opt, 's') || strchr(opt, 'S')) ? kTRUE : kFALSE;
+   Bool_t shutdown = (strchr(opt,'s') || strchr(opt,'S')) ? kTRUE : kFALSE;
 
    // If processing, try to stop processing first
    if (shutdown && !IsIdle()) {
@@ -6810,7 +6828,7 @@ void TProof::Detach(Option_t *opt)
       Long_t timeout = gEnv->GetValue("Proof.ShutdownTimeout", 60);
       timeout = (timeout > 20) ? timeout : 20;
       // Send stop signal
-      StopProcess(kFALSE, (Long_t)(timeout / 2));
+      StopProcess(kFALSE, (Long_t) (timeout / 2));
       // Receive results
       Collect(kActive, timeout);
    }
@@ -6878,10 +6896,10 @@ void TProof::SetAlias(const char *alias)
 
 //______________________________________________________________________________
 Int_t TProof::UploadDataSet(const char *dataSetName,
-      TList *files,
-      const char *desiredDest,
-      Int_t opt,
-      TList *skippedFiles)
+                            TList *files,
+                            const char *desiredDest,
+                            Int_t opt,
+                            TList *skippedFiles)
 {
    // Upload a set of files and save the list of files by name dataSetName.
    // The 'files' argument is a list of TFileInfo objects describing the files
@@ -6912,7 +6930,7 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
 
    if (fProtocol < 15) {
       Info("UploadDataSet", "functionality not available: the server has an"
-           " incompatible version of TFileInfo");
+                            " incompatible version of TFileInfo");
       return -1;
    }
 
@@ -6925,14 +6943,14 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
       }
    }
    if (((opt & kOverwriteAllFiles) && (opt & kOverwriteNoFiles))
-         || ((opt & kNoOverwriteDataSet) && (opt & kAppend))
-         || ((opt & kOverwriteDataSet) && (opt & kAppend))
-         || ((opt & kNoOverwriteDataSet) && (opt & kOverwriteDataSet))
-         || ((opt & kAskUser) && (opt & (kOverwriteDataSet |
-               kNoOverwriteDataSet |
-               kAppend |
-               kOverwriteAllFiles |
-               kOverwriteNoFiles)))) {
+       || ((opt & kNoOverwriteDataSet) && (opt & kAppend))
+       || ((opt & kOverwriteDataSet) && (opt & kAppend))
+       || ((opt & kNoOverwriteDataSet) && (opt & kOverwriteDataSet))
+       || ((opt & kAskUser) && (opt & (kOverwriteDataSet |
+                                   kNoOverwriteDataSet |
+                                   kAppend |
+                                   kOverwriteAllFiles |
+                                   kOverwriteNoFiles)))) {
       Error("UploadDataSet", "you specified contradicting options.");
       return kError;
    }
@@ -6980,7 +6998,7 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
          //We ask user to agree on overwriting the dataset name
          while (goodName == -1 && !overwriteNoDataSet) {
             Info("UploadDataSet", "dataset %s already exist. ",
-                 dataSetName);
+                   dataSetName);
             Info("UploadDataSet", "do you want to overwrite it[Yes/No/Append]?");
             TString answer;
             answer.ReadToken(cin);
@@ -7000,9 +7018,9 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
    if (goodName == 1) {  //must be == 1 as -1 was used for a bad name!
       //Code for enforcing writing in user "home dir" only
       char *relativeDestDir = Form("%s/%s/",
-            gSystem->GetUserInfo()->fUser.Data(),
-            desiredDest ? desiredDest : "");
-      //Consider adding dataSetName to the path
+                                   gSystem->GetUserInfo()->fUser.Data(),
+                                   desiredDest?desiredDest:"");
+                                   //Consider adding dataSetName to the path
 
       relativeDestDir = CollapseSlashesInPath(relativeDestDir);
       TString dest = Form("%s/%s", GetDataPoolUrl(), relativeDestDir);
@@ -7021,7 +7039,7 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
 
             Int_t goodFileName = 1;
             if (!overwriteAll &&
-                  gSystem->AccessPathName(Form("%s/%s", dest.Data(), ent), kFileExists)
+               gSystem->AccessPathName(Form("%s/%s", dest.Data(), ent), kFileExists)
                   == kFALSE) {  //Destination file exists
                goodFileName = -1;
                while (goodFileName == -1 && !overwriteAll && !overwriteNone) {
@@ -7044,7 +7062,7 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
             if (goodFileName == 1 || overwriteAll) {
                //must be == 1 as -1 was meant for bad name!
                Info("UploadDataSet", "Uploading %s to %s/%s",
-                    fileUrl->GetUrl(), dest.Data(), ent);
+                      fileUrl->GetUrl(), dest.Data(), ent);
                if (TFile::Cp(fileUrl->GetUrl(), Form("%s/%s", dest.Data(), ent))) {
                   fileList->GetList()->Add(new TFileInfo(Form("%s/%s", dest.Data(), ent)));
                } else
@@ -7080,10 +7098,10 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
 
 //______________________________________________________________________________
 Int_t TProof::UploadDataSet(const char *dataSetName,
-      const char *files,
-      const char *desiredDest,
-      Int_t opt,
-      TList *skippedFiles)
+                            const char *files,
+                            const char *desiredDest,
+                            Int_t opt,
+                            TList *skippedFiles)
 {
    // Upload a set of files and save the list of files by name dataSetName.
    // The mask 'opt' is a combination of EUploadOpt:
@@ -7106,7 +7124,7 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
 
    if (fProtocol < 15) {
       Info("UploadDataSet", "functionality not available: the server has an"
-           " incompatible version of TFileInfo");
+                            " incompatible version of TFileInfo");
       return -1;
    }
 
@@ -7115,7 +7133,7 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
    void *dataSetDir = gSystem->OpenDirectory(gSystem->DirName(files));
    const char* ent;
    TString filesExp(gSystem->BaseName(files));
-   filesExp.ReplaceAll("*", ".*");
+   filesExp.ReplaceAll("*",".*");
    TRegexp rg(filesExp);
    while ((ent = gSystem->GetDirEntry(dataSetDir))) {
       TString entryString(ent);
@@ -7131,14 +7149,14 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
       Printf("No files match your selection. The dataset will not be saved");
    else
       fileCount = UploadDataSet(dataSetName, &fileList, desiredDest,
-                  opt, skippedFiles);
+                                opt, skippedFiles);
    return fileCount;
 }
 
 //______________________________________________________________________________
 Int_t TProof::UploadDataSetFromFile(const char *dataset, const char *file,
-      const char *dest, Int_t opt,
-      TList *skippedFiles)
+                                    const char *dest, Int_t opt,
+                                    TList *skippedFiles)
 {
    // Upload files listed in "file" to PROOF cluster.
    // Where file = name of file containing list of files and
@@ -7148,7 +7166,7 @@ Int_t TProof::UploadDataSetFromFile(const char *dataset, const char *file,
 
    if (fProtocol < 15) {
       Info("UploadDataSetFromFile", "functionality not available: the server has an"
-           " incompatible version of TFileInfo");
+                                    " incompatible version of TFileInfo");
       return -1;
    }
 
@@ -7172,7 +7190,7 @@ Int_t TProof::UploadDataSetFromFile(const char *dataset, const char *file,
               "no files match your selection. The dataset will not be saved");
       else
          fileCount = UploadDataSet(dataset, &fileList, dest,
-                     opt, skippedFiles);
+                                   opt, skippedFiles);
    } else {
       Error("UploadDataSetFromFile", "unable to open the specified file");
    }
@@ -7182,7 +7200,7 @@ Int_t TProof::UploadDataSetFromFile(const char *dataset, const char *file,
 
 //______________________________________________________________________________
 Bool_t TProof::RegisterDataSet(const char *dataSetName,
-      TFileCollection *dataSet, const char* optStr)
+                               TFileCollection *dataSet, const char* optStr)
 {
    // Register the 'dataSet' on the cluster under the current
    // user, group and the given 'dataSetName'.
@@ -7245,8 +7263,8 @@ TMap *TProof::GetDataSets(const char *uri, const char* optStr)
 
    TMessage mess(kPROOF_DATASETS);
    mess << Int_t(kGetDataSets);
-   mess << TString(uri ? uri : "");
-   mess << TString(optStr ? optStr : "");
+   mess << TString(uri?uri:"");
+   mess << TString(optStr?optStr:"");
    Broadcast(mess);
    Collect(kActive, fCollectTimeout);
 
@@ -7289,8 +7307,8 @@ void TProof::ShowDataSets(const char *uri, const char* optStr)
 
    TMessage mess(kPROOF_DATASETS);
    mess << Int_t(kShowDataSets);
-   mess << TString(uri ? uri : "");
-   mess << TString(optStr ? optStr : "");
+   mess << TString(uri?uri:"");
+   mess << TString(optStr?optStr:"");
    Broadcast(mess);
 
    Collect(kActive, fCollectTimeout);
@@ -7306,7 +7324,7 @@ TFileCollection *TProof::GetDataSet(const char *uri, const char* optStr)
 
    if (fProtocol < 15) {
       Info("GetDataSet", "functionality not available: the server has an"
-           " incompatible version of TFileInfo");
+                         " incompatible version of TFileInfo");
       return 0;
    }
 
@@ -7319,8 +7337,8 @@ TFileCollection *TProof::GetDataSet(const char *uri, const char* optStr)
    }
    TMessage nameMess(kPROOF_DATASETS);
    nameMess << Int_t(kGetDataSet);
-   nameMess << TString(uri ? uri : "");
-   nameMess << TString(optStr ? optStr : "");
+   nameMess << TString(uri?uri:"");
+   nameMess << TString(optStr?optStr:"");
    if (Broadcast(nameMess) < 0)
       Error("GetDataSet", "sending request failed");
 
@@ -7351,7 +7369,7 @@ void TProof::ShowDataSet(const char *uri, const char* opt)
       fileList->Print(opt);
       delete fileList;
    } else
-      Warning("ShowDataSet", "no such dataset: %s", uri);
+      Warning("ShowDataSet","no such dataset: %s", uri);
 }
 
 //______________________________________________________________________________
@@ -7369,8 +7387,8 @@ Int_t TProof::RemoveDataSet(const char *uri, const char* optStr)
    }
    TMessage nameMess(kPROOF_DATASETS);
    nameMess << Int_t(kRemoveDataSet);
-   nameMess << TString(uri ? uri : "");
-   nameMess << TString(optStr ? optStr : "");
+   nameMess << TString(uri?uri:"");
+   nameMess << TString(optStr?optStr:"");
    if (Broadcast(nameMess) < 0)
       Error("RemoveDataSet", "sending request failed");
    Collect(kActive, fCollectTimeout);
@@ -7386,7 +7404,7 @@ TList* TProof::FindDataSets(const char* /*searchString*/, const char* /*optStr*/
 {
    // Find datasets, returns in a TList all found datasets.
 
-   Error("FindDataSets", "not yet implemented");
+   Error ("FindDataSets", "not yet implemented");
    return (TList *) 0;
 }
 
@@ -7398,7 +7416,7 @@ Int_t TProof::VerifyDataSet(const char *uri, const char* optStr)
 
    if (fProtocol < 15) {
       Info("VerifyDataSet", "functionality not available: the server has an"
-           " incompatible version of TFileInfo");
+                            " incompatible version of TFileInfo");
       return kError;
    }
 
@@ -7441,7 +7459,7 @@ TMap *TProof::GetDataSetQuota(const char* optStr)
 
    TMessage mess(kPROOF_DATASETS);
    mess << Int_t(kGetQuota);
-   mess << TString(optStr ? optStr : "");
+   mess << TString(optStr?optStr:"");
    Broadcast(mess);
 
    Collect(kActive, fCollectTimeout);
@@ -7483,7 +7501,7 @@ void TProof::ShowDataSetQuota(Option_t* opt)
 
    TMessage mess(kPROOF_DATASETS);
    mess << Int_t(kShowQuota);
-   mess << TString(opt ? opt : "");
+   mess << TString(opt?opt:"");
    Broadcast(mess);
 
    Collect();
@@ -7599,7 +7617,7 @@ void TProof::ModifyWorkerLists(const char *ord, Bool_t add)
 
 //_____________________________________________________________________________
 TProof *TProof::Open(const char *cluster, const char *conffile,
-      const char *confdir, Int_t loglevel)
+                                   const char *confdir, Int_t loglevel)
 {
    // Start a PROOF session on a specific cluster. If cluster is 0 (the
    // default) then the PROOF Session Viewer GUI pops up and 0 is returned.
@@ -7672,7 +7690,7 @@ TProof *TProof::Open(const char *cluster, const char *conffile,
                port = sport.Atoi();
             if (port > 0) {
                // Set the relevant variables
-               ::Info("TProof::Open", "using tunnel at %s:%d", host.Data(), port);
+               ::Info("TProof::Open","using tunnel at %s:%d", host.Data(), port);
                gEnv->SetValue("XNet.SOCKS4Host", host);
                gEnv->SetValue("XNet.SOCKS4Port", port);
             } else {
@@ -7688,7 +7706,7 @@ TProof *TProof::Open(const char *cluster, const char *conffile,
       Int_t locid = -1;
       Bool_t create = kFALSE;
       if (o.Length() > 0) {
-         if (o.BeginsWith("N", TString::kIgnoreCase)) {
+         if (o.BeginsWith("N",TString::kIgnoreCase)) {
             create = kTRUE;
          } else if (o.IsDigit()) {
             locid = o.Atoi();
@@ -7777,7 +7795,7 @@ void TProof::AddEnvVar(const char *name, const char *value)
    // Add an variable to the list of environment variables passed to proofserv
    // on the master and slaves
 
-   if (gDebug > 0) ::Info("TProof::AddEnvVar", "%s=%s", name, value);
+   if (gDebug > 0) ::Info("TProof::AddEnvVar","%s=%s", name, value);
 
    if (fgProofEnvList == 0) {
       // initialize the list if needed
@@ -7831,20 +7849,20 @@ void TProof::SaveWorkerInfo()
 
    // We must have a server defined
    if (!gProofServ) {
-      Error("SaveWorkerInfo", "gProofServ undefined");
+      Error("SaveWorkerInfo","gProofServ undefined");
       return;
    }
 
    // The relevant lists must be defined
    if (!fSlaves && !fBadSlaves) {
-      Warning("SaveWorkerInfo", "all relevant worker lists is undefined");
+      Warning("SaveWorkerInfo","all relevant worker lists is undefined");
       return;
    }
 
    // Create or truncate the file first
    TString fnwrk = Form("%s/.workers",
-         gSystem->DirName(gProofServ->GetSessionDir()));
-   FILE *fwrk = fopen(fnwrk.Data(), "w");
+                        gSystem->DirName(gProofServ->GetSessionDir()));
+   FILE *fwrk = fopen(fnwrk.Data(),"w");
    if (!fwrk) {
       Error("SaveWorkerInfo",
             "cannot open %s for writing (errno: %d)", fnwrk.Data(), errno);
@@ -7857,9 +7875,9 @@ void TProof::SaveWorkerInfo()
    while ((wrk = (TSlave *) nxa())) {
       Int_t status = (fBadSlaves && fBadSlaves->FindObject(wrk)) ? 0 : 1;
       // Write out record for this worker
-      fprintf(fwrk, "%s@%s:%d %d %s %s.log\n",
-              wrk->GetUser(), wrk->GetName(), wrk->GetPort(), status,
-              wrk->GetOrdinal(), wrk->GetWorkDir());
+      fprintf(fwrk,"%s@%s:%d %d %s %s.log\n",
+                   wrk->GetUser(), wrk->GetName(), wrk->GetPort(), status,
+                   wrk->GetOrdinal(), wrk->GetWorkDir());
    }
 
    // Close file

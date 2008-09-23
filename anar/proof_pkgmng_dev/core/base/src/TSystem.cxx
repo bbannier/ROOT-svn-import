@@ -938,7 +938,7 @@ const char *TSystem::DirName(const char *pathname)
       // Then find the next non slash
       while ( r>buf && *(r)!='/') { --r; }
       // Then skip duplicate slashes
-      // Note the 'r>buf' is a strict comparaison to allows '/topdir' to return '/'
+      // Note the 'r>buf' is a strict comparison to allows '/topdir' to return '/'
       while ( r>buf && *(r)=='/') { --r; }            
       // And finally terminate the string to drop off the filename
       *(r+1) = '\0';
@@ -2511,8 +2511,14 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 
    }
 
-   TString emergency_loc = TempDirectory();
-
+   TString emergency_loc;
+   UserGroup_t *ug = gSystem->GetUserInfo(gSystem->GetUid());
+   if (ug) {
+      AssignAndDelete( emergency_loc, ConcatFileName( TempDirectory(), ug->fUser ) );
+   } else {
+      emergency_loc = TempDirectory();
+   }
+   
    Bool_t canWrite = !gSystem->AccessPathName(build_loc,kWritePermission);
 
    Bool_t modified = kFALSE;
