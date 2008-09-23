@@ -85,6 +85,7 @@ public:
       fDebug(3),
 #endif 
       fStrategy(1),
+      fStatus(-1),
       fMaxCalls(0), 
       fMaxIter(0),
       fTol(1.E-6), 
@@ -230,6 +231,14 @@ public:
       return ( tmp < 0) ? 0 : CovMatrix(i,j) / std::sqrt( tmp );  
    }
 
+   /**
+      return global correlation coefficient for variable i
+      This is a number between zero and one which gives 
+      the correlation between the i-th parameter  and that linear combination of all 
+      other parameters which is most strongly correlated with i.
+      Minimizer must overload method if implemented 
+    */
+   virtual double GlobalCC(unsigned int ) const { return -1; }
 
    /// minos error for variable i, return false if Minos failed or not supported 
    virtual bool GetMinosError(unsigned int /* i */, double & errLow, double & errUp) { 
@@ -239,6 +248,9 @@ public:
 
    /// return reference to the objective function
    ///virtual const ROOT::Math::IGenFunction & Function() const = 0; 
+
+   /// print the result according to set level. 
+   virtual void PrintResults() {}
 
 
    /** minimizer configuration parameters **/
@@ -258,8 +270,11 @@ public:
    /// strategy 
    int Strategy() const { return fStrategy; }
 
+   /// status code of minimizer 
+   int Status() const { return fStatus; } 
+
    /// return the statistical scale used for calculate the error
-   /// is typically 1 for Chi2 minimizetion and 0.5 for likelihood's
+   /// is typically 1 for Chi2 and 0.5 for likelihood minimization
    double ErrorUp() const { return fUp; } 
 
    ///return true if Minimizer has performed a detailed error validation (e.g. run Hesse for Minuit)
@@ -288,7 +303,6 @@ public:
 
 
 
-
 protected: 
 
 
@@ -301,6 +315,7 @@ protected:
    bool fValidError;            // flag to control if errors have been validated (Hesse has been run in case of Minuit)
    int fDebug;                  // print level
    int fStrategy;               // minimizer strategy
+   int fStatus;                 // status of minimizer    
    unsigned int fMaxCalls;      // max number of funciton calls 
    unsigned int fMaxIter;       // max number or iterations used to find the minimum
    double fTol;                 // tolerance (absolute)

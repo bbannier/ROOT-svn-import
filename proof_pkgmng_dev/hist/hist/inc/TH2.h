@@ -41,9 +41,11 @@ protected:
    Double_t     fTsumwy2;         //Total Sum of weight*Y*Y
    Double_t     fTsumwxy;         //Total Sum of weight*X*Y
 
-   virtual Int_t    BufferFill(Double_t, Double_t) {return -2;} //may not use
-   virtual Int_t    BufferFill(Double_t x, Double_t y, Double_t w);
-   virtual TH1D    *DoProjection(const char *name, bool onX, Int_t firstbin, Int_t lastbin, Option_t *option) const;
+   virtual Int_t     BufferFill(Double_t, Double_t) {return -2;} //may not use
+   virtual Int_t     BufferFill(Double_t x, Double_t y, Double_t w);
+   virtual TH1D     *DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbin, Option_t *option) const;
+   virtual TProfile *DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastbin, Option_t *option) const;
+   virtual void      DoFitSlices(bool onX, TF1 *f1, Int_t firstbin, Int_t lastbin, Int_t cut, Option_t *option, TObjArray* arr);
 
 public:
    TH2();
@@ -83,6 +85,9 @@ public:
    virtual Double_t Integral(Int_t, Int_t, Option_t * ="") const {return 0;}
    virtual Double_t Integral(Int_t firstxbin, Int_t lastxbin, Int_t firstybin, Int_t lastybin, Option_t *option="") const;
    virtual Double_t Integral(Int_t, Int_t, Int_t, Int_t, Int_t, Int_t, Option_t * ="") const {return 0;}
+   virtual Double_t Interpolate(Double_t x);
+   virtual Double_t Interpolate(Double_t x, Double_t y);
+   virtual Double_t Interpolate(Double_t x, Double_t y, Double_t z);
    virtual Double_t KolmogorovTest(const TH1 *h2, Option_t *option="") const;
    virtual Long64_t Merge(TCollection *list);
    virtual TH2     *RebinX(Int_t ngroup=2, const char *newname="");
