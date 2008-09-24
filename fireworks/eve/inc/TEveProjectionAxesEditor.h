@@ -31,7 +31,7 @@ protected:
 
    TGComboBox      *fLabMode;
    TGComboBox      *fAxesMode;
-   TEveGValuator   *fNdiv;         // tick-mark number widget
+   TEveGValuator   *fStep;         // step size widget
 
 
    TGVerticalFrame *fCenterFrame;  // Parent frame for Center tab.
@@ -49,7 +49,7 @@ public:
 
    void DoLabMode(Int_t type);
    void DoAxesMode(Int_t type);
-   void DoNdiv();
+   void DoStep();
 
    void DoDrawCenter();
    void DoDrawOrigin();

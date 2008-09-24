@@ -61,25 +61,78 @@ void TEveProjectionAxesGL::SetBBox()
 }
 
 //______________________________________________________________________________
-void TEveProjectionAxesGL::DrawTickMarks(Bool_t horizontal, Float_t tmSize) const
+void TEveProjectionAxesGL::DrawScales(Bool_t horizontal, TGLFont& font, Float_t tmSize) const
 {
-   // Draw tick-marks on the current axis.
+   // Draw labels and tick-marks.
 
+   // tick-marks
+   Float_t off = 1.5*tmSize;
    glBegin(GL_LINES);
-   for (std::list<TM_t>::iterator it = fTMList.begin(); it != fTMList.end(); ++it)
+   Int_t cnt = 0;
+   Int_t nsd = fM->GetNSecDiv();
+   Float_t mh = tmSize*0.5;
+   for (TMVec_t::iterator it = fTickMarks.begin(); it != fTickMarks.end(); ++it)
    {
       if (horizontal)
       {
-         glVertex2f((*it).first, 0);
-         glVertex2f((*it).first, tmSize);
+         glVertex2f(*it, 0);
+         glVertex2f(*it, (cnt%nsd)? mh:tmSize);
       }
       else
       {
-         glVertex2f(0, (*it).first);
-         glVertex2f(tmSize, (*it).first);
+         glVertex2f(0, *it);
+         glVertex2f((cnt%nsd)? mh:tmSize, *it);
       }
+      cnt++;
    }
    glEnd();
+
+   // labels
+   TGLFont::ETextAlign_e align;
+   if (horizontal)
+      align = (off > 0) ? TGLFont::kCenterUp : TGLFont::kCenterDown;
+   else
+      align = (off > 0) ? TGLFont::kRight : TGLFont::kLeft;
+
+   // move from center out to be symetric
+   Int_t minIdx = TMath::BinarySearch(fTickMarks.size(), &fTickMarks[0], 0.f);
+   minIdx /= fM->GetNSecDiv();
+   Int_t nl = fLabVec.size();
+   const char* txt;
+
+   // right
+   Float_t prev = fLabVec[minIdx-1].first;
+   Float_t minDist = TMath::Abs(tmSize*5);
+   for (Int_t i=minIdx; i<nl; ++i)
+   {
+      txt =TEveUtil::FormAxisValue(fLabVec[i].second);
+      if (i > (minIdx) && (fLabVec[i].first - prev) < minDist)
+         continue;
+
+      if (horizontal) 
+         font.RenderBitmap(txt, fLabVec[i].first, off, 0, align);
+      else
+         font.RenderBitmap(txt, off, fLabVec[i].first, 0, align);
+
+      prev = fLabVec[i].first;
+   }
+
+
+   prev = fLabVec[minIdx].first;  
+   minIdx -= 1;
+   // left
+   for (Int_t i=minIdx; i>=0; --i)
+   {
+      if ((prev - fLabVec[i].first) < minDist)
+        continue;
+ 
+      txt =TEveUtil::FormAxisValue(fLabVec[i].second);
+      if (horizontal) 
+         font.RenderBitmap(txt, fLabVec[i].first, off, 0, align);
+      else
+         font.RenderBitmap(txt, off, fLabVec[i].first, 0, align);
+      prev = fLabVec[i].first;
+   }
 }
 
 //______________________________________________________________________________
@@ -87,11 +140,8 @@ void TEveProjectionAxesGL::SplitInterval(Float_t p1, Float_t p2, Int_t ax) const
 {
    // Build an array of tick-mark position-value pairs.
 
-   Float_t down = fProjection->GetLimit(ax, kFALSE)*0.95;
-   p1 = TMath::Max(p1, down);
-
-   Float_t up = fProjection->GetLimit(ax, kTRUE)*0.95;
-   p2 = TMath::Min(p2, up);
+   fLabVec.clear();
+   fTickMarks.clear();
 
    if (fM->GetLabMode() == TEveProjectionAxes::kValue)
    {
@@ -108,19 +158,21 @@ void TEveProjectionAxesGL::SplitIntervalByPos(Float_t p1, Float_t p2, Int_t ax) 
 {
    // Add tick-marks at equidistant position.
 
-   Float_t step = (p2-p1)/fM->GetNdivisions();
+   Float_t step = fProjection->GetScreenVal(ax, fM->GetStep());
+   Int_t nsd = fM->GetNSecDiv();
+   Float_t ss = step/nsd;
 
-   TEveVector zeroPos;
-   fProjection->ProjectVector(zeroPos);
-   Float_t p = zeroPos.fX;
-   while (p > p1) {
-      fTMList.push_back(TM_t(p , fProjection->GetValForScreenPos(ax, p)));
-      p -= step;
-   }
+   Int_t n1=Int_t(p1/step);
+   Int_t n2=Int_t(p2/step);
+   Float_t p = n1*step;
 
-   p = zeroPos.fX + step;
-   while (p < p2) {
-      fTMList.push_back(TM_t(p , fProjection->GetValForScreenPos(ax, p)));
+   for (Int_t l=n1; l<=n2; l++)
+   {
+      fLabVec.push_back(Lab_t(p , fProjection->GetValForScreenPos(ax, p)));
+      for (Int_t i=0; i<nsd; i++)
+      {
+         fTickMarks.push_back(p + i*ss);
+      }
       p += step;
    }
 }
@@ -130,17 +182,21 @@ void TEveProjectionAxesGL::SplitIntervalByVal(Float_t v1, Float_t v2, Int_t ax) 
 {
    // Add tick-marks on fixed value step.
 
-   Float_t step = (v2-v1)/fM->GetNdivisions();
+   Float_t step = fM->GetStep();
+   Int_t nsd = fM->GetNSecDiv();
+   Float_t ss = step/nsd;
 
-   Float_t v = 0.f;
-   while (v > v1) {
-      fTMList.push_back(TM_t(fProjection->GetScreenVal(ax, v) , v));
-      v -= step;
-   }
+   Int_t n1 = Int_t (v1/step);
+   Int_t n2 = Int_t (v2/step);
+   Float_t v = n1*step;
 
-   v = step;
-   while (v < v2) {
-      fTMList.push_back(TM_t(fProjection->GetScreenVal(ax, v) , v));
+   for (Int_t l=n1; l<=n2; l++)
+   {
+      fLabVec.push_back(Lab_t(fProjection->GetScreenVal(ax, v) , v));
+      for (Int_t i=0; i<nsd; i++)
+      {
+         fTickMarks.push_back(fProjection->GetScreenVal(ax, v+i*ss));
+      }
       v += step;
    }
 }
@@ -154,9 +210,10 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    if (rnrCtx.Selection() || rnrCtx.Highlight()) return;
 
    fProjection = fM->GetManager()->GetProjection();
+   Float_t bf = 1.2; // epxand to see scales over bounding box
    Float_t bbox[6];
    for(Int_t i=0; i<6; i++)
-      bbox[i] = fM->GetManager()->GetBBox()[i];
+      bbox[i] = bf*fM->GetManager()->GetBBox()[i];
 
    // horizontal font setup
 
@@ -176,94 +233,70 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       rng = vp[2];
 
    Int_t fs =  TGLFontManager::GetFontSize(rng*fM->GetLabelSize(), 8, 36);
-
    rnrCtx.RegisterFont(fs, "arial", TGLFont::kPixmap, font);
    font.PreRender();
 
+   glPushMatrix();
    TGLMatrix modview;
    glGetDoublev(GL_MODELVIEW_MATRIX, modview.Arr());
    TGLVertex3 worldRef;
-   Float_t tms = rnrCtx.RefCamera().ViewportDeltaToWorld(worldRef, rng*0.01, 0, &modview).Mag();
-   Float_t off = 1.5*tms;
-
-   const char* txt;
+   TGLVector3 diff = rnrCtx.RefCamera().ViewportDeltaToWorld(worldRef, 1, 1, &modview);
+   Float_t tms = diff.X()*rng*0.02;
    Float_t uLim, dLim;
    Float_t start, end;
    Float_t limFac = 0.98;
    //______________________________________________________________________________
    // X-axis
 
-   fTMList.clear();
    if (fM->fAxesMode == TEveProjectionAxes::kAll
        || (fM->fAxesMode == TEveProjectionAxes::kHorizontal))
    {
       dLim = fProjection->GetLimit(0, 0)*limFac;
       uLim = fProjection->GetLimit(0, 1)*limFac;
-      start =  (l > dLim) ?  l : dLim;
-      end =    (r < uLim) ?  r : uLim;
-
+      start =  (bbox[0] > dLim) ?  bbox[0] : dLim;
+      end =    (bbox[1] < uLim) ?  bbox[1] : uLim;
       SplitInterval(start, end, 0);
       {
          // bottom
          glPushMatrix();
          glTranslatef((bbox[1]+bbox[0])*0.5, b, 0);
-         DrawTickMarks(kTRUE, tms);
-         for (std::list<TM_t>::iterator it = fTMList.begin(); it != fTMList.end(); ++it)
-         {
-            txt =TEveUtil::FormAxisValue((*it).second);
-            font.RenderBitmap(txt, (*it).first, +off, 0, TGLFont::kCenterUp);
-         }
+         DrawScales(kTRUE, font, tms);
          glPopMatrix();
       }
       {
          // top
          glPushMatrix();
          glTranslatef((bbox[1]+bbox[0])*0.5, t, 0);
-         DrawTickMarks(kTRUE, -tms);
-         for (std::list<TM_t>::iterator it = fTMList.begin(); it != fTMList.end(); ++it)
-         {
-            txt =TEveUtil::FormAxisValue((*it).second);
-            font.RenderBitmap(txt, (*it).first, -off, 0, TGLFont::kCenterDown);
-         }
+         DrawScales(kTRUE, font, -tms);
          glPopMatrix();
       }
    }
 
    // Y-axis
-   fTMList.clear();
    if (fM->fAxesMode == TEveProjectionAxes::kAll
        || (fM->fAxesMode == TEveProjectionAxes::kVertical))
    {
-      // left
       dLim = fProjection->GetLimit(1, 0)*limFac;
       uLim = fProjection->GetLimit(1, 1)*limFac;
-      start =  (b > dLim) ? b : dLim;
-      end =    (t < uLim) ? t : uLim;
-      SplitInterval(start, end, 0);
+      start =  (bbox[2] > dLim) ? bbox[2] : dLim;
+      end =    (bbox[3] < uLim) ? bbox[3] : uLim;
+      // left
+      SplitInterval(start, end, 1);
       {
          glPushMatrix();
          glTranslatef(l, (bbox[3]+bbox[2])*0.5, 0);
-         DrawTickMarks(kFALSE, tms);
-         for (std::list<TM_t>::iterator it = fTMList.begin(); it != fTMList.end(); ++it)
-         {
-            txt =TEveUtil::FormAxisValue((*it).second);
-            font.RenderBitmap(txt, +off, (*it).first, 0, TGLFont::kRight);
-         }
+         DrawScales(kFALSE, font, tms);
          glPopMatrix();
       }
       // right
       {
          glPushMatrix();
          glTranslatef(r, (bbox[3]+bbox[2])*0.5, 0);
-         DrawTickMarks(kFALSE, -tms);
-         for (std::list<TM_t>::iterator it = fTMList.begin(); it != fTMList.end(); ++it)
-         {
-            txt =TEveUtil::FormAxisValue((*it).second);
-            font.RenderBitmap(txt, -off, (*it).first, 0,  TGLFont::kLeft);
-         }
+         DrawScales(kFALSE, font, -tms);
          glPopMatrix();
       }
    }
 
+   glPopMatrix();
    font.PostRender();
 }
