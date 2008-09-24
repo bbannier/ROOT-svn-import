@@ -13,7 +13,7 @@
 #define ROOT_TEveProjectionAxesGL
 
 #include "TGLObject.h"
-#include <list>
+#include <vector>
 
 class TEveProjectionAxes;
 class TEveProjection;
@@ -25,13 +25,14 @@ private:
    TEveProjectionAxesGL(const TEveProjectionAxesGL&);            // Not implemented
    TEveProjectionAxesGL& operator=(const TEveProjectionAxesGL&); // Not implemented
 
+   typedef std::pair<Float_t, Float_t>    Lab_t; // tick-mark <pos, value> pair
+   typedef std::vector<Lab_t>             LabVec_t;
+   typedef std::vector<Float_t>  TMVec_t; // vector od tick lines
 
-   typedef std::pair<Float_t, Float_t>  TM_t; // tick-mark <pos, value> pair
-   typedef std::list<TM_t>              TMList_t;
+   mutable LabVec_t  fLabVec;    // list of tick-mark position-value pairs
+   mutable TMVec_t   fTickMarks;  // list of tick-mark position-value pairs
 
-   mutable TMList_t   fTMList;    // list of tick-mark position-value pairs
-
-   void               DrawTickMarks(Bool_t horizontal, Float_t tms) const;
+   void               DrawScales(Bool_t horizontal, TGLFont& font, Float_t tms) const;
 
    void               SplitInterval(Float_t x1, Float_t x2, Int_t axis) const;
    void               SplitIntervalByPos(Float_t min, Float_t max, Int_t axis)const;

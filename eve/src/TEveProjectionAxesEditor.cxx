@@ -32,7 +32,7 @@ TEveProjectionAxesEditor::TEveProjectionAxesEditor(const TGWindow *p, Int_t widt
 
    fLabMode(0),
    fAxesMode(0),
-   fNdiv(0),
+   fStep(0),
 
    fCenterFrame(0),
    fDrawCenter(0),
@@ -81,14 +81,14 @@ TEveProjectionAxesEditor::TEveProjectionAxesEditor(const TGWindow *p, Int_t widt
       AddFrame(f);
    }
 
-   fNdiv = new TEveGValuator(this, "Ndiv:", 70, 0);
-   fNdiv->SetLabelWidth(labw);
-   fNdiv->SetNELength(4);
-   fNdiv->SetShowSlider(kFALSE);
-   fNdiv->Build();
-   fNdiv->SetLimits(3, 50);
-   fNdiv->Connect("ValueSet(Double_t)", "TEveProjectionAxesEditor", this, "DoNdiv()");
-   AddFrame(fNdiv, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
+   fStep = new TEveGValuator(this, "Step:", 70, 0);
+   fStep->SetLabelWidth(labw);
+   fStep->SetNELength(6);
+   fStep->SetShowSlider(kFALSE);
+   fStep->Build();
+   fStep->SetLimits(0.1, 1000, 101, TGNumberFormat::kNESRealOne);
+   fStep->Connect("ValueSet(Double_t)", "TEveProjectionAxesEditor", this, "DoStep()");
+   AddFrame(fStep, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
 
    //______________________________________________________________________________
 
@@ -136,7 +136,7 @@ void TEveProjectionAxesEditor::SetModel(TObject* obj)
 
    fLabMode->Select(fM->GetLabMode(), kFALSE);
    fAxesMode->Select(fM->GetAxesMode(), kFALSE);
-   fNdiv->SetValue(fM->GetNdiv());
+   fStep->SetValue(fM->GetStep());
    fDrawCenter->SetState(fM->GetDrawCenter()  ? kButtonDown : kButtonUp);
    fDrawOrigin->SetState(fM->GetDrawOrigin()  ? kButtonDown : kButtonUp);
 
@@ -180,9 +180,10 @@ void TEveProjectionAxesEditor::DoAxesMode(Int_t mode)
    Update();
 }
 //______________________________________________________________________________
-void TEveProjectionAxesEditor::DoNdiv()
+void TEveProjectionAxesEditor::DoStep()
 {
-   // Slot for setting number of tick-marks.
-   fM->SetNdiv((Int_t)fNdiv->GetValue());
+   // Slot for setting step size.
+
+   fM->SetStep((Int_t)fStep->GetValue());
    Update();
 }
