@@ -39,13 +39,11 @@ TEveProjectionAxes::TEveProjectionAxes(TEveProjectionManager* m) :
    fAxesMode(kAll),
 
    fDrawCenter(kFALSE),
-   fDrawOrigin(kFALSE),
-
-   fStep(100),
-   fNSecDiv(5)
+   fDrawOrigin(kFALSE)
 {
    // Constructor.
 
+   fNdivisions = 1006; // primary np = n/100, secondary ns = n -np*100 
    fLabelSize = 0.015;
 
    fCanEditMainTrans = kFALSE;

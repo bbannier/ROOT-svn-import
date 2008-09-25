@@ -32,7 +32,7 @@ TEveProjectionAxesEditor::TEveProjectionAxesEditor(const TGWindow *p, Int_t widt
 
    fLabMode(0),
    fAxesMode(0),
-   fStep(0),
+   fNdivisions(0),
 
    fCenterFrame(0),
    fDrawCenter(0),
@@ -81,14 +81,14 @@ TEveProjectionAxesEditor::TEveProjectionAxesEditor(const TGWindow *p, Int_t widt
       AddFrame(f);
    }
 
-   fStep = new TEveGValuator(this, "Step:", 70, 0);
-   fStep->SetLabelWidth(labw);
-   fStep->SetNELength(6);
-   fStep->SetShowSlider(kFALSE);
-   fStep->Build();
-   fStep->SetLimits(0.1, 1000, 101, TGNumberFormat::kNESRealOne);
-   fStep->Connect("ValueSet(Double_t)", "TEveProjectionAxesEditor", this, "DoStep()");
-   AddFrame(fStep, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
+   fNdivisions = new TEveGValuator(this, "Ndivisions:", 70, 0);
+   fNdivisions->SetLabelWidth(labw);
+   fNdivisions->SetNELength(6);
+   fNdivisions->SetShowSlider(kFALSE);
+   fNdivisions->Build();
+   fNdivisions->SetLimits(100, 10000);
+   fNdivisions->Connect("ValueSet(Double_t)", "TEveProjectionAxesEditor", this, "DoNdivisions()");
+   AddFrame(fNdivisions, new TGLayoutHints(kLHintsTop, 1, 1, 1, 1));
 
    //______________________________________________________________________________
 
@@ -136,7 +136,7 @@ void TEveProjectionAxesEditor::SetModel(TObject* obj)
 
    fLabMode->Select(fM->GetLabMode(), kFALSE);
    fAxesMode->Select(fM->GetAxesMode(), kFALSE);
-   fStep->SetValue(fM->GetStep());
+   fNdivisions->SetValue(fM->GetNdivisions());
    fDrawCenter->SetState(fM->GetDrawCenter()  ? kButtonDown : kButtonUp);
    fDrawOrigin->SetState(fM->GetDrawOrigin()  ? kButtonDown : kButtonUp);
 
@@ -180,10 +180,10 @@ void TEveProjectionAxesEditor::DoAxesMode(Int_t mode)
    Update();
 }
 //______________________________________________________________________________
-void TEveProjectionAxesEditor::DoStep()
+void TEveProjectionAxesEditor::DoNdivisions()
 {
    // Slot for setting step size.
 
-   fM->SetStep((Int_t)fStep->GetValue());
+   fM->SetNdivisions((Int_t)fNdivisions->GetValue());
    Update();
 }
