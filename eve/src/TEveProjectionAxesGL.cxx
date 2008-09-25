@@ -12,6 +12,7 @@
 #include "TEveProjectionAxesGL.h"
 #include "TEveProjectionAxes.h"
 #include "TEveProjectionManager.h"
+#include "THLimitsFinder.h"
 
 #include "TGLIncludes.h"
 #include "TGLRnrCtx.h"
@@ -69,7 +70,7 @@ void TEveProjectionAxesGL::DrawScales(Bool_t horizontal, TGLFont& font, Float_t 
    Float_t off = 1.5*tmSize;
    glBegin(GL_LINES);
    Int_t cnt = 0;
-   Int_t nsd = fM->GetNSecDiv();
+   Int_t nsd = fTickMarks.size()/fLabVec.size();
    Float_t mh = tmSize*0.5;
    for (TMVec_t::iterator it = fTickMarks.begin(); it != fTickMarks.end(); ++it)
    {
@@ -96,7 +97,7 @@ void TEveProjectionAxesGL::DrawScales(Bool_t horizontal, TGLFont& font, Float_t 
 
    // move from center out to be symetric
    Int_t minIdx = TMath::BinarySearch(fTickMarks.size(), &fTickMarks[0], 0.f);
-   minIdx /= fM->GetNSecDiv();
+   minIdx /= nsd;
    Int_t nl = fLabVec.size();
    const char* txt;
 
@@ -109,7 +110,7 @@ void TEveProjectionAxesGL::DrawScales(Bool_t horizontal, TGLFont& font, Float_t 
       if (i > (minIdx) && (fLabVec[i].first - prev) < minDist)
          continue;
 
-      if (horizontal) 
+      if (horizontal)
          font.RenderBitmap(txt, fLabVec[i].first, off, 0, align);
       else
          font.RenderBitmap(txt, off, fLabVec[i].first, 0, align);
@@ -118,16 +119,16 @@ void TEveProjectionAxesGL::DrawScales(Bool_t horizontal, TGLFont& font, Float_t 
    }
 
 
-   prev = fLabVec[minIdx].first;  
+   prev = fLabVec[minIdx].first;
    minIdx -= 1;
    // left
    for (Int_t i=minIdx; i>=0; --i)
    {
       if ((prev - fLabVec[i].first) < minDist)
         continue;
- 
+
       txt =TEveUtil::FormAxisValue(fLabVec[i].second);
-      if (horizontal) 
+      if (horizontal)
          font.RenderBitmap(txt, fLabVec[i].first, off, 0, align);
       else
          font.RenderBitmap(txt, off, fLabVec[i].first, 0, align);
@@ -143,25 +144,36 @@ void TEveProjectionAxesGL::SplitInterval(Float_t p1, Float_t p2, Int_t ax) const
    fLabVec.clear();
    fTickMarks.clear();
 
+    // optimise linits
+   Int_t ndiv = fM->GetNdivisions();
+   Int_t n1a = TMath::FloorNint(ndiv/100);
+   Int_t n2a = ndiv-n1a*100;
+   Int_t bn1, bn2;
+   Double_t bw1, bw2; // bin with first second order
+   Double_t bl1, bh1, bl2, bh2; // bin low, high first second order
+
+   THLimitsFinder::Optimize(p1, p2, n1a, bl1, bh1, bn1, bw1);
+   THLimitsFinder::Optimize(bl1, bl1+bw1, n2a, bl2, bh2, bn2, bw2);
+   //    printf("%f labels %d sec tick \n", bw1, bn2);
+
    if (fM->GetLabMode() == TEveProjectionAxes::kValue)
    {
-      SplitIntervalByVal(fProjection->GetValForScreenPos(ax, p1), fProjection->GetValForScreenPos(ax, p2), ax);
+      SplitIntervalByVal(fProjection->GetValForScreenPos(ax, p1),
+                         fProjection->GetValForScreenPos(ax, p2),
+                         ax, bw1, bn2);
    }
    else if (fM->GetLabMode() == TEveProjectionAxes::kPosition)
    {
-      SplitIntervalByPos(p1, p2, ax);
+      SplitIntervalByPos(p1, p2, ax, bw1, bn2);
    }
 }
 
 //______________________________________________________________________________
-void TEveProjectionAxesGL::SplitIntervalByPos(Float_t p1, Float_t p2, Int_t ax) const
+void TEveProjectionAxesGL::SplitIntervalByPos(Float_t p1, Float_t p2, Int_t ax, Float_t step, Int_t nsd) const
 {
    // Add tick-marks at equidistant position.
 
-   Float_t step = fProjection->GetScreenVal(ax, fM->GetStep());
-   Int_t nsd = fM->GetNSecDiv();
    Float_t ss = step/nsd;
-
    Int_t n1=Int_t(p1/step);
    Int_t n2=Int_t(p2/step);
    Float_t p = n1*step;
@@ -178,14 +190,11 @@ void TEveProjectionAxesGL::SplitIntervalByPos(Float_t p1, Float_t p2, Int_t ax) 
 }
 
 //______________________________________________________________________________
-void TEveProjectionAxesGL::SplitIntervalByVal(Float_t v1, Float_t v2, Int_t ax) const
+void TEveProjectionAxesGL::SplitIntervalByVal(Float_t v1, Float_t v2, Int_t ax, Float_t step, Int_t nsd) const
 {
    // Add tick-marks on fixed value step.
 
-   Float_t step = fM->GetStep();
-   Int_t nsd = fM->GetNSecDiv();
    Float_t ss = step/nsd;
-
    Int_t n1 = Int_t (v1/step);
    Int_t n2 = Int_t (v2/step);
    Float_t v = n1*step;
@@ -210,51 +219,43 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    if (rnrCtx.Selection() || rnrCtx.Highlight()) return;
 
    fProjection = fM->GetManager()->GetProjection();
-   Float_t bf = 1.2; // epxand to see scales over bounding box
+   // draw axis orund bbox with offset
+   Float_t bsf = 1.2;
    Float_t bbox[6];
    for(Int_t i=0; i<6; i++)
-      bbox[i] = bf*fM->GetManager()->GetBBox()[i];
+      bbox[i] = bsf*fM->GetManager()->GetBBox()[i];
 
    // horizontal font setup
-
    Float_t l =  -rnrCtx.GetCamera()->FrustumPlane(TGLCamera::kLeft).D();
    Float_t r =   rnrCtx.GetCamera()->FrustumPlane(TGLCamera::kRight).D();
    Float_t t =   rnrCtx.GetCamera()->FrustumPlane(TGLCamera::kTop).D();
    Float_t b =  -rnrCtx.GetCamera()->FrustumPlane(TGLCamera::kBottom).D();
 
+   // font size relative to wiewport width
    TGLFont font;
-   Int_t rng;
    GLint    vp[4];
    glGetIntegerv(GL_VIEWPORT, vp);
-
-   if (fM->fAxesMode == TEveProjectionAxes::kAll || TEveProjectionAxes::kVertical)
-      rng = vp[3];
-   else
-      rng = vp[2];
-
-   Int_t fs =  TGLFontManager::GetFontSize(rng*fM->GetLabelSize(), 8, 36);
+   Int_t fs =  TGLFontManager::GetFontSize(TMath::Min(vp[2], vp[3])*fM->GetLabelSize(), 8, 36);
    rnrCtx.RegisterFont(fs, "arial", TGLFont::kPixmap, font);
    font.PreRender();
 
+
    glPushMatrix();
-   TGLMatrix modview;
-   glGetDoublev(GL_MODELVIEW_MATRIX, modview.Arr());
-   TGLVertex3 worldRef;
-   TGLVector3 diff = rnrCtx.RefCamera().ViewportDeltaToWorld(worldRef, 1, 1, &modview);
-   Float_t tms = diff.X()*rng*0.02;
-   Float_t uLim, dLim;
-   Float_t start, end;
-   Float_t limFac = 0.98;
    //______________________________________________________________________________
    // X-axis
 
+   Float_t limFac = 0.98; // set limit factor in case of divergence
+   Float_t frOff = 0.8; // draw frustum axis with offset not to cross X and Y axis
    if (fM->fAxesMode == TEveProjectionAxes::kAll
        || (fM->fAxesMode == TEveProjectionAxes::kHorizontal))
    {
-      dLim = fProjection->GetLimit(0, 0)*limFac;
-      uLim = fProjection->GetLimit(0, 1)*limFac;
-      start =  (bbox[0] > dLim) ?  bbox[0] : dLim;
-      end =    (bbox[1] < uLim) ?  bbox[1] : uLim;
+      Float_t p0 = bbox[0] > l*frOff ? bbox[0] : l*frOff;
+      Float_t p1=  bbox[1] < r*frOff ? bbox[1] : r*frOff;
+      Float_t dLim = fProjection->GetLimit(0, 0)*limFac;
+      Float_t uLim = fProjection->GetLimit(0, 1)*limFac;
+      Float_t start =  (p0 > dLim) ?  p0 :dLim;
+      Float_t end =    (p1 < uLim) ?  p1 :uLim;
+      Float_t tms = (t-b)*0.02;
       SplitInterval(start, end, 0);
       {
          // bottom
@@ -276,10 +277,14 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    if (fM->fAxesMode == TEveProjectionAxes::kAll
        || (fM->fAxesMode == TEveProjectionAxes::kVertical))
    {
-      dLim = fProjection->GetLimit(1, 0)*limFac;
-      uLim = fProjection->GetLimit(1, 1)*limFac;
-      start =  (bbox[2] > dLim) ? bbox[2] : dLim;
-      end =    (bbox[3] < uLim) ? bbox[3] : uLim;
+      Float_t p0 = bbox[2] > b*frOff ? bbox[2] : b*frOff;
+      Float_t p1=  bbox[3] < t*frOff ? bbox[3] : t*frOff;
+
+      Float_t dLim = fProjection->GetLimit(1, 0)*limFac;
+      Float_t uLim = fProjection->GetLimit(1, 1)*limFac;
+      Float_t start =  (p0 > dLim) ? p0 : dLim;
+      Float_t end =    (p1 < uLim) ? p1 : uLim;
+      Float_t tms = (r-l)*0.015;
       // left
       SplitInterval(start, end, 1);
       {

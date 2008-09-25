@@ -48,9 +48,6 @@ protected:
    Bool_t          fDrawCenter;  // draw center of distortion
    Bool_t          fDrawOrigin;  // draw origin
 
-   Float_t         fStep;
-   Int_t           fNSecDiv;
-
 public:
    TEveProjectionAxes(TEveProjectionManager* m);
    virtual ~TEveProjectionAxes();
@@ -61,15 +58,6 @@ public:
    ELabMode        GetLabMode()   const     { return fLabMode;  }
    void            SetAxesMode(EAxesMode x) { fAxesMode = x;    }
    EAxesMode       GetAxesMode()   const    { return fAxesMode; }
-
-   void            SetStep(Float_t x) { fStep = x;    }
-   Float_t         GetStep()  const   { return fStep; }
-
-   void            SetNSecDiv(Int_t x) { fNSecDiv = x;    }
-   Int_t           GetNSecDiv()  const { return fNSecDiv; }
-
-   Float_t         GetLabelSize() const {return fLabelSize;}
-   void            SetLabelSize(Float_t x) {fLabelSize=x;}
 
    void            SetDrawCenter(Bool_t x){ fDrawCenter = x;    }
    Bool_t          GetDrawCenter() const  { return fDrawCenter; }

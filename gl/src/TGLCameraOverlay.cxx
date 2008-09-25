@@ -18,8 +18,6 @@
 #include "TGLRnrCtx.h"
 #include "TGLFontManager.h"
 #include "TMath.h"
-#include "THLimitsFinder.h"
-
 
 //______________________________________________________________________________
 // A GL overlay element which displays camera furstum.

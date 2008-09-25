@@ -35,8 +35,8 @@ private:
    void               DrawScales(Bool_t horizontal, TGLFont& font, Float_t tms) const;
 
    void               SplitInterval(Float_t x1, Float_t x2, Int_t axis) const;
-   void               SplitIntervalByPos(Float_t min, Float_t max, Int_t axis)const;
-   void               SplitIntervalByVal(Float_t min, Float_t max, Int_t axis)const;
+   void               SplitIntervalByPos(Float_t min, Float_t max, Int_t axis, Float_t step, Int_t nsd)const;
+   void               SplitIntervalByVal(Float_t min, Float_t max, Int_t axis, Float_t step, Int_t nsd)const;
 
 protected:
    TEveProjectionAxes     *fM;  // model object.

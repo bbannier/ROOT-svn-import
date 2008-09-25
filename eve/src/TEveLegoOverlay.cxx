@@ -20,9 +20,6 @@
 #include <TGLUtil.h>
 #include <TGLCamera.h>
 
-#include <THLimitsFinder.h>
-
-
 //______________________________________________________________________________
 //
 //
