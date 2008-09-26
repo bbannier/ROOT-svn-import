@@ -62,7 +62,7 @@ void TEveProjectionAxesGL::SetBBox()
 }
 
 //______________________________________________________________________________
-void TEveProjectionAxesGL::DrawScales(Bool_t horizontal, TGLFont& font, Float_t tmSize) const
+void TEveProjectionAxesGL::DrawScales(Bool_t horizontal, TGLFont& font, Float_t tmSize, Float_t dtw) const
 {
    // Draw labels and tick-marks.
 
@@ -94,6 +94,7 @@ void TEveProjectionAxesGL::DrawScales(Bool_t horizontal, TGLFont& font, Float_t 
       align = (off > 0) ? TGLFont::kCenterUp : TGLFont::kCenterDown;
    else
       align = (off > 0) ? TGLFont::kRight : TGLFont::kLeft;
+   Float_t llx, lly, llz, urx, ury, urz;
 
    // move from center out to be symetric
    Int_t minIdx = TMath::BinarySearch(fTickMarks.size(), &fTickMarks[0], 0.f);
@@ -103,11 +104,11 @@ void TEveProjectionAxesGL::DrawScales(Bool_t horizontal, TGLFont& font, Float_t 
 
    // right
    Float_t prev = fLabVec[minIdx-1].first;
-   Float_t minDist = TMath::Abs(tmSize*5);
    for (Int_t i=minIdx; i<nl; ++i)
    {
       txt =TEveUtil::FormAxisValue(fLabVec[i].second);
-      if (i > (minIdx) && (fLabVec[i].first - prev) < minDist)
+      font.BBox(txt, llx, lly, llz, urx, ury, urz);
+      if (i > (minIdx) && prev > (fLabVec[i].first - (urx-llx)*0.5*dtw))
          continue;
 
       if (horizontal)
@@ -115,24 +116,27 @@ void TEveProjectionAxesGL::DrawScales(Bool_t horizontal, TGLFont& font, Float_t 
       else
          font.RenderBitmap(txt, off, fLabVec[i].first, 0, align);
 
-      prev = fLabVec[i].first;
+      prev = fLabVec[i].first + (urx-llx)*0.5*dtw;
    }
 
-
-   prev = fLabVec[minIdx].first;
-   minIdx -= 1;
    // left
+   txt =TEveUtil::FormAxisValue(fLabVec[minIdx].second);
+   font.BBox(txt, llx, lly, llz, urx, ury, urz);
+   prev = fLabVec[minIdx].first -(urx-llx)*0.5 *dtw;
+   minIdx -= 1;
    for (Int_t i=minIdx; i>=0; --i)
    {
-      if ((prev - fLabVec[i].first) < minDist)
-        continue;
-
       txt =TEveUtil::FormAxisValue(fLabVec[i].second);
+      font.BBox(txt, llx, lly, llz, urx, ury, urz);
+      if ( prev < (fLabVec[i].first + (urx-llx)*0.5*dtw ))
+         continue;
+
       if (horizontal)
          font.RenderBitmap(txt, fLabVec[i].first, off, 0, align);
       else
          font.RenderBitmap(txt, off, fLabVec[i].first, 0, align);
-      prev = fLabVec[i].first;
+
+      prev = fLabVec[i].first -(urx-llx)*0.5 *dtw;
    }
 }
 
@@ -239,13 +243,12 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    rnrCtx.RegisterFont(fs, "arial", TGLFont::kPixmap, font);
    font.PreRender();
 
-
    glPushMatrix();
    //______________________________________________________________________________
    // X-axis
 
    Float_t limFac = 0.98; // set limit factor in case of divergence
-   Float_t frOff = 0.8; // draw frustum axis with offset not to cross X and Y axis
+   Float_t frOff  = 0.8; // draw frustum axis with offset not to cross X and Y axis
    if (fM->fAxesMode == TEveProjectionAxes::kAll
        || (fM->fAxesMode == TEveProjectionAxes::kHorizontal))
    {
@@ -256,19 +259,21 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       Float_t start =  (p0 > dLim) ?  p0 :dLim;
       Float_t end =    (p1 < uLim) ?  p1 :uLim;
       Float_t tms = (t-b)*0.02;
+      Float_t dtw = (r-l)/vp[2]; // delta to viewport
+
       SplitInterval(start, end, 0);
       {
          // bottom
          glPushMatrix();
          glTranslatef((bbox[1]+bbox[0])*0.5, b, 0);
-         DrawScales(kTRUE, font, tms);
+         DrawScales(kTRUE, font, tms, dtw);
          glPopMatrix();
       }
       {
          // top
          glPushMatrix();
          glTranslatef((bbox[1]+bbox[0])*0.5, t, 0);
-         DrawScales(kTRUE, font, -tms);
+         DrawScales(kTRUE, font, -tms, dtw);
          glPopMatrix();
       }
    }
@@ -284,20 +289,22 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       Float_t uLim = fProjection->GetLimit(1, 1)*limFac;
       Float_t start =  (p0 > dLim) ? p0 : dLim;
       Float_t end =    (p1 < uLim) ? p1 : uLim;
-      Float_t tms = (r-l)*0.015;
+      Float_t tms = (r-l)*0.015; 
+      Float_t dtw = (t-b)/vp[3];// delta to viewport
+
       // left
       SplitInterval(start, end, 1);
       {
          glPushMatrix();
          glTranslatef(l, (bbox[3]+bbox[2])*0.5, 0);
-         DrawScales(kFALSE, font, tms);
+         DrawScales(kFALSE, font, tms, dtw);
          glPopMatrix();
       }
       // right
       {
          glPushMatrix();
          glTranslatef(r, (bbox[3]+bbox[2])*0.5, 0);
-         DrawScales(kFALSE, font, -tms);
+         DrawScales(kFALSE, font, -tms, dtw);
          glPopMatrix();
       }
    }
