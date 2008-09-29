@@ -67,40 +67,59 @@ void TEveProjectionAxesGL::DrawScales(Bool_t horizontal, TGLFont& font, Float_t 
    // Draw labels and tick-marks.
 
    // tick-marks
-   Float_t off = 1.5*tmSize;
+
    glBegin(GL_LINES);
-   Int_t cnt = 0;
-   Int_t nsd = fTickMarks.size()/fLabVec.size();
+
+   // draw small tickmarks
    Float_t mh = tmSize*0.5;
    for (TMVec_t::iterator it = fTickMarks.begin(); it != fTickMarks.end(); ++it)
    {
       if (horizontal)
       {
-         glVertex2f(*it, 0);
-         glVertex2f(*it, (cnt%nsd)? mh:tmSize);
+         glVertex2f(*it, 0);  glVertex2f(*it, mh);
       }
       else
       {
-         glVertex2f(0, *it);
-         glVertex2f((cnt%nsd)? mh:tmSize, *it);
+         glVertex2f(0, *it); glVertex2f(mh, *it);
+      }
+   }
+
+   // draw label tickmarks
+   Int_t minIdx = 0;
+   Float_t minVal = TMath::Abs( fLabVec[0].second);
+   Int_t cnt = 0;
+   for (LabVec_t::iterator it = fLabVec.begin(); it != fLabVec.end(); ++it)
+   {
+      if (TMath::Abs((*it).second) < minVal)
+      {
+         minVal = TMath::Abs((*it).second);
+         minIdx = cnt;
+      }
+
+      if (horizontal)
+      {
+         glVertex2f((*it).first, 0);  glVertex2f((*it).first, tmSize);
+      }
+      else
+      {
+         glVertex2f(0, (*it).first); glVertex2f(tmSize, (*it).first);
       }
       cnt++;
    }
    glEnd();
 
-   // labels
+   //  align labels
    TGLFont::ETextAlign_e align;
    if (horizontal)
-      align = (off > 0) ? TGLFont::kCenterUp : TGLFont::kCenterDown;
+      align = (tmSize > 0) ? TGLFont::kCenterUp : TGLFont::kCenterDown;
    else
-      align = (off > 0) ? TGLFont::kRight : TGLFont::kLeft;
+      align = (tmSize > 0) ? TGLFont::kRight : TGLFont::kLeft;
    Float_t llx, lly, llz, urx, ury, urz;
 
    // move from center out to be symetric
-   Int_t minIdx = TMath::BinarySearch(fTickMarks.size(), &fTickMarks[0], 0.f);
-   minIdx /= nsd;
    Int_t nl = fLabVec.size();
    const char* txt;
+   Float_t off = 1.5*tmSize;
 
    // right
    Float_t prev = fLabVec[minIdx-1].first;
@@ -141,77 +160,137 @@ void TEveProjectionAxesGL::DrawScales(Bool_t horizontal, TGLFont& font, Float_t 
 }
 
 //______________________________________________________________________________
-void TEveProjectionAxesGL::SplitInterval(Float_t p1, Float_t p2, Int_t ax) const
+void TEveProjectionAxesGL::SplitInterval(Float_t p1, Float_t p2, Int_t ax, Int_t nLab) const
 {
    // Build an array of tick-mark position-value pairs.
 
    fLabVec.clear();
    fTickMarks.clear();
 
-    // optimise linits
-   Int_t ndiv = fM->GetNdivisions();
-   Int_t n1a = TMath::FloorNint(ndiv/100);
-   Int_t n2a = ndiv-n1a*100;
-   Int_t bn1, bn2;
-   Double_t bw1, bw2; // bin with first second order
-   Double_t bl1, bh1, bl2, bh2; // bin low, high first second order
-
-   THLimitsFinder::Optimize(p1, p2, n1a, bl1, bh1, bn1, bw1);
-   THLimitsFinder::Optimize(bl1, bl1+bw1, n2a, bl2, bh2, bn2, bw2);
-   //    printf("%f labels %d sec tick \n", bw1, bn2);
-
    if (fM->GetLabMode() == TEveProjectionAxes::kValue)
    {
-      SplitIntervalByVal(fProjection->GetValForScreenPos(ax, p1),
-                         fProjection->GetValForScreenPos(ax, p2),
-                         ax, bw1, bn2);
+      SplitIntervalByVal(p1, p2, ax, nLab);
    }
    else if (fM->GetLabMode() == TEveProjectionAxes::kPosition)
    {
-      SplitIntervalByPos(p1, p2, ax, bw1, bn2);
+      SplitIntervalByPos(p1, p2, ax, nLab);
    }
 }
 
 //______________________________________________________________________________
-void TEveProjectionAxesGL::SplitIntervalByPos(Float_t p1, Float_t p2, Int_t ax, Float_t step, Int_t nsd) const
+void TEveProjectionAxesGL::SplitIntervalByPos(Float_t p1, Float_t p2, Int_t ax, Int_t nLab) const
 {
    // Add tick-marks at equidistant position.
 
-   Float_t ss = step/nsd;
-   Int_t n1=Int_t(p1/step);
-   Int_t n2=Int_t(p2/step);
-   Float_t p = n1*step;
+   // limits
+   Int_t ndiv = fM->GetNdivisions();
+   Int_t n1a = nLab;
+   Int_t n2a = ndiv % 100;
+   Int_t bn1, bn2;
+   Double_t bw1, bw2; // bin with first second order
+   Double_t bl1, bh1, bl2, bh2; // bin low, high first second order
+   THLimitsFinder::Optimize(p1, p2, n1a, bl1, bh1, bn1, bw1);
+   THLimitsFinder::Optimize(bl1, bl1+bw1, n2a, bl2, bh2, bn2, bw2);
 
+   Int_t n1=TMath::CeilNint(p1/bw1);
+   Int_t n2=TMath::FloorNint(p2/bw1);
+
+   Float_t p = n1*bw1;
+   Float_t pMinor = p;
    for (Int_t l=n1; l<=n2; l++)
    {
       fLabVec.push_back(Lab_t(p , fProjection->GetValForScreenPos(ax, p)));
-      for (Int_t i=0; i<nsd; i++)
+
+      // tickmarks
+      fTickMarks.push_back(p);
+      pMinor = p-bw2;
+      for (Int_t i=1; i<bn2; i++)
       {
-         fTickMarks.push_back(p + i*ss);
+         if (pMinor > p2)  break;
+         fTickMarks.push_back(pMinor);
+         pMinor += bw2;
       }
-      p += step;
+      p += bw1;
+   }
+
+   // complete
+   pMinor = n1*bw1 -bw2;
+   while ( pMinor > p1)
+   {
+      fTickMarks.push_back(pMinor);
+      pMinor -=bw2;
    }
 }
 
 //______________________________________________________________________________
-void TEveProjectionAxesGL::SplitIntervalByVal(Float_t v1, Float_t v2, Int_t ax, Float_t step, Int_t nsd) const
+void TEveProjectionAxesGL::SplitIntervalByVal(Float_t p1, Float_t p2, Int_t ax, Int_t nLab) const
 {
    // Add tick-marks on fixed value step.
 
-   Float_t ss = step/nsd;
-   Int_t n1 = Int_t (v1/step);
-   Int_t n2 = Int_t (v2/step);
-   Float_t v = n1*step;
+   Float_t v1 = fProjection->GetValForScreenPos(ax, p1);
+   Float_t v2 = fProjection->GetValForScreenPos(ax, p2);
 
-   for (Int_t l=n1; l<=n2; l++)
+
+   // limits
+   Int_t ndiv = fM->GetNdivisions();
+   Int_t n1a = nLab;
+   Int_t n2a = ndiv %100;
+   Int_t bn1, bn2;
+   Double_t bw1, bw2; // bin with first second order
+   Double_t bl1, bh1, bl2, bh2; // bin low, high first second order
+   THLimitsFinder::Optimize(v1, v2, n1a, bl1, bh1, bn1, bw1);
+   THLimitsFinder::Optimize(bl1, bl1+bw1, n2a, bl2, bh2, bn2, bw2);
+
+   Float_t pMinor;
+   Float_t v = bl1;
+   // step
+   for (Int_t l=0; l<=bn1; l++)
    {
       fLabVec.push_back(Lab_t(fProjection->GetScreenVal(ax, v) , v));
-      for (Int_t i=0; i<nsd; i++)
+
+      // tickmarks
+      for (Int_t k=0; k<bn2; k++)
       {
-         fTickMarks.push_back(fProjection->GetScreenVal(ax, v+i*ss));
+         pMinor = fProjection->GetScreenVal(ax, v+k*bw2);
+         if (pMinor > p2)  break;
+         fTickMarks.push_back(pMinor);
       }
-      v += step;
+      v += bw1;
    }
+
+   // complete
+   v = bl1 -bw2;
+   while ( v > v1)
+   {
+      pMinor = fProjection->GetScreenVal(ax, v);
+      if (pMinor < p1)  break;
+      fTickMarks.push_back(pMinor);
+      v -= bw2;
+   }
+}
+
+//______________________________________________________________________________
+void TEveProjectionAxesGL::GetRange(Int_t ax, Float_t frustMin, Float_t frustMax, Float_t& start, Float_t& end) const
+{
+   // take range from bounding box of projection manager
+   Float_t bf = 1.2;
+   start = fM->GetManager()->GetBBox()[ax*2]*bf;
+   end   = fM->GetManager()->GetBBox()[ax*2+1]*bf;
+
+   // compare frustum range with bbox, take smaller
+   // draw frustum axis with offset not to cross X and Y axis
+   frustMin  *= 0.8;
+   frustMax *= 0.8;
+   if (start < frustMin )  start =frustMin;
+   if (end   > frustMax ) end =frustMax;
+
+   // ceheck projection  limits
+   // set limit factor in case of divergence
+   Float_t dLim = fProjection->GetLimit(ax, 0);
+   Float_t uLim = fProjection->GetLimit(ax, 1);
+
+   if (start < dLim) start = dLim*0.98;
+   if (end   > uLim)  end  = uLim*0.98;
 }
 
 //______________________________________________________________________________
@@ -223,11 +302,6 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    if (rnrCtx.Selection() || rnrCtx.Highlight()) return;
 
    fProjection = fM->GetManager()->GetProjection();
-   // draw axis orund bbox with offset
-   Float_t bsf = 1.2;
-   Float_t bbox[6];
-   for(Int_t i=0; i<6; i++)
-      bbox[i] = bsf*fM->GetManager()->GetBBox()[i];
 
    // horizontal font setup
    Float_t l =  -rnrCtx.GetCamera()->FrustumPlane(TGLCamera::kLeft).D();
@@ -244,35 +318,38 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    font.PreRender();
 
    glPushMatrix();
+
+   Float_t bboxCentX = (fM->GetManager()->GetBBox()[0] + fM->GetManager()->GetBBox()[1])* 0.5;
+   Float_t bboxCentY = (fM->GetManager()->GetBBox()[2] + fM->GetManager()->GetBBox()[3])* 0.5;
+
+   Float_t startX, endX;
+   Float_t startY, endY;
+   GetRange(0, l,  r, startX, endX);
+   GetRange(1, b, t, startY, endY);
+   Float_t rngX = endX -startX;
+   Float_t rngY = endY -startY;
+
    //______________________________________________________________________________
    // X-axis
 
-   Float_t limFac = 0.98; // set limit factor in case of divergence
-   Float_t frOff  = 0.8; // draw frustum axis with offset not to cross X and Y axis
    if (fM->fAxesMode == TEveProjectionAxes::kAll
        || (fM->fAxesMode == TEveProjectionAxes::kHorizontal))
    {
-      Float_t p0 = bbox[0] > l*frOff ? bbox[0] : l*frOff;
-      Float_t p1=  bbox[1] < r*frOff ? bbox[1] : r*frOff;
-      Float_t dLim = fProjection->GetLimit(0, 0)*limFac;
-      Float_t uLim = fProjection->GetLimit(0, 1)*limFac;
-      Float_t start =  (p0 > dLim) ?  p0 :dLim;
-      Float_t end =    (p1 < uLim) ?  p1 :uLim;
       Float_t tms = (t-b)*0.02;
       Float_t dtw = (r-l)/vp[2]; // delta to viewport
-
-      SplitInterval(start, end, 0);
+      Int_t nLab = (rngX< rngY ) ? TMath::FloorNint(fM->GetNdivisions()/100) : TMath::CeilNint((fM->GetNdivisions()*rngX)/(rngY*100)) ;
+      SplitInterval(startX, endX,  0,  nLab);
       {
          // bottom
          glPushMatrix();
-         glTranslatef((bbox[1]+bbox[0])*0.5, b, 0);
+         glTranslatef(bboxCentX, b, 0);
          DrawScales(kTRUE, font, tms, dtw);
          glPopMatrix();
       }
       {
          // top
          glPushMatrix();
-         glTranslatef((bbox[1]+bbox[0])*0.5, t, 0);
+         glTranslatef(bboxCentX, t, 0);
          DrawScales(kTRUE, font, -tms, dtw);
          glPopMatrix();
       }
@@ -282,28 +359,21 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    if (fM->fAxesMode == TEveProjectionAxes::kAll
        || (fM->fAxesMode == TEveProjectionAxes::kVertical))
    {
-      Float_t p0 = bbox[2] > b*frOff ? bbox[2] : b*frOff;
-      Float_t p1=  bbox[3] < t*frOff ? bbox[3] : t*frOff;
-
-      Float_t dLim = fProjection->GetLimit(1, 0)*limFac;
-      Float_t uLim = fProjection->GetLimit(1, 1)*limFac;
-      Float_t start =  (p0 > dLim) ? p0 : dLim;
-      Float_t end =    (p1 < uLim) ? p1 : uLim;
-      Float_t tms = (r-l)*0.015; 
+      Float_t tms = (r-l)*0.015;
       Float_t dtw = (t-b)/vp[3];// delta to viewport
-
+      Int_t nLab = (rngY < rngX ) ? TMath::FloorNint(fM->GetNdivisions()/100) : TMath::CeilNint((fM->GetNdivisions()*rngY)/(rngX*100)) ;
+      SplitInterval(startY, endY,  1,  nLab);
       // left
-      SplitInterval(start, end, 1);
       {
          glPushMatrix();
-         glTranslatef(l, (bbox[3]+bbox[2])*0.5, 0);
+         glTranslatef(l, bboxCentY, 0);
          DrawScales(kFALSE, font, tms, dtw);
          glPopMatrix();
       }
       // right
       {
          glPushMatrix();
-         glTranslatef(r, (bbox[3]+bbox[2])*0.5, 0);
+         glTranslatef(r, bboxCentY, 0);
          DrawScales(kFALSE, font, -tms, dtw);
          glPopMatrix();
       }
