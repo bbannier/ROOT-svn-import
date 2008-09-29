@@ -1,0 +1,4 @@
+<lcgdict>
+  <class pattern="Reflex::*"/>
+  <enum  pattern="Reflex::*"/>
+</lcgdict>
