@@ -151,7 +151,12 @@ const char *kGuiEventTree = "GuiEvents";   // Name of TTree with GUI events
 const char *kWindowsTree  = "WindowsTree"; // Name of TTree with window IDs
 const char *kBranchName   = "MainBranch";  // Name of the main branch in all TTress
 
-//______________________________________________________________________________
+ClassImp(TRecordableEvent)
+ClassImp(TRecCmdEvent)
+ClassImp(TRecGuiEvent)
+ClassImp(TRecWinPair)
+ClassImp(TRecorder)
+
 //______________________________________________________________________________
 TRecorder::TRecorder()
 {
