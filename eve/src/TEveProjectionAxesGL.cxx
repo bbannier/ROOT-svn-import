@@ -279,10 +279,13 @@ void TEveProjectionAxesGL::GetRange(Int_t ax, Float_t frustMin, Float_t frustMax
 
    // compare frustum range with bbox, take smaller
    // draw frustum axis with offset not to cross X and Y axis
-   frustMin  *= 0.8;
+   frustMin *= 0.8;
    frustMax *= 0.8;
-   if (start < frustMin )  start =frustMin;
-   if (end   > frustMax ) end =frustMax;
+   if (start<frustMin || end>frustMax)
+   {
+      start = frustMin;
+      end   = frustMax;
+   }
 
    // ceheck projection  limits
    // set limit factor in case of divergence
