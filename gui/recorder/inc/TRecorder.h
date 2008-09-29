@@ -1,4 +1,4 @@
-// @(#)root/gui:$Id: TRecorder.h
+// @(#)root/gui:$Id:$
 // Author: Katerina Opocenska   11/09/2008
 
 /*************************************************************************
@@ -128,6 +128,8 @@ class TFile;
 class TGPictureButton;
 class TGCheckButton;
 class TGLabel;
+
+class TRecorderState;
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
