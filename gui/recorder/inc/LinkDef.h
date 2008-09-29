@@ -24,6 +24,6 @@
 #pragma link C++ class TRecorderRecording;
 #pragma link C++ class TRecorderInactive;
 #pragma link C++ class TRecorderPaused;
-#pragma link C++ class TGEventRecorder;
+#pragma link C++ class TGRecorder;
 
 #endif

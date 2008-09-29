@@ -1075,7 +1075,7 @@ again:
                      TGuiBuilder::Instance();
                      break;
                   case kToolsRecorder:
-                     gROOT->ProcessLine("new TGEventRecorder(gClient->GetDefaultRoot())");
+                     gROOT->ProcessLine("new TGRecorder()");
                      break;
 
                   // Handle Tools menu items...
