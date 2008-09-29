@@ -104,7 +104,7 @@
 //                                                                      //
 //  GUI for recorder                                                    //
 //  =================================================================== //
-//  See TGEventRecorder class for more information                      //
+//  See TGRecorder class for more information                           //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -119,6 +119,7 @@
 #include "TGFileDialog.h"
 #include "TGLabel.h"
 #include "TGWindow.h"
+
 
 // Names of ROOT GUI events. Used for listing event logs.
 const char *kRecEventNames[] = {
@@ -1154,21 +1155,22 @@ void TRecorderRecording::SetTypeOfConfigureNotify(Event_t * e)
 }
 
 //______________________________________________________________________________
-TGEventRecorder::TGEventRecorder(const TGWindow *p, UInt_t w, UInt_t h)
+TGRecorder::TGRecorder(const TGWindow *p, UInt_t w, UInt_t h) :
+   TGMainFrame(p ? p : gClient->GetRoot(), w, h)
 {
    fRecorder = new TRecorder();
 
    // Create a main frame
-   fMain = new TGMainFrame(p,w,h);
-   fFilteredIds[0] = fMain->GetId();
+   
+   fFilteredIds[0] = GetId();
 
    // Create a horizontal frame widget with buttons
-   TGHorizontalFrame *hframe = new TGHorizontalFrame(fMain,200,200);
+   TGHorizontalFrame *hframe = new TGHorizontalFrame(this, 200, 200);
    fFilteredIds[1] = hframe->GetId();
 
    // START-STOP button
    fStartStop = new TGPictureButton(hframe,gClient->GetPicture("record.png"));
-   fStartStop->Connect("Clicked()","TGEventRecorder",this,"StartStop()");
+   fStartStop->Connect("Clicked()","TGRecorder",this,"StartStop()");
    hframe->AddFrame(fStartStop, new TGLayoutHints(kLHintsLeft | kLHintsTop,2,2,2,2));
    fStartStop->Resize(40,40);
 
@@ -1176,39 +1178,39 @@ TGEventRecorder::TGEventRecorder(const TGWindow *p, UInt_t w, UInt_t h)
 
    // REPLAY button
    fReplay = new TGPictureButton(hframe,gClient->GetPicture("replay.png"));
-   fReplay->Connect("Clicked()","TGEventRecorder",this,"Replay()");
+   fReplay->Connect("Clicked()","TGRecorder",this,"Replay()");
    hframe->AddFrame(fReplay, new TGLayoutHints(kLHintsLeft | kLHintsTop,2,2,2,2));
    fReplay->Resize(40,40);
 
    fFilteredIds[3] = fReplay->GetId();
 
    // LABEL WITH TIME
-   fTimeLabel = new TGLabel(fMain, "Time: 0 [s]");
-   fMain->AddFrame(fTimeLabel, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+   fTimeLabel = new TGLabel(this, "Time: 0 [s]");
+   AddFrame(fTimeLabel, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
 
    fFilteredIds[4] = fTimeLabel->GetId();
 
    // MOUSE CURSOR CHECKBOX
-   fCursorCheckBox = new TGCheckButton(fMain,"Show mouse cursor");
-   fMain->AddFrame(fCursorCheckBox, new TGLayoutHints(kLHintsCenterX, 2,2,2,2));
+   fCursorCheckBox = new TGCheckButton(this,"Show mouse cursor");
+   AddFrame(fCursorCheckBox, new TGLayoutHints(kLHintsCenterX, 2,2,2,2));
 
    fFilteredIds[5] = fCursorCheckBox->GetId();
 
    // Timer
    fTimer = new TTimer(25);
-   fTimer->Connect("Timeout()", "TGEventRecorder", this, "Update()");
+   fTimer->Connect("Timeout()", "TGRecorder", this, "Update()");
 
-   fMain->AddFrame(hframe, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
-   fMain->SetWindowName("ROOT Event Recorder");
-   fMain->MapSubwindows();
-   fMain->Resize(fMain->GetDefaultSize());
-   fMain->MapWindow();
+   AddFrame(hframe, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+   SetWindowName("ROOT Event Recorder");
+   MapSubwindows();
+   Resize(GetDefaultSize());
+   MapWindow();
 
    SetDefault();
 }
 
 //______________________________________________________________________________
-void TGEventRecorder::SetDefault()
+void TGRecorder::SetDefault()
 {
    // Sets GUI to the default inactive state
 
@@ -1226,7 +1228,7 @@ void TGEventRecorder::SetDefault()
 }
 
 //______________________________________________________________________________
-void TGEventRecorder::Update()
+void TGRecorder::Update()
 {
    // Called when fTimer timeouts (every 0.025 second)
    // Updates GUI of recorder
@@ -1272,7 +1274,7 @@ void TGEventRecorder::Update()
 }
 
 //______________________________________________________________________________
-void TGEventRecorder::StartStop()
+void TGRecorder::StartStop()
 {
    // Handles push of the fStartStop button
    // according to the current recorder state
@@ -1325,7 +1327,7 @@ void TGEventRecorder::StartStop()
 }
 
 //______________________________________________________________________________
-void TGEventRecorder::Replay()
+void TGRecorder::Replay()
 {
    // Handles push of fReplay button
    // according to the current recorder state
@@ -1369,9 +1371,8 @@ void TGEventRecorder::Replay()
 }
 
 //______________________________________________________________________________
-TGEventRecorder::~TGEventRecorder()
+TGRecorder::~TGRecorder()
 {
-   fMain->Cleanup();
-   delete fMain;
+   Cleanup();
 }
 

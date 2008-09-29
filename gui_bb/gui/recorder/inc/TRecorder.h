@@ -104,7 +104,7 @@
 //                                                                      //
 //  GUI for recorder                                                    //
 //  =================================================================== //
-//  See TGEventRecorder class for more information                      //
+//  See TGRecorder class for more information                           //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -122,7 +122,7 @@ class TMutex;
 class TTree;
 class TFile;
 
-// The following are needed just for TGEventRecorder
+// The following are needed just for TGRecorder
 #include "TGWindow.h"
 
 class TGPictureButton;
@@ -761,16 +761,16 @@ private:
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-//  TGEventRecorder                                                     //
+//  TGRecorder                                                          //
 //                                                                      //
 //  Provides GUI for TRecorder class.                                   //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
-class TGEventRecorder
+class TGRecorder : public TGMainFrame
 {
 public:
-   TGEventRecorder(const TGWindow *p, UInt_t w = 200, UInt_t h = 200);
-   virtual ~TGEventRecorder();
+   TGRecorder(const TGWindow *p = 0, UInt_t w = 200, UInt_t h = 200);
+   virtual ~TGRecorder();
 
    void StartStop();
    void Update();
@@ -779,7 +779,6 @@ public:
 private:
    TRecorder          *fRecorder;          // Recorder
 
-   TGMainFrame        *fMain;              // Main frame of GUI recorder
    TGPictureButton    *fStartStop;         // Button for start and stop of recording
    TGPictureButton    *fReplay;            // Button for start of replaying
 
