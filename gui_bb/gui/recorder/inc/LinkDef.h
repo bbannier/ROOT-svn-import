@@ -1,4 +1,4 @@
-// @(#)root/recorder:$Id: LinkDef.h,v 1.0 2003/11/25 
+// @(#)root/recorder:$Id:$
 
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
