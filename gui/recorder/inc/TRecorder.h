@@ -792,5 +792,7 @@ private:
    Window_t            fFilteredIds[kWidgetsCount];   // IDs of these windows in GUI recorder
 
    void                SetDefault();
+
+   ClassDef(TGRecorder,0)             // GUI class of the event recorder.
 };
 
