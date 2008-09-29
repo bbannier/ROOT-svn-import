@@ -1,4 +1,4 @@
-// @(#)root/gui:$Id:$
+// @(#)root/gui:$Id$
 // Author: Katerina Opocenska   11/09/2008
 
 /*************************************************************************
@@ -387,7 +387,6 @@ void TRecorderReplaying::RegisterWindow(Window_t w)
    }
 
    if ((gDebug > 0) && (fWaitingForWindow)) {
-      TGWindow * tmp = gClient->GetWindowById(w);
       cout << " Window registered: new ID: " << hex << w << "  previous ID: " << fWin << endl;
    }
 
@@ -433,7 +432,7 @@ Bool_t TRecorderReplaying::RemapWindowReferences()
    Bool_t found = kFALSE;
 
    // Iterates through the whole list of mappings
-   while (ids = (TRecWinPair*)it.Next()) {
+   while ((ids = (TRecWinPair*)it.Next())) {
       // Window that the event belongs to
       if (ids->fKey == fGuiEvent->fWindow) {
          fGuiEvent->fWindow = ids->fValue;

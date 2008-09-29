@@ -1,4 +1,4 @@
-// @(#)root/recorder:$Id:$
+// @(#)root/recorder:$Id$
 
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
