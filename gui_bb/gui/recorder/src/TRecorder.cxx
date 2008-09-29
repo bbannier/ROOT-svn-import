@@ -897,7 +897,7 @@ TRecorderRecording::TRecorderRecording(TRecorder * r, const char * filename, Opt
    fRegWinCounter = 0;
 
    // New timer for recording
-   fTimer      = new TTimer(25, kFALSE);
+   fTimer      = new TTimer(25, kTRUE);
 
    // File where store recorded events
    fFile       = new TFile(filename, option);
@@ -1246,19 +1246,18 @@ void TGRecorder::Update()
          if (cnt >= 40) {
             fTimeLabel->SetText(Form("Time: %d [s]", ++fSecCounter));
             cnt = 0;
+            if (gVirtualX->EventsPending()) {
+               fTimeLabel->SetTextColor((Pixel_t)0xff0000);
+            }
+            else {
+               fTimeLabel->SetTextColor((Pixel_t)0x000000);
+            }
+            fTimeLabel->Resize();
          }
          else
             ++cnt;
 
          // Changes background color according to the queue of pending events
-         if (gVirtualX->EventsPending()) {
-            fTimeLabel->SetTextColor((Pixel_t)0xff0000);
-         }
-         else {
-            fTimeLabel->SetTextColor((Pixel_t)0x000000);
-         }
-
-         fTimeLabel->Resize();
          fTimer->Reset();
          break;
 
