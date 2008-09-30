@@ -5,7 +5,7 @@
  * Copyright (C) 1995-2006, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
  *                                                                       *
- * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the licTF1ensing terms see $ROOTSYS/LICENSE.                         *
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
@@ -47,8 +47,6 @@ class TFitParametersDialog : public TGTransientFrame {
 protected:
    TF1                 *fFunc;            // function passed to this dialog
    TVirtualPad         *fFpad;            // pad where the function is drawn
-   Double_t             fRXmin;           // original min range
-   Double_t             fRXmax;           // original max range
    Bool_t               fHasChanges;      // kTRUE if function was redrawn;
    Bool_t               fImmediateDraw;   // kTRUE if function is updated on run-time
    Int_t               *fRetCode;         // address to store return code
@@ -87,8 +85,7 @@ protected:
    void  DisconnectSlots();
 public:
    TFitParametersDialog(const TGWindow *p, const TGWindow *main, TF1 *func,
-                        TVirtualPad *pad, Double_t rmin=1., Double_t rmax=2.,
-                        Int_t *ret_code = 0);
+                        TVirtualPad *pad, Int_t *ret_code = 0);
    virtual ~TFitParametersDialog();
 
    virtual void  CloseWindow();
