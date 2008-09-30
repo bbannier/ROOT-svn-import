@@ -2,7 +2,7 @@ from __future__ import generators
 # @(#)root/pyroot:$Id$
 # Author: Wim Lavrijsen (WLavrijsen@lbl.gov)
 # Created: 02/20/03
-# Last: 05/06/08
+# Last: 09/26/08
 
 """PyROOT user module.
 
@@ -11,10 +11,11 @@ from __future__ import generators
  o) add readline completion (if supported by python build)
  o) enable some ROOT/CINT style commands
  o) handle a few special cases such as gPad, STL, etc.
+ o) execute rootlogon.py/.C scripts
 
 """
 
-__version__ = '5.0.3'
+__version__ = '5.2.0'
 __author__  = 'Wim Lavrijsen (WLavrijsen@lbl.gov)'
 
 
@@ -97,10 +98,22 @@ if sys.version[0:3] == '2.2':
 
 ### configuration ---------------------------------------------------------------
 class _Configuration( object ):
-   __slots__ = [ 'StartGuiThread' ]
+   __slots__ = [ 'StartGuiThread', '_gts' ]
 
    def __init__( self ):
       self.StartGuiThread = 1
+      self._gts = []
+
+   def __setGTS( self, value ):
+      for c in value:
+         if not callable( c ):
+            raise ValueError( '"%s" is not callable' % str(c) );
+      self._gts = value
+
+   def __getGTS( self ):
+      return self._gts
+
+   GUIThreadScheduleOnce = property( __getGTS, __setGTS )
 
 PyConfig = _Configuration()
 del _Configuration
@@ -273,6 +286,10 @@ def _processRootEvents( controller ):
    while controller.keeppolling:
       try:
          gSystem.ProcessEvents()
+         if PyConfig.GUIThreadScheduleOnce:
+            for guicall in PyConfig.GUIThreadScheduleOnce:
+               guicall()
+            PyConfig.GUIThreadScheduleOnce = []
          time.sleep( 0.01 )
       except: # in case gSystem gets destroyed early on exit
          pass
@@ -296,6 +313,7 @@ class ModuleFacade( object ):
 
          def __getattr__( self, name ):
            if name != 'SetBatch' and self._master.__dict__[ 'gROOT' ] != self._gROOT:
+              print 'finalizing'
               self._master._ModuleFacade__finalSetup()
               del self._master.__class__._ModuleFacade__finalSetup
               self._master.__dict__[ 'gROOT' ] = self._gROOT
@@ -406,11 +424,11 @@ class ModuleFacade( object ):
 
     # normally, you'll want a ROOT application; don't init any further if
     # one pre-exists from some C++ code somewhere
-      c = _root.MakeRootClass( 'PyROOT::TPyROOTApplication' )
-      if c.CreatePyROOTApplication():
-         c.InitROOTGlobals()
-         c.InitCINTMessageCallback();
-         c.InitROOTMessageCallback();
+      appc = _root.MakeRootClass( 'PyROOT::TPyROOTApplication' )
+      if appc.CreatePyROOTApplication():
+         appc.InitROOTGlobals()
+         appc.InitCINTMessageCallback();
+         appc.InitROOTMessageCallback();
 
     # must be called after gApplication creation:
       if __builtins__.has_key( '__IPYTHON__' ):
@@ -418,15 +436,45 @@ class ModuleFacade( object ):
          _root.gROOT.ProcessLine( 'TPython::Exec( "" )' )
          sys.modules[ '__main__' ].__builtins__ = __builtins__
 
+    # custom logon file (must be after creation of ROOT globals)
+      if not '-n' in sys.argv:
+         rootlogon = os.path.expanduser( '~/.rootlogon.py' )
+         if os.path.exists( rootlogon ):
+          # could also have used execfile, but import is likely to give fewer surprises
+            import imp
+            imp.load_module( 'rootlogon', open( rootlogon, 'r' ), rootlogon, ('.py','r',1) )
+            del imp
+         else:  # if the .py version of rootlogon exists, the .C is ignored (the user can
+                # load the .C from the .py, if so desired)
+
+          # system logon, user logon, and local logon (skip Rint.Logon)
+            name = '.rootlogon.C'
+            logons = [ os.path.join( self.gRootDir, 'etc', 'system' + name ),
+                       os.path.expanduser( os.path.join( '~', name ) ) ]
+            if logons[-1] != os.path.join( os.getcwd(), name ):
+               logons.append( name )
+            for rootlogon in logons:
+               if os.path.exists( rootlogon ):
+                  appc.ExecuteFile( rootlogon )
+            del rootlogon, logons
+
     # root thread, if needed, to prevent GUIs from starving, as needed
       if self.PyConfig.StartGuiThread and \
             not ( self.keeppolling or _root.gROOT.IsBatch() ):
          import threading
          self.__dict__[ 'keeppolling' ] = 1
-         self.__dict__[ 'thread' ] = \
+         self.__dict__[ 'PyGUIThread' ] = \
             threading.Thread( None, _processRootEvents, None, ( self, ) )
-         self.thread.setDaemon( 1 )
-         self.thread.start()
+
+         def _finishSchedule( ROOT = self ):
+            import threading
+            if threading.currentThread() != self.PyGUIThread:
+               while self.PyConfig.GUIThreadScheduleOnce:
+                  self.PyGUIThread.join( 0.1 )
+
+         self.PyGUIThread.finishSchedule = _finishSchedule
+         self.PyGUIThread.setDaemon( 1 )
+         self.PyGUIThread.start()
 
     # store already available ROOT objects to prevent spurious lookups
       for name in self.module.__pseudo__all__ + _memPolicyAPI + _sigPolicyAPI:
@@ -459,13 +507,13 @@ def cleanup():
    del facade.__class__.__setattr__
 
  # shutdown GUI thread, as appropriate
-   if hasattr( facade, 'thread' ):
+   if hasattr( facade, 'PyGUIThread' ):
       facade.keeppolling = 0
 
     # if not shutdown from GUI (often the case), wait for it
       import threading
-      if threading.currentThread() != facade.thread:
-         facade.thread.join( 3. )                      # arbitrary
+      if threading.currentThread() != facade.PyGUIThread:
+         facade.PyGUIThread.join( 3. )                 # arbitrary
       del threading
 
  # remove otherwise (potentially) circular references

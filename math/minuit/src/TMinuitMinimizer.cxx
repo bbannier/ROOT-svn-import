@@ -32,6 +32,8 @@
 
 // initialize the static instances
 
+#define USE_STATIC_TMINUIT
+
 ROOT::Math::IMultiGenFunction * TMinuitMinimizer::fgFunc = 0; 
 TMinuit * TMinuitMinimizer::fgMinuit = 0; 
 
@@ -39,6 +41,7 @@ ClassImp(TMinuitMinimizer)
 
 
 TMinuitMinimizer::TMinuitMinimizer(ROOT::Minuit::EMinimizerType type ) : 
+   fUsed(false),
    fDim(0),
    fStrategy(1),
    fType(type), 
@@ -51,6 +54,7 @@ TMinuitMinimizer::TMinuitMinimizer(ROOT::Minuit::EMinimizerType type ) :
 }
 
 TMinuitMinimizer::TMinuitMinimizer(const char *  type ) : 
+   fUsed(false),
    fDim(0),
    fStrategy(1),
    fMinuit(fgMinuit)
@@ -74,7 +78,9 @@ TMinuitMinimizer::TMinuitMinimizer(const char *  type ) :
 TMinuitMinimizer::~TMinuitMinimizer() 
 {
    // Destructor implementation.
+#ifndef USE_STATIC_TMINUIT
    if (fMinuit) delete fMinuit; 
+#endif
 }
 
 TMinuitMinimizer::TMinuitMinimizer(const TMinuitMinimizer &) : 
@@ -103,7 +109,13 @@ void TMinuitMinimizer::SetFunction(const  ROOT::Math::IMultiGenFunction & func) 
    fDim = func.NDim(); 
 
 #ifdef USE_STATIC_TMINUIT
-   if (fgMinuit == 0) fgMinuit =  new TMinuit(fDim);
+   if (fgMinuit == 0) 
+      fgMinuit =  new TMinuit(fDim);
+   else if (fgMinuit->GetNumPars() != int(fDim) ) { 
+      delete fgMinuit; 
+      fgMinuit =  new TMinuit(fDim);
+   }
+
    fMinuit = fgMinuit; 
 #else
    if (fMinuit) { 
@@ -137,7 +149,13 @@ void TMinuitMinimizer::SetFunction(const  ROOT::Math::IMultiGradFunction & func)
    fDim = func.NDim(); 
 
 #ifdef USE_STATIC_TMINUIT
-   if (fgMinuit == 0) fgMinuit =  new TMinuit(fDim);
+   if (fgMinuit == 0) 
+      fgMinuit =  new TMinuit(fDim);
+   else if (fgMinuit->GetNumPars() != int(fDim) ) { 
+      delete fgMinuit; 
+      fgMinuit =  new TMinuit(fDim);
+   }
+
    fMinuit = fgMinuit; 
 #else
    if (fMinuit) delete fMinuit;  
@@ -187,6 +205,10 @@ bool TMinuitMinimizer::SetVariable(unsigned int ivar, const std::string & name, 
    if (fMinuit == 0) { 
       std::cerr << "TMinuitMinimizer: ERROR : invalid TMinuit pointer. Set function first " << std::endl;
    }
+
+   // clear after minimization when setting params
+   if (fUsed) DoClear(); 
+
    fMinuit->DefineParameter(ivar , name.c_str(), val, step, 0., 0. ); 
    return true; 
 }
@@ -196,6 +218,10 @@ bool TMinuitMinimizer::SetLimitedVariable(unsigned int ivar, const std::string &
    if (fMinuit == 0) { 
       std::cerr << "TMinuitMinimizer: ERROR : invalid TMinuit pointer. Set function first " << std::endl;
    }
+
+   // clear after minimization when setting params
+   if (fUsed) DoClear(); 
+
    fMinuit->DefineParameter(ivar, name.c_str(), val, step, lower, upper ); 
    return true; 
 }
@@ -227,6 +253,9 @@ bool TMinuitMinimizer::Minimize() {
    // By default Migrad is used. 
    // Return true if the found minimum is valid and update internal chached values of 
    // minimum values, errors and covariance matrix. 
+   // Status of minimizer is set to: 
+   // migradResult + 10*minosResult + 100*hesseResult + 1000*improveResult
+
 
    assert(fMinuit != 0 );
 
@@ -271,13 +300,19 @@ bool TMinuitMinimizer::Minimize() {
 
    }
 
+   fUsed = true;
+   fStatus = ierr; 
+
    // run improved if needed
-   if (ierr == 0 && fType == ROOT::Minuit::kMigradImproved) 
+   if (ierr == 0 && fType == ROOT::Minuit::kMigradImproved) {
       fMinuit->mnexcm("IMPROVE",arglist,1,ierr);
+      fStatus += 1000*ierr; 
+   }
 
    // check if Hesse needs to be run 
    if (ierr == 0 && IsValidError() ) { 
       fMinuit->mnexcm("HESSE",arglist,1,ierr);
+      fStatus += 100*ierr; 
    }
 
 
@@ -302,7 +337,33 @@ bool TMinuitMinimizer::Minimize() {
    // store global min results (only if minimization is OK)  
    if (ierr == 0) { 
       fCovar.resize(fDim*fDim); 
-      fMinuit->mnemat(&fCovar.front(), fDim); 
+      if (fNFree >= fDim) { // no fixed parameters 
+         fMinuit->mnemat(&fCovar.front(), fDim); 
+      } 
+      else { 
+         // case of fixed params need to take care 
+         if (fNFree > fDim) return true;
+         std::vector<double> tmpMat(fNFree*fNFree); 
+         fMinuit->mnemat(&tmpMat.front(), fNFree); 
+
+
+         unsigned int l = 0; 
+         for (unsigned int i = 0; i < fDim; ++i) { 
+            
+            if ( fMinuit->fNiofex[i] > 0 ) {  // not fixed ?
+               unsigned int m = 0; 
+               for (unsigned int j = 0; j <= i; ++j) { 
+                  if ( fMinuit->fNiofex[j] > 0 ) {  //not fixed
+                     fCovar[i*fDim + j] = tmpMat[l*fNFree + m];
+                     fCovar[j*fDim + i] = fCovar[i*fDim + j]; 
+                     m++;
+                  }
+               }
+               l++;
+            }
+         }
+
+      }
 
       // need to re-run Minos again if requested
       fMinosRun = false; 
@@ -338,19 +399,47 @@ bool TMinuitMinimizer::GetMinosError(unsigned int i, double & errLow, double & e
    
       int nargs = 2; 
       fMinuit->mnexcm("MINOS",arglist,nargs,ierr);
-      if (ierr != 0 ) return false; 
+      fStatus += 10*ierr;
 
       fMinosRun = true; 
+
    }
 
    double errParab = 0; 
    double gcor = 0; 
    // what returns if parameter fixed or constant or at limit ? 
    fMinuit->mnerrs(i,errUp,errLow, errParab, gcor); 
+
+   if (fStatus%100 != 0 ) return false; 
    return true; 
 
 }
 
+void TMinuitMinimizer::DoClear() { 
+   // reset TMinuit
+
+   fMinuit->mncler();
+   
+   //reset the internal Minuit random generator to its initial state
+   double val = 3;
+   int inseed = 12345;
+   fMinuit->mnrn15(val,inseed);
+   fUsed = false; 
+
+}
+
+void TMinuitMinimizer::PrintResults() { 
+   // print minimizer result
+   int ntot; 
+   int istat;
+   int nfree; 
+   double errdef = 0;
+   fMinuit->mnstat(fMinVal,fEdm,errdef,nfree,ntot,istat);
+   if (PrintLevel() > 2) 
+      fMinuit->mnprin(4,fMinVal);
+   else
+      fMinuit->mnprin(3,fMinVal);
+}
 
 //    } // end namespace Fit
 

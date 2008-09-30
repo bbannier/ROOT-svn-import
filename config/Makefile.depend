@@ -52,7 +52,7 @@ TMVALIBDEPM            = $(IOLIB) $(HISTLIB) $(MATRIXLIB) $(TREELIB) \
                          $(GRAFLIB) $(GPADLIB) $(TREEPLAYERLIB) $(MLPLIB) \
                          $(MINUITLIB) $(MATHCORELIB)
 SPLOTLIBDEPM           = $(MATRIXLIB) $(HISTLIB) $(TREELIB) $(TREEPLAYERLIB) \
-                         $(G3DLIB) $(GRAFLIB)
+                         $(G3DLIB) $(GRAFLIB) $(MATHCORELIB)
 QUADPLIBDEPM           = $(MATRIXLIB) 
 GLLIBDEPM              = $(G3DLIB) $(GUILIB) $(GRAFLIB) $(HISTLIB) $(GEDLIB) \
                          $(FTGLLIB) $(MATHCORELIB)
@@ -106,6 +106,7 @@ EVELIBDEPM             = $(GEOMLIB) $(GEOMPAINTERLIB) $(G3DLIB) $(GUILIB) \
                          $(GLLIB) $(FTGLLIB) $(IOLIB) $(RINTLIB) $(MATHCORELIB)
 MEMSTATLIBDEPM         = $(TREELIB)
 MEMSTATGUILIBDEPM      = $(MEMSTATLIB) $(TREELIB) $(GUILIB)
+RECLIBDEPM             = $(IOLIB) $(TREELIB) $(GUILIB) $(THREADLIB)
 
 
 ifeq ($(EXPLICITLINK),yes)
@@ -192,6 +193,7 @@ THREADLIBDEP           = $(THREADLIBDEPM)
 EVELIBDEP              = $(EVELIBDEPM)
 MEMSTATLIBDEP          = $(MEMSTATLIBDEPM)
 MEMSTATGUILIBDEP       = $(MEMSTATGUILIBDEPM)
+RECLIBDEP              = $(RECLIBDEPM)
 
 ifeq ($(PLATFORM),win32)
 
@@ -265,7 +267,7 @@ TMVALIBEXTRA            = lib/libRIO.lib lib/libHist.lib lib/libMatrix.lib \
                           lib/libMinuit.lib lib/libMathCore.lib
 SPLOTLIBEXTRA           = lib/libMatrix.lib lib/libHist.lib lib/libTree.lib \
                           lib/libTreePlayer.lib lib/libGraf3d.lib \
-                          lib/libGraf.lib
+                          lib/libGraf.lib lib/libMathCore.lib
 QUADPLIBEXTRA           = lib/libMatrix.lib 
 GLLIBEXTRA              = lib/libGraf3d.lib lib/libGui.lib lib/libGraf.lib \
                           lib/libHist.lib lib/libGed.lib lib/libMathCore.lib
@@ -326,6 +328,8 @@ EVELIBEXTRA             = lib/libGeom.lib lib/libGeomPainter.lib \
                           lib/libRint.lib lib/libMathCore.lib
 MEMSTATLIBEXTRA         = lib/libTree.lib
 MEMSTATGUILIBEXTRA      = lib/libMemStat.lib lib/libTree.lib lib/libGui.lib
+RECLIBEXTRA             = lib/libGui.lib lib/libRIO.lib lib/libTree.lib \
+                          lib/libThread.lib
 
 else
 
@@ -387,7 +391,7 @@ SPECTRUMLIBEXTRA        = -Llib -lHist -lMatrix
 TMVALIBEXTRA            = -Llib -lRIO -lHist -lMatrix -lTree -lGraf -lGpad \
                           -lTreePlayer -lMLP -lMinuit -lMathCore
 SPLOTLIBEXTRA           = -Llib -lMatrix -lHist -lTree -lTreePlayer -lGraf3d \
-                          -lGraf
+                          -lGraf -lMathCore
 QTROOTLIBEXTRA          = -Llib -lGui -lGQt
 GQTLIBEXTRA             = -Llib -lGui -lGpad -lGraf -lRint
 QUADPLIBEXTRA           = -Llib -lMatrix
@@ -427,6 +431,7 @@ EVELIBEXTRA             = -Llib -lGeom -lGeomPainter -lGraf3d -lGui -lGpad \
                           -lTreePlayer -lRGL -lRIO -lRint -lMathCore
 MEMSTATLIBEXTRA         = -Llib -lTree
 MEMSTATGUILIBEXTRA      = -Llib -lMemStat -lTree -lGui
+RECLIBEXTRA             = -Llib -lGui -lRIO -lTree -lThread
 
 endif
 
