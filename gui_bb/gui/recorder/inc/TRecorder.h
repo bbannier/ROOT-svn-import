@@ -133,7 +133,7 @@ class TRecorderState;
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-//  TRecordableEvent                                                    //
+//  TRecEvent                                                           //
 //                                                                      //
 //  Abstract class that defines interface for a class storing           //
 //  information about 1 ROOT event.                                     //
@@ -143,11 +143,11 @@ class TRecorderState;
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TRecordableEvent : public TObject
+class TRecEvent : public TObject
 {
 public:
    //---- Types of events recorded in ROOT.
-   enum ERecordableEventType {
+   enum ERecEventType {
       kCmdEvent,     // Commandline event
       kGuiEvent      // GUI event
    };
@@ -156,7 +156,7 @@ public:
    virtual void ReplayEvent(Bool_t showMouseCursor = kTRUE) = 0;
 
    // Returns what kind of event it stores
-   virtual ERecordableEventType GetType() = 0;
+   virtual ERecEventType GetType() = 0;
 
    virtual TTime GetTime() {
       // Returns time of original execution of stored event
@@ -171,7 +171,7 @@ public:
 private:
    TTime   fEventTime;          // Time of original event execution
 
-   ClassDef(TRecordableEvent,1) // Abstract class. Defines basic interface for storing information about ROOT events
+   ClassDef(TRecEvent,1) // Abstract class. Defines basic interface for storing information about ROOT events
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -184,7 +184,7 @@ private:
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TRecCmdEvent : public TRecordableEvent
+class TRecCmdEvent : public TRecEvent
 {
 public:
 
@@ -202,9 +202,9 @@ public:
       return fText.Data();
    }
 
-   virtual ERecordableEventType GetType() {
+   virtual ERecEventType GetType() {
       // Returns what kind of event it stores (commandline event)
-      return TRecordableEvent::kCmdEvent;
+      return TRecEvent::kCmdEvent;
    }
 
    virtual void ReplayEvent(Bool_t) {
@@ -228,7 +228,7 @@ private:
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-class TRecGuiEvent : public TRecordableEvent
+class TRecGuiEvent : public TRecEvent
 {
 public:
    //---- Types of kConfigureNotify GUI event
@@ -239,9 +239,9 @@ public:
       kCNFilter     = 3       // Not replaybale (filtered event).
    };
 
-   virtual ERecordableEventType GetType() {
+   virtual ERecEventType GetType() {
       // Returns what kind of event it stores (GUI event)
-      return TRecordableEvent::kGuiEvent;
+      return TRecEvent::kGuiEvent;
    }
 
    virtual void ReplayEvent(Bool_t showMouseCursor = kTRUE) {
@@ -620,7 +620,7 @@ private:
 
    TList      *fWindowList;      // List of TRecWinPair objects. Mapping of window IDs is stored here.
 
-   TRecordableEvent *fNextEvent;          // The next event that is going to be replayed (GUI event or commandline)
+   TRecEvent *fNextEvent;          // The next event that is going to be replayed (GUI event or commandline)
 
    TTime             fPreviousEventTime;  // Execution time of the previously replayed event.
                                           // It is used for computing time difference between two events.

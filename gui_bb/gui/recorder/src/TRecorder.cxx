@@ -152,7 +152,7 @@ const char *kGuiEventTree = "GuiEvents";   // Name of TTree with GUI events
 const char *kWindowsTree  = "WindowsTree"; // Name of TTree with window IDs
 const char *kBranchName   = "MainBranch";  // Name of the main branch in all TTress
 
-ClassImp(TRecordableEvent)
+ClassImp(TRecEvent)
 ClassImp(TRecCmdEvent)
 ClassImp(TRecGuiEvent)
 ClassImp(TRecWinPair)
@@ -589,7 +589,7 @@ Bool_t TRecorderReplaying::CanOverlap()
 
    // Commandline events.
    // Overlapping not allowed
-   if (fNextEvent->GetType() == TRecordableEvent::kCmdEvent)
+   if (fNextEvent->GetType() == TRecEvent::kCmdEvent)
       return kFALSE;
 
    if (gDebug > 0) {
