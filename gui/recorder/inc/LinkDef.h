@@ -14,7 +14,7 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ class TRecordableEvent;
+#pragma link C++ class TRecEvent;
 #pragma link C++ class TRecCmdEvent;
 #pragma link C++ class TRecGuiEvent;
 #pragma link C++ class TRecWinPair;
