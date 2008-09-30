@@ -278,9 +278,13 @@ void TEveProjectionAxesGL::GetRange(Int_t ax, Float_t frustMin, Float_t frustMax
    end   = fM->GetManager()->GetBBox()[ax*2+1]*bf;
 
    // compare frustum range with bbox, take smaller
+   Float_t center = (start+end)*0.5;
+   frustMin -= center;
+   frustMax -= center;
    // draw frustum axis with offset not to cross X and Y axis
-   frustMin *= 0.8;
-   frustMax *= 0.8;
+   Float_t frOff = (frustMax-frustMin)*0.1;
+   frustMin += frOff;
+   frustMax -= frOff;
    if (start<frustMin || end>frustMax)
    {
       start = frustMin;
@@ -306,7 +310,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
 
    fProjection = fM->GetManager()->GetProjection();
 
-   // horizontal font setup
+   // frustum size
    Float_t l =  -rnrCtx.GetCamera()->FrustumPlane(TGLCamera::kLeft).D();
    Float_t r =   rnrCtx.GetCamera()->FrustumPlane(TGLCamera::kRight).D();
    Float_t t =   rnrCtx.GetCamera()->FrustumPlane(TGLCamera::kTop).D();
@@ -319,8 +323,6 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    Int_t fs =  TGLFontManager::GetFontSize(TMath::Min(vp[2], vp[3])*fM->GetLabelSize(), 8, 36);
    rnrCtx.RegisterFont(fs, "arial", TGLFont::kPixmap, font);
    font.PreRender();
-
-   glPushMatrix();
 
    Float_t bboxCentX = (fM->GetManager()->GetBBox()[0] + fM->GetManager()->GetBBox()[1])* 0.5;
    Float_t bboxCentY = (fM->GetManager()->GetBBox()[2] + fM->GetManager()->GetBBox()[3])* 0.5;
@@ -381,7 +383,5 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
          glPopMatrix();
       }
    }
-
-   glPopMatrix();
    font.PostRender();
 }
