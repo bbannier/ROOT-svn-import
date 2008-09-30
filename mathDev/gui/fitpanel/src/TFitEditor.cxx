@@ -1678,7 +1678,7 @@ void TFitEditor::DoFunction(Int_t selected)
    else if ( fDim == 3 )
       fitFunc =  new TF3("lastFitFunc",fEnteredFunc->GetText());
 
-   if ( fitFunc && fitFunc->GetNpar() != fFuncPars.size() )
+   if ( fitFunc && (unsigned int) fitFunc->GetNpar() != fFuncPars.size() )
       fFuncPars.clear();
    if ( fitFunc ) delete fitFunc;
 }
@@ -1908,7 +1908,7 @@ void TFitEditor::DoSetParameters()
 //    fitFunc->GetRange(xmin, xmax);
    Int_t ret = 0;
    new TFitParametersDialog(gClient->GetDefaultRoot(), GetMainFrame(), 
-                            fitFunc, fParentPad, 0, 0, &ret);
+                            fitFunc, fParentPad, &ret);
 
    //if ( fFuncPars ) delete fFuncPars;
    //fFuncPars = new Double_t[fitFunc->GetNpar()][3];
