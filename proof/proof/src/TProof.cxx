@@ -3008,7 +3008,6 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
       }
    }
 
-// <<<<<<< .working
    if (IsMaster() && strcmp(reason, kPROOF_TerminateWorker)) {
       TList *listOfMissingFiles = 0;
       if (!(listOfMissingFiles = (TList *)GetOutput("MissingFiles"))) {
@@ -3029,27 +3028,6 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
          Info("MarkBad", "No packetizer received form the player!");
    }
 
-/* =======
-   if (IsMaster() && strcmp(reason, kPROOF_TerminateWorker)) {
-      TList *listOfMissingFiles = 0;
-      if (!(listOfMissingFiles = (TList *)GetOutput("MissingFiles"))) {
-         listOfMissingFiles = new TList();
-         listOfMissingFiles->SetName("MissingFiles");
-         if (fPlayer)
-            fPlayer->AddOutputObject(listOfMissingFiles);
-      }
-
-      TVirtualPacketizer *packetizer = fPlayer ? fPlayer->GetPacketizer() : 0;
-      if (packetizer)
-         // if the worker is being terminated, don't resubmit the packets
-         packetizer->MarkBad(wrk,
-                             strcmp(reason, kPROOF_TerminateWorker) != 0,
-                             &listOfMissingFiles);
-      else
-         Info("MarkBad", "No packetizer received form the player!");
-   }
-
->>>>>>> .merge-right.r25292 */
    fActiveSlaves->Remove(wrk);
    FindUniqueSlaves();
    fBadSlaves->Add(wrk);
@@ -3071,41 +3049,6 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
       if (fManager)
          fManager->ShutdownSession(this);
    }
-/*
-   if (IsMaster()) {
-      if (strcmp(reason, kPROOF_TerminateWorker)) {
-         TList *listOfMissingFiles = 0;
-         if (!(listOfMissingFiles = (TList *)GetOutput("MissingFiles"))) {
-            listOfMissingFiles = new TList();
-            listOfMissingFiles->SetName("MissingFiles");
-            if (fPlayer)
-               fPlayer->AddOutputObject(listOfMissingFiles);
-         }
-         TVirtualPacketizer *packetizer = fPlayer ? fPlayer->GetPacketizer() : 0;
-         if (packetizer)
-            // the worker is not terminated intentionally - do resubmit the packets
-            packetizer->MarkBad(wrk, kTRUE, &listOfMissingFiles);
-         else
-            Info("MarkBad", "No packetizer received form the player!");
-         fBadSlaves->Add(wrk);
-      } else {
-         // Assume that an idle worker is being termianted
-         // TODO handle termination while processing and do packetizer->MarkBad
-         fSlaves->Remove(wrk);
-         SafeDelete(wrk);
-      }
-      // Update session workers files
-      SaveWorkerInfo();
-   } else {
-      // On clients the proof session should be removed from the lists
-      // and deleted, since it is not valid anymore
-      fSlaves->Remove(wrk);
-      if (fManager)
-         fManager->ShutdownSession(this);
-   }
-
-   FindUniqueSlaves();
-*/
 }
 
 //______________________________________________________________________________

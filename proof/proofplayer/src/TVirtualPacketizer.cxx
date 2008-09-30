@@ -171,15 +171,6 @@ Long64_t TVirtualPacketizer::GetEntries(Bool_t tree, TDSetElement *e)
    return entries;
 }
 
-/*//______________________________________________________________________________
-Long64_t TVirtualPacketizer::GetEntriesProcessed(TSlave *) const
-{
-   // Get Entries processed by the given slave.
-
-   AbstractMethod("GetEntriesProcessed");
-   return 0;
-}
-*/
 //______________________________________________________________________________
 TDSetElement *TVirtualPacketizer::GetNextPacket(TSlave *, TMessage *)
 {
