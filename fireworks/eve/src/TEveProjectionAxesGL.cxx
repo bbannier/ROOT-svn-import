@@ -116,16 +116,25 @@ void TEveProjectionAxesGL::DrawScales(Bool_t horizontal, TGLFont& font, Float_t 
       align = (tmSize > 0) ? TGLFont::kRight : TGLFont::kLeft;
    Float_t llx, lly, llz, urx, ury, urz;
 
+
+   // get text format for current axis range and bin width
+   fAxisAtt.SetRng(fLabVec.front().second, fLabVec.back().second);
+   fAxisPainter.SetAxisAtt(&fAxisAtt);
+   if (minIdx < fLabVec.size())
+      fAxisPainter.SetTextFormat(fLabVec[minIdx+1].second -fLabVec[minIdx].second);
+   else
+      fAxisPainter.SetTextFormat(fLabVec[minIdx].second -fLabVec[minIdx-1].second);
+
    // move from center out to be symetric
    Int_t nl = fLabVec.size();
-   const char* txt;
+   char txt[100];
    Float_t off = 1.5*tmSize;
 
    // right
    Float_t prev = fLabVec[minIdx-1].first;
    for (Int_t i=minIdx; i<nl; ++i)
    {
-      txt =TEveUtil::FormAxisValue(fLabVec[i].second);
+      fAxisPainter.FormAxisValue(fLabVec[i].second, txt);
       font.BBox(txt, llx, lly, llz, urx, ury, urz);
       if (i > (minIdx) && prev > (fLabVec[i].first - (urx-llx)*0.5*dtw))
          continue;
@@ -139,13 +148,13 @@ void TEveProjectionAxesGL::DrawScales(Bool_t horizontal, TGLFont& font, Float_t 
    }
 
    // left
-   txt =TEveUtil::FormAxisValue(fLabVec[minIdx].second);
+   fAxisPainter.FormAxisValue(fLabVec[minIdx].second, txt);
    font.BBox(txt, llx, lly, llz, urx, ury, urz);
    prev = fLabVec[minIdx].first -(urx-llx)*0.5 *dtw;
    minIdx -= 1;
    for (Int_t i=minIdx; i>=0; --i)
    {
-      txt =TEveUtil::FormAxisValue(fLabVec[i].second);
+      fAxisPainter.FormAxisValue(fLabVec[i].second, txt);
       font.BBox(txt, llx, lly, llz, urx, ury, urz);
       if ( prev < (fLabVec[i].first + (urx-llx)*0.5*dtw ))
          continue;
@@ -347,6 +356,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       Float_t dtw = (r-l)/vp[2]; // delta to viewport
       Int_t nLab = (rngX< rngY ) ? TMath::FloorNint(fM->GetNdivisions()/100) : TMath::CeilNint((fM->GetNdivisions()*rngX)/(rngY*100)) ;
       SplitInterval(startX, endX,  0,  nLab);
+
       {
          // bottom
          glPushMatrix();

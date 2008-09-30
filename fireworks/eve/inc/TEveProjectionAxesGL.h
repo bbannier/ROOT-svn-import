@@ -13,6 +13,7 @@
 #define ROOT_TEveProjectionAxesGL
 
 #include "TGLObject.h"
+#include "TGLAxisPainter.h"
 #include <vector>
 
 class TEveProjectionAxes;
@@ -32,6 +33,8 @@ private:
    mutable LabVec_t  fLabVec;    // list of tick-mark position-value pairs
    mutable TMVec_t   fTickMarks;  // list of tick-mark position-value pairs
 
+   mutable TGLAxisPainter     fAxisPainter;
+   mutable TGLAxisAttrib      fAxisAtt;
    void               DrawScales(Bool_t horizontal, TGLFont& font, Float_t tms, Float_t dtw) const;
 
    Bool_t               GetRange(Int_t ax, Float_t frustMin, Float_t frustMax, Float_t& start, Float_t& en) const;
