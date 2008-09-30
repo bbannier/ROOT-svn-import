@@ -270,25 +270,26 @@ void TEveProjectionAxesGL::SplitIntervalByVal(Float_t p1, Float_t p2, Int_t ax, 
 }
 
 //______________________________________________________________________________
-void TEveProjectionAxesGL::GetRange(Int_t ax, Float_t frustMin, Float_t frustMax, Float_t& start, Float_t& end) const
+Bool_t TEveProjectionAxesGL::GetRange(Int_t ax, Float_t frustMin, Float_t frustMax, Float_t& start, Float_t& end) const
 {
    // take range from bounding box of projection manager
+
+   Bool_t rngBBox=kTRUE;
+
    Float_t bf = 1.2;
    start = fM->GetManager()->GetBBox()[ax*2]*bf;
    end   = fM->GetManager()->GetBBox()[ax*2+1]*bf;
 
    // compare frustum range with bbox, take smaller
-   Float_t center = (start+end)*0.5;
-   frustMin -= center;
-   frustMax -= center;
-   // draw frustum axis with offset not to cross X and Y axis
-   Float_t frOff = (frustMax-frustMin)*0.1;
-   frustMin += frOff;
-   frustMax -= frOff;
+   Float_t frustC = (frustMin+frustMax) *0.5;
+   Float_t frustR =  (frustMax-frustMin)*0.8;
+   frustMin = frustC-frustR*0.5;
+   frustMax   = frustC+frustR*0.5;
    if (start<frustMin || end>frustMax)
    {
+      rngBBox=kFALSE;
       start = frustMin;
-      end   = frustMax;
+      end = frustMax;
    }
 
    // ceheck projection  limits
@@ -298,6 +299,8 @@ void TEveProjectionAxesGL::GetRange(Int_t ax, Float_t frustMin, Float_t frustMax
 
    if (start < dLim) start = dLim*0.98;
    if (end   > uLim)  end  = uLim*0.98;
+
+   return rngBBox;
 }
 
 //______________________________________________________________________________
@@ -329,8 +332,8 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
 
    Float_t startX, endX;
    Float_t startY, endY;
-   GetRange(0, l,  r, startX, endX);
-   GetRange(1, b, t, startY, endY);
+   Bool_t  rngBBoxX = GetRange(0, l, r, startX, endX);
+   Bool_t  rngBBoxY = GetRange(1, b, t, startY, endY);
    Float_t rngX = endX -startX;
    Float_t rngY = endY -startY;
 
@@ -347,14 +350,14 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       {
          // bottom
          glPushMatrix();
-         glTranslatef(bboxCentX, b, 0);
+         glTranslatef(rngBBoxX ? bboxCentX : 0, b, 0);
          DrawScales(kTRUE, font, tms, dtw);
          glPopMatrix();
       }
       {
          // top
          glPushMatrix();
-         glTranslatef(bboxCentX, t, 0);
+         glTranslatef(rngBBoxX ? bboxCentX : 0, t, 0);
          DrawScales(kTRUE, font, -tms, dtw);
          glPopMatrix();
       }
@@ -371,14 +374,14 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
       // left
       {
          glPushMatrix();
-         glTranslatef(l, bboxCentY, 0);
+         glTranslatef(l, rngBBoxY ? bboxCentY : 0, 0);
          DrawScales(kFALSE, font, tms, dtw);
          glPopMatrix();
       }
       // right
       {
          glPushMatrix();
-         glTranslatef(r, bboxCentY, 0);
+         glTranslatef(r, rngBBoxY ? bboxCentY : 0 , 0);
          DrawScales(kFALSE, font, -tms, dtw);
          glPopMatrix();
       }

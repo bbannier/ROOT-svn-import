@@ -34,7 +34,7 @@ private:
 
    void               DrawScales(Bool_t horizontal, TGLFont& font, Float_t tms, Float_t dtw) const;
 
-   void               GetRange(Int_t ax, Float_t frustMin, Float_t frustMax, Float_t& start, Float_t& en) const;
+   Bool_t               GetRange(Int_t ax, Float_t frustMin, Float_t frustMax, Float_t& start, Float_t& en) const;
    void               SplitInterval(Float_t x1, Float_t x2, Int_t axis, Int_t nLabels) const;
    void               SplitIntervalByPos(Float_t min, Float_t max, Int_t axis, Int_t nLab)const;
    void               SplitIntervalByVal(Float_t min, Float_t max, Int_t axis, Int_t nLab)const;
