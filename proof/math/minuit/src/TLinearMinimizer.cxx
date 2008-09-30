@@ -64,6 +64,7 @@ ClassImp(TLinearMinimizer)
 
 
 TLinearMinimizer::TLinearMinimizer(int ) : 
+   fRobust(false), 
    fDim(0),
    fObjFunc(0),
    fFitter(0)
@@ -72,6 +73,21 @@ TLinearMinimizer::TLinearMinimizer(int ) :
    // type is not used - needed for consistency with other minimizer plug-ins
 }
 
+TLinearMinimizer::TLinearMinimizer ( const char * type ) : 
+   fRobust(false),
+   fDim(0),
+   fObjFunc(0),
+   fFitter(0)
+{
+   // constructor passing a type of algorithm, (supported now robust via LTS regression)
+
+   // select type from the string
+   std::string algoname(type);
+   std::transform(algoname.begin(), algoname.end(), algoname.begin(), (int(*)(int)) tolower ); 
+
+   if (algoname == "robust") fRobust = true;
+
+}
 
 TLinearMinimizer::~TLinearMinimizer() 
 {
@@ -121,17 +137,22 @@ void TLinearMinimizer::SetFunction(const  ROOT::Math::IMultiGradFunction & objfu
    // get the basis functions (derivatives of the modelfunc)
    TObjArray flist; 
    for (unsigned int i = 0; i < fDim; ++i) { 
+      // t.b.f: should not create TF1 classes
+      // when creating TF1 (if onother function with same name exists it is 
+      // deleted since it is added in funciton list in gROOT 
+      // fix the problem using meaniful names (difficult to re-produce)
       BasisFunction<const ModelFunc> bf(modfunc,i); 
-      std::string fname = "f" + ROOT::Math::Util::ToString(i);
+      std::string fname = "_LinearMinimimizer_BasisFunction_" + 
+         ROOT::Math::Util::ToString(i);
       TF1 * f = new TF1(fname.c_str(),ROOT::Math::ParamFunctor(bf));
-      //f->SetDirectory(0);
       flist.Add(f);
    }
 
    // create TLinearFitter (do it now because olny now now the coordinate dimensions)
    if (fFitter) delete fFitter; // reset by deleting previous copy
    fFitter = new TLinearFitter( static_cast<const ModelFunc::BaseFunc&>(modfunc).NDim() ); 
-   fFitter->StoreData(false); 
+
+   fFitter->StoreData(fRobust); //  need a copy of data in case of robust fitting 
 
    fFitter->SetBasisFunctions(&flist); 
 
@@ -165,8 +186,17 @@ bool TLinearMinimizer::Minimize() {
 
    if (fFitter == 0 || fObjFunc == 0) return false;
 
-   int iret = fFitter->Eval(); 
-   
+   int iret = 0; 
+   if (!fRobust) 
+      iret = fFitter->Eval(); 
+   else { 
+      // robust fitting - get h parameter using tolerance (t.b. improved)
+      double h = Tolerance(); 
+      std::cout << "do robust fitting with h = " << h << std::endl; 
+      iret = fFitter->EvalRobust(h); 
+   }
+   fStatus = iret; 
+ 
    if (iret != 0) { 
       Warning("Minimize","TLinearFitter failed in finding the solution");  
       return false; 
@@ -175,14 +205,16 @@ bool TLinearMinimizer::Minimize() {
 
    // get parameter values 
    fParams.resize( fDim); 
-   fErrors.resize( fDim); 
+   // no error available for robust fitting
+   if (!fRobust) fErrors.resize( fDim); 
    for (unsigned int i = 0; i < fDim; ++i) { 
       fParams[i] = fFitter->GetParameter( i);
-      fErrors[i] = fFitter->GetParError( i ); 
+      if (!fRobust) fErrors[i] = fFitter->GetParError( i ); 
    }
    fCovar.resize(fDim*fDim); 
    double * cov = fFitter->GetCovarianceMatrix();
-   std::copy(cov,cov+fDim*fDim,fCovar.begin() );
+
+   if (!fRobust && cov) std::copy(cov,cov+fDim*fDim,fCovar.begin() );
 
    // calculate chi2 value
    
