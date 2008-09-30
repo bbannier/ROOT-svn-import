@@ -1255,12 +1255,7 @@ Int_t TPacketizerAdaptive::AddProcessed(TSlave *sl,
          }
       }
 
-// TODO what happens with the fProcTime ? status include the cumulative proctime
-
-      if (numev == expectedNumEv) {
-         // The last packet was sucessfully processed
-         ;
-      } else {
+      if (numev != expectedNumEv) {
          // The last packet was not fully processed
          // and will be split in two:
          // - The completed part was marked as done.

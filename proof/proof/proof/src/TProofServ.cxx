@@ -799,10 +799,6 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
    }
 
    req << fLatency.RealTime();
-   // TODO: update the status in the player and send that one!
-//   TProofProgressStatus *status =
-//      new TProofProgressStatus((Long64_t)(fPlayer?fPlayer->GetEventsProcessed():(-1)),
-//                               bytesRead, realtime, cputime);
    TProofProgressStatus *status;
    if (fPlayer)
       status = fPlayer->GetProgressStatus();
@@ -3676,17 +3672,9 @@ void TProofServ::HandleProcess(TMessage *mess)
             Bool_t abort =
               (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) ? kTRUE : kFALSE;
             m.Reset(kPROOF_STOPPROCESS);
-/*            if (fProtocol > 8) {
-               m << fPlayer->GetEventsProcessed() << abort;
-            } else {
-               m << fPlayer->GetEventsProcessed();
-            }
-*/
-//            TProofProgressStatus* status =
-//               new TProofProgressStatus(fPlayer->GetEventsProcessed(),
-//                                        gPerfStats?gPerfStats->GetBytesRead():0);
+            // message sent from worker to the master -> no protocol check
             TProofProgressStatus* status = fPlayer->GetProgressStatus();
-            Printf("Sending status"); // TODO is it called at all?
+            Printf("Sending status"); // is it called anywhere?
             m << status << abort;
             status = 0; // the status belongs to the player.
             fSocket->Send(m);

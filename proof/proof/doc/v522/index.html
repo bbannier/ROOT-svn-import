@@ -44,7 +44,7 @@ connections.&nbsp;</li>
     <li>Dynamic "per-query" scheduling</li>
 
       <ul>
-        
+
         <li>Dynamic worker startup. It can be enabled by the cluster
         administrator or by a user with 'Proof.DynamicStartup'
         environment variable. The effect is that a session starts only on
@@ -57,6 +57,11 @@ connections.&nbsp;</li>
 
         <li> A packet resubmitting mechanism. When a worker dies all the
         packets that it processed are resubmitted. </li>
+    <li>Added the possibility to handle dynamically removed workers and partly processed
+     packets (when a worker is stopped while processing a packet it finishes
+     the current event and the rest of the packet is reassigned to another workers).
+     It's done by a new method TPacketizerAdaptive::AddProcessed(TSlave *sl,
+     TProofProgressStatus *st, TList **) and TPacketizerAdaptive::ReassignPacket. </li>
 
       </ul>
 
@@ -117,6 +122,15 @@ now
 receive a message containing the low level reason for the failure and a
 hint for getting more information</li>
 
+     <li>Addition of a new class TProofProgressStatus, which is used to keep
+     the query progress stauts in all the TProofPlayer objects and in the
+     TPacketizerAdaptive. It is also send in kPROOF_GETPACKET and
+     kPROOF_STOPPROCESS messages. </li>
+     <li>The classes TPacketizer and TPacketizerProgressive were removed. TPacketizer
+     was implemented as an alternative strategy of TPacketizerAdaptive earlier</li>
+     <li>Changing the protocol version to 19: TProofProgressStatus used in
+     kPROOF_STOPPROCESS and kPROOF_GETNEXTPACKET messages in Master - worker communication
+     </li>
   </ul>
 
   <ul>
