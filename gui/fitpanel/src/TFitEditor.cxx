@@ -1557,7 +1557,6 @@ void TFitEditor::DoFit()
    if ( fDim > 0 ) { fSliderX->SetPosition(xmin, xmax); DoSliderXMoved(); }
    if ( fDim > 1 ) { fSliderY->SetPosition(ymin, ymax); DoSliderYMoved(); }
    if ( fDim > 2 ) { fSliderZ->SetPosition(zmin, zmax); DoSliderZMoved(); }
-   DoSliderXMoved();
    fParentPad->GetCanvas()->SetCursor(kPointer);
    fParentPad->Connect("RangeAxisChanged()", "TFitEditor", this, "UpdateGUI()");
    
