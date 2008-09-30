@@ -1668,8 +1668,19 @@ void TFitEditor::DoFunction(Int_t selected)
    fSelLabel->SetText(fEnteredFunc->GetText());
    ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
 
-   // reset function parameters 
-   fFuncPars.clear();
+   // reset function parameters if the number of parameters of the new
+   // function is different from the old one!
+   TF1* fitFunc = 0;
+   if ( fDim == 1 )
+      fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText());
+   else if ( fDim == 2 )
+      fitFunc = new TF2("lastFitFunc",fEnteredFunc->GetText());
+   else if ( fDim == 3 )
+      fitFunc =  new TF3("lastFitFunc",fEnteredFunc->GetText());
+
+   if ( fitFunc && fitFunc->GetNpar() != fFuncPars.size() )
+      fFuncPars.clear();
+   if ( fitFunc ) delete fitFunc;
 }
 
 //______________________________________________________________________________
