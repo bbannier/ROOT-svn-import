@@ -1080,30 +1080,17 @@ void TFitEditor::UpdateGUI()
             break;
       }
       
-      Int_t ixmin = 0; 
-      Int_t ixmax = 0; 
-      Int_t iymin = 0; 
-      Int_t iymax = 0; 
-      Int_t izmin = 0; 
-      Int_t izmax = 0; 
       if (hist) {
          fXaxis = hist->GetXaxis();
          fYaxis = hist->GetYaxis();
          fZaxis = hist->GetZaxis();
          fXrange = fXaxis->GetNbins();
-         ixmin = fXaxis->GetFirst();
-         ixmax = fXaxis->GetLast();
-         iymin = fYaxis->GetFirst();
-         iymax = fYaxis->GetLast();
-         izmin = fZaxis->GetFirst();
-         izmax = fZaxis->GetLast();
       }
 
+      fXmin = fXaxis->GetFirst();
+      fXmax = fXaxis->GetLast();
       fSliderX->SetRange(1,fXrange);
-      if (ixmin == 0 && ixmax == 0)
-         fSliderX->SetPosition(1,fXrange);
-      else 
-         fSliderX->SetPosition(ixmin,ixmax);
+      fSliderX->SetPosition(fXmin,fXmax);
       fSliderX->SetScale(5);
       fSliderX->Connect("PositionChanged()","TFitEditor",this, "DoSliderXMoved()");
    }
@@ -2368,7 +2355,6 @@ TF1* TFitEditor::HasFitFunction(TObject *obj)
    }
    if (func) {
       if (lf) GetFunctionsFromList(lf);
-      CheckRange(func);
       
       TGLBEntry *le = fFuncList->FindEntry(Form(func->GetName()));
       if (le) {
@@ -2384,7 +2370,6 @@ TF1* TFitEditor::HasFitFunction(TObject *obj)
       while ((obj2 = next())) {
          if (obj2->InheritsFrom(TF1::Class())) {
             func = (TF1 *)obj2;
-            CheckRange(func);
             //LM:  does not work - why ??????
             //std::cout << "from histo function list  func " << func << "  " << func->GetName() << std::endl; 
             TGLBEntry *le = fFuncList->FindEntry(func->GetName());
@@ -2447,56 +2432,6 @@ void TFitEditor::GetFunctionsFromList(TList *list)
 
       fFuncList->Select((newid != kFP_USER*30)?newid-1:1);
       Object = fFitObject;
-   }
-}
-
-//______________________________________________________________________________
-void TFitEditor::CheckRange(TF1 *f1)
-{
-   // Check the fit function range (if the object has been fitted).
-   Double_t fxmin=0, fxmax=0, xmin=0, xmax=0;
-
-   f1->GetRange(fxmin, fxmax);
-   xmin = fXaxis->GetXmin();
-   xmax = fXaxis->GetXmax();
-   fXrange = fXaxis->GetNbins();
-
-   if (fFitObject->InheritsFrom(TGraph::Class())) {
-      TGraph *gr = (TGraph *)fFitObject;
-      Int_t npoints = gr->GetN();
-      Double_t *gx = gr->GetX();
-      Double_t gxmin, gxmax;
-      const Int_t imin =  TMath::LocMin(npoints,gx);
-      const Int_t imax =  TMath::LocMax(npoints,gx);
-      gxmin = gx[imin];
-      gxmax = gx[imax];
-      if (xmin < gxmin) xmin = gxmin;
-      if (xmax > gxmax) xmax = gxmax;
-      if (xmin > xmax) {
-         Double_t tmp = gxmin;
-         xmin = xmax;
-         xmax = tmp;
-      }
-   }
-   if ((fxmin > xmin) || (fxmax < xmax)) {
-      fXmin = fXaxis->FindBin(fxmin);
-      fXmax = fXaxis->FindBin(fxmax);
-      fUseRange->SetState(kButtonDown);
-   } else {
-      fXmin = fXaxis->FindBin(xmin);
-      fXmax = fXaxis->FindBin(xmax);
-      fUseRange->SetState(kButtonUp);
-   }
-
-   if (fDim > 0) {
-      fSliderX->Disconnect("PositionChanged()");
-      fSliderX->SetRange(1,fXrange);
-      if (!fXmin && !fXmax)
-         fSliderX->SetPosition(1,fXrange);
-      else 
-         fSliderX->SetPosition(fXmin,fXmax);
-      fSliderX->SetScale(5);
-      fSliderX->Connect("PositionChanged()","TFitEditor",this, "DoSliderXMoved()");
    }
 }
 
