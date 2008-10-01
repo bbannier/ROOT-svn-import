@@ -249,8 +249,8 @@ void TGLCameraOverlay::Render(TGLRnrCtx& rnrCtx)
 
    TGLCamera &cam = rnrCtx.RefCamera();
 
-   if (   cam.IsPerspective() && fShowPerspective == kFALSE
-          || cam.IsOrthographic() && fShowOrthographic == kFALSE)
+   if ((cam.IsPerspective()  && ! fShowPerspective) ||
+       (cam.IsOrthographic() && ! fShowOrthographic))
       return;
 
    EMode mode = cam.IsOrthographic() ? fOrthographicMode : fPerspectiveMode;
