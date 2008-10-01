@@ -82,13 +82,13 @@ void TEveLegoOverlay::DrawSlider(TGLRnrCtx& rnrCtx)
       Double_t maxVal = fCalo->GetMaxVal();
       TGLRect& wprt = rnrCtx.RefCamera().RefViewport();
       Float_t fs = wprt.Height()*fSliderH* fAxisAtt.GetLabelSize();
-      fAxisAtt.SetAbsLabelFontSize( TGLFontManager::GetFontSize(fs, 8, 36));
+      fAxisAtt.SetAbsLabelFontSize(TGLFontManager::GetFontSize(fs, 8, 36));
 
       fAxisAtt.RefDir().Set(0, 1, 0);
       fAxisAtt.SetTextAlign(TGLFont::kLeft);
       fAxisAtt.SetRng(0, maxVal);
       fAxisAtt.RefTMOff(0).X() = -maxVal*0.03;
-      fAxisAtt.SetAbsLabelFontSize(fs);
+      fAxisAtt.SetAbsLabelFontSize(TMath::Nint(fs));
 
       glPushMatrix();
       glScalef( fSliderH/maxVal, fSliderH/maxVal, 1.);
