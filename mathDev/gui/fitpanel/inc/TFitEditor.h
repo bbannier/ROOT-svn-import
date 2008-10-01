@@ -171,7 +171,6 @@ protected:
    void        MakeTitle(TGCompositeFrame *parent, const char *title);
    TF1*        HasFitFunction(TObject *obj);
    void        GetFunctionsFromList(TList *list);
-   void        CheckRange(TF1 *f1);
    void        SetEditable(Bool_t);
 
 private:
