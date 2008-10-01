@@ -72,6 +72,10 @@ else
 		if [ $(ARCH) = "alphacxx6" ]; then \
 			PCRECC="cc"; \
 		fi; \
+		if [ "$(ARCH)" = "linux" ]; then \
+			PCRECC="gcc"; \
+			PCRE_CFLAGS="-m32"; \
+		fi; \
 		if [ $(ARCH) = "linuxx8664gcc" ]; then \
 			PCRECC="gcc"; \
 			PCRE_CFLAGS="-m64"; \
