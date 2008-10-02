@@ -243,12 +243,6 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
    fXaxis       (0),
    fYaxis       (0),
    fZaxis       (0),
-   fXmin        (0),
-   fXmax        (0),
-   fYmin        (0),
-   fYmax        (0),
-   fZmin        (0),
-   fZmax        (0),
    fFuncPars    (0)
 
 {
@@ -1080,22 +1074,30 @@ void TFitEditor::UpdateGUI()
             break;
       }
       
-      if (hist) {
-         fXaxis = hist->GetXaxis();
-         fYaxis = hist->GetYaxis();
-         fZaxis = hist->GetZaxis();
-         fXrange = fXaxis->GetNbins();
+
+      if (!hist) {
+	assert("No hist in UpdateGUI!");
       }
 
-      fXmin = fXaxis->GetFirst();
-      fXmax = fXaxis->GetLast();
-      fSliderX->SetRange(1,fXrange);
-      fSliderX->SetPosition(fXmin,fXmax);
+      fXaxis = hist->GetXaxis();
+      fYaxis = hist->GetYaxis();
+      fZaxis = hist->GetZaxis();
+      Int_t ixrange = fXaxis->GetNbins();
+      Int_t ixmin = fXaxis->GetFirst();
+      Int_t ixmax = fXaxis->GetLast();
+
+      if (ixmin > 1 || ixmax < ixrange) {
+	fSliderX->SetRange(ixmin,ixmax);
+	fSliderX->SetPosition(ixmin, ixmax);
+      } else {
+	fSliderX->SetRange(1,ixrange);
+	fSliderX->SetPosition(ixmin,ixmax);
+      }
+
       fSliderX->SetScale(5);
       fSliderX->Connect("PositionChanged()","TFitEditor",this, "DoSliderXMoved()");
    }
 
-//  no implemented functionality for y & z sliders yet 
    if (fDim > 1) {
       fSliderY->Disconnect("PositionChanged()");
 
@@ -1104,13 +1106,14 @@ void TFitEditor::UpdateGUI()
       if (fSliderZParent->IsMapped())
          fSliderZParent->UnmapWindow();
 
+      Int_t iymin = 0, iymax = 0, iyrange = 0;
       switch (fType) {
          case kObjectHisto: 
          case kObjectGraph2D:
          case kObjectHStack: 
-            fYrange = fYaxis->GetNbins();
-            fYmin = fYaxis->GetFirst();
-            fYmax = fYaxis->GetLast();
+            iyrange = fYaxis->GetNbins();
+            iymin = fYaxis->GetFirst();
+            iymax = fYaxis->GetLast();
             break;
          
          case kObjectGraph: 
@@ -1119,8 +1122,15 @@ void TFitEditor::UpdateGUI()
             //not implemented
             break;
       }
-      fSliderY->SetRange(1,fYrange);
-      fSliderY->SetPosition(fYmin,fYmax);
+
+      if (iymin > 1 || iymax < iyrange) {
+	fSliderY->SetRange(iymin,iymax);
+	fSliderY->SetPosition(iymin, iymax);
+      } else {
+	fSliderY->SetRange(1,iyrange);
+	fSliderY->SetPosition(iymin,iymax);
+      }
+
       fSliderY->SetScale(5);
       fSliderY->Connect("PositionChanged()","TFitEditor",this, "DoSliderYMoved()");
    }
@@ -1132,12 +1142,13 @@ void TFitEditor::UpdateGUI()
       if (!fSliderZParent->IsMapped())
          fSliderZParent->MapWindow();
 
+      Int_t izmin = 0, izmax = 0, izrange = 0;
       switch (fType) {
          case kObjectHStack:
          case kObjectHisto:
-            fZrange = fZaxis->GetNbins();
-            fZmin = fZaxis->GetFirst();
-            fZmax = fZaxis->GetLast();
+            izrange = fZaxis->GetNbins();
+            izmin = fZaxis->GetFirst();
+            izmax = fZaxis->GetLast();
             break;
 
          case kObjectGraph:
@@ -1147,22 +1158,18 @@ void TFitEditor::UpdateGUI()
             //not implemented
             break;
       }
-      fSliderZ->SetRange(1,fZrange);
-      fSliderZ->SetPosition(fZmin,fZmax);
+
+      if (izmin > 1 || izmax < izrange) {
+	fSliderZ->SetRange(izmin,izmax);
+	fSliderZ->SetPosition(izmin, izmax);
+      } else {
+	fSliderZ->SetRange(1,izrange);
+	fSliderZ->SetPosition(izmin,izmax);
+      }
+
       fSliderZ->SetScale(5);
       fSliderZ->Connect("PositionChanged()","TFitEditor",this, "DoSliderZMoved()");
    }
-/*
-   switch (fDim) {
-      case 1:
-         fGeneral->HideFrame(fSliderYParent);
-         fGeneral->HideFrame(fSliderZParent);
-         break;
-      case 2:
-         fGeneral->HideFrame(fSliderZParent);
-         break;
-   }
-   Layout();*/
 }
 
 //______________________________________________________________________________
@@ -1770,26 +1777,8 @@ void TFitEditor::DoReset()
    fParentPad->Update();
    fEnteredFunc->SetText("gaus");
 
-   if (fXmin > 1 || fXmax < fXrange) {
-      fSliderX->SetRange(fXmin,fXmax);
-      fSliderX->SetPosition(fXmin, fXmax);
-   } else {
-      fSliderX->SetRange(1,fXrange);
-      fSliderX->SetPosition(fXmin,fXmax);
-   }
-
-   if (fYmin > 1 || fYmax < fYrange) {
-      fSliderY->SetRange(fYmin,fYmax);
-      fSliderY->SetPosition(fYmin, fYmax);
-   } else {
-      fSliderY->SetRange(1,fYrange);
-      fSliderY->SetPosition(fYmin,fYmax);
-   }
-
-   fPx1old = fParentPad->XtoAbsPixel(fParentPad->GetUxmin());
-   fPy1old = fParentPad->YtoAbsPixel(fParentPad->GetUymin());
-   fPx2old = fParentPad->XtoAbsPixel(fParentPad->GetUxmax());
-   fPy2old = fParentPad->YtoAbsPixel(fParentPad->GetUymax());
+   // To restore temporary points and sliders
+   UpdateGUI();
 
    if (fLinearFit->GetState() == kButtonDown)
       fLinearFit->SetState(kButtonUp, kTRUE);
