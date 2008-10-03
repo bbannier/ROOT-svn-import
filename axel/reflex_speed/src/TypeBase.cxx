@@ -154,13 +154,13 @@ Reflex::Internal::TypeBase::DetermineFinalType(const Type& t) const {
       retType = t.ToType().FinalType();
       break;
    case kPointer:
-      retType = PointerBuilder(t.ToType().FinalType(), InCatalog(), t.TypeInfo());
+      retType = PointerBuilder(t.ToType().FinalType(), t.TypeInfo(), InCatalog());
       break;
    case kPointerToMember:
-      retType = PointerToMemberBuilder(t.ToType().FinalType(), t.PointerToMemberScope(), InCatalog(), t.TypeInfo());
+      retType = PointerToMemberBuilder(t.ToType().FinalType(), t.PointerToMemberScope(), t.TypeInfo(), InCatalog());
       break;
    case kArray:
-      retType = ArrayBuilder(t.ToType().FinalType(), t.ArrayLength(), InCatalog(), t.TypeInfo());
+      retType = ArrayBuilder(t.ToType().FinalType(), t.ArrayLength(), t.TypeInfo(), InCatalog());
       break;
    case kFunction:
       {
@@ -169,7 +169,7 @@ Reflex::Internal::TypeBase::DetermineFinalType(const Type& t) const {
          Type_Iterator iParEnd = t.FunctionParameters().End();
          for (Type_Iterator iPar = t.FunctionParameters().Begin(); iPar != iParEnd; ++iPar, ++idx)
             vecParFinal[idx] = iPar->FinalType();
-         retType = FunctionTypeBuilder(t.ReturnType().FinalType(), vecParFinal, InCatalog(), t.TypeInfo());
+         retType = FunctionTypeBuilder(t.ReturnType().FinalType(), vecParFinal, t.TypeInfo(), InCatalog());
          break;
       }
    case kUnresolved:

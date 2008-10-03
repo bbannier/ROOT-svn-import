@@ -492,14 +492,6 @@ namespace Reflex {
       /** */
       const Internal::ScopeBase * ToScopeBase() const;
 
-   public:
-
-      /**
-      * @label __NIRVANA__
-      * @link association 
-      */
-      static Scope & __NIRVANA__();
-
    private:
 
       /**

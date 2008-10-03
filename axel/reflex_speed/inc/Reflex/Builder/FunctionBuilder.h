@@ -38,8 +38,8 @@ namespace Reflex {
          StubFunction stubFP,
          void * stubCtx,
          const char * params,
-         const Catalog& catalog,
-         unsigned char modifiers);
+         unsigned char modifiers,
+         const Catalog& catalog = Reflex::Catalog::Instance());
 
 
       /** destructor */
@@ -86,9 +86,9 @@ namespace Reflex {
          const Type & typ,
          StubFunction stubFP,
          void * stubCtx,
-         const char * params,
-         const Catalog& catalog = Reflex::Catalog::Instance(), 
-         unsigned char modifiers = 0);
+         const char * params, 
+         unsigned char modifiers = 0,
+         const Catalog& catalog = Reflex::Catalog::Instance());
 
 
       /** destructor */
@@ -182,8 +182,8 @@ inline Reflex::FunctionBuilderT<F>::FunctionBuilderT(const char * nam,
                           stubFP,
                           stubCtx,
                           params,
-                          catalog,
-                          modifiers) { }
+                          modifiers,
+                          catalog) { }
       
 
 //-------------------------------------------------------------------------------

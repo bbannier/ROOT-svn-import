@@ -37,7 +37,10 @@ namespace Internal {
 
    public:
 
-      /** default constructor */
+      /** constructor for initialisation of the global namespace */
+      Namespace(const Catalog& catalog);
+
+      /** named constructor */
       Namespace(const char * scop, const Catalog& catalog);
 
 
@@ -51,11 +54,6 @@ namespace Internal {
       */
       virtual void GenerateDict(DictionaryGenerator &generator) const;
 
-
-   private:
-
-      /** constructor for initialisation of the global namespace */
-      Namespace(const Catalog& catalog);
 
    }; // class Namespace
 } //namespace Internal

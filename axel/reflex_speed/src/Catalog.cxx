@@ -78,12 +78,23 @@ Reflex::Catalog::Scopes() const {
 
 
 //-------------------------------------------------------------------------------
-// shortcut access:
 Reflex::Scope
 Reflex::Catalog::GlobalScope() const {
 //-------------------------------------------------------------------------------
+// shortcut access to the global scope
    if (fImpl)
       return fImpl->Scopes().GlobalScope();
+   return Scope();
+}
+
+
+//-------------------------------------------------------------------------------
+// shortcut access:
+Reflex::Scope
+Reflex::Catalog::__NIRVANA__() const {
+//-------------------------------------------------------------------------------
+   if (fImpl)
+      return fImpl->Scopes().__NIRVANA__();
    return Scope();
 }
 

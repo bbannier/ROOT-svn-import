@@ -84,6 +84,8 @@ namespace Reflex {
          // Destruct a ContainerImplBase
          virtual ~ContainerImplBase();
 
+         void SetOther(ContainerImplBase* other) { fOther = other; }
+
          void InsertNode(Link* node, Hash_t hash);
 
          void PauseRehash(bool pause = true) {
@@ -136,6 +138,13 @@ namespace Reflex {
             return fSize;
          }
 
+         virtual void* ProxyByName(const std::string&) const {
+            return 0;
+         }
+         virtual void* ProxyByTypeInfo(const std::type_info&) const {
+            return 0;
+         }
+
          // Statistics holder for the collection
          struct Statistics {
             size_t fSize; // number of nodes stored in the collection
@@ -172,6 +181,7 @@ namespace Reflex {
          size_t        fCollisions; // number of nodes sharing a bucket with other nodes
          size_t        fSize; // number of elements this container holds
          NodeArena*    fNodeArena; // the container's node storage manager
+         const ContainerImplBase* fOther; // forward to other if ProxyByXYZ is incomatiple with our key
          mutable ContainerImplBase* fNext; // next container (used for chained searches)
          mutable RWLock fLock; // Read/Write lock for this container
          static const size_t fgPrimeArraySqrt3[19]; // a pre-computed array of prime numbers used for growing the buckets

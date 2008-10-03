@@ -111,11 +111,7 @@ namespace Reflex {
       * The reason for deprecating this function is the misleading name. The function checks
       * if a given property (with a key) is attached to this item.
       */
-      bool HasKey(const std::string & key) const
-#if defined(__GNUC__) && !defined(__CINT__)
-         __attribute__((deprecated))
-#endif
-         ;
+      // bool HasKey(const std::string & key) const;
 
 
       /**
@@ -218,11 +214,7 @@ namespace Reflex {
       * function now returns only the number of properties attached. The container it
       * self can be larger, because it may have holes
       */
-      size_t PropertySize() const
-#if defined(__GNUC__) && !defined(__CINT__)
-         __attribute__((deprecated))
-#endif
-         ;
+      // size_t PropertySize() const;
 
 
 
@@ -302,20 +294,5 @@ inline Reflex::PropertyList::PropertyList(const PropertyList & pl)
 inline Reflex::PropertyList::~PropertyList() {
 //-------------------------------------------------------------------------------
 }
-
-
-//-------------------------------------------------------------------------------
-inline bool Reflex::PropertyList::HasKey(const std::string & key) const {
-//-------------------------------------------------------------------------------
-   return HasProperty(key);
-}
-
-
-//-------------------------------------------------------------------------------
-inline size_t Reflex::PropertyList::PropertySize() const {
-//-------------------------------------------------------------------------------
-   return PropertyCount();
-}
-
 
 #endif // Reflex_PropertyList

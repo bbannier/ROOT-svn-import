@@ -71,7 +71,7 @@ Reflex::Internal::TypeName::TypeName(const char * nam,
 
    std::string sname = Tools::GetScopeName(nam);
    fScope = catalog.ScopeByName(sname);
-   if (!fScope.Id())
+   if (!fScope.Id() || fScope.InCatalog() != catalog)
       fScope = (new ScopeName(sname.c_str(), 0, catalog))->ThisScope();
 }
 

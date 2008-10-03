@@ -36,6 +36,9 @@ namespace Reflex {
       // static instance
       static const Catalog& Instance();
 
+      bool operator==(const Catalog& other) const { return fImpl == other.fImpl; }
+      bool operator!=(const Catalog& other) const { return fImpl != other.fImpl; }
+
       Type ByName(const std::string& name) const;
       Type ByTypeInfo(const std::type_info & ti) const;
       Scope ScopeByName(const std::string& name) const;
@@ -46,6 +49,7 @@ namespace Reflex {
 
       // shortcut access:
       Scope GlobalScope() const;
+      Scope __NIRVANA__() const;
 
       // for internal use:
       Internal::CatalogImpl* Impl() const { return fImpl; }

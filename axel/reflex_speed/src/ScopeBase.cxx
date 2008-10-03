@@ -13,19 +13,19 @@
 #define REFLEX_BUILD
 #endif
 
-#include "Reflex/Scope.h"
-
 #include "ScopeBase.h"
 
+#include "Reflex/Scope.h"
 #include "Reflex/Type.h"
-#include "OwnedMember.h"
-#include "ScopeName.h"
-#include "Reflex/TypeTemplate.h"
-#include "OwnedMemberTemplate.h"
-#include "InternalTools.h"
 #include "Reflex/Tools.h"
+#include "Reflex/Catalog.h"
+#include "Reflex/TypeTemplate.h"
 #include "Reflex/DictionaryGenerator.h"
 
+#include "OwnedMember.h"
+#include "ScopeName.h"
+#include "OwnedMemberTemplate.h"
+#include "InternalTools.h"
 #include "Class.h"
 #include "Namespace.h"
 #include "DataMember.h"
@@ -56,7 +56,7 @@ Reflex::Internal::ScopeBase::ScopeBase(const char * scope,
    }
 
    // Construct Scope
-   Scope scopePtr = Scope::Scopes().ByName(sname);
+   Scope scopePtr = catalog.ByName(sname);
    if (scopePtr.Id() == 0) { 
       // create a new Scope
       fScopeName = new ScopeName(scope, this, catalog); 
@@ -82,7 +82,7 @@ Reflex::Internal::ScopeBase::ScopeBase(const char * scope,
 Reflex::Internal::ScopeBase::ScopeBase(const Catalog& catalog) 
    : fScopeName(0),
      fScopeType(kNamespace),
-     fDeclaringScope(Scope::__NIRVANA__()),
+     fDeclaringScope(catalog.__NIRVANA__()),
      fPropertyList(OwnedPropertyList(new PropertyListImpl())),
      fBasePosition(0) {
 //-------------------------------------------------------------------------------
@@ -162,7 +162,8 @@ Reflex::Scope
 Reflex::Internal::ScopeBase::GlobalScope() {
 //-------------------------------------------------------------------------------
    // Return a ref to the global scope.
-   return Namespace::GlobalScope();
+   static Scope sGlobal = Catalog::Instance().ScopeByName("");
+   return sGlobal;
 }
 
 
@@ -176,11 +177,20 @@ Reflex::Internal::ScopeBase::HideName() const {
 
 
 //-------------------------------------------------------------------------------
+const Reflex::Catalog&
+Reflex::Internal::ScopeBase::InCatalog() const {
+//-------------------------------------------------------------------------------
+// Retrieve the Catalog containing the type.
+   return fScopeName->InCatalog();
+}
+
+
+//-------------------------------------------------------------------------------
 bool
 Reflex::Internal::ScopeBase::IsTopScope() const {
 //-------------------------------------------------------------------------------
    // Check if this scope is the top scope.
-   if (fDeclaringScope == Scope::__NIRVANA__()) return true;
+   if (fDeclaringScope == InCatalog().__NIRVANA__()) return true;
    return false;
 }
 
@@ -392,7 +402,7 @@ Reflex::Internal::ScopeBase::AddSubScope(const char * scope,
                                          ETYPE scopeType) const {
 //-------------------------------------------------------------------------------
    // Add sub scope to this scope.
-   AddSubScope(*(new ScopeBase(scope, scopeType, fScopeName->InCatalog())));
+   AddSubScope(*(new ScopeBase(scope, scopeType, InCatalog())));
 }
 
 
@@ -426,13 +436,13 @@ Reflex::Internal::ScopeBase::AddSubType(const char * type,
    TypeBase * tb = 0;
    switch (typeType) {
    case kClass:
-      tb = new Class(type,size,ti, fScopeName->InCatalog(), modifiers);
+      tb = new Class(type,size,ti, InCatalog(), modifiers);
       break;
    case kStruct:
-      tb = new Class(type,size,ti, fScopeName->InCatalog(),modifiers,kStruct);
+      tb = new Class(type,size,ti, InCatalog(),modifiers,kStruct);
       break;
    case kEnum:
-      tb = new Enum(type,ti, fScopeName->InCatalog(),modifiers);
+      tb = new Enum(type,ti, InCatalog(),modifiers);
       break;
    case kFunction:
       break;
@@ -447,10 +457,10 @@ Reflex::Internal::ScopeBase::AddSubType(const char * type,
    case kTypedef:
       break;
    case kUnion:
-      tb = new Union(type,size,ti, fScopeName->InCatalog(),modifiers); 
+      tb = new Union(type,size,ti, InCatalog(),modifiers); 
       break;
    default:
-      tb = new TypeBase(type, modifiers, size, typeType, ti, fScopeName->InCatalog());
+      tb = new TypeBase(type, modifiers, size, typeType, ti, InCatalog());
    }
    if (tb) AddSubType(* tb);
 }

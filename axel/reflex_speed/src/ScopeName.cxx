@@ -69,9 +69,10 @@ Reflex::Internal::ScopeName::ScopeName(const char* name,
    cati->Scopes().Add(*this);
 
    //---Build recursively the declaring scopeNames
-   if (fName != "@N@I@R@V@A@N@A@") {
+   if (fName[0] && fName != "@N@I@R@V@A@N@A@") {
       std::string decl_name = Tools::GetScopeName(fName);
-      if (! cati->Scopes().ByName(decl_name).Id())
+      Scope declScope = cati->Scopes().ByName(decl_name);
+      if (! declScope.Id() || declScope.InCatalog() != catalog )
          new ScopeName(decl_name.c_str(), 0, catalog);
    }
 }

@@ -25,8 +25,8 @@
 Reflex::VariableBuilderImpl::VariableBuilderImpl(const char * nam,
                                                  const Type & typ,
                                                  size_t offs,
-                                                 const Catalog& catalog,
-                                                 unsigned int modifiers) 
+                                                 unsigned int modifiers,
+                                                 const Catalog& catalog) 
    : fDataMember(Member()) {
 //-------------------------------------------------------------------------------
 // Construct the info for a variable.
@@ -88,8 +88,8 @@ Reflex::Member Reflex::VariableBuilderImpl::ToMember() {
 Reflex::VariableBuilder::VariableBuilder(const char * nam, 
                                          const Type & typ,
                                          size_t offs,
-                                         const Catalog& catalog,
-                                         unsigned int modifiers) 
+                                         unsigned int modifiers,
+                                         const Catalog& catalog) 
    : fDataMember(Member()) {
 //-------------------------------------------------------------------------------
 // Construct the variable info.

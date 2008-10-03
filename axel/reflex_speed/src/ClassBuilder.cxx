@@ -41,8 +41,8 @@
 
 //______________________________________________________________________________
 Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info& ti,
-                                           size_t size, const Catalog& catalog, 
-                                           unsigned int modifiers, ETYPE typ):
+                                           size_t size, unsigned int modifiers,
+                                           ETYPE typ, const Catalog& catalog):
    fClass(0) , fLastMember(), fCatalog(catalog)
 {
    // -- Construct a class information (internal).
@@ -199,9 +199,9 @@ Reflex::Type Reflex::ClassBuilderImpl::ToType()
 
 //______________________________________________________________________________
 Reflex::ClassBuilder::ClassBuilder(const char* nam, const std::type_info& ti,
-                                   size_t size, const Catalog& catalog,
-                                   unsigned int modifiers, ETYPE typ)
-: fClassBuilderImpl(nam, ti, size, catalog, modifiers, typ)
+                                   size_t size, unsigned int modifiers,
+                                   ETYPE typ, const Catalog& catalog)
+: fClassBuilderImpl(nam, ti, size, modifiers, typ, catalog)
 {
    // -- Constructor
 }

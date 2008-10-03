@@ -157,6 +157,26 @@ namespace Internal {
       return scope->Name();
    }
 
+
+   //---- Container Traits for ByName(), ByTypeInfo() ----
+
+   template <>
+   void*
+   ContainerTraits::ProxyByNameImpl<std::string>(const std::string& name, ContainerImplBase* coll) const {
+      iterator ret = coll->Find(name);
+      if (ret) return &(*ret);
+      return 0;
+   }
+
+   template <>
+   void*
+   ContainerTraits::ProxyByTypeInfoImpl<const char*>(const std::type_info& ti, ContainerImplBase* coll) const {
+      iterator ret = coll->Find(ti.name());
+      if (ret) return &(*ret);
+      return 0;
+   }
+
+
 } // namespace Internal
 } // namespace Reflex
 
