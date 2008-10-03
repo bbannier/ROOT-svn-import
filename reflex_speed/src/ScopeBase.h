@@ -136,6 +136,12 @@ namespace Internal {
 
 
       /**
+      * Retrieve the Catalog containing the scope.
+      */
+      const Catalog& InCatalog() const;
+
+
+      /**
       * Check whether the entity property is set for the scope. You can
       * combine checks, e.g. Is(gClass && gPublic)
       * @param descr the entity property to check for; see EntityProperty.
@@ -441,6 +447,8 @@ namespace Internal {
 
 
       virtual void HideName() const;
+
+      ScopeName* ToScopeName() const { return fScopeName; }
 
    private:
 

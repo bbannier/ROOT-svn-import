@@ -73,14 +73,24 @@ namespace Internal {
       return pti.IsInvalidated();
    }
 
+
+   template <EUniqueness UNIQUENESS, class TRAITS>
+   virtual void*
+   ContainerImpl<const char*, PairTypeInfoType, UNIQUENESS, TRAITS>::ProxyByTypeInfo(const std::type_info& ti) const {
+      iterator ret = Find(ti.name);
+      if (ret) return &(*ret);
+      return 0;
+   }
+
+
    class TypeCatalogImpl {
    public:
       typedef ContainerImpl<std::string, TypeName*, kUnique> TypeContainer_t;
 
-      TypeCatalogImpl(const CatalogImpl* catalog);
+      TypeCatalogImpl(const CatalogImpl* catalog): fCatalog(catalog) {}
       ~TypeCatalogImpl() {}
 
-      void SetCatalog(const CatalogImpl* catalog) { fCatalog = catalog; };
+      void Init();
 
       const TypeContainer_t& All() const { return fAllTypes; }
       Type ByName(const std::string& name) const;
@@ -107,8 +117,11 @@ namespace Internal {
    public:
       typedef ContainerImpl<std::string, ScopeName*>            ScopeContainer_t;
 
-      ScopeCatalogImpl(const CatalogImpl* catalog = 0);
+      ScopeCatalogImpl(const CatalogImpl* catalog):
+         fCatalog(catalog), fGlobalScope(0), fNirvana(0) {}
       ~ScopeCatalogImpl() {}
+
+      void Init();
 
       void SetCatalog(const CatalogImpl* catalog) { fCatalog = catalog; };
 
@@ -120,16 +133,18 @@ namespace Internal {
       void Remove(ScopeName& scope);
 
       Scope GlobalScope() const;
+      Scope __NIRVANA__() const;
 
    private:
       const CatalogImpl* fCatalog;
       ScopeContainer_t   fAllScopes;
+      ScopeName*         fGlobalScope;
       ScopeName*         fNirvana;
    };
 
    class CatalogImpl {
    public:
-      CatalogImpl(): fScopes(this), fTypes(this) {}
+      CatalogImpl(const std::string& name);
       ~CatalogImpl() {}
 
       static CatalogImpl& Instance();
@@ -140,12 +155,18 @@ namespace Internal {
       ScopeCatalogImpl& Scopes() {return fScopes;}
       TypeCatalogImpl&  Types()  {return fTypes;}
 
-      const Catalog& ThisCatalog() const { return fThisCatalog; }
+      Catalog ThisCatalog() const { return const_cast<CatalogImpl*>(this); }
+
+      const std::string& Name() { return fName; }
+
+   private:
+      // default constructor for the static instance
+      CatalogImpl();
 
    private:
       ScopeCatalogImpl fScopes;
       TypeCatalogImpl  fTypes;
-      Catalog          fThisCatalog;
+      std::string      fName;
    };
 } // namespace Internal
 } // namespace Reflex

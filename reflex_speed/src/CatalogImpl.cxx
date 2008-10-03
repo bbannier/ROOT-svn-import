@@ -40,15 +40,37 @@ Reflex::Internal::CatalogImpl::Instance() {
    return instance;
 }
 
+
+//-------------------------------------------------------------------------------
+Reflex::Internal::CatalogImpl::CatalogImpl():
+   fScopes(this), fTypes(this), fName("Global Reflex Catalog") {
+//-------------------------------------------------------------------------------
+   fScopes.Init();
+   fTypes.Init();
+}
+
+
+//-------------------------------------------------------------------------------
+Reflex::Internal::CatalogImpl::CatalogImpl(const std::string& name):
+   fScopes(this), fTypes(this), fName(name) {
+//-------------------------------------------------------------------------------
+   fScopes.Init();
+   // fundamental types go only into the static dict,
+   // and that is initialized via the default constructor:
+   // fTypes.Init();
+}
+
+
 #define RFLX_TYPECAT_DECLFUND(type) \
 tb = new Internal::Fundamental(#type, sizeof(type), typeid(type), myCatalog);\
 tb->Properties().AddProperty("Description", "fundamental type")
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::TypeCatalogImpl::TypeCatalogImpl(const CatalogImpl* catalog):
-   fCatalog(catalog) {
+void
+Reflex::Internal::TypeCatalogImpl::Init() {
 //-------------------------------------------------------------------------------
-// Initialize the fundamental types of a catalog
+// Initialize the fundamental types of a catalog; only called for the static
+// instance of the CatalogImpl.
 
    Internal::Fundamental * tb = 0;
    Type t;
@@ -100,7 +122,7 @@ Reflex::Internal::TypeCatalogImpl::TypeCatalogImpl(const CatalogImpl* catalog):
    new Internal::Typedef("long unsigned int", t, myCatalog, kFundamental, t);
 
    /* // w_chart [3.9.1.5]
-   RFLX_TYPECAT_DECLFUND(w_chart);
+      RFLX_TYPECAT_DECLFUND(w_chart);
    */
 
    // bool [3.9.1.6]
@@ -212,10 +234,12 @@ void Reflex::Internal::TypeCatalogImpl::UpdateTypeId(const Reflex::Internal::Typ
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::ScopeCatalogImpl::ScopeCatalogImpl(const CatalogImpl* catalog):
-   fCatalog(catalog) {
+void
+Reflex::Internal::ScopeCatalogImpl::Init() {
 //-------------------------------------------------------------------------------
+// create the global scope and its "declaring scope" as returned by __NIRVANA__().
    fNirvana = new ScopeName("@N@I@R@V@A@N@A@", 0, fCatalog->ThisCatalog());
+   fGlobalScope = (new Namespace(fCatalog->ThisCatalog()))->ToScopeName();
 }
 
 //-------------------------------------------------------------------------------
@@ -301,7 +325,16 @@ Reflex::Scope
 Reflex::Internal::ScopeCatalogImpl::GlobalScope() const {
 //-------------------------------------------------------------------------------
 // Return the global scope's Scope object.
-   return Internal::Namespace::GlobalScope();
+   return fGlobalScope;
+}
+
+
+//-------------------------------------------------------------------------------
+Reflex::Scope
+Reflex::Internal::ScopeCatalogImpl::__NIRVANA__() const {
+//-------------------------------------------------------------------------------
+// Return the global scope's Scope object.
+   return fNirvana;
 }
 
 

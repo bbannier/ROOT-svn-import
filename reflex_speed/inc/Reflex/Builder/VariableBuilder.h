@@ -34,8 +34,8 @@ namespace Reflex {
       VariableBuilder(const char * nam,
          const Type & typ,
          size_t offs,
-         const Catalog& catalog = Reflex::Catalog::Instance(),
-         unsigned int modifiers = 0);
+         unsigned int modifiers = 0,
+         const Catalog& catalog = Reflex::Catalog::Instance());
 
 
       /** destructor */
@@ -82,8 +82,8 @@ namespace Reflex {
       VariableBuilderImpl(const char * nam,
          const Type & typ,
          size_t offs,
-         const Catalog& catalog = Reflex::Catalog::Instance(),
-         unsigned int modifiers = 0);
+         unsigned int modifiers = 0,
+         const Catalog& catalog = Reflex::Catalog::Instance());
 
 
       /** destructor */
@@ -128,8 +128,8 @@ namespace Reflex {
       /** constructor */
       VariableBuilderT(const char * nam,
          size_t offs,
-         const Catalog& catalog = Reflex::Catalog::Instance(),
-         unsigned int modifiers = 0);
+         unsigned int modifiers = 0,
+         const Catalog& catalog = Reflex::Catalog::Instance());
 
 
       /** destructor */
@@ -167,14 +167,14 @@ namespace Reflex {
 template < typename D > 
 inline Reflex::VariableBuilderT<D>::VariableBuilderT(const char * nam,
                                                      size_t offs,
-                                                     const Catalog& catalog,
-                                                     unsigned int modifiers) 
+                                                     unsigned int modifiers,
+                                                     const Catalog& catalog) 
 //-------------------------------------------------------------------------------
    : fDataMemberBuilderImpl(nam,
                             TypeDistiller<D>::Get(),
                             offs,
-                            catalog,
-                            modifiers) {}
+                            modifiers,
+                            catalog) {}
 
 
 //-------------------------------------------------------------------------------

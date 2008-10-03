@@ -74,6 +74,18 @@ namespace Internal {
       void Invalidate(U* &u) const { u = 0; }
       template <typename U>
       void IsInvalidated(const U* &u) const { return !u; }
+
+      template <class KEY>
+      void* ProxyByNameImpl(const std::string& name, ContainerImplBase* coll) const {
+         if (coll->GetOther()) return coll->GetOther()->ProxyByName(name);
+         return 0;
+      }
+      template <class KEY>
+      void* ProxyByTypeInfoImpl(const std::type_info& ti, ContainerImplBase* coll) const {
+         if (coll->GetOther()) return coll->GetOther()->ProxyByTypeInfo(ti);
+         return 0;
+      }
+
    };
 
    // Traits class used by Container
@@ -96,6 +108,11 @@ namespace Internal {
       void Invalidate(VALUE& value) const { ContainerTraits::Invalidate<VALUE>(value); }
       // check whether a value is invalidated (e.g. for iterators pointing to removed nodes)
       bool IsInvalidated(const VALUE& value) const { return ContainerTraits::IsInvalidated<VALUE>(value); }
+
+      void* ProxyByNameImpl(const std::string& name, ContainerImplBase* coll) const {
+         return ContainerTraits::ProxyByNameImpl<KEY>(name, coll); }
+      void* ProxyByTypeInfoImpl(const std::type_info& ti, ContainerImplBase* coll) const {
+         return ContainerTraits::ProxyByTypeInfoImpl<KEY>(ti, coll); }
    };
 
    
@@ -107,12 +124,12 @@ namespace Internal {
    template <>
    inline Hash_t ContainerTraits::Hash(const char* const & key) const { return StringHash(key); }
 
+
+
    enum EUniqueness {
       kMany   = 0, // for UNIQUENESS: allow multiple instances of the same object in the container
       kUnique = 1 // for UNIQUENESS: allow container to hold only one instance of each object
    };
-
-
 
 
 
@@ -155,6 +172,7 @@ namespace Internal {
          REFLEX_RWLOCK_W(fLock);
          RemoveAllNodes();
       }
+
 
       // leave out const_iterator overloads as these are not part of the API anyway.
       iterator Begin() const { return iterator(*this, *GetNodeHelper(), End()); }
@@ -288,6 +306,13 @@ namespace Internal {
          return !Size();
       }
 
+      virtual void* ProxyByName(const std::string& name) const {
+         return ProxyByNameImpl<KEY>(name);
+      }
+      virtual void* ProxyByTypeInfo(const std::type_info& ti) const {
+         return ProxyByTypeInfoImpl<KEY>(ti);
+      }
+
       static NodeHelper* GetNodeHelper() {
          static NodeHelper helper;
          return &helper;
@@ -312,6 +337,7 @@ namespace Internal {
       const ContainerImpl<KEY, VALUE, UNIQUENESS, TRAITS>* fNext; // next container for chained iteration
 
    }; // class ContainerImpl
+
 
    //-------------------------------------------------------------------------------
 
@@ -350,6 +376,7 @@ namespace Internal {
       const VALUE* operator->() const { return &(Curr()->fObj); }
       const VALUE& operator*() const  { return Curr()->fObj; }
    }; // class Container_const_iterator
+
 
    //-------------------------------------------------------------------------------
 

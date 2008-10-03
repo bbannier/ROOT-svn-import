@@ -139,9 +139,9 @@ Reflex::Type Reflex::Internal::Class::DynamicType(const Object & obj) const
       long int offset = **(long**)obj.Address();
       if (offset == 0) return ThisType();
       else {
-         const Type & dytype = InCatalog().ByTypeInfo(typeid(*(DynType_t*)obj.Address()));
+         const Type & dytype = ScopeBase::InCatalog().ByTypeInfo(typeid(*(DynType_t*)obj.Address()));
          if (dytype && dytype.Is(gClass)) return dytype;
-         else                              return ThisType();
+         else                             return ThisType();
       }
    }
    else {

@@ -39,14 +39,14 @@ namespace Reflex {
 
 
    RFLX_API Type PointerBuilder(const Type & t,
-      const Catalog& catalog = Reflex::Catalog::Instance(),
-      const std::type_info & ti = typeid(UnknownType));
+      const std::type_info & ti = typeid(UnknownType),
+      const Catalog& catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type PointerToMemberBuilder(const Type & t,
       const Scope & s,
-      const Catalog& catalog = Reflex::Catalog::Instance(),
-      const std::type_info & ti = typeid(UnknownType));
+      const std::type_info & ti = typeid(UnknownType),
+      const Catalog& catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type ReferenceBuilder(const Type & t);
@@ -54,13 +54,13 @@ namespace Reflex {
 
    RFLX_API Type ArrayBuilder(const Type & t, 
       size_t n,
-      const Catalog& catalog = Reflex::Catalog::Instance(),
-      const std::type_info & ti = typeid(UnknownType));
+      const std::type_info & ti = typeid(UnknownType),
+      const Catalog& catalog = Reflex::Catalog::Instance());
 
    RFLX_API Type EnumTypeBuilder(const char *, 
       const char * items = "",
-      const Catalog& catalog = Reflex::Catalog::Instance(),
-      const std::type_info & ti = typeid(UnknownType));
+      const std::type_info & ti = typeid(UnknownType),
+      const Catalog& catalog = Reflex::Catalog::Instance());
 
    RFLX_API Type TypedefTypeBuilder(const char * Name, 
       const Type & t,
@@ -69,8 +69,8 @@ namespace Reflex {
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,
       const std::vector<Reflex::Type> & p,
-      const Catalog& catalog = Reflex::Catalog::Instance(),
-      const std::type_info & ti = typeid(UnknownType));
+      const std::type_info & ti = typeid(UnknownType),
+      const Catalog& catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,
