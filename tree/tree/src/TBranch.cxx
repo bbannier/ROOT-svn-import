@@ -895,9 +895,10 @@ TBranch* TBranch::FindBranch(const char* name)
       longnm += '.';
    }
    longnm += name;
-   TBranch* branch = 0;
+   UInt_t namelen = strlen(name);
 
    Int_t nbranches = fBranches.GetEntries();
+   TBranch* branch = 0;
    for(Int_t i = 0; i < nbranches; ++i) {
       branch = (TBranch*) fBranches.UncheckedAt(i);
       
@@ -909,7 +910,7 @@ TBranch* TBranch::FindBranch(const char* name)
             brlen = dim - brname;
          }
       }
-      if (name[brlen]=='\0' /* same size */
+      if (namelen == brlen /* same effective size */
           && strncmp(name,brname,brlen) == 0) {
          return branch;
       }

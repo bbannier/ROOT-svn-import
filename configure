@@ -2273,7 +2273,8 @@ if test ! "x$enable_qt" = "xno" || \
 
     message "Checking for moc or moc.exe"
     if `$cwhich moc > /dev/null 2>&1` ; then
-        mocdir=`dirname $cwhich moc`
+        mocdir=`$cwhich moc`
+        mocdir=`dirname $mocdir`
     fi
     for i in $QTDIR $QTDIR/bin "$mocdir" /usr/local/bin /usr/local/qt/bin \
         /usr/bin /usr/qt4/bin /usr/lib/qt4/bin /usr/share/qt4/bin ; do
@@ -3286,7 +3287,9 @@ if test "x$enable_globus" = "xyes"; then
        globusincdir=$globusdir/include
     fi
     searchincdir="$globusincdir/gcc32 $globusincdir/gcc32dbg \
-                  $globusincdir/gcc32pthr $globusincdir/gcc32dbgpthr"
+                  $globusincdir/gcc32pthr $globusincdir/gcc32dbgpthr \
+                  $globusincdir/gcc64 $globusincdir/gcc64dbg \
+                  $globusincdir/gcc64pthr $globusincdir/gcc64dbgpthr"
 
     # Found the reference dir first
     check_header "openssl/x509.h" "" "$searchincdir"
