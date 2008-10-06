@@ -5019,7 +5019,12 @@ TH1 *TH1::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
    }
 
    Int_t newbins = nbins/ngroup;
-   if (xbins) newbins = ngroup;
+   // in the case of xbins ngroup is the new number of bin.
+   //  we need also to recompute ngroup  
+   if (xbins) { 
+      newbins = ngroup;
+      ngroup = nbins/newbins;
+   }
 
    // Save old bin contents into a new array
    Double_t entries = fEntries;
@@ -5067,7 +5072,6 @@ TH1 *TH1::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
       hnew->SetBins(newbins,bins); //this also changes errors array (if any)
       delete [] bins;
    } else if (xbins) {
-      ngroup = newbins;
       hnew->SetBins(newbins,xbins);
    } else {
       hnew->SetBins(newbins,xmin,xmax);
@@ -5977,6 +5981,7 @@ void TH1::UseCurrentStyle()
 {
    //   Copy current attributes from/to current style
 
+   if (!gStyle) return;
    if (gStyle->IsReading()) {
       fXaxis.ResetAttAxis("X");
       fYaxis.ResetAttAxis("Y");
@@ -7487,10 +7492,14 @@ TH1* TH1::TransformHisto(TVirtualFFT *fft, TH1* h_output,  Option_t *option)
 }
 
 
-ClassImp(TH1C)
 
 //______________________________________________________________________________
 //                     TH1C methods
+// TH1C : histograms with one byte per channel.   Maximum bin content = 127
+//______________________________________________________________________________
+
+ClassImp(TH1C)
+
 //______________________________________________________________________________
 TH1C::TH1C(): TH1(), TArrayC()
 {
@@ -7726,10 +7735,15 @@ TH1C operator/(const TH1C &h1, const TH1C &h2)
    return hnew;
 }
 
-ClassImp(TH1S)
+
 
 //______________________________________________________________________________
 //                     TH1S methods
+// TH1S : histograms with one short per channel.  Maximum bin content = 32767
+//______________________________________________________________________________
+
+ClassImp(TH1S)
+
 //______________________________________________________________________________
 TH1S::TH1S(): TH1(), TArrayS()
 {
@@ -7964,10 +7978,14 @@ TH1S operator/(const TH1S &h1, const TH1S &h2)
    return hnew;
 }
 
-ClassImp(TH1I)
 
 //______________________________________________________________________________
 //                     TH1I methods
+// TH1I : histograms with one int per channel.    Maximum bin content = 2147483647
+//______________________________________________________________________________
+
+ClassImp(TH1I)
+
 //______________________________________________________________________________
 TH1I::TH1I(): TH1(), TArrayI()
 {
@@ -8201,10 +8219,14 @@ TH1I operator/(const TH1I &h1, const TH1I &h2)
    return hnew;
 }
 
-ClassImp(TH1F)
 
 //______________________________________________________________________________
 //                     TH1F methods
+// TH1F : histograms with one float per channel.  Maximum precision 7 digits
+//______________________________________________________________________________
+
+ClassImp(TH1F)
+
 //______________________________________________________________________________
 TH1F::TH1F(): TH1(), TArrayF()
 {
@@ -8436,10 +8458,14 @@ TH1F operator/(const TH1F &h1, const TH1F &h2)
 }
 
 
-ClassImp(TH1D)
 
 //______________________________________________________________________________
 //                     TH1D methods
+// TH1D : histograms with one double per channel. Maximum precision 14 digits
+//______________________________________________________________________________
+
+ClassImp(TH1D)
+
 //______________________________________________________________________________
 TH1D::TH1D(): TH1(), TArrayD()
 {

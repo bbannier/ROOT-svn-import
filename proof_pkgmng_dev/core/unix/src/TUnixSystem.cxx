@@ -177,10 +177,9 @@
 #endif
 
 #if (defined(R__AIX) && !defined(_AIX43)) || \
-    (defined(R__FBSD) && !defined(R__ALPHA)) || \
     (defined(R__SUNGCC3) && !defined(__arch64__))
 #   define USE_SIZE_T
-#elif defined(R__GLIBC) || (defined(R__FBSD) && defined(R__ALPHA)) || \
+#elif defined(R__GLIBC) || defined(R__FBSD) || \
       (defined(R__SUNGCC3) && defined(__arch64__)) || \
       defined(R__OBSD) || defined(MAC_OS_X_VERSION_10_4) || \
       (defined(R__AIX) && defined(_AIX43))
@@ -4453,7 +4452,6 @@ void *TUnixSystem::SearchUtmpEntry(int n, const char *tty)
 #include <sys/resource.h>
 #include <mach/mach.h>
 #include <mach/mach_error.h>
-#include <mach/shared_memory_server.h>
 
 //______________________________________________________________________________
 static void GetDarwinSysInfo(SysInfo_t *sysinfo)
@@ -4616,6 +4614,12 @@ static void GetDarwinProcInfo(ProcInfo_t *procinfo)
 #ifdef _LP64
 #define vm_region vm_region_64
 #endif
+
+// taken from <mach/shared_memory_server.h> which is obsoleted in 10.5
+#define GLOBAL_SHARED_TEXT_SEGMENT      0x90000000U
+#define GLOBAL_SHARED_DATA_SEGMENT      0xA0000000U
+#define SHARED_TEXT_REGION_SIZE         0x10000000
+#define SHARED_DATA_REGION_SIZE         0x10000000
 
    struct rusage ru;
    if (getrusage(RUSAGE_SELF, &ru) < 0) {

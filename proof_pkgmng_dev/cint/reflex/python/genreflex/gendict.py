@@ -55,6 +55,22 @@ class genDictionary(object) :
     # references to id equal '_0' which is not defined anywhere
     self.xref['_0'] = {'elem':'Unknown', 'attrs':{'id':'_0','name':''}, 'subelems':[]}
 #----------------------------------------------------------------------------------
+  def addTemplateToName(self, attrs):
+    if attrs['name'].find('>') == -1 and 'demangled' in attrs :
+      # check whether this method is templated; GCCXML will
+      # not pass the real name foo<int> but only foo"
+      demangled = attrs['demangled']
+      posargs = demangled.rfind('(')
+      if posargs and posargs > 1 \
+             and demangled[posargs - 1] == '>' \
+             and (demangled[posargs - 2].isalnum() \
+                  or demangled[posargs - 2] == '_') :
+        posname = demangled.find(attrs['name'] + '<');
+        if posname :
+          reui = re.compile('\\b(unsigned)(\\s+)?([^\w\s])')
+          name1 = demangled[posname : posargs]
+          attrs['name'] = reui.sub('unsigned int\\3', name1)
+#----------------------------------------------------------------------------------
   def start_element(self, name, attrs):
     if 'id' in attrs :
       self.xref[attrs['id']] = {'elem':name, 'attrs':attrs, 'subelems':[]}
@@ -67,6 +83,7 @@ class genDictionary(object) :
     elif name in ('Class','Struct') :
       self.classes.append(attrs)
     elif name in ('Function',) :
+      self.addTemplateToName(attrs)
       self.functions.append(attrs)
     elif name in ('Enumeration',) :
       self.enums.append(attrs)
@@ -74,21 +91,11 @@ class genDictionary(object) :
       self.variables.append(attrs)
     elif name in ('OperatorFunction',) :
       attrs['operator'] = 'true'
+      self.addTemplateToName(attrs)
       self.functions.append(attrs)
     elif name in ('Constructor','Method','OperatorMethod') :
       if 'name' in attrs and attrs['name'][0:3] != '_ZT' :
-        if '>' not in attrs['name'] and 'demangled' in attrs :
-          # check whether this method is templated; GCCXML will
-          # not pass the real name foo<int> but only foo"
-          demangled = attrs['demangled']
-          posargs = demangled.rfind('(')
-          if posargs and posargs > 1 \
-                 and demangled[posargs - 1] == '>' \
-                 and (demangled[posargs - 2].isalnum() \
-                      or demangled[posargs - 2] == '_') :
-            posname = demangled.find(attrs['name'] + '<');
-            if posname :
-              attrs['name'] = demangled[posname : posargs]
+        self.addTemplateToName(attrs)
         self.methods.append(attrs)
     elif name == 'Namespace' :
       self.namespaces.append(attrs)
@@ -534,6 +541,7 @@ class genDictionary(object) :
         f_shadow += self.genClassShadow(c)
     f_shadow += '}\n\n'
     f_buffer += self.genFunctionsStubs( selfunctions )
+    f_buffer += ClassDefImplementation(selclasses, self)
     f_buffer += self.genInstantiateDict(selclasses, selfunctions, selenums, selvariables)
     f.write('namespace {\n')
     f.write(self.genNamespaces(selclasses + selfunctions + selenums + selvariables))
@@ -1340,6 +1348,8 @@ class genDictionary(object) :
       else : return attrs['demangled']
     if id[-1] in ['c','v'] :
       nid = id[:-1]
+      if nid[-1] in ['c','v'] :
+        nid = nid[:-1]
       cvdict = {'c':'const','v':'volatile'}
       prdict = {'PointerType':'*', 'ReferenceType':'&'}
       nidelem = self.xref[nid]['elem']
@@ -1579,7 +1589,6 @@ class genDictionary(object) :
         dname = gccdemangler.demangle_name(mm)
       else :
         dname = name
-      name += getTemplateArgString(dname[1])
       args = self.xref[id]['subelems']      
       if args : params  = '"'+ string.join( map(self.genParameter, args),';')+'"'
       else    : params  = '0'
@@ -2096,6 +2105,15 @@ class genDictionary(object) :
         bases.append( [id,  mod, level] )
         self.getAllBases( id, bases, level+1, access, virtual )
 #----------------------------------------------------------------------------------
+  def isCopyCtor(self, cid, mid):
+    args = self.xref[mid]['subelems']
+    if (len(args) == 1 or (len(args) > 1 and 'default' in args[1])) :
+      arg0type = args[0]['type']
+      while self.xref[arg0type]['elem'] in ( 'ReferenceType', 'CvQualifiedType') :
+        arg0type = self.xref[arg0type]['attrs']['type']
+      if arg0type == cid: return 1
+    return 0
+#----------------------------------------------------------------------------------
   def completeClass(self, attrs):
     # Complete class with "instantiated" templated methods or constructors
     # for GCCXML 0.9: add default c'tor, copy c'tor, d'tor if not available.
@@ -2118,29 +2136,26 @@ class genDictionary(object) :
             fname =  dname[1][dname[1].rfind('::' + m['name'])+2:]
             m['name'] = fname
         attrs['members'] += u' ' + m['id']
-    haveCtor    = 0
-    haveCtorCpy = 0
-    haveDtor    = 0
-    for m in members :
-      if self.xref[m]['elem'] == 'Constructor' :
-        haveCtor = 1
-        args = self.xref[m]['subelems']
-        if haveCtorCpy == 0 \
-               and (len(args) == 1 \
-                    or (len(args) > 1 and 'default' in args[1])) :
-          arg0type = args[0]['type']
-          elem = self.xref[arg0type]['elem']
-          while elem in ( 'ReferenceType', 'CvQualifiedType') :
-            arg0type = self.xref[arg0type]['attrs']['type']
-            elem = self.xref[arg0type]['elem']
-          if arg0type == cid: haveCtorCpy = 1
-      elif self.xref[m]['elem'] == 'Destructor' :
-        haveDtor = 1
+    # GCCXML now (>0.7) takes care by itself of which functions are implicitly defined:
+    haveCtor    = 1
+    haveCtorCpy = 1
+    haveDtor    = 1
+    if self.gccxmlvers.find('0.7') == 0:
+      haveCtor    = 0
+      haveCtorCpy = 0
+      haveDtor    = 0
+      for m in members :
+        if self.xref[m]['elem'] == 'Constructor' :
+          haveCtor = 1
+          if haveCtorCpy == 0:
+            haveCtorCpy = self.isCopyCtor(cid, m)
+        elif self.xref[m]['elem'] == 'Destructor' :
+          haveDtor = 1
     if haveCtor == 0 :
       id = u'_x%d' % self.x_id.next()
       new_attrs = { 'name':attrs['name'], 'id':id, 'context':cid, 'artificial':'true', 'access':'public' }
       self.xref[id] = {'elem':'Constructor', 'attrs':new_attrs, 'subelems':[] }
-      attrs['members'] += u' ' + id      
+      attrs['members'] += u' ' + id
     if haveCtorCpy == 0 :
       ccid = cid + 'c'
       # const cid exists?
@@ -2217,23 +2232,18 @@ else :
   stldeftab['hash_multimap'] = '=','=','__gnu_cxx::hash','std::equal_to','std::allocator'  
 #---------------------------------------------------------------------------------------
 def getTemplateArgs( cl ) :
-  if cl.find('<') == -1 : return []
+  begin = cl.find('<')
+  if begin == -1 : return []
+  end = cl.rfind('>')
+  if end == -1 : return []
   args, cnt = [], 0
-  for s in string.split(cl[cl.find('<')+1:cl.rfind('>')],',') :
+  for s in string.split(cl[begin+1:end],',') :
     if   cnt == 0 : args.append(s)
     else          : args[-1] += ','+ s
     cnt += s.count('<')+s.count('(')-s.count('>')-s.count(')')
-  if args[-1][-1] == ' ' : args[-1] = args[-1][:-1]
+  if len(args) and len(args[-1]) and args[-1][-1] == ' ' :
+    args[-1] = args[-1][:-1]
   return args
-#---------------------------------------------------------------------------------------
-def getTemplateArgString( cl ) :
-  bc = 0
-  if cl[-1] != '>' : return ''
-  for i in range( len(cl)-1, -1, -1) :
-    if   cl[i] == '>' : bc += 1
-    elif cl[i] == '<' : bc -= 1
-    if bc == 0 : return cl[i:]
-  return ''
 #---------------------------------------------------------------------------------------
 def normalizeClassAllTempl(name)   : return normalizeClass(name,True)
 def normalizeClassNoDefTempl(name) : return normalizeClass(name,False)
@@ -2247,10 +2257,14 @@ def normalizeClass(name,alltempl,_useCache=True,_cache={}) :
       _cache[key] = ret
       return ret
   names, cnt = [], 0
+  # Special cases:
+  # a< (0 > 1) >::b
+  # a< b::c >
+  # a< b::c >::d< e::f >
   for s in string.split(name,'::') :
     if cnt == 0 : names.append(s)
     else        : names[-1] += '::' + s
-    cnt += s.count('<')-s.count('>')
+    cnt += s.count('<')+s.count('(')-s.count('>')-s.count(')')
   if alltempl : return string.join(map(normalizeFragmentAllTempl,names),'::')
   else        : return string.join(map(normalizeFragmentNoDefTempl,names),'::')
 #--------------------------------------------------------------------------------------
@@ -2279,9 +2293,9 @@ def normalizeFragment(name,alltempl=False,_useCache=True,_cache={}) :
              ['long int',               'long']] :
       nor = nor.replace(e[0], e[1])
     return nor
-  else                     : clname = name[:name.find('<')]
-  if name.rfind('>') == -1 : suffix = ''
-  else                     : suffix = name[name.rfind('>')+1:]
+  else : clname = name[:name.find('<')]
+  if name.rfind('>') < len(clname) : suffix = ''
+  else                             : suffix = name[name.rfind('>')+1:]
   args = getTemplateArgs(name)
   sargs = [normalizeClass(a, alltempl) for a in args]
 
@@ -2317,3 +2331,94 @@ def clean(a) :
   for i in a :
 	if i not in r : r.append(i)
   return r
+#--------------------------------------------------------------------------------------
+# Add implementations of functions declared by ROOT's ClassDef() macro
+def ClassDefImplementation(selclasses, self) :
+  # test whether Rtypes.h got included:
+  haveRtypes = 0
+  for file in self.files:
+    if self.files[file]['name'].endswith('Rtypes.h') \
+           and ( self.files[file]['name'][-9] == '/' or self.files[file]['name'][-9] == '\\' ):
+      haveRtypes = 1
+      break
+  if haveRtypes == 0: return ''
+  
+  returnValue  = '#include "TClass.h"\n'
+  returnValue += '#include "TMemberInspector.h"\n'
+  haveClassDef = 0
+
+  for attrs in selclasses :
+    members = attrs.get('members','')
+    membersList = members.split()
+
+    listOfMembers = ""
+    for ml in membersList:
+      if ml[1].isdigit() :
+        listOfMembers += self.xref[ml]['attrs']['name']
+
+    if  "fgIsA" in listOfMembers \
+      and "Class" in listOfMembers \
+      and "Class_Name" in listOfMembers  \
+      and "Class_Version" in listOfMembers  \
+      and "Dictionary" in listOfMembers  \
+      and "IsA" in listOfMembers  \
+      and "ShowMembers" in listOfMembers  \
+      and "Streamer" in listOfMembers  \
+      and "StreamerNVirtual" in listOfMembers \
+      and "DeclFileName" in listOfMembers \
+      and "ImplFileLine" in listOfMembers \
+      and "ImplFileName" in listOfMembers :
+
+         haveClassDef = 1
+
+         clname = '::' + attrs['fullname']
+         returnValue += 'TClass* ' + clname + '::fgIsA = 0;\n'
+         returnValue += 'TClass* ' + clname + '::Class() {\n'
+         returnValue += '   if (!fgIsA)\n'
+         returnValue += '      fgIsA = TClass::GetClass("' + clname[2:] + '");\n'
+         returnValue += '   return fgIsA;\n'
+         returnValue += '}\n'
+         returnValue += 'const char * ' + clname + '::Class_Name() {return "' + clname[2:]  + '";}\n'
+         returnValue += 'void ' + clname + '::Dictionary() {}\n'
+         returnValue += 'const char *' + clname  + '::ImplFileName() {return "";}\n'
+
+         returnValue += 'int ' + clname + '::ImplFileLine() {return 0;}\n'
+
+         returnValue += 'void '+ clname  +'::ShowMembers(TMemberInspector &R__insp, char *R__parent) {\n'
+         returnValue += '   TClass *R__cl = ' + clname  + '::IsA();\n'
+         returnValue += '   Int_t R__ncp = strlen(R__parent);\n'
+         returnValue += '   if (R__ncp || R__cl || R__insp.IsA()) { }\n'
+
+         for ml in membersList:
+           if ml[1].isdigit() :
+             if self.xref[ml]['elem'] == 'Field' :
+               mattrs = self.xref[ml]['attrs']
+               varname  = mattrs['name']
+               tt = self.xref[mattrs['type']]
+               te = tt['elem']
+               if te == 'PointerType' :
+                 varname1 = '*' + varname
+               elif te == 'ArrayType' :
+                 t = self.genTypeName(mattrs['type'],colon=True,const=True)
+                 arraytype = t[t.find('['):]
+                 varname1 = varname + arraytype
+               else :
+                 varname1 = varname
+               returnValue += '   R__insp.Inspect(R__cl, R__parent, "' + varname1 + '", &' + varname + ');\n'
+
+         if 'bases' in attrs :
+           for b in attrs['bases'].split() :
+             returnValue +=  '   ' + self.xref[b]['attrs']['name'] + '::ShowMembers(R__insp,R__parent);\n'
+
+         returnValue += '}\n'
+
+         returnValue += 'void '+ clname  +'::Streamer(TBuffer &b) {\n   if (b.IsReading()) {\n'
+         returnValue += '      b.ReadClassBuffer(' + clname + '::Class(),this);\n'
+         returnValue += '   } else {\n'
+         returnValue += '      b.WriteClassBuffer(' + clname  + '::Class(),this);\n'
+         returnValue += '   }\n'
+         returnValue += '}\n'
+
+  if haveClassDef == 1 :
+    return "} // unnamed namespace\n\n" + returnValue + "\nnamespace {\n"
+  return ""
