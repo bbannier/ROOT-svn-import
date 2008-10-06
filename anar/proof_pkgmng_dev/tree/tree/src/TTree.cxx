@@ -3468,52 +3468,87 @@ Int_t TTree::Fill()
 }
 
 //______________________________________________________________________________
+static TBranch *R__FindBranchHelper(TObjArray *list, const char *branchname) {
+   // Search in the array for a branch matching the branch name,
+   // with the branch possibly expressed as a 'full' path name (with dots).
+   
+   if (list==0) return 0;
+   
+   Int_t nbranches = list->GetEntries();
+
+   UInt_t brlen = strlen(branchname);
+   
+   for(Int_t index = 0; index < nbranches; ++index) {
+      TBranch *where = (TBranch*)list->UncheckedAt(index); 
+      
+      const char *name = where->GetName();
+      UInt_t len = strlen(name);
+      if (name[len-1]==']') {
+         const  char *dim = strchr(name,'[');
+         if (dim) {
+            len = dim - name;
+         }
+      }
+      if (brlen == len && strncmp(branchname,name,len)==0) {
+         return where;
+      }
+      TBranch *next = 0;
+      if (branchname && branchname[len]=='.' 
+          && strncmp(name,branchname,len)==0) {
+         // The prefix subbranch name match the branch name.
+         
+         next = where->FindBranch(branchname);
+         if (!next) {
+            next = where->FindBranch(branchname+len+1);
+         }
+         if (next) return next;
+      }
+      const char *dot = strchr((char*)branchname,'.');
+      if (dot) {
+         if (len==(size_t)(dot-branchname) &&
+             strncmp(branchname,name,dot-branchname)==0 ) {
+            return R__FindBranchHelper(where->GetListOfBranches(),dot+1);
+         }
+      }
+   }
+   return 0;
+}
+
+//______________________________________________________________________________
 TBranch* TTree::FindBranch(const char* branchname)
 {
-   // FIXME: Describe this function.
+   // Return the branch that correspond to the path 'branchname', which can
+   // include the name of the tree or the ommited name of the parent branches.
+   // In case of ambiguity, returns the first match.
 
    // We already have been visited while recursively looking
    // through the friends tree, let return
    if (kFindBranch & fFriendLockStatus) {
       return 0;
    }
-   TIter next(GetListOfBranches());
+   
+   TBranch* branch = 0;
+   // If the first part of the name match the TTree name, look for the right part in the
+   // list of branches.
    // This will allow the branchname to be preceded by
    // the name of this tree.
-   char* subbranch = (char*) strstr(branchname, GetName());
-   if (subbranch != branchname) {
-      subbranch = 0;
+   if (strncmp(fName.Data(),branchname,fName.Length())==0 && branchname[fName.Length()]=='.') {
+      branch = R__FindBranchHelper( GetListOfBranches(), branchname + fName.Length() + 1);
+      if (branch) return branch;
    }
-   if (subbranch) {
-      subbranch += strlen(GetName());
-      if (*subbranch != '.') {
-         subbranch = 0;
-      } else {
-         ++subbranch;
-      }
-   }
-   TBranch* branch = 0;
-   while ((branch = (TBranch*) next())) {
-      std::string name(branch->GetName());
-      std::size_t dim = name.find_first_of("[");
-      if (dim != std::string::npos) {
-         name.erase(dim);
-      }
-      if (branchname == name) {
-         return branch;
-      }
-      if (subbranch && (subbranch == name)) {
-         return branch;
-      }
-   }
-   next.Reset();
-   branch = 0;
+   // If we did not find it, let's try to find the full name in the list of branches.
+   branch = R__FindBranchHelper(GetListOfBranches(), branchname);
+   if (branch) return branch;
+
+   // If we still did not find, let's try to find it within each branch assuming it does not the branch name.
+   TIter next(GetListOfBranches());
    while ((branch = (TBranch*) next())) {
       TBranch* nestedbranch = branch->FindBranch(branchname);
       if (nestedbranch) {
          return nestedbranch;
       }
    }
+   
    // Search in list of friends.
    if (!fFriends) {
       return 0;
@@ -3527,7 +3562,7 @@ TBranch* TTree::FindBranch(const char* branchname)
          continue;
       }
       // If the alias is present replace it with the real name.
-      subbranch = (char*) strstr(branchname, fe->GetName());
+      const char *subbranch = strstr(branchname, fe->GetName());
       if (subbranch != branchname) {
          subbranch = 0;
       }
@@ -4336,16 +4371,24 @@ TLeaf* TTree::GetLeaf(const char* aname)
    if (kGetLeaf & fFriendLockStatus) {
       return 0;
    }
+   TLeaf *leaf = 0;
    char* slash = (char*) strchr(aname, '/');
    char* name = 0;
    UInt_t nbch = 0;
    if (slash) {
       name = slash + 1;
       nbch = slash - aname;
+      TString brname(aname,nbch);
+      TBranch *branch = FindBranch(brname);
+      if (branch) {
+         leaf = branch->GetLeaf(name);
+         if (leaf) {
+            return leaf;
+         }
+      }
    } else {
       name = (char*) aname;
    }
-   TLeaf *leaf = 0;
    TIter nextl(GetListOfLeaves());
    while ((leaf = (TLeaf*)nextl())) {
       if (strcmp(leaf->GetName(),name)) continue;
