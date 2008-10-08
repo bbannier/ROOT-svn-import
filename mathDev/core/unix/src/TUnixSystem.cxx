@@ -177,10 +177,9 @@
 #endif
 
 #if (defined(R__AIX) && !defined(_AIX43)) || \
-    (defined(R__FBSD) && !defined(R__ALPHA)) || \
     (defined(R__SUNGCC3) && !defined(__arch64__))
 #   define USE_SIZE_T
-#elif defined(R__GLIBC) || (defined(R__FBSD) && defined(R__ALPHA)) || \
+#elif defined(R__GLIBC) || defined(R__FBSD) || \
       (defined(R__SUNGCC3) && defined(__arch64__)) || \
       defined(R__OBSD) || defined(MAC_OS_X_VERSION_10_4) || \
       (defined(R__AIX) && defined(_AIX43))
@@ -2092,7 +2091,7 @@ void TUnixSystem::StackTrace()
 #if (__GNUC__ >= 3)
    // try finding supported format option for g++ v3
    if (filter) {
-      FILE *p = OpenPipe(Form("%s --help 2>&1", filter), "r");
+      FILE *p = OpenPipe(TString::Format("%s --help 2>&1", filter), "r");
       TString help;
       while (help.Gets(p)) {
          if (help.Index("gnu-v3") != kNPOS) {
@@ -2614,7 +2613,7 @@ const char *TUnixSystem::GetLinkedLibraries()
    DylibAdded(0, 0);
    linkedLibs = gLinkedDylibs;
 #if 0
-   FILE *p = OpenPipe(Form("otool -L %s", exe), "r");
+   FILE *p = OpenPipe(TString::Format("otool -L %s", exe), "r");
    TString otool;
    while (otool.Gets(p)) {
       TString delim(" \t");
@@ -2637,7 +2636,7 @@ const char *TUnixSystem::GetLinkedLibraries()
    const char *cLDD="ldd";
    const char *cSOEXT=".so";
 #endif
-   FILE *p = OpenPipe(Form("%s %s", cLDD, exe), "r");
+   FILE *p = OpenPipe(TString::Format("%s %s", cLDD, exe), "r");
    TString ldd;
    while (ldd.Gets(p)) {
       TString delim(" \t");
@@ -2925,8 +2924,11 @@ int TUnixSystem::ConnectService(const char *servername, int port,
 {
    // Connect to service servicename on server servername.
 
-   if (!strcmp(servername, "unix"))
+   if (!strcmp(servername, "unix")) {
       return UnixUnixConnect(port);
+   } else if (!gSystem->AccessPathName(servername) || servername[0] == '/') {
+      return UnixUnixConnect(servername);
+   }
    return UnixTcpConnect(servername, port, tcpwindowsize);
 }
 
@@ -2963,9 +2965,17 @@ int TUnixSystem::AnnounceTcpService(int port, Bool_t reuse, int backlog,
 //______________________________________________________________________________
 int TUnixSystem::AnnounceUnixService(int port, int backlog)
 {
-   // Announce unix domain service.
+   // Announce unix domain service on path "kServerPath/<port>"
 
    return UnixUnixService(port, backlog);
+}
+
+//______________________________________________________________________________
+int TUnixSystem::AnnounceUnixService(const char *sockpath, int backlog)
+{
+   // Announce unix domain service on path 'sockpath'
+
+   return UnixUnixService(sockpath, backlog);
 }
 
 //______________________________________________________________________________
@@ -3864,14 +3874,23 @@ int TUnixSystem::UnixUnixConnect(int port)
 {
    // Connect to a Unix domain socket.
 
+   return UnixUnixConnect(TString::Format("%s/%d", kServerPath, port));
+}
+
+//______________________________________________________________________________
+int TUnixSystem::UnixUnixConnect(const char *sockpath)
+{
+   // Connect to a Unix domain socket.
+
+   if (!sockpath || strlen(sockpath) <= 0) {
+      ::SysError("TUnixSystem::UnixUnixConnect", "socket path undefined");
+      return -1;
+   }
+
    int sock;
-   char buf[100];
    struct sockaddr_un unserver;
-
-   sprintf(buf, "%s/%d", kServerPath, port);
-
    unserver.sun_family = AF_UNIX;
-   strcpy(unserver.sun_path, buf);
+   strcpy(unserver.sun_path, sockpath);
 
    // Open socket
    if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
@@ -3970,20 +3989,41 @@ int TUnixSystem::UnixUnixService(int port, int backlog)
    // Open a socket, bind to it and start listening for Unix domain connections
    // to it. Returns socket fd or -1.
 
-   struct sockaddr_un unserver;
-   int sock, oldumask;
-
-   memset(&unserver, 0, sizeof(unserver));
-   unserver.sun_family = AF_UNIX;
+   int oldumask;
 
    // Assure that socket directory exists
    oldumask = umask(0);
    ::mkdir(kServerPath, 0777);
    umask(oldumask);
-   sprintf(unserver.sun_path, "%s/%d", kServerPath, port);
+
+   // Socket path
+   TString sockpath;
+   sockpath.Form("%s/%d", kServerPath, port);
 
    // Remove old socket
-   unlink(unserver.sun_path);
+   unlink(sockpath.Data());
+
+   return UnixUnixService(sockpath, backlog);
+}
+
+//______________________________________________________________________________
+int TUnixSystem::UnixUnixService(const char *sockpath, int backlog)
+{
+   // Open a socket on path 'sockpath', bind to it and start listening for Unix
+   // domain connections to it. Returns socket fd or -1.
+
+   if (!sockpath || strlen(sockpath) <= 0) {
+      ::SysError("TUnixSystem::UnixUnixService", "socket path undefined");
+      return -1;
+   }
+
+   struct sockaddr_un unserver;
+   int sock;
+
+   // Prepare structure
+   memset(&unserver, 0, sizeof(unserver));
+   unserver.sun_family = AF_UNIX;
+   sprintf(unserver.sun_path, "%s", sockpath);
 
    // Create socket
    if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
@@ -4141,7 +4181,7 @@ static const char *DynamicPath(const char *newpath = 0, Bool_t reset = kFALSE)
          dynpath += ":"; dynpath += ROOTLIBDIR;
       }
 #else
-      if (!dynpath.Contains(Form("%s/lib", gRootDir))) {
+      if (!dynpath.Contains(TString::Format("%s/lib", gRootDir))) {
          dynpath += ":"; dynpath += gRootDir; dynpath += "/lib";
       }
 #endif
@@ -4191,20 +4231,21 @@ char *TUnixSystem::DynamicPathName(const char *lib, Bool_t quiet)
       name = gSystem->Which(GetDynamicPath(), lib, kReadPermission);
       ext  = 1;
    } else {
-      name = Form("%s.dll", lib);
-      name = gSystem->Which(GetDynamicPath(), name, kReadPermission);
+      TString fname;
+      fname.Form("%s.dll", lib);
+      name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
       if (!name) {
-         name = Form("%s.so", lib);
-         name = gSystem->Which(GetDynamicPath(), name, kReadPermission);
+         fname.Form("%s.so", lib);
+         name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
          if (!name) {
-            name = Form("%s.sl", lib);
-            name = gSystem->Which(GetDynamicPath(), name, kReadPermission);
+            fname.Form("%s.sl", lib);
+            name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
             if (!name) {
-               name = Form("%s.dl", lib);
-               name = gSystem->Which(GetDynamicPath(), name, kReadPermission);
+               fname.Form("%s.dl", lib);
+               name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
                if (!name) {
-                  name = Form("%s.a", lib);
-                  name = gSystem->Which(GetDynamicPath(), name, kReadPermission);
+                  fname.Form("%s.a", lib);
+                  name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
                }
             }
          }
@@ -4453,7 +4494,6 @@ void *TUnixSystem::SearchUtmpEntry(int n, const char *tty)
 #include <sys/resource.h>
 #include <mach/mach.h>
 #include <mach/mach_error.h>
-#include <mach/shared_memory_server.h>
 
 //______________________________________________________________________________
 static void GetDarwinSysInfo(SysInfo_t *sysinfo)
@@ -4616,6 +4656,12 @@ static void GetDarwinProcInfo(ProcInfo_t *procinfo)
 #ifdef _LP64
 #define vm_region vm_region_64
 #endif
+
+// taken from <mach/shared_memory_server.h> which is obsoleted in 10.5
+#define GLOBAL_SHARED_TEXT_SEGMENT      0x90000000U
+#define GLOBAL_SHARED_DATA_SEGMENT      0xA0000000U
+#define SHARED_TEXT_REGION_SIZE         0x10000000
+#define SHARED_DATA_REGION_SIZE         0x10000000
 
    struct rusage ru;
    if (getrusage(RUSAGE_SELF, &ru) < 0) {
@@ -4835,7 +4881,7 @@ static void GetLinuxProcInfo(ProcInfo_t *procinfo)
    }
 
    TString s;
-   FILE *f = fopen(Form("/proc/%d/statm", gSystem->GetPid()), "r");
+   FILE *f = fopen(TString::Format("/proc/%d/statm", gSystem->GetPid()), "r");
    s.Gets(f);
    Long_t total, rss;
    sscanf(s.Data(), "%ld %ld", &total, &rss);

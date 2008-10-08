@@ -352,7 +352,8 @@ add_opt "--psdir=" 'ignored'
 
 add_opt "--readlinelib=" "Readline library "$'\n\t'"(defaults to /usr/(local)/lib/libreadline.a if it exists)"
 add_opt "--debug" "Build non-optimized Cint with debug symbols"
-add_opt "--pedantic" "Warn on everything that the compielr allows (only supported for GCC)"
+add_opt "--checkstack" "Build with stack checking (GCC only)"
+add_opt "--pedantic" "Warn on everything that the compiler allows (only supported for GCC)"
 
 add_opt "--inputmode=" "Define the inputmode (C++|cint|root)"
 
@@ -394,7 +395,7 @@ function guess_arch {
 #        openbsd*:*:*)          arch=openbsd         ;;
 #        lynx:*:*)              arch=lynxos          ;;
 #        darwin:power*:*)       arch=macosx          ;;
-#        darwin:*86*:*)         arch=macosx          ;;
+        darwin:*86*:*)         arch=macosx          ;;
 #        irix*:sgi*:*)          arch=sgicc           ;;
         sunos:sun*:6*)         arch=solarisCC5      ;;
         sunos:sun*:5*)         arch=solarisCC5      ;;
@@ -422,13 +423,13 @@ function guess_arch {
             GUESSEDARCH=msvc7
         fi
     elif gcc --version >/dev/null 2>&1; then
-        if [ "x`uname -a|grep -i mac`" != "x" ]; then
-            MACOSX_MINOR=`sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2`
-            if [ ${MACOSX_MINOR} -gt 4 ]; then
-                GUESSEDARCH=macosx64
-            else
-                GUESSEDARCH=macos
-            fi
+        if [ "x`uname -a|grep -i mac`" != "x" -o "$arch" = "macosx" ]; then
+           GUESSEDARCH=macos
+           if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -ge 5 ]; then
+              if `sysctl machdep.cpu.extfeatures | grep "64" > /dev/null  2>&1` ; then
+                 GUESSARCH=macosx64
+              fi
+           fi
         elif [ "x`uname -a|grep -i SunOS`" != "x" ]; then
             GUESSEDARCH=solarisgcc
         fi
@@ -540,6 +541,12 @@ function processflag_inputmode {
         echo WARNING: unknown INPUTMODE \"$INPUTMODE\" specified\!
     fi
 }
+
+function processflag_checkstack {
+    CXXFLAGS="$CXXFLAGS -fstack-check"
+    LDFLAGS="$LDFLAGS -fstack-check "
+}
+
 
 # process options
 ALLOPTIONS=(${*:1})
@@ -733,7 +740,7 @@ done
 
 $RM bin/cint-config
 echo Writing bin/cint-config...
-[ "x$INCLUDEDIR" = "x" ] && INCLUDEDIR='$CINTSYSDIR/include'
+[ "x$INCLUDEDIR" = "x" ] && INCLUDEDIR='$CINTSYSDIR/include' && INCLUDEDIRCINT=$INCLUDEDIR/cint
 [ "x$LIBDIR" = "x" ] && LIBDIR='$CINTSYSDIR/lib'
 [ "x$DATADIR" = "x" ] && DATADIR='$CINTSYSDIR/'${COREVERSION}'/'
 

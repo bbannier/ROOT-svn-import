@@ -31,8 +31,6 @@
 
 ClassImp(TProofOutputFile)
 
-TFileMerger *TProofOutputFile::fgMerger = 0; // Instance of the file merger for mode "CENTRAL"
-
 //________________________________________________________________________________
 TProofOutputFile::TProofOutputFile(const char* path,
                                    const char* location, const char* mode)
@@ -41,6 +39,7 @@ TProofOutputFile::TProofOutputFile(const char* path,
    // Main conctructor
 
    fMerged = kFALSE;
+   fMerger = 0;
 
    TUrl u(path, kTRUE);
    // File name
@@ -84,6 +83,9 @@ TProofOutputFile::TProofOutputFile(const char* path,
    fOutputFileName += path;
    if (!fOutputFileName.EndsWith(".root"))
       fOutputFileName += ".root";
+   // Resolve placeholders
+   ResolveKeywords(fOutputFileName);
+   Info("TProofOutputFile", "output file url: %s", fOutputFileName.Data());
 
    // Location
    fLocation = "REMOTE";
@@ -107,6 +109,14 @@ TProofOutputFile::TProofOutputFile(const char* path,
       }
       fMode.ToUpper();
    }
+}
+
+//________________________________________________________________________________
+TProofOutputFile::~TProofOutputFile()
+{
+   // Main destructor
+
+   if (fMerger) delete fMerger;
 }
 
 //______________________________________________________________________________
@@ -143,8 +153,35 @@ void TProofOutputFile::SetOutputFileName(const char *name)
 
    if (name && strlen(name) > 0) {
       fOutputFileName = name;
+      ResolveKeywords(fOutputFileName);
+      Info("SetOutputFileName", "output file url: %s", fOutputFileName.Data());
    } else {
       fOutputFileName = "";
+   }
+}
+
+//______________________________________________________________________________
+void TProofOutputFile::ResolveKeywords(TString &fname)
+{
+   // Replace <user> and <group> placeholders in fname
+
+   // Replace <user>, if any
+   if (fname.Contains("<user>")) {
+      TString user = "nouser";
+      // Get user logon name
+      UserGroup_t *pw = gSystem->GetUserInfo();
+      if (pw) {
+         user = pw->fUser;
+         delete pw;
+      }
+      fname.ReplaceAll("<user>", user);
+   }
+   // Replace <group>, if any
+   if (fname.Contains("<group>")) {
+      if (gProofServ && gProofServ->GetGroup() && strlen(gProofServ->GetGroup()))
+         fname.ReplaceAll("<group>", gProofServ->GetGroup());
+      else
+         fname.ReplaceAll("<group>", "default");
    }
 }
 
@@ -437,7 +474,7 @@ TFileMerger *TProofOutputFile::GetFileMerger(Bool_t local)
 {
    // Get instance of the file merger to be used in "CENTRAL" mode
 
-   if (!fgMerger)
-      fgMerger = new TFileMerger(local);
-   return fgMerger;
+   if (!fMerger)
+      fMerger = new TFileMerger(local);
+   return fMerger;
 }

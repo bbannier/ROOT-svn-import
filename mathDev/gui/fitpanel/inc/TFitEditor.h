@@ -1,5 +1,5 @@
 // @(#)root/fitpanel:$Id$
-// Author: Ilka Antcheva, Lorenzo Moneta 10/08/2006
+// Author: Ilka Antcheva, Lorenzo Moneta, David Gonzalez Maline 10/08/2006
 
 /*************************************************************************
  * Copyright (C) 1995-2006, Rene Brun and Fons Rademakers.               *

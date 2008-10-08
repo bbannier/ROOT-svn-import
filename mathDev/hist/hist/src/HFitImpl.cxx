@@ -46,7 +46,7 @@ namespace HFit {
 
    void FitOptionsMake(const char *option, Foption_t &fitOption);
 
-   void CheckGraphFitOptions(const Foption_t &fitOption);
+   void CheckGraphFitOptions(Foption_t &fitOption);
 
 
    void GetDrawingRange(TH1 * h1, ROOT::Fit::DataRange & range);
@@ -138,6 +138,7 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
    ROOT::Fit::DataOptions opt; 
    opt.fIntegral = fitOption.Integral; 
    opt.fUseRange = fitOption.Range; 
+   if (fitOption.Like) opt.fUseEmpty = true;  // use empty bins in log-likelihood fits 
    if (linear) opt.fCoordErrors = false; // cannot use coordinate errors in a linear fit
 
 
@@ -162,20 +163,21 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
 #endif
 
    // fill data  
-   ROOT::Fit::BinData fitdata(opt,range);
-   ROOT::Fit::FillData(fitdata, h1, f1); 
+   //std::auto_ptr<ROOT::Fit::BinData> fitdata = std::auto_ptr<ROOT::Fit::BinData> (new ROOT::Fit::BinData(opt,range) );
+   ROOT::Fit::BinData * fitdata = new ROOT::Fit::BinData(opt,range);
+   ROOT::Fit::FillData(*fitdata, h1, f1); 
 
 #ifdef DEBUG
-   printf("HFit:: data size is %d \n",fitdata.Size());
-   for (unsigned int i = 0; i < fitdata.Size(); ++i) { 
-      if (fitdata.NDim() == 1) printf(" x[%d] = %f - value = %f \n", i,*(fitdata.Coords(i)),fitdata.Value(i) ); 
+   printf("HFit:: data size is %d \n",fitdata->Size());
+   for (unsigned int i = 0; i < fitdata->Size(); ++i) { 
+      if (fitdata->NDim() == 1) printf(" x[%d] = %f - value = %f \n", i,*(fitdata->Coords(i)),fitdata->Value(i) ); 
    }
 #endif   
 
    // this functions use the TVirtualFitter
    if (special != 0 && !fitOption.Bound && !linear) { 
-      if      (special == 100)      ROOT::Fit::InitGaus(fitdata,f1);  // gaussian
-      else if (special == 400)      ROOT::Fit::InitGaus(fitdata,f1);  // landau (use the same)
+      if      (special == 100)      ROOT::Fit::InitGaus(*fitdata,f1);  // gaussian
+      else if (special == 400)      ROOT::Fit::InitGaus(*fitdata,f1);  // landau (use the same)
    // need to do a linear fit first for expo and poly ? 
 //             else if (special == 200)      H1InitExpo();
 //             else if (special == 299+npar) H1InitPolynom();
@@ -190,7 +192,7 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
       fitter->SetFunction(ROOT::Math::WrappedMultiTF1(*f1) );
 
    // error normalization in case of zero error in the data
-   if (fitdata.GetErrorType() == ROOT::Fit::BinData::kNoError) fitConfig.SetNormErrors(true);
+   if (fitdata->GetErrorType() == ROOT::Fit::BinData::kNoError) fitConfig.SetNormErrors(true);
 
    
    // here need to get some static extra information (like max iterations, error def, etc...)
@@ -249,10 +251,22 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
  
    bool fitok = false; 
 
-   if (fitOption.Like)
-      fitok = fitter->LikelihoodFit(fitdata);
-   else 
-      fitok = fitter->Fit(fitdata); 
+
+   // check if can use option user 
+   //typedef  void (* MinuitFCN_t )(int &npar, double *gin, double &f, double *u, int flag);
+   TVirtualFitter::FCNFunc_t  userFcn = 0;  
+   if (fitOption.User && TVirtualFitter::GetFitter() ) { 
+      userFcn = (TVirtualFitter::GetFitter())->GetFCN(); 
+      (TVirtualFitter::GetFitter())->SetUserFunc(f1); 
+   }
+   
+
+   if (fitOption.User && userFcn) // user provided fit objective function
+      fitok = fitter->FitFCN( userFcn );
+   else if (fitOption.Like) // likelihood fit 
+      fitok = fitter->LikelihoodFit(*fitdata);
+   else // standard least square fit
+      fitok = fitter->Fit(*fitdata); 
 
 
    if ( !fitok  && !fitOption.Quiet )
@@ -274,14 +288,12 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
       // set in f1 the result of the fit      
       f1->SetChisquare(fitResult.Chi2() );
       f1->SetNDF(fitResult.Ndf() );
+      f1->SetNumberFitPoints(fitdata->Size() );
 
       f1->SetParameters( &(fitResult.Parameters().front()) ); 
       if ( int( fitResult.Errors().size()) >= f1->GetNpar() ) 
          f1->SetParErrors( &(fitResult.Errors().front()) ); 
   
-      // print results
-      if (!fitOption.Quiet) fitResult.Print(std::cout); 
-      if (fitOption.Verbose) fitResult.PrintCovMatrix(std::cout); 
       if (!fitResult.IsValid() ) iret = 1;
    }
    else {
@@ -296,9 +308,27 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
 
       // store result in the backward compatible VirtualFitter
       TVirtualFitter * lastFitter = TVirtualFitter::GetFitter(); 
+      // pass ownership of fitdata to TBackCompFitter (should do also fitter)
+      TBackCompFitter * bcfitter = new TBackCompFitter(*fitter,fitdata);
+      bcfitter->SetFitOption(fitOption); 
+      bcfitter->SetObjectFit(h1);
+      bcfitter->SetUserFunc(f1);
+      if (userFcn) { 
+         bcfitter->SetFCN(userFcn); 
+         // for interpreted FCN functions
+         if (lastFitter->GetMethodCall() ) bcfitter->SetMethodCall(lastFitter->GetMethodCall() );
+      }
+         
       if (lastFitter) delete lastFitter; 
-      TVirtualFitter::SetFitter( new TBackCompFitter(*fitter) ); 
-      (TVirtualFitter::GetFitter())->SetObjectFit(h1);
+      TVirtualFitter::SetFitter( bcfitter ); 
+
+      // print results
+//       if (!fitOption.Quiet) fitResult.Print(std::cout);
+//       if (fitOption.Verbose) fitResult.PrintCovMatrix(std::cout); 
+
+      // use old-style for printing the results
+      if (fitOption.Verbose) bcfitter->PrintResults(2,0.);
+      else if (!fitOption.Quiet) bcfitter->PrintResults(1,0.);
 
       return iret; 
 }
@@ -467,6 +497,7 @@ void HFit::FitOptionsMake(const char *option, Foption_t &fitOption) {
    if (opt.Contains("Q")) fitOption.Quiet   = 1;
    if (opt.Contains("V")){fitOption.Verbose = 1; fitOption.Quiet   = 0;}
    if (opt.Contains("L")) fitOption.Like    = 1;
+   if (opt.Contains("I")) fitOption.Integral= 1;
    if (opt.Contains("LL")) fitOption.Like   = 2;
    if (opt.Contains("W")) fitOption.W1      = 1;
    if (opt.Contains("E")) fitOption.Errors  = 1;
@@ -483,9 +514,15 @@ void HFit::FitOptionsMake(const char *option, Foption_t &fitOption) {
 
 }
 
-void HFit::CheckGraphFitOptions(const Foption_t & foption) { 
-   if (foption.Like) Info("CheckGraphFitOptions","L (Log Likelihood fit) is an invalid option when fitting a graph. It is ignored");
-   if (foption.Integral) Info("CheckGraphFitOptions","I (use function integral) is an invalid option when fitting a graph. It is ignored");
+void HFit::CheckGraphFitOptions(Foption_t & foption) { 
+   if (foption.Like) { 
+      Info("CheckGraphFitOptions","L (Log Likelihood fit) is an invalid option when fitting a graph. It is ignored");
+      foption.Like = 0; 
+   }
+   if (foption.Integral) { 
+      Info("CheckGraphFitOptions","I (use function integral) is an invalid option when fitting a graph. It is ignored");
+      foption.Integral = 0; 
+   }
    return;
 } 
 
@@ -497,17 +534,23 @@ int ROOT::Fit::FitObject(TH1 * h1, TF1 *f1 , Foption_t & foption , const ROOT::M
 }
 
 int ROOT::Fit::FitObject(TGraph * gr, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
-   // TGraph fitting
+  // exclude options not valid for graphs
+   HFit::CheckGraphFitOptions(foption);
+    // TGraph fitting
    return HFit::Fit(gr,f1,foption,moption,goption,range); 
 }
 
 int ROOT::Fit::FitObject(TMultiGraph * gr, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
-   // TMultiGraph fitting
+  // exclude options not valid for graphs
+   HFit::CheckGraphFitOptions(foption);
+    // TMultiGraph fitting
    return HFit::Fit(gr,f1,foption,moption,goption,range); 
 }
 
 int ROOT::Fit::FitObject(TGraph2D * gr, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
-   // TGraph2D fitting
+  // exclude options not valid for graphs
+   HFit::CheckGraphFitOptions(foption);
+    // TGraph2D fitting
    return HFit::Fit(gr,f1,foption,moption,goption,range); 
 }
 
@@ -530,8 +573,6 @@ Int_t TGraph::DoFit(TF1 *f1 ,Option_t *option ,Option_t *goption, Axis_t rxmin, 
    // internal graph fitting methods
    Foption_t fitOption;
    HFit::FitOptionsMake(option,fitOption);
-   // exclude options not valid for graphs
-   HFit::CheckGraphFitOptions(fitOption);
    // create range and minimizer options with default values 
    ROOT::Fit::DataRange range(rxmin,rxmax); 
    ROOT::Math::MinimizerOptions minOption; 
@@ -542,7 +583,6 @@ Int_t TMultiGraph::DoFit(TF1 *f1 ,Option_t *option ,Option_t *goption, Axis_t rx
    // internal multigraph fitting methods
    Foption_t fitOption;
    HFit::FitOptionsMake(option,fitOption);
-   HFit::CheckGraphFitOptions(fitOption);
 
    // create range and minimizer options with default values 
    ROOT::Fit::DataRange range(rxmin,rxmax); 
@@ -555,7 +595,6 @@ Int_t TGraph2D::DoFit(TF2 *f2 ,Option_t *option ,Option_t *goption) {
    // internal graph2D fitting methods
    Foption_t fitOption;
    HFit::FitOptionsMake(option,fitOption);
-   HFit::CheckGraphFitOptions(fitOption);
 
    // create range and minimizer options with default values 
    ROOT::Fit::DataRange range(2); 
