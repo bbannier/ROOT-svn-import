@@ -47,6 +47,7 @@ class TDSet;
 class TProof;
 class TVirtualProofPlayer;
 class TProofLockPath;
+class TQueryResultManager;
 class TSocket;
 class THashList;
 class TList;
@@ -113,11 +114,8 @@ private:
    TStopwatch    fLatency;          //measures latency of packet requests
    TStopwatch    fCompute;          //measures time spend processing a packet
 
-   Int_t         fSeqNum;           //sequential number of last processed query
-   Int_t         fDrawQueries;      //number of draw queries processed
-   Int_t         fKeptQueries;      //number of queries fully in memory and in dir
-   TList        *fQueries;          //list of TProofQueryResult objects
-   TList        *fPreviousQueries;  //list of TProofQueryResult objects from previous sections
+   TQueryResultManager *fQMgr;      //Query-result manager
+
    TList        *fWaitingQueries;   //list of TProofQueryResult wating to be processed
    Bool_t        fIdle;             //TRUE if idle
 
@@ -146,23 +144,18 @@ private:
    Int_t         OldAuthSetup(TString &wconf);
    Int_t         GetPriority();
 
+   Int_t         AssertDataSet(TDSet *dset, TList *input);
+
    // Query handlers
-   void          AddLogFile(TProofQueryResult *pq);
-   Int_t         ApplyMaxQueries();
-   Int_t         CleanupQueriesDir();
-   void          FinalizeQuery(TProofQueryResult *pq);
    TProofQueryResult *MakeQueryResult(Long64_t nentries, const char *opt,
                                       TList *inl, Long64_t first, TDSet *dset,
                                       const char *selec, TObject *elist);
-   TProofQueryResult *LocateQuery(TString queryref, Int_t &qry, TString &qdir);
-   void          RemoveQuery(TQueryResult *qr, Bool_t soft = kFALSE);
-   void          RemoveQuery(const char *queryref);
-   void          SaveQuery(TQueryResult *qr, const char *fout = 0);
    void          SetQueryRunning(TProofQueryResult *pq);
 
-   Int_t         LockSession(const char *sessiontag, TProofLockPath **lck);
-   Int_t         CleanupSession(const char *sessiontag);
-   void          ScanPreviousQueries(const char *dir);
+   // Input data handling
+   Int_t         GetInputData(TList *input);
+   Int_t         SaveInputData(TQueryResult *qr);
+   Int_t         SendInputData(TQueryResult *qr);
 
 protected:
    virtual void  HandleArchive(TMessage *mess);

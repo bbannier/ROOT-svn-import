@@ -467,6 +467,7 @@ public:
    virtual int             OpenConnection(const char *server, int port, int tcpwindowsize = -1);
    virtual int             AnnounceTcpService(int port, Bool_t reuse, int backlog, int tcpwindowsize = -1);
    virtual int             AnnounceUnixService(int port, int backlog);
+   virtual int             AnnounceUnixService(const char *sockpath, int backlog);
    virtual int             AcceptConnection(int sock);
    virtual void            CloseConnection(int sock, Bool_t force = kFALSE);
    virtual int             RecvRaw(int sock, void *buffer, int length, int flag);
@@ -485,7 +486,7 @@ public:
    //---- ACLiC (Automatic Compiler of Shared Library for CINT)
    virtual void            AddIncludePath(const char *includePath);
    virtual void            AddLinkedLibs(const char *linkedLib);
-   virtual int             CompileMacro(const char *filename, Option_t *opt="", const char* library_name = "", const char* build_dir = "");
+   virtual int             CompileMacro(const char *filename, Option_t *opt="", const char* library_name = "", const char* build_dir = "", UInt_t dirmode = 0);
    virtual const char     *GetBuildArch() const;
    virtual const char     *GetBuildCompiler() const;
    virtual const char     *GetBuildCompilerVersion() const;

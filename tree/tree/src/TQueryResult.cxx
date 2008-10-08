@@ -245,7 +245,7 @@ void TQueryResult::RecordEnd(EQueryStatus status, TList *outlist)
    fStatus = (status < kAborted || status > kCompleted) ? kAborted : status;
 
    // Clone the results
-   if (outlist) {
+   if (outlist && fOutputList != outlist) {
       if (fOutputList) {
          fOutputList->Delete();
          SafeDelete(fOutputList);
@@ -403,22 +403,24 @@ void TQueryResult::SetInputList(TList *in, Bool_t adopt)
 {
    // Set / change the input list.
    // The flag 'adopt' determines whether the list is adopted (default)
-   // or cloned.
+   // or cloned. If adopted, object ownership is transferred to this object.
+   // The internal fInputList will always be owner of its objects.
 
-   SafeDelete(fInputList);
+   if (!in || in != fInputList)
+      SafeDelete(fInputList);
 
-   if (in) {
+   if (in && in != fInputList) {
       if (!adopt) {
          fInputList = (TList *) (in->Clone());
-         fInputList->SetOwner();
       } else {
          fInputList = new TList;
          TIter nxi(in);
          TObject *o = 0;
          while ((o = nxi()))
             fInputList->Add(o);
-         fInputList->SetOwner(kFALSE);
+         in->SetOwner(kFALSE);
       }
+      fInputList->SetOwner();
    }
 }
 
@@ -427,23 +429,24 @@ void TQueryResult::SetOutputList(TList *out, Bool_t adopt)
 {
    // Set / change the output list.
    // The flag 'adopt' determines whether the list is adopted (default)
-   // or cloned. The internal fOutputList will always be owner of its
-   // objects.
+   // or cloned.  If adopted, object ownership is transferred to this object.
+   // The internal fOutputList will always be owner of its objects.
 
-   SafeDelete(fOutputList);
+   if (!out || out != fOutputList)
+      SafeDelete(fOutputList);
 
-   if (out) {
+   if (out && out != fOutputList) {
       if (!adopt) {
          fOutputList = (TList *) (out->Clone());
-         fOutputList->SetOwner();
       } else {
          fOutputList = new TList;
          TIter nxo(out);
          TObject *o = 0;
          while ((o = nxo()))
             fOutputList->Add(o);
-         fOutputList->SetOwner(kFALSE);
+         out->SetOwner(kFALSE);
       }
+      fOutputList->SetOwner();
    }
 }
 

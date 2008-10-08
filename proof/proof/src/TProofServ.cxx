@@ -33,7 +33,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <stdlib.h>
+#include <cstdlib>
 
 #if (defined(__FreeBSD__) && (__FreeBSD__ < 4)) || \
     (defined(__APPLE__) && (!defined(MAC_OS_X_VERSION_10_3) || \
@@ -65,6 +65,7 @@
 #include "TProof.h"
 #include "TVirtualProofPlayer.h"
 #include "TProofQueryResult.h"
+#include "TQueryResultManager.h"
 #include "TRegexp.h"
 #include "TROOT.h"
 #include "TSocket.h"
@@ -421,12 +422,8 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fCacheLock       = 0;
    fQueryLock       = 0;
 
-   fSeqNum          = 0;
-   fDrawQueries     = 0;
-   fKeptQueries     = 0;
-   fQueries         = new TList;
+   fQMgr            = 0;
    fWaitingQueries  = new TList;
-   fPreviousQueries = 0;
    fIdle            = kTRUE;
 
    fRealTimeLog     = kFALSE;
@@ -655,8 +652,6 @@ TProofServ::~TProofServ()
    // Cleanup. Not really necessary since after this dtor there is no
    // live anyway.
 
-   SafeDelete(fQueries);
-   SafeDelete(fPreviousQueries);
    SafeDelete(fWaitingQueries);
    SafeDelete(fEnabledPackages);
    SafeDelete(fSocket);
@@ -1085,7 +1080,7 @@ void TProofServ::HandleSocketInput()
                Info("HandleSocketInput:kPROOF_CLEANUPSESSION", "Enter");
             TString stag;
             (*mess) >> stag;
-            if (CleanupSession(stag) == 0) {
+            if (fQMgr && fQMgr->CleanupSession(stag) == 0) {
                Printf("Session %s cleaned up", stag.Data());
             } else {
                Printf("Could not cleanup session %s", stag.Data());
@@ -1140,15 +1135,22 @@ void TProofServ::HandleSocketInput()
                sscanf(str, "%s %d %ld %d", name, &bin, &size, &fw);
             else
                sscanf(str, "%s %d %ld", name, &bin, &size);
-            ReceiveFile(name, bin ? kTRUE : kFALSE, size);
+            TString fnam(name);
+            Bool_t copytocache = kTRUE;
+            if (fnam.BeginsWith("cache:")) {
+               fnam.ReplaceAll("cache:", Form("%s/", fCacheDir.Data()));
+               copytocache = kFALSE;
+            }
+            ReceiveFile(fnam, bin ? kTRUE : kFALSE, size);
             // copy file to cache if not a PAR file
-            if (size > 0 && strncmp(fPackageDir, name, fPackageDir.Length()))
+            if (copytocache && size > 0 &&
+                strncmp(fPackageDir, name, fPackageDir.Length()))
                CopyToCache(name, 0);
             if (IsMaster() && fw == 1) {
-               Int_t opt = TProof::kForward;
+               Int_t opt = TProof::kForward | TProof::kCp;
                if (bin)
                   opt |= TProof::kBinary;
-               fProof->SendFile(name, opt);
+               fProof->SendFile(fnam, opt, (copytocache ? "cache" : ""));
             }
          }
          break;
@@ -1723,7 +1725,7 @@ void TProofServ::RedirectOutput()
       SysError("RedirectOutput", "could not open logfile");
 
    // from this point on stdout and stderr are properly redirected
-   if (fProtocol < 4 && fWorkDir != kPROOF_WorkDir) {
+   if (fProtocol < 4 && fWorkDir != Form("~/%s", kPROOF_WorkDir)) {
       Warning("RedirectOutput", "no way to tell master (or client) where"
               " to upload packages");
    }
@@ -2055,13 +2057,13 @@ Int_t TProofServ::Setup()
       }
       if (IsMaster()) {
          fConfFile = wconf;
-         fWorkDir = kPROOF_WorkDir;
+         fWorkDir = Form("~/%s", kPROOF_WorkDir);
       } else {
          if (fProtocol < 4) {
-            fWorkDir = kPROOF_WorkDir;
+            fWorkDir = Form("~/%s", kPROOF_WorkDir);
          } else {
             fWorkDir = wconf;
-            if (fWorkDir.IsNull()) fWorkDir = kPROOF_WorkDir;
+            if (fWorkDir.IsNull()) fWorkDir = Form("~/%s", kPROOF_WorkDir);
          }
       }
    } else {
@@ -2074,11 +2076,11 @@ Int_t TProofServ::Setup()
       }
       if (IsMaster()) {
          (*mess) >> fUser >> fOrdinal >> fConfFile;
-         fWorkDir = gEnv->GetValue("ProofServ.Sandbox", kPROOF_WorkDir);
+         fWorkDir = gEnv->GetValue("ProofServ.Sandbox", Form("~/%s", kPROOF_WorkDir));
       } else {
          (*mess) >> fUser >> fOrdinal >> fWorkDir;
          if (fWorkDir.IsNull())
-            fWorkDir = gEnv->GetValue("ProofServ.Sandbox", kPROOF_WorkDir);
+            fWorkDir = gEnv->GetValue("ProofServ.Sandbox", Form("~/%s", kPROOF_WorkDir));
       }
       // Set the correct prefix
       if (fOrdinal != "-1")
@@ -2156,6 +2158,12 @@ Int_t TProofServ::Setup()
 
    // Incoming OOB should generate a SIGURG
    fSocket->SetOption(kProcessGroup, gSystem->GetPid());
+
+   // Send packages off immediately to reduce latency
+   fSocket->SetOption(kNoDelay, 1);
+
+   // Check every two hours if client is still alive
+   fSocket->SetOption(kKeepAlive, 1);
 
    // Done
    return 0;
@@ -2298,6 +2306,9 @@ Int_t TProofServ::SetupCommon()
                        kPROOF_QueryLockFile, fTopSessionTag.Data(),
                        TString(fQueryDir).ReplaceAll("/","%").Data()));
       fQueryLock->Lock();
+      // Create the query manager
+      fQMgr = new TQueryResultManager(fQueryDir, fSessionTag, fSessionDir,
+                                      fQueryLock, 0);
 
       // Send session tag to client
       TMessage m(kPROOF_SESSIONTAG);
@@ -2416,8 +2427,8 @@ Int_t TProofServ::SetupCommon()
    }
 
    // Apply quotas, if any
-   if (IsMaster())
-      if (ApplyMaxQueries() != 0)
+   if (IsMaster() && fQMgr)
+      if (fQMgr->ApplyMaxQueries(fMaxQueries) != 0)
          Warning("SetupCommon", "problems applying fMaxQueries");
 
    // Send "ROOTversion|ArchCompiler" flag
@@ -2433,12 +2444,6 @@ Int_t TProofServ::SetupCommon()
       m << vac;
       fSocket->Send(m);
    }
-
-   // Send packages off immediately to reduce latency
-   fSocket->SetOption(kNoDelay, 1);
-
-   // Check every two hours if client is still alive
-   fSocket->SetOption(kKeepAlive, 1);
 
    // Set user vars in TProof
    TString all_vars(gSystem->Getenv("PROOF_ALLVARS"));
@@ -2474,7 +2479,7 @@ void TProofServ::Terminate(Int_t status)
 
    // Cleanup queries directory if empty
    if (IsMaster()) {
-      if (!(fQueries->GetSize())) {
+      if (!(fQMgr && fQMgr->Queries() && fQMgr->Queries()->GetSize())) {
          // make sure we remain in a "connected" directory
          gSystem->ChangeDirectory("/");
          // needed in case fQueryDir is on NFS ?!
@@ -2579,15 +2584,15 @@ TProofQueryResult *TProofServ::MakeQueryResult(Long64_t nent,
    // Create a TProofQueryResult instance for this query.
 
    // Increment sequential number
-   fSeqNum++;
+   if (fQMgr) fQMgr->IncrementSeqNum();
 
    // Locally we always use the current streamer
-   Bool_t olds = (dset->TestBit(TDSet::kWriteV3)) ? kTRUE : kFALSE;
+   Bool_t olds = (dset && dset->TestBit(TDSet::kWriteV3)) ? kTRUE : kFALSE;
    if (olds)
       dset->SetWriteV3(kFALSE);
 
    // Create the instance and add it to the list
-   TProofQueryResult *pqr = new TProofQueryResult(fSeqNum, opt, inlist, nent,
+   TProofQueryResult *pqr = new TProofQueryResult(fQMgr->SeqNum(), opt, inlist, nent,
                                                   fst, dset, selec, elist);
    // Title is the session identifier
    pqr->SetTitle(gSystem->BaseName(fQueryDir));
@@ -2632,635 +2637,6 @@ void TProofServ::SetQueryRunning(TProofQueryResult *pq)
 }
 
 //______________________________________________________________________________
-void TProofServ::AddLogFile(TProofQueryResult *pq)
-{
-   // Add part of log file concerning TQueryResult pq to its macro
-   // container.
-
-   if (!pq)
-      return;
-
-   // Make sure everything is written to file
-   fflush(stdout);
-
-   // Save current position
-   off_t lnow = lseek(fLogFileDes, (off_t) 0, SEEK_CUR);
-
-   // The range we are interested in
-   Int_t start = pq->fStartLog;
-   if (start > -1)
-      lseek(fLogFileDes, (off_t) start, SEEK_SET);
-
-   // Read the lines and add then to the internal container
-   const Int_t kMAXBUF = 4096;
-   char line[kMAXBUF];
-   while (fgets(line, sizeof(line), fLogFile)) {
-      if (line[strlen(line)-1] == '\n')
-         line[strlen(line)-1] = 0;
-      pq->AddLogLine((const char *)line);
-   }
-
-   // Restore initial position if partial send
-   lseek(fLogFileDes, lnow, SEEK_SET);
-}
-
-//______________________________________________________________________________
-void TProofServ::FinalizeQuery(TProofQueryResult *pq)
-{
-   // Final steps after Process() to complete the TQueryResult instance.
-
-   if (!pq || !fPlayer) {
-      Warning("FinalizeQuery",
-              "bad inputs: query = %p, player = %p ", pq ? pq : 0, fPlayer ? fPlayer : 0);
-      return;
-   }
-
-   Int_t qn = pq->GetSeqNum();
-   Long64_t np = fPlayer->GetEventsProcessed();
-   TVirtualProofPlayer::EExitStatus est = fPlayer->GetExitStatus();
-   TList *out = fPlayer->GetOutputList();
-
-   fProof->AskStatistics();
-
-   Float_t cpu = fProof->GetCpuTime();
-   Long64_t bytes = fProof->GetBytesRead();
-
-   TQueryResult::EQueryStatus st = TQueryResult::kAborted;
-
-   PDB(kGlobal, 2) Info("FinalizeQuery","query #%d", qn);
-
-   PDB(kGlobal, 1)
-      Info("FinalizeQuery","%.1f %lld", cpu, bytes);
-
-   // Some notification (useful in large logs)
-   Bool_t save = kTRUE;
-   switch (est) {
-   case TVirtualProofPlayer::kAborted:
-      PDB(kGlobal, 1)
-         Info("FinalizeQuery", "query %d has been ABORTED <====", qn);
-      out = 0;
-      save = kFALSE;
-      break;
-   case TVirtualProofPlayer::kStopped:
-      PDB(kGlobal, 1)
-         Info("FinalizeQuery",
-              "query %d has been STOPPED: %d events processed", qn, np);
-      st = TQueryResult::kStopped;
-      break;
-   case TVirtualProofPlayer::kFinished:
-      PDB(kGlobal, 1)
-         Info("FinalizeQuery",
-              "query %d has been completed: %d events processed", qn, np);
-      st = TQueryResult::kCompleted;
-      break;
-   default:
-      Warning("FinalizeQuery",
-              "query %d: unknown exit status (%d)", qn, fPlayer->GetExitStatus());
-   }
-
-   // Fill some variables
-   pq->SetProcessInfo(np, cpu - pq->GetUsedCPU());
-   pq->RecordEnd(st, out);
-
-   // Save the logs into the query result instance
-   AddLogFile(pq);
-
-   // Update/Save entry in specific query dir
-   if (save) {
-
-      // We may need some cleanup
-      if (fMaxQueries > -1) {
-         if (fQueries && fKeptQueries >= fMaxQueries) {
-            // Find oldest completed and archived query
-            TQueryResult *fcom = 0;
-            TQueryResult *farc = 0;
-            TIter nxq(fQueries);
-            TQueryResult *qr = 0;
-            while (fKeptQueries >= fMaxQueries) {
-               while ((qr = (TQueryResult *) nxq())) {
-                  if (qr->IsArchived()) {
-                     if (qr->GetOutputList() && !farc)
-                        farc = qr;
-                  } else if (qr->GetStatus() > TQueryResult::kRunning && !fcom) {
-                     fcom = qr;
-                  }
-                  if (farc && fcom)
-                     break;
-               }
-               if (farc) {
-                  RemoveQuery(farc, kTRUE);
-                  fKeptQueries--;
-               } else if (fcom) {
-                  RemoveQuery(fcom);
-                  fKeptQueries--;
-               }
-               if (!farc && !fcom)
-                  break;
-            }
-         }
-         if (fKeptQueries < fMaxQueries) {
-            SaveQuery(pq);
-            fKeptQueries++;
-         } else {
-            SendAsynMessage(Form("Too many saved queries (%d): cannot save %s:%s",
-                                 fKeptQueries, pq->GetTitle(),  pq->GetName()));
-         }
-      } else {
-         SaveQuery(pq);
-         fKeptQueries++;
-      }
-   }
-
-   // Done!
-}
-
-//______________________________________________________________________________
-Int_t TProofServ::CleanupQueriesDir()
-{
-   // Remove all queries results referring to previous sessions
-
-   Int_t nd = 0;
-
-   // Cleanup previous stuff
-   if (fPreviousQueries) {
-      fPreviousQueries->Delete();
-      SafeDelete(fPreviousQueries);
-   }
-
-   // Loop over session dirs
-   TString queriesdir = fQueryDir;
-   queriesdir = queriesdir.Remove(queriesdir.Index(kPROOF_QueryDir) +
-                                  strlen(kPROOF_QueryDir));
-   void *dirs = gSystem->OpenDirectory(queriesdir);
-   char *sess = 0;
-   while ((sess = (char *) gSystem->GetDirEntry(dirs))) {
-
-      // We are interested only in "session-..." subdirs
-      if (strlen(sess) < 7 || strncmp(sess,"session",7))
-         continue;
-
-      // We do not want this session at this level
-      if (strstr(sess, fTopSessionTag))
-         continue;
-
-      // Remove the directory
-      TString qdir = Form("%s/%s", queriesdir.Data(), sess);
-      Info("RemoveQuery", "removing directory: %s", qdir.Data());
-      gSystem->Exec(Form("%s %s", kRM, qdir.Data()));
-      nd++;
-   }
-
-   // Done
-   return nd;
-}
-
-//______________________________________________________________________________
-void TProofServ::ScanPreviousQueries(const char *dir)
-{
-   // Scan the queries directory for the results of previous queries.
-   // The headers of the query results found are loaded in fPreviousQueries.
-   // The full query result can be retrieved via TProof::Retrieve.
-
-   // Cleanup previous stuff
-   if (fPreviousQueries) {
-      fPreviousQueries->Delete();
-      SafeDelete(fPreviousQueries);
-   }
-
-   // Loop over session dirs
-   void *dirs = gSystem->OpenDirectory(dir);
-   char *sess = 0;
-   while ((sess = (char *) gSystem->GetDirEntry(dirs))) {
-
-      // We are interested only in "session-..." subdirs
-      if (strlen(sess) < 7 || strncmp(sess,"session",7))
-         continue;
-
-      // We do not want this session at this level
-      if (strstr(sess, fTopSessionTag))
-         continue;
-
-      // Loop over query dirs
-      void *dirq = gSystem->OpenDirectory(Form("%s/%s", dir, sess));
-      char *qry = 0;
-      while ((qry = (char *) gSystem->GetDirEntry(dirq))) {
-
-         // We are interested only in "n/" subdirs
-         if (qry[0] == '.')
-            continue;
-
-         // File with the query result
-         TString fn = Form("%s/%s/%s/query-result.root", dir, sess, qry);
-         TFile *f = TFile::Open(fn);
-         if (f) {
-            f->ReadKeys();
-            TIter nxk(f->GetListOfKeys());
-            TKey *k =  0;
-            TProofQueryResult *pqr = 0;
-            while ((k = (TKey *)nxk())) {
-               if (!strcmp(k->GetClassName(), "TProofQueryResult")) {
-                  pqr = (TProofQueryResult *) f->Get(k->GetName());
-                  if (pqr) {
-                     TQueryResult *qr = pqr->CloneInfo();
-                     if (!fPreviousQueries)
-                        fPreviousQueries = new TList;
-                     if (qr->GetStatus() > TQueryResult::kRunning) {
-                        fPreviousQueries->Add(qr);
-                     } else {
-                        // (For the time being) remove a non completed
-                        // query if not owned by anybody
-                        TProofLockPath *lck = 0;
-                        if (LockSession(qr->GetTitle(), &lck) == 0) {
-                           RemoveQuery(qr);
-                           // Unlock and remove the lock file
-                           SafeDelete(lck);
-                        }
-                     }
-                  }
-               }
-            }
-            f->Close();
-            delete f;
-         }
-      }
-      gSystem->FreeDirectory(dirq);
-   }
-   gSystem->FreeDirectory(dirs);
-}
-
-//______________________________________________________________________________
-Int_t TProofServ::ApplyMaxQueries()
-{
-   // Scan the queries directory and remove the oldest ones (and relative dirs,
-   // if empty) in such a way only fMaxQueries are kept.
-   // Return 0 on success, -1 in case of problems
-
-   // Nothing to do if fmaxQueries is -1.
-   if (fMaxQueries < 0)
-      return 0;
-
-   // We will sort the entries using the creation time
-   TSortedList *sl = new TSortedList;
-   sl->SetOwner();
-   // List with information
-   THashList *hl = new THashList;
-   hl->SetOwner();
-
-   // Keep track of the queries per session dir
-   TList *dl = new TList;
-   dl->SetOwner();
-
-   // Loop over session dirs
-   TString dir = fQueryDir;
-   Int_t idx = dir.Index("session-");
-   if (idx != kNPOS)
-      dir.Remove(idx);
-   void *dirs = gSystem->OpenDirectory(dir);
-   char *sess = 0;
-   while ((sess = (char *) gSystem->GetDirEntry(dirs))) {
-
-      // We are interested only in "session-..." subdirs
-      if (strlen(sess) < 7 || strncmp(sess,"session",7))
-         continue;
-
-      // We do not want this session at this level
-      if (strstr(sess, fTopSessionTag))
-         continue;
-
-      // Loop over query dirs
-      Int_t nq = 0;
-      void *dirq = gSystem->OpenDirectory(Form("%s/%s", dir.Data(), sess));
-      char *qry = 0;
-      while ((qry = (char *) gSystem->GetDirEntry(dirq))) {
-
-         // We are interested only in "n/" subdirs
-         if (qry[0] == '.')
-            continue;
-
-         // File with the query result
-         TString fn = Form("%s/%s/%s/query-result.root", dir.Data(), sess, qry);
-
-         FileStat_t st;
-         if (gSystem->GetPathInfo(fn, st)) {
-            Info("ApplyMaxQueries","file '%s' cannot be stated: remove it", fn.Data());
-            gSystem->Unlink(gSystem->DirName(fn));
-            continue;
-         }
-
-         // Add the entry in the sorted list
-         sl->Add(new TObjString(Form("%d",st.fMtime)));
-         hl->Add(new TNamed((const char *)Form("%d",st.fMtime),fn.Data()));
-         nq++;
-      }
-      gSystem->FreeDirectory(dirq);
-
-      if (nq > 0)
-         dl->Add(new TParameter<Int_t>(Form("%s/%s", dir.Data(), sess), nq));
-      else
-         // Remove it
-         gSystem->Exec(Form("%s -fr %s/%s", kRM, dir.Data(), sess));
-   }
-   gSystem->FreeDirectory(dirs);
-
-   // Now we apply the quota
-   TIter nxq(sl, kIterBackward);
-   Int_t nqkept = 0;
-   TObjString *os = 0;
-   while ((os = (TObjString *)nxq())) {
-      if (nqkept < fMaxQueries) {
-         // Keep this and go to the next
-         nqkept++;
-      } else {
-         // Clean this
-         TNamed *nm = dynamic_cast<TNamed *>(hl->FindObject(os->GetName()));
-         if (nm) {
-            gSystem->Unlink(nm->GetTitle());
-            // Update dir counters
-            TString tdir(gSystem->DirName(nm->GetTitle()));
-            tdir = gSystem->DirName(tdir.Data());
-            TParameter<Int_t> *nq = dynamic_cast<TParameter<Int_t>*>(dl->FindObject(tdir));
-            if (nq) {
-               Int_t val = nq->GetVal();
-               nq->SetVal(--val);
-               if (nq->GetVal() <= 0)
-                  // Remove the directory if empty
-                  gSystem->Exec(Form("%s -fr %s", kRM, tdir.Data()));
-            }
-         }
-      }
-   }
-
-   // Cleanup
-   delete sl;
-   delete hl;
-   delete dl;
-
-   // Done
-   return 0;
-}
-
-//______________________________________________________________________________
-Int_t TProofServ::LockSession(const char *sessiontag, TProofLockPath **lck)
-{
-   // Try locking query area of session tagged sessiontag.
-   // The id of the locking file is returned in fid and must be
-   // unlocked via UnlockQueryFile(fid).
-
-   // We do not need to lock our own session
-   if (strstr(sessiontag, fTopSessionTag))
-      return 0;
-
-   if (!lck) {
-      Info("LockSession","locker space undefined");
-      return -1;
-   }
-   *lck = 0;
-
-   // Check the format
-   TString stag = sessiontag;
-   TRegexp re("session-.*-.*-.*-.*");
-   Int_t i1 = stag.Index(re);
-   if (i1 == kNPOS) {
-      Info("LockSession","bad format: %s", sessiontag);
-      return -1;
-   }
-   stag.ReplaceAll("session-","");
-
-   // Drop query number, if any
-   Int_t i2 = stag.Index(":q");
-   if (i2 != kNPOS)
-      stag.Remove(i2);
-
-   // Make sure that parent process does not exist anylonger
-   TString parlog = fSessionDir;
-   parlog = parlog.Remove(parlog.Index("master-")+strlen("master-"));
-   parlog += stag;
-   if (!gSystem->AccessPathName(parlog)) {
-      Info("LockSession","parent still running: do nothing");
-      return -1;
-   }
-
-   // Lock the query lock file
-   TString qlock = fQueryLock->GetName();
-   qlock.ReplaceAll(fTopSessionTag, stag);
-
-   if (!gSystem->AccessPathName(qlock)) {
-      *lck = new TProofLockPath(qlock);
-      if (((*lck)->Lock()) < 0) {
-         Info("LockSession","problems locking query lock file");
-         SafeDelete(*lck);
-         return -1;
-      }
-   }
-
-   // We are done
-   return 0;
-}
-
-//______________________________________________________________________________
-Int_t TProofServ::CleanupSession(const char *sessiontag)
-{
-   // Cleanup query dir qdir.
-
-   if (!sessiontag) {
-      Info("CleanupSession","session tag undefined");
-      return -1;
-   }
-
-   // Query dir
-   TString qdir = fQueryDir;
-   qdir.ReplaceAll(Form("session-%s", fTopSessionTag.Data()), sessiontag);
-   Int_t idx = qdir.Index(":q");
-   if (idx != kNPOS)
-      qdir.Remove(idx);
-   if (gSystem->AccessPathName(qdir)) {
-      Info("CleanupSession","query dir %s does not exist", qdir.Data());
-      return -1;
-   }
-
-   TProofLockPath *lck = 0;
-   if (LockSession(sessiontag, &lck) == 0) {
-
-      // Cleanup now
-      gSystem->Exec(Form("%s %s", kRM, qdir.Data()));
-
-      // Unlock and remove the lock file
-      if (lck) {
-         gSystem->Unlink(lck->GetName());
-         SafeDelete(lck);  // Unlocks, if necessary
-      }
-
-      // We are done
-      return 0;
-   }
-
-   // Notify failure
-   Info("CleanupSession", "could not lock session %s", sessiontag);
-   return -1;
-}
-
-//______________________________________________________________________________
-void TProofServ::SaveQuery(TQueryResult *qr, const char *fout)
-{
-   // Save current status of query 'qr' to file name fout.
-   // If fout == 0 (default) use the default name.
-
-   if (!qr || qr->IsDraw())
-      return;
-
-   // Create dir for specific query
-   TString querydir = Form("%s/%d",fQueryDir.Data(), qr->GetSeqNum());
-
-   // Create dir, if needed
-   if (gSystem->AccessPathName(querydir))
-      gSystem->MakeDirectory(querydir);
-   TString ofn = fout ? fout : Form("%s/query-result.root", querydir.Data());
-
-   // Recreate file and save query in its current status
-   TFile *f = TFile::Open(ofn, "RECREATE");
-   if (f) {
-      f->cd();
-      if (!(qr->IsArchived()))
-         qr->fResultFile = ofn;
-      qr->Write();
-      f->Close();
-      delete f;
-   }
-}
-
-//______________________________________________________________________________
-void TProofServ::RemoveQuery(const char *queryref)
-{
-   // Remove everything about query queryref.
-
-   PDB(kGlobal, 1)
-      Info("RemoveQuery", "Enter: %s", queryref);
-
-   // Parse reference string
-   Int_t qry = -1;
-   TString qdir;
-   TProofQueryResult *pqr = LocateQuery(queryref, qry, qdir);
-   // Remove instance in memory
-   if (pqr) {
-      if (qry > -1) {
-         fQueries->Remove(pqr);
-         fWaitingQueries->Remove(pqr);
-      } else
-         fPreviousQueries->Remove(pqr);
-      delete pqr;
-      pqr = 0;
-   }
-
-   // Remove the directory
-   Info("RemoveQuery", "removing directory: %s", qdir.Data());
-   gSystem->Exec(Form("%s %s", kRM, qdir.Data()));
-
-   // Done
-   return;
-}
-
-//______________________________________________________________________________
-void TProofServ::RemoveQuery(TQueryResult *qr, Bool_t soft)
-{
-   // Remove everything about query qr. If soft = TRUE leave a track
-   // in memory with the relevant info
-
-   PDB(kGlobal, 1)
-      Info("RemoveQuery", "Enter");
-
-   if (!qr)
-      return;
-
-   // Remove the directory
-   TString qdir = fQueryDir;
-   qdir = qdir.Remove(qdir.Index(kPROOF_QueryDir)+strlen(kPROOF_QueryDir));
-   qdir = Form("%s/%s/%d", qdir.Data(), qr->GetTitle(), qr->GetSeqNum());
-   PDB(kGlobal, 1)
-      Info("RemoveQuery", "removing directory: %s", qdir.Data());
-   gSystem->Exec(Form("%s %s", kRM, qdir.Data()));
-
-   // Remove from memory lists
-   if (soft) {
-      TQueryResult *qrn = qr->CloneInfo();
-      Int_t idx = fQueries->IndexOf(qr);
-      if (idx > -1)
-         fQueries->AddAt(qrn, idx);
-      else
-         SafeDelete(qrn);
-   }
-   fQueries->Remove(qr);
-   SafeDelete(qr);
-
-   // Done
-   return;
-}
-
-//______________________________________________________________________________
-TProofQueryResult *TProofServ::LocateQuery(TString queryref, Int_t &qry, TString &qdir)
-{
-   // Locate query referenced by queryref. Return pointer to instance
-   // in memory, if any, or 0. Fills qdir with the query specific directory
-   // and qry with the query number for queries processed by this session.
-
-   TProofQueryResult *pqr = 0;
-
-   // Find out if the request is a for a local query or for a
-   // previously processed one
-   qry = -1;
-   if (queryref.IsDigit()) {
-      qry = queryref.Atoi();
-   } else if (queryref.Contains(fTopSessionTag)) {
-      Int_t i1 = queryref.Index(":q");
-      if (i1 != kNPOS) {
-         queryref.Remove(0,i1+2);
-         qry = queryref.Atoi();
-      }
-   }
-
-   // Build dir name for specific query
-   qdir = "";
-   if (qry > -1) {
-
-      PDB(kGlobal, 1)
-         Info("LocateQuery", "local query: %d", qry);
-
-      // Remove query from memory list
-      if (fQueries) {
-         TIter nxq(fQueries);
-         while ((pqr = (TProofQueryResult *) nxq())) {
-            if (pqr->GetSeqNum() == qry) {
-               // Dir for specific query
-               qdir = Form("%s/%d", fQueryDir.Data(), qry);
-               break;
-            }
-         }
-      }
-
-   } else {
-      PDB(kGlobal, 1)
-         Info("LocateQuery", "previously processed query: %s", queryref.Data());
-
-      // Remove query from memory list
-      if (fPreviousQueries) {
-         TIter nxq(fPreviousQueries);
-         while ((pqr = (TProofQueryResult *) nxq())) {
-            if (queryref.Contains(pqr->GetTitle()) &&
-                queryref.Contains(pqr->GetName()))
-               break;
-         }
-      }
-
-      queryref.ReplaceAll(":q","/");
-      qdir = fQueryDir;
-      qdir = qdir.Remove(qdir.Index(kPROOF_QueryDir)+strlen(kPROOF_QueryDir));
-      qdir = Form("%s/%s", qdir.Data(), queryref.Data());
-   }
-
-   // We are done
-   return pqr;
-}
-
-//______________________________________________________________________________
 void TProofServ::HandleArchive(TMessage *mess)
 {
    // Handle archive request.
@@ -3282,7 +2658,7 @@ void TProofServ::HandleArchive(TMessage *mess)
 
    Int_t qry = -1;
    TString qdir;
-   TProofQueryResult *pqr = LocateQuery(queryref, qry, qdir);
+   TProofQueryResult *pqr = fQMgr ? fQMgr->LocateQuery(queryref, qry, qdir) : 0;
    TProofQueryResult *pqm = pqr;
 
    if (path.Length() <= 0) {
@@ -3355,8 +2731,8 @@ void TProofServ::HandleArchive(TMessage *mess)
       pqr->Write();
 
       // Update temporary files too
-      if (qry > -1)
-         SaveQuery(pqr);
+      if (qry > -1 && fQMgr)
+         fQMgr->SaveQuery(pqr);
 
       // Notify
       Info("HandleArchive",
@@ -3366,6 +2742,134 @@ void TProofServ::HandleArchive(TMessage *mess)
 
    // Done
    return;
+}
+
+//______________________________________________________________________________
+Int_t TProofServ::AssertDataSet(TDSet *dset, TList *input)
+{
+   // Make sure that dataset is in the form to be processed. This may mean
+   // retrieving the relevant info from the dataset manager or from the
+   // attached input list.
+   // Returns 0 on success, -1 on error
+
+   // We must have something to process
+   if (!dset || !input) return -1;
+
+   // We need a dataset manager
+   if (!fDataSetManager) {
+      SendAsynMessage(Form("AssertDataSet on %s: no dataset manager!", fPrefix.Data()));
+      Error("AssertDataSet", "no dataset manager: cannot proceed");
+      return -1;
+   }
+
+   TFileCollection* dataset = 0;
+   TString lookupopt;
+   TString dsname(dset->GetName());
+   // The dataset maybe in the form of a TFileCollection in the input list
+   if (dsname.BeginsWith("TFileCollection:")) {
+      // Isolate the real name
+      dsname.ReplaceAll("TFileCollection:", "");
+      // Get the object
+      dataset = (TFileCollection *) input->FindObject(dsname);
+      if (!dataset) {
+         SendAsynMessage(Form("AssertDataSet on %s: TFileCollection %s not"
+                              " found in input list",
+                              fPrefix.Data(), dset->GetName()));
+         Error("AssertDataSet", "TFileCollection %s not found in input list",
+                                 dset->GetName());
+         return -1;
+      }
+      // Remove from everywhere
+      input->RecursiveRemove(dataset);
+      // Make sure we lookup everything (unless the client or the administartor
+      // required something else)
+      if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
+         lookupopt = gEnv->GetValue("Proof.LookupOpt", "all");
+         input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
+      }
+   }
+
+   // The received message included an empty dataset, with only the name
+   // defined: assume that a dataset, stored on the PROOF master by that
+   // name, should be processed.
+   if (!dataset) {
+      dataset = fDataSetManager->GetDataSet(dsname.Data());
+      if (!dataset) {
+         SendAsynMessage(Form("AssertDataSet on %s: no such dataset: %s",
+                              fPrefix.Data(), dsname.Data()));
+         Error("AssertDataSet", "no such dataset on the master: %s", dsname.Data());
+         return -1;
+      }
+
+      // Apply the lookup option requested by the client or the administartor
+      // (by default we trust the information in the dataset)
+      if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
+         lookupopt = gEnv->GetValue("Proof.LookupOpt", "stagedOnly");
+         input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
+      }
+   }
+
+   // Logic for the subdir/obj names: try first to see if the dataset name contains
+   // some info; if not check the settings in the TDSet object itself; if still empty
+   // check the default tree name / path in the TFileCollection object; if still empty
+   // use the default as the flow will determine
+   TString dsTree;
+   // Get the [subdir/]tree, if any
+   fDataSetManager->ParseUri(dset->GetName(), 0, 0, 0, &dsTree);
+   if (dsTree.IsNull()) {
+      // Use what we have in the original dataset; we need this to locate the
+      // meta data information
+      dsTree += dset->GetDirectory();
+      dsTree += dset->GetObjName();
+   }
+   if (!dsTree.IsNull() && dsTree != "/") {
+      TString tree(dsTree);
+      Int_t idx = tree.Index("/");
+      if (idx != kNPOS) {
+         TString dir = tree(0, idx+1);
+         tree.Remove(0, idx);
+         dset->SetDirectory(dir);
+      }
+      dset->SetObjName(tree);
+   } else {
+      // Use the default obj name from the TFileCollection
+      dsTree = dataset->GetDefaultTreeName();
+   }
+
+   // Transfer the list now
+   if (dataset) {
+      TList *missingFiles = new TList;
+      TSeqCollection* files = dataset->GetList();
+      Bool_t availableOnly = (lookupopt != "all") ? kTRUE : kFALSE;
+      if (!dset->Add(files, dsTree, availableOnly, missingFiles)) {
+         SendAsynMessage(Form("AssertDataSet on %s: error retrieving"
+                              " dataset: %s", fPrefix.Data(), dset->GetName()));
+         Error("AssertDataSet", "error retrieving dataset %s",
+               dset->GetName());
+         delete dataset;
+         return -1;
+      }
+      if (missingFiles) {
+         // The missing files objects have to be removed from the dataset
+         // before delete.
+         TIter next(missingFiles);
+         TObject *file;
+         while ((file = next()))
+            dataset->GetList()->Remove(file);
+      }
+      delete dataset;
+
+      // Make sure it will be sent back merged with other similar lists created
+      // during processing; this list will be transferred by the player to the
+      // output list, once the latter has been created (see TProofPlayerRemote::Process)
+      if (missingFiles && missingFiles->GetSize() > 0) {
+         missingFiles->SetName("MissingFiles");
+         input->Add(missingFiles);
+      }
+   }
+
+   // Done
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -3419,132 +2923,37 @@ void TProofServ::HandleProcess(TMessage *mess)
 
    if (IsTopMaster()) {
 
+      // Make sure the dataset contains the information needed
       if ((!hasNoData) && dset->GetListOfElements()->GetSize() == 0) {
-         TFileCollection* dataset = 0;
-         TString lookupopt;
-         TString dsname(dset->GetName());
-         // The dataset maybe in the form of a TFileCollection in the input list
-         if (dsname.BeginsWith("TFileCollection:")) {
-            // Isolate the real name
-            dsname.ReplaceAll("TFileCollection:", "");
-            // Get the object
-            dataset = (TFileCollection *) input->FindObject(dsname);
-            if (!dataset) {
-               SendAsynMessage(Form("HandleProcess on %s: TFileCollection %s not"
-                                    " found in input list",
-                                    fPrefix.Data(), dset->GetName()));
-               Error("HandleProcess", "TFileCollection %s not found in input list",
-                                      dset->GetName());
-               return;
-            }
-            input->Remove(dataset);
-            // Make sure we lookup everything (unless the client or the administartor
-            // required something else)
-            if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
-               lookupopt = gEnv->GetValue("Proof.LookupOpt", "all");
-               input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
-            }
-         }
-
-         // The received message included an empty dataset, with only the name
-         // defined: assume that a dataset, stored on the PROOF master by that
-         // name, should be processed.
-         if (!dataset) {
-            if (fDataSetManager) {
-               dataset = fDataSetManager->GetDataSet(dsname.Data());
-               if (!dataset) {
-                  SendAsynMessage(Form("HandleProcess on %s: no such dataset: %s",
-                                       fPrefix.Data(), dsname.Data()));
-                  Error("HandleProcess", "no such dataset on the master: %s", dsname.Data());
-                  return;
-               }
-
-               // Apply the lookup option requested by the client or the administartor
-               // (by default we trust the information in the dataset)
-               if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
-                  lookupopt = gEnv->GetValue("Proof.LookupOpt", "stagedOnly");
-                  input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
-               }
-            } else {
-               SendAsynMessage(Form("HandleProcess on %s: no dataset manager!", fPrefix.Data()));
-               Error("HandleProcess", "no dataset manager: cannot proceed");
-               return;
-            }
-         }
-
-         // Logic for the subdir/obj names: try first to see if the dataset name contains
-         // some info; if not check the settings in the TDSet object itself; if still empty
-         // check the default tree name / path in the TFileCollection object; if still empty
-         // use the default as the flow will determine
-         TString dsTree;
-         // Get the [subdir/]tree, if any
-         fDataSetManager->ParseUri(dset->GetName(), 0, 0, 0, &dsTree);
-         if (dsTree.IsNull()) {
-            // Use what we have in the original dataset; we need this to locate the
-            // meta data information
-            dsTree += dset->GetDirectory();
-            dsTree += dset->GetObjName();
-         }
-         if (!dsTree.IsNull() && dsTree != "/") {
-            TString tree(dsTree);
-            Int_t idx = tree.Index("/");
-            if (idx != kNPOS) {
-               TString dir = tree(0, idx+1);
-               tree.Remove(0, idx);
-               dset->SetDirectory(dir);
-            }
-            dset->SetObjName(tree);
-         } else {
-            // Use the default obj name from the TFileCollection
-            dsTree = dataset->GetDefaultTreeName();
-         }
-
-         // Transfer the list now
-         if (dataset) {
-            TList *missingFiles = new TList;
-            TSeqCollection* files = dataset->GetList();
-            Bool_t availableOnly = (lookupopt != "all") ? kTRUE : kFALSE;
-            if (!dset->Add(files, dsTree, availableOnly, missingFiles)) {
-               SendAsynMessage(Form("HandleProcess on %s: error retrieving"
-                                    " dataset: %s", fPrefix.Data(), dset->GetName()));
-               Error("HandleProcess", "error retrieving dataset %s",
-                     dset->GetName());
-               delete dataset;
-               return;
-            }
-            if (missingFiles) {
-               // The missing files objects have to be removed from the dataset
-               // before delete.
-               TIter next(missingFiles);
-               TObject *file;
-               while ((file = next()))
-                  dataset->GetList()->Remove(file);
-            }
-            delete dataset;
-
-            // Make sure it will be sent back merged with other similar lists created
-            // during processing; this list will be transferred by the player to the
-            // output list, once the latter has been created (see TProofPlayerRemote::Process)
-            if (missingFiles && missingFiles->GetSize() > 0) {
-               missingFiles->SetName("MissingFiles");
-               input->Add(missingFiles);
-            }
-         }
+         if (AssertDataSet(dset, input) != 0) return;
       }
 
       TProofQueryResult *pq = 0;
 
-      // Create instance of query results
-      pq = MakeQueryResult(nentries, opt, input, first, dset, filename, elist);
-      // Make sure that cleanup is done when required
-      input->SetOwner();
+      // Create instance of query results; we set ownership of the input list
+      // to the TQueryResult object, to avoid too many instantiations
+      pq = MakeQueryResult(nentries, opt, 0, first, 0, filename, 0);
+
+      // Prepare the input list and transfer it into the TQueryResult object
+      if (dset) input->Add(dset);
+      if (elist) input->Add(elist);
+      pq->SetInputList(input, kTRUE);
+
+      // Re-attach to the new list
+      input->Clear("nodelete");
       SafeDelete(input);
+      input = pq->GetInputList();
+
+      // Save input data, if any
+      SaveInputData(pq);
 
       // If not a draw action add the query to the main list
       if (!(pq->IsDraw())) {
-         fQueries->Add(pq);
-         // Also save it to queries dir
-         SaveQuery(pq);
+         if (fQMgr) {
+            if (fQMgr->Queries()) fQMgr->Queries()->Add(pq);
+            // Also save it to queries dir
+            fQMgr->SaveQuery(pq);
+         }
       }
 
       // Add anyhow to the waiting lists
@@ -3613,10 +3022,12 @@ void TProofServ::HandleProcess(TMessage *mess)
          SetQueryRunning(pq);
 
          // Save to queries dir, if not standard draw
-         if (!(pq->IsDraw()))
-            SaveQuery(pq);
-         else
-            fDrawQueries++;
+         if (fQMgr) {
+            if (!(pq->IsDraw()))
+               fQMgr->SaveQuery(pq);
+            else
+               fQMgr->IncrementDrawQueries();
+         }
 
          // Signal the client that we are starting a new query
          TMessage m(kPROOF_STARTPROCESS);
@@ -3637,6 +3048,9 @@ void TProofServ::HandleProcess(TMessage *mess)
          // Setup data set
          if (dset->IsA() == TDSetProxy::Class())
             ((TDSetProxy*)dset)->SetProofServ(this);
+
+         // Send input data, if any
+         SendInputData(pq);
 
          // Add the unique query tag as TNamed object to the input list
          // so that it is available in TSelectors for monitoring
@@ -3671,7 +3085,11 @@ void TProofServ::HandleProcess(TMessage *mess)
          }
 
          // Complete filling of the TQueryResult instance
-         FinalizeQuery(pq);
+         if (fQMgr) {
+            fProof->AskStatistics();
+            if (fQMgr->FinalizeQuery(pq, fProof, fPlayer))
+               fQMgr->SaveQuery(pq, fMaxQueries);
+         }
 
          // Send back the results
          TQueryResult *pqr = pq->CloneInfo();
@@ -3735,14 +3153,16 @@ void TProofServ::HandleProcess(TMessage *mess)
 
          // Remove aborted queries from the list
          if (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) {
-            RemoveQuery(pq);
+            if (fQMgr) fQMgr->RemoveQuery(pq);
          } else {
             // Keep in memory only light infor about a query
             if (!(pq->IsDraw())) {
-               if (pqr)
-                  fQueries->Add(pqr);
-               // Remove from the fQueries list
-               fQueries->Remove(pq);
+               if (fQMgr && fQMgr->Queries()) {
+                  if (pqr)
+                     fQMgr->Queries()->Add(pqr);
+                  // Remove from the fQueries list
+                  fQMgr->Queries()->Remove(pq);
+               }
                // These removes 'pq' from the internal player list and
                // deletes it; in this way we do not attempt a double delete
                // when destroying the player
@@ -3771,6 +3191,9 @@ void TProofServ::HandleProcess(TMessage *mess)
       // Setup data set
       if (dset->IsA() == TDSetProxy::Class())
          ((TDSetProxy*)dset)->SetProofServ(this);
+
+      // Get input data, if any
+      GetInputData(input);
 
       // Set input
       TIter next(input);
@@ -3856,42 +3279,46 @@ void TProofServ::HandleQueryList(TMessage *mess)
    (*mess) >> all;
 
    TList *ql = new TList;
-   Int_t ntot = 0;
-   if (all) {
-      // Rescan
-      TString qdir = fQueryDir;
-      Int_t idx = qdir.Index("session-");
-      if (idx != kNPOS)
-         qdir.Remove(idx);
-      ScanPreviousQueries(qdir);
-      // Send also information about previous queries, if any
-      if (fPreviousQueries) {
-         TIter nxq(fPreviousQueries);
-         TProofQueryResult *pqr = 0;
-         while ((pqr = (TProofQueryResult *)nxq())) {
-            ntot++;
-            pqr->fSeqNum = ntot;
-            ql->Add(pqr);
+   Int_t ntot = 0, npre = 0, ndraw= 0;
+   if (fQMgr) {
+      if (all) {
+         // Rescan
+         TString qdir = fQueryDir;
+         Int_t idx = qdir.Index("session-");
+         if (idx != kNPOS)
+            qdir.Remove(idx);
+         fQMgr->ScanPreviousQueries(qdir);
+         // Send also information about previous queries, if any
+         if (fQMgr->PreviousQueries()) {
+            TIter nxq(fQMgr->PreviousQueries());
+            TProofQueryResult *pqr = 0;
+            while ((pqr = (TProofQueryResult *)nxq())) {
+               ntot++;
+               pqr->fSeqNum = ntot;
+               ql->Add(pqr);
+            }
          }
       }
-   }
 
-   Int_t npre = ntot;
-   if (fQueries) {
-      // Add info about queries in this session
-      TIter nxq(fQueries);
-      TProofQueryResult *pqr = 0;
-      TQueryResult *pqm = 0;
-      while ((pqr = (TProofQueryResult *)nxq())) {
-         ntot++;
-         pqm = pqr->CloneInfo();
-         pqm->fSeqNum = ntot;
-         ql->Add(pqm);
+      npre = ntot;
+      if (fQMgr->Queries()) {
+         // Add info about queries in this session
+         TIter nxq(fQMgr->Queries());
+         TProofQueryResult *pqr = 0;
+         TQueryResult *pqm = 0;
+         while ((pqr = (TProofQueryResult *)nxq())) {
+            ntot++;
+            pqm = pqr->CloneInfo();
+            pqm->fSeqNum = ntot;
+            ql->Add(pqm);
+         }
       }
+      // Number of draw queries
+      ndraw = fQMgr->DrawQueries();
    }
 
    TMessage m(kPROOF_QUERYLIST);
-   m << npre << fDrawQueries << ql;
+   m << npre << ndraw << ql;
    fSocket->Send(m);
    delete ql;
 
@@ -3923,7 +3350,7 @@ void TProofServ::HandleRemove(TMessage *mess)
    if (queryref == "cleanupdir") {
 
       // Cleanup previous sessions results
-      Int_t nd = CleanupQueriesDir();
+      Int_t nd = (fQMgr) ? fQMgr->CleanupQueriesDir() : -1;
 
       // Notify
       Info("HandleRemove", "%d directories removed", nd);
@@ -3932,21 +3359,24 @@ void TProofServ::HandleRemove(TMessage *mess)
    }
 
 
+   if (fQMgr) {
+      TProofLockPath *lck = 0;
+      if (fQMgr->LockSession(queryref, &lck) == 0) {
 
-   TProofLockPath *lck = 0;
-   if (LockSession(queryref, &lck) == 0) {
+         // Remove query
+         fQMgr->RemoveQuery(queryref, fWaitingQueries);
 
-      // Remove query
-      RemoveQuery(queryref);
+         // Unlock and remove the lock file
+         if (lck) {
+            gSystem->Unlink(lck->GetName());
+            SafeDelete(lck);
+         }
 
-      // Unlock and remove the lock file
-      if (lck) {
-         gSystem->Unlink(lck->GetName());
-         SafeDelete(lck);
+         // We are done
+         return;
       }
-
-      // We are done
-      return;
+   } else {
+      Warning("HandleRemove", "query result manager undefined!");
    }
 
    // Notify failure
@@ -3971,13 +3401,13 @@ void TProofServ::HandleRetrieve(TMessage *mess)
    // Parse reference string
    Int_t qry = -1;
    TString qdir;
-   TProofQueryResult *pqr = LocateQuery(queryref, qry, qdir);
+   if (fQMgr) fQMgr->LocateQuery(queryref, qry, qdir);
 
    TString fout = qdir;
    fout += "/query-result.root";
 
    TFile *f = TFile::Open(fout,"READ");
-   pqr = 0;
+   TProofQueryResult *pqr = 0;
    if (f) {
       f->ReadKeys();
       TIter nxk(f->GetListOfKeys());
@@ -4305,8 +3735,11 @@ void TProofServ::HandleCheckFile(TMessage *mess)
       TMD5 *md5local = TMD5::FileChecksum(cachef);
       if (md5local && md5 == (*md5local)) {
          // copy file from cache to working directory
-         Bool_t cpbin = (opt & TProof::kCpBin) ? kTRUE : kFALSE;
-         CopyFromCache(filenam, cpbin);
+         Bool_t cp = (opt & TProof::kCp) ? kTRUE : kFALSE;
+         if (cp) {
+            Bool_t cpbin = (opt & TProof::kCpBin) ? kTRUE : kFALSE;
+            CopyFromCache(filenam, cpbin);
+         }
          fSocket->Send(kPROOF_CHECKFILE);
          PDB(kCache, 1)
             Info("HandleCheckFile", "file %s already on node", filenam.Data());
@@ -4338,7 +3771,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
    TString noth = (IsMaster()) ? Form("Mst-%s", fOrdinal.Data())
                                : Form("Wrk-%s", fOrdinal.Data());
 
-   TString package, pdir, ocwd;
+   TString package, pdir, ocwd, file;
    (*mess) >> type;
    switch (type) {
       case TProof::kShowCache:
@@ -4356,11 +3789,17 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          LogToMaster();
          break;
       case TProof::kClearCache:
+         file = "";
+         if ((mess->BufferSize() > mess->Length())) (*mess) >> file;
          fCacheLock->Lock();
-         gSystem->Exec(Form("%s %s/* %s/.*.binversion", kRM, fCacheDir.Data(), fCacheDir.Data()));
+         if (file.IsNull() || file == "*") {
+            gSystem->Exec(Form("%s %s/* %s/.*.binversion", kRM, fCacheDir.Data(), fCacheDir.Data()));
+         } else {
+            gSystem->Exec(Form("%s %s/%s", kRM, fCacheDir.Data(), file.Data()));
+         }
          fCacheLock->Unlock();
          if (IsMaster())
-            fProof->ClearCache();
+            fProof->ClearCache(file);
          break;
       case TProof::kShowPackages:
          (*mess) >> all;
@@ -4670,8 +4109,10 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          LogToMaster();
          break;
       case TProof::kClearSubCache:
+         file = "";
+         if ((mess->BufferSize() > mess->Length())) (*mess) >> file;
          if (IsMaster())
-            fProof->ClearCache();
+            fProof->ClearCache(file);
          break;
       case TProof::kShowSubPackages:
          (*mess) >> all;
@@ -5040,7 +4481,7 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
    fflush(stderr);
 
    if (tosyslog)
-     gSystem->Syslog(loglevel, buf);
+      gSystem->Syslog(loglevel, buf);
 
    if (abort) {
 
@@ -5576,6 +5017,157 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
 
    // We are done
    return rc;
+}
+
+//______________________________________________________________________________
+Int_t TProofServ::SaveInputData(TQueryResult *qr)
+{
+   // Save input data file from cache into the sandbox or create a the file
+   // with input data objects
+
+   TList *input = 0;
+
+   // We must have got something to process
+   if (!qr || !(input = qr->GetInputList())) return 0;
+
+   // There must be some input data or input data file
+   TNamed *data = (TNamed *) input->FindObject("PROOF_InputDataFile");
+   TList *inputdata = (TList *) input->FindObject("PROOF_InputData");
+   if (!data && !inputdata) return 0;
+   // Default dstination filename
+   if (!data)
+      input->Add((data = new TNamed("PROOF_InputDataFile", kPROOF_InputDataFile)));
+
+   TString dstname(data->GetTitle()), srcname;
+   Bool_t fromcache = kFALSE;
+   if (dstname.BeginsWith("cache:")) {
+      fromcache = kTRUE;
+      srcname = dstname;
+      dstname.ReplaceAll("cache:", "");
+      srcname.ReplaceAll("cache:", Form("%s/", fCacheDir.Data()));
+      if (gSystem->AccessPathName(srcname)) {
+         Error("SaveInputData",
+               "input data file not found in cache (%s)", srcname.Data());
+         return -1;
+      }
+   }
+
+   // If from cache, just move the cache file
+   if (fromcache) {
+      if (gSystem->CopyFile(srcname, dstname, kTRUE) != 0) {
+         Error("SaveInputData",
+               "problems copying %s to %s", srcname.Data(), dstname.Data());
+         return -1;
+      }
+   } else {
+      // Create the file
+      if (inputdata && inputdata->GetSize() > 0) {
+         TFile *f = TFile::Open(dstname.Data(), "RECREATE");
+         if (f) {
+            f->cd();
+            inputdata->Write();
+            f->Close();
+            delete f;
+         } else {
+            Error("SaveInputData", "could not create %s", dstname.Data());
+            return -1;
+         }
+      } else {
+         Error("SaveInputData", "no input data!");
+         return -1;
+      }
+   }
+   Info("SaveInputData", "input data saved to %s", dstname.Data());
+
+   // Save the file name and clean up the data list
+   data->SetTitle(dstname);
+   if (inputdata) {
+      input->Remove(inputdata);
+      inputdata->SetOwner();
+      delete inputdata;
+   }
+
+   // Done
+   return 0;
+}
+
+//______________________________________________________________________________
+Int_t TProofServ::SendInputData(TQueryResult *qr)
+{
+   // Send the input data file to the workers
+
+   TList *input = 0;
+
+   // We must have got something to process
+   if (!qr || !(input = qr->GetInputList())) return 0;
+
+   // There must be some input data or input data file
+   TNamed *inputdata = (TNamed *) input->FindObject("PROOF_InputDataFile");
+   if (!inputdata) return 0;
+
+   TString fname(inputdata->GetTitle());
+   if (gSystem->AccessPathName(fname)) {
+      Error("SendInputData",
+            "input data file not found in sandbox (%s)", fname.Data());
+      return -1;
+   }
+
+   // PROOF session must available
+   if (!fProof) {
+      Error("SendInputData", "fProof object undefined: protocol error!");
+      return -1;
+   }
+
+   // Send to unique workers and submasters
+   fProof->BroadcastFile(fname, TProof::kBinary, "cache");
+
+   // Done
+   return 0;
+}
+
+//______________________________________________________________________________
+Int_t TProofServ::GetInputData(TList *input)
+{
+   // Get the input data from the file defined in the input list
+
+   // We must have got something to process
+   if (!input) return 0;
+
+   // There must be some input data or input data file
+   TNamed *inputdata = (TNamed *) input->FindObject("PROOF_InputDataFile");
+   if (!inputdata) return 0;
+
+   TString fname(inputdata->GetTitle());
+   fname.Insert(0, Form("%s/", fCacheDir.Data()));
+   if (gSystem->AccessPathName(fname)) {
+      Error("GetInputData",
+            "input data file not found in cache (%s)", fname.Data());
+      return -1;
+   }
+
+   // Read the input data into the input list
+   TFile *f = TFile::Open(fname.Data());
+   if (f) {
+      TList *keys = (TList *) f->GetListOfKeys();
+      if (!keys) {
+         Error("GetInputData", "could not get list of object keys from file");
+         return -1;
+      }
+      TIter nxk(keys);
+      TKey *k = 0;
+      while ((k = (TKey *)nxk())) {
+         TObject *o = f->Get(k->GetName());
+         if (o) input->Add(o);
+      }
+      f->Close();
+      delete f;
+   } else {
+      Error("GetInputData", "could not open %s", fname.Data());
+      return -1;
+   }
+
+   // Done
+   return 0;
 }
 
 //______________________________________________________________________________

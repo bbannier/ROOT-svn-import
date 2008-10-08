@@ -11,6 +11,7 @@
 
 #include "TEveUtil.h"
 #include "TEveElement.h"
+#include "TEveManager.h"
 
 #include "TError.h"
 #include "TPad.h"
@@ -33,12 +34,17 @@
 #include <iostream>
 #include <string>
 
-//______________________________________________________________________________
+//==============================================================================
 // TEveUtil
+//==============================================================================
+
+//______________________________________________________________________________
 //
-// Standard utility functions for Reve.
+// Standard utility functions for Eve.
 
 ClassImp(TEveUtil);
+
+TObjArray* TEveUtil::fgDefaultColors = 0;
 
 //______________________________________________________________________________
 void TEveUtil::SetupEnvironment()
@@ -266,31 +272,69 @@ Color_t* TEveUtil::FindColorVar(TObject* obj, const Text_t* varname)
    return (Color_t*) (((char*)obj) + off);
 }
 
-
-/******************************************************************************/
-// Text formatting
-/******************************************************************************/
-
-//______________________________________________________________________________
-const char* TEveUtil::FormAxisValue(Float_t x)
+void TEveUtil::SetColorBrightness(Float_t value, Bool_t full_redraw)
 {
-   // Returns formatted text suitable for display of value 'x' on an
-   // axis tick-mark.
+   // Tweak all ROOT colors to become brighter (if value > 0) or
+   // darker (value < 0). Reasonable values for the value argument are
+   // from -0.5 to 0.5 (error will be printed otherwise).
+   // If value is zero, the original colors are restored.
+   //
+   // You should call TEveManager::FullRedraw3D() afterwards or set
+   // the argument full_redraw to true (default is false).
 
-   // There is a problem on windows: for values printed with the %f.0
-   // format 8 trailing zeros are displayed.
+   if (value < -0.5 || value > 0.5)
+   {
+      Error("TEveUtil::SetColorBrightness", "value '%f' out of range [-0.5, 0.5].", value);
+      return;
+   }
 
-   using namespace TMath;
+   TObjArray   *colors = (TObjArray*) gROOT->GetListOfColors();
 
-   if (Abs(x) > 1000)
-      return Form("%d", (Int_t) 10*Nint(x/10.0f));
-   if (Abs(x) > 100 || x == Nint(x))
-      return Form("%d", (Int_t) Nint(x));
-   if (Abs(x) > 10)
-      return Form("%.1f", x);
-   if (Abs(x) >= 0.01 )
-      return Form("%.2f", x);
-   return "0";
+   if (fgDefaultColors == 0)
+   {
+      const Int_t n_col = colors->GetEntriesFast();
+      fgDefaultColors = new TObjArray(n_col);
+      for (Int_t i = 0; i < n_col; ++i)
+      {
+         TColor* c = (TColor*) colors->At(i);
+         if (c)
+            fgDefaultColors->AddAt(new TColor(*c), i);
+      }
+   }
+
+   const Int_t n_col = fgDefaultColors->GetEntriesFast();
+   for (Int_t i = 0; i < n_col; ++i)
+   {
+      TColor* cdef = (TColor*) fgDefaultColors->At(i);
+      if (cdef)
+      {
+         TColor* croot = (TColor*)  colors->At(i);
+         if (croot == 0)
+         {
+            croot = new TColor(*cdef);
+            colors->AddAt(croot, i);
+         }
+         else
+         {
+            cdef->Copy(*croot);
+         }
+         Float_t r, g, b;
+         croot->GetRGB(r, g, b);
+         if (r < 0.01 && g < 0.01 && b < 0.01) continue; // skip black
+         if (r > 0.99 && g > 0.99 && b > 0.99) continue; // skip white
+         r = TMath::Min(r + value, 1.0f);
+         g = TMath::Min(g + value, 1.0f);
+         b = TMath::Min(b + value, 1.0f);
+         croot->SetRGB(r, g, b);
+      }
+      else
+      {
+         delete colors->RemoveAt(i);
+      }
+   }
+
+   if (full_redraw && gEve != 0)
+      gEve->FullRedraw3D();
 }
 
 /******************************************************************************/
@@ -442,12 +486,20 @@ TEvePadHolder::~TEvePadHolder()
 ClassImp(TEveGeoManagerHolder);
 
 //______________________________________________________________________________
-TEveGeoManagerHolder::TEveGeoManagerHolder(TGeoManager* new_gmgr) :
-   fManager(gGeoManager)
+TEveGeoManagerHolder::TEveGeoManagerHolder(TGeoManager* new_gmgr, Int_t n_seg) :
+   fManager   (gGeoManager),
+   fNSegments (0)
 {
    // Constructor.
+   // If n_seg is specified and larger than 2, the new geo-manager's
+   // NSegments is set to this value.
 
    gGeoManager = new_gmgr;
+   if (gGeoManager && n_seg > 2)
+   {
+      fNSegments = gGeoManager->GetNsegments();
+      gGeoManager->SetNsegments(n_seg);
+   }
 }
 
 //______________________________________________________________________________
@@ -455,6 +507,10 @@ TEveGeoManagerHolder::~TEveGeoManagerHolder()
 {
    // Destructor.
 
+   if (gGeoManager && fNSegments > 2)
+   {
+      gGeoManager->SetNsegments(fNSegments);
+   }
    gGeoManager = fManager;
 }
 

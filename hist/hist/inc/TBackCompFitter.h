@@ -29,6 +29,12 @@
     TVirtualFitter backward compatibility implementation using new ROOT::Fit::Fitter
 */
 
+namespace ROOT { 
+   namespace Fit { 
+      class FitData; 
+   }
+}
+
 
 class TBackCompFitter : public TVirtualFitter {
 
@@ -38,7 +44,7 @@ public:
 
    TBackCompFitter();
 
-   TBackCompFitter(ROOT::Fit::Fitter & fitter); 
+   TBackCompFitter(ROOT::Fit::Fitter & fitter, ROOT::Fit::BinData * ); 
 
    virtual ~TBackCompFitter();
 
@@ -78,9 +84,13 @@ public:
    virtual void      SetFCN(void (*fcn)(Int_t &, Double_t *, Double_t &f, Double_t *, Int_t) );
    // this for CINT (interactive functions)
    virtual void      SetFCN(void * );
+   // for using interpreted function passed by the user
+   virtual void SetMethodCall(TMethodCall * m) { fMethodCall = m; }
+
 
    // set FCN using new interface
    virtual void SetObjFunction(  ROOT::Math::IMultiGenFunction * f);
+   
 
 protected: 
 
@@ -90,15 +100,20 @@ protected:
   
    void DoSetDimension(); 
    
+   void SetMinimizerFunction(const ROOT::Fit::BinData * data);
+   void SetMinimizerFunction(const ROOT::Fit::UnBinData * ) {}; // not yet impl.
+   
 private:
 
-   
+
+   ROOT::Fit::FitData * fFitData;
+   ROOT::Math::Minimizer * fMinimizer;
    ROOT::Fit::Fitter fFitter; 
    ROOT::Math::IMultiGenFunction * fObjFunc; 
    mutable std::vector<double> fCovar; // cached covariance matrix (NxN)
 
 
-   ClassDef(TBackCompFitter,1)  // The fitter providing backward compatibility by implementing the TVirtualFitter interface
+   ClassDef(TBackCompFitter,1)  // Class providing backward compatibility for fitting by implementing the TVirtualFitter interface
 
 };
 

@@ -4625,6 +4625,10 @@ void TPad::RedrawAxis(Option_t *option)
    // get first histogram in the list of primitives
    TString opt = option;
    opt.ToLower();
+
+   TPad *padsav = (TPad*)gPad;
+   cd();
+
    if (!fPrimitives) fPrimitives = new TList;
    TIter next(fPrimitives);
    TObject *obj;
@@ -4646,6 +4650,8 @@ void TPad::RedrawAxis(Option_t *option)
          return;
       }
    }
+
+   if (padsav) padsav->cd();
 }
 
 

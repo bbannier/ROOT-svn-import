@@ -715,7 +715,7 @@ check_comp() {
     case $comptype in
     C)
         if test "x$altcc" = "x" ; then
-            altcc=`grep '^CC ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; nextfile} }'`
+            altcc=`grep '^CC ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
         fi
         if `$cwhich $altcc > /dev/null 2>&1` ; then
             found_comp=1
@@ -726,7 +726,7 @@ check_comp() {
         ;;
     C++)
         if test "x$altcxx" = "x" ; then
-            altcxx=`grep '^CXX ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; nextfile} }'`
+            altcxx=`grep '^CXX ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
         fi
         if `$cwhich $altcxx > /dev/null 2>&1` ; then
             found_comp=1
@@ -737,7 +737,7 @@ check_comp() {
         ;;
     LD)
         if test "x$altld" = "x" ; then
-            altld=`grep '^LD ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; nextfile} }'`
+            altld=`grep '^LD ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
             if test "x$arch" = "xwin32" ; then
                 altldorg="link"
                 altldtmp="$altld"
@@ -762,7 +762,7 @@ check_comp() {
         ;;
     F77)
         if test "x$altf77" = "x" ; then
-            altf77=`grep '^F77 ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; nextfile} }'`
+            altf77=`grep '^F77 ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
             if test "x$arch" = "xwin32" ; then
                 altf77org="fl32"
                 altf77tmp="$altf77"
@@ -818,6 +818,7 @@ guess_architecture() {
     case "$arch:$chip:$rele" in
         aix*)                  arch=aix5            ;;
         osf1*:alpha:*)         arch=alphacxx6       ;;
+        freebsd*:*:7*)         arch=freebsd7        ;;
         freebsd*:*:6*)         arch=freebsd5        ;;
         freebsd*:*:5*)         arch=freebsd5        ;;
         freebsd*:*:4*)         arch=freebsd4        ;;
@@ -998,7 +999,7 @@ enable/disable options, prefix with either --enable- or --disable-
   asimage            Image processing support, requires libAfterImage
   astiff             Include tiff support in image processing
   builtin-afterimage Built included libAfterImage, or use system libAfterImage
-  builtin-ftgl       Built included libFTGL, or use system libftgl_pic
+  builtin-ftgl       Built included libFTGL, or use system libftgl
   builtin-freetype   Built included libfreetype, or use system libfreetype
   builtin-pcre       Built included libpcre, or use system libpcre
   builtin-zlib       Built included libz, or use system libz
@@ -1068,7 +1069,7 @@ with options, prefix with --with-, enables corresponding support
   dcap-libdir        dCache support, location of libdcap
   dicttype           dictionary type: "cint" (default), "reflex", or "gccxml"
   ftgl-incdir        FTGL support, location of FTGL.h
-  ftgl-libdir        FTGL support, location of libftgl_pic
+  ftgl-libdir        FTGL support, location of libftgl
   fftw3-incdir       FFTW3 support, location of fftw3.h
   fftw3-libdir       FFTW3 support, location of libfftw3 (libfftw3-3 for windows)
   gfal-incdir        GFAL support, location of gfal_api.h
@@ -1788,7 +1789,7 @@ if test "x$enable_builtin_ftgl" = "x" || \
       if pkg-config --exists ftgl ; then
 	  result "ok"
 	  ftglincdir=`pkg-config --cflags-only-I ftgl | sed 's/-I//g'`
-	  ftgllibs=`pkg-config --libs-only-l ftgl | sed s'/-lftgl/-lftgl_pic/'`
+	  ftgllibs=`pkg-config --libs-only-l ftgl`
 	  ftgllibdir=`pkg-config --libs-only-L ftgl | sed 's/-L//g'`
 	  enable_builtin_ftgl=no
       else
@@ -2175,7 +2176,7 @@ check_qtvers()
     qttestdir=$1 ; shift
     qtverneed=$1 ; shift
     qttoonew=$1  ; shift
-    message " Checking whether $qtverneed <= Qt version < $qttoonew under $qttestdir/qglobal.h "
+    message "Checking for $qtverneed <= Qt version < $qttoonew "
     logmsg " grep '# *define *QT_VERSION_STR *' $qttestdir/qglobal.h"
     qtverstr=`grep "# *define *QT_VERSION_STR *" $qttestdir/qglobal.h | \
         sed '-e s/[^"]*"//' -e 's/".*$//' 2>> $logfile`
@@ -2190,32 +2191,33 @@ check_qtvers()
 	    awk 'BEGIN {FS="."}{ printf "%d", (($1*2^8)+$2)*2^8+$3; }'`
 	logmsg " Got $qtgot, min $qtneed, max $qtnew"
 	if test $qtgot -lt $qtneed ; then
-	    logmsg " Please update to Qt $qtverneed"
 	    res="no"
+	    resprint="no (found version $qtverstr)"
 	elif test $qtgot -ge $qtnew; then
-	    logmsg " Qt $qtverstr too new (>= $qttoonew)"
 	    res="no"
+	    resprint="no (found version $qtverstr)"
 	else
 	    res="$qtverstr"
+	    resprint="$res"
 	    qtvers=`echo $qtverstr | awk 'BEGIN {FS="."} {print $1}'`
 	fi
     else
 	res="no"
+	resprint="$res"
     fi
-    result $res
+    result $resprint
 }
 
 if test ! "x$enable_qt" = "xno" || \
    test ! "x$enable_qtgsi" = "xno"; then
     # Check for Qt include and library
-    # Check for Qt 4 first
     if test ! "x$QTDIR" = "x"; then
-      # The user asked for a specific "QTDIR" ... search ONLY in there
-      check_header "Qt/qglobal.h" "$qtincdir" $QTDIR $QTDIR/include
+        # The user asked for a specific "QTDIR" ... search ONLY in there
+        check_header "Qt/qglobal.h" "$qtincdir" $QTDIR $QTDIR/include
     else
-      check_header "Qt/qglobal.h" "$qtincdir" $QTDIR/include \
-        /usr/local/include/  /usr/local/qt/include  \
-        /usr/include /usr/include/qt4
+        check_header "Qt/qglobal.h" "$qtincdir" \
+            /usr/local/include/ /usr/local/qt/include  \
+            /usr/include /usr/include/qt4
     fi
     qtvers=0
     if test ! "x$found_hdr" = "x"; then
@@ -2224,17 +2226,15 @@ if test ! "x$enable_qt" = "xno" || \
         qtinc=$found_hdr
         qtmainincdir=$found_dir
         qtincdir=$qtmainincdir
-        qtdirlist=`ls $qtmainincdir`
-        for i in $qtdirlist ; do
-            if test -r $qtmainincdir/$i ; then
-		qtincdir="$qtincdir  $qtmainincdir/$i"
+        for i in `ls -d $qtmainincdir/Qt*` ; do
+            if test -d $i ; then
+		qtincdir="$qtincdir $i"
             fi
         done
 	qtverneed="4.3.0"
 	qttoonew="5.0.0"
-	if test "x$platform" = xwin32 ; then
-	    qttestdir=$qtmainincdir/../src/corelib/global
-	else
+	qttestdir=$qtmainincdir/../src/corelib/global
+	if test ! -d $qttestdir ; then
 	    qttestdir=$qtmainincdir/Qt
 	fi
 	check_qtvers "$qttestdir" $qtverneed $qttoonew
@@ -2243,25 +2243,26 @@ if test ! "x$enable_qt" = "xno" || \
 	    if test "x$enable_winrtdebug" = "xyes"; then
 	        qt4suffix="d4"
 	    fi
-	    check_library "libQtCore QtCore QtCore$qt4suffix QtCore4" "$enable_shared" \
+	    check_library "libQtCore QtCore QtCore$qt4suffix QtCore4" \
+		"$enable_shared" \
 		"$qtlibdir" $QTDIR $QTDIR/lib /usr/local/lib \
 		/usr/local/qt/lib /usr/lib /usr/qt/lib
 	    qtlib=$found_lib
 	    qtlibdir=$found_dir
-	    check_library "libQtGui QtGui QtGui$qt4suffix QtGui4" "$enable_shared" \
-		"$found_raw_dir"  ""
+	    check_library "libQtGui QtGui QtGui$qt4suffix QtGui4" \
+		"$enable_shared" "$found_raw_dir" ""
 	    qtlib="$qtlib $found_lib"
 	    check_library "libQt3Support Qt3Support Qt3Support$qt4suffix Qt3Support4" \
-		"$enable_shared" "$found_raw_dir"  ""
+		"$enable_shared" "$found_raw_dir" ""
 	    qtlib="$qtlib $found_lib"
 	    check_library "libQtOpenGL QtOpenGL QtOpenGL$qt4suffix QtOpenGL4" \
-		"$enable_shared" "$found_raw_dir"  ""
+		"$enable_shared" "$found_raw_dir" ""
 	    qtlib="$qtlib $found_lib"
-	    check_library "libQtSvg QtSvg QtSvg$qt4suffix QtSvg4" "$enable_shared" \
-		"$found_raw_dir"  ""
+	    check_library "libQtSvg QtSvg QtSvg$qt4suffix QtSvg4" \
+		"$enable_shared" "$found_raw_dir" ""
 	    qtlib="$qtlib $found_lib"
-	    check_library "libQtXml QtXml QtXml$qt4suffix QtXml4" "$enable_shared" \
-		"$found_raw_dir"  ""
+	    check_library "libQtXml QtXml QtXml$qt4suffix QtXml4" \
+		"$enable_shared" "$found_raw_dir" ""
 	    qtlib="$qtlib $found_lib"
 	else
             qtinc=
@@ -2270,52 +2271,21 @@ if test ! "x$enable_qt" = "xno" || \
 	fi
     fi
 
-    if test $qtvers -eq 0 ; then
-	logmsg "No Qt4 was found, let's try to find Qt3 instead"
-        if test ! "x$QTDIR" = "x"; then
-        # The user asked for a specific "QTDIR" ... search ONLY in there
-          check_header "qt.h" "$qtincdir" $QTDIR $QTDIR/include
-        else
-        # Try to search in all system default subdirectories ...
-	  check_header "qt.h" "$qtincdir" $QTDIR $QTDIR/include \
-            /usr/local/include  /usr/local/qt/include /usr/include \
-            /usr/include/qt /usr/include/qt3
-        fi
-	qtinc=$found_hdr
-	qtincdir=$found_dir
-	if test ! "x$found_hdr" = "x" ; then
-	    qtverneed="3.3.0"
-	    qttoonew="4.0.0"
-	    qttestdir=$qtincdir
-	    check_qtvers "$qttestdir" $qtverneed $qttoonew
-	fi
-	if test $qtvers -eq 3 ; then
-	    check_library \
-		"libqt-mt libqt qt-mt* qt-mt334 qt-mt335 qt-mt336 qt" \
-		"$enable_shared" "$qtlibdir" \
-		$QTDIR $QTDIR/lib /usr/local/lib /usr/local/qt/lib /usr/lib \
-		/usr/qt/lib
-	    qtlib=$found_lib
-	    qtlibdir=$found_dir
-	else
-	    qtinc=
-	    qtincdir=
-	fi
-    fi
-
     message "Checking for moc or moc.exe"
-    #  we can pick the wrong moc this way  --  qtmocexe=`$cwhich moc`
-    #  we can pick the wrong moc this way  --  if test $? -ne 0 ; then
-    for i in $QTDIR $QTDIR/bin /usr/local/bin /usr/local/qt/bin /usr/bin \
-        /usr/qt3/bin /usr/share/qt3/bin ; do
-	logmsg " Checking for $qtmocexe in $i"
+    if `$cwhich moc > /dev/null 2>&1` ; then
+        mocdir=`$cwhich moc`
+        mocdir=`dirname $mocdir`
+    fi
+    for i in $QTDIR $QTDIR/bin "$mocdir" /usr/local/bin /usr/local/qt/bin \
+        /usr/bin /usr/qt4/bin /usr/lib/qt4/bin /usr/share/qt4/bin ; do
+	logmsg " Checking for moc in $i"
 	for j in $i/moc-qt${qtvers} $i/moc-qt${qtvers}.exe $i/moc $i/moc.exe ;
 	do
 	    if test -x $j ; then
 		moc_vers=`$j -v >/dev/stdout 2>&1 | \
 		    sed -e 's/.*(Qt //' -e 's/\.[0-9]*\.[0-9]*)//'`
                 if test ! "$moc_vers" = "$qtvers" ; then
-		    # Moc version does not match Qt version
+		    logmsg "$j: moc version ${moc_vers} does not match Qt version ${qtvers}"
 		    continue
 		fi
 		qtmocexe=$j
@@ -2340,7 +2310,7 @@ if test ! "x$enable_qt" = "xno" || \
     fi
 
     if test "x$qtincdir" = "x" || test "x$qtlib" = "x" || \
-	test "x$qtmocexe" = "x" || test $qtvers -eq 0 ; then
+       test "x$qtmocexe" = "x" || test $qtvers -eq 0 ; then
         enable_qt="no"
         enable_qtgsi="no"
     fi
@@ -3317,7 +3287,9 @@ if test "x$enable_globus" = "xyes"; then
        globusincdir=$globusdir/include
     fi
     searchincdir="$globusincdir/gcc32 $globusincdir/gcc32dbg \
-                  $globusincdir/gcc32pthr $globusincdir/gcc32dbgpthr"
+                  $globusincdir/gcc32pthr $globusincdir/gcc32dbgpthr \
+                  $globusincdir/gcc64 $globusincdir/gcc64dbg \
+                  $globusincdir/gcc64pthr $globusincdir/gcc64dbgpthr"
 
     # Found the reference dir first
     check_header "openssl/x509.h" "" "$searchincdir"
@@ -5374,20 +5346,7 @@ if test "x$enable_reflex" = "xyes"; then
         libdirreflex='`dirname $0`/../lib'
     fi
 
-    # determine whether to use GCCXML0.6 python scripts
-    GCCXML06SED=""
-    if test "x$gccxml" != "x"; then
-        if test -x ${gccxml}/gccxml; then
-            GCCXMLVERSION=`${gccxml}/gccxml --version 2>/dev/null | sed 's,.*\([[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+\).*$,\1,'`
-            GCCXMLVERSION06=`echo $GCCXMLVERSION|grep ^0\.6`
-            if test "x${GCCXMLVERSION06}" != "x"; then
-                GCCXML06SED="-e s|genreflex\([.-]\)|genreflex06\1|g"
-                echo -n ' [ Upgrade to GCCXML >= 0.7 recommended! ] '
-            fi
-        fi
-    fi
-
-    cat $GENREFLEXSHIN | sed -e "s|@libdir@|$libdirreflex|g" $GCCXML06SED > $GENREFLEXSHOUT
+    cat $GENREFLEXSHIN | sed -e "s|@libdir@|$libdirreflex|g" > $GENREFLEXSHOUT
     chmod a+x $GENREFLEXSHOUT
     result "done"
 
@@ -5399,7 +5358,7 @@ if test "x$enable_reflex" = "xyes"; then
             libdirreflex=`cygpath -m $libdir`
         fi
 
-        cat $GENREFLEXBATIN | sed -e "s|@libdir@|$libdirreflex|g" $GCCXML06SED > $GENREFLEXBATOUT
+        cat $GENREFLEXBATIN | sed -e "s|@libdir@|$libdirreflex|g" > $GENREFLEXBATOUT
         chmod a+x $GENREFLEXBATOUT
         result "done"
     fi
@@ -5409,7 +5368,7 @@ if test "x$enable_reflex" = "xyes"; then
     if test "x$haveconfig" = "x" ; then
         libdirreflex='`dirname $0`/../lib'
     fi
-    cat $GENREFLEXROOTCINTSHIN | sed -e "s|@libdir@|$libdirreflex|g" $GCCXML06SED > $GENREFLEXROOTCINTSHOUT
+    cat $GENREFLEXROOTCINTSHIN | sed -e "s|@libdir@|$libdirreflex|g" > $GENREFLEXROOTCINTSHOUT
     chmod a+x $GENREFLEXROOTCINTSHOUT
     result "done"
 
@@ -5420,7 +5379,7 @@ if test "x$enable_reflex" = "xyes"; then
         else
             libdirreflex=`cygpath -m $libdir`
         fi
-        cat $GENREFLEXROOTCINTBATIN | sed -e "s|@libdir@|$libdirreflex|g" $GCCXML06SED > $GENREFLEXROOTCINTBATOUT
+        cat $GENREFLEXROOTCINTBATIN | sed -e "s|@libdir@|$libdirreflex|g" > $GENREFLEXROOTCINTBATOUT
         chmod a+x $GENREFLEXROOTCINTBATOUT
         result "done"
     fi

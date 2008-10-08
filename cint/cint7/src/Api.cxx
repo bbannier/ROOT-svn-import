@@ -94,7 +94,9 @@ static G__pMethodSpecialObject G__UserSpecificGetSpecialObject;
 static void G__ClassInfo2G__value(G__ClassInfo* type
 				     ,G__value* pvalue,long l)
 {
-   G__value_typenum(*pvalue) = ::Reflex::PointerBuilder(type->ReflexType());
+   ::Reflex::Scope scope = type->ReflexScope();
+   ::Reflex::Type what = scope;
+   G__value_typenum(*pvalue) = ::Reflex::PointerBuilder(what);
    pvalue->ref=0;
    pvalue->obj.i = l;
 }
@@ -152,6 +154,26 @@ void Cint::G__delete_interpreted_object(void* p) {
 }
 #endif
 
+/*********************************************************************
+* Generate dictionary.
+*********************************************************************/
+static G__pGenerateDictionary G__GenerateDictionary = 0;
+extern "C" int G__EnableAutoDictionary;
+int G__EnableAutoDictionary = 0;
+
+void Cint::G__InitGenerateDictionary(G__pGenerateDictionary gdict)
+{
+  //gdict will be a pointer to TCint_GenerateDictionary
+  G__GenerateDictionary = gdict;
+}
+
+G__pGenerateDictionary Cint::G__GetGenerateDictionary()
+{
+  if (G__EnableAutoDictionary) {
+     return G__GenerateDictionary;
+  }
+  return 0;
+}
 
 /*********************************************************************
 * G__SourceFileInfo

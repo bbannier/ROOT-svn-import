@@ -83,7 +83,7 @@ MODULES       = build cint/cint core/metautils core/pcre core/utils core/base \
                 math/foam math/splot math/smatrix io/sql tmva \
                 geom/geombuilder hist/spectrum hist/spectrumpainter \
                 gui/fitpanel proof/proof proof/proofplayer \
-                gui/sessionviewer gui/guihtml math/genetic
+                gui/sessionviewer gui/guihtml gui/recorder
 
 ifeq ($(ARCH),win32)
 MODULES      += core/winnt graf2d/win32gdk
@@ -427,7 +427,7 @@ endif
 ifeq ($(findstring $(MAKECMDGOALS),clean distclean maintainer-clean dist),)
 ifeq ($(findstring clean-,$(MAKECMDGOALS)),)
 ifeq ($(shell which svn 2>&1 | sed -ne "s@.*/svn@svn@p"),svn)
-SVNREV  := $(shell build/unix/svninfo.sh)
+SVNREV  := $(shell bash build/unix/svninfo.sh)
 endif
 endif
 endif
@@ -440,6 +440,7 @@ MAKEDIST      = build/unix/makedist.sh
 MAKEDISTSRC   = build/unix/makedistsrc.sh
 MAKEVERSION   = build/unix/makeversion.sh
 MAKECOMPDATA  = build/unix/compiledata.sh
+MAKECINTDLL   = build/unix/makecintdll.sh
 MAKECHANGELOG = build/unix/makechangelog.sh
 MAKEHTML      = build/unix/makehtml.sh
 MAKELOGHTML   = build/unix/makeloghtml.sh
