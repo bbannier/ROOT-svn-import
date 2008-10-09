@@ -23,7 +23,7 @@
   //  Z   = Z-value or significance in Sigma (one-sided convention)
   //////////////////////////////////
 
-#include "NumberCountingUtils.h"
+#include "RooStats/NumberCountingUtils.h"
 
 
 // Without this macro the THtml doc for TMath can not be generated
