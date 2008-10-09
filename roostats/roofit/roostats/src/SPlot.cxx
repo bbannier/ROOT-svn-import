@@ -47,7 +47,7 @@
 #include <vector>
 #include <map>
 
-#include "SPlot.h"
+#include "RooStats/SPlot.h"
 #include "RooAbsPdf.h"
 #include "RooDataSet.h"
 #include "RooRealVar.h"

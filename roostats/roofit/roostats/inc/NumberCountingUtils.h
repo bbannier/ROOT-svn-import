@@ -9,12 +9,13 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOT_NumberCountingUtils
-#define ROOT_NumberCountingUtils
+#ifndef ROOT_RooStats_NumberCountingUtils
+#define ROOT_RooStats_NumberCountingUtils
 
 #ifndef ROOT_TMath
 #include "TMath.h"
 #endif
+
 
 namespace Statistics {
   inline Double_t PValueToSignificance(Double_t pvalue){
