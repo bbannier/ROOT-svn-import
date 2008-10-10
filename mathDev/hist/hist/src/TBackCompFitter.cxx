@@ -270,7 +270,7 @@ Int_t TBackCompFitter::ExecuteCommand(const char *command, Double_t *args, Int_t
    } 
    else {
       // other commands passed 
-      Error("ExecuteCommand","Invalid command given");
+      Error("ExecuteCommand","Invalid or not supported command given %s",command);
       return -1;
    }
    

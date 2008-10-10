@@ -138,6 +138,9 @@ bool Fitter::FitFCN(const BaseFunc & fcn, const double * params, unsigned int da
    std::auto_ptr<ROOT::Math::Minimizer> minimizer = std::auto_ptr<ROOT::Math::Minimizer> ( fConfig.CreateMinimizer() );
    if (minimizer.get() == 0) return false; 
 
+   if (fFunc && fResult.FittedFunction() == 0) delete fFunc; 
+   fFunc = 0;
+
    return DoMinimization<BaseFunc> (*minimizer, fcn, dataSize); 
 }
 
@@ -155,6 +158,10 @@ bool Fitter::FitFCN(const BaseGradFunc & fcn, const double * params, unsigned in
    // create Minimizer  (need to be done afterwards)
    std::auto_ptr<ROOT::Math::Minimizer> minimizer = std::auto_ptr<ROOT::Math::Minimizer> ( fConfig.CreateMinimizer() );
    if (minimizer.get() == 0) return false; 
+
+   if (fFunc && fResult.FittedFunction() == 0) delete fFunc; 
+   fFunc = 0;
+
    // create fit configuration if null 
    return DoMinimization<BaseGradFunc> (*minimizer, fcn, dataSize); 
 }
@@ -338,7 +345,7 @@ bool Fitter::DoMinimization(ROOT::Math::Minimizer & minimizer, const ObjFunc & o
 #endif
    
    unsigned int ncalls = ObjFuncTrait<ObjFunc>::NCalls(objFunc);
-   fResult = FitResult(minimizer,fConfig, *fFunc, ret, dataSize, chi2func, fConfig.MinosErrors(), ncalls );
+   fResult = FitResult(minimizer,fConfig, fFunc, ret, dataSize, chi2func, fConfig.MinosErrors(), ncalls );
    if (fConfig.NormalizeErrors() ) fResult.NormalizeErrors(); 
    return ret; 
 }
