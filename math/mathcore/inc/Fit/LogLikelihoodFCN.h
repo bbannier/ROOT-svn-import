@@ -28,8 +28,8 @@
 #ifndef ROOT_Fit_FitUtil
 #include "Fit/FitUtil.h"
 #endif
-//#define PARALLEL
-#ifdef PARALLEL
+
+#ifdef ROOT_FIT_PARALLEL
 #ifndef ROOT_Fit_FitUtilParallel
 #include "Fit/FitUtilParallel.h"
 #endif
@@ -136,7 +136,8 @@ private:
     */
    double DoEval (const double * x) const { 
       this->UpdateNCalls();
-#ifdef PARALLEL
+
+#ifdef ROOT_FIT_PARALLEL
       return FitUtilParallel::EvaluateLogL(fFunc, fData, x, fNEffPoints); 
 #else 
       return FitUtil::EvaluateLogL(fFunc, fData, x, fNEffPoints); 
