@@ -154,6 +154,7 @@ protected:
    static TFitEditor *fgFitDialog;         // singleton fit panel
 
    TGComboBox *BuildFunctionList(TGFrame *parent, Int_t id);
+   TGComboBox *BuildDataSetList(TGFrame *parent, Int_t id);
    TGComboBox *BuildMethodList(TGFrame *parent, Int_t id);
    Int_t       CheckFunctionString(const char* str);
    void        CreateGeneralTab();

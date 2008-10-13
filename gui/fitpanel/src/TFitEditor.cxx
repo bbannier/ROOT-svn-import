@@ -150,6 +150,9 @@
 #include "TMath.h"
 #include "Fit/DataRange.h"
 #include "TMultiGraph.h"
+#include "TTree.h"
+
+#include "Riostream.h"
 
 enum EFitPanel {
    kFP_FLIST, kFP_GAUS,  kFP_GAUSN, kFP_EXPO,  kFP_LAND,  kFP_LANDN,
@@ -164,7 +167,11 @@ enum EFitPanel {
    kFP_LMIN,  kFP_LMIN2, kFP_LFUM,  kFP_MIGRAD,kFP_SIMPLX,kFP_FUMILI, kFP_COMBINATION,
    kFP_SCAN,  kFP_MERR,  kFP_MTOL,  kFP_MITR,
    
-   kFP_FIT,   kFP_RESET, kFP_CLOSE
+   kFP_FIT,   kFP_RESET, kFP_CLOSE,
+
+   // New GUI elements from here!
+   kFP_TLIST, kFP_PRED1D, kFP_PRED2D, kFP_PRED3D, kFP_UFUNC, kFP_ROOFIT,
+   kFP_DATAS,
 };
 
 enum EParStruct {
@@ -256,7 +263,7 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
    fObjLabelParent = new TGHorizontalFrame(this, 80, 20);
    TGLabel *label = new TGLabel(fObjLabelParent,"Current selection: ");
    fObjLabelParent->AddFrame(label, new TGLayoutHints(kLHintsLeft, 1, 1, 0, 0));
-   fObjLabel = new TGLabel(fObjLabelParent, Form("%s", name.Data()));
+   fObjLabel = new TGLabel(fObjLabelParent, name.Data());
    fObjLabelParent->AddFrame(fObjLabel, new TGLayoutHints(kLHintsLeft, 1, 1, 0, 0));
    AddFrame(fObjLabelParent, new TGLayoutHints(kLHintsTop, 1, 1, 10, 10));
    // set red color for the name
@@ -377,21 +384,56 @@ void TFitEditor::CreateGeneralTab()
                                                        5, 5, 2, 2));
 
    TGGroupFrame *gf1 = new TGGroupFrame(fGeneral, "Function", kFitWidth);
+
+
+   TGCompositeFrame *tf = new TGCompositeFrame(gf1, 350, 26,
+                                                kHorizontalFrame);
+   TGLabel *label = new TGLabel(tf,"Data Set: ");
+   tf->AddFrame(label, new TGLayoutHints(kLHintsNormal, 0, 0, 5, 0));
+
+   TGComboBox* fDataSet = BuildDataSetList(tf, kFP_DATAS);
+   fDataSet->Resize(140, 20);
+
+   TGListBox *lb = fDataSet->GetListBox();
+   lb->Resize(lb->GetWidth(), 200);
+   tf->AddFrame(fDataSet, new TGLayoutHints(kLHintsNormal, 5, 0, 5, 0));
+   fDataSet->Associate(this);
+
+   gf1->AddFrame(tf, new TGLayoutHints(kLHintsNormal | kLHintsExpandX));
+
+
+   TGCompositeFrame *tf0 = new TGCompositeFrame(gf1, 350, 26,
+                                                kHorizontalFrame);
+   TGLabel *label1 = new TGLabel(tf0,"Type of Fit:");
+   tf0->AddFrame(label1, new TGLayoutHints(kLHintsNormal, 0, 0, 5, 0));
+
+   TGComboBox* fTypeFit = new TGComboBox(tf0, kFP_TLIST);
+   fTypeFit->AddEntry("Predef-1D", kFP_PRED1D);
+   fTypeFit->AddEntry("Predef-2D", kFP_PRED2D);
+   fTypeFit->AddEntry("Predef-3D", kFP_PRED3D);
+   fTypeFit->AddEntry("User Func", kFP_UFUNC);
+   fTypeFit->AddEntry("RooFit", kFP_ROOFIT);
+   fTypeFit->Resize(90, 20);
+   fTypeFit->Select(kFP_PRED1D, kFALSE);
+
+   lb = fTypeFit->GetListBox();
+   lb->Resize(lb->GetWidth(), 200);
+   tf0->AddFrame(fTypeFit, new TGLayoutHints(kLHintsNormal, 5, 0, 5, 0));
+   fTypeFit->Associate(this);
+
+   fFuncList = BuildFunctionList(tf0, kFP_FLIST);
+   fFuncList->Resize(170, 20);
+   fFuncList->Select(kFP_GAUS, kFALSE);
+
+   lb = fFuncList->GetListBox();
+   lb->Resize(lb->GetWidth(), 500);
+   tf0->AddFrame(fFuncList, new TGLayoutHints(kLHintsNormal, 5, 0, 5, 0));
+   fFuncList->Associate(this);
+
+   gf1->AddFrame(tf0, new TGLayoutHints(kLHintsNormal | kLHintsExpandX));
+
    TGCompositeFrame *tf1 = new TGCompositeFrame(gf1, 350, 26,
                                                 kHorizontalFrame);
-   TGVerticalFrame *tf11 = new TGVerticalFrame(tf1);
-   TGLabel *label1 = new TGLabel(tf11,"Predefined:");
-   tf11->AddFrame(label1, new TGLayoutHints(kLHintsNormal, 0, 0, 2, 0));
-   fFuncList = BuildFunctionList(tf11, kFP_FLIST);
-   fFuncList->Resize(80, 20);
-   fFuncList->Select(1, kFALSE);
-
-   TGListBox *lb = fFuncList->GetListBox();
-   lb->Resize(lb->GetWidth(), 200);
-   tf11->AddFrame(fFuncList, new TGLayoutHints(kLHintsNormal, 0, 0, 5, 0));
-   fFuncList->Associate(this);
-   tf1->AddFrame(tf11);
-
    TGHButtonGroup *bgr = new TGHButtonGroup(tf1,"Operation");
    bgr->SetRadioButtonExclusive();
    fNone = new TGRadioButton(bgr, "Nop", kFP_NONE);
@@ -420,6 +462,10 @@ void TFitEditor::CreateGeneralTab()
    fEnteredFunc->SetMaxLength(250);
    fEnteredFunc->SetAlignment(kTextLeft);
    TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
+   if ( te == NULL ) 
+      cout << "NNOOOOO" << endl;
+   else 
+      cout << "SIIII" << endl;
    fEnteredFunc->SetText(te->GetTitle());
    fEnteredFunc->SetToolTipText("Enter file_name/function_name or a function expression");
    fEnteredFunc->Resize(250,fEnteredFunc->GetDefaultHeight());
@@ -823,6 +869,8 @@ void TFitEditor::ConnectSlots()
 {
    // Connect GUI signals to fit panel slots.
 
+//    // list of data sets to fit
+//    fDataSet->Connect("Selected(Int_t)", "TFitEditor", this, "DoDataSet(Int_t)");
    // list of predefined functions
    fFuncList->Connect("Selected(Int_t)", "TFitEditor", this, "DoFunction(Int_t)");
    // entered formula or function name
@@ -1327,6 +1375,63 @@ TGComboBox* TFitEditor::BuildFunctionList(TGFrame* parent, Int_t id)
    c->AddEntry("pol8",   kFP_POL8);
    c->AddEntry("pol9",   kFP_POL9);
    c->AddEntry("user",   kFP_USER);
+
+   return c;
+}
+
+void SearchCanvases(TSeqCollection* canvases, vector<TObject*>& objects)
+{
+   TIter canvasIter(canvases);
+   while(TObject* obj = (TObject*) canvasIter()) {
+      if ( TPad* can = dynamic_cast<TPad*>(obj))
+         SearchCanvases(can->GetListOfPrimitives(), objects);
+      else if (    dynamic_cast<TH1*>(obj)
+                || dynamic_cast<TGraph*>(obj)
+                || dynamic_cast<TGraph2D*>(obj)
+                || dynamic_cast<TMultiGraph*>(obj)
+                || dynamic_cast<THStack*>(obj)
+                || dynamic_cast<TTree*>(obj) ) {
+         bool insertNew = true;
+         TNamed* named = static_cast<TNamed*>(obj);
+         cout << named->GetName() << endl;
+         for ( vector<TObject*>::iterator i = objects.begin(); i != objects.end(); ++i )
+            if ( (*i) == obj ) {
+               insertNew = false;
+               break;
+            }
+         if ( insertNew ) objects.push_back(obj);
+      }
+   }
+}
+
+//______________________________________________________________________________
+TGComboBox* TFitEditor::BuildDataSetList(TGFrame* parent, Int_t id)
+{
+   // Create function list combo box.
+
+   cout << "Creating Data Set List" << endl;
+
+   TGComboBox *c = new TGComboBox(parent, id);
+   Int_t newid = kFP_USER*500;
+   vector<TObject*> objects;
+
+   TIter next(gDirectory->GetList());
+   TObject* obj = NULL;
+   while ( (obj = (TObject*) next()) ) {
+      if ( dynamic_cast<TH1*>(obj) || 
+           dynamic_cast<TTree*>(obj) ) {
+         objects.push_back(obj);
+         cout << obj->GetName() << endl;
+      }
+   }
+
+   cout << "Adding elements to the combo box" << endl;
+   SearchCanvases(gROOT->GetListOfCanvases(), objects);
+   for ( vector<TObject*>::iterator i = objects.begin(); i != objects.end(); ++i ) {
+      cout << (*i)->GetName() << endl;
+      TString name = (*i)->ClassName(); name.Append("::"); name.Append((*i)->GetName());
+      c->AddEntry(name, newid++);
+   }
 
    return c;
 }
