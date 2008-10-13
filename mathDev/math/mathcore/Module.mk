@@ -151,4 +151,10 @@ $(MATHCOREO): CXXFLAGS += -DUSE_ROOT_ERROR
 $(MATHCOREDO): CXXFLAGS += -DUSE_ROOT_ERROR 
 # add optimization to G__Math compilation
 $(MATHCOREDO1) : NOOPT = $(OPT)
-
+#for multi-threads
+ifneq ($(USE_PARALLEL_FIT),)
+ifneq ($(USE_OPENMP),)
+$(MATHCOREO): CXXFLAGS += -DROOT_FIT_PARALLEL
+math/mathcore/src/FitUtilParallel.o: CXXFLAGS += -D_GLIBCXX_PARALLEL -fopenmp 
+endif
+endif
