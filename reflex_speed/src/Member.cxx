@@ -137,7 +137,7 @@ Reflex::Member::Invoke(const std::vector < void * > & paramList) const {
 
 //-------------------------------------------------------------------------------
 bool
-Reflex::Member::Is(const EntityProperty& descr) const {
+Reflex::Member::Is(const AttributesExpression& descr) const {
 //-------------------------------------------------------------------------------
 // Test member for properties.
    if (fMemberBase) return fMemberBase->Is(descr);

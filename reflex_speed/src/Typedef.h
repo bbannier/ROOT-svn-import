@@ -15,7 +15,7 @@
 // Include files
 #include "TypeBase.h"
 #include "Reflex/Type.h"
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 
 namespace Reflex {
    // forward declarations

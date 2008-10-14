@@ -55,7 +55,7 @@ namespace Reflex {
    }; // class ValueObject
 } // namespace Reflex
 
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 
 //-------------------------------------------------------------------------------
 inline Reflex::ValueObject::ValueObject() {

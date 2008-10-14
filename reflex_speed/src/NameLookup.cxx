@@ -18,7 +18,7 @@
 #include "Reflex/Scope.h"
 #include "Reflex/Type.h"
 #include "Reflex/Tools.h"
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 
 #include "OwnedMember.h"
 #include "TypeBase.h"

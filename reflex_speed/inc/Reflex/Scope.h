@@ -14,7 +14,7 @@
 
 // Include files
 #include "Reflex/Kernel.h"
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 #include <string>
 #include <typeinfo>
 
@@ -22,7 +22,7 @@ namespace Reflex {
 
    // forward declarations
    class Base;
-   class EntityProperty;
+   class AttributesExpression;
    class Member;
    class PropertyList;
    class Type;
@@ -154,10 +154,10 @@ namespace Reflex {
       /**
       * Check whether the entity property is set for the scope. You can
       * combine checks, e.g. Is(kClass && kPublic)
-      * @param descr the entity property to check for; see EntityProperty.
+      * @param descr the entity property to check for; see AttributesExpression.
       * @return whether descr is set.
       */
-      bool Is(const EntityProperty& descr) const;
+      bool Is(const AttributesExpression& descr) const;
 
 
       /* IsComplete will return true if all classes and base classes of this 

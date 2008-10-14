@@ -22,7 +22,7 @@
 #include "Reflex/Member.h"
 #include "Reflex/DictionaryGenerator.h"
 
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 #include "Reflex/Tools.h"
 #include "Class.h"
 #include <cstring>

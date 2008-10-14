@@ -100,7 +100,7 @@ Reflex::Scope::GlobalScope() {
 
 //-------------------------------------------------------------------------------
 bool
-Reflex::Scope::Is(const EntityProperty& descr) const {
+Reflex::Scope::Is(const AttributesExpression& descr) const {
 //-------------------------------------------------------------------------------
 // Test scope for properties.
    if (*this) return fScopeName->fScopeBase->Is(descr);

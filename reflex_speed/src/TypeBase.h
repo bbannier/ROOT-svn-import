@@ -174,11 +174,11 @@ namespace Internal {
       /**
       * Check whether the entity property is set for the type. You can
       * combine checks, e.g. t.Is(kClass && kPublic)
-      * @param descr the entity property to check for; see EntityProperty.
+      * @param descr the entity property to check for; see AttributesExpression.
       * @param mod the modifier as stored by Type (reference,...)
       * @return whether descr is set.
       */
-      virtual bool Is(const EntityProperty& descr, unsigned int mod = 0) const;
+      virtual bool Is(const AttributesExpression& descr, unsigned int mod = 0) const;
 
 
       /** Array
@@ -500,7 +500,7 @@ Reflex::Internal::TypeBase::HasBase(const Type &) const {
 
 //-------------------------------------------------------------------------------
 inline bool
-Reflex::Internal::TypeBase::Is(const EntityProperty& prop, unsigned int mod) const {
+Reflex::Internal::TypeBase::Is(const AttributesExpression& prop, unsigned int mod) const {
 //-------------------------------------------------------------------------------
    return prop.Eval(fTypeModifiers | mod, fTypeType);
 }

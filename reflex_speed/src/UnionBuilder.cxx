@@ -18,7 +18,7 @@
 #include "Reflex/Any.h"
 #include "Reflex/Callback.h"
 #include "Reflex/Member.h"
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 #include "DataMember.h"
 #include "FunctionMemberTemplateInstance.h"
 #include "Union.h"

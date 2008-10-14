@@ -22,7 +22,7 @@ namespace Reflex {
    // forward declarations
    class Type;
    class Scope;
-   class EntityProperty;
+   class AttributesExpression;
    class PropertyList;
    class Object;
    class MemberTemplate;
@@ -174,10 +174,10 @@ namespace Reflex {
       /**
       * Check whether the entity property is set for the member. You can
       * combine checks, e.g. t.Is(kClass && kPublic)
-      * @param descr the entity property to check for; see EntityProperty.
+      * @param descr the entity property to check for; see AttributesExpression.
       * @return whether descr is set.
       */
-      bool Is(const EntityProperty& descr) const;
+      bool Is(const AttributesExpression& descr) const;
 
 
       /** 
