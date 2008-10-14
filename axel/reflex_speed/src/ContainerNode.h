@@ -13,6 +13,7 @@
 #define Reflex_ContainerNode
 
 #include <cstddef>
+#include <cstring>
 #include <string>
 #include "AtomicCount.h"
 #include "ContainerLink.h"

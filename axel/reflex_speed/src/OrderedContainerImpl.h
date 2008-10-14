@@ -217,7 +217,7 @@ namespace Internal {
       reverse_iterator RBegin() const { return reverse_iterator(fHashMap.Arena(), fLast); }
       reverse_iterator REnd() const { return reverse_iterator(); }
 
-      const VALUE& First() const { return ((const NODE*)(fFirst.Next(0)))->fObj; }
+      const VALUE& First() const { return ((const NODE*)(fFirst.Next()))->fObj; }
       const VALUE& Last() const { return fLast->fObj; }
 
       const typename HashMapNode_t::Traits_t& Traits() const { return HashMapNode_t::fgTraits; }
