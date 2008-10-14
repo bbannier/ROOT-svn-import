@@ -153,6 +153,7 @@
 #include "TTree.h"
 
 #include "Riostream.h"
+#include <queue>
 
 enum EFitPanel {
    kFP_FLIST, kFP_GAUS,  kFP_GAUSN, kFP_EXPO,  kFP_LAND,  kFP_LANDN,
@@ -391,7 +392,7 @@ void TFitEditor::CreateGeneralTab()
    TGLabel *label = new TGLabel(tf,"Data Set: ");
    tf->AddFrame(label, new TGLayoutHints(kLHintsNormal, 0, 0, 5, 0));
 
-   TGComboBox* fDataSet = BuildDataSetList(tf, kFP_DATAS);
+   fDataSet = BuildDataSetList(tf, kFP_DATAS);
    fDataSet->Resize(140, 20);
 
    TGListBox *lb = fDataSet->GetListBox();
@@ -870,7 +871,7 @@ void TFitEditor::ConnectSlots()
    // Connect GUI signals to fit panel slots.
 
 //    // list of data sets to fit
-//    fDataSet->Connect("Selected(Int_t)", "TFitEditor", this, "DoDataSet(Int_t)");
+   fDataSet->Connect("Selected(Int_t)", "TFitEditor", this, "DoDataSet(Int_t)");
    // list of predefined functions
    fFuncList->Connect("Selected(Int_t)", "TFitEditor", this, "DoFunction(Int_t)");
    // entered formula or function name
@@ -941,6 +942,7 @@ void TFitEditor::DisconnectSlots()
 
    Disconnect("CloseWindow()");
 
+   fDataSet->Disconnect("Selected(Int_t)");
    fFuncList->Disconnect("Selected(Int_t)");
    fEnteredFunc->Disconnect("ReturnPressed()");
    fSetParam->Disconnect("Clicked()");
@@ -1425,8 +1427,8 @@ TGComboBox* TFitEditor::BuildDataSetList(TGFrame* parent, Int_t id)
       }
    }
 
-   cout << "Adding elements to the combo box" << endl;
    SearchCanvases(gROOT->GetListOfCanvases(), objects);
+   cout << "Adding elements to the combo box" << endl;
    for ( vector<TObject*>::iterator i = objects.begin(); i != objects.end(); ++i ) {
       cout << (*i)->GetName() << endl;
       TString name = (*i)->ClassName(); name.Append("::"); name.Append((*i)->GetName());
@@ -1703,6 +1705,45 @@ void TFitEditor::DoAddition(Bool_t on)
    } else {
       first = kFALSE;
    }
+}
+
+//______________________________________________________________________________
+void TFitEditor::DoDataSet(Int_t selected)
+{
+//   cout << fDataSet->GetTextEntry()->GetText() << endl;
+   TGTextLBEntry* textEntry = static_cast<TGTextLBEntry*>(fDataSet->GetListBox()->GetEntry(selected));
+   const char* name = textEntry->GetText()->GetString()+textEntry->GetText()->Last(':')+1;
+   cout << "Selected: " << name << " " << textEntry->GetText()->Last(':') << endl;
+   TObject* objSelected = gROOT->FindObject(name);
+   assert(objSelected);
+   cout << objSelected << endl;
+
+   TPad* currentPad = NULL;
+   bool found = false;
+   queue<TPad*> stPad;
+   TIter padIter( gROOT->GetListOfCanvases() );
+   while ( TObject* canvas = static_cast<TObject*>(padIter() ) ) {
+      if ( dynamic_cast<TPad*>(canvas) )
+         stPad.push(dynamic_cast<TPad*>(canvas));
+   }
+
+   while ( !stPad.empty() && !found ) {
+      currentPad = stPad.front();
+      stPad.pop();
+      TIter elemIter( currentPad->GetListOfPrimitives() );
+      while ( TObject* elem = static_cast<TObject*>(elemIter() ) ) {
+         if ( elem == objSelected ) {
+            found = true;
+            break;
+         } else if ( dynamic_cast<TPad*>(elem) )
+            stPad.push( dynamic_cast<TPad*>(elem) );
+      }
+   }
+
+   cout << "Object found? " << found << " in " 
+        << currentPad->GetName() << endl;
+      
+   SetFitObject( found?currentPad:gPad, objSelected, kButton1Down);
 }
 
 //______________________________________________________________________________
