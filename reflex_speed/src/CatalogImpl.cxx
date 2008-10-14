@@ -40,6 +40,11 @@ Reflex::Internal::CatalogImpl::Instance() {
    return instance;
 }
 
+#ifdef _MSC_VER
+# pragma warning(push)
+// "This" used in base initializer list
+# pragma warning(disable: 4355)
+#endif
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::CatalogImpl::CatalogImpl():
@@ -59,6 +64,10 @@ Reflex::Internal::CatalogImpl::CatalogImpl(const std::string& name):
    // and that is initialized via the default constructor:
    // fTypes.Init();
 }
+
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
 
 
 #define RFLX_TYPECAT_DECLFUND(type) \
