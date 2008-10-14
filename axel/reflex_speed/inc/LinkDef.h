@@ -33,7 +33,7 @@
 #pragma link C++ class Reflex::OrderedContainer<Reflex::TypeTemplate>;
 #pragma link C++ class Reflex::Container<Reflex::MemberTemplate>;
 #pragma link C++ class Reflex::OrderedContainer<Reflex::MemberTemplate>;
-#pragma link C++ class Reflex::EntityProperty;
+#pragma link C++ class Reflex::AttributesExpression;
 #pragma link C++ class Reflex::Instance;
 #pragma link C++ class Reflex::Member;
 #pragma link C++ class Reflex::MemberTemplate;

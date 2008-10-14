@@ -20,7 +20,7 @@
 
 #include "Reflex/DictionaryGenerator.h"
 #include "Reflex/Member.h"
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 #include "Class.h"
 
 // For adding the XML parser

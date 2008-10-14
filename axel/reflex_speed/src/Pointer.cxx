@@ -15,7 +15,7 @@
 
 #include "Pointer.h"
 
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 #include "OwnedMember.h"
 #include "Function.h"
 

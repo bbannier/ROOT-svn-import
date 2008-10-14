@@ -16,7 +16,7 @@
 #include "Array.h"
 
 #include "Reflex/Type.h"
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 #include "OwnedMember.h"
 
 #include <sstream>

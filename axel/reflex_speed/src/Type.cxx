@@ -186,7 +186,7 @@ Reflex::Type::DetermineEquivalence(const Type & typ, unsigned int modifiers_mask
    if (t1.Is(kArray) && t1.ArrayLength() != t2.ArrayLength())
       return false;
 
-   static EntityProperty needToType(kPointer || kPointerToMember || kArray);
+   static AttributesExpression needToType(kPointer || kPointerToMember || kArray);
 
    if (t1.Is(needToType))
       // set alsoReturn to true because we know it's not a function and void(*)() != int(*)()
@@ -227,7 +227,7 @@ bool Reflex::Type::HasBase(const Type & cl) const {
 
 //-------------------------------------------------------------------------------
 bool
-Reflex::Type::Is(const EntityProperty& descr) const {
+Reflex::Type::Is(const AttributesExpression& descr) const {
 //-------------------------------------------------------------------------------
 // Test type for properties.
    if (*this) return fTypeName->ToTypeBase()->Is(descr);

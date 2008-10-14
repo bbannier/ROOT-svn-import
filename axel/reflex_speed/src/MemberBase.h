@@ -23,7 +23,7 @@ namespace Reflex {
 
    // forward declarations
    class Object;
-   class EntityProperty;
+   class AttributesExpression;
    class DictionaryGenerator;
 
 namespace Internal {
@@ -97,10 +97,10 @@ namespace Internal {
       /**
       * Check whether the entity property is set for the member. You can
       * combine checks, e.g. t.Is(kClass && kPublic)
-      * @param descr the entity property to check for; see EntityProperty.
+      * @param descr the entity property to check for; see AttributesExpression.
       * @return whether descr is set.
       */
-      bool Is(const EntityProperty& descr) const;
+      bool Is(const AttributesExpression& descr) const;
 
 
       /** return the type of the member (function or data member) */
@@ -318,7 +318,7 @@ Reflex::Internal::MemberBase::Invoke(const std::vector < void * > & /* paramList
 
 //-------------------------------------------------------------------------------
 inline bool
-Reflex::Internal::MemberBase::Is(const EntityProperty& prop) const {
+Reflex::Internal::MemberBase::Is(const AttributesExpression& prop) const {
 //-------------------------------------------------------------------------------
    return prop.Eval(fModifiers, fMemberType);
 }

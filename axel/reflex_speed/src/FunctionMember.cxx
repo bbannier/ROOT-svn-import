@@ -22,7 +22,7 @@
 
 #include "Function.h"
 #include "Reflex/Tools.h"
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 
 
 //-------------------------------------------------------------------------------

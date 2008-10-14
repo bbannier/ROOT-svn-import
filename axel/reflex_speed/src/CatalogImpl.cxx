@@ -16,7 +16,7 @@
 #include "CatalogImpl.h"
 
 #include "ScopeName.h"
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 #include "Namespace.h"
 #include "TypeName.h"
 #include "TypeBase.h"

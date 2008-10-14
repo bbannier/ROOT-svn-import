@@ -18,7 +18,7 @@
 #include "Reflex/Object.h"
 #include "Reflex/Type.h"
 #include "Reflex/Catalog.h"
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 #include "Reflex/Tools.h"
 #include "Reflex/DictionaryGenerator.h"
 

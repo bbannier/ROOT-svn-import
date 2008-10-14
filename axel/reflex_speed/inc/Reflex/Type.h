@@ -14,7 +14,7 @@
 
 // Include files
 #include "Reflex/Kernel.h"
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 #include "Reflex/Container.h"
 #include <vector>
 #include <string>
@@ -228,10 +228,10 @@ namespace Reflex {
       /**
       * Check whether the entity property is set for the type. You can
       * combine checks, e.g. t.Is(kClass && kPublic)
-      * @param descr the entity property to check for; see EntityProperty.
+      * @param descr the entity property to check for; see AttributesExpression.
       * @return whether descr is set.
       */
-      bool Is(const EntityProperty& descr) const;
+      bool Is(const AttributesExpression& descr) const;
 
 
       /** 

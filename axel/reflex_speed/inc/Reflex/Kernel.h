@@ -359,7 +359,7 @@ inline size_t Reflex::NPos() {
 
 // includes that should be available to all of Reflex
 #include "Reflex/Container.h"
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 
 #endif // Reflex_Kernel
 

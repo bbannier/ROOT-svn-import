@@ -16,7 +16,7 @@
 #include "Reflex/Kernel.h"
 #include "Reflex/Type.h"
 #include "Reflex/Scope.h"
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 
 namespace Reflex {
 
@@ -73,10 +73,10 @@ namespace Reflex {
       * Only public / protected / private and virtual are check with the base;
       * the ETYPE-like properties (class / struct / ...) are forwarded to
       * the base's type.
-      * @param descr the entity property to check for; see EntityProperty.
+      * @param descr the entity property to check for; see AttributesExpression.
       * @return whether descr is set.
       */
-      bool Is(const EntityProperty& prop) const;
+      bool Is(const AttributesExpression& prop) const;
 
 
       /**
@@ -165,7 +165,7 @@ inline Reflex::Base::operator bool () const {
 
 
 //-------------------------------------------------------------------------------
-inline bool Reflex::Base::Is(const EntityProperty& prop) const {
+inline bool Reflex::Base::Is(const AttributesExpression& prop) const {
 //-------------------------------------------------------------------------------
    return prop.Eval(fModifiers, ToType().TypeType());
 }

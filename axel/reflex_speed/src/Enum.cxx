@@ -16,7 +16,7 @@
 #include "Enum.h"
 
 #include "Reflex/Tools.h"
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 #include "Reflex/DictionaryGenerator.h"
 
 #include <sstream>
