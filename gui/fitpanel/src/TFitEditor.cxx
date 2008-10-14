@@ -462,10 +462,7 @@ void TFitEditor::CreateGeneralTab()
    fEnteredFunc->SetMaxLength(250);
    fEnteredFunc->SetAlignment(kTextLeft);
    TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-   if ( te == NULL ) 
-      cout << "NNOOOOO" << endl;
-   else 
-      cout << "SIIII" << endl;
+   assert(te);
    fEnteredFunc->SetText(te->GetTitle());
    fEnteredFunc->SetToolTipText("Enter file_name/function_name or a function expression");
    fEnteredFunc->Resize(250,fEnteredFunc->GetDefaultHeight());
