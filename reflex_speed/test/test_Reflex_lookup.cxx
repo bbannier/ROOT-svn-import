@@ -100,7 +100,7 @@ void ReflexLookupTest::lookupType() {
 
    Type t10 = s1.LookupType("MyInt");
    CPPUNIT_ASSERT( t10 );
-   CPPUNIT_ASSERT( t10.Is(gTypedef));
+   CPPUNIT_ASSERT( t10.Is(kTypedef));
 
    Scope s2 = Scope::ByName("");
    CPPUNIT_ASSERT( s2 );

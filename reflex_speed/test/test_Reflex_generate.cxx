@@ -17,11 +17,11 @@ using namespace std;
 enum Visibility { Public, Protected, Private }; 
 
 void generate_visibility( ostream& out, const Member& m, const string& indent, Visibility& v ) {
-  if ( m.Is(gPublic) && v != Public ) {
+  if ( m.Is(kPublic) && v != Public ) {
     out << indent << "public:" << endl;  v = Public;
-  } else if ( m.Is(gProtected) && v != Protected ) {
+  } else if ( m.Is(kProtected) && v != Protected ) {
     out << indent << "protected:" << endl;  v = Protected;
-  } else if ( m.Is(gPrivate) && v != Private ) {
+  } else if ( m.Is(kPrivate) && v != Private ) {
     out << indent << "private:" << endl;  v = Private;
   }
 }
@@ -39,9 +39,9 @@ void generate_class( ostream& out, const Type& cl, const string& indent = "" ) {
     const Base_Iterator baseEnd = cl.Bases().End();
     for ( Base_Iterator base = cl.Bases().Begin(); base != baseEnd; ) {
       Base ba = *base;
-      if ( ba.Is(gVirtual) ) out << "virtual ";
-      if ( ba.Is(gPublic) ) out << "public ";
-      if ( ba.Is(gPrivate) ) out << "private ";
+      if ( ba.Is(kVirtual) ) out << "virtual ";
+      if ( ba.Is(kPublic) ) out << "public ";
+      if ( ba.Is(kPrivate) ) out << "private ";
       out << ba.ToType().Name(Reflex::kScoped);
       ++base;
       if ( base != baseEnd ) out << ", ";
@@ -53,7 +53,7 @@ void generate_class( ostream& out, const Type& cl, const string& indent = "" ) {
   const Member_Iterator iDMEnd = ((Scope)cl).DataMembers().End();
   for ( Member_Iterator iDM = ((Scope)cl).DataMembers().Begin(); iDM != iDMEnd; ++iDM ) {
     Member dm = *iDM;
-    if ( dm.Is(gArtificial) ) continue;
+    if ( dm.Is(kArtificial) ) continue;
     generate_visibility(out, dm, indent, curr_vis);
     out << indent + "  " << dm.TypeOf().Name(Reflex::kScoped|Reflex::kQualified) << " " << dm.Name() <<";" ;
     generate_comment( out, dm );
@@ -63,12 +63,12 @@ void generate_class( ostream& out, const Type& cl, const string& indent = "" ) {
   const Member_Iterator iFMEnd = ((Scope)cl).FunctionMembers().End();
   for ( Member_Iterator iFM = ((Scope)cl).FunctionMembers().Begin(); iFM != iFMEnd; ++iFM ) {
     Member fm = *iFM;
-    if ( fm.Is(gArtificial) ) continue;
+    if ( fm.Is(kArtificial) ) continue;
     generate_visibility( out, fm, indent, curr_vis);
     Type ft = fm.TypeOf();
     out << indent + "  ";
-    if ( ! fm.Is(gConstructor) && !fm.Is(gDestructor) ) out << ft.ReturnType().Name(Reflex::kScoped) << " ";
-    if (  fm.Is(gOperator) ) out << "operator ";
+    if ( ! fm.Is(kConstructor) && !fm.Is(kDestructor) ) out << ft.ReturnType().Name(Reflex::kScoped) << " ";
+    if (  fm.Is(kOperator) ) out << "operator ";
     out << fm.Name() << " (";
     if ( ft.FunctionParameters().Size() == 0 ) {
       out << "void";
@@ -111,9 +111,9 @@ void generate_namespace(ostream& out, const Scope& ns, const string& indent = ""
 
   for ( size_t i = 0; i < subscopes.size(); i++ ) {
     Scope sc = subscopes[i];
-    if ( sc.Is(gNamespace) ) generate_namespace(out, sc, indent + "  ");
+    if ( sc.Is(kNamespace) ) generate_namespace(out, sc, indent + "  ");
     //one is enough, and we already generate classes as types below:
-    // if ( sc.Is(gClassOrStruct) ) generate_class(out, Type::ByName(sc.Name(Reflex::kScoped)), indent + "  ");
+    // if ( sc.Is(kClassOrStruct) ) generate_class(out, Type::ByName(sc.Name(Reflex::kScoped)), indent + "  ");
   }
   // Types----
   std::vector<Type> subtypes(ns.SubTypes().Begin(), ns.SubTypes().End());
@@ -121,7 +121,7 @@ void generate_namespace(ostream& out, const Scope& ns, const string& indent = ""
 
   for ( size_t t = 0; t < subtypes.size(); t++ ) {
     Type ty = subtypes[t];
-    if ( ty.Is(gClassOrStruct) ) generate_class(out, ty, indent + "  ");
+    if ( ty.Is(kClassOrStruct) ) generate_class(out, ty, indent + "  ");
   }
 
   if ( ! ns.IsTopScope() ) out << indent << "}" << endl;

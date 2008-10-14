@@ -298,7 +298,7 @@ void ReflexBuilderUnitTest::classbuilder()
   Type t = Type::ByName("a::foo");  
   Scope s = Scope::ByName("a");
   CPPUNIT_ASSERT(t);
-  CPPUNIT_ASSERT(t.Is(gClassOrStruct));
+  CPPUNIT_ASSERT(t.Is(kClassOrStruct));
   CPPUNIT_ASSERT_EQUAL( t.Id(), Type::ByName("::a::foo").Id());
   CPPUNIT_ASSERT_EQUAL( t.Id(), TypeBuilder("::a::foo").Id());
   CPPUNIT_ASSERT_EQUAL( s.Id(), Scope::ByName("::a").Id());
@@ -307,14 +307,14 @@ void ReflexBuilderUnitTest::classbuilder()
   CPPUNIT_ASSERT_EQUAL(size_t(13),t.DataMembers().Size());
   for (size_t i = 0; i < t.FunctionMembers().Size(); i++ ) {
     Member f = t.FunctionMembers().At(i);
-    if( f.Name() == "foo" )  CPPUNIT_ASSERT(f.Is(gConstructor));
-    else if( f.Name() == "~foo" ) CPPUNIT_ASSERT(f.Is(gDestructor));
+    if( f.Name() == "foo" )  CPPUNIT_ASSERT(f.Is(kConstructor));
+    else if( f.Name() == "~foo" ) CPPUNIT_ASSERT(f.Is(kDestructor));
     else if( f.Name()[0] == 'f') {
       CPPUNIT_ASSERT_EQUAL(size_t(f.Name()[1]-'0'), f.TypeOf().FunctionParameters().Size());
     }
     else if( f.Name()[0] == 's') {
-      CPPUNIT_ASSERT(f.Is(gStatic) );
-      CPPUNIT_ASSERT(f.Is(gPrivate) );
+      CPPUNIT_ASSERT(f.Is(kStatic) );
+      CPPUNIT_ASSERT(f.Is(kPrivate) );
     }
     else if (f.Name()[0] == 't' ) {
       CPPUNIT_ASSERT_EQUAL(size_t(f.Name()[1]-'0'), f.TypeOf().FunctionParameters().Size());
@@ -378,7 +378,7 @@ void ReflexBuilderUnitTest::propertybuilder()
     .AddProperty("p1",true);
   Type t = Type::ByName("b::foo");  
   CPPUNIT_ASSERT(t);
-  CPPUNIT_ASSERT(t.Is(gClassOrStruct));
+  CPPUNIT_ASSERT(t.Is(kClassOrStruct));
   CPPUNIT_ASSERT(t.Properties().HasProperty("foo_p0"));
   CPPUNIT_ASSERT_EQUAL(string("value"), 
                        string(any_cast<const char*>(t.Properties().PropertyValue("foo_p0"))));
@@ -551,7 +551,7 @@ void ReflexBuilderUnitTest::typedefbuilder()
   TypedefBuilder<int>("MyInt1").AddProperty("owner","me").AddProperty("price",10.0);
   Type t = Type::ByName("MyInt1");
   CPPUNIT_ASSERT(t);
-  CPPUNIT_ASSERT(t.Is(gTypedef));
+  CPPUNIT_ASSERT(t.Is(kTypedef));
   Type t2 = Type::ByName("int");
   Type t3 = Type::ByTypeInfo(typeid(int));
   Type t4 = t.ToType();
@@ -561,10 +561,10 @@ void ReflexBuilderUnitTest::typedefbuilder()
   TypedefBuilder<float>("AA::MyInt1");
   t = Type::ByName("AA::MyInt1");
   CPPUNIT_ASSERT(t);
-  CPPUNIT_ASSERT(t.Is(gTypedef));
+  CPPUNIT_ASSERT(t.Is(kTypedef));
   Scope s = Scope::ByName("AA");
   CPPUNIT_ASSERT(s);
-  CPPUNIT_ASSERT( s == t.DeclaringScope());
+  CPPUNIT_ASSERT( s == t.DeclarinkScope());
   CPPUNIT_ASSERT_EQUAL( size_t(1), s.SubTypes().Size());
   CPPUNIT_ASSERT( t == s.SubTypes().At(0));
 }
@@ -619,13 +619,13 @@ void ReflexBuilderUnitTest::enumbuilder()
   EnumBuilderT<g::enum2>().AddItem("i", g::i).AddItem("j", g::j).AddItem("k", g::k);
   Type e1 = Type::ByName("enum1");
   CPPUNIT_ASSERT(e1);
-  CPPUNIT_ASSERT(e1.Is(gEnum));
+  CPPUNIT_ASSERT(e1.Is(kEnum));
   CPPUNIT_ASSERT_EQUAL(size_t(3),e1.Members().Size());
   CPPUNIT_ASSERT_EQUAL(size_t(val_b) , *(size_t*)e1.Members().At(1).Get().Address() );
 
   Type e2 = Type::ByName("g::enum2");
   CPPUNIT_ASSERT(e2);
-  CPPUNIT_ASSERT(e2.Is(gEnum));
+  CPPUNIT_ASSERT(e2.Is(kEnum));
   CPPUNIT_ASSERT_EQUAL(size_t(3),e2.Members().Size());
   CPPUNIT_ASSERT_EQUAL(size_t(g::i) , *(size_t*)e2.Members().At(0).Get().Address() );
 }
@@ -698,7 +698,7 @@ void ReflexBuilderUnitTest::freefunctionbuilder()
   CPPUNIT_ASSERT(m);
   Member f = m;
   CPPUNIT_ASSERT(f);
-  CPPUNIT_ASSERT(!f.Is(gStatic));
+  CPPUNIT_ASSERT(!f.Is(kStatic));
   int a = 3;
   Object ret = f.Invoke(Tools::MakeVector((void*)&a));
   CPPUNIT_ASSERT( ret.Address() );
@@ -709,11 +709,11 @@ void ReflexBuilderUnitTest::freefunctionbuilder()
   FunctionBuilder(t,"g::func2",func_stub,0,0,0);
   Scope g = Scope::ByName("g");
   CPPUNIT_ASSERT(g);
-  CPPUNIT_ASSERT(g.Is(gNamespace));
+  CPPUNIT_ASSERT(g.Is(kNamespace));
   Member m2 = g.MemberByName("func2");
   Member f2 = m2;
   CPPUNIT_ASSERT(f2);
-  CPPUNIT_ASSERT(!f2.Is(gStatic));
+  CPPUNIT_ASSERT(!f2.Is(kStatic));
 }
 
 void ReflexBuilderUnitTest::freevariablebuilder() {
@@ -765,15 +765,15 @@ void ReflexBuilderUnitTest::forwarddeclarations()
     .AddMember(t_ftb, "f", 0 );
   Type t = Type::ByName("i::foo");
   CPPUNIT_ASSERT(t);
-  CPPUNIT_ASSERT(t.Is(gClassOrStruct));
+  CPPUNIT_ASSERT(t.Is(kClassOrStruct));
   Member m = t.MemberByName("m");
   CPPUNIT_ASSERT(m);
-  CPPUNIT_ASSERT(m.TypeOf().Is(gPointer));
+  CPPUNIT_ASSERT(m.TypeOf().Is(kPointer));
   CPPUNIT_ASSERT(m.TypeOf().ToType().Id());
   CPPUNIT_ASSERT_EQUAL(string("ftype"), m.TypeOf().ToType().Name());
   Member f = t.MemberByName("f");
   CPPUNIT_ASSERT(f);
-  CPPUNIT_ASSERT(f.TypeOf().Is(gFunction));
+  CPPUNIT_ASSERT(f.TypeOf().Is(kFunction));
   CPPUNIT_ASSERT_EQUAL(string("ftype& (ftype*)"), f.TypeOf().Name(Reflex::kQualified));
   
   
@@ -957,7 +957,7 @@ void ReflexBuilderUnitTest::member_template() {
 
   Member mt0i0 = mt0.TemplateInstances().At(0);
   CPPUNIT_ASSERT( mt0i0 );
-  CPPUNIT_ASSERT( mt0i0.Is(gTemplateInstance));
+  CPPUNIT_ASSERT( mt0i0.Is(kTemplateInstance));
   CPPUNIT_ASSERT_EQUAL(std::string("MyMemberTemplateClass::foo<int>"), mt0i0.Name(Reflex::kScoped));
   CPPUNIT_ASSERT_EQUAL(1, (int)mt0i0.TemplateArguments().Size());
   CPPUNIT_ASSERT("int" == mt0i0.TemplateArguments().At(0).Name());
@@ -985,7 +985,7 @@ void ReflexBuilderUnitTest::member_template() {
 
   Member mt1i1 = mt1.TemplateInstances().At(1);
   CPPUNIT_ASSERT( mt1i1 );
-  CPPUNIT_ASSERT( mt1i1.Is(gTemplateInstance));
+  CPPUNIT_ASSERT( mt1i1.Is(kTemplateInstance));
   CPPUNIT_ASSERT("TTT::foo<float>" == mt1i1.Name(Reflex::kScoped));
   CPPUNIT_ASSERT_EQUAL(1, (int)mt1i1.TemplateArguments().Size());
   CPPUNIT_ASSERT(mt1i1.TemplateArguments().At(0));
@@ -1021,7 +1021,7 @@ void ReflexBuilderUnitTest::member_template() {
 
   Member mt3i2 = mt3.TemplateInstances().At(2);
   CPPUNIT_ASSERT( mt3i2 );
-  CPPUNIT_ASSERT( mt3i2.Is(gTemplateInstance));
+  CPPUNIT_ASSERT( mt3i2.Is(kTemplateInstance));
   CPPUNIT_ASSERT("foo<std::string>" == mt3i2.Name(Reflex::kScoped));
   CPPUNIT_ASSERT("foo<std::string>" == mt3i2.Name(Reflex::kScoped|FINAL|QUALIFIED));
   CPPUNIT_ASSERT_EQUAL(1, (int)mt3i2.TemplateArguments().Size());
@@ -1091,7 +1091,7 @@ void ReflexBuilderUnitTest::hiddentypes() {
    TypedefTypeBuilder("MyType", t0);
    Type t1 = Type::ByName("MyType");
    CPPUNIT_ASSERT( t1 );
-   CPPUNIT_ASSERT( t1.Is(gTypedef));
+   CPPUNIT_ASSERT( t1.Is(kTypedef));
    CPPUNIT_ASSERT_EQUAL(std::string("MyType"), t1.Name());
    CPPUNIT_ASSERT( t0 != t1 );
    CPPUNIT_ASSERT( ! t1.FinalType() );
@@ -1122,11 +1122,11 @@ void ReflexBuilderUnitTest::hiddentypes() {
    CPPUNIT_ASSERT( t3.FinalType() == t2 );
    Scope s3 = Scope::ByName("MyType");
    CPPUNIT_ASSERT( s3 );
-   CPPUNIT_ASSERT( s3.Is(gClassOrStruct));
+   CPPUNIT_ASSERT( s3.Is(kClassOrStruct));
    CPPUNIT_ASSERT_EQUAL( std::string("MyType @HIDDEN@"), s3.Name());
    Scope s4 = Scope::ByName("MyType @HIDDEN@");
    CPPUNIT_ASSERT( s4 );
-   CPPUNIT_ASSERT( s4.Is(gClassOrStruct));
+   CPPUNIT_ASSERT( s4.Is(kClassOrStruct));
 
 }
 

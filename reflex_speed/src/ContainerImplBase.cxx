@@ -109,7 +109,7 @@ Reflex::Internal::ContainerImplBase::InsertNodeBase(ContainerTools::Link1Base* n
    fBuckets[bucketidx] = node;
    // find previous
    size_t bucketidxprev = bucketidx;
-   while (bucketidxprev > 0 && !fBuckets[--bucketidxprev]);
+   while (bucketidxprev > 0 && !fBuckets[--bucketidxprev]) {}
    // fBuckets[bucketidxprev] points to bucket containing the node before "node":
    //   [bucketidxprev]:    n0 -> n1 -> n2 (-> n3)
    //   [...]:              0...
@@ -120,7 +120,7 @@ Reflex::Internal::ContainerImplBase::InsertNodeBase(ContainerTools::Link1Base* n
    if (n2) {
       // Find bucketidxnext:
       size_t bucketidxnext = bucketidx;
-      while (++bucketidxnext < fBuckets.size() && !fBuckets[bucketidxnext]);
+      while (++bucketidxnext < fBuckets.size() && !fBuckets[bucketidxnext]) {}
       if (bucketidxnext < fBuckets.size()) {
          // have valid n2 and n3.
          // n2 is the one before n3, i.e.
@@ -135,7 +135,7 @@ Reflex::Internal::ContainerImplBase::InsertNodeBase(ContainerTools::Link1Base* n
       // there is no n2; node will be the first node in the bucket vector.
       // Need to find the next one to set node->fNext:
       size_t bucketidxnext = bucketidx;
-      while (++bucketidxnext < fBuckets.size() && !fBuckets[bucketidxnext]);
+      while (++bucketidxnext < fBuckets.size() && !fBuckets[bucketidxnext]) {}
       if (bucketidxnext < fBuckets.size())
          node->SetNext(fBuckets[bucketidxnext]);
       fBuckets[bucketidx] = node;

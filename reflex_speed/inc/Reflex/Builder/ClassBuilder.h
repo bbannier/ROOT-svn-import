@@ -385,13 +385,13 @@ template <typename P> inline Reflex::ClassBuilder& Reflex::ClassBuilder::AddProp
 
 //______________________________________________________________________________
 template <typename C> inline Reflex::ClassBuilderT<C>::ClassBuilderT(unsigned int modifiers, ETYPE typ, const Catalog& catalog) 
-: fClassBuilderImpl(Tools::Demangle(typeid(C)).c_str(), typeid(C), sizeof(C), catalog, modifiers, typ)
+: fClassBuilderImpl(Tools::Demangle(typeid(C)).c_str(), typeid(C), sizeof(C), modifiers, typ, catalog)
 {
 }
 
 //______________________________________________________________________________
 template <class C> inline Reflex::ClassBuilderT<C>::ClassBuilderT(const char* nam, unsigned int modifiers, ETYPE typ, const Catalog& catalog)
-: fClassBuilderImpl(nam, typeid(C), sizeof(C), catalog, modifiers, typ)
+: fClassBuilderImpl(nam, typeid(C), sizeof(C), modifiers, typ, catalog)
 {
 }
     
