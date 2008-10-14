@@ -119,7 +119,11 @@ namespace Internal {
          // Calculate the offset between the enclosing HashMapNode_t and the inner Node_t.
          // Also ensures that HashMapNode_t::Value_t really is Node_t, by doing a dummy
          // const_cast to the expected type.
+#ifdef REFLEX_CONST_EXPR_CAST
          kNodeOffset = ((char*)const_cast<Node_t*>(&((const HashMapNode_t*)0x64)->fObj)) - (char*)0x64
+#else
+         kNodeOffset = sizeof(HashMapNode_t) - sizeof(Node_t)
+#endif
       };
 
       OrderedContainer_iterator* CreateNext(const OrderedContainer_iterator& next) {

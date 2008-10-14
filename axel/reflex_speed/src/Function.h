@@ -92,7 +92,8 @@ namespace Internal {
       static const std::string& BuildPointerTypeName(std::string& buf,
          const Type & ret,
          const std::string& name,
-         const OrderedContainer< Type > & pars,
+         const OrderedContainer< Type >::const_iterator & parsBegin,
+         const OrderedContainer< Type >::const_iterator & parsEnd,
          unsigned int typemod = 0,
          unsigned int mod = kScoped | kQualified,
          const Scope & scope = Scope());

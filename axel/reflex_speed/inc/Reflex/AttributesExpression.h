@@ -9,16 +9,16 @@
 //
 // This software is provided "as is" without express or implied warranty.
 
-#ifndef Reflex_EntityProperty
-#define Reflex_EntityProperty
+#ifndef Reflex_AttributesExpression
+#define Reflex_AttributesExpression
 
 #include "Kernel.h"
 
 namespace Reflex {
 
    // Bitset-style class that allows to test for a combination of
-   // EntityProperty enum constants via its operators &&, ||, !.
-   class EntityProperty {
+   // AttributesExpression enum constants via its operators &&, ||, !.
+   class AttributesExpression {
    public:
       enum EOP {
          kDesc,
@@ -31,14 +31,14 @@ namespace Reflex {
    private:
       EOP fOp;
       int fValue;
-      const EntityProperty& fLHS;
-      const EntityProperty& fRHS;
-      static EntityProperty fgNIL;
+      const AttributesExpression& fLHS;
+      const AttributesExpression& fRHS;
+      static AttributesExpression fgNIL;
 
    public:
-      EntityProperty(EENTITY_DESCRIPTION desc): fOp(kDesc), fValue(desc), fLHS(fgNIL), fRHS(fgNIL) {};
-      EntityProperty(ETYPE type): fOp(kType), fValue(type), fLHS(fgNIL), fRHS(fgNIL) {};
-      EntityProperty(EOP op, const EntityProperty& lhs, const EntityProperty& rhs = Reflex::EntityProperty::fgNIL):
+      AttributesExpression(EENTITY_DESCRIPTION desc): fOp(kDesc), fValue(desc), fLHS(fgNIL), fRHS(fgNIL) {};
+      AttributesExpression(ETYPE type): fOp(kType), fValue(type), fLHS(fgNIL), fRHS(fgNIL) {};
+      AttributesExpression(EOP op, const AttributesExpression& lhs, const AttributesExpression& rhs = Reflex::AttributesExpression::fgNIL):
       fOp(op), fValue(0), fLHS(lhs), fRHS(rhs) {}
 
       bool Eval(int desc, ETYPE type) const {
@@ -50,59 +50,59 @@ namespace Reflex {
          return true;
       }
 
-      EntityProperty operator && (const EntityProperty& rhs) const { return EntityProperty(kAnd, *this, rhs); }
-      EntityProperty operator || (const EntityProperty& rhs) const { return EntityProperty(kOr, *this, rhs); }
-      EntityProperty operator ! () const { return EntityProperty(kNot, *this); }
+      AttributesExpression operator && (const AttributesExpression& rhs) const { return AttributesExpression(kAnd, *this, rhs); }
+      AttributesExpression operator || (const AttributesExpression& rhs) const { return AttributesExpression(kOr, *this, rhs); }
+      AttributesExpression operator ! () const { return AttributesExpression(kNot, *this); }
    };
 
-   static const EntityProperty kPublic(kEDPublic);
-   static const EntityProperty kProtected(kEDProtected);
-   static const EntityProperty kPrivate(kEDPrivate);
-   static const EntityProperty kRegister(kEDRegister);
-   static const EntityProperty kStatic(kEDStatic);
-   static const EntityProperty kConstructor(kEDConstructor);
-   static const EntityProperty kDestructor(kEDDestructor);
-   static const EntityProperty kExplicit(kEDExplicit);
-   static const EntityProperty kExtern(kEDExtern);
-   static const EntityProperty kCopyconstructor(kEDCopyConstructor);
-   static const EntityProperty kOperator(kEDOperator);
-   static const EntityProperty kInline(kEDInline);
-   static const EntityProperty kConverter(kEDConverter);
-   static const EntityProperty kAuto(kEDAuto);
-   static const EntityProperty kMutable(kEDMutable);
-   static const EntityProperty kConst(kEDConst);
-   static const EntityProperty kVolatile(kEDVolatile);
-   static const EntityProperty kReference(kEDReference);
-   static const EntityProperty kAbstract(kEDAbstract);
-   static const EntityProperty kVirtual(kEDVirtual);
-   static const EntityProperty kTransient(kEDTransient);
-   static const EntityProperty kArtificial(kEDArtificial);
+   static const AttributesExpression kPublic(kEDPublic);
+   static const AttributesExpression kProtected(kEDProtected);
+   static const AttributesExpression kPrivate(kEDPrivate);
+   static const AttributesExpression kRegister(kEDRegister);
+   static const AttributesExpression kStatic(kEDStatic);
+   static const AttributesExpression kConstructor(kEDConstructor);
+   static const AttributesExpression kDestructor(kEDDestructor);
+   static const AttributesExpression kExplicit(kEDExplicit);
+   static const AttributesExpression kExtern(kEDExtern);
+   static const AttributesExpression kCopyconstructor(kEDCopyConstructor);
+   static const AttributesExpression kOperator(kEDOperator);
+   static const AttributesExpression kInline(kEDInline);
+   static const AttributesExpression kConverter(kEDConverter);
+   static const AttributesExpression kAuto(kEDAuto);
+   static const AttributesExpression kMutable(kEDMutable);
+   static const AttributesExpression kConst(kEDConst);
+   static const AttributesExpression kVolatile(kEDVolatile);
+   static const AttributesExpression kReference(kEDReference);
+   static const AttributesExpression kAbstract(kEDAbstract);
+   static const AttributesExpression kVirtual(kEDVirtual);
+   static const AttributesExpression kTransient(kEDTransient);
+   static const AttributesExpression kArtificial(kEDArtificial);
 
-   static const EntityProperty kClass(kETClass);
-   static const EntityProperty kStruct(kETStruct);
-   static const EntityProperty kEnum(kETEnum);
-   static const EntityProperty kUnion(kETUnion);
-   static const EntityProperty kNamespace(kETNamespace);
-   static const EntityProperty kFunction(kETFunction);
-   static const EntityProperty kArray(kETArray);
-   static const EntityProperty kFundamental(kETFundamental);
-   static const EntityProperty kPointer(kETPointer);
-   static const EntityProperty kPointerToMember(kETPointerToMember);
-   static const EntityProperty kTypedef(kETTypedef);
-   static const EntityProperty kTypeTemplateInstance(kETTypeTemplateInstance);
-   static const EntityProperty kMemberTemplateInstance(kETMemberTemplateInstance);
-   static const EntityProperty kDataMember(kETDataMember);
-   static const EntityProperty kFunctionMember(kETFunctionMember);
-   static const EntityProperty kUnresolved(kETUnresolved);
+   static const AttributesExpression kClass(kETClass);
+   static const AttributesExpression kStruct(kETStruct);
+   static const AttributesExpression kEnum(kETEnum);
+   static const AttributesExpression kUnion(kETUnion);
+   static const AttributesExpression kNamespace(kETNamespace);
+   static const AttributesExpression kFunction(kETFunction);
+   static const AttributesExpression kArray(kETArray);
+   static const AttributesExpression kFundamental(kETFundamental);
+   static const AttributesExpression kPointer(kETPointer);
+   static const AttributesExpression kPointerToMember(kETPointerToMember);
+   static const AttributesExpression kTypedef(kETTypedef);
+   static const AttributesExpression kTypeTemplateInstance(kETTypeTemplateInstance);
+   static const AttributesExpression kMemberTemplateInstance(kETMemberTemplateInstance);
+   static const AttributesExpression kDataMember(kETDataMember);
+   static const AttributesExpression kFunctionMember(kETFunctionMember);
+   static const AttributesExpression kUnresolved(kETUnresolved);
 
-   static const EntityProperty kTemplateInstance(EntityProperty::kOr, kTypeTemplateInstance, kMemberTemplateInstance);
+   static const AttributesExpression kTemplateInstance(AttributesExpression::kOr, kTypeTemplateInstance, kMemberTemplateInstance);
 #ifndef __CINT__
-   static const EntityProperty kClassOrStruct(kClass || kTypeTemplateInstance || kStruct);
+   static const AttributesExpression kClassOrStruct(kClass || kTypeTemplateInstance || kStruct);
 #else
-   static const EntityProperty kClassOrStruct(EntityProperty::kOr, kClass,
-                                        EntityProperty(EntityProperty::kOr, kTypeTemplateInstance, kStruct));
+   static const AttributesExpression kClassOrStruct(AttributesExpression::kOr, kClass,
+                                        AttributesExpression(AttributesExpression::kOr, kTypeTemplateInstance, kStruct));
 #endif
 }
 
-#endif // Reflex_EntityProperty
+#endif // Reflex_AttributesExpression
 

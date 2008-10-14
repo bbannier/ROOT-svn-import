@@ -9,6 +9,9 @@
 //
 // This software is provided "as is" without express or implied warranty.
 
+#ifndef Reflex_AtomicCount
+#define Reflex_AtomicCount
+
 #ifndef REFLEX_ATOMIC
 # ifndef REFLEX_THREADING
 #  define REFLEX_ATOMIC_NONE
@@ -143,3 +146,5 @@ Reflex::Internal::AtomicCount::operator --() {
    return *this;
 }
 #endif // REFLEX_ATOMIC_PTHREAD
+
+#endif // Reflex_AtomicCount

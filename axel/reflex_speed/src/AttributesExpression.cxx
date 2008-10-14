@@ -9,6 +9,6 @@
 //
 // This software is provided "as is" without express or implied warranty.
 
-#include "Reflex/EntityProperty.h"
+#include "Reflex/AttributesExpression.h"
 
-Reflex::EntityProperty Reflex::EntityProperty::fgNIL(Reflex::kETNIL);
+Reflex::AttributesExpression Reflex::AttributesExpression::fgNIL(Reflex::kETNIL);

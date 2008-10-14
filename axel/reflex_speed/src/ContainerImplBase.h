@@ -44,21 +44,6 @@ namespace Reflex {
          class NodeArena;
       }
 
-      // Simple and fast hashing routine for std::string
-      inline Hash_t StringHash(const char* str) {
-         Hash_t hash = 5381;
-         while (*str) {
-            hash *= 5;
-            hash += *(str++);
-         }
-         return hash;
-      }
-
-      // Simple and fast hashing routine for std::string
-      inline Hash_t StringHash(const std::string& s) {
-         return StringHash(s.c_str());
-      }
-
       //-------------------------------------------------------------------------------
       //
       // Base class for Reflex::Container.

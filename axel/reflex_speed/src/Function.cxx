@@ -50,9 +50,10 @@ Reflex::Internal::Function::Name(std::string& buf, unsigned int mod) const {
 const std::string&
 Reflex::Internal::Function::BuildPointerTypeName(std::string& buf, const Type & ret,
                                                  const std::string& name,
-                                                const OrderedContainer< Type > & pars,
-                                                unsigned int typemod, unsigned int mod,
-                                                const Scope& scope) {
+                                                 const OrderedContainer< Type >::const_iterator & parsBegin,
+                                                 const OrderedContainer< Type >::const_iterator & parsEnd,
+                                                 unsigned int typemod, unsigned int mod,
+                                                 const Scope& scope) {
 //-------------------------------------------------------------------------------
 // Build the name of the function type in the form <returntype><space>(<scope>::* <name>)(<param>*)
 // Return type and parameter types will always be scoped and qualified, even if
@@ -69,13 +70,10 @@ Reflex::Internal::Function::BuildPointerTypeName(std::string& buf, const Type & 
       buf += "::* ";
    }
    buf += name + ")(";
-   if (!pars.Empty()) {
-      Container<Type>::const_iterator iParEnd = pars.End();
-      for (Container<Type>::const_iterator ti = pars.Begin(); ti != iParEnd;) {
-         ti->Name(buf, kQualified | kScoped);
-         if (++ti != iParEnd)
-            buf += ", ";
-      }
+   for (Container<Type>::const_iterator ti = parsBegin; ti != parsEnd;) {
+      ti->Name(buf, kQualified | kScoped);
+      if (++ti != parsEnd)
+         buf += ", ";
    }
    // leave it blank - the shorter the string the better.
    //else {

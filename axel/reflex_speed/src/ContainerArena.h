@@ -17,8 +17,8 @@
 #include <iostream>
 #include <algorithm>
 
-#include "ContainerNode.h"
 #include "RWLock.h"
+#include "ContainerLink.h"
 
 namespace Reflex {
    namespace Internal {
