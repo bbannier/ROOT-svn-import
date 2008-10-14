@@ -11,4 +11,4 @@
 
 #include "Reflex/EntityProperty.h"
 
-Reflex::EntityProperty Reflex::EntityProperty::fgNIL(Reflex::kNIL);
+Reflex::EntityProperty Reflex::EntityProperty::fgNIL(Reflex::kETNIL);

@@ -438,8 +438,8 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T));
-         if (t) return Type(t, kConst);
-         else return Type(TypeDistiller<T>::Get(),kConst);
+         if (t) return Type(t, kEDConst);
+         else return Type(TypeDistiller<T>::Get(),kEDConst);
       }
    };
 
@@ -449,8 +449,8 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T));
-         if (t) return Type(t, kVolatile);
-         else return Type(TypeDistiller<T>::Get(),kVolatile);
+         if (t) return Type(t, kEDVolatile);
+         else return Type(TypeDistiller<T>::Get(),kEDVolatile);
       }
    };
 
@@ -460,8 +460,8 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T));
-         if (t) return Type(t, kConst | kVolatile);
-         else return Type(TypeDistiller<T>::Get(),kConst|kVolatile);
+         if (t) return Type(t, kEDConst | kEDVolatile);
+         else return Type(TypeDistiller<T>::Get(),kEDConst|kEDVolatile);
       }
    };
 
@@ -471,8 +471,8 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T));
-         if (t) return Type(t, kReference);
-         else return Type(TypeDistiller<T>::Get(),kReference);
+         if (t) return Type(t, kEDReference);
+         else return Type(TypeDistiller<T>::Get(),kEDReference);
       }
    };
 
@@ -482,8 +482,8 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T));
-         if (t) return Type(t, kConst | kReference);
-         else return Type(TypeDistiller<T>::Get(),kConst|kReference);
+         if (t) return Type(t, kEDConst | kEDReference);
+         else return Type(TypeDistiller<T>::Get(),kEDConst|kEDReference);
       }
    };
 
@@ -493,8 +493,8 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T));
-         if (t) return Type(t, kVolatile | kReference);
-         else return Type(TypeDistiller<T>::Get(),kVolatile|kReference);
+         if (t) return Type(t, kEDVolatile | kEDReference);
+         else return Type(TypeDistiller<T>::Get(),kEDVolatile|kEDReference);
       }
    };
 
@@ -504,8 +504,8 @@ namespace Reflex {
    public:
       static Type Get() {
          Type t = Type::ByTypeInfo(typeid(T));
-         if (t) return Type(t, kConst | kVolatile | kReference);
-         else return Type(TypeDistiller<T>::Get(),kConst|kVolatile|kReference);
+         if (t) return Type(t, kEDConst | kEDVolatile | kEDReference);
+         else return Type(TypeDistiller<T>::Get(),kEDConst|kEDVolatile|kEDReference);
       }
    };
 

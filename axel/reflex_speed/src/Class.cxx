@@ -133,14 +133,14 @@ Reflex::Type Reflex::Internal::Class::DynamicType(const Object & obj) const
 //-------------------------------------------------------------------------------
 // Discover the dynamic type of a class object and return it.
    // If no virtual_function_table return itself
-   if (Is(gVirtual)) {
+   if (Is(kVirtual)) {
       // Avoid the case that the first word is a virtual_base_offset_table instead of
       // a virtual_function_table
       long int offset = **(long**)obj.Address();
       if (offset == 0) return ThisType();
       else {
          const Type & dytype = ScopeBase::InCatalog().ByTypeInfo(typeid(*(DynType_t*)obj.Address()));
-         if (dytype && dytype.Is(gClass)) return dytype;
+         if (dytype && dytype.Is(kClass)) return dytype;
          else                             return ThisType();
       }
    }
@@ -297,12 +297,12 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
       generator.AddIntoInstances("      " + generator.Replace_colon(ThisType().Name(kScoped)) + "_dict();\n");
 
       // Outputten only, if inside a namespace
-      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().Is(gNamespace))) {
+      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().Is(kNamespace))) {
          generator.AddIntoShadow("\nnamespace " + ThisType().Name() + " {");
       }
 
       // new
-      if (ThisType().DeclaringScope().Is(gClassOrStruct)) {
+      if (ThisType().DeclaringScope().Is(kClassOrStruct)) {
          generator.AddIntoShadow("};");
       }
 
@@ -315,22 +315,22 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
 
 
 
-      if (ThisType().DeclaringScope().Is(gClassOrStruct)) {
+      if (ThisType().DeclaringScope().Is(kClassOrStruct)) {
          generator.AddIntoFree(";\n}\n");
       }
 
       generator.AddIntoFree("\n\n// ------ Dictionary for class " + ThisType().Name() + "\n");
       generator.AddIntoFree("void " + generator.Replace_colon(ThisType().Name(kScoped)) + "_dict() {\n");
       generator.AddIntoFree("ClassBuilder(\"" + ThisType().Name(kScoped));
-      if (Is(gPublic)) generator.AddIntoFree("\", typeid(" + ThisType().Name(kScoped) + "), sizeof(" + ThisType().Name(kScoped) + "), ");
-      else if (Is(gProtected)) generator.AddIntoFree("\", typeid(Reflex::ProtectedClass), 0,");
-      else if (Is(gPrivate)) generator.AddIntoFree("\", typeid(Reflex::PrivateClass), 0,");
+      if (Is(kPublic)) generator.AddIntoFree("\", typeid(" + ThisType().Name(kScoped) + "), sizeof(" + ThisType().Name(kScoped) + "), ");
+      else if (Is(kProtected)) generator.AddIntoFree("\", typeid(Reflex::ProtectedClass), 0,");
+      else if (Is(kPrivate)) generator.AddIntoFree("\", typeid(Reflex::PrivateClass), 0,");
 
-      if (ThisType().Is(gPublic))  generator.AddIntoFree("kPublic");
-      if (ThisType().Is(gPrivate)) generator.AddIntoFree("kPrivate");
-      if (ThisType().Is(gProtected)) generator.AddIntoFree("kProtected");
-      if (ThisType().Is(gVirtual)) generator.AddIntoFree(" | kVirtual");
-      generator.AddIntoFree(" | kClass)\n");
+      if (ThisType().Is(kPublic))  generator.AddIntoFree("kEDPublic");
+      if (ThisType().Is(kPrivate)) generator.AddIntoFree("kEDPrivate");
+      if (ThisType().Is(kProtected)) generator.AddIntoFree("kEDProtected");
+      if (ThisType().Is(kVirtual)) generator.AddIntoFree(" | kEDVirtual");
+      generator.AddIntoFree(" | kETClass)\n");
 
       generator.AddIntoClasses("\n// -- Stub functions for class " + ThisType().Name() + "--\n");
 
@@ -339,7 +339,7 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
          mi->GenerateDict(generator);      // call Members' own gendict
       }
 
-      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().Is(gNamespace))) {
+      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().Is(kNamespace))) {
          generator.AddIntoShadow("\nnamespace " + ThisType().Name() + " {");
       }
 
@@ -350,7 +350,7 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
 //       generator.AddIntoClasses("  static NewDelFunctions s_funcs;\n");
 
 //       generator.AddIntoFree(".AddMember<void*(void)>(\"__getNewDelFunctions\", method_x" + tempcounter.str());
-//       generator.AddIntoFree(", 0, 0, kPublic | kArtificial)");
+//       generator.AddIntoFree(", 0, 0, kEDPublic | kEDArtificial)");
 
 //       std::string temp = "NewDelFunctionsT< ::" + ThisType().Name(kScoped) + " >::";
 //       generator.AddIntoClasses("  s_funcs.fNew         = " + temp + "new_T;\n");
@@ -362,7 +362,7 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
 
 //       ++generator.fMethodCounter;
 
-      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().Is(gNamespace))) {
+      if (ThisType().DeclaringScope().IsTopScope() && (!DeclaringScope().Is(kNamespace))) {
          generator.AddIntoShadow("}\n");        // End of top namespace
       }
 
@@ -370,7 +370,7 @@ void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) cons
       this->ScopeBase::GenerateDict(generator);
 
 
-      if (!ThisType().DeclaringScope().Is(gClassOrStruct)) {
+      if (!ThisType().DeclaringScope().Is(kClassOrStruct)) {
          generator.AddIntoShadow("};\n");
          generator.AddIntoFree(";\n}\n");
       }

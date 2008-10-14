@@ -18,42 +18,52 @@
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Internal::ContainerTools::Link::InsertAfter(const Link* prev, Link* newnext) {
+Reflex::Internal::ContainerTools::Link1Base::InsertAfter(Link1Base* newnext) {
 //-------------------------------------------------------------------------------
-   // Insert a link between this and the next element:
-   // convert "prev -> this -> oldnext"
-   // to "prev -> this -> newnext -> oldnext"
-   Link* oldnext = Next(prev);
-   if (oldnext) oldnext->Set(newnext, oldnext->Next(this));
-   if (newnext) newnext->Set(this, oldnext);
-   Set(prev, newnext);
+   // Insert a Link1 between this and the next element:
+   // convert "this -> oldnext"
+   // to "this -> newnext -> oldnext"
+   if (newnext) newnext->SetNext(Next());
+   SetNext(newnext);
 }
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::ContainerTools::Link*
-Reflex::Internal::ContainerTools::Link::RemoveAfter(const Link* prev) {
+const Reflex::Internal::ContainerTools::Link1Base*
+Reflex::Internal::ContainerTools::Link1Base::RemoveAfter() {
 //-------------------------------------------------------------------------------
-   // convert "prev -> this -> oldnext -> newnext"
-   // to "prev -> this -> newnext"
-   Link* oldnext = Next(prev);
+   // convert "this -> oldnext -> newnext"
+   // to "this -> newnext"
+   const Link1Base* oldnext = Next();
    if (!oldnext) return 0;
-   Link* newnext = oldnext->Next(this);
-   if (newnext) newnext->Set(this, newnext->Next(oldnext));
-   Set(prev, newnext);
+   SetNext(oldnext->Next());
    return oldnext;
 }
 
-
 //-------------------------------------------------------------------------------
 void
-Reflex::Internal::ContainerTools::LinkIter::ArenaDelete(Link* link) const {
+Reflex::Internal::ContainerTools::Link2Base::InsertAfter(Link2Base* newnext) {
 //-------------------------------------------------------------------------------
-// Ask NodeArena to delete a link.
-
-   fArena->Delete(link);
-   // the container might have been deleted, leaving its
-   // arena pages around because this node was still needing
-   // it. Tell the arena to check for 
-   fArena->ReleaseInstance();
+   // Insert a Link2 between this and the next element:
+   // convert "this -> oldnext"
+   // to "this -> newnext -> oldnext"
+   Link2Base* oldnext = const_cast<Link2Base*>(Next());
+   if (oldnext) oldnext->SetPrev(newnext);
+   if (newnext) newnext->Set(this, oldnext);
+   SetNext(newnext);
 }
+
+//-------------------------------------------------------------------------------
+Reflex::Internal::ContainerTools::Link2Base*
+Reflex::Internal::ContainerTools::Link2Base::RemoveAfter() {
+//-------------------------------------------------------------------------------
+   // convert "prev -> this -> oldnext -> newnext"
+   // to "prev -> this -> newnext"
+   const Link2Base* oldnext = Next();
+   if (!oldnext) return 0;
+   Link2Base* newnext = const_cast<Link2Base*>(oldnext->Next());
+   if (newnext) newnext->SetPrev(this);
+   SetNext(newnext);
+   return const_cast<Link2Base*>(oldnext);
+}
+
 

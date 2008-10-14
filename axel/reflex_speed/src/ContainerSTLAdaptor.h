@@ -78,14 +78,14 @@ namespace Internal {
       size_t ProxySize() const { return fCont->size(); }
       bool   ProxyEmpty() const { return fCont->empty(); }
 
-      void*  ProxyByName(const std::string& name) const {
+      const void*  ProxyByName(const std::string& name) const {
          const_iterator it = std::find_if(fCont->begin(), fCont->end(),
             NameFinderPredicate<value_type>(name));
          if (it != fCont->end())
             return (void*)&(*it);
          return 0;
       }
-      void*  ProxyByTypeInfo(const std::type_info& /*ti*/) const { return 0; }
+      const void*  ProxyByTypeInfo(const std::type_info& /*ti*/) const { return 0; }
 
    private:
       static const CONTAINER& ContForEnd() {

@@ -143,7 +143,7 @@ namespace Internal {
 
       /**
       * Check whether the entity property is set for the scope. You can
-      * combine checks, e.g. Is(gClass && gPublic)
+      * combine checks, e.g. Is(kClass && kPublic)
       * @param descr the entity property to check for; see EntityProperty.
       * @param mod unused; for compatibility with Type::Is().
       * @return whether descr is set.
@@ -254,7 +254,7 @@ namespace Internal {
 
       /**
       * ScopeTypeAsString will return the string representation of the enum
-      * representing the current Scope (e.g. "kClass")
+      * representing the current Scope (e.g. "kETClass")
       * @return string representation of enum for Scope
       */
       std::string ScopeTypeAsString() const;

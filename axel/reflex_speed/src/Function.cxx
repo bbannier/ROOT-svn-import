@@ -64,7 +64,7 @@ Reflex::Internal::Function::BuildPointerTypeName(std::string& buf, const Type & 
    ret.Name(buf, kScoped | kQualified);
 
    buf += " (";
-   if (scope && !scope.Is(gNamespace)) {
+   if (scope && !scope.Is(kNamespace)) {
       scope.Name(buf, kScoped);
       buf += "::* ";
    }
@@ -82,11 +82,11 @@ Reflex::Internal::Function::BuildPointerTypeName(std::string& buf, const Type & 
    //   buf += "void";
    //}
    buf += ")";
-   if ((mod & kQualified) && (typemod & kConst))
+   if ((mod & kQualified) && (typemod & kEDConst))
       buf += " const";
    // should we or should we not? It's part of the type but overloading with
    // throiw / no throw is not allowed.
-   // if (Is(gThrows)) buf += " throw()";
+   // if (Is(kThrows)) buf += " throw()";
    return buf;
 }
 
@@ -119,10 +119,10 @@ Reflex::Internal::Function::BuildTypeName(std::string& buf, const Type & ret,
    //   buf += "void";
    //}
    buf += ")";
-   if ((mod & kQualified) && (typemod & kConst))
+   if ((mod & kQualified) && (typemod & kEDConst))
       buf += " const";
    // should we or should we not? It's part of the type but overloading with
    // throiw / no throw is not allowed.
-   // if (Is(gThrows)) buf += " throw()";
+   // if (Is(kThrows)) buf += " throw()";
    return buf;
 }

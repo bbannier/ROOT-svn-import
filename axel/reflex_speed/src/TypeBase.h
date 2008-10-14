@@ -173,7 +173,7 @@ namespace Internal {
 
       /**
       * Check whether the entity property is set for the type. You can
-      * combine checks, e.g. t.Is(gClass && gPublic)
+      * combine checks, e.g. t.Is(kClass && kPublic)
       * @param descr the entity property to check for; see EntityProperty.
       * @param mod the modifier as stored by Type (reference,...)
       * @return whether descr is set.

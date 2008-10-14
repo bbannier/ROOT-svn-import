@@ -50,7 +50,7 @@ namespace Reflex {
          // the INodeHelper interface. Needed for DecRef() on a bucket.
          class BucketNodeHelper: public INodeHelper {
          public:
-            bool IsInvalidated(const Link* link) const {
+            bool IsValid(const Link* link) const {
                return static_cast<const Bucket*>(link)->fIndex == -1; }
          };
 

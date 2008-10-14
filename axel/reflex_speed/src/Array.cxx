@@ -30,7 +30,7 @@ Reflex::Internal::Array::Array(const Type & arrayType,
 //-------------------------------------------------------------------------------
 // Constructs an array type.
    : TypeBase((arrayType.FinalType().Name() + (fNameArraySizeSuffix = BuildTypeNameSuffix(arrayType, len))).c_str(),
-              modifiers, len*(arrayType.SizeOf()), kArray, typeinfo, catalog),
+              modifiers, len*(arrayType.SizeOf()), kETArray, typeinfo, catalog),
      fArrayType(arrayType), 
      fLength(len) { }
 
@@ -56,7 +56,7 @@ Reflex::Internal::Array::BuildTypeNameSuffix(Type arraytype,
 // Build an array type name's size suffix, i.e. "[12][10][2]".
    std::ostringstream ost; 
    ost << "[" << len << "]";
-   while (arraytype.Is(gArray)) {
+   while (arraytype.Is(kArray)) {
       ost << "[" << arraytype.ArrayLength() << "]";
       arraytype = arraytype.ToType();
    }

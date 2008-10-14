@@ -43,7 +43,7 @@ namespace Internal {
       Typedef(const char * typ,
          const Type & typedefType,
          const Catalog& catalog,
-         ETYPE typeTyp = kTypedef,
+         ETYPE typeTyp = kETTypedef,
          unsigned int modifiers = 0,
          const Type & finalType = Dummy::Type()) ;
 
@@ -117,7 +117,7 @@ inline const std::type_info & Reflex::Internal::Typedef::TypeInfo() const {
 //-------------------------------------------------------------------------------
    if (*fTypeInfo != typeid(UnknownType)) return *fTypeInfo;
    Type current = ThisType();
-   while (current.TypeType() == kTypedef) current = current.ToType();
+   while (current.TypeType() == kETTypedef) current = current.ToType();
    if (current && current.TypeInfo() != typeid(UnknownType)) fTypeInfo = &current.TypeInfo();
    return *fTypeInfo;
 }
@@ -134,10 +134,10 @@ inline Reflex::Type Reflex::Internal::Typedef::ToType() const {
 inline bool Reflex::Internal::Typedef::ForwardStruct() const {
 //-------------------------------------------------------------------------------
    switch (fTypedefType.TypeType()) {
-   case kTypedef:
-   case kClass:
-   case kStruct:
-   case kTypeTemplateInstance:
+   case kETTypedef:
+   case kETClass:
+   case kETStruct:
+   case kETTypeTemplateInstance:
       return true;
    default:
       return false;
@@ -149,9 +149,9 @@ inline bool Reflex::Internal::Typedef::ForwardStruct() const {
 inline bool Reflex::Internal::Typedef::ForwardTemplate() const {
 //-------------------------------------------------------------------------------
    switch (fTypedefType.TypeType()) {
-   case kTypedef:
-   case kTypeTemplateInstance:
-   case kMemberTemplateInstance:
+   case kETTypedef:
+   case kETTypeTemplateInstance:
+   case kETMemberTemplateInstance:
       return true;
    default:
       return false;
@@ -163,8 +163,8 @@ inline bool Reflex::Internal::Typedef::ForwardTemplate() const {
 inline bool Reflex::Internal::Typedef::ForwardFunction() const {
 //-------------------------------------------------------------------------------
    switch (fTypedefType.TypeType()) {
-   case kTypedef:
-   case kFunction:
+   case kETTypedef:
+   case kETFunction:
       return true;
    default:
       return false;

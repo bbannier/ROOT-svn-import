@@ -153,7 +153,7 @@ namespace Reflex {
 
       /**
       * Check whether the entity property is set for the scope. You can
-      * combine checks, e.g. Is(gClass && gPublic)
+      * combine checks, e.g. Is(kClass && kPublic)
       * @param descr the entity property to check for; see EntityProperty.
       * @return whether descr is set.
       */
@@ -260,8 +260,8 @@ namespace Reflex {
 
 
       /**
-      * ScopeTypeAsString will return the string representation of the kEnum
-      * representing the real type of the scope (e.g. "kClass")
+      * ScopeTypeAsString will return the string representation of the kETEnum
+      * representing the real type of the scope (e.g. "kETClass")
       * @return string representation of the ETYPE enum of the scope
       */
       std::string ScopeTypeAsString() const;

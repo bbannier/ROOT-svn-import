@@ -35,7 +35,7 @@
 Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size,
                                            const std::type_info& ti,
                                            const Catalog& catalog,
-                                           unsigned int modifiers /*= 0*/, ETYPE typ /*=kUnion*/)
+                                           unsigned int modifiers /*= 0*/, ETYPE typ /*=kETUnion*/)
 : fUnion(0)
 , fLastMember()
 {
@@ -44,11 +44,11 @@ Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size,
    const Type& c = Type::Types().ByName(nam2);
    if (c) {
       // We found a typedef to a class with the same name
-      if (c.Is(gTypedef)) {
+      if (c.Is(kTypedef)) {
          nam2 += " @HIDDEN@";
       }
       // Type already exists. Check if it was a class, struct, or union.
-      else if (!c.Is(gClass)) {
+      else if (!c.Is(kClass)) {
          throw RuntimeError("Attempt to replace a non-class type with a union"); // FIXME: We should not throw!
       }
    }
@@ -138,7 +138,7 @@ Reflex::UnionBuilder::UnionBuilder(const char* nam, const std::type_info& ti,
                                    size_t size,
                                    const Catalog& catalog,
                                    unsigned int modifiers /*= 0*/,
-                                   ETYPE typ /*= kUnion*/)
+                                   ETYPE typ /*= kETUnion*/)
 : fUnionBuilderImpl(nam, size, ti, catalog, modifiers, typ)
 {
 // Constructor.

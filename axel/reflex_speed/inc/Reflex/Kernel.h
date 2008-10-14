@@ -81,9 +81,9 @@
 #endif
 #endif
 
-// windows.h and oracle define kConst
-#ifdef kConst
-#undef kConst
+// windows.h and oracle define kEDConst
+#ifdef kEDConst
+#undef kEDConst
 #endif
 
 #ifdef _MSC_VER
@@ -214,52 +214,52 @@ namespace Reflex {
    // these defines are used for the modifiers they are used in the following
    // classes
    // BA = BASE
-   // CL = kClass
-   // FU = kFunction
-   // DM = kDataMember
-   // FM = kFunctionMember
+   // CL = kETClass
+   // FU = kETFunction
+   // DM = kETDataMember
+   // FM = kETFunctionMember
    // TY = ETYPE
    // ME = MEMBER
    //                                BA  CL  DM  FM  TY  ME
    enum EENTITY_DESCRIPTION {
-      kPublic          = (1<<0),  //  X       X   X       X
-      kProtected       = (1<<1),  //  X       X   X       X
-      kPrivate         = (1<<2),  //  X       X   X       X
-      kRegister        = (1<<3),  //          X   X       X
-      kStatic          = (1<<4),  //          X   X       X
-      kConstructor     = (1<<5),  //              X       X
-      kDestructor      = (1<<6) , //              X       X
-      kExplicit        = (1<<7),  //              X       X
-      kExtern          = (1<<8) , //          X   X       X
-      kCopyConstructor = (1<<9) , //              X       X
-      kOperator        = (1<<10), //              X       X
-      kInline          = (1<<11), //              X       X
-      kConverter       = (1<<12), //              X       X
-      kAuto            = (1<<13), //          X           X
-      kMutable         = (1<<14), //          X           X
-      kConst           = (1<<15), //          X       X   X
-      kVolatile        = (1<<16), //          X       X   X
-      kReference       = (1<<17), //          X           X
-      kAbstract        = (1<<18), //      X       X   X
-      kVirtual         = (1<<19), //  X   X           X
-      kTransient       = (1<<20), //          X           X
-      kArtificial      = (1<<21), //  X   X   X   X   X   X
+      kEDPublic          = (1<<0),  //  X       X   X       X
+      kEDProtected       = (1<<1),  //  X       X   X       X
+      kEDPrivate         = (1<<2),  //  X       X   X       X
+      kEDRegister        = (1<<3),  //          X   X       X
+      kEDStatic          = (1<<4),  //          X   X       X
+      kEDConstructor     = (1<<5),  //              X       X
+      kEDDestructor      = (1<<6) , //              X       X
+      kEDExplicit        = (1<<7),  //              X       X
+      kEDExtern          = (1<<8) , //          X   X       X
+      kEDCopyConstructor = (1<<9) , //              X       X
+      kEDOperator        = (1<<10), //              X       X
+      kEDInline          = (1<<11), //              X       X
+      kEDConverter       = (1<<12), //              X       X
+      kEDAuto            = (1<<13), //          X           X
+      kEDMutable         = (1<<14), //          X           X
+      kEDConst           = (1<<15), //          X       X   X
+      kEDVolatile        = (1<<16), //          X       X   X
+      kEDReference       = (1<<17), //          X           X
+      kEDAbstract        = (1<<18), //      X       X   X
+      kEDVirtual         = (1<<19), //  X   X           X
+      kEDTransient       = (1<<20), //          X           X
+      kEDArtificial      = (1<<21), //  X   X   X   X   X   X
       // the bits 31 - 28 are reserved for template default arguments
-      kTemplateDefaults1  = (0<<31)&(0<<30)&(0<<29)&(1<<28),
-      kTemplateDefaults2  = (0<<31)&(0<<30)&(1<<29)&(0<<28),
-      kTemplateDefaults3  = (0<<31)&(0<<30)&(1<<29)&(1<<28),
-      kTemplateDefaults4  = (0<<31)&(1<<30)&(0<<29)&(0<<28),
-      kTemplateDefaults5  = (0<<31)&(1<<30)&(0<<29)&(1<<28),
-      kTemplateDefaults6  = (0<<31)&(1<<30)&(1<<29)&(0<<28),
-      kTemplateDefaults7  = (0<<31)&(1<<30)&(1<<29)&(1<<28),
-      kTemplateDefaults8  = (1<<31)&(0<<30)&(0<<29)&(0<<28),
-      kTemplateDefaults9  = (1<<31)&(0<<30)&(0<<29)&(1<<28),
-      kTemplateDefaults10 = (1<<31)&(0<<30)&(1<<29)&(0<<28),
-      kTemplateDefaults11 = (1<<31)&(0<<30)&(1<<29)&(1<<28),
-      kTemplateDefaults12 = (1<<31)&(1<<30)&(0<<29)&(0<<28),
-      kTemplateDefaults13 = (1<<31)&(1<<30)&(0<<29)&(1<<28),
-      kTemplateDefaults14 = (1<<31)&(1<<30)&(1<<29)&(0<<28),
-      kTemplateDefaults15 = (1<<31)&(1<<30)&(1<<29)&(1<<28)
+      kEDTemplateDefaults1  = (0<<31)&(0<<30)&(0<<29)&(1<<28),
+      kEDTemplateDefaults2  = (0<<31)&(0<<30)&(1<<29)&(0<<28),
+      kEDTemplateDefaults3  = (0<<31)&(0<<30)&(1<<29)&(1<<28),
+      kEDTemplateDefaults4  = (0<<31)&(1<<30)&(0<<29)&(0<<28),
+      kEDTemplateDefaults5  = (0<<31)&(1<<30)&(0<<29)&(1<<28),
+      kEDTemplateDefaults6  = (0<<31)&(1<<30)&(1<<29)&(0<<28),
+      kEDTemplateDefaults7  = (0<<31)&(1<<30)&(1<<29)&(1<<28),
+      kEDTemplateDefaults8  = (1<<31)&(0<<30)&(0<<29)&(0<<28),
+      kEDTemplateDefaults9  = (1<<31)&(0<<30)&(0<<29)&(1<<28),
+      kEDTemplateDefaults10 = (1<<31)&(0<<30)&(1<<29)&(0<<28),
+      kEDTemplateDefaults11 = (1<<31)&(0<<30)&(1<<29)&(1<<28),
+      kEDTemplateDefaults12 = (1<<31)&(1<<30)&(0<<29)&(0<<28),
+      kEDTemplateDefaults13 = (1<<31)&(1<<30)&(0<<29)&(1<<28),
+      kEDTemplateDefaults14 = (1<<31)&(1<<30)&(1<<29)&(0<<28),
+      kEDTemplateDefaults15 = (1<<31)&(1<<30)&(1<<29)&(1<<28)
    };
 
 
@@ -276,25 +276,25 @@ namespace Reflex {
 
    /** enum containing all possible types and scopes */
    enum ETYPE {
-      kClass,
-      kStruct,
-      kEnum,
-      kUnion,
-      kNamespace,
-      kScopeEndTag = kNamespace,
+      kETClass,
+      kETStruct,
+      kETEnum,
+      kETUnion,
+      kETNamespace,
+      kETScopeEndTag = kETNamespace,
 
-      kFunction,
-      kArray,
-      kFundamental,
-      kPointer,
-      kPointerToMember,
-      kTypedef,
-      kTypeTemplateInstance,
-      kMemberTemplateInstance,
-      kDataMember,
-      kFunctionMember,
-      kUnresolved,
-      kNIL
+      kETFunction,
+      kETArray,
+      kETFundamental,
+      kETPointer,
+      kETPointerToMember,
+      kETTypedef,
+      kETTypeTemplateInstance,
+      kETMemberTemplateInstance,
+      kETDataMember,
+      kETFunctionMember,
+      kETUnresolved,
+      kETNIL
    };
 
 

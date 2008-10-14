@@ -51,11 +51,11 @@ Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info
    Type c = Type::Types().ByName(nam2);
    if (c) {
       // We found a typedef to a class with the same name
-      if (c.Is(gTypedef)) {
+      if (c.Is(kTypedef)) {
          nam2 += " @Hidden@";
       }
       // Class already exists. Check if it was a class.
-      else if (!c.Is(gClassOrStruct)) {
+      else if (!c.Is(kClassOrStruct)) {
          throw RuntimeError("Attempt to replace a non-class type with a class"); // FIXME: We should not throw!
       }
    }
@@ -111,7 +111,7 @@ void Reflex::ClassBuilderImpl::AddTypedef(const Type& typ, const char* def)
    // -- Add typedef info (internal).
    Type ret = Type::Types().ByName(def);
    // Check for typedef AA AA;
-   if (ret == typ && ! typ.Is(gTypedef)) {
+   if (ret == typ && ! typ.Is(kTypedef)) {
       if (typ) {
          typ.ToTypeBase()->HideName();
       }

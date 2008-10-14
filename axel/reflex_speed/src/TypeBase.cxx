@@ -59,9 +59,9 @@ Reflex::Internal::TypeBase::TypeBase(const char * nam,
          fTypeName->UpdateTypeBase(this);
    }
 
-   if (typeTyp != kFundamental && 
-        typeTyp != kFunction &&
-        typeTyp != kPointer ) {
+   if (typeTyp != kETFundamental && 
+        typeTyp != kETFunction &&
+        typeTyp != kETPointer ) {
       Scope declScope = fTypeName->DeclaringScope();
       // Add to declaring scope
       if (declScope)
@@ -87,13 +87,13 @@ Reflex::Internal::TypeBase::operator Reflex::Scope () const {
 //-------------------------------------------------------------------------------
 // Conversion operator to Scope.
    switch (fTypeType) {
-   case kClass:
-   case kStruct:
-   case kTypeTemplateInstance:
-   case kUnion:
-   case kEnum:
+   case kETClass:
+   case kETStruct:
+   case kETTypeTemplateInstance:
+   case kETUnion:
+   case kETEnum:
       return (dynamic_cast<const ScopeBase*>(this))->ThisScope();
-   case kTypedef:
+   case kETTypedef:
       return FinalType();
    default:
       return Dummy::Scope();
@@ -150,19 +150,19 @@ Reflex::Internal::TypeBase::DetermineFinalType(const Type& t) const {
    Type retType(t);
 
    switch (t.TypeType()) {
-   case kTypedef:
+   case kETTypedef:
       retType = t.ToType().FinalType();
       break;
-   case kPointer:
+   case kETPointer:
       retType = PointerBuilder(t.ToType().FinalType(), t.TypeInfo(), InCatalog());
       break;
-   case kPointerToMember:
+   case kETPointerToMember:
       retType = PointerToMemberBuilder(t.ToType().FinalType(), t.PointerToMemberScope(), t.TypeInfo(), InCatalog());
       break;
-   case kArray:
+   case kETArray:
       retType = ArrayBuilder(t.ToType().FinalType(), t.ArrayLength(), t.TypeInfo(), InCatalog());
       break;
-   case kFunction:
+   case kETFunction:
       {
          std::vector<Type> vecParFinal(t.FunctionParameters().Size());
          size_t idx = 0;
@@ -172,18 +172,18 @@ Reflex::Internal::TypeBase::DetermineFinalType(const Type& t) const {
          retType = FunctionTypeBuilder(t.ReturnType().FinalType(), vecParFinal, t.TypeInfo(), InCatalog());
          break;
       }
-   case kUnresolved:
+   case kETUnresolved:
       return Dummy::Type();
    default:
       return t;
    }
 
    // copy fModifiers
-   if (t.Is(gConst))
+   if (t.Is(kConst))
       retType = ConstBuilder(retType);
-   if (t.Is(gReference))
+   if (t.Is(kReference))
       retType = ReferenceBuilder(retType);
-   if (t.Is(gVolatile))
+   if (t.Is(kVolatile))
       retType = VolatileBuilder(retType);
 
    return retType;
@@ -244,13 +244,13 @@ Reflex::Internal::TypeBase::RawType() const {
       
       switch (rawType.TypeType()) {
          
-      case kPointer:
-      case kPointerToMember:
-      case kTypedef:
-      case kArray:
+      case kETPointer:
+      case kETPointerToMember:
+      case kETTypedef:
+      case kETArray:
          rawType = rawType.ToType();
          break;
-      case kUnresolved:
+      case kETUnresolved:
          return Dummy::Type();
       default:
          fRawType = new Type(rawType);

@@ -51,8 +51,8 @@ Reflex::Type Reflex::TypeBuilder(const char * n,
 Reflex::Type Reflex::ConstBuilder(const Type & t) {
 //-------------------------------------------------------------------------------
 // Construct a const qualified type.
-   unsigned int mod = kConst;
-   if (t.Is(gVolatile)) mod |= kVolatile;
+   unsigned int mod = kEDConst;
+   if (t.Is(kVolatile)) mod |= kEDVolatile;
    return Type(t,mod);    
 }
 
@@ -60,8 +60,8 @@ Reflex::Type Reflex::ConstBuilder(const Type & t) {
 Reflex::Type Reflex::VolatileBuilder(const Type & t) {
 //-------------------------------------------------------------------------------
 // Construct a volatile qualified type.
-   unsigned int mod = kVolatile;
-   if (t.Is(gConst))    mod |= kConst;
+   unsigned int mod = kEDVolatile;
+   if (t.Is(kConst))    mod |= kEDConst;
    return Type(t,mod);    
 }
 
@@ -98,9 +98,9 @@ Reflex::PointerToMemberBuilder(const Type & t,
 Reflex::Type Reflex::ReferenceBuilder(const Type & t) {
 //-------------------------------------------------------------------------------
 // Construct a "reference qualified" type.
-   unsigned int mod = kReference;
-   if (t.Is(gConst))    mod |= kConst;
-   if (t.Is(gVolatile)) mod |= kVolatile;
+   unsigned int mod = kEDReference;
+   if (t.Is(kConst))    mod |= kEDConst;
+   if (t.Is(kVolatile)) mod |= kEDVolatile;
    return Type(t,mod);    
 }
 
@@ -129,7 +129,7 @@ Reflex::Type Reflex::EnumTypeBuilder(const char * nam,
 
    const Type & ret = Type::ByName(nam2);
    if (ret) {
-      if (ret.Is(gTypedef)) nam2 += " @HIDDEN@";
+      if (ret.Is(kTypedef)) nam2 += " @HIDDEN@";
       else return ret;
    }
 
@@ -157,7 +157,7 @@ Reflex::Type Reflex::TypedefTypeBuilder(const char * nam,
 // Construct a typedef type.
    Type ret = Type::ByName(nam);
    // Check for typedef AA AA;
-   if (ret == t && ! t.Is(gTypedef)) 
+   if (ret == t && ! t.Is(kTypedef)) 
       if (t) t.ToTypeBase()->HideName();
       else ((Internal::TypeName*)t.Id())->HideName();
    // We found the typedef type

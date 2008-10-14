@@ -297,7 +297,7 @@ namespace {\
       Reflex::Type sig = Reflex::FunctionDistiller<signature>::Get(); \
       std::string fname = (std::string(PLUGINSVC_FACTORY_NS "::")+Reflex::PluginService::FactoryName(name));\
       Reflex::FunctionBuilder(sig, fname.c_str(), \
-        Factory<type, signature>::Func , 0, "", Reflex::kPublic)\
+        Factory<type, signature>::Func , 0, "", Reflex::kEDPublic)\
         .AddProperty("name",name); \
       if (Reflex::PluginService::Debug()) std::cout << "PluginService: Declared factory for class " << name << " with signature " << sig.Name() << std::endl; \
     }\
@@ -314,7 +314,7 @@ namespace {\
       std::stringstream s; s << id; \
       std::string fname = (std::string(PLUGINSVC_FACTORY_NS "::")+Reflex::PluginService::FactoryName(s.str()));\
       Reflex::FunctionBuilder(sig, fname.c_str(), \
-        Factory<type, signature>::Func , 0, "", Reflex::kPublic)\
+        Factory<type, signature>::Func , 0, "", Reflex::kEDPublic)\
         .AddProperty("name",name) \
         .AddProperty("id",id); \
       if (Reflex::PluginService::Debug()) std::cout << "PluginService: Declared factory for id " << fname << " with signature " << sig.Name() << std::endl; \

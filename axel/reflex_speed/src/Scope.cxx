@@ -232,7 +232,7 @@ Reflex::ETYPE
 Reflex::Scope::ScopeType() const {
 //-------------------------------------------------------------------------------
    if (* this) return fScopeName->fScopeBase->ScopeType(); 
-   return kUnresolved;
+   return kETUnresolved;
 }
 
 
@@ -241,7 +241,7 @@ std::string
 Reflex::Scope::ScopeTypeAsString() const {
 //-------------------------------------------------------------------------------
    if (* this) return fScopeName->fScopeBase->ScopeTypeAsString(); 
-   return "kUnresolved";
+   return "kETUnresolved";
 }
 
 

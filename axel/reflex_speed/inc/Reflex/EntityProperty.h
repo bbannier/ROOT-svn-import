@@ -55,52 +55,52 @@ namespace Reflex {
       EntityProperty operator ! () const { return EntityProperty(kNot, *this); }
    };
 
-   static EntityProperty gPublic(kPublic);
-   static EntityProperty gProtected(kProtected);
-   static EntityProperty gPrivate(kPrivate);
-   static EntityProperty gRegister(kRegister);
-   static EntityProperty gStatic(kStatic);
-   static EntityProperty gConstructor(kConstructor);
-   static EntityProperty gDestructor(kDestructor);
-   static EntityProperty gExplicit(kExplicit);
-   static EntityProperty gExtern(kExtern);
-   static EntityProperty gCopyconstructor(kCopyConstructor);
-   static EntityProperty gOperator(kOperator);
-   static EntityProperty gInline(kInline);
-   static EntityProperty gConverter(kConverter);
-   static EntityProperty gAuto(kAuto);
-   static EntityProperty gMutable(kMutable);
-   static EntityProperty gConst(kConst);
-   static EntityProperty gVolatile(kVolatile);
-   static EntityProperty gReference(kReference);
-   static EntityProperty gAbstract(kAbstract);
-   static EntityProperty gVirtual(kVirtual);
-   static EntityProperty gTransient(kTransient);
-   static EntityProperty gArtificial(kArtificial);
+   static const EntityProperty kPublic(kEDPublic);
+   static const EntityProperty kProtected(kEDProtected);
+   static const EntityProperty kPrivate(kEDPrivate);
+   static const EntityProperty kRegister(kEDRegister);
+   static const EntityProperty kStatic(kEDStatic);
+   static const EntityProperty kConstructor(kEDConstructor);
+   static const EntityProperty kDestructor(kEDDestructor);
+   static const EntityProperty kExplicit(kEDExplicit);
+   static const EntityProperty kExtern(kEDExtern);
+   static const EntityProperty kCopyconstructor(kEDCopyConstructor);
+   static const EntityProperty kOperator(kEDOperator);
+   static const EntityProperty kInline(kEDInline);
+   static const EntityProperty kConverter(kEDConverter);
+   static const EntityProperty kAuto(kEDAuto);
+   static const EntityProperty kMutable(kEDMutable);
+   static const EntityProperty kConst(kEDConst);
+   static const EntityProperty kVolatile(kEDVolatile);
+   static const EntityProperty kReference(kEDReference);
+   static const EntityProperty kAbstract(kEDAbstract);
+   static const EntityProperty kVirtual(kEDVirtual);
+   static const EntityProperty kTransient(kEDTransient);
+   static const EntityProperty kArtificial(kEDArtificial);
 
-   static EntityProperty gClass(kClass);
-   static EntityProperty gStruct(kStruct);
-   static EntityProperty gEnum(kEnum);
-   static EntityProperty gUnion(kUnion);
-   static EntityProperty gNamespace(kNamespace);
-   static EntityProperty gFunction(kFunction);
-   static EntityProperty gArray(kArray);
-   static EntityProperty gFundamental(kFundamental);
-   static EntityProperty gPointer(kPointer);
-   static EntityProperty gPointerToMember(kPointerToMember);
-   static EntityProperty gTypedef(kTypedef);
-   static EntityProperty gTypeTemplateInstance(kTypeTemplateInstance);
-   static EntityProperty gMemberTemplateInstance(kMemberTemplateInstance);
-   static EntityProperty gDataMember(kDataMember);
-   static EntityProperty gFunctionMember(kFunctionMember);
-   static EntityProperty gUnresolved(kUnresolved);
+   static const EntityProperty kClass(kETClass);
+   static const EntityProperty kStruct(kETStruct);
+   static const EntityProperty kEnum(kETEnum);
+   static const EntityProperty kUnion(kETUnion);
+   static const EntityProperty kNamespace(kETNamespace);
+   static const EntityProperty kFunction(kETFunction);
+   static const EntityProperty kArray(kETArray);
+   static const EntityProperty kFundamental(kETFundamental);
+   static const EntityProperty kPointer(kETPointer);
+   static const EntityProperty kPointerToMember(kETPointerToMember);
+   static const EntityProperty kTypedef(kETTypedef);
+   static const EntityProperty kTypeTemplateInstance(kETTypeTemplateInstance);
+   static const EntityProperty kMemberTemplateInstance(kETMemberTemplateInstance);
+   static const EntityProperty kDataMember(kETDataMember);
+   static const EntityProperty kFunctionMember(kETFunctionMember);
+   static const EntityProperty kUnresolved(kETUnresolved);
 
-   static EntityProperty gTemplateInstance(EntityProperty::kOr, gTypeTemplateInstance, gMemberTemplateInstance);
+   static const EntityProperty kTemplateInstance(EntityProperty::kOr, kTypeTemplateInstance, kMemberTemplateInstance);
 #ifndef __CINT__
-   static EntityProperty gClassOrStruct(gClass || gTypeTemplateInstance || gStruct);
+   static const EntityProperty kClassOrStruct(kClass || kTypeTemplateInstance || kStruct);
 #else
-   static EntityProperty gClassOrStruct(EntityProperty::kOr, gClass,
-                                        EntityProperty(EntityProperty::kOr, gTypeTemplateInstance, gStruct));
+   static const EntityProperty kClassOrStruct(EntityProperty::kOr, kClass,
+                                        EntityProperty(EntityProperty::kOr, kTypeTemplateInstance, kStruct));
 #endif
 }
 

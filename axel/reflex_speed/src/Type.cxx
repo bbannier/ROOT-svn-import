@@ -169,11 +169,11 @@ Reflex::Type::DetermineEquivalence(const Type & typ, unsigned int modifiers_mask
    unsigned int mod1 = t1.fModifiers | modifiers_mask;
    unsigned int mod2 = t2.fModifiers | modifiers_mask;
 
-   while (t1.Is(gTypedef)) { 
+   while (t1.Is(kTypedef)) { 
       t1 = t1.ToType();
       mod1 |= t1.fModifiers;
    }
-   while (t2.Is(gTypedef)) {
+   while (t2.Is(kTypedef)) {
       t2 = t2.ToType();
       mod2 |= t2.fModifiers;
    }
@@ -183,16 +183,16 @@ Reflex::Type::DetermineEquivalence(const Type & typ, unsigned int modifiers_mask
    if (t1.TypeType() != t2.TypeType())
       return false;
 
-   if (t1.Is(gArray) && t1.ArrayLength() != t2.ArrayLength())
+   if (t1.Is(kArray) && t1.ArrayLength() != t2.ArrayLength())
       return false;
 
-   static EntityProperty needToType(gPointer || gPointerToMember || gArray);
+   static EntityProperty needToType(kPointer || kPointerToMember || kArray);
 
    if (t1.Is(needToType))
       // set alsoReturn to true because we know it's not a function and void(*)() != int(*)()
       return t1.ToType().DetermineEquivalence(t2.ToType(),modifiers_mask, true);
 
-   if (!t1.Is(gFunction))
+   if (!t1.Is(kFunction))
       return t1.fTypeName == t2.fTypeName;
    else {
       if (alsoReturn)
@@ -265,12 +265,12 @@ Reflex::Type::Name(std::string& buf, unsigned int mod) const {
 
    /** apply qualifications if wanted */
    if (mod & kQualified) {
-      if (Is(gConst && gVolatile)) cv = &sCVcv;
-      else if (Is(gConst))         cv = &sCVc;
-      else if (Is(gVolatile))      cv = &sCVv;
+      if (Is(kConst && kVolatile)) cv = &sCVcv;
+      else if (Is(kConst))         cv = &sCVc;
+      else if (Is(kVolatile))      cv = &sCVv;
    }
 
-   bool isPtrOrFunc = Is(gPointer || gFunction);
+   bool isPtrOrFunc = Is(kPointer || kFunction);
 
    /** if At is not a pointer qualifiers can be put before */
    if (cv && !isPtrOrFunc)
@@ -298,7 +298,7 @@ Reflex::Type::Name(std::string& buf, unsigned int mod) const {
       buf += " " + *cv;
 
    /** apply reference if qualifications wanted */
-   if ((mod & kQualified) && Is(gReference))
+   if ((mod & kQualified) && Is(kReference))
       buf += "&";
 
    return buf;
@@ -415,7 +415,7 @@ Reflex::ETYPE
 Reflex::Type::TypeType() const {
 //-------------------------------------------------------------------------------
    if (* this) return fTypeName->ToTypeBase()->TypeType();
-   return kUnresolved;
+   return kETUnresolved;
 }
 
 
@@ -424,7 +424,7 @@ std::string
 Reflex::Type::TypeTypeAsString() const {
 //-------------------------------------------------------------------------------
    if (* this) return fTypeName->ToTypeBase()->TypeTypeAsString(); 
-   return "kUnresolved";
+   return "kETUnresolved";
 }
 
 //-------------------------------------------------------------------------------

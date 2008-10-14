@@ -25,7 +25,7 @@ Reflex::Internal::Pointer::Pointer(const Type & pointerType,
                                    const std::type_info & ti,
                                    const Catalog& catalog)
 //-------------------------------------------------------------------------------
-: TypeBase(BuildTypeName(pointerType, kQualified).c_str(), modifiers, sizeof(void*), kPointer, ti, catalog), 
+: TypeBase(BuildTypeName(pointerType, kQualified).c_str(), modifiers, sizeof(void*), kETPointer, ti, catalog), 
      fPointerType(pointerType) { 
    // Construct the dictionary info for a pointer type.
 }
@@ -38,7 +38,7 @@ Reflex::Internal::Pointer::BuildTypeName(std::string& buf,
                                          unsigned int mod) {
 //-------------------------------------------------------------------------------
 // Build the pointer type name.
-   if (! pointerType.Is(gFunction)) {
+   if (! pointerType.Is(kFunction)) {
       pointerType.Name(buf, mod);
       buf += "*";
       return buf;
@@ -46,7 +46,7 @@ Reflex::Internal::Pointer::BuildTypeName(std::string& buf,
    // function pointer and pointer to function members
    else {
       return Function::BuildPointerTypeName(buf, pointerType.ReturnType(), "",
-         pointerType.FunctionParameters(), pointerType.Is(gConst) ? kConst : 0,
+         pointerType.FunctionParameters(), pointerType.Is(kConst) ? kEDConst : 0,
          mod, pointerType.DeclaringScope());
    }
 }

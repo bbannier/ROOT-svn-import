@@ -33,7 +33,7 @@ Reflex::Internal::MemberBase::MemberBase(const char *  name,
                                       ETYPE          memberType,
                                       unsigned int  modifiers)
 //-------------------------------------------------------------------------------
-   : fType(type, modifiers & (kConst | kVolatile | kReference) , Type::kAppend),
+   : fType(type, modifiers & (kEDConst | kEDVolatile | kEDReference) , Type::kAppend),
      fModifiers(modifiers),
      fName(name),
      fScope(Scope()),
@@ -71,7 +71,7 @@ Reflex::Internal::MemberBase::CalculateBaseObject(const Object & obj) const {
    Type cl = obj.TypeOf();
    // if the object type is not implemented return the Address of the object
    if (! cl) return mem; 
-   if (cl.Is(gClassOrStruct)) {
+   if (cl.Is(kClassOrStruct)) {
       if (DeclaringScope() && (cl.Id() != (dynamic_cast<const Class*>(DeclaringScope().ToScopeBase()))->ThisType().Id())) {
          // now we know that the Member type is an inherited one
          std::vector < OffsetFunction > basePath = (dynamic_cast<const Class*>(cl.ToTypeBase()))->PathToBase(DeclaringScope());
@@ -121,10 +121,10 @@ Reflex::Internal::MemberBase::MemberTypeAsString() const {
 //-------------------------------------------------------------------------------
 // Remember type of the member as a string.
    switch (fMemberType) {
-   case kDataMember:
+   case kETDataMember:
       return "DataMember";
       break;
-   case kFunctionMember:
+   case kETFunctionMember:
       return "FunctionMember";
       break;
    default:

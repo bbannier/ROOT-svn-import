@@ -20,7 +20,8 @@
 
 
 //-------------------------------------------------------------------------------
-const size_t Reflex::Internal::ContainerImplBase::fgPrimeArraySqrt3[19] = {
+const size_t
+Reflex::Internal::ContainerImplBase::fgPrimeArraySqrt3[19] = {
 //-------------------------------------------------------------------------------
    2,7,23,71,223,673,2027,6089,18269,54829,164503,493523,1480571,4441721,
    13325171,39975553,119926691,359780077,1079340313
@@ -28,26 +29,27 @@ const size_t Reflex::Internal::ContainerImplBase::fgPrimeArraySqrt3[19] = {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::ContainerImplBase::ContainerImplBase(size_t nodeSize, size_t size):
+Reflex::Internal::ContainerImplBase::ContainerImplBase(size_t nodeSize, const IContainerImpl* other):
 //-------------------------------------------------------------------------------
-   fBuckets(GetBucketSize(size)), fRehashPaused(false), fCollisions(0),
-   fSize(0)
+   fBuckets(17), fRehashPaused(false), fCollisions(0),
+   fSize(0), fNodeArena(NodeArena_t::Instance(nodeSize)), fOther(other)
 {
-   // Initialize a ContainerImplBase with a minimum size.
+   // Initialize a ContainerImplBaseT with a minimum size.
    // The actual size will be the next element in fgPrimeArraySqrt3
    // greater or equal to the size given.
-   fNodeArena = NodeArena::Instance(nodeSize);
 };
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::ContainerImplBase::~ContainerImplBase() {
+Reflex::Internal::ContainerImplBase::ContainerImplBase(size_t nodeSize, size_t size, const IContainerImpl* other):
 //-------------------------------------------------------------------------------
-   // NEEDS TO BE DONE BY DERIVED kClass!
-   // The buckets d'tor needs to access the virtual DeleteNode()
-   //   fBuckets.clear();
-   fNodeArena->ReleaseInstance();
-}
+   fBuckets(GetBucketSize(size)), fRehashPaused(false), fCollisions(0),
+   fSize(0), fNodeArena(NodeArena_t::Instance(nodeSize)), fOther(other)
+{
+   // Initialize a ContainerImplBaseT with a minimum size.
+   // The actual size will be the next element in fgPrimeArraySqrt3
+   // greater or equal to the size given.
+};
 
 
 //-------------------------------------------------------------------------------
@@ -71,78 +73,74 @@ Reflex::Internal::ContainerImplBase::GetBucketSize(size_t requested) {
    return requested;
 }
 
-
 //-------------------------------------------------------------------------------
-void
-Reflex::Internal::ContainerImplBase::Rehash() {
+Reflex::Internal::ContainerTools::Link1Base*
+Reflex::Internal::ContainerImplBase::First() const {
 //-------------------------------------------------------------------------------
-// Resize fNodesList to reduce collisions. Check with NeedRehash() before
-// calling this function. We assume that we have reached the amoutn of collisions
-// defined by the Rehash level; to not Rehash that soon again we extend the list
-// by at least (Rehash level * Rehash level); the new size will be the next
-// prime larger than the current size * (Rehash level * Rehash level).
-   REFLEX_RWLOCK_W(fLock);
-   size_t newSize = fBuckets.size() * REFLEX_CONTAINER_REHASH_LEVEL;
-   int i = 0;
-   while (i < 19 && fgPrimeArraySqrt3[i] < newSize) ++i;
-   if (i == 19) // exceeds max supported entries...
-      return;
-   newSize = fgPrimeArraySqrt3[i];
-   BucketVector oldList = fBuckets;
-
-   fBuckets.Init(newSize);
-   fCollisions = 0;
-   bool hadRehashPaused = fRehashPaused;
-   fRehashPaused = true;
-   for (ContainerTools::LinkIter b = oldList.Begin(); b != oldList.End(); ++b) {
-      ContainerTools::Bucket* bucket = static_cast<ContainerTools::Bucket*>(b.Curr());
-      Link* prev = &bucket->fFirst;
-      Link* curr = prev->Next(0);
-      while (curr) {
-         // progress before inserting, or next will be fBucket's next, not oldList's!
-         curr = curr->Progress(prev);
-         if (fBuckets[GetHash(prev) % fBuckets.size()].InsertNode(prev))
-            ++fCollisions;
-      }
-      // Prevent l from deleting its nodes - they are now owned by fBuckets
-      // But then again, l doesn't delete its nodes
-      // const_cast<Bucket&>(*l).fFirst.Set(0, 0);
-   }
-   fRehashPaused = hadRehashPaused;
-
-   std::cout << "Rehashing from " << oldList.size() << " to " << newSize << " for " << fSize << " entries." << std::endl; // AND REMOVE IOSTREAM, TOO!
-}
-
-//-------------------------------------------------------------------------------
-void
-Reflex::Internal::ContainerImplBase::Clear() {
-//-------------------------------------------------------------------------------
-   REFLEX_RWLOCK_W(fLock);
-   RemoveAllNodes();
-   // NO! We need to keep our nodearena, we cannot have it deleted!
-   // fNodeArena->ReleaseInstance();
-   fCollisions = 0;
-   fSize = 0;
-   fRehashPaused = false;
+// Return the first node != 0
+   ContainerTools::Link1Base* c = 0;
+   size_t firstBucket = 0;
+   const size_t size = fBuckets.size();
+   do {
+      c = fBuckets[firstBucket++];
+   } while (!c && firstBucket < size);
+   return c;
 }
 
 
 //-------------------------------------------------------------------------------
-void
-Reflex::Internal::ContainerImplBase::InsertNode(Link* node, Hash_t hash) {
+bool
+Reflex::Internal::ContainerImplBase::InsertNodeBase(ContainerTools::Link1Base* node, Hash_t hash) {
 //-------------------------------------------------------------------------------
 // Insert node with hash into the container. The hash defines
-// the container's bucket to store the node in.
+// the container's bucket to store the node in. Returns true in case
+// there is a collition, i.e. the node is inserted into an already filled bucket.
    REFLEX_RWLOCK_W(fLock);
    ++fSize;
-   if (fBuckets[hash % fBuckets.size()].InsertNode(node)) {
+   const size_t bucketidx = BucketIndex(hash);
+   if (fBuckets[bucketidx]) {
+      // collision, simply add behind front:
+      fBuckets[bucketidx]->InsertAfter(node);
       ++fCollisions;
-      if (!fRehashPaused) {
-         REFLEX_RWLOCK_W_RELEASE(fLock);
-         if (NeedRehash())
-            Rehash();
+      return true;
+   };
+
+   // no collision; this node is the first one in its bucket.
+   fBuckets[bucketidx] = node;
+   // find previous
+   size_t bucketidxprev = bucketidx;
+   while (bucketidxprev > 0 && !fBuckets[--bucketidxprev]);
+   // fBuckets[bucketidxprev] points to bucket containing the node before "node":
+   //   [bucketidxprev]:    n0 -> n1 -> n2 (-> n3)
+   //   [...]:              0...
+   //   [bucketidx]:        node
+   //   [...]:              0...
+   //   [bucketidxnext]:    n3
+   const ContainerTools::Link1Base* n2 = fBuckets[bucketidxprev];
+   if (n2) {
+      // Find bucketidxnext:
+      size_t bucketidxnext = bucketidx;
+      while (++bucketidxnext < fBuckets.size() && !fBuckets[bucketidxnext]);
+      if (bucketidxnext < fBuckets.size()) {
+         // have valid n2 and n3.
+         // n2 is the one before n3, i.e.
+         const ContainerTools::Link1Base* n3 = fBuckets[bucketidxnext];
+         while (n2->Next() != n3)
+            n2 = n2->Next();
       }
+      // else: valid n2 but no n3, thus pref is already the last node.
+
+      const_cast<ContainerTools::Link1Base*>(n2)->InsertAfter(node);
+   } else {
+      // there is no n2; node will be the first node in the bucket vector.
+      // Need to find the next one to set node->fNext:
+      size_t bucketidxnext = bucketidx;
+      while (++bucketidxnext < fBuckets.size() && !fBuckets[bucketidxnext]);
+      if (bucketidxnext < fBuckets.size())
+         node->SetNext(fBuckets[bucketidxnext]);
+      fBuckets[bucketidx] = node;
    }
+   return false;
 }
 
 
@@ -155,19 +153,18 @@ Reflex::Internal::ContainerImplBase::GetStatistics(Statistics& stat) const {
    REFLEX_RWLOCK_R(fLock);
    int maxcoll = 0;
    double squared = 0.;
-   const ContainerTools::Bucket* maxcollisionbucket = 0;
+   const ContainerTools::Link1Base* maxcollisionbucket = 0;
    for (size_t b = 0; b < fBuckets.size(); ++b) {
-      const Link* p = 0;
-      const Link* c = fBuckets[b].fFirst.Next(0);
-      int listEntries = 0;
+      const ContainerTools::Link1Base* c = fBuckets[b];
+      int bucketEntries = 0;
       do {
-         ++listEntries;
-      } while ((c = c->Progress(p)));
+         ++bucketEntries;
+      } while ((c = c->Next()));
 
-      squared += listEntries * listEntries;
-      if (maxcoll < listEntries) {
-         maxcoll = listEntries;
-         maxcollisionbucket = &(fBuckets[b]);
+      squared += bucketEntries * bucketEntries;
+      if (maxcoll < bucketEntries) {
+         maxcoll = bucketEntries;
+         maxcollisionbucket = fBuckets[b];
       }
    }
 
@@ -177,11 +174,10 @@ Reflex::Internal::ContainerImplBase::GetStatistics(Statistics& stat) const {
    stat.fCollisionPerBucketRMS = std::sqrt(squared - maxcoll*maxcoll);
    if (maxcollisionbucket) {
       stat.fCollidingNodes.resize(maxcoll);
-      const Link* p = 0;
-      const Link* c = maxcollisionbucket->fFirst.Next(0);
+      const ContainerTools::Link1Base* c = maxcollisionbucket;
       do {
          stat.fCollidingNodes[--maxcoll] = c;
-      } while ((c = c->Progress(p)));
+      } while ((c = c->Next()));
    }
    stat.fNumBuckets = fBuckets.size();
    stat.fMaxNumRehashes = 0;
@@ -190,73 +186,3 @@ Reflex::Internal::ContainerImplBase::GetStatistics(Statistics& stat) const {
       ++stat.fMaxNumRehashes;
 }
 
-
-//-------------------------------------------------------------------------------
-Reflex::Internal::ContainerImplBase_iterator::ContainerImplBase_iterator(
-   const LinkIter& linkiter, const LinkIter& bucketiter,
-   const ContainerImplBase_iterator& nextContainer):
-//-------------------------------------------------------------------------------
-fLinkIter(linkiter), fBucketIter(bucketiter), fNextContainerBegin(0)
-{
-   // move to next valid node
-   while (fBucketIter && !fLinkIter) {
-      ContainerTools::Bucket* first = static_cast<ContainerTools::Bucket*>(fBucketIter.Curr());
-      fLinkIter = LinkIter(linkiter.Helper(), linkiter.Arena(), &first->fFirst, first->fFirst.Next(0));
-      if (!fLinkIter) ++fBucketIter;
-   }
-
-   if (nextContainer)
-      fNextContainerBegin = new ContainerImplBase_iterator(nextContainer);
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Internal::ContainerImplBase_iterator::ContainerImplBase_iterator(
-   const ContainerImplBase& container, const INodeHelper& helper,
-   const ContainerImplBase_iterator& nextContainer):
-//-------------------------------------------------------------------------------
-   fBucketIter(container.Buckets().Begin()), fNextContainerBegin(0)
-{
-   while (fBucketIter && !fLinkIter) {
-      ContainerTools::Bucket* first = static_cast<ContainerTools::Bucket*>(fBucketIter.Curr());
-      fLinkIter = LinkIter(&helper, container.Arena(), &first->fFirst, first->fFirst.Next(0));
-      if (!fLinkIter) ++fBucketIter;
-   }
-
-   if (nextContainer)
-      fNextContainerBegin = new ContainerImplBase_iterator(nextContainer);
-}
-
-//-------------------------------------------------------------------------------
-Reflex::Internal::ContainerImplBase_iterator::~ContainerImplBase_iterator() {
-//-------------------------------------------------------------------------------
-// destruct a ContainerImplBase_iterator
-   delete fNextContainerBegin;
-}
-
-//-------------------------------------------------------------------------------
-Reflex::Internal::ContainerImplBase_iterator&
-Reflex::Internal::ContainerImplBase_iterator::operator++() {
-//-------------------------------------------------------------------------------
-// Prefix increment: move to next node, which might be in the next
-// bucket or even in the next container.
-
-   // End() is unchanged:
-   if (!fLinkIter) return *this;
-
-   ++fLinkIter;
-   while (!fLinkIter) {
-      if (++fBucketIter) {
-         // the link has left bucket, go to next one
-         fLinkIter = static_cast<ContainerTools::Bucket*>(fBucketIter.Curr())->Begin(fLinkIter.Helper(), fLinkIter.Arena());
-      } else if (fNextContainerBegin) {
-         // out of buckets, try next container
-         ContainerImplBase_iterator* tobedeleted = fNextContainerBegin;
-         *this = *fNextContainerBegin;
-         delete tobedeleted;
-      } else
-         // no next node, no next bucket, no next collection: the End().
-         break;
-   }
-   return *this;
-}
