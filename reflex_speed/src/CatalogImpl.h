@@ -67,13 +67,15 @@ namespace Internal {
 
    class TypeCatalogImpl {
    public:
-      typedef ContainerImpl<std::string, TypeName*, kUnique> TypeContainer_t;
+      typedef ContainerImpl<std::string, TypeName*, kUnique> TypeNameContainer_t;
+      typedef ContainerImpl<std::string, Type, kUnique> TypeContainer_t;
 
       TypeCatalogImpl(const CatalogImpl* catalog): fCatalog(catalog) {}
       ~TypeCatalogImpl() {}
 
       void Init();
 
+      const TypeNameContainer_t& AllNames() const { return fAllTypeNames; }
       const TypeContainer_t& All() const { return fAllTypes; }
       Type ByName(const std::string& name) const;
       Type ByTypeInfo(const std::type_info & ti) const;
@@ -90,14 +92,16 @@ namespace Internal {
    private:
       typedef ContainerImpl<const char*, PairTypeInfoType, kUnique> TypeInfoTypeMap_t;
 
-      const CatalogImpl* fCatalog;
-      TypeContainer_t    fAllTypes;
-      TypeInfoTypeMap_t  fTypeInfoTypeMap;
+      const CatalogImpl*  fCatalog;
+      TypeNameContainer_t fAllTypeNames;
+      TypeContainer_t     fAllTypes;
+      TypeInfoTypeMap_t   fTypeInfoTypeMap;
    };
 
    class ScopeCatalogImpl {
    public:
-      typedef ContainerImpl<std::string, ScopeName*>            ScopeContainer_t;
+      typedef ContainerImpl<std::string, ScopeName*> ScopeNameContainer_t;
+      typedef ContainerImpl<std::string, Scope> ScopeContainer_t;
 
       ScopeCatalogImpl(const CatalogImpl* catalog):
          fCatalog(catalog), fGlobalScope(0), fNirvana(0) {}
@@ -107,6 +111,7 @@ namespace Internal {
 
       void SetCatalog(const CatalogImpl* catalog) { fCatalog = catalog; };
 
+      const ScopeNameContainer_t& AllNames() const { return fAllScopeNames; }
       const ScopeContainer_t& All() const { return fAllScopes; }
       Scope ByName(const std::string& name) const;
       void CleanUp() const;
@@ -118,10 +123,11 @@ namespace Internal {
       Scope __NIRVANA__() const;
 
    private:
-      const CatalogImpl* fCatalog;
-      ScopeContainer_t   fAllScopes;
-      ScopeName*         fGlobalScope;
-      ScopeName*         fNirvana;
+      const CatalogImpl*   fCatalog;
+      ScopeNameContainer_t fAllScopeNames;
+      ScopeContainer_t     fAllScopes;
+      ScopeName*           fGlobalScope;
+      ScopeName*           fNirvana;
    };
 
    class CatalogImpl {

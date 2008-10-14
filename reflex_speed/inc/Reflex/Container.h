@@ -22,6 +22,15 @@
 //#endif
 
 namespace Reflex {
+   template <typename CONT>
+   const CONT&
+   Dummy::Get();
+   class Scope;
+   class Type;
+   class Member;
+   class Catalog;
+   class MemberTemplate;
+   class TypeTemplate;
 
    //-------------------------------------------------------------------------------
    // Opaque layer around Reflex internal collections
@@ -133,10 +142,7 @@ namespace Reflex {
 
    template <typename T>
    class RFLX_API Container: public Internal::ContainerBase {
-   public:
-#ifndef RFLX_DICTIONARY_SOURCE
    protected:
-#endif
       const Container* operator&() const;  // intentionally not implemented
       Container* operator&();  // intentionally not implemented
       Container(const Container&); // intentionally not implemented

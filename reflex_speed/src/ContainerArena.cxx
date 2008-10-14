@@ -14,6 +14,7 @@
 #endif
 
 #include "ContainerArena.h"
+#include "ContainerNode.h"
 
 //-------------------------------------------------------------------------------
 const size_t

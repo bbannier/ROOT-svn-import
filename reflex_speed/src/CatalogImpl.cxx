@@ -181,7 +181,7 @@ Reflex::Internal::TypeCatalogImpl::ByName(const std::string & name) const {
 // Lookup a type by name.
    size_t pos = 0;
    while (name[pos] == ':') ++pos;
-   TypeContainer_t::const_iterator it = fAllTypes.Find(name.substr(pos));
+   TypeNameContainer_t::const_iterator it = fAllTypeNames.Find(name.substr(pos));
    if (it) return *it;
    return Dummy::Type();
 }
@@ -203,7 +203,7 @@ void Reflex::Internal::TypeCatalogImpl::CleanUp() const {
 //-------------------------------------------------------------------------------
    // Cleanup memory allocations for types.
    /* SHOULD BE DONE BY ScopeName!
-   for (TypeContainer_t::const_iterator it = fAllTypes.Begin(); it != fAllTypes.End(); ++it) {
+   for (TypeContainer_t::const_iterator it = fAllTypeNames.Begin(); it != fAllTypeNames.End(); ++it) {
       TypeName * tn = (TypeName*)it->Id();
       Type * t = tn->fThisType;
       if (*t) t->Unload();
@@ -216,7 +216,8 @@ void Reflex::Internal::TypeCatalogImpl::CleanUp() const {
 void Reflex::Internal::TypeCatalogImpl::Add(Reflex::Internal::TypeName& type, const std::type_info * ti) {
 //-------------------------------------------------------------------------------
 // Add a type_info to the map.
-   fAllTypes.Insert(&type);
+   fAllTypeNames.Insert(&type);
+   fAllTypes.Insert(type.ThisType());
    if (ti) fTypeInfoTypeMap.Insert(Internal::PairTypeInfoType(type, *ti));
 }
 
@@ -226,7 +227,8 @@ void
 Reflex::Internal::TypeCatalogImpl::Remove(TypeName& type) {
 //-------------------------------------------------------------------------------
 // Remove the type from the list of known types.
-   fAllTypes.Remove(&type);
+   fAllTypeNames.Remove(&type);
+   fAllTypes.Remove(type.ThisType());
 }
 
 
@@ -255,7 +257,8 @@ Reflex::Internal::ScopeCatalogImpl::Init() {
 void Reflex::Internal::ScopeCatalogImpl::Add(Reflex::Internal::ScopeName& scope) {
 //-------------------------------------------------------------------------------
 // Add a scope to the map.
-   fAllScopes.Insert(&scope);
+   fAllScopeNames.Insert(&scope);
+   fAllScopes.Insert(scope.ThisScope());
 }
 
 
@@ -352,5 +355,6 @@ void
 Reflex::Internal::ScopeCatalogImpl::Remove(ScopeName& scope) {
 //-------------------------------------------------------------------------------
 // Remove the scope from the list of known scopes.
-   fAllScopes.Remove(&scope);
+   fAllScopeNames.Remove(&scope);
+   fAllScopes.Remove(scope.ThisScope());
 }

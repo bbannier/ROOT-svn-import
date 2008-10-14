@@ -46,7 +46,9 @@ Reflex::Internal::Pointer::BuildTypeName(std::string& buf,
    // function pointer and pointer to function members
    else {
       return Function::BuildPointerTypeName(buf, pointerType.ReturnType(), "",
-         pointerType.FunctionParameters(), pointerType.Is(kConst) ? kEDConst : 0,
+         pointerType.FunctionParameters().Begin(),
+         pointerType.FunctionParameters().End(),
+         pointerType.Is(kConst) ? kEDConst : 0,
          mod, pointerType.DeclaringScope());
    }
 }

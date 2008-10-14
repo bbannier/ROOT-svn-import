@@ -49,7 +49,7 @@ namespace Reflex {
       *   kQualified - cv, reference qualification 
       * @return name of template argument (type or value)
       */
-      virtual const std::string& Name(std::string& buf, unsigned int mod = kScoped | kQualified) const;
+      const std::string& Name(std::string& buf, unsigned int mod = kScoped | kQualified) const;
 
       EKindOf KindOf() const { return fKindOf; }
       const Object& AsValue() const { return fValue; }

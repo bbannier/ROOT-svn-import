@@ -52,7 +52,9 @@ Reflex::Internal::PointerToMember::BuildTypeName(std::string& buf, const Type & 
    if (pointerToMemberType.TypeType() == kETFunction) {
 
       return Function::BuildPointerTypeName(buf, pointerToMemberType.ReturnType(), "",
-         pointerToMemberType.FunctionParameters(), pointerToMemberType.Is(kConst) ? kEDConst : 0,
+         pointerToMemberType.FunctionParameters().Begin(),
+         pointerToMemberType.FunctionParameters().End(),
+         pointerToMemberType.Is(kConst) ? kEDConst : 0,
          mod, pointerToMemberScope);
 
    }
