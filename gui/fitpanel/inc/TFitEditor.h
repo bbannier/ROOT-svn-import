@@ -107,7 +107,6 @@ protected:
    TGRadioButton       *fOptDefault;       // set default printing mode
    TGRadioButton       *fOptVerbose;       // set printing mode to 'Verbose'
    TGRadioButton       *fOptQuiet;         // set printing mode to 'Quiet'
-   TCanvas             *fCanvas;           // canvas containing the object
    TVirtualPad         *fParentPad;        // pad containing the object
    TObject             *fFitObject;        // selected object to fit
    EObjectType          fType;             // object type info
@@ -188,10 +187,13 @@ public:
 
    virtual void   CloseWindow();
    virtual void   ConnectSlots();
-   virtual void   ConnectToCanvas();
    virtual void   DisconnectSlots();
    virtual void   RecursiveRemove(TObject* obj);
+
+protected:
    virtual void   SetCanvas(TCanvas *c);
+
+public:
    virtual void   SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event);
    virtual void   SetFunction(const char *function);
 
@@ -222,6 +224,7 @@ public:
    virtual void   DoMinMethod(Bool_t on);
    virtual void   DoPrintOpt(Bool_t on);
    
+public:
    typedef std::vector<FuncParamData_t > FuncParams_t; 
 
    

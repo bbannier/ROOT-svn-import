@@ -244,7 +244,6 @@ TFitEditor * TFitEditor::GetInstance(TVirtualPad* pad, TObject *obj)
 //______________________________________________________________________________
 TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
    TGMainFrame(gClient->GetRoot(), 20, 20),
-   fCanvas      (0),
    fParentPad   (0),
    fFitObject   (0),
    fDim         (0),
@@ -1002,20 +1001,10 @@ void TFitEditor::SetCanvas(TCanvas *newcan)
 {
    // Connect to another canvas.
 
-   if (!newcan || (fCanvas == newcan)) return;
-
-   fCanvas = newcan;
-   fParentPad = fCanvas->GetSelectedPad();
-   if (!fParentPad) fParentPad = fCanvas;
+   fParentPad = newcan->GetSelectedPad();
+   if (!fParentPad) fParentPad = newcan;
    newcan->Connect("Selected(TVirtualPad*,TObject*,Int_t)", "TFitEditor",
                    this, "SetFitObject(TVirtualPad *, TObject *, Int_t)");
-   ConnectToCanvas();
-}
-
-//______________________________________________________________________________
-void TFitEditor::ConnectToCanvas()
-{
-   // Connect fit panel to the 'Selected' signal of canvas 'c'.
 
    TQObject::Connect("TCanvas", "Selected(TVirtualPad *, TObject *, Int_t)", 
                      "TFitEditor",this, 
@@ -1035,7 +1024,6 @@ void TFitEditor::Hide()
       fParentPad->Disconnect("RangeAxisChanged()");
       DoReset();
    }
-   fCanvas = 0;
    fParentPad = 0;
    fFitObject = 0;
    gROOT->GetListOfCleanups()->Remove(this);
@@ -1044,6 +1032,7 @@ void TFitEditor::Hide()
 //______________________________________________________________________________
 void TFitEditor::Show(TVirtualPad* pad, TObject *obj)
 {
+   cout << "TFitEditor::Show(TVirtualPad* pad, TObject *obj)" << endl;
    // Show the fit panel (possible only via context menu).
 
    if (!gROOT->GetListOfCleanups()->FindObject(this))
@@ -1054,7 +1043,7 @@ void TFitEditor::Show(TVirtualPad* pad, TObject *obj)
       gVirtualX->RaiseWindow(GetId());
    }
    SetCanvas(pad->GetCanvas());
-   fCanvas->Selected(pad, obj, kButton1Down);
+   SetFitObject(pad, obj, kButton1Down);
 }
 
 //______________________________________________________________________________
