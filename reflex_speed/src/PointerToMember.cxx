@@ -26,7 +26,7 @@ Reflex::Internal::PointerToMember::PointerToMember(const Type & pointerToMemberT
                                                    const Catalog& catalog) 
 //------------------------------------------------------------------------------- 
    : TypeBase(BuildTypeName(pointerToMemberType, pointerToMemberScope).c_str(),
-              modifiers, sizeof(void*), kPointerToMember, ti, catalog),
+              modifiers, sizeof(void*), kETPointerToMember, ti, catalog),
      fPointerToMemberType(pointerToMemberType),
      fPointerToMemberScope(pointerToMemberScope) {
    // Construct dictionary info for a pointer to member type.
@@ -49,10 +49,10 @@ Reflex::Internal::PointerToMember::BuildTypeName(std::string& buf, const Type & 
                                                  unsigned int mod) {
 //-------------------------------------------------------------------------------
 // Build the pointer to member type name.
-   if (pointerToMemberType.TypeType() == kFunction) {
+   if (pointerToMemberType.TypeType() == kETFunction) {
 
       return Function::BuildPointerTypeName(buf, pointerToMemberType.ReturnType(), "",
-         pointerToMemberType.FunctionParameters(), pointerToMemberType.Is(gConst) ? kConst : 0,
+         pointerToMemberType.FunctionParameters(), pointerToMemberType.Is(kConst) ? kEDConst : 0,
          mod, pointerToMemberScope);
 
    }

@@ -40,7 +40,7 @@ namespace Internal {
          const std::vector< Type > & parameters,
          const std::type_info & ti,
          const Catalog& catalog,
-         ETYPE functionType = kFunction);
+         ETYPE functionType = kETFunction);
 
 
       /** destructor */

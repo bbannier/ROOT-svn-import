@@ -95,7 +95,7 @@ void Reflex::Internal::Constructable::Destruct(void * instance,
       for (OrdMemberCont_t::iterator i = FunctionMembers().Begin(); i; ++i) {
          Member fm = *i;
          // constructor found Set the cache pointer
-         if (fm.Is(gDestructor)) {
+         if (fm.Is(kDestructor)) {
             fDestructor = fm;
             break;
          }
@@ -123,8 +123,8 @@ void Reflex::Internal::Constructable::AddMember(const Member & m) const
 //-------------------------------------------------------------------------------
 // Add member m to this class
    ScopeBase::AddMember(m);
-   if (m.Is(gConstructor))      fConstructors.push_back(m);
-   else if (m.Is(gDestructor)) fDestructor = m;
+   if (m.Is(kConstructor))      fConstructors.push_back(m);
+   else if (m.Is(kDestructor)) fDestructor = m;
 }
 
 
@@ -139,7 +139,7 @@ void Reflex::Internal::Constructable::AddMember(const char * nam,
 //-------------------------------------------------------------------------------
 // Add member to this class
    ScopeBase::AddMember(nam, typ, stubFP, stubCtx, params, modifiers);
-   if (modifiers & kConstructor)
+   if (modifiers & kEDConstructor)
       fConstructors.push_back(fFunctionMembers.Last());
    // setting the destructor is not needed because it is always provided when building the class
 }
@@ -150,12 +150,12 @@ void Reflex::Internal::Constructable::RemoveMember(const Member & m) const
 {
 //-------------------------------------------------------------------------------
 // Remove member from this class.
-   if (m.Is(gConstructor)) {
+   if (m.Is(kConstructor)) {
       std::vector<Member>::iterator iCtor
          = std::find(fConstructors.begin(), fConstructors.end(), m);
       if (iCtor != fConstructors.end())
          fConstructors.erase(iCtor);
-   } else if (m.Is(gDestructor) && m == fDestructor) {
+   } else if (m.Is(kDestructor) && m == fDestructor) {
       fDestructor = Member();
    }
    ScopeBase::RemoveMember(m);

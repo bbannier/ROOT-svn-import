@@ -44,7 +44,7 @@ Reflex::VariableBuilderImpl::VariableBuilderImpl(const char * nam,
       sc = (new Internal::Namespace(declScope.c_str(), catalog))->ThisScope();
    }
   
-   if (! sc.Is(gNamespace)) throw RuntimeError("Declaring At is not a namespace");
+   if (! sc.Is(kNamespace)) throw RuntimeError("Declaring At is not a namespace");
 
    sc.AddMember(memName.c_str(), typ, offs,modifiers);
 }
@@ -102,7 +102,7 @@ Reflex::VariableBuilder::VariableBuilder(const char * nam,
       sc = (new Internal::Namespace(declScope.c_str(), catalog))->ThisScope();
    }
   
-   if (!sc.Is(gNamespace)) throw RuntimeError("Declaring scope is not a namespace");
+   if (!sc.Is(kNamespace)) throw RuntimeError("Declaring scope is not a namespace");
 
    Internal::DataMember* dm = new Internal::DataMember(memName.c_str(),
                                     typ,

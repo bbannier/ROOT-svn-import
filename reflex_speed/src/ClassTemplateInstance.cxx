@@ -37,7 +37,7 @@ ClassTemplateInstance(const char * typ,
             ti, 
             catalog,
             modifiers,
-            kTypeTemplateInstance),
+            kETTypeTemplateInstance),
      TemplateInstance(Tools::GetTemplateArguments(typ)),
      fTemplateFamily(TypeTemplate()) {
 //-------------------------------------------------------------------------------

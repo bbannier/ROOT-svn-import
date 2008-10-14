@@ -106,16 +106,16 @@ std::string Tools::BuildTypeName(Type & t,
 //-------------------------------------------------------------------------------
 // Build a complete qualified type name.
    std::string mod = "";
-   if (t.Is(gConst && gVolatile)) mod = "const volatile";
-   else if (t.Is(gConst))    mod = "const";
-   else if (t.Is(gVolatile)) mod = "volatile";
+   if (t.Is(kConst && kVolatile)) mod = "const volatile";
+   else if (t.Is(kConst))    mod = "const";
+   else if (t.Is(kVolatile)) mod = "volatile";
 
    std::string name = t.Name();
 
-   if (t.Is(gPointer || gPointerToMember)) name += " " + mod;
+   if (t.Is(kPointer || kPointerToMember)) name += " " + mod;
    else                                    name = mod + " " + name;
 
-   if (t.Is(gReference)) name += "&";
+   if (t.Is(kReference)) name += "&";
 
    return name;
 }

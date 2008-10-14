@@ -29,7 +29,7 @@ Reflex::NamespaceBuilder::NamespaceBuilder(const char * nam,
 //-------------------------------------------------------------------------------
 // Create dictionary info for a namespace.
    Scope sc = catalog.Scopes().ByName(nam);
-   if (sc && sc.Is(gNamespace)) {
+   if (sc && sc.Is(kNamespace)) {
       fNamespace       = sc;
    }
    else {

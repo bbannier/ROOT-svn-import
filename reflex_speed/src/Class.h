@@ -42,7 +42,7 @@ namespace Internal {
       /** constructor */
       Class(const char* typ, size_t size, const std::type_info& ti,
             const Catalog& catalog,
-            unsigned int modifiers = 0, ETYPE classType = kClass);
+            unsigned int modifiers = 0, ETYPE classType = kETClass);
 
       /** destructor */
       virtual ~Class();

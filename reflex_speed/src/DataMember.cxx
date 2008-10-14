@@ -35,7 +35,7 @@ Reflex::Internal::DataMember::DataMember(const char *  nam,
                                       unsigned int  modifiers)
 //-------------------------------------------------------------------------------
 // Construct the dictionary information for a data member.
-   : MemberBase (nam, typ, kDataMember, modifiers),
+   : MemberBase (nam, typ, kETDataMember, modifiers),
      fOffset(offs) { }
 
 
@@ -51,17 +51,17 @@ Reflex::Internal::DataMember::Name(std::string& s, unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Return the scoped and qualified (if requested with mod) name of the data member
    if (mod & kQualified) {
-      if (Is(gPublic))    s += "public ";
-      if (Is(gProtected)) s += "protected ";
-      if (Is(gPrivate))   s += "private ";
-      if (Is(gExtern))    s += "extern ";
-      if (Is(gStatic))    s += "static ";
-      if (Is(gAuto))      s += "auto ";
-      if (Is(gRegister))  s += "register ";
-      if (Is(gMutable))   s += "mutable ";
+      if (Is(kPublic))    s += "public ";
+      if (Is(kProtected)) s += "protected ";
+      if (Is(kPrivate))   s += "private ";
+      if (Is(kExtern))    s += "extern ";
+      if (Is(kStatic))    s += "static ";
+      if (Is(kAuto))      s += "auto ";
+      if (Is(kRegister))  s += "register ";
+      if (Is(kMutable))   s += "mutable ";
    }
 
-   if (mod & kScoped && DeclaringScope().Is(gEnum)) {
+   if (mod & kScoped && DeclaringScope().Is(kEnum)) {
       if (DeclaringScope().DeclaringScope() && !DeclaringScope().DeclaringScope().IsTopScope()) {
          DeclaringScope().DeclaringScope().Name(s,kScoped);
          s += "::";
@@ -81,7 +81,7 @@ Reflex::Object
 Reflex::Internal::DataMember::Get(const Object & obj) const {
 //-------------------------------------------------------------------------------
 // Get the value of this data member as stored in object obj.
-   if (DeclaringScope().ScopeType() == kEnum) {
+   if (DeclaringScope().ScopeType() == kETEnum) {
       return Object(Catalog::Instance().Get_int(), (void*)&fOffset);
    }
    else {
@@ -118,7 +118,7 @@ Reflex::Internal::DataMember::Set(const Object & instance,
 // Set the data member value in object instance.
    void * mem = CalculateBaseObject(instance);
    mem = (char*)mem + Offset();
-   if (TypeOf().Is(gClassOrStruct)) {
+   if (TypeOf().Is(kClassOrStruct)) {
       // Should use the asigment operator if exists (FIX-ME)
       memcpy(mem, value, TypeOf().SizeOf());
    }
@@ -136,20 +136,20 @@ Reflex::Internal::DataMember::GenerateDict(DictionaryGenerator & generator) cons
 
    const Scope & declScope = DeclaringScope();
 
-   if (declScope.Is(gUnion)) {
+   if (declScope.Is(kUnion)) {
 
       // FIXME
 
    }
 
-   else if (declScope.Is(gEnum)) {
+   else if (declScope.Is(kEnum)) {
       std::string name;
       Name(name);
 
       std::stringstream tmp;
       tmp << Offset();
 
-      if (declScope.DeclaringScope().Is(gNamespace)) { 
+      if (declScope.DeclaringScope().Is(kNamespace)) { 
          generator.AddIntoInstances("\n.AddItem(\"" + name + "\", " + tmp.str() + ")");
       }
       else { // class, struct
@@ -163,7 +163,7 @@ Reflex::Internal::DataMember::GenerateDict(DictionaryGenerator & generator) cons
       std::string name;
       Name(name);
         
-      if (TypeOf().Is(gArray)) {      
+      if (TypeOf().Is(kArray)) {      
 
          Type t = TypeOf();
 
@@ -175,13 +175,13 @@ Reflex::Internal::DataMember::GenerateDict(DictionaryGenerator & generator) cons
 	     
       }
    
-      else if (TypeOf().Is(gPointer) && TypeOf().RawType().Is(gFunction)) {
+      else if (TypeOf().Is(kPointer) && TypeOf().RawType().Is(kFunction)) {
      
          Type t = TypeOf().ToType();
          generator.AddIntoShadow(t.ReturnType().Name(kScoped) + "(") ;
 	
 	
-         if (t.DeclaringScope().Is(gClassOrStruct)) {
+         if (t.DeclaringScope().Is(kClassOrStruct)) {
             generator.AddIntoShadow(t.DeclaringScope().Name(kScoped) + "::");
          }
 	
@@ -205,7 +205,7 @@ Reflex::Internal::DataMember::GenerateDict(DictionaryGenerator & generator) cons
       else {
          std::string tname;
          TypeOf().Name(tname, kScoped);
-         if (rType.Is((gClassOrStruct) && !gPublic)) {
+         if (rType.Is((kClassOrStruct) && !kPublic)) {
             tname = generator.Replace_colon(rType.Name(kScoped));
             if (rType != TypeOf()) tname = tname + TypeOf().Name(kScoped).substr(tname.length());
          }
@@ -220,11 +220,11 @@ Reflex::Internal::DataMember::GenerateDict(DictionaryGenerator & generator) cons
                             generator.Replace_colon((*this).DeclaringScope().Name(kScoped)));
       generator.AddIntoFree(", " + name + "), ");
       
-      if (Is(gPublic))    generator.AddIntoFree("kPublic");
-      else if (Is(gPrivate))   generator.AddIntoFree("kPrivate");
-      else if (Is(gProtected)) generator.AddIntoFree("kProtected");
-      if (Is(gVirtual))    generator.AddIntoFree(" | kVirtual");
-      if (Is(gArtificial))  generator.AddIntoFree(" | kArtificial");
+      if (Is(kPublic))    generator.AddIntoFree("kEDPublic");
+      else if (Is(kPrivate))   generator.AddIntoFree("kEDPrivate");
+      else if (Is(kProtected)) generator.AddIntoFree("kEDProtected");
+      if (Is(kVirtual))    generator.AddIntoFree(" | kEDVirtual");
+      if (Is(kArtificial))  generator.AddIntoFree(" | kEDArtificial");
    
       generator.AddIntoFree(")\n");
 

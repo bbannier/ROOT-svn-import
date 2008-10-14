@@ -68,7 +68,7 @@ Reflex::Internal::ScopeBase::ScopeBase(const char * scope,
 
    Scope declScopePtr = catalog.Scopes().ByName(declScope);
    if (! declScopePtr) {
-      if (scopeType == kNamespace) declScopePtr = (new Namespace(declScope.c_str(), catalog))->ThisScope();
+      if (scopeType == kETNamespace) declScopePtr = (new Namespace(declScope.c_str(), catalog))->ThisScope();
       else                         declScopePtr = (new ScopeName(declScope.c_str(), 0, catalog))->ThisScope();
    }
 
@@ -81,7 +81,7 @@ Reflex::Internal::ScopeBase::ScopeBase(const char * scope,
 //-------------------------------------------------------------------------------
 Reflex::Internal::ScopeBase::ScopeBase(const Catalog& catalog) 
    : fScopeName(0),
-     fScopeType(kNamespace),
+     fScopeType(kETNamespace),
      fDeclaringScope(catalog.__NIRVANA__()),
      fPropertyList(OwnedPropertyList(new PropertyListImpl())),
      fBasePosition(0) {
@@ -127,11 +127,11 @@ Reflex::Internal::ScopeBase::operator Reflex::Type () const {
 //-------------------------------------------------------------------------------
    // Conversion operator to Type.
    switch (fScopeType) {
-   case kClass:
-   case kStruct:
-   case kTypeTemplateInstance:
-   case kUnion:
-   case kEnum:
+   case kETClass:
+   case kETStruct:
+   case kETTypeTemplateInstance:
+   case kETUnion:
+   case kETEnum:
       return (dynamic_cast<const TypeBase*>(this))->ThisType();
    default:
       return Dummy::Type();
@@ -330,7 +330,7 @@ Reflex::Internal::ScopeBase::RemoveMember(const Member & m) const {
 //-------------------------------------------------------------------------------
    // Remove member m from this scope.
    Hash_t hash = fMembers.ValueHash(m);
-   if (m.Is(gDataMember))
+   if (m.Is(kDataMember))
       fDataMembers.Remove(m, hash);
    else
       fFunctionMembers.Remove(m, hash);
@@ -346,7 +346,7 @@ Reflex::Internal::ScopeBase::AddMember(const Member & m) const {
    // Add member m to this scope.
    m.SetScope(ThisScope());
    Hash_t hash = fMembers.ValueHash(m);
-   if (m.Is(gDataMember))
+   if (m.Is(kDataMember))
       fDataMembers.Insert(m, hash);
    else
       fFunctionMembers.Insert(m, hash);
@@ -435,28 +435,28 @@ Reflex::Internal::ScopeBase::AddSubType(const char * type,
    // Add sub type to this scope.
    TypeBase * tb = 0;
    switch (typeType) {
-   case kClass:
+   case kETClass:
       tb = new Class(type,size,ti, InCatalog(), modifiers);
       break;
-   case kStruct:
-      tb = new Class(type,size,ti, InCatalog(),modifiers,kStruct);
+   case kETStruct:
+      tb = new Class(type,size,ti, InCatalog(),modifiers,kETStruct);
       break;
-   case kEnum:
+   case kETEnum:
       tb = new Enum(type,ti, InCatalog(),modifiers);
       break;
-   case kFunction:
+   case kETFunction:
       break;
-   case kArray:
+   case kETArray:
       break;
-   case kFundamental:
+   case kETFundamental:
       break;
-   case  kPointer:
+   case  kETPointer:
       break;
-   case kPointerToMember:
+   case kETPointerToMember:
       break;
-   case kTypedef:
+   case kETTypedef:
       break;
-   case kUnion:
+   case kETUnion:
       tb = new Union(type,size,ti, InCatalog(),modifiers); 
       break;
    default:
@@ -518,7 +518,7 @@ Reflex::Internal::ScopeBase::GenerateDict(DictionaryGenerator & generator) const
    // Generate Dictionary information about itself.
 
    if (generator.Use_recursive()) {
-      for(OrdScopeUniqueCont_t::iterator iSubScope = SubScopes().RBegin();
+      for(OrdScopeUniqueCont_t::reverse_iterator iSubScope = SubScopes().RBegin();
          iSubScope; ++iSubScope)
          iSubScope->GenerateDict(generator);
    }

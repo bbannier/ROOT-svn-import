@@ -68,7 +68,7 @@ namespace Reflex {
 
       /**
       * Check whether the entity property is set for the base. You can
-      * combine checks, e.g. t.Is(gClass && gPublic) would check whether
+      * combine checks, e.g. t.Is(kClass && kPublic) would check whether
       * this is a public base class.
       * Only public / protected / private and virtual are check with the base;
       * the ETYPE-like properties (class / struct / ...) are forwarded to

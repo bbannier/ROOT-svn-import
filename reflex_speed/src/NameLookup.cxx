@@ -201,7 +201,7 @@ template<class T> T Reflex::NameLookup::LookupInScope()
             if (fPosNamePart == std::string::npos) {
                return type;
             }
-            if (it->Is(gTypedef)) {
+            if (it->Is(kTypedef)) {
                fCurrentScope = it->FinalType();
             }
             else {
@@ -215,7 +215,7 @@ template<class T> T Reflex::NameLookup::LookupInScope()
    Scope_Iterator subscope_end(fCurrentScope.SubScopes().End());
    for (Scope_Iterator in = fCurrentScope.SubScopes().Begin(); in != subscope_end; ++in) {
       // only take namespaces into account - classes were checked as part of SubType
-      if (in->Is(gNamespace)) {
+      if (in->Is(kNamespace)) {
          const Scope& scope = *in;
          const Internal::ScopeBase* base = scope.ToScopeBase();
          if (base) {

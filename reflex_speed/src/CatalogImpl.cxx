@@ -84,42 +84,42 @@ Reflex::Internal::TypeCatalogImpl::Init() {
 
    RFLX_TYPECAT_DECLFUND(short int);
    t = tb->ThisType();
-   new Internal::Typedef("short", t, myCatalog, kFundamental, t);
-   new Internal::Typedef("signed short", t, myCatalog, kFundamental, t);
-   new Internal::Typedef("short signed", t, myCatalog, kFundamental, t);
-   new Internal::Typedef("signed short int", t, myCatalog, kFundamental, t);
-   new Internal::Typedef("short signed int", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("short", t, myCatalog, kETFundamental, t);
+   new Internal::Typedef("signed short", t, myCatalog, kETFundamental, t);
+   new Internal::Typedef("short signed", t, myCatalog, kETFundamental, t);
+   new Internal::Typedef("signed short int", t, myCatalog, kETFundamental, t);
+   new Internal::Typedef("short signed int", t, myCatalog, kETFundamental, t);
 
    RFLX_TYPECAT_DECLFUND(int);
    t = tb->ThisType();
-   new Internal::Typedef("signed", t, myCatalog, kFundamental, t);
-   new Internal::Typedef("signed int", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("signed", t, myCatalog, kETFundamental, t);
+   new Internal::Typedef("signed int", t, myCatalog, kETFundamental, t);
 
    RFLX_TYPECAT_DECLFUND(long int);
    t = tb->ThisType();
-   new Internal::Typedef("long", t, myCatalog, kFundamental, t);
-   new Internal::Typedef("signed long", t, myCatalog, kFundamental, t);
-   new Internal::Typedef("long signed", t, myCatalog, kFundamental, t);
-   new Internal::Typedef("signed long int", t, myCatalog, kFundamental, t);
-   new Internal::Typedef("long signed int", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("long", t, myCatalog, kETFundamental, t);
+   new Internal::Typedef("signed long", t, myCatalog, kETFundamental, t);
+   new Internal::Typedef("long signed", t, myCatalog, kETFundamental, t);
+   new Internal::Typedef("signed long int", t, myCatalog, kETFundamental, t);
+   new Internal::Typedef("long signed int", t, myCatalog, kETFundamental, t);
 
    // unsigned integer types [3.9.1.3]
    RFLX_TYPECAT_DECLFUND(unsigned char);
 
    RFLX_TYPECAT_DECLFUND(unsigned short int);
    t = tb->ThisType();
-   new Internal::Typedef("unsigned short", t, myCatalog, kFundamental, t);
-   new Internal::Typedef("short unsigned int", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("unsigned short", t, myCatalog, kETFundamental, t);
+   new Internal::Typedef("short unsigned int", t, myCatalog, kETFundamental, t);
 
    RFLX_TYPECAT_DECLFUND(unsigned int);
    t = tb->ThisType();
-   new Internal::Typedef("unsigned", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("unsigned", t, myCatalog, kETFundamental, t);
 
    RFLX_TYPECAT_DECLFUND(unsigned long int);
    t = tb->ThisType();
-   new Internal::Typedef("unsigned long", t, myCatalog, kFundamental, t);
-   new Internal::Typedef("long unsigned", t, myCatalog, kFundamental, t);
-   new Internal::Typedef("long unsigned int", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("unsigned long", t, myCatalog, kETFundamental, t);
+   new Internal::Typedef("long unsigned", t, myCatalog, kETFundamental, t);
+   new Internal::Typedef("long unsigned int", t, myCatalog, kETFundamental, t);
 
    /* // w_chart [3.9.1.5]
       RFLX_TYPECAT_DECLFUND(w_chart);
@@ -153,15 +153,15 @@ Reflex::Internal::TypeCatalogImpl::Init() {
                                   typeid(longlong), myCatalog);
    tb->Properties().AddProperty("Description", "fundamental type");
    t = tb->ThisType();
-   new Internal::Typedef("long long int", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("long long int", t, myCatalog, kETFundamental, t);
 
    tb = new Internal::Fundamental("unsigned long long", sizeof(ulonglong), 
                                   typeid(ulonglong), myCatalog);
    tb->Properties().AddProperty("Description", "fundamental type");
    t = tb->ThisType();
-   new Internal::Typedef("long long unsigned", t, myCatalog, kFundamental, t);
-   new Internal::Typedef("unsigned long long int", t, myCatalog, kFundamental, t);
-   new Internal::Typedef("long long unsigned int", t, myCatalog, kFundamental, t);
+   new Internal::Typedef("long long unsigned", t, myCatalog, kETFundamental, t);
+   new Internal::Typedef("unsigned long long int", t, myCatalog, kETFundamental, t);
+   new Internal::Typedef("long long unsigned int", t, myCatalog, kETFundamental, t);
 }
 
 
@@ -264,9 +264,9 @@ Reflex::Internal::ScopeCatalogImpl::ByName(const std::string & name) const {
    // HERE STARTS AN UGLY HACK WHICH HAS TO BE UNDONE ASAP
    // (also remove inlcude Reflex/Type.h)
    Type t = fCatalog->Types().ByName(name);
-   if (t && t.Is(gTypedef)) {
-      while (t.Is(gTypedef)) t = t.ToType();
-      if (t.Is(gClassOrStruct || gEnum || gUnion))
+   if (t && t.Is(kTypedef)) {
+      while (t.Is(kTypedef)) t = t.ToType();
+      if (t.Is(kClassOrStruct || kEnum || kUnion))
          return t.operator Scope ();
    }
    return Dummy::Scope();

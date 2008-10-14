@@ -227,7 +227,7 @@ namespace Reflex {
 
       /**
       * Check whether the entity property is set for the type. You can
-      * combine checks, e.g. t.Is(gClass && gPublic)
+      * combine checks, e.g. t.Is(kClass && kPublic)
       * @param descr the entity property to check for; see EntityProperty.
       * @return whether descr is set.
       */
@@ -368,8 +368,8 @@ namespace Reflex {
 
 
       /**
-      * TypeTypeAsString will return the string representation of the kEnum
-      * representing the real type of the Type (e.g. "kClass")
+      * TypeTypeAsString will return the string representation of the kETEnum
+      * representing the real type of the Type (e.g. "kETClass")
       * @return string representation of the ETYPE enum of the Type
       */
       std::string TypeTypeAsString() const;

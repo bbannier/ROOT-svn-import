@@ -316,11 +316,11 @@ std::string Reflex::DictionaryGenerator::GetParams(const Type & membertype) {
 //-------------------------------------------------------------------------------
 // Get params for the functions
    // Recursive, if it's a reference or a pointer
-   if (membertype.Is(gReference)) {
+   if (membertype.Is(kReference)) {
       GetParams(membertype.ToType());
    }
 
-   if (membertype.Is(gPointer)) {
+   if (membertype.Is(kPointer)) {
       GetParams(membertype.ToType());
    }
 
@@ -333,7 +333,7 @@ std::string Reflex::DictionaryGenerator::GetParams(const Type & membertype) {
       //      types2.push_back(membertype);  //TESTING
 
 
-      if (!membertype.Is(gFunction)) {
+      if (!membertype.Is(kFunction)) {
          // adding into NS this way
          GetTypeNumber(membertype);
       }
@@ -371,7 +371,7 @@ std::string Reflex::DictionaryGenerator::GetTypeNumber(const Type & membertype) 
 
    // when it's a new type, add also into NS field
    // (No function members added)
-   if (newtype && !(membertype.Is(gFunction))) {
+   if (newtype && !(membertype.Is(kFunction))) {
       AddIntoNS(numberstr.str(), membertype);
    }
 
@@ -397,8 +397,8 @@ void Reflex::DictionaryGenerator::AddIntoNS(const std::string & typenumber,
    // Name(kScoped)  adds also the namespace into name
 
    //     forward declarations
-   if (membertype.TypeType() == kStruct || membertype.TypeType() == kClass
-       || membertype.TypeType() == kTypedef) {
+   if (membertype.TypeType() == kETStruct || membertype.TypeType() == kETClass
+       || membertype.TypeType() == kETTypedef) {
       fStr_shadow2 << (membertype).Name(kScoped) << ";\n";
    }
 
@@ -407,16 +407,16 @@ void Reflex::DictionaryGenerator::AddIntoNS(const std::string & typenumber,
 
    // if type is also a const, add that extra line
    // No references are supported by the original genreflex.py for datamembers!
-   if (membertype.Is(gReference)) {
-      if (membertype.Is(gConst))     mod |= kConst;
-      if (membertype.Is(gVolatile))  mod |= kVolatile;
+   if (membertype.Is(kReference)) {
+      if (membertype.Is(kConst))     mod |= kEDConst;
+      if (membertype.Is(kVolatile))  mod |= kEDVolatile;
       
       fStr_namespaces << "Type type_" + typenumber + " = ReferenceBuilder(type_" +
          GetTypeNumber(Type(membertype, mod)) + ");\n";
    }
 
-   else if (membertype.Is(gConst)) {
-      if (membertype.Is(gVolatile))   mod |= kVolatile;
+   else if (membertype.Is(kConst)) {
+      if (membertype.Is(kVolatile))   mod |= kEDVolatile;
 
       fStr_namespaces << "Type type_" + typenumber +
          " = ConstBuilder(type_" + GetTypeNumber(Type(membertype, mod)) + ");\n";
@@ -424,7 +424,7 @@ void Reflex::DictionaryGenerator::AddIntoNS(const std::string & typenumber,
    }
 
 
-   else if (membertype.Is(gVolatile)) {
+   else if (membertype.Is(kVolatile)) {
 
       fStr_namespaces << "Type type_" + typenumber + " = VolatileBuilder(type_" +
          GetTypeNumber(Type(membertype, mod)) + ");\n";
@@ -432,7 +432,7 @@ void Reflex::DictionaryGenerator::AddIntoNS(const std::string & typenumber,
    }
 
 
-   else if (membertype.TypeType() == kClass) {
+   else if (membertype.TypeType() == kETClass) {
 
       fStr_namespaces << "Type type_" + typenumber + " = TypeBuilder(\"" + membertype.Name(kScoped) + "\"); //class\n";
       //membertype
@@ -440,7 +440,7 @@ void Reflex::DictionaryGenerator::AddIntoNS(const std::string & typenumber,
 
    }
 
-   else if (membertype.Is(gPointer)) {
+   else if (membertype.Is(kPointer)) {
       fStr_namespaces << "Type type_" + typenumber +
          " = PointerBuilder(type_" + GetTypeNumber(membertype.ToType()) + ");\n";
    }

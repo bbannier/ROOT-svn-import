@@ -42,7 +42,7 @@ namespace Internal {
          void *         stubCtx = 0,
          const char *   params = 0,
          unsigned int   modifiers = 0,
-         ETYPE           memType = kFunctionMember);
+         ETYPE           memType = kETFunctionMember);
 
 
       /** destructor */

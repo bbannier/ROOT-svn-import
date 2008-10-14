@@ -39,7 +39,7 @@ namespace Reflex {
 
       /** constructor */
       ClassBuilderImpl(const char* nam, const std::type_info& ti, size_t size,
-                       unsigned int modifiers = 0, ETYPE typ = kClass,
+                       unsigned int modifiers = 0, ETYPE typ = kETClass,
                        const Catalog& catalog = Reflex::Catalog::Instance());
 
       /** destructor */
@@ -132,7 +132,7 @@ namespace Reflex {
 
       /** constructor */
       ClassBuilder(const char* nam, const std::type_info& ti, size_t size,
-                   unsigned int modifiers = 0, ETYPE typ = kClass,
+                   unsigned int modifiers = 0, ETYPE typ = kETClass,
                    const Catalog& catalog = Reflex::Catalog::Instance()); 
 
       /** destructor */
@@ -224,14 +224,14 @@ namespace Reflex {
 
       /** constructor */
       ClassBuilderT(unsigned int modifiers = 0, 
-         ETYPE typ = kClass,
+         ETYPE typ = kETClass,
          const Catalog& catalog = Reflex::Catalog::Instance());
 
 
       /** constructor */
       ClassBuilderT(const char* nam, 
          unsigned int modifiers = 0,
-         ETYPE typ = kClass,
+         ETYPE typ = kETClass,
          const Catalog& catalog = Reflex::Catalog::Instance());
 
 

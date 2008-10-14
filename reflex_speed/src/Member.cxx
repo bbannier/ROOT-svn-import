@@ -150,7 +150,7 @@ Reflex::ETYPE
 Reflex::Member::MemberType() const {
 //-------------------------------------------------------------------------------
    if (*this) return fMemberBase->MemberType();
-   return kUnresolved;
+   return kETUnresolved;
 }
 
 

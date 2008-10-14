@@ -38,7 +38,7 @@ FunctionMemberTemplateInstance(const char * nam,
                      stubCtx,
                      params,
                      modifiers,
-                     kMemberTemplateInstance),
+                     kETMemberTemplateInstance),
      TemplateInstance(Tools::GetTemplateArguments(nam)),
      fTemplateFamily(MemberTemplate()) {
 //-------------------------------------------------------------------------------

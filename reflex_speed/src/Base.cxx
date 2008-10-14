@@ -50,10 +50,10 @@ std::string Reflex::Base::Name(unsigned int mod) const {
 // Construct the name of the base. Qualify if requested.
    std::string s = "";
    if (mod & kQualified) {
-      if (Is(gPublic))    { s += "public "; }
-      if (Is(gProtected)) { s += "protected "; }
-      if (Is(gPrivate))   { s += "private "; }
-      if (Is(gVirtual))   { s += "virtual "; }
+      if (Is(kPublic))    { s += "public "; }
+      if (Is(kProtected)) { s += "protected "; }
+      if (Is(kPrivate))   { s += "private "; }
+      if (Is(kVirtual))   { s += "virtual "; }
    }
    s += fBaseType.Name(mod);
    return s;

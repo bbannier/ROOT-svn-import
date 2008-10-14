@@ -21,7 +21,7 @@
 //-------------------------------------------------------------------------------
 Reflex::Internal::Namespace::Namespace(const char * scop, const Catalog& catalog) 
 //-------------------------------------------------------------------------------
-   : ScopeBase(scop, kNamespace, catalog) {
+   : ScopeBase(scop, kETNamespace, catalog) {
    // Create dictionary info for a namespace scope.
 }
 

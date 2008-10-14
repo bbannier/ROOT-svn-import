@@ -37,25 +37,25 @@ const std::string&
 Reflex::TYPEName(ETYPE type) {
 //-------------------------------------------------------------------------------
    static const std::string sTYPENames[] = {
-      "kClass",
-      "kStruct",
-      "kEnum",
-      "kUnion",
-      "kNamespace",
-      "kFunction",
-      "kArray",
-      "kFundamental",
-      "kPointer",
-      "kPointerToMember",
-      "kTypedef",
-      "kDataMember",
-      "kFunctionMember",
-      "kUnresolved",
+      "kETClass",
+      "kETStruct",
+      "kETEnum",
+      "kETUnion",
+      "kETNamespace",
+      "kETFunction",
+      "kETArray",
+      "kETFundamental",
+      "kETPointer",
+      "kETPointerToMember",
+      "kETTypedef",
+      "kETDataMember",
+      "kETFunctionMember",
+      "kETUnresolved",
       ""
    };
 
-   if (type > kUnresolved + 1)
-      type = (ETYPE) (kUnresolved + 1);
+   if (type > kETUnresolved + 1)
+      type = (ETYPE) (kETUnresolved + 1);
    return sTYPENames[type];
 }
 
@@ -106,8 +106,8 @@ namespace {
       virtual size_t ProxySize() const { return 0; }
       virtual bool   ProxyEmpty() const { return true; }
 
-      virtual void*  ProxyByName(const std::string& /*name*/) const { return 0; }
-      virtual void*  ProxyByTypeInfo(const std::type_info& /*ti*/) const { return 0; }
+      virtual const void*  ProxyByName(const std::string& /*name*/) const { return 0; }
+      virtual const void*  ProxyByTypeInfo(const std::type_info& /*ti*/) const { return 0; }
    };
 
    EmptyContainerImpl::iterator EmptyContainerImpl::sBeginEnd;

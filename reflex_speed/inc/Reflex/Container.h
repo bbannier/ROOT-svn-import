@@ -118,8 +118,8 @@ namespace Reflex {
          virtual size_t ProxySize() const = 0;
          virtual bool   ProxyEmpty() const = 0;
 
-         virtual void*  ProxyByName(const std::string& /*name*/) const { return 0; }
-         virtual void*  ProxyByTypeInfo(const std::type_info& /*ti*/) const { return 0; }
+         virtual const void*  ProxyByName(const std::string& /*name*/) const { return 0; }
+         virtual const void*  ProxyByTypeInfo(const std::type_info& /*ti*/) const { return 0; }
       };
 
       class RFLX_API ContainerBase {

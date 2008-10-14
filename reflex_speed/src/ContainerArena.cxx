@@ -14,33 +14,47 @@
 #endif
 
 #include "ContainerArena.h"
-#include <iostream>
-#include <algorithm>
 
 //-------------------------------------------------------------------------------
-size_t Reflex::Internal::ContainerTools::NodeArena::fgElementsPerPage = 1000;
+const size_t
+Reflex::Internal::ContainerTools::NodeArenaBase::fgElementsPerPage = 1000;
+
+//-------------------------------------------------------------------------------
+int
+Reflex::Internal::ContainerTools::NodeArenaBase::fgDebug = 0;
+
+//-------------------------------------------------------------------------------
+Reflex::Internal::ContainerTools::NodeArenaBase::NodeArenaBase(size_t elementSize):
+   fElementSize(elementSize)
+//-------------------------------------------------------------------------------
+   // Create a node storage, characterized by the nodes' size.
+   // Allocate an initial page.
+{
+   fWatermark = new char[fgElementsPerPage * elementSize];
+   fPages.push_back(fWatermark);
+}
+
+
+//-------------------------------------------------------------------------------
+size_t
+Reflex::Internal::ContainerTools::NodeArenaBase::Entries() const {
+//-------------------------------------------------------------------------------
+// Return the number of allocated (i.e. filled) entries.
+// Must be locked by caller!
+
+   int entries = fPages.size() - 1; // last one only filled up to fWatermark
+   entries *= fgElementsPerPage;
+   entries += (fWatermark - fPages.back()) / fElementSize;
+   return entries;
+}
 
 //-------------------------------------------------------------------------------
 std::vector< std::list<Reflex::Internal::ContainerTools::NodeArena*> >
    Reflex::Internal::ContainerTools::NodeArena::fgInstances(256);
 
 //-------------------------------------------------------------------------------
-int Reflex::Internal::ContainerTools::NodeArena::fgDebug = 0;
-
-//-------------------------------------------------------------------------------
 Reflex::Internal::RWLock
 Reflex::Internal::ContainerTools::NodeArena::fgLock;
-
-//-------------------------------------------------------------------------------
-Reflex::Internal::ContainerTools::NodeArena::NodeArena(size_t elementsize):
-//-------------------------------------------------------------------------------
-fElementSize(elementsize) {
-   // Create a node storage, characterized by the nodes' size.
-   // Allocate an initial page.
-   fWatermark = new char[fgElementsPerPage * fElementSize];
-   fPages.push_back(fWatermark);
-}
-
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::ContainerTools::NodeArena::~NodeArena() {
@@ -57,26 +71,13 @@ Reflex::Internal::ContainerTools::NodeArena::~NodeArena() {
 
 
 //-------------------------------------------------------------------------------
-size_t
-Reflex::Internal::ContainerTools::NodeArena::Entries() const {
-//-------------------------------------------------------------------------------
-// Return the number of allocated (i.e. filled) entries.
-// Must be locked by caller!
-
-   int entries = fPages.size() - 1; // last one only filled up to fWatermark
-   entries *= fgElementsPerPage;
-   entries += (fWatermark - fPages.back()) / fElementSize;
-   return entries;
-}
-
-
-//-------------------------------------------------------------------------------
 Reflex::Internal::ContainerTools::NodeArena*
-Reflex::Internal::ContainerTools::NodeArena::Instance(int elementsize) {
+Reflex::Internal::ContainerTools::NodeArena::Instance(size_t elementsize) {
 //-------------------------------------------------------------------------------
 // Return the instance of NodeArena for a given elementsize
    size_t index = elementsize;
-   index -= sizeof(Link); // we always store that, so factor it out
+   // we always store a link, so factor it out:
+   index -= sizeof(Link1Base);
    index -= 1; // and the object is expected to use at least one byte!
    bool needresize = false;
    bool neednew = false;
@@ -103,41 +104,20 @@ Reflex::Internal::ContainerTools::NodeArena::Instance(int elementsize) {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::ContainerTools::Link*
-Reflex::Internal::ContainerTools::NodeArena::New() {
-//-------------------------------------------------------------------------------
-// Create a new node.
-// Take one from fFree, or allocate one if needed.
-   REFLEX_RWLOCK_W(fLock);
-   if (fFree) {
-      return fFree.Pop();
-   }
-   char* n = fWatermark;
-   fWatermark += fElementSize;
-   if ((size_t)(fWatermark - fPages.back()) >= fgElementsPerPage * fElementSize) {
-      fWatermark = new char[fgElementsPerPage * fElementSize];
-      fPages.push_back(fWatermark);
-   }
-   return (Link*)n;
-}
-
-
-//-------------------------------------------------------------------------------
 bool
 Reflex::Internal::ContainerTools::NodeArena::ReleaseInstance() {
 //-------------------------------------------------------------------------------
 // Remove the memory used by the instance specified by elementsize.
-// The memory is only freed if all nodes are deleted, i.e. if fFree
+// Only call if all nodes are deleted, i.e. if fFree
 // contains as many entries as fPages can hold. Returns true in case
 // the memory was freed.
-   REFLEX_RWLOCK_W(fLock);
+// REFLEX_RWLOCK_W(fLock) is assumed to be done by the caller!
+
    REFLEX_RWLOCK_W(fgLock);
    size_t index = fElementSize;
-   index -= sizeof(Link); // we always store that, so factor it out
+   index -= sizeof(Link1Base); // we always store that, so factor it out
    index -= 1; // and the object is expected to use at least one byte!
    if (index < fgInstances.size()) {
-      std::list<NodeArena*>::iterator iNA
-         = std::find(fgInstances[index].begin(), fgInstances[index].end(), this);
       if (fgDebug > 0) {
          int instances = 0;
          for (size_t i = 0; i < fgInstances.size(); ++i)
@@ -151,22 +131,13 @@ Reflex::Internal::ContainerTools::NodeArena::ReleaseInstance() {
               << "  RESULT: " << ((fFree.Size() == Entries()) ? "SUCCESS" : "FAILED") << std::endl
               << "  number of node arena instances: " << instances << std::endl;
       }
-      if (fFree.Size() == Entries()) {
-         fgInstances[index].erase(iNA);
-         delete this;
-      }
+      std::list<NodeArena*>::iterator iNA
+         = std::find(fgInstances[index].begin(), fgInstances[index].end(), this);
+      fgInstances[index].erase(iNA);
+      delete this;
       return true;
    } else
       std::cerr << "Reflex: ContainerBase::NodeArea::ReleaseInstance: " << std::endl
                 << "  no instance with node size == " << fElementSize << "!" << std::endl;
    return false;
-}
-
-
-//-------------------------------------------------------------------------------
-void
-Reflex::Internal::ContainerTools::NodeArena::SetElementsPerPage(size_t numElementsPerPage) {
-//-------------------------------------------------------------------------------
-   REFLEX_RWLOCK_W(fgLock);
-   fgElementsPerPage = numElementsPerPage;
 }

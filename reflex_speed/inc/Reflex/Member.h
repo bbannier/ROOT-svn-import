@@ -173,7 +173,7 @@ namespace Reflex {
 
       /**
       * Check whether the entity property is set for the member. You can
-      * combine checks, e.g. t.Is(gClass && gPublic)
+      * combine checks, e.g. t.Is(kClass && kPublic)
       * @param descr the entity property to check for; see EntityProperty.
       * @return whether descr is set.
       */

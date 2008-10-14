@@ -29,7 +29,7 @@ Reflex::Internal::Enum::Enum(const char * enumType,
                              unsigned int modifiers)
 //-------------------------------------------------------------------------------
 // Construct the dictionary information for an enum
-: ScopedType(enumType, modifiers, sizeof(int), kEnum, ti, catalog) {}
+: ScopedType(enumType, modifiers, sizeof(int), kETEnum, ti, catalog) {}
 
 
 //-------------------------------------------------------------------------------
@@ -39,7 +39,7 @@ Reflex::Internal::Enum::GenerateDict(DictionaryGenerator & generator) const {
 // Generate Dictionary information about itself.
 
    std::string name;
-   if (!(DeclaringScope().Is(gNamespace))) {  
+   if (!(DeclaringScope().Is(kNamespace))) {  
 
       generator.AddIntoFree("\n.AddEnum(\"" + Name(name) + "\", \"");
 
@@ -50,13 +50,13 @@ Reflex::Internal::Enum::GenerateDict(DictionaryGenerator & generator) const {
 
       generator.AddIntoFree("\",");
       name.clear();
-      if      (Is(gPublic))    generator.AddIntoFree("typeid(" + Name(name, kScoped) + "), kPublic)");
-      else if (Is(gProtected)) generator.AddIntoFree("typeid(Reflex::ProtectedEnum), kProtected)");
-      else if (Is(gPrivate))   generator.AddIntoFree("typeid(Reflex::PrivateEnum), kPrivate)");
+      if      (Is(kPublic))    generator.AddIntoFree("typeid(" + Name(name, kScoped) + "), kEDPublic)");
+      else if (Is(kProtected)) generator.AddIntoFree("typeid(Reflex::ProtectedEnum), kEDProtected)");
+      else if (Is(kPrivate))   generator.AddIntoFree("typeid(Reflex::PrivateEnum), kEDPrivate)");
    }
    else {
       Name(name, kScoped);
-      generator.AddIntoInstances("      EnumBuilder(\"" + name + "\", typeid(" + name + "), kPublic)");
+      generator.AddIntoInstances("      EnumBuilder(\"" + name + "\", typeid(" + name + "), kEDPublic)");
       for (OrdMemberCont_t::iterator i = DataMembers().Begin(); i; ++i) {
          i->GenerateDict(generator);
       }

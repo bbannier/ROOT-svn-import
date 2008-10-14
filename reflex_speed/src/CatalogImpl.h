@@ -32,15 +32,16 @@ namespace Internal {
 
    class PairTypeInfoType {
    public:
-      PairTypeInfoType(): fType(), fTI(typeid(UnknownType)) {}
+      PairTypeInfoType(): fType(0), fTI(typeid(UnknownType)) {}
       PairTypeInfoType(const TypeName& type);
       PairTypeInfoType(const TypeName& type, const std::type_info& ti): fType(&type), fTI(ti) {}
       operator const char* () const { return Name(); } // for ContainerTraits::Key()
       const char* Name() const { return fTI.name(); }
+      const char* Name(const char*&) const { return fTI.name(); }
       operator const Type () const { return fType ? fType->ThisType() : Type(); }
 
       void Invalidate() { fType = 0; }
-      bool IsInvalidated() const { return !fType; }
+      bool IsValid() const { return fType; }
 
    private:
       const TypeName* fType;
@@ -50,38 +51,19 @@ namespace Internal {
    //---- Container Traits for PairTypeInfoType ----
 
    template <>
-   inline bool
-   ContainerTraits::KeyMatches(const char* const & name, const PairTypeInfoType& pti) const {
-      return !strcmp(name, pti.Name());
-   }
+   struct NodeValidator<PairTypeInfoType> {
+      // set a value to invalid (e.g. for iterators pointing to removed nodes)
+      static void Invalidate(PairTypeInfoType& value) { value.Invalidate(); }
+      // check whether a value is invalidated (e.g. for iterators pointing to removed nodes)
+      static bool IsValid(const PairTypeInfoType& value) { return value.IsValid(); }
+   };
 
+   // Specialization of key extraction for VALUE=TypeName*
    template <>
-   inline bool
-   ContainerTraits::KeyMatches(const char* const & name, const PairTypeInfoType& pti, const char* &) const {
-      return !strcmp(name, pti.Name());
-   }
-
-   template <>
-   inline void
-   ContainerTraits::Invalidate(PairTypeInfoType& pti) const {
-      pti.Invalidate();
-   }
-
-   template <>
-   inline bool
-   ContainerTraits::IsInvalidated(const PairTypeInfoType& pti) const {
-      return pti.IsInvalidated();
-   }
-
-
-   template <EUniqueness UNIQUENESS, class TRAITS>
-   virtual void*
-   ContainerImpl<const char*, PairTypeInfoType, UNIQUENESS, TRAITS>::ProxyByTypeInfo(const std::type_info& ti) const {
-      iterator ret = Find(ti.name);
-      if (ret) return &(*ret);
-      return 0;
-   }
-
+   struct ContainerTraits_KeyExtractor<std::string, Reflex::Internal::TypeName*> {
+      const std::string& Get(const Reflex::Internal::TypeName* v) { return v->Name(); }
+      const std::string& Get(const Reflex::Internal::TypeName* v, std::string&) { return v->Name(); }
+   };
 
    class TypeCatalogImpl {
    public:

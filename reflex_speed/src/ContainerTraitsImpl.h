@@ -27,155 +27,25 @@
 
 namespace Reflex {
 namespace Internal {
-   //---- Container Traits for Type ----
 
-   template <>
-   inline std::string
-   ContainerTraits::Key(const Type& type) const {
-      return type.Name();
-   }
+   template <typename VALUE>
+   struct ContainerTraits_KeyExtractor<std::string, VALUE> {
+      std::string Get(const VALUE& v) { return v.Name(); }
+      const std::string& Get(const VALUE& v, std::string& buf) { return v.Name(buf); }
+   };
 
-   template <>
-   inline const std::string&
-   ContainerTraits::Key(const Type& type, std::string& buf) const {
-      return type.Name(buf);
-   }
+   template <typename VALUE>
+   struct ContainerTraits_KeyExtractor<std::string, VALUE*> {
+      std::string Get(const VALUE* v) { return v->Name(); }
+      const std::string& Get(const VALUE* v, std::string& buf) { return v->Name(buf); }
+   };
 
-   //---- Container Traits for Scope ----
-
-   template <>
-   inline std::string
-   ContainerTraits::Key(const Scope& scope) const {
-      return scope.Name();
-   }
-
-   template <>
-   inline const std::string&
-   ContainerTraits::Key(const Scope& scope, std::string& buf) const {
-      return scope.Name(buf);
-   }
-
-   //---- Container Traits for Member ----
-
-   template <>
-   inline std::string
-   ContainerTraits::Key(const Member& member) const {
-      return member.Name();
-   }
-
-   template <>
-   inline const std::string&
-   ContainerTraits::Key(const Member& member, std::string& buf) const {
-      return member.Name(buf);
-   }
-
-   //---- Container Traits for OwnedMember ----
-
-   template <>
-   inline std::string
-   ContainerTraits::Key(const OwnedMember& member) const {
-      return member.Name();
-   }
-
-   template <>
-   inline const std::string&
-   ContainerTraits::Key(const OwnedMember& member, std::string& buf) const {
-      return member.Name(buf);
-   }
-
-
-   //---- Container Traits for MemberTemplate ----
-
-   template <>
-   inline std::string
-   ContainerTraits::Key(const MemberTemplate& member) const {
-      return member.Name();
-   }
-
-   template <>
-   inline const std::string&
-   ContainerTraits::Key(const MemberTemplate& member, std::string& buf) const {
-      return member.Name(buf);
-   }
-
-
-   //---- Container Traits for TypeTemplate ----
-
-   template <>
-   inline std::string
-   ContainerTraits::Key(const TypeTemplate& member) const {
-      return member.Name();
-   }
-
-   template <>
-   inline const std::string&
-   ContainerTraits::Key(const TypeTemplate& member, std::string& buf) const {
-      return member.Name(buf);
-   }
-
-
-   //---- Container Traits for OwnedMemberTemplate ----
-
-   template <>
-   inline std::string
-   ContainerTraits::Key(const OwnedMemberTemplate& member) const {
-      return member.Name();
-   }
-
-   template <>
-   inline const std::string&
-   ContainerTraits::Key(const OwnedMemberTemplate& member, std::string& buf) const {
-      return member.Name(buf);
-   }
-
-
-   //---- Container Traits for TypeName* ----
-
-   template <>
-   inline std::string
-   ContainerTraits::Key(TypeName* const & type) const {
-      return type->Name();
-   }
-
-   template <>
-   inline const std::string&
-   ContainerTraits::Key(TypeName* const & type, std::string&) const {
-      return type->Name();
-   }
-
-   //---- Container Traits for ScopeName* ----
-
-   template <>
-   inline std::string
-   ContainerTraits::Key(ScopeName* const & scope) const {
-      return scope->Name();
-   }
-
-   template <>
-   inline const std::string&
-   ContainerTraits::Key(ScopeName* const & scope, std::string&) const {
-      return scope->Name();
-   }
-
-
-   //---- Container Traits for ByName(), ByTypeInfo() ----
-
-   template <>
-   void*
-   ContainerTraits::ProxyByNameImpl<std::string>(const std::string& name, ContainerImplBase* coll) const {
-      iterator ret = coll->Find(name);
-      if (ret) return &(*ret);
-      return 0;
-   }
-
-   template <>
-   void*
-   ContainerTraits::ProxyByTypeInfoImpl<const char*>(const std::type_info& ti, ContainerImplBase* coll) const {
-      iterator ret = coll->Find(ti.name());
-      if (ret) return &(*ret);
-      return 0;
-   }
-
+   template<>
+   struct ContainerTraits_KeyExtractor<std::string, Reflex::Internal::ScopeName*> {
+      std::string Get(const Reflex::Internal::ScopeName* v) { return v->Name(); }
+      const std::string& Get(const Reflex::Internal::ScopeName* v, std::string&) {
+         return v->Name(); }
+   };
 
 } // namespace Internal
 } // namespace Reflex

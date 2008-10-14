@@ -31,158 +31,123 @@ namespace Internal {
    //-------------------------------------------------------------------------------
    // A hash map container (its type-safe layer)
    //
-
-   template <typename VALUE, typename NODE> class Container_iterator;
-   template <typename VALUE, typename NODE> class Container_const_iterator;
-
-   // Base class of adaptor; allows function-wise specialization
-   struct ContainerTraits {
-      // get the key for a value
-      template <typename KEY, typename VALUE>
-      KEY Key(const VALUE& value) const { return (KEY) value; }
-
-      // get the key for a value, using a pre-allocated key buffer
-      template <typename KEY, typename VALUE>
-      const KEY& Key(const VALUE& value, KEY& buf) const { return (buf = Key<KEY, VALUE>(value)); }
-
-      // test whether the key for a value matches the given key
-      template <typename KEY, typename VALUE>
-      bool KeyMatches(const KEY& key, const VALUE& value) const { return (key == Key<KEY, VALUE>(value)); }
-
-      // test whether the key for a value matches the given key, using a pre-allocated key buffer
-      template <typename KEY, typename VALUE>
-      bool KeyMatches(const KEY& key, const VALUE& value, KEY& buf) const { return (key == Key<KEY, VALUE>(value, buf)); }
-
-      // get the hash for a key
-      template <typename KEY>
-      Hash_t Hash(const KEY& key) const { return (Hash_t) key; }
-
-      // get the hash for a value
-      template <typename KEY, typename VALUE>
-      Hash_t ValueHash(const VALUE& value) const { return Hash<KEY>(Key<KEY, VALUE>(value)); }
-
-      // set a value to invalid (e.g. for iterators pointing to removed nodes)
-      template <typename VALUE>
-      void Invalidate(VALUE& value) const { value = VALUE(); }
-
-      // check whether a value is invalidated (e.g. for iterators pointing to removed nodes)
-      template <typename VALUE>
-      bool IsInvalidated(const VALUE& value) const { return value == VALUE(); }
-   
-      // specialization for pointer values: invalid means NULL pointer
-      template <typename U>
-      void Invalidate(U* &u) const { u = 0; }
-      template <typename U>
-      void IsInvalidated(const U* &u) const { return !u; }
-
-      template <class KEY>
-      void* ProxyByNameImpl(const std::string& name, ContainerImplBase* coll) const {
-         if (coll->GetOther()) return coll->GetOther()->ProxyByName(name);
-         return 0;
-      }
-      template <class KEY>
-      void* ProxyByTypeInfoImpl(const std::type_info& ti, ContainerImplBase* coll) const {
-         if (coll->GetOther()) return coll->GetOther()->ProxyByTypeInfo(ti);
-         return 0;
-      }
-
-   };
-
-   // Traits class used by Container
-   template <typename KEY, typename VALUE>
-   struct ContainerTraitsT: public ContainerTraits {
-      // get the key for a value
-      KEY Key(const VALUE& value) const { return ContainerTraits::Key<KEY, VALUE>(value); }
-      // get the key for a value, using a pre-allocated key buffer
-      const KEY& Key(const VALUE& value, KEY& buf) const { return ContainerTraits::Key<KEY, VALUE>(value, buf); }
-      // test whether the key for a value matches the given key
-      bool KeyMatches(const KEY& key, const VALUE& value) const { return ContainerTraits::KeyMatches<KEY, VALUE>(key, value); }
-      // test whether the key for a value matches the given key, using a pre-allocated key buffer
-      bool KeyMatches(const KEY& key, const VALUE& value, KEY& buf) const { return ContainerTraits::KeyMatches<KEY, VALUE>(key, value, buf); }
-
-      // get the hash for a key
-      Hash_t Hash(const KEY& key) const { return ContainerTraits::Hash<KEY>(key); }
-      // get the hash for a value
-      Hash_t ValueHash(const VALUE& value) const { return ContainerTraits::ValueHash<KEY, VALUE>(value); }
-      // get a value that signals an invalidated value (e.g. for iterators pointing to removed nodes)
-      void Invalidate(VALUE& value) const { ContainerTraits::Invalidate<VALUE>(value); }
-      // check whether a value is invalidated (e.g. for iterators pointing to removed nodes)
-      bool IsInvalidated(const VALUE& value) const { return ContainerTraits::IsInvalidated<VALUE>(value); }
-
-      void* ProxyByNameImpl(const std::string& name, ContainerImplBase* coll) const {
-         return ContainerTraits::ProxyByNameImpl<KEY>(name, coll); }
-      void* ProxyByTypeInfoImpl(const std::type_info& ti, ContainerImplBase* coll) const {
-         return ContainerTraits::ProxyByTypeInfoImpl<KEY>(ti, coll); }
-   };
-
-   
-   // specialization for std::string key: hash uses Reflex's Hash()
-   template <>
-   inline Hash_t ContainerTraits::Hash(const std::string& key) const { return StringHash(key); }
-
-   // specialization for std::string key: hash uses Reflex's Hash()
-   template <>
-   inline Hash_t ContainerTraits::Hash(const char* const & key) const { return StringHash(key); }
-
-
+   //-------------------------------------------------------------------------------
 
    enum EUniqueness {
       kMany   = 0, // for UNIQUENESS: allow multiple instances of the same object in the container
       kUnique = 1 // for UNIQUENESS: allow container to hold only one instance of each object
    };
 
+   //-------------------------------------------------------------------------------
 
 
-   template <typename KEY, typename VALUE, EUniqueness UNIQUENESS = kMany, class TRAITS = ContainerTraitsT<KEY, VALUE> >
-   class ContainerImpl: public ContainerImplBase, public IContainerImpl {
-   private:
-      class Node: public ContainerImplBase::Link {
-      public:
-         Node(const VALUE& obj): fObj(obj) {}
-         VALUE  fObj;
-      }; // class Node
-
-      class NodeHelper: public ContainerTools::INodeHelper {
-      public:
-         bool IsInvalidated(const Link* link) const {
-            return fTraits.IsInvalidated(static_cast<const Node*>(link)->fObj);
-         }
-      private:
-         TRAITS fTraits;
-      };
+   template <class NODE>
+   class Container_iterator: public IConstIteratorImpl {
    public:
+      typedef ContainerTools::NodeArena Arena_t;
+      typedef typename NODE::Value_t Value_t;
 
-      //-------------------------------------------------------------------------------
+      Container_iterator(): fCurr(0, 0) {} // == End(), should be as efficient as possible
 
-      typedef Container_iterator<VALUE, Node> iterator;
-      typedef Container_const_iterator<VALUE, Node> const_iterator;
+      Container_iterator(Arena_t* arena, NODE* node):
+      fCurr(node, arena), fNext(0) {}
+
+      Container_iterator(Arena_t* arena, NODE* node, const Container_iterator& nextContainer):
+      fCurr(node, arena), fNext(CreateNext(nextContainer)) {}
+
+      Container_iterator(const Container_iterator& iter, const Container_iterator& nextContainer):
+      fCurr(iter.Curr(), iter.Arena()), fNext(CreateNext(nextContainer)) {}
+
+      operator bool() const { return fCurr; }
+
+      bool operator == (const Container_iterator& rhs) const { return fCurr == rhs.fCurr; }
+      bool operator != (const Container_iterator& rhs) const { return fCurr != rhs.fCurr; }
+
+      Arena_t* Arena() const { return fCurr.Arena(); }
+      NODE* Curr() const { return fCurr; }
+      const Value_t* operator->() const { return &(Curr()->fObj); }
+      const Value_t& operator*() const  { return Curr()->fObj; }
+
+      Container_iterator& operator++() {
+         // End() is unchanged
+         if (!fCurr) return *this;
+         fCurr = (NODE*)fCurr->Next();
+         while (!fCurr && fNext) {
+            // out of buckets, try next container
+            Container_iterator* tobedeleted = fNext;
+            *this = *fNext;
+            delete tobedeleted;
+         }
+         // else: 
+         //    no next node, no next collection: the End().
+         return *this;
+      }
+
+      // Collection Proxy / IConstIteratorImpl:
+      bool ProxyIsEqual(const IConstIteratorImpl& other) const {
+         return *this == ((Container_iterator&)other);
+      }
+
+      void ProxyForward() { ++(*this); }
+
+      const void* ProxyElement() const { return operator->(); }
+      IConstIteratorImpl* ProxyClone() const { return new Container_iterator(*this); }
+
+      Container_iterator NextContainerBegin() const {
+         if (fNext)
+            return *fNext;
+         return Container_iterator();
+      }
+
+   private:
+      Container_iterator* CreateNext(const Container_iterator& next) {
+         if (next) return new Container_iterator(next);
+         else return 0;
+      }
+
+      NodeRef<NODE> fCurr; // current node pointed to by the iterator
+      Container_iterator<NODE>* fNext; // next contaienr used for iteration beyond End()
+   }; // class Container_iterator
+
+
+   //-------------------------------------------------------------------------------
+
+
+   template <typename KEY, typename VALUE, EUniqueness UNIQUENESS = Reflex::Internal::kMany,
+      class REFCOUNTER = Reflex::Internal::ContainerTools::RefCounted,
+      class NODE = Reflex::Internal::ContainerNode<KEY, VALUE, REFCOUNTER> >
+   class ContainerImpl: public ContainerImplBase, public IContainerImpl {
+   public:
+      typedef Container_iterator<NODE> iterator;
+      typedef Container_iterator<NODE> const_iterator;
 
       //-------------------------------------------------------------------------------
 
       // Initialize a default container holding VALUE objects retrievable by KEY.
-      // Allocate 17 chunks for now.
-      ContainerImpl(/*size_t size = 17*/): ContainerImplBase(sizeof(Node)) {};
+      // Allocate 17 chunks.
+      ContainerImpl(const IContainerImpl* other = 0): ContainerImplBase(sizeof(NODE), other) {};
 
       // Initialize a default container holding VALUE objects retrievable by KEY.
       // Allocate psize chunks for now; psize the next element of fgPrimeArraySqrt3
       // greater or equal than the size parameter.
-      ContainerImpl(size_t size): ContainerImplBase(sizeof(Node), size) {}
+      ContainerImpl(size_t size, const IContainerImpl* other = 0): ContainerImplBase(sizeof(NODE), size, other) {}
       // Destruct a container
       virtual ~ContainerImpl() {
          REFLEX_RWLOCK_W(fLock);
-         RemoveAllNodes();
+         DeleteAllNodes();
       }
 
 
-      // leave out const_iterator overloads as these are not part of the API anyway.
-      iterator Begin() const { return iterator(*this, *GetNodeHelper(), End()); }
+      iterator Begin() const { return iterator(Arena(), (NODE*)First()); }
+      iterator Begin(const iterator& nextContainer) const { return iterator(Arena(), (NODE*)First(), nextContainer); }
       iterator End() const { return iterator(); }
 
-      Hash_t Hash(const KEY& key) const { return fTraits.Hash(key); }
-      Hash_t ValueHash(const VALUE& obj) const { return fTraits.ValueHash(obj); }
+      const typename NODE::Traits_t& Traits() const { return NODE::fgTraits; }
+      Hash_t Hash(const KEY& key) const { return Traits().Hash(key); }
+      Hash_t ValueHash(const VALUE& value) const { return Traits().ValueHash(value); }
 
       // Insert VALUE obj into container; return &obj or 0 if not inserted
-      const VALUE* Insert(const VALUE& obj) { return Insert(obj, fTraits.ValueHash(obj)); }
+      const VALUE* Insert(const VALUE& obj) { return Insert(obj, ValueHash(obj)); }
       // Insert VALUE obj with hash into container; return & obj or 0 if not inserted
       const VALUE* Insert(const VALUE& obj, Hash_t hash) {
          bool canInsert = (UNIQUENESS == kMany);
@@ -190,108 +155,83 @@ namespace Internal {
             canInsert = !ContainsValue(obj, hash);
          }
          if (canInsert) {
-            Node* n = new (fNodeArena->New()) Node(obj);
+            NODE* n = new (fNodeArena->New()) NODE(obj);
             InsertNode(n, hash);
             return &n->fObj;
          }
          return 0;
       }
 
-      void Remove(const VALUE& obj) {Remove(obj, fTraits.ValueHash(obj));}
+      void Remove(const VALUE& obj) {Remove(obj, ValueHash(obj));}
       void Remove(const VALUE& obj, Hash_t hash) {
          iterator it = FindValue(obj, hash);
-         if (it) Remove(it);
+         Remove(it, hash);
       }
 
-      void Remove(const iterator& it) {
-         REFLEX_RWLOCK_W(fLock);
-         Node* prev     = it.Prev();
-         Node* curr     = it.Curr();
-         Link* prevprev = prev->Prev(curr);
-         prev->RemoveAfter(prevprev);
-         DeleteNode(curr);
-         --fSize;
-      }
-
-      void DeleteNode(Node* node) {
-         // Delete the node if it is not referenced anymore, by telling the node
-         // arena to delete it. Invalidate the node otherwise.
-         // Locking is done by the caller.
-         if (!node->IsReferenced()) {
-            // depends on the fact that invalidated links are not reachable
-            // anymore (as they are removed from the bucket chain), thus
-            // fRefCount cannot change between the line above and the deletion.
-            fNodeArena->Delete(node);
+      void Remove(const iterator& it) {Remove(it, ValueHash(*it));}
+      void Remove(const iterator& it, Hash_t hash) {
+         if (!it) return;
+         NODE* curr = it.Curr();
+         ContainerTools::Link1Base* prev = 0;
+         {
+            REFLEX_RWLOCK_R(fLock);
+            // locate previous node:
+            size_t prevbucket = BucketIndex(hash);
+            prev = fBuckets[prevbucket];
+            if (prev == curr) prev = 0;
+            while (!prev && prevbucket > 0) {
+               // the is not the previous node; we need to move to the previous bucket.
+               prev = fBuckets[--prevbucket];
+            }
+            while (prev && prev->Next() != curr) {
+               prev = const_cast<ContainerTools::Link1Base*>(prev->Next());
+            }
+         }
+         if (prev) {
+            REFLEX_RWLOCK_W(fLock);
+            prev->RemoveAfter();
+            curr->Invalidate(Arena());
+            --fSize;
          } else {
-            fTraits.Invalidate(node->fObj);
+            std::cerr << "ERROR Reflex::Internal::ContainerImpl::Remove(): cannot find location to remove!" << std::endl;
          }
       }
 
-      iterator Find(const KEY& key) const { return Find(key, fTraits.Hash(key)); }
+      iterator Find(const KEY& key) const { return Find(key, Hash(key)); }
       iterator Find(const KEY& key, Hash_t hash) const {
-         // Find first entry matching key with given hash
          REFLEX_RWLOCK_R(fLock);
-         int posBuckets = hash % fBuckets.size();
-         std::string name;
-         for (ContainerTools::LinkIter i = fBuckets[posBuckets].Begin(GetNodeHelper(), fNodeArena); i; ++i) {
-            if (fTraits.KeyMatches(key, static_cast<const Node*>(i.Curr())->fObj))
-               return iterator(i, fBuckets.IterAt(posBuckets), End());
-         }
-         return End();
+         return Find(key, iterator(Arena(), (NODE*)fBuckets[BucketIndex(hash)]));
       }
 
-      iterator Find(const KEY& key, const const_iterator& start) const {
+      iterator Find(const KEY& key, const iterator& start) const {
          // Find next match, starting the search after a first match at start.
          // Used as
          //   while (start = Find(key, start) && !check(*start));
-         using namespace ContainerTools;
          if (!start) return End();
+
+         REFLEX_RWLOCK_R(fLock);
+         Hash_t hash = Hash(key);
+         size_t posBuckets = BucketIndex(hash);
+         const ContainerTools::Link1Base* endnode = 0;
+         if (posBuckets + 1 < fBuckets.size())
+            endnode = fBuckets[posBuckets + 1];
          KEY buf;
-         LinkIter startbucket = start.CurrentBucket();
-         iterator ret(start.CurrentLink(), startbucket, End());
-         while (++ret && ret.CurrentBucket() == startbucket)
-            if (fTraits.KeyMatches(key, *ret, buf))
-               return ret;
-         if (start.NextContainerBegin()) {
-            LinkIter iBucket(start.NextContainerBegin().CurrentBucket());
-            if (iBucket) {
-               const Bucket* bucket0 = static_cast<const Bucket*>(iBucket.Curr());
-               const int numBuckets = bucket0->fIndex;
-               int posBuckets = fTraits.Hash(key) % numBuckets;
-               while(posBuckets--)
-                  ++iBucket;
-               if (iBucket) {
-                  // this is the bucket we need to start searching at
-                  Bucket* bucket = static_cast<Bucket*>(iBucket.Curr());
-                  const iterator substart(bucket->Begin(GetNodeHelper(), fNodeArena),
-                                          iBucket,
-                                          start.NextContainerBegin().NextContainerBegin());
-                  if (substart.CurrentLink()) {
-                     // Already the substart could match; Find(key, substart) would skip it, so test here:
-                     const Node* subfirstnode = static_cast<const Node*>(substart.CurrentLink().Curr());
-                     if (fTraits.KeyMatches(key, subfirstnode->fObj, buf))
-                        return substart;
-                     return Find(key, substart);
-                  }
-               }
-            }
+         for (NODE* c = static_cast<NODE*>(start.Curr()); c && c != endnode; c = (NODE*)c->Next()) {
+            if (Traits().KeyMatches(key, c->fObj, buf))
+               return iterator(Arena(), c);
          }
+         // should now iterate over next container (see start.NextContainerBegin())
          return End();
       }
 
-      iterator FindValue(const VALUE& obj) const { return Find(fTraits.Key(obj), fTraits.ValueHash(obj)); }
-      iterator FindValue(const VALUE& obj, Hash_t hash) const { return Find(fTraits.Key(obj), hash); }
+      iterator FindValue(const VALUE& obj) const { return Find(Traits().Key(obj), ValueHash(obj)); }
+      iterator FindValue(const VALUE& obj, Hash_t hash) const { return Find(Traits().Key(obj), hash); }
 
-      bool Contains(const KEY& key) const { return Contains(key, fTraits.Hash(key)); }
+      bool Contains(const KEY& key) const { return Contains(key, Hash(key)); }
       bool Contains(const KEY& key, Hash_t hash) const { return Find(key, hash); }
 
-      bool ContainsValue(const VALUE& obj) const { return ContainsValue(obj, fTraits.ValueHash(obj)); }
+      bool ContainsValue(const VALUE& obj) const { return ContainsValue(obj, ValueHash(obj)); }
       bool ContainsValue(const VALUE& obj, Hash_t hash) const { return FindValue(obj, hash); }
-
-      void SetNext(const ContainerImpl<KEY, VALUE, UNIQUENESS, TRAITS>* next) { fNext = next; }
-      const ContainerImpl<KEY, VALUE, UNIQUENESS, TRAITS>* GetNext() const { return fNext; }
-
-
 
       virtual void ProxyBegin(ConstIteratorBase& i) const { i.SetImpl(new iterator(Begin()), true); }
       virtual void ProxyEnd(ConstIteratorBase& i) const {
@@ -306,134 +246,131 @@ namespace Internal {
          return !Size();
       }
 
-      virtual void* ProxyByName(const std::string& name) const {
-         return ProxyByNameImpl<KEY>(name);
+
+      virtual const void* ProxyByName(const std::string& name) const {
+         return ProxyByNameImpl(name);
       }
-      virtual void* ProxyByTypeInfo(const std::type_info& ti) const {
-         return ProxyByTypeInfoImpl<KEY>(ti);
+      const void* ProxyByNameImpl(const KEY& name) const {
+         // overload for the Containers with KEY == std::string
+         iterator ret = Find(name);
+         if (ret) return &(*ret);
+         return 0;
+      }
+      template <typename STRING>
+      const void* ProxyByNameImpl(STRING name) const {
+         // templated version; only instantiated if ProxyByName(const KEY& name)
+         // doesn't match.
+         if (fOther) return fOther->ProxyByName(name);
+         return 0;
       }
 
-      static NodeHelper* GetNodeHelper() {
-         static NodeHelper helper;
-         return &helper;
+
+      virtual const void* ProxyByTypeInfo(const std::type_info& ti) const {
+         return ProxyByTypeInfoImpl(ti, (const char*)0, (const PairTypeInfoType*)0);
+      }
+      const void* ProxyByTypeInfoImpl(const std::type_info& ti, KEY, const VALUE*) const {
+         // overload for the Containers with KEY == std::type_info
+         iterator ret = Find(ti.name());
+         if (ret) return &(*ret);
+         return 0;
+      }
+      template <typename NOTHANDLED>
+      const void* ProxyByTypeInfoImpl(const std::type_info& ti, const char*, NOTHANDLED) const {
+         // templated version; only instantiated if
+         // ProxyByTypeInfoImpl(const std::type_info& ti, const VALUE*) doesn't match.
+         if (fOther) return fOther->ProxyByTypeInfo(ti);
+         return 0;
       }
 
+      void InsertNode(NODE* node, Hash_t hash) {
+         //-------------------------------------------------------------------------------
+         // Insert node with hash into the container. The hash defines
+         // the container's bucket to store the node in.
+         if (InsertNodeBase(node, hash) && !fRehashPaused && NeedRehash())
+            Rehash();
+      }
+
+      // Reset the elements
+      void Clear() {
+         REFLEX_RWLOCK_W(fLock);
+         DeleteAllNodes();
+         // NO! We need to keep our nodearena, we cannot have it deleted!
+         // fNodeArena->ReleaseInstance();
+         fCollisions = 0;
+         fSize = 0;
+         fRehashPaused = false;
+      }
+
+      void PauseRehash(bool pause = true) {
+         // Prevent the container from rehashing.
+         // PauseRehash() should be called when inserting a large number of elements;
+         // afterwards, rehashing should be turned on again by calling PausRehash(false).
+         REFLEX_RWLOCK_R(fLock);
+         if (fRehashPaused == pause)
+               return;
+         REFLEX_RWLOCK_R_RELEASE(fLock);
+         {
+            REFLEX_RWLOCK_W(fLock);
+            fRehashPaused = pause;
+         }
+         if (!pause && NeedRehash())
+            Rehash();
+      }
 
    protected:
-      void RemoveAllNodes() {
+      void DeleteAllNodes() {
+         // Empty the buckets, deleting all nodes
          for (iterator iNode = Begin(); iNode; ++iNode)
-            DeleteNode(static_cast<Node*>(iNode.CurrentLink().Curr()));
-      }
-
-      virtual Hash_t GetHash(const Link* node) const
-      { return fTraits.ValueHash(static_cast< const Node* >(node)->fObj); }
-
-      virtual bool IsNodeInvalidated(const Link* node) const {
-         return fTraits.IsInvalidated(static_cast<const Node*>(node)->fObj);
+            iNode.Curr()->Invalidate(Arena());
+         fBuckets.clear();
       }
 
    private:
-      TRAITS fTraits;
-      const ContainerImpl<KEY, VALUE, UNIQUENESS, TRAITS>* fNext; // next container for chained iteration
+
+      // Rehash the nodes
+      void Rehash();
 
    }; // class ContainerImpl
 
-
-   //-------------------------------------------------------------------------------
-
-   template <typename VALUE, class NODE>
-   class Container_const_iterator: public ContainerImplBase_iterator {
-   public:
-      typedef ContainerImplBase_iterator CBIter;
-      typedef ContainerTools::LinkIter LinkIter;
-      typedef ContainerTools::LinkIter BucketIter;
-      typedef ContainerTools::INodeHelper INodeHelper;
-
-      Container_const_iterator() {}
-
-      Container_const_iterator(const LinkIter& linkiter, const BucketIter& bucketiter,
-                               const CBIter& nextContainer):
-         CBIter(linkiter, bucketiter, nextContainer) {}
-
-      Container_const_iterator(const ContainerImplBase& container, const INodeHelper& helper,
-                               const CBIter& nextContainer):
-         CBIter(container, helper, nextContainer) {}
-
-      Container_const_iterator& operator++() {
-         CBIter::operator++();
-         return *this;
-      }
-
-      Container_const_iterator operator++(int) {
-         Container_const_iterator ret = *this;
-         CBIter::operator++();
-         return ret;
-      }
-
-      const NODE* Prev() const { return static_cast<NODE*>(CBIter::CurrentLink().Prev()); }
-      const NODE* Curr() const { return static_cast<NODE*>(CBIter::CurrentLink().Curr()); }
-
-      const VALUE* operator->() const { return &(Curr()->fObj); }
-      const VALUE& operator*() const  { return Curr()->fObj; }
-   }; // class Container_const_iterator
-
-
-   //-------------------------------------------------------------------------------
-
-   template <typename VALUE, class NODE>
-   class Container_iterator: public Container_const_iterator<VALUE, NODE>,
-                                      public Reflex::Internal::IConstIteratorImpl
-   {
-   public:
-      typedef ContainerImplBase_iterator CBIter;
-      typedef ContainerTools::LinkIter LinkIter;
-      typedef ContainerTools::LinkIter BucketIter;
-      typedef ContainerTools::INodeHelper INodeHelper;
-      typedef Container_const_iterator<VALUE, NODE> ConstIter;
-
-      Container_iterator() {}
-
-      Container_iterator(const LinkIter& linkiter, const BucketIter& bucketiter,
-                         const CBIter& nextContainer):
-         ConstIter(linkiter, bucketiter, nextContainer) {}
-
-      Container_iterator(const ContainerImplBase& container, const INodeHelper& helper,
-                         const CBIter& nextContainer):
-         ConstIter(container, helper, nextContainer) {}
-
-      Container_iterator& operator++() {
-         CBIter::operator++();
-         return *this;
-      }
-
-      Container_iterator operator++(int) {
-         Container_iterator ret = *this;
-         CBIter::operator++();
-         return ret;
-      }
-
-      NODE* Prev() const { return static_cast<NODE*>(CBIter::CurrentLink().Prev()); }
-      NODE* Curr() const { return static_cast<NODE*>(CBIter::CurrentLink().Curr()); }
-
-      VALUE* operator->() const { return &(Curr()->fObj); }
-      VALUE& operator*() const  { return Curr()->fObj; }
-
-      // Collection Proxy / IConstIteratorImpl:
-      bool ProxyIsEqual(const IConstIteratorImpl& other) const {
-         return *this == ((ContainerImplBase_iterator&)other);
-      }
-
-      void ProxyForward() { ++(*this); }
-
-      const void* ProxyElement() const { return operator->(); }
-      IConstIteratorImpl* ProxyClone() const { return new Container_iterator(*this); }
-
-   }; // class Container_iterator
 
 } // namespace Internal
 } // namespace Reflex
 
 
+//-------------------------------------------------------------------------------
+template <typename KEY, typename VALUE, Reflex::Internal::EUniqueness UNIQUENESS, class REFCOUNTER, class NODE>
+inline
+void
+Reflex::Internal::ContainerImpl<KEY, VALUE, UNIQUENESS, REFCOUNTER, NODE>::Rehash() {
+//-------------------------------------------------------------------------------
+// Resize fNodesList to reduce collisions. Check with NeedRehash() before
+// calling this function. We assume that we have reached the amoutn of collisions
+// defined by the Rehash level; to not Rehash that soon again we extend the list
+// by at least (Rehash level * Rehash level); the new size will be the next
+// prime larger than the current size * (Rehash level * Rehash level).
+   REFLEX_RWLOCK_W(fLock);
+   size_t newSize = fBuckets.size() * REFLEX_CONTAINER_REHASH_LEVEL;
+   int i = 0;
+   while (i < 19 && fgPrimeArraySqrt3[i] < newSize) ++i;
+   if (i == 19) // exceeds max supported entries...
+      return;
+   newSize = fgPrimeArraySqrt3[i];
+   BucketVector_t oldList = fBuckets;
+
+   fBuckets.resize(newSize);
+   fCollisions = 0;
+   bool hadRehashPaused = fRehashPaused;
+   fRehashPaused = true;
+   NODE* c = (NODE*) First();
+   NODE* n = 0;
+   for (; c; c = n) {
+      n = (NODE*) c->Next();
+      InsertNode(c, c->Hash());
+   }
+   fRehashPaused = hadRehashPaused;
+
+   std::cout << "Rehashing from " << oldList.size() << " to " << newSize << " for " << fSize << " entries." << std::endl; // AND REMOVE IOSTREAM, TOO!
+}
 
 // reflex-specific specializations etc:
 #include "ContainerTraitsImpl.h"

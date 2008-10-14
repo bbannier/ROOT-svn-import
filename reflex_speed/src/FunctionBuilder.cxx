@@ -96,7 +96,7 @@ Reflex::FunctionBuilderImpl::FunctionBuilderImpl(const char * nam,
       sc = (new Internal::Namespace(declScope.c_str(), catalog))->ThisScope();
    }
 
-   if (! sc.Is(gNamespace)) throw RuntimeError("Declaring scope is not a namespace");
+   if (! sc.Is(kNamespace)) throw RuntimeError("Declaring scope is not a namespace");
    if (Tools::IsTemplated(funcName.c_str()))
       fFunction = Member(new Internal::FunctionMemberTemplateInstance(funcName.c_str(),
                                                               typ,
@@ -178,7 +178,7 @@ Reflex::FunctionBuilder::FunctionBuilder(const Type & typ,
       // Let's create the namespace here
       sc = (new Internal::Namespace(declScope.c_str(), catalog))->ThisScope();
    }
-   if (! sc.Is(gNamespace)) throw RuntimeError("Declaring scope is not a namespace");
+   if (! sc.Is(kNamespace)) throw RuntimeError("Declaring scope is not a namespace");
    if (Tools::IsTemplated(funcName.c_str()))
       fFunction = Member(new Internal::FunctionMemberTemplateInstance(funcName.c_str(),
                                                               typ,

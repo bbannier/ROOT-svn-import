@@ -68,7 +68,7 @@ inline Reflex::ValueObject::ValueObject(T& v)
    : Object(GetType<T>(), 0), 
      fValue(v)  {
 //-------------------------------------------------------------------------------
-   if (TypeOf().Is(gPointer)) fAddress = *(void**)fValue.Address();
+   if (TypeOf().Is(kETPointer)) fAddress = *(void**)fValue.Address();
    else                         fAddress = fValue.Address();
 }
 
@@ -78,7 +78,7 @@ inline Reflex::ValueObject::ValueObject(const ValueObject& o)
    : Object(o.TypeOf(), 0), 
      fValue(o.fValue)  {
 //-------------------------------------------------------------------------------
-   if (TypeOf().Is(gPointer)) fAddress = *(void**)fValue.Address();
+   if (TypeOf().Is(kETPointer)) fAddress = *(void**)fValue.Address();
    else                         fAddress = fValue.Address();
 }
 
@@ -88,7 +88,7 @@ inline Reflex::ValueObject& Reflex::ValueObject::operator=(const T& v)  {
 //-------------------------------------------------------------------------------
   fValue = Any(v);
   fType = GetType<T>();
-  if (TypeOf().Is(gPointer)) fAddress = *(void**)fValue.Address();
+  if (TypeOf().Is(kETPointer)) fAddress = *(void**)fValue.Address();
   else                         fAddress = fValue.Address();
   return *this;
 }
