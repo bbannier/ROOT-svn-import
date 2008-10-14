@@ -71,6 +71,7 @@ protected:
    TGHorizontalFrame   *fObjLabelParent;   // parent of fObjLabel
    TGLabel             *fObjLabel;         // contains fitted object name
    TGLabel             *fSelLabel;         // contains selected fit function
+   TGComboBox          *fDataSet;          // contains list of data set to be fitted
    TGComboBox          *fFuncList;         // contains function list
    TGTextEntry         *fEnteredFunc;      // contains user function file name
    TGTextButton        *fUserButton;       // opens a dialog for user-defined fit method
@@ -203,6 +204,7 @@ public:
    virtual void   DoEnteredFunction();
    virtual void   DoFit();
    virtual void   DoMaxIterations();
+   virtual void   DoDataSet(Int_t sel);
    virtual void   DoFunction(Int_t sel);
    virtual void   DoLinearFit();
    virtual void   DoNoChi2();
