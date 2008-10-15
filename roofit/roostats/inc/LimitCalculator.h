@@ -1,5 +1,5 @@
 // @(#)root/roostats:$Id: LimitCalculator.h 24970 2008-10-10  $
-// Author: Kyle Cranmer, Lorenzo Monetta, Gregory Schott, Wouter Verkerke
+// Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
