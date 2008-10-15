@@ -17,7 +17,7 @@
 //
 // Encapsulates common number counting utilities
 /////////////////////////////////////////
-#include "RTypes.h"
+#include "Rtypes.h"
 
 namespace RooStats{
   namespace  NumberCountingUtils {
