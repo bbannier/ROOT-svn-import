@@ -20,19 +20,19 @@ namespace RooStats {
     virtual ~HypoTestResult();
     
     //pure virtual? 
-    virtual Double_t NullPValue() {return fNullPValue;}
+    virtual Double_t NullPValue();
     //pure virtual? 
-    virtual Double_t AlternatePValue()  {return fAlternatePValue;}
+    virtual Double_t AlternatePValue();
     
     // familiar name for NullPValue()
-    virtual Double_t CLb()  {return NullPValue(); }
+    virtual Double_t CLb();
     // familiar name for AlternatePValue()
-    virtual Double_t CLsplusb()   {return AlternatePValue(); }
+    virtual Double_t CLsplusb();
     // CLs is simply CLs+b/CLb (not a method, but a quantity)
-    virtual Double_t CLs()   {return CLsplusb() / CLb();}
+    virtual Double_t CLs();
     
     // familiar name for the Null p-value in terms of 1-sided Gaussian significance
-    virtual Double_t Significance()  = 0;
+    virtual Double_t Significance();
     
   private:
     Double_t fNullPValue;

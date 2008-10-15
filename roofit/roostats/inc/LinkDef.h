@@ -24,10 +24,10 @@
 #endif
 
 #pragma link C++ class RooStats::SPlot+;
-#pragma link C++ class RooStats::ConfInterval+;
 #pragma link C++ class RooStats::SimpleInterval+;
 #pragma link C++ class RooStats::HypoTestResult+;
-#pragma link C++ class RooStats::LimitCalculator+;
+//#pragma link C++ class RooStats::LimitCalculator+; // interface, not concrete
+//#pragma link C++ class RooStats::ConfInterval+; // interface, not concrete
 
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialExpZ(Double_t,Double_t,Double_t);
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialWithTauExpZ(Double_t,Double_t,Double_t);

@@ -23,10 +23,15 @@
   //  Z   = Z-value or significance in Sigma (one-sided convention)
   //////////////////////////////////
 
+#ifndef ROOT_RooStats_NumberCountingUtils
 #include "RooStats/NumberCountingUtils.h"
+#endif
 
+#ifndef ROOT_RooStats_RooStatsUtils
+#include "RooStats/RooStatsUtils.h"
+#endif
 
-// Without this macro the THtml doc for TMath can not be generated
+// Without this macro the THtml doc  can not be generated
 #if !defined(R__ALPHA) && !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
 NamespaceImp(RooStats)
 NamespaceImp(NumberCountingUtils)
