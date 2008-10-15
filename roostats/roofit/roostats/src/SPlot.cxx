@@ -55,7 +55,14 @@
 
 #include "TMatrixD.h"
 
-ClassImp(SPlot) ;
+// Without this macro the THtml doc for TMath can not be generated
+#if !defined(R__ALPHA) && !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
+NamespaceImp(RooStats)
+#endif
+
+ClassImp(RooStats::SPlot) ;
+
+using namespace RooStats;
 
 
 //____________________________________________________________________

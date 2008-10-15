@@ -17,7 +17,7 @@
 #endif
 
 
-namespace Statistics {
+namespace RooStats {
   inline Double_t PValueToSignificance(Double_t pvalue){
 //    return sqrt(2.)*TMath::ErfInverse(1 - 2.*pvalue);
     return TMath::Abs(TMath::NormQuantile(pvalue) ); 
@@ -30,7 +30,8 @@ namespace Statistics {
 // Encapsulates common number counting utilities
 /////////////////////////////////////////
 
-namespace  NumberCountingUtils {
+namespace RooStats{
+  namespace  NumberCountingUtils {
 
   ///////////////////////////////////
   // Standalone Functions.
@@ -57,6 +58,7 @@ namespace  NumberCountingUtils {
   //////////////////////////////////
   Double_t ProfileCombinationExpZ(Double_t*, Double_t*, Double_t*, Int_t );
 
+  }
 }
 
 #endif

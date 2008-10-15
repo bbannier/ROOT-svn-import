@@ -28,10 +28,13 @@
 
 // Without this macro the THtml doc for TMath can not be generated
 #if !defined(R__ALPHA) && !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
+NamespaceImp(RooStats)
 NamespaceImp(NumberCountingUtils)
 #endif
 
-Double_t NumberCountingUtils::BinomialExpP(Double_t signalExp, Double_t backgroundExp, Double_t relativeBkgUncert){
+//using namespace RooStats;
+
+Double_t RooStats::NumberCountingUtils::BinomialExpP(Double_t signalExp, Double_t backgroundExp, Double_t relativeBkgUncert){
   // Expected P-value for s=0 in a ratio of Poisson means.  
   // Here the background and its uncertainty are provided directly and 
   // assumed to be from the double Poisson counting setup described in the 
@@ -93,7 +96,7 @@ S = sqrt(2)*TMath::ErfInverse(1 - 2*Z_Bi)
 }
 
 
-Double_t NumberCountingUtils::BinomialWithTauExpP(Double_t signalExp, Double_t backgroundExp, Double_t tau){
+Double_t RooStats::NumberCountingUtils::BinomialWithTauExpP(Double_t signalExp, Double_t backgroundExp, Double_t tau){
   // Expected P-value for s=0 in a ratio of Poisson means.  
   // Based on two expectations, a main measurement that might have signal
   // and an auxiliarly measurement for the background that is signal free.
@@ -109,7 +112,7 @@ Double_t NumberCountingUtils::BinomialWithTauExpP(Double_t signalExp, Double_t b
   
 }
 
-Double_t NumberCountingUtils::BinomialObsP(Double_t mainObs, Double_t backgroundObs, Double_t relativeBkgUncert){
+Double_t RooStats::NumberCountingUtils::BinomialObsP(Double_t mainObs, Double_t backgroundObs, Double_t relativeBkgUncert){
   // P-value for s=0 in a ratio of Poisson means.  
   // Here the background and its uncertainty are provided directly and 
   // assumed to be from the double Poisson counting setup.  
@@ -130,7 +133,7 @@ Double_t NumberCountingUtils::BinomialObsP(Double_t mainObs, Double_t background
 }
 
 
-Double_t NumberCountingUtils::BinomialWithTauObsP(Double_t mainObs, Double_t auxiliaryObs, Double_t tau){
+Double_t RooStats::NumberCountingUtils::BinomialWithTauObsP(Double_t mainObs, Double_t auxiliaryObs, Double_t tau){
   // P-value for s=0 in a ratio of Poisson means.  
   // Based on two observations, a main measurement that might have signal
   // and an auxiliarly measurement for the background that is signal free.
@@ -145,25 +148,25 @@ Double_t NumberCountingUtils::BinomialWithTauObsP(Double_t mainObs, Double_t aux
   
 }
 
-Double_t NumberCountingUtils::BinomialExpZ(Double_t signalExp, Double_t backgroundExp, Double_t relativeBkgUncert) {    
+Double_t RooStats::NumberCountingUtils::BinomialExpZ(Double_t signalExp, Double_t backgroundExp, Double_t relativeBkgUncert) {    
   // See BinomialExpP
-  return Statistics::PValueToSignificance( BinomialExpP(signalExp,backgroundExp,relativeBkgUncert) ) ;
+  return RooStats::PValueToSignificance( BinomialExpP(signalExp,backgroundExp,relativeBkgUncert) ) ;
   }
 
-Double_t NumberCountingUtils::BinomialWithTauExpZ(Double_t signalExp, Double_t backgroundExp, Double_t tau){
+Double_t RooStats::NumberCountingUtils::BinomialWithTauExpZ(Double_t signalExp, Double_t backgroundExp, Double_t tau){
   // See BinomialWithTauExpP
-  return Statistics::PValueToSignificance( BinomialWithTauExpP(signalExp,backgroundExp,tau) ) ;
+  return RooStats::PValueToSignificance( BinomialWithTauExpP(signalExp,backgroundExp,tau) ) ;
 }
 
 
-Double_t NumberCountingUtils::BinomialObsZ(Double_t mainObs, Double_t backgroundObs, Double_t relativeBkgUncert){
+Double_t RooStats::NumberCountingUtils::BinomialObsZ(Double_t mainObs, Double_t backgroundObs, Double_t relativeBkgUncert){
   // See BinomialObsZ
-  return Statistics::PValueToSignificance( BinomialObsP(mainObs,backgroundObs,relativeBkgUncert) ) ;
+  return RooStats::PValueToSignificance( BinomialObsP(mainObs,backgroundObs,relativeBkgUncert) ) ;
 }
 
-Double_t NumberCountingUtils::BinomialWithTauObsZ(Double_t mainObs, Double_t auxiliaryObs, Double_t tau){
+Double_t RooStats::NumberCountingUtils::BinomialWithTauObsZ(Double_t mainObs, Double_t auxiliaryObs, Double_t tau){
   // See BinomialWithTauObsZ
-  return Statistics::PValueToSignificance( BinomialWithTauObsP(mainObs,auxiliaryObs,tau) ) ;  
+  return RooStats::PValueToSignificance( BinomialWithTauObsP(mainObs,auxiliaryObs,tau) ) ;  
 }
 
 /////////////////////////////////////////////////////////////
@@ -192,7 +195,7 @@ Double_t NumberCountingUtils::BinomialWithTauObsZ(Double_t mainObs, Double_t aux
 #include <sstream>
 
 
-Double_t NumberCountingUtils::ProfileCombinationExpZ(Double_t* sig, 
+Double_t RooStats::NumberCountingUtils::ProfileCombinationExpZ(Double_t* sig, 
 						     Double_t* back, 
 						     Double_t* back_syst, 
 						     Int_t nbins){
