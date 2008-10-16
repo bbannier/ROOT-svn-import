@@ -905,7 +905,8 @@ void TFitEditor::ConnectSlots()
    if (fDim > 2)
       fSliderZ->Connect("PositionChanged()","TFitEditor",this, "DoSliderZMoved()");
 
-   fParentPad->Connect("RangeAxisChanged()", "TFitEditor", this, "UpdateGUI()");
+   if ( fParentPad )
+      fParentPad->Connect("RangeAxisChanged()", "TFitEditor", this, "UpdateGUI()");
    
    // 'Minimization' tab
    // library
@@ -998,8 +999,6 @@ void TFitEditor::SetCanvas(TCanvas *newcan)
 {
    // Connect to another canvas.
 
-   fParentPad = newcan->GetSelectedPad();
-   if (!fParentPad) fParentPad = newcan;
    newcan->Connect("Selected(TVirtualPad*,TObject*,Int_t)", "TFitEditor",
                    this, "SetFitObject(TVirtualPad *, TObject *, Int_t)");
 
@@ -1029,7 +1028,6 @@ void TFitEditor::Hide()
 //______________________________________________________________________________
 void TFitEditor::Show(TVirtualPad* pad, TObject *obj)
 {
-   cout << "TFitEditor::Show(TVirtualPad* pad, TObject *obj)" << endl;
    // Show the fit panel (possible only via context menu).
 
    if (!gROOT->GetListOfCleanups()->FindObject(this))
@@ -1039,6 +1037,7 @@ void TFitEditor::Show(TVirtualPad* pad, TObject *obj)
       fgFitDialog->MapWindow();
       gVirtualX->RaiseWindow(GetId());
    }
+   fParentPad = static_cast<TPad*>(pad);
    SetCanvas(pad->GetCanvas());
    SetFitObject(pad, obj, kButton1Down);
 }
@@ -1075,10 +1074,12 @@ void TFitEditor::UpdateGUI()
 
    if (!fFitObject) return;
 
-   fPx1old = fParentPad->XtoAbsPixel(fParentPad->GetUxmin());
-   fPy1old = fParentPad->YtoAbsPixel(fParentPad->GetUymin());
-   fPx2old = fParentPad->XtoAbsPixel(fParentPad->GetUxmax());
-   fPy2old = fParentPad->YtoAbsPixel(fParentPad->GetUymax());
+   if (fParentPad) {
+      fPx1old = fParentPad->XtoAbsPixel(fParentPad->GetUxmin());
+      fPy1old = fParentPad->YtoAbsPixel(fParentPad->GetUymin());
+      fPx2old = fParentPad->XtoAbsPixel(fParentPad->GetUxmax());
+      fPy2old = fParentPad->YtoAbsPixel(fParentPad->GetUymax());
+   }
 
    // sliders
    if (fDim > 0) {
@@ -1217,7 +1218,7 @@ void TFitEditor::SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event)
 
    if (event != kButton1Down) return;
 
-   if (!pad || !obj) {
+   if ( !obj ) {
       DoNoSelection();
       return;
    }
@@ -1482,7 +1483,7 @@ void TFitEditor::DoFit()
    // Perform a fit with current parameters' settings.
 
    if (!fFitObject) return;
-   if (!fParentPad) return;
+   //if (!fParentPad) return;
 
    if ( fNone->GetState() != kButtonDisabled && CheckFunctionString(fEnteredFunc->GetText()) )
    {
@@ -1496,13 +1497,15 @@ void TFitEditor::DoFit()
    if (gPad) gPad->GetVirtCanvas()->SetCursor(kWatch);
    gVirtualX->SetCursor(GetId(), gVirtualX->CreateCursor(kWatch));
 
-   fParentPad->Disconnect("RangeAxisChanged()");
    TVirtualPad *save = 0;
-   save = gPad;
-   gPad = fParentPad;
-   fParentPad->cd();
+   if ( fParentPad ) {
+      fParentPad->Disconnect("RangeAxisChanged()");
+      save = gPad;
+      gPad = fParentPad;
+      fParentPad->cd();
 
-   fParentPad->GetCanvas()->SetCursor(kWatch);
+      fParentPad->GetCanvas()->SetCursor(kWatch);
+   }
 
    // Option Retrieval!
    ROOT::Math::MinimizerOptions mopts;
@@ -1631,26 +1634,30 @@ void TFitEditor::DoFit()
    delete fitFunc;
 
 
-   fParentPad->Modified();
-   // As the range is not changed, save the old values and restore
-   // after the GUI has been updated.  It would be more elegant to
-   // disconnect the signal from fParentPad, however, this doesn't
-   // work for unknown reasons.
-   float xmin, xmax, ymin, ymax, zmin, zmax;
-   if ( fDim > 0 ) fSliderX->GetPosition(xmin, xmax);
-   if ( fDim > 1 ) fSliderY->GetPosition(ymin, ymax);
-   if ( fDim > 2 ) fSliderZ->GetPosition(zmin, zmax);
-   fParentPad->Update();
-   if ( fDim > 0 ) { fSliderX->SetPosition(xmin, xmax); DoSliderXMoved(); }
-   if ( fDim > 1 ) { fSliderY->SetPosition(ymin, ymax); DoSliderYMoved(); }
-   if ( fDim > 2 ) { fSliderZ->SetPosition(zmin, zmax); DoSliderZMoved(); }
-   fParentPad->GetCanvas()->SetCursor(kPointer);
-   fParentPad->Connect("RangeAxisChanged()", "TFitEditor", this, "UpdateGUI()");
-   
-   if (save) gPad = save;
-   if (fSetParam->GetState() == kButtonDisabled && 
-       fLinearFit->GetState() == kButtonUp)
-      fSetParam->SetState(kButtonUp);
+   // In case the fit method draws something!
+   SetFitObject(gPad, fFitObject, kButton1Down);
+   if ( fParentPad ) {
+      fParentPad->Modified();
+      // As the range is not changed, save the old values and restore
+      // after the GUI has been updated.  It would be more elegant to
+      // disconnect the signal from fParentPad, however, this doesn't
+      // work for unknown reasons.
+      float xmin, xmax, ymin, ymax, zmin, zmax;
+      if ( fDim > 0 ) fSliderX->GetPosition(xmin, xmax);
+      if ( fDim > 1 ) fSliderY->GetPosition(ymin, ymax);
+      if ( fDim > 2 ) fSliderZ->GetPosition(zmin, zmax);
+      fParentPad->Update();
+      if ( fDim > 0 ) { fSliderX->SetPosition(xmin, xmax); DoSliderXMoved(); }
+      if ( fDim > 1 ) { fSliderY->SetPosition(ymin, ymax); DoSliderYMoved(); }
+      if ( fDim > 2 ) { fSliderZ->SetPosition(zmin, zmax); DoSliderZMoved(); }
+      fParentPad->GetCanvas()->SetCursor(kPointer);
+      fParentPad->Connect("RangeAxisChanged()", "TFitEditor", this, "UpdateGUI()");
+      
+      if (save) gPad = save;
+      if (fSetParam->GetState() == kButtonDisabled && 
+          fLinearFit->GetState() == kButtonUp)
+         fSetParam->SetState(kButtonUp);
+   }
 
    if (gPad) gPad->GetVirtCanvas()->SetCursor(kPointer);
    gVirtualX->SetCursor(GetId(), gVirtualX->CreateCursor(kPointer));
@@ -1729,7 +1736,7 @@ void TFitEditor::DoDataSet(Int_t selected)
    cout << "Object found? " << found << " in " 
         << currentPad->GetName() << endl;
       
-   SetFitObject( found?currentPad:gPad, objSelected, kButton1Down);
+   SetFitObject( found?currentPad:NULL, objSelected, kButton1Down);
 }
 
 //______________________________________________________________________________
@@ -1905,8 +1912,10 @@ void TFitEditor::DoReset()
 {
    // Reset all fit parameters.
 
-   fParentPad->Modified();
-   fParentPad->Update();
+   if ( fParentPad ) {
+      fParentPad->Modified();
+      fParentPad->Update();
+   }
    fEnteredFunc->SetText("gaus");
 
    // To restore temporary points and sliders
@@ -2010,19 +2019,18 @@ void TFitEditor::DoSetParameters()
       SetParameters(fFuncPars, fitFunc);
    }
 
-   fParentPad->Disconnect("RangeAxisChanged()");
-
+   if ( fParentPad ) fParentPad->Disconnect("RangeAxisChanged()");
 //    Double_t xmin, xma> x;
 //    fitFunc->GetRange(xmin, xmax);
    Int_t ret = 0;
    new TFitParametersDialog(gClient->GetDefaultRoot(), GetMainFrame(), 
                             fitFunc, fParentPad, &ret);
-
+   
    //if ( fFuncPars ) delete fFuncPars;
    //fFuncPars = new Double_t[fitFunc->GetNpar()][3];
    GetParameters(fFuncPars, fitFunc);
-
-   fParentPad->Connect("RangeAxisChanged()", "TFitEditor", this, "UpdateGUI()");
+   
+   if ( fParentPad ) fParentPad->Connect("RangeAxisChanged()", "TFitEditor", this, "UpdateGUI()");
 
    if ( fNone->GetState() != kButtonDisabled ) delete fitFunc;
 }
@@ -2031,6 +2039,8 @@ void TFitEditor::DoSetParameters()
 void TFitEditor::DoSliderXMoved()
 {
    // Slot connected to range settings on x-axis.
+
+   if ( !fParentPad ) return;
 
    Int_t px1,py1,px2,py2;
 
@@ -2080,6 +2090,8 @@ void TFitEditor::DoSliderXMoved()
 void TFitEditor::DoSliderYMoved()
 {
    // Slot connected to range settings on y-axis.
+
+   if ( !fParentPad ) return;
 
    Int_t px1,py1,px2,py2;
 
