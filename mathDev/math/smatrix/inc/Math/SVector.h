@@ -130,7 +130,7 @@ public:
    
 #endif
    /// construct a vector of size 1 from a single scalar value
-    SVector(const T& a1);
+   explicit SVector(const T& a1);
    /// construct a vector of size 2 from 2 scalar values 
    SVector(const T& a1, const T& a2);
    /// construct a vector of size 3 from 3 scalar values 

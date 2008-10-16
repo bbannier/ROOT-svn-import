@@ -118,7 +118,7 @@ public:
    }
 
    /// get type of fit method function
-   virtual  typename BaseObjFunction::Type GetType() const { return BaseObjFunction::kLogLikelihood; }
+   virtual  typename BaseObjFunction::Type_t Type() const { return BaseObjFunction::kLogLikelihood; }
 
    /// access to const reference to the data 
    virtual const UnBinData & Data() const { return fData; }

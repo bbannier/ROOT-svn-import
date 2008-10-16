@@ -149,6 +149,8 @@
 #include "THStack.h"
 #include "TMath.h"
 #include "Fit/DataRange.h"
+#include "Fit/BinData.h"
+#include "Fit/UnBinData.h"
 #include "TMultiGraph.h"
 #include "TTree.h"
 
@@ -212,7 +214,9 @@ void InitParameters(TF1* func, FitObject * fitobj)
    
    int special = func->GetNumber(); 
    if (special == 100 || special == 400) { 
-      ROOT::Fit::InitGaus(fitobj, func);
+      ROOT::Fit::BinData data; 
+      ROOT::Fit::FillData(data,fitobj,func); 
+      ROOT::Fit::InitGaus(data, func);
       // case gaussian or Landau
    }
 }
