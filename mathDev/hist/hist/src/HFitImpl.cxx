@@ -500,6 +500,7 @@ void HFit::FitOptionsMake(const char *option, Foption_t &fitOption) {
    if (opt.Contains("E")) fitOption.Errors  = 1;
    if (opt.Contains("R")) fitOption.Range   = 1;
    if (opt.Contains("G")) fitOption.Gradient= 1;
+   if (opt.Contains("M")) fitOption.More    = 1;
    if (opt.Contains("N")) fitOption.Nostore = 1;
    if (opt.Contains("0")) fitOption.Nograph = 1;
    if (opt.Contains("+")) fitOption.Plus    = 1;
