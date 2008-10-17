@@ -68,8 +68,6 @@ protected:
    TGTextButton        *fFitButton;        // performs fitting
    TGTextButton        *fResetButton;      // resets fit parameters
    TGTextButton        *fCloseButton;      // close the fit panel
-   TGHorizontalFrame   *fObjLabelParent;   // parent of fObjLabel
-   TGLabel             *fObjLabel;         // contains fitted object name
    TGLabel             *fSelLabel;         // contains selected fit function
    TGComboBox          *fDataSet;          // contains list of data set to be fitted
    TGComboBox          *fFuncList;         // contains function list

@@ -154,8 +154,10 @@
 #include "TMultiGraph.h"
 #include "TTree.h"
 
-#include "Riostream.h"
+#include <vector>
 #include <queue>
+using std::vector;
+using std::queue;
 
 enum EFitPanel {
    kFP_FLIST, kFP_GAUS,  kFP_GAUSN, kFP_EXPO,  kFP_LAND,  kFP_LANDN,
@@ -263,21 +265,6 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
 
    SetCleanup(kDeepCleanup);
    
-   TString name = obj->GetName();
-   name.Append("::");
-   name.Append(obj->ClassName());
-   fObjLabelParent = new TGHorizontalFrame(this, 80, 20);
-   TGLabel *label = new TGLabel(fObjLabelParent,"Current selection: ");
-   fObjLabelParent->AddFrame(label, new TGLayoutHints(kLHintsLeft, 1, 1, 0, 0));
-   fObjLabel = new TGLabel(fObjLabelParent, name.Data());
-   fObjLabelParent->AddFrame(fObjLabel, new TGLayoutHints(kLHintsLeft, 1, 1, 0, 0));
-   AddFrame(fObjLabelParent, new TGLayoutHints(kLHintsTop, 1, 1, 10, 10));
-   // set red color for the name
-   Pixel_t color;
-   gClient->GetColorByName("#ff0000", color);
-   fObjLabel->SetTextColor(color, kFALSE);
-   fObjLabel->SetTextJustify(kTextLeft);
-
    fTab = new TGTab(this, 10, 10);
    AddFrame(fTab, new TGLayoutHints(kLHintsExpandY | kLHintsExpandX));
    fTab->SetCleanup(kDeepCleanup);
@@ -727,7 +714,7 @@ void TFitEditor::CreateMinimizationTab()
    fLibMinuit->Associate(this);
    fLibMinuit->SetToolTipText("Use minimization from libMinuit (default)");
    hl->AddFrame(fLibMinuit, new TGLayoutHints(kLHintsNormal, 40, 0, 0, 1));
-   fStatusBar->SetText("LIB Minuit",0);
+   fStatusBar->SetText("LIB Minuit",1);
 
    fLibMinuit2 = new TGRadioButton(hl, "Minuit2", kFP_LMIN2);
    fLibMinuit2->Associate(this);
@@ -747,7 +734,7 @@ void TFitEditor::CreateMinimizationTab()
    fMigrad->Associate(this);
    fMigrad->SetToolTipText("Use MIGRAD as minimization method");
    hm->AddFrame(fMigrad, new TGLayoutHints(kLHintsNormal, 40, 0, 0, 1));
-   fStatusBar->SetText("MIGRAD",1);
+   fStatusBar->SetText("MIGRAD",2);
 
    fSimplex = new TGRadioButton(hm, "SIMPLEX", kFP_SIMPLX);
    fSimplex->Associate(this);
@@ -841,7 +828,7 @@ void TFitEditor::CreateMinimizationTab()
                                                  1, 1, 3, 3));
    hs->AddFrame(hsv2, new TGLayoutHints(kLHintsNormal, 0, 0, 0, 0));
    fMinimization->AddFrame(hs, new TGLayoutHints(kLHintsExpandX, 0, 0, 1, 1));
-   fStatusBar->SetText(Form("Itr: %d",ROOT::Math::MinimizerOptions::DefaultMaxIterations()),2);
+   fStatusBar->SetText(Form("Itr: %d",ROOT::Math::MinimizerOptions::DefaultMaxIterations()),3);
 
    MakeTitle(fMinimization, "Print Options");
 
@@ -851,7 +838,7 @@ void TFitEditor::CreateMinimizationTab()
    fOptDefault->SetToolTipText("Default is between Verbose and Quiet");
    h8->AddFrame(fOptDefault, new TGLayoutHints(kLHintsNormal, 40, 0, 0, 1));
    fOptDefault->SetState(kButtonDown);
-   fStatusBar->SetText("Prn: DEF",3);
+   fStatusBar->SetText("Prn: DEF",4);
 
    fOptVerbose = new TGRadioButton(h8, "Verbose", kFP_PVER);
    fOptVerbose->Associate(this);
@@ -1301,8 +1288,8 @@ void TFitEditor::DoNoSelection()
    DisconnectSlots();
    fParentPad = 0;
    fFitObject = 0;
-   fObjLabel->SetText("No object selected");
-   fObjLabelParent->Resize(GetDefaultSize());
+   fStatusBar->SetText("No selection",0);
+   fDataSet->Select(kFP_NOSEL, kFALSE);
    Layout();
 
    fSetParam->SetEnabled(kFALSE);
@@ -1318,8 +1305,8 @@ void TFitEditor::RecursiveRemove(TObject* obj)
    if (obj == fFitObject) {
       fFitObject = 0;
       DisconnectSlots();
-      fObjLabel->SetText("No object selected");
-      fObjLabelParent->Resize(GetDefaultSize());
+      fStatusBar->SetText("No selection",0);
+      fDataSet->Select(kFP_NOSEL, kFALSE);
       Layout();
 
       fFitButton->SetEnabled(kFALSE);
@@ -1337,8 +1324,8 @@ void TFitEditor::RecursiveRemove(TObject* obj)
       fFitObject = 0;
       fParentPad = 0;
       DisconnectSlots();
-      fObjLabel->SetText("No object selected");
-      fObjLabelParent->Resize(GetDefaultSize());
+      fStatusBar->SetText("No selection",0);
+      fDataSet->Select(kFP_NOSEL, kFALSE);
       Layout();
 
       fFitButton->SetEnabled(kFALSE);
@@ -1387,8 +1374,6 @@ void SearchCanvases(TSeqCollection* canvases, vector<TObject*>& objects)
                 || dynamic_cast<THStack*>(obj)
                 || dynamic_cast<TTree*>(obj) ) {
          bool insertNew = true;
-         TNamed* named = static_cast<TNamed*>(obj);
-         cout << named->GetName() << endl;
          for ( vector<TObject*>::iterator i = objects.begin(); i != objects.end(); ++i )
             if ( (*i) == obj ) {
                insertNew = false;
@@ -1404,8 +1389,6 @@ TGComboBox* TFitEditor::BuildDataSetList(TGFrame* parent, Int_t id)
 {
    // Create function list combo box.
 
-   cout << "Creating Data Set List" << endl;
-
    TGComboBox *c = new TGComboBox(parent, id);
    Int_t newid = kFP_NOSEL;
    vector<TObject*> objects;
@@ -1416,15 +1399,12 @@ TGComboBox* TFitEditor::BuildDataSetList(TGFrame* parent, Int_t id)
       if ( dynamic_cast<TH1*>(obj) || 
            dynamic_cast<TTree*>(obj) ) {
          objects.push_back(obj);
-         cout << obj->GetName() << endl;
       }
    }
 
    SearchCanvases(gROOT->GetListOfCanvases(), objects);
-   cout << "Adding elements to the combo box" << endl;
    c->AddEntry("No Selection", newid++);
    for ( vector<TObject*>::iterator i = objects.begin(); i != objects.end(); ++i ) {
-      cout << (*i)->GetName() << endl;
       TString name = (*i)->ClassName(); name.Append("::"); name.Append((*i)->GetName());
       c->AddEntry(name, newid++);
    }
@@ -1710,8 +1690,6 @@ void TFitEditor::DoAddition(Bool_t on)
 //______________________________________________________________________________
 void TFitEditor::DoDataSet(Int_t selected)
 {
-//   cout << fDataSet->GetTextEntry()->GetText() << endl;
-
    if ( selected == kFP_NOSEL ) {
       DoNoSelection();
       return;
@@ -1719,10 +1697,8 @@ void TFitEditor::DoDataSet(Int_t selected)
 
    TGTextLBEntry* textEntry = static_cast<TGTextLBEntry*>(fDataSet->GetListBox()->GetEntry(selected));
    const char* name = textEntry->GetText()->GetString()+textEntry->GetText()->Last(':')+1;
-   cout << "Selected: " << name << " " << textEntry->GetText()->Last(':') << endl;
    TObject* objSelected = gROOT->FindObject(name);
    assert(objSelected);
-   cout << objSelected << endl;
 
    TPad* currentPad = NULL;
    bool found = false;
@@ -1746,9 +1722,6 @@ void TFitEditor::DoDataSet(Int_t selected)
       }
    }
 
-   cout << "Object found? " << found << " in " 
-        << currentPad->GetName() << endl;
-      
    SetFitObject( found?currentPad:NULL, objSelected, kButton1Down);
 }
 
@@ -1898,7 +1871,7 @@ void TFitEditor::DoPrintOpt(Bool_t on)
             fOptVerbose->SetState(kButtonUp);
             fOptQuiet->SetState(kButtonUp);
          }
-         fStatusBar->SetText("Prn: DEF",3);
+         fStatusBar->SetText("Prn: DEF",4);
          break;
       case kFP_PVER:
          if (on) {
@@ -1906,7 +1879,7 @@ void TFitEditor::DoPrintOpt(Bool_t on)
             fOptDefault->SetState(kButtonUp);
             fOptQuiet->SetState(kButtonUp);
          }
-         fStatusBar->SetText("Prn: VER",3);
+         fStatusBar->SetText("Prn: VER",4);
          break;
       case kFP_PQET:
          if (on) {
@@ -1914,7 +1887,7 @@ void TFitEditor::DoPrintOpt(Bool_t on)
             fOptDefault->SetState(kButtonUp);
             fOptVerbose->SetState(kButtonUp);
          }
-         fStatusBar->SetText("Prn: QT",3);
+         fStatusBar->SetText("Prn: QT",4);
       default:
          break;
    }
@@ -1991,7 +1964,6 @@ void TFitEditor::DoSetParameters()
    if ( fNone->GetState() == kButtonDisabled )
    {
       TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-      //std::cout << te << "  " << te->GetTitle() << std::endl;
       fitFunc = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
    }
    else if ( fDim == 1 )
@@ -2247,14 +2219,29 @@ void TFitEditor::ShowObjectName(TObject* obj)
    TString name;
    
    if (obj) {
-      name = obj->GetName();
+      name = obj->ClassName();
       name.Append("::");
-      name.Append(obj->ClassName());
+      name.Append(obj->GetName());
    } else {
       name = "No object selected";
    }
-   fObjLabel->SetText(name.Data());
-   fObjLabelParent->Resize(GetDefaultSize());
+   fStatusBar->SetText(name.Data(),0);
+
+   Int_t entryId = kFP_NOSEL+1;
+   bool found = false;
+   while ( TGTextLBEntry* entry = static_cast<TGTextLBEntry*> 
+           ( fDataSet->GetListBox()->GetEntry(entryId)) ) {
+      if ( name.CompareTo(*(entry->GetText())) == 0 ) {
+         fDataSet->Select(entryId, false);
+         found = true;
+         break;
+      }
+      entryId += 1;
+   }
+
+   if ( !found )
+      fDataSet->AddEntry(name.Data(), entryId);
+   
    Layout();
 }
 
@@ -2293,11 +2280,11 @@ void TFitEditor::DoLibrary(Bool_t on)
                   fFumili->SetDisabledAndSelected(kFALSE);
                }
                fMigrad->SetState(kButtonDown);
-               fStatusBar->SetText("MIGRAD", 1);
+               fStatusBar->SetText("MIGRAD", 2);
                fSimplex->SetState(kButtonUp);
                fCombination->SetState(kButtonUp);
                fScan->SetState(kButtonUp);
-               fStatusBar->SetText("LIB Minuit", 0);
+               fStatusBar->SetText("LIB Minuit", 1);
             }
             
          }
@@ -2319,7 +2306,7 @@ void TFitEditor::DoLibrary(Bool_t on)
                   fCombination->SetState(kButtonUp);
                if (fScan->GetState() == kButtonDisabled)
                   fScan->SetState(kButtonUp);
-               fStatusBar->SetText("LIB Minuit2", 0);
+               fStatusBar->SetText("LIB Minuit2", 1);
             }
          }
          break;
@@ -2333,13 +2320,13 @@ void TFitEditor::DoLibrary(Bool_t on)
 
                if (fFumili->GetState() != kButtonDown) {
                   fFumili->SetState(kButtonDown);
-                  fStatusBar->SetText("FUMILI", 1);
+                  fStatusBar->SetText("FUMILI", 2);
                }
                fMigrad->SetDisabledAndSelected(kFALSE);
                fSimplex->SetState(kButtonDisabled);
                fCombination->SetState(kButtonDisabled);
                fScan->SetState(kButtonDisabled);
-               fStatusBar->SetText("LIB Fumili", 0);
+               fStatusBar->SetText("LIB Fumili", 1);
             }
          }
       default:
@@ -2368,7 +2355,7 @@ void TFitEditor::DoMinMethod(Bool_t on)
          else
             fFumili->SetState(kButtonUp);
          fMigrad->SetState(kButtonDown);
-         fStatusBar->SetText("MIGRAD",1);
+         fStatusBar->SetText("MIGRAD",2);
       }
    }
    break;
@@ -2384,7 +2371,7 @@ void TFitEditor::DoMinMethod(Bool_t on)
          else
             fFumili->SetState(kButtonUp);
          fSimplex->SetState(kButtonDown);
-         fStatusBar->SetText("SIMPLEX",1);
+         fStatusBar->SetText("SIMPLEX",2);
       }
    }
    break;
@@ -2400,7 +2387,7 @@ void TFitEditor::DoMinMethod(Bool_t on)
          else
             fFumili->SetState(kButtonUp);    
          fCombination->SetState(kButtonDown);
-         fStatusBar->SetText("Combination",1);
+         fStatusBar->SetText("Combination",2);
       }
    }
    break;
@@ -2416,7 +2403,7 @@ void TFitEditor::DoMinMethod(Bool_t on)
          else
             fFumili->SetState(kButtonUp);    
          fScan->SetState(kButtonDown);
-         fStatusBar->SetText("SCAN",1);
+         fStatusBar->SetText("SCAN",2);
       }
    }
    break;
@@ -2429,7 +2416,7 @@ void TFitEditor::DoMinMethod(Bool_t on)
          fCombination->SetState(kButtonUp);
          fScan->SetState(kButtonUp);
          fFumili->SetState(kButtonDown);
-         fStatusBar->SetText("FUMILI",1);
+         fStatusBar->SetText("FUMILI",2);
       }
    }
    break;
