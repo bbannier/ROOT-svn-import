@@ -175,6 +175,8 @@ enum EFitPanel {
    // New GUI elements from here!
    kFP_TLIST, kFP_PRED1D, kFP_PRED2D, kFP_PRED3D, kFP_UFUNC, kFP_ROOFIT,
    kFP_DATAS,
+
+   kFP_NOSEL = 8000
 };
 
 enum EParStruct {
@@ -1087,8 +1089,6 @@ void TFitEditor::UpdateGUI()
 
    // sliders
    if (fDim > 0) {
-      fSliderX->Disconnect("PositionChanged()");
-
       TH1* hist = 0;
       switch (fType) {
          case kObjectHisto:
@@ -1119,6 +1119,8 @@ void TFitEditor::UpdateGUI()
       if (!hist) {
 	assert("No hist in UpdateGUI!");
       }
+
+      fSliderX->Disconnect("PositionChanged()");
 
       fXaxis = hist->GetXaxis();
       fYaxis = hist->GetYaxis();
@@ -1405,7 +1407,7 @@ TGComboBox* TFitEditor::BuildDataSetList(TGFrame* parent, Int_t id)
    cout << "Creating Data Set List" << endl;
 
    TGComboBox *c = new TGComboBox(parent, id);
-   Int_t newid = kFP_USER*500;
+   Int_t newid = kFP_NOSEL;
    vector<TObject*> objects;
 
    TIter next(gDirectory->GetList());
@@ -1420,6 +1422,7 @@ TGComboBox* TFitEditor::BuildDataSetList(TGFrame* parent, Int_t id)
 
    SearchCanvases(gROOT->GetListOfCanvases(), objects);
    cout << "Adding elements to the combo box" << endl;
+   c->AddEntry("No Selection", newid++);
    for ( vector<TObject*>::iterator i = objects.begin(); i != objects.end(); ++i ) {
       cout << (*i)->GetName() << endl;
       TString name = (*i)->ClassName(); name.Append("::"); name.Append((*i)->GetName());
@@ -1708,6 +1711,12 @@ void TFitEditor::DoAddition(Bool_t on)
 void TFitEditor::DoDataSet(Int_t selected)
 {
 //   cout << fDataSet->GetTextEntry()->GetText() << endl;
+
+   if ( selected == kFP_NOSEL ) {
+      DoNoSelection();
+      return;
+   }
+
    TGTextLBEntry* textEntry = static_cast<TGTextLBEntry*>(fDataSet->GetListBox()->GetEntry(selected));
    const char* name = textEntry->GetText()->GetString()+textEntry->GetText()->Last(':')+1;
    cout << "Selected: " << name << " " << textEntry->GetText()->Last(':') << endl;
@@ -2044,7 +2053,7 @@ void TFitEditor::DoSliderXMoved()
 {
    // Slot connected to range settings on x-axis.
 
-   if ( !fParentPad ) return;
+   if ( !fParentPad || !fFitObject ) return;
 
    Int_t px1,py1,px2,py2;
 
@@ -2095,7 +2104,7 @@ void TFitEditor::DoSliderYMoved()
 {
    // Slot connected to range settings on y-axis.
 
-   if ( !fParentPad ) return;
+   if ( !fParentPad || !fFitObject ) return;
 
    Int_t px1,py1,px2,py2;
 
