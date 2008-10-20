@@ -34,7 +34,7 @@
 //______________________________________________________________________________
 Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size,
                                            const std::type_info& ti,
-                                           const Catalog& catalog,
+                                           Catalog catalog,
                                            unsigned int modifiers /*= 0*/, ETYPE typ /*=kETUnion*/)
 : fUnion(0)
 , fLastMember()
@@ -136,7 +136,7 @@ Reflex::Type Reflex::UnionBuilderImpl::ToType()
 //______________________________________________________________________________
 Reflex::UnionBuilder::UnionBuilder(const char* nam, const std::type_info& ti,
                                    size_t size,
-                                   const Catalog& catalog,
+                                   Catalog catalog,
                                    unsigned int modifiers /*= 0*/,
                                    ETYPE typ /*= kETUnion*/)
 : fUnionBuilderImpl(nam, size, ti, catalog, modifiers, typ)

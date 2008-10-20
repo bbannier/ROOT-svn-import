@@ -37,7 +37,7 @@ namespace Internal {
          unsigned int modifiers,
          const Scope & pointerToMemberScope,
          const std::type_info & ti,
-         const Catalog& catalog);
+         Catalog catalog);
 
 
       /** destructor */

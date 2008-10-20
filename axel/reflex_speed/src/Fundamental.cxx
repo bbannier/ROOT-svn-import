@@ -22,7 +22,7 @@
 Reflex::Internal::Fundamental::Fundamental(const char * typ,
                                            size_t size,
                                            const std::type_info & ti,
-                                           const Catalog& cat) 
+                                           Catalog cat) 
 //-------------------------------------------------------------------------------
    : TypeBase(typ, 0, size, kETFundamental, ti, cat) {
    // Create dictionary info for this fundamental type.

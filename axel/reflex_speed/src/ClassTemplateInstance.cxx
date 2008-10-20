@@ -30,7 +30,7 @@ Reflex::Internal::ClassTemplateInstance::
 ClassTemplateInstance(const char * typ, 
                       size_t size, 
                       const std::type_info & ti,
-                      const Catalog& catalog,
+                      Catalog catalog,
                       unsigned int modifiers)
    : Class(typ, 
             size, 

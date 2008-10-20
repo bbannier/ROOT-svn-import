@@ -82,7 +82,7 @@ Reflex::Scope::FunctionMemberByName(const std::string & name,
 
 
 //-------------------------------------------------------------------------------
-const Reflex::Catalog&
+Reflex::Catalog
 Reflex::Scope::InCatalog() const {
 //-------------------------------------------------------------------------------
    if (fScopeName) return fScopeName->InCatalog();
@@ -200,6 +200,7 @@ const std::string&
 Reflex::Scope::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Return the name of this scope, scoped if requested.
+   buf.clear();
    if (*this)
       return fScopeName->fScopeBase->Name(buf, mod);
    if (fScopeName) {

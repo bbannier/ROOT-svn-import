@@ -23,7 +23,7 @@
 Reflex::Internal::Function::Function(const Type & retType,
                                      const std::vector< Type > & parameters,
                                      const std::type_info & ti,
-                                     const Catalog& catalog,
+                                     Catalog catalog,
                                      ETYPE functionType) 
 //-------------------------------------------------------------------------------
 // Default constructor for a function type.

@@ -54,7 +54,7 @@ static ScopeVec_t & sScopeVec() {
 //-------------------------------------------------------------------------------
 Reflex::Internal::ScopeName::ScopeName(const char* name,
                                        ScopeBase* scopeBase,
-                                       const Catalog& catalog)
+                                       Catalog catalog)
    : fName(name),
      fScopeBase(scopeBase),
      fCatalog(catalog) {

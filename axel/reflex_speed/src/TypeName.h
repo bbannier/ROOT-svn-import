@@ -41,7 +41,7 @@ namespace Internal {
       /** default constructor */
       TypeName(const char * nnam,
          TypeBase * typeBas,
-         const Catalog& catalog,
+         Catalog catalog,
          const std::type_info * ti = 0);
 
 
@@ -63,7 +63,7 @@ namespace Internal {
       /**
       * Retrieve the Catalog containing the type.
       */
-      const Catalog& InCatalog() const { return fScope.InCatalog(); }
+      Catalog InCatalog() const { return fScope.InCatalog(); }
 
 
       void HideName();

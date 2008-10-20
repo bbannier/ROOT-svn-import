@@ -25,7 +25,7 @@
 
 //-------------------------------------------------------------------------------
 Reflex::NamespaceBuilder::NamespaceBuilder(const char * nam,
-                                           const Catalog& catalog) {
+                                           Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Create dictionary info for a namespace.
    Scope sc = catalog.Scopes().ByName(nam);

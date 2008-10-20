@@ -41,7 +41,7 @@ namespace Internal {
    public:
 
       /** constructor */
-      ScopeName(const char * name, ScopeBase * scopeBase, const Catalog& catalog);
+      ScopeName(const char * name, ScopeBase * scopeBase, Catalog catalog);
 
 
       /**
@@ -58,7 +58,7 @@ namespace Internal {
       /**
       * Retrieve the Catalog containing the type.
       */
-      const Catalog& InCatalog() const { return fCatalog; }
+      Catalog InCatalog() const { return fCatalog; }
 
 
       /**

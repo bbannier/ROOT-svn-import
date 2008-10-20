@@ -29,7 +29,7 @@ namespace Reflex {
 
    RFLX_API Type TypeBuilder(const char * n,
       unsigned int modifiers = 0,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type ConstBuilder(const Type & t);
@@ -40,13 +40,13 @@ namespace Reflex {
 
    RFLX_API Type PointerBuilder(const Type & t,
       const std::type_info & ti = typeid(UnknownType),
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type PointerToMemberBuilder(const Type & t,
       const Scope & s,
       const std::type_info & ti = typeid(UnknownType),
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type ReferenceBuilder(const Type & t);
@@ -55,88 +55,88 @@ namespace Reflex {
    RFLX_API Type ArrayBuilder(const Type & t, 
       size_t n,
       const std::type_info & ti = typeid(UnknownType),
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
    RFLX_API Type EnumTypeBuilder(const char *, 
       const char * items = "",
       const std::type_info & ti = typeid(UnknownType),
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
    RFLX_API Type TypedefTypeBuilder(const char * Name, 
       const Type & t,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,
       const std::vector<Reflex::Type> & p,
       const std::type_info & ti = typeid(UnknownType),
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
       const Type & t2,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
       const Type & t2,  const Type & t3,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
       const Type & t2,  const Type & t3,  const Type & t4,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
       const Type & t2,  const Type & t3,  const Type & t4, 
       const Type & t5,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
       const Type & t2,  const Type & t3,  const Type & t4, 
       const Type & t5,  const Type & t6,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
       const Type & t2,  const Type & t3,  const Type & t4, 
       const Type & t5,  const Type & t6,  const Type & t7,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
       const Type & t2,  const Type & t3,  const Type & t4, 
       const Type & t5,  const Type & t6,  const Type & t7,
       const Type & t8,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
       const Type & t2,  const Type & t3,  const Type & t4, 
       const Type & t5,  const Type & t6,  const Type & t7,
       const Type & t8,  const Type & t9,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
       const Type & t2,  const Type & t3,  const Type & t4, 
       const Type & t5,  const Type & t6,  const Type & t7,
       const Type & t8,  const Type & t9,  const Type & t10,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -144,7 +144,7 @@ namespace Reflex {
       const Type & t5,  const Type & t6,  const Type & t7,
       const Type & t8,  const Type & t9,  const Type & t10, 
       const Type & t11,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -152,7 +152,7 @@ namespace Reflex {
       const Type & t5,  const Type & t6,  const Type & t7,
       const Type & t8,  const Type & t9,  const Type & t10, 
       const Type & t11, const Type & t12,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -160,7 +160,7 @@ namespace Reflex {
       const Type & t5,  const Type & t6,  const Type & t7,
       const Type & t8,  const Type & t9,  const Type & t10, 
       const Type & t11, const Type & t12, const Type & t13,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -169,7 +169,7 @@ namespace Reflex {
       const Type & t8,  const Type & t9,  const Type & t10, 
       const Type & t11, const Type & t12, const Type & t13, 
       const Type & t14,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -178,7 +178,7 @@ namespace Reflex {
       const Type & t8,  const Type & t9,  const Type & t10, 
       const Type & t11, const Type & t12, const Type & t13, 
       const Type & t14, const Type & t15,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -187,7 +187,7 @@ namespace Reflex {
       const Type & t8,  const Type & t9,  const Type & t10, 
       const Type & t11, const Type & t12, const Type & t13, 
       const Type & t14, const Type & t15, const Type & t16,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -197,7 +197,7 @@ namespace Reflex {
       const Type & t11, const Type & t12, const Type & t13, 
       const Type & t14, const Type & t15, const Type & t16,
       const Type & t17,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -207,7 +207,7 @@ namespace Reflex {
       const Type & t11, const Type & t12, const Type & t13, 
       const Type & t14, const Type & t15, const Type & t16,
       const Type & t17, const Type & t18,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -217,7 +217,7 @@ namespace Reflex {
       const Type & t11, const Type & t12, const Type & t13, 
       const Type & t14, const Type & t15, const Type & t16,
       const Type & t17, const Type & t18, const Type & t19,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -228,7 +228,7 @@ namespace Reflex {
       const Type & t14, const Type & t15, const Type & t16,
       const Type & t17, const Type & t18, const Type & t19,
       const Type & t20,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -239,7 +239,7 @@ namespace Reflex {
       const Type & t14, const Type & t15, const Type & t16,
       const Type & t17, const Type & t18, const Type & t19,
       const Type & t20, const Type & t21,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -250,7 +250,7 @@ namespace Reflex {
       const Type & t14, const Type & t15, const Type & t16,
       const Type & t17, const Type & t18, const Type & t19,
       const Type & t20, const Type & t21, const Type & t22,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -262,7 +262,7 @@ namespace Reflex {
       const Type & t17, const Type & t18, const Type & t19,
       const Type & t20, const Type & t21, const Type & t22,
       const Type & t23,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -274,7 +274,7 @@ namespace Reflex {
       const Type & t17, const Type & t18, const Type & t19,
       const Type & t20, const Type & t21, const Type & t22,
       const Type & t23, const Type & t24,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -286,7 +286,7 @@ namespace Reflex {
       const Type & t17, const Type & t18, const Type & t19,
       const Type & t20, const Type & t21, const Type & t22,
       const Type & t23, const Type & t24, const Type & t25,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -299,7 +299,7 @@ namespace Reflex {
       const Type & t20, const Type & t21, const Type & t22,
       const Type & t23, const Type & t24, const Type & t25,
       const Type & t26,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -312,7 +312,7 @@ namespace Reflex {
       const Type & t20, const Type & t21, const Type & t22,
       const Type & t23, const Type & t24, const Type & t25,
       const Type & t26, const Type & t27,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -325,7 +325,7 @@ namespace Reflex {
       const Type & t20, const Type & t21, const Type & t22,
       const Type & t23, const Type & t24, const Type & t25,
       const Type & t26, const Type & t27, const Type & t28,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -339,7 +339,7 @@ namespace Reflex {
       const Type & t23, const Type & t24, const Type & t25,
       const Type & t26, const Type & t27, const Type & t28,
       const Type & t29,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -353,7 +353,7 @@ namespace Reflex {
       const Type & t23, const Type & t24, const Type & t25,
       const Type & t26, const Type & t27, const Type & t28,
       const Type & t29, const Type & t30,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    RFLX_API Type FunctionTypeBuilder(const Type & r,   const Type & t0,  const Type & t1, 
@@ -367,7 +367,7 @@ namespace Reflex {
       const Type & t23, const Type & t24, const Type & t25,
       const Type & t26, const Type & t27, const Type & t28,
       const Type & t29, const Type & t30, const Type & t31,
-      const Catalog& catalog = Reflex::Catalog::Instance());
+      Catalog catalog = Reflex::Catalog::Instance());
 
 
    /**

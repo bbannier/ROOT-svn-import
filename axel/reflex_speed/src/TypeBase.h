@@ -51,7 +51,7 @@ namespace Internal {
       /** default constructor */
       TypeBase(const char* nam, unsigned int modifiers, size_t size, 
                ETYPE typeTyp, const std::type_info& ti,
-               const Catalog& catalog,
+               Catalog catalog,
                const Type& finalType = Dummy::Type());
 
 
@@ -168,7 +168,7 @@ namespace Internal {
       /**
       * Retrieve the Catalog containing the type.
       */
-      const Catalog& InCatalog() const;
+      Catalog InCatalog() const;
 
 
       /**

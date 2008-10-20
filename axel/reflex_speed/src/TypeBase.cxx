@@ -35,7 +35,7 @@ Reflex::Internal::TypeBase::TypeBase(const char * nam,
                                      size_t size,
                                      ETYPE typeTyp, 
                                      const std::type_info & ti,
-                                     const Catalog& catalog,
+                                     Catalog catalog,
                                      const Type & finalType)
    : fTypeInfo(&ti),
      fTypeModifiers(modifiers),
@@ -212,7 +212,7 @@ Reflex::Internal::TypeBase::HideName() const {
 
 
 //-------------------------------------------------------------------------------
-const Reflex::Catalog&
+Reflex::Catalog
 Reflex::Internal::TypeBase::InCatalog() const {
 //-------------------------------------------------------------------------------
 // Retrieve the Catalog containing the type.

@@ -35,7 +35,7 @@ namespace Internal {
       Pointer(const Type & pointerType,
          unsigned int modifiers,
          const std::type_info & ti,
-         const Catalog& catalog);
+         Catalog catalog);
 
       /** destructor */
       virtual ~Pointer() {}
@@ -61,7 +61,7 @@ namespace Internal {
 
 
       /** static funtion that composes the typename */
-      static const std::string& BuildTypeName(
+      static std::string BuildTypeName(
          const Type & pointerType,
          unsigned int mod = kScoped | kQualified) {
          std::string buf;
@@ -69,7 +69,8 @@ namespace Internal {
       }
 
       /** static funtion that composes the typename */
-      static const std::string& BuildTypeName(std::string& buf,
+      static const std::string& BuildTypeName(
+         std::string& buf,
          const Type & pointerType,
          unsigned int mod = kScoped | kQualified);
 

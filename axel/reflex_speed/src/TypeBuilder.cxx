@@ -32,7 +32,7 @@
 //-------------------------------------------------------------------------------
 Reflex::Type Reflex::TypeBuilder(const char * n, 
                                  unsigned int modifiers,
-                                 const Catalog& catalog) {
+                                 Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct the type information for a type.
    const Type & ret = catalog.Types().ByName(n);
@@ -69,7 +69,7 @@ Reflex::Type Reflex::VolatileBuilder(const Type & t) {
 //-------------------------------------------------------------------------------
 Reflex::Type Reflex::PointerBuilder(const Type & t,
                                     const std::type_info & ti,
-                                    const Catalog& catalog) {
+                                    Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a pointer type.
    std::string buf;
@@ -84,7 +84,7 @@ Reflex::Type
 Reflex::PointerToMemberBuilder(const Type & t,
                                const Scope & s,
                                const std::type_info & ti,
-                               const Catalog& catalog) {
+                               Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a pointer type.
    std::string buf;
@@ -109,7 +109,7 @@ Reflex::Type Reflex::ReferenceBuilder(const Type & t) {
 Reflex::Type Reflex::ArrayBuilder(const Type & t, 
                                   size_t n,
                                   const std::type_info & ti,
-                                  const Catalog& catalog) {
+                                  Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct an array type.
    const Type & ret = Type::ByName(Internal::Array::BuildTypeName(t,n));
@@ -121,7 +121,7 @@ Reflex::Type Reflex::ArrayBuilder(const Type & t,
 Reflex::Type Reflex::EnumTypeBuilder(const char * nam, 
                                      const char * values,
                                      const std::type_info & ti,
-                                     const Catalog& catalog) {
+                                     Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct an enum type.
 
@@ -152,7 +152,7 @@ Reflex::Type Reflex::EnumTypeBuilder(const char * nam,
 //-------------------------------------------------------------------------------
 Reflex::Type Reflex::TypedefTypeBuilder(const char * nam, 
                                         const Type & t,
-                                        const Catalog& catalog) {
+                                        Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a typedef type.
    Type ret = Type::ByName(nam);
@@ -171,7 +171,7 @@ Reflex::Type Reflex::TypedefTypeBuilder(const char * nam,
 Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const std::vector<Type> & p,
                                          const std::type_info & ti,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    return (new Internal::Function(r, p, ti, catalog))->ThisType();
@@ -180,7 +180,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 
 //-------------------------------------------------------------------------------
 Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector< Type > v;
@@ -193,7 +193,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 //-------------------------------------------------------------------------------
 Reflex::Type Reflex::FunctionTypeBuilder(const Type & r, 
                                          const Type & t0,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0);
@@ -207,7 +207,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
 Reflex::Type Reflex::FunctionTypeBuilder(const Type & r, 
                                          const Type & t0, 
                                          const Type & t1,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1);
@@ -222,7 +222,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t0, 
                                          const Type & t1,
                                          const Type & t2,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2);
@@ -238,7 +238,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t1,
                                          const Type & t2,
                                          const Type & t3,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3);
@@ -255,7 +255,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t2,
                                          const Type & t3,
                                          const Type & t4,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4);
@@ -273,7 +273,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t3,
                                          const Type & t4,
                                          const Type & t5,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5);
@@ -292,7 +292,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t4,
                                          const Type & t5,
                                          const Type & t6,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6);
@@ -312,7 +312,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t5,
                                          const Type & t6,
                                          const Type & t7,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7);
@@ -333,7 +333,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t6,
                                          const Type & t7,
                                          const Type & t8,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8);
@@ -355,7 +355,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t7,
                                          const Type & t8,
                                          const Type & t9,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9);
@@ -378,7 +378,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t8,
                                          const Type & t9,
                                          const Type & t10,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10);
@@ -402,7 +402,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t9,
                                          const Type & t10,
                                          const Type & t11,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11);
@@ -427,7 +427,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t10,
                                          const Type & t11,
                                          const Type & t12,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector< Type > v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12);
@@ -453,7 +453,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t11,
                                          const Type & t12,
                                          const Type & t13,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13);
@@ -480,7 +480,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t12,
                                          const Type & t13,
                                          const Type & t14,
-                                         const Catalog& catalog) {
+                                         Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14);
@@ -508,7 +508,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t13,
                                          const Type & t14,
                                          const Type & t15,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15);
@@ -537,7 +537,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t14,
                                          const Type & t15,
                                          const Type & t16,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
@@ -568,7 +568,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t15,
                                          const Type & t16,
                                          const Type & t17,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
@@ -600,7 +600,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t16,
                                          const Type & t17,
                                          const Type & t18,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
@@ -633,7 +633,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t17,
                                          const Type & t18,
                                          const Type & t19,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
@@ -667,7 +667,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t18,
                                          const Type & t19,
                                          const Type & t20,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
@@ -702,7 +702,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t19,
                                          const Type & t20,
                                          const Type & t21,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
@@ -738,7 +738,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t20,
                                          const Type & t21,
                                          const Type & t22,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
@@ -775,7 +775,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t21,
                                          const Type & t22,
                                          const Type & t23,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
@@ -813,7 +813,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t22,
                                          const Type & t23,
                                          const Type & t24,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
@@ -852,7 +852,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t23,
                                          const Type & t24,
                                          const Type & t25,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
@@ -892,7 +892,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t24,
                                          const Type & t25,
                                          const Type & t26,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
@@ -933,7 +933,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t25,
                                          const Type & t26,
                                          const Type & t27,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
@@ -975,7 +975,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t26,
                                          const Type & t27,
                                          const Type & t28,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
@@ -1018,7 +1018,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t27,
                                          const Type & t28,
                                          const Type & t29,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
@@ -1062,7 +1062,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t28,
                                          const Type & t29,
                                          const Type & t30,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,
@@ -1108,7 +1108,7 @@ Reflex::Type Reflex::FunctionTypeBuilder(const Type & r,
                                          const Type & t29,
                                          const Type & t30,
                                          const Type & t31,
-                                         const Catalog& catalog) { 
+                                         Catalog catalog) { 
 //-------------------------------------------------------------------------------
 // Construct a function type.
    std::vector<Type> v = Tools::MakeVector(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15,

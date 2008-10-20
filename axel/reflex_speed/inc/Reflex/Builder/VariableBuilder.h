@@ -35,7 +35,7 @@ namespace Reflex {
          const Type & typ,
          size_t offs,
          unsigned int modifiers = 0,
-         const Catalog& catalog = Reflex::Catalog::Instance());
+         Catalog catalog = Reflex::Catalog::Instance());
 
 
       /** destructor */
@@ -83,7 +83,7 @@ namespace Reflex {
          const Type & typ,
          size_t offs,
          unsigned int modifiers = 0,
-         const Catalog& catalog = Reflex::Catalog::Instance());
+         Catalog catalog = Reflex::Catalog::Instance());
 
 
       /** destructor */
@@ -129,7 +129,7 @@ namespace Reflex {
       VariableBuilderT(const char * nam,
          size_t offs,
          unsigned int modifiers = 0,
-         const Catalog& catalog = Reflex::Catalog::Instance());
+         Catalog catalog = Reflex::Catalog::Instance());
 
 
       /** destructor */
@@ -168,7 +168,7 @@ template < typename D >
 inline Reflex::VariableBuilderT<D>::VariableBuilderT(const char * nam,
                                                      size_t offs,
                                                      unsigned int modifiers,
-                                                     const Catalog& catalog) 
+                                                     Catalog catalog) 
 //-------------------------------------------------------------------------------
    : fDataMemberBuilderImpl(nam,
                             TypeDistiller<D>::Get(),

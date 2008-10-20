@@ -178,9 +178,28 @@ namespace Internal {
             // locate previous node:
             size_t prevbucket = BucketIndex(hash);
             prev = fBuckets[prevbucket];
-            if (prev == curr) prev = 0;
+            if (prev == curr) {
+               prev = 0;
+
+               // The current bucket starts with the current node.
+               // We need to update the bucket so it starts with curr->Next()...
+               // ...unless curr->Next() is the head of the next bucket
+               // ...or curr->Next() is the last node in the buckets
+               size_t nextbucket = prevbucket + 1;
+               if (nextbucket == fBuckets.size()) {
+                  fBuckets[prevbucket] = 0;
+               } else {
+                  ContainerTools::Link1Base* next = fBuckets[nextbucket];
+                  while (!next && nextbucket + 1 < fBuckets.size())
+                     next = fBuckets[++nextbucket];
+                  if (!next || curr->Next() == next)
+                     fBuckets[prevbucket] = 0;
+                  else
+                     fBuckets[prevbucket] = next;
+               }
+            }
             while (!prev && prevbucket > 0) {
-               // the is not the previous node; we need to move to the previous bucket.
+               // this is not the previous node; we need to move to the previous bucket.
                prev = fBuckets[--prevbucket];
             }
             while (prev && prev->Next() != curr) {
@@ -200,17 +219,24 @@ namespace Internal {
       iterator Find(const KEY& key) const { return Find(key, Hash(key)); }
       iterator Find(const KEY& key, Hash_t hash) const {
          REFLEX_RWLOCK_R(fLock);
-         return Find(key, iterator(Arena(), (NODE*)fBuckets[BucketIndex(hash)]));
+         return Find(key, iterator(Arena(), (NODE*)fBuckets[BucketIndex(hash)]), hash);
       }
 
       iterator Find(const KEY& key, const iterator& start) const {
          // Find next match, starting the search after a first match at start.
          // Used as
          //   while (start = Find(key, start) && !check(*start));
+         Hash_t hash = Hash(key);
+         return Find(key, start, hash);
+      }
+
+      iterator Find(const KEY& key, const iterator& start, Hash_t hash) const {
+         // Find next match, starting the search after a first match at start.
+         // Used as
+         //   while (start = Find(key, start) && !check(*start));
          if (!start) return End();
 
          REFLEX_RWLOCK_R(fLock);
-         Hash_t hash = Hash(key);
          size_t posBuckets = BucketIndex(hash);
          const ContainerTools::Link1Base* endnode = 0;
          if (posBuckets + 1 < fBuckets.size())

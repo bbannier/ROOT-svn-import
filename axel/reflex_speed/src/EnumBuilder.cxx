@@ -25,7 +25,7 @@
 Reflex::EnumBuilder::EnumBuilder(const char * nam,
                                  const std::type_info & ti,
                                  unsigned int modifiers,
-                                 const Catalog& catalog) {
+                                 Catalog catalog) {
 //-------------------------------------------------------------------------------
 // Construct a new enum dictionary info.
    fEnum = new Internal::Enum(nam, ti, catalog, modifiers);

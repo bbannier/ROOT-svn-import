@@ -116,7 +116,9 @@ Reflex::Internal::ContainerImplBase::InsertNodeBase(ContainerTools::Link1Base* n
    //   [bucketidx]:        node
    //   [...]:              0...
    //   [bucketidxnext]:    n3
-   const ContainerTools::Link1Base* n2 = fBuckets[bucketidxprev];
+   const ContainerTools::Link1Base* n2 = 0;
+   if (bucketidxprev != bucketidx)
+      n2 = fBuckets[bucketidxprev];
    if (n2) {
       // Find bucketidxnext:
       size_t bucketidxnext = bucketidx;

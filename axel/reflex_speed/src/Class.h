@@ -41,7 +41,7 @@ namespace Internal {
 
       /** constructor */
       Class(const char* typ, size_t size, const std::type_info& ti,
-            const Catalog& catalog,
+            Catalog catalog,
             unsigned int modifiers = 0, ETYPE classType = kETClass);
 
       /** destructor */

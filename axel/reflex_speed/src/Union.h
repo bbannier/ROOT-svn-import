@@ -32,7 +32,7 @@ namespace Internal {
 
       /** constructor */
       Union(const char* name, size_t size, const std::type_info& ti,
-            const Catalog& catalog, unsigned int modifiers, ETYPE unionType = kETUnion):
+            Catalog catalog, unsigned int modifiers, ETYPE unionType = kETUnion):
          Constructable(name, modifiers, size, unionType, ti, catalog) {}
 
       /** destructor */

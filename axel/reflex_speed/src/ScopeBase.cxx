@@ -38,7 +38,7 @@
 //-------------------------------------------------------------------------------
 Reflex::Internal::ScopeBase::ScopeBase(const char * scope,
                                        ETYPE scopeType,
-                                       const Catalog& catalog)
+                                       Catalog catalog)
    : fScopeName(0),
      fScopeType(scopeType),
      fPropertyList(OwnedPropertyList(new PropertyListImpl())),
@@ -79,7 +79,7 @@ Reflex::Internal::ScopeBase::ScopeBase(const char * scope,
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::ScopeBase::ScopeBase(const Catalog& catalog) 
+Reflex::Internal::ScopeBase::ScopeBase(Catalog catalog) 
    : fScopeName(0),
      fScopeType(kETNamespace),
      fDeclaringScope(catalog.__NIRVANA__()),
@@ -177,7 +177,7 @@ Reflex::Internal::ScopeBase::HideName() const {
 
 
 //-------------------------------------------------------------------------------
-const Reflex::Catalog&
+Reflex::Catalog
 Reflex::Internal::ScopeBase::InCatalog() const {
 //-------------------------------------------------------------------------------
 // Retrieve the Catalog containing the type.

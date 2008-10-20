@@ -38,7 +38,7 @@ namespace Internal {
             unsigned int modifiers,
             size_t len,
             const std::type_info & typeinfo,
-            const Catalog& catalog);
+            Catalog catalog);
 
 
       /** destructor */

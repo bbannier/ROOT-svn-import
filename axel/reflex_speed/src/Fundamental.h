@@ -34,7 +34,7 @@ namespace Internal {
       Fundamental(const char * typ,
          size_t size,
          const std::type_info & ti,
-         const Catalog& cat) ;
+         Catalog cat) ;
 
 
       /** destructor */

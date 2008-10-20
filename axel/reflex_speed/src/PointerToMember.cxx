@@ -23,7 +23,7 @@ Reflex::Internal::PointerToMember::PointerToMember(const Type & pointerToMemberT
                                                    unsigned int modifiers,
                                                    const Scope & pointerToMemberScope,
                                                    const std::type_info & ti,
-                                                   const Catalog& catalog) 
+                                                   Catalog catalog) 
 //------------------------------------------------------------------------------- 
    : TypeBase(BuildTypeName(pointerToMemberType, pointerToMemberScope).c_str(),
               modifiers, sizeof(void*), kETPointerToMember, ti, catalog),

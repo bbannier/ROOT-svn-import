@@ -38,10 +38,10 @@ namespace Internal {
    public:
 
       /** constructor for initialisation of the global namespace */
-      Namespace(const Catalog& catalog);
+      Namespace(Catalog catalog);
 
       /** named constructor */
-      Namespace(const char * scop, const Catalog& catalog);
+      Namespace(const char * scop, Catalog catalog);
 
 
       /** destructor */
