@@ -35,7 +35,7 @@ namespace Internal {
       /** default constructor */
       Enum(const char * enumType,
          const std::type_info & ti,
-         const Catalog& catalog,
+         Catalog catalog,
          unsigned int modifiers);
 
 

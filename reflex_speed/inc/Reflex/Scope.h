@@ -148,7 +148,7 @@ namespace Reflex {
       /**
       * Retrieve the Catalog containing the scope.
       */
-      const Catalog& InCatalog() const;
+      Catalog InCatalog() const;
 
 
       /**

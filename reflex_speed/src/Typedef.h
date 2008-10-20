@@ -42,7 +42,7 @@ namespace Internal {
       /** constructor */
       Typedef(const char * typ,
          const Type & typedefType,
-         const Catalog& catalog,
+         Catalog catalog,
          ETYPE typeTyp = kETTypedef,
          unsigned int modifiers = 0,
          const Type & finalType = Dummy::Type()) ;

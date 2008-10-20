@@ -66,7 +66,7 @@ namespace Internal {
       /** constructor within a At*/
       ScopeBase(const char * scope,
                 ETYPE scopeType,
-                const Catalog& catalog);
+                Catalog catalog);
 
 
       /** destructor */
@@ -138,7 +138,7 @@ namespace Internal {
       /**
       * Retrieve the Catalog containing the scope.
       */
-      const Catalog& InCatalog() const;
+      Catalog InCatalog() const;
 
 
       /**
@@ -326,7 +326,7 @@ namespace Internal {
    protected:
 
       /** protected constructor for initialisation of the global namespace */
-      ScopeBase(const Catalog& catalog);
+      ScopeBase(Catalog catalog);
 
    public:
 

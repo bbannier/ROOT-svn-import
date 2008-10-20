@@ -23,7 +23,7 @@
 Reflex::Internal::Pointer::Pointer(const Type & pointerType,
                                    unsigned int modifiers,
                                    const std::type_info & ti,
-                                   const Catalog& catalog)
+                                   Catalog catalog)
 //-------------------------------------------------------------------------------
 : TypeBase(BuildTypeName(pointerType, kQualified).c_str(), modifiers, sizeof(void*), kETPointer, ti, catalog), 
      fPointerType(pointerType) { 
@@ -52,3 +52,4 @@ Reflex::Internal::Pointer::BuildTypeName(std::string& buf,
          mod, pointerType.DeclaringScope());
    }
 }
+

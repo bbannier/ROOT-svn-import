@@ -45,7 +45,7 @@ namespace Internal {
                     size_t size,
                     ETYPE type,
                     const std::type_info& ti,
-                    const Catalog& catalog);
+                    Catalog catalog);
 
       /** destructor */
       virtual ~Constructable() {}
@@ -121,7 +121,7 @@ namespace Internal {
 inline
 Reflex::Internal::Constructable::Constructable(const char* name, unsigned int modifiers,
                                                size_t size, ETYPE type, const std::type_info& ti,
-                                               const Catalog& catalog):
+                                               Catalog catalog):
    ScopedType(name, modifiers, size, type, ti, catalog),
    fConstructorsAdaptor(fConstructors) {}
 //-------------------------------------------------------------------------------

@@ -68,7 +68,7 @@ namespace Internal {
    class TypeCatalogImpl {
    public:
       typedef ContainerImpl<std::string, TypeName*, kUnique> TypeNameContainer_t;
-      typedef ContainerImpl<std::string, Type, kUnique> TypeContainer_t;
+      typedef ContainerImpl<std::string, Type, kMany> TypeContainer_t;
 
       TypeCatalogImpl(const CatalogImpl* catalog): fCatalog(catalog) {}
       ~TypeCatalogImpl() {}

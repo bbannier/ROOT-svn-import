@@ -72,7 +72,7 @@ Reflex::FunctionBuilderImpl::FunctionBuilderImpl(const char * nam,
                                                  void * stubCtx,
                                                  const char * params,
                                                  unsigned char modifiers,
-                                                 const Catalog& catalog) 
+                                                 Catalog catalog) 
    : fFunction(Member(0)) {
 //-------------------------------------------------------------------------------
 // Create function type dictionary info (internal).
@@ -156,7 +156,7 @@ Reflex::FunctionBuilder::FunctionBuilder(const Type & typ,
                                          void * stubCtx,
                                          const char * params, 
                                          unsigned char modifiers,
-                                         const Catalog& catalog) 
+                                         Catalog catalog) 
    : fFunction(Member(0)) {
 //-------------------------------------------------------------------------------
 // Create function dictionary type information.

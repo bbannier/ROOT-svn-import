@@ -59,7 +59,7 @@ static TypeVec_t & sTypeVec() {
 //-------------------------------------------------------------------------------
 Reflex::Internal::TypeName::TypeName(const char * nam,
                                       TypeBase * typeBas,
-                                      const Catalog& catalog,
+                                      Catalog catalog,
                                       const std::type_info * ti)
    : fName(nam),
      fTypeBase(typeBas) {

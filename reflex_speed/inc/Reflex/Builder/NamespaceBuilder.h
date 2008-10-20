@@ -31,7 +31,7 @@ namespace Reflex{
 
       /** constructor */
       NamespaceBuilder(const char * nam,
-                       const Catalog& catalog = Reflex::Catalog::Instance());
+                       Catalog catalog = Reflex::Catalog::Instance());
 
 
       /** destructor */

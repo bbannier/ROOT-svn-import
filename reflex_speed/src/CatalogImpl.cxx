@@ -216,8 +216,9 @@ void Reflex::Internal::TypeCatalogImpl::CleanUp() const {
 void Reflex::Internal::TypeCatalogImpl::Add(Reflex::Internal::TypeName& type, const std::type_info * ti) {
 //-------------------------------------------------------------------------------
 // Add a type_info to the map.
-   fAllTypeNames.Insert(&type);
-   fAllTypes.Insert(type.ThisType());
+   Hash_t hash = fAllTypeNames.Hash(type.Name());
+   fAllTypeNames.Insert(&type, hash);
+   fAllTypes.Insert(type.ThisType(), hash);
    if (ti) fTypeInfoTypeMap.Insert(Internal::PairTypeInfoType(type, *ti));
 }
 
@@ -257,8 +258,9 @@ Reflex::Internal::ScopeCatalogImpl::Init() {
 void Reflex::Internal::ScopeCatalogImpl::Add(Reflex::Internal::ScopeName& scope) {
 //-------------------------------------------------------------------------------
 // Add a scope to the map.
-   fAllScopeNames.Insert(&scope);
-   fAllScopes.Insert(scope.ThisScope());
+   Hash_t hash = fAllScopeNames.Hash(scope.Name());
+   fAllScopeNames.Insert(&scope, hash);
+   fAllScopes.Insert(scope.ThisScope(), hash);
 }
 
 

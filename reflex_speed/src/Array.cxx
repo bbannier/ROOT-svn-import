@@ -26,13 +26,16 @@ Reflex::Internal::Array::Array(const Type & arrayType,
                                unsigned int modifiers,
                                size_t len,
                                const std::type_info & typeinfo,
-                               const Catalog& catalog) 
+                               Catalog catalog) 
 //-------------------------------------------------------------------------------
 // Constructs an array type.
-   : TypeBase((arrayType.FinalType().Name() + (fNameArraySizeSuffix = BuildTypeNameSuffix(arrayType, len))).c_str(),
+   : TypeBase((arrayType.FinalType().Name() + BuildTypeNameSuffix(arrayType, len)).c_str(),
               modifiers, len*(arrayType.SizeOf()), kETArray, typeinfo, catalog),
      fArrayType(arrayType), 
-     fLength(len) { }
+     fLength(len),
+     fNameArraySizeSuffix(BuildTypeNameSuffix(arrayType, len))
+{
+}
 
 
 //-------------------------------------------------------------------------------

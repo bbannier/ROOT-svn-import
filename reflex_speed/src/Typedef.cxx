@@ -21,7 +21,7 @@
 //-------------------------------------------------------------------------------
 Reflex::Internal::Typedef::Typedef(const char * typ,
                                    const Type & typedefType,
-                                   const Catalog& catalog,
+                                   Catalog catalog,
                                    ETYPE typeTyp,
                                    unsigned int modifiers,
                                    const Type & finalType)

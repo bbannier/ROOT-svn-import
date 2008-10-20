@@ -111,7 +111,7 @@ namespace Reflex {
 
 #else // !REFLEX_THREADING:
 
-#ifndef DEBUG
+#ifndef REFLEX_RWLOCK_DEBUG
 inline
 Reflex::Internal::RWLock::RWLock() {}
 
@@ -134,7 +134,7 @@ inline
 void
 Reflex::Internal::RWLock::ReleaseWrite() {}
 
-# else // DEBUG:
+# else // REFLEX_LOCK_DEBUG:
 
 inline
 Reflex::Internal::RWLock::RWLock(): fState(RWLockState::kUnlocked) {}

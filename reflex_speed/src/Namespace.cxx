@@ -19,7 +19,7 @@
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::Namespace::Namespace(const char * scop, const Catalog& catalog) 
+Reflex::Internal::Namespace::Namespace(const char * scop, Catalog catalog) 
 //-------------------------------------------------------------------------------
    : ScopeBase(scop, kETNamespace, catalog) {
    // Create dictionary info for a namespace scope.
@@ -27,7 +27,7 @@ Reflex::Internal::Namespace::Namespace(const char * scop, const Catalog& catalog
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::Namespace::Namespace(const Catalog& catalog) 
+Reflex::Internal::Namespace::Namespace(Catalog catalog) 
 //-------------------------------------------------------------------------------
    : ScopeBase(catalog) {
    // Constructor for global namespace initialization.

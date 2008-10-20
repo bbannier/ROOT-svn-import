@@ -25,7 +25,7 @@
 //-------------------------------------------------------------------------------
 Reflex::Internal::Enum::Enum(const char * enumType,
                              const std::type_info & ti,
-                             const Catalog& catalog,
+                             Catalog catalog,
                              unsigned int modifiers)
 //-------------------------------------------------------------------------------
 // Construct the dictionary information for an enum
