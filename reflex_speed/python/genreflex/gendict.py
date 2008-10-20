@@ -737,6 +737,7 @@ class genDictionary(object) :
     c += '#endif\n'
     c += '#include "%s"\n' % self.hfile
     c += '#include "Reflex/Builder/ReflexBuilder.h"\n'
+    c += '#include "Reflex/DictionaryHelper.h"\n'
     c += '#include <typeinfo>\n'
     c += 'using namespace ::Reflex;\n\n'
     return c
@@ -775,12 +776,12 @@ class genDictionary(object) :
     if 'members' in attrs : members = string.split(attrs['members'])
     mod = self.genModifier(attrs,None)
     typ = self.xref[attrs['id']]['elem']
-    typ = 'k' + typ[0].upper() + typ[1:]
-    if attrs.has_key('abstract') : mod += ' | kAbstract'
+    typ = 'kET' + typ[0].upper() + typ[1:]
+    if attrs.has_key('abstract') : mod += ' | kEDAbstract'
     if self.vtables :
-      if attrs['id'] in self.vtables : mod += ' | kVirtual'
+      if attrs['id'] in self.vtables : mod += ' | kEDVirtual'
     else :  # new in version 0.6.0
-      if self.isClassVirtual(attrs) :  mod += ' | kVirtual'
+      if self.isClassVirtual(attrs) :  mod += ' | kEDVirtual'
     members = filter(self.memberfilter, members)  # Eliminate problematic members
     # Fill the different streams sc: constructor, ss: stub functions
     sc = '//------Dictionary for class %s -------------------------------\n' % cl
@@ -1271,15 +1272,15 @@ class genDictionary(object) :
             first = iden + '  return (void*)%s(' % ( name, )
             s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
           elif returns[-1] == '&' :
-            first = iden + '  return (void*)&%s(' % ( name, )
-            s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
+            first = iden + '  return ::Reflex::DictionaryHelper::AddressOf(%s(' % ( name, )
+            s += first + self.genMCOArgs(args, n, len(first)) + '));\n'
           elif (returns in self.basictypes or
                 self.translate_typedef (f['returns']) in self.basictypes):
             first = iden + '  ret = %s(' % ( name, )
             s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
             s += iden + '  return &ret;\n'        
           else :
-            first = iden + '  return new %s(%s(' % ( returns, name )
+            first = iden + '  return ::Reflex::DictionaryHelper::New< %s >(%s(' % ( returns, name )
             s += first + self.genMCOArgs(args, n, len(first)) + '));\n'
         if ndarg : 
           if n != narg : s += '  }\n'
@@ -1375,11 +1376,11 @@ class genDictionary(object) :
     else             : xattrs = None
     mod = self.genModifier(attrs,xattrs)
     if attrs['type'][-1] == 'c' :
-      if mod : mod += ' | kConst'
-      else   : mod =  'kConst'
+      if mod : mod += ' | kEDConst'
+      else   : mod =  'kEDConst'
     if attrs['type'][-1] == 'v' :
-      if mod : mod += ' | kVolatile'
-      else   : mod = 'kVolatile'
+      if mod : mod += ' | kEDVolatile'
+      else   : mod = 'kEDVolatile'
     shadow = '__shadow__::' + string.translate( str(cl), self.transtable)
     c = '  .AddMember(%s, "%s", OffsetOf(%s, %s), %s)' % (self.genTypeID(attrs['type']), name, shadow, name, mod)
     c += self.genCommentProperty(attrs)
@@ -1426,13 +1427,13 @@ class genDictionary(object) :
     return c
 #----------------------------------------------------------------------------------
   def genModifier(self, attrs, xattrs ):
-    if   attrs.get('access') == 'public' or 'access' not in attrs : mod = 'kPublic'
-    elif attrs['access'] == 'private'   : mod = 'kPrivate'
-    elif attrs['access'] == 'protected' : mod = 'kProtected'
+    if   attrs.get('access') == 'public' or 'access' not in attrs : mod = 'kEDPublic'
+    elif attrs['access'] == 'private'   : mod = 'kEDPrivate'
+    elif attrs['access'] == 'protected' : mod = 'kEDProtected'
     else                                : mod = 'NONE'
-    if 'virtual' in attrs : mod += ' | kVirtual'
-    if 'pure_virtual' in attrs : mod += ' | kAbstract'
-    if 'static'  in attrs : mod += ' | kStatic'
+    if 'virtual' in attrs : mod += ' | kEDVirtual'
+    if 'pure_virtual' in attrs : mod += ' | kEDAbstract'
+    if 'static'  in attrs : mod += ' | kEDStatic'
     # Extra modifiers
     xtrans = ''
     etrans = ''
@@ -1442,8 +1443,8 @@ class genDictionary(object) :
     if 'extra' in attrs:
       etrans = attrs['extra'].get('transient')
       if etrans : etrans = etrans.lower()
-    if xtrans == 'true' or etrans == 'true' : mod += ' | kTransient'
-    if 'artificial' in attrs : mod += ' | kArtificial' 
+    if xtrans == 'true' or etrans == 'true' : mod += ' | kEDTransient'
+    if 'artificial' in attrs : mod += ' | kEDArtificial' 
     return mod
 #----------------------------------------------------------------------------------
   def genMCODecl( self, type, name, attrs, args ) :
@@ -1456,10 +1457,10 @@ class genDictionary(object) :
     if type == 'constructor' : returns  = 'void'
     else                     : returns  = self.genTypeName(attrs['returns'])
     mod = self.genModifier(attrs, None)
-    if   type == 'constructor' : mod += ' | kConstructor'
-    elif type == 'operator' :    mod += ' | kOperator'
-    elif type == 'converter' :   mod += ' | kConverter'
-    if attrs.get('const')=='1' : mod += ' | kConst'
+    if   type == 'constructor' : mod += ' | kEDConstructor'
+    elif type == 'operator' :    mod += ' | kEDOperator'
+    elif type == 'converter' :   mod += ' | kEDConverter'
+    if attrs.get('const')=='1' : mod += ' | kEDConst'
     if args : params  = '"'+ string.join( map(self.genParameter, args),';')+'"'
     else    : params  = '0'
     s = '  .AddMember(%s, "%s", %s%s, 0, %s, %s)' % (self.genTypeID(id), name, type, id, params, mod)
@@ -1510,8 +1511,8 @@ class genDictionary(object) :
           first = iden + '  return (void*)(((%s*)o)->%s)(' % ( cl, name )
           s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
         elif returns[-1] == '&' :
-          first = iden + '  return (void*)&(((%s*)o)->%s)(' % ( cl, name )
-          s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
+          first = iden + '  return ::Reflex::DictionaryHelper::AddressOf((((%s*)o)->%s)(' % ( cl, name )
+          s += first + self.genMCOArgs(args, n, len(first)) + '));\n'
         elif (returns in self.basictypes or
               self.translate_typedef (attrs['returns']) in self.basictypes or
               returns.find('::*') != -1 or
@@ -1520,7 +1521,7 @@ class genDictionary(object) :
           s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
           s += iden + '  return &ret;\n'        
         else :
-          first = iden + '  return new %s((((%s*)o)->%s)(' % ( returns, cl, name )
+          first = iden + '  return ::Reflex::DictionaryHelper::New< %s >((((%s*)o)->%s)(' % ( returns, cl, name )
           s += first + self.genMCOArgs(args, n, len(first)) + '));\n'
       if ndarg : 
         if n != narg : s += '  }\n'
@@ -1614,7 +1615,7 @@ class genDictionary(object) :
        self.checkAccessibleType(self.xref[attrs['context']]) : return ''
     mod = self.genModifier(attrs,None)
     id       = attrs['id']
-    s = '  .AddMember(%s, "~%s", destructor%s, 0, 0, %s | kDestructor )' % (self.genTypeID(id), attrs['name'], attrs['id'], mod)
+    s = '  .AddMember(%s, "~%s", destructor%s, 0, 0, %s | kEDDestructor )' % (self.genTypeID(id), attrs['name'], attrs['id'], mod)
     s += self.genCommentProperty(attrs)
     return s
 #----------------------------------------------------------------------------------
@@ -1656,8 +1657,8 @@ class genDictionary(object) :
 #----------------------------------------------------------------------------------
   def genBaseClassBuild(self, clf, b ):
     mod = b['access']
-    mod = 'k' + mod[0].upper() + mod[1:]
-    if 'virtual' in b and b['virtual'] == '1' : mod = 'kVirtual | ' + mod
+    mod = 'kED' + mod[0].upper() + mod[1:]
+    if 'virtual' in b and b['virtual'] == '1' : mod = 'kEDVirtual | ' + mod
     return '  .AddBase(%s, BaseOffset< %s, %s >::Get(), %s)' %  (self.genTypeID(b['type']), clf, self.genTypeName(b['type'],colon=True), mod)
 #----------------------------------------------------------------------------------
   def enhanceClass(self, attrs):
@@ -1813,8 +1814,8 @@ class genDictionary(object) :
       if id not in [ bid[0] for bid in bases] :
         if access == 'public' : access = b['access']
         if not virtual : virtual = ( b['virtual'] == '1' )
-        mod = 'k' + access[0].upper() + access[1:];
-        if virtual : mod = 'kVirtual |' + mod
+        mod = 'kED' + access[0].upper() + access[1:];
+        if virtual : mod = 'kEDVirtual |' + mod
         bases.append( [id,  mod, level] )
         self.getAllBases( id, bases, level+1, access, virtual )
 #----------------------------------------------------------------------------------

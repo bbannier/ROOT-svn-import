@@ -31,6 +31,7 @@ namespace Reflex {
    class Catalog;
    class MemberTemplate;
    class TypeTemplate;
+   class DictionaryHelper;
 
    //-------------------------------------------------------------------------------
    // Opaque layer around Reflex internal collections
@@ -180,6 +181,7 @@ namespace Reflex {
       friend class Catalog;
       friend class MemberTemplate;
       friend class TypeTemplate;
+      friend class DictionaryHelper;
    };
 
 
@@ -218,6 +220,7 @@ namespace Reflex {
       friend class Catalog;
       friend class MemberTemplate;
       friend class TypeTemplate;
+      friend class DictionaryHelper;
    };
 
 } // namespace Reflex
