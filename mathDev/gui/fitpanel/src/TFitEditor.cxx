@@ -1763,11 +1763,13 @@ void TFitEditor::DoDataSet(Int_t selected)
       return;
    }
 
+   // Check if the object selected still exist
    TGTextLBEntry* textEntry = static_cast<TGTextLBEntry*>(fDataSet->GetListBox()->GetEntry(selected));
    const char* name = textEntry->GetText()->GetString()+textEntry->GetText()->Last(':')+1;
    TObject* objSelected = gROOT->FindObject(name);
    assert(objSelected);
 
+   // Search the canvas where the object is drawn, if any
    TPad* currentPad = NULL;
    bool found = false;
    queue<TPad*> stPad;
@@ -1790,6 +1792,7 @@ void TFitEditor::DoDataSet(Int_t selected)
       }
    }
 
+   // Set the proper object and canvas
    SetFitObject( found?currentPad:NULL, objSelected, kButton1Down);
 }
 
