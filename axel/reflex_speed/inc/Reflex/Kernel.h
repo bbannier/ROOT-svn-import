@@ -81,11 +81,6 @@
 #endif
 #endif
 
-// windows.h and oracle define kEDConst
-#ifdef kEDConst
-#undef kEDConst
-#endif
-
 #ifdef _MSC_VER
 // Some pragmas to avoid warnings in MSVisualC
 // Disable warning C4786: identifier was truncated to '255' characters in the debug information
