@@ -96,7 +96,11 @@ protected:
    TGCheckButton       *fDrawSame;         // switch on/off fit function drawing
    TGTextButton        *fDrawAdvanced;     // opens a dialog for advanced draw options
    TGDoubleHSlider     *fSliderX;          // slider to set fit range along x-axis
+   TGNumberEntry       *fSliderXMax;       // entry to set the maximum in the range
+   TGNumberEntry       *fSliderXMin;       // entry to set the minumum in the range
    TGDoubleHSlider     *fSliderY;          // slider to set fit range along y-axis
+   TGNumberEntry       *fSliderYMax;       // entry to set the maximum in the range
+   TGNumberEntry       *fSliderYMin;       // entry to set the minumum in the range
    TGDoubleHSlider     *fSliderZ;          // slider to set fit range along z-axis
    TGHorizontalFrame   *fSliderXParent;    // parent of fSliderX
    TGHorizontalFrame   *fSliderYParent;    // parent of fSliderY
@@ -213,7 +217,9 @@ public:
    virtual void   DoReset();
    virtual void   DoSetParameters();
    virtual void   DoSliderXMoved();
+   virtual void   DoNumericSliderXChanged();
    virtual void   DoSliderYMoved();
+   virtual void   DoNumericSliderYChanged();
    virtual void   DoSliderZMoved();
    virtual void   DoUserDialog();
 
