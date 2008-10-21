@@ -53,7 +53,7 @@ Reflex::Internal::Class::Class(const char *           typ,
 Reflex::Internal::Class::~Class()
 {
 //-------------------------------------------------------------------------------
-   for (PathsToBase::iterator it = fPathsToBase.begin(); it != fPathsToBase.end(); ++it) {
+   for (PathsToBase_t::iterator it = fPathsToBase.begin(); it != fPathsToBase.end(); ++it) {
       delete it->second;
    }
 }
@@ -206,7 +206,23 @@ bool Reflex::Internal::Class::UpdateCompleteness() const
 
 
 //-------------------------------------------------------------------------------
-size_t Reflex::Internal::Class::AllBases() const
+void
+Reflex::Internal::Class::UpdateMembers() const
+{
+//-------------------------------------------------------------------------------
+// Update information for function and data members.
+   std::vector < OffsetFunction > basePath = std::vector < OffsetFunction >();
+   UpdateMembers2(fMembers,
+                  fDataMembers,
+                  fFunctionMembers,
+                  fPathsToBase,
+                  basePath);
+}
+
+
+//-------------------------------------------------------------------------------
+size_t
+Reflex::Internal::Class::AllBases() const
 {
 //-------------------------------------------------------------------------------
 // Return the number of base classes.
@@ -253,6 +269,72 @@ Reflex::Internal::Class::PathToBase(const Scope & bas) const
 
 
 //-------------------------------------------------------------------------------
+void
+Reflex::Internal::Class::UpdateMembers2(OrdOwnedMemberCont_t& members,
+                                   OrdMemberCont_t& dataMembers,
+                                   OrdMemberCont_t& functionMembers,
+                                   PathsToBase_t& pathsToBase,
+                                   std::vector < OffsetFunction > & basePath) const
+{
+//-------------------------------------------------------------------------------
+// Internal function to update the data and function member information.
+   std::vector < Base >::const_iterator bIter;
+   for (bIter = fBases.begin(); bIter != fBases.end(); ++bIter) {
+      Type bType = bIter->ToType().FinalType();
+      basePath.push_back(bIter->OffsetFP());
+      if (bType) {
+         Scope bScope(bType);
+         const Class* clbase = dynamic_cast<const Class*>(bScope.ToScopeBase());
+         if (!clbase) {
+            std::string myname;
+            Name(myname);
+            std::cerr << "ERROR in Reflex::Internal::Class::UpdateMembers2: inconsistency: base "
+                      << bType.Name() << " of " << myname << " is not a class but a "
+                      << bType.TypeTypeAsString() << "!" << std::endl;
+            continue;
+         }
+         ScopeName* id = (ScopeName*)clbase->ThisScope().Id();
+         PathsToBase_t::iterator it = pathsToBase.find(id);
+         if (it != pathsToBase.end()) delete it->second;
+         pathsToBase[ id ] = new std::vector < OffsetFunction >(basePath);
+         ConstIterator<Member> iDM = bScope.DataMembers().Begin();
+         const ConstIterator<Member> iDMEnd = bScope.DataMembers().End();
+         for (; iDM != iDMEnd; ++iDM) {
+            Member dm = *iDM;
+            if (!dataMembers.ContainsValue(dm)) {
+               members.Insert(OwnedMember(dm));
+               dataMembers.Insert(dm);
+            }
+         }
+         ConstIterator<Member> iFM = bScope.FunctionMembers().Begin();
+         const ConstIterator<Member> iFMEnd = bScope.FunctionMembers().End();
+         for (; iFM != iFMEnd; ++iFM) {
+            Member fm = *iFM;
+            if (!functionMembers.ContainsValue(fm)) {
+               members.Insert(OwnedMember(fm));
+               functionMembers.Insert(fm);
+            }
+         }
+         // recurse
+         clbase->UpdateMembers2(members, dataMembers, functionMembers, pathsToBase, basePath);
+      }
+      basePath.pop_back();
+   }
+   /*
+   // breath first search to find the "lowest" members in the hierarchy
+   for ( bIter = fBases.begin(); bIter != fBases.end(); ++bIter ) {
+   const Class * bClass = (*bIter)->toClass();
+   if ( bClass ) {  bClass->UpdateMembers2( members,
+   dataMembers,
+   functionMembers,
+   pathsToBase,
+   basePath );
+   }
+   }
+   */
+}
+
+
 //-------------------------------------------------------------------------------
 void Reflex::Internal::Class::GenerateDict(DictionaryGenerator & generator) const
 {

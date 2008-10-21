@@ -302,6 +302,13 @@ namespace Internal {
       const OrdTypeTemplateCont_t& SubTypeTemplates() const;
 
 
+      /** 
+      * UpdateMembers will update the list of Function/Data/Members with all
+      * MemberAt of BaseAt classes currently availabe in the system
+      */
+      virtual void UpdateMembers() const {}
+
+
       /**
       * UsingDirectives returns the using directives declared in this scope.
       * @return using directives

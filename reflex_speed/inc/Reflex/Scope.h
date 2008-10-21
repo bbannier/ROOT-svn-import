@@ -300,6 +300,13 @@ namespace Reflex {
       void Unload() const;
 
 
+      /** 
+      * UpdateMembers will update the list of Function/Data/Members with all
+      * members of base classes currently availabe in the system
+      */
+      void UpdateMembers() const;
+
+
       /**
       * UsingDirectives returns the using directives declared in this scope.
       * @return using directives

@@ -121,11 +121,32 @@ namespace Internal {
       virtual void AddBase(const Base& b) const;
 
 
+      /**
+       * UpdateMembers will update the list of Function/Data/Members with all
+       * MemberAt of BaseAt classes currently availabe in the system
+       */
+      virtual void UpdateMembers() const;
+
    private:
 
       /** map with the class as a key and the path to it as the value
           the key (void*) is a pointer to the unique ScopeName */
-      typedef std::map<ScopeName*, std::vector<OffsetFunction>* > PathsToBase;
+      typedef std::map<ScopeName*, std::vector<OffsetFunction>* > PathsToBase_t;
+      typedef OrderedContainerImpl<std::string, Member> OrdMemberCont_t;
+      typedef OrderedContainerImpl<std::string, OwnedMember> OrdOwnedMemberCont_t;
+
+      /**
+       * UpdateMembers2 will update the list of Function/Data/Members with all
+       * MemberAt of BaseAt classes currently availabe in the system
+       * @param members the list of members
+       * @param dataMembers the list of data members
+       * @param functionMembers the list of function members
+       * @param pathsToBase the cache storing pathes to all known bases
+       * @param basePath the current path to the BaseAt class
+       */
+      void UpdateMembers2(OrdOwnedMemberCont_t& members, OrdMemberCont_t& dataMembers,
+                          OrdMemberCont_t& functionMembers, PathsToBase_t& pathsToBase,
+                          std::vector<OffsetFunction>& basePath) const;
 
       /**
        * NewBases will return true if new BaseAt classes have been discovered
@@ -171,7 +192,7 @@ namespace Internal {
       mutable bool fCompleteType;
 
       /** map to all inherited datamembers and their inheritance path */
-      mutable PathsToBase fPathsToBase;
+      mutable PathsToBase_t fPathsToBase;
 
    }; // class Class
 } //namespace Internal

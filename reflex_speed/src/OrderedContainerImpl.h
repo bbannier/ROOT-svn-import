@@ -146,9 +146,12 @@ namespace Internal {
       typedef VALUE Value_t;
 
       OrderedContainerNode(const VALUE& obj, OrderedContainerNode* prev):
-      Link2_t(prev, 0), fObj(obj)
-      {
+      Link2_t(prev, 0), fObj(obj) {
          if (prev) prev->InsertAfter(this);
+      }
+
+      bool operator==(const OrderedContainerNode& other) {
+         return fObj == other;
       }
 
       VALUE fObj;
@@ -253,11 +256,13 @@ namespace Internal {
       iterator Find(const KEY& key, const iterator& start) const { return fHashMap.Find(key, start); }
 
       iterator FindValue(const VALUE& obj) const {
-         return fHashMap.FindValue(obj); }
-      iterator FindValue(const VALUE& obj, Hash_t hash) const { return fHashMap.FindValue(obj, hash); }
+         return fHashMap.FindValue(OrderedNode_t(obj, 0)); }
+      iterator FindValue(const VALUE& obj, Hash_t hash) const { return fHashMap.FindValue(OrderedNode_t(obj, 0), hash); }
 
-      bool Contains(const VALUE& obj) const {return fHashMap.Contains(obj);}
-      bool Contains(const VALUE& obj, Hash_t hash) const { return fHashMap.Contains(obj, hash); }
+      bool Contains(const KEY& key) const {return fHashMap.Contains(key);}
+      bool Contains(const KEY& key, Hash_t hash) const { return fHashMap.Contains(key, hash); }
+      bool ContainsValue(const VALUE& obj) const {return fHashMap.ContainsValue(OrderedNode_t(obj, 0));}
+      bool ContainsValue(const VALUE& obj, Hash_t hash) const { return fHashMap.ContainsValue(OrderedNode_t(obj, 0), hash); }
 
       void   Clear() { fHashMap.Clear(); fLast = 0; fFirst.Set(0,0); }
       size_t Size() const { return fHashMap.Size(); }
