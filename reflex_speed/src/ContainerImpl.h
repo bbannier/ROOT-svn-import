@@ -245,6 +245,7 @@ namespace Internal {
          for (NODE* c = static_cast<NODE*>(start.Curr()); c && c != endnode; c = (NODE*)c->Next()) {
             if (Traits().KeyMatches(key, c->fObj, buf))
                return iterator(Arena(), c);
+            buf = KEY();
          }
          // should now iterate over next container (see start.NextContainerBegin())
          return End();

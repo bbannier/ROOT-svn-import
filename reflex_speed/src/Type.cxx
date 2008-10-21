@@ -255,8 +255,6 @@ Reflex::Type::Name(std::string& buf, unsigned int mod) const {
    static const std::string sCVc  = "const";
    static const std::string sCVv  = "volatile";
 
-   buf.clear();
-
    if ((!(mod & kQualified) || !fModifiers) && (*this)) { 
       // most common case
       return fTypeName->ToTypeBase()->Name(buf, mod);

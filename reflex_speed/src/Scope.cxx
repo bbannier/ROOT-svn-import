@@ -200,7 +200,6 @@ const std::string&
 Reflex::Scope::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Return the name of this scope, scoped if requested.
-   buf.clear();
    if (*this)
       return fScopeName->fScopeBase->Name(buf, mod);
    if (fScopeName) {
