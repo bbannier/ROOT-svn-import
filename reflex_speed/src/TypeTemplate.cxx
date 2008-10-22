@@ -57,6 +57,15 @@ Reflex::TypeTemplate::AddTemplateInstance(const Type & templateInstance) const {
 }
 
 //-------------------------------------------------------------------------------
+const Reflex::Container<Reflex::Type>
+Reflex::TypeTemplate::TemplateInstances() const {
+//-------------------------------------------------------------------------------
+   if (*this) return fTypeTemplateName->fTypeTemplateImpl->TemplateInstances();
+   return Dummy::EmptyContainer();
+}
+
+
+//-------------------------------------------------------------------------------
 const Reflex::OrderedContainer<std::string>
 Reflex::TypeTemplate::TemplateParameterDefaults() const {
 //-------------------------------------------------------------------------------

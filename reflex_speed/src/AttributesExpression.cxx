@@ -9,6 +9,11 @@
 //
 // This software is provided "as is" without express or implied warranty.
 
+#ifndef REFLEX_BUILD
+#define REFLEX_BUILD
+#endif
+
 #include "Reflex/AttributesExpression.h"
 
-Reflex::AttributesExpression Reflex::AttributesExpression::fgNIL(Reflex::kETNIL);
+Reflex::AttributesExpression
+Reflex::AttributesExpression::fgNIL(Reflex::kETNIL);

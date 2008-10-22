@@ -134,7 +134,7 @@ namespace Reflex {
       * Keys returns the collection of all known keys
       * @return begin iterator of key container
       */
-      static const Container<std::string>& Keys(); 
+      static OrderedContainer<std::string> Keys();
 
 
       /**

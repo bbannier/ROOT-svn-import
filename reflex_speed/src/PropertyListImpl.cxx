@@ -18,21 +18,50 @@
 #include "Reflex/Tools.h"
 
 #include <sstream>
+#include <utility>
 
 // SOLARIS CC FIX (this include file is needed for a fix for std::distance)
 #include "stl_hash.h"
+#include "ContainerImpl.h"
+#include "ContainerSTLAdaptor.h"
 
 /** the Key container */
 typedef std::vector< std::string > Keys_t;
 
 //-------------------------------------------------------------------------------
-Keys_t & sKeys() {
+Keys_t& sKeys() {
 //-------------------------------------------------------------------------------
    // Wrapper for static keys container.
    static Keys_t k;
    return k;
 }
 
+
+//-------------------------------------------------------------------------------
+// specializations for map of string -> int:
+template <>
+class Reflex::Internal::ContainerTraits_KeyExtractor<std::string, size_t> {
+public:
+   const std::string& Get(size_t v) const { return sKeys()[v]; }
+   const std::string& Get(size_t v, std::string&) const { return sKeys()[v]; }
+};
+
+template <>
+struct Reflex::Internal::NodeValidator<size_t> {
+   static void Invalidate(size_t& value) { value = (size_t)-1; }
+   static bool IsValid(size_t value) { return value != (size_t)-1; }
+};
+
+typedef Reflex::Internal::ContainerImpl<std::string, size_t, Reflex::Internal::kUnique,
+                                        Reflex::Internal::ContainerTools::NotRefCounted> KeyCont_t;
+
+//-------------------------------------------------------------------------------
+KeyCont_t& sKeyCont() {
+//-------------------------------------------------------------------------------
+// Wrapper for static key name -> vector position
+   static KeyCont_t k;
+   return k;
+}
 
 //-------------------------------------------------------------------------------
 std::ostream & Reflex::Internal::operator<<(std::ostream & s,
@@ -72,9 +101,9 @@ bool
 Reflex::Internal::PropertyListImpl::HasProperty(const std::string & key) const {
 //-------------------------------------------------------------------------------
    // Return true if property has key.
-   size_t i = KeyByName(key);
-   if (i == NPos()) return false;
-   else               return PropertyValue(i);
+   KeyCont_t::const_iterator i = sKeyCont().Find(key);
+   if (!i) return false;
+   else    return PropertyValue(*i);
 }
 
 
@@ -88,38 +117,12 @@ Reflex::Internal::PropertyListImpl::HasProperty(size_t key) const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::StdString_Iterator
-Reflex::Internal::PropertyListImpl::Key_Begin() {
+const Reflex::Internal::IContainerImpl&
+Reflex::Internal::PropertyListImpl::Keys() {
 //-------------------------------------------------------------------------------
    // Return begin iterator of key container
-   return sKeys().begin();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Internal::StdString_Iterator
-Reflex::Internal::PropertyListImpl::Key_End() {
-//-------------------------------------------------------------------------------
-   // Return end iterator of key container
-   return sKeys().end();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Internal::Reverse_StdString_Iterator
-Reflex::Internal::PropertyListImpl::Key_RBegin() {
-//-------------------------------------------------------------------------------
-   // Return rbegin iterator of key container
-   return ((const std::vector<std::string>&)sKeys()).rbegin();
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::Internal::Reverse_StdString_Iterator
-Reflex::Internal::PropertyListImpl::Key_REnd() {
-//-------------------------------------------------------------------------------
-   // Return rend iterator of key container
-   return ((const std::vector<std::string>&)sKeys()).rend();
+   static Reflex::Internal::ContainerSTLAdaptor<Keys_t> k(sKeys());
+   return k;
 }
 
 
@@ -134,38 +137,34 @@ Reflex::Internal::PropertyListImpl::KeysAsString() {
 
 
 //-------------------------------------------------------------------------------
-const std::string &
+const std::string&
 Reflex::Internal::PropertyListImpl::KeyAt(size_t nth) {
 //-------------------------------------------------------------------------------
-   // Return the nth property key.
-   return sKeys().at(nth);
+// Return a string containing all property keys.
+   return sKeys()[nth];
 }
 
 
 //-------------------------------------------------------------------------------
 size_t
 Reflex::Internal::PropertyListImpl::KeyByName(const std::string & key,
-                                            bool allocateNew) {
+                                              bool allocateNew /*= false*/) {
 //-------------------------------------------------------------------------------
-// Return a key by it's name.
-   Keys_t::iterator it = std::find(sKeys().begin(), sKeys().end(), key);
-   if (it != sKeys().end()) {
-      return std::distance(sKeys().begin(), it);
-   }
-   else if (allocateNew) {
-      sKeys().push_back(key);
-      return sKeys().size() - 1;
-   }
-   return NPos();
-}
+// Key is the static getter function to return the index of a key. If allocateNew is 
+// set to true a new key will be allocated if it doesn't exist and it's index returned.
+// Otherwise if the key exists the function returns it's index or 0 if no key exists.
+// @param key the key to look for 
+// @param allocateNew allocate a new key if the key doesn't exist
+// @return key index or 0 if no key exists and allocateNew is set to false
+   KeyCont_t::const_iterator i = sKeyCont().Find(key);
+   if (i) return *i;
+   if (!allocateNew) return (size_t)-1;
 
-
-//-------------------------------------------------------------------------------
-size_t
-Reflex::Internal::PropertyListImpl::KeySize() {
-//-------------------------------------------------------------------------------
-   // Return number of all allocated keys.
-   return sKeys().size();
+   // allocate
+   size_t idx = sKeys().size();
+   sKeys().push_back(key);
+   sKeyCont().Insert(idx);
+   return idx;
 }
 
 
@@ -210,9 +209,9 @@ std::string
 Reflex::Internal::PropertyListImpl::PropertyKeys() const {
 //-------------------------------------------------------------------------------
 // Return a string containing all property keys.
-   std::vector<std::string> kv;
-   for (size_t i = 0; i < KeySize(); ++i) {
-      if (PropertyValue(i)) kv.push_back(KeyAt(i));
+   std::vector<std::string> kv(sKeys().size());
+   for (size_t i = 0; i < sKeys().size(); ++i) {
+      if (PropertyValue(i)) kv.push_back(sKeys()[i]);
    }
    std::string buf;
    return Tools::StringVec2String(buf, kv);
