@@ -28,44 +28,58 @@
 /** the Key container */
 typedef std::vector< std::string > Keys_t;
 
-//-------------------------------------------------------------------------------
-Keys_t& sKeys() {
-//-------------------------------------------------------------------------------
-   // Wrapper for static keys container.
-   static Keys_t k;
-   return k;
+namespace {
+   //-------------------------------------------------------------------------------
+   static
+   Keys_t&
+   sKeys() {
+      //-------------------------------------------------------------------------------
+      // Wrapper for static keys container.
+      static Keys_t k;
+      return k;
+   }
 }
 
 
 //-------------------------------------------------------------------------------
-// specializations for map of string -> int:
-template <>
-class Reflex::Internal::ContainerTraits_KeyExtractor<std::string, size_t> {
-public:
-   const std::string& Get(size_t v) const { return sKeys()[v]; }
-   const std::string& Get(size_t v, std::string&) const { return sKeys()[v]; }
-};
+namespace Reflex {
+namespace Internal {
+   // specializations for map of string -> int:
+   template <>
+   class ContainerTraits_KeyExtractor<std::string, size_t> {
+   public:
+      const std::string& Get(size_t v) const { return sKeys()[v]; }
+      const std::string& Get(size_t v, std::string&) const { return sKeys()[v]; }
+   };
 
-template <>
-struct Reflex::Internal::NodeValidator<size_t> {
-   static void Invalidate(size_t& value) { value = (size_t)-1; }
-   static bool IsValid(size_t value) { return value != (size_t)-1; }
-};
+   template <>
+   struct NodeValidator<size_t> {
+      static void Invalidate(size_t& value) { value = (size_t)-1; }
+      static bool IsValid(size_t value) { return value != (size_t)-1; }
+   };
+} // namespace Internal
+} // namespace Reflex
+
 
 typedef Reflex::Internal::ContainerImpl<std::string, size_t, Reflex::Internal::kUnique,
                                         Reflex::Internal::ContainerTools::NotRefCounted> KeyCont_t;
 
-//-------------------------------------------------------------------------------
-KeyCont_t& sKeyCont() {
-//-------------------------------------------------------------------------------
-// Wrapper for static key name -> vector position
-   static KeyCont_t k;
-   return k;
+namespace {
+   //-------------------------------------------------------------------------------
+   static
+   KeyCont_t&
+   sKeyCont() {
+      //-------------------------------------------------------------------------------
+      // Wrapper for static key name -> vector position
+      static KeyCont_t k;
+      return k;
+   }
 }
 
 //-------------------------------------------------------------------------------
-std::ostream & Reflex::Internal::operator<<(std::ostream & s,
-                                             const PropertyListImpl & p) {
+std::ostream&
+Reflex::Internal::operator<<(std::ostream & s,
+                             const PropertyListImpl & p) {
 //-------------------------------------------------------------------------------
 // Operator to put properties on the ostream.
    if (p.fProperties) {
