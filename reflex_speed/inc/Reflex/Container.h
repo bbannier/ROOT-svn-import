@@ -136,6 +136,10 @@ namespace Reflex {
       public:
          ContainerBase(const IContainerImpl* coll = 0): fCont(coll) {}
          const Internal::IContainerImpl& Cont() const { return *fCont; }
+
+         size_t Size() const  { return fCont->ProxySize(); }
+         bool   Empty() const { return fCont->ProxyEmpty(); }
+
       private:
          const Internal::IContainerImpl* fCont; // actual collection wrapper
       };
@@ -144,10 +148,13 @@ namespace Reflex {
    template <typename T>
    class /* RFLX_API */ Container: public Internal::ContainerBase {
    protected:
-      Container& operator=(const Container& rhs); // intentionally not implemented
-      Container* operator&();   // intentionally not implemented
       const Container* operator&() const { return this; }  // needed for dictionary
       Container(const Container& c): ContainerBase(c) {} // needed for dictionary
+      Container& operator=(const Container& rhs) {
+         // assignment operator, needed for dictionary
+         ContainerBase::operator=(rhs);
+         return *this;
+      }
 
    public:
       typedef ConstIterator<T> const_iterator;
@@ -157,9 +164,6 @@ namespace Reflex {
          
       const_iterator Begin() const { const_iterator ret; Cont().ProxyBegin(ret); return ret; }
       const_iterator End() const   { const_iterator ret; Cont().ProxyEnd(ret);   return ret; }
-
-      size_t Size() const  { return Cont().ProxySize(); }
-      bool   Empty() const { return Cont().ProxyEmpty(); }
 
       T ByName(const std::string& name) const {
          const T* ret = (const T*)Cont().ProxyByName(name);
@@ -193,10 +197,13 @@ namespace Reflex {
    class /* RFLX_API */ OrderedContainer: public Container<T>
    {
    public:
-      OrderedContainer& operator=(const OrderedContainer& rhs); // intentionally not implemented
-      OrderedContainer* operator&();  // intentionally not implemented
       const OrderedContainer* operator&() const { return this; }  // needed for dictionary
       OrderedContainer(const OrderedContainer& oc): Container<T>(oc) {} // needed for dictionary
+      OrderedContainer& operator=(const OrderedContainer& rhs) {
+         // assignment operator, needed for dictionary
+         Container<T>::operator=(rhs);
+         return *this;
+      }
 
    public:
       typedef ConstReverseIterator<T> const_reverse_iterator;
