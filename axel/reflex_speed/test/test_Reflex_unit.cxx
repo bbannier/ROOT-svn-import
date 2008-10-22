@@ -17,9 +17,9 @@
 #include "src/FunctionMember.h"
 #include "src/Class.h"
 #include "src/ClassTemplateInstance.h"
-
-#include "Reflex/internal/OwnedPropertyList.h"
-#include "Reflex/internal/OwnedMember.h"
+#include "src/OwnedPropertyList.h"
+#include "src/PropertyListImpl.h"
+#include "src/OwnedMember.h"
 #include "Reflex/SharedLibrary.h"
 
 // Standard C++ include files
@@ -30,6 +30,7 @@
 #include <string.h>
 
 using namespace Reflex;
+using namespace Reflex::Internal;
 using namespace std;
 
 
@@ -145,27 +146,28 @@ void ReflexUnitTest::any_type()
 
 void ReflexUnitTest::empty_type() {
   Type t;
-  CPPUNIT_ASSERT_EQUAL(38, int(Type::TypeSize()));
+  CPPUNIT_ASSERT_EQUAL(38, int(Catalog::Instance().Types().Size()));
   CPPUNIT_ASSERT(!t);
   CPPUNIT_ASSERT_EQUAL(size_t(0), size_t(t.Allocate()));
-  CPPUNIT_ASSERT(!t.Bases().At(0));
+  CPPUNIT_ASSERT(!(*t.Bases().Begin()));
   CPPUNIT_ASSERT_EQUAL(0, int(t.Bases().Size()));
   CPPUNIT_ASSERT(!t.CastObject(Type(),Object()));
   CPPUNIT_ASSERT(!t.Construct());
-  CPPUNIT_ASSERT(!t.DataMembers().At(0));
-  CPPUNIT_ASSERT_EQUAL(0, int(t.DataMembers().Size()));
-  CPPUNIT_ASSERT(!t.DeclarinkScope());
+  Scope ts(t);
+  CPPUNIT_ASSERT(!(*ts.DataMembers().Begin()));
+  CPPUNIT_ASSERT_EQUAL(0, int(ts.DataMembers().Size()));
+  CPPUNIT_ASSERT(!t.DeclaringScope());
   CPPUNIT_ASSERT(!t.DynamicType(Object()));
-  CPPUNIT_ASSERT(!t.FunctionMembers().At(0));
-  CPPUNIT_ASSERT_EQUAL(0,int(t.FunctionMembers().Size()));
+  CPPUNIT_ASSERT(!*ts.FunctionMembers().Begin());
+  CPPUNIT_ASSERT_EQUAL(0,int(ts.FunctionMembers().Size()));
   CPPUNIT_ASSERT(!(bool)t.HasBase(Type()));
   CPPUNIT_ASSERT_EQUAL(size_t(0), size_t(t.Id()));
   CPPUNIT_ASSERT_EQUAL(false, t.Is(kAbstract));
   CPPUNIT_ASSERT_EQUAL(false, t.Is(kArray));
   CPPUNIT_ASSERT_EQUAL(false, t.Is(kClassOrStruct));
-  CPPUNIT_ASSERT_EQUAL(false, t.IsComplete());
+  CPPUNIT_ASSERT_EQUAL(false, ts.IsComplete());
   CPPUNIT_ASSERT_EQUAL(false, t.Is(kConst));
-  CPPUNIT_ASSERT_EQUAL(false, t.IsConstVolatile());
+  CPPUNIT_ASSERT_EQUAL(false, t.Is(kConstVolatile));
   CPPUNIT_ASSERT_EQUAL(false, t.Is(kEnum));
   CPPUNIT_ASSERT_EQUAL(true, t.IsEquivalentTo(Type()));
   CPPUNIT_ASSERT_EQUAL(false, t.Is(kFunction));
@@ -181,24 +183,26 @@ void ReflexUnitTest::empty_type() {
   CPPUNIT_ASSERT_EQUAL(false, t.Is(kVirtual));
   CPPUNIT_ASSERT_EQUAL(false, t.Is(kVolatile));
   CPPUNIT_ASSERT_EQUAL(0, int(t.ArrayLength()));
-  CPPUNIT_ASSERT(!t.MemberByName(""));
-  CPPUNIT_ASSERT(!t.Members().At(0));
-  CPPUNIT_ASSERT_EQUAL(0, int(t.Members().Size()));
-  CPPUNIT_ASSERT(!t.MemberTemplates().At(0));
-  CPPUNIT_ASSERT_EQUAL(0, int(t.MemberTemplates().Size()));
+  CPPUNIT_ASSERT(!ts.Members().ByName(""));
+  CPPUNIT_ASSERT(!*ts.Members().Begin());
+  CPPUNIT_ASSERT_EQUAL(0, int(ts.Members().Size()));
+  CPPUNIT_ASSERT(!*ts.MemberTemplates().Begin());
+  CPPUNIT_ASSERT_EQUAL(0, int(ts.MemberTemplates().Size()));
   CPPUNIT_ASSERT_EQUAL(std::string(""), t.Name());
-  CPPUNIT_ASSERT_EQUAL(std::string(""), std::string(t.Name_c_str()));
-  CPPUNIT_ASSERT(!t.FunctionParameters().At(0));
+  std::string buf("foo");
+  CPPUNIT_ASSERT_EQUAL(std::string("foo"), t.Name(buf));
+  CPPUNIT_ASSERT_EQUAL(std::string("foo"), buf);
+  CPPUNIT_ASSERT(!*t.FunctionParameters().Begin());
   CPPUNIT_ASSERT_EQUAL(0, int(t.FunctionParameters().Size()));
   CPPUNIT_ASSERT(!t.Properties());
   CPPUNIT_ASSERT(!t.ReturnType());
-  CPPUNIT_ASSERT(!t.DeclarinkScope());
+  CPPUNIT_ASSERT(!t.DeclaringScope());
   CPPUNIT_ASSERT_EQUAL(0, int(t.SizeOf()));
-  CPPUNIT_ASSERT(!t.SubScopes().At(0));
-  CPPUNIT_ASSERT_EQUAL(0, int(t.SubScopes().Size()));
-  CPPUNIT_ASSERT(!t.SubTypes().At(0));
-  CPPUNIT_ASSERT_EQUAL(0, int(t.SubTypes().Size()));
-  CPPUNIT_ASSERT(!t.TemplateArguments().At(0));
+  CPPUNIT_ASSERT(!*ts.SubScopes().Begin());
+  CPPUNIT_ASSERT_EQUAL(0, int(ts.SubScopes().Size()));
+  CPPUNIT_ASSERT(!*ts.SubTypes().Begin());
+  CPPUNIT_ASSERT_EQUAL(0, int(ts.SubTypes().Size()));
+  CPPUNIT_ASSERT(!*t.TemplateArguments().Begin());
   CPPUNIT_ASSERT_EQUAL(0, int(t.TemplateArguments().Size()));
   CPPUNIT_ASSERT(!t.TemplateFamily());
   CPPUNIT_ASSERT(!t.ToType());
@@ -206,15 +210,15 @@ void ReflexUnitTest::empty_type() {
   CPPUNIT_ASSERT(!t.RawType());
   CPPUNIT_ASSERT(!t.FinalType().RawType());
   CPPUNIT_ASSERT_EQUAL(std::string(typeid(void).name()), std::string(t.TypeInfo().name()));
-  CPPUNIT_ASSERT(!t.SubTypeTemplates().At(0));
-  CPPUNIT_ASSERT_EQUAL(0, int(t.SubTypeTemplates().Size()));
-  CPPUNIT_ASSERT_EQUAL(kUnresolved,t.TypeType());
+  CPPUNIT_ASSERT(!*ts.SubTypeTemplates().Begin());
+  CPPUNIT_ASSERT_EQUAL(0, int(ts.SubTypeTemplates().Size()));
+  CPPUNIT_ASSERT_EQUAL(kETUnresolved,t.TypeType());
   CPPUNIT_ASSERT_EQUAL(std::string("kUnresolved"), t.TypeTypeAsString());
 }
 
 void ReflexUnitTest::empty_scope() {
   Scope s;
-  CPPUNIT_ASSERT(!s.DataMembers().At(0));
+  CPPUNIT_ASSERT(!*s.DataMembers().Begin());
 }
 
 void ReflexUnitTest::empty_member() {
@@ -223,6 +227,7 @@ void ReflexUnitTest::empty_member() {
 }
 
 void ReflexUnitTest::exception() {
+   /* no exception anymore, UpdateMembers is now part of Scope:
   Type t = Type::ByName("int");
   CPPUNIT_ASSERT(t);
   //CPPUNIT_ASSERT_THROW(t.updateMembers(), Reflex::RuntimeError);
@@ -232,6 +237,7 @@ void ReflexUnitTest::exception() {
   catch (Reflex::RuntimeError e) {
     CPPUNIT_ASSERT_EQUAL(std::string("REFLEX: Function UpdateMembers can only be called on Class/Struct"), std::string(e.what()));
   }
+  */
 }
 
 
@@ -245,21 +251,21 @@ struct AnyStruct {
 
 void ReflexUnitTest::property_list()
 {
-  OwnedPropertyList pl = OwnedPropertyList(new PropertyListImpl());
+   OwnedPropertyList pl(new PropertyListImpl());
 
   CPPUNIT_ASSERT(pl);
   CPPUNIT_ASSERT_EQUAL((size_t)0, pl.PropertyCount());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, PropertyList::KeySize());
-  CPPUNIT_ASSERT_EQUAL(std::string("Description"), *PropertyList::Key_Begin());
-  CPPUNIT_ASSERT_EQUAL(std::string("Description"), *(PropertyList::Key_REnd()-1));
+  CPPUNIT_ASSERT_EQUAL((size_t)1, PropertyList::Keys().Size());
+  CPPUNIT_ASSERT_EQUAL(std::string("Description"), *PropertyList::Keys().Begin());
+  CPPUNIT_ASSERT_EQUAL(std::string("Description"), *(++PropertyList::Keys().RBegin()));
 
   pl.AddProperty("Description", "some blabla");
   CPPUNIT_ASSERT_EQUAL((size_t)1, pl.PropertyCount());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, PropertyList::KeySize());
+  CPPUNIT_ASSERT_EQUAL((size_t)1, PropertyList::Keys().Size());
 
   CPPUNIT_ASSERT_EQUAL(NPos(), pl.PropertyKey("int"));
   CPPUNIT_ASSERT_EQUAL(size_t(1), pl.PropertyKey("int",true));
-  CPPUNIT_ASSERT_EQUAL(size_t(2), PropertyList::KeySize());
+  CPPUNIT_ASSERT_EQUAL(size_t(2), PropertyList::Keys().Size());
   pl.AddProperty("int", 10);
   CPPUNIT_ASSERT_EQUAL(size_t(1), pl.PropertyKey("int"));
   CPPUNIT_ASSERT(pl.HasProperty("int"));
@@ -278,8 +284,8 @@ void ReflexUnitTest::property_list()
   CPPUNIT_ASSERT(!strcmp("this is a char*",any_cast<const char*>(pl.PropertyValue("char*"))));
   CPPUNIT_ASSERT_EQUAL(string("this is a char*"), pl.PropertyAsString("char*"));
   CPPUNIT_ASSERT_EQUAL((size_t)4, pl.PropertyCount());
-  CPPUNIT_ASSERT_EQUAL((size_t)4, PropertyList::KeySize());
-  CPPUNIT_ASSERT_EQUAL(std::string("char*"), *(PropertyList::Key_End()-1));
+  CPPUNIT_ASSERT_EQUAL((size_t)4, PropertyList::Keys().Size());
+  CPPUNIT_ASSERT_EQUAL(std::string("char*"), *(++PropertyList::Keys().RBegin()));
 
   string s = "this is a string";
   pl.AddProperty("string", s);
@@ -289,7 +295,7 @@ void ReflexUnitTest::property_list()
   CPPUNIT_ASSERT( Dummy::Any() == pl.PropertyValue("none"));
   CPPUNIT_ASSERT( Dummy::Any() == pl.PropertyValue(NPos()));
   CPPUNIT_ASSERT_EQUAL(string(""), pl.PropertyAsString("none"));
-  CPPUNIT_ASSERT_EQUAL(std::string("string"), *PropertyList::Key_RBegin());
+  CPPUNIT_ASSERT_EQUAL(std::string("string"), *PropertyList::Keys().RBegin());
   CPPUNIT_ASSERT_EQUAL((size_t)5, pl.PropertyCount());
   CPPUNIT_ASSERT_EQUAL(string("Description, int, double, char*, string"), pl.PropertyKeys());
   
@@ -297,11 +303,11 @@ void ReflexUnitTest::property_list()
   CPPUNIT_ASSERT(!pl.HasProperty("char*"));
   CPPUNIT_ASSERT_EQUAL((size_t)4, pl.PropertyCount());
 
-  OwnedPropertyList pl2 = OwnedPropertyList(new PropertyListImpl());
+  OwnedPropertyList pl2(new PropertyListImpl());
   
   CPPUNIT_ASSERT(pl2);
   CPPUNIT_ASSERT_EQUAL((size_t)0, pl2.PropertyCount());
-  CPPUNIT_ASSERT_EQUAL((size_t)5, PropertyList::KeySize());
+  CPPUNIT_ASSERT_EQUAL((size_t)5, PropertyList::Keys().Size());
   CPPUNIT_ASSERT(!pl2.HasProperty("string"));
 
   AnyStruct strct;
@@ -317,7 +323,7 @@ void ReflexUnitTest::property_list()
   CPPUNIT_ASSERT_EQUAL(2, any_cast<AnyStruct>(pl.PropertyValue("struct")).i);
   CPPUNIT_ASSERT_EQUAL(2.0, any_cast<AnyStruct>(pl.PropertyValue("struct")).d);
   CPPUNIT_ASSERT_EQUAL(false, any_cast<AnyStruct>(pl.PropertyValue("struct")).b);
-  CPPUNIT_ASSERT_EQUAL((size_t)6, PropertyList::KeySize());
+  CPPUNIT_ASSERT_EQUAL((size_t)6, PropertyList::Keys().Size());
 
   pl.Delete();
 }
@@ -326,11 +332,13 @@ struct myInt { int m;};
 
 void ReflexUnitTest::fundamental_type()
 {
-  Fundamental itype("myInt",sizeof(myInt),typeid(myInt));
+  Fundamental itype("myInt",sizeof(myInt),typeid(myInt), Catalog::Instance());
   CPPUNIT_ASSERT(itype.Is(kFundamental));
   CPPUNIT_ASSERT(!itype.Is(kClassOrStruct));
   CPPUNIT_ASSERT_EQUAL( sizeof(myInt), itype.SizeOf());
-  CPPUNIT_ASSERT_EQUAL( string("myInt"), itype.Name());
+  string name;
+  itype.Name(name);
+  CPPUNIT_ASSERT_EQUAL( string("myInt"), name);
 
   Type itypet = itype;
   Object iobj = itypet.Construct();
@@ -342,7 +350,7 @@ void ReflexUnitTest::fundamental_type()
 
 void ReflexUnitTest::type_base() {
   {
-    Fundamental f("fundamental",0,typeid(UnknownType));
+    Fundamental f("fundamental",0,typeid(UnknownType), Catalog::Instance());
     Type ft = Type::ByName("fundamental");
     CPPUNIT_ASSERT(ft);
     Type ftt = f;
@@ -355,13 +363,13 @@ void ReflexUnitTest::type_base() {
   }
   Type ft = Type::ByName("fundamental"); // Type is not deleted
   CPPUNIT_ASSERT(!ft);
-  Fundamental f("fundamental",0,typeid(UnknownType));
+  Fundamental f("fundamental",0,typeid(UnknownType), Catalog::Instance());
   CPPUNIT_ASSERT(ft);
 }
 
 void ReflexUnitTest::pointer_type() {
-  Fundamental f("fundamental",0,typeid(UnknownType));
-  Pointer fp(f.ThisType(),typeid(void*));
+  Fundamental f("fundamental",0,typeid(UnknownType), Catalog::Instance());
+  Pointer fp(f.ThisType(),0, typeid(void*), Catalog::Instance());
   Type fpt = Type::ByName("fundamental*");
   CPPUNIT_ASSERT(fpt);
   CPPUNIT_ASSERT(fpt.Is(kPointer));
@@ -372,8 +380,8 @@ void ReflexUnitTest::pointer_type() {
 }
 
 void ReflexUnitTest::reference_type() {
-  Fundamental f("fundamental",0,typeid(UnknownType));
-  DataMember d("myDataMember",f.ThisType(),0,kReference);
+  Fundamental f("fundamental",0,typeid(UnknownType), Catalog::Instance());
+  DataMember d("myDataMember",f.ThisType(),0,kEDReference);
   Type frt = d.TypeOf();
   CPPUNIT_ASSERT(frt);
   CPPUNIT_ASSERT(frt.Is(kReference));
@@ -386,7 +394,7 @@ void ReflexUnitTest::reference_type() {
 
 void ReflexUnitTest::array_type() {
   Type f = Type::ByName("float");
-  Array fa(f, 10, typeid(float[10]));
+  Array fa(f, 0, 10, typeid(float[10]), Catalog::Instance());
   Type fat = Type::ByName("float[10]");
   CPPUNIT_ASSERT(fat);
   CPPUNIT_ASSERT(fat.Is(kArray));
@@ -408,23 +416,31 @@ void ReflexUnitTest::typedef_type() {
   CPPUNIT_ASSERT_EQUAL(t.Name(Reflex::kFinal), std::string("unsigned long int"));
 
   //Fundamental i("int",sizeof(int),typeid(int));
-  Typedef my_i("myInt", Type::ByName("int"));
-  Typedef your_i("yourInt", Type::ByName("myInt"));
+  Typedef my_i("myInt", Type::ByName("int"), Catalog::Instance());
+  Typedef your_i("yourInt", Type::ByName("myInt"), Catalog::Instance());
   CPPUNIT_ASSERT(my_i.Is(kTypedef));
   CPPUNIT_ASSERT(your_i.Is(kTypedef));
-  CPPUNIT_ASSERT_EQUAL(string("myInt"), my_i.Name());
-  CPPUNIT_ASSERT_EQUAL(string("yourInt"), your_i.Name());
-  CPPUNIT_ASSERT_EQUAL(string("int"), my_i.Name(Reflex::kFinal));
-  CPPUNIT_ASSERT_EQUAL(string("int"), your_i.Name(Reflex::kFinal));
+  string buf;
+  my_i.Name(buf);
+  CPPUNIT_ASSERT_EQUAL(string("myInt"), buf);
+  buf.clear();
+  your_i.Name(buf);
+  CPPUNIT_ASSERT_EQUAL(string("yourInt"), buf);
+  buf.clear();
+  my_i.Name(buf,Reflex::kFinal);
+  CPPUNIT_ASSERT_EQUAL(string("int"), buf);
+  buf.clear();
+  your_i.Name(buf, Reflex::kFinal);
+  CPPUNIT_ASSERT_EQUAL(string("int"), buf);
   CPPUNIT_ASSERT_EQUAL(sizeof(int), my_i.SizeOf());
 }
 
 void ReflexUnitTest::namespace_scope() {
   {
-    Namespace ns("Namespace");
+    Namespace ns("Namespace", Catalog::Instance());
     Scope s = Scope::ByName("Namespace");
     CPPUNIT_ASSERT(s);
-    CPPUNIT_ASSERT_EQUAL(kNamespace, s.ScopeType());
+    CPPUNIT_ASSERT_EQUAL(kETNamespace, s.ScopeType());
     CPPUNIT_ASSERT_EQUAL(string("kNamespace"), s.ScopeTypeAsString());
     CPPUNIT_ASSERT(s.Is(kNamespace));
     CPPUNIT_ASSERT(!s.Is(kClassOrStruct));
@@ -436,29 +452,30 @@ void ReflexUnitTest::namespace_scope() {
     CPPUNIT_ASSERT(g.IsTopScope());
     CPPUNIT_ASSERT(g.Is(kNamespace));
     CPPUNIT_ASSERT_EQUAL(string(""), g.Name());
-    CPPUNIT_ASSERT(ns.DeclarinkScope() == g);
-    Namespace s1("Namespace::Subspace1");
-    Namespace s2("Namespace::Subspace2");
+    CPPUNIT_ASSERT(ns.DeclaringScope() == g);
+    Namespace s1("Namespace::Subspace1", Catalog::Instance());
+    Namespace s2("Namespace::Subspace2", Catalog::Instance());
     CPPUNIT_ASSERT(Scope::ByName("Namespace::Subspace1"));
     CPPUNIT_ASSERT(Scope::ByName("Namespace::Subspace2"));
-    CPPUNIT_ASSERT_EQUAL(s.Id(), s1.DeclarinkScope().Id());
-    CPPUNIT_ASSERT_EQUAL(s.Id(), s2.DeclarinkScope().Id());
+    CPPUNIT_ASSERT_EQUAL(s.Id(), s1.DeclaringScope().Id());
+    CPPUNIT_ASSERT_EQUAL(s.Id(), s2.DeclaringScope().Id());
     CPPUNIT_ASSERT_EQUAL(size_t(2), s.SubScopes().Size());
     CPPUNIT_ASSERT_EQUAL(size_t(1), g.SubScopes().Size());
-    CPPUNIT_ASSERT_EQUAL(s1.ThisScope().Id(), s.SubScopes().At(0).Id());
-    CPPUNIT_ASSERT_EQUAL(s2.ThisScope().Id(), s.SubScopes().At(1).Id());
+    OrderedContainer<Scope>::const_iterator iSubScope = s.SubScopes().Begin();
+    CPPUNIT_ASSERT_EQUAL(s1.ThisScope().Id(), iSubScope->Id());
+    CPPUNIT_ASSERT_EQUAL(s2.ThisScope().Id(), (++iSubScope)->Id());
   }
   CPPUNIT_ASSERT(!Scope::ByName("Namespace"));
   CPPUNIT_ASSERT(!Scope::ByName("Namespace::Subspace1"));
   CPPUNIT_ASSERT(!Scope::ByName("Namespace::Subspace2"));
-  Namespace s1("Namespace::Subspace1");
+  Namespace s1("Namespace::Subspace1", Catalog::Instance());
   CPPUNIT_ASSERT(Scope::ByName("Namespace::Subspace1"));
 }
 
 void * s_f1( void*, const vector<void*>&, void* ) {return 0;}
 
 void ReflexUnitTest::namespace_members() {
-  Namespace n("Members");
+  Namespace n("Members", Catalog::Instance());
   CPPUNIT_ASSERT_EQUAL(size_t(0), n.Members().Size());
 
   Type i = Type::ByName("int");
@@ -469,28 +486,33 @@ void ReflexUnitTest::namespace_members() {
   n.AddMember(m2);
   CPPUNIT_ASSERT_EQUAL(size_t(2), n.Members().Size());
   CPPUNIT_ASSERT_EQUAL(size_t(2), n.DataMembers().Size());
-  CPPUNIT_ASSERT_EQUAL(string("d1"), n.DataMembers().At(0).Name());
-  CPPUNIT_ASSERT_EQUAL(string("d2"), n.DataMembers().At(1).Name());
+  OrderedContainer<Member>::const_iterator iDB = n.ThisScope().DataMembers().Begin();
+  CPPUNIT_ASSERT_EQUAL(string("d1"), iDB->Name());
+  CPPUNIT_ASSERT_EQUAL(string("d2"), (++iDB)->Name());
 
   vector<Type> params;
   params.push_back(i);
   params.push_back(f);
-  Function fun(f, params, typeid(void (void)) );
-  CPPUNIT_ASSERT_EQUAL(string("float (int, float)"), fun.Name());
+  Function fun(f, params, typeid(void (void)), Catalog::Instance());
+  string buf;
+  fun.Name(buf);
+  CPPUNIT_ASSERT_EQUAL(string("float (int, float)"), buf);
 
   Member m3 = Member(new FunctionMember("f1",fun.ThisType(),s_f1,0,"i;f=99.9"));
   Member m4 = Member(new FunctionMember("f2",fun.ThisType(),s_f1,0,"j=10"));
   n.AddMember(m3);
   n.AddMember(m4);
   CPPUNIT_ASSERT_EQUAL(size_t(2), n.FunctionMembers().Size());
-  CPPUNIT_ASSERT_EQUAL(string("f1"), n.FunctionMembers().At(0).Name());
-  CPPUNIT_ASSERT_EQUAL(string("f2"), n.FunctionMembers().At(1).Name());
+  OrderedContainer<Member>::const_iterator iFM = n.ThisScope().FunctionMembers().Begin();
+  CPPUNIT_ASSERT_EQUAL(string("f1"), iFM->Name());
+  CPPUNIT_ASSERT_EQUAL(string("f2"), (++iFM)->Name());
 
   CPPUNIT_ASSERT_EQUAL(size_t(4), n.Members().Size());
-  CPPUNIT_ASSERT_EQUAL(string("d1"), n.Members().At(0).Name());
-  CPPUNIT_ASSERT_EQUAL(string("d2"), n.Members().At(1).Name());
-  CPPUNIT_ASSERT_EQUAL(string("f1"), n.Members().At(2).Name());
-  CPPUNIT_ASSERT_EQUAL(string("f2"), n.Members().At(3).Name());
+  Container<Member>::const_iterator iM = n.ThisScope().Members().Begin();
+  CPPUNIT_ASSERT_EQUAL(string("d1"), iM->Name());
+  CPPUNIT_ASSERT_EQUAL(string("d2"), (++iM)->Name());
+  CPPUNIT_ASSERT_EQUAL(string("f1"), (++iM)->Name());
+  CPPUNIT_ASSERT_EQUAL(string("f2"), (++iM)->Name());
 }
 
 void ReflexUnitTest::function_member() {
@@ -498,20 +520,23 @@ void ReflexUnitTest::function_member() {
   params.push_back(Type::ByName("int"));
   params.push_back(Type::ByName("double"));
   params.push_back(Type::ByName("bool"));
-  Function fun(Type::ByName("float"),params,typeid(void (void)) );
-  OwnedMember fun1 (new FunctionMember("fun1",fun.ThisType(),0,0,"arg1;arg2;arg3",kStatic));
+  Function fun(Type::ByName("float"),params,typeid(void (void)), Catalog::Instance());
+  OwnedMember fun1 (new FunctionMember("fun1",fun.ThisType(),0,0,"arg1;arg2;arg3",kEDStatic));
   OwnedMember fun2 (new FunctionMember("fun2",fun.ThisType(),0,0,"arg1;arg2=99.9;arg3=true"));
   OwnedMember fun3 (new FunctionMember("fun3",fun.ThisType(),0,0,"arg1;arg2"));
-  CPPUNIT_ASSERT_EQUAL(size_t(3), fun1.FunctionParameters().Size() );
-  CPPUNIT_ASSERT_EQUAL(string("arg1"), fun1.FunctionParameterNames().At(0) );
-  CPPUNIT_ASSERT_EQUAL(string("arg2"), fun1.FunctionParameterNames().At(1) );
-  CPPUNIT_ASSERT_EQUAL(string("arg3"), fun1.FunctionParameterNames().At(2) );
-  CPPUNIT_ASSERT_EQUAL(string(""),     fun2.FunctionParameterDefaults().At(0) );
-  CPPUNIT_ASSERT_EQUAL(string("99.9"), fun2.FunctionParameterDefaults().At(1) );
-  CPPUNIT_ASSERT_EQUAL(string("true"), fun2.FunctionParameterDefaults().At(2) );
-  CPPUNIT_ASSERT_EQUAL(string("arg1"), fun3.FunctionParameterNames().At(0) );
-  CPPUNIT_ASSERT_EQUAL(string("arg2"), fun3.FunctionParameterNames().At(1) );
-  CPPUNIT_ASSERT_EQUAL(string(""),     fun3.FunctionParameterNames().At(2) );
+  CPPUNIT_ASSERT_EQUAL(size_t(3), fun1.FunctionParameterSize() );
+  OrderedContainer<std::string>::const_iterator iParName = fun1.FunctionParameterNames().Begin();
+  CPPUNIT_ASSERT_EQUAL(string("arg1"), *iParName );
+  CPPUNIT_ASSERT_EQUAL(string("arg2"), *(++iParName) );
+  CPPUNIT_ASSERT_EQUAL(string("arg3"), *(++iParName) );
+  OrderedContainer<std::string>::const_iterator iParDef = fun2.FunctionParameterDefaults().Begin();
+  CPPUNIT_ASSERT_EQUAL(string(""),     *iParDef );
+  CPPUNIT_ASSERT_EQUAL(string("99.9"), *(++iParDef) );
+  CPPUNIT_ASSERT_EQUAL(string("true"), *(++iParDef) );
+  OrderedContainer<std::string>::const_iterator iParName3 = fun3.FunctionParameterNames().Begin();
+  CPPUNIT_ASSERT_EQUAL(string("arg1"), *iParName3 );
+  CPPUNIT_ASSERT_EQUAL(string("arg2"), *(++iParName3) );
+  CPPUNIT_ASSERT_EQUAL(string(""),     *(++iParName3) );
   fun1.Delete();
   fun2.Delete();
   fun3.Delete();
@@ -528,8 +553,8 @@ void ReflexUnitTest::object_basics() {
 
 void ReflexUnitTest::class_type() {
   {
-    Class _foo("foo", sizeof(foo), typeid(foo));
-    Class _bar("bar", sizeof(bar), typeid(bar));
+    Class _foo("foo", sizeof(foo), typeid(foo), Catalog::Instance());
+    Class _bar("bar", sizeof(bar), typeid(bar), Catalog::Instance());
     CPPUNIT_ASSERT(Type::ByName("foo"));
     CPPUNIT_ASSERT(_foo.ThisType() == Type::ByName("foo"));
     CPPUNIT_ASSERT(_foo.ThisType() == Type::ByName("::foo"));
@@ -548,17 +573,18 @@ void ReflexUnitTest::class_type() {
 
 
 void ReflexUnitTest::type_template() {
-  Namespace _n("mmm");
+  Namespace _n("mmm", Catalog::Instance());
   ClassTemplateInstance _cti("mmm::template<int,float,dummy>",
                              1,
                              typeid(UnknownType),
+                             Catalog::Instance(),
                              0);
 
   Scope s = Scope::ByName("mmm");
 
   CPPUNIT_ASSERT_EQUAL(1, (int)s.SubTypeTemplates().Size());
   
-  TypeTemplate tt = s.SubTypeTemplates().At(0);
+  TypeTemplate tt = *s.SubTypeTemplates().Begin();
   
   CPPUNIT_ASSERT(tt == true);
   CPPUNIT_ASSERT(tt.Name()       == "template");
@@ -566,35 +592,37 @@ void ReflexUnitTest::type_template() {
   
   CPPUNIT_ASSERT_EQUAL(1, (int)tt.TemplateInstances().Size());
   
-  Type t1 = tt.TemplateInstances().At(0); 
+  Type t1 = *tt.TemplateInstances().Begin(); 
   CPPUNIT_ASSERT( t1 );
-  CPPUNIT_ASSERT_EQUAL(std::string("mmm::template<int,float,dummy>"), t1.Name(Reflex::kScoped|Q|Reflex::kFinal));
+  CPPUNIT_ASSERT_EQUAL(std::string("mmm::template<int,float,dummy>"), t1.Name(Reflex::kScoped|kQualified|Reflex::kFinal));
   CPPUNIT_ASSERT( t1.Is(kClassOrStruct) );
   CPPUNIT_ASSERT( t1.Is(kTemplateInstance) );
 
   Type c1 = Type::ByName("mmm::template<int,float,dummy>");
   CPPUNIT_ASSERT( c1 );
   CPPUNIT_ASSERT(c1 == t1);
-  CPPUNIT_ASSERT_EQUAL(std::string("mmm::template<int,float,dummy>"), c1.Name(Reflex::kScoped|Q|Reflex::kFinal));
+  CPPUNIT_ASSERT_EQUAL(std::string("mmm::template<int,float,dummy>"), c1.Name(Reflex::kScoped|kQualified|Reflex::kFinal));
   CPPUNIT_ASSERT_EQUAL(std::string("template<int,float,dummy>"), c1.Name());
   CPPUNIT_ASSERT( c1.Is(kClassOrStruct) );
   CPPUNIT_ASSERT( c1.Is(kTemplateInstance) );
 
   Scope s1 = Scope::ByName("mmm::template<int,float,dummy>");
   CPPUNIT_ASSERT( s1 );
-  CPPUNIT_ASSERT_EQUAL(std::string("mmm::template<int,float,dummy>"), s1.Name(Reflex::kScoped|Q|Reflex::kFinal));
+  CPPUNIT_ASSERT_EQUAL(std::string("mmm::template<int,float,dummy>"), s1.Name(Reflex::kScoped|kQualified|Reflex::kFinal));
   CPPUNIT_ASSERT_EQUAL(std::string("template<int,float,dummy>"), s1.Name());
   CPPUNIT_ASSERT( s1.Is(kClassOrStruct) );
   CPPUNIT_ASSERT( s1.Is(kTemplateInstance) );
   
   CPPUNIT_ASSERT_EQUAL( 3, (int)c1.TemplateArguments().Size() );
-  CPPUNIT_ASSERT( c1.TemplateArguments().At(0) );
-  CPPUNIT_ASSERT( c1.TemplateArguments().At(1) );
-  CPPUNIT_ASSERT( ! c1.TemplateArguments().At(2) );
+  Container<TemplateArgument>::const_iterator iTA = c1.TemplateArguments().Begin();
+  CPPUNIT_ASSERT( *iTA );
+  CPPUNIT_ASSERT( *(++iTA) );
+  CPPUNIT_ASSERT( ! *(++iTA) );
 
-  CPPUNIT_ASSERT_EQUAL( string("int"), c1.TemplateArguments().At(0).Name() );
-  CPPUNIT_ASSERT_EQUAL( string("float"), c1.TemplateArguments().At(1).Name() );
-  CPPUNIT_ASSERT_EQUAL( string("dummy"), c1.TemplateArguments().At(2).Name() );
+  iTA = c1.TemplateArguments().Begin();
+  CPPUNIT_ASSERT_EQUAL( string("int"), iTA->Name() );
+  CPPUNIT_ASSERT_EQUAL( string("float"), (++iTA)->Name() );
+  CPPUNIT_ASSERT_EQUAL( string("dummy"), (++iTA)->Name() );
  
 }
 

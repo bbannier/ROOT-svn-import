@@ -23,9 +23,12 @@ namespace Reflex {
    class TemplateArgument {
    public:
       enum EKindOf {
+         kNothing, // uninitialized
          kType, // template parameter of type "typename / class / template"
          kValue // non-type template parameter
       };
+
+      TemplateArgument() : fKindOf(kNothing) {}
 
       TemplateArgument(Type type): fKindOf(kType), fType(type) {}
       TemplateArgument(Type type, const Object& value): fKindOf(kValue), fValue(value), fType(type) {}
@@ -54,6 +57,8 @@ namespace Reflex {
       EKindOf KindOf() const { return fKindOf; }
       const Object& AsValue() const { return fValue; }
       Type          AsType() const { return fType; }
+
+      operator bool() const { return fKindOf != kNothing; }
 
    private:
       EKindOf     fKindOf; // type of template parameter

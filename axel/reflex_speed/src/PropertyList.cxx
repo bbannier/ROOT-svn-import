@@ -155,6 +155,15 @@ Reflex::PropertyList::RemoveProperty(size_t key) const {
 
 
 //-------------------------------------------------------------------------------
+Reflex::OrderedContainer<std::string>
+Reflex::PropertyList::Keys() {
+//-------------------------------------------------------------------------------
+// Retrieve container of all known keys
+   return Internal::PropertyListImpl::Keys();
+}
+
+
+//-------------------------------------------------------------------------------
 std::string
 Reflex::PropertyList::KeysAsString() {
 //-------------------------------------------------------------------------------
@@ -175,7 +184,7 @@ Reflex::PropertyList::KeyAt(size_t nth) {
 //-------------------------------------------------------------------------------
 size_t
 Reflex::PropertyList::KeyByName(const std::string & key,
-                                              bool allocateNew) {
+                                bool allocateNew) {
 //-------------------------------------------------------------------------------
 // Return the position of a Key. If allocateNew is set to true allocate a new key
 // if necessary.

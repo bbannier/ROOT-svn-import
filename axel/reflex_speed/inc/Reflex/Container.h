@@ -85,7 +85,7 @@ namespace Reflex {
    }
 
    template <typename T>
-   class RFLX_API ConstIterator: public Internal::ConstIteratorBase,
+   class /* RFLX_API */ ConstIterator: public Internal::ConstIteratorBase,
                                  public std::iterator<std::forward_iterator_tag, T> {
    public:
       ConstIterator(): Internal::ConstIteratorBase(0, true) {}
@@ -100,7 +100,7 @@ namespace Reflex {
    };
 
    template <class T>
-   class RFLX_API ConstReverseIterator: public ConstIterator<T> {
+   class /* RFLX_API */ ConstReverseIterator: public ConstIterator<T> {
    public:
       ConstReverseIterator(): ConstIterator<T>() {}
       ConstReverseIterator(Internal::IConstIteratorImpl* ii, bool owned = true): ConstIterator<T>(ii, owned) {}
@@ -142,12 +142,12 @@ namespace Reflex {
    }
 
    template <typename T>
-   class RFLX_API Container: public Internal::ContainerBase {
+   class /* RFLX_API */ Container: public Internal::ContainerBase {
    protected:
-      const Container* operator&() const;  // intentionally not implemented
-      Container* operator&();  // intentionally not implemented
-      Container(const Container&); // intentionally not implemented
       Container& operator=(const Container& rhs); // intentionally not implemented
+      Container* operator&();   // intentionally not implemented
+      const Container* operator&() const { return this; }  // needed for dictionary
+      Container(const Container& c): ContainerBase(c) {} // needed for dictionary
 
    public:
       typedef ConstIterator<T> const_iterator;
@@ -190,16 +190,13 @@ namespace Reflex {
    // the containers are read-only this is irrelevant for
    // their interface.
    template <typename T>
-   class RFLX_API OrderedContainer: public Container<T>
+   class /* RFLX_API */ OrderedContainer: public Container<T>
    {
    public:
-#ifndef RFLX_DICTIONARY_SOURCE
-   protected:
-#endif
-      const OrderedContainer* operator&() const;  // intentionally not implemented
-      OrderedContainer* operator&();  // intentionally not implemented
-      OrderedContainer(const OrderedContainer&); // intentionally not implemented
       OrderedContainer& operator=(const OrderedContainer& rhs); // intentionally not implemented
+      OrderedContainer* operator&();  // intentionally not implemented
+      const OrderedContainer* operator&() const { return this; }  // needed for dictionary
+      OrderedContainer(const OrderedContainer& oc): Container<T>(oc) {} // needed for dictionary
 
    public:
       typedef ConstReverseIterator<T> const_reverse_iterator;

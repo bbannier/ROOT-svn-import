@@ -504,10 +504,52 @@ Reflex::Internal::ScopeBase::AddUsingDirective(const Scope & ud) const {
 
 //-------------------------------------------------------------------------------
 void
+Reflex::Internal::ScopeBase::AddUsingDeclaration(const Type & ud) const {
+//-------------------------------------------------------------------------------
+// Adds a using directive of a type to this scope, as in
+//   using scope::ud;
+// @param ud using declaration to add
+   fTypeUsingDeclarations.Insert(ud);
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Internal::ScopeBase::AddUsingDeclaration(const Member & ud) const {
+//-------------------------------------------------------------------------------
+// Adds a using declaration of a member to this scope, as in
+//  using scope::ud;
+// @param ud using declaration to add
+   fMemberUsingDeclarations.Insert(ud);
+}
+
+
+//-------------------------------------------------------------------------------
+void
 Reflex::Internal::ScopeBase::RemoveUsingDirective(const Scope & ud) const {
 //-------------------------------------------------------------------------------
    // Remove using directive ud from this scope.
    fUsingDirectives.Remove(ud);
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Internal::ScopeBase::RemoveUsingDeclaration(const Type & ud) const {
+//-------------------------------------------------------------------------------
+// Removes a using declaration from this scope
+// @param ud using declaration to remove
+   fTypeUsingDeclarations.Remove(ud);
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Internal::ScopeBase::RemoveUsingDeclaration(const Member & ud) const {
+//-------------------------------------------------------------------------------
+// Removes a using declaration from this scope
+// @param ud using declaration to remove
+   fMemberUsingDeclarations.Remove(ud);
 }
 
 

@@ -441,7 +441,32 @@ Reflex::Scope::RemoveSubScope(const Scope & sc) const {
 void
 Reflex::Scope::AddUsingDirective(const Scope & ud) const {
 //-------------------------------------------------------------------------------
+// Adds a using directive to this scope, as in
+//   using namespace ud;
+// @param ud using directive to add
    if (* this) fScopeName->fScopeBase->AddUsingDirective(ud);
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Scope::AddUsingDeclaration(const Type & ud) const {
+//-------------------------------------------------------------------------------
+// Adds a using directive of a type to this scope, as in
+//   using scope::ud;
+// @param ud using declaration to add
+   if (* this) fScopeName->fScopeBase->AddUsingDeclaration(ud);
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Scope::AddUsingDeclaration(const Member & ud) const {
+//-------------------------------------------------------------------------------
+// Adds a using declaration of a member to this scope, as in
+//  using scope::ud;
+// @param ud using declaration to add
+   if (* this) fScopeName->fScopeBase->AddUsingDeclaration(ud);
 }
 
 
@@ -449,8 +474,31 @@ Reflex::Scope::AddUsingDirective(const Scope & ud) const {
 void
 Reflex::Scope::RemoveUsingDirective(const Scope & ud) const {
 //-------------------------------------------------------------------------------
+// Removes a using directive from this scope
+// @param ud using directive to remove
    if (* this) fScopeName->fScopeBase->RemoveUsingDirective(ud);
 }
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Scope::RemoveUsingDeclaration(const Type & ud) const {
+//-------------------------------------------------------------------------------
+// Removes a using declaration from this scope
+// @param ud using declaration to remove
+   if (* this) fScopeName->fScopeBase->RemoveUsingDeclaration(ud);
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Scope::RemoveUsingDeclaration(const Member & ud) const {
+//-------------------------------------------------------------------------------
+// Removes a using declaration from this scope
+// @param ud using declaration to remove
+   if (* this) fScopeName->fScopeBase->RemoveUsingDeclaration(ud);
+}
+
 
 //-------------------------------------------------------------------------------
 void

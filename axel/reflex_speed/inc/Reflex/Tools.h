@@ -21,7 +21,6 @@
 namespace Reflex {
 
    // forward declarations
-   class Function;
    class Type;
 
    enum EFUNDAMENTALTYPE {

@@ -18,7 +18,7 @@ namespace Reflex {
 
    // Bitset-style class that allows to test for a combination of
    // AttributesExpression enum constants via its operators &&, ||, !.
-   class AttributesExpression {
+   class RFLX_API AttributesExpression {
    public:
       enum EOP {
          kDesc,
@@ -55,51 +55,53 @@ namespace Reflex {
       AttributesExpression operator ! () const { return AttributesExpression(kNot, *this); }
    };
 
-   static const AttributesExpression kPublic(kEDPublic);
-   static const AttributesExpression kProtected(kEDProtected);
-   static const AttributesExpression kPrivate(kEDPrivate);
-   static const AttributesExpression kRegister(kEDRegister);
-   static const AttributesExpression kStatic(kEDStatic);
-   static const AttributesExpression kConstructor(kEDConstructor);
-   static const AttributesExpression kDestructor(kEDDestructor);
-   static const AttributesExpression kExplicit(kEDExplicit);
-   static const AttributesExpression kExtern(kEDExtern);
-   static const AttributesExpression kCopyconstructor(kEDCopyConstructor);
-   static const AttributesExpression kOperator(kEDOperator);
-   static const AttributesExpression kInline(kEDInline);
-   static const AttributesExpression kConverter(kEDConverter);
-   static const AttributesExpression kAuto(kEDAuto);
-   static const AttributesExpression kMutable(kEDMutable);
-   static const AttributesExpression kConst(kEDConst);
-   static const AttributesExpression kVolatile(kEDVolatile);
-   static const AttributesExpression kReference(kEDReference);
-   static const AttributesExpression kAbstract(kEDAbstract);
-   static const AttributesExpression kVirtual(kEDVirtual);
-   static const AttributesExpression kTransient(kEDTransient);
-   static const AttributesExpression kArtificial(kEDArtificial);
+   const AttributesExpression kPublic(kEDPublic);
+   const AttributesExpression kProtected(kEDProtected);
+   const AttributesExpression kPrivate(kEDPrivate);
+   const AttributesExpression kRegister(kEDRegister);
+   const AttributesExpression kStatic(kEDStatic);
+   const AttributesExpression kConstructor(kEDConstructor);
+   const AttributesExpression kDestructor(kEDDestructor);
+   const AttributesExpression kExplicit(kEDExplicit);
+   const AttributesExpression kExtern(kEDExtern);
+   const AttributesExpression kCopyconstructor(kEDCopyConstructor);
+   const AttributesExpression kOperator(kEDOperator);
+   const AttributesExpression kInline(kEDInline);
+   const AttributesExpression kConverter(kEDConverter);
+   const AttributesExpression kAuto(kEDAuto);
+   const AttributesExpression kMutable(kEDMutable);
+   const AttributesExpression kConst(kEDConst);
+   const AttributesExpression kVolatile(kEDVolatile);
+   const AttributesExpression kReference(kEDReference);
+   const AttributesExpression kAbstract(kEDAbstract);
+   const AttributesExpression kVirtual(kEDVirtual);
+   const AttributesExpression kTransient(kEDTransient);
+   const AttributesExpression kArtificial(kEDArtificial);
 
-   static const AttributesExpression kClass(kETClass);
-   static const AttributesExpression kStruct(kETStruct);
-   static const AttributesExpression kEnum(kETEnum);
-   static const AttributesExpression kUnion(kETUnion);
-   static const AttributesExpression kNamespace(kETNamespace);
-   static const AttributesExpression kFunction(kETFunction);
-   static const AttributesExpression kArray(kETArray);
-   static const AttributesExpression kFundamental(kETFundamental);
-   static const AttributesExpression kPointer(kETPointer);
-   static const AttributesExpression kPointerToMember(kETPointerToMember);
-   static const AttributesExpression kTypedef(kETTypedef);
-   static const AttributesExpression kTypeTemplateInstance(kETTypeTemplateInstance);
-   static const AttributesExpression kMemberTemplateInstance(kETMemberTemplateInstance);
-   static const AttributesExpression kDataMember(kETDataMember);
-   static const AttributesExpression kFunctionMember(kETFunctionMember);
-   static const AttributesExpression kUnresolved(kETUnresolved);
+   const AttributesExpression kConstVolatile(AttributesExpression::kAnd, kConst, kVolatile);
 
-   static const AttributesExpression kTemplateInstance(AttributesExpression::kOr, kTypeTemplateInstance, kMemberTemplateInstance);
+   const AttributesExpression kClass(kETClass);
+   const AttributesExpression kStruct(kETStruct);
+   const AttributesExpression kEnum(kETEnum);
+   const AttributesExpression kUnion(kETUnion);
+   const AttributesExpression kNamespace(kETNamespace);
+   const AttributesExpression kFunction(kETFunction);
+   const AttributesExpression kArray(kETArray);
+   const AttributesExpression kFundamental(kETFundamental);
+   const AttributesExpression kPointer(kETPointer);
+   const AttributesExpression kPointerToMember(kETPointerToMember);
+   const AttributesExpression kTypedef(kETTypedef);
+   const AttributesExpression kTypeTemplateInstance(kETTypeTemplateInstance);
+   const AttributesExpression kMemberTemplateInstance(kETMemberTemplateInstance);
+   const AttributesExpression kDataMember(kETDataMember);
+   const AttributesExpression kFunctionMember(kETFunctionMember);
+   const AttributesExpression kUnresolved(kETUnresolved);
+
+   const AttributesExpression kTemplateInstance(AttributesExpression::kOr, kTypeTemplateInstance, kMemberTemplateInstance);
 #ifndef __CINT__
-   static const AttributesExpression kClassOrStruct(kClass || kTypeTemplateInstance || kStruct);
+   const AttributesExpression kClassOrStruct(kClass || kTypeTemplateInstance || kStruct);
 #else
-   static const AttributesExpression kClassOrStruct(AttributesExpression::kOr, kClass,
+   const AttributesExpression kClassOrStruct(AttributesExpression::kOr, kClass,
                                         AttributesExpression(AttributesExpression::kOr, kTypeTemplateInstance, kStruct));
 #endif
 }

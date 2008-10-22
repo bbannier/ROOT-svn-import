@@ -120,28 +120,7 @@ namespace Internal {
       * Key_Begin will return the begin iterator of the key container
       * @return begin iterator of key container
       */
-      static StdString_Iterator Key_Begin(); 
-
-
-      /**
-      * Key_End will return the end iterator of the key container
-      * @return end iterator of key container
-      */
-      static StdString_Iterator Key_End(); 
-
-
-      /**
-      * Key_RBegin will return the rbegin iterator of the key container
-      * @return rbegin iterator of key container
-      */
-      static Reverse_StdString_Iterator Key_RBegin(); 
-
-
-      /**
-      * Key_REnd will return the rend iterator of the key container
-      * @return rend iterator of key container
-      */
-      static Reverse_StdString_Iterator Key_REnd(); 
+      static const IContainerImpl& Keys(); 
 
 
       /**
@@ -169,13 +148,6 @@ namespace Internal {
       */
       static size_t KeyByName(const std::string & key,
          bool allocateNew = false);
-
-
-      /**
-      * KeySize will return the number of currently allocated keys
-      * @return number of allocated keys
-      */
-      static size_t KeySize();
 
 
       /**
