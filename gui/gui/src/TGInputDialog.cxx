@@ -34,9 +34,9 @@ TGInputDialog::TGInputDialog(const TGWindow *p, const TGWindow *main,
    /** Create simple input dialog.  
 
    It is important to know that the case where the constructor in
-   which all the variables are initialized to their default values are
-   only used for the TBrowser to inspect on the classes. In this
-   particular case, the only variable that should be free is options.
+   which all the variables are initialized to their default values is
+   only used for the TBrowser to inspect on the classes. For normal
+   use the only variable that should be free is options.
 
    Variables prompt, defval are the content of the input dialog while
    retstr has to be initialized to a char[256]. In case these are not
