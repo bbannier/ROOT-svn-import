@@ -60,8 +60,8 @@ ClassTemplateInstance(const char * typ,
 
    if (! fTemplateFamily) {
       std::vector < std::string > parameterNames(fTemplateArguments.size());
-      for (size_t i = 65; i < 65 + fTemplateArguments.size(); ++i) {
-         parameterNames.push_back("typename " + char(i));      
+      for (size_t i = 0; i < fTemplateArguments.size(); ++i) {
+         parameterNames[i] = std::string("typename ") + char(i + 65);
       }
       TypeTemplateImpl * tti = new TypeTemplateImpl(templateName.c_str(),
                                                      s,

@@ -66,7 +66,6 @@ Reflex::Internal::ScopeName::ScopeName(const char* name,
    sScopeVec().push_back(*fThisScope);
    */
    CatalogImpl* cati = fCatalog.Impl();
-   cati->Scopes().Add(*this);
 
    //---Build recursively the declaring scopeNames
    if (fName[0] && fName != "@N@I@R@V@A@N@A@") {
@@ -75,6 +74,11 @@ Reflex::Internal::ScopeName::ScopeName(const char* name,
       if (! declScope.Id() || declScope.InCatalog() != catalog )
          new ScopeName(decl_name.c_str(), 0, catalog);
    }
+
+   // Add only after possible search through cati's scopes:
+   // *this might not be fully initialized yet and thus a
+   // bad element to use during searches
+   cati->Scopes().Add(*this);
 }
 
 
