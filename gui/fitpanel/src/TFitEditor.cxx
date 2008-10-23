@@ -153,11 +153,15 @@
 #include "Fit/UnBinData.h"
 #include "TMultiGraph.h"
 #include "TTree.h"
+#include "TTreeInput.h"
+#include "TGInputDialog.h"
 
 #include <vector>
 #include <queue>
 using std::vector;
 using std::queue;
+
+#include "Riostream.h"
 
 enum EFitPanel {
    kFP_FLIST, kFP_GAUS,  kFP_GAUSN, kFP_EXPO,  kFP_LAND,  kFP_LANDN,
@@ -1769,6 +1773,14 @@ void TFitEditor::DoDataSet(Int_t selected)
    TObject* objSelected = gROOT->FindObject(name);
    assert(objSelected);
 
+   if ( strcmp( objSelected->ClassName(), "TTree" ) == 0 ) {
+      cout << "It's a TREE!!!!! (" << objSelected << ')' << endl;
+      char variables[256]; char cuts[256];
+      strcpy(variables, "Sin input!");
+      new TTreeInput( fClient->GetRoot(), GetMainFrame(), variables, cuts );
+      cout << "1: '" << variables << "' '" << cuts << "'" << endl;
+   }
+
    // Search the canvas where the object is drawn, if any
    TPad* currentPad = NULL;
    bool found = false;
@@ -2291,7 +2303,7 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
       fType = kObjectTree;
       set = kTRUE;
       fDim = -1; //not implemented
-      fMethodList->SetEnabled(kFALSE);
+      //fMethodList->SetEnabled(kFALSE);
    } else if (obj->InheritsFrom("TH1")){
       fType = kObjectHisto;
       set = kTRUE;
