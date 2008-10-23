@@ -130,7 +130,7 @@ void generate_namespace(ostream& out, const Scope& ns, const string& indent = ""
 int main(int /*argc*/, char* argv[]) {
 
 #ifdef _WIN32
-  HMODULE libInstance = LoadLibrary("libtest_Class2DictRflx.dll");
+  HMODULE libInstance = LoadLibrary("test_Class2DictRflx.dll");
   if ( ! libInstance )  std::cerr << "Could not load dictionary. " << std::endl << "Reason: " << GetLastError() << std::endl;
 #else
   void * libInstance = dlopen("libtest_Class2DictRflx.so", RTLD_LAZY);

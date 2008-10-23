@@ -56,7 +56,7 @@ Reflex::Internal::ScopeBase::ScopeBase(const char * scope,
    }
 
    // Construct Scope
-   Scope scopePtr = catalog.ByName(sname);
+   Scope scopePtr = catalog.ScopeByName(sname);
    if (scopePtr.Id() == 0) { 
       // create a new Scope
       fScopeName = new ScopeName(scope, this, catalog); 
@@ -66,7 +66,7 @@ Reflex::Internal::ScopeBase::ScopeBase(const char * scope,
       fScopeName->fScopeBase = this;
    }
 
-   Scope declScopePtr = catalog.Scopes().ByName(declScope);
+   Scope declScopePtr = catalog.ScopeByName(declScope);
    if (! declScopePtr) {
       if (scopeType == kETNamespace) declScopePtr = (new Namespace(declScope.c_str(), catalog))->ThisScope();
       else                         declScopePtr = (new ScopeName(declScope.c_str(), 0, catalog))->ThisScope();

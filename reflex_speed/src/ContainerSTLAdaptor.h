@@ -93,14 +93,21 @@ namespace Internal {
          static const CONTAINER sContForEnd;
          return sContForEnd;
       }
+
       static bool AllEndsAreEqual() {
          // Test whether all containers' end() compare equal, in which case we can use one static
          // iterator end()
+
+         // At least on windows, behavior depends on whether CONTAINER is empty.
+         // Disable optimization for now.
+         return false;
+         /*
          static const CONTAINER sCont2;
          if (fgEndEquality != kEndUntested)
             return fgEndEquality;
          fgEndEquality = (EEndEquality) (ContForEnd().end () == sCont2.end());
          return fgEndEquality;
+         */
       }
       enum EEndEquality { kEndDiffers, kEndAllEqual, kEndUntested };
       const CONTAINER* fCont; // STL container
