@@ -389,11 +389,11 @@ void TFitEditor::CreateGeneralTab()
    tf->AddFrame(label, new TGLayoutHints(kLHintsNormal, 0, 0, 5, 0));
 
    fDataSet = BuildDataSetList(tf, kFP_DATAS);
-   fDataSet->Resize(140, 20);
+   fDataSet->Resize(264, 20);
 
    TGListBox *lb = fDataSet->GetListBox();
    lb->Resize(lb->GetWidth(), 200);
-   tf->AddFrame(fDataSet, new TGLayoutHints(kLHintsNormal, 5, 0, 5, 0));
+   tf->AddFrame(fDataSet, new TGLayoutHints(kLHintsNormal, 13, 0, 5, 0));
    fDataSet->Associate(this);
 
    gf1->AddFrame(tf, new TGLayoutHints(kLHintsNormal | kLHintsExpandX));
@@ -1767,18 +1767,33 @@ void TFitEditor::DoDataSet(Int_t selected)
       return;
    }
 
-   // Check if the object selected still exist
+   // Get the name of the object
    TGTextLBEntry* textEntry = static_cast<TGTextLBEntry*>(fDataSet->GetListBox()->GetEntry(selected));
-   const char* name = textEntry->GetText()->GetString()+textEntry->GetText()->Last(':')+1;
-   TObject* objSelected = gROOT->FindObject(name);
+   string name = textEntry->GetText()->GetString()+textEntry->GetText()->First(':')+2;
+   
+   // Check the object exists and it is registered
+   TObject* objSelected = gROOT->FindObject(name.substr(0, name.find(' ')).c_str());
    assert(objSelected);
 
-   if ( strcmp( objSelected->ClassName(), "TTree" ) == 0 ) {
+   // If it is a tree, and there is no variables selected, show a dialog
+   if ( strcmp( objSelected->ClassName(), "TTree" ) == 0 && 
+        name.find(' ') == string::npos ) {
       cout << "It's a TREE!!!!! (" << objSelected << ')' << endl;
       char variables[256]; char cuts[256];
       strcpy(variables, "Sin input!");
       new TTreeInput( fClient->GetRoot(), GetMainFrame(), variables, cuts );
-      cout << "1: '" << variables << "' '" << cuts << "'" << endl;
+      if ( strcmp ( variables, "" ) == 0 ) {
+         fDataSet->Select( kFP_NOSEL, kTRUE );
+         return;
+      }
+
+      // If the input is valid, insert the tree with the selections as an entry to fDataSet
+      TString entryName = (objSelected)->ClassName(); entryName.Append("::"); entryName.Append((objSelected)->GetName());
+      entryName.Append(" (\""); entryName.Append(variables); entryName.Append("\", \"");
+      entryName.Append(cuts); entryName.Append("\")");
+      Int_t newid = fDataSet->GetNumberOfEntries() + kFP_NOSEL;
+      fDataSet->InsertEntry(entryName, newid, selected );
+      fDataSet->Select(newid);
    }
 
    // Search the canvas where the object is drawn, if any
@@ -1804,7 +1819,7 @@ void TFitEditor::DoDataSet(Int_t selected)
       }
    }
 
-   // Set the proper object and canvas
+   // Set the proper object and canvas (if found!)
    SetFitObject( found?currentPad:NULL, objSelected, kButton1Down);
 }
 
@@ -2341,6 +2356,7 @@ void TFitEditor::ShowObjectName(TObject* obj)
 
    TString name;
    
+   // Build the string to be compared to look for the object.
    if (obj) {
       name = obj->ClassName();
       name.Append("::");
@@ -2350,11 +2366,25 @@ void TFitEditor::ShowObjectName(TObject* obj)
    }
    fStatusBar->SetText(name.Data(),0);
 
+   // If the selection was done in the fDataSet combo box, there is no need
+   // to search through the list
+   TGTextLBEntry* entry = static_cast<TGTextLBEntry*> ( fDataSet->GetSelectedEntry());
+   if ( entry ) {
+      string selectedName = entry->GetText()->GetString();
+      if ( name.CompareTo(selectedName.substr(0, selectedName.find(' ')).c_str()) == 0 ) {
+         Layout();
+         return;
+      }
+   }
+
+   // Search through the list for the object
    Int_t entryId = kFP_NOSEL+1;
    bool found = false;
    while ( TGTextLBEntry* entry = static_cast<TGTextLBEntry*> 
            ( fDataSet->GetListBox()->GetEntry(entryId)) ) {
-      if ( name.CompareTo(*(entry->GetText())) == 0 ) {
+      string compareName = entry->GetText()->GetString();
+      if ( name.CompareTo(compareName.substr(0, compareName.find(' ')).c_str()) == 0 ) {
+         // If the object is found, select it
          fDataSet->Select(entryId, false);
          found = true;
          break;
@@ -2362,8 +2392,11 @@ void TFitEditor::ShowObjectName(TObject* obj)
       entryId += 1;
    }
 
-   if ( !found )
+   // If the object was not found, add it and select it.
+   if ( !found ) {
       fDataSet->AddEntry(name.Data(), entryId);
+      fDataSet->Select(entryId, kTRUE);
+   }
    
    Layout();
 }
