@@ -234,10 +234,10 @@ Bool_t TProofServLogHandler::Notify()
          TString log;
          if (fPfx.Length() > 0) {
             // Prepend prefix specific to this instance
-            log = Form("%s: %s", fPfx.Data(), line);
+            log.Form("%s: %s", fPfx.Data(), line);
          } else if (fgPfx.Length() > 0) {
             // Prepend default prefix
-            log = Form("%s: %s", fgPfx.Data(), line);
+            log.Form("%s: %s", fgPfx.Data(), line);
          } else {
             // Nothing to prepend
             log = line;
@@ -2106,8 +2106,8 @@ Int_t TProofServ::Setup()
       host.Remove(host.Index("."));
 
    // Session tag
-   fSessionTag = Form("%s-%s-%d-%d", fOrdinal.Data(), host.Data(),
-                      TTimeStamp().GetSec(),gSystem->GetPid());
+   fSessionTag.Form("%s-%s-%d-%d", fOrdinal.Data(), host.Data(),
+                    TTimeStamp().GetSec(),gSystem->GetPid());
    fTopSessionTag = fSessionTag;
 
    // create session directory and make it the working directory
@@ -2220,7 +2220,8 @@ Int_t TProofServ::SetupCommon()
                              " exist or is not readable", ldir.Data());
          } else {
             // Add to the list, key will be "G<ng>", i.e. "G0", "G1", ...
-            TString key = Form("G%d", ng++);
+            TString key;
+            key.Form("G%d", ng++);
             if (!fGlobalPackageDirList) {
                fGlobalPackageDirList = new THashList();
                fGlobalPackageDirList->SetOwner();
@@ -2310,7 +2311,7 @@ Int_t TProofServ::SetupCommon()
          TString dsetdir = gEnv->GetValue("ProofServ.DataSetDir", "");
          if (dsetdir.IsNull()) {
             // Use the default in the sandbox
-            dsetdir = Form("%s/%s", fWorkDir.Data(), kPROOF_DataSetDir);
+            dsetdir.Form("%s/%s", fWorkDir.Data(), kPROOF_DataSetDir);
             if (gSystem->AccessPathName(fDataSetDir))
                gSystem->MakeDirectory(fDataSetDir);
             opts += "Sb:";
@@ -2820,7 +2821,8 @@ void TProofServ::ScanPreviousQueries(const char *dir)
             continue;
 
          // File with the query result
-         TString fn = Form("%s/%s/%s/query-result.root", dir, sess, qry);
+         TString fn;
+         fn.Form("%s/%s/%s/query-result.root", dir, sess, qry);
          TFile *f = TFile::Open(fn);
          if (f) {
             f->ReadKeys();
@@ -2908,7 +2910,8 @@ Int_t TProofServ::ApplyMaxQueries()
             continue;
 
          // File with the query result
-         TString fn = Form("%s/%s/%s/query-result.root", dir.Data(), sess, qry);
+         TString fn;
+         fn.Form("%s/%s/%s/query-result.root", dir.Data(), sess, qry);
 
          FileStat_t st;
          if (gSystem->GetPathInfo(fn, st)) {
@@ -3079,7 +3082,8 @@ void TProofServ::SaveQuery(TQueryResult *qr, const char *fout)
       return;
 
    // Create dir for specific query
-   TString querydir = Form("%s/%d",fQueryDir.Data(), qr->GetSeqNum());
+   TString querydir;
+   querydir.Form("%s/%d",fQueryDir.Data(), qr->GetSeqNum());
 
    // Create dir, if needed
    if (gSystem->AccessPathName(querydir))
@@ -3144,7 +3148,7 @@ void TProofServ::RemoveQuery(TQueryResult *qr, Bool_t soft)
    // Remove the directory
    TString qdir = fQueryDir;
    qdir = qdir.Remove(qdir.Index(kPROOF_QueryDir)+strlen(kPROOF_QueryDir));
-   qdir = Form("%s/%s/%d", qdir.Data(), qr->GetTitle(), qr->GetSeqNum());
+   qdir.Form("%s/%s/%d", qdir.Data(), qr->GetTitle(), qr->GetSeqNum());
    PDB(kGlobal, 1)
       Info("RemoveQuery", "removing directory: %s", qdir.Data());
    gSystem->Exec(Form("%s %s", kRM, qdir.Data()));
@@ -3200,7 +3204,7 @@ TProofQueryResult *TProofServ::LocateQuery(TString queryref, Int_t &qry, TString
          while ((pqr = (TProofQueryResult *) nxq())) {
             if (pqr->GetSeqNum() == qry) {
                // Dir for specific query
-               qdir = Form("%s/%d", fQueryDir.Data(), qry);
+               qdir.Form("%s/%d", fQueryDir.Data(), qry);
                break;
             }
          }
@@ -3223,7 +3227,7 @@ TProofQueryResult *TProofServ::LocateQuery(TString queryref, Int_t &qry, TString
       queryref.ReplaceAll(":q","/");
       qdir = fQueryDir;
       qdir = qdir.Remove(qdir.Index(kPROOF_QueryDir)+strlen(kPROOF_QueryDir));
-      qdir = Form("%s/%s", qdir.Data(), queryref.Data());
+      qdir.Form("%s/%s", qdir.Data(), queryref.Data());
    }
 
    // We are done
@@ -3262,8 +3266,8 @@ void TProofServ::HandleArchive(TMessage *mess)
          return;
       }
       if (qry > 0) {
-         path = Form("%s/session-%s-%d.root",
-                     fArchivePath.Data(), fTopSessionTag.Data(), qry);
+         path.Form("%s/session-%s-%d.root",
+                   fArchivePath.Data(), fTopSessionTag.Data(), qry);
       } else {
          path = queryref;
          path.ReplaceAll(":q","-");
@@ -3376,8 +3380,9 @@ void TProofServ::HandleProcess(TMessage *mess)
 
       if ((!hasNoData) && dset->GetListOfElements()->GetSize() == 0) {
          TFileCollection* dataset = 0;
-         TString dsTree, lookupopt;         // The dataset maybe in the form of a TFileCollection in the input list
+         TString lookupopt;
          TString dsname(dset->GetName());
+         // The dataset maybe in the form of a TFileCollection in the input list
          if (dsname.BeginsWith("TFileCollection:")) {
             // Isolate the real name
             dsname.ReplaceAll("TFileCollection:", "");
@@ -3392,7 +3397,6 @@ void TProofServ::HandleProcess(TMessage *mess)
                return;
             }
             input->Remove(dataset);
-            dsTree = dataset->GetDefaultTreeName();
             // Make sure we lookup everything (unless the client or the administartor
             // required something else)
             if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
@@ -3406,16 +3410,14 @@ void TProofServ::HandleProcess(TMessage *mess)
          // name, should be processed.
          if (!dataset) {
             if (fDataSetManager) {
-               dataset = fDataSetManager->GetDataSet(dset->GetName());
+               dataset = fDataSetManager->GetDataSet(dsname.Data());
                if (!dataset) {
                   SendAsynMessage(Form("HandleProcess on %s: no such dataset: %s",
-                                       fPrefix.Data(), dset->GetName()));
+                                       fPrefix.Data(), dsname.Data()));
                   Error("HandleProcess", "no such dataset on the master: %s",
-                        dset->GetName());
+                        dsname.Data());
                   return;
                }
-               if (!(fDataSetManager->ParseUri(dset->GetName(), 0, 0, 0, &dsTree)))
-                  dsTree = "";
    
                // Apply the lookup option requested by the client or the administartor
                // (by default we trust the information in the dataset)
@@ -3428,6 +3430,34 @@ void TProofServ::HandleProcess(TMessage *mess)
                Error("HandleProcess", "no dataset manager: cannot proceed");
                return;
             }
+         }
+
+ 
+         // Logic for the subdir/obj names: try first to see if the dataset name contains
+         // some info; if not check the settings in the TDSet object itself; if still empty
+         // check the default tree name / path in the TFileCollection object; if still empty
+         // use the default as the flow will determine
+         TString dsTree;
+         // Get the [subdir/]tree, if any
+         fDataSetManager->ParseUri(dset->GetName(), 0, 0, 0, &dsTree);
+         if (dsTree.IsNull()) {
+            // Use what we have in the original dataset; we need this to locate the
+            // meta data information
+            dsTree += dset->GetDirectory();
+            dsTree += dset->GetObjName();
+         }
+         if (!dsTree.IsNull() && dsTree != "/") {
+            TString tree(dsTree);
+            Int_t idx = tree.Index("/");
+            if (idx != kNPOS) {
+               TString dir = tree(0, idx+1);
+               tree.Remove(0, idx);
+               dset->SetDirectory(dir);
+            }
+            dset->SetObjName(tree);
+         } else {
+            // Use the default obj name from the TFileCollection
+            dsTree = dataset->GetDefaultTreeName();
          }
 
          // Transfer the list now
@@ -4240,8 +4270,7 @@ void TProofServ::HandleCheckFile(TMessage *mess)
       TMD5 *md5local = TMD5::FileChecksum(cachef);
       if (md5local && md5 == (*md5local)) {
          // copy file from cache to working directory
-         Bool_t cpbin = (!IsMaster() || !IsParallel()) ? kTRUE : kFALSE;
-         CopyFromCache(filenam, cpbin);
+         CopyFromCache(filenam, kTRUE);
          fSocket->Send(kPROOF_CHECKFILE);
          PDB(kCache, 1)
             Info("HandleCheckFile", "file %s already on node", filenam.Data());
@@ -4288,6 +4317,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          }
          if (IsMaster() && all)
             fProof->ShowCache(all);
+         fgSendLogToMaster = kTRUE;
          break;
       case TProof::kClearCache:
          fCacheLock->Lock();
@@ -4317,6 +4347,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          gSystem->Exec(Form("%s %s", kLS, fPackageDir.Data()));
          if (IsMaster() && all)
             fProof->ShowPackages(all);
+         fgSendLogToMaster = kTRUE;
          break;
       case TProof::kClearPackages:
          status = UnloadPackages();
@@ -4594,11 +4625,13 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          }
          if (IsMaster() && all)
             fProof->ShowEnabledPackages(all);
+         fgSendLogToMaster = kTRUE;
          break;
       case TProof::kShowSubCache:
          (*mess) >> all;
          if (IsMaster() && all)
             fProof->ShowCache(all);
+         fgSendLogToMaster = kTRUE;
          break;
       case TProof::kClearSubCache:
          if (IsMaster())
@@ -4608,6 +4641,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          (*mess) >> all;
          if (IsMaster() && all)
             fProof->ShowPackages(all);
+         fgSendLogToMaster = kTRUE;
          break;
       case TProof::kDisableSubPackages:
          if (IsMaster())
@@ -4687,22 +4721,28 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          if (IsMaster())
             fProof->Load(package);
 
+         // Atomic action
+         fCacheLock->Lock();
+
          // Load locally; the implementation and header files (and perhaps
          // the binaries) are already in the cache
          CopyFromCache(package, kTRUE);
 
-         {  TProofServLogHandlerGuard hg(fLogFile, fSocket);
-            PDB(kGlobal, 1) Info("HandleCache:kLoadMacro", "enter");
-            // Load the macro
-            gROOT->ProcessLine(Form(".L %s", package.Data()));
-         }
+         // Load the macro
+         Info("HandleCache", "loading macro %s ...", package.Data());
+         gROOT->ProcessLine(Form(".L %s", package.Data()));
 
          // Cache binaries, if any new
          CopyToCache(package, 1);
 
-         // Wait forworkers to be done
+         // Release atomicity
+         fCacheLock->Unlock();
+
+         // Wait for workers to be done
          if (IsMaster())
-            fProof->Collect(TProof::kAllUnique);
+            fProof->Collect();
+         
+         fgSendLogToMaster = kTRUE;
 
          break;
       default:
@@ -5030,7 +5070,8 @@ Int_t TProofServ::CopyFromCache(const char *macro, Bool_t cpbin)
    }
 
    // Binary version file name
-   TString vername(Form(".%s", name.Data()));
+   TString vername;
+   vername.Form(".%s", name.Data());
    Int_t dotv = vername.Last('.');
    if (dotv != kNPOS)
       vername.Remove(dotv);
@@ -5071,7 +5112,8 @@ Int_t TProofServ::CopyFromCache(const char *macro, Bool_t cpbin)
       const char *e = 0;
       while ((e = gSystem->GetDirEntry(dirp))) {
          if (!strncmp(e, binname.Data(), binname.Length())) {
-            TString fncache = Form("%s/%s", fCacheDir.Data(), e);
+            TString fncache;
+            fncache.Form("%s/%s", fCacheDir.Data(), e);
             Bool_t docp = kTRUE;
             FileStat_t stlocal, stcache;
             if (!gSystem->GetPathInfo(fncache, stcache)) {
@@ -5094,6 +5136,9 @@ Int_t TProofServ::CopyFromCache(const char *macro, Bool_t cpbin)
 
    // End of atomicity
    fCacheLock->Unlock();
+
+   PDB(kGlobal,1)
+      Info("CopyFromCache","exit");
 
    // Done
    return 0;
@@ -5131,7 +5176,8 @@ Int_t TProofServ::CopyToCache(const char *macro, Int_t opt)
       binname.Replace(dot,1,"_");
 
    // Create version file name template
-   TString vername(Form(".%s", name.Data()));
+   TString vername;
+   vername.Form(".%s", name.Data());
    dot = vername.Last('.');
    if (dot != kNPOS)
       vername.Remove(dot);
@@ -5168,7 +5214,8 @@ Int_t TProofServ::CopyToCache(const char *macro, Int_t opt)
                   Bool_t docp = kTRUE;
                   FileStat_t stlocal, stcache;
                   if (!gSystem->GetPathInfo(e, stlocal)) {
-                     TString fncache = Form("%s/%s", fCacheDir.Data(), e);
+                     TString fncache;
+                     fncache.Form("%s/%s", fCacheDir.Data(), e);
                      Int_t rc = gSystem->GetPathInfo(fncache, stcache);
                      if (rc == 0 && (stlocal.fMtime <= stcache.fMtime))
                         docp = kFALSE;
@@ -5201,6 +5248,9 @@ Int_t TProofServ::CopyToCache(const char *macro, Int_t opt)
 
    // End of atomicity
    fCacheLock->Unlock();
+
+   PDB(kGlobal,1)
+      Info("CopyToCache","exit");
 
    // Done
    return 0;

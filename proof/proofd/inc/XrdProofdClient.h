@@ -96,6 +96,8 @@ class XrdProofdClient {
    int                     GuessTag(XrdOucString &tag, int ridx = 1, bool notify = 1);
    int                     MvOldSession(const char *tag, bool notify = 1);
 
+   void                    Reset();
+
    static void             SetMaxOldLogs(int mx) { fgMaxOldLogs = mx; }
 
  private:

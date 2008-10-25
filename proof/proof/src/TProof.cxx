@@ -4508,12 +4508,13 @@ Int_t TProof::DisablePackageOnClient(const char *package)
       gSystem->Exec(Form("%s %s/%s", kRM, fPackageDir.Data(), package));
       gSystem->Exec(Form("%s %s/%s.par", kRM, fPackageDir.Data(), package));
       fPackageLock->Unlock();
-      if (gSystem->AccessPathName(Form("%s/%s.par", fPackageDir.Data(), package))
-          && gSystem->AccessPathName(Form("%s/%s", fPackageDir.Data(), package)))
-         return 0;
+      if (!gSystem->AccessPathName(Form("%s/%s.par", fPackageDir.Data(), package)))
+         Warning("DisablePackageOnClient", "unable to remove package PAR file for %s", package);
+      if (!gSystem->AccessPathName(Form("%s/%s", fPackageDir.Data(), package)))
+         Warning("DisablePackageOnClient", "unable to remove package directory for %s", package);
    }
 
-   return -1;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -5325,7 +5326,7 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient)
       TString basemacro = gSystem->BaseName(macro);
       TMessage mess(kPROOF_CACHE);
       mess << Int_t(kLoadMacro) << basemacro;
-      Broadcast(mess, kUnique);
+      Broadcast(mess);
    }
 
    // Done

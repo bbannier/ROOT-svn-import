@@ -1194,15 +1194,6 @@ int XrdProofdProtocol::Login()
       // ... make sure that the directory for credentials exists in the sandbox ...
       XrdOucString credsdir = fUI.fWorkDir;
       credsdir += "/.creds";
-      // Acquire user identity
-      XrdSysPrivGuard pGuard((uid_t)fUI.fUid, (gid_t)fUI.fGid);
-      if (!pGuard.Valid()) {
-         emsg = "Login: could not get privileges to create credential dir ";
-         emsg += credsdir;
-         TRACEP(XERR, emsg);
-         fResponse.Send(kXP_ServerError, emsg.c_str());
-         return rc;
-      }
       if (XrdProofdAux::AssertDir(credsdir.c_str(), fUI, fgMgr.ChangeOwn()) == -1) {
          emsg = "Login: unable to create credential dir: ";
          emsg += credsdir;
@@ -3948,7 +3939,7 @@ int XrdProofdProtocol::Admin()
          cmsg = "Reset: forwarding the reset request to next tier(s) ";
          fResponse.Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
 
-         fgMgr.Broadcast(type, usr, &fResponse, 1);
+         fgMgr.Broadcast(type, usr, fClientID, &fResponse, 1);
       }
 
       // Unlock the locked client mutexes
@@ -3961,8 +3952,18 @@ int XrdProofdProtocol::Admin()
       // Cleanup usr
       SafeDelArray(usr);
 
+      // Reset the client instance
+      if (clnts) {
+         for (i = clnts->begin(); i != clnts->end(); ++i)
+            if ((c = *i))
+               c->Reset();
+      }
+
       // Acknowledge user
       fResponse.Send();
+
+      // Also this client needs to reconnect
+      return -1;
 
    } else if (type == kSendMsgToUser) {
 
@@ -4363,7 +4364,7 @@ int XrdProofdProtocol::Admin()
             buf += c->ID();
             buf += " ";
             buf += tag;
-            fgMgr.Broadcast(type, buf.c_str(), &fResponse);
+            fgMgr.Broadcast(type, buf.c_str(), fClientID,  &fResponse);
          }
          // Acknowledge user
          fResponse.Send();
@@ -5300,7 +5301,7 @@ char *XrdProofdProtocol::ReadBufferRemote(const char *url, const char *file,
    // We log in as the effective user to minimize the number of connections to the
    // other servers
    XrdClientUrlInfo u(url);
-   u.User = fgMgr.EffectiveUser();
+   u.User = fClientID ? fClientID : fgMgr.EffectiveUser();
    XrdProofConn *conn = fgMgr.GetProofConn(u.GetUrl().c_str());
 
    char *buf = 0;
@@ -5356,7 +5357,7 @@ char *XrdProofdProtocol::ReadLogPaths(const char *url, const char *msg, int ises
    // We log in as the effective user to minimize the number of connections to the
    // other servers
    XrdClientUrlInfo u(url);
-   u.User = fgMgr.EffectiveUser();
+   u.User = fClientID ? fClientID : fgMgr.EffectiveUser();
    XrdProofConn *conn = fgMgr.GetProofConn(u.GetUrl().c_str());
 
    char *buf = 0;

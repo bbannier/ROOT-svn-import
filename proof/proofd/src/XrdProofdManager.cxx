@@ -33,6 +33,7 @@
 #  include "XrdSys/XrdSysPlugin.hh"
 #  define XPD_LOG_01 SYS_LOG_01
 #endif
+#include "XrdSys/XrdSysPriv.hh"
 
 #include "XrdClient/XrdClientConst.hh"
 #include "XrdClient/XrdClientEnv.hh"
@@ -255,16 +256,21 @@ int XrdProofdManager::Config(const char *fn, bool rcf, XrdSysError *e)
 
    // Effective user
    XrdProofUI ui;
-   if (XrdProofdAux::GetUserInfo(geteuid(), ui) == 0) {
-      fEffectiveUser = ui.fUser;
+   if (!rcf) {
+      if (XrdProofdAux::GetUserInfo(geteuid(), ui) == 0) {
+         fEffectiveUser = ui.fUser;
+      } else {
+         mp = "ProofdManager: Config: could not resolve effective user (getpwuid, errno: ";
+         mp += errno;
+         mp += ")";
+         fEDest->Say(0, mp.c_str());
+         return -1;
+      }
    } else {
-      mp = "ProofdManager: Config: could not resolve effective user (getpwuid, errno: ";
-      mp += errno;
-      mp += ")";
-      fEDest->Say(0, mp.c_str());
-      return -1;
+      // Fill 'ui'
+      XrdProofdAux::GetUserInfo(fEffectiveUser.c_str(), ui);
    }
-
+   
    // Local FQDN
    char *host = XrdNetDNS::getHostName();
    fHost = host ? host : "";
@@ -409,19 +415,6 @@ int XrdProofdManager::ParseConfig(XrdProofUI ui, bool rcf)
                return 0;
             }
          }
-      }
-   }
-
-   // Initialize the security system if this is wanted
-   if (!rcf) {
-      if (fSecLib.length() <= 0)
-         fEDest->Say(0, "XRD seclib not specified; strong authentication disabled");
-      else {
-         if (!(fCIA = LoadSecurity())) {
-            fEDest->Emsg(0, "ProofdManager: ParseConfig: unable to load security system.");
-            return -1;
-         }
-         fEDest->Emsg(0, "ProofdManager: ParseConfig: security library loaded");
       }
    }
 
@@ -572,7 +565,7 @@ int XrdProofdManager::ParseConfig(XrdProofUI ui, bool rcf)
             XrdROOT *rootc = new XrdROOT(getenv("ROOTSYS"), "");
             msg = "ProofdManager : ParseConfig: ROOT dist: \"";
             msg += rootc->Export();
-            if (rootc->Validate()) {
+            if (rootc->Validate(fEffectiveUser.c_str())) {
                msg += "\" validated";
                fROOT.push_back(rootc);
             } else {
@@ -620,12 +613,29 @@ int XrdProofdManager::ParseConfig(XrdProofUI ui, bool rcf)
       fEDest->Say(0, mp.c_str());
    }
 
+   // Work as root to avoid contineous changes of the effective user
+   // (users are logged in their box after forking)
+   if (!getuid()) XrdSysPriv::ChangePerm((uid_t)0, (gid_t)0);
+
+   // Initialize the security system if this is wanted
+   if (!rcf) {
+      if (fSecLib.length() <= 0)
+         fEDest->Say(0, "XRD seclib not specified; strong authentication disabled");
+      else {
+         if (!(fCIA = LoadSecurity())) {
+            fEDest->Emsg(0, "ProofdManager: ParseConfig: unable to load security system.");
+            return -1;
+         }
+         fEDest->Emsg(0, "ProofdManager: ParseConfig: security library loaded");
+      }
+   }
+
    // Done
    return 0;
 }
 
 //__________________________________________________________________________
-int XrdProofdManager::Broadcast(int type, const char *msg,
+int XrdProofdManager::Broadcast(int type, const char *msg, const char *usr,
                                 XrdProofdResponse *r, bool notify)
 {
    // Broadcast request to known potential sub-nodes.
@@ -646,7 +656,7 @@ int XrdProofdManager::Broadcast(int type, const char *msg,
                     (w->fPort == -1 || w->fPort == fPort)) ? 1 : 0;
          if (!us) {
             // Create 'url'
-            XrdOucString u = fEffectiveUser;
+            XrdOucString u = usr ? usr : fEffectiveUser;
             u += '@';
             u += w->fHost;
             if (w->fPort != -1) {
@@ -2338,7 +2348,7 @@ int XrdProofdManager::DoDirectiveRootSys(char *val, XrdOucStream *cfg, bool)
       }
       // If not, try validation
       if (rootc) {
-         if (rootc->Validate()) {
+         if (rootc->Validate(fEffectiveUser.c_str())) {
             XPDPRT("DoDirectiveRootSys: validation OK for: "<<rootc->Export());
             // Add to the list
             fROOT.push_back(rootc);
