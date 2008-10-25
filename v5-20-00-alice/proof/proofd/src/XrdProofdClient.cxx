@@ -161,6 +161,28 @@ XrdProofdClient::~XrdProofdClient()
 }
 
 //__________________________________________________________________________
+void XrdProofdClient::Reset()
+{
+   // Reset this instance
+
+   fClientVers = -1;
+   SafeDel(fUNIXSock);
+   SafeDelArray(fUNIXSockPath);
+   fROOT = 0;
+   fGroup = 0;
+   fWorkerProofServ = 0;
+   fMasterProofServ = 0;
+   fIsValid = 0;
+
+   XrdSysMutexHelper mh(fMutex);
+   std::vector<XrdProofdProofServ *>::iterator ip;
+   for (ip = fProofServs.begin(); ip != fProofServs.end();) {
+      delete *ip;
+      ip = fProofServs.erase(ip);
+   }
+}
+
+//__________________________________________________________________________
 void XrdProofdClient::CountSession(int n, bool worker)
 {
    // Count session of type srvtype

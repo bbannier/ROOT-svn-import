@@ -50,7 +50,7 @@ private:
    Bool_t   fIsLocal;     // kTRUE if the file is in the sandbox
    Bool_t   fMerged;
 
-   static TFileMerger *fgMerger;  // Instance of the file merger for mode "CENTRAL"
+   TFileMerger *fMerger;  // Instance of the file merger for mode "CENTRAL"
 
    TString GetTmpName(const char* name);
 
@@ -67,22 +67,21 @@ protected:
 public:
    TProofOutputFile(const char* path = "prooffile.root",
               const char* location = "REMOTE", const char* mode = "CENTRAL");
-   virtual ~TProofOutputFile() { }
+   virtual ~TProofOutputFile();
 
    const char* GetDir() const { return fDir; }
+   TFileMerger* GetFileMerger(Bool_t local = kFALSE);
    const char* GetFileName(Bool_t tmpName = kTRUE) const { return (tmpName) ? fFileName1 : fFileName; }
    const char* GetLocation() const { return fLocation; }
    const char* GetMode() const { return fMode; }
    const char* GetOutputFileName() const { return fOutputFileName; }
    const char* GetWorkerOrdinal() const { return fWorkerOrdinal; }
 
-
+   Int_t AdoptFile(TFile *f);                    // Adopt a TFile already open
    TFile* OpenFile(const char* opt);             // Open a file with the specified name in fFileName1
    Long64_t Merge(TCollection* list);
    void Print(Option_t *option="") const;
    void SetOutputFileName(const char *name);
-
-   static TFileMerger* GetFileMerger(Bool_t local = kFALSE); // Instance of the file merger for mode "CENTRAL"
 
    ClassDef(TProofOutputFile,1) // Wrapper class to steer the merging of files produced on workers
 };

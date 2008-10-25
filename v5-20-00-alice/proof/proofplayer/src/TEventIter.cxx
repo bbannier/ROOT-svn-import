@@ -414,6 +414,7 @@ TEventIterTree::TEventIterTree(TDSet *dset, TSelector *sel, Long64_t first, Long
    fFileTrees = new TList;
    fFileTrees->SetOwner();
    fUseTreeCache = gEnv->GetValue("ProofPlayer.UseTreeCache", 1);
+   fCacheSize = gEnv->GetValue("ProofPlayer.CacheSize", 10000000);
 }
 
 //______________________________________________________________________________
@@ -445,7 +446,7 @@ TTree* TEventIterTree::GetTrees(TDSetElement *elem)
       if (fUseTreeCache) {
          TFile *curfile = main->GetCurrentFile();
          if (!fTreeCache) {
-            main->SetCacheSize();
+            main->SetCacheSize(fCacheSize);
             fTreeCache = (TTreeCache *)curfile->GetCacheRead();
          } else {
             curfile->SetCacheRead(fTreeCache);
@@ -646,7 +647,11 @@ Long64_t TEventIterTree::GetNextEvent()
                attach = kTRUE;
                fOldBytesRead = fTree->GetCurrentFile()->GetBytesRead();
             }
-         } else {
+            // Set range to be analysed
+            if (fTreeCache)
+               fTreeCache->SetEntryRange(fElem->GetFirst(),
+                                         fElem->GetFirst() + fElem->GetNum() - 1);
+          } else {
             // Could not open this element: ask for another one
             SafeDelete(fElem);
             // The current tree, if any, is not valid anymore

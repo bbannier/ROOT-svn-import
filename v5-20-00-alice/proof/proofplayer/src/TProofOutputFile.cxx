@@ -31,8 +31,6 @@
 
 ClassImp(TProofOutputFile)
 
-TFileMerger *TProofOutputFile::fgMerger = 0; // Instance of the file merger for mode "CENTRAL"
-
 //________________________________________________________________________________
 TProofOutputFile::TProofOutputFile(const char* path,
                                    const char* location, const char* mode)
@@ -41,6 +39,7 @@ TProofOutputFile::TProofOutputFile(const char* path,
    // Main conctructor
 
    fMerged = kFALSE;
+   fMerger = 0;
 
    TUrl u(path, kTRUE);
    // File name
@@ -84,6 +83,25 @@ TProofOutputFile::TProofOutputFile(const char* path,
    fOutputFileName += path;
    if (!fOutputFileName.EndsWith(".root"))
       fOutputFileName += ".root";
+   // Replace <user>, if any
+   if (fOutputFileName.Contains("<user>")) {
+      TString user = "nouser";
+      // Get user logon name
+      UserGroup_t *pw = gSystem->GetUserInfo();
+      if (pw) {
+         user = pw->fUser;
+         delete pw;
+      }
+      fOutputFileName.ReplaceAll("<user>", user);
+   }
+   // Replace <group>, if any
+   if (fOutputFileName.Contains("<group>")) {
+      if (gProofServ && gProofServ->GetGroup() && strlen(gProofServ->GetGroup()))
+         fOutputFileName.ReplaceAll("<group>", gProofServ->GetGroup());
+      else
+         fOutputFileName.ReplaceAll("<group>", "default");
+   }
+   Info("TProofOutputFile", "output file url: %s", fOutputFileName.Data());
 
    // Location
    fLocation = "REMOTE";
@@ -107,6 +125,14 @@ TProofOutputFile::TProofOutputFile(const char* path,
       }
       fMode.ToUpper();
    }
+}
+
+//________________________________________________________________________________
+TProofOutputFile::~TProofOutputFile()
+{
+   // Main destructor
+
+   if (fMerger) delete fMerger;
 }
 
 //______________________________________________________________________________
@@ -163,6 +189,31 @@ TFile* TProofOutputFile::OpenFile(const char* opt)
    TFile *retFile = TFile::Open(fileLoc, opt);
 
    return retFile;
+}
+
+//______________________________________________________________________________
+Int_t TProofOutputFile::AdoptFile(TFile *f)
+{
+   // Adopt a file already open.
+   // Return 0 if OK, -1 in case of failure
+
+   if (!f || f->IsZombie())
+      return -1;
+
+   // Set the name and dir
+   TUrl u(*(f->GetEndpointUrl()));
+   fIsLocal = kFALSE;
+   if (!strcmp(u.GetProtocol(), "file")) {
+      fIsLocal = kTRUE;
+      fDir = u.GetFile();
+   } else {
+      fDir = u.GetUrl();
+   }
+   fFileName1 = gSystem->BaseName(fDir.Data());
+   fFileName = fFileName1;
+   fDir.ReplaceAll(fFileName1, "");
+
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -437,7 +488,7 @@ TFileMerger *TProofOutputFile::GetFileMerger(Bool_t local)
 {
    // Get instance of the file merger to be used in "CENTRAL" mode
 
-   if (!fgMerger)
-      fgMerger = new TFileMerger(local);
-   return fgMerger;
+   if (!fMerger)
+      fMerger = new TFileMerger(local);
+   return fMerger;
 }

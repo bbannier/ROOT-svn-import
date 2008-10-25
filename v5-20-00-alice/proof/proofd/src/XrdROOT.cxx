@@ -85,10 +85,11 @@ XrdROOT::XrdROOT(const char *dir, const char *tag)
 }
 
 //__________________________________________________________________________
-bool XrdROOT::Validate()
+bool XrdROOT::Validate(const char *effusr)
 {
    // Validates 'dir' (temporarly stored in fExport) and makes sure the
-   // associated 'proofserv' can be started
+   // associated 'proofserv' can be started (effusr is the effective user to
+   // be used for the test.
 
    if (IsInvalid()) {
       // Cannot be validated
@@ -97,7 +98,7 @@ bool XrdROOT::Validate()
    }
 
    // Validate it, retrieving at the same time the PROOF protocol run by it
-   if (ValidatePrgmSrv() == -1) {
+   if (ValidatePrgmSrv(effusr) == -1) {
       XPDERR("XrdROOT:Validate: unable to validate "<< fPrgmSrv);
       return 0;
    }
@@ -150,10 +151,11 @@ int XrdROOT::GetROOTVersion(const char *dir, XrdOucString &version)
 }
 
 //__________________________________________________________________________
-int XrdROOT::ValidatePrgmSrv()
+int XrdROOT::ValidatePrgmSrv(const char *effusr)
 {
    // Start a trial server application to test forking and get the version
    // of the protocol run by the PROOF server.
+   // The trial application runs under effective user 'effusr'.
    // Return 0 if everything goes well, -1 in cse of any error.
 
    XPDPRT("XrdROOT::ValidatePrgmSrv: forking test and protocol retrieval");
@@ -203,9 +205,9 @@ int XrdROOT::ValidatePrgmSrv()
       // a normal user
       if (!getuid()) {
          XrdProofUI ui;
-         if (XrdProofdAux::GetUserInfo(geteuid(), ui) != 0) {
+         if (XrdProofdAux::GetUserInfo(effusr, ui) != 0) {
             TRACE(XERR, "XrdROOT::ValidatePrgmSrv:"
-                          " could not get info for user-id: "<<geteuid());
+                          " could not get info for user: "<<effusr);
             exit(1);
          }
 

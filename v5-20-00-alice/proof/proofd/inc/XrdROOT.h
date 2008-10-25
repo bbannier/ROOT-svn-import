@@ -35,7 +35,7 @@ private:
    kXR_int16    fSrvProtVers;
 
    int          GetROOTVersion(const char *dir, XrdOucString &version);
-   int          ValidatePrgmSrv();
+   int          ValidatePrgmSrv(const char *effusr);
 
 public:
    XrdROOT(const char *dir, const char *tag);
@@ -54,7 +54,7 @@ public:
    void        SetValid() { fStatus = 1; }
    kXR_int16   SrvProtVers() const { return fSrvProtVers; }
    const char *Tag() const { return fTag.c_str(); }
-   bool        Validate();
+   bool        Validate(const char *effusr);
 };
 
 #endif
