@@ -171,7 +171,7 @@ void NumberCountingPdfFactory::AddPdf(Double_t* sig,
   RooArgSet likelihoodFactorSet(likelihoodFactors);
   RooProdPdf joint("joint","joint", likelihoodFactorSet );
 
-  // add this workspace to joint.  
+  // add this PDF to workspace.  
   // Need to do import into workspace now to get all the structure imported as well.
   // Just returning the WS will loose the rest of the structure b/c it will go out of scope
   ws->import(joint);
@@ -185,7 +185,7 @@ void NumberCountingPdfFactory::AddExpData(Double_t* sig,
 					  RooWorkspace* ws) {
 
   // A number counting combination for N channels with uncorrelated background 
-  //  uncertainty.  Correlations can be added by extending this PDF with additional terms.
+  // uncertainty.  Correlations can be added by extending this PDF with additional terms.
   // Arguements are an array of expected signal, expected background, and relative 
   // background uncertainty (eg. 0.1 for 10% uncertainty), and the number of channels.
 
