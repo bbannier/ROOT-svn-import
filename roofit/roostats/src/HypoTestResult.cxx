@@ -45,6 +45,21 @@ HypoTestResult::HypoTestResult()
 
 
 //____________________________________________________________________
+HypoTestResult::HypoTestResult(const char* name) :
+  TNamed(name,name)
+{
+  // Alternate constructor
+}
+
+//____________________________________________________________________
+HypoTestResult::HypoTestResult(const char* name, const char* title):
+  TNamed(name,title)
+{
+  // Alternate constructor
+}
+
+
+//____________________________________________________________________
 HypoTestResult::~HypoTestResult()
 {
   // Destructor
