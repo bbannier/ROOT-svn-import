@@ -27,8 +27,11 @@
 #pragma link C++ class RooStats::NumberCountingPdfFactory+;
 #pragma link C++ class RooStats::SimpleInterval+;
 #pragma link C++ class RooStats::HypoTestResult+;
-//#pragma link C++ class RooStats::IntervalCalculator+; // interface, not concrete
 //#pragma link C++ class RooStats::ConfInterval+; // interface, not concrete
+//#pragma link C++ class RooStats::IntervalCalculator+; // interface, not concrete
+//#pragma link C++ class RooStats::HypoTestCalculator+; // interface, not concrete
+//#pragma link C++ class RooStats::CombinedCalculator+; // interface, not concrete
+#pragma link C++ class RooStats::ProfileLikelihoodCalculator+; 
 
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialExpZ(Double_t,Double_t,Double_t);
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialWithTauExpZ(Double_t,Double_t,Double_t);
