@@ -41,7 +41,7 @@ namespace RooStats {
 
 
   protected:
-    //    ClassDef(ConfInterval,1)
+    ClassDef(ConfInterval,1)
 
    };
 }

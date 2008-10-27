@@ -26,16 +26,17 @@ namespace RooStats{
 
   public:
     // need one for expected and one for observed
-    NumberCountingPdfFactory(Double_t*, Double_t*, Double_t*, Int_t );
+    NumberCountingPdfFactory();
     ~NumberCountingPdfFactory();
-    RooWorkspace* GetWorkspace() const;
-    RooAbsPdf* GetPdf() const;
-    RooAbsData* GetData() const;
+    RooWorkspace* GetExpWS(Double_t*, Double_t*, Double_t*, Int_t) ; 
+    //  RooWorkspace* GetObsWS(Double_t*, Double_t*, Double_t*, Int_t) ; // needs more thought
 
   private:
-    RooWorkspace* fWS;
+    //    RooWorkspace* fWS;  //avoiding having  this class keep state, really use as a factory
 
-    void FillWorkspace(Double_t*, Double_t*, Double_t*, Int_t );
+    void AddExpData(Double_t*, Double_t*, Double_t*, Int_t, RooWorkspace* );
+    //    void AddObsData(Double_t*, Double_t*, Double_t*, Int_t, RooWorkspace* ); // needs more thought
+    void AddPdf(Double_t*, Double_t*, Double_t*, Int_t, RooWorkspace* );
 
 
 

@@ -17,7 +17,7 @@
 #include "RooArgSet.h"
 
 namespace RooStats {
-  class IntervalCalculator { //: TNamed {
+  class IntervalCalculator {//: public TNamed {
   public:
     IntervalCalculator();
     virtual ~IntervalCalculator();
