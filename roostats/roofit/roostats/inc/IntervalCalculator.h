@@ -15,6 +15,7 @@
 #include "RooStats/ConfInterval.h"
 #include "RooAbsPdf.h"
 #include "RooArgSet.h"
+#include "RooWorkspace.h"
 
 namespace RooStats {
   class IntervalCalculator {//: public TNamed {
@@ -22,27 +23,26 @@ namespace RooStats {
     IntervalCalculator();
     virtual ~IntervalCalculator();
     
-    //pure virtual?  
+    // Main interface, pure virtual
     virtual ConfInterval* GetInterval() const = 0; 
 
-    // set the size of the test (rate of Type I error).  
-    // Eg. 0.5 for a 95% Confidence Interval
-    virtual void SetConfidenceLevel(Double_t) = 0;
     
-    // do we want it to cache confidence level?
-    // Double_t Size() const;
-    // Double_t ConfidenceLevel() const; // different name
-    // if so does this implement it?
-    // private fSize;
-    
-
-    virtual void SetPdf(RooAbsPdf&) = 0;
+    // keep these pure virtual
+    virtual Double_t Size() const = 0;
+    virtual Double_t ConfidenceLevel()  const = 0;  
+    virtual void SetWorkspace(RooWorkspace* ws) = 0;
+    virtual void SetPdf(const char* name) = 0;
+    virtual void SetData(const char* name) = 0;
     virtual void SetParameters(RooArgSet&) = 0;
     virtual void SetNuisanceParameters(RooArgSet&) = 0;
+    // set the size of the test (rate of Type I error).  
+    // Eg. 0.05 for a 95% Confidence Interval
+    virtual void SetSize(Double_t size) = 0;
+    virtual void SetConfidenceLevel(Double_t cl) = 0;
     
 
   protected:
-    ClassDef(IntervalCalculator,1)        
+    //    ClassDef(IntervalCalculator,1)        
   };
 }
 #endif
