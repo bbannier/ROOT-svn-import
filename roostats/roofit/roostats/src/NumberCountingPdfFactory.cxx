@@ -51,6 +51,8 @@ NamespaceImp(RooStats)
 #endif
 
 
+ClassImp(RooStats::NumberCountingPdfFactory) ;
+
 
 // A factory for building PDFs and data for a number counting combination.  
 // The factory produces a PDF for N channels with uncorrelated background 
