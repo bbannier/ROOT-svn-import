@@ -52,63 +52,81 @@ NamespaceImp(RooStats)
 
 
 
+// A factory for building PDFs and data for a number counting combination.  
+// The factory produces a PDF for N channels with uncorrelated background 
+// uncertainty.  Correlations can be added by extending this PDF with additional terms.
+// The factory relates the signal in each channel to a master signal strength times the 
+// expected signal in each channel.  Thus, the final test is performed on the master signal strength.
+// This yields a more powerful test than letting signal in each channel be independent.
+// One can incorporate uncertainty on the expected signal by adding additional terms.
+//
+// For the future, perhaps this factory should be extended to include the efficiency terms automatically.
 
 using namespace RooStats;
 
 
 //_______________________________________________________
-NumberCountingPdfFactory::NumberCountingPdfFactory(Double_t* sig, 
-						     Double_t* back, 
-						     Double_t* back_syst, 
-							    Int_t nbins) {
-
-  
-
-  // A number counting combination for N channels with uncorrelated background 
-  //  uncertainty.  
-  // Background uncertainty taken into account via the profile likelihood ratio.
-  // Arguements are an array of expected signal, expected background, and relative 
-  // background uncertainty (eg. 0.1 for 10% uncertainty), and the number of channels.
-
-  using namespace RooFit;
-  using std::vector;
-
-  // make a new workspace
-  fWS = new RooWorkspace();
-
-  // actually fill the workspace
-  FillWorkspace(sig, back, back_syst, nbins) ;
+NumberCountingPdfFactory::NumberCountingPdfFactory() {
+  // constructor
 
 }
 
 //_______________________________________________________
 NumberCountingPdfFactory::~NumberCountingPdfFactory(){
-  delete fWS;
+  // destructor
 }
 
+
 //_______________________________________________________
-void NumberCountingPdfFactory::FillWorkspace(Double_t* sig, 
+RooWorkspace* NumberCountingPdfFactory::GetExpWS(Double_t* sig, 
 					Double_t* back, 
 					Double_t* back_syst, 
 					Int_t nbins) {
 
-  // This method actually fills the workspace
+  // Returns a workspace with data, pdf, and variables for a number counting combination
 
-  vector<RooRealVar*> backVec, tauVec, xVec, yVec;
-  vector<RooProduct*> sigVec;
-  vector<RooFormulaVar*> splusbVec;
-  vector<RooPoisson*> sigRegions, sidebands;
+  using namespace RooFit;
+  using std::vector;
+
+  // make a new Workspace
+  RooWorkspace* ws = new RooWorkspace("NumberCountingWS","Number Counting WS");
+
+  // add the PDF to the WS (common to both usages) 
+  AddPdf(sig, back, back_syst, nbins, ws) ;
+
+  //add the data to the WS.  in this case arguments are an expected signal & bkg.
+  AddExpData(sig, back, back_syst, nbins, ws) ;
+
+  return ws;
+}
+
+
+//_______________________________________________________
+void NumberCountingPdfFactory::AddPdf(Double_t* sig, 
+				 Double_t* back, 
+				 Double_t* back_syst, 
+				 Int_t nbins, 
+				 RooWorkspace* ws) {
+  
+
+// This method produces a PDF for N channels with uncorrelated background 
+// uncertainty. It relates the signal in each channel to a master signal strength times the 
+// expected signal in each channel.
+//
+// For the future, perhaps this method should be extended to include the efficiency terms automatically.
+
+  using namespace RooFit;
+  using std::vector;
+
   TList likelihoodFactors;
-  TList observablesCollection;
-
-  TTree* tree = new TTree();
-  Double_t* xForTree = new Double_t[nbins];
-  Double_t* yForTree = new Double_t[nbins];
 
   Double_t MaxSigma = 8; // Needed to set ranges for varaibles.
 
   RooRealVar*   masterSignal = 
     new RooRealVar("masterSignal","masterSignal",1., 0., 3.);
+
+
+  // loop over individual channels
   for(Int_t i=0; i<nbins; ++i){
     std::stringstream str;
     str<<"_"<<i;
@@ -143,25 +161,56 @@ void NumberCountingPdfFactory::FillWorkspace(Double_t* sig,
     RooPoisson* sideband = 
       new RooPoisson(("sideband"+str.str()).c_str(),("sideband"+str.str()).c_str(), *y,*bTau);
 
-    sigVec.push_back(s);
-    backVec.push_back(b);
-    tauVec.push_back(tau);
-    xVec.push_back(x);
-    yVec.push_back(y);
-    sigRegions.push_back(sigRegion);
-    sidebands.push_back(sideband);
-
     likelihoodFactors.Add(sigRegion);
     likelihoodFactors.Add(sideband);
+    
+  }
+
+  RooArgSet likelihoodFactorSet(likelihoodFactors);
+  RooProdPdf joint("joint","joint", likelihoodFactorSet );
+
+  // add this workspace to joint.  
+  // Need to do import into workspace now to get all the structure imported as well.
+  // Just returning the WS will loose the rest of the structure b/c it will go out of scope
+  ws->import(joint);
+}
+
+//_______________________________________________________
+void NumberCountingPdfFactory::AddExpData(Double_t* sig, 
+					  Double_t* back, 
+					  Double_t* back_syst, 
+					  Int_t nbins, 
+					  RooWorkspace* ws) {
+
+  // A number counting combination for N channels with uncorrelated background 
+  //  uncertainty.  Correlations can be added by extending this PDF with additional terms.
+  // Arguements are an array of expected signal, expected background, and relative 
+  // background uncertainty (eg. 0.1 for 10% uncertainty), and the number of channels.
+
+  using namespace RooFit;
+  using std::vector;
+
+  TList observablesCollection;
+
+  TTree* tree = new TTree();
+  Double_t* xForTree = new Double_t[nbins];
+  Double_t* yForTree = new Double_t[nbins];
+
+  // loop over channels
+  for(Int_t i=0; i<nbins; ++i){
+    std::stringstream str;
+    str<<"_"<<i;
+
+    Double_t _tau = 1./back[i]/back_syst[i]/back_syst[i];
+
+    RooRealVar*   x = 
+      new RooRealVar(("x"+str.str()).c_str(),("x"+str.str()).c_str(),  sig[i]+back[i], 0., 2.*(sig[i]+back[i]));
+    RooRealVar*   y = 
+      new RooRealVar(("y"+str.str()).c_str(),("y"+str.str()).c_str(),  back[i]*_tau,  0., 2.*back[i]*_tau);
+
     observablesCollection.Add(x);
     observablesCollection.Add(y);
     
-    // print to see range on variables
-    //    x->Print();
-    //    y->Print();
-    //    b->Print();
-
-
     xForTree[i] = sig[i]+back[i];
     yForTree[i] = back[i]*_tau;
     tree->Branch(("x"+str.str()).c_str(), xForTree+i ,("x"+str.str()+"/D").c_str());
@@ -171,48 +220,17 @@ void NumberCountingPdfFactory::FillWorkspace(Double_t* sig,
   //  tree->Print();
   //  tree->Scan();
 
-  RooArgSet likelihoodFactorSet(likelihoodFactors);
-  RooProdPdf joint("joint","joint", likelihoodFactorSet );
-  //  likelihoodFactorSet.Print();
-
-  //  cout << "\n print model" << endl;
-  //  joint.Print();
-  //  joint.printCompactTree();
-
-  //  RooArgSet* observableSet = new RooArgSet(observablesCollection);
   RooArgList* observableList = new RooArgList(observablesCollection);
 
   //  observableSet->Print();
   //  observableList->Print();
 
-  //  cout << "Make hypothetical dataset:" << endl;
-  RooDataSet* toyMC = new RooDataSet("data","data", tree, *observableList); // one experiment
-  toyMC->Scan();
+  RooDataSet* data = new RooDataSet("NumberCountingData","Number Counting Data", tree, *observableList); // one experiment
+  data->Scan();
 
 
   // import hypothetical data
-  fWS->import(*toyMC);
-  // import joint PDF
-  fWS->import(joint);
+  ws->import(*data);
 
-
-}
-
-//_______________________________________________________
-RooWorkspace* NumberCountingPdfFactory::GetWorkspace() const {
-  // returns workspace
-  return fWS;
-}
-
-//_______________________________________________________
-RooAbsPdf* NumberCountingPdfFactory::GetPdf() const {
-  // returns pdf
-  return fWS->pdf("joint");
-}
-
-//_______________________________________________________
-RooAbsData* NumberCountingPdfFactory::GetData() const {
-  // returns dataset
-  return fWS->data("data");
 }
 
