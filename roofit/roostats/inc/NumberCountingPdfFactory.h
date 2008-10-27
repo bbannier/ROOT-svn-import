@@ -39,6 +39,8 @@ namespace RooStats{
     void AddPdf(Double_t*, Double_t*, Double_t*, Int_t, RooWorkspace* );
 
 
+  protected:
+    ClassDef(NumberCountingPdfFactory,1)
 
   };
 }
