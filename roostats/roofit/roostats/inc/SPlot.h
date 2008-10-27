@@ -9,8 +9,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOT_RooStats_SPlot
-#define ROOT_RooStats_SPlot
+#ifndef RooStats_SPlot
+#define RooStats_SPlot
 
 class RooAbsReal;
 class RooAbsPdf;

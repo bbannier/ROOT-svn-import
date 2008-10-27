@@ -9,8 +9,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOT_RooStats_RooStatsUtils
-#define ROOT_RooStats_RooStatsUtils
+#ifndef RooStats_RooStatsUtils
+#define RooStats_RooStatsUtils
 
 #ifndef ROOT_TMath
 #include "TMath.h"

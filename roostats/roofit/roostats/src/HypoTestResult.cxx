@@ -24,7 +24,7 @@
 #include "RooStats/HypoTestResult.h"
 #include "RooAbsReal.h"
 
-#ifndef ROOT_RooStats_RooStatsUtils
+#ifndef RooStats_RooStatsUtils
 #include "RooStats/RooStatsUtils.h"
 #endif
 
