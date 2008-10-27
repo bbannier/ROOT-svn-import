@@ -21,7 +21,9 @@
 
 // This class implements the ConfInterval interface for a simple 1-d interval of the form [a,b]
 
+#ifndef RooStats_SimpleInterval
 #include "RooStats/SimpleInterval.h"
+#endif
 #include "RooAbsReal.h"
 
 // Without this macro the THtml doc for TMath can not be generated
@@ -34,9 +36,37 @@ ClassImp(RooStats::SimpleInterval) ;
 using namespace RooStats;
 
 //____________________________________________________________________
-SimpleInterval::SimpleInterval()
+SimpleInterval::SimpleInterval() : fLowerLimit(0), fUpperLimit(0)
 {
   // Default constructor
+}
+
+//____________________________________________________________________
+SimpleInterval::SimpleInterval(const char* name) :
+  ConfInterval(name,name), fLowerLimit(0), fUpperLimit(0)
+{
+  // Alternate constructor
+}
+
+//____________________________________________________________________
+SimpleInterval::SimpleInterval(const char* name, const char* title) :
+  ConfInterval(name,title), fLowerLimit(0), fUpperLimit(0)
+{
+  // Alternate constructor
+}
+
+//____________________________________________________________________
+SimpleInterval::SimpleInterval(const char* name, Double_t lower, Double_t upper) :
+  ConfInterval(name,name), fLowerLimit(lower), fUpperLimit(upper)
+{
+  // Alternate constructor
+}
+
+//____________________________________________________________________
+SimpleInterval::SimpleInterval(const char* name, const char* title, Double_t lower, Double_t upper):
+  ConfInterval(name,title), fLowerLimit(lower), fUpperLimit(upper)
+{
+  // Alternate constructor
 }
 
 

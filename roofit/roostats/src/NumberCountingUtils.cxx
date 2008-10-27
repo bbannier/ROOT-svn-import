@@ -23,11 +23,11 @@
   //  Z   = Z-value or significance in Sigma (one-sided convention)
   //////////////////////////////////
 
-#ifndef ROOT_RooStats_NumberCountingUtils
+#ifndef RooStats_NumberCountingUtils
 #include "RooStats/NumberCountingUtils.h"
 #endif
 
-#ifndef ROOT_RooStats_RooStatsUtils
+#ifndef RooStats_RooStatsUtils
 #include "RooStats/RooStatsUtils.h"
 #endif
 

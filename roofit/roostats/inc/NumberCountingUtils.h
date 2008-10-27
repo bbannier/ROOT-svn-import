@@ -9,8 +9,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOT_RooStats_NumberCountingUtils
-#define ROOT_RooStats_NumberCountingUtils
+#ifndef RooStats_NumberCountingUtils
+#define RooStats_NumberCountingUtils
 
 /////////////////////////////////////////
 // NumberCountingUtils

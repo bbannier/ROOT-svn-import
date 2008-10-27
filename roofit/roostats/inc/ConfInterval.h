@@ -16,10 +16,12 @@
 
 namespace RooStats {
 
-  class ConfInterval {//: TNamed {
+  class ConfInterval : public TNamed {
   public:
     ConfInterval();
-    virtual ~ConfInterval() {}
+    ConfInterval(const char* name);
+    ConfInterval(const char* name, const char* title);
+    virtual ~ConfInterval();
     
     //pure virtual?  where does =0 go with const?
     virtual Bool_t IsInInterval(RooArgSet&) = 0; 

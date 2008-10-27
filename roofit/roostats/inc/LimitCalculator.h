@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: LimitCalculator.h 24970 2008-10-10  $
+// @(#)root/roostats:$Id: IntervalCalculator.h 24970 2008-10-10  $
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -8,8 +8,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOSTATS_LimitCalculator
-#define ROOSTATS_LimitCalculator
+#ifndef ROOSTATS_IntervalCalculator
+#define ROOSTATS_IntervalCalculator
 
 #include "TNamed.h"
 #include "RooStats/ConfInterval.h"
@@ -17,10 +17,10 @@
 #include "RooArgSet.h"
 
 namespace RooStats {
-  class LimitCalculator { //: TNamed {
+  class IntervalCalculator { //: TNamed {
   public:
-    LimitCalculator();
-    virtual ~LimitCalculator();
+    IntervalCalculator();
+    virtual ~IntervalCalculator();
     
     //pure virtual?  
     virtual ConfInterval* GetInterval() const = 0; 
@@ -42,7 +42,7 @@ namespace RooStats {
     
 
   protected:
-    ClassDef(LimitCalculator,1)        
+    ClassDef(IntervalCalculator,1)        
   };
 }
 #endif

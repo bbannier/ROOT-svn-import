@@ -8,19 +8,33 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOSTATS_SimpleInterval
-#define ROOSTATS_SimpleInterval
+#ifndef RooStats_SimpleInterval
+#define RooStats_SimpleInterval
 
+#ifndef ROO_ARG_SET
 #include "RooArgSet.h"
+#endif
+#ifndef RooStats_ConfInterval
 #include "RooStats/ConfInterval.h"
+#endif
 
 namespace RooStats {
  class SimpleInterval : public ConfInterval {
   public:
+    // constructors,destructors
     SimpleInterval();
+    SimpleInterval(const char* name);
+    SimpleInterval(const char* name, const char* title);
+    SimpleInterval(const char* name, Double_t, Double_t);
+    SimpleInterval(const char* name, const char* title, Double_t, Double_t);
     virtual ~SimpleInterval();
-    
+        
     virtual Bool_t IsInInterval(RooArgSet&);
+ 
+    // Method to return lower limit
+    Double_t LowerLimit() {return fLowerLimit;}
+    // Method to return upper limit
+    Double_t UpperLimit() {return fUpperLimit;}
     
   private:
     Double_t fLowerLimit;

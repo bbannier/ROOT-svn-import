@@ -8,8 +8,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOSTATS_HypoTestResult
-#define ROOSTATS_HypoTestResult
+#ifndef RooStats_HypoTestResult
+#define RooStats_HypoTestResult
 
 #include "TNamed.h"
 
