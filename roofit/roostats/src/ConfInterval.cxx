@@ -31,7 +31,7 @@
 NamespaceImp(RooStats)
 #endif
 
-ClassImp(RooStats::ConfInterval) ;
+//ClassImp(RooStats::ConfInterval) ;
 
 using namespace RooStats;
 
