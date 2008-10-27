@@ -40,7 +40,7 @@ namespace RooStats{
 
 
   protected:
-    ClassDef(NumberCountingPdfFactory,1)
+     //   ClassDef(NumberCountingPdfFactory,1)
 
   };
 }

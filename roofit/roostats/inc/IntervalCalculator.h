@@ -20,8 +20,8 @@
 namespace RooStats {
   class IntervalCalculator {//: public TNamed {
   public:
-    IntervalCalculator();
-    virtual ~IntervalCalculator();
+     //IntervalCalculator();
+     virtual ~IntervalCalculator() {}
     
     // Main interface, pure virtual
     virtual ConfInterval* GetInterval() const = 0; 
