@@ -14,9 +14,11 @@
 #include "TNamed.h"
 
 namespace RooStats {
-  class HypoTestResult { //: TNamed {
+  class HypoTestResult  : public TNamed {
   public:
     HypoTestResult();
+    HypoTestResult(const char* name);
+    HypoTestResult(const char* name, const char* title);
     virtual ~HypoTestResult();
     
     //pure virtual? 
