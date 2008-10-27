@@ -1466,6 +1466,7 @@ TGComboBox* TFitEditor::BuildDataSetList(TGFrame* parent, Int_t id)
    TObject* obj = NULL;
    while ( (obj = (TObject*) next()) ) {
       if ( dynamic_cast<TH1*>(obj) || 
+           dynamic_cast<TGraph2D*>(obj) ||
            dynamic_cast<TTree*>(obj) ) {
          objects.push_back(obj);
       }
