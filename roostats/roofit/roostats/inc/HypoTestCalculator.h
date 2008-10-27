@@ -19,8 +19,8 @@
 namespace RooStats {
   class HypoTestCalculator {
   public:
-    HypoTestCalculator();
-    virtual ~HypoTestCalculator();
+
+     virtual ~HypoTestCalculator() {}
     
     // main interface, pure virtual
     virtual HypoTestResult* GetHypoTest() const = 0;   
