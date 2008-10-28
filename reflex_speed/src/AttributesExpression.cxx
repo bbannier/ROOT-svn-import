@@ -14,6 +14,3 @@
 #endif
 
 #include "Reflex/AttributesExpression.h"
-
-Reflex::AttributesExpression
-Reflex::AttributesExpression::fgNIL(Reflex::kETNIL);

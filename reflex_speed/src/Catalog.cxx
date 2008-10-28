@@ -31,8 +31,12 @@ Reflex::Catalog::Instance() {
 Reflex::Type
 Reflex::Catalog::ByName(const std::string& name) const {
 //-------------------------------------------------------------------------------
-   if (fImpl)
-      return fImpl->Types().ByName(name);
+   if (fImpl) {
+      if (name[0] == ':' && name[1] == ':')
+         return fImpl->Types().ByName(name.substr(2));
+      else
+         return fImpl->Types().ByName(name);
+   }
    return Type();
 }
 

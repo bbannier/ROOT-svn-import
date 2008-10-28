@@ -241,7 +241,7 @@ std::string
 Reflex::Scope::ScopeTypeAsString() const {
 //-------------------------------------------------------------------------------
    if (* this) return fScopeName->fScopeBase->ScopeTypeAsString(); 
-   return "kETUnresolved";
+   return "kUnresolved";
 }
 
 

@@ -30,32 +30,29 @@ namespace Internal {
    class ScopeName;
    class CatalogImpl;
 
-   class PairTypeInfoType {
+   class TypeInfoType: public ::Reflex::Type {
    public:
-      PairTypeInfoType(): fType(0), fTI(typeid(UnknownType)) {}
-      PairTypeInfoType(const TypeName& type);
-      PairTypeInfoType(const TypeName& type, const std::type_info& ti): fType(&type), fTI(ti) {}
-      operator const char* () const { return Name(); } // for ContainerTraits::Key()
-      const char* Name() const { return fTI.name(); }
-      const char* Name(const char*&) const { return fTI.name(); }
-      operator const Type () const { return fType ? fType->ThisType() : Type(); }
-
-      void Invalidate() { fType = 0; }
-      bool IsValid() const { return fType; }
+      TypeInfoType(): fTypeinfo(0) {}
+      TypeInfoType(const TypeName& tn):
+         Type(&tn), fTypeinfo(0) {}
+      TypeInfoType(const TypeName& tn, const std::type_info& ti):
+         Type(&tn), fTypeinfo(&ti) {}
+      const char* Name() const { return fTypeinfo ? fTypeinfo->name() : "[UNRESOLVED]"; }
+      const char* Name(const char*&) const { return Name(); }
+      void Invalidate() { fTypeinfo = 0; }
+      bool IsValid() const { return fTypeinfo; }
+      operator const char*() const { return Name(); }
 
    private:
-      const TypeName* fType;
-      const std::type_info& fTI;
+      const std::type_info* fTypeinfo; // typeinfo reference for the type
    };
 
-   //---- Container Traits for PairTypeInfoType ----
-
    template <>
-   struct NodeValidator<PairTypeInfoType> {
+   struct NodeValidator<TypeInfoType> {
       // set a value to invalid (e.g. for iterators pointing to removed nodes)
-      static void Invalidate(PairTypeInfoType& value) { value.Invalidate(); }
+      static void Invalidate(TypeInfoType& value) { value.Invalidate(); }
       // check whether a value is invalidated (e.g. for iterators pointing to removed nodes)
-      static bool IsValid(const PairTypeInfoType& value) { return value.IsValid(); }
+      static bool IsValid(const TypeInfoType& value) { return value.IsValid(); }
    };
 
    // Specialization of key extraction for VALUE=TypeName*
@@ -67,10 +64,12 @@ namespace Internal {
 
    class TypeCatalogImpl {
    public:
-      typedef ContainerImpl<std::string, TypeName*, kUnique> TypeNameContainer_t;
-      typedef ContainerImpl<std::string, Type, kMany> TypeContainer_t;
+      typedef ContainerImpl<std::string, TypeName*, kUnique>         TypeNameContainer_t;
+      typedef ContainerImpl<std::string, Type, kMany>                TypeContainer_t;
+      typedef ContainerImpl<const char*, TypeInfoType, kUnique>  TypeInfoTypeMap_t;
 
-      TypeCatalogImpl(const CatalogImpl* catalog): fCatalog(catalog) {}
+      TypeCatalogImpl(const CatalogImpl* catalog):
+      fCatalog(catalog), fAllTypes(&fTypeInfoTypeMap), fTypeInfoTypeMap(&fAllTypes) {}
       ~TypeCatalogImpl() {}
 
       void Init();
@@ -83,14 +82,13 @@ namespace Internal {
 
       static const Type& Get(EFUNDAMENTALTYPE);
 
-      void Add(TypeName& type, const std::type_info * ti);
+      void Add(TypeName& type, const std::type_info* ti);
       void UpdateTypeId(const TypeName& type, const std::type_info & newti,
          const std::type_info & oldti = typeid(NullType));
       void Remove(TypeName& type);
 
 
    private:
-      typedef ContainerImpl<const char*, PairTypeInfoType, kUnique> TypeInfoTypeMap_t;
 
       const CatalogImpl*  fCatalog;
       TypeNameContainer_t fAllTypeNames;

@@ -223,7 +223,8 @@ std::string
 Reflex::Internal::PropertyListImpl::PropertyKeys() const {
 //-------------------------------------------------------------------------------
 // Return a string containing all property keys.
-   std::vector<std::string> kv(sKeys().size());
+   std::vector<std::string> kv;
+   kv.reserve(sKeys().size());
    for (size_t i = 0; i < sKeys().size(); ++i) {
       if (PropertyValue(i)) kv.push_back(sKeys()[i]);
    }

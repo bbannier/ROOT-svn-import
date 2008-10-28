@@ -166,7 +166,12 @@ namespace Reflex {
       const_iterator End() const   { const_iterator ret; Cont().ProxyEnd(ret);   return ret; }
 
       T ByName(const std::string& name) const {
-         const T* ret = (const T*)Cont().ProxyByName(name);
+         const T* ret = 0;
+         if (name[0] == ':' && name[1] == ':')
+            ret = (const T*)Cont().ProxyByName(name.substr(2));
+         else
+            ret = (const T*)Cont().ProxyByName(name);
+
          if (ret) return *ret;
          return T();
       }

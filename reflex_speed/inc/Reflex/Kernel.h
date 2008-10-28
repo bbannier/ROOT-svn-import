@@ -260,6 +260,7 @@ namespace Reflex {
 
    /** enum for printing names */
    enum EENTITY_HANDLING {
+      kNone      = 0,
       kFinal     = (1<<0),
       kQualified = (1<<1),
       kScoped    = (1<<2),

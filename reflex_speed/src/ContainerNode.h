@@ -39,9 +39,6 @@ namespace Internal {
       return StringHash(s.c_str());
    }
 
-   template <typename NODE> class Container_iterator;
-   class PairTypeInfoType; // for "ProxyByTypeInfo()"
-
    // Traits class used by Container
    template <class VALUE>
    struct NodeValidator {
