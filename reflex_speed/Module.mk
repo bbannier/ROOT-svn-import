@@ -121,9 +121,6 @@ $(RFLX_GRFLXDD)/%.py: $(RFLX_GRFLXSD)/%.py $(RFLX_GCCXMLPATHPY)
 $(RFLX_GRFLXDD)/%.pyc: $(RFLX_GRFLXDD)/%.py
 		@python -c 'import py_compile; py_compile.compile( "$<" )'
 
-$(RFLX_GENMAPO) : $(RFLX_GENMAPS)
-	$(CXX) $(OPT) $(CXXFLAGS) -Iinclude -I$(REFLEXDIRS)/genmap -c $< $(CXXOUT)$@
-
 $(RFLX_GENMAPX) : $(RFLX_GENMAPO) $(REFLEXLIB)
 	$(LD) $(LDFLAGS) -o $@ $(RFLX_GENMAPO) $(RFLX_REFLEXLL)
 
@@ -207,3 +204,5 @@ check-reflex-diff-generate: $(RFLX_TESTD)/test_Reflex_generate.testout $(RFLX_TE
 	@diff -u $(RFLX_TESTD)/test_Reflex_generate.testref $(RFLX_TESTD)/test_Reflex_generate.testout
 $(REFLEXO):      PCHCXXFLAGS =
 $(RFLX_GENMAPO): PCHCXXFLAGS =
+$(RFLX_GENMAPO) : CXXFLAGS+=-I$(REFLEXDIRS)/genmap
+
