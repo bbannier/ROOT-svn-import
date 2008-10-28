@@ -1,8 +1,9 @@
 # MacroLibrary
 #   Offers a collection of macros which extend the built-in cmake commands
 
-INCLUDE(MacroAdditionalCleanFiles)
 INCLUDE(MacroAddLinkFlags)
+INCLUDE(MacroAddSubdirectories)
+INCLUDE(MacroAdditionalCleanFiles)
 INCLUDE(MacroEnsureOutOfSourceBuild)
 INCLUDE(MacroFindPackageIf)
 INCLUDE(MacroGetTargetDirectory)
