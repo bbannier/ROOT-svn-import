@@ -677,7 +677,7 @@ void TFitEditor::CreateGeneralTab()
                                                       kLHintsCenterY, 0, 5, 0, 0));
 
    fSliderXMin = new TGNumberEntry(fSliderXParent, 0, 5, kFP_XMIN,
-                                   TGNumberFormat::kNESRealOne,
+                                   TGNumberFormat::kNESRealTwo,
                                    TGNumberFormat::kNEAAnyNumber,
                                    TGNumberFormat::kNELLimitMinMax, -1,1);
    fSliderXParent->AddFrame(fSliderXMin, new TGLayoutHints(kLHintsLeft | kLHintsCenterY));
@@ -688,7 +688,7 @@ void TFitEditor::CreateGeneralTab()
 
 
    fSliderXMax = new TGNumberEntry(fSliderXParent, 0, 5, kFP_XMIN,
-                                   TGNumberFormat::kNESRealOne,
+                                   TGNumberFormat::kNESRealTwo,
                                    TGNumberFormat::kNEAAnyNumber,
                                    TGNumberFormat::kNELLimitMinMax, -1,1);
    fSliderXParent->AddFrame(fSliderXMax, new TGLayoutHints(kLHintsRight | kLHintsCenterY));
@@ -701,7 +701,7 @@ void TFitEditor::CreateGeneralTab()
                                                       kLHintsCenterY, 0, 5, 0, 0));
 
    fSliderYMin = new TGNumberEntry(fSliderYParent, 0, 5, kFP_YMIN,
-                                   TGNumberFormat::kNESRealOne,
+                                   TGNumberFormat::kNESRealTwo,
                                    TGNumberFormat::kNEAAnyNumber,
                                    TGNumberFormat::kNELLimitMinMax, -1,1);
    fSliderYParent->AddFrame(fSliderYMin, new TGLayoutHints(kLHintsLeft | kLHintsCenterY));
@@ -711,7 +711,7 @@ void TFitEditor::CreateGeneralTab()
    fSliderYParent->AddFrame(fSliderY, new TGLayoutHints(kLHintsExpandX | kLHintsCenterY));
 
    fSliderYMax = new TGNumberEntry(fSliderYParent, 0, 5, kFP_YMIN,
-                                   TGNumberFormat::kNESRealOne,
+                                   TGNumberFormat::kNESRealTwo,
                                    TGNumberFormat::kNEAAnyNumber,
                                    TGNumberFormat::kNELLimitMinMax, -1,1);
    fSliderYParent->AddFrame(fSliderYMax, new TGLayoutHints(kLHintsRight | kLHintsCenterY));
@@ -1177,13 +1177,13 @@ void TFitEditor::UpdateGUI()
       fSliderX->SetScale(5);
 
       fSliderXMin->SetLimits(TGNumberFormat::kNELLimitMinMax,
-                             fSliderX->GetMinPosition(), 
-                             fSliderX->GetMaxPosition());
-      fSliderXMin->SetNumber(fSliderX->GetMinPosition());
+                             fXaxis->GetBinLowEdge( fSliderX->GetMinPosition() ), 
+                             fXaxis->GetBinUpEdge ( fSliderX->GetMaxPosition() ));
+      fSliderXMin->SetNumber( fXaxis->GetBinLowEdge( fSliderX->GetMinPosition() ));
       fSliderXMax->SetLimits(TGNumberFormat::kNELLimitMinMax,
-                             fSliderX->GetMinPosition(), 
-                             fSliderX->GetMaxPosition());
-      fSliderXMax->SetNumber(fSliderX->GetMaxPosition());
+                             fXaxis->GetBinLowEdge( fSliderX->GetMinPosition() ), 
+                             fXaxis->GetBinUpEdge ( fSliderX->GetMaxPosition() ));
+      fSliderXMax->SetNumber( fXaxis->GetBinUpEdge ( fSliderX->GetMaxPosition() ));
 
       fSliderX->Connect("PositionChanged()","TFitEditor",this, "DoSliderXMoved()");
       fSliderXMax->Connect("ValueSet(Long_t)", "TFitEditor", this, "DoNumericSliderXChanged()");
@@ -1229,13 +1229,13 @@ void TFitEditor::UpdateGUI()
       fSliderY->SetScale(5);
 
       fSliderYMin->SetLimits(TGNumberFormat::kNELLimitMinMax,
-                             fSliderY->GetMinPosition(), 
-                             fSliderY->GetMaxPosition());
-      fSliderYMin->SetNumber(fSliderY->GetMinPosition());
+                             fYaxis->GetBinLowEdge( fSliderY->GetMinPosition() ), 
+                             fYaxis->GetBinUpEdge ( fSliderY->GetMaxPosition() ));
+      fSliderYMin->SetNumber(fYaxis->GetBinLowEdge( fSliderY->GetMinPosition() ));
       fSliderYMax->SetLimits(TGNumberFormat::kNELLimitMinMax,
-                             fSliderY->GetMinPosition(), 
-                             fSliderY->GetMaxPosition());
-      fSliderYMax->SetNumber(fSliderY->GetMaxPosition());
+                             fYaxis->GetBinLowEdge( fSliderY->GetMinPosition() ), 
+                             fYaxis->GetBinUpEdge ( fSliderY->GetMaxPosition() ));
+      fSliderYMax->SetNumber( fYaxis->GetBinUpEdge ( fSliderY->GetMaxPosition() ));
 
       fSliderY->Connect("PositionChanged()","TFitEditor",this, "DoSliderYMoved()");
       fSliderYMax->Connect("ValueSet(Long_t)", "TFitEditor", this, "DoNumericSliderYChanged()");
@@ -2194,9 +2194,9 @@ void TFitEditor::DoSliderXMoved()
    // Slot connected to range settings on x-axis.
 
    if ( !fParentPad || !fFitObject ) return;
-
-   fSliderXMin->SetNumber( fSliderX->GetMinPosition() );
-   fSliderXMax->SetNumber( fSliderX->GetMaxPosition() );
+   
+   fSliderXMin->SetNumber( fXaxis->GetBinLowEdge( fSliderX->GetMinPosition() ) );
+   fSliderXMax->SetNumber( fXaxis->GetBinUpEdge ( fSliderX->GetMaxPosition() ) );
 
    Int_t px1,py1,px2,py2;
 
@@ -2248,13 +2248,13 @@ void TFitEditor::DoNumericSliderXChanged()
    if ( fSliderXMin->GetNumber() > fSliderXMax->GetNumber() ) {
       float xmin, xmax;
       fSliderX->GetPosition(xmin, xmax);
-      fSliderXMin->SetNumber(xmin);
-      fSliderXMax->SetNumber(xmax);
+      fSliderXMin->SetNumber( fXaxis->GetBinLowEdge( xmin ) );
+      fSliderXMax->SetNumber( fXaxis->GetBinUpEdge ( xmax ) );
       return;
    }
 
-   fSliderX->SetPosition(fSliderXMin->GetNumber(),
-                         fSliderXMax->GetNumber());
+   fSliderX->SetPosition(fXaxis->FindBin( fSliderXMin->GetNumber() ),
+                         fXaxis->FindBin( fSliderXMax->GetNumber() ));
 
    DoSliderXMoved();
 }
@@ -2266,8 +2266,8 @@ void TFitEditor::DoSliderYMoved()
 
    if ( !fParentPad || !fFitObject ) return;
 
-   fSliderYMin->SetNumber( fSliderY->GetMinPosition() );
-   fSliderYMax->SetNumber( fSliderY->GetMaxPosition() );
+   fSliderYMin->SetNumber( fYaxis->GetBinLowEdge( fSliderY->GetMinPosition() ) );
+   fSliderYMax->SetNumber( fYaxis->GetBinUpEdge ( fSliderY->GetMaxPosition() ) );
 
    Int_t px1,py1,px2,py2;
 
@@ -2310,13 +2310,13 @@ void TFitEditor::DoNumericSliderYChanged()
    if ( fSliderYMin->GetNumber() > fSliderYMax->GetNumber() ) {
       float ymin, ymax;
       fSliderY->GetPosition(ymin, ymax);
-      fSliderYMin->SetNumber(ymin);
-      fSliderYMax->SetNumber(ymax);
+      fSliderYMin->SetNumber( fYaxis->GetBinLowEdge( ymin ) );
+      fSliderYMax->SetNumber( fYaxis->GetBinUpEdge ( ymax ) );
       return;
    }
 
-   fSliderY->SetPosition(fSliderYMin->GetNumber(),
-                         fSliderYMax->GetNumber());
+   fSliderY->SetPosition( fYaxis->FindBin( fSliderYMin->GetNumber() ),
+                          fYaxis->FindBin( fSliderYMax->GetNumber() ));
 
    DoSliderYMoved();
 }
