@@ -45,15 +45,15 @@ HypoTestResult::HypoTestResult()
 
 
 //____________________________________________________________________
-HypoTestResult::HypoTestResult(const char* name) :
-  TNamed(name,name)
+HypoTestResult::HypoTestResult(const char* name, Double_t nullp, Double_t altp) :
+  TNamed(name,name), fNullPValue(nullp), fAlternatePValue(altp)
 {
   // Alternate constructor
 }
 
 //____________________________________________________________________
-HypoTestResult::HypoTestResult(const char* name, const char* title):
-  TNamed(name,title)
+HypoTestResult::HypoTestResult(const char* name, const char* title, Double_t nullp, Double_t altp):
+  TNamed(name,title), fNullPValue(nullp), fAlternatePValue(altp)
 {
   // Alternate constructor
 }
@@ -65,36 +65,3 @@ HypoTestResult::~HypoTestResult()
   // Destructor
 
 }
-
-//____________________________________________________________________
-Double_t HypoTestResult::NullPValue() {
-  return fNullPValue;
-}
-
-//____________________________________________________________________
-Double_t HypoTestResult::AlternatePValue()  {
-  return fAlternatePValue;
-}
-
-//____________________________________________________________________
-Double_t HypoTestResult::Significance() 
-{  
-  return PValueToSignificance( fNullPValue) ;  
-}
-
-    
-//____________________________________________________________________
-Double_t HypoTestResult::CLb()  {
-  return NullPValue(); 
-}
-
-//____________________________________________________________________
-Double_t HypoTestResult::CLsplusb()   {
-  return AlternatePValue(); 
-}
-
-//____________________________________________________________________
-Double_t HypoTestResult::CLs()   {
-  return CLsplusb() / CLb();
-}
- 

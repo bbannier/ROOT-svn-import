@@ -24,8 +24,22 @@
 namespace RooStats {
  class CombinedCalculator : public IntervalCalculator, public HypoTestCalculator {
   public:
-    CombinedCalculator();
-    virtual ~CombinedCalculator() {delete fWS;}
+    CombinedCalculator(){
+       fWS = 0;
+       fNullParams = 0;
+       fAlternateParams = 0;
+       fPOI = 0;
+       fNuisParams = 0;
+    }
+
+    virtual ~CombinedCalculator() {
+      if (fWS) delete fWS;
+      if (fNullParams) delete fNullParams;
+      if (fAlternateParams) delete fAlternateParams;
+      if (fPOI) delete fPOI;
+      if (fNuisParams) delete fNuisParams;
+    }
+
     
     // main interface, keep pure virtual
     virtual ConfInterval* GetInterval() const = 0; 
@@ -43,8 +57,8 @@ namespace RooStats {
     virtual void SetWorkspace(RooWorkspace* ws) {fWS = ws;}
     virtual void SetPdf(const char* name) {fPdfName = name;}
     virtual void SetData(const char* name){fDataName = name;}
-    virtual void SetParameters(RooArgSet& set) {fPOI = set;}
-    virtual void SetNuisanceParameters(RooArgSet& set) {fNuisParams = set;}
+    virtual void SetParameters(RooArgSet* set) {fPOI = set;}
+    virtual void SetNuisanceParameters(RooArgSet* set) {fNuisParams = set;}
     
 
     // from HypoTestCalculator
@@ -55,9 +69,9 @@ namespace RooStats {
     // set a common PDF for both the null and alternate hypotheses
     virtual void SetCommonPdf(const char* name) {SetPdf(name);}
     // set parameter values for the null if using a common PDF
-    virtual void SetNullParameters(RooArgSet& set) {fNullParams = set;}
+    virtual void SetNullParameters(RooArgSet* set) {fNullParams = set;}
     // set parameter values for the alternate if using a common PDF
-    virtual void SetAlternateParameters(RooArgSet& set) {fAlternateParams = set;}
+    virtual void SetAlternateParameters(RooArgSet* set) {fAlternateParams = set;}
     
 
 
@@ -67,10 +81,10 @@ namespace RooStats {
     RooWorkspace* fWS;
     const char* fPdfName; // should be common
     const char* fDataName; // should be common
-    RooArgSet& fNullParams;
-    RooArgSet& fAlternateParams;
-    RooArgSet& fPOI;
-    RooArgSet& fNuisParams;
+    RooArgSet* fNullParams;
+    RooArgSet* fAlternateParams;
+    RooArgSet* fPOI;
+    RooArgSet* fNuisParams;
 
     //    ClassDef(CombinedCalculator,1)        
   };

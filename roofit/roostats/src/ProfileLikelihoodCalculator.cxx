@@ -46,7 +46,8 @@ using namespace RooStats;
 
 
 //_______________________________________________________
-ProfileLikelihoodCalculator::ProfileLikelihoodCalculator() {
+ProfileLikelihoodCalculator::ProfileLikelihoodCalculator() : 
+CombinedCalculator() {
   // default constructor
 
 }
