@@ -335,6 +335,9 @@ void TGLViewer::SetupCameras(Bool_t reset)
       fOrthoXOYCamera.Setup(box, reset);
       fOrthoXOZCamera.Setup(box, reset);
       fOrthoZOYCamera.Setup(box, reset);
+      fOrthoXnOYCamera.Setup(box, reset);
+      fOrthoXnOZCamera.Setup(box, reset);
+      fOrthoZnOYCamera.Setup(box, reset);
    }
 }
 
@@ -460,7 +463,7 @@ void TGLViewer::DoDraw()
       }
    }
 
-   if (fGLDevice == -1 && (fViewport.Width() <= 0 || fViewport.Height() <= 0)) {
+   if (fGLDevice == -1 && (fViewport.Width() <= 1 || fViewport.Height() <= 1)) {
       ReleaseLock(kDrawLock);
       if (gDebug > 2) {
 	 Info("TGLViewer::DoDraw()", "zero surface area, draw skipped.");
@@ -518,7 +521,6 @@ void TGLViewer::DoDraw()
    if (gDebug>2) {
       Info("TGLViewer::DoDraw()", "Took %f msec", timer.End());
    }
-
 
    // Check if further redraws are needed and schedule them.
 

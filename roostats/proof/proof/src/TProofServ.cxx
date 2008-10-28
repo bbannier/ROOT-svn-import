@@ -25,6 +25,7 @@
 #include "Riostream.h"
 
 #ifdef WIN32
+   #include <process.h>
    #include <io.h>
    typedef long off_t;
 #endif
@@ -33,6 +34,9 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifndef WIN32
+#include <sys/wait.h>
+#endif
 #include <cstdlib>
 
 #if (defined(__FreeBSD__) && (__FreeBSD__ < 4)) || \
@@ -92,12 +96,16 @@
 #include "TFileCollection.h"
 #include "TLockFile.h"
 #include "TProofDataSetManagerFile.h"
+#include "TProofProgressStatus.h"
 
 // global proofserv handle
 TProofServ *gProofServ = 0;
 
 // debug hook
 static volatile Int_t gProofServDebug = 1;
+
+// File where to log: default stderr
+FILE *TProofServ::fgErrorHandlerFile = 0;
 
 //----- Interrupt signal handler -----------------------------------------------
 //______________________________________________________________________________
@@ -232,10 +240,10 @@ Bool_t TProofServLogHandler::Notify()
          TString log;
          if (fPfx.Length() > 0) {
             // Prepend prefix specific to this instance
-            log = Form("%s: %s", fPfx.Data(), line);
+            log.Form("%s: %s", fPfx.Data(), line);
          } else if (fgPfx.Length() > 0) {
             // Prepend default prefix
-            log = Form("%s: %s", fgPfx.Data(), line);
+            log.Form("%s: %s", fgPfx.Data(), line);
          } else {
             // Nothing to prepend
             log = line;
@@ -341,6 +349,72 @@ Bool_t TShutdownTimer::Notify()
    return kTRUE;
 }
 
+//--- Synchronous timer used to reap children processes change of state ------//
+//______________________________________________________________________________
+TReaperTimer::~TReaperTimer()
+{
+   // Destructor
+
+   if (fChildren) {
+      fChildren->SetOwner(kTRUE);
+      delete fChildren;
+      fChildren = 0;
+   }
+}
+
+//______________________________________________________________________________
+void TReaperTimer::AddPid(Int_t pid)
+{
+   // Add an entry for 'pid' in the internal list
+
+   if (pid > 0) {
+      if (!fChildren)
+         fChildren = new TList;
+      TString spid;
+      spid.Form("%d", pid);
+      fChildren->Add(new TParameter<Int_t>(spid.Data(), pid));
+      TurnOn();
+   }
+}
+
+//______________________________________________________________________________
+Bool_t TReaperTimer::Notify()
+{
+   // Check if any of the registered children has changed its state.
+   // Unregister those that are gone.
+
+   if (fChildren) {
+      TIter nxp(fChildren);
+      TParameter<Int_t> *p = 0;
+      while ((p = (TParameter<Int_t> *)nxp())) {
+         int status;
+#ifndef WIN32
+         pid_t pid;
+         do {
+            pid = waitpid(p->GetVal(), &status, WNOHANG);
+         } while (pid < 0 && errno == EINTR);
+#else
+         intptr_t pid;
+         pid = _cwait(&status, (intptr_t)p->GetVal(), 0);
+#endif
+         if (pid > 0 && pid == p->GetVal()) {
+            // Remove from the list
+            fChildren->Remove(p);
+            delete p;
+         }
+      }
+   }
+
+   // Stop the timer if no children
+   if (fChildren->GetSize() <= 0) {
+      Stop();
+   } else {
+      // Needed for the next shot
+      Reset();
+   }
+   return kTRUE;
+}
+
 ClassImp(TProofServ)
 
 // Hook to the constructor. This is needed to avoid using the plugin manager
@@ -393,6 +467,7 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
 
    // abort on higher than kSysError's and set error handler
    gErrorAbortLevel = kSysError + 1;
+   SetErrorHandlerFile(stderr);
    SetErrorHandler(ErrorHandler);
 
    fNcmd            = 0;
@@ -429,6 +504,7 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fRealTimeLog     = kFALSE;
 
    fShutdownTimer   = 0;
+   fReaperTimer     = 0;
 
    fInflateFactor   = 1000;
 
@@ -792,10 +868,27 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
          Info("GetNextPacket","slept %d millisec", sleeptime);
    }
 
-   req << fLatency.RealTime() << realtime << cputime
-       << bytesRead << totalEntries;
-   if (fPlayer)
-       req << fPlayer->GetEventsProcessed();
+   if (fProtocol > 18) {
+      req << fLatency.RealTime();
+      TProofProgressStatus *status = 0;
+      if (fPlayer)
+         status = fPlayer->GetProgressStatus();
+      else {
+         Error("GetNextPacket", "No progress status object");
+         return 0;
+      }
+      // the CPU and wallclock proc times are kept in the TProofServ and here
+      // added to the status object in the fPlayer.
+      status->IncProcTime(realtime);
+      status->IncCPUTime(cputime);
+      req << status;
+      status = 0; // status is owned by the player.
+   } else {
+      req << fLatency.RealTime() << realtime << cputime
+          << bytesRead << totalEntries;
+      if (fPlayer)
+         req << fPlayer->GetEventsProcessed();
+   }
 
    fLatency.Start();
    Int_t rc = fSocket->Send(req);
@@ -1333,6 +1426,13 @@ void TProofServ::HandleSocketInput()
          }
          break;
 
+      case kPROOF_FORK:
+
+         HandleFork(mess);
+         LogToMaster();
+         SendLogFile();
+         break;
+
       default:
          Error("HandleSocketInput", "unknown command %d", what);
          break;
@@ -1453,8 +1553,10 @@ void TProofServ::HandleSocketInputDuringProcess()
                Info("HandleSocketInputDuringProcess:kPROOF_STOPPROCESS",
                     "enter %d, %d", aborted, timeout);
             if (fProof)
+               // On the master: propagate further
                fProof->StopProcess(aborted, timeout);
             else
+               // Worker: actually stop processing
                if (fPlayer)
                   fPlayer->StopProcess(aborted, timeout);
          }
@@ -1702,27 +1804,28 @@ void TProofServ::Print(Option_t *option) const
 }
 
 //______________________________________________________________________________
-void TProofServ::RedirectOutput()
+void TProofServ::RedirectOutput(const char *dir, const char *mode)
 {
    // Redirect stdout to a log file. This log file will be flushed to the
    // client or master after each command.
 
    char logfile[512];
 
+   TString sdir = (dir && strlen(dir) > 0) ? dir : fSessionDir.Data();
    if (IsMaster()) {
-      sprintf(logfile, "%s/master.log", fSessionDir.Data());
+      sprintf(logfile, "%s/master-%s.log", sdir.Data(), fOrdinal.Data());
    } else {
-      sprintf(logfile, "%s/slave-%s.log", fSessionDir.Data(), fOrdinal.Data());
+      sprintf(logfile, "%s/worker-%s.log", sdir.Data(), fOrdinal.Data());
    }
 
-   if ((freopen(logfile, "w", stdout)) == 0)
-      SysError("RedirectOutput", "could not freopen stdout");
+   if ((freopen(logfile, mode, stdout)) == 0)
+      SysError("RedirectOutput", "could not freopen stdout (%s)", logfile);
 
    if ((dup2(fileno(stdout), fileno(stderr))) < 0)
       SysError("RedirectOutput", "could not redirect stderr");
 
    if ((fLogFile = fopen(logfile, "r")) == 0)
-      SysError("RedirectOutput", "could not open logfile");
+      SysError("RedirectOutput", "could not open logfile '%s'", logfile);
 
    // from this point on stdout and stderr are properly redirected
    if (fProtocol < 4 && fWorkDir != Form("~/%s", kPROOF_WorkDir)) {
@@ -2057,13 +2160,13 @@ Int_t TProofServ::Setup()
       }
       if (IsMaster()) {
          fConfFile = wconf;
-         fWorkDir = Form("~/%s", kPROOF_WorkDir);
+         fWorkDir.Form("~/%s", kPROOF_WorkDir);
       } else {
          if (fProtocol < 4) {
-            fWorkDir = Form("~/%s", kPROOF_WorkDir);
+            fWorkDir.Form("~/%s", kPROOF_WorkDir);
          } else {
             fWorkDir = wconf;
-            if (fWorkDir.IsNull()) fWorkDir = Form("~/%s", kPROOF_WorkDir);
+            if (fWorkDir.IsNull()) fWorkDir.Form("~/%s", kPROOF_WorkDir);
          }
       }
    } else {
@@ -2138,8 +2241,8 @@ Int_t TProofServ::Setup()
       host.Remove(host.Index("."));
 
    // Session tag
-   fSessionTag = Form("%s-%s-%d-%d", fOrdinal.Data(), host.Data(),
-                      TTimeStamp().GetSec(),gSystem->GetPid());
+   fSessionTag.Form("%s-%s-%d-%d", fOrdinal.Data(), host.Data(),
+                    TTimeStamp().GetSec(),gSystem->GetPid());
    fTopSessionTag = fSessionTag;
 
    // create session directory and make it the working directory
@@ -2258,7 +2361,8 @@ Int_t TProofServ::SetupCommon()
                              " exist or is not readable", ldir.Data());
          } else {
             // Add to the list, key will be "G<ng>", i.e. "G0", "G1", ...
-            TString key = Form("G%d", ng++);
+            TString key;
+            key.Form("G%d", ng++);
             if (!fGlobalPackageDirList) {
                fGlobalPackageDirList = new THashList();
                fGlobalPackageDirList->SetOwner();
@@ -2351,7 +2455,7 @@ Int_t TProofServ::SetupCommon()
          TString dsetdir = gEnv->GetValue("ProofServ.DataSetDir", "");
          if (dsetdir.IsNull()) {
             // Use the default in the sandbox
-            dsetdir = Form("%s/%s", fWorkDir.Data(), kPROOF_DataSetDir);
+            dsetdir.Form("%s/%s", fWorkDir.Data(), kPROOF_DataSetDir);
             if (gSystem->AccessPathName(fDataSetDir))
                gSystem->MakeDirectory(fDataSetDir);
             opts += "Sb:";
@@ -2668,8 +2772,8 @@ void TProofServ::HandleArchive(TMessage *mess)
          return;
       }
       if (qry > 0) {
-         path = Form("%s/session-%s-%d.root",
-                     fArchivePath.Data(), fTopSessionTag.Data(), qry);
+         path.Form("%s/session-%s-%d.root",
+                   fArchivePath.Data(), fTopSessionTag.Data(), qry);
       } else {
          path = queryref;
          path.ReplaceAll(":q","-");
@@ -2745,134 +2849,6 @@ void TProofServ::HandleArchive(TMessage *mess)
 }
 
 //______________________________________________________________________________
-Int_t TProofServ::AssertDataSet(TDSet *dset, TList *input)
-{
-   // Make sure that dataset is in the form to be processed. This may mean
-   // retrieving the relevant info from the dataset manager or from the
-   // attached input list.
-   // Returns 0 on success, -1 on error
-
-   // We must have something to process
-   if (!dset || !input) return -1;
-
-   // We need a dataset manager
-   if (!fDataSetManager) {
-      SendAsynMessage(Form("AssertDataSet on %s: no dataset manager!", fPrefix.Data()));
-      Error("AssertDataSet", "no dataset manager: cannot proceed");
-      return -1;
-   }
-
-   TFileCollection* dataset = 0;
-   TString lookupopt;
-   TString dsname(dset->GetName());
-   // The dataset maybe in the form of a TFileCollection in the input list
-   if (dsname.BeginsWith("TFileCollection:")) {
-      // Isolate the real name
-      dsname.ReplaceAll("TFileCollection:", "");
-      // Get the object
-      dataset = (TFileCollection *) input->FindObject(dsname);
-      if (!dataset) {
-         SendAsynMessage(Form("AssertDataSet on %s: TFileCollection %s not"
-                              " found in input list",
-                              fPrefix.Data(), dset->GetName()));
-         Error("AssertDataSet", "TFileCollection %s not found in input list",
-                                 dset->GetName());
-         return -1;
-      }
-      // Remove from everywhere
-      input->RecursiveRemove(dataset);
-      // Make sure we lookup everything (unless the client or the administartor
-      // required something else)
-      if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
-         lookupopt = gEnv->GetValue("Proof.LookupOpt", "all");
-         input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
-      }
-   }
-
-   // The received message included an empty dataset, with only the name
-   // defined: assume that a dataset, stored on the PROOF master by that
-   // name, should be processed.
-   if (!dataset) {
-      dataset = fDataSetManager->GetDataSet(dsname.Data());
-      if (!dataset) {
-         SendAsynMessage(Form("AssertDataSet on %s: no such dataset: %s",
-                              fPrefix.Data(), dsname.Data()));
-         Error("AssertDataSet", "no such dataset on the master: %s", dsname.Data());
-         return -1;
-      }
-
-      // Apply the lookup option requested by the client or the administartor
-      // (by default we trust the information in the dataset)
-      if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
-         lookupopt = gEnv->GetValue("Proof.LookupOpt", "stagedOnly");
-         input->Add(new TNamed("PROOF_LookupOpt", lookupopt.Data()));
-      }
-   }
-
-   // Logic for the subdir/obj names: try first to see if the dataset name contains
-   // some info; if not check the settings in the TDSet object itself; if still empty
-   // check the default tree name / path in the TFileCollection object; if still empty
-   // use the default as the flow will determine
-   TString dsTree;
-   // Get the [subdir/]tree, if any
-   fDataSetManager->ParseUri(dset->GetName(), 0, 0, 0, &dsTree);
-   if (dsTree.IsNull()) {
-      // Use what we have in the original dataset; we need this to locate the
-      // meta data information
-      dsTree += dset->GetDirectory();
-      dsTree += dset->GetObjName();
-   }
-   if (!dsTree.IsNull() && dsTree != "/") {
-      TString tree(dsTree);
-      Int_t idx = tree.Index("/");
-      if (idx != kNPOS) {
-         TString dir = tree(0, idx+1);
-         tree.Remove(0, idx);
-         dset->SetDirectory(dir);
-      }
-      dset->SetObjName(tree);
-   } else {
-      // Use the default obj name from the TFileCollection
-      dsTree = dataset->GetDefaultTreeName();
-   }
-
-   // Transfer the list now
-   if (dataset) {
-      TList *missingFiles = new TList;
-      TSeqCollection* files = dataset->GetList();
-      Bool_t availableOnly = (lookupopt != "all") ? kTRUE : kFALSE;
-      if (!dset->Add(files, dsTree, availableOnly, missingFiles)) {
-         SendAsynMessage(Form("AssertDataSet on %s: error retrieving"
-                              " dataset: %s", fPrefix.Data(), dset->GetName()));
-         Error("AssertDataSet", "error retrieving dataset %s",
-               dset->GetName());
-         delete dataset;
-         return -1;
-      }
-      if (missingFiles) {
-         // The missing files objects have to be removed from the dataset
-         // before delete.
-         TIter next(missingFiles);
-         TObject *file;
-         while ((file = next()))
-            dataset->GetList()->Remove(file);
-      }
-      delete dataset;
-
-      // Make sure it will be sent back merged with other similar lists created
-      // during processing; this list will be transferred by the player to the
-      // output list, once the latter has been created (see TProofPlayerRemote::Process)
-      if (missingFiles && missingFiles->GetSize() > 0) {
-         missingFiles->SetName("MissingFiles");
-         input->Add(missingFiles);
-      }
-   }
-
-   // Done
-   return 0;
-}
-
-//______________________________________________________________________________
 void TProofServ::HandleProcess(TMessage *mess)
 {
    // Handle processing request.
@@ -2925,7 +2901,13 @@ void TProofServ::HandleProcess(TMessage *mess)
 
       // Make sure the dataset contains the information needed
       if ((!hasNoData) && dset->GetListOfElements()->GetSize() == 0) {
-         if (AssertDataSet(dset, input) != 0) return;
+         TString emsg;
+         if (TProof::AssertDataSet(dset, input, fDataSetManager, emsg) != 0) {
+            SendAsynMessage(Form("AssertDataSet on %s: %s",
+                                 fPrefix.Data(), emsg.Data()));
+            Error("HandleProcess", "AssertDataSet: %s", emsg.Data());
+            return;
+         }
       }
 
       TProofQueryResult *pq = 0;
@@ -3028,6 +3010,7 @@ void TProofServ::HandleProcess(TMessage *mess)
             else
                fQMgr->IncrementDrawQueries();
          }
+         fQMgr->ResetTime();
 
          // Signal the client that we are starting a new query
          TMessage m(kPROOF_STARTPROCESS);
@@ -3076,7 +3059,12 @@ void TProofServ::HandleProcess(TMessage *mess)
             Bool_t abort =
               (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) ? kTRUE : kFALSE;
             m.Reset(kPROOF_STOPPROCESS);
-            if (fProtocol > 8) {
+            // message sent from worker to the master
+            if (fProtocol > 18) {
+               TProofProgressStatus* status = fPlayer->GetProgressStatus();
+               m << status << abort;
+               status = 0; // the status belongs to the player.
+            } else if (fProtocol > 8) {
                m << fPlayer->GetEventsProcessed() << abort;
             } else {
                m << fPlayer->GetEventsProcessed();
@@ -3213,7 +3201,15 @@ void TProofServ::HandleProcess(TMessage *mess)
       // Return number of events processed
       TMessage m(kPROOF_STOPPROCESS);
       Bool_t abort = (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted) ? kFALSE : kTRUE;
-      m << fPlayer->GetEventsProcessed() << abort;
+      if (fProtocol > 18) {
+         TProofProgressStatus* status =
+            new TProofProgressStatus(fPlayer->GetEventsProcessed(),
+                                    gPerfStats?gPerfStats->GetBytesRead():0);
+         if (status)
+            m << status << abort;
+      } else {
+         m << fPlayer->GetEventsProcessed() << abort;
+      }
       fSocket->Send(m);
 
       // Send back the results
@@ -3768,8 +3764,9 @@ Int_t TProofServ::HandleCache(TMessage *mess)
    Bool_t fromglobal = kFALSE;
 
    // Notification message
-   TString noth = (IsMaster()) ? Form("Mst-%s", fOrdinal.Data())
-                               : Form("Wrk-%s", fOrdinal.Data());
+   TString noth;
+   const char *k = (IsMaster()) ? "Mst" : "Wrk";
+   noth.Form("%s-%s", k, fOrdinal.Data());
 
    TString package, pdir, ocwd, file;
    (*mess) >> type;
@@ -3865,7 +3862,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
                TIter nxd(fGlobalPackageDirList);
                TNamed *nm = 0;
                while ((nm = (TNamed *)nxd())) {
-                  pdir = Form("%s/%s", nm->GetTitle(), package.Data());
+                  pdir.Form("%s/%s", nm->GetTitle(), package.Data());
                   if (!gSystem->AccessPathName(pdir, kReadPermission) &&
                       !gSystem->AccessPathName(pdir + "/PROOF-INF", kReadPermission)) {
                      // Package found, stop searching
@@ -3939,9 +3936,11 @@ Int_t TProofServ::HandleCache(TMessage *mess)
                      char *gunzip = gSystem->Which(gSystem->Getenv("PATH"), kGUNZIP,
                                                    kExecutePermission);
                      if (gunzip) {
-                        TString par = Form("%s.par", pdir.Data());
+                        TString par;
+                        par.Form("%s.par", pdir.Data());
                         // untar package
-                        TString cmd(Form(kUNTAR3, gunzip, par.Data()));
+                        TString cmd;
+                        cmd.Form(kUNTAR3, gunzip, par.Data());
                         status = gSystem->Exec(cmd);
                         if (status) {
                            Error("HandleCache", "kBuildPackage: failure executing: %s", cmd.Data());
@@ -3971,8 +3970,8 @@ Int_t TProofServ::HandleCache(TMessage *mess)
                   // shortly after the master ones.
                   TString ipath(gSystem->GetIncludePath());
                   ipath.ReplaceAll("\"","");
-                  TString cmd = Form("export ROOTINCLUDEPATH=\"%s\" ; PROOF-INF/BUILD.sh",
-                                      ipath.Data());
+                  TString cmd;
+                  cmd.Form("export ROOTINCLUDEPATH=\"%s\" ; PROOF-INF/BUILD.sh", ipath.Data());
                   {
                      TProofServLogHandlerGuard hg(cmd, fSocket);
                   }
@@ -4024,7 +4023,7 @@ Int_t TProofServ::HandleCache(TMessage *mess)
                TIter nxd(fGlobalPackageDirList);
                TNamed *nm = 0;
                while ((nm = (TNamed *)nxd())) {
-                  pdir = Form("%s/%s", nm->GetTitle(), package.Data());
+                  pdir.Form("%s/%s", nm->GetTitle(), package.Data());
                   if (!gSystem->AccessPathName(pdir, kReadPermission)) {
                      // Package found, stop searching
                      break;
@@ -4364,10 +4363,22 @@ TProofServ::EQueryAction TProofServ::GetWorkers(TList *workers,
 }
 
 //______________________________________________________________________________
+FILE *TProofServ::SetErrorHandlerFile(FILE *ferr)
+{
+   // Set the file stream where to log (default stderr).
+   // If ferr == 0 the default is restored.
+   // Returns current setting.
+
+   FILE *oldferr = fgErrorHandlerFile;
+   fgErrorHandlerFile = (ferr) ? ferr : stderr;
+   return oldferr;
+}
+
+//______________________________________________________________________________
 void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
                               const char *msg)
 {
-   // The PROOF error handler function. It prints the message on stderr and
+   // The PROOF error handler function. It prints the message on fgErrorHandlerFile and
    // if abort is set it aborts the application.
 
    if (gErrorIgnoreLevel == kUnset) {
@@ -4463,22 +4474,25 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
    if (!location || ipos == 0 ||
        (level >= kPrint && level < kInfo) ||
        (level >= kBreak && level < kSysError)) {
-      fprintf(stderr, "%s %5d %s | %s: %s\n", st(11,8).Data(), gSystem->GetPid(),
-                     (gProofServ ? gProofServ->GetPrefix() : "proof"), type, msg);
+      fprintf(fgErrorHandlerFile, "%s %5d %s | %s: %s\n", st(11,8).Data(),
+                                  gSystem->GetPid(),
+                                 (gProofServ ? gProofServ->GetPrefix() : "proof"),
+                                  type, msg);
       if (tosyslog)
          buf.Form("%s:%s:%s:%s", (gProofServ ? gProofServ->GetUser() : "unknown"),
                                  (gProofServ ? gProofServ->GetPrefix() : "proof"),
                                  type, msg);
    } else {
-      fprintf(stderr, "%s %5d %s | %s in <%.*s>: %s\n", st(11,8).Data(), gSystem->GetPid(),
-                      (gProofServ ? gProofServ->GetPrefix() : "proof"),
-                      type, ipos, location, msg);
+      fprintf(fgErrorHandlerFile, "%s %5d %s | %s in <%.*s>: %s\n", st(11,8).Data(),
+                                  gSystem->GetPid(),
+                                 (gProofServ ? gProofServ->GetPrefix() : "proof"),
+                                  type, ipos, location, msg);
       if (tosyslog)
          buf.Form("%s:%s:%s:<%.*s>:%s", (gProofServ ? gProofServ->GetUser() : "unknown"),
                                         (gProofServ ? gProofServ->GetPrefix() : "proof"),
                                         type, ipos, location, msg);
    }
-   fflush(stderr);
+   fflush(fgErrorHandlerFile);
 
    if (tosyslog)
       gSystem->Syslog(loglevel, buf);
@@ -4493,8 +4507,8 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
          recursive = kFALSE;
       }
 
-      fprintf(stderr, "aborting\n");
-      fflush(stderr);
+      fprintf(fgErrorHandlerFile, "aborting\n");
+      fflush(fgErrorHandlerFile);
       gSystem->StackTrace();
       gSystem->Abort();
    }
@@ -4552,7 +4566,8 @@ Int_t TProofServ::CopyFromCache(const char *macro, Bool_t cpbin)
    }
 
    // Binary version file name
-   TString vername(Form(".%s", name.Data()));
+   TString vername;
+   vername.Form(".%s", name.Data());
    Int_t dotv = vername.Last('.');
    if (dotv != kNPOS)
       vername.Remove(dotv);
@@ -4593,7 +4608,8 @@ Int_t TProofServ::CopyFromCache(const char *macro, Bool_t cpbin)
       const char *e = 0;
       while ((e = gSystem->GetDirEntry(dirp))) {
          if (!strncmp(e, binname.Data(), binname.Length())) {
-            TString fncache = Form("%s/%s", fCacheDir.Data(), e);
+            TString fncache;
+            fncache.Form("%s/%s", fCacheDir.Data(), e);
             Bool_t docp = kTRUE;
             FileStat_t stlocal, stcache;
             if (!gSystem->GetPathInfo(fncache, stcache)) {
@@ -4653,7 +4669,8 @@ Int_t TProofServ::CopyToCache(const char *macro, Int_t opt)
       binname.Replace(dot,1,"_");
 
    // Create version file name template
-   TString vername(Form(".%s", name.Data()));
+   TString vername;
+   vername.Form(".%s", name.Data());
    dot = vername.Last('.');
    if (dot != kNPOS)
       vername.Remove(dot);
@@ -4691,7 +4708,8 @@ Int_t TProofServ::CopyToCache(const char *macro, Int_t opt)
                   Bool_t docp = kTRUE;
                   FileStat_t stlocal, stcache;
                   if (!gSystem->GetPathInfo(e, stlocal)) {
-                     TString fncache = Form("%s/%s", fCacheDir.Data(), e);
+                     TString fncache;
+                     fncache.Form("%s/%s", fCacheDir.Data(), e);
                      Int_t rc = gSystem->GetPathInfo(fncache, stcache);
                      if (rc == 0 && (stlocal.fMtime <= stcache.fMtime))
                         docp = kFALSE;
@@ -4911,7 +4929,9 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
                   return -1;
                }
                // Register the dataset (quota checks are done inside here)
-               return fDataSetManager->RegisterDataSet(uri, dataSet, opt);
+               rc = fDataSetManager->RegisterDataSet(uri, dataSet, opt);
+               delete dataSet;
+               return rc;
             } else {
                Info("HandleDataSets", "dataset registration not allowed");
                return -1;
@@ -5017,6 +5037,14 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
 
    // We are done
    return rc;
+}
+
+//______________________________________________________________________________
+void TProofServ::HandleFork(TMessage *)
+{
+   // Cloning itself via fork. Not implemented
+
+   Info("HandleFork", "fork cloning not implemented");
 }
 
 //______________________________________________________________________________
@@ -5168,6 +5196,42 @@ Int_t TProofServ::GetInputData(TList *input)
 
    // Done
    return 0;
+}
+
+//______________________________________________________________________________
+Int_t TProofServ::Fork()
+{
+   // Fork a child.
+   // If successful, return 0 in the child process and the child pid in the parent
+   // process. The child pid is registered for reaping.
+   // Return <0 in the parent process in case of failure.
+
+#ifndef WIN32
+   // Fork
+   pid_t pid;
+   if ((pid = fork()) < 0) {
+      Error("Fork", "failed to fork");
+      return pid;
+   }
+
+   // Nothing else to do in the child
+   if (!pid) return pid;
+
+   // Make sure that the reaper timer is started
+   if (!fReaperTimer) {
+      fReaperTimer = new TReaperTimer(1000);
+      fReaperTimer->Start(-1);
+   }
+
+   // Register the new child
+   fReaperTimer->AddPid(pid);
+
+   // Done
+   return pid;
+#else
+   Warning("Fork", "Functionality not provided under windows");
+   return -1;
+#endif
 }
 
 //______________________________________________________________________________

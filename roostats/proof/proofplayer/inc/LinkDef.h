@@ -18,6 +18,7 @@
 #pragma link C++ nestedclasses;
 
 #pragma link C++ class TProofPlayer+;
+#pragma link C++ class TProofPlayerLite+;
 #pragma link C++ class TProofPlayerLocal+;
 #pragma link C++ class TProofPlayerRemote+;
 #pragma link C++ class TProofPlayerSlave+;
@@ -25,7 +26,6 @@
 
 #pragma link C++ class TVirtualPacketizer+;
 #pragma link C++ class TPacketizer+;
-#pragma link C++ class TPacketizerProgressive+;
 #pragma link C++ class TPacketizerUnit+;
 #pragma link C++ class TPacketizerAdaptive+;
 

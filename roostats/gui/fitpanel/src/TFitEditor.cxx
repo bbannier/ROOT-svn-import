@@ -149,6 +149,7 @@
 #include "THStack.h"
 #include "TMath.h"
 #include "Fit/DataRange.h"
+#include "Fit/BinData.h"
 #include "TMultiGraph.h"
 
 enum EFitPanel {
@@ -204,7 +205,9 @@ void InitParameters(TF1* func, FitObject * fitobj)
    
    int special = func->GetNumber(); 
    if (special == 100 || special == 400) { 
-      ROOT::Fit::InitGaus(fitobj, func);
+      ROOT::Fit::BinData data;
+      ROOT::Fit::FillData(data,fitobj,func);
+      ROOT::Fit::InitGaus(data, func);
       // case gaussian or Landau
    }
 }
@@ -1076,7 +1079,8 @@ void TFitEditor::UpdateGUI()
       
 
       if (!hist) {
-	assert("No hist in UpdateGUI!");
+         Error("UpdateGUI","No hist is present - this should not happen, aborting");
+         assert(hist);
       }
 
       fXaxis = hist->GetXaxis();
