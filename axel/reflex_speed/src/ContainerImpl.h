@@ -112,6 +112,10 @@ namespace Internal {
 
    //-------------------------------------------------------------------------------
 
+   template <typename NODE> class Container_iterator;
+   class TypeInfoType; // for "ProxyByTypeInfo()"
+
+   //-------------------------------------------------------------------------------
 
    template <typename KEY, typename VALUE, EUniqueness UNIQUENESS = Reflex::Internal::kMany,
       class REFCOUNTER = Reflex::Internal::ContainerTools::RefCounted,
@@ -291,9 +295,8 @@ namespace Internal {
          return 0;
       }
 
-
       virtual const void* ProxyByTypeInfo(const std::type_info& ti) const {
-         return ProxyByTypeInfoImpl(ti, (const char*)0, (const PairTypeInfoType*)0);
+         return ProxyByTypeInfoImpl(ti, (const char*)0, (const TypeInfoType*)0);
       }
       const void* ProxyByTypeInfoImpl(const std::type_info& ti, KEY, const VALUE*) const {
          // overload for the Containers with KEY == std::type_info

@@ -24,6 +24,7 @@
 #include "Reflex/Builder/TypeBuilder.h"
 
 #include "TypeName.h"
+#include "Typedef.h"
 #include "ScopeBase.h"
 #include "ScopeName.h"
 #include "PropertyListImpl.h"
@@ -46,7 +47,7 @@ Reflex::Internal::TypeBase::TypeBase(const char * nam,
      fFinalType(finalType.Id() ? new Type(finalType) : 0),
      fRawType(0) {
 //-------------------------------------------------------------------------------
-// Construct the dictinary info for a type.
+// Construct reflection data for a type.
    Type t = catalog.ByName(nam);
    if (t.Id() == 0) { 
       fTypeName = new TypeName(nam, this, catalog, &ti); 
@@ -55,8 +56,7 @@ Reflex::Internal::TypeBase::TypeBase(const char * nam,
       fTypeName = (TypeName*)t.Id();
       if (t.Id() != catalog.ByTypeInfo(ti).Id())
          fTypeName->SetTypeId(ti);
-      if (fTypeName->ToTypeBase())
-         fTypeName->UpdateTypeBase(this);
+      fTypeName->UpdateTypeBase(this);
    }
 
    if (typeTyp != kETFundamental && 
@@ -146,6 +146,7 @@ Reflex::Type
 Reflex::Internal::TypeBase::DetermineFinalType(const Type& t) const {
 //-------------------------------------------------------------------------------
 // Return the type t without typedefs information.
+// Also normalize "unsigned" to "unsigned int"
    
    Type retType(t);
 
@@ -174,8 +175,12 @@ Reflex::Internal::TypeBase::DetermineFinalType(const Type& t) const {
       }
    case kETUnresolved:
       return Dummy::Type();
+   case kETFundamental:
+      // unsigned -> unsigned int
+      if (dynamic_cast<const Typedef*>(t.ToTypeBase()))
+         retType =  t.ToType();
    default:
-      return t;
+      ;
    }
 
    // copy fModifiers
@@ -225,6 +230,16 @@ const std::string&
 Reflex::Internal::TypeBase::Name(std::string& buf, unsigned int mod) const {
 //-------------------------------------------------------------------------------
 // Return the name of the type, using buffer buf when calculating it
+
+   if (mod & kFinal) {
+      Type final = FinalType();
+      // we cannot test on fTypeType because "unsigned int" etc are Typedefs with
+      // fTypeType set to kFundamental
+      if (final != ThisType()) {
+         // We know it's final, so remove kFinal
+         return final.Name(buf, mod & (~kFinal));
+      }
+   }
    if (mod & kScoped)
       return (buf += fTypeName->Name());
    return (buf += std::string(fTypeName->Name(), fBasePosition));

@@ -37,20 +37,20 @@ const std::string&
 Reflex::TYPEName(ETYPE type) {
 //-------------------------------------------------------------------------------
    static const std::string sTYPENames[] = {
-      "kETClass",
-      "kETStruct",
-      "kETEnum",
-      "kETUnion",
-      "kETNamespace",
-      "kETFunction",
-      "kETArray",
-      "kETFundamental",
-      "kETPointer",
-      "kETPointerToMember",
-      "kETTypedef",
-      "kETDataMember",
-      "kETFunctionMember",
-      "kETUnresolved",
+      "kClass",
+      "kStruct",
+      "kEnum",
+      "kUnion",
+      "kNamespace",
+      "kFunction",
+      "kArray",
+      "kFundamental",
+      "kPointer",
+      "kPointerToMember",
+      "kTypedef",
+      "kDataMember",
+      "kFunctionMember",
+      "kUnresolved",
       ""
    };
 

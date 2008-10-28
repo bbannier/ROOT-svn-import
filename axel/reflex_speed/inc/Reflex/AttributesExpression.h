@@ -9,102 +9,182 @@
 //
 // This software is provided "as is" without express or implied warranty.
 
-#ifndef Reflex_AttributesExpression
-#define Reflex_AttributesExpression
+#ifndef Reflex_AttributesExpressionT
+#define Reflex_AttributesExpressionT
 
 #include "Kernel.h"
 
 namespace Reflex {
 
    // Bitset-style class that allows to test for a combination of
-   // AttributesExpression enum constants via its operators &&, ||, !.
-   class RFLX_API AttributesExpression {
+   // AttributesExpressionT enum constants via its operators &&, ||, !.
+
+   template <typename OP1, typename OP2 = OP1> class AttributesExpressionT_And;
+   template <typename OP1, typename OP2 = OP1> class AttributesExpressionT_Or;
+   template <typename OP1>               class AttributesExpressionT_Not;
+   class AttributesExpressionT_TypeType;
+   class AttributesExpressionT_TypeDescription;
+   template <typename ATTRIBUTESEXPRESSION> class AttributesExpressionImpl;
+      
+   class AttributesExpression {
    public:
-      enum EOP {
-         kDesc,
-         kType,
-         kAnd,
-         kOr,
-         kNot
-      };
-
-   private:
-      EOP fOp;
-      int fValue;
-      const AttributesExpression& fLHS;
-      const AttributesExpression& fRHS;
-      static AttributesExpression fgNIL;
-
+      virtual bool Eval(int, ETYPE type) const = 0;
+   };
+      
+   template <typename SELF>
+   class AttributesExpressionT: public AttributesExpression {
    public:
-      AttributesExpression(EENTITY_DESCRIPTION desc): fOp(kDesc), fValue(desc), fLHS(fgNIL), fRHS(fgNIL) {};
-      AttributesExpression(ETYPE type): fOp(kType), fValue(type), fLHS(fgNIL), fRHS(fgNIL) {};
-      AttributesExpression(EOP op, const AttributesExpression& lhs, const AttributesExpression& rhs = Reflex::AttributesExpression::fgNIL):
-      fOp(op), fValue(0), fLHS(lhs), fRHS(rhs) {}
+      template <typename OPR>
+      const AttributesExpressionT_And<SELF, OPR>
+      operator &&(const OPR& opr) const;
 
-      bool Eval(int desc, ETYPE type) const {
-         if (fOp == kDesc)  return (desc & fValue);
-         if (fOp == kType)  return (type == fValue);
-         if (fOp == kOr)    return fLHS.Eval(desc, type) || fRHS.Eval(desc, type);
-         if (fOp == kAnd)   return fLHS.Eval(desc, type) && fRHS.Eval(desc, type);
-         if (fOp == kNot)   return !fLHS.Eval(desc, type);
-         return true;
-      }
-
-      AttributesExpression operator && (const AttributesExpression& rhs) const { return AttributesExpression(kAnd, *this, rhs); }
-      AttributesExpression operator || (const AttributesExpression& rhs) const { return AttributesExpression(kOr, *this, rhs); }
-      AttributesExpression operator ! () const { return AttributesExpression(kNot, *this); }
+      template <typename OPR>
+      const AttributesExpressionT_Or<SELF, OPR>
+      operator ||(const OPR& opr) const;
+      
+      const AttributesExpressionT_Not<SELF>
+      operator !() const;
    };
 
-   const AttributesExpression kPublic(kEDPublic);
-   const AttributesExpression kProtected(kEDProtected);
-   const AttributesExpression kPrivate(kEDPrivate);
-   const AttributesExpression kRegister(kEDRegister);
-   const AttributesExpression kStatic(kEDStatic);
-   const AttributesExpression kConstructor(kEDConstructor);
-   const AttributesExpression kDestructor(kEDDestructor);
-   const AttributesExpression kExplicit(kEDExplicit);
-   const AttributesExpression kExtern(kEDExtern);
-   const AttributesExpression kCopyconstructor(kEDCopyConstructor);
-   const AttributesExpression kOperator(kEDOperator);
-   const AttributesExpression kInline(kEDInline);
-   const AttributesExpression kConverter(kEDConverter);
-   const AttributesExpression kAuto(kEDAuto);
-   const AttributesExpression kMutable(kEDMutable);
-   const AttributesExpression kConst(kEDConst);
-   const AttributesExpression kVolatile(kEDVolatile);
-   const AttributesExpression kReference(kEDReference);
-   const AttributesExpression kAbstract(kEDAbstract);
-   const AttributesExpression kVirtual(kEDVirtual);
-   const AttributesExpression kTransient(kEDTransient);
-   const AttributesExpression kArtificial(kEDArtificial);
+   class RFLX_API AttributesExpressionT_TypeType:
+      public AttributesExpressionT< AttributesExpressionT_TypeType > {
+   public:
+      AttributesExpressionT_TypeType(ETYPE type): fType(type) {}
+      bool Eval(int, ETYPE type) const { return fType == type; }
+   private:
+      ETYPE fType;
+   };
 
-   const AttributesExpression kConstVolatile(AttributesExpression::kAnd, kConst, kVolatile);
+   class RFLX_API AttributesExpressionT_TypeDescription:
+      public AttributesExpressionT< AttributesExpressionT_TypeDescription > {
+   public:
+      AttributesExpressionT_TypeDescription(int descr): fDescr(descr) {}
+      bool Eval(int descr, ETYPE) const { return fDescr == descr; }
+   private:
+      int fDescr;
+   };
 
-   const AttributesExpression kClass(kETClass);
-   const AttributesExpression kStruct(kETStruct);
-   const AttributesExpression kEnum(kETEnum);
-   const AttributesExpression kUnion(kETUnion);
-   const AttributesExpression kNamespace(kETNamespace);
-   const AttributesExpression kFunction(kETFunction);
-   const AttributesExpression kArray(kETArray);
-   const AttributesExpression kFundamental(kETFundamental);
-   const AttributesExpression kPointer(kETPointer);
-   const AttributesExpression kPointerToMember(kETPointerToMember);
-   const AttributesExpression kTypedef(kETTypedef);
-   const AttributesExpression kTypeTemplateInstance(kETTypeTemplateInstance);
-   const AttributesExpression kMemberTemplateInstance(kETMemberTemplateInstance);
-   const AttributesExpression kDataMember(kETDataMember);
-   const AttributesExpression kFunctionMember(kETFunctionMember);
-   const AttributesExpression kUnresolved(kETUnresolved);
+   template <class SELF, class OP1, class OP2>
+   class AttributesExpressionT_Binary: public AttributesExpressionT<SELF> {
+   public:
+      AttributesExpressionT_Binary(const OP1& op1, const OP2& op2):
+         fLeft(op1), fRight(op2) {}
+   protected:
+      OP1 fLeft;
+      OP2 fRight;
+   };
 
-   const AttributesExpression kTemplateInstance(AttributesExpression::kOr, kTypeTemplateInstance, kMemberTemplateInstance);
+   template <class OP1, class OP2 /* = OP1 */>
+   class AttributesExpressionT_And:
+      public AttributesExpressionT_Binary< AttributesExpressionT_And<OP1, OP2>, OP1, OP2> {
+   public:
+      AttributesExpressionT_And(const OP1& l, const OP2& r):
+         AttributesExpressionT_Binary< AttributesExpressionT_And<OP1, OP2>, OP1, OP2>(l, r) {}
+      bool Eval(int descr, ETYPE type) const { return this->fLeft.Eval(descr, type) && this->fRight.Eval(descr, type); }
+   };
+
+   template <class OP1, class OP2 /* = OP1 */>
+   class AttributesExpressionT_Or:
+      public AttributesExpressionT_Binary< AttributesExpressionT_Or<OP1, OP2>, OP1, OP2> {
+   public:
+      AttributesExpressionT_Or(const OP1& l, const OP2& r):
+         AttributesExpressionT_Binary< AttributesExpressionT_Or<OP1, OP2>, OP1, OP2>(l, r) {}
+      bool Eval(int descr, ETYPE type) const { return this->fLeft.Eval(descr, type) || this->fRight.Eval(descr, type); }
+   };
+
+   template <class OPR>
+   class AttributesExpressionT_Not:
+      public AttributesExpressionT< AttributesExpressionT_Not<OPR> > {
+   public:
+      AttributesExpressionT_Not(const OPR& op): fOp(op) {}
+      bool Eval(int descr, ETYPE type) const { return fOp.Eval(descr, type); }
+   protected:
+      const OPR fOp;
+   };
+
+   template <typename SELF>
+   template <typename OPR>
+   inline
+   const AttributesExpressionT_And<SELF, OPR>
+   AttributesExpressionT<SELF>::operator &&(const OPR& opr) const {
+      return AttributesExpressionT_And<SELF, OPR>(*reinterpret_cast<const SELF*>(this), opr);
+   }
+
+   template <typename SELF>
+   template <typename OPR>
+   inline
+   const AttributesExpressionT_Or<SELF, OPR>
+   AttributesExpressionT<SELF>::operator ||(const OPR& opr) const {
+      return AttributesExpressionT_Or<SELF, OPR>(*reinterpret_cast<const SELF*>(this), opr);
+   }
+
+   template <typename SELF>
+   inline
+   const AttributesExpressionT_Not<SELF>
+   AttributesExpressionT<SELF>::operator !() const {
+      return AttributesExpressionT_Not<SELF>(*reinterpret_cast<const SELF*>(this));
+   }
+
+
+   const AttributesExpressionT_TypeDescription kPublic(kEDPublic);
+   const AttributesExpressionT_TypeDescription kProtected(kEDProtected);
+   const AttributesExpressionT_TypeDescription kPrivate(kEDPrivate);
+   const AttributesExpressionT_TypeDescription kRegister(kEDRegister);
+   const AttributesExpressionT_TypeDescription kStatic(kEDStatic);
+   const AttributesExpressionT_TypeDescription kConstructor(kEDConstructor);
+   const AttributesExpressionT_TypeDescription kDestructor(kEDDestructor);
+   const AttributesExpressionT_TypeDescription kExplicit(kEDExplicit);
+   const AttributesExpressionT_TypeDescription kExtern(kEDExtern);
+   const AttributesExpressionT_TypeDescription kCopyconstructor(kEDCopyConstructor);
+   const AttributesExpressionT_TypeDescription kOperator(kEDOperator);
+   const AttributesExpressionT_TypeDescription kInline(kEDInline);
+   const AttributesExpressionT_TypeDescription kConverter(kEDConverter);
+   const AttributesExpressionT_TypeDescription kAuto(kEDAuto);
+   const AttributesExpressionT_TypeDescription kMutable(kEDMutable);
+   const AttributesExpressionT_TypeDescription kConst(kEDConst);
+   const AttributesExpressionT_TypeDescription kVolatile(kEDVolatile);
+   const AttributesExpressionT_TypeDescription kReference(kEDReference);
+   const AttributesExpressionT_TypeDescription kAbstract(kEDAbstract);
+   const AttributesExpressionT_TypeDescription kVirtual(kEDVirtual);
+   const AttributesExpressionT_TypeDescription kTransient(kEDTransient);
+   const AttributesExpressionT_TypeDescription kArtificial(kEDArtificial);
+
+   const AttributesExpressionT_And<AttributesExpressionT_TypeDescription>
+      kConstVolatile(kConst, kVolatile);
+
+   const AttributesExpressionT_TypeType kClass(kETClass);
+   const AttributesExpressionT_TypeType kStruct(kETStruct);
+   const AttributesExpressionT_TypeType kEnum(kETEnum);
+   const AttributesExpressionT_TypeType kUnion(kETUnion);
+   const AttributesExpressionT_TypeType kNamespace(kETNamespace);
+   const AttributesExpressionT_TypeType kFunction(kETFunction);
+   const AttributesExpressionT_TypeType kArray(kETArray);
+   const AttributesExpressionT_TypeType kFundamental(kETFundamental);
+   const AttributesExpressionT_TypeType kPointer(kETPointer);
+   const AttributesExpressionT_TypeType kPointerToMember(kETPointerToMember);
+   const AttributesExpressionT_TypeType kTypedef(kETTypedef);
+   const AttributesExpressionT_TypeType kTypeTemplateInstance(kETTypeTemplateInstance);
+   const AttributesExpressionT_TypeType kMemberTemplateInstance(kETMemberTemplateInstance);
+   const AttributesExpressionT_TypeType kDataMember(kETDataMember);
+   const AttributesExpressionT_TypeType kFunctionMember(kETFunctionMember);
+   const AttributesExpressionT_TypeType kUnresolved(kETUnresolved);
+
+   const AttributesExpressionT_Or<AttributesExpressionT_TypeType>
+      kTemplateInstance(kTypeTemplateInstance, kMemberTemplateInstance);
 #ifndef __CINT__
-   const AttributesExpression kClassOrStruct(kClass || kTypeTemplateInstance || kStruct);
+   const AttributesExpressionT_Or<
+      AttributesExpressionT_Or<AttributesExpressionT_TypeType>,
+      AttributesExpressionT_TypeType
+   > kClassOrStruct(kClass || kTypeTemplateInstance || kStruct);
 #else
-   const AttributesExpression kClassOrStruct(AttributesExpression::kOr, kClass,
-                                        AttributesExpression(AttributesExpression::kOr, kTypeTemplateInstance, kStruct));
+   const AttributesExpressionT_Or<
+      AttributesExpressionT_Or<AttributesExpressionT_TypeType>,
+      AttributesExpressionT_TypeType
+   > kClassOrStruct(
+      AttributesExpressionT_Or<AttributesExpressionT_TypeType>(kClass, kTypeTemplateInstance),
+      kStruct);
 #endif
 }
 
-#endif // Reflex_AttributesExpression
+#endif // Reflex_AttributesExpressionT
 

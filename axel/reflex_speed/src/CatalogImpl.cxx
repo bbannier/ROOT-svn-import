@@ -25,12 +25,6 @@
 #include "Typedef.h"
 
 //-------------------------------------------------------------------------------
-Reflex::Internal::PairTypeInfoType::PairTypeInfoType(const TypeName& type):
-   fType(&type), fTI(type.ToTypeBase()->TypeInfo()) {}
-//-------------------------------------------------------------------------------
-
-
-//-------------------------------------------------------------------------------
 Reflex::Internal::CatalogImpl&
 Reflex::Internal::CatalogImpl::Instance() {
 //-------------------------------------------------------------------------------
@@ -219,7 +213,7 @@ void Reflex::Internal::TypeCatalogImpl::Add(Reflex::Internal::TypeName& type, co
    Hash_t hash = fAllTypeNames.Hash(type.Name());
    fAllTypeNames.Insert(&type, hash);
    fAllTypes.Insert(type.ThisType(), hash);
-   if (ti) fTypeInfoTypeMap.Insert(Internal::PairTypeInfoType(type, *ti));
+   if (ti) fTypeInfoTypeMap.Insert(Internal::TypeInfoType(type, *ti));
 }
 
 
@@ -239,9 +233,9 @@ void Reflex::Internal::TypeCatalogImpl::UpdateTypeId(const Reflex::Internal::Typ
 //-------------------------------------------------------------------------------
 // Update a type_info in the map.
    if (oldti != typeid(NullType))
-      fTypeInfoTypeMap.Remove(Internal::PairTypeInfoType(type, oldti));
+      fTypeInfoTypeMap.Remove(Internal::TypeInfoType(type, oldti));
    if (newti != typeid(NullType))
-      fTypeInfoTypeMap.Insert(Internal::PairTypeInfoType(type, newti));
+      fTypeInfoTypeMap.Insert(Internal::TypeInfoType(type, newti));
 }
 
 

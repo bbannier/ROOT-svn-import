@@ -14,7 +14,6 @@
 
 // Include files
 #include "Reflex/Kernel.h"
-#include "Reflex/AttributesExpression.h"
 #include <string>
 #include <typeinfo>
 
@@ -22,7 +21,6 @@ namespace Reflex {
 
    // forward declarations
    class Base;
-   class AttributesExpression;
    class Member;
    class PropertyList;
    class Type;

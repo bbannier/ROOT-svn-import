@@ -186,7 +186,8 @@ Reflex::Type::DetermineEquivalence(const Type & typ, unsigned int modifiers_mask
    if (t1.Is(kArray) && t1.ArrayLength() != t2.ArrayLength())
       return false;
 
-   static AttributesExpression needToType(kPointer || kPointerToMember || kArray);
+   static AttributesExpressionT_Or< AttributesExpressionT_Or<AttributesExpressionT_TypeType>, AttributesExpressionT_TypeType>
+      needToType(kPointer || kPointerToMember || kArray);
 
    if (t1.Is(needToType))
       // set alsoReturn to true because we know it's not a function and void(*)() != int(*)()
@@ -230,7 +231,7 @@ bool
 Reflex::Type::Is(const AttributesExpression& descr) const {
 //-------------------------------------------------------------------------------
 // Test type for properties.
-   if (*this) return fTypeName->ToTypeBase()->Is(descr);
+   if (*this) return fTypeName->ToTypeBase()->Is(descr, fModifiers);
    return false;
 }
 
@@ -423,7 +424,7 @@ std::string
 Reflex::Type::TypeTypeAsString() const {
 //-------------------------------------------------------------------------------
    if (* this) return fTypeName->ToTypeBase()->TypeTypeAsString(); 
-   return "kETUnresolved";
+   return "kUnresolved";
 }
 
 //-------------------------------------------------------------------------------

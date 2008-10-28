@@ -149,16 +149,16 @@ void ReflexUnitTest::empty_type() {
   CPPUNIT_ASSERT_EQUAL(38, int(Catalog::Instance().Types().Size()));
   CPPUNIT_ASSERT(!t);
   CPPUNIT_ASSERT_EQUAL(size_t(0), size_t(t.Allocate()));
-  CPPUNIT_ASSERT(!(*t.Bases().Begin()));
+  CPPUNIT_ASSERT(t.Bases().Begin() == t.Bases().End());
   CPPUNIT_ASSERT_EQUAL(0, int(t.Bases().Size()));
   CPPUNIT_ASSERT(!t.CastObject(Type(),Object()));
   CPPUNIT_ASSERT(!t.Construct());
   Scope ts(t);
-  CPPUNIT_ASSERT(!(*ts.DataMembers().Begin()));
+  CPPUNIT_ASSERT(ts.DataMembers().Begin() == ts.DataMembers().End());
   CPPUNIT_ASSERT_EQUAL(0, int(ts.DataMembers().Size()));
   CPPUNIT_ASSERT(!t.DeclaringScope());
   CPPUNIT_ASSERT(!t.DynamicType(Object()));
-  CPPUNIT_ASSERT(!*ts.FunctionMembers().Begin());
+  CPPUNIT_ASSERT(ts.FunctionMembers().Begin() == ts.FunctionMembers().End());
   CPPUNIT_ASSERT_EQUAL(0,int(ts.FunctionMembers().Size()));
   CPPUNIT_ASSERT(!(bool)t.HasBase(Type()));
   CPPUNIT_ASSERT_EQUAL(size_t(0), size_t(t.Id()));
@@ -184,25 +184,25 @@ void ReflexUnitTest::empty_type() {
   CPPUNIT_ASSERT_EQUAL(false, t.Is(kVolatile));
   CPPUNIT_ASSERT_EQUAL(0, int(t.ArrayLength()));
   CPPUNIT_ASSERT(!ts.Members().ByName(""));
-  CPPUNIT_ASSERT(!*ts.Members().Begin());
+  CPPUNIT_ASSERT(ts.Members().Begin() == ts.Members().End());
   CPPUNIT_ASSERT_EQUAL(0, int(ts.Members().Size()));
-  CPPUNIT_ASSERT(!*ts.MemberTemplates().Begin());
+  CPPUNIT_ASSERT(ts.MemberTemplates().Begin() == ts.MemberTemplates().End());
   CPPUNIT_ASSERT_EQUAL(0, int(ts.MemberTemplates().Size()));
   CPPUNIT_ASSERT_EQUAL(std::string(""), t.Name());
   std::string buf("foo");
   CPPUNIT_ASSERT_EQUAL(std::string("foo"), t.Name(buf));
   CPPUNIT_ASSERT_EQUAL(std::string("foo"), buf);
-  CPPUNIT_ASSERT(!*t.FunctionParameters().Begin());
+  CPPUNIT_ASSERT(t.FunctionParameters().Begin() == t.FunctionParameters().End());
   CPPUNIT_ASSERT_EQUAL(0, int(t.FunctionParameters().Size()));
   CPPUNIT_ASSERT(!t.Properties());
   CPPUNIT_ASSERT(!t.ReturnType());
   CPPUNIT_ASSERT(!t.DeclaringScope());
   CPPUNIT_ASSERT_EQUAL(0, int(t.SizeOf()));
-  CPPUNIT_ASSERT(!*ts.SubScopes().Begin());
+  CPPUNIT_ASSERT(ts.SubScopes().Begin() == ts.SubScopes().End());
   CPPUNIT_ASSERT_EQUAL(0, int(ts.SubScopes().Size()));
-  CPPUNIT_ASSERT(!*ts.SubTypes().Begin());
+  CPPUNIT_ASSERT(ts.SubTypes().Begin() == ts.SubTypes().End());
   CPPUNIT_ASSERT_EQUAL(0, int(ts.SubTypes().Size()));
-  CPPUNIT_ASSERT(!*t.TemplateArguments().Begin());
+  CPPUNIT_ASSERT(t.TemplateArguments().Begin() == t.TemplateArguments().End());
   CPPUNIT_ASSERT_EQUAL(0, int(t.TemplateArguments().Size()));
   CPPUNIT_ASSERT(!t.TemplateFamily());
   CPPUNIT_ASSERT(!t.ToType());
@@ -210,7 +210,7 @@ void ReflexUnitTest::empty_type() {
   CPPUNIT_ASSERT(!t.RawType());
   CPPUNIT_ASSERT(!t.FinalType().RawType());
   CPPUNIT_ASSERT_EQUAL(std::string(typeid(void).name()), std::string(t.TypeInfo().name()));
-  CPPUNIT_ASSERT(!*ts.SubTypeTemplates().Begin());
+  CPPUNIT_ASSERT(ts.SubTypeTemplates().Begin() == ts.SubTypeTemplates().End());
   CPPUNIT_ASSERT_EQUAL(0, int(ts.SubTypeTemplates().Size()));
   CPPUNIT_ASSERT_EQUAL(kETUnresolved,t.TypeType());
   CPPUNIT_ASSERT_EQUAL(std::string("kUnresolved"), t.TypeTypeAsString());
@@ -218,7 +218,7 @@ void ReflexUnitTest::empty_type() {
 
 void ReflexUnitTest::empty_scope() {
   Scope s;
-  CPPUNIT_ASSERT(!*s.DataMembers().Begin());
+  CPPUNIT_ASSERT(s.DataMembers().Begin() == s.DataMembers().End());
 }
 
 void ReflexUnitTest::empty_member() {
@@ -257,7 +257,7 @@ void ReflexUnitTest::property_list()
   CPPUNIT_ASSERT_EQUAL((size_t)0, pl.PropertyCount());
   CPPUNIT_ASSERT_EQUAL((size_t)1, PropertyList::Keys().Size());
   CPPUNIT_ASSERT_EQUAL(std::string("Description"), *PropertyList::Keys().Begin());
-  CPPUNIT_ASSERT_EQUAL(std::string("Description"), *(++PropertyList::Keys().RBegin()));
+  CPPUNIT_ASSERT_EQUAL(std::string("Description"), *PropertyList::Keys().RBegin());
 
   pl.AddProperty("Description", "some blabla");
   CPPUNIT_ASSERT_EQUAL((size_t)1, pl.PropertyCount());
@@ -285,7 +285,7 @@ void ReflexUnitTest::property_list()
   CPPUNIT_ASSERT_EQUAL(string("this is a char*"), pl.PropertyAsString("char*"));
   CPPUNIT_ASSERT_EQUAL((size_t)4, pl.PropertyCount());
   CPPUNIT_ASSERT_EQUAL((size_t)4, PropertyList::Keys().Size());
-  CPPUNIT_ASSERT_EQUAL(std::string("char*"), *(++PropertyList::Keys().RBegin()));
+  CPPUNIT_ASSERT_EQUAL(std::string("char*"), *(PropertyList::Keys().RBegin()));
 
   string s = "this is a string";
   pl.AddProperty("string", s);
@@ -387,8 +387,8 @@ void ReflexUnitTest::reference_type() {
   CPPUNIT_ASSERT(frt.Is(kReference));
   CPPUNIT_ASSERT(!frt.Is(kPointer));
   CPPUNIT_ASSERT(frt.Is(kFundamental));
-  CPPUNIT_ASSERT_EQUAL(string("fundamental"), frt.Name());
-  CPPUNIT_ASSERT_EQUAL(string("fundamental&"), frt.Name(Reflex::kQualified));
+  CPPUNIT_ASSERT_EQUAL(string("fundamental"), frt.Name(kNone));
+  CPPUNIT_ASSERT_EQUAL(string("fundamental&"), frt.Name(kQualified));
   CPPUNIT_ASSERT(f.ThisType().Id() == d.TypeOf().Id());
 }
 
