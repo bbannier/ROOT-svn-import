@@ -156,8 +156,31 @@ MACRO(REFLEX_GET_DICTIONARIES_PATH dictionaries _path)
 
 ENDMACRO(REFLEX_GET_DICTIONARIES_PATH dictionaries _path)
 
+MACRO (GET_TEST_SCOPED_NAME _name _scoped_name)
+
+   SET(_test_qname)
+   FILE(RELATIVE_PATH _test_qname ${REFLEX_TEST_DIR} ${CMAKE_PARENT_LIST_FILE})
+   GET_FILENAME_COMPONENT(_test_qname ${_test_qname} PATH)
+   FILE(TO_CMAKE_PATH ${_test_qname} _test_qname)
+
+   IF (NOT "${_name}" STREQUAL "")
+      SET(_test_qname "${_test_qname}/${_name}")
+   ENDIF (NOT "${_name}" STREQUAL "")
+
+   SET(${_scoped_name} ${_test_qname})
+
+ENDMACRO (GET_TEST_SCOPED_NAME _name _scoped_name)
 
 MACRO (REFLEX_ADD_TEST name target)
+
+   GET_TEST_SCOPED_NAME("${name}" _scoped_name)
+   SET(_test_key "REGISTERED_TESTS_${_scoped_name}")
+
+   # check for duplicate tests
+   IF (DEFINED ${_test_key})
+      MESSAGE(FATAL_ERROR "Test ${_scoped_name} was already added")
+   ENDIF (DEFINED ${_test_key})
+   SET(${_test_key} "1")
 
    MACRO_PARSE_ARGUMENTS(REFLEX_ADD_TEST "DICTIONARIES" "" "${ARGN}")
 
@@ -211,6 +234,8 @@ MACRO (REFLEX_ADD_TEST name target)
 
    ENDIF (UNIX)
 
-   ADD_TEST(${name} ${_shell_wrapper} ${REFLEX_ADD_TEST_DEFAULT_ARGS})
+   ADD_TEST("${_scoped_name}" ${_shell_wrapper} ${REFLEX_ADD_TEST_DEFAULT_ARGS})
 
 ENDMACRO (REFLEX_ADD_TEST name target)
+
+INCLUDE(ReflexTestMacros)
