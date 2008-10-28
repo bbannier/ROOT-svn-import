@@ -1446,7 +1446,16 @@ void TFitEditor::FillFunctionList(Int_t)
       // TODO
    }
    else if ( fTypeFit->GetSelected() == kFP_UFUNC ) {
-      // TODO
+      Int_t newid = kFP_ALTFUNC;
+      TIter functionsIter(gROOT->GetListOfFunctions());
+      TObject* obj;
+      while( ( obj = (TObject*) functionsIter() ) ) {
+         if ( TF1* func = dynamic_cast<TF1*>(obj) ) {
+            fFuncList->AddEntry(func->GetName(), newid++); 
+         }
+      }
+       if ( newid != kFP_ALTFUNC )
+            fFuncList->Select(newid-1);
    } 
    else if ( fTypeFit->GetSelected() == kFP_PREVFIT ) {
       TList *listOfFunctions = 0;
@@ -1628,7 +1637,6 @@ void TFitEditor::DoFit()
    Foption_t fitOpts;
    TString strDrawOpts;
 
-
    TF1 *fitFunc = 0;
    if ( fNone->GetState() == kButtonDisabled )
    {
@@ -1691,7 +1699,6 @@ void TFitEditor::DoFit()
    // set parameters from panel in function
    SetParameters(fFuncPars, fitFunc);
    RetrieveOptions(fitOpts, strDrawOpts, mopts, fitFunc->GetNpar());
-
 
    switch (fType) {
       case kObjectHisto: {
@@ -1764,8 +1771,9 @@ void TFitEditor::DoFit()
       fParentPad->Update();
    }
 
-   // In case the fit method draws something! Set the canvas and everything else.
-   SetFitObject(gPad, fFitObject, kButton1Down);
+   // In case the fit method draws something! Set the canvas!
+   fParentPad = gPad;
+   UpdateGUI();
 
    if ( fParentPad ) {
       if ( fDim > 0 ) { fSliderX->SetPosition(xmin, xmax); DoSliderXMoved(); }
@@ -1840,7 +1848,6 @@ void TFitEditor::DoDataSet(Int_t selected)
    // If it is a tree, and there is no variables selected, show a dialog
    if ( strcmp( objSelected->ClassName(), "TTree" ) == 0 && 
         name.find(' ') == string::npos ) {
-      cout << "It's a TREE!!!!! (" << objSelected << ')' << endl;
       char variables[256]; char cuts[256];
       strcpy(variables, "Sin input!");
       new TTreeInput( fClient->GetRoot(), GetMainFrame(), variables, cuts );
@@ -2722,12 +2729,9 @@ TF1* TFitEditor::HasFitFunction(TObject *obj)
       while ((obj2 = next())) {
          if (obj2->InheritsFrom(TF1::Class())) {
             func = (TF1 *)obj2;
-            //LM:  does not work - why ??????
-            //std::cout << "from histo function list  func " << func << "  " << func->GetName() << std::endl; 
             TGLBEntry *le = fFuncList->FindEntry(func->GetName());
             if (le) {
                fFuncList->Select(le->EntryId(), kTRUE);
-//               std::cout << func->GetName() << "  " << le->EntryId() << " is selected " << std::endl;
             }
             return func;
          }
