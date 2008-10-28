@@ -449,6 +449,10 @@ N: John Marraffino
 E: marafino@fnal.gov
 D: improvements in TUnixSystem::StackTrace()
 
+N: Andy Mastbaum
+E: mastbaum@lanl.gov
+D: implementation of TH1::Interpolate and TH2::Interpolate
+
 N: Jiri Masik
 E: Jiri.Masik@fzu.cz
 D: Numerous contributions to the system
@@ -536,6 +540,10 @@ D: various contributions to GUI classes (scrolled text in TGTextEntry)
 D: implementation of Qt like signals and slots mechanism (TQObject,
 D: TQConnection, etc.)
 D: author of Carrot (http://carrot.cern.ch)
+
+N: Katerina Opocenska
+E: opocenska@gmail.com
+D: Event Recorder
 
 N: Suzanne Panacek
 E: spanacek@fnal.gov

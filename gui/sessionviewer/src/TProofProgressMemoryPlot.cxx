@@ -71,7 +71,7 @@ TProofProgressMemoryPlot::TProofProgressMemoryPlot(TProofProgressDialog *d,
    //The list of workers
    fWorkers = BuildLogList(vworkers);
    fWorkers->Resize(102,52);
-   fWorkers->SetMultipleSelections(kTRUE); 
+   fWorkers->SetMultipleSelections(kTRUE);
 
    //The SelectAll/ClearAll button
    TGPopupMenu *pm = new TGPopupMenu(gClient->GetRoot());
@@ -79,7 +79,7 @@ TProofProgressMemoryPlot::TProofProgressMemoryPlot(TProofProgressDialog *d,
    pm->AddEntry("Clear All", 1);
 
    fAllWorkers = new TGSplitButton(vworkers, new TGHotString("Select ...            "), pm);
-   fAllWorkers->Connect("ItemClicked(Int_t)", "TProofProgressMemoryPlot", this, 
+   fAllWorkers->Connect("ItemClicked(Int_t)", "TProofProgressMemoryPlot", this,
                         "Select(Int_t)");
    fAllWorkers->SetSplit(kFALSE);
    //select all for the first display
@@ -366,7 +366,7 @@ TGraph *TProofProgressMemoryPlot::DoAveragePlot(Int_t &max_el, Int_t &min_el)
 
    TList *elem = fProofLog->GetListOfLogs();
    if (!elem) {
-      Error("DoAveragePlot", "Empty log"); 
+      Error("DoAveragePlot", "Empty log");
       return 0;
    }
    TIter next(elem);
@@ -391,6 +391,7 @@ TGraph *TProofProgressMemoryPlot::DoAveragePlot(Int_t &max_el, Int_t &min_el)
       const char *role = ple->GetRole();
       if (role[0]!='w') continue; //skip the master log
       TList *lines = ple->GetMacro()->GetListOfLines();
+      if (!lines || lines->GetSize() <= 0) continue;
       curline = (TObjString*)lines->Last();
       parts = curline->String().Tokenize(" ");
       curevent = (TObjString*)parts->At(kEventNumberPos);
@@ -436,6 +437,7 @@ TGraph *TProofProgressMemoryPlot::DoAveragePlot(Int_t &max_el, Int_t &min_el)
       const char *role = ple->GetRole();
       if (role[0]!='w') continue;
       TList *lines = ple->GetMacro()->GetListOfLines();
+      if (!lines || lines->GetSize() <= 0) continue;
       TIter prev(lines, kIterBackward);
       nev = 0;
       nextevent = Long64_t(10E16);
@@ -451,7 +453,7 @@ TGraph *TProofProgressMemoryPlot::DoAveragePlot(Int_t &max_el, Int_t &min_el)
                av_mem[last[ielem] -1 - iline] += tempval; //last[ielem] is the number of lines for
                nw[last[ielem] -1 - iline]++;              //this query and this element
                cur_av += tempval/last[ielem];
-               // printf("added value %f at position %lld\n", tempval, last[ielem]-1-iline);    
+               // printf("added value %f at position %lld\n", tempval, last[ielem]-1-iline);
             }
             iword++;
          }
@@ -527,7 +529,7 @@ TGraph *TProofProgressMemoryPlot::DoWorkerPlot(TProofLogElem *ple)
          if (iword==kMemValuePos){
             tempval = token.Atof();
             gr->SetPoint(nlines-1-iline,lastevent_value-iline*step, tempval/1024.);
-            // printf("setting point %d x=%f, y=%lld\n", nlines-1-iline, tempval/1024., lastevent_value-iline*step);  
+            // printf("setting point %d x=%f, y=%lld\n", nlines-1-iline, tempval/1024., lastevent_value-iline*step);
          }
          iword++;
       }
@@ -589,4 +591,3 @@ void TProofProgressMemoryPlot::Select(Int_t id)
       fWorkers->Select(ie, sel);
    }
 }
-
