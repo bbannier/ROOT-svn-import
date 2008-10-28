@@ -64,6 +64,8 @@ namespace Reflex {
       int fDescr;
    };
 
+#ifndef __MAKECINT__
+
    template <class SELF, class OP1, class OP2>
    class AttributesExpressionT_Binary: public AttributesExpressionT<SELF> {
    public:
@@ -125,6 +127,7 @@ namespace Reflex {
       return AttributesExpressionT_Not<SELF>(*reinterpret_cast<const SELF*>(this));
    }
 
+#endif // __MAKECINT__
 
    const AttributesExpressionT_TypeDescription kPublic(kEDPublic);
    const AttributesExpressionT_TypeDescription kProtected(kEDProtected);
@@ -169,8 +172,10 @@ namespace Reflex {
    const AttributesExpressionT_TypeType kFunctionMember(kETFunctionMember);
    const AttributesExpressionT_TypeType kUnresolved(kETUnresolved);
 
-   const AttributesExpressionT_Or<AttributesExpressionT_TypeType>
+   const AttributesExpressionT_Or<Reflex::AttributesExpressionT_TypeType>
       kTemplateInstance(kTypeTemplateInstance, kMemberTemplateInstance);
+   const AttributesExpressionT_Or<Reflex::AttributesExpressionT_TypeType>
+      kClassOrTemplateInstance(kClass, kTypeTemplateInstance);
 #ifndef __CINT__
    const AttributesExpressionT_Or<
       AttributesExpressionT_Or<AttributesExpressionT_TypeType>,
@@ -178,11 +183,9 @@ namespace Reflex {
    > kClassOrStruct(kClass || kTypeTemplateInstance || kStruct);
 #else
    const AttributesExpressionT_Or<
-      AttributesExpressionT_Or<AttributesExpressionT_TypeType>,
-      AttributesExpressionT_TypeType
-   > kClassOrStruct(
-      AttributesExpressionT_Or<AttributesExpressionT_TypeType>(kClass, kTypeTemplateInstance),
-      kStruct);
+      Reflex::AttributesExpressionT_Or<Reflex::AttributesExpressionT_TypeType>,
+      Reflex::AttributesExpressionT_TypeType
+   > kClassOrStruct(kClassOrTemplateInstance, kStruct);
 #endif
 }
 
