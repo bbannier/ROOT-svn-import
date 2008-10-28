@@ -179,10 +179,12 @@ enum EFitPanel {
    kFP_FIT,   kFP_RESET, kFP_CLOSE,
 
    // New GUI elements from here!
-   kFP_TLIST, kFP_PRED1D, kFP_PRED2D, kFP_PRED3D, kFP_UFUNC, kFP_ROOFIT,
+   kFP_TLIST, kFP_PRED1D, kFP_PRED2D, kFP_PRED3D, kFP_UFUNC, kFP_PREVFIT, kFP_ROOFIT,
    kFP_DATAS,
 
-   kFP_NOSEL = 8000
+   kFP_NOSEL = 8000,
+   kFP_ALTFUNC = 10000
+
 };
 
 enum EParStruct {
@@ -404,12 +406,13 @@ void TFitEditor::CreateGeneralTab()
    TGLabel *label1 = new TGLabel(tf0,"Type of Fit:");
    tf0->AddFrame(label1, new TGLayoutHints(kLHintsNormal, 0, 0, 5, 0));
 
-   TGComboBox* fTypeFit = new TGComboBox(tf0, kFP_TLIST);
+   fTypeFit = new TGComboBox(tf0, kFP_TLIST);
    fTypeFit->AddEntry("Predef-1D", kFP_PRED1D);
    fTypeFit->AddEntry("Predef-2D", kFP_PRED2D);
-   fTypeFit->AddEntry("Predef-3D", kFP_PRED3D);
+   //fTypeFit->AddEntry("Predef-3D", kFP_PRED3D);
    fTypeFit->AddEntry("User Func", kFP_UFUNC);
-   fTypeFit->AddEntry("RooFit", kFP_ROOFIT);
+   fTypeFit->AddEntry("Prev. Fit", kFP_PREVFIT);
+   //fTypeFit->AddEntry("RooFit", kFP_ROOFIT);
    fTypeFit->Resize(90, 20);
    fTypeFit->Select(kFP_PRED1D, kFALSE);
 
@@ -418,7 +421,8 @@ void TFitEditor::CreateGeneralTab()
    tf0->AddFrame(fTypeFit, new TGLayoutHints(kLHintsNormal, 5, 0, 5, 0));
    fTypeFit->Associate(this);
 
-   fFuncList = BuildFunctionList(tf0, kFP_FLIST);
+   fFuncList = new TGComboBox(tf0, kFP_FLIST);
+   FillFunctionList();
    fFuncList->Resize(170, 20);
    fFuncList->Select(kFP_GAUS, kFALSE);
 
@@ -888,8 +892,10 @@ void TFitEditor::ConnectSlots()
 {
    // Connect GUI signals to fit panel slots.
 
-//    // list of data sets to fit
+   // list of data sets to fit
    fDataSet->Connect("Selected(Int_t)", "TFitEditor", this, "DoDataSet(Int_t)");
+   // list of predefined functions
+   fTypeFit->Connect("Selected(Int_t)", "TFitEditor", this, "FillFunctionList(Int_t)");
    // list of predefined functions
    fFuncList->Connect("Selected(Int_t)", "TFitEditor", this, "DoFunction(Int_t)");
    // entered formula or function name
@@ -1139,6 +1145,7 @@ void TFitEditor::UpdateGUI()
             hist = (TH1 *)((THStack *)fFitObject)->GetHists()->First();
 
          case kObjectTree:
+         default:
             //not implemented
             break;
       }
@@ -1205,7 +1212,8 @@ void TFitEditor::UpdateGUI()
          
          case kObjectGraph: 
          case kObjectMultiGraph: 
-         case kObjectTree:  
+         case kObjectTree:
+         default:
             //not implemented
             break;
       }
@@ -1254,6 +1262,7 @@ void TFitEditor::UpdateGUI()
          case kObjectGraph2D:
          case kObjectMultiGraph:
          case kObjectTree:
+         default:
             //not implemented
             break;
       }
@@ -1404,30 +1413,80 @@ void TFitEditor::RecursiveRemove(TObject* obj)
 }
 
 //______________________________________________________________________________
-TGComboBox* TFitEditor::BuildFunctionList(TGFrame* parent, Int_t id)
+void TFitEditor::FillFunctionList(Int_t)
 {
-   // Create function list combo box.
+   fFuncList->RemoveAll();
+   if ( fTypeFit->GetSelected() == kFP_PRED1D && fDim <= 1 ) {
+      // Fill function list combo box.
+      fFuncList->AddEntry("gaus" ,  kFP_GAUS);
+      fFuncList->AddEntry("gausn",  kFP_GAUSN);
+      fFuncList->AddEntry("expo",   kFP_EXPO);
+      fFuncList->AddEntry("landau", kFP_LAND);
+      fFuncList->AddEntry("landaun",kFP_LANDN);
+      fFuncList->AddEntry("pol0",   kFP_POL0);
+      fFuncList->AddEntry("pol1",   kFP_POL1);
+      fFuncList->AddEntry("pol2",   kFP_POL2);
+      fFuncList->AddEntry("pol3",   kFP_POL3);
+      fFuncList->AddEntry("pol4",   kFP_POL4);
+      fFuncList->AddEntry("pol5",   kFP_POL5);
+      fFuncList->AddEntry("pol6",   kFP_POL6);
+      fFuncList->AddEntry("pol7",   kFP_POL7);
+      fFuncList->AddEntry("pol8",   kFP_POL8);
+      fFuncList->AddEntry("pol9",   kFP_POL9);
+      fFuncList->AddEntry("user",   kFP_USER);
 
-   TGComboBox *c = new TGComboBox(parent, id);
+      // Need to be setted this way, otherwise when the functions
+      // are removed, the list doesn't show them.x
+      TGListBox *lb = fFuncList->GetListBox();
+      lb->Resize(lb->GetWidth(), 200);
 
-   c->AddEntry("gaus" ,  kFP_GAUS);
-   c->AddEntry("gausn",  kFP_GAUSN);
-   c->AddEntry("expo",   kFP_EXPO);
-   c->AddEntry("landau", kFP_LAND);
-   c->AddEntry("landaun",kFP_LANDN);
-   c->AddEntry("pol0",   kFP_POL0);
-   c->AddEntry("pol1",   kFP_POL1);
-   c->AddEntry("pol2",   kFP_POL2);
-   c->AddEntry("pol3",   kFP_POL3);
-   c->AddEntry("pol4",   kFP_POL4);
-   c->AddEntry("pol5",   kFP_POL5);
-   c->AddEntry("pol6",   kFP_POL6);
-   c->AddEntry("pol7",   kFP_POL7);
-   c->AddEntry("pol8",   kFP_POL8);
-   c->AddEntry("pol9",   kFP_POL9);
-   c->AddEntry("user",   kFP_USER);
-
-   return c;
+      fFuncList->Select(kFP_GAUS);
+   }
+   else if ( fTypeFit->GetSelected() == kFP_PRED2D && fDim == 2 ) {
+      // TODO
+   }
+   else if ( fTypeFit->GetSelected() == kFP_UFUNC ) {
+      // TODO
+   } 
+   else if ( fTypeFit->GetSelected() == kFP_PREVFIT ) {
+      TList *listOfFunctions = 0;
+      if ( fFitObject ) {
+         switch (fType) {
+            
+         case kObjectHisto:
+            listOfFunctions = ((TH1 *)fFitObject)->GetListOfFunctions();
+            break;
+            
+         case kObjectGraph:
+            listOfFunctions = ((TGraph *)fFitObject)->GetListOfFunctions();
+            break;
+            
+         case kObjectMultiGraph:
+            listOfFunctions = ((TMultiGraph *)fFitObject)->GetListOfFunctions();
+            break;
+            
+         case kObjectGraph2D:
+            listOfFunctions = ((TGraph2D *)fFitObject)->GetListOfFunctions();
+            break;
+            
+         case kObjectHStack:
+         case kObjectTree: 
+         default:
+            break;
+         }
+      }
+      if ( listOfFunctions ) {
+         Int_t newid = kFP_ALTFUNC;
+         TIter next(listOfFunctions, kIterForward);
+         TObject* obj;
+         while ((obj = next()))
+            if (obj->InheritsFrom(TF1::Class())) {
+               fFuncList->AddEntry(obj->GetName(), newid++);
+            }
+         if ( newid != kFP_ALTFUNC )
+            fFuncList->Select(newid-1);
+      }
+   }
 }
 
 void SearchCanvases(TSeqCollection* canvases, vector<TObject*>& objects)
@@ -1643,6 +1702,7 @@ void TFitEditor::DoFit()
          break;
       }
       case kObjectGraph: {
+
          TGraph *gr = (TGraph*)fFitObject;
          // not sure if this is needed 
 //         TH1F *hist = gr->GetHistogram();
@@ -1662,6 +1722,7 @@ void TFitEditor::DoFit()
          break;
       }
       case kObjectMultiGraph: {
+
          TMultiGraph *mg = (TMultiGraph*)fFitObject;
          FitObject(mg, fitFunc, fitOpts, mopts, strDrawOpts, drange);
 
@@ -2090,10 +2151,8 @@ void TFitEditor::DoSetParameters()
          InitParameters( fitFunc, ((TGraph2D*)fFitObject));
          break;
       case kObjectHStack: 
-         // N/A
-         break;
       case kObjectTree:  
-         // N/A
+      default:
          break;
       }
 
@@ -2643,9 +2702,13 @@ TF1* TFitEditor::HasFitFunction(TObject *obj)
          break;
       }
    }
+
+   if ( lf ) {
+      fTypeFit->Select(kFP_PREVFIT);
+      FillFunctionList();
+   }
+
    if (func) {
-      if (lf) GetFunctionsFromList(lf);
-      
       TGLBEntry *le = fFuncList->FindEntry(Form(func->GetName()));
       if (le) {
          fFuncList->Select(le->EntryId(), kFALSE);
@@ -2654,7 +2717,6 @@ TF1* TFitEditor::HasFitFunction(TObject *obj)
       return func;
    } 
    if (lf) {
-      GetFunctionsFromList(lf);
       TObject *obj2;
       TIter next(lf, kIterBackward);
       while ((obj2 = next())) {
@@ -2672,57 +2734,6 @@ TF1* TFitEditor::HasFitFunction(TObject *obj)
       }
    }
    return 0;
-}
-
-//______________________________________________________________________________
-void TFitEditor::GetFunctionsFromList(TList *list)
-{
-   // Scan the list of functions of the selected object and include them 
-   // by name in the combobox holding the predefined functions.
-   
-   TObject *obj;
-   Int_t newid = kFP_USER*30;
-
-   static TObject *Object = 0; 
-   if ( Object != fFitObject )
-   {
-      fFuncList->RemoveAll();
-      if ( fDim == 1 ) // Put back the predefined functions for 1D
-         // objects.
-      {
-         fFuncList->AddEntry("gaus" ,  kFP_GAUS);
-         fFuncList->AddEntry("gausn",  kFP_GAUSN);
-         fFuncList->AddEntry("expo",   kFP_EXPO);
-         fFuncList->AddEntry("landau", kFP_LAND);
-         fFuncList->AddEntry("landaun",kFP_LANDN);
-         fFuncList->AddEntry("pol0",   kFP_POL0);
-         fFuncList->AddEntry("pol1",   kFP_POL1);
-         fFuncList->AddEntry("pol2",   kFP_POL2);
-         fFuncList->AddEntry("pol3",   kFP_POL3);
-         fFuncList->AddEntry("pol4",   kFP_POL4);
-         fFuncList->AddEntry("pol5",   kFP_POL5);
-         fFuncList->AddEntry("pol6",   kFP_POL6);
-         fFuncList->AddEntry("pol7",   kFP_POL7);
-         fFuncList->AddEntry("pol8",   kFP_POL8);
-         fFuncList->AddEntry("pol9",   kFP_POL9);
-         fFuncList->AddEntry("user",   kFP_USER);
-
-         // Need to be setted this way, otherwise when the functions
-         // are removed, the list doesn't show them.x
-         TGListBox *lb = fFuncList->GetListBox();
-         lb->Resize(lb->GetWidth(), 200);
-      }
-
-      TIter next(list, kIterForward);
-      while ((obj = next()))
-         if (obj->InheritsFrom(TF1::Class())) {
-            fFuncList->AddEntry(obj->GetName(), newid++);
-         }
-
-
-      fFuncList->Select((newid != kFP_USER*30)?newid-1:1);
-      Object = fFitObject;
-   }
 }
 
 //______________________________________________________________________________

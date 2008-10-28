@@ -70,6 +70,7 @@ protected:
    TGTextButton        *fCloseButton;      // close the fit panel
    TGLabel             *fSelLabel;         // contains selected fit function
    TGComboBox          *fDataSet;          // contains list of data set to be fitted
+   TGComboBox          *fTypeFit;          // contains the types of functions to be selected
    TGComboBox          *fFuncList;         // contains function list
    TGTextEntry         *fEnteredFunc;      // contains user function file name
    TGTextButton        *fUserButton;       // opens a dialog for user-defined fit method
@@ -155,7 +156,6 @@ protected:
    
    static TFitEditor *fgFitDialog;         // singleton fit panel
 
-   TGComboBox *BuildFunctionList(TGFrame *parent, Int_t id);
    TGComboBox *BuildDataSetList(TGFrame *parent, Int_t id);
    TGComboBox *BuildMethodList(TGFrame *parent, Int_t id);
    Int_t       CheckFunctionString(const char* str);
@@ -163,7 +163,6 @@ protected:
    void        CreateMinimizationTab();
    void        MakeTitle(TGCompositeFrame *parent, const char *title);
    TF1*        HasFitFunction(TObject *obj);
-   void        GetFunctionsFromList(TList *list);
    void        SetEditable(Bool_t);
 
 private:
@@ -200,6 +199,7 @@ public:
    virtual void   SetFunction(const char *function);
 
    // slot methods 'General' tab
+   void           FillFunctionList(Int_t selected = -1);
    virtual void   DoAddition(Bool_t on);
    virtual void   DoAdvancedOptions();
    virtual void   DoAllWeights1();
