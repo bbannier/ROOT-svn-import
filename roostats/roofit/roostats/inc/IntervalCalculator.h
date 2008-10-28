@@ -33,8 +33,8 @@ namespace RooStats {
     virtual void SetWorkspace(RooWorkspace* ws) = 0;
     virtual void SetPdf(const char* name) = 0;
     virtual void SetData(const char* name) = 0;
-    virtual void SetParameters(RooArgSet&) = 0;
-    virtual void SetNuisanceParameters(RooArgSet&) = 0;
+    virtual void SetParameters(RooArgSet*) = 0;
+    virtual void SetNuisanceParameters(RooArgSet*) = 0;
     // set the size of the test (rate of Type I error).  
     // Eg. 0.05 for a 95% Confidence Interval
     virtual void SetSize(Double_t size) = 0;

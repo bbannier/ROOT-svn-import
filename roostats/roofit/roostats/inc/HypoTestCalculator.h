@@ -32,9 +32,9 @@ namespace RooStats {
     // set a common PDF for both the null and alternate hypotheses
     virtual void SetCommonPdf(const char* name) = 0;
     // set parameter values for the null if using a common PDF
-    virtual void SetNullParameters(RooArgSet&) = 0;
+    virtual void SetNullParameters(RooArgSet*) = 0;
     // set parameter values for the alternate if using a common PDF
-    virtual void SetAlternateParameters(RooArgSet&) = 0;
+    virtual void SetAlternateParameters(RooArgSet*) = 0;
     
 
   protected:

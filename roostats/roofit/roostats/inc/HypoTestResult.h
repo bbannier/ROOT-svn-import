@@ -12,29 +12,28 @@
 #define RooStats_HypoTestResult
 
 #include "TNamed.h"
+#include "RooStats/RooStatsUtils.h"
 
 namespace RooStats {
   class HypoTestResult  : public TNamed {
   public:
     HypoTestResult();
-    HypoTestResult(const char* name);
-    HypoTestResult(const char* name, const char* title);
+    HypoTestResult(const char* name, Double_t nullp, Double_t altp);
+    HypoTestResult(const char* name, const char* title, Double_t nullp, Double_t altp);
     virtual ~HypoTestResult();
     
-    //pure virtual? 
-    virtual Double_t NullPValue();
-    //pure virtual? 
-    virtual Double_t AlternatePValue();
+    virtual Double_t NullPValue() const {return fNullPValue;}
+    virtual Double_t AlternatePValue() const {return fAlternatePValue;}
     
     // familiar name for NullPValue()
-    virtual Double_t CLb();
+    virtual Double_t CLb() const {return NullPValue();}
     // familiar name for AlternatePValue()
-    virtual Double_t CLsplusb();
+    virtual Double_t CLsplusb() const {return AlternatePValue();}
     // CLs is simply CLs+b/CLb (not a method, but a quantity)
-    virtual Double_t CLs();
+    virtual Double_t CLs() const {return CLsplusb()/CLb();}
     
     // familiar name for the Null p-value in terms of 1-sided Gaussian significance
-    virtual Double_t Significance();
+    virtual Double_t Significance() const {return RooStats::PValueToSignificance( CLb() ); }
     
   private:
     Double_t fNullPValue;
