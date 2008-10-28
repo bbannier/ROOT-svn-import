@@ -1339,7 +1339,9 @@ void TFitEditor::SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event)
          tmpStr +=te->GetTitle();
          fEnteredFunc->SetText(tmpStr);
       } else if ( !te )
-         fEnteredFunc->SetText("");
+         // If there is no space, an error message is shown:
+         // Error in <TString::AssertElement>: out of bounds: i = -1, Length = 0
+         fEnteredFunc->SetText(" ");
       fEnteredFunc->SelectAll();
    }
 
@@ -1697,6 +1699,7 @@ void TFitEditor::DoFit()
    
    //if ( fFuncPars ) 
    // set parameters from panel in function
+   assert(fitFunc);
    SetParameters(fFuncPars, fitFunc);
    RetrieveOptions(fitOpts, strDrawOpts, mopts, fitFunc->GetNpar());
 
