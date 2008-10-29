@@ -2197,10 +2197,18 @@ void TFitEditor::DoSliderXMoved()
 {
    // Slot connected to range settings on x-axis.
 
-   if ( !fParentPad || !fFitObject ) return;
+   if ( !fFitObject ) return;
    
    fSliderXMin->SetNumber( fXaxis->GetBinLowEdge( fSliderX->GetMinPosition() ) );
    fSliderXMax->SetNumber( fXaxis->GetBinUpEdge ( fSliderX->GetMaxPosition() ) );
+
+   DrawSelection();
+}
+
+//______________________________________________________________________________
+void TFitEditor::DrawSelection()
+{
+   if ( !fParentPad ) return;
 
    Int_t px1,py1,px2,py2;
 
@@ -2260,7 +2268,7 @@ void TFitEditor::DoNumericSliderXChanged()
    fSliderX->SetPosition(fXaxis->FindBin( fSliderXMin->GetNumber() ),
                          fXaxis->FindBin( fSliderXMax->GetNumber() ));
 
-   DoSliderXMoved();
+   DrawSelection();
 }
 
 //______________________________________________________________________________
@@ -2268,44 +2276,12 @@ void TFitEditor::DoSliderYMoved()
 {
    // Slot connected to range settings on y-axis.
 
-   if ( !fParentPad || !fFitObject ) return;
+   if ( !fFitObject ) return;
 
    fSliderYMin->SetNumber( fYaxis->GetBinLowEdge( fSliderY->GetMinPosition() ) );
    fSliderYMax->SetNumber( fYaxis->GetBinUpEdge ( fSliderY->GetMaxPosition() ) );
-
-   Int_t px1,py1,px2,py2;
-
-   TVirtualPad *save = 0;
-   save = gPad;
-   gPad = fParentPad;
-   gPad->cd();
-
-   Float_t ybottom = 0;
-   Float_t ytop = 0;
-   ybottom = fYaxis->GetBinLowEdge((Int_t)((fSliderY->GetMinPosition())+0.5));
-   ytop = fYaxis->GetBinUpEdge((Int_t)((fSliderY->GetMaxPosition())+0.5));
-
-   Float_t xmin = fXaxis->GetBinLowEdge((Int_t)((fSliderX->GetMinPosition())+0.5));//fParentPad->GetUxmin();
-   Float_t xmax = fXaxis->GetBinUpEdge((Int_t)((fSliderX->GetMaxPosition())+0.5));//fParentPad->GetUxmax();
-
-   px1 = fParentPad->XtoAbsPixel(xmin);
-   py1 = fParentPad->YtoAbsPixel(ybottom);
-   px2 = fParentPad->XtoAbsPixel(xmax);
-   py2 = fParentPad->YtoAbsPixel(ytop);
-
-   gPad->GetCanvas()->FeedbackMode(kTRUE);
-   gPad->SetLineWidth(1);
-   gPad->SetLineColor(2);
-
-   gVirtualX->DrawBox(fPx1old, fPy1old, fPx2old, fPy2old, TVirtualX::kHollow);
-   gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
-
-   fPx1old = px1;
-   fPy1old = py1;
-   fPx2old = px2 ;
-   fPy2old = py2;
-
-   if(save) gPad = save;
+   
+   DrawSelection();
 }
 
 //______________________________________________________________________________
@@ -2322,7 +2298,7 @@ void TFitEditor::DoNumericSliderYChanged()
    fSliderY->SetPosition( fYaxis->FindBin( fSliderYMin->GetNumber() ),
                           fYaxis->FindBin( fSliderYMax->GetNumber() ));
 
-   DoSliderYMoved();
+   DrawSelection();
 }
 
 //______________________________________________________________________________

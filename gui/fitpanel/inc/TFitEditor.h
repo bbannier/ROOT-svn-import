@@ -158,6 +158,7 @@ protected:
 
    TGComboBox *BuildDataSetList(TGFrame *parent, Int_t id);
    TGComboBox *BuildMethodList(TGFrame *parent, Int_t id);
+   void        DrawSelection();
    Int_t       CheckFunctionString(const char* str);
    void        CreateFunctionGroup();
    void        CreateGeneralTab();
