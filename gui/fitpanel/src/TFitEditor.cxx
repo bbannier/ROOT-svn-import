@@ -1811,6 +1811,9 @@ Int_t TFitEditor::CheckFunctionString(const char *fname)
    } else if ( fDim == 2 ) {
       TF2 form("tmpCheck", fname);
       rvalue = form.Compile();
+   } else if ( fDim == 3 ) {
+      TF3 form("tmpCheck", fname);
+      rvalue = form.Compile();
    }
 
    return rvalue;
