@@ -270,6 +270,23 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
    // Constructor of fit editor.
 
    SetCleanup(kDeepCleanup);
+
+   TGCompositeFrame *tf = new TGCompositeFrame(this, 350, 26,
+                                                kHorizontalFrame);
+   TGLabel *label = new TGLabel(tf,"Data Set: ");
+   tf->AddFrame(label, new TGLayoutHints(kLHintsNormal, 15, 0, 5, 0));
+
+   fDataSet = BuildDataSetList(tf, kFP_DATAS);
+   fDataSet->Resize(264, 20);
+
+   TGListBox *lb = fDataSet->GetListBox();
+   lb->Resize(lb->GetWidth(), 200);
+   tf->AddFrame(fDataSet, new TGLayoutHints(kLHintsNormal, 13, 0, 5, 0));
+   fDataSet->Associate(this);
+
+   this->AddFrame(tf, new TGLayoutHints(kLHintsNormal | kLHintsExpandX,0,0,5,5));
+
+   CreateFunctionGroup();
    
    fTab = new TGTab(this, 10, 10);
    AddFrame(fTab, new TGLayoutHints(kLHintsExpandY | kLHintsExpandX));
@@ -372,38 +389,13 @@ TFitEditor::~TFitEditor()
 }
 
 //______________________________________________________________________________
-void TFitEditor::CreateGeneralTab()
+void TFitEditor::CreateFunctionGroup()
 {
-   // Create 'General' tab.
-
-   fTabContainer = fTab->AddTab("General");
-   fGeneral = new TGCompositeFrame(fTabContainer, 10, 10, kVerticalFrame);
-   fTabContainer->AddFrame(fGeneral, new TGLayoutHints(kLHintsTop |
-                                                       kLHintsExpandX,
-                                                       5, 5, 2, 2));
-
-   TGGroupFrame *gf1 = new TGGroupFrame(fGeneral, "Function", kFitWidth);
-
-
-   TGCompositeFrame *tf = new TGCompositeFrame(gf1, 350, 26,
-                                                kHorizontalFrame);
-   TGLabel *label = new TGLabel(tf,"Data Set: ");
-   tf->AddFrame(label, new TGLayoutHints(kLHintsNormal, 0, 0, 5, 0));
-
-   fDataSet = BuildDataSetList(tf, kFP_DATAS);
-   fDataSet->Resize(264, 20);
-
-   TGListBox *lb = fDataSet->GetListBox();
-   lb->Resize(lb->GetWidth(), 200);
-   tf->AddFrame(fDataSet, new TGLayoutHints(kLHintsNormal, 13, 0, 5, 0));
-   fDataSet->Associate(this);
-
-   gf1->AddFrame(tf, new TGLayoutHints(kLHintsNormal | kLHintsExpandX));
-
-
+   TGGroupFrame *gf1 = new TGGroupFrame(this, "Fit Function", kFitWidth);
+      
    TGCompositeFrame *tf0 = new TGCompositeFrame(gf1, 350, 26,
                                                 kHorizontalFrame);
-   TGLabel *label1 = new TGLabel(tf0,"Type of Fit:");
+   TGLabel *label1 = new TGLabel(tf0,"Type:");
    tf0->AddFrame(label1, new TGLayoutHints(kLHintsNormal, 0, 0, 5, 0));
 
    fTypeFit = new TGComboBox(tf0, kFP_TLIST);
@@ -416,14 +408,14 @@ void TFitEditor::CreateGeneralTab()
    fTypeFit->Resize(90, 20);
    fTypeFit->Select(kFP_PRED1D, kFALSE);
 
-   lb = fTypeFit->GetListBox();
+   TGListBox *lb = fTypeFit->GetListBox();
    lb->Resize(lb->GetWidth(), 200);
    tf0->AddFrame(fTypeFit, new TGLayoutHints(kLHintsNormal, 5, 0, 5, 0));
    fTypeFit->Associate(this);
 
    fFuncList = new TGComboBox(tf0, kFP_FLIST);
    FillFunctionList();
-   fFuncList->Resize(170, 20);
+   fFuncList->Resize(194, 20);
    fFuncList->Select(kFP_GAUS, kFALSE);
 
    lb = fFuncList->GetListBox();
@@ -502,8 +494,20 @@ void TFitEditor::CreateGeneralTab()
    gf1->AddFrame(tf4, new TGLayoutHints(kLHintsNormal |
                                              kLHintsExpandX, 5, 0, 0, 0));
 
-   fGeneral->AddFrame(gf1, new TGLayoutHints(kLHintsExpandX, 5, 5, 0, 0));
+   this->AddFrame(gf1, new TGLayoutHints(kLHintsExpandX, 5, 5, 0, 0));
 
+}
+
+//______________________________________________________________________________
+void TFitEditor::CreateGeneralTab()
+{
+   // Create 'General' tab.
+
+   fTabContainer = fTab->AddTab("General");
+   fGeneral = new TGCompositeFrame(fTabContainer, 10, 10, kVerticalFrame);
+   fTabContainer->AddFrame(fGeneral, new TGLayoutHints(kLHintsTop |
+                                                       kLHintsExpandX,
+                                                       5, 5, 2, 2));
 
    // 'options' group frame
    TGGroupFrame *gf = new TGGroupFrame(fGeneral, "Fit Settings", kFitWidth);
@@ -522,7 +526,7 @@ void TFitEditor::CreateGeneralTab()
    fMethodList = BuildMethodList(v1, kFP_MLIST);
    fMethodList->Select(1, kFALSE);
    fMethodList->Resize(130, 20);
-   lb = fMethodList->GetListBox();
+   TGListBox *lb = fMethodList->GetListBox();
    Int_t lbe = lb->GetNumberOfEntries();
    lb->Resize(lb->GetWidth(), lbe*16);
    v1->AddFrame(fMethodList, new TGLayoutHints(kLHintsLeft, 0, 0, 2, 5));
