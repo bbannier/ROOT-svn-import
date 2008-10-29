@@ -1150,7 +1150,6 @@ void TFitEditor::UpdateGUI()
 
          case kObjectTree:
          default:
-            //not implemented
             break;
       }
       
@@ -1693,7 +1692,7 @@ void TFitEditor::DoFit()
    if ( fitFunc == 0 )
    {
       // create function with saved range values 
-      if ( fDim == 1 )
+      if ( fDim == 1 || fDim == 0 )
          fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText(),fFuncXmin,fFuncXmax);
       else if ( fDim == 2 )
          fitFunc = new TF2("lastFitFunc",fEnteredFunc->GetText(),fFuncXmin,fFuncXmax, fFuncYmin, fFuncYmax);
@@ -1710,14 +1709,14 @@ void TFitEditor::DoFit()
    switch (fType) {
       case kObjectHisto: {
 
-         TH1 *hist = (TH1*)fFitObject;
+         TH1 *hist = dynamic_cast<TH1*>(fFitObject);
          ROOT::Fit::FitObject(hist, fitFunc, fitOpts, mopts, strDrawOpts, drange);
 
          break;
       }
       case kObjectGraph: {
 
-         TGraph *gr = (TGraph*)fFitObject;
+         TGraph *gr = dynamic_cast<TGraph*>(fFitObject);
          // not sure if this is needed 
 //         TH1F *hist = gr->GetHistogram();
 //          if (hist) { //!!! for many graphs in a pad, use the xmin/xmax of pad!!!
@@ -1737,14 +1736,14 @@ void TFitEditor::DoFit()
       }
       case kObjectMultiGraph: {
 
-         TMultiGraph *mg = (TMultiGraph*)fFitObject;
+         TMultiGraph *mg = dynamic_cast<TMultiGraph*>(fFitObject);
          FitObject(mg, fitFunc, fitOpts, mopts, strDrawOpts, drange);
 
          break;
       }
       case kObjectGraph2D: {
 
-         TGraph2D *mg = (TGraph2D*)fFitObject;
+         TGraph2D *mg = dynamic_cast<TGraph2D*>(fFitObject);
          FitObject(mg, fitFunc, fitOpts, mopts, strDrawOpts, drange);
 
          break;
@@ -1754,7 +1753,13 @@ void TFitEditor::DoFit()
          break;
       }
       case kObjectTree:  {
-         // N/A
+         TGTextLBEntry* textEntry = 
+            static_cast<TGTextLBEntry*>( fDataSet->GetListBox()->GetEntry( fDataSet->GetSelected() ) );
+         string name = textEntry->GetText()->GetString();
+         dynamic_cast<TTree*>(fFitObject)->UnbinnedFit("gausND",
+                                                       name.substr( name.find('(') + 2, name.find(',') - name.find('(') - 3 ).c_str(),
+                                                       name.substr( name.find(',') + 3, name.find(')') - name.find(',') - 4 ).c_str(),
+                                                       "");
          break;
       }
    }
@@ -1805,7 +1810,7 @@ Int_t TFitEditor::CheckFunctionString(const char *fname)
 {
    // Check entered function string.
    Int_t rvalue = 0;
-   if ( fDim == 1 ) {
+   if ( fDim == 1 || fDim == 0 ) {
       TF1 form("tmpCheck", fname);
       rvalue = form.Compile();
    } else if ( fDim == 2 ) {
@@ -1967,7 +1972,7 @@ void TFitEditor::DoFunction(Int_t selected)
    // reset function parameters if the number of parameters of the new
    // function is different from the old one!
    TF1* fitFunc = 0;
-   if ( fDim == 1 )
+   if ( fDim == 1 || fDim == 0 )
       fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText());
    else if ( fDim == 2 )
       fitFunc = new TF2("lastFitFunc",fEnteredFunc->GetText());
@@ -2143,7 +2148,7 @@ void TFitEditor::DoSetParameters()
       TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
       fitFunc = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
    }
-   else if ( fDim == 1 )
+   else if ( fDim == 1 || fDim == 0 )
       fitFunc = new TF1("tmpPars",fEnteredFunc->GetText() );
    else if ( fDim == 2 )
       fitFunc = new TF2("tmpPars",fEnteredFunc->GetText() );
@@ -2370,7 +2375,7 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
    } else if (obj->InheritsFrom("TTree")) {
       fType = kObjectTree;
       set = kTRUE;
-      fDim = -1; //not implemented
+      fDim = 0; 
       //fMethodList->SetEnabled(kFALSE);
    } else if (obj->InheritsFrom("TH1")){
       fType = kObjectHisto;
