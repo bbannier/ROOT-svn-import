@@ -26,7 +26,7 @@ MACRO (test002)
    REFLEX_ASSERT_GENREFLEX_CLI(ARGS X.h Y.h --quiet
                                RESULT EQUAL 1
                                STDOUT STREQUAL "\n--->> genreflex: ERROR: processing file with gccxml. genreflex command failed.\n"
-                               STDERR MATCHES "X.h:1: error: declaration does not declare anything\nX.h:1: error: missing '.' before right brace")
+                               STDERR MATCHES "X.h:1: error: .*\n")
 
    MACRO_ASSERT_TEST_FILE_NOT_EXISTS("X_rflx.cpp")
    MACRO_ASSERT_TEST_FILE_EXISTS("Y_rflx.cpp")
