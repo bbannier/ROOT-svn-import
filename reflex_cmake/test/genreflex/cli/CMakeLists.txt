@@ -1,8 +1,8 @@
 # CLI Tests
 #   Tests genreflex's command-line interface
 
-FILE(READ /home/azalek/Projets/Reflex/Test/src/reflex/test/genreflex/cli/Synopsis.txt _msg_synopsis)
-FILE(READ /home/azalek/Projets/Reflex/Test/src/reflex/test/genreflex/cli/Help.txt _msg_help)
+MACRO_READ_RESOURCE(_msg_synopsis ${CMAKE_CURRENT_LIST_FILE} Synopsis.txt)
+MACRO_READ_RESOURCE(_msg_help ${CMAKE_CURRENT_LIST_FILE} Help.txt)
 
 # no input files is an error
 MACRO (test001)
