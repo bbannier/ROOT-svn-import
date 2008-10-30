@@ -1914,6 +1914,7 @@ void TFitEditor::DoFunction(Int_t selected)
    // Slot connected to predefined fit function settings.
 
    TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
+   bool editable = false;
    if (fNone->GetState() == kButtonDown || fNone->GetState() == kButtonDisabled) {
       TF1* tmpTF1 = 0;
       switch (fType) {
@@ -1930,17 +1931,18 @@ void TFitEditor::DoFunction(Int_t selected)
 
       if ( tmpTF1 && strcmp(tmpTF1->GetExpFormula(), "") ) 
       {
-         SetEditable(kTRUE);
+         editable = kTRUE;
          fEnteredFunc->SetText(tmpTF1->GetExpFormula());
       }
       else
       {
          if ( selected <= kFP_USER )
-            SetEditable(kTRUE);
+            editable = kTRUE;
          else       
-            SetEditable(kFALSE);
+            editable = kFALSE;
          fEnteredFunc->SetText(te->GetTitle());
       }
+      SetEditable(editable);
    } else if (fAdd->GetState() == kButtonDown) {
       Int_t np = 0;
       TString s = "";
@@ -1973,12 +1975,19 @@ void TFitEditor::DoFunction(Int_t selected)
    // reset function parameters if the number of parameters of the new
    // function is different from the old one!
    TF1* fitFunc = 0;
-   if ( fDim == 1 || fDim == 0 )
-      fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText());
-   else if ( fDim == 2 )
-      fitFunc = new TF2("lastFitFunc",fEnteredFunc->GetText());
-   else if ( fDim == 3 )
-      fitFunc =  new TF3("lastFitFunc",fEnteredFunc->GetText());
+   if ( !editable ) {
+      TF1* tmpF1 = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
+      fitFunc = (TF1*)tmpF1->IsA()->New();
+      tmpF1->Copy(*fitFunc);
+   }
+   else {
+      if ( fDim == 1 || fDim == 0 ) 
+         fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText(),fFuncXmin,fFuncXmax);
+      else if ( fDim == 2 )
+         fitFunc = new TF2("lastFitFunc",fEnteredFunc->GetText());
+      else if ( fDim == 3 )
+         fitFunc =  new TF3("lastFitFunc",fEnteredFunc->GetText());
+   }
 
    if ( fitFunc && (unsigned int) fitFunc->GetNpar() != fFuncPars.size() )
       fFuncPars.clear();
@@ -2805,8 +2814,8 @@ void TFitEditor::SetEditable(Bool_t state)
    if ( state )
    {
       fEnteredFunc->SetState(kTRUE);
-         fAdd->SetState(kButtonUp, kFALSE);
-         fNone->SetState(kButtonDown, kFALSE);
+      fAdd->SetState(kButtonUp, kFALSE);
+      fNone->SetState(kButtonDown, kFALSE);
    } else {
       fEnteredFunc->SetState(kFALSE);
       fAdd->SetState(kButtonDisabled, kFALSE);
