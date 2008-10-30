@@ -1862,7 +1862,7 @@ void TFitEditor::DoDataSet(Int_t selected)
    assert(objSelected);
 
    // If it is a tree, and there is no variables selected, show a dialog
-   if ( strcmp( objSelected->ClassName(), "TTree" ) == 0 && 
+   if ( objSelected->InheritsFrom("TTree") && 
         name.find(' ') == string::npos ) {
       char variables[256]; char cuts[256];
       strcpy(variables, "Sin input!");
@@ -2371,7 +2371,6 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
       fType = kObjectTree;
       set = kTRUE;
       fDim = 0; 
-      cout << "Binned Likelihood" << fMethodList->FindEntry("Binned Likelihood") << endl;
       fMethodList->RemoveAll();
       fMethodList->AddEntry("Unbinned Likelihood", kFP_MUBIN);
       fMethodList->Select(kFP_MUBIN, kFALSE);      
