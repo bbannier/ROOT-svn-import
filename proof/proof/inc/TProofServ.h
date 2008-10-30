@@ -54,6 +54,7 @@ class TList;
 class TDSetElement;
 class TMessage;
 class TTimer;
+class TReaperTimer;
 class TMutex;
 class TFileCollection;
 class TProofDataSetManager;
@@ -67,6 +68,7 @@ typedef Int_t (*OldProofServAuthSetup_t)(TSocket *, Bool_t, Int_t,
 
 class TProofServ : public TApplication {
 
+friend class TProofServLite;
 friend class TXProofServ;
 
 public:
@@ -124,6 +126,7 @@ private:
    Bool_t        fRealTimeLog;      //TRUE if log messages should be send back in real-time
 
    TTimer       *fShutdownTimer;    // Timer used to shutdown out-of-control sessions
+   TReaperTimer *fReaperTimer;      // Timer used to control children state
 
    Int_t         fInflateFactor;    // Factor in 1/1000 to inflate the CPU time
 
@@ -137,14 +140,14 @@ private:
    Long64_t      fMaxBoxSize;       //Max size of the sandbox
    Long64_t      fHWMBoxSize;       //High-Water-Mark on the sandbox size
 
-   void          RedirectOutput();
+   static FILE  *fgErrorHandlerFile; // File where to log 
+
+   void          RedirectOutput(const char *dir = 0, const char *mode = "w");
    Int_t         CatMotd();
    Int_t         UnloadPackage(const char *package);
    Int_t         UnloadPackages();
    Int_t         OldAuthSetup(TString &wconf);
    Int_t         GetPriority();
-
-   Int_t         AssertDataSet(TDSet *dset, TList *input);
 
    // Query handlers
    TProofQueryResult *MakeQueryResult(Long64_t nentries, const char *opt,
@@ -162,6 +165,7 @@ protected:
    virtual Int_t HandleCache(TMessage *mess);
    virtual void  HandleCheckFile(TMessage *mess);
    virtual Int_t HandleDataSets(TMessage *mess);
+   virtual void  HandleFork(TMessage *mess);
    virtual void  HandleLibIncPath(TMessage *mess);
    virtual void  HandleProcess(TMessage *mess);
    virtual void  HandleQueryList(TMessage *mess);
@@ -175,8 +179,7 @@ protected:
    virtual void  MakePlayer();
    virtual void  DeletePlayer();
 
-   static void   ErrorHandler(Int_t level, Bool_t abort, const char *location,
-                              const char *msg);
+   virtual Int_t Fork();
 
 public:
    TProofServ(Int_t *argc, char **argv, FILE *flog = 0);
@@ -194,6 +197,7 @@ public:
    const char    *GetImage()      const { return fImage; }
    const char    *GetSessionTag() const { return fTopSessionTag; }
    const char    *GetSessionDir() const { return fSessionDir; }
+   const char    *GetPackageDir() const { return fPackageDir; }
    Int_t          GetProtocol()   const { return fProtocol; }
    const char    *GetOrdinal()    const { return fOrdinal; }
    Int_t          GetGroupId()    const { return fGroupId; }
@@ -249,6 +253,10 @@ public:
    // Log control
    Bool_t         LogToSysLog() { return fLogToSysLog; }
    void           LogToMaster(Bool_t on = kTRUE) { fSendLogToMaster = on; }
+
+   static FILE   *SetErrorHandlerFile(FILE *ferr);
+   static void    ErrorHandler(Int_t level, Bool_t abort, const char *location,
+                               const char *msg);
 
    static Bool_t      IsActive();
    static TProofServ *This();
@@ -329,6 +337,20 @@ private:
 public:
    TShutdownTimer(TProofServ *p, Int_t delay) : TTimer(delay, kFALSE), fProofServ(p) { }
 
+   Bool_t Notify();
+};
+
+//--- Synchronous timer used to reap children processes change of state
+//______________________________________________________________________________
+class TReaperTimer : public TTimer {
+private:
+   TList  *fChildren;   // List of children (forked) processes
+
+public:
+   TReaperTimer(Long_t frequency = 1000) : TTimer(frequency, kTRUE), fChildren(0) { }
+   virtual ~TReaperTimer();
+
+   void AddPid(Int_t pid);
    Bool_t Notify();
 };
 

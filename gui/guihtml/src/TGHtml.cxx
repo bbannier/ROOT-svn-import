@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "TSystem.h"
 #include "TGHtml.h"
 #include "THashTable.h"
 #include "TObjString.h"
@@ -42,6 +43,10 @@
 #include "TImage.h"
 #include "TGScrollBar.h"
 #include "TGTextEntry.h"
+#include "TGText.h"
+#include "Riostream.h"
+#include "TGComboBox.h"
+#include "TGListBox.h"
 
 //_____________________________________________________________________________
 //
@@ -1211,6 +1216,17 @@ Bool_t TGHtml::HandleHtmlInput(TGHtmlInput *pr, Event_t *event)
          te->SetFocus();
          break;
       }
+      case INPUT_TYPE_Select: {
+         RemoveInput(kButtonPressMask | kButtonReleaseMask | kPointerMotionMask);
+         eventSt.fUser[0] = childdum;
+         if (pr->frame->InheritsFrom("TGComboBox"))
+            ((TGComboBox *)pr->frame)->HandleButton(&eventSt);
+         else if (pr->frame->InheritsFrom("TGListBox"))
+            ((TGListBox *)pr->frame)->HandleButton(&eventSt);
+         InputSelected(name, val); // emit InputSelected
+         AddInput(kButtonPressMask | kButtonReleaseMask | kPointerMotionMask);
+         break;
+      }
       default:
          break;
    }
@@ -1272,6 +1288,19 @@ void TGHtml::RadioChanged(const char *name, const char *val)
    args[1] = (Long_t)val;
 
    Emit("RadioChanged(char*,char*)", args);
+}
+
+//______________________________________________________________________________
+void TGHtml::InputSelected(const char *name, const char *val)
+{
+   // Emit Selected() signal.
+
+   Long_t args[2];
+
+   args[0] = (Long_t)name;
+   args[1] = (Long_t)val;
+
+   Emit("InputSelected(char*,char*)", args);
 }
 
 //______________________________________________________________________________
@@ -2003,4 +2032,37 @@ int TGHtml::SetInsert(const char *insIx)
    }
 
    return kTRUE;
+}
+
+//______________________________________________________________________________
+void TGHtml::SavePrimitive(ostream &out, Option_t * /*= ""*/)
+{
+   // Save a html widget as a C++ statement(s) on output stream out.
+
+   out << "   TGHtml *";
+   out << GetName() << " = new TGHtml(" << fParent->GetName()
+       << "," << GetWidth() << "," << GetHeight()
+       << ");"<< endl;
+
+   if (fCanvas->GetBackground() != TGFrame::GetWhitePixel()) {
+      out << "   " << GetName() << "->ChangeBackground(" << fCanvas->GetBackground() << ");" << endl;
+   }
+
+   char fn[kMAXPATHLEN];
+   TGText txt(GetText());
+   sprintf(fn,"Html%s.htm",GetName()+5);
+   txt.Save(fn);
+   out << "   " << "FILE *f = fopen(\"" << fn << "\", \"r\");" << endl;
+   out << "   " << "if (f) {" << endl;
+   out << "      " << GetName() << "->Clear();" << endl;
+   out << "      " << GetName() << "->Layout();" << endl;
+   out << "      " << GetName() << "->SetBaseUri(\"\");" << endl;
+   out << "      " << "char *buf = (char *)calloc(4096, sizeof(char));" << endl;
+   out << "      " << "while (fgets(buf, 4096, f)) {" << endl;
+   out << "         " << GetName() << "->ParseText(buf);" << endl;
+   out << "      " << "}" << endl;
+   out << "      " << "free(buf);" << endl;
+   out << "      " << "fclose(f);" << endl;
+   out << "   " << "}" << endl;
+   out << "   " << GetName() << "->Layout();" << endl;
 }

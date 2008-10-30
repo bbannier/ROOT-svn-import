@@ -104,15 +104,15 @@ FunctionGradient Numerical2PGradientCalculator::operator()(const MinimumParamete
 #ifndef MINUIT2_PARALLEL_OPENMP
    // for serial execution this can be outside the loop
    MnAlgebraicVector x = par.Vec();
-#endif
+#else
 
-
-   // parallelize this loop using OpenMP
+ // parallelize this loop using OpenMP
 //#define N_PARALLEL_PAR 5
 #pragma omp parallel
 #pragma omp for 
 //#pragma omp for schedule (static, N_PARALLEL_PAR)
 
+#endif
 
    for(int i = 0; i < int(n); i++) {
 

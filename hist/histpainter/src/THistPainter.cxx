@@ -599,13 +599,13 @@ The titles are part of the persistent histogram.
 <a name="HP060"></a><h3>The option "SAME"</h3>
 
 
-By default, when an histogram is drawn, the current pad is cleared before 
+By default, when an histogram is drawn, the current pad is cleared before
 drawing. In order to keep the previous drawing and draw on top of it the
 option <tt>"SAME"</tt> should be use. The histogram drawn with the option
 <tt>"SAME"</tt> uses the coordinates system available in the current pad.
 <p>
 This option can be used alone or combined with any valid drawing option but
-some combinations must be use with care. 
+some combinations must be use with care.
 
 <a name="HP060a"></a><h4><u>Limitations</u></h4>
 <ul>
@@ -2037,6 +2037,11 @@ should be added to the list of the options used to paint the histogram.
 
 The class <tt>TGLHistPainter</tt> allows to paint data set using the OpenGL 3D
 graphics library. The plotting options start with <tt>GL</tt> keyword.
+In addition, in order to inform canvases that OpenGL should be used to render
+3D representations, the following option should be set:
+<pre>
+      gStyle->SetCanvasPreferGL(true);
+</pre>
 
 <a name="HP29a"></a><h4><u>General information: plot types and supported options</u></h4>
 
@@ -2665,7 +2670,7 @@ char *THistPainter::GetObjectInfo(Int_t px, Int_t py) const
    End_html */
 
    if (!gPad) return (char*)"";
-   static char info[64];
+   static char info[100];
    Double_t x  = gPad->PadtoX(gPad->AbsPixeltoX(px));
    Double_t y  = gPad->PadtoY(gPad->AbsPixeltoY(py));
    Double_t x1 = gPad->PadtoX(gPad->AbsPixeltoX(px+1));
@@ -6217,7 +6222,7 @@ void THistPainter::PaintStat(Int_t dostat, TF1 *fit)
    <a href="#HP07">Draw the statistics box for 1D and profile histograms.</a>
    End_html */
 
-   static char t[64];
+   static char t[100];
    Int_t dofit;
    TPaveStats *stats  = 0;
    TIter next(fFunctions);
@@ -6436,7 +6441,7 @@ void THistPainter::PaintStat2(Int_t dostat, TF1 *fit)
    if (fH->GetDimension() != 2) return;
    TH2 *h2 = (TH2*)fH;
 
-   static char t[64];
+   static char t[100];
    Int_t dofit;
    TPaveStats *stats  = 0;
    TIter next(fFunctions);
@@ -6647,7 +6652,7 @@ void THistPainter::PaintStat3(Int_t dostat, TF1 *fit)
    if (fH->GetDimension() != 3) return;
    TH3 *h3 = (TH3*)fH;
 
-   static char t[64];
+   static char t[100];
    Int_t dofit;
    TPaveStats *stats  = 0;
    TIter next(fFunctions);
@@ -6984,8 +6989,13 @@ void THistPainter::PaintSurface(Option_t *)
    view->SetView(phideg, thedeg, psideg, irep);
 
    //     Set color/style for back box
-   fLego->SetFillStyle(gPad->GetFrameFillStyle());
-   fLego->SetFillColor(gPad->GetFrameFillColor());
+   if (Hoption.Same) {
+      fLego->SetFillStyle(0);
+      fLego->SetFillColor(1);
+   } else {
+      fLego->SetFillStyle(gPad->GetFrameFillStyle());
+      fLego->SetFillColor(gPad->GetFrameFillColor());
+   }
    fLego->TAttFill::Modify();
 
    Int_t backcolor = gPad->GetFrameFillColor();

@@ -1,7 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
   <title>PROOF release notes</title></head>
-
 <body>
 
 <br>
@@ -16,7 +15,13 @@
 
   <ul>
 
-    <li>XrdProofd plug-in</li>
+    <li>PROOF-Lite</li><ul><li>2-tier
+realization of PROOF intended for multi-core machines; the client
+starts directly the workers; no daemon is required. To start a session
+just use TProof::Open("") or TProof::Open("lite"). From there on
+everything should be as in normal PROOF. To start a standard PROOF
+session (i.e. via daemons) on the localhost use
+TProof::Open("localhost").</li></ul><li>XrdProofd plug-in</li>
 
     <ul>
 
@@ -39,7 +44,7 @@ connections.&nbsp;</li>
     <li>Dynamic "per-query" scheduling</li>
 
       <ul>
-        
+
         <li>Dynamic worker startup. It can be enabled by the cluster
         administrator or by a user with 'Proof.DynamicStartup'
         environment variable. The effect is that a session starts only on
@@ -52,6 +57,11 @@ connections.&nbsp;</li>
 
         <li> A packet resubmitting mechanism. When a worker dies all the
         packets that it processed are resubmitted.</li>
+    <li>Added the possibility to handle dynamically removed workers and partly processed
+     packets (when a worker is stopped while processing a packet it finishes
+     the current event and the rest of the packet is reassigned to another workers).
+     It's done by a new method TPacketizerAdaptive::AddProcessed(TSlave *sl,
+     TProofProgressStatus *st, TList **) and TPacketizerAdaptive::ReassignPacket. </li>
 
       </ul><li>Add
 possibility to display the memory footprint on workers and master as a
@@ -70,7 +80,12 @@ measurements are recorded by default; this number can be changed with'proof-&gt;
 
   <ul>
 
-    <li>XrdProofd plug-in</li>
+    <li>More
+complete set of tests in test/stressProof . To run with PROOF-Lite pass
+the argument 'lite' as master URL, e.g. './stressProof lite'.</li><li>Possibility
+to control on the client via rc variable the location of the sandbox,
+package directory, cache and dataset directory (the latters two only
+for PROOF-Lite); the variable names are 'Proof.Sandbox',&nbsp; 'Proof.PackageDir',&nbsp;'Proof.CacheDir' and 'Proof.DataSetDir'. The <span style="font-weight: bold;">default location of the sandbox has been changed from "~/proof" to "~/.proof"</span> to avoid interferences with possible users' working areas.</li><li>XrdProofd plug-in</li>
 
     <ul>
 
@@ -120,6 +135,14 @@ TProofOutputFile, support the "&lt;user&gt;" and "&lt;group&gt;"
 placeholders in the output file name to automatically re-direct the
 output to an area specific to the logged user.<br></li>
 
+     <li>Addition of a new class TProofProgressStatus, which is used to keep
+     the query progress stauts in all the TProofPlayer objects and in the
+     TPacketizerAdaptive. It is also send in kPROOF_GETPACKET and
+     kPROOF_STOPPROCESS messages. </li>
+     <li>The class TPacketizerProgressive is removed. </li>
+     <li>Changing the protocol version to 19: TProofProgressStatus used in
+     kPROOF_STOPPROCESS and kPROOF_GETNEXTPACKET messages in Master - worker communication
+     </li>
   </ul>
 
   <ul>
@@ -147,10 +170,13 @@ workers death</li>
     <li>Avoid duplicating worker logs in the master log file
 unless
 when explicitely needed by the request (Exec(...), Print(...)) or when
-an error occured</li><li>Fix problem with the determination and transmission of the name of the object to be processed. The problem appeared when processing files containing &gt;1 trees in changing order.</li><li>Fix problem with TProof::Load loading the macro to one worker only per machine</li><li>Fix wrong return code preventing the correct propagation of the full ClearPackage to workers</li><li>Fix a problem causing the whole query to stop even in the case a worker was terminated gently with SIGTERM.</li><li>
+an error occured</li><li>Fix
+problem with the determination and transmission of the name of the
+object to be processed. The problem appeared when processing files
+containing &gt;1 trees in changing order.</li><li>Fix problem with TProof::Load loading the macro to one worker only per machine</li><li>Fix wrong return code preventing the correct propagation of the full ClearPackage to workers</li><li>Fix a problem causing the whole query to stop even in the case a worker was terminated gently with SIGTERM.</li><li>
 Fix a problem triggering full re-build of a package upon change of a
 single file; the version info file was wrongly reset; this should
-happen only after a re-build.</li><li>Make sure that in case multiple TProofOutputFile are present, each get merged correctly<br></li></ul></ul><ul><ul></ul>
+happen only after a re-build.</li><li>Make sure that in case multiple TProofOutputFile are present, each get merged correctly</li><li>Fix problem in TProofServLogHandler::Notify due to bad usage of Form(...).</li></ul></ul><ul><ul></ul>
 
 </ul>
 
