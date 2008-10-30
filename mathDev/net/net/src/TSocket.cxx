@@ -271,6 +271,8 @@ TSocket::TSocket(const char *sockpath) : TNamed(sockpath, "")
    fBytesRecv = 0;
    fCompress  = 0;
    fTcpWindowSize = -1;
+   fUUIDs = 0;
+   fLastUsageMtx   = 0;
 
    fSocket = gSystem->OpenConnection(sockpath, -1, -1);
    if (fSocket > 0) {

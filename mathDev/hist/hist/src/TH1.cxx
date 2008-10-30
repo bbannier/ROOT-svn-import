@@ -4025,12 +4025,33 @@ TAxis *TH1::GetZaxis() const
 }
 
 //______________________________________________________________________________
-Double_t TH1::Interpolate(Double_t)
+Double_t TH1::Interpolate(Double_t x)
 {
-   
-   //Not yet implemented
-   Error("Interpolate","This function is not yet implemented for a TH1");
-   return 0;
+   // Given a point x, approximates the value via linear interpolation
+   // based on the two nearest bin centers
+   // Andy Mastbaum 10/21/08
+
+   Int_t xbin = FindBin(x);
+   Double_t x0,x1,y0,y1;
+
+   if(x<=GetBinCenter(1)) {
+      return GetBinContent(1);
+   } else if(x>=GetBinCenter(GetNbinsX())) {
+      return GetBinContent(GetNbinsX());
+   } else {
+      if(x<=GetBinCenter(xbin)) {
+         y0 = GetBinContent(xbin-1);
+         x0 = GetBinCenter(xbin-1);
+         y1 = GetBinContent(xbin);
+         x1 = GetBinCenter(xbin);
+      } else {
+         y0 = GetBinContent(xbin);
+         x0 = GetBinCenter(xbin);
+         y1 = GetBinContent(xbin+1);
+         x1 = GetBinCenter(xbin+1);
+      }
+      return y0 + (x-x0)*((y1-y0)/(x1-x0));
+   }
 }
 
 //______________________________________________________________________________
@@ -5005,10 +5026,7 @@ TH1 *TH1::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
       Error("Rebin", "Illegal value of ngroup=%d",ngroup);
       return 0;
    }
-   Int_t nbg = nbins/ngroup;
-   if (nbg*ngroup != nbins) {
-      Warning("Rebin", "ngroup=%d must be an exact divider of nbins=%d",ngroup,nbins);
-   }
+
    if (fDimension > 1 || InheritsFrom("TProfile")) {
       Error("Rebin", "Operation valid on 1-D histograms only");
       return 0;
@@ -5019,11 +5037,19 @@ TH1 *TH1::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
    }
 
    Int_t newbins = nbins/ngroup;
-   // in the case of xbins ngroup is the new number of bin.
-   //  we need also to recompute ngroup  
-   if (xbins) { 
+   if (!xbins) { 
+      Int_t nbg = nbins/ngroup;
+      if (nbg*ngroup != nbins) {
+         Warning("Rebin", "ngroup=%d must be an exact divider of nbins=%d",ngroup,nbins);
+      }
+   }
+   else {   
+   // in the case of xbins given (rebinning in variable bins) ngroup is the news number of bins.
+   //  and number of grouped bins is not constant. 
+   // when looping for setting the contents for the new histogram we 
+   // need to loop on all bins of original histogram. Set then ngroup=nbins
       newbins = ngroup;
-      ngroup = nbins/newbins;
+      ngroup = nbins;
    }
 
    // Save old bin contents into a new array
@@ -7129,7 +7155,13 @@ void TH1::SetStats(Bool_t stats)
    if (!stats) {
       SetBit(kNoStats);
       //remove the "stats" object from the list of functions
-      if (fFunctions) delete fFunctions->FindObject("stats");
+      if (fFunctions) {
+         TObject *obj = fFunctions->FindObject("stats");
+         if (obj) {
+            fFunctions->Remove(obj);
+            delete obj;
+         }
+      }
    }
 }
 

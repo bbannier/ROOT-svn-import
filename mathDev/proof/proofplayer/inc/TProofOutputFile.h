@@ -40,6 +40,9 @@ friend class TProofPlayer;
 public:
 
 private:
+   TProofOutputFile(const TProofOutputFile&); // Not implemented
+   TProofOutputFile& operator=(const TProofOutputFile&); // Not implemented
+
    TString  fDir;         // name of the directory
    TString  fFileName;
    TString  fFileName1;
@@ -66,7 +69,10 @@ private:
 protected:
 
 public:
-   TProofOutputFile() { fMerger = 0; }
+   TProofOutputFile() : fDir(), fFileName(), fFileName1(), fLocation(),
+     fMode(), fOutputFileName(), fWorkerOrdinal(), fIsLocal(kFALSE), fMerged(kFALSE),
+     fMerger(0) {}
+
    TProofOutputFile(const char* path,
                     const char* location = "REMOTE", const char* mode = "CENTRAL");
    virtual ~TProofOutputFile();
@@ -80,6 +86,7 @@ public:
    const char* GetWorkerOrdinal() const { return fWorkerOrdinal; }
 
 
+   Int_t AdoptFile(TFile *f);                    // Adopt a TFile already open
    TFile* OpenFile(const char* opt);             // Open a file with the specified name in fFileName1
    Long64_t Merge(TCollection* list);
    void Print(Option_t *option="") const;

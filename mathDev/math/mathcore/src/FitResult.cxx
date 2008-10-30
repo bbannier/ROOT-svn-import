@@ -247,7 +247,6 @@ void FitResult::Print(std::ostream & os, bool doCovMatrix) const {
       os << std::setw(nw) << std::left << "Edm"    << " =\t" << fEdm << std::endl; 
       os << std::setw(nw) << std::left << "NCalls" << " =\t" << fNCalls << std::endl; 
    }
-   assert(fFitFunc != 0); 
    for (unsigned int i = 0; i < npar; ++i) { 
       os << std::setw(nw) << std::left << GetParameterName(i); 
       os << " =\t" << fParams[i]; 

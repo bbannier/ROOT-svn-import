@@ -1209,9 +1209,9 @@ void TProfile::LabelsOption(Option_t *option, Option_t * /*ax*/)
          ent[i]    = fBinEntries.fArray[a[i]];
       }
       for (i=1;i<=n;i++) {
-         fArray[i] = sumw[a[i]];
-         fSumw2.fArray[i] = errors[a[i]];
-         fBinEntries.fArray[i] = ent[a[i]];
+         fArray[i] = sumw[i];
+         fSumw2.fArray[i] = errors[i];
+         fBinEntries.fArray[i] = ent[i];
       }
    }
    delete labold;
@@ -1492,6 +1492,21 @@ TH1D *TProfile::ProjectionX(const char *name, Option_t *option) const
       if (binWeight)      h1->SetBinError(bin , TMath::Sqrt(fSumw2.fArray[bin] ) );
 
    }
+
+   // Copy the axis attributes and the axis labels if needed.
+   h1->GetXaxis()->ImportAttributes(this->GetXaxis());
+   h1->GetYaxis()->ImportAttributes(this->GetYaxis());
+   THashList* labels=this->GetXaxis()->GetLabels();
+   if (labels) {
+      TIter iL(labels);
+      TObjString* lb;
+      Int_t i = 1;
+      while ((lb=(TObjString*)iL())) {
+         h1->GetXaxis()->SetBinLabel(i,lb->String().Data());
+         i++;
+      }
+   }
+   
    h1->SetEntries(fEntries);
    return h1;
 }
@@ -1853,7 +1868,7 @@ void TProfile::SetErrorOption(Option_t *option)
 //                      "     "  0.  for N.eq.0
 //     'g'            Errors are 1./SQRT(W) for Spread.ne.0. , 
 //                      "     "  0.  for N.eq.0
-//                    W is the sum of wights of the profile. 
+//                    W is the sum of weights of the profile. 
 //                    This option is for measurements y +/ dy and  the profile is filled with 
 //                    weights w = 1/dy**2
 //

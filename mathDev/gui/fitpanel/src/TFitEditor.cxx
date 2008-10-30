@@ -1155,7 +1155,8 @@ void TFitEditor::UpdateGUI()
       
 
       if (!hist) {
-	assert("No hist in UpdateGUI!");
+         Error("UpdateGUI","No hist is present - this should not happen, aborting");
+         assert(hist);
       }
 
       fSliderX->Disconnect("PositionChanged()");
