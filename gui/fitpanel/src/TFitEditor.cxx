@@ -525,7 +525,7 @@ void TFitEditor::CreateGeneralTab()
    TGVerticalFrame *v1 = new TGVerticalFrame(h2);
    fMethodList = BuildMethodList(v1, kFP_MLIST);
    fMethodList->Select(1, kFALSE);
-   fMethodList->Resize(130, 20);
+   fMethodList->Resize(140, 20);
    TGListBox *lb = fMethodList->GetListBox();
    Int_t lbe = lb->GetNumberOfEntries();
    lb->Resize(lb->GetWidth(), lbe*16);
@@ -1564,7 +1564,7 @@ TGComboBox* TFitEditor::BuildMethodList(TGFrame* parent, Int_t id)
    TGComboBox *c = new TGComboBox(parent, id);
    c->AddEntry("Chi-square", kFP_MCHIS);
    c->AddEntry("Binned Likelihood", kFP_MBINL);
-   //c->AddEntry("Unbinned Likelihood", kFP_MUBIN); //for later use
+   c->AddEntry("Unbinned Likelihood", kFP_MUBIN);
    //c->AddEntry("User", kFP_MUSER);                //for later use
    c->Select(kFP_MCHIS);
    return c;
@@ -2347,10 +2347,8 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
       fType = kObjectGraph;
       set = kTRUE;
       fDim = 1;
-      if (fMethodList->FindEntry("Binned Likelihood"))
-         fMethodList->RemoveEntry(kFP_MBINL);
-      if (!fMethodList->FindEntry("Chi-square"))
-         fMethodList->AddEntry("Chi-square", kFP_MCHIS);
+      fMethodList->RemoveAll();
+      fMethodList->AddEntry("Chi-square", kFP_MCHIS);
       fMethodList->Select(kFP_MCHIS, kFALSE);
       fRobustValue->SetState(kTRUE);
       fRobustValue->GetNumberEntry()->SetToolTipText("Set robust value");
@@ -2358,43 +2356,39 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
       fType = kObjectGraph2D;
       set = kTRUE;
       fDim = 2;
-      if (fMethodList->FindEntry("Unbinned Likelihood"))
-         fMethodList->RemoveEntry(kFP_MUBIN);
-      if (!fMethodList->FindEntry("Chi-square"))
-         fMethodList->AddEntry("Chi-square", kFP_MCHIS);
+      fMethodList->RemoveAll();
+      fMethodList->AddEntry("Chi-square", kFP_MCHIS);
       fMethodList->Select(kFP_MCHIS, kFALSE);
    } else if (obj->InheritsFrom("THStack")) {
       fType = kObjectHStack;
       set = kTRUE;
       TH1 *hist = (TH1 *)((THStack *)obj)->GetHists()->First();
       fDim = hist->GetDimension();
-      if (fMethodList->FindEntry("Unbinned Likelihood"))
-         fMethodList->RemoveEntry(kFP_MUBIN);
-      if (!fMethodList->FindEntry("Chi-square"))
-         fMethodList->AddEntry("Chi-square", kFP_MCHIS);
+      fMethodList->RemoveAll();
+      fMethodList->AddEntry("Chi-square", kFP_MCHIS);
       fMethodList->Select(kFP_MCHIS, kFALSE);
    } else if (obj->InheritsFrom("TTree")) {
       fType = kObjectTree;
       set = kTRUE;
       fDim = 0; 
-      //fMethodList->SetEnabled(kFALSE);
+      cout << "Binned Likelihood" << fMethodList->FindEntry("Binned Likelihood") << endl;
+      fMethodList->RemoveAll();
+      fMethodList->AddEntry("Unbinned Likelihood", kFP_MUBIN);
+      fMethodList->Select(kFP_MUBIN, kFALSE);      
    } else if (obj->InheritsFrom("TH1")){
       fType = kObjectHisto;
       set = kTRUE;
       fDim = ((TH1*)obj)->GetDimension();
-      if (!fMethodList->FindEntry("Binned Likelihood"))
-         fMethodList->AddEntry("Binned Likelihood", kFP_MBINL);
-      if (!fMethodList->FindEntry("Chi-square"))
-         fMethodList->AddEntry("Chi-square", kFP_MCHIS);
+      fMethodList->RemoveAll();
+      fMethodList->AddEntry("Chi-square", kFP_MCHIS);
+      fMethodList->AddEntry("Binned Likelihood", kFP_MBINL);
       fMethodList->Select(kFP_MCHIS, kFALSE);
    } else if (obj->InheritsFrom("TMultiGraph")) {
       fType = kObjectMultiGraph;
       set = kTRUE;
       fDim = 1;
-      if (fMethodList->FindEntry("Binned Likelihood"))
-         fMethodList->RemoveEntry(kFP_MBINL);
-      if (!fMethodList->FindEntry("Chi-square"))
-         fMethodList->AddEntry("Chi-square", kFP_MCHIS);
+      fMethodList->RemoveAll();
+      fMethodList->AddEntry("Chi-square", kFP_MCHIS);
       fMethodList->Select(kFP_MCHIS, kFALSE);
       fRobustValue->SetState(kTRUE);
       fRobustValue->GetNumberEntry()->SetToolTipText("Set robust value");
