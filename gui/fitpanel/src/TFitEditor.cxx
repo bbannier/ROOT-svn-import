@@ -1122,12 +1122,7 @@ void TFitEditor::UpdateGUI()
 
    if (!fFitObject) return;
 
-   if (fParentPad) {
-      fPx1old = fParentPad->XtoAbsPixel(fParentPad->GetUxmin());
-      fPy1old = fParentPad->YtoAbsPixel(fParentPad->GetUymin());
-      fPx2old = fParentPad->XtoAbsPixel(fParentPad->GetUxmax());
-      fPy2old = fParentPad->YtoAbsPixel(fParentPad->GetUymax());
-   }
+   DrawSelection(true);
 
    // sliders
    if (fDim > 0) {
@@ -2220,11 +2215,22 @@ void TFitEditor::DoSliderXMoved()
 }
 
 //______________________________________________________________________________
-void TFitEditor::DrawSelection()
+void TFitEditor::DrawSelection(bool restore)
 {
    // Draws the square around the object showing where the limits for
    // fitting are.
+
+   static Int_t  px1old, py1old, px2old, py2old; // to remember the square drawn.
+
    if ( !fParentPad ) return;
+
+   if (restore) {
+      px1old = fParentPad->XtoAbsPixel(fParentPad->GetUxmin());
+      py1old = fParentPad->YtoAbsPixel(fParentPad->GetUymin());
+      px2old = fParentPad->XtoAbsPixel(fParentPad->GetUxmax());
+      py2old = fParentPad->YtoAbsPixel(fParentPad->GetUymax());
+      return;
+   }
 
    Int_t px1,py1,px2,py2;
 
@@ -2259,13 +2265,13 @@ void TFitEditor::DrawSelection()
    gPad->SetLineWidth(1);
    gPad->SetLineColor(2);
    
-   gVirtualX->DrawBox(fPx1old, fPy1old, fPx2old, fPy2old, TVirtualX::kHollow);
+   gVirtualX->DrawBox(px1old, py1old, px2old, py2old, TVirtualX::kHollow);
    gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
 
-   fPx1old = px1;
-   fPy1old = py1;
-   fPx2old = px2 ;
-   fPy2old = py2;
+   px1old = px1;
+   py1old = py1;
+   px2old = px2 ;
+   py2old = py2;
 
    if(save) gPad = save;
 }

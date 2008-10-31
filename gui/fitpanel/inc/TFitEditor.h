@@ -129,11 +129,6 @@ protected:
    };
    std::vector<FuncParamData_t >  fFuncPars;         // function parameters (value + limits)
 
-   Int_t                fPx1old,
-                        fPy1old,
-                        fPx2old,
-                        fPy2old;
-
    Double_t             fFuncXmin;       // fit function range (min and max) values    
    Double_t             fFuncXmax;      
    Double_t             fFuncYmin;      
@@ -160,7 +155,7 @@ protected:
    TGComboBox *BuildDataSetList(TGFrame *parent, Int_t id);
    TGComboBox *BuildMethodList(TGFrame *parent, Int_t id);
    void        GetRanges(ROOT::Fit::DataRange&);
-   void        DrawSelection();
+   void        DrawSelection(bool restore = false);
    Int_t       CheckFunctionString(const char* str);
    void        CreateFunctionGroup();
    void        CreateGeneralTab();
