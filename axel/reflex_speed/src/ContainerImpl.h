@@ -210,14 +210,10 @@ namespace Internal {
                prev = const_cast<ContainerTools::Link1Base*>(prev->Next());
             }
          }
-         if (prev) {
-            REFLEX_RWLOCK_W(fLock);
-            prev->RemoveAfter();
-            curr->Invalidate(Arena());
-            --fSize;
-         } else {
-            std::cerr << "ERROR Reflex::Internal::ContainerImpl::Remove(): cannot find location to remove!" << std::endl;
-         }
+         REFLEX_RWLOCK_W(fLock);
+         if (prev) prev->RemoveAfter();
+         curr->Invalidate(Arena());
+         --fSize;
       }
 
       iterator Find(const KEY& key) const { return Find(key, Hash(key)); }

@@ -41,6 +41,8 @@ using namespace std;
 
 class ReflexUnitTest : public CppUnit::TestFixture {
   CPPUNIT_TEST_SUITE( ReflexUnitTest );
+  CPPUNIT_TEST( container );
+  CPPUNIT_TEST( ordered_container );
   CPPUNIT_TEST( any_type );
   CPPUNIT_TEST( empty_type );
   CPPUNIT_TEST( empty_scope );
@@ -70,6 +72,8 @@ class ReflexUnitTest : public CppUnit::TestFixture {
   CPPUNIT_TEST_SUITE_END();
 public:
   void setUp () {}
+  void container();
+  void ordered_container();
   void any_type();
   void empty_type();
   void empty_scope();
@@ -109,6 +113,152 @@ struct bar {
   bar(float i) :b(i) {}
   float b; 
 };
+
+void ReflexUnitTest::container()
+{
+   Type tInt(Type::ByName("int"));
+   Type tFloat(Type::ByName("float"));
+
+   Reflex::Internal::ContainerImpl<std::string, Reflex::Type, Reflex::Internal::kUnique> typesU;
+
+   size_t numAllocatedNodes = typesU.Arena()->Entries();
+
+   CPPUNIT_ASSERT_EQUAL((size_t)0, typesU.Size());
+   CPPUNIT_ASSERT(typesU.End() == typesU.Find("int"));
+   CPPUNIT_ASSERT(typesU.End() == typesU.FindValue(tInt));
+
+   typesU.Insert(tInt);
+   CPPUNIT_ASSERT_EQUAL((size_t)1, typesU.Size());
+   CPPUNIT_ASSERT_EQUAL(std::string("int"), typesU.Begin()->Name());
+   CPPUNIT_ASSERT(typesU.Begin() == typesU.Find("int"));
+   CPPUNIT_ASSERT(typesU.Begin() == typesU.FindValue(tInt));
+   CPPUNIT_ASSERT(typesU.End() == typesU.Find("float"));
+   CPPUNIT_ASSERT(typesU.End() == typesU.FindValue(tFloat));
+   CPPUNIT_ASSERT(tInt == *typesU.Begin());
+
+   typesU.Insert(tInt);
+   CPPUNIT_ASSERT_EQUAL((size_t)1, typesU.Size());
+   CPPUNIT_ASSERT_EQUAL(std::string("int"), typesU.Begin()->Name());
+   CPPUNIT_ASSERT(typesU.Begin() == typesU.Find("int"));
+   CPPUNIT_ASSERT(typesU.Begin() == typesU.FindValue(tInt));
+   CPPUNIT_ASSERT(typesU.End() == typesU.Find("float"));
+   CPPUNIT_ASSERT(typesU.End() == typesU.FindValue(tFloat));
+   CPPUNIT_ASSERT(tInt == *typesU.Begin());
+
+   typesU.Insert(tFloat);
+   CPPUNIT_ASSERT_EQUAL((size_t)2, typesU.Size());
+   CPPUNIT_ASSERT(typesU.Find("int") != typesU.End());
+   CPPUNIT_ASSERT(typesU.Find("float") != typesU.End());
+   CPPUNIT_ASSERT(typesU.Find("float") != typesU.Find("int"));
+   CPPUNIT_ASSERT(typesU.FindValue(tInt) != typesU.End());
+   CPPUNIT_ASSERT(typesU.FindValue(tFloat) != typesU.End());
+   CPPUNIT_ASSERT(typesU.FindValue(tFloat) != typesU.FindValue(tInt));
+
+   typesU.Remove(tInt);
+   CPPUNIT_ASSERT_EQUAL((size_t)1, typesU.Size());
+   CPPUNIT_ASSERT_EQUAL(std::string("float"), typesU.Begin()->Name());
+   CPPUNIT_ASSERT(typesU.Begin() == typesU.Find("float"));
+   CPPUNIT_ASSERT(typesU.Begin() == typesU.FindValue(tFloat));
+   CPPUNIT_ASSERT(typesU.End() == typesU.Find("int"));
+   CPPUNIT_ASSERT(typesU.End() == typesU.FindValue(tInt));
+   CPPUNIT_ASSERT(tFloat == *typesU.Begin());
+
+   typesU.Insert(tInt);
+   CPPUNIT_ASSERT(typesU.Find("int") != typesU.End());
+   CPPUNIT_ASSERT(typesU.Find("float") != typesU.End());
+   CPPUNIT_ASSERT(typesU.Find("float") != typesU.Find("int"));
+   CPPUNIT_ASSERT(typesU.FindValue(tInt) != typesU.End());
+   CPPUNIT_ASSERT(typesU.FindValue(tFloat) != typesU.End());
+   CPPUNIT_ASSERT(typesU.FindValue(tFloat) != typesU.FindValue(tInt));
+
+   typesU.Remove(tFloat);
+   CPPUNIT_ASSERT_EQUAL((size_t)1, typesU.Size());
+   CPPUNIT_ASSERT_EQUAL(std::string("int"), typesU.Begin()->Name());
+   CPPUNIT_ASSERT(typesU.Begin() == typesU.Find("int"));
+   CPPUNIT_ASSERT(typesU.Begin() == typesU.FindValue(tInt));
+   CPPUNIT_ASSERT(typesU.End() == typesU.Find("float"));
+   CPPUNIT_ASSERT(typesU.End() == typesU.FindValue(tFloat));
+   CPPUNIT_ASSERT(tInt == *typesU.Begin());
+
+   typesU.Remove(tInt);
+   CPPUNIT_ASSERT_EQUAL((size_t)0, typesU.Size());
+   CPPUNIT_ASSERT(typesU.End() == typesU.Find("int"));
+   CPPUNIT_ASSERT(typesU.End() == typesU.FindValue(tInt));
+   CPPUNIT_ASSERT_EQUAL(numAllocatedNodes, typesU.Arena()->Entries());
+}
+
+void ReflexUnitTest::ordered_container()
+{
+   Type tInt(Type::ByName("int"));
+   Type tFloat(Type::ByName("float"));
+
+   Reflex::Internal::OrderedContainerImpl<std::string, Reflex::Type, Reflex::Internal::kUnique> typesU;
+
+   size_t numAllocatedNodes = typesU.Arena()->Entries();
+
+   CPPUNIT_ASSERT_EQUAL((size_t)0, typesU.Size());
+   CPPUNIT_ASSERT(typesU.End() == typesU.Find("int"));
+   CPPUNIT_ASSERT(typesU.End() == typesU.FindValue(tInt));
+
+   typesU.Insert(tInt);
+   CPPUNIT_ASSERT_EQUAL((size_t)1, typesU.Size());
+   CPPUNIT_ASSERT_EQUAL(std::string("int"), typesU.Begin()->Name());
+   CPPUNIT_ASSERT(typesU.Begin() == typesU.Find("int"));
+   CPPUNIT_ASSERT(typesU.Begin() == typesU.FindValue(tInt));
+   CPPUNIT_ASSERT(typesU.End() == typesU.Find("float"));
+   CPPUNIT_ASSERT(typesU.End() == typesU.FindValue(tFloat));
+   CPPUNIT_ASSERT(tInt == *typesU.Begin());
+
+   typesU.Insert(tInt);
+   CPPUNIT_ASSERT_EQUAL((size_t)1, typesU.Size());
+   CPPUNIT_ASSERT_EQUAL(std::string("int"), typesU.Begin()->Name());
+   CPPUNIT_ASSERT(typesU.Begin() == typesU.Find("int"));
+   CPPUNIT_ASSERT(typesU.Begin() == typesU.FindValue(tInt));
+   CPPUNIT_ASSERT(typesU.End() == typesU.Find("float"));
+   CPPUNIT_ASSERT(typesU.End() == typesU.FindValue(tFloat));
+   CPPUNIT_ASSERT(tInt == *typesU.Begin());
+
+   typesU.Insert(tFloat);
+   CPPUNIT_ASSERT_EQUAL((size_t)2, typesU.Size());
+   CPPUNIT_ASSERT(typesU.Find("int") == typesU.Begin());
+   CPPUNIT_ASSERT(typesU.Find("float") == ++typesU.Begin());
+   CPPUNIT_ASSERT(typesU.Find("float") != typesU.Find("int"));
+   CPPUNIT_ASSERT(typesU.FindValue(tInt) == typesU.Begin());
+   CPPUNIT_ASSERT(typesU.FindValue(tFloat) == ++typesU.Begin());
+   CPPUNIT_ASSERT(typesU.FindValue(tFloat) != typesU.FindValue(tInt));
+
+   typesU.Remove(tInt);
+   CPPUNIT_ASSERT_EQUAL((size_t)1, typesU.Size());
+   CPPUNIT_ASSERT_EQUAL(std::string("float"), typesU.Begin()->Name());
+   CPPUNIT_ASSERT(typesU.Begin() == typesU.Find("float"));
+   CPPUNIT_ASSERT(typesU.Begin() == typesU.FindValue(tFloat));
+   CPPUNIT_ASSERT(typesU.End() == typesU.Find("int"));
+   CPPUNIT_ASSERT(typesU.End() == typesU.FindValue(tInt));
+   CPPUNIT_ASSERT(tFloat == *typesU.Begin());
+
+   typesU.Insert(tInt);
+   CPPUNIT_ASSERT(typesU.Find("int") == ++typesU.Begin());
+   CPPUNIT_ASSERT(typesU.Find("float") == typesU.Begin());
+   CPPUNIT_ASSERT(typesU.Find("float") != typesU.Find("int"));
+   CPPUNIT_ASSERT(typesU.FindValue(tInt) == ++typesU.Begin());
+   CPPUNIT_ASSERT(typesU.FindValue(tFloat) == typesU.Begin());
+   CPPUNIT_ASSERT(typesU.FindValue(tFloat) != typesU.FindValue(tInt));
+
+   typesU.Remove(tFloat);
+   CPPUNIT_ASSERT_EQUAL((size_t)1, typesU.Size());
+   CPPUNIT_ASSERT_EQUAL(std::string("int"), typesU.Begin()->Name());
+   CPPUNIT_ASSERT(typesU.Begin() == typesU.Find("int"));
+   CPPUNIT_ASSERT(typesU.Begin() == typesU.FindValue(tInt));
+   CPPUNIT_ASSERT(typesU.End() == typesU.Find("float"));
+   CPPUNIT_ASSERT(typesU.End() == typesU.FindValue(tFloat));
+   CPPUNIT_ASSERT(tInt == *typesU.Begin());
+
+   typesU.Remove(tInt);
+   CPPUNIT_ASSERT_EQUAL((size_t)0, typesU.Size());
+   CPPUNIT_ASSERT(typesU.End() == typesU.Find("int"));
+   CPPUNIT_ASSERT(typesU.End() == typesU.FindValue(tInt));
+   CPPUNIT_ASSERT_EQUAL(numAllocatedNodes, typesU.Arena()->Entries());
+}
 
 void ReflexUnitTest::any_type()
 {
@@ -487,8 +637,10 @@ void ReflexUnitTest::namespace_members() {
   CPPUNIT_ASSERT_EQUAL(size_t(2), n.Members().Size());
   CPPUNIT_ASSERT_EQUAL(size_t(2), n.DataMembers().Size());
   OrderedContainer<Member>::const_iterator iDB = n.ThisScope().DataMembers().Begin();
-  CPPUNIT_ASSERT_EQUAL(string("d1"), iDB->Name());
-  CPPUNIT_ASSERT_EQUAL(string("d2"), (++iDB)->Name());
+  CPPUNIT_ASSERT_EQUAL(string("Members::d1"), iDB->Name());
+  CPPUNIT_ASSERT_EQUAL(string("d1"), iDB->Name(kNone));
+  CPPUNIT_ASSERT_EQUAL(string("Members::d2"), (++iDB)->Name());
+  CPPUNIT_ASSERT_EQUAL(string("d2"), (++iDB)->Name(kNone));
 
   vector<Type> params;
   params.push_back(i);
@@ -504,15 +656,15 @@ void ReflexUnitTest::namespace_members() {
   n.AddMember(m4);
   CPPUNIT_ASSERT_EQUAL(size_t(2), n.FunctionMembers().Size());
   OrderedContainer<Member>::const_iterator iFM = n.ThisScope().FunctionMembers().Begin();
-  CPPUNIT_ASSERT_EQUAL(string("f1"), iFM->Name());
-  CPPUNIT_ASSERT_EQUAL(string("f2"), (++iFM)->Name());
+  CPPUNIT_ASSERT_EQUAL(string("Members::f1"), iFM->Name());
+  CPPUNIT_ASSERT_EQUAL(string("Members::f2"), (++iFM)->Name());
 
   CPPUNIT_ASSERT_EQUAL(size_t(4), n.Members().Size());
   Container<Member>::const_iterator iM = n.ThisScope().Members().Begin();
-  CPPUNIT_ASSERT_EQUAL(string("d1"), iM->Name());
-  CPPUNIT_ASSERT_EQUAL(string("d2"), (++iM)->Name());
-  CPPUNIT_ASSERT_EQUAL(string("f1"), (++iM)->Name());
-  CPPUNIT_ASSERT_EQUAL(string("f2"), (++iM)->Name());
+  CPPUNIT_ASSERT_EQUAL(string("Members::d1"), iM->Name());
+  CPPUNIT_ASSERT_EQUAL(string("Members::d2"), (++iM)->Name());
+  CPPUNIT_ASSERT_EQUAL(string("Members::f1"), (++iM)->Name());
+  CPPUNIT_ASSERT_EQUAL(string("Members::f2"), (++iM)->Name());
 }
 
 void ReflexUnitTest::function_member() {
