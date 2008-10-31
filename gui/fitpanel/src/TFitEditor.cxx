@@ -194,6 +194,7 @@ enum EParStruct {
 
 void GetParameters(TFitEditor::FuncParams_t & pars, TF1* func)
 {
+   // Stores the parameters of the given function into pars
    int npar = func->GetNpar(); 
    if (npar != (int) pars.size() ) pars.resize(npar); 
    for ( Int_t i = 0; i < npar; ++i )
@@ -208,6 +209,7 @@ void GetParameters(TFitEditor::FuncParams_t & pars, TF1* func)
 
 void SetParameters(TFitEditor::FuncParams_t & pars, TF1* func)
 {
+   // Restore the parameters from pars into the function
    int npar = func->GetNpar(); 
    if (npar > (int) pars.size() ) pars.resize(npar); 
    for ( Int_t i = 0; i < npar; ++i )
@@ -220,7 +222,7 @@ void SetParameters(TFitEditor::FuncParams_t & pars, TF1* func)
 template<class FitObject>
 void InitParameters(TF1* func, FitObject * fitobj)
 {
-   
+   // Parameter initialization for the function
    int special = func->GetNumber(); 
    if (special == 100 || special == 400) { 
       ROOT::Fit::BinData data; 
@@ -266,7 +268,8 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
    fFuncPars    (0)
 
 {
-   // Constructor of fit editor.
+   // Constructor of fit editor. 'obj' is the object to be fitted and
+   // 'pad' where it is drawn.
 
    SetCleanup(kDeepCleanup);
 
@@ -390,6 +393,8 @@ TFitEditor::~TFitEditor()
 //______________________________________________________________________________
 void TFitEditor::CreateFunctionGroup()
 {
+   // Creates the Frame that contains oll the information about the
+   // function.
    TGGroupFrame *gf1 = new TGGroupFrame(this, "Fit Function", kFitWidth);
       
    TGCompositeFrame *tf0 = new TGCompositeFrame(gf1, 350, 26,
@@ -1420,6 +1425,9 @@ void TFitEditor::RecursiveRemove(TObject* obj)
 //______________________________________________________________________________
 void TFitEditor::FillFunctionList(Int_t)
 {
+   // Fills the list of functions depending on the type of fit
+   // selected.
+
    fFuncList->RemoveAll();
    if ( fTypeFit->GetSelected() == kFP_PRED1D && fDim <= 1 ) {
       // Fill function list combo box.
@@ -1505,6 +1513,8 @@ void TFitEditor::FillFunctionList(Int_t)
 
 void SearchCanvases(TSeqCollection* canvases, vector<TObject*>& objects)
 {
+   // Auxiliary function to recursively search for objects inside the
+   // current canvases.
    TIter canvasIter(canvases);
    while(TObject* obj = (TObject*) canvasIter()) {
       if ( TPad* can = dynamic_cast<TPad*>(obj))
@@ -1529,7 +1539,7 @@ void SearchCanvases(TSeqCollection* canvases, vector<TObject*>& objects)
 //______________________________________________________________________________
 TGComboBox* TFitEditor::BuildDataSetList(TGFrame* parent, Int_t id)
 {
-   // Create function list combo box.
+   // Create a combo box with all the possible objects to be fitted.
 
    TGComboBox *c = new TGComboBox(parent, id);
    Int_t newid = kFP_NOSEL;
@@ -1658,6 +1668,7 @@ void TFitEditor::DoFit()
       tmpF1->Copy(*fitFunc);
    }
 
+   // Get the ranges from the sliders
    ROOT::Fit::DataRange drange; 
    GetRanges(drange);
 
@@ -1819,6 +1830,7 @@ void TFitEditor::DoAddition(Bool_t on)
 //______________________________________________________________________________
 void TFitEditor::DoDataSet(Int_t selected)
 {
+   // Selects the data set to be fitted
    if ( selected == kFP_NOSEL ) {
       DoNoSelection();
       return;
@@ -1947,12 +1959,15 @@ void TFitEditor::DoFunction(Int_t selected)
    // reset function parameters if the number of parameters of the new
    // function is different from the old one!
    TF1* fitFunc = 0;
+   // If it's not editable that means the function is from a C
+   // function and it exists in gROOT.
    if ( !editable ) {
       TF1* tmpF1 = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
       fitFunc = (TF1*)tmpF1->IsA()->New();
       tmpF1->Copy(*fitFunc);
    }
    else {
+      // Otherwise, we can create a new one with the text
       if ( fDim == 1 || fDim == 0 ) 
          fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText(),fFuncXmin,fFuncXmax);
       else if ( fDim == 2 )
@@ -2207,6 +2222,8 @@ void TFitEditor::DoSliderXMoved()
 //______________________________________________________________________________
 void TFitEditor::DrawSelection()
 {
+   // Draws the square around the object showing where the limits for
+   // fitting are.
    if ( !fParentPad ) return;
 
    Int_t px1,py1,px2,py2;
@@ -2256,6 +2273,7 @@ void TFitEditor::DrawSelection()
 //______________________________________________________________________________
 void TFitEditor::DoNumericSliderXChanged()
 {
+   // Sincronize the numeric sliders with the graphical one.
    if ( fSliderXMin->GetNumber() > fSliderXMax->GetNumber() ) {
       float xmin, xmax;
       fSliderX->GetPosition(xmin, xmax);
@@ -2286,6 +2304,7 @@ void TFitEditor::DoSliderYMoved()
 //______________________________________________________________________________
 void TFitEditor::DoNumericSliderYChanged()
 {
+   //syncronize the numeric slider with the graphical one.
    if ( fSliderYMin->GetNumber() > fSliderYMax->GetNumber() ) {
       float ymin, ymax;
       fSliderY->GetPosition(ymin, ymax);
@@ -2718,6 +2737,8 @@ TF1* TFitEditor::HasFitFunction(TObject *obj)
 //______________________________________________________________________________
 void TFitEditor::RetrieveOptions(Foption_t& fitOpts, TString& drawOpts, ROOT::Math::MinimizerOptions& minOpts, Int_t npar)
 {
+   // Retrieve the fitting options from all the widgets.
+
    drawOpts = "";
 
    fitOpts.Range    = (fUseRange->GetState() == kButtonDown);
@@ -2792,6 +2813,8 @@ void TFitEditor::RetrieveOptions(Foption_t& fitOpts, TString& drawOpts, ROOT::Ma
 
 void TFitEditor::SetEditable(Bool_t state)
 {
+   // Set the state of some input widgets depending on whether the fit
+   // function can be defined by text or if it is an existing one.
    if ( state )
    {
       fEnteredFunc->SetState(kTRUE);
@@ -2806,6 +2829,7 @@ void TFitEditor::SetEditable(Bool_t state)
 
 void TFitEditor::GetRanges(ROOT::Fit::DataRange& drange)
 {
+   // Return the ranges selected by the sliders.
    Int_t ixmin = (Int_t)(fSliderX->GetMinPosition()); 
    Int_t ixmax = (Int_t)(fSliderX->GetMaxPosition()); 
    Double_t xmin = fXaxis->GetBinLowEdge(ixmin);
