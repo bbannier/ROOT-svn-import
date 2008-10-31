@@ -148,7 +148,6 @@
 #include "TTimer.h"
 #include "THStack.h"
 #include "TMath.h"
-#include "Fit/DataRange.h"
 #include "Fit/BinData.h"
 #include "Fit/UnBinData.h"
 #include "TMultiGraph.h"
@@ -1660,35 +1659,7 @@ void TFitEditor::DoFit()
    }
 
    ROOT::Fit::DataRange drange; 
-
-   Int_t ixmin = (Int_t)(fSliderX->GetMinPosition()); 
-   Int_t ixmax = (Int_t)(fSliderX->GetMaxPosition()); 
-   if (ixmin > 1 || ixmax < fXaxis->GetNbins() ) { 
-      Double_t xmin = fXaxis->GetBinLowEdge(ixmin);
-      Double_t xmax = fXaxis->GetBinUpEdge(ixmax);
-      drange.AddRange(0,xmin, xmax);
-   }
-
-   if ( fDim > 1 ) {
-      assert(fYaxis); 
-      Int_t iymin = (Int_t)(fSliderY->GetMinPosition()); 
-      Int_t iymax = (Int_t)(fSliderY->GetMaxPosition()); 
-      if (iymin > 1 || iymax < fYaxis->GetNbins() ) { 
-         Double_t ymin = fYaxis->GetBinLowEdge(iymin);
-         Double_t ymax = fYaxis->GetBinUpEdge(iymax);
-         drange.AddRange(1,ymin, ymax);
-      }
-   }
-   if ( fDim > 2 ) {
-      assert(fZaxis); 
-      Int_t izmin = (Int_t)(fSliderZ->GetMinPosition()); 
-      Int_t izmax = (Int_t)(fSliderZ->GetMaxPosition()); 
-      if (izmin > 1 || izmax < fZaxis->GetNbins() ) { 
-         Double_t zmin = fZaxis->GetBinLowEdge(izmin);
-         Double_t zmax = fZaxis->GetBinUpEdge(izmax);
-         drange.AddRange(2,zmin, zmax);
-      }
-   }
+   GetRanges(drange);
 
    if ( fitFunc == 0 )
    {
@@ -2156,14 +2127,23 @@ void TFitEditor::DoSetParameters()
    if ( fNone->GetState() == kButtonDisabled )
    {
       TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-      fitFunc = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
+      TF1* tmpF1 = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
+      fitFunc = (TF1*)tmpF1->IsA()->New();
+      tmpF1->Copy(*fitFunc);
    }
-   else if ( fDim == 1 || fDim == 0 )
-      fitFunc = new TF1("tmpPars",fEnteredFunc->GetText() );
-   else if ( fDim == 2 )
-      fitFunc = new TF2("tmpPars",fEnteredFunc->GetText() );
-   else if ( fDim == 3 )
-      fitFunc = new TF3("tmpPars",fEnteredFunc->GetText() );
+   else {
+      ROOT::Fit::DataRange drange; 
+      GetRanges(drange);
+      double xmin, xmax, ymin, ymax, zmin, zmax;
+      drange.GetRange(xmin, xmax, ymin, ymax, zmin, zmax);
+
+      if ( fDim == 1 || fDim == 0 )
+         fitFunc = new TF1("tmpPars",fEnteredFunc->GetText(), xmin, xmax );
+      else if ( fDim == 2 )
+         fitFunc = new TF2("tmpPars",fEnteredFunc->GetText(), xmin, xmax, ymin, ymax );
+      else if ( fDim == 3 )
+         fitFunc = new TF3("tmpPars",fEnteredFunc->GetText(), xmin, xmax, ymin, ymax, zmin, zmax );
+   }
 
    if (!fitFunc) { Error("DoSetParameters","NUll function"); return; }
 
@@ -2820,5 +2800,31 @@ void TFitEditor::SetEditable(Bool_t state)
       fEnteredFunc->SetState(kFALSE);
       fAdd->SetState(kButtonDisabled, kFALSE);
       fNone->SetState(kButtonDisabled, kFALSE);
+   }
+}
+
+void TFitEditor::GetRanges(ROOT::Fit::DataRange& drange)
+{
+   Int_t ixmin = (Int_t)(fSliderX->GetMinPosition()); 
+   Int_t ixmax = (Int_t)(fSliderX->GetMaxPosition()); 
+   Double_t xmin = fXaxis->GetBinLowEdge(ixmin);
+   Double_t xmax = fXaxis->GetBinUpEdge(ixmax);
+   drange.AddRange(0,xmin, xmax);
+
+   if ( fDim > 1 ) {
+      assert(fYaxis); 
+      Int_t iymin = (Int_t)(fSliderY->GetMinPosition()); 
+      Int_t iymax = (Int_t)(fSliderY->GetMaxPosition()); 
+      Double_t ymin = fYaxis->GetBinLowEdge(iymin);
+      Double_t ymax = fYaxis->GetBinUpEdge(iymax);
+      drange.AddRange(1,ymin, ymax);
+   }
+   if ( fDim > 2 ) {
+      assert(fZaxis); 
+      Int_t izmin = (Int_t)(fSliderZ->GetMinPosition()); 
+      Int_t izmax = (Int_t)(fSliderZ->GetMaxPosition()); 
+      Double_t zmin = fZaxis->GetBinLowEdge(izmin);
+      Double_t zmax = fZaxis->GetBinUpEdge(izmax);
+      drange.AddRange(2,zmin, zmax);
    }
 }
