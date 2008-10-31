@@ -59,8 +59,7 @@ TEvePolygonSetProjected::TEvePolygonSetProjected(const Text_t* n, const Text_t* 
 
    fFillColor(5),
    fLineColor(3),
-   fLineWidth(1),
-   fTransparency (0)
+   fLineWidth(1)
 {
    // Constructor.
 
@@ -310,10 +309,10 @@ Float_t TEvePolygonSetProjected::MakePolygonsFromBS(Int_t* idxMap)
    // First creates a segment pool according to reduced and projected points
    // and then build polygons from the pool.
 
-   LSeg_t segs;
+   LSeg_t   segs;
    LSegIt_t it;
-   TEveProjection* projection = fManager->GetProjection();
-   Float_t surf; // surface of projected polygons
+   Float_t  surf = 0; // surface of projected polygons
+   TEveProjection *projection = fManager->GetProjection();
    for (UInt_t s = 0; s < fBuff->NbSegs(); ++s)
    {
       Bool_t duplicate = kFALSE;
@@ -325,10 +324,12 @@ Float_t TEvePolygonSetProjected::MakePolygonsFromBS(Int_t* idxMap)
       vor2 = idxMap[vo2];
       if (vor1 == vor2) continue;
       // check duplicate
-      for (it = segs.begin(); it != segs.end(); it++ ){
+      for (it = segs.begin(); it != segs.end(); ++it)
+      {
          Int_t vv1 = (*it).fV1;
          Int_t vv2 = (*it).fV2;
-         if((vv1 == vor1 && vv2 == vor2 )||(vv1 == vor2 && vv2 == vor1 )) {
+         if((vv1 == vor1 && vv2 == vor2) || (vv1 == vor2 && vv2 == vor1))
+         {
             duplicate = kTRUE;
             continue;
          }
@@ -337,14 +338,14 @@ Float_t TEvePolygonSetProjected::MakePolygonsFromBS(Int_t* idxMap)
          segs.push_back(Seg_t(vor1, vor2));
    }
 
-   while (segs.empty() == kFALSE)
+   while ( ! segs.empty())
    {
       std::list<Int_t> pp; // points in current polygon
       pp.push_back(segs.front().fV1);
       Int_t tail = segs.front().fV2;
       segs.pop_front();
       Bool_t match = kTRUE;
-      while (match && segs.empty() == kFALSE)
+      while (match && ! segs.empty())
       {
          for (LSegIt_t k = segs.begin(); k != segs.end(); ++k)
          {
@@ -459,7 +460,7 @@ void TEvePolygonSetProjected::Paint(Option_t* )
    // Section kCore
    buffer.fID           = this;
    buffer.fColor        = GetMainColor();
-   buffer.fTransparency = fTransparency;
+   buffer.fTransparency = GetMainTransparency();
    buffer.fLocalFrame   = false;
 
    buffer.SetSectionsValid(TBuffer3D::kCore);
