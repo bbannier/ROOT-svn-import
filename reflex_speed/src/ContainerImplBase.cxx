@@ -97,52 +97,49 @@ Reflex::Internal::ContainerImplBase::InsertNodeBase(ContainerTools::Link1Base* n
 // there is a collition, i.e. the node is inserted into an already filled bucket.
    REFLEX_RWLOCK_W(fLock);
    ++fSize;
+   bool haveCollision = false;
    const size_t bucketidx = BucketIndex(hash);
    if (fBuckets[bucketidx]) {
-      // collision, simply add behind front:
-      fBuckets[bucketidx]->InsertAfter(node);
+      // collision, simply add at front:
+      node->SetNext(fBuckets[bucketidx]);
       ++fCollisions;
-      return true;
-   };
+      haveCollision = true;
+   }
 
-   // no collision; this node is the first one in its bucket.
-   fBuckets[bucketidx] = node;
-   // find previous
-   size_t bucketidxprev = bucketidx;
-   while (bucketidxprev > 0 && !fBuckets[--bucketidxprev]) {}
    // fBuckets[bucketidxprev] points to bucket containing the node before "node":
    //   [bucketidxprev]:    n0 -> n1 -> n2 (-> n3)
    //   [...]:              0...
    //   [bucketidx]:        node
    //   [...]:              0...
    //   [bucketidxnext]:    n3
-   const ContainerTools::Link1Base* n2 = 0;
+
+   fBuckets[bucketidx] = node;
+   // find previous
+   size_t bucketidxprev = bucketidx;
+   while (bucketidxprev > 0 && !fBuckets[--bucketidxprev]) {}
+   ContainerTools::Link1Base* n2 = 0;
    if (bucketidxprev != bucketidx)
       n2 = fBuckets[bucketidxprev];
-   if (n2) {
-      // Find bucketidxnext:
+
+   // Find bucketidxnext:
+   const ContainerTools::Link1Base* n3 = node->Next();
+   if (!n3) {
       size_t bucketidxnext = bucketidx;
       while (++bucketidxnext < fBuckets.size() && !fBuckets[bucketidxnext]) {}
       if (bucketidxnext < fBuckets.size()) {
          // have valid n2 and n3.
          // n2 is the one before n3, i.e.
-         const ContainerTools::Link1Base* n3 = fBuckets[bucketidxnext];
-         while (n2->Next() != n3)
-            n2 = n2->Next();
+         n3 = fBuckets[bucketidxnext];
       }
-      // else: valid n2 but no n3, thus pref is already the last node.
-
-      const_cast<ContainerTools::Link1Base*>(n2)->InsertAfter(node);
-   } else {
-      // there is no n2; node will be the first node in the bucket vector.
-      // Need to find the next one to set node->fNext:
-      size_t bucketidxnext = bucketidx;
-      while (++bucketidxnext < fBuckets.size() && !fBuckets[bucketidxnext]) {}
-      if (bucketidxnext < fBuckets.size())
-         node->SetNext(fBuckets[bucketidxnext]);
-      fBuckets[bucketidx] = node;
+      node->SetNext(n3);
    }
-   return false;
+   // n2 is probably just n0 - iterate to find last node in bucket:
+   while (n2 && n2->Next() != n3)
+      n2 = const_cast<ContainerTools::Link1Base*>(n2->Next());
+
+   if (n2)
+      n2->SetNext(node);
+   return haveCollision;
 }
 
 

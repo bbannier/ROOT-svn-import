@@ -15,6 +15,7 @@
 #include <cstddef>
 #include <string>
 #include "AtomicCount.h"
+#include <iostream>
 
 namespace Reflex {
 namespace Internal {
@@ -68,10 +69,20 @@ namespace Internal {
          Link2Base* RemoveAfter();
 
          // Set previous and next
-         void Set(const Link2Base* prev, const Link2Base* next) {
-            fPrev = prev; fNext = next; }
-         void SetNext(const Link2Base* next) { fNext = next; }
-         void SetPrev(const Link2Base* prev) { fPrev = prev; }
+         void Set(Link2Base* prev, Link2Base* next) {
+            SetPrev(prev);
+            SetNext(next);
+         }
+         void SetNext(Link2Base* next) {
+            fNext = next;
+            if (next && next->fPrev != this)
+               next->fPrev = this;
+         }
+         void SetPrev(Link2Base* prev) {
+            fPrev = prev;
+            if (prev && prev->fNext != this)
+               prev->fNext = this;
+         }
 
       private:
          const Link2Base* fPrev; // previous node
@@ -86,7 +97,13 @@ namespace Internal {
          RefCounted(): fRefCount(0) {}
          // Reference Count
          void IncRef() const { ++fRefCount; }
-         void DecRef() const { --fRefCount; }
+         void DecRef() const {
+            if (!fRefCount)
+               // REMOVE <iostream>!
+               std::cerr << "ERROR in Reflex::Internal::RefCounted::DecRef: already at 0!"<< std::endl;
+            else
+               --fRefCount;
+         }
          bool IsReferenced() const { return fRefCount; }
 
       private:

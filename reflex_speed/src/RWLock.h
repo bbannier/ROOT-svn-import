@@ -111,6 +111,8 @@ namespace Reflex {
 
 #else // !REFLEX_THREADING:
 
+//#define REFLEX_RWLOCK_DEBUG
+
 #ifndef REFLEX_RWLOCK_DEBUG
 inline
 Reflex::Internal::RWLock::RWLock() {}

@@ -146,9 +146,7 @@ namespace Internal {
       typedef VALUE Value_t;
 
       OrderedContainerNode(const VALUE& obj, OrderedContainerNode* prev):
-      Link2_t(prev, 0), fObj(obj) {
-         if (prev) prev->InsertAfter(this);
-      }
+      Link2_t(prev, 0), fObj(obj) {}
 
       bool operator==(const OrderedContainerNode& other) {
          return fObj == other;
@@ -167,7 +165,12 @@ namespace Internal {
       // set a value to invalid (e.g. for iterators pointing to removed nodes)
       static void Invalidate(Node_t& node) { Base_t::Invalidate(node.fObj); }
       // check whether a value is invalidated (e.g. for iterators pointing to removed nodes)
-      static bool IsValid(const Node_t& node) { return Base_t::IsValid(node.fObj); }
+      // Never delete an OrderedContainerNode<T> as a
+      // ContainerNode< OrderedContainerNode<T> > (which is
+      // when we end up here), so always return true.
+      // It will be deleted as a OrderedContainerNode<T>, using
+      // NodeValidator<T>.
+      static bool IsValid(const Node_t& node) { return true; /*return Base_t::IsValid(node.fObj);*/ }
    };
 
    //-------------------------------------------------------------------------------
@@ -204,6 +207,7 @@ namespace Internal {
       typedef OrderedContainerNodeTraits<KEY, OrderedNode_t> OrderedTraits_t;
       typedef ContainerNode<KEY, OrderedNode_t, Reflex::Internal::ContainerTools::NotRefCounted, OrderedTraits_t> HashMapNode_t;
       typedef ContainerImpl<KEY, OrderedNode_t, UNIQUENESS, ContainerTools::NotRefCounted, HashMapNode_t> Cont_t;
+      typedef typename Cont_t::NodeArena_t NodeArena_t;
       typedef OrderedContainer_iterator<OrderedNode_t, HashMapNode_t, kOrderedContainer_iterator_Direction_Forward> iterator;
       typedef OrderedContainer_iterator<OrderedNode_t, HashMapNode_t, kOrderedContainer_iterator_Direction_Backward> reverse_iterator;
       typedef OrderedContainer_iterator<OrderedNode_t, HashMapNode_t, kOrderedContainer_iterator_Direction_Forward> const_iterator;
@@ -215,25 +219,26 @@ namespace Internal {
       virtual ~OrderedContainerImpl() {}
 
       iterator End() const { return iterator(); }
-      iterator Begin() const { return iterator(fHashMap.Arena(), (OrderedNode_t*)fFirst.Next()); }
+      iterator Begin() const { return iterator(Arena(), (OrderedNode_t*)fFirst.Next()); }
 
-      reverse_iterator RBegin() const { return reverse_iterator(fHashMap.Arena(), fLast); }
+      reverse_iterator RBegin() const { return reverse_iterator(Arena(), fLast); }
       reverse_iterator REnd() const { return reverse_iterator(); }
 
       const VALUE& First() const { return ((const NODE*)(fFirst.Next()))->fObj; }
       const VALUE& Last() const { return fLast->fObj; }
 
       const typename HashMapNode_t::Traits_t& Traits() const { return HashMapNode_t::fgTraits; }
+      NodeArena_t* Arena() const { return fHashMap.Arena(); }
       Hash_t Hash(const KEY& key) const { return Traits().Hash(key); }
       Hash_t ValueHash(const VALUE& value) const { return Traits().ValueHash(value); }
 
       const VALUE* Insert(const VALUE& obj) {return Insert(obj, Traits().ValueHash(obj));}
       const VALUE* Insert(const VALUE& obj, Hash_t hash) {
-         const OrderedNode_t* newLast = fHashMap.Insert(OrderedNode_t(obj, fLast), hash);
+         OrderedNode_t* newLast = const_cast<OrderedNode_t*>(fHashMap.Insert(OrderedNode_t(obj, fLast), hash));
          if (newLast) {
-            if (!fLast)
-               fFirst.SetNext(newLast);
-            fLast = const_cast<OrderedNode_t*>(newLast);
+            if (!fLast) fFirst.SetNext(newLast);
+            else        fLast->SetNext(newLast);
+            fLast = newLast;
             return &newLast->fObj;
          }
          return 0;
@@ -247,7 +252,8 @@ namespace Internal {
          if (!it) return;
          OrderedNode_t* curr = &it.Curr()->fObj;
          ContainerTools::Link2Base* prev = const_cast<ContainerTools::Link2Base*>(curr->Prev());
-         prev->RemoveAfter();
+         if (fLast == prev->RemoveAfter())
+            fLast = (OrderedNode_t*)prev;
          fHashMap.Remove(*curr);
       }
 
