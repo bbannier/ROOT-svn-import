@@ -1929,6 +1929,7 @@ void TFitEditor::DoFunction(Int_t selected)
       else
          s += Form("%s(%d)", te->GetTitle(), np);
       fEnteredFunc->SetText(s.Data());
+      editable = true;
    }
    TString tmpStr = fEnteredFunc->GetText();
 
