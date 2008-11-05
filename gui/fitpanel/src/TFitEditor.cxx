@@ -1162,6 +1162,9 @@ void TFitEditor::UpdateGUI()
       fSliderXMin->Disconnect("ValueChanged()");
       fSliderXMax->Disconnect("ValueChanged()");
 
+      if (!fSliderXParent->IsMapped())
+         fSliderXParent->MapWindow();
+
       fXaxis = hist->GetXaxis();
       fYaxis = hist->GetYaxis();
       fZaxis = hist->GetZaxis();
@@ -2412,6 +2415,11 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
       fGeneral->HideFrame(fSliderYParent);
    else
       fGeneral->ShowFrame(fSliderYParent);
+
+   if ( fDim < 1 )
+      fGeneral->HideFrame(fSliderXParent);
+   else
+      fGeneral->ShowFrame(fSliderXParent);
 
    return set;
 }
