@@ -1469,32 +1469,7 @@ void TFitEditor::FillFunctionList(Int_t)
             fFuncList->Select(newid-1);
    } 
    else if ( fTypeFit->GetSelected() == kFP_PREVFIT ) {
-      TList *listOfFunctions = 0;
-      if ( fFitObject ) {
-         switch (fType) {
-            
-         case kObjectHisto:
-            listOfFunctions = ((TH1 *)fFitObject)->GetListOfFunctions();
-            break;
-            
-         case kObjectGraph:
-            listOfFunctions = ((TGraph *)fFitObject)->GetListOfFunctions();
-            break;
-            
-         case kObjectMultiGraph:
-            listOfFunctions = ((TMultiGraph *)fFitObject)->GetListOfFunctions();
-            break;
-            
-         case kObjectGraph2D:
-            listOfFunctions = ((TGraph2D *)fFitObject)->GetListOfFunctions();
-            break;
-            
-         case kObjectHStack:
-         case kObjectTree: 
-         default:
-            break;
-         }
-      }
+      TList *listOfFunctions = GetFitObjectListOfFunctions();
       if ( listOfFunctions ) {
          Int_t newid = kFP_ALTFUNC;
          TIter next(listOfFunctions, kIterForward);
@@ -1504,7 +1479,7 @@ void TFitEditor::FillFunctionList(Int_t)
                fFuncList->AddEntry(obj->GetName(), newid++);
             }
          if ( newid != kFP_ALTFUNC )
-            fFuncList->Select(newid-1);
+            fFuncList->Select(newid-1, kTRUE);
       }
    }
 }
@@ -1897,18 +1872,8 @@ void TFitEditor::DoFunction(Int_t selected)
    TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
    bool editable = false;
    if (fNone->GetState() == kButtonDown || fNone->GetState() == kButtonDisabled) {
-      TF1* tmpTF1 = 0;
-      switch (fType) {
-      case kObjectHisto: {
-         tmpTF1 = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
-         break;
-      }
-      case kObjectGraph: {
-         tmpTF1 = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
-         break;
-      }
-      default: { break; }
-      }
+      TF1* tmpTF1 = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
+      if ( !tmpTF1 ) tmpTF1 = (TF1*) GetFitObjectListOfFunctions()->FindObject( te->GetTitle() );
 
       if ( tmpTF1 && strcmp(tmpTF1->GetExpFormula(), "") ) 
       {
@@ -1919,7 +1884,7 @@ void TFitEditor::DoFunction(Int_t selected)
       {
          if ( selected <= kFP_USER )
             editable = kTRUE;
-         else       
+         else
             editable = kFALSE;
          fEnteredFunc->SetText(te->GetTitle());
       }
@@ -1967,11 +1932,11 @@ void TFitEditor::DoFunction(Int_t selected)
    else {
       // Otherwise, we can create a new one with the text
       if ( fDim == 1 || fDim == 0 ) 
-         fitFunc = new TF1("lastFitFunc",fEnteredFunc->GetText(),fFuncXmin,fFuncXmax);
+         fitFunc = new TF1("tmpPars2",fEnteredFunc->GetText(),fFuncXmin,fFuncXmax);
       else if ( fDim == 2 )
-         fitFunc = new TF2("lastFitFunc",fEnteredFunc->GetText());
+         fitFunc = new TF2("tmpPars2",fEnteredFunc->GetText());
       else if ( fDim == 3 )
-         fitFunc =  new TF3("lastFitFunc",fEnteredFunc->GetText());
+         fitFunc =  new TF3("tmpPars2",fEnteredFunc->GetText());
    }
 
    if ( fitFunc && (unsigned int) fitFunc->GetNpar() != fFuncPars.size() )
@@ -2685,27 +2650,23 @@ TF1* TFitEditor::HasFitFunction(TObject *obj)
    // found in the list of functions, returns kTRUE; if not returns kFALSE.
    
    TF1 *func = 0;
-   TList *lf = 0;
+   TList *lf = GetFitObjectListOfFunctions();
 
    switch (fType) {
       case kObjectHisto: {
          func =((TH1 *)obj)->GetFunction("fitFunc");
-         lf = ((TH1 *)obj)->GetListOfFunctions();
          break;
       }
       case kObjectGraph: {
          func =((TGraph *)obj)->GetFunction("fitFunc");
-         lf = ((TGraph *)obj)->GetListOfFunctions();
          break;
       }
       case kObjectMultiGraph: {
          func =((TMultiGraph *)obj)->GetFunction("fitFunc");
-         lf = ((TMultiGraph *)obj)->GetListOfFunctions();
          break;
       }
       case kObjectGraph2D: {
          func =(TF1 *)((TGraph2D *)obj)->GetListOfFunctions()->FindObject("fitFunc");
-         lf = ((TGraph2D *)obj)->GetListOfFunctions();
          break;
       }
       case kObjectHStack: {
@@ -2866,4 +2827,35 @@ void TFitEditor::GetRanges(ROOT::Fit::DataRange& drange)
       Double_t zmax = fZaxis->GetBinUpEdge(izmax);
       drange.AddRange(2,zmin, zmax);
    }
+}
+
+TList* TFitEditor::GetFitObjectListOfFunctions()
+{
+   TList *listOfFunctions = 0;
+   if ( fFitObject ) {
+      switch (fType) {
+            
+      case kObjectHisto:
+         listOfFunctions = ((TH1 *)fFitObject)->GetListOfFunctions();
+         break;
+            
+      case kObjectGraph:
+         listOfFunctions = ((TGraph *)fFitObject)->GetListOfFunctions();
+         break;
+            
+      case kObjectMultiGraph:
+         listOfFunctions = ((TMultiGraph *)fFitObject)->GetListOfFunctions();
+         break;
+         
+      case kObjectGraph2D:
+         listOfFunctions = ((TGraph2D *)fFitObject)->GetListOfFunctions();
+         break;
+         
+      case kObjectHStack:
+      case kObjectTree: 
+      default:
+         break;
+      }
+   }
+   return listOfFunctions;
 }
