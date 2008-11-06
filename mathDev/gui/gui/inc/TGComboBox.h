@@ -101,12 +101,9 @@ public:
                         { fListBox->AddEntry(s, id); }
    virtual void AddEntry(TGLBEntry *lbe, TGLayoutHints *lhints)
                         { fListBox->AddEntry(lbe, lhints); }
-   virtual void InsertEntry(TGString *s, Int_t id, Int_t afterID)
-                        { fListBox->InsertEntry(s, id, afterID); }
-   virtual void InsertEntry(const char *s, Int_t id, Int_t afterID)
-                        { fListBox->InsertEntry(s, id, afterID); }
-   virtual void InsertEntry(TGLBEntry *lbe, TGLayoutHints *lhints, Int_t afterID)
-                        { fListBox->InsertEntry(lbe, lhints, afterID); }
+   virtual void InsertEntry(TGString *s, Int_t id, Int_t afterID);
+   virtual void InsertEntry(const char *s, Int_t id, Int_t afterID);
+   virtual void InsertEntry(TGLBEntry *lbe, TGLayoutHints *lhints, Int_t afterID);
    virtual void NewEntry(const char *s = "Entry") 
                         { fListBox->NewEntry(s); Resize(); }       //*MENU*
    virtual void RemoveEntry(Int_t id = -1);                        //*MENU*
@@ -121,7 +118,7 @@ public:
 
    virtual TGListBox    *GetListBox() const { return fListBox; }
    virtual TGTextEntry  *GetTextEntry() const { return fTextEntry; }
-   virtual TGLBEntry    *FindEntry(const char *s) const { return fListBox->FindEntry(s); }
+   virtual TGLBEntry    *FindEntry(const char *s) const;
    virtual void  Select(Int_t id, Bool_t emit = kTRUE);
    virtual Int_t GetSelected() const { return fListBox->GetSelected(); }
    virtual TGLBEntry *GetSelectedEntry() const
