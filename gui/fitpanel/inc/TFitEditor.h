@@ -152,9 +152,10 @@ protected:
    
    static TFitEditor *fgFitDialog;         // singleton fit panel
 
-   TGComboBox *BuildDataSetList(TGFrame *parent, Int_t id);
-   TGComboBox *BuildMethodList(TGFrame *parent, Int_t id);
+   TGComboBox* BuildDataSetList(TGFrame *parent, Int_t id);
+   TGComboBox* BuildMethodList(TGFrame *parent, Int_t id);
    void        GetRanges(ROOT::Fit::DataRange&);
+   TList*      GetFitObjectListOfFunctions();
    void        DrawSelection(bool restore = false);
    Int_t       CheckFunctionString(const char* str);
    void        CreateFunctionGroup();
