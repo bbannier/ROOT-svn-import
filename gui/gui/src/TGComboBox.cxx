@@ -325,27 +325,6 @@ void TGComboBox::EnableTextInput(Bool_t on)
 }
 
 //______________________________________________________________________________
-void TGComboBox::InsertEntry(TGString *s, Int_t id, Int_t afterID) 
-{ 
-   fListBox->InsertEntry(s, id, afterID); 
-   Layout();
-}
-
-//______________________________________________________________________________
-void TGComboBox::InsertEntry(const char *s, Int_t id, Int_t afterID)
-{ 
-   fListBox->InsertEntry(s, id, afterID); 
-   Layout(); 
-}
-
-//______________________________________________________________________________
-void TGComboBox::InsertEntry(TGLBEntry *lbe, TGLayoutHints *lhints, Int_t afterID)
-{
-   fListBox->InsertEntry(lbe, lhints, afterID);
-   Layout();
-}
-
-//______________________________________________________________________________
 TGLBEntry *TGComboBox::FindEntry(const char *s) const
 {
    // Find entry by name.
