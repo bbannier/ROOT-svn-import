@@ -403,12 +403,9 @@ void TFitEditor::CreateFunctionGroup()
    tf0->AddFrame(label1, new TGLayoutHints(kLHintsNormal, 0, 0, 5, 0));
 
    fTypeFit = new TGComboBox(tf0, kFP_TLIST);
-   fTypeFit->AddEntry("Predef-1D", kFP_PRED1D);
-   fTypeFit->AddEntry("Predef-2D", kFP_PRED2D);
-   //fTypeFit->AddEntry("Predef-3D", kFP_PRED3D);
    fTypeFit->AddEntry("User Func", kFP_UFUNC);
    fTypeFit->AddEntry("Prev. Fit", kFP_PREVFIT);
-   //fTypeFit->AddEntry("RooFit", kFP_ROOFIT);
+   fTypeFit->AddEntry("Predef-1D", kFP_PRED1D);
    fTypeFit->Resize(90, 20);
    fTypeFit->Select(kFP_PRED1D, kFALSE);
 
@@ -1454,7 +1451,7 @@ void TFitEditor::FillFunctionList(Int_t)
       fFuncList->Select(kFP_GAUS);
    }
    else if ( fTypeFit->GetSelected() == kFP_PRED2D && fDim == 2 ) {
-      // TODO
+      // TODO - if we decide to implement some!
    }
    else if ( fTypeFit->GetSelected() == kFP_UFUNC ) {
       Int_t newid = kFP_ALTFUNC;
@@ -1470,17 +1467,21 @@ void TFitEditor::FillFunctionList(Int_t)
    } 
    else if ( fTypeFit->GetSelected() == kFP_PREVFIT ) {
       TList *listOfFunctions = GetFitObjectListOfFunctions();
+      Int_t newid = kFP_ALTFUNC;
       if ( listOfFunctions ) {
-         Int_t newid = kFP_ALTFUNC;
          TIter next(listOfFunctions, kIterForward);
          TObject* obj;
          while ((obj = next()))
             if (obj->InheritsFrom(TF1::Class())) {
                fFuncList->AddEntry(obj->GetName(), newid++);
             }
-         if ( newid != kFP_ALTFUNC )
-            fFuncList->Select(newid-1, kTRUE);
       }
+      if ( newid == kFP_ALTFUNC ) {
+         fTypeFit->RemoveEntry(kFP_PREVFIT);
+         fTypeFit->Select(kFP_UFUNC, kTRUE);
+      }
+      else
+         fFuncList->Select(newid-1, kTRUE);
    }
 }
 
@@ -1759,6 +1760,9 @@ void TFitEditor::DoFit()
    if (gPad) gPad->GetVirtCanvas()->SetCursor(kPointer);
    gVirtualX->SetCursor(GetId(), gVirtualX->CreateCursor(kPointer));
    fFitButton->SetState(kButtonUp);
+
+   if ( !fTypeFit->FindEntry("Prev. Fit") )
+      fTypeFit->InsertEntry("Prev. Fit",kFP_PREVFIT, kFP_UFUNC);
 }
 
 //______________________________________________________________________________
@@ -2386,6 +2390,14 @@ Bool_t TFitEditor::SetObjectType(TObject* obj)
    else
       fGeneral->ShowFrame(fSliderXParent);
 
+   if ( fDim == 1 ) {
+      if ( !fTypeFit->FindEntry("Predef-1D") ) 
+         fTypeFit->InsertEntry("Predef-1D", kFP_PRED1D, kFP_PREVFIT);
+   } else {
+      if ( fTypeFit->FindEntry("Predef-1D") )
+         fTypeFit->RemoveEntry(kFP_PRED1D);
+   }
+
    return set;
 }
 
@@ -2680,6 +2692,8 @@ TF1* TFitEditor::HasFitFunction(TObject *obj)
    }
 
    if ( lf ) {
+      if ( !fTypeFit->FindEntry("Prev. Fit") )
+         fTypeFit->InsertEntry("Prev. Fit",kFP_PREVFIT, kFP_UFUNC);
       fTypeFit->Select(kFP_PREVFIT);
       FillFunctionList();
    }
