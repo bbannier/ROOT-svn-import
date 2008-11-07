@@ -2695,54 +2695,17 @@ void TFitEditor::MakeTitle(TGCompositeFrame *parent, const char *title)
 TF1* TFitEditor::HasFitFunction(TObject *obj)
 {
    // Look in the list of function for TF1. If a TF1 is
-   // found in the list of functions, returns kTRUE; if not returns kFALSE.
+   // found in the list of functions, it will be returned
    
-   TF1 *func = 0;
    TList *lf = GetFitObjectListOfFunctions();
-
-   switch (fType) {
-      case kObjectHisto: {
-         func =((TH1 *)obj)->GetFunction("fitFunc");
-         break;
-      }
-      case kObjectGraph: {
-         func =((TGraph *)obj)->GetFunction("fitFunc");
-         break;
-      }
-      case kObjectMultiGraph: {
-         func =((TMultiGraph *)obj)->GetFunction("fitFunc");
-         break;
-      }
-      case kObjectGraph2D: {
-         func =(TF1 *)((TGraph2D *)obj)->GetListOfFunctions()->FindObject("fitFunc");
-         break;
-      }
-      case kObjectHStack: {
-         // N/A
-         break;
-      }
-      case kObjectTree:  {
-         // N/A
-         break;
-      }
-   }
+   TF1 *func = 0;
 
    if ( lf ) {
       if ( !fTypeFit->FindEntry("Prev. Fit") )
          fTypeFit->InsertEntry("Prev. Fit",kFP_PREVFIT, kFP_UFUNC);
       fTypeFit->Select(kFP_PREVFIT);
       FillFunctionList();
-   }
 
-   if (func) {
-      TGLBEntry *le = fFuncList->FindEntry(Form(func->GetName()));
-      if (le) {
-         fFuncList->Select(le->EntryId(), kFALSE);
-         fSelLabel->SetText(le->GetTitle());
-      }
-      return func;
-   } 
-   if (lf) {
       TObject *obj2;
       TIter next(lf, kIterBackward);
       while ((obj2 = next())) {
