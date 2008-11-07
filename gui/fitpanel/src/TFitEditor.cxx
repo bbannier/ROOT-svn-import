@@ -912,6 +912,7 @@ void TFitEditor::ConnectSlots()
 
    // fit options
    fAllWeights1->Connect("Toggled(Bool_t)","TFitEditor",this,"DoAllWeights1()");
+   fUseRange->Connect("Toggled(Bool_t)","TFitEditor",this,"DoUseFuncRange()");
    fEmptyBinsWghts1->Connect("Toggled(Bool_t)","TFitEditor",this,"DoEmptyBinsAllWeights1()");
 
    // linear fit
@@ -1574,6 +1575,33 @@ void TFitEditor::DoEmptyBinsAllWeights1()
 }
 
 //______________________________________________________________________________
+void TFitEditor::DoUseFuncRange()
+{
+   if ( fUseRange->GetState() == kButtonDown ) {
+      if (fNone->GetState() == kButtonDown || fNone->GetState() == kButtonDisabled) {
+         TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
+         TF1* tmpTF1 = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
+         if ( !tmpTF1 ) tmpTF1 = (TF1*) GetFitObjectListOfFunctions()->FindObject( te->GetTitle() );
+         if ( tmpTF1 ) {
+            Double_t xmin, ymin, zmin, xmax, ymax, zmax;
+            tmpTF1->GetRange(xmin, ymin, zmin, xmax, ymax, zmax);
+            if ( fDim > 0 ) {
+               fSliderXMin->SetNumber( xmin );
+               fSliderXMax->SetNumber( xmax );
+               DoNumericSliderXChanged();
+            }
+            if ( fDim > 1 ) {
+               fSliderYMin->SetNumber( ymin );
+               fSliderYMax->SetNumber( ymax );
+               DoNumericSliderYChanged();
+            }
+         }
+      }
+      fUseRange->SetState(kButtonDown);
+   }
+}
+
+//______________________________________________________________________________
 void TFitEditor::DoAllWeights1()
 {
    // Slot connected to 'set all weights to 1' setting.
@@ -2183,6 +2211,8 @@ void TFitEditor::DoSliderXMoved()
    fSliderXMin->SetNumber( fXaxis->GetBinLowEdge( fSliderX->GetMinPosition() ) );
    fSliderXMax->SetNumber( fXaxis->GetBinUpEdge ( fSliderX->GetMaxPosition() ) );
 
+   fUseRange->SetState(kButtonUp);
+
    DrawSelection();
 }
 
@@ -2263,6 +2293,8 @@ void TFitEditor::DoNumericSliderXChanged()
    fSliderX->SetPosition(fXaxis->FindBin( fSliderXMin->GetNumber() ),
                          fXaxis->FindBin( fSliderXMax->GetNumber() ));
 
+   fUseRange->SetState(kButtonUp);
+
    DrawSelection();
 }
 
@@ -2276,6 +2308,8 @@ void TFitEditor::DoSliderYMoved()
    fSliderYMin->SetNumber( fYaxis->GetBinLowEdge( fSliderY->GetMinPosition() ) );
    fSliderYMax->SetNumber( fYaxis->GetBinUpEdge ( fSliderY->GetMaxPosition() ) );
    
+   fUseRange->SetState(kButtonUp);
+
    DrawSelection();
 }
 
@@ -2293,6 +2327,8 @@ void TFitEditor::DoNumericSliderYChanged()
 
    fSliderY->SetPosition( fYaxis->FindBin( fSliderYMin->GetNumber() ),
                           fYaxis->FindBin( fSliderYMax->GetNumber() ));
+
+   fUseRange->SetState(kButtonUp);
 
    DrawSelection();
 }

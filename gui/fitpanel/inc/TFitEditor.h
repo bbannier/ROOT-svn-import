@@ -222,6 +222,7 @@ public:
    virtual void   DoNumericSliderYChanged();
    virtual void   DoSliderZMoved();
    virtual void   DoUserDialog();
+   virtual void   DoUseFuncRange();
 
    // slot methods 'Minimization' tab
    virtual void   DoLibrary(Bool_t on);
