@@ -170,7 +170,7 @@ namespace Internal {
       // when we end up here), so always return true.
       // It will be deleted as a OrderedContainerNode<T>, using
       // NodeValidator<T>.
-      static bool IsValid(const Node_t& node) { return true; /*return Base_t::IsValid(node.fObj);*/ }
+      static bool IsValid(const Node_t&) { return true; /*return Base_t::IsValid(node.fObj);*/ }
    };
 
    //-------------------------------------------------------------------------------
