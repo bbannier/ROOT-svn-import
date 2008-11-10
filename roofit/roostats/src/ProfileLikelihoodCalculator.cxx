@@ -23,6 +23,7 @@
 
 #include "RooStats/SimpleInterval.h"
 
+#include "RooFitResult.h"
 #include "RooRealVar.h"
 #include "RooDataSet.h"
 #include "RooGlobalFunc.h"
@@ -42,6 +43,7 @@ NamespaceImp(RooStats)
 // Essentially this is the method of MINUIT/MINOS.
 
 
+using namespace RooFit;
 using namespace RooStats;
 
 
@@ -79,15 +81,44 @@ ConfInterval* ProfileLikelihoodCalculator::GetInterval() const {
 HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
 
   // dummy to get started
+  RooAbsPdf* pdf   = fWS->pdf(fPdfName);
+  RooAbsData* data = fWS->data(fDataName);
+  //  data->Print();
+
+  // calculate MLE
+  RooFitResult* fit = pdf->fitTo(*data,Extended(kFALSE),Strategy(0),Hesse(kFALSE),Save(kTRUE),PrintLevel(-1));
+  
+
+  fit->Print();
+  Double_t NLLatMLE= fit->minNll();
 
 
   // set POI to null values, set constant, calculate conditional MLE
+  TIter it = fNullParams->createIterator();
+  RooRealVar *myarg; 
+  RooRealVar *mytarget; 
+  while ((myarg = (RooRealVar *)it.Next())) { 
+    if(!myarg) continue;
 
-  // set POI to alternate values, set constant, calculate MLE
+    mytarget = fWS->var(myarg->GetName());
+    if(!mytarget) continue;
+    mytarget->setVal( myarg->getVal() );
+    mytarget->setConstant(kTRUE);
+    cout << "setting null parameter:" << endl;
+    mytarget->Print();
+  }
+  
+  RooFitResult* fit2 = pdf->fitTo(*data,Extended(kFALSE),Hesse(kFALSE),Strategy(0), Minos(kFALSE), Save(kTRUE),PrintLevel(-1));
+
+  Double_t NLLatCondMLE= fit2->minNll();
+  fit2->Print();
 
   // Use Wilks' theorem to translate -2 log lambda into p-values
-  HypoTestResult* htr = new HypoTestResult();
-
+  HypoTestResult* htr = 
+    new HypoTestResult("ProfileLRHypoTestResult",
+		       .5*TMath::Erfc(sqrt( 2*(NLLatCondMLE-NLLatMLE))/sqrt(2.)), 
+		       0 );
+  
   return htr;
 
 }
