@@ -65,6 +65,7 @@ ClassImp(RooStats::NumberCountingPdfFactory) ;
 // For the future, perhaps this factory should be extended to include the efficiency terms automatically.
 
 using namespace RooStats;
+using namespace RooFit;
 
 
 //_______________________________________________________
@@ -174,7 +175,7 @@ void NumberCountingPdfFactory::AddPdf(Double_t* sig,
   // add this PDF to workspace.  
   // Need to do import into workspace now to get all the structure imported as well.
   // Just returning the WS will loose the rest of the structure b/c it will go out of scope
-  ws->import(joint,PrintLevel(0));
+  ws->import(joint,PrintLevel(-1));
 }
 
 //_______________________________________________________
@@ -227,12 +228,12 @@ void NumberCountingPdfFactory::AddExpData(Double_t* sig,
   //  observableSet->Print();
   //  observableList->Print();
 
-  RooDataSet* data = new RooDataSet("NumberCountingData","Number Counting Data", tree, *observableList); // one experiment
+  RooDataSet* data = new RooDataSet("ExpectedNumberCountingData","Number Counting Data", tree, *observableList); // one experiment
   //  data->Scan();
 
 
   // import hypothetical data
-  ws->import(*data,PrintLevel(0));
+  ws->import(*data,PrintLevel(-1));
 
 }
 
