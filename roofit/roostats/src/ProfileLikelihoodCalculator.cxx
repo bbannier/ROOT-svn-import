@@ -83,7 +83,7 @@ HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
   // dummy to get started
   RooAbsPdf* pdf   = fWS->pdf(fPdfName);
   RooAbsData* data = fWS->data(fDataName);
-  //  data->Print();
+  if (!data) return 0;
 
   // calculate MLE
   RooFitResult* fit = pdf->fitTo(*data,Extended(kFALSE),Strategy(0),Hesse(kFALSE),Save(kTRUE),PrintLevel(-1));
@@ -113,11 +113,10 @@ HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
   Double_t NLLatCondMLE= fit2->minNll();
   fit2->Print();
 
-  // Use Wilks' theorem to translate -2 log lambda into p-values
+  // Use Wilks' theorem to translate -2 log lambda into a signifcance/p-value
   HypoTestResult* htr = 
     new HypoTestResult("ProfileLRHypoTestResult",
-		       .5*TMath::Erfc(sqrt( 2*(NLLatCondMLE-NLLatMLE))/sqrt(2.)), 
-		       0 );
+		       SignificanceToPValue(sqrt( 2*(NLLatCondMLE-NLLatMLE))), 0 );
   
   return htr;
 
