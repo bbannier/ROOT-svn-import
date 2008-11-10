@@ -141,7 +141,7 @@ void NumberCountingPdfFactory::AddPdf(Double_t* sig,
 
     RooRealVar*   b = 
       new RooRealVar(("b"+str.str()).c_str(),("b"+str.str()).c_str(),back[i],  0., 1.2*back[i]+MaxSigma*(sqrt(back[i])+back[i]*back_syst[i]));
-    b->Print();
+    //    b->Print();
     Double_t _tau = 1./back[i]/back_syst[i]/back_syst[i];
     RooRealVar*  tau = 
       new RooRealVar(("tau"+str.str()).c_str(),("tau"+str.str()).c_str(),_tau,0,2*_tau); 
@@ -174,7 +174,7 @@ void NumberCountingPdfFactory::AddPdf(Double_t* sig,
   // add this PDF to workspace.  
   // Need to do import into workspace now to get all the structure imported as well.
   // Just returning the WS will loose the rest of the structure b/c it will go out of scope
-  ws->import(joint);
+  ws->import(joint,PrintLevel(0));
 }
 
 //_______________________________________________________
@@ -228,11 +228,11 @@ void NumberCountingPdfFactory::AddExpData(Double_t* sig,
   //  observableList->Print();
 
   RooDataSet* data = new RooDataSet("NumberCountingData","Number Counting Data", tree, *observableList); // one experiment
-  data->Scan();
+  //  data->Scan();
 
 
   // import hypothetical data
-  ws->import(*data);
+  ws->import(*data,PrintLevel(0));
 
 }
 
