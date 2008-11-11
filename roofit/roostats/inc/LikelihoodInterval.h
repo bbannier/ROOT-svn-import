@@ -31,10 +31,12 @@ namespace RooStats {
         
     virtual Bool_t IsInInterval(RooArgSet&);
  
-    // Method to return lower limit
-    //    Double_t LowerLimit(RooAbsReal* param) const;
-    // Method to return upper limit
-    //  Double_t UpperLimit(RooAbsReal* param) const;
+    // Method to return lower limit on a given parameter out of a set of parameters of interest
+    //    Double_t LowerLimit(RooAbsReal* param, RooArgSet) const;
+    //    Double_t LowerLimit(RooAbsReal* param, Int_t) const;
+    // Method to return upper limit on a given parameter out of a set of parameters of interest
+    //    Double_t UpperLimit(RooAbsReal* param) const;
+    //    Double_t UpperLimit(RooAbsReal* param, Int_t) const;
     
   private:
     RooAbsReal* fLikelihoodRatio;

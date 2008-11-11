@@ -36,9 +36,7 @@ void rs101_numbercountinglimit()
 
   RooRealVar* param = (RooRealVar*) ws2->var("masterSignal"); 
   RooArgSet* params = new RooArgSet("params");
-  //  RooDataSet* data = (RooDataSet*) ws2->data("ExpectedNumberCountingData"); 
   RooAbsData* data =  ws2->data("ExpectedNumberCountingData"); 
-  //  params->addClone(*param);
   params->addClone(*param);
 
   RooNLLVar nll("nll","",*(ws2->pdf("joint")),*data);
@@ -47,15 +45,18 @@ void rs101_numbercountinglimit()
   LikelihoodInterval lrint("LRInterval","",&profile);
 
   params->setRealValue("masterSignal",0); 
-  //  params->first()->Print();
-  cout << " is it in the interval?: " << lrint.IsInInterval(*params) << endl;
+  std::cout << "\nconsider this parameter point:" << std::endl;
+  params->first()->Print();
+  std::cout << "\tis it in the interval?: " << lrint.IsInInterval(*params) << std::endl;
 
   params->setRealValue("masterSignal",1); 
-  //  params->first()->Print();
-  cout << " is it in the interval?: " << lrint.IsInInterval(*params) << endl;
+  std::cout << "\nconsider this parameter point:" << std::endl;
+  params->first()->Print();
+  std::cout << "\tis it in the interval?: " << lrint.IsInInterval(*params) << std::endl;
 
   params->setRealValue("masterSignal",3); 
-  //  params->first()->Print();
-  cout << " is it in the interval?: " << lrint.IsInInterval(*params) << endl;
+  std::cout << "\nconsider this parameter point:" << std::endl;
+  params->first()->Print();
+  cout << "\tis it in the interval?: " << lrint.IsInInterval(*params) << std::endl;
   
 }
