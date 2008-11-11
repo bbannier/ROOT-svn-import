@@ -20,6 +20,9 @@
 #include"Math/DistFunc.h"
 #endif
 
+#include "RooArgSet.h"
+#include "RooRealVar.h"
+
 namespace RooStats {
   // returns one-sided significance corresponding to a p-value
   inline Double_t PValueToSignificance(Double_t pvalue){
@@ -32,6 +35,21 @@ namespace RooStats {
     //    return .5*TMath::Erfc( Z /sqrt(2.));
     return ROOT::Math::normal_cdf_c(Z);
   }
+
+
+  inline void SetParameters(RooArgSet* desiredVals, RooArgSet* paramsToChange){
+    TIter it = desiredVals->createIterator();
+    RooRealVar *myarg; 
+    RooRealVar *mytarget; 
+    while ((myarg = (RooRealVar *)it.Next())) { 
+      if(!myarg) continue;
+      mytarget = (RooRealVar*) paramsToChange->find(myarg->GetName());
+      if(!mytarget) continue;
+      mytarget->setVal( myarg->getVal() );
+      mytarget->setConstant(myarg->isConstant());
+    }
+  }
+
 
 }
 
