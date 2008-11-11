@@ -175,7 +175,9 @@ void NumberCountingPdfFactory::AddPdf(Double_t* sig,
   // add this PDF to workspace.  
   // Need to do import into workspace now to get all the structure imported as well.
   // Just returning the WS will loose the rest of the structure b/c it will go out of scope
-  ws->import(joint,PrintLevel(-1));
+  RooMsgService::instance().setGlobalKillBelow(RooMsgService::ERROR) ;
+  ws->import(joint);
+  RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
 }
 
 //_______________________________________________________
@@ -233,7 +235,9 @@ void NumberCountingPdfFactory::AddExpData(Double_t* sig,
 
 
   // import hypothetical data
-  ws->import(*data,PrintLevel(-1));
+  RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
+  ws->import(*data);
+  RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
 
 }
 
