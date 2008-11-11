@@ -97,7 +97,7 @@ void rs100_numbercounting()
   // eg. we exclude masterSignal=0 at 95% confidence.
   paramsOfInterest->setRealValue("masterSignal",0.); 
   cout << "-------------------------------------------------" << endl;
-  std::cout << "\nconsider this parameter point:" << std::endl;
+  std::cout << "Consider this parameter point:" << std::endl;
   paramsOfInterest->first()->Print();
   if( lrint->IsInInterval(*paramsOfInterest) )
     std::cout << "It IS in the interval."  << std::endl;
@@ -108,7 +108,7 @@ void rs100_numbercounting()
   // We also ask about the parameter point masterSignal=2, which is inside the interval.
   paramsOfInterest->setRealValue("masterSignal",2.); 
   cout << "-------------------------------------------------" << endl;
-  std::cout << "\nconsider this parameter point:" << std::endl;
+  std::cout << "Consider this parameter point:" << std::endl;
   paramsOfInterest->first()->Print();
   if( lrint->IsInInterval(*paramsOfInterest) )
     std::cout << "It IS in the interval."  << std::endl;
