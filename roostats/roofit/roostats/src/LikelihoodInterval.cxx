@@ -86,13 +86,21 @@ Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint)
   if( !this->CheckParameters(parameterPoint) )
     return false; 
 
+  if(!fLikelihoodRatio) {
+    std::cout << "likelihood ratio not set" << std::endl;
+    return false;
+  }
 
   // set parameters
   SetParameters(&parameterPoint, fLikelihoodRatio->getVariables() );
-  // evaluate likelihood ratio, see if it's bigger than threshold
 
-  
-  std::cout << "lr = " << fLikelihoodRatio->getVal() << " " << parameterPoint.getSize() << std::endl;
+  // evaluate likelihood ratio, see if it's bigger than threshold
+  //  std::cout << "evaluate LR " << std::endl ;
+  //  std::cout << fLikelihoodRatio->getVal() << std::endl;
+  if (fLikelihoodRatio->getVal()<0){
+    std::cout << "The likelihood ratio is < 0, indicates a bad minimum or numerical precision problems.  Will return true" << std::endl;
+    return true;
+  }
   if ( TMath::Prob( 2* fLikelihoodRatio->getVal(), parameterPoint.getSize()) < 0.05 )
     return false;
 
@@ -100,3 +108,40 @@ Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint)
   return true;
   
 }
+
+/* Not complete.  Add a binary search to get lower/upper limit for a given parameter.
+Need to be careful because of a few issues:
+ - Need to profile other parameters of interest, and the fLikelihoodRatio may keep the other POI fixed to their current values.  Probably need to make a custom POI.
+ - Need to cut on the profile LR based on a chi^2 dist with the correct number of number of POI.
+//____________________________________________________________________
+Bool_t LikelihoodInterval::LowerLimit(RooRealVar& param, RooArgSet &parameterPoint) 
+{  
+  //  double target = 1.64; // target of sqrt(-2log lambda)
+  RooArgSet* theseParams = parameterPoint.clone("tempParams");
+
+  Double_t paramRange = param.getMax()-param.getMin();
+  Double_t step = paramRange/2.;
+  Double_t lastDiff = -.5, diff=-.5;
+  Double_t thisMu = param.getMin();
+  int nIterations = 0, maxIterations = 20;
+  cout << "about to do binary search" << endl;
+  while(fabs(diff) > 0.01*paramRange && nIterations < maxIterations ){
+    nIterations++;
+    if(diff<0)
+      thisMu += step;
+    else
+      thisMu -= step;
+    if(lastDiff*diff < 0) step /=2; 
+
+    
+    mu.setVal( thisMu );
+    lastDiff = diff;
+    // abs below to protect small negative numbers from numerical precision
+    //    diff = sqrt(2.*fabs(muprofile.getVal())) - target; 
+    diff = (Double_t) IsInInterval(theseParams) - 0.5;
+    cout << "diff = " << diff << endl;
+  }
+  
+
+}
+*/

@@ -12,6 +12,7 @@
 #endif
 #include "RooStats/ProfileLikelihoodCalculator.h"
 #include "RooStats/NumberCountingPdfFactory.h"
+#include "RooStats/ConfInterval.h"
 #include "RooRealVar.h"
 
 using namespace RooFit ;
@@ -56,6 +57,21 @@ void rs100_numbercounting()
   */
 
   delete htr;
+
+
+  // an example with the confidence interval
+  /*
+  plc.SetParameters(nullParams);
+  ConfInterval* lrint = plc.GetInterval();
+  nullParams->setRealValue("masterSignal",2.); 
+  std::cout << "\nconsider this parameter point:" << std::endl;
+  nullParams->first()->Print();
+  std::cout << "\tis it in the interval?: " << lrint->IsInInterval(*nullParams) << std::endl;
+
+  delete lrint;
+  */
+
+
   //  delete nullParams;
 
   /*

@@ -21,10 +21,12 @@
 #include "RooStats/RooStatsUtils.h"
 #endif
 
-#include "RooStats/SimpleInterval.h"
+#include "RooStats/LikelihoodInterval.h"
 
 #include "RooFitResult.h"
 #include "RooRealVar.h"
+#include "RooProfileLL.h"
+#include "RooNLLVar.h"
 #include "RooDataSet.h"
 #include "RooGlobalFunc.h"
 #include "RooCmdArg.h"
@@ -63,16 +65,15 @@ ProfileLikelihoodCalculator::~ProfileLikelihoodCalculator(){
 //_______________________________________________________
 ConfInterval* ProfileLikelihoodCalculator::GetInterval() const {
 
-  // dummy to get started
-  
-  // result possibilities:
-  //   - If 1-d use a simple interval
-  //   - If 2-d could return a contour interval
-  //   - could return an elliptical interval (eg. HESSE, general but not really profile LR)
-  //   - could make an interval class that caches the profile LR internally (totally general)
+  RooAbsPdf* pdf   = fWS->pdf(fPdfName);
+  RooAbsData* data = fWS->data(fDataName);
+  if (!data || !pdf || !fPOI) return 0;
 
-  SimpleInterval* interval = new SimpleInterval();
+  RooNLLVar nll("nll","",*pdf,*data);
+  RooProfileLL* profile = new RooProfileLL("pll","",nll, *fPOI);
 
+  LikelihoodInterval* interval 
+    = new LikelihoodInterval("LikelihoodInterval", profile);
 
   return interval;
 }
@@ -80,10 +81,9 @@ ConfInterval* ProfileLikelihoodCalculator::GetInterval() const {
 //_______________________________________________________
 HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
 
-  // dummy to get started
   RooAbsPdf* pdf   = fWS->pdf(fPdfName);
   RooAbsData* data = fWS->data(fDataName);
-  if (!data) return 0;
+  if (!data || !pdf) return 0;
 
   // calculate MLE
   RooFitResult* fit = pdf->fitTo(*data,Extended(kFALSE),Strategy(0),Hesse(kFALSE),Save(kTRUE),PrintLevel(-1));
