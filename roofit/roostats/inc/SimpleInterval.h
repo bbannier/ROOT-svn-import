@@ -30,6 +30,8 @@ namespace RooStats {
     virtual ~SimpleInterval();
         
     virtual Bool_t IsInInterval(RooArgSet&);
+    virtual void SetConfidenceLevel(Double_t cl) {fConfidenceLevel = cl;}
+    virtual Double_t ConfidenceLevel() const {return fConfidenceLevel;}
  
     // Method to return lower limit
     Double_t LowerLimit() {return fLowerLimit;}
@@ -39,6 +41,7 @@ namespace RooStats {
   private:
     Double_t fLowerLimit;
     Double_t fUpperLimit;
+    Double_t fConfidenceLevel;
     
   protected:
     ClassDef(SimpleInterval,1)  

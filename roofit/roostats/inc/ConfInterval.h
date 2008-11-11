@@ -26,8 +26,10 @@ namespace RooStats {
     //pure virtual?  where does =0 go with const?
     virtual Bool_t IsInInterval(RooArgSet&) = 0; 
     
-    // do we want it to cache confidence level?
-    // double ConfLevel() const;
+    // used to set confidence level.  Keep pure virtual
+    virtual void SetConfidenceLevel(Double_t cl) = 0;
+    // return confidence level
+    virtual Double_t ConfidenceLevel() const = 0;
     // 
     // if so does this implement it?
     // private fSize;

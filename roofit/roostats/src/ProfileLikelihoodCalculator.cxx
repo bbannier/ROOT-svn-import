@@ -69,8 +69,13 @@ ConfInterval* ProfileLikelihoodCalculator::GetInterval() const {
   RooAbsData* data = fWS->data(fDataName);
   if (!data || !pdf || !fPOI) return 0;
 
-  RooNLLVar nll("nll","",*pdf,*data);
-  RooProfileLL* profile = new RooProfileLL("pll","",nll, *fPOI);
+  RooNLLVar* nll = new RooNLLVar("nll","",*pdf,*data);
+  RooProfileLL* profile = new RooProfileLL("pll","",*nll, *fPOI);
+  profile->addOwnedComponents(*nll) ;  // to avoid memory leak
+
+  RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
+  profile->getVal();
+  RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
 
   LikelihoodInterval* interval 
     = new LikelihoodInterval("LikelihoodInterval", profile);

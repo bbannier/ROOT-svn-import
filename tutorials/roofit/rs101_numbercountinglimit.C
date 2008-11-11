@@ -40,9 +40,12 @@ void rs101_numbercountinglimit()
   params->addClone(*param);
 
   RooNLLVar nll("nll","",*(ws2->pdf("joint")),*data);
-  RooProfileLL profile("pll","",nll,*(ws2->var("masterSignal")));
+  //  RooProfileLL profile("pll","",nll,*(ws2->var("masterSignal")));
+  RooProfileLL* profile = new RooProfileLL("pll","",nll,*(ws2->var("masterSignal")));
+  profile->getVariables()->Print();
 
-  LikelihoodInterval lrint("LRInterval","",&profile);
+  //  LikelihoodInterval lrint("LRInterval","",&profile);
+  LikelihoodInterval lrint("LRInterval","",profile);
 
   params->setRealValue("masterSignal",0); 
   std::cout << "\nconsider this parameter point:" << std::endl;
