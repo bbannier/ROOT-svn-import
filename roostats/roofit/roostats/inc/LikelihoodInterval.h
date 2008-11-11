@@ -18,6 +18,8 @@
 #include "RooStats/ConfInterval.h"
 #endif
 
+#include "RooAbsReal.h"
+
 namespace RooStats {
  class LikelihoodInterval : public ConfInterval {
   public:
@@ -30,6 +32,8 @@ namespace RooStats {
     virtual ~LikelihoodInterval();
         
     virtual Bool_t IsInInterval(RooArgSet&);
+    virtual void SetConfidenceLevel(Double_t cl) {fConfidenceLevel = cl;}
+    virtual Double_t ConfidenceLevel() const {return fConfidenceLevel;}
  
     // Method to return lower limit on a given parameter out of a set of parameters of interest
     //    Double_t LowerLimit(RooAbsReal* param, RooArgSet) const;
@@ -40,6 +44,7 @@ namespace RooStats {
     
   private:
     RooAbsReal* fLikelihoodRatio;
+    Double_t fConfidenceLevel;
     
   protected:
     ClassDef(LikelihoodInterval,1)  

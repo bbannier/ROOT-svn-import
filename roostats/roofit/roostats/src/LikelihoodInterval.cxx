@@ -25,6 +25,7 @@
 #include "RooStats/LikelihoodInterval.h"
 #endif
 #include "RooAbsReal.h"
+#include "RooMsgService.h"
 #include "RooStats/RooStatsUtils.h"
 
 // Without this macro the THtml doc for TMath can not be generated
@@ -58,16 +59,18 @@ LikelihoodInterval::LikelihoodInterval(const char* name, const char* title) :
 
 //____________________________________________________________________
 LikelihoodInterval::LikelihoodInterval(const char* name, RooAbsReal* lr) :
-  ConfInterval(name,name), fLikelihoodRatio(lr)
+  ConfInterval(name,name)
 {
   // Alternate constructor
+  fLikelihoodRatio = lr;
 }
 
 //____________________________________________________________________
 LikelihoodInterval::LikelihoodInterval(const char* name, const char* title, RooAbsReal* lr) :
-  ConfInterval(name,title), fLikelihoodRatio(lr)
+  ConfInterval(name,title)
 {
   // Alternate constructor
+  fLikelihoodRatio = lr;
 }
 
 //____________________________________________________________________
@@ -82,6 +85,7 @@ LikelihoodInterval::~LikelihoodInterval()
 Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint) 
 {  
 
+  RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
   // Method to determine if a parameter point is in the interval
   if( !this->CheckParameters(parameterPoint) )
     return false; 
@@ -94,17 +98,17 @@ Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint)
   // set parameters
   SetParameters(&parameterPoint, fLikelihoodRatio->getVariables() );
 
+
   // evaluate likelihood ratio, see if it's bigger than threshold
-  //  std::cout << "evaluate LR " << std::endl ;
-  //  std::cout << fLikelihoodRatio->getVal() << std::endl;
   if (fLikelihoodRatio->getVal()<0){
     std::cout << "The likelihood ratio is < 0, indicates a bad minimum or numerical precision problems.  Will return true" << std::endl;
     return true;
   }
-  if ( TMath::Prob( 2* fLikelihoodRatio->getVal(), parameterPoint.getSize()) < 0.05 )
+  if ( TMath::Prob( 2* fLikelihoodRatio->getVal(), parameterPoint.getSize()) < (1.-fConfidenceLevel) )
     return false;
 
 
+  RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
   return true;
   
 }
