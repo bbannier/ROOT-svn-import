@@ -26,6 +26,7 @@
 #pragma link C++ class RooStats::SPlot+;
 #pragma link C++ class RooStats::NumberCountingPdfFactory+;
 #pragma link C++ class RooStats::SimpleInterval+;
+#pragma link C++ class RooStats::LikelihoodInterval+;
 #pragma link C++ class RooStats::HypoTestResult+;
 //#pragma link C++ class RooStats::ConfInterval+; // interface, not concrete
 //#pragma link C++ class RooStats::IntervalCalculator+; // interface, not concrete
