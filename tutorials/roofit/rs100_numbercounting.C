@@ -41,8 +41,7 @@ void rs100_numbercounting()
 
   
   // Step 2, use a RooStats factory to build a PDF for a 
-  // number counting combination.
-  // The Workspace will include model and expected data.
+  // number counting combination and add it to the workspace.
   // We need to give the signal expectation to relate the masterSignal
   // to the signal contribution in the individual channels.
   // The model neglects correlations in background uncertainty, 
@@ -51,18 +50,19 @@ void rs100_numbercounting()
   RooWorkspace* wspace = new RooWorkspace();
   f.AddModel(s,2,wspace,"TopLevelPdf", "masterSignal"); 
 
-  // Step 2b.
+  // Step 3, use a RooStats factory to add datasets to teh workspace.
+  // Step 3a.
   // Add the expected data to the workspace
   f.AddExpData(s, b, db, 2, wspace, "ExpectedNumberCountingData");
 
-  // Step 2c.
+  // Step 3b.
   // Add the observed data to the workspace
   Double_t mainMeas[2] = {123.,117.};      // observed main measurement
   Double_t bkgMeas[2] = {111.23,98.76};    // observed background
   Double_t dbMeas[2] = {.011,.0095};       // observed fractional background uncertainty
   f.AddData(mainMeas, bkgMeas, dbMeas, 2, wspace,"ObservedNumberCountingData");
 
-  // Step 2d.
+  // Step 3c.
   Double_t sideband[2] = {11123.,9876.};    // observed sideband
   Double_t tau[2] = {100.,100.}; // ratio of bkg in sideband to bkg in main measurement, from experimental design.
   f.AddDataWithSideband(mainMeas, sideband, tau, 2, wspace,"ObservedNumberCountingDataWithSideband");
@@ -74,12 +74,12 @@ void rs100_numbercounting()
   // The Hypothesis testing stage:
   /////////////////////////////////////////
 
-  // Step 3, Create a calculator for doing the hypothesis test.
+  // Step 4, Create a calculator for doing the hypothesis test.
   ProfileLikelihoodCalculator plc;
   plc.SetWorkspace(wspace);
   plc.SetCommonPdf("TopLevelPdf");
 
-  // Step 4, Specify the data set 
+  // Step 5, Specify the data set 
   // case a: for expected data
   plc.SetData("ExpectedNumberCountingData"); 
   // need code to deal with snapshots.  Same model in workspace may need to be reconfigured.
@@ -99,7 +99,7 @@ void rs100_numbercounting()
   //  wspace->var("tau_1")->setVal(wspace->var("tau_1ObservedNumberCountingDataWithSideband")->getVal() );
 
 
-  // Step 5, Define the null hypothesis for the calculator
+  // Step 6, Define the null hypothesis for the calculator
   // Here you need to know the name of the variables corresponding to hypothesis.
   RooRealVar* x = wspace->var("masterSignal"); 
   RooArgSet* nullParams = new RooArgSet("nullParams");
@@ -108,7 +108,7 @@ void rs100_numbercounting()
   nullParams->setRealValue("masterSignal",0); 
   plc.SetNullParameters(nullParams);
 
-  // Step 6, Use the Calculator to get a HypoTestResult
+  // Step 7, Use the Calculator to get a HypoTestResult
   HypoTestResult* htr = plc.GetHypoTest();
   cout << "-------------------------------------------------" << endl;
   cout << "The p-value for the null is " << htr->NullPValue() << endl;
@@ -125,14 +125,14 @@ void rs100_numbercounting()
   //////////////////////////////////////////
   // Confidence Interval Stage
 
-  // Step 7, Here we re-use the ProfileLikelihoodCalculator to return a confidence interval.
+  // Step 8, Here we re-use the ProfileLikelihoodCalculator to return a confidence interval.
   // We need to specify what are our parameters of interest
   RooArgSet* paramsOfInterest = nullParams; // they are the same as before in this case
   plc.SetParameters(paramsOfInterest);
   ConfInterval* lrint = plc.GetInterval();  // that was easy.
   lrint->SetConfidenceLevel(0.95);
 
-  // Step 8a, Ask if masterSignal=0 is in the interval.
+  // Step 9a, Ask if masterSignal=0 is in the interval.
   // Note, this is equivalent to the question of a 2-sigma hypothesis test: 
   // "is the parameter point masterSignal=0 inside the 95% confidence interval?"
   // Since the signficance of the Hypothesis test was > 2-sigma it should not be: 
@@ -147,7 +147,7 @@ void rs100_numbercounting()
     std::cout << "It is NOT in the interval."  << std::endl;
   cout << "-------------------------------------------------\n\n" << endl;
 
-  // Step 8b, We also ask about the parameter point masterSignal=2, which is inside the interval.
+  // Step 9b, We also ask about the parameter point masterSignal=2, which is inside the interval.
   paramsOfInterest->setRealValue("masterSignal",2.); 
   cout << "-------------------------------------------------" << endl;
   std::cout << "Consider this parameter point:" << std::endl;
