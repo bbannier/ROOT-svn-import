@@ -28,19 +28,22 @@ namespace RooStats{
     // need one for expected and one for observed
     NumberCountingPdfFactory();
     ~NumberCountingPdfFactory();
-    RooWorkspace* GetExpWS(Double_t*, Double_t*, Double_t*, Int_t) ; 
-    //  RooWorkspace* GetObsWS(Double_t*, Double_t*, Double_t*, Int_t) ; // needs more thought
-    void AddObsData(Double_t* mainMeas, Double_t* bkgMeas, Double_t* db, 
-		    Int_t nbins, RooWorkspace* ws);
-    void AddObsDataWithSideband(Double_t* mainMeas, Double_t* sideband, 
-				Int_t nbins, RooWorkspace* ws);
+
+    void AddModel(Double_t* sigExp, Int_t nchan, RooWorkspace* ws, 
+		  const char* pdfName = "CombinedPdf", const char* masterSignalName = "masterSignal") ; 
+
+    void AddData(Double_t* mainMeas, Double_t* bkgMeas, Double_t* db, 
+		 Int_t nbins, RooWorkspace* ws, const char* dsName = "NumberCountingData");
+    void AddExpData(Double_t* sigExp, Double_t* bkgExp, Double_t* db, 
+		    Int_t nbins, RooWorkspace* ws, const char* dsName = "ExpectedNumberCountingData");
+    void AddExpDataWithSideband(Double_t* sigExp, Double_t* bkgExp, Double_t* tau, 
+				Int_t nbins, RooWorkspace* ws, const char* dsName = "NumberCountingData");
+    void AddDataWithSideband(Double_t* mainMeas, Double_t* sideband, Double_t* tau, 
+				Int_t nbins, RooWorkspace* ws, const char* dsName = "ExpectedNumberCountingData");
 
   private:
-    //    RooWorkspace* fWS;  //avoiding having  this class keep state, really use as a factory
-
-    void AddExpData(Double_t*, Double_t*, Double_t*, Int_t, RooWorkspace* );
-    //    void AddObsData(Double_t*, Double_t*, Double_t*, Int_t, RooWorkspace* ); // needs more thought
-    void AddPdf(Double_t*, Double_t*, Double_t*, Int_t, RooWorkspace* );
+    RooRealVar* SafeObservableCreation(RooWorkspace* ws, const char* varName, Double_t value) ;
+    RooRealVar* SafeObservableCreation(RooWorkspace* ws, const char* varName, Double_t value, Double_t maximum) ;
 
 
   protected:
