@@ -40,18 +40,31 @@ void rs100_numbercounting()
   Double_t db[2] = {.0100,.0100}; // fractional background uncertainty
 
   
-  // Step 2, use a RooStats factory to build a PDF for a number counting combination
-  // Workspace will include model and expected data.
-  // Could add observed data to the workspace at this stage.
-  // The model neglects correlations in background uncertainty, but they can be added.
+  // Step 2, use a RooStats factory to build a PDF for a 
+  // number counting combination.
+  // The Workspace will include model and expected data.
+  // We need to give the signal expectation to relate the masterSignal
+  // to the signal contribution in the individual channels.
+  // The model neglects correlations in background uncertainty, 
+  // but they can be added.
   NumberCountingPdfFactory f;
-  RooWorkspace* ws2 = f.GetExpWS(s,b,db,2); // see below for a printout of the workspace
+  RooWorkspace* ws2 = f.GetExpWS(s,b,db,2); 
+  // see below for a printout of the workspace
   //  ws2->Print();  //uncomment to see structure of workspace
 
   // Step 2b.
-  Double_t mainMeas[2] = {125.,115.};      // observed main measurement
-  Double_t sideband[2] = {10000.,10000.};    // observed sideband
-  f.AddObsData(mainMeas,sideband,2,ws2);
+  // Add the observed data to the workspace at this stage.
+  Double_t mainMeas[2] = {123.,117.};      // observed main measurement
+  Double_t bkgMeas[2] = {111.23,98.76};    // observed sideband
+  f.AddObsData(mainMeas, bkgMeas, db, 2, ws2);
+  // Not correct b/c still need to deal with the right tau in this case.
+  // Change interfaces to:
+  // AddModel(sExpected,nchan, ws) // make model only
+  // AddExpData(s+b, b, db, nchan,ws) // sideband
+  // AddExpDataWithSideband(s+b, b*tau, tau, nchan,ws) // on off
+  //   - or AddExpDataWithSideband(s,b,tau,nchan,ws) // on off
+  // AddObsData(x, b, db, nchan,ws)              // gauss
+  // AddObsDataWithSideband(x, y, tau, nchan,ws) // on off
 
   /////////////////////////////////////////
   // The Hypothesis testing stage:
@@ -61,8 +74,8 @@ void rs100_numbercounting()
   ProfileLikelihoodCalculator plc;
   plc.SetWorkspace(ws2);
   plc.SetCommonPdf("joint");
-  plc.SetData("ExpectedNumberCountingData");
-  //  plc.SetData("ObservedNumberCountingData");
+  plc.SetData("ExpectedNumberCountingData"); // for expected case
+  //  plc.SetData("ObservedNumberCountingData"); // for observed case
 
   // Step 4, Define the null hypothesis for the calculator
   // Here you need to know the name of the variables corresponding to hypothesis.
@@ -80,7 +93,7 @@ void rs100_numbercounting()
   cout << "Corresponding to a signifcance of " << htr->Significance() << endl;
   cout << "-------------------------------------------------\n\n" << endl;
 
-  /* should return:
+  /* expected case should return:
      The p-value for the null is 0.015294
      Corresponding to a signifcance of 2.16239
   */

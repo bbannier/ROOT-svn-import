@@ -241,8 +241,70 @@ void NumberCountingPdfFactory::AddExpData(Double_t* sig,
 
 }
 
+
 //_______________________________________________________
 void NumberCountingPdfFactory::AddObsData(Double_t* mainMeas, 
+					  Double_t* back, 
+					  Double_t* back_syst, 
+					  Int_t nbins, 
+					  RooWorkspace* ws) {
+
+  // Method to add observed data in expected form of a main measurement
+  // and a sideband measurement.  
+
+  using namespace RooFit;
+  using std::vector;
+
+  TList observablesCollection;
+
+  TTree* tree = new TTree();
+  Double_t* xForTree = new Double_t[nbins];
+  Double_t* yForTree = new Double_t[nbins];
+
+  // loop over channels
+  for(Int_t i=0; i<nbins; ++i){
+    std::stringstream str;
+    str<<"_"<<i;
+
+    Double_t _tau = 1./back[i]/back_syst[i]/back_syst[i];
+
+    RooRealVar*   x = 
+      new RooRealVar(("x"+str.str()).c_str(),("x"+str.str()).c_str(),  mainMeas[i], 0., 2.*mainMeas[i]);
+    RooRealVar*   y = 
+      new RooRealVar(("y"+str.str()).c_str(),("y"+str.str()).c_str(),  back[i]*_tau,  0., 2.*back[i]*_tau);
+
+    observablesCollection.Add(x);
+    observablesCollection.Add(y);
+    
+    std::cout << "bkgMeas = " << back[i] << " tau = " << _tau << std::endl;
+
+    xForTree[i] = mainMeas[i];
+    yForTree[i] = back[i]*_tau;
+    tree->Branch(("x"+str.str()).c_str(), xForTree+i ,("x"+str.str()+"/D").c_str());
+    tree->Branch(("y"+str.str()).c_str(), yForTree+i ,("y"+str.str()+"/D").c_str());
+  }
+  tree->Fill();
+  //  tree->Print();
+  //  tree->Scan();
+
+  RooArgList* observableList = new RooArgList(observablesCollection);
+
+  //  observableSet->Print();
+  //  observableList->Print();
+
+  RooDataSet* data = new RooDataSet("ObservedNumberCountingData","Number Counting Data", tree, *observableList); // one experiment
+  data->Scan();
+
+
+  // import hypothetical data
+  RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
+  ws->import(*data);
+  RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+
+}
+
+//_______________________________________________________
+void NumberCountingPdfFactory::AddObsDataWithSideband(Double_t* mainMeas, 
 					  Double_t* sideband, 
 					  Int_t nbins, 
 					  RooWorkspace* ws) {
