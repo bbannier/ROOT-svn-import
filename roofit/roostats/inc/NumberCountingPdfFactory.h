@@ -30,10 +30,10 @@ namespace RooStats{
     ~NumberCountingPdfFactory();
     RooWorkspace* GetExpWS(Double_t*, Double_t*, Double_t*, Int_t) ; 
     //  RooWorkspace* GetObsWS(Double_t*, Double_t*, Double_t*, Int_t) ; // needs more thought
-    void AddObsData(Double_t* mainMeas, 
-		    Double_t* sideband, 
-		    Int_t nbins, 
-		    RooWorkspace* ws);
+    void AddObsData(Double_t* mainMeas, Double_t* bkgMeas, Double_t* db, 
+		    Int_t nbins, RooWorkspace* ws);
+    void AddObsDataWithSideband(Double_t* mainMeas, Double_t* sideband, 
+				Int_t nbins, RooWorkspace* ws);
 
   private:
     //    RooWorkspace* fWS;  //avoiding having  this class keep state, really use as a factory
