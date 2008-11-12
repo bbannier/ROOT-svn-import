@@ -241,3 +241,61 @@ void NumberCountingPdfFactory::AddExpData(Double_t* sig,
 
 }
 
+//_______________________________________________________
+void NumberCountingPdfFactory::AddObsData(Double_t* mainMeas, 
+					  Double_t* sideband, 
+					  Int_t nbins, 
+					  RooWorkspace* ws) {
+
+  // A number counting combination for N channels with uncorrelated background 
+  // uncertainty.  Correlations can be added by extending this PDF with additional terms.
+  // Arguements are an array of expected signal, expected background, and relative 
+  // background uncertainty (eg. 0.1 for 10% uncertainty), and the number of channels.
+
+  using namespace RooFit;
+  using std::vector;
+
+  TList observablesCollection;
+
+  TTree* tree = new TTree();
+  Double_t* xForTree = new Double_t[nbins];
+  Double_t* yForTree = new Double_t[nbins];
+
+  // loop over channels
+  for(Int_t i=0; i<nbins; ++i){
+    std::stringstream str;
+    str<<"_"<<i;
+
+    RooRealVar*   x = 
+      new RooRealVar(("x"+str.str()).c_str(),("x"+str.str()).c_str(),  mainMeas[i], 0., 2.*mainMeas[i] );
+    RooRealVar*   y = 
+      new RooRealVar(("y"+str.str()).c_str(),("y"+str.str()).c_str(),  sideband[i],  0., 2.*sideband[i] );
+
+    observablesCollection.Add(x);
+    observablesCollection.Add(y);
+    
+    xForTree[i] = mainMeas[i];
+    yForTree[i] = sideband[i];
+    tree->Branch(("x"+str.str()).c_str(), xForTree+i ,("x"+str.str()+"/D").c_str());
+    tree->Branch(("y"+str.str()).c_str(), yForTree+i ,("y"+str.str()+"/D").c_str());
+  }
+  tree->Fill();
+  //  tree->Print();
+  //  tree->Scan();
+
+  RooArgList* observableList = new RooArgList(observablesCollection);
+
+  //  observableSet->Print();
+  //  observableList->Print();
+
+  RooDataSet* data = new RooDataSet("ObservedNumberCountingData","Number Counting Data", tree, *observableList); // one experiment
+  data->Scan();
+
+
+  // import hypothetical data
+  RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
+  ws->import(*data);
+  RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+
+}
+
