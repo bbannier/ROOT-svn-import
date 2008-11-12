@@ -35,9 +35,9 @@ void rs100_numbercounting()
   /////////////////////////////////////////
 
   // Step 1, define arrays with signal & bkg expectations and background uncertainties
-  Double_t s[2] = {20.,10.};      // expected signal
-  Double_t b[2] = {100.,100.};    // expected background
-  Double_t db[2] = {.0100,.0100}; // fractional background uncertainty
+  Double_t s[2] = {20.,10.};           // expected signal
+  Double_t b[2] = {100.,100.};         // expected background
+  Double_t db[2] = {.0100,.0100};      // fractional background uncertainty
 
   
   // Step 2, use a RooStats factory to build a PDF for a 
@@ -46,25 +46,29 @@ void rs100_numbercounting()
   // We need to give the signal expectation to relate the masterSignal
   // to the signal contribution in the individual channels.
   // The model neglects correlations in background uncertainty, 
-  // but they can be added.
+  // but they can be added later.
   NumberCountingPdfFactory f;
-  RooWorkspace* ws2 = f.GetExpWS(s,b,db,2); 
-  // see below for a printout of the workspace
-  //  ws2->Print();  //uncomment to see structure of workspace
+  RooWorkspace* wspace = new RooWorkspace();
+  f.AddModel(s,2,wspace,"TopLevelPdf", "masterSignal"); 
 
   // Step 2b.
-  // Add the observed data to the workspace at this stage.
+  // Add the expected data to the workspace
+  f.AddExpData(s, b, db, 2, wspace, "ExpectedNumberCountingData");
+
+  // Step 2c.
+  // Add the observed data to the workspace
   Double_t mainMeas[2] = {123.,117.};      // observed main measurement
-  Double_t bkgMeas[2] = {111.23,98.76};    // observed sideband
-  f.AddObsData(mainMeas, bkgMeas, db, 2, ws2);
-  // Not correct b/c still need to deal with the right tau in this case.
-  // Change interfaces to:
-  // AddModel(sExpected,nchan, ws) // make model only
-  // AddExpData(s+b, b, db, nchan,ws) // sideband
-  // AddExpDataWithSideband(s+b, b*tau, tau, nchan,ws) // on off
-  //   - or AddExpDataWithSideband(s,b,tau,nchan,ws) // on off
-  // AddObsData(x, b, db, nchan,ws)              // gauss
-  // AddObsDataWithSideband(x, y, tau, nchan,ws) // on off
+  Double_t bkgMeas[2] = {111.23,98.76};    // observed background
+  Double_t dbMeas[2] = {.011,.0095};       // observed fractional background uncertainty
+  f.AddData(mainMeas, bkgMeas, dbMeas, 2, wspace,"ObservedNumberCountingData");
+
+  // Step 2d.
+  Double_t sideband[2] = {11123.,9876.};    // observed sideband
+  Double_t tau[2] = {100.,100.}; // ratio of bkg in sideband to bkg in main measurement, from experimental design.
+  f.AddDataWithSideband(mainMeas, sideband, tau, 2, wspace,"ObservedNumberCountingDataWithSideband");
+
+  // see below for a printout of the workspace
+  //  wspace->Print();  //uncomment to see structure of workspace
 
   /////////////////////////////////////////
   // The Hypothesis testing stage:
@@ -72,21 +76,39 @@ void rs100_numbercounting()
 
   // Step 3, Create a calculator for doing the hypothesis test.
   ProfileLikelihoodCalculator plc;
-  plc.SetWorkspace(ws2);
-  plc.SetCommonPdf("joint");
-  plc.SetData("ExpectedNumberCountingData"); // for expected case
-  //  plc.SetData("ObservedNumberCountingData"); // for observed case
+  plc.SetWorkspace(wspace);
+  plc.SetCommonPdf("TopLevelPdf");
 
-  // Step 4, Define the null hypothesis for the calculator
+  // Step 4, Specify the data set 
+  // case a: for expected data
+  plc.SetData("ExpectedNumberCountingData"); 
+  // need code to deal with snapshots.  Same model in workspace may need to be reconfigured.
+  wspace->var("tau_0")->setVal(wspace->var("tau_0ExpectedNumberCountingData")->getVal() );
+  wspace->var("tau_1")->setVal(wspace->var("tau_1ExpectedNumberCountingData")->getVal() );
+
+  // // case b: for observed data
+  //  plc.SetData("ObservedNumberCountingData"); // for observed case
+  //  // need code to deal with snapshots.  Same model in workspace may need to be reconfigured.
+  //  wspace->var("tau_0")->setVal(wspace->var("tau_0ObservedNumberCountingData")->getVal() );
+  //  wspace->var("tau_1")->setVal(wspace->var("tau_1ObservedNumberCountingData")->getVal() );
+
+  // // case c: for observed data with sideband
+  //  plc.SetData("ObservedNumberCountingDataWithSideband"); // for observed case
+  //  // need code to deal with snapshots.  Same model in workspace may need to be reconfigured.
+  //  wspace->var("tau_0")->setVal(wspace->var("tau_0ObservedNumberCountingDataWithSideband")->getVal() );
+  //  wspace->var("tau_1")->setVal(wspace->var("tau_1ObservedNumberCountingDataWithSideband")->getVal() );
+
+
+  // Step 5, Define the null hypothesis for the calculator
   // Here you need to know the name of the variables corresponding to hypothesis.
-  RooRealVar* x = ws2->var("masterSignal"); 
+  RooRealVar* x = wspace->var("masterSignal"); 
   RooArgSet* nullParams = new RooArgSet("nullParams");
   nullParams->addClone(*x);
   // here we explicitly set the value of the parameters for the null
   nullParams->setRealValue("masterSignal",0); 
   plc.SetNullParameters(nullParams);
 
-  // Step 5, Use the Calculator to get a HypoTestResult
+  // Step 6, Use the Calculator to get a HypoTestResult
   HypoTestResult* htr = plc.GetHypoTest();
   cout << "-------------------------------------------------" << endl;
   cout << "The p-value for the null is " << htr->NullPValue() << endl;
@@ -103,14 +125,14 @@ void rs100_numbercounting()
   //////////////////////////////////////////
   // Confidence Interval Stage
 
-  // Step 5, Here we re-use the ProfileLikelihoodCalculator to return a confidence interval.
+  // Step 7, Here we re-use the ProfileLikelihoodCalculator to return a confidence interval.
   // We need to specify what are our parameters of interest
   RooArgSet* paramsOfInterest = nullParams; // they are the same as before in this case
   plc.SetParameters(paramsOfInterest);
   ConfInterval* lrint = plc.GetInterval();  // that was easy.
   lrint->SetConfidenceLevel(0.95);
 
-  // Step 6, Ask if masterSignal=0 is in the interval.
+  // Step 8a, Ask if masterSignal=0 is in the interval.
   // Note, this is equivalent to the question of a 2-sigma hypothesis test: 
   // "is the parameter point masterSignal=0 inside the 95% confidence interval?"
   // Since the signficance of the Hypothesis test was > 2-sigma it should not be: 
@@ -125,7 +147,7 @@ void rs100_numbercounting()
     std::cout << "It is NOT in the interval."  << std::endl;
   cout << "-------------------------------------------------\n\n" << endl;
 
-  // We also ask about the parameter point masterSignal=2, which is inside the interval.
+  // Step 8b, We also ask about the parameter point masterSignal=2, which is inside the interval.
   paramsOfInterest->setRealValue("masterSignal",2.); 
   cout << "-------------------------------------------------" << endl;
   std::cout << "Consider this parameter point:" << std::endl;
@@ -137,12 +159,12 @@ void rs100_numbercounting()
   cout << "-------------------------------------------------\n\n" << endl;
   
   delete lrint;
-  //  delete ws2;
+  //  delete wspace;
   //  delete nullParams;
 
   /*
   // Here's an example of what is in the workspace 
-  //  ws2->Print();
+  //  wspace->Print();
   RooWorkspace(NumberCountingWS) Number Counting WS contents
 
   variables
