@@ -38,6 +38,7 @@ void rs100_numbercounting()
   Double_t s[2] = {20.,10.};      // expected signal
   Double_t b[2] = {100.,100.};    // expected background
   Double_t db[2] = {.0100,.0100}; // fractional background uncertainty
+
   
   // Step 2, use a RooStats factory to build a PDF for a number counting combination
   // Workspace will include model and expected data.
@@ -46,6 +47,11 @@ void rs100_numbercounting()
   NumberCountingPdfFactory f;
   RooWorkspace* ws2 = f.GetExpWS(s,b,db,2); // see below for a printout of the workspace
   //  ws2->Print();  //uncomment to see structure of workspace
+
+  // Step 2b.
+  Double_t mainMeas[2] = {125.,115.};      // observed main measurement
+  Double_t sideband[2] = {10000.,10000.};    // observed sideband
+  f.AddObsData(mainMeas,sideband,2,ws2);
 
   /////////////////////////////////////////
   // The Hypothesis testing stage:
@@ -56,6 +62,7 @@ void rs100_numbercounting()
   plc.SetWorkspace(ws2);
   plc.SetCommonPdf("joint");
   plc.SetData("ExpectedNumberCountingData");
+  //  plc.SetData("ObservedNumberCountingData");
 
   // Step 4, Define the null hypothesis for the calculator
   // Here you need to know the name of the variables corresponding to hypothesis.
