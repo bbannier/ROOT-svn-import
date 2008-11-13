@@ -34,6 +34,10 @@
 //#pragma link C++ class RooStats::CombinedCalculator+; // interface, not concrete
 #pragma link C++ class RooStats::ProfileLikelihoodCalculator+; 
 
+#pragma link C++ class RooStats::HybridCalculator+;
+#pragma link C++ class RooStats::HybridPlot+;
+#pragma link C++ class RooStats::HybridResult+;
+
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialExpZ(Double_t,Double_t,Double_t);
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialWithTauExpZ(Double_t,Double_t,Double_t);
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialObsZ(Double_t,Double_t,Double_t);
