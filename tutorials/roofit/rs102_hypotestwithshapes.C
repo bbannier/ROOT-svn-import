@@ -8,7 +8,9 @@
 //
 /////////////////////////////////////////////////////////////////
 
+#ifndef __CINT__
 #include "RooGlobalFunc.h"
+#endif
 #include "RooDataSet.h"
 #include "RooRealVar.h"
 #include "RooGaussian.h"
@@ -29,6 +31,7 @@
 #include <string>
 
 
+// use this order for safety on library loading
 using namespace RooFit;
 using namespace RooStats;
  
@@ -231,7 +234,7 @@ void rs102_hypotestwithshapes() {
 
   DoHypothesisTest(wspace);
 
-  //  MakePlots(wspace);
+  MakePlots(wspace);
 
   delete wspace;
 }

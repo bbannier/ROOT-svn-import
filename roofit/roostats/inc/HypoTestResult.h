@@ -26,14 +26,14 @@ namespace RooStats {
     virtual Double_t AlternatePValue() const {return fAlternatePValue;}
     
     // familiar name for NullPValue()
-    virtual Double_t CLb() const {return NullPValue();}
+    virtual Double_t CLb() const {return 1.-NullPValue();}
     // familiar name for AlternatePValue()
-    virtual Double_t CLsplusb() const {return AlternatePValue();}
+    virtual Double_t CLsplusb() const {return 1.-AlternatePValue();}
     // CLs is simply CLs+b/CLb (not a method, but a quantity)
     virtual Double_t CLs() const {return CLsplusb()/CLb();}
     
     // familiar name for the Null p-value in terms of 1-sided Gaussian significance
-    virtual Double_t Significance() const {return RooStats::PValueToSignificance( CLb() ); }
+    virtual Double_t Significance() const {return RooStats::PValueToSignificance( fNullPValue ); }
     
   private:
     Double_t fNullPValue;

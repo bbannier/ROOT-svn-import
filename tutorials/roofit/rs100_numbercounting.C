@@ -15,6 +15,7 @@
 #include "RooStats/ConfInterval.h"
 #include "RooRealVar.h"
 
+// use this order for safety on library loading
 using namespace RooFit ;
 using namespace RooStats ;
 
@@ -50,7 +51,7 @@ void rs100_numbercounting()
   RooWorkspace* wspace = new RooWorkspace();
   f.AddModel(s,2,wspace,"TopLevelPdf", "masterSignal"); 
 
-  // Step 3, use a RooStats factory to add datasets to teh workspace.
+  // Step 3, use a RooStats factory to add datasets to the workspace.
   // Step 3a.
   // Add the expected data to the workspace
   f.AddExpData(s, b, db, 2, wspace, "ExpectedNumberCountingData");
@@ -63,6 +64,7 @@ void rs100_numbercounting()
   f.AddData(mainMeas, bkgMeas, dbMeas, 2, wspace,"ObservedNumberCountingData");
 
   // Step 3c.
+  // Add the observed data to the workspace in the on-off problem.
   Double_t sideband[2] = {11123.,9876.};    // observed sideband
   Double_t tau[2] = {100.,100.}; // ratio of bkg in sideband to bkg in main measurement, from experimental design.
   f.AddDataWithSideband(mainMeas, sideband, tau, 2, wspace,"ObservedNumberCountingDataWithSideband");
