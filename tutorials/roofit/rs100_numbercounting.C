@@ -120,7 +120,7 @@ void rs100_numbercounting()
      Corresponding to a signifcance of 2.16239
   */
 
-  delete htr;
+  //  delete htr;
 
   //////////////////////////////////////////
   // Confidence Interval Stage

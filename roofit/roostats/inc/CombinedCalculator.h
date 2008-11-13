@@ -36,7 +36,7 @@ namespace RooStats {
       if (fWS) delete fWS;
       if (fNullParams) delete fNullParams;
       if (fAlternateParams) delete fAlternateParams;
-      if (fPOI) delete fPOI;
+      //      if (fPOI) delete fPOI;
       if (fNuisParams) delete fNuisParams;
     }
 
