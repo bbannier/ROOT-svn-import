@@ -28,9 +28,9 @@ HWORLDO       = hworld.$(ObjSuf)
 HWORLDS       = hworld.$(SrcSuf)
 HWORLD        = hworld$(ExeSuf)
 
-STRESSPROO       = stressProjection.$(ObjSuf)
-STRESSPROS       = stressProjection.$(SrcSuf)
-STRESSPRO        = stressProjection$(ExeSuf)
+STRESSHISTO   = stressProjection.$(ObjSuf) stressRebin.$(ObjSuf) stressHistogram.$(ObjSuf)
+STRESSHISTS   = stressProjection.$(SrcSuf) stressRebin.$(SrcSuf) stressHistogram.$(SrcSuf)
+STRESSHIST    = stressHistogram$(ExeSuf)
 
 CTORTUREO     = ctorture.$(ObjSuf)
 CTORTURES     = ctorture.$(SrcSuf)
@@ -210,7 +210,7 @@ STRESSITERO    = stressIterators.$(ObjSuf)
 STRESSITERS    = stressIterators.$(SrcSuf)
 STRESSITER     = stressIterators$(ExeSuf)
 
-OBJS          = $(EVENTO) $(MAINEVENTO) $(HWORLDO) $(STRESSPROO) $(HSIMPLEO) $(MINEXAMO) \
+OBJS          = $(EVENTO) $(MAINEVENTO) $(HWORLDO) $(HSIMPLEO) $(MINEXAMO) \
                 $(TSTRINGO) $(TCOLLEXO) $(VVECTORO) $(VMATRIXO) $(VLAZYO) \
                 $(HELLOO) $(ACLOCKO) $(STRESSO) $(TBENCHO) $(BENCHO) \
                 $(STRESSSHAPESO) $(TCOLLBMO) $(STRESSGEOMETRYO) $(STRESSLO) \
@@ -218,16 +218,16 @@ OBJS          = $(EVENTO) $(MAINEVENTO) $(HWORLDO) $(STRESSPROO) $(HSIMPLEO) $(M
                 $(CTORTUREO) $(QPRANDOMO) $(THREADSO) $(STRESSVECO) \
                 $(STRESSMATHO) $(STRESSFITO) $(STRESSHEPIXO) \
                 $(STRESSENTRYLISTO) $(STRESSROOFITO) $(STRESSPROOFO) \
-                $(STRESSMATHMOREO) $(STRESSITERO)
+                $(STRESSMATHMOREO) $(STRESSITERO) $(STRESSHISTO)
 
-PROGRAMS      = $(EVENT) $(HWORLD) $(STRESSPRO) $(HSIMPLE) $(MINEXAM) $(TSTRING) \
+PROGRAMS      = $(EVENT) $(HWORLD) $(HSIMPLE) $(MINEXAM) $(TSTRING) \
                 $(TCOLLEX) $(TCOLLBM) $(VVECTOR) $(VMATRIX) $(VLAZY) \
                 $(HELLOSO) $(ACLOCKSO) $(STRESS) $(TBENCHSO) $(BENCH) \
                 $(STRESSSHAPES) $(STRESSGEOMETRY) $(STRESSL) $(STRESSG) \
                 $(TESTBITS) $(CTORTURE) $(QPRANDOM) $(THREADS) $(STRESSSP) \
                 $(STRESSVEC) $(STRESSFIT) $(STRESSHEPIX) $(STRESSENTRYLIST) \
                 $(STRESSROOFIT) $(STRESSPROOF) $(STRESSMATH) $(STRESSTMVA) \
-                $(STRESSMATHMORE) $(STRESSITER)
+                $(STRESSMATHMORE) $(STRESSITER) $(STRESSHIST)
 
 
 OBJS         += $(GUITESTO) $(GUIVIEWERO) $(TETRISO)
@@ -284,7 +284,7 @@ $(HWORLD):      $(HWORLDO)
 		$(MT_EXE)
 		@echo "$@ done"
 
-$(STRESSPRO):   $(STRESSPROO)
+$(STRESSHIST):  $(STRESSHISTO)
 		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
 		$(MT_EXE)
 		@echo "$@ done"

@@ -16,17 +16,22 @@
 // try only for testing the statistics
 #define CENTRE_DEVIATION 0.0
 
-#define ERRORLIMIT 1E-15
-
 using std::cout;
 using std::endl;
 using std::fabs;
 
+// extern declarations
 enum compareOptions {
    cmpOptDebug=1,
    cmpOptNoError=2,
    cmpOptStats=4
 };
+
+int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0);
+int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0);
+int equals(Double_t n1, Double_t n2);
+int compareStatistics( TH1* h1, TH1* h2, bool debug );
+// extern declarations - end
 
 class HistogramTester {
    
@@ -682,119 +687,6 @@ public:
       return status;
    }
    
-   int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0)
-   {
-      bool debug = options & cmpOptDebug;
-      bool compareError = ! (options & cmpOptNoError);
-      bool compareStats = options & cmpOptStats;
-
-      bool differents = 0;
-      
-      for ( int x = LOWER_LIMIT; x <= UPPER_LIMIT + 1; ++x )
-         for ( int y = LOWER_LIMIT; y <= UPPER_LIMIT + 1; ++y )
-         {
-            if (debug)
-            {
-               cout << "[" << x << "," << y << "]: " 
-                    << h1->GetBinContent(x,y) << " +/- " << h1->GetBinError(x,y) << " | "
-                    << h2->GetBinContent(x,y) << " +/- " << h2->GetBinError(x,y)
-                    << " | " << equals(h1->GetBinContent(x,y), h2->GetBinContent(x,y))
-                    << " "   << equals(h1->GetBinError(x,y)  , h2->GetBinError(x,y) )
-                    << " "   << differents
-                    << " "   << (fabs(h1->GetBinContent(x,y) - h2->GetBinContent(x,y)))
-                    << endl;
-            }
-            
-            differents |= equals(h1->GetBinContent(x,y), h2->GetBinContent(x,y));
-            if ( compareError )
-               differents |= equals(h1->GetBinError(x,y)  , h2->GetBinError(x,y) );
-            
-
-         }
-
-      // Statistical tests:
-      if ( compareStats )
-         differents |= compareStatistics( h1, h2, debug );
-
-      cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
-
-      delete h2;
-
-      return differents;
-   }
-
-   int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0)
-   {
-      bool debug = options & cmpOptDebug;
-      bool compareError = ! (options & cmpOptNoError);
-      bool compareStats = options & cmpOptStats;
-
-      bool differents = 0;
-      
-      for ( int x = LOWER_LIMIT; x <= UPPER_LIMIT + 1; ++x )
-      {
-         if ( debug )
-         {
-            cout << "[" << x << "]: " 
-                 << h1->GetBinContent(x) << " +/- " << h1->GetBinError(x) << " | "
-                 << h2->GetBinContent(x) << " +/- " << h2->GetBinError(x)
-                 << " | " << equals(h1->GetBinContent(x), h2->GetBinContent(x))
-                 << " "   << equals(h1->GetBinError(x),   h2->GetBinError(x)  )
-                 << " "   << differents
-                 << endl;
-         }
-         differents |= equals(h1->GetBinContent(x), h2->GetBinContent(x));
-
-         if ( compareError )
-            differents |= equals(h1->GetBinError(x),   h2->GetBinError(x)  );
-      }
-
-      // Statistical tests:
-      if ( compareStats )
-         differents |= compareStatistics( h1, h2, debug );
-         
-      cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
-      
-      delete h2;
-      
-      return differents;      
-   }
-
-   int equals(Double_t n1, Double_t n2)
-   {
-      return fabs( n1 - n2 ) > ERRORLIMIT * fabs(n1);
-   }
-
-   int compareStatistics( TH1* h1, TH1* h2, bool debug )
-   {
-      bool differents = 0;
-
-      differents |= (h1->Chi2Test(h2) < 1);
-      differents |= (h2->Chi2Test(h1) < 1);         
-      if ( debug )
-         cout << "Chi2Test " << h1->Chi2Test(h2) << " " << h2->Chi2Test(h1) 
-              << " | " << differents
-              << endl;
-      
-      // Mean
-      differents |= equals(h1->GetMean(1), h2->GetMean(1));
-      if ( debug )
-         cout << "Mean: " << h1->GetMean(1) << " " << h2->GetMean(1) 
-              << " | " << fabs( h1->GetMean(1) - h2->GetMean(1) ) 
-              << " " << differents
-              << endl;
-      
-      // RMS
-      differents |= equals( h1->GetRMS(1), h2->GetRMS(1) );
-      if ( debug )
-         cout << "RMS: " << h1->GetRMS(1) << " " << h2->GetRMS(1) 
-                 << " | " << fabs( h1->GetRMS(1) - h2->GetRMS(1) ) 
-              << " " << differents
-              << endl;      
-
-      return differents;
-   }
-
 };
 
 int stressProjection(bool testWithoutWeights = true,
@@ -829,9 +721,3 @@ int stressProjection(bool testWithoutWeights = true,
 
    return status;
 }
-
-int main()
-{
-   return stressProjection();
-}
-
