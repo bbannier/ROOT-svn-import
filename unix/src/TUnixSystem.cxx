@@ -4780,8 +4780,8 @@ static void GetLinuxProcInfo(ProcInfo_t *procinfo)
    s.Gets(f);
    Long_t total, rss;
    sscanf(s.Data(), "%ld %ld", &total, &rss);
-   procinfo->fMemVirtual  = total * getpagesize() / 1024;
-   procinfo->fMemResident = rss * getpagesize() / 1024;
+   procinfo->fMemVirtual  = total * (getpagesize() / 1024);
+   procinfo->fMemResident = rss * (getpagesize() / 1024);
    fclose(f);
 }
 #endif
