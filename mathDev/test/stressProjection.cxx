@@ -523,34 +523,34 @@ public:
       
       // Now the histograms comming from the Profiles!
       options = cmpOptStats;
-      status += equals("TH3 -> PBXY", h2XY, (TH2D*) h3->Project3DProfile("yx")->ProjectionXY("1", "B"), options);
-      status += equals("TH3 -> PBXZ", h2XZ, (TH2D*) h3->Project3DProfile("zx")->ProjectionXY("2", "B"), options);
-      status += equals("TH3 -> PBYX", h2YX, (TH2D*) h3->Project3DProfile("xy")->ProjectionXY("3", "B"), options);
-      status += equals("TH3 -> PBYZ", h2YZ, (TH2D*) h3->Project3DProfile("zy")->ProjectionXY("4", "B"), options);
-      status += equals("TH3 -> PBZX", h2ZX, (TH2D*) h3->Project3DProfile("xz")->ProjectionXY("5", "B"), options);
-      status += equals("TH3 -> PBZY", h2ZY, (TH2D*) h3->Project3DProfile("yz")->ProjectionXY("6", "B"), options);
+      status += equals("TH3 -> PBXY", h2XY, (TH2D*) h3->Project3DProfile("yxUO")->ProjectionXY("1", "B"), options);
+      status += equals("TH3 -> PBXZ", h2XZ, (TH2D*) h3->Project3DProfile("zxUO")->ProjectionXY("2", "B"), options);
+      status += equals("TH3 -> PBYX", h2YX, (TH2D*) h3->Project3DProfile("xyUO")->ProjectionXY("3", "B"), options);
+      status += equals("TH3 -> PBYZ", h2YZ, (TH2D*) h3->Project3DProfile("zyUO")->ProjectionXY("4", "B"), options);
+      status += equals("TH3 -> PBZX", h2ZX, (TH2D*) h3->Project3DProfile("xzUO")->ProjectionXY("5", "B"), options);
+      status += equals("TH3 -> PBZY", h2ZY, (TH2D*) h3->Project3DProfile("yzUO")->ProjectionXY("6", "B"), options);
       options = 0;
       cout << "----------------------------------------------" << endl;
       
       // test directly project3dprofile
       options = cmpOptStats;
-      status += equals("TH3 -> PXY", (TH2D*) pe2XY, (TH2D*) h3->Project3DProfile("yx"), options);
-      status += equals("TH3 -> PXZ", (TH2D*) pe2XZ, (TH2D*) h3->Project3DProfile("zx"), options);
-      status += equals("TH3 -> PYX", (TH2D*) pe2YX, (TH2D*) h3->Project3DProfile("xy"), options);
-      status += equals("TH3 -> PYZ", (TH2D*) pe2YZ, (TH2D*) h3->Project3DProfile("zy"), options);
-      status += equals("TH3 -> PZX", (TH2D*) pe2ZX, (TH2D*) h3->Project3DProfile("xz"), options);
-      status += equals("TH3 -> PZY", (TH2D*) pe2ZY, (TH2D*) h3->Project3DProfile("yz"), options);
+      status += equals("TH3 -> PXY", (TH2D*) pe2XY, (TH2D*) h3->Project3DProfile("yx UO"), options);
+      status += equals("TH3 -> PXZ", (TH2D*) pe2XZ, (TH2D*) h3->Project3DProfile("zx UO"), options);
+      status += equals("TH3 -> PYX", (TH2D*) pe2YX, (TH2D*) h3->Project3DProfile("xy UO"), options);
+      status += equals("TH3 -> PYZ", (TH2D*) pe2YZ, (TH2D*) h3->Project3DProfile("zy UO"), options);
+      status += equals("TH3 -> PZX", (TH2D*) pe2ZX, (TH2D*) h3->Project3DProfile("xz UO"), options);
+      status += equals("TH3 -> PZY", (TH2D*) pe2ZY, (TH2D*) h3->Project3DProfile("yz UO"), options);
       options = 0;
       cout << "----------------------------------------------" << endl;
       
       // test option E of ProjectionXY
       options = 0;
-      status += equals("TH3 -> PEXY", (TH2D*) pe2XY, (TH2D*) h3->Project3DProfile("yx")->ProjectionXY("1", "E"), options);
-      status += equals("TH3 -> PEXZ", (TH2D*) pe2XZ, (TH2D*) h3->Project3DProfile("zx")->ProjectionXY("2", "E"), options);
-      status += equals("TH3 -> PEYX", (TH2D*) pe2YX, (TH2D*) h3->Project3DProfile("xy")->ProjectionXY("3", "E"), options);
-      status += equals("TH3 -> PEYZ", (TH2D*) pe2YZ, (TH2D*) h3->Project3DProfile("zy")->ProjectionXY("4", "E"), options);
-      status += equals("TH3 -> PEZX", (TH2D*) pe2ZX, (TH2D*) h3->Project3DProfile("xz")->ProjectionXY("5", "E"), options);
-      status += equals("TH3 -> PEZY", (TH2D*) pe2ZY, (TH2D*) h3->Project3DProfile("yz")->ProjectionXY("6", "E"), options);
+      status += equals("TH3 -> PEXY", (TH2D*) pe2XY, (TH2D*) h3->Project3DProfile("yx UO")->ProjectionXY("1", "E"), options);
+      status += equals("TH3 -> PEXZ", (TH2D*) pe2XZ, (TH2D*) h3->Project3DProfile("zx UO")->ProjectionXY("2", "E"), options);
+      status += equals("TH3 -> PEYX", (TH2D*) pe2YX, (TH2D*) h3->Project3DProfile("xy UO")->ProjectionXY("3", "E"), options);
+      status += equals("TH3 -> PEYZ", (TH2D*) pe2YZ, (TH2D*) h3->Project3DProfile("zy UO")->ProjectionXY("4", "E"), options);
+      status += equals("TH3 -> PEZX", (TH2D*) pe2ZX, (TH2D*) h3->Project3DProfile("xz UO")->ProjectionXY("5", "E"), options);
+      status += equals("TH3 -> PEZY", (TH2D*) pe2ZY, (TH2D*) h3->Project3DProfile("yz UO")->ProjectionXY("6", "E"), options);
       options = 0;
       cout << "----------------------------------------------" << endl;
       
@@ -558,12 +558,12 @@ public:
       
       // The error fails when built with weights. It is not properly calculated
       if ( buildWithWeights ) options = cmpOptNoError;
-      status += equals("TH3 -> PWXY", (TH2D*) h2wXY, (TH2D*) h3->Project3DProfile("yx")->ProjectionXY("1", "W"), options);
-      status += equals("TH3 -> PWXZ", (TH2D*) h2wXZ, (TH2D*) h3->Project3DProfile("zx")->ProjectionXY("2", "W"), options);
-      status += equals("TH3 -> PWYX", (TH2D*) h2wYX, (TH2D*) h3->Project3DProfile("xy")->ProjectionXY("3", "W"), options);
-      status += equals("TH3 -> PWYZ", (TH2D*) h2wYZ, (TH2D*) h3->Project3DProfile("zy")->ProjectionXY("4", "W"), options);
-      status += equals("TH3 -> PWZX", (TH2D*) h2wZX, (TH2D*) h3->Project3DProfile("xz")->ProjectionXY("5", "W"), options);
-      status += equals("TH3 -> PWZY", (TH2D*) h2wZY, (TH2D*) h3->Project3DProfile("yz")->ProjectionXY("6", "W"), options);
+      status += equals("TH3 -> PWXY", (TH2D*) h2wXY, (TH2D*) h3->Project3DProfile("yx UO")->ProjectionXY("1", "W"), options);
+      status += equals("TH3 -> PWXZ", (TH2D*) h2wXZ, (TH2D*) h3->Project3DProfile("zx UO")->ProjectionXY("2", "W"), options);
+      status += equals("TH3 -> PWYX", (TH2D*) h2wYX, (TH2D*) h3->Project3DProfile("xy UO")->ProjectionXY("3", "W"), options);
+      status += equals("TH3 -> PWYZ", (TH2D*) h2wYZ, (TH2D*) h3->Project3DProfile("zy UO")->ProjectionXY("4", "W"), options);
+      status += equals("TH3 -> PWZX", (TH2D*) h2wZX, (TH2D*) h3->Project3DProfile("xz UO")->ProjectionXY("5", "W"), options);
+      status += equals("TH3 -> PWZY", (TH2D*) h2wZY, (TH2D*) h3->Project3DProfile("yz UO")->ProjectionXY("6", "W"), options);
       options = 0;
       cout << "----------------------------------------------" << endl;
       
