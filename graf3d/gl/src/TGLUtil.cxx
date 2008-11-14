@@ -1001,6 +1001,91 @@ UInt_t TGLUtil::fgDefaultDrawQuality = 10;
 UInt_t TGLUtil::fgDrawQuality        = fgDefaultDrawQuality;
 UInt_t TGLUtil::fgColorLockCount     = 0;
 
+#ifndef CALLBACK
+#define CALLBACK
+#endif
+
+extern "C" {
+#if defined(R__AIXGCC) || (defined(__APPLE_CC__) && __APPLE_CC__ > 4000 && __APPLE_CC__ < 5341 && !defined(__INTEL_COMPILER))
+   typedef extern "C" void (*tessfuncptr_t)(...);
+#else
+   typedef void (CALLBACK *tessfuncptr_t)();
+#endif
+}
+
+namespace
+{
+
+class TGLTesselatorWrap
+{
+protected:
+
+public:
+   GLUtesselator *fTess;
+
+   TGLTesselatorWrap(tessfuncptr_t vertex_func) : fTess(0)
+   {
+      fTess = gluNewTess();
+      if (!fTess)
+         throw std::bad_alloc();
+
+      gluTessCallback(fTess, (GLenum)GLU_BEGIN,  (tessfuncptr_t) glBegin);
+      gluTessCallback(fTess, (GLenum)GLU_END,    (tessfuncptr_t) glEnd);
+      gluTessCallback(fTess, (GLenum)GLU_VERTEX, vertex_func);
+   }
+
+   virtual ~TGLTesselatorWrap()
+   {
+      if (fTess)
+         gluDeleteTess(fTess);
+   }
+};
+
+}
+
+//______________________________________________________________________________
+GLUtesselator* TGLUtil::GetDrawTesselator3fv()
+{
+   // Returns a tesselator for direct drawing when using 3-vertices with
+   // single precision.
+
+   static TGLTesselatorWrap singleton((tessfuncptr_t) glVertex3fv);
+
+   return singleton.fTess;
+}
+
+//______________________________________________________________________________
+GLUtesselator* TGLUtil::GetDrawTesselator4fv()
+{
+   // Returns a tesselator for direct drawing when using 4-vertices with
+   // single precision.
+
+   static TGLTesselatorWrap singleton((tessfuncptr_t) glVertex4fv);
+
+   return singleton.fTess;
+}
+
+//______________________________________________________________________________
+GLUtesselator* TGLUtil::GetDrawTesselator3dv()
+{
+   // Returns a tesselator for direct drawing when using 3-vertices with
+   // double precision.
+
+   static TGLTesselatorWrap singleton((tessfuncptr_t) glVertex3dv);
+
+   return singleton.fTess;
+}
+
+//______________________________________________________________________________
+GLUtesselator* TGLUtil::GetDrawTesselator4dv()
+{
+   // Returns a tesselator for direct drawing when using 4-vertices with
+   // double precision.
+
+   static TGLTesselatorWrap singleton((tessfuncptr_t) glVertex4dv);
+
+   return singleton.fTess;
+}
 
 //______________________________________________________________________________
 UInt_t TGLUtil::GetDrawQuality()

@@ -581,6 +581,170 @@ Double_t RooAbsPdf::extendedTerm(UInt_t observed, const RooArgSet* nset) const
 
 
 //_____________________________________________________________________________
+RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, RooCmdArg arg1, RooCmdArg arg2, RooCmdArg arg3, RooCmdArg arg4, 
+                                             RooCmdArg arg5, RooCmdArg arg6, RooCmdArg arg7, RooCmdArg arg8) 
+{
+  // Construct representation of -log(L) of PDFwith given dataset. If dataset is unbinned, an unbinned likelihood is constructed. If the dataset
+  // is binned, a binned likelihood is constructed. 
+  //
+  // The following named arguments are supported
+  //
+  // ConditionalObservables(const RooArgSet& set) -- Do not normalize PDF over listed observables
+  // Extended(Bool_t flag)           -- Add extended likelihood term, off by default
+  // Range(const char* name)         -- Fit only data inside range with given name
+  // Range(Double_t lo, Double_t hi) -- Fit only data inside given range. A range named "fit" is created on the fly on all observables.
+  //                                    Multiple comma separated range names can be specified.
+  // SumCoefRange(const char* name)  -- Set the range in which to interpret the coefficients of RooAddPdf components 
+  // NumCPU(int num)                 -- Parallelize NLL calculation on num CPUs
+  // Optimize(Bool_t flag)           -- Activate constant term optimization (on by default)
+  // SplitRange(Bool_t flag)         -- Use separate fit ranges in a simultaneous fit. Actual range name for each
+  //                                    subsample is assumed to by rangeName_{indexState} where indexState
+  //                                    is the state of the master index category of the simultaneous fit
+  // Contrain(const RooArgSet&pars)  -- Include constraints to listed parameters in likelihood using internal constrains in p.d.f
+  // ExternalConstraints(const RooArgSet& ) -- Include given external constraints to likelihood
+  // Verbose(Bool_t flag)           -- Constrols RooFit informational messages in likelihood construction
+  // 
+  // 
+  
+  RooLinkedList l ;
+  l.Add((TObject*)&arg1) ;  l.Add((TObject*)&arg2) ;  
+  l.Add((TObject*)&arg3) ;  l.Add((TObject*)&arg4) ;
+  l.Add((TObject*)&arg5) ;  l.Add((TObject*)&arg6) ;  
+  l.Add((TObject*)&arg7) ;  l.Add((TObject*)&arg8) ;
+  return createNLL(data,l) ;
+}
+
+
+
+
+//_____________________________________________________________________________
+RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList) 
+{
+  // Construct representation of -log(L) of PDFwith given dataset. If dataset is unbinned, an unbinned likelihood is constructed. If the dataset
+  // is binned, a binned likelihood is constructed. 
+  //
+  // See RooAbsPdf::createNLL(RooAbsData& data, RooCmdArg arg1, RooCmdArg arg2, RooCmdArg arg3, RooCmdArg arg4, 
+  //                                    RooCmdArg arg5, RooCmdArg arg6, RooCmdArg arg7, RooCmdArg arg8) 
+  //
+  // for documentation of options
+
+
+  // Select the pdf-specific commands 
+  RooCmdConfig pc(Form("RooAbsPdf::createNLL(%s)",GetName())) ;
+
+  pc.defineString("rangeName","RangeWithName",0,"",kTRUE) ;
+  pc.defineString("addCoefRange","SumCoefRange",0,"") ;
+  pc.defineDouble("rangeLo","Range",0,-999.) ;
+  pc.defineDouble("rangeHi","Range",1,-999.) ;
+  pc.defineInt("splitRange","SplitRange",0,0) ;
+  pc.defineInt("ext","Extended",0,2) ;
+  pc.defineInt("numcpu","NumCPU",0,1) ;
+  pc.defineInt("verbose","Verbose",0,0) ;
+  pc.defineObject("projDepSet","ProjectedObservables",0,0) ;
+  pc.defineObject("cPars","Constrain",0,0) ;
+  pc.defineObject("extCons","ExternalConstraints",0,0) ;
+  pc.defineMutex("Range","RangeWithName") ;
+  
+  // Process and check varargs 
+  pc.process(cmdList) ;
+  if (!pc.ok(kTRUE)) {
+    return 0 ;
+  }
+
+  // Decode command line arguments
+  const char* rangeName = pc.getString("rangeName",0,kTRUE) ;
+  const char* addCoefRangeName = pc.getString("addCoefRange",0,kTRUE) ;
+  Int_t ext      = pc.getInt("ext") ;
+  Int_t numcpu   = pc.getInt("numcpu") ;
+  Int_t splitr   = pc.getInt("splitRange") ;
+  Bool_t verbose = pc.getInt("verbose") ;
+  const RooArgSet* cPars = static_cast<RooArgSet*>(pc.getObject("cPars")) ;
+  const RooArgSet* extCons = static_cast<RooArgSet*>(pc.getObject("extCons")) ;
+
+  // Process automatic extended option
+  if (ext==2) {
+    ext = ((extendMode()==CanBeExtended || extendMode()==MustBeExtended)) ? 1 : 0 ;
+    if (ext) {
+      coutI(Minimization) << "p.d.f. provides expected number of events, including extended term in likelihood." << endl ;
+    }
+  }
+
+  if (pc.hasProcessed("Range")) {
+    Double_t rangeLo = pc.getDouble("rangeLo") ;
+    Double_t rangeHi = pc.getDouble("rangeHi") ;
+   
+    // Create range with name 'fit' with above limits on all observables
+    RooArgSet* obs = getObservables(&data) ;
+    TIterator* iter = obs->createIterator() ;
+    RooAbsArg* arg ;
+    while((arg=(RooAbsArg*)iter->Next())) {
+      RooRealVar* rrv =  dynamic_cast<RooRealVar*>(arg) ;
+      if (rrv) rrv->setRange("fit",rangeLo,rangeHi) ;
+    }
+    // Set range name to be fitted to "fit"
+    rangeName = "fit" ;
+  }
+
+  RooArgSet projDeps ;
+  RooArgSet* tmp = (RooArgSet*) pc.getObject("projDepSet") ;  
+  if (tmp) {
+    projDeps.add(*tmp) ;
+  }
+
+  // Construct NLL
+  RooAbsReal::enableEvalErrorLogging(kTRUE) ;
+  RooAbsReal* nll ;
+  if (!rangeName || strchr(rangeName,',')==0) {
+    // Simple case: default range, or single restricted range
+    nll = new RooNLLVar("nll","-log(likelihood)",*this,data,projDeps,ext,rangeName,addCoefRangeName,numcpu,kFALSE,verbose,splitr) ;
+  } else {
+    // Composite case: multiple ranges
+    RooArgList nllList ;
+    char* buf = new char[strlen(rangeName)+1] ;
+    strcpy(buf,rangeName) ;
+    char* token = strtok(buf,",") ;
+    while(token) {
+      RooAbsReal* nllComp = new RooNLLVar(Form("nll_%s",token),"-log(likelihood)",*this,data,projDeps,ext,token,addCoefRangeName,numcpu,kFALSE,verbose,splitr) ;
+      nllList.add(*nllComp) ;
+      token = strtok(0,",") ;
+    }
+    delete[] buf ;
+    nll = new RooAddition("nll","-log(likelihood)",nllList,kTRUE) ;
+  }
+  RooAbsReal::enableEvalErrorLogging(kFALSE) ;
+  
+  // Collect internal and external constraint specifications
+  RooArgSet allConstraints ;
+  if (cPars) {
+    RooArgSet* constraints = getAllConstraints(*data.get(),*cPars) ;
+    allConstraints.add(*constraints) ;
+    delete constraints ;
+  }
+  if (extCons) {
+    allConstraints.add(*extCons) ;
+  }
+
+  // Include constraints, if any, in likelihood
+  RooAbsReal* nllCons(0) ;
+  if (allConstraints.getSize()>0) {   
+
+    coutI(Minimization) << " Including the following contraint terms in minimization: " << allConstraints << endl ;
+
+    nllCons = new RooConstraintSum("nllCons","nllCons",allConstraints) ;
+    RooAbsReal* orignll = nll ;
+    nll = new RooAddition("nllWithCons","nllWithCons",RooArgSet(*nll,*nllCons)) ;
+    nll->addOwnedComponents(RooArgSet(*orignll,*nllCons)) ;
+  }
+
+  return nll ;
+}
+
+
+
+
+
+
+//_____________________________________________________________________________
 RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, RooCmdArg arg1, RooCmdArg arg2, RooCmdArg arg3, RooCmdArg arg4, 
                                                  RooCmdArg arg5, RooCmdArg arg6, RooCmdArg arg7, RooCmdArg arg8) 
 {
@@ -623,6 +787,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, RooCmdArg arg1, RooCmdArg arg2,
   // Timer(Bool_t flag)             -- Time CPU and wall clock consumption of fit steps, off by default
   // PrintLevel(Int_t level)        -- Set Minuit print level (-1 through 3, default is 1). At -1 all RooFit informational 
   //                                   messages are suppressed as well
+  // Warnings(Bool_t flag)          -- Enable or disable MINUIT warnings (enabled by default)
   // PrintEvalErrors(Int_t numErr)  -- Control number of p.d.f evaluation errors printed per likelihood evaluation. A negative
   //                                   value suppress output completely, a zero value will only print the error count per p.d.f component,
   //                                   a positive value is will print details of each error up to numErr messages per p.d.f component.
@@ -674,6 +839,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineInt("numcpu","NumCPU",0,1) ;
   pc.defineInt("numee","PrintEvalErrors",0,10) ;
   pc.defineInt("doEEWall","EvalErrorWall",0,1) ;
+  pc.defineInt("doWarn","Warnings",0,1) ;
   pc.defineObject("projDepSet","ProjectedObservables",0,0) ;
   pc.defineObject("minosSet","Minos",0,0) ;
   pc.defineObject("cPars","Constrain",0,0) ;
@@ -711,6 +877,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   Int_t splitr   = pc.getInt("splitRange") ;
   Int_t numee    = pc.getInt("numee") ;
   Int_t doEEWall = pc.getInt("doEEWall") ;
+  Int_t doWarn   = pc.getInt("doWarn") ;
   const RooArgSet* minosSet = static_cast<RooArgSet*>(pc.getObject("minosSet")) ;
   const RooArgSet* cPars = static_cast<RooArgSet*>(pc.getObject("cPars")) ;
   const RooArgSet* extCons = static_cast<RooArgSet*>(pc.getObject("extCons")) ;
@@ -779,7 +946,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   }
 
   // Include constraints, if any, in likelihood
-  RooAbsReal* nllCons ;
+  RooAbsReal* nllCons(0) ;
   if (allConstraints.getSize()>0) {   
 
     coutI(Minimization) << " Including the following contraint terms in minimization: " << allConstraints << endl ;
@@ -787,13 +954,16 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
     nllCons = new RooConstraintSum("nllCons","nllCons",allConstraints) ;
     RooAbsReal* orignll = nll ;
     nll = new RooAddition("nllWithCons","nllWithCons",RooArgSet(*nll,*nllCons)) ;
-    nll->addOwnedComponents(*orignll) ;
+    nll->addOwnedComponents(RooArgSet(*orignll,*nllCons)) ;
   }
 
   // Instantiate MINUIT
   RooMinuit m(*nll) ;
 
   m.setEvalErrorWall(doEEWall) ;
+  if (doWarn==0) {
+    m.setNoWarn() ;
+  }
   
   m.setPrintEvalErrors(numee) ;
   if (plevel!=1) {
@@ -1087,7 +1257,7 @@ RooDataSet *RooAbsPdf::generate(const RooArgSet& whatVars, const RooCmdArg& arg1
   // Decode command line arguments
   RooDataSet* protoData = static_cast<RooDataSet*>(pc.getObject("proto",0)) ;
   const char* dsetName = pc.getString("dsetName") ;
-  Int_t  nEvents = pc.getInt("nEvents") ;
+  Int_t nEvents = pc.getInt("nEvents") ;
   Bool_t verbose = pc.getInt("verbose") ;
   Bool_t randProto = pc.getInt("randProto") ;
   Bool_t resampleProto = pc.getInt("resampleProto") ;
@@ -1097,6 +1267,10 @@ RooDataSet *RooAbsPdf::generate(const RooArgSet& whatVars, const RooCmdArg& arg1
     nEvents = RooRandom::randomGenerator()->Poisson(nEvents==0?expectedEvents(&whatVars):nEvents) ;
     cxcoutI(Generation) << " Extended mode active, number of events generated (" << nEvents << ") is Poisson fluctuation on " 
 			  << GetName() << "::expectedEvents() = " << nEvents << endl ;
+    // If Poisson fluctuation results in zero events, stop here
+    if (nEvents==0) {
+      return 0 ;
+    }
   } else if (nEvents==0) {
     cxcoutI(Generation) << "No number of events specified , number of events generated is " 
 			  << GetName() << "::expectedEvents() = " << expectedEvents(&whatVars)<< endl ;
@@ -1589,7 +1763,14 @@ RooPlot* RooAbsPdf::plotOn(RooPlot* frame, RooLinkedList& cmdList) const
   
   // Restore selection status ;
   if (haveCompSel) plotOnCompSelect(0) ;
-  
+
+  if (plotRange) {
+    delete plotRange ;
+  }
+  if (normRange) {
+    delete normRange ;
+  }  
+
   return ret ;
 }
 
