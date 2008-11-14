@@ -1925,8 +1925,8 @@ TH1 *TH3::Project3D(Option_t *option) const
    Bool_t computeErrors = kFALSE;
    if (opt.Contains("e") || GetSumw2N() ) {h->Sumw2(); computeErrors = kTRUE;}
 
-   bool useUF = !opt.Contains("NU");
-   bool useOF = !opt.Contains("NO");
+   bool useUF = !opt.Contains("nu");
+   bool useOF = !opt.Contains("no");
    // Fill the projected histogram excluding underflow/overflows if considered in the option
    // if specified in the option (by default they considered)
    if (!fXaxis.TestBit(TAxis::kAxisRange)) {
@@ -1942,9 +1942,9 @@ TH1 *TH3::Project3D(Option_t *option) const
       if (useOF) izmax++;
    }
    // Fill the projected histogram taking into accounts underflow/overflows
-   if (!fXaxis.TestBit(TAxis::kAxisRange)) {ixmin--; ixmax++;}
-   if (!fYaxis.TestBit(TAxis::kAxisRange)) {iymin--; iymax++;}
-   if (!fZaxis.TestBit(TAxis::kAxisRange)) {izmin--; izmax++;}
+//    if (!fXaxis.TestBit(TAxis::kAxisRange)) {ixmin--; ixmax++;}
+//    if (!fYaxis.TestBit(TAxis::kAxisRange)) {iymin--; iymax++;}
+//    if (!fZaxis.TestBit(TAxis::kAxisRange)) {izmin--; izmax++;}
    Double_t cont,e,e1;
    Double_t entries  = 0;
    Double_t newerror = 0;
@@ -2267,8 +2267,8 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    delete [] title;
    if (p2 == 0) return 0;
 
-   bool useUF = opt.Contains("U");
-   bool useOF = opt.Contains("O");
+   bool useUF = opt.Contains("u");
+   bool useOF = opt.Contains("o");
    // Fill the projected histogram taking into accounts underflow/overflows
    // if specified in the option (by default they are not considered)
    if (!fXaxis.TestBit(TAxis::kAxisRange)) {
