@@ -171,16 +171,23 @@ MACRO (GET_TEST_SCOPED_NAME _name _scoped_name)
 
 ENDMACRO (GET_TEST_SCOPED_NAME _name _scoped_name)
 
-MACRO (REFLEX_ADD_TEST name target)
+MACRO (REFLEX_ADD_SCOPED_TEST _name)
 
-   GET_TEST_SCOPED_NAME("${name}" _scoped_name)
+   GET_TEST_SCOPED_NAME("${_name}" _scoped_name)
    SET(_test_key "REGISTERED_TESTS_${_scoped_name}")
 
    # check for duplicate tests
    IF (DEFINED ${_test_key})
       MESSAGE(FATAL_ERROR "Test ${_scoped_name} was already added")
    ENDIF (DEFINED ${_test_key})
+
+   # register and add the test to ctest
    SET(${_test_key} "1")
+   ADD_TEST("${_scoped_name}" ${ARGN})
+
+ENDMACRO (REFLEX_ADD_SCOPED_TEST _name)
+
+MACRO (REFLEX_ADD_TEST name target)
 
    MACRO_PARSE_ARGUMENTS(REFLEX_ADD_TEST "DICTIONARIES" "" "${ARGN}")
 
@@ -234,7 +241,7 @@ MACRO (REFLEX_ADD_TEST name target)
 
    ENDIF (UNIX)
 
-   ADD_TEST("${_scoped_name}" ${_shell_wrapper} ${REFLEX_ADD_TEST_DEFAULT_ARGS})
+   REFLEX_ADD_SCOPED_TEST("${name}" ${_shell_wrapper} ${REFLEX_ADD_TEST_DEFAULT_ARGS})
 
 ENDMACRO (REFLEX_ADD_TEST name target)
 

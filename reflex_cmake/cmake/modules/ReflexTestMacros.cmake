@@ -1,19 +1,3 @@
-MACRO (ADD_SCOPED_TEST _name)
-
-   GET_TEST_SCOPED_NAME("${_name}" _scoped_name)
-   SET(_test_key "REGISTERED_TESTS_${_scoped_name}")
-
-   # check for duplicate tests
-   IF (DEFINED ${_test_key})
-      MESSAGE(FATAL_ERROR "Test ${_scoped_name} was already added")
-   ENDIF (DEFINED ${_test_key})
-   SET(${_test_key} "1")
-
-   ADD_TEST("${_scoped_name}" ${ARGN})
-
-ENDMACRO (ADD_SCOPED_TEST _name)
-
-
 MACRO(MACRO_SCRUB_DIR path)
 
    FILE(GLOB _sub_dirs ${path}/*)
@@ -55,20 +39,20 @@ MACRO (REFLEX_ADD_MACRO_TEST _name)
 
       ENDIF (NOT EXISTS ${_script_file_name})
 
-      ADD_SCOPED_TEST("${_name}" ${CMAKE_COMMAND}
-                      "-DCMAKE_MODULE_PATH:PATH=${CMAKE_MODULE_PATH}"
-                      "-DCMAKE_PROJECT_NAME:STRING=${_name}"
-                      "-DCMAKE_VERSION:STRING=${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}"
-                      "-DREFLEX_TESTING:BOOLEAN=TRUE"
-                      "-DREFLEX_TEST_OUTPUT_DIR:PATH=${_test_output_dir}"
-                      "-DREFLEX_INCLUDE_DIR:PATH=${REFLEX_INCLUDE_DIR}"
-                      "-DREFLEX_LIBRARY:PATH=${REFLEX_LIBRARY}"
-                      "-DCPPUNIT_INCLUDE_DIR:PATH=${CPPUNIT_INCLUDE_DIR}"
-                      "-DCPPUNIT_LIBRARY:PATH=${CPPUNIT_LIBRARY}"
-                      "-DPYTHON_EXECUTABLE:PATH=${PYTHON_EXECUTABLE}"
-                      "-DGCCXML:PATH=${GCCXML}"
-                      "-DGENREFLEX_SCRIPT:PATH=${GENREFLEX_SCRIPT}"
-                      -P ${_script_file_name})
+      REFLEX_ADD_SCOPED_TEST("${_name}" ${CMAKE_COMMAND}
+                             "-DCMAKE_MODULE_PATH:PATH=${CMAKE_MODULE_PATH}"
+                             "-DCMAKE_PROJECT_NAME:STRING=${_name}"
+                             "-DCMAKE_VERSION:STRING=${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}"
+                             "-DREFLEX_TESTING:BOOLEAN=TRUE"
+                             "-DREFLEX_TEST_OUTPUT_DIR:PATH=${_test_output_dir}"
+                             "-DREFLEX_INCLUDE_DIR:PATH=${REFLEX_INCLUDE_DIR}"
+                             "-DREFLEX_LIBRARY:PATH=${REFLEX_LIBRARY}"
+                             "-DCPPUNIT_INCLUDE_DIR:PATH=${CPPUNIT_INCLUDE_DIR}"
+                             "-DCPPUNIT_LIBRARY:PATH=${CPPUNIT_LIBRARY}"
+                             "-DPYTHON_EXECUTABLE:PATH=${PYTHON_EXECUTABLE}"
+                             "-DGCCXML:PATH=${GCCXML}"
+                             "-DGENREFLEX_SCRIPT:PATH=${GENREFLEX_SCRIPT}"
+                             -P ${_script_file_name})
 
     ENDIF (NOT REFLEX_TESTING)
 
@@ -195,11 +179,17 @@ MACRO (REFLEX_ADD_SINGLE_TEST _name)
 
    # create the test executable
    SET(_test_target ${_qname})
-   GET_TARGET_PROPERTY(_dict_lib ${_dict_target} LOCATION)
    ADD_EXECUTABLE(${_test_target} ${_TEST_TEST})
    TARGET_LINK_LIBRARIES(${_test_target} Reflex ${DL_LIBRARY} ${CPPUNIT_LIBRARY})
-   REFLEX_ADD_TEST(${_name} ${_test_target} ${_dict_lib}
-                   DICTIONARIES _dict_lib)
-   TARGET_LINK_LIBRARIES(${_dict_target} Reflex)
+
+   # determine the dictionary path relative to the test executable
+   GET_TARGET_PROPERTY(_dict_lib ${_dict_target} LOCATION)
+   GET_TARGET_PROPERTY(_test_exe ${_test_target} LOCATION)
+   GET_FILENAME_COMPONENT(_test_exe_dir ${_test_exe} PATH)
+   FILE(RELATIVE_PATH _dict_lib_path ${_test_exe_dir} ${_dict_lib})
+   SET(_dict_lib_path ./${_dict_lib_path})
+
+   # add the test with the relative dictionary path as a parameter
+   REFLEX_ADD_TEST(${_name} ${_test_target} ${_dict_lib_path})
 
 ENDMACRO (REFLEX_ADD_SINGLE_TEST _name)
