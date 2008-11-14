@@ -33,7 +33,6 @@ class TEveElement
 {
    friend class TEveManager;
 
-   TEveElement(const TEveElement&);            // Not implemented
    TEveElement& operator=(const TEveElement&); // Not implemented
 
 public:
@@ -67,10 +66,12 @@ public:
    typedef sLTI_t::reverse_iterator             sLTI_ri;
 
    typedef std::list<TEveElement*>              List_t;
-   typedef std::list<TEveElement*>::iterator    List_i;
+   typedef List_t::iterator                     List_i;
+   typedef List_t::const_iterator               List_ci;
 
    typedef std::set<TEveElement*>               Set_t;
-   typedef std::set<TEveElement*>::iterator     Set_i;
+   typedef Set_t::iterator                      Set_i;
+   typedef Set_t::const_iterator                Set_ci;
 
 protected:
    List_t           fParents;              //  List of parents.
@@ -88,6 +89,7 @@ protected:
    Bool_t           fRnrChildren;          //  Render children of this element.
    Bool_t           fCanEditMainTrans;     //  Allow editing of main transformation.
 
+   UChar_t          fMainTransparency;     //  Main-transparency variable.
    Color_t         *fMainColorPtr;         //  Pointer to main-color variable.
    TEveTrans       *fMainTrans;            //  Pointer to main transformation matrix.
 
@@ -101,7 +103,12 @@ protected:
 public:
    TEveElement();
    TEveElement(Color_t& main_color);
+   TEveElement(const TEveElement& e);
    virtual ~TEveElement();
+
+   virtual TEveElement* CloneElement() const { return new TEveElement(*this); }
+   virtual TEveElement* CloneElementRecurse(Int_t recurse=0) const;
+   virtual void         CloneChildrenRecurse(TEveElement* dest, Int_t recurse=0) const;
 
    virtual const Text_t* GetElementName()  const;
    virtual const Text_t* GetElementTitle() const;
@@ -136,15 +143,19 @@ public:
    virtual void CollectSceneParentsFromChildren(List_t& scenes,
                                                 TEveElement* parent);
 
-   List_i BeginParents()      { return  fParents.begin();  }
-   List_i EndParents()        { return  fParents.end();    }
-   Int_t  NumParents()  const { return  fParents.size();   }
-   Bool_t HasParents()  const { return !fParents.empty();  }
+   List_i  BeginParents()        { return  fParents.begin();  }
+   List_i  EndParents()          { return  fParents.end();    }
+   List_ci BeginParents()  const { return  fParents.begin();  }
+   List_ci EndParents()    const { return  fParents.end();    }
+   Int_t   NumParents()    const { return  fParents.size();   }
+   Bool_t  HasParents()    const { return !fParents.empty();  }
 
-   List_i BeginChildren()     { return  fChildren.begin(); }
-   List_i EndChildren()       { return  fChildren.end();   }
-   Int_t  NumChildren() const { return  fChildren.size();  }
-   Bool_t HasChildren() const { return !fChildren.empty(); }
+   List_i  BeginChildren()       { return  fChildren.begin(); }
+   List_i  EndChildren()         { return  fChildren.end();   }
+   List_ci BeginChildren() const { return  fChildren.begin(); }
+   List_ci EndChildren()   const { return  fChildren.end();   }
+   Int_t   NumChildren()   const { return  fChildren.size();  }
+   Bool_t  HasChildren()   const { return !fChildren.empty(); }
 
    Bool_t       HasChild(TEveElement* el);
    TEveElement* FindChild(const TString& name, const TClass* cls=0);
@@ -223,7 +234,7 @@ public:
    virtual void   PropagateRnrStateToProjecteds();
 
    virtual Bool_t CanEditMainColor() const  { return kFALSE; }
-   Color_t* GetMainColorPtr()               { return fMainColorPtr; }
+   Color_t* GetMainColorPtr()        const  { return fMainColorPtr; }
    void     SetMainColorPtr(Color_t* color) { fMainColorPtr = color; }
 
    virtual Bool_t  HasMainColor() const { return fMainColorPtr != 0; }
@@ -235,8 +246,9 @@ public:
    virtual void    PropagateMainColorToProjecteds(Color_t color, Color_t old_color);
 
    virtual Bool_t  CanEditMainTransparency() const { return kFALSE; }
-   virtual UChar_t GetMainTransparency()     const { return 0; }
-   virtual void    SetMainTransparency(UChar_t) {}
+   virtual UChar_t GetMainTransparency()     const { return fMainTransparency; }
+   virtual void    SetMainTransparency(UChar_t t);
+   void            SetMainAlpha(Float_t alpha);
 
    virtual Bool_t     CanEditMainTrans() const { return fCanEditMainTrans; }
    virtual Bool_t     HasMainTrans()     const { return fMainTrans != 0;   }
@@ -343,7 +355,6 @@ public:
 class TEveElementObjectPtr : public TEveElement,
                              public TObject
 {
-   TEveElementObjectPtr(const TEveElementObjectPtr&);            // Not implemented
    TEveElementObjectPtr& operator=(const TEveElementObjectPtr&); // Not implemented
 
 protected:
@@ -353,7 +364,10 @@ protected:
 public:
    TEveElementObjectPtr(TObject* obj, Bool_t own=kTRUE);
    TEveElementObjectPtr(TObject* obj, Color_t& mainColor, Bool_t own=kTRUE);
+   TEveElementObjectPtr(const TEveElementObjectPtr& e);
    virtual ~TEveElementObjectPtr();
+
+   virtual TEveElementObjectPtr* CloneElement() const { return new TEveElementObjectPtr(*this); }
 
    virtual TObject* GetObject(const TEveException& eh="TEveElementObjectPtr::GetObject ") const;
    virtual void     ExportToCINT(Text_t* var_name);
@@ -373,7 +387,6 @@ class TEveElementList : public TEveElement,
                         public TNamed
 {
 private:
-   TEveElementList(const TEveElementList&);            // Not implemented
    TEveElementList& operator=(const TEveElementList&); // Not implemented
 
 protected:
@@ -384,7 +397,10 @@ protected:
 public:
    TEveElementList(const Text_t* n="TEveElementList", const Text_t* t="",
                    Bool_t doColor=kFALSE);
+   TEveElementList(const TEveElementList& e);
    virtual ~TEveElementList() {}
+
+   virtual TEveElementList* CloneElement() const { return new TEveElementList(*this); }
 
    virtual const Text_t* GetElementName()  const { return TNamed::GetName(); }
    virtual const Text_t* GetElementTitle() const { return TNamed::GetTitle(); }

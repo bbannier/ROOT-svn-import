@@ -111,7 +111,11 @@ RooCurve::RooCurve(const RooAbsReal &f, RooAbsRealLValue &x, Double_t xlo, Doubl
 
   // calculate the points to add to our curve
   Double_t prevYMax = getYAxisMax() ;
-  addPoints(*funcPtr,xlo,xhi,xbins+1,prec,resolution,wmode,nEvalError,doEEVal,eeVal,f.plotSamplingHint(x,xlo,xhi));
+  list<Double_t>* hint = f.plotSamplingHint(x,xlo,xhi) ;
+  addPoints(*funcPtr,xlo,xhi,xbins+1,prec,resolution,wmode,nEvalError,doEEVal,eeVal,hint);
+  if (hint) {
+    delete hint ;
+  }
   initialize();
 
   // cleanup
@@ -351,10 +355,10 @@ void RooCurve::addPoints(const RooAbsFunc &func, Double_t xlo, Double_t xhi,
   while(true) {
     x1= x2;
     iter2++ ;
-    x2= *iter2 ;
     if (iter2==xval->end()) {
       break ;
     }
+    x2= *iter2 ;
     addRange(func,x1,x2,yval[step-1],yval[step],prec*yrangeEst,minDx,numee,doEEVal,eeVal);
     step++ ;
   }
@@ -369,6 +373,9 @@ void RooCurve::addPoints(const RooAbsFunc &func, Double_t xlo, Double_t xhi,
 
   // cleanup
   delete [] yval;
+  if (xval != samplingHint) {
+    delete xval ;
+  }
 
 }
 
@@ -685,19 +692,33 @@ Bool_t RooCurve::isIdentical(const RooCurve& other, Double_t tol) const
   // Return true if curve is identical to other curve allowing for given
   // absolute tolerance on each point compared point.
 
-  Int_t n= GetN();
+  // Determine X range and Y range
+  Int_t n= min(GetN(),other.GetN());
+  Double_t xmin(1e30), xmax(-1e30), ymin(1e30), ymax(-1e30) ;
   for(Int_t i= 0; i < n; i++) {
-    if (fabs(fX[i]-other.fX[i])>tol) {
-      cout << "fX[" << i << "] = " << fX[i] << " other.fX[" << i << "] = " << other.fX[i] << endl ;
-      return kFALSE ;
-    }
-    if (fabs(fY[i]-other.fY[i])>tol) {
-      cout << "fY[" << i << "] = " << fY[i] << " other.fY[" << i << "] = " << other.fY[i] << endl ;
-      return kFALSE ;
+    if (fX[i]<xmin) xmin=fX[i] ;
+    if (fX[i]>xmax) xmax=fX[i] ;
+    if (fY[i]<ymin) ymin=fY[i] ;
+    if (fY[i]>ymax) ymax=fY[i] ;
+  }
+  Double_t Yrange=ymax-ymin ;
+
+  Bool_t ret(kTRUE) ;
+  for(Int_t i= 2; i < n-2; i++) {
+    Double_t yTest = interpolate(other.fX[i],1e-10) ;
+    Double_t rdy = fabs(yTest-other.fY[i])/Yrange ;
+    if (rdy>tol) {
+
+//       cout << "xref = " << other.fX[i] << " yref = " << other.fY[i] << " xtest = " << fX[i] << " ytest = " << fY[i] 
+// 	   << " ytestInt[other.fX] = " << interpolate(other.fX[i],1e-10) << endl ;
+      
+      cout << "RooCurve::isIdentical[" << i << "] Y tolerance exceeded (" << rdy << ">" << tol 
+	   << "), X=" << other.fX[i] << "(" << fX[i] << ")" << " Ytest=" << yTest << " Yref=" << other.fY[i] << " range = " << Yrange << endl ;
+      ret=kFALSE ;
     }
   }
 
-  return kTRUE ;
+  return ret ;
 }
 
 

@@ -41,6 +41,7 @@
 #include "TList.h"
 #include "Riostream.h"
 #include "TClass.h"
+#include "TGPicture.h"
 
 const TGFont *TGTab::fgDefaultFont = 0;
 const TGGC   *TGTab::fgDefaultGC = 0;
@@ -58,12 +59,18 @@ TGTabElement::TGTabElement(const TGWindow *p, TGString *text, UInt_t w, UInt_t h
 {
    // Create a tab element. Text is adopted by tab element.
 
+   fClosePic     = 0;
+   fClosePicD    = 0;
+   fShowClose    = kFALSE;
+   fActive       = kFALSE;
    fText         = text;
    fBorderWidth  = 0;
    fNormGC       = norm;
    fFontStruct   = font;
    fEditDisabled = kEditDisableGrab | kEditDisableBtnEnable;
 
+   fClosePic      = fClient->GetPicture("closetab.png");
+   fClosePicD     = fClient->GetPicture("closetab_d.png");
    int max_ascent, max_descent;
    if (fText)
       fTWidth = gVirtualX->TextWidth(fFontStruct, fText->GetString(), fText->GetLength());
@@ -79,6 +86,8 @@ TGTabElement::~TGTabElement()
 {
    // Delete tab element.
 
+   if (fClosePic) gClient->FreePicture(fClosePic);
+   if (fClosePicD) gClient->FreePicture(fClosePicD);
    if (fText) delete fText;
 }
 
@@ -105,6 +114,12 @@ void TGTabElement::DrawBorder()
          fText->Draw(fId, GetShadowGC()(), 6, max_ascent);
       }
    }
+   if (fShowClose && fClosePic && fClosePicD) {
+      if (fEnabled && fActive)
+         fClosePic->Draw(fId, fNormGC, fTWidth+12, fHeight/2-7);
+      else 
+         fClosePicD->Draw(fId, fNormGC, fTWidth+12, fHeight/2-7);
+   }
 }
 
 //______________________________________________________________________________
@@ -116,6 +131,15 @@ Bool_t TGTabElement::HandleButton(Event_t *event)
    if (event->fType == kButtonPress) {
       TGTab* main = (TGTab*)fParent;
       if (main) {
+         if (fShowClose && event->fWindow == GetId() &&
+             (UInt_t)event->fX > fTWidth+12 && (UInt_t)event->fX < fTWidth+26 &&
+             (UInt_t)event->fY > fHeight/2-7 && (UInt_t)event->fY < fHeight/2+7) {
+            if (main->GetTabTab(main->GetCurrent()) == this) {
+               main->CloseTab(main->GetCurrent()); // emit signal
+               //main->RemoveTab(main->GetCurrent());
+               return kTRUE;
+            }
+         }
          TGFrameElement *el;
          TIter next(main->GetList());
 
@@ -141,7 +165,10 @@ TGDimension TGTabElement::GetDefaultSize() const
 {
    // Return default size of tab element.
 
-   return TGDimension(TMath::Max(fTWidth+12, (UInt_t)45), fTHeight+6);
+   if (fShowClose && fClosePic && fClosePicD)
+      return TGDimension(TMath::Max(fTWidth+30, (UInt_t)45), fTHeight+6);
+   else
+      return TGDimension(TMath::Max(fTWidth+12, (UInt_t)45), fTHeight+6);
 }
 
 //______________________________________________________________________________
@@ -160,6 +187,21 @@ void TGTabElement::SetText(TGString *text)
    fClient->NeedRedraw(this);
 }
 
+//______________________________________________________________________________
+void TGTabElement::ShowClose(Bool_t show)
+{
+   // Show/hide close icon on the tab element, then apply layout
+   // to compute correct elements size.
+
+   TGTab* main = (TGTab*)fParent;
+   fShowClose = show;
+   if (fShowClose && fClosePic && fClosePicD)
+      Resize(TMath::Max(fTWidth+30, (UInt_t)45), fTHeight+6);
+   else
+      Resize(TMath::Max(fTWidth+12, (UInt_t)45), fTHeight+6);
+   if (main)
+      main->GetLayoutManager()->Layout();
+}
 
 //______________________________________________________________________________
 TGTabLayout::TGTabLayout(TGTab *main)
@@ -404,6 +446,10 @@ void TGTab::ChangeTab(Int_t tabIndex, Bool_t emit)
    if (!te || !te->IsEnabled()) return;
 
    if (tabIndex != fCurrent) {
+      if (GetTabTab(fCurrent)) {
+         GetTabTab(fCurrent)->SetActive(kFALSE);
+         fClient->NeedRedraw(GetTabTab(fCurrent));
+      }
       TGFrameElement *el, *elnxt;
       UInt_t tw;
       Int_t  xtab  = 2;
@@ -432,6 +478,8 @@ void TGTab::ChangeTab(Int_t tabIndex, Bool_t emit)
          fClient->ProcessLine(fCommand, MK_MSG(kC_COMMAND, kCM_TAB), fCurrent, 0);
          Selected(fCurrent);
       }
+      GetTabTab(fCurrent)->SetActive(kTRUE);
+      fClient->NeedRedraw(GetTabTab(fCurrent));
    }
 }
 
@@ -743,6 +791,11 @@ void TGTab::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       }
       cf->SavePrimitiveSubframes(out, option);
 
+      if (GetTabTab(i)->IsCloseShown()) {
+         out << "   TGTabElement *tab" << i << " = "
+             << GetName() << "->GetTabTab(" << i << ");" << endl;
+         out << "   tab" << i << "->ShowClose(kTRUE);" << endl;
+      }
       if (GetTabTab(i)->GetBackground() != GetTabTab(i)->GetDefaultFrameBackground()) {
          GetTabTab(i)->SaveUserColor(out, option);
          out << "   TGTabElement *tab" << i << " = "
