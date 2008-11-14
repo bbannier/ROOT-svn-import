@@ -29,7 +29,7 @@ namespace RooStats {
                             float testStat_data_val );
 
 	/// Destructor of HybridResult
-	~HybridResult();
+	virtual ~HybridResult();
 
 	/// TO DO: use from HypoTestResult
 	double CLb();

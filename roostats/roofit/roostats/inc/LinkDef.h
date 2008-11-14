@@ -28,10 +28,10 @@
 #pragma link C++ class RooStats::SimpleInterval+;
 #pragma link C++ class RooStats::LikelihoodInterval+;
 #pragma link C++ class RooStats::HypoTestResult+;
-//#pragma link C++ class RooStats::ConfInterval+; // interface, not concrete
-//#pragma link C++ class RooStats::IntervalCalculator+; // interface, not concrete
-//#pragma link C++ class RooStats::HypoTestCalculator+; // interface, not concrete
-//#pragma link C++ class RooStats::CombinedCalculator+; // interface, not concrete
+#pragma link C++ class RooStats::ConfInterval+; // interface, not concrete
+#pragma link C++ class RooStats::IntervalCalculator+; // interface, not concrete
+#pragma link C++ class RooStats::HypoTestCalculator+; // interface, not concrete
+#pragma link C++ class RooStats::CombinedCalculator+; // interface, not concrete
 #pragma link C++ class RooStats::ProfileLikelihoodCalculator+; 
 
 #pragma link C++ class RooStats::HybridCalculator+;

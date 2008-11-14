@@ -34,7 +34,7 @@ namespace RooStats {
 		RooAbsPdf& prior_pdf);
 
 	/// Destructor of HybridCalculator
-	~HybridCalculator();
+	virtual ~HybridCalculator();
 
 	void SetTestStatistics(int index);
 	void Calculate(RooAbsData& data, unsigned int nToys, bool usePriors);
