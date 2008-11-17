@@ -34,10 +34,10 @@ namespace RooStats {
 
     virtual ~CombinedCalculator() {
       //      if (fWS) delete fWS;
-      if (fNullParams) delete fNullParams;
-      if (fAlternateParams) delete fAlternateParams;
+      //      if (fNullParams) delete fNullParams;
+      //      if (fAlternateParams) delete fAlternateParams;
       //      if (fPOI) delete fPOI;
-      if (fNuisParams) delete fNuisParams;
+      //      if (fNuisParams) delete fNuisParams;
     }
 
     
