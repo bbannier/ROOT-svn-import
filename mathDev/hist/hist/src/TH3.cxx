@@ -1588,6 +1588,10 @@ TH1 *TH3::Project3D(Option_t *option) const
    //
    //  NOTE 3: underflow/overflow are included by default in the projection 
    //  To exclude underflow and/or overflow (for both axis in case of a projection to a 1D histogram) use option "NU" and/or "NO"
+   //  With SetRange() you can have all bin except underflow/overflow only if you set the axis bit range as 
+   // following after having called SetRange: 
+   //    axis->SetRange(1, axis->GetNbins());
+   //    axis->SetBit(TAxis::kAxisRange);  
    //          
 
    TString opt = option; opt.ToLower();
