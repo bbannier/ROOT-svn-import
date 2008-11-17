@@ -1181,13 +1181,13 @@ void TFitEditor::UpdateGUI()
       fSliderX->SetScale(5);
 
       fSliderXMin->SetLimits(TGNumberFormat::kNELLimitMinMax,
-                             fXaxis->GetBinLowEdge( fSliderX->GetMinPosition() ), 
-                             fXaxis->GetBinUpEdge ( fSliderX->GetMaxPosition() ));
-      fSliderXMin->SetNumber( fXaxis->GetBinLowEdge( fSliderX->GetMinPosition() ));
+                             fXaxis->GetBinLowEdge( static_cast<Int_t>( fSliderX->GetMinPosition() ) ), 
+                             fXaxis->GetBinUpEdge ( static_cast<Int_t>( fSliderX->GetMaxPosition() ) ));
+      fSliderXMin->SetNumber( fXaxis->GetBinLowEdge( static_cast<Int_t>( fSliderX->GetMinPosition() ) ));
       fSliderXMax->SetLimits(TGNumberFormat::kNELLimitMinMax,
-                             fXaxis->GetBinLowEdge( fSliderX->GetMinPosition() ), 
-                             fXaxis->GetBinUpEdge ( fSliderX->GetMaxPosition() ));
-      fSliderXMax->SetNumber( fXaxis->GetBinUpEdge ( fSliderX->GetMaxPosition() ));
+                             fXaxis->GetBinLowEdge( static_cast<Int_t>( fSliderX->GetMinPosition() ) ), 
+                             fXaxis->GetBinUpEdge ( static_cast<Int_t>( fSliderX->GetMaxPosition() ) ));
+      fSliderXMax->SetNumber( fXaxis->GetBinUpEdge ( static_cast<Int_t>( fSliderX->GetMaxPosition() ) ));
 
       fSliderX->Connect("PositionChanged()","TFitEditor",this, "DoSliderXMoved()");
       fSliderXMax->Connect("ValueSet(Long_t)", "TFitEditor", this, "DoNumericSliderXChanged()");
@@ -1233,13 +1233,13 @@ void TFitEditor::UpdateGUI()
       fSliderY->SetScale(5);
 
       fSliderYMin->SetLimits(TGNumberFormat::kNELLimitMinMax,
-                             fYaxis->GetBinLowEdge( fSliderY->GetMinPosition() ), 
-                             fYaxis->GetBinUpEdge ( fSliderY->GetMaxPosition() ));
-      fSliderYMin->SetNumber(fYaxis->GetBinLowEdge( fSliderY->GetMinPosition() ));
+                             fYaxis->GetBinLowEdge( static_cast<Int_t>( fSliderY->GetMinPosition() ) ), 
+                             fYaxis->GetBinUpEdge ( static_cast<Int_t>( fSliderY->GetMaxPosition() ) ));
+      fSliderYMin->SetNumber(fYaxis->GetBinLowEdge( static_cast<Int_t>( fSliderY->GetMinPosition() ) ));
       fSliderYMax->SetLimits(TGNumberFormat::kNELLimitMinMax,
-                             fYaxis->GetBinLowEdge( fSliderY->GetMinPosition() ), 
-                             fYaxis->GetBinUpEdge ( fSliderY->GetMaxPosition() ));
-      fSliderYMax->SetNumber( fYaxis->GetBinUpEdge ( fSliderY->GetMaxPosition() ));
+                             fYaxis->GetBinLowEdge( static_cast<Int_t>( fSliderY->GetMinPosition() ) ), 
+                             fYaxis->GetBinUpEdge ( static_cast<Int_t>( fSliderY->GetMaxPosition() ) ));
+      fSliderYMax->SetNumber( fYaxis->GetBinUpEdge ( static_cast<Int_t>( fSliderY->GetMaxPosition() ) ));
 
       fSliderY->Connect("PositionChanged()","TFitEditor",this, "DoSliderYMoved()");
       fSliderYMax->Connect("ValueSet(Long_t)", "TFitEditor", this, "DoNumericSliderYChanged()");
@@ -2208,8 +2208,8 @@ void TFitEditor::DoSliderXMoved()
 
    if ( !fFitObject ) return;
    
-   fSliderXMin->SetNumber( fXaxis->GetBinLowEdge( fSliderX->GetMinPosition() ) );
-   fSliderXMax->SetNumber( fXaxis->GetBinUpEdge ( fSliderX->GetMaxPosition() ) );
+   fSliderXMin->SetNumber( fXaxis->GetBinLowEdge( static_cast<Int_t>( fSliderX->GetMinPosition() ) ) );
+   fSliderXMax->SetNumber( fXaxis->GetBinUpEdge ( static_cast<Int_t>( fSliderX->GetMaxPosition() ) ) );
 
    fUseRange->SetState(kButtonUp);
 
@@ -2285,8 +2285,8 @@ void TFitEditor::DoNumericSliderXChanged()
    if ( fSliderXMin->GetNumber() > fSliderXMax->GetNumber() ) {
       float xmin, xmax;
       fSliderX->GetPosition(xmin, xmax);
-      fSliderXMin->SetNumber( fXaxis->GetBinLowEdge( xmin ) );
-      fSliderXMax->SetNumber( fXaxis->GetBinUpEdge ( xmax ) );
+      fSliderXMin->SetNumber( fXaxis->GetBinLowEdge( static_cast<Int_t>( xmin ) ) );
+      fSliderXMax->SetNumber( fXaxis->GetBinUpEdge ( static_cast<Int_t>( xmax ) ) );
       return;
    }
 
@@ -2305,8 +2305,8 @@ void TFitEditor::DoSliderYMoved()
 
    if ( !fFitObject ) return;
 
-   fSliderYMin->SetNumber( fYaxis->GetBinLowEdge( fSliderY->GetMinPosition() ) );
-   fSliderYMax->SetNumber( fYaxis->GetBinUpEdge ( fSliderY->GetMaxPosition() ) );
+   fSliderYMin->SetNumber( fYaxis->GetBinLowEdge( static_cast<Int_t>( fSliderY->GetMinPosition() ) ) );
+   fSliderYMax->SetNumber( fYaxis->GetBinUpEdge ( static_cast<Int_t>( fSliderY->GetMaxPosition() ) ) );
    
    fUseRange->SetState(kButtonUp);
 
@@ -2320,8 +2320,8 @@ void TFitEditor::DoNumericSliderYChanged()
    if ( fSliderYMin->GetNumber() > fSliderYMax->GetNumber() ) {
       float ymin, ymax;
       fSliderY->GetPosition(ymin, ymax);
-      fSliderYMin->SetNumber( fYaxis->GetBinLowEdge( ymin ) );
-      fSliderYMax->SetNumber( fYaxis->GetBinUpEdge ( ymax ) );
+      fSliderYMin->SetNumber( fYaxis->GetBinLowEdge( static_cast<Int_t>( ymin ) ) );
+      fSliderYMax->SetNumber( fYaxis->GetBinUpEdge ( static_cast<Int_t>( ymax ) ) );
       return;
    }
 
