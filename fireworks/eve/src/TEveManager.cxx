@@ -828,6 +828,22 @@ TEveManager* TEveManager::Create(Bool_t map_window, Option_t* opt)
    return gEve;
 }
 
+//______________________________________________________________________________
+void TEveManager::Terminate()
+{
+   // Properly terminate global TEveManager.
+
+   if (!gEve) return;
+
+   delete gEve->fViewers;
+   delete gEve->fViewer->GetGLViewer();
+   delete gEve->fViewer;
+   TEveGListTreeEditorFrame *lf = gEve->fLTEFrame;
+   TEveBrowser              * b = gEve->GetBrowser();
+   delete gEve;
+   delete lf;
+   delete b; 
+}
 
 //==============================================================================
 //==============================================================================

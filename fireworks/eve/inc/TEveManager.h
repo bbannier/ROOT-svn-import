@@ -223,6 +223,7 @@ public:
    void ClearROOTClassSaved();
 
    static TEveManager* Create(Bool_t map_window=kTRUE, Option_t* opt="FI");
+   static void         Terminate();
 
    ClassDef(TEveManager, 0); // Eve application manager.
 };
