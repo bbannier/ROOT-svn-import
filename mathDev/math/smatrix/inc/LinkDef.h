@@ -36,7 +36,6 @@
 #pragma link C++ class ROOT::Math::MatRepStd<double,2,2>+;
 #pragma link C++ class ROOT::Math::MatRepStd<double,3,3>+;
 #pragma link C++ class ROOT::Math::MatRepStd<double,4,4>+;
-//#pragma link C++ class ROOT::Math::MatRepStd<double,5u,5u>+;
 #pragma link C++ class ROOT::Math::MatRepStd<double,5,5>+;
 #pragma link C++ class ROOT::Math::MatRepStd<double,6,6>+;
 #pragma link C++ class ROOT::Math::MatRepStd<double,7,7>+;
@@ -52,7 +51,6 @@
 #pragma link C++ class ROOT::Math::SMatrix<double,3,3>+;
 #pragma link C++ class ROOT::Math::SMatrix<double,4,4>+;
 #pragma link C++ class ROOT::Math::SMatrix<double,5,5>+;
-//#pragma link C++ class ROOT::Math::SMatrix<double,5u,5u>+;
 #pragma link C++ class ROOT::Math::SMatrix<double,6,6>+;
 #pragma link C++ class ROOT::Math::SMatrix<double,7,7>+;
 // #pragma link C++ class ROOT::Math::SMatrix<double,8,8>+;
