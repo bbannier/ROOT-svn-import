@@ -41,17 +41,8 @@ int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0);
 int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0);
 int equals(Double_t n1, Double_t n2);
 int compareStatistics( TH1* h1, TH1* h2, bool debug );
+ostream& operator<<(ostream& out, TH1D* h);
 // extern declarations - end
-
-ostream& operator<<(ostream& out, TH1D* h)
-{
-   out << h->GetName() << ": [" << h->GetBinContent(1);
-   for ( Int_t i = 1; i < h->GetNbinsX(); ++i )
-      out << ", " << h->GetBinContent(i);
-   out << "] ";
-
-   return out;
-}
 
 TH1D* CreateHistogram(const Int_t nbins, const Int_t seed)
 {
@@ -102,7 +93,7 @@ bool testIntegerRebin()
    for ( Int_t i = 0; i < nEvents; ++i )
       h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
 
-   return equals("TestIntegerRebin", h2, h3, cmpOptStats | cmpOptDebug);
+   return equals("TestIntegerRebin", h2, h3, cmpOptStats);
 }
 
 bool testIntegerRebinNoName()

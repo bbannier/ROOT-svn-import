@@ -43,11 +43,11 @@ int main(int argc, char** argv)
    ostringstream output;
    output << "\nTEST RESULTS\n\n";
 
-//    cout << "\nstressProjection\n" << endl;
-//    status = stressProjection();
-//    GlobalStatus |= status;
-//    output << "stressProjection Test........" 
-//           << (status?"FAIL":"OK") << endl;
+   cout << "\nstressProjection\n" << endl;
+   status = stressProjection();
+   GlobalStatus |= status;
+   output << "stressProjection Test........" 
+          << (status?"FAIL":"OK") << endl;
 
    cout << "\nstressRebin\n" << endl;
    status = stressRebin();
