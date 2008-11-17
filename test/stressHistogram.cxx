@@ -8,7 +8,7 @@
 
 #define ERRORLIMIT 1E-15
 
-const unsigned int __DRAW__ = 1;
+const unsigned int __DRAW__ = 0;
 
 // From stressProjection.cxx
 int stressProjection(bool testWithoutWeights = true,
@@ -43,11 +43,11 @@ int main(int argc, char** argv)
    ostringstream output;
    output << "\nTEST RESULTS\n\n";
 
-   cout << "\nstressProjection\n" << endl;
-   status = stressProjection();
-   GlobalStatus |= status;
-   output << "stressProjection Test........" 
-          << (status?"FAIL":"OK") << endl;
+//    cout << "\nstressProjection\n" << endl;
+//    status = stressProjection();
+//    GlobalStatus |= status;
+//    output << "stressProjection Test........" 
+//           << (status?"FAIL":"OK") << endl;
 
    cout << "\nstressRebin\n" << endl;
    status = stressRebin();
@@ -164,6 +164,7 @@ int compareStatistics( TH1* h1, TH1* h2, bool debug )
    
    differents |= (h1->Chi2Test(h2) < 1);
    differents |= (h2->Chi2Test(h1) < 1);         
+   differents |= equals(h1->Chi2Test(h2), h2->Chi2Test(h1));
    if ( debug )
       cout << "Chi2Test " << h1->Chi2Test(h2) << " " << h2->Chi2Test(h1) 
            << " | " << differents
