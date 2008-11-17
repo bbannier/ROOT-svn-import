@@ -1308,7 +1308,7 @@ void TFitEditor::SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event)
 
    ConnectSlots();
    
-   TF1* fitFunc = HasFitFunction(obj);
+   TF1* fitFunc = HasFitFunction();
 
    if (fitFunc) {
       //fFuncPars = FuncParams_t( fitFunc->GetNpar() );
@@ -2456,9 +2456,9 @@ void TFitEditor::ShowObjectName(TObject* obj)
 
    // If the selection was done in the fDataSet combo box, there is no need
    // to search through the list
-   TGTextLBEntry* entry = static_cast<TGTextLBEntry*> ( fDataSet->GetSelectedEntry());
-   if ( entry ) {
-      string selectedName = entry->GetText()->GetString();
+   TGTextLBEntry* selectedEntry = static_cast<TGTextLBEntry*> ( fDataSet->GetSelectedEntry());
+   if ( selectedEntry ) {
+      string selectedName = selectedEntry->GetText()->GetString();
       if ( name.CompareTo(selectedName.substr(0, selectedName.find(' ')).c_str()) == 0 ) {
          Layout();
          return;
@@ -2692,7 +2692,7 @@ void TFitEditor::MakeTitle(TGCompositeFrame *parent, const char *title)
 }
 
 //______________________________________________________________________________
-TF1* TFitEditor::HasFitFunction(TObject *obj)
+TF1* TFitEditor::HasFitFunction()
 {
    // Look in the list of function for TF1. If a TF1 is
    // found in the list of functions, it will be returned

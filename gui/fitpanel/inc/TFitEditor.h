@@ -162,7 +162,7 @@ protected:
    void        CreateGeneralTab();
    void        CreateMinimizationTab();
    void        MakeTitle(TGCompositeFrame *parent, const char *title);
-   TF1*        HasFitFunction(TObject *obj);
+   TF1*        HasFitFunction();
    void        SetEditable(Bool_t);
 
 private:
