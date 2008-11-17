@@ -67,7 +67,6 @@ void rs102_hypotestwithshapes() {
   // inspect the workspace if you wish
   //  wspace->Print();
 
-
   // do the hypothesis test
   DoHypothesisTest(wspace);
 

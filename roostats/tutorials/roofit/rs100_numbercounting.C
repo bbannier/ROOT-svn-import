@@ -1,9 +1,25 @@
 /////////////////////////////////////////////////////////////////////////
 //
 // 'Number Counting Example' RooStats tutorial macro #100
-// 
+// author: Kyle Cranmer
+// date Nov. 2008 
 //
-// 11/2008 - Kyle Cranmer
+// This tutorial shows an example of a combination of 
+// two searches using number counting with background uncertainty.
+//
+// The macro uses a RooStats "factory" to construct a PDF
+// that represents the two number counting analyses with background 
+// uncertainties.  The uncertainties are taken into account by 
+// considering a sideband measurement of a size that corresponds to the
+// background uncertainty.  The problem has been studied in these references:
+//   http://arxiv.org/abs/physics/0511028
+//   http://arxiv.org/abs/physics/0702156
+//   http://cdsweb.cern.ch/record/1099969?ln=en
+//
+// After using the factory to make the model, we use a RooStats 
+// ProfileLikelihoodCalculator for a Hypothesis test and a confidence interval.
+// The calculator takes into account systematics by eliminating nuisance parameters
+// with the profile likelihood.  This is equivalent to the method of MINOS.
 //
 /////////////////////////////////////////////////////////////////////////
 
@@ -26,8 +42,6 @@ void rs100_numbercounting()
   /////////////////////////////////////////
   // An example of a number counting combination with two channels.
   // We consider both hypothesis testing and the equivalent confidence interval.
-  // Note: Here we consider the case of an expected result. 
-  // Will update tutorial to consider observed data
   /////////////////////////////////////////
 
 
@@ -46,7 +60,7 @@ void rs100_numbercounting()
   // We need to give the signal expectation to relate the masterSignal
   // to the signal contribution in the individual channels.
   // The model neglects correlations in background uncertainty, 
-  // but they can be added later.
+  // but they could be added without much change to the example.
   NumberCountingPdfFactory f;
   RooWorkspace* wspace = new RooWorkspace();
   f.AddModel(s,2,wspace,"TopLevelPdf", "masterSignal"); 
@@ -161,8 +175,9 @@ void rs100_numbercounting()
   cout << "-------------------------------------------------\n\n" << endl;
   
   delete lrint;
-  //  delete wspace;
-  //  delete nullParams;
+
+  delete wspace;
+  delete nullParams;
 
   /*
   // Here's an example of what is in the workspace 
