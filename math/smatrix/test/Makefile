@@ -6,9 +6,9 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-ROOTSYS = ../../..
+#ROOTSYS = ../../..
 include $(ROOTSYS)/test/Makefile.arch
-include $(ROOTSYS)/config/Makefile.config
+#include $(ROOTSYS)/config/Makefile.config
 
 #------------------------------------------------------------------------------
 
@@ -18,6 +18,7 @@ include $(ROOTSYS)/config/Makefile.config
 # endif
 
 
+CXXFLAGS+= -g
 
 # if have clhep
 #CLHEPBASE=/Users/moneta/mathlibs/CLHEP-1.9.2.2

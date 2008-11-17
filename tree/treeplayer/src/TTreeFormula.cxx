@@ -558,6 +558,14 @@ Int_t TTreeFormula::RegisterDimensions(Int_t code, TLeaf *leaf) {
    char *branch_dim = (char*)strstr(bname,"[");
    if (branch_dim) branch_dim++; // skip the '['
 
+   Bool_t isString  = kFALSE;
+   if  (leaf->IsA() == TLeafElement::Class()) {
+      Int_t type =((TBranchElement*)leaf->GetBranch())->GetStreamerType();
+      isString =    (type == TStreamerInfo::kOffsetL+TStreamerInfo::kChar)
+                 || (type == TStreamerInfo::kCharStar);
+   } else {
+      isString = (leaf->IsA() == TLeafC::Class());
+   }
    if (leaf_dim) {
       leaf_dim++; // skip the '['
       if (!branch_dim || strncmp(branch_dim,leaf_dim,strlen(branch_dim))) {
@@ -572,9 +580,12 @@ Int_t TTreeFormula::RegisterDimensions(Int_t code, TLeaf *leaf) {
    }
    if (branch_dim) {
       // then both are NOT same so do the branch name next:
-      numberOfVarDim += RegisterDimensions( branch_dim, code);
+      if (isString) {
+         numberOfVarDim += RegisterDimensions( code, 1);            
+      } else {
+         numberOfVarDim += RegisterDimensions( branch_dim, code);
+      }
    }
-
    if (leaf->IsA() == TLeafElement::Class()) {
       TBranchElement* branch = (TBranchElement*) leaf->GetBranch();
       if (branch->GetBranchCount2()) {
@@ -789,6 +800,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
    TFormLeafInfo *maininfo = 0;
    TFormLeafInfo *previnfo = 0;
    Bool_t unwindCollection = kFALSE;
+   static TClassRef stdStringClass = TClass::GetClass("string");
 
    if (leaf==0) {
       TNamed *names = (TNamed*)fLeafNames.UncheckedAt(code);
@@ -1001,7 +1013,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                 cl->GetCollectionProxy()->GetType()>0) {
 
                previnfo->fNext =
-                        new TFormLeafInfoNumerical(cl->GetCollectionProxy()->GetType());
+                        new TFormLeafInfoNumerical(cl->GetCollectionProxy());
                previnfo = previnfo->fNext;
             } else {
                // nothing to do
@@ -1041,7 +1053,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                 cl->GetCollectionProxy()->GetType()>0) {
 
                previnfo->fNext =
-                  new TFormLeafInfoNumerical(cl->GetCollectionProxy()->GetType());
+                  new TFormLeafInfoNumerical(cl->GetCollectionProxy());
                previnfo = previnfo->fNext;
             }
 
@@ -1062,18 +1074,25 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
             numberOfVarDim += RegisterDimensions(code,collectioninfo,maininfo,kFALSE);
 
             collectioninfo->fNext =
-               new TFormLeafInfoNumerical(elemCl->GetCollectionProxy()->GetType());
+               new TFormLeafInfoNumerical(elemCl->GetCollectionProxy());
 
             maininfo = collectioninfo;
             previnfo = maininfo->fNext;
 
-         } else if (!element->IsaPointer()) {
+         }  else if (!useLeafCollectionObject
+                     && elemCl && elemCl->GetCollectionProxy()) {
+            if (elemCl->GetCollectionProxy()->GetValueClass()==TString::Class()) {
+               right = "Data()";
+            } else if (elemCl->GetCollectionProxy()->GetValueClass()==stdStringClass) {
+               right = "c_str()";
+            }
 
+         } else if (!element->IsaPointer()) {
+            
             maininfo = new TFormLeafInfoDirect(branchEl);
             previnfo = maininfo;
-
+            
          }
-
       }
       else if ( cl && cl->GetReferenceProxy() )  {
          if ( useLeafCollectionObject || fullExpression[0] == '@' || fullExpression[strlen(scratch)] == '@' ) {
@@ -1121,7 +1140,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                 cl->GetCollectionProxy()->GetType()>0) {
 
                previnfo->fNext =
-                  new TFormLeafInfoNumerical(cl->GetCollectionProxy()->GetType());
+                  new TFormLeafInfoNumerical(cl->GetCollectionProxy());
                previnfo = previnfo->fNext;
             }
          } else if (!useLeafCollectionObject && cl == TClonesArray::Class()) {
@@ -1738,7 +1757,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                            leafinfo->fNext =  new TFormLeafInfoCollection(cl, offset, element);
                            if (element->GetClassPointer()->GetCollectionProxy()->GetValueClass()==0) {
                               TFormLeafInfo *info = new TFormLeafInfoNumerical(
-                                 element->GetClassPointer()->GetCollectionProxy()->GetType());
+                                 element->GetClassPointer()->GetCollectionProxy());
                               if (leafinfo->fNext) leafinfo->fNext->fNext = info;
                               else leafinfo->fNext = info;
                            }
@@ -1768,8 +1787,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                            }
                            if (elemCl->GetCollectionProxy() &&
                                elemCl->GetCollectionProxy()->GetValueClass()==0) {
-                              TFormLeafInfo *info = new TFormLeafInfoNumerical(
-                                 elemCl->GetCollectionProxy()->GetType());
+                              TFormLeafInfo *info = new TFormLeafInfoNumerical(elemCl->GetCollectionProxy());
                               if (leafinfo->fNext) leafinfo->fNext->fNext = info;
                               else leafinfo->fNext = info;
                            }
@@ -1871,8 +1889,34 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
       return -1;
    }
 
-   static TClassRef stdStringClass = TClass::GetClass("string");
    TClass *objClass = EvalClass(code);
+   if (objClass && !useLeafCollectionObject && objClass->GetCollectionProxy() && objClass->GetCollectionProxy()->GetValueClass()) {
+      TFormLeafInfo *last = 0;
+      if ( SwitchToFormLeafInfo(code) ) {
+         
+         last = (TFormLeafInfo*)fDataMembers.At(code);
+         
+         if (!last) return action;
+         while (last->fNext) { last = last->fNext; }
+         
+      }
+      if (last->GetClass() != objClass) {
+         TClass *mother_cl;
+         if (leaf->IsA()==TLeafObject::Class()) {
+            // in this case mother_cl is not really used
+            mother_cl = cl;
+         } else {
+            mother_cl = ((TBranchElement*)branch)->GetInfo()->GetClass();
+         }
+         
+         TFormLeafInfo* collectioninfo = new TFormLeafInfoCollection(mother_cl, 0, objClass, kFALSE);
+         // The dimension needs to be handled!
+         numberOfVarDim += RegisterDimensions(code,collectioninfo,maininfo,kFALSE);
+         last->fNext = collectioninfo;
+      }
+      numberOfVarDim += RegisterDimensions(code,1); //NOTE: changed from 0
+      objClass = objClass->GetCollectionProxy()->GetValueClass();
+   }
    if (IsLeafString(code) || objClass == TString::Class() || objClass == stdStringClass) {
 
       TFormLeafInfo *last = 0;
@@ -3448,12 +3492,14 @@ const char* TTreeFormula::EvalStringInstance(Int_t instance)
          fNeedLoading = kFALSE;
          TBranch *branch = leaf->GetBranch();
          R__LoadBranch(branch,branch->GetTree()->GetReadEntry(),fQuickLoad);
-      } else if (real_instance>fNdata[0]) return 0;
+      } else if (real_instance>=fNdata[0]) {
+         return 0;
+      }
 
       if (fLookupType[0]==kDirect) {
          return (char*)leaf->GetValuePointer();
       } else {
-         return  (char*)GetLeafInfo(0)->GetValuePointer(leaf,instance);
+         return  (char*)GetLeafInfo(0)->GetValuePointer(leaf,real_instance);
       }
    }
 
@@ -4356,11 +4402,10 @@ char *TTreeFormula::PrintValue(Int_t mode, Int_t instance, const char *decform) 
       for (int i = 0; i < kMAXLENGTH-1; i++)
          value[i] = '*';
       value[kMAXLENGTH-1] = 0;
-   } else if (mode == -1)
+   } else if (mode == -1) {
       sprintf(value, "%s", GetTitle());
-
-   if (fNstring && fNval==0 && fNoper==1) {
-      if (mode == 0) {
+   } else if (mode == 0) {
+      if (fNstring && fNval==0 && fNoper==1) {
          const char * val = 0;
          if (fLookupType[0]==kTreeMember) {
             val = (char*)GetLeafInfo(0)->GetValuePointer((TLeaf*)0x0,instance);
@@ -4378,12 +4423,10 @@ char *TTreeFormula::PrintValue(Int_t mode, Int_t instance, const char *decform) 
          if (val) {
             strncpy(value, val, kMAXLENGTH-1);
          } else {
-            //strncpy(value, " ", kMAXLENGTH-1);
+            value[0] = '\0';
          }
          value[kMAXLENGTH-1] = 0;
-      }
-   } else {
-      if (mode == 0) {
+      } else {
          //NOTE: This is terrible form ... but is forced upon us by the fact that we can not
          //use the mutable keyword AND we should keep PrintValue const.
          Int_t real_instance = ((TTreeFormula*)this)->GetRealInstance(instance,-1);
@@ -4408,44 +4451,44 @@ char *TTreeFormula::PrintValue(Int_t mode, Int_t instance, const char *decform) 
                case 'c':
                case 'd':
                case 'i':
-                  { 
-                     switch (outputSizeLevel) {
-                        case 0:  sprintf(value,Form("%%%s",decform),(Short_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
-                        case 2:  sprintf(value,Form("%%%s",decform),(Long_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
-                        case 3:  sprintf(value,Form("%%%s",decform),(Long64_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
-                        case 1:
-                        default: sprintf(value,Form("%%%s",decform),(Int_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
-                     }
-                     break;
+               { 
+                  switch (outputSizeLevel) {
+                     case 0:  sprintf(value,Form("%%%s",decform),(Short_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     case 2:  sprintf(value,Form("%%%s",decform),(Long_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     case 3:  sprintf(value,Form("%%%s",decform),(Long64_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     case 1:
+                     default: sprintf(value,Form("%%%s",decform),(Int_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
                   }
+                  break;
+               }
                case 'o': 
                case 'x':
                case 'X':
                case 'u':
-                  { 
-                     switch (outputSizeLevel) {
-                        case 0:  sprintf(value,Form("%%%s",decform),(UShort_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
-                        case 2:  sprintf(value,Form("%%%s",decform),(ULong_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
-                        case 3:  sprintf(value,Form("%%%s",decform),(ULong64_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
-                        case 1:
-                        default: sprintf(value,Form("%%%s",decform),(UInt_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
-                     }
-                     break;
+               { 
+                  switch (outputSizeLevel) {
+                     case 0:  sprintf(value,Form("%%%s",decform),(UShort_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     case 2:  sprintf(value,Form("%%%s",decform),(ULong_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     case 3:  sprintf(value,Form("%%%s",decform),(ULong64_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     case 1:
+                     default: sprintf(value,Form("%%%s",decform),(UInt_t)((TTreeFormula*)this)->EvalInstance(instance)); break;
                   }
+                  break;
+               }
                case 'f':
                case 'e':
                case 'E':
                case 'g':
                case 'G':
-                  {
-                     switch (outputSizeLevel) {
-                        case 2:  sprintf(value,Form("%%%s",decform),(long double)((TTreeFormula*)this)->EvalInstance(instance)); break;
-                        case 1:
-                        default: sprintf(value,Form("%%%s",decform),((TTreeFormula*)this)->EvalInstance(instance)); break;
-                     }
-                     expo = strchr(value,'e');
-                     break;
+               {
+                  switch (outputSizeLevel) {
+                     case 2:  sprintf(value,Form("%%%s",decform),(long double)((TTreeFormula*)this)->EvalInstance(instance)); break;
+                     case 1:
+                     default: sprintf(value,Form("%%%s",decform),((TTreeFormula*)this)->EvalInstance(instance)); break;
                   }
+                  expo = strchr(value,'e');
+                  break;
+               }
                default:
                   sprintf(value,Form("%%%sg",decform),((TTreeFormula*)this)->EvalInstance(instance));
                   expo = strchr(value,'e');

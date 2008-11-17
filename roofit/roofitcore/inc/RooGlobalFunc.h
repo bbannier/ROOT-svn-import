@@ -135,6 +135,7 @@ RooCmdArg Verbose(Bool_t flag=kTRUE) ;
 RooCmdArg Save(Bool_t flag=kTRUE) ;
 RooCmdArg Timer(Bool_t flag=kTRUE) ;
 RooCmdArg PrintLevel(Int_t code) ;
+RooCmdArg Warnings(Bool_t flag=kTRUE) ; 
 RooCmdArg Strategy(Int_t code) ;
 RooCmdArg InitialHesse(Bool_t flag=kTRUE) ;
 RooCmdArg Hesse(Bool_t flag=kTRUE) ;
@@ -211,6 +212,7 @@ RooCmdArg Color(Color_t color) ;
 // RooWorkspace::import() arguments
 RooCmdArg RenameConflictNodes(const char* suffix) ;
 RooCmdArg RenameAllNodes(const char* suffix) ; 
+RooCmdArg RenameAllVariables(const char* suffix) ; 
 RooCmdArg RenameVariable(const char* inputName, const char* outputName) ;
 RooCmdArg RenameDataset(const char* suffix) ;
 RooCmdArg RecycleConflictNodes(Bool_t flag=kTRUE) ;

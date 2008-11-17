@@ -2544,8 +2544,8 @@ void TASImage::Merge(const TImage *im, const char *op, Int_t x, Int_t y)
    layers[1].im = ((TASImage*)im)->fImage;
    layers[1].dst_x = x;
    layers[1].dst_y = y;
-   layers[1].clip_width = x + im->GetWidth();
-   layers[1].clip_height = y + im->GetHeight();
+   layers[1].clip_width  = im->GetWidth();
+   layers[1].clip_height = im->GetHeight();
    layers[1].merge_scanlines = blend_scanlines_name2func(op ? op : "add");
 
    rendered_im = merge_layers(fgVisual, &(layers[0]), 2, fImage->width, fImage->height,
@@ -3875,6 +3875,7 @@ void TASImage::DrawRectangle(UInt_t x, UInt_t y, UInt_t w, UInt_t h,
    DrawVLine(x + w, y, y + h, (UInt_t)color, thick);
    DrawHLine(y + h, x, x + w, (UInt_t)color, thick);
    DrawVLine(x, y, y + h, (UInt_t)color, thick);
+   UnZoom();
 }
 
 //______________________________________________________________________________
