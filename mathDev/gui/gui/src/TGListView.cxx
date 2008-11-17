@@ -1362,13 +1362,14 @@ void TGListView::Layout()
          fColHeader[i]->SetText(fColNames[i]);
 
          if ( fJustChanged ) {
-            w = fColHeader[i]->GetDefaultWidth();
+            w = TMath::Min(fMaxSize.fWidth + 10, fColHeader[i]->GetDefaultWidth());
+            if (w < fMinColumnSize) w = fColHeader[i]->GetDefaultWidth();
             if (i == 0) w = TMath::Max(fMaxSize.fWidth + 10, w);
             if (i > 0)  w = TMath::Max(container->GetMaxSubnameWidth(i) + 40, (Int_t)w);
          } else {
             w = fColHeader[i]->GetWidth();
          }
-         w = TMath::Max( fMinColumnSize, (Int_t)w);
+         w = TMath::Max(fMinColumnSize, w);
          if ( fColHeader[i]->GetDefaultWidth() > w ) {
             for (int j = fColNames[i].Length() - 1 ; j > 0; j--) {
                fColHeader[i]->SetText( fColNames[i](0,j) + "..." );
@@ -1453,13 +1454,14 @@ void TGListView::LayoutHeader(TGFrame *head)
          fColHeader[i]->SetText(fColNames[i]);
 
          if ( fJustChanged ) {
-            w = fColHeader[i]->GetDefaultWidth();
+            w = TMath::Min(fMaxSize.fWidth + 10, fColHeader[i]->GetDefaultWidth());
+            if (w < fMinColumnSize) w = fColHeader[i]->GetDefaultWidth();
             if (i == 0) w = TMath::Max(fMaxSize.fWidth + 10, w);
             if (i > 0)  w = TMath::Max(container->GetMaxSubnameWidth(i) + 40, (Int_t)w);
          } else {
             w = fColHeader[i]->GetWidth();
          }
-         w = TMath::Max( fMinColumnSize, (Int_t)w);
+         w = TMath::Max(fMinColumnSize, w);
          if ( fColHeader[i]->GetDefaultWidth() > w ) {
             for (int j = fColNames[i].Length() - 1 ; j > 0; j--) {
                fColHeader[i]->SetText( fColNames[i](0,j) + "..." );

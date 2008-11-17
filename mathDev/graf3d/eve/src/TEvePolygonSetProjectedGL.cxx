@@ -16,7 +16,6 @@
 #include "TGLRnrCtx.h"
 #include "TGLIncludes.h"
 
-
 //==============================================================================
 //==============================================================================
 // TEvePolygonSetProjectedGL
@@ -57,43 +56,6 @@ void TEvePolygonSetProjectedGL::SetBBox()
 
 /******************************************************************************/
 
-static GLUtriangulatorObj *GetTesselator()
-{
-   // Return default static GLU triangulator object.
-
-   static struct Init {
-      Init()
-      {
-#if defined(R__WIN32)
-         typedef void (CALLBACK *tessfuncptr_t)();
-#elif defined(R__AIXGCC)
-         typedef void (*tessfuncptr_t)(...);
-#else
-         typedef void (*tessfuncptr_t)();
-#endif
-         fTess = gluNewTess();
-
-         if (!fTess) {
-            Error("GetTesselator::Init", "could not create tesselation object");
-         } else {
-            gluTessCallback(fTess, (GLenum)GLU_BEGIN,  (tessfuncptr_t) glBegin);
-            gluTessCallback(fTess, (GLenum)GLU_END,    (tessfuncptr_t) glEnd);
-            gluTessCallback(fTess, (GLenum)GLU_VERTEX, (tessfuncptr_t) glVertex3fv);
-         }
-      }
-      ~Init()
-      {
-         if(fTess)
-            gluDeleteTess(fTess);
-      }
-      GLUtriangulatorObj *fTess;
-   } singleton;
-
-   return singleton.fTess;
-}
-
-/******************************************************************************/
-
 //______________________________________________________________________________
 void TEvePolygonSetProjectedGL::DirectDraw(TGLRnrCtx & /*rnrCtx*/) const
 {
@@ -115,7 +77,7 @@ void TEvePolygonSetProjectedGL::DirectDraw(TGLRnrCtx & /*rnrCtx*/) const
    // polygons
    glEnable(GL_POLYGON_OFFSET_FILL);
    glPolygonOffset(1.,1.);
-   GLUtriangulatorObj *tessObj = GetTesselator();
+   GLUtesselator *tessObj = TGLUtil::GetDrawTesselator3fv();
 
    TEveVector* pnts = refPS.fPnts;
    for (TEvePolygonSetProjected::vpPolygon_ci i = refPS.fPols.begin();

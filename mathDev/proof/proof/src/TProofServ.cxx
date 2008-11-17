@@ -2892,7 +2892,7 @@ void TProofServ::HandleProcess(TMessage *mess)
    // Priority to the entry list
    TObject *elist = (enl) ? (TObject *)enl : (TObject *)evl;
    if (enl && evl)
-      // Cannot spcify both at the same time
+      // Cannot specify both at the same time
       SafeDelete(evl);
    if ((!hasNoData) && elist)
       dset->SetEntryList(elist);
@@ -2971,6 +2971,10 @@ void TProofServ::HandleProcess(TMessage *mess)
             input    = pq->GetInputList();
             nentries = pq->GetEntries();
             first    = pq->GetFirst();
+            filename = pq->GetSelecImp()->GetName();
+            Ssiz_t id = opt.Last('#');
+            if (id != kNPOS && id < opt.Length() - 1)
+               filename += opt(id + 1, opt.Length());
             // Attach to data set and entry- (or event-) list (if any)
             TObject *o = 0;
             if ((o = pq->GetInputObject("TDSet")))
