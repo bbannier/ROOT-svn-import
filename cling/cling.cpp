@@ -23,108 +23,231 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/Module.h>
 #include <llvm/Function.h>
+#include <llvm/Support/MemoryBuffer.h>
 
+//------------------------------------------------------------------------------
+// String constants
+//------------------------------------------------------------------------------
+std::string code_prefix = "#include <stdio.h>\nint main(int argc, char** argv) {\n";
+std::string code_suffix = "\nreturn 0; } ";
+
+//------------------------------------------------------------------------------
+// Execute the module
+//------------------------------------------------------------------------------
+int executeModuleMain( llvm::Module *module )
+{
+   //---------------------------------------------------------------------------
+   // Create the execution engine
+   //---------------------------------------------------------------------------
+   llvm::OwningPtr<llvm::ExecutionEngine> engine( llvm::ExecutionEngine::create( module ) );
+
+   if( !engine ) {
+      std::cout << "[!] Unable to create the execution engine!" << std::endl;
+      return 1;
+   }
+
+   //---------------------------------------------------------------------------
+   // Look for the main function
+   //---------------------------------------------------------------------------
+   llvm::Function* func( module->getFunction( "main" ) );
+   if( !func ) {
+      std::cerr << "[!] Cannot find the entry function!" << std::endl;
+      return 1;
+   }
+
+   //---------------------------------------------------------------------------
+   // Create argv
+   //---------------------------------------------------------------------------
+   std::vector<std::string> params;
+   params.push_back( "executable" );
+
+   return engine->runFunctionAsMain( func,  params, 0 );
+}
+
+//------------------------------------------------------------------------------
+// Parse
+//------------------------------------------------------------------------------
+llvm::Module* parse( clang::LangOptions*      langInfo,
+                     clang::TargetInfo*       targetInfo,
+                     clang::DiagnosticClient* diagClient,
+                     clang::SourceManager*    srcMgr,
+                     clang::FileManager*      fileMgr )
+{
+   //---------------------------------------------------------------------------
+   // Create the header database
+   //---------------------------------------------------------------------------
+   clang::HeaderSearch     headerInfo( *fileMgr );
+   clang::InitHeaderSearch hiInit( headerInfo );
+
+   hiInit.AddDefaultEnvVarPaths( *langInfo );
+   hiInit.AddDefaultSystemIncludePaths( *langInfo );
+   hiInit.AddPath( CLANG_SYS_HEADERS, clang::InitHeaderSearch::System,
+                   false, false, false );
+   hiInit.Realize();
+
+   //----------------------------------------------------------------------------
+   // Create diagnostics
+   //----------------------------------------------------------------------------
+   clang::Diagnostic diag( diagClient );
+   diag.setSuppressSystemWarnings( true );
+
+   //----------------------------------------------------------------------------
+   // Create the preprocessor and code generator
+   //----------------------------------------------------------------------------
+   llvm::OwningPtr<clang::Preprocessor> pp( new clang::Preprocessor( diag, *langInfo, *targetInfo,
+                                                                    *srcMgr, headerInfo ) );
+   llvm::OwningPtr<clang::CodeGenerator> consumer( CreateLLVMCodeGen( diag, *langInfo, "-", false ) );
+
+   //----------------------------------------------------------------------------
+   // Pars and return the module
+   //----------------------------------------------------------------------------
+   clang::ParseAST( *pp.get(), consumer.get() );
+
+   llvm::Module* module = consumer->ReleaseModule();
+   return module;
+}
+
+//------------------------------------------------------------------------------
+// Parse file
+//------------------------------------------------------------------------------
+llvm::Module* parseFile( std::string filePath,
+                         clang::LangOptions*      langInfo,
+                         clang::TargetInfo*       targetInfo,
+                         clang::DiagnosticClient* diag,
+                         clang::SourceManager*    srcMgr,
+                         clang::FileManager*      fileMgr )
+{
+   //---------------------------------------------------------------------------
+   // Feed in the file
+   //---------------------------------------------------------------------------
+   const clang::FileEntry *file = fileMgr->getFile( filePath );
+   if( file )
+      srcMgr->createMainFileID( file, clang::SourceLocation() );
+
+   if( srcMgr->getMainFileID() == 0 ) {
+      std::cerr << "[!] The input file you have specified does not exist!" << std::endl;
+      return 0;
+   }
+   return parse( langInfo, targetInfo, diag, srcMgr, fileMgr );
+}
+
+
+//------------------------------------------------------------------------------
+// Parse a string
+//------------------------------------------------------------------------------
+llvm::Module* parseString( std::string              code,
+                           clang::LangOptions*      langInfo,
+                           clang::TargetInfo*       targetInfo,
+                           clang::DiagnosticClient* diag,
+                           clang::SourceManager*    srcMgr,
+                           clang::FileManager*      fileMgr )
+{
+   //---------------------------------------------------------------------------
+   // Wrap the code and create a memory buffer
+   //---------------------------------------------------------------------------
+   std::string wrapped = code_prefix + code + code_suffix;
+   llvm::MemoryBuffer* buff =llvm::MemoryBuffer::getMemBufferCopy( &*wrapped.begin(), &*wrapped.rbegin(), "MemoryBuffer" );
+
+   //---------------------------------------------------------------------------
+   // Register with the source manager
+   //---------------------------------------------------------------------------
+   if( buff )
+     srcMgr->createMainFileIDForMemBuffer( buff );
+
+   if( srcMgr->getMainFileID() == 0 ) {
+      std::cerr << "[!] Cannot create a memory buffer from your input!" << std::endl;
+      return 0;
+   }
+
+   return parse( langInfo, targetInfo, diag, srcMgr, fileMgr );
+}
+
+//------------------------------------------------------------------------------
+// Let the show begin
+//------------------------------------------------------------------------------
 int main( int argc, char **argv )
 {
-  //----------------------------------------------------------------------------
-  // Check the commandline parameters
-  //----------------------------------------------------------------------------
-  if( argc != 2 )
-  {
-    std::cerr << "[!] You have to specify the input file!" << std::endl;
-    return 1;
-  }
+   //---------------------------------------------------------------------------
+   // Check the commandline parameters
+   //---------------------------------------------------------------------------
+   if( argc != 2 ) {
+      std::cerr << "[!] You have to specify the input file!" << std::endl;
+      return 1;
+   }
 
-  //----------------------------------------------------------------------------
-  // Set up the language options for gnu c99
-  //----------------------------------------------------------------------------
-  clang::LangOptions langInfo;
-  langInfo.C99         = 1;
-  langInfo.HexFloats   = 1;
-  langInfo.BCPLComment = 1; // Only for C99/C++.
-  langInfo.Digraphs    = 1; // C94, C99, C++.
+   //---------------------------------------------------------------------------
+   // Check if we should run in the "interactive" mode
+   //---------------------------------------------------------------------------
+   bool interactive = false;
+   if( std::string( argv[1] ) == "-i" )
+      interactive = true;
 
-  //----------------------------------------------------------------------------
-  // Create the header searching lists
-  //----------------------------------------------------------------------------
-  clang::FileManager      fileMgr;
-  clang::HeaderSearch     headerInfo( fileMgr );
-  clang::InitHeaderSearch hiInit( headerInfo );
+   //---------------------------------------------------------------------------
+   // Set up the language options for gnu c99
+   //---------------------------------------------------------------------------
+   clang::LangOptions langInfo;
+   langInfo.C99         = 1;
+   langInfo.HexFloats   = 1;
+   langInfo.BCPLComment = 1; // Only for C99/C++.
+   langInfo.Digraphs    = 1; // C94, C99, C++.
 
-  hiInit.AddDefaultEnvVarPaths( langInfo );
-  hiInit.AddDefaultSystemIncludePaths( langInfo );
-  hiInit.AddPath( "/build/ljanyst/llvm/svn00/install/Headers",
-                  clang::InitHeaderSearch::System, false, false, false );
-  hiInit.Realize();
+   //---------------------------------------------------------------------------
+   // Create the stuff for the preprocessor
+   //---------------------------------------------------------------------------
+   llvm::OwningPtr<clang::DiagnosticClient> diagClient( new clang::TextDiagnosticPrinter() );
+   llvm::OwningPtr<clang::TargetInfo>       targetInfo( clang::TargetInfo::CreateTargetInfo( HOST_TARGET ) );
+   llvm::OwningPtr<clang::SourceManager>    srcMgr( new clang::SourceManager() );
+   clang::FileManager                       fileMgr;
 
-  //----------------------------------------------------------------------------
-  // Create the stuff for the preprocessor
-  //----------------------------------------------------------------------------
-  llvm::OwningPtr<clang::DiagnosticClient> diagClient( new clang::TextDiagnosticPrinter() );
-  llvm::OwningPtr<clang::TargetInfo>       targetInfo( clang::TargetInfo::CreateTargetInfo( "x86_64-unknown-linux-gnu" ) );
-  llvm::OwningPtr<clang::SourceManager>    sourceManager( new clang::SourceManager() );
-  clang::Diagnostic                        diag( diagClient.get() );
-  diag.setSuppressSystemWarnings( true );
+   //---------------------------------------------------------------------------
+   // We're supposed to parse a file
+   //---------------------------------------------------------------------------
+   if( !interactive ) {
+      llvm::Module* module = parseFile( argv[1], &langInfo, targetInfo.get(),
+                                        diagClient.get(), srcMgr.get(), &fileMgr );
+      if(!module) {
+         std::cerr << "[!] Errors occured while parsing your code!" << std::endl;
+         return 1;
+      }
+      return executeModuleMain( module );
+   }
+   //----------------------------------------------------------------------------
+   // We're interactive
+   //----------------------------------------------------------------------------
+   else {
+      std::cerr << "Type a C code and press enter to run it." << std::endl;
+      std::cerr << "Type exit or ctrl+D to quit" << std::endl;
+      std::string input;
 
-  //----------------------------------------------------------------------------
-  // Create the preprocessor
-  //----------------------------------------------------------------------------
-  llvm::OwningPtr<clang::Preprocessor> pp( new clang::Preprocessor( diag, langInfo, *targetInfo.get(),
-                                                                    *sourceManager.get(), headerInfo ) );
+      //------------------------------------------------------------------------
+      // Loop
+      //------------------------------------------------------------------------
+      while( 1 ) {
+         //---------------------------------------------------------------------
+         // Get the user input
+         //---------------------------------------------------------------------
+         std::cout << "[cling] $ ";
+         std::getline( std::cin, input );
+         if( !std::cin.good() || input == "exit" ) {
+            std::cerr << std::endl;
+            break;
+         }
 
-  //----------------------------------------------------------------------------
-  // Feed in the file
-  //----------------------------------------------------------------------------
-  const clang::FileEntry *file = fileMgr.getFile( argv[1] );
-  if( file )
-    sourceManager->createMainFileID( file, clang::SourceLocation() );
+         //----------------------------------------------------------------------
+         // Parse and run it
+         //----------------------------------------------------------------------
+         srcMgr->clearIDTables();
+         llvm::Module* module = parseString( input, &langInfo, targetInfo.get(),
+                                             diagClient.get(), srcMgr.get(), &fileMgr );
 
-  if( sourceManager->getMainFileID() == 0 )
-  {
-    std::cerr << "[!] The input file you have specified does not exist!" << std::endl;
-    return 1;
-  }
-
-  //----------------------------------------------------------------------------
-  // Create an AST consumer
-  //----------------------------------------------------------------------------
-  llvm::OwningPtr<clang::CodeGenerator> consumer( CreateLLVMCodeGen( diag, langInfo, argv[1], false ) );
-
-  //----------------------------------------------------------------------------
-  // Parse
-  //----------------------------------------------------------------------------
-  clang::ParseAST( *pp.get(), consumer.get() );
-
-  //----------------------------------------------------------------------------
-  // Get the parsed module
-  //----------------------------------------------------------------------------
-  llvm::Module* module = consumer->ReleaseModule();
-  if(!module)
-    return 0;
-
-  //-----------------------------------------------------------------------------
-  // Create the execution engine
-  //-----------------------------------------------------------------------------
-  llvm::OwningPtr<llvm::ExecutionEngine> engine( llvm::ExecutionEngine::create( module ) );
-
-  if( !engine )
-  {
-    std::cout << "[!] Unable to create the execution engine!" << std::endl;
-    return 1;
-  }
-
-  //-----------------------------------------------------------------------------
-  // Look for the main function
-  //-----------------------------------------------------------------------------
-  llvm::Function* func( module->getFunction( "main" ) );
-  if( !func )
-  {
-    std::cerr << "[!] Cannot find the entry function!" << std::endl;
-    return 1;
-  }
-
-  std::vector<std::string> params;
-  params.push_back( "executable" );
-
-  return engine->runFunctionAsMain( func,  params, 0 );
+         if(!module) {
+            std::cerr << std::endl;
+            std::cerr << "[!] Errors occured while parsing your code!" << std::endl;
+            std::cerr << std::endl;
+            continue;
+         }
+         executeModuleMain( module );
+      }
+   }
+   return 0;
 }
