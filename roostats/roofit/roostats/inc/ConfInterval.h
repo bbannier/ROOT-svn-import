@@ -14,6 +14,22 @@
 #include "TNamed.h"
 #include "RooArgSet.h"
 
+//_________________________________________________________________
+//
+// BEGIN_HTML
+// ConfInterval is an interface class for a generic interval in the RooStats framework.
+// Any tool inheriting from IntervalCalculator can return a ConfInterval.
+// There are many types of intervals, they may be a simple range [a,b] in 1 dimension,
+// or they may be disconnected regions in multiple dimensions.
+// So the common interface is simply to ask the interval if a given point "IsInInterval".
+// The Interval also knows what confidence level it was constructed at and the space of 
+// parameters for which it was constructed.
+// Note, one could use the same class for a Bayesian "credible interval".
+// END_HTML
+//
+//
+
+
 namespace RooStats {
 
   class ConfInterval : public TNamed {
@@ -43,8 +59,17 @@ namespace RooStats {
 
 
   protected:
-    //ClassDef(ConfInterval,1)
+    ClassDef(ConfInterval,1)
+
 
    };
 }
+
+// Without this macro the THtml doc for TMath can not be generated
+//#if !defined(R__ALPHA) && !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
+//NamespaceImp(RooStats)
+//#endif
+
+ClassImp(RooStats::ConfInterval) ;
+
 #endif

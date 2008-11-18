@@ -21,14 +21,14 @@ namespace RooStats {
     ProfileLikelihoodCalculator();
     virtual ~ProfileLikelihoodCalculator();
     
-    // main interface, keep pure virtual
+    // main interface, implemented
     virtual ConfInterval* GetInterval() const ; 
-    // main interface, pure virtual
+    // main interface, implemented
     virtual HypoTestResult* GetHypoTest() const;   
     
 
   protected:
-    //    ClassDef(ProfileLikelihoodCalculator,1)        
+    ClassDef(ProfileLikelihoodCalculator,1)        
   };
 }
 #endif

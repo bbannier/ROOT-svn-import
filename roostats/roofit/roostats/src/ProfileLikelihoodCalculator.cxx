@@ -9,8 +9,41 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-/////////////////////////////////////////
-// ProfileLikelihoodCalculator
+//_________________________________________________
+/*
+BEGIN_HTML
+<p>
+ProfileLikelihoodCalculator is a concrete implementation of CombinedCalculator 
+(the interface class for a tools which can produce both RooStats HypoTestResults and ConfIntervals).  
+The tool uses the profile likelihood ratio as a test statistic, and assumes that Wilks' theorem is valid.  
+Wilks' theorem states that -2* log (profile likelihood ratio) is asymptotically distributed as a chi^2 distribution 
+with N-dof, where N is the number of degrees of freedom.  Thus, p-values can be constructed and the profile likelihood ratio
+can be used to construct a LikelihoodInterval.
+(In the future, this class could be extended to use toy Monte Carlo to calibrate the distribution of the test statistic).
+</p>
+<p> Usage: It uses the interface of the CombinedCalculator, so that it can be configured by specifying:
+<ul>
+ <li>a model common model (eg. a family of specific models which includes both the null and alternate),</li>
+ <li>a data set, </li>
+ <li>a set of parameters of which specify the null (including values and const/non-const status), </li>
+ <li>a set of parameters of which specify the alternate (including values and const/non-const status),</li>
+ <li>a set of parameters of nuisance parameters  (including values and const/non-const status).</li>
+</ul>
+The interface allows one to pass the model, data, and parameters via a workspace and then specify them with names.
+The interface will be extended so that one does not need to use a workspace.
+</p>
+<p>
+After configuring the calculator, one only needs to ask GetHypoTest() (which will return a HypoTestResult pointer) or GetInterval() (which will return an ConfInterval pointer).
+</p>
+<p>
+The concrete implementations of this interface should deal with the details of how the nuisance parameters are
+dealt with (eg. integration vs. profiling) and which test-statistic is used (perhaps this should be added to the interface).
+</p>
+<p>
+The motivation for this interface is that we hope to be able to specify the problem in a common way for several concrete calculators.
+</p>
+END_HTML
+*/
 //
 
 #ifndef RooStats_ProfileLikelihoodCalculator
@@ -38,11 +71,8 @@ NamespaceImp(RooStats)
 #endif
 
 
-//ClassImp(RooStats::ProfileLikelihoodCalculator) ;
+ClassImp(RooStats::ProfileLikelihoodCalculator) ;
 
-
-// A combined calculator tool that uses the profile likelihood ratio to eliminate nuisance parameters.
-// Essentially this is the method of MINUIT/MINOS.
 
 
 using namespace RooFit;
@@ -64,6 +94,8 @@ ProfileLikelihoodCalculator::~ProfileLikelihoodCalculator(){
 
 //_______________________________________________________
 ConfInterval* ProfileLikelihoodCalculator::GetInterval() const {
+  // Main interface to get a RooStats::ConfInterval.  
+  // It constructs a profile likelihood ratio and uses that to construct a RooStats::LikelihoodInterval.
 
   RooAbsPdf* pdf   = fWS->pdf(fPdfName);
   RooAbsData* data = fWS->data(fDataName);
@@ -85,6 +117,12 @@ ConfInterval* ProfileLikelihoodCalculator::GetInterval() const {
 
 //_______________________________________________________
 HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
+  // Main interface to get a HypoTestResult.
+  // It does two fits:
+  // the first lets the null parameters float, so it's a maximum likelihood estimate
+  // the second is to the null (fixing null parameters to their specified values): eg. a conditional maximum likelihood
+  // the ratio of the likelihood at the conditional MLE to the MLE is the profile likelihood ratio.
+  // Wilks' theorem is used to get p-values 
 
   RooAbsPdf* pdf   = fWS->pdf(fPdfName);
   RooAbsData* data = fWS->data(fDataName);

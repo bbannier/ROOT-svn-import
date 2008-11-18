@@ -12,13 +12,7 @@
 #ifndef RooStats_NumberCountingPdfFactory
 #define RooStats_NumberCountingPdfFactory
 
-/////////////////////////////////////////
-// NumberCountingPdfFactory
-//
-// Encapsulates common number counting utilities
-/////////////////////////////////////////
 #include "Rtypes.h"
-
 #include "RooWorkspace.h"
 
 namespace RooStats{
@@ -47,7 +41,7 @@ namespace RooStats{
 
 
   protected:
-     //   ClassDef(NumberCountingPdfFactory,1)
+    ClassDef(NumberCountingPdfFactory,1)
 
   };
 }

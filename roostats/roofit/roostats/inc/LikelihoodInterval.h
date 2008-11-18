@@ -20,10 +20,11 @@
 
 #include "RooAbsReal.h"
 
+
 namespace RooStats {
  class LikelihoodInterval : public ConfInterval {
   public:
-    // constructors,destructors
+
     LikelihoodInterval();
     LikelihoodInterval(const char* name);
     LikelihoodInterval(const char* name, const char* title);
