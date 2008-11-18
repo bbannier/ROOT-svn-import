@@ -27,10 +27,10 @@ enum compareOptions {
    cmpOptStats=4
 };
 
-int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0);
-int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0);
-int equals(Double_t n1, Double_t n2);
-int compareStatistics( TH1* h1, TH1* h2, bool debug );
+int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0, double ERRORLIMIT = 1E-15);
+int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0, double ERRORLIMIT = 1E-15);
+int equals(Double_t n1, Double_t n2, double ERRORLIMIT = 1E-15);
+int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT = 1E-15);
 // extern declarations - end
 
 class HistogramTester {

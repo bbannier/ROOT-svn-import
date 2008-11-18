@@ -16,7 +16,6 @@ const unsigned int __DRAW__ = 1;
 
 const unsigned int numberOfTests = 4;
 
-TRandom2 r;
 const Double_t minRange = 1;
 const Double_t maxRange = 5;
 
@@ -37,11 +36,13 @@ enum compareOptions {
    cmpOptStats=4
 };
 
-int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0);
-int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0);
-int equals(Double_t n1, Double_t n2);
-int compareStatistics( TH1* h1, TH1* h2, bool debug );
+int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0, double ERRORLIMIT = 1E-15);
+int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0, double ERRORLIMIT = 1E-15);
+int equals(Double_t n1, Double_t n2, double ERRORLIMIT = 1E-15);
+int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT = 1E-15);
 ostream& operator<<(ostream& out, TH1D* h);
+
+extern TRandom2 r;
 // extern declarations - end
 
 TH1D* CreateHistogram(const Int_t nbins, const Int_t seed)
@@ -199,7 +200,6 @@ bool test2DRebin()
 
 bool stressRebin()
 {
-   r.SetSeed(time(0));
    typedef bool (*pointer2Test)();
    pointer2Test testPointer[numberOfTests] = { testIntegerRebin, 
                                                testIntegerRebinNoName,
