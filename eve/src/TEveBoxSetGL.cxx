@@ -25,7 +25,7 @@
 // A GL rendering class for TEveBoxSet.
 //
 
-ClassImp(TEveBoxSetGL)
+ClassImp(TEveBoxSetGL);
 
 //______________________________________________________________________________
 TEveBoxSetGL::TEveBoxSetGL() : fM(0), fBoxDL(0)
@@ -143,7 +143,8 @@ void TEveBoxSetGL::MakeDisplayList() const
 
       glNewList(fBoxDL, GL_COMPILE);
   
-      if (fM->fBoxType < TEveBoxSet::kBT_Cone) { 
+      if (fM->fBoxType < TEveBoxSet::kBT_Cone)
+      { 
          glBegin(PrimitiveType());
          Float_t p[24];
          if (fM->fBoxType == TEveBoxSet::kBT_AABox)
