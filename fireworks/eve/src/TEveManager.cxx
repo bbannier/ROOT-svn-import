@@ -126,6 +126,7 @@ TEveManager::TEveManager(UInt_t w, UInt_t h, Bool_t map_window, Option_t* opt) :
    // Build GUI
    fBrowser   = new TEveBrowser(w, h);
    fStatusBar = fBrowser->GetStatusBar();
+   fBrowser->Connect("CloseWindow()", "TEveManager", this, "CloseEveWindow()");
 
    // ListTreeEditor
    fBrowser->StartEmbedding(0);
@@ -801,6 +802,23 @@ void TEveManager::ClearROOTClassSaved()
       cls->ResetBit(TClass::kClassSaved);
    }
 }
+
+//______________________________________________________________________________
+void TEveManager::CloseEveWindow()
+{
+   // Close button haas been clicked on EVE main window (browser).
+   // Cleanup and terminate application.
+
+   TGMainFrame *mf = (TGMainFrame*) gTQSender;
+   TEveBrowser *eb = dynamic_cast<TEveBrowser*>(mf);
+   if (eb == fBrowser)
+   {
+      mf->DontCallClose();
+      Terminate();
+      gApplication->Terminate();
+   }
+}
+
 
 /******************************************************************************/
 // Static initialization.
