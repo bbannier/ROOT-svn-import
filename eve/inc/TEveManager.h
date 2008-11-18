@@ -222,6 +222,8 @@ public:
    void SetStatusLine(const char* text);
    void ClearROOTClassSaved();
 
+   void CloseEveWindow();
+
    static TEveManager* Create(Bool_t map_window=kTRUE, Option_t* opt="FI");
    static void         Terminate();
 
