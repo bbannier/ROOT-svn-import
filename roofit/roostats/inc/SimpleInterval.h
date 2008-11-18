@@ -18,6 +18,7 @@
 #include "RooStats/ConfInterval.h"
 #endif
 
+
 namespace RooStats {
  class SimpleInterval : public ConfInterval {
   public:

@@ -18,13 +18,55 @@
 #include "RooArgSet.h"
 #include "RooWorkspace.h"
 
-// An base class for calculators that can fulfil both the 
-// IntervalCalculator and HypoTestCalculator interfaces.
+//_________________________________________________
+/*
+BEGIN_HTML
+<p>
+CombinedCalculator is an interface class for a tools which can produce both RooStats HypoTestResults and ConfIntervals.  
+The interface currently assumes that any such calculator can be configured by specifying:
+<ul>
+ <li>a model common model (eg. a family of specific models which includes both the null and alternate),</li>
+ <li>a data set, </li>
+ <li>a set of parameters of which specify the null (including values and const/non-const status), </li>
+ <li>a set of parameters of which specify the alternate (including values and const/non-const status),</li>
+ <li>a set of parameters of nuisance parameters  (including values and const/non-const status).</li>
+</ul>
+The interface allows one to pass the model, data, and parameters via a workspace and then specify them with names.
+The interface will be extended so that one does not need to use a workspace.
+</p>
+<p>
+After configuring the calculator, one only needs to ask GetHypoTest() (which will return a HypoTestResult pointer) or GetInterval() (which will return an ConfInterval pointer).
+</p>
+<p>
+The concrete implementations of this interface should deal with the details of how the nuisance parameters are
+dealt with (eg. integration vs. profiling) and which test-statistic is used (perhaps this should be added to the interface).
+</p>
+<p>
+The motivation for this interface is that we hope to be able to specify the problem in a common way for several concrete calculators.
+</p>
+END_HTML
+*/
+//
 
 namespace RooStats {
  class CombinedCalculator : public IntervalCalculator, public HypoTestCalculator {
+
+
+  protected:
+
+    Double_t fSize; // size of the test (eg. specified rate of Type I error)
+    RooWorkspace* fWS; // a workspace that owns all the components to be used by the calculator
+    const char* fPdfName; // name of  common PDF in workspace
+    const char* fDataName; // name of data set in workspace
+    RooArgSet* fNullParams; // RooArgSet specifying null parameters for hypothesis test
+    RooArgSet* fAlternateParams; // RooArgSet specifying alternate parameters for hypothesis test
+    RooArgSet* fPOI; // RooArgSet specifying  parameters of interest for interval
+    RooArgSet* fNuisParams;// RooArgSet specifying  nuisance parameters for interval
+
+
   public:
     CombinedCalculator(){
+      // default constructor
        fWS = 0;
        fNullParams = 0;
        fAlternateParams = 0;
@@ -33,6 +75,8 @@ namespace RooStats {
     }
 
     virtual ~CombinedCalculator() {
+      // destructor.
+      // commented out b/c currently the calculator does not own these.  Change if we clone.
       //      if (fWS) delete fWS;
       //      if (fNullParams) delete fNullParams;
       //      if (fAlternateParams) delete fAlternateParams;
@@ -41,30 +85,38 @@ namespace RooStats {
     }
 
     
-    // main interface, keep pure virtual
+    // Main interface to get a ConfInterval, pure virtual
     virtual ConfInterval* GetInterval() const = 0; 
-    // main interface, pure virtual
+    // main interface to get a HypoTestResult, pure virtual
     virtual HypoTestResult* GetHypoTest() const = 0;   
 
-    // from IntervalCalculator
-    // Implement easy stuff:
+
+    // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
     virtual void SetSize(Double_t size) {fSize = size;}
+    // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
     virtual void SetConfidenceLevel(Double_t cl) {fSize = 1.-cl;}
+    // Get the size of the test (eg. rate of Type I error)
     virtual Double_t Size() const {return fSize;}
+    // Get the Confidence level for the test
     virtual Double_t ConfidenceLevel()  const {return 1.-fSize;}
     
 
+    // set a workspace that owns all the necessary components for the analysis
     virtual void SetWorkspace(RooWorkspace* ws) {fWS = ws;}
+    // specify the name of the PDF in the workspace to be used
     virtual void SetPdf(const char* name) {fPdfName = name;}
+    // specify the name of the dataset in the workspace to be used
     virtual void SetData(const char* name){fDataName = name;}
+    // specify the parameters of interest in the interval
     virtual void SetParameters(RooArgSet* set) {fPOI = set;}
+    // specify the nuisance parameters (eg. the rest of the parameters)
     virtual void SetNuisanceParameters(RooArgSet* set) {fNuisParams = set;}
     
 
     // from HypoTestCalculator
-    // set the PDF for the null hypothesis
+    // set the PDF for the null hypothesis.  Needs to be the common one
     virtual void SetNullPdf(const char* name) {SetPdf(name);}
-    // set the PDF for the alternate hypothesis
+    // set the PDF for the alternate hypothesis. Needs to be the common one
     virtual void SetAlternatePdf(const char* name) {SetPdf(name);}
     // set a common PDF for both the null and alternate hypotheses
     virtual void SetCommonPdf(const char* name) {SetPdf(name);}
@@ -74,19 +126,18 @@ namespace RooStats {
     virtual void SetAlternateParameters(RooArgSet* set) {fAlternateParams = set;}
     
 
-
   protected:
-
-    Double_t fSize; // size of the test (eg. specified rate of Type I error)
-    RooWorkspace* fWS;
-    const char* fPdfName; // should be common
-    const char* fDataName; // should be common
-    RooArgSet* fNullParams;
-    RooArgSet* fAlternateParams;
-    RooArgSet* fPOI;
-    RooArgSet* fNuisParams;
-
-    //    ClassDef(CombinedCalculator,1)        
+    ClassDef(CombinedCalculator,1)        
+    
   };
 }
+
+
+// Without this macro the THtml doc for TMath can not be generated
+//#if !defined(R__ALPHA) && !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
+//NamespaceImp(RooStats)
+//#endif
+
+ClassImp(RooStats::CombinedCalculator) ;
+
 #endif

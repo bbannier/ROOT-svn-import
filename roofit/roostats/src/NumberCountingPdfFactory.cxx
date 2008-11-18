@@ -9,19 +9,32 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-/////////////////////////////////////////
-// NumberCountingPdfFactory
-//
-// Encapsulates common number counting utilities
-/////////////////////////////////////////
-  ///////////////////////////////////
-  // Standalone Functions.
-  // Naming conventions:
-  //  Exp = Expected
-  //  Obs = Observed
-  //  P   = p-value
-  //  Z   = Z-value or significance in Sigma (one-sided convention)
-  //////////////////////////////////
+//___________________________________________________
+/*
+BEGIN_HTML
+<p>
+A factory for building PDFs and data for a number counting combination.  
+The factory produces a PDF for N channels with uncorrelated background 
+uncertainty.  Correlations can be added by extending this PDF with additional terms.
+The factory relates the signal in each channel to a master signal strength times the 
+expected signal in each channel.  Thus, the final test is performed on the master signal strength.
+This yields a more powerful test than letting signal in each channel be independent.
+</p>
+<p>
+The problem has been studied in these references:
+<ul>
+ <li>   http://arxiv.org/abs/physics/0511028</li>
+ <li>   http://arxiv.org/abs/physics/0702156</li>
+ <li>   http://cdsweb.cern.ch/record/1099969?ln=en</li>
+</ul>
+</p>
+
+<p>
+One can incorporate uncertainty on the expected signal by adding additional terms.
+For the future, perhaps this factory should be extended to include the efficiency terms automatically.
+</p>
+END_HTML
+*/
 
 #ifndef RooStats_NumberCountingPdfFactory
 #include "RooStats/NumberCountingPdfFactory.h"
@@ -53,16 +66,6 @@ NamespaceImp(RooStats)
 
 ClassImp(RooStats::NumberCountingPdfFactory) ;
 
-
-// A factory for building PDFs and data for a number counting combination.  
-// The factory produces a PDF for N channels with uncorrelated background 
-// uncertainty.  Correlations can be added by extending this PDF with additional terms.
-// The factory relates the signal in each channel to a master signal strength times the 
-// expected signal in each channel.  Thus, the final test is performed on the master signal strength.
-// This yields a more powerful test than letting signal in each channel be independent.
-// One can incorporate uncertainty on the expected signal by adding additional terms.
-//
-// For the future, perhaps this factory should be extended to include the efficiency terms automatically.
 
 using namespace RooStats;
 using namespace RooFit;
@@ -105,6 +108,7 @@ void NumberCountingPdfFactory::AddModel(Double_t* sig,
 
   // loop over individual channels
   for(Int_t i=0; i<nbins; ++i){
+    // need to name the variables dynamically, so please forgive the string manipulation and focus on values & ranges.
     std::stringstream str;
     str<<"_"<<i;
     RooRealVar*   expectedSignal = 
@@ -180,7 +184,9 @@ void NumberCountingPdfFactory::AddExpDataWithSideband(Double_t* sigExp,
 					  Int_t nbins, 
 					  RooWorkspace* ws, const char* dsName) {
 
-  // loop over channels
+  // Arguements are an array of expected signal, expected background, and relative 
+  // ratio of background expected in the sideband to that expected in signal region, and the number of channels.
+
   Double_t* mainMeas = new Double_t[nbins];
   Double_t* sideband = new Double_t[nbins];
   for(Int_t i=0; i<nbins; ++i){
@@ -298,8 +304,6 @@ void NumberCountingPdfFactory::AddDataWithSideband(Double_t* mainMeas,
 					  Int_t nbins, 
 					  RooWorkspace* ws, const char* dsName) {
 
-  // A number counting combination for N channels with uncorrelated background 
-  // uncertainty.  Correlations can be added by extending this PDF with additional terms.
   // Arguements are an array of expected signal, expected background, and relative 
   // background uncertainty (eg. 0.1 for 10% uncertainty), and the number of channels.
 

@@ -26,6 +26,8 @@
 
 
 
+//_________________________________________________
+//BEGIN_HTML
 // This class calculates sWeights used to create an sPlot.  
 // The code is based on 
 // ``SPlot: A statistical tool to unfold data distributions,'' 
@@ -43,6 +45,8 @@
 // For the second fit, fix your parameters at the minimum, float only your yields 
 // (normalizations), and remove any PDFs correlated with the variable of interest.
 //  Be sure to save the RooFitResult.  
+//END_HTML
+//
 
 #include <vector>
 #include <map>

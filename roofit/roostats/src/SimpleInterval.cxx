@@ -19,7 +19,15 @@
 
 
 
-// This class implements the ConfInterval interface for a simple 1-d interval of the form [a,b]
+//_________________________________________________________
+//
+// BEGIN_HTML
+// SimpleInterval is a concrete implementation of the ConfInterval interface.  
+// It implements simple 1-dimensional intervals in a range [a,b].
+// In addition, you can ask it for the upper- or lower-bound.
+// END_HTML
+//
+//
 
 #ifndef RooStats_SimpleInterval
 #include "RooStats/SimpleInterval.h"

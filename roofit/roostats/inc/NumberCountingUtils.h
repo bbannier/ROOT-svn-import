@@ -42,10 +42,6 @@ namespace RooStats{
   Double_t BinomialObsP(Double_t, Double_t, Double_t);
   Double_t BinomialWithTauObsP(Double_t, Double_t, Double_t);
 
-  ///////////////////////////////////
-  // RooFit based Functions
-  //////////////////////////////////
-  Double_t ProfileCombinationExpZ(Double_t*, Double_t*, Double_t*, Int_t );
 
   }
 }
