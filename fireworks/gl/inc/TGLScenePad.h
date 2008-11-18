@@ -39,6 +39,7 @@ protected:
    // For building via VV3D
    Bool_t             fInternalPIDs;          //! using internal physical IDs
    UInt_t             fNextInternalPID;       //! next internal physical ID (from 1 - 0 reserved)
+   UInt_t             fLastPID;               //! last physical ID that was processed in AddObject()
    Int_t              fAcceptedPhysicals;
 
    Int_t              ValidateObjectBuffer(const TBuffer3D & buffer, Bool_t includeRaw) const;

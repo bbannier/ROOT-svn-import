@@ -55,6 +55,7 @@ TGLScenePad::TGLScenePad(TVirtualPad* pad) :
    fPad               (pad),
    fInternalPIDs      (kFALSE),
    fNextInternalPID   (1), // 0 reserved
+   fLastPID           (0), // 0 reserved
    fAcceptedPhysicals (0),
    fComposite         (0),
    fCSLevel           (0),
@@ -169,7 +170,7 @@ void TGLScenePad::ObjectPaint(TObject* obj, Option_t* opt)
    else
    {
       // Handle 2D primitives here.
-      // printf("TGLScenePad::PadPaint skipping %p, %s, %s.\n",
+      // printf("TGLScenePad::ObjectPaint skipping %p, %s, %s.\n",
       //        obj, obj->GetName(), obj->ClassName());
       obj->Paint(opt);
    }
@@ -255,6 +256,7 @@ void TGLScenePad::BeginScene()
 
    // Reset internal physical ID counter
    fNextInternalPID = 1;
+   fLastPID         = 0;   
 
    // Reset tracing info
    fAcceptedPhysicals = 0;
@@ -299,7 +301,6 @@ Int_t TGLScenePad::AddObject(const TBuffer3D & buffer, Bool_t * addChildren)
 }
 
 //______________________________________________________________________________
-// TODO: Cleanup addChildren to UInt_t flag for full termination - how returned?
 Int_t TGLScenePad::AddObject(UInt_t physicalID, const TBuffer3D & buffer, Bool_t * addChildren)
 {
    // Add an object to the scene, using an external physical ID
@@ -349,11 +350,11 @@ Int_t TGLScenePad::AddObject(UInt_t physicalID, const TBuffer3D & buffer, Bool_t
       return TBuffer3D::kNone;
    }
 
-   // TODO: Could be static and save possible double lookup?
+   // TODO: Could be a data member - save possible double lookup?
    TGLPhysicalShape * physical = FindPhysical(physicalID);
    TGLLogicalShape  * logical  = 0;
 
-   // If we have a valid (non-zero) ID in buffer see if the logical is already cached
+   // If we have a valid (non-zero) ID, see if the logical is already cached.
    if (buffer.fID) {
       logical = FindLogical(buffer.fID);
       // If not, attempt direct rendering via <ClassName>GL object.
@@ -362,50 +363,43 @@ Int_t TGLScenePad::AddObject(UInt_t physicalID, const TBuffer3D & buffer, Bool_t
       }
    }
 
-   // Function can be called twice if extra buffer filling for logical
-   // is required - record last physical ID to detect
-   static UInt_t lastPID = 0;
-
-   // First attempt to add this physical
-   if (physicalID != lastPID) {
+   // First attempt to add this physical.
+   if (physicalID != fLastPID) {
       // Existing physical
       if (physical) {
-         // If we have physical we should have logical cached too
+         // If we have physical we should have logical cached, too.
          if (!logical) {
             Error("TGLScenePad::AddObject", "cached physical with no assocaited cached logical");
          }
 
-         // Always increment the internal physical ID so they
-         // match external object sequence
-         if (fInternalPIDs) {
-            fNextInternalPID++;
-         }
+         // Done ... prepare for next object.
+         if (fInternalPIDs)
+            ++fNextInternalPID;
 
-         // We don't need anything more for this object
          return TBuffer3D::kNone;
       }
 
       // Need any extra sections in buffer?
-      // If we have logical already we don't need to check raw sections
+      // If we have logical already we don't need to check raw sections.
       Int_t extraSections = ValidateObjectBuffer(buffer, logical == 0); // Check raw?
       if (extraSections != TBuffer3D::kNone) {
          return extraSections;
       } else {
-         lastPID = physicalID;
+         fLastPID = physicalID;
       }
    }
 
-   if(lastPID != physicalID)
+   if (fLastPID != physicalID)
    {
       Error("TGLScenePad::AddObject", "internal physical ID tracking error?");
    }
-   // By now we should need to add a physical at least
+   // By now we should need to add a physical at least.
    if (physical) {
       Error("TGLScenePad::AddObject", "expecting to require physical");
       return TBuffer3D::kNone;
    }
 
-   // Create logical if required
+   // Create logical if required.
    if (!logical) {
       logical = CreateNewLogical(buffer);
       if (!logical) {
@@ -416,7 +410,7 @@ Int_t TGLScenePad::AddObject(UInt_t physicalID, const TBuffer3D & buffer, Bool_t
       AdoptLogical(*logical);
    }
 
-   // Finally create the physical, binding it to the logical, and add to scene
+   // Create the physical, bind it to the logical and add it to the scene.
    physical = CreateNewPhysical(physicalID, buffer, *logical);
 
    if (physical) {
@@ -430,14 +424,10 @@ Int_t TGLScenePad::AddObject(UInt_t physicalID, const TBuffer3D & buffer, Bool_t
       Error("TGLScenePad::AddObject", "failed to create physical");
    }
 
-   // Always increment the internal physical ID so they
-   // match external object sequence
-   if (fInternalPIDs) {
+   // Done ... prepare for next object.
+   if (fInternalPIDs)
       fNextInternalPID++;
-   }
 
-   // Reset last physical ID so can detect new one
-   lastPID = 0;
    return TBuffer3D::kNone;
 }
 
