@@ -52,10 +52,10 @@ namespace RooStats {
     
 
     // do we want it to return list of parameters
-    RooArgSet& GetParameters();
+    virtual RooArgSet* GetParameters() const = 0;
 
     // check if parameters are correct. (dummy implementation to start)
-    Bool_t CheckParameters(RooArgSet&) {return true;}
+    virtual Bool_t CheckParameters(RooArgSet&) const = 0;
 
 
   protected:

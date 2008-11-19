@@ -28,14 +28,22 @@ namespace RooStats {
     LikelihoodInterval();
     LikelihoodInterval(const char* name);
     LikelihoodInterval(const char* name, const char* title);
-    LikelihoodInterval(const char* name, RooAbsReal*);
-    LikelihoodInterval(const char* name, const char* title, RooAbsReal*);
+    LikelihoodInterval(const char* name, RooAbsReal*, RooArgSet*);
+    LikelihoodInterval(const char* name, const char* title, RooAbsReal*, RooArgSet*);
     virtual ~LikelihoodInterval();
         
     virtual Bool_t IsInInterval(RooArgSet&);
     virtual void SetConfidenceLevel(Double_t cl) {fConfidenceLevel = cl;}
     virtual Double_t ConfidenceLevel() const {return fConfidenceLevel;}
  
+
+    // do we want it to return list of parameters
+    virtual RooArgSet* GetParameters() const;
+
+    // check if parameters are correct. (dummy implementation to start)
+    Bool_t CheckParameters(RooArgSet&) const ;
+
+
     // Method to return lower limit on a given parameter out of a set of parameters of interest
     //    Double_t LowerLimit(RooAbsReal* param, RooArgSet) const;
     //    Double_t LowerLimit(RooAbsReal* param, Int_t) const;
@@ -44,6 +52,7 @@ namespace RooStats {
     //    Double_t UpperLimit(RooAbsReal* param, Int_t) const;
     
   private:
+    RooArgSet* fParameters;
     RooAbsReal* fLikelihoodRatio;
     Double_t fConfidenceLevel;
     

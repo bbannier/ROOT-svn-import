@@ -110,7 +110,7 @@ ConfInterval* ProfileLikelihoodCalculator::GetInterval() const {
   RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
 
   LikelihoodInterval* interval 
-    = new LikelihoodInterval("LikelihoodInterval", profile);
+    = new LikelihoodInterval("LikelihoodInterval", profile, fPOI);
 
   return interval;
 }

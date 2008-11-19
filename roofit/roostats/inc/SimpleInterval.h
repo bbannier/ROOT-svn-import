@@ -39,10 +39,18 @@ namespace RooStats {
     // Method to return upper limit
     Double_t UpperLimit() {return fUpperLimit;}
     
+    // do we want it to return list of parameters
+    virtual RooArgSet* GetParameters() const;
+
+    // check if parameters are correct. (dummy implementation to start)
+    Bool_t CheckParameters(RooArgSet&) const ;
+
+
   private:
-    Double_t fLowerLimit;
-    Double_t fUpperLimit;
-    Double_t fConfidenceLevel;
+    RooArgSet* fParameters; // parameter of interest
+    Double_t fLowerLimit; // lower limit
+    Double_t fUpperLimit; // upper limit
+    Double_t fConfidenceLevel; // confidence level
     
   protected:
     ClassDef(SimpleInterval,1)  

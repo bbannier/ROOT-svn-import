@@ -108,3 +108,25 @@ Bool_t SimpleInterval::IsInInterval(RooArgSet &parameterPoint)
   return true;
   
 }
+
+//____________________________________________________________________
+RooArgSet* SimpleInterval::GetParameters() const
+{  
+  // returns list of parameters
+  return (RooArgSet*) fParameters->clone((std::string(fParameters->GetName())+"_clone").c_str());
+}
+
+//____________________________________________________________________
+Bool_t SimpleInterval::CheckParameters(RooArgSet &parameterPoint) const
+{  
+
+  if (parameterPoint.getSize() != fParameters->getSize() ) {
+    std::cout << "size is wrong, parameters don't match" << std::endl;
+    return false;
+  }
+  if ( ! parameterPoint.equals( *fParameters ) ) {
+    std::cout << "size is ok, but parameters don't match" << std::endl;
+    return false;
+  }
+  return true;
+}
