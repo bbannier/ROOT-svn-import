@@ -42,12 +42,12 @@ namespace RooStats {
 	void Print(const char* options);
 
     private:
-	const char* _name; /// TO DO: put to inherited (TNamed for write to file)
-	const char* _title; /// TO DO: put to inherited (TNamed for write to file)
+	const char* fName; /// TO DO: put to inherited (TNamed for write to file)
+	const char* fTitle; /// TO DO: put to inherited (TNamed for write to file)
 
-        std::vector<float> _testStat_b; // results for B-only toy-MC
-        std::vector<float> _testStat_sb; // results for S+B toy-MC
-        float _testStat_data; // results for data
+        std::vector<float> fTestStat_b; // results for B-only toy-MC
+        std::vector<float> fTestStat_sb; // results for S+B toy-MC
+        float fTestStat_data; // results for data
 
     protected:
 	ClassDef(HybridResult,1)

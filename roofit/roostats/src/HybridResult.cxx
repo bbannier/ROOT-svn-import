@@ -47,9 +47,9 @@ HybridResult::HybridResult( const char *name, const char *title,
                             std::vector<float>& testStat_b_vals,
                             float testStat_data_val ) :
 	/*HypoTestCalculator(name,title),*/ /// TO DO
-	_name(name),
-	_title(title),
-	_testStat_data(testStat_data_val)
+	fName(name),
+	fTitle(title),
+	fTestStat_data(testStat_data_val)
 {
   /// HybridResult constructor:
   int vector_size_sb = testStat_sb_vals.size();
@@ -58,14 +58,14 @@ HybridResult::HybridResult( const char *name, const char *title,
   int vector_size_b = testStat_b_vals.size();
   assert(vector_size_b>0);
 
-  _testStat_sb.reserve(vector_size_sb);
-  _testStat_b.reserve(vector_size_b);
+  fTestStat_sb.reserve(vector_size_sb);
+  fTestStat_b.reserve(vector_size_b);
 
   for (int i=0;i<vector_size_sb;++i)
-    _testStat_sb.push_back(testStat_sb_vals[i]);
+    fTestStat_sb.push_back(testStat_sb_vals[i]);
 
   for (int i=0;i<vector_size_b;++i)
-    _testStat_b.push_back(testStat_b_vals[i]);
+    fTestStat_b.push_back(testStat_b_vals[i]);
 
 //  _testStat_data = -999;
 }
@@ -75,8 +75,8 @@ HybridResult::HybridResult( const char *name, const char *title,
 HybridResult::~HybridResult()
 {
   /// HybridResult destructor
-  _testStat_sb.clear();
-  _testStat_b.clear();
+  fTestStat_sb.clear();
+  fTestStat_b.clear();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -85,7 +85,7 @@ double HybridResult::CLb()
 {
   /// return CL_b
 
-  int nToys = _testStat_b.size();
+  int nToys = fTestStat_b.size();
   if (nToys==0) {
     std::cout << "Error: no toy data present. Returning -1.\n";
     // TO DO: assert
@@ -94,7 +94,7 @@ double HybridResult::CLb()
 
   double larger_than_measured=0;
   for (int iToy=0;iToy<nToys;++iToy)
-    if ( _testStat_b[iToy] > _testStat_data ) ++larger_than_measured;
+    if ( fTestStat_b[iToy] > fTestStat_data ) ++larger_than_measured;
 
   if (larger_than_measured==0) std::cout << "Warning: CLb = 0 ... maybe more toys are needed!\n";
   return larger_than_measured/nToys;
@@ -105,7 +105,7 @@ double HybridResult::CLb()
 double HybridResult::CLsplusb()
 {
   /// return CL_s+b
-  int nToys = _testStat_b.size();
+  int nToys = fTestStat_b.size();
   if (nToys==0) {
     std::cout << "Error: no toy data present. Returning -1.\n";
     // TO DO: assert!
@@ -114,7 +114,7 @@ double HybridResult::CLsplusb()
 
   double larger_than_measured=0;
   for (int iToy=0;iToy<nToys;++iToy)
-    if ( _testStat_sb[iToy] > _testStat_data ) ++larger_than_measured;
+    if ( fTestStat_sb[iToy] > fTestStat_data ) ++larger_than_measured;
 
   if (larger_than_measured==0) std::cout << "Warning: CLsb = 0 ... maybe more toys are needed!\n";
   return larger_than_measured/nToys;
@@ -167,24 +167,24 @@ HybridPlot* HybridResult::GetPlot(const char* name,const char* title, int n_bins
   // default plot name
   TString plot_name;
   if ( TString(name)=="" ) {
-    plot_name += _name; //GetName();
+    plot_name += fName; //GetName();
     plot_name += "_plot";
   } else plot_name = name;
 
   // default plot title
   TString plot_title;
   if ( TString(title)=="" ) {
-    plot_title += _title; //GetTitle();
+    plot_title += fTitle; //GetTitle();
     plot_title += "_plot (";
-    plot_title += _testStat_b.size();
+    plot_title += fTestStat_b.size();
     plot_title += " toys)";
   } else plot_title = title;
 
   HybridPlot* plot = new HybridPlot( plot_name.Data(),
                                    plot_title.Data(),
-                                   _testStat_sb,
-                                   _testStat_b,
-                                   _testStat_data,
+                                   fTestStat_sb,
+                                   fTestStat_b,
+                                   fTestStat_data,
                                    n_bins,
                                    true );
   return plot;
@@ -198,10 +198,10 @@ void HybridResult::Print(const char* options)
 
   /// Print out some information about the results
 
-  std::cout << "\nResults " << _name /*GetName()*/ << ":\n"
-            << " - Number of S+B toys: " << _testStat_b.size() << std::endl
-            << " - Number of B toys: " << _testStat_sb.size() << std::endl
-            << " - test statistics evaluated on data: " << _testStat_data << std::endl
+  std::cout << "\nResults " << fName /*GetName()*/ << ":\n"
+            << " - Number of S+B toys: " << fTestStat_b.size() << std::endl
+            << " - Number of B toys: " << fTestStat_sb.size() << std::endl
+            << " - test statistics evaluated on data: " << fTestStat_data << std::endl
             << " - CL_b " << CLb() << std::endl
             << " - CL_s+b " << CLsplusb() << std::endl
             << " - CL_s " << CLs() << std::endl;
