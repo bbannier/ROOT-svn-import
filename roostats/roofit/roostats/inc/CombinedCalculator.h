@@ -79,7 +79,7 @@ namespace RooStats {
 
     CombinedCalculator(RooWorkspace* ws, RooAbsData* data, RooAbsPdf* pdf, RooArgSet* paramsOfInterest, 
 		       Double_t size = 0.05, RooArgSet* nullParams = 0, RooArgSet* altParams = 0){
-      // default constructor
+      // alternate constructor
       SetWorkspace(ws);
       SetData(data);
       SetPdf(pdf);
@@ -89,12 +89,13 @@ namespace RooStats {
 	SetNullParameters(nullParams);
       else
 	SetNullParameters(paramsOfInterest);
+      SetAlternateParameters(altParams);
       fOwnsWorkspace = false;
     }
 
     CombinedCalculator(RooAbsData* data, RooAbsPdf* pdf, RooArgSet* paramsOfInterest, 
 		       Double_t size = 0.05, RooArgSet* nullParams = 0, RooArgSet* altParams = 0){
-      // default constructor
+      // alternate constructor
       fWS = new RooWorkspace();
       fOwnsWorkspace = true;
       SetData(data);
