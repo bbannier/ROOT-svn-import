@@ -113,7 +113,7 @@ bool testIntegerRebinNoName()
    for ( Int_t i = 0; i < nEvents; ++i )
       h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
 
-   return equals("TestIntegerRebinNoName", h2, h3, cmpOptStats);
+   return equals("TestIntRebinNoName", h2, h3, cmpOptStats);
 }
 
 bool testArrayRebin()
@@ -195,7 +195,7 @@ bool test2DRebin()
 //       }
 //    }
 
-   return equals("TestRebin2D", h2d2, h3, cmpOptStats);
+   return equals("TestIntRebin2D", h2d2, h3, cmpOptStats);
 }
 
 bool stressRebin()
