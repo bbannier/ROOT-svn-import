@@ -41,7 +41,7 @@ namespace RooStats{
 
 
   protected:
-    ClassDef(NumberCountingPdfFactory,1)
+    ClassDef(NumberCountingPdfFactory,1) // A factory specific to common number counting problems.
 
   };
 }

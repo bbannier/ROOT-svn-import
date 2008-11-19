@@ -21,6 +21,12 @@
 
 namespace RooStats {
  class SimpleInterval : public ConfInterval {
+  private:
+    RooArgSet* fParameters; // parameter of interest
+    Double_t fLowerLimit; // lower limit
+    Double_t fUpperLimit; // upper limit
+    Double_t fConfidenceLevel; // confidence level
+
   public:
     // constructors,destructors
     SimpleInterval();
@@ -46,14 +52,9 @@ namespace RooStats {
     Bool_t CheckParameters(RooArgSet&) const ;
 
 
-  private:
-    RooArgSet* fParameters; // parameter of interest
-    Double_t fLowerLimit; // lower limit
-    Double_t fUpperLimit; // upper limit
-    Double_t fConfidenceLevel; // confidence level
     
   protected:
-    ClassDef(SimpleInterval,1)  
+    ClassDef(SimpleInterval,1)  // Concrete implementation of ConfInterval for simple 1-D intervals in the form [a,b]
       
   };
 }
