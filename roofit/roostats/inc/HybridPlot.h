@@ -28,7 +28,6 @@ HybridCalculator class.
 #include "TRandom3.h"
 
 namespace RooStats {
-  extern TRandom3 random_generator;
 
 class HybridPlot : public TNamed {
 
