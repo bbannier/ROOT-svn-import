@@ -1370,9 +1370,24 @@ void TEveElement::DisableListElements(Bool_t rnr_self,  Bool_t rnr_children)
 //______________________________________________________________________________
 void TEveElement::Destroy()
 {
-   // Destroy this element.
+   // Destroy this element. Throws an exception if deny-destroy is in force.
 
    static const TEveException eh("TEveElement::Destroy ");
+
+   if (fDenyDestroy > 0)
+      throw(eh + "this element '%s' is protected against destruction.", GetElementName());
+
+   gEve->PreDeleteElement(this);
+   delete this;
+   gEve->Redraw3D();
+}
+
+//______________________________________________________________________________
+void TEveElement::DestroyOrWarn()
+{
+   // Destroy this element. Prints a warning if deny-destroy is in force.
+
+   static const TEveException eh("TEveElement::DestroyOrWarn ");
 
    if (fDenyDestroy > 0)
       throw(eh + "this element '%s' is protected against destruction.", GetElementName());
