@@ -16,7 +16,7 @@ HybridCalculator class.
 #include <vector>
 #include <iostream>
 
-#include "RooStats/Rsc.h"
+//#include "RooStats/Rsc.h"
 
 #include "TH1F.h"
 #include "TLine.h"
@@ -25,8 +25,11 @@ HybridCalculator class.
 #include "TNamed.h"
 #include "TCanvas.h"
 #include "TFile.h"
+#include "TRandom3.h"
 
 namespace RooStats {
+  extern TRandom3 random_generator;
+
 class HybridPlot : public TNamed {
 
   public:
@@ -63,25 +66,25 @@ class HybridPlot : public TNamed {
 
     /// Get B histo center
     double getBCenter(double n_sigmas=1, bool display=false)
-                              {return Rsc::getHistoCenter(m_b_histo,n_sigmas,display);};
+                              {return getHistoCenter(m_b_histo,n_sigmas,display);};
 
     /// Get B histo integration extremes to obtain the requested area fraction
     double* getBIntExtremes(double frac)
-                                   {return Rsc::getHistoPvals(m_b_histo,frac);};
+                                   {return getHistoPvals(m_b_histo,frac);};
 
     /// Get SB histo mean
     double getSBmean(){return m_sb_histo->GetMean();};
 
     /// Get SB histo center
     double getSBCenter(double n_sigmas=1, bool display=false)
-                             {return Rsc::getHistoCenter(m_sb_histo,n_sigmas,display);};
+                             {return getHistoCenter(m_sb_histo,n_sigmas,display);};
 
     /// Get SB histo RMS
     double getSBrms(){return m_sb_histo->GetRMS();};
 
     /// Get SB histo integration extremes to obtain the requested area fraction
     double* getSBIntExtremes(double frac)
-                                  {return Rsc::getHistoPvals(m_sb_histo,frac);};
+                                  {return getHistoPvals(m_sb_histo,frac);};
 
     /// Get B histo
     TH1F* getSBhisto(){return m_sb_histo;}
@@ -96,6 +99,18 @@ class HybridPlot : public TNamed {
 
     /// Write an image on disk
     void dumpToImage (const char* filename){m_canvas->Print(filename);}
+
+    // moved from Rsc.h
+
+    /// Get the center of the histo
+    double getHistoCenter(TH1* histo, double n_rms=1,bool display_result=false);
+
+    /// Get the "effective sigmas" of the histo
+    double* getHistoPvals (TH1* histo, double percentage);
+
+    /// Get the median of an histogram
+    double getMedian(TH1* histo);
+
 
   private:
 

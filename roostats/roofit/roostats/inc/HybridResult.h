@@ -20,6 +20,7 @@
 #include "RooStats/HybridPlot.h"
 
 namespace RooStats {
+
   class HybridResult /*: public HypoTestResult*/ {  /// TO DO: inheritance
 
     public:
