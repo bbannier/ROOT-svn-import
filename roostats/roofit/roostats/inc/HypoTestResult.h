@@ -47,7 +47,7 @@ namespace RooStats {
     
     
   protected:
-    ClassDef(HypoTestResult,1)  
+    ClassDef(HypoTestResult,1)  // Base class to represent results of a hypothesis test
       
    };
 }

@@ -51,7 +51,7 @@ namespace RooStats{
     
   protected:
 
-    ClassDef(SPlot,1)   // Make sPlot
+    ClassDef(SPlot,1)   // Class used for making sPlots
    };
 
 }

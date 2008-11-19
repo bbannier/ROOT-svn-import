@@ -28,7 +28,7 @@ namespace RooStats {
     
 
   protected:
-    ClassDef(ProfileLikelihoodCalculator,1)        
+    ClassDef(ProfileLikelihoodCalculator,1) // A concrete implementation of CombinedCalculator that uses the ProfileLikelihood ratio.
   };
 }
 #endif

@@ -127,17 +127,10 @@ namespace RooStats {
     
 
   protected:
-    ClassDef(CombinedCalculator,1)        
+    ClassDef(CombinedCalculator,1) // A base class that is for tools that can be both HypoTestCalculators and IntervalCalculators
     
   };
 }
 
-
-// Without this macro the THtml doc for TMath can not be generated
-//#if !defined(R__ALPHA) && !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
-//NamespaceImp(RooStats)
-//#endif
-
-ClassImp(RooStats::CombinedCalculator) ;
 
 #endif

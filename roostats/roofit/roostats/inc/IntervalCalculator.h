@@ -78,15 +78,9 @@ namespace RooStats {
     
 
   protected:
-    ClassDef(IntervalCalculator,1)        
+    ClassDef(IntervalCalculator,1)   // Interface for tools setting limits (producing confidence intervals)
   };
 }
 
-// Without this macro the THtml doc for TMath can not be generated
-//#if !defined(R__ALPHA) && !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
-//NamespaceImp(RooStats)
-//#endif
-
-ClassImp(RooStats::IntervalCalculator) ;
 
 #endif

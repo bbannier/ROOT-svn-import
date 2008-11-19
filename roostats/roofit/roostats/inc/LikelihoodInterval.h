@@ -23,6 +23,11 @@
 
 namespace RooStats {
  class LikelihoodInterval : public ConfInterval {
+  private:
+    RooArgSet* fParameters; // parameters of interest for this interval
+    RooAbsReal* fLikelihoodRatio; // likelihood ratio function used to make contours
+    Double_t fConfidenceLevel; // Requested confidence level (eg. 0.95 for 95% CL)
+
   public:
 
     LikelihoodInterval();
@@ -51,13 +56,9 @@ namespace RooStats {
     //    Double_t UpperLimit(RooAbsReal* param) const;
     //    Double_t UpperLimit(RooAbsReal* param, Int_t) const;
     
-  private:
-    RooArgSet* fParameters;
-    RooAbsReal* fLikelihoodRatio;
-    Double_t fConfidenceLevel;
     
   protected:
-    ClassDef(LikelihoodInterval,1)  
+    ClassDef(LikelihoodInterval,1)  // Concrete implementation of a ConfInterval based on a likelihood ratio
       
   };
 }
