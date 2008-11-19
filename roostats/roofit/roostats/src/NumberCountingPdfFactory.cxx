@@ -352,10 +352,8 @@ void NumberCountingPdfFactory::AddDataWithSideband(Double_t* mainMeas,
     tree->Branch(("x"+str.str()).c_str(), xForTree+i ,("x"+str.str()+"/D").c_str());
     tree->Branch(("y"+str.str()).c_str(), yForTree+i ,("y"+str.str()+"/D").c_str());
 
-    ws->var(("b"+str.str()).c_str())->Print();
     ws->var(("b"+str.str()).c_str())->setMax(  1.2*back+MaxSigma*(sqrt(back)+back*back_syst) );
     ws->var(("b"+str.str()).c_str())->setVal( back );
-    ws->var(("b"+str.str()).c_str())->Print();
 
   }
   tree->Fill();

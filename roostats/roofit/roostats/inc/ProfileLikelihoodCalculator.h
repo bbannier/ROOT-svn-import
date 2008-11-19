@@ -19,6 +19,15 @@ namespace RooStats {
  class ProfileLikelihoodCalculator : public CombinedCalculator {
   public:
     ProfileLikelihoodCalculator();
+
+    ProfileLikelihoodCalculator(RooWorkspace* ws, RooAbsData* data, RooAbsPdf* pdf, RooArgSet* paramsOfInterest, 
+				Double_t size = 0.05, RooArgSet* nullParams = 0, RooArgSet* altParams = 0);
+
+    ProfileLikelihoodCalculator(RooAbsData* data, RooAbsPdf* pdf, RooArgSet* paramsOfInterest, 
+				Double_t size = 0.05, RooArgSet* nullParams = 0, RooArgSet* altParams = 0);
+
+
+
     virtual ~ProfileLikelihoodCalculator();
     
     // main interface, implemented
