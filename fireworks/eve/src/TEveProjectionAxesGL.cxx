@@ -130,13 +130,22 @@ void TEveProjectionAxesGL::DrawScales(Bool_t horizontal, TGLFont& font, Float_t 
    char txt[100];
    Float_t off = 1.5*tmSize;
 
-   // right
-   Float_t prev = fLabVec[minIdx-1].first;
-   for (Int_t i=minIdx; i<nl; ++i)
+
+   // render zero or minimum absolute value if not exist
+   fAxisPainter.FormAxisValue(fLabVec[minIdx].second, txt);
+   font.BBox(txt, llx, lly, llz, urx, ury, urz);
+   if (horizontal)
+      font.RenderBitmap(txt, fLabVec[minIdx].first, off, 0, align);
+   else
+      font.RenderBitmap(txt, off, fLabVec[minIdx].first, 0, align);
+
+   // positive values (from zero to right)
+   Float_t prev = fLabVec[minIdx].first;
+   for (Int_t i=minIdx+1; i<nl; ++i)
    {
       fAxisPainter.FormAxisValue(fLabVec[i].second, txt);
       font.BBox(txt, llx, lly, llz, urx, ury, urz);
-      if (i > (minIdx) && prev > (fLabVec[i].first - (urx-llx)*0.5*dtw))
+      if (prev > (fLabVec[i].first - (urx-llx)*0.5*dtw))
          continue;
 
       if (horizontal)
@@ -147,12 +156,9 @@ void TEveProjectionAxesGL::DrawScales(Bool_t horizontal, TGLFont& font, Float_t 
       prev = fLabVec[i].first + (urx-llx)*0.5*dtw;
    }
 
-   // left
-   fAxisPainter.FormAxisValue(fLabVec[minIdx].second, txt);
-   font.BBox(txt, llx, lly, llz, urx, ury, urz);
-   prev = fLabVec[minIdx].first -(urx-llx)*0.5 *dtw;
-   minIdx -= 1;
-   for (Int_t i=minIdx; i>=0; --i)
+   // negative values (zero to left)
+   prev = fLabVec[minIdx].first;
+   for (Int_t i=minIdx-1; i>=0; --i)
    {
       fAxisPainter.FormAxisValue(fLabVec[i].second, txt);
       font.BBox(txt, llx, lly, llz, urx, ury, urz);
