@@ -33,6 +33,7 @@
 #include "RooStats/SimpleInterval.h"
 #endif
 #include "RooAbsReal.h"
+#include <string>
 
 // Without this macro the THtml doc for TMath can not be generated
 #if !defined(R__ALPHA) && !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
@@ -64,17 +65,21 @@ SimpleInterval::SimpleInterval(const char* name, const char* title) :
 }
 
 //____________________________________________________________________
-SimpleInterval::SimpleInterval(const char* name, Double_t lower, Double_t upper) :
+SimpleInterval::SimpleInterval(const char* name, RooAbsArg* var, Double_t lower, Double_t upper) :
   ConfInterval(name,name), fLowerLimit(lower), fUpperLimit(upper)
 {
   // Alternate constructor
+  fParameters = new RooArgSet((std::string(name)+"_parameters").c_str());
+  fParameters->addClone( *var );
 }
 
 //____________________________________________________________________
-SimpleInterval::SimpleInterval(const char* name, const char* title, Double_t lower, Double_t upper):
+SimpleInterval::SimpleInterval(const char* name, const char* title, RooAbsArg* var, Double_t lower, Double_t upper):
   ConfInterval(name,title), fLowerLimit(lower), fUpperLimit(upper)
 {
   // Alternate constructor
+  fParameters = new RooArgSet((std::string(name)+"_parameters").c_str());
+  fParameters->addClone( *var );
 }
 
 
