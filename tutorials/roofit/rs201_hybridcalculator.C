@@ -4,6 +4,7 @@ void rs201_hybridcalculator()
  
   //***********************************************************************//
 
+  using namespace RooFit;
   using namespace RooStats;
 
   /// set random seed
@@ -30,8 +31,8 @@ void rs201_hybridcalculator()
 
   /// build the prior PDF on the parameters to be integrated
   // gaussian contraint on the background yield ( N_B = 100 +/- 10 )
-  RooGaussian bkg_yield_prior("bkg_yield_prior","",bkg_yield,RooConst(100),RooConst(10));
-  RooArgSet parameters(bkg_yield); // variables to be integrated
+  RooGaussian bkg_yield_prior("bkg_yield_prior","",bkg_yield,RooConst(100.),RooConst(10.));
+  RooArgSet nuisance_parameters(bkg_yield); // variables to be integrated
 
   /// generate a data sample
   RooDataSet* data = tot_pdf.generate(observables,RooFit::Extended());
@@ -39,7 +40,7 @@ void rs201_hybridcalculator()
   //***********************************************************************//
 
   /// run HybridCalculator on those inputs
-  HybridCalculator myHybridCalc("myHybridCalc","HybridCalculator example",tot_pdf,bkg_ext_pdf,observables,parameters,bkg_yield_prior);
+  HybridCalculator myHybridCalc("myHybridCalc","HybridCalculator example",tot_pdf,bkg_ext_pdf,observables,nuisance_parameters,bkg_yield_prior);
 
   // here I use the default test statistics: 2*lnQ (optional)
   myHybridCalc->SetTestStatistics(1);
@@ -65,7 +66,7 @@ void rs201_hybridcalculator()
 
   /// to do: more results on mean CL_sb, RMS and mean of the test statistics, ...
 
-  LimitPlot* myPlot = myHybridResult->GetPlot();
+  HybridPlot* myPlot = myHybridResult->GetPlot();
 
   std::cout << "Completed HybridCalculator example:\n"; 
   std::cout << " - CL_sb = " << clsb_data << std::endl;
