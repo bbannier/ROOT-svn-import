@@ -22,6 +22,7 @@ ClassImp(RooStats::HybridPlot)
 
 using namespace RooStats;
 
+//TRandom3 random_generator;
 
 /*----------------------------------------------------------------------------*/
 
@@ -33,9 +34,9 @@ HybridPlot::HybridPlot(const char* name,
                      int n_bins,
                      bool verbosity):
     TNamed(name,title),
-    m_b_histo_shaded(NULL),
-    m_sb_histo_shaded(NULL),
-    m_verbose(verbosity)
+    fB_histo_shaded(NULL),
+    fSb_histo_shaded(NULL),
+    fVerbose(verbosity)
 {
 
     // Get the max and the min of the plots
@@ -70,49 +71,49 @@ HybridPlot::HybridPlot(const char* name,
     // Build the histos
     //int n_bins=100;
 
-    m_sb_histo = new TH1F ("SB_model",title,n_bins,min,max);
-    m_sb_histo->SetTitle(m_sb_histo->GetTitle());
-    m_sb_histo->SetLineColor(kBlue);
-    m_sb_histo->GetXaxis()->SetTitle("-2lnQ");
-    //m_sb_histo->GetYaxis()->SetTitle("Entries");
-    m_sb_histo->SetLineWidth(2);
+    fSb_histo = new TH1F ("SB_model",title,n_bins,min,max);
+    fSb_histo->SetTitle(fSb_histo->GetTitle());
+    fSb_histo->SetLineColor(kBlue);
+    fSb_histo->GetXaxis()->SetTitle("-2lnQ");
+    //fSb_histo->GetYaxis()->SetTitle("Entries");
+    fSb_histo->SetLineWidth(2);
 
-    m_b_histo = new TH1F ("B_model",title,n_bins,min,max);
-    m_b_histo->SetTitle(m_b_histo->GetTitle());
-    m_b_histo->SetLineColor(kRed);
-    m_b_histo->GetXaxis()->SetTitle("-2lnQ");
-    //m_b_histo->GetYaxis()->SetTitle("Entries");
-    m_b_histo->SetLineWidth(2);
+    fB_histo = new TH1F ("B_model",title,n_bins,min,max);
+    fB_histo->SetTitle(fB_histo->GetTitle());
+    fB_histo->SetLineColor(kRed);
+    fB_histo->GetXaxis()->SetTitle("-2lnQ");
+    //fB_histo->GetYaxis()->SetTitle("Entries");
+    fB_histo->SetLineWidth(2);
 
 
     for (int i=0;i<n_toys;++i){
-        m_sb_histo->Fill(sb_vals[i]);
-        m_b_histo->Fill(b_vals[i]);
+        fSb_histo->Fill(sb_vals[i]);
+        fB_histo->Fill(b_vals[i]);
         }
 
-    double histos_max_y=m_sb_histo->GetMaximum();
-    if (histos_max_y<m_b_histo->GetMaximum())
-        histos_max_y=m_b_histo->GetMaximum();
+    double histos_max_y=fSb_histo->GetMaximum();
+    if (histos_max_y<fB_histo->GetMaximum())
+        histos_max_y=fB_histo->GetMaximum();
 
     double line_hight=histos_max_y/n_toys;
 
     // Build the line of the measured -2lnQ
-    m_data_m2lnQ_line = new TLine(m2lnQ_data,0,m2lnQ_data,line_hight);
-    m_data_m2lnQ_line->SetLineWidth(3);
-    m_data_m2lnQ_line->SetLineColor(kBlack);
+    fData_m2lnQ_line = new TLine(m2lnQ_data,0,m2lnQ_data,line_hight);
+    fData_m2lnQ_line->SetLineWidth(3);
+    fData_m2lnQ_line->SetLineColor(kBlack);
 
     // The legend
     double golden_section=(sqrt(5)-1)/2;
 
-    m_legend = new TLegend(0.75,0.95-0.2*golden_section,0.95,0.95);
+    fLegend = new TLegend(0.75,0.95-0.2*golden_section,0.95,0.95);
     TString title_leg="-2lnQ distributions ";
     title_leg+=sb_vals.size();
     title_leg+=" toys";
-    m_legend->SetName(title_leg.Data());
-    m_legend->AddEntry(m_sb_histo,"SB toy datasets");
-    m_legend->AddEntry(m_b_histo,"B toy datasets");
-    m_legend->AddEntry((TLine*)m_data_m2lnQ_line,"-2lnQ on Data","L");
-    m_legend->SetFillColor(0);
+    fLegend->SetName(title_leg.Data());
+    fLegend->AddEntry(fSb_histo,"SB toy datasets");
+    fLegend->AddEntry(fB_histo,"B toy datasets");
+    fLegend->AddEntry((TLine*)fData_m2lnQ_line,"-2lnQ on Data","L");
+    fLegend->SetFillColor(0);
 
     }
 
@@ -120,105 +121,105 @@ HybridPlot::HybridPlot(const char* name,
 
 HybridPlot::~HybridPlot(){
 
-    if (m_sb_histo)
-        delete m_sb_histo;
+    if (fSb_histo)
+        delete fSb_histo;
 
-    if (m_b_histo)
-        delete m_b_histo;
+    if (fB_histo)
+        delete fB_histo;
 
-    if (m_data_m2lnQ_line)
-        delete m_data_m2lnQ_line;
+    if (fData_m2lnQ_line)
+        delete fData_m2lnQ_line;
 
-   if (m_legend)
-        delete m_legend;
+   if (fLegend)
+        delete fLegend;
     }
 
 /*----------------------------------------------------------------------------*/
 
-void HybridPlot::draw(const char* options){
+void HybridPlot::Draw(const char* options){
 
-    setCanvas(new TCanvas(GetName(),GetTitle()));
-    getCanvas()->cd();
-    getCanvas()->Draw(options);
+    SetCanvas(new TCanvas(GetName(),GetTitle()));
+    GetCanvas()->cd();
+    GetCanvas()->Draw(options);
 
     // We don't want the statistics of teh histos
     gStyle->SetOptStat(0);
 
     // The histos
 
-    if (m_sb_histo->GetMaximum()>m_b_histo->GetMaximum()){
-        m_sb_histo->DrawNormalized();
-        m_b_histo->DrawNormalized("same");
+    if (fSb_histo->GetMaximum()>fB_histo->GetMaximum()){
+        fSb_histo->DrawNormalized();
+        fB_histo->DrawNormalized("same");
         }
     else{
-        m_b_histo->DrawNormalized();
-        m_sb_histo->DrawNormalized("same");
+        fB_histo->DrawNormalized();
+        fSb_histo->DrawNormalized("same");
         }
 
     // Shaded
-    m_b_histo_shaded = (TH1F*)m_b_histo->Clone("b_shaded");
-    m_b_histo_shaded->SetFillStyle(3005);
-    m_b_histo_shaded->SetFillColor(kRed);
+    fB_histo_shaded = (TH1F*)fB_histo->Clone("b_shaded");
+    fB_histo_shaded->SetFillStyle(3005);
+    fB_histo_shaded->SetFillColor(kRed);
 
-    m_sb_histo_shaded = (TH1F*)m_sb_histo->Clone("sb_shaded");
-    m_sb_histo_shaded->SetFillStyle(3004);
-    m_sb_histo_shaded->SetFillColor(kBlue);
+    fSb_histo_shaded = (TH1F*)fSb_histo->Clone("sb_shaded");
+    fSb_histo_shaded->SetFillStyle(3004);
+    fSb_histo_shaded->SetFillColor(kBlue);
 
 
     // Empty the bins according to the data -2lnQ
-    double data_m2lnq= m_data_m2lnQ_line->GetX1();
-    for (int i=0;i<m_sb_histo->GetNbinsX();++i){
-        if (m_sb_histo->GetBinCenter(i)<data_m2lnq){
-            m_sb_histo_shaded->SetBinContent(i,0);
-            m_b_histo_shaded->SetBinContent(i,m_b_histo->GetBinContent(i)/m_b_histo->GetEntries());
+    double data_m2lnq= fData_m2lnQ_line->GetX1();
+    for (int i=0;i<fSb_histo->GetNbinsX();++i){
+        if (fSb_histo->GetBinCenter(i)<data_m2lnq){
+            fSb_histo_shaded->SetBinContent(i,0);
+            fB_histo_shaded->SetBinContent(i,fB_histo->GetBinContent(i)/fB_histo->GetEntries());
             }
         else{
-            m_b_histo_shaded->SetBinContent(i,0);
-            m_sb_histo_shaded->SetBinContent(i,m_sb_histo->GetBinContent(i)/m_sb_histo->GetEntries());
+            fB_histo_shaded->SetBinContent(i,0);
+            fSb_histo_shaded->SetBinContent(i,fSb_histo->GetBinContent(i)/fSb_histo->GetEntries());
             }
         }
 
     // Draw the shaded histos
-    m_b_histo_shaded->Draw("same");
-    m_sb_histo_shaded->Draw("same");
+    fB_histo_shaded->Draw("same");
+    fSb_histo_shaded->Draw("same");
 
     // The line 
-    m_data_m2lnQ_line->Draw("same");
+    fData_m2lnQ_line->Draw("same");
 
     // The legend
-    m_legend->Draw("same");
+    fLegend->Draw("same");
 
 
     }
 
 /*----------------------------------------------------------------------------*/
 
-void HybridPlot::print(const char* options){
-    std::cout << "\nHybridPlot " << GetName() << std::endl;
-    }
+//void HybridPlot::print(const char* options){
+//    std::cout << "\nHybridPlot " << GetName() << std::endl;
+//    }
 
 /*----------------------------------------------------------------------------*/
 
-void HybridPlot::dumpToFile (const char* RootFileName, const char* options){
+void HybridPlot::DumpToFile (const char* RootFileName, const char* options){
 
     TFile ofile(RootFileName,options);
     ofile.cd();
 
     // The histos
-    m_sb_histo->Write();
-    m_b_histo->Write();
+    fSb_histo->Write();
+    fB_histo->Write();
 
     // The shaded histos
-    if (m_b_histo_shaded!=NULL && m_sb_histo_shaded!=NULL){
-        m_b_histo_shaded->Write();
-        m_sb_histo_shaded->Write();
+    if (fB_histo_shaded!=NULL && fSb_histo_shaded!=NULL){
+        fB_histo_shaded->Write();
+        fSb_histo_shaded->Write();
         }
 
     // The line 
-    m_data_m2lnQ_line->Write("Measured -2lnQ line tag");
+    fData_m2lnQ_line->Write("Measured -2lnQ line tag");
 
     // The legend
-    m_legend->Write();
+    fLegend->Write();
 
     ofile.Close();
 
@@ -237,7 +238,7 @@ void HybridPlot::dumpToFile (const char* RootFileName, const char* options){
     To get the second fit range get an interval that tries to keep into account 
     the skewness of the distribution.
     **/
-    double getHistoCenter(TH1* histo_orig, double n_rms, bool display_result){
+    double HybridPlot::GetHistoCenter(TH1* histo_orig, double n_rms, bool display_result){
 
         TCanvas* c = new TCanvas();
         c->cd();
@@ -298,7 +299,7 @@ void HybridPlot::dumpToFile (const char* RootFileName, const char* options){
     equal to the desired one.
     **/
 
-    double* getHistoPvals (TH1* histo, double percentage){
+    double* HybridPlot::GetHistoPvals (TH1* histo, double percentage){
 
         if (percentage>1){
             std::cerr << "Percentage greater or equal to 1!\n";
@@ -324,7 +325,7 @@ void HybridPlot::dumpToFile (const char* RootFileName, const char* options){
         // Now select the couple of extremes which have the lower bin content diff
         std::map<int,int>::iterator it;
         int a,b;
-        double left_bin_center,right_bin_center;
+        double left_bin_center(0.),right_bin_center(0.);
         double diff=10e40;
         double current_diff;
         for (it = extremes_map.begin();it != extremes_map.end();++it){
@@ -349,21 +350,21 @@ void HybridPlot::dumpToFile (const char* RootFileName, const char* options){
 /**
 Get the median of an histogram.
 **/
-    double getMedian(TH1* histo){
-    
-        int xbin_median;
+    double HybridPlot::GetMedian(TH1* histo){
+
+        //int xbin_median;
         Double_t* integral = histo->GetIntegral();
         int median_i = 0;
         for (int j=0;j<histo->GetNbinsX(); j++) 
             if (integral[j]<0.5) 
                 median_i = j;
-    
+
         double median_x = 
             histo->GetBinCenter(median_i)+
             (histo->GetBinCenter(median_i+1)-
             histo->GetBinCenter(median_i))*
             (0.5-integral[median_i])/(integral[median_i+1]-integral[median_i]);
-    
+
         return median_x;
         }
 

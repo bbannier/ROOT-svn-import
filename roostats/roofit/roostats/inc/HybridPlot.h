@@ -28,6 +28,7 @@ HybridCalculator class.
 #include "TRandom3.h"
 
 namespace RooStats {
+  //extern TRandom3 random_generator;
 
 class HybridPlot : public TNamed {
 
@@ -46,96 +47,96 @@ class HybridPlot : public TNamed {
     ~HybridPlot();
 
     /// Draw on canvas
-    void draw (const char* options="");
+    void Draw (const char* options="");
 
     /// Print the relevant information
-    void print (const char* options="");
+    //void Print (const char* options="");
 
     /// All the objects are written to rootfile
-    void dumpToFile (const char* RootFileName, const char* options);
+    void DumpToFile (const char* RootFileName, const char* options);
 
     /// Get B histo mean
-    double getBmean(){return m_b_histo->GetMean();};
+    double GetBmean(){return fB_histo->GetMean();};
 
     /// Get B histo RMS
-    double getBrms(){return m_b_histo->GetRMS();};
+    double GetBrms(){return fB_histo->GetRMS();};
 
     /// Get B histo
-    TH1F* getBhisto(){return m_b_histo;}
+    TH1F* GetBhisto(){return fB_histo;}
 
     /// Get B histo center
-    double getBCenter(double n_sigmas=1, bool display=false)
-                              {return getHistoCenter(m_b_histo,n_sigmas,display);};
+    double GetBCenter(double n_sigmas=1, bool display=false)
+                              {return GetHistoCenter(fB_histo,n_sigmas,display);};
 
     /// Get B histo integration extremes to obtain the requested area fraction
-    double* getBIntExtremes(double frac)
-                                   {return getHistoPvals(m_b_histo,frac);};
+    double* GetBIntExtremes(double frac)
+                                   {return GetHistoPvals(fB_histo,frac);};
 
     /// Get SB histo mean
-    double getSBmean(){return m_sb_histo->GetMean();};
+    double GetSBmean(){return fSb_histo->GetMean();};
 
     /// Get SB histo center
-    double getSBCenter(double n_sigmas=1, bool display=false)
-                             {return getHistoCenter(m_sb_histo,n_sigmas,display);};
+    double GetSBCenter(double n_sigmas=1, bool display=false)
+                             {return GetHistoCenter(fSb_histo,n_sigmas,display);};
 
     /// Get SB histo RMS
-    double getSBrms(){return m_sb_histo->GetRMS();};
+    double GetSBrms(){return fSb_histo->GetRMS();};
 
     /// Get SB histo integration extremes to obtain the requested area fraction
-    double* getSBIntExtremes(double frac)
-                                  {return getHistoPvals(m_sb_histo,frac);};
+    double* GetSBIntExtremes(double frac)
+                                  {return GetHistoPvals(fSb_histo,frac);};
 
     /// Get B histo
-    TH1F* getSBhisto(){return m_sb_histo;}
+    TH1F* GetSBhisto(){return fSb_histo;}
 
 	/// from Statistical plot
 
     /// Get the canvas
-    TCanvas* getCanvas(){return m_canvas;}
+    TCanvas* GetCanvas(){return fCanvas;}
 
     /// Set the canvas
-    void setCanvas(TCanvas* new_canvas){m_canvas=new_canvas;}
+    void SetCanvas(TCanvas* new_canvas){fCanvas=new_canvas;}
 
     /// Write an image on disk
-    void dumpToImage (const char* filename){m_canvas->Print(filename);}
+    void DumpToImage (const char* filename){fCanvas->Print(filename);}
 
     // moved from Rsc.h
 
     /// Get the center of the histo
-    double getHistoCenter(TH1* histo, double n_rms=1,bool display_result=false);
+    double GetHistoCenter(TH1* histo, double n_rms=1,bool display_result=false);
 
     /// Get the "effective sigmas" of the histo
-    double* getHistoPvals (TH1* histo, double percentage);
+    double* GetHistoPvals (TH1* histo, double percentage);
 
     /// Get the median of an histogram
-    double getMedian(TH1* histo);
+    double GetMedian(TH1* histo);
 
 
   private:
 
     /// The sb Histo
-    TH1F* m_sb_histo;
+    TH1F* fSb_histo;
 
     /// The sb Histo shaded
-    TH1F* m_sb_histo_shaded;
+    TH1F* fSb_histo_shaded;
 
     /// The b Histo
-    TH1F* m_b_histo;
+    TH1F* fB_histo;
 
     /// The b Histo shaded
-    TH1F* m_b_histo_shaded;
+    TH1F* fB_histo_shaded;
 
     /// The line for the data -2lnQ
-    TLine* m_data_m2lnQ_line;
+    TLine* fData_m2lnQ_line;
 
     /// The legend of the plot
-    TLegend* m_legend;
+    TLegend* fLegend;
 
     /// Verbosity flag
-    bool m_verbose;
+    bool fVerbose;
 
     /// Canvas
-    TCanvas* m_canvas;
+    TCanvas* fCanvas;
 
    // For Cint
     ClassDef(HybridPlot,1) 
