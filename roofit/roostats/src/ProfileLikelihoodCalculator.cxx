@@ -86,6 +86,17 @@ CombinedCalculator() {
 
 }
 
+ProfileLikelihoodCalculator::ProfileLikelihoodCalculator(RooWorkspace* ws, RooAbsData* data, RooAbsPdf* pdf, RooArgSet* paramsOfInterest, 
+			    Double_t size, RooArgSet* nullParams, RooArgSet* altParams) :
+  CombinedCalculator(ws,data,pdf, paramsOfInterest, size, nullParams, altParams)
+  {}
+
+ProfileLikelihoodCalculator::ProfileLikelihoodCalculator(RooAbsData* data, RooAbsPdf* pdf, RooArgSet* paramsOfInterest, 
+			    Double_t size, RooArgSet* nullParams, RooArgSet* altParams):
+  CombinedCalculator(data,pdf, paramsOfInterest, size, nullParams, altParams)
+{}
+
+
 //_______________________________________________________
 ProfileLikelihoodCalculator::~ProfileLikelihoodCalculator(){
   // destructor

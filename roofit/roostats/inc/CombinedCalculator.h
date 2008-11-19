@@ -15,6 +15,7 @@
 #include "RooStats/IntervalCalculator.h"
 #include "RooStats/HypoTestCalculator.h"
 #include "RooAbsPdf.h"
+#include "RooAbsData.h"
 #include "RooArgSet.h"
 #include "RooWorkspace.h"
 
@@ -32,7 +33,7 @@ The interface currently assumes that any such calculator can be configured by sp
  <li>a set of parameters of nuisance parameters  (including values and const/non-const status).</li>
 </ul>
 The interface allows one to pass the model, data, and parameters via a workspace and then specify them with names.
-The interface will be extended so that one does not need to use a workspace.
+The interface also allows one to pass the model, data, and parameters without a workspace (which is created internally).
 </p>
 <p>
 After configuring the calculator, one only needs to ask GetHypoTest() (which will return a HypoTestResult pointer) or GetInterval() (which will return an ConfInterval pointer).
@@ -62,6 +63,7 @@ namespace RooStats {
     RooArgSet* fAlternateParams; // RooArgSet specifying alternate parameters for hypothesis test
     RooArgSet* fPOI; // RooArgSet specifying  parameters of interest for interval
     RooArgSet* fNuisParams;// RooArgSet specifying  nuisance parameters for interval
+    Bool_t fOwnsWorkspace;
 
 
   public:
@@ -72,10 +74,43 @@ namespace RooStats {
        fAlternateParams = 0;
        fPOI = 0;
        fNuisParams = 0;
+       fOwnsWorkspace = false;
+    }
+
+    CombinedCalculator(RooWorkspace* ws, RooAbsData* data, RooAbsPdf* pdf, RooArgSet* paramsOfInterest, 
+		       Double_t size = 0.05, RooArgSet* nullParams = 0, RooArgSet* altParams = 0){
+      // default constructor
+      SetWorkspace(ws);
+      SetData(data);
+      SetPdf(pdf);
+      SetParameters(paramsOfInterest);
+      SetSize(size);
+      if(nullParams ) 
+	SetNullParameters(nullParams);
+      else
+	SetNullParameters(paramsOfInterest);
+      fOwnsWorkspace = false;
+    }
+
+    CombinedCalculator(RooAbsData* data, RooAbsPdf* pdf, RooArgSet* paramsOfInterest, 
+		       Double_t size = 0.05, RooArgSet* nullParams = 0, RooArgSet* altParams = 0){
+      // default constructor
+      fWS = new RooWorkspace();
+      fOwnsWorkspace = true;
+      SetData(data);
+      SetPdf(pdf);
+      SetParameters(paramsOfInterest);
+      SetSize(size);
+      if(nullParams ) 
+	SetNullParameters(nullParams);
+      else
+	SetNullParameters(paramsOfInterest);
+      SetAlternateParameters(altParams);
     }
 
     virtual ~CombinedCalculator() {
       // destructor.
+      if( fOwnsWorkspace && fWS) delete fWS;
       // commented out b/c currently the calculator does not own these.  Change if we clone.
       //      if (fWS) delete fWS;
       //      if (fNullParams) delete fNullParams;
@@ -102,7 +137,49 @@ namespace RooStats {
     
 
     // set a workspace that owns all the necessary components for the analysis
-    virtual void SetWorkspace(RooWorkspace* ws) {fWS = ws;}
+    virtual void SetWorkspace(RooWorkspace* ws) {
+      if (!fWS)
+	fWS = ws;
+      else{
+	RooMsgService::instance().setGlobalKillBelow(RooMsgService::ERROR) ;
+	fWS->merge(*ws);
+	RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+      }
+
+    }
+
+    // Set the DataSet, add to the the workspace if not already there
+    virtual void SetData(RooAbsData* data) {      
+      if (!fWS) 
+	fWS = new RooWorkspace();
+      if (! fWS->data( data->GetName() ) ){
+	RooMsgService::instance().setGlobalKillBelow(RooMsgService::ERROR) ;
+	fWS->import(*data);
+	RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+      }
+      SetData( data->GetName() );
+
+      };
+
+    // Set the Pdf, add to the the workspace if not already there
+    virtual void SetPdf(RooAbsPdf* pdf) {
+      if (!fWS) 
+	fWS = new RooWorkspace();
+      if (! fWS->pdf( pdf->GetName() ) ){
+	RooMsgService::instance().setGlobalKillBelow(RooMsgService::ERROR) ;
+	fWS->import(*pdf);
+	RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+      }
+      SetPdf( pdf->GetName() );
+    }
+
+    // Set the Pdf, add to the the workspace if not already there
+    virtual void SetCommonPdf(RooAbsPdf* pdf) { SetPdf(pdf);}
+    // Set the Pdf, add to the the workspace if not already there
+    virtual void SetNullPdf(RooAbsPdf* pdf) { SetPdf(pdf);}
+    // Set the Pdf, add to the the workspace if not already there
+    virtual void SetAlternatePdf(RooAbsPdf* pdf) { SetPdf(pdf);}
+
     // specify the name of the PDF in the workspace to be used
     virtual void SetPdf(const char* name) {fPdfName = name;}
     // specify the name of the dataset in the workspace to be used
@@ -112,7 +189,6 @@ namespace RooStats {
     // specify the nuisance parameters (eg. the rest of the parameters)
     virtual void SetNuisanceParameters(RooArgSet* set) {fNuisParams = set;}
     
-
     // from HypoTestCalculator
     // set the PDF for the null hypothesis.  Needs to be the common one
     virtual void SetNullPdf(const char* name) {SetPdf(name);}

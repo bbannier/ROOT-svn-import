@@ -179,39 +179,63 @@ Bool_t LikelihoodInterval::CheckParameters(RooArgSet &parameterPoint) const
 }
 
 
-/* Not complete.  Add a binary search to get lower/upper limit for a given parameter.
-Need to be careful because of a few issues:
- - Need to profile other parameters of interest, and the fLikelihoodRatio may keep the other POI fixed to their current values.  Probably need to make a custom POI.
- - Need to cut on the profile LR based on a chi^2 dist with the correct number of number of POI.
+/*
+//Not complete.  Add a binary search to get lower/upper limit for a given parameter.
+//Need to be careful because of a few issues:
+// - Need to profile other parameters of interest, and the fLikelihoodRatio may keep the other POI fixed to their current values.  Probably need to make a custom POI.
+// - Need to cut on the profile LR based on a chi^2 dist with the correct number of number of POI.
 //____________________________________________________________________
-Bool_t LikelihoodInterval::LowerLimit(RooRealVar& param, RooArgSet &parameterPoint) 
+Double_t LikelihoodInterval::LowerLimit(RooRealVar& param ) 
 {  
-  //  double target = 1.64; // target of sqrt(-2log lambda)
-  RooArgSet* theseParams = parameterPoint.clone("tempParams");
+  // check that param is in the list of parameters of interest
+  RooRealVar *myarg = (RooRealVar *) fParameters->find(param.GetName());
+  if( ! myarg ){
+    std::cout << "couldn't find parameter " << param.GetName() << " in parameters of interest " << std::endl;
+    return param.getMin();
+  }
+  // Keep track of values before hand
+  RooAbsArg* snapshot = (RooAbsArg*) fParameters->snapshot();
 
-  Double_t paramRange = param.getMax()-param.getMin();
-  Double_t step = paramRange/2.;
-  Double_t lastDiff = -.5, diff=-.5;
-  Double_t thisMu = param.getMin();
+  // free all parameters
+  TIter it = fParameters->createIterator();
+  while ((myarg = (RooRealVar *)it.Next())) { 
+    myarg->setConstant(kFALSE);
+  }    
+
+  // fix parameter of interest
+  myarg = (RooRealVar *) fParameters->find(param.GetName());
+  myarg->setConstant(kTRUE);
+
+  // do binary search for minimum
+  double target = 1.64; // FIX THIS: target of sqrt(-2log lambda)
+  std::cout << "FIX THIS: target is not correct for general case" << std::endl;
+  double lastDiff = -target, diff=-target, step = myarg->getMax() - myarg->getMin();
+  double thisArgVal = myarg->getMin();
   int nIterations = 0, maxIterations = 20;
-  cout << "about to do binary search" << endl;
-  while(fabs(diff) > 0.01*paramRange && nIterations < maxIterations ){
+  std::cout << "about to do binary search" << std::endl;
+  while(fabs(diff) > 0.01 && nIterations < maxIterations){
     nIterations++;
     if(diff<0)
-      thisMu += step;
+      thisArgVal += step;
     else
-      thisMu -= step;
+      thisArgVal -= step;
     if(lastDiff*diff < 0) step /=2; 
-
-    
-    mu.setVal( thisMu );
+    myarg->setVal( thisArgVal );
+    myarg->Print();
+    std::cout << "lambda("<<thisArgVal<<") = " << fLikelihoodRatio->getVal() << std::endl;;
     lastDiff = diff;
     // abs below to protect small negative numbers from numerical precision
-    //    diff = sqrt(2.*fabs(muprofile.getVal())) - target; 
-    diff = (Double_t) IsInInterval(theseParams) - 0.5;
-    cout << "diff = " << diff << endl;
+    diff = sqrt(2.*fabs(fLikelihoodRatio->getVal())) - target; 
+    std::cout << "diff = " << diff << std::endl;
   }
   
 
+
+  // put the parameters back to the way they were
+  (*fParameters) = (*snapshot);
+
+  return myarg->getVal();
+
 }
+
 */

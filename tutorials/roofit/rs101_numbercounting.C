@@ -36,7 +36,7 @@ using namespace RooFit ;
 using namespace RooStats ;
 
 
-void rs100_numbercounting()
+void rs101_numbercounting()
 {
 
   /////////////////////////////////////////
@@ -89,15 +89,20 @@ void rs100_numbercounting()
   /////////////////////////////////////////
   // The Hypothesis testing stage:
   /////////////////////////////////////////
+  // Step 4, Define the null hypothesis for the calculator
+  // Here you need to know the name of the variables corresponding to hypothesis.
+  RooRealVar* x = wspace->var("masterSignal"); 
+  RooArgSet* nullParams = new RooArgSet("nullParams");
+  nullParams->addClone(*x);
+  // here we explicitly set the value of the parameters for the null
+  nullParams->setRealValue("masterSignal",0); 
 
-  // Step 4, Create a calculator for doing the hypothesis test.
-  ProfileLikelihoodCalculator plc;
-  plc.SetWorkspace(wspace);
-  plc.SetCommonPdf("TopLevelPdf");
+  // Step 5, Create a calculator for doing the hypothesis test.
+  // because this is a 
+  ProfileLikelihoodCalculator plc(wspace->data("ExpectedNumberCountingData"),
+				  wspace->pdf("TopLevelPdf"), nullParams);
+				  
 
-  // Step 5, Specify the data set 
-  // case a: for expected data
-  plc.SetData("ExpectedNumberCountingData"); 
   // need code to deal with snapshots.  Same model in workspace may need to be reconfigured.
   wspace->var("tau_0")->setVal(wspace->var("tau_0ExpectedNumberCountingData")->getVal() );
   wspace->var("tau_1")->setVal(wspace->var("tau_1ExpectedNumberCountingData")->getVal() );
@@ -115,14 +120,6 @@ void rs100_numbercounting()
   //  wspace->var("tau_1")->setVal(wspace->var("tau_1ObservedNumberCountingDataWithSideband")->getVal() );
 
 
-  // Step 6, Define the null hypothesis for the calculator
-  // Here you need to know the name of the variables corresponding to hypothesis.
-  RooRealVar* x = wspace->var("masterSignal"); 
-  RooArgSet* nullParams = new RooArgSet("nullParams");
-  nullParams->addClone(*x);
-  // here we explicitly set the value of the parameters for the null
-  nullParams->setRealValue("masterSignal",0); 
-  plc.SetNullParameters(nullParams);
 
   // Step 7, Use the Calculator to get a HypoTestResult
   HypoTestResult* htr = plc.GetHypoTest();

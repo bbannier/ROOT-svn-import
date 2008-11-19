@@ -63,10 +63,17 @@ namespace RooStats {
     virtual Double_t ConfidenceLevel()  const = 0;  
     // set a workspace that owns all the necessary components for the analysis
     virtual void SetWorkspace(RooWorkspace* ws) = 0;
-    // specify the name of the PDF in the workspace to be used
-    virtual void SetPdf(const char* name) = 0;
+
+    // Set the DataSet, add to the the workspace if not already there
+    virtual void SetData(RooAbsData*) = 0;
+    // Set the Pdf, add to the the workspace if not already there
+    virtual void SetPdf(RooAbsPdf*) = 0;
+
     // specify the name of the dataset in the workspace to be used
     virtual void SetData(const char* name) = 0;
+    // specify the name of the PDF in the workspace to be used
+    virtual void SetPdf(const char* name) = 0;
+
     // specify the parameters of interest in the interval
     virtual void SetParameters(RooArgSet*) = 0;
     // specify the nuisance parameters (eg. the rest of the parameters)

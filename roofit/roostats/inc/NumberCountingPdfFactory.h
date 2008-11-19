@@ -21,7 +21,7 @@ namespace RooStats{
   public:
     // need one for expected and one for observed
     NumberCountingPdfFactory();
-    ~NumberCountingPdfFactory();
+    virtual ~NumberCountingPdfFactory();
 
     void AddModel(Double_t* sigExp, Int_t nchan, RooWorkspace* ws, 
 		  const char* pdfName = "CombinedPdf", const char* masterSignalName = "masterSignal") ; 

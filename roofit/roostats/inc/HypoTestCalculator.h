@@ -64,6 +64,18 @@ namespace RooStats {
     virtual void SetAlternatePdf(const char* name) = 0;
     // set a common PDF for both the null and alternate hypotheses
     virtual void SetCommonPdf(const char* name) = 0;
+    // Set a common PDF for both the null and alternate, add to the the workspace if not already there
+    virtual void SetCommonPdf(RooAbsPdf* pdf) = 0;
+    // Set the PDF for the null, add to the the workspace if not already there
+    virtual void SetNullPdf(RooAbsPdf* pdf) = 0;
+    // Set the PDF for the alternate hypothesis, add to the the workspace if not already there
+    virtual void SetAlternatePdf(RooAbsPdf* pdf) = 0;
+
+    // specify the name of the dataset in the workspace to be used
+    virtual void SetData(const char* name) = 0;
+    // Set the DataSet, add to the the workspace if not already there
+    virtual void SetData(RooAbsData* data) = 0;
+
     // set parameter values for the null if using a common PDF
     virtual void SetNullParameters(RooArgSet*) = 0;
     // set parameter values for the alternate if using a common PDF
