@@ -42,14 +42,14 @@ namespace RooStats {
 	void Print(const char* options);
 
     private:
-	const char* _name; /// TO DO: put to TNamed inherited
-	const char* _title; /// TO DO: put to TNamed inherited
-	RooAbsPdf& _sbModel;
-	RooAbsPdf& _bModel;
-	RooArgList& _observables;
-	RooArgSet& _parameters;
-	RooAbsPdf& _priorPdf;
-        unsigned int _testStatisticsIdx;
+	const char* fName; /// TO DO: put to TNamed inherited
+	const char* fTitle; /// TO DO: put to TNamed inherited
+	RooAbsPdf& fSbModel;
+	RooAbsPdf& fBModel;
+	RooArgList& fObservables;
+	RooArgSet& fParameters;
+	RooAbsPdf& fPriorPdf;
+        unsigned int fTestStatisticsIdx;
 
     protected:
 	ClassDef(HybridCalculator,1)

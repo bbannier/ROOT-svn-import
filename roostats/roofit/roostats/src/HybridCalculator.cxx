@@ -49,13 +49,13 @@ HybridCalculator::HybridCalculator( const char *name,
 		RooArgSet& parameters,
 		RooAbsPdf& priorPdf ) :
 	/*HypoTestCalculator(name,title),*/ /// TO DO
-	_name(name),
-	_title(title),
-	_sbModel(sbModel),
-	_bModel(bModel),
-	_observables(observables),
-	_parameters(parameters),
-	_priorPdf(priorPdf)
+	fName(name),
+	fTitle(title),
+	fSbModel(sbModel),
+	fBModel(bModel),
+	fObservables(observables),
+	fParameters(parameters),
+	fPriorPdf(priorPdf)
 {
   /// HybridCalculator constructor:
   /// the user need to specify the models in the S+B case and B-only case,
@@ -82,7 +82,7 @@ void HybridCalculator::SetTestStatistics(int index)
   /// index=1 : 2 * log( L_sb / L_b )  (DEFAULT)
   /// index=2 : number of generated events
   /// if the index is different to any of those values, the default is used
-  _testStatisticsIdx = index;
+  fTestStatisticsIdx = index;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -107,16 +107,16 @@ void HybridCalculator::RunToys(unsigned int nToys, bool usePriors)
 {
   /// do the actual run-MC processing
   std::cout << "HybridCalculator: run " << nToys << " toy-MC experiments\n";
-  std::cout << "with test statistics index: " << _testStatisticsIdx << "\n";
+  std::cout << "with test statistics index: " << fTestStatisticsIdx << "\n";
 
   assert(nToys > 0);
 
   /// backup the initial values of the parameters that are varied by the prior MC-integration
-  int nParameters = _parameters.getSize();
+  int nParameters = fParameters.getSize();
   double* parameterValues; /// array to hold the initial parameter values
   RooArgList parametersList("parametersList"); /// transforms the RooArgSet in a RooArgList (needed for .at())
   if (usePriors && nParameters>0) {
-    parametersList.add(_parameters);
+    parametersList.add(fParameters);
     parameterValues = new double[nParameters];
     for (int iParameter=0; iParameter<nParameters; iParameter++) {
       RooRealVar* oneParam = (RooRealVar*) parametersList.at(iParameter);
@@ -135,7 +135,7 @@ void HybridCalculator::RunToys(unsigned int nToys, bool usePriors)
     /// vary the value of the integrated parameters according to the prior pdf
     if (usePriors && nParameters>0) {
       /// generation from the prior pdf (TO DO: RooMCStudy could be used here)
-      RooDataSet* tmpValues = (RooDataSet*) _priorPdf.generate(_parameters,1);
+      RooDataSet* tmpValues = (RooDataSet*) fPriorPdf.generate(fParameters,1);
       for (int iParameter=0; iParameter<nParameters; iParameter++) {
         RooRealVar* oneParam = (RooRealVar*) parametersList.at(iParameter);
         oneParam->setVal(tmpValues->get()->getRealValue(oneParam->GetName()));
@@ -144,28 +144,28 @@ void HybridCalculator::RunToys(unsigned int nToys, bool usePriors)
     }
 
     /// generate the dataset in the S+B hypothesis
-    RooTreeData* sbData = static_cast<RooTreeData*> (_sbModel.generate(_observables,RooFit::Extended()));
+    RooTreeData* sbData = static_cast<RooTreeData*> (fSbModel.generate(fObservables,RooFit::Extended()));
 
     /// work-around in case of an empty dataset (TO DO: need a debug in RooFit?)
     bool sbIsEmpty = false;
     if (sbData==NULL) {
       sbIsEmpty = true;
       // if ( _verbose ) std::cout << "empty S+B dataset!\n";
-      RooDataSet* sbDataDummy=new RooDataSet("sbDataDummy","empty dataset",_observables);
-      sbData = static_cast<RooTreeData*>(new RooDataHist ("sbDataEmpty","",_observables,*sbDataDummy));
+      RooDataSet* sbDataDummy=new RooDataSet("sbDataDummy","empty dataset",fObservables);
+      sbData = static_cast<RooTreeData*>(new RooDataHist ("sbDataEmpty","",fObservables,*sbDataDummy));
       delete sbDataDummy;
     }
 
     /// generate the dataset in the B-only hypothesis
-    RooTreeData* bData = static_cast<RooTreeData*> (_bModel.generate(_observables,RooFit::Extended()));
+    RooTreeData* bData = static_cast<RooTreeData*> (fBModel.generate(fObservables,RooFit::Extended()));
 
     /// work-around in case of an empty dataset (TO DO: need a debug in RooFit?)
     bool bIsEmpty = false;
     if (bData==NULL) {
       bIsEmpty = true;
       // if ( _verbose ) std::cout << "empty B-only dataset!\n";
-      RooDataSet* bDataDummy=new RooDataSet("bDataDummy","empty dataset",_observables);
-      bData = static_cast<RooTreeData*>(new RooDataHist ("bDataEmpty","",_observables,*bDataDummy));
+      RooDataSet* bDataDummy=new RooDataSet("bDataDummy","empty dataset",fObservables);
+      bData = static_cast<RooTreeData*>(new RooDataHist ("bDataEmpty","",fObservables,*bDataDummy));
       delete bDataDummy;
     }
 
@@ -180,7 +180,7 @@ void HybridCalculator::RunToys(unsigned int nToys, bool usePriors)
     /// TO DO: add test statistics index variable
 
     /// evaluate the test statistic in the S+B case
-    if ( _testStatisticsIdx==2 ) {
+    if ( fTestStatisticsIdx==2 ) {
       /// number of events used as test statistics
       int nEvents = 0;
       if ( !sbIsEmpty ) sbData->numEntries();
@@ -189,8 +189,8 @@ void HybridCalculator::RunToys(unsigned int nToys, bool usePriors)
       // sb_vals.push_back(m2lnQ);
     } else {
       /// likelihood ratio used as test statistics (default)
-      RooNLLVar sb_sb_nll("sb_sb_nll","sb_sb_nll",_sbModel,*sbData,RooFit::Extended());
-      RooNLLVar b_sb_nll("b_sb_nll","b_sb_nll",_bModel,*sbData,RooFit::Extended());
+      RooNLLVar sb_sb_nll("sb_sb_nll","sb_sb_nll",fSbModel,*sbData,RooFit::Extended());
+      RooNLLVar b_sb_nll("b_sb_nll","b_sb_nll",fBModel,*sbData,RooFit::Extended());
       double m2lnQ = 2*(sb_sb_nll.getVal()-b_sb_nll.getVal());
       /// TO DO: store it somewhere!!!
       std::cout << m2lnQ << std::endl; // for the warnings
@@ -198,7 +198,7 @@ void HybridCalculator::RunToys(unsigned int nToys, bool usePriors)
     }
 
     /// evaluate the test statistic in the B-only case
-    if ( _testStatisticsIdx==2 ) {
+    if ( fTestStatisticsIdx==2 ) {
       /// number of events used as test statistics
       int nEvents = 0;
       if ( !bIsEmpty ) bData->numEntries();
@@ -207,8 +207,8 @@ void HybridCalculator::RunToys(unsigned int nToys, bool usePriors)
       // b_vals.push_back(m2lnQ);
     } else {
       /// likelihood ratio used as test statistics (default)
-      RooNLLVar sb_b_nll("sb_b_nll","sb_b_nll",_sbModel,*bData,RooFit::Extended());
-      RooNLLVar b_b_nll("b_b_nll","b_b_nll",_bModel,*bData,RooFit::Extended());
+      RooNLLVar sb_b_nll("sb_b_nll","sb_b_nll",fSbModel,*bData,RooFit::Extended());
+      RooNLLVar b_b_nll("b_b_nll","b_b_nll",fBModel,*bData,RooFit::Extended());
       double m2lnQ = 2*(sb_b_nll.getVal()-b_b_nll.getVal());
       /// TO DO: store it somewhere!!!
       std::cout << m2lnQ << std::endl; // for the warnings
@@ -240,19 +240,19 @@ void HybridCalculator::Print(const char* options)
   /// Print out some information about the input models
 
   std::cout << "Signal plus background model:\n";
-  _sbModel.Print(options);
+  fSbModel.Print(options);
 
   std::cout << "\nBackground model:\n";
-  _bModel.Print(options);
+  fBModel.Print(options);
 
   std::cout << "\nObservables:\n";
-  _observables.Print(options);
+  fObservables.Print(options);
 
   std::cout << "\nParameters being integrated:\n";
-  _parameters.Print(options);
+  fParameters.Print(options);
 
   std::cout << "\nPrior PDF model for integration:\n";
-  _priorPdf.Print(options);
+  fPriorPdf.Print(options);
 
   return;
 }
