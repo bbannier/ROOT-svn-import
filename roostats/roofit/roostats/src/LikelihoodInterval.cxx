@@ -59,6 +59,7 @@ END_HTML
 #include "RooAbsReal.h"
 #include "RooMsgService.h"
 #include "RooStats/RooStatsUtils.h"
+#include <string>
 
 // Without this macro the THtml doc for TMath can not be generated
 #if !defined(R__ALPHA) && !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
@@ -90,19 +91,21 @@ LikelihoodInterval::LikelihoodInterval(const char* name, const char* title) :
 }
 
 //____________________________________________________________________
-LikelihoodInterval::LikelihoodInterval(const char* name, RooAbsReal* lr) :
+LikelihoodInterval::LikelihoodInterval(const char* name, RooAbsReal* lr, RooArgSet* params) :
   ConfInterval(name,name)
 {
   // Alternate constructor
   fLikelihoodRatio = lr;
+  fParameters = params;
 }
 
 //____________________________________________________________________
-LikelihoodInterval::LikelihoodInterval(const char* name, const char* title, RooAbsReal* lr) :
+LikelihoodInterval::LikelihoodInterval(const char* name, const char* title, RooAbsReal* lr, RooArgSet* params) :
   ConfInterval(name,title)
 {
   // Alternate constructor
   fLikelihoodRatio = lr;
+  fParameters = params;
 }
 
 //____________________________________________________________________
@@ -121,8 +124,10 @@ Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint)
 
   RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
   // Method to determine if a parameter point is in the interval
-  if( !this->CheckParameters(parameterPoint) )
+  if( !this->CheckParameters(parameterPoint) ) {
+    std::cout << "parameters don't match" << std::endl;
     return false; 
+  }
 
   // make sure likelihood ratio is set
   if(!fLikelihoodRatio) {
@@ -149,6 +154,30 @@ Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint)
   return true;
   
 }
+
+//____________________________________________________________________
+RooArgSet* LikelihoodInterval::GetParameters() const
+{  
+  // returns list of parameters
+  return (RooArgSet*) fParameters->clone((std::string(fParameters->GetName())+"_clone").c_str());
+}
+
+//____________________________________________________________________
+Bool_t LikelihoodInterval::CheckParameters(RooArgSet &parameterPoint) const
+{  
+  // check that the parameters are correct
+
+  if (parameterPoint.getSize() != fParameters->getSize() ) {
+    std::cout << "size is wrong, parameters don't match" << std::endl;
+    return false;
+  }
+  if ( ! parameterPoint.equals( *fParameters ) ) {
+    std::cout << "size is ok, but parameters don't match" << std::endl;
+    return false;
+  }
+  return true;
+}
+
 
 /* Not complete.  Add a binary search to get lower/upper limit for a given parameter.
 Need to be careful because of a few issues:
