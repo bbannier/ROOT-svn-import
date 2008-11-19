@@ -51,7 +51,12 @@ namespace RooStats {
   class HypoTestCalculator {
   public:
 
-     virtual ~HypoTestCalculator() {}
+    // Concrete implementations should have a constructor like: 
+    // HypoTestCalculator(RooWorkspace*, RooAbsData*,RooAbsPdf*, RooAbsPdf*, RooArgSet*, RooArgSet*) 
+    // Concrete implementations should have a constructor like: 
+    // HypoTestCalculator(RooAbsData*,RooAbsPdf*, RooAbsPdf*, RooArgSet*, RooArgSet*) 
+
+    virtual ~HypoTestCalculator() {}
     
     // main interface to get a HypoTestResult, pure virtual
     virtual HypoTestResult* GetHypoTest() const = 0;   
