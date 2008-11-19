@@ -15,6 +15,7 @@
 #include "RooStats/HypoTestResult.h"
 #include "RooAbsPdf.h"
 #include "RooArgSet.h"
+#include "RooWorkspace.h"
 
 //_________________________________________________
 /*
