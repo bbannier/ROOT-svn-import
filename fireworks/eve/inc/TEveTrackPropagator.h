@@ -203,6 +203,10 @@ public:
                        TEveMagField* field=0);
    virtual ~TEveTrackPropagator();
 
+   virtual void OnZeroRefCount();
+
+   virtual void CheckReferenceCount(const TEveException& eh="TEveElement::CheckReferenceCount ");
+
    virtual void ElementChanged(Bool_t update_scenes=kTRUE, Bool_t redraw=kFALSE);
 
    // propagation

@@ -191,6 +191,26 @@ TEveTrackPropagator::~TEveTrackPropagator()
 }
 
 //______________________________________________________________________________
+void TEveTrackPropagator::OnZeroRefCount()
+{
+   // Virtual from TEveRefBackPtr - track reference count has reached zero.
+
+   CheckReferenceCount("TEveTrackPropagator::OnZeroRefCount ");
+}
+
+//______________________________________________________________________________
+void TEveTrackPropagator::CheckReferenceCount(const TEveException& eh)
+{
+   // Check reference count - virtual from TEveElement.
+   // Must also take into account references from TEveRefBackPtr.
+
+   if (fRefCount <= 0)
+   {
+      TEveElementList::CheckReferenceCount(eh);
+   }
+}
+
+//______________________________________________________________________________
 void TEveTrackPropagator::ElementChanged(Bool_t update_scenes, Bool_t redraw)
 {
    // Element-change notification.
