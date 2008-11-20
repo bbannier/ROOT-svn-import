@@ -236,7 +236,7 @@ void TEveCaloLegoGL::MakeDisplayList() const
 {
    // Create display-list that draws histogram bars.
    // It is used for filled and outline passes.
-  
+
    if (fBinStep>1)
    {
       Int_t nSlices = fM->fData->GetNSlices();
@@ -315,7 +315,7 @@ void TEveCaloLegoGL::MakeDisplayList() const
          }
          glEndList();
       }
-   }  
+   }
    fDLCacheOK=kTRUE;
 }
 
@@ -937,7 +937,7 @@ void TEveCaloLegoGL::DrawCells2D() const
          {
             Float_t *val = fRebinData.GetSliceVals(bin);
             for (Int_t s=0; s<fRebinData.fNSlices; ++s)
-            { 
+            {
                ssum += val[s];
                if (fM->fTopViewUseMaxColor && val[s] > max_e[bin])
                {
@@ -1026,7 +1026,7 @@ void TEveCaloLegoGL::DrawCells2D() const
          }
       }
    }
-   
+
    if (fM->f2DMode == TEveCaloLego::kValSize)
    {
       TGLUtil::Color(defCol);
@@ -1086,7 +1086,7 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
    SetAxis(fM->fData->GetPhiBins(), fPhiAxis);
 
    // cache ids
-   Bool_t idCacheChanged = kFALSE; 
+   Bool_t idCacheChanged = kFALSE;
    if (fM->fCellIdCacheOK == kFALSE)
    {
       fM->BuildCellIdCache();
@@ -1102,7 +1102,7 @@ void TEveCaloLegoGL::DirectDraw(TGLRnrCtx & rnrCtx) const
       fRebinData.fSliceData.clear();
 
       if (fBinStep > 1)
-      {  
+      {
          fM->fData->Rebin(fEtaAxis, fPhiAxis, fM->fCellList, fM->fPlotEt, fRebinData);
          if (fM->fNormalizeRebin)
          {
@@ -1187,8 +1187,8 @@ void TEveCaloLegoGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & 
       fM->fData->GetCellData(fM->fCellList[cellID], cellData);
 
       if (fCells3D)
-      {        
-         printf("Bin %d selected in slice %d val %f\n", 
+      {
+         printf("Bin %d selected in slice %d val %f\n",
                 fM->fCellList[cellID].fTower,
                 fM->fCellList[cellID].fSlice, cellData.fValue);
       }
@@ -1197,7 +1197,7 @@ void TEveCaloLegoGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & 
          printf("Bin %d selected\n",fM->fCellList[cellID].fTower);
       }
    }
-   else 
+   else
    {
       if (fCells3D)
       {
@@ -1205,7 +1205,7 @@ void TEveCaloLegoGL::ProcessSelection(TGLRnrCtx & /*rnrCtx*/, TGLSelectRecord & 
          Int_t s = rec.GetItem(1);
          printf("Rebined bin %d selected in slice %d val %f\n", rec.GetItem(2), s, v[s]);
       }
-      else 
+      else
       {
          Float_t* v = fRebinData.GetSliceVals(rec.GetItem(1));
          printf("Rebined bin %d selected\n",rec.GetItem(1));

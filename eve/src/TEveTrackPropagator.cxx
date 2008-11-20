@@ -89,7 +89,7 @@ void TEveTrackPropagator::Helix_t::Step(const TEveVector4& v, const TEveVector& 
 {
    // Step helix for given momentum p from vertex v.
 
-   vOut = v; 
+   vOut = v;
 
    if (fValid)
    {
@@ -259,7 +259,7 @@ void TEveTrackPropagator::ResetTrack()
 Bool_t TEveTrackPropagator::GoToVertex(TEveVector& v, TEveVector& p)
 {
    // Propagate particle with momentum p to vertex v.
-  
+
    fH.Update(p, fMagFieldObj->GetField(fV), kTRUE);
 
    Bool_t hit;
@@ -384,7 +384,7 @@ Bool_t TEveTrackPropagator::HelixToVertex(TEveVector& v, TEveVector& p)
    {
       StepHelix(currV, p, forwV, forwP);
 
-      if (IsOutsideBounds(forwV, maxRsq, fMaxZ)) 
+      if (IsOutsideBounds(forwV, maxRsq, fMaxZ))
       {
          hitBounds = kTRUE;
          TEveVector d = v-forwV;
