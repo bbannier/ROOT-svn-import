@@ -112,6 +112,10 @@ bool testIntegerRebinNoName()
       h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
 
    return equals("TestIntRebinNoName", h2, h3, cmpOptStats);
+
+   // This method fails because the Chi2Test is different of 1 for
+   // both of them. We need to look into both the Rebin method and the
+   // Chi2Test method to understand better what is going wrong.
 }
 
 bool testArrayRebin()
