@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: RooStatsUtils.h 25832 2008-10-15 16:27:15Z cranmer $
+// @(#)root/roostats:$Id$
 // Author: Kyle Cranmer   28/07/2008
 
 /*************************************************************************
