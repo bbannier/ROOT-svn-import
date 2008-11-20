@@ -34,7 +34,7 @@ namespace RooStats {
   // returns p-value corresponding to a 1-sided significance
   inline Double_t SignificanceToPValue(Double_t Z){
     //    return .5*TMath::Erfc( Z /sqrt(2.));
-    return ROOT::Math::normal_cdf_c(Z);
+    return ::ROOT::Math::normal_cdf_c(Z);
   }
 
 
