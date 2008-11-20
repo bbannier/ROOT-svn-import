@@ -20,30 +20,31 @@
 #include "Rtypes.h"
 
 namespace RooStats{
-  namespace  NumberCountingUtils {
 
-  ///////////////////////////////////
-  // Standalone Functions.
-  // Naming conventions:
-  //  Exp = Expected
-  //  Obs = Observed
-  //  P   = p-value
-  //  Z   = Z-value or significance in Sigma (one-sided convention)
-  //////////////////////////////////
+   namespace  NumberCountingUtils {
+
+      ///////////////////////////////////
+      // Standalone Functions.
+      // Naming conventions:
+      //  Exp = Expected
+      //  Obs = Observed
+      //  P   = p-value
+      //  Z   = Z-value or significance in Sigma (one-sided convention)
+      //////////////////////////////////
 
   
-  Double_t BinomialExpZ(Double_t, Double_t, Double_t);
-  Double_t BinomialWithTauExpZ(Double_t, Double_t, Double_t);   
-  Double_t BinomialObsZ(Double_t, Double_t, Double_t);
-  Double_t BinomialWithTauObsZ(Double_t, Double_t, Double_t);
+      Double_t BinomialExpZ(Double_t, Double_t, Double_t);
+      Double_t BinomialWithTauExpZ(Double_t, Double_t, Double_t);   
+      Double_t BinomialObsZ(Double_t, Double_t, Double_t);
+      Double_t BinomialWithTauObsZ(Double_t, Double_t, Double_t);
 
-  Double_t BinomialExpP(Double_t, Double_t, Double_t);
-  Double_t BinomialWithTauExpP(Double_t, Double_t, Double_t);
-  Double_t BinomialObsP(Double_t, Double_t, Double_t);
-  Double_t BinomialWithTauObsP(Double_t, Double_t, Double_t);
+      Double_t BinomialExpP(Double_t, Double_t, Double_t);
+      Double_t BinomialWithTauExpP(Double_t, Double_t, Double_t);
+      Double_t BinomialObsP(Double_t, Double_t, Double_t);
+      Double_t BinomialWithTauObsP(Double_t, Double_t, Double_t);
+      
 
-
-  }
+   }
 }
 
 #endif
