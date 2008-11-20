@@ -103,7 +103,7 @@ HybridPlot::HybridPlot(const char* name,
    fData_m2lnQ_line->SetLineColor(kBlack);
 
    // The legend
-   double golden_section=(std::sqrt(5)-1)/2;
+   double golden_section=(std::sqrt(5.)-1)/2;
 
    fLegend = new TLegend(0.75,0.95-0.2*golden_section,0.95,0.95);
    TString title_leg="-2lnQ distributions ";
