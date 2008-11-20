@@ -621,17 +621,65 @@ bool testMul3D2()
    return ret;
 }
 
+bool testDivide1() 
+{
+   Double_t c1 = 1;//r.Rndm();
+   Double_t c2 = 1;//r.Rndm();
+
+   TH1D* h1 = new TH1D("d1D1-h1", "h1-Title", nbins, minRange, maxRange);
+   TH1D* h2 = new TH1D("d1D1-h2", "h2-Title", nbins, minRange, maxRange);
+
+   h1->Sumw2();h2->Sumw2();
+
+   UInt_t seed = r.GetSeed();
+   // For possible problems
+   r.SetSeed(seed);
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value;
+      value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value, 1);
+      value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(value,  1);
+   }
+
+   TH1D* h3 = new TH1D("d1D1-h3", "h3=(c1*h1)/(c2*h2)", nbins, minRange, maxRange);
+   h3->Divide(h1, h2, c1, c2);
+      
+   TH1D* h4 = new TH1D("d1D1-h4", "h4=h3*h2)", nbins, minRange, maxRange);
+   h4->Multiply(h2, h3, 1, 1);
+   for ( Int_t bin = 0; bin <= h4->GetNbinsX() + 1; ++bin ) {
+      Double_t error = h1->GetBinError(bin) * h1->GetBinError(bin);
+      error += 2 * h3->GetBinContent(bin)*h3->GetBinContent(bin)*h3->GetBinError(bin)*h3->GetBinError(bin);
+      h4->SetBinError( bin, sqrt(error) );
+   }
+   cout << h2 << endl;
+   cout << h3 << endl;
+
+   return equals("Divide1D1", h1, h4, cmpOptStats | cmpOptDebug, 1E-13);
+}
+
 bool stressAdd()
 {
    r.SetSeed(time(0));
    typedef bool (*pointer2Test)();
-   const unsigned int numberOfTests = 12;
+   const unsigned int numberOfTests = 13;
    pointer2Test testPointer[numberOfTests] = {  testAdd1,   testAdd2, 
                                                 testAdd2D1, testAdd2D2,
                                                 testAdd3D1, testAdd3D2, 
                                                 testMul1,   testMul2,
                                                 testMul2D1, testMul2D2,
-                                                testMul3D1, testMul3D2 };
+                                                testMul3D1, testMul3D2, 
+                                                testDivide1 };
+
+   // Still to do: testDivide2, testDivide2D1, testDivide2D2 and
+   // testDivide3D1, testDivide3D2. 
+
+   // It depends on whether we can solve the problem with the 1D test
+   // already done. It seems like there is something wrong with the
+   // way the errors are being calculated. We have a formula to
+   // calculate it by hand. Nevertheless the Divide method errors and
+   // the ones calculated by ourselves differ a bit from those (in the
+   // order of 1E-1).
    
    bool status = false;
    for ( unsigned int i = 0; i < numberOfTests; ++i )
