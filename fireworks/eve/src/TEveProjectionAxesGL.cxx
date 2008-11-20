@@ -364,12 +364,12 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    if (fM->fAxesMode == TEveProjectionAxes::kAll ||
        fM->fAxesMode == TEveProjectionAxes::kHorizontal)
    {
-     
+
       Float_t dtw  = (r-l)/vp[2]; // delta to viewport
       Int_t   nLab = (rngX < rngY ) ? TMath::FloorNint(fM->GetNdivisions()/100) :
                                       TMath::CeilNint((fM->GetNdivisions()*rngX)/(rngY*100));
       SplitInterval(startX, endX, 0, nLab);
- 
+
       Float_t vOff = dtw*minPix;
       Float_t tms  = (t-b)*rtm;
       if (tms < vOff) tms = vOff;
@@ -414,7 +414,7 @@ void TEveProjectionAxesGL::DirectDraw(TGLRnrCtx& rnrCtx) const
    // projection center and origin marker
    Float_t d = ((r-l) > (b-t)) ? (b-t) : (r-l);
    d *= 0.02f;
-   if (fM->GetDrawCenter()) 
+   if (fM->GetDrawCenter())
    {
       Float_t* c = fProjection->GetProjectedCenter();
       TGLUtil::Color3f(1., 0., 0.);

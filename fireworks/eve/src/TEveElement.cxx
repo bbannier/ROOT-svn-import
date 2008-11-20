@@ -575,8 +575,8 @@ void TEveElement::CheckReferenceCount(const TEveException& eh)
    // Check external references to this and eventually auto-destruct
    // the render-element.
 
-   if(NumParents() <= fParentIgnoreCnt && fTopItemCnt  <= 0 &&
-      fDestroyOnZeroRefCnt             && fDenyDestroy <= 0)
+   if (NumParents() <= fParentIgnoreCnt && fTopItemCnt  <= 0 &&
+       fDestroyOnZeroRefCnt             && fDenyDestroy <= 0)
    {
       if (gEve->GetUseOrphanage())
       {
@@ -605,7 +605,7 @@ void TEveElement::CollectSceneParents(List_t& scenes)
    //
    // Overriden in TEveScene to include itself and return.
 
-   for(List_i p=fParents.begin(); p!=fParents.end(); ++p)
+   for (List_i p=fParents.begin(); p!=fParents.end(); ++p)
       (*p)->CollectSceneParents(scenes);
 }
 
@@ -776,7 +776,7 @@ Int_t TEveElement::RemoveFromListTrees(TEveElement* parent)
          j->fTree->ClearViewPort();
          fItems.erase(j);
          if (parent == 0)
-            --fTopItemCnt;            
+            --fTopItemCnt;
          ++count;
       }
    }
@@ -1649,7 +1649,7 @@ TObject* TEveElementObjectPtr::GetObject(const TEveException& eh) const
    // Return external object.
    // Virtual from TEveElement.
 
-   if(fObject == 0)
+   if (fObject == 0)
       throw(eh + "fObject not set.");
    return fObject;
 }
@@ -1672,7 +1672,7 @@ TEveElementObjectPtr::~TEveElementObjectPtr()
 {
    // Destructor.
 
-   if(fOwnObject)
+   if (fOwnObject)
       delete fObject;
 }
 
@@ -1705,7 +1705,7 @@ TEveElementList::TEveElementList(const Text_t* n, const Text_t* t, Bool_t doColo
 {
    // Constructor.
 
-   if(fDoColor) {
+   if (fDoColor) {
       SetMainColorPtr(&fColor);
    }
 }

@@ -194,7 +194,7 @@ void TEveSceneList::DestroyScenes()
       TEveScene* s = (TEveScene*) *(i++);
       s->DestroyElements();
       s->DestroyOrWarn();
-   } 
+   }
 }
 
 /******************************************************************************/
