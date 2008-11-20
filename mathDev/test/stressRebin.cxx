@@ -14,8 +14,6 @@
 const unsigned int __DRAW__ = 1;
 //#define __DEBUG__ 1
 
-const unsigned int numberOfTests = 4;
-
 const Double_t minRange = 1;
 const Double_t maxRange = 5;
 
@@ -184,16 +182,6 @@ bool test2DRebin()
    r.SetSeed(seed);
    for ( Int_t i = 0; i < nEvents; ++i )
       h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ), r.Uniform( minRange * .9 , maxRange * 1.1 ) );
-//    for ( Int_t x = 1; x <= h3->GetNbinsX(); ++x ) {
-//       for ( Int_t y = 1; y <= h3->GetNbinsY(); ++y ) {
-//          Double_t sum = 0;
-//          for ( Int_t j = 0; j < xrebin; ++j )
-//             for ( Int_t i = 0; i < yrebin; ++i )
-//                sum += h2d->GetBinContent(xrebin * x - j, yrebin * y - i);
-//          // With TH1D::Fill method, it fails :S
-//          h3->SetBinContent(x, y, sum);
-//       }
-//    }
 
    return equals("TestIntRebin2D", h2d2, h3, cmpOptStats);
 }
@@ -201,6 +189,7 @@ bool test2DRebin()
 bool stressRebin()
 {
    typedef bool (*pointer2Test)();
+   const unsigned int numberOfTests = 4;
    pointer2Test testPointer[numberOfTests] = { testIntegerRebin, 
                                                testIntegerRebinNoName,
                                                testArrayRebin,
