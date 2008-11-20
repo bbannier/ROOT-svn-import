@@ -38,6 +38,7 @@ HybridPlot::HybridPlot(const char* name,
    fB_histo_shaded(NULL),
    fVerbose(verbosity)
 {
+   // constructor
 
    // Get the max and the min of the plots
    int n_toys=sb_vals.size();
@@ -120,6 +121,7 @@ HybridPlot::HybridPlot(const char* name,
 /*----------------------------------------------------------------------------*/
 
 HybridPlot::~HybridPlot(){
+   // destructor 
 
    if (fSb_histo)
       delete fSb_histo;
@@ -137,12 +139,13 @@ HybridPlot::~HybridPlot(){
 /*----------------------------------------------------------------------------*/
 
 void HybridPlot::Draw(const char* options){
+   // draw on canvas
 
    SetCanvas(new TCanvas(GetName(),GetTitle()));
    GetCanvas()->cd();
    GetCanvas()->Draw(options);
 
-   // We don't want the statistics of teh histos
+   // We don't want the statistics of the histos
    gStyle->SetOptStat(0);
 
    // The histos
@@ -201,6 +204,7 @@ void HybridPlot::Draw(const char* options){
 /*----------------------------------------------------------------------------*/
 
 void HybridPlot::DumpToFile (const char* RootFileName, const char* options){
+   // All the objects are written to rootfile
 
    TFile ofile(RootFileName,options);
    ofile.cd();
@@ -239,7 +243,8 @@ void HybridPlot::DumpToFile (const char* RootFileName, const char* options){
    the skewness of the distribution.
 **/
 double HybridPlot::GetHistoCenter(TH1* histo_orig, double n_rms, bool display_result){
-
+   // Get the center of the histo
+   
    TCanvas* c = new TCanvas();
    c->cd();
 

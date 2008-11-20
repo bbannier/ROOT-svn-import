@@ -166,7 +166,8 @@ namespace RooStats {
       TCanvas* fCanvas;
 
       // For Cint
-      ClassDef(HybridPlot,1) 
+      ClassDef(HybridPlot,1)   // Provides the plots for an HybridResult
+
    };
 }
 
