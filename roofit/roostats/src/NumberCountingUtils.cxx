@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id$
+// @(#)root/roostats:$Id: NumberCountingUtils.cxx 26279 2008-11-18 22:15:02Z cranmer $
 // Author: Kyle Cranmer   28/07/2008
 
 /*************************************************************************
@@ -31,11 +31,11 @@
 #include "RooStats/RooStatsUtils.h"
 #endif
 
-// Without this macro the THtml doc  can not be generated
-#if !defined(R__ALPHA) && !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
-NamespaceImp(RooStats)
-//NamespaceImp(NumberCountingUtils)
-#endif
+// // Without this macro the THtml doc  can not be generated
+// #if !defined(R__ALPHA) && !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
+// NamespaceImp(RooStats)
+// //NamespaceImp(NumberCountingUtils)
+// #endif
 
 //using namespace RooStats;
 

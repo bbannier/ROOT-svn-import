@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: ProfileLikelihoodCalculator.h 24970 2008-10-10  $
+// @(#)root/roostats:$Id$
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -11,33 +11,35 @@
 #ifndef ROOSTATS_ProfileLikelihoodCalculator
 #define ROOSTATS_ProfileLikelihoodCalculator
 
+#ifndef ROOSTATS_CombinedCalculator
 #include "RooStats/CombinedCalculator.h"
-#include "RooAbsPdf.h"
-#include "RooArgSet.h"
+#endif
+
 
 namespace RooStats {
- class ProfileLikelihoodCalculator : public CombinedCalculator {
-  public:
-    ProfileLikelihoodCalculator();
 
-    ProfileLikelihoodCalculator(RooWorkspace* ws, RooAbsData* data, RooAbsPdf* pdf, RooArgSet* paramsOfInterest, 
-				Double_t size = 0.05, RooArgSet* nullParams = 0, RooArgSet* altParams = 0);
+   class ProfileLikelihoodCalculator : public CombinedCalculator {
+   public:
+      ProfileLikelihoodCalculator();
 
-    ProfileLikelihoodCalculator(RooAbsData* data, RooAbsPdf* pdf, RooArgSet* paramsOfInterest, 
-				Double_t size = 0.05, RooArgSet* nullParams = 0, RooArgSet* altParams = 0);
+      ProfileLikelihoodCalculator(RooWorkspace* ws, RooAbsData* data, RooAbsPdf* pdf, RooArgSet* paramsOfInterest, 
+                                  Double_t size = 0.05, RooArgSet* nullParams = 0, RooArgSet* altParams = 0);
+
+      ProfileLikelihoodCalculator(RooAbsData* data, RooAbsPdf* pdf, RooArgSet* paramsOfInterest, 
+                                  Double_t size = 0.05, RooArgSet* nullParams = 0, RooArgSet* altParams = 0);
 
 
 
-    virtual ~ProfileLikelihoodCalculator();
+      virtual ~ProfileLikelihoodCalculator();
     
-    // main interface, implemented
-    virtual ConfInterval* GetInterval() const ; 
-    // main interface, implemented
-    virtual HypoTestResult* GetHypoTest() const;   
+      // main interface, implemented
+      virtual ConfInterval* GetInterval() const ; 
+      // main interface, implemented
+      virtual HypoTestResult* GetHypoTest() const;   
     
 
-  protected:
-    ClassDef(ProfileLikelihoodCalculator,1) // A concrete implementation of CombinedCalculator that uses the ProfileLikelihood ratio.
-  };
+   protected:
+      ClassDef(ProfileLikelihoodCalculator,1) // A concrete implementation of CombinedCalculator that uses the ProfileLikelihood ratio.
+   };
 }
 #endif

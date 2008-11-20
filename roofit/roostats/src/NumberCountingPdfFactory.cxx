@@ -53,15 +53,10 @@ END_HTML
 #include "RooPoisson.h"
 #include "RooGlobalFunc.h"
 #include "RooCmdArg.h"
+#include "RooWorkspace.h"
 #include "TTree.h"
 #include <sstream>
 
-
-// Without this macro the THtml doc  can not be generated
-#if !defined(R__ALPHA) && !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
-NamespaceImp(RooStats)
-//NamespaceImp(NumberCountingUtils)
-#endif
 
 
 ClassImp(RooStats::NumberCountingPdfFactory) ;
@@ -73,13 +68,13 @@ using namespace RooFit;
 
 //_______________________________________________________
 NumberCountingPdfFactory::NumberCountingPdfFactory() {
-  // constructor
+   // constructor
 
 }
 
 //_______________________________________________________
 NumberCountingPdfFactory::~NumberCountingPdfFactory(){
-  // destructor
+   // destructor
 }
 
 //_______________________________________________________
@@ -95,66 +90,66 @@ void NumberCountingPdfFactory::AddModel(Double_t* sig,
 //
 // For the future, perhaps this method should be extended to include the efficiency terms automatically.
 
-  using namespace RooFit;
-  using std::vector;
+   using namespace RooFit;
+   using std::vector;
 
-  TList likelihoodFactors;
+   TList likelihoodFactors;
 
-  //  Double_t MaxSigma = 8; // Needed to set ranges for varaibles.
+   //  Double_t MaxSigma = 8; // Needed to set ranges for varaibles.
 
-  RooRealVar*   masterSignal = 
-    new RooRealVar(muName,"masterSignal",1., 0., 3.);
-
-
-  // loop over individual channels
-  for(Int_t i=0; i<nbins; ++i){
-    // need to name the variables dynamically, so please forgive the string manipulation and focus on values & ranges.
-    std::stringstream str;
-    str<<"_"<<i;
-    RooRealVar*   expectedSignal = 
-      new RooRealVar(("expected_s"+str.str()).c_str(),("expected_s"+str.str()).c_str(),sig[i], 0., 2*sig[i]);
-    expectedSignal->setConstant(kTRUE);
-
-    RooProduct*   s = 
-      new RooProduct(("s"+str.str()).c_str(),("s"+str.str()).c_str(), RooArgSet(*masterSignal, *expectedSignal)); 
-
-    RooRealVar*   b = 
-      new RooRealVar(("b"+str.str()).c_str(),("b"+str.str()).c_str(), .5,  0.,1.);
-    RooRealVar*  tau = 
-      new RooRealVar(("tau"+str.str()).c_str(),("tau"+str.str()).c_str(), .5, 0., 1.); 
-    tau->setConstant(kTRUE);
-
-    RooAddition*  splusb = 
-      new RooAddition(("splusb"+str.str()).c_str(),("s"+str.str()+"+"+"b"+str.str()).c_str(),   
-		      RooArgSet(*s,*b)); 
-    RooProduct*   bTau = 
-      new RooProduct(("bTau"+str.str()).c_str(),("b*tau"+str.str()).c_str(),   RooArgSet(*b, *tau)); 
-    RooRealVar*   x = 
-      new RooRealVar(("x"+str.str()).c_str(),("x"+str.str()).c_str(),  0.5 , 0., 1.);
-    RooRealVar*   y = 
-      new RooRealVar(("y"+str.str()).c_str(),("y"+str.str()).c_str(),  0.5,  0., 1.);
+   RooRealVar*   masterSignal = 
+      new RooRealVar(muName,"masterSignal",1., 0., 3.);
 
 
-    RooPoisson* sigRegion = 
-      new RooPoisson(("sigRegion"+str.str()).c_str(),("sigRegion"+str.str()).c_str(), *x,*splusb);
-    RooPoisson* sideband = 
-      new RooPoisson(("sideband"+str.str()).c_str(),("sideband"+str.str()).c_str(), *y,*bTau);
+   // loop over individual channels
+   for(Int_t i=0; i<nbins; ++i){
+      // need to name the variables dynamically, so please forgive the string manipulation and focus on values & ranges.
+      std::stringstream str;
+      str<<"_"<<i;
+      RooRealVar*   expectedSignal = 
+         new RooRealVar(("expected_s"+str.str()).c_str(),("expected_s"+str.str()).c_str(),sig[i], 0., 2*sig[i]);
+      expectedSignal->setConstant(kTRUE);
 
-    likelihoodFactors.Add(sigRegion);
-    likelihoodFactors.Add(sideband);
+      RooProduct*   s = 
+         new RooProduct(("s"+str.str()).c_str(),("s"+str.str()).c_str(), RooArgSet(*masterSignal, *expectedSignal)); 
+
+      RooRealVar*   b = 
+         new RooRealVar(("b"+str.str()).c_str(),("b"+str.str()).c_str(), .5,  0.,1.);
+      RooRealVar*  tau = 
+         new RooRealVar(("tau"+str.str()).c_str(),("tau"+str.str()).c_str(), .5, 0., 1.); 
+      tau->setConstant(kTRUE);
+
+      RooAddition*  splusb = 
+         new RooAddition(("splusb"+str.str()).c_str(),("s"+str.str()+"+"+"b"+str.str()).c_str(),   
+                         RooArgSet(*s,*b)); 
+      RooProduct*   bTau = 
+         new RooProduct(("bTau"+str.str()).c_str(),("b*tau"+str.str()).c_str(),   RooArgSet(*b, *tau)); 
+      RooRealVar*   x = 
+         new RooRealVar(("x"+str.str()).c_str(),("x"+str.str()).c_str(),  0.5 , 0., 1.);
+      RooRealVar*   y = 
+         new RooRealVar(("y"+str.str()).c_str(),("y"+str.str()).c_str(),  0.5,  0., 1.);
+
+
+      RooPoisson* sigRegion = 
+         new RooPoisson(("sigRegion"+str.str()).c_str(),("sigRegion"+str.str()).c_str(), *x,*splusb);
+      RooPoisson* sideband = 
+         new RooPoisson(("sideband"+str.str()).c_str(),("sideband"+str.str()).c_str(), *y,*bTau);
+
+      likelihoodFactors.Add(sigRegion);
+      likelihoodFactors.Add(sideband);
     
-  }
+   }
 
-  RooArgSet likelihoodFactorSet(likelihoodFactors);
-  RooProdPdf joint(pdfName,"joint", likelihoodFactorSet );
-  //  joint.printCompactTree();
+   RooArgSet likelihoodFactorSet(likelihoodFactors);
+   RooProdPdf joint(pdfName,"joint", likelihoodFactorSet );
+   //  joint.printCompactTree();
 
-  // add this PDF to workspace.  
-  // Need to do import into workspace now to get all the structure imported as well.
-  // Just returning the WS will loose the rest of the structure b/c it will go out of scope
-  RooMsgService::instance().setGlobalKillBelow(RooMsgService::ERROR) ;
-  ws->import(joint);
-  RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+   // add this PDF to workspace.  
+   // Need to do import into workspace now to get all the structure imported as well.
+   // Just returning the WS will loose the rest of the structure b/c it will go out of scope
+   RooMsgService::instance().setGlobalKillBelow(RooMsgService::ERROR) ;
+   ws->import(joint);
+   RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
 }
 
 //_______________________________________________________
@@ -164,215 +159,215 @@ void NumberCountingPdfFactory::AddExpData(Double_t* sig,
 					  Int_t nbins, 
 					  RooWorkspace* ws, const char* dsName) {
 
-  // Arguements are an array of expected signal, expected background, and relative 
-  // background uncertainty (eg. 0.1 for 10% uncertainty), and the number of channels.
+   // Arguements are an array of expected signal, expected background, and relative 
+   // background uncertainty (eg. 0.1 for 10% uncertainty), and the number of channels.
 
-  using std::vector;
-  Double_t* mainMeas = new Double_t[nbins];
+   using std::vector;
+   Double_t* mainMeas = new Double_t[nbins];
 
-  // loop over channels
-  for(Int_t i=0; i<nbins; ++i){
-    mainMeas[i] = sig[i] + back[i];
-  }
-  return AddData(mainMeas, back, back_syst, nbins, ws, dsName);
+   // loop over channels
+   for(Int_t i=0; i<nbins; ++i){
+      mainMeas[i] = sig[i] + back[i];
+   }
+   return AddData(mainMeas, back, back_syst, nbins, ws, dsName);
 }
 
 //_______________________________________________________
 void NumberCountingPdfFactory::AddExpDataWithSideband(Double_t* sigExp, 
-					  Double_t* backExp, 
-					  Double_t* tau, 
-					  Int_t nbins, 
-					  RooWorkspace* ws, const char* dsName) {
+                                                      Double_t* backExp, 
+                                                      Double_t* tau, 
+                                                      Int_t nbins, 
+                                                      RooWorkspace* ws, const char* dsName) {
 
-  // Arguements are an array of expected signal, expected background, and relative 
-  // ratio of background expected in the sideband to that expected in signal region, and the number of channels.
+   // Arguements are an array of expected signal, expected background, and relative 
+   // ratio of background expected in the sideband to that expected in signal region, and the number of channels.
 
-  Double_t* mainMeas = new Double_t[nbins];
-  Double_t* sideband = new Double_t[nbins];
-  for(Int_t i=0; i<nbins; ++i){
-    mainMeas[i] = sigExp[i] + backExp[i];
-    sideband[i] = backExp[i]*tau[i];
-  }
-  return AddDataWithSideband(mainMeas, sideband, tau, nbins, ws, dsName);
+   Double_t* mainMeas = new Double_t[nbins];
+   Double_t* sideband = new Double_t[nbins];
+   for(Int_t i=0; i<nbins; ++i){
+      mainMeas[i] = sigExp[i] + backExp[i];
+      sideband[i] = backExp[i]*tau[i];
+   }
+   return AddDataWithSideband(mainMeas, sideband, tau, nbins, ws, dsName);
 
 }
 
 //_______________________________________________________
 RooRealVar* NumberCountingPdfFactory::SafeObservableCreation(RooWorkspace* ws, const char* varName, Double_t value) {
-    // need to be careful here that the range of observable in the dataset is consistent with the one in the workspace
-    // don't rescale unless necessary.  If it is necessary, then rescale by x10 or a defined maximum.
+   // need to be careful here that the range of observable in the dataset is consistent with the one in the workspace
+   // don't rescale unless necessary.  If it is necessary, then rescale by x10 or a defined maximum.
 
-  return SafeObservableCreation(ws, varName, value, 10.*value);
+   return SafeObservableCreation(ws, varName, value, 10.*value);
 
 }
 
 //_______________________________________________________
 RooRealVar* NumberCountingPdfFactory::SafeObservableCreation(RooWorkspace* ws, const char* varName, 
 							     Double_t value, Double_t maximum) {
-    // need to be careful here that the range of observable in the dataset is consistent with the one in the workspace
-    // don't rescale unless necessary.  If it is necessary, then rescale by x10 or a defined maximum.
+   // need to be careful here that the range of observable in the dataset is consistent with the one in the workspace
+   // don't rescale unless necessary.  If it is necessary, then rescale by x10 or a defined maximum.
 
-    RooRealVar*   x = ws->var( varName );
-    if( !x )
+   RooRealVar*   x = ws->var( varName );
+   if( !x )
       x = new RooRealVar(varName, varName, value, 0, maximum );
-    if( x->getMax() < value )
+   if( x->getMax() < value )
       x->setMax( max(x->getMax(), 10*value ) );
-    x->setVal( value );
+   x->setVal( value );
 
-    return x;
+   return x;
 }
 
 
 //_______________________________________________________
 void NumberCountingPdfFactory::AddData(Double_t* mainMeas, 
-					  Double_t* back, 
-					  Double_t* back_syst, 
-					  Int_t nbins, 
-					  RooWorkspace* ws, const char* dsName) {
+                                       Double_t* back, 
+                                       Double_t* back_syst, 
+                                       Int_t nbins, 
+                                       RooWorkspace* ws, const char* dsName) {
 
-  // Arguments are an array of results from a main measurement, a measured background,
-  //  and relative background uncertainty (eg. 0.1 for 10% uncertainty), and the number of channels.
+   // Arguments are an array of results from a main measurement, a measured background,
+   //  and relative background uncertainty (eg. 0.1 for 10% uncertainty), and the number of channels.
 
-  using namespace RooFit;
-  using std::vector;
+   using namespace RooFit;
+   using std::vector;
 
-  Double_t MaxSigma = 8; // Needed to set ranges for varaibles.
+   Double_t MaxSigma = 8; // Needed to set ranges for varaibles.
 
-  TList observablesCollection;
+   TList observablesCollection;
 
-  TTree* tree = new TTree();
-  Double_t* xForTree = new Double_t[nbins];
-  Double_t* yForTree = new Double_t[nbins];
+   TTree* tree = new TTree();
+   Double_t* xForTree = new Double_t[nbins];
+   Double_t* yForTree = new Double_t[nbins];
 
-  // loop over channels
-  for(Int_t i=0; i<nbins; ++i){
-    std::stringstream str;
-    str<<"_"<<i;
+   // loop over channels
+   for(Int_t i=0; i<nbins; ++i){
+      std::stringstream str;
+      str<<"_"<<i;
 
-    Double_t _tau = 1./back[i]/back_syst[i]/back_syst[i];
-    RooRealVar*  tau = SafeObservableCreation(ws,  ("tau"+str.str()).c_str(), _tau );
+      Double_t _tau = 1./back[i]/back_syst[i]/back_syst[i];
+      RooRealVar*  tau = SafeObservableCreation(ws,  ("tau"+str.str()).c_str(), _tau );
 
-    cout << "\nWARNING: changed value of " << tau->GetName() << " to " << tau->getVal() << 
-      " to be consistent with background and its uncertainty. " <<
-      " Also stored these values of tau into workspace with name . " << (string(tau->GetName())+string(dsName)).c_str() <<
-      " if you test with a different dataset, you should adjust tau appropriately.\n"<< endl;
-    ws->import(*((RooRealVar*) tau->clone( (string(tau->GetName())+string(dsName)).c_str() ) ) );
+      cout << "\nWARNING: changed value of " << tau->GetName() << " to " << tau->getVal() << 
+         " to be consistent with background and its uncertainty. " <<
+         " Also stored these values of tau into workspace with name . " << (string(tau->GetName())+string(dsName)).c_str() <<
+         " if you test with a different dataset, you should adjust tau appropriately.\n"<< endl;
+      ws->import(*((RooRealVar*) tau->clone( (string(tau->GetName())+string(dsName)).c_str() ) ) );
 
-    // need to be careful
-    RooRealVar* x = SafeObservableCreation(ws, ("x"+str.str()).c_str(), mainMeas[i]);
+      // need to be careful
+      RooRealVar* x = SafeObservableCreation(ws, ("x"+str.str()).c_str(), mainMeas[i]);
     
-    // need to be careful
-    RooRealVar*   y = SafeObservableCreation(ws, ("y"+str.str()).c_str(), back[i]*_tau );
+      // need to be careful
+      RooRealVar*   y = SafeObservableCreation(ws, ("y"+str.str()).c_str(), back[i]*_tau );
 
-    observablesCollection.Add(x);
-    observablesCollection.Add(y);
+      observablesCollection.Add(x);
+      observablesCollection.Add(y);
     
-    xForTree[i] = mainMeas[i];
-    yForTree[i] = back[i]*_tau;
+      xForTree[i] = mainMeas[i];
+      yForTree[i] = back[i]*_tau;
 
-    tree->Branch(("x"+str.str()).c_str(), xForTree+i ,("x"+str.str()+"/D").c_str());
-    tree->Branch(("y"+str.str()).c_str(), yForTree+i ,("y"+str.str()+"/D").c_str());
+      tree->Branch(("x"+str.str()).c_str(), xForTree+i ,("x"+str.str()+"/D").c_str());
+      tree->Branch(("y"+str.str()).c_str(), yForTree+i ,("y"+str.str()+"/D").c_str());
 
-    ws->var(("b"+str.str()).c_str())->setMax( 1.2*back[i]+MaxSigma*(sqrt(back[i])+back[i]*back_syst[i]) );
-    ws->var(("b"+str.str()).c_str())->setVal( back[i] );
+      ws->var(("b"+str.str()).c_str())->setMax( 1.2*back[i]+MaxSigma*(sqrt(back[i])+back[i]*back_syst[i]) );
+      ws->var(("b"+str.str()).c_str())->setVal( back[i] );
 
-  }
-  tree->Fill();
-  //  tree->Print();
-  //  tree->Scan();
+   }
+   tree->Fill();
+   //  tree->Print();
+   //  tree->Scan();
 
-  RooArgList* observableList = new RooArgList(observablesCollection);
+   RooArgList* observableList = new RooArgList(observablesCollection);
 
-  //  observableSet->Print();
-  //  observableList->Print();
+   //  observableSet->Print();
+   //  observableList->Print();
 
-  RooDataSet* data = new RooDataSet(dsName,"Number Counting Data", tree, *observableList); // one experiment
-  //  data->Scan();
+   RooDataSet* data = new RooDataSet(dsName,"Number Counting Data", tree, *observableList); // one experiment
+   //  data->Scan();
 
 
-  // import hypothetical data
-  RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
-  ws->import(*data);
-  RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+   // import hypothetical data
+   RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
+   ws->import(*data);
+   RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
 
 }
 
 //_______________________________________________________
 void NumberCountingPdfFactory::AddDataWithSideband(Double_t* mainMeas, 
-					  Double_t* sideband, 
-					  Double_t* tauForTree, 
-					  Int_t nbins, 
-					  RooWorkspace* ws, const char* dsName) {
+                                                   Double_t* sideband, 
+                                                   Double_t* tauForTree, 
+                                                   Int_t nbins, 
+                                                   RooWorkspace* ws, const char* dsName) {
 
-  // Arguements are an array of expected signal, expected background, and relative 
-  // background uncertainty (eg. 0.1 for 10% uncertainty), and the number of channels.
+   // Arguements are an array of expected signal, expected background, and relative 
+   // background uncertainty (eg. 0.1 for 10% uncertainty), and the number of channels.
 
-  using namespace RooFit;
-  using std::vector;
+   using namespace RooFit;
+   using std::vector;
 
-  Double_t MaxSigma = 8; // Needed to set ranges for varaibles.
+   Double_t MaxSigma = 8; // Needed to set ranges for varaibles.
 
-  TList observablesCollection;
+   TList observablesCollection;
 
-  TTree* tree = new TTree();
-  Double_t* xForTree = new Double_t[nbins];
-  Double_t* yForTree = new Double_t[nbins];
+   TTree* tree = new TTree();
+   Double_t* xForTree = new Double_t[nbins];
+   Double_t* yForTree = new Double_t[nbins];
 
-  // loop over channels
-  for(Int_t i=0; i<nbins; ++i){
-    std::stringstream str;
-    str<<"_"<<i;
+   // loop over channels
+   for(Int_t i=0; i<nbins; ++i){
+      std::stringstream str;
+      str<<"_"<<i;
 
-    Double_t _tau = tauForTree[i];
-    Double_t back_syst = 1./sqrt(sideband[i]);
-    Double_t back = (sideband[i]/_tau);
+      Double_t _tau = tauForTree[i];
+      Double_t back_syst = 1./sqrt(sideband[i]);
+      Double_t back = (sideband[i]/_tau);
 
 
-    RooRealVar*  tau = SafeObservableCreation(ws,  ("tau"+str.str()).c_str(), _tau );
+      RooRealVar*  tau = SafeObservableCreation(ws,  ("tau"+str.str()).c_str(), _tau );
 
-    cout << "\nWARNING: changed value of " << tau->GetName() << " to " << tau->getVal() << 
-      " to be consistent with background and its uncertainty. " <<
-      " Also stored these values of tau into workspace with name . " << (string(tau->GetName())+string(dsName)).c_str() <<
-      " if you test with a different dataset, you should adjust tau appropriately.\n"<< endl;
-    ws->import(*((RooRealVar*) tau->clone( (string(tau->GetName())+string(dsName)).c_str() ) ) );
+      cout << "\nWARNING: changed value of " << tau->GetName() << " to " << tau->getVal() << 
+         " to be consistent with background and its uncertainty. " <<
+         " Also stored these values of tau into workspace with name . " << (string(tau->GetName())+string(dsName)).c_str() <<
+         " if you test with a different dataset, you should adjust tau appropriately.\n"<< endl;
+      ws->import(*((RooRealVar*) tau->clone( (string(tau->GetName())+string(dsName)).c_str() ) ) );
 
-    // need to be careful
-    RooRealVar* x = SafeObservableCreation(ws, ("x"+str.str()).c_str(), mainMeas[i]);
+      // need to be careful
+      RooRealVar* x = SafeObservableCreation(ws, ("x"+str.str()).c_str(), mainMeas[i]);
     
-    // need to be careful
-    RooRealVar*   y = SafeObservableCreation(ws, ("y"+str.str()).c_str(), sideband[i] );
+      // need to be careful
+      RooRealVar*   y = SafeObservableCreation(ws, ("y"+str.str()).c_str(), sideband[i] );
 
 
-    observablesCollection.Add(x);
-    observablesCollection.Add(y);
+      observablesCollection.Add(x);
+      observablesCollection.Add(y);
     
-    xForTree[i] = mainMeas[i];
-    yForTree[i] = sideband[i];
+      xForTree[i] = mainMeas[i];
+      yForTree[i] = sideband[i];
 
-    tree->Branch(("x"+str.str()).c_str(), xForTree+i ,("x"+str.str()+"/D").c_str());
-    tree->Branch(("y"+str.str()).c_str(), yForTree+i ,("y"+str.str()+"/D").c_str());
+      tree->Branch(("x"+str.str()).c_str(), xForTree+i ,("x"+str.str()+"/D").c_str());
+      tree->Branch(("y"+str.str()).c_str(), yForTree+i ,("y"+str.str()+"/D").c_str());
 
-    ws->var(("b"+str.str()).c_str())->setMax(  1.2*back+MaxSigma*(sqrt(back)+back*back_syst) );
-    ws->var(("b"+str.str()).c_str())->setVal( back );
+      ws->var(("b"+str.str()).c_str())->setMax(  1.2*back+MaxSigma*(sqrt(back)+back*back_syst) );
+      ws->var(("b"+str.str()).c_str())->setVal( back );
 
-  }
-  tree->Fill();
-  //  tree->Print();
-  //  tree->Scan();
+   }
+   tree->Fill();
+   //  tree->Print();
+   //  tree->Scan();
 
-  RooArgList* observableList = new RooArgList(observablesCollection);
+   RooArgList* observableList = new RooArgList(observablesCollection);
 
-  //  observableSet->Print();
-  //  observableList->Print();
+   //  observableSet->Print();
+   //  observableList->Print();
 
-  RooDataSet* data = new RooDataSet(dsName,"Number Counting Data", tree, *observableList); // one experiment
-  //  data->Scan();
+   RooDataSet* data = new RooDataSet(dsName,"Number Counting Data", tree, *observableList); // one experiment
+   //  data->Scan();
 
 
-  // import hypothetical data
-  RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
-  ws->import(*data);
-  RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+   // import hypothetical data
+   RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
+   ws->import(*data);
+   RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
 
 }
 

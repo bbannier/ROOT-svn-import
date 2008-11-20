@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: HypoTestCalculator.h 24970 2008-10-10  $
+// @(#)root/roostats:$Id$
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -11,11 +11,7 @@
 #ifndef ROOSTATS_HypoTestCalculator
 #define ROOSTATS_HypoTestCalculator
 
-#include "TNamed.h"
-#include "RooStats/HypoTestResult.h"
-#include "RooAbsPdf.h"
-#include "RooArgSet.h"
-#include "RooWorkspace.h"
+//#include "TNamed.h"
 
 //_________________________________________________
 /*
@@ -47,49 +43,58 @@ END_HTML
 */
 //
 
+class RooAbsPdf;
+class RooArgSet; 
+class RooWorkspace; 
+
+
 namespace RooStats {
-  class HypoTestCalculator {
-  public:
 
-    // Concrete implementations should have a constructor like: 
-    // HypoTestCalculator(RooWorkspace*, RooAbsData*,RooAbsPdf*, RooAbsPdf*, RooArgSet*, RooArgSet*) 
-    // Concrete implementations should have a constructor like: 
-    // HypoTestCalculator(RooAbsData*,RooAbsPdf*, RooAbsPdf*, RooArgSet*, RooArgSet*) 
+   class HypoTestResult; 
 
-    virtual ~HypoTestCalculator() {}
+   class HypoTestCalculator {
+
+   public:
+
+      // Concrete implementations should have a constructor like: 
+      // HypoTestCalculator(RooWorkspace*, RooAbsData*,RooAbsPdf*, RooAbsPdf*, RooArgSet*, RooArgSet*) 
+      // Concrete implementations should have a constructor like: 
+      // HypoTestCalculator(RooAbsData*,RooAbsPdf*, RooAbsPdf*, RooArgSet*, RooArgSet*) 
+
+      virtual ~HypoTestCalculator() {}
     
-    // main interface to get a HypoTestResult, pure virtual
-    virtual HypoTestResult* GetHypoTest() const = 0;   
+      // main interface to get a HypoTestResult, pure virtual
+      virtual HypoTestResult* GetHypoTest() const = 0;   
 
-    // set a workspace that owns all the necessary components for the analysis
-    virtual void SetWorkspace(RooWorkspace* ws) = 0;
-    // set the PDF for the null hypothesis
-    virtual void SetNullPdf(const char* name) = 0;
-    // set the PDF for the alternate hypothesis
-    virtual void SetAlternatePdf(const char* name) = 0;
-    // set a common PDF for both the null and alternate hypotheses
-    virtual void SetCommonPdf(const char* name) = 0;
-    // Set a common PDF for both the null and alternate, add to the the workspace if not already there
-    virtual void SetCommonPdf(RooAbsPdf* pdf) = 0;
-    // Set the PDF for the null, add to the the workspace if not already there
-    virtual void SetNullPdf(RooAbsPdf* pdf) = 0;
-    // Set the PDF for the alternate hypothesis, add to the the workspace if not already there
-    virtual void SetAlternatePdf(RooAbsPdf* pdf) = 0;
+      // set a workspace that owns all the necessary components for the analysis
+      virtual void SetWorkspace(RooWorkspace* ws) = 0;
+      // set the PDF for the null hypothesis
+      virtual void SetNullPdf(const char* name) = 0;
+      // set the PDF for the alternate hypothesis
+      virtual void SetAlternatePdf(const char* name) = 0;
+      // set a common PDF for both the null and alternate hypotheses
+      virtual void SetCommonPdf(const char* name) = 0;
+      // Set a common PDF for both the null and alternate, add to the the workspace if not already there
+      virtual void SetCommonPdf(RooAbsPdf* pdf) = 0;
+      // Set the PDF for the null, add to the the workspace if not already there
+      virtual void SetNullPdf(RooAbsPdf* pdf) = 0;
+      // Set the PDF for the alternate hypothesis, add to the the workspace if not already there
+      virtual void SetAlternatePdf(RooAbsPdf* pdf) = 0;
 
-    // specify the name of the dataset in the workspace to be used
-    virtual void SetData(const char* name) = 0;
-    // Set the DataSet, add to the the workspace if not already there
-    virtual void SetData(RooAbsData* data) = 0;
+      // specify the name of the dataset in the workspace to be used
+      virtual void SetData(const char* name) = 0;
+      // Set the DataSet, add to the the workspace if not already there
+      virtual void SetData(RooAbsData* data) = 0;
 
-    // set parameter values for the null if using a common PDF
-    virtual void SetNullParameters(RooArgSet*) = 0;
-    // set parameter values for the alternate if using a common PDF
-    virtual void SetAlternateParameters(RooArgSet*) = 0;
+      // set parameter values for the null if using a common PDF
+      virtual void SetNullParameters(RooArgSet*) = 0;
+      // set parameter values for the alternate if using a common PDF
+      virtual void SetAlternateParameters(RooArgSet*) = 0;
     
 
-  protected:
-    ClassDef(HypoTestCalculator,1)  // Interface for tools doing hypothesis tests
-  };
+   protected:
+      ClassDef(HypoTestCalculator,1)  // Interface for tools doing hypothesis tests
+   };
 }
 
 
