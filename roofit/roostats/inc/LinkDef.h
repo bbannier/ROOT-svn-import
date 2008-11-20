@@ -1,4 +1,4 @@
-/* @(#)root/roostats:$Id: LinkDef.h 26279 2008-11-18 22:15:02Z cranmer $ */
+/* @(#)root/roostats:$Id$ */
 
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *

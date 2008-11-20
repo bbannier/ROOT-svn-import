@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: NumberCountingPdfFactory.cxx 25835 2008-10-15 19:37:19Z moneta $
+// @(#)root/roostats:$Id$
 // Author: Kyle Cranmer   28/07/2008
 
 /*************************************************************************
