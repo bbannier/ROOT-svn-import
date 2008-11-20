@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id$
+// @(#)root/roostats:$Id: NumberCountingUtils.h 26279 2008-11-18 22:15:02Z cranmer $
 // Author: Kyle Cranmer   28/07/2008
 
 /*************************************************************************

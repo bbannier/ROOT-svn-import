@@ -61,10 +61,6 @@ END_HTML
 #include "RooStats/RooStatsUtils.h"
 #include <string>
 
-// Without this macro the THtml doc for TMath can not be generated
-#if !defined(R__ALPHA) && !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
-NamespaceImp(RooStats)
-#endif
 
 ClassImp(RooStats::LikelihoodInterval) ;
 
@@ -73,45 +69,45 @@ using namespace RooStats;
 //____________________________________________________________________
 LikelihoodInterval::LikelihoodInterval() : fLikelihoodRatio(0)
 {
-  // Default constructor
+   // Default constructor
 }
 
 //____________________________________________________________________
 LikelihoodInterval::LikelihoodInterval(const char* name) :
-  ConfInterval(name,name), fLikelihoodRatio(0)
+   ConfInterval(name,name), fLikelihoodRatio(0)
 {
-  // Alternate constructor
+   // Alternate constructor
 }
 
 //____________________________________________________________________
 LikelihoodInterval::LikelihoodInterval(const char* name, const char* title) :
-  ConfInterval(name,title), fLikelihoodRatio(0)
+   ConfInterval(name,title), fLikelihoodRatio(0)
 {
-  // Alternate constructor
+   // Alternate constructor
 }
 
 //____________________________________________________________________
 LikelihoodInterval::LikelihoodInterval(const char* name, RooAbsReal* lr, RooArgSet* params) :
-  ConfInterval(name,name)
+   ConfInterval(name,name)
 {
-  // Alternate constructor
-  fLikelihoodRatio = lr;
-  fParameters = params;
+   // Alternate constructor
+   fLikelihoodRatio = lr;
+   fParameters = params;
 }
 
 //____________________________________________________________________
 LikelihoodInterval::LikelihoodInterval(const char* name, const char* title, RooAbsReal* lr, RooArgSet* params) :
-  ConfInterval(name,title)
+   ConfInterval(name,title)
 {
-  // Alternate constructor
-  fLikelihoodRatio = lr;
-  fParameters = params;
+   // Alternate constructor
+   fLikelihoodRatio = lr;
+   fParameters = params;
 }
 
 //____________________________________________________________________
 LikelihoodInterval::~LikelihoodInterval()
 {
-  // Destructor
+   // Destructor
 
 }
 

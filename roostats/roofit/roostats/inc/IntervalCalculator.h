@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: IntervalCalculator.h 24970 2008-10-10  $
+// @(#)root/roostats:$Id$
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -41,52 +41,61 @@ END_HTML
 */
 //
 
-#include "TNamed.h"
-#include "RooStats/ConfInterval.h"
-#include "RooAbsPdf.h"
-#include "RooArgSet.h"
-#include "RooWorkspace.h"
+#ifndef ROOT_Rtypes
+#include "Rtypes.h"
+#endif
+//#include "TNamed.h"
+
+
+class RooAbsPdf;
+class RooArgSet; 
+class RooAbsData; 
+class RooWorkspace; 
 
 namespace RooStats {
-  class IntervalCalculator {//: public TNamed {
-  public:
-     //IntervalCalculator();
-     virtual ~IntervalCalculator() {}
+
+   class ConfInterval; 
+
+   class IntervalCalculator {//: public TNamed {
+
+   public:
+      //IntervalCalculator();
+      virtual ~IntervalCalculator() {}
     
-    // Main interface to get a ConfInterval, pure virtual
-    virtual ConfInterval* GetInterval() const = 0; 
+      // Main interface to get a ConfInterval, pure virtual
+      virtual ConfInterval* GetInterval() const = 0; 
 
     
-    // Get the size of the test (eg. rate of Type I error)
-    virtual Double_t Size() const = 0;
-    // Get the Confidence level for the test
-    virtual Double_t ConfidenceLevel()  const = 0;  
-    // set a workspace that owns all the necessary components for the analysis
-    virtual void SetWorkspace(RooWorkspace* ws) = 0;
+      // Get the size of the test (eg. rate of Type I error)
+      virtual Double_t Size() const = 0;
+      // Get the Confidence level for the test
+      virtual Double_t ConfidenceLevel()  const = 0;  
+      // set a workspace that owns all the necessary components for the analysis
+      virtual void SetWorkspace(RooWorkspace* ws) = 0;
 
-    // Set the DataSet, add to the the workspace if not already there
-    virtual void SetData(RooAbsData*) = 0;
-    // Set the Pdf, add to the the workspace if not already there
-    virtual void SetPdf(RooAbsPdf*) = 0;
+      // Set the DataSet, add to the the workspace if not already there
+      virtual void SetData(RooAbsData*) = 0;
+      // Set the Pdf, add to the the workspace if not already there
+      virtual void SetPdf(RooAbsPdf*) = 0;
 
-    // specify the name of the dataset in the workspace to be used
-    virtual void SetData(const char* name) = 0;
-    // specify the name of the PDF in the workspace to be used
-    virtual void SetPdf(const char* name) = 0;
+      // specify the name of the dataset in the workspace to be used
+      virtual void SetData(const char* name) = 0;
+      // specify the name of the PDF in the workspace to be used
+      virtual void SetPdf(const char* name) = 0;
 
-    // specify the parameters of interest in the interval
-    virtual void SetParameters(RooArgSet*) = 0;
-    // specify the nuisance parameters (eg. the rest of the parameters)
-    virtual void SetNuisanceParameters(RooArgSet*) = 0;
-    // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
-    virtual void SetSize(Double_t size) = 0;
-    // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
-    virtual void SetConfidenceLevel(Double_t cl) = 0;
-    
+      // specify the parameters of interest in the interval
+      virtual void SetParameters(RooArgSet*) = 0;
+      // specify the nuisance parameters (eg. the rest of the parameters)
+      virtual void SetNuisanceParameters(RooArgSet*) = 0;
+      // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
+      virtual void SetSize(Double_t size) = 0;
+      // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
+      virtual void SetConfidenceLevel(Double_t cl) = 0;
+      
 
-  protected:
-    ClassDef(IntervalCalculator,1)   // Interface for tools setting limits (producing confidence intervals)
-  };
+   protected:
+      ClassDef(IntervalCalculator,1)   // Interface for tools setting limits (producing confidence intervals)
+   };
 }
 
 

@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: ConfInterval.h 24970 2008-10-10  $
+// @(#)root/roostats:$Id$
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -11,8 +11,13 @@
 #ifndef ROOSTATS_ConfInterval
 #define ROOSTATS_ConfInterval
 
+#ifndef ROOT_TNamed
 #include "TNamed.h"
+#endif
+
+#ifndef ROO_ARG_SET
 #include "RooArgSet.h"
+#endif
 
 //_________________________________________________________________
 //
@@ -32,34 +37,36 @@
 
 namespace RooStats {
 
-  class ConfInterval : public TNamed {
-  public:
-    ConfInterval();
-    ConfInterval(const char* name);
-    ConfInterval(const char* name, const char* title);
-    virtual ~ConfInterval();
+   class ConfInterval : public TNamed {
+
+   public:
+
+      ConfInterval() : TNamed() {} 
+      ConfInterval(const char* name) :  TNamed(name,name) {}
+      ConfInterval(const char* name, const char* title) : TNamed(name,title) {} 
+      virtual ~ConfInterval() {}
     
-    //pure virtual?  where does =0 go with const?
-    virtual Bool_t IsInInterval(RooArgSet&) = 0; 
+      //pure virtual?  where does =0 go with const?
+      virtual Bool_t IsInInterval(RooArgSet&) = 0; 
     
-    // used to set confidence level.  Keep pure virtual
-    virtual void SetConfidenceLevel(Double_t cl) = 0;
-    // return confidence level
-    virtual Double_t ConfidenceLevel() const = 0;
-    // 
-    // if so does this implement it?
-    // private fSize;
+      // used to set confidence level.  Keep pure virtual
+      virtual void SetConfidenceLevel(Double_t cl) = 0;
+      // return confidence level
+      virtual Double_t ConfidenceLevel() const = 0;
+      // 
+      // if so does this implement it?
+      // private fSize;
     
 
-    // do we want it to return list of parameters
-    virtual RooArgSet* GetParameters() const = 0;
+      // do we want it to return list of parameters
+      virtual RooArgSet* GetParameters() const = 0;
 
-    // check if parameters are correct. (dummy implementation to start)
-    virtual Bool_t CheckParameters(RooArgSet&) const = 0;
+      // check if parameters are correct. (dummy implementation to start)
+      virtual Bool_t CheckParameters(RooArgSet&) const = 0;
 
 
-  protected:
-    ClassDef(ConfInterval,1) // Interface for Confidence Intervals
+   protected:
+      ClassDef(ConfInterval,1) // Interface for Confidence Intervals
 
    };
 }

@@ -97,9 +97,9 @@ void AddModel(RooWorkspace* ws){
   RooRealVar sigma1("sigma1","Width of Gaussian",12.,2,100)  ;
   RooGaussian sigModel("sigModel", "Signal Model", invMass, mH, sigma1);
   // we will test this specific mass point for the signal
-  mH->setConstant();
+  mH.setConstant();
   // and we assume we know the mass resolution
-  sigma1->setConstant();
+  sigma1.setConstant();
 
   /////////////////////////////////////////////
   // make zjj model.  Just like signal model
@@ -109,7 +109,7 @@ void AddModel(RooWorkspace* ws){
   // we know Z mass
   mZ.setConstant();
   // assume we know resolution too
-  sigma1_z->setConstant();
+  sigma1_z.setConstant();
   
 
   //////////////////////////////////////////////

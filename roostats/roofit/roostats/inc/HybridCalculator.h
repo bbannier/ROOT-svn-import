@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: $
+// @(#)root/roostats:$Id$
 
 /*************************************************************************
  * Project: RooStats                                                     *
@@ -16,44 +16,46 @@
 #ifndef ROOSTATS_HybridCalculator
 #define ROOSTATS_HybridCalculator
 
-#include "RooStats/HybridResult.h"
+#ifndef ROOSTATS_HypoTestCalculator
 #include "RooStats/HypoTestCalculator.h"
-#include "RooStats/HypoTestResult.h"
+#endif
+
 
 namespace RooStats {
-  class HybridCalculator /*: public HypoTestCalculator*/ {  /// TO DO: inheritance
 
-    public:
-	/// Constructor for HybridCalculator
-	HybridCalculator(const char *name,
-		const char *title,
-		RooAbsPdf& sb_model,
-		RooAbsPdf& b_model,
-		RooArgList& observables,
-		RooArgSet& parameters,
-		RooAbsPdf& prior_pdf);
+   class HybridCalculator /*: public HypoTestCalculator*/ {  /// TO DO: inheritance
 
-	/// Destructor of HybridCalculator
-	virtual ~HybridCalculator();
+   public:
+      /// Constructor for HybridCalculator
+      HybridCalculator(const char *name,
+                       const char *title,
+                       RooAbsPdf& sb_model,
+                       RooAbsPdf& b_model,
+                       RooArgList& observables,
+                       RooArgSet& parameters,
+                       RooAbsPdf& prior_pdf);
 
-	void SetTestStatistics(int index);
-	void Calculate(RooAbsData& data, unsigned int nToys, bool usePriors);
-	void RunToys(unsigned int nToys, bool usePriors); // private?
-	void Print(const char* options);
+      /// Destructor of HybridCalculator
+      virtual ~HybridCalculator();
 
-    private:
-	const char* fName; /// TO DO: put to TNamed inherited
-	const char* fTitle; /// TO DO: put to TNamed inherited
-	RooAbsPdf& fSbModel;
-	RooAbsPdf& fBModel;
-	RooArgList& fObservables;
-	RooArgSet& fParameters;
-	RooAbsPdf& fPriorPdf;
-        unsigned int fTestStatisticsIdx;
+      void SetTestStatistics(int index);
+      void Calculate(RooAbsData& data, unsigned int nToys, bool usePriors);
+      void RunToys(unsigned int nToys, bool usePriors); // private?
+      void Print(const char* options);
 
-    protected:
-	ClassDef(HybridCalculator,1)
-  };
+   private:
+      const char* fName; /// TO DO: put to TNamed inherited
+      const char* fTitle; /// TO DO: put to TNamed inherited
+      RooAbsPdf& fSbModel;
+      RooAbsPdf& fBModel;
+      RooArgList& fObservables;
+      RooArgSet& fParameters;
+      RooAbsPdf& fPriorPdf;
+      unsigned int fTestStatisticsIdx;
+
+   protected:
+      ClassDef(HybridCalculator,1)  // Hypothesis test calculator using a Bayesian-frequentist hybrid method
+   };
 }
 
 #endif

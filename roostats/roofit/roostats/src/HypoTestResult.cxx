@@ -43,10 +43,6 @@ END_HTML
 #include "RooStats/RooStatsUtils.h"
 #endif
 
-// Without this macro the THtml doc for TMath can not be generated
-#if !defined(R__ALPHA) && !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
-NamespaceImp(RooStats)
-#endif
 
 ClassImp(RooStats::HypoTestResult) ;
 
@@ -55,28 +51,28 @@ using namespace RooStats;
 //____________________________________________________________________
 HypoTestResult::HypoTestResult()
 {
-  // Default constructor
+   // Default constructor
 }
 
 
 //____________________________________________________________________
 HypoTestResult::HypoTestResult(const char* name, Double_t nullp, Double_t altp) :
-  TNamed(name,name), fNullPValue(nullp), fAlternatePValue(altp)
+   TNamed(name,name), fNullPValue(nullp), fAlternatePValue(altp)
 {
-  // Alternate constructor
+   // Alternate constructor
 }
 
 //____________________________________________________________________
 HypoTestResult::HypoTestResult(const char* name, const char* title, Double_t nullp, Double_t altp):
-  TNamed(name,title), fNullPValue(nullp), fAlternatePValue(altp)
+   TNamed(name,title), fNullPValue(nullp), fAlternatePValue(altp)
 {
-  // Alternate constructor
+   // Alternate constructor
 }
 
 
 //____________________________________________________________________
 HypoTestResult::~HypoTestResult()
 {
-  // Destructor
+   // Destructor
 
 }

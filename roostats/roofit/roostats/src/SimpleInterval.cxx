@@ -35,10 +35,6 @@
 #include "RooAbsReal.h"
 #include <string>
 
-// Without this macro the THtml doc for TMath can not be generated
-#if !defined(R__ALPHA) && !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
-NamespaceImp(RooStats)
-#endif
 
 ClassImp(RooStats::SimpleInterval) ;
 
@@ -47,46 +43,46 @@ using namespace RooStats;
 //____________________________________________________________________
 SimpleInterval::SimpleInterval() : fLowerLimit(0), fUpperLimit(0)
 {
-  // Default constructor
+   // Default constructor
 }
 
 //____________________________________________________________________
 SimpleInterval::SimpleInterval(const char* name) :
-  ConfInterval(name,name), fLowerLimit(0), fUpperLimit(0)
+   ConfInterval(name,name), fLowerLimit(0), fUpperLimit(0)
 {
-  // Alternate constructor
+   // Alternate constructor
 }
 
 //____________________________________________________________________
 SimpleInterval::SimpleInterval(const char* name, const char* title) :
-  ConfInterval(name,title), fLowerLimit(0), fUpperLimit(0)
+   ConfInterval(name,title), fLowerLimit(0), fUpperLimit(0)
 {
-  // Alternate constructor
+   // Alternate constructor
 }
 
 //____________________________________________________________________
 SimpleInterval::SimpleInterval(const char* name, RooAbsArg* var, Double_t lower, Double_t upper) :
-  ConfInterval(name,name), fLowerLimit(lower), fUpperLimit(upper)
+   ConfInterval(name,name), fLowerLimit(lower), fUpperLimit(upper)
 {
-  // Alternate constructor
-  fParameters = new RooArgSet((std::string(name)+"_parameters").c_str());
-  fParameters->addClone( *var );
+   // Alternate constructor
+   fParameters = new RooArgSet((std::string(name)+"_parameters").c_str());
+   fParameters->addClone( *var );
 }
 
 //____________________________________________________________________
 SimpleInterval::SimpleInterval(const char* name, const char* title, RooAbsArg* var, Double_t lower, Double_t upper):
-  ConfInterval(name,title), fLowerLimit(lower), fUpperLimit(upper)
+   ConfInterval(name,title), fLowerLimit(lower), fUpperLimit(upper)
 {
-  // Alternate constructor
-  fParameters = new RooArgSet((std::string(name)+"_parameters").c_str());
-  fParameters->addClone( *var );
+   // Alternate constructor
+   fParameters = new RooArgSet((std::string(name)+"_parameters").c_str());
+   fParameters->addClone( *var );
 }
 
 
 //____________________________________________________________________
 SimpleInterval::~SimpleInterval()
 {
-  // Destructor
+   // Destructor
 
 }
 
@@ -95,43 +91,43 @@ SimpleInterval::~SimpleInterval()
 Bool_t SimpleInterval::IsInInterval(RooArgSet &parameterPoint) 
 {  
 
-  // Method to determine if a parameter point is in the interval
-  if( !this->CheckParameters(parameterPoint) )
-    return false; 
+   // Method to determine if a parameter point is in the interval
+   if( !this->CheckParameters(parameterPoint) )
+      return false; 
 
-  if(parameterPoint.getSize() != 1 )
-    return false;
+   if(parameterPoint.getSize() != 1 )
+      return false;
 
-  RooAbsReal* point = dynamic_cast<RooAbsReal*> (parameterPoint.first());
-  if (point == 0)
-    return false;
+   RooAbsReal* point = dynamic_cast<RooAbsReal*> (parameterPoint.first());
+   if (point == 0)
+      return false;
 
-  if ( point->getVal() > fUpperLimit || point->getVal() < fUpperLimit)
-    return false;
+   if ( point->getVal() > fUpperLimit || point->getVal() < fUpperLimit)
+      return false;
 
 
-  return true;
+   return true;
   
 }
 
 //____________________________________________________________________
 RooArgSet* SimpleInterval::GetParameters() const
 {  
-  // returns list of parameters
-  return (RooArgSet*) fParameters->clone((std::string(fParameters->GetName())+"_clone").c_str());
+   // returns list of parameters
+   return (RooArgSet*) fParameters->clone((std::string(fParameters->GetName())+"_clone").c_str());
 }
 
 //____________________________________________________________________
 Bool_t SimpleInterval::CheckParameters(RooArgSet &parameterPoint) const
 {  
 
-  if (parameterPoint.getSize() != fParameters->getSize() ) {
-    std::cout << "size is wrong, parameters don't match" << std::endl;
-    return false;
-  }
-  if ( ! parameterPoint.equals( *fParameters ) ) {
-    std::cout << "size is ok, but parameters don't match" << std::endl;
-    return false;
-  }
-  return true;
+   if (parameterPoint.getSize() != fParameters->getSize() ) {
+      std::cout << "size is wrong, parameters don't match" << std::endl;
+      return false;
+   }
+   if ( ! parameterPoint.equals( *fParameters ) ) {
+      std::cout << "size is ok, but parameters don't match" << std::endl;
+      return false;
+   }
+   return true;
 }

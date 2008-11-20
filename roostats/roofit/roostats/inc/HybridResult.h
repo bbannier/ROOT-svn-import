@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: $
+// @(#)root/roostats:$Id$
 
 /*************************************************************************
  * Project: RooStats                                                     *
@@ -16,42 +16,47 @@
 #ifndef ROOSTATS_HybridResult
 #define ROOSTATS_HybridResult
 
+#ifndef ROOSTATS_HypoTestResult
 #include "RooStats/HypoTestResult.h"
-#include "RooStats/HybridPlot.h"
+#endif
 
 namespace RooStats {
 
-  class HybridResult /*: public HypoTestResult*/ {  /// TO DO: inheritance
+   class HybridPlot; 
 
-    public:
-	/// Constructor for HybridResult
-	HybridResult(const char *name,const char *title,std::vector<float>& testStat_sb_vals,
-                            std::vector<float>& testStat_b_vals,
-                            float testStat_data_val );
+   class HybridResult /*: public HypoTestResult*/ {  /// TO DO: inheritance
 
-	/// Destructor of HybridResult
-	virtual ~HybridResult();
+   public:
 
-	/// TO DO: use from HypoTestResult
-	double CLb();
-	double CLsplusb();
-	double CLs();
+      /// Constructor for HybridResult
+      HybridResult(const char *name,const char *title,std::vector<float>& testStat_sb_vals,
+                   std::vector<float>& testStat_b_vals,
+                   float testStat_data_val );
 
-	void Add(HybridResult* other);
-	HybridPlot* GetPlot(const char* name,const char* title, int n_bins);
-	void Print(const char* options);
+      /// Destructor of HybridResult
+      virtual ~HybridResult();
 
-    private:
-	const char* fName; /// TO DO: put to inherited (TNamed for write to file)
-	const char* fTitle; /// TO DO: put to inherited (TNamed for write to file)
+      /// TO DO: use from HypoTestResult
+      double CLb();
+      double CLsplusb();
+      double CLs();
 
-        std::vector<float> fTestStat_b; // results for B-only toy-MC
-        std::vector<float> fTestStat_sb; // results for S+B toy-MC
-        float fTestStat_data; // results for data
+      void Add(HybridResult* other);
+      HybridPlot* GetPlot(const char* name,const char* title, int n_bins);
+      void Print(const char* options);
 
-    protected:
-	ClassDef(HybridResult,1)
-  };
+   private:
+      const char* fName; /// TO DO: put to inherited (TNamed for write to file)
+      const char* fTitle; /// TO DO: put to inherited (TNamed for write to file)
+
+      std::vector<float> fTestStat_b; // results for B-only toy-MC
+      std::vector<float> fTestStat_sb; // results for S+B toy-MC
+      float fTestStat_data; // results for data
+
+   protected:
+
+      ClassDef(HybridResult,1)   // Class containing the results of the HybridCalculator
+   };
 }
 
 #endif

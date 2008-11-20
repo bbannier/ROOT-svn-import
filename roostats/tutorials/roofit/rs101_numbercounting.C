@@ -29,6 +29,7 @@
 #include "RooStats/ProfileLikelihoodCalculator.h"
 #include "RooStats/NumberCountingPdfFactory.h"
 #include "RooStats/ConfInterval.h"
+#include "RooStats/HypoTestResult.h"
 #include "RooRealVar.h"
 
 // use this order for safety on library loading
