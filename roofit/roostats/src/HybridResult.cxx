@@ -190,9 +190,10 @@ HybridPlot* HybridResult::GetPlot(const char* name,const char* title, int n_bins
 
 void HybridResult::Print(const char* options)
 {
+   /// Print out some information about the results
+
    std::cout << options << std::endl;
 
-   /// Print out some information about the results
 
    std::cout << "\nResults " << fName /*GetName()*/ << ":\n"
              << " - Number of S+B toys: " << fTestStat_b.size() << std::endl
