@@ -155,11 +155,6 @@ private:
                                       const char *selec, TObject *elist);
    void          SetQueryRunning(TProofQueryResult *pq);
 
-   // Input data handling
-   Int_t         GetInputData(TList *input);
-   Int_t         SaveInputData(TQueryResult *qr);
-   Int_t         SendInputData(TQueryResult *qr);
-
 protected:
    virtual void  HandleArchive(TMessage *mess);
    virtual Int_t HandleCache(TMessage *mess);
@@ -242,7 +237,7 @@ public:
    virtual Int_t  SendAsynMessage(const char *msg, Bool_t lf = kTRUE);
    virtual void   SendLogFile(Int_t status = 0, Int_t start = -1, Int_t end = -1);
    void           SendStatistics();
-   void           SendParallel();
+   void           SendParallel(Bool_t async = kFALSE);
 
    // Disable / Enable read timeout
    virtual void   DisableTimeout() { }
