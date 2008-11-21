@@ -314,7 +314,7 @@ void  TestkdtreeIF(Int_t npoints, Int_t bsize, Int_t nloop, Int_t mode)
   
   if (mode ==2){
     if (nloop) timer.Start(kTRUE);
-    Int_t res[npoints];
+    Int_t *res = new Int_t[npoints];
     Int_t nfound = 0;
     for (Int_t kloop = 0;kloop<nloop;kloop++){
       if (kloop==0){
@@ -351,6 +351,8 @@ void  TestkdtreeIF(Int_t npoints, Int_t bsize, Int_t nloop, Int_t mode)
       timer.Stop();
       timer.Print();
     }
+
+    delete [] res; 
   }
   delete [] data0;
   
