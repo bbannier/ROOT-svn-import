@@ -39,7 +39,7 @@ namespace RooStats {
       virtual Double_t CLb() const {return 1.-NullPValue();}
 
       // Convert  AlternatePValue into a "confidence level"
-      virtual Double_t CLsplusb() const {return 1.-AlternatePValue();}
+      virtual Double_t CLsplusb() const {return AlternatePValue();}
 
       // CLs is simply CLs+b/CLb (not a method, but a quantity)
       virtual Double_t CLs() const {return CLsplusb()/CLb();}
