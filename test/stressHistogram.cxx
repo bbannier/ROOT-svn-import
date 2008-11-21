@@ -11,6 +11,7 @@
 
 #include "TApplication.h"
 #include "Riostream.h"
+#include "TMath.h"
 #include "TRandom2.h"
 
 const unsigned int __DRAW__ = 0;
@@ -20,6 +21,17 @@ bool stressHistRebin();
 
 // From stressAdd.cxx
 bool stressHistOpts();
+
+const Double_t minRange = 1;
+const Double_t maxRange = 5;
+
+const Double_t minRebin = 3;
+const Double_t maxRebin = 7;
+
+const int minBinValue = 1;
+const int maxBinValue = 10;
+
+const int nEvents = 1000;
 
 enum compareOptions {
    cmpOptDebug=1,
@@ -36,6 +48,135 @@ int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0, double ERRORLIM
 int equals(const char* msg, TH3D* h1, TH3D* h2, int options = 0, double ERRORLIMIT = 1E-15);
 int equals(Double_t n1, Double_t n2, double ERRORLIMIT = 1E-15);
 int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT = 1E-15);
+
+// old stresHistRebin.cxx file
+
+bool testIntegerRebin()
+{
+   const int rebin = TMath::Nint( r.Uniform(minRebin, maxRebin) );
+   Int_t seed = 4632;//time(0);
+   TH1D* h1 = new TH1D("h1","Original Histogram", TMath::Nint( r.Uniform(1, 5) ) * rebin, minRange, maxRange);
+   r.SetSeed(seed);
+   for ( Int_t i = 0; i < nEvents; ++i )
+      h1->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
+
+   TH1D* h2 = static_cast<TH1D*>( h1->Rebin(rebin, "testIntegerRebin") );
+
+   TH1D* h3 = new TH1D("testIntegerRebin2", "testIntegerRebin2", 
+                       h1->GetNbinsX() / rebin, minRange, maxRange);
+   r.SetSeed(seed);
+   for ( Int_t i = 0; i < nEvents; ++i )
+      h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
+
+   return equals("TestIntegerRebin", h2, h3, cmpOptStats);
+}
+
+bool testIntegerRebinNoName()
+{
+   const int rebin = TMath::Nint( r.Uniform(minRebin, maxRebin) );
+   Int_t seed = 4632;//time(0);
+   TH1D* h1 = new TH1D("h2","Original Histogram", TMath::Nint( r.Uniform(1, 5) ) * rebin, minRange, maxRange);
+   r.SetSeed(seed);
+   for ( Int_t i = 0; i < nEvents; ++i )
+      h1->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
+
+   TH1D* h2 = dynamic_cast<TH1D*>( h1->Clone() );
+   h2->Rebin(rebin);
+
+   TH1D* h3 = new TH1D("testIntegerRebinNoName", "testIntegerRebinNoName", 
+                       h1->GetNbinsX() / rebin, minRange, maxRange);
+   r.SetSeed(seed);
+   for ( Int_t i = 0; i < nEvents; ++i )
+      h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
+
+   return equals("TestIntRebinNoName", h2, h3, cmpOptStats);
+
+   // This method fails because the Chi2Test is different of 1 for
+   // both of them. We need to look into both the Rebin method and the
+   // Chi2Test method to understand better what is going wrong.
+}
+
+bool testArrayRebin()
+{
+   const int rebin = TMath::Nint( r.Uniform(minRebin, maxRebin) ) + 1;
+   Int_t seed = 4632;//time(0);
+   TH1D* h1 = new TH1D("h3","Original Histogram", TMath::Nint( r.Uniform(1, 5) ) * rebin * 2, minRange, maxRange);
+   r.SetSeed(seed);
+   for ( Int_t i = 0; i < nEvents; ++i )
+      h1->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
+
+   // Create vector 
+   Double_t rebinArray[rebin];
+   r.RndmArray(rebin, rebinArray);
+   std::sort(rebinArray, rebinArray + rebin);
+   for ( Int_t i = 0; i < rebin; ++i ) {
+      rebinArray[i] = TMath::Nint( rebinArray[i] * ( h1->GetNbinsX() - 2 ) + 2 );
+      rebinArray[i] = h1->GetBinLowEdge( rebinArray[i] );
+   }
+   
+
+   rebinArray[0] = minRange;
+   rebinArray[rebin-1] = maxRange;
+
+   #ifdef __DEBUG__
+   for ( Int_t i = 0; i < rebin; ++i ) 
+      cout << rebinArray[i] << endl;
+   cout << "rebin: " << rebin << endl;
+   #endif
+
+   TH1D* h2 = static_cast<TH1D*>( h1->Rebin(rebin - 1, "testArrayRebin", rebinArray) );
+
+   TH1D* h3 = new TH1D("testArrayRebin2", "testArrayRebin2", rebin - 1, rebinArray );
+   r.SetSeed(seed);
+   for ( Int_t i = 0; i < nEvents; ++i )
+      h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
+      
+   return equals("TestArrayRebin", h2, h3, cmpOptStats);
+}
+
+bool test2DRebin()
+{
+   Int_t xrebin = TMath::Nint( r.Uniform(minRebin, maxRebin) );
+   Int_t yrebin = TMath::Nint( r.Uniform(minRebin, maxRebin) );
+   TH2D* h2d = new TH2D("h2d","Original Histogram", 
+                       xrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange, 
+                       yrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange);
+   
+   Int_t seed = 4632;//time(0);
+   r.SetSeed(seed);
+   for ( Int_t i = 0; i < nEvents; ++i )
+      h2d->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ), r.Uniform( minRange * .9 , maxRange * 1.1 ) );
+
+   TH2D* h2d2 = (TH2D*) h2d->Rebin2D(xrebin,yrebin, "h2d2");
+
+   TH2D* h3 = new TH2D("test2DRebin", "test2DRebin", 
+                       h2d->GetNbinsX() / xrebin, minRange, maxRange,
+                       h2d->GetNbinsY() / yrebin, minRange, maxRange );
+   r.SetSeed(seed);
+   for ( Int_t i = 0; i < nEvents; ++i )
+      h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ), r.Uniform( minRange * .9 , maxRange * 1.1 ) );
+
+   return equals("TestIntRebin2D", h2d2, h3, cmpOptStats);
+}
+
+bool stressHistRebin()
+{
+   typedef bool (*pointer2Test)();
+   const unsigned int numberOfTests = 4;
+   pointer2Test testPointer[numberOfTests] = { testIntegerRebin, 
+                                               testIntegerRebinNoName,
+                                               testArrayRebin,
+                                               test2DRebin };
+
+   bool status = false;
+   for ( unsigned int i = 0; i < numberOfTests; ++i )
+      status |= testPointer[i]();
+
+   return status;
+}
+
+// end stressHistRebin.cxx file
+ 
 
 // old stressHistProj file 
 
