@@ -1,29 +1,31 @@
 // Author: Stefan Schmitt
 // DESY, 14.10.2008
 
-//  Version 4, with bug-fix in TUnfold.C
+//  Version 6, re-include class MyUnfold in the example
 //
 //  History:
+//    Version 5, move class MyUnfold to seperate files
+//    Version 4, with bug-fix in TUnfold.C
 //    Version 3, with bug-fix in TUnfold.C
 //    Version 2, with changed ScanLcurve() arguments
 //    Version 1, remove L curve analysis, use ScanLcurve() method instead
 //    Version 0, L curve analysis included here
 
-#include "TMath.h"
-#include "TCanvas.h"
-#include "TRandom3.h"
+#include <TMath.h>
+#include <TCanvas.h>
+#include <TRandom3.h>
+#include <TFitter.h>
+#include <TF1.h>
+#include <TStyle.h>
+#include <TVector.h>
+#include <TGraph.h>
 #include "TUnfold.h"
-#include "TFitter.h"
-#include "TF1.h"
-#include "TStyle.h"
-#include "TVector.h"
-#include "TGraph.h"
 
 using namespace std;
 
 ///////////////////////////////////////////////////////////////////////
 // 
-//  Test program for the class TUnfold
+//  Test program for the class MyUnfold, derived from TUnfold
 //
 //  (1) Generate Monte Carlo and Data events
 //      The events consist of
@@ -43,6 +45,74 @@ using namespace std;
 //  (3) fit the unfolded distribution, including the correlation matrix
 //
 ///////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////
+// 
+//  Example of a class derived from TUnfold
+//
+///////////////////////////////////////////////////////////////////////
+
+class MyUnfold : public TUnfold {
+public:
+  MyUnfold(TH2 const *hist_A, EHistMap histmap,
+           ERegMode regmode = kRegModeSize);  // constructor, in parallel to original constructor
+  virtual Double_t DoUnfold(Double_t const &tau);  // derived method, to store the result of the unfolding for a given parameter tau
+  using TUnfold::DoUnfold;  // otherwise TUnfold methods will be hidden
+  void TauAnalysis(void); // method for the alternative analysis
+  void ResetUser(Int_t const *binMap);  // reset alternative analysis
+  inline Double_t GetTauUser(void) const { return fTauBest; } // query result of alternative analysis
+protected:
+  Int_t const *fBinMap; // bin mapping to extract the global correlation
+  Double_t fTauBest;    // tau with the smallest correlation
+  Double_t fRhoMin;     // smallest correlation
+  //ClassDef(MyUnfold,0); 
+};
+
+//ClassImp(MyUnfold)
+
+MyUnfold::MyUnfold(TH2 const *hist_A, EHistMap histmap,ERegMode regmode)
+  : TUnfold(hist_A,histmap,regmode) {
+  // The arguments are passed to the parent class constructor
+  // Then the local variables are initialized
+
+  // reset members of this class
+  ResetUser(0);
+};
+
+Double_t MyUnfold::DoUnfold(Double_t const &tau) {
+  // The argument is passed to the corresponding method of the parent class
+  // Then the new analysis code is called
+
+  // this calls the original unfolding
+  Double_t r=TUnfold::DoUnfold(tau);
+  // here do our private analysis to find the best choice of tau
+  TauAnalysis();
+
+  return r;
+};
+
+void  MyUnfold::ResetUser(Int_t const *binMap) {
+  // Reset the local variables
+  // Arguments:
+  //    binMap: the bin mapping for determining the correlation
+  //            See documentation of TUnfold: Bin averaging of the output
+
+  fBinMap=binMap;
+  fTauBest=0;
+  fRhoMin=1.0;
+}
+ 
+void MyUnfold::TauAnalysis(void) {
+  // User analysis: extract tau with smallest correlation
+
+  // This is a very simple analysis: the tau value with the smallest
+  // globla correlation is stored
+  if(GetRhoAvg()<fRhoMin) {
+    fRhoMin=GetRhoAvg();
+    fTauBest=fTau;
+  }
+}
+
 
 TRandom *rnd=0;
 
@@ -142,48 +212,6 @@ Double_t DetectorEvent(Double_t const &mTrue) {
     return rnd->Gaus(mTrue+smallBias,smallSigma);
   } else {
     return rnd->Gaus(mTrue+wideBias,wideSigma);
-  }
-}
-
-//===============================================
-// class derived from TUnfold
-// purpose:
-// alternative determination of the tau parameter during L-curve scan
-
-class MyUnfold : public TUnfold {
-public:
-  MyUnfold(TH2 const *hist_A, EHistMap histmap,
-           ERegMode regmode = kRegModeSize);
-  virtual Double_t DoUnfold(Double_t const &tau);
-
-  using TUnfold::DoUnfold;  // otherwise TUnfold methods will be hidden
-  void TauAnalysis(void);
-  inline void ResetUser(Int_t const *binMap) { fBinMap=binMap; fTauBest=0; fRhoMin=1.0; }
-  inline Double_t GetTauUser(void) const { return fTauBest; }
-protected:
-  Int_t const *fBinMap;
-  Double_t fTauBest;
-  Double_t fRhoMin;
-  ClassDef(MyUnfold,0); 
-};
-
-MyUnfold::MyUnfold(TH2 const *hist_A, EHistMap histmap,ERegMode regmode)
-  : TUnfold(hist_A,histmap,regmode) {
-};
-
-Double_t MyUnfold::DoUnfold(Double_t const &tau) {
-  // this calls the original unfolding
-  Double_t r=TUnfold::DoUnfold(tau);
-  // here we can do our private analysis to find the best choice of tau
-  TauAnalysis();
-
-  return r;
-};
- 
-void MyUnfold::TauAnalysis(void) {
-  if(GetRhoAvg()<fRhoMin) {
-    fRhoMin=GetRhoAvg();
-    fTauBest=fTau;
   }
 }
 
