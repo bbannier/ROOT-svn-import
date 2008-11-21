@@ -64,7 +64,7 @@ namespace RooStats {
       virtual ~HypoTestCalculator() {}
     
       // main interface to get a HypoTestResult, pure virtual
-      virtual HypoTestResult* GetHypoTest() const = 0;   
+      virtual HypoTestResult* GetHypoTest() const = 0;
 
       // set a workspace that owns all the necessary components for the analysis
       virtual void SetWorkspace(RooWorkspace* ws) = 0;

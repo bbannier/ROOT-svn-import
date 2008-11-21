@@ -40,12 +40,9 @@ using namespace RooStats;
 
 HybridResult::HybridResult( const char *name, const char *title,
                             std::vector<float>& testStat_sb_vals,
-                            std::vector<float>& testStat_b_vals,
-                            float testStat_data_val ) :
+                            std::vector<float>& testStat_b_vals) :
    /*HypoTestCalculator(name,title),*/ /// TO DO
-   fName(name),
-   fTitle(title),
-   fTestStat_data(testStat_data_val)
+   TNamed(name,title)
 {
    /// HybridResult constructor:
    int vector_size_sb = testStat_sb_vals.size();
@@ -73,6 +70,14 @@ HybridResult::~HybridResult()
    /// HybridResult destructor
    fTestStat_sb.clear();
    fTestStat_b.clear();
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+void HybridResult::SetDataTestStatistics(double testStat_data_val)
+{
+   fTestStat_data = testStat_data_val;
+   return;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -137,7 +142,7 @@ double HybridResult::CLs()
 void HybridResult::Add(HybridResult* other)
 {
 /// TO DO: to complete
-   other->Print("");
+   other->PrintMore("");
 
 //   int other_size_sb = _testStat_sb.size();
 //   for (int i=0;i<other_size_sb;++i)
@@ -163,14 +168,14 @@ HybridPlot* HybridResult::GetPlot(const char* name,const char* title, int n_bins
    // default plot name
    TString plot_name;
    if ( TString(name)=="" ) {
-      plot_name += fName; //GetName();
+      plot_name += GetName();
       plot_name += "_plot";
    } else plot_name = name;
 
    // default plot title
    TString plot_title;
    if ( TString(title)=="" ) {
-      plot_title += fTitle; //GetTitle();
+      plot_title += GetTitle();
       plot_title += "_plot (";
       plot_title += fTestStat_b.size();
       plot_title += " toys)";
@@ -188,14 +193,13 @@ HybridPlot* HybridResult::GetPlot(const char* name,const char* title, int n_bins
 
 ///////////////////////////////////////////////////////////////////////////
 
-void HybridResult::Print(const char* options)
+void HybridResult::PrintMore(const char* options)
 {
    /// Print out some information about the results
 
    std::cout << options << std::endl;
 
-
-   std::cout << "\nResults " << fName /*GetName()*/ << ":\n"
+   std::cout << "\nResults " << GetName() << ":\n"
              << " - Number of S+B toys: " << fTestStat_b.size() << std::endl
              << " - Number of B toys: " << fTestStat_sb.size() << std::endl
              << " - test statistics evaluated on data: " << fTestStat_data << std::endl

@@ -20,10 +20,15 @@
 #include "RooStats/HypoTestCalculator.h"
 #endif
 
+#include <vector>
+
+#include "TH1.h"
+
+#include "RooStats/HybridResult.h"
 
 namespace RooStats {
 
-   class HybridCalculator /*: public HypoTestCalculator*/ {  /// TO DO: inheritance
+   class HybridCalculator : public HypoTestCalculator , public TNamed {
 
    public:
       /// Constructor for HybridCalculator
@@ -39,13 +44,14 @@ namespace RooStats {
       virtual ~HybridCalculator();
 
       void SetTestStatistics(int index);
-      void Calculate(RooAbsData& data, unsigned int nToys, bool usePriors);
-      void RunToys(unsigned int nToys, bool usePriors); // private?
-      void Print(const char* options);
+      HybridResult* Calculate(TH1& data, unsigned int nToys, bool usePriors);
+      HybridResult* Calculate(RooTreeData& data, unsigned int nToys, bool usePriors);
+      HybridResult* Calculate(unsigned int nToys, bool usePriors);
+      void PrintMore(const char* options);
 
    private:
-      const char* fName; /// TO DO: put to TNamed inherited
-      const char* fTitle; /// TO DO: put to TNamed inherited
+      void RunToys(std::vector<float>& bVals, std::vector<float>& sbVals, unsigned int nToys, bool usePriors);
+
       RooAbsPdf& fSbModel;
       RooAbsPdf& fBModel;
       RooArgList& fObservables;
