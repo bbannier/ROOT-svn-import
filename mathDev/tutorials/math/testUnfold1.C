@@ -1,9 +1,10 @@
 // Author: Stefan Schmitt
 // DESY, 14.10.2008
 
-//  Version 6, bug-fixes in TUnfold.C
+//  Version 6a, fix problem with dynamic array allocation under windows
 //
 //  History:
+//    Version 6, bug-fixes in TUnfold.C
 //    Version 5, replace main() by testUnfold1()
 //    Version 4, with bug-fix in TUnfold.C
 //    Version 3, with bug-fix in TUnfold.C
@@ -70,7 +71,7 @@ void chisquare_corr(Int_t &npar, Double_t * /*gin */, Double_t &f, Double_t *u, 
    
   Int_t npfit = 0;
   Int_t nPoints=hfit->GetNbinsX();
-  Double_t df[nPoints];
+  Double_t *df=new Double_t[nPoints];
   for (Int_t i=0;i<nPoints;i++) {
     x     = hfit->GetBinCenter(i+1);
     TF1::RejectPoint(kFALSE);
@@ -83,6 +84,7 @@ void chisquare_corr(Int_t &npar, Double_t * /*gin */, Double_t &f, Double_t *u, 
       f += df[i]*df[j]*gHistInvEMatrix->GetBinContent(i+1,j+1);
     }
   }
+  delete[] df;
   f1->SetNumberFitPoints(npfit);
 }
 
@@ -267,7 +269,7 @@ int testUnfold1()
   // In this example, the underflow and overflow bin are discarded
   // This is important for the inverse of the covariance matrix
   // because that matrix is used for a fit later on
-  Int_t binMap[nGen+2];
+  Int_t *binMap=new Int_t[nGen+2];
   for(Int_t i=1;i<=nGen;i++) binMap[i]=i;
   binMap[0]=-1; // discarde underflow bin (here: the background normalisation)
   binMap[nGen+1]=-1; // discarde overflow bin
@@ -290,6 +292,9 @@ int testUnfold1()
                            nGen,xminGen,xmaxGen,nGen,xminGen,xmaxGen);
   TH1D *histRhoi=new TH1D("rho_I","mass",nGen,xminGen,xmaxGen);
   unfold.GetRhoI(histRhoi,gHistInvEMatrix,binMap);
+
+  delete[] binMap;
+  binMap=0; // just in case You think it is still defined
 
   //======================================================================
   // fit Breit-Wigner shape to unfolded data, using the full error matrix

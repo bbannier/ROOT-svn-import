@@ -1,9 +1,10 @@
 // Author: Stefan Schmitt
 // DESY, 14.10.2008
 
-//  Version 6, re-include class MyUnfold in the example
+//  Version 6a, fix problem with dynamic array allocation under windows
 //
 //  History:
+//    Version 6, re-include class MyUnfold in the example
 //    Version 5, move class MyUnfold to seperate files
 //    Version 4, with bug-fix in TUnfold.C
 //    Version 3, with bug-fix in TUnfold.C
@@ -137,7 +138,7 @@ void chisquare_corr(Int_t &npar, Double_t * /*gin */, Double_t &f, Double_t *u, 
    
   Int_t npfit = 0;
   Int_t nPoints=hfit->GetNbinsX();
-  Double_t df[nPoints];
+  Double_t *df=new Double_t[nPoints];
   for (Int_t i=0;i<nPoints;i++) {
     x     = hfit->GetBinCenter(i+1);
     TF1::RejectPoint(kFALSE);
@@ -150,6 +151,7 @@ void chisquare_corr(Int_t &npar, Double_t * /*gin */, Double_t &f, Double_t *u, 
       f += df[i]*df[j]*gHistInvEMatrix->GetBinContent(i+1,j+1);
     }
   }
+  delete[] df;
   f1->SetNumberFitPoints(npfit);
 }
 
@@ -324,7 +326,7 @@ int testUnfold2()
   unfold.RegularizeBins(iPeek+nPeek,1,nGen-(iPeek+nPeek),regMode);
 
   // set up bin map, excluding underflow and overflow bins
-  Int_t binMap[nGen+2];
+  Int_t *binMap=new Int_t[nGen+2];
   for(Int_t i=1;i<=nGen;i++) binMap[i]=i;
   binMap[0]=-1;
   binMap[nGen+1]=-1;
@@ -376,6 +378,9 @@ int testUnfold2()
                            nGen,xminGen,xmaxGen,nGen,xminGen,xmaxGen);
   
   unfold.GetRhoI(histRhoi,gHistInvEMatrix,binMap);
+
+  delete[] binMap;
+  binMap=0;
 
   //======================================================================
   // fit Breit-Wigner shape to unfolded data, using the full error matrix
