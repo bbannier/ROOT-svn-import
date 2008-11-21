@@ -2,9 +2,11 @@
 // DESY, 13/10/08
 
 
-//  Version 4, fix new bug from version 3 with initial regularisation condition
+//  Version 6, replace class XY by std::pair
 //
 //  History:
+//    Version 5, replace run-time dynamic arrays by new and delete[]
+//    Version 4, fix new bug from V3 with initial regularisation condition
 //    Version 3, fix bug with initial regularisation condition
 //    Version 2, with improved ScanLcurve() algorithm
 //    Version 1, added ScanLcurve() method
@@ -273,9 +275,9 @@
 //      RegularizeCurvature()   regularize the curvature given by three bins
 
 #include <iostream>
-#include <TMath.h>
 #include <TMatrixD.h>
 #include <TMatrixDSparse.h>
+#include <TMath.h>
 
 #include "TUnfold.h"
 
@@ -291,14 +293,14 @@ void TUnfold::ClearTUnfold(void)
    fA = 0;
    fLsquared = 0;
    fV = 0;
-   fy = 0;
-   fx0 = 0;
+   fY = 0;
+   fX0 = 0;
    fTau = 0.0;
    fBiasScale = 0.0;
    // output
    fEinv = 0;
    fE = 0;
-   fx = 0;
+   fX = 0;
    fAx = 0;
    fChi2A = 0.0;
    fChi2L = 0.0;
@@ -314,25 +316,25 @@ TUnfold::TUnfold(void)
 
 Double_t TUnfold::DoUnfold(void)
 {
-   // main unfolding algorithm. Declared virual, because other algorithms
+   // main unfolding algorithm. Declared virtual, because other algorithms
    // could be implemented
    //
    // Purpose: unfold y -> x
    // Data members required:
    //     fA:  matrix to relate x and y
-   //     fy:  measured data points
-   //     fx0: bias on x
-   //     fBiasScale: scale factor for fx0
+   //     fY:  measured data points
+   //     fX0: bias on x
+   //     fBiasScale: scale factor for fX0
    //     fV:  inverse of covariance matrix for y
    //     fLsquared: regularisation conditions
    //     fTau: regularisation strength
    // Data members modified:
    //     fEinv: inverse of the covariance matrix of x
    //     fE:    covariance matrix of x
-   //     fx:    unfolded data points
+   //     fX:    unfolded data points
    //     fAx:   estimate of y from x
    //     fChi2A:  contribution to chi**2 from y-fAx
-   //     fChi2L:  contribution to chi**2 from R*(x-x0)
+   //     fChi2L:  contribution to chi**2 from L*(x-x0)
    //     fRhoMax: maximum global correlation coefficient
    //     fRhoAvg: average global correlation coefficient
    // return code:
@@ -343,8 +345,8 @@ Double_t TUnfold::DoUnfold(void)
       delete fEinv;
    if (fE)
       delete fE;
-   if (fx)
-      delete fx;
+   if (fX)
+      delete fX;
    if (fAx)
       delete fAx;
 
@@ -357,14 +359,14 @@ Double_t TUnfold::DoUnfold(void)
                         TMatrixDSparse::kMult, *fV);
    //
    // get   T
-   //     fA fV fy + fTau fBiasScale Lsquared fx0 = rhs
+   //     fA fV fY + fTau fBiasScale Lsquared fX0 = rhs
    //
-   TMatrixDSparse rhs(mAt_V, TMatrixDSparse::kMult, *fy);
+   TMatrixDSparse rhs(mAt_V, TMatrixDSparse::kMult, *fY);
    if (fBiasScale != 0.0) {
       rhs +=
           (fTau * fBiasScale) * TMatrixDSparse(*fLsquared,
                                                TMatrixDSparse::kMult,
-                                               *fx0);
+                                               *fX0);
    }
    //
    // get matrix
@@ -389,12 +391,12 @@ Double_t TUnfold::DoUnfold(void)
    // get result
    //        fE rhs  = x
    //
-   fx = new TMatrixD(*fE, TMatrixD::kMult, rhs);
+   fX = new TMatrixD(*fE, TMatrixD::kMult, rhs);
    //
    // get result
    //        fA x  =  fAx
    //
-   fAx = new TMatrixDSparse(*fA, TMatrixDSparse::kMult, *fx);
+   fAx = new TMatrixDSparse(*fA, TMatrixDSparse::kMult, *fX);
    //
    // calculate chi**2 etc
    //
@@ -407,13 +409,13 @@ void TUnfold::CalculateChi2Rho(void)
 {
    // Calculate chi**2 and maximum global correlation
    // Data members required:
-   //   fy,fAx,fV,fx,fx0,fBiasScale,fTau,fLsquared
+   //   fY,fAx,fV,fX,fX0,fBiasScale,fTau,fLsquared
    // Data members modified:
    //   fChi2A,fChi2L,fRhoMax,fRhoAvg
 
    // chi**2 contribution from (y-Ax)V(y-Ax)
    fChi2A = 0.0;
-   TMatrixD dy(*fy, TMatrixD::kMinus, *fAx);
+   TMatrixD dy(*fY, TMatrixD::kMinus, *fAx);
    // Vd is made sparse, because it is made from sparse matrix V
    TMatrixDSparse Vd(*fV, TMatrixDSparse::kMult, dy);
    for (int iy = 0; iy < GetNy(); iy++) {
@@ -422,7 +424,7 @@ void TUnfold::CalculateChi2Rho(void)
 
    // chi**2 contribution from tau(x-s*x0)Lsquared(x-s*x0)
    fChi2L = 0.0;
-   TMatrixD dx(*fx, TMatrixD::kMinus, fBiasScale * (*fx0));
+   TMatrixD dx(*fX, TMatrixD::kMinus, fBiasScale * (*fX0));
    // LsquaredDx is made sparse, because it is made from sparse matrix
    // fLsquared
    TMatrixDSparse LsquaredDx(*fLsquared, TMatrixDSparse::kMult, dx);
@@ -480,7 +482,7 @@ TUnfold::TUnfold(TH2 const *hist_A, EHistMap histmap, ERegMode regmode)
    //    regmode: global regularisation mode
    // data members initialized to something different from zero:
    //    fA: filled from hist_A
-   //    fx0: filled from hist_A
+   //    fX0: filled from hist_A
    //    fLsquared: filled depending on the regularisation scheme
    // Treatment of overflow bins
    //    Bins where the unfolding input (Detector level) is in overflow
@@ -561,18 +563,18 @@ TUnfold::TUnfold(TH2 const *hist_A, EHistMap histmap, ERegMode regmode)
       }
    }
    // store bias as matrix
-   fx0 = new TMatrixD(nx, 1, sum_over_y.GetArray());
+   fX0 = new TMatrixD(nx, 1, sum_over_y.GetArray());
    // store non-zero elements in sparse matrix fA
    // construct sparse matrix fA
    // row structure
-   Int_t row_A[ny + 1];
+   Int_t *row_A = new Int_t[ny + 1];
    row_A[0] = 0;
    for (Int_t iy = 0; iy < ny; iy++) {
       row_A[iy + 1] = row_A[iy] + colCount_A[iy];
    }
    // column structure and data points
-   Int_t col_A[row_A[ny]];
-   Double_t data_A[row_A[ny]];
+   Int_t *col_A= new Int_t[row_A[ny]];
+   Double_t *data_A=new Double_t[row_A[ny]];
    for (Int_t iy = 0; iy < ny; iy++) {
       Int_t index = row_A[iy];
       for (Int_t ix = 0; ix < nx; ix++) {
@@ -591,6 +593,9 @@ TUnfold::TUnfold(TH2 const *hist_A, EHistMap histmap, ERegMode regmode)
       }
    }
    fA = CreateSparseMatrix(ny, nx, row_A, col_A, data_A);
+   delete[] row_A;
+   delete[] col_A;
+   delete[] data_A;
    // regularisation conditions squared
    fLsquared = new TMatrixDSparse(GetNx(), GetNx());
    if (regmode != kRegModeNone) {
@@ -608,16 +613,16 @@ TUnfold::~TUnfold(void)
       delete fLsquared;
    if (fV)
       delete fV;
-   if (fy)
-      delete fy;
-   if (fx0)
-      delete fx0;
+   if (fY)
+      delete fY;
+   if (fX0)
+      delete fX0;
    if (fEinv)
       delete fEinv;
    if (fE)
       delete fE;
-   if (fx)
-      delete fx;
+   if (fX)
+      delete fX;
    if (fAx)
       delete fAx;
 }
@@ -625,13 +630,13 @@ TUnfold::~TUnfold(void)
 void TUnfold::SetBias(TH1 const *bias)
 {
    // initialize alternative bias from histogram
-   // modifies data member fx0
+   // modifies data member fX0
 
-   if (fx0)
-      delete fx0;
-   fx0 = new TMatrixD(GetNx(), 1);
+   if (fX0)
+      delete fX0;
+   fX0 = new TMatrixD(GetNx(), 1);
    for (Int_t i = 0; i < GetNx(); i++) {
-      (*fx0) (i, 0) = bias->GetBinContent(fXToHist[i]);
+      (*fX0) (i, 0) = bias->GetBinContent(fXToHist[i]);
    }
 }
 
@@ -770,7 +775,7 @@ Double_t TUnfold::DoUnfold(Double_t const &tau_reg, TH1 const *input,
    //   input:   input distribution with errors
    //   scaleBias:  scale factor applied to the bias
    // Data members required:
-   //   fA, fx0, fLsquared
+   //   fA, fX0, fLsquared
    // Data members modified:
    //   those documented in SetInput()
    //   and those documented in DoUnfold(Double_t)
@@ -789,12 +794,13 @@ void TUnfold::SetInput(TH1 const *input, Double_t const &scaleBias) {
   //   input:   input distribution with errors
   //   scaleBias:  scale factor applied to the bias
   // Data members modified:
-  //   fy, fV, fBiasScale
+  //   fY, fV, fBiasScale
   fBiasScale = scaleBias;
   // construct inverted error matrix of measured quantities
   // from errors of input histogram
-  Int_t row_V[GetNy() + 1], col_V[GetNy()];
-  Double_t data_V[GetNy()];
+  Int_t *row_V=new Int_t[GetNy() + 1];
+  Int_t *col_V=new Int_t[GetNy()];
+  Double_t *data_V=new Double_t[GetNy()];
   // fV is set up in increasing row/column order
   // to avoid too much memory management
   for (Int_t iy = 0; iy < GetNy(); iy++) {
@@ -809,13 +815,16 @@ void TUnfold::SetInput(TH1 const *input, Double_t const &scaleBias) {
   if (fV)
     delete fV;
   fV = CreateSparseMatrix(GetNy(), GetNy(), row_V, col_V, data_V);
+  delete[] row_V;
+  delete[] col_V;
+  delete[] data_V;
   //
   // get input vector
-  if (fy)
-    delete fy;
-  fy = new TMatrixD(GetNy(), 1);
+  if (fY)
+    delete fY;
+  fY = new TMatrixD(GetNy(), 1);
   for (Int_t i = 0; i < GetNy(); i++) {
-    (*fy) (i, 0) = input->GetBinContent(i + 1);
+    (*fY) (i, 0) = input->GetBinContent(i + 1);
   }  
 }
 
@@ -824,9 +833,9 @@ Double_t TUnfold::DoUnfold(Double_t const &tau) {
   //     tau: new tau parameter
   // required data members:
   //     fA:  matrix to relate x and y
-  //     fy:  measured data points
-  //     fx0: bias on x
-  //     fBiasScale: scale factor for fx0
+  //     fY:  measured data points
+  //     fX0: bias on x
+  //     fBiasScale: scale factor for fX0
   //     fV:  inverse of covariance matrix for y
   //     fLsquared: regularisation conditions
   // modified data members:
@@ -834,18 +843,6 @@ Double_t TUnfold::DoUnfold(Double_t const &tau) {
   fTau=tau;
   return DoUnfold();
 }
-
-class XY {
-public:
-  inline XY(void) : x(0.),y(0.) { }
-    inline XY(Double_t const &_x,Double_t const & _y) : x(_x),y(_y) { }
-  inline Double_t GetDistance(XY const &a) const {
-    Double_t dx=x-a.x;
-    Double_t dy=y-a.y;
-    return TMath::Sqrt(dx*dx+dy*dy);
-  }
-  Double_t x,y;
-};
 
 Int_t TUnfold::ScanLcurve(Int_t nPoint,
                           Double_t const &tauMin,Double_t const &tauMax,
@@ -860,7 +857,7 @@ Int_t TUnfold::ScanLcurve(Int_t nPoint,
   //   logTauY: output spline of y-coordinates vs tau for the L curve
   // return value: the coordinate number (0..nPoint-1) with the "best" choice
   //     of tau
-  typedef std::map<Double_t,XY> XYtau_t;
+  typedef std::map<Double_t,std::pair<Double_t,Double_t> > XYtau_t;
 
   Int_t bestChoice=-1;
   XYtau_t curve;
@@ -874,11 +871,11 @@ Int_t TUnfold::ScanLcurve(Int_t nPoint,
     if(nPoint>1) {
       // initialisation for two or more points
       DoUnfold(TMath::Power(10.,logTauMax));
-      curve[logTauMax]=XY(GetLcurveX(),GetLcurveY());
+      curve[logTauMax]=std::make_pair(GetLcurveX(),GetLcurveY());
     }
     // initialisation for one or more points (if nPoint<3 tau is set to tauMin)
     DoUnfold(TMath::Power(10.,logTauMin));
-    curve[logTauMin]=XY(GetLcurveX(),GetLcurveY());
+    curve[logTauMin]=std::make_pair(GetLcurveX(),GetLcurveY());
   }
 
   while(int(curve.size())<nPoint-1) {
@@ -889,7 +886,11 @@ Int_t TUnfold::ScanLcurve(Int_t nPoint,
     i1=i0;
     Double_t distMax=0.0;
     for(i1++;i1!=curve.end();i1++) {
-      Double_t d=(*i1).second.GetDistance((*i0).second);
+      std::pair<Double_t,Double_t> const &xy0=(*i0).second;
+      std::pair<Double_t,Double_t> const &xy1=(*i1).second;
+      Double_t dx=xy1.first-xy0.first;
+      Double_t dy=xy1.second-xy0.second;
+      Double_t d=TMath::Sqrt(dx*dx+dy*dy);
       if(d>=distMax) {
         distMax=d;
         logTau=0.5*((*i0).first+(*i1).first);
@@ -897,7 +898,7 @@ Int_t TUnfold::ScanLcurve(Int_t nPoint,
       i0=i1;
     }
     DoUnfold(TMath::Power(10.,logTau));
-    curve[logTau]=XY(GetLcurveX(),GetLcurveY());
+    curve[logTau]=std::make_pair(GetLcurveX(),GetLcurveY());
   }
   XYtau_t::const_iterator i0,i1;
   i0=curve.begin();
@@ -905,35 +906,42 @@ Int_t TUnfold::ScanLcurve(Int_t nPoint,
   i1++;
   if(curve.size()>2) {
     // set up splines and determine (x,y) curvature in each point
-    Double_t lXi[curve.size()],lYi[curve.size()],lTi[curve.size()];
+    Double_t *cTi=new Double_t[curve.size()-1];
+    Double_t *cCi=new Double_t[curve.size()-1];
     Int_t n=0;
-    for( XYtau_t::const_iterator i=curve.begin();i!=curve.end();i++) {
-      lXi[n]=(*i).second.x;
-      lYi[n]=(*i).second.y;
-      lTi[n]=(*i).first;
-      n++;
+    {
+      Double_t *lXi=new Double_t[curve.size()];
+      Double_t *lYi=new Double_t[curve.size()];
+      Double_t *lTi=new Double_t[curve.size()];
+      for( XYtau_t::const_iterator i=curve.begin();i!=curve.end();i++) {
+        lXi[n]=(*i).second.first;
+        lYi[n]=(*i).second.second;
+        lTi[n]=(*i).first;
+        n++;
+      }
+      TSpline3 *splineX=new TSpline3("x vs tau",lTi,lXi,n);
+      TSpline3 *splineY=new TSpline3("y vs tau",lTi,lYi,n);
+      // calculate (x,y) curvature for all points
+      // the curvature is stored in the array cCi[] as a function of cTi[] 
+      for(Int_t i=0;i<n-1;i++) {
+        Double_t ltau,xy,bi,ci,di;
+        splineX->GetCoeff(i,ltau,xy,bi,ci,di);
+        Double_t tauBar=0.5*(lTi[i]+lTi[i+1]);
+        Double_t dTau=0.5*(lTi[i+1]-lTi[i]);
+        Double_t dx1=bi+dTau*(2.*ci+3.*di*dTau);
+        Double_t dx2=2.*ci+6.*di*dTau;
+        splineY->GetCoeff(i,ltau,xy,bi,ci,di);
+        Double_t dy1=bi+dTau*(2.*ci+3.*di*dTau);
+        Double_t dy2=2.*ci+6.*di*dTau;
+        cTi[i]=tauBar;
+        cCi[i]=(dy2*dx1-dy1*dx2)/TMath::Power(dx1*dx1+dy1*dy1,1.5);
+      }
+      delete splineX;
+      delete splineY;
+      delete[] lXi;
+      delete[] lYi;
+      delete[] lTi;
     }
-    TSpline3 *splineX=new TSpline3("x vs tau",lTi,lXi,n);
-    TSpline3 *splineY=new TSpline3("y vs tau",lTi,lYi,n);
-    Double_t cTi[curve.size()-1];
-    Double_t cCi[curve.size()-1];
-    // calculate (x,y) curvature for all points
-    // the curvature is stored in the array yi[] 
-    for(Int_t i=0;i<n-1;i++) {
-      Double_t ltau,xy,bi,ci,di;
-      splineX->GetCoeff(i,ltau,xy,bi,ci,di);
-      Double_t tauBar=0.5*(lTi[i]+lTi[i+1]);
-      Double_t dTau=0.5*(lTi[i+1]-lTi[i]);
-      Double_t dx1=bi+dTau*(2.*ci+3.*di*dTau);
-      Double_t dx2=2.*ci+6.*di*dTau;
-      splineY->GetCoeff(i,ltau,xy,bi,ci,di);
-      Double_t dy1=bi+dTau*(2.*ci+3.*di*dTau);
-      Double_t dy2=2.*ci+6.*di*dTau;
-      cTi[i]=tauBar;
-      cCi[i]=(dy2*dx1-dy1*dx2)/TMath::Power(dx1*dx1+dy1*dy1,1.5);
-    }
-    delete splineX;
-    delete splineY;
     // create curvature Spline
     TSpline3 *splineC=new TSpline3("L curve curvature",cTi,cCi,n-1);
     Double_t cCmax=cCi[0];
@@ -997,27 +1005,34 @@ Int_t TUnfold::ScanLcurve(Int_t nPoint,
       }
     }
     delete splineC;
+    delete[] cTi;
+    delete[] cCi;
     logTau=cTmax;
     DoUnfold(TMath::Power(10.,logTau));
-    curve[logTau]=XY(GetLcurveX(),GetLcurveY());
+    curve[logTau]=std::make_pair(GetLcurveX(),GetLcurveY());
   }
   //
   // identify position of the result and save it as splines
   if(curve.size()>0) {
-    Double_t x[curve.size()],y[curve.size()],logT[curve.size()];
+    Double_t *x=new Double_t[curve.size()];
+    Double_t *y=new Double_t[curve.size()];
+    Double_t *logT=new Double_t[curve.size()];
     int n=0;
     for( XYtau_t::const_iterator i=curve.begin();i!=curve.end();i++) {
       if(logTau==(*i).first) {
         bestChoice=n;
       }
-      x[n]=(*i).second.x;
-      y[n]=(*i).second.y;
+      x[n]=(*i).second.first;
+      y[n]=(*i).second.second;
       logT[n]=(*i).first;
       n++;
     }
     if(lCurve) (*lCurve)=new TGraph(n,x,y);
     if(logTauX) (*logTauX)=new TSpline3("log(chi**2)%log(tau)",logT,x,n);
     if(logTauY) (*logTauY)=new TSpline3("L curve",logT,y,n);
+    delete[] x;
+    delete[] y;
+    delete[] logT;
   }
 
   return bestChoice;
@@ -1041,7 +1056,7 @@ TH1D *TUnfold::GetOutput(char const *name, char const *title,
    TH1D *out = new TH1D(name, title, nbins, xmin, xmax);
 #ifdef UNUSED
    for (Int_t i = 0; i < GetNx(); i++) {
-      out->SetBinContent(fXToHist[i], (*fx) (i, 0));
+      out->SetBinContent(fXToHist[i], (*fX) (i, 0));
       out->SetBinError(fXToHist[i], TMath::Sqrt((*fE) (i, i)));
    }
 #else
@@ -1067,7 +1082,7 @@ TH1D *TUnfold::GetBias(char const *name, char const *title,
    }
    TH1D *out = new TH1D(name, title, nbins, xmin, xmax);
    for (Int_t i = 0; i < GetNx(); i++) {
-      out->SetBinContent(fXToHist[i], (*fx0) (i, 0));
+      out->SetBinContent(fXToHist[i], (*fX0) (i, 0));
    }
    return out;
 }
@@ -1119,7 +1134,7 @@ TH1D *TUnfold::GetInput(char const *name, char const *title,
    TH1D *out = new TH1D(name, title, GetNy(), y0, y1);
    TMatrixD Vinv(TMatrixD::kInverted, *fV);
    for (Int_t i = 0; i < GetNy(); i++) {
-      out->SetBinContent(i + 1, (*fy) (i, 0));
+      out->SetBinContent(i + 1, (*fY) (i, 0));
       out->SetBinError(i + 1, TMath::Sqrt(Vinv(i, i)));
    }
 
@@ -1301,8 +1316,8 @@ void TUnfold::GetOutput(TH1 *output,Int_t const *binMap) const {
    //          ...
 
   Int_t nbin=output->GetNbinsX();
-  Double_t c[nbin+2];
-  Double_t e2[nbin+2];
+  Double_t *c=new Double_t[nbin+2];
+  Double_t *e2=new Double_t[nbin+2];
   for(Int_t i=0;i<nbin+2;i++) {
     c[i]=0.0;
     e2[i]=0.0;
@@ -1313,7 +1328,7 @@ void TUnfold::GetOutput(TH1 *output,Int_t const *binMap) const {
     Int_t destBinI=binMap ? binMap[i] : i;
     Int_t srcBinI=fHistToX[i];
     if((destBinI>=0)&&(destBinI<nbin+2)&&(srcBinI>=0)) {
-      c[destBinI]+=(*fx)(srcBinI,0);
+      c[destBinI]+=(*fX)(srcBinI,0);
       for(Int_t j=0;j<binMapSize;j++) {
         Int_t destBinJ=binMap ? binMap[j] : j;
         if(destBinI!=destBinJ) continue;
@@ -1326,6 +1341,8 @@ void TUnfold::GetOutput(TH1 *output,Int_t const *binMap) const {
     output->SetBinContent(i,c[i]);
     output->SetBinError(i,TMath::Sqrt(e2[i]));
   }
+  delete[] c;
+  delete[] e2;
 }
 
 void TUnfold::GetEmatrix(TH2 *ematrix,Int_t const *binMap) const {
@@ -1378,7 +1395,7 @@ Double_t TUnfold::GetRhoI(TH1 *rhoi,TH2 *ematrixinv,Int_t const *binMap) const {
 
   Int_t nbin=rhoi->GetNbinsX();  
   // count number of bins mapped into one bin of the output histogram
-  Int_t nz[nbin+2];
+  Int_t *nz=new Int_t[nbin+2];
   for(Int_t i=0;i<nbin+2;i++) nz[i]=0;
   Int_t binMapSize = fHistToX.GetSize();
   for(Int_t i=0;i<binMapSize;i++) {
@@ -1391,7 +1408,8 @@ Double_t TUnfold::GetRhoI(TH1 *rhoi,TH2 *ematrixinv,Int_t const *binMap) const {
   // count bins which do receive some input
   // and provide lookup-table
   Int_t n=0;
-  Int_t destBin[nbin+2],matrixBin[nbin+2];
+  Int_t *destBin=new Int_t[nbin+2];
+  Int_t *matrixBin=new Int_t[nbin+2];
   for(Int_t i=0;i<nbin+2;i++) {
     if(nz[i]>0) {
       matrixBin[i]=n;
@@ -1435,6 +1453,9 @@ Double_t TUnfold::GetRhoI(TH1 *rhoi,TH2 *ematrixinv,Int_t const *binMap) const {
       }
     }
   }
+  delete[] nz;
+  delete[] destBin;
+  delete[] matrixBin;
   return rhoMax;
 }
 
@@ -1449,7 +1470,7 @@ void TUnfold::GetRhoIJ(TH2 *rhoij,Int_t const *binMap) const {
   //          ...
   GetEmatrix(rhoij,binMap);
   Int_t nbin=rhoij->GetNbinsX();  
-  Double_t e[nbin+2];
+  Double_t *e=new Double_t[nbin+2];
   for(Int_t i=0;i<nbin+2;i++) {
     e[i]=TMath::Sqrt(rhoij->GetBinContent(i,i));
   }
@@ -1462,4 +1483,5 @@ void TUnfold::GetRhoIJ(TH2 *rhoij,Int_t const *binMap) const {
       }
     }
   }
+  delete[] e;
 }

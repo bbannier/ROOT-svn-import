@@ -1,9 +1,11 @@
 // Author: Stefan Schmitt
 // DESY, 13/10/08
 
-//  Version 4, with bug-fix in TUnfold.C
+//  Version 6, completely remove definition of class XY
 //
 //  History:
+//    Version 5, move definition of class XY from TUnfold.C to this file
+//    Version 4, with bug-fix in TUnfold.C
 //    Version 3, with bug-fix in TUnfold.C
 //    Version 2, with changed ScanLcurve() arguments
 //    Version 1, added ScanLcurve() method
@@ -59,15 +61,15 @@ class TUnfold:public TObject {
    TMatrixDSparse * fA;        // Input: matrix
    TMatrixDSparse *fLsquared;   // Input: regularisation conditions squared
    TMatrixDSparse *fV;          // Input: covariance matrix for y
-   TMatrixD *fy;                // Input: y
-   TMatrixD *fx0;               // Input: x0
+   TMatrixD *fY;                // Input: y
+   TMatrixD *fX0;               // Input: x0
    Double_t fTau;               // Input: regularisation parameter
    Double_t fBiasScale;         // Input: scale factor for the bias
    TArrayI fXToHist;            // Input: matrix indices -> histogram bins
    TArrayI fHistToX;            // Input: histogram bins -> matrix indices
    TMatrixDSparse *fEinv;       // Result: inverse error matrix
    TMatrixD *fE;                // Result: error matrix
-   TMatrixD *fx;                // Result: x
+   TMatrixD *fX;                // Result: x
    TMatrixDSparse *fAx;         // Result: Ax
    Double_t fChi2A;             // Result: chi**2 contribution from (y-Ax)V(y-Ax)
    Double_t fChi2L;             // Result: chi**2 contribution from tau(x-s*x0)Lsquared(x-s*x0)
@@ -94,7 +96,7 @@ class TUnfold:public TObject {
       kRegModeNone = 0,         // no regularisation
       kRegModeSize = 1,         // regularise the size of the output
       kRegModeDerivative = 2,   // regularize the 1st derivative of the output
-      kRegModeCurvature = 3,    // regularize the 2nd derivative of the output
+      kRegModeCurvature = 3     // regularize the 2nd derivative of the output
    };
    TUnfold(TH2 const *hist_A, EHistMap histmap, ERegMode regmode = kRegModeSize);      // constructor
    virtual ~ TUnfold(void);    // delete data members
