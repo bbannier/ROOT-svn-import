@@ -141,10 +141,10 @@ HybridResult* HybridCalculator::Calculate(RooTreeData& data, unsigned int nToys,
 
 HybridResult* HybridCalculator::Calculate(unsigned int nToys, bool usePriors)
 {
-   std::vector<float> bVals;
+   std::vector<double> bVals;
    bVals.reserve(nToys);
 
-   std::vector<float> sbVals;
+   std::vector<double> sbVals;
    sbVals.reserve(nToys);
 
    RunToys(bVals,sbVals,nToys,usePriors);
@@ -156,7 +156,7 @@ HybridResult* HybridCalculator::Calculate(unsigned int nToys, bool usePriors)
 
 ///////////////////////////////////////////////////////////////////////////
 
-void HybridCalculator::RunToys(std::vector<float>& bVals, std::vector<float>& sbVals, unsigned int nToys, bool usePriors)
+void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& sbVals, unsigned int nToys, bool usePriors)
 {
    /// do the actual run-MC processing
    std::cout << "HybridCalculator: run " << nToys << " toy-MC experiments\n";
@@ -233,7 +233,7 @@ void HybridCalculator::RunToys(std::vector<float>& bVals, std::vector<float>& sb
       /// evaluate the test statistic in the S+B case
       if ( fTestStatisticsIdx==2 ) {
          /// number of events used as test statistics
-         int nEvents = 0;
+         double nEvents = 0;
          if ( !sbIsEmpty ) nEvents = sbData->numEntries();
          sbVals.push_back(nEvents);
       } else {
@@ -247,7 +247,7 @@ void HybridCalculator::RunToys(std::vector<float>& bVals, std::vector<float>& sb
       /// evaluate the test statistic in the B-only case
       if ( fTestStatisticsIdx==2 ) {
          /// number of events used as test statistics
-         int nEvents = 0;
+         double nEvents = 0;
          if ( !bIsEmpty ) nEvents = bData->numEntries();
          bVals.push_back(nEvents);
       } else {
