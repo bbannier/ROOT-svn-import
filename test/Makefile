@@ -28,8 +28,8 @@ HWORLDO       = hworld.$(ObjSuf)
 HWORLDS       = hworld.$(SrcSuf)
 HWORLD        = hworld$(ExeSuf)
 
-STRESSHISTO   = stressHistOpts.$(ObjSuf) stressHistogram.$(ObjSuf)
-STRESSHISTS   = stressHistOpts.$(SrcSuf) stressHistogram.$(SrcSuf)
+STRESSHISTO   = stressHistogram.$(ObjSuf)
+STRESSHISTS   = stressHistogram.$(SrcSuf)
 STRESSHIST    = stressHistogram$(ExeSuf)
 
 CTORTUREO     = ctorture.$(ObjSuf)
