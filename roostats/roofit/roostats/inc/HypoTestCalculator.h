@@ -50,7 +50,7 @@ class RooWorkspace;
 
 namespace RooStats {
 
-   class HypoTestResult; 
+   class HypoTestResult;
 
    class HypoTestCalculator {
 
@@ -62,7 +62,7 @@ namespace RooStats {
       // HypoTestCalculator(RooAbsData*,RooAbsPdf*, RooAbsPdf*, RooArgSet*, RooArgSet*) 
 
       virtual ~HypoTestCalculator() {}
-    
+
       // main interface to get a HypoTestResult, pure virtual
       virtual HypoTestResult* GetHypoTest() const = 0;
 
@@ -90,7 +90,6 @@ namespace RooStats {
       virtual void SetNullParameters(RooArgSet*) = 0;
       // set parameter values for the alternate if using a common PDF
       virtual void SetAlternateParameters(RooArgSet*) = 0;
-    
 
    protected:
       ClassDef(HypoTestCalculator,1)  // Interface for tools doing hypothesis tests

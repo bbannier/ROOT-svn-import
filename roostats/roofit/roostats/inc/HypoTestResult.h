@@ -21,8 +21,7 @@
 
 namespace RooStats {
 
-   class HypoTestResult  : public TNamed {
-
+   class HypoTestResult : public TNamed {
 
    public:
       HypoTestResult();
@@ -35,7 +34,7 @@ namespace RooStats {
 
       // Return p-value for alternate hypothesis
       virtual Double_t AlternatePValue() const {return fAlternatePValue;}
-    
+
       // Convert  NullPValue into a "confidence level"
       virtual Double_t CLb() const {return 1.-NullPValue();}
 
@@ -44,18 +43,17 @@ namespace RooStats {
 
       // CLs is simply CLs+b/CLb (not a method, but a quantity)
       virtual Double_t CLs() const {return CLsplusb()/CLb();}
-    
+
       // familiar name for the Null p-value in terms of 1-sided Gaussian significance
       virtual Double_t Significance() const {return RooStats::PValueToSignificance( fNullPValue ); }
-    
-    
-   private:
+
+   protected:
 
       Double_t fNullPValue; // p-value for the null hypothesis (small number means disfavored)
       Double_t fAlternatePValue; // p-value for the alternate hypothesis (small number means disfavored)
 
       ClassDef(HypoTestResult,1)  // Base class to represent results of a hypothesis test
-      
+
    };
 }
 

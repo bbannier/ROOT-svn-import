@@ -24,7 +24,7 @@ namespace RooStats {
 
    class HybridPlot; 
 
-   class HybridResult /*: TNamed*/ /* , public HypoTestResult*/ {  /// TO DO: inheritance
+   class HybridResult : public TNamed /* , public HypoTestResult*/ {  /// TO DO: inheritance
 
    public:
 
