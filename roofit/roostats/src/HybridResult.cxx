@@ -40,8 +40,8 @@ using namespace RooStats;
 
 HybridResult::HybridResult( const char *name, const char *title,
                             std::vector<double>& testStat_sb_vals,
-                            std::vector<double>& testStat_b_vals)  //:
-   //TNamed(name,title)
+                            std::vector<double>& testStat_b_vals) :
+   TNamed(name,title)
 {
    /*HypoTestCalculator(name,title),*/ /// TO DO
    //TNamed(name,title)
@@ -143,17 +143,17 @@ void HybridResult::Add(HybridResult* other)
 /// TO DO: to complete
    other->PrintMore("");
 
-//   int other_size_sb = _testStat_sb.size();
-//   for (int i=0;i<other_size_sb;++i)
-//     _testStat_sb.push_back(other->getTestStat_sb()[i]);
-// 
-//   int other_size_b = _testStat_b.size();
-//   for (int i=0;i<other_size_b;++i)
-//     _testStat_b.push_back(other->getTestStat_b()[i]);
-// 
-//   // if no data is present use the other's HybridResult's data
-//   if (_testStat_data==-999)
-//     _testStat_data = other->getTestStat_data();
+   int other_size_sb = _testStat_sb.size();
+   for (int i=0;i<other_size_sb;++i)
+      _testStat_sb.push_back(other->getTestStat_sb()[i]);
+
+   int other_size_b = _testStat_b.size();
+   for (int i=0;i<other_size_b;++i)
+      _testStat_b.push_back(other->getTestStat_b()[i]);
+
+   // if no data is present use the other's HybridResult's data
+   if (_testStat_data==-999)
+      _testStat_data = other->getTestStat_data();
 
    return;
 }
@@ -167,14 +167,14 @@ HybridPlot* HybridResult::GetPlot(const char* name,const char* title, int n_bins
    // default plot name
    TString plot_name;
    if ( TString(name)=="" ) {
-      plot_name += /*GetName()*/"";
+      plot_name += GetName();
       plot_name += "_plot";
    } else plot_name = name;
 
    // default plot title
    TString plot_title;
    if ( TString(title)=="" ) {
-      plot_title += /*GetTitle()*/"";
+      plot_title += GetTitle();
       plot_title += "_plot (";
       plot_title += fTestStat_b.size();
       plot_title += " toys)";
@@ -198,7 +198,7 @@ void HybridResult::PrintMore(const char* options)
 
    std::cout << options << std::endl;
 
-   std::cout << "\nResults " << /*GetName() <<*/ ":\n"
+   std::cout << "\nResults " << GetName() << ":\n"
              << " - Number of S+B toys: " << fTestStat_b.size() << std::endl
              << " - Number of B toys: " << fTestStat_sb.size() << std::endl
              << " - test statistics evaluated on data: " << fTestStat_data << std::endl
