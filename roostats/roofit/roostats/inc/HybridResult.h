@@ -24,13 +24,13 @@ namespace RooStats {
 
    class HybridPlot; 
 
-   class HybridResult : TNamed /* , public HypoTestResult*/ {  /// TO DO: inheritance
+   class HybridResult /*: TNamed*/ /* , public HypoTestResult*/ {  /// TO DO: inheritance
 
    public:
 
       /// Constructor for HybridResult
-      HybridResult(const char *name,const char *title,std::vector<float>& testStat_sb_vals,
-                   std::vector<float>& testStat_b_vals);
+      HybridResult(const char *name,const char *title,std::vector<double>& testStat_sb_vals,
+                   std::vector<double>& testStat_b_vals);
 
       /// Destructor of HybridResult
       virtual ~HybridResult();

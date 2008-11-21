@@ -50,7 +50,7 @@ namespace RooStats {
       void PrintMore(const char* options);
 
    private:
-      void RunToys(std::vector<float>& bVals, std::vector<float>& sbVals, unsigned int nToys, bool usePriors);
+      void RunToys(std::vector<double>& bVals, std::vector<double>& sbVals, unsigned int nToys, bool usePriors);
 
       RooAbsPdf& fSbModel;
       RooAbsPdf& fBModel;

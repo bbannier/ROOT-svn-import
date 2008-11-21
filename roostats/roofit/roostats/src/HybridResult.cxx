@@ -39,11 +39,13 @@ using namespace RooStats;
 ///////////////////////////////////////////////////////////////////////////
 
 HybridResult::HybridResult( const char *name, const char *title,
-                            std::vector<float>& testStat_sb_vals,
-                            std::vector<float>& testStat_b_vals) :
-   /*HypoTestCalculator(name,title),*/ /// TO DO
-   TNamed(name,title)
+                            std::vector<double>& testStat_sb_vals,
+                            std::vector<double>& testStat_b_vals)  //:
+   //TNamed(name,title)
 {
+   /*HypoTestCalculator(name,title),*/ /// TO DO
+   //TNamed(name,title)
+//{
    /// HybridResult constructor:
    int vector_size_sb = testStat_sb_vals.size();
    assert(vector_size_sb>0);
@@ -52,15 +54,12 @@ HybridResult::HybridResult( const char *name, const char *title,
    assert(vector_size_b>0);
 
    fTestStat_sb.reserve(vector_size_sb);
-   fTestStat_b.reserve(vector_size_b);
-
    for (int i=0;i<vector_size_sb;++i)
       fTestStat_sb.push_back(testStat_sb_vals[i]);
 
+   fTestStat_b.reserve(vector_size_b);
    for (int i=0;i<vector_size_b;++i)
       fTestStat_b.push_back(testStat_b_vals[i]);
-
-//  _testStat_data = -999;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -168,14 +167,14 @@ HybridPlot* HybridResult::GetPlot(const char* name,const char* title, int n_bins
    // default plot name
    TString plot_name;
    if ( TString(name)=="" ) {
-      plot_name += GetName();
+      plot_name += /*GetName()*/"";
       plot_name += "_plot";
    } else plot_name = name;
 
    // default plot title
    TString plot_title;
    if ( TString(title)=="" ) {
-      plot_title += GetTitle();
+      plot_title += /*GetTitle()*/"";
       plot_title += "_plot (";
       plot_title += fTestStat_b.size();
       plot_title += " toys)";
@@ -199,7 +198,7 @@ void HybridResult::PrintMore(const char* options)
 
    std::cout << options << std::endl;
 
-   std::cout << "\nResults " << GetName() << ":\n"
+   std::cout << "\nResults " << /*GetName() <<*/ ":\n"
              << " - Number of S+B toys: " << fTestStat_b.size() << std::endl
              << " - Number of B toys: " << fTestStat_sb.size() << std::endl
              << " - test statistics evaluated on data: " << fTestStat_data << std::endl
