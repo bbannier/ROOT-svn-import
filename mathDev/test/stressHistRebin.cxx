@@ -190,7 +190,7 @@ bool test2DRebin()
    return equals("TestIntRebin2D", h2d2, h3, cmpOptStats);
 }
 
-bool stressRebin()
+bool stressHistRebin()
 {
    typedef bool (*pointer2Test)();
    const unsigned int numberOfTests = 4;

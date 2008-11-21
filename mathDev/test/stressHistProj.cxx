@@ -689,8 +689,8 @@ public:
    
 };
 
-int stressProjection(bool testWithoutWeights = true,
-                     bool testWithWeights = true)
+int stressHistProj(bool testWithoutWeights = true,
+                   bool testWithWeights = true)
 {
    int status = 0;
    

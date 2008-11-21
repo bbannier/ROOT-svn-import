@@ -11,14 +11,14 @@
 const unsigned int __DRAW__ = 0;
 
 // From stressProjection.cxx
-int stressProjection(bool testWithoutWeights = true,
-                     bool testWithWeights = true);
+int stressHistProj(bool testWithoutWeights = true,
+                   bool testWithWeights = true);
 
 // From stressRebin.cxx
-bool stressRebin();
+bool stressHistRebin();
 
 // From stressAdd.cxx
-bool stressAdd();
+bool stressHistOpts();
 
 enum compareOptions {
    cmpOptDebug=1,
@@ -32,7 +32,7 @@ TRandom2 r;
 
 int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0, double ERRORLIMIT = 1E-15);
 int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0, double ERRORLIMIT = 1E-15);
-int equals(const char* msg, TH3D* h1, TH3D* h2, int options, double ERRORLIMIT);
+int equals(const char* msg, TH3D* h1, TH3D* h2, int options = 0, double ERRORLIMIT = 1E-15);
 int equals(Double_t n1, Double_t n2, double ERRORLIMIT = 1E-15);
 int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT = 1E-15);
 
@@ -51,22 +51,22 @@ int main(int argc, char** argv)
    ostringstream output;
    output << "\nTEST RESULTS\n\n";
 
-   cout << "\nstressProjection\n" << endl;
-   status = stressProjection();
+   cout << "\nstressHistProj\n" << endl;
+   status = stressHistProj();
    GlobalStatus |= status;
-   output << "stressProjection Test........" 
+   output << "stressHistProj Test.............." 
           << (status?"FAILED":"OK") << endl;
 
-   cout << "\nstressRebin\n" << endl;
-   status = stressRebin();
+   cout << "\nstressHistRebin\n" << endl;
+   status = stressHistRebin();
    GlobalStatus |= status;
-   output << "stressRebin Test............."
+   output << "stressHistRebin Test............."
           << (status?"FAILED":"OK") << endl;
 
-   cout << "\nstressAdd\n" << endl;
-   status = stressAdd();
+   cout << "\nstressHistOpts\n" << endl;
+   status = stressHistOpts();
    GlobalStatus |= status;
-   output << "stressAdd Test............."
+   output << "stressHistOpts Test.............."
           << (status?"FAILED":"OK") << endl;
 
    cout << output.str() << endl;
