@@ -8,6 +8,7 @@
 
 #include "TProfile.h"
 #include "TProfile2D.h"
+#include "TProfile3D.h"
 
 #include "TApplication.h"
 #include "Riostream.h"
@@ -680,8 +681,28 @@ bool stressAssign1D()
    TH1D* h2 = new TH1D("=1D-h2", "h2-Title", numberOfBins, minRange, maxRange);
    *h2 = *h1;
 
-   bool ret = equals("Assign Oper '='  1D", h1, h2, cmpOptStats);
+   bool ret = equals("Assign Oper Hist '='  1D", h1, h2, cmpOptStats);
    delete h1;
+   return ret;
+}
+
+bool stressAssignProfile1D()
+{
+   TProfile* p1 = new TProfile("=1D-p1", "p1-Title", numberOfBins, minRange, maxRange);
+
+   p1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, 1);
+   }
+
+   TProfile* p2 = new TProfile("=1D-p2", "p2-Title", numberOfBins, minRange, maxRange);
+   *p2 = *p1;
+
+   bool ret = equals("Assign Oper Prof '='  1D", p1, p2, cmpOptStats);
+   delete p1;
    return ret;
 }
 
@@ -698,8 +719,27 @@ bool stressCopyConstructor1D()
 
    TH1D* h2 = new TH1D(*h1);
 
-   bool ret = equals("Copy Constructor 1D", h1, h2, cmpOptStats);
+   bool ret = equals("Copy Constructor Hist 1D", h1, h2, cmpOptStats);
    delete h1;
+   return ret;
+}
+
+bool stressCopyConstructorProfile1D()
+{
+   TProfile* p1 = new TProfile("cc1D-p1", "p1-Title", numberOfBins, minRange, maxRange);
+
+   p1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, 1);
+   }
+
+   TProfile* p2 = new TProfile(*p1);
+
+   bool ret = equals("Copy Constructor Prof 1D", p1, p2, cmpOptStats);
+   delete p1;
    return ret;
 }
 
@@ -716,8 +756,27 @@ bool stressClone1D()
 
    TH1D* h2 = static_cast<TH1D*> ( h1->Clone() );
 
-   bool ret = equals("Clone Function   1D", h1, h2, cmpOptStats);
+   bool ret = equals("Clone Function Hist   1D", h1, h2, cmpOptStats);
    delete h1;
+   return ret;
+}
+
+bool stressCloneProfile1D()
+{
+   TProfile* p1 = new TProfile("cl1D-p1", "p1-Title", numberOfBins, minRange, maxRange);
+
+   p1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, 1);
+   }
+
+   TProfile* p2 = static_cast<TProfile*> ( p1->Clone() );
+
+   bool ret = equals("Clone Function Prof   1D", p1, p2, cmpOptStats);
+   delete p1;
    return ret;
 }
 
@@ -734,16 +793,42 @@ bool stressAssign2D()
       Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       h1->Fill(x, y, 1);
    }
-
+   
    TH2D* h2 = new TH2D("=2D-h2", "h2-Title", 
                        numberOfBins, minRange, maxRange, 
                        numberOfBins, minRange, maxRange);
    *h2 = *h1;
 
-   bool ret = equals("Assign Oper '='  2D", h1, h2, cmpOptStats);
+   bool ret = equals("Assign Oper Hist '='  2D", h1, h2, cmpOptStats);
    delete h1;
    return ret;
 }
+
+bool stressAssignProfile2D()
+{
+   TProfile2D* p1 = new TProfile2D("=2D-p1", "p1-Title", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   p1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, 1);
+   }
+
+   TProfile2D* p2 = new TProfile2D("=2D-p2", "p2-Title", 
+                                   numberOfBins, minRange, maxRange, 
+                                   numberOfBins, minRange, maxRange);
+   *p2 = *p1;
+
+   bool ret = equals("Assign Oper Prof '='  2D", p1, p2, cmpOptStats);
+   delete p1;
+   return ret;
+}
+
 
 bool stressCopyConstructor2D()
 {
@@ -761,8 +846,30 @@ bool stressCopyConstructor2D()
 
    TH2D* h2 = new TH2D(*h1);
 
-   bool ret = equals("Copy Constructor 2D", h1, h2, cmpOptStats);
+   bool ret = equals("Copy Constructor Hist 2D", h1, h2, cmpOptStats);
    delete h1;
+   return ret;
+}
+
+bool stressCopyConstructorProfile2D()
+{
+   TProfile2D* p1 = new TProfile2D("cc2D-p1", "p1-Title", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   p1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, 1);
+   }
+
+   TProfile2D* p2 = new TProfile2D(*p1);
+
+   bool ret = equals("Copy Constructor Prof 2D", p1, p2, cmpOptStats);
+   delete p1;
    return ret;
 }
 
@@ -782,8 +889,30 @@ bool stressClone2D()
 
    TH2D* h2 = static_cast<TH2D*> ( h1->Clone() );
 
-   bool ret = equals("Clone Function   2D", h1, h2, cmpOptStats);
+   bool ret = equals("Clone Function Hist   2D", h1, h2, cmpOptStats);
    delete h1;
+   return ret;
+}
+
+bool stressCloneProfile2D()
+{
+   TProfile2D* p1 = new TProfile2D("cl2D-p1", "p1-Title", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   //p1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, 1);
+   }
+
+   TProfile2D* p2 = static_cast<TProfile2D*> ( p1->Clone() );
+
+   bool ret = equals("Clone Function Prof   2D", p1, p2, cmpOptStats);
+   delete p1;
    return ret;
 }
 
@@ -809,8 +938,36 @@ bool stressAssign3D()
                        numberOfBins, minRange, maxRange);
    *h2 = *h1;
 
-   bool ret = equals("Assign Oper '='  3D", h1, h2, cmpOptStats);
+   bool ret = equals("Assign Oper Hist '='  3D", h1, h2, cmpOptStats);
    delete h1;
+   return ret;
+}
+
+bool stressAssignProfile3D()
+{
+   TProfile3D* p1 = new TProfile3D("=3D-p1", "p1-Title", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   p1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, t, 1);
+   }
+
+   TProfile3D* p2 = new TProfile3D("=3D-p2", "p2-Title", 
+                                   numberOfBins, minRange, maxRange, 
+                                   numberOfBins, minRange, maxRange, 
+                                   numberOfBins, minRange, maxRange);
+   *p2 = *p1;
+
+   bool ret = equals("Assign Oper Prof '='  3D", p1, p2/*, cmpOptDebug | cmpOptStats*/);
+   delete p1;
    return ret;
 }
 
@@ -832,8 +989,32 @@ bool stressCopyConstructor3D()
 
    TH3D* h2 = new TH3D(*h1);
 
-   bool ret = equals("Copy Constructor 3D", h1, h2, cmpOptStats);
+   bool ret = equals("Copy Constructor Hist 3D", h1, h2, cmpOptStats);
    delete h1;
+   return ret;
+}
+
+bool stressCopyConstructorProfile3D()
+{
+   TProfile3D* p1 = new TProfile3D("cc3D-p1", "p1-Title", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   p1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, t, 1);
+   }
+
+   TProfile3D* p2 = new TProfile3D(*p1);
+
+   bool ret = equals("Copy Constructor Prof 3D", p1, p2/*, cmpOptStats*/);
+   delete p1;
    return ret;
 }
 
@@ -855,8 +1036,32 @@ bool stressClone3D()
 
    TH3D* h2 = static_cast<TH3D*> ( h1->Clone() );
 
-   bool ret = equals("Clone Function   3D", h1, h2, cmpOptStats);
+   bool ret = equals("Clone Function Hist   3D", h1, h2, cmpOptStats);
    delete h1;
+   return ret;
+}
+
+bool stressCloneProfile3D()
+{
+   TProfile3D* p1 = new TProfile3D("cl3D-p1", "p1-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+
+   p1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, t, 1);
+   }
+
+   TProfile3D* p2 = static_cast<TProfile3D*> ( p1->Clone() );
+
+   bool ret = equals("Clone Function Prof   3D", p1, p2/*, cmpOptStats*/);
+   delete p1;
    return ret;
 }
 
@@ -864,7 +1069,7 @@ bool stressHistOpts()
 {
    r.SetSeed(time(0));
    typedef bool (*pointer2Test)();
-   const unsigned int numberOfTests = 22;
+   const unsigned int numberOfTests = 31;
    pointer2Test testPointer[numberOfTests] = {  testAdd1,   testAdd2, 
                                                 testAdd2D1, testAdd2D2,
                                                 testAdd3D1, testAdd3D2, 
@@ -872,9 +1077,15 @@ bool stressHistOpts()
                                                 testMul2D1, testMul2D2,
                                                 testMul3D1, testMul3D2, 
                                                 testDivide1,
-                                                stressAssign1D, stressCopyConstructor1D, stressClone1D,
-                                                stressAssign2D, stressCopyConstructor2D, stressClone2D,
-                                                stressAssign3D, stressCopyConstructor3D, stressClone3D
+                                                stressAssign1D, stressAssignProfile1D, 
+                                                stressCopyConstructor1D, stressCopyConstructorProfile1D, 
+                                                stressClone1D, stressCloneProfile1D,
+                                                stressAssign2D, stressAssignProfile2D,
+                                                stressCopyConstructor2D, stressCopyConstructorProfile2D,
+                                                stressClone2D, stressCloneProfile2D,
+                                                stressAssign3D, stressAssignProfile3D,
+                                                stressCopyConstructor3D, stressCopyConstructorProfile3D,
+                                                stressClone3D, stressCloneProfile3D
    };
 
    // Still to do: testDivide2, testDivide2D1, testDivide2D2 and
