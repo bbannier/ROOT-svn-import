@@ -28,9 +28,9 @@ using namespace RooStats;
 
 HybridPlot::HybridPlot(const char* name,
                        const  char* title,
-                       std::vector<float> sb_vals,
-                       std::vector<float> b_vals,
-                       float m2lnQ_data,
+                       std::vector<double> sb_vals,
+                       std::vector<double> b_vals,
+                       double m2lnQ_data,
                        int n_bins,
                        bool verbosity):
    TNamed(name,title),

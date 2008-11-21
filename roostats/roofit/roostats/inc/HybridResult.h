@@ -46,9 +46,19 @@ namespace RooStats {
       HybridPlot* GetPlot(const char* name,const char* title, int n_bins);
       void PrintMore(const char* options);
 
+      /// Get test statistics values for the sb model
+      std::vector<double> getTestStat_sb(){return fTestStat_sb;}
+
+      /// Get test statistics values for the b model
+      std::vector<double> getTestStat_b(){return fTestStat_b;}
+
+      /// Get test statistics value on data
+      double getTestStat_data(){return fTestStat_data;}
+
+
    private:
-      std::vector<float> fTestStat_b; // results for B-only toy-MC
-      std::vector<float> fTestStat_sb; // results for S+B toy-MC
+      std::vector<double> fTestStat_b; // results for B-only toy-MC
+      std::vector<double> fTestStat_sb; // results for S+B toy-MC
       double fTestStat_data; // results for data
 
    protected:
