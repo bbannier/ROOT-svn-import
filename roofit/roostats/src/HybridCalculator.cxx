@@ -5,6 +5,7 @@
  * Package: RooFit/RooStats                                              *
  * Authors:                                                              *
  *   Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke       *
+ * Other author of this class: Danilo Piparo                             *
  *************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
@@ -22,15 +23,13 @@
 
 #include "RooDataHist.h"
 #include "RooDataSet.h"
-#include "RooGlobalFunc.h" // for RooFit::Extended()
+#include "RooGlobalFunc.h"
 #include "RooNLLVar.h"
 #include "RooRealVar.h"
 #include "RooTreeData.h"
 
 #include "RooStats/HybridCalculator.h"
 
-
-/// ClassImp for building the THtml documentation of the class
 ClassImp(RooStats::HybridCalculator)
 
 using namespace RooStats;
@@ -44,9 +43,7 @@ HybridCalculator::HybridCalculator( const char *name,
                                     RooArgList& observables,
                                     RooArgSet& parameters,
                                     RooAbsPdf& priorPdf ) :
-   /*HypoTestCalculator(name,title),*/ /// TO DO
-   fName(name),
-   fTitle(title),
+   TNamed(name,title),
    fSbModel(sbModel),
    fBModel(bModel),
    fObservables(observables),
@@ -58,9 +55,10 @@ HybridCalculator::HybridCalculator( const char *name,
    /// the list of observables of the model(s) (for MC-generation), the list of parameters 
    /// that are marginalised and the prior distribution of those parameters
 
-   this->SetTestStatistics(1); /// set to default
+   SetTestStatistics(1); /// set to default
 
-   /* if ( _verbose ) */ this->Print("v"); /// TO DO: add the verbose mode
+   this->Print();
+   /* if ( _verbose ) */ this->PrintMore("v"); /// TO DO: add the verbose mode
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -83,23 +81,82 @@ void HybridCalculator::SetTestStatistics(int index)
 
 ///////////////////////////////////////////////////////////////////////////
 
-void HybridCalculator::Calculate(RooAbsData& data, unsigned int nToys, bool usePriors)
+// to do: fix for TH1 that have non int entries or weighted ones
+HybridResult* HybridCalculator::Calculate(TH1& data, unsigned int nToys, bool usePriors)
 {
-   /// prepare and run the toy-MC experiments in order to calculate the hypothesis test
-   /// for the given data
+   /// this will not work so well with weighted TH1 and if it has non int entries
+   /// it works for TH1 that have int entries
 
-   /// TO DO: compute for data
-   data.Print(); // TO DO: just for the warnings
+   /// first compute the test statistics for data and then prepare and run the toy-MC experiments
 
-   return RunToys(nToys,usePriors);
+   /// convert data TH1 histogram to a RooDataHist
+   TString dataHistName = GetName(); dataHistName += "_roodatahist";
+   RooDataHist dataHist(dataHistName,"Data distribution as RooDataHist converted from TH1",fObservables,&data);
+
+   double testStatData = 0;
+   if ( fTestStatisticsIdx==2 ) {
+      /// number of events used as test statistics
+      double nEvents = data.Integral();  // use the TH1 integral (to do: check this)
+      testStatData = nEvents;
+   } else {
+      /// likelihood ratio used as test statistics (default)
+      RooNLLVar sb_sb_nll("sb_sb_nll","sb_sb_nll",fSbModel,dataHist,RooFit::Extended());
+      RooNLLVar b_sb_nll("b_sb_nll","b_sb_nll",fBModel,dataHist,RooFit::Extended());
+      double m2lnQ = 2*(sb_sb_nll.getVal()-b_sb_nll.getVal());
+      testStatData = m2lnQ;
+   }
+
+   HybridResult* result = Calculate(nToys,usePriors);
+   result->SetDataTestStatistics(testStatData);
+
+   return result;
 }
-///////////////////////////////////////////////////////////////////////////
-
-/// TO DO: add other data types constructors (?)
 
 ///////////////////////////////////////////////////////////////////////////
 
-void HybridCalculator::RunToys(unsigned int nToys, bool usePriors)
+HybridResult* HybridCalculator::Calculate(RooTreeData& data, unsigned int nToys, bool usePriors)
+{
+   /// first compute the test statistics for data and then prepare and run the toy-MC experiments
+
+   double testStatData = 0;
+   if ( fTestStatisticsIdx==2 ) {
+      /// number of events used as test statistics
+      double nEvents = data.numEntries();
+      testStatData = nEvents;
+   } else {
+      /// likelihood ratio used as test statistics (default)
+      RooNLLVar sb_sb_nll("sb_sb_nll","sb_sb_nll",fSbModel,data,RooFit::Extended());
+      RooNLLVar b_sb_nll("b_sb_nll","b_sb_nll",fBModel,data,RooFit::Extended());
+      double m2lnQ = 2*(sb_sb_nll.getVal()-b_sb_nll.getVal());
+      testStatData = m2lnQ;
+   }
+
+   HybridResult* result = Calculate(nToys,usePriors);
+   result->SetDataTestStatistics(testStatData);
+
+   return result;
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+HybridResult* HybridCalculator::Calculate(unsigned int nToys, bool usePriors)
+{
+   std::vector<float> bVals;
+   bVals.reserve(nToys);
+
+   std::vector<float> sbVals;
+   sbVals.reserve(nToys);
+
+   RunToys(bVals,sbVals,nToys,usePriors);
+
+   HybridResult* result = new HybridResult(GetName(),GetTitle(),sbVals,bVals);
+
+   return result;
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+void HybridCalculator::RunToys(std::vector<float>& bVals, std::vector<float>& sbVals, unsigned int nToys, bool usePriors)
 {
    /// do the actual run-MC processing
    std::cout << "HybridCalculator: run " << nToys << " toy-MC experiments\n";
@@ -109,8 +166,8 @@ void HybridCalculator::RunToys(unsigned int nToys, bool usePriors)
 
    /// backup the initial values of the parameters that are varied by the prior MC-integration
    int nParameters = fParameters.getSize();
-   double* parameterValues = 0; /// array to hold the initial parameter values
-   RooArgList parametersList("parametersList"); /// transforms the RooArgSet in a RooArgList (needed for .at())
+   double* parameterValues = 0;  /// array to hold the initial parameter values
+   RooArgList parametersList("parametersList");  /// transforms the RooArgSet in a RooArgList (needed for .at())
    if (usePriors && nParameters>0) {
       parametersList.add(fParameters);
       parameterValues = new double[nParameters];
@@ -173,42 +230,32 @@ void HybridCalculator::RunToys(unsigned int nToys, bool usePriors)
          }
       }
 
-      /// TO DO: add test statistics index variable
-
       /// evaluate the test statistic in the S+B case
       if ( fTestStatisticsIdx==2 ) {
          /// number of events used as test statistics
          int nEvents = 0;
-         if ( !sbIsEmpty ) sbData->numEntries();
-         /// TO DO: store it somewhere!!!
-         std::cout << nEvents << std::endl; // for the warnings
-         // sb_vals.push_back(m2lnQ);
+         if ( !sbIsEmpty ) nEvents = sbData->numEntries();
+         sbVals.push_back(nEvents);
       } else {
          /// likelihood ratio used as test statistics (default)
          RooNLLVar sb_sb_nll("sb_sb_nll","sb_sb_nll",fSbModel,*sbData,RooFit::Extended());
          RooNLLVar b_sb_nll("b_sb_nll","b_sb_nll",fBModel,*sbData,RooFit::Extended());
          double m2lnQ = 2*(sb_sb_nll.getVal()-b_sb_nll.getVal());
-         /// TO DO: store it somewhere!!!
-         std::cout << m2lnQ << std::endl; // for the warnings
-         // sb_vals.push_back(m2lnQ);
+         sbVals.push_back(m2lnQ);
       }
 
       /// evaluate the test statistic in the B-only case
       if ( fTestStatisticsIdx==2 ) {
          /// number of events used as test statistics
          int nEvents = 0;
-         if ( !bIsEmpty ) bData->numEntries();
-         /// TO DO: store it somewhere!!!
-         std::cout << nEvents << std::endl; // for the warnings
-         // b_vals.push_back(m2lnQ);
+         if ( !bIsEmpty ) nEvents = bData->numEntries();
+         bVals.push_back(nEvents);
       } else {
          /// likelihood ratio used as test statistics (default)
          RooNLLVar sb_b_nll("sb_b_nll","sb_b_nll",fSbModel,*bData,RooFit::Extended());
          RooNLLVar b_b_nll("b_b_nll","b_b_nll",fBModel,*bData,RooFit::Extended());
          double m2lnQ = 2*(sb_b_nll.getVal()-b_b_nll.getVal());
-         /// TO DO: store it somewhere!!!
-         std::cout << m2lnQ << std::endl; // for the warnings
-         // b_vals.push_back(m2lnQ);
+         bVals.push_back(m2lnQ);
       }
 
       /// delete the toy-MC datasets
@@ -231,7 +278,7 @@ void HybridCalculator::RunToys(unsigned int nToys, bool usePriors)
 
 ///////////////////////////////////////////////////////////////////////////
 
-void HybridCalculator::Print(const char* options)
+void HybridCalculator::PrintMore(const char* options)
 {
    /// Print out some information about the input models
 

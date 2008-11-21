@@ -24,17 +24,18 @@ namespace RooStats {
 
    class HybridPlot; 
 
-   class HybridResult /*: public HypoTestResult*/ {  /// TO DO: inheritance
+   class HybridResult : TNamed /* , public HypoTestResult*/ {  /// TO DO: inheritance
 
    public:
 
       /// Constructor for HybridResult
       HybridResult(const char *name,const char *title,std::vector<float>& testStat_sb_vals,
-                   std::vector<float>& testStat_b_vals,
-                   float testStat_data_val );
+                   std::vector<float>& testStat_b_vals);
 
       /// Destructor of HybridResult
       virtual ~HybridResult();
+
+      void SetDataTestStatistics(double testStat_data_val);
 
       /// TO DO: use from HypoTestResult
       double CLb();
@@ -43,15 +44,12 @@ namespace RooStats {
 
       void Add(HybridResult* other);
       HybridPlot* GetPlot(const char* name,const char* title, int n_bins);
-      void Print(const char* options);
+      void PrintMore(const char* options);
 
    private:
-      const char* fName; /// TO DO: put to inherited (TNamed for write to file)
-      const char* fTitle; /// TO DO: put to inherited (TNamed for write to file)
-
       std::vector<float> fTestStat_b; // results for B-only toy-MC
       std::vector<float> fTestStat_sb; // results for S+B toy-MC
-      float fTestStat_data; // results for data
+      double fTestStat_data; // results for data
 
    protected:
 
