@@ -31,7 +31,7 @@ enum compareOptions {
 
 int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0, double ERRORLIMIT = 1E-15);
 int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0, double ERRORLIMIT = 1E-15);
-int equals(const char* msg, TH3D* h1, TH3D* h2, int options, double ERRORLIMIT);
+int equals(const char* msg, TH3D* h1, TH3D* h2, int options = 0, double ERRORLIMIT = 1E-15);
 int equals(Double_t n1, Double_t n2, double ERRORLIMIT = 1E-15);
 int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT = 1E-15);
 ostream& operator<<(ostream& out, TH1D* h);
@@ -652,24 +652,223 @@ bool testDivide1()
       error += 2 * h3->GetBinContent(bin)*h3->GetBinContent(bin)*h3->GetBinError(bin)*h3->GetBinError(bin);
       h4->SetBinError( bin, sqrt(error) );
    }
-   cout << h2 << endl;
-   cout << h3 << endl;
 
-   return equals("Divide1D1", h1, h4, cmpOptStats | cmpOptDebug, 1E-13);
+//    cout << h2 << endl;
+//    cout << h3 << endl;
+
+   return equals("Divide1D1", h1, h4, cmpOptStats/* | cmpOptDebug*/, 1E-13);
 }
 
-bool stressAdd()
+bool stressAssign1D()
+{
+   TH1D* h1 = new TH1D("=1D-h1", "h1-Title", nbins, minRange, maxRange);
+
+   h1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value, 1);
+   }
+
+   TH1D* h2 = new TH1D("=1D-h2", "h2-Title", nbins, minRange, maxRange);
+   *h2 = *h1;
+
+   bool ret = equals("Assign Oper '='  1D", h1, h2, cmpOptStats);
+   delete h1;
+   return ret;
+}
+
+bool stressCopyConstructor1D()
+{
+   TH1D* h1 = new TH1D("cc1D-h1", "h1-Title", nbins, minRange, maxRange);
+
+   h1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value, 1);
+   }
+
+   TH1D* h2 = new TH1D(*h1);
+
+   bool ret = equals("Copy Constructor 1D", h1, h2, cmpOptStats);
+   delete h1;
+   return ret;
+}
+
+bool stressClone1D()
+{
+   TH1D* h1 = new TH1D("cl1D-h1", "h1-Title", nbins, minRange, maxRange);
+
+   h1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value, 1);
+   }
+
+   TH1D* h2 = static_cast<TH1D*> ( h1->Clone() );
+
+   bool ret = equals("Clone Function   1D", h1, h2, cmpOptStats);
+   delete h1;
+   return ret;
+}
+
+bool stressAssign2D()
+{
+   TH2D* h1 = new TH2D("=2D-h1", "h1-Title", 
+                       nbins, minRange, maxRange,
+                       nbins, minRange, maxRange);
+
+   h1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, 1);
+   }
+
+   TH2D* h2 = new TH2D("=2D-h2", "h2-Title", 
+                       nbins, minRange, maxRange, 
+                       nbins, minRange, maxRange);
+   *h2 = *h1;
+
+   bool ret = equals("Assign Oper '='  2D", h1, h2, cmpOptStats);
+   delete h1;
+   return ret;
+}
+
+bool stressCopyConstructor2D()
+{
+   TH2D* h1 = new TH2D("cc2D-h1", "h1-Title", 
+                       nbins, minRange, maxRange,
+                       nbins, minRange, maxRange);
+
+   h1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, 1);
+   }
+
+   TH2D* h2 = new TH2D(*h1);
+
+   bool ret = equals("Copy Constructor 2D", h1, h2, cmpOptStats);
+   delete h1;
+   return ret;
+}
+
+bool stressClone2D()
+{
+   TH2D* h1 = new TH2D("cl2D-h1", "h1-Title", 
+                       nbins, minRange, maxRange,
+                       nbins, minRange, maxRange);
+
+   h1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, 1);
+   }
+
+   TH2D* h2 = static_cast<TH2D*> ( h1->Clone() );
+
+   bool ret = equals("Clone Function   2D", h1, h2, cmpOptStats);
+   delete h1;
+   return ret;
+}
+
+bool stressAssign3D()
+{
+   TH3D* h1 = new TH3D("=3D-h1", "h1-Title", 
+                       nbins, minRange, maxRange,
+                       nbins, minRange, maxRange,
+                       nbins, minRange, maxRange);
+
+   h1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, z, 1);
+   }
+
+   TH3D* h2 = new TH3D("=3D-h2", "h2-Title", 
+                       nbins, minRange, maxRange, 
+                       nbins, minRange, maxRange, 
+                       nbins, minRange, maxRange);
+   *h2 = *h1;
+
+   bool ret = equals("Assign Oper '='  3D", h1, h2, cmpOptStats);
+   delete h1;
+   return ret;
+}
+
+bool stressCopyConstructor3D()
+{
+   TH3D* h1 = new TH3D("cc3D-h1", "h1-Title", 
+                       nbins, minRange, maxRange,
+                       nbins, minRange, maxRange,
+                       nbins, minRange, maxRange);
+
+   h1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, z, 1);
+   }
+
+   TH3D* h2 = new TH3D(*h1);
+
+   bool ret = equals("Copy Constructor 3D", h1, h2, cmpOptStats);
+   delete h1;
+   return ret;
+}
+
+bool stressClone3D()
+{
+   TH3D* h1 = new TH3D("cl3D-h1", "h1-Title", 
+                       nbins, minRange, maxRange,
+                       nbins, minRange, maxRange,
+                       nbins, minRange, maxRange);
+
+   h1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, z, 1);
+   }
+
+   TH3D* h2 = static_cast<TH3D*> ( h1->Clone() );
+
+   bool ret = equals("Clone Function   3D", h1, h2, cmpOptStats);
+   delete h1;
+   return ret;
+}
+
+bool stressHistOpts()
 {
    r.SetSeed(time(0));
    typedef bool (*pointer2Test)();
-   const unsigned int numberOfTests = 13;
+   const unsigned int numberOfTests = 22;
    pointer2Test testPointer[numberOfTests] = {  testAdd1,   testAdd2, 
                                                 testAdd2D1, testAdd2D2,
                                                 testAdd3D1, testAdd3D2, 
                                                 testMul1,   testMul2,
                                                 testMul2D1, testMul2D2,
                                                 testMul3D1, testMul3D2, 
-                                                testDivide1 };
+                                                testDivide1,
+                                                stressAssign1D, stressCopyConstructor1D, stressClone1D,
+                                                stressAssign2D, stressCopyConstructor2D, stressClone2D,
+                                                stressAssign3D, stressCopyConstructor3D, stressClone3D
+   };
 
    // Still to do: testDivide2, testDivide2D1, testDivide2D2 and
    // testDivide3D1, testDivide3D2. 
