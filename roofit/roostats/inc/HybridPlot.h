@@ -64,9 +64,9 @@ namespace RooStats {
       /// Constructor
       HybridPlot(const char* name,
                  const char* title,
-                 std::vector<float> sb_values,
-                 std::vector<float> b_values,
-                 float m2lnQ_data,
+                 std::vector<double> sb_values,
+                 std::vector<double> b_values,
+                 double m2lnQ_data,
                  int n_bins,
                  bool verbosity=true);
 

@@ -81,33 +81,15 @@ void HybridCalculator::SetTestStatistics(int index)
 
 ///////////////////////////////////////////////////////////////////////////
 
-// to do: fix for TH1 that have non int entries or weighted ones
 HybridResult* HybridCalculator::Calculate(TH1& data, unsigned int nToys, bool usePriors)
 {
-   /// this will not work so well with weighted TH1 and if it has non int entries
-   /// it works for TH1 that have int entries
-
    /// first compute the test statistics for data and then prepare and run the toy-MC experiments
 
    /// convert data TH1 histogram to a RooDataHist
    TString dataHistName = GetName(); dataHistName += "_roodatahist";
    RooDataHist dataHist(dataHistName,"Data distribution as RooDataHist converted from TH1",fObservables,&data);
 
-   double testStatData = 0;
-   if ( fTestStatisticsIdx==2 ) {
-      /// number of events used as test statistics
-      double nEvents = data.Integral();  // use the TH1 integral (to do: check this)
-      testStatData = nEvents;
-   } else {
-      /// likelihood ratio used as test statistics (default)
-      RooNLLVar sb_sb_nll("sb_sb_nll","sb_sb_nll",fSbModel,dataHist,RooFit::Extended());
-      RooNLLVar b_sb_nll("b_sb_nll","b_sb_nll",fBModel,dataHist,RooFit::Extended());
-      double m2lnQ = 2*(sb_sb_nll.getVal()-b_sb_nll.getVal());
-      testStatData = m2lnQ;
-   }
-
-   HybridResult* result = Calculate(nToys,usePriors);
-   result->SetDataTestStatistics(testStatData);
+   HybridResult* result = Calculate(dataHist,nToys,usePriors);
 
    return result;
 }
@@ -121,13 +103,13 @@ HybridResult* HybridCalculator::Calculate(RooTreeData& data, unsigned int nToys,
    double testStatData = 0;
    if ( fTestStatisticsIdx==2 ) {
       /// number of events used as test statistics
-      double nEvents = data.numEntries();
+      double nEvents = data.sumEntries();
       testStatData = nEvents;
    } else {
       /// likelihood ratio used as test statistics (default)
-      RooNLLVar sb_sb_nll("sb_sb_nll","sb_sb_nll",fSbModel,data,RooFit::Extended());
-      RooNLLVar b_sb_nll("b_sb_nll","b_sb_nll",fBModel,data,RooFit::Extended());
-      double m2lnQ = 2*(sb_sb_nll.getVal()-b_sb_nll.getVal());
+      RooNLLVar sb_nll("sb_nll","sb_nll",fSbModel,data,RooFit::Extended());
+      RooNLLVar b_nll("b_nll","b_nll",fBModel,data,RooFit::Extended());
+      double m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
       testStatData = m2lnQ;
    }
 

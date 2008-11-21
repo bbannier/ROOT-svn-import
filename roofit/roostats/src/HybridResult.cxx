@@ -60,6 +60,8 @@ HybridResult::HybridResult( const char *name, const char *title,
    fTestStat_b.reserve(vector_size_b);
    for (int i=0;i<vector_size_b;++i)
       fTestStat_b.push_back(testStat_b_vals[i]);
+
+   fTestStat_data = -999.;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -143,17 +145,17 @@ void HybridResult::Add(HybridResult* other)
 /// TO DO: to complete
    other->PrintMore("");
 
-   int other_size_sb = _testStat_sb.size();
+   int other_size_sb = fTestStat_sb.size();
    for (int i=0;i<other_size_sb;++i)
-      _testStat_sb.push_back(other->getTestStat_sb()[i]);
+      fTestStat_sb.push_back(other->getTestStat_sb()[i]);
 
-   int other_size_b = _testStat_b.size();
+   int other_size_b = fTestStat_b.size();
    for (int i=0;i<other_size_b;++i)
-      _testStat_b.push_back(other->getTestStat_b()[i]);
+      fTestStat_b.push_back(other->getTestStat_b()[i]);
 
    // if no data is present use the other's HybridResult's data
-   if (_testStat_data==-999)
-      _testStat_data = other->getTestStat_data();
+   if (fTestStat_data==-999.)
+      fTestStat_data = other->getTestStat_data();
 
    return;
 }
