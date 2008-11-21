@@ -3516,13 +3516,8 @@ Int_t TTreePlayer::UnbinnedFit(const char *funcname ,const char *varexp, const c
 
    // Check that function has same dimension as number of variables
    Int_t ndim = GetDimension();
-   // forget about this check (TF1::GetNdim() return 1 for TF1 classes created with 
+   // do not check with TF1::GetNdim() since it returns 1 for TF1 classes created with 
    // a C function with larger dimension
-
-//   if (ndim != fitfunc->GetNdim()) {
-//       Error("UnbinnedFit", "Function dimension=%d not equal to expression dimension=%d",fitfunc->GetNdim(),ndim);
-//       return -2;
-//    }
    
 
    // use pointer stored in the tree (not copy the data in)
