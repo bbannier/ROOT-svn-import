@@ -228,7 +228,7 @@ void TProfile::BuildOptions(Double_t ymin, Double_t ymax, Option_t *option)
 
    fBinEntries.Set(fNcells);  //*-* create number of entries per bin array
 
-   Sumw2();                   //*-* create sum of squares of weights array
+   TH1::Sumw2();                   //*-* create sum of squares of weights array
 
    fYmin = ymin;
    fYmax = ymax;
@@ -292,11 +292,17 @@ void TProfile::Add(const TH1 *h1, Double_t c1)
    Double_t *cu1 = p1->GetW();
    Double_t *er1 = p1->GetW2();
    Double_t *en1 = p1->GetB();
+   Double_t *ew1 = p1->GetB2();
+   // create sumw2 per bin if not set 
+   if (fBinSumw2.fN == 0 && ew1 ) Sumw2(); 
+   // if p1 has not the sum of weight squared/bin stored use just the sum of weights  
+   if (ew1 == 0) ew1 = en1; 
    for (bin=0;bin<=nbinsx+1;bin++) {
       fArray[bin]             += c1*cu1[bin];
       //see http://savannah.cern.ch/bugs/?func=detailitem&item_id=14851
       fSumw2.fArray[bin]      += ac1*er1[bin];
       fBinEntries.fArray[bin] += ac1*en1[bin];
+      if (fBinSumw2.fN ) fBinSumw2.fArray[bin]  += ac1 * ac1 * ew1[bin];  
    }
 }
 
@@ -350,16 +356,25 @@ void TProfile::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
    Double_t *er2 = p2->GetW2();
    Double_t *en1 = p1->GetB();
    Double_t *en2 = p2->GetB();
+   Double_t *ew1 = p1->GetB2();
+   Double_t *ew2 = p2->GetB2();
+   //    Create Sumw2 if h1 or h2 have Sumw2 set
+   if (fBinSumw2.fN == 0 && (p1->fBinSumw2.fN != 0 || p2->fBinSumw2.fN != 0)) Sumw2();
+   if (ew1 == 0) ew1 = en1; 
+   if (ew2 == 0) ew2 = en2; 
+
    for (bin=0;bin<=nbinsx+1;bin++) {
       fArray[bin]             = c1*cu1[bin] +  c2*cu2[bin];
-      if (fScaling) {
-         //see http://savannah.cern.ch/bugs/?func=detailitem&item_id=14851
-         fSumw2.fArray[bin]      = ac1*ac1*er1[bin] + ac2*ac2*er2[bin];
-         fBinEntries.fArray[bin] = en1[bin];
-      } else {
+//       if (fScaling) {
+//          //see http://savannah.cern.ch/bugs/?func=detailitem&item_id=14851
+//          //LM. using fBinSumw2 this should not be required now
+//          fSumw2.fArray[bin]      = ac1*ac1*er1[bin] + ac2*ac2*er2[bin];
+//          fBinEntries.fArray[bin] = en1[bin];
+//       } else {
          fSumw2.fArray[bin]      = ac1*er1[bin] + ac2*er2[bin];
          fBinEntries.fArray[bin] = ac1*en1[bin] + ac2*en2[bin];
-      }
+         if (fBinSumw2.fN ) fBinSumw2.fArray[bin]  = ac1*ac1*ew1[bin] + ac2*ac2*ew2[bin];  
+//      }
    }
 }
 
@@ -476,6 +491,7 @@ void TProfile::Copy(TObject &obj) const
 
    TH1D::Copy(((TProfile&)obj));
    fBinEntries.Copy(((TProfile&)obj).fBinEntries);
+   fBinSumw2.Copy(((TProfile&)obj).fBinSumw2);
    for (int bin=0;bin<fNcells;bin++) {
       ((TProfile&)obj).fArray[bin]        = fArray[bin];
       ((TProfile&)obj).fSumw2.fArray[bin] = fSumw2.fArray[bin];
@@ -565,6 +581,13 @@ void TProfile::Divide(const TH1 *h1)
       if (!en1[bin]) fBinEntries.fArray[bin] = 0;
       else           fBinEntries.fArray[bin] /= en1[bin];
    }
+   // mantaining the correct sum of weights square is not supported when dividing
+   // bin error resulting from division of profile needs to be checked 
+   if (fBinSumw2.fN) { 
+      Warning("Divide","Cannot preserve during the division of profiles the sum of bin weight square");
+      fBinSumw2 = TArrayD();
+   }
+   
 }
 
 
@@ -661,6 +684,14 @@ void TProfile::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Op
       if (en2[bin]) fBinEntries.fArray[bin] = en1[bin]/en2[bin];
       else          fBinEntries.fArray[bin] = 0;
    }
+
+   // mantaining the correct sum of weights square is not supported when dividing
+   // bin error resulting from division of profile needs to be checked 
+   if (fBinSumw2.fN) { 
+      Warning("Divide","Cannot preserve during the division of profiles the sum of bin weight square");
+      fBinSumw2 = TArrayD();
+   }
+
 }
 
 //______________________________________________________________________________
@@ -696,6 +727,7 @@ Int_t TProfile::Fill(Double_t x, Double_t y)
    AddBinContent(bin, y);
    fSumw2.fArray[bin] += (Double_t)y*y;
    fBinEntries.fArray[bin] += 1;
+   if (fBinSumw2.fN)  fBinSumw2.fArray[bin] += 1;
    if (bin == 0 || bin > fXaxis.GetNbins()) {
       if (!fgStatOverflows) return -1;
    }
@@ -723,6 +755,7 @@ Int_t TProfile::Fill(const char *namex, Double_t y)
    AddBinContent(bin, y);
    fSumw2.fArray[bin] += (Double_t)y*y;
    fBinEntries.fArray[bin] += 1;
+   if (fBinSumw2.fN)  fBinSumw2.fArray[bin] += 1;
    if (bin == 0 || bin > fXaxis.GetNbins()) {
       if (!fgStatOverflows) return -1;
    }
@@ -755,6 +788,7 @@ Int_t TProfile::Fill(Double_t x, Double_t y, Double_t w)
    AddBinContent(bin, z*y);
    fSumw2.fArray[bin] += z*y*y;
    fBinEntries.fArray[bin] += z;
+   if (fBinSumw2.fN)  fBinSumw2.fArray[bin] += z*z;
    if (bin == 0 || bin > fXaxis.GetNbins()) {
       if (!fgStatOverflows) return -1;
    }
@@ -784,6 +818,7 @@ Int_t TProfile::Fill(const char *namex, Double_t y, Double_t w)
    AddBinContent(bin, z*y);
    fSumw2.fArray[bin] += z*y*y;
    fBinEntries.fArray[bin] += z;
+   if (fBinSumw2.fN)  fBinSumw2.fArray[bin] += z*z;
    if (bin == 0 || bin > fXaxis.GetNbins()) {
       if (!fgStatOverflows) return -1;
    }
@@ -816,6 +851,7 @@ void TProfile::FillN(Int_t ntimes, const Double_t *x, const Double_t *y, const D
       AddBinContent(bin, z*y[i]);
       fSumw2.fArray[bin] += z*y[i]*y[i];
       fBinEntries.fArray[bin] += z;
+      if (fBinSumw2.fN)  fBinSumw2.fArray[bin] += z*z;
       if (bin == 0 || bin > fXaxis.GetNbins()) {
          if (!fgStatOverflows) continue;
       }
@@ -852,6 +888,27 @@ Double_t TProfile::GetBinEntries(Int_t bin) const
 
    if (bin < 0 || bin >= fNcells) return 0;
    return fBinEntries.fArray[bin];
+}
+
+//______________________________________________________________________________
+Double_t TProfile::GetBinEffectiveEntries(Int_t bin) const
+{
+//            Return bin effective entries for a weighted filled Profile histogram. 
+//            In case of an unweighted profile, it is equivalent to the number of entries per bin   
+//            The effective entries is defined as the square of the sum of the weights divided by the 
+//            sum of the weights square. 
+//            TProfile::Sumw2() must be called before filling the profile with weights. 
+//            Only by calling this method the  sum of the square of the weights per bin is stored. 
+//  
+//*-*          =========================================
+
+   if (fBuffer) ((TProfile*)this)->BufferEmpty();
+
+   if (bin < 0 || bin >= fNcells) return 0;
+   double sumOfWeights = fBinEntries.fArray[bin];
+   if ( fBinSumw2.fN == 0) return sumOfWeights;  
+   double sumOfWeightsSquare = fBinSumw2.fArray[bin]; 
+   return ( sumOfWeightsSquare > 0 ?  sumOfWeights * sumOfWeights /   sumOfWeightsSquare : 0 ); 
 }
 
 //______________________________________________________________________________
@@ -892,13 +949,13 @@ Double_t TProfile::GetBinError(Int_t bin) const
    Double_t cont = fArray[bin];
    Double_t sum  = fBinEntries.fArray[bin];
    Double_t err2 = fSumw2.fArray[bin];
+   Double_t neff = GetBinEffectiveEntries(bin);
    if (sum == 0) return 0;
-   Double_t eprim;
    Double_t contsum = cont/sum;
    Double_t eprim2  = TMath::Abs(err2/sum - contsum*contsum);
-   eprim          = TMath::Sqrt(eprim2);
+   Double_t eprim   = TMath::Sqrt(eprim2);
    Double_t test = 1;
-   if (err2 != 0 && sum < 5) test = eprim2*sum/err2;
+   if (err2 != 0 && neff < 5) test = eprim2*sum/err2;
 //printf("bin=%d, cont=%g, sum=%g, err2=%g, eprim2=%g, test=%g\n",bin,cont,sum,err2,eprim2,test);
    //if statistics is unsufficient, take approximation.
    // error is set to the (average error on all bins) * 2
@@ -920,11 +977,11 @@ Double_t TProfile::GetBinError(Int_t bin) const
       sum = ssum;
    }
    sum = TMath::Abs(sum);
-   if (fErrorMode == kERRORMEAN) return eprim/TMath::Sqrt(sum);
+   if (fErrorMode == kERRORMEAN) return eprim/TMath::Sqrt(neff);
    else if (fErrorMode == kERRORSPREAD) return eprim;
    else if (fErrorMode == kERRORSPREADI) {
-      if (eprim != 0) return eprim/TMath::Sqrt(sum);
-      return 1/TMath::Sqrt(12*sum);
+      if (eprim != 0) return eprim/TMath::Sqrt(neff);
+      return 1/TMath::Sqrt(12*neff);
    }
    else if (fErrorMode == kERRORSPREADG) {
       // it is supposed the values y are gaussian distributed y +/- dy
@@ -983,15 +1040,14 @@ void TProfile::GetStats(Double_t *stats) const
    // Loop on bins
    Int_t bin, binx;
    if (fTsumw == 0 || fXaxis.TestBit(TAxis::kAxisRange)) {
-      Double_t w;
-      Double_t x;
       for (bin=0;bin<6;bin++) stats[bin] = 0;
       if (!fBinEntries.fArray) return;
       for (binx=fXaxis.GetFirst();binx<=fXaxis.GetLast();binx++) {
-         w         = fBinEntries.fArray[binx];
-         x         = fXaxis.GetBinCenter(binx);
+         Double_t w   = fBinEntries.fArray[binx];
+         Double_t w2  = (fBinSumw2.fN ? fBinSumw2.fArray[binx] : w*w );  
+         Double_t x   = fXaxis.GetBinCenter(binx);
          stats[0] += w;
-         stats[1] += w*w;
+         stats[1] += w2;
          stats[2] += w*x;
          stats[3] += w*x*x;
          stats[4] += fArray[binx];
@@ -1039,6 +1095,7 @@ void TProfile::LabelsDeflate(Option_t *)
    SetBinsLength(ncells);
    fBinEntries.Set(ncells);
    fSumw2.Set(ncells);
+   if (fBinSumw2.fN)  fBinSumw2.Set(ncells);
 
    //now loop on all bins and refill
    Int_t bin;
@@ -1046,6 +1103,7 @@ void TProfile::LabelsDeflate(Option_t *)
       fArray[bin] = hold->fArray[bin];
       fBinEntries.fArray[bin] = hold->fBinEntries.fArray[bin];
       fSumw2.fArray[bin] = hold->fSumw2.fArray[bin];
+      if (fBinSumw2.fN) fBinSumw2.fArray[bin] = hold->fBinSumw2.fArray[bin];
    }
    delete hold;
 }
@@ -1072,6 +1130,8 @@ void TProfile::LabelsInflate(Option_t *)
    SetBinsLength(ncells);
    fBinEntries.Set(ncells);
    fSumw2.Set(ncells);
+   if (fBinSumw2.fN)  fBinSumw2.Set(ncells);
+
 
    //now loop on all bins and refill
    Int_t bin;
@@ -1080,10 +1140,12 @@ void TProfile::LabelsInflate(Option_t *)
          fArray[bin] = hold->fArray[bin];
          fBinEntries.fArray[bin] = hold->fBinEntries.fArray[bin];
          fSumw2.fArray[bin] = hold->fSumw2.fArray[bin];
+         if (fBinSumw2.fN) fBinSumw2.fArray[bin] = hold->fBinSumw2.fArray[bin];
       } else {
          fArray[bin] = 0;
          fBinEntries.fArray[bin] = 0;
          fSumw2.fArray[bin] = 0;
+         if (fBinSumw2.fN) fBinSumw2.fArray[bin] = 0;
       }
    }
    delete hold;
@@ -1145,6 +1207,7 @@ void TProfile::LabelsOption(Option_t *option, Option_t * /*ax*/)
    Double_t *sumw   = new Double_t[n+2];
    Double_t *errors = new Double_t[n+2];
    Double_t *ent    = new Double_t[n+2];
+   Double_t *entw2  = (fBinSumw2.fN ? new Double_t[n+2] : 0  ); 
    THashList *labold = new THashList(labels->GetSize(),1);
    TIter nextold(labels);
    TObject *obj;
@@ -1158,6 +1221,7 @@ void TProfile::LabelsOption(Option_t *option, Option_t * /*ax*/)
          sumw[i-1]   = fArray[i];
          errors[i-1] = fSumw2.fArray[i];
          ent[i-1]    = fBinEntries.fArray[i];
+         if (fBinSumw2.fN)  entw2[i] = fBinSumw2.fArray[i];
          if (fBinEntries.fArray[i] == 0) cont[i-1] = 0;
          else cont[i-1] = fArray[i]/fBinEntries.fArray[i];
       }
@@ -1167,6 +1231,7 @@ void TProfile::LabelsOption(Option_t *option, Option_t * /*ax*/)
          fArray[i] = sumw[a[i-1]];
          fSumw2.fArray[i] = errors[a[i-1]];
          fBinEntries.fArray[i] = ent[a[i-1]];
+         if (fBinSumw2.fN)  fBinSumw2.fArray[i] = entw2[a[i-1]];
       }
       for (i=1;i<=n;i++) {
          obj = labold->At(a[i-1]);
@@ -1207,11 +1272,13 @@ void TProfile::LabelsOption(Option_t *option, Option_t * /*ax*/)
          sumw[i]   = fArray[a[i]];
          errors[i] = fSumw2.fArray[a[i]];
          ent[i]    = fBinEntries.fArray[a[i]];
+         if (fBinSumw2.fN)  entw2[i] = fBinSumw2.fArray[a[i]];
       }
       for (i=1;i<=n;i++) {
          fArray[i] = sumw[i];
          fSumw2.fArray[i] = errors[i];
          fBinEntries.fArray[i] = ent[i];
+         if (fBinSumw2.fN)  fBinSumw2.fArray[i] = entw2[i];
       }
    }
    delete labold;
@@ -1220,6 +1287,7 @@ void TProfile::LabelsOption(Option_t *option, Option_t * /*ax*/)
    if (cont)   delete [] cont;
    if (errors) delete [] errors;
    if (ent)    delete [] ent;
+   if (entw2)  delete [] entw2; 
 }
 
 //______________________________________________________________________________
@@ -1339,6 +1407,10 @@ Long64_t TProfile::Merge(TCollection *li)
             fArray[ix]             += h->GetW()[binx];
             fSumw2.fArray[ix]      += h->GetW2()[binx];
             fBinEntries.fArray[ix] += h->GetB()[binx];
+            if (fBinEntries.fN) { 
+               if ( h->GetB2() ) fBinEntries.fArray[ix] += h->GetB2()[binx];
+               else fBinEntries.fArray[ix] += h->GetB()[binx];
+            }
          }
          fEntries += h->GetEntries();
          fTsumw   += h->fTsumw;
@@ -1579,14 +1651,18 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
    Double_t *oldBins   = new Double_t[nbins+1];
    Double_t *oldCount  = new Double_t[nbins+1];
    Double_t *oldErrors = new Double_t[nbins+1];
+   Double_t *oldBinw2  = (fBinSumw2.fN ? new Double_t[nbins+1] : 0  ); 
    Int_t bin, i;
    Double_t *cu1 = GetW();
    Double_t *er1 = GetW2();
    Double_t *en1 = GetB();
+   Double_t *ew1 = GetB2();
+   
    for (bin=1;bin<=nbins;bin++) {
       oldBins[bin]   = cu1[bin];
       oldCount[bin]  = en1[bin];
       oldErrors[bin] = er1[bin];
+      if (fBinSumw2.fN) oldBinw2[bin]  = ew1[bin];
    }
 
    // create a clone of the old histogram if newname is specified
@@ -1612,17 +1688,20 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
    } else {
       hnew->SetBins(newbins,xmin,xmax);
    }
+   if (fBinSumw2.fN) hnew->Sumw2();
 
    // copy merged bin contents (ignore under/overflows)
    Double_t *cu2 = hnew->GetW();
    Double_t *er2 = hnew->GetW2();
    Double_t *en2 = hnew->GetB();
+   Double_t *ew2 = hnew->GetB2();
    Int_t oldbin = 1;
-   Double_t binContent, binCount, binError;
+   Double_t binContent, binCount, binError, binSumw2;
    for (bin = 1;bin<=newbins;bin++) {
       binContent = 0;
       binCount   = 0;
       binError   = 0;
+      binSumw2   = 0;
 
       Int_t imax = ngroup;
       Double_t xbinmax = hnew->GetXaxis()->GetBinUpEdge(bin);
@@ -1637,10 +1716,12 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
          binContent += oldBins[oldbin+i];
          binCount   += oldCount[oldbin+i];
          binError   += oldErrors[oldbin+i];
+         if (fBinSumw2.fN) binSumw2 += oldBinw2[oldbin+i];
       }
       cu2[bin] = binContent;
       er2[bin] = binError;
       en2[bin] = binCount;
+      if (fBinSumw2.fN) ew2[bin] = binSumw2;
       oldbin += imax;
    }
 
@@ -1649,6 +1730,7 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
    delete [] oldBins;
    delete [] oldCount;
    delete [] oldErrors;
+   if (oldBinw2) delete [] oldBinw2; 
    return hnew;
 }
 
@@ -1677,6 +1759,7 @@ void TProfile::RebinAxis(Double_t x, TAxis *axis)
    hold->SetDirectory(0);
    //set new axis limits
    axis->SetLimits(xmin,xmax);
+   if (fBinSumw2.fN) hold->Sumw2();
 
    Int_t  nbinsx = fXaxis.GetNbins();
 
@@ -1688,6 +1771,7 @@ void TProfile::RebinAxis(Double_t x, TAxis *axis)
       AddBinContent(destinationBin, hold->fArray[sourceBin]);
       fBinEntries.fArray[destinationBin] += hold->fBinEntries.fArray[sourceBin];
       fSumw2.fArray[destinationBin] += hold->fSumw2.fArray[sourceBin];
+      if (fBinSumw2.fN) fBinSumw2.fArray[destinationBin] += hold->fBinSumw2.fArray[sourceBin];
    }
    fTsumwy = hold->fTsumwy;
    fTsumwy2 = hold->fTsumwy2;
@@ -1775,7 +1859,7 @@ void TProfile::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 }
 
 //______________________________________________________________________________
-void TProfile::Scale(Double_t c1, Option_t *)
+void TProfile::Scale(Double_t c1, Option_t * option)
 {
 //*-*-*-*-*Multiply this profile by a constant c1*-*-*-*-*-*-*-*-*
 //*-*      ======================================
@@ -1784,9 +1868,13 @@ void TProfile::Scale(Double_t c1, Option_t *)
 //
 // This function uses the services of TProfile::Add
 //
+   
+   TString opt = option;
+   opt.ToLower();
 
    Double_t ent = fEntries;
    fScaling = kTRUE;
+   if (fBinSumw2.fN == 0) Sumw2();
    Add(this,this,c1,0);
    fScaling = kFALSE;
    fEntries = ent;
@@ -1813,6 +1901,7 @@ void TProfile::SetBins(Int_t nx, Double_t xmin, Double_t xmax)
    SetBinsLength(fNcells);
    fBinEntries.Set(fNcells);
    fSumw2.Set(fNcells);
+   if (fBinSumw2.fN) fBinSumw2.Set(fNcells);
 }
 
 //______________________________________________________________________________
@@ -1826,6 +1915,7 @@ void TProfile::SetBins(Int_t nx, const Double_t *xbins)
    SetBinsLength(fNcells);
    fBinEntries.Set(fNcells);
    fSumw2.Set(fNcells);
+   if (fBinSumw2.fN) fBinSumw2.Set(fNcells);
 }
 
 
@@ -1913,5 +2003,28 @@ void TProfile::Streamer(TBuffer &R__b)
 
    } else {
       R__b.WriteClassBuffer(TProfile::Class(),this);
+   }
+}
+//______________________________________________________________________________
+void TProfile::Sumw2()
+{
+   // Create structure to store sum of squares of weights per bin  *-*-*-*-*-*-*-*
+   //   This is needed to compute  the correct statistical quantities  
+   //    of a profile filled with weights 
+   //  
+   //
+   //  This function is automatically called when the histogram is created
+   //  if the static function TH1::SetDefaultSumw2 has been called before.
+
+   if (!fgDefaultSumw2 && fBinSumw2.fN) {
+      Warning("Sumw2","Sum of squares of weights structure already created");
+      return;
+   }
+
+   fBinSumw2.Set(fNcells);
+
+   // by default fill with the sum of weights wich are stored in fBinEntries
+   for (Int_t bin=0; bin<fNcells; bin++) {
+      fBinSumw2.fArray[bin] = fBinEntries.fArray[bin]; 
    }
 }
