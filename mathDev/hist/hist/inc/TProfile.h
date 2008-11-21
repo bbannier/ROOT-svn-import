@@ -39,6 +39,8 @@ protected:
     Bool_t      fScaling;         //!True when TProfile::Scale is called
     Double_t    fTsumwy;          //Total Sum of weight*Y
     Double_t    fTsumwy2;         //Total Sum of weight*Y*Y
+    TArrayD     fBinSumw2;        //Array of sum of squares of weights per bin 
+
 static Bool_t   fgApproximate;    //bin error approximation option
 
    virtual Int_t    BufferFill(Double_t, Double_t) {return -2;} //may not use
@@ -54,6 +56,7 @@ private:
    void SetBins(Int_t, Double_t, Double_t, Int_t, Double_t, Double_t, Int_t, Double_t, Double_t)
       { MayNotUse("SetBins(Int_t, Double_t, Double_t, Int_t, Double_t, Double_t, Int_t, Double_t, Double_t"); }
    Double_t *GetB()  {return &fBinEntries.fArray[0];}
+   Double_t *GetB2() {return (fBinSumw2.fN ? &fBinSumw2.fArray[0] : 0 ); }
    Double_t *GetW()  {return &fArray[0];}
    Double_t *GetW2() {return &fSumw2.fArray[0];}
 
@@ -89,6 +92,7 @@ public:
    virtual Double_t GetBinError(Int_t bin, Int_t) const {return GetBinError(bin);}
    virtual Double_t GetBinError(Int_t bin, Int_t, Int_t) const {return GetBinError(bin);}
    virtual Double_t GetBinEntries(Int_t bin) const;
+   virtual Double_t GetBinEffectiveEntries(Int_t bin) const;
    Option_t        *GetErrorOption() const;
    virtual char    *GetObjectInfo(Int_t px, Int_t py) const;
    virtual void     GetStats(Double_t *stats) const;
@@ -113,6 +117,7 @@ public:
    virtual void     SetBins(Int_t nx, const Double_t *xbins);
    virtual void     SetBuffer(Int_t buffersize, Option_t *option="");
    virtual void     SetErrorOption(Option_t *option=""); // *MENU*
+   virtual void     Sumw2(); 
 
    ClassDef(TProfile,5)  //Profile histogram class
 };
