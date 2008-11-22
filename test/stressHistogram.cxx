@@ -1238,15 +1238,17 @@ bool stressHistRebin()
 
 // old stressHistProj file 
 
+// In case of deviation, the profiles' content will not work anymore
+// try only for testing the statistics
+static const double centre_deviation = 0.0;
+
+
 class ProjectionTester {
    
 private:
    static const unsigned int binsize = 10;
    static const int lower_limit = 0;
    static const int upper_limit = 10;
-// In case of deviation, the profiles' content will not work anymore
-// try only for testing the statistics
-   static const double centre_deviation = 0.0;
 
 
    TH3D* h3;
