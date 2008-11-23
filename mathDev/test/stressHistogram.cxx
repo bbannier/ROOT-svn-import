@@ -147,7 +147,7 @@ bool testAdd2D1()
                        numberOfBins, minRange, maxRange,
                        numberOfBins, minRange, maxRange);
    h4->Add(h1, h2, c1, c2);
-   bool ret = equals("Add2D1", h3, h4, cmpOptStats, 1E-12);
+   bool ret = equals("Add2D1", h3, h4, cmpOptStats , 1E-10);
    delete h1;
    delete h2;
    delete h3;
@@ -187,7 +187,7 @@ bool testAdd2D2()
    }
 
    h1->Add(h2, c2);
-   bool ret = equals("Add2D2", h3, h1, cmpOptStats, 1E-12);
+   bool ret = equals("Add2D2", h3, h1, cmpOptStats, 1E-10);
    delete h2;
    delete h3;
    return ret;
@@ -236,7 +236,7 @@ bool testAdd3D1()
                        numberOfBins, minRange, maxRange,
                        numberOfBins, minRange, maxRange);
    h4->Add(h1, h2, c1, c2);
-   bool ret = equals("Add3D1", h3, h4, cmpOptStats, 1E-12);
+   bool ret = equals("Add3D1", h3, h4, cmpOptStats, 1E-10);
    delete h1;
    delete h2;
    delete h3;
@@ -281,7 +281,7 @@ bool testAdd3D2()
    }
 
    h1->Add(h2, c2);
-   bool ret = equals("Add3D2", h3, h1, cmpOptStats, 1E-12);
+   bool ret = equals("Add3D2", h3, h1, cmpOptStats, 1E-10);
    delete h2;
    delete h3;
    return ret;
@@ -1126,7 +1126,7 @@ bool testIntegerRebin()
    for ( Int_t i = 0; i < nEvents; ++i )
       h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
 
-   return equals("TestIntegerRebin", h2, h3, cmpOptStats);
+   return equals("TestIntegerRebin", h2, h3, cmpOptStats  );
 }
 
 bool testIntegerRebinNoName()
@@ -1142,12 +1142,12 @@ bool testIntegerRebinNoName()
    h2->Rebin(rebin);
 
    TH1D* h3 = new TH1D("testIntegerRebinNoName", "testIntegerRebinNoName", 
-                       h1->GetNbinsX() / rebin, minRange, maxRange);
+                       int(h1->GetNbinsX() / rebin + 0.1), minRange, maxRange);
    r.SetSeed(seed);
    for ( Int_t i = 0; i < nEvents; ++i )
       h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
 
-   return equals("TestIntRebinNoName", h2, h3, cmpOptStats);
+   return equals("TestIntRebinNoName", h2, h3, cmpOptStats );
 
    // This method fails because the Chi2Test is different of 1 for
    // both of them. We need to look into both the Rebin method and the
@@ -1743,34 +1743,34 @@ public:
       
       // Now the histograms comming from the Profiles!
       options = cmpOptStats;
-      status += equals("TH3 -> PBXY", h2XY, (TH2D*) h3->Project3DProfile("yxUO")->ProjectionXY("1", "B"), options);
-      status += equals("TH3 -> PBXZ", h2XZ, (TH2D*) h3->Project3DProfile("zxUO")->ProjectionXY("2", "B"), options);
-      status += equals("TH3 -> PBYX", h2YX, (TH2D*) h3->Project3DProfile("xyUO")->ProjectionXY("3", "B"), options);
-      status += equals("TH3 -> PBYZ", h2YZ, (TH2D*) h3->Project3DProfile("zyUO")->ProjectionXY("4", "B"), options);
-      status += equals("TH3 -> PBZX", h2ZX, (TH2D*) h3->Project3DProfile("xzUO")->ProjectionXY("5", "B"), options);
-      status += equals("TH3 -> PBZY", h2ZY, (TH2D*) h3->Project3DProfile("yzUO")->ProjectionXY("6", "B"), options);
+      status += equals("TH3 -> PBXY", h2XY, (TH2D*) h3->Project3DProfile("yx UF OF")->ProjectionXY("1", "B"), options);
+      status += equals("TH3 -> PBXZ", h2XZ, (TH2D*) h3->Project3DProfile("zx UF OF")->ProjectionXY("2", "B"), options);
+      status += equals("TH3 -> PBYX", h2YX, (TH2D*) h3->Project3DProfile("xy UF OF")->ProjectionXY("3", "B"), options);
+      status += equals("TH3 -> PBYZ", h2YZ, (TH2D*) h3->Project3DProfile("zy UF OF")->ProjectionXY("4", "B"), options);
+      status += equals("TH3 -> PBZX", h2ZX, (TH2D*) h3->Project3DProfile("xz UF OF")->ProjectionXY("5", "B"), options);
+      status += equals("TH3 -> PBZY", h2ZY, (TH2D*) h3->Project3DProfile("yz UF OF")->ProjectionXY("6", "B"), options);
       options = 0;
       cout << "----------------------------------------------" << endl;
       
       // test directly project3dprofile
       options = cmpOptStats;
-      status += equals("TH3 -> PXY", (TH2D*) pe2XY, (TH2D*) h3->Project3DProfile("yx UO"), options);
-      status += equals("TH3 -> PXZ", (TH2D*) pe2XZ, (TH2D*) h3->Project3DProfile("zx UO"), options);
-      status += equals("TH3 -> PYX", (TH2D*) pe2YX, (TH2D*) h3->Project3DProfile("xy UO"), options);
-      status += equals("TH3 -> PYZ", (TH2D*) pe2YZ, (TH2D*) h3->Project3DProfile("zy UO"), options);
-      status += equals("TH3 -> PZX", (TH2D*) pe2ZX, (TH2D*) h3->Project3DProfile("xz UO"), options);
-      status += equals("TH3 -> PZY", (TH2D*) pe2ZY, (TH2D*) h3->Project3DProfile("yz UO"), options);
+      status += equals("TH3 -> PXY", (TH2D*) pe2XY, (TH2D*) h3->Project3DProfile("yx  UF OF"), options);
+      status += equals("TH3 -> PXZ", (TH2D*) pe2XZ, (TH2D*) h3->Project3DProfile("zx  UF OF"), options);
+      status += equals("TH3 -> PYX", (TH2D*) pe2YX, (TH2D*) h3->Project3DProfile("xy  UF OF"), options);
+      status += equals("TH3 -> PYZ", (TH2D*) pe2YZ, (TH2D*) h3->Project3DProfile("zy  UF OF"), options);
+      status += equals("TH3 -> PZX", (TH2D*) pe2ZX, (TH2D*) h3->Project3DProfile("xz  UF OF"), options);
+      status += equals("TH3 -> PZY", (TH2D*) pe2ZY, (TH2D*) h3->Project3DProfile("yz  UF OF"), options);
       options = 0;
       cout << "----------------------------------------------" << endl;
       
       // test option E of ProjectionXY
       options = 0;
-      status += equals("TH3 -> PEXY", (TH2D*) pe2XY, (TH2D*) h3->Project3DProfile("yx UO")->ProjectionXY("1", "E"), options);
-      status += equals("TH3 -> PEXZ", (TH2D*) pe2XZ, (TH2D*) h3->Project3DProfile("zx UO")->ProjectionXY("2", "E"), options);
-      status += equals("TH3 -> PEYX", (TH2D*) pe2YX, (TH2D*) h3->Project3DProfile("xy UO")->ProjectionXY("3", "E"), options);
-      status += equals("TH3 -> PEYZ", (TH2D*) pe2YZ, (TH2D*) h3->Project3DProfile("zy UO")->ProjectionXY("4", "E"), options);
-      status += equals("TH3 -> PEZX", (TH2D*) pe2ZX, (TH2D*) h3->Project3DProfile("xz UO")->ProjectionXY("5", "E"), options);
-      status += equals("TH3 -> PEZY", (TH2D*) pe2ZY, (TH2D*) h3->Project3DProfile("yz UO")->ProjectionXY("6", "E"), options);
+      status += equals("TH3 -> PEXY", (TH2D*) pe2XY, (TH2D*) h3->Project3DProfile("yx  UF OF")->ProjectionXY("1", "E"), options);
+      status += equals("TH3 -> PEXZ", (TH2D*) pe2XZ, (TH2D*) h3->Project3DProfile("zx  UF OF")->ProjectionXY("2", "E"), options);
+      status += equals("TH3 -> PEYX", (TH2D*) pe2YX, (TH2D*) h3->Project3DProfile("xy  UF OF")->ProjectionXY("3", "E"), options);
+      status += equals("TH3 -> PEYZ", (TH2D*) pe2YZ, (TH2D*) h3->Project3DProfile("zy  UF OF")->ProjectionXY("4", "E"), options);
+      status += equals("TH3 -> PEZX", (TH2D*) pe2ZX, (TH2D*) h3->Project3DProfile("xz  UF OF")->ProjectionXY("5", "E"), options);
+      status += equals("TH3 -> PEZY", (TH2D*) pe2ZY, (TH2D*) h3->Project3DProfile("yz  UF OF")->ProjectionXY("6", "E"), options);
       options = 0;
       cout << "----------------------------------------------" << endl;
       
@@ -1778,12 +1778,12 @@ public:
       
       // The error fails when built with weights. It is not properly calculated
       if ( buildWithWeights ) options = cmpOptNoError;
-      status += equals("TH3 -> PWXY", (TH2D*) h2wXY, (TH2D*) h3->Project3DProfile("yx UO")->ProjectionXY("1", "W"), options);
-      status += equals("TH3 -> PWXZ", (TH2D*) h2wXZ, (TH2D*) h3->Project3DProfile("zx UO")->ProjectionXY("2", "W"), options);
-      status += equals("TH3 -> PWYX", (TH2D*) h2wYX, (TH2D*) h3->Project3DProfile("xy UO")->ProjectionXY("3", "W"), options);
-      status += equals("TH3 -> PWYZ", (TH2D*) h2wYZ, (TH2D*) h3->Project3DProfile("zy UO")->ProjectionXY("4", "W"), options);
-      status += equals("TH3 -> PWZX", (TH2D*) h2wZX, (TH2D*) h3->Project3DProfile("xz UO")->ProjectionXY("5", "W"), options);
-      status += equals("TH3 -> PWZY", (TH2D*) h2wZY, (TH2D*) h3->Project3DProfile("yz UO")->ProjectionXY("6", "W"), options);
+      status += equals("TH3 -> PWXY", (TH2D*) h2wXY, (TH2D*) h3->Project3DProfile("yx  UF OF")->ProjectionXY("1", "W"), options);
+      status += equals("TH3 -> PWXZ", (TH2D*) h2wXZ, (TH2D*) h3->Project3DProfile("zx  UF OF")->ProjectionXY("2", "W"), options);
+      status += equals("TH3 -> PWYX", (TH2D*) h2wYX, (TH2D*) h3->Project3DProfile("xy  UF OF")->ProjectionXY("3", "W"), options);
+      status += equals("TH3 -> PWYZ", (TH2D*) h2wYZ, (TH2D*) h3->Project3DProfile("zy  UF OF")->ProjectionXY("4", "W"), options);
+      status += equals("TH3 -> PWZX", (TH2D*) h2wZX, (TH2D*) h3->Project3DProfile("xz  UF OF")->ProjectionXY("5", "W"), options);
+      status += equals("TH3 -> PWZY", (TH2D*) h2wZY, (TH2D*) h3->Project3DProfile("yz  UF OF")->ProjectionXY("6", "W"), options);
       options = 0;
       cout << "----------------------------------------------" << endl;
       
@@ -2138,14 +2138,25 @@ int equals(Double_t n1, Double_t n2, double ERRORLIMIT)
 int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT)
 {
    bool differents = 0;
+
+   int precLevel = gErrorIgnoreLevel; 
+   // switch off Info mesaage from chi2 test
+   if (!debug) gErrorIgnoreLevel = 1001; 
+            
+   if (debug) h2->Print(); 
    
-   differents |= (h1->Chi2Test(h2, "WW") < 1);
-   differents |= (h2->Chi2Test(h1, "WW") < 1);         
-   differents |= equals(h1->Chi2Test(h2, "WW"), h2->Chi2Test(h1, "WW"), ERRORLIMIT);
+   std::string option = "WW OF UF";
+   const char * opt = option.c_str(); 
+   differents |= (h1->Chi2Test(h2, opt) < 1);
+   differents |= (h2->Chi2Test(h1,opt) < 1);         
+   differents |= equals(h1->Chi2Test(h2,opt), h2->Chi2Test(h1,opt), ERRORLIMIT);
    if ( debug )
-      cout << "Chi2Test " << h1->Chi2Test(h2, "WW") << " " << h2->Chi2Test(h1, "WW") 
+      cout << "Chi2Test " << h1->Chi2Test(h2, opt) << " " << h2->Chi2Test(h1, opt) 
            << " | " << differents
            << endl;
+
+   if (!debug) gErrorIgnoreLevel = precLevel; 
+
    // Mean
    differents |= equals(h1->GetMean(1), h2->GetMean(1), ERRORLIMIT);
    if ( debug )
