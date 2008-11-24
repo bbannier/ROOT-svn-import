@@ -14,6 +14,9 @@
 #include "Riostream.h"
 #include "TMath.h"
 #include "TRandom2.h"
+#include "TFile.h"
+
+#include "TROOT.h"
 
 const unsigned int __DRAW__ = 0;
 
@@ -44,7 +47,7 @@ int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0, double ERRORLIM
 int equals(const char* msg, TH3D* h1, TH3D* h2, int options = 0, double ERRORLIMIT = 1E-15);
 int equals(Double_t n1, Double_t n2, double ERRORLIMIT = 1E-15);
 int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT = 1E-15);
-
+ostream& operator<<(ostream& out, TH1D* h);
 // old stresHistOpts.cxx file
 
 bool testAdd1() 
@@ -1053,27 +1056,187 @@ bool stressCloneProfile3D()
    return ret;
 }
 
+bool testWriteRead1D()
+{
+   TH1D* h1 = new TH1D("wr1D-h1", "h1-Title", numberOfBins, minRange, maxRange);
+
+   h1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value, 1);
+   }
+
+   TFile f("tmpHist.root", "RECREATE");
+   h1->Write();
+   f.Close();
+
+   TFile f2("tmpHist.root");
+   TH1D* h2 = static_cast<TH1D*> ( f2.Get("wr1D-h1") );
+
+   bool ret = equals("Read/Write Hist 1D", h1, h2, cmpOptStats);
+   delete h1;
+   return ret;
+}
+
+bool testWriteReadProfile1D()
+{
+   TProfile* p1 = new TProfile("wr1D-p1", "p1-Title", numberOfBins, minRange, maxRange);
+
+   p1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, 1);
+   }
+
+   TFile f("tmpHist.root", "RECREATE");
+   p1->Write();
+   f.Close();
+
+   TFile f2("tmpHist.root");
+   TProfile* p2 = static_cast<TProfile*> ( f2.Get("wr1D-p1") );
+
+   bool ret = equals("Read/Write Prof 1D", p1, p2, cmpOptStats);
+   delete p1;
+   return ret;
+}
+
+bool testWriteRead2D()
+{
+   TH2D* h1 = new TH2D("wr2D-h1", "h1-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+
+   h1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, 1);
+   }
+
+   TFile f("tmpHist.root", "RECREATE");
+   h1->Write();
+   f.Close();
+
+   TFile f2("tmpHist.root");
+   TH2D* h2 = static_cast<TH2D*> ( f2.Get("wr2D-h1") );
+
+   bool ret = equals("Read/Write Hist 2D", h1, h2, cmpOptStats);
+   delete h1;
+   return ret;
+}
+
+bool testWriteReadProfile2D()
+{
+   TProfile2D* p1 = new TProfile2D("wr2D-p1", "p1-Title", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, 1);
+   }
+
+   TFile f("tmpHist.root", "RECREATE");
+   p1->Write();
+   f.Close();
+
+   TFile f2("tmpHist.root");
+   TProfile2D* p2 = static_cast<TProfile2D*> ( f2.Get("wr2D-p1") );
+
+   bool ret = equals("Read/Write Prof 2D", p1, p2, cmpOptStats);
+   delete p1;
+   return ret;
+}
+
+bool testWriteRead3D()
+{
+   TH3D* h1 = new TH3D("wr3D-h1", "h1-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+
+   h1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, z, 1);
+   }
+
+   TFile f("tmpHist.root", "RECREATE");
+   h1->Write();
+   f.Close();
+
+   TFile f2("tmpHist.root");
+   TH3D* h2 = static_cast<TH3D*> ( f2.Get("wr3D-h1") );
+
+   bool ret = equals("Read/Write Hist 3D", h1, h2, cmpOptStats);
+   delete h1;
+   return ret;
+}
+
+bool testWriteReadProfile3D()
+{
+   TProfile3D* p1 = new TProfile3D("wr3D-p1", "p1-Title", 
+                                 numberOfBins, minRange, maxRange,
+                                 numberOfBins, minRange, maxRange,
+                                 numberOfBins, minRange, maxRange);
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, t, 1);
+   }
+
+   TFile f("tmpHist.root", "RECREATE");
+   p1->Write();
+   f.Close();
+
+   TFile f2("tmpHist.root");
+   TProfile3D* p2 = static_cast<TProfile3D*> ( f2.Get("wr3D-p1") );
+
+   // In this particular case the statistics are not checked. The
+   // Chi2Test is not properly implemented for the TProfile3D
+   // class. If the cmpOptStats flag is set, then there will be a
+   // crash.
+   bool ret = equals("Read/Write Prof 3D", p1, p2);
+   delete p1;
+   return ret;
+}
+
 bool stressHistOpts()
 {
    r.SetSeed(time(0));
    typedef bool (*pointer2Test)();
-   const unsigned int numberOfTests = 31;
-   pointer2Test testPointer[numberOfTests] = {  testAdd1,   testAdd2, 
-                                                testAdd2D1, testAdd2D2,
-                                                testAdd3D1, testAdd3D2, 
-                                                testMul1,   testMul2,
-                                                testMul2D1, testMul2D2,
-                                                testMul3D1, testMul3D2, 
-                                                testDivide1,
-                                                stressAssign1D, stressAssignProfile1D, 
+   const unsigned int numberOfTests = 36;
+   pointer2Test testPointer[numberOfTests] = {  testAdd1,                testAdd2, 
+                                                testAdd2D1,              testAdd2D2,
+                                                testAdd3D1,              testAdd3D2, 
+                                                testMul1,                testMul2,
+                                                testMul2D1,              testMul2D2,
+                                                testMul3D1,              testMul3D2, 
+                                                //testDivide1,
+                                                stressAssign1D,          stressAssignProfile1D, 
                                                 stressCopyConstructor1D, stressCopyConstructorProfile1D, 
-                                                stressClone1D, stressCloneProfile1D,
-                                                stressAssign2D, stressAssignProfile2D,
+                                                stressClone1D,           stressCloneProfile1D,
+                                                stressAssign2D,          stressAssignProfile2D,
                                                 stressCopyConstructor2D, stressCopyConstructorProfile2D,
-                                                stressClone2D, stressCloneProfile2D,
-                                                stressAssign3D, stressAssignProfile3D,
+                                                stressClone2D,           stressCloneProfile2D,
+                                                stressAssign3D,          stressAssignProfile3D,
                                                 stressCopyConstructor3D, stressCopyConstructorProfile3D,
-                                                stressClone3D, stressCloneProfile3D
+                                                stressClone3D,           stressCloneProfile3D,
+                                                testWriteRead1D,         testWriteReadProfile1D,
+                                                testWriteRead2D,         testWriteReadProfile2D,
+                                                testWriteRead3D,         testWriteReadProfile3D
    };
 
    // Still to do: testDivide2, testDivide2D1, testDivide2D2 and
@@ -1990,7 +2153,11 @@ int equals(const char* msg, TH3D* h1, TH3D* h2, int options, double ERRORLIMIT)
    bool compareError = ! (options & cmpOptNoError);
    bool compareStats = options & cmpOptStats;
    
-   bool differents = 0;
+   bool differents = ( h1 == h2 ); // Check they are not the same histogram!
+   if (debug) {
+      cout << static_cast<void*>(h1) << " " << static_cast<void*>(h2) << " "
+           << (h1 == h2 ) << " " << differents << endl;
+   }
    
    for ( int i = 0; i <= h1->GetNbinsX() + 1; ++i )
       for ( int j = 0; j <= h1->GetNbinsY() + 1; ++j )
@@ -2039,8 +2206,12 @@ int equals(const char* msg, TH2D* h1, TH2D* h2, int options, double ERRORLIMIT)
    bool compareError = ! (options & cmpOptNoError);
    bool compareStats = options & cmpOptStats;
    
-   bool differents = 0;
-   
+   bool differents = ( h1 == h2 ); // Check they are not the same histogram!
+   if (debug) {
+      cout << static_cast<void*>(h1) << " " << static_cast<void*>(h2) << " "
+           << (h1 == h2 ) << " " << differents << endl;
+   }
+
    for ( int i = 0; i <= h1->GetNbinsX() + 1; ++i )
       for ( int j = 0; j <= h1->GetNbinsY() + 1; ++j )
       {
@@ -2084,8 +2255,12 @@ int equals(const char* msg, TH1D* h1, TH1D* h2, int options, double ERRORLIMIT)
    bool compareError = ! (options & cmpOptNoError);
    bool compareStats = options & cmpOptStats;
    
-   bool differents = 0;
-   
+   bool differents = ( h1 == h2 ); // Check they are not the same histogram!
+   if (debug) {
+      cout << static_cast<void*>(h1) << " " << static_cast<void*>(h2) << " "
+           << (h1 == h2 ) << " " << differents << endl;
+   }
+
    for ( int i = 0; i <= h1->GetNbinsX() + 1; ++i )
    {
       Double_t x = h1->GetXaxis()->GetBinCenter(i);
