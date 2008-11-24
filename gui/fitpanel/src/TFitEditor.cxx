@@ -1052,7 +1052,7 @@ void TFitEditor::DisconnectSlots()
 }
 
 //______________________________________________________________________________
-void TFitEditor::SetCanvas(TCanvas */*newcan*/)
+void TFitEditor::SetCanvas(TCanvas * /*newcan*/)
 {
    // Connect to another canvas.
 
@@ -1600,7 +1600,10 @@ void TFitEditor::DoUseFuncRange()
       if (fNone->GetState() == kButtonDown || fNone->GetState() == kButtonDisabled) {
          TGTextLBEntry *te = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
          TF1* tmpTF1 = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
-         if ( !tmpTF1 ) tmpTF1 = (TF1*) GetFitObjectListOfFunctions()->FindObject( te->GetTitle() );
+         if ( !tmpTF1 ) {
+            if (GetFitObjectListOfFunctions())
+               tmpTF1 = (TF1*) GetFitObjectListOfFunctions()->FindObject( te->GetTitle() );
+         }
          if ( tmpTF1 ) {
             Double_t xmin, ymin, zmin, xmax, ymax, zmax;
             tmpTF1->GetRange(xmin, ymin, zmin, xmax, ymax, zmax);
@@ -1924,8 +1927,10 @@ void TFitEditor::DoFunction(Int_t selected)
    bool editable = false;
    if (fNone->GetState() == kButtonDown || fNone->GetState() == kButtonDisabled) {
       TF1* tmpTF1 = (TF1*) gROOT->GetListOfFunctions()->FindObject(te->GetTitle());
-      if ( !tmpTF1 ) tmpTF1 = (TF1*) GetFitObjectListOfFunctions()->FindObject( te->GetTitle() );
-
+      if ( !tmpTF1 ) {
+         if (GetFitObjectListOfFunctions())
+            tmpTF1 = (TF1*) GetFitObjectListOfFunctions()->FindObject( te->GetTitle() );
+      }
       if ( tmpTF1 && strcmp(tmpTF1->GetExpFormula(), "") ) 
       {
          editable = kTRUE;
