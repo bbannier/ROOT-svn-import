@@ -13,17 +13,17 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-// -- CLASS DESCRIPTION [ROOSTATS] --
-//
-// HybridResult class: this class is a fresh rewrite in RooStats of
-// 	RooStatsCms/LimitResults developped by D. Piparo and G. Schott
-//
-// The objects of this class store and access with lightweight methods the
-// information calculated by LimitResults through a Lent calculation using
-// MC toy experiments.
-// In some ways can be considered an extended and extensible implementation of the
-// TConfidenceLevel class (http://root.cern.ch/root/html/TConfidenceLevel.html).
+//____________________________________________________________________
+/*
+HybridResult class: this class is a fresh rewrite in RooStats of
+	RooStatsCms/LimitResults developped by D. Piparo and G. Schott
 
+The objects of this class store and access with lightweight methods the
+information calculated by LimitResults through a Lent calculation using
+MC toy experiments.
+In some ways can be considered an extended and extensible implementation of the
+TConfidenceLevel class (http://root.cern.ch/root/html/TConfidenceLevel.html).
+*/
 
 #include "RooDataHist.h"
 #include "RooDataSet.h"
@@ -227,7 +227,7 @@ HybridPlot* HybridResult::GetPlot(const char* name,const char* title, int n_bins
 
 ///////////////////////////////////////////////////////////////////////////
 
-void HybridResult::PrintMore(const char* options)
+void HybridResult::PrintMore(const char* /*options */)
 {
    // Print out some information about the results
 

@@ -1,3 +1,17 @@
+#include "RooRandom.h"
+#include "RooRealVar.h"
+#include "RooGaussian.h"
+#include "RooPolynomial.h"
+#include "RooArgSet.h"
+#include "RooAddPdf.h"
+#include "RooDataSet.h"
+#include "RooExtendPdf.h"
+#include "RooGlobalFunc.h"
+
+#include "RooStats/HybridCalculator.h"
+#include "RooStats/HybridResult.h"
+#include "RooStats/HybridPlot.h"
+
 void rs201_hybridcalculator()
 {
   //***********************************************************************//
@@ -95,3 +109,5 @@ void rs201_hybridcalculator()
   std::cout << " - significance of data  = " << data_significance << std::endl;
   std::cout << " - mean significance of toys  = " << toys_significance << std::endl;
 }
+
+
