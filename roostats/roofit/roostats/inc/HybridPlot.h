@@ -55,7 +55,6 @@ class TLegend;
 
 
 namespace RooStats {
-  //extern TRandom3 random_generator;
 
    class HybridPlot : public TNamed {
 
