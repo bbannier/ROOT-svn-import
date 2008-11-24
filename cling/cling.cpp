@@ -24,6 +24,7 @@
 #include <llvm/Module.h>
 #include <llvm/Function.h>
 #include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Support/raw_ostream.h>
 
 //------------------------------------------------------------------------------
 // String constants
@@ -194,7 +195,7 @@ int main( int argc, char **argv )
    //---------------------------------------------------------------------------
    // Create the stuff for the preprocessor
    //---------------------------------------------------------------------------
-   llvm::OwningPtr<clang::DiagnosticClient> diagClient( new clang::TextDiagnosticPrinter() );
+   llvm::OwningPtr<clang::DiagnosticClient> diagClient( new clang::TextDiagnosticPrinter(llvm::errs()) );
    llvm::OwningPtr<clang::TargetInfo>       targetInfo( clang::TargetInfo::CreateTargetInfo( HOST_TARGET ) );
    llvm::OwningPtr<clang::SourceManager>    srcMgr( new clang::SourceManager() );
    clang::FileManager                       fileMgr;
