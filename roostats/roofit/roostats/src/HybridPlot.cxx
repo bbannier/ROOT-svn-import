@@ -22,8 +22,6 @@ ClassImp(RooStats::HybridPlot)
 
 using namespace RooStats;
 
-//TRandom3 random_generator;
-
 /*----------------------------------------------------------------------------*/
 
 HybridPlot::HybridPlot(const char* name,
