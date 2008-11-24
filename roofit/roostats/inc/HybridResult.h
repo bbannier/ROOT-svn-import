@@ -24,7 +24,7 @@ namespace RooStats {
 
    class HybridPlot;
 
-   class HybridResult : public TNamed /* , public HypoTestResult*/ {
+   class HybridResult : /*public TNamed ,*/ public HypoTestResult {
 
    public:
 
@@ -58,27 +58,25 @@ namespace RooStats {
 
 
       // Return p-value for null hypothesis
-      Double_t NullPValue() const  {return 1;};
+      Double_t NullPValue() const;
 
       // Return p-value for alternate hypothesis
-      Double_t AlternatePValue() const {return 1;};
+      Double_t AlternatePValue() const;
 
 
-
-
+/*
 
       // Convert  NullPValue into a "confidence level"
       Double_t CLb() const {return (1.-NullPValue());}
 
       // Convert  AlternatePValue into a "confidence level"
-      Double_t CLsplusb()  const {return AlternatePValue();}
+      Double_t CLsplusb() const {return AlternatePValue();}
 
       // CLs is simply CLs+b/CLb (not a method, but a quantity)
-      Double_t CLs()  const {
+      Double_t CLs() const {
         double thisCLb = CLb();
         if (thisCLb==0) {
           std::cout << "Error: Cannot compute CLs because CLb = 0. Returning CLs = -1\n";
-          // TO DO: assert!
           return -1;
         }
         double thisCLsb = CLsplusb();
@@ -88,7 +86,7 @@ namespace RooStats {
       // familiar name for the Null p-value in terms of 1-sided Gaussian significance
       Double_t Significance()  const {return RooStats::PValueToSignificance( NullPValue() ); }
 
-
+*/
 
    private:
       std::vector<double> fTestStat_b; // vector of results for B-only toy-MC
@@ -98,8 +96,8 @@ namespace RooStats {
       mutable bool fComputationsNulDoneFlag; // flag if the fNullPValue computation have been already done or not (ie need to be refreshed)
       mutable bool fComputationsAltDoneFlag; // flag if the fAlternatePValue computation have been already done or not (ie need to be refreshed)
  
-      mutable Double_t fNullPValue; // p-value for the null hypothesis (small number means disfavored)
-      mutable Double_t fAlternatePValue; // p-value for the alternate hypothesis (small number means disfavored)
+//      mutable Double_t fNullPValue; // p-value for the null hypothesis (small number means disfavored)
+//      mutable Double_t fAlternatePValue; // p-value for the alternate hypothesis (small number means disfavored)
 
    protected:
 
