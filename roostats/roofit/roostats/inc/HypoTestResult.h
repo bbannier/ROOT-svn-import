@@ -8,16 +8,6 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-// Authors: D. Piparo (danilo.piparo<at>cern.ch), G. Schott - Universitaet Karlsruhe
-
-The objects of this class store and access with lightweight methods the 
-information calculated by LimitResults through a Lent calculation using 
-MC toy experiments.
-In some ways can be considered an extended and extensible implementation of the 
-TConfidenceLevel class (http://root.cern.ch/root/html/TConfidenceLevel.html).
-**/
-
-
 #ifndef ROOSTATS_HypoTestResult
 #define ROOSTATS_HypoTestResult
 
