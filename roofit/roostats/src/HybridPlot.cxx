@@ -1,15 +1,16 @@
 // @(#)root/hist:$Id$
 
-// -- CLASS DESCRIPTION [ROOSTATS] --
-//
-// Class HybridPlot
-// Authors: D. Piparo, G. Schott - Universitaet Karlsruhe
-//
-// This class provides the plots for the result of a study performed with the 
-// HybridCalculator class.
-//
-// An example plot is available here:
-//    http://www-ekp.physik.uni-karlsruhe.de/~schott/roostats/hybridplot_example.png
+//___________________________________
+/**
+Class HybridPlot
+Authors: D. Piparo, G. Schott - Universitaet Karlsruhe
+
+This class provides the plots for the result of a study performed with the 
+HybridCalculator class.
+
+An example plot is available here:
+   http://www-ekp.physik.uni-karlsruhe.de/~schott/roostats/hybridplot_example.png
+*/
 
 
 #include "assert.h"

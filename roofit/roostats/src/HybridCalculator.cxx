@@ -14,42 +14,43 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-// -- CLASS DESCRIPTION [ROOSTATS] --
-//
-// HybridCalculator class: this class is a fresh rewrite in RooStats of
-// 	RooStatsCms/LimitCalculator developped by D. Piparo and G. Schott
-// Authors: D. Piparo, G. Schott - Universitaet Karlsruhe
-//
-// The class is born from the need to have an implementation of the CLs 
-// method that could take advantage from the RooFit Package.
-// The basic idea is the following: 
-// - Instantiate an object specifying a signal+background model, a background model and a dataset.
-// - Perform toy MC experiments to know the distributions of -2lnQ 
-// - Calculate the CLsb and CLs values as "integrals" of these distributions.
-// 
-// The class allows the user to input models as RooAbsPdf or TH1 object 
-// pointers (the pdfs must be "extended": for more information please refer to 
-// http://roofit.sourceforge.net). The dataset can be entered as a 
-// RooTreeData or TH1 object pointer. 
-// 
-// Unlike the TLimit Class a complete MC generation is performed at each step 
-// and not a simple Poisson fluctuation of the contents of the bins.
-// Another innovation is the treatment of the nuisance parameters. The user 
-// can input in the constructor nuisance parameters.
-// To include the information that we have about the nuisance parameters a prior
-// PDF (RooAbsPdf) should be specified
-//
-// The result of the calculations is returned as a HybridResult object pointer.
-//
-// see also the following interesting references:
-// - Alex Read, "Presentation of search results: the CLs technique" Journal of Physics G: Nucl. // Part. Phys. 28 2693-2704 (2002). http://www.iop.org/EJ/abstract/0954-3899/28/10/313/
-//
-// - Alex Read, "Modified Frequentist Analysis of Search Results (The CLs Method)" CERN 2000-005 (30 May 2000)
-//
-// - V. Bartsch, G.Quast, "Expected signal observability at future experiments" CMS NOTE 2005/004
-//
-// - http://root.cern.ch/root/html/src/TLimit.html
-//
+//_________________________________________________________________
+/**
+HybridCalculator class: this class is a fresh rewrite in RooStats of
+	RooStatsCms/LimitCalculator developped by D. Piparo and G. Schott
+Authors: D. Piparo, G. Schott - Universitaet Karlsruhe
+
+The class is born from the need to have an implementation of the CLs 
+method that could take advantage from the RooFit Package.
+The basic idea is the following: 
+- Instantiate an object specifying a signal+background model, a background model and a dataset.
+- Perform toy MC experiments to know the distributions of -2lnQ 
+- Calculate the CLsb and CLs values as "integrals" of these distributions.
+
+The class allows the user to input models as RooAbsPdf or TH1 object 
+pointers (the pdfs must be "extended": for more information please refer to 
+http://roofit.sourceforge.net). The dataset can be entered as a 
+RooTreeData or TH1 object pointer. 
+
+Unlike the TLimit Class a complete MC generation is performed at each step 
+and not a simple Poisson fluctuation of the contents of the bins.
+Another innovation is the treatment of the nuisance parameters. The user 
+can input in the constructor nuisance parameters.
+To include the information that we have about the nuisance parameters a prior
+PDF (RooAbsPdf) should be specified
+
+The result of the calculations is returned as a HybridResult object pointer.
+
+see also the following interesting references:
+- Alex Read, "Presentation of search results: the CLs technique" Journal of Physics G: Nucl. // Part. Phys. 28 2693-2704 (2002). http://www.iop.org/EJ/abstract/0954-3899/28/10/313/
+
+- Alex Read, "Modified Frequentist Analysis of Search Results (The CLs Method)" CERN 2000-005 (30 May 2000)
+
+- V. Bartsch, G.Quast, "Expected signal observability at future experiments" CMS NOTE 2005/004
+
+- http://root.cern.ch/root/html/src/TLimit.html
+*/
+
 
 #include "RooDataHist.h"
 #include "RooDataSet.h"
