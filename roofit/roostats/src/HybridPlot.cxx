@@ -1,5 +1,17 @@
 // @(#)root/hist:$Id$
 
+// -- CLASS DESCRIPTION [ROOSTATS] --
+//
+// Class HybridPlot
+// Authors: D. Piparo, G. Schott - Universitaet Karlsruhe
+//
+// This class provides the plots for the result of a study performed with the 
+// HybridCalculator class.
+//
+// An example plot is available here:
+//    http://www-ekp.physik.uni-karlsruhe.de/~schott/roostats/hybridplot_example.png
+
+
 #include "assert.h"
 #include <cmath>
 #include <iostream>
@@ -35,7 +47,7 @@ HybridPlot::HybridPlot(const char* name,
    fB_histo_shaded(NULL),
    fVerbose(verbosity)
 {
-   // constructor
+   // HybridPlot constructor
 
    // Get the max and the min of the plots
    int n_toys=sb_vals.size();
@@ -191,12 +203,6 @@ void HybridPlot::Draw(const char* options){
 
 
 }
-
-/*----------------------------------------------------------------------------*/
-
-//void HybridPlot::print(const char* options){
-//    std::cout << "\nHybridPlot " << GetName() << std::endl;
-//    }
 
 /*----------------------------------------------------------------------------*/
 

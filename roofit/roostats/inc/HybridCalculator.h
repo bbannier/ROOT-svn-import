@@ -52,12 +52,12 @@ namespace RooStats {
    private:
       void RunToys(std::vector<double>& bVals, std::vector<double>& sbVals, unsigned int nToys, bool usePriors);
 
-      RooAbsPdf& fSbModel;
-      RooAbsPdf& fBModel;
-      RooArgList& fObservables;
-      RooArgSet& fParameters;
-      RooAbsPdf& fPriorPdf;
-      unsigned int fTestStatisticsIdx;
+      RooAbsPdf& fSbModel; // The pdf of the signal+background model
+      RooAbsPdf& fBModel; // The pdf of the background model
+      RooArgList& fObservables; // Collection of the observables of the model
+      RooArgSet& fParameters; // Collection of the nuisance parameters in the model
+      RooAbsPdf& fPriorPdf; // Prior PDF of the nuisance parameters
+      unsigned int fTestStatisticsIdx; // Index of the test statistics to use
 
    protected:
       ClassDef(HybridCalculator,1)  // Hypothesis test calculator using a Bayesian-frequentist hybrid method

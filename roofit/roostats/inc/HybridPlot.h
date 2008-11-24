@@ -13,27 +13,16 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-/**
-Class HybridPlot
-Authors: D. Piparo, G. Schott - Universitaet Karlsruhe
-This class provides the plots for the result of a study performed with the 
-HybridCalculator class.
-**/
-
 #ifndef ROOSTATS_HybridPlot
 #define ROOSTATS_HybridPlot
 
 #include <vector>
 #include <iostream>
 
-// #include "TLine.h"
-// #include "TText.h"
-// #include "TLegend.h"
-
 #ifndef ROOT_TNamed 
 #include "TNamed.h"
 #endif
-// 
+
 // these  should be maybe forward decleared 
 // by moving implementations in source file 
 #include "TH1.h"
@@ -64,9 +53,6 @@ namespace RooStats {
 
       /// Draw on canvas
       void Draw (const char* options="");
-
-      /// Print the relevant information
-      //void Print (const char* options="");
 
       /// All the objects are written to rootfile
       void DumpToFile (const char* RootFileName, const char* options);
@@ -127,36 +113,18 @@ namespace RooStats {
       /// Get the median of an histogram
       double GetMedian(TH1* histo);
 
-
    private:
 
-      /// The sb Histo
-      TH1F* fSb_histo;
+      TH1F* fSb_histo; // The sb Histo
+      TH1F* fSb_histo_shaded; // The sb Histo shaded
+      TH1F* fB_histo; // The b Histo
+      TH1F* fB_histo_shaded; // The b Histo shaded
+      TLine* fData_m2lnQ_line; // The line for the data -2lnQ
+      TLegend* fLegend; // The legend of the plot
+      bool fVerbose; // verbosity flag
+      TCanvas* fCanvas; // plot canvas
 
-      /// The sb Histo shaded
-      TH1F* fSb_histo_shaded;
-
-      /// The b Histo
-      TH1F* fB_histo;
-
-      /// The b Histo shaded
-      TH1F* fB_histo_shaded;
-
-      /// The line for the data -2lnQ
-      TLine* fData_m2lnQ_line;
-
-      /// The legend of the plot
-      TLegend* fLegend;
-
-      /// Verbosity flag
-      bool fVerbose;
-
-      /// Canvas
-      TCanvas* fCanvas;
-
-      // For Cint
       ClassDef(HybridPlot,1)   // Provides the plots for an HybridResult
-
    };
 }
 
