@@ -47,7 +47,9 @@ HybridResult::HybridResult( const char *name, const char *title,
                             std::vector<double>& testStat_sb_vals,
                             std::vector<double>& testStat_b_vals) :
    TNamed(name,title),
-   fTestStat_data(-999.)
+   fTestStat_data(-999.),
+   fComputationsNulDoneFlag(false),
+   fComputationsAltDoneFlag(false)
 {
    // HybridResult constructor (with name, title and vectors of S+B and B values)
 
@@ -70,7 +72,9 @@ HybridResult::HybridResult( const char *name, const char *title,
 
 HybridResult::HybridResult( const char *name, const char *title) :
    TNamed(name,title),
-   fTestStat_data(-999.)
+   fTestStat_data(-999.),
+   fComputationsNulDoneFlag(false),
+   fComputationsAltDoneFlag(false)
 {
    // HybridResult constructor (with name and title)
 }
@@ -79,7 +83,9 @@ HybridResult::HybridResult( const char *name, const char *title) :
 
 HybridResult::HybridResult( ) :
    TNamed("HybridResult_DefaultName","HybridResult"),
-   fTestStat_data(-999.)
+   fTestStat_data(-999.),
+   fComputationsNulDoneFlag(false),
+   fComputationsAltDoneFlag(false)
 {
    // HybridResult default constructor
 }
@@ -98,73 +104,68 @@ HybridResult::~HybridResult()
 
 void HybridResult::SetDataTestStatistics(double testStat_data_val)
 {
-   // set the choice of test statistics:
-   // use 1 for using -2lnQ (default)
-   // use 2 for using the number of events
+   // set the value of the test statistics on data
 
+   fComputationsAltDoneFlag = false;
+   fComputationsNulDoneFlag = false;
    fTestStat_data = testStat_data_val;
    return;
 }
 
 ///////////////////////////////////////////////////////////////////////////
-
-double HybridResult::CLb()
+/*
+const double HybridResult::NullPValue()
 {
-   // return CL_b : one minus the B p-value
+   // return 1-CL_b : the B p-value
 
-   int nToys = fTestStat_b.size();
-   if (nToys==0) {
-      std::cout << "Error: no toy data present. Returning -1.\n";
-      // TO DO: assert
-      return -1;
+   if (fComputationsNulDoneFlag==false) {
+      int nToys = fTestStat_b.size();
+      if (nToys==0) {
+         std::cout << "Error: no toy data present. Returning -1.\n";
+         // TO DO: assert
+         return -1;
+      }
+
+      double larger_than_measured=0;
+      for (int iToy=0;iToy<nToys;++iToy)
+         if ( fTestStat_b[iToy] > fTestStat_data ) ++larger_than_measured;
+
+      if (larger_than_measured==0) std::cout << "Warning: CLb = 0 ... maybe more toys are needed!\n";
+
+      //fComputationsNulDoneFlag = true;
+      //fNullPValue = 1-larger_than_measured/nToys;
    }
 
-   double larger_than_measured=0;
-   for (int iToy=0;iToy<nToys;++iToy)
-      if ( fTestStat_b[iToy] > fTestStat_data ) ++larger_than_measured;
-
-   if (larger_than_measured==0) std::cout << "Warning: CLb = 0 ... maybe more toys are needed!\n";
-   return larger_than_measured/nToys;
+   return fNullPValue;
 }
-
+*/
 ///////////////////////////////////////////////////////////////////////////
-
-double HybridResult::CLsplusb()
+/*
+const double HybridResult::AlternatePValue()
 {
    // return CL_s+b : the S+B p-value
 
-   int nToys = fTestStat_b.size();
-   if (nToys==0) {
-      std::cout << "Error: no toy data present. Returning -1.\n";
-      // TO DO: assert!
-      return -1;
+   if (fComputationsAltDoneFlag==false) {
+      int nToys = fTestStat_b.size();
+      if (nToys==0) {
+         std::cout << "Error: no toy data present. Returning -1.\n";
+         // TO DO: assert!
+         return -1;
+      }
+
+      double larger_than_measured=0;
+      for (int iToy=0;iToy<nToys;++iToy)
+         if ( fTestStat_sb[iToy] > fTestStat_data ) ++larger_than_measured;
+
+      if (larger_than_measured==0) std::cout << "Warning: CLsb = 0 ... maybe more toys are needed!\n";
+
+      //fComputationsAltDoneFlag = true;
+      //fAlternatePValue = larger_than_measured/nToys;
    }
 
-   double larger_than_measured=0;
-   for (int iToy=0;iToy<nToys;++iToy)
-      if ( fTestStat_sb[iToy] > fTestStat_data ) ++larger_than_measured;
-
-   if (larger_than_measured==0) std::cout << "Warning: CLsb = 0 ... maybe more toys are needed!\n";
-   return larger_than_measured/nToys;
+   return fAlternatePValue;
 }
-
-///////////////////////////////////////////////////////////////////////////
-
-double HybridResult::CLs()
-{
-   // returns CL_s = CL_s+b / CL_b
-
-   double thisCLb = CLb();
-   if (thisCLb==0) {
-      std::cout << "Error: Cannot compute CLs because CLb = 0. Returning CLs = -1\n";
-      // TO DO: assert!
-      return -1;
-   }
-   double thisCLsb = CLsplusb();
-
-   return thisCLsb/thisCLb;
-}
-
+*/
 ///////////////////////////////////////////////////////////////////////////
 
 void HybridResult::Add(HybridResult* other)
@@ -183,6 +184,9 @@ void HybridResult::Add(HybridResult* other)
    // if no data is present use the other's HybridResult's data
    if (fTestStat_data==-999.)
       fTestStat_data = other->GetTestStat_data();
+
+   fComputationsAltDoneFlag = false;
+   fComputationsNulDoneFlag = false;
 
    return;
 }
