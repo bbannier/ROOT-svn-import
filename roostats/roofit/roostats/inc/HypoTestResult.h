@@ -46,7 +46,6 @@ namespace RooStats {
        double thisCLb = CLb();
         if (thisCLb==0) {
           std::cout << "Error: Cannot compute CLs because CLb = 0. Returning CLs = -1\n";
-          // TO DO: assert!
           return -1;
         }
         double thisCLsb = CLsplusb();
