@@ -6,7 +6,10 @@
 #include "RooAddPdf.h"
 #include "RooDataSet.h"
 #include "RooExtendPdf.h"
+
+#ifndef __CINT__  // problem including this file with CINT
 #include "RooGlobalFunc.h"
+#endif
 
 #include "RooStats/HybridCalculator.h"
 #include "RooStats/HybridResult.h"
