@@ -42,15 +42,24 @@ namespace RooStats {
       virtual Double_t CLsplusb() const {return AlternatePValue();}
 
       // CLs is simply CLs+b/CLb (not a method, but a quantity)
-      virtual Double_t CLs() const {return CLsplusb()/CLb();}
+      virtual Double_t CLs() const {
+       double thisCLb = CLb();
+        if (thisCLb==0) {
+          std::cout << "Error: Cannot compute CLs because CLb = 0. Returning CLs = -1\n";
+          // TO DO: assert!
+          return -1;
+        }
+        double thisCLsb = CLsplusb();
+        return thisCLsb/thisCLb;
+      }
 
       // familiar name for the Null p-value in terms of 1-sided Gaussian significance
-      virtual Double_t Significance() const {return RooStats::PValueToSignificance( fNullPValue ); }
+      virtual Double_t Significance() const {return RooStats::PValueToSignificance( NullPValue() ); }
 
    protected:
 
-      Double_t fNullPValue; // p-value for the null hypothesis (small number means disfavored)
-      Double_t fAlternatePValue; // p-value for the alternate hypothesis (small number means disfavored)
+      mutable Double_t fNullPValue; // p-value for the null hypothesis (small number means disfavored)
+      mutable Double_t fAlternatePValue; // p-value for the alternate hypothesis (small number means disfavored)
 
       ClassDef(HypoTestResult,1)  // Base class to represent results of a hypothesis test
 
