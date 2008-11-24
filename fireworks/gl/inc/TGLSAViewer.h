@@ -105,6 +105,7 @@ public:
 
    void   Show();
    void   Close();
+   void   DeleteMenuBar();
 
    // GUI events - editors, frame etc
    Bool_t ProcessFrameMessage(Long_t msg, Long_t parm1, Long_t);
