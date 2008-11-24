@@ -46,7 +46,7 @@ END_HTML
 class RooAbsPdf;
 class RooArgSet; 
 class RooWorkspace; 
-
+//class HypoTestResult;
 
 namespace RooStats {
 

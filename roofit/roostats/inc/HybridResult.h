@@ -32,6 +32,11 @@ namespace RooStats {
       HybridResult(const char *name,const char *title,std::vector<double>& testStat_sb_vals,
                    std::vector<double>& testStat_b_vals);
 
+      HybridResult(const char *name,const char *title);
+
+     /// Default constructor for HybridResult
+      HybridResult();
+
       /// Destructor of HybridResult
       virtual ~HybridResult();
 
@@ -47,14 +52,13 @@ namespace RooStats {
       void PrintMore(const char* options);
 
       /// Get test statistics values for the sb model
-      std::vector<double> getTestStat_sb(){return fTestStat_sb;}
+      std::vector<double> GetTestStat_sb(){return fTestStat_sb;}
 
       /// Get test statistics values for the b model
-      std::vector<double> getTestStat_b(){return fTestStat_b;}
+      std::vector<double> GetTestStat_b(){return fTestStat_b;}
 
       /// Get test statistics value on data
-      double getTestStat_data(){return fTestStat_data;}
-
+      double GetTestStat_data(){return fTestStat_data;}
 
    private:
       std::vector<double> fTestStat_b; // results for B-only toy-MC

@@ -28,7 +28,7 @@
 
 namespace RooStats {
 
-   class HybridCalculator : public HypoTestCalculator , public TNamed {
+   class HybridCalculator : /*public HypoTestCalculator ,*/ public TNamed {
 
    public:
       /// Constructor for HybridCalculator
