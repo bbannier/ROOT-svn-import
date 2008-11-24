@@ -57,8 +57,8 @@ HybridCalculator::HybridCalculator( const char *name,
 
    SetTestStatistics(1); /// set to default
 
-   this->Print();
-   /* if ( _verbose ) */ this->PrintMore("v"); /// TO DO: add the verbose mode
+   // this->Print();
+   /* if ( _verbose ) */ //this->PrintMore("v"); /// TO DO: add the verbose mode
 }
 
 ///////////////////////////////////////////////////////////////////////////

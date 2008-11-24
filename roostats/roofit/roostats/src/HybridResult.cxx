@@ -41,9 +41,10 @@ using namespace RooStats;
 HybridResult::HybridResult( const char *name, const char *title,
                             std::vector<double>& testStat_sb_vals,
                             std::vector<double>& testStat_b_vals) :
-   TNamed(name,title)
+   TNamed(name,title),
+   fTestStat_data(-999.)
 {
-   /*HypoTestCalculator(name,title),*/ /// TO DO
+   /*HypoTestResult(name,title),*/ /// TO DO
    //TNamed(name,title)
 //{
    /// HybridResult constructor:
@@ -61,7 +62,24 @@ HybridResult::HybridResult( const char *name, const char *title,
    for (int i=0;i<vector_size_b;++i)
       fTestStat_b.push_back(testStat_b_vals[i]);
 
-   fTestStat_data = -999.;
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+HybridResult::HybridResult( const char *name, const char *title) :
+   TNamed(name,title),
+   fTestStat_data(-999.)
+{
+   /// constructor with name and title
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+HybridResult::HybridResult( ) :
+   TNamed("HybridResult_DefaultName","HybridResult"),
+   fTestStat_data(-999.)
+{
+   /// default constructor (needed for writing to file)
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -142,20 +160,21 @@ double HybridResult::CLs()
 
 void HybridResult::Add(HybridResult* other)
 {
-/// TO DO: to complete
-   other->PrintMore("");
+   //other->PrintMore("");
 
-   int other_size_sb = fTestStat_sb.size();
+   int other_size_sb = other->GetTestStat_sb().size();
    for (int i=0;i<other_size_sb;++i)
-      fTestStat_sb.push_back(other->getTestStat_sb()[i]);
+      fTestStat_sb.push_back(other->GetTestStat_sb()[i]);
 
-   int other_size_b = fTestStat_b.size();
+   int other_size_b = other->GetTestStat_b().size();
    for (int i=0;i<other_size_b;++i)
-      fTestStat_b.push_back(other->getTestStat_b()[i]);
+      fTestStat_b.push_back(other->GetTestStat_b()[i]);
 
    // if no data is present use the other's HybridResult's data
    if (fTestStat_data==-999.)
-      fTestStat_data = other->getTestStat_data();
+      fTestStat_data = other->GetTestStat_data();
+
+   //this->PrintMore("");
 
    return;
 }

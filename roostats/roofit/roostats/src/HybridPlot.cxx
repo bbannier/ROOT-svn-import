@@ -1,5 +1,4 @@
 // @(#)root/hist:$Id$
-// Author: Danilo.Piparo@cern.ch   01/06/2008
 
 #include "assert.h"
 #include <cmath>
@@ -229,10 +228,7 @@ void HybridPlot::DumpToFile (const char* RootFileName, const char* options){
 
 /*----------------------------------------------------------------------------*/
 
-
 // from Rsc.cxx
-
-
 
 
 /**
@@ -295,7 +291,6 @@ double HybridPlot::GetHistoCenter(TH1* histo_orig, double n_rms, bool display_re
 
 
 }
-
 
 /**
    We let an orizzontal bar go down and we stop when we have the integral 

@@ -13,14 +13,9 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-/// HybridPlot: The plot for the PLScan
-
 /**
-\class HybridPlot
-$Revision: 1.3 $
-$Date: 2008/10/24 11:33:18 $
-\author D. Piparo (danilo.piparo<at>cern.ch), G. Schott - Universitaet Karlsruhe
-
+Class HybridPlot
+Authors: D. Piparo, G. Schott - Universitaet Karlsruhe
 This class provides the plots for the result of a study performed with the 
 HybridCalculator class.
 **/
@@ -30,8 +25,6 @@ HybridCalculator class.
 
 #include <vector>
 #include <iostream>
-
-//#include "RooStats/Rsc.h"
 
 // #include "TLine.h"
 // #include "TText.h"
@@ -46,9 +39,6 @@ HybridCalculator class.
 #include "TH1.h"
 #include "TCanvas.h"
 
-//class TH1;
-//class TH1F;  
-//class TCanvas; 
 
 class TLine; 
 class TLegend; 
