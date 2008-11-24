@@ -1,16 +1,18 @@
 void rs201_hybridcalculator()
 {
   //***********************************************************************//
-  /// This macro show an example on how to use RooStats/HybridCalculator   //
+  // This macro show an example on how to use RooStats/HybridCalculator    //
   //***********************************************************************//
+  //
+  // With this example, you should get: CL_sb = 0.130 and CL_b = 0.946
+  // (if data had -2lnQ = -3.0742). You can compare to the expected plot:
+  // http://www-ekp.physik.uni-karlsruhe.de/~schott/roostats/hybridplot_example.png
 
   using namespace RooFit;
   using namespace RooStats;
 
   /// set RooFit random seed
-  int seed = 3007;
-  RooRandom::randomGenerator()->SetSeed(seed);
-  gRandom->SetSeed(seed);
+  RooRandom::randomGenerator()->SetSeed(3007);
 
   /// build the models for background and signal+background
   RooRealVar x("x","",-3,3);
@@ -32,7 +34,7 @@ void rs201_hybridcalculator()
   RooAddPdf tot_pdf("tot_pdf","",RooArgList(sig_pdf,bkg_pdf),RooArgList(sig_yield,bkg_yield));
 
   /// build the prior PDF on the parameters to be integrated
-  // gaussian contraint on the background yield ( N_B = 100 +/- 10 )
+  // gaussian contraint on the background yield ( N_B = 40 +/- 10  ie. 25% )
   RooGaussian bkg_yield_prior("bkg_yield_prior","",bkg_yield,RooConst(bkg_yield.getVal()),RooConst(10.));
   RooArgSet nuisance_parameters(bkg_yield); // variables to be integrated
 
@@ -73,7 +75,6 @@ void rs201_hybridcalculator()
   /// nice plot of the results
   HybridPlot* myHybridPlot = myHybridResult->GetPlot("myHybridPlot","Plot of results with HybridCalculator",100);
   myHybridPlot->Draw();
-  myHybridPlot->GetBhisto()->Integral();
 
   /// recover and display the results
   double clsb_data = myHybridResult->CLsplusb();
@@ -85,7 +86,4 @@ void rs201_hybridcalculator()
   std::cout << " - CL_sb = " << clsb_data << std::endl;
   std::cout << " - CL_b  = " << clb_data << std::endl;
   std::cout << " - CL_s  = " << cls_data << std::endl;
-
-  // for this example, you should get: CL_sb = 0.130 and CL_b = 0.946 (if data had -2lnQ = -3.0742)
-  // http://www-ekp.physik.uni-karlsruhe.de/~schott/roostats/hybridplot_example.png
 }
