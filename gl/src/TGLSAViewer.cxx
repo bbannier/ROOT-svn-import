@@ -380,6 +380,15 @@ void TGLSAViewer::Close()
 }
 
 //______________________________________________________________________________
+void TGLSAViewer::DeleteMenuBar()
+{
+   // Delete the menu bar.
+
+   delete fMenuBar;
+   fMenuBar = 0;
+}
+
+//______________________________________________________________________________
 Bool_t TGLSAViewer::ProcessFrameMessage(Long_t msg, Long_t parm1, Long_t)
 {
    // Process GUI message capture by the main GUI frame (TGLSAFrame).
