@@ -17,6 +17,7 @@
 #include "TFile.h"
 
 #include "TROOT.h"
+#include <algorithm>
 
 const unsigned int __DRAW__ = 0;
 
@@ -39,6 +40,8 @@ enum compareOptions {
 };
 
 TRandom2 r;
+
+typedef bool ( * pointer2Test) ();
 
 // Methods for histogram comparisions (later implemented)
 
@@ -1216,7 +1219,6 @@ bool testWriteReadProfile3D()
 bool stressHistOpts()
 {
    r.SetSeed(time(0));
-   typedef bool (*pointer2Test)();
    const unsigned int numberOfTests = 36;
    pointer2Test testPointer[numberOfTests] = {  testAdd1,                testAdd2, 
                                                 testAdd2D1,              testAdd2D2,
@@ -1315,7 +1317,7 @@ bool testArrayRebin()
       h1->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
 
    // Create vector 
-   Double_t rebinArray[rebin];
+   Double_t * rebinArray = new Double_t[rebin];
    r.RndmArray(rebin, rebinArray);
    std::sort(rebinArray, rebinArray + rebin);
    for ( Int_t i = 0; i < rebin; ++i ) {
@@ -1339,6 +1341,8 @@ bool testArrayRebin()
    r.SetSeed(seed);
    for ( Int_t i = 0; i < nEvents; ++i )
       h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
+
+   delete [] rebinArray;
       
    return equals("TestArrayRebin", h2, h3, cmpOptStats);
 }
@@ -1370,7 +1374,6 @@ bool test2DRebin()
 
 bool stressHistRebin()
 {
-   typedef bool (*pointer2Test)();
    const unsigned int numberOfTests = 4;
    pointer2Test testPointer[numberOfTests] = { testIntegerRebin, 
                                                testIntegerRebinNoName,
