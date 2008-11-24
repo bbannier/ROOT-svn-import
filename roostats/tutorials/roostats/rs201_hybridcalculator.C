@@ -87,5 +87,5 @@ void rs201_hybridcalculator()
   std::cout << " - CL_s  = " << cls_data << std::endl;
 
   // for this example, you should get: CL_sb = 0.130 and CL_b = 0.946 (if data had -2lnQ = -3.0742)
-  // http://www-ekp.physik.uni-karlsruhe.de/~schott/hybridplot.png
+  // http://www-ekp.physik.uni-karlsruhe.de/~schott/roostats/hybridplot_example.png
 }
