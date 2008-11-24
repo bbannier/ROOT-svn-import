@@ -41,13 +41,13 @@ HybridCalculator::HybridCalculator( const char *name,
                                     RooAbsPdf& sbModel,
                                     RooAbsPdf& bModel,
                                     RooArgList& observables,
-                                    RooArgSet& parameters,
+                                    RooArgSet& nuisance_parameters,
                                     RooAbsPdf& priorPdf ) :
    TNamed(name,title),
    fSbModel(sbModel),
    fBModel(bModel),
    fObservables(observables),
-   fParameters(parameters),
+   fParameters(nuisance_parameters),
    fPriorPdf(priorPdf)
 {
    /// HybridCalculator constructor:

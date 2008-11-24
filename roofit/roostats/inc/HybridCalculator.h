@@ -37,7 +37,7 @@ namespace RooStats {
                        RooAbsPdf& sb_model,
                        RooAbsPdf& b_model,
                        RooArgList& observables,
-                       RooArgSet& parameters,
+                       RooArgSet& nuisance_parameters,
                        RooAbsPdf& prior_pdf);
 
       /// Destructor of HybridCalculator
