@@ -61,13 +61,13 @@ namespace RooStats {
       double GetTestStat_data(){return fTestStat_data;}
 
    private:
-      std::vector<double> fTestStat_b; // results for B-only toy-MC
-      std::vector<double> fTestStat_sb; // results for S+B toy-MC
-      double fTestStat_data; // results for data
+      std::vector<double> fTestStat_b; // vector of results for B-only toy-MC
+      std::vector<double> fTestStat_sb; // vector of results for S+B toy-MC
+      double fTestStat_data; // results (test statistics) evaluated for data
 
    protected:
 
-      ClassDef(HybridResult,1)   // Class containing the results of the HybridCalculator
+      ClassDef(HybridResult,1)  // Class containing the results of the HybridCalculator
    };
 }
 
