@@ -810,8 +810,6 @@ bool stressAssignProfile2D()
                                    numberOfBins, minRange, maxRange,
                                    numberOfBins, minRange, maxRange);
 
-   p1->Sumw2();
-
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -857,8 +855,6 @@ bool stressCopyConstructorProfile2D()
                                    numberOfBins, minRange, maxRange,
                                    numberOfBins, minRange, maxRange);
 
-   p1->Sumw2();
-
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -899,8 +895,6 @@ bool stressCloneProfile2D()
    TProfile2D* p1 = new TProfile2D("cl2D-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
                                    numberOfBins, minRange, maxRange);
-
-   //p1->Sumw2();
 
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -949,8 +943,6 @@ bool stressAssignProfile3D()
                                    numberOfBins, minRange, maxRange,
                                    numberOfBins, minRange, maxRange,
                                    numberOfBins, minRange, maxRange);
-
-   p1->Sumw2();
 
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -1001,8 +993,6 @@ bool stressCopyConstructorProfile3D()
                                    numberOfBins, minRange, maxRange,
                                    numberOfBins, minRange, maxRange);
 
-   p1->Sumw2();
-
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -1047,8 +1037,6 @@ bool stressCloneProfile3D()
                        numberOfBins, minRange, maxRange,
                        numberOfBins, minRange, maxRange,
                        numberOfBins, minRange, maxRange);
-
-   p1->Sumw2();
 
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
