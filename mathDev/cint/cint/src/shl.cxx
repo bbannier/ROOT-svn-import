@@ -2107,10 +2107,11 @@ void* G__FindSym(char *filename,char *funcname)
 const char *G__dladdr(void (*func)())
 {
    // Wrapper around dladdr (and friends)
-#if defined(G__WIN32)
-#if 0
+#if defined(__CYGWIN__) && defined(__GNUC__)
+   return 0;
+#elif defined(G__WIN32)
    MEMORY_BASIC_INFORMATION mbi;
-   if (!VirtualQuery (addr, &mbi, sizeof (mbi)))
+   if (!VirtualQuery (func, &mbi, sizeof (mbi)))
    {
       return 0;
    }
@@ -2123,8 +2124,6 @@ const char *G__dladdr(void (*func)())
       return 0;
    }
    return moduleName;
-#endif
-   return 0;
 #else
    Dl_info info;
    if (dladdr((void*)func,&info)==0) {
@@ -2144,7 +2143,7 @@ void* G__RegisterLibrary(void (*func)()) {
 
    const char *libname = G__dladdr( func );
    if (libname) {
-      // G__register_sharedlib( libname );
+      G__register_sharedlib( libname );
    }
    return 0;
 }   

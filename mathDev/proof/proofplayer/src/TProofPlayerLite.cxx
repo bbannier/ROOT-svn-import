@@ -52,7 +52,7 @@ Int_t TProofPlayerLite::MakeSelector(const char *selfile)
       return -1;
    }
 
-   // If we are just given a name, initi the selector and return
+   // If we are just given a name, init the selector and return
    if (!strchr(gSystem->BaseName(selfile), '.')) {
       if (gDebug > 1)
          Info("MakeSelector", "selector name '%s' does not contain a '.':"
@@ -122,7 +122,7 @@ Int_t TProofPlayerLite::MakeSelector(const char *selfile)
    Bool_t useCacheBinaries = kFALSE;
    TString cachedname = Form("%s/%s", cacheDir.Data(), gSystem->BaseName(name));
    TString cachedhname = Form("%s/%s", cacheDir.Data(), gSystem->BaseName(hname));
-   if (!gSystem->AccessPathName(cachedname, kReadPermission) && 
+   if (!gSystem->AccessPathName(cachedname, kReadPermission) &&
        !gSystem->AccessPathName(cachedhname, kReadPermission)) {
       TMD5 *md5 = TMD5::FileChecksum(name);
       TMD5 *md5cache = TMD5::FileChecksum(cachedname);
@@ -336,6 +336,7 @@ Long64_t TProofPlayerLite::Process(TDSet *dset, const char *selector_file,
                                dset->GetDirectory());
    if (dset->TestBit(TDSet::kEmpty))
       set->SetBit(TDSet::kEmpty);
+   fProof->SetParameter("PROOF_MaxSlavesPerNode", (Long_t) ((TProofLite *)fProof)->fNWorkers);
    if (InitPacketizer(dset, nentries, first, "TPacketizerUnit", "TPacketizer") != 0) {
       Error("Process", "cannot init the packetizer");
       fExitStatus = kAborted;
@@ -370,7 +371,8 @@ Long64_t TProofPlayerLite::Process(TDSet *dset, const char *selector_file,
    // Broadcast main message
    PDB(kGlobal,1) Info("Process","Calling Broadcast");
    mesg << set << fn << fInput << opt << num << fst << evl << sync << enl;
-   fProof->Broadcast(mesg);
+   Int_t nb = fProof->Broadcast(mesg);
+   fProof->fNotIdle += nb;
 
    // Redirect logs from master to special log frame
    fProof->fRedirLog = kTRUE;
@@ -396,7 +398,8 @@ Long64_t TProofPlayerLite::Process(TDSet *dset, const char *selector_file,
       // at the time it was called)
       fProof->fRedirLog = kFALSE;
 
-      HandleTimer(0); // force an update of final result
+      if (!TSelector::IsStandardDraw(fn))
+         HandleTimer(0); // force an update of final result
       // Store process info
       if (fPacketizer && fQuery)
          fQuery->SetProcessInfo(0, 0., fPacketizer->GetBytesRead(),

@@ -66,7 +66,7 @@ protected:
   Int_t const *fBinMap; // bin mapping to extract the global correlation
   Double_t fTauBest;    // tau with the smallest correlation
   Double_t fRhoMin;     // smallest correlation
-  //ClassDef(MyUnfold,0); 
+  ClassDef(MyUnfold,0); 
 };
 
 //ClassImp(MyUnfold)
@@ -234,12 +234,12 @@ int testUnfold2()
   Double_t const luminosityMC=1000000;
   Double_t const crossSection=1.0;
 
-  Int_t const &nDet=250;
-  Int_t const &nGen=100;
-  Double_t const &xminDet=0.0;
-  Double_t const &xmaxDet=10.0;
-  Double_t const &xminGen=0.0;
-  Double_t const &xmaxGen=10.0;
+  Int_t const nDet=250;
+  Int_t const nGen=100;
+  Double_t const xminDet=0.0;
+  Double_t const xmaxDet=10.0;
+  Double_t const xminGen=0.0;
+  Double_t const xmaxGen=10.0;
 
   //============================================
   // generate MC distribution
