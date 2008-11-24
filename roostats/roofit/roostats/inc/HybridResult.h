@@ -58,23 +58,23 @@ namespace RooStats {
 
 
       // Return p-value for null hypothesis
-      Double_t NullPValue() {return 1;};
+      Double_t NullPValue() const  {return 1;};
 
       // Return p-value for alternate hypothesis
-      Double_t AlternatePValue() {return 1;};
+      Double_t AlternatePValue() const {return 1;};
 
 
 
 
 
       // Convert  NullPValue into a "confidence level"
-      Double_t CLb() {return (1.-NullPValue());}
+      Double_t CLb() const {return (1.-NullPValue());}
 
       // Convert  AlternatePValue into a "confidence level"
-      Double_t CLsplusb()  {return AlternatePValue();}
+      Double_t CLsplusb()  const {return AlternatePValue();}
 
       // CLs is simply CLs+b/CLb (not a method, but a quantity)
-      Double_t CLs()  {
+      Double_t CLs()  const {
         double thisCLb = CLb();
         if (thisCLb==0) {
           std::cout << "Error: Cannot compute CLs because CLb = 0. Returning CLs = -1\n";
@@ -86,7 +86,7 @@ namespace RooStats {
       }
 
       // familiar name for the Null p-value in terms of 1-sided Gaussian significance
-      Double_t Significance()  {return RooStats::PValueToSignificance( NullPValue() ); }
+      Double_t Significance()  const {return RooStats::PValueToSignificance( NullPValue() ); }
 
 
 
