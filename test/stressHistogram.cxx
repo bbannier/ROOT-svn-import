@@ -673,7 +673,7 @@ bool testDivide1()
    return equals("Divide1D1", h1, h4, cmpOptStats/* | cmpOptDebug*/, 1E-13);
 }
 
-bool stressAssign1D()
+bool testAssign1D()
 {
    TH1D* h1 = new TH1D("=1D-h1", "h1-Title", numberOfBins, minRange, maxRange);
 
@@ -692,7 +692,7 @@ bool stressAssign1D()
    return ret;
 }
 
-bool stressAssignProfile1D()
+bool testAssignProfile1D()
 {
    TProfile* p1 = new TProfile("=1D-p1", "p1-Title", numberOfBins, minRange, maxRange);
 
@@ -712,7 +712,7 @@ bool stressAssignProfile1D()
    return ret;
 }
 
-bool stressCopyConstructor1D()
+bool testCopyConstructor1D()
 {
    TH1D* h1 = new TH1D("cc1D-h1", "h1-Title", numberOfBins, minRange, maxRange);
 
@@ -730,7 +730,7 @@ bool stressCopyConstructor1D()
    return ret;
 }
 
-bool stressCopyConstructorProfile1D()
+bool testCopyConstructorProfile1D()
 {
    TProfile* p1 = new TProfile("cc1D-p1", "p1-Title", numberOfBins, minRange, maxRange);
 
@@ -749,7 +749,7 @@ bool stressCopyConstructorProfile1D()
    return ret;
 }
 
-bool stressClone1D()
+bool testClone1D()
 {
    TH1D* h1 = new TH1D("cl1D-h1", "h1-Title", numberOfBins, minRange, maxRange);
 
@@ -767,7 +767,7 @@ bool stressClone1D()
    return ret;
 }
 
-bool stressCloneProfile1D()
+bool testCloneProfile1D()
 {
    TProfile* p1 = new TProfile("cl1D-p1", "p1-Title", numberOfBins, minRange, maxRange);
 
@@ -786,7 +786,7 @@ bool stressCloneProfile1D()
    return ret;
 }
 
-bool stressAssign2D()
+bool testAssign2D()
 {
    TH2D* h1 = new TH2D("=2D-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
@@ -810,7 +810,7 @@ bool stressAssign2D()
    return ret;
 }
 
-bool stressAssignProfile2D()
+bool testAssignProfile2D()
 {
    TProfile2D* p1 = new TProfile2D("=2D-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
@@ -834,7 +834,7 @@ bool stressAssignProfile2D()
 }
 
 
-bool stressCopyConstructor2D()
+bool testCopyConstructor2D()
 {
    TH2D* h1 = new TH2D("cc2D-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
@@ -855,7 +855,7 @@ bool stressCopyConstructor2D()
    return ret;
 }
 
-bool stressCopyConstructorProfile2D()
+bool testCopyConstructorProfile2D()
 {
    TProfile2D* p1 = new TProfile2D("cc2D-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
@@ -875,7 +875,7 @@ bool stressCopyConstructorProfile2D()
    return ret;
 }
 
-bool stressClone2D()
+bool testClone2D()
 {
    TH2D* h1 = new TH2D("cl2D-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
@@ -896,7 +896,7 @@ bool stressClone2D()
    return ret;
 }
 
-bool stressCloneProfile2D()
+bool testCloneProfile2D()
 {
    TProfile2D* p1 = new TProfile2D("cl2D-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
@@ -916,7 +916,7 @@ bool stressCloneProfile2D()
    return ret;
 }
 
-bool stressAssign3D()
+bool testAssign3D()
 {
    TH3D* h1 = new TH3D("=3D-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
@@ -943,7 +943,7 @@ bool stressAssign3D()
    return ret;
 }
 
-bool stressAssignProfile3D()
+bool testAssignProfile3D()
 {
    TProfile3D* p1 = new TProfile3D("=3D-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
@@ -969,7 +969,7 @@ bool stressAssignProfile3D()
    return ret;
 }
 
-bool stressCopyConstructor3D()
+bool testCopyConstructor3D()
 {
    TH3D* h1 = new TH3D("cc3D-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
@@ -992,7 +992,7 @@ bool stressCopyConstructor3D()
    return ret;
 }
 
-bool stressCopyConstructorProfile3D()
+bool testCopyConstructorProfile3D()
 {
    TProfile3D* p1 = new TProfile3D("cc3D-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
@@ -1014,7 +1014,7 @@ bool stressCopyConstructorProfile3D()
    return ret;
 }
 
-bool stressClone3D()
+bool testClone3D()
 {
    TH3D* h1 = new TH3D("cl3D-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
@@ -1037,7 +1037,7 @@ bool stressClone3D()
    return ret;
 }
 
-bool stressCloneProfile3D()
+bool testCloneProfile3D()
 {
    TProfile3D* p1 = new TProfile3D("cl3D-p1", "p1-Title", 
                        numberOfBins, minRange, maxRange,
@@ -1227,15 +1227,15 @@ bool stressHistOpts()
                                                 testMul2D1,              testMul2D2,
                                                 testMul3D1,              testMul3D2, 
                                                 //testDivide1,
-                                                stressAssign1D,          stressAssignProfile1D, 
-                                                stressCopyConstructor1D, stressCopyConstructorProfile1D, 
-                                                stressClone1D,           stressCloneProfile1D,
-                                                stressAssign2D,          stressAssignProfile2D,
-                                                stressCopyConstructor2D, stressCopyConstructorProfile2D,
-                                                stressClone2D,           stressCloneProfile2D,
-                                                stressAssign3D,          stressAssignProfile3D,
-                                                stressCopyConstructor3D, stressCopyConstructorProfile3D,
-                                                stressClone3D,           stressCloneProfile3D,
+                                                testAssign1D,            testAssignProfile1D, 
+                                                testCopyConstructor1D,   testCopyConstructorProfile1D, 
+                                                testClone1D,             testCloneProfile1D,
+                                                testAssign2D,            testAssignProfile2D,
+                                                testCopyConstructor2D,   testCopyConstructorProfile2D,
+                                                testClone2D,             testCloneProfile2D,
+                                                testAssign3D,            testAssignProfile3D,
+                                                testCopyConstructor3D,   testCopyConstructorProfile3D,
+                                                testClone3D,             testCloneProfile3D,
                                                 testWriteRead1D,         testWriteReadProfile1D,
                                                 testWriteRead2D,         testWriteReadProfile2D,
                                                 testWriteRead3D,         testWriteReadProfile3D
