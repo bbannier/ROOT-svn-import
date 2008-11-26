@@ -47,7 +47,7 @@ TRandom2 r;
 typedef bool ( * pointer2Test) ();
 
 // Methods for histogram comparisions (later implemented)
-
+void printResult(const char* msg, bool status);
 int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0, double ERRORLIMIT = 1E-15);
 int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0, double ERRORLIMIT = 1E-15);
 int equals(const char* msg, TH3D* h1, TH3D* h2, int options = 0, double ERRORLIMIT = 1E-15);
@@ -1411,29 +1411,32 @@ bool testMerge3D()
 bool stressHistOpts()
 {
    r.SetSeed(0);
-   const unsigned int numberOfTests = 39;
-   pointer2Test testPointer[numberOfTests] = {  testAdd1,                testAdd2, 
-                                                testAdd2D1,              testAdd2D2,
-                                                testAdd3D1,              testAdd3D2, 
-                                                testMul1,                testMul2,
-                                                testMul2D1,              testMul2D2,
-                                                testMul3D1,              testMul3D2, 
-                                                //testDivide1,
-                                                testAssign1D,            testAssignProfile1D, 
-                                                testCopyConstructor1D,   testCopyConstructorProfile1D, 
-                                                testClone1D,             testCloneProfile1D,
-                                                testAssign2D,            testAssignProfile2D,
-                                                testCopyConstructor2D,   testCopyConstructorProfile2D,
-                                                testClone2D,             testCloneProfile2D,
-                                                testAssign3D,            testAssignProfile3D,
-                                                testCopyConstructor3D,   testCopyConstructorProfile3D,
-                                                testClone3D,             testCloneProfile3D,
-                                                testWriteRead1D,         testWriteReadProfile1D,
-                                                testWriteRead2D,         testWriteReadProfile2D,
-                                                testWriteRead3D,         testWriteReadProfile3D, 
-                                                testMerge1D,             /* testMergeProf1D,*/
-                                                testMerge2D, testMerge3D
+//    const unsigned int numberOfTests = 39;
+   struct TTestSuite {
+      unsigned int nTests;
+      char suiteName[75];
+      pointer2Test* tests;
    };
+
+   // Add Tests
+   const unsigned int numberOfAdds = 6;
+   pointer2Test addTestPointer[numberOfAdds] = { testAdd1,    testAdd2, 
+                                                 testAdd2D1,  testAdd2D2,
+                                                 testAdd3D1,  testAdd3D2
+   };
+   struct TTestSuite addTestSuite = { numberOfAdds, 
+                                      "Add tests for 1D, 2D and 3D Histograms...........................",
+                                      addTestPointer };
+
+   // Multiply Tests
+   const unsigned int numberOfMultiply = 6;
+   pointer2Test multiplyTestPointer[numberOfMultiply] = { testMul1,    testMul2,
+                                                          testMul2D1,  testMul2D2,
+                                                          testMul3D1,  testMul3D2
+   };
+   struct TTestSuite multiplyTestSuite = { numberOfMultiply, 
+                                           "Multiply tests for 1D, 2D and 3D Histograms......................",
+                                           multiplyTestPointer };
 
    // Still to do: testDivide2, testDivide2D1, testDivide2D2 and
    // testDivide3D1, testDivide3D2. 
@@ -1444,10 +1447,60 @@ bool stressHistOpts()
    // calculate it by hand. Nevertheless the Divide method errors and
    // the ones calculated by ourselves differ a bit from those (in the
    // order of 1E-1).
-   
+
+   // Copy Tests
+   const unsigned int numberOfCopy = 18;
+   pointer2Test copyTestPointer[numberOfCopy] = { testAssign1D,          testAssignProfile1D, 
+                                                  testCopyConstructor1D, testCopyConstructorProfile1D, 
+                                                  testClone1D,           testCloneProfile1D,
+                                                  testAssign2D,          testAssignProfile2D,
+                                                  testCopyConstructor2D, testCopyConstructorProfile2D,
+                                                  testClone2D,           testCloneProfile2D,
+                                                  testAssign3D,          testAssignProfile3D,
+                                                  testCopyConstructor3D, testCopyConstructorProfile3D,
+                                                  testClone3D,           testCloneProfile3D,
+   };
+   struct TTestSuite copyTestSuite = { numberOfCopy, 
+                                       "Copy tests for 1D, 2D and 3D Histograms and Profiles.............",
+                                       copyTestPointer };
+
+   // Readwrite Tests
+   const unsigned int numberOfReadwrite = 6;
+   pointer2Test readwriteTestPointer[numberOfReadwrite] = { testWriteRead1D,  testWriteReadProfile1D,
+                                                            testWriteRead2D,  testWriteReadProfile2D,
+                                                            testWriteRead3D,  testWriteReadProfile3D, 
+   };
+   struct TTestSuite readwriteTestSuite = { numberOfReadwrite, 
+                                            "Read/Write tests for 1D, 2D and 3D Histograms and Profiles.......",
+                                            readwriteTestPointer };
+
+   // Merge Tests
+   const unsigned int numberOfMerge = 3;
+   pointer2Test mergeTestPointer[numberOfMerge] = { testMerge1D, /* testMergeProf1D,*/
+                                                    testMerge2D, testMerge3D
+   };
+   struct TTestSuite mergeTestSuite = { numberOfMerge, 
+                                        "Merge tests for 1D, 2D and 3D Histograms and Profiles............",
+                                        mergeTestPointer };
+
+   // Combination of tests
+   const unsigned int numberOfSuits = 5;
+   struct TTestSuite* testSuite[numberOfSuits];
+   testSuite[0] = &addTestSuite;
+   testSuite[1] = &multiplyTestSuite;
+   testSuite[2] = &copyTestSuite;
+   testSuite[3] = &readwriteTestSuite;
+   testSuite[4] = &mergeTestSuite;
+
    bool status = false;
-   for ( unsigned int i = 0; i < numberOfTests; ++i )
-      status |= testPointer[i]();
+   for ( unsigned int i = 0; i < numberOfSuits; ++i ) {
+      bool internalStatus = false;
+      for ( unsigned int j = 0; j < testSuite[i]->nTests; ++j ) {
+         internalStatus |= testSuite[i]->tests[j]();
+      }
+      printResult( testSuite[i]->suiteName, internalStatus);
+      status |= internalStatus;
+   }
 
    return status;
 }
@@ -1577,6 +1630,8 @@ bool stressHistRebin()
    bool status = false;
    for ( unsigned int i = 0; i < numberOfTests; ++i )
       status |= testPointer[i]();
+
+   printResult("Histogram Rebining...............................................", status);
 
    return status;
 }
@@ -2282,7 +2337,9 @@ int stressHistProj(bool testWithoutWeights = true,
       ProjectionTester ht;
       ht.buildHistograms();
       //ht.buildHistograms(2,4,5,6,8,10);
-      status += ht.compareHistograms();
+      int internalStatus = ht.compareHistograms();
+      status += internalStatus;
+      printResult("Testing Projections without weights..............................", internalStatus);
    }
 
    if ( testWithWeights )
@@ -2295,7 +2352,9 @@ int stressHistProj(bool testWithoutWeights = true,
 
       ProjectionTester ht;
       ht.buildHistogramsWithWeights();
-      status += ht.compareHistograms();
+      bool internalStatus = ht.compareHistograms();
+      printResult("Testing Projections with weights.................................", internalStatus);
+      status += internalStatus;
    }
 
    return status;
@@ -2321,6 +2380,7 @@ int main(int argc, char** argv)
    cout << "****************************************************************************" <<endl;
 
    ostringstream output;
+   output << "\n\nSumUp of the test Suite:\n";
 
    if ( defaultEqualOptions & cmpOptPrint )
       cout << "\nstressHistProj\n" << endl;
@@ -2343,7 +2403,8 @@ int main(int argc, char** argv)
    output << "stressHistOpts Test......................................................."
           << (status?"FAILED":"OK") << endl;
 
-   cout << output.str() << endl;
+   if ( defaultEqualOptions & cmpOptPrint )
+      cout << output.str() << endl;
 
    if ( __DRAW__ ) {
       theApp->Run();
@@ -2362,6 +2423,17 @@ ostream& operator<<(ostream& out, TH1D* h)
    out << "] ";
 
    return out;
+}
+
+void printResult(const char* msg, bool status)
+{
+   static int counter = 1;
+   cout << "Test ";
+   cout.width(2);
+   cout<< counter << ": "
+       << msg
+       << (status?"FAILED":"OK") << endl;
+   counter += 1;
 }
 
 // Methods for histogram comparisions
