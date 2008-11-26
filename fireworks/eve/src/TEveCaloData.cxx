@@ -431,24 +431,29 @@ void  TEveCaloDataVec::SetAxisFromBins(Double_t epsX, Double_t epsY)
    std::sort(binX.begin(), binX.end());
    std::sort(binY.begin(), binY.end());
 
-
-   // X axis
    Int_t cnt = 0;
    Double_t sum = 0;
+   Double_t val;
+
+   // X axis
+   Double_t dx = binX.back() - binX.front();
+   epsX *= dx;
    std::vector<Double_t> newX;
    newX.push_back(binX.front()); // underflow
-   Double_t dx = binX.back() - binX.front();
-   epsX *=dx;
-   Int_t nX = binX.size();
-   for(Int_t i=0; i<nX; i++) { 
-      cnt++;
-      sum += binX[i];
-      if (binX[i] - newX.back() > epsX )
+   Int_t nX = binX.size()-1;
+   for(Int_t i=0; i<nX; i++) 
+   { 
+      val = (sum +binX[i])/(cnt+1);
+      if (binX[i+1] -val > epsX)
       {
-         //          newX.push_back( binX[i]);
-         newX.push_back(sum/cnt);
+         newX.push_back(val);
          cnt = 0;
          sum = 0;
+      }
+      else 
+      {
+         sum += binX[i];
+         cnt++;
       }
    }
    newX.push_back(binX.back()); // overflow
@@ -458,25 +463,34 @@ void  TEveCaloDataVec::SetAxisFromBins(Double_t epsX, Double_t epsY)
    sum = 0;
    std::vector<Double_t> newY;
    Double_t dy = binY.back() - binY.front();
-   epsY *=dy;
+   epsY *= dy;
    newY.push_back(binY.front());// underflow
-   Int_t nY = binY.size();
-   for(Int_t i=0 ; i<nY; i++) {
-      cnt++;
-      sum += binY[i];
-      if (binY[i] - newY.back() > epsY )
+   Int_t nY = binY.size()-1;
+   for(Int_t i=0 ; i<nY; i++) 
+   {
+      val = (sum +binY[i])/(cnt+1);
+      if (binY[i+1] -val > epsY )
       {
-         newY.push_back(sum/cnt);
+         newY.push_back(val);
          cnt = 0;
          sum = 0;
       }
+      else 
+      {
+         sum += binY[i];
+         cnt++;
+      }
+
    }
    newY.push_back(binY.back()); // overflow
 
    if (fEtaAxis) delete fEtaAxis;
    if (fPhiAxis) delete fPhiAxis;
+
    fEtaAxis = new TAxis(newX.size()-1, &newX[0]);
    fPhiAxis = new TAxis(newY.size()-1, &newY[0]);
+   fEtaAxis->SetNdivisions(510);
+   fPhiAxis->SetNdivisions(510);
 }
 
 //==============================================================================
