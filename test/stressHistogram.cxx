@@ -34,10 +34,13 @@ const int nEvents = 1000;
 const int numberOfBins = 10;
 
 enum compareOptions {
-   cmpOptDebug=1,
-   cmpOptNoError=2,
-   cmpOptStats=4
+   cmpOptPrint=1,
+   cmpOptDebug=2,
+   cmpOptNoError=4,
+   cmpOptStats=8
 };
+
+const int defaultEqualOptions = 0; //cmpOptPrint;
 
 TRandom2 r;
 
@@ -666,9 +669,6 @@ bool testDivide1()
       error += 2 * h3->GetBinContent(bin)*h3->GetBinContent(bin)*h3->GetBinError(bin)*h3->GetBinError(bin);
       h4->SetBinError( bin, sqrt(error) );
    }
-
-//    cout << h2 << endl;
-//    cout << h3 << endl;
 
    return equals("Divide1D1", h1, h4, cmpOptStats/* | cmpOptDebug*/, 1E-13);
 }
@@ -1768,7 +1768,8 @@ public:
                        h3->GetYaxis()->FindBin(y) >= ymin && h3->GetYaxis()->FindBin(y) <= ymax &&
                        h3->GetZaxis()->FindBin(z) >= zmin && h3->GetZaxis()->FindBin(z) <= zmax )
                   {
-                     cout << "Filling (" << x << "," << y << "," << z << ")!" << endl;
+                     if ( defaultEqualOptions & cmpOptPrint )
+                        cout << "Filling (" << x << "," << y << "," << z << ")!" << endl;
                      
                      h2XY->Fill(x,y);
                      h2XZ->Fill(x,z);
@@ -1863,7 +1864,8 @@ public:
       status += equals("TH3 -> ZX", h2ZX, (TH2D*) h3->Project3D("XZ"), options);
       status += equals("TH3 -> ZY", h2ZY, (TH2D*) h3->Project3D("YZ"), options);
       options = 0;
-      cout << "----------------------------------------------" << endl;
+      if ( defaultEqualOptions & cmpOptPrint )
+         cout << "----------------------------------------------" << endl;
       
       // TH1 derived from TH3
       options = cmpOptStats;
@@ -1871,7 +1873,8 @@ public:
       status += equals("TH3 -> Y", h1Y, (TH1D*) h3->Project3D("y"), options);
       status += equals("TH3 -> Z", h1Z, (TH1D*) h3->Project3D("z"), options);
       options = 0;
-      cout << "----------------------------------------------" << endl;
+      if ( defaultEqualOptions & cmpOptPrint )
+         cout << "----------------------------------------------" << endl;
       
       // TH1 derived from h2XY
       options = cmpOptStats;
@@ -1893,7 +1896,8 @@ public:
       status += equals("TH2ZY -> Z", h1Z, (TH1D*) h2ZY->ProjectionX("z"), options);
       status += equals("TH2ZY -> Y", h1Y, (TH1D*) h2ZY->ProjectionY("y"), options);
       options = 0;
-      cout << "----------------------------------------------" << endl;
+      if ( defaultEqualOptions & cmpOptPrint )
+         cout << "----------------------------------------------" << endl;
       
       // Now the histograms comming from the Profiles!
       options = cmpOptStats;
@@ -1904,7 +1908,8 @@ public:
       status += equals("TH3 -> PBZX", h2ZX, (TH2D*) h3->Project3DProfile("xz UF OF")->ProjectionXY("5", "B"), options);
       status += equals("TH3 -> PBZY", h2ZY, (TH2D*) h3->Project3DProfile("yz UF OF")->ProjectionXY("6", "B"), options);
       options = 0;
-      cout << "----------------------------------------------" << endl;
+      if ( defaultEqualOptions & cmpOptPrint )
+         cout << "----------------------------------------------" << endl;
       
       // test directly project3dprofile
       options = cmpOptStats;
@@ -1915,7 +1920,8 @@ public:
       status += equals("TH3 -> PZX", (TH2D*) pe2ZX, (TH2D*) h3->Project3DProfile("xz  UF OF"), options);
       status += equals("TH3 -> PZY", (TH2D*) pe2ZY, (TH2D*) h3->Project3DProfile("yz  UF OF"), options);
       options = 0;
-      cout << "----------------------------------------------" << endl;
+      if ( defaultEqualOptions & cmpOptPrint )
+         cout << "----------------------------------------------" << endl;
       
       // test option E of ProjectionXY
       options = 0;
@@ -1926,7 +1932,8 @@ public:
       status += equals("TH3 -> PEZX", (TH2D*) pe2ZX, (TH2D*) h3->Project3DProfile("xz  UF OF")->ProjectionXY("5", "E"), options);
       status += equals("TH3 -> PEZY", (TH2D*) pe2ZY, (TH2D*) h3->Project3DProfile("yz  UF OF")->ProjectionXY("6", "E"), options);
       options = 0;
-      cout << "----------------------------------------------" << endl;
+      if ( defaultEqualOptions & cmpOptPrint )
+         cout << "----------------------------------------------" << endl;
       
       // test option W of ProjectionXY
       
@@ -1939,7 +1946,8 @@ public:
       status += equals("TH3 -> PWZX", (TH2D*) h2wZX, (TH2D*) h3->Project3DProfile("xz  UF OF")->ProjectionXY("5", "W"), options);
       status += equals("TH3 -> PWZY", (TH2D*) h2wZY, (TH2D*) h3->Project3DProfile("yz  UF OF")->ProjectionXY("6", "W"), options);
       options = 0;
-      cout << "----------------------------------------------" << endl;
+      if ( defaultEqualOptions & cmpOptPrint )
+         cout << "----------------------------------------------" << endl;
       
       // test 1D histograms
       options = cmpOptStats;
@@ -1956,7 +1964,8 @@ public:
       status += equals("TH2ZY -> PBZ", h1Z, (TH1D*) h2ZY->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
       status += equals("TH2ZY -> PBY", h1Y, (TH1D*) h2ZY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
       options = 0;
-      cout << "----------------------------------------------" << endl;
+      if ( defaultEqualOptions & cmpOptPrint )
+         cout << "----------------------------------------------" << endl;
 
       // 1D testing direct profiles 
       options = cmpOptStats;
@@ -1973,7 +1982,8 @@ public:
       status += equals("TH2ZY -> PZ", pe1ZY, (TH1D*) h2ZY->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1), options);
       status += equals("TH2ZY -> PY", pe1YZ, (TH1D*) h2ZY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1), options);
       options = 0;
-      cout << "----------------------------------------------" << endl;
+      if ( defaultEqualOptions & cmpOptPrint )
+         cout << "----------------------------------------------" << endl;
 
       // 1D testing e profiles
       options = 0;
@@ -2002,7 +2012,8 @@ public:
       status += equals("TH2ZY -> PEY", pe1YZ, 
                        (TH1D*) h2ZY->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
       options = 0;
-      cout << "----------------------------------------------" << endl;
+      if ( defaultEqualOptions & cmpOptPrint )
+         cout << "----------------------------------------------" << endl;
 
       // 1D testing w profiles
       // The error is not properly propagated when build with weights :S
@@ -2032,7 +2043,8 @@ public:
       status += equals("TH2ZY -> PWY", hw1YZ, 
                        (TH1D*) h2ZY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
       options = 0;
-      cout << "----------------------------------------------" << endl;
+      if ( defaultEqualOptions & cmpOptPrint )
+         cout << "----------------------------------------------" << endl;
       
       // TH2 derived from STH3
       options = cmpOptStats;
@@ -2043,7 +2055,8 @@ public:
       status += equals("STH3 -> ZX", h2ZX, (TH2D*) s3->Projection(0,2), options);
       status += equals("STH3 -> ZY", h2ZY, (TH2D*) s3->Projection(1,2), options);
       options = 0;
-      cout << "----------------------------------------------" << endl;
+      if ( defaultEqualOptions & cmpOptPrint )
+         cout << "----------------------------------------------" << endl;
 
       // TH1 derived from STH3
       options = cmpOptStats;
@@ -2051,7 +2064,8 @@ public:
       status += equals("STH3 -> Y", h1Y, (TH1D*) s3->Projection(1), options);
       status += equals("STH3 -> Z", h1Z, (TH1D*) s3->Projection(2), options);
       options = 0;
-      cout << "----------------------------------------------" << endl;
+      if ( defaultEqualOptions & cmpOptPrint )
+         cout << "----------------------------------------------" << endl;
 
       return status;
    }
@@ -2065,10 +2079,11 @@ int stressHistProj(bool testWithoutWeights = true,
    
    if ( testWithoutWeights )
    {
-      cout << "**********************************\n"
-           << "       Test without weights       \n" 
-           << "**********************************\n"
-           << endl;
+      if ( defaultEqualOptions & cmpOptPrint )
+         cout << "**********************************\n"
+              << "       Test without weights       \n" 
+              << "**********************************\n"
+              << endl;
       
       ProjectionTester ht;
       ht.buildHistograms();
@@ -2078,10 +2093,11 @@ int stressHistProj(bool testWithoutWeights = true,
 
    if ( testWithWeights )
    {
-      cout << "**********************************\n"
-           << "        Test with weights         \n" 
-           << "**********************************\n"
-           << endl;
+      if ( defaultEqualOptions & cmpOptPrint )
+         cout << "**********************************\n"
+              << "        Test with weights         \n" 
+              << "**********************************\n"
+              << endl;
 
       ProjectionTester ht;
       ht.buildHistogramsWithWeights();
@@ -2106,25 +2122,31 @@ int main(int argc, char** argv)
    bool GlobalStatus = false;
    bool status = false;
 
-   ostringstream output;
-   output << "\nTEST RESULTS\n\n";
+   cout << "****************************************************************************" <<endl;
+   cout << "*  Starting  stress  H I S T O G R A M                                     *" <<endl;
+   cout << "****************************************************************************" <<endl;
 
-   cout << "\nstressHistProj\n" << endl;
+   ostringstream output;
+
+   if ( defaultEqualOptions & cmpOptPrint )
+      cout << "\nstressHistProj\n" << endl;
    status = stressHistProj();
    GlobalStatus |= status;
-   output << "stressHistProj Test.............." 
+   output << "stressHistProj Test......................................................." 
           << (status?"FAILED":"OK") << endl;
 
-   cout << "\nstressHistRebin\n" << endl;
+   if ( defaultEqualOptions & cmpOptPrint )
+      cout << "\nstressHistRebin\n" << endl;
    status = stressHistRebin();
    GlobalStatus |= status;
-   output << "stressHistRebin Test............."
+   output << "stressHistRebin Test......................................................"
           << (status?"FAILED":"OK") << endl;
 
-   cout << "\nstressHistOpts\n" << endl;
+   if ( defaultEqualOptions & cmpOptPrint )
+      cout << "\nstressHistOpts\n" << endl;
    status = stressHistOpts();
    GlobalStatus |= status;
-   output << "stressHistOpts Test.............."
+   output << "stressHistOpts Test......................................................."
           << (status?"FAILED":"OK") << endl;
 
    cout << output.str() << endl;
@@ -2152,6 +2174,8 @@ ostream& operator<<(ostream& out, TH1D* h)
 
 int equals(const char* msg, TH3D* h1, TH3D* h2, int options, double ERRORLIMIT)
 {
+   options = options | defaultEqualOptions;
+   bool print = options & cmpOptPrint;
    bool debug = options & cmpOptDebug;
    bool compareError = ! (options & cmpOptNoError);
    bool compareStats = options & cmpOptStats;
@@ -2196,7 +2220,7 @@ int equals(const char* msg, TH3D* h1, TH3D* h2, int options, double ERRORLIMIT)
    if ( compareStats )
       differents |= compareStatistics( h1, h2, debug, ERRORLIMIT);
    
-   cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
+   if ( print ) cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
    
    delete h2;
    
@@ -2205,6 +2229,8 @@ int equals(const char* msg, TH3D* h1, TH3D* h2, int options, double ERRORLIMIT)
 
 int equals(const char* msg, TH2D* h1, TH2D* h2, int options, double ERRORLIMIT)
 {
+   options = options | defaultEqualOptions;
+   bool print = options & cmpOptPrint;
    bool debug = options & cmpOptDebug;
    bool compareError = ! (options & cmpOptNoError);
    bool compareStats = options & cmpOptStats;
@@ -2245,7 +2271,7 @@ int equals(const char* msg, TH2D* h1, TH2D* h2, int options, double ERRORLIMIT)
    if ( compareStats )
       differents |= compareStatistics( h1, h2, debug, ERRORLIMIT);
    
-   cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
+   if ( print ) cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
    
    delete h2;
    
@@ -2254,6 +2280,8 @@ int equals(const char* msg, TH2D* h1, TH2D* h2, int options, double ERRORLIMIT)
 
 int equals(const char* msg, TH1D* h1, TH1D* h2, int options, double ERRORLIMIT)
 {
+   options = options | defaultEqualOptions;
+   bool print = options & cmpOptPrint;
    bool debug = options & cmpOptDebug;
    bool compareError = ! (options & cmpOptNoError);
    bool compareStats = options & cmpOptStats;
@@ -2289,7 +2317,7 @@ int equals(const char* msg, TH1D* h1, TH1D* h2, int options, double ERRORLIMIT)
    if ( compareStats )
       differents |= compareStatistics( h1, h2, debug, ERRORLIMIT);
    
-   cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
+   if ( print ) cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
    
    delete h2;
    
