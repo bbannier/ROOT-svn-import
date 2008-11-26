@@ -1216,10 +1216,202 @@ bool testWriteReadProfile3D()
    return ret;
 }
 
+bool testMerge1D() 
+{
+   TH1D* h1 = new TH1D("merge1D-h1", "h1-Title", numberOfBins, minRange, maxRange);
+   TH1D* h2 = new TH1D("merge1D-h2", "h2-Title", numberOfBins, minRange, maxRange);
+   TH1D* h3 = new TH1D("merge1D-h3", "h3-Title", numberOfBins, minRange, maxRange);
+   TH1D* h4 = new TH1D("merge1D-h4", "h4-Title", numberOfBins, minRange, maxRange);
+
+   h1->Sumw2();h2->Sumw2();h3->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value, 1.0);
+      h4->Fill(value, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(value, 1.0);
+      h4->Fill(value, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(value, 1.0);
+      h4->Fill(value, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+
+   h1->Merge(list);
+
+   bool ret = equals("Merge1D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMergeProf1D() 
+{
+   TProfile* p1 = new TProfile("merge1D-p1", "p1-Title", numberOfBins, minRange, maxRange);
+   TProfile* p2 = new TProfile("merge1D-p2", "p2-Title", numberOfBins, minRange, maxRange);
+   TProfile* p3 = new TProfile("merge1D-p3", "p3-Title", numberOfBins, minRange, maxRange);
+   TProfile* p4 = new TProfile("merge1D-p4", "p4-Title", numberOfBins, minRange, maxRange);
+
+   p1->Sumw2();p2->Sumw2();p3->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+
+   p1->Merge(list);
+
+   bool ret = equals("Merge1D", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
+bool testMerge2D() 
+{
+   TH2D* h1 = new TH2D("merge2D-h1", "h1-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h2 = new TH2D("merge2D-h2", "h2-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h3 = new TH2D("merge2D-h3", "h3-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h4 = new TH2D("merge2D-h4", "h4-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+
+   h1->Sumw2();h2->Sumw2();h3->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+
+   h1->Merge(list);
+
+   bool ret = equals("Merge2D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMerge3D() 
+{
+   TH3D* h1 = new TH3D("merge3D-h1", "h1-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h2 = new TH3D("merge3D-h2", "h2-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h3 = new TH3D("merge3D-h3", "h3-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h4 = new TH3D("merge3D-h4", "h4-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+
+   h1->Sumw2();h2->Sumw2();h3->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+
+   h1->Merge(list);
+
+   bool ret = equals("Merge3D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
 bool stressHistOpts()
 {
    r.SetSeed(0);
-   const unsigned int numberOfTests = 36;
+   const unsigned int numberOfTests = 39;
    pointer2Test testPointer[numberOfTests] = {  testAdd1,                testAdd2, 
                                                 testAdd2D1,              testAdd2D2,
                                                 testAdd3D1,              testAdd3D2, 
@@ -1238,7 +1430,9 @@ bool stressHistOpts()
                                                 testClone3D,             testCloneProfile3D,
                                                 testWriteRead1D,         testWriteReadProfile1D,
                                                 testWriteRead2D,         testWriteReadProfile2D,
-                                                testWriteRead3D,         testWriteReadProfile3D
+                                                testWriteRead3D,         testWriteReadProfile3D, 
+                                                testMerge1D,             /* testMergeProf1D,*/
+                                                testMerge2D, testMerge3D
    };
 
    // Still to do: testDivide2, testDivide2D1, testDivide2D2 and
@@ -2220,7 +2414,7 @@ int equals(const char* msg, TH3D* h1, TH3D* h2, int options, double ERRORLIMIT)
    if ( compareStats )
       differents |= compareStatistics( h1, h2, debug, ERRORLIMIT);
    
-   if ( print ) cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
+   if ( print || debug ) cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
    
    delete h2;
    
@@ -2271,7 +2465,7 @@ int equals(const char* msg, TH2D* h1, TH2D* h2, int options, double ERRORLIMIT)
    if ( compareStats )
       differents |= compareStatistics( h1, h2, debug, ERRORLIMIT);
    
-   if ( print ) cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
+   if ( print || debug ) cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
    
    delete h2;
    
@@ -2317,7 +2511,7 @@ int equals(const char* msg, TH1D* h1, TH1D* h2, int options, double ERRORLIMIT)
    if ( compareStats )
       differents |= compareStatistics( h1, h2, debug, ERRORLIMIT);
    
-   if ( print ) cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
+   if ( print || debug ) cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
    
    delete h2;
    
