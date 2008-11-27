@@ -40,8 +40,7 @@ enum compareOptions {
    cmpOptStats=8
 };
 
-//const int defaultEqualOptions = 0; //cmpOptPrint;
-const int defaultEqualOptions = cmpOptPrint;
+const int defaultEqualOptions = 0; //cmpOptPrint;
 
 TRandom2 r;
 
@@ -1508,8 +1507,6 @@ bool testMergeProf1D()
    TProfile* p3 = new TProfile("merge1D-p3", "p3-Title", numberOfBins, minRange, maxRange);
    TProfile* p4 = new TProfile("merge1D-p4", "p4-Title", numberOfBins, minRange, maxRange);
 
-   p1->Sumw2();p2->Sumw2();p3->Sumw2();
-
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -1537,7 +1534,7 @@ bool testMergeProf1D()
 
    p1->Merge(list);
 
-   bool ret = equals("Merge1D", p1, p4, cmpOptStats, 1E-10);
+   bool ret = equals("Merge1DProf", p1, p4, cmpOptStats, 1E-10);
    delete p1;
    delete p2;
    delete p3;
@@ -1592,6 +1589,58 @@ bool testMerge2D()
    delete h1;
    delete h2;
    delete h3;
+   return ret;
+}
+
+bool testMergeProf2D() 
+{
+   TProfile2D* p1 = new TProfile2D("merge2D-p1", "p1-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile2D* p2 = new TProfile2D("merge2D-p2", "p2-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile2D* p3 = new TProfile2D("merge2D-p3", "p3-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile2D* p4 = new TProfile2D("merge2D-p4", "p4-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+
+   p1->Merge(list);
+
+   bool ret = equals("Merge2DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
    return ret;
 }
 
@@ -1650,6 +1699,65 @@ bool testMerge3D()
    delete h1;
    delete h2;
    delete h3;
+   return ret;
+}
+
+bool testMergeProf3D() 
+{
+   TProfile3D* p1 = new TProfile3D("merge3D-p1", "p1-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile3D* p2 = new TProfile3D("merge3D-p2", "p2-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile3D* p3 = new TProfile3D("merge3D-p3", "p3-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile3D* p4 = new TProfile3D("merge3D-p4", "p4-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+
+   p1->Merge(list);
+
+   bool ret = equals("Merge3DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
    return ret;
 }
 
@@ -1723,22 +1831,25 @@ bool stressHistOpts()
                                             readwriteTestPointer };
 
    // Merge Tests
-   const unsigned int numberOfMerge = 3;
-   pointer2Test mergeTestPointer[numberOfMerge] = { testMerge1D, /* testMergeProf1D,*/
-                                                    testMerge2D, testMerge3D
+   const unsigned int numberOfMerge = 5;
+   pointer2Test mergeTestPointer[numberOfMerge] = { testMerge1D,  //testMergeProf1D,
+                                                    testMerge2D,  testMergeProf2D,
+                                                    testMerge3D,  testMergeProf3D
    };
    struct TTestSuite mergeTestSuite = { numberOfMerge, 
                                         "Merge tests for 1D, 2D and 3D Histograms and Profiles............",
                                         mergeTestPointer };
+   // MergeProf1D fails!!
+
 
    // Combination of tests
-   const unsigned int numberOfSuits = 1;//5;
+   const unsigned int numberOfSuits = 5;
    struct TTestSuite* testSuite[numberOfSuits];
    testSuite[0] = &addTestSuite;
-//    testSuite[1] = &multiplyTestSuite;
-//    testSuite[2] = &copyTestSuite;
-//    testSuite[3] = &readwriteTestSuite;
-//    testSuite[4] = &mergeTestSuite;
+   testSuite[1] = &multiplyTestSuite;
+   testSuite[2] = &copyTestSuite;
+   testSuite[3] = &readwriteTestSuite;
+   testSuite[4] = &mergeTestSuite;
 
    bool status = false;
    for ( unsigned int i = 0; i < numberOfSuits; ++i ) {
@@ -2630,19 +2741,19 @@ int main(int argc, char** argv)
    ostringstream output;
    output << "\n\nSumUp of the test Suite:\n";
 
-//    if ( defaultEqualOptions & cmpOptPrint )
-//       cout << "\nstressHistProj\n" << endl;
-//    status = stressHistProj();
-//    GlobalStatus |= status;
-//    output << "stressHistProj Test......................................................." 
-//           << (status?"FAILED":"OK") << endl;
+   if ( defaultEqualOptions & cmpOptPrint )
+      cout << "\nstressHistProj\n" << endl;
+   status = stressHistProj();
+   GlobalStatus |= status;
+   output << "stressHistProj Test......................................................." 
+          << (status?"FAILED":"OK") << endl;
 
-//    if ( defaultEqualOptions & cmpOptPrint )
-//       cout << "\nstressHistRebin\n" << endl;
-//    status = stressHistRebin();
-//    GlobalStatus |= status;
-//    output << "stressHistRebin Test......................................................"
-//           << (status?"FAILED":"OK") << endl;
+   if ( defaultEqualOptions & cmpOptPrint )
+      cout << "\nstressHistRebin\n" << endl;
+   status = stressHistRebin();
+   GlobalStatus |= status;
+   output << "stressHistRebin Test......................................................"
+          << (status?"FAILED":"OK") << endl;
 
    if ( defaultEqualOptions & cmpOptPrint )
       cout << "\nstressHistOpts\n" << endl;
