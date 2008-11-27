@@ -40,7 +40,8 @@ enum compareOptions {
    cmpOptStats=8
 };
 
-const int defaultEqualOptions = 0; //cmpOptPrint;
+//const int defaultEqualOptions = 0; //cmpOptPrint;
+const int defaultEqualOptions = cmpOptPrint;
 
 TRandom2 r;
 
@@ -89,6 +90,41 @@ bool testAdd1()
    return ret;
 }
 
+bool testAddProfile1() 
+{
+   Double_t c1 = r.Rndm();
+   Double_t c2 = r.Rndm();
+
+   TProfile* p1 = new TProfile("t1D1-p1", "p1-Title", numberOfBins, minRange, maxRange);
+   TProfile* p2 = new TProfile("t1D1-p2", "p2-Title", numberOfBins, minRange, maxRange);
+   TProfile* p3 = new TProfile("t1D1-p3", "p3=c1*p1+c2*p2", numberOfBins, minRange, maxRange);
+
+   p1->Sumw2();p2->Sumw2();p3->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, 1.0);
+      p3->Fill(x, y,  c1);
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, 1.0);
+      p3->Fill(x, y,  c2);
+   }
+
+   TProfile* p4 = new TProfile("t1D1-p4", "p4=c1*p1+p2*c2", numberOfBins, minRange, maxRange);
+   p4->Add(p1, p2, c1, c2);
+
+   bool ret = equals("Add1DProfile1", p3, p4, cmpOptStats, 1E-13);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
 bool testAdd2() 
 {
    Double_t c2 = r.Rndm();
@@ -116,6 +152,38 @@ bool testAdd2()
    bool ret = equals("Add1D2", h5, h6, cmpOptStats, 1E-13);
    delete h5;
    delete h7;
+   return ret;
+}
+
+bool testAddProfile2() 
+{
+   Double_t c2 = r.Rndm();
+
+   TProfile* p5 = new TProfile("t1D2-p5", "p5=   p6+c2*p7", numberOfBins, minRange, maxRange);
+   TProfile* p6 = new TProfile("t1D2-p6", "p6-Title", numberOfBins, minRange, maxRange);
+   TProfile* p7 = new TProfile("t1D2-p7", "p7-Title", numberOfBins, minRange, maxRange);
+
+   p5->Sumw2();p6->Sumw2();p7->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p6->Fill(x, y, 1.0);
+      p5->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p7->Fill(x, y, 1.0);
+      p5->Fill(x, y,  c2);
+   }
+
+   p6->Add(p7, c2);
+   
+   bool ret = equals("Add1DProfile2", p5, p6, cmpOptStats, 1E-13);
+   delete p5;
+   delete p7;
    return ret;
 }
 
@@ -163,6 +231,50 @@ bool testAdd2D1()
    return ret;
 }
 
+bool testAdd2DProfile1() 
+{
+   Double_t c1 = r.Rndm();
+   Double_t c2 = r.Rndm();
+
+   TProfile2D* p1 = new TProfile2D("t2D1-p1", "p1", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   TProfile2D* p2 = new TProfile2D("t2D1-p2", "p2", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   TProfile2D* p3 = new TProfile2D("t2D1-p3", "p3=c1*p1+c2*p2", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, 1.0);
+      p3->Fill(x, y, z, c1);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, z, 1.0);
+      p3->Fill(x, y, z, c2);
+   }
+
+   TProfile2D* p4 = new TProfile2D("t2D1-p4", "p4=c1*p1+c2*p2", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   p4->Add(p1, p2, c1, c2);
+   bool ret = equals("Add2DProfile1", p3, p4, cmpOptStats , 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
 bool testAdd2D2() 
 {
    Double_t c2 = r.Rndm();
@@ -199,6 +311,45 @@ bool testAdd2D2()
    bool ret = equals("Add2D2", h3, h1, cmpOptStats, 1E-10);
    delete h2;
    delete h3;
+   return ret;
+}
+
+bool testAdd2DProfile2() 
+{
+   Double_t c2 = r.Rndm();
+
+   TProfile2D* p1 = new TProfile2D("t2D2-p1", "p1", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   TProfile2D* p2 = new TProfile2D("t2D2-p2", "p2", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   TProfile2D* p3 = new TProfile2D("t2D2-p3", "p3=p1+c2*p2", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, 1.0);
+      p3->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, z, 1.0);
+      p3->Fill(x, y, z,  c2);
+   }
+
+   p1->Add(p2, c2);
+   bool ret = equals("Add2DProfile2", p3, p1, cmpOptStats, 1E-10);
+   delete p2;
+   delete p3;
    return ret;
 }
 
@@ -252,6 +403,56 @@ bool testAdd3D1()
    return ret;
 }
 
+bool testAdd3DProfile1() 
+{
+   Double_t c1 = r.Rndm();
+   Double_t c2 = r.Rndm();
+
+   TProfile3D* p1 = new TProfile3D("t3D1-p1", "p1", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   TProfile3D* p2 = new TProfile3D("t3D1-p2", "p2", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   TProfile3D* p3 = new TProfile3D("t3D1-p3", "p3=c1*p1+c2*p2", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, t, 1.0);
+      p3->Fill(x, y, z, t,  c1);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, z, t, 1.0);
+      p3->Fill(x, y, z, t,  c2);
+   }
+
+   TProfile3D* p4 = new TProfile3D("t3D1-p4", "p4=c1*p1+c2*p2", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   p4->Add(p1, p2, c1, c2);
+   bool ret = equals("Add3DProfile1", p3, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
 bool testAdd3D2() 
 {
    Double_t c2 = r.Rndm();
@@ -293,6 +494,50 @@ bool testAdd3D2()
    bool ret = equals("Add3D2", h3, h1, cmpOptStats, 1E-10);
    delete h2;
    delete h3;
+   return ret;
+}
+
+bool testAdd3DProfile2() 
+{
+   Double_t c2 = r.Rndm();
+
+   TProfile3D* p1 = new TProfile3D("t3D2-p1", "p1", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   
+   TProfile3D* p2 = new TProfile3D("t3D2-p2", "p2", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   
+   TProfile3D* p3 = new TProfile3D("t3D2-p3", "p3=p1+c2*p2", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, t, 1.0);
+      p3->Fill(x, y, z, t, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, z, t, 1.0);
+      p3->Fill(x, y, z, t,  c2);
+   }
+
+   p1->Add(p2, c2);
+   bool ret = equals("Add3DProfile2", p3, p1, cmpOptStats, 1E-10);
+   delete p2;
+   delete p3;
    return ret;
 }
 
@@ -1419,13 +1664,16 @@ bool stressHistOpts()
    };
 
    // Add Tests
-   const unsigned int numberOfAdds = 6;
-   pointer2Test addTestPointer[numberOfAdds] = { testAdd1,    testAdd2, 
-                                                 testAdd2D1,  testAdd2D2,
-                                                 testAdd3D1,  testAdd3D2
+   const unsigned int numberOfAdds = 12;
+   pointer2Test addTestPointer[numberOfAdds] = { testAdd1,    testAddProfile1, 
+                                                 testAdd2,    testAddProfile2,
+                                                 testAdd2D1,  testAdd2DProfile1,
+                                                 testAdd2D2,  testAdd2DProfile2,
+                                                 testAdd3D1,  testAdd3DProfile1,
+                                                 testAdd3D2,  testAdd3DProfile2
    };
    struct TTestSuite addTestSuite = { numberOfAdds, 
-                                      "Add tests for 1D, 2D and 3D Histograms...........................",
+                                      "Add tests for 1D, 2D and 3D Histograms and Profiles..............",
                                       addTestPointer };
 
    // Multiply Tests
@@ -1484,13 +1732,13 @@ bool stressHistOpts()
                                         mergeTestPointer };
 
    // Combination of tests
-   const unsigned int numberOfSuits = 5;
+   const unsigned int numberOfSuits = 1;//5;
    struct TTestSuite* testSuite[numberOfSuits];
    testSuite[0] = &addTestSuite;
-   testSuite[1] = &multiplyTestSuite;
-   testSuite[2] = &copyTestSuite;
-   testSuite[3] = &readwriteTestSuite;
-   testSuite[4] = &mergeTestSuite;
+//    testSuite[1] = &multiplyTestSuite;
+//    testSuite[2] = &copyTestSuite;
+//    testSuite[3] = &readwriteTestSuite;
+//    testSuite[4] = &mergeTestSuite;
 
    bool status = false;
    for ( unsigned int i = 0; i < numberOfSuits; ++i ) {
@@ -2382,19 +2630,19 @@ int main(int argc, char** argv)
    ostringstream output;
    output << "\n\nSumUp of the test Suite:\n";
 
-   if ( defaultEqualOptions & cmpOptPrint )
-      cout << "\nstressHistProj\n" << endl;
-   status = stressHistProj();
-   GlobalStatus |= status;
-   output << "stressHistProj Test......................................................." 
-          << (status?"FAILED":"OK") << endl;
+//    if ( defaultEqualOptions & cmpOptPrint )
+//       cout << "\nstressHistProj\n" << endl;
+//    status = stressHistProj();
+//    GlobalStatus |= status;
+//    output << "stressHistProj Test......................................................." 
+//           << (status?"FAILED":"OK") << endl;
 
-   if ( defaultEqualOptions & cmpOptPrint )
-      cout << "\nstressHistRebin\n" << endl;
-   status = stressHistRebin();
-   GlobalStatus |= status;
-   output << "stressHistRebin Test......................................................"
-          << (status?"FAILED":"OK") << endl;
+//    if ( defaultEqualOptions & cmpOptPrint )
+//       cout << "\nstressHistRebin\n" << endl;
+//    status = stressHistRebin();
+//    GlobalStatus |= status;
+//    output << "stressHistRebin Test......................................................"
+//           << (status?"FAILED":"OK") << endl;
 
    if ( defaultEqualOptions & cmpOptPrint )
       cout << "\nstressHistOpts\n" << endl;
