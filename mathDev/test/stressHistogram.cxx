@@ -104,8 +104,6 @@ bool testAddProfile1()
    TProfile* p2 = new TProfile("t1D1-p2", "p2-Title", numberOfBins, minRange, maxRange);
    TProfile* p3 = new TProfile("t1D1-p3", "p3=c1*p1+c2*p2", numberOfBins, minRange, maxRange);
 
-   p1->Sumw2();p2->Sumw2();p3->Sumw2();
-
    for ( Int_t e = 0; e < nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -167,8 +165,6 @@ bool testAddProfile2()
    TProfile* p5 = new TProfile("t1D2-p5", "p5=   p6+c2*p7", numberOfBins, minRange, maxRange);
    TProfile* p6 = new TProfile("t1D2-p6", "p6-Title", numberOfBins, minRange, maxRange);
    TProfile* p7 = new TProfile("t1D2-p7", "p7-Title", numberOfBins, minRange, maxRange);
-
-   p5->Sumw2();p6->Sumw2();p7->Sumw2();
 
    for ( Int_t e = 0; e < nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -946,8 +942,6 @@ bool testAssignProfile1D()
 {
    TProfile* p1 = new TProfile("=1D-p1", "p1-Title", numberOfBins, minRange, maxRange);
 
-   p1->Sumw2();
-
    for ( Int_t e = 0; e < nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -984,8 +978,6 @@ bool testCopyConstructorProfile1D()
 {
    TProfile* p1 = new TProfile("cc1D-p1", "p1-Title", numberOfBins, minRange, maxRange);
 
-   p1->Sumw2();
-
    for ( Int_t e = 0; e < nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -1020,8 +1012,6 @@ bool testClone1D()
 bool testCloneProfile1D()
 {
    TProfile* p1 = new TProfile("cl1D-p1", "p1-Title", numberOfBins, minRange, maxRange);
-
-   p1->Sumw2();
 
    for ( Int_t e = 0; e < nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -1335,8 +1325,6 @@ bool testWriteRead1D()
 bool testWriteReadProfile1D()
 {
    TProfile* p1 = new TProfile("wr1D-p1", "p1-Title", numberOfBins, minRange, maxRange);
-
-   p1->Sumw2();
 
    for ( Int_t e = 0; e < nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -2705,16 +2693,14 @@ int main(int argc, char** argv)
 
    // Test 8
    // Merge Tests
-   const unsigned int numberOfMerge = 5;
-   pointer2Test mergeTestPointer[numberOfMerge] = { testMerge1D,  //testMergeProf1D,
+   const unsigned int numberOfMerge = 6;
+   pointer2Test mergeTestPointer[numberOfMerge] = { testMerge1D,  testMergeProf1D,
                                                     testMerge2D,  testMergeProf2D,
                                                     testMerge3D,  testMergeProf3D
    };
    struct TTestSuite mergeTestSuite = { numberOfMerge, 
                                         "Merge tests for 1D, 2D and 3D Histograms and Profiles............",
                                         mergeTestPointer };
-   // MergeProf1D fails!!
-
    // Test 9
    // Label Tests
    const unsigned int numberOfLabel = 1;
