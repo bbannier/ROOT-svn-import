@@ -1767,9 +1767,33 @@ bool testMergeProf3D()
    return ret;
 }
 
-// end stresHistRebin.cxx file
+bool testLabel()
+{
+   TH1D* h1 = new TH1D("lD1-h1", "h1-Title", numberOfBins, minRange, maxRange);
+   TH1D* h2 = new TH1D("lD1-h2", "h2-Title", numberOfBins, minRange, maxRange);
 
-// old stresHistRebin.cxx file
+   for ( Int_t bin = 1; bin <= h1->GetNbinsX() ; ++bin ) {
+      ostringstream label;
+      label << bin;
+      h2->GetXaxis()->SetBinLabel(bin, label.str().c_str());
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(minRange, maxRange);
+      Int_t bin = h1->GetXaxis()->FindBin(value);
+      h1->AddBinContent( bin, 1.0);
+
+      ostringstream label;
+      label << bin;
+      h2->Fill(label.str().c_str(), 1.0);
+   }
+
+   bool status = equals("Fill(char*)", h1, h2, cmpOptStats, 1E-13);
+   delete h1;
+   return status;
+}
+
+
 
 bool testIntegerRebin()
 {
@@ -2691,9 +2715,18 @@ int main(int argc, char** argv)
                                         mergeTestPointer };
    // MergeProf1D fails!!
 
+   // Test 9
+   // Label Tests
+   const unsigned int numberOfLabel = 1;
+   pointer2Test labelTestPointer[numberOfLabel] = { testLabel
+   };
+   struct TTestSuite labelTestSuite = { numberOfLabel, 
+                                        "Label tests for 1D Histograms (TAxis)............................",
+                                        labelTestPointer };
+
 
    // Combination of tests
-   const unsigned int numberOfSuits = 6;
+   const unsigned int numberOfSuits = 7;
    struct TTestSuite* testSuite[numberOfSuits];
    testSuite[0] = &rebinTestSuite;
    testSuite[1] = &addTestSuite;
@@ -2701,6 +2734,7 @@ int main(int argc, char** argv)
    testSuite[3] = &copyTestSuite;
    testSuite[4] = &readwriteTestSuite;
    testSuite[5] = &mergeTestSuite;
+   testSuite[6] = &labelTestSuite;
 
    status = 0;
    for ( unsigned int i = 0; i < numberOfSuits; ++i ) {
