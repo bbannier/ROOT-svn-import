@@ -261,6 +261,8 @@ void TEveGListTreeEditorFrame::ReconfToHorizontal()
    {
       if (el->fFrame == fSplitter)
       {
+         // This is needed so that splitter window gets destroyed on server.
+         fSplitter->ReparentWindow(fClient->GetDefaultRoot());
          delete fSplitter;
          el->fFrame = fSplitter = new TGVSplitter(fFrame);
          el->fLayout->SetLayoutHints(kLHintsLeft | kLHintsExpandY);
@@ -304,6 +306,8 @@ void TEveGListTreeEditorFrame::ReconfToVertical()
    {
       if (el->fFrame == fSplitter)
       {
+         // This is needed so that splitter window gets destroyed on server.
+         fSplitter->ReparentWindow(fClient->GetDefaultRoot());
          delete fSplitter;
          el->fFrame = fSplitter = new TGHSplitter(fFrame);
          el->fLayout->SetLayoutHints(kLHintsTop | kLHintsExpandX);
