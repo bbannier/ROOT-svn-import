@@ -110,6 +110,26 @@ FILE *TProofServ::fgErrorHandlerFile = 0;
 // To control allowed actions while processing
 Int_t TProofServ::fgRecursive = 0;
 
+//----- Termination signal handler ---------------------------------------------
+//______________________________________________________________________________
+class TProofServTerminationHandler : public TSignalHandler {
+   TProofServ  *fServ;
+public:
+   TProofServTerminationHandler(TProofServ *s)
+      : TSignalHandler(kSigTermination, kFALSE) { fServ = s; }
+   Bool_t  Notify();
+};
+
+//______________________________________________________________________________
+Bool_t TProofServTerminationHandler::Notify()
+{
+   // Handle this interrupt
+
+   Printf("Received SIGTERM: terminating");
+   fServ->HandleTermination();
+   return kTRUE;
+}
+
 //----- Interrupt signal handler -----------------------------------------------
 //______________________________________________________________________________
 class TProofServInterruptHandler : public TSignalHandler {
@@ -657,6 +677,7 @@ Int_t TProofServ::CreateServer()
    gInterpreter->SaveGlobalsContext();
 
    // Install interrupt and message input handlers
+   gSystem->AddSignalHandler(new TProofServTerminationHandler(this));
    gSystem->AddSignalHandler(new TProofServInterruptHandler(this));
    gSystem->AddFileHandler(new TProofServInputHandler(this, sock));
 
@@ -2840,21 +2861,6 @@ void TProofServ::HandleProcess(TMessage *mess)
    if (!IsTopMaster() && !fIdle)
       return;
 
-   if (IsMaster() && fProof->UseDynamicStartup()) {
-      // get the a list of workers and start them
-      TList* workerList = new TList();
-      Int_t pc = 0;
-      if (GetWorkers(workerList, pc) == TProofServ::kQueryStop) {
-         Error("HandleProcess", "getting list of worker nodes");
-         return;
-      }
-      if (Int_t ret = fProof->AddWorkers(workerList) < 0) {
-         Error("HandleProcess", "Adding a list of worker nodes returned: %d",
-               ret);
-         return;
-      }
-   }
-
    TDSet *dset;
    TString filename, opt;
    TList *input;
@@ -2923,12 +2929,12 @@ void TProofServ::HandleProcess(TMessage *mess)
       // Add anyhow to the waiting lists
       fWaitingQueries->Add(pq);
 
-      // If the client submission was asynchronous, signal the submission of
-      // the query and communicate the assigned sequential number for later
-      // identification
+      // If the client submission was asynchronous or if we switched to asynchronous,
+      // signal the submission of the query and communicate the assigned sequential
+      // number for later identification
+      TMessage m(kPROOF_QUERYSUBMITTED);
       if (!sync) {
-         TMessage m(kPROOF_QUERYSUBMITTED);
-         m << pq->GetSeqNum();
+         m << pq->GetSeqNum() << kFALSE;
          fSocket->Send(m);
       }
 
@@ -2949,6 +2955,22 @@ void TProofServ::HandleProcess(TMessage *mess)
          // Get query info
          pq = (TProofQueryResult *)(fWaitingQueries->First());
          if (pq) {
+
+            if (IsMaster() && fProof->UseDynamicStartup()) {
+               // get the a list of workers and start them
+               TList* workerList = new TList();
+               Int_t pc = 0;
+               if (GetWorkers(workerList, pc) == TProofServ::kQueryStop) {
+                  Error("HandleProcess", "getting list of worker nodes");
+                  return;
+               }
+               if (Int_t ret = fProof->AddWorkers(workerList) < 0) {
+                  Error("HandleProcess", "Adding a list of worker nodes returned: %d",
+                        ret);
+                  return;
+               }
+            }
+
             opt      = pq->GetOptions();
             input    = pq->GetInputList();
             nentries = pq->GetEntries();
@@ -2999,7 +3021,7 @@ void TProofServ::HandleProcess(TMessage *mess)
          fQMgr->ResetTime();
 
          // Signal the client that we are starting a new query
-         TMessage m(kPROOF_STARTPROCESS);
+         m.Reset(kPROOF_STARTPROCESS);
          m << TString(pq->GetSelecImp()->GetName())
            << dset->GetListOfElements()->GetSize()
            << pq->GetFirst() << pq->GetEntries();
@@ -3624,10 +3646,8 @@ void TProofServ::HandleCheckFile(TMessage *mess)
             // par file did not unpack itself in the expected directory, failure
             reply << (Int_t)0;
             err = kTRUE;
-            PDB(kPackage, 1)
-               Info("HandleCheckFile",
-                    "package %s did not unpack into %s", filenam.Data(),
-                    packnam.Data());
+            Error("HandleCheckFile", "package %s did not unpack into %s",
+                                     filenam.Data(), packnam.Data());
          } else {
             // store md5 in package/PROOF-INF/md5.txt
             TString md5f = fPackageDir + "/" + packnam + "/PROOF-INF/md5.txt";
@@ -3641,6 +3661,9 @@ void TProofServ::HandleCheckFile(TMessage *mess)
       } else {
          reply << (Int_t)0;
          err = kTRUE;
+         PDB(kPackage, 1)
+            Info("HandleCheckFile",
+                 "package %s not yet on node", filenam.Data());
       }
       fSocket->Send(reply);
 

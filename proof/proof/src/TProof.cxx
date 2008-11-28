@@ -274,6 +274,9 @@ TProof::TProof(const char *masterurl, const char *conffile, const char *confdir,
    // Loglevel is the log level (default = 1). User specified custom config
    // files will be first looked for in $HOME/.conffile.
 
+   // Synchronize closing with actions like MarkBad
+   fCloseMutex = 0;
+
    // This may be needed during init
    fManager = mgr;
 
@@ -439,6 +442,8 @@ TProof::TProof() : fUrl(""), fServType(TProofMgr::kXProofd)
    fQueryMode = kSync;
    fDynamicStartup = kFALSE;
 
+   fCloseMutex = 0;
+
    gROOT->GetListOfProofs()->Add(this);
 
    gProof = this;
@@ -497,6 +502,7 @@ TProof::~TProof()
    SafeDelete(fRecvMessages);
    SafeDelete(fInputData);
    SafeDelete(fRunningDSets);
+   SafeDelete(fCloseMutex);
 
    // remove file with redirected logs
    if (TestBit(TProof::kIsClient)) {
@@ -615,6 +621,11 @@ Int_t TProof::Init(const char *, const char *conffile,
 
    // Query type
    fSync = kTRUE;
+
+   // Counters
+   fBytesRead = 0;
+   fRealTime = 0;
+   fCpuTime = 0;
 
    // List of queries
    fQueries = 0;
@@ -876,6 +887,10 @@ Int_t TProof::AddWorkers(TList *workerList)
    Int_t ord = 0;
 
    // Loop over all workers and start them
+
+   // a list of TSlave objects for workers that are being added
+   TList *addedWorkers = new TList();
+   addedWorkers->SetOwner(kFALSE);
    TListIter next(workerList);
    TObject *to;
    TProofNodeInfo *worker;
@@ -911,6 +926,7 @@ Int_t TProof::AddWorkers(TList *workerList)
       Bool_t slaveOk = kTRUE;
       if (slave->IsValid()) {
          fSlaves->Add(slave);
+         addedWorkers->Add(slave);
       } else {
          slaveOk = kFALSE;
          fBadSlaves->Add(slave);
@@ -937,7 +953,7 @@ Int_t TProof::AddWorkers(TList *workerList)
 
    // Here we finalize the server startup: in this way the bulk
    // of remote operations are almost parallelized
-   TIter nxsl(fSlaves);
+   TIter nxsl(addedWorkers);
    TSlave *sl = 0;
    while ((sl = (TSlave *) nxsl())) {
 
@@ -961,6 +977,7 @@ Int_t TProof::AddWorkers(TList *workerList)
         << nSlavesDone << slaveOk;
       gProofServ->GetSocket()->Send(m);
    }
+   delete addedWorkers;
 
    // Now set new state on the added workers (on all workers for simplicity)
    // use fEnabledPackages, fLoadedMacros,
@@ -1391,21 +1408,25 @@ void TProof::Close(Option_t *opt)
    // or 's'. Default for clients is detach, if supported. Masters always
    // shutdown the remote counterpart.
 
-   if (fSlaves) {
-      if (fIntHandler)
-         fIntHandler->Remove();
+   {  R__LOCKGUARD2(fCloseMutex);
 
-      TIter nxs(fSlaves);
-      TSlave *sl = 0;
-      while ((sl = (TSlave *)nxs()))
-         sl->Close(opt);
+      fValid = kFALSE;
+      if (fSlaves) {
+         if (fIntHandler)
+            fIntHandler->Remove();
 
-      fActiveSlaves->Clear("nodelete");
-      fUniqueSlaves->Clear("nodelete");
-      fAllUniqueSlaves->Clear("nodelete");
-      fNonUniqueMasters->Clear("nodelete");
-      fBadSlaves->Clear("nodelete");
-      fSlaves->Delete();
+         TIter nxs(fSlaves);
+         TSlave *sl = 0;
+         while ((sl = (TSlave *)nxs()))
+            sl->Close(opt);
+
+         fActiveSlaves->Clear("nodelete");
+         fUniqueSlaves->Clear("nodelete");
+         fAllUniqueSlaves->Clear("nodelete");
+         fNonUniqueMasters->Clear("nodelete");
+         fBadSlaves->Clear("nodelete");
+         fSlaves->Delete();
+      }
    }
 
    {
@@ -2508,6 +2529,13 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
          }
          break;
 
+      case kPROOF_STOP:
+         // Stop collection from this worker
+         Info("HandleInputMessage", "received kPROOF_STOP from %s: disabling any further collection this worker",
+                                    (sl ? sl->GetOrdinal() : "undef"));
+         rc = 1;
+         break;
+
       case kPROOF_GETTREEHEADER:
          // Add the message to the list
          fRecvMessages->Add(mess);
@@ -2675,6 +2703,8 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                   // Add query to the result list in TProofPlayer
                   fPlayer->AddQueryResult(pq);
                   fPlayer->SetCurrentQuery(pq);
+                  // And clear the output list, as we start merging a new set of results
+                  fPlayer->GetOutputList()->Clear();
                   // Add the unique query tag as TNamed object to the input list
                   // so that it is available in TSelectors for monitoring
                   fPlayer->AddInput(new TNamed("PROOF_QueryTag",
@@ -2912,7 +2942,7 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
       case kPROOF_SETIDLE:
          {
             PDB(kGlobal,2)
-             Info("HandleInputMessage","kPROOF_SETIDLE: enter");
+               Info("HandleInputMessage","kPROOF_SETIDLE: enter");
 
             // The session is idle
             if (IsLite()) {
@@ -2933,6 +2963,14 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
 
             // We have received the sequential number
             (*mess) >> fSeqNum;
+            Bool_t sync = fSync;
+            if ((mess->BufferSize() > mess->Length()))
+               (*mess) >> sync;
+            if (sync !=  fSync && fSync) {
+               // The server required to switch to asynchronous mode
+               Activate();
+               fSync = kFALSE;
+            }
 
             rc = 1;
          }
@@ -3033,10 +3071,12 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                      if (fPlayer)
                         fPlayer->AddOutputObject(listOfMissingFiles);
                   }
-                  Int_t ret =
-                     fPlayer->GetPacketizer()->AddProcessed(sl, status, 0, &listOfMissingFiles);
-                  if (ret > 0)
-                     fPlayer->GetPacketizer()->MarkBad(sl, status, &listOfMissingFiles);
+                  if (fPlayer->GetPacketizer()) {
+                     Int_t ret =
+                        fPlayer->GetPacketizer()->AddProcessed(sl, status, 0, &listOfMissingFiles);
+                     if (ret > 0)
+                        fPlayer->GetPacketizer()->MarkBad(sl, status, &listOfMissingFiles);
+                  }
                } else {
                   fPlayer->AddEventsProcessed(events);
                }
@@ -3256,6 +3296,12 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
    // the active list and from the two monitor objects. Assume that the work
    // done by this worker was lost and ask packerizer to reassign it.
 
+   R__LOCKGUARD2(fCloseMutex);
+
+
+   // We may have been invalidated in the meanwhile: nothing to do in such a case
+   if (!IsValid()) return;
+
    if (!wrk) {
       Error("MarkBad", "worker instance undefined: protocol error? ");
       return;
@@ -3310,6 +3356,7 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
    }
 
    if (IsMaster() && reason && strcmp(reason, kPROOF_TerminateWorker)) {
+      // if the reason was not a planned termination
       TList *listOfMissingFiles = 0;
       if (!(listOfMissingFiles = (TList *)GetOutput("MissingFiles"))) {
          listOfMissingFiles = new TList();
@@ -3330,16 +3377,22 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
 
    fActiveSlaves->Remove(wrk);
    FindUniqueSlaves();
-   fBadSlaves->Add(wrk);
 
    fAllMonitor->Remove(wrk->GetSocket());
    fActiveMonitor->Remove(wrk->GetSocket());
 
-   wrk->Close();
-
    fSendGroupView = kTRUE;
 
    if (IsMaster()) {
+      if (reason && !strcmp(reason, kPROOF_TerminateWorker)) {
+         // if the reason was a planned termination then delete the worker
+         fSlaves->Remove(wrk);
+         delete wrk;
+      } else {
+         fBadSlaves->Add(wrk);
+         wrk->Close();
+      }
+
       // Update session workers files
       SaveWorkerInfo();
    } else {
@@ -3356,6 +3409,11 @@ void TProof::MarkBad(TSocket *s, const char *reason)
 {
    // Add slave with socket s to the bad slave list and remove if from
    // the active list and from the two monitor objects.
+
+   R__LOCKGUARD2(fCloseMutex);
+
+   // We may have been invalidated in the meanwhile: nothing to do in such a case
+   if (!IsValid()) return;
 
    TSlave *wrk = FindSlave(s);
    MarkBad(wrk, reason);
@@ -4255,7 +4313,8 @@ void TProof::NotifyLogMsg(const char *msg, const char *sfx)
          }
          // Add a suffix, if requested
          if (lsfx > 0)
-            write(fdout, sfx, lsfx);
+            if (write(fdout, sfx, lsfx) != lsfx)
+               SysError("NotifyLogMsg", "error writing to unit: %d", fdout);
       }
    }
    if (len > 0) {
@@ -5543,7 +5602,6 @@ Int_t TProof::UnloadPackageOnClient(const char *package)
    if (TestBit(TProof::kIsClient)) {
       TObjString *pack = (TObjString *) fEnabledPackagesOnClient->FindObject(package);
       if (pack) {
-
          // Remove entry from include path
          TString aclicincpath = gSystem->GetIncludePath();
          TString cintincpath = gInterpreter->GetIncludePath();
@@ -5556,13 +5614,16 @@ Int_t TProof::UnloadPackageOnClient(const char *package)
          //TODO reset interpreter include path
 
          // remove entry from enabled packages list
-         delete fEnabledPackagesOnClient->Remove(pack);
+         fEnabledPackagesOnClient->Remove(pack);
       }
 
       // cleanup the link
       if (!gSystem->AccessPathName(package))
          if (gSystem->Unlink(package) != 0)
             Warning("UnloadPackageOnClient", "unable to remove symlink to %s", package);
+
+      // delete entry
+      delete pack;
    }
    return 0;
 }
@@ -6834,7 +6895,8 @@ TObject *TProof::GetOutput(const char *name)
    // Get specified object that has been produced during the processing
    // (see Process()).
 
-   return fPlayer->GetOutput(name);
+   // Can be called by MarkBad on the master before the player is initialized
+   return (fPlayer) ? fPlayer->GetOutput(name) : (TObject *)0;
 }
 
 //______________________________________________________________________________
@@ -7460,7 +7522,8 @@ void TProof::ShowLog(Int_t qry)
    }
    if (!SendingLogToWindow()) {
       // Avoid screwing up the prompt
-      write(fileno(stdout), "\n", 1);
+      if (write(fileno(stdout), "\n", 1) != 1)
+         SysError("ShowLogFile", "error writing to stdout");
    }
 
    // Restore original pointer

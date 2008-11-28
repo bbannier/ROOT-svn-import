@@ -1785,16 +1785,19 @@ Int_t TTabCom::Hook(char *buf, int *pLoc)
          IfDebug(cerr << "prefix: " << '"' << prefix << '"' << endl);
          IfDebug(cerr << "preprefix: " << '"' << preprefix << '"' << endl);
 
-         // Sometimes, eg on startup of ROOT fpNamespaces might be 0,
-         // so create and fill the array.
-         if (!fpNamespaces)
-            RehashClasses();
-
          TString namesp = prefix;
          if (namesp.Length() >= 2)
             namesp.Remove(namesp.Length() - 2, 2);  // Remove the '::' at the end of the string.
          IfDebug(cerr << "namesp: " << '"' << namesp << '"' << endl);
 
+         // Make sure autoloading happens (if it can).
+         delete TryMakeClassFromClassName(namesp);
+         
+         // Sometimes, eg on startup of ROOT fpNamespaces might be 0,
+         // so create and fill the array.
+         if (!fpNamespaces)
+            RehashClasses();
+         
          // Try find the namesp string in the list of namespaces. If its found then
          // we need to treat the different prefices a little differently:
          TObjString objstr(namesp);
@@ -1814,7 +1817,7 @@ Int_t TTabCom::Hook(char *buf, int *pLoc)
                rxp += prefix;
                if (astr.Contains(TRegexp(rxp))) {
                   astr.Remove(0, prefix.Length());
-                  TString s = str("^[^: ]*");
+                  TString s = astr("^[^: ]*");
                   TObjString *ostr = new TObjString(s);
                   if (!pList->Contains(ostr))
                      pList->Add(ostr);
@@ -1831,7 +1834,7 @@ Int_t TTabCom::Hook(char *buf, int *pLoc)
                rxp += prefix;
                if (astr.Contains(TRegexp(rxp))) {
                   astr.Remove(0, prefix.Length());
-                  TString s = str("^[^: ]*");
+                  TString s = astr("^[^: ]*");
                   TObjString *ostr = new TObjString(s);
                   if (!pList->Contains(ostr))
                      pList->Add(ostr);
