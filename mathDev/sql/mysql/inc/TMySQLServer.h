@@ -93,6 +93,9 @@ public:
    Bool_t         Commit();
    Bool_t         Rollback();
 
+   Bool_t         PingVerify();
+   Int_t          Ping();
+
    ClassDef(TMySQLServer,0)  // Connection to MySQL server
 };
 
