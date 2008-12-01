@@ -22,9 +22,14 @@ class TEveWindowMainFrame;
 class TEveWindowPack;
 class TEveWindowTab;
 
+class TContextMenu;
+
+class TGButton;
+class TGSplitButton;
+class TGTextButton;
+
 class TGPack;
 class TGTab;
-
 
 //==============================================================================
 // TEveCompositeFrame
@@ -45,8 +50,12 @@ protected:
    TGTextButton      *fIconBar;
    TGLayoutHints     *fEveWindowLH;
 
+   TGButton          *fMiniBar;
+
    TEveWindow        *fEveParentWindow;
    TEveWindow        *fEveWindow;
+
+   static TContextMenu *fgCtxMenu;
 
 public:
    TEveCompositeFrame(TGCompositeFrame* gui_parent, TEveWindow* eve_parent);
@@ -62,6 +71,8 @@ public:
    virtual void SetCurrent(Bool_t curr);
    virtual void SetShowTitleBar(Bool_t show);
 
+   void ActionPressed();
+   void FlipTitleBarState();
    void TitleBarClicked();
 
    ClassDef(TEveCompositeFrame, 0); // Short description.
@@ -151,6 +162,9 @@ public:
    TEveWindow(const Text_t* n="TEveWindow", const Text_t* t="");
    virtual ~TEveWindow();
 
+   void SwapWindow(TEveWindow* w);
+   void SwapWindowWithCurrent();        // *MENU*
+
    virtual void DestroyWindow();        // *MENU*
    virtual void DestroyWindowAndSlot(); // *MENU*
 
@@ -161,6 +175,7 @@ public:
 
    void   PopulateSlot(TEveCompositeFrame* ef); 
 
+   void   FlipShowTitleBar()      { SetShowTitleBar(!fShowTitleBar); }
    Bool_t GetShowTitleBar() const { return fShowTitleBar; }
    void   SetShowTitleBar(Bool_t x);
 
@@ -175,6 +190,7 @@ public:
    static TEveWindowSlot* CreateWindowInTab(TGTab* tab, TEveWindow* eve_parent=0);
 
    static Pixel_t fgCurrentBackgroundColor;
+   static Pixel_t fgMiniBarBackgroundColor;
 
    ClassDef(TEveWindow, 0); // Short description.
 };
