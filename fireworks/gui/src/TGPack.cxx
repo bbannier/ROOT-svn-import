@@ -269,10 +269,12 @@ void TGPack::AddFrameInternal(TGFrame* f, TGLayoutHints* l)
          s->Connect("Moved(Int_t)",  "TGPack", this, "HandleSplitterResize(Int_t)");
          s->Connect("DragStarted()", "TGPack", this, "HandleSplitterStart()");
          TGCompositeFrame::AddFrame(s);
+         s->MapWindow();
       }
    }
    SetFrameLength(f, nflen);
    TGCompositeFrame::AddFrame(f, l);
+   f->MapWindow();
 }
 
 //______________________________________________________________________________
@@ -284,7 +286,6 @@ void TGPack::AddFrame(TGFrame* f, TGLayoutHints* l)
    AddFrameInternal(f, l);
 
    Layout();
-   MapSubwindows();
 }
 
 //______________________________________________________________________________
@@ -506,5 +507,4 @@ void TGPack::SetVertical(Bool_t x)
       list.RemoveFirst();
    }
    Layout();
-   MapSubwindows();
 }

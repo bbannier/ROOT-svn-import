@@ -13,7 +13,11 @@
 #include "TEveManager.h"
 #include "TEveSelection.h"
 
+#include "TContextMenu.h"
+
 #include "TGButton.h"
+#include "TContextMenu.h"
+#include "TGMenu.h"
 #include "TGPack.h"
 #include "TGTab.h"
 
@@ -37,6 +41,8 @@
 
 ClassImp(TEveCompositeFrame);
 
+TContextMenu* TEveCompositeFrame::fgCtxMenu = 0;
+
 //______________________________________________________________________________
 TEveCompositeFrame::TEveCompositeFrame(TGCompositeFrame* parent,
                                        TEveWindow*   eve_parent) :
@@ -48,37 +54,59 @@ TEveCompositeFrame::TEveCompositeFrame(TGCompositeFrame* parent,
    fIconBar     (0),
    fEveWindowLH (0),
 
+   fMiniBar     (0),
+
    fEveParentWindow (eve_parent),
    fEveWindow       (0)
 {
    // Constructor.
 
-   static const UInt_t topH = 14;
+   static const UInt_t topH = 14, miniH = 4;
+
+   // --- TopFrame
 
    fTopFrame = new TGHorizontalFrame(this, 20, topH);
 
-   fToggleBar = new TGTextButton(fTopFrame, "Switch");
+   fToggleBar = new TGTextButton(fTopFrame, "Hide");
+   fToggleBar->ChangeOptions(kRaisedFrame);
    fToggleBar->Resize(40, topH);
    fTopFrame->AddFrame(fToggleBar, new TGLayoutHints(kLHintsNormal, 0,0,0,0));//1,1,1,1));
 
    fTitleBar = new TGTextButton(fTopFrame, "Title Bar");
+   fTitleBar->ChangeOptions(kRaisedFrame);
    fTitleBar->Resize(40, topH);
    fTopFrame->AddFrame(fTitleBar, new TGLayoutHints(kLHintsNormal | kLHintsExpandX,  0,0,0,0));//1,1,1,1));
 
-   fIconBar = new TGTextButton(fTopFrame, "Icons");
+   fIconBar = new TGTextButton(fTopFrame, "Actions");
+   fIconBar->ChangeOptions(kRaisedFrame);
    fIconBar->Resize(40, topH);
    fTopFrame->AddFrame(fIconBar, new TGLayoutHints(kLHintsNormal,  0,0,0,0));//1,1,1,1));
 
    AddFrame(fTopFrame, new TGLayoutHints(kLHintsNormal | kLHintsExpandX));
 
-   fTitleBar->Connect("Clicked()", "TEveCompositeFrame", this, "TitleBarClicked()");
+   fToggleBar->Connect("Clicked()", "TEveCompositeFrame", this, "FlipTitleBarState()");
+   fTitleBar ->Connect("Clicked()", "TEveCompositeFrame", this, "TitleBarClicked()");
+   fIconBar  ->Connect("Pressed()", "TEveCompositeFrame", this, "ActionPressed()");
+
+   // --- MiniBar
+
+   fMiniBar = new TGButton(this);
+   fMiniBar->ChangeOptions(kRaisedFrame | kFixedHeight);
+   fMiniBar->Resize(20, miniH);
+   fMiniBar->SetBackgroundColor(TEveWindow::fgMiniBarBackgroundColor);
+   AddFrame(fMiniBar, new TGLayoutHints(kLHintsNormal | kLHintsExpandX));
+
+   fMiniBar->Connect("Clicked()", "TEveCompositeFrame", this, "FlipTitleBarState()");
+
+   // --- Common settings.
 
    SetCleanup(kDeepCleanup);
 
+   MapSubwindows();
+   HideFrame(fMiniBar);
+
    // Layout for embedded windows.
    fEveWindowLH = new TGLayoutHints(kLHintsNormal | kLHintsExpandX | kLHintsExpandY);
-
-   MapSubwindows();
 }
 
 //______________________________________________________________________________
@@ -108,11 +136,38 @@ void TEveCompositeFrame::Destroy()
    // TEveCompositeFrameInTab.
 }
 
+//==============================================================================
+
+void TEveCompositeFrame::ActionPressed()
+{
+   if (fgCtxMenu == 0) {
+      fgCtxMenu = new TContextMenu("", "");
+   }
+
+   Int_t    x, y;
+   UInt_t   w, h;
+   Window_t childdum;
+   gVirtualX->GetWindowSize(fIconBar->GetId(), x, y, w, h);
+   gVirtualX->TranslateCoordinates(fIconBar->GetId(),
+                                   gClient->GetDefaultRoot()->GetId(),
+                                   0, 0, x, y, childdum);
+
+   fgCtxMenu->Popup(x - 2, y + h - 2, fEveWindow);
+}
+
+//______________________________________________________________________________
+void TEveCompositeFrame::FlipTitleBarState()
+{
+   fEveWindow->FlipShowTitleBar();
+}
+
 //______________________________________________________________________________
 void TEveCompositeFrame::TitleBarClicked()
 {
    fEveWindow->TitleBarClicked();
 }
+
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveCompositeFrame::AcquireEveWindow(TEveWindow* ew)
@@ -198,9 +253,11 @@ void TEveCompositeFrame::SetCurrent(Bool_t curr)
 void TEveCompositeFrame::SetShowTitleBar(Bool_t show)
 {
    if (show) {
+      HideFrame(fMiniBar);
       ShowFrame(fTopFrame);
    } else {
       HideFrame(fTopFrame);
+      ShowFrame(fMiniBar);
    }
 }
 
@@ -360,6 +417,7 @@ ClassImp(TEveWindow);
 
 TEveWindow* TEveWindow::fgCurrentWindow = 0;
 Pixel_t     TEveWindow::fgCurrentBackgroundColor = 0x80A0C0;
+Pixel_t     TEveWindow::fgMiniBarBackgroundColor = 0x80C0A0;
 
 //______________________________________________________________________________
 TEveWindow::TEveWindow(const Text_t* n, const Text_t* t) :
@@ -381,6 +439,28 @@ TEveWindow::~TEveWindow()
       fgCurrentWindow = 0;
 
    printf("TEveWindow::~TEveWindow  '%s' '%s', cnt=%d\n", GetElementName(), ClassName(), fDenyDestroy);
+}
+
+//==============================================================================
+
+//______________________________________________________________________________
+void TEveWindow::SwapWindow(TEveWindow* w)
+{
+   printf ("Swapping ... yeah, right :)\n");
+}
+
+//______________________________________________________________________________
+void TEveWindow::SwapWindowWithCurrent()
+{
+   static const TEveException eh("TEveWindow::SwapWindowWithCurrent ");
+
+   if (fgCurrentWindow == 0)
+      throw eh + "Current eve-window is not set.";
+
+   if (fgCurrentWindow == this)
+      throw eh + "This is the current window ... nothing changed.";
+
+   SwapWindow(fgCurrentWindow);
 }
 
 //______________________________________________________________________________
@@ -510,9 +590,7 @@ TEveWindowSlot* TEveWindow::CreateDefaultWindowSlot()
 //______________________________________________________________________________
 TEveWindowSlot* TEveWindow::CreateWindowInTab(TGTab* tab, TEveWindow* eve_parent)
 {
-   tab->NewTab("<unused>");
-   Int_t idx = tab->GetNumberOfTabs() - 1;
-   TGCompositeFrame *parent = tab->GetTabContainer(idx);
+   TGCompositeFrame *parent = tab->AddTab("<unused>");
 
    TEveCompositeFrameInTab *slot = new TEveCompositeFrameInTab(parent, eve_parent, tab);
 
@@ -522,7 +600,7 @@ TEveWindowSlot* TEveWindow::CreateWindowInTab(TGTab* tab, TEveWindow* eve_parent
    parent->AddFrame(slot, new TGLayoutHints(kLHintsNormal | kLHintsExpandX | kLHintsExpandY));
    slot->MapWindow();
 
-   parent->Layout();
+   tab->Layout();
 
    return ew_slot;
 }
@@ -546,8 +624,8 @@ TEveWindowSlot::TEveWindowSlot(const Text_t* n, const Text_t* t) :
    // Constructor.
 
    fEmptyButt = new TGTextButton(0, "    <empty>\nclick to select");
+   fEmptyButt->ChangeOptions(kRaisedFrame);
    fEmptyButt->SetTextJustify(kTextCenterX | kTextCenterY);
-   // AddFrame(fEmptyButt, new TGLayoutHints(kLHintsNormal | kLHintsExpandX | kLHintsExpandY));
 
    fEmptyButt->Connect("Clicked()", "TEveWindow", this, "TitleBarClicked()");
 }
