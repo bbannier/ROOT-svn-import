@@ -57,6 +57,7 @@ void printResult(const char* msg, bool status);
 int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0, double ERRORLIMIT = 1E-15);
 int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0, double ERRORLIMIT = 1E-15);
 int equals(const char* msg, TH3D* h1, TH3D* h2, int options = 0, double ERRORLIMIT = 1E-15);
+int equals(const char* msg, THnSparse* h1, THnSparse* h2, int options, double ERRORLIMIT = 1E-15);
 int equals(Double_t n1, Double_t n2, double ERRORLIMIT = 1E-15);
 int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT = 1E-15);
 ostream& operator<<(ostream& out, TH1D* h);
@@ -1781,8 +1782,6 @@ bool testLabel()
    return status;
 }
 
-
-
 bool testIntegerRebin()
 {
    const int rebin = TMath::Nint( r.Uniform(minRebin, maxRebin) );
@@ -1843,7 +1842,7 @@ bool testArrayRebin()
    std::sort(rebinArray, rebinArray + rebin);
    for ( Int_t i = 0; i < rebin; ++i ) {
       rebinArray[i] = TMath::Nint( rebinArray[i] * ( h1->GetNbinsX() - 2 ) + 2 );
-      rebinArray[i] = h1->GetBinLowEdge( rebinArray[i] );
+      rebinArray[i] = h1->GetBinLowEdge( h1->GetXaxis()->FindBin( rebinArray[i] ) );
    }
    
 
@@ -1892,6 +1891,40 @@ bool test2DRebin()
 
    return equals("TestIntRebin2D", h2d2, h3, cmpOptStats);
 }
+
+bool testSparseRebin1() 
+{
+   const int rebin = 2;//TMath::Nint( r.Uniform(minRebin, maxRebin) );
+
+   Int_t bsizeRebin[] = { 2,//TMath::Nint( r.Uniform(1, 5) ),
+                          2,//TMath::Nint( r.Uniform(1, 5) ),
+                          2};//TMath::Nint( r.Uniform(1, 5) )};
+
+   Int_t bsize[] = { bsizeRebin[0] * rebin,
+                     bsizeRebin[1] * rebin,
+                     bsizeRebin[2] * rebin};
+                    
+   Double_t xmin[] = {minRange, minRange, minRange};
+   Double_t xmax[] = {maxRange, maxRange, maxRange};
+   THnSparseD* s1 = new THnSparseD("rebin1-s1","s1-Title", 3, bsize, xmin, xmax);
+   THnSparseD* s2 = new THnSparseD("rebin1-s2","s2-Title", 3, bsizeRebin, xmin, xmax);
+
+   for ( Int_t i = 0; i < nEvents; ++i ) {
+      Double_t points[3];
+      points[0] = r.Uniform( minRange * .9 , maxRange * 1.1 );
+      points[1] = r.Uniform( minRange * .9 , maxRange * 1.1 );
+      points[2] = r.Uniform( minRange * .9 , maxRange * 1.1 );
+      s1->Fill(points);
+      s2->Fill(points);
+   }
+
+   THnSparse* s3 = s1->Rebin(rebin);
+
+   bool ret = equals("THnSparse Rebin 1", s2, s3, cmpOptStats | cmpOptPrint );
+   delete s1;
+   return ret;
+}
+
 
 // In case of deviation, the profiles' content will not work anymore
 // try only for testing the statistics
@@ -2621,12 +2654,17 @@ int main(int argc, char** argv)
    // Test 3
    const unsigned int numberOfRebin = 4;
    pointer2Test rebinTestPointer[numberOfRebin] = { testIntegerRebin, 
-                                               testIntegerRebinNoName,
-                                               testArrayRebin,
-                                               test2DRebin };
+                                                    testIntegerRebinNoName,
+                                                    testArrayRebin,
+                                                    test2DRebin,
+                                                    /*testSparseRebin1*/};
    struct TTestSuite rebinTestSuite = { numberOfRebin, 
-                                        "Histogram Rebining...............................................",
+                                        "Histogram Rebinning..............................................",
                                         rebinTestPointer };
+
+   // testSparseRebin1 fails. To be looked. Also to be done the
+   // testSparseRebin2, but this is calling the first method, so also
+   // frozen until fixed.
 
    // Test 4
    // Add Tests
@@ -2764,6 +2802,56 @@ void printResult(const char* msg, bool status)
 }
 
 // Methods for histogram comparisions
+
+int equals(const char* msg, THnSparse* h1, THnSparse* h2, int options, double ERRORLIMIT)
+{
+   bool debug = options & cmpOptDebug;
+   bool compareError = ! (options & cmpOptNoError);
+   
+   bool differents = 0;
+   
+   for ( int i = 0; i <= h1->GetAxis(0)->GetNbins() + 1; ++i )
+      for ( int j = 0; j <= h1->GetAxis(1)->GetNbins() + 1; ++j )
+         for ( int h = 0; h <= h1->GetAxis(2)->GetNbins() + 1; ++h )
+         {
+            Double_t x = h1->GetAxis(0)->GetBinCenter(i);
+            Double_t y = h1->GetAxis(1)->GetBinCenter(j);
+            Double_t z = h1->GetAxis(2)->GetBinCenter(h);
+            
+            Int_t bin[3] = {i, j, h};
+            
+            if (debug) {
+               cout << equals(x, h2->GetAxis(0)->GetBinCenter(i), ERRORLIMIT) << " "
+                    << equals(y, h2->GetAxis(1)->GetBinCenter(j), ERRORLIMIT) << " "
+                    << equals(z, h2->GetAxis(2)->GetBinCenter(h), ERRORLIMIT) << " "
+                    << "[" << x << "," << y << "," << z << "]: " 
+                    << h1->GetBinContent(bin) << " +/- " << h1->GetBinError(bin) << " | "
+                    << h2->GetBinContent(bin) << " +/- " << h2->GetBinError(bin)
+                    << " | " << equals(h1->GetBinContent(bin), h2->GetBinContent(bin), ERRORLIMIT)
+                    << " "   << equals(h1->GetBinError(bin)  , h2->GetBinError(bin),   ERRORLIMIT)
+                    << " "   << differents
+                    << " "   << (fabs(h1->GetBinContent(bin) - h2->GetBinContent(bin)))
+                    << endl;
+            }
+            differents |= equals(x, h2->GetAxis(0)->GetBinCenter(i), ERRORLIMIT);
+            differents |= equals(y, h2->GetAxis(1)->GetBinCenter(j), ERRORLIMIT);
+            differents |= equals(z, h2->GetAxis(2)->GetBinCenter(h), ERRORLIMIT);
+            differents |= equals(h1->GetBinContent(bin), h2->GetBinContent(bin), ERRORLIMIT);
+            if ( compareError )
+               differents |= equals(h1->GetBinError(bin)  , h2->GetBinError(bin), ERRORLIMIT);
+         }
+   
+   // Statistical tests:
+   // No statistical tests possible for THnSparse so far...
+//    if ( compareStats )
+//       differents |= compareStatistics( h1, h2, debug, ERRORLIMIT);
+   
+   cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
+   
+   delete h2;
+   
+   return differents;
+}
 
 int equals(const char* msg, TH3D* h1, TH3D* h2, int options, double ERRORLIMIT)
 {
