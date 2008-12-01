@@ -4,6 +4,7 @@
 #include "TEnv.h"
 #include "TObjString.h"
 #include "TGLUtil.h"
+#include "TGLIncludes.h"
 
 #include "FTFont.h"
 #include "FTGLExtrdFont.h"
