@@ -13,8 +13,15 @@
 #include "TGSplitter.h"
 
 //______________________________________________________________________________
-// Description of TGPack
 //
+// Stack of frames in horizontal (default) or vertical stack.
+// The splitters are placed between the neighbouring frames so that
+// they can be resized by the user.
+// When the whole pack is resized, frames are scaled proportionally to
+// their previous size.
+//
+// When frames are left in pack at destruction time, they will be
+// deleted via deep-cleanup.
 
 ClassImp(TGPack);
 
@@ -38,6 +45,8 @@ TGPack::TGPack(TGClient *c, Window_t id, const TGWindow *parent) :
    fDragOverflow (0)
 {
    // Constructor.
+
+   SetCleanup(kDeepCleanup);
 }
 
 //______________________________________________________________________________
@@ -124,34 +133,37 @@ void TGPack::ExpandExistingFrames(Int_t amount)
 
    Int_t remainder = amount;
 
-   TGFrameElement *el;
-   TIter next(fList);
-
-   while ((el = (TGFrameElement *) next()))
+   if ( ! fList->IsEmpty())
    {
-      Int_t l = GetFrameLength(el->fFrame);
-      Int_t d = (l * amount) / len;
-      SetFrameLength(el->fFrame, l + d);
-      remainder -= d;
-      
-      if (fUseSplitters)
-         next();
-   }
+      TGFrameElement *el;
+      TIter next(fList);
 
-   while (remainder > 0)
-   {
-      next.Reset();
-      while ((el = (TGFrameElement *) next()) && remainder > 0)
+      while ((el = (TGFrameElement *) next()))
       {
          Int_t l = GetFrameLength(el->fFrame);
-         if (l > 0)
-         {
-            SetFrameLength(el->fFrame, l + 1);
-            --remainder;
-         }
+         Int_t d = (l * amount) / len;
+         SetFrameLength(el->fFrame, l + d);
+         remainder -= d;
 
          if (fUseSplitters)
             next();
+      }
+
+      while (remainder > 0)
+      {
+         next.Reset();
+         while ((el = (TGFrameElement *) next()) && remainder > 0)
+         {
+            Int_t l = GetFrameLength(el->fFrame);
+            if (l > 0)
+            {
+               SetFrameLength(el->fFrame, l + 1);
+               --remainder;
+            }
+
+            if (fUseSplitters)
+               next();
+         }
       }
    }
 }
@@ -174,7 +186,7 @@ void TGPack::ShrinkExistingFrames(Int_t amount)
       Int_t d = (l * amount) / len;
       SetFrameLength(el->fFrame, l - d);
       remainder -= d;
-      
+
       if (fUseSplitters)
          next();
    }
@@ -238,7 +250,7 @@ void TGPack::FindFrames(TGFrame* splitter, TGFrame*& f0, TGFrame*& f1)
 //------------------------------------------------------------------------------
 
 //______________________________________________________________________________
-void TGPack::AddFrame(TGFrame* f, TGLayoutHints* l)
+void TGPack::AddFrameInternal(TGFrame* f, TGLayoutHints* l)
 {
    // Add frame f at the end.
    // LayoutHints are ignored in TGPack.
@@ -251,7 +263,7 @@ void TGPack::AddFrame(TGFrame* f, TGLayoutHints* l)
    if (n > 0)
    {
       ShrinkExistingFrames(nflen);
-      
+
       if (fUseSplitters) {
          nflen -= fSplitterLen;
          TGSplitter* s = 0;
@@ -262,25 +274,33 @@ void TGPack::AddFrame(TGFrame* f, TGLayoutHints* l)
          s->Connect("Moved(Int_t)",  "TGPack", this, "HandleSplitterResize(Int_t)");
          s->Connect("DragStarted()", "TGPack", this, "HandleSplitterStart()");
          TGCompositeFrame::AddFrame(s);
+         s->MapWindow();
       }
    }
    SetFrameLength(f, nflen);
    TGCompositeFrame::AddFrame(f, l);
-
-   Layout();
-   MapSubwindows();
+   f->MapWindow();
 }
 
 //______________________________________________________________________________
-void TGPack::RemoveFrame(TGFrame* f)
+void TGPack::AddFrame(TGFrame* f, TGLayoutHints* l)
 {
-   // Remove frame f and refit existing frames to pack size.
+   // Add frame f at the end.
+   // LayoutHints are ignored in TGPack.
 
-//   Error("RemoveFrame", "not yet supported.");
+   AddFrameInternal(f, l);
+
+   Layout();
+}
+
+//______________________________________________________________________________
+Int_t TGPack::RemoveFrameInternal(TGFrame* f)
+{
+   // Remove frame f.
 
    TGFrameElement *el = FindFrameElement(f);
 
-   if (!el) return;
+   if (!el) return 0;
 
    Int_t space_freed = 0;
 
@@ -295,24 +315,54 @@ void TGPack::RemoveFrame(TGFrame* f)
       space_freed += fSplitterLen;
       splitter->UnmapWindow();
       TGCompositeFrame::RemoveFrame(splitter);
+      // This is needed so that splitter window gets destroyed on server.
+      splitter->ReparentWindow(fClient->GetDefaultRoot());
       delete splitter;
    }
 
    space_freed += GetFrameLength(f);
    f->UnmapWindow();
    TGCompositeFrame::RemoveFrame(f);
-   delete f;
 
    printf("Removed frame, n=%d, space_freed=%d\n", NumberOfRealFrames(), space_freed);
 
-   ResizeExistingFrames(space_freed);
-   Layout();
+   return space_freed;
+}
+
+//______________________________________________________________________________
+void TGPack::DeleteFrame(TGFrame* f)
+{
+   // Remove frame f and refit existing frames to pack size.
+   // Frame is deleted.
+
+   Int_t space_freed = RemoveFrameInternal(f);
+   if (space_freed)
+   {
+      delete f;
+      ResizeExistingFrames(space_freed);
+      Layout();
+   }
+}
+
+//______________________________________________________________________________
+void TGPack::RemoveFrame(TGFrame* f)
+{
+   // Remove frame f and refit existing frames to pack size.
+   // Frame is not deleted.
+
+   Int_t space_freed = RemoveFrameInternal(f);
+   if (space_freed)
+   {
+      ResizeExistingFrames(space_freed);
+      Layout();
+   }
 }
 
 //______________________________________________________________________________
 void TGPack::ShowFrame(TGFrame* /*f*/)
 {
-   // Blabla blu.
+   // Virtual from TGCompositeFrame.
+   // This operation not supported by pack.
 
    Error("ShowFrame", "not yet supported.");
 }
@@ -320,7 +370,8 @@ void TGPack::ShowFrame(TGFrame* /*f*/)
 //______________________________________________________________________________
 void TGPack::HideFrame(TGFrame* /*f*/)
 {
-   // Blabla blu.
+   // Virtual from TGCompositeFrame.
+   // This operation not supported by pack.
 
    Error("HideFrame", "not yet supported.");
 }
@@ -373,6 +424,8 @@ void TGPack::Layout()
       el->fFrame->Layout();
    }
 }
+
+//------------------------------------------------------------------------------
 
 //______________________________________________________________________________
 void TGPack::HandleSplitterStart()
@@ -427,13 +480,41 @@ void TGPack::HandleSplitterResize(Int_t delta)
    else
    {
       Int_t l = GetFrameLength(f1);
-      if (l - 1 < delta) 
+      if (l - 1 < delta)
       {
          fDragOverflow += delta - l + 1;
          delta = l - 1;
       }
       SetFrameLength(f0, GetFrameLength(f0) + delta);
       SetFrameLength(f1, l - delta);
+   }
+   Layout();
+}
+
+//------------------------------------------------------------------------------
+
+//______________________________________________________________________________
+void TGPack::SetVertical(Bool_t x)
+{
+   // Sets the vertical flag and reformats the back to new stacking
+   // direction.
+
+   if (x == fVertical)
+      return;
+
+   TList list;
+   while ( ! fList->IsEmpty())
+   {
+      TGFrame* f = ((TGFrameElement*) fList->First())->fFrame;
+      RemoveFrameInternal(f);
+      list.Add(f);
+   }
+   fVertical = x;
+   while ( ! list.IsEmpty())
+   {
+      TGFrame* f = (TGFrame*) list.First();
+      AddFrameInternal(f);
+      list.RemoveFirst();
    }
    Layout();
 }

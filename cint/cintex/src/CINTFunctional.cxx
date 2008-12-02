@@ -19,10 +19,9 @@
 #include <sys/mman.h>
 #endif
 
+
 using namespace ROOT::Reflex;
 using namespace std;
-
-extern "C" int G__GetCatchException();
 
 namespace ROOT { namespace Cintex {
 
@@ -56,8 +55,8 @@ namespace ROOT { namespace Cintex {
       if ( mem.IsConstructor() || mem.IsDestructor() ) {
          Member getnewdelfuncs = fClass.MemberByName("__getNewDelFunctions");
          if( getnewdelfuncs ) {
-            static Type tNewdelfuncs = Type::ByTypeInfo(typeid(&fNewdelfuncs));
-            Object ret = tNewdelfuncs.Construct();
+            static Type tNewdelfuncs = Type::ByTypeInfo(typeid(fNewdelfuncs));
+            Object ret( tNewdelfuncs, (void*)&fNewdelfuncs);
             getnewdelfuncs.Invoke(&ret);
          }
       }
@@ -93,6 +92,11 @@ namespace ROOT { namespace Cintex {
 
       // pre-process result block
       Type rt = fFunction.ReturnType();
+      fRet_Sizeof = rt.SizeOf();
+      if (fRet_Sizeof==0) {
+         // Humm a type with sizeof 0 ... more likely to be a type unknown to reflex ...
+         fRet_Sizeof = G__Lsizeof( rt.Name( Reflex::SCOPED ).c_str() );
+      }
       fRet_byref   = rt.IsReference();
       while ( rt.IsTypedef() ) rt = rt.ToType();
       fRet_desc = CintType( rt );
@@ -106,9 +110,7 @@ namespace ROOT { namespace Cintex {
          ++plevel;
          frt = frt.ToType();
       }
-      if (fRet_byref) {
-         fRet_desc.first = (fRet_desc.first - ('a'-'A'));
-      } else if ( rt.IsPointer() ) {
+      if ( rt.IsPointer() ) {
          fRet_desc.first = (fRet_desc.first - ('a'-'A'));
          --plevel;
       }
@@ -168,9 +170,6 @@ namespace ROOT { namespace Cintex {
          result->ref = (long) *(void**)objaddr;
          obj = *(void**)objaddr;
          result->tagnum = fRet_tag;
-         if (fRet_plevel == 0) {
-            t = tolower(t);
-         }
       } else {
          result->ref = 0;
       }
@@ -241,9 +240,12 @@ namespace ROOT { namespace Cintex {
 
          // Stub Calling
          void* retaddr = 0;
-         if ( context->fRet_byvalue )
-            retaddr = context->fMember.TypeOf().ReturnType().Construct().Address();
-         else
+         if ( context->fRet_byvalue ) {
+            // Intentionally use operator new here, we do NOT need to run
+            // the constructor since the function itself will run 
+            // a new with placement.
+            retaddr = ::operator new( context->fRet_Sizeof );
+         } else
             retaddr = context->GetReturnAddress(result);
          (*context->fStub)(retaddr, (void*)G__getstructoffset(), context->fParam, context->fStubctx);
          context->ProcessResult(result, retaddr);
@@ -257,9 +259,12 @@ namespace ROOT { namespace Cintex {
       // does not transmit the exception 
       try {
          void* retaddr = 0;
-         if ( context->fRet_byvalue )
-            retaddr = context->fMember.TypeOf().ReturnType().Construct().Address();
-         else
+         if ( context->fRet_byvalue ) {
+            // Intentionally use operator new here, we do NOT need to run
+            // the constructor since the function itself will run 
+            // a new with placement.
+            retaddr = ::operator new( context->fRet_Sizeof );
+         } else
             retaddr = context->GetReturnAddress(result);
          (*context->fStub)(retaddr, (void*)G__getstructoffset(), context->fParam, context->fStubctx);
          context->ProcessResult(result, retaddr);
@@ -302,7 +307,7 @@ namespace ROOT { namespace Cintex {
                obj = context->fNewdelfuncs->fNewArray(nary, 0);
             }
             else {
-               obj = new char[size];
+               obj = new char[size * nary];
                long p = (long)obj; 
                for( long i = 0; i < nary; ++i, p += size )
                   (*context->fStub)(0, (void*)p, context->fParam, 0);

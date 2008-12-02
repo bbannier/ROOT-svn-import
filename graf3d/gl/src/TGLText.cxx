@@ -17,13 +17,21 @@
 #include "TColor.h"
 #include "TSystem.h"
 #include "TEnv.h"
+#include "TGLIncludes.h"
 
-#include "FTGLExtrdFont.h"
-#include "FTGLOutlineFont.h"
-#include "FTGLPolygonFont.h"
-#include "FTGLTextureFont.h"
-#include "FTGLPixmapFont.h"
-#include "FTGLBitmapFont.h"
+// Direct inclussion of FTGL headers is deprecated in ftgl-2.1.3 while
+// ftgl-2.1.2 shipped with root requires manual inclusion.
+#ifndef BUILTIN_FTGL
+# include <FTGL/ftgl.h>
+#else
+# include "FTFont.h"
+# include "FTGLExtrdFont.h"
+# include "FTGLOutlineFont.h"
+# include "FTGLPolygonFont.h"
+# include "FTGLTextureFont.h"
+# include "FTGLPixmapFont.h"
+# include "FTGLBitmapFont.h"
+#endif
 
 #define FTGL_BITMAP  0
 #define FTGL_PIXMAP  1
