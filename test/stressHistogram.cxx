@@ -40,7 +40,7 @@ enum compareOptions {
    cmpOptStats=8
 };
 
-const int defaultEqualOptions = 1; //cmpOptPrint;
+const int defaultEqualOptions = 0; //cmpOptPrint;
 
 TRandom2 r;
 
@@ -2814,7 +2814,7 @@ int equals(const char* msg, THnSparse* h1, THnSparse* h2, int options, double ER
    bool debug = options & cmpOptDebug;
    bool compareError = ! (options & cmpOptNoError);
    
-   bool differents = 0;
+   int differents = 0;
    
    for ( int i = 0; i <= h1->GetAxis(0)->GetNbins() + 1; ++i )
       for ( int j = 0; j <= h1->GetAxis(1)->GetNbins() + 1; ++j )
@@ -2839,18 +2839,18 @@ int equals(const char* msg, THnSparse* h1, THnSparse* h2, int options, double ER
                     << " "   << (fabs(h1->GetBinContent(bin) - h2->GetBinContent(bin)))
                     << endl;
             }
-            differents |= equals(x, h2->GetAxis(0)->GetBinCenter(i), ERRORLIMIT);
-            differents |= equals(y, h2->GetAxis(1)->GetBinCenter(j), ERRORLIMIT);
-            differents |= equals(z, h2->GetAxis(2)->GetBinCenter(h), ERRORLIMIT);
-            differents |= equals(h1->GetBinContent(bin), h2->GetBinContent(bin), ERRORLIMIT);
+            differents += equals(x, h2->GetAxis(0)->GetBinCenter(i), ERRORLIMIT);
+            differents += equals(y, h2->GetAxis(1)->GetBinCenter(j), ERRORLIMIT);
+            differents += equals(z, h2->GetAxis(2)->GetBinCenter(h), ERRORLIMIT);
+            differents += equals(h1->GetBinContent(bin), h2->GetBinContent(bin), ERRORLIMIT);
             if ( compareError )
-               differents |= equals(h1->GetBinError(bin)  , h2->GetBinError(bin), ERRORLIMIT);
+               differents += equals(h1->GetBinError(bin)  , h2->GetBinError(bin), ERRORLIMIT);
          }
    
    // Statistical tests:
    // No statistical tests possible for THnSparse so far...
 //    if ( compareStats )
-//       differents |= compareStatistics( h1, h2, debug, ERRORLIMIT);
+//       differents += compareStatistics( h1, h2, debug, ERRORLIMIT);
    
    cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
    
@@ -2867,7 +2867,7 @@ int equals(const char* msg, TH3D* h1, TH3D* h2, int options, double ERRORLIMIT)
    bool compareError = ! (options & cmpOptNoError);
    bool compareStats = options & cmpOptStats;
    
-   bool differents = ( h1 == h2 ); // Check they are not the same histogram!
+   int differents = ( h1 == h2 ); // Check they are not the same histogram!
    if (debug) {
       cout << static_cast<void*>(h1) << " " << static_cast<void*>(h2) << " "
            << (h1 == h2 ) << " " << differents << endl;
@@ -2895,17 +2895,17 @@ int equals(const char* msg, TH3D* h1, TH3D* h2, int options, double ERRORLIMIT)
                  << " "   << (fabs(h1->GetBinContent(i,j,h) - h2->GetBinContent(i,j,h)))
                  << endl;
          }
-         differents |= (bool) equals(x, h2->GetXaxis()->GetBinCenter(i), ERRORLIMIT);
-         differents |= (bool) equals(y, h2->GetYaxis()->GetBinCenter(j), ERRORLIMIT);
-         differents |= (bool) equals(z, h2->GetZaxis()->GetBinCenter(h), ERRORLIMIT);
-         differents |= (bool) equals(h1->GetBinContent(i,j,h), h2->GetBinContent(i,j,h), ERRORLIMIT);
+         differents += (bool) equals(x, h2->GetXaxis()->GetBinCenter(i), ERRORLIMIT);
+         differents += (bool) equals(y, h2->GetYaxis()->GetBinCenter(j), ERRORLIMIT);
+         differents += (bool) equals(z, h2->GetZaxis()->GetBinCenter(h), ERRORLIMIT);
+         differents += (bool) equals(h1->GetBinContent(i,j,h), h2->GetBinContent(i,j,h), ERRORLIMIT);
          if ( compareError )
-            differents |= (bool) equals(h1->GetBinError(i,j,h)  , h2->GetBinError(i,j,h), ERRORLIMIT);
+            differents += (bool) equals(h1->GetBinError(i,j,h)  , h2->GetBinError(i,j,h), ERRORLIMIT);
       }
    
    // Statistical tests:
    if ( compareStats )
-      differents |= compareStatistics( h1, h2, debug, ERRORLIMIT);
+      differents += compareStatistics( h1, h2, debug, ERRORLIMIT);
    
    if ( print || debug ) cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
    
@@ -2922,7 +2922,7 @@ int equals(const char* msg, TH2D* h1, TH2D* h2, int options, double ERRORLIMIT)
    bool compareError = ! (options & cmpOptNoError);
    bool compareStats = options & cmpOptStats;
    
-   bool differents = ( h1 == h2 ); // Check they are not the same histogram!
+   int differents = ( h1 == h2 ); // Check they are not the same histogram!
    if (debug) {
       cout << static_cast<void*>(h1) << " " << static_cast<void*>(h2) << " "
            << (h1 == h2 ) << " " << differents << endl;
@@ -2947,16 +2947,16 @@ int equals(const char* msg, TH2D* h1, TH2D* h2, int options, double ERRORLIMIT)
                  << " "   << (fabs(h1->GetBinContent(i,j) - h2->GetBinContent(i,j)))
                  << endl;
          }
-         differents |= (bool) equals(x, h2->GetXaxis()->GetBinCenter(i), ERRORLIMIT);
-         differents |= (bool) equals(y, h2->GetYaxis()->GetBinCenter(j), ERRORLIMIT);
-         differents |= (bool) equals(h1->GetBinContent(i,j), h2->GetBinContent(i,j), ERRORLIMIT);
+         differents += (bool) equals(x, h2->GetXaxis()->GetBinCenter(i), ERRORLIMIT);
+         differents += (bool) equals(y, h2->GetYaxis()->GetBinCenter(j), ERRORLIMIT);
+         differents += (bool) equals(h1->GetBinContent(i,j), h2->GetBinContent(i,j), ERRORLIMIT);
          if ( compareError )
-            differents |= (bool) equals(h1->GetBinError(i,j)  , h2->GetBinError(i,j), ERRORLIMIT);
+            differents += (bool) equals(h1->GetBinError(i,j)  , h2->GetBinError(i,j), ERRORLIMIT);
       }
    
    // Statistical tests:
    if ( compareStats )
-      differents |= compareStatistics( h1, h2, debug, ERRORLIMIT);
+      differents += compareStatistics( h1, h2, debug, ERRORLIMIT);
    
    if ( print || debug ) cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
    
@@ -2978,7 +2978,7 @@ int equals(const char* msg, TH1D* h1, TH1D* h2, int options, double ERRORLIMIT)
       cout << "Nbins  = " << h1->GetXaxis()->GetNbins() << " ,  " <<  h2->GetXaxis()->GetNbins() << endl;
    }
 
-   bool differents = ( h1 == h2 ); // Check they are not the same histogram!
+   int differents = ( h1 == h2 ); // Check they are not the same histogram!
    if (debug) {
       cout << static_cast<void*>(h1) << " " << static_cast<void*>(h2) << " "
            << (h1 == h2 ) << " " << differents << endl;
@@ -2998,16 +2998,16 @@ int equals(const char* msg, TH1D* h1, TH1D* h2, int options, double ERRORLIMIT)
               << " "   << differents
               << endl;
       }
-      differents |= (bool) equals(x, h2->GetXaxis()->GetBinCenter(i), ERRORLIMIT);
-      differents |= (bool) equals(h1->GetBinContent(i), h2->GetBinContent(i), ERRORLIMIT);
+      differents += (bool) equals(x, h2->GetXaxis()->GetBinCenter(i), ERRORLIMIT);
+      differents += (bool) equals(h1->GetBinContent(i), h2->GetBinContent(i), ERRORLIMIT);
       
       if ( compareError )
-         differents |= (bool) equals(h1->GetBinError(i),   h2->GetBinError(i), ERRORLIMIT);
+         differents += (bool) equals(h1->GetBinError(i),   h2->GetBinError(i), ERRORLIMIT);
    }
    
    // Statistical tests:
    if ( compareStats )
-      differents |= compareStatistics( h1, h2, debug, ERRORLIMIT);
+      differents += compareStatistics( h1, h2, debug, ERRORLIMIT);
    
    if ( print || debug ) cout << msg << ": \t" << (differents?"FAILED":"OK") << endl;
    
@@ -3023,7 +3023,7 @@ int equals(Double_t n1, Double_t n2, double ERRORLIMIT)
 
 int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT)
 {
-   bool differents = 0;
+   int differents = 0;
 
    int precLevel = gErrorIgnoreLevel; 
    // switch off Info mesaage from chi2 test
@@ -3033,9 +3033,9 @@ int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT)
    
    std::string option = "WW OF UF";
    const char * opt = option.c_str(); 
-   differents |= (h1->Chi2Test(h2, opt) < 1);
-   differents |= (h2->Chi2Test(h1,opt) < 1);         
-   differents |= (bool) equals(h1->Chi2Test(h2,opt), h2->Chi2Test(h1,opt), ERRORLIMIT);
+   differents += (h1->Chi2Test(h2, opt) < 1);
+   differents += (h2->Chi2Test(h1,opt) < 1);         
+   differents += (bool) equals(h1->Chi2Test(h2,opt), h2->Chi2Test(h1,opt), ERRORLIMIT);
    if ( debug )
       cout << "Chi2Test " << h1->Chi2Test(h2, opt) << " " << h2->Chi2Test(h1, opt) 
            << " | " << differents
@@ -3044,7 +3044,7 @@ int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT)
    if (!debug) gErrorIgnoreLevel = precLevel; 
 
    // Mean
-   differents |= (bool) equals(h1->GetMean(1), h2->GetMean(1), ERRORLIMIT);
+   differents += (bool) equals(h1->GetMean(1), h2->GetMean(1), ERRORLIMIT);
    if ( debug )
       cout << "Mean: " << h1->GetMean(1) << " " << h2->GetMean(1) 
            << " | " << fabs( h1->GetMean(1) - h2->GetMean(1) ) 
@@ -3052,7 +3052,7 @@ int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT)
            << endl;
    
    // RMS
-   differents |= (bool) equals( h1->GetRMS(1), h2->GetRMS(1), ERRORLIMIT);
+   differents += (bool) equals( h1->GetRMS(1), h2->GetRMS(1), ERRORLIMIT);
    if ( debug )
       cout << "RMS: " << h1->GetRMS(1) << " " << h2->GetRMS(1) 
            << " | " << fabs( h1->GetRMS(1) - h2->GetRMS(1) ) 
