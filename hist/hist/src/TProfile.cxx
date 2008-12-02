@@ -1406,9 +1406,9 @@ Long64_t TProfile::Merge(TCollection *li)
             fArray[ix]             += h->GetW()[binx];
             fSumw2.fArray[ix]      += h->GetW2()[binx];
             fBinEntries.fArray[ix] += h->GetB()[binx];
-            if (fBinEntries.fN) { 
-               if ( h->GetB2() ) fBinEntries.fArray[ix] += h->GetB2()[binx];
-               else fBinEntries.fArray[ix] += h->GetB()[binx];
+            if (fBinSumw2.fN) { 
+               if ( h->GetB2() ) fBinSumw2.fArray[ix] += h->GetB2()[binx];
+               else fBinSumw2.fArray[ix] += h->GetB()[binx];
             }
          }
          fEntries += h->GetEntries();
