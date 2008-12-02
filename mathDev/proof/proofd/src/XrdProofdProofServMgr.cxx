@@ -257,6 +257,8 @@ XrdProofdProofServMgr::XrdProofdProofServMgr(XrdProofdManager *mgr,
    fReconnectTime = -1;
    fReconnectTimeOut = 300;
    fNextSessionsCheck = -1;
+   fNCreate = 0;
+
    // Defaults can be changed via 'proofservmgr'
    fCheckFrequency = 30;
    fTerminationTimeOut = fCheckFrequency - 10;
@@ -415,8 +417,11 @@ bool XrdProofdProofServMgr::IsSessionSocket(const char *fpid)
    // Check the admin path
    struct stat st;
    if (stat(apath.c_str(), &st) != 0 && (errno == ENOENT)) {
-      // Remove the socket path
-      unlink(spath.c_str());
+      // Remove the socket path if not during creation
+      if (NCreate() <= 0) {
+         unlink(spath.c_str());
+         TRACE(REQ, "missing admin path: removing "<<spath<<" ...");
+      }
    }
 
    // Done
@@ -819,11 +824,15 @@ int XrdProofdProofServMgr::CheckActiveSessions(bool verify)
       {  XrdSysMutexHelper mhp(fMutex);
          xps = fSessions.Find(key.c_str());
       }
-      bool rmsession = (xps && xps->IsValid() && 
-                       (VerifySession(ent->d_name) == 0)) ? 0 : 1;
-      // Check if the process is still alive
-      if (XrdProofdAux::VerifyProcessByID(pid) == 0) {
-         // Process is gone
+
+      bool sessionalive = (VerifySession(ent->d_name) == 0) ? 1 : 0;
+      bool rmsession = 0;
+      if (xps) {
+         if (!xps->IsValid() || !sessionalive) rmsession = 1; 
+      } else {
+         // Session not yet registered, possibly starting
+         // Skips checks the admin file verification was OK
+         if (sessionalive) continue;
          rmsession = 1;
       }
 
@@ -1366,7 +1375,13 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
    XPD_SETRESP(p, "Create");
 
    TRACEP(p, DBG, "enter");
-   XrdSysMutexHelper mhc(p->Client()->Mutex());
+
+   // Update counter to control checks during creation
+   XpdSrvMgrCreateCnt cnt(this);
+   if (TRACING(DBG)) {
+      int nc = NCreate();
+      TRACEP(p, DBG, nc << " threads are creating a new session");
+   }
 
    // Allocate next free server ID and fill in the basic stuff
    XrdProofdProofServ *xps = p->Client()->GetFreeServObj();
@@ -1479,8 +1494,6 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
    TRACEP(p, FORK,"Forking external proofsrv");
    if (!(pid = fSched->Fork("proofsrv"))) {
 
-      p->Client()->Mutex()->UnLock();
-
       // Get unique tag and relevant dirs for this session
       ProofServEnv_t in = {xps, loglevel, cffile.c_str(), "", "", "", "", ""};
       GetTagDirs(p, xps, in.fSessionTag, in.fTopSessionTag, in.fSessionDir, in.fWrkDir);
@@ -1502,8 +1515,8 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       if (fLogger) fLogger->Bind(in.fLogFile.c_str());
 
       // These files belongs to the client
-      chown(in.fLogFile.c_str(), p->Client()->UI().fUid, p->Client()->UI().fGid);
-      chown(sockpath.c_str(), p->Client()->UI().fUid, p->Client()->UI().fGid);
+      if (chown(in.fLogFile.c_str(), p->Client()->UI().fUid, p->Client()->UI().fGid) != 0)
+         TRACE(XERR, "chown on '"<<in.fLogFile.c_str()<<"'; errno: "<<errno);
 
       int setupOK = 0;
 
@@ -1515,7 +1528,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       if (SetUserEnvironment(p) != 0) {
          TRACE(XERR, "SetUserEnvironment did not return OK - EXIT");
          if (write(fp[1], &setupOK, sizeof(setupOK)) != sizeof(setupOK))
-            TRACE(XERR, "cannot write to internal pipe");
+            TRACE(XERR, "cannot write to internal pipe; errno: "<<errno);
          close(fp[0]);
          close(fp[1]);
          exit(1);
@@ -1551,7 +1564,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       if (SetProofServEnv(p, (void *)&in) != 0) {
          TRACE(XERR, "SetProofServEnv did not return OK - EXIT");
          if (write(fp[1], &setupOK, sizeof(setupOK) != sizeof(setupOK)))
-            TRACE(XERR, "cannot write to internal pipe");
+            TRACE(XERR, "cannot write to internal pipe; errno:"<<errno);
          close(fp[0]);
          close(fp[1]);
          exit(1);
@@ -1560,7 +1573,8 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       // Setup OK: now we go
       // Communicate the logfile path
       int lfout = strlen(xps->Fileout());
-      write(fp[1], &lfout, sizeof(lfout));
+      if (write(fp[1], &lfout, sizeof(lfout)) != sizeof(lfout))
+         TRACE(XERR, "cannot write to internal pipe; errno: "<<errno);
       if (lfout > 0) {
          int n, ns = 0;
          char *xbuf = (char *) xps->Fileout();
@@ -1568,7 +1582,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
             if ((ns = write(fp[1], xbuf + n, lfout - n)) <= 0) {
                TRACE(XERR, "SetProofServEnv did not return OK - EXIT");
                if (write(fp[1], &setupOK, sizeof(setupOK) != sizeof(setupOK)))
-                  TRACE(XERR, "cannot write to internal pipe");
+                  TRACE(XERR, "cannot write to internal pipe; errno: "<<errno);
                close(fp[0]);
                close(fp[1]);
                exit(1);
@@ -1624,6 +1638,8 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       return 0;
    }
    TRACEP(p, FORK,"UNIX sock: "<<xps->UNIXSockPath());
+   if (chown(sockpath.c_str(), p->Client()->UI().fUid, p->Client()->UI().fGid) != 0)
+      TRACEP(p, XERR, "chown on '"<<sockpath.c_str()<<"'; errno: "<<errno);
 
    // Read status-of-setup from pipe
    int setupOK = 0;
@@ -1912,12 +1928,12 @@ int XrdProofdProofServMgr::Accept(XrdProofdProofServ *xps,
    XrdNetPeer peerpsrv;
    XrdLink   *linkpsrv = 0;
    XrdProtocol *xp = 0;
-   int lnkopts = XRDLINK_RDLOCK;
+   int lnkopts = 0;
    bool go = 1;
 
    // Check inputs
-   if (!xps) {
-      TRACE(XERR, "invalid inputs: "<<xps);
+   if (!xps || !xps->IsValid()) {
+      TRACE(XERR, "session pointer undefined or session invalid: "<<xps);
       return -1;
    }
    TRACE(REQ, "waiting for server callback for "<<to<<" secs ... on "<<xps->UNIXSockPath());

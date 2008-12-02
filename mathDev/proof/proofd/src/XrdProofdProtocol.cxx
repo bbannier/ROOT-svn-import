@@ -70,7 +70,7 @@ int                   XrdProofdProtocol::fgReadWait = 0;
 XrdProofdManager     *XrdProofdProtocol::fgMgr = 0;
 
 // Effective uid
-int                   XrdProofdProtocol::fgEffectiveUid = -1;
+int                   XrdProofdProtocol::fgEUidAtStartup = -1;
 
 // Local definitions
 #define MAX_ARGS 128
@@ -155,9 +155,9 @@ XrdProofdProtocol::XrdProofdProtocol()
 XrdProofdResponse *XrdProofdProtocol::Response(kXR_unt16 sid)
 {
    // Get response instance corresponding to stream ID 'sid'
+   XPDLOC(ALL, "Protocol::Response")
 
-   // Atomic
-   XrdSysMutexHelper mh(fMutex);
+   TRACE(HDBG, "sid: "<<sid<<", size: "<<fResponses.size());
 
    if (sid > 0)
       if (sid <= fResponses.size())
@@ -176,8 +176,6 @@ XrdProofdResponse *XrdProofdProtocol::GetNewResponse(kXR_unt16 sid)
    XrdOucString msg;
    msg.form("sid: %d", sid);
    if (sid > 0) {
-      // Atomic
-      XrdSysMutexHelper mh(fMutex);
       if (sid > fResponses.size()) {
          if (sid > fResponses.capacity()) {
             int newsz = (sid < 2 * fResponses.capacity()) ? 2 * fResponses.capacity() : sid+1 ;
@@ -283,7 +281,6 @@ int XrdProofdProtocol::Stats(char *buff, int blen, int)
 void XrdProofdProtocol::Reset()
 {
    // Reset static and local vars
-   XrdSysMutexHelper mh(fMutex);
 
    // Init local vars
    fLink      = 0;
@@ -349,7 +346,7 @@ int XrdProofdProtocol::Configure(char *, XrdProtocol_Config *pi)
 
    // Work as root to avoid contineous changes of the effective user
    // (users are logged in their box after forking)
-   fgEffectiveUid = geteuid();
+   fgEUidAtStartup = geteuid();
    if (!getuid()) XrdSysPriv::ChangePerm((uid_t)0, (gid_t)0);
 
    // Process the config file for directives meaningful to us
@@ -398,10 +395,10 @@ int XrdProofdProtocol::Process(XrdLink *)
          TRACEP(this, XERR, "could not get Response instance for rid: "<< sid);
          return rc;
       }
-      // Set the stream ID for the reply
-      response->Set(fRequest.header.streamid);
-      response->Set(fLink);
    }
+   // Set the stream ID for the reply
+   response->Set(fRequest.header.streamid);
+   response->Set(fLink);
 
    TRACEP(this, REQ, "sid: " << sid << ", req id: " << fRequest.header.requestid <<
                 " (" << XrdProofdAux::ProofRequestTypes(fRequest.header.requestid)<<
@@ -505,8 +502,6 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
                              "ClientMaster", "Internal", "Admin"};
    XrdOucString buf;
 
-   XrdSysMutexHelper mh(fMutex);
-
    // Document the disconnect
    if (fPClient)
       buf.form("user %s disconnected; type: %s", fPClient->User(),
@@ -605,10 +600,8 @@ int XrdProofdProtocol::GetData(const char *dtype, char *buff, int blen)
    // data within the timeout interval.
    TRACEP(this, HDBG, "dtype: "<<(dtype ? dtype : " - ")<<", blen: "<<blen);
 
-   {  XrdSysMutexHelper mh(fMutex);
-      rlen = fLink->Recv(buff, blen, fgReadWait);
-   }
-
+   // No need to lock:the link is disable while we are here
+   rlen = fLink->Recv(buff, blen, fgReadWait);
    if (rlen  < 0) {
       if (rlen != -ENOMSG && rlen != -ECONNRESET) {
          XrdOucString emsg = "link read error: errno: ";
@@ -765,25 +758,23 @@ int XrdProofdProtocol::SendMsg()
 
    XPD_SETRESP(this, "SendMsg");
 
-   XrdSysMutexHelper mhc(Client()->Mutex());
-   XrdSysMutexHelper mh(response->fMutex);
-
    // Unmarshall the data
    int psid = ntohl(fRequest.sendrcv.sid);
    int opt = ntohl(fRequest.sendrcv.opt);
 
+   XrdOucString msg;
    // Find server session
    XrdProofdProofServ *xps = 0;
    if (!fPClient || !(xps = fPClient->GetProofServ(psid))) {
-      TRACEP(this, XERR, "session ID not found: "<< psid);
-      response->Send(kXR_InvalidRequest,"session ID not found");
+      msg.form("%s: session ID not found: %d", (Internal() ? "INT" : "EXT"), psid);
+      TRACEP(this, XERR, msg.c_str());
+      response->Send(kXR_InvalidRequest, msg.c_str());
       return 0;
    }
 
    // Message length
    int len = fRequest.header.dlen;
 
-   XrdOucString msg;
    if (!Internal()) {
 
       // Notify
@@ -888,7 +879,6 @@ int XrdProofdProtocol::Urgent()
    XPDLOC(ALL, "Protocol::Urgent")
 
    unsigned int rc = 0;
-   XrdSysMutexHelper mh(fMutex);
 
    XPD_SETRESP(this, "Urgent");
 
@@ -950,7 +940,6 @@ int XrdProofdProtocol::Interrupt()
    XPDLOC(ALL, "Protocol::Interrupt")
 
    int rc = 0;
-   XrdSysMutexHelper mh(fMutex);
 
    XPD_SETRESP(this, "Interrupt");
 
@@ -1004,7 +993,6 @@ int XrdProofdProtocol::Ping()
    // problems; the session checker verifies that the admin file has been touched
    // recently enough; touching is done in Process2, so we have nothing to do here
    XPDLOC(ALL, "Protocol::Ping")
-   XrdSysMutexHelper mh(fMutex);
 
    int rc = 0;
    if (Internal()) {
@@ -1132,10 +1120,7 @@ void XrdProofdProtocol::TouchAdminPath()
    // Recording time of the last request on this instance
    XPDLOC(ALL, "Protocol::TouchAdminPath")
 
-   XrdOucString apath;
-   { XrdSysMutexHelper mhp(fMutex);
-      apath = fAdminPath;
-   }
+   XrdOucString apath = fAdminPath;
 
    XPD_SETRESPV(this, "TouchAdminPath");
    TRACEP(this, HDBG, apath);
