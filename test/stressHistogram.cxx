@@ -40,7 +40,7 @@ enum compareOptions {
    cmpOptStats=8
 };
 
-const int defaultEqualOptions = 0; //cmpOptPrint;
+const int defaultEqualOptions = 1; //cmpOptPrint;
 
 TRandom2 r;
 
@@ -54,12 +54,12 @@ struct TTestSuite {
 
 // Methods for histogram comparisions (later implemented)
 void printResult(const char* msg, bool status);
-int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0, double ERRORLIMIT = 1E-15);
-int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0, double ERRORLIMIT = 1E-15);
-int equals(const char* msg, TH3D* h1, TH3D* h2, int options = 0, double ERRORLIMIT = 1E-15);
-int equals(const char* msg, THnSparse* h1, THnSparse* h2, int options, double ERRORLIMIT = 1E-15);
-int equals(Double_t n1, Double_t n2, double ERRORLIMIT = 1E-15);
-int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT = 1E-15);
+int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0, double ERRORLIMIT = 1E-13);
+int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0, double ERRORLIMIT = 1E-13);
+int equals(const char* msg, TH3D* h1, TH3D* h2, int options = 0, double ERRORLIMIT = 1E-13);
+int equals(const char* msg, THnSparse* h1, THnSparse* h2, int options, double ERRORLIMIT = 1E-13);
+int equals(Double_t n1, Double_t n2, double ERRORLIMIT = 1E-13);
+int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT = 1E-13);
 ostream& operator<<(ostream& out, TH1D* h);
 // old stresHistOpts.cxx file
 
@@ -1934,7 +1934,9 @@ static const double centre_deviation = 0.0;
 class ProjectionTester {
    
 private:
-   static const unsigned int binsize = 10;
+   static const unsigned int binsizeX =  8;
+   static const unsigned int binsizeY = 10;
+   static const unsigned int binsizeZ = 12;
    static const int lower_limit = 0;
    static const int upper_limit = 10;
 
@@ -1997,59 +1999,59 @@ public:
    
    void CreateHistograms()
    {
-      h3 = new TH3D("h3","h3", binsize, lower_limit, upper_limit, 
-                               binsize, lower_limit, upper_limit, 
-                               binsize, lower_limit, upper_limit);
+      h3 = new TH3D("h3","h3", binsizeX, lower_limit, upper_limit, 
+                               binsizeY, lower_limit, upper_limit, 
+                               binsizeZ, lower_limit, upper_limit);
 
-      h2XY = new TH2D("h2XY", "h2XY", binsize, lower_limit, upper_limit, 
-                                      binsize, lower_limit, upper_limit);
-      h2XZ = new TH2D("h2XZ", "h2XZ", binsize, lower_limit, upper_limit, 
-                                      binsize, lower_limit, upper_limit);
-      h2YX = new TH2D("h2YX", "h2YX", binsize, lower_limit, upper_limit, 
-                                      binsize, lower_limit, upper_limit);
-      h2YZ = new TH2D("h2YZ", "h2YZ", binsize, lower_limit, upper_limit, 
-                                      binsize, lower_limit, upper_limit);
-      h2ZX = new TH2D("h2ZX", "h2ZX", binsize, lower_limit, upper_limit, 
-                                      binsize, lower_limit, upper_limit);
-      h2ZY = new TH2D("h2ZY", "h2ZY", binsize, lower_limit, upper_limit, 
-                                      binsize, lower_limit, upper_limit);
+      h2XY = new TH2D("h2XY", "h2XY", binsizeX, lower_limit, upper_limit, 
+                                      binsizeY, lower_limit, upper_limit);
+      h2XZ = new TH2D("h2XZ", "h2XZ", binsizeX, lower_limit, upper_limit, 
+                                      binsizeZ, lower_limit, upper_limit);
+      h2YX = new TH2D("h2YX", "h2YX", binsizeY, lower_limit, upper_limit, 
+                                      binsizeX, lower_limit, upper_limit);
+      h2YZ = new TH2D("h2YZ", "h2YZ", binsizeY, lower_limit, upper_limit, 
+                                      binsizeZ, lower_limit, upper_limit);
+      h2ZX = new TH2D("h2ZX", "h2ZX", binsizeZ, lower_limit, upper_limit, 
+                                      binsizeX, lower_limit, upper_limit);
+      h2ZY = new TH2D("h2ZY", "h2ZY", binsizeZ, lower_limit, upper_limit, 
+                                      binsizeY, lower_limit, upper_limit);
 
       // The bit is set for all the histograms (It's a statistic variable)
       TH1::StatOverflows(kTRUE);
 
-      h1X = new TH1D("h1X", "h1X", binsize, lower_limit, upper_limit);
-      h1Y = new TH1D("h1Y", "h1Y", binsize, lower_limit, upper_limit);
-      h1Z = new TH1D("h1Z", "h1Z", binsize, lower_limit, upper_limit);
+      h1X = new TH1D("h1X", "h1X", binsizeX, lower_limit, upper_limit);
+      h1Y = new TH1D("h1Y", "h1Y", binsizeY, lower_limit, upper_limit);
+      h1Z = new TH1D("h1Z", "h1Z", binsizeZ, lower_limit, upper_limit);
 
-      h1XStats = new TH1D("h1XStats", "h1XStats", binsize, lower_limit, upper_limit);
-      h1YStats = new TH1D("h1YStats", "h1YStats", binsize, lower_limit, upper_limit);
-      h1ZStats = new TH1D("h1ZStats", "h1ZStats", binsize, lower_limit, upper_limit);
+      h1XStats = new TH1D("h1XStats", "h1XStats", binsizeX, lower_limit, upper_limit);
+      h1YStats = new TH1D("h1YStats", "h1YStats", binsizeY, lower_limit, upper_limit);
+      h1ZStats = new TH1D("h1ZStats", "h1ZStats", binsizeZ, lower_limit, upper_limit);
 
-      pe2XY = new TProfile2D("pe2XY", "pe2XY", binsize, lower_limit, upper_limit, 
-                                               binsize, lower_limit, upper_limit);
-      pe2XZ = new TProfile2D("pe2XZ", "pe2XZ", binsize, lower_limit, upper_limit, 
-                                               binsize, lower_limit, upper_limit);
-      pe2YX = new TProfile2D("pe2YX", "pe2YX", binsize, lower_limit, upper_limit, 
-                                               binsize, lower_limit, upper_limit);
-      pe2YZ = new TProfile2D("pe2YZ", "pe2YZ", binsize, lower_limit, upper_limit, 
-                                               binsize, lower_limit, upper_limit);
-      pe2ZX = new TProfile2D("pe2ZX", "pe2ZX", binsize, lower_limit, upper_limit, 
-                                               binsize, lower_limit, upper_limit);
-      pe2ZY = new TProfile2D("pe2ZY", "pe2ZY", binsize, lower_limit, upper_limit, 
-                                               binsize, lower_limit, upper_limit);
+      pe2XY = new TProfile2D("pe2XY", "pe2XY", binsizeX, lower_limit, upper_limit, 
+                                               binsizeY, lower_limit, upper_limit);
+      pe2XZ = new TProfile2D("pe2XZ", "pe2XZ", binsizeX, lower_limit, upper_limit, 
+                                               binsizeZ, lower_limit, upper_limit);
+      pe2YX = new TProfile2D("pe2YX", "pe2YX", binsizeY, lower_limit, upper_limit, 
+                                               binsizeX, lower_limit, upper_limit);
+      pe2YZ = new TProfile2D("pe2YZ", "pe2YZ", binsizeY, lower_limit, upper_limit, 
+                                               binsizeZ, lower_limit, upper_limit);
+      pe2ZX = new TProfile2D("pe2ZX", "pe2ZX", binsizeZ, lower_limit, upper_limit, 
+                                               binsizeX, lower_limit, upper_limit);
+      pe2ZY = new TProfile2D("pe2ZY", "pe2ZY", binsizeZ, lower_limit, upper_limit, 
+                                               binsizeY, lower_limit, upper_limit);
       
-      h2wXY = new TH2D("h2wXY", "h2wXY", binsize, lower_limit, upper_limit, 
-                                         binsize, lower_limit, upper_limit);
-      h2wXZ = new TH2D("h2wXZ", "h2wXZ", binsize, lower_limit, upper_limit, 
-                                         binsize, lower_limit, upper_limit);
-      h2wYX = new TH2D("h2wYX", "h2wYX", binsize, lower_limit, upper_limit, 
-                                         binsize, lower_limit, upper_limit);
-      h2wYZ = new TH2D("h2wYZ", "h2wYZ", binsize, lower_limit, upper_limit, 
-                                         binsize, lower_limit, upper_limit);
-      h2wZX = new TH2D("h2wZX", "h2wZX", binsize, lower_limit, upper_limit, 
-                                         binsize, lower_limit, upper_limit);
-      h2wZY = new TH2D("h2wZY", "h2wZY", binsize, lower_limit, upper_limit, 
-                                         binsize, lower_limit, upper_limit);
+      h2wXY = new TH2D("h2wXY", "h2wXY", binsizeX, lower_limit, upper_limit, 
+                                         binsizeY, lower_limit, upper_limit);
+      h2wXZ = new TH2D("h2wXZ", "h2wXZ", binsizeX, lower_limit, upper_limit, 
+                                         binsizeZ, lower_limit, upper_limit);
+      h2wYX = new TH2D("h2wYX", "h2wYX", binsizeY, lower_limit, upper_limit, 
+                                         binsizeX, lower_limit, upper_limit);
+      h2wYZ = new TH2D("h2wYZ", "h2wYZ", binsizeY, lower_limit, upper_limit, 
+                                         binsizeZ, lower_limit, upper_limit);
+      h2wZX = new TH2D("h2wZX", "h2wZX", binsizeZ, lower_limit, upper_limit, 
+                                         binsizeX, lower_limit, upper_limit);
+      h2wZY = new TH2D("h2wZY", "h2wZY", binsizeZ, lower_limit, upper_limit, 
+                                         binsizeY, lower_limit, upper_limit);
 
       h2wXY->Sumw2();
       h2wXZ->Sumw2();
@@ -2058,19 +2060,19 @@ public:
       h2wZX->Sumw2();
       h2wZY->Sumw2();
 
-      pe1XY = new TProfile("pe1XY", "pe1XY", binsize, lower_limit, upper_limit);
-      pe1XZ = new TProfile("pe1XZ", "pe1XZ", binsize, lower_limit, upper_limit);
-      pe1YX = new TProfile("pe1YX", "pe1YX", binsize, lower_limit, upper_limit);
-      pe1YZ = new TProfile("pe1YZ", "pe1YZ", binsize, lower_limit, upper_limit);
-      pe1ZX = new TProfile("pe1ZX", "pe1ZX", binsize, lower_limit, upper_limit);
-      pe1ZY = new TProfile("pe1ZY", "pe1ZY", binsize, lower_limit, upper_limit);
+      pe1XY = new TProfile("pe1XY", "pe1XY", binsizeX, lower_limit, upper_limit);
+      pe1XZ = new TProfile("pe1XZ", "pe1XZ", binsizeX, lower_limit, upper_limit);
+      pe1YX = new TProfile("pe1YX", "pe1YX", binsizeY, lower_limit, upper_limit);
+      pe1YZ = new TProfile("pe1YZ", "pe1YZ", binsizeY, lower_limit, upper_limit);
+      pe1ZX = new TProfile("pe1ZX", "pe1ZX", binsizeZ, lower_limit, upper_limit);
+      pe1ZY = new TProfile("pe1ZY", "pe1ZY", binsizeZ, lower_limit, upper_limit);
 
-      hw1XY = new TH1D("hw1XY", "hw1XY", binsize, lower_limit, upper_limit);
-      hw1XZ = new TH1D("hw1XZ", "hw1XZ", binsize, lower_limit, upper_limit);
-      hw1YX = new TH1D("hw1YX", "hw1YX", binsize, lower_limit, upper_limit);
-      hw1YZ = new TH1D("hw1YZ", "hw1YZ", binsize, lower_limit, upper_limit);
-      hw1ZX = new TH1D("hw1ZX", "hw1ZX", binsize, lower_limit, upper_limit);
-      hw1ZY = new TH1D("hw1ZY", "hw1ZY", binsize, lower_limit, upper_limit);
+      hw1XY = new TH1D("hw1XY", "hw1XY", binsizeX, lower_limit, upper_limit);
+      hw1XZ = new TH1D("hw1XZ", "hw1XZ", binsizeX, lower_limit, upper_limit);
+      hw1YX = new TH1D("hw1YX", "hw1YX", binsizeY, lower_limit, upper_limit);
+      hw1YZ = new TH1D("hw1YZ", "hw1YZ", binsizeY, lower_limit, upper_limit);
+      hw1ZX = new TH1D("hw1ZX", "hw1ZX", binsizeZ, lower_limit, upper_limit);
+      hw1ZY = new TH1D("hw1ZY", "hw1ZY", binsizeZ, lower_limit, upper_limit);
 
       hw1XZ->Sumw2();
       hw1XY->Sumw2();
@@ -2079,7 +2081,7 @@ public:
       hw1ZX->Sumw2();
       hw1ZY->Sumw2();
 
-      Int_t bsize[] = {binsize, binsize, binsize};
+      Int_t bsize[] = {binsizeX, binsizeY, binsizeZ};
       Double_t xmin[] = {lower_limit, lower_limit, lower_limit};
       Double_t xmax[] = {upper_limit, upper_limit, upper_limit};
       s3 = new THnSparseD("s3","s3", 3, bsize, xmin, xmax);
@@ -2485,36 +2487,39 @@ public:
       
       // test 1D histograms
       options = cmpOptStats;
-      status += equals("TH2XY -> PBX", h1X, (TH1D*) h2XY->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
-      status += equals("TH2XY -> PBX", h1Y, (TH1D*) h2XY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
-      status += equals("TH2XZ -> PBX", h1X, (TH1D*) h2XZ->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
-      status += equals("TH2XZ -> PBZ", h1Z, (TH1D*) h2XZ->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
-      status += equals("TH2YX -> PBY", h1Y, (TH1D*) h2YX->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
-      status += equals("TH2YX -> PBX", h1X, (TH1D*) h2YX->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
-      status += equals("TH2YZ -> PBY", h1Y, (TH1D*) h2YZ->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
-      status += equals("TH2YZ -> PBZ", h1Z, (TH1D*) h2YZ->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
-      status += equals("TH2ZX -> PBZ", h1Z, (TH1D*) h2ZX->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
-      status += equals("TH2ZX -> PBX", h1X, (TH1D*) h2ZX->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
-      status += equals("TH2ZY -> PBZ", h1Z, (TH1D*) h2ZY->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
-      status += equals("TH2ZY -> PBY", h1Y, (TH1D*) h2ZY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      // ProfileX re-use the same histo if sme name is given. 
+      // need to give a diffrent name for each projectino (x,y,Z) otherwise we end-up in different bins
+      // t.b.d: ProfileX make a new histo if non compatible
+      status += equals("TH2XY -> PBX", h1X, (TH1D*) h2XY->ProfileX("PBX", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2XY -> PBY", h1Y, (TH1D*) h2XY->ProfileY("PBY", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options );
+      status += equals("TH2XZ -> PBX", h1X, (TH1D*) h2XZ->ProfileX("PBX", 0,h2XZ->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2XZ -> PBZ", h1Z, (TH1D*) h2XZ->ProfileY("PBZ", 0,h2XZ->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options,1E-12);
+      status += equals("TH2YX -> PBY", h1Y, (TH1D*) h2YX->ProfileX("PBY", 0,h2YX->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2YX -> PBX", h1X, (TH1D*) h2YX->ProfileY("PBX", 0,h2YX->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2YZ -> PBY", h1Y, (TH1D*) h2YZ->ProfileX("PBY", 0,h2YZ->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2YZ -> PBZ", h1Z, (TH1D*) h2YZ->ProfileY("PBZ", 0,h2YZ->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options,1E-12);
+      status += equals("TH2ZX -> PBZ", h1Z, (TH1D*) h2ZX->ProfileX("PBZ", 0,h2ZX->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options,1E-12);
+      status += equals("TH2ZX -> PBX", h1X, (TH1D*) h2ZX->ProfileY("PBX", 0,h2ZX->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2ZY -> PBZ", h1Z, (TH1D*) h2ZY->ProfileX("PBZ", 0,h2ZY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options,1E-12);
+      status += equals("TH2ZY -> PBY", h1Y, (TH1D*) h2ZY->ProfileY("PBY", 0,h2ZY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
       options = 0;
       if ( defaultEqualOptions & cmpOptPrint )
          cout << "----------------------------------------------" << endl;
 
       // 1D testing direct profiles 
       options = cmpOptStats;
-      status += equals("TH2XY -> PX", pe1XY, (TH1D*) h2XY->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1), options);
-      status += equals("TH2XY -> PX", pe1YX, (TH1D*) h2XY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1), options);
-      status += equals("TH2XZ -> PX", pe1XZ, (TH1D*) h2XZ->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1), options);
-      status += equals("TH2XZ -> PZ", pe1ZX, (TH1D*) h2XZ->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1), options);
-      status += equals("TH2YX -> PY", pe1YX, (TH1D*) h2YX->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1), options);
-      status += equals("TH2YX -> PX", pe1XY, (TH1D*) h2YX->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1), options);
-      status += equals("TH2YZ -> PY", pe1YZ, (TH1D*) h2YZ->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1), options);
-      status += equals("TH2YZ -> PZ", pe1ZY, (TH1D*) h2YZ->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1), options);
-      status += equals("TH2ZX -> PZ", pe1ZX, (TH1D*) h2ZX->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1), options);
-      status += equals("TH2ZX -> PX", pe1XZ, (TH1D*) h2ZX->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1), options);
-      status += equals("TH2ZY -> PZ", pe1ZY, (TH1D*) h2ZY->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1), options);
-      status += equals("TH2ZY -> PY", pe1YZ, (TH1D*) h2ZY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1), options);
+      status += equals("TH2XY -> PX", pe1XY, (TH1D*) h2XY->ProfileX("PX", 0,h2XY->GetYaxis()->GetNbins()+1), options);
+      status += equals("TH2XY -> PY", pe1YX, (TH1D*) h2XY->ProfileY("PY", 0,h2XY->GetXaxis()->GetNbins()+1), options);
+      status += equals("TH2XZ -> PX", pe1XZ, (TH1D*) h2XZ->ProfileX("PX", 0,h2XZ->GetYaxis()->GetNbins()+1), options);
+      status += equals("TH2XZ -> PZ", pe1ZX, (TH1D*) h2XZ->ProfileY("PZ", 0,h2XZ->GetXaxis()->GetNbins()+1), options);
+      status += equals("TH2YX -> PY", pe1YX, (TH1D*) h2YX->ProfileX("PY", 0,h2YX->GetYaxis()->GetNbins()+1), options);
+      status += equals("TH2YX -> PX", pe1XY, (TH1D*) h2YX->ProfileY("PX", 0,h2YX->GetXaxis()->GetNbins()+1), options);
+      status += equals("TH2YZ -> PY", pe1YZ, (TH1D*) h2YZ->ProfileX("PY", 0,h2YZ->GetYaxis()->GetNbins()+1), options);
+      status += equals("TH2YZ -> PZ", pe1ZY, (TH1D*) h2YZ->ProfileY("PZ", 0,h2YZ->GetXaxis()->GetNbins()+1), options);
+      status += equals("TH2ZX -> PZ", pe1ZX, (TH1D*) h2ZX->ProfileX("PZ", 0,h2ZX->GetYaxis()->GetNbins()+1), options);
+      status += equals("TH2ZX -> PX", pe1XZ, (TH1D*) h2ZX->ProfileY("PX", 0,h2ZX->GetXaxis()->GetNbins()+1), options);
+      status += equals("TH2ZY -> PZ", pe1ZY, (TH1D*) h2ZY->ProfileX("PZ", 0,h2ZY->GetYaxis()->GetNbins()+1), options);
+      status += equals("TH2ZY -> PY", pe1YZ, (TH1D*) h2ZY->ProfileY("PY", 0,h2ZY->GetXaxis()->GetNbins()+1), options);
       options = 0;
       if ( defaultEqualOptions & cmpOptPrint )
          cout << "----------------------------------------------" << endl;
@@ -2522,29 +2527,29 @@ public:
       // 1D testing e profiles
       options = 0;
       status += equals("TH2XY -> PEX", pe1XY, 
-                       (TH1D*) h2XY->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
-      status += equals("TH2XY -> PEX", pe1YX, 
-                       (TH1D*) h2XY->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+                       (TH1D*) h2XY->ProfileX("PEX", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+      status += equals("TH2XY -> PEY", pe1YX, 
+                       (TH1D*) h2XY->ProfileY("PEY", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
       status += equals("TH2XZ -> PEX", pe1XZ, 
-                       (TH1D*) h2XZ->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+                       (TH1D*) h2XZ->ProfileX("PEX", 0,h2XZ->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
       status += equals("TH2XZ -> PEZ", pe1ZX, 
-                       (TH1D*) h2XZ->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+                       (TH1D*) h2XZ->ProfileY("PEZ", 0,h2XZ->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
       status += equals("TH2YX -> PEY", pe1YX, 
-                       (TH1D*) h2YX->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+                       (TH1D*) h2YX->ProfileX("PEY", 0,h2YX->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
       status += equals("TH2YX -> PEX", pe1XY, 
-                       (TH1D*) h2YX->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+                       (TH1D*) h2YX->ProfileY("PEX", 0,h2YX->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
       status += equals("TH2YZ -> PEY", pe1YZ, 
-                       (TH1D*) h2YZ->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+                       (TH1D*) h2YZ->ProfileX("PEY", 0,h2YZ->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
       status += equals("TH2YZ -> PEZ", pe1ZY, 
-                       (TH1D*) h2YZ->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+                       (TH1D*) h2YZ->ProfileY("PEZ", 0,h2YZ->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
       status += equals("TH2ZX -> PEZ", pe1ZX, 
-                       (TH1D*) h2ZX->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+                       (TH1D*) h2ZX->ProfileX("PEZ", 0,h2ZX->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
       status += equals("TH2ZX -> PEX", pe1XZ, 
-                       (TH1D*) h2ZX->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+                       (TH1D*) h2ZX->ProfileY("PEX", 0,h2ZX->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
       status += equals("TH2ZY -> PEZ", pe1ZY, 
-                       (TH1D*) h2ZY->ProfileX("8", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+                       (TH1D*) h2ZY->ProfileX("PEZ", 0,h2ZY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
       status += equals("TH2ZY -> PEY", pe1YZ, 
-                       (TH1D*) h2ZY->ProfileY("8", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
+                       (TH1D*) h2ZY->ProfileY("PEY", 0,h2ZY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "E"), options);
       options = 0;
       if ( defaultEqualOptions & cmpOptPrint )
          cout << "----------------------------------------------" << endl;
@@ -2553,29 +2558,30 @@ public:
       // The error is not properly propagated when build with weights :S
       if ( buildWithWeights ) options = cmpOptNoError;
       status += equals("TH2XY -> PWX", hw1XY, 
-                       (TH1D*) h2XY->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
-      status += equals("TH2XY -> PWX", hw1YX, 
-                       (TH1D*) h2XY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
+                       (TH1D*) h2XY->ProfileX("PWX", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
+      status += equals("TH2XY -> PWY", hw1YX, 
+                       (TH1D*) h2XY->ProfileY("PWY", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
       status += equals("TH2XZ -> PWX", hw1XZ, 
-                       (TH1D*) h2XZ->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
+                       (TH1D*) h2XZ->ProfileX("PWX", 0,h2XZ->GetYaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
       status += equals("TH2XZ -> PWZ", hw1ZX, 
-                       (TH1D*) h2XZ->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
+                       (TH1D*) h2XZ->ProfileY("PWZ", 0,h2XZ->GetXaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
       status += equals("TH2YX -> PWY", hw1YX, 
-                       (TH1D*) h2YX->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
+                       (TH1D*) h2YX->ProfileX("PWY", 0,h2YX->GetYaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
       status += equals("TH2YX -> PWX", hw1XY, 
-                       (TH1D*) h2YX->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
+                       (TH1D*) h2YX->ProfileY("PWX", 0,h2YX->GetXaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
       status += equals("TH2YZ -> PWY", hw1YZ, 
-                       (TH1D*) h2YZ->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
+                       (TH1D*) h2YZ->ProfileX("PWY", 0,h2YZ->GetYaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
       status += equals("TH2YZ -> PWZ", hw1ZY, 
-                       (TH1D*) h2YZ->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
+                       (TH1D*) h2YZ->ProfileY("PWZ", 0,h2YZ->GetXaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
       status += equals("TH2ZX -> PWZ", hw1ZX, 
-                       (TH1D*) h2ZX->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
+                       (TH1D*) h2ZX->ProfileX("PWZ", 0,h2ZX->GetYaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
       status += equals("TH2ZX -> PWX", hw1XZ, 
-                       (TH1D*) h2ZX->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
+                       (TH1D*) h2ZX->ProfileY("PWX", 0,h2ZX->GetXaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
       status += equals("TH2ZY -> PWZ", hw1ZY, 
-                       (TH1D*) h2ZY->ProfileX("7", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
+                       (TH1D*) h2ZY->ProfileX("PWZ", 0,h2ZY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
       status += equals("TH2ZY -> PWY", hw1YZ, 
-                       (TH1D*) h2ZY->ProfileY("7", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
+                       (TH1D*) h2ZY->ProfileY("PWY", 0,h2ZY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "W"), options);
+
       options = 0;
       if ( defaultEqualOptions & cmpOptPrint )
          cout << "----------------------------------------------" << endl;
@@ -2586,8 +2592,8 @@ public:
       status += equals("STH3 -> XZ", h2XZ, (TH2D*) s3->Projection(2,0), options);
       status += equals("STH3 -> YX", h2YX, (TH2D*) s3->Projection(0,1), options);
       status += equals("STH3 -> YZ", h2YZ, (TH2D*) s3->Projection(2,1), options);
-      status += equals("STH3 -> ZX", h2ZX, (TH2D*) s3->Projection(0,2), options);
-      status += equals("STH3 -> ZY", h2ZY, (TH2D*) s3->Projection(1,2), options);
+      status += equals("STH3 -> ZX", h2ZX, (TH2D*) s3->Projection(0,2), options); 
+      status += equals("STH3 -> ZY", h2ZY, (TH2D*) s3->Projection(1,2), options); 
       options = 0;
       if ( defaultEqualOptions & cmpOptPrint )
          cout << "----------------------------------------------" << endl;
@@ -2967,6 +2973,11 @@ int equals(const char* msg, TH1D* h1, TH1D* h2, int options, double ERRORLIMIT)
    bool compareError = ! (options & cmpOptNoError);
    bool compareStats = options & cmpOptStats;
    
+
+   if (debug) { 
+      cout << "Nbins  = " << h1->GetXaxis()->GetNbins() << " ,  " <<  h2->GetXaxis()->GetNbins() << endl;
+   }
+
    bool differents = ( h1 == h2 ); // Check they are not the same histogram!
    if (debug) {
       cout << static_cast<void*>(h1) << " " << static_cast<void*>(h2) << " "
