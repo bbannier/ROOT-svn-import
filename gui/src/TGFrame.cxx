@@ -1086,7 +1086,7 @@ void TGCompositeFrame::MapSubwindows()
    // Map all sub windows that are part of the composite frame.
 
    if (!fMapSubwindows) {
-      MapWindow();
+      //MapWindow();
       return;
    }
 
