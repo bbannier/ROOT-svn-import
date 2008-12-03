@@ -1023,7 +1023,7 @@ void THnSparse::Multiply(const THnSparse* h)
 
    // Trigger error calculation if h has it
    Bool_t wantErrors = kFALSE;
-   if (GetCalculateErrors() && h->GetCalculateErrors())
+   if (GetCalculateErrors() || h->GetCalculateErrors())
       wantErrors = kTRUE;
 
    // Create a temporary histogram where to store the result
