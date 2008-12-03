@@ -252,12 +252,15 @@ void TEveElement::SetElementName(const Text_t* name)
    // Virtual function for setting of name of an element.
    // Here we attempt to cast the assigned object into TNamed and call
    // SetName() there.
+   // If you override this call NameTitleChanged() from there.
 
    static const TEveException eh("TEveElement::SetElementName ");
 
    TNamed* named = dynamic_cast<TNamed*>(GetObject(eh));
-   if (named)
+   if (named) {
       named->SetName(name);
+      NameTitleChanged();
+   }
 }
 
 //______________________________________________________________________________
@@ -266,12 +269,15 @@ void TEveElement::SetElementTitle(const Text_t* title)
    // Virtual function for setting of title of an element.
    // Here we attempt to cast the assigned object into TNamed and call
    // SetTitle() there.
+   // If you override this call NameTitleChanged() from there.
 
    static const TEveException eh("TEveElement::SetElementTitle ");
 
    TNamed* named = dynamic_cast<TNamed*>(GetObject(eh));
-   if (named)
+   if (named) {
       named->SetTitle(title);
+      NameTitleChanged();
+   }
 }
 
 //______________________________________________________________________________
@@ -280,12 +286,25 @@ void TEveElement::SetElementNameTitle(const Text_t* name, const Text_t* title)
    // Virtual function for setting of name and title of render element.
    // Here we attempt to cast the assigned object into TNamed and call
    // SetNameTitle() there.
+   // If you override this call NameTitleChanged() from there.
 
    static const TEveException eh("TEveElement::SetElementNameTitle ");
 
    TNamed* named = dynamic_cast<TNamed*>(GetObject(eh));
-   if (named)
+   if (named) {
       named->SetNameTitle(name, title);
+      NameTitleChanged();
+   }
+}
+
+//______________________________________________________________________________
+void TEveElement::NameTitleChanged()
+{
+   // Virtual function called when a name or title of the element has
+   // been changed.
+   // If you override this, call also the version of your direct base-class.
+
+   // Nothing to do - list-tree-items take this info directly.
 }
 
 //******************************************************************************
