@@ -63,6 +63,8 @@ public:
    TEveCompositeFrame(TGCompositeFrame* gui_parent, TEveWindow* eve_parent);
    virtual ~TEveCompositeFrame();
 
+   virtual void WindowNameChanged(const TString& name);
+
    virtual void Destroy() = 0;
 
    virtual void        AcquireEveWindow(TEveWindow* ew);
@@ -99,10 +101,9 @@ public:
                                  TGMainFrame* mf);
    virtual ~TEveCompositeFrameInMainFrame();
 
-   virtual void Destroy();
+   virtual void WindowNameChanged(const TString& name);
 
-   virtual void        AcquireEveWindow(TEveWindow* ew);
-   virtual TEveWindow* RelinquishEveWindow(Bool_t reparent=kTRUE);
+   virtual void Destroy();
 
    void MainFrameClosed();
 
@@ -155,10 +156,9 @@ public:
                            TGTab* tab);
    virtual ~TEveCompositeFrameInTab();
 
-   virtual void Destroy();
+   virtual void WindowNameChanged(const TString& name);
 
-   virtual void        AcquireEveWindow(TEveWindow* ew);
-   virtual TEveWindow* RelinquishEveWindow(Bool_t reparent=kTRUE);
+   virtual void Destroy();
 
    virtual void SetCurrent(Bool_t curr);
 
@@ -198,6 +198,8 @@ protected:
 public:
    TEveWindow(const Text_t* n="TEveWindow", const Text_t* t="");
    virtual ~TEveWindow();
+
+   virtual void NameTitleChanged();
 
    virtual TGFrame*        GetGUIFrame() = 0;
 
