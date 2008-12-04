@@ -1647,17 +1647,17 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
 
    // Save old bin contents into a new array
    Double_t entries = fEntries;
-   Double_t *oldBins   = new Double_t[nbins+1];
-   Double_t *oldCount  = new Double_t[nbins+1];
-   Double_t *oldErrors = new Double_t[nbins+1];
-   Double_t *oldBinw2  = (fBinSumw2.fN ? new Double_t[nbins+1] : 0  ); 
+   Double_t *oldBins   = new Double_t[nbins+2];
+   Double_t *oldCount  = new Double_t[nbins+2];
+   Double_t *oldErrors = new Double_t[nbins+2];
+   Double_t *oldBinw2  = (fBinSumw2.fN ? new Double_t[nbins+2] : 0  ); 
    Int_t bin, i;
    Double_t *cu1 = GetW();
    Double_t *er1 = GetW2();
    Double_t *en1 = GetB();
    Double_t *ew1 = GetB2();
    
-   for (bin=1;bin<=nbins;bin++) {
+   for (bin=0;bin<=nbins+1;bin++) {
       oldBins[bin]   = cu1[bin];
       oldCount[bin]  = en1[bin];
       oldErrors[bin] = er1[bin];
@@ -1677,8 +1677,8 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
    }
 
    if(!xbins && (fXaxis.GetXbins()->GetSize() > 0)){ // variable bin sizes
-      Double_t *bins = new Double_t[newbins+1];
-      for(i = 0; i <= newbins; ++i) bins[i] = fXaxis.GetBinLowEdge(1+i*ngroup);
+      Double_t *bins = new Double_t[newbins+2];
+      for(i = 0; i <= newbins + 1; ++i) bins[i] = fXaxis.GetBinLowEdge(1+i*ngroup);
       hnew->SetBins(newbins,bins); //this also changes errors array (if any)
       delete [] bins;
    } else if (xbins) {
@@ -1722,6 +1722,17 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
       en2[bin] = binCount;
       if (fBinSumw2.fN) ew2[bin] = binSumw2;
       oldbin += imax;
+   }
+
+   hnew->fArray[0] = oldBins[0];
+   hnew->fArray[newbins+1] = oldBins[nbins+1];
+   hnew->fBinEntries[0] = oldCount[0];
+   hnew->fBinEntries[newbins+1] = oldCount[nbins+1];
+   hnew->fSumw2[0] = oldErrors[0];
+   hnew->fSumw2[newbins+1] = oldErrors[nbins+1];
+   if ( fBinSumw2.fN ) {
+      hnew->fBinSumw2[0] = oldBinw2[0];
+      hnew->fBinSumw2[newbins+1] = oldBinw2[nbins+1];
    }
 
    hnew->SetEntries(entries); //was modified by SetBinContent
