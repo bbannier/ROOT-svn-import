@@ -10,6 +10,7 @@
  *************************************************************************/
 
 #include "TEveWindow.h"
+#include "TEveWindowManager.h"
 #include "TEveManager.h"
 #include "TEveSelection.h"
 
@@ -128,7 +129,7 @@ TEveCompositeFrame::TEveCompositeFrame(TGCompositeFrame* parent,
    // some not-yet-existing static method of TEveWindow. Right now the
    // eve-frame-creation code is still a little bit everywhere.
    if (fEveParent == 0)
-      fEveParent = gEve->GetWindows();
+      fEveParent = gEve->GetWindowManager();
 }
 
 //______________________________________________________________________________
@@ -346,6 +347,8 @@ void TEveCompositeFrameInMainFrame::WindowNameChanged(const TString& name)
    // Update widgets using window's name or title.
 
    fMainFrame->SetWindowName(name);
+
+   TEveCompositeFrame::WindowNameChanged(name);
 }
 
 //______________________________________________________________________________
@@ -454,6 +457,8 @@ void TEveCompositeFrameInTab::WindowNameChanged(const TString& name)
    Int_t t = FindTabIndex();
    fTab->GetTabTab(t)->SetText(new TGString(name));
    fTab->Layout();
+
+   TEveCompositeFrame::WindowNameChanged(name);
 }
 
 //______________________________________________________________________________
@@ -534,7 +539,6 @@ void TEveCompositeFrameInTab::SetCurrent(Bool_t curr)
 
 ClassImp(TEveWindow);
 
-TEveWindow* TEveWindow::fgCurrentWindow = 0;
 UInt_t      TEveWindow::fgMainFrameDefWidth  = 640;
 UInt_t      TEveWindow::fgMainFrameDefHeight = 480;
 Pixel_t     TEveWindow::fgCurrentBackgroundColor = 0x80A0C0;
@@ -558,10 +562,19 @@ TEveWindow::~TEveWindow()
 {
    // Destructor.
 
-   if (this == fgCurrentWindow)
-      fgCurrentWindow = 0;
-
    printf("TEveWindow::~TEveWindow  '%s' '%s', cnt=%d\n", GetElementName(), ClassName(), fDenyDestroy);
+}
+
+//______________________________________________________________________________
+void TEveWindow::PreDeleteElement()
+{
+   // Called before the element is deleted, thus offering the last chance
+   // to detach from acquired resources and from the framework itself.
+   // Here the request is just passed to TEveManager.
+   // If you override it, make sure to call base-class version.
+
+   gEve->GetWindowManager()->WindowDeleted(this);
+   TEveElementList::PreDeleteElement();
 }
 
 //==============================================================================
@@ -607,13 +620,15 @@ void TEveWindow::SwapWindowWithCurrent()
 
    static const TEveException eh("TEveWindow::SwapWindowWithCurrent ");
 
-   if (fgCurrentWindow == 0)
+   TEveWindow* current = gEve->GetWindowManager()->GetCurrentWindow();
+
+   if (current == 0)
       throw eh + "Current eve-window is not set.";
 
-   if (fgCurrentWindow == this)
+   if (current == this)
       throw eh + "This is the current window ... nothing changed.";
 
-   SwapWindows(this, fgCurrentWindow);
+   SwapWindows(this, current);
 }
 
 //______________________________________________________________________________
@@ -703,32 +718,18 @@ void TEveWindow::SetShowTitleBar(Bool_t x)
 }
 
 //______________________________________________________________________________
-void TEveWindow::TitleBarClicked()
+Bool_t TEveWindow::IsCurrent() const
 {
-   // Slot for clicking on the title-bar. This window becomes the current
-   // window or, if it was already current, the current is set to zero. 
+   // Returns true if this window is the current one.
 
-   if (fgCurrentWindow == this)
-   {
-      SetCurrent(kFALSE);
-      fgCurrentWindow = 0;
-   }
-   else
-   {
-      if (fgCurrentWindow)
-      {
-         fgCurrentWindow->SetCurrent(kFALSE);
-      }
-      fgCurrentWindow = this;
-      SetCurrent(kTRUE);
-   }
+   return gEve->GetWindowManager()->IsCurrentWindow(this);
 }
 
 //______________________________________________________________________________
 void TEveWindow::SetCurrent(Bool_t curr)
 {
    // Set current state of this eve-window.
-   // Should be protected.
+   // Called by window-manager.
 
    fEveFrame->SetCurrent(curr);
 }
@@ -750,6 +751,16 @@ Bool_t TEveWindow::IsAncestorOf(TEveWindow* win)
    {
       return kFALSE;
    }
+}
+
+//______________________________________________________________________________
+void TEveWindow::TitleBarClicked()
+{
+   // Slot for clicking on the title-bar.
+   // The wish that this window becomes the current one is sent to
+   // the window-manager.
+
+   gEve->GetWindowManager()->WindowSelected(this);
 }
 
 //------------------------------------------------------------------------------

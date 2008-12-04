@@ -181,6 +181,8 @@ public:
 
 class TEveWindow : public TEveElementList
 {
+   friend class TEveWindowManager;
+
 private:
    TEveWindow(const TEveWindow&);            // Not implemented
    TEveWindow& operator=(const TEveWindow&); // Not implemented
@@ -189,13 +191,15 @@ protected:
    TEveCompositeFrame  *fEveFrame;
    Bool_t               fShowTitleBar;
 
-   static TEveWindow   *fgCurrentWindow;
+   virtual void SetCurrent(Bool_t curr);
 
    static UInt_t        fgMainFrameDefWidth;
    static UInt_t        fgMainFrameDefHeight;
 
    static Pixel_t       fgCurrentBackgroundColor;
    static Pixel_t       fgMiniBarBackgroundColor;
+
+   virtual void PreDeleteElement();
 
 public:
    TEveWindow(const Text_t* n="TEveWindow", const Text_t* t="");
@@ -225,12 +229,11 @@ public:
    Bool_t GetShowTitleBar() const { return fShowTitleBar; }
    void   SetShowTitleBar(Bool_t x);
 
-   Bool_t       IsCurrent() const { return fgCurrentWindow == this; }
-   virtual void SetCurrent(Bool_t curr);
+   Bool_t IsCurrent() const;
 
    Bool_t IsAncestorOf(TEveWindow* win);
 
-   void TitleBarClicked();
+   void   TitleBarClicked();
 
 
    // Static helper functions for common window management scenarios.
@@ -242,8 +245,6 @@ public:
    static void            SwapWindows(TEveWindow* w1, TEveWindow* w2);
 
    // Access to static data-members.
-
-   static TEveWindow* GetCurrentWindow() { return fgCurrentWindow; }
 
    static UInt_t  GetMainFrameDefWidth()  { return fgMainFrameDefWidth;  }
    static UInt_t  GetMainFrameDefHeight() { return fgMainFrameDefHeight; }
