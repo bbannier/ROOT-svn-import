@@ -191,6 +191,17 @@ TEveElement::~TEveElement()
 }
 
 //______________________________________________________________________________
+void TEveElement::PreDeleteElement()
+{
+   // Called before the element is deleted, thus offering the last chance
+   // to detach from acquired resources and from the framework itself.
+   // Here the request is just passed to TEveManager.
+   // If you override it, make sure to call base-class version.
+
+   gEve->PreDeleteElement(this);
+}
+
+//______________________________________________________________________________
 TEveElement* TEveElement::CloneElementRecurse(Int_t level) const
 {
    // Clone elements and recurse 'level' deep over children.
@@ -605,7 +616,7 @@ void TEveElement::CheckReferenceCount(const TEveException& eh)
          if (gDebug > 0)
             Info(eh, Form("moving to orphanage '%s' on zero reference count.", GetElementName()));
 
-         gEve->PreDeleteElement(this);
+         PreDeleteElement();
          gEve->GetOrphanage()->AddElement(this);
       }
       else
@@ -613,7 +624,7 @@ void TEveElement::CheckReferenceCount(const TEveException& eh)
          if (gDebug > 0)
             Info(eh, Form("auto-destructing '%s' on zero reference count.", GetElementName()));
 
-         gEve->PreDeleteElement(this);
+         PreDeleteElement();
          delete this;
       }
    }
@@ -1400,7 +1411,7 @@ void TEveElement::Destroy()
       throw eh + TString::Format("element '%s' (%s*) 0x%lx is protected against destruction.",
                                  GetElementName(), IsA()->GetName(), this);
 
-   gEve->PreDeleteElement(this);
+   PreDeleteElement();
    delete this;
    gEve->Redraw3D();
 }

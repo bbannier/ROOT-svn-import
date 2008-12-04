@@ -98,6 +98,7 @@ protected:
    TRef             fSource;               //  External object that is represented by this element.
    void            *fUserData;             //! Externally assigned and controlled user data.
 
+   virtual void PreDeleteElement();
    virtual void RemoveElementsInternal();
 
 public:
