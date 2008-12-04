@@ -1642,8 +1642,21 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
       return 0;
    }
 
-      Int_t newbins = nbins/ngroup;
-   if (xbins) newbins = ngroup;
+   Int_t newbins = nbins/ngroup;
+   if (!xbins) { 
+      Int_t nbg = nbins/ngroup;
+      if (nbg*ngroup != nbins) {
+         Warning("Rebin", "ngroup=%d must be an exact divider of nbins=%d",ngroup,nbins);
+      }
+   }
+   else {   
+   // in the case of xbins given (rebinning in variable bins) ngroup is the new number of bins.
+   //  and number of grouped bins is not constant. 
+   // when looping for setting the contents for the new histogram we 
+   // need to loop on all bins of original histogram. Set then ngroup=nbins
+      newbins = ngroup;
+      ngroup = nbins;
+   }
 
    // Save old bin contents into a new array
    Double_t *oldBins   = new Double_t[nbins+2];
@@ -1675,13 +1688,12 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
       hnew->fTsumw = 0; //stats must be reset because top bins will be moved to overflow bin
    }
 
-   if(!xbins && (fXaxis.GetXbins()->GetSize() > 0)){ // variable bin sizes
+   if(!xbins && (fXaxis.GetXbins()->GetSize() > 0)){ 
       Double_t *bins = new Double_t[newbins+1];
       for(i = 0; i <= newbins; ++i) bins[i] = fXaxis.GetBinLowEdge(1+i*ngroup);
       hnew->SetBins(newbins,bins); //this also changes errors array (if any)
       delete [] bins;
-   } else if (xbins) {
-      ngroup = newbins;
+   } else if (xbins) { // variable bin sizes
       hnew->SetBins(newbins,xbins);
    } else {
       hnew->SetBins(newbins,xmin,xmax);
@@ -1703,6 +1715,7 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
 
       Int_t imax = ngroup;
       Double_t xbinmax = hnew->GetXaxis()->GetBinUpEdge(bin);
+      // in case of variables bins ngroup = nbins (number of old bins)
       for (i=0;i<ngroup;i++) {
 
          if( (hnew == this && (oldbin+i > nbins)) || 
@@ -1722,6 +1735,7 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
       if (fBinSumw2.fN) ew2[bin] = binSumw2;
       oldbin += imax;
    }
+
 
    hnew->fArray[0] = oldBins[0];
    hnew->fArray[newbins+1] = oldBins[nbins+1];
