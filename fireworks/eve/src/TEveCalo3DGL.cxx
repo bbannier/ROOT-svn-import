@@ -289,6 +289,8 @@ void TEveCalo3DGL::DirectDraw(TGLRnrCtx &rnrCtx) const
 {
    // GL rendering.
 
+   if (fM->fData->Empty()) return;
+
    if (fM->fCellIdCacheOK == kFALSE)
       fM->BuildCellIdCache();
 
