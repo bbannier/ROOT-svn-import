@@ -70,6 +70,8 @@ public:
    virtual void        AcquireEveWindow(TEveWindow* ew);
    virtual TEveWindow* RelinquishEveWindow(Bool_t reparent=kTRUE);
 
+   TEveWindow* GetEveWindow() const { return fEveWindow; }
+
    virtual void SetCurrent(Bool_t curr);
    virtual void SetShowTitleBar(Bool_t show);
 
@@ -240,6 +242,8 @@ public:
    static void            SwapWindows(TEveWindow* w1, TEveWindow* w2);
 
    // Access to static data-members.
+
+   static TEveWindow* GetCurrentWindow() { return fgCurrentWindow; }
 
    static UInt_t  GetMainFrameDefWidth()  { return fgMainFrameDefWidth;  }
    static UInt_t  GetMainFrameDefHeight() { return fgMainFrameDefHeight; }

@@ -721,7 +721,6 @@ void TEveWindow::TitleBarClicked()
       }
       fgCurrentWindow = this;
       SetCurrent(kTRUE);
-      gEve->GetSelection()->UserPickedElement(this, kFALSE);
    }
 }
 
