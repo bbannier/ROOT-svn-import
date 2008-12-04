@@ -1646,7 +1646,6 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
    if (xbins) newbins = ngroup;
 
    // Save old bin contents into a new array
-   Double_t entries = fEntries;
    Double_t *oldBins   = new Double_t[nbins+2];
    Double_t *oldCount  = new Double_t[nbins+2];
    Double_t *oldErrors = new Double_t[nbins+2];
@@ -1677,8 +1676,8 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
    }
 
    if(!xbins && (fXaxis.GetXbins()->GetSize() > 0)){ // variable bin sizes
-      Double_t *bins = new Double_t[newbins+2];
-      for(i = 0; i <= newbins + 1; ++i) bins[i] = fXaxis.GetBinLowEdge(1+i*ngroup);
+      Double_t *bins = new Double_t[newbins+1];
+      for(i = 0; i <= newbins; ++i) bins[i] = fXaxis.GetBinLowEdge(1+i*ngroup);
       hnew->SetBins(newbins,bins); //this also changes errors array (if any)
       delete [] bins;
    } else if (xbins) {
@@ -1735,7 +1734,6 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
       hnew->fBinSumw2[newbins+1] = oldBinw2[nbins+1];
    }
 
-   hnew->SetEntries(entries); //was modified by SetBinContent
 
    delete [] oldBins;
    delete [] oldCount;
