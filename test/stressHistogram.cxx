@@ -55,21 +55,12 @@ struct TTestSuite {
 
 // Methods for histogram comparisions (later implemented)
 void printResult(const char* msg, bool status);
-// <<<<<<< .mine
-// int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0, double ERRORLIMIT = 1E-15);
-// int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0, double ERRORLIMIT = 1E-15);
-// int equals(const char* msg, TH3D* h1, TH3D* h2, int options = 0, double ERRORLIMIT = 1E-15);
-// int equals(const char* msg, THnSparse* h1, THnSparse* h2, int options = 0, double ERRORLIMIT = 1E-15);
-// int equals(Double_t n1, Double_t n2, double ERRORLIMIT = 1E-15);
-// int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT = 1E-15);
-// =======
 int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0, double ERRORLIMIT = 1E-13);
 int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0, double ERRORLIMIT = 1E-13);
 int equals(const char* msg, TH3D* h1, TH3D* h2, int options = 0, double ERRORLIMIT = 1E-13);
 int equals(const char* msg, THnSparse* h1, THnSparse* h2, int options = 0, double ERRORLIMIT = 1E-13);
 int equals(Double_t n1, Double_t n2, double ERRORLIMIT = 1E-13);
 int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT = 1E-13);
-// >>>>>>> .r26586
 ostream& operator<<(ostream& out, TH1D* h);
 // old stresHistOpts.cxx file
 
@@ -2018,7 +2009,7 @@ bool testLabel()
 bool testIntegerRebin()
 {
    const int rebin = TMath::Nint( r.Uniform(minRebin, maxRebin) );
-   Int_t seed = 4632;//0;
+   UInt_t seed = r.GetSeed();
    TH1D* h1 = new TH1D("h1","Original Histogram", TMath::Nint( r.Uniform(1, 5) ) * rebin, minRange, maxRange);
    r.SetSeed(seed);
    for ( Int_t i = 0; i < nEvents; ++i )
@@ -2032,13 +2023,37 @@ bool testIntegerRebin()
    for ( Int_t i = 0; i < nEvents; ++i )
       h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
 
-   return equals("TestIntegerRebin", h2, h3, cmpOptStats  );
+   bool ret = equals("TestIntegerRebinHist", h2, h3, cmpOptStats  );
+   delete h1;
+   delete h2;
+   return ret;
+}
+
+bool testIntegerRebinProfile()
+{
+   const int rebin = TMath::Nint( r.Uniform(minRebin, maxRebin) );
+   TProfile* p1 = new TProfile("p1","p1-Title", TMath::Nint( r.Uniform(1, 5) ) * rebin, minRange, maxRange);
+   TProfile* p3 = new TProfile("testIntRebProf", "testIntRebProf", p1->GetNbinsX() / rebin, minRange, maxRange);
+
+   for ( Int_t i = 0; i < nEvents; ++i ) {
+      Double_t x = r.Uniform( minRange * .9 , maxRange * 1.1 );
+      Double_t y = r.Uniform( minRange * .9 , maxRange * 1.1 );
+      p1->Fill( x, y );
+      p3->Fill( x, y );
+   }
+
+   TProfile* p2 = static_cast<TProfile*>( p1->Rebin(rebin, "testIntegerRebin") );
+
+   bool ret = equals("TestIntegerRebinProf", p2, p3, cmpOptStats );
+   delete p1;
+   delete p2;
+   return ret;
 }
 
 bool testIntegerRebinNoName()
 {
    const int rebin = TMath::Nint( r.Uniform(minRebin, maxRebin) );
-   Int_t seed = 4632;//0;
+   UInt_t seed = r.GetSeed();
    TH1D* h1 = new TH1D("h2","Original Histogram", TMath::Nint( r.Uniform(1, 5) ) * rebin, minRange, maxRange);
    r.SetSeed(seed);
    for ( Int_t i = 0; i < nEvents; ++i )
@@ -2053,17 +2068,37 @@ bool testIntegerRebinNoName()
    for ( Int_t i = 0; i < nEvents; ++i )
       h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ) );
 
-   return equals("TestIntRebinNoName", h2, h3, cmpOptStats );
+   bool ret = equals("TestIntRebinNoName", h2, h3, cmpOptStats );
+   delete h1;
+   delete h2;
+   return ret;
+}
 
-   // This method fails because the Chi2Test is different of 1 for
-   // both of them. We need to look into both the Rebin method and the
-   // Chi2Test method to understand better what is going wrong.
+bool testIntegerRebinNoNameProfile()
+{
+   const int rebin = TMath::Nint( r.Uniform(minRebin, maxRebin) );
+   TProfile* p1 = new TProfile("p1","p1-Title", TMath::Nint( r.Uniform(1, 5) ) * rebin, minRange, maxRange);
+   TProfile* p3 = new TProfile("testIntRebNNProf", "testIntRebNNProf", int(p1->GetNbinsX() / rebin + 0.1), minRange, maxRange);
+
+   for ( Int_t i = 0; i < nEvents; ++i ) {
+      Double_t x = r.Uniform( minRange * .9 , maxRange * 1.1 );
+      Double_t y = r.Uniform( minRange * .9 , maxRange * 1.1 );
+      p1->Fill( x, y );
+      p3->Fill( x, y );
+   }
+
+   TProfile* p2 = dynamic_cast<TProfile*>( p1->Clone() );
+   p2->Rebin(rebin);
+   bool ret = equals("TestIntRebNoNamProf", p2, p3, cmpOptStats);
+   delete p1;
+   delete p2;
+   return ret;
 }
 
 bool testArrayRebin()
 {
    const int rebin = TMath::Nint( r.Uniform(minRebin, maxRebin) ) + 1;
-   Int_t seed = 4632;//0;
+   UInt_t seed = r.GetSeed();
    TH1D* h1 = new TH1D("h3","Original Histogram", TMath::Nint( r.Uniform(1, 5) ) * rebin * 2, minRange, maxRange);
    r.SetSeed(seed);
    for ( Int_t i = 0; i < nEvents; ++i )
@@ -2097,7 +2132,58 @@ bool testArrayRebin()
 
    delete [] rebinArray;
       
-   return equals("TestArrayRebin", h2, h3, cmpOptStats);
+   bool ret = equals("TestArrayRebin", h2, h3, cmpOptStats);
+   delete h1;
+   delete h2;
+   return ret;
+}
+
+bool testArrayRebinProfile()
+{
+   const int rebin = TMath::Nint( r.Uniform(minRebin, maxRebin) ) + 1;
+   UInt_t seed = r.GetSeed();
+   TProfile* p1 = new TProfile("p3","Original Histogram", TMath::Nint( r.Uniform(1, 5) ) * rebin * 2, minRange, maxRange);
+   r.SetSeed(seed);
+   for ( Int_t i = 0; i < nEvents; ++i ) {
+      Double_t x = r.Uniform( minRange * .9 , maxRange * 1.1 );
+      Double_t y = r.Uniform( minRange * .9 , maxRange * 1.1 ); 
+      p1->Fill( x, y );
+   }
+
+   // Create vector 
+   Double_t * rebinArray = new Double_t[rebin];
+   r.RndmArray(rebin, rebinArray);
+   std::sort(rebinArray, rebinArray + rebin);
+   for ( Int_t i = 0; i < rebin; ++i ) {
+      rebinArray[i] = TMath::Nint( rebinArray[i] * ( p1->GetNbinsX() - 2 ) + 2 );
+      rebinArray[i] = p1->GetBinLowEdge( p1->GetXaxis()->FindBin( rebinArray[i] ) );
+   }
+
+   rebinArray[0] = minRange;
+   rebinArray[rebin-1] = maxRange;
+
+   #ifdef __DEBUG__
+   for ( Int_t i = 0; i < rebin; ++i ) 
+      cout << rebinArray[i] << endl;
+   cout << "rebin: " << rebin << endl;
+   #endif
+
+   TProfile* p2 = static_cast<TProfile*>( p1->Rebin(rebin - 1, "testArrayRebinProf", rebinArray) );
+
+   TProfile* p3 = new TProfile("testArrayRebinProf2", "testArrayRebinProf2", rebin - 1, rebinArray );
+   r.SetSeed(seed);
+   for ( Int_t i = 0; i < nEvents; ++i ) {
+      Double_t x = r.Uniform( minRange * .9 , maxRange * 1.1 );
+      Double_t y = r.Uniform( minRange * .9 , maxRange * 1.1 );
+      p3->Fill( x, y );
+   }
+
+   delete [] rebinArray;
+      
+   bool ret = equals("TestArrayRebinProf", p2, p3, cmpOptStats );
+   delete p1;
+   delete p2;
+   return ret;
 }
 
 bool test2DRebin()
@@ -2108,7 +2194,7 @@ bool test2DRebin()
                        xrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange, 
                        yrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange);
    
-   Int_t seed = 4632;//0;
+   UInt_t seed = r.GetSeed();
    r.SetSeed(seed);
    for ( Int_t i = 0; i < nEvents; ++i )
       h2d->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ), r.Uniform( minRange * .9 , maxRange * 1.1 ) );
@@ -2122,7 +2208,10 @@ bool test2DRebin()
    for ( Int_t i = 0; i < nEvents; ++i )
       h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ), r.Uniform( minRange * .9 , maxRange * 1.1 ) );
 
-   return equals("TestIntRebin2D", h2d2, h3, cmpOptStats);
+   bool ret = equals("TestIntRebin2D", h2d2, h3, cmpOptStats);
+   delete h2d;
+   delete h2d2;
+   return ret;
 }
 
 bool testSparseRebin1() 
@@ -2892,10 +2981,10 @@ int main(int argc, char** argv)
    delete ht2;
    
    // Test 3
-   const unsigned int numberOfRebin = 5;
-   pointer2Test rebinTestPointer[numberOfRebin] = { testIntegerRebin, 
-                                                    testIntegerRebinNoName,
-                                                    testArrayRebin,
+   const unsigned int numberOfRebin = 8;
+   pointer2Test rebinTestPointer[numberOfRebin] = { testIntegerRebin,       testIntegerRebinProfile,
+                                                    testIntegerRebinNoName, testIntegerRebinNoNameProfile,
+                                                    testArrayRebin,         testArrayRebinProfile,
                                                     test2DRebin,
                                                     testSparseRebin1};
    struct TTestSuite rebinTestSuite = { numberOfRebin, 
@@ -3294,7 +3383,15 @@ int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT)
       cout << "RMS: " << h1->GetRMS(1) << " " << h2->GetRMS(1) 
            << " | " << fabs( h1->GetRMS(1) - h2->GetRMS(1) ) 
            << " " << differents
-           << endl;      
+           << endl;  
+
+   // Number of Entries
+//    differents += (bool) equals( h1->GetEffectiveEntries(), h2->GetEffectiveEntries(), 100*ERRORLIMIT);
+//    if ( debug )
+//       cout << "Entries: " << h1->GetEffectiveEntries() << " " << h2->GetEffectiveEntries() 
+//            << " | " << fabs( h1->GetEffectiveEntries() - h2->GetEffectiveEntries() ) 
+//            << " " << differents
+//            << endl;  
    
    return differents;
 }
