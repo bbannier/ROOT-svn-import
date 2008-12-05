@@ -1682,22 +1682,27 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
       hnew = (TProfile*)Clone(newname);
    }
 
-   // change axis specs and rebuild bin contents array
+   // in case of ngroup not an excat divider of nbins, 
+   // top limit is changed (see NOTE in method comment) 
    if(!xbins && (newbins*ngroup != nbins)) {
       xmax = fXaxis.GetBinUpEdge(newbins*ngroup);
       hnew->fTsumw = 0; //stats must be reset because top bins will be moved to overflow bin
    }
 
+   // set correctly the axis and resizes the bin arrays
    if(!xbins && (fXaxis.GetXbins()->GetSize() > 0)){ 
+      // for rebinning of variable bins in a constant group 
       Double_t *bins = new Double_t[newbins+1];
       for(i = 0; i <= newbins; ++i) bins[i] = fXaxis.GetBinLowEdge(1+i*ngroup);
-      hnew->SetBins(newbins,bins); //this also changes errors array (if any)
+      hnew->SetBins(newbins,bins); //this also changes the bin array's
       delete [] bins;
-   } else if (xbins) { // variable bin sizes
+   } else if (xbins) { 
+      // when rebinning in variable bins
       hnew->SetBins(newbins,xbins);
    } else {
       hnew->SetBins(newbins,xmin,xmax);
    }
+
    if (fBinSumw2.fN) hnew->Sumw2();
 
    // copy merged bin contents (ignore under/overflows)
