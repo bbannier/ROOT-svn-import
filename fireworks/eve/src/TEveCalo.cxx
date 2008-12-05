@@ -283,6 +283,9 @@ Float_t TEveCaloViz::GetValToHeight() const
    }
    else
    {
+     if (fData->Empty())
+       return 1;
+
       return fMaxTowerH/fData->GetMaxVal(fPlotEt);
    }
 }
