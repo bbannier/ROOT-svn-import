@@ -103,8 +103,6 @@ void TEveCalo3DGL::RenderGrid(TGLRnrCtx & rnrCtx) const
    Int_t ny = ay->GetNbins();
    Double_t zE =  fM->GetEndCapPos();
 
-   Float_t transZ = -1.;
-
    // eta slices
    Float_t z, theta, phi, eta, x, y, r;
    Float_t x0, y0;
@@ -114,7 +112,6 @@ void TEveCalo3DGL::RenderGrid(TGLRnrCtx & rnrCtx) const
       eta = ax->GetBinLowEdge(i);
       if (Abs(eta) < trans)
       {
-         if (transZ < 0) transZ = Abs(rB/Tan(theta));
          if (! fM->fRnrBarrelFrame) continue;
          r  = rB;
          z  = rB/Tan(theta);
@@ -142,6 +139,27 @@ void TEveCalo3DGL::RenderGrid(TGLRnrCtx & rnrCtx) const
       glEnd();
    }
 
+
+
+   // draw ring exactlu on the edcap z
+   x0 = r * Cos(ay->GetBinUpEdge(0));
+   y0 = r * Sin(ay->GetBinUpEdge(0));
+   glBegin(GL_LINES);
+   for (Int_t j=1; j<=ny; j++)
+   {
+      phi = ay->GetBinUpEdge(j);
+      x = r * Cos(phi);
+      y = r * Sin(phi);
+      glVertex3f(x0, y0, zE);
+      glVertex3f(x, y, zE);
+      glVertex3f(x0, y0, zE);
+      glVertex3f(x, y, zE);
+      x0 = x;
+      y0 = y;
+   }   
+   glEnd();
+
+
    // phi  slices
    glBegin(GL_LINES);
    for (Int_t j=0; j<ny; j++)
@@ -151,15 +169,15 @@ void TEveCalo3DGL::RenderGrid(TGLRnrCtx & rnrCtx) const
       y = rB * Sin(phi);
       if (fM->fRnrBarrelFrame)
       {
-         glVertex3f(x, y, -transZ);
-         glVertex3f(x, y, transZ);
+         glVertex3f(x, y, -zE);
+         glVertex3f(x, y, zE);
       }
       if (fM->fRnrEndCapFrame)
       {
-         glVertex3f(x, y, -transZ);
-         glVertex3f(0, 0, -transZ);
-         glVertex3f(x, y, transZ);
-         glVertex3f(0, 0, transZ);
+         glVertex3f(x, y, -zE);
+         glVertex3f(0, 0, -zE);
+         glVertex3f(x, y, zE);
+         glVertex3f(0, 0, zE);
       }
    }
    glEnd();
