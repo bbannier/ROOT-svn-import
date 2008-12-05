@@ -187,6 +187,17 @@ public:
    virtual bool SetFixedVariable(unsigned int ivar , const std::string & name , double val ) { 
       return SetLimitedVariable(ivar, name, val, 0., val, val); 
    }
+   /// set the value of an existing variable 
+   virtual bool SetVariableValue(unsigned int , double ) { return false;  }
+   /// set the values of all existing variables (array must be dimensioned size of existing parameters)
+   virtual bool SetVariableValues(const double * x) { 
+      bool ret = true; 
+      unsigned int i = 0;
+      while ( i <= NDim() && ret) { 
+         SetVariableValue(i,x[i] ); i++; 
+      }
+      return ret; 
+   }
 
    /// method to perform the minimization
    virtual  bool Minimize() = 0; 
@@ -244,11 +255,31 @@ public:
     */
    virtual double GlobalCC(unsigned int ) const { return -1; }
 
-   /// minos error for variable i, return false if Minos failed or not supported 
+   /**
+      minos error for variable i, return false if Minos failed or not supported 
+   */
    virtual bool GetMinosError(unsigned int /* i */, double & errLow, double & errUp) { 
       errLow = 0; errUp = 0; 
       return false; 
    }  
+
+   /**
+      scan function minimum for variable i. Variable and funciton must be set before using Scan 
+      Return false if an error or if minimizer does not support this funcitonality
+    */
+   virtual bool Scan(unsigned int /* i */, unsigned int /* nstep */, double * /* x */, double * /* y */, 
+                     double /*xmin */ = 0, double /*xmax*/ = 0) {
+      return false; 
+   }
+
+   /**
+      find the contour points (xi,xj) of the function for parameter i and j around the minimum
+      The contour will be find for value of the function = Min + ErrorUp();
+    */
+   virtual bool Contour(unsigned int /* i */, unsigned int /* j */, unsigned int /* np */, 
+                        double * /* xi */, double * /* xj */) { 
+      return false; 
+   }
 
    /// return reference to the objective function
    ///virtual const ROOT::Math::IGenFunction & Function() const = 0; 
