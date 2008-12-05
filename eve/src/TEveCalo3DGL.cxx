@@ -13,6 +13,7 @@
 #include "TEveCalo.h"
 
 #include "TMath.h"
+#include "TAxis.h"
 
 #include "TGLRnrCtx.h"
 #include "TGLSelectRecord.h"
@@ -68,6 +69,89 @@ inline void TEveCalo3DGL::CrossProduct(const Float_t a[3], const Float_t b[3],
    out[0] = v1[1] * v2[2] - v1[2] * v2[1];
    out[1] = v1[2] * v2[0] - v1[0] * v2[2];
    out[2] = v1[0] * v2[1] - v1[1] * v2[0];
+}
+
+
+//______________________________________________________________________________
+void TEveCalo3DGL::RenderGrid(TGLRnrCtx & rnrCtx) const
+{
+   // Draw frame reading eta, phi axis.
+
+   if (rnrCtx.Highlight() || rnrCtx.Selection()) return;
+
+   using namespace TMath;
+
+   TGLCapabilitySwitch lights_off(GL_LIGHTING, kFALSE);
+
+   Float_t rB = fM->GetBarrelRadius();
+   Float_t trans = fM->GetTransitionEta();
+
+   TAxis *ax = fM->GetData()->GetEtaBins();
+   Int_t nx = ax->GetNbins();
+   TAxis *ay = fM->GetData()->GetPhiBins();
+   Int_t ny = ay->GetNbins();
+   Double_t zE =  fM->GetEndCapPos();
+
+   Float_t transZ = -1.;
+
+   // eta slices
+   Float_t z, theta, phi, eta, x, y, r;
+   Float_t x0, y0;
+   for(Int_t i=1; i<nx; i++)
+   {
+      theta = TEveCaloData::EtaToTheta(ax->GetBinLowEdge(i));
+      eta = ax->GetBinLowEdge(i);
+      if (Abs(eta) < trans)
+      {
+         if (transZ < 0) transZ = Abs(rB/Tan(theta));
+         if (! fM->fRnrBarrelFrame) continue;
+         r  = rB;
+         z  = rB/Tan(theta);
+      }
+      else
+      {
+         if (!fM->fRnrEndCapFrame) continue;
+         r = zE*Tan(theta);
+         z = Sign(zE, ax->GetBinLowEdge(i));
+      }
+      // make circle
+      x0 = r * Cos(ay->GetBinUpEdge(0));
+      y0 = r * Sin(ay->GetBinUpEdge(0));
+      glBegin(GL_LINES);
+      for (Int_t j=1; j<=ny; j++)
+      {
+         phi = ay->GetBinUpEdge(j);
+         x = r * Cos(phi);
+         y = r * Sin(phi);
+         glVertex3f(x0, y0, z);
+         glVertex3f(x, y, z);
+         x0 = x;
+         y0 = y;
+      }   
+      glEnd();
+   }
+
+   // phi  slices
+   glBegin(GL_LINES);
+   for (Int_t j=0; j<ny; j++)
+   {
+      phi = ax->GetBinUpEdge(j);
+      x = rB * Cos(phi);
+      y = rB * Sin(phi);
+      if (fM->fRnrBarrelFrame)
+      {
+         glVertex3f(x, y, -transZ);
+         glVertex3f(x, y, transZ);
+      }
+      if (fM->fRnrEndCapFrame)
+      {
+         glVertex3f(x, y, -transZ);
+         glVertex3f(0, 0, -transZ);
+         glVertex3f(x, y, transZ);
+         glVertex3f(0, 0, transZ);
+      }
+   }
+   glEnd();
 }
 
 //______________________________________________________________________________
@@ -288,6 +372,8 @@ Float_t TEveCalo3DGL::RenderEndCapCell(const TEveCaloData::CellData_t &cellData,
 void TEveCalo3DGL::DirectDraw(TGLRnrCtx &rnrCtx) const
 {
    // GL rendering.
+
+   RenderGrid(rnrCtx);
 
    if (fM->fCellIdCacheOK == kFALSE)
       fM->BuildCellIdCache();
