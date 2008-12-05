@@ -58,6 +58,17 @@ void TEveCalo3DGL::SetBBox()
 }
 
 //______________________________________________________________________________
+Bool_t TEveCalo3DGL::ShouldDLCache(const TGLRnrCtx& rnrCtx) const
+{
+   // Override from TGLObject.
+   // To account for large point-sizes we modify the projection matrix
+   // during selection and thus we need a direct draw.
+
+   if (rnrCtx.Highlight() || rnrCtx.Selection()) return kFALSE;
+   return TGLObject::ShouldDLCache(rnrCtx);
+}
+
+//______________________________________________________________________________
 inline void TEveCalo3DGL::CrossProduct(const Float_t a[3], const Float_t b[3],
                                        const Float_t c[3], Float_t out[3]) const
 {
