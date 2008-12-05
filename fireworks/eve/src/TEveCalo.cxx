@@ -324,7 +324,8 @@ void TEveCaloViz::Paint(Option_t* /*option*/)
 
    // Section kCore
    buff.fID           = this;
-   buff.fTransparency = 0;
+   buff.fColor        = GetMainColor();
+   buff.fTransparency = GetMainTransparency();
    if (HasMainTrans())
       RefMainTrans().SetBuffer3D(buff);
    buff.SetSectionsValid(TBuffer3D::kCore);
@@ -371,6 +372,21 @@ void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t& outH) co
 // Visualization of a calorimeter event data in 3D.
 
 ClassImp(TEveCalo3D);
+
+
+TEveCalo3D::TEveCalo3D(TEveCaloData* d, const Text_t* n, const Text_t* t): 
+   TEveCaloViz(d, n, t),
+   fRnrEndCapFrame(kTRUE),
+   fRnrBarrelFrame(kTRUE)
+{
+
+   // Constructor.
+
+   fFrameColor = kGray+1;
+   fMainTransparency= 50;
+
+   fMainColorPtr = &fFrameColor;
+}
 
 //______________________________________________________________________________
 void TEveCalo3D::BuildCellIdCache()
