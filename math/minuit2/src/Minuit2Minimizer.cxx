@@ -496,7 +496,7 @@ bool Minuit2Minimizer::GetMinosError(unsigned int i, double & errLow, double & e
    return true;
 } 
 
-bool Minuit2Minimizer::Scan(unsigned int ipar, unsigned int nstep, double * x, double * y, double xmin, double xmax) { 
+bool Minuit2Minimizer::Scan(unsigned int ipar, unsigned int & nstep, double * x, double * y, double xmin, double xmax) { 
    // scan a parameter (variable) around the minimum value
    // the parameters must have been set before 
    // if xmin=0 && xmax == 0  by default scan around 2 sigma of the error
@@ -537,7 +537,7 @@ bool Minuit2Minimizer::Scan(unsigned int ipar, unsigned int nstep, double * x, d
    return true; 
 }
 
-bool Minuit2Minimizer::Contour(unsigned int ipar, unsigned int jpar, unsigned int npoints, double * x, double * y) {
+bool Minuit2Minimizer::Contour(unsigned int ipar, unsigned int jpar, unsigned int & npoints, double * x, double * y) {
    // contour plot for parameter i and j
    // need a valid FuncitonMinimum otherwise exits
    if (fMinimum == 0) { 

@@ -97,7 +97,7 @@ public:
    /** 
       Destructor (no operations)
    */ 
-   virtual ~Chi2FCN ()  {}  
+   virtual ~Chi2FCN ()  {}
 
 #ifdef LATER
 private:
