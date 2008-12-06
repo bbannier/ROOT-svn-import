@@ -267,7 +267,7 @@ public:
       scan function minimum for variable i. Variable and funciton must be set before using Scan 
       Return false if an error or if minimizer does not support this funcitonality
     */
-   virtual bool Scan(unsigned int /* i */, unsigned int /* nstep */, double * /* x */, double * /* y */, 
+   virtual bool Scan(unsigned int /* i */, unsigned int & /* nstep */, double * /* x */, double * /* y */, 
                      double /*xmin */ = 0, double /*xmax*/ = 0) {
       return false; 
    }
@@ -276,7 +276,7 @@ public:
       find the contour points (xi,xj) of the function for parameter i and j around the minimum
       The contour will be find for value of the function = Min + ErrorUp();
     */
-   virtual bool Contour(unsigned int /* i */, unsigned int /* j */, unsigned int /* np */, 
+   virtual bool Contour(unsigned int /* i */, unsigned int /* j */, unsigned int &/* np */, 
                         double * /* xi */, double * /* xj */) { 
       return false; 
    }
@@ -284,7 +284,7 @@ public:
    /// return reference to the objective function
    ///virtual const ROOT::Math::IGenFunction & Function() const = 0; 
 
-   /// print the result according to set level. 
+   /// print the result according to set level (implemented for TMinuit for mantaining Minuit-style printing)
    virtual void PrintResults() {}
 
    // get name of variables (override if minimizer support storing of variable names)

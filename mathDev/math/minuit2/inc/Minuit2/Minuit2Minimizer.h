@@ -194,13 +194,13 @@ public:
       scan a parameter i around the minimum. A minimization must have been done before, 
       return false if it is not the case
     */
-   virtual bool Scan(unsigned int i, unsigned int nstep, double * x, double * y, double xmin = 0, double xmax = 0); 
+   virtual bool Scan(unsigned int i, unsigned int & nstep, double * x, double * y, double xmin = 0, double xmax = 0); 
 
    /**
       find the contour points (xi,xj) of the function for parameter i and j around the minimum
       The contour will be find for value of the function = Min + ErrorUp();
     */
-   virtual bool Contour(unsigned int i, unsigned int j, unsigned int npoints, double *xi, double *xj); 
+   virtual bool Contour(unsigned int i, unsigned int j, unsigned int & npoints, double *xi, double *xj); 
 
    
    /// return reference to the objective function

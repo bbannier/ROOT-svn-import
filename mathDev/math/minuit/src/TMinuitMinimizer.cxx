@@ -15,6 +15,9 @@
 
 #include "TMinuit.h"
 
+#include "TGraph.h" // needed for scan 
+#include "TError.h"
+
 #include <iostream>
 #include <cassert>
 #include <algorithm>
@@ -211,7 +214,7 @@ void TMinuitMinimizer::FcnGrad( int &, double * g, double & f, double * x , int 
 bool TMinuitMinimizer::SetVariable(unsigned int ivar, const std::string & name, double val, double step) { 
    // set a free variable.
    if (fMinuit == 0) { 
-      std::cerr << "TMinuitMinimizer: ERROR : invalid TMinuit pointer. Set function first " << std::endl;
+      Error("SetVariable","invalid TMinuit pointer. Set function first "); 
    }
 
 #ifdef USE_STATIC_TMINUIT
@@ -281,6 +284,17 @@ bool TMinuitMinimizer::SetFixedVariable(unsigned int ivar, const std::string & n
    fMinuit->DefineParameter(ivar, name.c_str(), val, 0.1, 0., 0. ); 
    fMinuit->FixParameter(ivar);
    return true; 
+}
+
+bool TMinuitMinimizer::SetVariableValue(unsigned int ivar, double val) { 
+   // set the value of an existing variable
+   // parameter must exist or return false
+   double arglist[2]; 
+   int ierr = 0; 
+   arglist[0] = ivar+1;  // TMinuit starts from 1 
+   arglist[1] = val;
+   fMinuit->mnexcm("SET PAR",arglist,2,ierr);
+   return (ierr==0);
 }
 
 bool TMinuitMinimizer::Minimize() { 
@@ -490,6 +504,78 @@ void TMinuitMinimizer::PrintResults() {
       fMinuit->mnprin(4,fMinVal);
    else
       fMinuit->mnprin(3,fMinVal);
+}
+
+
+bool TMinuitMinimizer::Contour(unsigned int ipar, unsigned int jpar, unsigned int &npoints, double * x, double * y) {
+   // contour plot for parameter i and j
+   // need a valid FuncitonMinimum otherwise exits
+   if (fMinuit == 0) { 
+      Error("TMinuitMinimizer::Contour"," invalid TMinuit instance");
+      return false;
+   }
+
+//    if (!fMinimum->IsValid() ) { 
+//       MN_ERROR_MSG2("Minuit2Minimizer::Contour","invalid funciton minimum");
+//       return false;
+//    }
+
+   if (npoints == 0) npoints = 41; // use default 
+   int npfound = 0; 
+   npoints -= 1;   // remove always one point in TMinuit
+   fMinuit->mncont( ipar+1,jpar+1,npoints, x, y,npfound); 
+   if (npfound<4) {
+      // mncont did go wrong
+      Error("Contour","Cannot find more than 4 points, return false");
+      return false;
+   }
+   if (npfound!=(int)npoints) {
+      // mncont did go wrong
+      Warning("Contour","Returning only %d points ",npfound);
+      npoints = npfound;
+   }
+   return true; 
+   
+}
+
+bool TMinuitMinimizer::Scan(unsigned int ipar, unsigned int & nstep, double * x, double * y, double xmin, double xmax) { 
+   // scan a parameter (variable) around the minimum value
+   // the parameters must have been set before 
+   // if xmin=0 && xmax == 0  by default scan around 2 sigma of the error
+   // if the errors  are also zero then scan from min and max of parameter range
+
+   // scan is not implemented for TMinuit, the way to return the array is only via the graph 
+   if (fMinuit == 0) { 
+      Error("TMinuitMinimizer::Scan"," invalid TMinuit instance");
+      return false;
+   }
+   
+   double arglist[4]; 
+   int ierr = 0; 
+   if (nstep == 0) nstep = 20; 
+   arglist[0] = ipar+1;  // TMinuit starts from 1 
+   arglist[1] = nstep+2; // TMinuit deletes two points
+   int nargs = 2; 
+   if (xmax > xmin ) { 
+      arglist[2] = xmin; 
+      arglist[3] = xmax; 
+      nargs = 4; 
+   }
+   fMinuit->mnexcm("SCAN",arglist,nargs,ierr);
+   if (ierr) { 
+      Error("TMinuitMinimizer::Scan"," Error executing command SCAN");
+      return false;      
+   }
+   // get TGraph object
+   TGraph * gr = dynamic_cast<TGraph *>(fMinuit->GetPlot() );
+   if (!gr) {
+      Error("TMinuitMinimizer::Scan"," Error in returned graph object");
+      return false;      
+   }
+   std::copy(gr->GetX(), gr->GetX()+gr->GetN(), x);
+   std::copy(gr->GetY(), gr->GetY()+gr->GetN(), y);
+   nstep = gr->GetN(); 
+   return true; 
 }
 
 //    } // end namespace Fit

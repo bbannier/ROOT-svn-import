@@ -592,12 +592,12 @@ Bool_t TBackCompFitter::IsFixed(Int_t ipar) const {
 
 void TBackCompFitter::PrintResults(Int_t level, Double_t ) const {
    // print the fit result
-   if (!fMinimizer) {
+   // use PrintResults function in case of Minuit for old -style printing
+   if (fFitter->GetMinimizer() && fFitter->Config().MinimizerType() == "Minuit")
+      fFitter->GetMinimizer()->PrintResults();
+   else { 
       if (level > 0) fFitter->Result().Print(std::cout); 
       if (level > 3)  fFitter->Result().PrintCovMatrix(std::cout);    
-   }
-   else { 
-      fMinimizer->PrintResults();
    }
    // need to print minos errors and globalCC + other info
 }
@@ -773,7 +773,8 @@ bool TBackCompFitter::Scan(unsigned int ipar, TGraph * gr, double xmin, double x
    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
    if (!gr) return false; 
-   if (!fMinimizer) {
+   ROOT::Math::Minimizer * minimizer = fFitter->GetMinimizer(); 
+   if (!minimizer) {
       Error("Scan","Minimizer is not available - cannot scan before fitting");
       return false;
    }
@@ -782,7 +783,9 @@ bool TBackCompFitter::Scan(unsigned int ipar, TGraph * gr, double xmin, double x
       npoints = 40; 
       gr->Set(npoints);
    }
-   return fMinimizer->Scan( ipar, npoints, gr->GetX(), gr->GetY(), xmin, xmax); 
+   bool ret = minimizer->Scan( ipar, npoints, gr->GetX(), gr->GetY(), xmin, xmax); 
+   if ((int) npoints < gr->GetN() ) gr->Set(npoints); 
+   return ret; 
 }
    
 // bool  TBackCompFitter::Scan2D(unsigned int ipar, unsigned int jpar, TGraph2D * gr, 
@@ -817,7 +820,8 @@ bool  TBackCompFitter::Contour(unsigned int ipar, unsigned int jpar, TGraph * gr
    // if the size is zero a default number of points = 20 is used 
 
    if (!gr) return false; 
-   if (!fMinimizer) {
+   ROOT::Math::Minimizer * minimizer = fFitter->GetMinimizer(); 
+   if (!minimizer) {
       Error("Scan","Minimizer is not available - cannot scan before fitting");
       return false;
    }
@@ -826,7 +830,9 @@ bool  TBackCompFitter::Contour(unsigned int ipar, unsigned int jpar, TGraph * gr
       npoints = 40; 
       gr->Set(npoints);
    }
-   return fMinimizer->Contour( ipar, jpar, npoints, gr->GetX(), gr->GetY()); 
+   bool ret =  minimizer->Contour( ipar, jpar, npoints, gr->GetX(), gr->GetY()); 
+   if ((int) npoints < gr->GetN() ) gr->Set(npoints); 
+   return ret; 
 }
 
 

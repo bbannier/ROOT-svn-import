@@ -46,14 +46,14 @@ Fitter::Fitter() :
 Fitter::~Fitter() 
 {
    // Destructor implementation.
-   // since function pointer is normally own by FitResult. delete only if fit result is empty 
-   if (fFunc && fResult.FittedFunction() == 0) delete fFunc; 
+   // delete function ifnot empty
+   if (fFunc) delete fFunc; 
 }
 
 Fitter::Fitter(const Fitter & rhs) 
 {
    // Implementation of copy constructor.
-   // copy FitResult, FitCOnfig and clone fit function
+   // copy FitResult, FitConfig and clone fit function
    (*this) = rhs; 
 }
 
@@ -341,7 +341,11 @@ bool Fitter::DoMinimization(const ObjFunc & objFunc, unsigned int dataSize, cons
    // assert that params settings have been set correctly
    assert( fConfig.ParamsSettings().size() == objFunc.NDim() );
 
-   fMinimizer->SetFunction(objFunc);
+   // keep also a copy of FCN function and set this in minimizer so they will be managed together
+   // (remember that cloned copy will still depende on data and model function pointers) 
+   fObjFunction = std::auto_ptr<ROOT::Math::IMultiGenFunction> ( objFunc.Clone() ); 
+   fMinimizer->SetFunction( *fObjFunction);
+
    fMinimizer->SetVariables(fConfig.ParamsSettings().begin(), fConfig.ParamsSettings().end() ); 
 
 
@@ -359,9 +363,6 @@ bool Fitter::DoMinimization(const ObjFunc & objFunc, unsigned int dataSize, cons
    int fitType =  ObjFuncTrait<ObjFunc>::Type(objFunc);
 
    fResult = FitResult(*fMinimizer,fConfig, fFunc, ret, dataSize, fBinFit, chi2func, fConfig.MinosErrors(), ncalls );
-   // keep also a copy of FCN function 
-   // (remember that cloned copy will still depende on data and model function pointers) 
-   fObjFunction = std::auto_ptr<ROOT::Math::IMultiGenFunction> ( objFunc.Clone() ); 
 
    if (fConfig.NormalizeErrors() && fitType == ROOT::Math::FitMethodFunction::kLeastSquare ) fResult.NormalizeErrors(); 
    return ret; 
