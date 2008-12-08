@@ -209,7 +209,7 @@ void Minuit2Minimizer::SetFunction(const  ROOT::Math::IMultiGenFunction & func) 
    if (fMinuitFCN) delete fMinuitFCN;
    fDim = func.NDim(); 
    if (!fUseFumili) {
-      fMinuitFCN = new ROOT::Minuit2::FCNAdapter<ROOT::Math::IMultiGenFunction> (func, ErrorUp() );
+      fMinuitFCN = new ROOT::Minuit2::FCNAdapter<ROOT::Math::IMultiGenFunction> (func, ErrorDef() );
    }
    else { 
       // for Fumili the fit method function interface is required
@@ -218,7 +218,7 @@ void Minuit2Minimizer::SetFunction(const  ROOT::Math::IMultiGenFunction & func) 
          MN_ERROR_MSG("Minuit2Minimizer: Wrong Fit method function for Fumili");
          return;
       }
-      fMinuitFCN = new ROOT::Minuit2::FumiliFCNAdapter<ROOT::Math::FitMethodFunction> (*fcnfunc, fDim, ErrorUp() );
+      fMinuitFCN = new ROOT::Minuit2::FumiliFCNAdapter<ROOT::Math::FitMethodFunction> (*fcnfunc, fDim, ErrorDef() );
    }
 }
 
@@ -227,7 +227,7 @@ void Minuit2Minimizer::SetFunction(const  ROOT::Math::IMultiGradFunction & func)
    fDim = func.NDim(); 
    if (fMinuitFCN) delete fMinuitFCN;
    if (!fUseFumili) { 
-      fMinuitFCN = new ROOT::Minuit2::FCNGradAdapter<ROOT::Math::IMultiGradFunction> (func, ErrorUp() );
+      fMinuitFCN = new ROOT::Minuit2::FCNGradAdapter<ROOT::Math::IMultiGradFunction> (func, ErrorDef() );
    }
    else { 
       // for Fumili the fit method function interface is required
@@ -236,7 +236,7 @@ void Minuit2Minimizer::SetFunction(const  ROOT::Math::IMultiGradFunction & func)
          MN_ERROR_MSG("Minuit2Minimizer: Wrong Fit method function for Fumili");
          return;
       }
-      fMinuitFCN = new ROOT::Minuit2::FumiliFCNAdapter<ROOT::Math::FitMethodGradFunction> (*fcnfunc, fDim, ErrorUp() );
+      fMinuitFCN = new ROOT::Minuit2::FumiliFCNAdapter<ROOT::Math::FitMethodGradFunction> (*fcnfunc, fDim, ErrorDef() );
    }
 }
                                    
@@ -253,7 +253,7 @@ bool Minuit2Minimizer::Minimize() {
    int maxfcn = MaxFunctionCalls(); 
    double tol = Tolerance();
    int strategy = Strategy(); 
-   fMinuitFCN->SetErrorDef(ErrorUp() );
+   fMinuitFCN->SetErrorDef(ErrorDef() );
 
    if (PrintLevel() >=1)
       std::cout << "Minuit2Minimizer: Minimize with max iterations " << maxfcn << " edmval " << tol << " strategy " 
@@ -443,11 +443,10 @@ bool Minuit2Minimizer::GetMinosError(unsigned int i, double & errLow, double & e
       return false;
    }
 
-   fMinuitFCN->SetErrorDef(ErrorUp() );
-
+   fMinuitFCN->SetErrorDef(ErrorDef() );
    // if error def has been changed update it in FunctionMinimum
-   if (ErrorUp() != fMinimum->Up() ) 
-      fMinimum->SetErrorDef(ErrorUp() );
+   if (ErrorDef() != fMinimum->Up() ) 
+      fMinimum->SetErrorDef(ErrorDef() );
 
 
    ROOT::Minuit2::MnMinos minos( *fMinuitFCN, *fMinimum);
@@ -521,11 +520,15 @@ bool Minuit2Minimizer::Scan(unsigned int ipar, unsigned int & nstep, double * x,
       MN_ERROR_MSG2("Minuit2Minimizer::Scan"," Invalid result from MnParameterScan");
       return false; 
    }
+   // sort also the returned points in x
+   std::sort(result.begin(), result.end() );
+
 
    for (unsigned int i = 0; i < nstep; ++i ) { 
       x[i] = result[i].first; 
       y[i] = result[i].second; 
    }
+
    // what to do if a new minimum has been found ? 
    // use that as new minimum
    if (scan.Fval() < amin ) { 
@@ -533,6 +536,7 @@ bool Minuit2Minimizer::Scan(unsigned int ipar, unsigned int & nstep, double * x,
       fState.SetValue(ipar, scan.Parameters().Value(ipar) );
          
    }
+
 
    return true; 
 }
@@ -551,6 +555,11 @@ bool Minuit2Minimizer::Contour(unsigned int ipar, unsigned int jpar, unsigned in
    }
    assert(fMinuitFCN); 
 
+   fMinuitFCN->SetErrorDef(ErrorDef() );
+   // if error def has been changed update it in FunctionMinimum
+   if (ErrorDef() != fMinimum->Up() ) 
+      fMinimum->SetErrorDef(ErrorDef() );
+
    MnContours contour(*fMinuitFCN, *fMinimum, Strategy() ); 
    
    std::vector<std::pair<double,double> >  result = contour(ipar,jpar, npoints);
@@ -562,6 +571,7 @@ bool Minuit2Minimizer::Contour(unsigned int ipar, unsigned int jpar, unsigned in
       x[i] = result[i].first; 
       y[i] = result[i].second; 
    }
+
    return true;
    
 

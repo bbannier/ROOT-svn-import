@@ -825,6 +825,13 @@ bool  TBackCompFitter::Contour(unsigned int ipar, unsigned int jpar, TGraph * gr
       Error("Scan","Minimizer is not available - cannot scan before fitting");
       return false;
    }
+
+   // set required error definition in minimizer
+   minimizer->SetErrorDef (GetErrorDef() );
+   // set required print level 
+   minimizer->SetErrorDef (GetErrorDef() );
+   
+
    unsigned int npoints = gr->GetN(); 
    if (npoints == 0)  { 
       npoints = 40; 

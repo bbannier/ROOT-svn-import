@@ -189,7 +189,7 @@ public:
    }
    /// set the value of an existing variable 
    virtual bool SetVariableValue(unsigned int , double ) { return false;  }
-   /// set the values of all existing variables (array must be dimensioned size of existing parameters)
+   /// set the values of all existing variables (array must be dimensioned to the size of the existing parameters)
    virtual bool SetVariableValues(const double * x) { 
       bool ret = true; 
       unsigned int i = 0;
@@ -312,7 +312,7 @@ public:
 
    /// return the statistical scale used for calculate the error
    /// is typically 1 for Chi2 and 0.5 for likelihood minimization
-   double ErrorUp() const { return fUp; } 
+   double ErrorDef() const { return fUp; } 
 
    ///return true if Minimizer has performed a detailed error validation (e.g. run Hesse for Minuit)
    bool IsValidError() const { return fValidError; }
@@ -333,7 +333,7 @@ public:
    void SetStrategy(int strategyLevel) { fStrategy = strategyLevel; }  
 
    /// set scale for calculating the errors
-   void SetErrorUp(double up) { fUp = up; }
+   void SetErrorDef(double up) { fUp = up; }
 
    /// flag to check if minimizer needs to perform accurate error analysis (e.g. run Hesse for Minuit)
    void SetValidError(bool on) { fValidError = on; } 
