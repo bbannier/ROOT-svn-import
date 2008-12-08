@@ -192,6 +192,8 @@ enum EParStruct {
    PAR_MAX = 2
 };
 
+void SearchCanvases(TSeqCollection* canvases, vector<TObject*>& objects);
+
 void GetParameters(TFitEditor::FuncParams_t & pars, TF1* func)
 {
    // Stores the parameters of the given function into pars
@@ -343,6 +345,17 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
                kMWMInputModeless);
 
    ConnectSlots();
+
+   if (!obj) {
+      TList* l = new TList();
+      l->Add(pad);
+      vector<TObject*> v;
+      SearchCanvases(l, v);
+      if ( v.size() ) 
+         obj = v[0];
+      delete l;
+   }
+
    SetFitObject(pad, obj, kButton1Down);
 
    // In case we want to make it without a default canvas. This will
@@ -357,6 +370,7 @@ TFitEditor::TFitEditor(TVirtualPad* pad, TObject *obj) :
       if ( obj )
          pad->GetCanvas()->Selected(pad, obj, kButton1Down);
    }
+
    UInt_t dw = fClient->GetDisplayWidth();
    UInt_t cw = 0;
    UInt_t cx = 0;
