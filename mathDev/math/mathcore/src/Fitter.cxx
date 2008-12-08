@@ -234,7 +234,7 @@ bool Fitter::DoLikelihoodFit(const BinData & data) {
    // logl fit (error should be 0.5) set if different than default values (of 1)
    if (fConfig.MinimizerOptions().ErrorDef() == ROOT::Math::MinimizerOptions::DefaultErrorDef() ) { 
       fConfig.MinimizerOptions().SetErrorDef(0.5);
-         fMinimizer->SetErrorUp(0.5);
+         fMinimizer->SetErrorDef(0.5);
    }
 
    fBinFit = true; 
@@ -281,7 +281,7 @@ bool Fitter::DoLikelihoodFit(const UnBinData & data) {
    // logl fit (error should be 0.5) set if different than default values (of 1)
    if (fConfig.MinimizerOptions().ErrorDef() == ROOT::Math::MinimizerOptions::DefaultErrorDef() ) {
       fConfig.MinimizerOptions().SetErrorDef(0.5);
-      fMinimizer->SetErrorUp(0.5);
+      fMinimizer->SetErrorDef(0.5);
    }
 
    if (!fUseGradient) { 

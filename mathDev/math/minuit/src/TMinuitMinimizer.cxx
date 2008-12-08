@@ -314,15 +314,15 @@ bool TMinuitMinimizer::Minimize() {
 
 
    // set error and print level 
-   arglist[0] = ErrorUp(); 
+   arglist[0] = ErrorDef(); 
    fMinuit->mnexcm("SET Err",arglist,1,ierr);
 
    int printlevel = PrintLevel(); 
    arglist[0] = printlevel - 1;
    fMinuit->mnexcm("SET PRINT",arglist,1,ierr);
 
-   // suppress warning in case Printlevel() == 0
-   if (printlevel == 0)    fMinuit->mnexcm("SET NOW",arglist,0,ierr);
+   // suppress warning in case Printlevel() == 0 (not needed done by TMinuit already)
+   //if (printlevel == 0)    fMinuit->mnexcm("SET NOW",arglist,0,ierr);
 
 
    arglist[0] = MaxFunctionCalls(); 
@@ -383,7 +383,7 @@ bool TMinuitMinimizer::Minimize() {
    assert (static_cast<unsigned int>(ntot) == fDim); 
    assert( nfree == fMinuit->GetNumFreePars() );
    fNFree = nfree;
-   assert (errdef == ErrorUp());
+   assert (errdef == ErrorDef());
    
 
    // get parameter values 
@@ -447,10 +447,9 @@ bool TMinuitMinimizer::GetMinosError(unsigned int i, double & errLow, double & e
       int ierr = 0; 
 
       // set error and print level 
-      arglist[0] = ErrorUp(); 
+      arglist[0] = ErrorDef(); 
       fMinuit->mnexcm("SET Err",arglist,1,ierr);
       
-      std::cout << "print level " << PrintLevel() << std::endl;
       arglist[0] = PrintLevel()-1; 
       fMinuit->mnexcm("SET PRINT",arglist,1,ierr);
 
@@ -515,15 +514,20 @@ bool TMinuitMinimizer::Contour(unsigned int ipar, unsigned int jpar, unsigned in
       return false;
    }
 
-//    if (!fMinimum->IsValid() ) { 
-//       MN_ERROR_MSG2("Minuit2Minimizer::Contour","invalid funciton minimum");
-//       return false;
-//    }
+   // set error and print level 
+   double arglist[1];
+   int ierr = 0; 
+   arglist[0] = ErrorDef(); 
+   fMinuit->mnexcm("SET Err",arglist,1,ierr);
+      
+   arglist[0] = PrintLevel()-1; 
+   fMinuit->mnexcm("SET PRINT",arglist,1,ierr);
 
    if (npoints == 0) npoints = 41; // use default 
    int npfound = 0; 
    npoints -= 1;   // remove always one point in TMinuit
-   fMinuit->mncont( ipar+1,jpar+1,npoints, x, y,npfound); 
+   // parameter numbers in mncont start from zero
+   fMinuit->mncont( ipar,jpar,npoints, x, y,npfound); 
    if (npfound<4) {
       // mncont did go wrong
       Error("Contour","Cannot find more than 4 points, return false");
@@ -552,6 +556,11 @@ bool TMinuitMinimizer::Scan(unsigned int ipar, unsigned int & nstep, double * x,
    
    double arglist[4]; 
    int ierr = 0; 
+
+   arglist[0] = PrintLevel()-1; 
+   fMinuit->mnexcm("SET PRINT",arglist,1,ierr);
+
+
    if (nstep == 0) nstep = 20; 
    arglist[0] = ipar+1;  // TMinuit starts from 1 
    arglist[1] = nstep+2; // TMinuit deletes two points
