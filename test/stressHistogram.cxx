@@ -51,7 +51,7 @@ enum RefFileEnum {
 
 const int refFileOption = 1;
 TFile * refFile = 0;
-const char* refFileName = "stressHistogram.5.21.00.root";
+const char* refFileName = "stressHistogram.5.18.00.root";
 
 TRandom2 r;
 
@@ -2048,7 +2048,7 @@ bool testRefReadProf1D()
 {
    if ( refFileOption == refFileWrite ) {
       TProfile* p1 = new TProfile("rr1D-p1", "p1-Title", numberOfBins, minRange, maxRange);
-      p1->Sumw2();
+//      p1->Sumw2();
    
       for ( Int_t e = 0; e < nEvents; ++e ) {
          Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -2060,7 +2060,7 @@ bool testRefReadProf1D()
    } else {
       TProfile* p1 = static_cast<TProfile*> ( refFile->Get("rr1D-p1") );
       TProfile* p2 = new TProfile("rr1D-p2", "p2-Title", numberOfBins, minRange, maxRange);
-      p2->Sumw2();
+//      p2->Sumw2();
    
       for ( Int_t e = 0; e < nEvents; ++e ) {
          Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -3187,14 +3187,9 @@ public:
    
 };
 
-int main(int argc, char** argv)
+int stressHistogram()
 {
    r.SetSeed(0);
-
-   TApplication* theApp = 0;
-
-   if ( __DRAW__ )
-      theApp = new TApplication("App",&argc,argv);
 
    int GlobalStatus = false;
    int status = false;
@@ -3384,19 +3379,13 @@ int main(int argc, char** argv)
    GlobalStatus += status;
 
    bm.Stop("stressHistogram");
-   std::cout <<"******************************************************************************\n";
+   std::cout <<"****************************************************************************\n";
    bm.Print("stressHistogram");
    const double reftime = 7.1; // needs to be updated // ref time on  pcbrun4
    double rootmarks = 860 * reftime / bm.GetCpuTime("stressHistogram");
    std::cout << " ROOTMARKS = " << rootmarks << " ROOT version: " << gROOT->GetVersion() << "\t" 
              << gROOT->GetSvnBranch() << "@" << gROOT->GetSvnRevision() << std::endl;
-   std::cout <<"*******************************************************************************\n";
-
-   if ( __DRAW__ ) {
-      theApp->Run();
-      delete theApp;
-      theApp = 0;
-   }
+   std::cout <<"****************************************************************************\n";
 
    return GlobalStatus;
 }
@@ -3685,4 +3674,22 @@ int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT)
 //            << endl;  
    
    return differents;
+}
+
+int main(int argc, char** argv)
+{
+   TApplication* theApp = 0;
+
+   if ( __DRAW__ )
+      theApp = new TApplication("App",&argc,argv);
+
+   int ret = stressHistogram();
+
+   if ( __DRAW__ ) {
+      theApp->Run();
+      delete theApp;
+      theApp = 0;
+   }
+
+   return ret;
 }
