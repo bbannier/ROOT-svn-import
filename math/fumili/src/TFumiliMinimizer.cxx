@@ -405,7 +405,7 @@ bool TFumiliMinimizer::SetVariable(unsigned int ivar, const std::string & name, 
 #endif
 
    int ierr = fFumili->SetParameter(ivar , name.c_str(), val, step, 0., 0. ); 
-   if (!ierr) { 
+   if (ierr) { 
       Error("SetVariable","Error for parameter %d ",ivar);
       return false; 
    }
@@ -421,7 +421,7 @@ bool TFumiliMinimizer::SetLimitedVariable(unsigned int ivar, const std::string &
    std::cout << "set limited variable " << ivar << " " << name << " value " << val << " step " << step << std::endl; 
 #endif
    int ierr = fFumili->SetParameter(ivar, name.c_str(), val, step, lower, upper ); 
-   if (!ierr) { 
+   if (ierr) { 
       Error("SetLimitedVariable","Error for parameter %d ",ivar);
       return false; 
    }
@@ -452,7 +452,7 @@ bool TFumiliMinimizer::SetFixedVariable(unsigned int ivar, const std::string & n
    std::cout << "Fix variable " << ivar << " " << name << " value " << std::endl; 
 #endif
 
-   if (!ierr) { 
+   if (ierr) { 
       Error("SetFixedVariable","Error for parameter %d ",ivar);
       return false; 
    }
@@ -464,18 +464,22 @@ bool TFumiliMinimizer::SetVariableValue(unsigned int ivar, double val) {
    if (fFumili == 0) { 
       Error("SetVariableValue","invalid TFumili pointer. Set function first ");
    }
-   TString name = fFumili->GetParName(ivar);
+   TString name = fFumili->GetParName(ivar
+
+);
    double  oldval, verr, vlow, vhigh = 0; 
-   if (! fFumili->GetParameter( ivar, &name[0], oldval, verr, vlow, vhigh) ) { 
+   int ierr = fFumili->GetParameter( ivar, &name[0], oldval, verr, vlow, vhigh); 
+   if (ierr) {
       Error("SetVariableValue","Error for parameter %d ",ivar);
+      return false; 
    }
 #ifdef DEBUG
    std::cout << "set variable " << ivar << " " << name << " value " 
              << val << " step " <<  verr << std::endl; 
 #endif
 
-   int ierr = fFumili->SetParameter(ivar , name , val, verr, vlow, vhigh ); 
-   if (!ierr) { 
+   ierr = fFumili->SetParameter(ivar , name , val, verr, vlow, vhigh ); 
+   if (ierr) { 
       Error("SetVariableValue","Error for parameter %d ",ivar);
       return false; 
    }
