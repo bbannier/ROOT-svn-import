@@ -89,34 +89,34 @@ void TEveCalo3DGL::RenderGridEndCap() const
    // Render end cap grid.
 
    using namespace TMath;
-   
-   Float_t rB = fM->GetBarrelRadius();
-   Double_t zE =  fM->GetEndCapPos();
+
+   Float_t  rB = fM->GetBarrelRadius();
+   Double_t zE = fM->GetEndCapPos();
 
    Float_t etaMin = fM->GetEtaMin();
    Float_t etaMax = fM->GetEtaMax();
-   Float_t trans = fM->GetTransitionEta();
+   Float_t trans  = fM->GetTransitionEta();
    Float_t phiMin = fM->GetPhiMin();
    Float_t phiMax = fM->GetPhiMax();
 
    TAxis *ax = fM->GetData()->GetEtaBins();
-   Int_t nx  = ax->GetNbins();
+   Int_t  nx = ax->GetNbins();
    TAxis *ay = fM->GetData()->GetPhiBins();
-   Int_t ny  = ay->GetNbins();
+   Int_t  ny = ay->GetNbins();
 
 
    Float_t r, z, theta, phiU, phiL, eta;
 
    // eta slices
-   for(Int_t i=1; i<nx; i++)
+   for (Int_t i=1; i<nx; ++i)
    {
       eta = ax->GetBinLowEdge(i);
-      if (Abs(eta) > trans &&(eta > etaMin && eta < etaMax))
+      if (Abs(eta) > trans && (eta > etaMin && eta < etaMax))
       {
          theta = TEveCaloData::EtaToTheta(eta);
          r = Abs(zE*Tan(theta));
          z = Sign(zE, ax->GetBinLowEdge(i));
-         for (Int_t j=1; j<=ny; j++)
+         for (Int_t j=1; j<=ny; ++j)
          {
             phiL = ay->GetBinLowEdge(j);
             phiU = ay->GetBinUpEdge(j);
@@ -131,15 +131,15 @@ void TEveCalo3DGL::RenderGridEndCap() const
 
    Float_t r1, r2;
    // phi slices front
-   if ( etaMax > trans)
+   if (etaMax > trans)
    {
       r1 = zE*Tan(TEveCaloData::EtaToTheta(etaMax));
       if (etaMin < trans)
          r2 = rB;
       else
-         r2 = z*Tan(TEveCaloData::EtaToTheta(etaMin));
+         r2 = zE*Tan(TEveCaloData::EtaToTheta(etaMin));
 
-      for (Int_t j=0; j<ny; j++)
+      for (Int_t j=0; j<ny; ++j)
       {
          phiL = ay->GetBinLowEdge(j);
          phiU = ay->GetBinUpEdge(j);
@@ -162,18 +162,18 @@ void TEveCalo3DGL::RenderGridEndCap() const
       else
          r2 = zE*Tan(TEveCaloData::EtaToTheta(etaMax));
 
-      r1 =Abs(r1);
-      r2 =Abs(r2);
-      for (Int_t j=0; j<ny; j++)
+      r1 = Abs(r1);
+      r2 = Abs(r2);
+      for (Int_t j=0; j<ny; ++j)
       {
          phiL = ay->GetBinLowEdge(j);
          phiU = ay->GetBinUpEdge(j);
          if (TEveUtil::IsU1IntervalContainedByMinMax(phiMin, phiMax, phiL, phiU))
          {
-            glVertex3f( r1*Cos(phiU), r1*Sin(phiU), -zE);
-            glVertex3f( r2*Cos(phiU), r2*Sin(phiU), -zE);
-            glVertex3f( r1*Cos(phiL), r1*Sin(phiL), -zE);
-            glVertex3f( r2*Cos(phiL), r2*Sin(phiL), -zE);
+            glVertex3f(r1*Cos(phiU), r1*Sin(phiU), -zE);
+            glVertex3f(r2*Cos(phiU), r2*Sin(phiU), -zE);
+            glVertex3f(r1*Cos(phiL), r1*Sin(phiL), -zE);
+            glVertex3f(r2*Cos(phiL), r2*Sin(phiL), -zE);
          }
       }
    }
