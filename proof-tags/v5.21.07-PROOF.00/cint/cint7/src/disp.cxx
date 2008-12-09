@@ -779,7 +779,7 @@ static int G__display_membervariable(FILE *fout, int tagnum, int base)
    }
 
    G__incsetup_memvar(tagnum);
-   ::Reflex::Scope var = G__Dict::G__Dict().GetScope(tagnum);
+   ::Reflex::Scope var = G__Dict::GetDict().GetScope(tagnum);
    /* member variable */
    if (var) {
       fprintf(fout, "Defined in %s\n", var.Name().c_str());
@@ -810,7 +810,7 @@ static int G__display_memberfunction(FILE *fout, int tagnum, int access, int bas
    }
 
    /* member function */
-   ::Reflex::Scope scope = G__Dict::G__Dict().GetScope(tagnum);
+   ::Reflex::Scope scope = G__Dict::GetDict().GetScope(tagnum);
    G__incsetup_memfunc(tagnum);
    if (scope.FunctionMemberSize()) {
 
@@ -1511,7 +1511,7 @@ int Cint::Internal::G__objectmonitor(FILE *fout, char *pobject, const ::Reflex::
             if (G__more(fout, msg)) return(1);
             if (G__objectmonitor(fout
                                  , pobject + (size_t)baseclass->baseoffset[i]
-                                 , G__Dict::G__Dict().GetType(baseclass->basetagnum[i]), space))
+                                 , G__Dict::GetDict().GetType(baseclass->basetagnum[i]), space))
                return(1);
          }
       }
@@ -1684,7 +1684,6 @@ int Cint::Internal::G__varmonitor(FILE* fout, const ::Reflex::Scope scope, const
          int constvar = 0;
          G__get_cint5_type_tuple(mbr.TypeOf(), &type, &tagnum, &typenum, &reftype, &constvar);
          sprintf(msg, "%s", G__type2string(type, tagnum, typenum, reftype, constvar));
-         //sprintf(msg, "%s::%s", ty.DeclaringScope().Name(::Reflex::SCOPED).c_str(), ty.Name(::Reflex::SCOPED).c_str());
       }
       if (G__more(fout, msg)) {
          return 1;
@@ -1697,7 +1696,6 @@ int Cint::Internal::G__varmonitor(FILE* fout, const ::Reflex::Scope scope, const
       //  Print member name.
       //
       sprintf(msg, "%s", mbr.Name().c_str());
-      //sprintf(msg, "%s", mbr.Name(::Reflex::SCOPED).c_str());
       if (G__more(fout, msg)) {
          return 1;
       }

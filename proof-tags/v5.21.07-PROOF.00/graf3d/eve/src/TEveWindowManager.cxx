@@ -50,7 +50,10 @@ void TEveWindowManager::WindowDeleted(TEveWindow* window)
    // Called by a window before it gets deleted.
 
    if (window == fCurrentWindow)
-      WindowSelected(0);
+   {
+      fCurrentWindow = 0;
+      CurrentWindowChanged(fCurrentWindow);
+   }
 }
 
 //______________________________________________________________________________
@@ -76,10 +79,22 @@ void TEveWindowManager::WindowSelected(TEveWindow* window)
    fCurrentWindow = window;
 
    if (fCurrentWindow)
-      window->SetCurrent(kTRUE);
+      fCurrentWindow->SetCurrent(kTRUE);
 
-   CurrentWindowChanged(fCurrentWindow);  
+   CurrentWindowChanged(fCurrentWindow);
 }
+
+//==============================================================================
+
+//______________________________________________________________________________
+TEveWindowSlot* TEveWindowManager::GetCurrentWindowAsSlot() const
+{
+   // Return current window dynamic-casted to TEveWindowSlot.
+
+   return dynamic_cast<TEveWindowSlot*>(fCurrentWindow);
+}
+
+//==============================================================================
 
 //______________________________________________________________________________
 void TEveWindowManager::CurrentWindowChanged(TEveWindow* window)
