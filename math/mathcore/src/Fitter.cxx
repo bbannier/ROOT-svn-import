@@ -342,9 +342,12 @@ bool Fitter::DoMinimization(const ObjFunc & objFunc, unsigned int dataSize, cons
    assert( fConfig.ParamsSettings().size() == objFunc.NDim() );
 
    // keep also a copy of FCN function and set this in minimizer so they will be managed together
-   // (remember that cloned copy will still depende on data and model function pointers) 
+   // (remember that cloned copy will still depends on data and model function pointers) 
    fObjFunction = std::auto_ptr<ROOT::Math::IMultiGenFunction> ( objFunc.Clone() ); 
-   fMinimizer->SetFunction( *fObjFunction);
+   // in case of gradient function needs to downcast the pointer
+   const ObjFunc * fcn = dynamic_cast<const ObjFunc *> (fObjFunction.get() );
+   assert(fcn); 
+   fMinimizer->SetFunction( *fcn);
 
    fMinimizer->SetVariables(fConfig.ParamsSettings().begin(), fConfig.ParamsSettings().end() ); 
 
