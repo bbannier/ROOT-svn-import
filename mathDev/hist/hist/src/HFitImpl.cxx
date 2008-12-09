@@ -306,8 +306,7 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
 
       // store result in the backward compatible VirtualFitter
       TVirtualFitter * lastFitter = TVirtualFitter::GetFitter(); 
-      // pass ownership of fitdata to TBackCompFitter (should do also fitter)
-      //TBackCompFitter * bcfitter = new TBackCompFitter(*fitter, fitdata);
+      // pass ownership of Fitter and Fitdata to TBackCompFitter (fitter pointer cannot be used afterwards)
       TBackCompFitter * bcfitter = new TBackCompFitter(fitter, std::auto_ptr<ROOT::Fit::FitData>(fitdata));
       bcfitter->SetFitOption(fitOption); 
       bcfitter->SetObjectFit(h1);
@@ -317,9 +316,6 @@ int HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const ROOT::Math
          // for interpreted FCN functions
          if (lastFitter->GetMethodCall() ) bcfitter->SetMethodCall(lastFitter->GetMethodCall() );
       }
-
-      // in case of TMinuit recreate minimizer for printing results and correct use of gMinuit 
-      //if (fitter->Config().MinimizerType() == "Minuit") bcfitter->ReCreateMinimizer(); 
          
       if (lastFitter) delete lastFitter; 
       TVirtualFitter::SetFitter( bcfitter ); 
@@ -602,9 +598,9 @@ int ROOT::Fit::UnBinFit(ROOT::Fit::UnBinData * fitdata, TF1 * fitfunc, Foption_t
 
    // store result in the backward compatible VirtualFitter
    TVirtualFitter * lastFitter = TVirtualFitter::GetFitter(); 
-   // pass ownership of fitdata to TBackCompFitter (should do also fitter)
-   //TBackCompFitter * bcfitter = new TBackCompFitter(fitter, std::auto_ptr<ROOT::Fit::FitData>(fitdata) );
-   TBackCompFitter * bcfitter = new TBackCompFitter(fitter, std::auto_ptr<ROOT::Fit::FitData>(fitdata) );
+   // pass ownership of Fitter and Fitdata to TBackCompFitter (fitter pointer cannot be used afterwards)
+   TBackCompFitter * bcfitter = new TBackCompFitter(fitter, std::auto_ptr<ROOT::Fit::FitData>(fitdata));
+
    bcfitter->SetFitOption(fitOption); 
    //bcfitter->SetObjectFit(fTree);
    bcfitter->SetUserFunc(fitfunc);

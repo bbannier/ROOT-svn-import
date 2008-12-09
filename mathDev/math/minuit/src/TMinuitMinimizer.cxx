@@ -547,11 +547,28 @@ bool TMinuitMinimizer::Scan(unsigned int ipar, unsigned int & nstep, double * x,
    // the parameters must have been set before 
    // if xmin=0 && xmax == 0  by default scan around 2 sigma of the error
    // if the errors  are also zero then scan from min and max of parameter range
+   // (if parameters are limited Minuit scan from min and max instead of 2 sigma by default)
+   // (force in that case to use errors)
 
    // scan is not implemented for TMinuit, the way to return the array is only via the graph 
    if (fMinuit == 0) { 
       Error("TMinuitMinimizer::Scan"," invalid TMinuit instance");
       return false;
+   }
+
+   // case of default xmin and xmax
+   if (xmin >= xmax && (int) ipar < fMinuit->GetNumPars() ) { 
+      double val = 0; double err = 0;
+      TString name; 
+      double xlow = 0; double xup = 0 ;
+      int iuint = 0; 
+      // in mnpout index starts from ze
+      fMinuit->mnpout( ipar, name, val, err, xlow, xup, iuint);
+      // redefine 2 sigma for all parameters by default (TMinuit does 1 sigma and range if limited)
+      if (iuint > 0 && err > 0) { 
+         xmin = val - 2.*err; 
+         xmax = val + 2 * err; 
+      }
    }
    
    double arglist[4]; 
