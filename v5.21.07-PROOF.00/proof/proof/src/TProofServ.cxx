@@ -52,13 +52,6 @@
 #endif
 #endif
 
-// Macros to check ranges
-#ifdef R__B64
-#  define P_LONGOK(x) (1)
-#else
-#  define P_LONGOK(x) (x > LONG_MIN && x < LONG_MAX)
-#endif
-
 #include "TProofServ.h"
 #include "TDSetProxy.h"
 #include "TEnv.h"
@@ -474,13 +467,13 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fVirtMemMax = -1;
    if (gSystem->Getenv("ROOTPROOFASSOFT")) {
       Long_t hwm = strtol(gSystem->Getenv("ROOTPROOFASSOFT"), 0, 10);
-      if (P_LONGOK(hwm) && hwm > 0)
-         fVirtMemHWM = (unsigned long) hwm * 1024;
+      if (hwm < kMaxLong && hwm > 0)
+         fVirtMemHWM = hwm * 1024;
    }
    if (gSystem->Getenv("ROOTPROOFASHARD")) {
       Long_t mmx = strtol(gSystem->Getenv("ROOTPROOFASHARD"), 0, 10);
-      if (P_LONGOK(mmx) && mmx > 0)
-         fVirtMemMax = (unsigned long) mmx * 1024;
+      if (mmx < kMaxLong && mmx > 0)
+         fVirtMemMax = mmx * 1024;
    }
 
    // Wait (loop) to allow debugger to connect
@@ -1139,10 +1132,10 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
                ProcessLine(str);
             }
             LogToMaster();
-            SendLogFile();
          } else {
             rc = -1;
          }
+         SendLogFile();
          break;
 
       case kMESS_STRING:
@@ -1171,38 +1164,28 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
          break;
 
       case kPROOF_LOGLEVEL:
-         if (all) {
-            UInt_t mask;
+         {  UInt_t mask;
             mess->ReadString(str, sizeof(str));
             sscanf(str, "%d %u", &fLogLevel, &mask);
             gProofDebugLevel = fLogLevel;
             gProofDebugMask  = (TProofDebug::EProofDebugMask) mask;
             if (IsMaster())
                fProof->SetLogLevel(fLogLevel, mask);
-         } else {
-            rc = -1;
          }
          break;
 
       case kPROOF_PING:
-         if (all) {
-            if (IsMaster())
+         {  if (IsMaster())
                fProof->Ping();
             // do nothing (ping is already acknowledged)
-         } else {
-            rc = -1;
          }
          break;
 
       case kPROOF_PRINT:
-         if (all) {
-            mess->ReadString(str, sizeof(str));
-            Print(str);
-            LogToMaster();
-            SendLogFile();
-         } else {
-            rc = -1;
-         }
+         mess->ReadString(str, sizeof(str));
+         Print(str);
+         LogToMaster();
+         SendLogFile();
          break;
 
       case kPROOF_RESET:
@@ -1215,13 +1198,9 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
          break;
 
       case kPROOF_STATUS:
-         if (all) {
-            Warning("HandleSocketInput:kPROOF_STATUS",
-                  "kPROOF_STATUS message is obsolete");
-            fSocket->Send(fProof->GetParallel(), kPROOF_STATUS);
-         } else {
-            rc = -1;
-         }
+         Warning("HandleSocketInput:kPROOF_STATUS",
+               "kPROOF_STATUS message is obsolete");
+         fSocket->Send(fProof->GetParallel(), kPROOF_STATUS);
          break;
 
       case kPROOF_GETSTATS:
@@ -1229,11 +1208,7 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
          break;
 
       case kPROOF_GETPARALLEL:
-         if (all) {
-            SendParallel();
-         } else {
-            rc = -1;
-         }
+         SendParallel();
          break;
 
       case kPROOF_STOP:
@@ -1321,16 +1296,13 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
          break;
 
       case kPROOF_MAXQUERIES:
-         if (all) {
-            PDB(kGlobal, 1)
+         {  PDB(kGlobal, 1)
                Info("HandleSocketInput:kPROOF_MAXQUERIES", "Enter");
             TMessage m(kPROOF_MAXQUERIES);
             m << fMaxQueries;
             fSocket->Send(m);
             // Notify
             SendLogFile();
-         } else {
-            rc = -1;
          }
          break;
 
@@ -1345,41 +1317,38 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
             } else {
                Printf("Could not cleanup session %s", stag.Data());
             }
-            // Notify
-            SendLogFile();
          } else {
             rc = -1;
          }
+         // Notify
+         SendLogFile();
          break;
 
       case kPROOF_GETENTRIES:
-         if (all) {
-            PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_GETENTRIES", "Enter");
+         {  PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_GETENTRIES", "Enter");
             Bool_t         isTree;
             TString        filename;
             TString        dir;
-            TString        objname;
-            Long64_t       entries;
+            TString        objname("undef");
+            Long64_t       entries = -1;
 
-            (*mess) >> isTree >> filename >> dir >> objname;
-
-            PDB(kGlobal, 2) Info("HandleSocketInput:kPROOF_GETENTRIES",
-                                 "Report size of object %s (%s) in dir %s in file %s",
-                                 objname.Data(), isTree ? "T" : "O",
-                                 dir.Data(), filename.Data());
-
-            entries = TDSet::GetEntries(isTree, filename, dir, objname);
-
-            PDB(kGlobal, 2) Info("HandleSocketInput:kPROOF_GETENTRIES",
-                                 "Found %lld %s", entries, isTree ? "entries" : "objects");
-
+            if (all) {
+               (*mess) >> isTree >> filename >> dir >> objname;
+               PDB(kGlobal, 2) Info("HandleSocketInput:kPROOF_GETENTRIES",
+                                    "Report size of object %s (%s) in dir %s in file %s",
+                                    objname.Data(), isTree ? "T" : "O",
+                                    dir.Data(), filename.Data());
+               entries = TDSet::GetEntries(isTree, filename, dir, objname);
+               PDB(kGlobal, 2) Info("HandleSocketInput:kPROOF_GETENTRIES",
+                                    "Found %lld %s", entries, isTree ? "entries" : "objects");
+            } else {
+               rc = -1;
+            }
             TMessage answ(kPROOF_GETENTRIES);
             answ << entries << objname;
             SendLogFile(); // in case of error messages
             fSocket->Send(answ);
             PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_GETENTRIES", "Done");
-         } else {
-            rc = -1;
          }
          break;
 
@@ -1417,6 +1386,7 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
                   opt |= TProof::kBinary;
                fProof->SendFile(fnam, opt, (copytocache ? "cache" : ""));
             }
+            SendLogFile();
          }
          break;
 
@@ -1442,12 +1412,13 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
                if ((mess->BufferSize() > mess->Length()))
                   (*mess) >> random;
                if (fProof) fProof->SetParallel(nodes, random);
-               SendLogFile();
                rc = 1;
             }
          } else {
             rc = -1;
          }
+         // Notify
+         SendLogFile();
          break;
 
       case kPROOF_CACHE:
@@ -1467,11 +1438,11 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
             else
                Warning("HandleSocketInput:kPROOF_WORKERLISTS",
                        "Action meaning-less on worker nodes: protocol error?");
-            // Notify
-            SendLogFile();
          } else {
             rc = -1;
          }
+         // Notify
+         SendLogFile();
          break;
 
       case kPROOF_GETSLAVEINFO:
@@ -1490,6 +1461,9 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
 
             PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_GETSLAVEINFO", "Done");
          } else {
+            TMessage answ(kPROOF_GETSLAVEINFO);
+            answ << (TList *)0;
+            fSocket->Send(answ);
             rc = -1;
          }
          break;
@@ -1504,13 +1478,15 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
 
             PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_GETTREEHEADER", "Done");
          } else {
+            TMessage answ(kPROOF_GETTREEHEADER);
+            answ << TString("Failed") << (TObject *)0;
+            fSocket->Send(answ);
             rc = -1;
          }
          break;
 
       case kPROOF_GETOUTPUTLIST:
-         if (all) {
-            PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_GETOUTPUTLIST", "Enter");
+         {  PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_GETOUTPUTLIST", "Enter");
             TList* outputList = 0;
             if (IsMaster()) {
                outputList = fProof->GetOutputList();
@@ -1533,8 +1509,6 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
             fSocket->Send(answ);
             delete outputList;
             PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_GETOUTPUTLIST", "Done");
-         } else {
-            rc = -1;
          }
          break;
 
@@ -1555,10 +1529,11 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
             delete dset;
             PDB(kGlobal, 1)
                Info("HandleSocketInput:kPROOF_VALIDATE_DSET", "Done");
-            SendLogFile();
          } else {
             rc = -1;
          }
+         // Notify
+         SendLogFile();
          break;
 
       case kPROOF_DATA_READY:
@@ -1576,15 +1551,18 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
             }
             fSocket->Send(answ);
             PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_DATA_READY", "Done");
-            SendLogFile();
          } else {
+            TMessage answ(kPROOF_DATA_READY);
+            answ << kFALSE << Long64_t(0) << Long64_t(0);
+            fSocket->Send(answ);
             rc = -1;
          }
+         // Notify
+         SendLogFile();
          break;
 
       case kPROOF_DATASETS:
-         {
-            Int_t xrc = -1;
+         {  Int_t xrc = -1;
             if (fProtocol > 16) {
                xrc = HandleDataSets(mess);
             } else {
@@ -1597,16 +1575,15 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
       case kPROOF_LIB_INC_PATH:
          if (all) {
             HandleLibIncPath(mess);
-            // Notify the client
-            SendLogFile();
          } else {
             rc = -1;
          }
+         // Notify the client
+         SendLogFile();
          break;
 
       case kPROOF_REALTIMELOG:
-         if (all) {
-            Bool_t on;
+         {  Bool_t on;
             (*mess) >> on;
             PDB(kGlobal, 1)
                Info("HandleSocketInput:kPROOF_REALTIMELOG",
@@ -1615,8 +1592,6 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
             // Forward the request to lower levels
             if (IsMaster())
                fProof->SetRealTimeLog(on);
-         } else {
-            rc = -1;
          }
          break;
 
@@ -1624,10 +1599,10 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
          if (all) {
             HandleFork(mess);
             LogToMaster();
-            SendLogFile();
          } else {
             rc = -1;
          }
+         SendLogFile();
          break;
 
       default:

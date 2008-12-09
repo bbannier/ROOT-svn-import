@@ -654,7 +654,7 @@ Overview:
   <li><a href="#conf:classdoc">Recognizing class documentation</a></li>
   <li><a href="#conf:tags">Author, copyright, etc.</a></li>
   <li><a href="#conf:header">Header and footer</a></li>
-  <li><a href="#conf:search">Links to searches, home page, ViewCVS</a></li>
+  <li><a href="#conf:search">Links to searches, home page, ViewVC</a></li>
   <li><a href="#conf:charset">HTML Charset</a></li>
   </ol></li>
   <li><a href="#syntax">Documentation syntax</a>
@@ -851,14 +851,14 @@ replaced by the exact string that follows Root.Html.Author, no link
 generation will occur.</p>
 
 
-<h4><a name="conf:search">II.7 Links to searches, home page, ViewCVS</a></h4>
+<h4><a name="conf:search">II.7 Links to searches, home page, ViewVC</a></h4>
 
 <p>Additional parameters can be set by Root.Html.Homepage (address of the
 user's home page), Root.Html.SearchEngine (search engine for the class
 documentation), Root.Html.Search (search URL, where %u is replaced by the 
-referer and %s by the escaped search expression), and a ViewCVS base URL 
+referer and %s by the escaped search expression), and a ViewVC base URL 
 Root.Html.ViewCVS. For the latter, the file name is appended or, if 
-the ViewCVS contains %f, it %f is replaced by the file name.
+the URL contains %f, %f is replaced by the file name.
 All values default to "".</p>
 
 <p>Examples:</p><pre>
@@ -1341,7 +1341,8 @@ void THtml::HelperDeleted(THtml::THelperBase* who)
 //______________________________________________________________________________
 void THtml::Convert(const char *filename, const char *title,
                     const char *dirname /*= ""*/, const char *relpath /*= "../"*/,
-                    Bool_t includeOutput /*= kFALSE */)
+                    Int_t includeOutput /* = kNoOutput */,
+                    const char* context /* = "" */)
 {
 // It converts a single text file to HTML
 //
@@ -1352,9 +1353,13 @@ void THtml::Convert(const char *filename, const char *title,
 //                   be placed in htmldoc/examples directory.
 //        relpath  - optional parameter pointing to the THtml generated doc 
 //                   on the server, relative to the current page.
-//        includeOutput - if true, run the script passed as filename and
+//        includeOutput - if != kNoOutput, run the script passed as filename and
 //                   store all created canvases in PNG files that are
-//                   shown next to the converted source.
+//                   shown next to the converted source. Bitwise-ORing with 
+//                   re-runs the script even if output PNGs exist that are newer
+//                   than the script. If kCompiledOutput is passed, the script is
+//                   run through ACLiC (.x filename+)
+//        context  - line shown verbatim at the top of the page; e.g. for links
 //
 //  NOTE: Output file name is the same as filename, but with extension .html
 //
@@ -1406,7 +1411,7 @@ void THtml::Convert(const char *filename, const char *title,
        gSystem->ConcatFileName(dir, gSystem->BaseName(filename));
 
    TDocOutput output(*this);
-   output.Convert(sourceFile, realFilename, tmp1, title, relpath, includeOutput);
+   output.Convert(sourceFile, realFilename, tmp1, title, relpath, includeOutput, context);
 
    if (tmp1)
       delete[]tmp1;

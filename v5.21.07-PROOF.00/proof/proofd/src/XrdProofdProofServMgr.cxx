@@ -46,6 +46,7 @@
 #include "XrdProofdProofServMgr.h"
 #include "XrdProofdProtocol.h"
 #include "XrdProofGroup.h"
+#include "XrdProofSched.h"
 #include "XrdROOT.h"
 
 #include <map>
@@ -401,11 +402,7 @@ int XrdProofdProofServMgr::AddSession(XrdProofdProtocol *p, XrdProofdProofServ *
    // Save session info to file
    XrdProofSessionInfo info(c, s);
    int rc = info.SaveToFile(path.c_str());
-   if (rc == 0) {
-      // Save path into the protocol instance, if successful 
-      s->SetAdminPath(path.c_str());
-      s->Protocol()->SetAdminPath(path.c_str());
-   } 
+
    return rc;
 }
 
@@ -1420,6 +1417,20 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
    XPD_SETRESP(p, "Create");
 
    TRACEP(p, DBG, "enter");
+   XrdOucString msg;
+
+   // Check if we are allowed to start a new session
+   int mxsess = fMgr->ProofSched() ? fMgr->ProofSched()->MaxSessions() : -1;
+   if (p->ConnType() == kXPD_ClientMaster && mxsess > 0) {
+      XrdSysMutexHelper mhp(fMutex);
+      int cursess = CurrentSessions();
+      if (mxsess <= cursess) {
+         msg.form(" ++++ Max number of sessions reached (%d) - please retry later ++++ \n", cursess); 
+         response->Send(kXR_attn, kXPD_srvmsg, (char *) msg.c_str(), msg.length());
+         response->Send(kXP_TooManySess, "cannot start a new session");
+         return 0;
+      }
+   }
 
    // Update counter to control checks during creation
    XpdSrvMgrCreateCnt cnt(this, kCreateCnt);
@@ -1496,7 +1507,6 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       uenvs = "";
 
    // The ROOT version to be used
-   XrdOucString msg;
    xps->SetROOT(p->Client()->ROOT());
    msg.form("using ROOT version: %s", xps->ROOT()->Export());
    TRACEP(p, REQ, msg);
@@ -1634,6 +1644,13 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
             }
          }
       }
+
+      // Unblock SIGUSR1 and SIGUSR2
+      sigset_t myset;
+      sigemptyset(&myset);
+      sigaddset(&myset, SIGUSR1);
+      sigaddset(&myset, SIGUSR2);
+      pthread_sigmask(SIG_UNBLOCK, &myset, 0);
 
       // Cleanup
       close(fp[0]);
@@ -2031,6 +2048,9 @@ int XrdProofdProofServMgr::Accept(XrdProofdProofServ *xps,
    }
 
    if (go) {
+      // Save path into the protocol instance: it may be needed during Process
+      XrdOucString apath(xps->AdminPath());
+      ((XrdProofdProtocol *)xp)->SetAdminPath(apath.c_str());
       // Take a short-cut and process the initial request as a sticky request
       if (xp->Process(linkpsrv) != 0) {
          msg = "handshake with internal link failed: ";
@@ -3437,13 +3457,50 @@ int XrdProofdProofServMgr::BroadcastPriorities()
 }
 
 //__________________________________________________________________________
+static int CountTopMasters(const char *, XrdProofdProofServ *ps, void *s)
+{
+   // Run thorugh entries to count top-masters
+   XPDLOC(SMGR, "CountTopMasters")
+
+   int *ntm = (int *)s;
+
+   XrdOucString emsg;
+   if (ps) {
+      if (ps->SrvType() == kXPD_TopMaster) (*ntm)++;
+      // Go to next
+      return 0;
+   } else {
+      emsg = "input entry undefined";
+   }
+
+   // Some problem
+   TRACE(XERR,"protocol error: "<<emsg);
+   return 1;
+}
+
+//__________________________________________________________________________
+int XrdProofdProofServMgr::CurrentSessions()
+{
+   // Return the number of current sessions (top masters)
+
+   XPDLOC(SMGR, "ProofServMgr::CurrentSessions")
+
+   TRACE(REQ, "enter");
+
+   int ns = 0;
+   XrdSysMutexHelper mhp(fMutex);
+   fSessions.Apply(CountTopMasters, (void *)&ns);
+
+   // Done
+   return ns;
+}
+
+//__________________________________________________________________________
 bool XrdProofdProofServMgr::IsReconnecting()
 {
    // Return true if in reconnection state, i.e. during
    // that period during which clients are expected to reconnect.
    // Return false if the session is fully effective
-
-   XrdSysMutexHelper mhp(fMutex);
 
    int rect = -1;
    if (fReconnectTime >= 0) {

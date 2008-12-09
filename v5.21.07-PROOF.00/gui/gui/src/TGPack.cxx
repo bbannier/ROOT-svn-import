@@ -12,6 +12,9 @@
 #include "TGPack.h"
 #include "TGSplitter.h"
 
+#include <algorithm>
+#include <vector>
+
 //______________________________________________________________________________
 //
 // Stack of frames in horizontal (default) or vertical stack.
@@ -21,7 +24,7 @@
 // their previous size.
 //
 // When frames are left in pack at destruction time, they will be
-// deleted via deep-cleanup.
+// deleted via local-cleanup.
 
 ClassImp(TGPack);
 
@@ -34,6 +37,8 @@ TGPack::TGPack(const TGWindow *p, UInt_t w, UInt_t h, UInt_t options, Pixel_t ba
    fDragOverflow (0)
 {
    // Constructor.
+
+   SetCleanup(kLocalCleanup);
 }
 
 //______________________________________________________________________________
@@ -46,7 +51,7 @@ TGPack::TGPack(TGClient *c, Window_t id, const TGWindow *parent) :
 {
    // Constructor.
 
-   SetCleanup(kDeepCleanup);
+   SetCleanup(kLocalCleanup);
 }
 
 //______________________________________________________________________________
@@ -129,41 +134,44 @@ void TGPack::ExpandExistingFrames(Int_t amount)
 {
    // Expand existing frames by amount in total.
 
-   Int_t len = LengthOfRealFrames();
+   if (fList->IsEmpty())
+      return;
 
+   Int_t length    = LengthOfRealFrames();
    Int_t remainder = amount;
 
-   if ( ! fList->IsEmpty())
+   std::vector<TGFrame*> frame_vec;
    {
       TGFrameElement *el;
       TIter next(fList);
-
       while ((el = (TGFrameElement *) next()))
       {
          Int_t l = GetFrameLength(el->fFrame);
-         Int_t d = (l * amount) / len;
+         Int_t d = (l * amount) / length;
          SetFrameLength(el->fFrame, l + d);
          remainder -= d;
+
+         frame_vec.push_back(el->fFrame);
 
          if (fUseSplitters)
             next();
       }
+   }
 
-      while (remainder > 0)
+   std::random_shuffle(frame_vec.begin(), frame_vec.end());
+
+   while (remainder > 0)
+   {
+      std::vector<TGFrame*>::iterator fi = frame_vec.begin();
+      while (fi != frame_vec.end() && remainder > 0)
       {
-         next.Reset();
-         while ((el = (TGFrameElement *) next()) && remainder > 0)
+         Int_t l = GetFrameLength(*fi);
+         if (l > 0)
          {
-            Int_t l = GetFrameLength(el->fFrame);
-            if (l > 0)
-            {
-               SetFrameLength(el->fFrame, l + 1);
-               --remainder;
-            }
-
-            if (fUseSplitters)
-               next();
+            SetFrameLength(*fi, l + 1);
+            --remainder;
          }
+         ++fi;
       }
    }
 }
@@ -173,41 +181,45 @@ void TGPack::ShrinkExistingFrames(Int_t amount)
 {
    // Shrink existing frames by amount in total.
 
-   Int_t len = LengthOfRealFrames();
-
+   Int_t length    = LengthOfRealFrames();
    Int_t remainder = amount;
 
-   TGFrameElement *el;
-   TIter next(fList);
-
-   while ((el = (TGFrameElement *) next()))
+   std::vector<TGFrame*> frame_vec;
    {
-      Int_t l = GetFrameLength(el->fFrame);
-      Int_t d = (l * amount) / len;
-      SetFrameLength(el->fFrame, l - d);
-      remainder -= d;
+      TIter next(fList);
+      TGFrameElement *el;
+      while ((el = (TGFrameElement *) next()))
+      {
+         Int_t l = GetFrameLength(el->fFrame);
+         Int_t d = (l * amount) / length;
+         SetFrameLength(el->fFrame, l - d);
+         remainder -= d;
 
-      if (fUseSplitters)
-         next();
+         frame_vec.push_back(el->fFrame);
+
+         if (fUseSplitters)
+            next();
+      }
    }
+
+   std::random_shuffle(frame_vec.begin(), frame_vec.end());
 
    Bool_t all_one = kFALSE;
    while (remainder > 0 && ! all_one)
    {
-      next.Reset();
       all_one = kTRUE;
-      while ((el = (TGFrameElement *) next()) && remainder > 0)
+
+      std::vector<TGFrame*>::iterator fi = frame_vec.begin();
+      while (fi != frame_vec.end() && remainder > 0)
       {
-         Int_t l = GetFrameLength(el->fFrame);
+         Int_t l = GetFrameLength(*fi);
          if (l > 1)
          {
             all_one = kFALSE;
-            SetFrameLength(el->fFrame, l - 1);
+            SetFrameLength(*fi, l - 1);
             --remainder;
          }
-
-         if (fUseSplitters)
-            next();
+         ++fi;
       }
    }
 }
@@ -258,7 +270,7 @@ void TGPack::AddFrameInternal(TGFrame* f, TGLayoutHints* l)
    Int_t n     = NumberOfRealFrames();
    Int_t nflen = (GetLength() - (fUseSplitters ? fSplitterLen*n : 0)) / (n + 1);
 
-   printf("New frame, n=%d, new_frame_len=%d\n", n, nflen);
+   // printf("New frame, n=%d, new_frame_len=%d\n", n, nflen);
 
    if (n > 0)
    {
@@ -324,7 +336,7 @@ Int_t TGPack::RemoveFrameInternal(TGFrame* f)
    f->UnmapWindow();
    TGCompositeFrame::RemoveFrame(f);
 
-   printf("Removed frame, n=%d, space_freed=%d\n", NumberOfRealFrames(), space_freed);
+   // printf("Removed frame, n=%d, space_freed=%d\n", NumberOfRealFrames(), space_freed);
 
    return space_freed;
 }

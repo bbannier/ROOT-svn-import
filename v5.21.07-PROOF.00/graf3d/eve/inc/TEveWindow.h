@@ -230,6 +230,8 @@ public:
    void   SetShowTitleBar(Bool_t x);
 
    Bool_t IsCurrent() const;
+   void   MakeCurrent();
+
 
    Bool_t IsAncestorOf(TEveWindow* win);
 
@@ -274,19 +276,18 @@ protected:
    TGTextButton      *fEmptyButt;
    TGCompositeFrame  *fEmbedBuffer;
 
+   virtual void SetCurrent(Bool_t curr);
+
 public:
    TEveWindowSlot(const Text_t* n="TEveWindowSlot", const Text_t* t="");
    virtual ~TEveWindowSlot();
 
    virtual TGFrame* GetGUIFrame();
 
-   virtual void SetCurrent(Bool_t curr);
-
    TEveWindowPack*   MakePack(); // *MENU*
    TEveWindowTab*    MakeTab();  // *MENU*
 
-   TEveWindowFrame*  MakeFrame();
-   TEveWindowFrame*  MakeFrame(TGFrame* frame);
+   TEveWindowFrame*  MakeFrame(TGFrame* frame=0);
 
    TGCompositeFrame* StartEmbedding();
    TEveWindowFrame*  StopEmbedding(const Text_t* name=0);
@@ -309,10 +310,12 @@ protected:
    TGFrame         *fGUIFrame;
 
 public:
-   TEveWindowFrame(TGFrame* f, const Text_t* n="TEveWindowFrame", const Text_t* t="");
+   TEveWindowFrame(TGFrame* frame, const Text_t* n="TEveWindowFrame", const Text_t* t="");
    virtual ~TEveWindowFrame();
 
    virtual TGFrame* GetGUIFrame() { return fGUIFrame; }
+
+   TGCompositeFrame* GetGUICompositeFrame();
 
    ClassDef(TEveWindowFrame, 0); // Eve-window containing any TGFrame.
 };
@@ -341,6 +344,8 @@ public:
    virtual TEveWindowSlot* NewSlot(); // *MENU*
 
    void FlipOrientation(); // *MENU*
+   void SetVertical(Bool_t x=kTRUE);
+   void SetHorizontal() { SetVertical(kFALSE); }
 
    TGPack* GetPack() const { return fPack; }
 
