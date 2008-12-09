@@ -82,6 +82,9 @@ XrdProofdProofServ::~XrdProofdProofServ()
    // Cleanup worker info
    ClearWorkers();
 
+   // Cleanup queries info
+   fQueries.clear();
+
    // Remove the associated UNIX socket path
    unlink(fUNIXSockPath.c_str());
 
@@ -89,18 +92,83 @@ XrdProofdProofServ::~XrdProofdProofServ()
 }
 
 //__________________________________________________________________________
+static int DecreaseWorkerCounters(const char *, XrdProofWorker *w, void *x)
+{
+   // Decrease active session counters on worker w
+   XPDLOC(PMGR, "DecreaseWorkerCounters")
+
+   XrdProofdProofServ *xps = (XrdProofdProofServ *)x;
+
+   if (w && xps) {
+      w->RemoveProofServ(xps);
+      TRACE(REQ, w->fHost.c_str() <<" done");
+      // Check next
+      return 0;
+   }
+
+   // Not enough info: stop
+   return 1;
+}
+
+//__________________________________________________________________________
+static int DumpWorkerCounters(const char *k, XrdProofWorker *w, void *)
+{
+   // Decrease active session counters on worker w
+   XPDLOC(PMGR, "DumpWorkerCounters")
+
+   if (w) {
+      TRACE(ALL, k <<" : "<<w->fHost.c_str()<<":"<<w->fPort <<" act: "<<w->Active());
+      // Check next
+      return 0;
+   }
+
+   // Not enough info: stop
+   return 1;
+}
+
+//__________________________________________________________________________
 void XrdProofdProofServ::ClearWorkers()
 {
    // Decrease worker counters and clean-up the list
+   // If called for a worker will do nothing (fWorkers.size() == 0)
+   // In normal operation the workers are cleared already before.
 
    XrdSysMutexHelper mhp(fMutex);
 
-   // Decrease worker counters
-   std::list<XrdProofWorker *>::iterator i;
-   for (i = fWorkers.begin(); i != fWorkers.end(); i++)
-       if (*i)
-          (*i)->fActive--;
-   fWorkers.clear();
+   // Decrease workers' counters and remove this from workers
+   fWorkers.Apply(DecreaseWorkerCounters, this);
+   fWorkers.Purge();
+}
+
+//__________________________________________________________________________
+void XrdProofdProofServ::AddWorker(const char *o, XrdProofWorker *w)
+{
+   // Add a worker assigned to this session with label 'o'
+
+   if (!o || !w) return;
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   fWorkers.Add(o, w, 0, Hash_keepdata);
+}
+
+//__________________________________________________________________________
+void XrdProofdProofServ::RemoveWorker(const char *o)
+{
+   // Release worker assigned to this session with label 'o'
+   XPDLOC(SMGR, "ProofServ::RemoveWorker")
+
+   if (!o) return;
+
+   TRACE(DBG,"removing: "<<o);
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   XrdProofWorker *w = fWorkers.Find(o);
+   if (w)
+      w->RemoveProofServ(this);
+   fWorkers.Del(o);
+   if (TRACING(HDBG)) fWorkers.Apply(DumpWorkerCounters, 0);
 }
 
 //__________________________________________________________________________
@@ -130,6 +198,8 @@ void XrdProofdProofServ::Reset()
    fROOT = 0;
    // Cleanup worker info
    ClearWorkers();
+   // Cleanup queries info
+   fQueries.clear();
    // Strings
    fAdminPath = "";
    fAlias = "";
@@ -139,6 +209,14 @@ void XrdProofdProofServ::Reset()
    fOrdinal = "";
    fTag = "";
    fUserEnvs = "";
+   DeleteUNIXSock();
+}
+
+//__________________________________________________________________________
+void XrdProofdProofServ::DeleteUNIXSock()
+{
+   // Delete the current UNIX socket
+
    SafeDelete(fUNIXSock);
    unlink(fUNIXSockPath.c_str());
    fUNIXSockPath = "";
@@ -215,13 +293,14 @@ int XrdProofdProofServ::FreeClientID(int pid)
    // Free instance corresponding to protocol connecting process 'pid'
    XPDLOC(SMGR, "ProofServ::FreeClientID")
 
-   TRACE(DBG, "pid: "<<pid<<", session status: "<<
+   TRACE(DBG, "svrPID: "<<fSrvPID<< ", pid: "<<pid<<", session status: "<<
               fStatus<<", # clients: "<< fClients.size());
    int rc = -1;
    if (pid <= 0) {
       TRACE(XERR, "undefined pid!");
       return rc;
    }
+   if (!IsValid()) return rc;
 
    {  XrdSysMutexHelper mhp(fMutex);
 
@@ -257,13 +336,11 @@ int XrdProofdProofServ::GetNClients(bool check)
    XrdSysMutexHelper mhp(fMutex);
 
    if (check) {
+      fNClients = 0;
       // Remove this from the list of clients
       std::vector<XrdClientID *>::iterator i;
       for (i = fClients.begin(); i != fClients.end(); ++i) {
-         if ((*i) && (*i)->P() && !(*i)->P()->Link()) {
-            (*i)->Reset();
-            fNClients--;
-         }
+         if ((*i) && (*i)->P() && (*i)->P()->Link()) fNClients++;
       }
    }
 
@@ -371,10 +448,10 @@ int XrdProofdProofServ::TerminateProofServ(bool changeown)
    // or other errors occured.
    XPDLOC(SMGR, "ProofServ::TerminateProofServ")
 
-   TRACE(DBG, "ord: " << Ordinal() << ", pid: " << fSrvPID);
+   int pid = fSrvPID;
+   TRACE(DBG, "ord: " << fOrdinal << ", pid: " << pid);
 
    // Send a terminate signal to the proofserv
-   int pid = SrvPID();
    if (pid > -1) {
       XrdProofUI ui;
       XrdProofdAux::GetUserInfo(fClient.c_str(), ui);
@@ -551,25 +628,6 @@ void XrdProofdProofServ::ExportBuf(XrdOucString &buf)
 }
 
 //______________________________________________________________________________
-bool XrdProofdProofServ::IsValid()
-{
-   // Returns true if the session is valid, i.e. active an not shutdown
-
-   XrdSysMutexHelper mhp(fMutex);
-
-   if (fIsValid) {
-      struct stat st;
-      if (!fIsShutdown && stat(fAdminPath.c_str(), &st) == 0) {
-         // Look good
-         return 1;
-      }
-   }
-
-   // Done
-   return 0;
-}
-
-//__________________________________________________________________________
 int XrdProofdProofServ::CreateUNIXSock(XrdSysError *edest)
 {
    // Create UNIX socket for internal connections
@@ -579,8 +637,7 @@ int XrdProofdProofServ::CreateUNIXSock(XrdSysError *edest)
 
    // Make sure we do not have already a socket
    if (fUNIXSock) {
-       TRACE(DBG,"UNIX socket exists already! (" <<
-             fUNIXSockPath<<")");
+       TRACE(DBG,"UNIX socket exists already! ("<<fUNIXSockPath<<")");
        return 0;
    }
 
@@ -612,13 +669,14 @@ int XrdProofdProofServ::CreateUNIXSock(XrdSysError *edest)
    // Create the path
    int fd = 0;
    if (!ok) {
-      if ((fd = open(fUNIXSockPath.c_str(), O_EXCL | O_RDWR | O_CREAT)) < 0) {
+      if ((fd = open(fUNIXSockPath.c_str(), O_EXCL | O_RDWR | O_CREAT, 0700)) < 0) {
          TRACE(XERR, "unable to create path: " <<fUNIXSockPath);
          return -1;
       }
       close(fd);
    }
    if (fd > -1) {
+      // Change ownership
       if (fUNIXSock->Bind((char *)fUNIXSockPath.c_str())) {
          TRACE(XERR, " problems binding to UNIX socket; path: " <<fUNIXSockPath);
          return -1;
@@ -629,7 +687,42 @@ int XrdProofdProofServ::CreateUNIXSock(XrdSysError *edest)
       return -1;
    }
 
+   // Change ownership if running as super-user
+   if (!geteuid()) {
+      XrdProofUI ui;
+      XrdProofdAux::GetUserInfo(fClient.c_str(), ui);
+      if (chown(fUNIXSockPath.c_str(), ui.fUid, ui.fGid) != 0) {
+         TRACE(XERR, "unable to change ownership of the UNIX socket"<<fUNIXSockPath);
+         return -1;
+      }
+   }
+
    // We are done
    return 0;
 }
 
+//__________________________________________________________________________
+int XrdProofdProofServ::SetAdminPath(const char *a)
+{
+   // Set the admin path and make sure the file exists
+
+   XPDLOC(SMGR, "ProofServ::SetAdminPath")
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   fAdminPath = a;
+
+   struct stat st;
+   if (stat(a, &st) != 0 && errno == ENOENT) {
+      // Create the file
+      FILE *fpid = fopen(a, "w");
+      if (fpid) {
+         fclose(fpid);
+         return 0;
+      }
+      TRACE(XERR, "unable to open / create admin path "<< fAdminPath << "; errno = "<<errno);
+      return -1;
+   }
+   // Done
+   return 0;
+}

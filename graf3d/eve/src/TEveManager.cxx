@@ -16,6 +16,7 @@
 #include "TEveScene.h"
 #include "TEvePad.h"
 #include "TEveEventManager.h"
+#include "TEveWindowManager.h"
 
 #include "TEveBrowser.h"
 #include "TEveGedEditor.h"
@@ -68,9 +69,9 @@ TEveManager::TEveManager(UInt_t w, UInt_t h, Bool_t map_window, Option_t* opt) :
 
    fMacroFolder (0),
 
+   fWindowManager  (0),
    fViewers        (0),
    fScenes         (0),
-   fViewer         (0),
    fGlobalScene    (0),
    fEventScene     (0),
    fCurrentEvent   (0),
@@ -91,9 +92,14 @@ TEveManager::TEveManager(UInt_t w, UInt_t h, Bool_t map_window, Option_t* opt) :
 {
    // Constructor.
    // If map_window is true, the TEveBrowser window is mapped.
-   // Option string is passed to TEveBrowser for creation of
-   // additional plugins. By default file-browser and command-line
-   // plugins are created.
+   //
+   // Option string is first parsed for the following characters:
+   //   V - spawn a default GL viewer.
+   //
+   // The consumed characters are removed from the options and they
+   // are passed to TEveBrowser for creation of additional plugins.
+   //
+   // Default options: "FIV" - file-browser, command-line, GL-viewer.
 
 
    static const TEveException eh("TEveManager::TEveManager ");
@@ -123,9 +129,12 @@ TEveManager::TEveManager(UInt_t w, UInt_t h, Bool_t map_window, Option_t* opt) :
    gROOT->GetListOfBrowsables()->Add(fMacroFolder);
 
 
+   fWindowManager = new TEveWindowManager("WindowManager", "Manager of EVE windows");
+
    // Build GUI
    fBrowser   = new TEveBrowser(w, h);
    fStatusBar = fBrowser->GetStatusBar();
+   fBrowser->Connect("CloseWindow()", "TEveManager", this, "CloseEveWindow()");
 
    // ListTreeEditor
    fBrowser->StartEmbedding(0);
@@ -134,33 +143,25 @@ TEveManager::TEveManager(UInt_t w, UInt_t h, Bool_t map_window, Option_t* opt) :
    fLTEFrame->ConnectSignals();
    fEditor = fLTEFrame->fEditor;
 
-   // GL viewer
-   fBrowser->ShowCloseTab(kFALSE);
-   fBrowser->StartEmbedding(1);
-   TGLSAViewer* glv = new TGLSAViewer(gClient->GetRoot(), 0, fEditor);
-   //glv->GetFrame()->SetCleanup(kNoCleanup);
-   glv->ToggleEditObject();
-   fBrowser->StopEmbedding();
-   fBrowser->SetTabTitle("GLViewer", 1);
-   fBrowser->ShowCloseTab(kTRUE);
+   // See how many GL viewers are requested, remove from options.
+   TString str_opt(opt);
+   TPMERegexp viewer_re("V", "g");
+   Int_t viewer_count = viewer_re.Substitute(str_opt, "", kFALSE);
 
-   // Finalize it
-   fBrowser->InitPlugins(opt);
+   // Create the main window / browse.
+   fBrowser->InitPlugins(str_opt);
    if (map_window)
       fBrowser->MapWindow();
 
    // --------------------------------
 
+   fWindowManager->IncDenyDestroy();
+   AddToListTree(fWindowManager, kTRUE);
+
    fViewers = new TEveViewerList("Viewers");
    fViewers->IncDenyDestroy();
-   AddToListTree(fViewers, kTRUE);
-
-   fViewer  = new TEveViewer("GLViewer");
-   fViewer->SetGLViewer(glv);
-   fViewer->IncDenyDestroy();
-   AddElement(fViewer, fViewers);
-
    fViewers->Connect();
+   AddToListTree(fViewers, kTRUE);
 
    fScenes  = new TEveSceneList ("Scenes");
    fScenes->IncDenyDestroy();
@@ -168,19 +169,26 @@ TEveManager::TEveManager(UInt_t w, UInt_t h, Bool_t map_window, Option_t* opt) :
 
    fGlobalScene = new TEveScene("Geometry scene");
    fGlobalScene->IncDenyDestroy();
-   AddElement(fGlobalScene, fScenes);
+   fScenes->AddElement(fGlobalScene);
 
    fEventScene = new TEveScene("Event scene");
    fEventScene->IncDenyDestroy();
-   AddElement(fEventScene, fScenes);
+   fScenes->AddElement(fEventScene);
 
-   fViewer->AddScene(fGlobalScene);
-   fViewer->AddScene(fEventScene);
+   for (Int_t vc = 0; vc < viewer_count; ++vc)
+   {
+      TEveViewer* v = SpawnNewViewer(Form("Viewer %d", vc+1));
+      v->AddScene(fGlobalScene);
+      v->AddScene(fEventScene);
+   }
+
+   if (GetDefaultViewer())
+   {
+      EditElement(GetDefaultViewer());
+   }
 
    /**************************************************************************/
    /**************************************************************************/
-
-   EditElement(fViewer);
 
    gSystem->ProcessEvents();
 }
@@ -190,10 +198,28 @@ TEveManager::~TEveManager()
 {
    // Destructor.
 
+   fGlobalScene->DecDenyDestroy();
+   fEventScene->DecDenyDestroy();
+   fScenes->DestroyScenes();
+   fScenes->DecDenyDestroy();
+   fScenes->Destroy();
+   fScenes = 0;
+
+   fViewers->DestroyElements();
+   fViewers->DecDenyDestroy();
+   fViewers->Destroy();
+   fViewers = 0;
+
+   fWindowManager->DestroyElements();
+   fWindowManager->DecDenyDestroy();
+   fWindowManager->Destroy();
+   fWindowManager = 0;
+
    fOrphanage->DecDenyDestroy();
    fHighlight->DecDenyDestroy();
    fSelection->DecDenyDestroy();
 
+   delete fMacroFolder;
    delete fGeometryAliases;
    delete fGeometries;
    delete fVizDB;
@@ -235,11 +261,20 @@ TGWindow* TEveManager::GetMainWindow() const
 }
 
 //______________________________________________________________________________
-TGLViewer* TEveManager::GetGLViewer() const
+TEveViewer* TEveManager::GetDefaultViewer() const
 {
-   // Get default TGLViewer.
+   // Returns the default viewer - the first one in the fViewers list.
 
-   return fViewer->GetGLViewer();
+   return dynamic_cast<TEveViewer*>(fViewers->FirstChild());
+}
+
+//______________________________________________________________________________
+TGLViewer* TEveManager::GetDefaultGLViewer() const
+{
+   // Get TGLViewer of the default TEveViewer.
+
+   TEveViewer *ev = GetDefaultViewer();
+   return ev ? ev->GetGLViewer() : 0;
 }
 
 //______________________________________________________________________________
@@ -248,21 +283,30 @@ TEveViewer* TEveManager::SpawnNewViewer(const Text_t* name, const Text_t* title,
 {
    // Create a new GL viewer.
 
-   TEveViewer* v = new TEveViewer(name, title);
+   TEveWindowSlot* slot = 0;
+   if (embed)
+   {
+      slot = fWindowManager->GetCurrentWindowAsSlot();
+      if (slot == 0)
+      {
+         // In principle should have some default/current container
+         // in TEveWindowManager.
+         // Also to store closed windows.
+         slot = TEveWindow::CreateWindowInTab(fBrowser->GetTabRight());
+      }
+   }
+   else
+   {
+      slot = TEveWindow::CreateWindowMainFrame();
+   }
 
-   if (embed)
-   {
-      fBrowser->ShowCloseTab(kFALSE);
-      fBrowser->StartEmbedding(1);
-   }
-   v->SpawnGLViewer(gClient->GetRoot(), embed ? fEditor : 0);
-   v->IncDenyDestroy();
-   if (embed)
-   {
-      fBrowser->StopEmbedding(), fBrowser->SetTabTitle(name, 1);
-      fBrowser->ShowCloseTab(kTRUE);
-   }
-   AddElement(v, fViewers);
+   TEveViewer* v = new TEveViewer(name, title);
+   v->SpawnGLViewer(embed ? fEditor : 0);
+
+   slot->ReplaceWindow(v);
+
+   fViewers->AddElement(v);
+
    return v;
 }
 
@@ -503,7 +547,8 @@ void TEveManager::PreDeleteElement(TEveElement* element)
    if (fEditor->GetEveElement() == element)
       EditElement(0);
 
-   fScenes->DestroyElementRenderers(element);
+   if (fScenes)
+      fScenes->DestroyElementRenderers(element);
 
    TEveElement::Set_i sei = fStampedElements.find(element);
    if (sei != fStampedElements.end())
@@ -802,6 +847,23 @@ void TEveManager::ClearROOTClassSaved()
    }
 }
 
+//______________________________________________________________________________
+void TEveManager::CloseEveWindow()
+{
+   // Close button haas been clicked on EVE main window (browser).
+   // Cleanup and terminate application.
+
+   TGMainFrame *mf = (TGMainFrame*) gTQSender;
+   TEveBrowser *eb = dynamic_cast<TEveBrowser*>(mf);
+   if (eb == fBrowser)
+   {
+      mf->DontCallClose();
+      Terminate();
+      gApplication->Terminate();
+   }
+}
+
+
 /******************************************************************************/
 // Static initialization.
 /******************************************************************************/
@@ -828,6 +890,23 @@ TEveManager* TEveManager::Create(Bool_t map_window, Option_t* opt)
    return gEve;
 }
 
+//______________________________________________________________________________
+void TEveManager::Terminate()
+{
+   // Properly terminate global TEveManager.
+
+   if (!gEve) return;
+
+   TEveGListTreeEditorFrame *lf = gEve->fLTEFrame;
+   TEveBrowser              *b  = gEve->GetBrowser();
+
+   delete gEve;
+
+   delete lf;
+   delete b;
+
+   gEve = 0;
+}
 
 //==============================================================================
 //==============================================================================

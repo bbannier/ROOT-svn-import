@@ -507,7 +507,6 @@ End_Html */
 
 
 TF1 *gF1=0;  //left for back compatibility (use TVirtualFitter::GetUserFunc instead)
-const Int_t kNstat = 11;
 
 Int_t  TH1::fgBufferSize   = 1000;
 Bool_t TH1::fgAddDirectory = kTRUE;
@@ -2047,12 +2046,6 @@ void TH1::Copy(TObject &obj) const
    ((TH1&)obj).fNcells    = fNcells;
    ((TH1&)obj).fBarOffset = fBarOffset;
    ((TH1&)obj).fBarWidth  = fBarWidth;
-   ((TH1&)obj).fTsumw     = fTsumw;
-   ((TH1&)obj).fTsumw2    = fTsumw2;
-   ((TH1&)obj).fTsumwx    = fTsumwx;
-   ((TH1&)obj).fTsumwx2   = fTsumwx2;
-   ((TH1&)obj).fMaximum   = fMaximum;
-   ((TH1&)obj).fMinimum   = fMinimum;
    ((TH1&)obj).fOption    = fOption;
    ((TH1&)obj).fBuffer    = 0;
    ((TH1&)obj).fBufferSize= fBufferSize;
@@ -2067,6 +2060,13 @@ void TH1::Copy(TObject &obj) const
    if (a) a->Set(fNcells);
    for (i=0;i<fNcells;i++) ((TH1&)obj).SetBinContent(i,this->GetBinContent(i));
    ((TH1&)obj).fEntries   = fEntries;
+
+   ((TH1&)obj).fTsumw     = fTsumw;
+   ((TH1&)obj).fTsumw2    = fTsumw2;
+   ((TH1&)obj).fTsumwx    = fTsumwx;
+   ((TH1&)obj).fTsumwx2   = fTsumwx2;
+   ((TH1&)obj).fMaximum   = fMaximum;
+   ((TH1&)obj).fMinimum   = fMinimum;
 
    TAttLine::Copy(((TH1&)obj));
    TAttFill::Copy(((TH1&)obj));

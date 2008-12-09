@@ -140,7 +140,7 @@ XrdProofdPriorityMgr::XrdProofdPriorityMgr(XrdProofdManager *mgr,
 static int DumpPriorityChanges(const char *, XrdProofdPriority *p, void *s)
 {
    // Reset the priority on entries
-   XPDLOC(PMGR, "PriorityMgr::Config")
+   XPDLOC(PMGR, "DumpPriorityChanges")
 
    XrdSysError *e = (XrdSysError *)s;
 
@@ -332,9 +332,11 @@ int XrdProofdPriorityMgr::SetNiceValues(int opt)
 
    TRACE(REQ, "opt: "<<opt);
 
-   if (!fMgr->GroupsMgr() || fMgr->GroupsMgr()->Num() <= 1 || !IsSchedOn())
+   if (!fMgr->GroupsMgr() || fMgr->GroupsMgr()->Num() <= 1 || !IsSchedOn()) {
       // Nothing to do
+      TRACE(REQ, "------------------- End ------------------------");
       return 0;
+   }
 
    // At least two active session
    int nact = fSessions.Num();

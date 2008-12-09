@@ -40,6 +40,14 @@ TEveBoxSetGL::TEveBoxSetGL() : fM(0), fBoxDL(0)
    fMultiColor = kTRUE;
 }
 
+//______________________________________________________________________________
+TEveBoxSetGL::~TEveBoxSetGL()
+{
+   // Destructor.
+
+   DLCachePurge();
+}
+
 /******************************************************************************/
 // Protected methods
 /******************************************************************************/
@@ -138,8 +146,9 @@ void TEveBoxSetGL::MakeDisplayList() const
          fBoxDL = glGenLists(1);
 
       glNewList(fBoxDL, GL_COMPILE);
-  
-      if (fM->fBoxType < TEveBoxSet::kBT_Cone) { 
+
+      if (fM->fBoxType < TEveBoxSet::kBT_Cone)
+      {
          glBegin(PrimitiveType());
          Float_t p[24];
          if (fM->fBoxType == TEveBoxSet::kBT_AABox)
@@ -149,7 +158,7 @@ void TEveBoxSetGL::MakeDisplayList() const
          RenderBox(p);
          glEnd();
       }
-      else 
+      else
       {
          static TGLQuadric quad;
          Int_t nt = 15; // number of corners
@@ -201,17 +210,10 @@ void TEveBoxSetGL::DLCachePurge()
    // Called when display-lists need to be returned to the system.
    // Virtual from TGLLogicalShape.
 
-   static const TEveException eH("TEveBoxSetGL::DLCachePurge ");
-
-   if (fBoxDL == 0) return;
-   if (fScene)
+   if (fBoxDL != 0)
    {
-      fScene->GetGLCtxIdentity()->RegisterDLNameRangeToWipe(fBoxDL, 1);
-   }
-   else
-   {
-      Warning(eH, "TEveScene unknown, attempting direct deletion.");
-      glDeleteLists(fBoxDL, 1);
+      PurgeDLRange(fBoxDL, 1);
+      fBoxDL = 0;
    }
    TGLObject::DLCachePurge();
 }

@@ -83,6 +83,8 @@ int XrdProofdAdmin::Process(XrdProofdProtocol *p, int type)
          return SetSessionAlias(p);
       case kSessionTag:
          return SetSessionTag(p);
+      case kReleaseWorker:
+         return ReleaseWorker(p);
       default:
          emsg += "Invalid type: ";
          emsg += type;
@@ -199,7 +201,7 @@ int XrdProofdAdmin::SetROOTVersion(XrdProofdProtocol *p)
          buf += " ";
          buf += tag;
          int type = ntohl(p->Request()->proof.int1);
-         fMgr->NetMgr()->Broadcast(type, buf.c_str(),response);
+         fMgr->NetMgr()->Broadcast(type, buf.c_str(), p->Client()->User(), response);
       }
       // Acknowledge user
       response->Send();
@@ -253,7 +255,7 @@ int XrdProofdAdmin::GetWorkers(XrdProofdProtocol *p)
 
    // Find server session
    XrdProofdProofServ *xps = 0;
-   if (!p->Client() || !(xps = p->Client()->GetProofServ(psid))) {
+   if (!p->Client() || !(xps = p->Client()->GetServer(psid))) {
       TRACEP(p, XERR, "session ID not found");
       response->Send(kXR_InvalidRequest,"session ID not found");
       return 0;
@@ -428,8 +430,11 @@ int XrdProofdAdmin::QuerySessions(XrdProofdProtocol *p)
    int rc = 0;
    XPD_SETRESP(p, "QuerySessions");
 
-   XrdOucString notmsg;
-   XrdOucString msg = p->Client()->ExportSessions(notmsg, response);
+   XrdOucString notmsg, msg;
+   {  // This is needed to block the session checks
+      XpdSrvMgrCreateCnt cnt(fMgr->SessionMgr(), XrdProofdProofServMgr::kProcessCnt);
+      msg = p->Client()->ExportSessions(notmsg, response);
+   }
 
    if (notmsg.length() > 0) {
       // Some sessions seem non-responding: notify the client
@@ -573,12 +578,14 @@ int XrdProofdAdmin::QueryLogPaths(XrdProofdProtocol *p)
                   // about its workers
                   bool ismst = (strstr(pp, "master-")) ? 1 : 0;
                   if (ismst) {
+                     XrdClientUrlInfo u((const char *)&ln[0]);
                      XrdOucString msg(stag);
                      msg += "|master:";
                      msg += ln;
                      msg += "|user:";
-                     msg += XrdClientUrlInfo(ln).User;
-                     char *bmst = fMgr->NetMgr()->ReadLogPaths((const char *)&ln[0], msg.c_str(), ridx);
+                     msg += u.User;
+                     u.User = p->Client()->User() ? p->Client()->User() : fMgr->EffectiveUser();
+                     char *bmst = fMgr->NetMgr()->ReadLogPaths(u.GetUrl().c_str(), msg.c_str(), ridx);
                      if (bmst) {
                         rmsg += bmst;
                         free(bmst);
@@ -686,35 +693,25 @@ int XrdProofdAdmin::CleanupSessions(XrdProofdProtocol *p)
    if (hard && fMgr->SrvType() != kXPD_Worker) {
 
       // Asynchronous notification to requester
-      cmsg.form("CleanupSessions: %s: wait 5 seconds for completion before forwarding ...", lab);
-      response->Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
-      sleep(5);
-
-      // Asynchronous notification to requester
       cmsg.form("CleanupSessions: %s: forwarding the reset request to next tier(s) ", lab);
       response->Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
 
       int type = ntohl(p->Request()->proof.int1);
-      fMgr->NetMgr()->Broadcast(type, usr, response, 1);
+      fMgr->NetMgr()->Broadcast(type, usr, p->Client()->User(), response, 1);
+   }
 
-      // We wait for the next sessions check, if it was not too close
-      int twait = fMgr->SessionMgr()->NextSessionsCheck() - time(0);
-      if (twait < 5) twait = fMgr->SessionMgr()->CheckFrequency();
-      // Asynchronous notification to requester
-      while (twait > 0) {
-         cmsg.form("CleanupSessions: %s: waiting %d secs for the session"
-                  " manager to verify session termination", lab, twait);
+   // Wait just a bit before testing the activity of the session manager
+   sleep(1);
+
+   // Additional waiting (max 10 secs) depends on the activity of the session manager
+   int twait = 10;
+   while (twait > 0 &&
+          fMgr->SessionMgr()->CheckCounter(XrdProofdProofServMgr::kCleanSessionsCnt) > 0) {
+      if (twait < 7) {
+         cmsg.form("CleanupSessions: %s: wait %d more seconds for completion ...", lab, twait);
          response->Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
-         int tsleep = (twait > 5) ? 5 : twait;
-         sleep(tsleep);
-         twait -= 5;
       }
-   } else {
-
-      // Asynchronous notification to requester
-      cmsg.form("CleanupSessions: %s: wait 5 seconds for completion ...", lab);
-      response->Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
-      sleep(5);
+      sleep(1);
    }
 
    // Cleanup usr
@@ -740,7 +737,7 @@ int XrdProofdAdmin::SetSessionAlias(XrdProofdProtocol *p)
    // Specific info about a session
    int psid = ntohl(p->Request()->proof.sid);
    XrdProofdProofServ *xps = 0;
-   if (!p->Client() || !(xps = p->Client()->GetProofServ(psid))) {
+   if (!p->Client() || !(xps = p->Client()->GetServer(psid))) {
       TRACEP(p, XERR, "session ID not found");
       response->Send(kXR_InvalidRequest,"SetSessionAlias: session ID not found");
       return 0;
@@ -780,7 +777,7 @@ int XrdProofdAdmin::SetSessionTag(XrdProofdProtocol *p)
    // Specific info about a session
    int psid = ntohl(p->Request()->proof.sid);
    XrdProofdProofServ *xps = 0;
-   if (!p->Client() || !(xps = p->Client()->GetProofServ(psid))) {
+   if (!p->Client() || !(xps = p->Client()->GetServer(psid))) {
       TRACEP(p, XERR, "session ID not found");
       response->Send(kXR_InvalidRequest,"SetSessionTag: session ID not found");
       return 0;
@@ -799,6 +796,44 @@ int XrdProofdAdmin::SetSessionTag(XrdProofdProtocol *p)
          XrdOucString tag(xps->Tag());
          TRACEP(p, DBG, "session tag set to: "<<tag);
       }
+   }
+
+   // Acknowledge user
+   response->Send();
+
+   // Over
+   return 0;
+}
+
+//______________________________________________________________________________
+int XrdProofdAdmin::ReleaseWorker(XrdProofdProtocol *p)
+{
+   // Handle request for releasing a worker
+   XPDLOC(ALL, "Admin::ReleaseWorker")
+
+   int rc = 0;
+   XPD_SETRESP(p, "ReleaseWorker");
+   //
+   // Specific info about a session
+   int psid = ntohl(p->Request()->proof.sid);
+   XrdProofdProofServ *xps = 0;
+   if (!p->Client() || !(xps = p->Client()->GetServer(psid))) {
+      TRACEP(p, XERR, "session ID not found");
+      response->Send(kXR_InvalidRequest,"ReleaseWorker: session ID not found");
+      return 0;
+   }
+
+   // Set session tag
+   const char *msg = (const char *) p->Argp()->buff;
+   int   len = p->Request()->header.dlen;
+   if (len > kXPROOFSRVTAGMAX - 1)
+      len = kXPROOFSRVTAGMAX - 1;
+
+   // Save tag
+   if (len > 0 && msg) {
+      xps->RemoveWorker(msg);
+      TRACEP(p, DBG, "worker \""<<msg<<"\" released");
+      if (TRACING(HDBG)) fMgr->NetMgr()->Dump();
    }
 
    // Acknowledge user

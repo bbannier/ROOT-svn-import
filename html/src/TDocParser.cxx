@@ -131,7 +131,8 @@ std::set<std::string>  TDocParser::fgKeywords;
 //______________________________________________________________________________
 TDocParser::TDocParser(TClassDocOutput& docOutput, TClass* cl):
    fHtml(docOutput.GetHtml()), fDocOutput(&docOutput), fLineNo(0),
-   fCurrentClass(cl), fCurrentModule(0), fDirectiveCount(0), fDocContext(kIgnore), 
+   fCurrentClass(cl), fRecentClass(0), fCurrentModule(0),
+   fDirectiveCount(0), fDocContext(kIgnore), 
    fCheckForMethod(kFALSE), fClassDocState(kClassDoc_Uninitialized), 
    fCommentAtBOL(kFALSE)
 {
@@ -166,7 +167,7 @@ TDocParser::TDocParser(TClassDocOutput& docOutput, TClass* cl):
 //______________________________________________________________________________
 TDocParser::TDocParser(TDocOutput& docOutput):
    fHtml(docOutput.GetHtml()), fDocOutput(&docOutput), fLineNo(0),
-   fCurrentClass(0), fDirectiveCount(0), fDocContext(kIgnore), 
+   fCurrentClass(0), fRecentClass(0), fDirectiveCount(0), fDocContext(kIgnore), 
    fCheckForMethod(kFALSE), fClassDocState(kClassDoc_Uninitialized),
    fCommentAtBOL(kFALSE)
 {
@@ -328,7 +329,7 @@ void TDocParser::AddClassDataMembersRecursively(TBaseClass* bc) {
 
 
 //______________________________________________________________________________
-void TDocParser::AnchorFromLine(TString& anchor) {
+void TDocParser::AnchorFromLine(const TString& line, TString& anchor) {
    // Create an anchor from the given line, by hashing it and
    // convertig the hash into a custom base64 string.
 
@@ -337,7 +338,7 @@ void TDocParser::AnchorFromLine(TString& anchor) {
    // use hash of line instead of e.g. line number.
    // advantages: more stable (lines can move around, we still find them back),
    // no need for keeping a line number context
-   UInt_t hash = ::Hash(fLineStripped);
+   UInt_t hash = ::Hash(line);
    anchor.Remove(0);
    // force first letter to be [A-Za-z], to be id compatible
    anchor += base64String[hash % 52];
@@ -617,8 +618,12 @@ void TDocParser::DecorateKeywords(TString& line)
       }
       TClass* lookupScope = currentType.back();
 
-      if (scoping == kNada)
-         lookupScope = fCurrentClass;
+      if (scoping == kNada) {
+         if (fCurrentClass)
+            lookupScope = fCurrentClass;
+         else
+            lookupScope = fRecentClass;
+      }
 
       if (scoping == kNada) {
          subType = gROOT->GetType(word);
@@ -724,6 +729,7 @@ void TDocParser::DecorateKeywords(TString& line)
             globalTypeName ? globalTypeName : subClass->GetName());
 
          currentType.back() = subClass;
+         fRecentClass = subClass;
       } else if (datamem || meth) {
             if (datamem) {
                fDocOutput->ReferenceEntity(substr, datamem);
@@ -1385,7 +1391,7 @@ TMethod* TDocParser::LocateMethodInCurrentLine(Ssiz_t &posMethodName, TString& r
          // gotta write out this line before it gets lost
          if (!anchor.Length()) {
             // request an anchor, just in case...
-            AnchorFromLine(anchor);
+            AnchorFromLine(fLineStripped, anchor);
             if (srcOut)
                srcOut << "<a name=\"" << anchor << "\"></a>";
          }
@@ -1673,7 +1679,7 @@ void TDocParser::LocateMethods(std::ostream& out, const char* filename,
             fComment.Remove(0);
 
          if (needAnchor || fExtraLinesWithAnchor.find(fLineNo) != fExtraLinesWithAnchor.end()) {
-            AnchorFromLine(anchor);
+            AnchorFromLine(fLineStripped, anchor);
             if (sourceExt)
                srcHtmlOut << "<a name=\"" << anchor << "\"></a>";
          }
@@ -1974,7 +1980,13 @@ void TDocParser::WriteMethod(std::ostream& out, TString& ret,
 
    TMethod* guessedMethod = 0;
    int nparams = params.CountChar(',');
-   if (params.Length()) ++nparams;
+   TString strippedParams(params);
+   if (strippedParams[0] == '(') {
+      strippedParams.Remove(0, 1);
+      strippedParams.Remove(strippedParams.Length() - 1);
+   }
+   if (strippedParams.Strip(TString::kBoth).Length())
+      ++nparams;
 
    TMethod* method = 0;
    TIter nextMethod(fCurrentClass->GetListOfMethods());

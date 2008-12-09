@@ -1081,8 +1081,9 @@ void TF1::Copy(TObject &obj) const
       for (i=0;i<fNpar;i++)   ((TF1&)obj).fParMax[i]    = fParMax[i];
    }
    if (fMethodCall) {
-      TMethodCall *m = new TMethodCall();
-      m->InitWithPrototype(fMethodCall->GetMethodName(),fMethodCall->GetProto());
+      // use copy-constructor of TMethodCall 
+      TMethodCall *m = new TMethodCall(*fMethodCall);
+//       m->InitWithPrototype(fMethodCall->GetMethodName(),fMethodCall->GetProto());
       ((TF1&)obj).fMethodCall  = m;
    }
 }
@@ -1673,7 +1674,7 @@ Int_t TF1::GetNDF() const
    // The number of degrees of freedom corresponds to the number of points
    // used in the fit minus the number of free parameters.
 
-   if (fNDF == 0) return fNpfits-fNpar;
+   if (fNDF == 0 && (fNpfits > fNpar) ) return fNpfits-fNpar;
    return fNDF;
 }
 

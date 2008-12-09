@@ -101,6 +101,7 @@ protected:
    TString        fFirstClassDoc;   // first class-doc found - per file, taken if fLastClassDoc is empty
    TString        fLastClassDoc;    // last class-doc found - becomes class doc at ClassImp or first method
    TClass*        fCurrentClass;    // current class context of sources being parsed
+   TClass*        fRecentClass;     // recently seen class context of sources being parsed, e.g. for Convert()
    TString        fCurrentModule;   // current module context of sources being parsed
    TString        fCurrentMethodTag;// name_idx of the currently parsed method
    Int_t          fDirectiveCount;  // index of directive for current method
@@ -130,7 +131,6 @@ protected:
 
    void           AddClassMethodsRecursively(TBaseClass* bc);
    void           AddClassDataMembersRecursively(TBaseClass* bc);
-   void           AnchorFromLine(TString& anchor);
    EParseContext  Context() const { return fParseContext.empty() ? kComment : (EParseContext)(fParseContext.back() & kParseContextMask); }
    virtual void   ExpandCPPLine(TString& line, Ssiz_t& pos);
    virtual Bool_t HandleDirective(TString& keyword, Ssiz_t& pos, 
@@ -163,6 +163,7 @@ public:
    TDocParser(TDocOutput& docOutput);
    virtual       ~TDocParser();
 
+   static void   AnchorFromLine(const TString& line, TString& anchor);
    void          Convert(std::ostream& out, std::istream& in, const char* relpath);
    void          DecrementMethodCount(const char* name);
    virtual void  DecorateKeywords(std::ostream& out, const char* text);

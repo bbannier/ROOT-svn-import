@@ -140,7 +140,12 @@ private:
    Long64_t      fMaxBoxSize;       //Max size of the sandbox
    Long64_t      fHWMBoxSize;       //High-Water-Mark on the sandbox size
 
+   // Memory limits (-1 to disable) set by envs ROOTPROOFASSOFT and RPPTPROFOASHARD
+   Long_t        fVirtMemHWM;       //Above this we terminate gently (in kB)
+   Long_t        fVirtMemMax;       //Hard limit enforced by the system (in kB)
+
    static FILE  *fgErrorHandlerFile; // File where to log 
+   static Int_t  fgRecursive;       // Keep track of recursive inputs during processing
 
    void          RedirectOutput(const char *dir = 0, const char *mode = "w");
    Int_t         CatMotd();
@@ -155,11 +160,6 @@ private:
                                       const char *selec, TObject *elist);
    void          SetQueryRunning(TProofQueryResult *pq);
 
-   // Input data handling
-   Int_t         GetInputData(TList *input);
-   Int_t         SaveInputData(TQueryResult *qr);
-   Int_t         SendInputData(TQueryResult *qr);
-
 protected:
    virtual void  HandleArchive(TMessage *mess);
    virtual Int_t HandleCache(TMessage *mess);
@@ -173,7 +173,6 @@ protected:
    virtual void  HandleRetrieve(TMessage *mess);
    virtual void  HandleWorkerLists(TMessage *mess);
 
-   virtual void  HandleSocketInputDuringProcess();
    virtual Int_t Setup();
    Int_t         SetupCommon();
    virtual void  MakePlayer();
@@ -211,6 +210,8 @@ public:
 
    Int_t          GetInflateFactor() const { return fInflateFactor; }
 
+   Long_t         GetVirtMemHWM() const { return fVirtMemHWM; }
+
    const char    *GetPrefix()     const { return fPrefix; }
 
    void           FlushLogFile();
@@ -221,6 +222,7 @@ public:
    virtual EQueryAction GetWorkers(TList *workers, Int_t &prioritychange);
 
    virtual void   HandleException(Int_t sig);
+   virtual Int_t  HandleSocketInput(TMessage *mess, Bool_t all);
    virtual void   HandleSocketInput();
    virtual void   HandleUrgentData();
    virtual void   HandleSigPipe();
@@ -237,12 +239,13 @@ public:
 
    TObject       *Get(const char *namecycle);
    TDSetElement  *GetNextPacket(Long64_t totalEntries = -1);
+   virtual void   ReleaseWorker(const char *) { }
    void           Reset(const char *dir);
    Int_t          ReceiveFile(const char *file, Bool_t bin, Long64_t size);
    virtual Int_t  SendAsynMessage(const char *msg, Bool_t lf = kTRUE);
    virtual void   SendLogFile(Int_t status = 0, Int_t start = -1, Int_t end = -1);
    void           SendStatistics();
-   void           SendParallel();
+   void           SendParallel(Bool_t async = kFALSE);
 
    // Disable / Enable read timeout
    virtual void   DisableTimeout() { }

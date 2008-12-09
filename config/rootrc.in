@@ -94,7 +94,7 @@ Root.Fitter:             Minuit
 # on mouse and key events.
 Canvas.MoveOpaque:          false
 Canvas.ResizeOpaque:        false
-Canvas.UseScreenFactor:     true
+Canvas.UseScreenFactor:     false
 Canvas.HighLightColor:      2
 Canvas.ShowEventStatus:     false
 Canvas.ShowToolBar:         false
@@ -190,6 +190,8 @@ Browser.SortBy:              name
 Browser.GroupView:           10000
 Browser.ShowHidden:          no
 Browser.AutoThumbnail:       yes
+# Start URL for the TRootBrowser embedded HTML renderer
+Browser.StartUrl:            http://root.cern.ch/root/html/ClassIndex.html
 
 # Rint (interactive ROOT executable) specific alias, logon and logoff macros.
 Rint.Load:               rootalias.C
@@ -232,6 +234,13 @@ ACLiC.Linkdef:          _linkdef
 #ACLiC.BuildDir:        /where/I/would/like/my/compiled/scripts
 # Add additional include directives for ACLiC compilations.
 #ACLiC.IncludePaths:     -I/where/the/includes/are
+# Select whether and how ACLiC tracks the dependency of the libraries.
+#  0 - No tracking
+#  1 - [Default] New libraries are explicitly linked to all currently loaded libraries
+#  2 - Generate and use rootmap file for each library
+#  3 - Generate rootmap file for each library _and_ explicitly link to the
+#      needed libraries.
+#ACLiC.LinkLibs:      1
 
 # PROOF related variables
 #

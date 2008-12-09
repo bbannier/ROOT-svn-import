@@ -30,7 +30,6 @@
 #include "TROOT.h"
 #include "Strlen.h"
 #include "TVirtualMutex.h"
-//#include "TCint.h"
 
 ClassImp(TMethodCall)
 
@@ -329,6 +328,8 @@ void TMethodCall::Execute(void *object)
 {
    // Execute the method (with preset arguments) for the specified object.
 
+   if (!fFunc) return;
+   
    R__LOCKGUARD2(gCINTMutex);
    void *address = 0;
    if (object) address = (void*)((Long_t)object + fOffset);
@@ -348,6 +349,8 @@ void TMethodCall::Execute(void *object, const char *params)
 {
    // Execute the method for the specified object and argument values.
 
+   if (!fFunc) return;
+   
    R__LOCKGUARD2(gCINTMutex);
    gCint->CallFunc_SetArgs(fFunc, (char *)params);
 
@@ -363,6 +366,8 @@ void TMethodCall::Execute(void *object, Long_t &retLong)
 {
    // Execute the method (with preset arguments) for the specified object.
 
+   if (!fFunc) return;
+   
    R__LOCKGUARD2(gCINTMutex);
    void *address = 0;
    if (object) address = (void*)((Long_t)object + fOffset);
@@ -376,6 +381,8 @@ void TMethodCall::Execute(void *object, const char *params, Long_t &retLong)
 {
    // Execute the method for the specified object and argument values.
 
+   if (!fFunc) return;
+   
    R__LOCKGUARD2(gCINTMutex);
    gCint->CallFunc_SetArgs(fFunc, (char *)params);
 
@@ -391,6 +398,8 @@ void TMethodCall::Execute(void *object, Double_t &retDouble)
 {
    // Execute the method (with preset arguments) for the specified object.
 
+   if (!fFunc) return;
+   
    R__LOCKGUARD2(gCINTMutex);
    void *address = 0;
    if (object) address = (void*)((Long_t)object + fOffset);
@@ -404,6 +413,8 @@ void TMethodCall::Execute(void *object, const char *params, Double_t &retDouble)
 {
    // Execute the method for the specified object and argument values.
 
+   if (!fFunc) return;
+   
    R__LOCKGUARD2(gCINTMutex);
    gCint->CallFunc_SetArgs(fFunc, (char *)params);
 
@@ -419,6 +430,8 @@ void TMethodCall::Execute(void *object, char **retText)
 {
    // Execute the method (with preset arguments) for the specified object.
 
+   if (!fFunc) return;
+   
    R__LOCKGUARD2(gCINTMutex);
    void *address = 0;
    if (object) address = (void*)((Long_t)object + fOffset);
@@ -432,6 +445,8 @@ void TMethodCall::Execute(void *object, const char *params, char **retText)
 {
    // Execute the method for the specified object and argument values.
 
+   if (!fFunc) return;
+   
    R__LOCKGUARD2(gCINTMutex);
    gCint->CallFunc_SetArgs(fFunc, (char *)params);
 
@@ -530,6 +545,7 @@ void TMethodCall::SetParamPtrs(void *paramArr, Int_t nparam)
    // Nargs is the number of all arguments and NargsOpt is the number
    // of default arguments.
 
+   if (!fFunc) return;
    R__LOCKGUARD2(gCINTMutex);
    gCint->CallFunc_SetArgArray(fFunc,(Long_t *)paramArr, nparam);
 }
@@ -539,6 +555,7 @@ void TMethodCall::ResetParam()
 {
    // Reset parameter list. To be used before the first call the SetParam().
 
+   if (!fFunc) return;
    gCint->CallFunc_ResetArg(fFunc);
 }
 
@@ -547,6 +564,7 @@ void TMethodCall::SetParam(Long_t l)
 {
    // Set long method parameter.
 
+   if (!fFunc) return;
    gCint->CallFunc_SetArg(fFunc,l);
 }
 
@@ -555,6 +573,7 @@ void TMethodCall::SetParam(Double_t d)
 {
    // Set double method parameter.
 
+   if (!fFunc) return;
    gCint->CallFunc_SetArg(fFunc,d);
 }
 
@@ -563,6 +582,7 @@ void TMethodCall::SetParam(Long64_t ll)
 {
    // Set long long method parameter.
 
+   if (!fFunc) return;
    gCint->CallFunc_SetArg(fFunc,ll);
 }
 
@@ -571,5 +591,6 @@ void TMethodCall::SetParam(ULong64_t ull)
 {
    // Set unsigned long long method parameter.
 
+   if (!fFunc) return;   
    gCint->CallFunc_SetArg(fFunc,ull);
 }

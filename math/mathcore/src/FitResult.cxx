@@ -48,6 +48,7 @@ FitResult::FitResult() :
    fValid(isValid),
    fNormalized(false),
    fNFree(min.NFree() ),
+   fNdf(0),
    fNCalls(min.NCalls()),
    fStatus(min.Status() ),
    fVal (min.MinValue()),  
@@ -59,11 +60,22 @@ FitResult::FitResult() :
    // Constructor from a minimizer, fill the data. ModelFunction  is passed as non const 
    // since it will be managed by the FitResult
 
-   if (sizeOfData > 0) fNdf = sizeOfData - min.NFree(); 
+   if (sizeOfData >  min.NFree() ) fNdf = sizeOfData - min.NFree(); 
+
 
    // set right parameters in function (in case minimizer did not do before)
    // do also when fit is not valid
-   if (fFitFunc) fFitFunc->SetParameters(&fParams.front());
+   if (fFitFunc) { 
+      fFitFunc->SetParameters(&fParams.front());
+   }
+   else { 
+      // when no fFitFunc is present take parameters from FitConfig
+      unsigned int npar = fParams.size();
+      fParNames.reserve( npar );
+      for (unsigned int i = 0; i < npar; ++i ) {
+         fParNames.push_back( fconfig.ParSettings(i).Name() );
+      }
+   }
 
    if (min.Errors() != 0) 
       fErrors = std::vector<double>(min.Errors(), min.Errors() + min.NDim() ) ; 
@@ -136,6 +148,11 @@ FitResult::FitResult() :
 
 }
 
+FitResult::~FitResult() { 
+   // destructor. FitResult manages the fit Function pointer
+   if (fFitFunc) delete fFitFunc;   
+}
+
 FitResult::FitResult(const FitResult &rhs) { 
    // Implementation of copy constructor
    (*this) = rhs; 
@@ -172,7 +189,8 @@ FitResult & FitResult::operator = (const FitResult &rhs) {
    fGlobalCC = rhs.fGlobalCC;
    fMinosErrors = rhs.fMinosErrors; 
 
-   fMinimType = rhs.fMinimType; 
+   fMinimType = rhs.fMinimType;
+   fParNames = rhs.fParNames; 
    
    return *this; 
 
@@ -221,7 +239,8 @@ bool FitResult::IsParameterFixed(unsigned int ipar) const {
 
 std::string FitResult::GetParameterName(unsigned int ipar) const {
    if (fFitFunc) return fFitFunc->ParameterName(ipar); 
-   else return "param_" + ROOT::Math::Util::ToString(ipar);
+   else if (ipar < fParNames.size() ) return fParNames[ipar];
+   return "param_" + ROOT::Math::Util::ToString(ipar);
 }
 
 void FitResult::Print(std::ostream & os, bool doCovMatrix) const { 

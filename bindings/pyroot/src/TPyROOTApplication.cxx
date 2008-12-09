@@ -17,10 +17,13 @@
 // CINT
 #include "Api.h"
 
+// Standard
+#include <string.h>
+
 
 //______________________________________________________________________________
-//                        Setup interactive application
-//                        =============================
+//                   Setup interactive application for python
+//                   ========================================
 //
 // The TPyROOTApplication sets up the nuts and bolts for interactive ROOT use
 // from python, closely following TRint. Note that not everything is done here,
@@ -33,6 +36,10 @@
 //
 // The static InitXYZ functions are used in conjunction with TPyROOTApplication
 // in ROOT.py, but they can be used independently.
+//
+// NOTE: This class will receive the command line arguments from sys.argv. A
+// distinction between arguments for TApplication and user arguments can be
+// made by using "-" or "--" as a separator on the command line.
 
 
 //- data ---------------------------------------------------------------------
@@ -94,8 +101,15 @@ Bool_t PyROOT::TPyROOTApplication::CreatePyROOTApplication( Bool_t bLoadLibs )
 
       int argc = argl ? PyList_Size( argl ) : 1;
       char** argv = new char*[ argc ];
-      for ( int i = 1; i < argc; ++i )
-         argv[ i ] = PyString_AS_STRING( PyList_GET_ITEM( argl, i ) );
+      for ( int i = 1; i < argc; ++i ) {
+         char* argi = PyString_AS_STRING( PyList_GET_ITEM( argl, i ) );
+         if ( strcmp( argi, "-" ) == 0 || strcmp( argi, "--" ) == 0 ) {
+         // stop collecting options, the remaining are for the python script
+            argc = i;    // includes program name
+            break;
+         }
+         argv[ i ] = argi;
+      }
       argv[ 0 ] = Py_GetProgramName();
 
       gApplication = new TPyROOTApplication( "PyROOT", &argc, argv, bLoadLibs );

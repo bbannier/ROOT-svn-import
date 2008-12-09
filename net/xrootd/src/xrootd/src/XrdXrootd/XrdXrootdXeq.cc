@@ -1056,6 +1056,7 @@ int XrdXrootdProtocol::do_Prepare()
    XrdOucTokenizer pathlist(argp->buff);
    XrdOucTList *pFirst=0, *pP, *pLast = 0;
    XrdOucTList *oFirst=0, *oP, *oLast = 0;
+   XrdOucTListHelper pHelp(&pFirst), oHelp(&oFirst);
    XrdXrootdPrepArgs pargs(0, 1);
    XrdSfsPrep fsprep;
 
@@ -1307,7 +1308,7 @@ int XrdXrootdProtocol::do_Qopaque(short qopt)
    XrdOucErrInfo myError(Link->ID);
    XrdSfsFSctl myData;
    const char *opaque, *Act, *AData;
-   int fsctl_cmd, rc, dlen = ntohl(Request.query.dlen);
+   int fsctl_cmd, rc, dlen = Request.query.dlen;
 
 // Process unstructured as well as structured (path/opaque) requests
 //

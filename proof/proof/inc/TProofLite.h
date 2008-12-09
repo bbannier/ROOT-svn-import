@@ -65,6 +65,8 @@ private:
    Int_t SetProofServEnv(const char *ord);
    Int_t InitDataSetManager();
 
+   void SendInputDataFile();
+
 protected:
    TProofLite() : TProof() { } // For derived classes to use
 
@@ -87,6 +89,10 @@ public:
 
    void Print(Option_t *option="") const;
 
+   Long64_t DrawSelect(TDSet *dset, const char *varexp,
+                       const char *selection = "",
+                       Option_t *option = "", Long64_t nentries = -1,
+                       Long64_t firstentry = 0);
    Long64_t Process(TDSet *dset, const char *sel, Option_t *o = "",
                     Long64_t nent = -1, Long64_t fst = 0);
    Long64_t Process(TFileCollection *fc, const char *sel, Option_t *o = "",
@@ -102,8 +108,9 @@ public:
    void ShowCache(Bool_t all = kFALSE);
    void ClearCache(const char *file = 0);
 
-   // List of queries
+   // Query management
    TList *GetListOfQueries(Option_t *opt = "");
+   Int_t Remove(const char *ref, Bool_t all);
 
    // Dataset handling
    Bool_t   RegisterDataSet(const char *dsName, TFileCollection *ds, const char *opt = "");
@@ -112,6 +119,9 @@ public:
    TFileCollection *GetDataSet(const char *uri, const char * = 0);
    Int_t    RemoveDataSet(const char *uri, const char * = 0);
    Int_t    VerifyDataSet(const char *uri, const char * = 0);
+
+   // Browsing
+   TTree *GetTreeHeader(TDSet *tdset);
 
    static Int_t GetNumberOfWorkers(const char *url = 0);
 

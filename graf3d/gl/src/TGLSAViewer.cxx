@@ -167,22 +167,26 @@ TGLSAViewer::TGLSAViewer(TVirtualPad *pad) :
    fPShapeWrap(0),
    fDirName("."),
    fTypeIdx(0),
-   fOverwrite(kFALSE)
+   fOverwrite(kFALSE),
+   fMenuBar(0),
+   fDeleteMenuBar(kFALSE)
 {
    // Construct a standalone viewer, bound to supplied 'pad'.
-   fFrame = new TGLSAFrame(*this);
+
+   TGLSAFrame* gl_frame = new TGLSAFrame(*this);
+   fFrame = gl_frame;
 
    CreateMenus();
    CreateFrames();
 
-   fFrame->SetWindowName("ROOT's GL viewer");
-   fFrame->SetClassHints("GLViewer", "GLViewer");
-   fFrame->SetMWMHints(kMWMDecorAll, kMWMFuncAll, kMWMInputModeless);
-   fFrame->MapSubwindows();
+   gl_frame->SetWindowName("ROOT's GL viewer");
+   gl_frame->SetClassHints("GLViewer", "GLViewer");
+   gl_frame->SetMWMHints(kMWMDecorAll, kMWMFuncAll, kMWMInputModeless);
+   gl_frame->MapSubwindows();
 
-   fFrame->Resize(fFrame->GetDefaultSize());
-   fFrame->MoveResize(fgInitX, fgInitY, fgInitW, fgInitH);
-   fFrame->SetWMPosition(fgInitX, fgInitY);
+   gl_frame->Resize(fFrame->GetDefaultSize());
+   gl_frame->MoveResize(fgInitX, fgInitY, fgInitW, fgInitH);
+   gl_frame->SetWMPosition(fgInitX, fgInitY);
 
    fPShapeWrap = new TGLPShapeObj(0, this);
 
@@ -206,14 +210,21 @@ TGLSAViewer::TGLSAViewer(const TGWindow *parent, TVirtualPad *pad, TGedEditor *g
    fLeftVerticalFrame(0),
    fGedEditor(ged),
    fPShapeWrap(0),
-   fTypeIdx(0)
+   fTypeIdx(0),
+   fMenuBar(0),
+   fDeleteMenuBar(kFALSE)
 {
    // Construct an embedded standalone viewer, bound to supplied 'pad'.
    //
    // Modified version of the previous constructor for embedding the
    // viewer into another frame (parent).
 
-   fFrame = new TGLSAFrame(parent, *this);
+   Bool_t is_main = (parent == 0 || parent == gClient->GetDefaultRoot());
+
+   if (is_main)      
+      fFrame = new TGLSAFrame(parent, *this);
+   else
+      fFrame = new TGCompositeFrame(parent);
 
    CreateMenus();
    CreateFrames();
@@ -234,7 +245,10 @@ TGLSAViewer::TGLSAViewer(const TGWindow *parent, TVirtualPad *pad, TGedEditor *g
       fLeftVerticalFrame->GetList()->AddFirst(fe);
    }
 
-   Show();
+   if (is_main)
+      Show();
+   else
+      fFrame->MapWindow();
 }
 
 //______________________________________________________________________________
@@ -248,6 +262,9 @@ TGLSAViewer::~TGLSAViewer()
    delete fCameraMenu;
    delete fFileSaveMenu;
    delete fFileMenu;
+   if(fDeleteMenuBar) {
+      delete fMenuBar;
+   }
    delete fFrame;
    fGLWidget = 0;
 }
@@ -267,12 +284,12 @@ void TGLSAViewer::CreateMenus()
 {
    //File/Camera/Help menus.
 
-   fFileMenu = new TGPopupMenu(fFrame->GetClient()->GetRoot());
+   fFileMenu = new TGPopupMenu(fFrame->GetClient()->GetDefaultRoot());
    fFileMenu->AddEntry("&Edit Object", kGLEditObject);
    fFileMenu->AddSeparator();
    fFileMenu->AddEntry("&Close Viewer", kGLCloseViewer);
    fFileMenu->AddSeparator();
-   fFileSaveMenu = new TGPopupMenu(fFrame->GetClient()->GetRoot());
+   fFileSaveMenu = new TGPopupMenu(fFrame->GetClient()->GetDefaultRoot());
    fFileSaveMenu->AddEntry("viewer.&eps", kGLSaveEPS);
    fFileSaveMenu->AddEntry("viewer.&pdf", kGLSavePDF);
    fFileSaveMenu->AddEntry("viewer.&gif", kGLSaveGIF);
@@ -285,7 +302,7 @@ void TGLSAViewer::CreateMenus()
    fFileMenu->AddEntry("&Quit ROOT", kGLQuitROOT);
    fFileMenu->Associate(fFrame);
 
-   fCameraMenu = new TGPopupMenu(fFrame->GetClient()->GetRoot());
+   fCameraMenu = new TGPopupMenu(fFrame->GetClient()->GetDefaultRoot());
    fCameraMenu->AddEntry("Perspective (Floor XOZ)", kGLPerspXOZ);
    fCameraMenu->AddEntry("Perspective (Floor YOZ)", kGLPerspYOZ);
    fCameraMenu->AddEntry("Perspective (Floor XOY)", kGLPerspXOY);
@@ -300,18 +317,18 @@ void TGLSAViewer::CreateMenus()
    fCameraMenu->AddEntry("Ortho allow dolly",  kGLOrthoDolly);
    fCameraMenu->Associate(fFrame);
 
-   fHelpMenu = new TGPopupMenu(fFrame->GetClient()->GetRoot());
+   fHelpMenu = new TGPopupMenu(fFrame->GetClient()->GetDefaultRoot());
    fHelpMenu->AddEntry("Help on GL Viewer...", kGLHelpViewer);
    fHelpMenu->AddSeparator();
    fHelpMenu->AddEntry("&About ROOT...", kGLHelpAbout);
    fHelpMenu->Associate(fFrame);
 
    // Create menubar
-   TGMenuBar *menuBar = new TGMenuBar(fFrame, 1, 1, kHorizontalFrame);
-   menuBar->AddPopup("&File", fFileMenu, new TGLayoutHints(kLHintsTop | kLHintsLeft, 0, 4, 0, 0));
-   menuBar->AddPopup("&Camera", fCameraMenu, new TGLayoutHints(kLHintsTop | kLHintsLeft, 0, 4, 0, 0));
-   menuBar->AddPopup("&Help",    fHelpMenu,    new TGLayoutHints(kLHintsTop | kLHintsRight));
-   fFrame->AddFrame(menuBar, new TGLayoutHints(kLHintsTop | kLHintsLeft | kLHintsExpandX, 0, 0, 1, 1));
+   fMenuBar = new TGMenuBar(fFrame, 1, 1, kHorizontalFrame);
+   fMenuBar->AddPopup("&File", fFileMenu, new TGLayoutHints(kLHintsTop | kLHintsLeft, 0, 4, 0, 0));
+   fMenuBar->AddPopup("&Camera", fCameraMenu, new TGLayoutHints(kLHintsTop | kLHintsLeft, 0, 4, 0, 0));
+   fMenuBar->AddPopup("&Help",    fHelpMenu,    new TGLayoutHints(kLHintsTop | kLHintsRight));
+   fFrame->AddFrame(fMenuBar, new TGLayoutHints(kLHintsTop | kLHintsLeft | kLHintsExpandX, 0, 0, 1, 1));
 
 }
 
@@ -375,6 +392,13 @@ void TGLSAViewer::Close()
 
    // Commit suicide when contained GUI is closed.
    delete this;
+}
+
+//______________________________________________________________________________
+void TGLSAViewer::DeleteMenuBar()
+{
+   // Delete the menu bar.
+   fDeleteMenuBar=kTRUE;
 }
 
 //______________________________________________________________________________

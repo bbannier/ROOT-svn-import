@@ -151,8 +151,10 @@ TEveElement::TEveElement(const TEveElement& e) :
    fDestructing         (kFALSE)
 {
    // Copy constructor. Does shallow copy.
-   // Call CloneChildren(const TEveElement& e, Bool_t recurse=kFALSE) if
-   // you want to copy children as well.
+   // For deep-cloning and children-cloning, see:
+   //   TEveElement* CloneElementRecurse(Int_t level)
+   //   void         CloneChildrenRecurse(TEveElement* dest, Int_t level)
+   //
    // 'TRef fSource' is copied but 'void* UserData' is NOT.
    // If the element is projectable, its projections are NOT copied.
    //
@@ -189,30 +191,41 @@ TEveElement::~TEveElement()
 }
 
 //______________________________________________________________________________
-TEveElement* TEveElement::CloneElementRecurse(Int_t recurse) const
+void TEveElement::PreDeleteElement()
 {
-   // Clone elements and 'recurse' levels of its children.
-   // If recurse ==  0, only the element itself is cloned (default).
-   // If recurse == -1, all the hierarchy is cloned.
+   // Called before the element is deleted, thus offering the last chance
+   // to detach from acquired resources and from the framework itself.
+   // Here the request is just passed to TEveManager.
+   // If you override it, make sure to call base-class version.
+
+   gEve->PreDeleteElement(this);
+}
+
+//______________________________________________________________________________
+TEveElement* TEveElement::CloneElementRecurse(Int_t level) const
+{
+   // Clone elements and recurse 'level' deep over children.
+   // If level ==  0, only the element itself is cloned (default).
+   // If level == -1, all the hierarchy is cloned.
 
    TEveElement* el = CloneElement();
-   if (recurse--)
+   if (level--)
    {
-      CloneChildrenRecurse(el, recurse);
+      CloneChildrenRecurse(el, level);
    }
    return el;
 }
 
 //______________________________________________________________________________
-void TEveElement::CloneChildrenRecurse(TEveElement* dest, Int_t recurse) const
+void TEveElement::CloneChildrenRecurse(TEveElement* dest, Int_t level) const
 {
    // Clone children and attach them to the dest element.
-   // If recurse ==  0, only the direct descendants are cloned (default).
-   // If recurse == -1, all the hierarchy is cloned.
+   // If level ==  0, only the direct descendants are cloned (default).
+   // If level == -1, all the hierarchy is cloned.
 
    for (List_ci i=fChildren.begin(); i!=fChildren.end(); ++i)
    {
-      dest->AddElement((*i)->CloneElementRecurse(recurse));
+      dest->AddElement((*i)->CloneElementRecurse(level));
    }
 }
 
@@ -250,12 +263,15 @@ void TEveElement::SetElementName(const Text_t* name)
    // Virtual function for setting of name of an element.
    // Here we attempt to cast the assigned object into TNamed and call
    // SetName() there.
+   // If you override this call NameTitleChanged() from there.
 
    static const TEveException eh("TEveElement::SetElementName ");
 
    TNamed* named = dynamic_cast<TNamed*>(GetObject(eh));
-   if (named)
+   if (named) {
       named->SetName(name);
+      NameTitleChanged();
+   }
 }
 
 //______________________________________________________________________________
@@ -264,12 +280,15 @@ void TEveElement::SetElementTitle(const Text_t* title)
    // Virtual function for setting of title of an element.
    // Here we attempt to cast the assigned object into TNamed and call
    // SetTitle() there.
+   // If you override this call NameTitleChanged() from there.
 
    static const TEveException eh("TEveElement::SetElementTitle ");
 
    TNamed* named = dynamic_cast<TNamed*>(GetObject(eh));
-   if (named)
+   if (named) {
       named->SetTitle(title);
+      NameTitleChanged();
+   }
 }
 
 //______________________________________________________________________________
@@ -278,12 +297,25 @@ void TEveElement::SetElementNameTitle(const Text_t* name, const Text_t* title)
    // Virtual function for setting of name and title of render element.
    // Here we attempt to cast the assigned object into TNamed and call
    // SetNameTitle() there.
+   // If you override this call NameTitleChanged() from there.
 
    static const TEveException eh("TEveElement::SetElementNameTitle ");
 
    TNamed* named = dynamic_cast<TNamed*>(GetObject(eh));
-   if (named)
+   if (named) {
       named->SetNameTitle(name, title);
+      NameTitleChanged();
+   }
+}
+
+//______________________________________________________________________________
+void TEveElement::NameTitleChanged()
+{
+   // Virtual function called when a name or title of the element has
+   // been changed.
+   // If you override this, call also the version of your direct base-class.
+
+   // Nothing to do - list-tree-items take this info directly.
 }
 
 //******************************************************************************
@@ -573,15 +605,18 @@ void TEveElement::CheckReferenceCount(const TEveException& eh)
    // Check external references to this and eventually auto-destruct
    // the render-element.
 
-   if(NumParents() <= fParentIgnoreCnt && fTopItemCnt  <= 0 &&
-      fDestroyOnZeroRefCnt             && fDenyDestroy <= 0)
+   if (fDestructing)
+      return;
+
+   if (NumParents() <= fParentIgnoreCnt && fTopItemCnt  <= 0 &&
+       fDestroyOnZeroRefCnt             && fDenyDestroy <= 0)
    {
       if (gEve->GetUseOrphanage())
       {
          if (gDebug > 0)
             Info(eh, Form("moving to orphanage '%s' on zero reference count.", GetElementName()));
 
-         gEve->PreDeleteElement(this);
+         PreDeleteElement();
          gEve->GetOrphanage()->AddElement(this);
       }
       else
@@ -589,7 +624,7 @@ void TEveElement::CheckReferenceCount(const TEveException& eh)
          if (gDebug > 0)
             Info(eh, Form("auto-destructing '%s' on zero reference count.", GetElementName()));
 
-         gEve->PreDeleteElement(this);
+         PreDeleteElement();
          delete this;
       }
    }
@@ -603,7 +638,7 @@ void TEveElement::CollectSceneParents(List_t& scenes)
    //
    // Overriden in TEveScene to include itself and return.
 
-   for(List_i p=fParents.begin(); p!=fParents.end(); ++p)
+   for (List_i p=fParents.begin(); p!=fParents.end(); ++p)
       (*p)->CollectSceneParents(scenes);
 }
 
@@ -774,7 +809,7 @@ Int_t TEveElement::RemoveFromListTrees(TEveElement* parent)
          j->fTree->ClearViewPort();
          fItems.erase(j);
          if (parent == 0)
-            --fTopItemCnt;            
+            --fTopItemCnt;
          ++count;
       }
    }
@@ -1368,16 +1403,34 @@ void TEveElement::DisableListElements(Bool_t rnr_self,  Bool_t rnr_children)
 //______________________________________________________________________________
 void TEveElement::Destroy()
 {
-   // Destroy this element.
+   // Destroy this element. Throws an exception if deny-destroy is in force.
 
    static const TEveException eh("TEveElement::Destroy ");
 
    if (fDenyDestroy > 0)
-      throw(eh + "this element '%s' is protected against destruction.", GetElementName());
+      throw eh + TString::Format("element '%s' (%s*) 0x%lx is protected against destruction.",
+                                 GetElementName(), IsA()->GetName(), this);
 
-   gEve->PreDeleteElement(this);
+   PreDeleteElement();
    delete this;
    gEve->Redraw3D();
+}
+
+//______________________________________________________________________________
+void TEveElement::DestroyOrWarn()
+{
+   // Destroy this element. Prints a warning if deny-destroy is in force.
+
+   static const TEveException eh("TEveElement::DestroyOrWarn ");
+
+   try
+   {
+      Destroy();
+   }
+   catch (TEveException& exc)
+   {
+      Warning(eh, exc);
+   }
 }
 
 //______________________________________________________________________________
@@ -1632,7 +1685,7 @@ TObject* TEveElementObjectPtr::GetObject(const TEveException& eh) const
    // Return external object.
    // Virtual from TEveElement.
 
-   if(fObject == 0)
+   if (fObject == 0)
       throw(eh + "fObject not set.");
    return fObject;
 }
@@ -1655,7 +1708,7 @@ TEveElementObjectPtr::~TEveElementObjectPtr()
 {
    // Destructor.
 
-   if(fOwnObject)
+   if (fOwnObject)
       delete fObject;
 }
 
@@ -1688,7 +1741,7 @@ TEveElementList::TEveElementList(const Text_t* n, const Text_t* t, Bool_t doColo
 {
    // Constructor.
 
-   if(fDoColor) {
+   if (fDoColor) {
       SetMainColorPtr(&fColor);
    }
 }

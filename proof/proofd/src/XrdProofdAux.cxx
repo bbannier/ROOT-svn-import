@@ -47,7 +47,7 @@ const char *XrdProofdAux::AdminMsgType(int type)
    static const char *msgtypes[] = { "Undef",
      "QuerySessions", "SessionTag", "SessionAlias", "GetWorkers", "QueryWorkers",
      "CleanupSessions", "QueryLogPaths", "ReadBuffer", "QueryROOTVersions",
-     "ROOTVersion", "GroupProperties", "SendMsgToUser" };
+     "ROOTVersion", "GroupProperties", "SendMsgToUser", "ReleaseWorker" };
 
    if (type < 1000 || type >= kUndef) {
       return msgtypes[0];
@@ -324,7 +324,7 @@ int XrdProofdAux::GetUserInfo(int uid, XrdProofUI &ui)
    // Retur 0 on success, -errno on error
 
    // Make sure input make sense
-   if (uid <= 0)
+   if (uid < 0)
       return -EINVAL;
 
    // Call getpwuid_r ...

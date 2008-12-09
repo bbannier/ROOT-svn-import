@@ -23,8 +23,8 @@ void TestBuild(const Int_t npoints = 1000000, const Int_t bsize = 100);
 void TestConstr(const Int_t npoints = 1000000, const Int_t bsize = 100);
 void TestSpeed(Int_t npower2 = 20, Int_t bsize = 10);
 
-void TestkdtreeIF(Int_t npoints=1000, Int_t bsize=9, Int_t nloop=1000, Int_t mode = 2);
-void TestSizeIF(Int_t nsec=36, Int_t nrows=159, Int_t npoints=1000,  Int_t bsize=10, Int_t mode=1);
+//void TestkdtreeIF(Int_t npoints=1000, Int_t bsize=9, Int_t nloop=1000, Int_t mode = 2);
+//void TestSizeIF(Int_t nsec=36, Int_t nrows=159, Int_t npoints=1000,  Int_t bsize=10, Int_t mode=1);
 
 
 
@@ -251,6 +251,7 @@ void TestSpeed(Int_t npower2, Int_t bsize)
   return;
 }
 
+/*
 //______________________________________________________________________
 void TestSizeIF(Int_t nsec, Int_t nrows, Int_t npoints,  Int_t bsize, Int_t mode)
 {
@@ -265,10 +266,10 @@ void TestSizeIF(Int_t nsec, Int_t nrows, Int_t npoints,  Int_t bsize, Int_t mode
   Float_t after = Mem();
   printf("Memory usage %f\n",after-before);
 }
+*/
 
-
-
-
+/*
+//______________________________________________________________________
 void  TestkdtreeIF(Int_t npoints, Int_t bsize, Int_t nloop, Int_t mode)
 {
 //
@@ -314,7 +315,7 @@ void  TestkdtreeIF(Int_t npoints, Int_t bsize, Int_t nloop, Int_t mode)
   
   if (mode ==2){
     if (nloop) timer.Start(kTRUE);
-    Int_t res[npoints];
+    Int_t *res = new Int_t[npoints];
     Int_t nfound = 0;
     for (Int_t kloop = 0;kloop<nloop;kloop++){
       if (kloop==0){
@@ -351,6 +352,8 @@ void  TestkdtreeIF(Int_t npoints, Int_t bsize, Int_t nloop, Int_t mode)
       timer.Stop();
       timer.Print();
     }
+
+    delete [] res; 
   }
   delete [] data0;
   
@@ -358,7 +361,183 @@ void  TestkdtreeIF(Int_t npoints, Int_t bsize, Int_t nloop, Int_t mode)
   counterfound/=npoints;
   if (nloop) printf("Find nearest point:\t%f\t%f\t%f\n",countern, counteriter, counterfound);
 }
+*/
 
+//______________________________________________________________________
+void TestNeighbors()
+{
+//Test TKDTree::FindNearestNeighbors() function
+
+//Generate some 3d points
+   Int_t npoints = 10000;
+   Int_t nn = 100;
+   Int_t ntimes = 100;
+   Int_t bsize = 10; //bucket size of the kd-tree
+
+   Double_t *x = new Double_t[npoints];
+   Double_t *y = new Double_t[npoints];
+   Double_t *z = new Double_t[npoints];
+   for (Int_t i=0; i<npoints; i++){
+      x[i] = gRandom->Uniform(-100, 100);
+      y[i] = gRandom->Uniform(-100, 100);
+      z[i] = gRandom->Uniform(-100, 100);
+   }
+
+   Int_t diff1=0;
+
+//for the distances brute-force:
+   Double_t *dist = new Double_t[npoints];
+   Int_t *index = new Int_t[npoints];
+      
+//Build the tree
+   TKDTreeID *kdtree = new TKDTreeID(npoints, 3, bsize);
+   kdtree->SetData(0, x);
+   kdtree->SetData(1, y);
+   kdtree->SetData(2, z);
+   kdtree->Build();
+   Int_t *index2 = new Int_t[nn];
+   Double_t *dist2 = new Double_t[nn];
+   Double_t point[3];
+//Select a random point
+   for (Int_t itime=0; itime<ntimes; itime++){
+      Int_t ipoint = Int_t(gRandom->Uniform(0, npoints));
+
+      for (Int_t i=0; i<npoints; i++){
+         dist[i]=0;
+
+         dist[i]+=(x[i]-x[ipoint])*(x[i]-x[ipoint]);
+         dist[i]+=(y[i]-y[ipoint])*(y[i]-y[ipoint]);
+         dist[i]+=(z[i]-z[ipoint])*(z[i]-z[ipoint]);
+         dist[i]=TMath::Sqrt(dist[i]);
+
+      }
+      TMath::Sort(npoints, dist, index, kFALSE);
+
+      point[0]=x[ipoint];
+      point[1]=y[ipoint];
+      point[2]=z[ipoint];
+
+      kdtree->FindNearestNeighbors(point, nn, index2, dist2);
+      
+
+      for (Int_t inn=0; inn<nn; inn++){
+         if (TMath::Abs(dist2[inn]-dist[index[inn]])>1E-8) {
+            diff1++;
+            // printf("dist1=%f, dist2=%f, in1=%lld, in2=%d\n", dist[index[inn]], dist2[inn], index[inn], index2[inn]);
+         }
+
+
+      }
+   }
+
+   printf("Nearest neighbors found for %d random points\n", ntimes);
+   printf("%d neighbors are wrong compared to \"brute force\" method\n", diff1);
+//   printf("Old: %d neighbors are wrong compared to brute-force method\n", diff2);
+
+//    printf("\n");
+//    for (Int_t i=0; i<nn; i++){
+//       printf("ind[%d]=%d, dist[%d]=%f\n", i, index2[i], i, dist2[i]);
+//    }
+      
+      
+      
+
+   delete [] x;
+   delete [] y;
+   delete [] z;
+   delete [] index;
+   delete [] dist;
+   delete [] index2;
+   delete [] dist2;
+}
+
+//______________________________________________________________________
+void TestRange()
+{
+
+//Test TKDTree::FindInRange() function
+
+   Int_t npoints = Int_t(gRandom->Uniform(0, 100000));
+   Double_t range = gRandom->Uniform(20, 100);
+
+   printf("%d points, range=%f\n", npoints, range);
+   Int_t ntimes = 10;
+   Double_t *x = new Double_t[npoints];
+   Double_t *y = new Double_t[npoints];
+   Double_t *z = new Double_t[npoints];
+   for (Int_t i=0; i<npoints; i++){
+      x[i] = gRandom->Uniform(-100, 100);
+      y[i] = gRandom->Uniform(-100, 100);
+      z[i] = gRandom->Uniform(-100, 100);
+   }
+
+   Int_t *results1 = new Int_t[npoints];
+   std::vector<Int_t> results2;
+   Int_t np1;
+
+//Compute with the kd-tree
+   Int_t bsize = 10;
+   TKDTreeID *kdtree = new TKDTreeID(npoints, 3, bsize);
+   kdtree->SetData(0, x);
+   kdtree->SetData(1, y);
+   kdtree->SetData(2, z);
+   kdtree->Build();
+   Double_t *dist = new Double_t[npoints];
+   Int_t *index = new Int_t[npoints];
+   Int_t ndiff = 0;
+   for (Int_t itime=0; itime<ntimes; itime++){
+      Double_t point[3];
+      point[0]=gRandom->Uniform(-90, 90);
+      point[1]=gRandom->Uniform(-90, 90);
+      point[2]=gRandom->Uniform(-90, 90);
+
+      //printf("point: (%f, %f, %f)\n\n", point[0], point[1], point[2]);
+      for (Int_t ipoint=0; ipoint<npoints; ipoint++){
+         dist[ipoint]=0;
+         dist[ipoint]+=(x[ipoint]-point[0])*(x[ipoint]-point[0]);
+         dist[ipoint]+=(y[ipoint]-point[1])*(y[ipoint]-point[1]);
+         dist[ipoint]+=(z[ipoint]-point[2])*(z[ipoint]-point[2]);
+         dist[ipoint]=TMath::Sqrt(dist[ipoint]);
+         index[ipoint]=ipoint;
+      }
+      TMath::Sort(npoints, dist, index, kFALSE);
+      np1=0;
+      while (np1<npoints && dist[index[np1]]<=range){
+         results1[np1]=index[np1];
+         np1++;
+      }
+      results2.clear();
+      kdtree->FindInRange(point, range, results2);
+
+      if (TMath::Abs(np1 - Int_t(results2.size()))>0.1) {
+         ndiff++;
+         printf("different numbers of points found, %d %d\n", np1, Int_t(results2.size()));
+         continue;
+      } 
+
+      //have to sort the results, as they are in different order
+      TMath::Sort(np1, results1, index, kFALSE);
+      std::sort(results2.begin(), results2.end());
+
+      for (Int_t i=0; i<np1; i++){
+         if (TMath::Abs(results1[index[i]]-results2[i])>1E-8) ndiff++;
+      }
+   }
+   printf("%d  differences found between \"brute force\" method and kd-tree\n", ndiff);
+
+   delete [] x;
+   delete [] y;
+   delete [] z;
+   delete [] index;
+   delete [] dist;
+   delete [] results1;
+   delete kdtree;
+}
+
+
+
+
+//______________________________________________________________________
 int main() { 
    kDTreeTest();
    return 0; 

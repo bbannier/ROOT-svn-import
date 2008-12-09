@@ -19,7 +19,8 @@
 #include <sched.h>
 #endif
 
-#include <list>
+// #include <list>
+// #include <map>
 #include <vector>
 
 #ifdef OLDXRDOUC
@@ -32,9 +33,11 @@
 #endif
 
 #include "Xrd/XrdLink.hh"
+#include "XrdOuc/XrdOucHash.hh"
 
 #include "XProofProtocol.h"
 #include "XrdProofdClient.h"
+#include "XrdProofWorker.h"
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
@@ -70,6 +73,25 @@ private:
 };
 
 
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// XrdProofQuery                                                        //
+//                                                                      //
+// Helper class describing a query. Used for scheduling.                //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+class XrdProofQuery
+{
+   XrdOucString      fDSName;
+   long              fDSSize;
+public:
+   XrdProofQuery(const char *n = 0, long s = 0) : fDSName(n), fDSSize(s) { }
+
+   const char       *GetDSName()  { return fDSName.c_str(); }
+   long              GetDSSize()  { return fDSSize; }
+};
+
+
 class XrdROOT;
 
 //////////////////////////////////////////////////////////////////////////
@@ -85,7 +107,6 @@ class XrdROOT;
 #define kXPROOFSRVALIASMAX 256
 
 class XrdProofGroup;
-class XrdProofWorker;
 class XrdSysSemWait;
 
 class XrdProofdProofServ
@@ -95,7 +116,7 @@ public:
    XrdProofdProofServ();
    ~XrdProofdProofServ();
 
-   void                AddWorker(XrdProofWorker *w) { XrdSysMutexHelper mhp(fMutex); fWorkers.push_back(w); }
+   void                AddWorker(const char *o, XrdProofWorker *w);
    inline const char  *AdminPath() const { XrdSysMutexHelper mhp(fMutex); return fAdminPath.c_str(); }
    inline const char  *Alias() const { XrdSysMutexHelper mhp(fMutex); return fAlias.c_str(); }
    void                Broadcast(const char *msg, int type = kXPD_srvmsg);
@@ -113,7 +134,7 @@ public:
    int                 IdleTime();
    inline short int    ID() const { XrdSysMutexHelper mhp(fMutex); return fID; }
    inline bool         IsShutdown() const { XrdSysMutexHelper mhp(fMutex); return fIsShutdown; }
-   bool                IsValid();
+   inline bool         IsValid() const { XrdSysMutexHelper mhp(fMutex); return fIsValid; }
    inline bool         Match(short int id) const { XrdSysMutexHelper mhp(fMutex); return (id == fID); }
    inline XrdSysRecMutex *Mutex() const { return fMutex; }
    inline const char  *Ordinal() const { XrdSysMutexHelper mhp(fMutex); return fOrdinal.c_str(); }
@@ -122,12 +143,14 @@ public:
    inline XrdProofdProtocol *Protocol() const { XrdSysMutexHelper mhp(fMutex); return fProtocol; }
    inline XrdSrvBuffer *QueryNum() const { XrdSysMutexHelper mhp(fMutex); return fQueryNum; }
 
+   void                RemoveWorker(const char *o);
    void                Reset();
+
    inline XrdROOT     *ROOT() const { XrdSysMutexHelper mhp(fMutex); return fROOT; }
    inline XrdProofdResponse *Response() const { XrdSysMutexHelper mhp(fMutex); return fResponse; }
    int                 SendData(int cid, void *buff, int len);
    int                 SendDataN(void *buff, int len);
-   void                SetAdminPath(const char *a) { XrdSysMutexHelper mhp(fMutex); fAdminPath = a; }
+   int                 SetAdminPath(const char *a);
    void                SetAlias(const char *a) { XrdSysMutexHelper mhp(fMutex); fAlias = a; }
    void                SetClient(const char *c) { XrdSysMutexHelper mhp(fMutex); fClient = c; }
    inline void         SetConnection(XrdProofdResponse *r) { XrdSysMutexHelper mhp(fMutex); fResponse = r;}
@@ -161,12 +184,15 @@ public:
    int                 TerminateProofServ(bool changeown);
    inline const char  *UserEnvs() const { XrdSysMutexHelper mhp(fMutex); return fUserEnvs.c_str(); }
    int                 VerifyProofServ(bool fw);
-   inline std::list<XrdProofWorker *> *Workers() const
-                      { XrdSysMutexHelper mhp(fMutex); return (std::list<XrdProofWorker *> *)&fWorkers; }
+   inline XrdOucHash<XrdProofWorker> *Workers() const
+                      { XrdSysMutexHelper mhp(fMutex); return (XrdOucHash<XrdProofWorker> *)&fWorkers; }
 
    int                 CreateUNIXSock(XrdSysError *edest);
+   void                DeleteUNIXSock();
    XrdNet             *UNIXSock() const { return fUNIXSock; }
    const char         *UNIXSockPath() const { return fUNIXSockPath.c_str(); }
+   inline std::list<XrdProofQuery *> *GetQueries() const
+                       { return (std::list<XrdProofQuery *> *)&fQueries; }
 
  private:
 
@@ -177,7 +203,7 @@ public:
    XrdClientID              *fParent;    // Parent creating this session
    int                       fNClients;   // Number of attached clients
    std::vector<XrdClientID *> fClients;  // Attached clients stream ids
-   std::list<XrdProofWorker *> fWorkers; // Workers assigned to the session
+   XrdOucHash<XrdProofWorker> fWorkers; // Workers assigned to the session
 
    XrdSysSemWait            *fPingSem;   // To sychronize ping requests
 
@@ -206,7 +232,7 @@ public:
    XrdOucString              fTag;       // Session unique tag
    XrdOucString              fOrdinal;   // Session ordinal number
    XrdOucString              fUserEnvs;  // List of envs received from the user
-   XrdOucString              fAdminPath; // Admin file in the form "<active-sessions>/<usr>.<grp>.<pid>" 
+   XrdOucString              fAdminPath; // Admin file in the form "<active-sessions>/<usr>.<grp>.<pid>"
 
    XrdROOT                  *fROOT;      // ROOT version run by this session
 
@@ -218,5 +244,6 @@ public:
                              { XrdSysMutexHelper mhp(fMutex); fPingSem = new XrdSysSemWait(0);}
    void                      DeletePingSem()
                              { XrdSysMutexHelper mhp(fMutex); if (fPingSem) delete fPingSem; fPingSem = 0;}
+   std::list<XrdProofQuery *> fQueries;  // the enqueued queries of this session
 };
 #endif
