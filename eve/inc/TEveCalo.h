@@ -162,10 +162,10 @@ public:
    virtual void ComputeBBox();
 
    virtual Bool_t CanEditMainColor() const  { return kTRUE; }
-   virtual Bool_t  CanEditMainTransparency() const { return kTRUE; }
+   virtual Bool_t CanEditMainTransparency() const { return kTRUE; }
 
-   void SetRnrFrame(Bool_t e, Bool_t b) { fRnrEndCapFrame=e; fRnrBarrelFrame=b; }
-   const void GetRnrFrame(Bool_t &e, Bool_t &b) { e=fRnrEndCapFrame; b=fRnrBarrelFrame; }
+   void SetRnrFrame(Bool_t e, Bool_t b)         { fRnrEndCapFrame = e; fRnrBarrelFrame = b; }
+   void GetRnrFrame(Bool_t &e, Bool_t &b) const { e = fRnrEndCapFrame; b = fRnrBarrelFrame; }
 
    ClassDef(TEveCalo3D, 0); // Class for 3D visualization of calorimeter event data.
 };
