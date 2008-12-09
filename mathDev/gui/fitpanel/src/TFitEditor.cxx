@@ -503,7 +503,8 @@ void TFitEditor::CreateFunctionGroup()
    TGCompositeFrame *tf4 = new TGCompositeFrame(gf1, 350, 26,
                                                 kHorizontalFrame);
    TGTextLBEntry *txt = (TGTextLBEntry *)fFuncList->GetSelectedEntry();
-   fSelLabel = new TGLabel(tf4, Form("%s", txt->GetTitle()));
+   TString s = txt->GetTitle();
+   fSelLabel = new TGLabel(tf4, s.Sizeof()>30?s(0,30)+"...":s);
    tf4->AddFrame(fSelLabel, new TGLayoutHints(kLHintsNormal |
                                               kLHintsCenterY, 0, 6, 2, 0));
    Pixel_t color;
@@ -1858,8 +1859,8 @@ void TFitEditor::DoAddition(Bool_t on)
    TString s = fEnteredFunc->GetText();
    if (on) {
       if (!first) {
+         fSelLabel->SetText(s.Sizeof()>30?s(0,30)+"...":s);
          s += "(0)";
-         fSelLabel->SetText(fEnteredFunc->GetText());
          fEnteredFunc->SetText(s.Data());
          first = kTRUE;
          ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
@@ -1987,7 +1988,7 @@ void TFitEditor::DoFunction(Int_t selected)
    }
 
    fEnteredFunc->SelectAll();
-   fSelLabel->SetText(fEnteredFunc->GetText());
+   fSelLabel->SetText(tmpStr.Sizeof()>30?tmpStr(0,30)+"...":tmpStr);
    ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
 
    // reset function parameters if the number of parameters of the new
@@ -2031,7 +2032,8 @@ void TFitEditor::DoEnteredFunction()
       return;
    }
 
-   fSelLabel->SetText(fEnteredFunc->GetText());
+   TString s = fEnteredFunc->GetText();
+   fSelLabel->SetText(s.Sizeof()>30?s(0,30)+"...":s);
    ((TGCompositeFrame *)fSelLabel->GetParent())->Layout();
 }
 
