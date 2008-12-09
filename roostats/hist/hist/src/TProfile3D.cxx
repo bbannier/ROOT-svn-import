@@ -18,7 +18,6 @@
 #include "TError.h"
 #include "TClass.h"
 
-const Int_t kNstat = 13;
 Bool_t TProfile3D::fgApproximate = kFALSE;
 
 ClassImp(TProfile3D)
@@ -483,6 +482,10 @@ void TProfile3D::Copy(TObject &obj) const
 
    TH3D::Copy(((TProfile3D&)obj));
    fBinEntries.Copy(((TProfile3D&)obj).fBinEntries);
+   for (int bin=0;bin<fNcells;bin++) {
+      ((TProfile3D&)obj).fArray[bin]        = fArray[bin];
+      ((TProfile3D&)obj).fSumw2.fArray[bin] = fSumw2.fArray[bin];
+   }
    ((TProfile3D&)obj).fTmin = fTmin;
    ((TProfile3D&)obj).fTmax = fTmax;
    ((TProfile3D&)obj).fScaling = fScaling;

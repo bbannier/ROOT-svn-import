@@ -567,6 +567,9 @@ int G__matchfilename(int i1,const char *filename)
   struct stat statBuf;
 #endif
 
+  if (G__srcfile[i1].filename==0) {
+    return 0;
+  }
   if((strcmp(G__srcfile[i1].filename,filename)==0)) {
      return(1);
   }
@@ -1178,7 +1181,235 @@ int G__loadfile_tmpfile(FILE *fp)
   G__UnlockCriticalSection();
   return(fentry+2);
 }
+   
+// *****************************************************************
+// * G__statfilename(filename)
+// *
+// * Use the same search algorithm as G__loadfile to do a 'stat' on the file
+// *
+// *****************************************************************
 
+int G__statfilename(const char *filenamein, struct stat *statBuf)
+{
+   char filename[G__ONELINE];
+   char workname[G__ONELINE];
+   int hash,temp;
+   char addpost[3][8];
+   int res = -1;
+   
+   strcpy(filename,filenamein);
+   
+   /*************************************************
+    * delete space chars at the end of filename
+    *************************************************/
+   int len = strlen(filename);
+   while(len>1&&isspace(filename[len-1])) {
+      filename[--len]='\0';
+   }
+   
+   G__hash(filename,hash,temp);
+
+   strcpy(addpost[0],"");
+   strcpy(addpost[1],".h");
+   
+   strcpy(addpost[2],"");
+   for(int i2=0;i2<3;i2++) {
+      if(2==i2) {
+         if((len>3&& (strcmp(filename+len-3,".sl")==0 ||
+                      strcmp(filename+len-3,".dl")==0 ||
+                      strcmp(filename+len-3,".so")==0))) {
+            strcpy(filename+len-3,G__getmakeinfo1("DLLPOST"));
+         }
+         else if((len>4&& (strcmp(filename+len-4,".dll")==0 ||
+                           strcmp(filename+len-4,".DLL")==0))) {
+            strcpy(filename+len-4,G__getmakeinfo1("DLLPOST"));
+         }
+         else if((len>2&& (strcmp(filename+len-2,".a")==0 ||
+                           strcmp(filename+len-2,".A")==0))) {
+            strcpy(filename+len-2,G__getmakeinfo1("DLLPOST"));
+         }
+#if defined(R__FBSD) || defined(R__OBSD)
+         else if (len>strlen(soext) &&
+                  strcmp(filename+len-strlen(soext),soext)==0) {
+            strcpy(filename+len-strlen(soext),G__getmakeinfo1("DLLPOST"));
+         }
+#endif
+      }
+      
+      /**********************************************
+       * If it's a "" header with a relative path, first
+       * try relative to the current input file.
+       * (This corresponds to the behavior of gcc.)
+       **********************************************/
+      if (G__USERHEADER == G__kindofheader &&
+#ifdef G__WIN32
+          filename[0] != '/' &&
+          filename[0] != '\\' &&
+#else
+          filename[0] != G__psep[0] &&
+#endif
+          G__ifile.name[0] != '\0') {
+         char* p;
+         strcpy(workname,G__ifile.name);
+#ifdef G__WIN32
+         p = strrchr (workname, '/');
+         {
+            char* q = strrchr (workname, '\\');
+            if (q && q > p)
+               p = q;
+         }
+#else
+         p = strrchr (workname, G__psep[0]);
+#endif
+         if (p == 0) p = workname;
+         else ++p;
+         strcpy (p, filename);
+         strcat (p, addpost[i2]);
+         
+         res = stat( workname, statBuf );
+         
+         if (res==0) return res;
+      }
+      /**********************************************
+       * try ./filename
+       **********************************************/
+      if(G__USERHEADER==G__kindofheader) {
+         sprintf(workname,"%s%s",filename,addpost[i2]);
+         res = stat( workname, statBuf );         
+         if (res==0) return res;
+      }  else {
+         // Do we need that or not?
+         // G__kindofheader = G__USERHEADER;
+      }
+      /**********************************************
+       * try includepath/filename
+       **********************************************/
+      struct G__includepath *ipath = &G__ipathentry;
+      while(res!=0 && ipath->pathname) {
+         sprintf(workname,"%s%s%s%s"
+                 ,ipath->pathname,G__psep,filename,addpost[i2]);
+         res = stat( workname, statBuf );         
+         ipath = ipath->next;
+      }
+      if (res==0) return res;
+      
+      G__getcintsysdir();
+
+      /**********************************************
+       * try $CINTSYSDIR/stl
+       **********************************************/
+      if('\0'!=G__cintsysdir[0]) {
+         sprintf(workname,"%s/%s/stl/%s%s",G__cintsysdir,G__CFG_COREVERSION
+                 ,filename,addpost[i2]);
+         res = stat( workname, statBuf );         
+         if (res==0) return res;
+      }
+
+      /**********************************************
+       * try $CINTSYSDIR/lib
+       **********************************************/
+      /* G__getcintsysdir(); */
+      if('\0'!=G__cintsysdir[0]) {
+         sprintf(workname,"%s/%s/lib/%s%s",G__cintsysdir,G__CFG_COREVERSION
+                 ,filename,addpost[i2]);
+         res = stat( workname, statBuf );         
+         if (res==0) return res;
+      }
+
+#ifdef G__EDU_VERSION
+      /**********************************************
+       * try include/filename
+       **********************************************/
+      if('\0'!=G__cintsysdir[0]) {
+         sprintf(workname,"include%s%s%s"
+                 ,G__psep,filename,addpost[i2]);
+         res = stat( workname, statBuf );         
+         if (res==0) return res;
+      }
+      /**********************************************
+       * try stl
+       **********************************************/
+      G__getcintsysdir();
+      if('\0'!=G__cintsysdir[0]) {
+         sprintf(workname,"stl%s%s%s"
+                 ,G__psep,filename,addpost[i2]);
+         res = stat( workname, statBuf );         
+         if (res==0) return res;
+      }         
+#endif /* G__EDU_VERSION */
+      
+#ifdef G__VISUAL
+      /**********************************************
+       * try /msdev/include
+       **********************************************/
+      if('\0'!=G__cintsysdir[0]) {
+         sprintf(workname,"/msdev/include/%s%s",filename,addpost[i2]);
+         res = stat( workname, statBuf );         
+         if (res==0) return res;
+      }
+#endif /* G__VISUAL */
+         
+#ifdef G__SYMANTEC
+      /**********************************************
+       * try /sc/include
+       **********************************************/
+      if('\0'!=G__cintsysdir[0]) {
+         sprintf(workname,"/sc/include/%s%s",filename,addpost[i2]);
+         res = stat( workname, statBuf );         
+         if (res==0) return res;
+      }
+#endif // G__SYMANTEC
+         
+#ifndef G__WIN32
+      /**********************************************
+       * try /usr/include/filename
+       **********************************************/
+      if('\0'!=G__cintsysdir[0]) {
+         sprintf(workname,"/usr/include/%s%s",filename,addpost[i2]);
+         res = stat( workname, statBuf );         
+         if (res==0) return res;
+      }
+#endif
+      
+#ifdef __GNUC__
+      /**********************************************
+       * try /usr/include/g++/filename
+       **********************************************/
+      if('\0'!=G__cintsysdir[0]) {
+         sprintf(workname,"/usr/include/g++/%s%s",filename,addpost[i2]);
+         res = stat( workname, statBuf );         
+         if (res==0) return res;
+      }
+#endif /* __GNUC__ */
+      
+#ifndef G__WIN32
+      /* #ifdef __hpux */
+      /**********************************************
+       * try /usr/include/CC/filename
+       **********************************************/
+      if('\0'!=G__cintsysdir[0]) {
+         sprintf(workname,"/usr/include/CC/%s%s",filename,addpost[i2]);
+         res = stat( workname, statBuf );         
+         if (res==0) return res;
+      }         
+#endif
+         
+#ifndef G__WIN32
+      /**********************************************
+       * try /usr/include/codelibs/filename
+       **********************************************/
+      if('\0'!=G__cintsysdir[0]) {
+         sprintf(workname,"/usr/include/codelibs/%s%s"
+                 ,filename,addpost[i2]);
+         res = stat( workname, statBuf );         
+         if (res==0) return res;
+      }
+#endif
+   }
+   return -1;
+}
+   
+   
 /******************************************************************
 * G__loadfile(filename)
 *
@@ -2717,6 +2948,200 @@ struct G__input_file *G__get_ifile()
    return &G__ifile;
 }
 
+// G__register_sharedlib(const char *libname) 
+int G__register_sharedlib(const char *libname)
+{
+   // Register (if not already registered) in G__srcfile a library that
+   // is indirectly loaded (via a hard link) and has a CINT dictionary.
+
+   int null_entry = -1;
+   int i1 = 0;
+   int hash,temp;
+   
+   G__LockCriticalSection();
+   
+   /*************************************************
+    * store current input file information
+    *************************************************/
+   G__setdebugcond();
+      
+   /******************************************************************
+    * check if number of loaded file exceeds G__MAXFILE
+    * if so, restore G__ifile reset G__eof and return.
+    ******************************************************************/
+   if(G__nfile==G__MAXFILE) {
+      G__fprinterr(G__serr,"Limitation: Sorry, can not load any more files\n");
+      G__setdebugcond();
+      G__UnlockCriticalSection();
+      return(G__LOADFILE_FATAL);
+   }
+      
+   G__hash(libname,hash,temp);
+   
+   
+   /******************************************************************
+    * check if file is already loaded.
+    * if so, restore G__ifile reset G__eof and return.
+    ******************************************************************/
+   while(i1<G__nfile) {
+      /***************************************************
+       * This entry was unloaded by G__unloadfile()
+       * Then remember the entry index into 'null_entry'.
+       ***************************************************/
+      if((char*)NULL==G__srcfile[i1].filename) {
+         if(null_entry == -1) {
+            null_entry = i1;
+         }
+      }
+      /***************************************************
+       * check if alreay loaded
+       ***************************************************/
+      if(G__matchfilename(i1,libname)
+         &&G__get_envtagnum()==G__srcfile[i1].parent_tagnum
+         ){
+         if(G__prerun==0 || G__debugtrace)
+            if(G__dispmsg>=G__DISPNOTE) {
+               static const char *excludelist [] = {
+                  "stdfunc.dll","stdcxxfunc.dll","posix.dll","ipc.dll","posix.dll"
+                  "string.dll","vector.dll","vectorbool.dll","list.dll","deque.dll",
+                  "map.dll", "map2.dll","set.dll","multimap.dll","multimap2.dll",
+                  "multiset.dll","stack.dll","queue.dll","valarray.dll",
+               "exception.dll","stdexcept.dll","complex.dll","climits.dll" };
+               static const unsigned int excludelistsize = sizeof(excludelist)/sizeof(excludelist[0]);
+               static int excludelen[excludelistsize] = {-1};
+               if (excludelen[0] == -1) {
+                  for (unsigned int i = 0; i < excludelistsize; ++i)
+                     excludelen[i] = strlen(excludelist[i]);
+               }
+               bool cintdlls = false;
+               int len = strlen(libname);
+               for (unsigned int i = 0; !cintdlls && i < excludelistsize; ++i) {
+                  if (len>=excludelen[i]) {
+                     cintdlls = (!strncmp(libname+len-excludelen[i], excludelist[i], excludelen[i]));
+                  }
+               }
+            }
+         /******************************************************
+          * restore input file information to G__ifile
+          * and reset G__eof to 0.
+          ******************************************************/
+         G__UnlockCriticalSection();
+         return(G__LOADFILE_DUPLICATE);
+      }
+      else {
+         ++i1;
+      }
+   }
+   
+   int fentry;
+   if (null_entry != -1) {
+      fentry = null_entry;
+   } else {
+      fentry = G__nfile;
+      ++G__nfile;
+   }
+ 
+   G__srcfile[fentry].dictpos
+      = (struct G__dictposition*)malloc(sizeof(struct G__dictposition));
+   G__srcfile[fentry].dictpos->ptype = (char*)NULL;
+   G__store_dictposition(G__srcfile[fentry].dictpos);
+   
+   G__srcfile[fentry].hdrprop = G__NONCINTHDR;
+   
+   G__srcfile[fentry].security = G__security;
+   
+   G__srcfile[fentry].prepname = (char*)NULL;
+   G__srcfile[fentry].hash = hash;
+   G__srcfile[fentry].filename = (char*)malloc(strlen(libname)+1);
+   strcpy(G__srcfile[fentry].filename,libname);
+   G__srcfile[fentry].fp=0;
+   
+   G__srcfile[fentry].included_from = G__ifile.filenum;
+   
+   G__srcfile[fentry].ispermanentsl = 2;
+   G__srcfile[fentry].initsl = 0;
+   G__srcfile[fentry].hasonlyfunc = (struct G__dictposition*)NULL;
+   G__srcfile[fentry].parent_tagnum = G__get_envtagnum();
+   G__srcfile[fentry].slindex = -1;
+
+   G__UnlockCriticalSection();
+   return(fentry);
+}
+   
+// G__unregister_sharedlib(const char *libname) 
+int G__unregister_sharedlib(const char *libname)
+{
+   // Unregister (if and only if it has been registered by G__register_sharedlib) 
+   // in G__srcfile a library.
+   
+   G__LockCriticalSection();
+   
+   int envtagnum = -1;
+   
+   /******************************************************************
+    * check if file is already loaded.
+    * if not so, return
+    ******************************************************************/
+   int i2;
+   int hash;
+   G__hash(libname,hash,i2);
+   
+   bool flag = false;
+   int ifn;
+   for(ifn = G__nfile-1; ifn>0; --ifn) {
+      if(G__srcfile[ifn].ispermanentsl == 2 
+         && G__matchfilename(ifn,libname)
+         && (-1==envtagnum||(envtagnum==G__srcfile[ifn].parent_tagnum))){
+         flag = true;
+         break;
+      }
+   }
+   
+   if (flag) {
+      // File found
+      
+      // No check for busy-ness is need.  If we get there the library
+      // is already being unloaded.
+      
+      // No active unload to do, since we did not load this file directly.
+
+      if (G__srcfile[ifn].dictpos) {
+         free((void*) G__srcfile[ifn].dictpos);
+         G__srcfile[ifn].dictpos = 0;
+      }
+      if (G__srcfile[ifn].hasonlyfunc) {
+         free((void*) G__srcfile[ifn].hasonlyfunc);
+         G__srcfile[ifn].hasonlyfunc = 0;
+      }
+      if (G__srcfile[ifn].filename) {
+         // --
+#ifndef G__OLDIMPLEMENTATION1546
+         unsigned int len = strlen(G__srcfile[ifn].filename);
+         if (
+             (len > strlen(G__NAMEDMACROEXT2)) &&
+             !strcmp(G__srcfile[ifn].filename + len - strlen(G__NAMEDMACROEXT2), G__NAMEDMACROEXT2)
+             ) {
+            remove(G__srcfile[ifn].filename);
+         }
+#endif // G__OLDIMPLEMENTATION1546
+         free((void*) G__srcfile[ifn].filename);
+         G__srcfile[ifn].filename = 0;
+      }
+      G__srcfile[ifn].hash = 0;      
+      
+      if(G__debug) {
+         G__fprinterr(G__serr,"File=%s unregistered\n",libname);
+      }
+      while(G__nfile && G__srcfile[G__nfile-1].filename==0) {
+         --G__nfile;
+      }
+   }
+   
+   G__UnlockCriticalSection(); 
+   return G__UNLOADFILE_SUCCESS;
+   
+}
+   
 } /* extern "C" */
 
 /*

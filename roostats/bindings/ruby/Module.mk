@@ -12,6 +12,16 @@ RUBYROOTDIR    := $(MODDIR)
 RUBYROOTDIRS   := $(RUBYROOTDIR)/src
 RUBYROOTDIRI   := $(RUBYROOTDIR)/inc
 
+##### ruby64 #####
+ifeq ($(ARCH),macosx64)
+ifeq ($(MACOSX_MINOR),5)
+RUBY64S        := $(MODDIRS)/ruby64.c
+RUBY64O        := $(RUBY64S:.c=.o)
+RUBY64         := bin/ruby64
+RUBY64DEP      := $(RUBY64O:.o=.d)
+endif
+endif
+
 ##### libRuby #####
 RUBYROOTL      := $(MODDIRI)/LinkDef.h
 RUBYROOTDS     := $(MODDIRS)/G__Ruby.cxx
@@ -31,6 +41,9 @@ RUBYROOTMAP    := $(RUBYROOTLIB:.$(SOEXT)=.rootmap)
 ALLHDRS        += $(patsubst $(MODDIRI)/%.h,include/%.h,$(RUBYROOTH))
 ALLLIBS        += $(RUBYROOTLIB)
 ALLMAPS        += $(RUBYROOTMAP)
+
+ALLEXECS       += $(RUBY64)
+INCLUDEFILES   += $(RUBY64DEP)
 
 # include all dependency files
 INCLUDEFILES   += $(RUBYROOTDEP)
@@ -55,18 +68,23 @@ $(RUBYROOTMAP): $(RLIBMAP) $(MAKEFILEDEP) $(RUBYROOTL)
 		$(RLIBMAP) -o $(RUBYROOTMAP) -l $(RUBYROOTLIB) \
 		   -d $(RUBYROOTLIBDEPM) -c $(RUBYROOTL)
 
-all-$(MODNAME): $(RUBYROOTLIB) $(RUBYROOTMAP)
+$(RUBY64):      $(RUBY64O)
+		$(CC) $(LDFLAGS) -o $@ $(RUBY64O) \
+		   $(RUBYLIBDIR) $(RUBYLIB)
+
+all-$(MODNAME): $(RUBYROOTLIB) $(RUBYROOTMAP) $(RUBY64)
 
 clean-$(MODNAME):
-		@rm -f $(RUBYROOTO) $(RUBYROOTDO)
+		@rm -f $(RUBYROOTO) $(RUBYROOTDO) $(RUBY64O)
 
 clean::         clean-$(MODNAME)
 
 distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -f $(RUBYROOTDEP) $(RUBYROOTDS) $(RUBYROOTDH) \
-		   $(RUBYROOTLIB) $(RUBYROOTMAP)
+		   $(RUBYROOTLIB) $(RUBYROOTMAP) $(RUBY64DEP) $(RUBY64)
 
 distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
 $(RUBYROOTO): CXXFLAGS += $(RUBYINCDIR:%=-I%) -Iinclude/cint
+$(RUBY64O): CFLAGS += $(RUBYINCDIR:%=-I%)

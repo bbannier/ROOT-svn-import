@@ -82,64 +82,63 @@ void rflx_gensrc::gen_file()
 * only information available. 'Stubs' are generated for every type appearing in
 * the dictionary source code (e.g. function parameter/return types, data members, ...) 
 */
-std::string rflx_gensrc::gen_type(G__TypeInfo & tn)
+std::string rflx_gensrc::gen_type(G__TypeInfo& tn)
 {
    // Q: volatile supported?
    // reference, pointer, const, volatile, type, typedef
-
    std::string tName = tn.Name();
    if (tName == "(unknown)") {
       // try class
       G__ClassInfo ci(tn.Tagnum());
-      if (ci.IsValid()) 
+      if (ci.IsValid()) {
          return gen_type(ci);
+      }
    }
-
    std::ostringstream tvNumS("");
    tvNumS << m_typeNum;
    std::string tvNumStr = "type_" + tvNumS.str();
-
    TypeMap::const_iterator mIt = m_typeMap.find(tName);
-   if (mIt != m_typeMap.end())
+   if (mIt != m_typeMap.end()) {
       return m_typeMap[tName];
-   else
-      m_typeMap[tName] = tvNumStr;
+   }
+   m_typeMap[tName] = tvNumStr;
    ++m_typeNum;
-
-   if (tn.Name()[strlen(tn.Name()) - 1] == '*') {
+   if (tn.Name()[strlen(tn.Name())-1] == '*') {
       G__TypeInfo ti(tName.substr(0, tName.rfind("*")).c_str());
-      m_typeVec.push_back("Type " + tvNumStr + " = PointerBuilder(" +
-                          gen_type(ti) + ");");
-   } else if (tn.Property() & G__BIT_ISTYPEDEF && tn.Type() != 'u') {
-      G__TypedefInfo tdi(tn.ReflexType());
-      if (!tdi.IsValid())
-         m_typeVec.push_back("Type " + tvNumStr + " = TypeBuilder(\"" +
-                             tName + "\");");
+      m_typeVec.push_back("Type " + tvNumStr + " = PointerBuilder(" + gen_type(ti) + ");");
+   }
+   else if ((tn.Property() & G__BIT_ISTYPEDEF) && (tn.Type() != 'u')) {
+      G__TypedefInfo tdi(tn.Typenum());
+      if (!tdi.IsValid()) {
+         m_typeVec.push_back("Type " + tvNumStr + " = TypeBuilder(\"" + tName + "\");");
+      }
       else {
          G__TypeInfo clOrig(tdi.TrueName());
-         m_typeVec.push_back("Type " + tvNumStr + " = TypedefTypeBuilder(\"" + tName 
-            + "\", " + gen_type(clOrig) + ");");
+         m_typeVec.push_back("Type " + tvNumStr + " = TypedefTypeBuilder(\"" + tName + "\", " + gen_type(clOrig) + ");");
       }
-   } else if (tn.Reftype()) {
+   }
+   else if (tn.Reftype()) {
       G__TypeInfo ti(tName.substr(0, tName.rfind("&")).c_str());
-      m_typeVec.push_back("Type " + tvNumStr + " = ReferenceBuilder(" +
-                          gen_type(ti) + ");");
-   } else if (tn.Isconst()&G__CONSTVAR) {
-      std::string::size_type posConst=tName.rfind("const");
+      m_typeVec.push_back("Type " + tvNumStr + " = ReferenceBuilder(" + gen_type(ti) + ");");
+   }
+   else if (tn.Isconst() & G__CONSTVAR) {
+      std::string::size_type posConst = tName.rfind("const");
       if (posConst != std::string::npos) {
-         if (posConst)
+         if (posConst) {
             tName = tName.substr(0, tName.length() - 5);
-         else
+         }
+         else {
             tName = tName.substr(6);
+         }
          G__TypeInfo ti(tName.c_str());
-         m_typeVec.push_back("Type " + tvNumStr + " = ConstBuilder(" +
-                             gen_type(ti) + ");");
-      } else 
-         m_typeVec.push_back("Type " + tvNumStr + " = TypeBuilder(\"" +
-                             tName + "\");");
-   } else {
-      m_typeVec.push_back("Type " + tvNumStr + " = TypeBuilder(\"" +
-                          tName + "\");");
+         m_typeVec.push_back("Type " + tvNumStr + " = ConstBuilder(" + gen_type(ti) + ");");
+      }
+      else {
+         m_typeVec.push_back("Type " + tvNumStr + " = TypeBuilder(\"" + tName + "\");");
+      }
+   }
+   else {
+      m_typeVec.push_back("Type " + tvNumStr + " = TypeBuilder(\"" + tName + "\");");
    }
    return tvNumStr;
 }
@@ -274,8 +273,7 @@ void rflx_gensrc::gen_typedefdicts()
 
    while (td.Next()) {
 
-      if (G__get_properties(td.ReflexType()) && 
-          G__get_properties(td.ReflexType())->globalcomp) {
+      if (G__get_properties(G__Dict::GetDict().GetTypedef(td.Typenum()))->globalcomp) {
 
          // G__type2string(td.Type(),td.Tagnum(),td.Typenum(),td.Reftype(),td.Isconst())
 
@@ -750,7 +748,7 @@ int rflx_gensrc::gen_stubfuncdecl_header(std::ostringstream & s,
    std::string fmname = fm.Name();
    std::string retname = rflx_tools::rm_end_ref(fm.Type()->Name());
 
-   ::Reflex::Member var( G__Dict::G__Dict().GetFunction( (G__ifunc_table *) fm.Handle(), fm.Handle() ));
+   ::Reflex::Member var( G__Dict::GetDict().GetFunction( (G__ifunc_table *) fm.Handle(), fm.Handle() ));
    G__SIGNEDCHAR_T retT = G__get_type(var.TypeOf());
    // pointer
    if (isupper(retT)) {
@@ -831,15 +829,19 @@ void rflx_gensrc::gen_stubfuncdecl_params(std::ostringstream & s,
       if (ma.Type()->Name() && strstr(ma.Type()->Name(),"(*)"))
          // func ptr
          s << ma.Type()->Name() << arrStr;
-      else if (! ma.Type()->Fullname() &&
-         strstr(ma.Type()->TrueName(),"void*") && 
-         strcmp(ma.Type()->Name(),"void*")
-         || !strcmp(ma.Type()->TrueName(),"G__p2memfunc"))
-      //else if (ma.Type()->Type()=='a')
-         // func ptr with typedef
+      else if (
+         (
+            !ma.Type()->Fullname() &&
+            strstr(ma.Type()->TrueName(),"void*") && 
+            strcmp(ma.Type()->Name(),"void*")
+         ) ||
+         !strcmp(ma.Type()->TrueName(),"G__p2memfunc")
+      ) {
          s << rflx_tools::stub_type_name(ma.Type()->Name()) << arrStr << pStr;
-      else
+      }
+      else {
          s << rflx_tools::stub_type_name(ma.Type()->TrueName()) << arrStr << pStr;
+      }
       s << ")arg[" << maNum << "]";
       ++maNum;
    }
@@ -856,7 +858,7 @@ void rflx_gensrc::gen_stubfuncdecl_trailer(std::ostringstream & s,
    if (argNum < 0)
       argNum = 0;
 
-   ::Reflex::Member var( G__Dict::G__Dict().GetFunction( (G__ifunc_table *) fm.Handle(), fm.Index() ));
+   ::Reflex::Member var( G__Dict::GetDict().GetFunction( (G__ifunc_table *) fm.Handle(), fm.Index() ));
    G__SIGNEDCHAR_T retT = G__get_type(var.TypeOf().ReturnType()); 
    // reference 
    if (fm.Type()->Reftype()) {
@@ -1054,26 +1056,35 @@ void rflx_gensrc::gen_classdictdecls(std::ostringstream & s,
       int accessBase=baseClassesToSearch.front().second.first;
       int inhlevel = baseClassesToSearch.front().second.second;
       while (ciBase.Next()) {
-         if (  (ciBase.Property() & G__BIT_ISVIRTUALBASE) &&
-              !(ciBase.Property() & G__BIT_ISDIRECTINHERIT)) {
+         if (
+            (ciBase.Property() & G__BIT_ISVIRTUALBASE) &&
+            !(ciBase.Property() & G__BIT_ISDIRECTINHERIT)
+         ) {
             // CINT duplicates the remote virtual base class in the list scanned
             // by G__BaseClassInfo, we need to skip them.
             continue;
          }
-         if (std::find(baseTags.begin(), baseTags.end(), ciBase.Tagnum())!=baseTags.end())
+         if (std::find(baseTags.begin(), baseTags.end(), ciBase.Tagnum()) != baseTags.end()) {
             continue; // already dealt with
+         }
 
          baseTags.push_back(ciBase.Tagnum());
          G__ClassInfo ciBaseClass(ciBase);
-         int myAccess=ciBase.Property() & 
-            (G__BIT_ISVIRTUALBASE | G__BIT_ISPRIVATE | G__BIT_ISPROTECTED | G__BIT_ISPUBLIC);
-         if (myAccess & G__BIT_ISPROTECTED && accessBase & G__BIT_ISPRIVATE)
-            myAccess=myAccess & !G__BIT_ISPROTECTED | G__BIT_ISPRIVATE;
-         else if (myAccess & G__BIT_ISPUBLIC)
-            if (accessBase & G__BIT_ISPRIVATE) 
-               myAccess=myAccess & !G__BIT_ISPUBLIC | G__BIT_ISPRIVATE;
-            else if (accessBase & G__BIT_ISPROTECTED) 
-               myAccess=myAccess & !G__BIT_ISPUBLIC | G__BIT_ISPROTECTED;
+         int myAccess = ciBase.Property() & (G__BIT_ISVIRTUALBASE | G__BIT_ISPRIVATE | G__BIT_ISPROTECTED | G__BIT_ISPUBLIC);
+         if (
+            (myAccess & G__BIT_ISPROTECTED) &&
+            (accessBase & G__BIT_ISPRIVATE)
+         ) {
+            myAccess = (myAccess & ~G__BIT_ISPROTECTED) | G__BIT_ISPRIVATE;
+         }
+         else if (myAccess & G__BIT_ISPUBLIC) {
+            if (accessBase & G__BIT_ISPRIVATE)  {
+               myAccess = (myAccess & ~G__BIT_ISPUBLIC) | G__BIT_ISPRIVATE;
+            }
+            else if (accessBase & G__BIT_ISPROTECTED) {
+               myAccess = (myAccess & ~G__BIT_ISPUBLIC) | G__BIT_ISPROTECTED;
+            }
+         }
 
          baseClassesToSearch.push_back(std::make_pair(ciBaseClass, std::make_pair(myAccess,inhlevel+1)));
 
@@ -1103,7 +1114,9 @@ void rflx_gensrc::gen_classdictdecls(std::ostringstream & s,
   }
 
   --ind;
-  if (iBase) s << ind() << "}" << std::endl;
+  if (iBase) {
+     s << ind() << "}" << std::endl;
+  }
 
   s << ind() << "return &s_bases;" << std::endl;
   --ind;
@@ -1128,7 +1141,7 @@ void rflx_gensrc::gen_freefundicts()
    while (mi.Next()) {
 
       std::string fmname = mi.Name();
-      ::Reflex::Member ifunc( G__Dict::G__Dict().GetFunction( (G__ifunc_table *) mi.Handle(), mi.Index()));
+      ::Reflex::Member ifunc( G__Dict::GetDict().GetFunction( (G__ifunc_table *) mi.Handle(), mi.Index()));
 
       if ((fmname.length()) 
          && G__get_properties(ifunc)->globalcomp == G__CPPLINK) {
@@ -1282,7 +1295,7 @@ void rflx_gensrc::gen_freevardicts()
       if (var.MemberOf() && var.MemberOf()->IsValid())
          continue;
 
-      ::Reflex::Member varArr( G__Dict::G__Dict().GetDataMember( (G__var_array*)var.Handle(), var.Index()));
+      ::Reflex::Member varArr( G__Dict::GetDict().GetDataMember( (G__var_array*)var.Handle(), var.Index()));
       if (G__get_properties(varArr)->globalcomp != G__CPPLINK) continue;
 
       if (var.Type() && strchr("pT", var.Type()->Type())) {
@@ -1321,7 +1334,7 @@ void rflx_gensrc::gen_freevardicts()
          iCPP!=cppMacros.end(); ++iCPP) {
             m_fv << ind() << "cppMacroEnum.AddDataMember(\"" << iCPP->Name()
                << "\", typeCPPMacro, (size_t)\"";
-            ::Reflex::Member va( G__Dict::G__Dict().GetDataMember( (G__var_array*)iCPP->Handle(), iCPP->Index() ) );
+            ::Reflex::Member va( G__Dict::GetDict().GetDataMember( (G__var_array*)iCPP->Handle(), iCPP->Index() ) );
             if (G__get_type(va.TypeOf()) == 'p') m_fv << *(int*)G__get_offset(va);
             else m_fv << *(const char**)G__get_offset(va);
             m_fv << "\", ARTIFICIAL);" << std::endl;

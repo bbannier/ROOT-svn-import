@@ -169,12 +169,13 @@ ROOT::Math::Minimizer * FitConfig::CreateMinimizer() {
    return min; 
 } 
 
-void FitConfig::SetDefaultMinimizer(const std::string & type, const std::string & algo ) { 
+void FitConfig::SetDefaultMinimizer(const char * type, const char *algo ) { 
    // set the default minimizer type and algorithms
    ROOT::Math::MinimizerOptions::SetDefaultMinimizer(type, algo); 
 } 
 
 void FitConfig::SetMinimizerOptions(const ROOT::Math::MinimizerOptions & minopt) {  
+   // set minimizer options
    fMinimizerType = minopt.MinimizerType(); 
    fMinimAlgoType = minopt.MinimizerAlgorithm(); 
    fMinimizerOpts.SetTolerance(minopt.Tolerance() ); 
@@ -184,7 +185,6 @@ void FitConfig::SetMinimizerOptions(const ROOT::Math::MinimizerOptions & minopt)
    fMinimizerOpts.SetPrintLevel(minopt.PrintLevel() ); 
    fMinimizerOpts.SetErrorDef(minopt.ErrorDef() ); 
 
-   // error up should be added as well
 }
 
 

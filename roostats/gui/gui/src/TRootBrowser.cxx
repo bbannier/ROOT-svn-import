@@ -67,6 +67,7 @@
 #include "TGFileDialog.h"
 #include "TObjString.h"
 #include "TVirtualPad.h"
+#include "TEnv.h"
 #include <KeySymbols.h>
 
 #include "TRootBrowser.h"
@@ -288,6 +289,7 @@ void TRootBrowser::CreateBrowser(const char *name)
    fEditFrame = 0;
    fEditTab   = 0;
    fEditPos   = -1;
+   fEditSubPos= -1;
    fNbTab[0]  = fNbTab[1] = fNbTab[2] = 0;
    fCrTab[0]  = fCrTab[1] = fCrTab[2] = -1;
    
@@ -724,7 +726,9 @@ void TRootBrowser::HandleMenu(Int_t id)
          ExecPlugin("", "", "new TCanvas()", 1);
          break;
       case kNewHtml:
-         ExecPlugin("HTML", "", "new TGHtmlBrowser(\"http://root.cern.ch\",gClient->GetRoot())", 1);
+         cmd.Form("new TGHtmlBrowser(\"%s\", gClient->GetRoot())",
+                  gEnv->GetValue("Browser.StartUrl", "http://root.cern.ch"));
+         ExecPlugin("HTML", "", cmd.Data(), 1);
          break;
       case kExecPluginMacro:
          {
@@ -803,8 +807,9 @@ void TRootBrowser::InitPlugins(Option_t *opt)
    // HTML plugin...
    if (strchr(opt, 'H')) {
       if (gSystem->Load("libGuiHtml") >= 0) {
-         cmd.Form("new TGHtmlBrowser(\"http://root.cern.ch/root/html/ClassIndex.html\", \
-                  gClient->GetRoot());");
+         cmd.Form("new TGHtmlBrowser(\"%s\", gClient->GetRoot());", 
+                  gEnv->GetValue("Browser.StartUrl",
+                  "http://root.cern.ch/root/html/ClassIndex.html"));
          ExecPlugin("HTML", 0, cmd.Data(), 1);
          ++fNbInitPlugins;
       }
@@ -1022,13 +1027,15 @@ void TRootBrowser::StartEmbedding(Int_t pos, Int_t subpos)
 
    fEditTab = GetTab(pos);
    fEditPos = pos;
+   fEditSubPos = subpos;
 
    if (fEditFrame == 0) {
       if (subpos == -1) {
          fCrTab[pos] = fNbTab[pos]++;
-         fEditFrame = fEditTab->AddTab(Form("Tab %d",fNbTab[pos]));
+         fEditFrame  = fEditTab->AddTab(Form("Tab %d",fNbTab[pos]));
+         fEditSubPos = fEditTab->GetNumberOfTabs()-1;
          fEditFrame->MapWindow();
-         TGTabElement *tabel = fEditTab->GetTabTab(fEditTab->GetNumberOfTabs()-1);
+         TGTabElement *tabel = fEditTab->GetTabTab(fEditSubPos);
          if(tabel) {
             tabel->MapWindow();
             if (fShowCloseTab && (pos == 1))
@@ -1063,10 +1070,10 @@ void TRootBrowser::StopEmbedding(const char *name, TGLayoutHints *layout)
          SwitchMenus(fEditFrame);
    }
    if (name && strlen(name)) {
-      SetTabTitle(name, fEditPos);
+      SetTabTitle(name, fEditPos, fEditSubPos);
    }
    fEditFrame = fEditTab = 0;
-   fEditPos = -1;
+   fEditPos = fEditSubPos = -1;
 }
 
 //______________________________________________________________________________

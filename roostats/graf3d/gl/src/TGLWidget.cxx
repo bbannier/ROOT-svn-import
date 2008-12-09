@@ -106,7 +106,7 @@ TGLWidget* TGLWidget::Create(const TGLFormat &format,
    glw->fInnerData   = innerData;
 #endif
    glw->fGLFormat  = format;
-   
+
    try
    {
       glw->SetFormat();
@@ -165,7 +165,7 @@ TGLWidget::~TGLWidget()
    }
    delete fGLContext;
 
-   gVirtualX->SelectWindow(fWindowIndex); 	 
+   gVirtualX->SelectWindow(fWindowIndex);
    gVirtualX->CloseWindow();
 }
 
@@ -186,6 +186,13 @@ Bool_t TGLWidget::MakeCurrent()
 {
    //Make the gl-context current.
    return fGLContext->MakeCurrent();
+}
+
+//______________________________________________________________________________
+Bool_t TGLWidget::ClearCurrent()
+{
+   //Clear the current gl-context.
+   return fGLContext->ClearCurrent();
 }
 
 //______________________________________________________________________________

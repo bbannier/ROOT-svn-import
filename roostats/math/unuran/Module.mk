@@ -12,7 +12,7 @@ UNURANDIR    := $(MODDIR)
 UNURANDIRS   := $(UNURANDIR)/src
 UNURANDIRI   := $(UNURANDIR)/inc
 
-UNRVERS      := unuran-1.3.devel-root
+UNRVERS      := unuran-1.3.0-root
 
 UNRSRCS      := $(MODDIRS)/$(UNRVERS).tar.gz
 UNRDIRS      := $(MODDIRS)/$(UNRVERS)
@@ -89,6 +89,7 @@ $(UNURANETAG):	$(UNRSRCS)
 		   etag=`basename $(UNURANETAG)` ; \
 		   touch $$etag ; \
 		fi); 
+#configure unuran (required for creating the config.h used by unuran source files)
 $(UNRCFG):	$(UNRANETAG)
 		@echo "** configure unuran"
 		@(cd $(UNURANDIRS)/$(UNRVERS) ; \
@@ -114,7 +115,7 @@ $(UNRCFG):	$(UNRANETAG)
 			ACC="cl.exe"; \
 			ACFLAGS="-MD -G5 -GX"; \
 		fi; \
-		GNUMAKE=$(MAKE) ./configure --prefix=`pwd`/$(MODDIRS)/$(UNRVERS) CC="$$ACC"  \
+		GNUMAKE=$(MAKE) ./configure  CC="$$ACC"  \
 		CFLAGS="$$ACFLAGS");
 
 $(UNURANLIB):   $(UNRCFG) $(UNRO) $(UNURANO) $(UNURANDO) $(ORDER_) $(MAINLIBS) $(UNURANLIBDEP)
@@ -144,9 +145,21 @@ clean::         clean-$(MODNAME)
 
 distclean-$(MODNAME): 
 		@rm -f $(UNURANO) $(UNURANDO) $(UNURANETAG) $(UNURANDEP) $(UNURANDS) $(UNURANDH) $(UNURANLIB) $(UNURANMAP)
+ifneq ($(wildcard $(UNRSRCS)), )
+		@echo "Moving $(UNRSRCS) out of the way"
 		@mv $(UNRSRCS) $(UNURANDIRS)/-$(UNRVERS).tar.gz
+endif
+ifeq ($(UNURKEEP),yes)
+		@echo "Moving $(UNRVERS) out of the way"
+		@mv $(UNURANDIRS)/$(UNRVERS) $(UNURANDIRS)/$(UNRVERS).keep
+endif
 		@rm -rf $(UNURANDIRS)/unuran-*-root
+ifeq ($(UNURKEEP),yes)
+		@mv $(UNURANDIRS)/$(UNRVERS).keep $(UNURANDIRS)/$(UNRVERS)
+endif
+ifneq ($(wildcard $(UNRSRCS)), )
 		@mv $(UNURANDIRS)/-$(UNRVERS).tar.gz $(UNRSRCS)
+endif
 
 distclean::     distclean-$(MODNAME)
 

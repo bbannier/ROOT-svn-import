@@ -245,6 +245,8 @@ int G__preprocessor(char *outname,const char *inname,int cppflag,const char *mac
 int G__difffile(char *file1,char *file2);
 int G__copyfile(FILE *to,FILE *from);
 
+struct stat;
+int G__statfilename(const char *filename, struct stat* buf);
 int G__matchfilename(int i1,const char* filename);
 int G__cleardictfile(int flag);
 
@@ -412,7 +414,6 @@ G__value G__pointer2func(G__value* obj_p2f,char *parameter0,char *parameter1,int
 char *G__search_func(const char *funcname,G__value *buf);
 char *G__search_next_member(const char *text,int state);
 int G__Loffsetof(const char *tagname,const char *memname);
-int G__Lsizeof(const char *typenamein);
 long *G__typeid(const char *typenamein);
 void G__getcomment(char *buf,struct G__comment_info *pcomment,int tagnum);
 void G__getcommenttypedef(char *buf,struct G__comment_info *pcomment,int typenum);
@@ -710,6 +711,11 @@ void G__setmemtestbreak(int n,int m);
 
 void G__clear_errordictpos();
 
+int G__register_sharedlib(const char *libname);
+int G__unregister_sharedlib(const char *libname);
+void *G__RegisterLibrary (void (*func) ());
+void *G__UnregisterLibrary (void (*func) ());
+  
 #ifdef __cplusplus
 } // extern "C"
 #endif

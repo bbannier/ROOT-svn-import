@@ -28,6 +28,7 @@
 #  include "XrdSys/XrdSysError.hh"
 #  include "XrdSys/XrdSysLogger.hh"
 #endif
+#include "XrdSys/XrdSysPriv.hh"
 
 #include "XrdVersion.hh"
 #include "Xrd/XrdBuffer.hh"
@@ -67,6 +68,9 @@ bool                  XrdProofdProtocol::fgConfigDone = 0;
 int                   XrdProofdProtocol::fgReadWait = 0;
 // Cluster manager
 XrdProofdManager     *XrdProofdProtocol::fgMgr = 0;
+
+// Effective uid
+int                   XrdProofdProtocol::fgEUidAtStartup = -1;
 
 // Local definitions
 #define MAX_ARGS 128
@@ -151,9 +155,9 @@ XrdProofdProtocol::XrdProofdProtocol()
 XrdProofdResponse *XrdProofdProtocol::Response(kXR_unt16 sid)
 {
    // Get response instance corresponding to stream ID 'sid'
+   XPDLOC(ALL, "Protocol::Response")
 
-   // Atomic
-   XrdSysMutexHelper mh(fMutex);
+   TRACE(HDBG, "sid: "<<sid<<", size: "<<fResponses.size());
 
    if (sid > 0)
       if (sid <= fResponses.size())
@@ -172,8 +176,6 @@ XrdProofdResponse *XrdProofdProtocol::GetNewResponse(kXR_unt16 sid)
    XrdOucString msg;
    msg.form("sid: %d", sid);
    if (sid > 0) {
-      // Atomic
-      XrdSysMutexHelper mh(fMutex);
       if (sid > fResponses.size()) {
          if (sid > fResponses.capacity()) {
             int newsz = (sid < 2 * fResponses.capacity()) ? 2 * fResponses.capacity() : sid+1 ;
@@ -342,6 +344,11 @@ int XrdProofdProtocol::Configure(char *, XrdProtocol_Config *pi)
    if (pi->DebugON)
       XrdProofdTrace->What |= (TRACE_REQ | TRACE_FORK);
 
+   // Work as root to avoid contineous changes of the effective user
+   // (users are logged in their box after forking)
+   fgEUidAtStartup = geteuid();
+   if (!getuid()) XrdSysPriv::ChangePerm((uid_t)0, (gid_t)0);
+
    // Process the config file for directives meaningful to us
    if (pi->ConfigFN) {
       // Create and Configure the manager
@@ -388,10 +395,10 @@ int XrdProofdProtocol::Process(XrdLink *)
          TRACEP(this, XERR, "could not get Response instance for rid: "<< sid);
          return rc;
       }
-      // Set the stream ID for the reply
-      response->Set(fRequest.header.streamid);
-      response->Set(fLink);
    }
+   // Set the stream ID for the reply
+   response->Set(fRequest.header.streamid);
+   response->Set(fLink);
 
    TRACEP(this, REQ, "sid: " << sid << ", req id: " << fRequest.header.requestid <<
                 " (" << XrdProofdAux::ProofRequestTypes(fRequest.header.requestid)<<
@@ -521,9 +528,8 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
          if (fgMgr && fgMgr->ClientMgr()) {
             TRACE(HDBG, "fAdminPath: "<<fAdminPath);
             buf.form("%s %p %d %d", fAdminPath.c_str(), pmgr, fCID, fPid);
-            fgMgr->ClientMgr()->Pipe()->Post(XrdProofdClientMgr::kClientDisconnect,
-                                             buf.c_str());
             TRACE(DBG, "sending to ClientMgr: "<<buf);
+            fgMgr->ClientMgr()->Pipe()->Post(XrdProofdClientMgr::kClientDisconnect, buf.c_str());
          }
 
       } else {
@@ -534,8 +540,8 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
          if (fgMgr && fgMgr->SessionMgr()) {
             TRACE(HDBG, "fAdminPath: "<<fAdminPath);
             buf.assign(fAdminPath, fAdminPath.rfind('/') + 1, -1);
-            fgMgr->SessionMgr()->Pipe()->Post(XrdProofdProofServMgr::kSessionRemoval, buf.c_str());
             TRACE(DBG, "sending to ProofServMgr: "<<buf);
+            fgMgr->SessionMgr()->Pipe()->Post(XrdProofdProofServMgr::kSessionRemoval, buf.c_str());
          }
       }
    }
@@ -593,14 +599,14 @@ int XrdProofdProtocol::GetData(const char *dtype, char *buff, int blen)
    // data within the timeout interval.
    TRACEP(this, HDBG, "dtype: "<<(dtype ? dtype : " - ")<<", blen: "<<blen);
 
+   // No need to lock:the link is disable while we are here
    rlen = fLink->Recv(buff, blen, fgReadWait);
-
    if (rlen  < 0) {
       if (rlen != -ENOMSG && rlen != -ECONNRESET) {
          XrdOucString emsg = "link read error: errno: ";
          emsg += -rlen;
          TRACEP(this, XERR, emsg.c_str());
-         return fLink->setEtext(emsg.c_str());
+         return (fLink ? fLink->setEtext(emsg.c_str()) : -1);
       } else {
          TRACEP(this, HDBG, "connection closed by peer (errno: "<<-rlen<<")");
          return -1;
@@ -751,25 +757,23 @@ int XrdProofdProtocol::SendMsg()
 
    XPD_SETRESP(this, "SendMsg");
 
-   XrdSysMutexHelper mhc(Client()->Mutex());
-   XrdSysMutexHelper mh(response->fMutex);
-
    // Unmarshall the data
    int psid = ntohl(fRequest.sendrcv.sid);
    int opt = ntohl(fRequest.sendrcv.opt);
 
+   XrdOucString msg;
    // Find server session
    XrdProofdProofServ *xps = 0;
-   if (!fPClient || !(xps = fPClient->GetProofServ(psid))) {
-      TRACEP(this, XERR, "session ID not found: "<< psid);
-      response->Send(kXR_InvalidRequest,"session ID not found");
+   if (!fPClient || !(xps = fPClient->GetServer(psid))) {
+      msg.form("%s: session ID not found: %d", (Internal() ? "INT" : "EXT"), psid);
+      TRACEP(this, XERR, msg.c_str());
+      response->Send(kXR_InvalidRequest, msg.c_str());
       return 0;
    }
 
    // Message length
    int len = fRequest.header.dlen;
 
-   XrdOucString msg;
    if (!Internal()) {
 
       // Notify
@@ -887,7 +891,7 @@ int XrdProofdProtocol::Urgent()
 
    // Find server session
    XrdProofdProofServ *xps = 0;
-   if (!fPClient || !(xps = fPClient->GetProofServ(psid))) {
+   if (!fPClient || !(xps = fPClient->GetServer(psid))) {
       TRACEP(this, XERR, "session ID not found");
       response->Send(kXR_InvalidRequest,"Urgent: session ID not found");
       return 0;
@@ -898,6 +902,12 @@ int XrdProofdProtocol::Urgent()
    // Check ID matching
    if (!xps->Match(psid)) {
       response->Send(kXP_InvalidRequest,"Urgent: IDs do not match - do nothing");
+      return 0;
+   }
+
+   // Check the link to the session
+   if (!xps->Response()) {
+      response->Send(kXP_InvalidRequest,"Urgent: session response object undefined - do nothing");
       return 0;
    }
 
@@ -945,7 +955,7 @@ int XrdProofdProtocol::Interrupt()
 
    // Find server session
    XrdProofdProofServ *xps = 0;
-   if (!fPClient || !(xps = fPClient->GetProofServ(psid))) {
+   if (!fPClient || !(xps = fPClient->GetServer(psid))) {
       TRACEP(this, XERR, "session ID not found");
       response->Send(kXR_InvalidRequest,"nterrupt: session ID not found");
       return 0;
@@ -1007,7 +1017,7 @@ int XrdProofdProtocol::Ping()
 
    // Find server session
    XrdProofdProofServ *xps = 0;
-   if (!fPClient || !(xps = fPClient->GetProofServ(psid))) {
+   if (!fPClient || !(xps = fPClient->GetServer(psid))) {
       TRACEP(this,  XERR, "session ID not found");
       response->Send(kXR_InvalidRequest,"session ID not found");
       return 0;
@@ -1115,10 +1125,7 @@ void XrdProofdProtocol::TouchAdminPath()
    // Recording time of the last request on this instance
    XPDLOC(ALL, "Protocol::TouchAdminPath")
 
-   XrdOucString apath;
-   { XrdSysMutexHelper mhp(fMutex);
-      apath = fAdminPath;
-   }
+   XrdOucString apath = fAdminPath;
 
    XPD_SETRESPV(this, "TouchAdminPath");
    TRACEP(this, HDBG, apath);

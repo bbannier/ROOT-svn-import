@@ -98,6 +98,7 @@ protected:
    TRef             fSource;               //  External object that is represented by this element.
    void            *fUserData;             //! Externally assigned and controlled user data.
 
+   virtual void PreDeleteElement();
    virtual void RemoveElementsInternal();
 
 public:
@@ -107,14 +108,15 @@ public:
    virtual ~TEveElement();
 
    virtual TEveElement* CloneElement() const { return new TEveElement(*this); }
-   virtual TEveElement* CloneElementRecurse(Int_t recurse=0) const;
-   virtual void         CloneChildrenRecurse(TEveElement* dest, Int_t recurse=0) const;
+   virtual TEveElement* CloneElementRecurse(Int_t level=0) const;
+   virtual void         CloneChildrenRecurse(TEveElement* dest, Int_t level=0) const;
 
    virtual const Text_t* GetElementName()  const;
    virtual const Text_t* GetElementTitle() const;
    virtual void SetElementName (const Text_t* name);
    virtual void SetElementTitle(const Text_t* title);
    virtual void SetElementNameTitle(const Text_t* name, const Text_t* title);
+   virtual void NameTitleChanged();
 
    const TString& GetVizTag() const             { return fVizTag; }
    void           SetVizTag(const TString& tag) { fVizTag = tag;  }
@@ -175,6 +177,10 @@ public:
    void   IncDenyDestroy()       { ++fDenyDestroy; }
    void   DecDenyDestroy()       { if (--fDenyDestroy <= 0) CheckReferenceCount("TEveElement::DecDenyDestroy "); }
 
+   Int_t  GetParentIgnoreCnt() const { return fParentIgnoreCnt; }
+   void   IncParentIgnoreCnt()       { ++fParentIgnoreCnt; }
+   void   DecParentIgnoreCnt()       { if (--fParentIgnoreCnt <= 0) CheckReferenceCount("TEveElement::DecParentIgnoreCnt "); }
+
    virtual void PadPaint(Option_t* option);
 
    virtual TObject* GetObject      (const TEveException& eh="TEveElement::GetObject ") const;
@@ -217,6 +223,7 @@ public:
    virtual void RemoveElementsLocal();
 
    virtual void Destroy();                      // *MENU*
+   virtual void DestroyOrWarn();
    virtual void DestroyElements();              // *MENU*
 
    virtual Bool_t HandleElementPaste(TEveElement* el);
@@ -402,12 +409,17 @@ public:
 
    virtual TEveElementList* CloneElement() const { return new TEveElementList(*this); }
 
-   virtual const Text_t* GetElementName()  const { return TNamed::GetName(); }
-   virtual const Text_t* GetElementTitle() const { return TNamed::GetTitle(); }
-   virtual void SetElementName (const Text_t* name)  { TNamed::SetName(name); }
-   virtual void SetElementTitle(const Text_t* title) { TNamed::SetTitle(title); }
+   virtual const Text_t* GetElementName()  const { return GetName();  }
+   virtual const Text_t* GetElementTitle() const { return GetTitle(); }
+
+   virtual void SetElementName (const Text_t* name)
+   { TNamed::SetName(name); NameTitleChanged(); }
+
+   virtual void SetElementTitle(const Text_t* title)
+   { TNamed::SetTitle(title); NameTitleChanged(); }
+
    virtual void SetElementNameTitle(const Text_t* name, const Text_t* title)
-   { TNamed::SetNameTitle(name, title); }
+   { TNamed::SetNameTitle(name, title); NameTitleChanged(); }
 
    virtual Bool_t CanEditMainColor() const { return fDoColor; }
 

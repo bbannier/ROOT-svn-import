@@ -255,8 +255,9 @@ void TEveCaloViz::AssignCaloVizParameters(TEveCaloViz* m)
    if (m->fPalette)
    {
       TEveRGBAPalette& mp = * m->fPalette;
-      TEveRGBAPalette* p = new TEveRGBAPalette(mp.GetMinVal(), mp.GetMaxVal(), mp.GetInterpolate());
-      p->SetDefaultColor(mp.GetDefaultColor());
+      if (fPalette) fPalette->DecRefCount();
+      fPalette = new TEveRGBAPalette(mp.GetMinVal(), mp.GetMaxVal(), mp.GetInterpolate());
+      fPalette->SetDefaultColor(mp.GetDefaultColor());
    }
 }
 
@@ -386,7 +387,7 @@ void TEveCalo3D::ComputeBBox()
    // If member 'TEveFrameBox* fFrame' is set, frame's corners are used as bbox.
 
    BBoxInit();
-  
+
    Float_t th = (fData) ? GetValToHeight() * fData->GetMaxVal(fPlotEt) : 0;
 
    fBBox[0] = -fBarrelRadius - th;

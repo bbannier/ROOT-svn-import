@@ -770,7 +770,9 @@ Int_t TUnixSystem::GetFPEMask()
    if (oldmask & FE_DIVBYZERO)   mask |= kDivByZero;
    if (oldmask & FE_OVERFLOW )   mask |= kOverflow;
    if (oldmask & FE_UNDERFLOW)   mask |= kUnderflow;
+# ifdef FE_INEXACT
    if (oldmask & FE_INEXACT  )   mask |= kInexact;
+# endif
 #endif
 #endif
 
@@ -784,7 +786,9 @@ Int_t TUnixSystem::GetFPEMask()
    if (oldmask & FE_DIVBYZERO)   mask |= kDivByZero;
    if (oldmask & FE_OVERFLOW )   mask |= kOverflow;
    if (oldmask & FE_UNDERFLOW)   mask |= kUnderflow;
+# ifdef FE_INEXACT
    if (oldmask & FE_INEXACT  )   mask |= kInexact;
+# endif
 #endif
 
 #if defined(R__MACOSX) && !defined(__xlC__) && !defined(__i386__) && \
@@ -819,7 +823,9 @@ Int_t TUnixSystem::SetFPEMask(Int_t mask)
    if (mask & kDivByZero)   newm |= FE_DIVBYZERO;
    if (mask & kOverflow )   newm |= FE_OVERFLOW;
    if (mask & kUnderflow)   newm |= FE_UNDERFLOW;
+# ifdef FE_INEXACT
    if (mask & kInexact  )   newm |= FE_INEXACT;
+# endif
 
 #if __GLIBC_MINOR__>=3
 
@@ -1337,11 +1343,12 @@ FILE *TUnixSystem::TempFileName(TString &base, const char *dir)
    delete [] arg;
 
    if (fd == -1) {
-      SysError("TempFileName", "%s", base.Data() );
+      SysError("TempFileName", "%s", base.Data());
       return 0;
    } else {
       FILE *fp = fdopen(fd, "w+");
-      if (fp == 0) SysError("TempFileName", "converting filedescriptor (%d)", fd);
+      if (fp == 0)
+         SysError("TempFileName", "converting filedescriptor (%d)", fd);
       return fp;
    }
 }
@@ -2129,13 +2136,14 @@ void TUnixSystem::StackTrace()
       }
 
       // open tmp file for demangled stack trace
-      char tmpf1[2*L_tmpnam];
+      TString tmpf1 = "gdb-backtrace";
       ofstream file1;
       if (demangle) {
-         tmpnam(tmpf1);
+         FILE *f = TempFileName(tmpf1);
+         if (f) fclose(f);
          file1.open(tmpf1);
          if (!file1) {
-            Error("StackTrace", "could not open file %s", tmpf1);
+            Error("StackTrace", "could not open file %s", tmpf1.Data());
             Unlink(tmpf1);
             demangle = kFALSE;
          }
@@ -2200,10 +2208,11 @@ void TUnixSystem::StackTrace()
       }
 
       if (demangle) {
-         char tmpf2[2*L_tmpnam];
-         tmpnam(tmpf2);
+         TString tmpf2 = "gdb-backtrace";
+         FILE *f = TempFileName(tmpf2);
+         if (f) fclose(f);
          file1.close();
-         sprintf(buffer, "%s %s < %s > %s", filter, cppfiltarg, tmpf1, tmpf2);
+         sprintf(buffer, "%s %s < %s > %s", filter, cppfiltarg, tmpf1.Data(), tmpf2.Data());
          Exec(buffer);
          ifstream file2(tmpf2);
          TString line;
@@ -3671,7 +3680,7 @@ void *TUnixSystem::UnixOpendir(const char *dir)
    return (void*) opendir(edir);
 }
 
-#if defined(_POSIX_SOURCE) || defined(__CYGWIN__)
+#if defined(_POSIX_SOURCE)
 // Posix does not require that the d_ino field be present, and some
 // systems do not provide it.
 #   define REAL_DIR_ENTRY(dp) 1
@@ -4878,8 +4887,8 @@ static void GetLinuxProcInfo(ProcInfo_t *procinfo)
    s.Gets(f);
    Long_t total, rss;
    sscanf(s.Data(), "%ld %ld", &total, &rss);
-   procinfo->fMemVirtual  = total * getpagesize() / 1024;
-   procinfo->fMemResident = rss * getpagesize() / 1024;
+   procinfo->fMemVirtual  = total * (getpagesize() / 1024);
+   procinfo->fMemResident = rss * (getpagesize() / 1024);
    fclose(f);
 }
 #endif

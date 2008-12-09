@@ -30,7 +30,6 @@ using namespace Cint::Internal;
 // Static functions.
 static void G__add_anonymousunion(const ::Reflex::Type uniontype, int def_struct_member, ::Reflex::Scope envtagnum);
 static int G__check_semicolumn_after_classdef(int isclassdef);
-static void G__create_global_namespace();
 
 // Cint internal functions.
 namespace Cint {
@@ -45,6 +44,8 @@ char* G__find_last_scope_operator(char* name);
 ::Reflex::Type G__find_type(const char* type_name, int /*errorflag*/, int /*templateflag*/);
 ::Reflex::Member G__add_scopemember(::Reflex::Scope envvar, const char* varname, const ::Reflex::Type type, int reflex_modifiers, size_t reflex_offset, char* offset, int var_access, int var_statictype);
 void G__define_struct(char type);
+void G__create_global_namespace();
+void G__create_bytecode_arena();
 #ifndef G__OLDIMPLEMENTATION2030
 int G__callfunc0(G__value* result, const ::Reflex::Member ifunc, G__param* libp, void* p, int funcmatch);
 int G__calldtor(void* p, const Reflex::Scope tagnum, int isheap);
@@ -77,49 +78,42 @@ static void G__add_anonymousunion(const ::Reflex::Type uniontype, int def_struct
    ::Reflex::Scope envvar;
    int statictype = G__AUTO;
    int store_statictype = G__AUTO;
-
    int access = G__PUBLIC;
-   if (def_struct_member) {
-      /* anonymous union as class/struct member */
-
-      assert(envtagnum.IsClass());
-      if (envtagnum.DataMemberSize() == 0) access = G__access;
+   if (def_struct_member) { // inner anonymous union
+      if (!envtagnum.DataMemberSize()) {
+         access = G__access;
+      }
       else {
-         ::Reflex::Member prev(envtagnum.DataMemberAt(envtagnum.DataMemberSize() - 1));
-         if (prev.IsPublic()) access = G__PUBLIC;
-         else if (prev.IsProtected()) access = G__PROTECTED;
-         else if (prev.IsPrivate()) access = G__PRIVATE;
-         else {
-            access = G__GRANDPRIVATE;
-            assert(0);
+         ::Reflex::Member prev = envtagnum.DataMemberAt(envtagnum.DataMemberSize() - 1);
+         if (prev.IsPublic()) {
+            access = G__PUBLIC;
+         }
+         else if (prev.IsProtected()) {
+            access = G__PROTECTED;
+         }
+         else if (prev.IsPrivate()) {
+            access = G__PRIVATE;
          }
       }
       envvar = envtagnum;
    }
    else {
-      /* variable body as global or local variable */
-
-      if (G__p_local) envvar = G__p_local;
+      if (G__p_local) {
+         envvar = G__p_local;
+      }
       else {
          envvar = ::Reflex::Scope::GlobalScope();
-         statictype = G__ifile.filenum; /* file scope static */
+         statictype = G__ifile.filenum; // file scope static
       }
       store_statictype = G__COMPILEDGLOBAL;
    }
-
-   char *offset = (char*)G__malloc(1, uniontype.SizeOf(), "");
-   for (unsigned int ig15 = 0;ig15 < uniontype.DataMemberSize();ig15++) {
-      ::Reflex::Member var = uniontype.DataMemberAt(ig15);
-
-      ::Reflex::Member d(
-         G__add_scopemember(envvar, var.Name().c_str(), var.TypeOf()
-                            , 0 /* should be var.Modifiers() */
-                            , var.Offset(), offset, access, statictype));
-
-      *G__get_properties(d) = *G__get_properties(var);
-      G__get_offset(d) = offset;
-      G__get_properties(d)->isCompiledGlobal = (statictype == G__COMPILEDGLOBAL);
-
+   char* offset = (char*) G__malloc(1, uniontype.SizeOf(), "");
+   for (unsigned int idx = 0; idx < uniontype.DataMemberSize(); ++idx) {
+      ::Reflex::Member mbr = uniontype.DataMemberAt(idx);
+      ::Reflex::Member new_mbr = G__add_scopemember(envvar, mbr.Name().c_str(), mbr.TypeOf(), 0, mbr.Offset(), offset, access, statictype);
+      *G__get_properties(new_mbr) = *G__get_properties(mbr); // WARNING: This overwrites the offset, and statictype we just passed to the function call.
+      G__get_offset(new_mbr) = offset;
+      G__get_properties(new_mbr)->statictype = statictype;
       statictype = store_statictype;
    }
 }
@@ -152,70 +146,6 @@ static int G__check_semicolumn_after_classdef(int isclassdef)
       return(1);
    }
    return(0);
-}
-
-//______________________________________________________________________________
-static void G__create_global_namespace()
-{
-   // add global scope as namespace
-#ifdef __GNUC__
-#else
-#pragma message (FIXME("Remove this once scopes are in reflex!"))
-#endif
-   int i = G__struct.alltag;
-   G__struct.name[i] = "";
-   G__struct.parent_tagnum[i] = -1;
-   G__struct.userparam[i] = 0;
-   G__struct.hash[i] = 0;
-   G__struct.size[i] = 0;
-   G__struct.type[i] = 'n';
-
-   G__struct.baseclass[i] = (struct G__inheritance *)malloc(sizeof(struct G__inheritance));
-   memset(G__struct.baseclass[i], 0, sizeof(struct G__inheritance));
-   G__struct.virtual_offset[i] = G__PVOID;
-   G__struct.isabstract[i] = 0;
-
-   G__struct.globalcomp[i] = G__NOLINK;
-   G__struct.iscpplink[i] = 0;
-   G__struct.protectedaccess[i] = 0;
-
-   G__struct.line_number[i] = -1;
-   G__struct.filenum[i] = -1;
-
-   G__struct.istypedefed[i] = 0;
-
-   G__struct.funcs[i] = 0;
-
-   G__struct.istrace[i] = 0;
-   G__struct.isbreak[i] = 0;
-
-#ifdef G__FRIEND
-   G__struct.friendtag[i] = (struct G__friendtag*)NULL;
-#endif
-
-   G__struct.comment[i].p.com = (char*)NULL;
-   G__struct.comment[i].filenum = -1;
-
-   G__struct.incsetup_memvar[i] = 0;
-   G__struct.incsetup_memfunc[i] = 0;
-   G__struct.rootflag[i] = 0;
-   G__struct.rootspecial[i] = (struct G__RootSpecial*)NULL;
-
-   G__struct.isctor[i] = 0;
-
-#ifndef G__OLDIMPLEMENTATION1503
-   G__struct.defaulttypenum[i] = ::Reflex::Type();
-#endif
-   G__struct.vtable[i] = (void*)NULL;
-
-   G__RflxProperties *prop = G__get_properties(Reflex::Scope::GlobalScope());
-   if (prop) {
-      prop->typenum = -1;
-      prop->tagnum = i;
-      prop->globalcomp = G__NOLINK;
-      prop->autoload = 0;
-   }
-   G__struct.alltag++;
 }
 
 //______________________________________________________________________________
@@ -336,7 +266,7 @@ int Cint::Internal::G__using_namespace()
          if (G__p_local) {
             varscope = G__p_local;
          }
-         ::Reflex::Member avar = G__add_scopemember(varscope, varname.c_str(), member.TypeOf(), 0 /* should be member.Modifiers() */, member.Offset(), G__get_offset(member), G__access, G__get_static(member));
+         ::Reflex::Member avar = G__add_scopemember(varscope, varname.c_str(), member.TypeOf(), 0 /* should be member.Modifiers() */, member.Offset(), G__get_offset(member), G__access, G__get_properties(member)->statictype);
          *G__get_properties(avar) = *G__get_properties(member);
          G__get_properties(avar)->isFromUsing = true;
 
@@ -539,7 +469,8 @@ int Cint::Internal::G__class_autoloading(int* ptagnum)
          G__def_tagnum = store_def_tagnum;
          G__tagdefining = store_tagdefining;
          if (G__struct.type[tagnum] == G__CLASS_AUTOLOAD) {
-            if (strstr(G__struct.name[tagnum], "<") != 0) {
+            // if (strstr(G__struct.name[tagnum], "<") != 0) 
+            {
                // Kill this entry.
                store_def_tagnum = G__def_tagnum;
                store_tagdefining = G__tagdefining;
@@ -552,6 +483,7 @@ int Cint::Internal::G__class_autoloading(int* ptagnum)
                // "hide" tagnum's name: we want to check whether this auto-loading loaded
                // another version of the same class, e.g. because of vector<Long64_t>
                // being requested but vector<long long> being loaded:
+               std::string fullname( autoloadcl.Name( Reflex::SCOPED ) );
                std::string origName(G__struct.name[tagnum]);
                if (G__struct.name[tagnum][0]) {
                   G__struct.name[tagnum][0] = '@';
@@ -561,7 +493,7 @@ int Cint::Internal::G__class_autoloading(int* ptagnum)
                   autoloadcl.ToTypeBase()->HideName();
                }
                
-               int found_tagnum = G__defined_tagname(origName.c_str(), 3);
+               int found_tagnum = G__defined_tagname(fullname.c_str(), 3);
  
                G__def_tagnum = store_def_tagnum;
                G__tagdefining = store_tagdefining;
@@ -666,9 +598,9 @@ int Cint::Internal::G__class_autoloading(int* ptagnum)
 }
 
 //______________________________________________________________________________
-::Reflex::Member Cint::Internal::G__add_scopemember(::Reflex::Scope envvar, const char* varname, const ::Reflex::Type type, int reflex_modifiers, size_t reflex_offset, char* offset, int var_access, int var_statictype)
+::Reflex::Member Cint::Internal::G__add_scopemember(::Reflex::Scope scope, const char* name, const ::Reflex::Type type, int reflex_modifiers, size_t reflex_offset, char* offset, int var_access, int var_statictype)
 {
-   // Create the Variable!
+   // Add a member variable to a scope.
    int modifiers = reflex_modifiers;
    if (var_access) {
       modifiers &= ~(::Reflex::PUBLIC | ::Reflex::PROTECTED | ::Reflex::PRIVATE);
@@ -684,39 +616,10 @@ int Cint::Internal::G__class_autoloading(int* ptagnum)
             break;
       };
    }
-   // Mutable and Register are ignored
-   if (var_statictype == G__LOCALSTATIC) {
-      modifiers |= ::Reflex::STATIC;
-   }
-   //fprintf(stderr, "G__add_scopemember: Creating '::%s::%s' type: '::%s' addr: %016lx reflex_offset: %d modifiers: %08x var_statictype: %d\n", envvar.Name(::Reflex::SCOPED).c_str(), varname, type.Name(::Reflex::SCOPED | ::Reflex::QUALIFIED).c_str(), (long) offset, reflex_offset, modifiers, var_statictype);
-   envvar.AddDataMember(varname, type, reflex_offset, modifiers);
-   ::Reflex::Member d = envvar.DataMemberByName(varname);
-   //fprintf(stderr, "G__add_scopemember: new member is: '::%s'\n", d.Name(::Reflex::SCOPED).c_str());
-   //if (d.Name(::Reflex::SCOPED) == "N::B::fB") {
-   //   fprintf(stderr, "G__add_scopemember: printing members of scope 'B'\n");
-   //   ::Reflex::Scope scope = ::Reflex::Scope::ByName("::B");
-   //   if (!scope.IsTopScope()) {
-   //      int len = scope.DataMemberSize();
-   //      for (int i = 0; i < len; ++i) {
-   //         ::Reflex::Member mbr = scope.DataMemberAt(i);
-   //         fprintf(stderr, "G__add_scopemember: scope: '::%s' i: %03d member: '::%s'\n", scope.Name(::Reflex::SCOPED).c_str(), i, mbr.Name(::Reflex::SCOPED).c_str());
-   //      }
-   //   }
-   //}
-   //{
-   //   ::Reflex::Scope scope(d.DeclaringScope());
-   //   if (!scope.IsTopScope()) {
-   //      int len = scope.DataMemberSize();
-   //      for (int i = 0; i < len; ++i) {
-   //         ::Reflex::Member mbr = scope.DataMemberAt(i);
-   //         fprintf(stderr, "G__add_scopemember: scope: '::%s' i: %03d member: '::%s'\n", scope.Name(::Reflex::SCOPED).c_str(), i, mbr.Name(::Reflex::SCOPED).c_str());
-   //      }
-   //   }
-   //}
+   scope.AddDataMember(name, type, reflex_offset, modifiers);
+   ::Reflex::Member d = scope.DataMemberByName(name);
    G__get_offset(d) = offset;
-   G__get_properties(d)->isCompiledGlobal = (var_statictype == G__COMPILEDGLOBAL);
-   G__get_properties(d)->statictype = var_statictype; // We need this to distinguish file-static variables.
-   //fprintf(stderr, "G__add_scopemember: Finished adding member '::%s::%s'\n", envvar.Name(::Reflex::SCOPED).c_str(), varname);
+   G__get_properties(d)->statictype = var_statictype;
    return d;
 }
 
@@ -893,7 +796,8 @@ void Cint::Internal::G__define_struct(char type)
          return;
       }
       else {
-         sprintf(tagname, "$G__NONAME%d_%s(%d)$", G__struct.alltag, G__ifile.name ? G__ifile.name : "<unknown file>", G__ifile.line_number);
+         sprintf(tagname, "$G__NONAME%d_%s(%d)$", G__struct.alltag, G__ifile.name ? G__ifile.name : "<unknown file>", G__ifile.line_number); // FIXME: BAD, remove weird chars, name has to be compilable, it is written to the dictionary file.
+         //sprintf(tagname, "$G__NONAME_%d$", G__struct.alltag);
       }
    }
 #ifndef G__STD_NAMESPACE
@@ -1517,7 +1421,7 @@ void Cint::Internal::G__define_struct(char type)
          G__define_var(G__get_tagnum(G__tagnum), ::Reflex::Type());
          G__disp_mask = 0;
       }
-      else if (!strncmp(G__struct.name[G__get_tagnum(G__tagnum)], "$G__NONAME", 10)) {
+      else if (!strncmp(G__struct.name[G__get_tagnum(G__tagnum)], "$G__NONAME", 10)) { // anonymous union, maybe someday anonymous namespace
          // -- anonymous union
          G__add_anonymousunion(G__tagnum, G__def_struct_member, store_def_tagnum);
       }
@@ -1536,6 +1440,122 @@ void Cint::Internal::G__define_struct(char type)
    }
    G__tagnum = store_tagnum;
    G__def_tagnum = store_def_tagnum;
+}
+
+//______________________________________________________________________________
+void Cint::Internal::G__create_global_namespace()
+{
+   // add global scope as namespace
+#ifdef __GNUC__
+#else
+#pragma message (FIXME("Remove this once scopes are in reflex!"))
+#endif
+   int i = G__struct.alltag;
+   G__struct.name[i] = "";
+   G__struct.parent_tagnum[i] = -1;
+   G__struct.userparam[i] = 0;
+   G__struct.hash[i] = 0;
+   G__struct.size[i] = 0;
+   G__struct.type[i] = 'n';
+
+   G__struct.baseclass[i] = (struct G__inheritance *)malloc(sizeof(struct G__inheritance));
+   memset(G__struct.baseclass[i], 0, sizeof(struct G__inheritance));
+   G__struct.virtual_offset[i] = G__PVOID;
+   G__struct.isabstract[i] = 0;
+
+   G__struct.globalcomp[i] = G__NOLINK;
+   G__struct.iscpplink[i] = 0;
+   G__struct.protectedaccess[i] = 0;
+
+   G__struct.line_number[i] = -1;
+   G__struct.filenum[i] = -1;
+
+   G__struct.istypedefed[i] = 0;
+
+   G__struct.funcs[i] = 0;
+
+   G__struct.istrace[i] = 0;
+   G__struct.isbreak[i] = 0;
+
+#ifdef G__FRIEND
+   G__struct.friendtag[i] = (struct G__friendtag*)NULL;
+#endif
+
+   G__struct.comment[i].p.com = (char*)NULL;
+   G__struct.comment[i].filenum = -1;
+
+   G__struct.incsetup_memvar[i] = 0;
+   G__struct.incsetup_memfunc[i] = 0;
+   G__struct.rootflag[i] = 0;
+   G__struct.rootspecial[i] = (struct G__RootSpecial*)NULL;
+
+   G__struct.isctor[i] = 0;
+
+#ifndef G__OLDIMPLEMENTATION1503
+   G__struct.defaulttypenum[i] = ::Reflex::Type();
+#endif
+   G__struct.vtable[i] = (void*)NULL;
+
+   G__RflxProperties *prop = G__get_properties(Reflex::Scope::GlobalScope());
+   if (prop) {
+      prop->typenum = -1;
+      prop->tagnum = i;
+      prop->globalcomp = G__NOLINK;
+      prop->autoload = 0;
+   }
+   G__Dict::GetDict().RegisterScope(i,Reflex::Scope::GlobalScope());
+   G__struct.alltag++;
+}
+
+//______________________________________________________________________________
+void Cint::Internal::G__create_bytecode_arena()
+{
+   // Create an artificial variable whose contents will be the storage area for bytecode.
+   ::Reflex::ClassBuilder* builder = new ::Reflex::ClassBuilder("% CINT byte code scratch arena %", typeid(::Reflex::UnknownType), 0, ::Reflex::CLASS);
+   ::Reflex::Type ty = builder->ToType();
+   G__Dict::GetDict().RegisterScope(1,ty);
+   G__RflxProperties* prop = G__get_properties(ty);
+   prop->builder.Set(builder);
+   prop->builder.Class().SetSizeOf(0);
+   prop->typenum = -1;
+   prop->tagnum = 1;
+   prop->globalcomp = G__NOLINK;
+   prop->autoload = 0;
+   prop->isBytecodeArena = true;
+   G__struct.parent_tagnum[1] = -1;
+   G__struct.userparam[1] = 0;
+   G__struct.name[1] = (char*) "% CINT byte code scratch arena %";
+   G__struct.hash[1] = strlen(G__struct.name[1]);
+   G__struct.size[1] = 0;
+   G__struct.type[1] = 'c';
+   G__struct.baseclass[1] = (G__inheritance*) malloc(sizeof(G__inheritance));
+   memset(G__struct.baseclass[1], 0, sizeof(G__inheritance));
+   G__struct.virtual_offset[1] = G__PVOID;
+   G__struct.isabstract[1] = 0;
+   G__struct.globalcomp[1] = G__NOLINK;
+   G__struct.iscpplink[1] = 0;
+   G__struct.protectedaccess[1] = 0;
+   G__struct.line_number[1] = -1;
+   G__struct.filenum[1] = -1;
+   G__struct.istypedefed[1] = 0;
+   G__struct.funcs[1] = 0;
+   G__struct.istrace[1] = 0;
+   G__struct.isbreak[1] = 0;
+#ifdef G__FRIEND
+   G__struct.friendtag[1] = 0;
+#endif // G__FRIEND
+   G__struct.comment[1].p.com = 0;
+   G__struct.comment[1].filenum = -1;
+   G__struct.incsetup_memvar[1] = 0;
+   G__struct.incsetup_memfunc[1] = 0;
+   G__struct.rootflag[1] = 0;
+   G__struct.rootspecial[1] = 0;
+   G__struct.isctor[1] = 0;
+#ifndef G__OLDIMPLEMENTATION1503
+   G__struct.defaulttypenum[1] = ::Reflex::Type();
+#endif // G__OLDIMPLEMENTATION1503
+   G__struct.vtable[1] = 0;
+   G__struct.alltag++;
 }
 
 #ifndef G__OLDIMPLEMENTATION2030
@@ -1575,7 +1595,11 @@ int Cint::Internal::G__callfunc0(G__value* result, const ::Reflex::Member ifunc,
       /* interpreted function */
       /* stat=G__ExceptionWrapper(G__interpret_func,result,ifunc->funcname[ifn]
          ,libp,ifunc->hash[ifn]);  this was wrong! */
-      stat = G__interpret_func(result, libp, 0 /* ifunc->hash[ifn] */, ifunc, G__EXACT, funcmatch);
+      G__StrBuf funcname_sb(G__LONGLINE);
+      char* funcname = funcname_sb;
+      strcpy(funcname, ifunc.Name().c_str());
+      ::Reflex::Scope scope = ifunc.DeclaringScope();
+      stat = G__interpret_func(result, funcname, libp, 0, scope, G__EXACT, funcmatch);
    }
 #else // G__EXCEPTIONWRAPPER
    if (-1 == G__get_funcproperties(ifunc)->entry.size) {
@@ -1590,7 +1614,11 @@ int Cint::Internal::G__callfunc0(G__value* result, const ::Reflex::Member ifunc,
    }
    else {
       /* interpreted function */
-      stat = G__interpret_func(result, libp, 0 /* ifunc->hash[ifn] */, ifunc, G__EXACT, funcmatch);
+      G__StrBuf funcname_sb(G__LONGLINE);
+      char* funcname = funcname_sb;
+      strcpy(funcname, ifunc.Name().c_str());
+      ::Reflex::Scope scope = ifunc.DeclaringScope();
+      stat = G__interpret_func(result, funcname, libp, 0, scope, G__EXACT, funcmatch);
    }
 #endif // G__EXCEPTIONWRAPPER
 
@@ -1678,15 +1706,30 @@ extern "C" char* G__get_class_autoloading_table(char* classname)
 //______________________________________________________________________________
 extern "C" void G__set_class_autoloading_table(char* classname, char* libname)
 {
-   ::Reflex::Scope tagnum;
+   // Register the class named 'classname' as being available in library
+   // 'libname' (I.e. the implementation or at least the dictionary for 
+   // the class is in the given library.  The class is marked as 
+   // 'autoload' to indicated that we known about it but have not yet
+   // loaded its dictionary.
+   // If libname==-1 then we 'undo' this behavior instead.
+   
+   int store_enable_autoloading = G__enable_autoloading;
    G__enable_autoloading = 0;
-   tagnum = G__Dict::GetDict().GetScope(G__search_tagname(classname, G__CLASS_AUTOLOAD));
+   int ntagnum = G__search_tagname(classname, G__CLASS_AUTOLOAD);
+   if (libname == (void*)-1) {
+      if (G__struct.name[ntagnum][0]) {
+         G__struct.name[ntagnum][0] = '@';
+      }
+      G__Dict::GetDict().GetType( ntagnum ).ToTypeBase()->HideName();
+      G__enable_autoloading = store_enable_autoloading;
+      return;
+   }
+   ::Reflex::Scope tagnum = G__Dict::GetDict().GetScope(ntagnum);
    if (G__struct.libname[G__get_tagnum(tagnum)]) {
       free((void*)G__struct.libname[G__get_tagnum(tagnum)]);
    }
    G__struct.libname[G__get_tagnum(tagnum)] = (char*)malloc(strlen(libname) + 1);
    strcpy(G__struct.libname[G__get_tagnum(tagnum)], libname);
-   G__enable_autoloading = 1;
 
    char *p = 0;
    if ((p = strchr(classname, '<'))) {
@@ -1717,6 +1760,7 @@ extern "C" void G__set_class_autoloading_table(char* classname, char* libname)
       }
       delete [] buf;
    }
+   G__enable_autoloading = store_enable_autoloading;
 }
 
 //______________________________________________________________________________
@@ -2111,9 +2155,10 @@ extern "C" int G__search_tagname(const char* tagname, int type)
          (envtagnum != G__Dict::GetDict().GetScope(G__struct.parent_tagnum[i]))
       )
    ) {
-      // Make sure first entry is the global namespace.
+      // Make sure first entry is the global namespace, and second entry is the bytecode arena.
       if (!G__struct.alltag) {
          G__create_global_namespace();
+         G__create_bytecode_arena();
       }
       i = G__struct.alltag;
       if (i == G__MAXSTRUCT) {
@@ -2159,7 +2204,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
          G__struct.parent_tagnum[i] = G__get_tagnum(env_tagnum);
          strcpy(atom_tagname, temp);
       }
-      if (!strncmp("$G__NONAME", atom_tagname, 10)) {
+      if (!strncmp("$G__NONAME", atom_tagname, 10)) { // anonymous union, maybe someday anonymous namespace
          len = strlen(atom_tagname);
       }
       else {
@@ -2192,6 +2237,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
                      ::Reflex::ClassBuilder *b = new ::Reflex::ClassBuilder(fullname.c_str(), typeid(::Reflex::UnknownType), 0, ::Reflex::CLASS);
                      cl =  b->ToType();
                      G__get_properties(cl)->builder.Set(b);
+                     G__Dict::GetDict().RegisterScope(i,cl);
                      break;
                   }
                case 'a':
@@ -2201,6 +2247,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
                      ::Reflex::ClassBuilder *b = new ::Reflex::ClassBuilder(fullname.c_str(), typeid(::Reflex::UnknownType), 0, ::Reflex::CLASS);
                      cl =  b->ToType();
                      G__get_properties(cl)->builder.Set(b);
+                     G__Dict::GetDict().RegisterScope(i,cl);
                      break;
                   }
                case 'c':
@@ -2210,6 +2257,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
                      ::Reflex::ClassBuilder *b = new ::Reflex::ClassBuilder(fullname.c_str(), typeid(::Reflex::UnknownType), 0, ::Reflex::CLASS);   // Should also add the privacy with the containing class.
                      cl =  b->ToType();
                      G__get_properties(cl)->builder.Set(b);
+                     G__Dict::GetDict().RegisterScope(i,cl);
                      break;
                   }
                case 's':
@@ -2219,6 +2267,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
                      ::Reflex::ClassBuilder *b = new ::Reflex::ClassBuilder(fullname.c_str(), typeid(::Reflex::UnknownType), 0, ::Reflex::STRUCT);   // Should also add the privacy with the containing class.
                      cl =  b->ToType();
                      G__get_properties(cl)->builder.Set(b);
+                     G__Dict::GetDict().RegisterScope(i,cl);
                      break;
                   }
                case 'n':
@@ -2228,7 +2277,8 @@ extern "C" int G__search_tagname(const char* tagname, int type)
                      ::Reflex::NamespaceBuilder *b = new ::Reflex::NamespaceBuilder(fullname.c_str());
                      newscope =  b->ToScope();
                      G__get_properties(newscope)->builder.Set(b);
-                     break;
+                     G__Dict::GetDict().RegisterScope(i,newscope);
+                    break;
                   }
                case 'e':
                   // -- Enum.
@@ -2236,6 +2286,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
                      //fprintf(stderr, "G__search_tagname: New enum type: '%s'\n", fullname.c_str());
                      cl = ::Reflex::EnumTypeBuilder(fullname.c_str());
                      //G__get_properties(cl)->builder.Set(b);
+                     G__Dict::GetDict().RegisterScope(i,cl);
                      break;
                   }
                case 'u':
@@ -2247,6 +2298,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
                      ::Reflex::UnionBuilder* b = new ::Reflex::UnionBuilder(fullname.c_str(), typeid(::Reflex::UnknownType), 0, ::Reflex::UNION);
                      cl = b->ToType();
                      G__get_properties(cl)->builder.Set(b);
+                     G__Dict::GetDict().RegisterScope(i,cl);
                      break;
                   }
                default:

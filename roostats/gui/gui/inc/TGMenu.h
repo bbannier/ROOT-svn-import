@@ -190,9 +190,9 @@ public:
    virtual void AddLabel(const char *s, const TGPicture *p = 0,
                          TGMenuEntry *before = 0);
    virtual void AddPopup(TGHotString *s, TGPopupMenu *popup,
-                         TGMenuEntry *before = 0);
+                         TGMenuEntry *before = 0, const TGPicture *p = 0);
    virtual void AddPopup(const char *s, TGPopupMenu *popup,
-                         TGMenuEntry *before = 0);
+                         TGMenuEntry *before = 0, const TGPicture *p = 0);
    virtual void   EnableEntry(Int_t id);
    virtual void   DisableEntry(Int_t id);
    virtual Bool_t IsEntryEnabled(Int_t id);
@@ -202,6 +202,8 @@ public:
    virtual void   CheckEntry(Int_t id);
    virtual void   CheckEntryByData(void *user_data);
    virtual void   UnCheckEntry(Int_t id);
+   virtual void   UnCheckEntryByData(void *user_data);
+   virtual void   UnCheckEntries();
    virtual Bool_t IsEntryChecked(Int_t id);
    virtual void   RCheckEntry(Int_t id, Int_t IDfirst, Int_t IDlast);
    virtual Bool_t IsEntryRChecked(Int_t id);
@@ -258,6 +260,7 @@ protected:
    Bool_t          fState;            // menu title state (active/not active)
    Int_t           fHkeycode;         // hot key code
    FontStruct_t    fFontStruct;       // font
+   Pixel_t         fTextColor;        // text color
    GContext_t      fNormGC, fSelGC;   // normal and selection graphics contexts
 
    virtual void DoRedraw();
@@ -281,6 +284,8 @@ public:
                UInt_t options = 0);
    virtual ~TGMenuTitle() { if (fLabel) delete fLabel; }
 
+   Pixel_t      GetTextColor() const { return fTextColor; }
+   void         SetTextColor(Pixel_t col) { fTextColor = col; }
    virtual void SetState(Bool_t state);
    Bool_t       GetState() const { return fState; }
    Int_t        GetHotKeyCode() const { return fHkeycode; }
@@ -345,6 +350,7 @@ public:
    virtual TGPopupMenu *GetPopup(const char *s);
    virtual TGPopupMenu *RemovePopup(const char *s);
 
+   virtual TList  *GetTitles() const { return fTitles; }
    virtual Bool_t  HandleButton(Event_t *event);
    virtual Bool_t  HandleMotion(Event_t *event);
    virtual Bool_t  HandleKey(Event_t *event);

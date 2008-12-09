@@ -1,3 +1,14 @@
+// @(#)root/gl:$Id$
+// Author:  Olivier Couet  12/04/2007
+
+/*************************************************************************
+ * Copyright (C) 1995-2007, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 #include "RConfigure.h"
 #include "TGLFontManager.h"
 
@@ -5,14 +16,21 @@
 #include "TEnv.h"
 #include "TObjString.h"
 #include "TGLUtil.h"
+#include "TGLIncludes.h"
 
-#include "FTFont.h"
-#include "FTGLExtrdFont.h"
-#include "FTGLOutlineFont.h"
-#include "FTGLPolygonFont.h"
-#include "FTGLTextureFont.h"
-#include "FTGLPixmapFont.h"
-#include "FTGLBitmapFont.h"
+// Direct inclussion of FTGL headers is deprecated in ftgl-2.1.3 while
+// ftgl-2.1.2 shipped with root requires manual inclusion.
+#ifndef BUILTIN_FTGL
+# include <FTGL/ftgl.h>
+#else
+# include "FTFont.h"
+# include "FTGLExtrdFont.h"
+# include "FTGLOutlineFont.h"
+# include "FTGLPolygonFont.h"
+# include "FTGLTextureFont.h"
+# include "FTGLPixmapFont.h"
+# include "FTGLBitmapFont.h"
+#endif
 
 //______________________________________________________________________________
 // TGLFont
@@ -273,6 +291,7 @@ void TGLFontManager::RegisterFont(Int_t size, Int_t fileID, TGLFont::EMode mode,
             Error("TGLFontManager::GetFont", "invalid FTGL type");
             break;
       }
+      delete [] file;
       ftfont->FaceSize(size);
       const TGLFont &mf = fFontMap.insert(std::make_pair(TGLFont(size, fileID, mode, ftfont, 0), 1)).first->first;
       out.CopyAttributes(mf);

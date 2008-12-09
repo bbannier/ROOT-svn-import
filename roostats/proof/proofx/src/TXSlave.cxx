@@ -117,7 +117,7 @@ TXSlave::TXSlave(const char *url, const char *ord, Int_t perf,
    TXSocketHandler *sh = TXSocketHandler::GetSocketHandler();
    gSystem->AddFileHandler(sh);
 
-   TXSocket::fgLoc = (fProof->IsMaster()) ? "master" : "client" ;
+   TXSocket::SetLocation((fProof->IsMaster()) ? "master" : "client");
 
    Init(url, stype);
 }
@@ -228,8 +228,10 @@ void TXSlave::Init(const char *host, Int_t stype)
 
    // The socket may not be valid
    if (!(fSocket->IsValid())) {
-      Error("Init", "some severe error occurred while opening "
-                    "the connection at %s - exit", url.GetUrl(kTRUE));
+      // Notify only if verbosity is on: most likely the failure has already been notified
+      if (gDebug > 0)
+         Error("Init", "some severe error occurred while opening "
+                       "the connection at %s - exit", url.GetUrl(kTRUE));
       SafeDelete(fSocket);
       return;
    }
@@ -580,7 +582,7 @@ Bool_t TXSlave::HandleError(const void *in)
       Warning("HandleError", "%p: reference to PROOF missing", this);
    }
 
-   Info("HandleError", "%p: DONE ... ", this);
+   Printf("TXSlave::HandleError: %p: DONE ... ", this);
 
    // We are done
    return kTRUE;
@@ -617,7 +619,9 @@ Bool_t TXSlave::HandleInput(const void *)
                                    this, GetOrdinal());
             }
          }
-         fProof->CollectInputFrom(fSocket);
+         if (fProof->CollectInputFrom(fSocket) < 0)
+            // Something wrong on the line: flush it
+            FlushSocket();
       }
    } else {
       Warning("HandleInput", "%p: %s: reference to PROOF missing", this, GetOrdinal());
@@ -655,5 +659,5 @@ void TXSlave::FlushSocket()
       Info("FlushSocket", "enter: %p", fSocket);
 
    if (fSocket)
-      TXSocket::FlushPipe(fSocket);
+      TXSocket::fgPipe.Flush(fSocket);
 }

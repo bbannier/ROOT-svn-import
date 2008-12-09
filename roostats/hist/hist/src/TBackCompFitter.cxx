@@ -45,7 +45,8 @@ ClassImp(TBackCompFitter);
 TBackCompFitter::TBackCompFitter( ) : 
    fFitData(0), 
    fMinimizer(0), 
-   fObjFunc(0)
+   fObjFunc(0),
+   fModelFunc(0)
 {
    // Constructur needed by TVirtualFitter interface. Same behavior as default constructor.
    // initialize setting name and the global pointer
@@ -55,15 +56,14 @@ TBackCompFitter::TBackCompFitter( ) :
 TBackCompFitter::TBackCompFitter(ROOT::Fit::Fitter & fitter,ROOT::Fit::FitData * data) : 
    fFitData(data),
    fMinimizer(0),
-   fObjFunc(0)
+   fObjFunc(0),
+   fModelFunc(0)
 {
    // constructor used after having fit using directly ROOT::Fit::Fitter
    // will create a dummy fitter copying configuration and parameter settings
    fFitter = fitter; 
    SetName("LastFitter");
-   // set in case of minuit the fcn
-   if (fitter.Config().MinimizerType() == "Minuit") 
-      SetMinimizerFunction(data);
+
 }
 
 
@@ -74,6 +74,7 @@ TBackCompFitter::~TBackCompFitter() {
    if (fFitData) delete fFitData; 
    if (fMinimizer) delete fMinimizer; 
    if (fObjFunc) delete fObjFunc; 
+   if (fModelFunc) delete fModelFunc;
 }
 
 Double_t TBackCompFitter::Chisquare(Int_t npar, Double_t *params) const {
@@ -640,33 +641,46 @@ Int_t TBackCompFitter::SetParameter(Int_t ipar,const char *parname,Double_t valu
 //    f = (*(fitter.fObjFunc) )(x);
 // }
 
-void TBackCompFitter::SetMinimizerFunction(const ROOT::Fit::FitData * data) { 
+void TBackCompFitter::ReCreateMinimizer() { 
    // set objective function in minimizers function to re-create FCN from stored data object and fit options
-   assert(data);
-   ROOT::Math::IParamMultiFunction * func =  dynamic_cast<ROOT::Math::IParamMultiFunction *>((fFitter.Result().FittedFunction())->Clone());
-   assert(func);
+   assert(fFitData);
 
-   // create fcn functions, should consider also gradient case
-   const ROOT::Fit::BinData * bindata = dynamic_cast<const ROOT::Fit::BinData *>(data); 
-   if (bindata) { 
-      if (GetFitOption().Like ) 
-         fObjFunc = new ROOT::Fit::PoissonLikelihoodFCN<ROOT::Math::IMultiGenFunction>(*bindata, *func);
-      else
-         fObjFunc = new ROOT::Fit::Chi2FCN<ROOT::Math::IMultiGenFunction>(*bindata, *func);
+   // case of standard fits (not made fia Fitter::FitFCN) 
+   if (fFitter.Result().FittedFunction() != 0) {
+
+      if (fModelFunc) delete fModelFunc; 
+      fModelFunc =  dynamic_cast<ROOT::Math::IParamMultiFunction *>((fFitter.Result().FittedFunction())->Clone());
+      assert(fModelFunc);
+
+      // create fcn functions, should consider also gradient case
+      const ROOT::Fit::BinData * bindata = dynamic_cast<const ROOT::Fit::BinData *>(fFitData); 
+      if (bindata) { 
+         if (GetFitOption().Like ) 
+            fObjFunc = new ROOT::Fit::PoissonLikelihoodFCN<ROOT::Math::IMultiGenFunction>(*bindata, *fModelFunc);
+         else
+            fObjFunc = new ROOT::Fit::Chi2FCN<ROOT::Math::IMultiGenFunction>(*bindata, *fModelFunc);
+      }
+      else { 
+         const ROOT::Fit::UnBinData * unbindata = dynamic_cast<const ROOT::Fit::UnBinData *>(fFitData); 
+         assert(unbindata); 
+         fObjFunc = new ROOT::Fit::LogLikelihoodFCN<ROOT::Math::IMultiGenFunction>(*unbindata, *fModelFunc);
+      }
    }
-   else { 
-      const ROOT::Fit::UnBinData * unbindata = dynamic_cast<const ROOT::Fit::UnBinData *>(data); 
-      assert(unbindata); 
-      fObjFunc = new ROOT::Fit::LogLikelihoodFCN<ROOT::Math::IMultiGenFunction>(*unbindata, *func);
-   }
+
 
    // recreate the minimizer
    fMinimizer = fFitter.Config().CreateMinimizer(); 
    if (fMinimizer == 0) { 
       Error("SetMinimizerFunction","cannot create minimizer %s",fFitter.Config().MinimizerType().c_str() );
    }
-   else 
-      fMinimizer->SetFunction(*fObjFunc);
+   else {
+      if (!fObjFunc) {
+         Error("SetMinimizerFunction","Object Function pointer is NULL");
+      }
+      else 
+         fMinimizer->SetFunction(*fObjFunc);
+   }
+  
 } 
 
 

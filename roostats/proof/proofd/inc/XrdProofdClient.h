@@ -64,8 +64,7 @@ class XrdProofdClient {
    XrdProofdProofServ     *GetServer(int psid);
    XrdProofdProofServ     *GetServer(XrdProofdProtocol *p);
    void                    EraseServer(int psid);
-   XrdProofdProofServ     *GetProofServ(int psid);
-   int                     GetTopProofServ();
+   int                     GetTopServers();
    void                    CheckServerSlots();
 
    int                     ResetClientSlot(int ic);
@@ -85,6 +84,8 @@ class XrdProofdClient {
    void                    TerminateSessions(int srvtype, XrdProofdProofServ *ref,
                                              const char *msg, XrdProofdPipe *pipe, bool changeown);
    bool                    VerifySession(XrdProofdProofServ *xps, XrdProofdResponse *r = 0);
+
+   void                    Reset();
 
    void                    SetGroup(const char *g) { fUI.fGroup = g; }
    void                    SetROOT(XrdROOT *r) { fROOT = r; }
@@ -143,7 +144,7 @@ public:
    bool               IsValid() const { return (fP != 0); }
    XrdProofdProtocol *P() const { return fP; }
    XrdProofdResponse *R() const { return fR; }
-   void               Reset() { fP = 0; fSid = 0; }
+   void               Reset() { fP = 0; fSid = 0; SetR(); }
    void               SetP(XrdProofdProtocol *p) { fP = p; SetR();}
    void               SetSid(unsigned short sid) { fSid = sid; SetR();}
    unsigned short     Sid() const { return fSid; }

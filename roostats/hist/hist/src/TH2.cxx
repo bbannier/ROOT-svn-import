@@ -1433,7 +1433,6 @@ Long64_t TH2::Merge(TCollection *list)
    }
 
    //merge bin contents and errors
-   const Int_t kNstat = 11;
    Double_t stats[kNstat], totstats[kNstat];
    for (Int_t i=0;i<kNstat;i++) {totstats[i] = stats[i] = 0;}
    GetStats(totstats);
@@ -1581,8 +1580,8 @@ TH2 *TH2::Rebin2D(Int_t nxgroup, Int_t nygroup, const char *newname)
    }
 
    // save original statistics
-   const Int_t kNstat = 7;
-   Double_t stat[kNstat]; 
+   const Int_t kNstat2D = 7;
+   Double_t stat[kNstat2D]; 
    GetStats(stat); 
    bool resetStat = false; 
 
@@ -1754,6 +1753,7 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
    TObject *h1obj = gROOT->FindObject(pname);
    if (h1obj && h1obj->InheritsFrom("TProfile")) {
       h1 = (TProfile*)h1obj;
+      // tb.d. check if number of bin is consistent ?
       h1->Reset();
    }
 
@@ -1765,9 +1765,9 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
    opt.ToLower();  //must be called after MakeCuts
 
    if (!h1) {
-      const TArrayD *bins = fXaxis.GetXbins();
+      const TArrayD *bins = outAxis.GetXbins();
       if (bins->fN == 0) {
-         h1 = new TProfile(pname,GetTitle(),outN,fXaxis.GetXmin(),fXaxis.GetXmax(),option);
+         h1 = new TProfile(pname,GetTitle(),outN,outAxis.GetXmin(),outAxis.GetXmax(),option);
       } else {
          h1 = new TProfile(pname,GetTitle(),outN,bins->fArray,option);
       }
@@ -1775,7 +1775,7 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
    if (pname != name)  delete [] pname;
 
    // Copy attributes
-   h1->GetXaxis()->ImportAttributes(this->GetXaxis());
+   h1->GetXaxis()->ImportAttributes( &outAxis);
    h1->SetLineColor(this->GetLineColor());
    h1->SetFillColor(this->GetFillColor());
    h1->SetMarkerColor(this->GetMarkerColor());
@@ -1794,7 +1794,7 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
          cont =  GetCellContent(binx,biny);
 
          if (cont) {
-            h1->Fill(fXaxis.GetBinCenter(outBin),fYaxis.GetBinCenter(inBin), cont );
+            h1->Fill(outAxis.GetBinCenter(outBin),inAxis.GetBinCenter(inBin), cont );
          }
       }
    }
@@ -2027,8 +2027,8 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
    }
 
 
-   if ( ( fgStatOverflows == false && firstbin == 1 && lastbin == outAxis->GetNbins()     ) ||
-        ( fgStatOverflows == true  && firstbin == 0 && lastbin == outAxis->GetNbins() + 1 ) )
+   if ( ( fgStatOverflows == false && firstbin == 1 && lastbin == inNbin     ) ||
+        ( fgStatOverflows == true  && firstbin == 0 && lastbin == inNbin + 1 ) )
    h1->PutStats(&th1Stats[0]);
 
    return h1;
@@ -2048,8 +2048,8 @@ TH1D *TH2::ProjectionX(const char *name, Int_t firstybin, Int_t lastybin, Option
    //   The number of entries in the projection is estimated from the
    //   number of effective entries for all the cells included in the projection
    //
-   //   To exclude the the underflow bins in Y, use firstybin=1;
-   //   to exclude the the underflow bins in Y, use lastybin=nx.
+   //   To exclude the underflow bins in Y, use firstybin=1;
+   //   to exclude the underflow bins in Y, use lastybin=nx.
    //
    //   if option "e" is specified, the errors are computed.
    //   if option "d" is specified, the projection is drawn in the current pad.
@@ -2084,8 +2084,8 @@ TH1D *TH2::ProjectionY(const char *name, Int_t firstxbin, Int_t lastxbin, Option
    //   The number of entries in the projection is estimated from the
    //   number of effective entries for all the cells included in the projection
    //
-   //   To exclude the the underflow bins in X, use firstxbin=1;
-   //   to exclude the the underflow bins in X, use lastxbin=nx.
+   //   To exclude the underflow bins in X, use firstxbin=1;
+   //   to exclude the underflow bins in X, use lastxbin=nx.
    //
    //   if option "e" is specified, the errors are computed.
    //   if option "d" is specified, the projection is drawn in the current pad.
@@ -2338,7 +2338,7 @@ void TH2::Streamer(TBuffer &R__b)
 ClassImp(TH2C)
 
 //______________________________________________________________________________
-TH2C::TH2C(): TH2()
+TH2C::TH2C(): TH2(), TArrayC(1)
 {
    // Constructor.
 }
@@ -2610,7 +2610,7 @@ TH2C operator/(TH2C &h1, TH2C &h2)
 ClassImp(TH2S)
 
 //______________________________________________________________________________
-TH2S::TH2S(): TH2()
+TH2S::TH2S(): TH2(), TArrayS(1)
 {
    // Constructor.
 }
@@ -2882,7 +2882,7 @@ TH2S operator/(TH2S &h1, TH2S &h2)
 ClassImp(TH2I)
 
 //______________________________________________________________________________
-TH2I::TH2I(): TH2()
+TH2I::TH2I(): TH2(), TArrayI(1)
 {
    // Constructor.
 }
@@ -3120,7 +3120,7 @@ TH2I operator/(TH2I &h1, TH2I &h2)
 ClassImp(TH2F)
 
 //______________________________________________________________________________
-TH2F::TH2F(): TH2()
+TH2F::TH2F(): TH2(), TArrayF(1)
 {
    // Constructor.
 }
@@ -3401,7 +3401,7 @@ TH2F operator/(TH2F &h1, TH2F &h2)
 ClassImp(TH2D)
 
 //______________________________________________________________________________
-TH2D::TH2D(): TH2()
+TH2D::TH2D(): TH2(), TArrayD(1)
 {
    // Constructor.
 }

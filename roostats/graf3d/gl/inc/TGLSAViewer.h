@@ -24,24 +24,18 @@ class TGWindow;
 class TGFrame;
 class TGCompositeFrame;
 class TGPopupMenu;
-class TGLSAFrame;
 
 class TGedEditor;
 class TGLPShapeObj;
-class TGLRenderArea; // Remove - replace with TGLManager
 class TGLEventHandler;
+class TGMenuBar;
 
-//////////////////////////////////////////////////////////////////////////
-//                                                                      //
-// TGLSAViewer                                                          //
-//                                                                      //
-// The top level standalone viewer object - created via plugin manager. //
+//______________________________________________________________________________
+//
 // TGLSAViewer
-//////////////////////////////////////////////////////////////////////////
+//
+// The top-level standalone GL viewer.
 
-// TODO: This really needs to be re-examined along with GUI parts in TGLViewer.
-// It still contiains lots of legacy parts for binding to external GUI (TGLEditors)
-// which could be neater.
 
 class TGLSAViewer : public TGLViewer
 {
@@ -58,7 +52,7 @@ public:
 
 private:
    // GUI components
-   TGLSAFrame        *fFrame;
+   TGCompositeFrame  *fFrame;
    TGPopupMenu       *fFileMenu;
    TGPopupMenu       *fFileSaveMenu;
    TGPopupMenu       *fCameraMenu;
@@ -72,6 +66,8 @@ private:
    TString            fDirName;
    Int_t              fTypeIdx;
    Bool_t             fOverwrite;
+   TGMenuBar         *fMenuBar;
+   Bool_t             fDeleteMenuBar;
 
    // Initial window positioning
    static const Int_t fgInitX;
@@ -79,8 +75,8 @@ private:
    static const Int_t fgInitW;
    static const Int_t fgInitH;
 
-   static const char * fgHelpText1;
-   static const char * fgHelpText2;
+   static const char *fgHelpText1;
+   static const char *fgHelpText2;
 
    void CreateMenus();
    void CreateFrames();
@@ -103,11 +99,12 @@ public:
 
    void   Show();
    void   Close();
+   void   DeleteMenuBar();
 
    // GUI events - editors, frame etc
    Bool_t ProcessFrameMessage(Long_t msg, Long_t parm1, Long_t);
 
-   TGLSAFrame*       GetFrame() const { return fFrame; }
+   TGCompositeFrame* GetFrame() const { return fFrame; }
    TGCompositeFrame* GetLeftVerticalFrame() const { return fLeftVerticalFrame; }
    TGedEditor*       GetGedEditor() const { return fGedEditor; }
 

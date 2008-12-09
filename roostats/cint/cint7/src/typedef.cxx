@@ -1160,6 +1160,9 @@ int G__defined_typename(const char* type_name)
          if (tagnum != -1) {
             scope = G__Dict::GetDict().GetScope(tagnum);
          }
+         else {
+            return ::Reflex::Type();
+         }
       }
    }
    else { // No scope operator in name, start search from current scope.
@@ -1339,10 +1342,16 @@ int G__search_typename(const char *typenamein,int typein
    ::Reflex::Scope scope = G__Dict::GetDict().GetScope(parent_tagnum);
    ::Reflex::Type typedf = scope.LookupType(type_name);
 
-   if (typedf.operator bool() && G__get_properties(typedf)->autoload) {
-      // The type we found is an autoload entry, let's replace it!
-      typedf.ToTypeBase()->HideName();
-      typedf = Reflex::Type();
+   if (typedf) {
+      if ( typedf.Name()==type_name ) {
+         if ( G__get_properties(typedf)->autoload) {
+            // The type we found is an autoload entry, let's replace it!
+            typedf.ToTypeBase()->HideName();
+            typedf = Reflex::Type();
+         }         
+      } else {
+         typedf = Reflex::Type();
+      }
    }
    
    if (pointer_fix && typedf && typedf.IsTypedef()) {

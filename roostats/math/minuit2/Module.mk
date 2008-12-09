@@ -93,7 +93,7 @@ $(MINUIT2MAP):  $(RLIBMAP) $(MAKEFILEDEP) $(MINUIT2L)
 all-$(MODNAME):  $(MINUIT2LIB) $(MINUIT2MAP)
 
 test-$(MODNAME): $(MINUIT2LIB)
-		cd $(MINUIT2DIR)/test; $(MAKE)
+		cd $(MINUIT2DIR)/test; $(MAKE) ROOTCONFIG=../../../bin/root-config
 
 clean-$(MODNAME):
 		@rm -f $(MINUIT2O) $(MINUIT2DO)
@@ -104,7 +104,7 @@ distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -f $(MINUIT2DEP) $(MINUIT2DS) $(MINUIT2DH) $(MINUIT2LIB) \
 		   $(MINUIT2MAP)
 		@rm -rf include/Minuit2
-		@cd $(MINUIT2DIR)/test; $(MAKE) distclean
+		@cd $(MINUIT2DIR)/test; $(MAKE) distclean ROOTCONFIG=../../../bin/root-config
 
 distclean::     distclean-$(MODNAME)
 
@@ -117,6 +117,6 @@ $(MINUIT2DO): CXXFLAGS += -DWARNINGMSG -DUSE_ROOT_ERROR
 ifneq ($(USE_PARALLEL_MINUIT2),)
 ifneq ($(USE_OPENMP),)
 #$(MINUIT2O): CXXFLAGS += -DMINUIT2_THREAD_SAFE -DMINUIT2_PARALLEL_OPENMP
-math/minuit2/src/Numerical2PGradientCalculator.o: CXXFLAGS += -DMINUIT2_PARALLEL_OPENMP -D_GLIBCXX_PARALLEL -fopenmp 
+math/minuit2/src/Numerical2PGradientCalculator.o: CXXFLAGS +=  -D_GLIBCXX_PARALLEL -fopenmp 
 endif
 endif

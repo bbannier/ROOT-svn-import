@@ -374,7 +374,7 @@ void TGMenuBar::BindHotKey(Int_t keycode, Bool_t on)
 
    const TGMainFrame *main = (TGMainFrame *) GetMainFrame();
 
-   if (!main) return;
+   if (!main || !main->InheritsFrom("TGMainFrame")) return;
 
    if (on) {
       // case unsensitive bindings
@@ -989,9 +989,10 @@ void TGPopupMenu::AddEntry(TGHotString *s, Int_t id, void *ud,
    else
       fEntryList->Add(nw);
 
-   UInt_t tw, pw = 0;
+   UInt_t tw, ph = 0, pw = 0;
    tw = gVirtualX->TextWidth(fHifontStruct, s->GetString(), s->GetLength());
    if (p) {
+      ph = p->GetHeight();
       pw = p->GetWidth();
       if (pw+12 > fXl) { fMenuWidth += pw+12-fXl; fXl = pw+12; }
    }
@@ -1001,6 +1002,7 @@ void TGPopupMenu::AddEntry(TGHotString *s, Int_t id, void *ud,
    fMenuWidth = TMath::Max(fMenuWidth, nw->fEw);
    gVirtualX->GetFontProperties(fHifontStruct, max_ascent, max_descent);
    nw->fEh = max_ascent + max_descent + fEntrySep;
+   if (nw->fEh < ph+fEntrySep) nw->fEh = ph+fEntrySep; 
    fMenuHeight += nw->fEh;
 
    if (before)
@@ -1078,9 +1080,10 @@ void TGPopupMenu::AddLabel(TGHotString *s, const TGPicture *p,
    else
       fEntryList->Add(nw);
 
-   UInt_t tw, pw = 0;
+   UInt_t tw, ph = 0, pw = 0;
    tw = gVirtualX->TextWidth(fHifontStruct, s->GetString(), s->GetLength());
    if (p) {
+      ph = p->GetHeight();
       pw = p->GetWidth();
       if (pw+12 > fXl) { fMenuWidth += pw+12-fXl; fXl = pw+12; }
    }
@@ -1090,6 +1093,7 @@ void TGPopupMenu::AddLabel(TGHotString *s, const TGPicture *p,
    fMenuWidth = TMath::Max(fMenuWidth, nw->fEw);
    gVirtualX->GetFontProperties(fHifontStruct, max_ascent, max_descent);
    nw->fEh = max_ascent + max_descent + fEntrySep;
+   if (nw->fEh < ph+fEntrySep) nw->fEh = ph+fEntrySep; 
    fMenuHeight += nw->fEh;
 
    if (before)
@@ -1110,7 +1114,7 @@ void TGPopupMenu::AddLabel(const char *s, const TGPicture *p,
 
 //______________________________________________________________________________
 void TGPopupMenu::AddPopup(TGHotString *s, TGPopupMenu *popup,
-                           TGMenuEntry *before)
+                           TGMenuEntry *before, const TGPicture *p)
 {
    // Add a (cascading) popup menu to a popup menu. The hotstring is adopted
    // by the menu (actually by the TGMenuEntry) and deleted when possible.
@@ -1119,7 +1123,7 @@ void TGPopupMenu::AddPopup(TGHotString *s, TGPopupMenu *popup,
    TGMenuEntry *nw = new TGMenuEntry;
 
    nw->fLabel    = s;
-   nw->fPic      = 0;
+   nw->fPic      = p;
    nw->fType     = kMenuPopup;
    nw->fEntryId  = -2;
    nw->fUserData = 0;
@@ -1136,11 +1140,18 @@ void TGPopupMenu::AddPopup(TGHotString *s, TGPopupMenu *popup,
    UInt_t tw = gVirtualX->TextWidth(fHifontStruct, s->GetString(),
                                     s->GetLength());
 
+   UInt_t ph = 0, pw = 8;
+   if (p) {
+      ph = p->GetHeight();
+      pw = p->GetWidth();
+      if (pw+12 > fXl) { fMenuWidth += pw+12-fXl; fXl = pw+12; }
+   }
    Int_t max_ascent, max_descent;
-   nw->fEw = tw +8+18+12;
+   nw->fEw = tw + pw+18+12;
    fMenuWidth = TMath::Max(fMenuWidth, nw->fEw);
    gVirtualX->GetFontProperties(fHifontStruct, max_ascent, max_descent);
    nw->fEh = max_ascent + max_descent + fEntrySep;
+   if (nw->fEh < ph+fEntrySep) nw->fEh = ph+fEntrySep; 
    fMenuHeight += nw->fEh;
 
    if (before)
@@ -1151,12 +1162,12 @@ void TGPopupMenu::AddPopup(TGHotString *s, TGPopupMenu *popup,
 
 //______________________________________________________________________________
 void TGPopupMenu::AddPopup(const char *s, TGPopupMenu *popup,
-                           TGMenuEntry *before)
+                           TGMenuEntry *before, const TGPicture *p)
 {
    // Add a (cascading) popup menu to a popup menu. The string s is not
    // adopted. If before is not 0, the entry will be added before it.
 
-   AddPopup(new TGHotString(s), popup, before);
+   AddPopup(new TGHotString(s), popup, before, p);
 }
 
 //______________________________________________________________________________
@@ -1464,7 +1475,11 @@ void TGPopupMenu::DrawEntry(TGMenuEntry *entry)
    int max_ascent, max_descent;
    gVirtualX->GetFontProperties(font, max_ascent, max_descent);
    int tx = entry->fEx + fXl;
-   int ty = entry->fEy + max_ascent;
+   // center text
+   int offset = (entry->fEh - (max_ascent + max_descent)) / 2;
+   if (offset > 0) offset -= 1;
+   else offset = 0;
+   int ty = entry->fEy + max_ascent + offset;
 
    switch (entry->fType) {
       case kMenuPopup:
@@ -1472,7 +1487,7 @@ void TGPopupMenu::DrawEntry(TGMenuEntry *entry)
       case kMenuEntry:
          if ((entry->fStatus & kMenuActiveMask) && entry->fType != kMenuLabel) {
             gVirtualX->FillRectangle(fId, fSelbackGC, entry->fEx+1, entry->fEy-1,
-                                     fMenuWidth-6, max_ascent + max_descent + fEntrySep);
+                                     fMenuWidth-6, entry->fEh);
             if (entry->fType == kMenuPopup)
                DrawTrianglePattern(fSelGC, fMenuWidth-10, entry->fEy+fEntrySep, fMenuWidth-6, entry->fEy+11);
             if (entry->fStatus & kMenuCheckedMask)
@@ -1486,7 +1501,7 @@ void TGPopupMenu::DrawEntry(TGMenuEntry *entry)
                            tx, ty);
          } else {
             gVirtualX->FillRectangle(fId, GetBckgndGC()(), entry->fEx+1, entry->fEy-1,
-                                     fMenuWidth-6, max_ascent + max_descent + fEntrySep);
+                                     fMenuWidth-6, entry->fEh);
             if (entry->fType == kMenuPopup)
                DrawTrianglePattern(fNormGC, fMenuWidth-10, entry->fEy+fEntrySep, fMenuWidth-6, entry->fEy+11);
             if (entry->fStatus & kMenuCheckedMask)
@@ -1724,6 +1739,32 @@ void TGPopupMenu::UnCheckEntry(Int_t id)
 }
 
 //______________________________________________________________________________
+void TGPopupMenu::UnCheckEntries()
+{
+   // Uncheck all entries.
+
+   TGMenuEntry *ptr;
+   TIter next(fEntryList);
+
+   while ((ptr = (TGMenuEntry *) next())) {
+      ptr->fStatus &= ~kMenuCheckedMask;
+   }
+}
+
+//______________________________________________________________________________
+void TGPopupMenu::UnCheckEntryByData(void *user_data)
+{
+   // Uncheck a menu entry (i.e. remove check mark in front of it).
+   // The input argument is user data associated with entry
+
+   TGMenuEntry *ptr;
+   TIter next(fEntryList);
+
+   while ((ptr = (TGMenuEntry *) next()))
+      if (ptr->fUserData == user_data) { ptr->fStatus  &= ~kMenuCheckedMask; break; }
+}
+
+//______________________________________________________________________________
 Bool_t TGPopupMenu::IsEntryChecked(Int_t id)
 {
    // Return true if menu item is checked.
@@ -1914,6 +1955,7 @@ TGMenuTitle::TGMenuTitle(const TGWindow *p, TGHotString *s, TGPopupMenu *menu,
    fNormGC     = norm;
    fState      = kFALSE;
    fTitleId    = -1;
+   fTextColor  = GetForeground();
 
    Int_t hotchar;
    if (s && (hotchar = s->GetHotChar()) != 0)
@@ -1936,7 +1978,6 @@ TGMenuTitle::TGMenuTitle(const TGWindow *p, TGHotString *s, TGPopupMenu *menu,
 }
 
 //______________________________________________________________________________
-
 void TGMenuTitle::SetState(Bool_t state)
 {
    // Set state of menu title.
@@ -1980,10 +2021,16 @@ void TGMenuTitle::DoRedraw()
       gVirtualX->SetForeground(fNormGC, GetForeground());
       fLabel->Draw(fId, fSelGC, x, y + max_ascent);
    } else {
-      gVirtualX->SetForeground(fNormGC,GetDefaultFrameBackground());
+      // Use same background color than the menu bar
+      Pixel_t back = GetDefaultFrameBackground();
+      if (fMenu && fMenu->fMenuBar && fMenu->fMenuBar->GetBackground() != back)
+         back = fMenu->fMenuBar->GetBackground();
+      gVirtualX->SetForeground(fNormGC, back);
       gVirtualX->FillRectangle(fId,fNormGC, 0, 0, fWidth, fHeight);
-      gVirtualX->SetForeground(fNormGC, GetForeground());
+      gVirtualX->SetForeground(fNormGC, fTextColor);
       fLabel->Draw(fId, fNormGC, x, y + max_ascent);
+      if (fTextColor != GetForeground())
+         gVirtualX->SetForeground(fNormGC, GetForeground());
    }
 }
 

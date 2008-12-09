@@ -362,6 +362,8 @@ int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps)
    TRACE(DBG, "list size: " << wrks.size());
 
    // The full list
+   XrdOucString ord;
+   int ii = -1;
    std::list<XrdProofWorker *>::iterator iw;
    for (iw = wrks.begin(); iw != wrks.end() ; iw++) {
       XrdProofWorker *w = *iw;
@@ -370,11 +372,17 @@ int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps)
          lw += '&';
       // Add export version of the info
       lw += w->Export();
-      // Count
-      xps->AddWorker(w);
+      // Count (fActive is increased inside here)
+      if (ii == -1) 
+         ord.form("master");
+      else
+         ord.form("%d", ii);
+      ii++;
+      xps->AddWorker(ord.c_str(), w);
       w->fProofServs.push_back(xps);
-      w->fActive++;
    }
+
+   if (TRACING(REQ)) fNetMgr->Dump();
 
    return rc;
 }
@@ -429,12 +437,13 @@ int XrdProofdManager::Config(bool rcf)
    TRACE(ALL, msg);
 
    XrdProofUI ui;
+   uid_t effuid = geteuid();
    if (!rcf) {
-      // Effective user
-      if (XrdProofdAux::GetUserInfo(geteuid(), ui) == 0) {
+      // Save Effective user
+      if (XrdProofdAux::GetUserInfo(effuid, ui) == 0) {
          fEffectiveUser = ui.fUser;
       } else {
-         msg.form("could not resolve effective user (getpwuid, errno: %d)",errno);
+         msg.form("could not resolve effective uid %d (errno: %d)", effuid, errno);
          XPDERR(msg);
          return -1;
       }
@@ -471,8 +480,9 @@ int XrdProofdManager::Config(bool rcf)
       fprintf(fpid, "%d", getpid());
       fclose(fpid);
    } else {
-      if (XrdProofdAux::GetUserInfo(fEffectiveUser.c_str(), ui) == 0) {
-         XPDERR("unable to get user info for "<<fEffectiveUser);
+      if (XrdProofdAux::GetUserInfo(effuid, ui) == 0) {
+         msg.form("could not resolve effective uid %d (errno: %d)", effuid, errno);
+         XPDERR(msg);
       }
    }
 
@@ -520,10 +530,17 @@ int XrdProofdManager::Config(bool rcf)
       TRACE(ALL, "user config files are "<<st[fNetMgr->WorkerUsrCfg()]);
    }
 
-   // Superusers: add default
-   if (fSuperUsers.length() > 0)
-      fSuperUsers += ",";
-   fSuperUsers += fEffectiveUser;
+   // Superusers: add the effective user at startup
+   XrdProofUI sui;
+   if (XrdProofdAux::GetUserInfo(XrdProofdProtocol::EUidAtStartup(), sui) == 0) {
+      if (fSuperUsers.find(sui.fUser.c_str()) == STR_NPOS) {
+        if (fSuperUsers.length() > 0) fSuperUsers += ",";
+         fSuperUsers += sui.fUser;
+      }
+   } else {
+      msg.form("could not resolve effective uid %d (errno: %d)", XrdProofdProtocol::EUidAtStartup(), errno);
+      XPDERR(msg);
+   }
    msg.form("list of superusers: %s", fSuperUsers.c_str());
    TRACE(ALL, msg);
 

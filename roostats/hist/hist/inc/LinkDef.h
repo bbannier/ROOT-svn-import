@@ -81,6 +81,7 @@
 #pragma link C++ class TVirtualHistPainter+;
 #pragma link C++ class TVirtualGraphPainter+;
 #pragma link C++ class TBackCompFitter+;
+#pragma link C++ class TUnfold+;
 
 
 #pragma link C++ typedef THnSparseD;
@@ -89,6 +90,17 @@
 #pragma link C++ typedef THnSparseI;
 #pragma link C++ typedef THnSparseS;
 #pragma link C++ typedef THnSparseC;
+
+// for autoloading of typedef's (make some dummy ifdef) 
+// which are not recognized by the autoloading 
+#ifdef DO_AUTOLOAD_TYPEDEF
+#pragma link C++ class THnSparseD;
+#pragma link C++ class THnSparseF;
+#pragma link C++ class THnSparseL;
+#pragma link C++ class THnSparseI;
+#pragma link C++ class THnSparseS;
+#pragma link C++ class THnSparseC;
+#endif
 
 
 #pragma link C++ function operator*(Float_t,TH1C&);

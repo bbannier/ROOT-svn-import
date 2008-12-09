@@ -817,6 +817,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
    // Get the frequency for logging memory consumption information
    TParameter<Long64_t> *par = (TParameter<Long64_t>*)fInput->FindObject("PROOF_MemLogFreq");
    volatile Long64_t memlogfreq = (par) ? par->GetVal() : 100;
+   volatile Long_t memlim = (gProofServ) ? gProofServ->GetVirtMemHWM() : -1;
 
    TRY {
 
@@ -839,7 +840,10 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
             PDB(kLoop,3)
                Info("Process","Call Process(%lld)", entry);
             fSelector->Process(entry);
-            if (fSelector->GetAbort() == TSelector::kAbortProcess) break;
+            if (fSelector->GetAbort() == TSelector::kAbortProcess) {
+               SetProcessing(kFALSE);
+               break;
+            }
          }
 
          if (fSelStatus->IsOk()) {
@@ -848,12 +852,32 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
             if (gMonitoringWriter)
                gMonitoringWriter->SendProcessingProgress(fProgressStatus->GetEntries(),
                        TFile::GetFileBytesRead()-readbytesatstart, kFALSE);
-            if (memlogfreq > 0 && GetEventsProcessed()%memlogfreq == 0){
+            if (memlogfreq > 0 && GetEventsProcessed()%memlogfreq == 0) {
                // Record the memory information
                ProcInfo_t pi;
                if (!gSystem->GetProcInfo(&pi)){
                   Info("Process|Svc", "Memory %ld virtual %ld resident event %d",
                                       pi.fMemVirtual, pi.fMemResident, GetEventsProcessed());
+                  // Apply limit, if any: warn if above 80%, stop if above 95% of the HWM
+                  TString wmsg;
+                  if (memlim > 0) {
+                     if (pi.fMemVirtual > 0.95 * memlim) {
+                        wmsg.Form("using more than 95% of allowed memory (%ld kB) - STOP processing", pi.fMemVirtual);
+                        Error("Process", wmsg.Data());
+                        wmsg.Insert(0, "ERROR: ");
+                        if (gProofServ) gProofServ->SendAsynMessage(wmsg.Data());
+                        fExitStatus = kStopped;
+                        SetProcessing(kFALSE);
+                        break;
+                     } else if (pi.fMemVirtual > 0.80 * memlim) {
+                        // Refine monitoring
+                        memlogfreq = 1;
+                        wmsg.Form("using more than 80% of allowed memory (%ld kB)", pi.fMemVirtual);
+                        Warning("Process", wmsg.Data());
+                        wmsg.Insert(0, "WARNING: ");
+                        if (gProofServ) gProofServ->SendAsynMessage(wmsg.Data());
+                     }
+                  }
                }
             }
          }
@@ -862,8 +886,8 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
             gSystem->DispatchOneEvent(kTRUE);
             ResetBit(TProofPlayer::kDispatchOneEvent);
          }
-         if (!fSelStatus->IsOk() || gROOT->IsInterrupted()) break;
          SetProcessing(kFALSE);
+         if (!fSelStatus->IsOk() || gROOT->IsInterrupted()) break;
       }
 
    } CATCH(excode) {
@@ -1410,6 +1434,12 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          memlogfreq = (memlogfreq > 0) ? memlogfreq : 1;
          fProof->SetParameter("PROOF_MemLogFreq", memlogfreq);
       }
+
+      // Send input data, if any
+      TString emsg;
+      if (TProof::SendInputData(fQuery, fProof, emsg) != 0)
+         Warning("Process", "could not forward input data: %s", emsg.Data());
+
    } else {
 
       // For a new query clients should make sure that the temporary
@@ -1439,6 +1469,9 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
 
       PDB(kLoop,1) Info("Process","Call Begin(0)");
       fSelector->Begin(0);
+
+      // Send large input data objects, if any
+      fProof->SendInputDataFile();
 
       if (!sync)
          gSystem->RedirectOutput(0);
@@ -1513,6 +1546,11 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
 
       PDB(kGlobal,1) Info("Process","Synchronous processing: calling Collect");
       fProof->Collect();
+      if (!(fProof->IsSync())) {
+         // The server required to switch to asynchronous mode
+         Info("Process", "switching to asynchronous mode following the server reply");
+         return fProof->fSeqNum;
+      }
 
       // Restore prompt logging, for clients (Collect leaves things as they were
       // at the time it was called)
@@ -1804,7 +1842,8 @@ Bool_t TProofPlayerRemote::SendSelector(const char* selector_file)
       mp.Insert(ip, np);
    }
    TROOT::SetMacroPath(mp);
-   Info("SendSelector", "macro path set to '%s'", TROOT::GetMacroPath());
+   if (gDebug > 0)
+      Info("SendSelector", "macro path set to '%s'", TROOT::GetMacroPath());
 
    // Header file
    TString header = selec;
@@ -2481,10 +2520,7 @@ Bool_t TProofPlayerRemote::HandleTimer(TTimer *)
 
    PDB(kFeedback,2) Info("HandleTimer","Entry");
 
-   R__ASSERT(!IsClient());
-
    if (fFeedbackTimer == 0) return kFALSE; // timer already switched off
-
 
    // process local feedback objects
 
@@ -2570,16 +2606,17 @@ Long64_t TProofPlayerRemote::DrawSelect(TDSet *set, const char *varexp,
    TNamed *varexpobj = new TNamed("varexp", varexp);
    TNamed *selectionobj = new TNamed("selection", selection);
 
-   // save the feedback list
+   // Save the current input list
+   TObject *o = 0;
+   TList *savedInput = new TList;
+   TIter nxi(fInput);
+   while ((o = nxi()))
+      savedInput->Add(o);
+   // The feedback list, if any, is kept
    TList *fb = (TList*) fInput->FindObject("FeedbackList");
-   if (fb)
-      fInput->Remove(fb);
-
-   fInput->Clear();  // good idea? what about a feedbacklist, but old query
-                     // could have left objs? clear at end? no, may want to
-                     // rerun, separate player?
-   if (fb)
-      fInput->Add(fb);
+   if (fb) fInput->Remove(fb);
+   fInput->Clear();
+   if (fb) fInput->Add(fb);
 
    fInput->Add(varexpobj);
    fInput->Add(selectionobj);
@@ -2599,6 +2636,14 @@ Long64_t TProofPlayerRemote::DrawSelect(TDSet *set, const char *varexp,
 
    delete varexpobj;
    delete selectionobj;
+
+   // Restore the input list
+   fInput->Clear();
+   TIter nxsi(savedInput);
+   while ((o = nxsi()))
+      fInput->Add(o);
+   savedInput->SetOwner(kFALSE);
+   delete savedInput;
 
    return r;
 }
@@ -2710,7 +2755,7 @@ void TProofPlayerSlave::HandleGetTreeHeader(TMessage *mess)
 {
    // Handle tree header request.
 
-   TMessage answ(kMESS_OBJECT);
+   TMessage answ(kPROOF_GETTREEHEADER);
 
    TDSet *dset;
    (*mess) >> dset;

@@ -15,7 +15,7 @@ MODNAME      := pcre
 MODDIR       := core/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 
-PCREVERS     := pcre-7.4
+PCREVERS     := pcre-7.8
 PCREDIR      := $(MODDIR)
 PCREDIRS     := $(MODDIRS)
 PCREDIRI     := $(MODDIRS)/$(PCREVERS)
@@ -23,7 +23,7 @@ PCREDIRI     := $(MODDIRS)/$(PCREVERS)
 ##### libpcre #####
 PCRELIBS     := $(MODDIRS)/$(PCREVERS).tar.gz
 ifeq ($(PLATFORM),win32)
-PCRELIBA     := $(MODDIRS)/$(PCREVERS)/Win32/libpcre-7.4.lib
+PCRELIBA     := $(MODDIRS)/Win32/libpcre-7.8.lib
 PCRELIB      := $(LPATH)/libpcre.lib
 ifeq (yes,$(WINRTDEBUG))
 PCREBLD      := "libpcre - Win32 Debug"
@@ -57,10 +57,10 @@ ifeq ($(PLATFORM),win32)
 		if [ ! -d $(PCREVERS) ]; then \
 			gunzip -c $(PCREVERS).tar.gz | tar xf -; \
 		fi; \
-		cd $(PCREVERS)/win32; \
+		cd win32; \
 		unset MAKEFLAGS; \
 		nmake -nologo -f Makefile.msc CFG=$(PCREBLD) \
-		NMCXXFLAGS="$(BLDCXXFLAGS) -I../../../../../build/win -FIw32pragma.h")
+		NMCXXFLAGS="$(BLDCXXFLAGS) -I../../../../build/win -FIw32pragma.h")
 else
 		@(if [ -d $(PCREDIRS)/$(PCREVERS) ]; then \
 			rm -rf $(PCREDIRS)/$(PCREVERS); \

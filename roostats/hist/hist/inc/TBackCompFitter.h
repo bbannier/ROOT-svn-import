@@ -90,6 +90,9 @@ public:
 
    // set FCN using new interface
    virtual void SetObjFunction(  ROOT::Math::IMultiGenFunction * f);
+
+   // recreate minimizer and FCN for TMinuit fits and standard printout 
+   void ReCreateMinimizer();
    
 
 protected: 
@@ -100,7 +103,6 @@ protected:
   
    void DoSetDimension(); 
    
-   void SetMinimizerFunction(const ROOT::Fit::FitData * data);
    
 private:
 
@@ -109,6 +111,7 @@ private:
    ROOT::Math::Minimizer * fMinimizer;
    ROOT::Fit::Fitter fFitter; 
    ROOT::Math::IMultiGenFunction * fObjFunc; 
+   ROOT::Math::IParamMultiFunction * fModelFunc; 
    mutable std::vector<double> fCovar; // cached covariance matrix (NxN)
 
 

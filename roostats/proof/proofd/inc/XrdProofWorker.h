@@ -25,7 +25,14 @@
 //////////////////////////////////////////////////////////////////////////
 #include <list>
 
+#ifdef OLDXRDOUC
+#  include "XrdSysToOuc.h"
+#  include "XrdOuc/XrdOucPthread.hh"
+#else
+#  include "XrdSys/XrdSysPthread.hh"
+#endif
 #include "XrdOuc/XrdOucString.hh"
+
 
 class XrdProofdProofServ;
 
@@ -33,7 +40,7 @@ class XrdProofWorker {
 
  public:
    XrdProofWorker(const char *str = 0);
-   virtual ~XrdProofWorker() { }
+   virtual ~XrdProofWorker();
 
    void                    Reset(const char *str); // Set from 'str'
 
@@ -46,9 +53,10 @@ class XrdProofWorker {
    static void             Sort(std::list<XrdProofWorker *> *lst,
                                 bool (*f)(XrdProofWorker *&lhs,
                                           XrdProofWorker *&rhs));
-   // Counters
-   int                     fActive;      // number of active sessions
-   int                     fSuspended;   // number of suspended sessions 
+
+   inline int              Active() const { XrdSysMutexHelper mhp(fMutex); return fProofServs.size(); }
+   inline void             AddProofServ(XrdProofdProofServ *xps) { XrdSysMutexHelper mhp(fMutex); return fProofServs.push_back(xps); }
+   inline void             RemoveProofServ(XrdProofdProofServ *xps) { XrdSysMutexHelper mhp(fMutex); return fProofServs.remove(xps); }
 
    std::list<XrdProofdProofServ *> fProofServs; // ProofServ sessions using
                                                // this worker
@@ -64,6 +72,9 @@ class XrdProofWorker {
    XrdOucString            fWorkDir;     // work directory
    XrdOucString            fMsd;         // mass storage domain
    XrdOucString            fId;          // ID string
+
+private:
+   XrdSysRecMutex         *fMutex;       // Local mutex
 };
 
 #endif

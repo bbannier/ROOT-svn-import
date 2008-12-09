@@ -202,6 +202,13 @@ public:
 
 
 public:
+   enum EConvertOutput {
+      kNoOutput, // do not run the source, do not show its output
+      kInterpretedOutput, // interpret the source and show output
+      kCompiledOutput, // run the source through ACLiC and show output
+      kForceOutput = 0x10 // re-generate the output files (canvas PNGs)
+   };
+
    THtml();
    virtual      ~THtml();
 
@@ -209,7 +216,9 @@ public:
 
    // Functions to generate documentation
    void          Convert(const char *filename, const char *title, 
-                         const char *dirname = "", const char *relpath="../");
+                         const char *dirname = "", const char *relpath="../",
+                         Int_t includeOutput = kNoOutput,
+                         const char* context = "");
    void          CreateHierarchy();
    void          MakeAll(Bool_t force=kFALSE, const char *filter="*",
                          int numthreads = 1);
@@ -308,7 +317,8 @@ public:
    void                SetDeclFileName(TClass* cl, const char* filename);
    void                SetFoundDot(Bool_t found = kTRUE);
    void                SetImplFileName(TClass* cl, const char* filename);
-
+   void                SetBatch(Bool_t batch = kTRUE) { fBatch = batch; }
+   Bool_t              IsBatch() const { return fBatch; }
    // unused
    void                ReplaceSpecialChars(std::ostream&, const char*) {
       Error("ReplaceSpecialChars",
@@ -376,6 +386,7 @@ protected:
    mutable TModuleDefinition *fModuleDef; // object translating classes to module names
    mutable TFileDefinition* fFileDef; // object translating classes to file names
    mutable TFileSysDB    *fLocalFiles; // files found locally for a given source path
+   Bool_t		fBatch; // Whether to enable GUI output
 
    ClassDef(THtml,0)  //Convert class(es) into HTML file(s)
 };

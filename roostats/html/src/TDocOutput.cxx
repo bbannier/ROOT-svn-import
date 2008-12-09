@@ -25,6 +25,7 @@
 #include "TSystem.h"
 #include "TUrl.h"
 #include "TVirtualMutex.h"
+#include "TVirtualPad.h"
 #include <vector>
 #include <list>
 #include <set>
@@ -295,13 +296,15 @@ void TDocOutput::AdjustSourcePath(TString& line, const char* relpath /*= "../"*/
 }
 
 //______________________________________________________________________________
-void TDocOutput::Convert(std::istream& in, const char* outfilename, const char *title,
-                         const char *relpath /*= "../"*/)
+void TDocOutput::Convert(std::istream& in, const char* infilename,
+                         const char* outfilename, const char *title,
+                         const char *relpath /*= "../"*/, Int_t includeOutput /*=0*/,
+                         const char* context /*= ""*/)
 {
    // Convert a text file into a html file.
    // outfilename doesn't have an extension yet; up to us to decide.
    // We generate HTML, so our extension is ".html".
-   // See THtml::Convert() for the otehr parameters.
+   // See THtml::Convert() for the other parameters.
 
    TString htmlFilename(outfilename);
    htmlFilename += ".html";
@@ -313,18 +316,132 @@ void TDocOutput::Convert(std::istream& in, const char* outfilename, const char *
       return;
    }
 
-   Printf("Convert: %s", htmlFilename.Data());
-
    // write a HTML header
    WriteHtmlHeader(out, title, relpath);
 
-   out << "<h1>" << title << "</h1>" << endl;
+   out << context << endl;
+
+   if (title && title[0])
+      out << "<h2>" << title << "</h2>" << endl;
+
+   Int_t numReuseCanvases = 0;
+   if (includeOutput && !(includeOutput & THtml::kForceOutput)) {
+      void* dirHandle = gSystem->OpenDirectory(gSystem->DirName(htmlFilename));
+      if (dirHandle) {
+         FileStat_t infile_stat;
+         if (!gSystem->GetPathInfo(infilename, infile_stat)) {
+            // can stat.
+            const char* outfile = 0;
+            TString firstCanvasFileBase(gSystem->BaseName(outfilename));
+            firstCanvasFileBase += "_0.png";
+            // first check whether the firstCanvasFile exists:
+            Bool_t haveFirstCanvasFile = false;
+            while ((outfile = gSystem->GetDirEntry(dirHandle))) {
+               if (firstCanvasFileBase == outfile) {
+                  haveFirstCanvasFile = true;
+                  break;
+               }
+            }
+            gSystem->FreeDirectory(dirHandle);
+
+            FileStat_t outfile_stat;
+            TString firstCanvasFile = outfilename;
+            firstCanvasFile += "_0.png";
+            Int_t maxIdx = -1;
+            if (haveFirstCanvasFile && !gSystem->GetPathInfo(firstCanvasFile, outfile_stat)
+                && outfile_stat.fMtime > infile_stat.fMtime) {
+               // the first canvas file exists and it is newer than the script, so we reuse
+               // the canvas files. We need to know how many there are:
+               dirHandle = gSystem->OpenDirectory(gSystem->DirName(htmlFilename));
+               TString stem(gSystem->BaseName(outfilename));
+               stem += "_";
+               TString dir(gSystem->DirName(htmlFilename));
+               while ((outfile = gSystem->GetDirEntry(dirHandle))) {
+                  if (strncmp(outfile, stem, stem.Length()))
+                     continue;
+                  const char* posext = strrchr(outfile, '.');
+                  if (!posext || strcmp(posext, ".png"))
+                     continue;
+
+                  // extract the mod time of the PNG file
+                  if (gSystem->GetPathInfo(dir + "/" + outfile, outfile_stat))
+                     // can't stat!
+                     continue;
+
+                  if (outfile_stat.fMtime > infile_stat.fMtime) {
+                     ++numReuseCanvases;
+                     // The canvas PNG is newer than the script, so
+                     // extract the index of the canvas
+                     TString idxStr(outfile + stem.Length());
+                     idxStr.Remove(idxStr.Length() - 4);
+                     Int_t idx = idxStr.Atoi();
+                     if (maxIdx < idx)
+                        maxIdx = idx;
+                  }
+               }
+               gSystem->FreeDirectory(dirHandle);
+               if (maxIdx + 1 != numReuseCanvases)
+                  // bad: the number of canvases to reuse noes not correspond to the highest index we saw.
+                  // we will need to regenerate evrything.
+                  numReuseCanvases = 0;
+            }
+         } // infile can be stat'ed
+      } // can open output directory
+   } // canvases wanted
+
+   if (numReuseCanvases)
+      Printf("Convert: %s (reusing %d saved canvas%s)", htmlFilename.Data(), numReuseCanvases, (numReuseCanvases > 1 ? "es" : ""));
+   else
+      Printf("Convert: %s", htmlFilename.Data());
+
+   UInt_t nCanvases = numReuseCanvases;
+   if (includeOutput) {
+      if (!numReuseCanvases) {
+         // need to run the script
+         TString pwd(gSystem->pwd());
+         gSystem->cd(gSystem->DirName(infilename));
+         TVirtualPad* lastCanvas = (TVirtualPad*) gROOT->GetListOfCanvases()->Last();
+         TString cmd(".x ");
+         cmd += gSystem->BaseName(infilename);
+         if (includeOutput & THtml::kCompiledOutput)
+            cmd += "+";
+         gROOT->ProcessLine(cmd);
+         gSystem->cd(pwd);
+
+         TIter iCanvas(gROOT->GetListOfCanvases());
+         TVirtualPad* canv = 0;
+         while ((canv = (TVirtualPad*) iCanvas())) {
+            if (lastCanvas) {
+               if (lastCanvas != canv) continue;
+               else lastCanvas = 0;
+            }
+            canv->Print(TString::Format("%s_%d.png", outfilename, nCanvases));
+            delete canv;
+            ++nCanvases;
+         }
+      }
+      out << "<table><tr><td style=\"vertical-align:top;padding-right:2em;\">" << endl;
+   }
    out << "<pre>" << endl;
 
    TDocParser parser(*this);
    parser.Convert(out, in, relpath);
 
    out << "</pre>" << endl;
+
+   if (includeOutput) {
+      out << "</td><td style=\"vertical-align:top;\">" << endl;
+      out << "<table>" << endl;
+      for (UInt_t i = 0; i < nCanvases; ++i) {
+         TString pngname = TString::Format("%s_%d.png", gSystem->BaseName(outfilename), i);
+         out << "<tr><td><a href=\"" << pngname << "\">" << endl
+             << "<img src=\"" << pngname << "\" id=\"canv" << i << "\" alt=\"thumb\" style=\"border:none;width:22em;\" "
+            "onmouseover=\"javascript:canv" << i << ".style.width='auto';\" />" << endl
+             << "</a></td></tr>" << endl;
+         }
+      out << "</table>" << endl;
+      out << "</td></tr></table>" << endl;
+   }
 
    // write a HTML footer
    WriteHtmlFooter(out, relpath);
@@ -1332,6 +1449,51 @@ void TDocOutput::NameSpace2FileName(TString& name)
 {
    // Replace "::" in name by "__"
    // Replace "<", ">", " ", ",", "~", "=" in name by "_"
+   // Replace "A::X<A::Y>" by "A::X<-p0Y>",
+   //         "A::B::X<A::B::Y>" by "A::B::X<-p1Y>", etc
+
+   TString encScope(name);
+   Ssiz_t posTemplate = encScope.Index('<');
+   if (posTemplate != kNPOS) {
+      TString templateArgs = encScope(posTemplate, encScope.Length());
+      encScope.Remove(posTemplate, encScope.Length());
+      // shorten the name a bit:
+      // convert A::B::X<A::B::Y> to A::X<-p1Y>, i.e.
+      // the filename A__X_A__Y_ to A__X_-p1Y_
+      // The rule: if the enclosing scope up to the N-th scope matches,
+      // the name becomes -pN
+      Ssiz_t posName = encScope.Last(':');
+      if (posName != kNPOS) {
+         Int_t numDblColumn = encScope.CountChar(':');
+         while (numDblColumn > 1) {
+            encScope.Remove(posName + 1, encScope.Length());
+            numDblColumn -= 2;
+            templateArgs.ReplaceAll(encScope, TString::Format("-p%d", numDblColumn / 2));
+            encScope.Remove(encScope.Length() - 2, 2);
+            posName = encScope.Last(':');
+            if (posName == kNPOS)
+               break; // should be handled by numDblColumn...
+         }
+         name.Replace(posTemplate, name.Length(), templateArgs);
+      }
+   }
+
+   if (name.Length() > 240) { // really 240! It might get some extra prefix or extension
+      // 8.3 is dead, but e.g. ext2 can only hold 255 chars in a file name.
+      // So mangle name to "beginning_of_name"-h"hash"."extension", where
+      // beginning_of_name is short enough such that the full name is <255 characters.
+
+      TString hash;
+      TDocParser::AnchorFromLine(name, hash);
+      hash.Prepend("-h");
+      Ssiz_t posDot = name.Last('.');
+      TString ext;
+      if (posDot != kNPOS)
+         ext = name(posDot, name.Length());
+      Ssiz_t namelen = 240 - hash.Length() - ext.Length();
+      name = name(0, namelen) + hash + ext;
+   }
+
    const char* replaceWhat = ":<> ,~=";
    for (Ssiz_t i=0; i < name.Length(); ++i)
       if (strchr(replaceWhat, name[i]))

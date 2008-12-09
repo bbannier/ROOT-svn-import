@@ -39,6 +39,18 @@
 <ul>
 <li> Since the new font endocing (June release) the hyphen was longer than
      before. Now fixed.
+<li> When drawn with an angle, the "tilde" character as an acceent was not
+     correctly placed in a PostScript file. For instance:
+<pre>
+   {
+      TCanvas *c1 = new TCanvas("c1", "c1",15,49,700,530);
+      TLatex *tex1 = new TLatex(0.5,0.5,"#tilde{C}");
+      tex1->SetTextSize(0.2);
+      tex1->SetTextAngle(90);
+      tex1->Draw();
+      c1->Print("tilde.ps");
+   }
+</pre>
 </ul>
 
 <h4>TASImage / libAfterImage</h4>
@@ -46,8 +58,9 @@
 <li> Synchronizing libAfterImage with Sasha'a latest version.
 <li> <tt>TASImage::Merge (const TImage im, const char op, Int_t x, Int_t y) </tt>
      with x and/or y not equal 0 did not clip the overlayed picture correctly.
-<li> Make sure a rectangle drawn will <tt>TAsimage::DrawRectangle<//t> appears 
+<li> Make sure a rectangle drawn will <tt>TAsimage::DrawRectangle</tt> appears 
      after calling <tt>gPad->Modified()</tt>.
+<li> Images can be saved (canvas->Print) from within threads.
 </ul>
 
 <h3>Miscellaneous</h3>
@@ -96,7 +109,7 @@ bar the additional tick marks belong. The following example, which has been
 provided by Thomas Ullrich <thomas.ullrich@bnl.gov>, shows it clearly.
 <center>
 <img alt="example of option []" src="graf2d_01.gif">
-<center>
+</center>
 
 <h4>TGraphPolargram.cxx</h4>
 

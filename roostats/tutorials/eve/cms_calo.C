@@ -96,6 +96,7 @@ void MakeCaloLego(TEveCaloData* data)
    lego->SetPlaneColor(kBlue-5);
    lego->Set2DMode(TEveCaloLego::kValSize);
    lego->SetName("TwoHistLego");
+   lego->SetPixelsPerBin(8);
    gEve->AddElement(lego, s2);
    gEve->AddToListTree(lego, kTRUE);
 
@@ -105,7 +106,8 @@ void MakeCaloLego(TEveCaloData* data)
    // overlay lego1
    TEveLegoOverlay* overlay = new TEveLegoOverlay();
    overlay->SetShowPlane(kTRUE);
-   overlay->SetShowPerspective(kTRUE);
+
+   overlay->SetHeaderTxt(Form("Max Et %3.1f", data->GetMaxVal(kTRUE)));
    overlay->RefAxisAttrib().SetLabelSize(0.02);
    v->AddOverlayElement(overlay);
    overlay->SetCaloLego(lego);
@@ -134,8 +136,7 @@ TEveCaloDataVec* MakeVecData(TH2* h1, TH2* h2)
     }
   }
 
-  data->SetEtaBins(new TAxis(100, ax->GetBinLowEdge(1), ax->GetBinUpEdge(ax->GetLast())));
-  data->SetPhiBins(new TAxis(100, ay->GetBinLowEdge(1), ay->GetBinUpEdge(ay->GetLast())));
+  data->SetAxisFromBins();
   data->DataChanged();
 
   return data;
