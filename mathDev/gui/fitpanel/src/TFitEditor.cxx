@@ -1381,8 +1381,10 @@ void TFitEditor::SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event)
          // If there is no space, an error message is shown:
          // Error in <TString::AssertElement>: out of bounds: i = -1, Length = 0
          fEnteredFunc->SetText(" ");
-      fEnteredFunc->SelectAll();
    }
+   fEnteredFunc->Home();
+   fEnteredFunc->SelectAll();
+
 
    // Update the information about the selected object.
    if (fSetParam->GetState() == kButtonDisabled)
