@@ -66,7 +66,7 @@ namespace RooStats {
       virtual HypoTestResult* GetHypoTest() const = 0;
 
       // set a workspace that owns all the necessary components for the analysis
-      virtual void SetWorkspace(RooWorkspace* ws) = 0;
+      virtual void SetWorkspace(RooWorkspace& ws) = 0;
       // set the PDF for the null hypothesis
       virtual void SetNullPdf(const char* name) = 0;
       // set the PDF for the alternate hypothesis
@@ -74,21 +74,21 @@ namespace RooStats {
       // set a common PDF for both the null and alternate hypotheses
       virtual void SetCommonPdf(const char* name) = 0;
       // Set a common PDF for both the null and alternate, add to the the workspace if not already there
-      virtual void SetCommonPdf(RooAbsPdf* pdf) = 0;
+      virtual void SetCommonPdf(RooAbsPdf& pdf) = 0;
       // Set the PDF for the null, add to the the workspace if not already there
-      virtual void SetNullPdf(RooAbsPdf* pdf) = 0;
+      virtual void SetNullPdf(RooAbsPdf& pdf) = 0;
       // Set the PDF for the alternate hypothesis, add to the the workspace if not already there
-      virtual void SetAlternatePdf(RooAbsPdf* pdf) = 0;
+      virtual void SetAlternatePdf(RooAbsPdf& pdf) = 0;
 
       // specify the name of the dataset in the workspace to be used
       virtual void SetData(const char* name) = 0;
       // Set the DataSet, add to the the workspace if not already there
-      virtual void SetData(RooAbsData* data) = 0;
+      virtual void SetData(RooAbsData& data) = 0;
 
       // set parameter values for the null if using a common PDF
-      virtual void SetNullParameters(RooArgSet*) = 0;
+      virtual void SetNullParameters(RooArgSet&) = 0;
       // set parameter values for the alternate if using a common PDF
-      virtual void SetAlternateParameters(RooArgSet*) = 0;
+      virtual void SetAlternateParameters(RooArgSet&) = 0;
 
    protected:
       ClassDef(HypoTestCalculator,1)  // Interface for tools doing hypothesis tests

@@ -100,8 +100,8 @@ void rs101_numbercounting()
 
   // Step 5, Create a calculator for doing the hypothesis test.
   // because this is a 
-  ProfileLikelihoodCalculator plc(wspace->data("ExpectedNumberCountingData"),
-				  wspace->pdf("TopLevelPdf"), nullParams);
+  ProfileLikelihoodCalculator plc( *wspace->data("ExpectedNumberCountingData"),
+				   *wspace->pdf("TopLevelPdf"), *nullParams);
 				  
 
   // need code to deal with snapshots.  Same model in workspace may need to be reconfigured.
@@ -142,7 +142,7 @@ void rs101_numbercounting()
   // Step 8, Here we re-use the ProfileLikelihoodCalculator to return a confidence interval.
   // We need to specify what are our parameters of interest
   RooArgSet* paramsOfInterest = nullParams; // they are the same as before in this case
-  plc.SetParameters(paramsOfInterest);
+  plc.SetParameters(*paramsOfInterest);
   ConfInterval* lrint = plc.GetInterval();  // that was easy.
   lrint->SetConfidenceLevel(0.95);
 
