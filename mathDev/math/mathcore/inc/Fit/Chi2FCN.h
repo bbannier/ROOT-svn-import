@@ -13,7 +13,7 @@
 #ifndef ROOT_Fit_Chi2FCN
 #define ROOT_Fit_Chi2FCN
 
-#ifndef ROOT_Math_FitMethodunction
+#ifndef ROOT_Math_FitMethodFunction
 #include "Math/FitMethodFunction.h"
 #endif
 
