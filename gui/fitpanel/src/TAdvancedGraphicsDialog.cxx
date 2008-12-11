@@ -241,8 +241,9 @@ void TAdvancedGraphicsDialog::DrawContour()
       Error("TAdvancedGraphicsDialog::DrawContour", "Parameters cannot be the same");
       return;
    }
-   fFitter->SetErrorDef( fContourError->GetNumber() );
-   fFitter->Contour( par1, par2, graph);
+   // contour error is actually the desired confidence level
+   Double_t cl = fContourError->GetNumber(); 
+   fFitter->Contour( par1, par2, graph, cl);
    graph->SetFillColor(kYellow-10);
    graph->GetXaxis()->SetTitle( fFitter->GetParName(par1) );
    graph->GetYaxis()->SetTitle( fFitter->GetParName(par2) );

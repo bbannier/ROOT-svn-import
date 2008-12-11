@@ -110,8 +110,9 @@ public:
 //    bool  Scan2D(unsigned int ipar, unsigned int jpar, TGraph2D * gr, 
 //                         double xmin = 0, double xmax = 0, double ymin = 0, double ymax = 0);
 
-   // create contour around the minimum
-   bool  Contour(unsigned int ipar, unsigned int jpar, TGraph * gr); 
+   // create contour of two parameters around the minimum
+   // pass as option confidence level:  default is a value of 0.683 
+   bool  Contour(unsigned int ipar, unsigned int jpar, TGraph * gr , double confLevel = 0.683); 
    
    // set FCN using new interface
    virtual void SetObjFunction(  ROOT::Math::IMultiGenFunction * f);

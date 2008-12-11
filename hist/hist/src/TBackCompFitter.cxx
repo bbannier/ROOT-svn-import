@@ -15,6 +15,7 @@
 #include "TH1.h"
 #include "TH2.h"
 #include "TH3.h"
+#include "TMath.h"
 #include "TGraph.h"
 #include "TGraphErrors.h"
 #include "TGraph2DErrors.h"
@@ -772,12 +773,15 @@ bool TBackCompFitter::Scan(unsigned int ipar, TGraph * gr, double xmin, double x
    //     If the graph size is zero, a default size n = 40 will be used
    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
+
    if (!gr) return false; 
    ROOT::Math::Minimizer * minimizer = fFitter->GetMinimizer(); 
    if (!minimizer) {
       Error("Scan","Minimizer is not available - cannot scan before fitting");
       return false;
    }
+
+
    unsigned int npoints = gr->GetN(); 
    if (npoints == 0)  { 
       npoints = 40; 
@@ -812,12 +816,15 @@ bool TBackCompFitter::Scan(unsigned int ipar, TGraph * gr, double xmin, double x
 
 // }
 
-bool  TBackCompFitter::Contour(unsigned int ipar, unsigned int jpar, TGraph * gr) { 
+bool  TBackCompFitter::Contour(unsigned int ipar, unsigned int jpar, TGraph * gr, double confLevel) { 
    //  create a 2D contour around the minimum for the parameter ipar and jpar
    // if a minimum does not exist or is invalid it will return false
    // on exit a TGraph is filled with the contour points 
    // the number of contur points is determined by the size of the TGraph. 
    // if the size is zero a default number of points = 20 is used 
+   // pass optionally the confidence level, default is 0.683
+   // it is assumed that ErrorDef() defines the right error definition 
+   // (i.e 1 sigma error for one parameter). If not the confidence level are scaled to new level
 
    if (!gr) return false; 
    ROOT::Math::Minimizer * minimizer = fFitter->GetMinimizer(); 
@@ -826,11 +833,13 @@ bool  TBackCompFitter::Contour(unsigned int ipar, unsigned int jpar, TGraph * gr
       return false;
    }
 
-   // set required error definition in minimizer
-   minimizer->SetErrorDef (GetErrorDef() );
-   // set required print level 
-   minimizer->SetErrorDef (GetErrorDef() );
+   // get error level used for fitting
+   double upScale = fFitter->Config().MinimizerOptions().ErrorDef();
+
+   double upVal = TMath::ChisquareQuantile( confLevel, 2);  // 2 is number of parameter we do the contour
    
+   // set required error definition in minimizer
+   minimizer->SetErrorDef (upScale * upVal);    
 
    unsigned int npoints = gr->GetN(); 
    if (npoints == 0)  { 
@@ -839,6 +848,10 @@ bool  TBackCompFitter::Contour(unsigned int ipar, unsigned int jpar, TGraph * gr
    }
    bool ret =  minimizer->Contour( ipar, jpar, npoints, gr->GetX(), gr->GetY()); 
    if ((int) npoints < gr->GetN() ) gr->Set(npoints); 
+
+   // restore the error level used for fitting
+   minimizer->SetErrorDef ( upScale);
+
    return ret; 
 }
 
