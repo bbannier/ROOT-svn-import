@@ -370,7 +370,7 @@ HybridResult* HybridCalculator::GetHypoTest() const {
       std::cerr << "Error in HybridCalculator::GetHypoTest - invalid data type - return NULL" << std::endl;
       return 0; 
    }
-   bool usePrior = (fPriorPdf != 0); 
+   bool usePrior = (fUsePriorPdf && fPriorPdf ); 
    return Calculate( *treeData, fNToys, usePrior);  
 }
 
@@ -392,19 +392,19 @@ bool HybridCalculator::DoInitializeFromWS() {
 
    fSbModel = fWS->pdf(fSbModelName); 
    if (!fSbModel) { 
-      std::cerr << "Error in HybridCalculator::DoInitializeFromWS - pdf " << fSbModelName << " is NOT found in workspace" << std::endl;
+      std::cerr << "Error in HybridCalculator::DoInitializeFromWS - S+B pdf " << fSbModelName << " is NOT found in workspace" << std::endl;
       return false; 
    }
    fBModel = fWS->pdf(fBModelName); 
    if (!fBModel) { 
-      std::cerr << "Error in HybridCalculator::DoInitializeFromWS - pdf " << fBModelName << " is NOT found in workspace" << std::endl;
+      std::cerr << "Error in HybridCalculator::DoInitializeFromWS - B pdf " << fBModelName << " is NOT found in workspace" << std::endl;
       return false; 
    }
 
    if (fUsePriorPdf) { 
       fPriorPdf = fWS->pdf(fPriorPdfName); 
       if (!fPriorPdf) { 
-         std::cerr << "Warning in HybridCalculator::DoInitializeFromWS - pdf " << fPriorPdfName << " is NOT found in workspace" << std::endl;
+         std::cerr << "Warning in HybridCalculator::DoInitializeFromWS - Prior pdf " << fPriorPdfName << " is NOT found in workspace" << std::endl;
          UseNuisancePriorPdf(false);
       }
    }

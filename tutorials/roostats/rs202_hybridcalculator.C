@@ -60,7 +60,7 @@ void rs202_hybridcalculator()
 #ifdef USE_WS
   RooWorkspace wspace;
   wspace.import(tot_pdf);
-  wspace.import(bkg_ext_pdf);
+  wspace.import(bkg_ext_pdf,RecycleConflictNodes(kTRUE));
   wspace.import(bkg_yield_prior);
   RooRealVar * obsdata = wspace.var("x");
   RooDataSet* data = tot_pdf.generate(*obsdata,RooFit::Extended());
@@ -78,9 +78,10 @@ void rs202_hybridcalculator()
 
   // method needed for hybrid calculator
   myHybridCalc.SetNumberOfToys(3000); 
-  myHybridCalc.UseNuisancePriorPdf(true); 
   myHybridCalc.SetNuisancePriorPdf(bkg_yield_prior); 
+  myHybridCalc.SetNuisancePriorPdf(bkg_yield_prior.GetName()); 
   // here I use the default test statistics: 2*lnQ (optional)
+  myHybridCalc.UseNuisancePriorPdf(false); 
   myHybridCalc.SetTestStatistics(1);
 
   // use HypoTest interface
@@ -88,11 +89,12 @@ void rs202_hybridcalculator()
 
 #ifdef USE_WS
   hypoCalc.SetWorkspace(wspace);
-  hypoCalc.SetCommonPdf(tot_pdf.GetName() );
-  hypoCalc.SetCommonPdf(bkg_ext_pdf.GetName() );
+  hypoCalc.SetAlternatePdf(tot_pdf.GetName() );
+  hypoCalc.SetNullPdf(bkg_ext_pdf.GetName() );
   hypoCalc.SetData("dataset" );
+  hypoCalc.SetNullParameters(nuisance_parameters);
 #else 
-  hypoCalc.SetCommonPdf(tot_pdf);
+  hypoCalc.SetAlternatePdf(tot_pdf);
   hypoCalc.SetNullPdf(bkg_ext_pdf);
   hypoCalc.SetData(*data); 
   hypoCalc.SetNullParameters(nuisance_parameters);
@@ -143,6 +145,7 @@ void rs202_hybridcalculator()
   /// compute the mean expected significance from toys
   double mean_sb_toys_test_stat = myHybridPlot->GetSBmean();
   myHybridResult->SetDataTestStatistics(mean_sb_toys_test_stat);
+
   double toys_significance = myHybridResult->Significance();
 
   std::cout << "Completed HybridCalculator example:\n"; 

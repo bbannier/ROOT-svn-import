@@ -59,18 +59,18 @@ namespace RooStats {
 
       // set a workspace that owns all the necessary components for the analysis
       virtual void SetWorkspace(RooWorkspace& ws);
-      // set the PDF for the null hypothesis
+      // set the PDF for the null hypothesis (only B)
       virtual void SetNullPdf(const char* name) { fBModelName = name; }
-      // set the PDF for the alternate hypothesis
-      virtual void SetAlternatePdf(const char* ) {} // no op
+      // set the PDF for the alternate hypothesis  (S+B)
+      virtual void SetAlternatePdf(const char* name ) { fSbModelName = name;} 
       // set a common PDF for both the null and alternate hypotheses
       virtual void SetCommonPdf(const char* name) {fSbModelName = name; }
       // Set a common PDF for both the null and alternate
       virtual void SetCommonPdf(RooAbsPdf & pdf) { fSbModel = &pdf; }
-      // Set the PDF for the null
+      // Set the PDF for the null (only B)
       virtual void SetNullPdf(RooAbsPdf& pdf) { fBModel = &pdf; }
-      // Set the PDF for the alternate hypothesis (dummy)
-      virtual void SetAlternatePdf(RooAbsPdf& ) {}
+      // Set the PDF for the alternate hypothesis ( i.e. S+B)
+      virtual void SetAlternatePdf(RooAbsPdf& pdf) { fSbModel = &pdf;  }
 
       // specify the name of the dataset in the workspace to be used
       virtual void SetData(const char* name) { fDataName = name; } 
@@ -80,7 +80,7 @@ namespace RooStats {
       // set parameter values for the null if using a common PDF
       virtual void SetNullParameters(RooArgSet& params) { fParameters = &params; }
       // set parameter values for the alternate if using a common PDF
-      virtual void SetAlternateParameters(RooArgSet&) {}
+      virtual void SetAlternateParameters(RooArgSet&) {}  // not needed
 
       // set number of toy MC 
       void SetNumberOfToys(unsigned int ntoys) { fNToys = ntoys; }
