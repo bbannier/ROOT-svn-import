@@ -67,7 +67,7 @@ void rs201_hybridcalculator()
   myHybridCalc.SetTestStatistics(1);
 
   /// run 1000 toys with gaussian prior on the background yield
-  HybridResult* myHybridResult = myHybridCalc.Calculate(*data,3000,false);
+  HybridResult* myHybridResult = myHybridCalc.Calculate(*data,3000,true);
 
   /// run 1000 toys without gaussian prior on the background yield
   //HybridResult* myHybridResult = myHybridCalc.Calculate(*data,1000,false);
