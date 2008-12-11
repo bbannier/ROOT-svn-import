@@ -1859,6 +1859,7 @@ void TFitEditor::DoDataSet(Int_t selected)
    // Selects the data set to be fitted
    if ( selected == kFP_NOSEL ) {
       DoNoSelection();
+      fDataSet->Connect("Selected(Int_t)", "TFitEditor", this, "DoDataSet(Int_t)");
       return;
    }
 
