@@ -17,7 +17,7 @@ TAdvancedGraphicsDialog::TAdvancedGraphicsDialog(const TGWindow *p, const TGWind
 
    fMainFrame = new TGVerticalFrame(this);
 
-   fTab = new TGTab(this, 10, 10);
+   fTab = new TGTab(fMainFrame, 10, 10);
    fMainFrame->AddFrame(fTab, new TGLayoutHints(kLHintsExpandY | kLHintsExpandX, 5,5,5,0));
    fTab->SetCleanup(kDeepCleanup);
    fTab->Associate(this);
@@ -239,7 +239,7 @@ void TAdvancedGraphicsDialog::DrawContour()
    static TGraph * graph = 0;
    if ( graph )
       delete graph;
-   graph = new TGraph( fContourPoints->GetNumber() ); 
+   graph = new TGraph( static_cast<int>(fContourPoints->GetNumber()) ); 
    Int_t par1 = fContourPar1->GetSelected() - kAGD_PARCOUNTER;
    Int_t par2 = fContourPar2->GetSelected() - kAGD_PARCOUNTER;
    if ( par1 == par2 ) {
@@ -262,7 +262,7 @@ void TAdvancedGraphicsDialog::DrawScan()
    static TGraph * graph = 0;
    if ( graph )
       delete graph;
-   graph = new TGraph( fScanPoints->GetNumber() );
+   graph = new TGraph( static_cast<int>(fScanPoints->GetNumber()) );
    Int_t par = fScanPar->GetSelected() - kAGD_PARCOUNTER;
    fFitter->Scan( par, graph, 
                   fScanMin->GetNumber(),
