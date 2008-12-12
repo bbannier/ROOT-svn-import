@@ -523,14 +523,17 @@ bool TMinuitMinimizer::Contour(unsigned int ipar, unsigned int jpar, unsigned in
    arglist[0] = PrintLevel()-1; 
    fMinuit->mnexcm("SET PRINT",arglist,1,ierr);
 
-   if (npoints == 0) npoints = 41; // use default 
+   if (npoints < 4) { 
+      Error("Contour","Cannot make contour with so few points");
+      return false; 
+   }
    int npfound = 0; 
    npoints -= 1;   // remove always one point in TMinuit
    // parameter numbers in mncont start from zero
    fMinuit->mncont( ipar,jpar,npoints, x, y,npfound); 
    if (npfound<4) {
       // mncont did go wrong
-      Error("Contour","Cannot find more than 4 points, return false");
+      Error("Contour","Cannot find more than 4 points");
       return false;
    }
    if (npfound!=(int)npoints) {
@@ -578,7 +581,7 @@ bool TMinuitMinimizer::Scan(unsigned int ipar, unsigned int & nstep, double * x,
    fMinuit->mnexcm("SET PRINT",arglist,1,ierr);
 
 
-   if (nstep == 0) nstep = 20; 
+   if (nstep == 0) return false; 
    arglist[0] = ipar+1;  // TMinuit starts from 1 
    arglist[1] = nstep+2; // TMinuit deletes two points
    int nargs = 2; 
@@ -598,8 +601,11 @@ bool TMinuitMinimizer::Scan(unsigned int ipar, unsigned int & nstep, double * x,
       Error("TMinuitMinimizer::Scan"," Error in returned graph object");
       return false;      
    }
-   std::copy(gr->GetX(), gr->GetX()+gr->GetN(), x);
-   std::copy(gr->GetY(), gr->GetY()+gr->GetN(), y);
+   nstep = std::min(gr->GetN(), (int) nstep); 
+
+
+   std::copy(gr->GetX(), gr->GetX()+nstep, x);
+   std::copy(gr->GetY(), gr->GetY()+nstep, y);
    nstep = gr->GetN(); 
    return true; 
 }

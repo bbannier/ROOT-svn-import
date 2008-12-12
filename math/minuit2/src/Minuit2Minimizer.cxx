@@ -516,6 +516,7 @@ bool Minuit2Minimizer::Scan(unsigned int ipar, unsigned int & nstep, double * x,
 
    // first value is param value
    std::vector<std::pair<double, double> > result = scan(ipar, nstep-1, xmin, xmax);
+
    if (result.size() != nstep) { 
       MN_ERROR_MSG2("Minuit2Minimizer::Scan"," Invalid result from MnParameterScan");
       return false; 
@@ -571,6 +572,7 @@ bool Minuit2Minimizer::Contour(unsigned int ipar, unsigned int jpar, unsigned in
       x[i] = result[i].first; 
       y[i] = result[i].second; 
    }
+
 
    return true;
    

@@ -213,7 +213,10 @@ public:
    /**
       get fit result
    */
-   const FitResult & Result() const { return fResult; } 
+   const FitResult & Result() const { 
+      assert( fResult.get() );
+      return *fResult; 
+   } 
 
    /**
       access to the fit configuration (const method)
@@ -273,9 +276,9 @@ private:
 
    IModelFunction * fFunc;  // copy of the fitted  function containing on output the fit result (managed by FitResult)
 
-   FitResult fResult;       // object containing the result of the fit
-
    FitConfig fConfig;       // fitter configuration (options and parameter settings)
+
+   std::auto_ptr<ROOT::Fit::FitResult>  fResult;  //! pointer to the object containing the result of the fit
 
    std::auto_ptr<ROOT::Math::Minimizer>  fMinimizer;  //! pointer to used minimizer
 
