@@ -174,9 +174,12 @@ void TAdvancedGraphicsDialog::CreateScanFrame()
    frame = new TGHorizontalFrame(fScanFrame);
    label = new TGLabel(frame, "Min: ");
    frame->AddFrame(label, new TGLayoutHints(kLHintsTop | kLHintsLeft, 5, 5, 5, 0));
-   fScanMin = new TGNumberEntry(frame, -2 * fFitter->GetParError( fScanPar->GetSelected() - kAGD_PARCOUNTER ), 
+
+   double val = fFitter->GetParameter( fScanPar->GetSelected() - kAGD_PARCOUNTER );
+   double err = fFitter->GetParError( fScanPar->GetSelected() - kAGD_PARCOUNTER ); 
+   fScanMin = new TGNumberEntry(frame, val - 2.*err , 
                                 5, kAGD_SCANMIN,
-                                TGNumberFormat::kNESRealTwo,
+                                TGNumberFormat::kNESRealFour,
                                 TGNumberFormat::kNEAAnyNumber,
                                 TGNumberFormat::kNELNoLimits);
    fScanMin->Resize(70, 20);
@@ -184,9 +187,9 @@ void TAdvancedGraphicsDialog::CreateScanFrame()
 
    label = new TGLabel(frame, "Max: ");
    frame->AddFrame(label, new TGLayoutHints(kLHintsTop | kLHintsLeft, 35, 5, 5, 0));
-   fScanMax = new TGNumberEntry(frame, +2 * fFitter->GetParError( fScanPar->GetSelected() - kAGD_PARCOUNTER ),
+   fScanMax = new TGNumberEntry(frame, val + 2.*err,
                                 5, kAGD_SCANMAX,
-                                TGNumberFormat::kNESRealTwo,
+                                TGNumberFormat::kNESRealFour,
                                 TGNumberFormat::kNEAAnyNumber,
                                 TGNumberFormat::kNELNoLimits);
    fScanMax->Resize(70, 20);
@@ -214,8 +217,10 @@ void TAdvancedGraphicsDialog::ConnectSlots()
 //______________________________________________________________________________
 void TAdvancedGraphicsDialog::DoChangedScanPar(Int_t selected)
 {
-   fScanMin->SetNumber( -2 * fFitter->GetParError( selected - kAGD_PARCOUNTER ) );
-   fScanMax->SetNumber( +2 * fFitter->GetParError( selected - kAGD_PARCOUNTER ) );
+   double val = fFitter->GetParameter( selected - kAGD_PARCOUNTER );
+   double err = fFitter->GetParError(  selected - kAGD_PARCOUNTER ); 
+   fScanMin->SetNumber( val -2 * err );
+   fScanMax->SetNumber( val +2 * err );
 }
 
 //______________________________________________________________________________
@@ -265,7 +270,7 @@ void TAdvancedGraphicsDialog::DrawScan()
    graph->SetLineColor(kBlue);
    graph->SetLineWidth(2);
    graph->GetXaxis()->SetTitle(fFitter->GetParName(par) );
-   graph->GetYaxis()->SetTitle("Chi2" );
+   graph->GetYaxis()->SetTitle("FCN" );
    graph->Draw("APL");
    gPad->Update();
 }

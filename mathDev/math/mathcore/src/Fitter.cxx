@@ -41,6 +41,7 @@ Fitter::Fitter() :
    fFunc(0)
 {
    // Default constructor implementation.
+   fResult = std::auto_ptr<ROOT::Fit::FitResult>(new ROOT::Fit::FitResult() );
 }
 
 Fitter::~Fitter() 
@@ -60,18 +61,19 @@ Fitter::Fitter(const Fitter & rhs)
 Fitter & Fitter::operator = (const Fitter &rhs) 
 {
    // Implementation of assignment operator.
+   // dummy implementation, since it is private
    if (this == &rhs) return *this;  // time saving self-test
-   fUseGradient = rhs.fUseGradient; 
-   fBinFit = rhs.fBinFit; 
-   fResult = rhs.fResult;
-   fConfig = rhs.fConfig; 
-   // function is copied and managed by FitResult (maybe should use an auto_ptr)
-   fFunc = fResult.ModelFunction(); 
-   if (rhs.fFunc != 0 && fResult.ModelFunction() == 0) { // case no fit has been done yet - then clone 
-      if (fFunc) delete fFunc; 
-      fFunc = dynamic_cast<IModelFunction *>( (rhs.fFunc)->Clone() ); 
-      assert(fFunc != 0); 
-   }
+//    fUseGradient = rhs.fUseGradient; 
+//    fBinFit = rhs.fBinFit; 
+//    fResult = rhs.fResult;
+//    fConfig = rhs.fConfig; 
+//    // function is copied and managed by FitResult (maybe should use an auto_ptr)
+//    fFunc = fResult.ModelFunction(); 
+//    if (rhs.fFunc != 0 && fResult.ModelFunction() == 0) { // case no fit has been done yet - then clone 
+//       if (fFunc) delete fFunc; 
+//       fFunc = dynamic_cast<IModelFunction *>( (rhs.fFunc)->Clone() ); 
+//       assert(fFunc != 0); 
+//    }
    return *this; 
 }
 
@@ -143,7 +145,7 @@ bool Fitter::FitFCN(const BaseFunc & fcn, const double * params, unsigned int da
    fMinimizer = std::auto_ptr<ROOT::Math::Minimizer> ( fConfig.CreateMinimizer() );
    if (fMinimizer.get() == 0) return false; 
 
-   if (fFunc && fResult.FittedFunction() == 0) delete fFunc; 
+   if (fFunc && fResult->FittedFunction() == 0) delete fFunc; 
    fFunc = 0;
 
    return DoMinimization<BaseFunc> (fcn, dataSize); 
@@ -166,7 +168,7 @@ bool Fitter::FitFCN(const BaseGradFunc & fcn, const double * params, unsigned in
    fMinimizer = std::auto_ptr<ROOT::Math::Minimizer> ( fConfig.CreateMinimizer() );
    if (fMinimizer.get() == 0) return false; 
 
-   if (fFunc && fResult.FittedFunction() == 0) delete fFunc; 
+   if (fFunc && fResult->FittedFunction() == 0) delete fFunc; 
    fFunc = 0;
 
    // create fit configuration if null 
@@ -365,9 +367,9 @@ bool Fitter::DoMinimization(const ObjFunc & objFunc, unsigned int dataSize, cons
    unsigned int ncalls =  ObjFuncTrait<ObjFunc>::NCalls(objFunc);
    int fitType =  ObjFuncTrait<ObjFunc>::Type(objFunc);
 
-   fResult = FitResult(*fMinimizer,fConfig, fFunc, ret, dataSize, fBinFit, chi2func, fConfig.MinosErrors(), ncalls );
+   fResult = std::auto_ptr<FitResult> ( new FitResult(*fMinimizer,fConfig, fFunc, ret, dataSize, fBinFit, chi2func, fConfig.MinosErrors(), ncalls ) );
 
-   if (fConfig.NormalizeErrors() && fitType == ROOT::Math::FitMethodFunction::kLeastSquare ) fResult.NormalizeErrors(); 
+   if (fConfig.NormalizeErrors() && fitType == ROOT::Math::FitMethodFunction::kLeastSquare ) fResult->NormalizeErrors(); 
    return ret; 
 }
 
