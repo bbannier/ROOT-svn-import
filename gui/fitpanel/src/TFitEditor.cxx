@@ -1596,8 +1596,7 @@ void TFitEditor::DoAdvancedOptions()
 {
    // Slot connected to advanced option button (opens a dialog).
 
-   TAdvancedGraphicsDialog* agd = new TAdvancedGraphicsDialog( fClient->GetRoot(), GetMainFrame());
-   delete agd;
+   new TAdvancedGraphicsDialog( fClient->GetRoot(), GetMainFrame());
 }
 
 //______________________________________________________________________________

@@ -48,6 +48,8 @@ Fitter::~Fitter()
 {
    // Destructor implementation.
    // delete function ifnot empty
+   fObjFunction = std::auto_ptr<ROOT::Math::IMultiGenFunction>(); 
+   fMinimizer = std::auto_ptr<ROOT::Math::Minimizer>(); 
    if (fFunc) delete fFunc; 
 }
 
