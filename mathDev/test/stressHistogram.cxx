@@ -51,7 +51,7 @@ enum RefFileEnum {
 
 const int refFileOption = 1;
 TFile * refFile = 0;
-const char* refFileName = "stressHistogram.5.18.00.root";
+const char* refFileName = "http://root.cern.ch/files/stressHistogram.5.18.00.root";
 
 TRandom2 r;
 
@@ -3364,19 +3364,23 @@ int stressHistogram()
    
 
    if ( refFileOption == refFileWrite ) {
-      refFile = new TFile(refFileName, "RECREATE");
+      refFile = TFile::Open(refFileName, "RECREATE");
    }
    else {
-      refFile = new TFile(refFileName);
+      refFile = TFile::Open(refFileName);
    }
 
-   r.SetSeed(8652);
-   status = 0;
-   for ( unsigned int j = 0; j < refReadTestSuite.nTests; ++j ) {
-      status |= refReadTestSuite.tests[j]();
+   if ( refFile != 0 ) {
+      r.SetSeed(8652);
+      status = 0;
+      for ( unsigned int j = 0; j < refReadTestSuite.nTests; ++j ) {
+         status |= refReadTestSuite.tests[j]();
+      }
+      printResult( refReadTestSuite.suiteName, status);
+      GlobalStatus += status;
+   } else {
+      Warning("stressHistogram", "No reference file found");
    }
-   printResult( refReadTestSuite.suiteName, status);
-   GlobalStatus += status;
 
    bm.Stop("stressHistogram");
    std::cout <<"****************************************************************************\n";
