@@ -68,7 +68,11 @@ public:
 
    // Returns list of workers to be used by session 'xps'
    virtual int GetWorkers(XrdProofdProofServ *xps,
-                          std::list<XrdProofWorker *> */*wrks*/);
+                          std::list<XrdProofWorker *> */*wrks*/,
+                          const char *);
+
+   // To be called after some nodes become free
+   virtual int Reschedule();
 
    // Max number of essions we are allowed to start
    virtual int MaxSessions() const { return fMaxSessions; }
@@ -84,6 +88,8 @@ public:
 
    virtual int ProcessDirective(XrdProofdDirective *d,
                                 char *val, XrdOucStream *cfg, bool rcf);
+   virtual int Enqueue(XrdProofdProofServ *xps, XrdProofQuery *query);
+   virtual XrdProofdProofServ *FirstSession();
 
 protected:
    char              fName[kXPSMXNMLEN];   // Name of this protocol
@@ -99,6 +105,7 @@ protected:
    int               fMinForQuery; // Minimal number of workers for a query
    double            fNodesFraction; // the fraction of free units to assign
                                      // to a query.
+   std::list<XrdProofdProofServ *> fQueue; // the queue with sessions (jobs);
 
    XrdOucHash<XrdProofdDirective> fConfigDirectives; // Config directives
 

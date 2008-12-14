@@ -134,7 +134,7 @@ void *XrdProofdProofServCron(void *p)
             XrdSysMutexHelper mhp(mgr->Mutex());
             // Remove it from the hash list
             mgr->DeleteFromSessions(fpid.c_str());
-            // Move the netry to the terminated sessions area
+            // Move the entry to the terminated sessions area
             mgr->MvSession(fpid.c_str());
             // Notify action
             TRACE(REQ, "kSessionRemoval: session: "<<fpid<<
@@ -156,7 +156,7 @@ void *XrdProofdProofServCron(void *p)
             // Quick check of active sessions in case of disconnections
             mgr->CheckActiveSessions(0);
         } else if (msg.Type() == XrdProofdProofServMgr::kCleanSessions) {
-            // Request for cleanup all sessions of a client (or all clients) 
+            // Request for cleanup all sessions of a client (or all clients)
             XpdSrvMgrCreateCnt cnt(mgr, XrdProofdProofServMgr::kCleanSessionsCnt);
             XrdOucString usr;
             rc = msg.Get(usr);
@@ -203,7 +203,7 @@ void *XrdProofdProofServCron(void *p)
             if (clnlostscale <= 0) {
                mgr->CleanupLostProofServ();
                clnlostscale = 10;
-            } else{
+            } else {
                clnlostscale--;
             }
             // Remember when ...
@@ -449,7 +449,7 @@ bool XrdProofdProofServMgr::IsSessionSocket(const char *fpid)
 //______________________________________________________________________________
 int XrdProofdProofServMgr::MvSession(const char *fpid)
 {
-   // Move session file from the active to the terminated areas 
+   // Move session file from the active to the terminated areas
    XPDLOC(SMGR, "ProofServMgr::MvSession")
 
    TRACE(REQ, "moving "<<fpid<<" ...");
@@ -938,7 +938,7 @@ int XrdProofdProofServMgr::CheckTerminatedSessions()
       struct stat st;
       int rcst = stat(path.c_str(), &st);
       TRACE(DBG, pid<<": rcst: "<<rcst<<", now - mtime: "<<now - st.st_mtime<<" secs")
-      if ((now - st.st_mtime) > fTerminationTimeOut || rcst != 0) { 
+      if ((now - st.st_mtime) > fTerminationTimeOut || rcst != 0) {
          // Check if the process is still alive
          if (XrdProofdAux::VerifyProcessByID(pid) != 0) {
             // Send again an hard-kill signal
@@ -2194,7 +2194,7 @@ int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p, void *input)
       TRACE(XERR, "unable to get instance of proofserv proxy");
       return -1;
    }
-   int psid = xps->ID();   
+   int psid = xps->ID();
    TRACE(REQ,  "psid: "<<psid<<", log: "<<in->fLogLevel);
 
    // Work directory
@@ -2230,7 +2230,7 @@ int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p, void *input)
    envfile += ".env";
    FILE *fenv = fopen(envfile.c_str(), "w");
    if (!fenv) {
-      TRACE(XERR, 
+      TRACE(XERR,
                   "unable to open env file: "<<envfile);
       return -1;
    }
@@ -2432,7 +2432,7 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdManager *mgr, XrdROOT *r)
       } else {
          ldpath = new char[32 + strlen(rootsys)];
          sprintf(ldpath, "%s=%s/lib", XPD_LIBPATH, rootsys);
-      } 
+      }
       putenv(ldpath);
 #endif
       // Set ROOTSYS
@@ -2535,7 +2535,7 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
       TRACE(XERR, "unable to get instance of proofserv proxy");
       return -1;
    }
-   int psid = xps->ID();   
+   int psid = xps->ID();
    TRACE(REQ,  "psid: "<<psid<<", log: "<<in->fLogLevel);
 
    // Client sandbox
