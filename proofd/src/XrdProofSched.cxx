@@ -138,8 +138,8 @@ void XrdProofSched::ResetParameters()
    fMaxSessions = -1;
    fWorkerMax = -1;
    fWorkerSel = kSSORoundRobin;
-   fOptWrksPerUnit = 2;
-   fMinForQuery = 2;
+   fOptWrksPerUnit = 1;
+   fMinForQuery = 0;
    fNodesFraction = 0.5;
 }
 
@@ -197,6 +197,37 @@ int XrdProofSched::Config(const char *cfn)
 }
 
 //______________________________________________________________________________
+int XrdProofSched::Enqueue(XrdProofdProofServ *xps, XrdProofQuery *query)
+{
+   //
+   if (xps->GetQueries()->size() == 0)
+      fQueue.push_back(xps);
+   xps->GetQueries()->push_back(query);
+   return 0;
+}
+
+//______________________________________________________________________________
+XrdProofdProofServ *XrdProofSched::FirstSession()
+{
+   // the dataset information can be used to assign workers.
+
+   if (fQueue.empty())
+      return 0;
+   XrdProofdProofServ *xps = fQueue.front();
+   // the session will be removed after workers are assigned
+/*
+   xps->SetCurrentQuery(xps->GetQueries()->front());
+   // remove the query to be processed from the queue
+   xps->GetQueries()->pop_front();
+   // Put the session at the end of the queue
+   // > 1 because the query is kept in the queue until ClearWorkers
+   if (!(xps->GetQueries()->size() > 0))
+      fQueue.push_back(xps);
+*/
+   return xps;
+}
+
+//______________________________________________________________________________
 int XrdProofSched::GetNumWorkers(XrdProofdProofServ *xps)
 {
    // Calculate the number of workers to be used given the state of the cluster
@@ -246,7 +277,8 @@ int XrdProofSched::GetNumWorkers(XrdProofdProofServ *xps)
 
 //______________________________________________________________________________
 int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
-                              std::list<XrdProofWorker *> *wrks)
+                              std::list<XrdProofWorker *> *wrks,
+                              const char* querytag)
 {
    // Get a list of workers that can be used by session 'xps'.
    XPDLOC(SCHED, "Sched::GetWorkers")
@@ -256,6 +288,14 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
    // The caller must provide a list where to store the result
    if (!wrks)
       return -1;
+
+   // if the session has already assigned workers or there are
+   // other queries waiting - just enqueue
+   if(xps->Workers()->Num() > 0) {
+      XrdProofQuery *query = new XrdProofQuery(querytag);
+      Enqueue(xps, query);
+      return 0;
+   }
 
    // The current, full list
    std::list<XrdProofWorker *> *acws = 0;
@@ -269,9 +309,6 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
    if (!mst)
       return -1;
 
-   // The master first (stats are updated in XrdProofdProtocol::GetWorkers)
-   wrks->push_back(mst);
-
    if (fWorkerSel == kSSOLoadBased) {
       // Dynamic scheduling: the scheduler will determine the #workers
       // to be used based on the current load and assign the least loaded ones
@@ -282,11 +319,9 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
       // Get the advised number
       int nw = GetNumWorkers(xps);
 
-      // Make sure that something has been found
-      if (nw <= 0) {
-         TRACE(XERR, "no worker available: do nothing");
-         return -1;
-      }
+      if (nw > 0)
+         // The master first (stats are updated in XrdProofdProtocol::GetWorkers)
+         wrks->push_back(mst);
 
       std::list<XrdProofWorker *>::iterator nxWrk = acws->begin();
       while (nw--) {
@@ -295,6 +330,15 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
          // (stats are updated in XrdProofdProtocol::GetWorkers)
          wrks->push_back(*nxWrk);
       }
+
+      if (wrks->empty()) {
+         // enqueue the querry/session
+         // the returned list of workers was not filled
+         //fQueue.push_back(xps);
+         XrdProofQuery *query = new XrdProofQuery(querytag);
+         Enqueue(xps, query);
+      }
+
       // Done
       return 0;
    }
@@ -456,6 +500,46 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
    return rc;
 }
 
+//______________________________________________________________________________
+int XrdProofSched::Reschedule()
+{
+   // consider starting some query from the queue.
+   // to be called after some resources are free (e.g. by a finished query)
+   // This method is doing the full transaction of finding the session to
+   // resume, assigning it workers and sending a resume message.
+   // In this way there is not possibility of interference with other GetWorkers
+   // return 0 in case of success and -1 in case of an error
+
+   if (!fQueue.empty()) {
+      // any advanced scheduling algorithms can be done here
+
+      XrdProofdProofServ *xps = FirstSession();
+      XrdOucString wrks;
+      // call GetWorkers in the manager to mark the assignment.
+      if (fMgr->GetWorkers(wrks, xps, xps->FirstQueryTag()) !=0 ) {
+         // Something wrong
+         return -1;
+      } else {
+         // Send buffer
+         // if workers were assigned remove the session from the queue
+         if (wrks.length() > 0) {
+            // send the resume message
+            // the workers will be send in response to a getworkers message
+            xps->Resume();
+            // acually remove the session from the queue
+            fQueue.pop_front();
+            // Put the session at the end of the queue
+            // > 1 because the query is kept in the queue until 2nd GetWorkers
+            if (xps->GetQueries()->size() > 1)
+               fQueue.push_back(xps);
+         } // else add workers to the running sessions (once it's possible)
+
+      }
+
+   } //else add workers to the running sessions (once it's possible)
+
+   return 0;
+}
 
 //______________________________________________________________________________
 int XrdProofSched::ExportInfo(XrdOucString &sbuf)

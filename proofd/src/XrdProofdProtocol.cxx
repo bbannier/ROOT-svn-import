@@ -42,6 +42,7 @@
 #include "XrdProofdProtocol.h"
 #include "XrdProofdResponse.h"
 #include "XrdProofdProofServ.h"
+#include "XrdProofSched.h"
 
 // Tracing utils
 #include "XrdProofdTrace.h"
@@ -783,7 +784,7 @@ int XrdProofdProtocol::SendMsg()
 
       if (opt & kXPD_process) {
          TRACEP(this, DBG, "EXT: setting proofserv in 'running' state");
-         xps->SetStatus(kXPD_running);
+//         xps->SetStatus(kXPD_running);
          PostSession(1, fPClient->UI().fUser.c_str(),
                         fPClient->UI().fGroup.c_str(), xps->SrvPID());
       }
@@ -815,9 +816,16 @@ int XrdProofdProtocol::SendMsg()
       // Additional info about the message
       if (opt & kXPD_setidle) {
          TRACEP(this, DBG, "INT: setting proofserv in 'idle' state");
+         bool wasRunning = (xps->Status() == kXPD_running);
          xps->SetStatus(kXPD_idle);
          PostSession(-1, fPClient->UI().fUser.c_str(),
                          fPClient->UI().fGroup.c_str(), xps->SrvPID());
+         // tell the scheduler that workers are freed
+         if (xps->SrvType() == kXPD_TopMaster && wasRunning) {
+            fgMgr->ProofSched()->Reschedule();
+         } else if (xps->SrvType() != kXPD_Worker) {
+            TRACEP(this, XERR, "INT: wrong type of server!");
+         }
 
       } else if (opt & kXPD_querynum) {
          TRACEP(this, DBG, "INT: got message with query number");

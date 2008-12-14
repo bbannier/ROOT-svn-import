@@ -62,6 +62,7 @@ XrdProofdProofServ::XrdProofdProofServ()
    fUserEnvs = "";
    fUNIXSock = 0;
    fUNIXSockPath = "";
+   fCurrentQuery = 0;
 }
 
 //__________________________________________________________________________
@@ -134,6 +135,10 @@ void XrdProofdProofServ::ClearWorkers()
    // In normal operation the workers are cleared already before.
 
    XrdSysMutexHelper mhp(fMutex);
+
+   if (fCurrentQuery)
+      delete fCurrentQuery;
+   fCurrentQuery = 0;
 
    // Decrease workers' counters and remove this from workers
    fWorkers.Apply(DecreaseWorkerCounters, this);
@@ -228,6 +233,7 @@ void XrdProofdProofServ::Reset()
    fTag = "";
    fUserEnvs = "";
    DeleteUNIXSock();
+   fWrksStr = "";
 }
 
 //__________________________________________________________________________
@@ -743,4 +749,21 @@ int XrdProofdProofServ::SetAdminPath(const char *a)
    }
    // Done
    return 0;
+}
+
+//______________________________________________________________________________
+int XrdProofdProofServ::Resume()
+{
+
+   return (fResponse->Send(kXR_ok, kXPD_resume)); //, (void *)wrks.c_str(), wrks.length()+1)); //?? +1
+}
+
+//______________________________________________________________________________
+const char *XrdProofdProofServ::FirstQueryTag()
+{
+
+   if (!fQueries.empty())
+      return fQueries.front()->GetTag();
+   else
+      return 0;
 }
