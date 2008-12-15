@@ -98,6 +98,7 @@ void TAdvancedGraphicsDialog::CreateContourFrame()
                                 TGNumberFormat::kNEAPositive,
                                 TGNumberFormat::kNELNoLimits);
    fContourPoints->Resize(130, 20);
+   fContourPoints->GetNumberEntry()->SetToolTipText("Sets the number of points used for the contour");
    frame->AddFrame(fContourPoints, new TGLayoutHints(kLHintsNormal, 8, 0, 5, 0));
    fContourFrame->AddFrame(frame, new TGLayoutHints(kLHintsExpandX, 5, 5, 0, 0));
 
@@ -140,6 +141,7 @@ void TAdvancedGraphicsDialog::CreateContourFrame()
                                      TGNumberFormat::kNEANonNegative,
                                      TGNumberFormat::kNELNoLimits);
    fContourError->Resize(130, 20);
+   fContourError->GetNumberEntry()->SetToolTipText("Sets the contour confidence level");
    frame->AddFrame(fContourError, new TGLayoutHints(kLHintsNormal, 5, 0, 5, 0));
 
    fContourFrame->AddFrame(frame, new TGLayoutHints(kLHintsExpandX, 5, 5, 0, 5));
@@ -163,6 +165,7 @@ void TAdvancedGraphicsDialog::CreateScanFrame()
                                 TGNumberFormat::kNEAPositive,
                                 TGNumberFormat::kNELNoLimits);
    fScanPoints->Resize(140, 20);
+   fScanPoints->GetNumberEntry()->SetToolTipText("Sets the number of points used in the scan");
    frame->AddFrame(fScanPoints, new TGLayoutHints(kLHintsNormal, 0, 0, 5, 0));
    fScanFrame->AddFrame(frame, new TGLayoutHints(kLHintsExpandX, 5, 5, 0, 0));
 
@@ -192,6 +195,7 @@ void TAdvancedGraphicsDialog::CreateScanFrame()
                                 TGNumberFormat::kNEAAnyNumber,
                                 TGNumberFormat::kNELNoLimits);
    fScanMin->Resize(70, 20);
+   fScanMin->GetNumberEntry()->SetToolTipText("Sets the minimum parameter value");
    frame->AddFrame(fScanMin, new TGLayoutHints(kLHintsNormal, 2, 0, 5, 0));
 
    label = new TGLabel(frame, "Max: ");
@@ -202,6 +206,7 @@ void TAdvancedGraphicsDialog::CreateScanFrame()
                                 TGNumberFormat::kNEAAnyNumber,
                                 TGNumberFormat::kNELNoLimits);
    fScanMax->Resize(70, 20);
+   fScanMax->GetNumberEntry()->SetToolTipText("Sets the maximum parameter value");
    frame->AddFrame(fScanMax, new TGLayoutHints(kLHintsNormal, 2, 0, 5, 0));
    fScanFrame->AddFrame(frame, new TGLayoutHints(kLHintsExpandX, 5, 5, 0, 0));
    
