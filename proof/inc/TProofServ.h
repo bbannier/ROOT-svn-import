@@ -65,7 +65,6 @@ class TProofDataSetManager;
 typedef Int_t (*OldProofServAuthSetup_t)(TSocket *, Bool_t, Int_t,
                                          TString &, TString &, TString &);
 
-Int_t parseWorkers(TString fl, TList *workers);
 
 class TProofServ : public TApplication {
 

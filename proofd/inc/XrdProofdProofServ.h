@@ -146,7 +146,6 @@ public:
    inline XrdSrvBuffer *QueryNum() const { XrdSysMutexHelper mhp(fMutex); return fQueryNum; }
    const char         *FirstQueryTag();
    XrdProofQuery      *CurrentQuery() { return fQueries.empty()?0:fQueries.front(); }
-//   void                SetCurrentQuery(XrdProofQuery *query) { fCurrentQuery = query; }
    void                SetWrksStr(XrdOucString &lw) { fWrksStr = lw; }
    XrdOucString        GetWrksStr() { return fWrksStr; }
    void                RemoveWorker(const char *o);
@@ -253,8 +252,7 @@ public:
                              { XrdSysMutexHelper mhp(fMutex); fPingSem = new XrdSysSemWait(0);}
    void                      DeletePingSem()
                              { XrdSysMutexHelper mhp(fMutex); if (fPingSem) delete fPingSem; fPingSem = 0;}
+   XrdOucString              fWrksStr;   // the string is used when a session is being resumed.
    std::list<XrdProofQuery *> fQueries;  // the enqueued queries of this session
-   XrdProofQuery             *fCurrentQuery;
-   XrdOucString               fWrksStr;  // the string is used when a session is being resumed.
 };
 #endif

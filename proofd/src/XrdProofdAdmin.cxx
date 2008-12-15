@@ -863,3 +863,4 @@ int XrdProofdAdmin::ReleaseWorker(XrdProofdProtocol *p)
    // Over
    return 0;
 }
+
