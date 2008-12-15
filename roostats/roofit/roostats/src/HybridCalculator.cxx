@@ -85,7 +85,7 @@ HybridCalculator::HybridCalculator(const char *name = 0,
    // set default parameters
    SetTestStatistics(1); 
    SetNumberOfToys(1000); 
-   UseNuisancePriorPdf(false); 
+   UseNuisancePdf(false); 
 }
 
 
@@ -102,7 +102,7 @@ HybridCalculator::HybridCalculator( const char *name,
    fParameters(&nuisance_parameters),
    fPriorPdf(&priorPdf)   
 {
-   /// HybridCalculator constructor:
+   /// specific HybridCalculator constructor:
    /// the user need to specify the models in the S+B case and B-only case,
    /// the list of observables of the model(s) (for MC-generation), the list of parameters 
    /// that are marginalised and the prior distribution of those parameters
@@ -112,11 +112,57 @@ HybridCalculator::HybridCalculator( const char *name,
 
    SetTestStatistics(1); /// set to default
    SetNumberOfToys(1000); 
-   UseNuisancePriorPdf(true); 
+   UseNuisancePdf(true); 
 
    // this->Print();
    /* if ( _verbose ) */ //this->PrintMore("v"); /// TO DO: add the verbose mode
 }
+
+HybridCalculator::HybridCalculator( const char *name,
+                                    const char *title,
+                                    RooAbsData & data, 
+                                    RooAbsPdf& sbModel,
+                                    RooAbsPdf& bModel,
+                                    RooArgSet* nuisance_parameters,
+                                    RooAbsPdf* priorPdf ) :
+   TNamed(name,title)
+{
+   /// HybridCalculator constructor for performing hypotesis test 
+   /// the user need to specify the data set, the models in the S+B case and B-only case. 
+   /// In case of treatment of nuisance parameter, the user need to specify the  
+   /// the list of parameters  that are marginalised and the prior distribution of those parameters
+
+   Initialize(data, bModel, sbModel, 0, 0, nuisance_parameters, priorPdf); 
+
+   SetTestStatistics(1); /// set to default
+   SetNumberOfToys(1000); 
+   if (priorPdf) UseNuisancePdf(true); 
+
+}
+
+HybridCalculator::HybridCalculator( const char *name,
+                                    const char *title,
+                                    RooWorkspace & wks, 
+                                    const char * data, 
+                                    const char * sbModel,
+                                    const char * bModel,
+                                    RooArgSet* nuisance_parameters,
+                                    const char* priorPdf ) :
+   TNamed(name,title)
+{
+   /// HybridCalculator constructor for performing hypotesis test from a Workspace 
+   /// the user need to specify the data set, the models in the S+B case and B-only case. 
+   /// In case of treatment of nuisance parameter, the user need to specify the  
+   /// the list of parameters  that are marginalised and the prior distribution of those parameters
+
+   Initialize(wks, data, bModel, sbModel, 0, 0, nuisance_parameters, priorPdf);
+
+   SetTestStatistics(1); /// set to default
+   SetNumberOfToys(1000); 
+   if (priorPdf) UseNuisancePdf(true); 
+
+}
+
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -405,7 +451,7 @@ bool HybridCalculator::DoInitializeFromWS() {
       fPriorPdf = fWS->pdf(fPriorPdfName); 
       if (!fPriorPdf) { 
          std::cerr << "Warning in HybridCalculator::DoInitializeFromWS - Prior pdf " << fPriorPdfName << " is NOT found in workspace" << std::endl;
-         UseNuisancePriorPdf(false);
+         UseNuisancePdf(false);
       }
    }
    return true; 

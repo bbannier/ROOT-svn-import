@@ -51,11 +51,32 @@ namespace RooStats {
                        RooArgSet& nuisance_parameters,
                        RooAbsPdf& prior_pdf);
 
+      /// Constructor for HybridCalculator using a data set and pdf instances
+      HybridCalculator(const char *name,
+                       const char *title,
+                       RooAbsData& data, 
+                       RooAbsPdf& sb_model,
+                       RooAbsPdf& b_model,
+                       RooArgSet* nuisance_parameters,
+                       RooAbsPdf* prior_pdf);
+
+      /// Constructor for HybridCalculator using a workspace and pdf names
+      HybridCalculator(const char *name,
+                       const char *title,
+                       RooWorkspace & wks, 
+                       const char* data, 
+                       const char* sb_model,
+                       const char* b_model,
+                       RooArgSet* nuisance_parameters,
+                       const char* prior_pdf);
+
       /// Destructor of HybridCalculator
       virtual ~HybridCalculator();
 
       /// inherited methods from HypoTestCalculanterface
       virtual HybridResult* GetHypoTest() const;
+
+      // inherited setter methods from HypoTestCalculator
 
       // set a workspace that owns all the necessary components for the analysis
       virtual void SetWorkspace(RooWorkspace& ws);
@@ -82,17 +103,26 @@ namespace RooStats {
       // set parameter values for the alternate if using a common PDF
       virtual void SetAlternateParameters(RooArgSet&) {}  // not needed
 
+      // additional methods specific for HybridCalculator
+      // set a  prior pdf for the nuisance parameters 
+      void SetNuisancePdf(RooAbsPdf & prior_pdf) {          
+         fPriorPdf = &prior_pdf; 
+         fUsePriorPdf = true; // if set by default turn it on
+      } 
+      // set name of a  prior pdf for the nuisance parameters in the previously given workspace
+      void SetNuisancePdf(const char * name) { 
+         fPriorPdfName = name; 
+         fUsePriorPdf = true; // if set by default turn it on
+      } 
+
       // set number of toy MC 
       void SetNumberOfToys(unsigned int ntoys) { fNToys = ntoys; }
 
-      // set a  prior pdf for the nuisance parameters 
-      void SetNuisancePriorPdf(RooAbsPdf & prior_pdf) { fPriorPdf = &prior_pdf; } 
-      // set name of a  prior pdf for the nuisance parameters in the previously given workspace
-      void SetNuisancePriorPdf(const char * name) { fPriorPdfName = name; } 
-      // control use of the prior pdf for the nuisance parameter
-      void UseNuisancePriorPdf(bool on = true) { fUsePriorPdf = on; }
+      // control use of the pdf for the nuisance parameter
+      void UseNuisancePdf(bool on = true) { fUsePriorPdf = on; }
       
       void SetTestStatistics(int index);
+
       HybridResult* Calculate(TH1& data, unsigned int nToys, bool usePriors) const;
       HybridResult* Calculate(RooTreeData& data, unsigned int nToys, bool usePriors) const;
       HybridResult* Calculate(unsigned int nToys, bool usePriors) const;
