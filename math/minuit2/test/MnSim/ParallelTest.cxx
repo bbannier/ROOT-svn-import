@@ -14,19 +14,23 @@
 #include "Minuit2/MnPrint.h"
 #include "Minuit2/MnMigrad.h"
 #include "Minuit2/MnMinos.h"
-#include "Minuit2/MnContours.h"
 #include "Minuit2/MnPlot.h"
 #include "Minuit2/MinosError.h"
 #include "Minuit2/FCNBase.h"
 #include <cmath>
 #include <iostream>
 
-// example of a multi dimensional fit (100) variables where parallelization can be used
+// example of a multi dimensional fit where parallelization can be used
 // to speed up the result
+// define the environment variable OMP_NUM_THREADS to the number of desired threads
+// By default it will have thenumber of core of the machine
+// The default number of dimension is 20 (fit in 40 parameters) on 1000 data events. 
+// One can change the dimension and the number of events by doing: 
+// ./test_Minuit2_Parallel    ndim  nevents   
 
 using namespace ROOT::Minuit2;
 
-const int default_ndim = 10; 
+const int default_ndim = 20; 
 const int default_ndata = 1000; 
   
 
