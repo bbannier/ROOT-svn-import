@@ -62,7 +62,6 @@ XrdProofdProofServ::XrdProofdProofServ()
    fUserEnvs = "";
    fUNIXSock = 0;
    fUNIXSockPath = "";
-   fCurrentQuery = 0;
 }
 
 //__________________________________________________________________________
@@ -136,13 +135,10 @@ void XrdProofdProofServ::ClearWorkers()
 
    XrdSysMutexHelper mhp(fMutex);
 
-   if (fCurrentQuery)
-      delete fCurrentQuery;
-   fCurrentQuery = 0;
-
    // Decrease workers' counters and remove this from workers
    fWorkers.Apply(DecreaseWorkerCounters, this);
    fWorkers.Purge();
+   fWrksStr = "";
 }
 
 //__________________________________________________________________________
@@ -771,8 +767,6 @@ int XrdProofdProofServ::Resume()
          rc = -1;
       }
    }
-   // Cleanup
-   delete[] buf;
 
    // Notify errors, if any
    if (rc != 0)

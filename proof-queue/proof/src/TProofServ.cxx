@@ -1620,7 +1620,6 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
             // get the list of workers and start them
             TList* workerList = new TList();
             Int_t pc = 0;
-//            TString seqnum(((TProofQueryResult *)(fWaitingQueries->First()))->GetSeqNum());
             EQueryAction retVal = GetWorkers(workerList, pc, kTRUE);
             if (retVal == TProofServ::kQueryStop) {
                Error("HandleSocketInput", "error getting list of worker nodes");
