@@ -35,12 +35,10 @@ namespace RooStats {
 
    public:
 
-      /// Default constructor  
-      HybridCalculator(); 
 
       /// Constructor with only name and title 
-      HybridCalculator(const char *name,
-                       const char *title); 
+      HybridCalculator(const char *name = 0,
+                       const char *title = 0); 
       
       /// Constructor for HybridCalculator
       HybridCalculator(const char *name,
@@ -51,7 +49,14 @@ namespace RooStats {
                        RooArgSet& nuisance_parameters,
                        RooAbsPdf& prior_pdf);
 
-      /// Constructor for HybridCalculator using a data set and pdf instances
+      /// Constructor for HybridCalculator using  a data set and pdf instances
+      HybridCalculator(RooAbsData& data, 
+                       RooAbsPdf& sb_model,
+                       RooAbsPdf& b_model,
+                       RooArgSet* nuisance_parameters,
+                       RooAbsPdf* prior_pdf);
+
+      /// Constructor for HybridCalculator using name, title, a data set and pdf instances
       HybridCalculator(const char *name,
                        const char *title,
                        RooAbsData& data, 
@@ -60,7 +65,16 @@ namespace RooStats {
                        RooArgSet* nuisance_parameters,
                        RooAbsPdf* prior_pdf);
 
-      /// Constructor for HybridCalculator using a workspace and pdf names
+
+      /// Constructor for HybridCalculator using name, title, a workspace and pdf names
+      HybridCalculator(RooWorkspace & wks, 
+                       const char* data, 
+                       const char* sb_model,
+                       const char* b_model,
+                       RooArgSet* nuisance_parameters,
+                       const char* prior_pdf);
+
+      /// Constructor for HybridCalculator using name, title, a workspace and pdf names
       HybridCalculator(const char *name,
                        const char *title,
                        RooWorkspace & wks, 
@@ -99,7 +113,7 @@ namespace RooStats {
       virtual void SetData(RooAbsData& data) { fData = &data; }
 
       // set parameter values for the null if using a common PDF
-      virtual void SetNullParameters(RooArgSet& params) { fParameters = &params; }
+      virtual void SetNullParameters(RooArgSet& ) { } // not needed
       // set parameter values for the alternate if using a common PDF
       virtual void SetAlternateParameters(RooArgSet&) {}  // not needed
 
@@ -114,12 +128,15 @@ namespace RooStats {
          fPriorPdfName = name; 
          fUsePriorPdf = true; // if set by default turn it on
       } 
+      
+      // set the nuisance parameters to be marginalized
+      void SetNuisanceParameters(RooArgSet & params) { fParameters = &params; }
 
       // set number of toy MC 
       void SetNumberOfToys(unsigned int ntoys) { fNToys = ntoys; }
 
-      // control use of the pdf for the nuisance parameter
-      void UseNuisancePdf(bool on = true) { fUsePriorPdf = on; }
+      // control use of the pdf for the nuisance parameter and marginalize them
+      void UseNuisance(bool on = true) { fUsePriorPdf = on; }
       
       void SetTestStatistics(int index);
 
