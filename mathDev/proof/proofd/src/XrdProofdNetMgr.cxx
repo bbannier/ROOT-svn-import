@@ -490,25 +490,12 @@ int XrdProofdNetMgr::ReadBuffer(XrdProofdProtocol *p)
    XrdOucString emsg;
 
    // Find out the file name
-   char *url = 0;
    char *file = 0;
    int dlen = p->Request()->header.dlen;
    if (dlen > 0 && p->Argp()->buff) {
-      int flen = dlen;
-      int ulen = 0;
-      int offs = 0;
-      char *c = (char *) strstr(p->Argp()->buff, ",");
-      if (c) {
-         ulen = (int) (c - p->Argp()->buff);
-         url = new char[ulen+1];
-         memcpy(url, p->Argp()->buff, ulen);
-         url[ulen] = 0;
-         offs = ulen + 1;
-         flen -= offs;
-      }
-      file = new char[flen+1];
-      memcpy(file, p->Argp()->buff+offs, flen);
-      file[flen] = 0;
+      file = new char[dlen+1];
+      memcpy(file, p->Argp()->buff, dlen);
+      file[dlen] = 0;
    } else {
       emsg = "file name not not found";
       TRACEP(p, XERR, emsg);
@@ -570,7 +557,7 @@ int XrdProofdNetMgr::ReadBuffer(XrdProofdProtocol *p)
       }
    } else {
       // Read portion of remote file
-      XrdClientUrlInfo u(url);
+      XrdClientUrlInfo u(file);
       u.User = p->Client()->User() ? p->Client()->User() : fMgr->EffectiveUser();
       buf = ReadBufferRemote(u.GetUrl().c_str(), file, ofs, lout, grep);
    }
@@ -977,7 +964,31 @@ std::list<XrdProofWorker *> *XrdProofdNetMgr::GetActiveWorkers()
    }
    TRACE(DBG,  "returning list with "<<fWorkers.size()<<" entries");
 
+   if (TRACING(HDBG)) Dump();
+
    return &fWorkers;
+}
+
+//__________________________________________________________________________
+void XrdProofdNetMgr::Dump()
+{
+   // Dump status
+   const char *xpdloc = "NetMgr::Dump";
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   XPDPRT("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+   XPDPRT("+ Active workers status");
+   XPDPRT("+ Size: "<<fWorkers.size());
+   XPDPRT("+ ");
+
+   std::list<XrdProofWorker *>::iterator iw;
+   for (iw = fWorkers.begin(); iw != fWorkers.end(); iw++) {
+      XPDPRT("+ wrk: "<<(*iw)->fHost.c_str()<<":"<<(*iw)->fPort<<" type:"<<(*iw)->fType<<
+             " active sessions:"<<(*iw)->Active());
+   }
+   XPDPRT("+ ");
+   XPDPRT("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 }
 
 //__________________________________________________________________________

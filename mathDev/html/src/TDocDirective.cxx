@@ -295,6 +295,11 @@ Bool_t TDocMacroDirective::GetResult(TString& result)
    if (!wasBatch && !fNeedGraphics)
       gROOT->SetBatch();
    else if (fNeedGraphics) {
+      if (fHtml->IsBatch()) {
+         Warning("GetResult()", "Will not initialize the graphics system; skipping macro %s!", GetName());
+         result = "";
+         return kFALSE;
+      }
       gROOT->SetBatch(0);
       TApplication::NeedGraphicsLibs();
       gApplication->InitializeGraphics();
@@ -400,7 +405,7 @@ Bool_t TDocMacroDirective::GetResult(TString& result)
          dparser = new TDocParser(*(TClassDocOutput*)GetDocOutput(), GetDocParser()->GetCurrentClass());
       else dparser = new TDocParser(*GetDocOutput());
       std::stringstream ssConverted;
-      dparser->Convert(ssConverted, ssRaw, "./");
+      dparser->Convert(ssConverted, ssRaw, "./", kFALSE /*no code*/);
       delete dparser;
 
       fMacro->GetListOfLines()->Delete();

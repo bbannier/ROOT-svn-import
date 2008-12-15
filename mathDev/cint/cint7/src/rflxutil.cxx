@@ -198,6 +198,9 @@ void Cint::Internal::G__get_cint5_type_tuple(const ::Reflex::Type in_type, char*
       for (; current && current.IsTypedef();) {
          current = current.ToType();
       }
+      for (; current && current.IsArray();) {
+         current = current.ToType();
+      }
       // Count pointer levels.
       int pointers = 0;
       for (; current && current.IsPointer(); current = current.ToType()) {
@@ -309,18 +312,6 @@ int Cint::Internal::G__get_type(const ::Reflex::Type in)
    // -- Get CINT type code for data type.
    // Note: Structures are all 'u'.
    if (!in) return 0;
-   if (in.Name() == "macroInt$")    return 'p';
-   if (in.Name() == "macroDouble$") return 'P';
-   if (in.Name() == "autoInt$")     return 'o';
-   if (in.Name() == "autoDouble$")  return 'O';
-   if (in.Name() == "macro$") return 'j';
-   if (in.Name() == "switchStart$")  return 'a';
-   if (in.Name() == "switchDefault$")  return 'z';
-   if (in.Name() == "codeBreak$")  return 'Z';
-   if (in.Name() == "codeBreak$*")  return 'Z'; // This is actually a 'slot' for a not yet found special object
-   if (in.Name() == "macroChar*$") return 'T';
-   if (in.Name() == "defaultFunccall$") return G__DEFAULT_FUNCCALL;
-
 
    // FINAL for a typedef only remove the typedef layer!
 
@@ -336,6 +327,28 @@ int Cint::Internal::G__get_type(const ::Reflex::Type in)
    ::Reflex::Type raw = in.RawType();
 
    if (raw.IsFundamental()) {
+      if (in.TypeType() == Reflex::TYPEDEF) {
+         // they are all typedefs to (pointer to) fundamental types:
+         const std::string name(in.Name());
+         const char name0 = name[0];
+         if (name0 == 'm') {
+            if (name == "macro$") return 'j';
+            if (name == "macroInt$")    return 'p';
+            if (name == "macroDouble$") return 'P';
+            if (name == "macroChar*$") return 'T';
+         } else if (name0 == 'a') {
+            if (name == "autoInt$")     return 'o';
+            if (name == "autoDouble$")  return 'O';
+         } else if (name0 == 's') {
+            if (name == "switchStart$")  return 'a';
+            if (name == "switchDefault$")  return 'z';
+         } else if (name0 == 'c') {
+            if (name == "codeBreak$")  return 'Z';
+            if (name == "codeBreak$*")  return 'Z'; // This is actually a 'slot' for a not yet found special object
+         } else if (name0 == 'd')
+            if (name == "defaultFunccall$") return G__DEFAULT_FUNCCALL;
+      }
+
       ::Reflex::EFUNDAMENTALTYPE fundamental = ::Reflex::Tools::FundamentalType(raw);
       char unsigned_flag = (fundamental == ::Reflex::kUNSIGNED_CHAR
          || fundamental == ::Reflex::kUNSIGNED_SHORT_INT
@@ -367,7 +380,10 @@ int Cint::Internal::G__get_type(const ::Reflex::Type in)
          case ::Reflex::kVOID: {
             if (final.IsPointer()) {
                return 'Y';
-            } else if (final.TypeType()==Reflex::FUNCTION || final.TypeType()==Reflex::FUNCTIONMEMBER || strstr(in.Name().c_str(),"(")) {
+            } else
+               if (final.TypeType()==Reflex::FUNCTION
+                   || final.TypeType()==Reflex::FUNCTIONMEMBER
+                   || strstr(in.Name().c_str(),"(")) {
                return '1';
             } else {
                return 'y';
@@ -386,11 +402,23 @@ int Cint::Internal::G__get_type(const ::Reflex::Type in)
             return 0;
       } // switch fundamental
    }
-   if (raw.Name() == "FILE") return ((int) 'e') + pointerThusUppercase;
-   if (raw.IsEnum()) return ((int)'i') + pointerThusUppercase;
+
+   static Reflex::Type stFile;
+   if (!stFile.Id()) stFile = Reflex::Type::ByName("FILE");
+   if ((stFile.Id() && raw.Id() == stFile.Id())
+       || (!stFile.Id() && raw.Name() == "FILE"))
+      return ((int) 'e') + pointerThusUppercase;
    if (raw.IsClass()|| raw.IsStruct() ||
        /* raw.IsEnum() || */ raw.IsUnion())
        return ((int) 'u') + pointerThusUppercase;
+   if (raw.IsEnum()) return ((int)'i') + pointerThusUppercase;
+   // Handle function and function pointer (both '1'):
+   Reflex::Type fn( in );
+   if (fn.IsPointer()) {
+      fn = fn.ToType();
+   }
+   if (fn.TypeType() == Reflex::FUNCTION || fn.TypeType() == Reflex::FUNCTIONMEMBER) return '1';
+   
    return 0;
 }
 
@@ -493,6 +521,9 @@ int Cint::Internal::G__get_reftype(const ::Reflex::Type in)
    while (!isref && current && current.IsTypedef()) {
       current = current.ToType();
       isref = current.IsReference();
+   }
+   while (current && current.IsArray()) {
+      current = current.ToType();
    }
 
    // Count pointer levels.
@@ -1217,29 +1248,6 @@ Reflex::Type Cint::Internal::G__deref(const Reflex::Type typein)
    if (ispointer) { // Apply the first level of pointers.
       result = ::Reflex::PointerBuilder(result);
    }
-   if (nindex) { // Now make an array.
-      // Build the array type chain in the reverse order
-      // of the dimensions, starting from the right and
-      // moving left towards the variable name.
-      //
-      // Note: This means that any unspecified length
-      //       flag will be next-to-last in the chain,
-      //       just before the type of the array elements.
-      //
-      // For example:
-      //
-      //      int a[2][3];
-      //
-      // gives:
-      //
-      //      a --> array[2] --> array[3] --> int
-      //
-      // That is: a is an array of two arrays of 3 ints.
-      //
-      for (int i = nindex - 1; i >= 0; --i) {
-         result = ::Reflex::ArrayBuilder(result, index[i]);
-      }
-   }
    switch (reftype) { // Apply the rest of the pointer levels, and the reference.
       case G__PARANORMAL:
          break;
@@ -1273,6 +1281,29 @@ Reflex::Type Cint::Internal::G__deref(const Reflex::Type typein)
    }
    if (ref) { // Apply reference.
       result = ::Reflex::Type(result, ::Reflex::REFERENCE, Reflex::Type::APPEND);
+   }
+   if (nindex) { // Now make an array.
+      // Build the array type chain in the reverse order
+      // of the dimensions, starting from the right and
+      // moving left towards the variable name.
+      //
+      // Note: This means that any unspecified length
+      //       flag will be next-to-last in the chain,
+      //       just before the type of the array elements.
+      //
+      // For example:
+      //
+      //      int a[2][3];
+      //
+      // gives:
+      //
+      //      a --> array[2] --> array[3] --> int
+      //
+      // That is: a is an array of two arrays of 3 ints.
+      //
+      for (int i = nindex - 1; i >= 0; --i) {
+         result = ::Reflex::ArrayBuilder(result, index[i]);
+      }
    }
    return result;
 }

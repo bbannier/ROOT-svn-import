@@ -117,7 +117,7 @@ TXSlave::TXSlave(const char *url, const char *ord, Int_t perf,
    TXSocketHandler *sh = TXSocketHandler::GetSocketHandler();
    gSystem->AddFileHandler(sh);
 
-   TXSocket::fgLoc = (fProof->IsMaster()) ? "master" : "client" ;
+   TXSocket::SetLocation((fProof->IsMaster()) ? "master" : "client");
 
    Init(url, stype);
 }
@@ -228,8 +228,10 @@ void TXSlave::Init(const char *host, Int_t stype)
 
    // The socket may not be valid
    if (!(fSocket->IsValid())) {
-      Error("Init", "some severe error occurred while opening "
-                    "the connection at %s - exit", url.GetUrl(kTRUE));
+      // Notify only if verbosity is on: most likely the failure has already been notified
+      if (gDebug > 0)
+         Error("Init", "some severe error occurred while opening "
+                       "the connection at %s - exit", url.GetUrl(kTRUE));
       SafeDelete(fSocket);
       return;
    }
@@ -657,5 +659,5 @@ void TXSlave::FlushSocket()
       Info("FlushSocket", "enter: %p", fSocket);
 
    if (fSocket)
-      TXSocket::FlushPipe(fSocket);
+      TXSocket::fgPipe.Flush(fSocket);
 }

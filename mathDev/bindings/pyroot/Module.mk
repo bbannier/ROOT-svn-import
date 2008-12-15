@@ -13,10 +13,14 @@ PYROOTDIRS   := $(PYROOTDIR)/src
 PYROOTDIRI   := $(PYROOTDIR)/inc
 
 ##### python64 #####
+ifeq ($(ARCH),macosx64)
+ifeq ($(MACOSX_MINOR),5)
 PYTHON64S    := $(MODDIRS)/python64.c
 PYTHON64O    := $(PYTHON64S:.c=.o)
 PYTHON64     := bin/python64
 PYTHON64DEP  := $(PYTHON64O:.o=.d)
+endif
+endif
 
 ##### libPyROOT #####
 PYROOTL      := $(MODDIRI)/LinkDef.h
@@ -47,14 +51,21 @@ endif
 ROOTPYC      := $(ROOTPY:.py=.pyc)
 ROOTPYO      := $(ROOTPY:.py=.pyo)
 
+ifeq ($(BUILDCINT7),yes)
+ifeq ($(ARCH),win32)
+PYROOTEXTRALIB   := $(LPATH)/libCint.lib
+else
+PYROOTEXTRALIB   := -lMetaTCint
+endif
+endif
+
 # used in the main Makefile
 ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(PYROOTH))
 ALLLIBS      += $(PYROOTLIB)
 ALLMAPS      += $(PYROOTMAP)
-ifeq ($(ARCH),macosx64)
+
 ALLEXECS     += $(PYTHON64)
 INCLUDEFILES += $(PYTHON64DEP)
-endif
 
 # include all dependency files
 INCLUDEFILES += $(PYROOTDEP)
@@ -73,7 +84,7 @@ $(PYROOTLIB):   $(PYROOTO) $(PYROOTDO) $(ROOTPY) $(ROOTPYC) $(ROOTPYO) \
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		  "$(SOFLAGS)" libPyROOT.$(SOEXT) $@ \
 		  "$(PYROOTO) $(PYROOTDO)" \
-		  "$(ROOTULIBS) $(RPATH) $(ROOTLIBS) \
+		  "$(ROOTULIBS) $(RPATH) $(ROOTLIBS) $(PYROOTEXTRALIB) \
 		   $(PYTHONLIBDIR) $(PYTHONLIB)" "$(PYTHONLIBFLAGS)"
 ifeq ($(ARCH),win32)
 		cp -f bin/$(notdir $@) $(PYROOTPYD)
@@ -91,11 +102,7 @@ $(PYTHON64):    $(PYTHON64O)
 		$(CC) $(LDFLAGS) -o $@ $(PYTHON64O) \
 		   $(PYTHONLIBDIR) $(PYTHONLIB)
 
-ifeq ($(ARCH),macosx64)
 all-$(MODNAME): $(PYROOTLIB) $(PYROOTMAP) $(PYTHON64)
-else
-all-$(MODNAME): $(PYROOTLIB) $(PYROOTMAP)
-endif
 
 clean-$(MODNAME):
 		@rm -f $(PYROOTO) $(PYROOTDO) $(PYTHON64O)

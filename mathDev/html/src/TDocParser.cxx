@@ -131,7 +131,8 @@ std::set<std::string>  TDocParser::fgKeywords;
 //______________________________________________________________________________
 TDocParser::TDocParser(TClassDocOutput& docOutput, TClass* cl):
    fHtml(docOutput.GetHtml()), fDocOutput(&docOutput), fLineNo(0),
-   fCurrentClass(cl), fCurrentModule(0), fDirectiveCount(0), fDocContext(kIgnore), 
+   fCurrentClass(cl), fRecentClass(0), fCurrentModule(0),
+   fDirectiveCount(0), fDocContext(kIgnore), 
    fCheckForMethod(kFALSE), fClassDocState(kClassDoc_Uninitialized), 
    fCommentAtBOL(kFALSE)
 {
@@ -166,7 +167,7 @@ TDocParser::TDocParser(TClassDocOutput& docOutput, TClass* cl):
 //______________________________________________________________________________
 TDocParser::TDocParser(TDocOutput& docOutput):
    fHtml(docOutput.GetHtml()), fDocOutput(&docOutput), fLineNo(0),
-   fCurrentClass(0), fDirectiveCount(0), fDocContext(kIgnore), 
+   fCurrentClass(0), fRecentClass(0), fDirectiveCount(0), fDocContext(kIgnore), 
    fCheckForMethod(kFALSE), fClassDocState(kClassDoc_Uninitialized),
    fCommentAtBOL(kFALSE)
 {
@@ -349,11 +350,14 @@ void TDocParser::AnchorFromLine(const TString& line, TString& anchor) {
 }
 
 //______________________________________________________________________________
-void TDocParser::Convert(std::ostream& out, std::istream& in, const char* relpath)
+void TDocParser::Convert(std::ostream& out, std::istream& in, const char* relpath,
+                         Bool_t isCode)
 {
-   // Parse text file in, add links etc, and write output file to out.
+   // Parse text file "in", add links etc, and write output to "out".
+   // If "isCode", "in" is assumed to be C++ code.
    fParseContext.clear();
-   fParseContext.push_back(kComment); // so we can find "BEGIN_HTML"/"END_HTML" in plain text
+   if (isCode) fParseContext.push_back(kCode);
+   else        fParseContext.push_back(kComment); // so we can find "BEGIN_HTML"/"END_HTML" in plain text
 
    while (!in.eof()) {
       fLineRaw.ReadLine(in, kFALSE);
@@ -369,9 +373,13 @@ void TDocParser::Convert(std::ostream& out, std::istream& in, const char* relpat
       DecorateKeywords(fLineSource);
       ProcessComment();
 
-      GetDocOutput()->AdjustSourcePath(fLineComment, relpath);
-      if (fLineComment.Length() || !InContext(kDirective))
+      if (fLineComment.Length() || InContext(kDirective)) {
+         GetDocOutput()->AdjustSourcePath(fLineComment, relpath);
          out << fLineComment << endl;
+      } else {
+         GetDocOutput()->AdjustSourcePath(fLineSource, relpath);
+         out << fLineSource << endl;
+      }
    }
 }
 
@@ -617,8 +625,12 @@ void TDocParser::DecorateKeywords(TString& line)
       }
       TClass* lookupScope = currentType.back();
 
-      if (scoping == kNada)
-         lookupScope = fCurrentClass;
+      if (scoping == kNada) {
+         if (fCurrentClass)
+            lookupScope = fCurrentClass;
+         else
+            lookupScope = fRecentClass;
+      }
 
       if (scoping == kNada) {
          subType = gROOT->GetType(word);
@@ -724,6 +736,7 @@ void TDocParser::DecorateKeywords(TString& line)
             globalTypeName ? globalTypeName : subClass->GetName());
 
          currentType.back() = subClass;
+         fRecentClass = subClass;
       } else if (datamem || meth) {
             if (datamem) {
                fDocOutput->ReferenceEntity(substr, datamem);

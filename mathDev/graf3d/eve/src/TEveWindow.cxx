@@ -10,9 +10,11 @@
  *************************************************************************/
 
 #include "TEveWindow.h"
+#include "TEveWindowManager.h"
 #include "TEveManager.h"
 #include "TEveSelection.h"
 
+#include "THashList.h"
 #include "TContextMenu.h"
 
 #include "TGButton.h"
@@ -36,14 +38,36 @@
 
 //______________________________________________________________________________
 // 
-// Base-class for EVE window slots.
+// Abstract base-class for frame-slots that encompass EVE-windows
+// (sub-classes of TEveWindow).
 //
+// The EVE-frame classes are managed by their embedded EVE-windows and
+// mostly serve as an interface to particular ROOT widgets
+// (sub-classes of TGCompositeFrame) they are embedded into.
+//
+// This base-class, a sub-class of a vertical composite-frame, creates
+// also the title-bar which can be used to interact with the embedded
+// window. Optionally, the title-bar can be replaced with a mini-bar
+// (a 4-pixel thin bar at the top). By clicking on the mini-bar, the
+// title-bar is restored.
+//
+// Sub-classes provide for specific behaviour and expectations of
+// individual ROOT GUI container frames.
+//
+//
+// POSSIBLE EXTENSIONS
+//
+// No frame is drawn around this composite-frame - frame style could be
+// available as a (static) member.
+//
+// Menus of embedded windows could also be managed - hidden or transposed
+// to a top-level menubar.
 
 ClassImp(TEveCompositeFrame);
 
 TContextMenu* TEveCompositeFrame::fgCtxMenu = 0;
 const TString TEveCompositeFrame::fgkEmptyFrameName("<relinquished>");
-
+TList*        TEveCompositeFrame::fgFrameList = new THashList;
 //______________________________________________________________________________
 TEveCompositeFrame::TEveCompositeFrame(TGCompositeFrame* parent,
                                        TEveWindow*   eve_parent) :
@@ -57,8 +81,10 @@ TEveCompositeFrame::TEveCompositeFrame(TGCompositeFrame* parent,
 
    fMiniBar     (0),
 
-   fEveParentWindow (eve_parent),
-   fEveWindow       (0)
+   fEveParent   (eve_parent),
+   fEveWindow   (0),
+
+   fShowInSync  (kTRUE)
 {
    // Constructor.
 
@@ -71,17 +97,17 @@ TEveCompositeFrame::TEveCompositeFrame(TGCompositeFrame* parent,
    fToggleBar = new TGTextButton(fTopFrame, "Hide");
    fToggleBar->ChangeOptions(kRaisedFrame);
    fToggleBar->Resize(40, topH);
-   fTopFrame->AddFrame(fToggleBar, new TGLayoutHints(kLHintsNormal, 0,0,0,0));//1,1,1,1));
+   fTopFrame->AddFrame(fToggleBar, new TGLayoutHints(kLHintsNormal));
 
    fTitleBar = new TGTextButton(fTopFrame, "Title Bar");
    fTitleBar->ChangeOptions(kRaisedFrame);
    fTitleBar->Resize(40, topH);
-   fTopFrame->AddFrame(fTitleBar, new TGLayoutHints(kLHintsNormal | kLHintsExpandX,  0,0,0,0));//1,1,1,1));
+   fTopFrame->AddFrame(fTitleBar, new TGLayoutHints(kLHintsNormal | kLHintsExpandX));
 
    fIconBar = new TGTextButton(fTopFrame, "Actions");
    fIconBar->ChangeOptions(kRaisedFrame);
    fIconBar->Resize(40, topH);
-   fTopFrame->AddFrame(fIconBar, new TGLayoutHints(kLHintsNormal,  0,0,0,0));//1,1,1,1));
+   fTopFrame->AddFrame(fIconBar, new TGLayoutHints(kLHintsNormal));
 
    AddFrame(fTopFrame, new TGLayoutHints(kLHintsNormal | kLHintsExpandX));
 
@@ -94,20 +120,30 @@ TEveCompositeFrame::TEveCompositeFrame(TGCompositeFrame* parent,
    fMiniBar = new TGButton(this);
    fMiniBar->ChangeOptions(kRaisedFrame | kFixedHeight);
    fMiniBar->Resize(20, miniH);
-   fMiniBar->SetBackgroundColor(TEveWindow::fgMiniBarBackgroundColor);
+   fMiniBar->SetBackgroundColor(TEveWindow::GetMiniBarBackgroundColor());
    AddFrame(fMiniBar, new TGLayoutHints(kLHintsNormal | kLHintsExpandX));
 
    fMiniBar->Connect("Clicked()", "TEveCompositeFrame", this, "FlipTitleBarState()");
 
    // --- Common settings.
 
-   SetCleanup(kDeepCleanup);
+   fTopFrame->SetCleanup(kLocalCleanup);
+   SetCleanup(kLocalCleanup);
 
    MapSubwindows();
    HideFrame(fMiniBar);
+   SetMapSubwindows(kFALSE);
 
    // Layout for embedded windows.
    fEveWindowLH = new TGLayoutHints(kLHintsNormal | kLHintsExpandX | kLHintsExpandY);
+
+   // !!! The following should actually be done somewhere else, in
+   // some not-yet-existing static method of TEveWindow. Right now the
+   // eve-frame-creation code is still a little bit everywhere.
+   if (fEveParent == 0)
+      fEveParent = gEve->GetWindowManager();
+
+   fgFrameList->Add(this);
 }
 
 //______________________________________________________________________________
@@ -116,10 +152,15 @@ TEveCompositeFrame::~TEveCompositeFrame()
    // If fEveWindow != 0 we are being deleted from the ROOT GUI side.
    // Relinquishe EveWindow and ref-counting should do the rest.
 
+   fgFrameList->Remove(this);
+
    if (fEveWindow != 0)
    {
-      printf("TEveCompositeFrame::~TEveCompositeFrame - EveWindow not null '%s'.\n",
-             fEveWindow->GetElementName());
+      if (gDebug > 0)
+         Info("TEveCompositeFrame::~TEveCompositeFrame",
+              "EveWindow not null '%s', relinquishing it now.",
+              fEveWindow->GetElementName());
+
       fEveWindow->ClearEveFrame();
       RelinquishEveWindow();
    }
@@ -127,54 +168,14 @@ TEveCompositeFrame::~TEveCompositeFrame()
    delete fEveWindowLH;
 }
 
-//______________________________________________________________________________
-void TEveCompositeFrame::Destroy()
-{
-   // Virtual function called from eve side when the frame should be
-   // destroyed. This means we expect that fEveWindow is null.
-   //
-   // See implementations in TEveCompositeFrameInPack and
-   // TEveCompositeFrameInTab.
-}
-
 //==============================================================================
 
-void TEveCompositeFrame::ActionPressed()
-{
-   // The action-button of the title-bar was pressed.
-   // This opens context menu of the eve-window.
-
-   if (fgCtxMenu == 0) {
-      fgCtxMenu = new TContextMenu("", "");
-   }
-
-   Int_t    x, y;
-   UInt_t   w, h;
-   Window_t childdum;
-   gVirtualX->GetWindowSize(fIconBar->GetId(), x, y, w, h);
-   gVirtualX->TranslateCoordinates(fIconBar->GetId(),
-                                   gClient->GetDefaultRoot()->GetId(),
-                                   0, 0, x, y, childdum);
-
-   fgCtxMenu->Popup(x - 2, y + h - 2, fEveWindow);
-}
-
 //______________________________________________________________________________
-void TEveCompositeFrame::FlipTitleBarState()
+void TEveCompositeFrame::WindowNameChanged(const TString& name)
 {
-   // Change display-state of the title-bar / mini-bar.
-   // This function is used as a slot and passes the call to eve-window.
+   // Update widgets using window's name or title.
 
-   fEveWindow->FlipShowTitleBar();
-}
-
-//______________________________________________________________________________
-void TEveCompositeFrame::TitleBarClicked()
-{
-   // Slot for mouse-click on the central part of the title-bar.
-   // The call is passed to eve-window.
-
-   fEveWindow->TitleBarClicked();
+   fTitleBar->SetText(name);
 }
 
 //==============================================================================
@@ -207,18 +208,20 @@ void TEveCompositeFrame::AcquireEveWindow(TEveWindow* ew)
    TGFrame* gui_frame = fEveWindow->GetGUIFrame();
    gui_frame->ReparentWindow(this);
    AddFrame(gui_frame, fEveWindowLH);
+   fEveWindow->PostDock();
    gui_frame->MapWindow();
 
    SetCurrent(fEveWindow->IsCurrent());
-   fTitleBar->SetText(fEveWindow->GetElementName());
    SetShowTitleBar(fEveWindow->GetShowTitleBar());
+   WindowNameChanged(fEveWindow->GetElementName());
 }
 
 //______________________________________________________________________________
-TEveWindow* TEveCompositeFrame::RelinquishEveWindow()
+TEveWindow* TEveCompositeFrame::RelinquishEveWindow(Bool_t reparent)
 {
    // Remove window and decrease its deny-destroy count.
-   // Window's gui-frame is unmapped, removed and reparented to default-root.
+   // Window's gui-frame is unmapped, removed and, if reparent flag is
+   // true (default), reparented to default-root.
 
    TEveWindow* ex_ew = fEveWindow;
 
@@ -226,28 +229,25 @@ TEveWindow* TEveCompositeFrame::RelinquishEveWindow()
    {
       TGFrame* gui_frame = fEveWindow->GetGUIFrame();
       gui_frame->UnmapWindow();
+      fEveWindow->PreUndock();
       RemoveFrame(gui_frame);
-      gui_frame->ReparentWindow(fClient->GetDefaultRoot());
+      if (reparent)
+         gui_frame->ReparentWindow(fClient->GetDefaultRoot());
       fEveWindow->DecDenyDestroy();
       fEveWindow = 0;
-      fTitleBar->SetText(fgkEmptyFrameName);
+      SetCurrent(kFALSE);
+      WindowNameChanged(fgkEmptyFrameName);
    }
 
    return ex_ew;
 }
 
 //______________________________________________________________________________
-TEveWindow* TEveCompositeFrame::ChangeEveWindow(TEveWindow* ew)
+TEveWindow* TEveCompositeFrame::GetEveParentAsWindow() const
 {
-   // Replace current eve-window with the given one.
-   // Current GUI window is unmapped, removed and reparented to default-root.
-   // New GUI window is reparented to this, added and mapped.
+   // Returns eve-parent dynamic-casted to TEveWindow.
 
-   TEveWindow* ex_ew = RelinquishEveWindow();
-
-   AcquireEveWindow(ew);
-
-   return ex_ew;
+   return dynamic_cast<TEveWindow*>(fEveParent);
 }
 
 //______________________________________________________________________________
@@ -257,7 +257,7 @@ void TEveCompositeFrame::SetCurrent(Bool_t curr)
    // This is called by the management functions in TEveWindow.
 
    if (curr) {
-      fTitleBar->SetBackgroundColor(TEveWindow::fgCurrentBackgroundColor);
+      fTitleBar->SetBackgroundColor(TEveWindow::GetCurrentBackgroundColor());
    } else {
       fTitleBar->SetBackgroundColor(GetDefaultFrameBackground());
    }
@@ -277,6 +277,91 @@ void TEveCompositeFrame::SetShowTitleBar(Bool_t show)
       HideFrame(fTopFrame);
       ShowFrame(fMiniBar);
    }
+
+   fShowInSync = show == fEveWindow->GetShowTitleBar();
+}
+
+//______________________________________________________________________________
+void TEveCompositeFrame::HideAllDecorations()
+{
+   // Hide title-bar and mini-bar.
+
+   HideFrame(fTopFrame);
+   HideFrame(fMiniBar);
+
+   fShowInSync = kFALSE;
+}
+
+//______________________________________________________________________________
+void TEveCompositeFrame::ShowNormalDecorations()
+{
+   // Show title-bar or mini-bar, as dictated by the window.
+
+   SetShowTitleBar(fEveWindow->GetShowTitleBar());
+}
+
+//______________________________________________________________________________
+void TEveCompositeFrame::ReplaceIconBox(TGFrame* icon_box)
+{
+   // Replace default action-button with the provided frame.
+   // The contents will erased via local-cleanup so make sure the frame
+   // will properly destroy its children.
+   // MapWindow is called on the passed frame but not map-subwindows.
+
+   if (fIconBar)
+   {
+      fTopFrame->RemoveFrame(fIconBar);
+      fIconBar->DestroyWindow();
+      delete fIconBar;
+      fIconBar = 0;
+   }
+
+   icon_box->ReparentWindow(fTopFrame);
+   fTopFrame->AddFrame(icon_box, new TGLayoutHints(kLHintsNormal));
+   fTopFrame->Layout();
+   icon_box->MapWindow();
+}
+
+//______________________________________________________________________________
+void TEveCompositeFrame::ActionPressed()
+{
+   // The action-button of the title-bar was pressed.
+   // This opens context menu of the eve-window.
+
+   if (fgCtxMenu == 0) {
+      fgCtxMenu = new TContextMenu("", "");
+   }
+
+   Int_t    x, y;
+   UInt_t   w, h;
+   Window_t childdum;
+   gVirtualX->GetWindowSize(fIconBar->GetId(), x, y, w, h);
+   gVirtualX->TranslateCoordinates(fIconBar->GetId(),
+                                   gClient->GetDefaultRoot()->GetId(),
+                                   0, 0, x, y, childdum);
+
+   fgCtxMenu->Popup(x - 2, y + h - 2, fEveWindow);
+}
+
+//______________________________________________________________________________
+void TEveCompositeFrame::FlipTitleBarState()
+{
+   // Change display-state of the title-bar / mini-bar.
+   // This function is used as a slot and passes the call to eve-window.
+
+   if (fShowInSync)
+      fEveWindow->FlipShowTitleBar();
+   else
+      SetShowTitleBar(fEveWindow->GetShowTitleBar());
+}
+
+//______________________________________________________________________________
+void TEveCompositeFrame::TitleBarClicked()
+{
+   // Slot for mouse-click on the central part of the title-bar.
+   // The call is passed to eve-window.
+
+   fEveWindow->TitleBarClicked();
 }
 
 
@@ -295,11 +380,14 @@ TEveCompositeFrameInMainFrame::TEveCompositeFrameInMainFrame(TGCompositeFrame* p
                                                              TEveWindow*  eve_parent,
                                                              TGMainFrame* mf) :
    TEveCompositeFrame(parent, eve_parent),
-   fMainFrame        (mf)
+   fMainFrame         (mf),
+   fOriginalSlot      (0),
+   fOriginalContainer (0)
 {
    // Constructor.
 
    fMainFrame->Connect("CloseWindow()", "TEveCompositeFrameInMainFrame", this, "MainFrameClosed()");
+   gEve->GetWindowManager()->Connect("WindowDeleted(TEveWindow*)", "TEveCompositeFrameInMainFrame", this, "SomeWindowClosed(TEveWindow*)");
 }
 
 //______________________________________________________________________________
@@ -307,15 +395,36 @@ TEveCompositeFrameInMainFrame::~TEveCompositeFrameInMainFrame()
 {
    // Destructor.
 
-   printf("TEveCompositeFrameInMainFrame::~TEveCompositeFrameInMainFrame\n");
+   if (gDebug > 0)
+      Info("TEveCompositeFrameInMainFrame::~TEveCompositeFrameInMainFrame",
+           "Destructor.");
+
+   gEve->GetWindowManager()->Disconnect("WindowDeleted(TEveWindow*)", this, "SomeWindowClosed(TEveWindow*)");
+}
+
+//______________________________________________________________________________
+void TEveCompositeFrameInMainFrame::WindowNameChanged(const TString& name)
+{
+   // Update widgets using window's name or title.
+
+   fMainFrame->SetWindowName(name);
+
+   TEveCompositeFrame::WindowNameChanged(name);
 }
 
 //______________________________________________________________________________
 void TEveCompositeFrameInMainFrame::Destroy()
 {
-   // Destroy the frame - the containing main-frame will be deleted as well.
+   // Virtual function called from eve side when the frame should be
+   // destroyed. This means we expect that fEveWindow is null.
+   //
+   // We simply call CloseWindow() on the main-frame which will in
+   // turn generate the "CloseWindow()" signal.
+   // This is then handled in MainFrameClosed().
 
-   printf("TEveCompositeFrameInMainFrame::Destroy()\n");
+   if (gDebug > 0)
+      Info("TEveCompositeFrameInMainFrame::Destroy()",
+           "Propagating call to main-frame.");
 
    assert (fEveWindow == 0);
 
@@ -323,36 +432,63 @@ void TEveCompositeFrameInMainFrame::Destroy()
 }
 
 //______________________________________________________________________________
-void TEveCompositeFrameInMainFrame::AcquireEveWindow(TEveWindow* ew)
+void TEveCompositeFrameInMainFrame::SetOriginalSlotAndContainer(TEveWindow* slot,
+                                                                TEveWindow* container)
 {
-   // Virtual from TEveCompositeFrame.
-   // Set also main-frame-name to window-name.
+   // Set the container where to return the contained window on destruction.
 
-   TEveCompositeFrame::AcquireEveWindow(ew);
+   static const TEveException kEH("TEveCompositeFrameInMainFrame::SetOriginalSlotAndContainer ");
 
-   fMainFrame->SetWindowName(fEveWindow->GetElementName());
+   if (container && ! container->CanMakeNewSlots())
+      throw kEH + "Given window can not make new slots.";
+
+   fOriginalSlot      = slot;
+   fOriginalContainer = container;
 }
 
 //______________________________________________________________________________
-TEveWindow* TEveCompositeFrameInMainFrame::RelinquishEveWindow()
+void TEveCompositeFrameInMainFrame::SomeWindowClosed(TEveWindow* w)
 {
-   // Virtual from TEveCompositeFrame.
-   // Set also main-frame-name to "<relinquished>".
+   // Slot called when a window is closed ... we check that this was
+   // not our original container.
 
-   fMainFrame->SetWindowName(fgkEmptyFrameName);
+   if (w == fOriginalSlot)
+      fOriginalSlot = 0;
 
-   return TEveCompositeFrame::RelinquishEveWindow();
+   if (w == fOriginalContainer)
+      fOriginalContainer = 0;
 }
 
 //______________________________________________________________________________
 void TEveCompositeFrameInMainFrame::MainFrameClosed()
 {
    // Slot for main-frame's "CloseWindow()" signal.
+   // If an eve window is still present, it will be put into:
+   //   - original-container, if it is set;
+   ///  - into window-managers default-container.
+
+   if (fEveWindow != 0)
+   {
+      if (fOriginalSlot)
+      {
+         TEveWindow::SwapWindows(fEveWindow, fOriginalSlot);
+      }
+      else if (fOriginalContainer)
+      {
+         TEveWindow::SwapWindows(fEveWindow, fOriginalContainer->NewSlot());
+      }
+      else if (gEve->GetWindowManager()->HasDefaultContainer())
+      {
+         TEveWindow::SwapWindows(fEveWindow, gEve->GetWindowManager()->GetDefaultContainer()->NewSlot());
+      }
+   }
 
    fMainFrame->DontCallClose();
    fEveWindow->DestroyWindowAndSlot();
 
-   printf("TEveCompositeFrameInMainFrame::MainFrameClosed() ... expecting destructor.\n");
+   if (gDebug > 0)
+      Info("TEveCompositeFrameInMainFrame::MainFrameClosed()",
+           "Expecting destructor call soon.");
 }
 
 
@@ -385,9 +521,13 @@ TEveCompositeFrameInPack::~TEveCompositeFrameInPack()
 //______________________________________________________________________________
 void TEveCompositeFrameInPack::Destroy()
 {
-   // Destroy the frame.
+   // Virtual function called from eve side when the frame should be
+   // destroyed. This means we expect that fEveWindow is null.
+   //
+   // Remove the frame from pack and delete it.
 
-   printf("TEveCompositeFrameInPack::Destroy()\n");
+   if (gDebug > 0)
+      Info("TEveCompositeFrameInPack::Destroy()", "Removing from pack and deleting.");
 
    assert(fEveWindow == 0);
 
@@ -423,6 +563,18 @@ TEveCompositeFrameInTab::~TEveCompositeFrameInTab()
 }
 
 //______________________________________________________________________________
+void TEveCompositeFrameInTab::WindowNameChanged(const TString& name)
+{
+   // Update widgets using window's name or title.
+
+   Int_t t = FindTabIndex();
+   fTab->GetTabTab(t)->SetText(new TGString(name));
+   fTab->Layout();
+
+   TEveCompositeFrame::WindowNameChanged(name);
+}
+
+//______________________________________________________________________________
 Int_t TEveCompositeFrameInTab::FindTabIndex()
 {
    // Return index of this frame in the tab.
@@ -445,9 +597,13 @@ Int_t TEveCompositeFrameInTab::FindTabIndex()
 //______________________________________________________________________________
 void TEveCompositeFrameInTab::Destroy()
 {
-   // Destroy the frame.
+   // Virtual function called from eve side when the frame should be
+   // destroyed. This means we expect that fEveWindow is null.
+   //
+   // Remove the frame from tab and delete it.
 
-   printf("TEveCompositeFrameInTab::Destroy()\n");
+   if (gDebug > 0)
+      Info("TEveCompositeFrameInTab::Destroy()", "Removing from tab and deleting.");
 
    assert (fEveWindow == 0);
 
@@ -462,32 +618,6 @@ void TEveCompositeFrameInTab::Destroy()
 }
 
 //______________________________________________________________________________
-void TEveCompositeFrameInTab::AcquireEveWindow(TEveWindow* ew)
-{
-   // Virtual from TEveCompositeFrame.
-   // Set also tab-name to window-name and call tab-layout.
-
-   TEveCompositeFrame::AcquireEveWindow(ew);
-
-   Int_t t = FindTabIndex();
-   fTab->GetTabTab(t)->SetText(new TGString(fEveWindow->GetElementName()));
-   fTab->Layout();
-}
-
-//______________________________________________________________________________
-TEveWindow* TEveCompositeFrameInTab::RelinquishEveWindow()
-{
-   // Virtual from TEveCompositeFrame.
-   // Set also tab-name to "<relinquished>" and call tab-layout.
-
-   Int_t t = FindTabIndex();
-   fTab->GetTabTab(t)->SetText(new TGString(fgkEmptyFrameName));
-   fTab->Layout();
-
-   return TEveCompositeFrame::RelinquishEveWindow();
-}
-
-//______________________________________________________________________________
 void TEveCompositeFrameInTab::SetCurrent(Bool_t curr)
 {
    // Set current state of this frame.
@@ -498,7 +628,7 @@ void TEveCompositeFrameInTab::SetCurrent(Bool_t curr)
    Int_t t = FindTabIndex();
    TGTabElement* te = fTab->GetTabTab(t);
    if (curr) {
-      te->SetBackgroundColor(TEveWindow::fgCurrentBackgroundColor);
+      te->SetBackgroundColor(TEveWindow::GetCurrentBackgroundColor());
    } else {
       te->SetBackgroundColor(GetDefaultFrameBackground());
    }
@@ -518,12 +648,14 @@ void TEveCompositeFrameInTab::SetCurrent(Bool_t curr)
 //==============================================================================
 
 //______________________________________________________________________________
-// Description of TEveWindow
 //
+// Abstract base-class for representing eve-windows.
+// Sub-classes define a particular GUI frame that gets show
+// in the window.
+// 
 
 ClassImp(TEveWindow);
 
-TEveWindow* TEveWindow::fgCurrentWindow = 0;
 UInt_t      TEveWindow::fgMainFrameDefWidth  = 640;
 UInt_t      TEveWindow::fgMainFrameDefHeight = 480;
 Pixel_t     TEveWindow::fgCurrentBackgroundColor = 0x80A0C0;
@@ -547,20 +679,85 @@ TEveWindow::~TEveWindow()
 {
    // Destructor.
 
-   if (this == fgCurrentWindow)
-      fgCurrentWindow = 0;
+   if (gDebug > 0)
+      Info("~TEveWindow", "name='%s', deny-destroy=%d.",
+           GetElementName(), fDenyDestroy);
+}
 
-   printf("TEveWindow::~TEveWindow  '%s' '%s', cnt=%d\n", GetElementName(), ClassName(), fDenyDestroy);
+//______________________________________________________________________________
+void TEveWindow::PreDeleteElement()
+{
+   // Called before the element is deleted, thus offering the last chance
+   // to detach from acquired resources and from the framework itself.
+   // Here the request is just passed to TEveManager.
+   // If you override it, make sure to call base-class version.
+
+   gEve->GetWindowManager()->DeleteWindow(this);
+   TEveElementList::PreDeleteElement();
 }
 
 //==============================================================================
 
 //______________________________________________________________________________
-void TEveWindow::SwapWindow(TEveWindow* /*w*/)
+void TEveWindow::PreUndock()
+{
+   // Virtual function called before a window is undocked.
+
+   for (List_ci i=fChildren.begin(); i!=fChildren.end(); ++i)
+   {
+      TEveWindow* w = dynamic_cast<TEveWindow*>(*i);
+      if (w)
+         w->PreUndock();
+   }
+}
+
+//______________________________________________________________________________
+void TEveWindow::PostDock()
+{
+   // Virtual function called before a window is undocked.
+
+   for (List_ci i=fChildren.begin(); i!=fChildren.end(); ++i)
+   {
+      TEveWindow* w = dynamic_cast<TEveWindow*>(*i);
+      if (w)
+         w->PostDock();
+   }
+}
+
+//==============================================================================
+
+//______________________________________________________________________________
+void TEveWindow::NameTitleChanged()
+{
+   // Name or title of the window changed - propagate to frames.
+   // Virtual from TEveElement.
+
+   fEveFrame->WindowNameChanged(GetElementName());
+}
+
+//______________________________________________________________________________
+void TEveWindow::PopulateEmptyFrame(TEveCompositeFrame* ef)
+{
+   // Populate given frame-slot - intended for initial population
+   // of a new slot or low-level window-swapping.
+   // No layout or window-mapping is done.
+
+   ef->fEveParent->AddElement(this);
+   ef->AcquireEveWindow(this);
+   fEveFrame = ef;
+}
+
+//______________________________________________________________________________
+void TEveWindow::SwapWindow(TEveWindow* w)
 {
    // Swap frames with the given window.
 
-   printf ("Swapping ... yeah, right :)\n");
+   static const TEveException eh("TEveWindow::SwapWindow ");
+
+   if (w == 0)
+      throw eh + "Called with null argument.";
+
+   SwapWindows(this, w);
 }
 
 //______________________________________________________________________________
@@ -570,13 +767,71 @@ void TEveWindow::SwapWindowWithCurrent()
 
    static const TEveException eh("TEveWindow::SwapWindowWithCurrent ");
 
-   if (fgCurrentWindow == 0)
+   TEveWindow* current = gEve->GetWindowManager()->GetCurrentWindow();
+
+   if (current == 0)
       throw eh + "Current eve-window is not set.";
 
-   if (fgCurrentWindow == this)
+   if (current == this)
       throw eh + "This is the current window ... nothing changed.";
 
-   SwapWindow(fgCurrentWindow);
+   SwapWindows(this, current);
+}
+
+//______________________________________________________________________________
+void TEveWindow::UndockWindow()
+{
+   // Undock the window - put it into a dedicated main-frame.
+
+   TEveWindow* return_cont = fEveFrame->GetEveParentAsWindow();
+   if (return_cont && ! return_cont->CanMakeNewSlots())
+      return_cont = 0;
+
+   TEveWindowSlot* ew_slot = TEveWindow::CreateWindowMainFrame(0);
+
+   TEveWindow::SwapWindows(ew_slot, this);
+
+   ((TEveCompositeFrameInMainFrame*) fEveFrame)->
+      SetOriginalSlotAndContainer(ew_slot, return_cont);
+}
+
+//______________________________________________________________________________
+void TEveWindow::UndockWindowDestroySlot()
+{
+   // Undock the window - put it into a dedicated main-frame.
+   // The old window slot is destroyed.
+
+   TEveWindow* return_cont = fEveFrame->GetEveParentAsWindow();
+   if (return_cont && ! return_cont->CanMakeNewSlots())
+      return_cont = 0;
+
+   TEveWindowSlot* ew_slot = TEveWindow::CreateWindowMainFrame(0);
+
+   TEveWindow::SwapWindows(ew_slot, this);
+
+   ((TEveCompositeFrameInMainFrame*) fEveFrame)->
+      SetOriginalSlotAndContainer(0, return_cont);
+
+   ew_slot->DestroyWindowAndSlot();
+}
+
+//______________________________________________________________________________
+void TEveWindow::ReplaceWindow(TEveWindow* w)
+{
+   // Replace this window with the passed one.
+   // Eve parentship is properly handled.
+   // This will most likely lead to the destruction of this window.
+   // Layout is called on the frame.
+
+   fEveFrame->RelinquishEveWindow();
+
+   fEveFrame->fEveParent->AddElement(w);
+   fEveFrame->AcquireEveWindow(w);
+   w->fEveFrame = fEveFrame;
+
+   fEveFrame->fEveParent->RemoveElement(this);
+
+   w->fEveFrame->Layout();
 }
 
 //______________________________________________________________________________
@@ -584,15 +839,27 @@ void TEveWindow::DestroyWindow()
 {
    // Destroy eve-window - replace it with an empty frame-slot.
 
-   printf("TEveWindow::DestroyWindow '%s' '%s', cnt=%d\n", GetElementName(), ClassName(), fDenyDestroy);
+   if (gDebug > 0)
+      Info("TEveWindow::DestroyWindow()", "name='%s', class='%s', deny-destroy=%d.",
+           GetElementName(), ClassName(), fDenyDestroy);
 
    if (fEveFrame != 0 && fDenyDestroy == 1)
    {
       TEveWindowSlot* ew_slot = TEveWindow::CreateDefaultWindowSlot();
+
+      fEveFrame->UnmapWindow();
+
       Bool_t dozrc = fDestroyOnZeroRefCnt;
       fDestroyOnZeroRefCnt = kFALSE;
-      ew_slot->PopulateSlot(fEveFrame);
+
+      fEveFrame->RelinquishEveWindow();
+      ew_slot->PopulateEmptyFrame(fEveFrame);
+      fEveFrame->fEveParent->RemoveElement(this);
+
       fDestroyOnZeroRefCnt = dozrc;
+
+      fEveFrame->Layout();
+      fEveFrame->MapWindow();
       fEveFrame = 0;
    }
 
@@ -604,7 +871,9 @@ void TEveWindow::DestroyWindowAndSlot()
 {
    // Destroy eve-window and its frame-slot.
 
-   printf("TEveWindow::DestroyWindowAndSlot '%s' '%s', cnt=%d\n", GetElementName(), ClassName(), fDenyDestroy);
+   if (gDebug > 0)
+      Info("TEveWindow::DestroyWindowAndSlot()", "'name=%s', class= '%s', deny-destroy=%d.",
+           GetElementName(), ClassName(), fDenyDestroy);
 
    if (fEveFrame != 0 && fDenyDestroy == 1)
    {
@@ -628,45 +897,6 @@ void TEveWindow::ClearEveFrame()
 }
 
 //______________________________________________________________________________
-void TEveWindow::PopulateSlot(TEveCompositeFrame* ef)
-{
-   // Populate given frame-slot.
-   //
-   // This function does all the eve-element side management of
-   // removing the old eve-window from the eve-window-parent of the
-   // frame-slot and adding a new one.
-   //
-   // This will be replaced with function: SwapWindow(TEveWindow* w).
-
-   TEveWindow* my_ex_parent = fEveFrame ? fEveFrame->fEveParentWindow : 0;
-
-   TEveWindow* ex_win = ef->fEveWindow;
-
-   if (ef->fEveParentWindow)
-   {
-      if (ex_win) ef->fEveParentWindow->RemoveElement(ex_win);
-      ef->fEveParentWindow->AddElement(this);
-   }
-   else
-   {
-      if (ex_win) gEve->GetWindows()->RemoveElement(ex_win);
-      gEve->GetWindows()->AddElement(this);
-   }
-
-   if (my_ex_parent)
-   {
-      my_ex_parent->RemoveElement(this);
-   }
-
-   if (ex_win)
-      ex_win->fEveFrame = 0;
-   ef->ChangeEveWindow(this);
-   fEveFrame = ef;
-
-   fEveFrame->Layout();
-}
-
-//______________________________________________________________________________
 void TEveWindow::SetShowTitleBar(Bool_t x)
 {
    // Set display state of the title-bar.
@@ -681,35 +911,58 @@ void TEveWindow::SetShowTitleBar(Bool_t x)
 }
 
 //______________________________________________________________________________
-void TEveWindow::TitleBarClicked()
+Bool_t TEveWindow::IsCurrent() const
 {
-   // Slot for clicking on the title-bar. This window becomes the current
-   // window or, if it was already current, the current is set to zero. 
+   // Returns true if this window is the current one.
 
-   if (fgCurrentWindow == this)
-   {
-      SetCurrent(kFALSE);
-      fgCurrentWindow = 0;
-   }
-   else
-   {
-      if (fgCurrentWindow)
-      {
-         fgCurrentWindow->SetCurrent(kFALSE);
-      }
-      fgCurrentWindow = this;
-      SetCurrent(kTRUE);
-      gEve->GetSelection()->UserPickedElement(this, kFALSE);
-   }
+   return gEve->GetWindowManager()->IsCurrentWindow(this);
+}
+
+//______________________________________________________________________________
+void TEveWindow::MakeCurrent()
+{
+   // Make this window current.
+
+   if ( ! gEve->GetWindowManager()->IsCurrentWindow(this))
+      gEve->GetWindowManager()->SelectWindow(this);
 }
 
 //______________________________________________________________________________
 void TEveWindow::SetCurrent(Bool_t curr)
 {
    // Set current state of this eve-window.
-   // Should be protected.
+   // Protected method - called by window-manager.
 
    fEveFrame->SetCurrent(curr);
+}
+
+//______________________________________________________________________________
+Bool_t TEveWindow::IsAncestorOf(TEveWindow* win)
+{
+   // Returns true if this is an ancestor of win.
+
+   TEveWindow* parent = dynamic_cast<TEveWindow*>(win->fEveFrame->fEveParent);
+   if (parent)
+   {
+      if (parent == this)
+         return kTRUE;
+      else
+         return IsAncestorOf(parent);
+   }
+   else
+   {
+      return kFALSE;
+   }
+}
+
+//______________________________________________________________________________
+void TEveWindow::TitleBarClicked()
+{
+   // Slot for clicking on the title-bar.
+   // The wish that this window becomes the current one is sent to
+   // the window-manager.
+
+   gEve->GetWindowManager()->SelectWindow(this);
 }
 
 //------------------------------------------------------------------------------
@@ -733,16 +986,16 @@ TEveWindowSlot* TEveWindow::CreateWindowMainFrame(TEveWindow* eve_parent)
    // Static helper.
 
    TGMainFrame* mf = new TGMainFrame(gClient->GetRoot(), fgMainFrameDefWidth, fgMainFrameDefHeight);
-   mf->SetCleanup(kDeepCleanup);
+   mf->SetCleanup(kLocalCleanup);
 
    TEveCompositeFrameInMainFrame *slot = new TEveCompositeFrameInMainFrame
       (mf, eve_parent, mf);
 
+   TEveWindowSlot* ew_slot = TEveWindow::CreateDefaultWindowSlot();
+   ew_slot->PopulateEmptyFrame(slot);
+
    mf->AddFrame(slot, new TGLayoutHints(kLHintsNormal | kLHintsExpandX | kLHintsExpandY));
    slot->MapWindow();
-
-   TEveWindowSlot* ew_slot = TEveWindow::CreateDefaultWindowSlot();
-   ew_slot->PopulateSlot(slot);
 
    mf->Layout();
    mf->MapWindow();
@@ -758,18 +1011,62 @@ TEveWindowSlot* TEveWindow::CreateWindowInTab(TGTab* tab, TEveWindow* eve_parent
    // Static helper.
 
    TGCompositeFrame *parent = tab->AddTab("<unused>");
+   parent->SetCleanup(kLocalCleanup);
 
    TEveCompositeFrameInTab *slot = new TEveCompositeFrameInTab(parent, eve_parent, tab);
 
    TEveWindowSlot* ew_slot = TEveWindow::CreateDefaultWindowSlot();
-   ew_slot->PopulateSlot(slot);
+
+   ew_slot->PopulateEmptyFrame(slot);
 
    parent->AddFrame(slot, new TGLayoutHints(kLHintsNormal | kLHintsExpandX | kLHintsExpandY));
-   slot->MapWindow();
 
    tab->Layout();
 
+   slot->MapWindow();
+
    return ew_slot;
+}
+
+//______________________________________________________________________________
+void TEveWindow::SwapWindows(TEveWindow* w1, TEveWindow* w2)
+{
+   // Swap windows w1 and w2. They are properly reparented in the eve
+   // hierarch as well.
+   // Layout is called on both frames.
+
+   static const TEveException eh("TEveWindow::SwapWindows ");
+
+   if (w1 == 0 || w2 == 0)
+      throw eh + "Called with null window.";
+
+   if (w1 == w2)
+      throw eh + "Windows are equal ... nothing to change.";
+
+   if (w1->IsAncestorOf(w2) || w2->IsAncestorOf(w1))
+      throw eh + "Windows are in direct ancestry.";
+
+   TEveCompositeFrame *f1 = w1->fEveFrame,  *f2 = w2->fEveFrame;
+   TEveElement        *p1 = f1->fEveParent, *p2 = f2->fEveParent;
+
+   if (p1 != p2)
+   {
+      p1->AddElement(w2);
+      p2->AddElement(w1);
+   }
+
+   f1->RelinquishEveWindow(kFALSE);
+   f2->RelinquishEveWindow(kFALSE);
+   f1->AcquireEveWindow(w2); w2->fEveFrame = f1;
+   f2->AcquireEveWindow(w1); w1->fEveFrame = f2;
+
+   if (p1 != p2)
+   {
+      p1->RemoveElement(w1);
+      p2->RemoveElement(w2);
+   }
+
+   f1->Layout(); f2->Layout();
 }
 
 
@@ -803,7 +1100,7 @@ TEveWindowSlot::~TEveWindowSlot()
 {
    // Destructor.
 
-   delete fEmptyButt;
+   fEmptyButt->DeleteWindow();
 }
 
 //______________________________________________________________________________
@@ -835,13 +1132,10 @@ TEveWindowPack* TEveWindowSlot::MakePack()
    // A pack is created in place of this window-slot.
    // This window-slot will auto-destruct.
 
-   TGPack* pack = new TGPack();
-   pack->SetVertical(kFALSE);
-
    TEveWindowPack* eve_pack = new TEveWindowPack
-      (pack, "Pack", "Window container for horizontal and vertical stacking.");
+      (0, "Pack", "Window container for horizontal and vertical stacking.");
 
-   eve_pack->PopulateSlot(fEveFrame);
+   ReplaceWindow(eve_pack);
 
    return eve_pack;
 }
@@ -852,18 +1146,32 @@ TEveWindowTab* TEveWindowSlot::MakeTab()
    // A tab is created in place of this window-slot.
    // This window-slot will auto-destruct.
 
-   TGTab* tab = new TGTab();
+   TEveWindowTab* eve_tab = new TEveWindowTab
+      (0, "Tab", "Window container for horizontal and vertical stacking.");
 
-   TEveWindowTab* eve_tab= new TEveWindowTab
-      (tab, "Tab", "Window container for horizontal and vertical stacking.");
-
-   eve_tab->PopulateSlot(fEveFrame);
+   ReplaceWindow(eve_tab);
 
    return eve_tab;
 }
 
 //______________________________________________________________________________
-void TEveWindowSlot::StartEmbedding()
+TEveWindowFrame* TEveWindowSlot::MakeFrame(TGFrame* frame)
+{
+   // An eve-window-frame is created and frame is passed into it.
+   // If frame is 0 (the default), a default composite-frame will be created
+   // in TEveWindowFrame() constructor.
+   // This window-slot will auto-destruct.
+
+   TEveWindowFrame* eve_frame = new TEveWindowFrame
+      (frame, "External frame", "");
+
+   ReplaceWindow(eve_frame);
+
+   return eve_frame;
+}
+
+//______________________________________________________________________________
+TGCompositeFrame* TEveWindowSlot::StartEmbedding()
 {
    // Start embedding a window that will replace the current slot.
    // It is expected that a main-frame will be created and then
@@ -875,12 +1183,13 @@ void TEveWindowSlot::StartEmbedding()
       throw eh + "Already embedding.";
 
    fEmbedBuffer = new TGCompositeFrame(gClient->GetDefaultRoot());
-   fEmbedBuffer->SetCleanup(kLocalCleanup);
    fEmbedBuffer->SetEditable(kTRUE);
+
+   return fEmbedBuffer;
 }
 
 //______________________________________________________________________________
-TEveWindowFrame* TEveWindowSlot::StopEmbedding()
+TEveWindowFrame* TEveWindowSlot::StopEmbedding(const Text_t* name)
 {
    // An embedded window is created in place of this window-slot.
    // This window-slot will auto-destruct.
@@ -917,10 +1226,14 @@ TEveWindowFrame* TEveWindowSlot::StopEmbedding()
    TGMainFrame *mf = dynamic_cast<TGMainFrame*>(f);
    assert(mf != 0);
 
-   TEveWindowFrame* eve_frame= new TEveWindowFrame
+   if (name) {
+      mf->SetWindowName(name);
+   }
+
+   TEveWindowFrame* eve_frame = new TEveWindowFrame
       (f, mf->GetWindowName(), mf->ClassName());
 
-   eve_frame->PopulateSlot(fEveFrame);
+   ReplaceWindow(eve_frame);
 
    return eve_frame;
 }
@@ -931,17 +1244,26 @@ TEveWindowFrame* TEveWindowSlot::StopEmbedding()
 //==============================================================================
 
 //______________________________________________________________________________
-// Description of TEveWindowFrame
 //
+// Encapsulates TGFrame into an eve-window.
+// The frame is owned by the eve-window.
 
 ClassImp(TEveWindowFrame);
 
 //______________________________________________________________________________
-TEveWindowFrame::TEveWindowFrame(TGFrame* f, const Text_t* n, const Text_t* t) :
+TEveWindowFrame::TEveWindowFrame(TGFrame* frame, const Text_t* n, const Text_t* t) :
    TEveWindow (n, t),
-   fGUIFrame  (f)
+   fGUIFrame  (frame)
 {
    // Constructor.
+   // If the passed frame is 0, a default TGCompositeFrame frame is instantiated
+   // and set to local-cleanup.
+
+   if (fGUIFrame == 0)
+   {
+      fGUIFrame = new TGCompositeFrame();
+      fGUIFrame->SetCleanup(kLocalCleanup);
+   }
 }
 
 //______________________________________________________________________________
@@ -949,26 +1271,43 @@ TEveWindowFrame::~TEveWindowFrame()
 {
    // Destructor.
 
-   delete fGUIFrame;
+   fGUIFrame->DeleteWindow();
 }
 
+//______________________________________________________________________________
+TGCompositeFrame* TEveWindowFrame::GetGUICompositeFrame()
+{
+   // Returns the registered top-frame of this eve-window dynamic-casted
+   // to composite-frame.
+   // Throws an execption if the cast fails.
+
+   static const TEveException kEH("TEveWindowFrame::GetGUICompositeFrame ");
+
+   TGCompositeFrame *cf = dynamic_cast<TGCompositeFrame*>(fGUIFrame);
+   if (cf == 0)
+      throw kEH + "The registered frame is not a composite-frame.";
+
+   return cf;
+}
 
 //==============================================================================
 // TEveWindowPack
 //==============================================================================
 
 //______________________________________________________________________________
-// Description of TEveWindowPack
 //
+// Encapsulates TGPack into an eve-window.
+// The pack is owned by the eve-window.
 
 ClassImp(TEveWindowPack);
 
 //______________________________________________________________________________
 TEveWindowPack::TEveWindowPack(TGPack* p, const Text_t* n, const Text_t* t) :
    TEveWindow   (n, t),
-   fPack        (p)
+   fPack        (p ? p : new TGPack())
 {
    // Constructor.
+   // If passed pack is 0, a defualt one is instantiated.
 }
 
 //______________________________________________________________________________
@@ -976,7 +1315,7 @@ TEveWindowPack::~TEveWindowPack()
 {
    // Destructor.
 
-   delete fPack;
+   fPack->DeleteWindow();
 }
 
 //______________________________________________________________________________
@@ -995,7 +1334,7 @@ TEveWindowSlot* TEveWindowPack::NewSlot()
    TEveCompositeFrame* slot = new TEveCompositeFrameInPack(fPack, this, fPack);
 
    TEveWindowSlot* ew_slot = TEveWindow::CreateDefaultWindowSlot();
-   ew_slot->PopulateSlot(slot);
+   ew_slot->PopulateEmptyFrame(slot);
 
    fPack->AddFrame(slot);
    slot->MapWindow();
@@ -1008,28 +1347,46 @@ TEveWindowSlot* TEveWindowPack::NewSlot()
 //______________________________________________________________________________
 void TEveWindowPack::FlipOrientation()
 {
-   // Flip orientation of the pack (horizontal / vertical).
+   // Flip orientation of the pack (vertical / horizontal).
 
    fPack->SetVertical( ! fPack->GetVertical());
 }
 
+//______________________________________________________________________________
+void TEveWindowPack::SetVertical(Bool_t x)
+{
+   // Set orientation of the pack (vertical / horizontal).
+
+   fPack->SetVertical(x);
+}
+
+//______________________________________________________________________________
+void TEveWindowPack::EqualizeFrames()
+{
+   // Refit existing frames so that their lengths are equal.
+
+   fPack->EqualizeFrames();
+   fPack->Layout();
+}
 
 //==============================================================================
 // TEveWindowTab
 //==============================================================================
 
 //______________________________________________________________________________
-// Description of TEveWindowTab
 //
+// Encapsulates TGTab into an eve-window.
+// The tab is owned by the eve-window.
 
 ClassImp(TEveWindowTab);
 
 //______________________________________________________________________________
 TEveWindowTab::TEveWindowTab(TGTab* tab, const Text_t* n, const Text_t* t) :
    TEveWindow(n, t),
-   fTab (tab)
+   fTab (tab ? tab : new TGTab())
 {
    // Constructor.
+   // If passed tab is 0, a defualt one is instantiated.
 }
 
 //______________________________________________________________________________
@@ -1037,7 +1394,7 @@ TEveWindowTab::~TEveWindowTab()
 {
    // Destructor.
 
-   delete fTab;
+   fTab->DeleteWindow();
 }
 
 //______________________________________________________________________________

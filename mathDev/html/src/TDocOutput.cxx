@@ -20,11 +20,14 @@
 #include "TEnv.h"
 #include "TGlobal.h"
 #include "THtml.h"
+#include "TInterpreter.h"
 #include "TMethod.h"
 #include "TROOT.h"
 #include "TSystem.h"
 #include "TUrl.h"
 #include "TVirtualMutex.h"
+#include "TVirtualPad.h"
+#include "TVirtualViewer3D.h"
 #include <vector>
 #include <list>
 #include <set>
@@ -295,13 +298,16 @@ void TDocOutput::AdjustSourcePath(TString& line, const char* relpath /*= "../"*/
 }
 
 //______________________________________________________________________________
-void TDocOutput::Convert(std::istream& in, const char* outfilename, const char *title,
-                         const char *relpath /*= "../"*/)
+void TDocOutput::Convert(std::istream& in, const char* infilename,
+                         const char* outfilename, const char *title,
+                         const char *relpath /*= "../"*/, Int_t includeOutput /*=0*/,
+                         const char* context /*= ""*/,
+                         TGClient* gclient /*= 0*/)
 {
    // Convert a text file into a html file.
    // outfilename doesn't have an extension yet; up to us to decide.
    // We generate HTML, so our extension is ".html".
-   // See THtml::Convert() for the otehr parameters.
+   // See THtml::Convert() for the other parameters.
 
    TString htmlFilename(outfilename);
    htmlFilename += ".html";
@@ -313,18 +319,209 @@ void TDocOutput::Convert(std::istream& in, const char* outfilename, const char *
       return;
    }
 
-   Printf("Convert: %s", htmlFilename.Data());
-
    // write a HTML header
    WriteHtmlHeader(out, title, relpath);
 
-   out << "<h1>" << title << "</h1>" << endl;
+   if (context || context[0])
+      out << context << endl;
+   else if (title && title[0])
+      out << "<h1 class=\"convert\">" << title << "</h1>" << endl;
+
+   Int_t numReuseCanvases = 0;
+   if (includeOutput && !(includeOutput & THtml::kForceOutput)) {
+      void* dirHandle = gSystem->OpenDirectory(gSystem->DirName(htmlFilename));
+      if (dirHandle) {
+         FileStat_t infile_stat;
+         if (!gSystem->GetPathInfo(infilename, infile_stat)) {
+            // can stat.
+            const char* outfile = 0;
+            TString firstCanvasFileBase(gSystem->BaseName(outfilename));
+            firstCanvasFileBase += "_0.png";
+            // first check whether the firstCanvasFile exists:
+            Bool_t haveFirstCanvasFile = false;
+            while ((outfile = gSystem->GetDirEntry(dirHandle))) {
+               if (firstCanvasFileBase == outfile) {
+                  haveFirstCanvasFile = true;
+                  break;
+               }
+            }
+            gSystem->FreeDirectory(dirHandle);
+
+            FileStat_t outfile_stat;
+            TString firstCanvasFile = outfilename;
+            firstCanvasFile += "_0.png";
+            Int_t maxIdx = -1;
+            if (haveFirstCanvasFile && !gSystem->GetPathInfo(firstCanvasFile, outfile_stat)
+                && outfile_stat.fMtime > infile_stat.fMtime) {
+               // the first canvas file exists and it is newer than the script, so we reuse
+               // the canvas files. We need to know how many there are:
+               dirHandle = gSystem->OpenDirectory(gSystem->DirName(htmlFilename));
+               TString stem(gSystem->BaseName(outfilename));
+               stem += "_";
+               TString dir(gSystem->DirName(htmlFilename));
+               while ((outfile = gSystem->GetDirEntry(dirHandle))) {
+                  if (strncmp(outfile, stem, stem.Length()))
+                     continue;
+                  const char* posext = strrchr(outfile, '.');
+                  if (!posext || strcmp(posext, ".png"))
+                     continue;
+
+                  // extract the mod time of the PNG file
+                  if (gSystem->GetPathInfo(dir + "/" + outfile, outfile_stat))
+                     // can't stat!
+                     continue;
+
+                  if (outfile_stat.fMtime > infile_stat.fMtime) {
+                     ++numReuseCanvases;
+                     // The canvas PNG is newer than the script, so
+                     // extract the index of the canvas
+                     TString idxStr(outfile + stem.Length());
+                     idxStr.Remove(idxStr.Length() - 4);
+                     Int_t idx = idxStr.Atoi();
+                     if (maxIdx < idx)
+                        maxIdx = idx;
+                  }
+               }
+               gSystem->FreeDirectory(dirHandle);
+               if (maxIdx + 1 != numReuseCanvases)
+                  // bad: the number of canvases to reuse noes not correspond to the highest index we saw.
+                  // we will need to regenerate evrything.
+                  numReuseCanvases = 0;
+            }
+         } // infile can be stat'ed
+      } // can open output directory
+   } // canvases wanted
+
+   if (numReuseCanvases)
+      Printf("Convert: %s (reusing %d saved canvas%s)", htmlFilename.Data(), numReuseCanvases, (numReuseCanvases > 1 ? "es" : ""));
+   else
+      Printf("Convert: %s", htmlFilename.Data());
+
+   UInt_t nCanvases = numReuseCanvases;
+   if (includeOutput) {
+      if (!numReuseCanvases) {
+         // need to run the script
+         TString pwd(gSystem->pwd());
+         gSystem->cd(gSystem->DirName(infilename));
+
+         TList* gClientGetListOfWindows = 0;
+         TObject* gClientGetDefaultRoot = 0;
+         std::set<TObject*> previousWindows;
+         if (gclient) {
+            gROOT->ProcessLine(TString::Format("*((TList**)0x%lx) = ((TGClient*)0x%lx)->GetListOfWindows();",
+                                               &gClientGetListOfWindows, gclient));
+            gROOT->ProcessLine(TString::Format("*((TObject**)0x%lx) = ((TGClient*)0x%lx)->GetDefaultRoot();",
+                                               &gClientGetDefaultRoot, gclient));
+            TObject* win = 0;
+            TIter iWin(gClientGetListOfWindows);
+            while((win = iWin())) {
+               TObject* winGetParent = 0;
+               gROOT->ProcessLine(TString::Format("*((TObject**)0x%lx) = ((TGWindow*)0x%lx)->GetParent();",
+                                                  &winGetParent, win));
+               if (winGetParent == gClientGetDefaultRoot)
+                  previousWindows.insert(win);
+            }
+         } else {
+            if (gROOT->GetListOfCanvases()->GetSize())
+               previousWindows.insert(gROOT->GetListOfCanvases()->Last());
+         }
+         TIter iTimer(gSystem->GetListOfTimers());
+         std::set<TObject*> timersBefore;
+         TObject* timerOld = 0;
+         while ((timerOld = iTimer()))
+            timersBefore.insert(timerOld);
+
+         TString cmd(".x ");
+         cmd += gSystem->BaseName(infilename);
+         if (includeOutput & THtml::kCompiledOutput)
+            cmd += "+";
+         gInterpreter->SaveContext();
+         gInterpreter->SaveGlobalsContext();
+         Int_t err;
+         gROOT->ProcessLine(cmd, &err);
+         gSystem->cd(pwd);
+
+         if (err == TInterpreter::kNoError) {
+            if (gclient) {
+               TClass* clRootCanvas = TClass::GetClass("TRootCanvas");
+               TClass* clGMainFrame = TClass::GetClass("TGMainFrame");
+               TObject* win = 0;
+               TIter iWin(gClientGetListOfWindows);
+               while((win = iWin())) {
+                  TObject* winGetParent = 0;
+                  gROOT->ProcessLine(TString::Format("*((TObject**)0x%lx) = ((TGWindow*)0x%lx)->GetParent();",
+                                                     &winGetParent, win));
+                  Bool_t winIsMapped = kFALSE;
+                  if (winGetParent == gClientGetDefaultRoot)
+                     gROOT->ProcessLine(TString::Format("*((Bool_t*)0x%lx) = ((TGWindow*)0x%lx)->IsMapped();",
+                                                        &winIsMapped, win));
+                  if (winIsMapped && previousWindows.find(win) == previousWindows.end()
+                      && win->InheritsFrom(clGMainFrame)) {
+                     gROOT->ProcessLine(TString::Format("((TGWindow*)0x%lx)->MapRaised();", win));
+                     Bool_t isRootCanvas = win->InheritsFrom(clRootCanvas);
+                     Bool_t hasEditor = false;
+                     if (isRootCanvas) {
+                        gROOT->ProcessLine(TString::Format("*((Bool_t*)0x%lx) = ((TRootCanvas*)0x%lx)->HasEditor();",
+                                                           &hasEditor, win));
+                     }
+                     if (isRootCanvas && !hasEditor) {
+                        TVirtualPad* pad = 0;
+                        gROOT->ProcessLine(TString::Format("*((TVirtualPad**)0x%lx) = ((TRootCanvas*)0x%lx)->Canvas();",
+                                                           &pad, win));
+                        if (!pad->HasViewer3D() || pad->GetViewer3D()->InheritsFrom("TViewer3DPad")) {
+                           pad->SaveAs(TString::Format("%s_%d.png", outfilename, nCanvases++));
+                        }
+                     } else
+                        gROOT->ProcessLine(TString::Format("((TGWindow*)0x%lx)->SaveAs(\"%s_%d.png\");",
+                                                           win, outfilename, nCanvases++));
+                  }
+               }
+            } else {
+               // no gClient
+               TVirtualPad* pad = 0;
+               TVirtualPad* last = 0;
+               if (!previousWindows.empty())
+                  last = (TVirtualPad*) *previousWindows.begin();
+               TIter iCanvas(gROOT->GetListOfCanvases());
+               while ((pad = (TVirtualPad*) iCanvas())) {
+                  if (last) {
+                     if (last == pad) last = 0;
+                     continue;
+                  }
+                  pad->SaveAs(TString::Format("%s_%d.png", outfilename, nCanvases++));
+               }
+            }
+            gInterpreter->Reset();
+            gInterpreter->ResetGlobals();
+            TIter iTimerRemove(gSystem->GetListOfTimers());
+            TTimer* timer = 0;
+            while ((timer = (TTimer*) iTimerRemove()))
+               if (timersBefore.find(timer) == timersBefore.end())
+                  gSystem->RemoveTimer(timer);
+         }
+      }
+      out << "<table><tr><td style=\"vertical-align:top;padding-right:2em;\">" << endl;
+   }
    out << "<pre>" << endl;
 
    TDocParser parser(*this);
-   parser.Convert(out, in, relpath);
+   parser.Convert(out, in, relpath, (includeOutput) /* determines whether it's code or not */);
 
    out << "</pre>" << endl;
+
+   if (includeOutput) {
+      out << "</td><td style=\"vertical-align:top;\">" << endl;
+      out << "<table>" << endl;
+      for (UInt_t i = 0; i < nCanvases; ++i) {
+         TString pngname = TString::Format("%s_%d.png", gSystem->BaseName(outfilename), i);
+         out << "<tr><td><a href=\"" << pngname << "\">" << endl
+             << "<img src=\"" << pngname << "\" id=\"canv" << i << "\" alt=\"thumb\" style=\"border:none;width:22em;\" "
+            "onmouseover=\"javascript:canv" << i << ".style.width='auto';\" />" << endl
+             << "</a></td></tr>" << endl;
+         }
+      out << "</table>" << endl;
+      out << "</td></tr></table>" << endl;
+   }
 
    // write a HTML footer
    WriteHtmlFooter(out, relpath);
@@ -1416,7 +1613,7 @@ void TDocOutput::ProcessDocInDir(std::ostream& out, const char* indir,
             if (in) {
                out << "<pre>"; // this is what e.g. the html directive expects
                TDocParser parser(*this);
-               parser.Convert(out, in, "./");
+               parser.Convert(out, in, "./", kFALSE /* no code */);
                out << "</pre>";
             }
          } else if (filename.EndsWith(".html", TString::kIgnoreCase)) {
@@ -1457,7 +1654,7 @@ void TDocOutput::ProcessDocInDir(std::ostream& out, const char* indir,
          if (inFurther && outFurther) {
             outFurther << "<pre>"; // this is what e.g. the html directive expects
             TDocParser parser(*this);
-            parser.Convert(outFurther, inFurther, "../");
+            parser.Convert(outFurther, inFurther, "../", kFALSE /*no code*/);
             outFurther << "</pre>";
          }
       } else {

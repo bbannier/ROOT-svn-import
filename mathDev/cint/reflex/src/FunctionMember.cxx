@@ -49,7 +49,8 @@ Reflex::FunctionMember::FunctionMember( const char *  nam,
 std::string Reflex::FunctionMember::Name( unsigned int mod ) const {
 //-------------------------------------------------------------------------------
 // Construct the qualified (if requested) name of the function member.
-   std::string s = "";
+   std::string s;
+   s.reserve(30); // an arbitrary, reasonable number
 
    if ( 0 != ( mod & ( QUALIFIED | Q ))) {
       if ( IsPublic())          { s += "public ";    }
@@ -100,7 +101,7 @@ Reflex::FunctionMember::Invoke( const Object & obj, Object* ret,
    void * mem = CalculateBaseObject( obj );
    static Type tVoid = Type::ByName("void");
    void* retaddr = 0;
-   if (TypeOf().ReturnType() != tVoid)
+   if (ret && TypeOf().ReturnType() != tVoid)
       retaddr = ret->Address();
    // parameters need more checking FIXME
    fStubFP( retaddr, mem, paramList, fStubCtx );
@@ -128,7 +129,7 @@ Reflex::FunctionMember::Invoke( Object* ret, const std::vector < void * > & para
 
    static Type tVoid = Type::ByName("void");
    void* retaddr = 0;
-   if (TypeOf().ReturnType() != tVoid)
+   if (ret && TypeOf().ReturnType() != tVoid)
       retaddr = ret->Address();
    // parameters need more checking FIXME
    fStubFP( retaddr, 0, paramList, fStubCtx );

@@ -1,3 +1,8 @@
+// @(#)root/eve:$Id$
+// Author: Matevz Tadel
+
+// Demonstates usage of automatic 2D projections - class TEveProjectionManager.
+
 const char* esd_geom_file_name = "http://root.cern.ch/files/alice_ESDgeometry.root";
 
 void projection_test()
@@ -7,8 +12,8 @@ void projection_test()
 
    // camera
    TEveScene* s = gEve->SpawnNewScene("Projected Event");
-   gEve->GetDefViewer()->AddScene(s);
-   TGLViewer* v = (TGLViewer *)gEve->GetGLViewer();
+   gEve->GetDefaultViewer()->AddScene(s);
+   TGLViewer* v = gEve->GetDefaultGLViewer();
    v->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
    TGLOrthoCamera* cam = (TGLOrthoCamera*) v->CurrentCamera();
    cam->SetZoomMinMax(0.2, 20);

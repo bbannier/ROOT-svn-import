@@ -46,6 +46,7 @@
 #include "XrdProofdProofServMgr.h"
 #include "XrdProofdProtocol.h"
 #include "XrdProofGroup.h"
+#include "XrdProofSched.h"
 #include "XrdROOT.h"
 
 #include <map>
@@ -112,6 +113,7 @@ void *XrdProofdProofServCron(void *p)
       if (waitt > quickcheckfreq || waitt <= 0)
          waitt = quickcheckfreq;
       int pollRet = mgr->Pipe()->Poll(waitt);
+
       if (pollRet > 0) {
          // Read message
          XpdMsg msg;
@@ -155,6 +157,7 @@ void *XrdProofdProofServCron(void *p)
             mgr->CheckActiveSessions(0);
         } else if (msg.Type() == XrdProofdProofServMgr::kCleanSessions) {
             // Request for cleanup all sessions of a client (or all clients) 
+            XpdSrvMgrCreateCnt cnt(mgr, XrdProofdProofServMgr::kCleanSessionsCnt);
             XrdOucString usr;
             rc = msg.Get(usr);
             int svrtype;
@@ -170,13 +173,28 @@ void *XrdProofdProofServCron(void *p)
             mgr->CleanClientSessions(usr.c_str(), svrtype);
             // Check if there is any orphalin sessions and clean them up
             mgr->CleanupLostProofServ();
+         } else if (msg.Type() == XrdProofdProofServMgr::kProcessReq) {
+            // Process request from some client: if we are here it means they can go ahead
+            mgr->ProcessSem()->Post();
          } else {
             TRACE(XERR, "unknown type: "<<msg.Type());
             continue;
          }
       } else {
+
          // The current time
          int now = time(0);
+
+         // If there is any activity in mgr->Process() we postpone the checks in 5 secs
+         if (mgr->CheckCounter(XrdProofdProofServMgr::kProcessCnt) > 0) {
+            // The current time
+            lastcheck = now + 5 - ckfreq;
+            mgr->SetNextSessionsCheck(now + 5);
+            // Notify
+            TRACE(ALL, "postponing sessions check (will retry in 5 secs)");
+            continue;
+         }
+
          bool full = (now > mgr->NextSessionsCheck() - deltat) ? 1 : 0;
          if (full) {
             // Run periodical full checks
@@ -242,7 +260,7 @@ void *XrdProofdProofServRecover(void *p)
 //______________________________________________________________________________
 XrdProofdProofServMgr::XrdProofdProofServMgr(XrdProofdManager *mgr,
                                              XrdProtocol_Config *pi, XrdSysError *e)
-                  : XrdProofdConfig(pi->ConfigFN, e)
+                  : XrdProofdConfig(pi->ConfigFN, e), fProcessSem(0)
 {
    // Constructor
    XPDLOC(SMGR, "XrdProofdProofServMgr")
@@ -257,7 +275,10 @@ XrdProofdProofServMgr::XrdProofdProofServMgr(XrdProofdManager *mgr,
    fReconnectTime = -1;
    fReconnectTimeOut = 300;
    fNextSessionsCheck = -1;
-   fNCreate = 0;
+   // Init internal counters
+   for (int i = 0; i < PSMMAXCNTS; i++) {
+      fCounters[i] = 0;
+   }
 
    // Defaults can be changed via 'proofservmgr'
    fCheckFrequency = 30;
@@ -381,11 +402,7 @@ int XrdProofdProofServMgr::AddSession(XrdProofdProtocol *p, XrdProofdProofServ *
    // Save session info to file
    XrdProofSessionInfo info(c, s);
    int rc = info.SaveToFile(path.c_str());
-   if (rc == 0) {
-      // Save path into the protocol instance, if successful 
-      s->SetAdminPath(path.c_str());
-      s->Protocol()->SetAdminPath(path.c_str());
-   } 
+
    return rc;
 }
 
@@ -418,7 +435,7 @@ bool XrdProofdProofServMgr::IsSessionSocket(const char *fpid)
    struct stat st;
    if (stat(apath.c_str(), &st) != 0 && (errno == ENOENT)) {
       // Remove the socket path if not during creation
-      if (NCreate() <= 0) {
+      if (CheckCounter(kCreateCnt) <= 0) {
          unlink(spath.c_str());
          TRACE(REQ, "missing admin path: removing "<<spath<<" ...");
       }
@@ -594,19 +611,24 @@ int XrdProofdProofServMgr::DeleteFromSessions(const char *fpid)
 
    XrdOucString key = fpid;
    key.erase(0, key.rfind('.') + 1);
-   XrdProofdProofServ *xps = fSessions.Find(key.c_str());
+   XrdProofdProofServ *xps = 0;
+   { XrdSysMutexHelper mhp(fMutex); xps = fSessions.Find(key.c_str()); }
    if (xps) {
       // Tell other attached clients, if any, that this session is gone
       XrdOucString msg;
       msg.form("session: %s terminated by peer", fpid);
-      xps->Broadcast(msg.c_str(), kXPD_wrkmortem);
       TRACE(DBG, msg);
-      // Reset instance
-      xps->Reset();
+      // Reset this instance
+      int tp = xps->Reset(msg.c_str(), kXPD_wrkmortem);
+      // Update counters and lists
+      XrdSysMutexHelper mhp(fMutex);
+      if (tp == 1) fCurrentSessions--;
       // remove from the list of active sessions
       fActiveSessions.remove(xps);
    }
-   return fSessions.Del(key.c_str());
+   int rc = -1;
+   { XrdSysMutexHelper mhp(fMutex); rc = fSessions.Del(key.c_str()); }
+   return rc;
 }
 
 //______________________________________________________________________________
@@ -794,7 +816,7 @@ bool XrdProofdProofServMgr::IsClientRecovering(const char *usr, const char *grp,
 int XrdProofdProofServMgr::CheckActiveSessions(bool verify)
 {
    // Go through the active sessions admin path and make sure sessions are alive.
-   // If 'verify' is true also ask the session to proof that they are allowed
+   // If 'verify' is true also ask the session to proof that they are alive
    // via asynchronous ping (the result will be done at next check).
    // Move those not responding in the terminated sessions admin path.
    XPDLOC(SMGR, "ProofServMgr::CheckActiveSessions")
@@ -828,7 +850,7 @@ int XrdProofdProofServMgr::CheckActiveSessions(bool verify)
       bool sessionalive = (VerifySession(ent->d_name) == 0) ? 1 : 0;
       bool rmsession = 0;
       if (xps) {
-         if (!xps->IsValid() || !sessionalive) rmsession = 1; 
+         if (!xps->IsValid() || !sessionalive) rmsession = 1;
       } else {
          // Session not yet registered, possibly starting
          // Skips checks the admin file verification was OK
@@ -847,8 +869,9 @@ int XrdProofdProofServMgr::CheckActiveSessions(bool verify)
          if (!rmsession) {
             XrdSysMutexHelper mh(xps->Mutex());
             if ((nc = xps->GetNClients(1)) <= 0 && (!IsReconnecting() || oldvers)) {
-               if ((fShutdownOpt == 1 && (xps->IdleTime() >= fShutdownDelay)) ||
-                  (fShutdownOpt == 2 && (xps->DisconnectTime() >= fShutdownDelay))) {
+               if ((xps->SrvType() != kXPD_TopMaster) || 
+                   (fShutdownOpt == 1 && (xps->IdleTime() >= fShutdownDelay)) ||
+                   (fShutdownOpt == 2 && (xps->DisconnectTime() >= fShutdownDelay))) {
                   xps->TerminateProofServ(fMgr->ChangeOwn());
                   rmsession = 1;
                }
@@ -866,7 +889,7 @@ int XrdProofdProofServMgr::CheckActiveSessions(bool verify)
             rmsession = 1;
          }
       }
-      TRACE(DBG, "session: "<<ent->d_name<<"; nc: "<<nc<<"; rm: "<<rmsession);
+      TRACE(REQ, "session: "<<ent->d_name<<"; nc: "<<nc<<"; rm: "<<rmsession);
       // Remove the session, if needed
       if (rmsession)
          MvSession(ent->d_name);
@@ -954,6 +977,18 @@ int XrdProofdProofServMgr::CleanClientSessions(const char *usr, int srvtype)
       XrdProofdAux::GetUserInfo(usr, ui);
    XrdOucString path, rest, key;
 
+   // We need lock to avoid session actions request while we are doing this
+   XrdSysRecMutex *mtx = 0;
+   if (all) {
+      // Lock us all
+      mtx = &fMutex;
+   } else {
+      // Lock the client
+      XrdProofdClient *c = fMgr->ClientMgr()->GetClient(usr);
+      if (c) mtx = c->Mutex();
+   }
+   XrdSysMutexHelper mtxh(mtx);
+
    // Check the terminated session dir first
    DIR *dir = opendir(fTermAdminPath.c_str());
    if (!dir) {
@@ -1021,13 +1056,8 @@ int XrdProofdProofServMgr::CleanClientSessions(const char *usr, int srvtype)
          XrdProofdProofServ *xps = 0;
          {  XrdSysMutexHelper mhp(fMutex);
             xps = fSessions.Find(key.c_str()); }
-         if (xps) {
-            // Ask the session to terminate
-            xps->TerminateProofServ(fMgr->ChangeOwn());
-         } else {
-            // Send directly a termination signal
-            XrdProofdAux::KillProcess(pid, 0, ui, fMgr->ChangeOwn());
-         }
+         // Send a termination signal
+         XrdProofdAux::KillProcess(pid, 0, ui, fMgr->ChangeOwn());
       }
       // Flag as terminated
       MvSession(ent->d_name);
@@ -1245,8 +1275,26 @@ int XrdProofdProofServMgr::Process(XrdProofdProtocol *p)
    TRACEP(p, REQ, "enter: req id: " << p->Request()->header.requestid << " (" <<
                 XrdProofdAux::ProofRequestTypes(p->Request()->header.requestid) << ")");
 
+   XrdSysMutexHelper mtxh(p->Client()->Mutex());
+
    // Once logged-in, the user can request the real actions
    XrdOucString emsg("Invalid request code: ");
+
+   int twait = 20;
+
+   if (Pipe()->Post(XrdProofdProofServMgr::kProcessReq, 0) != 0) {
+      response->Send(kXR_ServerError,
+                     "ProofServMgr::Process: error posting internal pipe for authorization to proceed");
+      return 0;
+   }
+   if (fProcessSem.Wait(twait) != 0) {
+      response->Send(kXR_ServerError,
+                     "ProofServMgr::Process: timed-out waiting for authorization to proceed - retry later");
+      return 0;
+   }
+
+   // This is needed to block the session checks
+   XpdSrvMgrCreateCnt cnt(this, kProcessCnt);
 
    switch(p->Request()->header.requestid) {
    case kXP_create:
@@ -1294,7 +1342,7 @@ int XrdProofdProofServMgr::Attach(XrdProofdProtocol *p)
    int now = time(0);
    int deadline = -1, defdeadline = now + fRecoverTimeOut;
    while ((deadline < 0) || (now < deadline)) {
-      if (!(xps = c->GetProofServ(psid)) || !xps->IsValid()) {
+      if (!(xps = c->GetServer(psid)) || !xps->IsValid()) {
          // If the client is recovering start regular checks
          if (!IsClientRecovering(c->User(), c->Group(), deadline)) {
             // Failure
@@ -1375,11 +1423,30 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
    XPD_SETRESP(p, "Create");
 
    TRACEP(p, DBG, "enter");
+   XrdOucString msg;
+
+   XpdSrvMgrCreateGuard mcGuard;
+
+   // Check if we are allowed to start a new session
+   int mxsess = fMgr->ProofSched() ? fMgr->ProofSched()->MaxSessions() : -1;
+   if (p->ConnType() == kXPD_ClientMaster && mxsess > 0) {
+      XrdSysMutexHelper mhp(fMutex);
+      int cursess = CurrentSessions();
+      TRACEP(p,ALL," cursess: "<<cursess);
+      if (mxsess <= cursess) {
+         msg.form(" ++++ Max number of sessions reached (%d) - please retry later ++++ \n", cursess); 
+         response->Send(kXR_attn, kXPD_srvmsg, (char *) msg.c_str(), msg.length());
+         response->Send(kXP_TooManySess, "cannot start a new session");
+         return 0;
+      }
+      // If we fail this guarantees that the counters are decreased, if needed 
+      mcGuard.Set(&fCurrentSessions);
+   }
 
    // Update counter to control checks during creation
-   XpdSrvMgrCreateCnt cnt(this);
+   XpdSrvMgrCreateCnt cnt(this, kCreateCnt);
    if (TRACING(DBG)) {
-      int nc = NCreate();
+      int nc = CheckCounter(kCreateCnt);
       TRACEP(p, DBG, nc << " threads are creating a new session");
    }
 
@@ -1451,7 +1518,6 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       uenvs = "";
 
    // The ROOT version to be used
-   XrdOucString msg;
    xps->SetROOT(p->Client()->ROOT());
    msg.form("using ROOT version: %s", xps->ROOT()->Export());
    TRACEP(p, REQ, msg);
@@ -1590,6 +1656,13 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
          }
       }
 
+      // Unblock SIGUSR1 and SIGUSR2
+      sigset_t myset;
+      sigemptyset(&myset);
+      sigaddset(&myset, SIGUSR1);
+      sigaddset(&myset, SIGUSR2);
+      pthread_sigmask(SIG_UNBLOCK, &myset, 0);
+
       // Cleanup
       close(fp[0]);
       close(fp[1]);
@@ -1620,6 +1693,12 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
    TRACEP(p, FORK,"Parent process: child is "<<pid);
    XrdOucString emsg;
 
+   // Cleanup current socket, if any
+   if (xps->UNIXSock()) {
+      TRACEP(p, FORK,"current UNIX sock: "<<xps->UNIXSock() <<", path: "<<xps->UNIXSockPath());
+      xps->DeleteUNIXSock();
+   }
+
    // Admin and UNIX Socket Path (set path and create the socket); we need to
    // set and create them in here, otherwise the cleaning may remove the socket
    XrdOucString path, sockpath;
@@ -1638,8 +1717,17 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       return 0;
    }
    TRACEP(p, FORK,"UNIX sock: "<<xps->UNIXSockPath());
-   if (chown(sockpath.c_str(), p->Client()->UI().fUid, p->Client()->UI().fGid) != 0)
-      TRACEP(p, XERR, "chown on '"<<sockpath.c_str()<<"'; errno: "<<errno);
+   if (chown(sockpath.c_str(), p->Client()->UI().fUid, p->Client()->UI().fGid) != 0) {
+      emsg += ": failure changing ownership of the UNIX socket on " ;
+      emsg += sockpath;
+      emsg += "; errno: " ;
+      emsg += errno;
+      xps->Reset();
+      XrdProofdAux::KillProcess(pid, 1, p->Client()->UI(), fMgr->ChangeOwn());
+      TRACEP(p, XERR, emsg.c_str());
+      response->Send(kXP_ServerError, emsg.c_str());
+      return 0;
+   }
 
    // Read status-of-setup from pipe
    int setupOK = 0;
@@ -1647,10 +1735,10 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
    fds_r.fd = fp[0];
    fds_r.events = POLLIN;
    int pollRet = 0;
-   // We wait for 14 secs max (7 x 2000 millisecs): this is enough to
+   // We wait for 20 secs max (10 x 2000 millisecs): this is enough to
    // cover possible delays due to heavy load; the client will anyhow
    // retry a few times
-   int ntry = 7;
+   int ntry = 10;
    while (pollRet == 0 && ntry--) {
       while ((pollRet = poll(&fds_r, 1, 2000)) < 0 &&
              (errno == EINTR)) { }
@@ -1746,7 +1834,6 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       response->Send(kXR_attn, kXPD_errmsg, (char *) emsg.c_str(), emsg.length());
       return 0;
    }
-
    // Set the group, if any
    xps->SetGroup(p->Client()->Group());
 
@@ -1760,11 +1847,14 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
    }
 
    XrdClientID *cid = xps->Parent();
-   TRACEP(p, FORK, "xps: "<<xps<<", ClientID: "<<(int *)cid<<" (sid: "<<sid<<")");
+   TRACEP(p, FORK, "xps: "<<xps<<", ClientID: "<<(int *)cid<<" (sid: "<<sid<<")"<<" NClients: "<<xps->GetNClients(1));
 
    // Record this session in the client sandbox
    if (p->Client()->Sandbox()->AddSession(xps->Tag()) == -1)
       TRACEP(p, REQ, "problems recording session in sandbox");
+
+   // Success; avoid that the global counter is decreased
+   mcGuard.Set(0);
 
    // Update the global session handlers
    XrdOucString key; key += pid;
@@ -1932,8 +2022,8 @@ int XrdProofdProofServMgr::Accept(XrdProofdProofServ *xps,
    bool go = 1;
 
    // Check inputs
-   if (!xps || !xps->IsValid()) {
-      TRACE(XERR, "session pointer undefined or session invalid: "<<xps);
+   if (!xps || !xps->UNIXSock()) {
+      TRACE(XERR, "session pointer undefined or socket invalid: "<<xps);
       return -1;
    }
    TRACE(REQ, "waiting for server callback for "<<to<<" secs ... on "<<xps->UNIXSockPath());
@@ -1972,6 +2062,9 @@ int XrdProofdProofServMgr::Accept(XrdProofdProofServ *xps,
    }
 
    if (go) {
+      // Save path into the protocol instance: it may be needed during Process
+      XrdOucString apath(xps->AdminPath());
+      ((XrdProofdProtocol *)xp)->SetAdminPath(apath.c_str());
       // Take a short-cut and process the initial request as a sticky request
       if (xp->Process(linkpsrv) != 0) {
          msg = "handshake with internal link failed: ";
@@ -2022,7 +2115,7 @@ int XrdProofdProofServMgr::Detach(XrdProofdProtocol *p)
 
    // Find server session
    XrdProofdProofServ *xps = 0;
-   if (!p->Client() || !(xps = p->Client()->GetProofServ(psid))) {
+   if (!p->Client() || !(xps = p->Client()->GetServer(psid))) {
       TRACEP(p, XERR, "session ID not found");
       response->Send(kXR_InvalidRequest,"session ID not found");
       return 0;
@@ -2052,7 +2145,7 @@ int XrdProofdProofServMgr::Destroy(XrdProofdProtocol *p)
    XrdProofdProofServ *xpsref = 0;
    if (psid > -1) {
       // Request for a specific session
-      if (!p->Client() || !(xpsref = p->Client()->GetProofServ(psid))) {
+      if (!p->Client() || !(xpsref = p->Client()->GetServer(psid))) {
          TRACEP(p, XERR, "reference session ID not found");
          response->Send(kXR_InvalidRequest,"reference session ID not found");
          return 0;
@@ -3383,8 +3476,6 @@ bool XrdProofdProofServMgr::IsReconnecting()
    // Return true if in reconnection state, i.e. during
    // that period during which clients are expected to reconnect.
    // Return false if the session is fully effective
-
-   XrdSysMutexHelper mhp(fMutex);
 
    int rect = -1;
    if (fReconnectTime >= 0) {

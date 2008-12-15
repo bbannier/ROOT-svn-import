@@ -166,59 +166,6 @@ TStreamerInfo::TStreamerInfo(TClass *cl)
 }
 
 //______________________________________________________________________________
-TStreamerInfo::TStreamerInfo(const TStreamerInfo& si) :
-  TVirtualStreamerInfo(si),
-  fCheckSum(si.fCheckSum),
-  fClassVersion(si.fClassVersion),
-  fOnFileClassVersion(si.fOnFileClassVersion),
-  fNumber(si.fNumber),
-  fNdata(si.fNdata),
-  fSize(si.fSize),
-  fType(si.fType),
-  fNewType(si.fNewType),
-  fOffset(si.fOffset),
-  fLength(si.fLength),
-  fElem(si.fElem),
-  fMethod(si.fMethod),
-  fComp(si.fComp),
-  fOptimized(si.fOptimized),
-  fClass(si.fClass),
-  fElements(si.fElements),
-  fOldVersion(si.fOldVersion),
-  fIsBuilt(si.fIsBuilt)
-{
-   //copy constructor
-}
-
-//______________________________________________________________________________
-TStreamerInfo& TStreamerInfo::operator=(const TStreamerInfo& si)
-{
-   //assignement operator
-   if(this!=&si) {
-      TVirtualStreamerInfo::operator=(si);
-      fCheckSum=si.fCheckSum;
-      fClassVersion=si.fClassVersion;
-      fOnFileClassVersion=si.fOnFileClassVersion;
-      fNumber=si.fNumber;
-      fNdata=si.fNdata;
-      fSize=si.fSize;
-      fType=si.fType;
-      fNewType=si.fNewType;
-      fOffset=si.fOffset;
-      fLength=si.fLength;
-      fElem=si.fElem;
-      fMethod=si.fMethod;
-      fComp=si.fComp;
-      fOptimized=si.fOptimized;
-      fClass=si.fClass;
-      fElements=si.fElements;
-      fOldVersion=si.fOldVersion;
-      fIsBuilt=si.fIsBuilt;
-   }
-   return *this;
-}
-
-//______________________________________________________________________________
 TStreamerInfo::~TStreamerInfo()
 {
    // TStreamerInfo dtor.
@@ -1715,7 +1662,16 @@ void TStreamerInfo::ForceWriteInfo(TFile* file, Bool_t force)
    for (; element; element = (TStreamerElement*) next()) {
       TClass* cl = element->GetClassPointer();
       if (cl) {
-         TVirtualStreamerInfo* si = cl->GetStreamerInfo();
+         TVirtualStreamerInfo* si = 0;
+         if (cl->Property() & kIsAbstract) {
+            // If the class of the element is abstract, register the
+            // TStreamerInfo only if it has already been built.
+            // Otherwise call cl->GetStreamerInfo() would generate an
+            // incorrect StreamerInfo.
+            si = cl->GetCurrentStreamerInfo();
+         } else {
+            si = cl->GetStreamerInfo();
+         }
          if (si) {
             si->ForceWriteInfo(file, force);
          }

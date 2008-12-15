@@ -1,6 +1,9 @@
 // @(#)root/eve:$Id$
 // Author: Alja Mrak-Tadel
 
+// Demonstrates usage of class TEveText - 2D & 3D text in GL.
+
+
 TEveText* text_test()
 {
    gSystem->IgnoreSignal(kSigSegmentationViolation, true);
@@ -32,8 +35,8 @@ TEveText* text_test()
 
    // TEveText does not know its bounding box before first rendering.
    gEve->FullRedraw3D(kTRUE);
-   gEve->GetGLViewer()->ResetCurrentCamera();
-   gEve->GetGLViewer()->RequestDraw(TGLRnrCtx::kLODHigh);
+   gEve->GetDefaultGLViewer()->ResetCurrentCamera();
+   gEve->GetDefaultGLViewer()->RequestDraw(TGLRnrCtx::kLODHigh);
 
    return t;
 }

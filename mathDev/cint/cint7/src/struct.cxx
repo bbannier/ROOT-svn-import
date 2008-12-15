@@ -1503,6 +1503,7 @@ void Cint::Internal::G__create_global_namespace()
       prop->globalcomp = G__NOLINK;
       prop->autoload = 0;
    }
+   G__Dict::GetDict().RegisterScope(i,Reflex::Scope::GlobalScope());
    G__struct.alltag++;
 }
 
@@ -1512,6 +1513,7 @@ void Cint::Internal::G__create_bytecode_arena()
    // Create an artificial variable whose contents will be the storage area for bytecode.
    ::Reflex::ClassBuilder* builder = new ::Reflex::ClassBuilder("% CINT byte code scratch arena %", typeid(::Reflex::UnknownType), 0, ::Reflex::CLASS);
    ::Reflex::Type ty = builder->ToType();
+   G__Dict::GetDict().RegisterScope(1,ty);
    G__RflxProperties* prop = G__get_properties(ty);
    prop->builder.Set(builder);
    prop->builder.Class().SetSizeOf(0);
@@ -1793,78 +1795,100 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
    static ::Reflex::NamespaceBuilder stdnp("std");
    int i;
    int len;
-   char *p;
-   char temp[G__LONGLINE];
-   char atom_tagname[G__LONGLINE];
+   G__StrBuf temp_sb(G__LONGLINE);
+   char* temp = temp_sb;
+   G__StrBuf atom_tagname_sb(G__LONGLINE);
+   char* atom_tagname = atom_tagname_sb;
    switch (tagname[0]) {
       case '"':
       case '\'':
-         return(-1);
-      case '\0':
-         // -- Global namespace.
+         return -1;
+      case '\0': // Global namespace.
          return 0;
    }
-   if (strchr(tagname, '>')) {
-      /* handles X<X<int>> as X<X<int> > */
-      while ((char*)NULL != (p = (char*)strstr(tagname, ">>"))) {
-         ++p;
-         strcpy(temp, p);
-         *p = ' ';
-         ++p;
-         strcpy(p, temp);
+   if (strchr(tagname, '>')) { // There is a template-id in the given tagname.
+      // handles X<X<int>> as X<X<int> >
+      {
+         char* p = strstr(tagname, ">>");
+         while (p) {
+            ++p;
+            strcpy(temp, p);
+            *p = ' ';
+            ++p;
+            strcpy(p, temp);
+            p = (char*) strstr(tagname, ">>");
+         }
       }
-
-      /* handles X<int > as X<int> */
-      p = (char*)tagname;
-      while ((char*)NULL != (p = (char*)strstr(p, " >"))) {
-         if ('>' != *(p - 1)) {
+      // handles X<int > as X<int>
+      {
+         char* p = strstr(tagname, " >");
+         while (p) {
+            if (p[-1] != '>') {
+               strcpy(temp, p + 1);
+               strcpy(p, temp);
+            }
+            ++p;
+            p = strstr(p, " >");
+         }
+      }
+      // handles X <int> as X<int>
+      {
+         char* p = strstr(tagname, " <");
+         while (p) {
             strcpy(temp, p + 1);
             strcpy(p, temp);
+            ++p;
+            p = strstr(p, " <");
          }
-         ++p;
       }
-      /* handles X <int> as X<int> */
-      p = (char*)tagname;
-      while ((char*)NULL != (p = strstr(p, " <"))) {
-         strcpy(temp, p + 1);
-         strcpy(p, temp);
-         ++p;
-      }
-      /* handles X<int>  as X<int> */
-      p = (char*)tagname;
-      while ((char*)NULL != (p = strstr(p, "> "))) {
-         if (strncmp(p, "> >", 3) == 0) {
-            p += 2;
+      // handles "X<int> "  as "X<int>"
+      {
+         char* p = strstr(tagname, "> ");
+         while (p) {
+            if (!strncmp(p, "> >", 3)) {
+               p += 2;
+            }
+            else {
+               strcpy(temp, p + 2);
+               strcpy(p + 1, temp);
+               ++p;
+            }
+            p = strstr(p, "> ");
          }
-         else {
+      }
+      // handles X< int> as X<int>
+      {
+         char* p = strstr(tagname, "< ");
+         while (p) {
             strcpy(temp, p + 2);
             strcpy(p + 1, temp);
             ++p;
+            p = strstr(p, "< ");
          }
       }
-      /* handles X< int> as X<int> */
-      p = (char*)tagname;
-      while ((char*)NULL != (p = strstr(p, "< "))) {
-         strcpy(temp, p + 2);
-         strcpy(p + 1, temp);
-         ++p;
-      }
       // handles X<int, int> as X<int,int>
-      p = (char*) tagname;
-      while (0 != (p = strstr(p, ", "))) {
-         strcpy(temp, p + 2);
-         strcpy(p + 1, temp);
-         ++p;
+      {
+         char* p = strstr(tagname, ", ");
+         while (p) {
+            strcpy(temp, p + 2);
+            strcpy(p + 1, temp);
+            ++p;
+            p = strstr(p, ", ");
+         }
       }
    }
    // handle X<const const Y>
-   p = (char*)strstr(tagname, "const const ");
-   while (p) {
-      char *p1 = (p += 6);
-      char *p2 = p + 6;
-      while (*p2) *p1++ = *p2++;
-      *p1 = 0;
-      p = strstr(p, "const const ");
+   {
+      char* p = strstr(tagname, "const const ");
+      while (p) {
+         char* p1 = (p += 6);
+         char* p2 = p + 6;
+         while (*p2) {
+            *p1++ = *p2++;
+         }
+         *p1 = 0;
+         p = strstr(p, "const const ");
+      }
    }
    if (isspace(tagname[0])) {
       strcpy(temp, tagname + 1);
@@ -1877,31 +1901,28 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
    //  the scope to look it up in.
    //
    ::Reflex::Scope env_tagnum;
-   p = G__find_last_scope_operator(temp);
-   if (!p) {
-      // -- An unqualified name, use the current scope.
+   char* p = G__find_last_scope_operator(temp);
+   if (!p) { // An unqualified name, use the current scope.
       strcpy(atom_tagname, temp);
       env_tagnum = G__get_envtagnum();
    }
-   else {
-      // -- A qualified name, find the specified scope.
+   else { // A qualified name, find the specified scope.
       strcpy(atom_tagname, p + 2);
       *p = '\0';
       int slen = p - temp;
       //assert(slen < G__LONGLINE);
       G__StrBuf given_scopename_sb(G__LONGLINE);
-      char *given_scopename = given_scopename_sb;
+      char* given_scopename = given_scopename_sb;
       strncpy(given_scopename, temp, slen);
       // Note: Not really necessary, but make sure
       //       in the case that slen == 0, and provoke
       //       a valgrind error if slen >= G__LONGLINE.
       given_scopename[slen] = '\0';
-      if (!slen) {
-         // -- The last :: was at the beginning, use the global scope.
+      if (!slen) { // The last :: was at the beginning, use the global scope.
          env_tagnum = ::Reflex::Scope::GlobalScope();
       }
-#ifndef G__STD_NAMESPACE /* ON667 */
-      else if (G__ignore_stdnamespace && (slen == 3) && !std::strcmp(given_scopename, "std")) {
+#ifndef G__STD_NAMESPACE
+      else if (G__ignore_stdnamespace && (slen == 3) && !strcmp(given_scopename, "std")) {
          // -- A name qualified explicitly with std::, use the global scope for now.
          env_tagnum = ::Reflex::Scope::GlobalScope();
          tagname += 5;
@@ -1909,19 +1930,22 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
             // "std::"
          }
       }
-#endif
+#endif // G__STD_NAMESPACE
       else {
-         // -- A qualified name, find the specified containing scope.
+         // A qualified name, find the specified containing scope.
          // Recursively locate the containing scopes, from right to left.
          // Note: use a temporary here, G__defined_tagname can alter its argument.
          strcpy(temp, given_scopename);
          int tag = G__defined_tagname(temp, noerror);
-         // FIXME: If we didn't find the scope, we use the global scope,
-         //       which is arguably wrong, we should just exit in error.
+         if (tag == -1) {
+            // Should never happen.
+            // TODO: Give an error message here.
+            return -1;
+         }
          env_tagnum = G__Dict::GetDict().GetScope(tag);
          if (!env_tagnum) {
-            // -- Should never happen.
-            // FIXME: Give an error message here.
+            // Should never happen.
+            // TODO: Give an error message here.
             return -1;
          }
       }
@@ -1932,7 +1956,7 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
    {
       ::Reflex::Scope scope = env_tagnum.LookupScope(atom_tagname);
       if (p && scope && (scope.DeclaringScope() != env_tagnum)) { // We found something, but not where we asked for it.
-         ::Reflex::Scope decl_scope(scope.DeclaringScope());
+         ::Reflex::Scope decl_scope = scope.DeclaringScope();
          int dtagnum = G__get_tagnum(decl_scope);
          int etagnum = G__get_tagnum(env_tagnum);
          int tmpltagnum = G__get_tagnum(G__tmplt_def_tagnum);
@@ -1983,7 +2007,7 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
       std::strcpy(atom_tagname, "$");
       ::Reflex::Scope scope = env_tagnum.LookupScope(atom_tagname);
       if (p && (scope.DeclaringScope() != env_tagnum)) { // We found something, but not where we asked for it.
-         ::Reflex::Scope decl_scope(scope.DeclaringScope());
+         ::Reflex::Scope decl_scope = scope.DeclaringScope();
          int dtagnum = G__get_tagnum(decl_scope);
          int etagnum = G__get_tagnum(env_tagnum);
          int tmpltagnum = G__get_tagnum(G__tmplt_def_tagnum);
@@ -2005,14 +2029,14 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
             G__isenclosingclass(decl_scope, G__tmplt_def_tagnum) ||
             G__isenclosingclassbase(decl_scope, G__tmplt_def_tagnum)
          ) {
-            // -- We have found something in a base class, or an enclosing class.
+            // We have found something in a base class, or an enclosing class.
          }
          else {
             scope = ::Reflex::Scope(); // Flag not found.
          }
       }
       if (scope) {
-         // -- Success, we found the class/struct/union/enum/namespace.
+         // Success, we found the class/struct/union/enum/namespace.
          // Now try to autoload the class library, if requested.
          int tagnum = G__get_tagnum(scope);
          if (noerror < 3) {
@@ -2055,7 +2079,7 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
    if (tp && tp.IsTypedef() && (!p || (tp.DeclaringScope() == env_tagnum))) {
       i = G__get_tagnum(tp);
       if (i != -1) {
-         // -- Found a typedef.
+         // Found a typedef.
          // Now autoload the class library, if requested.
          if (noerror < 3) {
             G__class_autoloading(&i);
@@ -2235,6 +2259,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
                      ::Reflex::ClassBuilder *b = new ::Reflex::ClassBuilder(fullname.c_str(), typeid(::Reflex::UnknownType), 0, ::Reflex::CLASS);
                      cl =  b->ToType();
                      G__get_properties(cl)->builder.Set(b);
+                     G__Dict::GetDict().RegisterScope(i,cl);
                      break;
                   }
                case 'a':
@@ -2244,6 +2269,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
                      ::Reflex::ClassBuilder *b = new ::Reflex::ClassBuilder(fullname.c_str(), typeid(::Reflex::UnknownType), 0, ::Reflex::CLASS);
                      cl =  b->ToType();
                      G__get_properties(cl)->builder.Set(b);
+                     G__Dict::GetDict().RegisterScope(i,cl);
                      break;
                   }
                case 'c':
@@ -2253,6 +2279,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
                      ::Reflex::ClassBuilder *b = new ::Reflex::ClassBuilder(fullname.c_str(), typeid(::Reflex::UnknownType), 0, ::Reflex::CLASS);   // Should also add the privacy with the containing class.
                      cl =  b->ToType();
                      G__get_properties(cl)->builder.Set(b);
+                     G__Dict::GetDict().RegisterScope(i,cl);
                      break;
                   }
                case 's':
@@ -2262,6 +2289,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
                      ::Reflex::ClassBuilder *b = new ::Reflex::ClassBuilder(fullname.c_str(), typeid(::Reflex::UnknownType), 0, ::Reflex::STRUCT);   // Should also add the privacy with the containing class.
                      cl =  b->ToType();
                      G__get_properties(cl)->builder.Set(b);
+                     G__Dict::GetDict().RegisterScope(i,cl);
                      break;
                   }
                case 'n':
@@ -2271,7 +2299,8 @@ extern "C" int G__search_tagname(const char* tagname, int type)
                      ::Reflex::NamespaceBuilder *b = new ::Reflex::NamespaceBuilder(fullname.c_str());
                      newscope =  b->ToScope();
                      G__get_properties(newscope)->builder.Set(b);
-                     break;
+                     G__Dict::GetDict().RegisterScope(i,newscope);
+                    break;
                   }
                case 'e':
                   // -- Enum.
@@ -2279,6 +2308,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
                      //fprintf(stderr, "G__search_tagname: New enum type: '%s'\n", fullname.c_str());
                      cl = ::Reflex::EnumTypeBuilder(fullname.c_str());
                      //G__get_properties(cl)->builder.Set(b);
+                     G__Dict::GetDict().RegisterScope(i,cl);
                      break;
                   }
                case 'u':
@@ -2290,6 +2320,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
                      ::Reflex::UnionBuilder* b = new ::Reflex::UnionBuilder(fullname.c_str(), typeid(::Reflex::UnknownType), 0, ::Reflex::UNION);
                      cl = b->ToType();
                      G__get_properties(cl)->builder.Set(b);
+                     G__Dict::GetDict().RegisterScope(i,cl);
                      break;
                   }
                default:
