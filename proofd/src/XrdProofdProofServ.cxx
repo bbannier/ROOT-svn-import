@@ -754,8 +754,32 @@ int XrdProofdProofServ::SetAdminPath(const char *a)
 //______________________________________________________________________________
 int XrdProofdProofServ::Resume()
 {
+   // Send a resume message to the this session. It is assumed that the session
+   // has at least one async query to process and will immediately send
+   // a getworkers request (the workers are already assigned).
+   XPDLOC(SMGR, "ProofServ::Resume")
 
-   return (fResponse->Send(kXR_ok, kXPD_resume)); //, (void *)wrks.c_str(), wrks.length()+1)); //?? +1
+   TRACE(DBG, "ord: " << fOrdinal<< ", pid: " << fSrvPID);
+
+   int rc = 0;
+   XrdOucString msg;
+
+   {  XrdSysMutexHelper mhp(fMutex);
+      // 
+      if (!fResponse || fResponse->Send(kXR_attn, kXPD_resume, 0, 0) != 0) {
+         msg = "could not propagate resume to proofsrv";
+         rc = -1;
+      }
+   }
+   // Cleanup
+   delete[] buf;
+
+   // Notify errors, if any
+   if (rc != 0)
+      TRACE(XERR, msg);
+
+   // Done
+   return rc;
 }
 
 //______________________________________________________________________________
