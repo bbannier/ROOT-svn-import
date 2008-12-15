@@ -304,8 +304,12 @@ int PyROOT::Utility::GetBuffer( PyObject* pyobject, char tc, int size, void*& bu
             if ( PyString_AS_STRING( pytc )[0] != tc )
                buf = 0;         // no match
             Py_DECREF( pytc );
-         } else if ( (int)(buflen / (*(seqmeths->sq_length))( pyobject )) == size ) {
+         } else if ( seqmeths->sq_length &&
+                     (int)(buflen / (*(seqmeths->sq_length))( pyobject )) == size ) {
          // this is a gamble ... may or may not be ok, but that's for the user
+            PyErr_Clear();
+         } else if ( buflen == size ) {
+         // also a gamble, but at least 1 item will fit into the buffer, so very likely ok ...
             PyErr_Clear();
          } else {
             buf = 0;                      // not compatible
@@ -314,9 +318,10 @@ int PyROOT::Utility::GetBuffer( PyObject* pyobject, char tc, int size, void*& bu
             PyObject* pytype = 0, *pyvalue = 0, *pytrace = 0;
             PyErr_Fetch( &pytype, &pyvalue, &pytrace );
             PyObject* pyvalue2 = PyString_FromFormat(
-               (char*)"%s and given element size (%d) does not match needed (%d)",
+               (char*)"%s and given element size (%ld) do not match needed (%d)",
                PyString_AS_STRING( pyvalue ),
-               (int)(buflen / (*(seqmeths->sq_length))( pyobject )), size );
+               seqmeths->sq_length ? (long)(buflen / (*(seqmeths->sq_length))( pyobject )) : (long)buflen,
+               size );
             Py_DECREF( pyvalue );
             PyErr_Restore( pytype, pyvalue2, pytrace );
          }
@@ -439,7 +444,7 @@ void PyROOT::Utility::ErrMsgCallback( char* msg )
       return;
    }
 
-// else, tranlate known errors and warnings, or simply accept the default
+// else, translate known errors and warnings, or simply accept the default
    char* format = (char*)"(file \"%s\", line %d) %s";
    char* p = 0;
    if ( ( p = strstr( msg, "Syntax Error:" ) ) )

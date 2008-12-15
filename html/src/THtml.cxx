@@ -10,7 +10,7 @@
  *************************************************************************/
 
 #include "THtml.h"
-
+#include "RConfigure.h"
 #include "Riostream.h"
 #include "TBaseClass.h"
 #include "TClass.h"
@@ -323,14 +323,14 @@ bool THtml::TFileDefinition::GetFileName(const TClass* cl, bool decl, TString& o
          filesysname += ".cxx";
       TFileSysEntry* fsentry = (TFileSysEntry*) GetOwner()->GetLocalFiles()->GetEntries().FindObject(filesysname);
       if (fsentry) {
-         fsentry->GetFullName(filesysname);
+         fsentry->GetFullName(filesysname, kFALSE);
          clfile = filesysname;
          out_filename = filesysname;
       }
    }
 
    if (!decl && !clfile.Length()) {
-      // determine possiblt impl file name from the decl file name,
+      // determine possible impl file name from the decl file name,
       // replacing ".whatever" by ".cxx", and looking for it in the known
       // file names
       TString declSysFileName;
@@ -342,7 +342,7 @@ bool THtml::TFileDefinition::GetFileName(const TClass* cl, bool decl, TString& o
          filesysname += ".cxx";
          TFileSysEntry* fsentry = (TFileSysEntry*) GetOwner()->GetLocalFiles()->GetEntries().FindObject(filesysname);
          if (fsentry) {
-            fsentry->GetFullName(filesysname);
+            fsentry->GetFullName(filesysname, kFALSE);
             clfile = filesysname;
             out_filename = filesysname;
          }
@@ -570,7 +570,7 @@ bool THtml::TPathDefinition::GetFileNameFromInclude(const char* included, TStrin
       }
       if (parent) {
          // entry found!
-         entry->GetFullName(out_fsname);
+         entry->GetFullName(out_fsname, kFALSE);
          delete arrSubDirs;
          return true;
       }
@@ -582,52 +582,83 @@ bool THtml::TPathDefinition::GetFileNameFromInclude(const char* included, TStrin
 //______________________________________________________________________________
 void THtml::TFileSysDir::Recurse(TFileSysDB* db, const char* path)
 {
-   // Recursively fill entries by parsing the path;
-   // can be a THtml::GetDirDelimiter() delimited list of paths.
+   // Recursively fill entries by parsing the contents of path.
 
-   TString sPath(path);
+   TString dir(path);
    if (gDebug > 0 || GetLevel() < 2)
       Info("Recurse", "scanning %s...", path);
+   TPMERegexp regexp(db->GetIgnore());
+   dir += "/";
+   void* hDir = gSystem->OpenDirectory(dir);
+   const char* direntry = 0;
+   while ((direntry = gSystem->GetDirEntry(hDir))) {
+      if (!direntry[0] || direntry[0] == '.' || regexp.Match(direntry)) continue;
+      TString entryPath(dir + direntry);
+      if (gSystem->AccessPathName(entryPath, kReadPermission))
+         continue;
+      FileStat_t buf;
+      gSystem->GetPathInfo(entryPath, buf);
+      if (R_ISDIR(buf.fMode)) {
+         // skip if we would nest too deeply,  and skip soft links:
+         if (GetLevel() > db->GetMaxLevel()
+#ifndef R__WIN32
+             || db->GetMapIno().GetValue(buf.fIno)
+#endif
+             ) continue;
+         TFileSysDir* subdir = new TFileSysDir(direntry, this);
+         fDirs.Add(subdir);
+#ifndef R__WIN32
+         db->GetMapIno().Add(buf.fIno, (Long_t)subdir);
+#endif
+         subdir->Recurse(db, entryPath);
+      } else {
+         int delen = strlen(direntry);
+         // only .cxx and .h are taken
+         if (strcmp(direntry + delen - 4, ".cxx")
+             && strcmp(direntry + delen - 2, ".h"))
+            continue;
+         TFileSysEntry* entry = new TFileSysEntry(direntry, this);
+         db->GetEntries().Add(entry);
+         fFiles.Add(entry);
+      }
+   } // while dir entry
+   gSystem->FreeDirectory(hDir);
+}
+
+
+//______________________________________________________________________________
+void THtml::TFileSysDB::Fill()
+{
+   // Recursively fill entries by parsing the path specified in GetName();
+   // can be a THtml::GetDirDelimiter() delimited list of paths.
+
    TString dir;
    Ssiz_t posPath = 0;
-   TPMERegexp regexp(db->GetIgnore());
-   while (sPath.Tokenize(dir, posPath, THtml::GetDirDelimiter())) {
-      dir += "/";
-      void* hDir = gSystem->OpenDirectory(dir);
-      const char* direntry = 0;
-      while ((direntry = gSystem->GetDirEntry(hDir))) {
-         if (!direntry[0] || direntry[0] == '.' || regexp.Match(direntry)) continue;
-         TString entryPath(dir + direntry);
-         if (gSystem->AccessPathName(entryPath, kReadPermission))
+   while (fName.Tokenize(dir, posPath, THtml::GetDirDelimiter())) {
+      if (gSystem->AccessPathName(dir, kReadPermission)) {
+         Warning("Fill", "Cannot read InputPath \"%s\"!", dir.Data());
+         continue;
+      }
+      FileStat_t buf;
+      gSystem->GetPathInfo(dir, buf);
+      if (R_ISDIR(buf.fMode)) {
+#ifndef R__WIN32
+         TFileSysRoot* prevroot = (TFileSysRoot*) GetMapIno().GetValue(buf.fIno);
+         if (prevroot != 0) {
+            Warning("Fill", "InputPath \"%s\" already present as \"%s\"!", dir.Data(), prevroot->GetName());
             continue;
-         FileStat_t buf;
-         gSystem->GetPathInfo(entryPath, buf);
-         if (R_ISDIR(buf.fMode)) {
-            // skip if we would nest too deeply,  and skip soft links:
-            if (GetLevel() > db->GetMaxLevel()
-#ifndef R__WIN32
-               || db->GetMapIno().GetValue(buf.fIno)
-#endif
-               ) continue;
-            TFileSysDir* subdir = new TFileSysDir(direntry, this);
-            fDirs.Add(subdir);
-#ifndef R__WIN32
-            db->GetMapIno().Add(buf.fIno, (Long_t)subdir);
-#endif
-            subdir->Recurse(db, entryPath);
-         } else {
-            int delen = strlen(direntry);
-            // only .cxx and .h are taken
-            if (strcmp(direntry + delen - 4, ".cxx")
-               && strcmp(direntry + delen - 2, ".h"))
-               continue;
-            TFileSysEntry* entry = new TFileSysEntry(direntry, this);
-            db->GetEntries().Add(entry);
-            fFiles.Add(entry);
          }
-      } // while dir entry
-      gSystem->FreeDirectory(hDir);
-   } // while sPath token
+#endif
+         TFileSysRoot* root = new TFileSysRoot(dir, this);
+         fDirs.Add(root);
+#ifndef R__WIN32
+         GetMapIno().Add(buf.fIno, (Long_t)root);
+#endif
+         root->Recurse(this, dir);
+      } else {
+         Warning("Fill", "Cannot read InputPath \"%s\"!", dir.Data());
+      }
+   }
 }
 
 
@@ -654,7 +685,7 @@ Overview:
   <li><a href="#conf:classdoc">Recognizing class documentation</a></li>
   <li><a href="#conf:tags">Author, copyright, etc.</a></li>
   <li><a href="#conf:header">Header and footer</a></li>
-  <li><a href="#conf:search">Links to searches, home page, ViewCVS</a></li>
+  <li><a href="#conf:search">Links to searches, home page, ViewVC</a></li>
   <li><a href="#conf:charset">HTML Charset</a></li>
   </ol></li>
   <li><a href="#syntax">Documentation syntax</a>
@@ -851,14 +882,14 @@ replaced by the exact string that follows Root.Html.Author, no link
 generation will occur.</p>
 
 
-<h4><a name="conf:search">II.7 Links to searches, home page, ViewCVS</a></h4>
+<h4><a name="conf:search">II.7 Links to searches, home page, ViewVC</a></h4>
 
 <p>Additional parameters can be set by Root.Html.Homepage (address of the
 user's home page), Root.Html.SearchEngine (search engine for the class
 documentation), Root.Html.Search (search URL, where %u is replaced by the 
-referer and %s by the escaped search expression), and a ViewCVS base URL 
+referer and %s by the escaped search expression), and a ViewVC base URL 
 Root.Html.ViewCVS. For the latter, the file name is appended or, if 
-the ViewCVS contains %f, it %f is replaced by the file name.
+the URL contains %f, %f is replaced by the file name.
 All values default to "".</p>
 
 <p>Examples:</p><pre>
@@ -1105,8 +1136,8 @@ THtml::THtml():
    fCounterFormat("%12s %5s %s"),
    fProductName("(UNKNOWN PRODUCT)"),
    fThreadedClassIter(0), fMakeClassMutex(0),
-   fPathDef(0), fModuleDef(0), fFileDef(0),
-   fLocalFiles(0)
+   fGClient(0), fPathDef(0), fModuleDef(0), fFileDef(0),
+   fLocalFiles(0), fBatch(kFALSE)
 {
    // Create a THtml object.
    // In case output directory does not exist an error
@@ -1340,7 +1371,9 @@ void THtml::HelperDeleted(THtml::THelperBase* who)
 
 //______________________________________________________________________________
 void THtml::Convert(const char *filename, const char *title,
-                    const char *dirname /*= ""*/, const char *relpath /*= "../"*/)
+                    const char *dirname /*= ""*/, const char *relpath /*= "../"*/,
+                    Int_t includeOutput /* = kNoOutput */,
+                    const char* context /* = "" */)
 {
 // It converts a single text file to HTML
 //
@@ -1351,6 +1384,15 @@ void THtml::Convert(const char *filename, const char *title,
 //                   be placed in htmldoc/examples directory.
 //        relpath  - optional parameter pointing to the THtml generated doc 
 //                   on the server, relative to the current page.
+//        includeOutput - if != kNoOutput, run the script passed as filename and
+//                   store all created canvases in PNG files that are
+//                   shown next to the converted source. Bitwise-ORing with 
+//                   re-runs the script even if output PNGs exist that are newer
+//                   than the script. If kCompiledOutput is passed, the script is
+//                   run through ACLiC (.x filename+)
+//        context  - line shown verbatim at the top of the page; e.g. for links.
+//                   If context is non-empty it is expected to also print the
+//                   title.
 //
 //  NOTE: Output file name is the same as filename, but with extension .html
 //
@@ -1372,23 +1414,24 @@ void THtml::Convert(const char *filename, const char *title,
       gSystem->MakeDirectory(dir);
 
    // find a file
-   char *realFilename =
+   char *cRealFilename =
        gSystem->Which(fPathInfo.fInputPath, filename, kReadPermission);
 
-   if (!realFilename) {
+   if (!cRealFilename) {
       Error("Convert", "Can't find file '%s' !", filename);
       return;
    }
+
+   TString realFilename(cRealFilename);
+   delete[] cRealFilename;
+   cRealFilename = 0;
 
    // open source file
    ifstream sourceFile;
    sourceFile.open(realFilename, ios::in);
 
-   delete[]realFilename;
-   realFilename = 0;
-
    if (!sourceFile.good()) {
-      Error("Convert", "Can't open file '%s' !", realFilename);
+      Error("Convert", "Can't open file '%s' !", realFilename.Data());
       return;
    }
 
@@ -1401,7 +1444,12 @@ void THtml::Convert(const char *filename, const char *title,
        gSystem->ConcatFileName(dir, gSystem->BaseName(filename));
 
    TDocOutput output(*this);
-   output.Convert(sourceFile, tmp1, title, relpath);
+   if (!fGClient)
+      gROOT->ProcessLine(TString::Format("*((TGClient**)0x%lx) = gClient;",
+                                         &fGClient));
+   if (includeOutput && !fGClient)
+      Warning("Convert", "Output requested but cannot initialize graphics: GUI  and GL windows not be available");
+   output.Convert(sourceFile, realFilename, tmp1, title, relpath, includeOutput, context, fGClient);
 
    if (tmp1)
       delete[]tmp1;
@@ -1932,8 +1980,8 @@ void THtml::LoadAllLibs()
    TEnv* mapfile = gInterpreter->GetMapfile();
    if (!mapfile || !mapfile->GetTable()) return;
 
-   std::set<std::string> direct;
-   std::set<std::string> indirect;
+   std::set<std::string> loadedlibs;
+   std::set<std::string> failedlibs;
    
    TEnvRec* rec = 0;
    TIter iEnvRec(mapfile->GetTable());
@@ -1941,38 +1989,27 @@ void THtml::LoadAllLibs()
       TString libs = rec->GetValue();
       TString lib;
       Ssiz_t pos = 0;
-      bool first = true;
-      while (libs.Tokenize(lib, pos))
-         if (first) {
-            // ignore libCore - it's already loaded
-            if (lib.BeginsWith("libCore"))
-               continue;
+      while (libs.Tokenize(lib, pos)) {
+         // check that none of the libs failed to load
+         if (failedlibs.find(lib.Data()) != failedlibs.end()) {
+            // don't load it or any of its dependencies
+            libs = "";
+            break;
+         }
+      }
+      pos = 0;
+      while (libs.Tokenize(lib, pos)) {
+         // ignore libCore - it's already loaded
+         if (lib.BeginsWith("libCore"))
+            continue;
 
-            // first one, i.e. direct
-            direct.insert(lib.Data());
-            first = false;
-         } else
-            indirect.insert(lib.Data());
+         if (loadedlibs.find(lib.Data()) == loadedlibs.end()) {
+            // just load the first library - TSystem will do the rest.
+            gSystem->Load(lib);
+            loadedlibs.insert(lib.Data());
+         }
+      }
    }
-   TString allLibs;
-   for (std::set<std::string>::iterator iDirect = direct.begin();
-        iDirect != direct.end();) {
-      std::set<std::string>::iterator next = iDirect;
-      ++next;
-      if (indirect.find(*iDirect) != indirect.end())
-         direct.erase(iDirect);
-      else allLibs += *iDirect + "* ";
-      iDirect = next;
-   }
-   for (std::set<std::string>::iterator iIndirect = indirect.begin();
-        iIndirect != indirect.end(); ++iIndirect)
-      allLibs += *iIndirect + " ";
-   if (gHtml && gDebug > 2)
-      gHtml->Info("LoadAllLibs", "Loading libraries %s\n", allLibs.Data());
-
-   for (std::set<std::string>::iterator iDirect = direct.begin();
-        iDirect != direct.end(); ++iDirect)
-      gSystem->Load(iDirect->c_str());
 }
 
 

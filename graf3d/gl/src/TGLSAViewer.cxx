@@ -165,6 +165,7 @@ TGLSAViewer::TGLSAViewer(TVirtualPad *pad) :
    fLeftVerticalFrame(0),
    fGedEditor(0),
    fPShapeWrap(0),
+   fRightVerticalFrame(0),
    fDirName("."),
    fTypeIdx(0),
    fOverwrite(kFALSE),
@@ -172,19 +173,21 @@ TGLSAViewer::TGLSAViewer(TVirtualPad *pad) :
    fDeleteMenuBar(kFALSE)
 {
    // Construct a standalone viewer, bound to supplied 'pad'.
-   fFrame = new TGLSAFrame(*this);
+
+   TGLSAFrame* gl_frame = new TGLSAFrame(*this);
+   fFrame = gl_frame;
 
    CreateMenus();
    CreateFrames();
 
-   fFrame->SetWindowName("ROOT's GL viewer");
-   fFrame->SetClassHints("GLViewer", "GLViewer");
-   fFrame->SetMWMHints(kMWMDecorAll, kMWMFuncAll, kMWMInputModeless);
-   fFrame->MapSubwindows();
+   gl_frame->SetWindowName("ROOT's GL viewer");
+   gl_frame->SetClassHints("GLViewer", "GLViewer");
+   gl_frame->SetMWMHints(kMWMDecorAll, kMWMFuncAll, kMWMInputModeless);
+   gl_frame->MapSubwindows();
 
-   fFrame->Resize(fFrame->GetDefaultSize());
-   fFrame->MoveResize(fgInitX, fgInitY, fgInitW, fgInitH);
-   fFrame->SetWMPosition(fgInitX, fgInitY);
+   gl_frame->Resize(fFrame->GetDefaultSize());
+   gl_frame->MoveResize(fgInitX, fgInitY, fgInitW, fgInitH);
+   gl_frame->SetWMPosition(fgInitX, fgInitY);
 
    fPShapeWrap = new TGLPShapeObj(0, this);
 
@@ -208,6 +211,7 @@ TGLSAViewer::TGLSAViewer(const TGWindow *parent, TVirtualPad *pad, TGedEditor *g
    fLeftVerticalFrame(0),
    fGedEditor(ged),
    fPShapeWrap(0),
+   fRightVerticalFrame(0),
    fTypeIdx(0),
    fMenuBar(0),
    fDeleteMenuBar(kFALSE)
@@ -260,6 +264,44 @@ TGLSAViewer::~TGLSAViewer()
 }
 
 //______________________________________________________________________________
+void TGLSAViewer::CreateGLWidget()
+{
+   // Create a GLwidget, it is an error if it is already created.
+   // This is needed for frame-swapping on mac.
+
+   if (fGLWidget) {
+      Error("CreateGLWidget", "Widget already exists.");
+      return;
+   }
+
+   fGLWidget = TGLWidget::Create(fRightVerticalFrame, kTRUE, kTRUE, 0, 10, 10);
+   fGLWidget->SetEventHandler(fEventHandler);
+
+   fRightVerticalFrame->AddFrame(fGLWidget, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+   fFrame->Layout();
+
+   fGLWidget->MapWindow();
+}
+
+//______________________________________________________________________________
+void TGLSAViewer::DestroyGLWidget()
+{
+   // Destroy the GLwidget, it is an error if it does not exist.
+   // This is needed for frame-swapping on mac.
+
+   if (fGLWidget == 0) {
+      Error("DestroyGLWidget", "Widget does not exist.");
+      return;
+   }
+
+   fGLWidget->UnmapWindow();
+
+   fRightVerticalFrame->RemoveFrame(fGLWidget);
+   fGLWidget->DeleteWindow();
+   fGLWidget = 0;
+}
+
+//______________________________________________________________________________
 void TGLSAViewer::RefreshPadEditor(TObject* changed)
 {
    // Refresh pad editor.
@@ -274,12 +316,12 @@ void TGLSAViewer::CreateMenus()
 {
    //File/Camera/Help menus.
 
-   fFileMenu = new TGPopupMenu(fFrame->GetClient()->GetRoot());
+   fFileMenu = new TGPopupMenu(fFrame->GetClient()->GetDefaultRoot());
    fFileMenu->AddEntry("&Edit Object", kGLEditObject);
    fFileMenu->AddSeparator();
    fFileMenu->AddEntry("&Close Viewer", kGLCloseViewer);
    fFileMenu->AddSeparator();
-   fFileSaveMenu = new TGPopupMenu(fFrame->GetClient()->GetRoot());
+   fFileSaveMenu = new TGPopupMenu(fFrame->GetClient()->GetDefaultRoot());
    fFileSaveMenu->AddEntry("viewer.&eps", kGLSaveEPS);
    fFileSaveMenu->AddEntry("viewer.&pdf", kGLSavePDF);
    fFileSaveMenu->AddEntry("viewer.&gif", kGLSaveGIF);
@@ -292,7 +334,7 @@ void TGLSAViewer::CreateMenus()
    fFileMenu->AddEntry("&Quit ROOT", kGLQuitROOT);
    fFileMenu->Associate(fFrame);
 
-   fCameraMenu = new TGPopupMenu(fFrame->GetClient()->GetRoot());
+   fCameraMenu = new TGPopupMenu(fFrame->GetClient()->GetDefaultRoot());
    fCameraMenu->AddEntry("Perspective (Floor XOZ)", kGLPerspXOZ);
    fCameraMenu->AddEntry("Perspective (Floor YOZ)", kGLPerspYOZ);
    fCameraMenu->AddEntry("Perspective (Floor XOY)", kGLPerspXOY);
@@ -307,7 +349,7 @@ void TGLSAViewer::CreateMenus()
    fCameraMenu->AddEntry("Ortho allow dolly",  kGLOrthoDolly);
    fCameraMenu->Associate(fFrame);
 
-   fHelpMenu = new TGPopupMenu(fFrame->GetClient()->GetRoot());
+   fHelpMenu = new TGPopupMenu(fFrame->GetClient()->GetDefaultRoot());
    fHelpMenu->AddEntry("Help on GL Viewer...", kGLHelpViewer);
    fHelpMenu->AddSeparator();
    fHelpMenu->AddEntry("&About ROOT...", kGLHelpAbout);
@@ -355,14 +397,14 @@ void TGLSAViewer::CreateFrames()
    //
    // TGVerticalFrame *rightVerticalFrame = new TGVerticalFrame(compositeFrame, 10, 10, kSunkenFrame);
    // compositeFrame->AddFrame(rightVerticalFrame, new TGLayoutHints(kLHintsRight | kLHintsExpandX | kLHintsExpandY,0,2,2,2));
-   TGVerticalFrame *rightVerticalFrame = new TGVerticalFrame(compositeFrame, 10, 10);
-   compositeFrame->AddFrame(rightVerticalFrame, new TGLayoutHints(kLHintsRight | kLHintsExpandX | kLHintsExpandY));
+   fRightVerticalFrame = new TGVerticalFrame(compositeFrame, 10, 10);
+   compositeFrame->AddFrame(fRightVerticalFrame, new TGLayoutHints(kLHintsRight | kLHintsExpandX | kLHintsExpandY));
 
-   fGLWidget = TGLWidget::Create(rightVerticalFrame, kTRUE, kTRUE, 0, 10, 10);
+   fGLWidget = TGLWidget::Create(fRightVerticalFrame, kTRUE, kTRUE, 0, 10, 10);
 
-   SetEventHandler(new TGLEventHandler("Default", fGLWidget, this));
+   SetEventHandler(new TGLEventHandler("Default", 0, this));
 
-   rightVerticalFrame->AddFrame(fGLWidget, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+   fRightVerticalFrame->AddFrame(fGLWidget, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 }
 
 

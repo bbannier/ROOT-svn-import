@@ -215,7 +215,7 @@ Int_t TPRegexp::ReplaceSubs(const TString &s, TString &final,
                             const TString &replacePattern,
                             Int_t *offVec, Int_t nrMatch) const
 {
-   // Return the number of substitutions.
+   // Returns the number of expanded '$' constructs.
 
    Int_t nrSubs = 0;
    const char *p = replacePattern;
@@ -251,12 +251,12 @@ Int_t TPRegexp::ReplaceSubs(const TString &s, TString &final,
                if (fPCREOpts & kPCRE_DEBUG_MSGS)
                   Info("ReplaceSubs", "PREGEX appending substr #%d", subnum);
                if (subnum < 0 || subnum > nrMatch-1) {
-                  Error("ReplaceSubs","bad string number :%d",subnum);
+                  Error("ReplaceSubs","bad string number: %d",subnum);
+               } else {
+                  const TString subStr = s(offVec[2*subnum],offVec[2*subnum+1]-offVec[2*subnum]);
+                  final += subStr;
+                  nrSubs++;
                }
-               const TString subStr = s(offVec[2*subnum],offVec[2*subnum+1]-offVec[2*subnum]);
-               final += subStr;
-               nrSubs++;
-
                state = 0;
                continue;  // send char to start state
             }
@@ -390,11 +390,11 @@ Int_t TPRegexp::SubstituteInternal(TString &s, const TString &replacePattern,
 
       // replace stuff in s
       if (doDollarSubst) {
-         nrSubs += ReplaceSubs(s, final, replacePattern, offVec, nrMatch);
+         ReplaceSubs(s, final, replacePattern, offVec, nrMatch);
       } else {
          final += replacePattern;
-         ++nrSubs;
       }
+      ++nrSubs;
 
       // if global gotta check match at every pos
       if (!(fPCREOpts & kPCRE_GLOBAL))
@@ -811,10 +811,11 @@ Int_t TPMERegexp::Split(const TString& s, Int_t maxfields)
 }
 
 //______________________________________________________________________________
-TString TPMERegexp::Substitute(const TString& s, const TString& r, Bool_t doDollarSubst)
+Int_t TPMERegexp::Substitute(TString& s, const TString& r, Bool_t doDollarSubst)
 {
    // Substitute matching part of s with r, dollar back-ref
    // substitution is performed if doDollarSubst is true (default).
+   // Returns the number of substitutions made.
    //
    // After the substitution, another pass is made over the resulting
    // string and the following special tokens are interpreted:
@@ -824,13 +825,12 @@ TString TPMERegexp::Substitute(const TString& s, const TString& r, Bool_t doDoll
    // \U - uppercase till \E, and
    // \E - end case modification.
 
-   TString newstring(s);
-   SubstituteInternal(newstring, r, 0, fNMaxMatches, doDollarSubst);
+   Int_t cnt = SubstituteInternal(s, r, 0, fNMaxMatches, doDollarSubst);
 
    TString ret;
    Int_t   state = 0;
-   Ssiz_t  pos = 0, len = newstring.Length();
-   const Char_t *data = newstring.Data();
+   Ssiz_t  pos = 0, len = s.Length();
+   const Char_t *data = s.Data();
    while (pos < len) {
       Char_t c = data[pos];
       if (c == '\\') {
@@ -858,7 +858,9 @@ TString TPMERegexp::Substitute(const TString& s, const TString& r, Bool_t doDoll
       }
    }
 
-   return ret;
+   s = ret;
+
+   return cnt;
 }
 
 //______________________________________________________________________________

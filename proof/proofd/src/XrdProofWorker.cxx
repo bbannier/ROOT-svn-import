@@ -33,12 +33,13 @@
 // Tracing utilities
 #include "XrdProofdTrace.h"
 
-//__________________________________________________________________________
+//______________________________________________________________________________
 XrdProofWorker::XrdProofWorker(const char *str)
-               : fActive (0), fSuspended(0),
-                 fExport(256), fType('W'), fPort(-1), fPerfIdx(100)
+               : fExport(256), fType('W'), fPort(-1), fPerfIdx(100)
 {
    // Constructor from a config file-like string
+
+   fMutex = new XrdSysRecMutex;
 
    // Make sure we got something to parse
    if (!str || strlen(str) <= 0)
@@ -47,16 +48,22 @@ XrdProofWorker::XrdProofWorker(const char *str)
    // The actual work is done by Reset()
    Reset(str);
 }
-
 //__________________________________________________________________________
+XrdProofWorker::~XrdProofWorker()
+{
+   // Destructor
+
+   SafeDelete(fMutex);
+}
+
+//______________________________________________________________________________
 void XrdProofWorker::Reset(const char *str)
 {
    // Set content from a config file-like string
    XPDLOC(NMGR, "Worker::Reset")
 
+
    // Reinit vars
-   fActive = 0;
-   fSuspended = 0;
    fExport = "";
    fType = 'W';
    fHost = "";
@@ -131,7 +138,7 @@ void XrdProofWorker::Reset(const char *str)
    }
 }
 
-//__________________________________________________________________________
+//______________________________________________________________________________
 bool XrdProofWorker::Matches(const char *host)
 {
    // Check compatibility of host with this instance.
@@ -140,7 +147,7 @@ bool XrdProofWorker::Matches(const char *host)
    return ((fHost.matches(host)) ? 1 : 0);
 }
 
-//__________________________________________________________________________
+//______________________________________________________________________________
 bool XrdProofWorker::Matches(XrdProofWorker *wrk)
 {
    // Check if 'wrk' is on the same node that 'this'; used to find the unique
@@ -162,7 +169,7 @@ bool XrdProofWorker::Matches(XrdProofWorker *wrk)
    return 0;
 }
 
-//__________________________________________________________________________
+//______________________________________________________________________________
 const char *XrdProofWorker::Export()
 {
    // Export current content in a form understood by parsing algorithms
@@ -214,15 +221,17 @@ const char *XrdProofWorker::Export()
    return fExport.c_str();
 }
 
-//__________________________________________________________________________
+//______________________________________________________________________________
 int XrdProofWorker::GetNActiveSessions()
 {
-   // calculate the number of workers existing on this node which are
+   // Calculate the number of workers existing on this node which are
    // currently running.
    // TODO: optimally, one could contact the packetizer and count the
    // opened files.
+
    int myRunning = 0;
    std::list<XrdProofdProofServ *>::iterator iter;
+   XrdSysMutexHelper mhp(fMutex); 
    for (iter = fProofServs.begin(); iter != fProofServs.end(); ++iter) {
       if (*iter) {
          if ((*iter)->Status() == kXPD_running)
@@ -231,7 +240,8 @@ int XrdProofWorker::GetNActiveSessions()
    }
    return myRunning;
 }
-//__________________________________________________________________________
+
+//______________________________________________________________________________
 void XrdProofWorker::Sort(std::list<XrdProofWorker *> *lst,
                           bool (*f)(XrdProofWorker *&lhs, XrdProofWorker *&rhs))
 {

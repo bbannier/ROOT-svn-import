@@ -1846,7 +1846,7 @@ const char* TCint::GetSharedLibs()
       Int_t len = strlen(filename);
       const char *end = filename+len;
       Bool_t needToSkip = kFALSE;
-      if ( len>5 && ( (strcmp(end-4,".dll") == 0 ) || (strstr(filename,"Dict.")!=0) ) ) {
+      if ( len>5 && ( (strcmp(end-4,".dll") == 0 ) || (strstr(filename,"Dict.")!=0)  || (strstr(filename,"MetaTCint")!=0)  ) ) {
          // Filter out the cintdlls
          static const char *excludelist [] = {
             "stdfunc.dll","stdcxxfunc.dll","posix.dll","ipc.dll","posix.dll"
@@ -1856,7 +1856,9 @@ const char* TCint::GetSharedLibs()
             "exception.dll","stdexcept.dll","complex.dll","climits.dll",
             "libvectorDict.","libvectorboolDict.","liblistDict.","libdequeDict.",
             "libmapDict.", "libmap2Dict.","libsetDict.","libmultimapDict.","libmultimap2Dict.",
-            "libmultisetDict.","libstackDict.","libqueueDict.","libvalarrayDict."};
+            "libmultisetDict.","libstackDict.","libqueueDict.","libvalarrayDict.",
+            "libMetaTCint.","libMetaTCint7."
+         };
          static const unsigned int excludelistsize = sizeof(excludelist)/sizeof(excludelist[0]);
          static int excludelen[excludelistsize] = {-1};
          if (excludelen[0] == -1) {
@@ -1994,6 +1996,16 @@ const char *TCint::GetIncludePath()
       const char *pathname = path.Name();
       fIncludePath.Append(" -I\"").Append(pathname).Append("\" ");
    }
+#ifdef ROOTINCDIR
+   fIncludePath.Append(" -I\"").Append(ROOTINCDIR);
+#else 
+   fIncludePath.Append(" -I\"").Append(gRootDir).Append("/include");
+#endif
+#ifdef R__BUILDING_CINT7
+   fIncludePath.Append("/cint7\" ");
+#else
+   fIncludePath.Append("/cint\" ");
+#endif
 
    return fIncludePath;
 }
@@ -2209,7 +2221,7 @@ Double_t  TCint::CallFunc_ExecDouble(CallFunc_t *func, void *address) const
    return f->ExecDouble(address);
 }
 //______________________________________________________________________________
-void *TCint::CallFunc_Factory() const
+CallFunc_t *TCint::CallFunc_Factory() const
 {
    // Interface to CINT function 
    
@@ -2217,7 +2229,7 @@ void *TCint::CallFunc_Factory() const
    return f;
 }
 //______________________________________________________________________________
-void *TCint::CallFunc_FactoryCopy(CallFunc_t *func) const
+CallFunc_t *TCint::CallFunc_FactoryCopy(CallFunc_t *func) const
 {
    // Interface to CINT function 
    
@@ -2226,7 +2238,7 @@ void *TCint::CallFunc_FactoryCopy(CallFunc_t *func) const
    return f;
 }
 //______________________________________________________________________________
-void *TCint::CallFunc_FactoryMethod(CallFunc_t *func) const
+MethodInfo_t *TCint::CallFunc_FactoryMethod(CallFunc_t *func) const
 {
    // Interface to CINT function
 
@@ -2378,14 +2390,14 @@ void  TCint::ClassInfo_Destruct(ClassInfo_t *cinfo, void *arena) const
    info->Destruct(arena);
 }
 //______________________________________________________________________________
-void *TCint::ClassInfo_Factory() const
+ClassInfo_t *TCint::ClassInfo_Factory() const
 {
    // Interface to CINT function 
    
    return new G__ClassInfo();
 }
 //______________________________________________________________________________
-void *TCint::ClassInfo_Factory(ClassInfo_t *cinfo) const
+ClassInfo_t *TCint::ClassInfo_Factory(ClassInfo_t *cinfo) const
 {
    // Interface to CINT function 
    
@@ -2393,11 +2405,18 @@ void *TCint::ClassInfo_Factory(ClassInfo_t *cinfo) const
    return new G__ClassInfo(*info);
 }
 //______________________________________________________________________________
-void *TCint::ClassInfo_Factory(const char *name) const
+ClassInfo_t *TCint::ClassInfo_Factory(const char *name) const
 {
    // Interface to CINT function 
    
    return new G__ClassInfo(name);
+}
+//______________________________________________________________________________
+ClassInfo_t *TCint::ClassInfo_Factory(G__value *pvalue) const
+{
+   // Interface to CINT function 
+   
+   return new G__ClassInfo(*pvalue);
 }
 //______________________________________________________________________________
 int TCint::ClassInfo_GetMethodNArg(ClassInfo_t *cinfo, const char *method,const char *proto) const
@@ -2612,7 +2631,7 @@ void  TCint::BaseClassInfo_Delete(BaseClassInfo_t *bcinfo) const
    delete info;
 }
 //______________________________________________________________________________
-void *TCint::BaseClassInfo_Factory(ClassInfo_t *cinfo) const
+BaseClassInfo_t *TCint::BaseClassInfo_Factory(ClassInfo_t *cinfo) const
 {
    // Interface to CINT function 
    
@@ -2702,7 +2721,7 @@ void  TCint::DataMemberInfo_Delete(DataMemberInfo_t *dminfo) const
    delete info;
 }
 //______________________________________________________________________________
-void *TCint::DataMemberInfo_Factory(ClassInfo_t* clinfo /* = 0 */) const
+DataMemberInfo_t *TCint::DataMemberInfo_Factory(ClassInfo_t* clinfo /* = 0 */) const
 {
    // Interface to CINT function 
    G__ClassInfo* clinfo1 = (G__ClassInfo*) clinfo;
@@ -2711,7 +2730,7 @@ void *TCint::DataMemberInfo_Factory(ClassInfo_t* clinfo /* = 0 */) const
    return new G__DataMemberInfo();
 }
 //______________________________________________________________________________
-void *TCint::DataMemberInfo_FactoryCopy(DataMemberInfo_t *dminfo) const
+DataMemberInfo_t *TCint::DataMemberInfo_FactoryCopy(DataMemberInfo_t *dminfo) const
 {
    // Interface to CINT function 
    
@@ -2855,7 +2874,7 @@ void  TCint::MethodInfo_CreateSignature(MethodInfo_t *minfo, TString &signature)
    signature += ")";
 }
 //______________________________________________________________________________
-void *TCint::MethodInfo_Factory() const
+MethodInfo_t *TCint::MethodInfo_Factory() const
 {
    // Interface to CINT function 
    
@@ -2863,7 +2882,7 @@ void *TCint::MethodInfo_Factory() const
    return info;
 }
 //______________________________________________________________________________
-void *TCint::MethodInfo_FactoryCopy(MethodInfo_t *minfo) const
+MethodInfo_t *TCint::MethodInfo_FactoryCopy(MethodInfo_t *minfo) const
 {
    // Interface to CINT function 
    
@@ -2987,7 +3006,7 @@ void  TCint::MethodArgInfo_Delete(MethodArgInfo_t *marginfo) const
    delete info;
 }
 //______________________________________________________________________________
-void *TCint::MethodArgInfo_Factory() const
+MethodArgInfo_t *TCint::MethodArgInfo_Factory() const
 {
    // Interface to CINT function 
    
@@ -2995,7 +3014,7 @@ void *TCint::MethodArgInfo_Factory() const
    return info;
 }
 //______________________________________________________________________________
-void *TCint::MethodArgInfo_FactoryCopy(MethodArgInfo_t *marginfo) const
+MethodArgInfo_t *TCint::MethodArgInfo_FactoryCopy(MethodArgInfo_t *marginfo) const
 {
    // Interface to CINT function 
    
@@ -3064,11 +3083,27 @@ void  TCint::TypeInfo_Delete(TypeInfo_t *tinfo) const
    delete info;
 }
 //______________________________________________________________________________
-void *TCint::TypeInfo_Factory() const
+TypeInfo_t *TCint::TypeInfo_Factory() const
 {
    // Interface to CINT function 
    
    G__TypeInfo *info = new G__TypeInfo();
+   return info;
+}
+//______________________________________________________________________________
+TypeInfo_t *TCint::TypeInfo_Factory(G__value *pvalue) const
+{
+   // Interface to CINT function 
+   
+   G__TypeInfo *info = new G__TypeInfo(*pvalue);
+   return info;
+}
+//______________________________________________________________________________
+TypeInfo_t *TCint::TypeInfo_FactoryCopy(TypeInfo_t *tinfo) const
+{
+   // Interface to CINT function 
+   
+   G__TypeInfo *info = new G__TypeInfo(*(G__TypeInfo*)tinfo);
    return info;
 }
 //______________________________________________________________________________
@@ -3088,12 +3123,28 @@ bool  TCint::TypeInfo_IsValid(TypeInfo_t *tinfo) const
    return info->IsValid();
 }
 //______________________________________________________________________________
+const char *TCint::TypeInfo_Name(TypeInfo_t *tinfo) const
+{
+   // Interface to CINT function 
+   
+   G__TypeInfo *info = (G__TypeInfo*)tinfo;
+   return info->Name();
+}
+//______________________________________________________________________________
 Long_t  TCint::TypeInfo_Property(TypeInfo_t *tinfo) const
 {
    // Interface to CINT function 
    
    G__TypeInfo *info = (G__TypeInfo*)tinfo;
    return info->Property();
+}
+//______________________________________________________________________________
+int   TCint::TypeInfo_RefType(TypeInfo_t *tinfo) const
+{
+   // Interface to CINT function 
+   
+   G__TypeInfo *info = (G__TypeInfo*)tinfo;
+   return info->Reftype();
 }
 //______________________________________________________________________________
 int   TCint::TypeInfo_Size(TypeInfo_t *tinfo) const
@@ -3124,7 +3175,7 @@ void  TCint::TypedefInfo_Delete(TypedefInfo_t *tinfo) const
    delete info;
 }
 //______________________________________________________________________________
-void *TCint::TypedefInfo_Factory() const
+TypedefInfo_t *TCint::TypedefInfo_Factory() const
 {
    // Interface to CINT function 
    
@@ -3132,7 +3183,15 @@ void *TCint::TypedefInfo_Factory() const
    return info;
 }
 //______________________________________________________________________________
-void  TCint::TypedefInfo_Init(TypedefInfo_t *tinfo, const char *funcname) const
+TypedefInfo_t *TCint::TypedefInfo_FactoryCopy(TypedefInfo_t *tinfo) const
+{
+   // Interface to CINT function 
+   
+   G__TypedefInfo *info = new G__TypedefInfo(*(G__TypedefInfo*)tinfo);
+   return info;
+}
+//______________________________________________________________________________
+TypedefInfo_t  TCint::TypedefInfo_Init(TypedefInfo_t *tinfo, const char *funcname) const
 {
    // Interface to CINT function 
    

@@ -34,6 +34,7 @@
 class TClass;
 class TDataMember;
 class TDataType;
+class TGClient;
 class THtml;
 class TModuleDocInfo;
 class TString;
@@ -73,8 +74,12 @@ public:
    virtual ~TDocOutput();
 
    virtual void   AdjustSourcePath(TString& line, const char* relpath = "../");
-   void           Convert(std::istream& in, const char* outfilename, const char *title,
-                          const char *relpath = "../");
+   void           Convert(std::istream& in, const char* infilename,
+                          const char* outfilename, const char *title,
+                          const char *relpath = "../",
+                          Int_t includeOutput = 0,
+                          const char* context = "",
+                          TGClient* gclient = 0);
    Bool_t         CopyHtmlFile(const char *sourceName, const char *destName="");
 
    virtual void   CreateClassIndex();

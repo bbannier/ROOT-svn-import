@@ -1,3 +1,8 @@
+// @(#)root/eve:$Id: triangleset.C 26568 2008-12-01 20:55:50Z matevz $
+// Author: Alja Mrak-Tadel
+
+// Demonstrates usage of EVE calorimetry classes.
+
 #include "TEveProjections.h"
 
 const char* histFile = "http://amraktad.web.cern.ch/amraktad/cms_calo_hist.root";
@@ -34,6 +39,11 @@ void cms_calo(Bool_t hdata = kTRUE)
    {
       data = MakeVecData(ecalHist, hcalHist);
    }
+   // set eta, phi axis title with symbol.ttf font
+   data->GetEtaBins()->SetTitleFont(120);
+   data->GetEtaBins()->SetTitle("h");
+   data->GetPhiBins()->SetTitleFont(120);
+   data->GetPhiBins()->SetTitle("f");
 
    TEveCalo3D* calo3d = MakeCalo3D(data);
    MakeCalo2D(calo3d);
@@ -112,6 +122,9 @@ void MakeCaloLego(TEveCaloData* data)
    v->AddOverlayElement(overlay);
    overlay->SetCaloLego(lego);
    gEve->AddElement(overlay, s2);
+
+
+
 }
 
 //______________________________________________________________________________

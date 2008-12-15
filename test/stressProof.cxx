@@ -337,6 +337,18 @@ void stressProof(const char *url, Int_t nwrks,
    // Set verbosity
    gverbose = verbose;
 
+   // Check url
+   TUrl uu(url), udef(urldef);
+   if (strcmp(uu.GetHost(), udef.GetHost()) || (uu.GetPort() != udef.GetPort())) {
+      if (gDynamicStartup) {
+         printf("*   WARNING: request to run a test with per-job scheduling on    *\n");
+         printf("*            an external cluster: %s .\n", url);
+         printf("*            Make sure the dynamic option is set.                *\n");
+         printf("******************************************************************\n");
+         gDynamicStartup = kFALSE;
+      }
+   }
+
    // Dataset option
    if (!skipds) {
       gSkipDataSetTest = kFALSE;
@@ -376,10 +388,6 @@ void stressProof(const char *url, Int_t nwrks,
 
    if (gSkipDataSetTest) {
       printf("*  Test for dataset handling (#4, #8) skipped                   **\n");
-      printf("******************************************************************\n");
-   }
-   if (gDynamicStartup) {
-      printf("*  Dynamic per-job worker startup ON (test 11 skipped)          **\n");
       printf("******************************************************************\n");
    }
    if (!strcmp(url,"lite")) {
@@ -584,9 +592,15 @@ Int_t PT_Open(void *args)
 
    // Temp dir for PROOF tutorials
    PutPoint();
-   TString tutdir;
+   TString tutdir, tmpdir(gSystem->TempDirectory()), us;
    UserGroup_t *ug = gSystem->GetUserInfo(gSystem->GetUid());
-   tutdir.Form("%s/%s/.proof-tutorial", gSystem->TempDirectory(), ug->fUser.Data());
+   if (!ug) {
+      printf("\n >>> Test failure: could not get user info");
+      return -1;
+   }
+   us.Form("/%s", ug->fUser.Data());
+   if (!tmpdir.EndsWith(us.Data())) tmpdir += us;
+   tutdir.Form("%s/.proof-tutorial", tmpdir.Data());
    if (gSystem->AccessPathName(tutdir)) {
       if (gSystem->mkdir(tutdir, kTRUE) != 0) {
          printf("\n >>> Test failure: could not assert/create the temporary directory"
@@ -1094,10 +1108,6 @@ Int_t PT_InputData(void *)
       printf("\n >>> Test failure: no PROOF session found\n");
       return -1;
    }
-   // Not yet supported for PROOF-Lite
-   if (gDynamicStartup) {
-      return 1;
-   }
    PutPoint();
 
    // Create the test information to be send via input and retrieved
@@ -1181,22 +1191,22 @@ Int_t PT_InputData(void *)
    }
 
    // Test how many workers got everything successfully
-   Int_t nw = gProof->GetParallel();
+   Int_t nw = (Int_t) stat->GetBinContent(1);
    PutPoint();
 
-   if (TMath::Abs(stat->GetBinContent(1) - nw) > .1) {
-      printf("\n >>> Test failure: histo 'h1' not correctly received on all workers (%.0f/%d)\n",
-             stat->GetBinContent(1), nw);
-      return -1;
-   }
    if (TMath::Abs(stat->GetBinContent(2) - nw) > .1) {
-      printf("\n >>> Test failure: histo 'h2' not correctly received on all workers (%.0f/%d)\n",
+      printf("\n >>> Test failure: histo 'h1' not correctly received on all workers (%.0f/%d)\n",
              stat->GetBinContent(2), nw);
       return -1;
    }
    if (TMath::Abs(stat->GetBinContent(3) - nw) > .1) {
-      printf("\n >>> Test failure: test input object not correctly received on all workers (%.0f/%d)\n",
+      printf("\n >>> Test failure: histo 'h2' not correctly received on all workers (%.0f/%d)\n",
              stat->GetBinContent(3), nw);
+      return -1;
+   }
+   if (TMath::Abs(stat->GetBinContent(4) - nw) > .1) {
+      printf("\n >>> Test failure: test input object not correctly received on all workers (%.0f/%d)\n",
+             stat->GetBinContent(4), nw);
       return -1;
    }
 

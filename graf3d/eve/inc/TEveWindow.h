@@ -39,6 +39,7 @@ class TGTab;
 class TEveCompositeFrame : public TGCompositeFrame
 {
    friend class TEveWindow;
+   friend class TEveWindowManager;
 
 private:
    TEveCompositeFrame(const TEveCompositeFrame&);            // Not implemented
@@ -53,25 +54,36 @@ protected:
 
    TGButton          *fMiniBar;
 
-   TEveWindow        *fEveParentWindow;
+   TEveElement       *fEveParent;
    TEveWindow        *fEveWindow;
+
+   Bool_t             fShowInSync;
 
    static TContextMenu *fgCtxMenu;
    static const TString fgkEmptyFrameName;
+
+   static TList        *fgFrameList;
 
 public:
    TEveCompositeFrame(TGCompositeFrame* gui_parent, TEveWindow* eve_parent);
    virtual ~TEveCompositeFrame();
 
-   virtual void Destroy();
+   virtual void WindowNameChanged(const TString& name);
+
+   virtual void Destroy() = 0;
 
    virtual void        AcquireEveWindow(TEveWindow* ew);
-   virtual TEveWindow* RelinquishEveWindow();
+   virtual TEveWindow* RelinquishEveWindow(Bool_t reparent=kTRUE);
 
-   virtual TEveWindow* ChangeEveWindow(TEveWindow* ew);
+   TEveWindow* GetEveWindow() const { return fEveWindow; }
+   TEveWindow* GetEveParentAsWindow() const;
 
    virtual void SetCurrent(Bool_t curr);
    virtual void SetShowTitleBar(Bool_t show);
+   virtual void HideAllDecorations();
+   virtual void ShowNormalDecorations();
+
+   void ReplaceIconBox(TGFrame* icon_box);
 
    void ActionPressed();
    void FlipTitleBarState();
@@ -93,17 +105,21 @@ private:
 
 protected:
    TGMainFrame      *fMainFrame;
+   TEveWindow       *fOriginalSlot;
+   TEveWindow       *fOriginalContainer;
 
 public:
    TEveCompositeFrameInMainFrame(TGCompositeFrame* parent, TEveWindow* eve_parent,
                                  TGMainFrame* mf);
    virtual ~TEveCompositeFrameInMainFrame();
 
+   virtual void WindowNameChanged(const TString& name);
+
    virtual void Destroy();
 
-   virtual void        AcquireEveWindow(TEveWindow* ew);
-   virtual TEveWindow* RelinquishEveWindow();
+   void SetOriginalSlotAndContainer(TEveWindow* slot, TEveWindow* container);
 
+   void SomeWindowClosed(TEveWindow* w);
    void MainFrameClosed();
 
    ClassDef(TEveCompositeFrameInMainFrame, 0); // Eve-composite-frame that is contained in one tab of a TGTab.
@@ -155,10 +171,9 @@ public:
                            TGTab* tab);
    virtual ~TEveCompositeFrameInTab();
 
-   virtual void Destroy();
+   virtual void WindowNameChanged(const TString& name);
 
-   virtual void        AcquireEveWindow(TEveWindow* ew);
-   virtual TEveWindow* RelinquishEveWindow();
+   virtual void Destroy();
 
    virtual void SetCurrent(Bool_t curr);
 
@@ -179,6 +194,8 @@ public:
 
 class TEveWindow : public TEveElementList
 {
+   friend class TEveWindowManager;
+
 private:
    TEveWindow(const TEveWindow&);            // Not implemented
    TEveWindow& operator=(const TEveWindow&); // Not implemented
@@ -187,21 +204,38 @@ protected:
    TEveCompositeFrame  *fEveFrame;
    Bool_t               fShowTitleBar;
 
-   static TEveWindow   *fgCurrentWindow;
+   virtual void SetCurrent(Bool_t curr);
+
+   static UInt_t        fgMainFrameDefWidth;
+   static UInt_t        fgMainFrameDefHeight;
+
+   static Pixel_t       fgCurrentBackgroundColor;
+   static Pixel_t       fgMiniBarBackgroundColor;
+
+   virtual void PreDeleteElement();
 
 public:
    TEveWindow(const Text_t* n="TEveWindow", const Text_t* t="");
    virtual ~TEveWindow();
 
+   virtual void NameTitleChanged();
+
    virtual TGFrame*        GetGUIFrame() = 0;
+   virtual void            PreUndock();
+   virtual void            PostDock();
 
    virtual Bool_t          CanMakeNewSlots() const { return kFALSE; }
    virtual TEveWindowSlot* NewSlot() { return 0; }
 
-   void PopulateSlot(TEveCompositeFrame* ef); 
+   void PopulateEmptyFrame(TEveCompositeFrame* ef); 
 
    void SwapWindow(TEveWindow* w);
    void SwapWindowWithCurrent();        // *MENU*
+
+   void UndockWindow();                 // *MENU*
+   void UndockWindowDestroySlot();      // *MENU*
+
+   void ReplaceWindow(TEveWindow* w);
 
    virtual void DestroyWindow();        // *MENU*
    virtual void DestroyWindowAndSlot(); // *MENU*
@@ -213,10 +247,14 @@ public:
    Bool_t GetShowTitleBar() const { return fShowTitleBar; }
    void   SetShowTitleBar(Bool_t x);
 
-   Bool_t       IsCurrent() const { return fgCurrentWindow == this; }
-   virtual void SetCurrent(Bool_t curr);
+   Bool_t IsCurrent() const;
+   void   MakeCurrent();
 
-   void TitleBarClicked();
+
+   Bool_t IsAncestorOf(TEveWindow* win);
+
+   void   TitleBarClicked();
+
 
    // Static helper functions for common window management scenarios.
 
@@ -224,11 +262,19 @@ public:
    static TEveWindowSlot* CreateWindowMainFrame(TEveWindow* eve_parent=0);
    static TEveWindowSlot* CreateWindowInTab(TGTab* tab, TEveWindow* eve_parent=0);
 
-   static UInt_t  fgMainFrameDefWidth;
-   static UInt_t  fgMainFrameDefHeight;
+   static void            SwapWindows(TEveWindow* w1, TEveWindow* w2);
 
-   static Pixel_t fgCurrentBackgroundColor;
-   static Pixel_t fgMiniBarBackgroundColor;
+   // Access to static data-members.
+
+   static UInt_t  GetMainFrameDefWidth()  { return fgMainFrameDefWidth;  }
+   static UInt_t  GetMainFrameDefHeight() { return fgMainFrameDefHeight; }
+   static void SetMainFrameDefWidth (UInt_t x) { fgMainFrameDefWidth  = x; }
+   static void SetMainFrameDefHeight(UInt_t x) { fgMainFrameDefHeight = x; }
+
+   static Pixel_t GetCurrentBackgroundColor() { return fgCurrentBackgroundColor; }
+   static Pixel_t GetMiniBarBackgroundColor() { return fgMiniBarBackgroundColor; }
+   static void SetCurrentBackgroundColor(Pixel_t p) { fgCurrentBackgroundColor = p; }
+   static void SetMiniBarBackgroundColor(Pixel_t p) { fgMiniBarBackgroundColor = p; }
 
    ClassDef(TEveWindow, 0); // Abstract base-class for eve-windows.
 };
@@ -248,19 +294,21 @@ protected:
    TGTextButton      *fEmptyButt;
    TGCompositeFrame  *fEmbedBuffer;
 
+   virtual void SetCurrent(Bool_t curr);
+
 public:
    TEveWindowSlot(const Text_t* n="TEveWindowSlot", const Text_t* t="");
    virtual ~TEveWindowSlot();
 
    virtual TGFrame* GetGUIFrame();
 
-   virtual void SetCurrent(Bool_t curr);
+   TEveWindowPack*   MakePack(); // *MENU*
+   TEveWindowTab*    MakeTab();  // *MENU*
 
-   TEveWindowPack* MakePack(); // *MENU*
-   TEveWindowTab*  MakeTab();  // *MENU*
+   TEveWindowFrame*  MakeFrame(TGFrame* frame=0);
 
-   void             StartEmbedding();
-   TEveWindowFrame* StopEmbedding();
+   TGCompositeFrame* StartEmbedding();
+   TEveWindowFrame*  StopEmbedding(const Text_t* name=0);
 
    ClassDef(TEveWindowSlot, 0); // An unoccupied eve-window slot.
 };
@@ -280,10 +328,12 @@ protected:
    TGFrame         *fGUIFrame;
 
 public:
-   TEveWindowFrame(TGFrame* f, const Text_t* n="TEveWindowFrame", const Text_t* t="");
+   TEveWindowFrame(TGFrame* frame, const Text_t* n="TEveWindowFrame", const Text_t* t="");
    virtual ~TEveWindowFrame();
 
    virtual TGFrame* GetGUIFrame() { return fGUIFrame; }
+
+   TGCompositeFrame* GetGUICompositeFrame();
 
    ClassDef(TEveWindowFrame, 0); // Eve-window containing any TGFrame.
 };
@@ -312,6 +362,10 @@ public:
    virtual TEveWindowSlot* NewSlot(); // *MENU*
 
    void FlipOrientation(); // *MENU*
+   void SetVertical(Bool_t x=kTRUE);
+   void SetHorizontal() { SetVertical(kFALSE); }
+
+   void EqualizeFrames();  // *MENU*
 
    TGPack* GetPack() const { return fPack; }
 

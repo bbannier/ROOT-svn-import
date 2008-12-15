@@ -900,20 +900,22 @@ void Cint::Internal::G__listshl(FILE * /* G__temp */)
 ******************************************************************/
 extern "C" struct G__ifunc_table* G__p2f2funchandle(void *p2f,struct G__ifunc_table* p_ifunc,int* pindex)
 {
-  ::Reflex::Scope ifunc = G__Dict::GetDict().GetScope(p_ifunc);
+   ::Reflex::Scope ifunc = G__Dict::GetDict().GetScope(p_ifunc);
   
-  for(size_t ig15 = 0; ig15 < ifunc.FunctionMemberSize(); ++ig15) {
-     const ::Reflex::Member func( ifunc.FunctionMemberAt(ig15) );
-     if (func) {
-        G__RflxFuncProperties *prop = G__get_funcproperties(func);
-        if (prop->entry.tp2f==p2f || prop->entry.bytecode==p2f) {
-           *pindex = -2; // since we return the id of the function itself and not its scope's id [we had: ig15];
-           return (G__ifunc_table*)func.Id();
-        }
-     }
-  }
-  *pindex = -1;
-  return(0);
+   if (ifunc) {
+      for(size_t ig15 = 0; ig15 < ifunc.FunctionMemberSize(); ++ig15) {
+         const ::Reflex::Member func( ifunc.FunctionMemberAt(ig15) );
+         if (func) {
+            G__RflxFuncProperties *prop = G__get_funcproperties(func);
+            if (prop->entry.tp2f==p2f || prop->entry.bytecode==p2f) {
+               *pindex = -2; // since we return the id of the function itself and not its scope's id [we had: ig15];
+               return (G__ifunc_table*)func.Id();
+            }
+         }
+      }
+   }
+   *pindex = -1;
+   return(0);
 }
 
 /******************************************************************
@@ -1072,14 +1074,14 @@ G__value Cint::Internal::G__pointer2func(G__value *obj_p2f,char *parameter0 ,cha
   }
 #ifdef G__PTR2MEMFUNC
   else {
-     for(::Reflex::Type_Iterator iter = ::Reflex::Type::Type_Begin();
-         iter != ::Reflex::Type::Type_End(); ++iter) {
-  
+     for(::Reflex::Scope_Iterator iter = ::Reflex::Scope::Scope_Begin();
+         iter != ::Reflex::Scope::Scope_End(); ++iter) {
+        
         ifunc = G__p2f2funchandle((void*)result3.obj.i,(G__ifunc_table*)iter->Id(),&ig15);
         if(ifunc) {
            ::Reflex::Member func( G__Dict::GetDict().GetFunction(ifunc, ig15));
            if (func.IsStatic()) {
-              sprintf(result7,"%s%s",func.Name(::Reflex::SCOPED).c_str(),parameter1);
+                 sprintf(result7,"%s%s",func.Name(::Reflex::SCOPED).c_str(),parameter1);
               break;
            }
         }
@@ -1166,7 +1168,7 @@ static ::Reflex::Type G__getp2ftype(const ::Reflex::Member &func)
 #if 0
    char *p;
    int i;
- 
+   
    std::string temp1( func.TypeOf().ReturnType().Name(::Reflex::SCOPED) );
    G__removetagid(temp1);
 
@@ -1179,28 +1181,23 @@ static ::Reflex::Type G__getp2ftype(const ::Reflex::Member &func)
 
    p = temp + strlen(temp);
    for(i=0;i<ifunc->para_nu[ifn];i++) {
-    if(i) *p++ = ',';
-    strcpy(temp1,G__type2string(ifunc->para_type[ifn][i]
-                                ,ifunc->para_p_tagtable[ifn][i]
-                                ,G__get_typenum(ifunc->para_p_typetable[ifn][i])
-                                ,ifunc->para_reftype[ifn][i]
-                                ,ifunc->para_isconst[ifn][i]));
-    G__removetagid(temp1);
-    strcpy(p,temp1);
-    p = temp + strlen(temp);
-  }
-  strcpy(p,")");
+      if(i) *p++ = ',';
+      strcpy(temp1,G__type2string(ifunc->para_type[ifn][i]
+                                  ,ifunc->para_p_tagtable[ifn][i]
+                                  ,G__get_typenum(ifunc->para_p_typetable[ifn][i])
+                                  ,ifunc->para_reftype[ifn][i]
+                                  ,ifunc->para_isconst[ifn][i]));
+      G__removetagid(temp1);
+      strcpy(p,temp1);
+      p = temp + strlen(temp);
+   }
+   strcpy(p,")");
 #endif
-  Reflex::Type functype( func.TypeOf() );
-  if (!functype.IsPointer()) {
-     functype = Reflex::PointerBuilder( functype );
-  } 
-  std::string name( functype.Name() );
-  if (name.length()>6 && strcmp(name.c_str()+name.length()-6,"(void)")==0) 
-  {
-     name.replace(name.length()-6,name.length(),"()");
-  }
-  return G__find_typedef(name.c_str());
+   Reflex::Type functype( func.TypeOf() );
+   if (!functype.IsPointer()) {
+      functype = Reflex::PointerBuilder( functype );
+   }
+   return functype;
 }
 
 /******************************************************************
@@ -1248,9 +1245,11 @@ char *Cint::Internal::G__search_func(char *funcname,G__value *buf)
 #endif
         else { /* interpreted function */
           G__letint(buf,'C',(long)prop->entry.tp2f);
+           G__value_typenum(*buf) = G__getp2ftype(*iter);
         }
 #else
         G__letint(buf,'C',(long)iter->Name().c_str());
+        G__value_typenum(*buf) = G__getp2ftype(*iter);
 #endif
         return((char*)iter->Name().c_str());
      }
@@ -1939,11 +1938,27 @@ static const char *G__dladdr(void (*func)())
 // G__RegisterLibrary
 void *Cint::Internal::G__RegisterLibrary(void (*func)()) {
    // This function makes sure that the library that contains 'func' is
-   // known to have been laoded by the CINT system.
+   // known to have been loaded by the CINT system.
    
    const char *libname = G__dladdr( func );
-   if (libname) {
-      G__register_sharedlib( libname );
+   if (libname && libname[0]) {
+      size_t lenLibName = strlen(libname);
+      G__StrBuf sbLibName(lenLibName);
+      strcpy(sbLibName, libname);
+      // remove soversion at the end: .12.34
+      size_t cutat = lenLibName - 1;
+      while (cutat > 2) {
+         if (!isdigit(sbLibName[cutat])) { break; }
+         // Skip first digit
+         --cutat;
+         // Skip 2nd digit if any
+         if (isdigit(sbLibName[cutat])) { --cutat; }
+         if (sbLibName[cutat] != '.') { break;  }
+         // Skip period
+         --cutat;
+         sbLibName[cutat + 1] = 0;
+      }
+      G__register_sharedlib( sbLibName );
    }
    return 0;
 }   

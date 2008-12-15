@@ -44,6 +44,8 @@ enum compareOptions {
 
 const int defaultEqualOptions = 0; //cmpOptPrint;
 
+const double defaultErrorLimit = 1.E-10;
+
 enum RefFileEnum {
    refFileRead = 1,
    refFileWrite = 2
@@ -65,12 +67,12 @@ struct TTestSuite {
 
 // Methods for histogram comparisions (later implemented)
 void printResult(const char* msg, bool status);
-int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0, double ERRORLIMIT = 1E-13);
-int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0, double ERRORLIMIT = 1E-13);
-int equals(const char* msg, TH3D* h1, TH3D* h2, int options = 0, double ERRORLIMIT = 1E-13);
-int equals(const char* msg, THnSparse* h1, THnSparse* h2, int options = 0, double ERRORLIMIT = 1E-13);
-int equals(Double_t n1, Double_t n2, double ERRORLIMIT = 1E-13);
-int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT = 1E-13);
+int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0, double ERRORLIMIT = defaultErrorLimit);
+int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0, double ERRORLIMIT = defaultErrorLimit);
+int equals(const char* msg, TH3D* h1, TH3D* h2, int options = 0, double ERRORLIMIT = defaultErrorLimit);
+int equals(const char* msg, THnSparse* h1, THnSparse* h2, int options = 0, double ERRORLIMIT = defaultErrorLimit);
+int equals(Double_t n1, Double_t n2, double ERRORLIMIT = defaultErrorLimit);
+int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT = defaultErrorLimit);
 ostream& operator<<(ostream& out, TH1D* h);
 // old stresHistOpts.cxx file
 
@@ -3374,7 +3376,7 @@ int stressHistogram()
       r.SetSeed(8652);
       status = 0;
       for ( unsigned int j = 0; j < refReadTestSuite.nTests; ++j ) {
-         status |= refReadTestSuite.tests[j]();
+         status += refReadTestSuite.tests[j]();
       }
       printResult( refReadTestSuite.suiteName, status);
       GlobalStatus += status;
@@ -3385,7 +3387,7 @@ int stressHistogram()
    bm.Stop("stressHistogram");
    std::cout <<"****************************************************************************\n";
    bm.Print("stressHistogram");
-   const double reftime = 7.1; // needs to be updated // ref time on  pcbrun4
+   const double reftime = 32; // needs to be updated // ref time on  pcbrun4
    double rootmarks = 860 * reftime / bm.GetCpuTime("stressHistogram");
    std::cout << " ROOTMARKS = " << rootmarks << " ROOT version: " << gROOT->GetVersion() << "\t" 
              << gROOT->GetSvnBranch() << "@" << gROOT->GetSvnRevision() << std::endl;

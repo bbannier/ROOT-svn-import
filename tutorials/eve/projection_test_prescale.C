@@ -1,3 +1,8 @@
+// @(#)root/eve:$Id: quad_test.C 25245 2008-08-25 21:44:09Z matevz $
+// Author: Matevz Tadel
+
+// Demonstates usage pre-scaling for automatic 2D projections.
+
 const char* esd_geom_file_name = "http://root.cern.ch/files/alice_ESDgeometry.root";
 
 void projection_test_prescale()
@@ -7,8 +12,8 @@ void projection_test_prescale()
 
    // camera
    TEveScene* s = gEve->SpawnNewScene("Projected Event");
-   gEve->GetDefViewer()->AddScene(s);
-   TGLViewer* v = (TGLViewer *)gEve->GetGLViewer();
+   gEve->GetDefaultViewer()->AddScene(s);
+   TGLViewer* v = gEve->GetDefaultGLViewer();
    v->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
    TGLOrthoCamera* cam = (TGLOrthoCamera*) v->CurrentCamera();
    cam->SetZoomMinMax(0.2, 20);
