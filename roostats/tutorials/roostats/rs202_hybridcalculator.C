@@ -57,55 +57,52 @@ void rs202_hybridcalculator()
   RooGaussian bkg_yield_prior("bkg_yield_prior","",bkg_yield,RooConst(bkg_yield.getVal()),RooConst(10.));
   RooArgSet nuisance_parameters(bkg_yield); // variables to be integrated
 
+  /// generate a data sample
+  RooArgList observables(x); // variables to be generated
+  RooDataSet* data = tot_pdf.generate(observables,RooFit::Extended());
+
 #ifdef USE_WS
   RooWorkspace wspace;
   wspace.import(tot_pdf);
   wspace.import(bkg_ext_pdf,RecycleConflictNodes(kTRUE));
   wspace.import(bkg_yield_prior);
-  RooRealVar * obsdata = wspace.var("x");
-  RooDataSet* data = tot_pdf.generate(*obsdata,RooFit::Extended());
   wspace.import(*data, RenameDataset("dataset") );
-#else
-  /// generate a data sample
-  RooArgList observables(x); // variables to be generated
-  RooDataSet* data = tot_pdf.generate(observables,RooFit::Extended());
 #endif
   //***********************************************************************//
 
-  /// run HybridCalculator on those inputs
-  HybridCalculator myHybridCalc("myHybridCalc","HybridCalculator example"); 
   //HybridCalculator myHybridCalc("myHybridCalc","HybridCalculator example",tot_pdf,bkg_ext_pdf,observables,nuisance_parameters,bkg_yield_prior);
 
-  // method needed for hybrid calculator
-  myHybridCalc.SetNumberOfToys(3000); 
-  myHybridCalc.SetNuisancePriorPdf(bkg_yield_prior); 
-  myHybridCalc.SetNuisancePriorPdf(bkg_yield_prior.GetName()); 
-  // here I use the default test statistics: 2*lnQ (optional)
-  myHybridCalc.UseNuisancePriorPdf(false); 
-  myHybridCalc.SetTestStatistics(1);
-
-  // use HypoTest interface
-  HypoTestCalculator & hypoCalc = myHybridCalc;  
 
 #ifdef USE_WS
-  hypoCalc.SetWorkspace(wspace);
-  hypoCalc.SetAlternatePdf(tot_pdf.GetName() );
-  hypoCalc.SetNullPdf(bkg_ext_pdf.GetName() );
-  hypoCalc.SetData("dataset" );
-  hypoCalc.SetNullParameters(nuisance_parameters);
+
+  /// run HybridCalculator on those inputs
+  HybridCalculator myHybridCalc("myHybridCalc","HybridCalculator example",
+                                wspace,"dataset",bkg_ext_pdf.GetName(),tot_pdf.GetName(),
+                                &nuisance_parameters,bkg_yield_prior.GetName()); 
+
+//   hypoCalc.SetWorkspace(wspace);
+//   hypoCalc.SetAlternatePdf(tot_pdf.GetName() );
+//   hypoCalc.SetNullPdf(bkg_ext_pdf.GetName() );
+//   hypoCalc.SetData("dataset" );
+//   hypoCalc.SetNullParameters(nuisance_parameters);
 #else 
-  hypoCalc.SetAlternatePdf(tot_pdf);
-  hypoCalc.SetNullPdf(bkg_ext_pdf);
-  hypoCalc.SetData(*data); 
-  hypoCalc.SetNullParameters(nuisance_parameters);
+  HybridCalculator myHybridCalc("myHybridCalc","HybridCalculator example",
+                                *data,bkg_ext_pdf , tot_pdf ,
+                                &nuisance_parameters, &bkg_yield_prior); 
+
+//   hypoCalc.SetAlternatePdf(tot_pdf);
+//   hypoCalc.SetNullPdf(bkg_ext_pdf);
+//   hypoCalc.SetData(*data); 
+//   hypoCalc.SetNullParameters(nuisance_parameters);
   // observables are not needed
 #endif  
   
-                             
+  myHybridCalc.SetNumberOfToys(3000); 
+  //myHybridCalc.UseNuisance(false);                            
 
   /// run 3000 toys with gaussian prior on the background yield
   //HybridResult* myHybridResult = myHybridCalc.Calculate(*data,3000,true);
-  HypoTestResult * result = hypoCalc.GetHypoTest(); 
+  HypoTestResult * result = myHybridCalc.GetHypoTest(); 
   if (!result) { 
      std::cerr << "\nError returned from Hypothesis test" << std::endl;
      return;
