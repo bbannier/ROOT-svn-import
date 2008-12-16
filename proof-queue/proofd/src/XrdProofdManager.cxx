@@ -467,8 +467,10 @@ int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps,
       w->AddProofServ(xps);
    }
 
-   if (lw.length())
+   if (lw.length()) {
       xps->SetWrksStr(lw);
+//      xps->SetStatus(kXPD_running); //TODO: remove?
+   }
 
    if (TRACING(REQ)) fNetMgr->Dump();
 

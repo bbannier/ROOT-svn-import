@@ -823,8 +823,6 @@ int XrdProofdProtocol::SendMsg()
          // tell the scheduler that workers are freed
          if (xps->SrvType() == kXPD_TopMaster && wasRunning) {
             fgMgr->ProofSched()->Reschedule();
-         } else if (xps->SrvType() != kXPD_Worker) {
-            TRACEP(this, XERR, "INT: wrong type of server!");
          }
 
       } else if (opt & kXPD_querynum) {
