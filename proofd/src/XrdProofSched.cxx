@@ -112,6 +112,7 @@ XrdProofSched::XrdProofSched(const char *name,
    fGrpMgr = grpmgr;
    fNextWrk = 1;
    fEDest = e;
+   fUseFIFO = 0;
    ResetParameters();
 
    memset(fName, 0, kXPSMXNMLEN);
@@ -215,15 +216,6 @@ XrdProofdProofServ *XrdProofSched::FirstSession()
       return 0;
    XrdProofdProofServ *xps = fQueue.front();
    // the session will be removed after workers are assigned
-/*
-   xps->SetCurrentQuery(xps->GetQueries()->front());
-   // remove the query to be processed from the queue
-   xps->GetQueries()->pop_front();
-   // Put the session at the end of the queue
-   // > 1 because the query is kept in the queue until ClearWorkers
-   if (!(xps->GetQueries()->size() > 0))
-      fQueue.push_back(xps);
-*/
    return xps;
 }
 
@@ -256,7 +248,7 @@ int XrdProofSched::GetNumWorkers(XrdProofdProofServ *xps)
       for (sesIter = sessions->begin(); sesIter != sessions->end(); ++sesIter) {
          if ((*sesIter)->Group()) {
             XrdProofGroup *g = fGrpMgr->GetGroup((*sesIter)->Group());
-            if (grp)
+            if (g)
                summedPriority += g->Priority();
          }
       }
@@ -291,7 +283,8 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
 
    // if the session has already assigned workers or there are
    // other queries waiting - just enqueue
-   if(xps->Workers()->Num() > 0) {
+   // FIFO is enforced by dynamic mode so it is checked just in case
+   if(fUseFIFO && xps->Workers()->Num() > 0) {
       XrdProofQuery *query = new XrdProofQuery(querytag);
       Enqueue(xps, query);
       return 0;
@@ -331,12 +324,18 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
          wrks->push_back(*nxWrk);
       }
 
+      // FIFO is enforced by dynamic mode so it is checked just in case
       if (wrks->empty()) {
-         // enqueue the querry/session
-         // the returned list of workers was not filled
-         //fQueue.push_back(xps);
-         XrdProofQuery *query = new XrdProofQuery(querytag);
-         Enqueue(xps, query);
+         if (fUseFIFO) {
+            // enqueue the querry/session
+            // the returned list of workers was not filled
+            //fQueue.push_back(xps);
+            XrdProofQuery *query = new XrdProofQuery(querytag);
+            Enqueue(xps, query);
+         } else {
+            // The master first (stats are updated in XrdProofdProtocol::GetWorkers)
+            wrks->push_back(mst);
+         }
       }
 
       // Done
@@ -627,6 +626,10 @@ int XrdProofSched::DoDirectiveSchedParam(char *val, XrdOucStream *cfg, bool)
       } else if (s.beginswith("minforquery:")) {
          s.replace("minforquery:","");
          fMinForQuery = strtol(s.c_str(), (char **)0, 10);
+      } else if (s.beginswith("queue:")) {
+         if (s.endswith("fifo")) {
+            fUseFIFO = 1;
+         }
       } else if (strncmp(val, "default", 7)) {
          // This line applies to another scheduler
          ResetParameters();

@@ -153,6 +153,16 @@ TXProofServ::TXProofServ(Int_t *argc, char **argv, FILE *flog)
    fInterruptHandler = 0;
    fInputHandler = 0;
    fTerminated = kFALSE;
+
+   // TODO:
+   //    Int_t useFIFO = 0;
+/*   if (GetParameter(fProof->GetInputList(), "PROOF_UseFIFO", useFIFO) != 0) {
+      if (useFIFO == 1)
+         Info("", "enablig use of FIFO (if allowed by the server)");
+      else
+         Warning("", "unsupported strategy index (%d): ignore", strategy);
+   }
+*/
 }
 
 //______________________________________________________________________________
@@ -1025,4 +1035,16 @@ void TXProofServ::ReleaseWorker(const char *ord)
    Info("ReleaseWorker","releasing: %s", ord);
 
    ((TXSocket *)fSocket)->SendCoordinator(TXSocket::kReleaseWorker, ord);
+}
+
+//______________________________________________________________________________
+void TXProofServ::SetInputSocket(Bool_t on)
+{
+   // Switch on / off input from the parent
+
+   if (!fSocket) return;
+   if (on)
+      ((TXSocket *)fSocket)->Enable();
+   else
+      ((TXSocket *)fSocket)->Disable();
 }
