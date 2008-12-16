@@ -2,6 +2,9 @@
 #include "TGraph.h"
 #include "TAxis.h"
 #include "TPad.h"
+#include "TColor.h"
+
+#include <string>
 
 TAdvancedGraphicsDialog::TAdvancedGraphicsDialog(const TGWindow *p, const TGWindow *main):
    TGTransientFrame(p, main, 10, 10, kVerticalFrame), 
@@ -46,7 +49,7 @@ TAdvancedGraphicsDialog::TAdvancedGraphicsDialog(const TGWindow *p, const TGWind
    width  = TMath::Max(width, fClose->GetDefaultWidth());
    frame->Resize((width + 20) * 2, height);
 
-   fMainFrame->AddFrame(frame, new TGLayoutHints(kLHintsBottom | kLHintsRight, 0, 0, 0, 0));
+   fMainFrame->AddFrame(frame, new TGLayoutHints(kLHintsBottom | kLHintsRight, 0, 0, 5, 0));
 
    this->AddFrame(fMainFrame, new TGLayoutHints(kLHintsNormal | kLHintsExpandX,0,0,5,5));
 
@@ -143,6 +146,20 @@ void TAdvancedGraphicsDialog::CreateContourFrame()
    fContourError->Resize(130, 20);
    fContourError->GetNumberEntry()->SetToolTipText("Sets the contour confidence level");
    frame->AddFrame(fContourError, new TGLayoutHints(kLHintsNormal, 5, 0, 5, 0));
+
+   fContourFrame->AddFrame(frame, new TGLayoutHints(kLHintsExpandX, 5, 5, 0, 5));
+
+   frame = new TGHorizontalFrame(fContourFrame);
+   
+   label = new TGLabel(frame, "Fill Colour: ");
+   frame->AddFrame(label, new TGLayoutHints(kLHintsTop | kLHintsLeft, 5, 5, 5, 0));
+
+   fContourColor = new TGColorSelect(frame, TColor::Number2Pixel(kYellow - 10), kAGD_CONTCOLOR);
+   frame->AddFrame(fContourColor, new TGLayoutHints(kLHintsNormal, 5, 0, 5, 0));
+
+   fContourOver = new TGCheckButton(frame, "Superimpose", kAGD_CONTOVER);
+   fContourOver->SetToolTipText("If checked, the new contour will overlap the previous one");
+   frame->AddFrame(fContourOver, new TGLayoutHints(kLHintsNormal, 5, 0, 5, 0));
 
    fContourFrame->AddFrame(frame, new TGLayoutHints(kLHintsExpandX, 5, 5, 0, 5));
 }
@@ -267,8 +284,13 @@ void TAdvancedGraphicsDialog::DrawContour()
    // tab. Then it call Virtual Fitter to perform it.
 
    static TGraph * graph = 0;
-   if ( graph )
-      delete graph;
+   std::string options;
+   if ( ! (fContourOver->GetState() == kButtonDown) ) {
+      if ( graph )
+         delete graph;
+      options = "ALF";
+   } else
+      options = "LF";
    graph = new TGraph( static_cast<int>(fContourPoints->GetNumber()) ); 
    Int_t par1 = fContourPar1->GetSelected() - kAGD_PARCOUNTER;
    Int_t par2 = fContourPar2->GetSelected() - kAGD_PARCOUNTER;
@@ -279,10 +301,10 @@ void TAdvancedGraphicsDialog::DrawContour()
    // contour error is actually the desired confidence level
    Double_t cl = fContourError->GetNumber(); 
    fFitter->Contour( par1, par2, graph, cl);
-   graph->SetFillColor(kYellow-10);
+   graph->SetFillColor( TColor::GetColor( fContourColor->GetColor() ) );
    graph->GetXaxis()->SetTitle( fFitter->GetParName(par1) );
    graph->GetYaxis()->SetTitle( fFitter->GetParName(par2) );
-   graph->Draw("ALF"); 
+   graph->Draw( options.c_str() ); 
    gPad->Update();
 }
 
