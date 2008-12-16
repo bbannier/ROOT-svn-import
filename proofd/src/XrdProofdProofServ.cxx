@@ -15,6 +15,8 @@
 #include "XrdProofdAux.h"
 #include "XrdProofdProofServ.h"
 #include "XrdProofWorker.h"
+#include "XrdProofSched.h"
+#include "XrdProofdManager.h"
 
 // Tracing utils
 #include "XrdProofdTrace.h"
@@ -130,8 +132,6 @@ static int DumpWorkerCounters(const char *k, XrdProofWorker *w, void *)
 void XrdProofdProofServ::ClearWorkers()
 {
    // Decrease worker counters and clean-up the list
-   // If called for a worker will do nothing (fWorkers.size() == 0)
-   // In normal operation the workers are cleared already before.
 
    XrdSysMutexHelper mhp(fMutex);
 
@@ -139,6 +139,8 @@ void XrdProofdProofServ::ClearWorkers()
    fWorkers.Apply(DecreaseWorkerCounters, this);
    fWorkers.Purge();
    fWrksStr = "";
+   if (fSrvType == kXPD_TopMaster && fStatus == kXPD_running && fWorkers.Num())
+      fProtocol->Mgr()->ProofSched()->Reschedule();
 }
 
 //__________________________________________________________________________
@@ -202,9 +204,7 @@ void XrdProofdProofServ::Reset()
    SafeDelete(fQueryNum);
    SafeDelete(fStartMsg);
    SafeDelete(fPingSem);
-   fStatus = kXPD_idle;
    fSrvPID = -1;
-   fSrvType = kXPD_AnyServer;
    fID = -1;
    fIsShutdown = false;
    fIsValid = false;
@@ -217,6 +217,9 @@ void XrdProofdProofServ::Reset()
    fROOT = 0;
    // Cleanup worker info
    ClearWorkers();
+   // ClearWorkers depends on the fSrvType and fStatus
+   fSrvType = kXPD_AnyServer;
+   fStatus = kXPD_idle;
    // Cleanup queries info
    fQueries.clear();
    // Strings
