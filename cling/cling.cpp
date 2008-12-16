@@ -8,29 +8,22 @@
 #include <vector>
 #include <string>
 
-#include <clang/Driver/TextDiagnosticPrinter.h>
-#include <clang/Driver/CompileOptions.h>
 #include <clang/Basic/LangOptions.h>
 #include <clang/Basic/TargetInfo.h>
-#include <clang/Basic/FileManager.h>
-#include <clang/Lex/HeaderSearch.h>
-#include <clang/Driver/InitHeaderSearch.h>
-#include <clang/Lex/Preprocessor.h>
-#include <clang/CodeGen/ModuleBuilder.h>
-#include <clang/Sema/ParseAST.h>
 
 #include <llvm/ADT/OwningPtr.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/Module.h>
 #include <llvm/Function.h>
 #include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Support/raw_ostream.h>
+
+#include <cling/Compiler.h>
 
 //------------------------------------------------------------------------------
 // String constants
 //------------------------------------------------------------------------------
 std::string code_prefix = "#include <stdio.h>\nint main(int argc, char** argv) {\n";
-std::string code_suffix = "\nreturn 0; } ";
+std::string code_suffix = ";\nreturn 0; } ";
 
 //------------------------------------------------------------------------------
 // Execute the module
@@ -66,104 +59,6 @@ int executeModuleMain( llvm::Module *module )
 }
 
 //------------------------------------------------------------------------------
-// Parse
-//------------------------------------------------------------------------------
-llvm::Module* parse( clang::LangOptions*      langInfo,
-                     clang::TargetInfo*       targetInfo,
-                     clang::DiagnosticClient* diagClient,
-                     clang::SourceManager*    srcMgr,
-                     clang::FileManager*      fileMgr )
-{
-   //---------------------------------------------------------------------------
-   // Create the header database
-   //---------------------------------------------------------------------------
-   clang::HeaderSearch     headerInfo( *fileMgr );
-   clang::InitHeaderSearch hiInit( headerInfo );
-
-   hiInit.AddDefaultEnvVarPaths( *langInfo );
-   hiInit.AddDefaultSystemIncludePaths( *langInfo );
-   hiInit.AddPath( CLANG_SYS_HEADERS, clang::InitHeaderSearch::System,
-                   false, false, false );
-   hiInit.Realize();
-
-   //----------------------------------------------------------------------------
-   // Create diagnostics
-   //----------------------------------------------------------------------------
-   clang::Diagnostic diag( diagClient );
-   diag.setSuppressSystemWarnings( true );
-
-   //----------------------------------------------------------------------------
-   // Create the preprocessor and code generator
-   //----------------------------------------------------------------------------
-   llvm::OwningPtr<clang::Preprocessor> pp( new clang::Preprocessor( diag, *langInfo, *targetInfo,
-                                                                    *srcMgr, headerInfo ) );
-   llvm::OwningPtr<clang::CodeGenerator> consumer( CreateLLVMCodeGen( diag, *langInfo, "-", false ) );
-
-   //----------------------------------------------------------------------------
-   // Pars and return the module
-   //----------------------------------------------------------------------------
-   clang::ParseAST( *pp.get(), consumer.get() );
-
-   llvm::Module* module = consumer->ReleaseModule();
-   return module;
-}
-
-//------------------------------------------------------------------------------
-// Parse file
-//------------------------------------------------------------------------------
-llvm::Module* parseFile( std::string filePath,
-                         clang::LangOptions*      langInfo,
-                         clang::TargetInfo*       targetInfo,
-                         clang::DiagnosticClient* diag,
-                         clang::SourceManager*    srcMgr,
-                         clang::FileManager*      fileMgr )
-{
-   //---------------------------------------------------------------------------
-   // Feed in the file
-   //---------------------------------------------------------------------------
-   const clang::FileEntry *file = fileMgr->getFile( filePath );
-   if( file )
-      srcMgr->createMainFileID( file, clang::SourceLocation() );
-
-   if( srcMgr->getMainFileID() == 0 ) {
-      std::cerr << "[!] The input file you have specified does not exist!" << std::endl;
-      return 0;
-   }
-   return parse( langInfo, targetInfo, diag, srcMgr, fileMgr );
-}
-
-
-//------------------------------------------------------------------------------
-// Parse a string
-//------------------------------------------------------------------------------
-llvm::Module* parseString( std::string              code,
-                           clang::LangOptions*      langInfo,
-                           clang::TargetInfo*       targetInfo,
-                           clang::DiagnosticClient* diag,
-                           clang::SourceManager*    srcMgr,
-                           clang::FileManager*      fileMgr )
-{
-   //---------------------------------------------------------------------------
-   // Wrap the code and create a memory buffer
-   //---------------------------------------------------------------------------
-   std::string wrapped = code_prefix + code + code_suffix;
-   llvm::MemoryBuffer* buff =llvm::MemoryBuffer::getMemBufferCopy( &*wrapped.begin(), &*wrapped.rbegin(), "MemoryBuffer" );
-
-   //---------------------------------------------------------------------------
-   // Register with the source manager
-   //---------------------------------------------------------------------------
-   if( buff )
-     srcMgr->createMainFileIDForMemBuffer( buff );
-
-   if( srcMgr->getMainFileID() == 0 ) {
-      std::cerr << "[!] Cannot create a memory buffer from your input!" << std::endl;
-      return 0;
-   }
-
-   return parse( langInfo, targetInfo, diag, srcMgr, fileMgr );
-}
-
-//------------------------------------------------------------------------------
 // Let the show begin
 //------------------------------------------------------------------------------
 int main( int argc, char **argv )
@@ -184,7 +79,7 @@ int main( int argc, char **argv )
       interactive = true;
 
    //---------------------------------------------------------------------------
-   // Set up the language options for gnu c99
+   // Set up the compiler
    //---------------------------------------------------------------------------
    clang::LangOptions langInfo;
    langInfo.C99         = 1;
@@ -192,20 +87,16 @@ int main( int argc, char **argv )
    langInfo.BCPLComment = 1; // Only for C99/C++.
    langInfo.Digraphs    = 1; // C94, C99, C++.
 
-   //---------------------------------------------------------------------------
-   // Create the stuff for the preprocessor
-   //---------------------------------------------------------------------------
-   llvm::OwningPtr<clang::DiagnosticClient> diagClient( new clang::TextDiagnosticPrinter(llvm::errs()) );
-   llvm::OwningPtr<clang::TargetInfo>       targetInfo( clang::TargetInfo::CreateTargetInfo( HOST_TARGET ) );
-   llvm::OwningPtr<clang::SourceManager>    srcMgr( new clang::SourceManager() );
-   clang::FileManager                       fileMgr;
+   llvm::OwningPtr<clang::TargetInfo> targetInfo;
+   targetInfo.reset( clang::TargetInfo::CreateTargetInfo( HOST_TARGET ) );
+
+   cling::Compiler compiler( langInfo, targetInfo.get() );
 
    //---------------------------------------------------------------------------
    // We're supposed to parse a file
    //---------------------------------------------------------------------------
    if( !interactive ) {
-      llvm::Module* module = parseFile( argv[1], &langInfo, targetInfo.get(),
-                                        diagClient.get(), srcMgr.get(), &fileMgr );
+      llvm::Module* module = compiler.link( argv[1] );
       if(!module) {
          std::cerr << "[!] Errors occured while parsing your code!" << std::endl;
          return 1;
@@ -235,11 +126,36 @@ int main( int argc, char **argv )
          }
 
          //----------------------------------------------------------------------
+         // Check if we are a preprocessor command
+         //----------------------------------------------------------------------
+         if( input.size() >= 2 && input[0] == '.' ) {
+            switch( input[1] ) {
+               case 'L':
+                  if( compiler.addUnit( input.substr( 3 ) ) )
+                     std::cerr << "[i] Success!" << std::endl;
+                  else
+                     std::cerr << "[i] Failure" << std::endl;
+                  break;
+               case 'U':
+                  compiler.removeUnit( input.substr( 3 ) );
+                  break;
+            }
+            continue;
+         }
+
+         //----------------------------------------------------------------------
+         // Wrap the code
+         //----------------------------------------------------------------------
+         std::string wrapped = code_prefix + input + code_suffix;
+         llvm::MemoryBuffer* buff;
+         buff  = llvm::MemoryBuffer::getMemBufferCopy( &*wrapped.begin(),
+                                                       &*wrapped.rbegin(),
+                                                       "MemoryBuffer" );
+
+         //----------------------------------------------------------------------
          // Parse and run it
          //----------------------------------------------------------------------
-         srcMgr->clearIDTables();
-         llvm::Module* module = parseString( input, &langInfo, targetInfo.get(),
-                                             diagClient.get(), srcMgr.get(), &fileMgr );
+         llvm::Module* module = compiler.link( buff );
 
          if(!module) {
             std::cerr << std::endl;

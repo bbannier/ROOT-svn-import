@@ -33,6 +33,11 @@ subversion [4] to get the source code.
      svn co  http://llvm.org/svn/llvm-project/cfe/trunk clang
      cd ..
 
+   * Apply some patches
+
+     wget http://cern.ch/ljanyst/llvm/patch.sh
+     bash patch.sh
+
    * Configure, build and install them:
 
      mkdir build
