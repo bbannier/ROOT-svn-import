@@ -15,7 +15,7 @@
 #include "RooStats/HybridResult.h"
 #include "RooStats/HybridPlot.h"
 
-void rs201_hybridcalculator()
+void rs201_hybridcalculator(int ntoys)
 {
   //***********************************************************************//
   // This macro show an example on how to use RooStats/HybridCalculator    //
@@ -67,7 +67,7 @@ void rs201_hybridcalculator()
   myHybridCalc.SetTestStatistics(1);
 
   /// run 1000 toys with gaussian prior on the background yield
-  HybridResult* myHybridResult = myHybridCalc.Calculate(*data,3000,true);
+  HybridResult* myHybridResult = myHybridCalc.Calculate(*data,ntoys,true);
 
   /// run 1000 toys without gaussian prior on the background yield
   //HybridResult* myHybridResult = myHybridCalc.Calculate(*data,1000,false);

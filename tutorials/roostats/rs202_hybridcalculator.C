@@ -16,9 +16,9 @@
 #include "RooStats/HybridResult.h"
 #include "RooStats/HybridPlot.h"
 
-#define USE_WS
+//#define USE_WS
 
-void rs202_hybridcalculator()
+void rs202_hybridcalculator(int ntoys=3000)
 {
   //***********************************************************************//
   // This macro show an example on how to use RooStats/HybridCalculator    //
@@ -66,7 +66,7 @@ void rs202_hybridcalculator()
   wspace.import(tot_pdf);
   wspace.import(bkg_ext_pdf,RecycleConflictNodes(kTRUE));
   wspace.import(bkg_yield_prior);
-  wspace.import(*data, RenameDataset("dataset") );
+  wspace.import(*data, RenameDataset("dataset"), RenameVariable("x","x2") );
 #endif
   //***********************************************************************//
 
@@ -77,7 +77,7 @@ void rs202_hybridcalculator()
 
   /// run HybridCalculator on those inputs
   HybridCalculator myHybridCalc("myHybridCalc","HybridCalculator example",
-                                wspace,"dataset",bkg_ext_pdf.GetName(),tot_pdf.GetName(),
+                                wspace,"dataset",tot_pdf.GetName(), bkg_ext_pdf.GetName(),
                                 &nuisance_parameters,bkg_yield_prior.GetName()); 
 
 //   hypoCalc.SetWorkspace(wspace);
@@ -87,7 +87,7 @@ void rs202_hybridcalculator()
 //   hypoCalc.SetNullParameters(nuisance_parameters);
 #else 
   HybridCalculator myHybridCalc("myHybridCalc","HybridCalculator example",
-                                *data,bkg_ext_pdf , tot_pdf ,
+                                *data, tot_pdf , bkg_ext_pdf ,
                                 &nuisance_parameters, &bkg_yield_prior); 
 
 //   hypoCalc.SetAlternatePdf(tot_pdf);
@@ -97,7 +97,7 @@ void rs202_hybridcalculator()
   // observables are not needed
 #endif  
   
-  myHybridCalc.SetNumberOfToys(3000); 
+  myHybridCalc.SetNumberOfToys(ntoys); 
   //myHybridCalc.UseNuisance(false);                            
 
   /// run 3000 toys with gaussian prior on the background yield
