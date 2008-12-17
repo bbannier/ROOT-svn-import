@@ -138,9 +138,10 @@ void XrdProofdProofServ::ClearWorkers()
    // Decrease workers' counters and remove this from workers
    fWorkers.Apply(DecreaseWorkerCounters, this);
    fWorkers.Purge();
-   fWrksStr = "";
-   if (fSrvType == kXPD_TopMaster && fStatus == kXPD_running && fWorkers.Num())
+   if (fSrvType == kXPD_TopMaster && fStatus == kXPD_running
+       && fWrksStr.length())
       fProtocol->Mgr()->ProofSched()->Reschedule();
+   fWrksStr = "";
 }
 
 //__________________________________________________________________________
