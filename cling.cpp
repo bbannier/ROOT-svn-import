@@ -16,6 +16,7 @@
 #include <llvm/Module.h>
 #include <llvm/Function.h>
 #include <llvm/Support/MemoryBuffer.h>
+#include <llvm/System/DynamicLibrary.h>
 
 #include <cling/Compiler.h>
 
@@ -131,11 +132,22 @@ int main( int argc, char **argv )
          if( input.size() >= 2 && input[0] == '.' ) {
             switch( input[1] ) {
                case 'L':
-                  if( compiler.addUnit( input.substr( 3 ) ) )
-                     std::cerr << "[i] Success!" << std::endl;
-                  else
-                     std::cerr << "[i] Failure" << std::endl;
-                  break;
+                  {
+                     llvm::sys::Path path(input.substr(3));
+                     if (path.isDynamicLibrary()) {
+                        std::string errMsg;
+                        if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(input.substr(3).c_str(), &errMsg))
+                           std::cerr << "[i] Success!" << std::endl;
+                        else
+                           std::cerr << "[i] Failure: " << errMsg << std::endl;
+                     } else {
+                        if( compiler.addUnit( input.substr( 3 ) ) )
+                           std::cerr << "[i] Success!" << std::endl;
+                        else
+                           std::cerr << "[i] Failure" << std::endl;
+                     }
+                     break;
+                  }
                case 'U':
                   compiler.removeUnit( input.substr( 3 ) );
                   break;
@@ -149,8 +161,8 @@ int main( int argc, char **argv )
          std::string wrapped = code_prefix + input + code_suffix;
          llvm::MemoryBuffer* buff;
          buff  = llvm::MemoryBuffer::getMemBufferCopy( &*wrapped.begin(),
-                                                       &*wrapped.rbegin(),
-                                                       "MemoryBuffer" );
+                                                       &*wrapped.end(),
+                                                       "CLING" );
 
          //----------------------------------------------------------------------
          // Parse and run it
