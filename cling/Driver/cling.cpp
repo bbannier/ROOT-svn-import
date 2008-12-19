@@ -19,6 +19,7 @@
 #include <llvm/System/DynamicLibrary.h>
 
 #include <cling/Interpreter/Interpreter.h>
+#include <cling/UserInterface/UserInterface.h>
 
 //------------------------------------------------------------------------------
 // String constants
@@ -26,6 +27,7 @@
 std::string code_prefix = "#include <stdio.h>\nint main(int argc, char** argv) {\n";
 std::string code_suffix = ";\nreturn 0; } ";
 
+/*
 //------------------------------------------------------------------------------
 // Execute the module
 //------------------------------------------------------------------------------
@@ -58,6 +60,7 @@ int executeModuleMain( llvm::Module *module )
 
    return engine->runFunctionAsMain( func,  params, 0 );
 }
+*/
 
 //------------------------------------------------------------------------------
 // Let the show begin
@@ -92,6 +95,7 @@ int main( int argc, char **argv )
    targetInfo.reset( clang::TargetInfo::CreateTargetInfo( HOST_TARGET ) );
 
    cling::Compiler compiler( langInfo, targetInfo.get() );
+   cling::UserInterface ui(compiler);
 
    //---------------------------------------------------------------------------
    // We're supposed to parse a file
@@ -102,12 +106,14 @@ int main( int argc, char **argv )
          std::cerr << "[!] Errors occured while parsing your code!" << std::endl;
          return 1;
       }
-      return executeModuleMain( module );
+      return ui.ExecuteModuleMain( module );
    }
    //----------------------------------------------------------------------------
    // We're interactive
    //----------------------------------------------------------------------------
    else {
+      ui.runInteractively();
+      /*
       std::cerr << "Type a C code and press enter to run it." << std::endl;
       std::cerr << "Type .q, exit or ctrl+D to quit" << std::endl;
       std::string input;
@@ -191,6 +197,7 @@ int main( int argc, char **argv )
          }
          executeModuleMain( module );
       }
+      */
    }
    return 0;
 }
