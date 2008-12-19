@@ -167,6 +167,9 @@ public:
    void SetRnrFrame(Bool_t e, Bool_t b)         { fRnrEndCapFrame = e; fRnrBarrelFrame = b; }
    void GetRnrFrame(Bool_t &e, Bool_t &b) const { e = fRnrEndCapFrame; b = fRnrBarrelFrame; }
 
+   virtual void SetFrameTransparency(UChar_t x) { fFrameTransparency = x; }
+   UChar_t GetFrameTransparency() const { return fFrameTransparency; }
+
    ClassDef(TEveCalo3D, 0); // Class for 3D visualization of calorimeter event data.
 };
 

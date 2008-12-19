@@ -380,7 +380,7 @@ TEveCalo3D::TEveCalo3D(TEveCaloData* d, const Text_t* n, const Text_t* t) :
    fRnrEndCapFrame    (kTRUE),
    fRnrBarrelFrame    (kTRUE),
    fFrameColor        (kGray+1),
-   fFrameTransparency (0)
+   fFrameTransparency (80)
 {
 
    // Constructor.
