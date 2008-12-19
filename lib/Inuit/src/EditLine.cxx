@@ -6,8 +6,18 @@
 #include "Inuit/Widgets/Frame.h"
 #include "Inuit/Drivers/TerminalDriver.h"
 #include "Inuit/Event.h"
+#include <string.h>
 
 using namespace Inuit;
+
+void EditLine::SetText(const char* text) {
+   if (fText == text) return;
+   fText = text;
+   fLen = strlen(text);
+   fCursorPos = 0;
+   fLeftmostChar = -1;
+   Draw();
+}
 
 bool EditLine::HandleEvent(const Event& event) {
    static const char* word_delim = " .,;:!@#$%^&*()-+={}[]\\|\"'<>~`";
@@ -81,6 +91,8 @@ void EditLine::Draw() {
    TerminalDriver& td = GetParent()->GetTerminalDriver();
    Pos pos = GetPos();
    td.Goto(pos);
+
+   if (!fLen) return;
 
    if (fLeftmostChar > fCursorPos)
       fLeftmostChar = fCursorPos;

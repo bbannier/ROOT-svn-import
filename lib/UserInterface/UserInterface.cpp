@@ -52,7 +52,8 @@ cling::UserInterface::UserInterface(Compiler& interp):
    InputDriver& ed = InputDriver::Instance(td);
    m_UI = new UI(Pos(td.GetSize().fX, 1), ed);
    m_UI->AddInputHandler(InputHandler, this);
-   m_UI->AddElement(new EditLine(m_UI, Pos(0, 0), td.GetSize().fX));
+   m_EditLine = new EditLine(m_UI, Pos(0, 0), td.GetSize().fX);
+   m_UI->AddElement(m_EditLine);
 }
 
 

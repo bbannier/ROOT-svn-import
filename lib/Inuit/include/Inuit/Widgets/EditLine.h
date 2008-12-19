@@ -19,7 +19,7 @@ namespace Inuit {
       Pos GetSize() const { return Pos(fLen, 1); }
       const std::string& GetText() const { return fText; }
 
-      void SetText(const char* text) { fText = text; }
+      void SetText(const char* text);
 
       void SetMaxCharacters(int maxlen = -1) {
          // maximum text size; -1 means none
