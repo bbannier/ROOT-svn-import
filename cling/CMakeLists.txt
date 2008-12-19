@@ -10,7 +10,7 @@ macro(add_cling_library name)
   endif(MSVC_IDE)
   add_library( ${name} ${srcs} )
   if( LLVM_COMMON_DEPENDS )
-    add_dependencies( ${name} ${LLVM_COMMON_DEPENDS} )
+    add_dependencies( ${name} ${LLVM_COMMON_DEPENDS})
   endif( LLVM_COMMON_DEPENDS )
   if(MSVC)
     get_target_property(cflag ${name} COMPILE_FLAGS)
@@ -38,6 +38,9 @@ endmacro(add_cling_executable)
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../clang/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../clang/lib/
+  ${CMAKE_CURRENT_SOURCE_DIR}/../cling/include
   )
 
 install(DIRECTORY include
@@ -45,7 +48,8 @@ install(DIRECTORY include
   PATTERN ".svn" EXCLUDE
   )
 
-add_definitions( -D_GNU_SOURCE )
+set(CLANG_SYS_HEADERS "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../Headers")
+add_definitions( -D_GNU_SOURCE -DCLANG_SYS_HEADERS="${CLANG_SYS_HEADERS}" -DHOST_TARGET="${LLVM_HOSTTRIPLE}")
 
 add_subdirectory(lib)
 add_subdirectory(Driver)

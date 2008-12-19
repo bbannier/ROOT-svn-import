@@ -4,7 +4,7 @@
 // author:  Lukasz Janyst <ljanyst@cern.ch>
 //------------------------------------------------------------------------------
 
-#include <cling/Compiler.h>
+#include <cling/Interpreter/Interpreter.h>
 
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/ADT/OwningPtr.h>
@@ -25,10 +25,12 @@
 #include <clang/AST/ASTConsumer.h>
 #include <clang/AST/TranslationUnit.h>
 #include <clang/AST/Decl.h>
-#include <clang/Sema/Sema.h>
 #include <clang/Parse/Parser.h>
 #include <clang/AST/DeclarationName.h>
 #include <clang/AST/Stmt.h>
+
+// Private CLANG headers
+#include <Sema/Sema.h>
 
 #include <iostream>
 #include <stdexcept>
