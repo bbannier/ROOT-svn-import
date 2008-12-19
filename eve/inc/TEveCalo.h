@@ -161,7 +161,7 @@ public:
    virtual ~TEveCalo3D() {}
    virtual void ComputeBBox();
 
-   virtual Bool_t CanEditMainColor() const  { return kTRUE; }
+   virtual Bool_t CanEditMainColor()        const { return kTRUE; }
    virtual Bool_t CanEditMainTransparency() const { return kTRUE; }
 
    void SetRnrFrame(Bool_t e, Bool_t b)         { fRnrEndCapFrame = e; fRnrBarrelFrame = b; }
