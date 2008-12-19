@@ -18,7 +18,7 @@
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/System/DynamicLibrary.h>
 
-#include <cling/Compiler.h>
+#include <cling/Interpreter/Interpreter.h>
 
 //------------------------------------------------------------------------------
 // String constants

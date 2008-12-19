@@ -1,6 +1,7 @@
 set(LLVM_NO_RTTI 1)
 
 set( LLVM_USED_LIBS
+  clingInterpreter
   clangDriver
   clangLex
   clangCodeGen
@@ -17,6 +18,8 @@ set( LLVM_LINK_COMPONENTS
   codegen
   ipo
   selectiondag
+  executionengine
+  linker
   )
 
 add_clang_executable(cling
