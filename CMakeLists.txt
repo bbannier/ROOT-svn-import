@@ -41,6 +41,7 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/../clang/include
   ${CMAKE_CURRENT_SOURCE_DIR}/../clang/lib/
   ${CMAKE_CURRENT_SOURCE_DIR}/../cling/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../cling/lib/Inuit/include
   )
 
 install(DIRECTORY include

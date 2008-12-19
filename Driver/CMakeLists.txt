@@ -1,7 +1,12 @@
 set(LLVM_NO_RTTI 1)
 
+SET(CURSES_NEED_NCURSES TRUE)
+FIND_PACKAGE(Curses)
+
 set( LLVM_USED_LIBS
   clingInterpreter
+  clingUserInterface
+  clingInuit
   clangDriver
   clangLex
   clangCodeGen
@@ -9,6 +14,7 @@ set( LLVM_USED_LIBS
   clangParse
   clangAST
   clangBasic
+  ${CURSES_CURSES_LIBRARY}
   )
 
 set( LLVM_LINK_COMPONENTS
