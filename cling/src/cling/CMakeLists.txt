@@ -1,1 +1,5 @@
-add_library( CLING Compiler.cpp )
+set(LLVM_NO_RTTI 1)
+
+add_cling_library(clingInterp
+  Compiler.cpp
+  )
