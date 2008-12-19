@@ -374,16 +374,16 @@ void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t& outH) co
 ClassImp(TEveCalo3D);
 
 
-TEveCalo3D::TEveCalo3D(TEveCaloData* d, const Text_t* n, const Text_t* t): 
-   TEveCaloViz(d, n, t),
-   fRnrEndCapFrame(kTRUE),
-   fRnrBarrelFrame(kTRUE)
+TEveCalo3D::TEveCalo3D(TEveCaloData* d, const Text_t* n, const Text_t* t) : 
+   TEveCaloViz (d, n, t),
+
+   fRnrEndCapFrame    (kTRUE),
+   fRnrBarrelFrame    (kTRUE),
+   fFrameColor        (kGray+1),
+   fFrameTransparency (0)
 {
 
    // Constructor.
-
-   fFrameColor = kGray+1;
-   fMainTransparency= 50;
 
    fMainColorPtr = &fFrameColor;
 }
