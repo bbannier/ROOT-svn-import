@@ -22,45 +22,37 @@ subversion [4] to get the source code.
    [3] http://cmake.org
    [4] http://subversion.tigris.org/
 
-1.2 Building LLVM and CLANG
+1.2 Building
 
    To build LLVM and CLANG you must:
 
    * Check out the sources:
 
+     mkdir src
+     cd src
      svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm
      cd llvm/tools
      svn co  http://llvm.org/svn/llvm-project/cfe/trunk clang
+     svn co  http://root.cern.ch/svn/root/branches/dev/cling
      cd ..
 
    * Apply some patches
 
-     wget http://cern.ch/ljanyst/llvm/patch.sh
-     bash patch.sh
+     cat tools/cling/patches | patch -p0
 
    * Configure, build and install them:
 
+     cd ..
      mkdir build
      cd build
-     cmake -DCMAKE_INSTALL_PREFIX=/some/install/dir -DCMAKE_BUILD_TYPE=Debug ../
+     cmake -DCMAKE_INSTALL_PREFIX=/some/install/dir \
+           -DLLVM_TARGETS_TO_BUILD=CBackend\;CppBackend\;X86 \
+           -DCMAKE_BUILD_TYPE=Debug \
+           -DCMAKE_CXX_COMPILER=`which c++` \
+           -DCMAKE_C_COMPILER=`which gcc` \
+           ../src
      make
      make install
-
-   * To make the installed headers and libraries visible for the CLING build
-     system you have to make sure the llvm-config executable is in your path
-     and can be executed:
-
-     export PATH=$PATH:/some/install/dir/bin
-
-1.3 Building CLING
-
-   To build CLING you have to check out the sources and build them with the
-following commands:
-
-   svn co https://root.cern.ch/svn/root/branches/dev/cling
-   cd cling
-   cmake -DCMAKE_BUILD_TYPE=Debug .
-   make
 
 2. U S A G E
 

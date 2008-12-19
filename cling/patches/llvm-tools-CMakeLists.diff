@@ -1,0 +1,12 @@
+Index: tools/CMakeLists.txt
+===================================================================
+--- tools/CMakeLists.txt	(revision 61129)
++++ tools/CMakeLists.txt	(working copy)
+@@ -34,3 +34,7 @@
+ if( EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/clang/CMakeLists.txt )
+   add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/clang )
+ endif( EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/clang/CMakeLists.txt )
++
++if( EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/cling/CMakeLists.txt )
++  add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/cling )
++endif( EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/cling/CMakeLists.txt )
