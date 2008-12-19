@@ -373,7 +373,7 @@ TEveCalo3DEditor::TEveCalo3DEditor(const TGWindow *p, Int_t width, Int_t height,
    MakeTitle("TEveCalo3D");
 
    TGHorizontalFrame* f = new TGHorizontalFrame(this);
-   TGLabel* lab = new TGLabel(f, "Transparency: ");
+   TGLabel* lab = new TGLabel(f, "Frame transparency: ");
    f->AddFrame(lab, new TGLayoutHints(kLHintsLeft|kLHintsBottom, 1, 1, 1, 1));
 
    fFrameTransparency = new TGNumberEntry(f, 0., 2, -1,
