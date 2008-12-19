@@ -109,7 +109,7 @@ int main( int argc, char **argv )
    //----------------------------------------------------------------------------
    else {
       std::cerr << "Type a C code and press enter to run it." << std::endl;
-      std::cerr << "Type exit or ctrl+D to quit" << std::endl;
+      std::cerr << "Type .q, exit or ctrl+D to quit" << std::endl;
       std::string input;
 
       //------------------------------------------------------------------------
@@ -125,6 +125,8 @@ int main( int argc, char **argv )
             std::cerr << std::endl;
             break;
          }
+
+         bool quitRequested = false;
 
          //----------------------------------------------------------------------
          // Check if we are a preprocessor command
@@ -149,11 +151,23 @@ int main( int argc, char **argv )
                      break;
                   }
                case 'U':
-                  compiler.removeUnit( input.substr( 3 ) );
-                  break;
+                  {
+                     llvm::sys::Path path(input.substr(3));
+                     if (path.isDynamicLibrary()) {
+                        std::cerr << "[i] Failure: cannot unload shared libraries yet!" << std::endl;
+                     }
+                     compiler.removeUnit( input.substr( 3 ) );
+                     break;
+                  }
+               case 'q':
+                  quitRequested = true;
             }
             continue;
          }
+
+
+         if (quitRequested)
+            break;
 
          //----------------------------------------------------------------------
          // Wrap the code
