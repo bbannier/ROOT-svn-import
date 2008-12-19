@@ -97,12 +97,16 @@ InputDriver::EInputStatus InputDriverUnix::ProcessAvailableInputs(std::list<Inpu
       case KEY_F(11): data = Input::kNPF11; break;
       case KEY_F(12): data = Input::kNPF12; break;
       default:
-         if (data == 0 && ((c & 127) >= '0' && (c & 127) <= '9'
-            || (c & 127) >= 'A' && (c & 127) <= 'Z'
-            || (c & 127) >= 'a' && (c & 127) <= 'z'
-            || (c & 127) < 32))
-            type = Input::kTypePrintable;
-         else type = Input::kNumTypes;
+         if (data == 0) {
+            if ((c & 127) >= ' ' && (c & 127) < 127)
+               type = Input::kTypePrintable;
+            else if ((c & 127) < 32) {
+               if ((c & 127) == 10) {
+                  data = Input::kNPEnter;
+                  break;
+               } else type = Input::kTypePrintable;
+            } else type = Input::kNumTypes;
+         } else type = Input::kNumTypes;
    };
    if (type == Input::kNumTypes) return kESIdle;
    if (type == Input::kTypePrintable)
@@ -112,7 +116,7 @@ InputDriver::EInputStatus InputDriverUnix::ProcessAvailableInputs(std::list<Inpu
 
    if (c & 128)
       modifier |= Input::kModAlt;
-   if ((c & 127) < 32) {
+   if ((c & ~128) < 32 && type == Input::kTypePrintable) {
       modifier |= Input::kModCtrl;
       data = c + '@'; // ^@ == 0.
    }

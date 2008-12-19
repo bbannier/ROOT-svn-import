@@ -23,14 +23,16 @@ Event InputFormat::InterpretInput(const Input& i) const {
             case Input::kNPArrowRight: e.Set(Event::kMoveWordRight); break;
          }
       } else {
-         if (!(i.GetModifiers() & Input::kModCtrl)) {
-            switch (i.GetNonPrintable()) {
-               case Input::kNPArrowLeft:
-               case Input::kNPInsert:
-               case Input::kNPDelete:
-               case Input::kNPBackspace:
-                  e.Set((Event::EEvent)i.GetNonPrintable()); break;
-            }
+         switch (i.GetNonPrintable()) {
+         case Input::kNPArrowLeft:
+         case Input::kNPArrowRight:
+         case Input::kNPArrowUp:
+         case Input::kNPArrowDown:
+         case Input::kNPInsert:
+         case Input::kNPDelete:
+         case Input::kNPBackspace:
+         case Input::kNPEnter:
+            e.Set((Event::EEvent)i.GetNonPrintable()); break;
          }
       }
    }
