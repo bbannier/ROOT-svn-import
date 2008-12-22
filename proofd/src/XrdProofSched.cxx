@@ -312,20 +312,20 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
       // Get the advised number
       int nw = GetNumWorkers(xps);
 
-      if (nw > 0)
+      if (nw > 0) {
          // The master first (stats are updated in XrdProofdProtocol::GetWorkers)
          wrks->push_back(mst);
 
-      std::list<XrdProofWorker *>::iterator nxWrk = acws->begin();
-      while (nw--) {
-         nxWrk++;
-         // Add export version of the info
-         // (stats are updated in XrdProofdProtocol::GetWorkers)
-         wrks->push_back(*nxWrk);
-      }
-
-      // FIFO is enforced by dynamic mode so it is checked just in case
-      if (wrks->empty()) {
+         std::list<XrdProofWorker *>::iterator nxWrk = acws->begin();
+         while (nw--) {
+            nxWrk++;
+            // Add export version of the info
+            // (stats are updated in XrdProofdProtocol::GetWorkers)
+            wrks->push_back(*nxWrk);
+         }
+      } else {
+         // if no workers were assigned
+         // enqueue or send a list with only the master (processing refused)
          if (fUseFIFO) {
             // enqueue the querry/session
             // the returned list of workers was not filled
@@ -372,6 +372,9 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
       if (acwseff) { delete acwseff; acwseff = 0; }
       return -1;
    }
+
+   // The master first (stats are updated in XrdProofdProtocol::GetWorkers)
+   wrks->push_back(mst);
 
    if (fWorkerMax > 0 && fWorkerMax < (int) acws->size()) {
 
