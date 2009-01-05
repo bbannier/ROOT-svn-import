@@ -718,14 +718,16 @@ TProofServ::EQueryAction TXProofServ::GetWorkers(TList *workers,
 
    // seqnum of the query for which we call getworkers
    TString seqnum;
-   if (!fWaitingQueries->IsEmpty())
-      if (resume)
+   if (!fWaitingQueries->IsEmpty()) {
+      if (resume) {
          seqnum += ((TProofQueryResult *)(fWaitingQueries->First()))->GetSeqNum();
-      else
+      } else {
          seqnum += ((TProofQueryResult *)(fWaitingQueries->Last()))->GetSeqNum();
+      }
+   }
    // Send request to the coordinator
    TObjString *os =
-      ((TXSocket *)fSocket)->SendCoordinator(TXSocket::kGetWorkers, seqnum.Data());
+      ((TXSocket *)fSocket)->SendCoordinator(kGetWorkers, seqnum.Data());
 
    // The reply contains some information about the master (image, workdir)
    // followed by the information about the workers; the tokens for each node
@@ -1034,17 +1036,5 @@ void TXProofServ::ReleaseWorker(const char *ord)
 
    Info("ReleaseWorker","releasing: %s", ord);
 
-   ((TXSocket *)fSocket)->SendCoordinator(TXSocket::kReleaseWorker, ord);
-}
-
-//______________________________________________________________________________
-void TXProofServ::SetInputSocket(Bool_t on)
-{
-   // Switch on / off input from the parent
-
-   if (!fSocket) return;
-   if (on)
-      ((TXSocket *)fSocket)->Enable();
-   else
-      ((TXSocket *)fSocket)->Disable();
+   ((TXSocket *)fSocket)->SendCoordinator(kReleaseWorker, ord);
 }

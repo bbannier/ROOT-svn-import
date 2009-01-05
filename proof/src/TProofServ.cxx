@@ -538,6 +538,8 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fWaitingQueries  = new TList;
    fIdle            = kTRUE;
 
+   fQueuedMsg       = new TList;
+
    fRealTimeLog     = kFALSE;
 
    fShutdownTimer   = 0;
@@ -1068,18 +1070,45 @@ void TProofServ::HandleSocketInput()
 
    if (fProof) fProof->SetActive();
 
-   // Process the message
-   Int_t rc = HandleSocketInput(mess, all);
-   if (rc < 0) {
-      TString emsg;
-      if (rc == -1) {
-         emsg.Form("HandleSocketInput: command %d cannot be executed while processing", what);
-      } else if (rc == -3) {
-         emsg.Form("HandleSocketInput: message undefined ! Protocol error?", what);
-      } else {
-         emsg.Form("HandleSocketInput: unknown command %d ! Protocol error?", what);
+   Bool_t doit = kTRUE;
+
+   Int_t rc = 0;
+   while (doit) {
+
+      // Process the message
+      rc = HandleSocketInput(mess, all);
+      if (rc < 0) {
+         TString emsg;
+         if (rc == -1) {
+            emsg.Form("HandleSocketInput: command %d cannot be executed while processing", what);
+         } else if (rc == -3) {
+            emsg.Form("HandleSocketInput: message undefined ! Protocol error?", what);
+         } else {
+            emsg.Form("HandleSocketInput: unknown command %d ! Protocol error?", what);
+         }
+         SendAsynMessage(emsg.Data());
+      } else if (rc == 2) {
+         // Add to the queue
+         fQueuedMsg->Add(mess);
+         PDB(kGlobal, 1)
+            Info("HandleSocketInput", "message of type %d enqueued; sz: %d",
+                                       mess->What(), fQueuedMsg->GetSize());
+         mess = 0;
       }
-      SendAsynMessage(emsg.Data());
+
+      // Still somethign to do?
+      doit = 0;
+      if (fgRecursive == 1 && fQueuedMsg->GetSize() > 0) {
+         // Add to the queue
+         PDB(kGlobal, 1)
+            Info("HandleSocketInput", "processing enqueued message of type %d; left: %d",
+                                      mess->What(), fQueuedMsg->GetSize());
+         all = 1;
+         SafeDelete(mess);
+         mess = (TMessage *) fQueuedMsg->First();
+         fQueuedMsg->Remove(mess);
+         doit = 1;
+      }
    }
 
    fgRecursive--;
@@ -1096,17 +1125,19 @@ void TProofServ::HandleSocketInput()
       fProof->SetRunStatus(TProof::kRunning);
    }
 
-   delete mess;
+   // Cleanup
+   SafeDelete(mess);
 }
 
 //______________________________________________________________________________
 Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
 {
    // Process input coming from the client or from the master server.
-   // if 'all' is kFALSE, process only those messages that can be handled
+   // If 'all' is kFALSE, process only those messages that can be handled
    // during qurey processing.
    // Returns -1 if the message could not be processed, <-1 if something went
    // wrong. Returns 1 if the action may have changed the parallel state.
+   // Returns 2 if the message has to be enqueued.
    // Returns 0 otherwise
 
    static TStopwatch timer;
@@ -1358,14 +1389,20 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
          break;
 
       case kPROOF_CHECKFILE:
-         {
+         if (!all && fProtocol <= 19) {
+            // Come back later
+            rc = 2;
+         } else {
             // Handle file checking request
             HandleCheckFile(mess);
          }
          break;
 
       case kPROOF_SENDFILE:
-         {
+         if (!all && fProtocol <= 19) {
+            // Come back later
+            rc = 2;
+         } else {
             mess->ReadString(str, sizeof(str));
             Long_t size;
             Int_t  bin, fw = 1;
@@ -1389,11 +1426,7 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
                Int_t opt = TProof::kForward | TProof::kCp;
                if (bin)
                   opt |= TProof::kBinary;
-               // Old clients do not wait for the termination of SendFile, so we need
-               // to disable new inputs while doing this
-               if (fProtocol <= 19) SetInputSocket(kFALSE);
                fProof->SendFile(fnam, opt, (copytocache ? "cache" : ""));
-               if (fProtocol <= 19) SetInputSocket(kTRUE);
             }
             if (fProtocol > 19) fSocket->Send(kPROOF_SENDFILE);
          }
@@ -1431,7 +1464,10 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
          break;
 
       case kPROOF_CACHE:
-         {
+         if (!all && fProtocol <= 19) {
+            // Come back later
+            rc = 2;
+         } else {
             TProofServLogHandlerGuard hg(fLogFile, fSocket, "", fRealTimeLog);
             PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_CACHE","enter");
             Int_t status = HandleCache(mess);
@@ -1575,7 +1611,7 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
             if (fProtocol > 16) {
                xrc = HandleDataSets(mess);
             } else {
-               Error("HandleProcess", "old client: no or incompatible dataset support");
+               Error("HandleSocketInput", "old client: no or incompatible dataset support");
             }
             SendLogFile(xrc);
          }
@@ -1616,10 +1652,10 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
 
       case kPROOF_STARTPROCESS:
          if (all) {
-            // this message resumes the session; should not come during processing.
+            // This message resumes the session; should not come during processing.
 
             if (fWaitingQueries->IsEmpty()) {
-               Error("HandleSocketInput", "no querries enqueued");
+               Error("HandleSocketInput", "no queries enqueued");
                break;
             }
 
@@ -1635,11 +1671,11 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
                Error("HandleSocketInput", "unexpected answer");
                break;
             } else if (Int_t ret = fProof->AddWorkers(workerList) < 0) {
-               Error("HandleSocketInput", "Adding a list of worker nodes returned: %d",
+               Error("HandleSocketInput", "adding a list of worker nodes returned: %d",
                      ret);
                break;
             } else {
-               ProcessNext();           
+               ProcessNext();
             }
          }
          break;
@@ -3005,11 +3041,9 @@ void TProofServ::HandleProcess(TMessage *mess)
 
       }
 
-
       // If the client submission was asynchronous, signal the submission of
       // the query and communicate the assigned sequential number for later
       // identification
-
       TMessage m(kPROOF_QUERYSUBMITTED);
       if (!sync || enqueued) {
          m << pq->GetSeqNum() << kFALSE;
@@ -3142,16 +3176,15 @@ void TProofServ::ProcessNext()
    // process the next query from the queue of submitted jobs.
    // to be called on the top master only.
 
-   TDSet *dset;
+   TDSet *dset = 0;
    TString filename, opt;
-   TList *input;
-   Long64_t nentries, first;
+   TList *input = 0;
+   Long64_t nentries = -1, first = 0;
 
-   TObject *elist;
+   TObject *elist = 0;
    TProofQueryResult *pq = 0;
 
    // Process
-
 
    // Get query info
    pq = (TProofQueryResult *)(fWaitingQueries->First());
@@ -3169,13 +3202,18 @@ void TProofServ::ProcessNext()
          filename += opt(id + 1, opt.Length());
       // Attach to data set and entry- (or event-) list (if any)
       TObject *o = 0;
-      if ((o = pq->GetInputObject("TDSet")))
+      if ((o = pq->GetInputObject("TDSet"))) {
          dset = (TDSet *) o;
+      } else {
+         // Should never get here
+         Error("ProcessNext", "no TDset object: cannot continue");
+         return;
+      }
       elist = 0;
       if ((o = pq->GetInputObject("TEntryList")))
          elist = o;
       else if ((o = pq->GetInputObject("TEventList")))
-          elist = o;
+         elist = o;
       //
       // Expand selector files
       if (pq->GetSelecImp()) {
@@ -3192,7 +3230,7 @@ void TProofServ::ProcessNext()
       fWaitingQueries->Remove(pq);
    } else {
       // Should never get here
-      Error("HandleProcess", "empty fWaitingQueries queue!");
+      Error("ProcessNext", "empty fWaitingQueries queue!");
       return;
    }
 
@@ -3236,7 +3274,7 @@ void TProofServ::ProcessNext()
    TIter next(input);
    TObject *o = 0;
    while ((o = next())) {
-      PDB(kGlobal, 2) Info("HandleProcess", "adding: %s", o->GetName());
+      PDB(kGlobal, 2) Info("ProcessNext", "adding: %s", o->GetName());
       fPlayer->AddInput(o);
    }
 
@@ -3244,7 +3282,7 @@ void TProofServ::ProcessNext()
    if ((o = input->FindObject("MissingFiles"))) input->Remove(o);
 
    // Process
-   PDB(kGlobal, 1) Info("HandleProcess", "calling %s::Process()", fPlayer->IsA()->GetName());
+   PDB(kGlobal, 1) Info("ProcessNext", "calling %s::Process()", fPlayer->IsA()->GetName());
    fPlayer->Process(dset, filename, opt, nentries, first);
 
    // Return number of events processed
@@ -3276,7 +3314,7 @@ void TProofServ::ProcessNext()
    TQueryResult *pqr = pq->CloneInfo();
    if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted && fPlayer->GetOutputList()) {
 
-      PDB(kGlobal, 2) Info("HandleProcess","Sending results");
+      PDB(kGlobal, 2) Info("ProcessNext","Sending results");
       if (fProtocol > 10) {
          // Send objects one-by-one to optimize transfer and merging
          TMessage mbuf(kPROOF_OUTPUTOBJECT);
@@ -3323,12 +3361,12 @@ void TProofServ::ProcessNext()
 
       } else {
          // TQueryResult unknow to client: send the output list only
-         PDB(kGlobal, 2) Info("HandleProcess","Sending output list");
+         PDB(kGlobal, 2) Info("ProcessNext","Sending output list");
          fSocket->SendObject(fPlayer->GetOutputList(), kPROOF_OUTPUTLIST);
       }
    } else {
       if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted)
-         Warning("HandleProcess","The output list is empty!");
+         Warning("ProcessNext","The output list is empty!");
       fSocket->SendObject(0, kPROOF_OUTPUTLIST);
    }
 
@@ -5164,17 +5202,6 @@ void TProofServ::HandleFork(TMessage *)
    // Cloning itself via fork. Not implemented
 
    Info("HandleFork", "fork cloning not implemented");
-}
-
-//______________________________________________________________________________
-void TProofServ::SetInputSocket(Bool_t on)
-{
-   // Switch on / off input from the parent
-
-   if (on)
-      gSystem->AddFileHandler(fInputHandler);
-   else
-      gSystem->RemoveFileHandler(fInputHandler);
 }
 
 //______________________________________________________________________________

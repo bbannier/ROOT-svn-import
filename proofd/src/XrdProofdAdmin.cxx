@@ -264,7 +264,7 @@ int XrdProofdAdmin::GetWorkers(XrdProofdProtocol *p)
    TRACEP(p, REQ, "request from session "<<pid);
 
    // We should query the chosen resource provider
-   XrdOucString wrks;
+   XrdOucString wrks("");
 
    // Read the query tag
    const char *msg = (const char *) p->Argp()->buff;
