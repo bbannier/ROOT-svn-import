@@ -15,6 +15,7 @@ namespace Inuit {
       TerminalDriverUnix();
       ~TerminalDriverUnix();
 
+      void Update();
       EErrorCode Goto(const Pos& p);
       EErrorCode WriteChar(char c);
       EErrorCode WriteString(const char* s);
@@ -24,6 +25,7 @@ namespace Inuit {
       EErrorCode Clear();
       EErrorCode SetManagedMode(bool managed);
       Pos GetSize() const;
+      Pos GetCursorPos() const;
 
    private:
       int fConsoleOffsetY; // distance of buffer's line 0 to screen's line 0

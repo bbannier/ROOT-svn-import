@@ -27,63 +27,21 @@
 std::string code_prefix = "#include <stdio.h>\nint main(int argc, char** argv) {\n";
 std::string code_suffix = ";\nreturn 0; } ";
 
-/*
-//------------------------------------------------------------------------------
-// Execute the module
-//------------------------------------------------------------------------------
-int executeModuleMain( llvm::Module *module )
-{
-   //---------------------------------------------------------------------------
-   // Create the execution engine
-   //---------------------------------------------------------------------------
-   llvm::OwningPtr<llvm::ExecutionEngine> engine( llvm::ExecutionEngine::create( module ) );
-
-   if( !engine ) {
-      std::cout << "[!] Unable to create the execution engine!" << std::endl;
-      return 1;
-   }
-
-   //---------------------------------------------------------------------------
-   // Look for the main function
-   //---------------------------------------------------------------------------
-   llvm::Function* func( module->getFunction( "main" ) );
-   if( !func ) {
-      std::cerr << "[!] Cannot find the entry function!" << std::endl;
-      return 1;
-   }
-
-   //---------------------------------------------------------------------------
-   // Create argv
-   //---------------------------------------------------------------------------
-   std::vector<std::string> params;
-   params.push_back( "executable" );
-
-   return engine->runFunctionAsMain( func,  params, 0 );
-}
-*/
-
 //------------------------------------------------------------------------------
 // Let the show begin
 //------------------------------------------------------------------------------
 int main( int argc, char **argv )
 {
-   //---------------------------------------------------------------------------
-   // Check the commandline parameters
-   //---------------------------------------------------------------------------
-   if( argc != 2 ) {
-      std::cerr << "[!] You have to specify the input file!" << std::endl;
-      return 1;
-   }
 
    //---------------------------------------------------------------------------
    // Check if we should run in the "interactive" mode
    //---------------------------------------------------------------------------
-   bool interactive = false;
-   if( std::string( argv[1] ) == "-i" )
+   bool interactive = (argc == 1);
+   if( !interactive && std::string( argv[1] ) == "-i" )
       interactive = true;
 
    //---------------------------------------------------------------------------
-   // Set up the compiler
+   // Set up the interpreter
    //---------------------------------------------------------------------------
    clang::LangOptions langInfo;
    langInfo.C99         = 1;
@@ -94,110 +52,25 @@ int main( int argc, char **argv )
    llvm::OwningPtr<clang::TargetInfo> targetInfo;
    targetInfo.reset( clang::TargetInfo::CreateTargetInfo( HOST_TARGET ) );
 
-   cling::Compiler compiler( langInfo, targetInfo.get() );
-   cling::UserInterface ui(compiler);
+   cling::Interpreter interpreter( langInfo, targetInfo.get() );
 
    //---------------------------------------------------------------------------
    // We're supposed to parse a file
    //---------------------------------------------------------------------------
    if( !interactive ) {
-      llvm::Module* module = compiler.link( argv[1] );
+      llvm::Module* module = interpreter.link( argv[1] );
       if(!module) {
          std::cerr << "[!] Errors occured while parsing your code!" << std::endl;
          return 1;
       }
-      return ui.ExecuteModuleMain( module );
+      return interpreter.executeModuleMain( module );
    }
    //----------------------------------------------------------------------------
    // We're interactive
    //----------------------------------------------------------------------------
    else {
+      cling::UserInterface ui(interpreter);
       ui.runInteractively();
-      /*
-      std::cerr << "Type a C code and press enter to run it." << std::endl;
-      std::cerr << "Type .q, exit or ctrl+D to quit" << std::endl;
-      std::string input;
-
-      //------------------------------------------------------------------------
-      // Loop
-      //------------------------------------------------------------------------
-      while( 1 ) {
-         //---------------------------------------------------------------------
-         // Get the user input
-         //---------------------------------------------------------------------
-         std::cout << "[cling] $ ";
-         std::getline( std::cin, input );
-         if( !std::cin.good() || input == "exit" ) {
-            std::cerr << std::endl;
-            break;
-         }
-
-         bool quitRequested = false;
-
-         //----------------------------------------------------------------------
-         // Check if we are a preprocessor command
-         //----------------------------------------------------------------------
-         if( input.size() >= 2 && input[0] == '.' ) {
-            switch( input[1] ) {
-               case 'L':
-                  {
-                     llvm::sys::Path path(input.substr(3));
-                     if (path.isDynamicLibrary()) {
-                        std::string errMsg;
-                        if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(input.substr(3).c_str(), &errMsg))
-                           std::cerr << "[i] Success!" << std::endl;
-                        else
-                           std::cerr << "[i] Failure: " << errMsg << std::endl;
-                     } else {
-                        if( compiler.addUnit( input.substr( 3 ) ) )
-                           std::cerr << "[i] Success!" << std::endl;
-                        else
-                           std::cerr << "[i] Failure" << std::endl;
-                     }
-                     break;
-                  }
-               case 'U':
-                  {
-                     llvm::sys::Path path(input.substr(3));
-                     if (path.isDynamicLibrary()) {
-                        std::cerr << "[i] Failure: cannot unload shared libraries yet!" << std::endl;
-                     }
-                     compiler.removeUnit( input.substr( 3 ) );
-                     break;
-                  }
-               case 'q':
-                  quitRequested = true;
-            }
-            continue;
-         }
-
-
-         if (quitRequested)
-            break;
-
-         //----------------------------------------------------------------------
-         // Wrap the code
-         //----------------------------------------------------------------------
-         std::string wrapped = code_prefix + input + code_suffix;
-         llvm::MemoryBuffer* buff;
-         buff  = llvm::MemoryBuffer::getMemBufferCopy( &*wrapped.begin(),
-                                                       &*wrapped.end(),
-                                                       "CLING" );
-
-         //----------------------------------------------------------------------
-         // Parse and run it
-         //----------------------------------------------------------------------
-         llvm::Module* module = compiler.link( buff );
-
-         if(!module) {
-            std::cerr << std::endl;
-            std::cerr << "[!] Errors occured while parsing your code!" << std::endl;
-            std::cerr << std::endl;
-            continue;
-         }
-         executeModuleMain( module );
-      }
-      */
    }
    return 0;
 }

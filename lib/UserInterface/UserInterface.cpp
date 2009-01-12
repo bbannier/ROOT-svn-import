@@ -9,10 +9,6 @@
 #include <cling/Interpreter/Interpreter.h>
 
 #include <llvm/System/DynamicLibrary.h>
-#include <llvm/ADT/OwningPtr.h>
-#include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include <llvm/Module.h>
-#include <llvm/Function.h>
 #include <llvm/Support/MemoryBuffer.h>
 #
 #include <Inuit/Widgets/UI.h>
@@ -21,6 +17,10 @@
 #include <Inuit/Drivers/InputDriver.h>
 
 #include <iostream>
+
+namespace llvm {
+   class Module;
+}
 
 using namespace Inuit;
 
@@ -45,14 +45,14 @@ namespace {
 //---------------------------------------------------------------------------
 // Construct an interface for an interpreter
 //---------------------------------------------------------------------------
-cling::UserInterface::UserInterface(Compiler& interp):
+cling::UserInterface::UserInterface(Interpreter& interp, const char* prompt /*= "[cling] $"*/):
    m_Interp(&interp), m_EditLine(0), m_UI(0)
 {
    TerminalDriver& td = TerminalDriver::Instance();
    InputDriver& ed = InputDriver::Instance(td);
-   m_UI = new UI(Pos(td.GetSize().fX, 1), ed);
+   m_UI = new UI(Pos(td.GetSize().fW, td.GetSize().fH), ed);
    m_UI->AddInputHandler(InputHandler, this);
-   m_EditLine = new EditLine(m_UI, Pos(0, 0), td.GetSize().fX);
+   m_EditLine = new EditLine(m_UI, Pos(0, td.GetSize().fH - 1), td.GetSize().fW, prompt);
    m_UI->AddElement(m_EditLine);
 }
 
@@ -67,9 +67,9 @@ cling::UserInterface::~UserInterface()
 }
 
 //---------------------------------------------------------------------------
-// Interact with the user using as prompt
+// Interact with the user using a prompt
 //---------------------------------------------------------------------------
-void cling::UserInterface::runInteractively(const char* prompt /*= "[cling] $"*/)
+void cling::UserInterface::runInteractively()
 {
    std::cerr << "Type a C code and press enter to run it." << std::endl;
    std::cerr << "Type .q, exit or ctrl+D to quit" << std::endl;
@@ -88,9 +88,13 @@ bool cling::UserInterface::HandleEvent(Inuit::UI& ui, const Inuit::Input& input)
    else if (input.GetType() == Input::kTypeNonPrintable
             && input.GetNonPrintable() == Inuit::Input::kNPEnter) {
       Inuit::EditLine* editLine = dynamic_cast<Inuit::EditLine*>(ui.GetFocusedWidget());
-      if (editLine && m_EditLine ==  editLine) {
-         if (NextInteractiveLine(editLine->GetText()))
+      if (editLine && m_EditLine == editLine) {
+         ui.GetTerminalDriver().SetManagedMode(false);
+         bool clearLine = NextInteractiveLine(editLine->GetText());
+         ui.GetTerminalDriver().SetManagedMode(true);
+         if (clearLine) {
             editLine->SetText("");
+         }
       } else return false;
    } else return false;
    return true;
@@ -124,7 +128,7 @@ bool cling::UserInterface::NextInteractiveLine(const std::string& line)
       std::cerr << std::endl;
       return false;
    }
-   ExecuteModuleMain( module );
+   m_Interp->executeModuleMain( module );
    return true;
 }
 
@@ -169,39 +173,5 @@ bool cling::UserInterface::ProcessMeta(const std::string& input)
       return false;
    }
    return true;
-}
-
-
-//---------------------------------------------------------------------------
-// Call the Interpreter on a Module
-//---------------------------------------------------------------------------
-int cling::UserInterface::ExecuteModuleMain( llvm::Module *module )
-{
-   //---------------------------------------------------------------------------
-   // Create the execution engine
-   //---------------------------------------------------------------------------
-   llvm::OwningPtr<llvm::ExecutionEngine> engine( llvm::ExecutionEngine::create( module ) );
-
-   if( !engine ) {
-      std::cout << "[!] Unable to create the execution engine!" << std::endl;
-      return 1;
-   }
-
-   //---------------------------------------------------------------------------
-   // Look for the main function
-   //---------------------------------------------------------------------------
-   llvm::Function* func( module->getFunction( "main" ) );
-   if( !func ) {
-      std::cerr << "[!] Cannot find the entry function!" << std::endl;
-      return 1;
-   }
-
-   //---------------------------------------------------------------------------
-   // Create argv
-   //---------------------------------------------------------------------------
-   std::vector<std::string> params;
-   params.push_back( "executable" );
-
-   return engine->runFunctionAsMain( func,  params, 0 );   
 }
 

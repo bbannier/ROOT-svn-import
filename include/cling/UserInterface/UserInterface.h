@@ -20,7 +20,7 @@ namespace llvm {
 }
 
 namespace cling {
-   class Compiler;
+   class Interpreter;
 
    //---------------------------------------------------------------------------
    //! Class for the user interaction with the interpreter
@@ -28,14 +28,12 @@ namespace cling {
    class UserInterface
    {
    public:
-      UserInterface(Compiler& interp);
+      UserInterface(Interpreter& interp, const char* prompt = "[cling] $");
       ~UserInterface();
 
-      void runInteractively(const char* prompt = "[cling] $");
+      void runInteractively();
       void executeSingleCodeLine(const char* line);
       void loadFile(const char* file);
-
-      int ExecuteModuleMain( llvm::Module *module );
 
       bool HandleEvent(Inuit::UI& ui, const Inuit::Input& input);
 
@@ -44,7 +42,7 @@ namespace cling {
       bool NextInteractiveLine(const std::string& line);
       bool ProcessMeta(const std::string& input);
 
-      Compiler* m_Interp;
+      Interpreter* m_Interp;
       Inuit::EditLine* m_EditLine;
       Inuit::UI* m_UI;
    };

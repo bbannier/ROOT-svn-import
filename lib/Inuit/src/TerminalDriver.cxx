@@ -25,7 +25,7 @@ TerminalDriver::~TerminalDriver() {}
 
 TerminalDriver::EErrorCode TerminalDriver::PageFeed() {
 // Clear the screen by inserting empty lines into the buffer:
-   for (int nLines = GetSize().fY; nLines > 0; --nLines)
+   for (int nLines = GetSize().fH; nLines > 0; --nLines)
       printf("\n");
    return kErrSuccess;
 }
