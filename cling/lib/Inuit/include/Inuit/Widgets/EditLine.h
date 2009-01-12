@@ -7,23 +7,27 @@
 
 #include "Inuit/Widgets/Widget.h"
 #include <string>
+#include <string.h>
 
 namespace Inuit {
    class EditLine: public Widget {
    public:
-      EditLine(Frame* parent, const Pos& pos, int len):
-         Widget(parent, pos), fLen(len), fMaxChar(-1), fCursorPos(0), fLeftmostChar(0),
-            fInsert(true), fPromptCutLeft("<< "), fPromptCutRight(" >>") {}
+      EditLine(Frame* parent, const Pos& pos, int width, const char* prompt,
+               const char* prompt_short = 0):
+         Widget(parent, pos), fWidth(width), fMaxLen(-1), fCursorPos(0), fCropLeft(0),
+         fInsert(true), fPrompt(prompt), fPromptShort(prompt_short ? prompt_short : prompt),
+         fPromptLen(strlen(prompt)), fPromptShortLen(strlen(prompt_short ? prompt_short : prompt)),
+         fPromptCutLeft("<< "), fPromptCutRight(" >>") {}
       ~EditLine() {}
 
-      Pos GetSize() const { return Pos(fLen, 1); }
+      Pos GetSize() const { return Pos(fWidth, 1); }
       const std::string& GetText() const { return fText; }
 
       void SetText(const char* text);
 
       void SetMaxCharacters(int maxlen = -1) {
          // maximum text size; -1 means none
-         fMaxChar = maxlen;
+         fMaxLen = maxlen;
       }
 
       void SetPromptCutLeft(const char* p) { fPromptCutLeft = p; }
@@ -34,12 +38,16 @@ namespace Inuit {
       virtual void SetFocus() {};
 
    private:
-      int fLen; // size of the line
-      int fMaxChar; // maximum text size
+      int fWidth; // size of the line
+      int fMaxLen; // maximum text size
       int fCursorPos; // position of cursor within string
-      int fLeftmostChar; // index of leftmost visible char within string
+      int fCropLeft; // index of leftmost visible char within string
       bool fInsert; // or overwrite mode
       std::string fText;
+      std::string fPrompt;
+      std::string fPromptShort;
+      size_t fPromptLen;
+      size_t fPromptShortLen;
       std::string fPromptCutLeft;
       std::string fPromptCutRight;
    };

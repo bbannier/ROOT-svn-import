@@ -8,12 +8,9 @@
 
 using namespace Inuit;
 
-TerminalDriverUnix::TerminalDriverUnix(): fConsoleOffsetY(0) {
+TerminalDriverUnix::TerminalDriverUnix(): fConsoleOffsetY(0), fManaged(false) {
    // initialize curses
    initscr();
-   raw();
-   noecho();
-   keypad(stdscr, true);
 }
 
 TerminalDriverUnix::~TerminalDriverUnix() {
@@ -22,15 +19,29 @@ TerminalDriverUnix::~TerminalDriverUnix() {
    endwin();
 }
 
+void TerminalDriverUnix::Update() {
+   // Update the screen
+   refresh();
+}
+
 TerminalDriverUnix::EErrorCode TerminalDriverUnix::SetManagedMode(bool managed) {
    // Managed: the user decides what to echo, low-level terminal I/O.
    // Unmanaged: use the high level I/O
    if (managed == fManaged) return kErrSuccess;
    fManaged = managed;
    if (managed) {
-      reset_prog_mode();
+      raw();
+      noecho();
+      keypad(stdscr, true);
+      meta(stdscr, true);
+      nl();
       refresh();
    } else {
+      return kErrSuccess;
+      noraw();
+      echo();
+      keypad(stdscr, false);
+      nl();
       def_prog_mode();
       endwin();
    }
@@ -58,7 +69,7 @@ TerminalDriver::EErrorCode TerminalDriverUnix::Clear() {
 
 TerminalDriver::EErrorCode TerminalDriverUnix::Goto(const Pos& p) { 
    fPos = p;
-   move(p.fY, p.fX);
+   move(p.fH, p.fW);
    return kErrSuccess;
 }
 
@@ -73,3 +84,10 @@ TerminalDriver::EErrorCode TerminalDriverUnix::SetCursorSize(char percent_size) 
    curs_set(percent_size > 50 ? 2 : (int)(percent_size >= 0)); 
    return kErrSuccess;
 }
+
+Pos TerminalDriverUnix::GetCursorPos() const {
+   Pos pos;
+   getyx(stdscr, pos.fH, pos.fW);
+   return pos;
+}
+

@@ -8,14 +8,14 @@
 namespace Inuit {
    struct Pos {
       Pos() {}
-      Pos(int x, int y): fX(x), fY(y) {}
-      int fX;
-      int fY;
+      Pos(int x, int y): fW(x), fH(y) {}
+      int fW;
+      int fH;
 
-      Pos operator +(const Pos& p) const { return Pos(fX + p.fX, fY + p.fY); }
-      Pos operator -(const Pos& p) const { return Pos(fX - p.fX, fY - p.fY); }
-      Pos& operator +=(const Pos& p) { fX += p.fX; fY += p.fY; return *this; }
-      Pos& operator -=(const Pos& p) { fX -= p.fX, fY -= p.fY; return *this; }
+      Pos operator +(const Pos& p) const { return Pos(fW + p.fW, fH + p.fH); }
+      Pos operator -(const Pos& p) const { return Pos(fW - p.fW, fH - p.fH); }
+      Pos& operator +=(const Pos& p) { fW += p.fW; fH += p.fH; return *this; }
+      Pos& operator -=(const Pos& p) { fW -= p.fW, fH -= p.fH; return *this; }
    };
 }
 

@@ -23,6 +23,7 @@ namespace Inuit {
          kNumErrorCodes
       };
 
+      virtual void Update() = 0;
       virtual EErrorCode Goto(const Pos& p) = 0;
       virtual EErrorCode WriteChar(char c) = 0;
       virtual EErrorCode WriteString(const char* s) = 0;
@@ -34,8 +35,8 @@ namespace Inuit {
 
       virtual EErrorCode SetManagedMode(bool managed) = 0;
 
-      const Pos& GetCursorPos() const { return fPos; }
       int GetCursorSize() const { return fSize; }
+      virtual Pos GetCursorPos() const = 0;
       virtual Pos GetSize() const = 0;
 
    protected:

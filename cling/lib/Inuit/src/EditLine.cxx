@@ -6,16 +6,15 @@
 #include "Inuit/Widgets/Frame.h"
 #include "Inuit/Drivers/TerminalDriver.h"
 #include "Inuit/Event.h"
-#include <string.h>
+#include <assert.h>
 
 using namespace Inuit;
 
 void EditLine::SetText(const char* text) {
    if (fText == text) return;
    fText = text;
-   fLen = strlen(text);
    fCursorPos = 0;
-   fLeftmostChar = -1;
+   fCropLeft = 0;
    Draw();
 }
 
@@ -24,7 +23,7 @@ bool EditLine::HandleEvent(const Event& event) {
    const Input& input = event.GetInput();
    if (event.Get() == Event::kRawInput && input.GetType() == Input::kTypePrintable) {
       if (!(input.GetModifiers() & (Input::kModAlt | Input::kModCtrl | Input::kModUp)) 
-         && (fMaxChar < 0 || fText.length() < (size_t) fMaxChar)) {
+         && (fMaxLen < 0 || fText.length() < (size_t) fMaxLen)) {
          if (fInsert)
             fText.insert(fCursorPos, std::string(1, input.GetPrintable()));
          else 
@@ -92,38 +91,50 @@ void EditLine::Draw() {
    Pos pos = GetPos();
    td.Goto(pos);
 
-   if (!fLen) return;
+   // This is what the most complex line looks like:
+   // fText might be "aiuilahilughslihgsfd_hkwlahlhkakjghkldshfhgshdkjshvk"
+   // Display:
+   // SHORTPROMPT: << iuilahilughslihgsfd_hkwlahlhkakjghkldshfhg >>
+   // fCropLeft is this 1 ("a" is not shown)
 
-   if (fLeftmostChar > fCursorPos)
-      fLeftmostChar = fCursorPos;
-   else if (fLeftmostChar + fLen < fCursorPos + 1)
-      fLeftmostChar = fCursorPos + 1 - fLen;
-
-   // >>_ ab
-   if (fLeftmostChar != 0
-      && fLeftmostChar + (int) fPromptCutLeft.length() > fCursorPos)
-      fLeftmostChar = fCursorPos - fPromptCutLeft.length();
-   if (fLeftmostChar < 0) fLeftmostChar = 0;
-
-   int len = GetText().length();
-   //         yz _<<
-   if (len - fLeftmostChar >= fLen
-      && fLeftmostChar + fLen - (int) fPromptCutRight.length() <= fCursorPos)
-      fLeftmostChar = fCursorPos - fLen + (int) fPromptCutRight.length() + 1;
-
-   std::string text(GetText().substr(fLeftmostChar));
-
-   if (fLeftmostChar != 0)
-      text.replace(0, fPromptCutLeft.length(), fPromptCutLeft);
-
-   len = text.length();
-   if (len >= fLen) {
-      text.replace(fLen - fPromptCutRight.length(), fPromptCutRight.length(), fPromptCutRight);
-      text.erase(fLen);
-   } else {
-      text += std::string(fLen - text.length(), ' ');
+   bool leftOK  = fCursorPos >= fCropLeft; // left
+   // Now adjust left if needed:
+   if (!leftOK) {
+      // The cursor left the view at the left side. Reduce fCropLeft until it is visible again:
+      assert(fCropLeft);
+      fCropLeft = fCursorPos;
+      assert(fCropLeft >= 0);
    }
+
+   size_t promptLenLong = fPromptLen;
+   size_t promptLenExt = fPromptShortLen + fPromptCutLeft.length();
+   size_t promptLen = fCropLeft ? promptLenExt : fPromptLen;
+
+   size_t numCharsShown = fWidth - promptLen;
+
+   int cropRight = fCropLeft + numCharsShown;
+   if (cropRight > GetText().length()) cropRight = 0;
+   else cropRight -= fPromptCutRight.length();
+   bool rightOK = !cropRight || fCursorPos < cropRight;
+   // Adjust right if needed:
+   if (!rightOK) {
+      // The cursor left the view at the right side. Increase fCropLeft until it is visible again:
+      cropRight = fCursorPos + 1;
+      fCropLeft = cropRight - (fWidth - promptLenExt);
+      if (cropRight > GetText().length()) cropRight = 0;
+      else fCropLeft += fPromptCutRight.length();
+      assert(fCropLeft);
+   }
+
+   assert(!cropRight || fCursorPos < cropRight);
+   assert(fCursorPos >= fCropLeft);
+
+   std::string text(fCropLeft ? (fPromptShort + fPromptCutLeft) : fPrompt);
+   text += GetText().substr(fCropLeft, cropRight ? cropRight - fCropLeft : -1);
+   if (cropRight) text += fPromptCutRight;
+   else text += std::string(fWidth - text.length() - 1, ' ');
+
    td.WriteString(text.c_str());
-   pos.fX = fCursorPos - fLeftmostChar;
+   pos.fW = fCursorPos - fCropLeft + (fCropLeft ? promptLenExt : fPromptLen);
    td.Goto(pos);
 }

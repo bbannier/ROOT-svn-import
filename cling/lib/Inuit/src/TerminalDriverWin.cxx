@@ -30,7 +30,7 @@ TerminalDriverWin::TerminalDriverWin(): fConsoleOffsetY(0), fManaged(false) {
 
 TerminalDriverWin::~TerminalDriverWin() {
    // go to bottom of screen.
-   COORD bottom = {0, GetSize().fY - 1 + fConsoleOffsetY - 1};
+   COORD bottom = {0, GetSize().fH - 1 + fConsoleOffsetY - 1};
    ::SetConsoleCursorPosition(fStdOut, bottom);
 }
 
@@ -69,7 +69,7 @@ TerminalDriver::EErrorCode TerminalDriverWin::Clear() {
    // Get the number of character cells in the current buffer. 
    CONSOLE_SCREEN_BUFFER_INFO csbi; 
    Pos size = GetSize();
-   DWORD dwConSize = size.fX * size.fY;
+   DWORD dwConSize = size.fW * size.fH;
 
    // Fill the entire screen with blanks.
    COORD coordScreen = {0, fConsoleOffsetY};    // home for the cursor 
@@ -85,7 +85,7 @@ TerminalDriver::EErrorCode TerminalDriverWin::Clear() {
                               dwConSize, coordScreen, &cCharsWritten);
 
    // Put the cursor at its home coordinates.
-   COORD coord = {fPos.fX, fPos.fY + fConsoleOffsetY};
+   COORD coord = {fPos.fW, fPos.fH + fConsoleOffsetY};
    ::SetConsoleCursorPosition(::GetStdHandle(STD_OUTPUT_HANDLE), coord);
    return kErrSuccess;
 }
@@ -93,7 +93,7 @@ TerminalDriver::EErrorCode TerminalDriverWin::Clear() {
 
 TerminalDriver::EErrorCode TerminalDriverWin::Goto(const Pos& p) { 
    fPos = p;
-   COORD coord = {p.fX, p.fY + fConsoleOffsetY};
+   COORD coord = {p.fW, p.fH + fConsoleOffsetY};
    ::SetConsoleCursorPosition(::GetStdHandle(STD_OUTPUT_HANDLE), coord);
    return kErrSuccess;
 }
