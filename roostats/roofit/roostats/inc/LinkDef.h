@@ -38,6 +38,13 @@
 #pragma link C++ class RooStats::HybridPlot+;
 #pragma link C++ class RooStats::HybridResult+;
 
+#pragma link C++ class RooStats::DistributionCreator+; // interface, not concrete
+#pragma link C++ class RooStats::DebuggingDistributionCreator+;
+#pragma link C++ class RooStats::SetInterval+;
+#pragma link C++ class RooStats::SamplingDistribution+;
+#pragma link C++ class RooStats::NeymanConstruction+;
+
+
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialExpZ(Double_t,Double_t,Double_t);
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialWithTauExpZ(Double_t,Double_t,Double_t);
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialObsZ(Double_t,Double_t,Double_t);
