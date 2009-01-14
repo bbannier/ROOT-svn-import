@@ -1846,7 +1846,7 @@ const char* TCint::GetSharedLibs()
       Int_t len = strlen(filename);
       const char *end = filename+len;
       Bool_t needToSkip = kFALSE;
-      if ( len>5 && ( (strcmp(end-4,".dll") == 0 ) || (strstr(filename,"Dict.")!=0) ) ) {
+      if ( len>5 && ( (strcmp(end-4,".dll") == 0 ) || (strstr(filename,"Dict.")!=0)  || (strstr(filename,"MetaTCint")!=0)  ) ) {
          // Filter out the cintdlls
          static const char *excludelist [] = {
             "stdfunc.dll","stdcxxfunc.dll","posix.dll","ipc.dll","posix.dll"
@@ -1856,7 +1856,9 @@ const char* TCint::GetSharedLibs()
             "exception.dll","stdexcept.dll","complex.dll","climits.dll",
             "libvectorDict.","libvectorboolDict.","liblistDict.","libdequeDict.",
             "libmapDict.", "libmap2Dict.","libsetDict.","libmultimapDict.","libmultimap2Dict.",
-            "libmultisetDict.","libstackDict.","libqueueDict.","libvalarrayDict."};
+            "libmultisetDict.","libstackDict.","libqueueDict.","libvalarrayDict.",
+            "libMetaTCint.","libMetaTCint7."
+         };
          static const unsigned int excludelistsize = sizeof(excludelist)/sizeof(excludelist[0]);
          static int excludelen[excludelistsize] = {-1};
          if (excludelen[0] == -1) {
@@ -1994,6 +1996,16 @@ const char *TCint::GetIncludePath()
       const char *pathname = path.Name();
       fIncludePath.Append(" -I\"").Append(pathname).Append("\" ");
    }
+#ifdef ROOTINCDIR
+   fIncludePath.Append(" -I\"").Append(ROOTINCDIR);
+#else 
+   fIncludePath.Append(" -I\"").Append(gRootDir).Append("/include");
+#endif
+#ifdef R__BUILDING_CINT7
+   fIncludePath.Append("/cint7\" ");
+#else
+   fIncludePath.Append("/cint\" ");
+#endif
 
    return fIncludePath;
 }
@@ -2398,6 +2410,13 @@ ClassInfo_t *TCint::ClassInfo_Factory(const char *name) const
    // Interface to CINT function 
    
    return new G__ClassInfo(name);
+}
+//______________________________________________________________________________
+ClassInfo_t *TCint::ClassInfo_Factory(G__value *pvalue) const
+{
+   // Interface to CINT function 
+   
+   return new G__ClassInfo(*pvalue);
 }
 //______________________________________________________________________________
 int TCint::ClassInfo_GetMethodNArg(ClassInfo_t *cinfo, const char *method,const char *proto) const
@@ -3072,6 +3091,14 @@ TypeInfo_t *TCint::TypeInfo_Factory() const
    return info;
 }
 //______________________________________________________________________________
+TypeInfo_t *TCint::TypeInfo_Factory(G__value *pvalue) const
+{
+   // Interface to CINT function 
+   
+   G__TypeInfo *info = new G__TypeInfo(*pvalue);
+   return info;
+}
+//______________________________________________________________________________
 TypeInfo_t *TCint::TypeInfo_FactoryCopy(TypeInfo_t *tinfo) const
 {
    // Interface to CINT function 
@@ -3096,12 +3123,28 @@ bool  TCint::TypeInfo_IsValid(TypeInfo_t *tinfo) const
    return info->IsValid();
 }
 //______________________________________________________________________________
+const char *TCint::TypeInfo_Name(TypeInfo_t *tinfo) const
+{
+   // Interface to CINT function 
+   
+   G__TypeInfo *info = (G__TypeInfo*)tinfo;
+   return info->Name();
+}
+//______________________________________________________________________________
 Long_t  TCint::TypeInfo_Property(TypeInfo_t *tinfo) const
 {
    // Interface to CINT function 
    
    G__TypeInfo *info = (G__TypeInfo*)tinfo;
    return info->Property();
+}
+//______________________________________________________________________________
+int   TCint::TypeInfo_RefType(TypeInfo_t *tinfo) const
+{
+   // Interface to CINT function 
+   
+   G__TypeInfo *info = (G__TypeInfo*)tinfo;
+   return info->Reftype();
 }
 //______________________________________________________________________________
 int   TCint::TypeInfo_Size(TypeInfo_t *tinfo) const

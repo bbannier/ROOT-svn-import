@@ -538,6 +538,8 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fWaitingQueries  = new TList;
    fIdle            = kTRUE;
 
+   fQueuedMsg       = new TList;
+
    fRealTimeLog     = kFALSE;
 
    fShutdownTimer   = 0;
@@ -546,6 +548,8 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fInflateFactor   = 1000;
 
    fDataSetManager  = 0; // Initialized in Setup()
+
+   fInputHandler    = 0;
 
    // Quotas disabled by default
    fMaxQueries      = -1;
@@ -693,7 +697,8 @@ Int_t TProofServ::CreateServer()
    // Install interrupt and message input handlers
    gSystem->AddSignalHandler(new TProofServTerminationHandler(this));
    gSystem->AddSignalHandler(new TProofServInterruptHandler(this));
-   gSystem->AddFileHandler(new TProofServInputHandler(this, sock));
+   fInputHandler = new TProofServInputHandler(this, sock);
+   gSystem->AddFileHandler(fInputHandler);
 
    // if master, start slave servers
    if (IsMaster()) {
@@ -1065,18 +1070,45 @@ void TProofServ::HandleSocketInput()
 
    if (fProof) fProof->SetActive();
 
-   // Process the message
-   Int_t rc = HandleSocketInput(mess, all);
-   if (rc < 0) {
-      TString emsg;
-      if (rc == -1) {
-         emsg.Form("HandleSocketInput: command %d cannot be executed while processing", what);
-      } else if (rc == -3) {
-         emsg.Form("HandleSocketInput: message undefined ! Protocol error?", what);
-      } else {
-         emsg.Form("HandleSocketInput: unknown command %d ! Protocol error?", what);
+   Bool_t doit = kTRUE;
+
+   Int_t rc = 0;
+   while (doit) {
+
+      // Process the message
+      rc = HandleSocketInput(mess, all);
+      if (rc < 0) {
+         TString emsg;
+         if (rc == -1) {
+            emsg.Form("HandleSocketInput: command %d cannot be executed while processing", what);
+         } else if (rc == -3) {
+            emsg.Form("HandleSocketInput: message undefined ! Protocol error?", what);
+         } else {
+            emsg.Form("HandleSocketInput: unknown command %d ! Protocol error?", what);
+         }
+         SendAsynMessage(emsg.Data());
+      } else if (rc == 2) {
+         // Add to the queue
+         fQueuedMsg->Add(mess);
+         PDB(kGlobal, 1)
+            Info("HandleSocketInput", "message of type %d enqueued; sz: %d",
+                                       mess->What(), fQueuedMsg->GetSize());
+         mess = 0;
       }
-      SendAsynMessage(emsg.Data());
+
+      // Still somethign to do?
+      doit = 0;
+      if (fgRecursive == 1 && fQueuedMsg->GetSize() > 0) {
+         // Add to the queue
+         PDB(kGlobal, 1)
+            Info("HandleSocketInput", "processing enqueued message of type %d; left: %d",
+                                      mess->What(), fQueuedMsg->GetSize());
+         all = 1;
+         SafeDelete(mess);
+         mess = (TMessage *) fQueuedMsg->First();
+         fQueuedMsg->Remove(mess);
+         doit = 1;
+      }
    }
 
    fgRecursive--;
@@ -1093,7 +1125,8 @@ void TProofServ::HandleSocketInput()
       fProof->SetRunStatus(TProof::kRunning);
    }
 
-   delete mess;
+   // Cleanup
+   SafeDelete(mess);
 }
 
 //______________________________________________________________________________
@@ -1102,6 +1135,7 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
    // Process input coming from the client or from the master server.
    // Returns -1 if the message could not be processed, <-1 if something went
    // wrong. Returns 1 if the action may have changed the parallel state.
+   // Returns 2 if the message has to be enqueued.
    // Returns 0 otherwise
 
    static TStopwatch timer;
@@ -1353,14 +1387,20 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
          break;
 
       case kPROOF_CHECKFILE:
-         {
+         if (!all && fProtocol <= 19) {
+            // Come back later
+            rc = 2;
+         } else {
             // Handle file checking request
             HandleCheckFile(mess);
          }
          break;
 
       case kPROOF_SENDFILE:
-         {
+         if (!all && fProtocol <= 19) {
+            // Come back later
+            rc = 2;
+         } else {
             mess->ReadString(str, sizeof(str));
             Long_t size;
             Int_t  bin, fw = 1;
@@ -1384,9 +1424,11 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
                Int_t opt = TProof::kForward | TProof::kCp;
                if (bin)
                   opt |= TProof::kBinary;
+               // Old clients do not wait for the termination of SendFile, so we need
+               // to disable new inputs while doing this
                fProof->SendFile(fnam, opt, (copytocache ? "cache" : ""));
             }
-            SendLogFile();
+            if (fProtocol > 19) fSocket->Send(kPROOF_SENDFILE);
          }
          break;
 
@@ -1422,7 +1464,10 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
          break;
 
       case kPROOF_CACHE:
-         {
+         if (!all && fProtocol <= 19) {
+            // Come back later
+            rc = 2;
+         } else {
             TProofServLogHandlerGuard hg(fLogFile, fSocket, "", fRealTimeLog);
             PDB(kGlobal, 1) Info("HandleSocketInput:kPROOF_CACHE","enter");
             Int_t status = HandleCache(mess);
@@ -3656,6 +3701,7 @@ void TProofServ::HandleCheckFile(TMessage *mess)
          if (gSystem->AccessPathName(fPackageDir + "/" + packnam, kWritePermission)) {
             // par file did not unpack itself in the expected directory, failure
             reply << (Int_t)0;
+            if (fProtocol <= 19) reply.Reset(kPROOF_FATAL);
             err = kTRUE;
             Error("HandleCheckFile", "package %s did not unpack into %s",
                                      filenam.Data(), packnam.Data());
@@ -3671,12 +3717,12 @@ void TProofServ::HandleCheckFile(TMessage *mess)
          }
       } else {
          reply << (Int_t)0;
+         if (fProtocol <= 19) reply.Reset(kPROOF_FATAL);
          err = kTRUE;
          PDB(kPackage, 1)
             Info("HandleCheckFile",
                  "package %s not yet on node", filenam.Data());
       }
-      fSocket->Send(reply);
 
       // Note: Originally an fPackageLock->Unlock() call was made
       // after the if-else statement below. With multilevel masters,
@@ -3698,6 +3744,7 @@ void TProofServ::HandleCheckFile(TMessage *mess)
          fPackageLock->Unlock();
       }
       delete md5local;
+      fSocket->Send(reply);
 
    } else if (filenam.BeginsWith("+")) {
       // check file in package directory
@@ -3718,6 +3765,7 @@ void TProofServ::HandleCheckFile(TMessage *mess)
             fProof->UploadPackage(fPackageDir + "/" + filenam);
       } else {
          reply << (Int_t)0;
+         if (fProtocol <= 19) reply.Reset(kPROOF_FATAL);
          PDB(kPackage, 1)
             Info("HandleCheckFile",
                  "package %s not yet on node", filenam.Data());
@@ -3744,6 +3792,7 @@ void TProofServ::HandleCheckFile(TMessage *mess)
             fProof->UploadPackage(fPackageDir + "/" + filenam);
       } else {
          reply << (Int_t)0;
+         if (fProtocol <= 19) reply.Reset(kPROOF_FATAL);
          PDB(kPackage, 1)
             Info("HandleCheckFile",
                  "package %s not yet on node", filenam.Data());
@@ -3759,7 +3808,7 @@ void TProofServ::HandleCheckFile(TMessage *mess)
 
       if (md5local && md5 == (*md5local)) {
          // copy file from cache to working directory
-         Bool_t cp = (opt & TProof::kCp) ? kTRUE : kFALSE;
+         Bool_t cp = ((opt & TProof::kCp) || (fProtocol <= 19)) ? kTRUE : kFALSE;
          if (cp) {
             Bool_t cpbin = (opt & TProof::kCpBin) ? kTRUE : kFALSE;
             CopyFromCache(filenam, cpbin);
@@ -3769,6 +3818,7 @@ void TProofServ::HandleCheckFile(TMessage *mess)
             Info("HandleCheckFile", "file %s already on node", filenam.Data());
       } else {
          reply << (Int_t)0;
+         if (fProtocol <= 19) reply.Reset(kPROOF_FATAL);
          PDB(kCache, 1)
             Info("HandleCheckFile", "file %s not yet on node", filenam.Data());
       }
@@ -4221,10 +4271,10 @@ Int_t TProofServ::HandleCache(TMessage *mess)
 
          (*mess) >> package;
 
-         // By first forwarding the load command to the master and workers
+         // By first forwarding the load command to the unique workers
          // and only then loading locally we load/build in parallel
          if (IsMaster())
-            fProof->Load(package);
+            fProof->Load(package, kFALSE, kTRUE);
 
          // Atomic action
          fCacheLock->Lock();
@@ -4243,9 +4293,10 @@ Int_t TProofServ::HandleCache(TMessage *mess)
          // Release atomicity
          fCacheLock->Unlock();
 
-         // Wait for workers to be done
+         // Now we collect the result from the unique workers and send the load request
+         // to the other workers (no compilation)
          if (IsMaster())
-            fProof->Collect();
+            fProof->Load(package, kFALSE, kFALSE);
 
          // Notify the upper level
          LogToMaster();

@@ -58,6 +58,7 @@ class TReaperTimer;
 class TMutex;
 class TFileCollection;
 class TProofDataSetManager;
+class TFileHandler;
 
 // Hook to external function setting up authentication related stuff
 // for old versions.
@@ -116,10 +117,14 @@ private:
    TStopwatch    fLatency;          //measures latency of packet requests
    TStopwatch    fCompute;          //measures time spend processing a packet
 
+   TFileHandler *fInputHandler;     //Input socket handler
+
    TQueryResultManager *fQMgr;      //Query-result manager
 
-   TList        *fWaitingQueries;   //list of TProofQueryResult wating to be processed
+   TList        *fWaitingQueries;   //list of TProofQueryResult waiting to be processed
    Bool_t        fIdle;             //TRUE if idle
+
+   TList        *fQueuedMsg;        //list of messages waiting to be processed
 
    TString       fPrefix;           //Prefix identifying the node
 

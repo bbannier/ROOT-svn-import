@@ -39,6 +39,7 @@ class TGTab;
 class TEveCompositeFrame : public TGCompositeFrame
 {
    friend class TEveWindow;
+   friend class TEveWindowManager;
 
 private:
    TEveCompositeFrame(const TEveCompositeFrame&);            // Not implemented
@@ -56,8 +57,12 @@ protected:
    TEveElement       *fEveParent;
    TEveWindow        *fEveWindow;
 
+   Bool_t             fShowInSync;
+
    static TContextMenu *fgCtxMenu;
    static const TString fgkEmptyFrameName;
+
+   static TList        *fgFrameList;
 
 public:
    TEveCompositeFrame(TGCompositeFrame* gui_parent, TEveWindow* eve_parent);
@@ -71,9 +76,12 @@ public:
    virtual TEveWindow* RelinquishEveWindow(Bool_t reparent=kTRUE);
 
    TEveWindow* GetEveWindow() const { return fEveWindow; }
+   TEveWindow* GetEveParentAsWindow() const;
 
    virtual void SetCurrent(Bool_t curr);
    virtual void SetShowTitleBar(Bool_t show);
+   virtual void HideAllDecorations();
+   virtual void ShowNormalDecorations();
 
    void ReplaceIconBox(TGFrame* icon_box);
 
@@ -97,6 +105,8 @@ private:
 
 protected:
    TGMainFrame      *fMainFrame;
+   TEveWindow       *fOriginalSlot;
+   TEveWindow       *fOriginalContainer;
 
 public:
    TEveCompositeFrameInMainFrame(TGCompositeFrame* parent, TEveWindow* eve_parent,
@@ -107,6 +117,9 @@ public:
 
    virtual void Destroy();
 
+   void SetOriginalSlotAndContainer(TEveWindow* slot, TEveWindow* container);
+
+   void SomeWindowClosed(TEveWindow* w);
    void MainFrameClosed();
 
    ClassDef(TEveCompositeFrameInMainFrame, 0); // Eve-composite-frame that is contained in one tab of a TGTab.
@@ -208,6 +221,8 @@ public:
    virtual void NameTitleChanged();
 
    virtual TGFrame*        GetGUIFrame() = 0;
+   virtual void            PreUndock();
+   virtual void            PostDock();
 
    virtual Bool_t          CanMakeNewSlots() const { return kFALSE; }
    virtual TEveWindowSlot* NewSlot() { return 0; }
@@ -216,6 +231,9 @@ public:
 
    void SwapWindow(TEveWindow* w);
    void SwapWindowWithCurrent();        // *MENU*
+
+   void UndockWindow();                 // *MENU*
+   void UndockWindowDestroySlot();      // *MENU*
 
    void ReplaceWindow(TEveWindow* w);
 
@@ -346,6 +364,8 @@ public:
    void FlipOrientation(); // *MENU*
    void SetVertical(Bool_t x=kTRUE);
    void SetHorizontal() { SetVertical(kFALSE); }
+
+   void EqualizeFrames();  // *MENU*
 
    TGPack* GetPack() const { return fPack; }
 

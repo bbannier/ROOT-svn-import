@@ -38,6 +38,7 @@
 
 class TClass;
 class TClassDocInfo;
+class TGClient;
 class TVirtualMutex;
 
 class THtml: public TObject {
@@ -105,18 +106,18 @@ public:
          fName(name), fParent(parent), fLevel(parent ? parent->GetLevel() + 1 : 0) {}
       const char* GetName() const { return fName; }
       virtual ULong_t Hash() const { return fName.Hash(); }
-      void GetFullName(TString& fullname) const {
-         fullname = "";
+      virtual void GetFullName(TString& fullname, Bool_t asIncluded) const {
          if (fParent) {
-            fParent->GetFullName(fullname);
+            fParent->GetFullName(fullname, asIncluded);
             fullname += "/";
-         }
+         } else
+            fullname = "";
          fullname += fName;
       }
 
       TFileSysDir* GetParent() const { return fParent; }
       Int_t GetLevel() const { return fLevel; }
-   private:
+   protected:
       TString      fName; // name of the element
       TFileSysDir* fParent; // parent directory
       Int_t        fLevel; // level of directory
@@ -135,10 +136,28 @@ public:
 
       void Recurse(TFileSysDB* db, const char* path);
 
-   private:
+   protected:
       TList fFiles;
       TList fDirs;
-      ClassDef(TFileSysDir, 0); // an directory if the local file system
+      ClassDef(TFileSysDir, 0); // an directory of the local file system
+   };
+
+   //______________________________________________________________
+   // Utility class representing a root directory as specified in
+   // THtml::GetInputPath()
+   class TFileSysRoot: public TFileSysDir {
+   public:
+      TFileSysRoot(const char* name, TFileSysDB* parent):
+         TFileSysDir(name, parent) {}
+      void GetFullName(TString& fullname, Bool_t asIncluded) const {
+         // prepend directory part of THtml::GetInputPath() only
+         // if !asIncluded
+         fullname = "";
+         if (!asIncluded)
+            fullname += fName;
+      }
+
+      ClassDef(TFileSysRoot, 0); // an root directory of the local file system
    };
 
    //______________________________________________________________
@@ -155,7 +174,7 @@ public:
       Int_t   GetMaxLevel() const { return fMaxLevel; }
 
    protected:
-      void Fill() { Recurse(this, GetName()); }
+      void Fill();
 
    private:
       TExMap   fMapIno; // inode to TFileSysDir map, to detect softlinks
@@ -206,7 +225,8 @@ public:
       kNoOutput, // do not run the source, do not show its output
       kInterpretedOutput, // interpret the source and show output
       kCompiledOutput, // run the source through ACLiC and show output
-      kForceOutput = 0x10 // re-generate the output files (canvas PNGs)
+      kForceOutput = 0x10, // re-generate the output files (canvas PNGs)
+      kSeparateProcessOutput = 0x20 // run the script in a separate process
    };
 
    THtml();
@@ -377,6 +397,7 @@ protected:
    TIter         *fThreadedClassIter; // fClasses iterator for MakeClassThreaded
    Int_t          fThreadedClassCount; // counter of processed classes for MakeClassThreaded
    TVirtualMutex *fMakeClassMutex; // Mutex for MakeClassThreaded
+   TGClient      *fGClient; // gClient, cached and queried through CINT
    DocSyntax_t     fDocSyntax;      // doc syntax configuration
    LinkInfo_t      fLinkInfo;       // link (URL) configuration
    OutputStyle_t   fOutputStyle;    // output style configuration

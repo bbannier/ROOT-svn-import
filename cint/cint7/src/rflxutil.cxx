@@ -412,7 +412,13 @@ int Cint::Internal::G__get_type(const ::Reflex::Type in)
        /* raw.IsEnum() || */ raw.IsUnion())
        return ((int) 'u') + pointerThusUppercase;
    if (raw.IsEnum()) return ((int)'i') + pointerThusUppercase;
-
+   // Handle function and function pointer (both '1'):
+   Reflex::Type fn( in );
+   if (fn.IsPointer()) {
+      fn = fn.ToType();
+   }
+   if (fn.TypeType() == Reflex::FUNCTION || fn.TypeType() == Reflex::FUNCTIONMEMBER) return '1';
+   
    return 0;
 }
 
@@ -1938,20 +1944,11 @@ void Cint::Internal::G__BuilderInfo::ParseParameterLink(const char* paras)
 void Cint::Internal::G__BuilderInfo::AddParameter(int /* ifn */, int type, int numerical_tagnum, int numerical_typenum, int reftype_const, G__value* para_default, char* para_def, char* para_name)
 {
    // -- Internal, called only by G__BuilderInfo::ParseParameterLink().
-   ::Reflex::Type paramType;
-   ::Reflex::Type typenum = G__Dict::GetDict().GetTypedef(numerical_typenum);
-   ::Reflex::Type tagnum = G__Dict::GetDict().GetScope(numerical_tagnum);
-   if (typenum) {
-      paramType = typenum;
-   } else if (tagnum) {
-      paramType = tagnum;
-   }
-   else {
-      paramType = G__get_from_type(type, 0);
-   }
    int isconst = (reftype_const / 10) % 10;
    int reftype = reftype_const - (reftype_const / 10 % 10 * 10);
-   paramType = G__modify_type(paramType, isupper(type), reftype, isconst, 0, 0);
+
+   ::Reflex::Type paramType( G__cint5_tuple_to_type(type, numerical_tagnum, numerical_typenum, reftype, isconst) );
+
    fParams_type.push_back(paramType);
    fDefault_vals.push_back(para_default);
    fParams_name.push_back(std::make_pair(para_name, para_def));

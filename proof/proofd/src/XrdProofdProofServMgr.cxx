@@ -101,8 +101,10 @@ void *XrdProofdProofServCron(void *p)
    int clnlostscale = 0;
 
    // Time of last full sessions check
-   int lastcheck = time(0), ckfreq = mgr->CheckFrequency(), waitt = 0;
+   int lastrun = time(0);
+   int lastcheck = lastrun, ckfreq = mgr->CheckFrequency(), waitt = 0;
    int deltat = ((int)(0.1*ckfreq) >= 1) ? (int)(0.1*ckfreq) : 1;
+   int maxdelay = 5*ckfreq; // Force check after 5 times the check frequency
    mgr->SetNextSessionsCheck(lastcheck + ckfreq);
    TRACE(ALL, "next full sessions check in "<<ckfreq<<" secs");
    while(1) {
@@ -186,13 +188,21 @@ void *XrdProofdProofServCron(void *p)
          int now = time(0);
 
          // If there is any activity in mgr->Process() we postpone the checks in 5 secs
-         if (mgr->CheckCounter(XrdProofdProofServMgr::kProcessCnt) > 0) {
-            // The current time
-            lastcheck = now + 5 - ckfreq;
-            mgr->SetNextSessionsCheck(now + 5);
-            // Notify
-            TRACE(ALL, "postponing sessions check (will retry in 5 secs)");
-            continue;
+         int cnt = mgr->CheckCounter(XrdProofdProofServMgr::kProcessCnt);
+         if (cnt > 0) {
+            if ((now - lastrun) < maxdelay) {
+               // The current time
+               lastcheck = now + 5 - ckfreq;
+               mgr->SetNextSessionsCheck(now + 5);
+               // Notify
+               TRACE(ALL, "postponing sessions check (will retry in 5 secs)");
+               continue;
+            } else {
+               // Max time without checks reached: force a check
+               TRACE(ALL, "Max time without checks reached ("<<maxdelay<<"): force a session check");
+               // Reset the counter
+               mgr->UpdateCounter(XrdProofdProofServMgr::kProcessCnt, -cnt);
+            }
          }
 
          bool full = (now > mgr->NextSessionsCheck() - deltat) ? 1 : 0;
@@ -206,7 +216,11 @@ void *XrdProofdProofServCron(void *p)
             } else{
                clnlostscale--;
             }
+            // How many active sessions do we have
+            int cursess = mgr->CurrentSessions(1);
+            TRACE(ALL, cursess << " sessions are currently active");
             // Remember when ...
+            lastrun = now;
             lastcheck = now;
             mgr->SetNextSessionsCheck(lastcheck + mgr->CheckFrequency());
             // Notify
@@ -279,6 +293,7 @@ XrdProofdProofServMgr::XrdProofdProofServMgr(XrdProofdManager *mgr,
    for (int i = 0; i < PSMMAXCNTS; i++) {
       fCounters[i] = 0;
    }
+   fCurrentSessions = 0;
 
    // Defaults can be changed via 'proofservmgr'
    fCheckFrequency = 30;
@@ -611,19 +626,24 @@ int XrdProofdProofServMgr::DeleteFromSessions(const char *fpid)
 
    XrdOucString key = fpid;
    key.erase(0, key.rfind('.') + 1);
-   XrdProofdProofServ *xps = fSessions.Find(key.c_str());
+   XrdProofdProofServ *xps = 0;
+   { XrdSysMutexHelper mhp(fMutex); xps = fSessions.Find(key.c_str()); }
    if (xps) {
       // Tell other attached clients, if any, that this session is gone
       XrdOucString msg;
       msg.form("session: %s terminated by peer", fpid);
       TRACE(DBG, msg);
-      xps->Broadcast(msg.c_str(), kXPD_wrkmortem);
-      // Reset instance
-      xps->Reset();
+      // Reset this instance
+      int tp = xps->Reset(msg.c_str(), kXPD_wrkmortem);
+      // Update counters and lists
+      XrdSysMutexHelper mhp(fMutex);
+      if (tp == 1) fCurrentSessions--;
       // remove from the list of active sessions
       fActiveSessions.remove(xps);
    }
-   return fSessions.Del(key.c_str());
+   int rc = -1;
+   { XrdSysMutexHelper mhp(fMutex); rc = fSessions.Del(key.c_str()); }
+   return rc;
 }
 
 //______________________________________________________________________________
@@ -864,8 +884,9 @@ int XrdProofdProofServMgr::CheckActiveSessions(bool verify)
          if (!rmsession) {
             XrdSysMutexHelper mh(xps->Mutex());
             if ((nc = xps->GetNClients(1)) <= 0 && (!IsReconnecting() || oldvers)) {
-               if ((fShutdownOpt == 1 && (xps->IdleTime() >= fShutdownDelay)) ||
-                  (fShutdownOpt == 2 && (xps->DisconnectTime() >= fShutdownDelay))) {
+               if ((xps->SrvType() != kXPD_TopMaster) || 
+                   (fShutdownOpt == 1 && (xps->IdleTime() >= fShutdownDelay)) ||
+                   (fShutdownOpt == 2 && (xps->DisconnectTime() >= fShutdownDelay))) {
                   xps->TerminateProofServ(fMgr->ChangeOwn());
                   rmsession = 1;
                }
@@ -1419,17 +1440,22 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
    TRACEP(p, DBG, "enter");
    XrdOucString msg;
 
+   XpdSrvMgrCreateGuard mcGuard;
+
    // Check if we are allowed to start a new session
    int mxsess = fMgr->ProofSched() ? fMgr->ProofSched()->MaxSessions() : -1;
    if (p->ConnType() == kXPD_ClientMaster && mxsess > 0) {
       XrdSysMutexHelper mhp(fMutex);
       int cursess = CurrentSessions();
+      TRACEP(p,ALL," cursess: "<<cursess);
       if (mxsess <= cursess) {
          msg.form(" ++++ Max number of sessions reached (%d) - please retry later ++++ \n", cursess); 
          response->Send(kXR_attn, kXPD_srvmsg, (char *) msg.c_str(), msg.length());
          response->Send(kXP_TooManySess, "cannot start a new session");
          return 0;
       }
+      // If we fail this guarantees that the counters are decreased, if needed 
+      mcGuard.Set(&fCurrentSessions);
    }
 
    // Update counter to control checks during creation
@@ -1841,6 +1867,9 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
    // Record this session in the client sandbox
    if (p->Client()->Sandbox()->AddSession(xps->Tag()) == -1)
       TRACEP(p, REQ, "problems recording session in sandbox");
+
+   // Success; avoid that the global counter is decreased
+   mcGuard.Set(0);
 
    // Update the global session handlers
    XrdOucString key; key += pid;
@@ -3457,45 +3486,6 @@ int XrdProofdProofServMgr::BroadcastPriorities()
 }
 
 //__________________________________________________________________________
-static int CountTopMasters(const char *, XrdProofdProofServ *ps, void *s)
-{
-   // Run thorugh entries to count top-masters
-   XPDLOC(SMGR, "CountTopMasters")
-
-   int *ntm = (int *)s;
-
-   XrdOucString emsg;
-   if (ps) {
-      if (ps->SrvType() == kXPD_TopMaster) (*ntm)++;
-      // Go to next
-      return 0;
-   } else {
-      emsg = "input entry undefined";
-   }
-
-   // Some problem
-   TRACE(XERR,"protocol error: "<<emsg);
-   return 1;
-}
-
-//__________________________________________________________________________
-int XrdProofdProofServMgr::CurrentSessions()
-{
-   // Return the number of current sessions (top masters)
-
-   XPDLOC(SMGR, "ProofServMgr::CurrentSessions")
-
-   TRACE(REQ, "enter");
-
-   int ns = 0;
-   XrdSysMutexHelper mhp(fMutex);
-   fSessions.Apply(CountTopMasters, (void *)&ns);
-
-   // Done
-   return ns;
-}
-
-//__________________________________________________________________________
 bool XrdProofdProofServMgr::IsReconnecting()
 {
    // Return true if in reconnection state, i.e. during
@@ -3555,6 +3545,47 @@ void XrdProofdProofServMgr::DisconnectFromProofServ(int pid)
    XrdSysMutexHelper mhp(fMutex);
 
    fSessions.Apply(FreeClientID, (void *)&pid);
+}
+
+//__________________________________________________________________________
+static int CountTopMasters(const char *, XrdProofdProofServ *ps, void *s)
+{
+   // Run thorugh entries to count top-masters
+   XPDLOC(SMGR, "CountTopMasters")
+
+   int *ntm = (int *)s;
+
+   XrdOucString emsg;
+   if (ps) {
+      if (ps->SrvType() == kXPD_TopMaster) (*ntm)++;
+      // Go to next
+      return 0;
+   } else {
+      emsg = "input entry undefined";
+   }
+
+   // Some problem
+   TRACE(XERR,"protocol error: "<<emsg);
+   return 1;
+}
+
+//__________________________________________________________________________
+int XrdProofdProofServMgr::CurrentSessions(bool recalculate)
+{
+   // Return the number of current sessions (top masters)
+
+   XPDLOC(SMGR, "ProofServMgr::CurrentSessions")
+
+   TRACE(REQ, "enter");
+
+   XrdSysMutexHelper mhp(fMutex);
+   if (recalculate) {
+      fCurrentSessions = 0;
+      fSessions.Apply(CountTopMasters, (void *)&fCurrentSessions);
+   }
+
+   // Done
+   return fCurrentSessions;
 }
 
 //

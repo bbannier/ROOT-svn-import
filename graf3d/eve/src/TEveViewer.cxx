@@ -72,6 +72,32 @@ TEveViewer::~TEveViewer()
 /******************************************************************************/
 
 //______________________________________________________________________________
+void TEveViewer::PreUndock()
+{
+   // Virtual function called before a window is undocked.
+   // On mac we have to force recreation of gl-context.
+
+   TEveWindowFrame::PreUndock();
+#ifdef R__MACOSX
+   fGLViewer->DestroyGLWidget();
+#endif
+}
+
+//______________________________________________________________________________
+void TEveViewer::PostDock()
+{
+   // Virtual function called before a window is undocked.
+   // On mac we have to force recreation of gl-context.
+
+#ifdef R__MACOSX
+   fGLViewer->CreateGLWidget();
+#endif
+   TEveWindowFrame::PreUndock();
+}
+
+/******************************************************************************/
+
+//______________________________________________________________________________
 const TGPicture* TEveViewer::GetListTreeIcon(Bool_t)
 {
    // Return TEveViewer icon.
@@ -102,11 +128,14 @@ void TEveViewer::SpawnGLViewer(TGedEditor* ged)
 
    TGCompositeFrame* cf = GetGUICompositeFrame();
 
+   cf->SetEditable(kTRUE);
    TGLSAViewer* v = new TGLSAViewer(cf, 0, ged);
+   cf->SetEditable(kFALSE);
    v->ToggleEditObject();
    SetGLViewer(v, v->GetFrame());
 
-   cf->AddFrame(fGLViewerFrame, new TGLayoutHints(kLHintsNormal | kLHintsExpandX | kLHintsExpandY));
+   if (fEveFrame == 0)
+      PreUndock();
 }
 
 //______________________________________________________________________________
@@ -124,6 +153,9 @@ void TEveViewer::SpawnGLEmbeddedViewer(Int_t border)
    cf->AddFrame(fGLViewerFrame, new TGLayoutHints(kLHintsNormal | kLHintsExpandX | kLHintsExpandY));
 
    fGLViewerFrame->MapWindow();
+
+   if (fEveFrame == 0)
+      PreUndock();
 }
 
 //______________________________________________________________________________

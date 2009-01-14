@@ -165,6 +165,7 @@ TGLSAViewer::TGLSAViewer(TVirtualPad *pad) :
    fLeftVerticalFrame(0),
    fGedEditor(0),
    fPShapeWrap(0),
+   fRightVerticalFrame(0),
    fDirName("."),
    fTypeIdx(0),
    fOverwrite(kFALSE),
@@ -210,6 +211,7 @@ TGLSAViewer::TGLSAViewer(const TGWindow *parent, TVirtualPad *pad, TGedEditor *g
    fLeftVerticalFrame(0),
    fGedEditor(ged),
    fPShapeWrap(0),
+   fRightVerticalFrame(0),
    fTypeIdx(0),
    fMenuBar(0),
    fDeleteMenuBar(kFALSE)
@@ -219,12 +221,7 @@ TGLSAViewer::TGLSAViewer(const TGWindow *parent, TVirtualPad *pad, TGedEditor *g
    // Modified version of the previous constructor for embedding the
    // viewer into another frame (parent).
 
-   Bool_t is_main = (parent == 0 || parent == gClient->GetDefaultRoot());
-
-   if (is_main)      
-      fFrame = new TGLSAFrame(parent, *this);
-   else
-      fFrame = new TGCompositeFrame(parent);
+   fFrame = new TGLSAFrame(parent, *this);
 
    CreateMenus();
    CreateFrames();
@@ -245,10 +242,7 @@ TGLSAViewer::TGLSAViewer(const TGWindow *parent, TVirtualPad *pad, TGedEditor *g
       fLeftVerticalFrame->GetList()->AddFirst(fe);
    }
 
-   if (is_main)
-      Show();
-   else
-      fFrame->MapWindow();
+   Show();
 }
 
 //______________________________________________________________________________
@@ -266,6 +260,44 @@ TGLSAViewer::~TGLSAViewer()
       delete fMenuBar;
    }
    delete fFrame;
+   fGLWidget = 0;
+}
+
+//______________________________________________________________________________
+void TGLSAViewer::CreateGLWidget()
+{
+   // Create a GLwidget, it is an error if it is already created.
+   // This is needed for frame-swapping on mac.
+
+   if (fGLWidget) {
+      Error("CreateGLWidget", "Widget already exists.");
+      return;
+   }
+
+   fGLWidget = TGLWidget::Create(fRightVerticalFrame, kTRUE, kTRUE, 0, 10, 10);
+   fGLWidget->SetEventHandler(fEventHandler);
+
+   fRightVerticalFrame->AddFrame(fGLWidget, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+   fFrame->Layout();
+
+   fGLWidget->MapWindow();
+}
+
+//______________________________________________________________________________
+void TGLSAViewer::DestroyGLWidget()
+{
+   // Destroy the GLwidget, it is an error if it does not exist.
+   // This is needed for frame-swapping on mac.
+
+   if (fGLWidget == 0) {
+      Error("DestroyGLWidget", "Widget does not exist.");
+      return;
+   }
+
+   fGLWidget->UnmapWindow();
+
+   fRightVerticalFrame->RemoveFrame(fGLWidget);
+   fGLWidget->DeleteWindow();
    fGLWidget = 0;
 }
 
@@ -365,14 +397,14 @@ void TGLSAViewer::CreateFrames()
    //
    // TGVerticalFrame *rightVerticalFrame = new TGVerticalFrame(compositeFrame, 10, 10, kSunkenFrame);
    // compositeFrame->AddFrame(rightVerticalFrame, new TGLayoutHints(kLHintsRight | kLHintsExpandX | kLHintsExpandY,0,2,2,2));
-   TGVerticalFrame *rightVerticalFrame = new TGVerticalFrame(compositeFrame, 10, 10);
-   compositeFrame->AddFrame(rightVerticalFrame, new TGLayoutHints(kLHintsRight | kLHintsExpandX | kLHintsExpandY));
+   fRightVerticalFrame = new TGVerticalFrame(compositeFrame, 10, 10);
+   compositeFrame->AddFrame(fRightVerticalFrame, new TGLayoutHints(kLHintsRight | kLHintsExpandX | kLHintsExpandY));
 
-   fGLWidget = TGLWidget::Create(rightVerticalFrame, kTRUE, kTRUE, 0, 10, 10);
+   fGLWidget = TGLWidget::Create(fRightVerticalFrame, kTRUE, kTRUE, 0, 10, 10);
 
-   SetEventHandler(new TGLEventHandler("Default", fGLWidget, this));
+   SetEventHandler(new TGLEventHandler("Default", 0, this));
 
-   rightVerticalFrame->AddFrame(fGLWidget, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+   fRightVerticalFrame->AddFrame(fGLWidget, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 }
 
 

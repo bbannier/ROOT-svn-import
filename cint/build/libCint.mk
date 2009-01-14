@@ -99,7 +99,7 @@ $(CINTLIBSTATIC): $(LIBOBJECTS) $(SETUPO)
 shared: $(CINTLIBSHARED)
 
 $(CINTLIBSHARED): $(LIBOBJECTS) $(SETUPO) $(REFLEXLIBDEP)
-	$(G__CFG_LD) $(subst @so@,libcint,$(G__CFG_SOFLAGS)) \
+	$(G__CFG_LD) $(subst @so@,lib/libcint,$(G__CFG_SOFLAGS)) \
 	  $(G__CFG_SOOUT)$@ $(LIBOBJECTS) $(SETUPO) \
 	  $(G__CFG_READLINELIB4SHLIB) $(G__CFG_CURSESLIB4SHLIB) $(G__CFG_DEFAULTLIBS) $(REFLEXLINK)
 ifneq ($(G__CFG_MAKEIMPLIB),)
@@ -121,7 +121,11 @@ $(G__CFG_COREVERSION)/src/dict/stdstrct$(G__CFG_OBJEXT): CXXFLAGS += $(G__CFG_IN
 # Generate standard header files
 ##############################################################
 $(MAKEINCL): $(MAKEINCL:$(G__CFG_EXEEXT)=).c
+ifeq ($(G__CFG_ARCH),$(subst msvc,,$(G__CFG_ARCH)))
 	$(G__CFG_CC) $< $(G__CFG_COUT)$@ $(CFLAGS)
+else
+	cd $(dir $@) && $(G__CFG_CC) $(notdir $<) $(CFLAGS)
+endif
 
 $(G__CFG_COREVERSION)/include/stdio.h : $(MAKEINCL)
 	(cd $(dir $(MAKEINCL)) && ./$(notdir $(MAKEINCL)))
