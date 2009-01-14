@@ -14,6 +14,7 @@
  ************************************************************************/
 
 #include "common.h"
+#include "Api.h"
 
 #include <set>
 #include <string>
@@ -53,9 +54,9 @@ using namespace std;
 ******************************************************************/
 static const char* G__saveconststring(const char* s)
 {
-   static std::set<std::string> conststring;
+   static std::set<std::string> static_conststring;
    std::string str(s);
-   return conststring.insert(str).first->c_str();
+   return static_conststring.insert(str).first->c_str();
 }
 
 /******************************************************************
@@ -206,7 +207,7 @@ G__value Cint::Internal::G__strip_quotation(char *string)
   else {
     if(G__isvalue(string)) {
       /* string is a pointer */
-      G__letint(&result,'C',atol(string));
+       Cint::G__letpointer(&result,(long)string,G__value_typenum(result));
       free((void*)temp);
       return(result);
     }
@@ -217,7 +218,7 @@ G__value Cint::Internal::G__strip_quotation(char *string)
   }
 
 
-  G__letint(&result,'C',(long)G__saveconststring(temp));
+  G__letpointer(&result,(long)G__saveconststring(temp),G__value_typenum(result));
 
   free((void*)temp);
   return(result);

@@ -164,6 +164,23 @@ void testAll() {
   }
   printf(" %8.3f\n",sw.CpuTime()*cpn);
 
+  printf("Exponential.......... %8.3f",sw.CpuTime()*cpn);
+  sw.Start();
+  for (i=0;i<N;i++) {
+     x = r1->Exp(1);
+  }
+  printf(" %8.3f",sw.CpuTime()*cpn);
+  sw.Start();
+  for (i=0;i<N;i++) {
+     x = r2->Exp(1);
+  }
+  printf(" %8.3f",sw.CpuTime()*cpn);
+  sw.Start();
+  for (i=0;i<N;i++) {
+     x = r3->Exp(1);
+  }
+  printf(" %8.3f\n",sw.CpuTime()*cpn);
+
   sw.Start();
   for (i=0;i<N;i++) {
      x = r0->Binomial(5,0.5);

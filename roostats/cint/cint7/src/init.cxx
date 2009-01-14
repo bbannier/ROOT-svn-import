@@ -109,7 +109,7 @@ extern "C" void G__add_setup_func(const char* libname, G__incsetup func)
    G__setup_func_list[islot]->func    = func;
    G__setup_func_list[islot]->inited  = 0;
    strcpy(G__setup_func_list[islot]->libname, libname);
-   
+
    G__RegisterLibrary(func);
 }
 
@@ -139,6 +139,18 @@ extern "C" int G__call_setup_funcs()
    if (!G__initpermanentsl) {
       G__initpermanentsl = new std::list<G__DLLINIT>;
    }
+   // Call G__RegisterLibrary() again, after it got called already
+   // in G__init_setup_funcs(), because G__scratchall might have been
+   // called in between.
+   // Do a separate loop so we don't re-load because of A->B->A
+   // dependencies introduced by autoloading during dictionary
+   // initialization
+   for (int i = 0; i < G__nlibs; ++i) {
+      if (G__setup_func_list[i] && !G__setup_func_list[i]->inited) {
+         G__RegisterLibrary(G__setup_func_list[i]->func);
+      }
+   }
+
    for (int i = 0; i < G__nlibs; ++i) {
       if (G__setup_func_list[i] && !G__setup_func_list[i]->inited) {
          // Run setup function for dictionary file.
@@ -1139,9 +1151,9 @@ extern "C" void G__set_stdio_handle(FILE* sout, FILE* serr, FILE* sin)
 //______________________________________________________________________________
 extern "C" const char* G__cint_version()
 {
-   static std::string version;
-   version = G__CINTVERSIONSTR;
-   return version.c_str(); // For example: "5.14.34, Mar 10 2000"
+   static std::string static_version;
+   static_version = G__CINTVERSIONSTR;
+   return static_version.c_str(); // For example: "5.14.34, Mar 10 2000"
 }
 
 //______________________________________________________________________________
@@ -1340,7 +1352,6 @@ extern "C" int G__main(int argc, char** argv)
 {
    // Main entry of the C/C++ interpreter.
    int stepfrommain = 0;
-   int ii;
    char* forceassignment = 0;
    int xfileflag = 0;
    G__StrBuf sourcefile_sb(G__MAXFILENAME);

@@ -716,9 +716,10 @@ Int_t TProof::Init(const char *, const char *conffile,
          }
       }
 
-      UserGroup_t *ug = gSystem->GetUserInfo();
-      fPackageLock = new TProofLockPath(Form("%s%s", kPROOF_PackageLockFile, ug->fUser.Data()));
-      delete ug;
+      TString lockpath(fPackageDir);
+      lockpath.ReplaceAll("/", "%");
+      lockpath.Insert(0, Form("%s/%s", gSystem->TempDirectory(), kPROOF_PackageLockFile));
+      fPackageLock = new TProofLockPath(lockpath.Data());
 
       fEnabledPackagesOnClient = new TList;
       fEnabledPackagesOnClient->SetOwner();
@@ -2357,7 +2358,7 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout, Int_t endtype)
          if (rc  == 1 || (rc == 2 && !savedMonitor)) {
             // Deactivate it if we are done with it
             mon->DeActivate(s);
-            if (gDebug > 2)
+            PDB(kGlobal, 2)
                Info("Collect","deactivating %p (active: %d, %p)",
                               s, mon->GetActive(),
                               mon->GetListOfActives()->First());
@@ -2366,8 +2367,8 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout, Int_t endtype)
             // Deactivate it if we are done with it
             if (savedMonitor) {
                savedMonitor->DeActivate(s);
-               if (gDebug > 2)
-                  Info("Collect","deactivating %p (active: %d, %p)",
+               PDB(kGlobal, 2)
+                  Info("Collect","save monitor: deactivating %p (active: %d, %p)",
                                  s, savedMonitor->GetActive(),
                                  savedMonitor->GetListOfActives()->First());
             }
@@ -2671,6 +2672,12 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                // dangerous kPROOF_FATAL)
                fCheckFileStatus = 1;
             }
+            rc = 1;
+         }
+         break;
+
+      case kPROOF_SENDFILE:
+         {  // New server: signals ending of sendfile operation
             rc = 1;
          }
          break;
@@ -4748,19 +4755,16 @@ Int_t TProof::SendFile(const char *file, Int_t opt, const char *rfile, TSlave *w
       // Don't send the kPROOF_SENDFILE command to real slaves when sendto
       // is false. Masters might still need to send the file to newly added
       // slaves.
+      PDB(kPackage,2) {
+         const char *snd = (sl->fSlaveType == TSlave::kSlave && sendto) ? "" : "not";
+         Info("SendFile", "%s sending file %s to: %s:%s (%d)", snd,
+                    file, sl->GetName(), sl->GetOrdinal(), sendto);
+      }
       if (sl->fSlaveType == TSlave::kSlave && !sendto)
          continue;
       // The value of 'size' is used as flag remotely, so we need to
       // reset it to 0 if we are not going to send the file
       Long64_t siz = sendto ? size : 0;
-
-      PDB(kPackage,2)
-         if (siz > 0) {
-            if (!nsl)
-               Info("SendFile", "sending file %s to:", file);
-            printf("   slave = %s:%s\n", sl->GetName(), sl->GetOrdinal());
-         }
-
       sprintf(buf, "%s %d %lld %d", fnam.Data(), bin, siz, fw);
       if (sl->GetSocket()->Send(buf, kPROOF_SENDFILE) == -1) {
          MarkBad(sl, "could not send kPROOF_SENDFILE request");
@@ -4796,12 +4800,11 @@ Int_t TProof::SendFile(const char *file, Int_t opt, const char *rfile, TSlave *w
 
          nsl++;
       }
+      // Wait for the operation to be done
+      Collect(sl, fCollectTimeout, kPROOF_SENDFILE);
    }
 
    close(fd);
-
-   // Wait for the operation to be done
-   Collect(&wsent, fCollectTimeout);
 
    // Cleanup temporary list, if any
    if (slaves != fActiveSlaves && slaves != fUniqueSlaves)
@@ -5860,8 +5863,9 @@ Int_t TProof::UploadPackage(const char *pack, EUploadPackageOpt opt)
             // remote directory is locked, upload file over the open channel
             smsg.Form("%s/%s/%s", sl->GetProofWorkDir(), kPROOF_PackDir,
                                   gSystem->BaseName(par));
-            if (SendFile(par, (kBinary | kForce | kCpBin), smsg.Data(), sl) < 0) {
-               Error("UploadPackage", "problems uploading file %s", par.Data());
+            if (SendFile(par, (kBinary | kForce | kCpBin | kForward), smsg.Data(), sl) < 0) {
+               Error("UploadPackage", "%s: problems uploading file %s",
+                                      sl->GetOrdinal(), par.Data());
                return -1;
             }
          } else {
@@ -5879,7 +5883,8 @@ Int_t TProof::UploadPackage(const char *pack, EUploadPackageOpt opt)
          fCheckFileStatus = 0;
          Collect(sl, fCollectTimeout, kPROOF_CHECKFILE);
          if (fCheckFileStatus == 0) {
-            Error("UploadPackage", "unpacking of package %s failed", par.Data());
+            Error("UploadPackage", "%s: unpacking of package %s failed",
+                                   sl->GetOrdinal(), gSystem->BaseName(par));
             return -1;
          }
       }
@@ -5998,15 +6003,25 @@ Int_t TProof::UploadPackageOnClient(const TString &par, EUploadPackageOpt opt, T
 }
 
 //______________________________________________________________________________
-Int_t TProof::Load(const char *macro, Bool_t notOnClient)
+Int_t TProof::Load(const char *macro, Bool_t notOnClient, Bool_t uniqueWorkers)
 {
    // Load the specified macro on master, workers and, if notOnClient is
    // kFALSE, on the client. The macro file is uploaded if new or updated.
    // If existing, the corresponding header basename(macro).h or .hh, is also
    // uploaded. The default is to load the macro also on the client.
+   // On masters, if uniqueWorkers is kTRUE, the macro is loaded on unique workers
+   // only, and collection si not done; if uniqueWorkers is kFALSE, collection
+   // from the previous request is done, and broadcasting + collection from the
+   // other workers is done.
    // Returns 0 in case of success and -1 in case of error.
 
    if (!IsValid()) return -1;
+
+   if (IsLite()) {
+      Warning("Load", "functionality not yet implemented; please use Exec(...)"
+                      " or a dedicated PAR package");
+      return -1;
+   }
 
    if (!macro || !strlen(macro)) {
       Error("Load", "need to specify a macro name");
@@ -6087,15 +6102,40 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient)
    } else {
       // On master
 
-      // The files are now on the workers: now we send the loading request
-      // On the master we do not wait here for the results, but after the local
-      // load
+      // The files are now on the workers: now we send the loading request first
+      // to the unique workers, so that the eventual compilation occurs only once.
       TString basemacro = gSystem->BaseName(macro);
       TMessage mess(kPROOF_CACHE);
-      mess << Int_t(kLoadMacro) << basemacro;
-      Broadcast(mess);
 
-      Printf("Adding loaded macro: %s", macro);
+      if (uniqueWorkers) {
+         mess << Int_t(kLoadMacro) << basemacro;
+         Broadcast(mess, kUnique);
+      } else {
+         // Wait for the result of the previous sending
+          Collect(kUnique);
+
+         // We then send a tuned loading request to the other workers
+         TList others;
+         TSlave *wrk = 0;
+         TIter nxw(fActiveSlaves);
+         while ((wrk = (TSlave *)nxw())) {
+            if (!fUniqueSlaves->FindObject(wrk)) {
+               others.Add(wrk);
+            }
+         }
+ 
+         // Do not force compilation, if it was requested
+         Int_t ld = basemacro.Last('.');
+         if (ld != kNPOS) {
+            Int_t lpp = basemacro.Index("++", ld);
+            if (lpp != kNPOS) basemacro.Replace(lpp, 2, "+");
+         }
+         mess << Int_t(kLoadMacro) << basemacro;
+         Broadcast(mess, &others);
+         Collect(&others);
+      }
+
+      PDB(kGlobal, 1) Info("Load", "adding loaded macro: %s", macro);
       if (!fLoadedMacros) {
          fLoadedMacros = new TList();
          fLoadedMacros->SetOwner();
@@ -6711,7 +6751,7 @@ void TProof::AddInputData(TObject *obj, Bool_t push)
    // Add data objects that might be needed during the processing of
    // the selector (see Process()). This object can be very large, so they
    // are distributed in an optimized way using a dedicated file.
-   // If push is TRUE the input data are snet over even if no apparent change
+   // If push is TRUE the input data are sent over even if no apparent change
    // occured to the list.
 
    if (obj) {

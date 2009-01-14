@@ -2764,8 +2764,8 @@ static int G__param_match(char formal_type, const ::Reflex::Scope& formal_tagnum
 #define G__PROMOTIONMATCH 0x00000100
 #define G__STDCONVMATCH   0x00010000
 #define G__USRCONVMATCH   0x01000000
-//#define G__CVCONVMATCH    0x00000001
-#define G__CVCONVMATCH    0x00000000
+#define G__CVCONVMATCH    0x00000001
+//#define G__CVCONVMATCH    0x00000000
 #define G__BASECONVMATCH  0x00000001
 #define G__C2P2FCONVMATCH 0x00000001
 #define G__I02PCONVMATCH  0x00000002
@@ -2921,13 +2921,15 @@ void Cint::Internal::G__rate_parameter_match(G__param* libp, const ::Reflex::Mem
       arg_final = arg_tagnum.FinalType();
       arg_type = G__get_type(arg_tagnum);
       formal_type = G__get_type(formal_tagnum);
-      arg_isconst = G__get_isconst(arg_tagnum);
+      arg_isconst = G__get_isconst(arg_tagnum); // NOTE: to match "Section 13.3.3.1" of the C++ standard, we might want to filter out PCONST
       formal_isconst = G__get_isconst(formal_tagnum);
       arg_reftype = G__get_reftype(arg_final);
       formal_reftype = G__get_reftype(formal_final);
       arg_tagnum = arg_tagnum.RawType();
       formal_tagnum = formal_tagnum.RawType();
       funclist->p_rate[i] = G__NOMATCH;
+      bool arg_isfunction = (arg_final.TypeType()==Reflex::FUNCTION || arg_final.TypeType()==Reflex::FUNCTIONMEMBER);
+      bool arg_isptrfunction = arg_final.IsPointer() &&  (arg_final.ToType().TypeType()==Reflex::FUNCTION || arg_final.ToType().TypeType()==Reflex::FUNCTIONMEMBER);
       //
       //  Exact Match.
       //
@@ -2983,6 +2985,15 @@ void Cint::Internal::G__rate_parameter_match(G__param* libp, const ::Reflex::Mem
       ) {
          funclist->p_rate[i] = G__EXACTMATCH;
       }
+      else if ( // special hack for matching function pointer to void*
+               formal_type == 'Y' 
+               && (   (arg_final.IsPointer() && arg_final.ToType().IsFunction() )
+                   || (arg_final.IsFunction() )
+               )
+            )
+      {
+         funclist->p_rate[i] = G__EXACTMATCH;
+      }
       //
       //  Promotion.
       //
@@ -3031,6 +3042,8 @@ void Cint::Internal::G__rate_parameter_match(G__param* libp, const ::Reflex::Mem
 #ifndef G__OLDIMPLEMENTATION2191
                 || '1' == arg_type
 #endif // G__OLDIMPLEMENTATION2191
+                ||  (   (arg_final.IsPointer() && arg_final.ToType().IsFunction() )
+                     || (arg_final.IsFunction() ) )
              ) {
                funclist->p_rate[i] = G__PROMOTIONMATCH + G__TOVOIDPMATCH;
             }
@@ -3124,11 +3137,14 @@ void Cint::Internal::G__rate_parameter_match(G__param* libp, const ::Reflex::Mem
 #else // G__OLDIMPLEMENTATION2191
                      'Q' == arg_type
 #endif // G__OLDIMPLEMENTATION2191
+                      || arg_isfunction
                      // --
                   ) {
                      funclist->p_rate[i] = G__STDCONVMATCH;
                   }
-                  else if ('Y' == arg_type) {
+                  else if ('Y' == arg_type
+                           || arg_isptrfunction
+                          ) {
                      funclist->p_rate[i] = G__STDCONVMATCH + G__V2P2FCONVMATCH;
                   }
                   else if ('C' == arg_type) {
@@ -3192,7 +3208,7 @@ void Cint::Internal::G__rate_parameter_match(G__param* libp, const ::Reflex::Mem
                default:
                   // --
 #ifndef G__OLDIMPLEMENTATION2191
-                  if ((arg_type == 'Y' || arg_type == '1') && (isupper(formal_type) || 'a' == formal_type)) {
+                  if ((arg_type == 'Y' || arg_type == '1' || arg_isfunction) && (isupper(formal_type) || 'a' == formal_type)) {
                      funclist->p_rate[i] = G__STDCONVMATCH;
                   }
 #else // G__OLDIMPLEMENTATION2191
@@ -3262,19 +3278,20 @@ void Cint::Internal::G__rate_parameter_match(G__param* libp, const ::Reflex::Mem
          }
       }
       //
+      //  Check for const passed to non-const ref.
+      //
+      if (funclist->p_rate[i] != G__USRCONVMATCH && arg_isconst && !formal_isconst && formal_final.IsReference()) { // const passed to non-const ref is bad
+         //fprintf(stderr, "G__rate_parameter_match: %d No match, const passed to non-const ref.\n", depth);
+         funclist->p_rate[i] = G__NOMATCH;
+      }
+      //
       //  Notice a const/volatile conversion (this should rank Exact Match)
       //
       //  TODO: This is unnecessary and should be removed.
       //
-      if (arg_isconst != formal_isconst) { // notice const/volatile conversion
-         funclist->p_rate[i] += G__CVCONVMATCH; // FIXME: Remove this!  This currently does nothing!  And it should not!
-      }
-      //
-      //  Check for const passed to non-const ref.
-      //
-      if (arg_isconst && !formal_isconst && formal_final.IsReference()) { // const passed to non-const ref is bad
-         //fprintf(stderr, "G__rate_parameter_match: %d No match, const passed to non-const ref.\n", depth);
-         funclist->p_rate[i] = G__NOMATCH;
+      if (G__NOMATCH != funclist->p_rate[i] && (arg_isconst != formal_isconst)) 
+      { // notice const/volatile conversion
+         funclist->p_rate[i] += G__CVCONVMATCH;
       }
       //fprintf(stderr, "G__rate_parameter_match: %d rate: %08X  function ", depth, funclist->p_rate[i]);
       //fprintf(stderr, "%s ", funclist->ifunc.TypeOf().ReturnType().Name(::Reflex::SCOPED |::Reflex::QUALIFIED).c_str());
@@ -4229,7 +4246,11 @@ static ::Reflex::Member G__overload_match(char* funcname, G__param* libp, int ha
 {
    // Perform function overload matching, and if found and requested, convert arguments guided by the prototype.
    ::Reflex::Scope store_ifunc = p_ifunc;
-   bool active_run = doconvert;
+#ifdef G__ASM
+   int active_run = doconvert && !G__asm_wholefunction && !G__asm_noverflow;
+#else
+   int active_run = doconvert;
+#endif
    unsigned int bestmatch = G__NOMATCH;
    int ambiguous = 0;
    //

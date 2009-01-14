@@ -1,4 +1,8 @@
+// @(#)root/eve:$Id: triangleset.C 26568 2008-12-01 20:55:50Z matevz $
+// Author: Matevz Tadel
+
 // How to use EVE without the standard window.
+
 // Type
 //   gEve->GetBrowser()->MapWindow()
 // to bring it up for object interaction, debugging, etc.
@@ -21,7 +25,7 @@ void arrow_standalone()
    evf->AddFrame(ev->GetFrame(), new TGLayoutHints(kLHintsNormal | kLHintsExpandX | kLHintsExpandY));
 
    TEveViewer* eve_v = new TEveViewer("YourViewer");
-   eve_v->SetGLViewer(ev);
+   eve_v->SetGLViewer(ev, ev->GetFrame());
    eve_v->IncDenyDestroy();
    eve_v->AddScene(gEve->GetEventScene());
    gEve->AddElement(eve_v, gEve->GetViewers());

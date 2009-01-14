@@ -288,9 +288,9 @@ public:
    TXSocket    *GetLastReady();
 
    Int_t        GetRead() const { return fPipe[0]; }
-   Int_t        Post(TSocket *s=0);  // Notify socket ready via global pipe
-   Int_t        Clean(TSocket *s=0); // Clean previous pipe notification
-   Int_t        Flush(TSocket *s=0); // Remove any instance of 's' from the pipe
+   Int_t        Post(TSocket *s);  // Notify socket ready via global pipe
+   Int_t        Clean(TSocket *s); // Clean previous pipe notification
+   Int_t        Flush(TSocket *s); // Remove any instance of 's' from the pipe
    void         DumpReadySock();
 
    void         SetLoc(const char *loc = "") { fLoc = loc; }
@@ -300,7 +300,6 @@ private:
    Int_t        fPipe[2];   // Pipe for input monitoring
    TString      fLoc;       // Location string
    TList        fReadySock;    // List of sockets ready to be read
-   TMutex       fReadyMtx;     // Protect access to the sockets-ready list
 };
 
 #endif

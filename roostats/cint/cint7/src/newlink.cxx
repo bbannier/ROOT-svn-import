@@ -370,10 +370,10 @@ static void G__fileerror(char* fname)
 }
 
 //______________________________________________________________________________
-const char* Cint::Internal::G__fulltypename(::Reflex::Type typenum)
+const std::string Cint::Internal::G__fulltypename(::Reflex::Type typenum)
 {
    if (!typenum) return("");
-   return typenum.Name(::Reflex::SCOPED).c_str();
+   return typenum.Name(::Reflex::SCOPED);
 }
 
 //______________________________________________________________________________
@@ -5642,9 +5642,7 @@ void Cint::Internal::G__cpplink_memfunc(FILE* fp)
 
                fprintf(fp, "%d, ", G__get_reftype(ifunc->TypeOf().ReturnType()));
 
-               /* K&R style if para_nu==-1, force it to 0 */
-               if (0 > ifunc->FunctionParameterSize()) fprintf(fp, "0, ");
-               else                       fprintf(fp, "%ld, ", ifunc->FunctionParameterSize());
+               fprintf(fp, "%ld, ", ifunc->FunctionParameterSize());
 
                if (2 == G__get_funcproperties(*ifunc)->entry.ansi)
                   fprintf(fp, "%d, ", 8 + ifunc->IsStatic()*2 + ifunc->IsExplicit()*4);
@@ -5690,7 +5688,7 @@ void Cint::Internal::G__cpplink_memfunc(FILE* fp)
                   }
 
                   if (typenum != -1) {
-                     fprintf(fp, "'%s' ", G__fulltypename(G__Dict::GetDict().GetTypedef(typenum)));
+                     fprintf(fp, "'%s' ", G__fulltypename(G__Dict::GetDict().GetTypedef(typenum)).c_str());
                   }
                   else {
                      fprintf(fp, "- ");
@@ -6332,9 +6330,7 @@ void Cint::Internal::G__cpplink_func(FILE* fp)
 
          fprintf(fp, "%d, ", G__get_reftype(ifunc->TypeOf().ReturnType()));
 
-         /* K&R style if para_nu==-1, force it to 0 */
-         if (0 > ifunc->FunctionParameterSize()) fprintf(fp, "0, ");
-         else                    fprintf(fp, "%ld, ", ifunc->FunctionParameterSize());
+         fprintf(fp, "%ld, ", ifunc->FunctionParameterSize());
 
          if (2 == G__get_funcproperties(*ifunc)->entry.ansi)
             fprintf(fp, "%d, ", 8 + ifunc->IsStatic()*2);
@@ -6378,7 +6374,7 @@ void Cint::Internal::G__cpplink_func(FILE* fp)
             }
 
             if (typenum != -1) {
-               fprintf(fp, "'%s' ", G__fulltypename(G__Dict::GetDict().GetTypedef(typenum)));
+               fprintf(fp, "'%s' ", G__fulltypename(G__Dict::GetDict().GetTypedef(typenum)).c_str());
             }
             else {
                fprintf(fp, "- ");

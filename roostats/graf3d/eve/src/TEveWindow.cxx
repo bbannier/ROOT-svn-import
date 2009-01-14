@@ -14,6 +14,7 @@
 #include "TEveManager.h"
 #include "TEveSelection.h"
 
+#include "THashList.h"
 #include "TContextMenu.h"
 
 #include "TGButton.h"
@@ -53,12 +54,20 @@
 // Sub-classes provide for specific behaviour and expectations of
 // individual ROOT GUI container frames.
 //
+//
+// POSSIBLE EXTENSIONS
+//
+// No frame is drawn around this composite-frame - frame style could be
+// available as a (static) member.
+//
+// Menus of embedded windows could also be managed - hidden or transposed
+// to a top-level menubar.
 
 ClassImp(TEveCompositeFrame);
 
 TContextMenu* TEveCompositeFrame::fgCtxMenu = 0;
 const TString TEveCompositeFrame::fgkEmptyFrameName("<relinquished>");
-
+TList*        TEveCompositeFrame::fgFrameList = new THashList;
 //______________________________________________________________________________
 TEveCompositeFrame::TEveCompositeFrame(TGCompositeFrame* parent,
                                        TEveWindow*   eve_parent) :
@@ -73,7 +82,9 @@ TEveCompositeFrame::TEveCompositeFrame(TGCompositeFrame* parent,
    fMiniBar     (0),
 
    fEveParent   (eve_parent),
-   fEveWindow   (0)
+   fEveWindow   (0),
+
+   fShowInSync  (kTRUE)
 {
    // Constructor.
 
@@ -131,6 +142,8 @@ TEveCompositeFrame::TEveCompositeFrame(TGCompositeFrame* parent,
    // eve-frame-creation code is still a little bit everywhere.
    if (fEveParent == 0)
       fEveParent = gEve->GetWindowManager();
+
+   fgFrameList->Add(this);
 }
 
 //______________________________________________________________________________
@@ -138,6 +151,8 @@ TEveCompositeFrame::~TEveCompositeFrame()
 {
    // If fEveWindow != 0 we are being deleted from the ROOT GUI side.
    // Relinquishe EveWindow and ref-counting should do the rest.
+
+   fgFrameList->Remove(this);
 
    if (fEveWindow != 0)
    {
@@ -193,6 +208,7 @@ void TEveCompositeFrame::AcquireEveWindow(TEveWindow* ew)
    TGFrame* gui_frame = fEveWindow->GetGUIFrame();
    gui_frame->ReparentWindow(this);
    AddFrame(gui_frame, fEveWindowLH);
+   fEveWindow->PostDock();
    gui_frame->MapWindow();
 
    SetCurrent(fEveWindow->IsCurrent());
@@ -213,6 +229,7 @@ TEveWindow* TEveCompositeFrame::RelinquishEveWindow(Bool_t reparent)
    {
       TGFrame* gui_frame = fEveWindow->GetGUIFrame();
       gui_frame->UnmapWindow();
+      fEveWindow->PreUndock();
       RemoveFrame(gui_frame);
       if (reparent)
          gui_frame->ReparentWindow(fClient->GetDefaultRoot());
@@ -223,6 +240,14 @@ TEveWindow* TEveCompositeFrame::RelinquishEveWindow(Bool_t reparent)
    }
 
    return ex_ew;
+}
+
+//______________________________________________________________________________
+TEveWindow* TEveCompositeFrame::GetEveParentAsWindow() const
+{
+   // Returns eve-parent dynamic-casted to TEveWindow.
+
+   return dynamic_cast<TEveWindow*>(fEveParent);
 }
 
 //______________________________________________________________________________
@@ -252,6 +277,27 @@ void TEveCompositeFrame::SetShowTitleBar(Bool_t show)
       HideFrame(fTopFrame);
       ShowFrame(fMiniBar);
    }
+
+   fShowInSync = show == fEveWindow->GetShowTitleBar();
+}
+
+//______________________________________________________________________________
+void TEveCompositeFrame::HideAllDecorations()
+{
+   // Hide title-bar and mini-bar.
+
+   HideFrame(fTopFrame);
+   HideFrame(fMiniBar);
+
+   fShowInSync = kFALSE;
+}
+
+//______________________________________________________________________________
+void TEveCompositeFrame::ShowNormalDecorations()
+{
+   // Show title-bar or mini-bar, as dictated by the window.
+
+   SetShowTitleBar(fEveWindow->GetShowTitleBar());
 }
 
 //______________________________________________________________________________
@@ -303,7 +349,10 @@ void TEveCompositeFrame::FlipTitleBarState()
    // Change display-state of the title-bar / mini-bar.
    // This function is used as a slot and passes the call to eve-window.
 
-   fEveWindow->FlipShowTitleBar();
+   if (fShowInSync)
+      fEveWindow->FlipShowTitleBar();
+   else
+      SetShowTitleBar(fEveWindow->GetShowTitleBar());
 }
 
 //______________________________________________________________________________
@@ -331,11 +380,14 @@ TEveCompositeFrameInMainFrame::TEveCompositeFrameInMainFrame(TGCompositeFrame* p
                                                              TEveWindow*  eve_parent,
                                                              TGMainFrame* mf) :
    TEveCompositeFrame(parent, eve_parent),
-   fMainFrame        (mf)
+   fMainFrame         (mf),
+   fOriginalSlot      (0),
+   fOriginalContainer (0)
 {
    // Constructor.
 
    fMainFrame->Connect("CloseWindow()", "TEveCompositeFrameInMainFrame", this, "MainFrameClosed()");
+   gEve->GetWindowManager()->Connect("WindowDeleted(TEveWindow*)", "TEveCompositeFrameInMainFrame", this, "SomeWindowClosed(TEveWindow*)");
 }
 
 //______________________________________________________________________________
@@ -346,6 +398,8 @@ TEveCompositeFrameInMainFrame::~TEveCompositeFrameInMainFrame()
    if (gDebug > 0)
       Info("TEveCompositeFrameInMainFrame::~TEveCompositeFrameInMainFrame",
            "Destructor.");
+
+   gEve->GetWindowManager()->Disconnect("WindowDeleted(TEveWindow*)", this, "SomeWindowClosed(TEveWindow*)");
 }
 
 //______________________________________________________________________________
@@ -378,9 +432,56 @@ void TEveCompositeFrameInMainFrame::Destroy()
 }
 
 //______________________________________________________________________________
+void TEveCompositeFrameInMainFrame::SetOriginalSlotAndContainer(TEveWindow* slot,
+                                                                TEveWindow* container)
+{
+   // Set the container where to return the contained window on destruction.
+
+   static const TEveException kEH("TEveCompositeFrameInMainFrame::SetOriginalSlotAndContainer ");
+
+   if (container && ! container->CanMakeNewSlots())
+      throw kEH + "Given window can not make new slots.";
+
+   fOriginalSlot      = slot;
+   fOriginalContainer = container;
+}
+
+//______________________________________________________________________________
+void TEveCompositeFrameInMainFrame::SomeWindowClosed(TEveWindow* w)
+{
+   // Slot called when a window is closed ... we check that this was
+   // not our original container.
+
+   if (w == fOriginalSlot)
+      fOriginalSlot = 0;
+
+   if (w == fOriginalContainer)
+      fOriginalContainer = 0;
+}
+
+//______________________________________________________________________________
 void TEveCompositeFrameInMainFrame::MainFrameClosed()
 {
    // Slot for main-frame's "CloseWindow()" signal.
+   // If an eve window is still present, it will be put into:
+   //   - original-container, if it is set;
+   ///  - into window-managers default-container.
+
+   if (fEveWindow != 0)
+   {
+      if (fOriginalSlot)
+      {
+         TEveWindow::SwapWindows(fEveWindow, fOriginalSlot);
+      }
+      else if (fOriginalContainer)
+      {
+         TEveWindow::SwapWindows(fEveWindow, fOriginalContainer->NewSlot());
+      }
+      else if (gEve->GetWindowManager()->HasDefaultContainer())
+      {
+         TEveWindow::SwapWindows(fEveWindow, gEve->GetWindowManager()->GetDefaultContainer()->NewSlot());
+      }
+   }
 
    fMainFrame->DontCallClose();
    fEveWindow->DestroyWindowAndSlot();
@@ -547,8 +648,11 @@ void TEveCompositeFrameInTab::SetCurrent(Bool_t curr)
 //==============================================================================
 
 //______________________________________________________________________________
-// Description of TEveWindow
 //
+// Abstract base-class for representing eve-windows.
+// Sub-classes define a particular GUI frame that gets show
+// in the window.
+// 
 
 ClassImp(TEveWindow);
 
@@ -588,8 +692,36 @@ void TEveWindow::PreDeleteElement()
    // Here the request is just passed to TEveManager.
    // If you override it, make sure to call base-class version.
 
-   gEve->GetWindowManager()->WindowDeleted(this);
+   gEve->GetWindowManager()->DeleteWindow(this);
    TEveElementList::PreDeleteElement();
+}
+
+//==============================================================================
+
+//______________________________________________________________________________
+void TEveWindow::PreUndock()
+{
+   // Virtual function called before a window is undocked.
+
+   for (List_ci i=fChildren.begin(); i!=fChildren.end(); ++i)
+   {
+      TEveWindow* w = dynamic_cast<TEveWindow*>(*i);
+      if (w)
+         w->PreUndock();
+   }
+}
+
+//______________________________________________________________________________
+void TEveWindow::PostDock()
+{
+   // Virtual function called before a window is undocked.
+
+   for (List_ci i=fChildren.begin(); i!=fChildren.end(); ++i)
+   {
+      TEveWindow* w = dynamic_cast<TEveWindow*>(*i);
+      if (w)
+         w->PostDock();
+   }
 }
 
 //==============================================================================
@@ -644,6 +776,43 @@ void TEveWindow::SwapWindowWithCurrent()
       throw eh + "This is the current window ... nothing changed.";
 
    SwapWindows(this, current);
+}
+
+//______________________________________________________________________________
+void TEveWindow::UndockWindow()
+{
+   // Undock the window - put it into a dedicated main-frame.
+
+   TEveWindow* return_cont = fEveFrame->GetEveParentAsWindow();
+   if (return_cont && ! return_cont->CanMakeNewSlots())
+      return_cont = 0;
+
+   TEveWindowSlot* ew_slot = TEveWindow::CreateWindowMainFrame(0);
+
+   TEveWindow::SwapWindows(ew_slot, this);
+
+   ((TEveCompositeFrameInMainFrame*) fEveFrame)->
+      SetOriginalSlotAndContainer(ew_slot, return_cont);
+}
+
+//______________________________________________________________________________
+void TEveWindow::UndockWindowDestroySlot()
+{
+   // Undock the window - put it into a dedicated main-frame.
+   // The old window slot is destroyed.
+
+   TEveWindow* return_cont = fEveFrame->GetEveParentAsWindow();
+   if (return_cont && ! return_cont->CanMakeNewSlots())
+      return_cont = 0;
+
+   TEveWindowSlot* ew_slot = TEveWindow::CreateWindowMainFrame(0);
+
+   TEveWindow::SwapWindows(ew_slot, this);
+
+   ((TEveCompositeFrameInMainFrame*) fEveFrame)->
+      SetOriginalSlotAndContainer(0, return_cont);
+
+   ew_slot->DestroyWindowAndSlot();
 }
 
 //______________________________________________________________________________
@@ -755,7 +924,7 @@ void TEveWindow::MakeCurrent()
    // Make this window current.
 
    if ( ! gEve->GetWindowManager()->IsCurrentWindow(this))
-      gEve->GetWindowManager()->WindowSelected(this);
+      gEve->GetWindowManager()->SelectWindow(this);
 }
 
 //______________________________________________________________________________
@@ -793,7 +962,7 @@ void TEveWindow::TitleBarClicked()
    // The wish that this window becomes the current one is sent to
    // the window-manager.
 
-   gEve->GetWindowManager()->WindowSelected(this);
+   gEve->GetWindowManager()->SelectWindow(this);
 }
 
 //------------------------------------------------------------------------------
@@ -1189,6 +1358,15 @@ void TEveWindowPack::SetVertical(Bool_t x)
    // Set orientation of the pack (vertical / horizontal).
 
    fPack->SetVertical(x);
+}
+
+//______________________________________________________________________________
+void TEveWindowPack::EqualizeFrames()
+{
+   // Refit existing frames so that their lengths are equal.
+
+   fPack->EqualizeFrames();
+   fPack->Layout();
 }
 
 //==============================================================================

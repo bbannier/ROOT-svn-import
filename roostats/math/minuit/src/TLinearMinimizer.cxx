@@ -13,6 +13,8 @@
 #include "TLinearMinimizer.h"
 #include "Math/IParamFunction.h"
 #include "TF1.h"
+#include "TUUID.h"
+#include "TROOT.h"
 #include "Fit/Chi2FCN.h"
 
 #include "TLinearFitter.h"
@@ -142,10 +144,14 @@ void TLinearMinimizer::SetFunction(const  ROOT::Math::IMultiGradFunction & objfu
       // deleted since it is added in funciton list in gROOT 
       // fix the problem using meaniful names (difficult to re-produce)
       BasisFunction<const ModelFunc> bf(modfunc,i); 
+      TUUID u; 
       std::string fname = "_LinearMinimimizer_BasisFunction_" + 
-         ROOT::Math::Util::ToString(i);
+         std::string(u.AsString() );
       TF1 * f = new TF1(fname.c_str(),ROOT::Math::ParamFunctor(bf));
       flist.Add(f);
+      // remove this functions from gROOT
+      gROOT->GetListOfFunctions()->Remove(f); 
+      
    }
 
    // create TLinearFitter (do it now because olny now now the coordinate dimensions)
