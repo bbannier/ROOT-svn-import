@@ -223,6 +223,7 @@ Double_t LikelihoodInterval::LowerLimit(RooRealVar& param )
   // put the parameters back to the way they were
   //  (*fParameters) = (*snapshot);
 
+  delete newProfile;
   return myarg->getVal();
 
 }
@@ -233,7 +234,7 @@ Double_t LikelihoodInterval::LowerLimit(RooRealVar& param )
 Double_t LikelihoodInterval::UpperLimit(RooRealVar& param ) 
 {  
 
-// A binary search to get lower/upper limit for a given parameter.  Slow.
+  // A binary search to get lower/upper limit for a given parameter.  Slow.
   RooAbsReal* newProfile = fLikelihoodRatio->createProfile(RooArgSet(param));
   RooRealVar* myarg = (RooRealVar *) newProfile->getVariables()->find(param.GetName());
 
@@ -271,6 +272,7 @@ Double_t LikelihoodInterval::UpperLimit(RooRealVar& param )
   }
   
 
+  // delete newProfile;
 
   // put the parameters back to the way they were
   //  (*fParameters) = (*snapshot);
