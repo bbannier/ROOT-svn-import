@@ -72,35 +72,55 @@ using namespace RooStats;
 //_______________________________________________________
 NeymanConstruction::NeymanConstruction() {
    // default constructor
-  fWS = 0;//new RooWorkspace();
+  fWS = new RooWorkspace();
   fOwnsWorkspace = true;
-
+  fDataName = "";
+  fPdfName = "";
 }
 
 
 //_______________________________________________________
 ConfInterval* NeymanConstruction::GetInterval() const {
-   // Main interface to get a RooStats::ConfInterval.  
-   // It constructs a RooStats::SetInterval.
+  // Main interface to get a RooStats::ConfInterval.  
+  // It constructs a RooStats::SetInterval.
+  std::cout << "in get interval" << std::endl;
+  std::cout << "fPointsToTest = " << fPointsToTest << std::endl;
+  std::cout << "fPointsToTest = " << fDistCreator << std::endl;
+  std::cout << "fPointsToTest->numEntries = " << fPointsToTest->numEntries() << std::endl;
+  std::cout << "dataName = "  << fDataName << std::endl;
+  fWS->Print();
+  RooAbsData* data = fWS->data(fDataName);
+  std::cout << "data = "  << data << std::endl;
 
+  Int_t npass = 0;
   RooArgSet* point; // local variable
   // loop over points to test
   for(Int_t i=0; i<fPointsToTest->numEntries(); ++i){
      // get a parameter point from the list of points to test.
     point = (RooArgSet*) fPointsToTest->get(i)->clone("temp");
+
     // the next line is where most of the time will be spent generating the sampling dist of the test statistic.
     SamplingDistribution* samplingDist = fDistCreator->GetSamplingDistribution(*point); 
+
     // find the lower & upper thresholds on the test statistic that define the acceptance region in the data
     Double_t lowerEdgeOfAcceptance = samplingDist->InverseCDF( fLeftSideFraction * fSize );
     Double_t upperEdgeOfAcceptance = samplingDist->InverseCDF( 1. - ((1.-fLeftSideFraction) * fSize) );
-    // get the value of the test statistic for this data set
-    Double_t thisTestStatistic = fDistCreator->EvaluateTestStatistic( *fWS->data(fDataName) );
+
+     // get the value of the test statistic for this data set
+    Double_t thisTestStatistic = fDistCreator->EvaluateTestStatistic( *( data) );
+
+    //    std::cout << "dbg= " << lowerEdgeOfAcceptance << ", " 
+    //      << upperEdgeOfAcceptance << std::endl;
+
     // Check if this data is in the acceptance region
     if(thisTestStatistic > lowerEdgeOfAcceptance && thisTestStatistic < upperEdgeOfAcceptance) {
       // if so, set this point to true
       fPointsToTest->add(*point, 1.); 
+      ++npass;
     }
+    delete samplingDist;
   }
+  std::cout << npass << " points in interval" << std::endl;
 
   // create an interval based fPointsToTest
   SetInterval* interval 

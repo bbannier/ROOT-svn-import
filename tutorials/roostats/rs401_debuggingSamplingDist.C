@@ -1,31 +1,17 @@
 /////////////////////////////////////////////////////////////////////////
 //
-// 'Number Counting Example' RooStats tutorial macro #100
+// 'Debugging Sampling Distribution' RooStats tutorial macro #401
 // author: Kyle Cranmer
-// date Nov. 2008 
+// date Jan. 2009
 //
-// This tutorial shows an example of a combination of 
-// two searches using number counting with background uncertainty.
-//
-// The macro uses a RooStats "factory" to construct a PDF
-// that represents the two number counting analyses with background 
-// uncertainties.  The uncertainties are taken into account by 
-// considering a sideband measurement of a size that corresponds to the
-// background uncertainty.  The problem has been studied in these references:
-//   http://arxiv.org/abs/physics/0511028
-//   http://arxiv.org/abs/physics/0702156
-//   http://cdsweb.cern.ch/record/1099969?ln=en
-//
-// After using the factory to make the model, we use a RooStats 
-// ProfileLikelihoodCalculator for a Hypothesis test and a confidence interval.
-// The calculator takes into account systematics by eliminating nuisance parameters
-// with the profile likelihood.  This is equivalent to the method of MINOS.
-//
+// This tutorial shows usage of a distribution creator, sampling distribution,
+// and the Neyman Construction.
 /////////////////////////////////////////////////////////////////////////
 
 #ifndef __CINT__
 #include "RooGlobalFunc.h"
 #endif
+#include "RooStats/ConfInterval.h"
 #include "RooStats/SamplingDistribution.h"
 #include "RooStats/DebuggingDistributionCreator.h"
 
@@ -33,12 +19,14 @@
 
 #include "RooRealVar.h"
 
+#include <iostream>
+
 // use this order for safety on library loading
 using namespace RooFit ;
 using namespace RooStats ;
 
 
-void rs100_debuggingSamplingDist()
+void rs401_debuggingSamplingDist()
 {
   
   //// create a distribution creator.  The debugging one creates a uniform distribution on [0,1] independent of data.
@@ -49,21 +37,28 @@ void rs100_debuggingSamplingDist()
   RooArgSet* point;
   ddc.GetSamplingDistribution(*point);
   SamplingDistribution* samp = ddc.GetSamplingDistribution(*point);
-  samp->InverseCDF(.1); // should give a number close to 0.1 b/c the distribution is uniform on [0,1]
-  samp->InverseCDF(.9); // should give a number close to 0.9 b/c the distribution is uniform on [0,1]
+
+  // should give a number close to 0.1 b/c the distribution is uniform on [0,1]
+  std::cout << "test stat with p=0.1 is " << samp->InverseCDF(.1) << std::endl;
+
+  // should give a number close to 0.1 b/c the distribution is uniform on [0,1]
+  std::cout << "test stat with p=0.9 is " << samp->InverseCDF(.9) << std::endl;
+
   // it knows the test statistic, so you can ask it to evaluate the test statistic on data
   RooAbsData* data;
-  ddc.EvaluateTestStatistic(*data);
+  std::cout << "test stat for this data is " 
+	    << ddc.EvaluateTestStatistic(*data) << std::endl;
 
   //////// show use of NeymanConstruction
   // Create points to test
   RooRealVar param1("param1", "", 0, 0, 1);
   param1.setBins(10);
   RooRealVar param2("param2", "", 0, 0, 1);
-  param1.setBins(100);
+  param2.setBins(100);
   RooArgSet parameters(param1, param2);
   RooDataHist parameterScan("parameterScan", "", parameters);
 
+ 
   // Create a Neyman Construction
   RooStats::NeymanConstruction nc;
   // set the distribution creator, which encodes the test statistic
@@ -71,8 +66,12 @@ void rs100_debuggingSamplingDist()
   nc.SetSize(.1); // set size of test
   nc.SetParameterPointsToTest( parameterScan );
 
+  std::cout << "debug " << std::endl;
   // use the Neyman Construction
   ConfInterval* interval = nc.GetInterval();
-  
+  std::cout << "interval ptr = " << interval << std::endl;
+  parameters.Print();
+  std::cout << "is this point in the interval? " << 
+    interval->IsInInterval(parameters) << std::endl;
   
 }

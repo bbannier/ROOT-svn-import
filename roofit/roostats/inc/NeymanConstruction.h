@@ -66,13 +66,18 @@ namespace RooStats {
 
       // Set the DataSet, add to the the workspace if not already there
       virtual void SetData(RooAbsData& data) {
-	fWS->import(data);
-	fDataName = data.GetName();
+	if(&data){
+	  fWS->import(data);
+	  fDataName = data.GetName();
+	  fWS->Print();
+	}
       }
       // Set the Pdf, add to the the workspace if not already there
       virtual void SetPdf(RooAbsPdf& pdf) { 
-	fWS->import(pdf);
-	fPdfName = pdf.GetName();
+	if(&pdf){
+	  fWS->import(pdf);
+	  fPdfName = pdf.GetName();
+	}
       }
 
       // specify the name of the dataset in the workspace to be used
