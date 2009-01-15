@@ -83,17 +83,12 @@ NeymanConstruction::NeymanConstruction() {
 ConfInterval* NeymanConstruction::GetInterval() const {
   // Main interface to get a RooStats::ConfInterval.  
   // It constructs a RooStats::SetInterval.
-  std::cout << "in get interval" << std::endl;
-  std::cout << "fPointsToTest = " << fPointsToTest << std::endl;
-  std::cout << "fPointsToTest = " << fDistCreator << std::endl;
-  std::cout << "fPointsToTest->numEntries = " << fPointsToTest->numEntries() << std::endl;
-  std::cout << "dataName = "  << fDataName << std::endl;
-  fWS->Print();
-  RooAbsData* data = fWS->data(fDataName);
-  std::cout << "data = "  << data << std::endl;
 
+  // local variables
+  RooAbsData* data = fWS->data(fDataName);
   Int_t npass = 0;
-  RooArgSet* point; // local variable
+  RooArgSet* point; 
+
   // loop over points to test
   for(Int_t i=0; i<fPointsToTest->numEntries(); ++i){
      // get a parameter point from the list of points to test.

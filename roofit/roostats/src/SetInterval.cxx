@@ -97,12 +97,15 @@ Bool_t SetInterval::IsInInterval(RooArgSet &parameterPoint)
   RooDataSet*  tree = dynamic_cast<RooDataSet*>(  fParameterPointsInInterval );
   RooDataHist* hist = dynamic_cast<RooDataHist*>( fParameterPointsInInterval );
   
-  if( !this->CheckParameters(parameterPoint) )
-    return false; 
+  if( !this->CheckParameters(parameterPoint) ){
+    //    std::cout << "problem with parameters" << std::endl;
+    //    return false; 
+  }
   
-  if(parameterPoint.getSize() != 1 )
+  if(parameterPoint.getSize() != fParameterPointsInInterval->get()->getSize() ){
+    std::cout << "problem with parameters" << std::endl;
     return false;
-
+  }
 
   if( hist ) {
     if ( hist->weight( parameterPoint , 0 ) > 0 ) // positive value indicates point is in interval

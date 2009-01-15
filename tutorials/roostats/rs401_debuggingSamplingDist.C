@@ -18,6 +18,10 @@
 #include "RooStats/NeymanConstruction.h"
 
 #include "RooRealVar.h"
+#include "RooPlot.h"
+
+#include "TTree.h"
+#include "TMarker.h"
 
 #include <iostream>
 
@@ -63,15 +67,41 @@ void rs401_debuggingSamplingDist()
   RooStats::NeymanConstruction nc;
   // set the distribution creator, which encodes the test statistic
   nc.SetDistributionCreator(ddc);
-  nc.SetSize(.1); // set size of test
+  nc.SetSize(.2); // set size of test
   nc.SetParameterPointsToTest( parameterScan );
 
-  std::cout << "debug " << std::endl;
   // use the Neyman Construction
   ConfInterval* interval = nc.GetInterval();
-  std::cout << "interval ptr = " << interval << std::endl;
-  parameters.Print();
+
   std::cout << "is this point in the interval? " << 
     interval->IsInInterval(parameters) << std::endl;
   
+  // make a plot
+  //  RooPlot plot(param1, param2);
+  //  parameterScan.plotOn(&plot);
+  //  plot.Draw();
+
+  //  TTree* tree = const_cast<TTree*> (&parameterScan.tree());
+  //  tree->Print();
+  //  tree->Draw("param1:param2 >> hist");
+  //  TH2F* hist = (TH2F*) gROOT->Get("hist");
+  //  hist->Draw();
+
+  parameterScan.Draw("param1:param2");
+
+  RooArgSet* tmpPoint;
+  // loop over points to test
+  for(Int_t i=0; i<parameterScan.numEntries(); ++i){
+     // get a parameter point from the list of points to test.
+    tmpPoint = (RooArgSet*) parameterScan.get(i)->clone("temp");
+      TMarker* mark = new TMarker(tmpPoint->getRealValue("param2"), 
+				  tmpPoint->getRealValue("param1"), 25);
+    if (interval->IsInInterval( *tmpPoint ) ) 
+      mark->SetMarkerColor(kBlue);
+    else
+      mark->SetMarkerColor(kRed);
+
+    mark->Draw("s");
+  }
+
 }
