@@ -187,19 +187,33 @@ bool cling::UserInterface::ProcessMeta(const std::string& input)
          if (!last) {
             std::cerr << "[i] Failure: no file name given!" << std::endl;
          } else {
-            llvm::sys::Path path(input.substr(first, last - first));
+            std::string filename = input.substr(first, last - first);
+            llvm::sys::Path path(filename);
             if (path.isDynamicLibrary()) {
                std::string errMsg;
-               if (!llvm::sys::DynamicLibrary::LoadLibraryPermanently(input.substr(3).c_str(), &errMsg))
+               if (!llvm::sys::DynamicLibrary::LoadLibraryPermanently(filename.c_str(), &errMsg))
                   std::cerr << "[i] Success!" << std::endl;
                else
                   std::cerr << "[i] Failure: " << errMsg << std::endl;
             } else {
-               if( m_Interp->addUnit( input.substr( 3 ) ) )
+               if( m_Interp->addUnit( filename ) )
                   std::cerr << "[i] Success!" << std::endl;
                else
                   std::cerr << "[i] Failure" << std::endl;
             }
+         }
+         break;
+      }
+   case 'x':
+      {
+         size_t first = 3;
+         while (isspace(input[first])) ++first;
+         size_t last = input.length();
+         while (last && isspace(input[last - 1])) --last;
+         if (!last) {
+            std::cerr << "[i] Failure: no file name given!" << std::endl;
+         } else {
+            m_Interp->executeFile(input.substr(first, last - first));
          }
          break;
       }
