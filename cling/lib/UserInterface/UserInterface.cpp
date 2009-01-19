@@ -4,6 +4,9 @@
 // author:  Axel Naumann <axel@cern.ch>
 //------------------------------------------------------------------------------
 
+// temporary - this has to go away after 2009-01-21!
+#define CLING_USE_READLINE
+
 #include <cling/UserInterface/UserInterface.h>
 
 #include <cling/Interpreter/Interpreter.h>
@@ -17,6 +20,13 @@
 #include <Inuit/Drivers/InputDriver.h>
 
 #include <iostream>
+
+#ifdef CLING_USE_READLINE
+#include <sys/stat.h>
+#include <stdio.h>
+#include <readline/readline.h>
+#include <readline/history.h>
+#endif
 
 namespace llvm {
    class Module;
@@ -48,12 +58,14 @@ namespace {
 cling::UserInterface::UserInterface(Interpreter& interp, const char* prompt /*= "[cling] $"*/):
    m_Interp(&interp), m_EditLine(0), m_UI(0)
 {
+#ifndef CLING_USE_READLINE
    TerminalDriver& td = TerminalDriver::Instance();
    InputDriver& ed = InputDriver::Instance(td);
    m_UI = new UI(Pos(td.GetSize().fW, td.GetSize().fH), ed);
    m_UI->AddInputHandler(InputHandler, this);
    m_EditLine = new EditLine(m_UI, Pos(0, td.GetSize().fH - 1), td.GetSize().fW, prompt);
    m_UI->AddElement(m_EditLine);
+#endif
 }
 
 
@@ -71,9 +83,32 @@ cling::UserInterface::~UserInterface()
 //---------------------------------------------------------------------------
 void cling::UserInterface::runInteractively()
 {
-   std::cerr << "Type a C code and press enter to run it." << std::endl;
-   std::cerr << "Type .q, exit or ctrl+D to quit" << std::endl;
+   std::cerr << "**** Welcome to the cling prototype! ****" << std::endl;
+   std::cerr << "* Type C code and press enter to run it *" << std::endl;
+   std::cerr << "* Type .q, exit or ctrl+D to quit       *" << std::endl;
+   std::cerr << "*****************************************" << std::endl;
+   std::cerr << std::endl;
+#ifdef CLING_USE_READLINE
+   struct stat buf;
+   static const char* histfile = ".cling_history";
+   using_history();
+   history_max_entries = 100;
+   if (stat(histfile, &buf) == 0) {
+      read_history(histfile);
+   }
+   m_QuitRequested = false;
+   while (!m_QuitRequested) {
+      char* line = readline("[cling]$ ");
+      if (line) {
+         NextInteractiveLine(line);
+         add_history(line);
+         free(line);
+      } else break;
+   }
+   write_history(histfile);
+#else
    m_UI->ProcessInputs();
+#endif
 }
 
 
@@ -142,18 +177,26 @@ bool cling::UserInterface::ProcessMeta(const std::string& input)
    switch (input[1]) {
    case 'L':
       {
-         llvm::sys::Path path(input.substr(3));
-         if (path.isDynamicLibrary()) {
-            std::string errMsg;
-            if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(input.substr(3).c_str(), &errMsg))
-               std::cerr << "[i] Success!" << std::endl;
-            else
-               std::cerr << "[i] Failure: " << errMsg << std::endl;
+         size_t first = 3;
+         while (isspace(input[first])) ++first;
+         size_t last = input.length();
+         while (last && isspace(input[last - 1])) --last;
+         if (!last) {
+            std::cerr << "[i] Failure: no file name given!" << std::endl;
          } else {
-            if( m_Interp->addUnit( input.substr( 3 ) ) )
-               std::cerr << "[i] Success!" << std::endl;
-            else
-               std::cerr << "[i] Failure" << std::endl;
+            llvm::sys::Path path(input.substr(first, last - first));
+            if (path.isDynamicLibrary()) {
+               std::string errMsg;
+               if (!llvm::sys::DynamicLibrary::LoadLibraryPermanently(input.substr(3).c_str(), &errMsg))
+                  std::cerr << "[i] Success!" << std::endl;
+               else
+                  std::cerr << "[i] Failure: " << errMsg << std::endl;
+            } else {
+               if( m_Interp->addUnit( input.substr( 3 ) ) )
+                  std::cerr << "[i] Success!" << std::endl;
+               else
+                  std::cerr << "[i] Failure" << std::endl;
+            }
          }
          break;
       }
@@ -167,7 +210,11 @@ bool cling::UserInterface::ProcessMeta(const std::string& input)
          break;
       }
    case 'q':
+#ifdef CLING_USE_READLINE
+      m_QuitRequested = true;
+#else
       m_UI->RequestQuit();
+#endif
       break;
    default:
       return false;

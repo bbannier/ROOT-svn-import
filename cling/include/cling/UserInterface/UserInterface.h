@@ -43,6 +43,9 @@ namespace cling {
       bool ProcessMeta(const std::string& input);
 
       Interpreter* m_Interp;
+#ifdef CLING_USE_READLINE
+      bool m_QuitRequested;
+#endif
       Inuit::EditLine* m_EditLine;
       Inuit::UI* m_UI;
    };
