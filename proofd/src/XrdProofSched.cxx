@@ -281,10 +281,10 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
    if (!wrks)
       return -1;
 
+   // In the FIFO mode:
    // if the session has already assigned workers or there are
    // other queries waiting - just enqueue
-   // FIFO is enforced by dynamic mode so it is checked just in case
-   if(fUseFIFO && xps->Workers()->Num() > 0) {
+   if(fUseFIFO && (xps->Workers()->Num() > 0 || !fQueue.empty())) {
       XrdProofQuery *query = new XrdProofQuery(querytag);
       Enqueue(xps, query);
       return 0;
@@ -306,13 +306,13 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
       // Dynamic scheduling: the scheduler will determine the #workers
       // to be used based on the current load and assign the least loaded ones
 
-      // Sort the workers by the load
-      XrdProofWorker::Sort(acws, XpdWrkComp);
-
       // Get the advised number
       int nw = GetNumWorkers(xps);
 
       if (nw > 0) {
+         // Sort the workers by the load
+         XrdProofWorker::Sort(acws, XpdWrkComp);
+
          // The master first (stats are updated in XrdProofdProtocol::GetWorkers)
          wrks->push_back(mst);
 
@@ -329,7 +329,6 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
          if (fUseFIFO) {
             // enqueue the querry/session
             // the returned list of workers was not filled
-            //fQueue.push_back(xps);
             XrdProofQuery *query = new XrdProofQuery(querytag);
             Enqueue(xps, query);
          } else {

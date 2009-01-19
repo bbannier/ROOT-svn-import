@@ -858,11 +858,12 @@ void TProof::SetManager(TProofMgr *mgr)
 Int_t TProof::AddWorkers(TList *workerList)
 {
    // Works on the master node only.
-   // It starts workers on the machines in workerList and sets the paths,
+   // From now on, use workers from the workerList.
+   // It compares the workerList with fSlaves and starts workers on the newly
+   // added machines and terminates the currently active slaves that are not on
+   // the list.
+   // The method sets the paths,
    // packages and macros as on the master.
-   // It is a subbstitute for StartSlaves(...)
-   // The code is mostly the master part of StartSlaves,
-   // with the parallel startup removed.
 
    if (!IsMaster()) {
       Error("AddWorkers", "AddWorkers can only be called on the master!");
@@ -887,13 +888,29 @@ Int_t TProof::AddWorkers(TList *workerList)
    UInt_t nSlavesDone = 0;
    Int_t ord = 0;
 
+   // If the fActiveSlaves is non-empty, go through it and remove them from
+   // the workerList. If some slave does not exist on the list - terminate it.
+   TListIter workers(fSlaves);
+   TObject *to;
+   TSlave *w;
+   while ((to = workers())) {
+      w = (TSlave *)to;
+      if (TProofNodeInfo *w1 = (TProofNodeInfo *)workerList->FindObject(w->GetName()))
+         workerList->Remove(w1);
+      else
+         TerminateWorker(w);
+   }
+
+   // Taken from RemoveWorkers:
+   fFileMap.clear(); // This could be avoided if CopyFromCache was used in SendFile
+
+
    // Loop over all workers and start them
 
    // a list of TSlave objects for workers that are being added
    TList *addedWorkers = new TList();
    addedWorkers->SetOwner(kFALSE);
    TListIter next(workerList);
-   TObject *to;
    TProofNodeInfo *worker;
    while ((to = next())) {
       // Get the next worker from the list

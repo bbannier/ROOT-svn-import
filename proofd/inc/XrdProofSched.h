@@ -88,8 +88,6 @@ public:
 
    virtual int ProcessDirective(XrdProofdDirective *d,
                                 char *val, XrdOucStream *cfg, bool rcf);
-   virtual int Enqueue(XrdProofdProofServ *xps, XrdProofQuery *query);
-   virtual XrdProofdProofServ *FirstSession();
 
 protected:
    char              fName[kXPSMXNMLEN];   // Name of this protocol
@@ -101,11 +99,11 @@ protected:
    int               fWorkerMax;   // max number or workers per user
    int               fWorkerSel;   // selection option
    int               fNextWrk;     // Reference index for RR sel option
-   int               fOptWrksPerUnit; // optimal # of workers per CPU/HD
+   int               fOptWrksPerUnit; // optimal # of workers per CPUCore/HD
    int               fMinForQuery; // Minimal number of workers for a query
    double            fNodesFraction; // the fraction of free units to assign
                                      // to a query.
-   bool              fUseFIFO;    // use FIFO or refuse if overloaded 
+   bool              fUseFIFO;     // use FIFO or refuse if overloaded 
    std::list<XrdProofdProofServ *> fQueue; // the queue with sessions (jobs);
 
    XrdOucHash<XrdProofdDirective> fConfigDirectives; // Config directives
@@ -117,6 +115,8 @@ protected:
    virtual int       DoDirectiveResource(char *, XrdOucStream *, bool);
    virtual int       GetNumWorkers(XrdProofdProofServ *xps);
    virtual void      ResetParameters();
+   virtual int       Enqueue(XrdProofdProofServ *xps, XrdProofQuery *query);
+   virtual XrdProofdProofServ *FirstSession();
 };
 
 
