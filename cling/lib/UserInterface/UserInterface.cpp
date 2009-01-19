@@ -46,7 +46,7 @@ namespace {
    //------------------------------------------------------------------------------
    // String constants - MOVE SOMEWHERE REASONABLE!
    //------------------------------------------------------------------------------
-   static std::string code_prefix = "#include <stdio.h>\nint main(int argc, char** argv) {\n";
+   static std::string code_prefix = "#include <stdio.h>\nint imain(int argc, char** argv) {\n";
    static std::string code_suffix = ";\nreturn 0; } ";
 
 } // unnamed namespace
@@ -83,11 +83,11 @@ cling::UserInterface::~UserInterface()
 //---------------------------------------------------------------------------
 void cling::UserInterface::runInteractively()
 {
+   std::cerr << std::endl;
    std::cerr << "**** Welcome to the cling prototype! ****" << std::endl;
    std::cerr << "* Type C code and press enter to run it *" << std::endl;
    std::cerr << "* Type .q, exit or ctrl+D to quit       *" << std::endl;
    std::cerr << "*****************************************" << std::endl;
-   std::cerr << std::endl;
 #ifdef CLING_USE_READLINE
    struct stat buf;
    static const char* histfile = ".cling_history";
@@ -155,15 +155,18 @@ bool cling::UserInterface::NextInteractiveLine(const std::string& line)
    //----------------------------------------------------------------------
    // Parse and run it
    //----------------------------------------------------------------------
-   llvm::Module* module = m_Interp->link( buff );
+   std::string errMsg;
+   llvm::Module* module = m_Interp->link( buff, &errMsg );
 
    if(!module) {
       std::cerr << std::endl;
       std::cerr << "[!] Errors occured while parsing your code!" << std::endl;
+      if (!errMsg.empty())
+         std::cerr << "[!] " << errMsg << std::endl;
       std::cerr << std::endl;
       return false;
    }
-   m_Interp->executeModuleMain( module );
+   m_Interp->executeModuleMain( module, "imain" );
    return true;
 }
 
