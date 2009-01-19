@@ -568,4 +568,27 @@ namespace cling
 
       return engine->runFunctionAsMain( func,  params, 0 );   
    }
+
+
+   //---------------------------------------------------------------------------
+   // Call the Interpreter on a File
+   //---------------------------------------------------------------------------
+   int Interpreter::executeFile( const std::string& filename,
+                                 const std::string& funcname)
+   {
+      llvm::Module* module = link( filename );
+      if(!module) {
+         std::cerr << "[!] Errors occured while parsing file " << filename << "!" << std::endl;
+         return 1;
+      }
+      std::string myfuncname(funcname);
+      if (funcname == "()") {
+         size_t posSlash = filename.find_last_of('/');
+         ++posSlash; // npos to 0, good!
+         size_t posDot = filename.find('.'); // npos is OK, too.
+         myfuncname = filename.substr(posSlash, posDot);
+      }
+
+      return executeModuleMain( module, myfuncname );
+   }
 }

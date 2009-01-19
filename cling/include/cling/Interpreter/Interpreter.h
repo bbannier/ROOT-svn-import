@@ -135,11 +135,20 @@ namespace cling
                                   std::string* errMsg = 0);
 
       //---------------------------------------------------------------------
-      //! Execute a module containing a function main(int, char*[]).
+      //! Execute a module containing a function funcname.
       //!
-      //! @return main()'s return value
+      //! @return funcname()'s return value
       int executeModuleMain( llvm::Module *module,
-                             const std::string& name = "main" );
+                             const std::string& funcname = "main" );
+
+      //---------------------------------------------------------------------
+      //! Execute a file containing a function funcname.
+      //! If funcname == "()", funcname is the stem (no extension) of
+      //! filename.
+      //!
+      //! @return funcname()'s return value
+      int executeFile( const std::string& filename,
+                       const std::string& funcname = "()" );
 
       //---------------------------------------------------------------------
       //! Set the diagnostic client (deletes 

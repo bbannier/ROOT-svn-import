@@ -22,12 +22,6 @@
 #include <cling/UserInterface/UserInterface.h>
 
 //------------------------------------------------------------------------------
-// String constants
-//------------------------------------------------------------------------------
-std::string code_prefix = "#include <stdio.h>\nint main(int argc, char** argv) {\n";
-std::string code_suffix = ";\nreturn 0; } ";
-
-//------------------------------------------------------------------------------
 // Let the show begin
 //------------------------------------------------------------------------------
 int main( int argc, char **argv )
@@ -58,12 +52,7 @@ int main( int argc, char **argv )
    // We're supposed to parse a file
    //---------------------------------------------------------------------------
    if( !interactive ) {
-      llvm::Module* module = interpreter.link( argv[1] );
-      if(!module) {
-         std::cerr << "[!] Errors occured while parsing your code!" << std::endl;
-         return 1;
-      }
-      return interpreter.executeModuleMain( module );
+      return interpreter.executeFile(argv[1]);
    }
    //----------------------------------------------------------------------------
    // We're interactive
