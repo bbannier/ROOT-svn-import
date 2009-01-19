@@ -110,11 +110,12 @@ namespace cling
    // Compile the filename and link it to all the modules known to the
    // compiler but do not add it to the list
    //---------------------------------------------------------------------------
-   llvm::Module* Interpreter::link( const std::string& fileName )
+   llvm::Module* Interpreter::link( const std::string& fileName,
+                                    std::string* errMsg )
    {
       clang::TranslationUnit* tu     = parse( fileName );
       llvm::Module*           module = compile( tu );
-      llvm::Module*           result = link( module );
+      llvm::Module*           result = link( module, errMsg );
       delete tu;
       delete module;
       return result;
@@ -124,11 +125,12 @@ namespace cling
    // Compile the buffer and link it to all the modules known to the
    // compiler but do not add it to the list
    //---------------------------------------------------------------------------
-   llvm::Module* Interpreter::link( const llvm::MemoryBuffer* buff )
+   llvm::Module* Interpreter::link( const llvm::MemoryBuffer* buff,
+                                    std::string* errMsg )
    {
       clang::TranslationUnit* tu     = parse( buff );
       llvm::Module*           module = compile( tu );
-      llvm::Module*           result = link( module );
+      llvm::Module*           result = link( module, errMsg );
       delete tu;
       delete module;
       return result;
@@ -138,10 +140,12 @@ namespace cling
    // Link the module to all the modules known to the compiler but do
    // not add it to the list
    //---------------------------------------------------------------------------
-   llvm::Module* Interpreter::link( llvm::Module *module )
+   llvm::Module* Interpreter::link( llvm::Module *module, std::string* errMsg )
    {
-      if( !module )
+      if( !module ) {
+         if (errMsg) *errMsg = "Module is NULL";
          return 0;
+      }
 
       //------------------------------------------------------------------------
       // We have some module so we should link the current one to it
@@ -149,9 +153,10 @@ namespace cling
       llvm::Linker linker( "executable", "executable" );
 
       if( m_module )
-         linker.LinkInModule( copyModule( m_module ) );
+         if (linker.LinkInModule( copyModule( m_module ), errMsg ))
+            return 0;
 
-      if( linker.LinkInModule( copyModule( module ) ) )
+      if( linker.LinkInModule( copyModule( module ), errMsg ) )
          return 0;
 
       return linker.releaseModule();
@@ -533,7 +538,8 @@ namespace cling
    //---------------------------------------------------------------------------
    // Call the Interpreter on a Module
    //---------------------------------------------------------------------------
-   int Interpreter::executeModuleMain( llvm::Module *module )
+   int Interpreter::executeModuleMain( llvm::Module *module,
+                                       const std::string& name)
    {
       //---------------------------------------------------------------------------
       // Create the execution engine
@@ -546,11 +552,11 @@ namespace cling
       }
 
       //---------------------------------------------------------------------------
-      // Look for the main function
+      // Look for the imain function
       //---------------------------------------------------------------------------
-      llvm::Function* func( module->getFunction( "main" ) );
+      llvm::Function* func( module->getFunction( name ) );
       if( !func ) {
-         std::cerr << "[!] Cannot find the entry function!" << std::endl;
+         std::cerr << "[!] Cannot find the entry function" << name << "!" << std::endl;
          return 1;
       }
 

@@ -109,7 +109,8 @@ namespace cling
       //! @return the resulting module or 0, consult the diagnostics if a 0
       //!         pointer is returned
       //---------------------------------------------------------------------
-      virtual llvm::Module* link( const std::string& fileName );
+      virtual llvm::Module* link( const std::string& fileName,
+                                  std::string* errMsg = 0);
 
       //---------------------------------------------------------------------
       //! Compile the buffer and link it to all the modules known to the
@@ -120,7 +121,8 @@ namespace cling
       //! @return the resulting module or 0, consult the diagnostics if a 0
       //!         pointer is returned
       //---------------------------------------------------------------------
-      virtual llvm::Module* link( const llvm::MemoryBuffer* buff );
+      virtual llvm::Module* link( const llvm::MemoryBuffer* buff,
+                                  std::string* errMsg = 0);
 
       //---------------------------------------------------------------------
       //! Link the module to all the modules known to the compiler but do
@@ -129,13 +131,15 @@ namespace cling
       //! @return the resulting module or 0, consult the diagnostics if a 0
       //!         pointer is returned
       //---------------------------------------------------------------------
-      virtual llvm::Module* link( llvm::Module *module );
+      virtual llvm::Module* link( llvm::Module *module,
+                                  std::string* errMsg = 0);
 
       //---------------------------------------------------------------------
       //! Execute a module containing a function main(int, char*[]).
       //!
       //! @return main()'s return value
-      int executeModuleMain( llvm::Module *module );
+      int executeModuleMain( llvm::Module *module,
+                             const std::string& name = "main" );
 
       //---------------------------------------------------------------------
       //! Set the diagnostic client (deletes 
