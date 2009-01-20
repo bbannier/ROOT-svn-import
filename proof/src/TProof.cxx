@@ -890,7 +890,7 @@ Int_t TProof::AddWorkers(TList *workerList)
 
    // If the fActiveSlaves is non-empty, go through it and remove them from
    // the workerList. If some slave does not exist on the list - terminate it.
-   TListIter workers(fSlaves);
+   TListIter workers(fActiveSlaves);
    TObject *to;
    TSlave *w;
    while ((to = workers())) {
