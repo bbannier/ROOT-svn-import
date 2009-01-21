@@ -14,7 +14,7 @@
 #include "RooStats/ConfInterval.h"
 #include "RooStats/SamplingDistribution.h"
 #include "RooStats/TemplatedDistributionCreator.h"
-#include "RooStats/DebuggingTestStatFunctor.h"
+#include "RooStats/ProfileLikelihoodFunctor.h"
 
 #include "RooStats/NeymanConstruction.h"
 
@@ -33,7 +33,7 @@ using namespace RooFit ;
 using namespace RooStats ;
 
 
-void rs401b_debuggingSamplingDist()
+void rs401c_debuggingSamplingDist()
 {
   
   // make a simple model
@@ -48,11 +48,9 @@ void rs401b_debuggingSamplingDist()
   // Double_t EvaluateTestStatistic(RooAbsData&, RooArgSet& parameterPoint)
   // and RooAbsArg* GetTestStatisitc()
   // 
-  // As an example, we use the DebuggingTestStatFunctor, which just
-  // returns a uniformly random number between [0,1]
-  // which is independent of the data and parameter point.
-  DebuggingTestStatFunctor testStatFunct;
-  TemplatedDistributionCreator<DebuggingTestStatFunctor>
+  // As an example, we use the ProfileLikelihoodFunctor.
+  ProfileLikelihoodFunctor testStatFunct(gaus);
+  TemplatedDistributionCreator<ProfileLikelihoodFunctor>
     samplingDistCreator(testStatFunct) ;
   samplingDistCreator.SetPdf(gaus);
   samplingDistCreator.SetParameters(parameters);

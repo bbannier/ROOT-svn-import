@@ -39,7 +39,6 @@ void rs401_debuggingSamplingDist()
 
   //// show use of a distribution creator
   RooArgSet* point;
-  ddc.GetSamplingDistribution(*point);
   SamplingDistribution* samp = ddc.GetSamplingDistribution(*point);
 
   // should give a number close to 0.1 b/c the distribution is uniform on [0,1]
