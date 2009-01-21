@@ -42,10 +42,10 @@ namespace RooStats {
      virtual ~DistributionCreator() {}
     
       // Main interface to get a ConfInterval, pure virtual
-      virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& paramsOfInterest) const = 0; 
+      virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& paramsOfInterest) = 0; 
 
       // Main interface to evaluate the test statistic on a dataset
-      virtual Double_t EvaluateTestStatistic(RooAbsData& data) const = 0;
+      virtual Double_t EvaluateTestStatistic(RooAbsData& data, RooArgSet& paramsOfInterest) = 0;
 
       // Get the TestStatistic
       virtual const RooAbsArg* GetTestStatistic()  const = 0;  
