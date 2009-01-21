@@ -46,7 +46,7 @@ namespace RooStats {
 
   public:
     TemplatedDistributionCreator(TestStatFunctor &ts) {
-      fTestStat = ts;
+      fTestStat = &ts;
       fWS = new RooWorkspace();
       fOwnsWorkspace = true;
       fDataName = "";
@@ -66,10 +66,10 @@ namespace RooStats {
        for(Int_t i=0; i<100; ++i){
 	 //cout << " on toy number " << i << endl;
 	 RooAbsData* toydata = GenerateToyData(paramsOfInterest);
-	 testStatVec.push_back( fTestStat.Evaluate(*toydata, paramsOfInterest) );
+	 testStatVec.push_back( fTestStat->Evaluate(*toydata, paramsOfInterest) );
 	 delete toydata;
        }
-       return new SamplingDistribution("UniformSamplingDist", "for debugging", testStatVec );
+       return new SamplingDistribution("TemplatedSamplingDist", "Samplint Distribution of Test Statistic", testStatVec );
      } 
      
      virtual RooAbsData* GenerateToyData(RooArgSet& paramsOfInterest) const{
@@ -86,12 +86,12 @@ namespace RooStats {
 
       // Main interface to evaluate the test statistic on a dataset
      virtual Double_t EvaluateTestStatistic(RooAbsData& data, RooArgSet& paramsOfInterest) {
-       return fTestStat.Evaluate(data, paramsOfInterest);
+       return fTestStat->Evaluate(data, paramsOfInterest);
      }
 
       // Get the TestStatistic
       virtual const RooAbsArg* GetTestStatistic()  const {
-	 return fTestStat.GetTestStatistic();}  
+	 return fTestStat->GetTestStatistic();}  
     
       // Get the Confidence level for the test
       virtual Double_t ConfidenceLevel()  const {return 1.-fSize;}  
@@ -145,7 +145,7 @@ namespace RooStats {
       const char* fDataName; // name of data set in workspace
       RooArgSet* fPOI; // RooArgSet specifying  parameters of interest for interval
       RooArgSet* fNuisParams;// RooArgSet specifying  nuisance parameters for interval
-      TestStatFunctor fTestStat;
+      TestStatFunctor* fTestStat;
 
    protected:
       ClassDef(TemplatedDistributionCreator,1)   // A simple implementation of the DistributionCreator interface
