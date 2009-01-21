@@ -40,6 +40,10 @@
 
 #pragma link C++ class RooStats::DistributionCreator+; // interface, not concrete
 #pragma link C++ class RooStats::DebuggingDistributionCreator+;
+#pragma link C++ class RooStats::DebuggingTestStatFunctor+;
+//#pragma link C++ class RooStats::TemplatedDistributionCreator+; // templated class
+#pragma link C++ class RooStats::TestDistributionCreator+; // templated class
+//#pragma link C++ class RooStats::TemplatedDistributionCreator<DebuggingTestStatFunctor>+; // templated class
 #pragma link C++ class RooStats::SetInterval+;
 #pragma link C++ class RooStats::SamplingDistribution+;
 #pragma link C++ class RooStats::NeymanConstruction+;

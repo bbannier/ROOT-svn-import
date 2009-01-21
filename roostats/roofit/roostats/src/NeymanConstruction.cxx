@@ -102,7 +102,7 @@ ConfInterval* NeymanConstruction::GetInterval() const {
     Double_t upperEdgeOfAcceptance = samplingDist->InverseCDF( 1. - ((1.-fLeftSideFraction) * fSize) );
 
      // get the value of the test statistic for this data set
-    Double_t thisTestStatistic = fDistCreator->EvaluateTestStatistic( *( data) );
+    Double_t thisTestStatistic = fDistCreator->EvaluateTestStatistic(*data, *point );
 
     //    std::cout << "dbg= " << lowerEdgeOfAcceptance << ", " 
     //      << upperEdgeOfAcceptance << std::endl;
@@ -113,7 +113,7 @@ ConfInterval* NeymanConstruction::GetInterval() const {
       fPointsToTest->add(*point, 1.); 
       ++npass;
     }
-    delete samplingDist;
+    //    delete samplingDist;
   }
   std::cout << npass << " points in interval" << std::endl;
 

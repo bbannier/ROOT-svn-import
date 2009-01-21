@@ -50,7 +50,8 @@ namespace RooStats {
      }
     
       // Main interface to get a ConfInterval, pure virtual
-     virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& paramsOfInterest) const {
+     virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& paramsOfInterest)  {
+       paramsOfInterest = paramsOfInterest; // avoid warning
        // normally this method would be complex, but here it is simple for debugging
        std::vector<Double_t> testStatVec;
        for(Int_t i=0; i<1000; ++i){
@@ -60,7 +61,11 @@ namespace RooStats {
      } 
 
       // Main interface to evaluate the test statistic on a dataset
-      virtual Double_t EvaluateTestStatistic(RooAbsData& data) const {return fRand->Uniform();}
+     virtual Double_t EvaluateTestStatistic(RooAbsData& data, RooArgSet& paramsOfInterest)  {
+       //       data = data; // avoid warning
+       //       paramsOfInterest = paramsOfInterest; // avoid warning
+       return fRand->Uniform();
+     }
 
       // Get the TestStatistic
       virtual const RooAbsArg* GetTestStatistic()  const {return fTestStatistic;}  
@@ -69,7 +74,11 @@ namespace RooStats {
       virtual Double_t ConfidenceLevel()  const {return 1.-fSize;}  
 
       // Common Initialization
-      virtual void Initialize(RooAbsArg& testStatistic, RooArgSet& paramsOfInterest, RooArgSet& nuisanceParameters) {}
+      virtual void Initialize(RooAbsArg& testStatistic, RooArgSet& paramsOfInterest, RooArgSet& nuisanceParameters) {
+	paramsOfInterest = paramsOfInterest; // avoid warning
+	testStatistic = testStatistic;
+	nuisanceParameters = nuisanceParameters;
+      }
 
       // Set the Pdf, add to the the workspace if not already there
       virtual void SetPdf(RooAbsPdf&) {}
