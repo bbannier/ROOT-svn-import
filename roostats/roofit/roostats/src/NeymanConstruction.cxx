@@ -113,7 +113,8 @@ ConfInterval* NeymanConstruction::GetInterval() const {
       fPointsToTest->add(*point, 1.); 
       ++npass;
     }
-    //    delete samplingDist;
+    delete samplingDist;
+    delete point;
   }
   std::cout << npass << " points in interval" << std::endl;
 

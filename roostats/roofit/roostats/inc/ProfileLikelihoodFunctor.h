@@ -47,6 +47,7 @@ namespace RooStats {
      ProfileLikelihoodFunctor(RooAbsPdf& pdf) {
        fPdf = &pdf;
        fProfile = 0;
+       fNll = 0;
      }
      virtual ~ProfileLikelihoodFunctor() {
        //       delete fRand;
@@ -56,10 +57,17 @@ namespace RooStats {
      // Main interface to evaluate the test statistic on a dataset
      virtual Double_t Evaluate(RooAbsData& data, RooArgSet& paramsOfInterest)  {       
        if(!fProfile){ 
-	 RooNLLVar* nll = new RooNLLVar("nll","",*fPdf,data);
-	 fProfile = new RooProfileLL("pll","",*nll, paramsOfInterest);
-	 fProfile->addOwnedComponents(*nll) ;  // to avoid memory leak       
+	 delete fProfile; 
+	 delete fNll;
        }
+       bool needToRebuild = true; // try to avoid rebuilding if possible
+       if(needToRebuild){
+	 RooNLLVar* nll = new RooNLLVar("nll","",*fPdf,data);
+	 fNll = nll;
+	 fProfile = new RooProfileLL("pll","",*nll, paramsOfInterest);
+	 //	 fProfile->addOwnedComponents(*nll) ;  // to avoid memory leak       
+       }
+       if(!fProfile){ cout << "problem making profile" << endl;}
 
        RooArgSet* paramsToChange = fProfile->getParameters(data);
 
@@ -72,7 +80,7 @@ namespace RooStats {
 	 if(!mytarget) continue;
 	 mytarget->setVal( myarg->getVal() );
        }
-
+       delete paramsToChange;
 
        /*       TIter      itr = fProfile->getParameters(data)->createIterator();
        while ((myarg = (RooRealVar *)itr.Next())) { 
@@ -80,6 +88,7 @@ namespace RooStats {
        }
        cout << " = " << fProfile->evaluate()  << endl;
        */
+       cout << " = " << fProfile->evaluate()  << endl;
 
        return fProfile->evaluate();
      }
@@ -91,6 +100,7 @@ namespace RooStats {
    private:
       RooProfileLL* fProfile;
       RooAbsPdf* fPdf;
+      RooNLLVar* fNll;
 
    protected:
       ClassDef(ProfileLikelihoodFunctor,1)   
