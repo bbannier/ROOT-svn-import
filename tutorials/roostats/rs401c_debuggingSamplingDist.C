@@ -38,8 +38,8 @@ void rs401c_debuggingSamplingDist()
 {
   
   // make a simple model
-  RooRealVar x("x","", 1,-5,5);
-  RooRealVar mu("mu","", 0,-5,5);
+  RooRealVar x("x","", 1,-10,10);
+  RooRealVar mu("mu","", 0,-7,7);
   RooRealVar sigma("sigma","", 1,0,5);
   RooGaussian gaus("gaus", "", x, mu, sigma);
   RooArgSet parameters(mu, sigma);
@@ -82,7 +82,7 @@ void rs401c_debuggingSamplingDist()
   //////// show use of NeymanConstruction
   // Create points to test
   mu.setBins(5);
-  sigma.setBins(3);
+  sigma.setBins(5);
   RooDataHist parameterScan("parameterScan", "", parameters);
 
  
