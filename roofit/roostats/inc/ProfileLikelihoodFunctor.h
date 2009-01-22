@@ -56,10 +56,12 @@ namespace RooStats {
     
      // Main interface to evaluate the test statistic on a dataset
      virtual Double_t Evaluate(RooAbsData& data, RooArgSet& paramsOfInterest)  {       
+       if(!&data){ cout << "problem with data" << endl;}
        if(!fProfile){ 
 	 delete fProfile; 
 	 delete fNll;
        }
+       RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
        bool needToRebuild = true; // try to avoid rebuilding if possible
        if(needToRebuild){
 	 RooNLLVar* nll = new RooNLLVar("nll","",*fPdf,data);
@@ -88,9 +90,10 @@ namespace RooStats {
        }
        cout << " = " << fProfile->evaluate()  << endl;
        */
-       cout << " = " << fProfile->evaluate()  << endl;
 
-       return fProfile->evaluate();
+       Double_t value = fProfile->evaluate();
+       RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+       return value;
      }
 
       // Get the TestStatistic

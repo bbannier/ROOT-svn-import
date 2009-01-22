@@ -63,13 +63,14 @@ namespace RooStats {
      virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& paramsOfInterest) {
        // normally this method would be complex, but here it is simple for debugging
        std::vector<Double_t> testStatVec;
+       //       cout << " about to generate sampling dist " << endl;
        for(Int_t i=0; i<100; ++i){
 	 //cout << " on toy number " << i << endl;
 	 RooAbsData* toydata = GenerateToyData(paramsOfInterest);
 	 testStatVec.push_back( fTestStat->Evaluate(*toydata, paramsOfInterest) );
-	 //	 if(i==1 || i==2) toydata->dump();//debugging
 	 delete toydata;
        }
+       //       cout << " generated sampling dist " << endl;
        return new SamplingDistribution("TemplatedSamplingDist", "Samplint Distribution of Test Statistic", testStatVec );
      } 
      
@@ -81,8 +82,10 @@ namespace RooStats {
        if(fNuisParams) observables->remove(*fNuisParams, kFALSE, kTRUE);
        // Need a nice way to determine how many events in a toy experiment
        Int_t nEvents = 100;
-       //delete observables;
-       return pdf->generate(*observables, nEvents);
+       RooAbsData* data = pdf->generate(*observables, nEvents);
+       delete observables;
+       //       delete pdf;
+       return data;
      }
 
       // Main interface to evaluate the test statistic on a dataset
