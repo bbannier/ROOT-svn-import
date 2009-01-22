@@ -23,6 +23,7 @@
 #include "RooGaussian.h"
 #include "RooPlot.h"
 
+#include "TCanvas.h"
 #include "TTree.h"
 #include "TMarker.h"
 
@@ -71,10 +72,17 @@ void rs401c_debuggingSamplingDist()
   std::cout << "test stat for this data is " 
 	    << samplingDistCreator.EvaluateTestStatistic(*data, *point) << std::endl;
 
+  TCanvas* dataCanvas = new TCanvas("dataCanvas");
+  RooPlot* frame = x.frame();
+  data->plotOn(frame);
+  frame->Draw();
+  dataCanvas->Update();
+
+
   //////// show use of NeymanConstruction
   // Create points to test
-  mu.setBins(10);
-  sigma.setBins(10);
+  mu.setBins(5);
+  sigma.setBins(3);
   RooDataHist parameterScan("parameterScan", "", parameters);
 
  
@@ -84,7 +92,11 @@ void rs401c_debuggingSamplingDist()
   nc.SetDistributionCreator(samplingDistCreator);
   nc.SetSize(.2); // set size of test
   nc.SetParameterPointsToTest( parameterScan );
+  nc.SetData(*data);
 
+
+  TCanvas* intervalCanvas =  new TCanvas("intervalCanvas");
+  
   // use the Neyman Construction
   ConfInterval* interval = nc.GetInterval();
 

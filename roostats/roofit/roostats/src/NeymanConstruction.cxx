@@ -86,6 +86,10 @@ ConfInterval* NeymanConstruction::GetInterval() const {
 
   // local variables
   RooAbsData* data = fWS->data(fDataName);
+  if(!data) {
+    cout << "Data is not set, NeymanConstruction not initialized" << endl;
+    return 0;
+  }
   Int_t npass = 0;
   RooArgSet* point; 
 
@@ -96,7 +100,6 @@ ConfInterval* NeymanConstruction::GetInterval() const {
 
     // the next line is where most of the time will be spent generating the sampling dist of the test statistic.
     SamplingDistribution* samplingDist = fDistCreator->GetSamplingDistribution(*point); 
-
     // find the lower & upper thresholds on the test statistic that define the acceptance region in the data
     Double_t lowerEdgeOfAcceptance = samplingDist->InverseCDF( fLeftSideFraction * fSize );
     Double_t upperEdgeOfAcceptance = samplingDist->InverseCDF( 1. - ((1.-fLeftSideFraction) * fSize) );
@@ -104,8 +107,14 @@ ConfInterval* NeymanConstruction::GetInterval() const {
      // get the value of the test statistic for this data set
     Double_t thisTestStatistic = fDistCreator->EvaluateTestStatistic(*data, *point );
 
-    //    std::cout << "dbg= " << lowerEdgeOfAcceptance << ", " 
-    //      << upperEdgeOfAcceptance << std::endl;
+    TIter      itr = point->createIterator();
+    RooRealVar* myarg;
+    while ((myarg = (RooRealVar *)itr.Next())) { 
+      cout << myarg->GetName() << "=" << myarg->getVal() << " ";
+    }
+    std::cout << "\tdbg= " << lowerEdgeOfAcceptance << ", " 
+    	      << upperEdgeOfAcceptance << ", " << thisTestStatistic <<  " " <<
+      (thisTestStatistic > lowerEdgeOfAcceptance && thisTestStatistic < upperEdgeOfAcceptance) << std::endl;
 
     // Check if this data is in the acceptance region
     if(thisTestStatistic > lowerEdgeOfAcceptance && thisTestStatistic < upperEdgeOfAcceptance) {
@@ -121,7 +130,8 @@ ConfInterval* NeymanConstruction::GetInterval() const {
   // create an interval based fPointsToTest
   SetInterval* interval 
     = new SetInterval("ClassicalConfidenceInterval", "ClassicalConfidenceInterval", *fPointsToTest);
-
-   return interval;
+  
+  delete data;
+  return interval;
 }
 
