@@ -49,6 +49,7 @@
 #pragma link C++ class RooStats::SetInterval+;
 #pragma link C++ class RooStats::SamplingDistribution+;
 #pragma link C++ class RooStats::NeymanConstruction+;
+#pragma link C++ class RooStats::ConfidenceBelt+;
 
 
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialExpZ(Double_t,Double_t,Double_t);
