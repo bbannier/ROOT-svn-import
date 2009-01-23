@@ -38,9 +38,9 @@ void rs401c_debuggingSamplingDist()
 {
   
   // make a simple model
-  RooRealVar x("x","", 1,-10,10);
-  RooRealVar mu("mu","", 0,-7,7);
-  RooRealVar sigma("sigma","", 1,0,5);
+  RooRealVar x("x","", 1,-5,5);
+  RooRealVar mu("mu","", 0,-.5, .5);
+  RooRealVar sigma("sigma","", 1, 0.9 ,1.2);
   RooGaussian gaus("gaus", "", x, mu, sigma);
   RooArgSet parameters(mu, sigma);
 
@@ -57,7 +57,7 @@ void rs401c_debuggingSamplingDist()
   samplingDistCreator.SetParameters(parameters);
 
   //// show use of a distribution creator
-  RooArgSet* point = new RooArgSet(x, mu, sigma);
+  RooArgSet* point = new RooArgSet(mu, sigma);
   SamplingDistribution* samp = samplingDistCreator.GetSamplingDistribution(*point);
 
   // should give a number close to 0.1 b/c the distribution is uniform on [0,1]
@@ -69,6 +69,8 @@ void rs401c_debuggingSamplingDist()
   // it knows the test statistic, so you can ask it 
   // to evaluate the test statistic on data at a point
   RooDataSet* data = gaus.generate(RooArgSet(x), 100);
+  
+  std::cout << "This data has mean, stdev = " << data->moment(x,1,0.) << ", " << data->moment(x,2,data->moment(x,1,0.) ) << endl; 
   std::cout << "test stat for this data is " 
 	    << samplingDistCreator.EvaluateTestStatistic(*data, *point) << std::endl;
 
@@ -84,7 +86,7 @@ void rs401c_debuggingSamplingDist()
   mu.setBins(5);
   sigma.setBins(5);
   RooDataHist parameterScan("parameterScan", "", parameters);
-
+  //  parameterScan.Scan("mu:sigma");
  
   // Create a Neyman Construction
   RooStats::NeymanConstruction nc;

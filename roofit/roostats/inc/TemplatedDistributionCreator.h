@@ -28,6 +28,8 @@ END_HTML
 #endif
 
 #include "RooStats/DistributionCreator.h"
+#include "RooStats/RooStatsUtils.h"
+
 #include "RooAbsPdf.h"
 #include "RooArgSet.h"
 #include "RooRealVar.h"
@@ -78,6 +80,18 @@ namespace RooStats {
        RooAbsPdf* pdf = fWS->pdf(fPdfName);
        // need a nicer way to specify observables in the dataset
        RooArgSet* observables = pdf->getVariables();
+
+       // Set the parameters to desired values for generating toys
+       RooStats::SetParameters(&paramsOfInterest, observables);
+       /*
+       TIter      itr = observables->createIterator();
+       RooRealVar* myarg;
+       while ((myarg = (RooRealVar *)itr.Next())) { 
+	 cout << myarg->GetName() << " = " << myarg->getVal() << "  " ;
+       }
+       cout << endl;
+       */
+
        if(fPOI) observables->remove(*fPOI, kFALSE, kTRUE);
        if(fNuisParams) observables->remove(*fNuisParams, kFALSE, kTRUE);
        // Need a nice way to determine how many events in a toy experiment
