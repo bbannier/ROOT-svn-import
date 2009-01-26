@@ -1349,10 +1349,6 @@ void TFitEditor::SetFitObject(TVirtualPad *pad, TObject *obj, Int_t event)
       //fFuncPars = FuncParams_t( fitFunc->GetNpar() );
       GetParameters(fFuncPars, fitFunc);
 
-      // get function range
-      fitFunc->GetRange(fFuncXmin, fFuncYmin, fFuncZmin, fFuncXmax,  fFuncYmax,  fFuncZmax);
-
-
       TString tmpStr = fitFunc->GetExpFormula();
       TGLBEntry *en = 0;
       if ( tmpStr.Length() == 0 )

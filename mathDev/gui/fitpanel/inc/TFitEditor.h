@@ -129,13 +129,6 @@ protected:
    };
    std::vector<FuncParamData_t >  fFuncPars;         // function parameters (value + limits)
 
-   Double_t             fFuncXmin;       // fit function range (min and max) values    
-   Double_t             fFuncXmax;      
-   Double_t             fFuncYmin;      
-   Double_t             fFuncYmax;      
-   Double_t             fFuncZmin;      
-   Double_t             fFuncZmax;      
-
    TGRadioButton       *fLibMinuit;        // set default minimization library (Minuit)
    TGRadioButton       *fLibMinuit2;       // set Minuit2 as minimization library
    TGRadioButton       *fLibFumili;        // set Fumili as minimization library
