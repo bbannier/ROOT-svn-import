@@ -355,6 +355,7 @@ TProof::TProof() : fUrl(""), fServType(TProofMgr::kXProofd)
    fNotIdle = 0;
    fSync = kTRUE;
    fRunStatus = kRunning;
+   fIsWaiting = kFALSE;
    fRedirLog = kFALSE;
    fLogFileW = 0;
    fLogFileR = 0;
@@ -573,9 +574,10 @@ Int_t TProof::Init(const char *, const char *conffile,
 
    // Status of cluster
    fNotIdle = 0;
-
    // Query type
    fSync = kTRUE;
+   // Not enqueued
+   fIsWaiting = kFALSE;
 
    // Counters
    fBytesRead = 0;
@@ -847,7 +849,16 @@ Int_t TProof::AddWorkers(TList *workerList)
          sport = fUrl.GetPort();
 
       // create slave server
+#if 0
       TString fullord = TString(gProofServ->GetOrdinal()) + "." + ((Long_t) ord);
+#else
+      TString fullord;
+      if (worker->GetOrdinal().Length() > 0) {
+         fullord.Form("%s.%s", gProofServ->GetOrdinal(), worker->GetOrdinal().Data());
+      } else {
+         fullord.Form("%s.%d", gProofServ->GetOrdinal(), ord);
+      }
+#endif
 
       // create slave server
       TUrl u(Form("%s:%d",worker->GetNodeName().Data(), sport));
@@ -957,6 +968,7 @@ Int_t TProof::AddWorkers(TList *workerList)
    inc.ReplaceAll("\"", " ");
    AddIncludePath(inc, addedWorkers);
 
+   // Cleanup
    delete addedWorkers;
 
    // Inform the client that the number of workers is changed
@@ -2691,8 +2703,10 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
 
             // For Proof-Lite this variable is the number of workers and is set
             // by the player
-            if (!IsLite())
+            if (!IsLite()) {
                fNotIdle = 1;
+               fIsWaiting = kFALSE;
+            }
 
             // The signal is used on masters by XrdProofdProtocol to catch
             // the start of processing; on clients it allows to update the
@@ -2745,6 +2759,9 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                }
             } else {
                fNotIdle = 0;
+               // Check if the query has been enqueued
+               if ((mess->BufferSize() > mess->Length()))
+                  (*mess) >> fIsWaiting;
             }
          }
          break;
@@ -2763,6 +2780,11 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                Activate();
                fSync = kFALSE;
             }
+            // Check if the query has been enqueued
+            fIsWaiting = kTRUE;
+            // For Proof-Lite this variable is the number of workers and is set by the player
+            if (!IsLite())
+               fNotIdle = 1;
 
             rc = 1;
          }
@@ -3454,13 +3476,17 @@ Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
    // Resolve query mode
    fSync = (GetQueryMode(option) == kSync);
 
-   if (fSync && !IsIdle()) {
-      Info("Process","not idle, cannot submit synchronous query");
-      return -1;
+   TString opt(option);
+   if (fSync && (!IsIdle() || IsWaiting())) {
+      // Already queued or processing queries: switch to asynchronous mode
+      Info("Process", "session is in waiting or processing status: switch to asynchronous mode");
+      fSync = kFALSE;
+      opt.ReplaceAll("SYNC","");
+      opt += "ASYN";
    }
 
    // Cleanup old temporary datasets
-   if (IsIdle() && fRunningDSets && fRunningDSets->GetSize() > 0) {
+   if ((IsIdle() && !IsWaiting()) && fRunningDSets && fRunningDSets->GetSize() > 0) {
       fRunningDSets->SetOwner(kTRUE);
       fRunningDSets->Delete();
    }
@@ -3473,7 +3499,7 @@ Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
          sh = gSystem->RemoveSignalHandler(gApplication->GetSignalHandler());
    }
 
-   Long64_t rv = fPlayer->Process(dset, selector, option, nentries, first);
+   Long64_t rv = fPlayer->Process(dset, selector, opt.Data(), nentries, first);
 
    if (fSync) {
       // reactivate the default application interrupt handler
@@ -5771,7 +5797,7 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient, Bool_t uniqueWorkers,
    // If existing, the corresponding header basename(macro).h or .hh, is also
    // uploaded. The default is to load the macro also on the client.
    // On masters, if uniqueWorkers is kTRUE, the macro is loaded on unique workers
-   // only, and collection si not done; if uniqueWorkers is kFALSE, collection
+   // only, and collection is not done; if uniqueWorkers is kFALSE, collection
    // from the previous request is done, and broadcasting + collection from the
    // other workers is done.
    // The wrks arg can be used on the master to limit the set of workers.

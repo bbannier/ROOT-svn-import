@@ -734,8 +734,8 @@ TProofServ::EQueryAction TXProofServ::GetWorkers(TList *workers,
    // are separated by '&'
    if (os) {
       TString fl(os->GetName());
-      if (fl.Length() == 0) {
-         SendAsynMessage("GetWorkers: the job was enqueued");
+      if (fl.BeginsWith(XPD_GW_QueryEnqueued)) {
+         SendAsynMessage("+++ Query cannot be processed now: enqueued");
          return kQueryEnqueued;
       }
 
