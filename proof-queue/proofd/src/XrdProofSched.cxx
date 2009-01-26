@@ -79,6 +79,69 @@
 //   return (XrdProofSched *)0;
 // }}
 
+//--------------------------------------------------------------------------
+//
+// XrdProofSchedCron
+//
+// Scheduler thread
+//
+//--------------------------------------------------------------------------
+void *XrdProofSchedCron(void *p)
+{
+   // This is an endless loop to check the system periodically or when
+   // triggered via a message in a dedicated pipe
+   XPDLOC(SCHED, "SchedCron")
+
+   XrdProofSched *sched = (XrdProofSched *)p;
+   if (!(sched)) {
+      TRACE(XERR, "undefined scheduler: cannot start");
+      return (void *)0;
+   }
+
+   // Time of last session check
+   int lastcheck = time(0), ckfreq = sched->CheckFrequency(), deltat = 0;
+   while(1) {
+      // We wait for processes to communicate a session status change
+      if ((deltat = ckfreq - (time(0) - lastcheck)) <= 0)
+         deltat = ckfreq;
+      int pollRet = sched->Pipe()->Poll(deltat);
+
+      if (pollRet > 0) {
+         // Read message
+         XpdMsg msg;
+         int rc = 0;
+         if ((rc = sched->Pipe()->Recv(msg)) != 0) {
+            XPDERR("problems receiving message; errno: "<<-rc);
+            continue;
+         }
+         // Parse type
+         XrdOucString buf;
+         if (msg.Type() == XrdProofSched::kReschedule) {
+
+            TRACE(ALL, "received kReschedule");
+
+            // Reschedule
+            sched->Reschedule();
+
+         } else {
+
+            TRACE(XERR, "unknown type: "<<msg.Type());
+            continue;
+         }
+      } else {
+         // Notify
+         TRACE(ALL, "running regular checks");
+         // Run regular rescheduling checks
+//         sched->Reschedule();
+         // Remember when ...
+         lastcheck = time(0);
+      }
+   }
+
+   // Should never come here
+   return (void *)0;
+}
+
 //______________________________________________________________________________
 static bool XpdWrkComp(XrdProofWorker *&lhs, XrdProofWorker *&rhs)
 {
@@ -103,7 +166,8 @@ int DoSchedDirective(XrdProofdDirective *d, char *val, XrdOucStream *cfg, bool r
 //______________________________________________________________________________
 XrdProofSched::XrdProofSched(const char *name,
                              XrdProofdManager *mgr, XrdProofGroupMgr *grpmgr,
-                             const char *cfn, XrdSysError *e)
+                             const char *cfn,  XrdSysError *e)
+              : XrdProofdConfig(cfn, e)
 {
    // Constructor
 
@@ -119,17 +183,39 @@ XrdProofSched::XrdProofSched(const char *name,
    if (name)
       memcpy(fName, name, kXPSMXNMLEN-1);
 
-   // Config directives
-   fConfigDirectives.Add("schedparam",
-      new XrdProofdDirective("schedparam", this, &DoSchedDirective));
-   fConfigDirectives.Add("resource",
-      new XrdProofdDirective("resource", this, &DoSchedDirective));
-
-   // Read config file, if required
-   if (cfn && strlen(cfn) > 0)
-      if (Config(cfn) != 0)
-         fValid = 0;
+   // Configuration directives
+   RegisterDirectives();
 }
+
+//__________________________________________________________________________
+void XrdProofSched::RegisterDirectives()
+{
+   // Register directives for configuration
+
+   Register("schedparam", new XrdProofdDirective("schedparam", this, &DoDirectiveClass));
+   Register("resource", new XrdProofdDirective("resource", this, &DoDirectiveClass));
+}
+
+//______________________________________________________________________________
+int XrdProofSched::DoDirective(XrdProofdDirective *d,
+                               char *val, XrdOucStream *cfg, bool rcf)
+{
+   // Update the priorities of the active sessions.
+   XPDLOC(SCHED, "Sched::DoDirective")
+
+   if (!d)
+      // undefined inputs
+      return -1;
+
+   if (d->fName == "schedparam") {
+      return DoDirectiveSchedParam(val, cfg, rcf);
+   } else if (d->fName == "resource") {
+      return DoDirectiveResource(val, cfg, rcf);
+   }
+   TRACE(XERR,"unknown directive: "<<d->fName);
+   return -1;
+}
+
 
 //______________________________________________________________________________
 void XrdProofSched::ResetParameters()
@@ -137,61 +223,50 @@ void XrdProofSched::ResetParameters()
    // Reset values for the configurable parameters
 
    fMaxSessions = -1;
+   fMaxRunning = -1;
    fWorkerMax = -1;
    fWorkerSel = kSSORoundRobin;
    fOptWrksPerUnit = 1;
    fMinForQuery = 0;
    fNodesFraction = 0.5;
+   fCheckFrequency = 30;
 }
 
 //______________________________________________________________________________
-int XrdProofSched::Config(const char *cfn)
+int XrdProofSched::Config(bool rcf)
 {
    // Configure this instance using the content of file 'cfn'.
    // Return 0 on success, -1 in case of failure (file does not exists
    // or containing incoherent information).
    XPDLOC(SCHED, "Sched::Config")
 
-   int rc = 0;
+   // Run first the configurator
+   if (XrdProofdConfig::Config(rcf) != 0) {
+      XPDERR("problems parsing file ");
+      fValid = 0;
+      return -1;
+   }
 
-   // Nothing to do if no file
-   if (!cfn || strlen(cfn) <= 0)
-      return rc;
+   int rc = 0;
 
    XrdOucString msg;
 
-   XrdOucStream cfg(fEDest, getenv("XRDINSTANCE"));
-
-   // Open and attach the config file
-   int cfgFD = 0;
-   if ((cfgFD = open(cfn, O_RDONLY, 0)) < 0) {
-      msg.form("error open config file: %s", cfn);
-      TRACE(XERR, msg);
-      return -1;
-   }
-   cfg.Attach(cfgFD);
-
-   // Process items
-   char *var = 0;
-   char *val = 0;
-   while ((var = cfg.GetMyFirstWord())) {
-      if (!(strncmp("xpd.", var, 4)) && var[4]) {
-         // xpd directive: process it
-         var += 4;
-         // Get the value
-         val = cfg.GetToken();
-         // Get the directive
-         XrdProofdDirective *d = fConfigDirectives.Find(var);
-         if (d) {
-            // Process it
-            d->DoDirective(val, &cfg, 0);
-         }
-      }
-   }
-
    // Notify
-   msg.form("maxsess: %d, maxwrks: %d, selopt: %d", fMaxSessions, fWorkerMax, fWorkerSel);
+   msg.form("maxsess: %d, maxrun: %d, maxwrks: %d, selopt: %d, fifo:%d",
+            fMaxSessions, fMaxRunning, fWorkerMax, fWorkerSel, fUseFIFO);
    TRACE(DBG, msg);
+
+   if (!rcf) {
+      // Start cron thread
+      pthread_t tid;
+      if (XrdSysThread::Run(&tid, XrdProofSchedCron,
+                           (void *)this, 0, "Scheduler cron thread") != 0) {
+         XPDERR("could not start cron thread");
+         fValid = 0;
+         return 0;
+      }
+      TRACE(ALL, "cron thread started");
+   }
 
    // Done
    return rc;
@@ -200,22 +275,38 @@ int XrdProofSched::Config(const char *cfn)
 //______________________________________________________________________________
 int XrdProofSched::Enqueue(XrdProofdProofServ *xps, XrdProofQuery *query)
 {
-   //
-   if (xps->GetQueries()->size() == 0)
-      fQueue.push_back(xps);
-   xps->GetQueries()->push_back(query);
+   // Queue a query in the session; if this is the first querym enqueue also
+   // the session
+
+   if (xps->Enqueue(query) == 1) {
+      std::list<XrdProofdProofServ *>::iterator ii;
+      for (ii = fQueue.begin(); ii != fQueue.end(); ii++) {
+         if ((*ii)->Status() == kXPD_running) break;
+      }
+      if (ii != fQueue.end()) {
+         fQueue.insert(ii, xps);
+      } else {
+         fQueue.push_back(xps);
+      }
+   }
+
    return 0;
 }
 
 //______________________________________________________________________________
 XrdProofdProofServ *XrdProofSched::FirstSession()
 {
-   // the dataset information can be used to assign workers.
+   // Get first valid session.
+   // The dataset information can be used to assign workers.
 
    if (fQueue.empty())
       return 0;
    XrdProofdProofServ *xps = fQueue.front();
-   // the session will be removed after workers are assigned
+   while (xps && !(xps->IsValid())) {
+      fQueue.pop_front();
+      xps = fQueue.front();
+   }
+   // The session will be removed after workers are assigned
    return xps;
 }
 
@@ -273,9 +364,36 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
                               const char *querytag)
 {
    // Get a list of workers that can be used by session 'xps'.
+   // The return code is:
+   //  -1     Some failure occured; cannot continue
+   //   0     A new list has been assigned to the session 'xps' and
+   //         returned in 'wrks'
+   //   1     The list currently assigned to the session is the one
+   //         to be used
+   //   2     No worker could be assigned now; session should be queued
+
    XPDLOC(SCHED, "Sched::GetWorkers")
 
    int rc = 0;
+
+   TRACE(REQ, "enter: query tag: "<< ((querytag) ? querytag : ""));
+
+   // Check if the current assigned list of workers is valid
+   if (querytag && xps && xps->Workers()->Num() > 0) {
+      if (TRACING(REQ)) xps->DumpQueries();
+      const char *cqtag = (xps->CurrentQuery()) ? xps->CurrentQuery()->GetTag() : "undef";
+      TRACE(REQ, "current query tag: "<< cqtag );
+      if (!strcmp(querytag, cqtag)) {
+         // Remove the query to be processed from the queue
+         XrdProofQuery *query = xps->GetQueries()->front();
+         xps->GetQueries()->pop_front();
+         delete query;
+         TRACE(REQ, "current assignment for session "<< xps->SrvPID() << " is valid");
+         // Current assignement is valid
+         return 1;
+      }
+   }
+
 
    // The caller must provide a list where to store the result
    if (!wrks)
@@ -285,9 +403,12 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
    // if the session has already assigned workers or there are
    // other queries waiting - just enqueue
    if(fUseFIFO && (xps->Workers()->Num() > 0 || !fQueue.empty())) {
-      XrdProofQuery *query = new XrdProofQuery(querytag);
-      Enqueue(xps, query);
-      return 0;
+      if (!xps->GetQuery(querytag))
+         Enqueue(xps, new XrdProofQuery(querytag));
+      if (TRACING(DBG)) xps->DumpQueries();
+      // Signal enqueing
+      TRACE(REQ, "session has already assigned workers: enqueue");
+      return 2;
    }
 
    // The current, full list
@@ -327,10 +448,14 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
          // if no workers were assigned
          // enqueue or send a list with only the master (processing refused)
          if (fUseFIFO) {
-            // enqueue the querry/session
+            // Enqueue the query/session
             // the returned list of workers was not filled
-            XrdProofQuery *query = new XrdProofQuery(querytag);
-            Enqueue(xps, query);
+            if (!xps->GetQuery(querytag))
+               Enqueue(xps, new XrdProofQuery(querytag));
+            if (TRACING(DBG)) xps->DumpQueries();
+            // Signal enqueing
+            TRACE(REQ, "no workers currently available: session enqueued");
+            return 2;
          } else {
             // The master first (stats are updated in XrdProofdProtocol::GetWorkers)
             wrks->push_back(mst);
@@ -344,21 +469,21 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
    // Check if the check on the max number of sessions is enabled
    // We need at least 1 master and a worker
    std::list<XrdProofWorker *> *acwseff = 0;
-   if (fMaxSessions > 0) {
+   if (fMaxRunning > 0) {
       bool ok = 0;
       acwseff = new std::list<XrdProofWorker *>;
       std::list<XrdProofWorker *>::iterator xWrk = acws->begin();
-      if ((*xWrk)->Active() < fMaxSessions) {
+      if ((*xWrk)->Active() < fMaxRunning) {
          acwseff->push_back(*xWrk);
          xWrk++;
          for (; xWrk != acws->end(); xWrk++) {
-            if ((*xWrk)->Active() < fMaxSessions) {
+            if ((*xWrk)->Active() < fMaxRunning) {
                acwseff->push_back(*xWrk);
                ok = 1;
             }
          }
-      } else {
-         TRACE(REQ, "max number of sessions reached - ("<< fMaxSessions <<")");
+      } else if (!fUseFIFO) {
+         TRACE(REQ, "max number of sessions reached - ("<< fMaxRunning <<")");
       }
       // Check the result
       if (!ok) { delete acwseff; acwseff = 0; }
@@ -367,9 +492,20 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
 
    // Make sure that something has been found
    if (!acws || acws->size() <= 1) {
-      TRACE(XERR, "no worker available: do nothing");
-      if (acwseff) { delete acwseff; acwseff = 0; }
-      return -1;
+      if (fUseFIFO) {
+         // Enqueue the query/session
+         // the returned list of workers was not filled
+         if (!xps->GetQuery(querytag))
+            Enqueue(xps, new XrdProofQuery(querytag));
+         if (TRACING(REQ)) xps->DumpQueries();
+         // Notify enqueing
+         TRACE(REQ, "no workers currently available: session enqueued");
+         return 2;
+      } else {
+         TRACE(XERR, "no worker available: do nothing");
+         if (acwseff) { delete acwseff; acwseff = 0; }
+         return -1;
+      }
    }
 
    // The master first (stats are updated in XrdProofdProtocol::GetWorkers)
@@ -504,31 +640,36 @@ int XrdProofSched::GetWorkers(XrdProofdProofServ *xps,
 //______________________________________________________________________________
 int XrdProofSched::Reschedule()
 {
-   // consider starting some query from the queue.
+   // Consider starting some query from the queue.
    // to be called after some resources are free (e.g. by a finished query)
    // This method is doing the full transaction of finding the session to
    // resume, assigning it workers and sending a resume message.
    // In this way there is not possibility of interference with other GetWorkers
    // return 0 in case of success and -1 in case of an error
+   XPDLOC(SCHED, "Sched::Reschedule")
+
+   TRACE(REQ, "queue size: "<<fQueue.size());
 
    if (!fQueue.empty()) {
-      // any advanced scheduling algorithms can be done here
+      // Any advanced scheduling algorithms can be done here
 
       XrdProofdProofServ *xps = FirstSession();
       XrdOucString wrks;
-      // call GetWorkers in the manager to mark the assignment.
-      if (fMgr->GetWorkers(wrks, xps, xps->FirstQueryTag()) !=0 ) {
+      // Call GetWorkers in the manager to mark the assignment.
+      const char *qtag = (xps && xps->CurrentQuery()) ?
+                         xps->CurrentQuery()->GetTag() : 0;
+      if (fMgr->GetWorkers(wrks, xps, qtag) < 0 ) {
          // Something wrong
          return -1;
       } else {
          // Send buffer
          // if workers were assigned remove the session from the queue
          if (wrks.length() > 0) {
-            // send the resume message
-            // the workers will be send in response to a getworkers message
+            // Send the resume message: the workers will be send in response to a
+            // GetWorkers message
             xps->Resume();
-            // acually remove the session from the queue
-            fQueue.pop_front();
+            // Acually remove the session from the queue
+            fQueue.remove(xps);
             // Put the session at the end of the queue
             // > 1 because the query is kept in the queue until 2nd GetWorkers
             if (xps->GetQueries()->size() > 1)
@@ -612,6 +753,9 @@ int XrdProofSched::DoDirectiveSchedParam(char *val, XrdOucStream *cfg, bool)
       } else if (s.beginswith("mxsess:")) {
          s.replace("mxsess:","");
          fMaxSessions = strtol(s.c_str(), (char **)0, 10);
+      } else if (s.beginswith("mxrun:")) {
+         s.replace("mxrun:","");
+         fMaxRunning = strtol(s.c_str(), (char **)0, 10);
       } else if (s.beginswith("selopt:")) {
          if (s.endswith("random"))
             fWorkerSel = kSSORandom;
@@ -642,7 +786,12 @@ int XrdProofSched::DoDirectiveSchedParam(char *val, XrdOucStream *cfg, bool)
 
    // If the max number of sessions is limited then there is no lower bound
    // the number of workers per query
-   if (fMaxSessions > 0) fMinForQuery = 0;
+   if (fMaxSessions > 0) {
+      fMinForQuery = 0;
+      // And there is an upper limit on the number of running sessions
+      if (fMaxRunning < 0 || fMaxRunning > fMaxSessions)
+         fMaxRunning = fMaxSessions;
+   }
 
    return 0;
 }

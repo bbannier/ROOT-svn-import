@@ -113,6 +113,7 @@ class TProofDataSetManager;
 // 18 -> 19: TProofProgressStatus used in kPROOF_PROGRESS, kPROOF_STOPPROCESS
 //           and kPROOF_GETNEXTPACKET messages in Master - worker communication
 // 19 -> 20: Fix the asynchronous mode (required changes in some messages)
+// 20 -> 21: Add support for session queuing
 
 // PROOF magic constants
 const Int_t       kPROOF_Protocol        = 20;            // protocol version number
@@ -378,6 +379,7 @@ private:
    Int_t           fNotIdle;         //Number of non-idle sub-nodes
    Bool_t          fSync;            //true if type of currently processed query is sync
    ERunStatus      fRunStatus;       //run status
+   Bool_t          fIsWaiting;       //true if queries have been enqueued
 
    Bool_t          fRedirLog;        //redirect received log info
    TString         fLogFileName;     //name of the temp file for redirected logs
@@ -711,6 +713,7 @@ public:
    Bool_t      IsValid() const { return fValid; }
    Bool_t      IsParallel() const { return GetParallel() > 0 ? kTRUE : kFALSE; }
    Bool_t      IsIdle() const { return (fNotIdle <= 0) ? kTRUE : kFALSE; }
+   Bool_t      IsWaiting() const { return fIsWaiting; }
 
    ERunStatus  GetRunStatus() const { return fRunStatus; }
    TList      *GetLoadedMacros() const { return fLoadedMacros; }
