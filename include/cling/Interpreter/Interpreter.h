@@ -193,7 +193,7 @@ namespace cling
       clang::TargetInfo*             m_target;
       clang::FileManager*            m_fileMgr;
       clang::DiagnosticClient*       m_diagClient;
-      std::vector<std::pair<clang::Decl*, clang::ASTContext*> >      m_decls;
+      std::vector<std::pair<clang::Decl*, const clang::ASTContext*> >      m_decls;
       llvm::Module*                  m_module;
 
    private:
@@ -209,7 +209,7 @@ namespace cling
       void insertDeclarations( clang::TranslationUnit* tu, clang::Sema* sema );
       void dumpTU( clang::TranslationUnit* tu );
       clang::QualType typeCopy( clang::QualType source,
-                                clang::ASTContext& sourceContext,
+                                const clang::ASTContext& sourceContext,
                                 clang::ASTContext& targetContext );
       llvm::Module* copyModule( const llvm::Module* src );
    };

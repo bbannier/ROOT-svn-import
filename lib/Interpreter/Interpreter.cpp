@@ -178,7 +178,7 @@ namespace cling
       if( buff )
          srcMgr->createMainFileIDForMemBuffer( buff );
 
-      if( srcMgr->getMainFileID() == 0 )
+      if( srcMgr->getMainFileID().isInvalid() )
          return 0;
 
       return parse( srcMgr.get() );
@@ -201,7 +201,7 @@ namespace cling
       if( file )
          srcMgr->createMainFileID( file, clang::SourceLocation() );
 
-      if( srcMgr->getMainFileID() == 0 )
+      if( srcMgr->getMainFileID().isInvalid() )
          return 0;
 
       return parse( srcMgr.get() );
@@ -245,7 +245,7 @@ namespace cling
 
       clang::Preprocessor*  pp =
          new clang::Preprocessor( diag, m_lang, *m_target, *srcMgr,
-                                  headerInfo );
+                                  headerInfo);
 
 
       //-------------------------------------------------------------------------
@@ -255,7 +255,8 @@ namespace cling
       clang::ASTConsumer dummyConsumer;
       context = new clang::ASTContext( m_lang, *srcMgr, *m_target,
                                        pp->getIdentifierTable(),
-                                       pp->getSelectorTable() );
+                                       pp->getSelectorTable(),
+                                       0);
 
       clang::TranslationUnit *tu = new clang::TranslationUnit(*context);
       clang::Sema   sema(*pp, *context, dummyConsumer);
@@ -268,12 +269,7 @@ namespace cling
 
       clang::Parser::DeclTy *adecl;
   
-      while( !p.ParseTopLevelDecl(adecl) ) {
-         if(adecl) {
-            clang::Decl* d = static_cast<clang::Decl*>(adecl);      
-            tu->AddTopLevelDecl( d ); // TU owns the decl
-         }
-      }
+      while( !p.ParseTopLevelDecl(adecl) ) {}
 
       //      dumpTU( tu );
 
@@ -371,22 +367,24 @@ namespace cling
       if( !tu )
          return vect;
 
+      std::set<clang::Decl*> decls_before;
+      std::vector<std::pair<clang::Decl*, const clang::ASTContext*> >::iterator
+         dit, ditend = m_decls.end();
+      for (dit = m_decls.begin(); dit != ditend; ++dit)
+         decls_before.insert(dit->first);
+
       //-------------------------------------------------------------------------
       // Loop over the declarations
       //-------------------------------------------------------------------------
-      clang::TranslationUnit::iterator it;
-      for( it = tu->begin(); it != tu->end(); ++it ) {
+      clang::ASTContext& context = tu->getContext();
+      const clang::SourceManager& srcMgr = context.getSourceManager();
+      clang::TranslationUnitDecl* tud = context.getTranslationUnitDecl();
+      clang::TranslationUnit::iterator it, itend = tud->decls_end();
+      for( it = tud->decls_begin(); it != itend; ++it ) {
          clang::FunctionDecl* decl = dynamic_cast<clang::FunctionDecl*>( *it );
-         if( decl ) {
-            clang::SourceLocation loc = decl->getLocation();
-
-            //-------------------------------------------------------------------
-            // Only consider the function _definitions_ from that file
-            //-------------------------------------------------------------------
-            if( !loc.isFileID() || loc.getFileID() != 1 || !decl->getBody() )
-               continue;
+         if( decl && decls_before.find(decl) == decls_before.end()) {
             vect.push_back( decl );
-            m_decls.push_back( std::make_pair(*it, &tu->getContext() ) );
+            m_decls.push_back( std::make_pair(*it, &context ) );
          }         
       }
    }
@@ -396,23 +394,26 @@ namespace cling
    //----------------------------------------------------------------------------
    void Interpreter::insertDeclarations( clang::TranslationUnit* tu, clang::Sema* sema )
    {
-      std::vector<std::pair<clang::Decl*, clang::ASTContext*> >::iterator it;
+      clang::ASTContext& context = tu->getContext();
+      clang::IdentifierTable&      table    = context.Idents;
+      clang::DeclarationNameTable& declTab  = context.DeclarationNames;
+      clang::TranslationUnitDecl* tud = context.getTranslationUnitDecl();
+      std::vector<std::pair<clang::Decl*, const clang::ASTContext*> >::iterator it;
       for( it = m_decls.begin(); it != m_decls.end(); ++it ) {
          clang::FunctionDecl* func = dynamic_cast<clang::FunctionDecl*>( it->first );
          if( func ) {
-            clang::ASTContext&           context  = tu->getContext();
-            clang::IdentifierTable&      table    = context.Idents;
             clang::IdentifierInfo&       id       = table.get(std::string(func->getNameAsString()));
-            clang::DeclarationNameTable& declTab  = context.DeclarationNames;
             clang::DeclarationName       dName    = declTab.getIdentifier( &id );
             
-            clang::FunctionDecl* decl = clang::FunctionDecl::Create( tu->getContext(),
-                                                                     tu->getContext().getTranslationUnitDecl(),
-                                                                     clang::SourceLocation::getFileLoc( 1, 0 ),
+            clang::FunctionDecl* decl = clang::FunctionDecl::Create( context,
+                                                                     tud,
+                                                                     func->getLocation(),
                                                                      dName,
                                                                      typeCopy( func->getType(), *it->second, context ) );
-            tu->AddTopLevelDecl( decl );
+            tud->addDecl( decl );
             sema->IdResolver.AddDecl( decl );
+            if (sema->TUScope)
+               sema->TUScope->AddDecl( decl );
          }
          
       }
@@ -438,7 +439,7 @@ namespace cling
    // Copy given type to the target AST context using serializers - grr ugly :)
    //-----------------------------------------------------------------------------
    clang::QualType Interpreter::typeCopy( clang::QualType source,
-                                          clang::ASTContext& sourceContext,
+                                          const clang::ASTContext& sourceContext,
                                           clang::ASTContext& targetContext )
    {
       const clang::BuiltinType*       bt;
