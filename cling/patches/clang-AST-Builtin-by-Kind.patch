@@ -1,0 +1,45 @@
+Index: include/clang/AST/ASTContext.h
+===================================================================
+--- include/clang/AST/ASTContext.h	(revision 63070)
++++ include/clang/AST/ASTContext.h	(working copy)
+@@ -55,6 +55,7 @@
+ /// decls) that can be referred to throughout the semantic analysis of a file.
+ class ASTContext {  
+   std::vector<Type*> Types;
++  std::vector<Type*> BuiltinTypes;
+   llvm::FoldingSet<ASQualType> ASQualTypes;
+   llvm::FoldingSet<ComplexType> ComplexTypes;
+   llvm::FoldingSet<PointerType> PointerTypes;
+@@ -174,6 +175,12 @@
+   /// resulting type has a union of the qualifiers from T and the address space.
+   // If T already has an address space specifier, it is silently replaced.
+   QualType getASQualType(QualType T, unsigned AddressSpace);
++
++  /// getBuiltinType
++  QualType getBuiltinType( BuiltinType::Kind K )
++  {
++    return QualType(BuiltinTypes[K], 0);
++  }
+   
+   /// getComplexType - Return the uniqued reference to the type for a complex
+   /// number with the specified element type.
+Index: lib/AST/ASTContext.cpp
+===================================================================
+--- lib/AST/ASTContext.cpp	(revision 63070)
++++ lib/AST/ASTContext.cpp	(working copy)
+@@ -179,11 +179,14 @@
+ void ASTContext::InitBuiltinType(QualType &R, BuiltinType::Kind K) {
+   void *Mem = Allocator.Allocate(sizeof(BuiltinType), 8);
+   Types.push_back((R = QualType(new (Mem) BuiltinType(K),0)).getTypePtr());
++  BuiltinTypes[K] = R.getTypePtr();
+ }
+ 
+ void ASTContext::InitBuiltinTypes() {
+   assert(VoidTy.isNull() && "Context reinitialized?");
+-  
++
++  BuiltinTypes.resize((int)BuiltinType::Dependent+1, 0 );
++
+   // C99 6.2.5p19.
+   InitBuiltinType(VoidTy,              BuiltinType::Void);
+   
