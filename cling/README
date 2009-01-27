@@ -38,7 +38,8 @@ subversion [4] to get the source code.
 
    * Apply some patches
 
-     cat tools/cling/patches | patch -p0
+     cat tools/cling/patches/llvm* | patch -p0
+     cat tools/cling/patches/clang* | ( cd tools/clang; patch -p0 ) 
 
    * Configure, build and install them:
 
@@ -57,4 +58,5 @@ subversion [4] to get the source code.
 2. U S A G E
 
    To interpret a C file type: "./cling test.c". To invoke cling in the
-interactive mode type: "cling -i"
+interactive mode type "cling" without file name.  Use ".L filename" to 
+load libraries or C++ files.  Type C++ code at the prompt to interpret it.
