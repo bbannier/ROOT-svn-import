@@ -401,104 +401,113 @@ void TDocOutput::Convert(std::istream& in, const char* infilename,
    if (includeOutput) {
       if (!numReuseCanvases) {
          // need to run the script
-         TString pwd(gSystem->pwd());
-         gSystem->cd(gSystem->DirName(infilename));
-
-         TList* gClientGetListOfWindows = 0;
-         TObject* gClientGetDefaultRoot = 0;
-         std::set<TObject*> previousWindows;
-         if (gclient) {
-            gROOT->ProcessLine(TString::Format("*((TList**)0x%lx) = ((TGClient*)0x%lx)->GetListOfWindows();",
-                                               &gClientGetListOfWindows, gclient));
-            gROOT->ProcessLine(TString::Format("*((TObject**)0x%lx) = ((TGClient*)0x%lx)->GetDefaultRoot();",
-                                               &gClientGetDefaultRoot, gclient));
-            TObject* win = 0;
-            TIter iWin(gClientGetListOfWindows);
-            while((win = iWin())) {
-               TObject* winGetParent = 0;
-               gROOT->ProcessLine(TString::Format("*((TObject**)0x%lx) = ((TGWindow*)0x%lx)->GetParent();",
-                                                  &winGetParent, win));
-               if (winGetParent == gClientGetDefaultRoot)
-                  previousWindows.insert(win);
-            }
+         if (includeOutput & THtml::kSeparateProcessOutput) {
+            gSystem->Exec(TString::Format("ROOT_HIST=0 root.exe -l -q %s $ROOTSYS/etc/html/saveScriptOutput.C\\(\\\"%s\\\",\\\"%s\\\",%d\\)",
+                          gROOT->IsBatch() ? "-b" : "",
+                          infilename,
+                          gSystem->DirName(outfilename),
+                          includeOutput & THtml::kCompiledOutput));
          } else {
-            if (gROOT->GetListOfCanvases()->GetSize())
-               previousWindows.insert(gROOT->GetListOfCanvases()->Last());
-         }
-         TIter iTimer(gSystem->GetListOfTimers());
-         std::set<TObject*> timersBefore;
-         TObject* timerOld = 0;
-         while ((timerOld = iTimer()))
-            timersBefore.insert(timerOld);
+            // run in this ROOT process
+            TString pwd(gSystem->pwd());
+            gSystem->cd(gSystem->DirName(infilename));
 
-         TString cmd(".x ");
-         cmd += gSystem->BaseName(infilename);
-         if (includeOutput & THtml::kCompiledOutput)
-            cmd += "+";
-         gInterpreter->SaveContext();
-         gInterpreter->SaveGlobalsContext();
-         Int_t err;
-         gROOT->ProcessLine(cmd, &err);
-         gSystem->cd(pwd);
-
-         if (err == TInterpreter::kNoError) {
+            TList* gClientGetListOfWindows = 0;
+            TObject* gClientGetDefaultRoot = 0;
+            std::set<TObject*> previousWindows;
             if (gclient) {
-               TClass* clRootCanvas = TClass::GetClass("TRootCanvas");
-               TClass* clGMainFrame = TClass::GetClass("TGMainFrame");
+               gROOT->ProcessLine(TString::Format("*((TList**)0x%lx) = ((TGClient*)0x%lx)->GetListOfWindows();",
+                                                  &gClientGetListOfWindows, gclient));
+               gROOT->ProcessLine(TString::Format("*((TObject**)0x%lx) = ((TGClient*)0x%lx)->GetDefaultRoot();",
+                                                  &gClientGetDefaultRoot, gclient));
                TObject* win = 0;
                TIter iWin(gClientGetListOfWindows);
                while((win = iWin())) {
                   TObject* winGetParent = 0;
                   gROOT->ProcessLine(TString::Format("*((TObject**)0x%lx) = ((TGWindow*)0x%lx)->GetParent();",
                                                      &winGetParent, win));
-                  Bool_t winIsMapped = kFALSE;
                   if (winGetParent == gClientGetDefaultRoot)
-                     gROOT->ProcessLine(TString::Format("*((Bool_t*)0x%lx) = ((TGWindow*)0x%lx)->IsMapped();",
-                                                        &winIsMapped, win));
-                  if (winIsMapped && previousWindows.find(win) == previousWindows.end()
-                      && win->InheritsFrom(clGMainFrame)) {
-                     gROOT->ProcessLine(TString::Format("((TGWindow*)0x%lx)->MapRaised();", win));
-                     Bool_t isRootCanvas = win->InheritsFrom(clRootCanvas);
-                     Bool_t hasEditor = false;
-                     if (isRootCanvas) {
-                        gROOT->ProcessLine(TString::Format("*((Bool_t*)0x%lx) = ((TRootCanvas*)0x%lx)->HasEditor();",
-                                                           &hasEditor, win));
-                     }
-                     if (isRootCanvas && !hasEditor) {
-                        TVirtualPad* pad = 0;
-                        gROOT->ProcessLine(TString::Format("*((TVirtualPad**)0x%lx) = ((TRootCanvas*)0x%lx)->Canvas();",
-                                                           &pad, win));
-                        if (!pad->HasViewer3D() || pad->GetViewer3D()->InheritsFrom("TViewer3DPad")) {
-                           pad->SaveAs(TString::Format("%s_%d.png", outfilename, nCanvases++));
-                        }
-                     } else
-                        gROOT->ProcessLine(TString::Format("((TGWindow*)0x%lx)->SaveAs(\"%s_%d.png\");",
-                                                           win, outfilename, nCanvases++));
-                  }
+                     previousWindows.insert(win);
                }
             } else {
-               // no gClient
-               TVirtualPad* pad = 0;
-               TVirtualPad* last = 0;
-               if (!previousWindows.empty())
-                  last = (TVirtualPad*) *previousWindows.begin();
-               TIter iCanvas(gROOT->GetListOfCanvases());
-               while ((pad = (TVirtualPad*) iCanvas())) {
-                  if (last) {
-                     if (last == pad) last = 0;
-                     continue;
-                  }
-                  pad->SaveAs(TString::Format("%s_%d.png", outfilename, nCanvases++));
-               }
+               if (gROOT->GetListOfCanvases()->GetSize())
+                  previousWindows.insert(gROOT->GetListOfCanvases()->Last());
             }
-            gInterpreter->Reset();
-            gInterpreter->ResetGlobals();
-            TIter iTimerRemove(gSystem->GetListOfTimers());
-            TTimer* timer = 0;
-            while ((timer = (TTimer*) iTimerRemove()))
-               if (timersBefore.find(timer) == timersBefore.end())
-                  gSystem->RemoveTimer(timer);
-         }
+            TIter iTimer(gSystem->GetListOfTimers());
+            std::set<TObject*> timersBefore;
+            TObject* timerOld = 0;
+            while ((timerOld = iTimer()))
+               timersBefore.insert(timerOld);
+
+            TString cmd(".x ");
+            cmd += gSystem->BaseName(infilename);
+            if (includeOutput & THtml::kCompiledOutput)
+               cmd += "+";
+            gInterpreter->SaveContext();
+            gInterpreter->SaveGlobalsContext();
+            Int_t err;
+            gROOT->ProcessLine(cmd, &err);
+            gSystem->cd(pwd);
+
+            if (err == TInterpreter::kNoError) {
+               if (gclient) {
+                  TClass* clRootCanvas = TClass::GetClass("TRootCanvas");
+                  TClass* clGMainFrame = TClass::GetClass("TGMainFrame");
+                  TObject* win = 0;
+                  TIter iWin(gClientGetListOfWindows);
+                  while((win = iWin())) {
+                     TObject* winGetParent = 0;
+                     gROOT->ProcessLine(TString::Format("*((TObject**)0x%lx) = ((TGWindow*)0x%lx)->GetParent();",
+                                                        &winGetParent, win));
+                     Bool_t winIsMapped = kFALSE;
+                     if (winGetParent == gClientGetDefaultRoot)
+                        gROOT->ProcessLine(TString::Format("*((Bool_t*)0x%lx) = ((TGWindow*)0x%lx)->IsMapped();",
+                                                           &winIsMapped, win));
+                     if (winIsMapped && previousWindows.find(win) == previousWindows.end()
+                         && win->InheritsFrom(clGMainFrame)) {
+                        gROOT->ProcessLine(TString::Format("((TGWindow*)0x%lx)->MapRaised();", win));
+                        Bool_t isRootCanvas = win->InheritsFrom(clRootCanvas);
+                        Bool_t hasEditor = false;
+                        if (isRootCanvas) {
+                           gROOT->ProcessLine(TString::Format("*((Bool_t*)0x%lx) = ((TRootCanvas*)0x%lx)->HasEditor();",
+                                                              &hasEditor, win));
+                        }
+                        if (isRootCanvas && !hasEditor) {
+                           TVirtualPad* pad = 0;
+                           gROOT->ProcessLine(TString::Format("*((TVirtualPad**)0x%lx) = ((TRootCanvas*)0x%lx)->Canvas();",
+                                                              &pad, win));
+                           if (!pad->HasViewer3D() || pad->GetViewer3D()->InheritsFrom("TViewer3DPad")) {
+                              pad->SaveAs(TString::Format("%s_%d.png", outfilename, nCanvases++));
+                           }
+                        } else
+                           gROOT->ProcessLine(TString::Format("((TGWindow*)0x%lx)->SaveAs(\"%s_%d.png\");",
+                                                              win, outfilename, nCanvases++));
+                     }
+                  }
+               } else {
+                  // no gClient
+                  TVirtualPad* pad = 0;
+                  TVirtualPad* last = 0;
+                  if (!previousWindows.empty())
+                     last = (TVirtualPad*) *previousWindows.begin();
+                  TIter iCanvas(gROOT->GetListOfCanvases());
+                  while ((pad = (TVirtualPad*) iCanvas())) {
+                     if (last) {
+                        if (last == pad) last = 0;
+                        continue;
+                     }
+                     pad->SaveAs(TString::Format("%s_%d.png", outfilename, nCanvases++));
+                  }
+               }
+               gInterpreter->Reset();
+               gInterpreter->ResetGlobals();
+               TIter iTimerRemove(gSystem->GetListOfTimers());
+               TTimer* timer = 0;
+               while ((timer = (TTimer*) iTimerRemove()))
+                  if (timersBefore.find(timer) == timersBefore.end())
+                     gSystem->RemoveTimer(timer);
+            }
+         } // run script in this ROOT process
       }
       out << "<table><tr><td style=\"vertical-align:top;padding-right:2em;\">" << endl;
    }
@@ -607,7 +616,7 @@ void TDocOutput::CreateHierarchy()
    WriteHtmlHeader(out, "Class Hierarchy");
 
    WriteTopLinks(out, 0);
-   out << "</div></div>" << endl;
+   out << "</div>" << endl;
 
    out << "<h1>Class Hierarchy</h1>" << endl;
 
@@ -662,7 +671,7 @@ void TDocOutput::CreateClassIndex()
    WriteHtmlHeader(indexFile, "Class Index");
 
    WriteTopLinks(indexFile, 0);
-   indexFile << "</div></div>" << endl;
+   indexFile << "</div>" << endl;
 
    indexFile << "<h1>Class Index</h1>" << endl;
 
@@ -795,7 +804,7 @@ void TDocOutput::CreateModuleIndex()
       WriteHtmlHeader(outputFile, htmltitle);
 
       WriteTopLinks(outputFile, module);
-      outputFile << "</div></div>" << endl;
+      outputFile << "</div>" << endl;
 
       outputFile << "<h2>" << htmltitle << "</h2>" << endl;
 
@@ -1052,7 +1061,7 @@ void TDocOutput::CreateModuleIndex()
    WriteHtmlHeader(out, "Library Dependencies");
 
    WriteTopLinks(out, 0);
-   out << "</div></div>" << endl;
+   out << "</div>" << endl;
 
    out << "<h1>Library Dependencies</h1>" << endl;
 
@@ -1086,7 +1095,7 @@ void TDocOutput::CreateProductIndex()
    WriteHtmlHeader(out, GetHtml()->GetProductName() + " Reference Guide");
 
    WriteTopLinks(out, 0);
-   out << "</div></div>" << endl;
+   out << "</div>" << endl;
 
    out << "<h1>" << GetHtml()->GetProductName() + " Reference Guide</h1>" << std::endl;
 
@@ -1181,7 +1190,7 @@ void TDocOutput::CreateClassTypeDefs()
          TModuleDocInfo* module = (TModuleDocInfo*) fHtml->GetListOfModules()->FindObject(modulename);
          WriteTopLinks(outfile, module, dt->GetName());
 
-         outfile << "</div><div class=\"dropshadow\"><div class=\"withshadow\">";
+         outfile << "<div class=\"dropshadow\"><div class=\"withshadow\">";
          outfile << "<h1>" << sTitle << "</h1>" << endl
             << "<div class=\"classdescr\">" << endl;
 
@@ -2301,13 +2310,13 @@ void TDocOutput::WriteSearch(std::ostream& out)
 void TDocOutput::WriteTopLinks(std::ostream& out, TModuleDocInfo* module, const char* classname)
 {
    // Write the first part of the links shown ontop of each doc page;
-   // two <div>s have to be closed by caller so additional items can still
+   // one <div> has to be closed by caller so additional items can still
    // be added.
 
    out << "<div id=\"toplinks\">" << endl;
 
    // make a link to the description
-   out << "<div class=\"descrhead\">" << endl
+   out << "<div class=\"descrhead\">" << endl // descrhead line 1
       << "<span class=\"descrtitle\">Location:</span>" << endl;
    const char *productName = fHtml->GetProductName();
    out << "<a class=\"descrheadentry\" href=\"index.html\">" << productName << "</a>" << endl;
@@ -2342,9 +2351,9 @@ void TDocOutput::WriteTopLinks(std::ostream& out, TModuleDocInfo* module, const 
       ReplaceSpecialChars(out, entityName);
       out << "</a>" << endl;
    }
-   out << "</div>" << endl;
+   out << "</div>" << endl; // descrhead line 1
 
-   out << "<div class=\"descrhead\">" << endl
+   out << "<div class=\"descrhead\">" << endl // descrhead line 2
       << "<span class=\"descrtitle\">Quick Links:</span>" << endl;
 
    // link to the user home page (if exist)
@@ -2357,6 +2366,8 @@ void TDocOutput::WriteTopLinks(std::ostream& out, TModuleDocInfo* module, const 
       << "<a class=\"descrheadentry\" href=\"./ClassIndex.html\">Class Index</a>" << endl
       << "<a class=\"descrheadentry\" href=\"./ClassHierarchy.html\">Class Hierarchy</a>" << endl;
    WriteSearch(out);
-   out << "</div>" << endl;
+   out << "</div>" << endl; // descrhead, line 2
+   // Closed by caller:
+   //out << "</div>" << endl; // toplinks
 
 }

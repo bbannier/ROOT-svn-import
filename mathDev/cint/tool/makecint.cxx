@@ -17,11 +17,10 @@
 #ifdef G__ROOT
 #include "RConfigure.h"
 #define G__EXTRA_TOPDIR "cint"
-#define G__CINT_LIBNAME "Cint"
 #else
 #define G__EXTRA_TOPDIR ""
-#define G__CINT_LIBNAME "cint"
 #endif
+#define G__CINT_LIBNAME "Cint"
 #if defined(G__HAVE_CONFIG)
 #include "configcint.h"
 #endif
@@ -498,20 +497,28 @@ void G__outputmakefile(int argc,char **argv)
   /***************************************************************************
    * Print out variables
    ***************************************************************************/
-#if defined(G__CFG_INCLUDEDIRCINT) || defined(G__CFG_LIBDIR)
+  // check if the variable __CINT_BUILDDIR is set. This means that we are
+  // within an initial cint build, and cint is not yet installed, i.e.
+  // cint system directories should be taken from the bild directory
+  // instead of the final destination
   char *builddir = getenv("__CINT_BUILDDIR");
-#endif
 
   out << "# Set variables ############################################" << std::endl
       << "CXX         := " << G__CFG_CXX << std::endl
       << "CC          := " << G__CFG_CC << std::endl
       << "LD          := " << G__CFG_LD << std::endl
-      << "CINT        := $(shell which cint" << G__CFG_EXEEXT << ")" << std::endl
-      << "CINTSYSDIRU := $(patsubst %/bin/,%/,$(dir $(CINT)))" << std::endl
-      << "CINTSYSDIRW := $(shell " << G__CFG_MANGLEPATHS << " $(CINTSYSDIRU) )" << std::endl;
+      << "CINT        := $(shell which cint" << G__CFG_EXEEXT << ")" << std::endl;
+  // changes start ---------------------------------------------
+  //<< "CINTSYSDIRU := $(patsubst %/bin/,%/,$(dir $(CINT)))" << std::endl
+  //<< "CINTSYSDIRW := $(shell " << G__CFG_MANGLEPATHS << " $(CINTSYSDIRU) )" << std::endl;
+  // changes end -----------------------------------------------
+
+  // if G__CFG_INCLUDEDIRCINT is set, this means that ./configure --with-prefix
+  // was called, i.e. a standard linux install is going to be done.
 #ifdef G__CFG_INCLUDEDIRCINT
   if(builddir)
   {
+      // initial build, take includedir from the builddir (temporarily)
       out << "CINTINCDIRU := " << builddir << "/" << G__EXTRA_TOPDIR << "/"
 	  << G__CFG_COREVERSION << "/inc" << std::endl
 	  << "CINTINCDIRW := " << builddir << "/" << G__EXTRA_TOPDIR << "/"
@@ -519,27 +526,89 @@ void G__outputmakefile(int argc,char **argv)
   }
   else
   {
-      out << "CINTINCDIRU := " << G__CFG_INCLUDEDIRCINT << std::endl
-	  << "CINTINCDIRW := " << G__CFG_INCLUDEDIRCINT << std::endl;
+      // already the installed version is running. Take the includedir
+      // using cint-config
+
+      // changes start ------------------------------------------
+
+      // old code
+      // out << "CINTINCDIRU := " << G__CFG_INCLUDEDIRCINT << std::endl
+      // << "CINTINCDIRW := " << G__CFG_INCLUDEDIRCINT << std::endl;
+
+      // new code
+      out << "CINTINCDIRU := $(shell cint-config --incdir)" << std::endl;
+      out << "CINTINCDIRW := $(shell " << G__CFG_MANGLEPATHS << " $(CINTINCDIRU) )" << std::endl;
+
+      //???
+      // The old code was buggy??? CINTINCDIRW should have been set
+      // with G__CFG_MANGLEPATHS as well? Probably nobody installed
+      // cint on windows/cygwin via ./configure --with-prefix ???
+
+      // changes end --------------------------------------------
   }
+
+  // In the other case, the compile-and-leave-in-place policy was used
+  // i.e. every cint system directory is within the toplevel CINTSYSDIR
 #else
-  out << "CINTINCDIRU := $(CINTSYSDIRU)" << G__EXTRA_TOPDIR << "/"
-      << G__CFG_COREVERSION << "/inc" << std::endl
-      << "CINTINCDIRW := $(CINTSYSDIRW)" << G__EXTRA_TOPDIR << "/"
-      << G__CFG_COREVERSION << "/inc" << std::endl;
+
+  // changes start ------------------------------------------
+
+  // old code
+  //out << "CINTINCDIRU := $(CINTSYSDIRU)" << G__EXTRA_TOPDIR << "/"
+  //<< G__CFG_COREVERSION << "/inc" << std::endl
+  //<< "CINTINCDIRW := $(CINTSYSDIRW)" << G__EXTRA_TOPDIR << "/"
+  //<< G__CFG_COREVERSION << "/inc" << std::endl;
+
+  // new code
+  out << "CINTINCDIRU := $(shell cint-config --unix --incdir)" << std::endl;
+  out << "CINTINCDIRW := $(shell " << G__CFG_MANGLEPATHS << " $(CINTINCDIRU) )" << std::endl;
+
+  // changes end --------------------------------------------
+
+
 #endif // G__CFG_INCLUDEDIRCINT
 
 #ifdef G__CFG_LIBDIR
   if(builddir)
   {
+#if defined(G__WIN32)
+      out << "CINTLIB     := " << builddir << "/bin/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;
+#else
       out << "CINTLIB     := " << builddir << "/lib/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;
+#endif
   }
   else
   {
-      out << "CINTLIB     := " << G__CFG_LIBDIR << "/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;
+      // changes start ------------------------------------------
+
+      // old code
+      //out << "CINTLIB     := " << G__CFG_LIBDIR << "/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;      
+
+      // new code
+#if defined(G__WIN32)
+      out << "CINTLIB     := $(shell cint-config --unix --bindir)/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;
+#else
+      out << "CINTLIB     := $(shell cint-config --unix --libdir)/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;
+#endif
+      // changes end --------------------------------------------
+      
   }
 #else
-  out << "CINTLIB     := $(CINTSYSDIRU)/lib/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;
+
+  // changes start ------------------------------------------
+
+  // old code
+  //out << "CINTLIB     := $(CINTSYSDIRU)/lib/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;
+
+  // new code
+#if defined(G__WIN32)
+  out << "CINTLIB     := $(shell cint-config --unix --bindir)/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;
+#else
+  out << "CINTLIB     := $(shell cint-config --unix --libdir)/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;
+#endif
+
+  // changes end --------------------------------------------
+  
 #endif
 
   if (!strcmp(G__CFG_COREVERSION,"cint7"))
@@ -586,7 +655,19 @@ void G__outputmakefile(int argc,char **argv)
   out << std::endl;
 
   out << "LIBS        := ";
-  out << G__CFG_LIBP << "$(CINTSYSDIRW)/lib $(subst @imp@," << G__CINT_LIBNAME << "," << G__CFG_LIBL << ") ";
+  // changes start ----------------------------------------------
+  // old code
+  //out << G__CFG_LIBP << "$(CINTSYSDIRW)/lib $(subst @imp@," << G__CINT_LIBNAME << "," << G__CFG_LIBL << ") ";
+  // new code
+  if(builddir)
+  {
+     out << G__CFG_LIBP << "\"" << builddir << "/lib\" $(subst @imp@," << G__CINT_LIBNAME << "," << G__CFG_LIBL << ") ";
+  }
+  else
+  {
+      out << G__CFG_LIBP << "\"$(shell cint-config --libdir)\" $(subst @imp@," << G__CINT_LIBNAME << "," << G__CFG_LIBL << ") ";
+  }
+  // changes end ------------------------------------------------
   if (!strcmp(G__CFG_COREVERSION,"cint7"))
     out << " $(subst @imp@,Reflex," << G__CFG_LIBL << ") ";
   out << G__CFG_DEFAULTLIBS << " " << G__LIB << " " << std::endl
@@ -622,24 +703,26 @@ void G__outputmakefile(int argc,char **argv)
       << "CXXSTUBCINT := " << G__CXXSTUB << std::endl
       << std::endl;
 
-#if defined(G__CYGWIN) || defined(_MSC_VER) || \
-  defined(__BORLANDC__) || defined(__BCPLUSPLUS__) || defined(G__BORLANDCC5)
-  out << "MAINDIRU    := ./" << std::endl;
-  out << "MAINDIRW    := ./" << std::endl;
-#else
 # ifdef G__CFG_DATADIRCINT
   std::string maindiru(G__CFG_DATADIRCINT);
   std::string maindirw(G__CFG_DATADIRCINT);
 # else
-  std::string maindiru("$(CINTSYSDIRU)");
-  std::string maindirw("$(CINTSYSDIRW)");
+  // changes start -------------------------------------------------
+  // old code
+  //std::string maindiru("$(CINTSYSDIRU)");
+  //std::string maindirw("$(CINTSYSDIRW)");
+  // new code
+  std::string maindiru = "$(patsubst %/bin/,%/,$(dir $(CINT)))";
+  std::string maindirw =
+        std::string("$(shell ") + std::string(G__CFG_MANGLEPATHS)
+      + std::string(" $(patsubst %/bin/,%/,$(dir $(shell which cint") 
+      + std::string(G__CFG_EXEEXT) + std::string("))))");
 # endif
   std::string maindir2("/");
   maindir2 += G__CFG_COREVERSION;
   maindir2 += "/main/";
   out << "MAINDIRU    := " << maindiru << maindir2 << std::endl;
   out << "MAINDIRW    := " << maindirw << maindir2 << std::endl;
-#endif
 
 #if !defined(G__CFG_EXPLLINK)
 #define G__CFG_EXPLLINK 0
@@ -730,11 +813,12 @@ TODO!
   if (G__quiet) out << "@";
 #if defined(G__CYGWIN) || defined(_MSC_VER) || \
   defined(__BORLANDC__) || defined(__BCPLUSPLUS__) || defined(G__BORLANDCC5)
-  out << "$(CXX) "
+  out << "$(CXX) $(CXXMACRO) $(CXXFLAGS) $(CCOPT) "
 #else
-  out << "$(CC) "
+  out << "$(CC)  $(CMACRO) $(CFLAGS) $(CCOPT) "
 #endif
-      << "$(LINKSPEC) $(CINTIPATH) -o $@ -c $<" << std::endl;
+      << "$(LINKSPEC) $(CINTIPATH) "
+      << G__CFG_COUT << "$@ -c $<\n" << std::endl;
 
   out << "# Compile dictionary setup routine #######################" << std::endl;
   out << "G__setup" << G__CFG_OBJEXT << ": $(MAINDIRU)/G__setup.c $(CINTINCDIRU)/G__ci.h" << std::endl
@@ -742,7 +826,7 @@ TODO!
   if (G__quiet) out << "@";
   out << "$(CC) $(LINKSPEC) $(CINTIPATH) $(CMACRO) $(CFLAGS) "
       << G__CFG_COUT << "$@ " 
-      << G__CFG_COMP << " $(MAINDIRW)/G__setup.c" << std::endl;
+      << G__CFG_COMP << " $(MAINDIRW)/G__setup.c\n" << std::endl;
 
   /***************************************************************************
    * Interface routine
@@ -756,7 +840,16 @@ TODO!
         << G__CFG_COMP << " $(CIFC)" << std::endl
         << std::endl
         << "# Create C Interface routine #############################" << std::endl
-        << "$(CIFC) : $(CHEADER) $(CSTUB) $(CINTSYSDIRU)/cint" << G__CFG_EXEEXT << std::endl;
+
+    // changes start ---------------------------------------------------------
+
+	// old code
+        //<< "$(CIFC) : $(CHEADER) $(CSTUB) $(CINTSYSDIRU)/cint" << G__CFG_EXEEXT << std::endl;
+
+	// new code
+        <<   "$(CIFC) : $(CHEADER) $(CSTUB) $(CINT)" << std::endl;
+
+    // changes end ------------------------------------------------------------
 
     /* Following line needs explanation. -K is used at the beginning and
      * later again $(KRMODE) may be set to -K. When -K is given after -c-2
@@ -855,7 +948,7 @@ void G__outputmain()
   fprintf(mainfp,"}\n");
   fprintf(mainfp,"\n");
 #ifndef G__OLDIMPLEMENTATION874
-  if(G__ismain) {
+  if(G__flags & G__ismain) {
     fprintf(mainfp,"class G__DMYp2fsetup {\n");
     fprintf(mainfp," public:\n");
     fprintf(mainfp,"  G__DMYp2fsetup() { \n");
@@ -869,8 +962,8 @@ void G__outputmain()
     fprintf(mainfp,"int main(int argc,char **argv)\n");
     fprintf(mainfp,"{\n");
     fprintf(mainfp,"  int result;\n");
-    if(G__CHDR.empty()) fprintf(mainfp,"  G__set_p2fsetup(G__c_setup%s);\n",G__DLLID);
-    if(G__CXXHDR.empty()) fprintf(mainfp,"  G__set_p2fsetup(G__cpp_setup%s);\n",G__DLLID);
+    if(!G__CHDR.empty()) fprintf(mainfp,"  G__set_p2fsetup(G__c_setup%s);\n",G__DLLID);
+    if(!G__CXXHDR.empty()) fprintf(mainfp,"  G__set_p2fsetup(G__cpp_setup%s);\n",G__DLLID);
     fprintf(mainfp,"  G__setothermain(0);\n");
     fprintf(mainfp,"  result=G__main(argc,argv);\n");
     fprintf(mainfp,"  G__free_p2fsetup();\n");

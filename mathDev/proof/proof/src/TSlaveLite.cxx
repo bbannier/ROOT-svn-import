@@ -18,6 +18,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#include "RConfigure.h"
 #include "TSlaveLite.h"
 #include "TProof.h"
 #include "TProofServ.h"
@@ -65,6 +66,7 @@ TSlaveLite::TSlaveLite(const char *ord, Int_t perf,
    fMsd = msd;
    fIntHandler = 0;
    fValid = kFALSE;
+   fProtocol = kPROOF_Protocol;
 
    if (fPerfIdx > 0) Init();
 }
@@ -75,9 +77,15 @@ void TSlaveLite::Init()
    // Init a PROOF worker object. Called via the TSlaveLite ctor.
 
    // Command to be executed
-   TString cmd(Form("%s/bin/proofserv proofslave lite %d %d %s/worker-%s.env &",
-                    gSystem->Getenv("ROOTSYS"), gSystem->GetPid(), gDebug,
-                    fWorkDir.Data(), fOrdinal.Data()));
+   TString cmd;
+#ifdef R__HAVE_CONFIG
+   cmd.Form("export ROOTBINDIR=\"%s\"; %s/proofserv proofslave lite %d %d %s/worker-%s.env &",
+            ROOTBINDIR, ROOTBINDIR,
+#else
+   cmd.Form("export ROOTBINDIR=\"%s/bin\"; %s/bin/proofserv proofslave lite %d %d %s/worker-%s.env &",
+            gSystem->Getenv("ROOTSYS"), gSystem->Getenv("ROOTSYS"),
+#endif
+            gSystem->GetPid(), gDebug, fWorkDir.Data(), fOrdinal.Data());
 
    // Execute
    if (gSystem->Exec(cmd) != 0) {

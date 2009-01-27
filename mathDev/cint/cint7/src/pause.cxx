@@ -316,7 +316,6 @@ static void G__init_undo()
    undoindex = 0;
    for (i = 0;i < G__MAXUNDO;i++) {
       undodictpos[i].var =::Reflex::Scope();
-      undodictpos[i].ptype = (char*)NULL;
    }
 }
 
@@ -341,10 +340,6 @@ static void G__cancel_undo_position()
 {
    G__decrement_undo_index(&undoindex);
    undodictpos[undoindex].var =::Reflex::Scope();
-   if (undodictpos[undoindex].ptype && undodictpos[undoindex].ptype != (char*)G__PVOID) {
-      free((void*)undodictpos[undoindex].ptype);
-      undodictpos[undoindex].ptype = 0;
-   }
 }
 
 //______________________________________________________________________________
@@ -441,10 +436,7 @@ static struct G__input_file errorifile;
 //______________________________________________________________________________
 void Cint::Internal::G__clear_errordictpos()
 {
-   if (0 != errordictpos.ptype && (char*)G__PVOID != errordictpos.ptype) {
-      free((void*)errordictpos.ptype);
-      errordictpos.ptype = 0;
-   }
+   // Used to free the data member ptype from the global variable errordictpos.
 }
 
 //______________________________________________________________________________
@@ -641,7 +633,7 @@ static void G__display_keyword(FILE* fout, char* keyword,
 }
 
 //______________________________________________________________________________
-extern "C" int G__reloadfile(char* filename)
+extern "C" int G__reloadfile(char* filename, bool keep)
 {
    int i, j = 0;
    char *storefname[G__MAXFILE];
@@ -659,31 +651,34 @@ extern "C" int G__reloadfile(char* filename)
       if (!flag &&
             G__matchfilename(i, filename)
          ) {
-         if (G__srcfile[i].hasonlyfunc && G__do_smart_unload) {
+         if (!keep && G__srcfile[i].hasonlyfunc && G__do_smart_unload) {
             G__smart_unload(i);
             flag = 0;
          }
          else flag = 1;
-         j = i;
-         while (-1 != G__srcfile[j].included_from
-                /* do not take the tempfile in consideration! */
-                && (G__srcfile[j].included_from <= G__gettempfilenum())
-               ) {
-            if (G__srcfile[G__srcfile[j].included_from].filename == 0) {
-               /* It is possibly a closed temporary file let's ignore
-                  it to */
-               break;
+         if (!keep) {
+            j = i;
+            while (-1 != G__srcfile[j].included_from
+                   /* do not take the tempfile in consideration! */
+                   && (G__srcfile[j].included_from <= G__gettempfilenum())
+                   ) {
+               if (G__srcfile[G__srcfile[j].included_from].filename == 0) {
+                  /* It is possibly a closed temporary file let's ignore
+                     it to */
+                  break;
+               }
+               // sanity check; this can only happen if something went wrong during loadfile
+               if (j != G__srcfile[j].included_from)
+                  j = G__srcfile[j].included_from;
+               else break;
             }
-            // sanity check; this can only happen if something went wrong during loadfile
-            if (j != G__srcfile[j].included_from)
-               j = G__srcfile[j].included_from;
-            else break;
          }
          break;
       }
    }
 
    if (flag) {
+      if (keep) return 1;
       for (i = j;i < G__nfile;i++) {
          if (G__srcfile[i].filename[0]) {
             if (G__srcfile[i].prepname) storecpp[storen] = 1;
@@ -2197,6 +2192,7 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
       struct G__store_env store;
       G__SET_TEMPENV;
 
+      bool keepIfLoaded = com[1] == 'k';
       temp = 0;
       while (isspace(string[temp])) {
          ++temp;
@@ -2222,7 +2218,7 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
       temp2 = G__prerun;
       G__prerun = 1;  // suppress warning message if file already loaded
       temp1 = G__loadfile(string + temp);
-      if (temp1 == 1) {
+      if (!keepIfLoaded && temp1 == 1) {
          G__prerun = 0;
          G__unloadfile(string + temp);
          G__storerewindposition();
@@ -2319,21 +2315,23 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
       (G__do_smart_unload && strncmp("L", com, 1) == 0) ||
       strncmp("Lall", com, 2) == 0
    ) {
+      bool keepIfLoaded = com[1] == 'k';
       temp = 0;
       while (isspace(string[temp])) temp++;
       G__UnlockCriticalSection();
-      G__reloadfile(string + temp);
+      G__reloadfile(string + temp, keepIfLoaded);
       G__unredirectoutput(&store_stdout, &store_stderr, &store_stdin
                           , keyword, pipefile);
       *err |= G__security_recover(G__serr);
       return(ignore);
    }
 
-   else if (strncmp("L", com, 1) == 0 || strncmp("Load", com, 4) == 0) {
+   else if (strncmp("L", com, 1) == 0) {
       /*******************************************************
        * Load(Re-Load) a C/C++ source file.
        *******************************************************/
 
+      bool keepIfLoaded = com[1] == 'k';
       temp = 0;
       while (isspace(string[temp])) temp++;
       if (string[temp] == '\0') {
@@ -2350,7 +2348,7 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
       temp2 = G__prerun;
       G__prerun = 1;  /* suppress warning message if file already loaded */
       temp1 = G__loadfile(string + temp);
-      if (temp1 == 1) {
+      if (!keepIfLoaded && temp1 == 1) {
          G__unloadfile(string + temp);
          G__storerewindposition();
          if (G__loadfile(string + temp)) {
@@ -2522,11 +2520,14 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
 #ifndef G__ROOT
       G__more(G__sout, "             x [file]  : load [file] and evaluate {statements} in the file\n");
 #else
-      G__more(G__sout, "             x [file]  : load [file] and execute function [file](wo extension)\n");
+      G__more(G__sout, "             x [file]  : load [file] and execute function [file](w/o extension)\n");
+      G__more(G__sout, "             xk [file] : keep [file] if already loaded else load it, and execute function [file](w/o extension)\n");
 #endif
-      G__more(G__sout, "             X [file]  : load [file] and execute function [file](wo extension)\n");
+      G__more(G__sout, "             X [file]  : load [file] and execute function [file](w/o extension)\n");
+      G__more(G__sout, "             Xk [file] : keep [file] it already loaded else load it. and execute function [file](w/o extension)\n");
       G__more(G__sout, "             E <[file]>: open editor and evaluate {statements} in the file\n");
       G__more(G__sout, "Load/Unload: L [file]  : load [file]\n");
+      G__more(G__sout, "             Lk [file] : keep [file] if already loaded, else load it\n");
       G__more(G__sout, "             La [file] : reload all files loaded after [file]\n");
       G__more(G__sout, "             U [file]  : unload [file]\n");
       G__more(G__sout, "             C [1|0]   : copy source to $TMPDIR (on/off)\n");
@@ -3393,6 +3394,7 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
             G__RESET_TEMPENV;
          }
          if (!G__func_now) {
+            store.var_local = G__p_local;
             G__p_local = ::Reflex::Scope();
          }
          if (

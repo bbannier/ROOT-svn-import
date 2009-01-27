@@ -202,6 +202,9 @@ TEveManager::~TEveManager()
    fRedrawTimer.Stop();
    fTimerActive = kTRUE;
 
+   delete fCurrentEvent;
+   fCurrentEvent = 0;
+
    fGlobalScene->DecDenyDestroy();
    fEventScene->DecDenyDestroy();
    fScenes->DestroyScenes();
@@ -282,7 +285,7 @@ TGLViewer* TEveManager::GetDefaultGLViewer() const
 }
 
 //______________________________________________________________________________
-TEveViewer* TEveManager::SpawnNewViewer(const Text_t* name, const Text_t* title,
+TEveViewer* TEveManager::SpawnNewViewer(const char* name, const char* title,
                                         Bool_t embed)
 {
    // Create a new GL viewer.
@@ -315,7 +318,7 @@ TEveViewer* TEveManager::SpawnNewViewer(const Text_t* name, const Text_t* title,
 }
 
 //______________________________________________________________________________
-TEveScene* TEveManager::SpawnNewScene(const Text_t* name, const Text_t* title)
+TEveScene* TEveManager::SpawnNewScene(const char* name, const char* title)
 {
    // Create a new scene.
 
@@ -329,7 +332,7 @@ TEveScene* TEveManager::SpawnNewScene(const Text_t* name, const Text_t* title)
 /******************************************************************************/
 
 //______________________________________________________________________________
-TMacro* TEveManager::GetMacro(const Text_t* name) const
+TMacro* TEveManager::GetMacro(const char* name) const
 {
    // Find macro in fMacroFolder by name.
 

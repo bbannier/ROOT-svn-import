@@ -58,6 +58,7 @@ class TReaperTimer;
 class TMutex;
 class TFileCollection;
 class TProofDataSetManager;
+class TFileHandler;
 
 // Hook to external function setting up authentication related stuff
 // for old versions.
@@ -72,7 +73,7 @@ friend class TProofServLite;
 friend class TXProofServ;
 
 public:
-   enum EQueryAction { kQueryOK, kQueryModify, kQueryStop };
+   enum EQueryAction { kQueryOK, kQueryModify, kQueryStop, kQueryEnqueued };
 
 private:
    TString       fService;          //service we are running, either "proofserv" or "proofslave"
@@ -116,10 +117,14 @@ private:
    TStopwatch    fLatency;          //measures latency of packet requests
    TStopwatch    fCompute;          //measures time spend processing a packet
 
+   TFileHandler *fInputHandler;     //Input socket handler
+
    TQueryResultManager *fQMgr;      //Query-result manager
 
-   TList        *fWaitingQueries;   //list of TProofQueryResult wating to be processed
+   TList        *fWaitingQueries;   //list of TProofQueryResult waiting to be processed
    Bool_t        fIdle;             //TRUE if idle
+
+   TList        *fQueuedMsg;        //list of messages waiting to be processed
 
    TString       fPrefix;           //Prefix identifying the node
 
@@ -144,7 +149,7 @@ private:
    Long_t        fVirtMemHWM;       //Above this we terminate gently (in kB)
    Long_t        fVirtMemMax;       //Hard limit enforced by the system (in kB)
 
-   static FILE  *fgErrorHandlerFile; // File where to log 
+   static FILE  *fgErrorHandlerFile; // File where to log
    static Int_t  fgRecursive;       // Keep track of recursive inputs during processing
 
    void          RedirectOutput(const char *dir = 0, const char *mode = "w");
@@ -173,6 +178,7 @@ protected:
    virtual void  HandleRetrieve(TMessage *mess);
    virtual void  HandleWorkerLists(TMessage *mess);
 
+   virtual void  ProcessNext();
    virtual Int_t Setup();
    Int_t         SetupCommon();
    virtual void  MakePlayer();
@@ -219,8 +225,8 @@ public:
    Int_t          CopyFromCache(const char *name, Bool_t cpbin);
    Int_t          CopyToCache(const char *name, Int_t opt = 0);
 
-   virtual EQueryAction GetWorkers(TList *workers, Int_t &prioritychange);
-
+   virtual EQueryAction GetWorkers(TList *workers, Int_t &prioritychange,
+                                   Bool_t resume = kFALSE);
    virtual void   HandleException(Int_t sig);
    virtual Int_t  HandleSocketInput(TMessage *mess, Bool_t all);
    virtual void   HandleSocketInput();

@@ -29,10 +29,10 @@ protected:
    TEveWindow   *fCurrentWindow;
    TEveWindow   *fDefaultContainer;
 
-   void DestroyWindowRecurively(TEveWindow* window);
+   void DestroyWindowRecursively(TEveWindow* window);
 
 public:
-   TEveWindowManager(const Text_t* n="TEveWindowManager", const Text_t* t="");
+   TEveWindowManager(const char* n="TEveWindowManager", const char* t="");
    virtual ~TEveWindowManager();
 
    void SelectWindow(TEveWindow* w);

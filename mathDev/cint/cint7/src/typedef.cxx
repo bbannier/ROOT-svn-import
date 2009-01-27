@@ -73,7 +73,13 @@ static ::Reflex::Type G__defined_typename_exact(char *type_name)
              ) env_tagnum = -1;
 #endif
     else {
-       env_tagnum = G__defined_tagname(skipconst,0);
+       // first try a typedef, so we don't trigger autoloading here:
+       Reflex::Type env_typenum = G__find_typedef(skipconst);
+       if (env_typenum) {
+          env_tagnum = G__get_tagnum(env_typenum.FinalType());
+       } else {
+          env_tagnum = G__defined_tagname(skipconst,0);
+       }
     }
   }
   else {
@@ -945,11 +951,27 @@ next_name:
 
    if(typenum) {
       /*
-      *  return if the type is already defined
+      *  return if the type is already defined but could just be marked autoload
       */
-      //fprintf(stderr, "G__define_type: The typdef '%s' already existed!\n", type_name);
-      if(';'!=c) G__fignorestream(";");
-      return;
+      G__RflxProperties *prop = G__get_properties(typenum);
+      if (prop && prop->autoload) {
+         if (typenum.ToTypeBase()) {
+            typenum.ToTypeBase()->HideName();
+         }
+         if (prop->tagnum>0) {
+            char *old = G__struct.name[prop->tagnum];
+            G__struct.name[prop->tagnum] = (char*)malloc(strlen(old) + 50);
+            strcpy(G__struct.name[prop->tagnum], "@@ ex autload entry @@");
+            strcat(G__struct.name[prop->tagnum], old);
+            G__struct.type[prop->tagnum] = 0;
+            free(old);            
+         }
+         // fprintf(stderr, "G__define_type: The typdef '%s' already existed as autoload!\n", type_name);
+      } else {
+         // fprintf(stderr, "G__define_type: The typdef '%s' already existed!\n", type_name);      
+         if(';'!=c) G__fignorestream(";");
+         return;
+      }
    }
 
    // Fix the name and the pointer type.
@@ -1156,7 +1178,13 @@ int G__defined_typename(const char* type_name)
          scope = ::Reflex::Scope::GlobalScope();
       }
       else {
-         int tagnum = G__defined_tagname(skipconst, 0); // Lookup the given scope, starting from the current scope, this may cause a template instantiation if the given scope has a template id in it.
+         int tagnum = -1;
+         Reflex::Type env_typenum = G__find_typedef(skipconst);
+         if (env_typenum) {
+            tagnum = G__get_tagnum(env_typenum.FinalType());
+         } else {
+            tagnum = G__defined_tagname(skipconst, 0); // Lookup the given scope, starting from the current scope, this may cause a template instantiation if the given scope has a template id in it.
+         }
          if (tagnum != -1) {
             scope = G__Dict::GetDict().GetScope(tagnum);
          }

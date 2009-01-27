@@ -1605,7 +1605,12 @@ int G__defined_tagname(const char* tagname, int noerror)
       }
 #endif // G__STD_NAMESPACE
       else {
-         env_tagnum = G__defined_tagname(temp, noerror);
+         // first try a typedef, so we don't trigger autoloading here:
+         long env_typenum = G__defined_typename_noerror(temp, 1);
+         if (env_typenum != -1 && G__newtype.type[env_typenum] == 'u')
+            env_tagnum = G__newtype.tagnum[env_typenum];
+         else
+            env_tagnum = G__defined_tagname(temp, noerror);
          if (env_tagnum == -1) {
             return -1;
          }
@@ -1769,13 +1774,19 @@ int G__search_tagname(const char* tagname, int type)
       strcpy(atom_tagname, tagname);
       p = (char*)G__strrstr(atom_tagname, "::");
       *p = 0;
-      envtagnum = G__defined_tagname(atom_tagname, 1);
+      // first try a typedef, so we don't trigger autoloading here:
+      long envtypenum = G__defined_typename_noerror(atom_tagname, 1);
+      if (envtypenum != -1 && G__newtype.type[envtypenum] == 'u')
+	envtagnum = G__newtype.tagnum[envtypenum];
+      else
+	envtagnum = G__defined_tagname(atom_tagname, 1);
    }
    else {
       envtagnum = G__get_envtagnum();
    }
    // If name not found, create a tagtable entry for it.
    if ((i == -1) || (isstructdecl && (envtagnum != G__struct.parent_tagnum[i]))) {
+      ++G__struct.nactives;
       i = G__struct.alltag;
       if (i == G__MAXSTRUCT) {
          G__fprinterr(G__serr, "Limitation: Number of struct/union tag exceed %d FILE:%s LINE:%d\nFatal error, exit program. Increase G__MAXSTRUCT in G__ci.h and recompile %s\n", G__MAXSTRUCT, G__ifile.name, G__ifile.line_number, G__nam);
@@ -1924,6 +1935,7 @@ int G__search_tagname(const char* tagname, int type)
    }
    else if (!G__struct.type[i] || (G__struct.type[i] == 'a')) {
       G__struct.type[i] = type;
+      ++G__struct.nactives;
    }
 #ifndef G__OLDIMPLEMENTATION1823
    if (buf != temp) {

@@ -36,6 +36,7 @@ struct G__setup_func_struct
 {
    char* libname;
    G__incsetup func;
+   int filenum;
    int inited;
 };
 
@@ -109,8 +110,7 @@ extern "C" void G__add_setup_func(const char* libname, G__incsetup func)
    G__setup_func_list[islot]->func    = func;
    G__setup_func_list[islot]->inited  = 0;
    strcpy(G__setup_func_list[islot]->libname, libname);
-
-   G__RegisterLibrary(func);
+   G__setup_func_list[islot]->filenum = G__RegisterLibrary(func);
 }
 
 //______________________________________________________________________________
@@ -130,9 +130,15 @@ extern "C" void G__remove_setup_func(const char* libname)
       }
 }
 
+
 //______________________________________________________________________________
 extern "C" int G__call_setup_funcs()
 {
+   if ( ! G__tagtable::inited ) { 
+      // Don't do anything until G__struct (at least) is initialized
+      return 0;
+   }
+
    int init_counter = 0; // Number of initializers run.
    ::Reflex::Scope store_p_local = G__p_local; // changed by setupfuncs
    G__LockCriticalSection();
@@ -147,7 +153,7 @@ extern "C" int G__call_setup_funcs()
    // initialization
    for (int i = 0; i < G__nlibs; ++i) {
       if (G__setup_func_list[i] && !G__setup_func_list[i]->inited) {
-         G__RegisterLibrary(G__setup_func_list[i]->func);
+         G__setup_func_list[i]->filenum = G__RegisterLibrary(G__setup_func_list[i]->func);
       }
    }
 
@@ -157,7 +163,24 @@ extern "C" int G__call_setup_funcs()
 #ifdef G__DEBUG
          fprintf(G__sout, "Initializing dictionary for '%s'.\n", G__setup_func_list[i]->libname);
 #endif // G__DEBUG
+         // Temporarily set G__ifile to the shared library.
+         G__input_file store_ifile = G__ifile;
+         int fileno = G__setup_func_list[i]->filenum;
+         G__ifile.filenum = fileno;
+         G__ifile.line_number = 1;
+         G__ifile.str = 0;
+         G__ifile.pos = 0;
+         G__ifile.vindex = 0;
+         
+         if (fileno != -1) {
+            G__ifile.fp = G__srcfile[fileno].fp;
+            strcpy(G__ifile.name,G__srcfile[fileno].filename);
+         }
+
          (G__setup_func_list[i]->func)();
+
+         G__ifile = store_ifile;
+
          G__setup_func_list[i]->inited = 1; // FIXME: Should set before calling func to make sure we run func only once, but because of stupid way G__get_linked_tagnum calls back into root, G__setup_tagtable needs this to allow double calling.
          G__initpermanentsl->push_back(G__setup_func_list[i]->func);
          ++init_counter;
@@ -1151,9 +1174,9 @@ extern "C" void G__set_stdio_handle(FILE* sout, FILE* serr, FILE* sin)
 //______________________________________________________________________________
 extern "C" const char* G__cint_version()
 {
-   static std::string version;
-   version = G__CINTVERSIONSTR;
-   return version.c_str(); // For example: "5.14.34, Mar 10 2000"
+   static std::string static_version;
+   static_version = G__CINTVERSIONSTR;
+   return static_version.c_str(); // For example: "5.14.34, Mar 10 2000"
 }
 
 //______________________________________________________________________________
@@ -1352,7 +1375,6 @@ extern "C" int G__main(int argc, char** argv)
 {
    // Main entry of the C/C++ interpreter.
    int stepfrommain = 0;
-   int ii;
    char* forceassignment = 0;
    int xfileflag = 0;
    G__StrBuf sourcefile_sb(G__MAXFILENAME);
@@ -1375,7 +1397,6 @@ extern "C" int G__main(int argc, char** argv)
    char* dllid = 0;
    G__dictposition stubbegin;
    char* icom = 0;
-   stubbegin.ptype = (char*) G__PVOID;
    //
    // Setting STDIOs.  May need to modify in init.c, end.c, scrupto.c, pause.c.
    //
@@ -1892,6 +1913,7 @@ extern "C" int G__main(int argc, char** argv)
    //  Catch signals if not embedded in ROOT.
    //
 #ifndef G__ROOT
+#ifdef G__SIGNAL
 #ifndef G__DONT_CATCH_SIGINT
    signal(SIGINT, G__breakkey);
 #endif // G__DONT_CATCH_SIGINT
@@ -1917,6 +1939,7 @@ extern "C" int G__main(int argc, char** argv)
 #endif // SIGBUS
       // --
    }
+#endif // G__SIGNAL
 #endif // G__ROOT
    //
    //  Initialize pointer to member function size.
@@ -1988,7 +2011,6 @@ extern "C" int G__main(int argc, char** argv)
          continue;
       }
       else if (strcmp(sourcefile, "+STUB") == 0) {
-         stubbegin.ptype = (char*)G__PVOID;
          G__store_dictposition(&stubbegin);
          continue;
       }

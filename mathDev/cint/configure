@@ -35,7 +35,7 @@ ARCHS=(linux linuxicc macos macosx64 djgpp cygwin mingw mwerks hpux aix msvc7 ms
 EXPORTS=(CINTVERSION ARCH COREVERSION CC CFLAGS CMACROS COMP CPP COUT COUTEXE INCP CXX CXXFLAGS CXXMACROS \
     LD LDFLAGS LDOUT LIBP LIBL SOFLAGS SOOUT OBJEXT EXEEXT \
     SOEXT LIBEXT IMPLIBEXT DEBUG DEFAULTLIBS \
-    MANGLEPATHS STREAMDIR PLATFORMO EXPLLINK \
+    MANGLEPATHS MANGLEPATHSU STREAMDIR PLATFORMO EXPLLINK \
     READLINELIB CURSESLIB LINK_READLINELIB LINK_CURSESLIB READLINELIB4SHLIB CURSESLIB4SHLIB RM MV WITHPREFIX \
     INPUTMODE INPUTMODELOCK AR EXTRACTSYMBOLS MAKEIMPLIB)
 unset ${EXPORTS[*]}
@@ -64,12 +64,12 @@ function config_GCC_defaults {
     COPTFLAGS=-O2
     CMACROS="$CMACROS -DG__SHAREDLIB -DG__OSFDLL -DG__ANSI -DG__ERRORCALLBACK -DG__SIGNEDCHAR -DG__NEWSTDHEADER -DG__CINT_VER6 -DG__NATIVELONGLONG -DG__P2FCAST -DG__STD_EXCEPTION"
 
-    CXX=g++
+    CXX="g++ "
     CXXDBGFLAGS="$CDBGFLAGS"
     CXXOPTFLAGS="$COPTFLAGS"
     CXXMACROS="$CXXMACROS $CMACROS"
 
-    LD=g++
+    LD="g++ "
     DEFAULTLIBS="-lm -ldl"
     LDOUT="-o "
     SOOUT="$LDOUT"
@@ -144,7 +144,7 @@ function config_macos {
 
     EXTRA_LIB_DIR="/sw/lib/ncurses"
 
-#    PLATFORMO=v6_macos
+#    PLATFORMO=macos
 
     AR="ar -q -cs "
     IMPLIBEXT=.dylib
@@ -223,8 +223,8 @@ function config_msvc7 {
     IMPLIBEXT=.lib
 
     CC=cl
-    CFLAGS="-G5 -nologo -wd4996 -GX"
-    CMACROS="-DG__REDIRECTIO -DG__SHAREDLIB -DG__UNIX -DG__WIN32 -DWIN32 -D_WIN32 -DG__NEWSTDHEADER"
+    CFLAGS="-G5 -nologo -wd4996  -GX"
+    CMACROS="-DG__REDIRECTIO -DG__SHAREDLIB -DG__WIN32 -DWIN32 -D_WIN32 -DG__NEWSTDHEADER"
     CPP="cl -E -C -nologo"
     COUT=-Fo
     COUTEXE=-Fe
@@ -232,7 +232,7 @@ function config_msvc7 {
     CDBGFLAGS="-Zi -MDd"
 
     CXX=cl
-    CXXFLAGS="$CXXFLAGS $CFLAGS -GR -wd4181"
+    CXXFLAGS="$CXXFLAGS $CFLAGS -TP -GR -wd4181"
     CXXMACROS="$CMACROS"
     CXXOPTFLAGS="$COPTFLAGS"
     CXXDBGFLAGS="$CDBGFLAGS"
@@ -254,11 +254,14 @@ function config_msvc7 {
     EXTRACTSYMBOLS="dumpbin.exe /SYMBOLS @obj@ | grep -e ' notype ()[[:space:]]\{4\}External '| grep -v ' UNDEF ' | grep -v 'AEPAXI@Z ('| sed 's!^[[:xdigit:]]\{3,\}[[:space:]]\+\([[:xdigit:]]\{8\}\)[[:space:]]\+.*\+External[[:space:]]\+|[[:space:]]\+\([^(]\+\).*\$!\1 \2!'| cut -d' ' -f2"
 
     MANGLEPATHS="cygpath -m"
+    MANGLEPATHSU="cygpath -u"
     STREAMDIR=vc7strm
-    PLATFORMO=v6_winnt
+    PLATFORMO=winnt
     RM="rm -f"
     MV="mv -f"
     AR="lib /OUT:"
+
+    NOREADLINE=1
 }
 
 function config_msvc8 {
@@ -266,9 +269,9 @@ function config_msvc8 {
     CFLAGS="${CFLAGS/-G5/}"
     CXXFLAGS="${CXXFLAGS/-G5/}"
     CFLAGS="${CFLAGS/-GX/-EHs}"
-    CMACROS="$CMACROS -D_CRT_SECURE_NO_DEPRECATE=1 -D_SECURE_SCL=0 -D_HAS_ITERATOR_DEBUGGING=0"
+    CMACROS="$CMACROS -D_CRT_SECURE_NO_DEPRECATE=1"
     CXXFLAGS="${CXXFLAGS/-GX/-EHs}"
-    CXXMACROS="$CXXMACROS -D_CRT_SECURE_NO_DEPRECATE=1 -D_SECURE_SCL=0 -D_HAS_ITERATOR_DEBUGGING=0"
+    CXXMACROS="$CXXMACROS -D_CRT_SECURE_NO_DEPRECATE=1"
 }
 
 function config_msvc9 {
@@ -276,9 +279,9 @@ function config_msvc9 {
     CFLAGS="${CFLAGS/-G5/}"
     CXXFLAGS="${CXXFLAGS/-G5/}"
     CFLAGS="${CFLAGS/-GX/-EHs}"
-    CMACROS="$CMACROS -D_CRT_SECURE_NO_DEPRECATE=1 -D_SECURE_SCL=0 -D_HAS_ITERATOR_DEBUGGING=0"
+    CMACROS="$CMACROS -D_CRT_SECURE_NO_DEPRECATE=1"
     CXXFLAGS="${CXXFLAGS/-GX/-EHs}"
-    CXXMACROS="$CXXMACROS -D_CRT_SECURE_NO_DEPRECATE=1 -D_SECURE_SCL=0 -D_HAS_ITERATOR_DEBUGGING=0"
+    CXXMACROS="$CXXMACROS -D_CRT_SECURE_NO_DEPRECATE=1"
 }
 
 function config_solarisgcc {
@@ -325,7 +328,7 @@ function add_opt {
 
 add_opt "--help -h" 'Show this help.'
 add_opt "--arch=" "Architecture, one of ${ARCHS[*]}"
-add_opt "--coreversion=" "CINT core version, one of old, new"
+add_opt "--coreversion=" "CINT core version, one of old, new [new]"
 add_opt "--with-prefix" 'Prefix-based build (instead of using CINTSYSDIR)'
 add_opt "--prefix=" 'Topdir for architecture-independent files [/usr/local]'
 add_opt "--exec-prefix=" 'Topdir for architecture-dependent files [$PREFIX]'
@@ -599,8 +602,8 @@ if [ "$ARCH" = "" ]; then
 fi
 
 if [ "$COREVERSION" = "" ]; then
-    COREVERSION=cint
-    echo Using old CINT core
+    COREVERSION=cint7
+    echo Using new CINT core
 fi
 
 if [ "$DEBUG" = "1" ]; then
@@ -618,7 +621,7 @@ fi
 CMACROS="$CMACROS -DG__HAVE_CONFIG -DG__NOMAKEINFO"
 CXXMACROS="$CXXMACROS -DG__HAVE_CONFIG -DG__NOMAKEINFO"
 
-if [ "$READLINELIB" = "" ]; then
+if [ "$NOREADLINE" = "" -a "$READLINELIB" = "" ]; then
     for ext in $IMPLIBEXT $SOEXT; do
         for d in $EXTRA_LIB_DIR /usr/local/lib /usr/lib /sw/lib; do 
             if [ -f ${d}/libreadline$ext ]; then
@@ -674,6 +677,7 @@ fi
 
 [ "$STREAMDIR" = "" ]   && STREAMDIR=stream
 [ "$MANGLEPATHS" = "" ] && MANGLEPATHS="echo "
+[ "$MANGLEPATHSU" = "" ] && MANGLEPATHSU="echo "
 
 HAVE_CONFIG=1
 
@@ -752,12 +756,16 @@ for exp in ${EXPORTS[*]}; do
     echo '#define 'G__CFG_$exp \""$value"\" >> $file
 done
 
+echo Removing Apiif.cxx
+rm -f ${COREVERSION}/src/dict/Apiif*.*
+
 # now write the cint-config script
 
 
 $RM bin/cint-config
 echo Writing bin/cint-config...
-[ "x$INCLUDEDIR" = "x" ] && INCLUDEDIR='$CINTSYSDIR/include' && INCLUDEDIRCINT=$INCLUDEDIR/cint
+[ "x$BINDIR" = "x" ] && BINDIR='$CINTSYSDIR/bin'
+[ "x$INCLUDEDIR" = "x" ] && INCLUDEDIR='$CINTSYSDIR'/${COREVERSION}/inc && INCLUDEDIRCINT='$CINTSYSDIR'/${COREVERSION}/include
 [ "x$LIBDIR" = "x" ] && LIBDIR='$CINTSYSDIR/lib'
 [ "x$DATADIR" = "x" ] && DATADIR='$CINTSYSDIR/'${COREVERSION}'/'
 
@@ -768,10 +776,15 @@ cat <<_EOF
 
 Usage: cint-config [options]
 
+  --bindir         print the directory of cint executables
   --incdir         print the directory of cint header files
   --cflags         print the necessary flags for the compiler
   --libs           print the necessary libs for linking 
+  --libdir         print the directory of cint libraries
   --datadir        print the location of cint data files
+  --arch           print architecture
+  -u|--unix        print unix-like paths (makes sense only on win)
+                   this arg has effect only on the following args
   -v|--version     print cint version
   -h|--help        print this help
 
@@ -783,13 +796,19 @@ if [ \$# -eq 0 ]; then
    exit 1
 fi
 
+pathconvert=echo
+
 while [ \$# -gt 0 ] ; do
   case \$1 in
-    --incdir) echo "${INCLUDEDIR}/cint" ;;
-    --cflags) echo "${INCP}${INCLUDEDIR}/cint" ;;
-    --libs)   echo "${LIBP}${LIBDIR} -lcint -lReflex" ;;
-    --datadir) echo "${DATADIR}/cint" ;;
+    --unix|-u) pathconvert="$MANGLEPATHSU" ;;
+    --bindir)  \$pathconvert "${BINDIR}" ;;
+    --incdir)  \$pathconvert "${INCLUDEDIR}" ;;
+    --cflags)  \$pathconvert "${INCP}${INCLUDEDIR}" ;;
+    --libs)    \$pathconvert "${LIBP}${LIBDIR} -lCint -lReflex" ;;
+    --libdir)  \$pathconvert "${LIBDIR}" ;;
+    --datadir) \$pathconvert "${DATADIR}/cint" ;;
     --version|-v) echo "$CINTVERSION" ;;
+    --arch)   echo "${ARCH}" ;;
     -h|--help) printhelp;;
     *)        echo "Unknown option: \$1"; exit 1;;
   esac

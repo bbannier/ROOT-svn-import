@@ -465,10 +465,17 @@ int Cint::Internal::G__class_autoloading(int* ptagnum)
          ::Reflex::Scope store_tagdefining = G__tagdefining;
          G__def_tagnum = Reflex::Scope();
          G__tagdefining = Reflex::Scope();
-         int res = (*G__p_class_autoloading)(G__fulltagname(tagnum, 1), copyLibname);
+         std::string fulltagname( G__fulltagname(tagnum, 1) );
+         int res = (*G__p_class_autoloading)((char*)fulltagname.c_str(), copyLibname);
          G__def_tagnum = store_def_tagnum;
          G__tagdefining = store_tagdefining;
-         if (G__struct.type[tagnum] == G__CLASS_AUTOLOAD) {
+         if (G__struct.type[tagnum] == 0 && G__struct.name[tagnum] && G__struct.name[tagnum][0]=='@') {
+            // This record was already 'killed' during the autoloading.
+            // Let's find the new real one!
+            //FIXME: remove the char* cast
+            tagnum = G__defined_tagname(fulltagname.c_str(), 3);
+            
+         } else if (G__struct.type[tagnum] == G__CLASS_AUTOLOAD) {
             // if (strstr(G__struct.name[tagnum], "<") != 0) 
             {
                // Kill this entry.
@@ -616,8 +623,8 @@ int Cint::Internal::G__class_autoloading(int* ptagnum)
             break;
       };
    }
-   scope.AddDataMember(name, type, reflex_offset, modifiers);
-   ::Reflex::Member d = scope.DataMemberByName(name);
+   ::Reflex::Member d;
+   scope.AddDataMember(d, name, type, reflex_offset, modifiers);
    G__get_offset(d) = offset;
    G__get_properties(d)->statictype = var_statictype;
    return d;
@@ -1715,6 +1722,21 @@ extern "C" void G__set_class_autoloading_table(char* classname, char* libname)
    
    int store_enable_autoloading = G__enable_autoloading;
    G__enable_autoloading = 0;
+   // First check whether this is already defined as typedef.
+   Reflex::Type typedf( G__find_typedef(classname) );
+   if (typedf) {
+      // The autoloading might actually be 'targeted' to the FinalType per se.
+      // For example in the case of the STL, the autoload classname would be
+      // vector<int> but this would be declared as a typedef to vector<int, allocator<int> >
+      ::Reflex::Type final( typedf.FinalType() );
+      if (final && final.SizeOf()==0) {
+         //FIXME: please remove the char* cast!
+         G__set_class_autoloading_table( (char*)final.Name(::Reflex::SCOPED).c_str(), libname );
+      }
+      // Let's do nothing in this case for now
+      G__enable_autoloading = store_enable_autoloading;
+      return;
+   }
    int ntagnum = G__search_tagname(classname, G__CLASS_AUTOLOAD);
    if (libname == (void*)-1) {
       if (G__struct.name[ntagnum][0]) {
@@ -1783,45 +1805,41 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
    // 
    //         = 3   like 2, and no autoloading
    // 
-   // CAUTION:
-   // 
-   //   If template class with constant argument is given to this function,
-   //   tagname argument may be modified like below.
-   // 
-   //        A<int,5*2> => A<int,10>
-   // 
-   //   This may cause unexpected side-effect.
-   //
    static ::Reflex::NamespaceBuilder stdnp("std");
    int i;
-   int len;
-   G__StrBuf temp_sb(G__LONGLINE);
+   // Allow for 10 occurrences of T<S<U>> - the only case where tagname can grow
+   // due to typename normalization.
+   int len = strlen(tagname) + 10;
+   G__StrBuf temp_sb(len);
    char* temp = temp_sb;
-   G__StrBuf atom_tagname_sb(G__LONGLINE);
+   G__StrBuf atom_tagname_sb(len);
    char* atom_tagname = atom_tagname_sb;
-   switch (tagname[0]) {
+   G__StrBuf normalized_tagname_sb(len);
+   char* normalized_tagname = normalized_tagname_sb;
+   strcpy(normalized_tagname, tagname);
+   switch (normalized_tagname[0]) {
       case '"':
       case '\'':
          return -1;
       case '\0': // Global namespace.
          return 0;
    }
-   if (strchr(tagname, '>')) { // There is a template-id in the given tagname.
+   if (strchr(normalized_tagname, '>')) { // There is a template-id in the given tagname.
       // handles X<X<int>> as X<X<int> >
       {
-         char* p = strstr(tagname, ">>");
+         char* p = strstr(normalized_tagname, ">>");
          while (p) {
             ++p;
             strcpy(temp, p);
             *p = ' ';
             ++p;
             strcpy(p, temp);
-            p = (char*) strstr(tagname, ">>");
+            p = (char*) strstr(normalized_tagname, ">>");
          }
       }
       // handles X<int > as X<int>
       {
-         char* p = strstr(tagname, " >");
+         char* p = strstr(normalized_tagname, " >");
          while (p) {
             if (p[-1] != '>') {
                strcpy(temp, p + 1);
@@ -1833,7 +1851,7 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
       }
       // handles X <int> as X<int>
       {
-         char* p = strstr(tagname, " <");
+         char* p = strstr(normalized_tagname, " <");
          while (p) {
             strcpy(temp, p + 1);
             strcpy(p, temp);
@@ -1843,7 +1861,7 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
       }
       // handles "X<int> "  as "X<int>"
       {
-         char* p = strstr(tagname, "> ");
+         char* p = strstr(normalized_tagname, "> ");
          while (p) {
             if (!strncmp(p, "> >", 3)) {
                p += 2;
@@ -1858,7 +1876,7 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
       }
       // handles X< int> as X<int>
       {
-         char* p = strstr(tagname, "< ");
+         char* p = strstr(normalized_tagname, "< ");
          while (p) {
             strcpy(temp, p + 2);
             strcpy(p + 1, temp);
@@ -1868,7 +1886,7 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
       }
       // handles X<int, int> as X<int,int>
       {
-         char* p = strstr(tagname, ", ");
+         char* p = strstr(normalized_tagname, ", ");
          while (p) {
             strcpy(temp, p + 2);
             strcpy(p + 1, temp);
@@ -1879,7 +1897,7 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
    }
    // handle X<const const Y>
    {
-      char* p = strstr(tagname, "const const ");
+      char* p = strstr(normalized_tagname, "const const ");
       while (p) {
          char* p1 = (p += 6);
          char* p2 = p + 6;
@@ -1890,11 +1908,11 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
          p = strstr(p, "const const ");
       }
    }
-   if (isspace(tagname[0])) {
-      strcpy(temp, tagname + 1);
+   if (isspace(normalized_tagname[0])) {
+      strcpy(temp, normalized_tagname + 1);
    }
    else {
-      strcpy(temp, tagname);
+      strcpy(temp, normalized_tagname);
    }
    //
    //  Now get the name to lookup and
@@ -1926,17 +1944,20 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
          // -- A name qualified explicitly with std::, use the global scope for now.
          env_tagnum = ::Reflex::Scope::GlobalScope();
          tagname += 5;
-         if (!*tagname) {
-            // "std::"
-         }
+         normalized_tagname += 5;
       }
 #endif // G__STD_NAMESPACE
       else {
          // A qualified name, find the specified containing scope.
          // Recursively locate the containing scopes, from right to left.
-         // Note: use a temporary here, G__defined_tagname can alter its argument.
-         strcpy(temp, given_scopename);
-         int tag = G__defined_tagname(temp, noerror);
+         int tag = -1;
+         // first try a typedef, so we don't trigger autoloading here:
+         Reflex::Type env_typenum = G__find_typedef(given_scopename);
+         if (env_typenum) {
+            tag = G__get_tagnum(env_typenum.FinalType());
+         } else {
+            tag = G__defined_tagname(given_scopename,noerror);
+         }
          if (tag == -1) {
             // Should never happen.
             // TODO: Give an error message here.
@@ -2049,26 +2070,28 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
    //
    //  Not found, try instantiating a class template.
    //
-   len = std::strlen(tagname);
-   if ((tagname[len-1] == '>') && (noerror < 2) && ((len < 2) || (tagname[len-2] != '-'))) {
+   len = std::strlen(normalized_tagname);
+   if ((normalized_tagname[len-1] == '>') &&
+       (noerror < 2) &&
+       ((len < 2) || (normalized_tagname[len-2] != '-'))) {
       if (G__loadingDLL) {
-         G__fprinterr(G__serr, "Error: '%s' Incomplete template resolution in shared library", tagname);
+         G__fprinterr(G__serr, "Error: '%s' Incomplete template resolution in shared library", normalized_tagname);
          G__genericerror(0);
          G__fprinterr(G__serr, "Add following line in header for making dictionary\n");
-         G__fprinterr(G__serr, "   #pragma link C++ class %s;\n", tagname);
+         G__fprinterr(G__serr, "   #pragma link C++ class %s;\n", normalized_tagname);
          G__exit(-1);
          return -1;
       }
-      // CAUTION: tagname may be modified in following function.
+
       char store_var_type = G__var_type;
-      i = G__instantiate_templateclass((char*) tagname, noerror);
+      i = G__instantiate_templateclass(normalized_tagname, noerror);
       G__var_type = store_var_type;
       return i;
    }
    else if (noerror < 2) {
-      G__Definedtemplateclass* deftmplt = G__defined_templateclass((char*) tagname);
+      G__Definedtemplateclass* deftmplt = G__defined_templateclass(normalized_tagname);
       if (deftmplt && deftmplt->def_para && deftmplt->def_para->default_parameter) {
-         i = G__instantiate_templateclass((char*) tagname, noerror);
+         i = G__instantiate_templateclass(normalized_tagname, noerror);
          return i;
       }
    }
@@ -2098,7 +2121,7 @@ extern "C" int G__defined_tagname(const char* tagname, int noerror)
    {
       int i2 = 0;
       int cx;
-      while ((cx = tagname[i2++])) {
+      while ((cx = normalized_tagname[i2++])) {
          if (G__isoperator(cx)) {
             return -1;
          }
@@ -2153,7 +2176,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
    }
    type = tolower(type);
    // Search for tagname, autoload class if not ref or ptr.
-   i = G__defined_tagname(tagname, isPointer ? 3 : 2); // Note: The tagname can be changed in this call.
+   i = G__defined_tagname(tagname, isPointer ? 3 : 2); 
 #ifndef G__OLDIMPLEMENTATION1823
    if (strlen(tagname) > ((G__BUFLEN * 2) - 10)) {
       temp = (char*) malloc(strlen(tagname) + 10);
@@ -2165,7 +2188,13 @@ extern "C" int G__search_tagname(const char* tagname, int type)
       strcpy(atom_tagname, tagname);
       p = G__strrstr(atom_tagname, "::");
       *p = 0;
-      envtagnum = G__Dict::GetDict().GetScope(G__defined_tagname(atom_tagname, 1)); // Note: atom_tagname can be modified during this call.
+      // first try a typedef, so we don't trigger autoloading here:
+      Reflex::Type envtypenum = G__find_typedef(atom_tagname);
+      if (envtypenum) {
+         envtagnum = envtypenum.FinalType();
+      } else {
+         envtagnum = G__Dict::GetDict().GetScope(G__defined_tagname(atom_tagname, 1)); // Note: atom_tagname can be modified during this call.
+      }      
    }
    else {
       envtagnum = G__get_envtagnum();
@@ -2183,6 +2212,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
          G__create_bytecode_arena();
       }
       i = G__struct.alltag;
+      ++G__struct.nactives;
       if (i == G__MAXSTRUCT) {
          G__fprinterr(G__serr, "Limitation: Number of struct/union tag exceed %d FILE:%s LINE:%d\nFatal error, exit program. Increase G__MAXSTRUCT in G__ci.h and recompile %s\n", G__MAXSTRUCT, G__ifile.name, G__ifile.line_number, G__nam);
          G__eof = 1;
@@ -2380,6 +2410,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
    }
    else if (!G__struct.type[i] || (G__struct.type[i] == 'a')) {
       G__struct.type[i] = type;
+      ++G__struct.nactives;
    }
 #ifndef G__OLDIMPLEMENTATION1823
    if (buf != temp) {

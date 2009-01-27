@@ -206,7 +206,7 @@ void TGToolButton::DoRedraw()
       pic = fPicD ? fPicD : fPic;
    }
    if (fBgndColor == 0xaaaaff) {
-      x--; y--;
+      //x--; y--;
       gVirtualX->DrawRectangle(fId, TGFrame::GetShadowGC()(), 0, 0, w, h);
    }
    pic->Draw(fId, fNormGC, x, y);
@@ -1011,7 +1011,7 @@ Bool_t RootShower::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
 
 
 //______________________________________________________________________________
-TGListTreeItem* RootShower::AddToTree(const Text_t *name)
+TGListTreeItem* RootShower::AddToTree(const char *name)
 {
    // Add item to the TGListTree of the event display. It will be connected
    // to the current TGListTreeItem (i.e. fCurEventListItem)

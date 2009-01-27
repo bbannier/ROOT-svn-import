@@ -931,19 +931,18 @@ static int G__isbinaryfile(char* filename)
 //______________________________________________________________________________
 static void G__checkIfOnlyFunction(int fentry)
 {
-   int tagflag = 0;
    G__dictposition* dictpos = G__srcfile[fentry].dictpos;
-   if (dictpos->tagnum == G__struct.alltag) {
-      tagflag = 1;
-      if (dictpos->ptype && (dictpos->ptype != (char*) G__PVOID)) {
-         for (int i = 0; i < G__struct.alltag; ++i) {
-            if (dictpos->ptype[i] != G__struct.type[i]) {
-               tagflag = 0;
-               break;
-            }
-         }
-      }
+
+   // Sum the number of G__struct slot used by any of the file
+   // we enclosed:
+   int nSubdefined = 0;
+   for(int filecur = fentry+1; filecur < G__nfile; ++filecur) {
+     nSubdefined += G__srcfile[filecur].definedStruct;
    }
+   G__srcfile[fentry].definedStruct = G__struct.nactives - dictpos->nactives - nSubdefined;
+   
+   int tagflag = ( G__srcfile[fentry].definedStruct == 0 ); 
+  
    int varflag = 1;
    ::Reflex::Scope var = ::Reflex::Scope::GlobalScope();
    if (dictpos->var == var && dictpos->ig15 == var.DataMemberSize()) {
@@ -984,7 +983,6 @@ static void G__checkIfOnlyFunction(int fentry)
       (definedtemplatefunc == dictpos->definedtemplatefunc)
    ) {
       G__srcfile[fentry].hasonlyfunc = (G__dictposition*) malloc(sizeof(G__dictposition));
-      G__srcfile[fentry].hasonlyfunc->ptype = (char*) G__PVOID;
       G__store_dictposition(G__srcfile[fentry].hasonlyfunc);
    }
 }
@@ -1054,7 +1052,6 @@ int Cint::Internal::G__loadfile_tmpfile(FILE* fp)
    sprintf(G__ifile.name, "(tmp%d)", fentry);
    G__hash(G__ifile.name, hash, temp);
    G__srcfile[fentry].dictpos = (G__dictposition*) malloc(sizeof(G__dictposition));
-   G__srcfile[fentry].dictpos->ptype =  0;
    G__store_dictposition(G__srcfile[fentry].dictpos);
    G__srcfile[fentry].hdrprop = hdrprop;
    store_security = G__security;
@@ -1274,8 +1271,8 @@ int Cint::Internal::G__statfilename(const char *filenamein, struct stat *statBuf
        * try $CINTSYSDIR/stl
        **********************************************/
       if('\0'!=G__cintsysdir[0]) {
-         sprintf(workname,"%s/%s/stl/%s%s",G__cintsysdir,G__CFG_COREVERSION
-                 ,filename,addpost[i2]);
+         sprintf(workname,"%s%s%s%sstl%s%s%s",G__cintsysdir,G__psep,G__CFG_COREVERSION
+                 ,G__psep,G__psep,filename,addpost[i2]);
          res = stat( workname, statBuf );         
          if (res==0) return res;
       }
@@ -1285,8 +1282,8 @@ int Cint::Internal::G__statfilename(const char *filenamein, struct stat *statBuf
        **********************************************/
       /* G__getcintsysdir(); */
       if('\0'!=G__cintsysdir[0]) {
-         sprintf(workname,"%s/%s/lib/%s%s",G__cintsysdir,G__CFG_COREVERSION
-                 ,filename,addpost[i2]);
+         sprintf(workname,"%s%s%s%slib%s%s%s",G__cintsysdir,G__psep,G__CFG_COREVERSION
+                 ,G__psep,G__psep,filename,addpost[i2]);
          res = stat( workname, statBuf );         
          if (res==0) return res;
       }
@@ -1423,8 +1420,10 @@ extern "C" int G__loadfile(const char* filenamein)
    int temp;
    int store_macroORtemplateINfile;
    int len;
+#ifdef G__SHAREDLIB
    int len1;
    char* dllpost;
+#endif
    short store_iscpp;
    G__UINT32 store_security;
    char addpost[3][8];
@@ -1824,7 +1823,8 @@ extern "C" int G__loadfile(const char* filenamein)
          //
          G__getcintsysdir();
          if (G__cintsysdir[0]) {
-            sprintf(G__ifile.name, "%s/%s/include/%s%s", G__cintsysdir, G__CFG_COREVERSION, filename, addpost[i2]);
+            sprintf(G__ifile.name,"%s%s%s%sinclude%s%s%s",G__cintsysdir,G__psep,G__CFG_COREVERSION
+                    ,G__psep,G__psep,filename,addpost[i2]);
 #ifndef G__WIN32
             G__ifile.fp = fopen(G__ifile.name, "r");
 #else // G__WIN32
@@ -1845,7 +1845,8 @@ extern "C" int G__loadfile(const char* filenamein)
          //
          G__getcintsysdir();
          if (G__cintsysdir[0]) {
-            sprintf(G__ifile.name, "%s/%s/stl/%s%s", G__cintsysdir, G__CFG_COREVERSION, filename, addpost[i2]);
+            sprintf(G__ifile.name,"%s%s%s%sstl%s%s%s",G__cintsysdir, G__psep, G__CFG_COREVERSION,
+                    G__psep, G__psep, filename,addpost[i2]);
 #ifndef G__WIN32
             G__ifile.fp = fopen(G__ifile.name, "r");
 #else // G__WIN32
@@ -1865,7 +1866,8 @@ extern "C" int G__loadfile(const char* filenamein)
          // try $CINTSYSDIR/lib
          //
          if (G__cintsysdir[0]) {
-            sprintf(G__ifile.name, "%s/%s/lib/%s%s", G__cintsysdir, G__CFG_COREVERSION, filename, addpost[i2]);
+            sprintf(G__ifile.name,"%s%s%s%slib%s%s%s",G__cintsysdir, G__psep, G__CFG_COREVERSION,
+                    G__psep, G__psep,filename,addpost[i2]);
 #ifndef G__WIN32
             G__ifile.fp = fopen(G__ifile.name, "r");
 #else // G__WIN32
@@ -2121,7 +2123,6 @@ extern "C" int G__loadfile(const char* filenamein)
    // so update G__ifile to point to fentry:
    G__ifile.filenum = fentry;
    G__srcfile[fentry].dictpos = (G__dictposition*) malloc(sizeof(G__dictposition));
-   G__srcfile[fentry].dictpos->ptype = 0;
    G__store_dictposition(G__srcfile[fentry].dictpos);
    if (null_entry == -1) {
       ++G__nfile;
@@ -2418,7 +2419,6 @@ int G__setfilecontext(const char* filename, G__input_file* ifile)
          fentry = G__nfile;
       }
       G__srcfile[fentry].dictpos = (G__dictposition*) malloc(sizeof(G__dictposition));
-      G__srcfile[fentry].dictpos->ptype = 0;
       G__store_dictposition(G__srcfile[fentry].dictpos);
       if (null_entry == -1) {
          ++G__nfile;
@@ -3010,7 +3010,8 @@ extern "C" G__input_file* G__get_ifile()
 int Cint::Internal::G__register_sharedlib(const char *libname)
 {
    // Register (if not already registered) in G__srcfile a library that
-   // is indirectly loaded (via a hard link) and has a CINT dictionary.
+   // is indirectly loaded (via a hard link) and has a CINT dictionary
+   // and return the filenum (index in G__srcfile).
    
    int null_entry = -1;
    int i1 = 0;
@@ -3057,34 +3058,12 @@ int Cint::Internal::G__register_sharedlib(const char *libname)
       if(G__matchfilename(i1,libname)
          &&G__get_tagnum(G__get_envtagnum())==G__srcfile[i1].parent_tagnum
          ){
-         if(G__prerun==0 || G__debugtrace)
-            if(G__dispmsg>=G__DISPNOTE) {
-               static const char *excludelist [] = {
-                  "stdfunc.dll","stdcxxfunc.dll","posix.dll","ipc.dll","posix.dll"
-                  "string.dll","vector.dll","vectorbool.dll","list.dll","deque.dll",
-                  "map.dll", "map2.dll","set.dll","multimap.dll","multimap2.dll",
-                  "multiset.dll","stack.dll","queue.dll","valarray.dll",
-               "exception.dll","stdexcept.dll","complex.dll","climits.dll" };
-               static const unsigned int excludelistsize = sizeof(excludelist)/sizeof(excludelist[0]);
-               static int excludelen[excludelistsize] = {-1};
-               if (excludelen[0] == -1) {
-                  for (unsigned int i = 0; i < excludelistsize; ++i)
-                     excludelen[i] = strlen(excludelist[i]);
-               }
-               bool cintdlls = false;
-               int len = strlen(libname);
-               for (unsigned int i = 0; !cintdlls && i < excludelistsize; ++i) {
-                  if (len>=excludelen[i]) {
-                     cintdlls = (!strncmp(libname+len-excludelen[i], excludelist[i], excludelen[i]));
-                  }
-               }
-            }
          /******************************************************
           * restore input file information to G__ifile
           * and reset G__eof to 0.
           ******************************************************/
          G__UnlockCriticalSection();
-         return(G__LOADFILE_DUPLICATE);
+         return i1;
       }
       else {
          ++i1;
@@ -3101,7 +3080,6 @@ int Cint::Internal::G__register_sharedlib(const char *libname)
    
    G__srcfile[fentry].dictpos
    = (struct G__dictposition*)malloc(sizeof(struct G__dictposition));
-   G__srcfile[fentry].dictpos->ptype = (char*)NULL;
    G__store_dictposition(G__srcfile[fentry].dictpos);
    
    G__srcfile[fentry].hdrprop = G__NONCINTHDR;

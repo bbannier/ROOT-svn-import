@@ -656,6 +656,7 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
    if (
       G__def_struct_member && // member of a class, enum, namespace, struct or union
       G__def_tagnum && // outer class is known
+      G__def_tagnum != Reflex::Scope::GlobalScope() &&
       (funcname == G__struct.name[G__get_tagnum(G__def_tagnum)]) // member name is same as class name
    ) {
       // -- This is a constructor, handle specially.
@@ -1215,7 +1216,8 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
          /* Destructor */
          G__struct.funcs[G__get_tagnum(G__def_tagnum)] |= G__HAS_DESTRUCTOR;
       }
-      else if (strcmp(G__struct.name[G__get_tagnum(G__def_tagnum)], funcname.c_str()) == 0) {
+      else if (G__def_tagnum != Reflex::Scope::GlobalScope() &&
+         strcmp(G__struct.name[G__get_tagnum(G__def_tagnum)], funcname.c_str()) == 0) {
          if (0 == newFunction.TypeOf().FunctionParameterSize() || newFunction.FunctionParameterDefaultAt(0).length()) {
             /* Default constructor */
             G__struct.funcs[G__get_tagnum(G__def_tagnum)] |= G__HAS_DEFAULTCONSTRUCTOR;
@@ -4246,7 +4248,11 @@ static ::Reflex::Member G__overload_match(char* funcname, G__param* libp, int ha
 {
    // Perform function overload matching, and if found and requested, convert arguments guided by the prototype.
    ::Reflex::Scope store_ifunc = p_ifunc;
-   bool active_run = doconvert;
+#ifdef G__ASM
+   int active_run = doconvert && !G__asm_wholefunction && !G__asm_noverflow;
+#else
+   int active_run = doconvert;
+#endif
    unsigned int bestmatch = G__NOMATCH;
    int ambiguous = 0;
    //
@@ -6503,15 +6509,17 @@ int Cint::Internal::G__function_signature_match(const Reflex::Member func1, cons
    //
    // Returns function member if found, invalid member otherwise.
    //
+   const char *func_now_name = ifunc_now.Name_c_str();
    for (::Reflex::Member_Iterator mbr_iter = ifunc.FunctionMember_Begin(); mbr_iter != ifunc.FunctionMember_End(); ++mbr_iter) {
+      const char *mbr_iter_name = mbr_iter->Name_c_str();
       if ( // destructor matches with ~
-         (ifunc_now.Name()[0] == '~') &&
-         (mbr_iter->Name()[0] == '~')
+         (func_now_name[0] == '~') &&
+         (mbr_iter_name[0] == '~')
       ) { // destructor matches with ~
          return *mbr_iter;
       }
       if (
-         (ifunc_now.Name() != mbr_iter->Name()) ||
+         (0!=strcmp(func_now_name, mbr_iter_name)) ||
          (ifunc_now.FunctionParameterSize() != mbr_iter->FunctionParameterSize()) ||
          (ifunc_now.IsConst() != mbr_iter->IsConst()) ||
          (
@@ -6555,17 +6563,19 @@ int Cint::Internal::G__function_signature_match(const Reflex::Member func1, cons
 
 //______________________________________________________________________________
 ::Reflex::Member Cint::Internal::G__ifunc_ambiguous(const ::Reflex::Member &ifunc_now, const ::Reflex::Scope &ifunc, const ::Reflex::Type &derivedtagnum)
-{
+{  
    int j, paran;
+   const char *func_now_name = ifunc_now.Name_c_str();
    for (::Reflex::Member_Iterator i = ifunc.FunctionMember_Begin();
          i != ifunc.FunctionMember_End();
          ++i) {
-      if ('~' == ifunc_now.Name().c_str()[0] &&
-            '~' == i->Name().c_str()[0]) { /* destructor matches with ~ */
+      const char *i_name = i->Name_c_str();
+      if ('~' == func_now_name[0] &&
+            '~' == i_name[0]) { /* destructor matches with ~ */
          return(*i);
       }
       if (/* ifunc_now->hash[allifunc]!=ifunc->hash[i] || */
-         ifunc_now.Name() == i->Name()
+         (0==strcmp(func_now_name, i_name))
       ) continue; /* unmatch */
       if (ifunc_now.FunctionParameterSize() < i->FunctionParameterSize())
          paran = ifunc_now.FunctionParameterSize();

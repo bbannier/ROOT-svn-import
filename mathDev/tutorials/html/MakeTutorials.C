@@ -234,8 +234,8 @@ void GetMacroTitle(const char *fullpath, TString &comment, Bool_t &compile) {
    // Find the best line with a title by scanning the first 50 lines of a macro.
    // "fullpath" location of the macro
    // "comment"  is set to the comment (i.e. title) found in the macro
-   // "compile"  is set to true if the macro should be compiled, i.e. one of the
-   //            comment lines starts with "//+ " (note the space)
+   // "compile"  is set to true if the macro should be compiled, i.e. the
+   //            title line starts with "//+ " (note the space)
    compile = kFALSE;
    FILE *fp = fopen(fullpath,"r");
    char line[250];
@@ -244,8 +244,6 @@ void GetMacroTitle(const char *fullpath, TString &comment, Bool_t &compile) {
       nlines++;
       char *com = strstr(line,"//");
       if (com) {
-         if (!strncmp(line,"//+ ", 4))
-            compile = kTRUE;
          if (strstr(line,"Author")) continue;
          if (strstr(line,"@(#)")) continue;
          if (strstr(line,"****")) continue;
@@ -255,6 +253,10 @@ void GetMacroTitle(const char *fullpath, TString &comment, Bool_t &compile) {
          if (strstr(line,"----")) continue;
          if (strstr(line,"____")) continue;
          if (strlen(com+1)  < 5)  continue;
+         if (!strncmp(com,"//+ ", 4)) {
+            compile = kTRUE;
+            com += 2; // skip "+ ", too.
+         }
          comment = com+2;
          break;
       }
@@ -295,6 +297,8 @@ Bool_t CreateOutput_Dir(const char* dir) {
      if (strstr(dir,"proof")) return kFALSE;
      if (strstr(dir,"foam"))  return kFALSE;
      if (strstr(dir,"unuran"))  return kFALSE;
+     if (strstr(dir,"roofit"))  return kFALSE;
+     if (strstr(dir,"threads"))  return kFALSE;
 
    /* They should all work now:
 
@@ -322,25 +326,28 @@ Bool_t CreateOutput_Tutorial(const char* tut) {
       "mathcore",
       "permute",
       "testrandom",
-      "testUnfold",
-      "tStudent",
-      "seism",
+      //"testUnfold",
+      //"tStudent",
+      //"seism",
       "psview",
       "readCode",
       "importCode",
-      "analyze",
+      //"analyze",
       "hadd",
-      "fit2dHist",
+      //"langaus",
+      //"fithist",
+      //"fit2dHist",
+      //"fitLinearRobust",
       "line3Dfit",
       "gtime",
       "event",
       "exec1",
       "exec2",
       "exec3",
-      "quantiles",
-      "gui",
-      "TwoHistoFit2D",
-      "CPUMeter",
+      //"quantiles",
+      //"gui",
+      //"TwoHistoFit2D",
+      //"CPUMeter",
       "games",
       "guiWithCINT",
       "statusBar",
@@ -349,20 +356,22 @@ Bool_t CreateOutput_Tutorial(const char* tut) {
       "viewer3DMaster.C",
       "anim",
       "pack",
-      "hsumTimer",
+      //"hsumTimer",
+      "htest",
       "jets",
       "bill",
       "tcl",
-      "tree2a",
+      "tree",
+      "tree3",
       "copytree",
       "clones",
       "copyFiles",
-      "geom_",
-      "test_compound",
-      "test_paramlist",
-      "test_windows",
+      //"geom_",
+      //"test_compound",
+      //"test_paramlist",
+      //"test_windows",
       "text_test",
-      "FFT",
+      //"FFT",
       "foam",
       "Qt",
       "TableTest",
@@ -448,6 +457,11 @@ void scandir(THtml& html, const char *dir, const char *title, TObjLink* toplnk) 
             includeOutput = THtml::kCompiledOutput;
          else
             includeOutput = THtml::kInterpretedOutput;
+         if (!strcmp(dir,"gui")
+             || !strcmp(dir,"eve")
+             || !strcmp(dir,"geom")
+             || !strcmp(dir,"image"))
+            includeOutput |= THtml::kSeparateProcessOutput;
       }
       if (!CreateOutput_Dir(dir) || !CreateOutput_Tutorial(direntry))
          includeOutput = THtml::kNoOutput;
@@ -485,6 +499,7 @@ void MakeTutorials() {
    gEnv->SetValue("Root.Html.Search", "http://www.google.com/search?q=%s+site%3A%u");
    THtml html;
    html.LoadAllLibs();
+   //gROOT->ProcessLine(".x htmlLoadlibs.C");
    html.CreateAuxiliaryFiles();
    writeTutorials(html);
 }

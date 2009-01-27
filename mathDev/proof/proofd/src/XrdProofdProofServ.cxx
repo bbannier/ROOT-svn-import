@@ -15,6 +15,8 @@
 #include "XrdProofdAux.h"
 #include "XrdProofdProofServ.h"
 #include "XrdProofWorker.h"
+#include "XrdProofSched.h"
+#include "XrdProofdManager.h"
 
 // Tracing utils
 #include "XrdProofdTrace.h"
@@ -62,6 +64,7 @@ XrdProofdProofServ::XrdProofdProofServ()
    fUserEnvs = "";
    fUNIXSock = 0;
    fUNIXSockPath = "";
+   fQueries.clear();
 }
 
 //__________________________________________________________________________
@@ -130,8 +133,6 @@ static int DumpWorkerCounters(const char *k, XrdProofWorker *w, void *)
 void XrdProofdProofServ::ClearWorkers()
 {
    // Decrease worker counters and clean-up the list
-   // If called for a worker will do nothing (fWorkers.size() == 0)
-   // In normal operation the workers are cleared already before.
 
    XrdSysMutexHelper mhp(fMutex);
 
@@ -165,8 +166,7 @@ void XrdProofdProofServ::RemoveWorker(const char *o)
    XrdSysMutexHelper mhp(fMutex);
 
    XrdProofWorker *w = fWorkers.Find(o);
-   if (w)
-      w->RemoveProofServ(this);
+   if (w) w->RemoveProofServ(this);
    fWorkers.Del(o);
    if (TRACING(HDBG)) fWorkers.Apply(DumpWorkerCounters, 0);
 }
@@ -201,9 +201,7 @@ void XrdProofdProofServ::Reset()
    SafeDelete(fQueryNum);
    SafeDelete(fStartMsg);
    SafeDelete(fPingSem);
-   fStatus = kXPD_idle;
    fSrvPID = -1;
-   fSrvType = kXPD_AnyServer;
    fID = -1;
    fIsShutdown = false;
    fIsValid = false;
@@ -216,6 +214,9 @@ void XrdProofdProofServ::Reset()
    fROOT = 0;
    // Cleanup worker info
    ClearWorkers();
+   // ClearWorkers depends on the fSrvType and fStatus
+   fSrvType = kXPD_AnyServer;
+   fStatus = kXPD_idle;
    // Cleanup queries info
    fQueries.clear();
    // Strings
@@ -743,4 +744,113 @@ int XrdProofdProofServ::SetAdminPath(const char *a)
    }
    // Done
    return 0;
+}
+
+//______________________________________________________________________________
+int XrdProofdProofServ::Resume()
+{
+   // Send a resume message to the this session. It is assumed that the session
+   // has at least one async query to process and will immediately send
+   // a getworkers request (the workers are already assigned).
+   XPDLOC(SMGR, "ProofServ::Resume")
+
+   TRACE(REQ, "ord: " << fOrdinal<< ", pid: " << fSrvPID);
+
+   int rc = 0;
+   XrdOucString msg;
+
+   {  XrdSysMutexHelper mhp(fMutex);
+      // 
+      if (!fResponse || fResponse->Send(kXR_attn, kXPD_resume, 0, 0) != 0) {
+         msg = "could not propagate resume to proofsrv";
+         rc = -1;
+      }
+   }
+
+   // Notify errors, if any
+   if (rc != 0)
+      TRACE(XERR, msg);
+
+   // Done
+   return rc;
+}
+
+//__________________________________________________________________________
+static int ExportWorkerDescription(const char *k, XrdProofWorker *w, void *s)
+{
+   // Decrease active session counters on worker w
+   XPDLOC(PMGR, "ExportWorkerDescription")
+
+   XrdOucString *wrks = (XrdOucString *)s;
+   if (w && wrks) {
+      // Master at the beginning
+      if (w->fType == 'M') {
+         if (wrks->length() > 0) wrks->insert('&',0);
+         wrks->insert(w->Export(), 0);
+      } else {
+         // Add separator if not the first
+         if (wrks->length() > 0)
+            (*wrks) += '&';
+         // Add export version of the info
+         (*wrks) += w->Export(k);
+      }
+      TRACE(ALL, k <<" : "<<w->fHost.c_str()<<":"<<w->fPort <<" act: "<<w->Active());
+      // Check next
+      return 0;
+   }
+
+   // Not enough info: stop
+   return 1;
+}
+
+//__________________________________________________________________________
+void XrdProofdProofServ::ExportWorkers(XrdOucString &wrks)
+{
+   // Export the assigned workers in the format understood by proofserv
+
+   XrdSysMutexHelper mhp(fMutex);
+   wrks = "";
+   fWorkers.Apply(ExportWorkerDescription, (void *)&wrks);
+}
+
+//__________________________________________________________________________
+void XrdProofdProofServ::DumpQueries()
+{
+   // Export the assigned workers in the format understood by proofserv
+   XPDLOC(PMGR, "DumpQueries")
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   TRACE(ALL," ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ");
+   TRACE(ALL," +++ client: "<<fClient<<", session: "<< fSrvPID <<
+             ", # of queries: "<< fQueries.size());
+   std::list<XrdProofQuery *>::iterator ii;
+   int i = 0;
+   for (ii = fQueries.begin(); ii != fQueries.end(); ii++) {
+      i++;
+      TRACE(ALL," +++ #"<<i<<" tag:"<< (*ii)->GetTag()<<" dset: "<<
+                (*ii)->GetDSName()<<" size:"<<(*ii)->GetDSSize());
+   }
+   TRACE(ALL," ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ");
+}
+
+//__________________________________________________________________________
+XrdProofQuery *XrdProofdProofServ::GetQuery(const char *tag)
+{
+   // Gte query with tag form the list of queries
+   XrdProofQuery *q = 0;
+   if (!tag || strlen(tag) <= 0) return q;
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   if (fQueries.size() <= 0) return q;
+
+   std::list<XrdProofQuery *>::iterator ii;
+   for (ii = fQueries.begin(); ii != fQueries.end(); ii++) {
+      q = *ii;
+      if (!strcmp(tag, q->GetTag())) break;
+      q = 0;
+   }
+   // Done
+   return q;
 }

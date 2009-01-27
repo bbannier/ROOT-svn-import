@@ -18,7 +18,7 @@
 //                                                                      //
 // Author: G. Ganis, CERN, 2007                                         //
 //                                                                      //
-// Class mapping manager fonctionality.                                 //
+// Class mapping manager functionality.                                 //
 // On masters it keeps info about the available worker nodes and allows //
 // communication with them. In particular, it reads the proof.conf file //
 // when working with static resources.                                  //
@@ -69,13 +69,15 @@ class XrdProofdManager : public XrdProofdConfig {
 
    int               ResolveKeywords(XrdOucString &s, XrdProofdClient *pcl);
 
-   int               GetWorkers(XrdOucString &workers, XrdProofdProofServ *);
+   int               GetWorkers(XrdOucString &workers, XrdProofdProofServ *, const char *);
 
    const char       *AdminPath() const { return fAdminPath.c_str(); }
    const char       *BareLibPath() const { return fBareLibPath.c_str(); }
    bool              ChangeOwn() const { return fChangeOwn; }
+   void              CheckLogFileOwnership();
    bool              CheckMaster(const char *m);
    int               CheckUser(const char *usr, XrdProofUI &ui, XrdOucString &e, bool &su);
+   int               CronFrequency() { return fCronFrequency; }
    const char       *Host() const { return fHost.c_str(); }
    const char       *Image() const { return fImage.c_str(); }
    bool              IsSuperMst() const { return fSuperMst; }
@@ -115,6 +117,7 @@ class XrdProofdManager : public XrdProofdConfig {
    int               fPort;           // Port for client-like connections
    XrdOucString      fImage;          // image name for these servers
    XrdOucString      fWorkDir;        // working dir for these servers
+   int               fCronFrequency;  // Frequency of cron checks
 
    XrdOucString      fBareLibPath;    // LIBPATH cleaned from ROOT dists
    XrdOucString      fTMPdir;         // directory for temporary files
@@ -162,6 +165,7 @@ class XrdProofdManager : public XrdProofdConfig {
 typedef struct {
    XrdProofdClientMgr    *fClientMgr;
    XrdProofdProofServMgr *fSessionMgr;
+   XrdProofSched         *fProofSched;
 } XpdManagerCron_t;
 
 #endif

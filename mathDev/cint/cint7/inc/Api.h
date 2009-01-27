@@ -36,7 +36,7 @@ class Type_Iterator;
 // Prevent the dictionary generation for vector<Type> and
 // the associated free functions
 #include <vector>
-std::vector<::Reflex::Type>* instiator;
+std::vector< ::Reflex::Type>* instiator;
 #pragma link off all classes;
 #pragma link off all functions;
 #pragma link off all globals;
@@ -234,7 +234,7 @@ struct G__dictposition
    G__Deffuncmacro* deffuncmacro; // macro table position
    G__Definedtemplateclass* definedtemplateclass; // class template table position
    G__Definetemplatefunc* definedtemplatefunc; // function template table position
-   char* ptype; // struct,union,enum,class
+   int nactives; // number of 'active' classes 
 };
 
 //
