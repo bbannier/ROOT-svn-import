@@ -12,40 +12,6 @@
 #include <llvm/Support/MemoryBuffer.h>
 
 
-//------------------------------------------------------------------------------
-// Execute the module
-//------------------------------------------------------------------------------
-int executeModuleMain( llvm::Module *module )
-{
-   //---------------------------------------------------------------------------
-   // Create the execution engine
-   //---------------------------------------------------------------------------
-   llvm::OwningPtr<llvm::ExecutionEngine> engine( llvm::ExecutionEngine::create( module ) );
-
-   if( !engine ) {
-      std::cout << "[!] Unable to create the execution engine!" << std::endl;
-      return 1;
-   }
-
-   //---------------------------------------------------------------------------
-   // Look for the main function
-   //---------------------------------------------------------------------------
-   llvm::Function* func( module->getFunction( "main" ) );
-   if( !func ) {
-      std::cerr << "[!] Cannot find the entry function!" << std::endl;
-      return 1;
-   }
-
-   //---------------------------------------------------------------------------
-   // Create argv
-   //---------------------------------------------------------------------------
-   std::vector<std::string> params;
-   params.push_back( "executable" );
-
-   return engine->runFunctionAsMain( func,  params, 0 );
-}
-
-
 extern "C" {
 int call_interp(const char* code) {
    clang::LangOptions langInfo;
@@ -53,11 +19,16 @@ int call_interp(const char* code) {
    langInfo.HexFloats   = 1;
    langInfo.BCPLComment = 1; // Only for C99/C++.
    langInfo.Digraphs    = 1; // C94, C99, C++.
+   langInfo.CPlusPlus   = 1;
+   langInfo.CPlusPlus0x = 1;
+   langInfo.CXXOperatorNames = 1;
+   langInfo.Boolean = 1;
+   langInfo.Exceptions = 1;
 
    llvm::OwningPtr<clang::TargetInfo> targetInfo;
    targetInfo.reset( clang::TargetInfo::CreateTargetInfo( HOST_TARGET ) );
-   cling::Compiler interp( langInfo, targetInfo.get() );
-   std::string wrapped_code("int main(int argc, char* argv[]) { ");
+   cling::Interpreter interp( langInfo, targetInfo.get() );
+   std::string wrapped_code("int reentrant_main(int argc, char* argv[]) { ");
    wrapped_code += code;
    wrapped_code += "return 0;}";
    llvm::MemoryBuffer* buff;
@@ -75,6 +46,6 @@ int call_interp(const char* code) {
       std::cerr << std::endl;
       return -1;
    }
-   return executeModuleMain( module );
+   return interp.executeModuleMain( module, "reentrant_main" );
 };
 }

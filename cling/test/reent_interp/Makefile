@@ -9,4 +9,4 @@ $(LIB): reent.cxx
 	g++ -shared -o$@ $< $(INC) $(CXXFLAGS) -fPIC
 
 run: $(LIB)
-	cat runreent.cxx | cling -i
+	cat runreent.cxx | cling
