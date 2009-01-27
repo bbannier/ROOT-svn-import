@@ -127,7 +127,9 @@ protected:
       Double_t & operator[](UInt_t i) { return fP[i];}
       Double_t fP[3];
    };
-   std::vector<FuncParamData_t >  fFuncPars;         // function parameters (value + limits)
+   std::vector<FuncParamData_t>  fFuncPars;         // function parameters (value + limits)
+
+   std::vector<TF1*> fPrevFit;             // Previous succesful fits.
 
    TGRadioButton       *fLibMinuit;        // set default minimization library (Minuit)
    TGRadioButton       *fLibMinuit2;       // set Minuit2 as minimization library
