@@ -264,20 +264,29 @@ int XrdProofdAdmin::GetWorkers(XrdProofdProtocol *p)
    TRACEP(p, REQ, "request from session "<<pid);
 
    // We should query the chosen resource provider
-   XrdOucString wrks;
+   XrdOucString wrks("");
 
-   if (fMgr->GetWorkers(wrks, xps) !=0 ) {
+   // Read the maessage associated with the request
+   XrdOucString msg((const char *) p->Argp()->buff, p->Request()->header.dlen);
+   if (fMgr->GetWorkers(wrks, xps, msg.c_str()) < 0 ) {
       // Something wrong
-      response->Send(kXR_InvalidRequest,"failure");
+      response->Send(kXR_InvalidRequest, "GetWorkers failed");
       return 0;
-   } else {
-      // Send buffer
-      char *buf = (char *) wrks.c_str();
-      int len = wrks.length() + 1;
-      TRACEP(p, DBG, "sending: "<<buf);
+   }
 
-      // Send back to user
+   // Send buffer
+   // In case the session was enqueued, pass an empty list.
+   char *buf = (char *) wrks.c_str();
+   int len = wrks.length() + 1;
+   TRACEP(p, DBG, "sending: "<<buf);
+
+   // Send back to user
+   if (buf) {
       response->Send(buf, len);
+   } else {
+      // Something wrong
+      response->Send(kXR_InvalidRequest, "GetWorkers failed");
+      return 0;
    }
 
    // Over
@@ -608,7 +617,7 @@ int XrdProofdAdmin::QueryLogPaths(XrdProofdProtocol *p)
 //______________________________________________________________________________
 int XrdProofdAdmin::CleanupSessions(XrdProofdProtocol *p)
 {
-   // Handle request of 
+   // Handle request of
    XPDLOC(ALL, "Admin::CleanupSessions")
 
    int rc = 0;

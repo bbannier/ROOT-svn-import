@@ -18,6 +18,9 @@ export __CINT_BUILDDIR
 
 include Makefile.conf
 
+CINTSYSDIR := $(shell $(G__CFG_MANGLEPATHS) "${CINTSYSDIR}" )
+__CINT_BUILDDIR := $(shell $(G__CFG_MANGLEPATHS) "${__CINT_BUILDDIR}" )
+
 # set up order target if available
 MAKE_VERSION_MAJOR := $(word 1,$(subst ., ,$(MAKE_VERSION)))
 MAKE_VERSION_MINOR := $(shell echo $(word 2,$(subst ., ,$(MAKE_VERSION))) | \
@@ -29,9 +32,13 @@ ORDER_ := $(shell test $(MAKE_VERSION_MAJOR) -gt 3 || \
                   test $(MAKE_VERSION_MINOR) -ge 80 && echo '|')
 
 # libraries
-CINTLIBSHARED = lib/libcint$(G__CFG_SOEXT)
-CINTIMPLIB    = lib/libcint$(G__CFG_IMPLIBEXT)
-CINTLIBSTATIC = lib/libcint_static$(G__CFG_LIBEXT)
+ifeq ($(subst msvc,,$(G__CFG_ARCH)), $(G__CFG_ARCH))
+CINTLIBSHARED = lib/libCint$(G__CFG_SOEXT)
+else
+CINTLIBSHARED = bin/libCint$(G__CFG_SOEXT)
+endif
+CINTIMPLIB    = lib/libCint$(G__CFG_IMPLIBEXT)
+CINTLIBSTATIC = lib/libCint_static$(G__CFG_LIBEXT)
 CINT          = bin/cint$(G__CFG_EXEEXT)
 RMKDEPEND     = tool/rmkdepend/rmkdepend$(G__CFG_EXEEXT)
 CONFIGCINTH   = $(G__CFG_COREVERSION)/inc/configcint.h
@@ -100,29 +107,35 @@ ifneq ($(G__CFG_LIBEXT),)
 endif
 	find . -name \*.d -exec rm {} \; || true
 	find . -name \*.dll -exec rm {} \; || true
+	find . -name \*.manifest -exec rm {} \; || true
+	find . -name \*.exp -exec rm {} \; || true
+	find . -name \*.pdb -exec rm {} \; || true
 
 cintreflextest: REFLEXTESTFLAGS = -m -r
 
 debugtest: TESTDEBUG = -DDEBUG
 
 ifeq ($(G__CFG_COREVERSION),cint)
-  TESTFLAGS ?= --ignore-diff-errors -k
+  TESTFLAGS ?= --ignore-diff-errors -k --hide-known-defects
+else
+  TESTFLAGS ?= -k --hide-known-defects
 endif
 
 test debugtest cintreflextest:
 	(cd test && \
-	PATH=../bin:.:$$PATH \
-	LD_LIBRARY_PATH=../lib:.:$$LD_LIBRARY_PATH \
-	DYLD_LIBRARY_PATH=../lib:.:$$DYLD_LIBRARY_PATH \
+	PATH=$$PWD/../bin:.:$$PATH; \
+	LD_LIBRARY_PATH=$$PWD/../lib:.:$$LD_LIBRARY_PATH; \
+	DYLD_LIBRARY_PATH=$$PWD/../lib:.:$$DYLD_LIBRARY_PATH; \
 	cint$(G__CFG_EXEEXT) $(TESTDEBUG) testall.cxx $(TEST) $(TESTFLAGS) $(REFLEXTESTFLAGS) )
 
 ifeq ($(findstring clean,$(MAKECMDGOALS)),)
 Makefile: $(RMKDEPEND)
 
 Makefile.conf $(CONFIGCINTH): configure
-	@echo "Run ./configure first!"
-	@./configure -h
-	@exit 1
+	@[ -x reconfigure ] && ./reconfigure || ( \
+	echo "Run ./configure first!" ; \
+	./configure -h ; \
+	exit 1 )
 endif
 
 MAKEINFO:  configure $(CONFIGCINTH)

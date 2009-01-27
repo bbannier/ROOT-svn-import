@@ -332,7 +332,7 @@ static int G__generate_template_dict(const char* template_id, G__Definedtemplate
    //
    //  Now lookup the passed template-id.
    //
-   int tagnum = G__defined_tagname(template_id_str.c_str(), 3); // FIXME: This is illegal, G__defined_tagname alters the string!
+   int tagnum = G__defined_tagname(template_id_str.c_str(), 3); 
    //
    //  If dictionary generation succeeded, remember what
    //  header files we used in the comment string for
@@ -1324,9 +1324,7 @@ static int G__gettemplatearglist(char* tmpl_arg_string, G__Charlist* tmpl_arg_li
       //
       //  And allocate a new empty entry to mark the end.
       //
-      tmpl_arg->next = (G__Charlist*) malloc(sizeof(G__Charlist));
-      tmpl_arg->next->next = 0;
-      tmpl_arg->next->string = 0;
+      tmpl_arg->next = new G__Charlist;
       tmpl_arg = tmpl_arg->next;
       ++(*pnpara); // Increment the number of arguments processed.
    }
@@ -1357,8 +1355,6 @@ static int G__gettemplatearglist(char* tmpl_arg_string, G__Charlist* tmpl_arg_li
          G__ASSERT((int) strlen(tmpl_arg->string) <= (int) len);
       }
       tmpl_arg->next = new G__Charlist;
-      tmpl_arg->next->next = 0;
-      tmpl_arg->next->string = 0;
       tmpl_arg = tmpl_arg->next;
       searchflag = 3; // Flag that a template arg was defaulted.
    }
@@ -1568,7 +1564,10 @@ static char* G__expand_def_template_arg(char* str_in, G__Templatearg* def_para, 
       }
       {
          int rlen = strlen(reslt);
-         if (isconst && !strncmp(reslt, "const ", 6) && (rlen > 0) && (reslt[rlen-1] == '*')) {
+         if (isconst &&
+             !strncmp(reslt, "const ", 6) &&
+             (rlen > 0) &&
+             (reslt[rlen-1] == '*')) {
             strcpy(str_out + iout, reslt + 6);
             strcat(str_out, " const");
             iout += lreslt;
@@ -1584,6 +1583,17 @@ static char* G__expand_def_template_arg(char* str_in, G__Templatearg* def_para, 
             strcpy(str_out + iout - 6, reslt);
             strcat(str_out, " const");
             iout += lreslt;
+            isconst = 0;
+         }
+         else if (
+            isconst &&
+            (iout >= 6) &&
+            !strncmp(str_out + iout - 6, "const ", 6) &&
+            !strncmp(reslt, "const ", 6)
+         ) {
+            // const T with T="const A" becomes "const const A", so skip one const
+            strcpy(str_out + iout, reslt + 6);
+            iout += lreslt - 6;
             isconst = 0;
          }
          else {
@@ -1792,8 +1802,6 @@ static int G__checkset_charlist(char* type_name, G__Charlist* pcall_para, int na
    for (int i = 1; i < narg; ++i) {
       if (!pcall_para->next) {
          pcall_para->next = new G__Charlist;
-         pcall_para->next->next = 0;
-         pcall_para->next->string = 0;
       }
       pcall_para = pcall_para->next;
    }
@@ -4123,8 +4131,6 @@ int Cint::Internal::G__instantiate_templateclass(char* tagnamein, int noerror)
    //  arguments provided.
    //
    G__Charlist* tmpl_arg_list = new G__Charlist;
-   tmpl_arg_list->string = 0;
-   tmpl_arg_list->next = 0;
    int npara = 0;
    int defarg = 0;
    int create_in_envtagnum = 0;
@@ -4758,8 +4764,6 @@ static G__Definedtemplateclass* G__resolve_specialization(char* tmpl_args_string
       //  appropriate for the selected specialization.
       //
       G__Charlist* new_tmpl_arg_head = new G__Charlist;
-      new_tmpl_arg_head->string = 0;
-      new_tmpl_arg_head->next = 0;
       int i = 1;
       G__Charlist* new_tmpl_arg = new_tmpl_arg_head;
       for (G__Templatearg* spec_def_para = best_match->def_para; spec_def_para; spec_def_para = spec_def_para->next) { // Create an argument for each specialization parameter.
@@ -4775,8 +4779,6 @@ static G__Definedtemplateclass* G__resolve_specialization(char* tmpl_args_string
                if (i != 1) {
                   new_tmpl_arg->next = new G__Charlist;
                   new_tmpl_arg = new_tmpl_arg->next;
-                  new_tmpl_arg->string = 0;
-                  new_tmpl_arg->next = 0;
                }
                new_tmpl_arg->string = (char*) malloc(strlen(expanded_tmpl_arg->string) + 1);
                strcpy(new_tmpl_arg->string, expanded_tmpl_arg->string);
@@ -4800,7 +4802,7 @@ static G__Definedtemplateclass* G__resolve_specialization(char* tmpl_args_string
       expanded_tmpl_arg_list->next = new_tmpl_arg_head->next;
       free(new_tmpl_arg_head->string);
       new_tmpl_arg_head->next = 0;
-      free(new_tmpl_arg_head);
+      delete (new_tmpl_arg_head);
       new_tmpl_arg_head = 0;
    }
    return best_match;

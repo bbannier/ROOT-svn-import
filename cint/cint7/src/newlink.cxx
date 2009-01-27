@@ -370,10 +370,10 @@ static void G__fileerror(char* fname)
 }
 
 //______________________________________________________________________________
-const char* Cint::Internal::G__fulltypename(::Reflex::Type typenum)
+const std::string Cint::Internal::G__fulltypename(::Reflex::Type typenum)
 {
    if (!typenum) return("");
-   return typenum.Name(::Reflex::SCOPED).c_str();
+   return typenum.Name(::Reflex::SCOPED);
 }
 
 //______________________________________________________________________________
@@ -542,7 +542,7 @@ void Cint::Internal::G__gen_cpplink()
       char *sysstl;
       G__getcintsysdir();
       sysstl = (char*)malloc(strlen(G__cintsysdir) + 20);
-      sprintf(sysstl, "%s/%s/stl/", G__cintsysdir, G__CFG_COREVERSION);
+      sprintf(sysstl,"%s%s%s%sstl%s",G__cintsysdir,G__psep,G__CFG_COREVERSION,G__psep,G__psep);
       lenstl = strlen(sysstl);
       for (filen = 0;filen < G__nfile;filen++) {
          fname = G__srcfile[filen].filename;
@@ -2322,7 +2322,7 @@ static void G__if_ary_union_reset(const ::Reflex::Member& ifunc)
 {
    int k, m;
    int type;
-   char *p;
+   const char *p;
 
    m = ifunc.FunctionParameterSize();
 
@@ -4379,8 +4379,8 @@ void Cint::Internal::G__cppif_paratype(FILE* fp, const ::Reflex::Member& ifunc, 
    if (k) {
       fprintf(fp, ", ");
    }
-   if (param_name.size()) {
-      char* p = strchr(param_name.c_str(), '[');
+   if (!param_name.empty()) {
+      const char* p = strchr(param_name.c_str(), '[');
       if (p) {
          fprintf(fp, "G__Ap%d->a", k);
          return;
@@ -5642,9 +5642,7 @@ void Cint::Internal::G__cpplink_memfunc(FILE* fp)
 
                fprintf(fp, "%d, ", G__get_reftype(ifunc->TypeOf().ReturnType()));
 
-               /* K&R style if para_nu==-1, force it to 0 */
-               if (0 > ifunc->FunctionParameterSize()) fprintf(fp, "0, ");
-               else                       fprintf(fp, "%ld, ", ifunc->FunctionParameterSize());
+               fprintf(fp, "%ld, ", ifunc->FunctionParameterSize());
 
                if (2 == G__get_funcproperties(*ifunc)->entry.ansi)
                   fprintf(fp, "%d, ", 8 + ifunc->IsStatic()*2 + ifunc->IsExplicit()*4);
@@ -5690,7 +5688,7 @@ void Cint::Internal::G__cpplink_memfunc(FILE* fp)
                   }
 
                   if (typenum != -1) {
-                     fprintf(fp, "'%s' ", G__fulltypename(G__Dict::GetDict().GetTypedef(typenum)));
+                     fprintf(fp, "'%s' ", G__fulltypename(G__Dict::GetDict().GetTypedef(typenum)).c_str());
                   }
                   else {
                      fprintf(fp, "- ");
@@ -6332,9 +6330,7 @@ void Cint::Internal::G__cpplink_func(FILE* fp)
 
          fprintf(fp, "%d, ", G__get_reftype(ifunc->TypeOf().ReturnType()));
 
-         /* K&R style if para_nu==-1, force it to 0 */
-         if (0 > ifunc->FunctionParameterSize()) fprintf(fp, "0, ");
-         else                    fprintf(fp, "%ld, ", ifunc->FunctionParameterSize());
+         fprintf(fp, "%ld, ", ifunc->FunctionParameterSize());
 
          if (2 == G__get_funcproperties(*ifunc)->entry.ansi)
             fprintf(fp, "%d, ", 8 + ifunc->IsStatic()*2);
@@ -6378,7 +6374,7 @@ void Cint::Internal::G__cpplink_func(FILE* fp)
             }
 
             if (typenum != -1) {
-               fprintf(fp, "'%s' ", G__fulltypename(G__Dict::GetDict().GetTypedef(typenum)));
+               fprintf(fp, "'%s' ", G__fulltypename(G__Dict::GetDict().GetTypedef(typenum)).c_str());
             }
             else {
                fprintf(fp, "- ");
@@ -6463,8 +6459,8 @@ extern "C" int G__tagtable_setup(int tagnum, int size, int cpplink, int isabstra
          && 'n' != G__struct.type[tagnum]
       ) return(0);
 
-   if (0 != G__struct.size[tagnum]
-         && 'n' != G__struct.type[tagnum]
+   if ( ('n' != G__struct.type[tagnum] && 0 != G__struct.size[tagnum] ) // Class already setup
+       || ('n' == G__struct.type[tagnum] && 0 != G__struct.iscpplink[tagnum]) // Namespace already setup
       ) {
 #ifndef G__OLDIMPLEMENTATION1656
      char found = G__incsetup_exist(G__struct.incsetup_memvar[tagnum],setup_memvar);
@@ -6542,8 +6538,6 @@ if (
          found = G__incsetup_exist(G__struct.incsetup_memfunc[tagnum], setup_memfunc);
          if (setup_memfunc&&!found)
             G__struct.incsetup_memfunc[tagnum]->push_back(setup_memfunc);
-         else
-            G__struct.incsetup_memfunc[tagnum]->clear();
       }
 
    /* add template names */
@@ -8501,7 +8495,7 @@ void Cint::Internal::G__incsetup_memfunc(int tagnum)
 
       if (fileno != -1) {
          G__ifile.fp = G__srcfile[fileno].fp;
-         strcpy(G__ifile.name, G__srcfile[fileno].filename);
+         if (G__srcfile[fileno].filename) strcpy(G__ifile.name, G__srcfile[fileno].filename);
       }
 #ifdef G__OLDIMPLEMENTATION1125_YET /* G__PHILIPPE26 */
       if (0 == G__struct.memfunc[tagnum]->allifunc

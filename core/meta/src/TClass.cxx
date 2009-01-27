@@ -58,6 +58,7 @@
 #include "THashTable.h"
 #include "TSchemaRuleSet.h"
 #include "TGenericClassInfo.h"
+#include "TIsAProxy.h"
 
 #include <cstdio>
 #include <cctype>
@@ -1511,6 +1512,58 @@ Bool_t TClass::CanSplit() const
 
    return kTRUE;
 }
+
+//______________________________________________________________________________
+TObject *TClass::Clone(const char *new_name) const
+{
+   // Duplicate this TClass object under a different.  This can be used to 
+   // provide 'hard' alias to classname.
+
+   if (new_name == 0 || new_name[0]=='\0' || fName == new_name) {
+      Error("Clone","The name of the class must be changed when cloning a TClass object.");
+      return 0;
+   }
+   TClass *copy;
+   if (fTypeInfo) {
+      copy = new TClass(new_name,
+                             fClassVersion,
+                             *fTypeInfo,
+                             new TIsAProxy(*fTypeInfo),
+                             fShowMembers,
+                             GetDeclFileName(),
+                             GetImplFileName(),
+                             GetDeclFileLine(),
+                             GetImplFileLine());
+   } else {
+      copy = new TClass(new_name,
+                        fClassVersion,
+                        GetDeclFileName(),
+                        GetImplFileName(),
+                        GetDeclFileLine(),
+                        GetImplFileLine());
+      copy->fShowMembers = fShowMembers;
+   }      
+
+   copy->SetNew(fNew);
+   copy->SetNewArray(fNewArray);
+   copy->SetDelete(fDelete);
+   copy->SetDeleteArray(fDeleteArray);
+   copy->SetDestructor(fDestructor);
+   copy->SetDirectoryAutoAdd(fDirAutoAdd);
+   if (fStreamer) {
+      copy->AdoptStreamer(fStreamer->Generate());
+   }
+   // If IsZombie is true, something went wront and we will not be
+   // able to properly copy the collection proxy
+   if (fCollectionProxy && !copy->IsZombie()) {
+      copy->CopyCollectionProxy(*fCollectionProxy);
+   }
+   copy->SetClassSize(fSizeof);
+   if (fRefProxy) {
+      copy->AdoptReferenceProxy( fRefProxy->Clone() );
+   }
+   return copy;
+}   
 
 //______________________________________________________________________________
 void TClass::CopyCollectionProxy(const TVirtualCollectionProxy &orig)
@@ -3859,7 +3912,7 @@ void TClass::PostLoadCheck()
    {
       TVirtualStreamerInfo *info = (TVirtualStreamerInfo*)(fStreamerInfo->At(fClassVersion));
       // Here we need to check whether this TVirtualStreamerInfo (which presumably has been
-      // loaded from a file) is consisten with the definition in the library we just loaded.
+      // loaded from a file) is consistent with the definition in the library we just loaded.
       // BuildCheck is not appropriate here since it check a streamerinfo against the
       // 'current streamerinfo' which, at time point, would be the same as 'info'!
       if (info && GetListOfDataMembers() && !GetCollectionProxy()
@@ -3897,6 +3950,7 @@ void TClass::PostLoadCheck()
    the files will not be readable.\n"
                        , fClassVersion, GetName(), GetName(), fStreamerInfo->GetLast()+1);
             }
+            info->CompareContent(this,0,kTRUE,kTRUE);
             SetBit(kWarned);
          }
       }
@@ -3946,7 +4000,8 @@ Long_t TClass::Property() const
          kl->fStreamerType  = kForeign;
 
       } else if ( kl->fStreamerType == kNone ) {
-         if (strcmp( gCint->ClassInfo_FileName(fClassInfo),"{CINTEX dictionary translator}")==0) {
+         if ( gCint->ClassInfo_FileName(fClassInfo) 
+             && strcmp( gCint->ClassInfo_FileName(fClassInfo),"{CINTEX dictionary translator}")==0) {
             kl->SetBit(kIsForeign);
          }
          kl->fStreamerType  = kInstrumented;

@@ -10,7 +10,8 @@ void fitcont()
    // to a TGraph*
    // Author:  Rene Brun
 
-   TVirtualFitter::SetDefaultFitter("Minuit");
+   //be sure default is Minuit since we will use gMinuit 
+   TVirtualFitter::SetDefaultFitter("Minuit");  
       
    TCanvas *c1 = new TCanvas("c1");
    TH1F *h = new TH1F("h","My histogram",100,-3,3);

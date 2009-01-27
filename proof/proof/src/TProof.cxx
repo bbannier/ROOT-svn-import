@@ -83,51 +83,6 @@ TList   *TProof::fgProofEnvList = 0;  // List of env vars for proofserv
 
 ClassImp(TProof)
 
-//----- Helper classes used for parallel startup -------------------------------
-//______________________________________________________________________________
-TProofThreadArg::TProofThreadArg(const char *h, Int_t po, const char *o,
-                                 Int_t pe, const char *i, const char *w,
-                                 TList *s, TProof *prf)
-  : fOrd(o), fPerf(pe), fImage(i), fWorkdir(w),
-    fSlaves(s), fProof(prf), fCslave(0), fClaims(0),
-    fType(TSlave::kSlave)
-{
-   // Constructor
-
-   fUrl = new TUrl(Form("%s:%d",h,po));
-}
-
-//______________________________________________________________________________
-TProofThreadArg::TProofThreadArg(TCondorSlave *csl, TList *clist,
-                                 TList *s, TProof *prf)
-  : fUrl(0), fOrd(0), fPerf(-1), fImage(0), fWorkdir(0),
-    fSlaves(s), fProof(prf), fCslave(csl), fClaims(clist),
-    fType(TSlave::kSlave)
-{
-   // Constructor
-
-   if (csl) {
-      fUrl     = new TUrl(Form("%s:%d",csl->fHostname.Data(),csl->fPort));
-      fImage   = csl->fImage;
-      fOrd     = csl->fOrdinal;
-      fWorkdir = csl->fWorkDir;
-      fPerf    = csl->fPerfIdx;
-   }
-}
-
-//______________________________________________________________________________
-TProofThreadArg::TProofThreadArg(const char *h, Int_t po, const char *o,
-                                 const char *i, const char *w, const char *m,
-                                TList *s, TProof *prf)
-  : fOrd(o), fPerf(-1), fImage(i), fWorkdir(w),
-    fMsd(m), fSlaves(s), fProof(prf), fCslave(0), fClaims(0),
-    fType(TSlave::kSlave)
-{
-   // Constructor
-
-   fUrl = new TUrl(Form("%s:%d",h,po));
-}
-
 //----- PROOF Interrupt signal handler -----------------------------------------
 //______________________________________________________________________________
 Bool_t TProofInterruptHandler::Notify()
@@ -400,6 +355,7 @@ TProof::TProof() : fUrl(""), fServType(TProofMgr::kXProofd)
    fNotIdle = 0;
    fSync = kTRUE;
    fRunStatus = kRunning;
+   fIsWaiting = kFALSE;
    fRedirLog = kFALSE;
    fLogFileW = 0;
    fLogFileR = 0;
@@ -618,9 +574,10 @@ Int_t TProof::Init(const char *, const char *conffile,
 
    // Status of cluster
    fNotIdle = 0;
-
    // Query type
    fSync = kTRUE;
+   // Not enqueued
+   fIsWaiting = kFALSE;
 
    // Counters
    fBytesRead = 0;
@@ -716,57 +673,25 @@ Int_t TProof::Init(const char *, const char *conffile,
          }
       }
 
-      UserGroup_t *ug = gSystem->GetUserInfo();
-      fPackageLock = new TProofLockPath(Form("%s%s", kPROOF_PackageLockFile, ug->fUser.Data()));
-      delete ug;
+      TString lockpath(fPackageDir);
+      lockpath.ReplaceAll("/", "%");
+      lockpath.Insert(0, Form("%s/%s", gSystem->TempDirectory(), kPROOF_PackageLockFile));
+      fPackageLock = new TProofLockPath(lockpath.Data());
 
       fEnabledPackagesOnClient = new TList;
       fEnabledPackagesOnClient->SetOwner();
    }
 
-   // Master may want parallel startup
-   Bool_t parallelStartup = kFALSE;
-   if (!attach && TestBit(TProof::kIsMaster)) {
-      parallelStartup = gEnv->GetValue("Proof.ParallelStartup", kFALSE);
-      PDB(kGlobal,1) Info("Init", "Parallel Startup: %s",
-                          parallelStartup ? "kTRUE" : "kFALSE");
-      if (parallelStartup) {
-         // Load thread lib, if not done already
-         TString threadLib = "libThread";
-         char *p;
-         if ((p = gSystem->DynamicPathName(threadLib, kTRUE))) {
-            delete[]p;
-            if (gSystem->Load(threadLib) == -1) {
-               Warning("Init",
-                       "Cannot load libThread: switch to serial startup (%s)",
-                       threadLib.Data());
-               parallelStartup = kFALSE;
-            }
-         } else {
-            Warning("Init",
-                    "Cannot find libThread: switch to serial startup (%s)",
-                    threadLib.Data());
-            parallelStartup = kFALSE;
-         }
-
-         // Get no of parallel requests and set semaphore correspondingly
-         Int_t parallelRequests = gEnv->GetValue("Proof.ParallelStartupRequests", 0);
-         if (parallelRequests > 0) {
-            PDB(kGlobal,1)
-               Info("Init", "Parallel Startup Requests: %d", parallelRequests);
-            fgSemaphore = new TSemaphore((UInt_t)(parallelRequests));
-         }
-      }
-   }
+   // Master may want dynamic startup
    if (fDynamicStartup) {
       if (!IsMaster()) {
          // If on client - start the master
-         if (!StartSlaves(parallelStartup, attach))
+         if (!StartSlaves(attach))
             return 0;
       }
    } else {
       // Start slaves (the old, static, per-session way)
-      if (!StartSlaves(parallelStartup, attach))
+      if (!StartSlaves(attach))
          return 0;
    }
 
@@ -907,7 +832,16 @@ Int_t TProof::AddWorkers(TList *workerList)
          sport = fUrl.GetPort();
 
       // create slave server
+#if 0
       TString fullord = TString(gProofServ->GetOrdinal()) + "." + ((Long_t) ord);
+#else
+      TString fullord;
+      if (worker->GetOrdinal().Length() > 0) {
+         fullord.Form("%s.%s", gProofServ->GetOrdinal(), worker->GetOrdinal().Data());
+      } else {
+         fullord.Form("%s.%d", gProofServ->GetOrdinal(), ord);
+      }
+#endif
 
       // create slave server
       TUrl u(Form("%s:%d",worker->GetNodeName().Data(), sport));
@@ -977,11 +911,11 @@ Int_t TProof::AddWorkers(TList *workerList)
         << nSlavesDone << slaveOk;
       gProofServ->GetSocket()->Send(m);
    }
-   delete addedWorkers;
 
    // Now set new state on the added workers (on all workers for simplicity)
    // use fEnabledPackages, fLoadedMacros,
    // gSystem->GetDynamicPath() and gSystem->GetIncludePath()
+   // no need to load packages that are only loaded and not enabled (dyn mode)
 
    SetParallel(99999, 0);
 
@@ -991,8 +925,10 @@ Int_t TProof::AddWorkers(TList *workerList)
       TIter nxp(tmpEnabledPackages);
       TObjString *os = 0;
       while ((os = (TObjString *) nxp())) {
+         // Upload and Enable methods are intelligent and avoid
+         // re-uploading or re-enabling of a package to a node that has it.
          UploadPackage(os->GetName());
-         EnablePackage(os->GetName());
+         EnablePackage(os->GetName(), kTRUE);
       }
    }
 
@@ -1002,23 +938,27 @@ Int_t TProof::AddWorkers(TList *workerList)
       TObjString *os = 0;
       while ((os = (TObjString *) nxp())) {
          Printf("Loading a macro : %s", os->GetName());
-         Load(os->GetName());
+         Load(os->GetName(), kTRUE, kTRUE, addedWorkers);
       }
    }
 
    TString dyn = gSystem->GetDynamicPath();
    dyn.ReplaceAll(":", " ");
    dyn.ReplaceAll("\"", " ");
-   AddDynamicPath(dyn);
+   AddDynamicPath(dyn, addedWorkers);
    TString inc = gSystem->GetIncludePath();
    inc.ReplaceAll("-I", " ");
    inc.ReplaceAll("\"", " ");
-   AddIncludePath(inc);
+   AddIncludePath(inc, addedWorkers);
 
-   // inform the client that the number of workers is changed
-   if (gProofServ) gProofServ->SendParallel(kTRUE);
+   // Cleanup
+   delete addedWorkers;
 
-   return kTRUE;
+   // Inform the client that the number of workers is changed
+   if (fDynamicStartup && gProofServ)
+      gProofServ->SendParallel(kTRUE);
+
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -1087,7 +1027,7 @@ Int_t TProof::RemoveWorkers(TList *workerList)
 }
 
 //______________________________________________________________________________
-Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
+Bool_t TProof::StartSlaves(Bool_t attach)
 {
    // Start up PROOF slaves.
 
@@ -1104,190 +1044,10 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
          gProofServ->SendAsynMessage(emsg.Data());
          return kFALSE;
       }
-      fImage = gProofServ->GetImage();
-      if (fImage.IsNull())
-         fImage = Form("%s:%s", TUrl(gSystem->HostName()).GetHostFQDN(),
-                                gProofServ->GetWorkDir());
 
-      // Get all workers
-      UInt_t nSlaves = workerList->GetSize();
-      UInt_t nSlavesDone = 0;
-      Int_t ord = 0;
-
-      // Init arrays for threads, if neeeded
-      std::vector<TProofThread *> thrHandlers;
-      if (parallel) {
-         thrHandlers.reserve(nSlaves);
-         if (thrHandlers.max_size() < nSlaves) {
-            PDB(kGlobal,1)
-               Info("StartSlaves","cannot reserve enough space for thread"
-                    " handlers - switch to serial startup");
-            parallel = kFALSE;
-         }
-      }
-
-      // Loop over all workers and start them
-      TListIter next(workerList);
-      TObject *to;
-      TProofNodeInfo *worker;
-      while ((to = next())) {
-         // Get the next worker from the list
-         worker = (TProofNodeInfo *)to;
-
-         // Read back worker node info
-         const Char_t *image = worker->GetImage().Data();
-         const Char_t *workdir = worker->GetWorkDir().Data();
-         Int_t perfidx = worker->GetPerfIndex();
-         Int_t sport = worker->GetPort();
-         if (sport == -1)
-            sport = fUrl.GetPort();
-
-         // create slave server
-         TString fullord = TString(gProofServ->GetOrdinal()) + "." + ((Long_t) ord);
-         if (parallel) {
-            // Prepare arguments
-            TProofThreadArg *ta =
-               new TProofThreadArg(worker->GetNodeName().Data(), sport,
-                                   fullord, perfidx, image, workdir,
-                                   fSlaves, this);
-            if (ta) {
-               // The type of the thread func makes it a detached thread
-               TThread *th = new TThread(SlaveStartupThread, ta);
-               if (!th) {
-                  Info("StartSlaves","Can't create startup thread:"
-                       " out of system resources");
-                  SafeDelete(ta);
-               } else {
-                  // Save in vector
-                  thrHandlers.push_back(new TProofThread(th, ta));
-                  // Run the thread
-                  th->Run();
-                  // Notify opening of connection
-                  nSlavesDone++;
-                  TMessage m(kPROOF_SERVERSTARTED);
-                  m << TString("Opening connections to workers") << nSlaves
-                    << nSlavesDone << kTRUE;
-                  gProofServ->GetSocket()->Send(m);
-               }
-            } // end if (ta)
-            else {
-               Info("StartSlaves","Can't create thread arguments object:"
-                    " out of system resources");
-            }
-         } // end if parallel
-         else {
-            // create slave server
-            TUrl u(Form("%s:%d",worker->GetNodeName().Data(), sport));
-            // Add group info in the password firdl, if any
-            if (strlen(gProofServ->GetGroup()) > 0) {
-               // Set also the user, otherwise the password is not exported
-               if (strlen(u.GetUser()) <= 0)
-                  u.SetUser(gProofServ->GetUser());
-               u.SetPasswd(gProofServ->GetGroup());
-            }
-            TSlave *slave = CreateSlave(u.GetUrl(), fullord, perfidx,
-                                        image, workdir);
-
-            // Add to global list (we will add to the monitor list after
-            // finalizing the server startup)
-            Bool_t slaveOk = kTRUE;
-            if (slave->IsValid()) {
-               fSlaves->Add(slave);
-            } else {
-               slaveOk = kFALSE;
-               fBadSlaves->Add(slave);
-            }
-
-            PDB(kGlobal,3)
-               Info("StartSlaves", "worker on host %s created"
-                    " and added to list", worker->GetNodeName().Data());
-
-            // Notify opening of connection
-            nSlavesDone++;
-            TMessage m(kPROOF_SERVERSTARTED);
-            m << TString("Opening connections to workers") << nSlaves
-              << nSlavesDone << slaveOk;
-            gProofServ->GetSocket()->Send(m);
-         }
-         ord++;
-      } //end of worker loop
-
-      // Cleanup
-      SafeDelete(workerList);
-
-      nSlavesDone = 0;
-      if (parallel) {
-
-         // Wait completion of startup operations
-         std::vector<TProofThread *>::iterator i;
-         for (i = thrHandlers.begin(); i != thrHandlers.end(); ++i) {
-            TProofThread *pt = *i;
-
-            // Wait on this condition
-            if (pt && pt->fThread->GetState() == TThread::kRunningState) {
-               PDB(kGlobal,3)
-                  Info("Init",
-                       "parallel startup: waiting for worker %s (%s:%d)",
-                        pt->fArgs->fOrd.Data(), pt->fArgs->fUrl->GetHost(),
-                        pt->fArgs->fUrl->GetPort());
-               pt->fThread->Join();
-            }
-
-            // Notify end of startup operations
-            nSlavesDone++;
-            TMessage m(kPROOF_SERVERSTARTED);
-            m << TString("Setting up worker servers") << nSlaves
-              << nSlavesDone << kTRUE;
-            gProofServ->GetSocket()->Send(m);
-         }
-
-         TIter nxw(fSlaves);
-         TSlave *sl = 0;
-         while ((sl = (TSlave *)nxw())) {
-            if (sl->IsValid())
-               fAllMonitor->Add(sl->GetSocket());
-            else
-               fBadSlaves->Add(sl);
-         }
-
-         // We can cleanup now
-         while (!thrHandlers.empty()) {
-            i = thrHandlers.end()-1;
-            if (*i) {
-               SafeDelete(*i);
-               thrHandlers.erase(i);
-            }
-         }
-
-      } else {
-
-         // Here we finalize the server startup: in this way the bulk
-         // of remote operations are almost parallelized
-         TIter nxsl(fSlaves);
-         TSlave *sl = 0;
-         while ((sl = (TSlave *) nxsl())) {
-
-            // Finalize setup of the server
-            if (sl->IsValid())
-               sl->SetupServ(TSlave::kSlave, 0);
-
-            // Monitor good slaves
-            Bool_t slaveOk = kTRUE;
-            if (sl->IsValid()) {
-               fAllMonitor->Add(sl->GetSocket());
-            } else {
-               slaveOk = kFALSE;
-               fBadSlaves->Add(sl);
-            }
-
-            // Notify end of startup operations
-            nSlavesDone++;
-            TMessage m(kPROOF_SERVERSTARTED);
-            m << TString("Setting up worker servers") << nSlaves
-              << nSlavesDone << slaveOk;
-            gProofServ->GetSocket()->Send(m);
-         }
-      }
+      // Setup the workers
+      if (AddWorkers(workerList) < 0)
+         return kFALSE;
 
    } else {
 
@@ -1376,19 +1136,14 @@ Bool_t TProof::StartSlaves(Bool_t parallel, Bool_t attach)
          } else {
 
             // Notify
-            if (attach) {
-               Printf("Starting master: OK                                     ");
-               StartupMessage("Master attached", kTRUE, 1, 1);
+            Printf("Starting master: OK                                     ");
+            StartupMessage("Master attached", kTRUE, 1, 1);
 
-               if (!gROOT->IsBatch()) {
-                  if ((fProgressDialog =
-                     gROOT->GetPluginManager()->FindHandler("TProofProgressDialog")))
-                     if (fProgressDialog->LoadPlugin() == -1)
-                        fProgressDialog = 0;
-               }
-            } else {
-               Printf("Starting manager: OK                                    ");
-               StartupMessage("Manager started", kTRUE, 1, 1);
+            if (!gROOT->IsBatch()) {
+               if ((fProgressDialog =
+                  gROOT->GetPluginManager()->FindHandler("TProofProgressDialog")))
+                  if (fProgressDialog->LoadPlugin() == -1)
+                     fProgressDialog = 0;
             }
 
             fSlaves->Add(slave);
@@ -2357,7 +2112,7 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout, Int_t endtype)
          if (rc  == 1 || (rc == 2 && !savedMonitor)) {
             // Deactivate it if we are done with it
             mon->DeActivate(s);
-            if (gDebug > 2)
+            PDB(kGlobal, 2)
                Info("Collect","deactivating %p (active: %d, %p)",
                               s, mon->GetActive(),
                               mon->GetListOfActives()->First());
@@ -2366,8 +2121,8 @@ Int_t TProof::Collect(TMonitor *mon, Long_t timeout, Int_t endtype)
             // Deactivate it if we are done with it
             if (savedMonitor) {
                savedMonitor->DeActivate(s);
-               if (gDebug > 2)
-                  Info("Collect","deactivating %p (active: %d, %p)",
+               PDB(kGlobal, 2)
+                  Info("Collect","save monitor: deactivating %p (active: %d, %p)",
                                  s, savedMonitor->GetActive(),
                                  savedMonitor->GetListOfActives()->First());
             }
@@ -2675,6 +2430,12 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
          }
          break;
 
+      case kPROOF_SENDFILE:
+         {  // New server: signals ending of sendfile operation
+            rc = 1;
+         }
+         break;
+
       case kPROOF_PACKAGE_LIST:
          {
             PDB(kGlobal,2) Info("HandleInputMessage","kPROOF_PACKAGE_LIST: enter");
@@ -2925,8 +2686,10 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
 
             // For Proof-Lite this variable is the number of workers and is set
             // by the player
-            if (!IsLite())
+            if (!IsLite()) {
                fNotIdle = 1;
+               fIsWaiting = kFALSE;
+            }
 
             // The signal is used on masters by XrdProofdProtocol to catch
             // the start of processing; on clients it allows to update the
@@ -2979,6 +2742,9 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                }
             } else {
                fNotIdle = 0;
+               // Check if the query has been enqueued
+               if ((mess->BufferSize() > mess->Length()))
+                  (*mess) >> fIsWaiting;
             }
          }
          break;
@@ -2997,6 +2763,11 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                Activate();
                fSync = kFALSE;
             }
+            // Check if the query has been enqueued
+            fIsWaiting = kTRUE;
+            // For Proof-Lite this variable is the number of workers and is set by the player
+            if (!IsLite())
+               fNotIdle = 1;
 
             rc = 1;
          }
@@ -3109,6 +2880,7 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                   fPlayer->AddEventsProcessed(events);
                }
             }
+            SafeDelete(status);
             if (!TestBit(TProof::kIsMaster))
                Emit("StopProcess(Bool_t)", abort);
             break;
@@ -3393,7 +3165,7 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
             if (fPlayer)
                fPlayer->AddOutputObject(listOfMissingFiles);
          }
-         // if a query is being processed, assume that the work done by
+         // If a query is being processed, assume that the work done by
          // the worker was lost and needs to be reassigned.
          TVirtualPacketizer *packetizer = fPlayer ? fPlayer->GetPacketizer() : 0;
          if (packetizer) {
@@ -3687,13 +3459,17 @@ Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
    // Resolve query mode
    fSync = (GetQueryMode(option) == kSync);
 
-   if (fSync && !IsIdle()) {
-      Info("Process","not idle, cannot submit synchronous query");
-      return -1;
+   TString opt(option);
+   if (fSync && (!IsIdle() || IsWaiting())) {
+      // Already queued or processing queries: switch to asynchronous mode
+      Info("Process", "session is in waiting or processing status: switch to asynchronous mode");
+      fSync = kFALSE;
+      opt.ReplaceAll("SYNC","");
+      opt += "ASYN";
    }
 
    // Cleanup old temporary datasets
-   if (IsIdle() && fRunningDSets && fRunningDSets->GetSize() > 0) {
+   if ((IsIdle() && !IsWaiting()) && fRunningDSets && fRunningDSets->GetSize() > 0) {
       fRunningDSets->SetOwner(kTRUE);
       fRunningDSets->Delete();
    }
@@ -3706,7 +3482,7 @@ Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
          sh = gSystem->RemoveSignalHandler(gApplication->GetSignalHandler());
    }
 
-   Long64_t rv = fPlayer->Process(dset, selector, option, nentries, first);
+   Long64_t rv = fPlayer->Process(dset, selector, opt.Data(), nentries, first);
 
    if (fSync) {
       // reactivate the default application interrupt handler
@@ -4748,19 +4524,16 @@ Int_t TProof::SendFile(const char *file, Int_t opt, const char *rfile, TSlave *w
       // Don't send the kPROOF_SENDFILE command to real slaves when sendto
       // is false. Masters might still need to send the file to newly added
       // slaves.
+      PDB(kPackage,2) {
+         const char *snd = (sl->fSlaveType == TSlave::kSlave && sendto) ? "" : "not";
+         Info("SendFile", "%s sending file %s to: %s:%s (%d)", snd,
+                    file, sl->GetName(), sl->GetOrdinal(), sendto);
+      }
       if (sl->fSlaveType == TSlave::kSlave && !sendto)
          continue;
       // The value of 'size' is used as flag remotely, so we need to
       // reset it to 0 if we are not going to send the file
       Long64_t siz = sendto ? size : 0;
-
-      PDB(kPackage,2)
-         if (siz > 0) {
-            if (!nsl)
-               Info("SendFile", "sending file %s to:", file);
-            printf("   slave = %s:%s\n", sl->GetName(), sl->GetOrdinal());
-         }
-
       sprintf(buf, "%s %d %lld %d", fnam.Data(), bin, siz, fw);
       if (sl->GetSocket()->Send(buf, kPROOF_SENDFILE) == -1) {
          MarkBad(sl, "could not send kPROOF_SENDFILE request");
@@ -4796,12 +4569,11 @@ Int_t TProof::SendFile(const char *file, Int_t opt, const char *rfile, TSlave *w
 
          nsl++;
       }
+      // Wait for the operation to be done
+      Collect(sl, fCollectTimeout, kPROOF_SENDFILE);
    }
 
    close(fd);
-
-   // Wait for the operation to be done
-   Collect(&wsent, fCollectTimeout);
 
    // Cleanup temporary list, if any
    if (slaves != fActiveSlaves && slaves != fUniqueSlaves)
@@ -5860,8 +5632,9 @@ Int_t TProof::UploadPackage(const char *pack, EUploadPackageOpt opt)
             // remote directory is locked, upload file over the open channel
             smsg.Form("%s/%s/%s", sl->GetProofWorkDir(), kPROOF_PackDir,
                                   gSystem->BaseName(par));
-            if (SendFile(par, (kBinary | kForce | kCpBin), smsg.Data(), sl) < 0) {
-               Error("UploadPackage", "problems uploading file %s", par.Data());
+            if (SendFile(par, (kBinary | kForce | kCpBin | kForward), smsg.Data(), sl) < 0) {
+               Error("UploadPackage", "%s: problems uploading file %s",
+                                      sl->GetOrdinal(), par.Data());
                return -1;
             }
          } else {
@@ -5879,7 +5652,8 @@ Int_t TProof::UploadPackage(const char *pack, EUploadPackageOpt opt)
          fCheckFileStatus = 0;
          Collect(sl, fCollectTimeout, kPROOF_CHECKFILE);
          if (fCheckFileStatus == 0) {
-            Error("UploadPackage", "unpacking of package %s failed", par.Data());
+            Error("UploadPackage", "%s: unpacking of package %s failed",
+                                   sl->GetOrdinal(), gSystem->BaseName(par));
             return -1;
          }
       }
@@ -5998,15 +5772,27 @@ Int_t TProof::UploadPackageOnClient(const TString &par, EUploadPackageOpt opt, T
 }
 
 //______________________________________________________________________________
-Int_t TProof::Load(const char *macro, Bool_t notOnClient)
+Int_t TProof::Load(const char *macro, Bool_t notOnClient, Bool_t uniqueWorkers,
+                   TList *wrks)
 {
    // Load the specified macro on master, workers and, if notOnClient is
    // kFALSE, on the client. The macro file is uploaded if new or updated.
    // If existing, the corresponding header basename(macro).h or .hh, is also
    // uploaded. The default is to load the macro also on the client.
+   // On masters, if uniqueWorkers is kTRUE, the macro is loaded on unique workers
+   // only, and collection is not done; if uniqueWorkers is kFALSE, collection
+   // from the previous request is done, and broadcasting + collection from the
+   // other workers is done.
+   // The wrks arg can be used on the master to limit the set of workers.
    // Returns 0 in case of success and -1 in case of error.
 
    if (!IsValid()) return -1;
+
+   if (IsLite()) {
+      Warning("Load", "functionality not yet implemented; please use Exec(...)"
+                      " or a dedicated PAR package");
+      return -1;
+   }
 
    if (!macro || !strlen(macro)) {
       Error("Load", "need to specify a macro name");
@@ -6014,6 +5800,10 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient)
    }
 
    if (TestBit(TProof::kIsClient)) {
+      if (wrks) {
+         Error("Load", "the 'wrks' arg can be used only on the master");
+         return -1;
+      }
 
       // Extract the file implementation name first
       TString implname = macro;
@@ -6087,20 +5877,50 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient)
    } else {
       // On master
 
-      // The files are now on the workers: now we send the loading request
-      // On the master we do not wait here for the results, but after the local
-      // load
+      // The files are now on the workers: now we send the loading request first
+      // to the unique workers, so that the eventual compilation occurs only once.
       TString basemacro = gSystem->BaseName(macro);
       TMessage mess(kPROOF_CACHE);
-      mess << Int_t(kLoadMacro) << basemacro;
-      Broadcast(mess);
 
-      Printf("Adding loaded macro: %s", macro);
+      if (uniqueWorkers) {
+         mess << Int_t(kLoadMacro) << basemacro;
+         if (wrks)
+            Broadcast(mess, wrks);
+         else
+            Broadcast(mess, kUnique);
+      } else {
+         // Wait for the result of the previous sending
+         Collect(kUnique);
+
+         // We then send a tuned loading request to the other workers
+         TList others;
+         TSlave *wrk = 0;
+         TIter nxw(fActiveSlaves);
+         while ((wrk = (TSlave *)nxw())) {
+            if (!fUniqueSlaves->FindObject(wrk)) {
+               others.Add(wrk);
+            }
+         }
+
+         // Do not force compilation, if it was requested
+         Int_t ld = basemacro.Last('.');
+         if (ld != kNPOS) {
+            Int_t lpp = basemacro.Index("++", ld);
+            if (lpp != kNPOS) basemacro.Replace(lpp, 2, "+");
+         }
+         mess << Int_t(kLoadMacro) << basemacro;
+         Broadcast(mess, &others);
+         Collect(&others);
+      }
+
+      PDB(kGlobal, 1) Info("Load", "adding loaded macro: %s", macro);
       if (!fLoadedMacros) {
          fLoadedMacros = new TList();
          fLoadedMacros->SetOwner();
       }
-      fLoadedMacros->Add(new TObjString(macro));
+      // if wrks is specified the macro should already be loaded on the master.
+      if (!wrks)
+         fLoadedMacros->Add(new TObjString(macro));
    }
 
    // Done
@@ -6108,7 +5928,7 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient)
 }
 
 //______________________________________________________________________________
-Int_t TProof::AddDynamicPath(const char *libpath, Bool_t onClient)
+Int_t TProof::AddDynamicPath(const char *libpath, Bool_t onClient, TList *wrks)
 {
    // Add 'libpath' to the lib path search.
    // Multiple paths can be specified at once separating them with a comma or
@@ -6135,14 +5955,17 @@ Int_t TProof::AddDynamicPath(const char *libpath, Bool_t onClient)
       m << TString("-");
 
    // Forward the request
-   Broadcast(m);
+   if (wrks)
+      Broadcast(m, wrks);
+   else
+      Broadcast(m);
    Collect(kActive, fCollectTimeout);
 
    return 0;
 }
 
 //______________________________________________________________________________
-Int_t TProof::AddIncludePath(const char *incpath, Bool_t onClient)
+Int_t TProof::AddIncludePath(const char *incpath, Bool_t onClient, TList *wrks)
 {
    // Add 'incpath' to the inc path search.
    // Multiple paths can be specified at once separating them with a comma or
@@ -6169,7 +5992,10 @@ Int_t TProof::AddIncludePath(const char *incpath, Bool_t onClient)
       m << TString("-");
 
    // Forward the request
-   Broadcast(m);
+   if (wrks)
+      Broadcast(m, wrks);
+   else
+      Broadcast(m);
    Collect(kActive, fCollectTimeout);
 
    return 0;
@@ -6711,7 +6537,7 @@ void TProof::AddInputData(TObject *obj, Bool_t push)
    // Add data objects that might be needed during the processing of
    // the selector (see Process()). This object can be very large, so they
    // are distributed in an optimized way using a dedicated file.
-   // If push is TRUE the input data are snet over even if no apparent change
+   // If push is TRUE the input data are sent over even if no apparent change
    // occured to the list.
 
    if (obj) {
@@ -7379,68 +7205,6 @@ void TProof::RemoveChain(TChain *chain)
    // Remove chain from data set
 
    fChains->Remove(chain);
-}
-
-//_____________________________________________________________________________
-void *TProof::SlaveStartupThread(void *arg)
-{
-   // Function executed in the slave startup thread.
-
-   if (fgSemaphore) fgSemaphore->Wait();
-
-   TProofThreadArg *ta = (TProofThreadArg *)arg;
-
-   PDB(kGlobal,1)
-      ::Info("TProof::SlaveStartupThread",
-             "Starting slave %s on host %s", ta->fOrd.Data(), ta->fUrl->GetHost());
-
-   TSlave *sl = 0;
-   if (ta->fType == TSlave::kSlave) {
-      // Open the connection
-      sl = ta->fProof->CreateSlave(ta->fUrl->GetUrl(), ta->fOrd,
-                                   ta->fPerf, ta->fImage, ta->fWorkdir);
-      // Finalize setup of the server
-      if (sl && sl->IsValid())
-         sl->SetupServ(TSlave::kSlave, 0);
-   } else {
-      // Open the connection
-      sl = ta->fProof->CreateSubmaster(ta->fUrl->GetUrl(), ta->fOrd,
-                                       ta->fImage, ta->fMsd);
-      // Finalize setup of the server
-      if (sl && sl->IsValid())
-         sl->SetupServ(TSlave::kMaster, ta->fWorkdir);
-   }
-
-   if (sl && sl->IsValid()) {
-
-      {  R__LOCKGUARD2(gProofMutex);
-
-         // Add to the started slaves list
-         ta->fSlaves->Add(sl);
-
-         if (ta->fClaims) { // Condor slave
-            // Remove from the pending claims list
-            TCondorSlave *c = ta->fCslave;
-            ta->fClaims->Remove(c);
-         }
-      }
-
-      // Notify we are done
-      PDB(kGlobal,1)
-         ::Info("TProof::SlaveStartupThread",
-                "slave %s on host %s created and added to list",
-                ta->fOrd.Data(), ta->fUrl->GetHost());
-   } else {
-      // Failure
-      SafeDelete(sl);
-      ::Error("TProof::SlaveStartupThread",
-              "slave %s on host %s could not be created",
-              ta->fOrd.Data(), ta->fUrl->GetHost());
-   }
-
-   if (fgSemaphore) fgSemaphore->Post();
-
-   return 0;
 }
 
 //______________________________________________________________________________

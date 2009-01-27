@@ -15,7 +15,7 @@
 //                                                                      //
 // Author: G. Ganis, CERN, 2007                                         //
 //                                                                      //
-// Class mapping manager fonctionality.                                 //
+// Class mapping manager functionality.                                 //
 // On masters it keeps info about the available worker nodes and allows //
 // communication with them.                                             //
 // On workers it handles the communication with the master.             //
@@ -52,6 +52,53 @@
 // Tracing utilities
 #include "XrdProofdTrace.h"
 
+//--------------------------------------------------------------------------
+//
+// XrdProofdManagerCron
+//
+// Function run in separate thread doing regular checks
+//
+//--------------------------------------------------------------------------
+void *XrdProofdManagerCron(void *p)
+{
+   // This is an endless loop to periodically check the system
+   XPDLOC(PMGR, "ManagerCron")
+
+   XrdProofdManager *mgr = (XrdProofdManager *)p;
+   if (!(mgr)) {
+      TRACE(REQ, "undefined manager: cannot start");
+      return (void *)0;
+   }
+
+   TRACE(REQ, "started with frequency "<<mgr->CronFrequency()<<" sec");
+
+   // Get Midnight time
+   int now = time(0);
+   int mid = XrdSysTimer::Midnight(now);
+   while (mid < now) {
+      mid += 86400;
+   }
+   TRACE(REQ, "midnight in  "<<(mid - now)<<" secs");
+
+   while(1) {
+      // Do something here
+      TRACE(REQ, "running periodical checks");
+      // Check the log file ownership
+      mgr->CheckLogFileOwnership();
+      // Wait a while
+      int tw = mgr->CronFrequency();
+      now = time(0);
+      if ((mid - now) <= tw) {
+         tw = mid - now + 2; // Always run a check just after midnight
+         mid += 86400;
+      }
+      XrdSysTimer::Wait(tw * 1000);
+   }
+
+   // Should never come here
+   return (void *)0;
+}
+
 //__________________________________________________________________________
 XrdProofdManager::XrdProofdManager(XrdProtocol_Config *pi, XrdSysError *edest)
                 : XrdProofdConfig(pi->ConfigFN, edest)
@@ -71,6 +118,7 @@ XrdProofdManager::XrdProofdManager(XrdProtocol_Config *pi, XrdSysError *edest)
    fOperationMode = kXPD_OpModeOpen;
    fMultiUser = 0;
    fChangeOwn = 0;
+   fCronFrequency = 30;
 
    // Proof admin path
    fAdminPath = pi->AdmPath;
@@ -120,6 +168,41 @@ XrdProofdManager::~XrdProofdManager()
    SafeDelete(fProofSched);
    SafeDelete(fROOTMgr);
    SafeDelete(fSessionMgr);
+}
+
+//__________________________________________________________________________
+void XrdProofdManager::CheckLogFileOwnership()
+{
+   // Make sure that the log file belongs to the original effective user
+   XPDLOC(ALL, "Manager::CheckLogFileOwnership")
+
+   // Nothing to do if not priviledged
+   if (getuid()) return;
+
+   struct stat st;
+   if (fstat(STDERR_FILENO, &st) != 0) {
+      if (errno != ENOENT) {
+         TRACE(XERR, "could not stat log file; errno: "<< errno);
+         return;
+      }
+   }
+
+   TRACE(HDBG,"uid: "<<st.st_uid<<", gid: "<<st.st_gid);
+
+   // Get original effective user identity
+   struct passwd *epwd = getpwuid(XrdProofdProtocol::EUidAtStartup());
+   if (!epwd) {
+      TRACE(XERR, "could not get effective user identity; errno: "<< errno);
+      return;
+   }
+ 
+   // Set ownership of the log file to the effective user
+   if (st.st_uid != epwd->pw_uid || st.st_gid != epwd->pw_gid) {
+      if (fchown(STDERR_FILENO, epwd->pw_uid, epwd->pw_gid) != 0) {
+         TRACE(XERR, "could not set stderr ownership; errno: "<< errno);
+         return;
+      }
+   }
 }
 
 //______________________________________________________________________________
@@ -323,7 +406,7 @@ XrdProofSched *XrdProofdManager::LoadScheduler()
          return (XrdProofSched *)0;
       }
       // Get the scheduler object
-      if (!(sched = (*ep)(cfn, this, fGroupsMgr, fEDest))) {
+      if (!(sched = (*ep)(cfn, this, fGroupsMgr, cfn, fEDest))) {
          TRACE(XERR, "unable to create scheduler object from " << lib);
          return (XrdProofSched *)0;
       }
@@ -342,7 +425,8 @@ XrdProofSched *XrdProofdManager::LoadScheduler()
 }
 
 //__________________________________________________________________________
-int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps)
+int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps,
+                                 const char *query)
 {
    // Get a list of workers from the available resource broker
    XPDLOC(ALL, "Manager::GetWorkers")
@@ -358,28 +442,41 @@ int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps)
 
    // Query the scheduler for the list of workers
    std::list<XrdProofWorker *> wrks;
-   fProofSched->GetWorkers(xps, &wrks);
-   TRACE(DBG, "list size: " << wrks.size());
+   if ((rc = fProofSched->GetWorkers(xps, &wrks, query)) < 0) {
+      TRACE(XERR, "error getting list of workers from the scheduler");
+      return -1;
+   }
+   // If we got a new list we save it into the session object
+   if (rc == 0) {
 
-   // The full list
-   XrdOucString ord;
-   int ii = -1;
-   std::list<XrdProofWorker *>::iterator iw;
-   for (iw = wrks.begin(); iw != wrks.end() ; iw++) {
-      XrdProofWorker *w = *iw;
-      // Add separator if not the first
-      if (lw.length() > 0)
-         lw += '&';
-      // Add export version of the info
-      lw += w->Export();
-      // Count (fActive is increased inside here)
-      if (ii == -1) 
-         ord.form("master");
-      else
-         ord.form("%d", ii);
-      ii++;
-      xps->AddWorker(ord.c_str(), w);
-      w->fProofServs.push_back(xps);
+      TRACE(DBG, "list size: " << wrks.size());
+
+      // The full list
+      XrdOucString ord;
+      int ii = -1;
+      std::list<XrdProofWorker *>::iterator iw;
+      for (iw = wrks.begin(); iw != wrks.end() ; iw++) {
+         XrdProofWorker *w = *iw;
+         // Count (fActive is increased inside here)
+         if (ii == -1) 
+            ord.form("master");
+         else
+            ord.form("%d", ii);
+         ii++;
+         xps->AddWorker(ord.c_str(), w);
+         // Add proofserv and increase the counter
+         w->AddProofServ(xps);
+      }
+   }
+
+   int proto = (xps->Protocol()) ? xps->Protocol()->ProofProtocol() : -1;
+   if (rc != 2 || (proto < 21 && rc == 0)) {
+      // Get the list in exported format
+      xps->ExportWorkers(lw);
+      TRACE(DBG, "from ExportWorkers: " << lw);
+   } else if (proto >= 21) {
+      // Signal enqueing
+      lw = XPD_GW_QueryEnqueued;
    }
 
    if (TRACING(REQ)) fNetMgr->Dump();
@@ -387,7 +484,7 @@ int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps)
    return rc;
 }
 
-//__________________________________________________________________________
+//______________________________________________________________________________
 static int FillKeyValues(const char *k, int *d, void *s)
 {
    // Add the key value in the string passed via the void argument
@@ -410,7 +507,7 @@ static int FillKeyValues(const char *k, int *d, void *s)
    return 0;
 }
 
-//__________________________________________________________________________
+//______________________________________________________________________________
 int XrdProofdManager::Config(bool rcf)
 {
    // Run configuration and parse the entered config directives.
@@ -639,11 +736,28 @@ int XrdProofdManager::Config(bool rcf)
       return -1;
    }
 
+   // Config the scheduler
+   if (fProofSched && fProofSched->Config(rcf) != 0) {
+      XPDERR("problems configuring the scheduler");
+      return -1;
+   }
+
+   if (!rcf) {
+      // Start cron thread
+      pthread_t tid;
+      if (XrdSysThread::Run(&tid, XrdProofdManagerCron,
+                           (void *)this, 0, "ProofdManager cron thread") != 0) {
+         XPDERR("could not start cron thread");
+         return 0;
+      }
+      TRACE(ALL, "manager cron thread started");
+   }
+
    // Done
    return 0;
 }
 
-//__________________________________________________________________________
+//______________________________________________________________________________
 void XrdProofdManager::RegisterDirectives()
 {
    // Register directives for configuration

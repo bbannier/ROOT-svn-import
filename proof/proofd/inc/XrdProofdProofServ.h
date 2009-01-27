@@ -82,11 +82,13 @@ private:
 //////////////////////////////////////////////////////////////////////////
 class XrdProofQuery
 {
+   XrdOucString      fTag;
    XrdOucString      fDSName;
    long              fDSSize;
 public:
-   XrdProofQuery(const char *n = 0, long s = 0) : fDSName(n), fDSSize(s) { }
+   XrdProofQuery(const char *t, const char *n = "", long s = 0) : fTag(t), fDSName(n), fDSSize(s) { }
 
+   const char       *GetTag()     { return fTag.c_str(); }
    const char       *GetDSName()  { return fDSName.c_str(); }
    long              GetDSSize()  { return fDSSize; }
 };
@@ -122,14 +124,20 @@ public:
    void                Broadcast(const char *msg, int type = kXPD_srvmsg);
    int                 BroadcastPriority(int priority);
    inline const char  *Client() const { XrdSysMutexHelper mhp(fMutex); return fClient.c_str(); }
+   XrdProofQuery      *CurrentQuery() { XrdSysMutexHelper mhp(fMutex); return (fQueries.empty()? 0 : fQueries.front()); }
    void                DeleteStartMsg()
                        { XrdSysMutexHelper mhp(fMutex); if (fStartMsg) delete fStartMsg; fStartMsg = 0;}
    int                 DisconnectTime();
+   void                DumpQueries();
+   int                 Enqueue(XrdProofQuery *q) { XrdSysMutexHelper mhp(fMutex);
+                                                   if (q) { fQueries.push_back(q); }; return fQueries.size(); }
    void                ExportBuf(XrdOucString &buf);
+   void                ExportWorkers(XrdOucString &wrks);
    inline const char  *Fileout() const { XrdSysMutexHelper mhp(fMutex); return fFileout.c_str(); }
    int                 FreeClientID(int pid);
    XrdClientID        *GetClientID(int cid);
    int                 GetNClients(bool check);
+   XrdProofQuery      *GetQuery(const char *tag);
    inline const char  *Group() const { XrdSysMutexHelper mhp(fMutex); return fGroup.c_str(); }
    int                 IdleTime();
    inline short int    ID() const { XrdSysMutexHelper mhp(fMutex); return fID; }
@@ -142,7 +150,6 @@ public:
    inline void         PingSem() const { XrdSysMutexHelper mhp(fMutex); if (fPingSem) fPingSem->Post(); }
    inline XrdProofdProtocol *Protocol() const { XrdSysMutexHelper mhp(fMutex); return fProtocol; }
    inline XrdSrvBuffer *QueryNum() const { XrdSysMutexHelper mhp(fMutex); return fQueryNum; }
-
    void                RemoveWorker(const char *o);
    void                Reset();
    int                 Reset(const char *msg, int type);
@@ -187,6 +194,8 @@ public:
    int                 VerifyProofServ(bool fw);
    inline XrdOucHash<XrdProofWorker> *Workers() const
                       { XrdSysMutexHelper mhp(fMutex); return (XrdOucHash<XrdProofWorker> *)&fWorkers; }
+
+   int                 Resume();
 
    int                 CreateUNIXSock(XrdSysError *edest);
    void                DeleteUNIXSock();

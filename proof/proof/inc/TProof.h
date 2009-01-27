@@ -113,6 +113,7 @@ class TProofDataSetManager;
 // 18 -> 19: TProofProgressStatus used in kPROOF_PROGRESS, kPROOF_STOPPROCESS
 //           and kPROOF_GETNEXTPACKET messages in Master - worker communication
 // 19 -> 20: Fix the asynchronous mode (required changes in some messages)
+// 20 -> 21: Add support for session queuing
 
 // PROOF magic constants
 const Int_t       kPROOF_Protocol        = 20;            // protocol version number
@@ -151,56 +152,6 @@ const char* const kGUNZIP = "gunzip";
 R__EXTERN TVirtualMutex *gProofMutex;
 
 typedef void (*PrintProgress_t)(Long64_t tot, Long64_t proc, Float_t proctime);
-
-// Helper classes used for parallel startup
-class TProofThreadArg {
-public:
-   TUrl         *fUrl;
-   TString       fOrd;
-   Int_t         fPerf;
-   TString       fImage;
-   TString       fWorkdir;
-   TString       fMsd;
-   TList        *fSlaves;
-   TProof       *fProof;
-   TCondorSlave *fCslave;
-   TList        *fClaims;
-   Int_t         fType;
-
-   TProofThreadArg(const char *h, Int_t po, const char *o, Int_t pe,
-                   const char *i, const char *w,
-                   TList *s, TProof *prf);
-
-   TProofThreadArg(TCondorSlave *csl, TList *clist,
-                   TList *s, TProof *prf);
-
-   TProofThreadArg(const char *h, Int_t po, const char *o,
-                   const char *i, const char *w, const char *m,
-                   TList *s, TProof *prf);
-
-   virtual ~TProofThreadArg() { if (fUrl) delete fUrl; }
-
-private:
-
-   TProofThreadArg(const TProofThreadArg&); // Not implemented
-   TProofThreadArg& operator=(const TProofThreadArg&); // Not implemented
-
-};
-
-// PROOF Thread class for parallel startup
-class TProofThread {
-public:
-   TThread         *fThread;
-   TProofThreadArg *fArgs;
-
-   TProofThread(TThread *t, TProofThreadArg *a): fThread(t), fArgs(a) {}
-   virtual ~TProofThread() { SafeDelete(fThread); SafeDelete(fArgs); }
-private:
-
-   TProofThread(const TProofThread&); // Not implemented
-   TProofThread& operator=(const TProofThread&); // Not implemented
-
-};
 
 // PROOF Interrupt signal handler
 class TProofInterruptHandler : public TSignalHandler {
@@ -428,6 +379,7 @@ private:
    Int_t           fNotIdle;         //Number of non-idle sub-nodes
    Bool_t          fSync;            //true if type of currently processed query is sync
    ERunStatus      fRunStatus;       //run status
+   Bool_t          fIsWaiting;       //true if queries have been enqueued
 
    Bool_t          fRedirLog;        //redirect received log info
    TString         fLogFileName;     //name of the temp file for redirected logs
@@ -585,7 +537,7 @@ protected:
    Int_t           Init(const char *masterurl, const char *conffile,
                         const char *confdir, Int_t loglevel,
                         const char *alias = 0);
-   virtual Bool_t  StartSlaves(Bool_t parallel, Bool_t attach = kFALSE);
+   virtual Bool_t  StartSlaves(Bool_t attach = kFALSE);
    Int_t AddWorkers(TList *wrks);
    Int_t RemoveWorkers(TList *wrks);
 
@@ -689,10 +641,11 @@ public:
    Int_t       ClearPackage(const char *package);
    Int_t       EnablePackage(const char *package, Bool_t notOnClient = kFALSE);
    Int_t       UploadPackage(const char *par, EUploadPackageOpt opt = kUntar);
-   Int_t       Load(const char *macro, Bool_t notOnClient = kFALSE);
+   Int_t       Load(const char *macro, Bool_t notOnClient = kFALSE, Bool_t uniqueOnly = kTRUE,
+                    TList *wrks = 0);
 
-   Int_t       AddDynamicPath(const char *libpath, Bool_t onClient = kFALSE);
-   Int_t       AddIncludePath(const char *incpath, Bool_t onClient = kFALSE);
+   Int_t       AddDynamicPath(const char *libpath, Bool_t onClient = kFALSE, TList *wrks = 0);
+   Int_t       AddIncludePath(const char *incpath, Bool_t onClient = kFALSE, TList *wrks = 0);
    Int_t       RemoveDynamicPath(const char *libpath, Bool_t onClient = kFALSE);
    Int_t       RemoveIncludePath(const char *incpath, Bool_t onClient = kFALSE);
 
@@ -760,6 +713,7 @@ public:
    Bool_t      IsValid() const { return fValid; }
    Bool_t      IsParallel() const { return GetParallel() > 0 ? kTRUE : kFALSE; }
    Bool_t      IsIdle() const { return (fNotIdle <= 0) ? kTRUE : kFALSE; }
+   Bool_t      IsWaiting() const { return fIsWaiting; }
 
    ERunStatus  GetRunStatus() const { return fRunStatus; }
    TList      *GetLoadedMacros() const { return fLoadedMacros; }

@@ -748,21 +748,15 @@ struct G__Definetemplatefunc {
 *
 **************************************************************************/
 
-extern "C" {
-
-struct G__breakcontinue_list {
-   struct G__breakcontinue_list* next; // next entry in list
-   int isbreak; // is it a break or a continue
-   int idx; // index into bytecode array to patch
-};
-
-
 struct G__Charlist {
+   G__Charlist() : string(0), next(0) {}
    char *string;
    struct G__Charlist *next;
 };
 
 struct G__Callfuncmacro{
+   G__Callfuncmacro() : call_fp(0),line(-1),next(0),call_filenum(-1) {}
+   
    FILE *call_fp;
    fpos_t call_pos;
    int line;
@@ -772,16 +766,26 @@ struct G__Callfuncmacro{
 } ;
 
 struct G__Deffuncmacro {
-  char *name;
-  int hash;
-  int line;
-  FILE *def_fp;
-  fpos_t def_pos;
-  struct G__Charlist def_para;
-  struct G__Callfuncmacro callfuncmacro;
-  struct G__Deffuncmacro *next;
-  short def_filenum;
+   G__Deffuncmacro() : name(0), hash(0), line(-1), def_fp(0), next(0), def_filenum(-1) {}
+   
+   char *name;
+   int hash;
+   int line;
+   FILE *def_fp;
+   fpos_t def_pos;
+   G__Charlist def_para;
+   struct G__Callfuncmacro callfuncmacro;
+   struct G__Deffuncmacro *next;
+   short def_filenum;
 } ;
+
+extern "C" {
+
+struct G__breakcontinue_list {
+   struct G__breakcontinue_list* next; // next entry in list
+   int isbreak; // is it a break or a continue
+   int idx; // index into bytecode array to patch
+};
 
 /**************************************************************************
 * preprocessed file keystring list
@@ -839,6 +843,7 @@ struct G__filetable {
   int ispermanentsl;
   std::list<G__DLLINIT>* initsl;
   struct G__dictposition *hasonlyfunc;
+  int definedStruct; /* number of struct/class/namespace defined in this file */
   char hdrprop;
 #ifndef G__OLDIMPLEMENTATION1649
   char *str;
@@ -892,8 +897,12 @@ struct G__view {
 * comment information
 *
 **************************************************************************/
+namespace Cint { namespace Internal { extern int G__nfile; } } 
 struct G__comment_info {
-   G__comment_info() : filenum(-1) { p.com = 0; }
+   G__comment_info()  {
+      filenum = -1;
+      p.com = 0;
+   }
    union {
       char  *com;
       fpos_t pos;
@@ -1166,7 +1175,12 @@ struct G__var_array {
 
 #ifdef __cplusplus
 
+namespace Cint { namespace Internal { extern int G__global1_init; } }
+
 struct G__tagtable {
+  static int inited;
+  G__tagtable(); // Implemented in global1.cxx for now.
+
   /* tag entry information */
   char type[G__MAXSTRUCT]; /* struct,union,enum,class */
 
@@ -1192,6 +1206,7 @@ struct G__tagtable {
   char istrace[G__MAXSTRUCT];
   char isbreak[G__MAXSTRUCT];
   int  alltag;
+  int  nactives; // List of active (i.e. non disable, non autoload entries).
 
 #ifdef G__FRIEND
   struct G__friendtag *friendtag[G__MAXSTRUCT];

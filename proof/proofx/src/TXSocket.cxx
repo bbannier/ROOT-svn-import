@@ -114,8 +114,8 @@ Long64_t     TXSockBuf::fgMemMax = 10485760; // Max allowed allocated memory [10
 TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
                    const char *logbuf, Int_t loglevel, TXHandler *handler)
          : TSocket(), fMode(m), fLogLevel(loglevel),
-           fBuffer(logbuf), fASem(0), fDontTimeout(kFALSE), fRDInterrupt(kFALSE),
-           fXrdProofdVersion(-1)
+           fBuffer(logbuf), fASem(0),
+           fDontTimeout(kFALSE), fRDInterrupt(kFALSE), fXrdProofdVersion(-1)
 {
    // Constructor
    // Open the connection to a remote XrdProofd instance and start a PROOF
@@ -651,7 +651,7 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
       case kXPD_msg:
          //
          // Data message
-         { R__LOCKGUARD(fAMtx);
+         {  R__LOCKGUARD(fAMtx);
 
             // Get a spare buffer
             TXSockBuf *b = PopUpSpare(len);
@@ -784,6 +784,11 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
          //
          // Request for remote touch: post a message to do that
          PostMsg(kPROOF_TOUCH);
+         break;
+      case kXPD_resume:
+         //
+         // process the next query (in the TXProofServ)
+         PostMsg(kPROOF_STARTPROCESS);
          break;
      default:
          Error("ProcessUnsolicitedMsg","%p: unknown action code: %d received from '%s' - disabling",
@@ -1685,7 +1690,9 @@ TObjString *TXSocket::SendCoordinator(Int_t kind, const char *msg, Int_t int2,
          break;
       case kGetWorkers:
          reqhdr.proof.sid = fSessionID;
-         reqhdr.header.dlen = 0;
+         reqhdr.header.dlen = (msg) ? strlen(msg) : 0;
+         if (msg)
+            buf = (const void *)msg;
          vout = (char **)&bout;
          break;
       case kReadBuffer:
@@ -2031,7 +2038,7 @@ void TXSockBuf::SetMemMax(Long64_t memmax)
 //
 
 //_____________________________________________________________________________
-TXSockPipe::TXSockPipe(const char *loc) : fMutex(kTRUE), fLoc(loc), fReadyMtx(kTRUE)
+TXSockPipe::TXSockPipe(const char *loc) : fMutex(kTRUE), fLoc(loc)
 {
    // Constructor
 
@@ -2060,27 +2067,26 @@ Int_t TXSockPipe::Post(TSocket *s)
    // Write a byte to the global pipe to signal new availibility of
    // new messages
 
-   if (!IsValid()) return -1;
+   if (!IsValid() || !s) return -1;
 
    // This must be an atomic action
-   { R__LOCKGUARD(&fReadyMtx);
-     // Add this one
-     fReadySock.Add(s);
-   }
+   Int_t sz = 0;
+   {  R__LOCKGUARD(&fMutex);
+      // Add this one
+      fReadySock.Add(s);
 
-   // Only one char
-   Char_t c = 1;
-   { R__LOCKGUARD(&fMutex);
+      // Only one char
+      Char_t c = 1;
       if (write(fPipe[1],(const void *)&c, sizeof(Char_t)) < 1) {
          Printf("TXSockPipe::Post: %s: can't notify pipe", fLoc.Data());
          return -1;
       }
+      if (gDebug > 2) sz = fReadySock.GetSize();
    }
 
    if (gDebug > 2)
       Printf("TXSockPipe::Post: %s: %p: pipe posted (pending %d)",
-                                   fLoc.Data(), s, fReadySock.GetSize());
-
+                                   fLoc.Data(), s, sz);
    // We are done
    return 0;
 }
@@ -2091,26 +2097,25 @@ Int_t TXSockPipe::Clean(TSocket *s)
    // Read a byte to the global pipe to synchronize message pickup
 
    // Pipe must have been created
-   if (!IsValid()) return -1;
+   if (!IsValid() || !s) return -1;
 
    // Only one char
+   Int_t sz = 0;
    Char_t c = 0;
    { R__LOCKGUARD(&fMutex);
       if (read(fPipe[0],(void *)&c, sizeof(Char_t)) < 1) {
          Printf("TXSockPipe::Clean: %s: can't read from pipe", fLoc.Data());
          return -1;
       }
-   }
-
-   // This must be an atomic action
-   {  R__LOCKGUARD(&fReadyMtx);
       // Remove this one
       fReadySock.Remove(s);
+
+      if (gDebug > 2) sz = fReadySock.GetSize();
    }
 
    if (gDebug > 2)
       Printf("TXSockPipe::Clean: %s: %p: pipe cleaned (pending %d)",
-                               fLoc.Data(), s, fReadySock.GetSize());
+                               fLoc.Data(), s, sz);
 
    // We are done
    return 0;
@@ -2123,27 +2128,25 @@ Int_t TXSockPipe::Flush(TSocket *s)
    // ready-socket queue
 
    // Pipe must have been created
-   if (!IsValid()) return -1;
+   if (!IsValid() || !s) return -1;
 
    TObject *o = 0;
    // This must be an atomic action
-   {  R__LOCKGUARD(&fReadyMtx);
+   {  R__LOCKGUARD(&fMutex);
       o = fReadySock.FindObject(s);
-   }
 
-   while (o) {
-      // Remove from the list
-      {  R__LOCKGUARD(&fReadyMtx);
+      while (o) {
+         // Remove from the list
          fReadySock.Remove(s);
          o = fReadySock.FindObject(s);
-      }
-      // Remove one notification from the pipe
-      Char_t c = 0;
-      {  R__LOCKGUARD(&fMutex);
+         // Remove one notification from the pipe
+         Char_t c = 0;
          if (read(fPipe[0],(void *)&c, sizeof(Char_t)) < 1)
             Printf("TXSockPipe::Flush: %s: can't read from pipe", fLoc.Data());
       }
    }
+   // Flush also the socket
+   ((TXSocket *)s)->Flush();
 
    // Notify
    if (gDebug > 0)
@@ -2158,7 +2161,7 @@ void TXSockPipe::DumpReadySock()
 {
    // Dump content of the ready socket list
 
-   R__LOCKGUARD(&fReadyMtx);
+   R__LOCKGUARD(&fMutex);
 
    TString buf = Form("%d |", fReadySock.GetSize());
    TIter nxs(&fReadySock);
@@ -2173,7 +2176,7 @@ TXSocket *TXSockPipe::GetLastReady()
 {
    // Return last ready socket
 
-   R__LOCKGUARD(&fReadyMtx);
+   R__LOCKGUARD(&fMutex);
 
    return (TXSocket *) fReadySock.Last();
 }

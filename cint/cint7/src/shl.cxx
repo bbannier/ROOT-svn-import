@@ -97,7 +97,10 @@ typedef void* G__SHLHANDLE;
 
 #endif /* G__SHAREDLIB */
 
+#ifdef G__SHAREDLIB
 short Cint::Internal::G__allsl=0;
+#endif
+
 struct G__CintSlHandle {
     G__CintSlHandle(G__SHLHANDLE h = 0, bool p = false) : handle(h),ispermanent(p) {}
     G__SHLHANDLE handle;
@@ -1209,7 +1212,7 @@ static ::Reflex::Type G__getp2ftype(const ::Reflex::Member &func)
 *  Used to return pointer to function. Cint handles pointer to
 * function as pointer to char which contains function name.
 ******************************************************************/
-char *Cint::Internal::G__search_func(char *funcname,G__value *buf)
+bool Cint::Internal::G__search_func(char *funcname,G__value *buf)
 {
   int i=0;
 #ifdef G__SHAREDLIB
@@ -1248,17 +1251,19 @@ char *Cint::Internal::G__search_func(char *funcname,G__value *buf)
            G__value_typenum(*buf) = G__getp2ftype(*iter);
         }
 #else
+        // This is wrong! ... However there is (hopefully) no reason
+        // to use the old implementation (2191)
         G__letint(buf,'C',(long)iter->Name().c_str());
         G__value_typenum(*buf) = G__getp2ftype(*iter);
 #endif
-        return((char*)iter->Name().c_str());
+        return true;
      }
   }
 
 #ifdef __CINT__
   if(NULL==G__completionlist) {
     *buf = G__null;
-    return(NULL);
+    return false;
   }
 #endif
 
@@ -1284,7 +1289,7 @@ char *Cint::Internal::G__search_func(char *funcname,G__value *buf)
   }
 
   *buf = G__null;
-  return(NULL);
+  return false;
 
 }
 
@@ -1905,7 +1910,8 @@ void* Cint::Internal::G__FindSym(const char *filename,const char *funcname)
 
 static const char *G__dladdr(void (*func)())
 {
-   // Wrapper around dladdr (and friends)
+#ifdef G__SHAREDLIB
+	// Wrapper around dladdr (and friends)
 #if defined(__CYGWIN__) && defined(__GNUC__)
    return 0;
 #elif defined(G__WIN32)
@@ -1933,12 +1939,18 @@ static const char *G__dladdr(void (*func)())
       return info.dli_fname;
    }
 #endif 
+
+#else // G__SHAREDLIB
+   return 0;
+#endif //G__SHAREDLIB
 }
 
 // G__RegisterLibrary
-void *Cint::Internal::G__RegisterLibrary(void (*func)()) {
+int Cint::Internal::G__RegisterLibrary(void (*func)()) 
+{
    // This function makes sure that the library that contains 'func' is
-   // known to have been loaded by the CINT system.
+   // known to have been loaded by the CINT system and return 
+   // the filenum (i.e. index in G__srcfile).
    
    const char *libname = G__dladdr( func );
    if (libname && libname[0]) {
@@ -1958,19 +1970,19 @@ void *Cint::Internal::G__RegisterLibrary(void (*func)()) {
          --cutat;
          sbLibName[cutat + 1] = 0;
       }
-      G__register_sharedlib( sbLibName );
+      return G__register_sharedlib( sbLibName );
    }
-   return 0;
+   return -1;
 }   
 
-// G__RegisterLibrary
-void *Cint::Internal::G__UnregisterLibrary(void (*func)()) {
+// G__UnregisterLibrary
+int Cint::Internal::G__UnregisterLibrary(void (*func)()) {
    // This function makes sure that the library that contains 'func' is
    // known to have been laoded by the CINT system.
    
    const char *libname = G__dladdr( func );
    if (libname) {
-      G__unregister_sharedlib( libname );
+      return G__unregister_sharedlib( libname );
    }
    return 0;
 }   

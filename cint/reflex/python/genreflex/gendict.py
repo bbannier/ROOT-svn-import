@@ -54,6 +54,7 @@ class genDictionary(object) :
     # The next is to avoid a known problem with gccxml that it generates a
     # references to id equal '_0' which is not defined anywhere
     self.xref['_0'] = {'elem':'Unknown', 'attrs':{'id':'_0','name':''}, 'subelems':[]}
+    self.TObject_id = ''
 #----------------------------------------------------------------------------------
   def addTemplateToName(self, attrs):
     if attrs['name'].find('>') == -1 and 'demangled' in attrs :
@@ -106,6 +107,8 @@ class genDictionary(object) :
     elif name in ('Class','Struct') :
       self.patchTemplateName(attrs, name)
       self.classes.append(attrs)
+      if 'name' in attrs and attrs['name'] == 'TObject' :
+        self.TObject_id = attrs['id']
     elif name in ('Function',) :
       self.addTemplateToName(attrs)
       self.patchTemplateName(attrs, name)
@@ -542,6 +545,12 @@ class genDictionary(object) :
         f.write( '#include <%s>\n' % (inc,) )
       f.write( '\n' )
 
+  
+    #------------------------------------------------------------------------------
+    # Process ClassDef implementation before writing: sets 'extra' properties
+    #------------------------------------------------------------------------------
+    classDefImpl = ClassDefImplementation(selclasses, self)
+
     f_buffer = ''
     f_shadow =  '\n// Shadow classes to obtain the data member offsets \n'
     f_shadow += 'namespace __shadow__ {\n'
@@ -569,7 +578,7 @@ class genDictionary(object) :
         f_shadow += self.genClassShadow(c)
     f_shadow += '}\n\n'
     f_buffer += self.genFunctionsStubs( selfunctions )
-    f_buffer += ClassDefImplementation(selclasses, self)
+    f_buffer += classDefImpl
     f_buffer += self.genInstantiateDict(selclasses, selfunctions, selenums, selvariables)
     f.write('namespace {\n')
     f.write(self.genNamespaces(selclasses + selfunctions + selenums + selvariables))
@@ -707,7 +716,8 @@ class genDictionary(object) :
   def tmplclasses(self, local):
     import re
     result = []
-    lc_patterns = map(lambda lc: re.compile("\\b%s\\b" % lc['name']) , local)
+    lc_patterns = map(lambda lc: re.compile("\\b%s\\b" % lc['name']) ,
+                      filter(lambda l: 'name' in l, local))
     for c in self.classes :
       if not 'name' in c: continue
       name = c['name']
@@ -1116,7 +1126,10 @@ class genDictionary(object) :
       for pname, pval in attrs['extra'].items() :
         if pname not in ('name','pattern','n_name','file_name','file_pattern') :
           if pname == 'id' : pname = 'ClassID'
-          sc += '\n  .AddProperty("%s", "%s")' % (pname, pval)
+          if pval[:5] == '!RAW!' :
+            sc += '\n  .AddProperty("%s", %s)' % (pname, pval[5:])
+          else :
+            sc += '\n  .AddProperty("%s", "%s")' % (pname, pval)
 
     if ioReadRules:
       sc += '\n  .AddProperty("ioread", readrules )'
@@ -1266,7 +1279,7 @@ class genDictionary(object) :
         for demangledMethod in allBasesMethods.keys() :
           member = allBasesMethods[demangledMethod]
           if len(member['bases']) > 1:
-            ret = self.genTypeName(member['returns'])
+            ret = self.genTypeName(member['returns'], False, True, True)
             if '(' not in ret:
               # skip functions returning functions; we don't get the prototype right easily:
               cmem = '  virtual %s %s throw();' % (ret, demangledMethod)
@@ -1563,45 +1576,52 @@ class genDictionary(object) :
       if not demangled or not len(demangled):
         demangled = name
       if not self.quiet : print  'function '+ demangled
-      s += 'static void '
       retaddrpar=''
       if returns != 'void': retaddrpar=' retaddr'
       argspar=''
       if len(args) : argspar=' arg'
-      s +=  'function%s( void*%s, void*, const std::vector<void*>&%s, void*)\n{\n' % (id, retaddrpar, argspar)
+      head =  'static void function%s( void*%s, void*, const std::vector<void*>&%s, void*)\n{\n' % (id, retaddrpar, argspar)
       ndarg = self.getDefaultArgs(args)
       narg  = len(args)
       if ndarg : iden = '  '
       else     : iden = ''
+      body = ''
       for n in range(narg-ndarg, narg+1) :
         if ndarg :
-          if n == narg-ndarg :  s += '  if ( arg.size() == %d ) {\n' % n
-          else               :  s += '  else if ( arg.size() == %d ) { \n' % n
+          if n == narg-ndarg :  body += '  if ( arg.size() == %d ) {\n' % n
+          else               :  body += '  else if ( arg.size() == %d ) { \n' % n
         if returns == 'void' :
-          first = iden + '  %s(' % ( name, )
-          s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
+          body += iden + '  %s(' % ( name, )
+          head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+          body += ');\n'
         else :
           if returns[-1] in ('*',')' ) and returns.find('::*') == -1:
-            first = iden + '  if (retaddr) *(void**)retaddr = (void*)%s(' % ( name, )
-            s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
-            first = iden + '  else %s(' % ( name, )
-            s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
+            body += iden + '  if (retaddr) *(void**)retaddr = (void*)%s(' % ( name, )
+            head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+            body += ');\n'
+            body += iden + '  else %s(' % ( name, )
+            head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+            body += ');\n'
           elif returns[-1] == '&' :
-            first = iden + '  if (retaddr) *(void**)retaddr = (void*)&%s(' % ( name, )
-            s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
-            first = iden + '  else %s(' % ( name, )
-            s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
+            body += iden + '  if (retaddr) *(void**)retaddr = (void*)&%s(' % ( name, )
+            head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+            body += ');\n'
+            body += iden + '  else %s(' % ( name, )
+            head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+            body += ');\n'
           else :
-            first = iden + '  if (retaddr) new (retaddr) (%s)(%s(' % ( returns, name )
-            s += first + self.genMCOArgs(args, n, len(first)) + '));\n'
-            first = iden + '  else %s(' % ( name )
-            s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
+            body += iden + '  if (retaddr) new (retaddr) (%s)(%s(' % ( returns, name )
+            head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+            body += '));\n'
+            body += iden + '  else %s(' % ( name )
+            head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+            body += ');\n'
         if ndarg : 
-          if n != narg : s += '  }\n'
+          if n != narg : body += '  }\n'
           else :
-            if returns == 'void' : s += '  }\n'
-            else :                 s += '  }\n'
-      s += '}\n'
+            if returns == 'void' : body += '  }\n'
+            else :                 body += '  }\n'
+      s += head + body + '}\n'
     return s  
 #----------------------------------------------------------------------------------
   def genFunctions(self, selfunctions) :
@@ -1785,7 +1805,6 @@ class genDictionary(object) :
     if narg : argspar = ' arg'
     retaddrpar = ''
 
-    s = 'static void '
     # If we construct a conversion operator to pointer to function member the name
     # will contain TDF_<attrs['id']>
     tdfname = 'TDF%s'%attrs['id']
@@ -1797,35 +1816,40 @@ class genDictionary(object) :
 
     if returns != 'void': retaddrpar=' retaddr'
                 
-    s +=  '%s%s( void*%s, void* o, const std::vector<void*>&%s, void*)\n{\n' %( type, id, retaddrpar, argspar )
-    s += tdfdecl
+    head =  'static void %s%s( void*%s, void* o, const std::vector<void*>&%s, void*)\n{\n' %( type, id, retaddrpar, argspar )
+    head += tdfdecl
     ndarg = self.getDefaultArgs(args)
     if ndarg : iden = '  '
     else     : iden = ''
     if 'const' in attrs : cl = 'const '+ cl
+    body = ''
     for n in range(narg-ndarg, narg+1) :
       if ndarg :
-        if n == narg-ndarg :  s += '  if ( arg.size() == %d ) {\n' % n
-        else               :  s += '  else if ( arg.size() == %d ) { \n' % n
+        if n == narg-ndarg :  body += '  if ( arg.size() == %d ) {\n' % n
+        else               :  body += '  else if ( arg.size() == %d ) { \n' % n
       if returns != 'void' :
         if returns[-1] in ('*',')') and returns.find('::*') == -1 :
-          first = iden + '  if (retaddr) *(void**)retaddr = (void*)(((%s*)o)->%s)(' % ( cl, name )
-          s += first + self.genMCOArgs(args, n, len(first)) + ');\n' + iden + 'else '
+          body += iden + '  if (retaddr) *(void**)retaddr = (void*)(((%s*)o)->%s)(' % ( cl, name )
+          head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+          body += ');\n' + iden + 'else '
         elif returns[-1] == '&' :
-          first = iden + '  if (retaddr) *(void**)retaddr = (void*)&(((%s*)o)->%s)(' % ( cl, name )
-          s += first + self.genMCOArgs(args, n, len(first)) + ');\n' + iden + 'else '
+          body += iden + '  if (retaddr) *(void**)retaddr = (void*)&(((%s*)o)->%s)(' % ( cl, name )
+          head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+          body += ');\n' + iden + 'else '
         else :
-          first = iden + '  if (retaddr) new (retaddr) (%s)((((%s*)o)->%s)(' % ( returns, cl, name )
-          s += first + self.genMCOArgs(args, n, len(first)) + '));\n' + iden + 'else '
-      first = iden + '  (((%s*)o)->%s)(' % ( cl, name )
-      s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
+          body += iden + '  if (retaddr) new (retaddr) (%s)((((%s*)o)->%s)(' % ( returns, cl, name )
+          head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+          body += '));\n' + iden + 'else '
+      body += iden + '  (((%s*)o)->%s)(' % ( cl, name )
+      head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+      body += ');\n'
       if ndarg : 
-        if n != narg : s += '  }\n'
+        if n != narg : body += '  }\n'
         else :
-          if returns == 'void' : s += '  }\n'
-          else :                 s += '  }\n'
-    s += '}\n'
-    return s
+          if returns == 'void' : body += '  }\n'
+          else :                 body += '  }\n'
+    body += '}\n'
+    return head + body;
 #----------------------------------------------------------------------------------
   def getDefaultArgs(self, args):
     n = 0
@@ -1833,12 +1857,26 @@ class genDictionary(object) :
       if 'default' in a : n += 1
     return n
 #----------------------------------------------------------------------------------
-  def genMCOArgs(self, args, narg, pad):
+  def genMCOArgs(self, args, narg, pad, head, body):
     s = ''
+    td = ''
     for i in range(narg) :
       a = args[i]
       #arg = self.genArgument(a, 0);
       arg = self.genTypeName(a['type'],colon=True)
+      if arg.find('[') != -1:
+        if arg[-1] == '*' :
+          argnoptr = arg[:-1]
+          argptr = '*'
+        elif len(arg) > 7 and arg[-7:] == '* const':
+          argnoptr = arg[:-7]
+          argptr = '* const'
+        else :
+          argnoptr = arg
+          argptr = ''
+        td += pad*' ' + 'typedef %s RflxDict_arg_td%d%s;\n' % (argnoptr[:argnoptr.index('[')], i, argnoptr[argnoptr.index('['):])
+        arg = 'RflxDict_arg_td%d' % i
+        arg += argptr;
       if arg[-1] == '*' or len(arg) > 7 and arg[-7:] == '* const':
         if arg[-2:] == ':*' or arg[-8:] == ':* const' : # Pointer to data member
           s += '*(%s*)arg[%d]' % (arg, i )
@@ -1857,8 +1895,8 @@ class genDictionary(object) :
         s += '*(%s*)arg[%d]' % (arg[:-1], i )
       else :
         s += '*(%s*)arg[%d]' % (arg, i )
-      if i != narg - 1 : s += ',\n' + pad*' '
-    return s
+      if i != narg - 1 : s += ',\n' + (pad+2)*' '
+    return head + td, body + s
 #----------------------------------------------------------------------------------
   def genMethodDecl(self, attrs, args):
     return self.genMCODecl( 'method', '', attrs, args )
@@ -1883,26 +1921,29 @@ class genDictionary(object) :
     id  = attrs['id']
     paramargs = ''
     if len(args): paramargs = ' arg'
-    s = 'static void constructor%s( void* retaddr, void* mem, const std::vector<void*>&%s, void*) {\n' %( id, paramargs )
+    head = 'static void constructor%s( void* retaddr, void* mem, const std::vector<void*>&%s, void*) {\n' %( id, paramargs )
+    body = ''
     if 'pseudo' in attrs :
-      s += '  if (retaddr) *(void**)retaddr =  ::new(mem) %s( *(__void__*)0 );\n' % ( cl )
-      s += '  else ::new(mem) %s( *(__void__*)0 );\n' % ( cl )
+      head += '  if (retaddr) *(void**)retaddr =  ::new(mem) %s( *(__void__*)0 );\n' % ( cl )
+      head += '  else ::new(mem) %s( *(__void__*)0 );\n' % ( cl )
     else :
       ndarg = self.getDefaultArgs(args)
       narg  = len(args)
       for n in range(narg-ndarg, narg+1) :
         if ndarg :
-          if n == narg-ndarg :  s += '  if ( arg.size() == %d ) {\n  ' % n
-          else               :  s += '  else if ( arg.size() == %d ) { \n  ' % n
-        first = '  if (retaddr) *(void**)retaddr = ::new(mem) %s(' % ( cl )
-        s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
-        first = '  else ::new(mem) %s(' % ( cl )
-        s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
+          if n == narg-ndarg :  body += '  if ( arg.size() == %d ) {\n  ' % n
+          else               :  body += '  else if ( arg.size() == %d ) { \n  ' % n
+        body += '  if (retaddr) *(void**)retaddr = ::new(mem) %s(' % ( cl )
+        head, body = self.genMCOArgs(args, n, 4, head, body)
+        body += ');\n'
+        body += '  else ::new(mem) %s(' % ( cl )
+        head, body = self.genMCOArgs(args, n, 4, head, body)
+        body += ');\n'
         if ndarg : 
-          if n != narg : s += '  }\n'
-          else :         s += '  }\n'
-    s += '}\n'
-    return s
+          if n != narg : body += '  }\n'
+          else :         body += '  }\n'
+    body += '}\n'
+    return head + body
 #----------------------------------------------------------------------------------
   def genDestructorDef(self, attrs, childs):
     cl = self.genTypeName(attrs['context'])
@@ -2354,81 +2395,142 @@ def ClassDefImplementation(selclasses, self) :
       break
   if haveRtypes == 0: return ''
   
-  returnValue  = '#include "TClass.h"\n'
+  returnValue  = '#ifndef G__DICTIONARY\n' # for RtypesImp.h
+  returnValue += '# define G__DICTIONARY\n'
+  returnValue += '#endif\n'
+  returnValue += '#include "TClass.h"\n'
   returnValue += '#include "TMemberInspector.h"\n'
+  returnValue += '#include "RtypesImp.h"\n' # for GenericShowMembers etc
   haveClassDef = 0
 
   for attrs in selclasses :
     members = attrs.get('members','')
     membersList = members.split()
 
-    listOfMembers = ""
+    listOfMembers = []
     for ml in membersList:
       if ml[1].isdigit() :
-        listOfMembers += self.xref[ml]['attrs']['name']
+        listOfMembers.append(self.xref[ml]['attrs']['name'])
 
-    if  "fgIsA" in listOfMembers \
-      and "Class" in listOfMembers \
-      and "Class_Name" in listOfMembers  \
-      and "Class_Version" in listOfMembers  \
-      and "Dictionary" in listOfMembers  \
-      and "IsA" in listOfMembers  \
-      and "ShowMembers" in listOfMembers  \
-      and "Streamer" in listOfMembers  \
-      and "StreamerNVirtual" in listOfMembers \
-      and "DeclFileName" in listOfMembers \
-      and "ImplFileLine" in listOfMembers \
-      and "ImplFileName" in listOfMembers :
+    allbases = []
+    self.getAllBases(attrs['id'], allbases)
 
-         haveClassDef = 1
+    # If the class inherits from TObject it MUST use ClassDef; check that:
+    derivesFromTObject = 0
+    if len(self.TObject_id) :
+      if len( filter( lambda b: b[0] == self.TObject_id, allbases ) ) :
+        derivesFromTObject = 1
 
-         clname = '::' + attrs['fullname']
-         returnValue += 'TClass* ' + clname + '::fgIsA = 0;\n'
-         returnValue += 'TClass* ' + clname + '::Class() {\n'
-         returnValue += '   if (!fgIsA)\n'
-         returnValue += '      fgIsA = TClass::GetClass("' + clname[2:] + '");\n'
-         returnValue += '   return fgIsA;\n'
-         returnValue += '}\n'
-         returnValue += 'const char * ' + clname + '::Class_Name() {return "' + clname[2:]  + '";}\n'
-         returnValue += 'void ' + clname + '::Dictionary() {}\n'
-         returnValue += 'const char *' + clname  + '::ImplFileName() {return "";}\n'
+    print 'AXEL: class', attrs['fullname'], 'has members: ', string.join(listOfMembers)
+    if "fgIsA" in listOfMembers \
+           and "Class" in listOfMembers \
+           and "Class_Name" in listOfMembers  \
+           and "Class_Version" in listOfMembers  \
+           and "Dictionary" in listOfMembers  \
+           and "IsA" in listOfMembers  \
+           and "ShowMembers" in listOfMembers  \
+           and "Streamer" in listOfMembers  \
+           and "StreamerNVirtual" in listOfMembers \
+           and "DeclFileName" in listOfMembers \
+           and "ImplFileLine" in listOfMembers \
+           and "ImplFileName" in listOfMembers :
 
-         returnValue += 'int ' + clname + '::ImplFileLine() {return 0;}\n'
+      print 'AXEL: class', attrs['fullname'], 'thus has ClassDef'
+      haveClassDef = 1
+      extraval = '!RAW!' + str(derivesFromTObject)
+      if attrs.has_key('extra') : attrs['extra']['ClassDef'] = extraval
+      else                      : attrs['extra'] = {'ClassDef': extraval}
 
-         returnValue += 'void '+ clname  +'::ShowMembers(TMemberInspector &R__insp, char *R__parent) {\n'
-         returnValue += '   TClass *R__cl = ' + clname  + '::IsA();\n'
-         returnValue += '   Int_t R__ncp = strlen(R__parent);\n'
-         returnValue += '   if (R__ncp || R__cl || R__insp.IsA()) { }\n'
+      clname = '::' + attrs['fullname']
+      returnValue += 'TClass* ' + clname + '::fgIsA = 0;\n'
+      returnValue += 'TClass* ' + clname + '::Class() {\n'
+      returnValue += '   if (!fgIsA)\n'
+      returnValue += '      fgIsA = TClass::GetClass("' + clname[2:] + '");\n'
+      returnValue += '   return fgIsA;\n'
+      returnValue += '}\n'
+      returnValue += 'const char * ' + clname + '::Class_Name() {return "' + clname[2:]  + '";}\n'
+      returnValue += 'void ' + clname + '::Dictionary() {}\n'
+      returnValue += 'const char *' + clname  + '::ImplFileName() {return "";}\n'
 
-         for ml in membersList:
-           if ml[1].isdigit() :
-             if self.xref[ml]['elem'] == 'Field' :
-               mattrs = self.xref[ml]['attrs']
-               varname  = mattrs['name']
-               tt = self.xref[mattrs['type']]
-               te = tt['elem']
-               if te == 'PointerType' :
-                 varname1 = '*' + varname
-               elif te == 'ArrayType' :
-                 t = self.genTypeName(mattrs['type'],colon=True,const=True)
-                 arraytype = t[t.find('['):]
-                 varname1 = varname + arraytype
-               else :
-                 varname1 = varname
-               returnValue += '   R__insp.Inspect(R__cl, R__parent, "' + varname1 + '", &' + varname + ');\n'
+      returnValue += 'int ' + clname + '::ImplFileLine() {return 0;}\n'
 
-         if 'bases' in attrs :
-           for b in attrs['bases'].split() :
-             returnValue +=  '   ' + self.xref[b]['attrs']['name'] + '::ShowMembers(R__insp,R__parent);\n'
+      returnValue += 'void '+ clname  +'::ShowMembers(TMemberInspector &R__insp, char *R__parent) {\n'
+      returnValue += '   TClass *R__cl = ' + clname  + '::IsA();\n'
+      returnValue += '   Int_t R__ncp = strlen(R__parent);\n'
+      returnValue += '   if (R__ncp || R__cl || R__insp.IsA()) { }\n'
 
-         returnValue += '}\n'
+      for ml in membersList:
+        if ml[1].isdigit() :
+          if self.xref[ml]['elem'] == 'Field' :
+            mattrs = self.xref[ml]['attrs']
+            varname  = mattrs['name']
+            tt = self.xref[mattrs['type']]
+            te = tt['elem']
+            if te == 'PointerType' :
+              varname1 = '*' + varname
+            elif te == 'ArrayType' :
+              t = self.genTypeName(mattrs['type'],colon=True,const=True)
+              arraytype = t[t.find('['):]
+              varname1 = varname + arraytype
+            else :
+              varname1 = varname
+            # rootcint adds a cast to void* here for the address of the member, as in:
+            # returnValue += '   R__insp.Inspect(R__cl, R__parent, "' + varname1 + '", (void*)&' + varname + ');\n'
+            # but only for struct-type members. CVS log from 2001:
+            #  "add explicit cast to (void*) in call to Inspect() only for object data"
+            #  "members not having a ShowMembers() method. Needed on ALPHA to be able to"
+            #  "compile G__Thread.cxx."
+            returnValue += '   R__insp.Inspect(R__cl, R__parent, "' + varname1 + '", &' + varname + ');\n'
+            # if struct: recurse!
+            if te in ('Class','Struct') :
+              memtypeid = mattrs['type']
+              memDerivesFromTObject = (memtypeid == self.TObject_id)
+              if not memDerivesFromTObject :
+                allmembases = []
+                self.getAllBases(memtypeid, allmembases)
+                if len( filter( lambda b: b[0] == self.TObject_id, allmembases ) ) :
+                  memDerivesFromTObject = 1
+              if memDerivesFromTObject :
+                returnValue +=  '   %s.ShowMembers(R__insp, strcat(R__parent,"%s.")); R__parent[R__ncp] = 0;\n' % (varname, varname)
+              else :
+                # TODO: the "false" parameter signals that it's a non-transient (i.e. a persistent) member.
+                # We have the knowledge to properly pass true or false, and we should do that at some point...
+                returnValue +=  '   ::ROOT::GenericShowMembers("%s", (void*)&%s, R__insp, strcat(R__parent,"%s."), %s);\n' \
+                               % (self.genTypeName(memtypeid), varname, varname, "false")
+                # tt['attrs']['fullname']
+                returnValue +=  '   R__parent[R__ncp] = 0;\n'
 
-         returnValue += 'void '+ clname  +'::Streamer(TBuffer &b) {\n   if (b.IsReading()) {\n'
-         returnValue += '      b.ReadClassBuffer(' + clname + '::Class(),this);\n'
-         returnValue += '   } else {\n'
-         returnValue += '      b.WriteClassBuffer(' + clname  + '::Class(),this);\n'
-         returnValue += '   }\n'
-         returnValue += '}\n'
+      if 'bases' in attrs :
+        for b in attrs['bases'].split() :
+          poscol = b.find(':')
+          if poscol == -1 : baseid = b
+          else            : baseid = b[poscol + 1:]
+          baseDerivesFromTObject = (baseid == self.TObject_id)
+          # a base cannot possibly derive from TObject if we don't derive from TObject:
+          if not baseDerivesFromTObject and derivesFromTObject :
+            allbasebases = []
+            self.getAllBases(baseid, allbasebases)
+            if len( filter( lambda b: b[0] == self.TObject_id, allbasebases ) ) :
+              baseDerivesFromTObject = 1
+          # basename = self.xref[baseid]['attrs']['fullname']
+          basename = self.genTypeName(baseid)
+          if baseDerivesFromTObject :
+            returnValue +=  '   %s::ShowMembers(R__insp,R__parent);\n' % basename
+          else :
+            returnValue +=  '   ::ROOT::GenericShowMembers("%s", ( ::%s *)(this), R__insp, R__parent, false);\n' % (basename, basename)
+
+      returnValue += '}\n'
+
+      returnValue += 'void '+ clname  +'::Streamer(TBuffer &b) {\n   if (b.IsReading()) {\n'
+      returnValue += '      b.ReadClassBuffer(' + clname + '::Class(),this);\n'
+      returnValue += '   } else {\n'
+      returnValue += '      b.WriteClassBuffer(' + clname  + '::Class(),this);\n'
+      returnValue += '   }\n'
+      returnValue += '}\n'
+    elif derivesFromTObject :
+      # no fgIsA etc members but derives from TObject!
+      print '--->> genreflex: ERROR: class %s derives from TObject but does not use ClassDef!' % attrs['fullname']
+      print '--->>                   You MUST put ClassDef(%s, 1); into the class definition.' % attrs['fullname']
 
   if haveClassDef == 1 :
     return "} // unnamed namespace\n\n" + returnValue + "\nnamespace {\n"

@@ -27,6 +27,7 @@
 #include "TVirtualMCApplication.h"
 #include "TVirtualMCStack.h"
 #include "TVirtualMCDecayer.h"
+#include "TVirtualMagField.h"
 #include "TRandom.h"
 #include "TString.h"
 #include "TError.h"
@@ -427,13 +428,13 @@ public:
    //
 
    // Return the unique numeric identifier for volume name volName
-   virtual Int_t VolId(const Text_t* volName) const = 0;
+   virtual Int_t VolId(const char* volName) const = 0;
 
    // Return the volume name for a given volume identifier id
    virtual const char* VolName(Int_t id) const = 0;
 
    // Return the unique numeric identifier for medium name mediumName
-   virtual Int_t MediumId(const Text_t* mediumName) const;
+   virtual Int_t MediumId(const char* mediumName) const;
 
    // Return total number of volumes in the geometry
    virtual Int_t NofVolumes() const = 0;
@@ -861,6 +862,9 @@ public:
    // Set the random number generator
    virtual void SetRandom(TRandom* random);
 
+   // Set the magnetic field
+   virtual void SetMagField(TVirtualMagField* field);
+
     //
     // ------------------------------------------------
     // Get methods
@@ -876,6 +880,9 @@ public:
     // Return the random number generator
     virtual TRandom*           GetRandom() const  { return fRandom; }
 
+    // Return the magnetic field
+    virtual TVirtualMagField*  GetMagField() const  { return fMagField; }
+
 
 protected:
    TVirtualMCApplication* fApplication; //! User MC application
@@ -889,13 +896,14 @@ private:
    TVirtualMCStack*    fStack;   //! Particles stack
    TVirtualMCDecayer*  fDecayer; //! External decayer
    TRandom*            fRandom;  //! Random number generator
+   TVirtualMagField*   fMagField;//! Magnetic field
 
    ClassDef(TVirtualMC,1)  //Interface to Monte Carlo
 };
 
 // new functions
 
-inline Int_t TVirtualMC::MediumId(const Text_t* /*mediumName*/) const {
+inline Int_t TVirtualMC::MediumId(const char* /*mediumName*/) const {
    Warning("MediumId", "New function - not yet implemented.");
    return 0;
 }

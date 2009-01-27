@@ -1,10 +1,15 @@
-//  Test program for the class TUnfold
 // Author: Stefan Schmitt
 // DESY, 14.10.2008
 
-//  Version 6a, fix problem with dynamic array allocation under windows
+//  Version 12, catch error when defining the input
 //
 //  History:
+//    Version 11,  print chi**2 and number of degrees of freedom
+//    Version 10,  with bug-fix in TUnfold.cxx
+//    Version 9,  with bug-fix in TUnfold.cxx and TUnfold.h
+//    Version 8,  with bug-fix in TUnfold.cxx and TUnfold.h
+//    Version 7,  with bug-fix in TUnfold.cxx and TUnfold.h
+//    Version 6a, fix problem with dynamic array allocation under windows
 //    Version 6, bug-fixes in TUnfold.C
 //    Version 5, replace main() by testUnfold1()
 //    Version 4, with bug-fix in TUnfold.C
@@ -242,7 +247,9 @@ int testUnfold1()
 
   // define input and bias scame
   // do not use the bias, because MC peak may be at the wrong place
-  unfold.SetInput(histMdetData);
+  if(unfold.SetInput(histMdetData)>=10000) {
+    std::cout<<"Unfolding result may be wrong\n";
+  }
 
   // the unfolding is done here
   //===========================
@@ -253,11 +260,12 @@ int testUnfold1()
   Int_t iBest;
   TSpline *logTauX,*logTauY;
   TGraph *lCurve;
- 
   // this method scans the parameter tau and finds the kink in the L curve
   // finally, the unfolding is done for the best choice of tau
   iBest=unfold.ScanLcurve(nScan,tauMin,tauMax,&lCurve,&logTauX,&logTauY);
   std::cout<<"tau="<<unfold.GetTau()<<"\n";
+  std::cout<<"chi**2="<<unfold.GetChi2A()<<"+"<<unfold.GetChi2L()
+           <<" / "<<unfold.GetNdf()<<"\n";
 
   // save graphs with one point to visualize best choice of tau
   Double_t t[1],x[1],y[1];
@@ -302,7 +310,6 @@ int testUnfold1()
   // fit Breit-Wigner shape to unfolded data, using the full error matrix
   // here we use a "user" chi**2 function to take into account
   // the full covariance matrix
-  //TVirtualFitter::SetDefaultFitter("TMinuit");
   gFitter=TVirtualFitter::Fitter(histMunfold);
   gFitter->SetFCN(chisquare_corr);
 
@@ -347,9 +354,13 @@ int testUnfold1()
   output.cd(3);
   histMdetFold->SetLineColor(kBlue);
   histMdetFold->Draw();
-  histMdetData->SetLineColor(kRed);
-  histMdetData->Draw("SAME");
   histMdetMC->Draw("SAME HIST");
+  //histMdetData->SetLineColor(kRed);
+  //histMdetData->Draw("SAME");
+  // test the GetInput() method
+  TH1D *histInput=unfold.GetInput("Minput",";mass(det)",xminDet,xmaxDet);
+  histInput->SetLineColor(kRed);
+  histInput->Draw("SAME");
 
   // show correlation coefficients
   //     all bins outside the peak are found to be highly correlated
@@ -372,6 +383,7 @@ int testUnfold1()
   bestLcurve->Draw("*");
 
   output.SaveAs("c1.ps");
+
   return 0;
 }
 

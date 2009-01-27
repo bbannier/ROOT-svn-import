@@ -96,7 +96,13 @@ extern "C" G__int64 G__expr_strtoll(const char *nptr, char **endptr, register in
     * Set any if any `digits' consumed; make it negative to indicate
     * overflow.
     */
-   cutoff = neg ? - (G__uint64)(LONG_LONG_MIN) : LONG_LONG_MAX;
+   if (neg) {
+      // -(-2147483648) is not a valid long long, but -(-2147483648 + 42) is!
+      cutoff = -(LONG_LONG_MIN + 42);
+      cutoff += 42; // fixup offset for unary -
+   } else {
+      cutoff = LONG_LONG_MAX;
+   }
    cutlim = (int)(cutoff % (G__uint64) base);
    cutoff /= (G__uint64) base;
    for (acc = 0, any = 0;; c = *s++) {
@@ -191,8 +197,10 @@ extern "C" G__uint64 G__expr_strtoull(const char *nptr, char **endptr, register 
       acc = ULONG_LONG_MAX;
       errno = ERANGE;
    }
-   else if (neg)
-      acc = -acc;
+   else if (neg) {
+      // IGNORE - we're unsigned!
+      // acc = -acc;
+   }
    if (endptr != 0)
       *endptr = (char *)(any ? s - 1 : nptr);
    return (acc);
@@ -2561,8 +2569,8 @@ extern "C" int G__display_class(FILE *fout, char *name, int base, int start)
    }
    if (G__more(fout, msg)) return(1);
    sprintf(msg
-           , " (tagnum=%d,voffset=%d,isabstract=%d,parent=%d,gcomp=%d:%d,d21=~cd=%x)"
-           , tagnum , G__struct.virtual_offset[tagnum]
+           , " (tagnum=%d,voffset=%ld,isabstract=%d,parent=%d,gcomp=%d:%d,d21=~cd=%x)"
+           , tagnum , (long)G__struct.virtual_offset[tagnum]
            , G__struct.isabstract[tagnum] , G__struct.parent_tagnum[tagnum]
            , G__struct.globalcomp[tagnum], G__struct.iscpplink[tagnum]
            , G__struct.funcs[tagnum]);

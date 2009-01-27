@@ -90,6 +90,7 @@ void *XrdProofdProofServCron(void *p)
 
    XpdManagerCron_t *mc = (XpdManagerCron_t *)p;
    XrdProofdProofServMgr *mgr = mc->fSessionMgr;
+   XrdProofSched *sched = mc->fProofSched;
    if (!(mgr)) {
       TRACE(XERR,  "undefined session manager: cannot start");
       return (void *)0;
@@ -101,8 +102,10 @@ void *XrdProofdProofServCron(void *p)
    int clnlostscale = 0;
 
    // Time of last full sessions check
-   int lastcheck = time(0), ckfreq = mgr->CheckFrequency(), waitt = 0;
+   int lastrun = time(0);
+   int lastcheck = lastrun, ckfreq = mgr->CheckFrequency(), waitt = 0;
    int deltat = ((int)(0.1*ckfreq) >= 1) ? (int)(0.1*ckfreq) : 1;
+   int maxdelay = 5*ckfreq; // Force check after 5 times the check frequency
    mgr->SetNextSessionsCheck(lastcheck + ckfreq);
    TRACE(ALL, "next full sessions check in "<<ckfreq<<" secs");
    while(1) {
@@ -134,8 +137,14 @@ void *XrdProofdProofServCron(void *p)
             XrdSysMutexHelper mhp(mgr->Mutex());
             // Remove it from the hash list
             mgr->DeleteFromSessions(fpid.c_str());
-            // Move the netry to the terminated sessions area
+            // Move the entry to the terminated sessions area
             mgr->MvSession(fpid.c_str());
+            // Notify the scheduler too
+            if (sched) {
+               if (sched->Pipe()->Post(XrdProofSched::kReschedule, 0) != 0) {
+                  TRACE(XERR, "kSessionRemoval: problem posting the scheduler pipe");
+               }
+            }
             // Notify action
             TRACE(REQ, "kSessionRemoval: session: "<<fpid<<
                         " has been removed from the active list");
@@ -156,7 +165,7 @@ void *XrdProofdProofServCron(void *p)
             // Quick check of active sessions in case of disconnections
             mgr->CheckActiveSessions(0);
         } else if (msg.Type() == XrdProofdProofServMgr::kCleanSessions) {
-            // Request for cleanup all sessions of a client (or all clients) 
+            // Request for cleanup all sessions of a client (or all clients)
             XpdSrvMgrCreateCnt cnt(mgr, XrdProofdProofServMgr::kCleanSessionsCnt);
             XrdOucString usr;
             rc = msg.Get(usr);
@@ -186,13 +195,21 @@ void *XrdProofdProofServCron(void *p)
          int now = time(0);
 
          // If there is any activity in mgr->Process() we postpone the checks in 5 secs
-         if (mgr->CheckCounter(XrdProofdProofServMgr::kProcessCnt) > 0) {
-            // The current time
-            lastcheck = now + 5 - ckfreq;
-            mgr->SetNextSessionsCheck(now + 5);
-            // Notify
-            TRACE(ALL, "postponing sessions check (will retry in 5 secs)");
-            continue;
+         int cnt = mgr->CheckCounter(XrdProofdProofServMgr::kProcessCnt);
+         if (cnt > 0) {
+            if ((now - lastrun) < maxdelay) {
+               // The current time
+               lastcheck = now + 5 - ckfreq;
+               mgr->SetNextSessionsCheck(now + 5);
+               // Notify
+               TRACE(ALL, "postponing sessions check (will retry in 5 secs)");
+               continue;
+            } else {
+               // Max time without checks reached: force a check
+               TRACE(ALL, "Max time without checks reached ("<<maxdelay<<"): force a session check");
+               // Reset the counter
+               mgr->UpdateCounter(XrdProofdProofServMgr::kProcessCnt, -cnt);
+            }
          }
 
          bool full = (now > mgr->NextSessionsCheck() - deltat) ? 1 : 0;
@@ -203,10 +220,14 @@ void *XrdProofdProofServCron(void *p)
             if (clnlostscale <= 0) {
                mgr->CleanupLostProofServ();
                clnlostscale = 10;
-            } else{
+            } else {
                clnlostscale--;
             }
+            // How many active sessions do we have
+            int cursess = mgr->CurrentSessions(1);
+            TRACE(ALL, cursess << " sessions are currently active");
             // Remember when ...
+            lastrun = now;
             lastcheck = now;
             mgr->SetNextSessionsCheck(lastcheck + mgr->CheckFrequency());
             // Notify
@@ -279,6 +300,7 @@ XrdProofdProofServMgr::XrdProofdProofServMgr(XrdProofdManager *mgr,
    for (int i = 0; i < PSMMAXCNTS; i++) {
       fCounters[i] = 0;
    }
+   fCurrentSessions = 0;
 
    // Defaults can be changed via 'proofservmgr'
    fCheckFrequency = 30;
@@ -449,7 +471,7 @@ bool XrdProofdProofServMgr::IsSessionSocket(const char *fpid)
 //______________________________________________________________________________
 int XrdProofdProofServMgr::MvSession(const char *fpid)
 {
-   // Move session file from the active to the terminated areas 
+   // Move session file from the active to the terminated areas
    XPDLOC(SMGR, "ProofServMgr::MvSession")
 
    TRACE(REQ, "moving "<<fpid<<" ...");
@@ -679,6 +701,7 @@ int XrdProofdProofServMgr::PrepareSessionRecovering()
       // Fill manager pointers structure
       fManagerCron.fClientMgr = fMgr->ClientMgr();
       fManagerCron.fSessionMgr = this;
+      fManagerCron.fProofSched = fMgr->ProofSched();
       if (XrdSysThread::Run(&tid, XrdProofdProofServRecover, (void *)&fManagerCron,
                             0, "ProofServMgr session recover thread") != 0) {
          TRACE(XERR, "could not start session recover thread");
@@ -938,7 +961,7 @@ int XrdProofdProofServMgr::CheckTerminatedSessions()
       struct stat st;
       int rcst = stat(path.c_str(), &st);
       TRACE(DBG, pid<<": rcst: "<<rcst<<", now - mtime: "<<now - st.st_mtime<<" secs")
-      if ((now - st.st_mtime) > fTerminationTimeOut || rcst != 0) { 
+      if ((now - st.st_mtime) > fTerminationTimeOut || rcst != 0) {
          // Check if the process is still alive
          if (XrdProofdAux::VerifyProcessByID(pid) != 0) {
             // Send again an hard-kill signal
@@ -2194,7 +2217,7 @@ int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p, void *input)
       TRACE(XERR, "unable to get instance of proofserv proxy");
       return -1;
    }
-   int psid = xps->ID();   
+   int psid = xps->ID();
    TRACE(REQ,  "psid: "<<psid<<", log: "<<in->fLogLevel);
 
    // Work directory
@@ -2230,7 +2253,7 @@ int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p, void *input)
    envfile += ".env";
    FILE *fenv = fopen(envfile.c_str(), "w");
    if (!fenv) {
-      TRACE(XERR, 
+      TRACE(XERR,
                   "unable to open env file: "<<envfile);
       return -1;
    }
@@ -2423,26 +2446,32 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdManager *mgr, XrdROOT *r)
    TRACE(REQ,  "ROOT dir: "<< (r ? r->Dir() : "*** undef ***"));
 
    if (r) {
-      char *rootsys = (char *) r->Dir();
-#ifndef ROOTLIBDIR
+      char *libdir = (char *) r->LibDir();
       char *ldpath = 0;
       if (mgr->BareLibPath() && strlen(mgr->BareLibPath()) > 0) {
-         ldpath = new char[32 + strlen(rootsys) + strlen(mgr->BareLibPath())];
-         sprintf(ldpath, "%s=%s/lib:%s", XPD_LIBPATH, rootsys, mgr->BareLibPath());
+         ldpath = new char[32 + strlen(libdir) + strlen(mgr->BareLibPath())];
+         sprintf(ldpath, "%s=%s:%s", XPD_LIBPATH, libdir, mgr->BareLibPath());
       } else {
-         ldpath = new char[32 + strlen(rootsys)];
-         sprintf(ldpath, "%s=%s/lib", XPD_LIBPATH, rootsys);
-      } 
+         ldpath = new char[32 + strlen(libdir)];
+         sprintf(ldpath, "%s=%s", XPD_LIBPATH, libdir);
+      }
       putenv(ldpath);
-#endif
       // Set ROOTSYS
+      char *rootsys = (char *) r->Dir();
       ev = new char[15 + strlen(rootsys)];
       sprintf(ev, "ROOTSYS=%s", rootsys);
       putenv(ev);
 
+      // Set bin directory
+      char *bindir = (char *) r->BinDir();
+      ev = new char[15 + strlen(bindir)];
+      sprintf(ev, "ROOTBINDIR=%s", bindir);
+      putenv(ev);
+
       // Set conf dir
-      ev = new char[20 + strlen(rootsys)];
-      sprintf(ev, "ROOTCONFDIR=%s", rootsys);
+      char *confdir = (char *) r->DataDir();
+      ev = new char[20 + strlen(confdir)];
+      sprintf(ev, "ROOTCONFDIR=%s", confdir);
       putenv(ev);
 
       // Set TMPDIR
@@ -2535,7 +2564,7 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
       TRACE(XERR, "unable to get instance of proofserv proxy");
       return -1;
    }
-   int psid = xps->ID();   
+   int psid = xps->ID();
    TRACE(REQ,  "psid: "<<psid<<", log: "<<in->fLogLevel);
 
    // Client sandbox
@@ -3530,6 +3559,47 @@ void XrdProofdProofServMgr::DisconnectFromProofServ(int pid)
    XrdSysMutexHelper mhp(fMutex);
 
    fSessions.Apply(FreeClientID, (void *)&pid);
+}
+
+//__________________________________________________________________________
+static int CountTopMasters(const char *, XrdProofdProofServ *ps, void *s)
+{
+   // Run thorugh entries to count top-masters
+   XPDLOC(SMGR, "CountTopMasters")
+
+   int *ntm = (int *)s;
+
+   XrdOucString emsg;
+   if (ps) {
+      if (ps->SrvType() == kXPD_TopMaster) (*ntm)++;
+      // Go to next
+      return 0;
+   } else {
+      emsg = "input entry undefined";
+   }
+
+   // Some problem
+   TRACE(XERR,"protocol error: "<<emsg);
+   return 1;
+}
+
+//__________________________________________________________________________
+int XrdProofdProofServMgr::CurrentSessions(bool recalculate)
+{
+   // Return the number of current sessions (top masters)
+
+   XPDLOC(SMGR, "ProofServMgr::CurrentSessions")
+
+   TRACE(REQ, "enter");
+
+   XrdSysMutexHelper mhp(fMutex);
+   if (recalculate) {
+      fCurrentSessions = 0;
+      fSessions.Apply(CountTopMasters, (void *)&fCurrentSessions);
+   }
+
+   // Done
+   return fCurrentSessions;
 }
 
 //
