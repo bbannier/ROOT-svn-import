@@ -138,6 +138,7 @@ public:
    XrdClientID        *GetClientID(int cid);
    int                 GetNClients(bool check);
    XrdProofQuery      *GetQuery(const char *tag);
+   int                 GetNextOrdN() const { XrdSysMutexHelper mhp(fMutex); return fNextOrdN; }
    inline const char  *Group() const { XrdSysMutexHelper mhp(fMutex); return fGroup.c_str(); }
    int                 IdleTime();
    inline short int    ID() const { XrdSysMutexHelper mhp(fMutex); return fID; }
@@ -187,6 +188,7 @@ public:
    void                SetUNIXSockPath(const char *s) { XrdSysMutexHelper mhp(fMutex); fUNIXSockPath = s; };
    void                SetUserEnvs(const char *t) { XrdSysMutexHelper mhp(fMutex); fUserEnvs = t; }
    inline void         SetValid(bool valid = 1) { XrdSysMutexHelper mhp(fMutex); fIsValid = valid; }
+   void                SetNextOrdN(int ord) { XrdSysMutexHelper mhp(fMutex); fNextOrdN = ord; }
    bool                SkipCheck();
    inline int          SrvPID() const { XrdSysMutexHelper mhp(fMutex); return fSrvPID; }
    inline int          SrvType() const { XrdSysMutexHelper mhp(fMutex); return fSrvType; }
@@ -244,7 +246,7 @@ public:
    XrdOucString              fOrdinal;   // Session ordinal number
    XrdOucString              fUserEnvs;  // List of envs received from the user
    XrdOucString              fAdminPath; // Admin file in the form "<active-sessions>/<usr>.<grp>.<pid>"
-
+   int                       fNextOrdN;  // The highest ord number of a worker
    XrdROOT                  *fROOT;      // ROOT version run by this session
 
    XrdOucString              fGroup;     // Group, if any, to which the owner belongs

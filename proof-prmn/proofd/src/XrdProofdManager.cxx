@@ -453,7 +453,12 @@ int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps,
 
       // The full list
       XrdOucString ord;
-      int ii = -1;
+      int proto = (xps->ROOT()) ? xps->ROOT()->SrvProtVers() : -1;
+      int ii;
+      if (proto < 21)
+         ii = -1;
+      else
+         ii = xps->GetNextOrdN();
       std::list<XrdProofWorker *>::iterator iw;
       for (iw = wrks.begin(); iw != wrks.end() ; iw++) {
          XrdProofWorker *w = *iw;
@@ -463,10 +468,12 @@ int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps,
          else
             ord.form("%d", ii);
          ii++;
+         // Count (fActive is increased inside here)
          xps->AddWorker(ord.c_str(), w);
          // Add proofserv and increase the counter
          w->AddProofServ(xps);
       }
+      xps->SetNextOrdN(ii);
    }
 
    int proto = (xps->ROOT()) ? xps->ROOT()->SrvProtVers() : -1;

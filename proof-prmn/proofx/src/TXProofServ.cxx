@@ -153,7 +153,8 @@ TXProofServ::TXProofServ(Int_t *argc, char **argv, FILE *flog)
    fInterruptHandler = 0;
    fInputHandler = 0;
    fTerminated = kFALSE;
-
+   // before it was sent at the beginning of the worker list
+   fImage = Form("master: %s", gSystem->HostName());
    // TODO:
    //    Int_t useFIFO = 0;
 /*   if (GetParameter(fProof->GetInputList(), "PROOF_UseFIFO", useFIFO) != 0) {
@@ -724,37 +725,56 @@ TProofServ::EQueryAction TXProofServ::GetWorkers(TList *workers,
    TObjString *os =
       ((TXSocket *)fSocket)->SendCoordinator(kGetWorkers, seqnum.Data());
 
-   // The reply contains some information about the master (image, workdir)
-   // followed by the information about the workers; the tokens for each node
-   // are separated by '&'
    if (os) {
       TString fl(os->GetName());
       if (fl.BeginsWith(XPD_GW_QueryEnqueued)) {
          SendAsynMessage("+++ Query cannot be processed now: enqueued");
          return kQueryEnqueued;
       }
-
-      TString tok;
-      Ssiz_t from = 0;
-      if (fl.Tokenize(tok, from, "&")) {
-         if (!tok.IsNull()) {
-            TProofNodeInfo *master = new TProofNodeInfo(tok);
-            if (!master) {
-               Error("GetWorkers", "no appropriate master line got from coordinator");
-               return kQueryStop;
-            } else {
-               // Set image if not yet done and available
-               if (fImage.IsNull() && strlen(master->GetImage()) > 0)
-                  fImage = master->GetImage();
-               SafeDelete(master);
-            }
-            // Now the workers
-            while (fl.Tokenize(tok, from, "&")) {
-               if (!tok.IsNull()) {
-                  if (workers)
-                     workers->Add(new TProofNodeInfo(tok));
-                  // We have the minimal set of information to start
-                  rc = kQueryOK;
+      // The reply contains up to 4 lists in the following format:
+      // wrks to add # wrks to remove # wrks to activate # wrks to deactivate
+      TString list;  // one of the lists in the message
+      Ssiz_t fromList = 0;
+      
+      // parse all 4 lists and fill in the 4 lists (see the 'case' instruction)
+      for(int listCount=0; listCount < 4; listCount++) {
+         if (fl.Tokenize(list, fromList, "#")) {
+            if (!list.IsNull()) {
+               TString tok;
+               Ssiz_t from = 0;
+               while (list.Tokenize(tok, from, "&")) {
+                  if (!tok.IsNull()) {
+                     switch (listCount) {
+                        case 0 : {
+                           // Add the worker
+                           TProofNodeInfo *worker = new TProofNodeInfo(tok);
+                           if (!worker) {
+                              Error("GetWorkers", "not an appropriate worker line");
+                              return kQueryStop;
+                           } else {
+                              if (workers)
+                                 workers->Add(worker);
+                              // We have the minimal set of information to start
+                              rc = kQueryOK;
+                           }
+                           break;
+                        }
+                        case 1 :
+                           // terminate a worker
+                           fProof->TerminateWorker(tok);
+                           break;
+                        case 2 :
+                           // activate a worker
+                           fProof->ActivateWorker(tok);
+                           break;
+                        case 3 :
+                           // deactive a worker
+                           fProof->DeactivateWorker(tok);
+                           break;
+                        default :
+                           break;
+                     }
+                  }
                }
             }
          }

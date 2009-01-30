@@ -53,6 +53,7 @@ XrdProofdProofServ::XrdProofdProofServ()
    fDisconnectTime = -1;
    fSetIdleTime = time(0);
    fROOT = 0;
+   fNextOrdN = 0;
    // Strings
    fAdminPath = "";
    fAlias = "";
@@ -752,7 +753,7 @@ int XrdProofdProofServ::Resume()
    // Send a resume message to the this session. It is assumed that the session
    // has at least one async query to process and will immediately send
    // a getworkers request (the workers are already assigned).
-   XPDLOC(SMGR, "ProofServ::Resume")
+   XPDLOC(SMGR, "ProofServ::Resched")
 
    TRACE(REQ, "ord: " << fOrdinal<< ", pid: " << fSrvPID);
 
@@ -761,8 +762,8 @@ int XrdProofdProofServ::Resume()
 
    {  XrdSysMutexHelper mhp(fMutex);
       // 
-      if (!fResponse || fResponse->Send(kXR_attn, kXPD_resume, 0, 0) != 0) {
-         msg = "could not propagate resume to proofsrv";
+      if (!fResponse || fResponse->Send(kXR_attn, kXPD_resched, 0, 0) != 0) {
+         msg = "could not propagate resched to proofsrv";
          rc = -1;
       }
    }
