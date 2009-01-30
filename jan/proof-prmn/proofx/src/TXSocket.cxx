@@ -785,7 +785,7 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
          // Request for remote touch: post a message to do that
          PostMsg(kPROOF_TOUCH);
          break;
-      case kXPD_resume:
+      case kXPD_resched:
          //
          // process the next query (in the TXProofServ)
          PostMsg(kPROOF_STARTPROCESS);

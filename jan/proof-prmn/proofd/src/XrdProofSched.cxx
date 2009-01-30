@@ -693,7 +693,7 @@ int XrdProofSched::Reschedule()
    // Consider starting some query from the queue.
    // to be called after some resources are free (e.g. by a finished query)
    // This method is doing the full transaction of finding the session to
-   // resume, assigning it workers and sending a resume message.
+   // resume, assigning it workers and sending a resched message.
    // In this way there is not possibility of interference with other GetWorkers
    // return 0 in case of success and -1 in case of an error
    XPDDOM(SCHED)
@@ -721,10 +721,10 @@ int XrdProofSched::Reschedule()
          // Send buffer
          // if workers were assigned remove the session from the queue
          if (wrks.length() > 0 && wrks != XPD_GW_QueryEnqueued) {
-            // Send the resume message: the workers will be send in response to a
+            // Send the resched message: the workers will be send in response to a
             // GetWorkers message
             xps->Resume();
-            // Acually remove the session from the queue
+            // Actually remove the session from the queue
             fQueue.remove(xps);
             // Put the session at the end of the queue
             // > 1 because the query is kept in the queue until 2nd GetWorkers
