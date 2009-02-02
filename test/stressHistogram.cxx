@@ -1008,8 +1008,8 @@ bool testMulSparse()
 
 bool testDivide1() 
 {
-   Double_t c1 = 1;//r.Rndm();
-   Double_t c2 = 1;//r.Rndm();
+   Double_t c1 = r.Rndm() + 1;
+   Double_t c2 = r.Rndm() + 1;
 
    TH1D* h1 = new TH1D("d1D1-h1", "h1-Title", numberOfBins, minRange, maxRange);
    TH1D* h2 = new TH1D("d1D1-h2", "h2-Title", numberOfBins, minRange, maxRange);
@@ -1031,14 +1031,317 @@ bool testDivide1()
    h3->Divide(h1, h2, c1, c2);
       
    TH1D* h4 = new TH1D("d1D1-h4", "h4=h3*h2)", numberOfBins, minRange, maxRange);
-   h4->Multiply(h2, h3, 1, 1.0);
+   h4->Multiply(h2, h3, c2/c1, 1);
    for ( Int_t bin = 0; bin <= h4->GetNbinsX() + 1; ++bin ) {
-      Double_t error = h1->GetBinError(bin) * h1->GetBinError(bin);
-      error += 2 * h3->GetBinContent(bin)*h3->GetBinContent(bin)*h3->GetBinError(bin)*h3->GetBinError(bin);
+      Double_t error = h4->GetBinError(bin) * h4->GetBinError(bin);
+      error -= (2*(c2*c2)/(c1*c1)) * h3->GetBinContent(bin)*h3->GetBinContent(bin)*h2->GetBinError(bin)*h2->GetBinError(bin); 
       h4->SetBinError( bin, sqrt(error) );
    }
 
-   return equals("Divide1D1", h1, h4, cmpOptStats/* | cmpOptDebug*/, 1E-13);
+   std::vector<double> stats(TH1::kNstat);
+   h1->PutStats(&stats[0]);
+
+   bool ret = equals("Divide1D1", h1, h4, cmpOptStats);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testDivideProf1() 
+{
+   Double_t c1 = 1;//r.Rndm();
+   Double_t c2 = 1;//r.Rndm();
+
+   TProfile* p1 = new TProfile("d1D1-p1", "p1-Title", numberOfBins, minRange, maxRange);
+   TProfile* p2 = new TProfile("d1D1-p2", "p2-Title", numberOfBins, minRange, maxRange);
+
+   p1->Sumw2();p2->Sumw2();
+
+   UInt_t seed = r.GetSeed();
+   // For possible problems
+   r.SetSeed(seed);
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x, y;
+      x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, 1.0);
+      x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, 1.0);
+   }
+
+   TProfile* p3 = new TProfile("d1D1-p3", "p3=(c1*p1)/(c2*p2)", numberOfBins, minRange, maxRange);
+   p3->Divide(p1, p2, c1, c2);
+
+   // There is no Multiply method to tests. And the errors are wrongly
+   // calculated in the TProfile::Division method, so there is no
+   // point to make the tests. Once the method is fixed, the tests
+   // will be finished.
+
+   return 0;
+}
+
+bool testDivide2() 
+{
+   TH1D* h1 = new TH1D("d1D2-h1", "h1-Title", numberOfBins, minRange, maxRange);
+   TH1D* h2 = new TH1D("d1D2-h2", "h2-Title", numberOfBins, minRange, maxRange);
+
+   h1->Sumw2();h2->Sumw2();
+
+   UInt_t seed = r.GetSeed();
+   // For possible problems
+   r.SetSeed(seed);
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value;
+      value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value, 1.0);
+      value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(value,  1.0);
+   }
+
+   TH1D* h3 = static_cast<TH1D*>( h1->Clone() );
+   h3->Divide(h2);
+      
+   TH1D* h4 = new TH1D("d1D2-h4", "h4=h3*h2)", numberOfBins, minRange, maxRange);
+   h4->Multiply(h2, h3, 1.0, 1.0);
+   for ( Int_t bin = 0; bin <= h4->GetNbinsX() + 1; ++bin ) {
+      Double_t error = h4->GetBinError(bin) * h4->GetBinError(bin);
+      error -= 2 * h3->GetBinContent(bin)*h3->GetBinContent(bin)*h2->GetBinError(bin)*h2->GetBinError(bin); 
+      h4->SetBinError( bin, sqrt(error) );
+   }
+
+   std::vector<double> stats(TH1::kNstat);
+   h1->PutStats(&stats[0]);
+
+   bool ret = equals("Divide1D1", h1, h4, cmpOptStats);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testDivide2D1() 
+{
+   Double_t c1 = r.Rndm() + 1;
+   Double_t c2 = r.Rndm() + 1;
+
+   TH2D* h1 = new TH2D("d2D1-h1", "h1-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h2 = new TH2D("d2D1-h2", "h2-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+
+   h1->Sumw2();h2->Sumw2();
+
+   UInt_t seed = r.GetSeed();
+   // For possible problems
+   r.SetSeed(seed);
+   for ( Int_t e = 0; e < nEvents*nEvents; ++e ) {
+      Double_t x,y;
+      x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, 1.0);
+      x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, 1.0);
+   }
+
+   TH2D* h3 = new TH2D("d2D1-h3", "h3=(c1*h1)/(c2*h2)", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   h3->Divide(h1, h2, c1, c2);
+      
+   TH2D* h4 = new TH2D("d2D1-h4", "h4=h3*h2)", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   h4->Multiply(h2, h3, c2/c1, 1);
+   for ( Int_t i = 0; i <= h4->GetNbinsX() + 1; ++i ) {
+      for ( Int_t j = 0; j <= h4->GetNbinsY() + 1; ++j ) {
+         Double_t error = h4->GetBinError(i,j) * h4->GetBinError(i,j);
+         error -= (2*(c2*c2)/(c1*c1)) * h3->GetBinContent(i,j)*h3->GetBinContent(i,j)*h2->GetBinError(i,j)*h2->GetBinError(i,j); 
+         h4->SetBinError( i, j, sqrt(error) );
+      }
+   }
+
+   std::vector<double> stats(TH1::kNstat);
+   h1->PutStats(&stats[0]);
+
+   bool ret = equals("Divide2D1", h1, h4, cmpOptStats);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testDivide2D2() 
+{
+   TH2D* h1 = new TH2D("d2D2-h1", "h1-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h2 = new TH2D("d2D2-h2", "h2-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+
+   h1->Sumw2();h2->Sumw2();
+
+   UInt_t seed = r.GetSeed();
+   // For possible problems
+   r.SetSeed(seed);
+   for ( Int_t e = 0; e < nEvents*nEvents; ++e ) {
+      Double_t x,y;
+      x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, 1.0);
+      x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, 1.0);
+   }
+
+   TH2D* h3 = static_cast<TH2D*>( h1->Clone() );
+   h3->Divide(h2);
+      
+   TH2D* h4 = new TH2D("d2D2-h4", "h4=h3*h2)", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   h4->Multiply(h2, h3, 1.0, 1.0);
+   for ( Int_t i = 0; i <= h4->GetNbinsX() + 1; ++i ) {
+      for ( Int_t j = 0; j <= h4->GetNbinsY() + 1; ++j ) {
+          Double_t error = h4->GetBinError(i,j) * h4->GetBinError(i,j);
+         error -= 2 * h3->GetBinContent(i,j)*h3->GetBinContent(i,j)*h2->GetBinError(i,j)*h2->GetBinError(i,j); 
+         h4->SetBinError( i, j, sqrt(error) );
+      }
+   }
+
+   std::vector<double> stats(TH1::kNstat);
+   h1->PutStats(&stats[0]);
+
+   bool ret = equals("Divide2D2", h1, h4, cmpOptStats);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testDivide3D1() 
+{
+   Double_t c1 = r.Rndm() + 1;
+   Double_t c2 = r.Rndm() + 1;
+
+   TH3D* h1 = new TH3D("d3D1-h1", "h1-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h2 = new TH3D("d3D1-h2", "h2-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+
+   h1->Sumw2();h2->Sumw2();
+
+   UInt_t seed = r.GetSeed();
+   // For possible problems
+   r.SetSeed(seed);
+   for ( Int_t e = 0; e < nEvents*nEvents; ++e ) {
+      Double_t x,y,z;
+      x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, z, 1.0);
+      x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, z, 1.0);
+   }
+
+   TH3D* h3 = new TH3D("d3D1-h3", "h3=(c1*h1)/(c2*h2)", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   h3->Divide(h1, h2, c1, c2);
+      
+   TH3D* h4 = new TH3D("d3D1-h4", "h4=h3*h2)", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   h4->Multiply(h2, h3, c2/c1, 1.0);
+   for ( Int_t i = 0; i <= h4->GetNbinsX() + 1; ++i ) {
+      for ( Int_t j = 0; j <= h4->GetNbinsY() + 1; ++j ) {
+         for ( Int_t h = 0; h <= h4->GetNbinsZ() + 1; ++h ) {
+            Double_t error = h4->GetBinError(i,j,h) * h4->GetBinError(i,j,h);
+            //error -= 2 * h3->GetBinContent(i,j,h)*h3->GetBinContent(i,j,h)*h2->GetBinError(i,j,h)*h2->GetBinError(i,j,h); 
+            error -= (2*(c2*c2)/(c1*c1)) * 
+               h3->GetBinContent(i,j,h)*h3->GetBinContent(i,j,h)*h2->GetBinError(i,j,h)*h2->GetBinError(i,j,h); 
+            h4->SetBinError( i, j, h, sqrt(error) );
+         }
+      }
+   }
+
+   std::vector<double> stats(TH1::kNstat);
+   h1->PutStats(&stats[0]);
+
+   bool ret = equals("Divide3D1", h1, h4, cmpOptStats);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testDivide3D2() 
+{
+   TH3D* h1 = new TH3D("d3D2-h1", "h1-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h2 = new TH3D("d3D2-h2", "h2-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+
+   h1->Sumw2();h2->Sumw2();
+
+   UInt_t seed = r.GetSeed();
+   // For possible problems
+   r.SetSeed(seed);
+   for ( Int_t e = 0; e < nEvents*nEvents; ++e ) {
+      Double_t x,y,z;
+      x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, z, 1.0);
+      x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, z, 1.0);
+   }
+
+   TH3D* h3 = static_cast<TH3D*>( h1->Clone() );
+   h3->Divide(h2);
+      
+   TH3D* h4 = new TH3D("d3D2-h4", "h4=h3*h2)", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   h4->Multiply(h2, h3, 1.0, 1.0);
+   for ( Int_t i = 0; i <= h4->GetNbinsX() + 1; ++i ) {
+      for ( Int_t j = 0; j <= h4->GetNbinsY() + 1; ++j ) {
+         for ( Int_t h = 0; h <= h4->GetNbinsZ() + 1; ++h ) {
+            Double_t error = h4->GetBinError(i,j,h) * h4->GetBinError(i,j,h);
+            error -= 2 * h3->GetBinContent(i,j,h)*h3->GetBinContent(i,j,h)*h2->GetBinError(i,j,h)*h2->GetBinError(i,j,h); 
+            h4->SetBinError( i, j, h, sqrt(error) );
+         }
+      }
+   }
+
+   std::vector<double> stats(TH1::kNstat);
+   h1->PutStats(&stats[0]);
+
+   bool ret = equals("Divide3D2", h1, h4, cmpOptStats);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
 }
 
 bool testAssign1D()
@@ -3270,17 +3573,23 @@ int stressHistogram()
                                            "Multiply tests for 1D, 2D and 3D Histograms......................",
                                            multiplyTestPointer };
 
-   // Still to do: testDivide2, testDivide2D1, testDivide2D2 and
-   // testDivide3D1, testDivide3D2. 
-
-   // It depends on whether we can solve the problem with the 1D test
-   // already done. It seems like there is something wrong with the
-   // way the errors are being calculated. We have a formula to
-   // calculate it by hand. Nevertheless the Divide method errors and
-   // the ones calculated by ourselves differ a bit from those (in the
-   // order of 1E-1).
-
    // Test 6
+   // Divide Tests
+   const unsigned int numberOfDivide = 6;
+   pointer2Test divideTestPointer[numberOfDivide] = { testDivide1,     testDivide2,
+                                                      testDivide2D1,   testDivide2D2,
+                                                      testDivide3D1,   testDivide3D2
+   };
+   struct TTestSuite divideTestSuite = { numberOfDivide, 
+                                         "Divide tests for 1D, 2D and 3D Histograms........................",
+                                         divideTestPointer };
+
+   // Still to do: Division for profiles
+
+   // The division methods for the profiles have to be changed to
+   // calculate the errors correctly.
+
+   // Test 7
    // Copy Tests
    const unsigned int numberOfCopy = 19;
    pointer2Test copyTestPointer[numberOfCopy] = { testAssign1D,          testAssignProfile1D, 
@@ -3298,7 +3607,7 @@ int stressHistogram()
                                        "Copy tests for 1D, 2D and 3D Histograms and Profiles.............",
                                        copyTestPointer };
 
-   // Test 7
+   // Test 8
    // WriteRead Tests
    const unsigned int numberOfReadwrite = 7;
    pointer2Test readwriteTestPointer[numberOfReadwrite] = { testWriteRead1D,  testWriteReadProfile1D,
@@ -3310,7 +3619,7 @@ int stressHistogram()
                                             "Read/Write tests for 1D, 2D and 3D Histograms and Profiles.......",
                                             readwriteTestPointer };
 
-   // Test 8
+   // Test 9
    // Merge Tests
    const unsigned int numberOfMerge = 7;
    pointer2Test mergeTestPointer[numberOfMerge] = { testMerge1D,  testMergeProf1D,
@@ -3321,7 +3630,7 @@ int stressHistogram()
    struct TTestSuite mergeTestSuite = { numberOfMerge, 
                                         "Merge tests for 1D, 2D and 3D Histograms and Profiles............",
                                         mergeTestPointer };
-   // Test 9
+   // Test 10
    // Label Tests
    const unsigned int numberOfLabel = 1;
    pointer2Test labelTestPointer[numberOfLabel] = { testLabel
@@ -3331,19 +3640,22 @@ int stressHistogram()
                                         labelTestPointer };
 
    // Combination of tests
-   const unsigned int numberOfSuits = 7;
+   const unsigned int numberOfSuits = 8;
    struct TTestSuite* testSuite[numberOfSuits];
    testSuite[0] = &rebinTestSuite;
    testSuite[1] = &addTestSuite;
    testSuite[2] = &multiplyTestSuite;
-   testSuite[3] = &copyTestSuite;
-   testSuite[4] = &readwriteTestSuite;
-   testSuite[5] = &mergeTestSuite;
-   testSuite[6] = &labelTestSuite;
+   testSuite[3] = &divideTestSuite;
+   testSuite[4] = &copyTestSuite;
+   testSuite[5] = &readwriteTestSuite;
+   testSuite[6] = &mergeTestSuite;
+   testSuite[7] = &labelTestSuite;
 
    status = 0;
    for ( unsigned int i = 0; i < numberOfSuits; ++i ) {
       bool internalStatus = false;
+//       #pragma omp parallel
+//       #pragma omp for reduction(|: internalStatus)
       for ( unsigned int j = 0; j < testSuite[i]->nTests; ++j ) {
          internalStatus |= testSuite[i]->tests[j]();
       }
@@ -3352,7 +3664,7 @@ int stressHistogram()
    }
    GlobalStatus += status;
 
-   // Test 10
+   // Test 11
    // Merge Tests
    const unsigned int numberOfRefRead = 7;
    pointer2Test refReadTestPointer[numberOfRefRead] = { testRefRead1D,  testRefReadProf1D,
