@@ -3,7 +3,16 @@
 
 // Bindings
 #include "PyROOT.h"
-#include "structmember.h"
+#include "structmember.h"    // from Python
+#if PY_MAJOR_VERSION >= 2 && PY_MINOR_VERSION >= 5
+#include "code.h"            // from Python
+#else
+#include "compile.h"         // from Python
+#endif
+#ifndef CO_NOFREE
+// python2.2 does not have CO_NOFREE defined
+#define CO_NOFREE       0x0040
+#endif
 #include "MethodProxy.h"
 #include "ObjectProxy.h"
 #include "TPyException.h"
