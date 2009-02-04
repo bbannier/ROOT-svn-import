@@ -25,6 +25,7 @@
 #include "RooWorkspace.h"
 #include "RooAbsPdf.h"
 #include "RooArgSet.h"
+#include "TList.h"
 
 class RooAbsData; 
 
@@ -40,7 +41,10 @@ namespace RooStats {
      virtual ~NeymanConstruction() {}
     
       // Main interface to get a ConfInterval (will be a SetInterval)
-      virtual ConfInterval* GetInterval() const; 
+      virtual TList*        GenSamplingDistribution(const char* asciiFilePat = 0) const; 
+      virtual ConfInterval* GetInterval(const char* asciiFilePat) const;
+      virtual ConfInterval* GetInterval() const;
+      virtual ConfInterval* run(TList *SamplingList) const;
 
       // in addition to interface we also need:
       // Set the DistributionCreator (eg. ToyMC or FFT, includes choice of TestStatistic)

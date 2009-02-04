@@ -55,6 +55,8 @@ void rs401c_debuggingSamplingDist()
     samplingDistCreator(testStatFunct) ;
   samplingDistCreator.SetPdf(gaus);
   samplingDistCreator.SetParameters(parameters);
+  samplingDistCreator.SetNToys(10);
+  samplingDistCreator.SetNEventsToys(100);
 
   //// show use of a distribution creator
   RooArgSet* point = new RooArgSet(mu, sigma);
@@ -84,7 +86,7 @@ void rs401c_debuggingSamplingDist()
   //////// show use of NeymanConstruction
   // Create points to test
   mu.setBins(5);
-  sigma.setBins(5);
+  sigma.setBins(3);
   RooDataHist parameterScan("parameterScan", "", parameters);
   //  parameterScan.Scan("mu:sigma");
  
@@ -101,6 +103,12 @@ void rs401c_debuggingSamplingDist()
   
   // use the Neyman Construction
   ConfInterval* interval = nc.GetInterval();
+  //These two methods produce the same result as GetInterval() but
+  //the sampling distribution is saved in a root file by the first
+  //method for further use. The second method uses the distribution
+  //in the file instead of generating it again (time consuming)
+  //nc.GenSamplingDistribution("debug.root");
+  //ConfInterval* interval = nc.GetInterval("debug.root");
 
   std::cout << "is this point in the interval? " << 
     interval->IsInInterval(parameters) << std::endl;

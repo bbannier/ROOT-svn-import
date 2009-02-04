@@ -28,14 +28,14 @@ END_HTML
 #endif
 
 #include "RooStats/DistributionCreator.h"
-#include "RooStats/RooStatsUtils.h"
-
 #include "RooAbsPdf.h"
 #include "RooArgSet.h"
+#include "RooGlobalFunc.h"
 #include "RooRealVar.h"
 #include "RooAbsData.h"
 #include "RooDataSet.h"
 #include "RooWorkspace.h"
+#include "RooMCStudy.h"
 #include "SamplingDistribution.h"
 #include "TRandom.h"
 #include <vector>
@@ -55,6 +55,9 @@ namespace RooStats {
       fPdfName = "";
       fPOI = 0;
       fNuisParams=0;
+      fExtended = kFALSE;
+      fNtoys = 0.;
+      fNevents = 0.;
     }
 
     virtual ~TemplatedDistributionCreator() {
@@ -62,45 +65,33 @@ namespace RooStats {
     }
     
      // Main interface to get a ConfInterval, pure virtual
-     virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& paramsOfInterest) {
+    virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& paramsOfInterest) {
        // normally this method would be complex, but here it is simple for debugging
        std::vector<Double_t> testStatVec;
        //       cout << " about to generate sampling dist " << endl;
-       for(Int_t i=0; i<100; ++i){
-	 //cout << " on toy number " << i << endl;
-	 RooAbsData* toydata = GenerateToyData(paramsOfInterest);
-	 testStatVec.push_back( fTestStat->Evaluate(*toydata, paramsOfInterest) );
-	 delete toydata;
-       }
-       //       cout << " generated sampling dist " << endl;
-       return new SamplingDistribution("TemplatedSamplingDist", "Samplint Distribution of Test Statistic", testStatVec );
-     } 
-     
-     virtual RooAbsData* GenerateToyData(RooArgSet& paramsOfInterest) const{
+
        RooAbsPdf* pdf = fWS->pdf(fPdfName);
        // need a nicer way to specify observables in the dataset
        RooArgSet* observables = pdf->getVariables();
-
-       // Set the parameters to desired values for generating toys
-       RooStats::SetParameters(&paramsOfInterest, observables);
-       /*
-       TIter      itr = observables->createIterator();
-       RooRealVar* myarg;
-       while ((myarg = (RooRealVar *)itr.Next())) { 
-	 cout << myarg->GetName() << " = " << myarg->getVal() << "  " ;
-       }
-       cout << endl;
-       */
-
        if(fPOI) observables->remove(*fPOI, kFALSE, kTRUE);
        if(fNuisParams) observables->remove(*fNuisParams, kFALSE, kTRUE);
        // Need a nice way to determine how many events in a toy experiment
-       Int_t nEvents = 100;
-       RooAbsData* data = pdf->generate(*observables, nEvents);
+
+       RooMCStudy *toyGenHandler = new RooMCStudy(*pdf,*observables,RooFit::Extended(fExtended));
+       toyGenHandler->generate(fNtoys, fNevents, kTRUE);
+
+       for(Int_t i=0; i<fNtoys; ++i){
+	 cout << " on toy number " << i << endl;
+	 RooAbsData* toydata = (RooAbsData*)toyGenHandler->genData(i);
+	 testStatVec.push_back( fTestStat->Evaluate(*toydata, paramsOfInterest) );
+	 delete toydata;
+       }
+
        delete observables;
-       //       delete pdf;
-       return data;
-     }
+       //delete toyGenHandler;
+              cout << " generated sampling dist " << endl;
+       return new SamplingDistribution("TemplatedSamplingDist", "Samplint Distribution of Test Statistic", testStatVec );
+     } 
 
       // Main interface to evaluate the test statistic on a dataset
      virtual Double_t EvaluateTestStatistic(RooAbsData& data, RooArgSet& paramsOfInterest) {
@@ -118,6 +109,20 @@ namespace RooStats {
       virtual void Initialize(RooAbsArg& testStatistic, 
 			      RooArgSet& paramsOfInterest, 
 			      RooArgSet& nuisanceParameters) {}
+
+      //set the parameters for the toyMC generation
+      virtual void SetNToys(const Int_t ntoy) {
+        fNtoys = ntoy;
+      }
+
+      virtual void SetNEventsToys(const Int_t nevents) {
+        fNevents = nevents;
+      }
+
+
+      virtual void SetExtended(const Bool_t isExtended) {
+        fExtended = isExtended;
+      }
 
       // Set the DataSet, add to the the workspace if not already there
       virtual void SetData(RooAbsData& data) {
@@ -164,6 +169,9 @@ namespace RooStats {
       RooArgSet* fPOI; // RooArgSet specifying  parameters of interest for interval
       RooArgSet* fNuisParams;// RooArgSet specifying  nuisance parameters for interval
       TestStatFunctor* fTestStat;
+      Int_t fNtoys;
+      Int_t fNevents;
+      Bool_t fExtended;
 
    protected:
       ClassDef(TemplatedDistributionCreator,1)   // A simple implementation of the DistributionCreator interface
