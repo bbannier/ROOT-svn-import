@@ -35,7 +35,7 @@ END_HTML
 #include "SamplingDistribution.h"
 #include "TRandom.h"
 #include <vector>
-#include "RooStats/TemplatedDistributionCreator.h"
+#include "RooStats/ToyMCDistCreator.h"
 
 
 namespace RooStats {
@@ -72,7 +72,7 @@ namespace RooStats {
       ClassDef(DebuggingTestStatFunctor,1)   
    };
 
- typedef TemplatedDistributionCreator<DebuggingTestStatFunctor> TestDistributionCreator;
+ typedef ToyMCDistCreator<DebuggingTestStatFunctor> TestDistributionCreator;
 
 
 }

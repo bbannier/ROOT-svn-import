@@ -35,7 +35,7 @@ END_HTML
 #include "SamplingDistribution.h"
 #include "TRandom.h"
 #include <vector>
-#include "RooStats/TemplatedDistributionCreator.h"
+#include "RooStats/ToyMCDistCreator.h"
 #include "RooProfileLL.h"
 #include "RooNLLVar.h"
 
@@ -108,7 +108,7 @@ namespace RooStats {
       ClassDef(ProfileLikelihoodFunctor,1)   
    };
 
- typedef TemplatedDistributionCreator<ProfileLikelihoodFunctor> ProfileDistributionCreator;
+ typedef ToyMCDistCreator<ProfileLikelihoodFunctor> ProfileDistributionCreator;
 
 
 }
