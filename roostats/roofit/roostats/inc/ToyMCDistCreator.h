@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: TemplatedDistributionCreator.h 26805 2009-01-13 17:45:57Z cranmer $
+// @(#)root/roostats:$Id: ToyMCDistCreator.h 26805 2009-01-13 17:45:57Z cranmer $
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -8,14 +8,14 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOSTATS_TemplatedDistributionCreator
-#define ROOSTATS_TemplatedDistributionCreator
+#ifndef ROOSTATS_ToyMCDistCreator
+#define ROOSTATS_ToyMCDistCreator
 
 //_________________________________________________
 /*
 BEGIN_HTML
 <p>
-TemplatedDistributionCreator is a simple implementation of the DistributionCreator interface used for debugging.
+ToyMCDistCreator is a simple implementation of the DistributionCreator interface used for debugging.
 The sampling distribution is uniformly random between [0,1] and is INDEPENDENT of the data.  So it is not useful
 for true statistical tests, but it is useful for debugging.
 </p>
@@ -43,11 +43,11 @@ END_HTML
 namespace RooStats {
 
   template <class TestStatFunctor>
-    class TemplatedDistributionCreator : public DistributionCreator {
+    class ToyMCDistCreator : public DistributionCreator {
 
 
   public:
-    TemplatedDistributionCreator(TestStatFunctor &ts) {
+    ToyMCDistCreator(TestStatFunctor &ts) {
       fTestStat = &ts;
       fWS = new RooWorkspace();
       fOwnsWorkspace = true;
@@ -56,16 +56,14 @@ namespace RooStats {
       fPOI = 0;
       fNuisParams=0;
       fExtended = kFALSE;
-      fNtoys = 0.;
-      fNevents = 0.;
     }
 
-    virtual ~TemplatedDistributionCreator() {
+    virtual ~ToyMCDistCreator() {
       if(fOwnsWorkspace) delete fWS;
     }
     
      // Main interface to get a ConfInterval, pure virtual
-    virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& paramsOfInterest) {
+    virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& allParameters) {
        // normally this method would be complex, but here it is simple for debugging
        std::vector<Double_t> testStatVec;
        //       cout << " about to generate sampling dist " << endl;
@@ -83,7 +81,7 @@ namespace RooStats {
        for(Int_t i=0; i<fNtoys; ++i){
 	 cout << " on toy number " << i << endl;
 	 RooAbsData* toydata = (RooAbsData*)toyGenHandler->genData(i);
-	 testStatVec.push_back( fTestStat->Evaluate(*toydata, paramsOfInterest) );
+	 testStatVec.push_back( fTestStat->Evaluate(*toydata, allParameters) );
 	 delete toydata;
        }
 
@@ -94,8 +92,8 @@ namespace RooStats {
      } 
 
       // Main interface to evaluate the test statistic on a dataset
-     virtual Double_t EvaluateTestStatistic(RooAbsData& data, RooArgSet& paramsOfInterest) {
-       return fTestStat->Evaluate(data, paramsOfInterest);
+     virtual Double_t EvaluateTestStatistic(RooAbsData& data, RooArgSet& allParameters) {
+       return fTestStat->Evaluate(data, allParameters);
      }
 
       // Get the TestStatistic
@@ -174,7 +172,7 @@ namespace RooStats {
       Bool_t fExtended;
 
    protected:
-      ClassDef(TemplatedDistributionCreator,1)   // A simple implementation of the DistributionCreator interface
+      ClassDef(ToyMCDistCreator,1)   // A simple implementation of the DistributionCreator interface
 	};
 }
 
