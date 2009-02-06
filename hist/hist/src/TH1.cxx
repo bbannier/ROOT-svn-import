@@ -4072,6 +4072,46 @@ Double_t TH1::Interpolate(Double_t, Double_t, Double_t)
    return 0;
 }
 
+//______________________________________________________________________________
+Bool_t TH1::IsBinOverflow(Int_t bin)
+{
+   
+   // Return true if the bin is overflow.
+   Int_t binx, biny, binz;
+   GetBinXYZ(bin, binx, biny, binz);
+   
+   if ( fDimension == 1 )
+      return binx == GetNbinsX() + 1;
+   else if ( fDimension == 2 )
+      return (binx == GetNbinsX() + 1) || 
+             (biny == GetNbinsY() + 1);
+   else if ( fDimension == 3 )
+      return (binx == GetNbinsX() + 1) || 
+             (biny == GetNbinsY() + 1) ||
+             (binz == GetNbinsZ() + 1);
+   else
+      return 0;
+}
+
+
+//______________________________________________________________________________
+Bool_t TH1::IsBinUnderflow(Int_t bin)
+{
+   
+   // Return true if the bin is overflow.
+   Int_t binx, biny, binz;
+   GetBinXYZ(bin, binx, biny, binz);
+   
+   if ( fDimension == 1 )
+      return (binx == 0);
+   else if ( fDimension == 2 )
+      return (binx == 0 || biny == 0);
+   else if ( fDimension == 3 )
+      return (binx == 0 || biny == 0 || binz == 0);
+   else
+      return 0;
+}
+
 //___________________________________________________________________________
 void TH1::LabelsDeflate(Option_t *ax)
 {

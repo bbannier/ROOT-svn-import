@@ -25,11 +25,16 @@
 #include "TH1.h"
 #endif
 
+class TProfileHelper;
+
 enum EErrorType { kERRORMEAN = 0, kERRORSPREAD, kERRORSPREADI, kERRORSPREADG };
 
 class TF1;
 
 class TProfile : public TH1D {
+
+public:
+   friend class TProfileHelper;
 
 protected:
     TArrayD     fBinEntries;      //number of entries per bin
@@ -45,6 +50,10 @@ static Bool_t   fgApproximate;    //bin error approximation option
 
    virtual Int_t    BufferFill(Double_t, Double_t) {return -2;} //may not use
    virtual Int_t    BufferFill(Double_t x, Double_t y, Double_t w);
+
+   // helper methods for the Merge unification in TProfileHelper
+   void SetBins(const Double_t* range) { SetBins(range[0], range[1], range[2]); };
+   Int_t Fill(const Double_t* v) { return Fill(v[0], v[1], v[2]); };
 
 private:
    Int_t Fill(Double_t) { MayNotUse("Fill(Double_t)"); return -1;}
@@ -119,7 +128,7 @@ public:
    virtual void     SetErrorOption(Option_t *option=""); // *MENU*
    virtual void     Sumw2(); 
 
-   ClassDef(TProfile,5)  //Profile histogram class
+   ClassDef(TProfile,6)  //Profile histogram class
 };
 
 #endif
