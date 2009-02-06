@@ -76,7 +76,7 @@ typedef struct {
 p_t p;
   
 const char *exps[10] = {"aleph",      // 0
-                        "alice",      // 1
+                        "aleph",      // 1  was alice2 waiting for Andrei's fix
                         "brahms",     // 2
                         "cdf",        // 3
                         "cms",        // 4
@@ -152,7 +152,7 @@ void stressGeometry(const char *exp="*", Bool_t generate_ref=kFALSE) {
          
       sprintf(fname, "%s_ref.root", exps[i]);
       
-      if (gen_ref || !TFile::Open(Form("http://root.cern.ch/files/%s",fname))) {
+      if (gen_ref || !TFile::Open(Form("http://root.cern.ch/files/%s_ref_2.root",exps[i]))) {
          if (!gen_ref) printf("File: %s does not exist, generating it\n", fname);
          else               printf("Generating reference file %s\n", fname);
          WriteRef(i);
