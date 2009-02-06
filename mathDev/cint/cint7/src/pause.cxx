@@ -74,7 +74,7 @@ static int G__atevaluate(G__value buf);
 static G__input_file G__multi_line_temp;
 
 //______________________________________________________________________________
-#define G__SET_TEMPENV                                 \
+#define G__SET_TEMPENV(store)                       \
    store.var_local = G__p_local;                    \
    store.struct_offset = G__store_struct_offset;    \
    store.tagnum=G__tagnum;                          \
@@ -86,7 +86,7 @@ static G__input_file G__multi_line_temp;
    G__storerewindposition()
 
 //______________________________________________________________________________
-#define G__RESET_TEMPENV                               \
+#define G__RESET_TEMPENV(store)                     \
    G__p_local=store.var_local;                      \
    G__store_struct_offset=store.struct_offset;      \
    G__tagnum = store.tagnum;                        \
@@ -282,7 +282,8 @@ extern "C" void G__set_autoloading(int (*p2f)(char*))
 //______________________________________________________________________________
 static int G__is_valid_dictpos(G__dictposition* dict)
 {
-   int flag = 0;
+   // Return if the dictpos is valid.
+   
    ::Reflex::Scope var = ::Reflex::Scope::GlobalScope();
    ::Reflex::Scope ifunc = ::Reflex::Scope::GlobalScope();
 
@@ -291,7 +292,7 @@ static int G__is_valid_dictpos(G__dictposition* dict)
    if (ifunc != dict->ifunc) return 0;
 
    if (G__struct.alltag < dict->tagnum) return(0);
-   if (G__Dict::GetDict().GetNumTypes() < dict->typenum) return(0);
+   if ( (int)G__Dict::GetDict().GetNumTypes() < dict->typenum) return(0);
 #ifdef G__SHAREDLIB  /* ???, reported by A.Yu.Isupov, anyway no harm */
    if (G__allsl < dict->allsl) return(0);
 #endif
@@ -373,7 +374,7 @@ static void G__show_undo_position(int index)
    fprintf(G__sout, "\n");
 
    fprintf(G__sout, "Typedef  : ");
-   while (typenum < G__Dict::GetDict().GetNumTypes()) {
+   while (typenum < (int)G__Dict::GetDict().GetNumTypes()) {
       ::Reflex::Type typedf(G__Dict::GetDict().GetTypedef(typenum));
       if (typedf.IsTypedef()) fprintf(G__sout, "%s ", typedf.Name(::Reflex::SCOPED).c_str());
       ++typenum;
@@ -833,7 +834,7 @@ extern "C" int G__security_recover(FILE* fout)
 #endif
 
 //______________________________________________________________________________
-static struct G__store_env store;
+static struct G__store_env global_store;
 static struct G__view view;
 static int init_process_cmd_called = 0;
 #if defined(G__REDIRECTIO) && !defined(G__WIN32)
@@ -944,13 +945,13 @@ extern "C" int G__pause()
 #ifndef G__ROOT
          signal(SIGINT, G__killproc);
 #endif // G__ROOT
-         G__SET_TEMPENV;
+         G__SET_TEMPENV(global_store);
          G__in_pause = 1;
       }
       strcpy(command, G__input(command));
       if (!more) {
          G__in_pause = 0;
-         G__RESET_TEMPENV;
+         G__RESET_TEMPENV(global_store);
       }
       oldhandler = (void (*)(int)) signal(SIGINT, G__breakkey);
       G__pause_return = 0;
@@ -1459,14 +1460,18 @@ static void G__create_input_tmpfile(G__input_file& ftemp)
 }
 
 //______________________________________________________________________________
+#ifdef G__WIN32
 static void G__remove_input_tmpfile(G__input_file& ftemp)
 {
    // --
-#ifdef G__WIN32
    unlink(ftemp.name);
-#endif // G__WIN32
    // --
 }
+#else
+static void G__remove_input_tmpfile(G__input_file&)
+{
+}
+#endif // G__WIN32
 
 //______________________________________________________________________________
 extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt)
@@ -2189,8 +2194,8 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
       // must match a function in the source file. This function
       // will be automatically executed.
       //
-      struct G__store_env store;
-      G__SET_TEMPENV;
+      struct G__store_env local_store;
+      G__SET_TEMPENV(local_store);
 
       bool keepIfLoaded = com[1] == 'k';
       temp = 0;
@@ -2308,7 +2313,7 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
       else {
          fprintf(G__sout, "Expecting . in filename\n");
       }
-      G__RESET_TEMPENV;
+      G__RESET_TEMPENV(local_store);
    }
 
    else if (
@@ -2706,11 +2711,11 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
       store_var_type = G__var_type;
       G__var_type = 'p';
 
-      G__SET_TEMPENV;
+      G__SET_TEMPENV(global_store);
       if ('g' == command[0]) G__varmonitor(G__sout,::Reflex::Scope::GlobalScope(), command + index, "", 0);
       else if ('G' == command[0]) G__varmonitor(G__sout,::Reflex::Scope::GlobalScope(), command + index, "", 0);
       else G__varmonitor(G__sout, G__p_local, command + index, "", 0);
-      G__RESET_TEMPENV;
+      G__RESET_TEMPENV(global_store);
 
 #ifdef G__ASM
       G__RECOVER_ASMENV;
@@ -3188,8 +3193,8 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
       if (strstr(syscom, "rootlogon.")) G__init_undo();
 #endif
       {
-         struct G__store_env store;
-         G__SET_TEMPENV;
+         struct G__store_env local_store;
+         G__SET_TEMPENV(local_store);
          buf = G__exec_tempfile(syscom);
          if (rslt) *rslt = buf;
          if (G__ifile.filenum >= 0)
@@ -3221,7 +3226,7 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
 #endif
          if (type.RawType().IsFundamental() && 0 == G__atevaluate(buf)) fprintf(G__sout, "%s\n", syscom);
 #endif
-         G__RESET_TEMPENV;
+         G__RESET_TEMPENV(local_store);
       }
       if (G__security_error) G__cancel_undo_position();
 #ifdef G__SECURITY
@@ -3350,8 +3355,8 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
          G__store_undo_position();
          G__more_pause((FILE*)NULL, 1);
          {
-            struct G__store_env store;
-            G__SET_TEMPENV;
+            struct G__store_env local_store;
+            G__SET_TEMPENV(local_store);
             if (!istmpnam) {
                G__command_eval = 1 ;
                buf = G__exec_tempfile_fp(ftemp.fp);
@@ -3391,10 +3396,10 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
                strcat(syscom, tmp2);
             }
 #endif // G__OLDIMPLEMENTATION1259
-            G__RESET_TEMPENV;
+            G__RESET_TEMPENV(local_store);
          }
          if (!G__func_now) {
-            store.var_local = G__p_local;
+            global_store.var_local = G__p_local;
             G__p_local = ::Reflex::Scope();
          }
          if (
@@ -3408,7 +3413,7 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
          G__command_eval = 0;
          G__free_tempobject();
          if (!G__func_now) {
-            G__p_local = store.var_local;
+            G__p_local = global_store.var_local;
          }
          if (G__security_error) {
             G__cancel_undo_position();
@@ -3481,7 +3486,7 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
                   break;
             }
          }
-         G__SET_TEMPENV;
+         G__SET_TEMPENV(global_store);
          if (evalbase) {
             *evalbase = '\0';
             temp1 = 1;
@@ -3592,7 +3597,7 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
             }
 #endif
          }
-         G__RESET_TEMPENV;
+         G__RESET_TEMPENV(global_store);
 
 #ifdef G__ASM
          G__RECOVER_ASMENV;
