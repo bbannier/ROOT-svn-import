@@ -15,9 +15,9 @@
 */
 
 #define ROOT_RELEASE "5.23/100"
-#define ROOT_RELEASE_DATE "Jan 29 2009"
+#define ROOT_RELEASE_DATE "Feb 6 2009"
 #define ROOT_RELEASE_TIME "10:50:00"
-#define ROOT_SVN_REVISION 27290
+#define ROOT_SVN_REVISION 27364
 #define ROOT_SVN_BRANCH "branches/dev/proof-tags/v5-23-01-PROOF-00"
 #define ROOT_VERSION_CODE 333168
 #define ROOT_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
