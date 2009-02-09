@@ -26,6 +26,7 @@
 #include "TCanvas.h"
 #include "TTree.h"
 #include "TMarker.h"
+#include "TStopwatch.h"
 
 #include <iostream>
 
@@ -37,10 +38,14 @@ using namespace RooStats ;
 void rs401c_debuggingSamplingDist()
 {
   
+  // to time the macro
+  TStopwatch t;
+  t.Start();
+
   // make a simple model
   RooRealVar x("x","", 1,-5,5);
   RooRealVar mu("mu","", 0,-.5, .5);
-  RooRealVar sigma("sigma","", 1, 0.9 ,1.2);
+  RooRealVar sigma("sigma","", 1, 0.5 ,1.5);
   RooGaussian gaus("gaus", "", x, mu, sigma);
   RooArgSet parameters(mu, sigma);
 
@@ -61,6 +66,7 @@ void rs401c_debuggingSamplingDist()
   //// show use of a distribution creator
   RooArgSet* point = new RooArgSet(mu, sigma);
   SamplingDistribution* samp = samplingDistCreator.GetSamplingDistribution(*point);
+  //  samp = samplingDistCreator.GetSamplingDistribution(*point);
 
   // should give a number close to 0.1 b/c the distribution is uniform on [0,1]
   std::cout << "test stat with p=0.1 is " << samp->InverseCDF(.1) << std::endl;
@@ -85,8 +91,8 @@ void rs401c_debuggingSamplingDist()
 
   //////// show use of NeymanConstruction
   // Create points to test
-  mu.setBins(10);
-  sigma.setBins(10);
+  mu.setBins(30);
+  sigma.setBins(30);
   RooDataHist parameterScan("parameterScan", "", parameters);
   //  parameterScan.Scan("mu:sigma");
  
@@ -94,7 +100,7 @@ void rs401c_debuggingSamplingDist()
   RooStats::NeymanConstruction nc;
   // set the distribution creator, which encodes the test statistic
   nc.SetDistributionCreator(samplingDistCreator);
-  nc.SetTestSize(.2); // set size of test
+  nc.SetSize(.2); // set size of test
   nc.SetParameterPointsToTest( parameterScan );
   nc.SetData(*data);
 
@@ -144,6 +150,8 @@ void rs401c_debuggingSamplingDist()
     //delete tmpPoint;
     //    delete mark;
   }
- 
+  t.Stop();
+  t.Print();
+    
 
 }

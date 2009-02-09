@@ -94,7 +94,7 @@ namespace RooStats {
       // specify the nuisance parameters (eg. the rest of the parameters)
       virtual void SetNuisanceParameters(RooArgSet& set) {fNuisParams = &set;}
       // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
-      virtual void SetTestSize(Double_t size) {fSize = size;}
+      virtual void SetSize(Double_t size) {fSize = size;}
       // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
       virtual void SetConfidenceLevel(Double_t cl) {fSize = 1.-cl;}
       
