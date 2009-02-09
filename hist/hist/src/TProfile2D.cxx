@@ -1180,9 +1180,11 @@ void TProfile2D::RebinAxis(Double_t x, TAxis *axis)
 //  Ex:  h->SetBit(TH1::kCanRebin);
 
    TProfile2D* hold = TProfileHelper::RebinAxis(this, x, axis);
-   fTsumwz  = hold->fTsumwz;
-   fTsumwz2 = hold->fTsumwz2;
-   delete hold;
+   if ( hold ) {
+      fTsumwz  = hold->fTsumwz;
+      fTsumwz2 = hold->fTsumwz2;
+      delete hold;
+   }
 }
 
 //______________________________________________________________________________
