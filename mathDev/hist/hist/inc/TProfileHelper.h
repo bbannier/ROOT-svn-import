@@ -305,7 +305,7 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
 }
 
 template <typename T>
-T* RebinAxis(T* p, Double_t x, TAxis *axis)
+T* TProfileHelper::RebinAxis(T* p, Double_t x, TAxis *axis)
 {
 // Profile histogram is resized along axis such that x is in the axis range.
 // The new axis limits are recomputed by doubling iteratively
@@ -316,13 +316,13 @@ T* RebinAxis(T* p, Double_t x, TAxis *axis)
 // The bit kCanRebin must be set before invoking this function.
 //  Ex:  h->SetBit(TH1::kCanRebin);
 
-   if (!p->TestBit(TH1::kCanRebin)) return;
-   if (axis->GetXmin() >= axis->GetXmax()) return;
-   if (axis->GetNbins() <= 0) return;
+   if (!p->TestBit(TH1::kCanRebin)) return 0;
+   if (axis->GetXmin() >= axis->GetXmax()) return 0;
+   if (axis->GetNbins() <= 0) return 0;
 
    Double_t xmin, xmax;
    if (!p->FindNewAxisLimits(axis, x, xmin, xmax))
-      return;
+      return 0;
 
    //save a copy of this histogram
    T *hold = (T*)p->Clone();
