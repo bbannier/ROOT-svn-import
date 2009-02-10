@@ -175,7 +175,8 @@ void TProfile3D::BuildOptions(Double_t tmin, Double_t tmax, Option_t *option)
 
    fBinEntries.Set(fNcells);  //*-* create number of entries per cell array
 
-   Sumw2();                   //*-* create sum of squares of weights array
+   TH1::Sumw2();                   //*-* create sum of squares of weights array times y 
+   if (fgDefaultSumw2) Sumw2();    // optionally create sum of squares of weights
 
    fTmin = tmin;
    fTmax = tmax;

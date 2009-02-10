@@ -228,7 +228,8 @@ void TProfile::BuildOptions(Double_t ymin, Double_t ymax, Option_t *option)
 
    fBinEntries.Set(fNcells);  //*-* create number of entries per bin array
 
-   TH1::Sumw2();                   //*-* create sum of squares of weights array
+   TH1::Sumw2();                   //*-* create sum of squares of weights array times y
+   if (fgDefaultSumw2) Sumw2();    // optionally create sum of squares of weights
 
    fYmin = ymin;
    fYmax = ymax;
@@ -279,6 +280,9 @@ void TProfile::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
 //*-*      =============================================================
 //
 //   this = c1*h1 + c2*h2
+//
+//   c1 and c2 are considered as weights applied to the two summed profiles. 
+//   The operation acts therefore like merging the two profiles with a weight c1 and c2
 //
 
    if (!h1 || !h2) {
@@ -1158,7 +1162,7 @@ TH1D *TProfile::ProjectionX(const char *name, Option_t *option) const
 
       if (binEntries)         cont = GetBinEntries(bin);
       else if (cequalErrors)  cont = GetBinError(bin);
-      else if (binWeight)     cont = GetBinContent(bin) * GetBinEntries(bin);
+      else if (binWeight)     cont = fArray[bin];  // bin content * bin entries
       else                    cont = GetBinContent(bin);    // default case
       
       h1->SetBinContent(bin ,cont);
@@ -1166,8 +1170,17 @@ TH1D *TProfile::ProjectionX(const char *name, Option_t *option) const
       // if option E projected histogram errors are same as profile
       if (computeErrors ) h1->SetBinError(bin , GetBinError(bin) );
       // in case of option W bin error is deduced from bin sum of z**2 values of profile
-      // this is correct only if the profile was filled with weights = 1. 
-      if (binWeight)      h1->SetBinError(bin , TMath::Sqrt(fSumw2.fArray[bin] ) );
+      // this is correct only if the profile is filled with weights =1
+      if (binWeight) h1->SetBinError(bin , TMath::Sqrt(fSumw2.fArray[bin] ) );
+      // in case of bin entries and h1 has sumw2 set set, we need to set the also bin error
+      if (binEntries && h1->GetSumw2() ) {
+         Double_t err2;
+         if (fBinSumw2.fN) 
+            err2 = fBinSumw2.fArray[bin]; 
+         else 
+            err2 = cont; // this is fBinEntries.fArray[bin]
+         h1->SetBinError(bin, TMath::Sqrt(err2 ) ); 
+      }
 
    }
 
@@ -1396,6 +1409,7 @@ void TProfile::Reset(Option_t *option)
 //*-*                =====================================
    TH1D::Reset(option);
    fBinEntries.Reset();
+   fBinSumw2.Reset();
    TString opt = option;
    opt.ToUpper();
    if (opt.Contains("ICE")) return;

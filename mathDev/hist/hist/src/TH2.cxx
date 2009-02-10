@@ -1949,20 +1949,32 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
    h1->SetMarkerColor(this->GetMarkerColor());
    h1->SetMarkerStyle(this->GetMarkerStyle());
 
-   //
+   // check if histogram is weighted
+   // in case need to store sum of weight square/bin for the profile
+   if (GetSumw2() ) h1->Sumw2(); 
+
+
    // Fill the profile histogram
+   // no entries/bin is available so can fill only using bin content as weight
    Double_t cont;
+   TArrayD * binSumw2 = h1->GetBinSumw2(); 
    for (Int_t outBin =0;outBin<=outN+1;outBin++) {
+      if ( binSumw2->fN ) binSumw2->fArray[outBin] = 0; 
       for (Int_t inBin=firstbin;inBin<=lastbin;inBin++) {
-         Int_t& binx = (onX ? outBin :  inBin );
-         Int_t& biny = (onX ?  inBin : outBin );
+         Int_t binx = (onX ? outBin :  inBin );
+         Int_t biny = (onX ?  inBin : outBin );
+         Int_t bin = GetBin(binx,biny); 
          if (ncuts) {
             if (!fPainter->IsInside(binx,biny)) continue;
          }
-         cont =  GetCellContent(binx,biny);
+         cont =  GetBinContent(bin);
 
          if (cont) {
+            Double_t tmp = 0; 
+            // the following fill update wrongly the fBinSumw2- need to save it before
+            if ( binSumw2->fN ) tmp = binSumw2->fArray[outBin];            
             h1->Fill(outAxis.GetBinCenter(outBin),inAxis.GetBinCenter(inBin), cont );
+            if ( binSumw2->fN ) binSumw2->fArray[outBin] = tmp + fSumw2.fArray[bin];
          }
       }
    }

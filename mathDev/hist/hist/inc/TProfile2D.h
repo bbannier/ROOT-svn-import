@@ -101,6 +101,8 @@ public:
    virtual Double_t  GetBinError(Int_t binx, Int_t biny, Int_t) const {return GetBinError(GetBin(binx,biny));}
    virtual Double_t  GetBinEntries(Int_t bin) const;
    virtual Double_t  GetBinEffectiveEntries(Int_t bin);
+   virtual TArrayD *GetBinSumw2() {return &fBinSumw2;}
+   virtual const TArrayD *GetBinSumw2() const {return &fBinSumw2;}
    Option_t         *GetErrorOption() const;
    virtual void      GetStats(Double_t *stats) const;
    virtual Double_t  GetZmin() const {return fZmin;}
