@@ -210,7 +210,8 @@ void TProfile2D::BuildOptions(Double_t zmin, Double_t zmax, Option_t *option)
 
    fBinEntries.Set(fNcells);  //*-* create number of entries per cell array
 
-   Sumw2();                   //*-* create sum of squares of weights array
+   TH1::Sumw2();                   //*-* create sum of squares of weights array times y
+   if (fgDefaultSumw2) Sumw2();    // optionally create sum of squares of weights
 
    fZmin = zmin;
    fZmax = zmax;
@@ -1131,6 +1132,15 @@ TH2D *TProfile2D::ProjectionXY(const char *name, Option_t *option) const
          // in case of option W bin error is deduced from bin sum of z**2 values of profile
          // this is correct only if the profile is unweighted 
          if (binWeight)      h1->SetBinError(bin , TMath::Sqrt(fSumw2.fArray[bin] ) );
+         // in case of bin entries and h1 has sumw2 set set, we need to set the also bin error
+         if (binEntries && h1->GetSumw2() ) {
+            Double_t err2;
+            if (fBinSumw2.fN) 
+               err2 = fBinSumw2.fArray[bin]; 
+            else 
+               err2 = cont;  // this is fBinEntries.fArray[bin]
+            h1->SetBinError(bin, TMath::Sqrt(err2 ) ); 
+         }
       }
    }
    h1->SetEntries(fEntries);

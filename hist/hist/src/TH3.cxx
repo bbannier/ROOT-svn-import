@@ -2268,6 +2268,8 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    delete [] title;
    if (p2 == 0) return 0;
 
+   if (GetSumw2() ) p2->Sumw2(); // store sum of w2 in profile if histo is weighted
+
    bool useUF = opt.Contains("uf");
    bool useOF = opt.Contains("of");
    // Fill the projected histogram taking into accounts underflow/overflows
@@ -2285,6 +2287,9 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    }
    Double_t cont;
    Double_t entries  = 0;
+
+   TArrayD * binSumw2 = p2->GetBinSumw2(); 
+
    for (Int_t ixbin=0;ixbin<=1+fXaxis.GetNbins();ixbin++){
       for (Int_t iybin=0;iybin<=1+fYaxis.GetNbins();iybin++){
          for (Int_t izbin=0;izbin<=1+fZaxis.GetNbins();izbin++){
@@ -2294,7 +2299,14 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
                case 4:
                   // "xy"
                   if (izbin < izmin || izbin > izmax) continue;
-                  if (cont) p2->Fill(fYaxis.GetBinCenter(iybin),fXaxis.GetBinCenter(ixbin),fZaxis.GetBinCenter(izbin), cont);
+                  if (cont) { 
+                     // the following fill update wrongly the fBinSumw2- need to save it before
+                     Int_t outBin = p2->FindBin(iybin, ixbin);
+                     Double_t tmp = 0;
+                     if ( binSumw2->fN ) tmp = binSumw2->fArray[outBin];            
+                     p2->Fill(fYaxis.GetBinCenter(iybin),fXaxis.GetBinCenter(ixbin),fZaxis.GetBinCenter(izbin), cont);
+                     if ( binSumw2->fN ) binSumw2->fArray[outBin] = tmp + fSumw2.fArray[bin];
+                  }
                   break;
 
                case 5:

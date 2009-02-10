@@ -64,6 +64,7 @@ private:
       { MayNotUse("SetBins(Int_t, const Double_t*, Int_t, const Double_t*"); }
    void SetBins(Int_t, Double_t, Double_t, Int_t, Double_t, Double_t, Int_t, Double_t, Double_t)
       { MayNotUse("SetBins(Int_t, Double_t, Double_t, Int_t, Double_t, Double_t, Int_t, Double_t, Double_t"); }
+
    Double_t *GetB()  {return &fBinEntries.fArray[0];}
    Double_t *GetB2() {return (fBinSumw2.fN ? &fBinSumw2.fArray[0] : 0 ); }
    Double_t *GetW()  {return &fArray[0];}
@@ -102,6 +103,8 @@ public:
    virtual Double_t GetBinError(Int_t bin, Int_t, Int_t) const {return GetBinError(bin);}
    virtual Double_t GetBinEntries(Int_t bin) const;
    virtual Double_t GetBinEffectiveEntries(Int_t bin) const;
+   virtual TArrayD *GetBinSumw2() {return &fBinSumw2;}
+   virtual const TArrayD *GetBinSumw2() const {return &fBinSumw2;}
    Option_t        *GetErrorOption() const;
    virtual char    *GetObjectInfo(Int_t px, Int_t py) const;
    virtual void     GetStats(Double_t *stats) const;
