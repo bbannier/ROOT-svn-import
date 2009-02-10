@@ -632,9 +632,9 @@ Int_t TProfile2D::Fill(Double_t x, Double_t y, Double_t z)
    fEntries++;
    binx =fXaxis.FindBin(x);
    biny =fYaxis.FindBin(y);
-   bin  = biny*(fXaxis.GetNbins()+2) + binx;
-   AddBinContent(bin, z);
-   fSumw2.fArray[bin] += (Double_t)z*z;
+   bin = GetBin(binx, biny); 
+   fArray[bin] += z; 
+   fSumw2.fArray[bin] += z*z;
    fBinEntries.fArray[bin] += 1;
    if (fBinSumw2.fN)  fBinSumw2.fArray[bin] += 1;
    if (binx == 0 || binx > fXaxis.GetNbins()) {

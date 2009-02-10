@@ -34,13 +34,13 @@ public:
    friend class TProfileHelper;
 
 protected:
-    TArrayD     fBinEntries;      //number of entries per bin
-    EErrorType  fErrorMode;       //Option to compute errors
-    Double_t    fZmin;            //Lower limit in Z (if set)
-    Double_t    fZmax;            //Upper limit in Z (if set)
-    Bool_t      fScaling;         //!True when TProfile2D::Scale is called
-    Double_t    fTsumwz;          //Total Sum of weight*Z
-    Double_t    fTsumwz2;         //Total Sum of weight*Z*Z
+   TArrayD     fBinEntries;      //number of entries per bin
+   EErrorType  fErrorMode;       //Option to compute errors
+   Double_t    fZmin;            //Lower limit in Z (if set)
+   Double_t    fZmax;            //Upper limit in Z (if set)
+   Bool_t      fScaling;         //!True when TProfile2D::Scale is called
+   Double_t    fTsumwz;          //Total Sum of weight*Z
+   Double_t    fTsumwz2;         //Total Sum of weight*Z*Z
    TArrayD     fBinSumw2;         //Array of sum of squares of weights per bin 
    static Bool_t   fgApproximate; //bin error approximation option
 
