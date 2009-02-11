@@ -42,7 +42,7 @@ enum compareOptions {
    cmpOptStats=8
 };
 
-const int defaultEqualOptions = 0; //cmpOptPrint;
+const int defaultEqualOptions = 1; //cmpOptPrint;
 
 const double defaultErrorLimit = 1.E-10;
 
@@ -3997,6 +3997,8 @@ int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT)
 int main(int argc, char** argv)
 {
    TApplication* theApp = 0;
+
+   TH1::SetDefaultSumw2();
 
    if ( __DRAW__ )
       theApp = new TApplication("App",&argc,argv);

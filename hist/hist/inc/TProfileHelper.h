@@ -105,7 +105,7 @@ void TProfileHelper::Add(T* p, const TH1 *h1,  const TH1 *h2, Double_t c1, Doubl
    // if p1 has not the sum of weight squared/bin stored use just the sum of weights  
    if (ew1 == 0) ew1 = en1;
    if (ew2 == 0) ew2 = en2; 
-   for (bin =0;bin<=p->fN;bin++) {
+   for (bin =0;bin< p->fN;bin++) {
       p->fArray[bin]             = c1*cu1[bin] + c2*cu2[bin];
       p->fSumw2.fArray[bin]      = ac1*er1[bin] + ac2*er2[bin];
       p->fBinEntries.fArray[bin] = ac1*en1[bin] + ac2*en2[bin];
