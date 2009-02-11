@@ -5179,6 +5179,10 @@ TH1 *TH1::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
    }
    hnew->SetBinContent(0,oldBins[0]);
    hnew->SetBinContent(newbins+1,oldBins[nbins+1]);
+   if ( oldErrors ) { 
+      hnew->SetBinError(0,oldErrors[0]);
+      hnew->SetBinError(newbins+1,oldErrors[nbins+1]);      
+   }
    //restore statistics and entries  modified by SetBinContent
    hnew->SetEntries(entries); 
    if (!resetStat) hnew->PutStats(stat);
