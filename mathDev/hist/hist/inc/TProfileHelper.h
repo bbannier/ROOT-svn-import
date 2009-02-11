@@ -109,7 +109,7 @@ void TProfileHelper::Add(T* p, const TH1 *h1,  const TH1 *h2, Double_t c1, Doubl
       p->fArray[bin]             = c1*cu1[bin] + c2*cu2[bin];
       p->fSumw2.fArray[bin]      = ac1*er1[bin] + ac2*er2[bin];
       p->fBinEntries.fArray[bin] = ac1*en1[bin] + ac2*en2[bin];
-      if (p->fBinSumw2.fN ) p->fBinSumw2.fArray[bin]  = ac1*ac1*ew1[bin] + ac1*ac1*ew1[bin];
+      if (p->fBinSumw2.fN ) p->fBinSumw2.fArray[bin]  = ac1*ac1*ew1[bin] + ac2*ac2*ew2[bin];
    }
 }
 
