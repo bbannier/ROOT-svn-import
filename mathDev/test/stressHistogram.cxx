@@ -951,7 +951,7 @@ bool testMulSparse()
    THnSparseD* s2 = new THnSparseD("m3D2-s2", "s2-Title", 3, bsize, xmin, xmax);
    THnSparseD* s3 = new THnSparseD("m3D2-s3", "s3=s1*s2", 3, bsize, xmin, xmax);
 
-//   s1->Sumw2();s2->Sumw2();s3->Sumw2();
+   s1->Sumw2();s2->Sumw2();s3->Sumw2();
 
    UInt_t seed = r.GetSeed();
    // For possible problems
@@ -3026,6 +3026,8 @@ public:
    
    void buildHistograms()
    {
+      if (h3->GetSumw2N() ) s3->Sumw2();
+
       for ( int ix = 0; ix <= h3->GetXaxis()->GetNbins() + 1; ++ix ) {
          double x = centre_deviation * h3->GetXaxis()->GetBinWidth(ix) + h3->GetXaxis()->GetBinCenter(ix);
          for ( int iy = 0; iy <= h3->GetYaxis()->GetNbins() + 1; ++iy ) {
@@ -3096,6 +3098,9 @@ public:
 
    void buildHistogramsWithWeights()
    {
+
+      s3->Sumw2();
+
       for ( int ix = 0; ix <= h3->GetXaxis()->GetNbins() + 1; ++ix ) {
          double x = centre_deviation * h3->GetXaxis()->GetBinWidth(ix) + h3->GetXaxis()->GetBinCenter(ix);
          for ( int iy = 0; iy <= h3->GetYaxis()->GetNbins() + 1; ++iy ) {
@@ -3317,7 +3322,7 @@ public:
       
       // Now the histograms comming from the Profiles!
       options = cmpOptStats;
-      status += equals("TH3 -> PBXY", h2XY, (TH2D*) h3->Project3DProfile("yx UF OF")->ProjectionXY("1", "B"), options);
+      status += equals("TH3 -> PBXY", h2XY, (TH2D*) h3->Project3DProfile("yx UF OF")->ProjectionXY("1", "B"), options );
       status += equals("TH3 -> PBXZ", h2XZ, (TH2D*) h3->Project3DProfile("zx UF OF")->ProjectionXY("2", "B"), options);
       status += equals("TH3 -> PBYX", h2YX, (TH2D*) h3->Project3DProfile("xy UF OF")->ProjectionXY("3", "B"), options);
       status += equals("TH3 -> PBYZ", h2YZ, (TH2D*) h3->Project3DProfile("zy UF OF")->ProjectionXY("4", "B"), options);
@@ -3371,7 +3376,7 @@ public:
       // need to give a diffrent name for each projectino (x,y,Z) otherwise we end-up in different bins
       // t.b.d: ProfileX make a new histo if non compatible
       status += equals("TH2XY -> PBX", h1X, (TH1D*) h2XY->ProfileX("PBX", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
-      status += equals("TH2XY -> PBY", h1Y, (TH1D*) h2XY->ProfileY("PBY", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options );
+      status += equals("TH2XY -> PBY", h1Y, (TH1D*) h2XY->ProfileY("PBY", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
       status += equals("TH2XZ -> PBX", h1X, (TH1D*) h2XZ->ProfileX("PBX", 0,h2XZ->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
       status += equals("TH2XZ -> PBZ", h1Z, (TH1D*) h2XZ->ProfileY("PBZ", 0,h2XZ->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options,1E-12);
       status += equals("TH2YX -> PBY", h1Y, (TH1D*) h2YX->ProfileX("PBY", 0,h2YX->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
@@ -3512,6 +3517,9 @@ int stressHistogram()
            << "       Test without weights       \n" 
            << "**********************************\n"
            << endl;
+
+
+   TH1::SetDefaultSumw2(); 
    
    ProjectionTester* ht = new ProjectionTester();
    ht->buildHistograms();
