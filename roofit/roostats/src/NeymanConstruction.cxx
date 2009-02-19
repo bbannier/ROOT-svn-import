@@ -119,8 +119,6 @@ TList* NeymanConstruction::GenSamplingDistribution(const char* asciiFilePat) con
     fSaveList.Close();
   }
 
-  cout << "prova 3" << endl;
-
   return SamplingList;
 }
 

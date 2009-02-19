@@ -47,7 +47,7 @@ END_HTML
 
 #include "RooGlobalFunc.h"
 #include "RooWorkspace.h"
-#include "RooMCStudy.h"
+#include "TRandom.h"
 
 namespace RooStats {
 
@@ -64,6 +64,7 @@ namespace RooStats {
       fPOI = 0;
       fNuisParams=0;
       fExtended = kFALSE;
+      fRand = new TRandom();
     }
 
     virtual ~ToyMCSampler() {
@@ -72,37 +73,53 @@ namespace RooStats {
     
      // Main interface to get a ConfInterval, pure virtual
     virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& allParameters) {
-       std::vector<Double_t> testStatVec;
-       //       cout << " about to generate sampling dist " << endl;
+      std::vector<Double_t> testStatVec;
+      //       cout << " about to generate sampling dist " << endl;
 
+      RooMsgService::instance().setGlobalKillBelow(RooMsgService::ERROR) ;
+      RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+
+      for(Int_t i=0; i<fNtoys; ++i){
+	//cout << " on toy number " << i << endl;
+	RooAbsData* toydata = (RooAbsData*)GenerateToyData(allParameters);
+	testStatVec.push_back( fTestStat->Evaluate(*toydata, allParameters) );
+	delete toydata;
+      }
+
+      cout << " generated sampling dist " << endl;
+      return new SamplingDistribution("SamplingDist", "Samplint Distribution of Test Statistic", testStatVec );
+    } 
+
+     virtual RooAbsData* GenerateToyData(RooArgSet& allParameters) const {
        RooAbsPdf* pdf = fWS->pdf(fPdfName);
        // need a nicer way to specify observables in the dataset
        RooArgSet* observables = pdf->getVariables();
 
-       // Set the parameters to desired values for generating toys	
+       // Set the parameters to desired values for generating toys
        RooStats::SetParameters(&allParameters, observables);
+       /*
+       TIter      itr = observables->createIterator();
+       RooRealVar* myarg;
+       while ((myarg = (RooRealVar *)itr.Next())) { 
+	 cout << myarg->GetName() << " = " << myarg->getVal() << "  " ;
+       }
+       cout << endl;
+       */
 
        if(fPOI) observables->remove(*fPOI, kFALSE, kTRUE);
        if(fNuisParams) observables->remove(*fNuisParams, kFALSE, kTRUE);
-       // Need a nice way to determine how many events in a toy experiment
 
-       RooMCStudy *toyGenHandler = new RooMCStudy(*pdf,*observables,RooFit::Extended(fExtended));
-       RooMsgService::instance().setGlobalKillBelow(RooMsgService::ERROR) ;
-       toyGenHandler->generate(fNtoys, fNevents, kTRUE);
-       RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+       //fluctuate the number of events if fExtended is on
+       Int_t nEvents = fNevents;
+       if(fExtended) nEvents = fRand->Poisson(fNevents);
 
-       for(Int_t i=0; i<fNtoys; ++i){
-	 //cout << " on toy number " << i << endl;
-	 RooAbsData* toydata = (RooAbsData*)toyGenHandler->genData(i);
-	 testStatVec.push_back( fTestStat->Evaluate(*toydata, allParameters) );
-	 delete toydata;
-       }
-
+       RooAbsData* data = (RooAbsData*)pdf->generate(*observables, nEvents);
        delete observables;
-       //delete toyGenHandler;
-              cout << " generated sampling dist " << endl;
-       return new SamplingDistribution("SamplingDist", "Samplint Distribution of Test Statistic", testStatVec );
-     } 
+       //       delete pdf;
+       return data;
+     }
+
+
 
       // Main interface to evaluate the test statistic on a dataset
      virtual Double_t EvaluateTestStatistic(RooAbsData& data, RooArgSet& allParameters) {
@@ -183,6 +200,7 @@ namespace RooStats {
       Int_t fNtoys;
       Int_t fNevents;
       Bool_t fExtended;
+      TRandom* fRand;
 
    protected:
       ClassDef(ToyMCSampler,1)   // A simple implementation of the DistributionCreator interface
