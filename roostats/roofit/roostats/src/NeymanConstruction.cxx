@@ -15,7 +15,7 @@ BEGIN_HTML
 <p>
 NeymanConstruction is a concrete implementation of teh NeymanConstruction interface that, as the name suggests,
 performs a NeymanConstruction.  
-It produces a RooStats::SetInterval, which is a concrete implementation of the ConfInterval interface.  
+It produces a RooStats::PointSetInterval, which is a concrete implementation of the ConfInterval interface.  
 </p>
 <p>
 The Neyman Construction is not a uniquely defined statistical technique, it requires that one specify an ordering rule 
@@ -26,9 +26,9 @@ enforced by other light weight classes.
 </p>
 <p>
 The Neyman Construction considers every point in the parameter space independently, no assumptions are 
-made that the interval is connected or of a particular shape.  As a result, the SetInterval class is used to 
+made that the interval is connected or of a particular shape.  As a result, the PointSetInterval class is used to 
 represent the result.  The user indicate which points in the parameter space to perform the constrution by providing
-a SetInterval instance with the desired points.
+a PointSetInterval instance with the desired points.
 </p>
 <p>
 This class is fairly light weight, because the choice of parameter points to be considered is factorized and so is the 
@@ -36,7 +36,7 @@ creation of the sampling distribution of the test statistic (which is done by a 
 <ul>
 <li> using a DistributionCreator to create the SamplingDistribution of a user-defined test statistic for each parameter point of interest,</li>
 <li>defining the acceptance region in the data by finding the thresholds on the test statistic such that the integral of the sampling distribution is of the appropriate size and consistent with the limits of integration (eg. upper/lower/central limits), </li>
-<li> and finally updating the SetInterval based on whether the value of the test statistic evaluated on the data are in the acceptance region.</li>
+<li> and finally updating the PointSetInterval based on whether the value of the test statistic evaluated on the data are in the acceptance region.</li>
 </p>
 END_HTML
 */
@@ -50,17 +50,16 @@ END_HTML
 #include "RooStats/RooStatsUtils.h"
 #endif
 
-#ifndef RooStats_SetInterval
-#include "RooStats/SetInterval.h"
+#ifndef RooStats_PointSetInterval
+#include "RooStats/PointSetInterval.h"
 #endif
+
+#include "RooStats/SamplingDistribution.h"
 
 #include "RooDataSet.h"
 #include "RooGlobalFunc.h"
-#include "RooCmdArg.h"
 #include "TFile.h"
 #include "TTree.h"
-
-#include "RooStats/SamplingDistribution.h"
 
 ClassImp(RooStats::NeymanConstruction) ;
 
@@ -127,7 +126,7 @@ TList* NeymanConstruction::GenSamplingDistribution(const char* asciiFilePat) con
 
 ConfInterval* NeymanConstruction::GetInterval() const {
   // Main interface to get a RooStats::ConfInterval.  
-  // It constructs a RooStats::SetInterval.
+  // It constructs a RooStats::PointSetInterval.
 
   // local variables
   RooAbsData* data = fWS->data(fDataName);
@@ -224,8 +223,8 @@ ConfInterval* NeymanConstruction::run(TList *SamplingList) const {
   std::cout << npass << " points in interval" << std::endl;
 
   // create an interval based fPointsToTest
-  SetInterval* interval 
-    = new SetInterval("ClassicalConfidenceInterval", "ClassicalConfidenceInterval", *fPointsToTest);
+  PointSetInterval* interval 
+    = new PointSetInterval("ClassicalConfidenceInterval", "ClassicalConfidenceInterval", *fPointsToTest);
   
   delete data;
   return interval;

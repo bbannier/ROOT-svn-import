@@ -27,13 +27,13 @@ END_HTML
 #include "Rtypes.h"
 #endif
 
-#include "RooStats/DistributionCreator.h"
-#include "RooAbsPdf.h"
-#include "RooArgSet.h"
-#include "RooRealVar.h"
-#include "SamplingDistribution.h"
-#include "TRandom.h"
 #include <vector>
+
+#include "RooStats/DistributionCreator.h"
+#include "RooStats/SamplingDistribution.h"
+
+#include "RooRealVar.h"
+#include "TRandom.h"
 
 namespace RooStats {
 
@@ -89,7 +89,7 @@ namespace RooStats {
       virtual void SetNuisanceParameters(RooArgSet&) {}
 
       // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
-      virtual void SetSize(Double_t size) {fSize = size;}
+      virtual void SetTestSize(Double_t size) {fSize = size;}
       // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
       virtual void SetConfidenceLevel(Double_t cl) {fSize = 1.-cl;}
 

@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: SetInterval.cxx 26317 2009-01-13 15:31:05Z cranmer $
+// @(#)root/roostats:$Id: PointSetInterval.cxx 26317 2009-01-13 15:31:05Z cranmer $
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -8,8 +8,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef RooStats_SetInterval
-#define RooStats_SetInterval
+#ifndef RooStats_PointSetInterval
+#define RooStats_PointSetInterval
 
 #ifndef ROO_ARG_SET
 #include "RooArgSet.h"
@@ -23,7 +23,7 @@
 
 
 namespace RooStats {
- class SetInterval : public ConfInterval {
+ class PointSetInterval : public ConfInterval {
   private:
     //    RooArgSet* fParameters; // parameter of interest
     Double_t fConfidenceLevel; // confidence level
@@ -31,12 +31,12 @@ namespace RooStats {
 
   public:
     // constructors,destructors
-    SetInterval();
-    SetInterval(const char* name);
-    SetInterval(const char* name, const char* title);
-    SetInterval(const char* name, RooTreeData&);
-    SetInterval(const char* name, const char* title, RooTreeData&);
-    virtual ~SetInterval();
+    PointSetInterval();
+    PointSetInterval(const char* name);
+    PointSetInterval(const char* name, const char* title);
+    PointSetInterval(const char* name, RooTreeData&);
+    PointSetInterval(const char* name, const char* title, RooTreeData&);
+    virtual ~PointSetInterval();
         
     virtual Bool_t IsInInterval(RooArgSet&);
     virtual void SetConfidenceLevel(Double_t cl) {fConfidenceLevel = cl;}
@@ -55,7 +55,7 @@ namespace RooStats {
 
     
   protected:
-    ClassDef(SetInterval,1)  // Concrete implementation of ConfInterval for simple 1-D intervals in the form [a,b]
+    ClassDef(PointSetInterval,1)  // Concrete implementation of ConfInterval for simple 1-D intervals in the form [a,b]
       
   };
 }

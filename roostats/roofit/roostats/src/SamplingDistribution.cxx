@@ -25,6 +25,7 @@ The class supports merging.
 
 
 #include "RooStats/SamplingDistribution.h"
+
 #include <algorithm>
 
 /// ClassImp for building the THtml documentation of the class 

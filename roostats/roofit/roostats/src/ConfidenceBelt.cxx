@@ -35,8 +35,6 @@
 #ifndef RooStats_ConfidenceBelt
 #include "RooStats/ConfidenceBelt.h"
 #endif
-#include "RooAbsReal.h"
-#include <string>
 
 #include "RooDataSet.h"
 #include "RooDataHist.h"
