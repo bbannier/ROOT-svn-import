@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: ProfileLikelihoodFunctor.h 26805 2009-01-13 17:45:57Z cranmer $
+// @(#)root/roostats:$Id: ProfileLikelihoodTestStat.h 26805 2009-01-13 17:45:57Z cranmer $
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -8,14 +8,14 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOSTATS_ProfileLikelihoodFunctor
-#define ROOSTATS_ProfileLikelihoodFunctor
+#ifndef ROOSTATS_ProfileLikelihoodTestStat
+#define ROOSTATS_ProfileLikelihoodTestStat
 
 //_________________________________________________
 /*
 BEGIN_HTML
 <p>
-ProfileLikelihoodFunctor is a simple implementation of the DistributionCreator interface used for debugging.
+ProfileLikelihoodTestStat is a simple implementation of the DistributionCreator interface used for debugging.
 The sampling distribution is uniformly random between [0,1] and is INDEPENDENT of the data.  So it is not useful
 for true statistical tests, but it is useful for debugging.
 </p>
@@ -27,29 +27,27 @@ END_HTML
 #include "Rtypes.h"
 #endif
 
-#include "RooStats/DistributionCreator.h"
-#include "RooAbsPdf.h"
-#include "RooArgSet.h"
-#include "RooRealVar.h"
-#include "RooDataSet.h"
-#include "SamplingDistribution.h"
-#include "TRandom.h"
 #include <vector>
-#include "RooStats/ToyMCDistCreator.h"
+
+#include "RooStats/DistributionCreator.h"
+#include "RooStats/SamplingDistribution.h"
+#include "RooStats/TestStatistic.h"
+#include "RooStats/ToyMCSampler.h"
+
 #include "RooProfileLL.h"
 #include "RooNLLVar.h"
 
 namespace RooStats {
 
- class ProfileLikelihoodFunctor {
+  class ProfileLikelihoodTestStat : public TestStatistic{
 
    public:
-     ProfileLikelihoodFunctor(RooAbsPdf& pdf) {
+     ProfileLikelihoodTestStat(RooAbsPdf& pdf) {
        fPdf = &pdf;
        fProfile = 0;
        fNll = 0;
      }
-     virtual ~ProfileLikelihoodFunctor() {
+     virtual ~ProfileLikelihoodTestStat() {
        //       delete fRand;
        //       delete fTestStatistic;
      }
@@ -105,11 +103,8 @@ namespace RooStats {
       RooNLLVar* fNll;
 
    protected:
-      ClassDef(ProfileLikelihoodFunctor,1)   
+      ClassDef(ProfileLikelihoodTestStat,1)   
    };
-
- typedef ToyMCDistCreator<ProfileLikelihoodFunctor> ProfileDistributionCreator;
-
 
 }
 

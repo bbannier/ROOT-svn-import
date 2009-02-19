@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: ToyMCDistCreator.h 26805 2009-01-13 17:45:57Z cranmer $
+// @(#)root/roostats:$Id: ToyMCSampler.h 26805 2009-01-13 17:45:57Z cranmer $
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -8,14 +8,14 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOSTATS_ToyMCDistCreator
-#define ROOSTATS_ToyMCDistCreator
+#ifndef ROOSTATS_ToyMCSampler
+#define ROOSTATS_ToyMCSampler
 
 //_________________________________________________
 /*
 BEGIN_HTML
 <p>
-ToyMCDistCreator is a simple implementation of the DistributionCreator interface used for debugging.
+ToyMCSampler is a simple implementation of the DistributionCreator interface used for debugging.
 The sampling distribution is uniformly random between [0,1] and is INDEPENDENT of the data.  So it is not useful
 for true statistical tests, but it is useful for debugging.
 </p>
@@ -27,27 +27,23 @@ END_HTML
 #include "Rtypes.h"
 #endif
 
+#include <vector>
+
 #include "RooStats/DistributionCreator.h"
-#include "RooAbsPdf.h"
-#include "RooArgSet.h"
+#include "RooStats/SamplingDistribution.h"
+#include "RooStats/TestStatistic.h"
+
 #include "RooGlobalFunc.h"
-#include "RooRealVar.h"
-#include "RooAbsData.h"
-#include "RooDataSet.h"
 #include "RooWorkspace.h"
 #include "RooMCStudy.h"
-#include "SamplingDistribution.h"
-#include "TRandom.h"
-#include <vector>
 
 namespace RooStats {
 
-  template <class TestStatFunctor>
-    class ToyMCDistCreator : public DistributionCreator {
+    class ToyMCSampler : public DistributionCreator {
 
 
   public:
-    ToyMCDistCreator(TestStatFunctor &ts) {
+    ToyMCSampler(TestStatistic &ts) {
       fTestStat = &ts;
       fWS = new RooWorkspace();
       fOwnsWorkspace = true;
@@ -58,7 +54,7 @@ namespace RooStats {
       fExtended = kFALSE;
     }
 
-    virtual ~ToyMCDistCreator() {
+    virtual ~ToyMCSampler() {
       if(fOwnsWorkspace) delete fWS;
     }
     
@@ -149,7 +145,7 @@ namespace RooStats {
       virtual void SetNuisanceParameters(RooArgSet& set) {fNuisParams = &set;}
 
       // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
-      virtual void SetSize(Double_t size) {fSize = size;}
+      virtual void SetTestSize(Double_t size) {fSize = size;}
       // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
       virtual void SetConfidenceLevel(Double_t cl) {fSize = 1.-cl;}
 
@@ -166,13 +162,13 @@ namespace RooStats {
       const char* fDataName; // name of data set in workspace
       RooArgSet* fPOI; // RooArgSet specifying  parameters of interest for interval
       RooArgSet* fNuisParams;// RooArgSet specifying  nuisance parameters for interval
-      TestStatFunctor* fTestStat;
+      TestStatistic* fTestStat;
       Int_t fNtoys;
       Int_t fNevents;
       Bool_t fExtended;
 
    protected:
-      ClassDef(ToyMCDistCreator,1)   // A simple implementation of the DistributionCreator interface
+      ClassDef(ToyMCSampler,1)   // A simple implementation of the DistributionCreator interface
 	};
 }
 

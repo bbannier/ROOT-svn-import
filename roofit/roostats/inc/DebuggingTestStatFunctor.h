@@ -27,20 +27,22 @@ END_HTML
 #include "Rtypes.h"
 #endif
 
+#include <vector>
+
 #include "RooStats/DistributionCreator.h"
+#include "RooStats/TestStatistic.h"
+#include "RooStats/ToyMCSampler.h"
+
 #include "RooAbsPdf.h"
 #include "RooArgSet.h"
 #include "RooRealVar.h"
 #include "RooDataSet.h"
 #include "SamplingDistribution.h"
 #include "TRandom.h"
-#include <vector>
-#include "RooStats/ToyMCDistCreator.h"
-
 
 namespace RooStats {
 
- class DebuggingTestStatFunctor {
+  class DebuggingTestStatFunctor : public TestStatistic {
 
    public:
      DebuggingTestStatFunctor() {
@@ -71,9 +73,6 @@ namespace RooStats {
    protected:
       ClassDef(DebuggingTestStatFunctor,1)   
    };
-
- typedef ToyMCDistCreator<DebuggingTestStatFunctor> TestDistributionCreator;
-
 
 }
 

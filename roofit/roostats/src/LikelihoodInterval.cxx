@@ -56,9 +56,11 @@ END_HTML
 #ifndef RooStats_LikelihoodInterval
 #include "RooStats/LikelihoodInterval.h"
 #endif
+#include "RooStats/RooStatsUtils.h"
+
 #include "RooAbsReal.h"
 #include "RooMsgService.h"
-#include "RooStats/RooStatsUtils.h"
+
 #include <string>
 
 

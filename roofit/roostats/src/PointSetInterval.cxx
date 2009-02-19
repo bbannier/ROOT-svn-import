@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: SetInterval.cxx 26317 2009-01-13 15:31:05Z cranmer $
+// @(#)root/roostats:$Id: PointSetInterval.cxx 26317 2009-01-13 15:31:05Z cranmer $
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -11,7 +11,7 @@
 /*****************************************************************************
  * Project: RooStats
  * Package: RooFit/RooStats  
- * @(#)root/roofit/roostats:$Id: SetInterval.cxx 26317 2009-01-13 15:31:05Z cranmer $
+ * @(#)root/roofit/roostats:$Id: PointSetInterval.cxx 26317 2009-01-13 15:31:05Z cranmer $
  * Original Author: Kyle Cranmer
  *   Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
  *
@@ -22,7 +22,7 @@
 //_________________________________________________________
 //
 // BEGIN_HTML
-// SetInterval is a concrete implementation of the ConfInterval interface.  
+// PointSetInterval is a concrete implementation of the ConfInterval interface.  
 // It implements simple general purpose interval of arbitrary dimensions and shape.
 // It does not assume the interval is connected.
 // It uses either a RooDataSet (eg. a list of parameter points in the interval) or
@@ -32,48 +32,46 @@
 //
 //
 
-#ifndef RooStats_SetInterval
-#include "RooStats/SetInterval.h"
+#ifndef RooStats_PointSetInterval
+#include "RooStats/PointSetInterval.h"
 #endif
-#include "RooAbsReal.h"
-#include <string>
 
 #include "RooDataSet.h"
 #include "RooDataHist.h"
 
-ClassImp(RooStats::SetInterval) ;
+ClassImp(RooStats::PointSetInterval) ;
 
 using namespace RooStats;
 
 //____________________________________________________________________
-SetInterval::SetInterval() 
+PointSetInterval::PointSetInterval() 
 {
    // Default constructor
 }
 
 //____________________________________________________________________
-SetInterval::SetInterval(const char* name) :
+PointSetInterval::PointSetInterval(const char* name) :
   ConfInterval(name,name), fParameterPointsInInterval(0)
 {
    // Alternate constructor
 }
 
 //____________________________________________________________________
-SetInterval::SetInterval(const char* name, const char* title) :
+PointSetInterval::PointSetInterval(const char* name, const char* title) :
    ConfInterval(name,title), fParameterPointsInInterval(0)
 {
    // Alternate constructor
 }
 
 //____________________________________________________________________
-SetInterval::SetInterval(const char* name, RooTreeData& data) :
+PointSetInterval::PointSetInterval(const char* name, RooTreeData& data) :
    ConfInterval(name,name), fParameterPointsInInterval(&data)
 {
    // Alternate constructor
 }
 
 //____________________________________________________________________
-SetInterval::SetInterval(const char* name, const char* title, RooTreeData& data) :
+PointSetInterval::PointSetInterval(const char* name, const char* title, RooTreeData& data) :
    ConfInterval(name,title), fParameterPointsInInterval(&data)
 {
    // Alternate constructor
@@ -82,7 +80,7 @@ SetInterval::SetInterval(const char* name, const char* title, RooTreeData& data)
 
 
 //____________________________________________________________________
-SetInterval::~SetInterval()
+PointSetInterval::~PointSetInterval()
 {
    // Destructor
 
@@ -90,7 +88,7 @@ SetInterval::~SetInterval()
 
 
 //____________________________________________________________________
-Bool_t SetInterval::IsInInterval(RooArgSet &parameterPoint) 
+Bool_t PointSetInterval::IsInInterval(RooArgSet &parameterPoint) 
 {  
    // Method to determine if a parameter point is in the interval
 
@@ -133,14 +131,14 @@ Bool_t SetInterval::IsInInterval(RooArgSet &parameterPoint)
 }
 
 //____________________________________________________________________
-RooArgSet* SetInterval::GetParameters() const
+RooArgSet* PointSetInterval::GetParameters() const
 {  
    // returns list of parameters
   return (RooArgSet*) fParameterPointsInInterval->get()->Clone();
 }
 
 //____________________________________________________________________
-Bool_t SetInterval::CheckParameters(RooArgSet &parameterPoint) const
+Bool_t PointSetInterval::CheckParameters(RooArgSet &parameterPoint) const
 {  
 
    if (parameterPoint.getSize() != fParameterPointsInInterval->get()->getSize() ) {

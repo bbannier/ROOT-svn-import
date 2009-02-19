@@ -61,15 +61,9 @@ END_HTML
 #include "RooRealVar.h"
 #include "RooProfileLL.h"
 #include "RooNLLVar.h"
-#include "RooDataSet.h"
 #include "RooGlobalFunc.h"
-#include "RooCmdArg.h"
-
-
 
 ClassImp(RooStats::ProfileLikelihoodCalculator) ;
-
-
 
 using namespace RooFit;
 using namespace RooStats;

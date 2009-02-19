@@ -21,6 +21,7 @@
 #endif
 
 #include "RooStats/DistributionCreator.h"
+
 #include "RooTreeData.h"
 #include "RooWorkspace.h"
 #include "RooAbsPdf.h"
@@ -28,7 +29,6 @@
 #include "TList.h"
 
 class RooAbsData; 
-
 
 namespace RooStats {
 
@@ -40,7 +40,7 @@ namespace RooStats {
      NeymanConstruction();
      virtual ~NeymanConstruction() {}
     
-      // Main interface to get a ConfInterval (will be a SetInterval)
+      // Main interface to get a ConfInterval (will be a PointSetInterval)
       virtual TList*        GenSamplingDistribution(const char* asciiFilePat = 0) const; 
       virtual ConfInterval* GetInterval(const char* asciiFilePat) const;
       virtual ConfInterval* GetInterval() const;
@@ -48,7 +48,7 @@ namespace RooStats {
 
       // in addition to interface we also need:
       // Set the DistributionCreator (eg. ToyMC or FFT, includes choice of TestStatistic)
-      void SetDistributionCreator(DistributionCreator& distCreator) {fDistCreator = &distCreator;}
+      void SetTestStatSampler(DistributionCreator& distCreator) {fDistCreator = &distCreator;}
       // Choose upper limit and unified limits use 1., lower limits use (0.), and central limits use (0.5)
       void SetLeftSideTailFraction(Double_t leftSideFraction = 1.) {fLeftSideFraction = leftSideFraction;} 
 
@@ -94,7 +94,7 @@ namespace RooStats {
       // specify the nuisance parameters (eg. the rest of the parameters)
       virtual void SetNuisanceParameters(RooArgSet& set) {fNuisParams = &set;}
       // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)
-      virtual void SetSize(Double_t size) {fSize = size;}
+      virtual void SetTestSize(Double_t size) {fSize = size;}
       // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
       virtual void SetConfidenceLevel(Double_t cl) {fSize = 1.-cl;}
       

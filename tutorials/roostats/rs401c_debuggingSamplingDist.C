@@ -13,8 +13,8 @@
 #endif
 #include "RooStats/ConfInterval.h"
 #include "RooStats/SamplingDistribution.h"
-#include "RooStats/ToyMCDistCreator.h"
-#include "RooStats/ProfileLikelihoodFunctor.h"
+#include "RooStats/ToyMCSampler.h"
+#include "RooStats/ProfileLikelihoodTestStat.h"
 
 #include "RooStats/NeymanConstruction.h"
 
@@ -55,9 +55,8 @@ void rs401c_debuggingSamplingDist()
   // and RooAbsArg* GetTestStatisitc()
   // 
   // As an example, we use the ProfileLikelihoodFunctor.
-  ProfileLikelihoodFunctor testStatFunct(gaus);
-  ToyMCDistCreator<ProfileLikelihoodFunctor>
-    samplingDistCreator(testStatFunct) ;
+  ProfileLikelihoodTestStat testStatFunct(gaus);
+  ToyMCSampler samplingDistCreator(testStatFunct) ;
   samplingDistCreator.SetPdf(gaus);
   samplingDistCreator.SetParameters(parameters);
   samplingDistCreator.SetNToys(100);
@@ -91,16 +90,16 @@ void rs401c_debuggingSamplingDist()
 
   //////// show use of NeymanConstruction
   // Create points to test
-  mu.setBins(30);
-  sigma.setBins(30);
+  mu.setBins(5);
+  sigma.setBins(5);
   RooDataHist parameterScan("parameterScan", "", parameters);
   //  parameterScan.Scan("mu:sigma");
  
   // Create a Neyman Construction
   RooStats::NeymanConstruction nc;
   // set the distribution creator, which encodes the test statistic
-  nc.SetDistributionCreator(samplingDistCreator);
-  nc.SetSize(.2); // set size of test
+  nc.SetTestStatSampler(samplingDistCreator);
+  nc.SetTestSize(.2); // set size of test
   nc.SetParameterPointsToTest( parameterScan );
   nc.SetData(*data);
 
