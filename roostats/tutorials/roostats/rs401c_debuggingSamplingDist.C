@@ -59,8 +59,8 @@ void rs401c_debuggingSamplingDist()
   ToyMCSampler samplingDistCreator(testStatFunct) ;
   samplingDistCreator.SetPdf(gaus);
   samplingDistCreator.SetParameters(parameters);
-  samplingDistCreator.SetNToys(100);
-  samplingDistCreator.SetNEventsToys(1000);
+  samplingDistCreator.SetNToys(500);
+  samplingDistCreator.SetNEventsToys(100); // this needs to match what was used for this dataset
 
   //// show use of a distribution creator
   RooArgSet* point = new RooArgSet(mu, sigma);
@@ -90,8 +90,8 @@ void rs401c_debuggingSamplingDist()
 
   //////// show use of NeymanConstruction
   // Create points to test
-  mu.setBins(10);
-  sigma.setBins(10);
+  mu.setBins(30);
+  sigma.setBins(30);
   RooDataHist parameterScan("parameterScan", "", parameters);
   //  parameterScan.Scan("mu:sigma");
  
