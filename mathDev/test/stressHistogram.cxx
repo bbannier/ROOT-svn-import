@@ -2309,14 +2309,14 @@ bool testLabel()
    for ( Int_t e = 0; e < nEvents; ++e ) {
       Double_t value = r.Uniform(minRange, maxRange);
       Int_t bin = h1->GetXaxis()->FindBin(value);
-      h1->AddBinContent( bin, 1.0);
+      h1->Fill( h1->GetXaxis()->GetBinCenter(bin), 1.0);
 
       ostringstream label;
       label << bin;
       h2->Fill(label.str().c_str(), 1.0);
    }
 
-   bool status = equals("Fill(char*)", h1, h2, cmpOptStats, 1E-13);
+   bool status = equals("Fill(char*)", h1, h2, cmpOptStats | cmpOptDebug, 1E-13);
    delete h1;
    return status;
 }
@@ -2363,6 +2363,7 @@ bool testRefReadProf1D()
       p1->Write();
       return 0;
    } else {
+      TH1::SetDefaultSumw2(false);
       TProfile* p1 = static_cast<TProfile*> ( refFile->Get("rr1D-p1") );
       TProfile* p2 = new TProfile("rr1D-p2", "p2-Title", numberOfBins, minRange, maxRange);
 //      p2->Sumw2();
@@ -2374,6 +2375,7 @@ bool testRefReadProf1D()
       }  
 
       bool ret = equals("Ref Read Prof 1D", p1, p2, cmpOptStats);
+      TH1::SetDefaultSumw2(true);
       delete p1;
       return ret;
    }
@@ -2441,7 +2443,7 @@ bool testRefReadProf2D()
          p2->Fill(x, y, z, 1.0);
       }  
 
-      bool ret = equals("Ref Read Prof 2D", p1, p2, cmpOptStats);
+      bool ret = equals("Ref Read Prof 2D", p1, p2, cmpOptStats );
       delete p1;
       return ret;
    }
@@ -2745,12 +2747,17 @@ bool testArrayRebinProfile()
 
 bool test2DRebin()
 {
+
    Int_t xrebin = TMath::Nint( r.Uniform(minRebin, maxRebin) );
    Int_t yrebin = TMath::Nint( r.Uniform(minRebin, maxRebin) );
    TH2D* h2d = new TH2D("h2d","Original Histogram", 
                        xrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange, 
                        yrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange);
    
+   std::cout << " xrebin, yrebin " << xrebin << "  " << yrebin << std::endl; 
+   std::cout << "nx, ny " <<  h2d->GetXaxis()->GetNbins()  <<  "  " << h2d->GetYaxis()->GetNbins() << std::endl; 
+   
+
    UInt_t seed = r.GetSeed();
    r.SetSeed(seed);
    for ( Int_t i = 0; i < nEvents; ++i )
@@ -2765,7 +2772,7 @@ bool test2DRebin()
    for ( Int_t i = 0; i < nEvents; ++i )
       h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ), r.Uniform( minRange * .9 , maxRange * 1.1 ) );
 
-   bool ret = equals("TestIntRebin2D", h2d2, h3, cmpOptStats);
+   bool ret = equals("TestIntRebin2D", h2d2, h3, cmpOptStats | cmpOptDebug);
    delete h2d;
    delete h2d2;
    return ret;
