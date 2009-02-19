@@ -34,6 +34,7 @@ END_HTML
 #include "RooStats/TestStatistic.h"
 #include "RooStats/ToyMCSampler.h"
 
+#include "RooRealVar.h"
 #include "RooProfileLL.h"
 #include "RooNLLVar.h"
 
