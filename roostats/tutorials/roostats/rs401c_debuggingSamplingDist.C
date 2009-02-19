@@ -90,8 +90,8 @@ void rs401c_debuggingSamplingDist()
 
   //////// show use of NeymanConstruction
   // Create points to test
-  mu.setBins(5);
-  sigma.setBins(5);
+  mu.setBins(10);
+  sigma.setBins(10);
   RooDataHist parameterScan("parameterScan", "", parameters);
   //  parameterScan.Scan("mu:sigma");
  

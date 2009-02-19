@@ -1,5 +1,6 @@
 // @(#)root/roostats:$Id: ToyMCSampler.h 26805 2009-01-13 17:45:57Z cranmer $
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
+// Additions and modifications by Mario Pelliccioni
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
@@ -15,9 +16,19 @@
 /*
 BEGIN_HTML
 <p>
-ToyMCSampler is a simple implementation of the DistributionCreator interface used for debugging.
-The sampling distribution is uniformly random between [0,1] and is INDEPENDENT of the data.  So it is not useful
-for true statistical tests, but it is useful for debugging.
+ToyMCSampler is a simple implementation of the TestStatSampler interface.
+It generates Toy Monte Carlo for a given parameter point, and evaluates a 
+test statistic that the user specifies (passed via the RooStats::TestStatistic interface).
+
+We need to provide a nice way for the user to:
+<ul>
+  <li>specify the number of toy experiments (needed to probe a given confidence level)</li>
+  <li>specify if the number of events per toy experiment should be fixed (conditioning) or floating (unconditional)</li>
+  <li>specify if any auxiliary observations should be fixed (conditioning) or floating (unconditional)</li>
+  <li>specify if nuisance paramters should be part of the toy MC: eg: integrated out (Bayesian marginalization)</li>
+</ul>
+
+All of these should be made fairly explicit in the interface.
 </p>
 END_HTML
 */
@@ -60,7 +71,6 @@ namespace RooStats {
     
      // Main interface to get a ConfInterval, pure virtual
     virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& allParameters) {
-       // normally this method would be complex, but here it is simple for debugging
        std::vector<Double_t> testStatVec;
        //       cout << " about to generate sampling dist " << endl;
 
@@ -75,7 +85,7 @@ namespace RooStats {
        toyGenHandler->generate(fNtoys, fNevents, kTRUE);
 
        for(Int_t i=0; i<fNtoys; ++i){
-	 cout << " on toy number " << i << endl;
+	 //cout << " on toy number " << i << endl;
 	 RooAbsData* toydata = (RooAbsData*)toyGenHandler->genData(i);
 	 testStatVec.push_back( fTestStat->Evaluate(*toydata, allParameters) );
 	 delete toydata;
@@ -84,7 +94,7 @@ namespace RooStats {
        delete observables;
        //delete toyGenHandler;
               cout << " generated sampling dist " << endl;
-       return new SamplingDistribution("TemplatedSamplingDist", "Samplint Distribution of Test Statistic", testStatVec );
+       return new SamplingDistribution("SamplingDist", "Samplint Distribution of Test Statistic", testStatVec );
      } 
 
       // Main interface to evaluate the test statistic on a dataset
