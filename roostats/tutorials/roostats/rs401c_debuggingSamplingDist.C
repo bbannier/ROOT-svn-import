@@ -15,7 +15,6 @@
 #include "RooStats/SamplingDistribution.h"
 #include "RooStats/ToyMCSampler.h"
 #include "RooStats/ProfileLikelihoodTestStat.h"
-
 #include "RooStats/NeymanConstruction.h"
 
 #include "RooDataSet.h"
@@ -49,6 +48,8 @@ void rs401c_debuggingSamplingDist()
   RooGaussian gaus("gaus", "", x, mu, sigma);
   RooArgSet parameters(mu, sigma);
 
+  Int_t nEventsData = 100;
+
   //// create a distribution creator.  
   // The Templated Distribution Creator is templated on a class which implements:
   // Double_t EvaluateTestStatistic(RooAbsData&, RooArgSet& parameterPoint)
@@ -60,7 +61,7 @@ void rs401c_debuggingSamplingDist()
   samplingDistCreator.SetPdf(gaus);
   samplingDistCreator.SetParameters(parameters);
   samplingDistCreator.SetNToys(100);
-  samplingDistCreator.SetNEventsToys(100); // this needs to match what was used for this dataset
+  samplingDistCreator.SetNEventsToys(nEventsData); // this needs to match what was used for this dataset
 
   //// show use of a distribution creator
   RooArgSet* point = new RooArgSet(mu, sigma);
@@ -75,7 +76,7 @@ void rs401c_debuggingSamplingDist()
 
   // it knows the test statistic, so you can ask it 
   // to evaluate the test statistic on data at a point
-  RooDataSet* data = gaus.generate(RooArgSet(x), 100);
+  RooDataSet* data = gaus.generate(RooArgSet(x), nEventsData);
   
   std::cout << "This data has mean, stdev = " << data->moment(x,1,0.) << ", " << data->moment(x,2,data->moment(x,1,0.) ) << endl; 
   std::cout << "test stat for this data is " 
@@ -108,6 +109,7 @@ void rs401c_debuggingSamplingDist()
   
   // use the Neyman Construction
   ConfInterval* interval = nc.GetInterval();
+
   //These two methods produce the same result as GetInterval() but
   //the sampling distribution is saved in a root file by the first
   //method for further use. The second method uses the distribution
