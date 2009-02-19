@@ -82,7 +82,9 @@ namespace RooStats {
        // Need a nice way to determine how many events in a toy experiment
 
        RooMCStudy *toyGenHandler = new RooMCStudy(*pdf,*observables,RooFit::Extended(fExtended));
+       RooMsgService::instance().setGlobalKillBelow(RooMsgService::ERROR) ;
        toyGenHandler->generate(fNtoys, fNevents, kTRUE);
+       RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
 
        for(Int_t i=0; i<fNtoys; ++i){
 	 //cout << " on toy number " << i << endl;
