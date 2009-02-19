@@ -59,7 +59,7 @@ void rs401c_debuggingSamplingDist()
   ToyMCSampler samplingDistCreator(testStatFunct) ;
   samplingDistCreator.SetPdf(gaus);
   samplingDistCreator.SetParameters(parameters);
-  samplingDistCreator.SetNToys(500);
+  samplingDistCreator.SetNToys(100);
   samplingDistCreator.SetNEventsToys(100); // this needs to match what was used for this dataset
 
   //// show use of a distribution creator
