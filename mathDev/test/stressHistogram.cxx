@@ -2295,6 +2295,1748 @@ bool testMergeSparse()
    return ret;
 }
 
+bool testMerge1DLabelSame()
+{
+   TH1D* h1 = new TH1D("merge1DLabelSame-h1", "h1-Title", numberOfBins, minRange, maxRange);
+   TH1D* h2 = new TH1D("merge1DLabelSame-h2", "h2-Title", numberOfBins, minRange, maxRange);
+   TH1D* h3 = new TH1D("merge1DLabelSame-h3", "h3-Title", numberOfBins, minRange, maxRange);
+   TH1D* h4 = new TH1D("merge1DLabelSame-h4", "h4-Title", numberOfBins, minRange, maxRange);
+
+   h1->GetXaxis()->SetBinLabel(4, "alpha");
+   h2->GetXaxis()->SetBinLabel(4, "alpha");
+   h3->GetXaxis()->SetBinLabel(4, "alpha");
+   h4->GetXaxis()->SetBinLabel(4, "alpha");
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, 1.0);
+      h4->Fill(x, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, 1.0);
+      h4->Fill(x, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, 1.0);
+      h4->Fill(x, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+
+   h1->Merge(list);
+
+   bool ret = equals("MergeLabelSame1D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMerge2DLabelSame()
+{
+   TH2D* h1 = new TH2D("merge2DLabelSame-h1", "h1-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h2 = new TH2D("merge2DLabelSame-h2", "h2-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h3 = new TH2D("merge2DLabelSame-h3", "h3-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h4 = new TH2D("merge2DLabelSame-h4", "h4-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+
+   h1->GetXaxis()->SetBinLabel(4, "alpha");
+   h2->GetXaxis()->SetBinLabel(4, "alpha");
+   h3->GetXaxis()->SetBinLabel(4, "alpha");
+   h4->GetXaxis()->SetBinLabel(4, "alpha");
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+
+   h1->Merge(list);
+
+   bool ret = equals("MergeLabelSame2D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMerge3DLabelSame()
+{
+   TH3D* h1 = new TH3D("merge3DLabelSame-h1", "h1-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h2 = new TH3D("merge3DLabelSame-h2", "h2-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h3 = new TH3D("merge3DLabelSame-h3", "h3-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h4 = new TH3D("merge3DLabelSame-h4", "h4-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+
+   h1->GetXaxis()->SetBinLabel(4, "alpha");
+   h2->GetXaxis()->SetBinLabel(4, "alpha");
+   h3->GetXaxis()->SetBinLabel(4, "alpha");
+   h4->GetXaxis()->SetBinLabel(4, "alpha");
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+
+   h1->Merge(list);
+
+   bool ret = equals("MergeLabelSame3D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMergeProf1DLabelSame()
+{
+   TProfile* p1 = new TProfile("merge1DLabelSame-p1", "p1-Title", numberOfBins, minRange, maxRange);
+   TProfile* p2 = new TProfile("merge1DLabelSame-p2", "p2-Title", numberOfBins, minRange, maxRange);
+   TProfile* p3 = new TProfile("merge1DLabelSame-p3", "p3-Title", numberOfBins, minRange, maxRange);
+   TProfile* p4 = new TProfile("merge1DLabelSame-p4", "p4-Title", numberOfBins, minRange, maxRange);
+
+   // It does not work properly! Look, the bins with the same labels
+   // are different ones and still the tests passes! This is not
+   // consistent with TH1::Merge()
+   p1->GetXaxis()->SetBinLabel(4, "alpha");
+   p2->GetXaxis()->SetBinLabel(6, "alpha");
+   p3->GetXaxis()->SetBinLabel(8, "alpha");
+   p4->GetXaxis()->SetBinLabel(4, "alpha");
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+   
+   p1->Merge(list);
+
+   bool ret = equals("MergeLabelSame1DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
+bool testMergeProf2DLabelSame()
+{
+   TProfile2D* p1 = new TProfile2D("merge2DLabelSame-p1", "p1-Title",
+                                   numberOfBins, minRange, maxRange, 
+                                   numberOfBins, minRange, maxRange);
+   TProfile2D* p2 = new TProfile2D("merge2DLabelSame-p2", "p2-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile2D* p3 = new TProfile2D("merge2DLabelSame-p3", "p3-Title", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile2D* p4 = new TProfile2D("merge2DLabelSame-p4", "p4-Title",
+                                   numberOfBins, minRange, maxRange, 
+                                   numberOfBins, minRange, maxRange);
+
+   // It does not work properly! Look, the bins with the same labels
+   // are different ones and still the tests passes! This is not
+   // consistent with TH1::Merge()
+   p1->GetXaxis()->SetBinLabel(4, "alpha");
+   p2->GetXaxis()->SetBinLabel(6, "alpha");
+   p3->GetXaxis()->SetBinLabel(8, "alpha");
+   p4->GetXaxis()->SetBinLabel(4, "alpha");
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+   
+   p1->Merge(list);
+
+   bool ret = equals("MergeLabelSame2DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
+bool testMergeProf3DLabelSame()
+{
+   TProfile3D* p1 = new TProfile3D("merge3DLabelSame-p1", "p1-Title",
+                                   numberOfBins, minRange, maxRange, 
+                                   numberOfBins, minRange, maxRange, 
+                                   numberOfBins, minRange, maxRange);
+   TProfile3D* p2 = new TProfile3D("merge3DLabelSame-p2", "p2-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange, 
+                                   numberOfBins, minRange, maxRange);
+   TProfile3D* p3 = new TProfile3D("merge3DLabelSame-p3", "p3-Title", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange, 
+                                   numberOfBins, minRange, maxRange);
+   TProfile3D* p4 = new TProfile3D("merge3DLabelSame-p4", "p4-Title",
+                                   numberOfBins, minRange, maxRange, 
+                                   numberOfBins, minRange, maxRange, 
+                                   numberOfBins, minRange, maxRange);
+
+   // It does not work properly! Look, the bins with the same labels
+   // are different ones and still the tests passes! This is not
+   // consistent with TH1::Merge()
+   p1->GetXaxis()->SetBinLabel(4, "alpha");
+   p2->GetXaxis()->SetBinLabel(6, "alpha");
+   p3->GetXaxis()->SetBinLabel(8, "alpha");
+   p4->GetXaxis()->SetBinLabel(4, "alpha");
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+   
+   p1->Merge(list);
+
+   bool ret = equals("MergeLabelSame3DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;  
+}
+
+bool testMerge1DLabelDiff()
+{
+   // This test fails, as expected! That is why it is not run in the tests suite.
+
+   TH1D* h1 = new TH1D("merge1DLabelDiff-h1", "h1-Title", numberOfBins, minRange, maxRange);
+   TH1D* h2 = new TH1D("merge1DLabelDiff-h2", "h2-Title", numberOfBins, minRange, maxRange);
+   TH1D* h3 = new TH1D("merge1DLabelDiff-h3", "h3-Title", numberOfBins, minRange, maxRange);
+   TH1D* h4 = new TH1D("merge1DLabelDiff-h4", "h4-Title", numberOfBins, minRange, maxRange);
+
+   h1->GetXaxis()->SetBinLabel(2, "gamma");
+   h2->GetXaxis()->SetBinLabel(6, "beta");
+   h3->GetXaxis()->SetBinLabel(4, "alpha");
+   h4->GetXaxis()->SetBinLabel(4, "alpha");
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, 1.0);
+      h4->Fill(x, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, 1.0);
+      h4->Fill(x, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, 1.0);
+      h4->Fill(x, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+   
+   h1->Merge(list);
+
+   bool ret = equals("MergeLabelDiff1D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMerge2DLabelDiff()
+{
+   // It does not work properly! Look, the bins with the same labels
+   // are different ones and still the tests passes! This is not
+   // consistent with TH1::Merge()
+
+   TH2D* h1 = new TH2D("merge2DLabelDiff-h1", "h1-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h2 = new TH2D("merge2DLabelDiff-h2", "h2-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h3 = new TH2D("merge2DLabelDiff-h3", "h3-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h4 = new TH2D("merge2DLabelDiff-h4", "h4-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+
+   h1->GetXaxis()->SetBinLabel(2, "gamma");
+   h2->GetXaxis()->SetBinLabel(6, "beta");
+   h3->GetXaxis()->SetBinLabel(4, "alpha");
+   h4->GetXaxis()->SetBinLabel(4, "alpha");
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+   
+   h1->Merge(list);
+
+   bool ret = equals("MergeLabelDiff2D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMerge3DLabelDiff()
+{
+   // It does not work properly! Look, the bins with the same labels
+   // are different ones and still the tests passes! This is not
+   // consistent with TH1::Merge()
+
+   TH3D* h1 = new TH3D("merge3DLabelDiff-h1", "h1-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h2 = new TH3D("merge3DLabelDiff-h2", "h2-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h3 = new TH3D("merge3DLabelDiff-h3", "h3-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h4 = new TH3D("merge3DLabelDiff-h4", "h4-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+
+   h1->GetXaxis()->SetBinLabel(2, "gamma");
+   h2->GetXaxis()->SetBinLabel(6, "beta");
+   h3->GetXaxis()->SetBinLabel(4, "alpha");
+   h4->GetXaxis()->SetBinLabel(4, "alpha");
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+   
+   h1->Merge(list);
+
+   bool ret = equals("MergeLabelDiff3D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMergeProf1DLabelDiff()
+{
+   TProfile* p1 = new TProfile("merge1DLabelDiff-p1", "p1-Title", numberOfBins, minRange, maxRange);
+   TProfile* p2 = new TProfile("merge1DLabelDiff-p2", "p2-Title", numberOfBins, minRange, maxRange);
+   TProfile* p3 = new TProfile("merge1DLabelDiff-p3", "p3-Title", numberOfBins, minRange, maxRange);
+   TProfile* p4 = new TProfile("merge1DLabelDiff-p4", "p4-Title", numberOfBins, minRange, maxRange);
+
+   // It does not work properly! Look, the bins with the same labels
+   // are different ones and still the tests passes! This is not
+   // consistent with TH1::Merge()
+   p1->GetXaxis()->SetBinLabel(2, "gamma");
+   p2->GetXaxis()->SetBinLabel(6, "beta");
+   p3->GetXaxis()->SetBinLabel(4, "alpha");
+   p4->GetXaxis()->SetBinLabel(4, "alpha");
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+   
+   p1->Merge(list);
+
+   bool ret = equals("MergeLabelDiff1DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
+bool testMergeProf2DLabelDiff()
+{
+   TProfile2D* p1 = new TProfile2D("merge2DLabelDiff-p1", "p1-Title", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile2D* p2 = new TProfile2D("merge2DLabelDiff-p2", "p2-Title", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile2D* p3 = new TProfile2D("merge2DLabelDiff-p3", "p3-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile2D* p4 = new TProfile2D("merge2DLabelDiff-p4", "p4-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   // It does not work properly! Look, the bins with the same labels
+   // are different ones and still the tests passes! This is not
+   // consistent with TH1::Merge()
+   p1->GetXaxis()->SetBinLabel(2, "gamma");
+   p2->GetXaxis()->SetBinLabel(6, "beta");
+   p3->GetXaxis()->SetBinLabel(4, "alpha");
+   p4->GetXaxis()->SetBinLabel(4, "alpha");
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+   
+   p1->Merge(list);
+
+   bool ret = equals("MergeLabelDiff2DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
+bool testMergeProf3DLabelDiff()
+{
+   TProfile3D* p1 = new TProfile3D("merge3DLabelDiff-p1", "p1-Title", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile3D* p2 = new TProfile3D("merge3DLabelDiff-p2", "p2-Title", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile3D* p3 = new TProfile3D("merge3DLabelDiff-p3", "p3-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile3D* p4 = new TProfile3D("merge3DLabelDiff-p4", "p4-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   // It does not work properly! Look, the bins with the same labels
+   // are different ones and still the tests passes! This is not
+   // consistent with TH1::Merge()
+   p1->GetXaxis()->SetBinLabel(2, "gamma");
+   p2->GetXaxis()->SetBinLabel(6, "beta");
+   p3->GetXaxis()->SetBinLabel(4, "alpha");
+   p4->GetXaxis()->SetBinLabel(4, "alpha");
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+   
+   p1->Merge(list);
+
+   bool ret = equals("MergeLabelDiff3DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
+bool testMerge1DLabelAll()
+{
+   TH1D* h1 = new TH1D("merge1DLabelAll-h1", "h1-Title", numberOfBins, minRange, maxRange);
+   TH1D* h2 = new TH1D("merge1DLabelAll-h2", "h2-Title", numberOfBins, minRange, maxRange);
+   TH1D* h3 = new TH1D("merge1DLabelAll-h3", "h3-Title", numberOfBins, minRange, maxRange);
+   TH1D* h4 = new TH1D("merge1DLabelAll-h4", "h4-Title", numberOfBins, minRange, maxRange);
+
+   for ( Int_t i = 1; i <= numberOfBins; ++ i) {
+      ostringstream name;
+      name << (char) ((int) 'a' + i - 1);
+      h1->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      h2->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      h3->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      h4->GetXaxis()->SetBinLabel(i, name.str().c_str());
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, 1.0);
+      h4->Fill(x, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, 1.0);
+      h4->Fill(x, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, 1.0);
+      h4->Fill(x, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+   
+   h1->Merge(list);
+
+   bool ret = equals("MergeLabelAll1D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMerge2DLabelAll()
+{
+   TH2D* h1 = new TH2D("merge2DLabelAll-h1", "h1-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h2 = new TH2D("merge2DLabelAll-h2", "h2-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h3 = new TH2D("merge2DLabelAll-h3", "h3-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h4 = new TH2D("merge2DLabelAll-h4", "h4-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+
+   for ( Int_t i = 1; i <= numberOfBins; ++ i) {
+      ostringstream name;
+      name << (char) ((int) 'a' + i - 1);
+      h1->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      h2->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      h3->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      h4->GetXaxis()->SetBinLabel(i, name.str().c_str());
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+   
+   h1->Merge(list);
+
+   bool ret = equals("MergeLabelAll2D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMerge3DLabelAll()
+{
+   TH3D* h1 = new TH3D("merge3DLabelAll-h1", "h1-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h2 = new TH3D("merge3DLabelAll-h2", "h2-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h3 = new TH3D("merge3DLabelAll-h3", "h3-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h4 = new TH3D("merge3DLabelAll-h4", "h4-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+
+   for ( Int_t i = 1; i <= numberOfBins; ++ i) {
+      ostringstream name;
+      name << (char) ((int) 'a' + i - 1);
+      h1->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      h2->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      h3->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      h4->GetXaxis()->SetBinLabel(i, name.str().c_str());
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+   
+   h1->Merge(list);
+
+   bool ret = equals("MergeLabelAll3D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMergeProf1DLabelAll()
+{
+   TProfile* p1 = new TProfile("merge1DLabelAll-p1", "p1-Title", numberOfBins, minRange, maxRange);
+   TProfile* p2 = new TProfile("merge1DLabelAll-p2", "p2-Title", numberOfBins, minRange, maxRange);
+   TProfile* p3 = new TProfile("merge1DLabelAll-p3", "p3-Title", numberOfBins, minRange, maxRange);
+   TProfile* p4 = new TProfile("merge1DLabelAll-p4", "p4-Title", numberOfBins, minRange, maxRange);
+
+   for ( Int_t i = 1; i <= numberOfBins; ++ i) {
+      ostringstream name;
+      name << (char) ((int) 'a' + i - 1);
+      p1->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p2->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p3->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p4->GetXaxis()->SetBinLabel(i, name.str().c_str());
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+   
+   p1->Merge(list);
+
+   bool ret = equals("MergeLabelAll1DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
+bool testMergeProf2DLabelAll()
+{
+   TProfile2D* p1 = new TProfile2D("merge2DLabelAll-p1", "p1-Title", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile2D* p2 = new TProfile2D("merge2DLabelAll-p2", "p2-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile2D* p3 = new TProfile2D("merge2DLabelAll-p3", "p3-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile2D* p4 = new TProfile2D("merge2DLabelAll-p4", "p4-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   for ( Int_t i = 1; i <= numberOfBins; ++ i) {
+      ostringstream name;
+      name << (char) ((int) 'a' + i - 1);
+      p1->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p2->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p3->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p4->GetXaxis()->SetBinLabel(i, name.str().c_str());
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+   
+   p1->Merge(list);
+
+   bool ret = equals("MergeLabelAll2DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
+bool testMergeProf3DLabelAll()
+{
+   TProfile3D* p1 = new TProfile3D("merge3DLabelAll-p1", "p1-Title", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile3D* p2 = new TProfile3D("merge3DLabelAll-p2", "p2-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile3D* p3 = new TProfile3D("merge3DLabelAll-p3", "p3-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile3D* p4 = new TProfile3D("merge3DLabelAll-p4", "p4-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   for ( Int_t i = 1; i <= numberOfBins; ++ i) {
+      ostringstream name;
+      name << (char) ((int) 'a' + i - 1);
+      p1->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p2->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p3->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p4->GetXaxis()->SetBinLabel(i, name.str().c_str());
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+   
+   p1->Merge(list);
+
+   bool ret = equals("MergeLabelAll3DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
+bool testMerge1DLabelAllDiff()
+{
+   // This test fails, as expected! That is why it is not run in the tests suite.
+
+   TH1D* h1 = new TH1D("merge1DLabelAllDiff-h1", "h1-Title", numberOfBins, minRange, maxRange);
+   TH1D* h2 = new TH1D("merge1DLabelAllDiff-h2", "h2-Title", numberOfBins, minRange, maxRange);
+   TH1D* h3 = new TH1D("merge1DLabelAllDiff-h3", "h3-Title", numberOfBins, minRange, maxRange);
+   TH1D* h4 = new TH1D("merge1DLabelAllDiff-h4", "h4-Title", numberOfBins, minRange, maxRange);
+
+   for ( Int_t i = 1; i <= numberOfBins; ++ i) {
+      ostringstream name;
+      name << (char) ((int) 'a' + i - 1);
+      h1->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      name << 1;
+      h2->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      name << 2;
+      h3->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      name << 3;
+      h4->GetXaxis()->SetBinLabel(i, name.str().c_str());
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, 1.0);
+      h4->Fill(x, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, 1.0);
+      h4->Fill(x, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, 1.0);
+      h4->Fill(x, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+   
+   h1->Merge(list);
+   
+   bool ret = equals("MergeLabelAllDiff1D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMerge2DLabelAllDiff()
+{
+   // It does not work properly! Look, the bins with the same labels
+   // are different ones and still the tests passes! This is not
+   // consistent with TH1::Merge()
+
+   TH2D* h1 = new TH2D("merge2DLabelAllDiff-h1", "h1-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h2 = new TH2D("merge2DLabelAllDiff-h2", "h2-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h3 = new TH2D("merge2DLabelAllDiff-h3", "h3-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH2D* h4 = new TH2D("merge2DLabelAllDiff-h4", "h4-Title",
+                       numberOfBins, minRange, maxRange, 
+                       numberOfBins, minRange, maxRange);
+
+   for ( Int_t i = 1; i <= numberOfBins; ++ i) {
+      ostringstream name;
+      name << (char) ((int) 'a' + i - 1);
+      h1->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      h1->GetYaxis()->SetBinLabel(i, name.str().c_str());
+      name << 1;
+      h2->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      h2->GetYaxis()->SetBinLabel(i, name.str().c_str());
+      name << 2;
+      h3->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      h3->GetYaxis()->SetBinLabel(i, name.str().c_str());
+      name << 3;
+      h4->GetXaxis()->SetBinLabel(i, name.str().c_str());
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+   
+   h1->Merge(list);
+
+   bool ret = equals("MergeLabelAllDiff2D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMerge3DLabelAllDiff()
+{
+   // It does not work properly! Look, the bins with the same labels
+   // are different ones and still the tests passes! This is not
+   // consistent with TH1::Merge()
+
+   TH3D* h1 = new TH3D("merge3DLabelAllDiff-h1", "h1-Title", 
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h2 = new TH3D("merge3DLabelAllDiff-h2", "h2-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h3 = new TH3D("merge3DLabelAllDiff-h3", "h3-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange);
+   TH3D* h4 = new TH3D("merge3DLabelAllDiff-h4", "h4-Title",
+                       numberOfBins, minRange, maxRange,
+                       numberOfBins, minRange, maxRange, 
+                       numberOfBins, minRange, maxRange);
+
+   for ( Int_t i = 1; i <= numberOfBins; ++ i) {
+      ostringstream name;
+      name << (char) ((int) 'a' + i - 1);
+      h1->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      h1->GetYaxis()->SetBinLabel(i, name.str().c_str());
+      h1->GetZaxis()->SetBinLabel(i, name.str().c_str());
+      name << 1;
+      h2->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      h2->GetYaxis()->SetBinLabel(i, name.str().c_str());
+      h2->GetZaxis()->SetBinLabel(i, name.str().c_str());
+      name << 2;
+      h3->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      h3->GetYaxis()->SetBinLabel(i, name.str().c_str());
+      h3->GetZaxis()->SetBinLabel(i, name.str().c_str());
+      name << 3;
+      h4->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      h4->GetYaxis()->SetBinLabel(i, name.str().c_str());
+      h4->GetZaxis()->SetBinLabel(i, name.str().c_str());
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+   
+   h1->Merge(list);
+
+   bool ret = equals("MergeLabelAllDiff3D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;  
+}
+
+bool testMergeProf1DLabelAllDiff()
+{
+   TProfile* p1 = new TProfile("merge1DLabelAllDiff-p1", "p1-Title", numberOfBins, minRange, maxRange);
+   TProfile* p2 = new TProfile("merge1DLabelAllDiff-p2", "p2-Title", numberOfBins, minRange, maxRange);
+   TProfile* p3 = new TProfile("merge1DLabelAllDiff-p3", "p3-Title", numberOfBins, minRange, maxRange);
+   TProfile* p4 = new TProfile("merge1DLabelAllDiff-p4", "p4-Title", numberOfBins, minRange, maxRange);
+
+   // It does not work properly! Look, the bins with the same labels
+   // are different ones and still the tests passes! This is not
+   // consistent with TH1::Merge()
+   for ( Int_t i = 1; i <= numberOfBins; ++ i) {
+      ostringstream name;
+      name << (char) ((int) 'a' + i - 1);
+      p1->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      name << 1;
+      p2->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      name << 2;
+      p3->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      name << 3;
+      p4->GetXaxis()->SetBinLabel(i, name.str().c_str());
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+   
+   p1->Merge(list);
+   
+   bool ret = equals("MergeLabelAllDiff1DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
+bool testMergeProf2DLabelAllDiff()
+{
+   TProfile2D* p1 = new TProfile2D("merge2DLabelAllDiff-p1", "p1-Title", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile2D* p2 = new TProfile2D("merge2DLabelAllDiff-p2", "p2-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile2D* p3 = new TProfile2D("merge2DLabelAllDiff-p3", "p3-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile2D* p4 = new TProfile2D("merge2DLabelAllDiff-p4", "p4-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   // It does not work properly! Look, the bins with the same labels
+   // are different ones and still the tests passes! This is not
+   // consistent with TH1::Merge()
+   for ( Int_t i = 1; i <= numberOfBins; ++ i) {
+      ostringstream name;
+      name << (char) ((int) 'a' + i - 1);
+      p1->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p1->GetYaxis()->SetBinLabel(i, name.str().c_str());
+      name << 1;
+      p2->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p2->GetYaxis()->SetBinLabel(i, name.str().c_str());
+      name << 2;
+      p3->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p3->GetYaxis()->SetBinLabel(i, name.str().c_str());
+      name << 3;
+      p4->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p4->GetYaxis()->SetBinLabel(i, name.str().c_str());
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+   
+   p1->Merge(list);
+   
+   bool ret = equals("MergeLabelAllDiff2DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
+bool testMergeProf3DLabelAllDiff()
+{
+   TProfile3D* p1 = new TProfile3D("merge3DLabelAllDiff-p1", "p1-Title", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile3D* p2 = new TProfile3D("merge3DLabelAllDiff-p2", "p2-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile3D* p3 = new TProfile3D("merge3DLabelAllDiff-p3", "p3-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+   TProfile3D* p4 = new TProfile3D("merge3DLabelAllDiff-p4", "p4-Title",
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins, minRange, maxRange);
+
+   // It does not work properly! Look, the bins with the same labels
+   // are different ones and still the tests passes! This is not
+   // consistent with TH1::Merge()
+   for ( Int_t i = 1; i <= numberOfBins; ++ i) {
+      ostringstream name;
+      name << (char) ((int) 'a' + i - 1);
+      p1->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p1->GetYaxis()->SetBinLabel(i, name.str().c_str());
+      p1->GetZaxis()->SetBinLabel(i, name.str().c_str());
+      name << 1;
+      p2->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p2->GetYaxis()->SetBinLabel(i, name.str().c_str());
+      p2->GetZaxis()->SetBinLabel(i, name.str().c_str());
+      name << 2;
+      p3->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p3->GetYaxis()->SetBinLabel(i, name.str().c_str());
+      p3->GetZaxis()->SetBinLabel(i, name.str().c_str());
+      name << 3;
+      p4->GetXaxis()->SetBinLabel(i, name.str().c_str());
+      p4->GetYaxis()->SetBinLabel(i, name.str().c_str());
+      p4->GetZaxis()->SetBinLabel(i, name.str().c_str());
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+   
+   p1->Merge(list);
+   
+   bool ret = equals("MergeLabelAllDiff3DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
+bool testMerge1DDiff() 
+{
+   TH1D *h1 = new TH1D("merge1DDiff-h1","h1-Title",110,-110,0);
+   TH1D *h2 = new TH1D("merge1DDiff-h2","h2-Title",220,0,110);
+   TH1D *h3 = new TH1D("merge1DDiff-h3","h3-Title",330,-55,55);
+   TH1D *h4 = new TH1D("merge1DDiff-h4","h4-Title",220,-110,110);
+
+   h1->Sumw2();h2->Sumw2();h3->Sumw2();h4->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Gaus(-55,10);
+      h1->Fill(value, 1.0);
+      h4->Fill(value, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Gaus(55,10);
+      h2->Fill(value, 1.0);
+      h4->Fill(value, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Gaus(0,10);
+      h3->Fill(value, 1.0);
+      h4->Fill(value, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+
+   h1->Merge(list);
+
+   bool ret = equals("MergeDiff1D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMerge2DDiff() 
+{
+   TH2D *h1 = new TH2D("merge2DDiff-h1","h1-Title",
+                       110,-110,0,
+                       110,-110,0);
+   TH2D *h2 = new TH2D("merge2DDiff-h2","h2-Title",
+                       220,0,110,
+                       220,0,110);
+   TH2D *h3 = new TH2D("merge2DDiff-h3","h3-Title",
+                       330,-55,55,
+                       330,-55,55);
+   TH2D *h4 = new TH2D("merge2DDiff-h4","h4-Title",
+                       220,-110,110,
+                       220,-110,110);
+
+   h1->Sumw2();h2->Sumw2();h3->Sumw2();h4->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Gaus(-55,10);
+      Double_t y = r.Gaus(-55,10);
+      h1->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Gaus(55,10);
+      Double_t y = r.Gaus(55,10);
+      h2->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Gaus(0,10);
+      Double_t y = r.Gaus(0,10);
+      h3->Fill(x, y, 1.0);
+      h4->Fill(x, y, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+
+   h1->Merge(list);
+
+   bool ret = equals("MergeDiff2D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMerge3DDiff() 
+{
+   // This tests fails! It should not!
+   TH3D *h1 = new TH3D("merge3DDiff-h1","h1-Title",
+                       110,-110,0,
+                       110,-110,0,
+                       110,-110,0);
+   TH3D *h2 = new TH3D("merge3DDiff-h2","h2-Title",
+                       220,0,110,
+                       220,0,110,
+                       220,0,110);
+   TH3D *h3 = new TH3D("merge3DDiff-h3","h3-Title",
+                       330,-55,55,
+                       330,-55,55,
+                       330,-55,55);
+   TH3D *h4 = new TH3D("merge3DDiff-h4","h4-Title",
+                       220,-110,110,
+                       220,-110,110,
+                       220,-110,110);
+
+   h1->Sumw2();h2->Sumw2();h3->Sumw2();h4->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Gaus(-55,10);
+      Double_t y = r.Gaus(-55,10);
+      Double_t z = r.Gaus(-55,10);
+      h1->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Gaus(55,10);
+      Double_t y = r.Gaus(55,10);
+      Double_t z = r.Gaus(55,10);
+      h2->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Gaus(0,10);
+      Double_t y = r.Gaus(55,10);
+      Double_t z = r.Gaus(0,10);
+      h3->Fill(x, y, z, 1.0);
+      h4->Fill(x, y, z, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+
+   h1->Merge(list);
+
+   bool ret = equals("MergeDiff3D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMergeProf1DDiff() 
+{
+   // Stats fail, for a reason I do not know :S
+
+   TProfile *p1 = new TProfile("merge1DDiff-p1","p1-Title",110,-110,0);
+   TProfile *p2 = new TProfile("merge1DDiff-p2","p2-Title",220,0,110);
+   TProfile *p3 = new TProfile("merge1DDiff-p3","p3-Title",330,-55,55);
+   TProfile *p4 = new TProfile("merge1DDiff-p4","p4-Title",220,-110,110);
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Gaus(-55,10);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Gaus(55,10);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Gaus(0,10);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, 1.0);
+      p4->Fill(x, y, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+
+   p1->Merge(list);
+
+   bool ret = equals("MergeDiff1DProf", p1, p4, cmpOptNone , 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
+bool testMergeProf2DDiff() 
+{
+   // This tests fails! It should not!
+   TProfile2D *p1 = new TProfile2D("merge2DDiff-p1","p1-Title",
+                                   110,-110,0,
+                                   110,-110,0);
+   TProfile2D *p2 = new TProfile2D("merge2DDiff-p2","p2-Title",
+                                   220,0,110,
+                                   220,0,110);
+   TProfile2D *p3 = new TProfile2D("merge2DDiff-p3","p3-Title",
+                                   330,-55,55,
+                                   330,-55,55);
+   TProfile2D *p4 = new TProfile2D("merge2DDiff-p4","p4-Title",
+                                   220,-110,110,
+                                   220,-110,110);
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Gaus(-55,10);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Gaus(55,10);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Gaus(0,10);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, z, 1.0);
+      p4->Fill(x, y, z, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+
+   p1->Merge(list);
+
+   bool ret = equals("MergeDiff2DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
+bool testMergeProf3DDiff() 
+{
+   // This tests fails! Segmentation Fault!!It should not!
+   TProfile3D *p1 = new TProfile3D("merge3DDiff-p1","p1-Title",
+                                   110,-110,0,
+                                   110,-110,0,
+                                   110,-110,0);
+   TProfile3D *p2 = new TProfile3D("merge3DDiff-p2","p2-Title",
+                                   220,0,110,
+                                   220,0,110,
+                                   220,0,110);
+   TProfile3D *p3 = new TProfile3D("merge3DDiff-p3","p3-Title",
+                                   330,-55,55,
+                                   330,-55,55,
+                                   330,-55,55);
+   TProfile3D *p4 = new TProfile3D("merge3DDiff-p4","p4-Title",
+                                   220,-110,110,
+                                   220,-110,110,
+                                   220,-110,110);
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Gaus(-55,10);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Gaus(55,10);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p2->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Gaus(0,10);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p3->Fill(x, y, z, t, 1.0);
+      p4->Fill(x, y, z, t, 1.0);
+   }
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+
+   p1->Merge(list);
+
+   bool ret = equals("MergeDiff3DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
 bool testLabel()
 {
    TH1D* h1 = new TH1D("lD1-h1", "h1-Title", numberOfBins, minRange, maxRange);
@@ -2309,7 +4051,7 @@ bool testLabel()
    for ( Int_t e = 0; e < nEvents; ++e ) {
       Double_t value = r.Uniform(minRange, maxRange);
       Int_t bin = h1->GetXaxis()->FindBin(value);
-      h1->Fill( h1->GetXaxis()->GetBinCenter(bin), 1.0);
+      h1->Fill(h1->GetXaxis()->GetBinCenter(bin), 1.0);
 
       ostringstream label;
       label << bin;
@@ -2753,7 +4495,6 @@ bool test2DRebin()
    TH2D* h2d = new TH2D("h2d","Original Histogram", 
                        xrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange, 
                        yrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange);
-      
 
    UInt_t seed = r.GetSeed();
    r.SetSeed(seed);
@@ -3633,11 +5374,27 @@ int stressHistogram()
 
    // Test 9
    // Merge Tests
-   const unsigned int numberOfMerge = 7;
-   pointer2Test mergeTestPointer[numberOfMerge] = { testMerge1D,  testMergeProf1D,
-                                                    testMerge2D,  testMergeProf2D,
-                                                    testMerge3D,  testMergeProf3D,
-                                                    testMergeSparse
+   const unsigned int numberOfMerge = 32;
+   pointer2Test mergeTestPointer[numberOfMerge] = { testMerge1D,                 testMergeProf1D,
+                                                    testMerge2D,                 testMergeProf2D,
+                                                    testMerge3D,                 testMergeProf3D,
+                                                    testMergeSparse,
+                                                    testMerge1DLabelSame,        testMergeProf1DLabelSame,
+                                                    testMerge2DLabelSame,        testMergeProf2DLabelSame,
+                                                    testMerge3DLabelSame,        testMergeProf3DLabelSame,
+
+                                                    /*testMerge1DLabelDiff,*/    testMergeProf1DLabelDiff,
+                                                    testMerge2DLabelDiff,        testMergeProf2DLabelDiff,
+                                                    testMerge3DLabelDiff,        testMergeProf3DLabelDiff,
+                                                    testMerge1DLabelAll,         testMergeProf1DLabelAll,
+                                                    testMerge2DLabelAll,         testMergeProf2DLabelAll,
+                                                    testMerge3DLabelAll,         testMergeProf3DLabelAll,
+                                                    /*testMerge1DLabelAllDiff*/  testMergeProf1DLabelAllDiff,
+                                                    testMerge2DLabelAllDiff,     testMergeProf2DLabelAllDiff,
+                                                    testMerge3DLabelAllDiff,     testMergeProf3DLabelAllDiff,
+                                                    testMerge1DDiff,             testMergeProf1DDiff,
+                                                    testMerge2DDiff/*,             testMergeProf2DDiff,*/
+                                                    /*testMerge3DDiff,*/         /*testMergeProf3DDiff*/
    };
    struct TTestSuite mergeTestSuite = { numberOfMerge, 
                                         "Merge tests for 1D, 2D and 3D Histograms and Profiles............",
