@@ -42,7 +42,7 @@ enum compareOptions {
    cmpOptStats=8
 };
 
-const int defaultEqualOptions = 1; //cmpOptPrint;
+const int defaultEqualOptions = 0; //cmpOptPrint;
 
 const double defaultErrorLimit = 1.E-10;
 
@@ -2316,7 +2316,7 @@ bool testLabel()
       h2->Fill(label.str().c_str(), 1.0);
    }
 
-   bool status = equals("Fill(char*)", h1, h2, cmpOptStats | cmpOptDebug, 1E-13);
+   bool status = equals("Fill(char*)", h1, h2, cmpOptStats, 1E-13);
    delete h1;
    return status;
 }
@@ -2753,10 +2753,7 @@ bool test2DRebin()
    TH2D* h2d = new TH2D("h2d","Original Histogram", 
                        xrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange, 
                        yrebin * TMath::Nint( r.Uniform(1, 5) ), minRange, maxRange);
-   
-   std::cout << " xrebin, yrebin " << xrebin << "  " << yrebin << std::endl; 
-   std::cout << "nx, ny " <<  h2d->GetXaxis()->GetNbins()  <<  "  " << h2d->GetYaxis()->GetNbins() << std::endl; 
-   
+      
 
    UInt_t seed = r.GetSeed();
    r.SetSeed(seed);
@@ -2772,7 +2769,7 @@ bool test2DRebin()
    for ( Int_t i = 0; i < nEvents; ++i )
       h3->Fill( r.Uniform( minRange * .9 , maxRange * 1.1 ), r.Uniform( minRange * .9 , maxRange * 1.1 ) );
 
-   bool ret = equals("TestIntRebin2D", h2d2, h3, cmpOptStats | cmpOptDebug);
+   bool ret = equals("TestIntRebin2D", h2d2, h3, cmpOptStats);
    delete h2d;
    delete h2d2;
    return ret;
