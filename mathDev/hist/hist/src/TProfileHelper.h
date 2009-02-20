@@ -219,7 +219,7 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
    next.Reset();
 
    same = same && p->SameLimitsAndNBins(newXAxis, *(p->GetXaxis()));
-   if ( p->GetDimension() >= 3 )
+   if ( p->GetDimension() >= 2 )
       same = same && p->SameLimitsAndNBins(newYAxis, *(p->GetYaxis()));
    if ( p->GetDimension() >= 3 )
       same = same && p->SameLimitsAndNBins(newZAxis, *(p->GetZaxis()));
@@ -244,6 +244,10 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
                } else if ( p->GetDimension() == 2 ) {
                   Double_t v[] = { h->fBuffer[4*i + 2], h->fBuffer[4*i + 3],
                                    h->fBuffer[4*i + 4], h->fBuffer[4*i + 1] };
+                  p->Fill(v);
+               }
+               else if ( p->GetDimension() == 1 ) {
+                  Double_t v[] = { h->fBuffer[3*i + 2], h->fBuffer[3*i + 3], h->fBuffer[3*i + 1] };
                   p->Fill(v);
                }
          }
@@ -271,11 +275,6 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
          nentries += h->GetEntries();
 
          for ( Int_t hbin = 0; hbin < h->fN; ++hbin ) {
-            Int_t hbinx, hbiny, hbinz;
-            h->GetBinXYZ(hbin, hbinx, hbiny, hbinz);
-            Int_t pbin = p->GetBin( h->fXaxis.FindBin( h->GetXaxis()->GetBinCenter(hbinx) ),
-                                    h->fYaxis.FindBin( h->GetYaxis()->GetBinCenter(hbiny) ),
-                                    h->fZaxis.FindBin( h->GetZaxis()->GetBinCenter(hbinz) ) );
             if ((!same) && (h->IsBinUnderflow(hbin) || h->IsBinOverflow(hbin)) ) {
                if (h->GetW()[hbin] != 0) {
                   Error("Merge", "Cannot merge histograms - the histograms have"
@@ -284,6 +283,17 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
                   return -1;
                }
             }
+            Int_t hbinx, hbiny, hbinz;
+            h->GetBinXYZ(hbin, hbinx, hbiny, hbinz);
+            Int_t pbin = p->GetBin( h->fXaxis.FindBin( h->GetXaxis()->GetBinCenter(hbinx) ),
+                                    h->fYaxis.FindBin( h->GetYaxis()->GetBinCenter(hbiny) ),
+                                    h->fZaxis.FindBin( h->GetZaxis()->GetBinCenter(hbinz) ) );
+            if ( p->GetDimension() == 1 )
+               // This is because the method p->GetBin is not giving
+               // the proper bin number when the profiles are
+               // different! This hack is made to make the behaviour
+               // consistent with the previous implementation.
+               pbin = p->fXaxis.FindBin(h->GetBinCenter(hbin));
             p->fArray[pbin]             += h->GetW()[hbin];
             p->fSumw2.fArray[pbin]      += h->GetW2()[hbin];
             p->fBinEntries.fArray[pbin] += h->GetB()[hbin];
