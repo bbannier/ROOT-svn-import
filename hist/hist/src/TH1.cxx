@@ -4073,7 +4073,7 @@ Double_t TH1::Interpolate(Double_t, Double_t, Double_t)
 }
 
 //______________________________________________________________________________
-Bool_t TH1::IsBinOverflow(Int_t bin)
+Bool_t TH1::IsBinOverflow(Int_t bin) const
 {
    
    // Return true if the bin is overflow.
@@ -4095,7 +4095,7 @@ Bool_t TH1::IsBinOverflow(Int_t bin)
 
 
 //______________________________________________________________________________
-Bool_t TH1::IsBinUnderflow(Int_t bin)
+Bool_t TH1::IsBinUnderflow(Int_t bin) const
 {
    
    // Return true if the bin is overflow.
