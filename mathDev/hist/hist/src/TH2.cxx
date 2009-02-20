@@ -1102,7 +1102,7 @@ void TH2::GetStats(Double_t *stats) const
    Int_t bin, binx, biny;
    Double_t w,err;
    Double_t x,y;
-   if (fTsumw == 0 || fXaxis.TestBit(TAxis::kAxisRange) || fYaxis.TestBit(TAxis::kAxisRange)) {
+   if ((fTsumw == 0 && fEntries > 0) || fXaxis.TestBit(TAxis::kAxisRange) || fYaxis.TestBit(TAxis::kAxisRange)) {
       for (bin=0;bin<7;bin++) stats[bin] = 0;
 
       Int_t firstBinX = fXaxis.GetFirst();
@@ -1827,10 +1827,16 @@ TH2 *TH2::Rebin2D(Int_t nxgroup, Int_t nygroup, const char *newname)
       }
 
       // Recompute correct underflows and overflows.
-      hnew->SetBinContent(newxbins+1,newybins+1,oldBins[(nxbins+1)*(nybins+2)+(nybins+1)]);
-      hnew->SetBinContent(0,0,oldBins[0]);
-      hnew->SetBinContent(0,newybins+1,oldBins[nybins+1]);
-      hnew->SetBinContent(newxbins+1,0,oldBins[(nxbins+1)*(nybins+2)]);
+      hnew->SetBinContent(newxbins+1,newybins+1,oldErrors[(nxbins+1)*(nybins+2)+(nybins+1)]);
+      hnew->SetBinContent(0,0,oldErrors[0]);
+      hnew->SetBinContent(0,newybins+1,oldErrors[nybins+1]);
+      hnew->SetBinContent(newxbins+1,0,oldErrors[(nxbins+1)*(nybins+2)]);
+      if (oldErrors) { 
+         hnew->SetBinError(newxbins+1,newybins+1,oldErrors[(nxbins+1)*(nybins+2)+(nybins+1)]);
+         hnew->SetBinError(0,0,oldErrors[0]);
+         hnew->SetBinError(0,newybins+1,oldErrors[nybins+1]);
+         hnew->SetBinError(newxbins+1,0,oldErrors[(nxbins+1)*(nybins+2)]);
+      }
       if (oldErrors) { 
          hnew->SetBinError(newxbins+1,newybins+1,oldErrors[(nxbins+1)*(nybins+2)+(nybins+1)]);
          hnew->SetBinError(0,0,oldErrors[0]);
@@ -2229,7 +2235,7 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
       strcpy(optin,opt.Data());
       char *d = (char*)strstr(optin,"d"); if (d) {*d = ' '; if (*(d+1) == 0) *d=0;}
       char *e = (char*)strstr(optin,"e"); if (e) {*e = ' '; if (*(e+1) == 0) *e=0;}
-      if (!gPad->FindObject(h1)) {
+      if (!gPad || !gPad->FindObject(h1)) {
          h1->Draw(optin);
       } else {
          h1->Paint(optin);

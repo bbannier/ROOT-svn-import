@@ -202,23 +202,23 @@ extern "C" { // std::qsort on solaris wants the sorter to be extern "C"
 namespace {
 
    // std::list::sort(with_stricmp_predicate) doesn't work with Solaris CC...
-   static void sort_strlist_stricmp(std::list<std::string>& l)
+   static void sort_strlist_stricmp(std::vector<std::string>& l)
    {
       // sort strings ignoring case - easier for humans
       struct posList {
          const char* str;
-         std::list<std::string>::const_iterator pos;
+         size_t pos;
       };
       posList* carr = new posList[l.size()];
       size_t idx = 0;
-      for (std::list<std::string>::const_iterator iS = l.begin(); iS != l.end(); ++iS) {
+      for (size_t iS = 0, iSE = l.size(); iS < iSE; ++iS) {
          carr[idx].pos = iS;
-         carr[idx++].str = iS->c_str();
+         carr[idx++].str = l[iS].c_str();
       }
       qsort(&carr[0].str, idx, sizeof(posList), CaseInsensitiveSort);
-      std::list<std::string> lsort;
-      for (idx = 0; idx < l.size(); ++idx) {
-         lsort.push_back(*carr[idx].pos);
+      std::vector<std::string> lsort(l.size());
+      for (size_t iS = 0, iSE = l.size(); iS < iSE; ++iS) {
+         lsort[iS].swap(l[carr[iS].pos]);
       }
       delete [] carr;
       l.swap(lsort);
@@ -511,12 +511,16 @@ void TDocOutput::Convert(std::istream& in, const char* infilename,
       }
       out << "<table><tr><td style=\"vertical-align:top;padding-right:2em;\">" << endl;
    }
-   out << "<pre>" << endl;
+   out << "<div class=\"listing\"><pre class=\"listing\">" << endl;
 
    TDocParser parser(*this);
    parser.Convert(out, in, relpath, (includeOutput) /* determines whether it's code or not */);
 
-   out << "</pre>" << endl;
+   out << "</pre></div>" << endl;
+   out << "<div id=\"linenums\">";
+   for (Long_t i = 0; i < parser.GetLineNumber(); ++i)
+      out << "<div class=\"ln\">&nbsp;<span class=\"ln\">" << i + 1 << "</span></div>";
+   out << "</div>" << std::endl;
 
    if (includeOutput) {
       out << "</td><td style=\"vertical-align:top;\">" << endl;
@@ -616,7 +620,6 @@ void TDocOutput::CreateHierarchy()
    WriteHtmlHeader(out, "Class Hierarchy");
 
    WriteTopLinks(out, 0);
-   out << "</div>" << endl;
 
    out << "<h1>Class Hierarchy</h1>" << endl;
 
@@ -671,7 +674,6 @@ void TDocOutput::CreateClassIndex()
    WriteHtmlHeader(indexFile, "Class Index");
 
    WriteTopLinks(indexFile, 0);
-   indexFile << "</div>" << endl;
 
    indexFile << "<h1>Class Index</h1>" << endl;
 
@@ -804,7 +806,6 @@ void TDocOutput::CreateModuleIndex()
       WriteHtmlHeader(outputFile, htmltitle);
 
       WriteTopLinks(outputFile, module);
-      outputFile << "</div>" << endl;
 
       outputFile << "<h2>" << htmltitle << "</h2>" << endl;
 
@@ -1061,7 +1062,6 @@ void TDocOutput::CreateModuleIndex()
    WriteHtmlHeader(out, "Library Dependencies");
 
    WriteTopLinks(out, 0);
-   out << "</div>" << endl;
 
    out << "<h1>Library Dependencies</h1>" << endl;
 
@@ -1095,7 +1095,6 @@ void TDocOutput::CreateProductIndex()
    WriteHtmlHeader(out, GetHtml()->GetProductName() + " Reference Guide");
 
    WriteTopLinks(out, 0);
-   out << "</div>" << endl;
 
    out << "<h1>" << GetHtml()->GetProductName() + " Reference Guide</h1>" << std::endl;
 
@@ -1246,18 +1245,20 @@ void TDocOutput::CreateTypeIndex()
    typesList << "<dl><dd>" << endl;
 
    // make loop on data types
-   std::list<std::string> typeNames;
+   std::vector<std::string> typeNames(gROOT->GetListOfTypes()->GetSize());
 
    {
       TDataType *type;
       TIter nextType(gROOT->GetListOfTypes());
+      size_t tnIdx = 0;
 
       while ((type = (TDataType *) nextType()))
          // no templates ('<' and '>'), no idea why the '(' is in here...
          if (*type->GetTitle() && !strchr(type->GetName(), '(')
              && !( strchr(type->GetName(), '<') && strchr(type->GetName(),'>'))
              && type->GetName())
-            typeNames.push_back(type->GetName());
+            typeNames[tnIdx++] = type->GetName();
+      typeNames.resize(tnIdx);
    }
 
    sort_strlist_stricmp(typeNames);
@@ -1280,7 +1281,7 @@ void TDocOutput::CreateTypeIndex()
    int idx = 0;
    UInt_t currentIndexEntry = 0;
 
-   for (std::list<std::string>::iterator iTypeName = typeNames.begin();
+   for (std::vector<std::string>::iterator iTypeName = typeNames.begin();
       iTypeName != typeNames.end(); ++iTypeName) {
       TDataType* type = gROOT->GetType(iTypeName->c_str(), kFALSE);
       typesList << "<li class=\"idxl" << idx%2 << "\">";
@@ -2127,15 +2128,14 @@ void TDocOutput::WriteHtmlFooter(std::ostream& out, const char* /*dir*/,
 
    static const char* templateSITags[TDocParser::kNumSourceInfos] = { "%UPDATE%", "%AUTHOR%", "%COPYRIGHT%", "%CHANGED%", "%GENERATED%"};
 
-   TString datimeString;
-   if (!lastUpdate || !strlen(lastUpdate)) {
-      TDatime date;
-      datimeString = date.AsString();
-      lastUpdate = datimeString.Data();
-   }
    TString today;
    TDatime dtToday;
    today.Form("%d-%02d-%02d %02d:%02d", dtToday.GetYear(), dtToday.GetMonth(), dtToday.GetDay(), dtToday.GetHour(), dtToday.GetMinute());
+
+   TString datimeString;
+   if (!lastUpdate || !strlen(lastUpdate)) {
+      lastUpdate = today;
+   }
    const char* siValues[TDocParser::kNumSourceInfos] = { lastUpdate, author, copyright, lastUpdate, today };
 
    ifstream addFooterFile(footer);
@@ -2296,30 +2296,23 @@ void TDocOutput::WriteSearch(std::ostream& out)
           << "window.location.href=s.replace(/%u/ig,ref).replace(/%s/ig,escape(document.searchform.t.value));" << endl
           << "return false;}" << endl
           << "</script>" << endl
-          << "<a class=\"descrheadentry\"> </a>" << endl
           << "<form id=\"searchform\" name=\"searchform\" onsubmit=\"return onSearch()\" action=\"javascript:onSearch();\" method=\"post\">" << endl
-          << "<input name=\"t\" size=\"30\" value=\"Search documentation...\" onfocus=\"if (document.searchform.t.value=='Search documentation...') document.searchform.t.value='';\"></input></form>" << endl
-          << "<a id=\"searchlink\" " << serverName << " href=\"javascript:onSearch();\" onclick=\"return onSearch()\">Search</a>" << endl;
+          << "<input name=\"t\" size=\"30\" value=\"Search documentation...\" onfocus=\"if (document.searchform.t.value=='Search documentation...') document.searchform.t.value='';\"></input>" << endl
+          << "<a id=\"searchlink\" " << serverName << " href=\"javascript:onSearch();\" onclick=\"return onSearch()\">Search</a></form>" << endl;
    } else if (searchEngine.Length())
       // create link to search engine page
       out << "<a class=\"descrheadentry\" href=\"" << searchEngine
           << "\">Search the Class Reference Guide</a>" << endl;
 }
 
+
 //______________________________________________________________________________
-void TDocOutput::WriteTopLinks(std::ostream& out, TModuleDocInfo* module, const char* classname)
+void TDocOutput::WriteLocation(std::ostream& out, TModuleDocInfo* module, const char* classname)
 {
-   // Write the first part of the links shown ontop of each doc page;
-   // one <div> has to be closed by caller so additional items can still
-   // be added.
-
-   out << "<div id=\"toplinks\">" << endl;
-
    // make a link to the description
-   out << "<div class=\"descrhead\">" << endl // descrhead line 1
-      << "<span class=\"descrtitle\">Location:</span>" << endl;
+   out << "<div class=\"location\">" << endl; // location
    const char *productName = fHtml->GetProductName();
-   out << "<a class=\"descrheadentry\" href=\"index.html\">" << productName << "</a>" << endl;
+   out << "<a class=\"locationlevel\" href=\"index.html\">" << productName << "</a>" << endl;
 
    if (module) {
       TString modulename(module->GetName());
@@ -2333,7 +2326,7 @@ void TDocOutput::WriteTopLinks(std::ostream& out, TModuleDocInfo* module, const 
             break;
          if (modulePath.Length()) modulePath += "_";
          modulePath += modulePart;
-         out << " &#187; <a class=\"descrheadentry\" href=\"./" << modulePath << "_Index.html\">" << modulePart << "</a>" << endl;
+         out << " &#187; <a class=\"locationlevel\" href=\"./" << modulePath << "_Index.html\">" << modulePart << "</a>" << endl;
       }
    }
 
@@ -2347,27 +2340,47 @@ void TDocOutput::WriteTopLinks(std::ostream& out, TModuleDocInfo* module, const 
       entityName.ToUpper();
    }
    if (entityName.Length()) {
-      out << " &#187; <a class=\"descrheadentry\" href=\"#TopOfPage\">";
+      out << " &#187; <a class=\"locationlevel\" href=\"#TopOfPage\">";
       ReplaceSpecialChars(out, entityName);
       out << "</a>" << endl;
    }
-   out << "</div>" << endl; // descrhead line 1
+   out << "</div>" << endl; // location
+}
 
-   out << "<div class=\"descrhead\">" << endl // descrhead line 2
+
+//______________________________________________________________________________
+void TDocOutput::WriteTopLinks(std::ostream& out, TModuleDocInfo* module, const char* classname,
+                               Bool_t withLocation)
+{
+   // Write the first part of the links shown ontop of each doc page;
+   // one <div> has to be closed by caller so additional items can still
+   // be added.
+
+   out << "<div id=\"toplinks\">" << endl;
+
+   out << "<div class=\"descrhead\"><div class=\"descrheadcontent\">" << endl // descrhead line 1
       << "<span class=\"descrtitle\">Quick Links:</span>" << endl;
 
    // link to the user home page (if exist)
    const char* userHomePage = GetHtml()->GetHomepage();
+   const char* productName = fHtml->GetProductName();
    if (productName && !strcmp(productName, "ROOT"))
       userHomePage = "";
    if (userHomePage && *userHomePage)
       out << "<a class=\"descrheadentry\" href=\"" << userHomePage << "\">" << productName << "</a>" << endl;
    out << "<a class=\"descrheadentry\" href=\"http://root.cern.ch\">ROOT Homepage</a>" << endl
       << "<a class=\"descrheadentry\" href=\"./ClassIndex.html\">Class Index</a>" << endl
-      << "<a class=\"descrheadentry\" href=\"./ClassHierarchy.html\">Class Hierarchy</a>" << endl;
+      << "<a class=\"descrheadentry\" href=\"./ClassHierarchy.html\">Class Hierarchy</a></div>" << endl;
    WriteSearch(out);
-   out << "</div>" << endl; // descrhead, line 2
-   // Closed by caller:
-   //out << "</div>" << endl; // toplinks
+   out << "</div>" << endl; // descrhead, line 1
+
+   if (withLocation) {
+      out << "</div>" << endl; //toplinks
+      WriteLocation(out, module, classname); // descrhead line 2
+   }
+   // else {
+   //    Closed by caller!
+   //    out << "</div>" << endl; // toplinks
+   // }
 
 }

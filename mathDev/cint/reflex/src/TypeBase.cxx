@@ -46,8 +46,10 @@ Reflex::TypeBase::TypeBase( const char * nam,
                                   size_t size,
                                   TYPE typeTyp, 
                                   const std::type_info & ti,
-                                  const Type & finalType) 
+                                  const Type & finalType,
+                                  const char cintType /*= '\0'*/) 
    : fTypeInfo( &ti ), 
+     fCintType(cintType),
      fScope( Scope::__NIRVANA__() ),
      fSize( size ),
      fTypeType( typeTyp ),

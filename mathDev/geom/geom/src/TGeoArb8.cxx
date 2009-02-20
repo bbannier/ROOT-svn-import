@@ -240,7 +240,8 @@ void TGeoArb8::ComputeBBox()
 void TGeoArb8::ComputeTwist()
 {
 // Computes tangents of twist angles (angles between projections on XY plane
-// of corresponding -dz +dz edges). Called after last point [7] was set.
+// of corresponding -dz +dz edges). Computes also if the vertices are defined
+// clockwise or anti-clockwise.
    Double_t twist[4];
    Bool_t twisted = kFALSE;
    Double_t dx1, dy1, dx2, dy2;
@@ -265,10 +266,50 @@ void TGeoArb8::ComputeTwist()
       twist[i] = TMath::Sign(1.,twist[i]);
       twisted = kTRUE;
    }
-   if (!twisted) return;
-   if (fTwist) delete [] fTwist;
-   fTwist = new Double_t[4];
-   memcpy(fTwist, &twist[0], 4*sizeof(Double_t));
+   if (twisted) {
+      if (fTwist) delete [] fTwist;
+      fTwist = new Double_t[4];
+      memcpy(fTwist, &twist[0], 4*sizeof(Double_t));
+   }   
+   Double_t sum1 = 0.;
+   Double_t sum2 = 0.;
+   Int_t j;
+   for (Int_t i=0; i<4; i++) {
+      j = (i+1)%4;
+      sum1 += fXY[i][0]*fXY[j][1]-fXY[j][0]*fXY[i][1];
+      sum2 += fXY[i+4][0]*fXY[j+4][1]-fXY[j+4][0]*fXY[i+4][1];
+   }
+   if (sum1*sum2 < -TGeoShape::Tolerance()) {
+      Fatal("ComputeTwist", "Shape %s type Arb8: Lower/upper faces defined with opposite clockwise", GetName());
+      return;
+   }
+   if (sum1>0.) {
+      Error("ComputeTwist", "Shape %s type Arb8: Vertices must be defined clockwise in XY planes. Re-ordering...", GetName());
+      Double_t xtemp, ytemp;
+      xtemp = fXY[1][0];
+      ytemp = fXY[1][1];
+      fXY[1][0] = fXY[3][0];
+      fXY[1][1] = fXY[3][1];
+      fXY[3][0] = xtemp;
+      fXY[3][1] = ytemp;
+      xtemp = fXY[5][0];
+      ytemp = fXY[5][1];
+      fXY[5][0] = fXY[7][0];
+      fXY[5][1] = fXY[7][1];
+      fXY[7][0] = xtemp;
+      fXY[7][1] = ytemp;
+   } 
+   // Check for illegal crossings.
+   Bool_t illegal_cross = kFALSE;
+   illegal_cross = TGeoShape::IsSegCrossing(fXY[0][0],fXY[0][1],fXY[1][0],fXY[1][1],
+                                            fXY[2][0],fXY[2][1],fXY[3][0],fXY[3][1]);
+   if (!illegal_cross) 
+   illegal_cross = TGeoShape::IsSegCrossing(fXY[4][0],fXY[4][1],fXY[5][0],fXY[5][1],
+                                            fXY[6][0],fXY[6][1],fXY[7][0],fXY[7][1]);
+   if (illegal_cross) {
+      Error("ComputeTwist", "Shape %s type Arb8: Malformed polygon with crossing opposite segments", GetName());
+      InspectShape();
+   }
 }
 
 //_____________________________________________________________________________
@@ -366,6 +407,7 @@ Double_t TGeoArb8::DistToPlane(Double_t *point, Double_t *dir, Int_t ipl, Bool_t
 // ipl=3 : points 3,7,0,4
    Double_t xa,xb,xc,xd;
    Double_t ya,yb,yc,yd;
+   Double_t eps = 100.*TGeoShape::Tolerance();
    Int_t j = (ipl+1)%4;
    xa=fXY[ipl][0];
    ya=fXY[ipl][1];
@@ -395,10 +437,10 @@ Double_t TGeoArb8::DistToPlane(Double_t *point, Double_t *dir, Int_t ipl, Bool_t
    Double_t c=dxs*point[1]-dys*point[0]+xs1*ys2-xs2*ys1;
    Double_t s=TGeoShape::Big();
    Double_t x1,x2,y1,y2,xp,yp,zi;
-   if (TMath::Abs(a)<1E-10) {           
-      if (b==0) return TGeoShape::Big();
+   if (TMath::Abs(a)<eps) {           
+      if (TMath::Abs(b)<eps) return TGeoShape::Big();
       s=-c/b;
-      if (s>0) {
+      if (s>eps) {
          if (in) return s;
          zi=point[2]+s*dir[2];
          if (TMath::Abs(zi)<fDz) {
@@ -414,13 +456,11 @@ Double_t TGeoArb8::DistToPlane(Double_t *point, Double_t *dir, Int_t ipl, Bool_t
       }
       return TGeoShape::Big();
    }      
-   b=0.5*b/a;
-   c=c/a;
-   Double_t d=b*b-c;
+   Double_t d=b*b-4*a*c;
    if (d>=0) {
-      Double_t sqd = TMath::Sqrt(d);
-      s=-b-sqd;
-      if (s>0) {
+      if (a>0) s=0.5*(-b-TMath::Sqrt(d))/a;
+      else     s=0.5*(-b+TMath::Sqrt(d))/a;
+      if (s>eps) {
          if (in) return s;
          zi=point[2]+s*dir[2];
          if (TMath::Abs(zi)<fDz) {
@@ -434,8 +474,9 @@ Double_t TGeoArb8::DistToPlane(Double_t *point, Double_t *dir, Int_t ipl, Bool_t
             if (zi<=0) return s;
          }      
       }
-      s=-b+sqd;
-      if (s>0) {
+      if (a>0) s=0.5*(-b+TMath::Sqrt(d))/a;
+      else     s=0.5*(-b-TMath::Sqrt(d))/a;
+      if (s>eps) {
          if (in) return s;
          zi=point[2]+s*dir[2];
          if (TMath::Abs(zi)<fDz) {
@@ -517,6 +558,7 @@ Double_t TGeoArb8::DistFromInside(Double_t *point, Double_t *dir, Int_t /*iact*/
 // ipl=2 : points 2,6,3,7
 // ipl=3 : points 3,7,0,4
    Double_t distmin;
+   Bool_t lateral_cross = kFALSE;
    if (dir[2]<0) {
       distmin=(-fDz-point[2])/dir[2];
    } else {
@@ -526,6 +568,7 @@ Double_t TGeoArb8::DistFromInside(Double_t *point, Double_t *dir, Int_t /*iact*/
    Double_t dz2 =0.5/fDz;
    Double_t xa,xb,xc,xd;
    Double_t ya,yb,yc,yd;
+   Double_t eps = 100.*TGeoShape::Tolerance();
    for (Int_t ipl=0;ipl<4;ipl++) {
       Int_t j = (ipl+1)%4;
       xa=fXY[ipl][0];
@@ -555,26 +598,51 @@ Double_t TGeoArb8::DistFromInside(Double_t *point, Double_t *dir, Int_t /*iact*/
               +tx1*ys2-tx2*ys1)*dir[2];
       Double_t c=dxs*point[1]-dys*point[0]+xs1*ys2-xs2*ys1;
       Double_t s=TGeoShape::Big();
-      if (TMath::Abs(a)<1E-10) {           
-         if (b==0) continue;
+      if (TMath::Abs(a)<eps) {           
+         if (TMath::Abs(b)<eps) continue;
          s=-c/b;
-         if (s>0 && s < distmin) distmin =s;
+         if (s>eps && s < distmin) {
+            distmin =s;
+            lateral_cross=kTRUE;
+         }   
          continue;
-      }      
-      b=0.5*b/a;
-      c=c/a;
-      Double_t d=b*b-c;
-      if (d>=0) {
-         Double_t sqd = TMath::Sqrt(d);
-         s=-b-sqd;
-         if (s>0) {
-            if (s < distmin) distmin = s;
+      }
+      Double_t d=b*b-4*a*c;
+      if (d>=0.) {
+         if (a>0) s=0.5*(-b-TMath::Sqrt(d))/a;
+         else     s=0.5*(-b+TMath::Sqrt(d))/a;
+         if (s>eps) {
+            if (s < distmin) {
+               distmin = s;
+               lateral_cross = kTRUE;
+            }   
          } else {
-            s=-b+sqd;
-            if (s>0 && s < distmin) distmin =s;
+            if (a>0) s=0.5*(-b+TMath::Sqrt(d))/a;
+            else     s=0.5*(-b-TMath::Sqrt(d))/a;
+            if (s>eps && s < distmin) {
+               distmin =s;
+               lateral_cross = kTRUE;
+            }   
          }
       }
    }
+
+   if (!lateral_cross) {
+      // We have to make sure that track crosses the top or bottom.
+      if (distmin > 1.E10) return TGeoShape::Tolerance();
+      Double_t pt[2];
+      pt[0] = point[0]+distmin*dir[0];
+      pt[1] = point[1]+distmin*dir[1];
+      // Check if propagated point is in the polygon
+      Double_t poly[8];
+      Int_t i = 0;
+      if (dir[2]>0.) i=4;
+      for (Int_t j=0; j<4; j++) {
+         poly[2*j]   = fXY[j+i][0];
+         poly[2*j+1] = fXY[j+i][1];
+      }
+      if (!InsidePolygon(pt[0],pt[1],poly)) return TGeoShape::Tolerance();
+   }   
    return distmin;
 #endif
 }   

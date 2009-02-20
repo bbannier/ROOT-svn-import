@@ -2744,7 +2744,7 @@ TFile *TFile::Open(const char *url, Option_t *option, const char *ftitle,
          if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name))) {
             if (h->LoadPlugin() == -1)
                return 0;
-            f = (TFile*) h->ExecPlugin(1, name.Data());
+            f = (TFile*) h->ExecPlugin(2, name.Data(), option);
          }
 
       } else if (type == kFile) {
@@ -3225,7 +3225,7 @@ Bool_t TFile::Matches(const char *url)
    // Return kTRUE if 'url' matches the coordinates of this file.
    // The check is implementation dependent and may need to be overload
    // by each TFile implememtation relying on this check.
-   // The default implementation checks teh file name only.
+   // The default implementation checks the file name only.
 
    // Check the full URL, including port and FQDN.
    TUrl u(url);
@@ -3326,7 +3326,7 @@ TFile::EFileType TFile::GetType(const char *name, Option_t *option, TString *pre
             // If option "READ" test existence and access
             TString opt = option;
             Bool_t read = (opt.IsNull() ||
-                          !opt.CompareTo("READ",TString::kIgnoreCase)) ? kTRUE : kFALSE;
+                          !opt.CompareTo("READ", TString::kIgnoreCase)) ? kTRUE : kFALSE;
             if (read) {
                char *fn;
                if ((fn = gSystem->ExpandPathName(TUrl(lfname).GetFile()))) {
@@ -3483,10 +3483,10 @@ Bool_t TFile::Cp(const char *src, const char *dst, Bool_t progressbar,
    if (opt != "") opt += "&";
    opt += raw;
    // Netx-related options:
-   //    cachesz = 2*buffersize   -> 2 buffers as peak mem usage
-   //    readaheadsz = buffersize -> Keep buffersize bytes outstanding
-   //    rmpolicy = 1             -> Remove from the cache the blk with the least offset
-   opt += Form("&cachesz=%d&readaheadsz=%d&rmpolicy=1", 2*buffersize, buffersize);
+   //    cachesz = 4*buffersize     -> 4 buffers as peak mem usage
+   //    readaheadsz = 2*buffersize -> Keep at max 4*buffersize bytes outstanding when reading
+   //    rmpolicy = 1               -> Remove from the cache the blk with the least offset
+   opt += Form("&cachesz=%d&readaheadsz=%d&rmpolicy=1", 4*buffersize, 2*buffersize);
    sURL.SetOptions(opt);
 
    // Set optimization options for the destination file
@@ -3589,22 +3589,22 @@ Bool_t TFile::Cp(const char *src, const char *dst, Bool_t progressbar,
 
    success = kTRUE;
 
-   if (sfile->GetBytesRead() != dfile->GetBytesWritten()) {
-      ::Error("TFile::Cp", "read and written bytes differ (%lld != %lld)",
-                           sfile->GetBytesRead(), dfile->GetBytesWritten());
-      success = kFALSE;
-   }
-
 copyout:
    if (sfile) sfile->Close();
    if (dfile) dfile->Close();
+
+   if (sfile->GetBytesRead() != dfile->GetBytesWritten()) {
+      ::Error("TFile::Cp", "read and written bytes differ (%lld != %lld)",
+                           sfile->GetBytesRead(), dfile->GetBytesWritten());
+      // success = kFALSE;       This should be just a severe warning
+  }
 
    if (sfile) delete sfile;
    if (dfile) delete dfile;
    if (copybuffer) delete[] copybuffer;
 
    if (rmdestiferror && (success != kTRUE))
-     gSystem->Unlink(dst);
+      gSystem->Unlink(dst);
 
    watch.Stop();
    watch.Reset();

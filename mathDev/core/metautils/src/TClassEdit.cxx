@@ -332,6 +332,7 @@ string TClassEdit::ShortType(const char *typeDesc, int mode)
    // if (mode&4) remove all     allocators from STL containers
    // if (mode&8) return inner class of stl container. list<innerClass>
    // if (mode&16) return deapest class of stl container. vector<list<deapest>>
+   // if (mode&kDropAllDefault) remove default template arguments
    /////////////////////////////////////////////////////////////////////////////
 
    //fprintf(stderr,"calling ShortType with mode %d\n",mode);
@@ -460,10 +461,35 @@ string TClassEdit::ShortType(const char *typeDesc, int mode)
 
    if (!arglist[0].empty()) {answ += arglist[0]; answ +="<";}
 
-
+   if (mode & kDropAllDefault) {
+      int nargNonDefault = 0;
+      std::string nonDefName = answ;
+      // "superlong" because tLong might turn typeDesc into an even longer name
+      std::string nameSuperLong = typeDesc;
+      G__TypedefInfo td;
+      td.Init(nameSuperLong.c_str());
+      if (td.IsValid())
+         nameSuperLong = td.TrueName();
+      while (++nargNonDefault < narg) {
+         // If T<a> is a "typedef" (aka default template params)
+         // to T<a,b> then we can strip the "b".
+         const char* closeTemplate = " >";
+         if (nonDefName[nonDefName.length() - 1] != '>')
+            ++closeTemplate;
+         td.Init((nonDefName + closeTemplate).c_str());
+         if (td.IsValid() && nameSuperLong == td.TrueName())
+            break;
+         if (nargNonDefault>1) nonDefName += ",";
+         nonDefName += arglist[nargNonDefault];
+      }
+      if (nargNonDefault < narg)
+         narg = nargNonDefault;
+   }
+   
+   
    { for (int i=1;i<narg-1; i++) { answ += arglist[i]; answ+=",";} }
    if (narg>1) { answ += arglist[narg-1]; }
-
+   
    if (!arglist[0].empty()) {
       if ( answ.at(answ.size()-1) == '>') {
          answ += " >";
@@ -590,7 +616,7 @@ string TClassEdit::ResolveTypedef(const char *tname, bool resolveAll)
    // Return the name of type 'tname' with all its typedef components replaced
    // by the actual type its points to
    // For example for "typedef MyObj MyObjTypedef;"
-   //    vector<MyObjTypedef> return vector<MyObjTypedef>
+   //    vector<MyObjTypedef> return vector<MyObj>
    //
 
    if ( tname==0 || tname[0]==0) return tname;

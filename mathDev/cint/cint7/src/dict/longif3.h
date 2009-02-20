@@ -157,6 +157,7 @@ typedef unsigned long long G__uint64;
 G__int64 G__strtoll(const char *nptr,char **endptr, register int base) {
    register const char *s = nptr;
    register G__uint64 acc;
+   G__int64 res;
    register int c;
    register G__uint64 cutoff;
    register int neg = 0, any, cutlim;
@@ -200,7 +201,13 @@ G__int64 G__strtoll(const char *nptr,char **endptr, register int base) {
     * Set any if any `digits' consumed; make it negative to indicate
     * overflow.
     */
-   cutoff = neg ? -(G__uint64) LONG_LONG_MIN : LONG_LONG_MAX;
+   if (neg) {
+      // -(-2147483648) is not a valid long long, but -(-2147483648 + 42) is!
+      cutoff = -(LONG_LONG_MIN + 42);
+      cutoff += 42; // fixup offset for unary -
+   } else {
+      cutoff = LONG_LONG_MAX;
+   }
    cutlim = cutoff % (G__uint64) base;
    cutoff /= (G__uint64) base;
    for (acc = 0, any = 0;; c = *s++) {
@@ -212,7 +219,7 @@ G__int64 G__strtoll(const char *nptr,char **endptr, register int base) {
          break;
       if (c >= base)
          break;
-      if (any < 0 || acc > cutoff || acc == cutoff && c > cutlim)
+      if (any < 0 || acc > cutoff || (acc == cutoff && c > cutlim) )
          any = -1;
       else {
          any = 1;
@@ -220,14 +227,15 @@ G__int64 G__strtoll(const char *nptr,char **endptr, register int base) {
          acc += c;
       }
    }
+   res = (G__int64) acc;
    if (any < 0) {
-      acc = neg ? LONG_LONG_MIN : LONG_LONG_MAX;
+      res = neg ? LONG_LONG_MIN : LONG_LONG_MAX;
       errno = ERANGE;
    } else if (neg)
-      acc = -acc;
+      res = -res;
    if (endptr != 0)
       *endptr = (char *) (any ? s - 1 : nptr);
-   return (acc);
+   return (res);
 }
 
 /*
@@ -286,8 +294,10 @@ G__uint64 G__strtoull(const char *nptr, char **endptr, register int base) {
    if (any < 0) {
       acc = ULONG_LONG_MAX;
       errno = ERANGE;
-   } else if (neg)
-      acc = -acc;
+   } else if (neg) {
+      // IGNORE - we're unsigned!
+      // acc = -acc;
+   }
    if (endptr != 0)
       *endptr = (char *) (any ? s - 1 : nptr);
    return (acc);

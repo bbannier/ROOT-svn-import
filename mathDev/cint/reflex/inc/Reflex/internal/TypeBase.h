@@ -55,7 +55,8 @@ namespace Reflex {
          size_t                 size, 
          TYPE                   typeTyp,
          const std::type_info & ti,
-         const Type &           finalType = Dummy::Type());
+         const Type &           finalType = Dummy::Type(),
+         const char cintType = '\0');
 
 
       /** destructor */
@@ -643,16 +644,9 @@ namespace Reflex {
       * AddDataMember will add the information about a data MemberAt
       * @param dm pointer to data MemberAt
       */
-      virtual void AddDataMember( const Member & dm ) const;
-      virtual void AddDataMember( const char * nam,
-         const Type & typ,
-         size_t offs,
-         unsigned int modifiers = 0 ) const;
-      virtual void AddDataMember(Member &output,
-                                   const char * nam,
-                                   const Type & typ,
-                                   size_t offs,
-                                   unsigned int modifiers = 0 ) const;
+      virtual void AddDataMember(const Member& dm) const;
+      virtual void AddDataMember(const char* nam, const Type& typ, size_t offs, unsigned int modifiers = 0) const;
+      virtual void AddDataMember(Member& output, const char* nam, const Type& typ, size_t offs, unsigned int modifiers = 0, char* interpreterOffset = 0) const;
       
       
 
@@ -744,6 +738,8 @@ namespace Reflex {
        */
       virtual void UnhideName() const;
       
+      char CintType() const { return fCintType; }
+
    protected:
 
       /**
@@ -776,6 +772,8 @@ namespace Reflex {
          const std::type_info * fTypeInfo;
 
    private:
+
+      char fCintType;
 
       /**
       * The Scope of the Type
@@ -1357,11 +1355,7 @@ inline void Reflex::TypeBase::AddDataMember( const char * /* nam */,
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::TypeBase::AddDataMember(Member & /* output */,
-                                            const char * /* nam */,
-                                            const Type & /* typ */,
-                                            size_t /* offs */,
-                                            unsigned int /* modifiers */ ) const {
+inline void Reflex::TypeBase::AddDataMember(Member& /*output*/, const char* /*nam*/, const Type& /*typ*/, size_t /*offs*/, unsigned int /*modifiers*/, char* /*interpreterOffset*/) const {
    //-------------------------------------------------------------------------------
    throw RuntimeError("Function AddDataMember  not callable on this object");
 }
