@@ -45,7 +45,7 @@ extern "C" int G__EnableAutoDictionary;
 #define G__NUM_STDBOTH 3
 
 //______________________________________________________________________________
-static void G__unredirectoutput(FILE **sout, FILE **serr, FILE **sin, char *keyword, char *pipefile);
+static void G__unredirectoutput(FILE **sout, FILE **serr, FILE **sin, const char *keyword, const char *pipefile);
 
 //______________________________________________________________________________
 #ifdef G__BORLANDCC5
@@ -57,9 +57,9 @@ void G__init_undo(void);
 int G__clearfilebusy(int ifn);
 void G__storerewindposition(void);
 #ifndef G__OLDIMPLEMENTATION1917
-static void G__display_keyword(FILE *fout, char *keyword, FILE *keyfile);
+static void G__display_keyword(FILE *fout, const char *keyword, FILE *keyfile);
 #else
-static void G__display_keyword(FILE *fout, char *keyword, char *fname);
+static void G__display_keyword(FILE *fout, const char *keyword, const char *fname);
 #endif
 void G__rewinddictionary(void);
 void G__UnlockCriticalSection(void);
@@ -244,7 +244,7 @@ extern "C" int G__autoloading(char *com)
       classname[j] = 0;
    }
    if (classname[0] && -1 == G__defined_tagname(classname, 2)) {
-      char *dllpost = G__getmakeinfo1("DLLPOST");
+      const char *dllpost = G__getmakeinfo1("DLLPOST");
       G__StrBuf fname_sb(G__MAXFILENAME);
       char *fname = fname_sb;
       G__StrBuf prompt_sb(G__ONELINE);
@@ -595,11 +595,11 @@ static void G__display_tempobj(FILE* fout)
 }
 
 //______________________________________________________________________________
-static void G__display_keyword(FILE* fout, char* keyword,
+static void G__display_keyword(FILE* fout, const char* keyword,
 #ifndef G__OLDIMPLEMENTATION1917
                                FILE *keyfile
 #else
-                               char *fname
+                               const char *fname
 #endif
                               )
 {
@@ -717,7 +717,7 @@ extern "C" int G__reloadfile(char* filename, bool keep)
 }
 
 //______________________________________________________________________________
-void Cint::Internal::G__display_classkeyword(FILE* fout, char* classnamein, char* keyword, int base)
+void Cint::Internal::G__display_classkeyword(FILE* fout, const char* classnamein, const char* keyword, int base)
 {
 #ifndef G__OLDIMPLEMENTATION1823
    G__StrBuf buf_sb(G__BUFLEN);
@@ -1007,7 +1007,7 @@ static void G__redirectoutput(char* com, FILE** psout, FILE** pserr
    char* doublequote;
    char* paren;
    char* blacket;
-   char* openmode;
+   const char* openmode;
    G__StrBuf filename_sb(G__MAXFILENAME);
    char* filename = filename_sb;
    int i = 0;
@@ -1218,7 +1218,7 @@ static void G__redirectoutput(char* com, FILE** psout, FILE** pserr
 }
 
 //______________________________________________________________________________
-static void G__unredirectoutput(FILE** sout, FILE** serr, FILE** sin, char* keyword, char* pipefile)
+static void G__unredirectoutput(FILE** sout, FILE** serr, FILE** sin, const char* keyword, const char* pipefile)
 {
    // --
 #ifdef G__REDIRECTIO
@@ -1373,7 +1373,7 @@ int Cint::Internal::G__ReadInputMode()
 {
    static int inputmodeflag = 0;
    if (inputmodeflag == 0) {
-      char *inputmodebuf;
+      const char *inputmodebuf;
       inputmodeflag = 1;
       inputmodebuf = getenv("INPUTMODE");
       if (inputmodebuf == 0) inputmodebuf = G__getmakeinfo1("INPUTMODE");
@@ -1416,7 +1416,7 @@ static void G__debugvariable(FILE* fp, ::Reflex::Scope var, char* name)
             fp,
             "%s p=%ld type=%c typenum=%d tagnum=%d const=%x static=%d\n paran=%d ",
             iter->Name().c_str(),
-            (long) prop->addressOffset,
+            (long) iter->InterpreterOffset(),
             type,
             typenum,
             tagnum,

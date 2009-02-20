@@ -393,6 +393,8 @@ namespace Reflex {
       * @return offset of member as int
       */
       size_t Offset() const;
+      void InterpreterOffset(char*);
+      char*& InterpreterOffset() const;
 
 
       /** 
@@ -859,6 +861,20 @@ inline size_t Reflex::Member::Offset() const {
 }
 
 
+inline void Reflex::Member::InterpreterOffset(char* offset)
+{
+   if (*this) {
+      fMemberBase->InterpreterOffset(offset);
+   }
+}
+
+
+inline char*& Reflex::Member::InterpreterOffset() const
+{
+   return fMemberBase->InterpreterOffset();
+}
+
+
 //-------------------------------------------------------------------------------
 inline size_t Reflex::Member::FunctionParameterSize( bool required ) const {
 //-------------------------------------------------------------------------------
@@ -1059,6 +1075,12 @@ inline bool operator&&(bool b, const Reflex::Member & rh) {
 }
 inline bool operator&&(int i, const Reflex::Member & rh) {
    return i && rh.operator bool();
+}
+inline bool operator&&(short s, const Reflex::Member & rh) {
+   return s && rh.operator bool();
+}
+inline bool operator||(short s, const Reflex::Member & rh) {
+   return s || rh.operator bool();
 }
 inline bool operator||(bool b, const Reflex::Member & rh) {
    return b || rh.operator bool();

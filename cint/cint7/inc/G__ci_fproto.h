@@ -28,12 +28,12 @@ G__DECL_API(9, int, G__del_alloctable, (void* allocmem));
 G__DECL_API(10, int, G__add_refcount, (void* allocedmem,void** storedmem));
 G__DECL_API(11, int, G__del_refcount, (void* allocedmem,void** storedmem));
 G__DECL_API(12, int, G__disp_garbagecollection, (FILE* fout));
-G__DECL_API(13, struct G__ifunc_table*, G__get_methodhandle, (char *funcname,char *argtype
+G__DECL_API(13, struct G__ifunc_table*, G__get_methodhandle, (const char *funcname,const char *argtype
                                            ,struct G__ifunc_table *p_ifunc
                                            ,long *pifn,long *poffset
                                            ,int withConversion
                                            ,int withInheritance));
-G__DECL_API(14, struct G__ifunc_table*, G__get_methodhandle2, (char *funcname
+G__DECL_API(14, struct G__ifunc_table*, G__get_methodhandle2, (const char *funcname
                                            ,struct G__param* libp
                                            ,struct G__ifunc_table *p_ifunc
                                            ,long *pifn,long *poffset
@@ -75,7 +75,7 @@ G__DECL_API(24, void, G__RegisterScriptCompiler, (int(*p2f)(G__CONST char*,G__CO
 *************************************************************************/
 
 G__DECL_API(25, int, G__defined_tagname, (G__CONST char* tagname,int noerror));
-G__DECL_API(26, struct G__Definedtemplateclass *,G__defined_templateclass, (char *name));
+G__DECL_API(26, struct G__Definedtemplateclass *,G__defined_templateclass, (G__CONST char *name));
 
 G__DECL_API(27, int, G__deleteglobal, (void* p));
 G__DECL_API(28, int, G__deletevariable, (G__CONST char* varname));
@@ -123,7 +123,7 @@ G__DECL_API(51, int, G__fputerr, (int c));
 #endif
 
 G__DECL_API(52, void, G__SetUseCINTSYSDIR, (int UseCINTSYSDIR));
-G__DECL_API(53, void, G__SetCINTSYSDIR, (char* cintsysdir));
+G__DECL_API(53, void, G__SetCINTSYSDIR, (const char* cintsysdir));
 G__DECL_API(54, void, G__set_eolcallback, (void* eolcallback));
 G__DECL_API(55, G__parse_hook_t*, G__set_beforeparse_hook, (G__parse_hook_t* hook));
 G__DECL_API(56, void, G__set_ioctortype_handler, (int (* /*p2f*/) (const char*)));
@@ -216,7 +216,7 @@ G__DECL_API(120, void, G__setdouble, (G__value *pbuf,double d,void* pd,int type,
 G__DECL_API(121, void, G__setint, (G__value *pbuf,long d,void* pd,int type,int tagnum,int typenum,int reftype));
 G__DECL_API(122, void, G__stubstoreenv, (struct G__StoreEnv *env,void* p,int tagnum));
 G__DECL_API(123, void, G__stubrestoreenv, (struct G__StoreEnv *env));
-G__DECL_API(124, int, G__getstream, (char *source,int *isrc,char *string,char *endmark));
+G__DECL_API(124, int, G__getstream, (const char *source,int *isrc,char *string,const char *endmark));
 G__DECL_API(125, char*, G__type2string, (int type,int tagnum,int typenum,int reftype,int isconst));
 G__DECL_API(240, void, G__set_typenum,(G__value* val, const char* type));
 G__DECL_API(252, void, G__set_type,(G__value* val, char* type));
@@ -251,7 +251,7 @@ G__DECL_API(151, void, G__setdebugcond, (void));
 G__DECL_API(152, int, G__init_process_cmd, (void));
 G__DECL_API(153, int, G__process_cmd, (char *line,char *prompt,int *more,int *err,G__value *rslt));
 G__DECL_API(154, int, G__pause, (void));
-G__DECL_API(155, char*, G__input, (char* prompt));
+G__DECL_API(155, char*, G__input, (const char* prompt));
 G__DECL_API(156, int, G__split, (char *line,char *string,int *argc,char **argv));
 G__DECL_API(157, int, G__getIfileLineNumber, (void));
 G__DECL_API(158, void, G__addpragma, (char* comname, void (* /*p2f*/) (char*)) );
@@ -276,8 +276,8 @@ G__DECL_API(176, void, G__set_atpause, (void (*p2f)()));
 G__DECL_API(177, void, G__set_aterror, (void (*p2f)()));
 G__DECL_API(178, void, G__p2f_void_void, (void* p2f));
 G__DECL_API(179, void, G__setglobalcomp, (int globalcomp));
-G__DECL_API(180, char, *G__getmakeinfo, (char *item));
-G__DECL_API(181, char, *G__getmakeinfo1, (char *item));
+G__DECL_API(180, const char, *G__getmakeinfo, (const char *item));
+G__DECL_API(181, const char, *G__getmakeinfo1, (const char *item));
 G__DECL_API(182, int, G__get_security_error, (void));
 G__DECL_API(183, char*, G__map_cpp_name, (const char *in));
 G__DECL_API(184, char*, G__Charref, (G__value *buf));
@@ -306,7 +306,7 @@ G__DECL_API(202, int, G__lasterror_linenum, (void));
 G__DECL_API(203, void, G__va_arg_put, (G__va_arg_buf* pbuf,struct G__param* libp,int n));
 
 #ifndef G__OLDIMPLEMENTATION1546
-G__DECL_API(204, char*, G__load_text, (G__CONST char *namedmacro));
+G__DECL_API(204, const char*, G__load_text, (G__CONST char *namedmacro));
 G__DECL_API(205, void, G__set_emergencycallback, (void (*p2f)()));
 #endif
 #ifndef G__OLDIMPLEMENTATION1485
@@ -336,7 +336,7 @@ G__DECL_API(224, void, G__store_dictposition, (struct G__dictposition* dictpos))
 G__DECL_API(225, int, G__printf, (char* fmt,...));
 #endif
 G__DECL_API(226, void, G__free_tempobject, (void));
-G__DECL_API(227, int, G__display_class, (FILE *fout, char *name, int base, int start));
+G__DECL_API(227, int, G__display_class, (FILE *fout, const char *name, int base, int start));
 G__DECL_API(228, int, G__display_includepath, (FILE *fout));
 G__DECL_API(229, void, G__set_alloclockfunc, (void(*)()));
 G__DECL_API(230, void, G__set_allocunlockfunc, (void(*)()));
@@ -354,11 +354,11 @@ G__DECL_API(232, int, G__usermemfunc_setup, (char *funcname,int hash,int (*funcp
                          char *paras, char *comment
                          ,void *userparam));
 #endif
-G__DECL_API(233, char, *G__fulltagname, (int tagnum,int mask_dollar));
+G__DECL_API(233, G__CONST char, *G__fulltagname, (int tagnum,int mask_dollar));
 G__DECL_API(234, void, G__loadlonglong, (int* ptag,int* ptype,int which));
 G__DECL_API(235, int, G__isanybase, (int basetagnum,int derivedtagnum,long pobject));
 G__DECL_API(236, int, G__pop_tempobject, (void));
-G__DECL_API(237, char*, G__stripfilename, (char* filename));
+G__DECL_API(237, const char*, G__stripfilename, (const char* filename));
 
 /***********************************************************************
  * Native long long support
@@ -366,16 +366,16 @@ G__DECL_API(237, char*, G__stripfilename, (char* filename));
 G__DECL_API(238, G__int64, G__expr_strtoll, (const char *nptr,char **endptr, register int base));
 G__DECL_API(239, G__uint64, G__expr_strtoull, (const char *nptr, char **endptr, register int base));
 
-G__DECL_API(250, int, G__check_drange, (int p,double low,double up,double d,G__value *result7,char *funcname));
-G__DECL_API(241, int, G__check_lrange, (int p,long low,long up,long l,G__value *result7,char *funcname));
-G__DECL_API(242, int, G__check_type, (int p,int t1,int t2,G__value *para,G__value *result7,char *funcname));
-G__DECL_API(243, int, G__check_nonull, (int p,int t,G__value *para,G__value *result7,char *funcname));
-G__DECL_API(244, void, G__printerror, (char *funcname,int ipara,int paran));
+G__DECL_API(250, int, G__check_drange, (int p,double low,double up,double d,G__value *result7,const char *funcname));
+G__DECL_API(241, int, G__check_lrange, (int p,long low,long up,long l,G__value *result7,const char *funcname));
+G__DECL_API(242, int, G__check_type, (int p,int t1,int t2,G__value *para,G__value *result7,const char *funcname));
+G__DECL_API(243, int, G__check_nonull, (int p,int t,G__value *para,G__value *result7,const char *funcname));
+G__DECL_API(244, void, G__printerror, (const char *funcname,int ipara,int paran));
 #ifdef G__SECURITY
 G__DECL_API(245, int, G__security_handle,(G__UINT32 category));
 #endif
 G__DECL_API(246, void, G__CurrentCall,(int, void*, long*));
-G__DECL_API(247, G__value, G__getfunction, (char *item,int *known3,int memfunc_flag));
+G__DECL_API(247, G__value, G__getfunction, (G__CONST char *item,int *known3,int memfunc_flag));
 
 G__DECL_API(248, int, G__sizeof, (G__value *object));
 G__DECL_API(249, void, G__exec_alloc_lock, ());

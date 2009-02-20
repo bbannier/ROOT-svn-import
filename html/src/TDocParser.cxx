@@ -132,9 +132,9 @@ std::set<std::string>  TDocParser::fgKeywords;
 TDocParser::TDocParser(TClassDocOutput& docOutput, TClass* cl):
    fHtml(docOutput.GetHtml()), fDocOutput(&docOutput), fLineNo(0),
    fCurrentClass(cl), fRecentClass(0), fCurrentModule(0),
-   fDirectiveCount(0), fDocContext(kIgnore), 
+   fDirectiveCount(0), fLineNumber(0), fDocContext(kIgnore), 
    fCheckForMethod(kFALSE), fClassDocState(kClassDoc_Uninitialized), 
-   fCommentAtBOL(kFALSE)
+   fCommentAtBOL(kFALSE), fAllowDirectives(kTRUE)
 {
    // Constructor called for parsing class sources
 
@@ -167,9 +167,10 @@ TDocParser::TDocParser(TClassDocOutput& docOutput, TClass* cl):
 //______________________________________________________________________________
 TDocParser::TDocParser(TDocOutput& docOutput):
    fHtml(docOutput.GetHtml()), fDocOutput(&docOutput), fLineNo(0),
-   fCurrentClass(0), fRecentClass(0), fDirectiveCount(0), fDocContext(kIgnore), 
+   fCurrentClass(0), fRecentClass(0), fDirectiveCount(0),
+   fLineNumber(0), fDocContext(kIgnore), 
    fCheckForMethod(kFALSE), fClassDocState(kClassDoc_Uninitialized),
-   fCommentAtBOL(kFALSE)
+   fCommentAtBOL(kFALSE), fAllowDirectives(kFALSE)
 {
    // constructor called for parsing text files with Convert()
    InitKeywords();
@@ -355,12 +356,14 @@ void TDocParser::Convert(std::ostream& out, std::istream& in, const char* relpat
 {
    // Parse text file "in", add links etc, and write output to "out".
    // If "isCode", "in" is assumed to be C++ code.
+   fLineNumber = 0;
    fParseContext.clear();
    if (isCode) fParseContext.push_back(kCode);
    else        fParseContext.push_back(kComment); // so we can find "BEGIN_HTML"/"END_HTML" in plain text
 
    while (!in.eof()) {
       fLineRaw.ReadLine(in, kFALSE);
+      ++fLineNumber;
       if (in.eof())
          break;
 
@@ -374,13 +377,8 @@ void TDocParser::Convert(std::ostream& out, std::istream& in, const char* relpat
       ProcessComment();
 
       if (!InContext(kDirective)) {
-         if (fLineComment.Length() ) {
-            GetDocOutput()->AdjustSourcePath(fLineComment, relpath);
-            out << fLineComment << endl;
-         } else {
-            GetDocOutput()->AdjustSourcePath(fLineSource, relpath);
-            out << fLineSource << endl;
-         }
+         GetDocOutput()->AdjustSourcePath(fLineSource, relpath);
+         out << fLineSource << endl;
       }
    }
 }
@@ -1404,6 +1402,7 @@ TMethod* TDocParser::LocateMethodInCurrentLine(Ssiz_t &posMethodName, TString& r
             if (srcOut)
                srcOut << "<a name=\"" << anchor << "\"></a>";
          }
+         ++fLineNumber;
          if (srcOut)
             WriteSourceLine(srcOut);
 
@@ -1562,9 +1561,10 @@ void TDocParser::LocateMethods(std::ostream& out, const char* filename,
 
    std::ofstream srcHtmlOut;
    TString srcHtmlOutName;
-   if (sourceExt && sourceExt[0])
+   if (sourceExt && sourceExt[0]) {
       dynamic_cast<TClassDocOutput*>(fDocOutput)->CreateSourceOutputStream(srcHtmlOut, sourceExt, srcHtmlOutName);
-   else {
+      fLineNumber = 0;
+   } else {
       sourceExt = 0;
       srcHtmlOutName = fCurrentClass->GetName();
       fDocOutput->NameSpace2FileName(srcHtmlOutName);
@@ -1707,6 +1707,7 @@ void TDocParser::LocateMethods(std::ostream& out, const char* filename,
 
 
       // write to .cxx.html
+      ++fLineNumber;
       if (srcHtmlOut)
          WriteSourceLine(srcHtmlOut);
       else if (needAnchor)
@@ -1724,6 +1725,11 @@ void TDocParser::LocateMethods(std::ostream& out, const char* filename,
       WriteClassDoc(out);
 
    srcHtmlOut << "</pre>" << std::endl;
+   srcHtmlOut << "<div id=\"linenums\">";
+   for (Long_t i = 0; i < fLineNumber; ++i)
+      srcHtmlOut << "<div class=\"ln\">&nbsp;<span class=\"ln\">" << i + 1 << "</span></div>";
+   srcHtmlOut << "</div></div>" << std::endl;
+
    fDocOutput->WriteHtmlFooter(srcHtmlOut, "../");
 
    fParseContext.clear();
@@ -2031,4 +2037,5 @@ void TDocParser::WriteSourceLine(std::ostream& out)
 
    fDocOutput->AdjustSourcePath(fLineSource);
    out << fLineSource << std::endl;
+
 }

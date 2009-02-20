@@ -59,6 +59,7 @@
 #include <conio.h>
 
 extern "C" {
+   extern void Gl_setwidth(int width);
    extern int G__get_security_error();
    extern int G__genericerror(const char* msg);
    void *_ReturnAddress(void);
@@ -875,6 +876,8 @@ namespace {
 
       char pszNewWindowTitle[1024]; // contains fabricated WindowTitle
       char pszOldWindowTitle[1024]; // contains original WindowTitle
+      HANDLE hStdout; 
+      CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
 
       if (!::GetConsoleTitle(pszOldWindowTitle, 1024))
          return;
@@ -893,6 +896,12 @@ namespace {
          //::SetForegroundWindow((HWND)gConsoleWindow);
          ::SetConsoleTitle("ROOT session");
       }
+      hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+      ::SetConsoleMode(hStdout, ENABLE_PROCESSED_OUTPUT | 
+                       ENABLE_WRAP_AT_EOL_OUTPUT);
+      if (!::GetConsoleScreenBufferInfo(hStdout, &csbiInfo))
+         return;
+      Gl_setwidth(csbiInfo.dwMaximumWindowSize.X);
    }
 
 } // end unnamed namespace
@@ -1542,22 +1551,23 @@ void TWinNTSystem::DispatchOneEvent(Bool_t pendingOnly)
    // Dispatch a single event in TApplication::Run() loop
 
    // check for keyboard events
-   if (_kbhit()) {
-      if (gROOT->GetApplication()) {
-         gApplication->HandleTermInput();
-         if (gSplash) {    // terminate splash window after first key press
-            delete gSplash;
-            gSplash = 0;
-         }
-         ::SetConsoleMode(::GetStdHandle(STD_OUTPUT_HANDLE),
-                          ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT);
-      }
-   }
    if (pendingOnly && gGlobalEvent) ::SetEvent(gGlobalEvent);
 
    Bool_t pollOnce = pendingOnly;
 
    while (1) {
+      if (_kbhit()) {
+         if (gROOT->GetApplication()) {
+            gApplication->HandleTermInput();
+            if (gSplash) {    // terminate splash window after first key press
+               delete gSplash;
+               gSplash = 0;
+            }
+            if (!pendingOnly) {
+               return;
+            }
+         }
+      }
       if (gROOT->IsLineProcessing() && (!gVirtualX || !gVirtualX->IsCmdThread())) {
          if (!pendingOnly) {
             // yield execution to another thread that is ready to run

@@ -23,7 +23,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
    char* struct_offset_stack[G__MAXSTRSTACK]; // struct offset stack
    int gvpp = 0; // struct offset stack pointer
    char* store_globalvarpointer[G__MAXSTRSTACK];
-   char* funcname = 0; // function name
+   const char* funcname = 0; // function name
    G__InterfaceMethod pfunc;
    struct G__param fpara; // func,var parameter buf
    int* cntr = 0;
@@ -206,7 +206,10 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             }
 #endif // G__ASM_DBG
             G__asm_stack[sp].obj.i = (G__asm_inst[pc+5] & 1) ? *(int*)(G__asm_inst[pc+1] + localmem) : *(int*)G__asm_inst[pc+1];
-            G__value_typenum(G__asm_stack[sp++]) = Reflex::Type::ByName("int");
+            {
+               static Reflex::Type int_type = Reflex::Type::ByName("int");
+               G__value_typenum(G__asm_stack[sp++]) = int_type;
+            }
             p2fldst = (p2fldst_t) G__asm_inst[pc+2];
             (*p2fldst)(G__asm_stack, &sp, (G__asm_inst[pc+5] & 2) ? localmem : 0, G__Dict::GetDict().GetDataMember(G__asm_inst[pc+6]));
             pc += G__asm_inst[pc+4];
@@ -257,7 +260,10 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
                       (*(int*)(G__asm_inst[pc+2] + localmem)) : (*(int*)G__asm_inst[pc+2]));
                   break;
             }
-            G__value_typenum(G__asm_stack[sp++]) = Reflex::Type::ByName("int");
+            {
+               static Reflex::Type int_type = Reflex::Type::ByName("int");
+               G__value_typenum(G__asm_stack[sp++]) = int_type;
+            }
             p2fldst = (p2fldst_t) G__asm_inst[pc+4];
             (*p2fldst)(G__asm_stack, &sp, (G__asm_inst[pc+7] & 4) ? localmem : 0, G__Dict::GetDict().GetDataMember(G__asm_inst[pc+8]));
             pc += G__asm_inst[pc+6];
@@ -614,10 +620,10 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
                }
 #endif
                if (flag == 1) {
-                  funcname = (char*)G__asm_inst[pc+2];
+                  funcname = (const char*)G__asm_inst[pc+2];
                   hash = G__asm_inst[pc+1] / 10;
                } else if (flag == 3) {
-                  funcname = (char*)G__asm_inst[pc+2]; 
+                  funcname = (const char*)G__asm_inst[pc+2]; 
                } else {
                   funcname = "Cint bytecode compiler G__LD_FUNC";
                }
@@ -631,7 +637,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
                for (int i = 0; i < fpara.paran; ++i) {
                   fpara.para[i] = G__asm_stack[sp-fpara.paran+i];
                   if (!fpara.para[i].ref) {
-                     switch (Reflex::Tools::FundamentalType(G__value_typenum(fpara.para[i]))) {
+                     switch (Reflex::Tools::FundamentalType(G__value_typenum(fpara.para[i]).FinalType())) {
                         case Reflex::kFLOAT:
                         case Reflex::kUNSIGNED_CHAR:
                         case Reflex::kCHAR:
@@ -671,10 +677,10 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
                //
 #ifdef G__EXCEPTIONWRAPPER
                G__asm_exec = 0;
-               dtorfreeoffset = (char*) G__ExceptionWrapper(pfunc, result, funcname, &fpara, hash);
+               dtorfreeoffset = (char*) (long) G__ExceptionWrapper(pfunc, result, (char*)funcname, &fpara, hash);
                G__asm_exec = 1;
 #else // G__EXCEPTIONWRAPPER
-               dtorfreeoffset = (char*) (*pfunc)(result, funcname, &fpara, hash);
+               dtorfreeoffset = (char*) (long) (*pfunc)(result, (char*)funcname, &fpara, hash);
 #endif // G__EXCEPTIONWRAPPER
                //
                //  Function has returned.
@@ -992,7 +998,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             sp -= fpara.paran;
             {
               int known = 0;
-              G__asm_stack[sp] = G__getvariable("", &known, G__asm_index.DeclaringScope(), Reflex::Scope());
+              G__asm_stack[sp] = G__getvariable(/*FIXME*/(char*)"", &known, G__asm_index.DeclaringScope(), Reflex::Scope());
             }
             pc += 5;
 #ifdef G__ASM_DBG
@@ -1090,7 +1096,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             sp -= fpara.paran;
             {
                int known = 0;
-               G__asm_stack[sp] = G__getvariable("", &known, G__asm_index.DeclaringScope(), Reflex::Scope::GlobalScope());
+               G__asm_stack[sp] = G__getvariable(/*FIXME*/(char*)"", &known, G__asm_index.DeclaringScope(), Reflex::Scope::GlobalScope());
             }
             pc += 5;
 #ifdef G__ASM_DBG
@@ -1192,7 +1198,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             G__store_struct_offset = localmem;
             {
                int known = 0;
-               G__asm_stack[sp] = G__getvariable("", &known, G__asm_index.DeclaringScope(), Reflex::Scope::GlobalScope());
+               G__asm_stack[sp] = G__getvariable(/*FIXME*/(char*)"", &known, G__asm_index.DeclaringScope(), Reflex::Scope::GlobalScope());
             }
             G__store_struct_offset = store_struct_offset_localmem;
             pc += 5;

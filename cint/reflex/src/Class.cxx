@@ -40,7 +40,7 @@ Reflex::Class::Class(const char *           typ,
                      TYPE                   classType)
 //-------------------------------------------------------------------------------
 // Construct a Class instance.
-      : TypeBase(typ, size, classType, ti),
+      : TypeBase(typ, size, classType, ti, Type(), (typ && (typ[0] == 'F') && !strcmp(typ, "FILE")) ? 'e' : 'u'),
       ScopeBase(typ, classType),
       fModifiers(modifiers),
       fAllBases(0),
@@ -461,15 +461,11 @@ void Reflex::Class::AddDataMember(const char * nam,
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Class::AddDataMember(Member &output,
-                                  const char * nam,
-                                  const Type & typ,
-                                  size_t offs,
-                                  unsigned int modifiers) const
+void Reflex::Class::AddDataMember(Member& output, const char* nam, const Type& typ, size_t offs, unsigned int modifiers, char* interpreterOffset) const
 {
    //-------------------------------------------------------------------------------
    // Add data member to this class
-   ScopeBase::AddDataMember(output, nam, typ, offs, modifiers);
+   ScopeBase::AddDataMember(output, nam, typ, offs, modifiers, interpreterOffset);
 }
 
 

@@ -19,7 +19,7 @@
 
 //______________________________________________________________________________
 Reflex::Union::Union(const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers, TYPE unionType /*=UNION*/)
-: TypeBase(typ, size, unionType, ti)
+: TypeBase(typ, size, unionType, ti, Type(), 'u')
 , ScopeBase(typ, unionType)
 , fModifiers(modifiers)
 , fCompleteType(false)
@@ -295,10 +295,10 @@ void Reflex::Union::AddDataMember(const char* nam, const Type& typ, size_t offs,
 }
 
 //______________________________________________________________________________
-void Reflex::Union::AddDataMember(Member &output, const char* nam, const Type& typ, size_t offs, unsigned int modifiers /*= 0*/) const
+void Reflex::Union::AddDataMember(Member& output, const char* nam, const Type& typ, size_t offs, unsigned int modifiers /*= 0*/, char* interpreterOffset /*= 0*/) const
 {
    // Add a data memebr to the union.
-   ScopeBase::AddDataMember(output, nam, typ, offs, modifiers);
+   ScopeBase::AddDataMember(output, nam, typ, offs, modifiers, interpreterOffset);
 }
 
 //______________________________________________________________________________

@@ -1990,7 +1990,7 @@ int G__blockscope::initscalarary(G__TypeReader& /*type*/, const Reflex::Member& 
       // -- Should be a one-dimensional character array.
       // char  ary[] =  "abc";  
       //                     ^
-      if ((Reflex::Tools::FundamentalType(var.TypeOf()) != Reflex::kCHAR) || (G__get_paran(var) != 1)) {
+      if ((Reflex::Tools::FundamentalType(var.TypeOf().FinalType()) != Reflex::kCHAR) || (G__get_paran(var) != 1)) {
          G__fprinterr(G__serr, "Error: %s: %d: illegal initialization of '%s'", __FILE__, __LINE__, var.Name(Reflex::SCOPED).c_str());
          G__genericerror(0);
       }
@@ -2198,7 +2198,7 @@ Reflex::Member G__blockscope::allocatevariable(G__TypeReader& type
     ::Reflex::Member var(
        G__add_scopemember(m_scope, name.c_str(),
           var_type, (type.Isstatic()?Reflex::STATIC:0), 
-          ((Type)(m_scope)).SizeOf(),
+          0 /*((Type)(m_scope)).SizeOf()*/,
           var_offset,
           G__PUBLIC, var_statictype));
 
