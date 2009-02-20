@@ -384,7 +384,7 @@ void TProfileHelper::Sumw2(T* p)
    //  This function is automatically called when the histogram is created
    //  if the static function TH1::SetDefaultSumw2 has been called before.
 
-   if (!p->fgDefaultSumw2 && p->fBinSumw2.fN) {
+   if (!p->fgDefaultSumw2 && p->fBinSumw2.fN == p->fNcells) {
       Warning("Sumw2","Sum of squares of weights structure already created");
       return;
    }
