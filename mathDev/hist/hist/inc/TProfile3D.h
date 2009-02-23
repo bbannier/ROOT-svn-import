@@ -50,9 +50,9 @@ protected:
    virtual Int_t    BufferFill(Double_t x, Double_t y, Double_t z, Double_t t, Double_t w);
 
    // helper methods for the Merge unification in TProfileHelper
-   void SetBins(const Double_t* range) { SetBins(range[0], range[1], range[2], 
-                                                 range[3], range[4], range[5], 
-                                                 range[6], range[7], range[8]); };
+   void SetBins(const Int_t* nbins,const Double_t* range) { SetBins(nbins[0], range[0], range[1], 
+                                                                    nbins[1], range[2], range[3], 
+                                                                    nbins[2], range[4], range[5]); };
    Int_t Fill(const Double_t* v) { return Fill(v[0], v[1], v[2], v[3], v[4]); };
    
 private:

@@ -52,7 +52,7 @@ static Bool_t   fgApproximate;    //bin error approximation option
    virtual Int_t    BufferFill(Double_t x, Double_t y, Double_t w);
 
    // helper methods for the Merge unification in TProfileHelper
-   void SetBins(const Double_t* range) { SetBins(range[0], range[1], range[2]); };
+   void SetBins(const Int_t* nbins, const Double_t* range) { SetBins(nbins[0], range[0], range[1]); };
    Int_t Fill(const Double_t* v) { return Fill(v[0], v[1], v[2]); };
 
 private:
