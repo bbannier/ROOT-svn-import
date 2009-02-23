@@ -224,10 +224,11 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
    if ( p->GetDimension() >= 3 )
       same = same && p->SameLimitsAndNBins(newZAxis, *(p->GetZaxis()));
    if (!same && initialLimitsFound) {
-      Double_t v[] = { newXAxis.GetNbins(), newXAxis.GetXmin(), newXAxis.GetXmax(),
-                       newYAxis.GetNbins(), newYAxis.GetXmin(), newYAxis.GetXmax(),
-                       newZAxis.GetNbins(), newZAxis.GetXmin(), newZAxis.GetXmax() };
-      p->SetBins(v);
+      Int_t b[] = { newXAxis.GetNbins(), newYAxis.GetNbins(), newZAxis.GetNbins() };
+      Double_t v[] = { newXAxis.GetXmin(), newXAxis.GetXmax(),
+                       newYAxis.GetXmin(), newYAxis.GetXmax(),
+                       newZAxis.GetXmin(), newZAxis.GetXmax() };
+      p->SetBins(b, v);
    }
 
    if (!allHaveLimits) {
