@@ -47,6 +47,7 @@
 #pragma link C++ class RooStats::ToyMCSampler+;
 #pragma link C++ class RooStats::TestStatistic+;
 #pragma link C++ class RooStats::ProfileLikelihoodTestStat+;
+#pragma link C++ class RooStats::NumEventsTestStat+;
 //#pragma link C++ class RooStats::ProfileDistributionCreator+; // type def to templated specialization
 #pragma link C++ class RooStats::PointSetInterval+;
 #pragma link C++ class RooStats::SamplingDistribution+;

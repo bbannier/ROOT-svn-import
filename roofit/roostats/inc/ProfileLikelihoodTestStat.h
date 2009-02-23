@@ -32,7 +32,6 @@ END_HTML
 #include "RooStats/DistributionCreator.h"
 #include "RooStats/SamplingDistribution.h"
 #include "RooStats/TestStatistic.h"
-#include "RooStats/ToyMCSampler.h"
 
 #include "RooRealVar.h"
 #include "RooProfileLL.h"
