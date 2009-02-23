@@ -1,7 +1,7 @@
 # Module.mk for mathcore module
 # Copyright (c) 2000 Rene Brun and Fons Rademakers
 #
-# Author: Fons Rademakers, 20/6/2005
+# Author: David Gonzalez Maline, 21/4/2008
 
 MODNAME      := genetic
 MODDIR       := math/$(MODNAME)
