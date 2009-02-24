@@ -56,12 +56,9 @@ MinimumError MnPosDef::operator()(const MinimumError& e, const MnMachinePrecisio
       if(err(i,i) < dgmin) dgmin = err(i,i);
    }
    double dg = 0.;
-//   if(dgmin < prec.Eps2()) {
    if(dgmin <= 0) {
       //dg = 1. + epspdf - dgmin; 
       dg = 0.5 + epspdf - dgmin; 
-      // added by me to test (scale by 100)
-      dg = 0.01 *( 0.5 + epspdf - dgmin); 
       //     dg = 0.5*(1. + epspdf - dgmin); 
 #ifdef WARNINGMSG
       MN_INFO_VAL2("added to diagonal of Error matrix a value",dg);
