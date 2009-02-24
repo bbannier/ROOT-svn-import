@@ -24,7 +24,7 @@
 #include "Minuit2/MnStrategy.h"
 #include "Minuit2/MnHesse.h"
 
-//#define DEBUG 
+#define DEBUG 
 
 #if defined(DEBUG) || defined(WARNINGMSG)
 #include "Minuit2/MnPrint.h" 
@@ -213,6 +213,11 @@ FunctionMinimum VariableMetricBuilder::Minimum(const MnFcn& fcn, const GradientC
       }
       
       double gdel = inner_product(step, s0.Gradient().Grad());
+
+#ifdef DEBUG
+      std::cout << " gdel = " << gdel << std::endl;
+#endif
+
       if(gdel > 0.) {
 #ifdef WARNINGMSG
          MN_INFO_MSG("VariableMetricBuilder: matrix not pos.def, gdel > 0");
