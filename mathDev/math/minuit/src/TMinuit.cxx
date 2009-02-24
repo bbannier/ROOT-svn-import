@@ -4176,7 +4176,29 @@ L30:
 L214:
    mninex(fX);
 //*-*-                 verify matrix positive-definite
+
+   //print matrix
+   Printf("Matrix before posdef \n");
+   for (i = 1; i <= fNpar; ++i) {
+      for (j = 1; j <= fNpar; ++j) {
+         ndex = i*(i-1) / 2 + j;
+         printf(" %f ",fVhmat[ndex-1]);
+      }
+      printf("\n");
+   }
+
    mnpsdf();
+
+   Printf("Matrix after posdef \n");
+   for (i = 1; i <= fNpar; ++i) {
+      for (j = 1; j <= fNpar; ++j) {
+         ndex = i*(i-1) / 2 + j;
+         printf(" %f ",fVhmat[ndex-1]);
+      }
+      printf("\n");
+   }
+
+
    for (i = 1; i <= fNpar; ++i) {
       for (j = 1; j <= i; ++j) {
          ndex = i*(i-1) / 2 + j;
@@ -5225,6 +5247,9 @@ L24:
       goto L300;
    }
 //*-*-                if gdel positive, V not posdef
+
+   printf ("Main iteration %d , gdel before LS %f \n",iter, gdel);
+
    if (gdel >= 0) {
       mnwarn("D", "MIGRAD", " NEWTON STEP NOT DESCENT.");
       if (npsdf == 1) goto L1;
@@ -5274,6 +5299,10 @@ L81:
       mnwarn("D", "MIGRAD", "NOT POS-DEF. EDM OR GVG NEGATIVE.");
       fCstatu = "NOT POSDEF";
       if (npsdf == 1) goto L230;
+
+      printf ("check gdel end iteration  %f  gvg  %f\n",fEDM,gvg);
+
+
       mnpsdf();
       npsdf = 1;
       goto L81;
