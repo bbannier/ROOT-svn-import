@@ -19,7 +19,7 @@
 #include "Minuit2/VariableMetricEDMEstimator.h"
 #include "Minuit2/FunctionMinimum.h"
 
-#define DEBUG
+//#define DEBUG
 
 #if defined(DEBUG) || defined(WARNINGMSG)
 #include "Minuit2/MnPrint.h"
@@ -151,9 +151,8 @@ MinimumState MnHesse::operator()(const MnFcn& mfcn, const MinimumState& st, cons
 #ifdef DEBUG
             std::cout << "cycle " << icyc << " mul " << multpy << "\t sag = " << sag << " d = " << d << std::endl; 
 #endif
-            // FMinuit checks that fabs(sag) != 0 (t.b.i). Now as F77 Minuit
+            //  Now as F77 Minuit - check taht sag is not zero
             if (sag != 0) goto L30; // break
-//            if(fabs(sag) > prec.Eps2()) goto L30; // break;
             if(trafo.Parameter(i).HasLimits()) {
                if(d > 0.5) goto L26;
                d *= 10.;
