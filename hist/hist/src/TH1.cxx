@@ -7231,9 +7231,10 @@ void TH1::Sumw2()
 
    fSumw2.Set(fNcells);
 
-   for (Int_t bin=0; bin<fNcells; bin++) {
-      fSumw2.fArray[bin] = GetBinContent(bin);
-   }
+   if ( fEntries > 0 )
+      for (Int_t bin=0; bin<fNcells; bin++) {
+         fSumw2.fArray[bin] = GetBinContent(bin);
+      }
 }
 
 //______________________________________________________________________________
