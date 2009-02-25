@@ -32,6 +32,7 @@
 #include "TContextMenu.h"
 #include "TGToolTip.h"
 #include "KeySymbols.h"
+#include "TGLAnnotation.h"
 
 //______________________________________________________________________________
 //
@@ -299,7 +300,7 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
    if (fGLViewer->IsLocked()) {
       if (gDebug>2) {
          Info("TGLEventHandler::HandleButton", "ignored - viewer is %s",
-            fGLViewer->LockName(fGLViewer->CurrentLock()));
+              fGLViewer->LockName(fGLViewer->CurrentLock()));
       }
       return kFALSE;
    }
@@ -316,20 +317,29 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
       eventSt.fY = event->fY;
       eventSt.fCode = event->fCode;
 
-      if (fGLViewer->GetPushAction() == TGLViewer::kPushCamCenter)
+      if ( fGLViewer->GetPushAction() != TGLViewer::kPushStd )
       {
-         fGLViewer->fPushAction = TGLViewer::kPushStd;
          fGLViewer->RequestSelect(event->fX, event->fY);
          if (fGLViewer->fSelRec.GetN() > 0)
          {
             TGLVector3 v(event->fX, event->fY, 0.5*fGLViewer->fSelRec.GetMinZ());
             fGLViewer->CurrentCamera().WindowToViewport(v);
             v = fGLViewer->CurrentCamera().ViewportToWorld(v);
-            fGLViewer->CurrentCamera().SetExternalCenter(kTRUE);
-            fGLViewer->CurrentCamera().SetCenterVec(v.X(), v.Y(), v.Z());
+            if (fGLViewer->GetPushAction() == TGLViewer::kPushCamCenter)
+            {
+               fGLViewer->CurrentCamera().SetExternalCenter(kTRUE);
+               fGLViewer->CurrentCamera().SetCenterVec(v.X(), v.Y(), v.Z());
+            }
+            else
+            { 
+               TGLSelectRecord& rec = fGLViewer->GetSelRec();
+               TObject* obj = rec.GetObject();
+               TGLRect& vp = fGLViewer->CurrentCamera().RefViewport();
+               new TGLAnnotation(fGLViewer, obj->GetTitle(),  eventSt.fX*1.f/vp.Width(),  1 - eventSt.fY*1.f/vp.Height(), v);
+            }
+
             fGLViewer->RequestDraw();
          }
-         fGLViewer->RefreshPadEditor(this);
          return kTRUE;
       }
 
@@ -435,7 +445,14 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
          fInPointerGrab = kFALSE;
       }
 
-      if (fGLViewer->fDragAction == TGLViewer::kDragOverlay)
+      if (fGLViewer->GetPushAction() !=  TGLViewer::kPushStd)
+      {
+         // This should be 'tool' dependant.
+         fGLViewer->fPushAction = TGLViewer::kPushStd;
+         fGLViewer->RefreshPadEditor(fGLViewer);
+         return kTRUE;
+      }
+      else if (fGLViewer->fDragAction == TGLViewer::kDragOverlay && fGLViewer->fCurrentOvlElm)
       {
          fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event);
          fGLViewer->OverlayDragFinished();
@@ -471,10 +488,13 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
       }
       fGLViewer->fDragAction = TGLViewer::kDragNone;
       if (fGLViewer->fGLDevice != -1)
+      {
          gGLManager->MarkForDirectCopy(fGLViewer->fGLDevice, kFALSE);
+      }
       if ((event->fX == eventSt.fX) &&
           (event->fY == eventSt.fY) &&
-          (eventSt.fCode == event->fCode)) {
+          (eventSt.fCode == event->fCode))
+      {
          TObject *obj = 0;
          fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY, kFALSE);
          TGLPhysicalShape *phys_shape = fGLViewer->fSelRec.GetPhysShape();
@@ -488,7 +508,8 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
          eventSt.fCode = 0;
          eventSt.fState = 0;
       }
-      if (event->fCode == kButton1 && fMouseTimer) {
+      if (event->fCode == kButton1 && fMouseTimer)
+      {
          fMouseTimer->TurnOn();
       }
    }

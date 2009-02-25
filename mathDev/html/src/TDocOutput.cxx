@@ -13,6 +13,7 @@
 
 #include "Riostream.h"
 #include "TClassDocOutput.h"
+#include "TClassEdit.h"
 #include "TDataMember.h"
 #include "TDataType.h"
 #include "TDocInfo.h"
@@ -517,10 +518,8 @@ void TDocOutput::Convert(std::istream& in, const char* infilename,
    parser.Convert(out, in, relpath, (includeOutput) /* determines whether it's code or not */);
 
    out << "</pre></div>" << endl;
-   out << "<div id=\"linenums\">";
-   for (Long_t i = 0; i < parser.GetLineNumber(); ++i)
-      out << "<div class=\"ln\">&nbsp;<span class=\"ln\">" << i + 1 << "</span></div>";
-   out << "</div>" << std::endl;
+
+   WriteLineNumbers(out, parser.GetLineNumber(), gSystem->BaseName(infilename));
 
    if (includeOutput) {
       out << "</td><td style=\"vertical-align:top;\">" << endl;
@@ -1194,7 +1193,8 @@ void TDocOutput::CreateClassTypeDefs()
             << "<div class=\"classdescr\">" << endl;
 
          outfile << dtName << " is a typedef to ";
-         parser.DecorateKeywords(outfile, cls->GetName());
+         std::string shortClsName(TClassEdit::ShortType(cls->GetName(), 1<<7));
+         parser.DecorateKeywords(outfile, shortClsName.c_str());
          outfile << endl
             << "</div>" << std::endl 
             << "</div></div><div style=\"clear:both;\"></div>" << std::endl;
@@ -1545,6 +1545,8 @@ void TDocOutput::NameSpace2FileName(TString& name)
    TString encScope(name);
    Ssiz_t posTemplate = encScope.Index('<');
    if (posTemplate != kNPOS) {
+      // strip default template params
+      name = TClassEdit::ShortType(name, 1<<7);
       TString templateArgs = encScope(posTemplate, encScope.Length());
       encScope.Remove(posTemplate, encScope.Length());
       // shorten the name a bit:
@@ -1785,8 +1787,10 @@ void TDocOutput::ReferenceEntity(TSubString& str, TDataType* entity, const char*
    if (isClassTypedef)
       /* is class/ struct / union */
       isClassTypedef = isClassTypedef && (entity->Property() & 7);
-   if (isClassTypedef)
-      cdi = (TClassDocInfo*) GetHtml()->GetListOfClasses()->FindObject(entity->GetFullTypeName());
+   if (isClassTypedef) {
+      std::string shortTypeName(TClassEdit::ShortType(entity->GetFullTypeName(), 1<<7));
+      cdi = (TClassDocInfo*) GetHtml()->GetListOfClasses()->FindObject(shortTypeName.c_str());
+   }
    if (cdi) {
       link = mangledEntity + ".html";
    } else {
@@ -2237,6 +2241,25 @@ void TDocOutput::WriteModuleLinks(std::ostream& out)
       }
       out<< "</div><br />" << endl;
    }
+}
+
+//______________________________________________________________________________
+void TDocOutput::WriteLineNumbers(std::ostream& out, Long_t nLines, const TString& infileBase) const
+{
+   // Create a div containing the line numbers (for a source listing) 1 to nLines.
+   // Create links to the source file's line number and anchors, such that one can
+   // jump to SourceFile.cxx.html#27 (using the anchor), and one can copy and paste
+   // the link into e.g. gdb to get the text "SourceFile.cxx:27".
+
+   out << "<div id=\"linenums\">";
+   for (Long_t i = 0; i < nLines; ++i) {
+      // &nbsp; to force correct line height
+      out << "<div class=\"ln\">&nbsp;<span class=\"lnfile\">" << infileBase
+          << ":</span><a name=\"" << i + 1 << "\" href=\"#" << i + 1
+          << "\" class=\"ln\">" << i + 1 << "</a></div>";
+   }
+   out << "</div>" << std::endl;
+
 }
 
 //______________________________________________________________________________

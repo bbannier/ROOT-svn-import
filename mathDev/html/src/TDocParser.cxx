@@ -1725,10 +1725,10 @@ void TDocParser::LocateMethods(std::ostream& out, const char* filename,
       WriteClassDoc(out);
 
    srcHtmlOut << "</pre>" << std::endl;
-   srcHtmlOut << "<div id=\"linenums\">";
-   for (Long_t i = 0; i < fLineNumber; ++i)
-      srcHtmlOut << "<div class=\"ln\">&nbsp;<span class=\"ln\">" << i + 1 << "</span></div>";
-   srcHtmlOut << "</div></div>" << std::endl;
+
+   fDocOutput->WriteLineNumbers(srcHtmlOut, fLineNumber, gSystem->BaseName(fCurrentFile));
+
+   srcHtmlOut << "</div>" << std::endl;
 
    fDocOutput->WriteHtmlFooter(srcHtmlOut, "../");
 
@@ -1759,7 +1759,6 @@ void TDocParser::LocateMethodsInSource(std::ostream& out)
    if (fHtml->GetImplFileName(fCurrentClass, kTRUE, implFileName))
       LocateMethods(out, implFileName, kFALSE /*source info*/, useDocxxStyle, 
                     kFALSE /*allowPureVirtual*/, pattern, ".cxx.html");
-   else out << "</div>" << endl; // close class descr div
 }
 
 //______________________________________________________________________________
