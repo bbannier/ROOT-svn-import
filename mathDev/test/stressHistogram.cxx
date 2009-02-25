@@ -1,3 +1,55 @@
+// @(#)root/test:$name:  $:$id: stressHistogram.cxx,v 1.15 2002/10/25 10:47:51 rdm exp $
+// Authors: David Gonzalez Maline November 2008
+
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*//
+//                                                                               //
+//                                                                               //
+// Here there is a set of tests for the histogram classes (including             //
+// histograms and profiles). The methods tested work on:                         //
+//                                                                               //
+// 1. Projection testing (with and without weights)                              //
+// 2. Rebinning                                                                  //
+// 3. Addition, multiplication an division operations.                           //
+// 4. Building and copying instances.                                            //
+// 5. I/O functionality (including reference with older versions).               //
+// 6. Labeling.                                                                  //
+// 7. Interpolation                                                              //
+//                                                                               //
+// To see the tests individually, at the bottom of the file the tests            //
+// are exectued using the structure TTestSuite, that defines the                 //
+// subset, the number of routines to be tested as well as the pointes            //
+// for these. Every tests is mean to be simple enough to be understood           //
+// without much comments.                                                        //
+//                                                                               //
+// Finally, for debugging reasons, the struct compareOptions can be              //
+// used to define the level of output of the tests, beging set                   //
+// generally for the whole suit in defaultEqualOptions.                          //
+//                                                                               //
+//                                                                               //
+// An example of output when all the tests run OK is shown below:                //
+// ****************************************************************************  //
+// *  Starting  stress  H I S T O G R A M                                     *  //
+// ****************************************************************************  //
+// Test  1: Testing Projections without weights..............................OK  //
+// Test  2: Testing Projections with weights.................................OK  //
+// Test  3: Histogram Rebinning..............................................OK  //
+// Test  4: Add tests for 1D, 2D and 3D Histograms and Profiles..............OK  //
+// Test  5: Multiply tests for 1D, 2D and 3D Histograms......................OK  //
+// Test  6: Divide tests for 1D, 2D and 3D Histograms........................OK  //
+// Test  7: Copy tests for 1D, 2D and 3D Histograms and Profiles.............OK  //
+// Test  8: Read/Write tests for 1D, 2D and 3D Histograms and Profiles.......OK  //
+// Test  9: Merge tests for 1D, 2D and 3D Histograms and Profiles............OK  //
+// Test 10: Label tests for 1D Histograms (TAxis)............................OK  //
+// Test 11: Interpolation tests for Histograms...............................OK  //
+// Test 12: Reference File Read for Histograms and Profiles..................OK  //
+// ****************************************************************************  //
+// stressHistogram: Real Time =  48.82 seconds Cpu Time =  48.66 seconds         //
+//  ROOTMARKS = 565.557 ROOT version: 5.23/01	branches/dev/mathDev@27607       //
+// ****************************************************************************  //
+//                                                                               //
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*//
+
+
 #include <sstream>
 #include <cmath>
 
