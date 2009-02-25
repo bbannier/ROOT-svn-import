@@ -4063,6 +4063,145 @@ bool testLabel()
    return status;
 }
 
+Double_t function1D(Double_t x)
+{
+   Double_t a = -1.8;
+
+   return a * x;
+}
+
+bool testInterpolation1D() 
+{
+   bool status = false;
+
+   TH1D* h1 = new TH1D("h1", "h1", 
+                       numberOfBins, minRange, maxRange);
+   
+   h1->Reset();
+
+   for ( Int_t nbinsx = 1; nbinsx <= h1->GetXaxis()->GetNbins(); ++nbinsx ) {
+      Double_t x = h1->GetXaxis()->GetBinCenter(nbinsx);
+      h1->Fill(x, function1D(x));
+   }
+   
+   int itest = 0;
+   for (itest = 0; itest < 1000; ++itest) { 
+      double xp = r.Uniform( h1->GetXaxis()->GetBinCenter(1), h1->GetXaxis()->GetBinCenter(numberOfBins) ); 
+      
+      double ip = h1->Interpolate(xp); 
+     
+      if (  fabs(ip  - function1D(xp) ) > 1.E-13*fabs(ip) ) {
+         status = true;
+         cout << "x: " << xp 
+              << " h3->Inter: " << ip
+              << " functionD: " << function1D(xp)
+              << " diff: " << fabs(ip  - function1D(xp))
+              << endl;
+      }
+   }
+
+   delete h1;
+   if ( defaultEqualOptions & cmpOptPrint ) cout << "testInterpolation1D: \t" << (status?"FAILED":"OK") << endl;
+   return status; 
+}
+
+Double_t function2D(Double_t x, Double_t y)
+{
+   Double_t a = -2.1;
+   Double_t b = 0.6;
+
+   return a * x + b * y;
+}
+
+bool testInterpolation2D()
+{
+   bool status = false;
+
+   TH2D* h1 = new TH2D("h1", "h1", 
+                       numberOfBins, minRange, maxRange,
+                       2*numberOfBins, minRange, maxRange);
+   
+   h1->Reset();
+
+   for ( Int_t nbinsx = 1; nbinsx <= h1->GetXaxis()->GetNbins(); ++nbinsx )
+      for ( Int_t nbinsy = 1; nbinsy <= h1->GetYaxis()->GetNbins(); ++nbinsy ) {
+            Double_t x = h1->GetXaxis()->GetBinCenter(nbinsx);
+            Double_t y = h1->GetYaxis()->GetBinCenter(nbinsy);
+            h1->Fill(x, y, function2D(x, y));
+         }
+   
+   int itest = 0;
+   for (itest = 0; itest < 1000; ++itest) { 
+
+      double xp = r.Uniform( h1->GetXaxis()->GetBinCenter(1), h1->GetXaxis()->GetBinCenter(numberOfBins) ); 
+      double yp = r.Uniform( h1->GetYaxis()->GetBinCenter(1), h1->GetYaxis()->GetBinCenter(numberOfBins) );
+      
+      double ip = h1->Interpolate(xp, yp); 
+     
+      if (  fabs(ip  - function2D(xp, yp) ) > 1.E-13*fabs(ip) ) {
+         status = true;
+         cout << "x: " << xp << " y: " << yp
+              << " h3->Inter: " << ip
+              << " function: " << function2D(xp, yp)
+              << " diff: " << fabs(ip  - function2D(xp, yp))
+              << endl;
+      }
+   }
+
+   delete h1;
+   if ( defaultEqualOptions & cmpOptPrint ) cout << "testInterpolation2D: \t" << (status?"FAILED":"OK") << endl;
+   return status; 
+}
+
+Double_t function3D(Double_t x, Double_t y, Double_t z)
+{
+
+   Double_t a = 0.3;
+   Double_t b = 6;
+   Double_t c = -2;
+
+   return a * x + b * y + c * z;
+}
+
+bool testInterpolation3D()
+{
+   bool status = false;
+   TH3D* h1 = new TH3D("h1", "h1", 
+                       numberOfBins, minRange, maxRange,
+                       2*numberOfBins, minRange, maxRange,
+                       4*numberOfBins, minRange, maxRange);
+   
+   h1->Reset();
+
+   for ( Int_t nbinsx = 1; nbinsx <= h1->GetXaxis()->GetNbins(); ++nbinsx )
+      for ( Int_t nbinsy = 1; nbinsy <= h1->GetYaxis()->GetNbins(); ++nbinsy )
+         for ( Int_t nbinsz = 1; nbinsz <= h1->GetZaxis()->GetNbins(); ++nbinsz ) {
+            Double_t x = h1->GetXaxis()->GetBinCenter(nbinsx);
+            Double_t y = h1->GetYaxis()->GetBinCenter(nbinsy);
+            Double_t z = h1->GetZaxis()->GetBinCenter(nbinsz);
+            h1->Fill(x, y, z, function3D(x, y, z));
+         }
+
+   
+   int itest = 0;
+   for (itest = 0; itest < 1000; ++itest) { 
+      double xp = r.Uniform( h1->GetXaxis()->GetBinCenter(1), h1->GetXaxis()->GetBinCenter(numberOfBins) ); 
+      double yp = r.Uniform( h1->GetYaxis()->GetBinCenter(1), h1->GetYaxis()->GetBinCenter(numberOfBins) );
+      double zp = r.Uniform( h1->GetZaxis()->GetBinCenter(1), h1->GetZaxis()->GetBinCenter(numberOfBins) );
+      
+      double ip = h1->Interpolate(xp, yp, zp); 
+      
+      if (  fabs(ip  - function3D(xp, yp, zp) ) > 1.E-15*fabs(ip) ) 
+         status = true;
+   }
+
+   delete h1;
+
+   if ( defaultEqualOptions & cmpOptPrint ) cout << "testInterpolation3D: \t" << (status?"FAILED":"OK") << endl;
+
+   return status; 
+}
+
 bool testRefRead1D()
 {
    if ( refFileOption == refFileWrite ) {
@@ -5408,8 +5547,19 @@ int stressHistogram()
                                         "Label tests for 1D Histograms (TAxis)............................",
                                         labelTestPointer };
 
+   // Test 11
+   // Interpolation Tests
+   const unsigned int numberOfInterpolation = 3;
+   pointer2Test interpolationTestPointer[numberOfInterpolation] = { testInterpolation1D,
+                                                                    testInterpolation2D, 
+                                                                    testInterpolation3D
+   };
+   struct TTestSuite interpolationTestSuite = { numberOfInterpolation, 
+                                                "Interpolation tests for Histograms...............................",
+                                                interpolationTestPointer };
+
    // Combination of tests
-   const unsigned int numberOfSuits = 8;
+   const unsigned int numberOfSuits = 9;
    struct TTestSuite* testSuite[numberOfSuits];
    testSuite[0] = &rebinTestSuite;
    testSuite[1] = &addTestSuite;
@@ -5419,6 +5569,7 @@ int stressHistogram()
    testSuite[5] = &readwriteTestSuite;
    testSuite[6] = &mergeTestSuite;
    testSuite[7] = &labelTestSuite;
+   testSuite[8] = &interpolationTestSuite;
 
    status = 0;
    for ( unsigned int i = 0; i < numberOfSuits; ++i ) {
@@ -5433,8 +5584,8 @@ int stressHistogram()
    }
    GlobalStatus += status;
 
-   // Test 11
-   // Merge Tests
+   // Test 12
+   // Reference Tests
    const unsigned int numberOfRefRead = 7;
    pointer2Test refReadTestPointer[numberOfRefRead] = { testRefRead1D,  testRefReadProf1D,
                                                         testRefRead2D,  testRefReadProf2D,
