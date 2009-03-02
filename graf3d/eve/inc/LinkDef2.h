@@ -108,19 +108,23 @@
 #pragma link C++ class TEveCaloViz+;
 #pragma link C++ class TEveCaloVizEditor+;
 #pragma link C++ class TEveCalo3D+;
+#pragma link C++ class TEveCalo3DEditor+;
 #pragma link C++ class TEveCalo3DGL+;
 #pragma link C++ class TEveCalo2D+;
 #pragma link C++ class TEveCalo2DGL+;
 #pragma link C++ class TEveCaloLego+;
 #pragma link C++ class TEveCaloLegoEditor+;
 #pragma link C++ class TEveCaloLegoGL+;
+#pragma link C++ class TEveCaloLegoOverlay+;
 
 // TEveLegoEventHandler
 #pragma link C++ class TEveLegoEventHandler+;
 
-// TEveLegoOverlay
-#pragma link C++ class TEveLegoOverlay+;
 
+// TEveJetCone
+#pragma link C++ class TEveJetCone+;
+#pragma link C++ class TEveJetConeEditor+;
+#pragma link C++ class TEveJetConeGL+;
 
 //______________________________________________________________________________
 // Helper classes

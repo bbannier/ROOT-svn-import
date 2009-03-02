@@ -1,5 +1,5 @@
 // @(#)root/eve:$Id$
-// Author: Matevz Tadel 2007
+// Author: Alja Mrak-Tadel 2007
 
 /*************************************************************************
  * Copyright (C) 1995-2007, Rene Brun and Fons Rademakers.               *
@@ -9,16 +9,20 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#include "TEveLegoOverlay.h"
+#include "TEveCaloLegoOverlay.h"
+
+#include "TAxis.h"
+
+#include "TGLRnrCtx.h"
+#include "TGLIncludes.h"
+#include "TGLSelectRecord.h"
+#include "TGLUtil.h"
+#include "TGLCamera.h"
+#include "TGLAxisPainter.h"
 
 #include "TEveCalo.h"
 #include "TEveCaloData.h"
 
-#include <TGLRnrCtx.h>
-#include <TGLIncludes.h>
-#include <TGLSelectRecord.h>
-#include <TGLUtil.h>
-#include <TGLCamera.h>
 
 //______________________________________________________________________________
 //
@@ -27,15 +31,16 @@
 //
 //
 
-ClassImp(TEveLegoOverlay);
+ClassImp(TEveCaloLegoOverlay);
 
 //______________________________________________________________________________
-TEveLegoOverlay::TEveLegoOverlay() :
+TEveCaloLegoOverlay::TEveCaloLegoOverlay() :
    TGLCameraOverlay(),
-   TEveElementList("Lego Menu", "TEveLegoOverlay", kTRUE),
+   TEveElementList("Lego Menu", "TEveCaloLegoOverlay", kTRUE),
    fHeaderSelected(kFALSE),
 
    fCalo(0),
+   fSliderAxis(0),
    fMainColor(kGray),
 
    fShowCamera(kTRUE),
@@ -54,18 +59,19 @@ TEveLegoOverlay::TEveLegoOverlay() :
 {
    // Constructor.
   fMainColorPtr = &fMainColor;
+  fSliderAxis = new TAxis();
 
 }
 
 
 /******************************************************************************/
-void TEveLegoOverlay::DrawSlider(TGLRnrCtx& rnrCtx)
+void TEveCaloLegoOverlay::DrawSlider(TGLRnrCtx& rnrCtx)
 {
    // Draw slider and calorimeter Z scale on left side of screen.
 
    glTranslatef(0, fSliderPosY, 0.5);
 
-   // event handling
+   // event handler
    if (rnrCtx.Selection())
    {
       glLoadName(2);
@@ -78,26 +84,27 @@ void TEveLegoOverlay::DrawSlider(TGLRnrCtx& rnrCtx)
       glEnd();
    }
 
-   // drawing
+   // render
    if ( fCalo->GetData() && fCalo->GetData()->Empty() == kFALSE)
    {
-      // axis
+      // slider axis
       Double_t maxVal = fCalo->GetMaxVal();
-      TGLRect& wprt = rnrCtx.RefCamera().RefViewport();
-      Float_t fs = wprt.Height()*fSliderH* fAxisAtt.GetLabelSize();
-      fAxisAtt.SetAbsLabelFontSize(TGLFontManager::GetFontSize(fs, 12, 36));
-
-      fAxisAtt.RefDir().Set(0, 1, 0);
-      fAxisAtt.SetTextAlign(TGLFont::kLeft);
-      fAxisAtt.SetRng(0, maxVal);
-      fAxisAtt.RefTMOff(0).X() = -maxVal*0.03;
-      fAxisAtt.SetAbsLabelFontSize(TMath::Nint(fs));
+      fAxisPainter->SetLabelPixelFontSize(TMath::CeilNint(rnrCtx.GetCamera()->RefViewport().Height()*0.06));
+      fAxisPainter->RefDir().Set(0, 1, 0);
+      fAxisPainter->RefTMOff(0).Set(1, 0, 0);
+      fAxisPainter->SetLabelAlign(TGLFont::kLeft);
+      fSliderAxis->SetRangeUser(0, maxVal);
+      fSliderAxis->SetLimits(0, maxVal);
+      fSliderAxis->SetNdivisions(710);
+      fSliderAxis->SetTickLength(0.02*maxVal);
+      fSliderAxis->SetLabelOffset(0.02*maxVal);
+      fSliderAxis->SetLabelSize(0.05);
+      fSliderAxis->SetAxisColor(fMainColor);
+      fSliderAxis->SetLabelColor(fMainColor);
 
       glPushMatrix();
-      glScalef( fSliderH/maxVal, fSliderH/maxVal, 1.);
-      fAxisAtt.SetAxisColor(fMainColor);
-      fAxisAtt.SetLabelColor(fMainColor);
-      fAxisPainter.Paint(rnrCtx, fAxisAtt);
+      glScalef(fSliderH/maxVal, fSliderH/maxVal, 1.);
+      fAxisPainter->PaintAxis(rnrCtx, fSliderAxis);
       glPopMatrix();
 
       // marker
@@ -110,7 +117,7 @@ void TEveLegoOverlay::DrawSlider(TGLRnrCtx& rnrCtx)
 }
 
 //______________________________________________________________________________
-void TEveLegoOverlay::RenderPlaneInterface(TGLRnrCtx &rnrCtx)
+void TEveCaloLegoOverlay::RenderPlaneInterface(TGLRnrCtx &rnrCtx)
 {
    // Render menu for plane-value and the plane if marked.
 
@@ -162,9 +169,9 @@ void TEveLegoOverlay::RenderPlaneInterface(TGLRnrCtx &rnrCtx)
    glVertex2f( bwt, bh);
    glVertex2f(-bwt, bh);
    glEnd();
+   glLineWidth(1);
 
    glPopMatrix();
-
    if (fShowSlider) DrawSlider(rnrCtx);
 
    glPopName();
@@ -175,7 +182,7 @@ void TEveLegoOverlay::RenderPlaneInterface(TGLRnrCtx &rnrCtx)
 }
 
 /******************************************************************************/
-void TEveLegoOverlay::RenderHeader(TGLRnrCtx& rnrCtx)
+void TEveCaloLegoOverlay::RenderHeader(TGLRnrCtx& rnrCtx)
 {
    // Render text on top right corner of the screen.
 
@@ -211,7 +218,7 @@ void TEveLegoOverlay::RenderHeader(TGLRnrCtx& rnrCtx)
 }
 
 /******************************************************************************/
-void TEveLegoOverlay::Render(TGLRnrCtx& rnrCtx)
+void TEveCaloLegoOverlay::Render(TGLRnrCtx& rnrCtx)
 {
    // Render the overlay elements.
 
@@ -277,7 +284,7 @@ void TEveLegoOverlay::Render(TGLRnrCtx& rnrCtx)
 // Virtual event handlers from TGLOverlayElement
 /******************************************************************************/
 
-Bool_t TEveLegoOverlay::SetSliderVal(Event_t* event, TGLRnrCtx &rnrCtx)
+Bool_t TEveCaloLegoOverlay::SetSliderVal(Event_t* event, TGLRnrCtx &rnrCtx)
 {
    // Set height of horizontal plane in the calorimeter.
 
@@ -295,7 +302,7 @@ Bool_t TEveLegoOverlay::SetSliderVal(Event_t* event, TGLRnrCtx &rnrCtx)
 }
 
 //______________________________________________________________________________
-Bool_t TEveLegoOverlay::Handle(TGLRnrCtx          & rnrCtx,
+Bool_t TEveCaloLegoOverlay::Handle(TGLRnrCtx          & rnrCtx,
                                TGLOvlSelectRecord & rec,
                                Event_t            * event)
 {
@@ -344,7 +351,7 @@ Bool_t TEveLegoOverlay::Handle(TGLRnrCtx          & rnrCtx,
 }
 
 //______________________________________________________________________________
-Bool_t TEveLegoOverlay::MouseEnter(TGLOvlSelectRecord& /*rec*/)
+Bool_t TEveCaloLegoOverlay::MouseEnter(TGLOvlSelectRecord& /*rec*/)
 {
    // Mouse has entered overlay area.
 
@@ -352,7 +359,7 @@ Bool_t TEveLegoOverlay::MouseEnter(TGLOvlSelectRecord& /*rec*/)
 }
 
 //______________________________________________________________________________
-void TEveLegoOverlay::MouseLeave()
+void TEveCaloLegoOverlay::MouseLeave()
 {
    // Mouse has left overlay area.
 

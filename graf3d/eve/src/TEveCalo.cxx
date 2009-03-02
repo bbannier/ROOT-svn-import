@@ -42,7 +42,7 @@
 ClassImp(TEveCaloViz);
 
 //______________________________________________________________________________
-TEveCaloViz::TEveCaloViz(TEveCaloData* data, const Text_t* n, const Text_t* t) :
+TEveCaloViz::TEveCaloViz(TEveCaloData* data, const char* n, const char* t) :
    TEveElement(),
    TNamed(n, t),
    TEveProjectable(),
@@ -83,7 +83,7 @@ TEveCaloViz::~TEveCaloViz()
    // Destructor.
 
    if (fPalette) fPalette->DecRefCount();
-   if (fData) fData->DecRefCount();
+   if (fData) fData->DecRefCount(this);
 }
 
 //______________________________________________________________________________
@@ -134,10 +134,11 @@ void TEveCaloViz::SetPlotEt(Bool_t isEt)
 {
    // Set E/Et plot.
 
-  fPlotEt=isEt;
-  fPalette->SetLimits(0, TMath::CeilNint(fData->GetMaxVal(fPlotEt)));
+   fPlotEt=isEt;
+   if (fPalette)
+      fPalette->SetLimits(0, TMath::CeilNint(fData->GetMaxVal(fPlotEt)));
 
-  InvalidateCellIdCache();
+   InvalidateCellIdCache();
 }
 
 //______________________________________________________________________________
@@ -374,16 +375,16 @@ void TEveCaloViz::SetupColorHeight(Float_t value, Int_t slice, Float_t& outH) co
 ClassImp(TEveCalo3D);
 
 
-TEveCalo3D::TEveCalo3D(TEveCaloData* d, const Text_t* n, const Text_t* t): 
+TEveCalo3D::TEveCalo3D(TEveCaloData* d, const char* n, const char* t): 
    TEveCaloViz(d, n, t),
-   fRnrEndCapFrame(kTRUE),
-   fRnrBarrelFrame(kTRUE)
+
+   fRnrEndCapFrame    (kTRUE),
+   fRnrBarrelFrame    (kTRUE),
+   fFrameColor        (kGray+1),
+   fFrameTransparency (80)
 {
 
    // Constructor.
-
-   fFrameColor = kGray+1;
-   fMainTransparency= 50;
 
    fMainColorPtr = &fFrameColor;
 }
@@ -429,7 +430,7 @@ void TEveCalo3D::ComputeBBox()
 ClassImp(TEveCalo2D);
 
 //______________________________________________________________________________
-TEveCalo2D::TEveCalo2D(const Text_t* n, const Text_t* t):
+TEveCalo2D::TEveCalo2D(const char* n, const char* t):
    TEveCaloViz(0, n, t),
    TEveProjected(),
    fOldProjectionType(TEveProjection::kPT_Unknown)
@@ -574,7 +575,7 @@ void TEveCalo2D::ComputeBBox()
 ClassImp(TEveCaloLego);
 
 //______________________________________________________________________________
-TEveCaloLego::TEveCaloLego(TEveCaloData* d, const Text_t* n, const Text_t* t):
+TEveCaloLego::TEveCaloLego(TEveCaloData* d, const char* n, const char* t):
    TEveCaloViz(d, n, t),
 
    fTopViewUseMaxColor(kTRUE),

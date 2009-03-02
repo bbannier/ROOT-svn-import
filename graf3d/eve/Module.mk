@@ -34,10 +34,10 @@ EVEH1     := TEveBrowser TEveChunkManager TEveCompound \
 
 EVEH2     := TEveArrow TEveBoxSet TEveCalo \
              TEveDigitSet TEveFrameBox TEveGeoNode TEveGeoShapeExtract \
-             TEveGridStepper TEveLegoEventHandler TEveLegoOverlay \
+             TEveGridStepper TEveLegoEventHandler \
              TEveLine TEvePointSet TEvePolygonSetProjected TEveQuadSet \
              TEveRGBAPalette TEveScalableStraightLineSet TEveStraightLineSet \
-             TEveText TEveTrack TEveTriangleSet 
+             TEveText TEveTrack TEveTriangleSet TEveJetCone
 
 EVEH1     := $(foreach stem, $(EVEH1), $(wildcard $(MODDIRI)/$(stem)*.h))
 EVEH2     := $(foreach stem, $(EVEH2), $(wildcard $(MODDIRI)/$(stem)*.h))

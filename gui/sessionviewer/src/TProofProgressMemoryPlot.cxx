@@ -108,17 +108,8 @@ TProofProgressMemoryPlot::TProofProgressMemoryPlot(TProofProgressDialog *d,
    SetIconName(title);
 
    MapSubwindows();
-
    Resize();
-
-   Window_t wdummy;
-   int ax, ay;
-   gVirtualX->TranslateCoordinates(GetParent()->GetId(), fDialog->fDialog->GetId(),
-       (Int_t)(((TGFrame *)GetParent())->GetWidth() + w),
-       (Int_t)(((TGFrame *)GetParent())->GetHeight()- 3*h/2), ax, ay, wdummy);
-   Move(ax, ay);
-
-   //Popup();
+   CenterOnParent();
    MapWindow();
 }
 
@@ -171,7 +162,7 @@ TGListBox* TProofProgressMemoryPlot::BuildLogList(TGFrame *parent)
    Int_t is = 1;
    while ((pe=(TProofLogElem*)next())){
       TUrl url(pe->GetTitle());
-      buf = Form("%s %s", pe->GetName(), url.GetHost());
+      buf = TString::Format("%s %s", pe->GetName(), url.GetHost());
       c->AddEntry(buf.Data(), is);
       is++;
    }
@@ -281,7 +272,7 @@ void TProofProgressMemoryPlot::DoPlot()
             gr->SetLineColor(2);
             gr->SetLineStyle(3);
             fWPlot->Add(gr, "l");
-            legw->AddEntry(gr, Form("%s - min", pltemp->GetName()) , "l");
+            legw->AddEntry(gr, TString::Format("%s - min", pltemp->GetName()) , "l");
          }
          pltemp = (TProofLogElem*)elem->At(max+1);
          gr = DoWorkerPlot(pltemp);
@@ -290,7 +281,7 @@ void TProofProgressMemoryPlot::DoPlot()
             gr->SetLineColor(2);
             gr->SetLineStyle(2);
             fWPlot->Add(gr, "l");
-            legw->AddEntry(gr, Form("%s - max", pltemp->GetName()), "l");
+            legw->AddEntry(gr, TString::Format("%s - max", pltemp->GetName()), "l");
          }
 
 
@@ -386,31 +377,40 @@ TGraph *TProofProgressMemoryPlot::DoAveragePlot(Int_t &max_el, Int_t &min_el)
    TObjArray *parts = 0;
    TString token;
    Int_t ielem=0;
-   while ((ple = (TProofLogElem*)next())){
+   while ((ple = (TProofLogElem *)next())){
       //find the maximal entry processed in the last query
       const char *role = ple->GetRole();
-      if (role[0]!='w') continue; //skip the master log
+      if (role[0] != 'w') continue; //skip the master log
       TList *lines = ple->GetMacro()->GetListOfLines();
       if (!lines || lines->GetSize() <= 0) continue;
-      curline = (TObjString*)lines->Last();
+      curline = (TObjString *) lines->Last();
+      if (!curline) continue;
       parts = curline->String().Tokenize(" ");
-      curevent = (TObjString*)parts->At(kEventNumberPos);
+      if (!parts) continue;
+      curevent = (TObjString *) parts->At(kEventNumberPos);
+      if (!curevent) continue;
       curevent_value = curevent->String().Atoll();
       if (maxevent < curevent_value) maxevent = curevent_value;
-      last[ielem]=curevent_value;
+      last[ielem] = curevent_value;
       parts->Delete();
       delete parts;
       parts = 0;
       if (step < 0) {
-         //find the step
-         prevline = (TObjString*)lines->Before(curline);
-         parts = prevline->String().Tokenize(" ");
-         curevent = (TObjString*)parts->At(kEventNumberPos);
-         prevevent_value = curevent->String().Atoll();
-         step = curevent_value - prevevent_value;
-         parts->Delete();
-         delete parts;
-         parts = 0;
+         // Find the step
+         prevline = (TObjString *)lines->Before(curline);
+         if (prevline) {
+            parts = prevline->String().Tokenize(" ");
+            if (parts) {
+               curevent = (TObjString *) parts->At(kEventNumberPos);
+               if (curevent) {
+                  prevevent_value = curevent->String().Atoll();
+                  step = curevent_value - prevevent_value;
+               }
+               parts->Delete();
+               delete parts;
+               parts = 0;
+            }
+         }
       }
       ielem++;
    }
