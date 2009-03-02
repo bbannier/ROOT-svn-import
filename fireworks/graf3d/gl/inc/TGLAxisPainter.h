@@ -1,127 +1,115 @@
 // @(#)root/eve:$Id$
-// Author: Matevz Tadel 2007
+// Author: Alja Mrak-Tadel 2009
 
 /*************************************************************************
- * Copyright (C) 1995-2007, Rene Brun and Fons Rademakers.               *
- * All rights reserved.                                                  *
- *                                                                       *
- * For the licensing terms see $ROOTSYS/LICENSE.                         *
- * For the list of contributors see $ROOTSYS/README/CREDITS.             *
- *************************************************************************/
+* Copyright (C) 1995-2007, Rene Brun and Fons Rademakers.               *
+* All rights reserved.                                                  *
+*                                                                       *
+* For the licensing terms see $ROOTSYS/LICENSE.                         *
+* For the list of contributors see $ROOTSYS/README/CREDITS.             *
+*************************************************************************/
 
 #ifndef ROOT_TGLAxisPainter
 #define ROOT_TGLAxisPainter
 
-#include "TAttAxis.h"
 #include "TGLUtil.h"
-#include "TString.h"
 #include "TGLFontManager.h"
 
+class TAttAxis;
+class TAxis;
 class TGLRnrCtx;
-class TGLFont;
-
-class TGLAxisAttrib: public TAttAxis
-{
-   friend class TGLAxisPainter;
-
-protected:
-   TGLVector3   fDir;
-   Double_t     fMin;
-   Double_t     fMax;
-
-   Float_t      fTMScale[3];
-   TGLVector3   fTMOff[3];
-   Int_t        fTMNDim;
-
-   TGLFont::ETextAlign_e  fTextAlign;
-
-   Bool_t       fRelativeFontSize;
-   Int_t        fAbsLabelFontSize;
-   Int_t        fAbsTitleFontSize;
-
-   TString      fLabelFontName;
-   TString      fTitleFontName;
-
-   TString      fTitle;
-   TString      fTitleUnits;
-   TGLVector3   fTitlePos;
-
-public:
-   TGLAxisAttrib();
-   virtual ~TGLAxisAttrib(){}
-
-   // Getters && Setters
-
-   TGLVector3&  RefDir() { return fDir; }
-   void SetRng(Double_t min, Double_t max) { fMin=min; fMax=max;}
-   void GetRng(Double_t &min, Double_t &max) {min=fMin; max=fMax;}
-
-   TGLVector3&  RefTMOff(Int_t i) { return fTMOff[i]; }
-   void SetTMNDim(Int_t i) {fTMNDim=i;}
-   Int_t GetTMNDim() {return fTMNDim;}
-
-   void SetTextAlign(TGLFont::ETextAlign_e a) {fTextAlign=a;}
-   TGLFont::ETextAlign_e GetTextAlign() const { return fTextAlign;}
-
-   void SetRelativeFontSize(Bool_t x) { fRelativeFontSize=x; }
-   Bool_t GetRelativeFontSize() const {return fRelativeFontSize;}
-
-   void  SetAbsLabelFontSize(Int_t fs) {fAbsLabelFontSize=fs;}
-   Int_t GetAbsLabelFontSize()const {return fAbsLabelFontSize;}
-   void  SetAbsTitleFontSize(Int_t fs) {fAbsTitleFontSize=fs;}
-   Int_t GetAbsTitleFontSize() const {return fAbsTitleFontSize;}
-
-   void SetLabelFontName(const char* name) { fLabelFontName = name; }
-   const char*  GetLabelFontName() const {return fLabelFontName.Data();}
-   void SetTitleFontName(const char* name) { fTitleFontName = name; }
-   const char*  GetTitleFontName() const {return fTitleFontName.Data();}
-
-   void SetTitle(const char* title) {fTitle = title;}
-   const char* GetTitle() const {return fTitle.Data();}
-
-   void SetTitleUnits(const char* un) {fTitleUnits = un;}
-   const char* GetTitleUnits() const {return fTitleUnits.Data();}
-
-
-   TGLVector3& RefTitlePos() {return fTitlePos;}
-
-   // override TAttAxis function
-   virtual void	SetNdivisions(Int_t n, Bool_t /*optim*/=kTRUE) { fNdivisions =n; }
-
-   ClassDef(TGLAxisAttrib, 0); // GL axis attributes.
-};
-
-/**************************************************************************/
 
 class TGLAxisPainter
 {
+public:
+   typedef std::pair  <Float_t, Float_t>    Lab_t; // label <pos, value> pair
+   typedef std::vector<Lab_t>               LabVec_t;
+   typedef std::pair  <Float_t, Int_t>      TM_t;  // tick-mark <pos, order> pair
+   typedef std::vector<TM_t>                TMVec_t; // vector od tick lines
+
 private:
    TGLAxisPainter(const TGLAxisPainter&);            // Not implemented
    TGLAxisPainter& operator=(const TGLAxisPainter&); // Not implemented
 
-protected:
-   void DrawTick(TGLVector3 &tv, Int_t order) const;
+   // Print format derived from attributers.
+   Int_t fExp;
+   Int_t fMaxDigits;
+   Int_t fDecimals;
+   char  fFormat[8];
 
-   void RnrText(const char* txt, TGLVector3 pos, TGLFont &font) const;
+   // Font derived from axis attributes.
+   TGLFont fLabelFont;
+   TGLFont fTitleFont;
+
+   // Print format.
    void LabelsLimits(const char *label, Int_t &first, Int_t &last) const;
+   void FormAxisValue(Float_t x, char* lab) const;
 
+protected:
+   TAttAxis        *fAttAxis;    // Model.
+   TGLFont::EMode   fFontMode;   // Later in AttAxis
+   LabVec_t         fLabVec;     // List of Labels position-value pairs
+   TMVec_t          fTMVec;      // List of tick-mark position-value pairs
 
-   TGLAxisAttrib* fAtt;
+   //
+   // Additional axis attributes required for GL rendering:
 
-   Int_t          fMaxDigits;
-   Int_t          fDecimals;  // cached
-   char           fFormat[8]; // cached
-   Int_t          fExp;        //cached
+   // Orientation
+   TGLVector3 fDir;
+   TGLVector3 fTMOff[3];
+   Int_t      fTMNDim;
+
+   // Font.
+   Int_t    fLabelPixelFontSize;
+   Double_t fLabel3DFontSize;
+   Int_t    fTitlePixelFontSize;
+   Double_t fTitle3DFontSize;
+
+   // Labels options. Allready exist in TAttAxis, but can't be set.
+   TGLFont::ETextAlign_e fLabelAlign;
 
 public:
    TGLAxisPainter();
-   virtual ~TGLAxisPainter() {}
+   virtual ~TGLAxisPainter();
 
-   void Paint(TGLRnrCtx& ctx, TGLAxisAttrib &atrib);
+   // GetSets.
+   Int_t        GetTMNDim() const { return fTMNDim; }
+   void         SetTMNDim(Int_t x) { fTMNDim = x; }
 
-   void SetTextFormat(Double_t binWidth);
-   void SetAxisAtt(TGLAxisAttrib* axa){ fAtt = axa; }
-   void FormAxisValue(Float_t x, char* lab) const;
+   TGLVector3&  RefDir() { return fDir; }
+   TGLVector3&  RefTMOff(Int_t i) { return fTMOff[i]; }
+
+   TGLFont::EMode GetFontMode() const { return fFontMode; }
+   void  SetFontMode(TGLFont::EMode m) { fFontMode=m; }
+
+   // this setter not necessary
+   void         SetLabelPixelFontSize(Int_t fs) { fLabelPixelFontSize=fs; }
+   Int_t        GetLabelPixelFontSize() const { return fLabelPixelFontSize; }
+   void         SetTitlePixelFontSize(Int_t fs) { fTitlePixelFontSize=fs; }
+   Int_t        GetTitlePixelFontSize() const { return fTitlePixelFontSize; }
+
+   TGLFont::ETextAlign_e GetLabelAlign() const { return fLabelAlign; }
+   void         SetLabelAlign(TGLFont::ETextAlign_e x) { fLabelAlign = x; }
+
+   LabVec_t& RefLabVec() { return fLabVec; }
+   TMVec_t&  RefTMVec()  { return fTMVec; }
+
+   void      SetAttAxis(TAttAxis* a) { fAttAxis = a; }
+   TAttAxis* GetAttAxis() { return fAttAxis; }
+
+   // Utility.
+   void SetLabelFont(TGLRnrCtx &rnrCtx, const char* fontName, Int_t pixelSize = 64, Double_t font3DSize = -1);
+   void SetTitleFont(TGLRnrCtx &rnrCtx, const char* fontName, Int_t pixelSize = 64, Double_t font3DSize = -1);
+
+   void SetTextFormat(Double_t min, Double_t max, Double_t binWidth);
+
+   // Renderers.
+   void RnrText( const char* txt, const TGLVector3 &pos, const TGLFont::ETextAlign_e align, const TGLFont &font) const;
+   void RnrTitle(const char* title, Float_t pos, TGLFont::ETextAlign_e align) const;
+   void RnrLabels() const;
+   void RnrLines() const;
+
+   void PaintAxis(TGLRnrCtx& ctx, TAxis* ax);
 
    ClassDef(TGLAxisPainter, 0); // GL axis painter.
 };

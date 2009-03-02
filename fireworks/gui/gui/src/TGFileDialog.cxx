@@ -368,7 +368,7 @@ Bool_t TGFileDialog::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
    TGTextLBEntry *te;
    TGFileItem *f;
    void *p = 0;
-   const char *txt;
+   TString txt;
    TString sdir = gSystem->WorkingDirectory();
 
    switch (GET_MSG(msg)) {
@@ -388,10 +388,10 @@ Bool_t TGFileDialog::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                                 !strcmp(fOk->GetTitle(), "Save") &&
                                 (!(fCheckB->GetState() == kButtonDown))) {
                         Int_t ret;
-                        txt = Form("File name %s already exists, OK to overwrite it?",
-                                   fTbfname->GetString());
+                        txt = TString::Format("File name %s already exists, OK to overwrite it?",
+                                              fTbfname->GetString());
                         new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
-                                     "File Name Exist", txt, kMBIconExclamation,
+                                     "File Name Exist", txt.Data(), kMBIconExclamation,
                                      kMBYes | kMBNo, &ret);
                         if (ret == kMBNo)
                            return kTRUE;
@@ -433,7 +433,7 @@ Bool_t TGFileDialog::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                      fFileInfo->fIniDir = StrDup(fFc->GetDirectory());
                      break;
 
-                  case kIDF_NEW_FOLDER:
+                  case kIDF_NEW_FOLDER: {
                      char answer[128];
                      strcpy(answer, "(empty)");
                      new TGInputDialog(gClient->GetRoot(), GetMainFrame(),
@@ -456,13 +456,14 @@ Bool_t TGFileDialog::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                      }
                      if ( gSystem->MakeDirectory(answer) != 0 )
                         new TGMsgBox(gClient->GetRoot(), GetMainFrame(), "Error", 
-                                     Form("Directory name \'%s\' already exists!", answer),
+                                     TString::Format("Directory name \'%s\' already exists!", answer),
                                      kMBIconStop, kMBOk);
                      else {
                         fFc->DisplayDirectory();
                      }
                      gSystem->ChangeDirectory(sdir.Data());
                      break;
+                  }
 
                   case kIDF_LIST:
                      fFv->SetViewMode(kLVList);
@@ -558,10 +559,10 @@ Bool_t TGFileDialog::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                             (!(fCheckB->GetState() == kButtonDown))) {
 
                            Int_t ret;
-                           txt = Form("File name %s already exists, OK to overwrite it?",
-                                      fTbfname->GetString());
+                           txt = TString::Format("File name %s already exists, OK to overwrite it?",
+                                                 fTbfname->GetString());
                            new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
-                                        "File Name Exist", txt, kMBIconExclamation,
+                                        "File Name Exist", txt.Data(), kMBIconExclamation,
                                         kMBYes | kMBNo, &ret);
                            if (ret == kMBNo)
                               return kTRUE;
@@ -603,10 +604,10 @@ Bool_t TGFileDialog::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                           !strcmp(fOk->GetTitle(), "Save") &&
                           (!(fCheckB->GetState() == kButtonDown))) {
                   Int_t ret;
-                  txt = Form("File name %s already exists, OK to overwrite it?",
-                             fTbfname->GetString());
+                  txt = TString::Format("File name %s already exists, OK to overwrite it?",
+                                        fTbfname->GetString());
                   new TGMsgBox(fClient->GetRoot(), GetMainFrame(),
-                               "File Name Exist", txt, kMBIconExclamation,
+                               "File Name Exist", txt.Data(), kMBIconExclamation,
                                kMBYes | kMBNo, &ret);
                   if (ret == kMBNo)
                      return kTRUE;

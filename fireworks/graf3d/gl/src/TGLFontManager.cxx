@@ -102,7 +102,48 @@ void TGLFont::CopyAttributes(const TGLFont &o)
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TGLFont::BBox(const char* txt, Float_t& llx, Float_t& lly, Float_t& llz, Float_t& urx, Float_t& ury, Float_t& urz) const
+Float_t TGLFont::GetAscent() const
+{
+   // Get font's ascent.
+
+   return fFont->Ascender();
+}
+
+//______________________________________________________________________________
+Float_t TGLFont::GetDescent() const
+{
+   // Get font's descent. The returned value is positive.
+
+   return -fFont->Descender();
+}
+
+//______________________________________________________________________________
+Float_t TGLFont::GetLineHeight() const
+{
+   // Get font's line-height.
+
+   return fFont->LineHeight();
+}
+
+//______________________________________________________________________________
+void TGLFont::MeasureBaseLineParams(Float_t& ascent, Float_t& descent, Float_t& line_height,
+                                    const char* txt) const
+{
+   // Measure font's base-line parameters from the passed text.
+   // Note that the measured parameters are not the same as the ones
+   // returned by get-functions - those were set by the font designer.
+
+   Float_t dum, lly, ury;
+   const_cast<FTFont*>(fFont)->BBox(txt, dum, lly, dum, dum, ury, dum);
+   ascent      =  ury;
+   descent     = -lly;
+   line_height =  ury - lly;
+}
+
+//______________________________________________________________________________
+void TGLFont::BBox(const char* txt,
+                   Float_t& llx, Float_t& lly, Float_t& llz,
+                   Float_t& urx, Float_t& ury, Float_t& urz) const
 {
    // Get bounding box.
 
@@ -309,7 +350,7 @@ void TGLFontManager::RegisterFont(Int_t size, Int_t fileID, TGLFont::EMode mode,
 }
 
 //______________________________________________________________________________
-void TGLFontManager::RegisterFont(Int_t size, const Text_t* name, TGLFont::EMode mode, TGLFont &out)
+void TGLFontManager::RegisterFont(Int_t size, const char* name, TGLFont::EMode mode, TGLFont &out)
 {
    // Get mapping from ttf id to font names. Table taken from TTF.cxx.
 
@@ -397,25 +438,12 @@ Int_t TGLFontManager::GetFontSize(Float_t ds, Int_t min, Int_t max)
 //______________________________________________________________________________
 const char* TGLFontManager::GetFontNameFromId(Int_t id)
 {
-   static const char *fonttable[] = {
-      /* 0 */  "arialbd",
-      /* 1 */  "timesi",
-      /* 2 */  "timesbd",
-      /* 3 */  "timesbi",
-      /* 4 */  "arial",
-      /* 5 */  "ariali",
-      /* 6 */  "arialbd",
-      /* 7 */  "arialbi",
-      /* 8 */  "cour",
-      /* 9 */  "couri",
-      /*10 */  "courbd",
-      /*11 */  "courbi",
-      /*12 */  "symbol",
-      /*13 */  "times",
-      /*14 */  "wingding"
-   };
+   // Get font name from TAttAxis font id.
 
-   return fonttable[id / 10];
+   if (fgStaticInitDone == kFALSE) InitStatics();
+
+   TObjString* os = (TObjString*)fgFontFileArray[id / 10];
+   return os->GetString().Data();
 }
 
 //______________________________________________________________________________
@@ -423,25 +451,25 @@ void TGLFontManager::InitStatics()
 {
    // Create a list of available font files and allowed font sizes.
 
-   const char *ttpath = gEnv->GetValue("Root.TTFontPath",
-# ifdef TTFFONTDIR
-                                       TTFFONTDIR);
-# else
-                                       "$(ROOTSYS)/fonts");
-# endif
+   fgFontFileArray.Add(new TObjString("arialbd"));  //   0
 
-   void *dir = gSystem->OpenDirectory(ttpath);
-   const char* name = 0;
-   TString s;
-   while ((name = gSystem->GetDirEntry(dir))) {
-      s = name;
-      if (s.EndsWith(".ttf")) {
-         s.Resize(s.Sizeof() -5);
-         fgFontFileArray.Add(new TObjString(s.Data()));
-      }
-   }
-   fgFontFileArray.Sort();
-   gSystem->FreeDirectory(dir);
+   fgFontFileArray.Add(new TObjString("timesi"));   //  10
+   fgFontFileArray.Add(new TObjString("timesbd"));  //  20
+   fgFontFileArray.Add(new TObjString("timesbi"));  //  30
+ 
+   fgFontFileArray.Add(new TObjString("arial"));    //  40
+   fgFontFileArray.Add(new TObjString("ariali"));   //  50
+   fgFontFileArray.Add(new TObjString("arialbd"));  //  60
+   fgFontFileArray.Add(new TObjString("arialbi"));  //  70
+
+   fgFontFileArray.Add(new TObjString("cour"));     //  80
+   fgFontFileArray.Add(new TObjString("couri"));    //  90
+   fgFontFileArray.Add(new TObjString("courbd"));   // 100
+   fgFontFileArray.Add(new TObjString("courbi"));   // 110
+
+   fgFontFileArray.Add(new TObjString("symbol"));   // 120
+   fgFontFileArray.Add(new TObjString("times"));    // 130
+   fgFontFileArray.Add(new TObjString("wingding")); // 140
 
 
    // font sizes

@@ -132,7 +132,7 @@ void TGedFrame::AddExtraTab(TGedSubFrame* sf)
 }
 
 //______________________________________________________________________________
-TGVerticalFrame* TGedFrame::CreateEditorTabSubFrame(const Text_t* name)
+TGVerticalFrame* TGedFrame::CreateEditorTabSubFrame(const char* name)
 {
    // Create a vertical frame to be used by 'owner' in extra tab 'name'.
    // The new frame is registered into the sub-frame list.
@@ -270,8 +270,8 @@ void TGedNameFrame::SetModel(TObject* obj)
    string.Append(obj->ClassName());
 
    fLabel->SetText(new TGString(string));
-   string = Form("Name: %s\nTitle:   %s\nClass: %s",
-                 obj->GetName(), obj->GetTitle(), obj->ClassName());
+   string = TString::Format("Name: %s\nTitle:   %s\nClass: %s",
+                            obj->GetName(), obj->GetTitle(), obj->ClassName());
    fTip->SetText(string);
 
    // Resize label-frame to a reasonable width.

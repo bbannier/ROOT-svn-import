@@ -64,6 +64,7 @@
 #pragma link C++ class TGLOverlayElement+;
 #pragma link C++ class TGLOverlayList+;
 #pragma link C++ class TGLOverlayButton+;
+#pragma link C++ class TGLAnnotation+;
 
 #pragma link C++ class TGLViewerBase+;
 #pragma link C++ class TGLViewer+;
@@ -92,7 +93,6 @@
 #pragma link C++ class TGLSphere;
 #pragma link C++ class TGLText;
 #pragma link C++ class TGLAxis;
-#pragma link C++ class TGLAxisAttrib;
 #pragma link C++ class TGLAxisPainter;
 
 #pragma link C++ class TGLSelectionBuffer;

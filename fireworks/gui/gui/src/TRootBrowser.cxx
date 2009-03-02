@@ -504,15 +504,16 @@ Long_t TRootBrowser::ExecPlugin(const char *name, const char *fname,
    StartEmbedding(pos, subpos);
    if (cmd && strlen(cmd)) {
       command = cmd;
-      pname = name ? name : Form("Plugin %d", fPlugins.GetSize());
-      p = new TBrowserPlugin(pname, command.Data(), pos, subpos);
+      if (name) pname = name;
+      else pname = TString::Format("Plugin %d", fPlugins.GetSize());
+      p = new TBrowserPlugin(pname.Data(), command.Data(), pos, subpos);
    }
    else if (fname && strlen(fname)) {
       pname = name ? name : gSystem->BaseName(fname);
       Ssiz_t t = pname.Last('.');
       if (t > 0) pname.Remove(t);
       command.Form("gROOT->Macro(\"%s\");", gSystem->UnixPathName(fname));
-      p = new TBrowserPlugin(pname, command.Data(), pos, subpos);
+      p = new TBrowserPlugin(pname.Data(), command.Data(), pos, subpos);
    }
    else return 0;
    fPlugins.Add(p);
@@ -521,7 +522,7 @@ Long_t TRootBrowser::ExecPlugin(const char *name, const char *fname,
       pname = gPad->GetName();
       p->SetName(pname.Data());
    }
-   SetTabTitle(pname, pos, subpos);
+   SetTabTitle(pname.Data(), pos, subpos);
    StopEmbedding();
    return retval;
 }
@@ -797,45 +798,47 @@ void TRootBrowser::InitPlugins(Option_t *opt)
 
    // --- Right main area
 
-   // Editor plugin...
-   if (strchr(opt, 'E')) {
-      cmd.Form("new TGTextEditor((const char *)0, gClient->GetRoot());");
-      ExecPlugin("Editor 1", 0, cmd.Data(), 1);
-      ++fNbInitPlugins;
-   }
+   Int_t i, len = strlen(opt);
+   for (i=0; i<len; ++i) {
+      // Editor plugin...
+      if (opt[i] == 'E') {
+         cmd.Form("new TGTextEditor((const char *)0, gClient->GetRoot());");
+         ExecPlugin("Editor 1", 0, cmd.Data(), 1);
+         ++fNbInitPlugins;
+      }
 
-   // HTML plugin...
-   if (strchr(opt, 'H')) {
-      if (gSystem->Load("libGuiHtml") >= 0) {
-         cmd.Form("new TGHtmlBrowser(\"%s\", gClient->GetRoot());", 
-                  gEnv->GetValue("Browser.StartUrl",
-                  "http://root.cern.ch/root/html/ClassIndex.html"));
-         ExecPlugin("HTML", 0, cmd.Data(), 1);
+      // HTML plugin...
+      if (opt[i] == 'H') {
+         if (gSystem->Load("libGuiHtml") >= 0) {
+            cmd.Form("new TGHtmlBrowser(\"%s\", gClient->GetRoot());", 
+                     gEnv->GetValue("Browser.StartUrl",
+                     "http://root.cern.ch/root/html/ClassIndex.html"));
+            ExecPlugin("HTML", 0, cmd.Data(), 1);
+            ++fNbInitPlugins;
+         }
+      }
+   
+      // Canvas plugin...
+      if (opt[i] == 'C') {
+         cmd.Form("new TCanvas();");
+         ExecPlugin("c1", 0, cmd.Data(), 1);
+         ++fNbInitPlugins;
+      }
+
+      // GLViewer plugin...
+      if (opt[i] == 'G') {
+         cmd.Form("new TGLSAViewer(gClient->GetRoot(), 0);");
+         ExecPlugin("OpenGL", 0, cmd.Data(), 1);
+         ++fNbInitPlugins;
+      }
+
+      // PROOF plugin...
+      if (opt[i] == 'P') {
+         cmd.Form("new TSessionViewer();");
+         ExecPlugin("PROOF", 0, cmd.Data(), 1);
          ++fNbInitPlugins;
       }
    }
-
-   // Canvas plugin...
-   if (strchr(opt, 'C')) {
-      cmd.Form("new TCanvas();");
-      ExecPlugin("c1", 0, cmd.Data(), 1);
-      ++fNbInitPlugins;
-   }
-
-   // GLViewer plugin...
-   if (strchr(opt, 'G')) {
-      cmd.Form("new TGLSAViewer(gClient->GetRoot(), 0);");
-      ExecPlugin("OpenGL", 0, cmd.Data(), 1);
-      ++fNbInitPlugins;
-   }
-
-   // PROOF plugin...
-   if (strchr(opt, 'P')) {
-      cmd.Form("new TSessionViewer();");
-      ExecPlugin("PROOF", 0, cmd.Data(), 1);
-      ++fNbInitPlugins;
-   }
-
    // --- Right bottom area
 
    // Command plugin...
