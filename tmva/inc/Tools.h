@@ -57,21 +57,32 @@ class TSpline;
 namespace TMVA {
 
    class Event;
+   class PDF;
    
-   namespace Tools {
+   class Tools {
+   private:
+      Tools();
+
+   public:
+
+      // destructor
+      ~Tools();
+
+      // accessor to single instance
+      static Tools& Instance() { return fgTools?*(fgTools): *(fgTools = new Tools()); }
 
       // simple statistics operations on tree entries
-      void  ComputeStat( TTree* theTree, const TString& theVarName,
-                         Double_t&, Double_t&, Double_t&, 
-                         Double_t&, Double_t&, Double_t&, Bool_t norm = kFALSE );
+      void  ComputeStat( TTree* theTree, const TString theVarName,
+                                Double_t&, Double_t&, Double_t&, 
+                                Double_t&, Double_t&, Double_t&, Bool_t norm = kFALSE );
 
       // compute variance from sums
       inline Double_t ComputeVariance( Double_t sumx2, Double_t sumx, Int_t nx );
 
       // creates histograms normalized to one
-      TH1* projNormTH1F( TTree* theTree, TString theVarName,
-                         TString name, Int_t nbins, 
-                         Double_t xmin, Double_t xmax, TString cut );
+      TH1* ProjNormTH1F( TTree* theTree, TString theVarName,
+                                TString name, Int_t nbins, 
+                                Double_t xmin, Double_t xmax, TString cut );
 
       // normalize histogram by its integral
       Double_t NormHist( TH1* theHist, Double_t norm = 1.0 );
@@ -95,13 +106,14 @@ namespace TMVA {
       // normalization of variable output
       Double_t NormVariable( Double_t x, Double_t xmin, Double_t xmax );
 
-      // return separation of two histograms
-      Double_t GetSeparation( TH1* S, TH1* B );
+      // return separation of two histograms or PDFs
+      Double_t GetSeparation( const TH1& S, const TH1& B ) const;
+      Double_t GetSeparation( const PDF& pdfS, const PDF& pdfB ) const;
 
       // vector rescaling
       std::vector<Double_t> MVADiff( std::vector<Double_t>&, std::vector<Double_t>& );
-      void Scale     ( std::vector<Double_t>&, Double_t );
-      void Scale     ( std::vector<Float_t>&,  Float_t  );
+      void Scale( std::vector<Double_t>&, Double_t );
+      void Scale( std::vector<Float_t>&,  Float_t  );
   
       // re-arrange a vector of arrays (vectors) in a way such that the first array
       // is ordered, and the other arrays reshuffeld accordingly
@@ -124,8 +136,8 @@ namespace TMVA {
                             TString format = "%+1.3f" );
       void FormattedOutput( const TMatrixD&, const std::vector<TString>&, MsgLogger& logger );
 
-      void writeFloatArbitraryPrecision( Float_t  val, ostream& os );
-      void readFloatArbitraryPrecision ( Float_t& val, istream& is );
+      void WriteFloatArbitraryPrecision( Float_t  val, ostream& os );
+      void ReadFloatArbitraryPrecision ( Float_t& val, istream& is );
 
       // check variable range and set var to lower or upper if out of range
       template<typename T>
@@ -138,30 +150,36 @@ namespace TMVA {
       inline Int_t VerifyRange( T& var, T vmin, T vmax );
 
       // output logger
-      MsgLogger& Logger();
-
-      const TString __regexp__ = "!%^&()'<>?= ";
+      MsgLogger& Logger() const;
 
       const TString& Color( const TString& );
 
       // print welcome message (to be called from, eg, .TMVAlogon)
-      enum EWelcomeMessage {
-         kStandardWelcomeMsg = 1,
-         kIsometricWelcomeMsg,
-         kBlockWelcomeMsg,
-         kLeanWelcomeMsg,
-         kLogoWelcomeMsg,
-         kSmall1WelcomeMsg,
-         kSmall2WelcomeMsg,
-         kOriginalWelcomeMsgColor,
-         kOriginalWelcomeMsgBW
-      };
+      enum EWelcomeMessage { kStandardWelcomeMsg = 1,
+                             kIsometricWelcomeMsg,
+                             kBlockWelcomeMsg,
+                             kLeanWelcomeMsg,
+                             kLogoWelcomeMsg,
+                             kSmall1WelcomeMsg,
+                             kSmall2WelcomeMsg,
+                             kOriginalWelcomeMsgColor,
+                             kOriginalWelcomeMsgBW };
 
       void TMVAWelcomeMessage();
       void TMVAWelcomeMessage( MsgLogger& logger, EWelcomeMessage m = kStandardWelcomeMsg );
       void TMVAVersionMessage( MsgLogger& logger );
-   } // Common tools
+      void ROOTVersionMessage( MsgLogger& logger );
 
+      const   TString    fRegexp;
+      mutable MsgLogger* fLogger;
+      static  Tools*     fgTools;
+
+   }; // Common tools
+
+#if !defined(__CINT__) || defined(__MAKECINT__)
+   Tools& gTools(); // global accessor
+#endif
+   
 } // namespace TMVA
 
 //_______________________________________________________________________

@@ -37,6 +37,7 @@
 #include <TSystem.h>
 #include <TParameter.h>
 
+//_____________________________________________________________________________
 ProofSimple::ProofSimple()
 {
    // Constructor
@@ -46,13 +47,15 @@ ProofSimple::ProofSimple()
    fRandom = 0;
 }
 
+//_____________________________________________________________________________
 ProofSimple::~ProofSimple()
 {
    // Destructor
 
-   SafeDelete(fRandom);
+   if (fRandom) delete fRandom;
 }
 
+//_____________________________________________________________________________
 void ProofSimple::Begin(TTree * /*tree*/)
 {
    // The Begin() function is called at the start of the query.
@@ -71,6 +74,7 @@ void ProofSimple::Begin(TTree * /*tree*/)
    fHist = new TH1F*[fNhist];
 }
 
+//_____________________________________________________________________________
 void ProofSimple::SlaveBegin(TTree * /*tree*/)
 {
    // The SlaveBegin() function is called after the Begin() function.
@@ -99,6 +103,7 @@ void ProofSimple::SlaveBegin(TTree * /*tree*/)
    fRandom = new TRandom3(0);
 }
 
+//_____________________________________________________________________________
 Bool_t ProofSimple::Process(Long64_t)
 {
    // The Process() function is called for each entry in the tree (or possibly
@@ -129,6 +134,7 @@ Bool_t ProofSimple::Process(Long64_t)
    return kTRUE;
 }
 
+//_____________________________________________________________________________
 void ProofSimple::SlaveTerminate()
 {
    // The SlaveTerminate() function is called after all entries or objects
@@ -137,6 +143,7 @@ void ProofSimple::SlaveTerminate()
 
 }
 
+//_____________________________________________________________________________
 void ProofSimple::Terminate()
 {
    // The Terminate() function is the last function to be called during
@@ -154,7 +161,8 @@ void ProofSimple::Terminate()
    for (Int_t i=0; i < fNhist; i++) {
       fHist[i] = dynamic_cast<TH1F *>(fOutput->FindObject(Form("h%d",i)));
       c1->cd(i+1);
-      fHist[i]->Draw();
+      if (fHist[i])
+         fHist[i]->Draw();
    }
 
    // Final update

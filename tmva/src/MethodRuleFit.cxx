@@ -42,6 +42,7 @@
 #include "TMVA/Tools.h"
 #include "TMVA/Timer.h"
 #include "TMVA/Ranking.h"
+#include "TMVA/Config.h"
 
 ClassImp(TMVA::MethodRuleFit)
  
@@ -56,6 +57,7 @@ TMVA::MethodRuleFit::MethodRuleFit( const TString& jobName, const TString& metho
    InitRuleFit();
 
    // interpretation of configuration option string
+   SetConfigName( TString("Method") + GetMethodName() );
    DeclareOptions();
    ParseOptions();
    ProcessOptions();
@@ -206,7 +208,6 @@ void TMVA::MethodRuleFit::ProcessOptions()
    fPruneMethodS.ToLower();
    if      (fPruneMethodS == "expectederror" )   fPruneMethod  = DecisionTree::kExpectedErrorPruning;
    else if (fPruneMethodS == "costcomplexity" )  fPruneMethod  = DecisionTree::kCostComplexityPruning;
-   else if (fPruneMethodS == "costcomplexity2" ) fPruneMethod  = DecisionTree::kMCC;
    else                                          fPruneMethod  = DecisionTree::kNoPruning;
 
    fForestTypeS.ToLower();
@@ -227,17 +228,17 @@ void TMVA::MethodRuleFit::ProcessOptions()
       fTreeEveFrac = min( 0.5, (100.0 +6.0*sqrt(n))/n);
    }
    // verify ranges of options
-   Tools::VerifyRange(fLogger, "nTrees",        fNTrees,0,100000,20);
-   Tools::VerifyRange(fLogger, "MinImp",        fMinimp,0.0,1.0,0.0);
-   Tools::VerifyRange(fLogger, "GDTauPrec",     fGDTauPrec,1e-5,5e-1);
-   Tools::VerifyRange(fLogger, "GDTauMin",      fGDTauMin,0.0,1.0);
-   Tools::VerifyRange(fLogger, "GDTauMax",      fGDTauMax,fGDTauMin,1.0);
-   Tools::VerifyRange(fLogger, "GDPathStep",    fGDPathStep,0.0,100.0,0.01);
-   Tools::VerifyRange(fLogger, "GDErrScale",    fGDErrScale,1.0,100.0,1.1);
-   Tools::VerifyRange(fLogger, "GDPathEveFrac", fGDPathEveFrac,0.01,0.9,0.5);
-   Tools::VerifyRange(fLogger, "GDValidEveFrac",fGDValidEveFrac,0.01,1.0-fGDPathEveFrac,1.0-fGDPathEveFrac);
-   Tools::VerifyRange(fLogger, "fEventsMin",    fMinFracNEve,0.0,1.0);
-   Tools::VerifyRange(fLogger, "fEventsMax",    fMaxFracNEve,fMinFracNEve,1.0);
+   gTools().VerifyRange(fLogger, "nTrees",        fNTrees,0,100000,20);
+   gTools().VerifyRange(fLogger, "MinImp",        fMinimp,0.0,1.0,0.0);
+   gTools().VerifyRange(fLogger, "GDTauPrec",     fGDTauPrec,1e-5,5e-1);
+   gTools().VerifyRange(fLogger, "GDTauMin",      fGDTauMin,0.0,1.0);
+   gTools().VerifyRange(fLogger, "GDTauMax",      fGDTauMax,fGDTauMin,1.0);
+   gTools().VerifyRange(fLogger, "GDPathStep",    fGDPathStep,0.0,100.0,0.01);
+   gTools().VerifyRange(fLogger, "GDErrScale",    fGDErrScale,1.0,100.0,1.1);
+   gTools().VerifyRange(fLogger, "GDPathEveFrac", fGDPathEveFrac,0.01,0.9,0.5);
+   gTools().VerifyRange(fLogger, "GDValidEveFrac",fGDValidEveFrac,0.01,1.0-fGDPathEveFrac,1.0-fGDPathEveFrac);
+   gTools().VerifyRange(fLogger, "fEventsMin",    fMinFracNEve,0.0,1.0);
+   gTools().VerifyRange(fLogger, "fEventsMax",    fMaxFracNEve,fMinFracNEve,1.0);
 
    fRuleFit.GetRuleEnsemblePtr()->SetLinQuantile(fLinQuantile);
    fRuleFit.GetRuleFitParamsPtr()->SetGDTauRange(fGDTauMin,fGDTauMax);
@@ -259,13 +260,13 @@ void TMVA::MethodRuleFit::ProcessOptions()
       fLogger << kINFO << "Friedmans RuleFit module is selected." << Endl;
       fLogger << kINFO << "Only the following options are used:" << Endl;
       fLogger << kINFO <<  Endl;
-      fLogger << kINFO << Tools::Color("bold") << "   Model"        << Tools::Color("reset") << Endl;
-      fLogger << kINFO << Tools::Color("bold") << "   RFWorkDir"    << Tools::Color("reset") << Endl;
-      fLogger << kINFO << Tools::Color("bold") << "   RFNrules"     << Tools::Color("reset") << Endl;
-      fLogger << kINFO << Tools::Color("bold") << "   RFNendnodes"  << Tools::Color("reset") << Endl;
-      fLogger << kINFO << Tools::Color("bold") << "   GDNPathSteps" << Tools::Color("reset") << Endl;
-      fLogger << kINFO << Tools::Color("bold") << "   GDPathStep"   << Tools::Color("reset") << Endl;
-      fLogger << kINFO << Tools::Color("bold") << "   GDErrScale"   << Tools::Color("reset") << Endl;
+      fLogger << kINFO << gTools().Color("bold") << "   Model"        << gTools().Color("reset") << Endl;
+      fLogger << kINFO << gTools().Color("bold") << "   RFWorkDir"    << gTools().Color("reset") << Endl;
+      fLogger << kINFO << gTools().Color("bold") << "   RFNrules"     << gTools().Color("reset") << Endl;
+      fLogger << kINFO << gTools().Color("bold") << "   RFNendnodes"  << gTools().Color("reset") << Endl;
+      fLogger << kINFO << gTools().Color("bold") << "   GDNPathSteps" << gTools().Color("reset") << Endl;
+      fLogger << kINFO << gTools().Color("bold") << "   GDPathStep"   << gTools().Color("reset") << Endl;
+      fLogger << kINFO << gTools().Color("bold") << "   GDErrScale"   << gTools().Color("reset") << Endl;
       fLogger << kINFO << "--------------------------------------" <<Endl;
       fLogger << kINFO << Endl;
    }
@@ -620,8 +621,12 @@ void TMVA::MethodRuleFit::GetHelpMessage() const
    //
    // typical length of text line: 
    //         "|--------------------------------------------------------------|"
+   TString col    = gConfig().WriteOptionsReference() ? "" : gTools().Color("bold");
+   TString colres = gConfig().WriteOptionsReference() ? "" : gTools().Color("reset");
+   TString brk    = gConfig().WriteOptionsReference() ? "<br>" : "";
+
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Short description:" << Tools::Color("reset") << Endl;
+   fLogger << col << "--- Short description:" << colres << Endl;
    fLogger << Endl;
    fLogger << "This method uses a collection of so called rules to create a" << Endl;
    fLogger << "discriminating scoring function. Each rule consists of a series" << Endl;
@@ -633,12 +638,12 @@ void TMVA::MethodRuleFit::GetHelpMessage() const
    fLogger << "set of coefficients. The goal is to find a model with few rules" << Endl;
    fLogger << "but with a strong discriminating power." << Endl;
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Performance optimisation:" << Tools::Color("reset") << Endl;
+   fLogger << col << "--- Performance optimisation:" << colres << Endl;
    fLogger << Endl;
    fLogger << "There are two important considerations to make when optimising:" << Endl;
    fLogger << Endl;
-   fLogger << "  1. topology of the decision tree forest" << Endl;
-   fLogger << "  2. fitting of the coefficients" << Endl;
+   fLogger << "  1. Topology of the decision tree forest" << brk << Endl;
+   fLogger << "  2. Fitting of the coefficients" << Endl;
    fLogger << Endl;
    fLogger << "The maximum complexity of the rules is defined by the size of" << Endl;
    fLogger << "the trees. Large trees will yield many complex rules and capture" << Endl;
@@ -663,28 +668,28 @@ void TMVA::MethodRuleFit::GetHelpMessage() const
    fLogger << "a better choice. Ideally the fitting procedure should be able to" << Endl;
    fLogger << "make this choice by giving appropriate weights for either terms." << Endl;
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Performance tuning via configuration options:" << Tools::Color("reset") << Endl;
+   fLogger << col << "--- Performance tuning via configuration options:" << colres << Endl;
    fLogger << Endl;
    fLogger << "I.  TUNING OF RULE ENSEMBLE:" << Endl;
    fLogger << Endl;
-   fLogger << "   " << Tools::Color("bold") << "ForestType  " << Tools::Color("reset")
-           << ": Recomended is to use the default <AdaBoost>." << Endl;
-   fLogger << "   " << Tools::Color("bold") << "nTrees      " << Tools::Color("reset")
+   fLogger << "   " << col << "ForestType  " << colres
+           << ": Recomended is to use the default \"AdaBoost\"." << brk << Endl;
+   fLogger << "   " << col << "nTrees      " << colres
            << ": More trees leads to more rules but also slow" << Endl;
    fLogger << "                 performance. With too few trees the risk is" << Endl;
-   fLogger << "                 that the rule ensemble becomes too simple." << Endl;
-   fLogger << "   " << Tools::Color("bold") << "fEventsMin  " << Tools::Color("reset") << Endl;
-   fLogger << "   " << Tools::Color("bold") << "fEventsMax  " << Tools::Color("reset")
+   fLogger << "                 that the rule ensemble becomes too simple." << brk << Endl;
+   fLogger << "   " << col << "fEventsMin  " << colres << brk << Endl;
+   fLogger << "   " << col << "fEventsMax  " << colres
            << ": With a lower min, more large trees will be generated" << Endl;
    fLogger << "                 leading to more complex rules." << Endl;
    fLogger << "                 With a higher max, more small trees will be" << Endl;
    fLogger << "                 generated leading to more simple rules." << Endl;
    fLogger << "                 By changing this range, the average complexity" << Endl;
-   fLogger << "                 of the rule ensemble can be controlled." << Endl;
-   fLogger << "   " << Tools::Color("bold") << "RuleMinDist " << Tools::Color("reset")
+   fLogger << "                 of the rule ensemble can be controlled." << brk << Endl;
+   fLogger << "   " << col << "RuleMinDist " << colres
            << ": By increasing the minimum distance between" << Endl;
    fLogger << "                 rules, fewer and more diverse rules will remain." << Endl;
-   fLogger << "                 Initially it's a good idea to keep this small" << Endl;
+   fLogger << "                 Initially it is a good idea to keep this small" << Endl;
    fLogger << "                 or zero and let the fitting do the selection of" << Endl;
    fLogger << "                 rules. In order to reduce the ensemble size," << Endl;
    fLogger << "                 the value can then be increased." << Endl;
@@ -692,13 +697,13 @@ void TMVA::MethodRuleFit::GetHelpMessage() const
    //         "|--------------------------------------------------------------|"
    fLogger << "II. TUNING OF THE FITTING:" << Endl;
    fLogger << Endl;
-   fLogger << "   " << Tools::Color("bold") << "GDPathEveFrac " << Tools::Color("reset")
+   fLogger << "   " << col << "GDPathEveFrac " << colres
            << ": fraction of events in path evaluation" << Endl;
    fLogger << "                 Increasing this fraction will improve the path" << Endl;
    fLogger << "                 finding. However, a too high value will give few" << Endl;
    fLogger << "                 unique events available for error estimation." << Endl;
-   fLogger << "                 It is recomended to usethe default = 0.5." << Endl;
-   fLogger << "   " << Tools::Color("bold") << "GDTau         " << Tools::Color("reset")
+   fLogger << "                 It is recomended to usethe default = 0.5." << brk << Endl;
+   fLogger << "   " << col << "GDTau         " << colres
            << ": cutoff parameter tau" << Endl;
    fLogger << "                 By default this value is set to -1.0." << Endl;
    //         "|----------------|---------------------------------------------|"
@@ -706,20 +711,20 @@ void TMVA::MethodRuleFit::GetHelpMessage() const
    fLogger << "                 automatically estimated. In most cases" << Endl;
    fLogger << "                 this should be fine. However, you may want" << Endl;
    fLogger << "                 to fix this value if you already know it" << Endl;
-   fLogger << "                 and want to reduce on training time." << Endl;
-   fLogger << "   " << Tools::Color("bold") << "GDTauPrec     " << Tools::Color("reset")
+   fLogger << "                 and want to reduce on training time." << brk << Endl;
+   fLogger << "   " << col << "GDTauPrec     " << colres
            << ": precision of estimated tau" << Endl;
    fLogger << "                 Increase this precision to find a more" << Endl;
-   fLogger << "                 optimum cut-off parameter." << Endl;
-   fLogger << "   " << Tools::Color("bold") << "GDNStep       " << Tools::Color("reset")
+   fLogger << "                 optimum cut-off parameter." << brk << Endl;
+   fLogger << "   " << col << "GDNStep       " << colres
            << ": number of steps in path search" << Endl;
    fLogger << "                 If the number of steps is too small, then" << Endl;
    fLogger << "                 the program will give a warning message." << Endl;
    fLogger << Endl;
    fLogger << "III. WARNING MESSAGES" << Endl;
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "Risk(i+1)>=Risk(i) in path" << Tools::Color("reset") << Endl;
-   fLogger << Tools::Color("bold") << "Chaotic behaviour of risk evolution." << Tools::Color("reset") << Endl;
+   fLogger << col << "Risk(i+1)>=Risk(i) in path" << colres << brk << Endl;
+   fLogger << col << "Chaotic behaviour of risk evolution." << colres << Endl;
    //         "|----------------|---------------------------------------------|"
    fLogger << "                 The error rate was still decreasing at the end" << Endl;
    fLogger << "                 By construction the Risk should always decrease." << Endl;
@@ -729,12 +734,12 @@ void TMVA::MethodRuleFit::GetHelpMessage() const
    fLogger << "                 The warnings can safely be ignored if only a" << Endl;
    fLogger << "                 few (<3) occur. If more warnings are generated," << Endl;
    fLogger << "                 the fitting fails." << Endl;
-   fLogger << "                 A remedy may be to increase the value" << Endl;
+   fLogger << "                 A remedy may be to increase the value" << brk << Endl;
    fLogger << "                 "
-           << Tools::Color("bold") << "GDValidEveFrac" << Tools::Color("reset")
-           << " to 1.0 (or a larger value)." << Endl;
+           << col << "GDValidEveFrac" << colres
+           << " to 1.0 (or a larger value)." << brk << Endl;
    fLogger << "                 In addition, if "
-           << Tools::Color("bold") << "GDPathEveFrac" << Tools::Color("reset")
+           << col << "GDPathEveFrac" << colres
            << " is too high" << Endl;
    fLogger << "                 the same warnings may occur since the events" << Endl;
    fLogger << "                 used for error estimation are also used for" << Endl;
@@ -742,16 +747,16 @@ void TMVA::MethodRuleFit::GetHelpMessage() const
    fLogger << "                 Another possibility is to modify the model - " << Endl;
    fLogger << "                 See above on tuning the rule ensemble." << Endl;
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "The error rate was still decreasing at the end of the path"
-           << Tools::Color("reset") << Endl;
+   fLogger << col << "The error rate was still decreasing at the end of the path"
+           << colres << Endl;
    fLogger << "                 Too few steps in path! Increase "
-           << Tools::Color("bold") << "GDNSteps" <<  Tools::Color("reset") << "." << Endl;
+           << col << "GDNSteps" <<  colres << "." << Endl;
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "Reached minimum early in the search" << Tools::Color("reset") << Endl;
+   fLogger << col << "Reached minimum early in the search" << colres << Endl;
 
    fLogger << "                 Minimum was found early in the fitting. This" << Endl;
    fLogger << "                 may indicate that the used step size "
-           << Tools::Color("bold") << "GDStep" <<  Tools::Color("reset") << "." << Endl;
+           << col << "GDStep" <<  colres << "." << Endl;
    fLogger << "                 was too large. Reduce it and rerun." << Endl;
    fLogger << "                 If the results still are not OK, modify the" << Endl;
    fLogger << "                 model either by modifying the rule ensemble" << Endl;

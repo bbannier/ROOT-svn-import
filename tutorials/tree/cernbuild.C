@@ -1,5 +1,4 @@
-// example of macro to read data from an ascii file and
-// create a root file with a Tree.
+// Read data (CERN staff) from an ascii file and create a root file with a Tree.
 // see also a variant in staff.C
 // Author: Rene Brun
    
@@ -19,7 +18,7 @@ TFile *cernbuild(Int_t get=0) {
 
    //The input file cern.dat is a copy of the CERN staff data base
    //from 1988
-   TString dir = gSystem->UnixPathName(TCint::GetCurrentMacroName());
+   TString dir = gSystem->UnixPathName(gInterpreter->GetCurrentMacroName());
    dir.ReplaceAll("cernbuild.C","");
    dir.ReplaceAll("/./","/");
    FILE *fp = fopen(Form("%scernstaff.dat",dir.Data()),"r");

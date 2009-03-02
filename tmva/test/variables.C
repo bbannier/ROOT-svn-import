@@ -10,17 +10,23 @@ void variables( TString fin = "TMVA.root", TMVAGlob::TypeOfPlot type = TMVAGlob:
                 Bool_t useTMVAStyle = kTRUE )
 {
 
-   const TString directories[3] = { "InputVariables_NoTransform",
+   const TString directories[4] = { "InputVariables_NoTransform",
                                     "InputVariables_DecorrTransform",
-                                    "InputVariables_PCATransform" };
+                                    "InputVariables_PCATransform",
+                                    "InputVariables_GaussDecorr"
+   };
 
-   const TString titles[3] = { "TMVA Input Variable",
+   const TString titles[4] = { "TMVA Input Variable",
                                "Decorrelated TMVA Input Variables",
-                               "Principal Component Transformed TMVA Input Variables" };
+                               "Principal Component Transformed TMVA Input Variables",
+                               "Gaussianized and Decorrelated TMVA Input Variable"
+   };
 
-   const TString outfname[3] = { "variables",
+   const TString outfname[4] = { "variables",
                                  "variables_decorr",
-                                 "variables_pca" };
+                                 "variables_pca",
+                                 "variables_gaussdecorr"
+   };
 
 
    // set style and remove existing canvas'
@@ -113,7 +119,7 @@ void variables( TString fin = "TMVA.root", TMVAGlob::TypeOfPlot type = TMVAGlob:
 
       // finally plot and overlay
       Float_t sc = 1.1;
-      if (countPad==2) sc = 1.3;
+      if (countPad == 1) sc = 1.3;
       sig->SetMaximum( TMath::Max( sig->GetMaximum(), bgd->GetMaximum() )*sc );
       sig->Draw( "hist" );
       cPad->SetLeftMargin( 0.17 );
@@ -124,7 +130,7 @@ void variables( TString fin = "TMVA.root", TMVAGlob::TypeOfPlot type = TMVAGlob:
       sig->GetYaxis()->SetTitle("Normalised");
 
       // Draw legend
-      if (countPad==2){
+      if (countPad == 1) {
          TLegend *legend= new TLegend( cPad->GetLeftMargin(), 
                                        1-cPad->GetTopMargin()-.15, 
                                        cPad->GetLeftMargin()+.4, 
@@ -141,10 +147,12 @@ void variables( TString fin = "TMVA.root", TMVAGlob::TypeOfPlot type = TMVAGlob:
       sig->Draw("sameaxis");
 
       // text for overflows
-      Int_t nbin = sig->GetNbinsX();
-      TString uoflow = Form( "U/O-flow (S,B): (%.1f, %.1f)% / (%.1f, %.1f)%", 
-                             sig->GetBinContent(0)*100, bgd->GetBinContent(0)*100,
-                             sig->GetBinContent(nbin+1)*100, bgd->GetBinContent(nbin+1)*100 );
+      Int_t    nbin = sig->GetNbinsX();
+      Double_t dxu  = sig->GetBinWidth(0);
+      Double_t dxo  = sig->GetBinWidth(nbin+1);
+      TString uoflow = Form( "U/O-flow (S,B): (%.1f, %.1f)%% / (%.1f, %.1f)%%", 
+                             sig->GetBinContent(0)*dxu*100, bgd->GetBinContent(0)*dxu*100,
+                             sig->GetBinContent(nbin+1)*dxo*100, bgd->GetBinContent(nbin+1)*dxo*100 );
       TText* t = new TText( 0.98, 0.14, uoflow );
       t->SetNDC();
       t->SetTextSize( 0.040 );

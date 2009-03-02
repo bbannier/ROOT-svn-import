@@ -216,6 +216,71 @@ a.descrheadentry:hover {
    text-decoration: underline;
 }
 
+/* convert */
+table.descrtitle {
+   width: 100%;
+}
+a.contextheadentry {
+   text-decoration: none;
+   font-size: small;
+   font-weight: normal;
+}
+a.contextheadentry:visited {
+   color: #0000ff;
+   background-color: inherit;
+   text-decoration: inherit;
+}
+a.contextheadentry:hover {
+   color: #0000ff;
+   background-color: #eeeeff;
+   text-decoration: underline;
+}
+td.contextheadentry {
+   color: #0000ff;
+   background-color: inherit;
+   margin-left: 0.0em;
+   margin-right: 0.0em;
+   border-bottom: none;
+   padding-left: 0.3em;
+   padding-right: 0.3em;
+   width: 40%;
+   text-align: left;
+}
+
+a.contextheadarrow {
+   font-size:xx-large;
+   text-decoration: none;
+   color: inherit;
+   padding-left: 0.3em;
+   padding-right: 0.3em;
+}
+#contexttitle div {
+   margin-top: -0.9em;
+   margin-bottom: -0.5em;
+}
+
+#contextheadentry_next {
+   border-left: dotted 1px #000077;
+   text-align: right;
+}
+#contextheadarrow_next {
+   border-left: none;
+}
+#divcontextheadarrow_up {
+   margin-top: -0.4em;
+}
+#contextheadarrow_up {
+   border-left: dotted 1px #000077;
+}
+#contextheadentry_up {
+   width: 20%;
+}
+#toplinks h1 {
+   font-size: x-large;
+   padding: 0em 0em 0em 0em;
+   margin: 0.3em 1em 0.1em 1em;
+}
+
 /* TOC */
 div.toc {
    font-weight: bold;
@@ -282,7 +347,17 @@ a.linkeddoc {
 }
 
 #searchform {
-   margin-left: 2em;
+   margin-left: -0.75em;
+   display: inline;
+}
+#searchlink {
+	background-color: ButtonFace;
+	border-style: outset;
+	border-width: 1px;
+	padding: 1px 0.2em 1px 0.2em;
+	text-decoration: none;
+	color: ButtonText;
+	margin-left: 0.5em;
 }
 
 /*** Class doc pages ***/
@@ -391,7 +466,14 @@ td.funcname {
    margin: 0px 0px 0px 0px;
    width: 100%;
 }
-
+span.funcprop
+{
+	margin-left: 1em;
+	background-color: #FFFFCC;
+	border: solid 1px #FFFF33;
+	font-size: 80%;
+	font-weight: bold;
+}
 td.dataname {
    font-weight: bolder;
    vertical-align: top;

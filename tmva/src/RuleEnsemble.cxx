@@ -252,7 +252,11 @@ void TMVA::RuleEnsemble::RemoveSimilarRules()
    for (UInt_t i=0; i<nrulesIn; i++) {
       if (removeMe[i]) {
          theRule = fRules[ind];
+#if _MSC_VER >= 1400
+         fRules.erase( std::vector<Rule *>::iterator(&fRules[ind], &fRules) );
+#else
          fRules.erase( std::vector<Rule *>::iterator(&fRules[ind]) );
+#endif
          delete theRule;
          ind--;
       } else {
@@ -280,7 +284,11 @@ void TMVA::RuleEnsemble::CleanupRules()
    for (UInt_t i=0; i<nrules; i++) {
       if (fRules[ind]->GetRelImportance()<fImportanceCut) {
          therule = fRules[ind];
+#if _MSC_VER >= 1400
+         fRules.erase( std::vector<Rule *>::iterator(&fRules[ind], &fRules));
+#else
          fRules.erase( std::vector<Rule *>::iterator(&fRules[ind]) );
+#endif
          delete therule;
          ind--;
       } 
@@ -513,7 +521,7 @@ void TMVA::RuleEnsemble::MakeRules( const std::vector< const DecisionTree *> & f
       nrulesCheck += nrules;
    }
    Double_t nmean = sumnendn/ntrees;
-   Double_t nsigm = TMath::Sqrt( Tools::ComputeVariance(sumn2,sumnendn,ntrees) );
+   Double_t nsigm = TMath::Sqrt( gTools().ComputeVariance(sumn2,sumnendn,ntrees) );
    Double_t ndev = 2.0*(nmean-2.0-nsigm)/(nmean-2.0+nsigm);
    //
    fLogger << kVERBOSE << "Average number of end nodes per tree   = " << nmean << Endl;
@@ -624,7 +632,7 @@ void TMVA::RuleEnsemble::MakeLinearTerms()
       //
       Int_t type;
       const Double_t w = 1.0/fRuleFit->GetNEveEff();
-      for (UInt_t ie=0; ie<neve; ie++) {
+      for (ie=0; ie<neve; ie++) {
          val  = vardata[v][ie].first;
          ew   = vardata[v][ie].second.first;
          type = vardata[v][ie].second.second;
@@ -839,7 +847,7 @@ void TMVA::RuleEnsemble::RuleStatistics()
    fRuleNCsig = 0.0;
    if (nrules>0) {
       fRuleNCave = sumNc/nrules;
-      fRuleNCsig = TMath::Sqrt(Tools::ComputeVariance(sumNc2,sumNc,nrules));
+      fRuleNCsig = TMath::Sqrt(gTools().ComputeVariance(sumNc2,sumNc,nrules));
    }
 }
 

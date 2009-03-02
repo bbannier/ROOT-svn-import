@@ -36,7 +36,8 @@ LDFLAGS       = $(OPT) -Wl,--enable-auto-import \
                 -Wl,--enable-runtime-pseudo-reloc \
                 -L/usr/X11R6/lib \
                 $(EXTRA_LDFLAGS)
-SOFLAGS       = -shared -Wl,--export-all-symbols -Wl,-soname=
+SOFLAGS       = -shared -Wl,--export-all-symbols -Wl,--enable-auto-image-base \
+                -Wl,-soname=
 # that's what cygwin ld looks for when searching for shared libs
 SOEXT         = dll
 EXEEXT        = .exe
@@ -49,9 +50,24 @@ CILIBS        = -lm
 CRYPTLIBS     = -lcrypt
 
 # Fortran:
+ifneq ($(findstring gfortran, $(F77)),)
+ifeq ($(F77),)
+# only needed to get default compiler in ./configure
+F77           = gfortran
+endif
+F77FLAGS      = -std=legacy
+F77LIBS      := $(shell $(F77) -print-file-name=libgfortran.a)
+F77LIBS      += $(shell $(F77) -print-file-name=libgfortranbegin.a)
+endif
+
+ifneq ($(findstring g77, $(F77)),)
+ifeq ($(F77),)
+# only needed to get default compiler in ./configure
 F77           = g77
+endif
 F77FLAGS      =
 F77LIBS       = -lg2c
+endif
 
 # transform cygwin version 1.2.3-4 into integer
 # each of the four version parts but the first gets two digits,

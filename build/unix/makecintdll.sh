@@ -25,6 +25,8 @@ if [ $PLATFORM != "clean" ]; then
    SOEXT=$1         ; shift
    COMPILER=$1      ; shift
    CXXOUT=$1        ; shift
+else
+   DLLNAME=$1       ; shift
 fi
 if [ $PLATFORM = "macosx" ]; then
    macosx_minor=`sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2`
@@ -56,9 +58,9 @@ if [ "x`echo $MAKELIB | grep build/unix/makelib.sh`" != "x" ]; then
    MAKELIB=`echo $MAKELIB | sed -e "s/ -x//g"`
 fi
 
-CINTDIRL=cint/lib
-CINTDIRI=cint/include
-CINTDIRS=cint/stl
+CINTDIRL=cint/cint/lib
+CINTDIRI=cint/cint/include
+CINTDIRS=cint/cint/stl
 
 clean() {
    rm -f $CINTDIRI/$DLLNAME.dll          $CINTDIRI/$DLLNAME.so.*

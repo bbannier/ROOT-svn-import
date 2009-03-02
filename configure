@@ -27,6 +27,11 @@ altcxx=
 altf77=
 altld=
 
+deprecated_options="         \
+   enable_mathcore           \
+   enable_cern               \
+"
+
 options="                    \
    enable_afs                \
    enable_alien              \
@@ -38,7 +43,6 @@ options="                    \
    enable_builtin_pcre       \
    enable_builtin_zlib       \
    enable_castor             \
-   enable_cern               \
    enable_chirp              \
    enable_cint7              \
    enable_cintex             \
@@ -50,12 +54,14 @@ options="                    \
    enable_gdml               \
    enable_gfal               \
    enable_g4root             \
+   enable_glite              \
    enable_globus             \
    enable_gsl_shared         \
    enable_krb5               \
    enable_ldap               \
-   enable_mathcore           \
+   enable_genvector          \
    enable_mathmore           \
+   enable_memstat            \
    enable_monalisa           \
    enable_mysql              \
    enable_odbc               \
@@ -65,6 +71,7 @@ options="                    \
    enable_peac               \
    enable_pgsql              \
    enable_pythia6            \
+   enable_pythia8            \
    enable_python             \
    enable_qt                 \
    enable_qtgsi              \
@@ -93,7 +100,8 @@ options="                    \
 # on per default explictly afterwards.
 #
 for c in $options ; do eval ${c}="yes" ; done
-for c in $options ; do eval ${c}_explicit="no" ; done
+for c in $deprecated_options ; do eval ${c}="yes" ; done
+for c in $options ; do eval ${c}_explicit="" ; done
 
 enable_afs=no
 enable_cint7=no
@@ -112,6 +120,8 @@ enable_shadowpw=
 enable_soversion=no
 enable_table=no
 enable_thread=yes        # cannot be disabled (not in above options list)
+no_stubs=no              # complete Dictionaries by default (All stubs)
+no_stubs_test=no         # complete Dictionaries by default (All stubs)
 enable_unuran=no
 enable_winrtdebug=
 enable_xrootd=           # must be set explicitely via --enable-xrootd
@@ -135,8 +145,8 @@ CASTOR           \
 GFAL             \
 G4ROOT           \
 GSL              \
-CERNLIB          \
 PYTHIA6          \
+PYTHIA8          \
 FFTW3            \
 PYTHONDIR        \
 DCACHE           \
@@ -145,6 +155,8 @@ ALIEN            \
 ASIMAGE          \
 LDAP             \
 GLOBUS_LOCATION  \
+GLITE            \
+MEMSTAT          \
 MONALISA         \
 SRP              \
 SSL              \
@@ -435,6 +447,7 @@ check_library() {
 	if (test "x$found_lib" = "x$flib" && test "x$shared" = "xno") || \
            test "x$maclib" = "xyes" ; then
 	    found_lib=${found_dir}/${found_lib}
+	    found_raw_dir=${found_dir}
 	    found_dir=""
 	else
 	    found_lib=`echo $found_lib | sed 's|^lib\(.*\)\..*|-l\1|'`
@@ -676,6 +689,109 @@ EOF
 }
 
 #_____________________________________________________________________
+check_comp() {
+    # This function will try to locate the default or alt compiler
+    # type [$1] in the PATH.
+    # The result of the check is stored in found_comp, 1 if true,
+    # 0 otherwise, which should be immediately copied, since the variable
+    # will be overwritten at next invocation of this function.
+
+    # Assert that we got enough arguments
+    if test $# -ne 1 ; then
+        echo "check_comp: not 1 argument"
+        found_comp=0
+        return 1
+    fi
+
+    comptype="$1"
+
+    if test "x$comptype" = "xLD" ; then
+       message "Checking for linker (LD)"
+    else
+       message "Checking for $comptype compiler"
+    fi
+
+    found_comp=0
+    case $comptype in
+    C)
+        if test "x$altcc" = "x" ; then
+            altcc=`grep '^CC ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
+        fi
+        altcc1=`echo "$altcc" | awk '{print $1}'`
+        if `$cwhich $altcc1 > /dev/null 2>&1` ; then
+            found_comp=1
+            result "$altcc"
+        else
+            nocomp="$altcc"
+        fi
+        ;;
+    C++)
+        if test "x$altcxx" = "x" ; then
+            altcxx=`grep '^CXX ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
+        fi
+        altcxx1=`echo "$altcxx" | awk '{print $1}'`
+        if `$cwhich $altcxx1 > /dev/null 2>&1` ; then
+            found_comp=1
+            result "$altcxx"
+        else
+            nocomp="$altcxx"
+        fi
+        ;;
+    LD)
+        if test "x$altld" = "x" ; then
+            altld=`grep '^LD ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
+            if test "x$arch" = "xwin32" ; then
+                altldorg="link"
+                altldtmp="$altld"
+                altld="$altldorg"
+            fi
+            if test "x$arch" = "xwin32gcc" ; then
+                altldorg="g++"
+                altldtmp="$altld"
+                altld="$altldorg"
+            fi
+        fi
+        altld1=`echo "$altld" | awk '{print $1}'`
+        if `$cwhich $altld1 > /dev/null 2>&1` ; then
+            found_comp=1
+            if test ! "x$altldtmp" = "x" ; then
+                altld="$altldtmp"
+            fi
+            result "$altld"
+        else
+            nocomp="$altld"
+            altldorg=""
+        fi
+        ;;
+    F77)
+        if test "x$altf77" = "x" ; then
+            altf77=`grep '^F77 ' config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
+            if test "x$arch" = "xwin32" ; then
+                altf77org="fl32"
+                altf77tmp="$altf77"
+                altf77="$altf77org"
+            fi
+        fi
+        altf771=`echo "$altf77" | awk '{print $1}'`
+        if `$cwhich $altf771 > /dev/null 2>&1` ; then
+            found_comp=1
+            if test ! "x$altf77tmp" = "x" ; then
+                altf77="$altf77tmp"
+            fi
+            result "$altf77"
+        else
+            nocomp="$altf77"
+            altf77org=""
+        fi
+        ;;
+    esac
+
+    if test $found_comp -eq 0 ; then
+       result "no $comptype compiler $nocomp found"
+    fi
+}
+
+#_____________________________________________________________________
 check_explicit()
 {
     feat=$1 ; shift
@@ -683,7 +799,7 @@ check_explicit()
     emsg=$1 ; shift
 
     if test "x$fail_on_missing" = "xno" ; then return 0 ; fi
-    if test "x$expl" = "xno" ; then return 0 ; fi
+    if test ! "x$expl" = "xyes" ; then return 0 ; fi
     if test ! "x$feat" = "xyes" ; then
 	result $emsg
 	exit 1
@@ -691,7 +807,7 @@ check_explicit()
 }
 
 #_____________________________________________________________________
-guess_architecture () {
+guess_architecture() {
     # Try to guess the architecture of the host system
     # Note, that there's no attempt at guessing the compiler.
     # The `native' compiler is used in all cases.
@@ -706,6 +822,7 @@ guess_architecture () {
     case "$arch:$chip:$rele" in
         aix*)                  arch=aix5            ;;
         osf1*:alpha:*)         arch=alphacxx6       ;;
+        freebsd*:*:7*)         arch=freebsd7        ;;
         freebsd*:*:6*)         arch=freebsd5        ;;
         freebsd*:*:5*)         arch=freebsd5        ;;
         freebsd*:*:4*)         arch=freebsd4        ;;
@@ -724,6 +841,7 @@ guess_architecture () {
         linux:ppc64*:*)        arch=linuxppc64gcc   ;;
         linux:ppc*:*)          arch=linuxppcgcc     ;;
         linux:i*86:*)          arch=linux           ;;
+        linux:s39*:*)          arch=linux           ;;
         openbsd*:*:*)          arch=openbsd         ;;
         lynx:*:*)              arch=lynxos          ;;
         darwin:power*:*)       arch=macosx          ;;
@@ -813,6 +931,11 @@ GENREFLEXROOTCINTSHIN=config/genreflex-rootcint.in
 GENREFLEXROOTCINTSHOUT=bin/genreflex-rootcint
 GENREFLEXROOTCINTBATIN=config/genreflex-rootcint.bat.in
 GENREFLEXROOTCINTBATOUT=bin/genreflex-rootcint.bat
+ROOTCINTSTUBSHIN=utils/src/rootcint_nostubs.sh
+ROOTCINTSTUBSHOUT=bin/rootcint_nostubs.sh
+
+# unset global command options that can cause havoc
+unset GREP_OPTIONS
 
 ######################################################################
 #
@@ -862,6 +985,8 @@ FIRST argument one of the architecures given at the end of this message.
    --macrodir      Macro installation dir    (<datadir>/macros)
    --mandir        Manpages installation dir (<prefix>/share/man/man1)
    --no-create     Do not create output files, dry run
+   --no-stubs      Remove Stubs from dictionaries (Direct call mechanism)
+   --no-stubs-test Remove Stubs from dictionaries (Direct call mechanism, can be switched off in rootrc)
    --prefix        Installation prefix       (/usr/local)
    --srcdir        Sources installation dir  (<datadir>/src)
    --testdir       Tests                     (<docdir>/test)
@@ -879,14 +1004,13 @@ enable/disable options, prefix with either --enable- or --disable-
   asimage            Image processing support, requires libAfterImage
   astiff             Include tiff support in image processing
   builtin-afterimage Built included libAfterImage, or use system libAfterImage
-  builtin-ftgl       Built included libFTGL, or use system libftgl_pic
+  builtin-ftgl       Built included libFTGL, or use system libftgl
   builtin-freetype   Built included libfreetype, or use system libfreetype
   builtin-pcre       Built included libpcre, or use system libpcre
   builtin-zlib       Built included libz, or use system libz
   castor             CASTOR support, requires libshift from CASTOR >= 1.5.2
-  cern               CERNLIB usage, build h2root and g2root
   chirp              Chirp support (Condor remote I/O), requires libchirp_client
-  cint7              Build the *experimental* new Cint library
+  cint7              Build the *experimental* new CINT library
   cintex             Build the libCintex Reflex interface library
   clarens            Clarens RPC support, optionally used by PROOF
   dcache             dCache support, requires libdcap from DESY
@@ -897,11 +1021,13 @@ enable/disable options, prefix with either --enable- or --disable-
   gfal               GFAL support, requires libgfal
   g4root             GEANT4 navigator based on TGeo, requires GEANT4 installed
   globus             Globus authentication support, requires Globus toolkit
+  glite	             gLite support, requires libglite-api-wrapper v.3 from GSI (https://subversion.gsi.de/trac/dgrid/wiki)
   gsl-shared         enable linking against shared libraries for GSL (default no)
   krb5               Kerberos5 support, requires Kerberos libs
   ldap               LDAP support, requires (Open)LDAP libs
-  mathcore           Build the new libMathCore math library
+  genvector          Build the new libGenVector library
   mathmore           Build the new libMathMore extended math library, requires GSL (vers. >= 1.8)
+  memstat            A memory statistics utility, helps to detect memory leaks
   minuit2            Build the new libMinuit2 minimizer library
   monalisa           Monalisa monitoring support, requires libapmoncpp
   mysql              MySQL support, requires libmysqlclient
@@ -912,6 +1038,7 @@ enable/disable options, prefix with either --enable- or --disable-
   peac               PEAC, PROOF Enabled Analysis Center, requires Clarens
   pgsql              PostgreSQL support, requires libpq
   pythia6            Pythia6 EG support, requires libPythia6
+  pythia8            Pythia8 EG support, requires libPythia8
   python             Python ROOT bindings, requires python >= 2.2
   qt                 Qt graphics backend, requires libqt >= 3
   qtgsi              GSI's Qt integration, requires libqt >= 3
@@ -940,7 +1067,6 @@ with options, prefix with --with-, enables corresponding support
   alien-libdir       AliEn support, location of libapiUI
   castor-incdir      CASTOR support, location of stager_api.h
   castor-libdir      CASTOR support, location of libshift
-  cern-libdir        HBOOK converter, location of CERNLIB libraries
   chirp-incdir       Chirp support, location of chirp_client.h
   chirp-libdir       Chirp support, location of libchirp_client
   cppunit            Cppunit testing, directory of the cppunit installation
@@ -948,7 +1074,7 @@ with options, prefix with --with-, enables corresponding support
   dcap-libdir        dCache support, location of libdcap
   dicttype           dictionary type: "cint" (default), "reflex", or "gccxml"
   ftgl-incdir        FTGL support, location of FTGL.h
-  ftgl-libdir        FTGL support, location of libftgl_pic
+  ftgl-libdir        FTGL support, location of libftgl
   fftw3-incdir       FFTW3 support, location of fftw3.h
   fftw3-libdir       FFTW3 support, location of libfftw3 (libfftw3-3 for windows)
   gfal-incdir        GFAL support, location of gfal_api.h
@@ -967,8 +1093,8 @@ with options, prefix with --with-, enables corresponding support
   krb5-libdir        Kerberos5 support, location of libkrb5
   ldap-incdir        LDAP support, location of ldap.h
   ldap-libdir        LDAP support, location of libldap
-  monalisa-incdir    Monalisa support, location of ApMon.h, monalisawsclient.h
-  monalisa-libdir    Monalisa support, location of libapmoncpp, libmonalisawsclient
+  monalisa-incdir    Monalisa support, location of ApMon.h
+  monalisa-libdir    Monalisa support, location of libapmoncpp
   mysql-incdir       MySQL support, location of mysql.h
   mysql-libdir       MySQL support, location of libmysqlclient
   odbc-incdir        ODBC support, location of sqlext.h
@@ -980,6 +1106,8 @@ with options, prefix with --with-, enables corresponding support
   pgsql-incdir       PostgreSQL support, location of libpq-fe.h
   pgsql-libdir       PostgreSQL support, location of libpq
   pythia6-libdir     PYHTIA6 support, location of libPythia6
+  pythia8-incdir     PYHTIA8 support, location of Pythia8 includes
+  pythia8-libdir     PYHTIA8 support, location of libpythia8.so
   python-incdir      Python support, location of Python.h
   python-libdir      Python support, location of libpython
   qt-incdir          Qt support, location of qt.h
@@ -1076,12 +1204,6 @@ hpuxia64acc)
    checkhpux64="yes" ;;
 esac
 
-# check for (g)make
-case $platform in
-win32|linux|macosx) gnumake="make"  ;;
-*)                  gnumake="gmake" ;;
-esac
-
 # check for which
 case $platform in
 macosx) cwhich="type -path" ;;
@@ -1092,7 +1214,7 @@ esac
 # and for sanity of source e.g. pcre-*.tar.gz must exist
 # which might not be the case if source was unpacked with StuffIt
 if test "x$platform" = "xmacosx" ; then
-   if test ! -f pcre/src/pcre-*.tar.gz ; then
+   if test ! -f core/pcre/src/pcre-*.tar.gz ; then
       echo "Source tree does not contain expected files, please unpack"
       echo "using tar and not StuffIt"
       exit 1
@@ -1100,6 +1222,10 @@ if test "x$platform" = "xmacosx" ; then
    logmsg "Checking Fink directory"
    finkdir=`$cwhich fink 2>&1 | sed -ne "s/\/bin\/fink//p"`
    logmsg "$finkdir"
+
+   if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -ge 5 ]; then
+      macosx105=yes
+   fi
 fi
 
 ######################################################################
@@ -1135,6 +1261,8 @@ if test $# -gt 0 ; then
       --no-create)             noact="yes"           ;;
       --nohowto)               nohowto="yes"         ;;
       --fail-on-missing)       fail_on_missing="yes" ;;
+      --no-stubs)              no_stubs="yes";;
+      --no-stubs-test)         no_stubs="yes"; no_stubs_test="yes";;
       --with-afs=*)            afsdir=$optarg        ; enable_afs="yes"     ;;
       --with-alien-incdir=*)   alienincdir=$optarg   ; enable_alien="yes"   ;;
       --with-alien-libdir=*)   alienlibdir=$optarg   ; enable_alien="yes"   ;;
@@ -1142,7 +1270,7 @@ if test $# -gt 0 ; then
       --with-afterimage-libdir=*) afterimagelibdir=$optarg; enable_builtin_afterimage=no ;;
       --with-castor-incdir=*)  castorincdir=$optarg  ; enable_castor="yes"  ;;
       --with-castor-libdir=*)  castorlibdir=$optarg  ; enable_castor="yes"  ;;
-      --with-cern-libdir=*)    cernlibdir=$optarg    ; enable_cern="yes"    ;;
+      --with-cern-libdir=*)    echo "WARNING: option $1 is deprecated and ignored"'!' ;;
       --with-chirp-incdir=*)   chirpincdir=$optarg   ; enable_chirp="yes"   ;;
       --with-chirp-libdir=*)   chirplibdir=$optarg   ; enable_chirp="yes"   ;;
       --with-cppunit=*)        cppunit=$optarg       ;;
@@ -1183,6 +1311,8 @@ if test $# -gt 0 ; then
       --with-pgsql-libdir=*)   pgsqllibdir=$optarg   ; enable_pgsql="yes"   ;;
       --with-pythia6-libdir=*) pythia6libdir=$optarg ; enable_pythia6="yes" ;;
       --with-pythia6-uscore=*) pythia6uscore=$optarg ; enable_pythia6="yes" ;;
+      --with-pythia8-incdir=*) pythia8incdir=$optarg ; enable_pythia8="yes" ;;
+      --with-pythia8-libdir=*) pythia8libdir=$optarg ; enable_pythia8="yes" ;;
       --with-python-incdir=*)  pythonincdir=$optarg  ; enable_python="yes"  ;;
       --with-python-libdir=*)  pythonlibdir=$optarg  ; enable_python="yes"  ;;
       --with-qt-incdir=*)      qtincdir=$optarg      ; enable_qt="yes"; enable_qtgsi="yes" ;;
@@ -1208,6 +1338,7 @@ if test $# -gt 0 ; then
       --with-x11-libdir=*)     x11libdir=$optarg     ;;
       --with-xpm-libdir=*)     xpmlibdir=$optarg     ;;
       --with-xrootd=*)         xrootddir=$optarg     ; enable_xrootd="yes"  ;;
+      --with-xrootd-opts=*)    xrdaddopts=$optarg    ; enable_xrootd="yes"  ;;
       --with-cc=*)             altcc=$optarg         ;;
       --with-cxx=*)            altcxx=$optarg        ;;
       --with-f77=*)            altf77=$optarg        ;;
@@ -1219,9 +1350,25 @@ if test $# -gt 0 ; then
       #
       --enable-*)
         f=`echo $1 | sed -e 's/--//' -e 's/-/_/g'`
+        eval prev='$'`echo ${f}`
+        eval prev_expl='$'`echo ${f}_explicit`
+        if test "${prev}:${prev_expl}" = "yes:"; then
+            echo "INFO: $1: already enabled by default."
+        fi
+        if test ! "x`echo ${deprecated_options} | grep ${f}`" = "x"; then
+            echo "WARNING: option $1 is deprecated and ignored"'!'
+        fi
+        if test "x${prev_expl}" = "xno"; then
+            echo "WARNING: conflicting --disable / $1, $1 wins"
+        fi
         eval ${f}=yes
         eval ${f}_explicit=yes
         for c in $options ; do
+           if test "x$c" = "x$f" ; then
+              f=""
+        fi
+        done
+        for c in $deprecated_options ; do
            if test "x$c" = "x$f" ; then
               f=""
         fi
@@ -1232,6 +1379,14 @@ if test $# -gt 0 ; then
         ;;
       --disable-*)
         f=`echo $1 | sed -e 's/--disable/enable/' -e 's/-/_/g'`
+        eval prev='$'`echo ${f}`
+        eval prev_expl='$'`echo ${f}_explicit`
+        if test "${prev}:${prev_expl}" = "xno:"; then
+            echo "INFO: $1: already disabled by default."
+        fi
+        if test "x${prev_expl}" = "xyes"; then
+            echo "WARNING: conflicting --enable / $1, $1 wins"
+        fi
         eval ${f}=no
         eval ${f}_explicit=no
         for c in $options ; do
@@ -1324,12 +1479,79 @@ fi
 
 ######################################################################
 #
+### echo %%% On MacOS X >=10.5 always enable_rpath in case of non-prefix install
+#
+if test ! "x$macosx105" = "x"; then
+    if test "x$enable_rpath" = "xno" && test "x$haveconfig" = "x" ; then
+        enable_rpath="yes"
+    fi
+fi
+
+######################################################################
+#
+### echo %%% check for GNU make >= 3.79.1 - Mandatory version of make
+#
+# Mandatory test, must succeed
+# Check for GNU make >= 3.79.1
+#
+message "Checking for GNU Make version >= 3.79.1"
+gnumake="make"
+gnu=`$gnumake -v 2>&1 | awk 'BEGIN { FS=" "} { if (NR==1) print $1 }'`
+if test ! "x$gnu" = "xGNU" ; then
+    gnumake="gmake"
+    gnu=`$gnumake -v 2>&1 | awk 'BEGIN { FS=" "} { if (NR==1) print $1 }'`
+    if test ! "x$gnu" = "xGNU" ; then
+        gnumake=""
+    fi
+fi
+if test ! "x$gnumake" = "x" ; then
+    gnuv=`$gnumake -v | tr '.,' ' ' | awk 'BEGIN { FS=" "} { if (NR==1 && $3 == "version") printf "%d", ($4*1000)+($5*10)+$6; else printf "%d", ($3*1000)+($4*10)+$5 }'`
+    if test $gnuv -lt 3791 ; then
+        result "`basename $0`: GNU Make >= 3.79.1 MUST be installed, current version $gnuv is too old"
+        exit 1
+    fi
+    result "ok"
+else
+    result "`basename $0`: GNU Make >= 3.79.1 MUST be installed"
+    exit 1
+fi
+
+######################################################################
+#
+### echo %%% check for compilers
+#
+# Mandatory test, must succeed
+# Check for C, C++ compilers, and optionally FORTRAN
+#
+check_comp C
+if test $found_comp -eq 0 ; then
+   result "`basename $0`: C compiler MUST be installed"
+   exit 1
+fi
+check_comp C++
+if test $found_comp -eq 0 ; then
+   result "`basename $0`: C++ compiler MUST be installed"
+   exit 1
+fi
+check_comp LD
+if test $found_comp -eq 0 ; then
+   result "`basename $0`: Linker MUST be installed"
+   exit 1
+fi
+check_comp F77
+if test $found_comp -eq 0 ; then
+   # missing F77 is not fatal
+   altf77=
+fi
+
+######################################################################
+#
 ### echo %%% X11 and XPM Library - Mandatory lib on Unix
 #
 # Mandatory test, must succeed
 # Check for X11 and Xpm library (for X11 use always shared lib)
 #
-if test ! "$platform" = "win32"; then
+if test ! "x$platform" = "xwin32"; then
     check_library "libX11" "yes" "$x11libdir" \
         /usr/lib /usr/X11R6/lib /usr/lib/X11 /usr/openwin/lib \
         /usr/local/lib /usr/local/lib/X11 /usr/local/X11R6/lib \
@@ -1357,7 +1579,18 @@ if test ! "$platform" = "win32"; then
         /usr/X11/include /usr/include/X11R5
 
     if test "x$found_dir" = "x" ; then
-        enable_xft="no"
+        result "`basename $0`: Xft headers (libxft-devel) MUST be installed"
+        exit 1
+    fi
+
+    check_header "X11/extensions/shape.h" "" \
+        /usr/include /usr/X11R6/include /usr/include/X11 /usr/openwin/include \
+        /usr/local/include /usr/local/include/X11 /usr/local/X11R6/include \
+        /usr/X11/include /usr/include/X11R5
+
+    if test "x$found_dir" = "x" ; then
+        result "`basename $0`: X11/extensions/shape.h header (xorg-x11-proto-devel) MUST be installed"
+        exit 1
     fi
 
     check_library "libXpm" "$enable_shared" "$xpmlibdir" \
@@ -1376,19 +1609,28 @@ if test ! "$platform" = "win32"; then
         /usr/local/lib /usr/lib /usr/lib/X11 \
         /usr/local/lib/X11 /usr/X11R6/lib /usr/local/X11R6/lib \
         /usr/X11/lib
-    xftlib=$found_lib
 
-    if test "x$xftlib" = "x" ; then
-        enable_xft="no"
+    if test "x$found_lib" = "x" ; then
+        result "`basename $0`: libXft (libxft-devel) MUST be installed"
+        exit 1
+    fi
+
+    check_library "libXext" "$enable_shared" "" \
+        /usr/local/lib /usr/lib /usr/lib/X11 \
+        /usr/local/lib/X11 /usr/X11R6/lib /usr/local/X11R6/lib \
+        /usr/X11/lib
+
+    if test "x$found_lib" = "x" ; then
+        result "`basename $0`: libXext (libXext-devel) MUST be installed"
+        exit 1
     fi
 fi
-
 
 ######################################################################
 #
 ### echo %%%Xft support (X11 antialiased fonts)
 #
-if test "$platform" = "win32"; then
+if test "x$platform" = "xwin32"; then
    enable_xft="no"
 fi
 hasxft="undef"
@@ -1435,7 +1677,7 @@ win32)
     ;;
 macosx)
     if test "x$enable_thread" = "x" || test "x$enable_thread" = "xyes"; then
-        if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -ge 5 ]; then
+        if test ! "x$macosx105" = "x"; then
             enable_thread="yes"
             threadflag="-D_REENTRANT -pthread"
             threadlib="-pthread"
@@ -1473,7 +1715,7 @@ hpuxia64acc)
     ;;
 esac
 if test "x$enable_thread" = "xyes" && \
-   test ! "$platform" = "win32"    && \
+   test ! "x$platform" = "xwin32"  && \
    test "x$threadlib" = "x" ; then
     check_library "libpthread" "$enable_shared" "$threadlibdir" \
 	$THREAD $THREAD/lib /usr/lib /usr/local/lib /usr/lib/X11 \
@@ -1489,7 +1731,7 @@ fi
 
 haspthread="undef"
 if test "x$enable_thread" = "xyes" && \
-   test ! "$platform" = "win32"; then
+   test ! "x$platform" = "xwin32"; then
    haspthread="define"
 fi
 
@@ -1552,7 +1794,7 @@ if test "x$enable_builtin_ftgl" = "x" || \
       if pkg-config --exists ftgl ; then
 	  result "ok"
 	  ftglincdir=`pkg-config --cflags-only-I ftgl | sed 's/-I//g'`
-	  ftgllibs=`pkg-config --libs-only-l ftgl | sed s'/-lftgl/-lftgl_pic/'`
+	  ftgllibs=`pkg-config --libs-only-l ftgl`
 	  ftgllibdir=`pkg-config --libs-only-L ftgl | sed 's/-L//g'`
 	  enable_builtin_ftgl=no
       else
@@ -1639,7 +1881,7 @@ result "$enable_builtin_zlib"
 #
 # (see mesa3d.org)
 #
-if test ! "x$enable_opengl" = "xno" && test ! "$platform" = "win32" ; then
+if test ! "x$enable_opengl" = "xno" && test ! "x$platform" = "xwin32" ; then
     # Check for OpenGL compatible include and library
     check_header "GL/gl.h" "$openglincdir" $OPENGL $OPENGL/include \
 	/usr/include /usr/include/X11 /usr/X11/include \
@@ -1665,7 +1907,7 @@ if test ! "x$enable_opengl" = "xno" && test ! "$platform" = "win32" ; then
 
     # Mac OS X 10.5.0 problem
     if test "x$platform" = "xmacosx"; then
-       if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -eq 5 ]; then
+       if test ! "x$macosx105" = "x"; then
           opengllib="-dylib_file /usr/X11R6/lib/libGL.dylib:/usr/X11R6/lib/libGL.dylib"
        fi
     fi
@@ -1690,7 +1932,7 @@ check_explicit "$enable_opengl" "$enable_opengl_explicit" \
 #
 # On win32 we always have OpenGL available (is this true?)
 #
-if test "$platform" = "win32"; then
+if test "x$platform" = "xwin32"; then
    enable_opengl="yes"
    openglincdir="include"
 fi
@@ -1798,12 +2040,13 @@ if test ! "x$enable_oracle" = "xno"; then
     keeplibdir=$oraclelibdir
     check_library "libclntsh oci" "$enable_shared" "$oraclelibdir" \
        $ORACLE $ORACLE/lib $ORACLELIBDIR /usr/local/lib /usr/lib \
-	/usr/lib/oracle/*/client/lib
+       /usr/lib/oracle/*/client/lib
     oraclelib=$found_lib
     oraclelibdir=$found_dir
 
     check_library "libocci oraocci10" "$enable_shared" "$keeplibdir" \
-       $ORACLE $ORACLE/lib $ORACLELIBDIR /usr/local/lib /usr/lib
+       $ORACLE $ORACLE/lib $ORACLELIBDIR /usr/local/lib /usr/lib \
+       /usr/lib/oracle/*/client/lib
     oraclelib="$oraclelib $found_lib"
 
     # space in "x " is intentional
@@ -1939,7 +2182,7 @@ check_qtvers()
     qttestdir=$1 ; shift
     qtverneed=$1 ; shift
     qttoonew=$1  ; shift
-    message " Checking whether $qtverneed <= Qt version < $qttoonew under $qttestdir/qglobal.h "
+    message "Checking for $qtverneed <= Qt version < $qttoonew "
     logmsg " grep '# *define *QT_VERSION_STR *' $qttestdir/qglobal.h"
     qtverstr=`grep "# *define *QT_VERSION_STR *" $qttestdir/qglobal.h | \
         sed '-e s/[^"]*"//' -e 's/".*$//' 2>> $logfile`
@@ -1947,53 +2190,57 @@ check_qtvers()
     if test $? -eq 0 ; then
 	logmsg " Got Qt version $qtverstr"
 	qtgot=`echo $qtverstr | \
-	    awk 'BEGIN {FS="."} {printf "%d", ((($1*2^8)+$2)*2^8)+$3; }'`;
+	    awk 'BEGIN {FS="."} {printf "%d", ((($1*2^8)+$2)*2^8)+$3; }'`
 	qtneed=`echo $qtverneed | \
 	    awk 'BEGIN {FS="."}{ printf "%d", (($1*2^8)+$2)*2^8+$3; }'`
 	qtnew=`echo $qttoonew | \
 	    awk 'BEGIN {FS="."}{ printf "%d", (($1*2^8)+$2)*2^8+$3; }'`
 	logmsg " Got $qtgot, min $qtneed, max $qtnew"
 	if test $qtgot -lt $qtneed ; then
-	    logmsg " Please update to Qt $qtverneed"
 	    res="no"
+	    resprint="no (found version $qtverstr)"
 	elif test $qtgot -ge $qtnew; then
-	    logmsg " Qt $qtverstr too new (>= $qttoonew)"
 	    res="no"
+	    resprint="no (found version $qtverstr)"
 	else
 	    res="$qtverstr"
-	    qtvers=`echo $qtverstr | awk 'BEGIN{FS="."}{print $1}'`
+	    resprint="$res"
+	    qtvers=`echo $qtverstr | awk 'BEGIN {FS="."} {print $1}'`
 	fi
     else
 	res="no"
+	resprint="$res"
     fi
-    result $res
+    result $resprint
 }
 
 if test ! "x$enable_qt" = "xno" || \
    test ! "x$enable_qtgsi" = "xno"; then
     # Check for Qt include and library
-    # Check for Qt 4 first
-    check_header "Qt/qglobal.h" "$qtincdir" $QTDIR/include \
-        /usr/local/include/  /usr/local/qt/include  \
-        /usr/include /usr/include/qt4
+    if test ! "x$QTDIR" = "x"; then
+        # The user asked for a specific "QTDIR" ... search ONLY in there
+        check_header "Qt/qglobal.h" "$qtincdir" $QTDIR $QTDIR/include
+    else
+        check_header "Qt/qglobal.h" "$qtincdir" \
+            /usr/local/include/ /usr/local/qt/include  \
+            /usr/include /usr/include/qt4 /usr/lib/qt4/include
+    fi
     qtvers=0
-    if ! test "x$found_hdr" = "x"; then
-	qtvers=4
+    if test ! "x$found_hdr" = "x"; then
+        qtvers=4
         qt4="yes"
         qtinc=$found_hdr
         qtmainincdir=$found_dir
         qtincdir=$qtmainincdir
-        qtdirlist=`ls $qtmainincdir`
-        for i in $qtdirlist ; do
-            if test -r $qtmainincdir/$i ; then
-		qtincdir="$qtincdir  $qtmainincdir/$i"
+        for i in `ls -d $qtmainincdir/Qt*` ; do
+            if test -d $i ; then
+                qtincdir="$qtincdir $i"
             fi
         done
 	qtverneed="4.3.0"
 	qttoonew="5.0.0"
-	if test "x$platform" = xwin32 ; then
-	    qttestdir=$qtmainincdir/../src/corelib/global
-	else
+	qttestdir=$qtmainincdir/../src/corelib/global
+	if test ! -d $qttestdir ; then
 	    qttestdir=$qtmainincdir/Qt
 	fi
 	check_qtvers "$qttestdir" $qtverneed $qttoonew
@@ -2002,25 +2249,26 @@ if test ! "x$enable_qt" = "xno" || \
 	    if test "x$enable_winrtdebug" = "xyes"; then
 	        qt4suffix="d4"
 	    fi
-	    check_library "libQtCore QtCore QtCore$qt4suffix" "$enable_shared" \
+	    check_library "libQtCore QtCore QtCore$qt4suffix QtCore4" \
+		"$enable_shared" \
 		"$qtlibdir" $QTDIR $QTDIR/lib /usr/local/lib \
 		/usr/local/qt/lib /usr/lib /usr/qt/lib
 	    qtlib=$found_lib
 	    qtlibdir=$found_dir
-	    check_library "libQtGui QtGui QtGui$qt4suffix" "$enable_shared" \
-		"$found_raw_dir"  ""
+	    check_library "libQtGui QtGui QtGui$qt4suffix QtGui4" \
+		"$enable_shared" "$found_raw_dir" ""
 	    qtlib="$qtlib $found_lib"
-	    check_library "libQt3Support Qt3Support Qt3Support$qt4suffix" \
-		"$enable_shared" "$found_raw_dir"  ""
+	    check_library "libQt3Support Qt3Support Qt3Support$qt4suffix Qt3Support4" \
+		"$enable_shared" "$found_raw_dir" ""
 	    qtlib="$qtlib $found_lib"
-	    check_library "libQtOpenGL QtOpenGL QtOpenGL$qt4suffix" \
-		"$enable_shared" "$found_raw_dir"  ""
+	    check_library "libQtOpenGL QtOpenGL QtOpenGL$qt4suffix QtOpenGL4" \
+		"$enable_shared" "$found_raw_dir" ""
 	    qtlib="$qtlib $found_lib"
-	    check_library "libQtSvg QtSvg QtSvg$qt4suffix" "$enable_shared" \
-		"$found_raw_dir"  ""
+	    check_library "libQtSvg QtSvg QtSvg$qt4suffix QtSvg4" \
+		"$enable_shared" "$found_raw_dir" ""
 	    qtlib="$qtlib $found_lib"
-	    check_library "libQtXml QtXml QtXml$qt4suffix" "$enable_shared" \
-		"$found_raw_dir"  ""
+	    check_library "libQtXml QtXml QtXml$qt4suffix QtXml4" \
+		"$enable_shared" "$found_raw_dir" ""
 	    qtlib="$qtlib $found_lib"
 	else
             qtinc=
@@ -2029,46 +2277,18 @@ if test ! "x$enable_qt" = "xno" || \
 	fi
     fi
 
-    if test $qtvers -eq 0 ; then
-	logmsg "No Qt4 was found, let's try to find Qt3 instead"
-	check_header "qt.h" "$qtincdir" $QTDIR $QTDIR/include \
-            /usr/local/include  /usr/local/qt/include /usr/include \
-            /usr/include/qt /usr/include/qt3
-	qtinc=$found_hdr
-	qtincdir=$found_dir
-	if ! test "x$found_hdr" = "x" ; then
-	    qtverneed="3.3.0"
-	    qttoonew="4.0.0"
-	    qttestdir=$qtincdir
-	    check_qtvers "$qttestdir" $qtverneed $qttoonew
-	fi
-	if test $qtvers -eq 3 ; then
-	    check_library \
-		"libqt-mt libqt qt-mt* qt-mt334 qt-mt335 qt-mt336 qt" \
-		"$enable_shared" "$qtlibdir" \
-		$QTDIR $QTDIR/lib /usr/local/lib /usr/local/qt/lib /usr/lib \
-		/usr/qt/lib
-	    qtlib=$found_lib
-	    qtlibdir=$found_dir
-	else
-	    qtinc=
-	    qtincdir=
-	fi
-    fi
-
     message "Checking for moc or moc.exe"
-    #  we can pick the wrong moc this way  --  qtmocexe=`$cwhich moc`
-    #  we can pick the wrong moc this way  --  if test $? -ne 0 ; then
-    for i in $QTDIR $QTDIR/bin /usr/local/bin /usr/local/qt/bin /usr/bin \
-        /usr/qt3/bin /usr/share/qt3/bin ; do
-	logmsg " Checking for $qtmocexe in $i"
+    for i in $QTDIR $QTDIR/bin "$mocdir" /usr/local/bin /usr/local/qt/bin \
+             /usr/bin /usr/qt4/bin /usr/lib/qt4/bin /usr/share/qt4/bin ; do
+    logmsg " Checking for $qtmocexe in $i"
+
 	for j in $i/moc-qt${qtvers} $i/moc-qt${qtvers}.exe $i/moc $i/moc.exe ;
 	do
 	    if test -x $j ; then
-		moc_vers=`$j -v >/dev/stdout 2>&1 | \
-		    sed -e 's/.*(Qt //' -e 's/\.[0-9]*\.[0-9]*)//'`
-		if test $moc_vers -ne $qtvers ; then
-		    # Moc version does not match Qt version
+          moc_vers=`$j -v >/dev/stdout 2>&1 | \
+          sed -e 's/.*(Qt //' -e 's/\.[0-9]*\.[0-9][-0-9a-z]*)//'`
+                if test ! "$moc_vers" = "$qtvers" ; then
+		    logmsg "$j: moc version ${moc_vers} does not match Qt version ${qtvers}"
 		    continue
 		fi
 		qtmocexe=$j
@@ -2076,7 +2296,7 @@ if test ! "x$enable_qt" = "xno" || \
 		break
 	    fi
 	done
-	if ! test "x$qtmocexe" = "x" ; then break ; fi
+	if test ! "x$qtmocexe" = "x" ; then break ; fi
     done
 
     # Correct path for win32
@@ -2093,7 +2313,7 @@ if test ! "x$enable_qt" = "xno" || \
     fi
 
     if test "x$qtincdir" = "x" || test "x$qtlib" = "x" || \
-	test "x$qtmocexe" = "x" || test $qtvers -eq 0 ; then
+       test "x$qtmocexe" = "x" || test $qtvers -eq 0 ; then
         enable_qt="no"
         enable_qtgsi="no"
     fi
@@ -2210,8 +2430,8 @@ if test ! "x$enable_castor" = "xno" ; then
 
     if test ! "x$stagerinc" = "x"; then
         castorcflags=-DR__CASTOR2
-        # check for Castor >= 2.1
-        message "Checking for Castor version being 2.1.0-* or 2.1.1-*"
+        # check for Castor >= 2.1.0
+        message "Checking for Castor version being >= 2.1.0"
         castor_version=`grep "define BASEVERSION" $castorincdir/patchlevel.h | sed 's/^.*"\([0-9]\.[0-9]\.[0-9]\)"/\1/' | awk 'BEGIN { FS="." } { printf "%d", $1 * 1000000 + $2 * 1000 + $3}'`
         if test $castor_version -lt 2001000; then
             base_vers=`grep "define BASEVERSION" $castorincdir/patchlevel.h | sed 's/^.*"\([0-9]\.[0-9]\.[0-9]\)"/\1/' | awk '{ printf $1}'`
@@ -2339,37 +2559,19 @@ check_explicit "$enable_g4root" "$enable_g4root_explicit" \
 #
 if test ! "x$enable_monalisa" = "xno"; then
     # Check for Monalisa include and library
-    tmpincdir=$monalisaincdir
     check_header "ApMon.h" "$monalisaincdir" $MONALISA $MONALISA/include \
 	/usr/local/include /opt/alien/api/include /opt/monalisa/include \
         /usr/include
     monalisainc=$found_hdr
     monalisaincdir=$found_dir
 
-    tmplibdir=$monalisalibdir
     check_library "libapmoncpp" "$enable_shared" "$monalisalibdir" \
-	$MONALISA $MONALISA/lib /usr/local/lib /opt/alien/api/lib \
-        /opt/monalisa/lib /usr/lib
+	$MONALISA $MONALISA/lib $MONALISA/.libs /usr/local/lib \
+        /opt/alien/api/lib /opt/monalisa/lib /usr/lib
     monalisalib=$found_lib
     monalisalibdir=$found_dir
 
-    check_header "monalisawsclient.h" "$tmpincdir" $MONALISA $MONALISA/include \
-	/usr/local/include /opt/alien/api/include /opt/monalisa/include \
-	/usr/include
-    monalisawsinc=$found_hdr
-    monalisawsincdir=$found_dir
-
-    check_library "libmonalisawsclient" "$enable_shared" "$tmplibdir" \
-	$MONALISA $MONALISA/lib /usr/local/lib /opt/alien/api/lib \
-	/opt/monalisa/lib /usr/lib
-    monalisawslib=$found_lib
-    monalisawslibdir=$found_dir
-
     if test "x$monalisaincdir" = "x" || test "x$monalisalib" = "x"; then
-        enable_monalisa="no"
-    fi
-
-    if test "x$monalisawsincdir" = "x" || test "x$monalisawslib" = "x"; then
         enable_monalisa="no"
     fi
 fi
@@ -2408,66 +2610,12 @@ check_explicit "$enable_fftw3" "$enable_fftw3_explicit" \
 
 ######################################################################
 #
-### echo %%% CERNLIB Usage - Third party libraries
-#
-# (See http://www.cern.ch)
-#
-# Check for CERN libs (libpacklib and libkernlib)
-#
-if test ! "x$enable_cern" = "xno"; then
-    cernlibdirs="$CERNLIB $CERNLIB/lib ${CERN}/${CERN_LEVEL}/lib  \
-	/cern/pro/lib /cern/new/lib /cern/old/lib /opt/cern/pro/lib \
-	/opt/cern/new/lib /opt/cern/old/lib /usr/local/cern/pro/lib \
-	/usr/local/cern/new/lib /usr/local/cern/old/lib /usr/lib \
-	/usr/lib/cern /usr/local/lib /usr/local/lib/cern $finkdir/lib"
-    check_library "libpacklib_noshift libpacklib packmd packlib" \
-	"$enable_shared" "${cernlibdir}" $cernlibdirs
-    packlib=$found_lib
-    packlibdir=$found_dir
-
-    check_library "libkernlib_noshift libkernlib kernmd kernlib" \
-	"$enable_shared" "${cernlibdir}" $cernlibdirs
-    kernlib=$found_lib
-    kernlibdir=$found_dir
-
-    if test ! "x$packlib" = "x" && test "x$enable_rfio" = "xno" ; then
-        # check if libpacklib contains rfio references, if yes make further check
-        check_symbol rfio "$packlib" "$packlibdir"
-        if test  $found_symbol -eq 1 ; then
-            # check if libpacklib contains rfio code (case of < 2002 version)
-            check_symbol rfio_connect "$packlib" "$packlibdir"
-            if test  $found_symbol -eq 0 ; then
-                result "### Need libshift with this version of $packlib"
-                if test "x$shiftold" = "xyes"; then
-                    result "### Found old version of libshift, please uprade to >=1.5.2"
-                else
-                    result "### Run configure with --enable-rfio or set --with-shift-libdir"
-                fi
-                packlib=""
-            fi
-        fi
-    fi
-
-    if test "x$packlib" = "x" || test "x$kernlib" = "x"; then
-        enable_cern="no"
-     else
-        cernlib="$packlib $kernlib"
-        cernlibdir="$packlibdir $kernlibdir"
-    fi
-fi
-check_explicit "$enable_cern" "$enable_cern_explicit" \
-     "Explicitly required CernLib dependencies not fulfilled"
-
-
-######################################################################
-#
 ### echo %%% Pythia6  Usage - Third party libraries
 #
 # (See http://root.cern.ch and Lund)
 #
 # Check for libPythia6
 #
-
 if test ! "x$enable_pythia6" = "xno" ; then
     if test "x$pythia6uscore" = "xDOUBLE" || \
        test "x$pythia6uscore" = "xSINGLE" || \
@@ -2519,6 +2667,31 @@ fi
 check_explicit "$enable_pythia6" "$enable_pythia6_explicit" \
      "Explicitly required Pythia6 dependencies not fulfilled"
 
+######################################################################
+#
+### echo %%% Pythia8  Usage - Third party libraries
+#
+# (See http://root.cern.ch and Lund)
+#
+# Check for libpythia8
+#
+if test ! "x$enable_pythia8" = "xno" ; then
+    # Check for PYTHIA8 include and library
+    check_header "Pythia.h" "$pythia8incdir" $PYTHIA8 $PYTHIA8/include \
+        /opt/pythia8/include /usr/local/include /usr/include
+    pythia8incdir=$found_dir
+
+    check_library "libpythia8" "$enable_shared" "$pythia8libdir" \
+       $PYTHIA8 $PYTHIA8/lib /opt/pythia8/lib /usr/local/lib /usr/lib
+    pythia8lib=$found_lib
+    pythia8libdir=$found_dir
+
+    if test "x$pythia8incdir" = "x" || test "x$pythia8lib" = "x"; then
+       enable_pythia8=no
+    fi
+fi
+check_explicit "$enable_pythia8" "$enable_pythia8_explicit" \
+     "Explicitly required Pythia8 dependencies not fulfilled"
 
 ######################################################################
 #
@@ -2541,9 +2714,9 @@ if test ! "x$enable_dcache" = "xno" ; then
     dcaplibdir=$found_dir
 
     if test ! "x$dcaplib" = "x" ; then
-        check_symbol dc_lseek64 "$dcaplib" "$dcaplibdir"
+        check_symbol dc_setClientActive "$dcaplib" "$dcaplibdir"
         if test  $found_symbol -eq 0 ; then
-            result "### Need dc_lseek64 in libdcap, upgrade your d-cache client library"
+            result "### Need dc_setClientActive in libdcap, upgrade your d-cache client library"
             dcaplib=
             dcaplibdir=
             dcapincdir=
@@ -2584,6 +2757,28 @@ if test ! "x$enable_chirp" = "xno" ; then
 fi
 check_explicit "$enable_chirp" "$enable_chirp_explicit" \
      "Explicitly required Chirp dependencies not fulfilled"
+
+######################################################################
+#
+### echo %%% gLite Support - Third party libraries
+#
+# (See https://subversion.gsi.de/trac/dgrid/wiki)
+#
+# Check for libglite-api-wrapper
+#
+if test ! "x$enable_glite" = "xno" ; then
+    check_library "libglite-api-wrapper" "$enable_shared" "$glitelibdir" \
+      $GAW_LOCATION $GLITE $GLITE/lib ~/GAW/lib /usr/local/lib /usr/lib
+    glitelib=$found_lib
+    glitelibdir=$found_dir
+    gaw_cppflags="${GAW_CPPFLAGS}"
+
+    if  test "x$glitelib" = "x"; then
+        enable_glite="no"
+    fi
+fi
+check_explicit "$enable_glite" "$enable_glite_explicit" \
+     "Explicitly required gLite dependencies not fulfilled"
 
 ######################################################################
 #
@@ -2651,7 +2846,7 @@ if test ! "x$enable_asimage" = "xno" ; then
           /usr/local/include /usr/include /opt/include
        asjpegincdir=$found_dir
        check_header "png.h" "" $ASIMAGE $ASIMAGE/include $ASPNG/include \
-          $LIBPNG_ROOT/include /usr/local/include /usr/include /usr/local/include/libpng \
+          /usr/local/include /usr/include /usr/local/include/libpng \
           /opt/include
        aspngincdir=$found_dir
        if test ! "x$enable_astiff" = "xno" ; then
@@ -2680,7 +2875,7 @@ if test ! "x$enable_asimage" = "xno" ; then
        fi
        for k in $aslibs ; do
            check_library $k "$enable_shared" "" \
-             $ASIMAGE $ASIMAGE/lib $ASPNG/lib $LIBPNG_ROOT/lib /usr/local/lib /usr/lib /opt/lib
+             $ASIMAGE $ASIMAGE/lib $ASPNG/lib /usr/local/lib /usr/lib /opt/lib
            if test "x$k" = "xlibz" ; then
                found_libz=$found_lib
                found_dirz=$found_dir
@@ -2782,9 +2977,11 @@ if test ! "x$enable_python" = "xno" ; then
     pythoninc=$found_hdr
     pythonincdir=$found_dir
     if test "x$platform" = "xwin32"; then
-       pythonvers=`python -c 'import sys; print sys.version[:3].replace(".","")' | tr -d '\r'`
-       if test ! "x$pythonincdir" = "x" ; then
-          pythonincdir=`cygpath -m $pythonincdir`
+       if test ! "x$mypython" = "x" && test -x "$mypython" ; then
+          pythonvers=`python -c 'import sys; print sys.version[:3].replace(".","")' | tr -d '\r'`
+          if test ! "x$pythonincdir" = "x" ; then
+             pythonincdir=`cygpath -m $pythonincdir`
+          fi
        fi
     fi
 
@@ -2863,6 +3060,10 @@ check_explicit "$enable_ruby" "$enable_ruby_explicit" \
 #
 if test ! "x$enable_xml" = "xno" ; then
     # Check for xml include and library
+    if test "x$platform" = "xmacosx"; then
+        # prefer native libxml2 over the one in Fink (/sw)
+        PATH=/usr/bin:$PATH
+    fi
     checking_msg "xml2-config"
     xml2_config=`$cwhich xml2-config 2> /dev/null`
     if test ! "x$xml2_config" = "x" && test -x "$xml2_config" && \
@@ -2940,8 +3141,7 @@ xrdcomm=""
 
 # If we are required to use an external XROOTD distribution
 # we just define the pointers
-extraxrdflags=""
-# extraxrdflags="-DOLDXRDLOCATE"
+extraxrdflags="-DUSENEWHDRS"
 if test ! "x$xrootddir" = "x"; then
 
    # We do not need to build, just the paths for includes and libs
@@ -2967,17 +3167,17 @@ if test ! "x$xrootddir" = "x"; then
    if [ $decver -gt $decrefone ] ; then
       if [ $decver -gt $decrefthree ] ; then
          xrdcomm="$xrdcomm (version is > 20071004)"
-         extraxrdflags=""
+         extraxrdflags="$extraxrdflags"
       elif [ $decver -gt $decreftwo ] ; then
          xrdcomm="$xrdcomm (version is > 20070723)"
-         extraxrdflags="-DOLDXRDLOCATE"
+         extraxrdflags="-DOLDXRDLOCATE $extraxrdflags"
       else
          xrdcomm="$xrdcomm (version is > 20070628)"
-         extraxrdflags="-DOLDXRDOUC -DOLDXRDLOCATE"
+         extraxrdflags="-DOLDXRDOUC -DOLDXRDLOCATE $extraxrdflags"
       fi
    else
       xrdcomm="$xrdcomm (version is <= 20070628: setting the appropriate compilation flag)"
-      extraxrdflags="-DOLDXRCPHYCONN -DOLDXRDOUC -DOLDXRDLOCATE"
+      extraxrdflags="-DOLDXRCPHYCONN -DOLDXRDOUC -DOLDXRDLOCATE $extraxrdflags"
    fi
 
 else
@@ -3051,18 +3251,15 @@ check_explicit "$enable_xrootd" "$enable_xrootd_explicit" \
 # If the user has set the flags "--disable-globus", we don't check for
 # Globus at all.
 #
-buildxrdgsi=
+# By default, always try to build the XRD GSI plug-in; this can be
+# disabled with
+#                  --with-xrootd-opts="--disable-gsi"
+buildxrdgsi="yes"
+#
 glbextracflags=""
 glbpatchcflags=""
 haveglobus=""
 if test ! "x$enable_globus" = "xno"; then
-   # If XROOTD is enabled ...
-   if test ! "x$enable_xrootd" = "xno"; then
-      # ... enable the GSI module in there
-      message "Checking whether to build the xrootd GSI plug-in"
-      buildxrdgsi="yes"
-      result "yes"
-   fi
    # Check if the GLOBUS_LOCATION variable is set
    checking_msg "for globusdir"
    if test "x$globusdir" = "x" ; then
@@ -3090,7 +3287,9 @@ if test "x$enable_globus" = "xyes"; then
        globusincdir=$globusdir/include
     fi
     searchincdir="$globusincdir/gcc32 $globusincdir/gcc32dbg \
-                  $globusincdir/gcc32pthr $globusincdir/gcc32dbgpthr"
+                  $globusincdir/gcc32pthr $globusincdir/gcc32dbgpthr \
+                  $globusincdir/gcc64 $globusincdir/gcc64dbg \
+                  $globusincdir/gcc64pthr $globusincdir/gcc64dbgpthr"
 
     # Found the reference dir first
     check_header "openssl/x509.h" "" "$searchincdir"
@@ -3718,8 +3917,7 @@ if test ! "x$enable_krb5" = "xno" ; then
     if test "x$krb5incdir" = "x" && test ! "x$krb5dir" = "x" ; then
 	krb5incdir=$krb5dir/include
     fi
-    check_header "krb5.h" "$krb5incdir" /usr/athena/include \
-	    /usr/local/athena/include /usr/kerberos/include \
+    check_header "krb5.h" "$krb5incdir" /usr/kerberos/include \
 	    /usr/krb5/include /usr/local/kerberos/include \
 	    /usr/include /usr/include/kerberosV /usr/local/include
     if test "x$found_dir" = "x" ; then
@@ -3736,7 +3934,7 @@ if test ! "x$enable_krb5" = "xno" ; then
     if test "x$krb5libdir" = "x" && test ! "x$krb5dir" = "x" ; then
 	krb5libdirorg=$krb5dir/lib
     fi
-    krb5libdirs="/usr/athena/lib /usr/local/athena/lib /usr/kerberos/lib \
+    krb5libdirs="/usr/kerberos/lib \
                  /usr/krb5/lib /usr/local/kerberos/lib /usr/lib /usr/local/lib"
 
     # check whether using MIT krb5
@@ -3783,8 +3981,7 @@ if test ! "x$enable_krb5" = "xno" ; then
       if test ! "x$krb5dir" = "x" ; then
 	 krb5bindir=$krb5dir/bin
       fi
-      for i in "$krb5bindir" /usr/athena/bin \
-             /usr/local/athena/bin /usr/kerberos/bin \
+      for i in "$krb5bindir" /usr/kerberos/bin \
              /usr/krb5/bin /usr/local/kerberos/bin \
              /usr/bin /usr/local/bin ; do
          if test -x $i/kinit ; then
@@ -3923,11 +4120,16 @@ if test ! "x$enable_mathmore" = "xno"; then
 	    gsllibs=$found_lib
 	    gsllibdir=$found_dir
 	    # in case of shared libs (gsllibdir is not empty) need gslcblas
-	    # assume libgslcblas is in same dir as libgsl
+	    # assume libgslcblas is in same dir as libgsl or in ../cblas/
 	    #if test ! "x$gsllibdir" = "x"; then
-		check_library "libgslcblas gslcblasML gslcblas cblas" "$enable_gsl_shared" "$gsllibdir0" \
-		    $GSL $GSL/lib $GSL/.libs /usr/local/lib /usr/lib /opt/gsl/lib \
-		    $finkdir/lib
+		if test ! "x$gsllibdir0" = "x"; then
+		    gsllibdir1=$gsllibdir0/../cblas/.libs
+		fi
+		check_library "libgslcblas gslcblasML gslcblas cblas" \
+		    "$enable_gsl_shared" "" \
+		    $gsllibdir0 $gsllibdir1 $GSL $GSL/lib \
+		    $GSL/.libs $GSL/cblas/.libs /usr/local/lib \
+		    /usr/lib /opt/gsl/lib $finkdir/lib
 		if test ! "x$found_lib" = "x"; then
 		    gsllibs="$gsllibs $found_lib"
 		    gsllibdir=$found_dir
@@ -3950,14 +4152,16 @@ if test ! "x$enable_mathmore" = "xno"; then
     fi
     # skip cygwin gsl-config when in pure Win32 mode
     if test "x$platform" = "xwin32"; then
-        case `$cwhich gsl-config` in
-            /bin/*|/usr/bin/*)
-	        if (test "x$gslincdir" = "x" || test "x$gsllibs" = "x"); then
-                    gslskip="skip"
-                    enable_mathmore="no"
-                fi
-                ;;
-        esac
+	if `$cwhich gsl-config > /dev/null 2>&1` ; then
+            case `$cwhich gsl-config` in
+                /bin/*|/usr/bin/*)
+	            if (test "x$gslincdir" = "x" || test "x$gsllibs" = "x"); then
+                        gslskip="skip"
+                        enable_mathmore="no"
+                    fi
+                    ;;
+            esac
+        fi
     fi
     if (test "x$gslincdir" = "x" || test "x$gsllibs" = "x") && \
         test ! "x$gslskip" = "xskip"; then
@@ -4005,28 +4209,36 @@ check_explicit "$enable_mathmore" "$enable_mathmore_explicit" \
 
 ######################################################################
 #
-### echo %%% MathCore Library - Contributed library
+### echo %%% GenVector Library - Contributed library
 #
-message "Checking whether to build libMathCore"
-if test ! "x$enable_mathcore" = "xno"; then
-    enable_mathcore="yes"
+message "Checking whether to build libGenVector"
+if test ! "x$enable_genvector" = "xno"; then
+    enable_genvector="yes"
     result "yes"
 else
-    enable_mathcore=""
+    enable_genvector=""
     result "no"
 fi
-check_explicit "$enable_mathmore" "$enable_mathmore_explicit" \
-     "Explicitly required MathMore dependencies not fulfilled"
+check_explicit "$enable_genvector" "$enable_genvector_explicit" \
+      "Explicitly required GenVector dependencies not fulfilled"
 
 ######################################################################
 #
-### echo %%% Experimental Cint7 Library
+### echo %%% Experimental CINT7 Library
 #
 message "Checking whether to build CINT7"
 if test ! "x$enable_cint7" = "xno"; then
     enable_cint7="yes"
     enable_reflex="yes"
     result "yes"
+    # remove CINT5's include/G__ci.h etc
+    if test -d include/cint; then
+        for f in `cd include/cint/; ls`; do
+            if test -f include/$f; then
+                rm include/$f
+            fi
+        done
+    fi
 else
     enable_cint7=""
     result "no"
@@ -4125,6 +4337,23 @@ fi
 
 ######################################################################
 #
+### echo %%% MemStat Library - check for memory leaks in application.
+#
+message "Checking whether to build libMemStat"
+if test "x$enable_memstat" = "xyes" || test ! "x$MEMSTAT" = "x"; then
+    case $arch in
+    linux*)
+       enable_memstat="yes" ;;
+    *)
+       enable_memstat="no" ;;
+    esac
+else
+    enable_memstat="no"
+fi
+result $enable_memstat
+
+######################################################################
+#
 ### echo %%% Clarens Support - Third party libraries
 #
 # (See http://clarens.sourceforge.net/)
@@ -4197,9 +4426,38 @@ check_explicit "$enable_peac" "$enable_peac_explicit" \
 
 ######################################################################
 #
+### echo %%% Check for Stub removal support
+#
+if test "x$no_stubs" = "xyes" || test "x$no_stubs_test" = "xyes"; then
+    message "Checking for CINT support of function calls via symbols"
+    no_stubs="yes"
+
+    # Now check whether the platform is supported at all:
+    if test "x${arch}" = "xlinux"; then
+        gccmajor="`gcc -dumpversion 2>&1 | cut -d'.' -f1`"
+        gccminor="`gcc -dumpversion 2>&1 | cut -d'.' -f2`"
+        gccminorOK="`echo 234 | grep ${gccminor}`"
+        if test ! "x$gccmajor" = "x3" || test ! "x$gccminorOK" = "x234"; then
+            no_stubs="no"
+            no_stubs_test="no"
+            result "$no_stubs"
+            echo "WARNING: symbol-based calls are not supported with your compiler version"'!'
+        else
+            result "$no_stubs"
+        fi
+    else
+        no_stubs="no"
+        no_stubs_test="no"
+        result "$no_stubs"
+        echo "WARNING: symbol-based calls are not supported on ${arch}"'!'
+    fi
+fi
+
+######################################################################
+#
 ### echo %%% What dictionaries to build
 #
-# Can be either cint (default), reflex, or gccxml.
+# Can be either CINT (default), reflex, or gccxml.
 # Option will be passed to rootcint(_tmp),
 # and root-config --libs will have -lReflex if needed.
 #
@@ -4209,7 +4467,7 @@ if test "x$dicttype" = "x" ; then
     dicttype="$ROOTDICTTYPE"
 fi
 
-# set default to cint
+# set default to CINT
 if test "x$dicttype" = "x"; then
     dicttype=cint
 fi
@@ -4245,45 +4503,102 @@ fi
 # system.
 #
 if test "x$show_pkglist" = "xyes" ; then
-    test "x$enable_alien"   = "xyes" && pkglist="$pkglist root-plugin-alien"
-    test "x$enable_asimage" = "xyes" && pkglist="$pkglist root-plugin-asimage"
-    test "x$enable_castor"  = "xyes" && pkglist="$pkglist root-plugin-castor"
-    test "x$enable_cern"    = "xyes" && pkglist="$pkglist root-plugin-hbook"
-    test "x$enable_chirp"   = "xyes" && pkglist="$pkglist root-plugin-chirp"
-    test "x$enable_cint7"   = "xyes" && pkglist="$pkglist root-plugin-cint7"
-    test "x$enable_clarens" = "xyes" && pkglist="$pkglist libroot-clarens"
-    test "x$enable_dcache"  = "xyes" && pkglist="$pkglist root-plugin-dcache"
-    test "x$enable_fftw3"   = "xyes" && pkglist="$pkglist root-plugin-fftw3"
-    test "x$enable_gfal"    = "xyes" && pkglist="$pkglist root-plugin-gfal"
-    test "x$enable_g4root"  = "xyes" && pkglist="$pkglist root-plugin-g4root"
-    test "x$enable_globus"  = "xyes" && pkglist="$pkglist root-plugin-globus"
-    test "x$enable_krb5"    = "xyes" && pkglist="$pkglist root-plugin-krb5"
-    test "x$enable_ldap"    = "xyes" && pkglist="$pkglist libroot-ldap"
-    test "x$enable_minuit2" = "xyes" && pkglist="$pkglist root-plugin-minuit2"
-    test "x$enable_mathmore" = "xyes" && pkglist="$pkglist libroot-mathmore"
-    test "x$enable_monalisa" = "xyes" && pkglist="$pkglist root-plugin-monalisa"
-    test "x$enable_mysql"   = "xyes" && pkglist="$pkglist root-plugin-mysql"
-    test "x$enable_odbc"    = "xyes" && pkglist="$pkglist root-plugin-odbc"
-    test "x$enable_opengl"  = "xyes" && pkglist="$pkglist root-plugin-gl"
-    test "x$enable_oracle"  = "xyes" && pkglist="$pkglist root-plugin-oracle"
-    test "x$enable_peac"    = "xyes" && pkglist="$pkglist root-plugin-peac"
-    test "x$enable_pgsql"   = "xyes" && pkglist="$pkglist root-plugin-pgsql"
-    test "x$enable_pythia6" = "xyes" && pkglist="$pkglist root-plugin-pythia6"
-    test "x$enable_python"  = "xyes" && pkglist="$pkglist libroot-python"
-    test "x$enable_qt"      = "xyes" && pkglist="$pkglist root-plugin-qt"
-    test "x$enable_roofit"  = "xyes" && pkglist="$pkglist libroot-roofit"
-    test "x$enable_ruby"    = "xyes" && pkglist="$pkglist libroot-ruby"
-    test "x$enable_rfio"    = "xyes" && pkglist="$pkglist root-plugin-rfio"
-    test "x$enable_sapdb"   = "xyes" && pkglist="$pkglist root-plugin-maxdb"
-    test "x$enable_srp"     = "xyes" && pkglist="$pkglist root-plugin-srp"
-    test "x$enable_unuran"  = "xyes" && pkglist="$pkglist libroot-unuran"
-    test "x$enable_xml"     = "xyes" && pkglist="$pkglist root-plugin-xml"
-    test "x$enable_xrootd"  = "xyes" && pkglist="$pkglist root-system-xrootd root-plugin-netx"
+    test "x$enable_python"   = "xyes" && pl="$pl libroot-bindings-python"
+    test "x$enable_ruby"     = "xyes" && pl="$pl libroot-bindings-ruby"
+    test "x$enable_opengl"   = "xyes" && pl="$pl libroot-graf3d-gl"
+    test "x$enable_xml"      = "xyes" && pl="$pl libroot-io-xmlparser"
+    test "x$enable_mathmore" = "xyes" && pl="$pl libroot-math-mathmore"
+    test "x$enable_unuran"   = "xyes" && pl="$pl libroot-math-unuran"
+    test "x$enable_table"    = "xyes" && pl="$pl libroot-misc-table"
+    test "x$enable_g4root"   = "xyes" && pl="$pl libroot-montecarlo-g4root"
+    test "x$enable_ldap"     = "xyes" && pl="$pl libroot-net-ldap"
+    test "x$enable_clarens"  = "xyes" && pl="$pl libroot-proof-clarens"
+    test "x$enable_roofit"   = "xyes" && pl="$pl libroot-roofit"
+    test "x$enable_cint7"    = "xyes" && pl="$pl root-plugin-cint7"
+    test "x$enable_asimage"  = "xyes" && pl="$pl root-plugin-graf2d-asimage"
+    test "x$enable_gdml"     = "xyes" && pl="$pl root-plugin-geom-gdml"
+    test "x$enable_qt"       = "xyes" && pl="$pl root-plugin-gui-qt root-plugin-graf2d-qt"
+    test "x$enable_castor"   = "xyes" && pl="$pl root-plugin-io-castor"
+    test "x$enable_chirp"    = "xyes" && pl="$pl root-plugin-io-chirp"
+    test "x$enable_dcache"   = "xyes" && pl="$pl root-plugin-io-dcache"
+    test "x$enable_gfal"     = "xyes" && pl="$pl root-plugin-io-gfal"
+    test "x$enable_rfio"     = "xyes" && pl="$pl root-plugin-io-rfio"
+    test "x$enable_fftw3"    = "xyes" && pl="$pl root-plugin-math-fftw3"
+    test "x$enable_minuit2"  = "xyes" && pl="$pl root-plugin-math-minuit2"
+    test "x$enable_g4root"   = "xyes" && pl="$pl root-plugin-montecarlo-g4root"
+    test "x$enable_pythia6"  = "xyes" && pl="$pl root-plugin-montecarlo-pythia6"
+    test "x$enable_alien"    = "xyes" && pl="$pl root-plugin-net-alien"
+    test "x$enable_globus"   = "xyes" && pl="$pl root-plugin-net-globus"
+    test "x$enable_krb5"     = "xyes" && pl="$pl root-plugin-net-krb5"
+    test "x$enable_monalisa" = "xyes" && pl="$pl root-plugin-net-monalisa"
+    test "x$enable_srp"      = "xyes" && pl="$pl root-plugin-net-srp"
+    test "x$enable_peac"     = "xyes" && pl="$pl root-plugin-proof-peac"
+    test "x$enable_mysql"    = "xyes" && pl="$pl root-plugin-sql-mysql"
+    test "x$enable_odbc"     = "xyes" && pl="$pl root-plugin-sql-odbc"
+    test "x$enable_oracle"   = "xyes" && pl="$pl root-plugin-sql-oracle"
+    test "x$enable_pgsql"    = "xyes" && pl="$pl root-plugin-sql-pgsql"
+    test "x$enable_sapdb"    = "xyes" && pl="$pl root-plugin-sql-maxdb"
+    test "x$enable_xrootd"   = "xyes" && pl="$pl root-system-xrootd root-plugin-net-netx root-plugin-net-xrootd"
 
-    pkglist="$pkglist root-plugin-fumili libroot-minuit libroot-mlp libroot-tmva root-plugin-proof root-plugin-xproof root-plugin-sql libroot-quadp root-system-proofd root-system-rootd root-system-doc root-system-bin libroot root-system-common ttf-root-installer"
+    pl="$pl \
+        libroot-geom \
+        libroot-graf2d-gpad \
+        libroot-graf2d-graf \
+        libroot-graf2d-postscript \
+        libroot-graf3d-eve \
+        libroot-graf3d-g3d \
+        libroot-gui \
+        libroot-gui-ged \
+        libroot-hist \
+        libroot-hist-spectrum \
+        libroot-io \
+        libroot-math-foam \
+        libroot-math-genvector \
+        libroot-math-mathcore \
+        libroot-math-matrix \
+        libroot-math-minuit \
+        libroot-math-mlp \
+        libroot-math-physics \
+        libroot-math-quadp \
+        libroot-math-smatrix \
+        libroot-math-splot \
+        libroot-misc-minicern \
+        libroot-montecarlo-eg \
+        libroot-montecarlo-vmc \
+        libroot-net \
+        libroot-net-auth \
+        libroot-proof \
+        libroot-tmva \
+        libroot-tree \
+        libroot-tree-treeplayer \
+        root-plugin-geom-geombuilder \
+        root-plugin-geom-geompainter \
+        root-plugin-graf2d-x11 \
+        root-plugin-graf3d-x3d \
+        root-plugin-gui-fitpanel \
+        root-plugin-gui-guibuilder \
+        root-plugin-gui-sessionviewer \
+        root-plugin-hist-hbook \
+        root-plugin-hist-histpainter \
+        root-plugin-hist-spectrumpainter \
+        root-plugin-io-sql \
+        root-plugin-io-xml \
+        root-plugin-math-fumili \
+        root-plugin-proof-proofplayer \
+        root-plugin-proof-xproof \
+        root-plugin-tree-treeviewer \
+        root-system-proofd \
+        root-system-rootd \
+        root-system-doc \
+        root-system-bin \
+        libroot-core \
+        root-system-common \
+        ttf-root-installer"
+    pl=`echo $pl | tr -s ' '`
+
     # If we're called from the package preparation script, then
     # print out the package list and exit
-    result "packages: $pkglist"
+    result "packages: $pl"
     exit 0
 fi
 
@@ -4312,7 +4627,7 @@ freebsd*|openbsd|aix*|win32*)
     enable_explicitlink="yes"
     ;;
 esac
-if test "x$enable_explicitlink" = "xyes" && test ! "$platform" = "win32" ; then
+if test "x$enable_explicitlink" = "xyes" && test ! "x$platform" = "xwin32"; then
     mkliboption=$mkliboption"-x "
 fi
 
@@ -4363,10 +4678,22 @@ fi
 if test -d star ; then
    rm -rf star
 fi
+if test -d freetype/src/freetype-2.1.9 ; then
+   rm -rf freetype/src/freetype-2.1.9
+fi
+if test -d pcre/src/pcre-6.4 ; then
+   rm -rf pcre/src/pcre-6.4
+fi
+if test -d core/pcre/src/pcre-7.4 ; then
+   rm -rf core/pcre/src/pcre-7.4
+fi
 rm -f lib/libRXML* bin/libRXML* bin/xproofd etc/system.rootmap
 rm -f lib/libProofGui* bin/libProofGui* bin/xrdgsiproxy
 rm -f lib/libMySQL* bin/libMySQL* lib/libGedOld* bin/libGedOld*
-rm -f lib/libASPluginGS.*
+rm -f lib/libASPluginGS.* bin/g2rootold*
+rm -f math/mathcore/src/G__MathCore32.*
+rm -f xrootd/src/headers.d
+rm -f asimage/src/headers.d asimage/src/G__ASImageGS.*
 
 ######################################################################
 #
@@ -4374,7 +4701,7 @@ rm -f lib/libASPluginGS.*
 #
 # First win32 does not support -L in ldflags, so remove @ldflags@.
 #
-if test "$platform" = "win32" ; then
+if test "x$platform" = "xwin32" ; then
     sed -e "s|@ldflags@||"        \
         < Makefile.tmp > Makefile.tmpp
     mv Makefile.tmpp Makefile.tmp
@@ -4382,17 +4709,19 @@ fi
 
 if test "x$enable_globus" = "xyes" && test "x$enable_rpath" = "xyes"; then
     case "$arch" in
-        solarisCC5)
+       solarisCC5)
           sed -e "s|@ldflags@|-R$globusdir/lib @ldflags@|" \
                  < Makefile.tmp > Makefile.tmpp
           ;;
-        solarisgcc*)
+       solarisgcc* | linux* | freebsd* | openbsd*)
           sed -e "s|@ldflags@|-Wl,-rpath,$globusdir/lib @ldflags@|" \
                  < Makefile.tmp > Makefile.tmpp
           ;;
-        linux*)
-          sed -e "s|@ldflags@|-Wl,-rpath,$globusdir/lib @ldflags@|" \
-                 < Makefile.tmp > Makefile.tmpp
+       macosx*)
+          if test ! "x$macosx105" = "x"; then
+             sed -e "s|@ldflags@|-Wl,-rpath,$globusdir/lib @ldflags@|" \
+                    < Makefile.tmp > Makefile.tmpp
+          fi
           ;;
     esac
     if test -f Makefile.tmpp ; then
@@ -4429,13 +4758,15 @@ if test ! "x$haveconfig" = "x" ; then
              sed -e "s|@ldflags@|-R$libdir @ldflags@|" \
                     < Makefile.tmp > Makefile.tmpp
              ;;
-          solarisgcc*)
+          solarisgcc* | linux* | freebsd* | openbsd*)
              sed -e "s|@ldflags@|-Wl,-rpath,$libdir @ldflags@|" \
                     < Makefile.tmp > Makefile.tmpp
              ;;
-          linux*)
-             sed -e "s|@ldflags@|-Wl,-rpath,$libdir @ldflags@|" \
-                    < Makefile.tmp > Makefile.tmpp
+          macosx*)
+             if test ! "x$macosx105" = "x"; then
+                sed -e "s|@ldflags@|-Wl,-rpath,$libdir @ldflags@|" \
+                       < Makefile.tmp > Makefile.tmpp
+             fi
              ;;
        esac
        if test -f Makefile.tmpp ; then
@@ -4470,16 +4801,29 @@ else
     aclocaldir=\$\(ROOTSYS\)/build/misc
     elispdir=\$\(ROOTSYS\)/build/misc
 
-    # when using rpath in this case build product is not relocatable
+    # when using rpath in this case the build product is not relocatable
+    # except for macosx 10.5 where we build relative to the location of
+    # the executable
     if test "x$enable_rpath" = "xyes" ; then
-        if test "$arch" = "solarisCC5"; then
-            sed -e "s|@ldflags@|-R$libdir @ldflags@|" \
+       case "$arch" in
+          solarisCC5)
+             sed -e "s|@ldflags@|-R$libdir @ldflags@|" \
                     < Makefile.tmp > Makefile.tmpp
-        else
-            sed -e "s|@ldflags@|-Wl,-rpath,$libdir @ldflags@|" \
+             ;;
+          solarisgcc* | linux* | freebsd* | openbsd*)
+             sed -e "s|@ldflags@|-Wl,-rpath,$libdir @ldflags@|" \
                     < Makefile.tmp > Makefile.tmpp
-        fi
-        mv Makefile.tmpp Makefile.tmp
+             ;;
+          macosx*)
+             if test ! "x$macosx105" = "x"; then
+                sed -e "s|@ldflags@|-Wl,-rpath,@loader_path/../lib @ldflags@|" \
+                       < Makefile.tmp > Makefile.tmpp
+             fi
+             ;;
+       esac
+       if test -f Makefile.tmpp ; then
+          mv Makefile.tmpp Makefile.tmp
+       fi
     fi
 
     sed -e "s|@useconfig@|FALSE|" \
@@ -4522,8 +4866,6 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@builtinfreetype@|$enable_builtin_freetype|"      \
     -e "s|@builtinpcre@|$enable_builtin_pcre|"  \
     -e "s|@buildxrd@|$buildxrd|"                \
-    -e "s|@cernlibdir@|$cernlibdir|"            \
-    -e "s|@cernlibs@|$cernlib|"                 \
     -e "s|@castorincdir@|$castorincdir|"        \
     -e "s|@castorlib@|$castorlib|"              \
     -e "s|@castorlibdir@|$castorlibdir|"        \
@@ -4547,7 +4889,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@dicttype@|$dicttype|"                \
     -e "s|@docdir@|$docdir|"                    \
     -e "s|@elispdir@|$elispdir|"                \
-    -e "s|@buildmathcore@|$enable_mathcore|"    \
+    -e "s|@buildgenvector@|$enable_genvector|"  \
     -e "s|@buildmathmore@|$enable_mathmore|"    \
     -e "s|@ftglincdir@|$ftglincdir|"            \
     -e "s|@ftgllibdir@|$ftgllibdir|"            \
@@ -4568,7 +4910,10 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@buildgdml@|$enable_gdml|"            \
     -e "s|@buildmonalisa@|$enable_monalisa|"    \
     -e "s|@enable_pch@|$enable_pch|"            \
+    -e "s|@no_stubs@|$no_stubs|"                \
+    -e "s|@no_stubs_test@|$no_stubs_test|"      \
     -e "s|@buildtable@|$enable_table|"          \
+    -e "s|@buildmemstat@|$enable_memstat|"      \
     -e "s|@enable_thread@|$enable_thread|"      \
     -e "s|@etcdir@|$etcdir|"                    \
     -e "s|@exceptions@|$enable_exceptions|"     \
@@ -4580,6 +4925,9 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@g4libdir@|$g4libdir|"                \
     -e "s|@clhepincdir@|$clhepincdir|"          \
     -e "s|@enable_xft@|$enable_xft|"            \
+    -e "s|@glitelib@|$glitelib|"                \
+    -e "s|@glitelibdir@|$glitelibdir|"          \
+    -e "s|@gaw_cppflags@|$gaw_cppflags|"        \
         < Makefile.tmp > Makefile.tmpp
 mv Makefile.tmpp Makefile.tmp
 
@@ -4607,9 +4955,6 @@ sed -e "s|@globusincdir@|$globusincdir|"        \
     -e "s|@monalisaincdir@|$monalisaincdir|"    \
     -e "s|@monalisalib@|$monalisalib|"          \
     -e "s|@monalisalibdir@|$monalisalibdir|"    \
-    -e "s|@monalisawsincdir@|$monalisawsincdir|"\
-    -e "s|@monalisawslib@|$monalisawslib|"      \
-    -e "s|@monalisawslibdir@|$monalisawslibdir|"\
     -e "s|@fftw3incdir@|$fftw3incdir|"          \
     -e "s|@fftw3lib@|$fftw3lib|"                \
     -e "s|@fftw3libdir@|$fftw3libdir|"          \
@@ -4632,6 +4977,9 @@ sed -e "s|@globusincdir@|$globusincdir|"        \
     -e "s|@pythia6lib@|$pythia6lib|"            \
     -e "s|@pythia6libdir@|$pythia6libdir|"      \
     -e "s|@pythia6cppflags@|$pythia6cppflags|"  \
+    -e "s|@pythia8lib@|$pythia8lib|"            \
+    -e "s|@pythia8incdir@|$pythia8incdir|"      \
+    -e "s|@pythia8libdir@|$pythia8libdir|"      \
     -e "s|@pythonlib@|$pythonlib|"              \
     -e "s|@pythonlibdir@|$pythonlibdir|"        \
     -e "s|@pythonincdir@|$pythonincdir|"        \
@@ -4682,9 +5030,9 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@x11libdir@|$x11libdir|"              \
     -e "s|@xpmlib@|$xpmlib|"                    \
     -e "s|@xpmlibdir@|$xpmlibdir|"              \
+    -e "s|@xrdaddopts@|$xrdaddopts|"            \
     -e "s|@xrootddir@|$xrootddir|"              \
     -e "s|@buildgl@|$enable_opengl|"            \
-    -e "s|@buildhbook@|$enable_cern|"           \
     -e "s|@buildldap@|$enable_ldap|"            \
     -e "s|@buildmysql@|$enable_mysql|"          \
     -e "s|@buildpgsql@|$enable_pgsql|"          \
@@ -4703,6 +5051,7 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@buildalien@|$enable_alien|"          \
     -e "s|@buildasimage@|$enable_asimage|"      \
     -e "s|@buildpythia6@|$enable_pythia6|"      \
+    -e "s|@buildpythia8@|$enable_pythia8|"      \
     -e "s|@buildpython@|$enable_python|"        \
     -e "s|@buildruby@|$enable_ruby|"            \
     -e "s|@buildxml@|$enable_xml|"              \
@@ -4713,6 +5062,7 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@buildxrdgsi@|$buildxrdgsi|"          \
     -e "s|@buildclarens@|$enable_clarens|"      \
     -e "s|@buildpeac@|$buildpeac|"              \
+    -e "s|@buildglite@|$enable_glite|"          \
     < Makefile.tmp > $MAKEOUT
 rm -f Makefile.tmp
 
@@ -4819,11 +5169,26 @@ prefix2=$prefix
 bindir2=$bindir
 libdir2=$libdir
 incdir2=$incdir
+etcdir2=$etcdir
+mandir2=$mandir
 if test "$prefix2" = "\$(ROOTSYS)" ; then
     prefix2=\$ROOTSYS
     bindir2=\$ROOTSYS/bin
     libdir2=\$ROOTSYS/lib
     incdir2=\$ROOTSYS/include
+    etcdir2=\$ROOTSYS/etc
+    mandir2=\$ROOTSYS/man/man1
+fi
+
+if test ! "x$altf77org" = "x" ; then
+    altf772="$altf77org"
+else
+    altf772="$altf77"
+fi
+if test ! "x$altldorg" = "x" ; then
+    altld2="$altldorg"
+else
+    altld2="$altld"
 fi
 
 features=""
@@ -4843,6 +5208,7 @@ sed -e "s|@architecture@|$arch|"           \
     -e "s|@bindir@|$bindir2|"              \
     -e "s|@libdir@|$libdir2|"              \
     -e "s|@incdir@|$incdir2|"              \
+    -e "s|@etcdir@|$etcdir2|"              \
     -e "s|@features@|$features|"           \
     -e "s|@winrtdebug@|$enable_winrtdebug|"\
     -e "s|@configargs@|$configargs|"       \
@@ -4851,8 +5217,10 @@ sed -e "s|@architecture@|$arch|"           \
     -e "s|@pythonvers@|$pythonvers|"       \
     -e "s|@altcc@|$altcc|"                 \
     -e "s|@altcxx@|$altcxx|"               \
-    -e "s|@altf77@|$altf77|"               \
-    -e "s|@altld@|$altld|"                 \
+    -e "s|@altf77@|$altf772|"              \
+    -e "s|@altld@|$altld2|"                \
+    -e "s|@no_stubs@|$no_stubs|"           \
+    -e "s|@no_stubs_test@|$no_stubs_test|" \
    < root-config.tmp > $RCONFOUT
 rm -f root-config.tmp
 chmod 755 $RCONFOUT
@@ -4901,7 +5269,7 @@ result "done"
 # etc/root.mimes
 #
 message "Writing $MIMEOUT"
-if test "$platform" = "win32" ; then
+if test "x$platform" = "xwin32" ; then
    cp -f $MIMEWIN32IN $MIMEOUT
 else
    cp -f $MIMEUNIXIN $MIMEOUT
@@ -5013,12 +5381,18 @@ result done
 # bin/thisroot.sh and bin/thisroot.csh
 #
 message "Writing $THISROOTSHOUT"
-cp -f $THISROOTSHIN $THISROOTSHOUT
+sed -e "s|@bindir@|$bindir2|"           \
+    -e "s|@libdir@|$libdir2|"           \
+    -e "s|@mandir@|$mandir2|"           \
+    < $THISROOTSHIN > $THISROOTSHOUT
 result "done"
 message "Writing $THISROOTCSHOUT"
-cp -f $THISROOTCSHIN $THISROOTCSHOUT
+sed -e "s|@bindir@|$bindir2|"           \
+    -e "s|@libdir@|$libdir2|"           \
+    -e "s|@mandir@|$mandir2|"           \
+    < $THISROOTCSHIN > $THISROOTCSHOUT
 result "done"
-if test "$platform" = "win32"; then
+if test "x$platform" = "xwin32"; then
     message "Writing $THISROOTBATOUT"
     cp -f $THISROOTBATIN $THISROOTBATOUT
     result "done"
@@ -5028,62 +5402,66 @@ fi
 # bin/genreflex(.bat), bin/genreflex-rootcint(.bat)
 #
 if test "x$enable_reflex" = "xyes"; then
-    message "Writing $GENREFLEXSHOUT"
     libdirreflex=$libdir
-    if test "$prefix" = "\$(ROOTSYS)" ; then
+    if test "x$haveconfig" = "x" ; then
         libdirreflex='`dirname $0`/../lib'
     fi
 
-    # determine whether to use GCCXML0.6 python scripts
-    GCCXML06SED=""
-    if test "x$gccxml" != "x"; then
-        if test -x ${gccxml}/gccxml; then
-            GCCXMLVERSION=`${gccxml}/gccxml --version 2>/dev/null | sed 's,.*\([[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+\).*$,\1,'`
-            GCCXMLVERSION06=`echo $GCCXMLVERSION|grep ^0\.6`
-            if test "x${GCCXMLVERSION06}" != "x"; then
-                GCCXML06SED="-e s|genreflex\([.-]\)|genreflex06\1|g"
-                echo -n ' [ Upgrade to GCCXML >= 0.7 recommended! ] '
-            fi
-        fi
-    fi
+    if test "x$platform" != "xwin32"; then
+        message "Writing $GENREFLEXSHOUT"
+        cat $GENREFLEXSHIN | sed -e "s|@libdir@|$libdirreflex|g" > $GENREFLEXSHOUT
+        chmod a+x $GENREFLEXSHOUT
+        result "done"
+    else
+        message "Writing $GENREFLEXSHOUT"
+        cat $GENREFLEXSHIN | sed -e "s|@libdir@|\$(cygpath -m $libdirreflex)|g" > $GENREFLEXSHOUT
+        chmod a+x $GENREFLEXSHOUT
+        result "done"
 
-    cat $GENREFLEXSHIN | sed -e "s|@libdir@|$libdirreflex|g" $GCCXML06SED > $GENREFLEXSHOUT
-    chmod a+x $GENREFLEXSHOUT
-    result "done"
-
-    if test "$platform" = "win32"; then
         message "Writing $GENREFLEXBATOUT"
-        if test "$prefix" = "\$(ROOTSYS)" ; then
+        if test "x$haveconfig" = "x" ; then
             libdirreflex='%~d0%~p0\\..\\lib'
         else
             libdirreflex=`cygpath -m $libdir`
         fi
 
-        cat $GENREFLEXBATIN | sed -e "s|@libdir@|$libdirreflex|g" $GCCXML06SED > $GENREFLEXBATOUT
+        cat $GENREFLEXBATIN | sed -e "s|@libdir@|$libdirreflex|g" > $GENREFLEXBATOUT
         chmod a+x $GENREFLEXBATOUT
         result "done"
     fi
 
     message "Writing $GENREFLEXROOTCINTSHOUT"
     libdirreflex=$libdir
-    if test "$prefix" = "\$(ROOTSYS)" ; then
+    if test "x$haveconfig" = "x" ; then
         libdirreflex='`dirname $0`/../lib'
     fi
-    cat $GENREFLEXROOTCINTSHIN | sed -e "s|@libdir@|$libdirreflex|g" $GCCXML06SED > $GENREFLEXROOTCINTSHOUT
+    cat $GENREFLEXROOTCINTSHIN | sed -e "s|@libdir@|$libdirreflex|g" > $GENREFLEXROOTCINTSHOUT
     chmod a+x $GENREFLEXROOTCINTSHOUT
     result "done"
 
-    if test "$platform" = "win32"; then
+    if test "x$platform" = "xwin32"; then
         message "Writing $GENREFLEXROOTCINTBATOUT"
-        if test "$prefix" = "\$(ROOTSYS)" ; then
+        if test "x$haveconfig" = "x" ; then
             libdirreflex='%~d0%~p0\\..\\lib'
         else
             libdirreflex=`cygpath -m $libdir`
         fi
-        cat $GENREFLEXROOTCINTBATIN | sed -e "s|@libdir@|$libdirreflex|g" $GCCXML06SED > $GENREFLEXROOTCINTBATOUT
+        cat $GENREFLEXROOTCINTBATIN | sed -e "s|@libdir@|$libdirreflex|g" > $GENREFLEXROOTCINTBATOUT
         chmod a+x $GENREFLEXROOTCINTBATOUT
         result "done"
     fi
+else
+    rm -f bin/genreflex*
+fi
+
+#---------------------------------------------------------------------
+# bin/rootcint_nostubs
+#
+if test "x$no_stubs" = "xyes"; then
+    message "Writing $ROOTCINTSTUBSHOUT"
+    cp -f  $ROOTCINTSTUBSHIN $ROOTCINTSTUBSHOUT
+    # force rootcint recompilation and thus regenerate dictionaries
+    touch utils/src/rootcint.cxx
 fi
 
 #---------------------------------------------------------------------
@@ -5149,4 +5527,3 @@ fi
 result ""
 
 exit 0
-

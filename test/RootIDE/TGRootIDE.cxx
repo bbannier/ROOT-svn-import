@@ -189,6 +189,7 @@
 #ifdef WIN32
 #include "TWin32SplashThread.h"
 #endif
+#include <string>
 
 const char *ed_filetypes[] = {
    "ROOT Macros",  "*.C",
@@ -397,6 +398,7 @@ Bool_t TGDocument::Open(const char *fname)
       fTab->MapSubwindows();
       fTab->Layout();
       fTabEl = fTab->GetTabTab(fTab->GetCurrent());
+      fTabEl->ShowClose();
    }
    if (fname) {
       if ((fEditor == 0) || (fTabEl == 0) || (fEditor &&
@@ -421,6 +423,7 @@ Bool_t TGDocument::Open(const char *fname)
          fTab->MapSubwindows();
          fTab->Layout();
          fTabEl = fTab->GetTabTab(fTab->GetCurrent());
+         fTabEl->ShowClose();
       }
       if (strlen(fname) == 0) {
          // no filename provided --> empty (untitled) document
@@ -764,7 +767,7 @@ void TGRootIDE::Build()
    fFileType->AddEntry(" C/C++ Files (*.c;*.cxx;*.h;...)", dropt++);
    fFileType->AddEntry(" Text Files (*.txt)", dropt++);
    fFilter = fFileType->GetTextEntry();
-   fFileType->Resize(200, fFilter->GetDefaultHeight());
+   fFileType->Resize(200, 20);
    vf3->AddFrame(fFileType, new TGLayoutHints(kLHintsExpandX, 1, 1, 1, 1));
    fFileType->Connect("Selected(Int_t)", "TGRootIDE", this, "ApplyFilter(Int_t)");
 
@@ -849,6 +852,9 @@ void TGRootIDE::Build()
    tf->SetLayoutManager(new TGHorizontalLayout(tf));
    fTextEdit = new TGTextEdit(tf, 10, 10, 1);
    fTextEdit->Associate(this);
+   TGTabElement *tabel = fTab->GetTabTab(1);
+   tabel->ShowClose();
+
    // set selected text colors
    Pixel_t pxl;
    gClient->GetColorByName("#ccccff", pxl);
@@ -862,6 +868,7 @@ void TGRootIDE::Build()
 
    vf2->AddFrame(fTab, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
    fTab->Connect("Selected(Int_t)", "TGRootIDE", this, "DoTab(Int_t)");
+   fTab->Connect("CloseTab(Int_t)", "TGRootIDE", this, "CloseTab(Int_t)");
 
    hf->AddFrame(vf2, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
    AddFrame(hf, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
@@ -1679,6 +1686,20 @@ void TGRootIDE::DoTab(Int_t id)
    fFilename = p;
    SetWindowName(Form("%s - TGRootIDE", p));
    fCurrent = id;
+}
+
+//______________________________________________________________________________
+void TGRootIDE::CloseTab(Int_t id)
+{
+   // Close tab "id".
+
+   if (fCurrentDoc) {
+      fCurrentDoc->Close();
+   }
+   else if (fTab->GetNumberOfTabs() > 2) {
+      fTab->RemoveTab(id);
+   }
+   fTab->Layout();
 }
 
 //______________________________________________________________________________

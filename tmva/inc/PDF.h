@@ -41,9 +41,12 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#ifndef ROOT_TH1
 #include "TH1.h"
+#endif
+#ifndef ROOT_TObject
 #include "TObject.h"
-
+#endif
 #ifndef ROOT_TMVA_MsgLogger
 #include "TMVA/MsgLogger.h"
 #endif

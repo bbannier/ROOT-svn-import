@@ -33,6 +33,7 @@
 #include <iomanip>
 #include <limits>
 #include <cmath>
+#include <stdlib.h>
 #include "TBenchmark.h"
 #include "TROOT.h"
 #include "TRandom3.h"
@@ -151,9 +152,9 @@ public:
       xlow(x1), xup(x2), 
       fHasLowRange(false), fHasUpRange(false)
    {
-      fScaleIg = 1; //scale for integral test
+      fScaleIg = 10; //scale for integral test
       fScaleDer = 1;  //scale for der test
-      fScaleInv = 100;  //scale for der test
+      fScaleInv = 100;  //scale for inverse test
       for(int i = 0; i< NPAR; ++i) fParams[i]=0;
       NFuncTest = 100; 
       if (xlow > -INF) fHasLowRange = true;
@@ -176,7 +177,7 @@ public:
 
 
    double Pdf(double x) const { 
-      return DoEval(x); 
+      return (*this)(x); 
    }
 
    double Cdf(double x) const { 
@@ -195,30 +196,22 @@ public:
    int TestDerivative(); 
 
    // test root finding algorithm for finding inverse of cdf 
-   template<class AlgoType>
-   int TestInverse1(); 
+   int TestInverse1(RootFinder::EType algotype); 
 
    // test root finding algorithm for finding inverse of cdf using drivatives
-   template<class AlgoType>
-   int TestInverse2(); 
-
+   int TestInverse2(RootFinder::EType algotype); 
 
    
    void SetScaleIg(double s) { fScaleIg = s; }  
    void SetScaleDer(double s) { fScaleDer = s; }
    void SetScaleInv(double s) { fScaleInv = s; }
 
-   //for building a TF1
-   using ROOT::Math::IParamFunction::operator();
-
-   double operator()(const double* x, const double *)  { 
-      return DoEval(*x);
-   }
 
 private: 
 
 
-   double DoEval(double x) const { 
+   double DoEvalPar(double x, const double * ) const { 
+      // use esplicity cached param values
       return (*fPdf)(x, *fParams, *(fParams+1)); 
    }
 
@@ -252,7 +245,7 @@ int StatFunction::TestIntegral() {
    double dx = (xmax-xmin)/NFuncTest; 
 
    // create Integrator 
-   Integrator ig(IntegrationOneDim::ADAPTIVESINGULAR, 1.E-12,1.E-12,100000);
+   Integrator ig(IntegrationOneDim::kADAPTIVESINGULAR, 1.E-12,1.E-12,100000);
    ig.SetFunction(*this);
 
    for (int i = 0; i < NFuncTest; ++i) { 
@@ -338,8 +331,8 @@ struct InvFunc {
    double fY; 
 };
 
-template<class AlgoType>
-int StatFunction::TestInverse1() {
+
+int StatFunction::TestInverse1(RootFinder::EType algoType) {
 
    int iret = 0; 
    int maxitr = 2000;
@@ -348,15 +341,16 @@ int StatFunction::TestInverse1() {
    //NFuncTest = 4;
 
 
-   // scan all values from 0 to 1
-   double dx = (1.)/NFuncTest; 
+   // scan all values from 0.05 to 0.95  to avoid problem at the border of definitions
+   double x1 = 0.05; double x2 = 0.95; 
+   double dx = (x2-x1)/NFuncTest; 
    double vmin = Quantile(dx/2);
    double vmax = Quantile(1.-dx/2);
 
    // test ROOT finder algorithm function without derivative
-   RootFinder<Roots::Brent> rf1; 
+   RootFinder  rf1(algoType); 
    for (int i = 1; i < NFuncTest; ++i) { 
-      double v1 = dx*i;  // value used  for testing
+      double v1 = x1 + dx*i;  // value used  for testing
       InvFunc finv(this,v1); 
       Functor1D func(finv); 
       rf1.SetFunction(func, vmin, vmax); 
@@ -381,26 +375,28 @@ int StatFunction::TestInverse1() {
    return iret; 
 
 }
-template <class AlgoType>
-int StatFunction::TestInverse2() {
+
+int StatFunction::TestInverse2(RootFinder::EType algoType) {
 
    int iret = 0; 
    int maxitr = 2000;
-   double abstol = 1.E-15;
-   double reltol = 1.E-15;
+   // put lower tolerance 
+   double abstol = 1.E-12;
+   double reltol = 1.E-12;
    //NFuncTest = 10;
 
-   // scan all values from 0 to 1
-   double dx = (1.)/NFuncTest; 
+   // scan all values from 0.05 to 0.95  to avoid problem at the border of definitions
+   double x1 = 0.05; double x2 = 0.95; 
+   double dx = (x2-x1)/NFuncTest; 
    // starting root is always on the left to avoid to go negative
    // it is very sensible at the starting point
    double vstart = fStartRoot; //depends on function shape
    // test ROOT finder algorithm function with derivative
-   RootFinder<AlgoType> rf1; 
+   RootFinder rf1(algoType); 
    //RootFinder<Roots::Secant> rf1; 
 
    for (int i = 1; i < NFuncTest; ++i) { 
-      double v1 = dx*i;  // value used  for testing
+      double v1 = x1 + dx*i;  // value used  for testing
       
       InvFunc finv(this,v1); 
       //make a gradient function using inv function and derivative (which is pdf)
@@ -466,12 +462,12 @@ int testGammaFunction(int n = 100) {
       iret |= ret;
 
       PrintTest("\t test inverse with Brent method");
-      ret = dist.TestInverse1<Roots::Brent>();
+      ret = dist.TestInverse1(RootFinder::kGSL_BRENT);
       PrintStatus(ret);
       iret |= ret;
 
       PrintTest("\t test inverse with Steffenson algo");
-      ret = dist.TestInverse2<Roots::Steffenson>();
+      ret = dist.TestInverse2(RootFinder::kGSL_STEFFENSON);
       PrintStatus(ret);
       iret |= ret;
    }
@@ -514,13 +510,13 @@ int testBetaFunction(int n = 100) {
       iret |= ret;
 
       PrintTest("\t test inverse with Brent method");
-      ret = dist.TestInverse1<Roots::Brent>();
+      ret = dist.TestInverse1(RootFinder::kGSL_BRENT);
       PrintStatus(ret);
       iret |= ret;
 
       if (i < 5) {  // test failed for k=5
          PrintTest("\t test inverse with Steffenson algo");
-         ret = dist.TestInverse2<Roots::Steffenson>();
+         ret = dist.TestInverse2(RootFinder::kGSL_STEFFENSON);
          PrintStatus(ret);
          iret |= ret;
       }
@@ -542,7 +538,9 @@ int stressMathMore(double nscale = 1) {
    TBenchmark bm;
    bm.Start("stressMathMore");
    
-   int n = int(nscale*100);
+   const int ntest = 10000; 
+   int n = int(nscale*ntest);
+   //std::cout << "StressMathMore: test number  n = " << n << std::endl;
 
    iret |= testGammaFunction(n);
    iret |= testBetaFunction(n);
@@ -550,7 +548,7 @@ int stressMathMore(double nscale = 1) {
    bm.Stop("stressMathMore");
    std::cout <<"******************************************************************************\n";
    bm.Print("stressMathMore");
-   const double reftime = 0.12; // ref time on  pcbrun4
+   const double reftime = 7.24; //to be updated  // ref time on  pcbrun4
    double rootmarks = 860 * reftime / bm.GetCpuTime("stressMathMore");
    std::cout << " ROOTMARKS = " << rootmarks << " ROOT version: " << gROOT->GetVersion() << "\t" 
              << gROOT->GetSvnBranch() << "@" << gROOT->GetSvnRevision() << std::endl;
@@ -565,8 +563,8 @@ int stressMathMore(double nscale = 1) {
 int main(int argc,const char *argv[]) { 
    double nscale = 1;
    if (argc > 1) { 
-      int scale = atoi(argv[1]);
-      nscale = std::pow(10.0,double(scale));
+      nscale = atof(argv[1]);
+      //nscale = std::pow(10.0,double(scale));
    } 
    return stressMathMore(nscale);
 }

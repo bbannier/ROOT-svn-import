@@ -36,13 +36,13 @@ mv -f tutorials/quadp/stock.root- tutorials/quadp/stock.root
 
 # mixture of files, wildcards, and directories
 WILDCARDS="LICENSE README bin \
-   include lib man cint/include tutorials \
-   cint/lib cint/stl gdml/*.py \
+   include lib man cint/cint/include tutorials \
+   cint/cint/lib cint/cint/stl geom/gdml/*.py \
    test/*.cxx test/*.h test/Makefile* test/README \
    test/*.C test/*.sh test/dt_Makefile test/linearIO.root \
    test/RootShower/*.h test/RootShower/*.cxx \
    test/RootShower/*.rc test/RootShower/*.ico \
-   test/RootShower/*.png test/RootShower/Makefile \
+   test/RootShower/*.png test/RootShower/Makefile* \
    test/RootShower/anim test/RootShower/icons \
    test/ProofBench test/RootIDE \
    tmva/test/*.gif tmva/test/*.png tmva/test/*.C tmva/test/README \
@@ -76,6 +76,7 @@ echo `echo ${FILES} | tr ' ' '\n' | sed \
   -e 's,^.*.cvsignore$,,' \
   -e 's,^.*/CVS/.*$,,' \
   -e 's,^.*/.svn/.*$,,' \
+  -e 's,^.*/.*.dSYM/.*$,,' \
   -e 's,^cint/.*/G__c_.*$',, \
   -e 's,^cint/.*/G__cpp_.*$',, \
   -e 's,^cint/.*/rootcint_.*$',, \

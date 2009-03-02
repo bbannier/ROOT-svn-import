@@ -24,6 +24,7 @@
 
 #ifndef __CINT__
 
+#include <stdlib.h>
 #include <Riostream.h>
 #include <time.h>
 #include <TString.h>
@@ -249,6 +250,8 @@ void stressGraphics(Int_t verbose = 0)
    }
    fclose(sg);
 
+   gRandom->SetSeed();
+
    if (gOptionR) {
       cout << "Test#   PS1Ref#   PS1Err#   PDFRef#   PDFErr#   GIFRef#   GIFErr#   JPGRef#   JPGErr#   PNGRef#   PNGErr#   PS2Ref#   PS2Err#" <<endl;
    } else {
@@ -320,7 +323,7 @@ void stressGraphics(Int_t verbose = 0)
    zoomtf1      ();
    zoomfit      ();
    parallelcoord();
-//////clonepad     ();
+///clonepad     ();
    if (!gOptionR) {
       cout << "**********************************************************************" <<endl;
 
@@ -442,6 +445,10 @@ TCanvas *StartTest(Int_t w, Int_t h)
 
    gTestNum++;
    gStyle->Reset();
+   TCanvas *old = (TCanvas*)gROOT->GetListOfCanvases()->FindObject("C");
+   if (old) {
+      if (old->IsOnHeap()) delete old;
+   }
    TCanvas *C = new TCanvas("C","C",0,0,w,h);
    return C;
 }
@@ -499,7 +506,6 @@ void TestReport1(TCanvas *C, const TString &title)
                                            gPNGRefNb[gTestNum-1],
                                            gPNGErrNb[gTestNum-1]);
 
-   gErrorIgnoreLevel = 0;
    gErrorIgnoreLevel = 0;
 
    return;
@@ -753,6 +759,8 @@ void ttext1()
       lh->Draw();
    }
    TText *tex1b = new TText(0.02,0.4,"jgabcdefhiklmnopqrstuvwxyz_{}");
+   // 161 is not a valid text font. This tests if the protection against
+   // invalid text font is working.
    tex1b->SetTextFont(161);
    tex1b->SetTextColor(2);
    tex1b->SetTextAngle(0);
@@ -2412,11 +2420,11 @@ void waves()
    finter->Draw("samecolorz");
 
    TArc *arc = new TArc();;
-   arc->SetFillStyle(0); 
-   arc->SetLineWidth(2);   
-   arc->SetLineColor(5);   
+   arc->SetFillStyle(0);
+   arc->SetLineWidth(2);
+   arc->SetLineColor(5);
    Float_t r = 0.5 * lambda, dr = lambda;
-      for (Int_t i = 0; i < 15; i++) {   
+      for (Int_t i = 0; i < 15; i++) {
       arc->DrawArc(0,  0.5*d, r, 0., 360., "only");
       arc->DrawArc(0, -0.5*d, r, 0., 360., "only");
       r += dr;
@@ -2436,6 +2444,7 @@ void waves()
    TestReport1(C, "TGraph, TArc, TPalette and TColor");
 ///DoCcode(C);
 ///TestReport2();
+   if (gOptionR) printf("\n");
 }
 
 

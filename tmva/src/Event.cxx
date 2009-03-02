@@ -46,7 +46,7 @@
 Int_t TMVA::Event::fgCount = 0;
 
 //____________________________________________________________
-TMVA::Event::Event(const std::vector<VariableInfo>& varinfo, Bool_t AllowExternalLinks) 
+TMVA::Event::Event(const std::vector<TMVA:: VariableInfo>& varinfo, Bool_t AllowExternalLinks) 
    : fVariables(varinfo),
      fVarPtr(new void*[varinfo.size()]), // array to hold pointers to the integer or float array
      fVarPtrF(0),                        // array to hold all integer variables
@@ -190,7 +190,7 @@ Float_t TMVA::Event::GetVal(UInt_t ivar) const
 Float_t TMVA::Event::GetValueNormalized(UInt_t ivar) const 
 {
    // returns the value of variable ivar, normalized to [-1,1]
-   return Tools::NormVariable(GetVal(ivar),fVariables[ivar].GetMin(),fVariables[ivar].GetMax());
+   return gTools().NormVariable(GetVal(ivar),fVariables[ivar].GetMin(),fVariables[ivar].GetMax());
 }
 
 //____________________________________________________________

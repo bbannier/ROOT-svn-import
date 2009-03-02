@@ -47,7 +47,10 @@ TMVA::MCFitter::MCFitter( IFitterTarget& target,
                           const TString& name, 
                           const std::vector<Interval*>& ranges, 
                           const TString& theOption ) 
-   : TMVA::FitterBase( target, name, ranges, theOption )
+   : TMVA::FitterBase( target, name, ranges, theOption ),
+     fSamples( 0 ),
+     fSigma  ( 1 ),
+     fSeed   ( 0 )
 {
    // constructor
    DeclareOptions();
@@ -58,7 +61,7 @@ TMVA::MCFitter::MCFitter( IFitterTarget& target,
 void TMVA::MCFitter::DeclareOptions() 
 {
    // Declare MCFitter options
-   DeclareOptionRef( fSamples = 100000, "SampleSize", "Number of Monte Carlo samples" );  
+   DeclareOptionRef( fSamples = 100000, "SampleSize", "Number of Monte Carlo events in toy sample" );  
    DeclareOptionRef( fSigma   = -1.0,   "Sigma", 
                     "If > 0: new points are generated according to Gauss around best value and with \"Sigma\" in units of interval length" );  
    DeclareOptionRef( fSeed    = 100,    "Seed",       "Seed for the random generator (0 takes random seeds)" );  
@@ -117,7 +120,7 @@ Double_t TMVA::MCFitter::Run( std::vector<Double_t>& pars )
       if (fSigma > 0.0) {
          parBestIt = bestParameters.begin();
          for (std::vector<TMVA::GeneticRange*>::iterator rndIt = rndRanges.begin(); rndIt<rndRanges.end(); rndIt++) {
-            (*parIt) = (*rndIt)->Random( kTRUE, fSigma,(*parBestIt) );
+            (*parIt) = (*rndIt)->Random( kTRUE, fSigma, (*parBestIt) );
             parIt++;
             parBestIt++;
          }

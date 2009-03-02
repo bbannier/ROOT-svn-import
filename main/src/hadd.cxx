@@ -48,9 +48,11 @@
   (i.e. direct copy of the raw byte on disk). The "fast" mode is typically
   5 times faster than the mode unzipping and unstreaming the baskets.
    
-  NOTE: By default histograms are added. However if histograms have their bit kIsAverage
+  NOTE1: By default histograms are added. However if histograms have their bit kIsAverage
         set, the contents are averaged instead of being summed. See TH1::Add.
         
+  NOTE2: hadd returns a status code: 0 if OK, -1 otherwise
+  
   Authors: Rene Brun, Dirk Geppert, Sven A. Schmidt, sven.schmidt@cern.ch
          : rewritten from scratch by Rene Brun (30 November 2005)
             to support files with nested directories.
@@ -68,6 +70,7 @@
 #include "Riostream.h"
 #include "TClass.h"
 #include "TSystem.h"
+#include <stdlib.h>
 
 TList *FileList;
 TFile *Target, *Source;
@@ -75,7 +78,7 @@ Bool_t noTrees;
 Bool_t fastMethod;
 
 int AddFile(TList* sourcelist, std::string entry, int newcomp) ;
-void MergeRootfile( TDirectory *target, TList *sourcelist, Int_t isdir );
+int MergeRootfile( TDirectory *target, TList *sourcelist, Int_t isdir );
 
 //___________________________________________________________________________
 int main( int argc, char **argv ) 
@@ -141,12 +144,12 @@ int main( int argc, char **argv )
       cout <<"Merging will be slower"<<endl;
    }
 
-   MergeRootfile( Target, FileList,0 );
+   int status = MergeRootfile( Target, FileList,0 );
 
    //must delete Target to avoid a problem with dictionaries in~ TROOT
    delete Target;
 
-   return 0;
+   return status;
 }
 
 //___________________________________________________________________________
@@ -184,9 +187,10 @@ int AddFile(TList* sourcelist, std::string entry, int newcomp)
 
 
 //___________________________________________________________________________
-void MergeRootfile( TDirectory *target, TList *sourcelist, Int_t isdir ) 
+int MergeRootfile( TDirectory *target, TList *sourcelist, Int_t isdir ) 
 {
    // Merge all objects in a directory
+   int status = 0;
    cout << "Target path: " << target->GetPath() << endl;
    TString path( (char*)strstr( target->GetPath(), ":" ) );
    path.Remove( 0, 2 );
@@ -197,6 +201,8 @@ void MergeRootfile( TDirectory *target, TList *sourcelist, Int_t isdir )
    ((THashList*)target->GetList())->Rehash(nguess);
    ((THashList*)target->GetListOfKeys())->Rehash(nguess);
    TList listH;
+   TString listHargs;
+   listHargs.Form("((TCollection*)0x%lx)",&listH);
    while(first_source) {
       TDirectory *current_sourcedir = first_source->GetDirectory(path);
       if (!current_sourcedir) {
@@ -222,31 +228,7 @@ void MergeRootfile( TDirectory *target, TList *sourcelist, Int_t isdir )
          //current_sourcedir->cd();
          TObject *obj = key->ReadObj();
 
-         if ( obj->IsA()->InheritsFrom( TH1::Class() ) ) {
-            // descendant of TH1 -> merge it
-
-            TH1 *h1 = (TH1*)obj;
-
-            // loop over all source files and add the content of the
-            // correspondant histogram to the one pointed to by "h1"
-            TFile *nextsource = (TFile*)sourcelist->After( first_source );
-            while ( nextsource ) {
-               // make sure we are at the correct directory level by cd'ing to path
-               TDirectory *ndir = nextsource->GetDirectory(path);
-               if (ndir) {
-                  ndir->cd();
-                  TKey *key2 = (TKey*)gDirectory->GetListOfKeys()->FindObject(key->GetName());
-                  if (key2) {
-                     TObject *hobj = key2->ReadObj();
-                     hobj->ResetBit(kMustCleanup);
-                     listH.Add(hobj);
-                     h1->Merge(&listH);
-                     listH.Delete();
-                  }
-               }
-               nextsource = (TFile*)sourcelist->After( nextsource );
-            }
-         } else if ( obj->IsA()->InheritsFrom( "TTree" ) ) {
+         if ( obj->IsA()->InheritsFrom( "TTree" ) ) {
       
             // loop over all source files create a chain of Trees "globChain"
             if (!noTrees) {
@@ -291,12 +273,59 @@ void MergeRootfile( TDirectory *target, TList *sourcelist, Int_t isdir )
             // newdir is now the starting point of another round of merging
             // newdir still knows its depth within the target file via
             // GetPath(), so we can still figure out where we are in the recursion
-            MergeRootfile( newdir, sourcelist,1);
+            status = MergeRootfile( newdir, sourcelist,1);
+            if (status) return status;
 
+         } else if ( obj->InheritsFrom(TObject::Class())
+              && obj->IsA()->GetMethodWithPrototype("Merge", "TCollection*") ) {
+            // object implements Merge(TCollection*)
+
+            // loop over all source files and merge same-name object
+            TFile *nextsource = (TFile*)sourcelist->After( first_source );
+            while ( nextsource ) {
+               // make sure we are at the correct directory level by cd'ing to path
+               TDirectory *ndir = nextsource->GetDirectory(path);
+               if (ndir) {
+                  ndir->cd();
+                  TKey *key2 = (TKey*)gDirectory->GetListOfKeys()->FindObject(key->GetName());
+                  if (key2) {
+                     TObject *hobj = key2->ReadObj();
+                     hobj->ResetBit(kMustCleanup);
+                     listH.Add(hobj);
+                     Int_t error = 0;
+                     obj->Execute("Merge", listHargs.Data(), &error);
+                     if (error) {
+                        cerr << "Error calling Merge() on " << obj->GetName()
+                             << " with the corresponding object in " << nextsource->GetName() << endl;
+                     }
+                     listH.Delete();
+                  }
+               }
+               nextsource = (TFile*)sourcelist->After( nextsource );
+            }
          } else {
-            // object is of no type that we know or can handle
-            cout << "Unknown object type, name: " 
+            // object is of no type that we can merge 
+            cout << "Cannot merge object type, name: " 
                  << obj->GetName() << " title: " << obj->GetTitle() << endl;
+
+            // loop over all source files and write similar objects directly to the output file
+            TFile *nextsource = (TFile*)sourcelist->After( first_source );
+            while ( nextsource ) {
+               // make sure we are at the correct directory level by cd'ing to path
+               TDirectory *ndir = nextsource->GetDirectory(path);
+               if (ndir) {
+                  ndir->cd();
+                  TKey *key2 = (TKey*)gDirectory->GetListOfKeys()->FindObject(key->GetName());
+                  if (key2) {
+                     TObject *nobj = key2->ReadObj();
+                     nobj->ResetBit(kMustCleanup);
+                     int nbytes1 = target->WriteTObject(nobj, key2->GetName(), "SingleKey" );
+                     if (nbytes1 <= 0) status = -1;
+                     delete nobj;
+                  }
+               }
+               nextsource = (TFile*)sourcelist->After( nextsource );
+            }
          }
 
          // now write the merged histogram (which is "in" obj) to the target file
@@ -317,7 +346,8 @@ void MergeRootfile( TDirectory *target, TList *sourcelist, Int_t isdir )
                   delete globChain;
                }
             } else {
-               obj->Write( key->GetName() );
+               int nbytes2 = obj->Write( key->GetName(), TObject::kSingleKey );
+               if (nbytes2 <= 0) status = -1;
             }
          }
          oldkey = key;
@@ -327,4 +357,5 @@ void MergeRootfile( TDirectory *target, TList *sourcelist, Int_t isdir )
    // save modifications to target file
    target->SaveSelf(kTRUE);
    if (!isdir) sourcelist->Remove(sourcelist->First());
+   return status;
 }

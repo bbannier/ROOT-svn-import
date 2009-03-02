@@ -1,6 +1,6 @@
 //
 // This macro attaches to a PROOF session, possibly at the indicated URL.
-// In the case non existing PROOF session is found and no URL is given, the macro
+// If no existing PROOF session is found and no URL is given, the macro
 // tries to start a local PROOF session.
 
 #include "Getline.h"
@@ -14,34 +14,84 @@ Int_t getXrootdPid(Int_t port);
 // By default we start a cluster on the local machine
 const char *refloc = "proof://localhost:11093";
 
-TProof *getProof(const char *url, Int_t nwrks, const char *dir, const char *opt = "ask")
+TProof *getProof(const char *url = "proof://localhost:11093", Int_t nwrks = -1, const char *dir = 0,
+                 const char *opt = "ask", Bool_t dyn = kFALSE)
 {
+   // Arguments:
+   //     'url'      URL of the master where to start/attach the PROOF session;
+   //                this is also the place where to force creation of a new session,
+   //                if needed (use option 'N', e.g. "proof://mymaster:myport/?N")
+   //
+   // The following arguments apply to xrootd responding at 'refloc' only:
+   //     'nwrks'    Number of workers to be started. []
+   //     'dir'      Directory to be used for the files and working areas [].
+   //     'opt'      Defines what to do if an existing xrootd uses the same ports; possible
+   //                options are: "ask", ask the user; "force", kill the xrootd and start
+   //                a new one; if any other string is specified the existing xrootd will be
+   //                used ["ask"].
+   //                NB: for a change in 'nwrks' to be effective you need to specify opt = "force"
+   //     'dyn'      This flag can be used to switch on dynamic, per-job worker setup scheduling
+   //                [kFALSE].
+   //
+
    TProof *p = 0;
-   TProof *pold = gProof;
 
    // If an URL has specified get a session there
-   if (url && strlen(url) > 0 && strcmp(url, refloc)) {
-      p = TProof::Open(url);
+   TUrl uu(url), uref(refloc);
+   Bool_t ext = (strcmp(uu.GetHost(), uref.GetHost()) ||
+                 (uu.GetPort() != uref.GetPort())) ? kTRUE : kFALSE;
+   if (url && strlen(url) > 0) {
+      if (!strcmp(url, "lite") && nwrks > 0)
+         uu.SetOptions(Form("workers=%d", nwrks));
+      p = TProof::Open(uu.GetUrl());
       if (p && p->IsValid()) {
+         // Check consistency
+         if (ext && nwrks > 0) {
+            Printf("getProof: WARNING: started/attached a session on external cluster (%s):"
+                   " 'nwrks=%d' ignored", url, nwrks);
+         }
+         if (ext && dir && strlen(dir) > 0) {
+            Printf("getProof: WARNING: started/attached a session on external cluster (%s):"
+                   " 'dir=\"%s\"' ignored", url, dir);
+         }
+         if (ext && !strcmp(opt,"force")) {
+            Printf("getProof: WARNING: started/attached a session on external cluster (%s):"
+                   " 'opt=\"force\"' ignored", url);
+         }
+         if (ext && dyn) {
+            Printf("getProof: WARNING: started/attached a session on external cluster (%s):"
+                   " 'dyn=kTRUE' ignored", url);
+         }
          // Done
          return p;
       } else {
-         Printf("getProof: could not get/start a valid session at %s - try local", url);
+         if (ext)
+            Printf("getProof: could not get/start a valid session at %s - try local", url);
       }
-   }
-   p = 0;
-
-   // Is there something valid running elsewhere?
-   if (pold && pold->IsValid()) {
-      if (url && strlen(url) > 0)
-         Printf("getProof: attaching to existing valid session at %s ", pold->GetMaster());
-      return pold;
+      if (p) delete p;
+      p = 0;
    }
 
-   // Is there something valid running elsewhere?
-   if (!dir || strlen(dir) <= 0 || gSystem->AccessPathName(dir, kWritePermission)) {
-      Printf("getProof: tutorial dir missing or not writable - cannot continue ");
-      return p;
+   // Temp dir for tutorial daemons
+   TString tutdir = dir;
+   if (tutdir.IsNull() || gSystem->AccessPathName(dir, kWritePermission)) {
+      Printf("getProof: tutorial dir missing or not writable - try temp ");
+      tutdir = gSystem->TempDirectory();
+      TString us;
+      UserGroup_t *ug = gSystem->GetUserInfo(gSystem->GetUid());
+      if (!ug) {
+         printf("getProof: could not get user info");
+         return p;
+      }
+      us.Form("/%s", ug->fUser.Data());
+      if (!tutdir.EndsWith(us.Data())) tutdir += us;
+      gSystem->mkdir(tutdir.Data(), kTRUE);
+      if (gSystem->AccessPathName(tutdir, kWritePermission)) {
+         Printf("getProof: unable to get a writable tutorial directory (tried: %s)"
+                " - cannot continue", tutdir.Data());
+         return p;
+      }
+      Printf("getProof: tutorial dir: %s", tutdir.Data());
    }
 
 #ifdef WIN32
@@ -51,27 +101,23 @@ TProof *getProof(const char *url, Int_t nwrks, const char *dir, const char *opt 
 #else
 
    // Local url (use a special port to try to not disturb running daemons)
-   Int_t lportx = 11094;
-   Int_t lportp = 11093;
-   url = (url && strlen(url) > 0) ? url : refloc;
-   TUrl u(url);
+   TUrl u(refloc);
    u.SetProtocol("proof");
-   u.SetPort(lportp);
+   Int_t lportp = u.GetPort();
+   Int_t lportx = lportp + 1;
    TString lurl = u.GetUrl();
-
-   // Temp dir for tutorial daemons
-   TString tutdir = dir;
 
    // Prepare to start the daemon
    TString workarea = Form("%s/proof", tutdir.Data());
    TString xpdcf(Form("%s/xpd.cf",tutdir.Data()));
    TString xpdlog(Form("%s/xpd.log",tutdir.Data()));
+   TString xpdlogprt(Form("%s/xpd-tutorial/xpd.log",tutdir.Data()));
    TString xpdpid(Form("%s/xpd.pid",tutdir.Data()));
    TString proofsessions(Form("%s/sessions",tutdir.Data()));
    TString cmd;
    Int_t rc = 0;
 
-   // Is there something listening already ? 
+   // Is there something listening already ?
    Int_t pid = -1;
    Bool_t restart = kTRUE;
    gEnv->SetValue("XProof.FirstConnectMaxCnt",1);
@@ -113,7 +159,7 @@ TProof *getProof(const char *url, Int_t nwrks, const char *dir, const char *opt 
    }
 
    if (restart) {
-      // Try to start something locally; make sure that evrything is there
+      // Try to start something locally; make sure that everything is there
       char *xrootd = gSystem->Which(gSystem->Getenv("PATH"), "xrootd", kExecutePermission);
       if (!xrootd) {
          Printf("getProof: xrootd not found: please check the environment!");
@@ -126,6 +172,8 @@ TProof *getProof(const char *url, Int_t nwrks, const char *dir, const char *opt 
          Printf("getProof: could not create config file for XPD (%s)", xpdcf.Data());
          return p;
       }
+      fprintf(fcf,"### Use admin path at %s/admin to avoid interferences with other users\n", tutdir.Data());
+      fprintf(fcf,"xrd.adminpath %s/admin\n", tutdir.Data());
       fprintf(fcf,"### Load the XrdProofd protocol on port %d\n", lportp);
       fprintf(fcf,"xrd.protocol xproofd:%d libXrdProofd.so\n", lportp);
       if (nwrks > 0) {
@@ -134,13 +182,19 @@ TProof *getProof(const char *url, Int_t nwrks, const char *dir, const char *opt 
       }
       fprintf(fcf,"### Root path for working dir\n");
       fprintf(fcf,"xpd.workdir %s\n", workarea.Data());
+      fprintf(fcf,"### Allow different users to connect\n");
+      fprintf(fcf,"xpd.multiuser 1\n");
       fprintf(fcf,"### Limit the number of query results kept in the master sandbox\n");
       fprintf(fcf,"xpd.putrc ProofServ.UserQuotas: maxquerykept=10\n");
+      if (dyn) {
+         fprintf(fcf,"### Use dynamic, per-job scheduling\n");
+         fprintf(fcf,"xpd.putrc Proof.DynamicStartup 1\n");
+      }
       fclose(fcf);
       Printf("getProof: xrootd config file at %s", xpdcf.Data());
 
       // Start xrootd in the background
-      Printf("getProof: xrootd log file at %s", xpdlog.Data());
+      Printf("getProof: xrootd log file at %s", xpdlogprt.Data());
       cmd = Form("%s -c %s -b -l %s -n xpd-tutorial -p %d",
                xrootd, xpdcf.Data(), xpdlog.Data(), lportx);
       Printf("(NB: any error line from XrdClientSock::RecvRaw and XrdClientMessage::ReadRaw should be ignored)");

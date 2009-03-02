@@ -53,6 +53,10 @@ N: Daniel Barna
 E: daniel.barna@cern.ch
 D: CINT install target
 
+N: Jean-Francois Bastien 
+E: jfbastien@cae.com
+D: contribution to Reflex
+
 N: Guy Barrand
 E: barrand@lal.in2p3.fr
 D: contribution to GUI classes
@@ -351,6 +355,10 @@ N: Stanislaw Jadach
 E: Stanislaw.jadach@ifj.edu.pl
 D: the FOAM classes
 
+N: Lukasz Janyst
+E: ljanyst@cern.ch
+D: split vector<T*> and schema evolution
+
 N: Luke Jones
 E: jones@netoffice.com
 D: class TGraphDelaunay
@@ -424,6 +432,11 @@ N: Henry Maddocks
 E: ftgl@opengl.geek.nz
 D: FTGL package (http://homepages.paradise.net.nz/henryj/code/index.html#FTGL)
 
+N: Anar Manafov
+E: anar.manafov@gmail.com
+D: STL compatible iterators for ROOT collections
+D: gLite plugin, PROOF development
+
 N: David Gonzalez Maline
 E: firemanworld@gmail.com
 D: contribution to GUI classes
@@ -435,6 +448,10 @@ D: Fundamental CINT call wrapper improvements
 N: John Marraffino
 E: marafino@fnal.gov
 D: improvements in TUnixSystem::StackTrace()
+
+N: Andy Mastbaum
+E: mastbaum@lanl.gov
+D: implementation of TH1::Interpolate and TH2::Interpolate
 
 N: Jiri Masik
 E: Jiri.Masik@fzu.cz
@@ -523,6 +540,10 @@ D: various contributions to GUI classes (scrolled text in TGTextEntry)
 D: implementation of Qt like signals and slots mechanism (TQObject,
 D: TQConnection, etc.)
 D: author of Carrot (http://carrot.cern.ch)
+
+N: Katerina Opocenska
+E: opocenska@gmail.com
+D: Event Recorder
 
 N: Suzanne Panacek
 E: spanacek@fnal.gov
@@ -673,6 +694,10 @@ D: contribution to the TMVA package
 N: Shaowen Wang
 E: shaowen-wang@uiowa.edu 
 D: TOracleResult
+
+N: Hady Zalek
+E: hady.zalek@gmail.com
+D: contributed to Reflex
 
 N: Andreas Zoglauer
 E: zog@mpe.mpg.de

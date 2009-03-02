@@ -1,3 +1,8 @@
+// @(#)root/eve:$Id$
+// Author: Matevz Tadel
+
+// Shows ATLAS geometry.
+
 void geom_atlas()
 {
    TEveManager::Create();
@@ -20,6 +25,7 @@ void geom_atlas()
 
    // EClipType not exported to CINT (see TGLUtil.h):
    // 0 - no clip, 1 - clip plane, 2 - clip box
-   gEve->GetGLViewer()->GetClipSet()->SetClipType(1);
-   gEve->GetGLViewer()->RefreshPadEditor(gEve->GetGLViewer());
+   TGLViewer *v = gEve->GetDefaultGLViewer();
+   v->GetClipSet()->SetClipType(1);
+   v->RefreshPadEditor(v);
 }

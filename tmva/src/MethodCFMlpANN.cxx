@@ -65,6 +65,7 @@ End_Html */
 
 #include <iostream>
 #include <string>
+#include <stdlib.h>
 
 #include "Riostream.h"
 #include "TMath.h"
@@ -87,8 +88,13 @@ TMVA::MethodCFMlpANN* TMVA::MethodCFMlpANN::fgThis = 0;
 TMVA::MethodCFMlpANN::MethodCFMlpANN( const TString& jobName, const TString& methodTitle, DataSet& theData, 
                                       const TString& theOption, TDirectory* theTargetDir  )
    : TMVA::MethodBase( jobName, methodTitle, theData, theOption, theTargetDir  ),
+     fData(0),
+     fClass(0),
+     fNlayers(0),
+     fNcycles(0),
      fNodes(0),
-     fYNN(0)
+     fYNN(0),
+     fLayerSpec("")
 {
    // standard constructor
    // option string: "n_training_cycles:n_hidden_layers"  
@@ -121,6 +127,7 @@ TMVA::MethodCFMlpANN::MethodCFMlpANN( const TString& jobName, const TString& met
    InitCFMlpANN();
   
    // interpretation of configuration option string
+   SetConfigName( TString("Method") + GetMethodName() );
    DeclareOptions();
    ParseOptions();
    ProcessOptions();
@@ -177,8 +184,8 @@ void TMVA::MethodCFMlpANN::DeclareOptions()
    // know options: NCycles=xx              :the number of training cycles
    //               HiddenLayser="N-1,N-2"  :the specification of the hidden layers
  
-   DeclareOptionRef( fNcycles  =3000,      "NCycles",      "Number of training cycles" );
-   DeclareOptionRef( fLayerSpec="N-1,N-2", "HiddenLayers", "Specification of hidden layer architecture" );
+   DeclareOptionRef( fNcycles    = 3000,      "NCycles",      "Number of training cycles" );
+   DeclareOptionRef( fLayerSpec  = "N-1,N-2", "HiddenLayers", "Specification of hidden layer architecture (N stands for number of variables; any integers may also be used)" );
 }
 
 //_______________________________________________________________________
@@ -365,7 +372,7 @@ Double_t TMVA::MethodCFMlpANN::NN_fonc( Int_t i, Double_t u ) const
 void TMVA::MethodCFMlpANN::ReadWeightsFromStream( istream & istr )
 {
    // read back the weight from the training from file (stream)
-   TString var;
+   TString var("");
 
    // read number of variables and classes
    Int_t nva(0), lclass(0);
@@ -629,15 +636,15 @@ void TMVA::MethodCFMlpANN::GetHelpMessage() const
    // typical length of text line: 
    //         "|--------------------------------------------------------------|"
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Short description:" << Tools::Color("reset") << Endl;
+   fLogger << gTools().Color("bold") << "--- Short description:" << gTools().Color("reset") << Endl;
    fLogger << Endl;
-   fLogger << "<None>" << Endl;
+   fLogger << "Sorry - not available" << Endl;
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Performance optimisation:" << Tools::Color("reset") << Endl;
+   fLogger << gTools().Color("bold") << "--- Performance optimisation:" << gTools().Color("reset") << Endl;
    fLogger << Endl;
-   fLogger << "<None>" << Endl;
+   fLogger << "Sorry - not available" << Endl;
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Performance tuning via configuration options:" << Tools::Color("reset") << Endl;
+   fLogger << gTools().Color("bold") << "--- Performance tuning via configuration options:" << gTools().Color("reset") << Endl;
    fLogger << Endl;
-   fLogger << "<None>" << Endl;
+   fLogger << "Sorry - not available" << Endl;
 }

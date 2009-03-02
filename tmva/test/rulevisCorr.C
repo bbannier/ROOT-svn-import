@@ -35,7 +35,6 @@ void rulevisCorr( TString fin = "TMVA.root", TMVAGlob::TypeOfPlot type = TMVAGlo
    TKey *rfkey;
    while ((rfkey = TMVAGlob::NextKey(keyIter,"TDirectory"))) {
       rfdir = (TDirectory *)rfkey->ReadObj();
-      cout << "Plotting title name " << rfdir->GetName() << endl;
       rulevisCorr( rfdir, vardir, corrdir, type );
    }
 }
@@ -51,7 +50,8 @@ void rulevisCorr( TDirectory *rfdir, TDirectory *vardir, TDirectory *corrdir, TM
    const TString rfNameOpt = "_RF2D_";
    const TString outfname[TMVAGlob::kNumOfMethods] = { "rulevisCorr",
                                                        "rulevisCorr_decorr",
-                                                       "rulevisCorr_pca" };
+                                                       "rulevisCorr_pca",
+                                                       "rulevisCorr_gaussdecorr" };
    const TString outputName = outfname[type]+"_"+rfdir->GetName();
    //
    TIter rfnext(rfdir->GetListOfKeys());
@@ -127,8 +127,6 @@ void rulevisCorr( TDirectory *rfdir, TDirectory *vardir, TDirectory *corrdir, TM
    TCanvas **c = new TCanvas*[noCanvas];
    for (Int_t ic=0; ic<noCanvas; ic++) c[ic] = 0;
 
-   cout << "--- Found: " << noPlots << " plots; will produce: " << noCanvas << " canva(s)" << endl;
-
    // counter variables
    Int_t countCanvas = 0;
    Int_t countPad    = 1;
@@ -152,14 +150,12 @@ void rulevisCorr( TDirectory *rfdir, TDirectory *vardir, TDirectory *corrdir, TM
          //         sigCpy = new TH2F(*sig);
          // create new canvas
          if ((c[countCanvas]==NULL) || (countPad>noPad)) {
-            cout << "--- Book canvas no: " << countCanvas << endl;
             char cn[20];
             sprintf( cn, "rulecorr%d_", countCanvas+1 );
             TString cname(cn);
             cname += rfdir->GetName();
             c[countCanvas] = new TCanvas( cname, maintitle,
                                           countCanvas*50+200, countCanvas*20, width, height ); 
-            cout << "New canvas name: " << cname.Data() << endl;
             // style
             c[countCanvas]->Divide(xPad,yPad);
             countPad = 1;

@@ -1,3 +1,8 @@
+// @(#)root/eve:$Id$
+// Author: Bertrand Bellenot
+
+// Complex example showing ALICE ESD visualization in several views.
+
 /*
   alice_esd_split.C - a simple event-display for ALICE ESD tracks and clusters
                       version with several windows in the same workspace
@@ -336,9 +341,9 @@ void make_gui()
 
    TEveBrowser* browser = gEve->GetBrowser();
 
-   // browser->ShowCloseTab(kFALSE);
+   browser->ShowCloseTab(kFALSE);
    browser->ExecPlugin("SplitGLView", 0, "new SplitGLView(gClient->GetRoot(), 600, 450, kTRUE)");
-   // browser->ShowCloseTab(kTRUE);
+   browser->ShowCloseTab(kTRUE);
 
    browser->StartEmbedding(TRootBrowser::kLeft);
 

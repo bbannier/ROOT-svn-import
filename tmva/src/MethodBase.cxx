@@ -91,13 +91,13 @@ End_Html */
 #include "TMVA/VariableIdentityTransform.h"
 #include "TMVA/VariableDecorrTransform.h"
 #include "TMVA/VariablePCATransform.h"
+#include "TMVA/VariableGaussDecorr.h"
 #include "TMVA/Version.h"
 #include "TMVA/TSpline1.h"
 #include "TMVA/Ranking.h"
 
 ClassImp(TMVA::MethodBase)
 
-using std::cout;
 using std::endl;
 
 const Int_t    MethodBase_MaxIterations_ = 200;
@@ -112,11 +112,11 @@ const Int_t    NBIN_HIST_HIGH = 10000;
 #endif
 
 //_______________________________________________________________________
-TMVA::MethodBase::MethodBase( const TString&      jobName,
-                              const TString&      methodTitle,
-                              DataSet&     theData,
-                              const TString&      theOption,
-                              TDirectory*  theBaseDir)
+TMVA::MethodBase::MethodBase( const TString& jobName,
+                              const TString& methodTitle,
+                              DataSet&       theData,
+                              const TString& theOption,
+                              TDirectory*    theBaseDir)
    : IMethod(),
      Configurable               ( theOption ),
      fData                      ( theData ),
@@ -134,9 +134,47 @@ TMVA::MethodBase::MethodBase( const TString&      jobName,
      fBaseDir                   ( 0 ),
      fMethodBaseDir             ( theBaseDir ),
      fWeightFile                ( "" ),
+     fHistS_plotbin             ( 0 ),
+     fHistB_plotbin             ( 0 ),
+     fHistTrS_plotbin           ( 0 ),
+     fHistTrB_plotbin           ( 0 ),
+     fProbaS_plotbin            ( 0 ),
+     fProbaB_plotbin            ( 0 ),
+     fRarityS_plotbin           ( 0 ),
+     fRarityB_plotbin           ( 0 ),
+     fHistS_highbin             ( 0 ),
+     fHistB_highbin             ( 0 ),
+     fEffS                      ( 0 ),
+     fEffB                      ( 0 ),
+     fEffBvsS                   ( 0 ),
+     fRejBvsS                   ( 0 ),
+     finvBeffvsSeff             ( 0 ),
+     fTrainEffS                 ( 0 ),
+     fTrainEffB                 ( 0 ),
+     fTrainEffBvsS              ( 0 ),
+     fTrainRejBvsS              ( 0 ),
+     fMVAPdfS                   ( 0 ),
+     fMVAPdfB                   ( 0 ),
+     fGraphS                    ( 0 ),
+     fGraphB                    ( 0 ),
+     fGrapheffBvsS              ( 0 ),
+     fSplS                      ( 0 ),
+     fSplB                      ( 0 ),
+     fSpleffBvsS                ( 0 ),
+     fGraphTrainS               ( 0 ),
+     fGraphTrainB               ( 0 ),
+     fGraphTrainEffBvsS         ( 0 ),
+     fSplTrainS                 ( 0 ),
+     fSplTrainB                 ( 0 ),
+     fSplTrainEffBvsS           ( 0 ),
+     fVarTransform              ( 0 ),
+     fSplRefS                   ( 0 ),
+     fSplRefB                   ( 0 ),
+     fSplTrainRefS              ( 0 ),
+     fSplTrainRefB              ( 0 ),
      fLogger                    ( this )
 {
-   // standard constructor
+   // standard constructur
    Init();
 
    // interpretation of configuration option string
@@ -148,11 +186,11 @@ TMVA::MethodBase::MethodBase( const TString&      jobName,
 }
 
 //_______________________________________________________________________
-TMVA::MethodBase::MethodBase( DataSet&     theData,
-                              const TString&      weightFile,
-                              TDirectory*  theBaseDir )
+TMVA::MethodBase::MethodBase( DataSet&       theData,
+                              const TString& weightFile,
+                              TDirectory*    theBaseDir )
    : IMethod(),
-     Configurable(""),
+     Configurable               ( "" ),
      fData                      ( theData ),
      fSignalReferenceCut        ( 0.5 ),
      fVariableTransformType     ( Types::kSignal ),
@@ -168,6 +206,44 @@ TMVA::MethodBase::MethodBase( DataSet&     theData,
      fBaseDir                   ( theBaseDir ),
      fMethodBaseDir             ( 0 ),
      fWeightFile                ( weightFile ),
+     fHistS_plotbin             ( 0 ),
+     fHistB_plotbin             ( 0 ),
+     fHistTrS_plotbin           ( 0 ),
+     fHistTrB_plotbin           ( 0 ),
+     fProbaS_plotbin            ( 0 ),
+     fProbaB_plotbin            ( 0 ),
+     fRarityS_plotbin           ( 0 ),
+     fRarityB_plotbin           ( 0 ),
+     fHistS_highbin             ( 0 ),
+     fHistB_highbin             ( 0 ),
+     fEffS                      ( 0 ),
+     fEffB                      ( 0 ),
+     fEffBvsS                   ( 0 ),
+     fRejBvsS                   ( 0 ),
+     finvBeffvsSeff             ( 0 ),
+     fTrainEffS                 ( 0 ),
+     fTrainEffB                 ( 0 ),
+     fTrainEffBvsS              ( 0 ),
+     fTrainRejBvsS              ( 0 ),
+     fMVAPdfS                   ( 0 ),
+     fMVAPdfB                   ( 0 ),
+     fGraphS                    ( 0 ),
+     fGraphB                    ( 0 ),
+     fGrapheffBvsS              ( 0 ),
+     fSplS                      ( 0 ),
+     fSplB                      ( 0 ),
+     fSpleffBvsS                ( 0 ),
+     fGraphTrainS               ( 0 ),
+     fGraphTrainB               ( 0 ),
+     fGraphTrainEffBvsS         ( 0 ),
+     fSplTrainS                 ( 0 ),
+     fSplTrainB                 ( 0 ),
+     fSplTrainEffBvsS           ( 0 ),
+     fVarTransform              ( 0 ),
+     fSplRefS                   ( 0 ),
+     fSplRefB                   ( 0 ),
+     fSplTrainRefS              ( 0 ),
+     fSplTrainRefB              ( 0 ),
      fLogger                    ( this )
 {
    // constructor used for Testing + Application of the MVA,
@@ -181,40 +257,63 @@ TMVA::MethodBase::MethodBase( DataSet&     theData,
 //_______________________________________________________________________
 TMVA::MethodBase::~MethodBase( void )
 {
-   // default destructur
-   if (fInputVars != 0) { fInputVars->clear(); delete fInputVars; }
-   if (fRanking   != 0) delete fRanking;
-   if (fMVAPdfS   != 0) delete fMVAPdfS;
-   if (fMVAPdfB   != 0) delete fMVAPdfB;
+   // destructor
+  if (fInputVars != 0) { fInputVars->clear(); delete fInputVars; }
+  if (fRanking   != 0) delete fRanking;
 
-   if (fGraphS)          delete fGraphS;
-   if (fGraphB)          delete fGraphB;
-   if (fSplS)            delete fSplS;
-   if (fSplB)            delete fSplB;
-   if (fGrapheffBvsS)    delete fGrapheffBvsS;
+  // PDFs
+  if (fMVAPdfS   != 0) delete fMVAPdfS;
+  if (fMVAPdfB   != 0) delete fMVAPdfB;
+
+  // TGraphs
+  if (fGraphS)            delete fGraphS;
+  if (fGraphB)            delete fGraphB;
+  if (fGrapheffBvsS)      delete fGrapheffBvsS;
+  if (fGraphTrainEffBvsS) delete fGraphTrainEffBvsS;
+  if (fGraphTrainS)       delete fGraphTrainS;
+  if (fGraphTrainB)       delete fGraphTrainB;
 
 
-   if (fHistS_plotbin)   delete fHistS_plotbin;
-   if (fHistB_plotbin)   delete fHistB_plotbin;
-   if (fProbaS_plotbin)  delete fProbaS_plotbin;
-   if (fProbaB_plotbin)  delete fProbaB_plotbin;
-   if (fRarityS_plotbin) delete fRarityS_plotbin;
-   if (fRarityB_plotbin) delete fRarityB_plotbin;
-   if (fHistS_highbin)   delete fHistS_highbin;
-   if (fHistB_highbin)   delete fHistB_highbin;
+  // Splines
+  if (fSplS)            delete fSplS;
+  if (fSplB)            delete fSplB;
+  if (fSpleffBvsS)      delete fSpleffBvsS;
+  if (fSplRefS)         delete fSplRefS;
+  if (fSplRefB)         delete fSplRefB;
 
-   if (fVarTransform)    delete fVarTransform;
+
+  // Histograms
+  if (fHistS_plotbin)   delete fHistS_plotbin;
+  if (fHistB_plotbin)   delete fHistB_plotbin;
+  if (fProbaS_plotbin)  delete fProbaS_plotbin;
+  if (fProbaB_plotbin)  delete fProbaB_plotbin;
+  if (fRarityS_plotbin) delete fRarityS_plotbin;
+  if (fRarityB_plotbin) delete fRarityB_plotbin;
+  if (fHistS_highbin)   delete fHistS_highbin;
+  if (fHistB_highbin)   delete fHistB_highbin;
+  if (fHistTrS_plotbin) delete fHistTrS_plotbin;
+  if (fHistTrB_plotbin) delete fHistTrB_plotbin;
+  if (fTrainEffS)       delete fTrainEffS;
+  if (fTrainEffB)       delete fTrainEffB;
+  if (fTrainEffBvsS)    delete fTrainEffBvsS;
+  if (fTrainRejBvsS)    delete fTrainRejBvsS;
+  if (fEffS)            delete fEffS;
+  if (fEffB)            delete fEffB;
+  if (fEffBvsS)         delete fEffBvsS;
+  if (fRejBvsS)         delete fRejBvsS;
+  if (finvBeffvsSeff)   delete finvBeffvsSeff;
 }
 
 //_______________________________________________________________________
 void TMVA::MethodBase::Init()
 {
    // default initialization called by all constructors
-   fNbins              = NBIN_HIST_PLOT;
+   SetConfigDescription( "Configuration options for classifier architecture and tuning" );
+
+   fNbins              = gConfig().fVariablePlotting.fNbinsXOfROCCurve;
    fNbinsH             = NBIN_HIST_HIGH;
 
    fVarTransform       = 0; 
-   fTrainEffS          = 0; 
    fTrainEffB          = 0; 
    fTrainEffBvsS       = 0; 
    fTrainRejBvsS       = 0; 
@@ -290,7 +389,7 @@ void TMVA::MethodBase::DeclareOptions()
    //               V                   for Verbose output (!V) for non verbos
    //               H                   for Help message
 
-   DeclareOptionRef( fUseDecorr=kFALSE, "D", "use-decorrelated-variables flag (depreciated)" );
+   DeclareOptionRef( fUseDecorr=kFALSE, "D", "Use-decorrelated-variables flag (depreciated)" );
 
    DeclareOptionRef( fNormalise=kFALSE, "Normalise", "Normalise input variables" ); // don't change the default !!!
 
@@ -298,29 +397,31 @@ void TMVA::MethodBase::DeclareOptions()
    AddPreDefVal( TString("None") );
    AddPreDefVal( TString("Decorrelate") );
    AddPreDefVal( TString("PCA") );
+   AddPreDefVal( TString("GaussDecorr") );
 
    DeclareOptionRef( fVariableTransformTypeString="Signal", "VarTransformType",
-                     "Use signal or background events for var transform" );
+                     "Use signal or background events to derive for variable transformation (the transformation is applied on both types of, course)" );
    AddPreDefVal( TString("Signal") );
    AddPreDefVal( TString("Background") );
 
-   DeclareOptionRef( fNbinsMVAPdf   = 60, "NbinsMVAPdf",   "Number of bins used to create MVA PDF" );
-   DeclareOptionRef( fNsmoothMVAPdf = 2,  "NsmoothMVAPdf", "Number of smoothing iterations for MVA PDF" );
+   DeclareOptionRef( fNbinsMVAPdf   = 60, "NbinsMVAPdf",   "Number of bins used for the PDFs of classifier outputs" );
+   DeclareOptionRef( fNsmoothMVAPdf = 2,  "NsmoothMVAPdf", "Number of smoothing iterations for classifier PDFs" );
 
    DeclareOptionRef( fVerbose,   "V",       "Verbose mode" );
 
-   DeclareOptionRef( fVerbosityLevelString="Info", "VerboseLevel", "Verbosity level" );
-   AddPreDefVal( TString("Debug") );
+   DeclareOptionRef( fVerbosityLevelString="Default", "VerboseLevel", "Verbosity level" );
+   AddPreDefVal( TString("Default") ); // uses default defined in MsgLogger header
+   AddPreDefVal( TString("Debug")   );
    AddPreDefVal( TString("Verbose") );
-   AddPreDefVal( TString("Info") );
+   AddPreDefVal( TString("Info")    );
    AddPreDefVal( TString("Warning") );
-   AddPreDefVal( TString("Error") );
-   AddPreDefVal( TString("Fatal") );
+   AddPreDefVal( TString("Error")   );
+   AddPreDefVal( TString("Fatal")   );
 
    DeclareOptionRef( fHelp,             "H",             "Print classifier-specific help message" );
-   DeclareOptionRef( fHasMVAPdfs=kFALSE, "CreateMVAPdfs", "Create PDFs for classifier outputs" );
+   DeclareOptionRef( fHasMVAPdfs=kFALSE, "CreateMVAPdfs", "Create PDFs for classifier outputs (signal and background)" );
 
-   DeclareOptionRef( fTxtWeightsOnly=kTRUE, "TxtWeightFilesOnly", "if True, write all weights as text files" );
+   DeclareOptionRef( fTxtWeightsOnly=kTRUE, "TxtWeightFilesOnly", "If True: write all training results (weights) as text files (False: some are written in ROOT format)" );
 }
 
 //_______________________________________________________________________
@@ -331,6 +432,7 @@ void TMVA::MethodBase::ProcessOptions()
    if      (fVarTransformString == "None")         fVariableTransform = Types::kNone;
    else if (fVarTransformString == "Decorrelate" ) fVariableTransform = Types::kDecorrelated;
    else if (fVarTransformString == "PCA" )         fVariableTransform = Types::kPCA;
+   else if (fVarTransformString == "GaussDecorr" ) fVariableTransform = Types::kGaussDecorr;
    else {
       fLogger << kFATAL << "<ProcessOptions> Variable transform '"
               << fVarTransformString << "' unknown." << Endl;
@@ -355,10 +457,6 @@ void TMVA::MethodBase::ProcessOptions()
    else if (fVerbosityLevelString == "Warning" ) fLogger.SetMinType( kWARNING );
    else if (fVerbosityLevelString == "Error"   ) fLogger.SetMinType( kERROR );
    else if (fVerbosityLevelString == "Fatal"   ) fLogger.SetMinType( kFATAL );
-   else {
-      fLogger << kFATAL << "<ProcessOptions> Verbosity level type '"
-              << fVerbosityLevelString << "' unknown." << Endl;
-   }
 
    if (Verbose()) fLogger.SetMinType( kVERBOSE );
 }
@@ -423,9 +521,7 @@ void TMVA::MethodBase::AddClassifierToTestTree( TTree* testTree )
 
    fLogger << kINFO << "Preparing evaluation tree... " << Endl;
    for (Int_t ievt=0; ievt<testTree->GetEntries(); ievt++) {
-
       ReadTestEvent(ievt);
-      
       // fill the MVA output value for this event
       newBranchMVA->SetAddress( &myMVA ); // only when the tree changed, but we don't know when that is
       myMVA = (Float_t)GetMvaValue();
@@ -440,6 +536,7 @@ void TMVA::MethodBase::AddClassifierToTestTree( TTree* testTree )
 
       // print progress
       Int_t modulo = Int_t(testTree->GetEntries()/100);
+      if(modulo==0) modulo=1;
       if (ievt%modulo == 0) timer.DrawProgressBar( ievt );
    }
 
@@ -477,12 +574,12 @@ void TMVA::MethodBase::Test( TTree *theTestTree )
    // note: cannot directly modify private class members
    Double_t meanS, meanB, rmsS, rmsB, xmin, xmax;
 
-   TMVA::Tools::ComputeStat( theTestTree, GetTestvarName(), meanS, meanB, rmsS, rmsB, xmin, xmax );
+   gTools().ComputeStat( theTestTree, GetTestvarName(), meanS, meanB, rmsS, rmsB, xmin, xmax );
 
    // choose reasonable histogram ranges, by removing outliers
    Double_t nrms = 10;
-   xmin = TMath::Max( TMath::Min(meanS - nrms*rmsS, meanB - nrms*rmsB ), xmin );
-   xmax = TMath::Min( TMath::Max(meanS + nrms*rmsS, meanB + nrms*rmsB ), xmax );
+   xmin = TMath::Max( TMath::Min( meanS - nrms*rmsS, meanB - nrms*rmsB ), xmin );
+   xmax = TMath::Min( TMath::Max( meanS + nrms*rmsS, meanB + nrms*rmsB ), xmax );
 
    fMeanS = meanS; fMeanB = meanB;
    fRmsS  = rmsS;  fRmsB  = rmsB;
@@ -578,17 +675,17 @@ void TMVA::MethodBase::Test( TTree *theTestTree )
 
    theTestTree->ResetBranchAddresses();
 
-   Tools::NormHist( fHistS_plotbin  );
-   Tools::NormHist( fHistB_plotbin  );
+   gTools().NormHist( fHistS_plotbin  );
+   gTools().NormHist( fHistB_plotbin  );
    if (pbranch) {
-      Tools::NormHist( fProbaS_plotbin );
-      Tools::NormHist( fProbaB_plotbin );
+      gTools().NormHist( fProbaS_plotbin );
+      gTools().NormHist( fProbaB_plotbin );
 
-      Tools::NormHist( fRarityS_plotbin );
-      Tools::NormHist( fRarityB_plotbin );
+      gTools().NormHist( fRarityS_plotbin );
+      gTools().NormHist( fRarityB_plotbin );
    }
-   Tools::NormHist( fHistS_highbin  );
-   Tools::NormHist( fHistB_highbin  );
+   gTools().NormHist( fHistS_highbin  );
+   gTools().NormHist( fHistB_highbin  );
 
    fHistS_plotbin ->SetDirectory(0);
    fHistB_plotbin ->SetDirectory(0);
@@ -704,7 +801,7 @@ void TMVA::MethodBase::WriteStateToFile() const
    // ---- create the text file
    TString tfname( GetWeightFileName() );
    fLogger << kINFO << "Creating weight file in text format: "
-           << Tools::Color("lightblue") << tfname << Tools::Color("reset") << Endl;
+           << gTools().Color("lightblue") << tfname << gTools().Color("reset") << Endl;
 
    ofstream tfile( tfname );
    if (!tfile.good()) { // file could not be opened --> Error
@@ -719,7 +816,7 @@ void TMVA::MethodBase::WriteStateToFile() const
       // ---- create the ROOT file
       TString rfname( tfname ); rfname.ReplaceAll( ".txt", ".root" );
       fLogger << kINFO << "Creating weight file in root format: "
-              << Tools::Color("lightblue") << rfname << Tools::Color("reset") << Endl;
+              << gTools().Color("lightblue") << rfname << gTools().Color("reset") << Endl;
       TFile* rfile = TFile::Open( rfname, "RECREATE" );
       WriteStateToStream( *rfile );
       rfile->Close();
@@ -735,7 +832,7 @@ void TMVA::MethodBase::ReadStateFromFile()
    TString tfname(GetWeightFileName());
 
    fLogger << kINFO << "Reading weight file: "
-           << Tools::Color("lightblue") << tfname << Tools::Color("reset") << Endl;
+           << gTools().Color("lightblue") << tfname << gTools().Color("reset") << Endl;
 
    ifstream fin( tfname );
    if (!fin.good()) { // file not found --> Error
@@ -750,7 +847,7 @@ void TMVA::MethodBase::ReadStateFromFile()
       // ---- read the ROOT file
       TString rfname( tfname ); rfname.ReplaceAll( ".txt", ".root" );
       fLogger << kINFO << "Reading root weight file: "
-              << Tools::Color("lightblue") << rfname << Tools::Color("reset") << Endl;
+              << gTools().Color("lightblue") << rfname << gTools().Color("reset") << Endl;
       TFile* rfile = TFile::Open( rfname, "READ" );
       ReadStateFromStream( *rfile );
       rfile->Close();
@@ -766,9 +863,9 @@ void TMVA::MethodBase::ReadStateFromStream( std::istream& fin )
    // first read the method name
    GetLine(fin,buf);
    while (!TString(buf).BeginsWith("Method")) GetLine(fin,buf);
-   TString ls(buf);
-   Int_t idx1 = ls.First(':')+2; Int_t idx2 = ls.Index(' ',idx1)-idx1; if (idx2<0) idx2=ls.Length();
-   TString fullname = ls(idx1,idx2);
+   TString lstr(buf);
+   Int_t idx1 = lstr.First(':')+2; Int_t idx2 = lstr.Index(' ',idx1)-idx1; if (idx2<0) idx2=lstr.Length();
+   TString fullname = lstr(idx1,idx2);
    idx1 = fullname.First(':');
    Int_t idxtit = (idx1<0 ? fullname.Length() : idx1);
    TString methodName  = fullname(0, idxtit);
@@ -875,6 +972,14 @@ TDirectory* TMVA::MethodBase::BaseDir() const
    }
 
    TDirectory *sdir = methodDir->mkdir(defaultDir);
+
+   // write weight file name into target file
+   sdir->cd();
+   TObjString wfilePath( gSystem->WorkingDirectory() );
+   TObjString wfileName( GetWeightFileName() );
+   wfilePath.Write( "TrainingPath" );
+   wfileName.Write( "WeightFileName" );
+
    return sdir;
 }
 
@@ -1051,8 +1156,8 @@ void TMVA::MethodBase::CreateMVAPdfs()
    delete bkgVec;
 
    // normalisation
-   Tools::NormHist( histMVAPdfS );
-   Tools::NormHist( histMVAPdfB );
+   gTools().NormHist( histMVAPdfS );
+   gTools().NormHist( histMVAPdfB );
 
    // momentary hack for ROOT problem
    histMVAPdfS->Write();
@@ -1117,17 +1222,23 @@ Double_t TMVA::MethodBase::GetEfficiency( TString theString, TTree *theTree, Dou
    if (theTree == 0) fLogger << kFATAL << "<GetEfficiency> Object theTree has zero pointer" << Endl;
 
    // parse input string for required background efficiency
-   TList* list  = Tools::ParseFormatLine( theString );
+   TList* list  = gTools().ParseFormatLine( theString );
 
-   // sanity check
-   Bool_t computeArea = kFALSE;
-   if      (!list || list->GetSize() < 2) computeArea = kTRUE; // the area is computed
-   else if (list->GetSize() > 2) {
+   if (list->GetSize() > 2) {
       fLogger << kFATAL << "<GetEfficiency> Wrong number of arguments"
               << " in string: " << theString
               << " | required format, e.g., Efficiency:0.05, or empty string" << Endl;
       return -1;
    }
+
+   // sanity check
+   Bool_t computeArea = (list->GetSize() < 2); // the area is computed
+
+   // that will be the value of the efficiency retured (does not affect
+   // the efficiency-vs-bkg plot which is done anyway.
+   Float_t effBref = (computeArea?1.:atof(((TObjString*)list->At(1))->GetString()) );
+
+   delete list;
 
    // sanity check
    if (fHistS_highbin->GetNbinsX() != fHistB_highbin->GetNbinsX() ||
@@ -1153,6 +1264,8 @@ Double_t TMVA::MethodBase::GetEfficiency( TString theString, TTree *theTree, Dou
 
       fEffS = new TH1F( GetTestvarName() + "_effS", GetTestvarName() + " (signal)",     fNbinsH, xmin, xmax );
       fEffB = new TH1F( GetTestvarName() + "_effB", GetTestvarName() + " (background)", fNbinsH, xmin, xmax );
+      fEffS->SetDirectory(0);
+      fEffB->SetDirectory(0);
 
       // sign if cut
       Int_t sign = (fCutOrientation == kPositive) ? +1 : -1;
@@ -1209,13 +1322,16 @@ Double_t TMVA::MethodBase::GetEfficiency( TString theString, TTree *theTree, Dou
 
       // now create efficiency curve: background versus signal
       fEffBvsS = new TH1F( GetTestvarName() + "_effBvsS", GetTestvarName() + "", fNbins, 0, 1 );
+      fEffBvsS->SetDirectory(0);
       fEffBvsS->SetXTitle( "signal eff" );
       fEffBvsS->SetYTitle( "backgr eff" );
       fRejBvsS = new TH1F( GetTestvarName() + "_rejBvsS", GetTestvarName() + "", fNbins, 0, 1 );
+      fRejBvsS->SetDirectory(0);
       fRejBvsS->SetXTitle( "signal eff" );
       fRejBvsS->SetYTitle( "backgr rejection (1-eff)" );
       finvBeffvsSeff = new TH1F( GetTestvarName() + "_invBeffvsSeff",
                                  GetTestvarName() + "", fNbins, 0, 1 );
+      finvBeffvsSeff->SetDirectory(0);
       finvBeffvsSeff->SetXTitle( "signal eff" );
       finvBeffvsSeff->SetYTitle( "inverse backgr. eff (1/eff)" );
 
@@ -1231,8 +1347,8 @@ Double_t TMVA::MethodBase::GetEfficiency( TString theString, TTree *theTree, Dou
          fSplRefB  = new TSpline1( "spline2_background", fGraphB );
 
          // verify spline sanity
-         Tools::CheckSplines( fEffS, fSplRefS );
-         Tools::CheckSplines( fEffB, fSplRefB );
+         gTools().CheckSplines( fEffS, fSplRefS );
+         gTools().CheckSplines( fEffB, fSplRefB );
       }
 
       // make the background-vs-signal efficiency plot
@@ -1310,10 +1426,6 @@ Double_t TMVA::MethodBase::GetEfficiency( TString theString, TTree *theTree, Dou
    }
    else {
 
-      // that will be the value of the efficiency retured (does not affect
-      // the efficiency-vs-bkg plot which is done anyway.
-      Float_t effBref  = atof( ((TObjString*)list->At(1))->GetString() );
-
       // find precise efficiency value
       for (Int_t bini=1; bini<=nbins_; bini++) {
 
@@ -1346,7 +1458,7 @@ Double_t TMVA::MethodBase::GetTrainingEfficiency( TString theString)
    // returns signal efficiency at background efficiency indicated in theString
 
    // parse input string for required background efficiency
-   TList*  list  = Tools::ParseFormatLine( theString );
+   TList*  list  = gTools().ParseFormatLine( theString );
    // sanity check
 
    if (list->GetSize() != 2) {
@@ -1358,6 +1470,8 @@ Double_t TMVA::MethodBase::GetTrainingEfficiency( TString theString)
    // that will be the value of the efficiency retured (does not affect
    // the efficiency-vs-bkg plot which is done anyway.
    Float_t effBref  = atof( ((TObjString*)list->At(1))->GetString() );
+
+   delete list;
 
    // sanity check
    if (fHistS_highbin->GetNbinsX() != fHistB_highbin->GetNbinsX() ||
@@ -1393,6 +1507,8 @@ Double_t TMVA::MethodBase::GetTrainingEfficiency( TString theString)
                              fNbinsH, xmin, xmax );
       fTrainEffB = new TH1F( GetTestvarName() + "_trainingEffB", GetTestvarName() + " (background)",
                              fNbinsH, xmin, xmax );
+      fTrainEffS->SetDirectory(0);
+      fTrainEffB->SetDirectory(0);
 
       // sign if cut
       Int_t sign = (fCutOrientation == kPositive) ? +1 : -1;
@@ -1426,8 +1542,8 @@ Double_t TMVA::MethodBase::GetTrainingEfficiency( TString theString)
       }
 
       // normalise output distributions
-      Tools::NormHist( fHistTrS_plotbin  );
-      Tools::NormHist( fHistTrB_plotbin  );
+      gTools().NormHist( fHistTrS_plotbin  );
+      gTools().NormHist( fHistTrB_plotbin  );
       fHistTrS_plotbin->SetDirectory(0);
       fHistTrB_plotbin->SetDirectory(0);
 
@@ -1438,6 +1554,8 @@ Double_t TMVA::MethodBase::GetTrainingEfficiency( TString theString)
       // now create efficiency curve: background versus signal
       fTrainEffBvsS = new TH1F( GetTestvarName() + "_trainingEffBvsS", GetTestvarName() + "", fNbins, 0, 1 );
       fTrainRejBvsS = new TH1F( GetTestvarName() + "_trainingRejBvsS", GetTestvarName() + "", fNbins, 0, 1 );
+      fTrainEffBvsS->SetDirectory(0);
+      fTrainRejBvsS->SetDirectory(0);
 
       // use root finder
       // spline background efficiency plot
@@ -1451,8 +1569,8 @@ Double_t TMVA::MethodBase::GetTrainingEfficiency( TString theString)
          fSplTrainRefB  = new TSpline1( "spline2_background", fGraphTrainB );
 
          // verify spline sanity
-         Tools::CheckSplines( fTrainEffS, fSplTrainRefS );
-         Tools::CheckSplines( fTrainEffB, fSplTrainRefB );
+         gTools().CheckSplines( fTrainEffS, fSplTrainRefS );
+         gTools().CheckSplines( fTrainEffB, fSplTrainRefB );
       }
 
       // make the background-vs-signal efficiency plot
@@ -1520,26 +1638,7 @@ Double_t TMVA::MethodBase::GetSeparation( TH1* histoS, TH1* histoB ) const
 {
    // compute "separation" defined as
    // <s2> = (1/2) Int_-oo..+oo { (S(x) - B(x))^2/(S(x) + B(x)) dx }
-
-   Double_t xmin = histoS->GetXaxis()->GetXmin();
-   Double_t xmax = histoB->GetXaxis()->GetXmax();
-   // sanity check
-   if (xmin != histoB->GetXaxis()->GetXmin() || xmax != histoB->GetXaxis()->GetXmax()) {
-      fLogger << kFATAL << "<GetSeparation> Mismatch in histogram limits: "
-              << xmin << " " << histoB->GetXaxis()->GetXmin()
-              << xmax << " " << histoB->GetXaxis()->GetXmax()  << Endl;
-   }
-
-   Double_t separation = 0;
-   Int_t nstep  = histoS->GetNbinsX();
-   Double_t intBin = (xmax - xmin)/nstep;
-   for (Int_t bin=0; bin<nstep; bin++) {
-      Double_t s = histoS->GetBinContent(bin);
-      Double_t b = histoB->GetBinContent(bin);
-      if (s + b > 0) separation += 0.5*(s - b)*(s - b)/(s + b);
-   }
-   separation *= intBin;
-   return separation;
+   return gTools().GetSeparation( *histoS, *histoB );
 }
 
 //_______________________________________________________________________
@@ -1547,13 +1646,15 @@ Double_t TMVA::MethodBase::GetSeparation( PDF* pdfS, PDF* pdfB ) const
 {
    // compute "separation" defined as
    // <s2> = (1/2) Int_-oo..+oo { (S(x)2 - B(x)2)/(S(x) + B(x)) dx }
-
+   
    // note, if zero pointers given, use internal pdf
    // sanity check first
-   if (!pdfS && pdfB || pdfS && !pdfB)
+   if ((!pdfS && pdfB) || (pdfS && !pdfB))
       fLogger << kFATAL << "<GetSeparation> Mismatch in pdfs" << Endl;
    if (!pdfS) pdfS = fSplS;
    if (!pdfB) pdfB = fSplB;
+   
+   return gTools().GetSeparation( *pdfS, *pdfB );
 
    Double_t xmin = pdfS->GetXmin();
    Double_t xmax = pdfS->GetXmax();
@@ -1564,16 +1665,16 @@ Double_t TMVA::MethodBase::GetSeparation( PDF* pdfS, PDF* pdfB ) const
    }
 
    Double_t separation = 0;
-   Int_t nstep  = 100;
-   Double_t intBin = (xmax - xmin)/nstep;
+   Int_t    nstep      = 100;
+   Double_t intBin     = (xmax - xmin)/nstep;
    for (Int_t bin=0; bin<nstep; bin++) {
       Double_t x = (bin + 0.5)*intBin + xmin;
       Double_t s = pdfS->GetVal( x );
       Double_t b = pdfB->GetVal( x );
       // separation
-      if (s + b > 0) separation += 0.5*(s - b)*(s - b)/(s + b);
+      if (s + b > 0) separation += (s - b)*(s - b)/(s + b);
    }
-   separation *= intBin;
+   separation *= (0.5*intBin);
 
    return separation;
 }
@@ -1621,7 +1722,7 @@ Double_t TMVA::MethodBase::GetMaximumSignificance( Double_t SignalEvents,
    max_significance_value = temp_histogram->GetBinContent( temp_histogram->GetMaximumBin() );
 
    // delete
-   temp_histogram->Delete();
+   delete temp_histogram;
 
    fLogger << kINFO << "Optimal cut at      : " << max_significance << Endl;
    fLogger << kINFO << "Maximum significance: " << max_significance_value << Endl;
@@ -1721,7 +1822,7 @@ void TMVA::MethodBase::MakeClass( const TString& theClassFileName ) const
 
    TString tfname( classFileName );
    fLogger << kINFO << "Creating standalone response class : "
-           << Tools::Color("lightblue") << classFileName << Tools::Color("reset") << Endl;
+           << gTools().Color("lightblue") << classFileName << gTools().Color("reset") << Endl;
 
    ofstream fout( classFileName );
    if (!fout.good()) { // file could not be opened --> Error
@@ -1882,48 +1983,49 @@ void TMVA::MethodBase::MakeClass( const TString& theClassFileName ) const
    MakeClassSpecific( fout, className );
 
    // now the actual implementation of the GetMvaValue (outside the class specification)
-   fout << "   inline double " << className << "::GetMvaValue( const std::vector<double>& inputValues ) const" << endl;
-   fout << "   {" << endl;
-   fout << "      // classifier response value" << endl;
-   fout << "      double retval = 0;" << endl;
+   fout << "inline double " << className << "::GetMvaValue( const std::vector<double>& inputValues ) const" << endl;
+   fout << "{" << endl;
+   fout << "   // classifier response value" << endl;
+   fout << "   double retval = 0;" << endl;
    fout << endl;
-   fout << "      // classifier response, sanity check first" << endl;
-   fout << "      if (!fStatusIsClean) {" << endl;
-   fout << "         std::cout << \"Problem in class \\\"\" << fClassName << \"\\\": cannot return classifier response\"" << endl;
+   fout << "   // classifier response, sanity check first" << endl;
+   fout << "   if (!fStatusIsClean) {" << endl;
+   fout << "      std::cout << \"Problem in class \\\"\" << fClassName << \"\\\": cannot return classifier response\"" << endl;
    fout << "                   << \" because status is dirty\" << std::endl;" << endl;
-   fout << "         retval = 0;" << endl;
+   fout << "      retval = 0;" << endl;
+   fout << "   }" << endl;
+   fout << "   else {" << endl;
+   fout << "      if (IsNormalised()) {" << endl;
+   fout << "         // normalise variables" << endl;
+   fout << "         std::vector<double> iV;" << endl;
+   fout << "         int ivar = 0;" << endl;
+   fout << "         for (std::vector<double>::const_iterator varIt = inputValues.begin();" << endl;
+   fout << "              varIt != inputValues.end(); varIt++, ivar++) {" << endl;
+   fout << "            iV.push_back(NormVariable( *varIt, fVmin[ivar], fVmax[ivar] ));" << endl;
+   fout << "         }" << endl;
+   if (fVariableTransform != Types::kNone && GetMethodType() != Types::kLikelihood )
+      fout << "         Transform( iV, 0 );" << endl;
+   fout << "         retval = GetMvaValue__( iV );" << endl;
    fout << "      }" << endl;
    fout << "      else {" << endl;
-   fout << "         if (IsNormalised()) {" << endl;
-   fout << "            // normalise variables" << endl;
-   fout << "            std::vector<double> iV;" << endl;
-   fout << "            int ivar = 0;" << endl;
-   fout << "            for (std::vector<double>::const_iterator varIt = inputValues.begin();" << endl;
-   fout << "                 varIt != inputValues.end(); varIt++, ivar++) {" << endl;
-   fout << "               iV.push_back(NormVariable( *varIt, fVmin[ivar], fVmax[ivar] ));" << endl;
-   fout << "            }" << endl;
-   if (fVariableTransform != Types::kNone && GetMethodType() != Types::kLikelihood )
-      fout << "            Transform( iV, 0 );" << endl;
-   fout << "            retval = GetMvaValue__( iV );" << endl;
-   fout << "         }" << endl;
-   fout << "         else {" << endl;
    if (fVariableTransform != Types::kNone && GetMethodType() != Types::kLikelihood ){
-      fout << "            std::vector<double> iV;" << endl;
-      fout << "            int ivar = 0;" << endl;
-      fout << "            for (std::vector<double>::const_iterator varIt = inputValues.begin();" << endl;
-      fout << "                 varIt != inputValues.end(); varIt++, ivar++) {" << endl;
-      fout << "               iV.push_back(*varIt);" << endl;
-      fout << "            }" << endl;
-      fout << "            Transform( iV, 0 );" << endl;
-      fout << "            retval = GetMvaValue__( iV );" << endl;
-   }else{
-      fout << "            retval = GetMvaValue__( inputValues );" << endl;
+      fout << "         std::vector<double> iV;" << endl;
+      fout << "         int ivar = 0;" << endl;
+      fout << "         for (std::vector<double>::const_iterator varIt = inputValues.begin();" << endl;
+      fout << "              varIt != inputValues.end(); varIt++, ivar++) {" << endl;
+      fout << "            iV.push_back(*varIt);" << endl;
+      fout << "         }" << endl;
+      fout << "         Transform( iV, 0 );" << endl;
+      fout << "         retval = GetMvaValue__( iV );" << endl;
    }
-   fout << "         }" << endl;
+   else{
+      fout << "         retval = GetMvaValue__( inputValues );" << endl;
+   }
    fout << "      }" << endl;
-   fout << endl;
-   fout << "      return retval;" << endl;
    fout << "   }" << endl;
+   fout << endl;
+   fout << "   return retval;" << endl;
+   fout << "}" << endl;
 
    // create output for transformation - if any
    if (fVariableTransform != Types::kNone) GetVarTransform().MakeFunction(fout, className,2);
@@ -1937,27 +2039,53 @@ void TMVA::MethodBase::PrintHelpMessage() const
 {
    // prints out classifier-specific help method
 
+   // if options are written to reference file, also append help info 
+   std::streambuf* cout_sbuf = std::cout.rdbuf(); // save original sbuf 
+   std::ofstream* o = 0;
+   if (gConfig().WriteOptionsReference()) {
+      fLogger << kINFO << "Print Help message for class " << GetName() << " into file: " << GetReferenceFile() << Endl;
+      o = new std::ofstream( GetReferenceFile(), std::ios::app );
+      if (!o->good()) { // file could not be opened --> Error
+         fLogger << kFATAL << "<PrintHelpMessage> Unable to append to output file: " << GetReferenceFile() << Endl;
+      }
+      std::cout.rdbuf( o->rdbuf() ); // redirect 'cout' to file      
+   }
+
    //         "|--------------------------------------------------------------|"
-   fLogger << kINFO << Endl;
-   fLogger << Tools::Color("bold")
-           << "================================================================" 
-           << Tools::Color( "reset" )
-           << Endl;
-   fLogger << Tools::Color("bold")
-           << "H e l p   f o r   c l a s s i f i e r   [ " << GetName() << " ] :" 
-           << Tools::Color( "reset" )
-           << Endl;
+   if (!o) {
+      fLogger << kINFO << Endl;
+      fLogger << gTools().Color("bold")
+              << "================================================================" 
+              << gTools().Color( "reset" )
+              << Endl;      
+      fLogger << gTools().Color("bold")
+              << "H e l p   f o r   c l a s s i f i e r   [ " << GetName() << " ] :" 
+              << gTools().Color( "reset" )
+              << Endl;
+   }
+   else {
+      fLogger << "Help for classifier [ " << GetName() << " ] :" << Endl;
+   }
 
    // print method-specific help message
    GetHelpMessage(); 
 
-   fLogger << Endl;
-   fLogger << "<Suppress this message by specifying \"!H\" in the booking option>" << Endl;
-   fLogger << Tools::Color("bold")
-           << "================================================================" 
-           << Tools::Color( "reset" )
-           << Endl;
-   fLogger << Endl;
+   if (!o) {
+      fLogger << Endl;
+      fLogger << "<Suppress this message by specifying \"!H\" in the booking option>" << Endl;
+      fLogger << gTools().Color("bold")
+              << "================================================================" 
+              << gTools().Color( "reset" )
+              << Endl;
+      fLogger << Endl;
+   }
+   else {
+      // indicate END
+      fLogger << "# End of Message___" << Endl;
+   }
+
+   std::cout.rdbuf( cout_sbuf ); // restore the original stream buffer 
+   if (o) o->close();
 }
 
 // ----------------------- r o o t   f i n d i n g ----------------------------

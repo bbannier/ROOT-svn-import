@@ -1,14 +1,13 @@
 #include "Riostream.h"
 void basic() {
-//   example of macro to read data from an ascii file and
-//   create a root file with an histogram and an ntuple.
+//  Read data from an ascii file and create a root file with an histogram and an ntuple.
 //   see a variant of this macro in basic2.C
 //Author: Rene Brun
       
 
 // read file $ROOTSYS/tutorials/tree/basic.dat
 // this file has 3 columns of float data
-   TString dir = gSystem->UnixPathName(TCint::GetCurrentMacroName());
+   TString dir = gSystem->UnixPathName(gInterpreter->GetCurrentMacroName());
    dir.ReplaceAll("basic.C","");
    dir.ReplaceAll("/./","/");
    ifstream in;

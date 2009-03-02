@@ -5,11 +5,34 @@
 #
 # Author: Fons Rademakers, 06/06/99
 
+# work around readlink versions not having -f option
+fullpath1=`readlink $0`
+if [ "$?" -ne "0" ]; then
+   fullpath1=$0
+fi
+progdir=`dirname $fullpath1`
+runningdir=`pwd`
+if echo $progdir | grep "^/" > /dev/null 2>& 1 || \
+   echo $progdir | grep "^~" > /dev/null 2>& 1; then
+   # absolute path
+   fullpath=$progdir
+else
+   # relative path
+   fullpath=$runningdir/$progdir
+fi
+# work around readlink versions not having -f option
+fullpath1=`readlink $fullpath`
+if [ "$?" -ne "0" ]; then
+   fullpath1=$fullpath
+fi
+ROOTSYS=`dirname $fullpath1`
+
 arch=@architecture@
 platform=@platform@
 bindir=@bindir@
 libdir=@libdir@
 incdir=@incdir@
+etcdir=@etcdir@
 features="@features@"
 configargs="@configargs@"
 altcc="@altcc@"
@@ -28,13 +51,14 @@ if test "$platform" = "win32"; then
    bindir=$unixROOTSYS/bin
    libdir=$unixROOTSYS/lib
    incdir=$unixROOTSYS/include
+   etcdir=$unixROOTSYS/etc
 fi
 
 ### ROOT libraries ###
 
 newlib="-lNew"
 rootlibs="-lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree \
-          -lRint -lPostscript -lMatrix -lPhysics $zliblib"
+          -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread $zliblib"
 rootglibs="-lGui"
 
 if test "$dicttype" = "reflex" || test "$dicttype" = "gccxml"; then
@@ -45,10 +69,11 @@ if test "$platform" = "win32"; then
    rootulibs="-include:_G__cpp_setupG__Net        \
               -include:_G__cpp_setupG__IO         \
               -include:_G__cpp_setupG__Hist       \
-              -include:_G__cpp_setupG__Graf1      \
+              -include:_G__cpp_setupG__Graf       \
               -include:_G__cpp_setupG__G3D        \
               -include:_G__cpp_setupG__GPad       \
               -include:_G__cpp_setupG__Tree       \
+              -include:_G__cpp_setupG__Thread     \
               -include:_G__cpp_setupG__Rint       \
               -include:_G__cpp_setupG__PostScript \
               -include:_G__cpp_setupG__Matrix     \
@@ -58,10 +83,11 @@ elif test "$platform" = "aix5"; then
    rootulibs="-Wl,-u,.G__cpp_setupG__Net        \
               -Wl,-u,.G__cpp_setupG__IO         \
               -Wl,-u,.G__cpp_setupG__Hist       \
-              -Wl,-u,.G__cpp_setupG__Graf1      \
+              -Wl,-u,.G__cpp_setupG__Graf       \
               -Wl,-u,.G__cpp_setupG__G3D        \
               -Wl,-u,.G__cpp_setupG__GPad       \
               -Wl,-u,.G__cpp_setupG__Tree       \
+              -Wl,-u,.G__cpp_setupG__Thread     \
               -Wl,-u,.G__cpp_setupG__Rint       \
               -Wl,-u,.G__cpp_setupG__PostScript \
               -Wl,-u,.G__cpp_setupG__Matrix     \
@@ -71,10 +97,11 @@ else
    rootulibs="-Wl,-u,_G__cpp_setupG__Net        \
               -Wl,-u,_G__cpp_setupG__IO         \
               -Wl,-u,_G__cpp_setupG__Hist       \
-              -Wl,-u,_G__cpp_setupG__Graf1      \
+              -Wl,-u,_G__cpp_setupG__Graf       \
               -Wl,-u,_G__cpp_setupG__G3D        \
               -Wl,-u,_G__cpp_setupG__GPad       \
               -Wl,-u,_G__cpp_setupG__Tree       \
+              -Wl,-u,_G__cpp_setupG__Thread     \
               -Wl,-u,_G__cpp_setupG__Rint       \
               -Wl,-u,_G__cpp_setupG__PostScript \
               -Wl,-u,_G__cpp_setupG__Matrix     \
@@ -300,8 +327,8 @@ freebsd4)
    auxcflags=
    auxlibs="-lm -lstdc++"
    ;;
-freebsd5)
-   # FreeBSD 5 with glibc
+freebsd5|freebsd7)
+   # FreeBSD 5/7 with glibc
    auxcflags=
    auxlibs="-lm -lstdc++"
    ;;
@@ -418,11 +445,14 @@ case $arch in
       auxldflags="--exceptions $auxldflags"
    fi
    ;;
-freebsd*|linux*)
+freebsd* | openbsd* | linux*)
    for f in $features ; do
       if test "x$f" = "xthread" ; then
          auxcflags="-pthread $auxcflags"
          auxlibs="-pthread $auxlibs"
+      fi
+      if test "x$f" = "xrpath" ; then
+         auxlibs="-Wl,-rpath,$libdir $auxlibs"
       fi
    done
    ;;
@@ -435,6 +465,11 @@ macosx*)
          else
 	    auxcflags="-D_REENTRANT $auxcflags"
 	    auxlibs="-lpthread $auxlibs"
+         fi
+      fi
+      if test "x$f" = "xrpath" ; then
+         if [ $macosx_minor -ge 5 ]; then
+            auxlibs="-Wl,-rpath,$libdir $auxlibs"
          fi
       fi
    done
@@ -460,6 +495,8 @@ win32)
 esac
 
 ### end of machine and compiler dependent settings ###
+nostubs=@no_stubs@
+nostubstest=@no_stubs_test@
 
 
 prefix=@prefix@
@@ -477,10 +514,10 @@ noldflags=no
 usage="\
 Usage: root-config [--prefix[=DIR]] [--exec-prefix[=DIR]] [--version]\
  [--cflags] [--auxcflags] [--ldflags] [--new] [--nonew] [--libs]\
- [--glibs] [--bindir] [--libdir] [--incdir] [--noauxcflags] [--noauxlibs]\
- [--noldflags] [--has-<feature>] [--arch] [--platform] [--dicttype]\
- [--config] [--features] [--svn-revision] [--python-version]\
- [--cc] [--cxx] [--f77] [--ld ][--help]"
+ [--glibs] [--bindir] [--libdir] [--incdir] [--etcdir] [--noauxcflags]\
+ [--noauxlibs] [--noldflags] [--has-<feature>] [--arch] [--platform]\
+ [--dicttype] [--config] [--features] [--svn-revision] [--python-version]\
+ [--cc] [--cxx] [--f77] [--ld ] [--nostubs] [--nostubstest] [--help]"
 
 if test $# -eq 0; then
    echo "${usage}" 1>&2
@@ -706,6 +743,10 @@ while test $# -gt 0; do
       ### output the header directory
       out="$out $incdir"
       ;;
+    --etcdir)
+      ### output the etc directory
+      out="$out $etcdir"
+      ;;
     --config)
       ### output the configure arguments
       out="$out $configargs"
@@ -734,6 +775,14 @@ while test $# -gt 0; do
       ### output used Linker
       out="$out $altld"
       ;;
+    --nostubs)
+      ### Output the prefix
+      out="$out $nostubs"
+      ;;
+    --nostubstest)
+      ### Output the prefix
+      out="$out $nostubstest"
+      ;;
     --help)
       ### Print a help message
       echo "Usage: `basename $0` [options]"
@@ -749,6 +798,7 @@ while test $# -gt 0; do
       echo "  --bindir              Print the executable directory"
       echo "  --libdir              Print the library directory"
       echo "  --incdir              Print the header directory"
+      echo "  --etcdir              Print the configuration directory"
       echo "  --auxlibs             Print auxiliary libraries"
       echo "  --auxcflags           Print auxiliary compiler flags"
       echo "  --[no]new             Turn on[off] use of libNew.so"
@@ -766,6 +816,8 @@ while test $# -gt 0; do
       echo "  --cxx                 Print alternative C++ compiler specified when ROOT was built"
       echo "  --f77                 Print alternative Fortran compiler specified when ROOT was built"
       echo "  --ld                  Print alternative Linker specified when ROOT was built"
+      echo "  --nostubs             Print yes if we are using the stubless calls"
+      echo "  --nostubstest         Print yes if we are using the stubless calls (in test mode)"
       echo "  --help                Print this message"
       exit 0
       ;;

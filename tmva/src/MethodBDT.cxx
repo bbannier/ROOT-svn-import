@@ -77,6 +77,12 @@
 // is not done on the basis of previous training results, but by a simple
 // stochasitc re-sampling of the initial training event sample.
 //
+// Random Trees:
+// similar to the "Random Forests" from Leo Breiman and Adele Cutler, it 
+// uses the bagging algorithm together and bases the determination of the
+// best node-split during the training on a random subset of variables only
+// which is individually chosen for each split.
+//
 // Analysis: 
 //
 // applying an individual decision tree to a test event results in a
@@ -92,8 +98,10 @@
 //_______________________________________________________________________
 
 #include <algorithm>
+
 #include "Riostream.h"
 #include "TRandom.h"
+#include "TRandom2.h"
 #include "TMath.h"
 #include "TObjString.h"
 
@@ -107,6 +115,7 @@
 #include "TMVA/GiniIndex.h"
 #include "TMVA/CrossEntropy.h"
 #include "TMVA/MisClassificationError.h"
+#include "TMVA/CCPruner.h"
 
 using std::vector;
 
@@ -118,34 +127,10 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName, const TString& methodTitle, 
    : TMVA::MethodBase( jobName, methodTitle, theData, theOption, theTargetDir )
 {
    // the standard constructor for the "boosted decision trees" 
-   //
-   // MethodBDT (Boosted Decision Trees) options:
-   // know options:
-   // nTrees=Int_t:    number of trees in the forest to be created
-   // BoostType=       the boosting type for the trees in the forest (AdaBoost e.t.c..)
-   //                  known: AdaBoost
-   //                         Bagging
-   // SeparationType   the separation criterion applied in the node splitting
-   //                  known: GiniIndex
-   //                         MisClassificationError
-   //                         CrossEntropy
-   //                         SDivSqrtSPlusB
-   // nEventsMin:      the minimum number of events in a node (leaf criteria, stop splitting)
-   // nCuts:           the number of steps in the optimisation of the cut for a node
-   // UseYesNoLeaf     decide if the classification is done simply by the node type, or the S/B
-   //                  (from the training) in the leaf node
-   // UseWeightedTrees use average classification from the trees, or have the individual trees
-   //                  trees in the forest weighted (e.g. log(boostweight) from AdaBoost
-   // PruneMethod      The Pruning method: 
-   //                  known: NoPruning  // switch off pruning completely
-   //                         ExpectedError
-   //                         CostComplexity 
-   //                         CostComplexity2
-   // PruneStrength    a parameter to adjust the amount of pruning. 
-   //                  Should be large enouth such that overtraining is avoided");
    InitBDT(); 
 
    // interpretation of configuration option string
+   SetConfigName( TString("Method") + GetMethodName() );
    DeclareOptions();
    ParseOptions();
    ProcessOptions();
@@ -163,13 +148,24 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName, const TString& methodTitle, 
 
    // book monitoring histograms (currently for AdaBost, only)
    BaseDir()->cd();
-   fBoostWeightHist = new TH1F("BoostWeight","Ada Boost weights",100,1,100);
-   fBoostWeightVsTree = new TH1F("BoostWeightVsTree","Ada Boost weights",fNTrees,0,fNTrees);
-   
+   fBoostWeightHist = new TH1F("BoostWeight","Ada Boost weight Distribution",100,1,30);
+   fBoostWeightHist->SetXTitle("boost weight");
+
+   fBoostWeightVsTree = new TH1F("BoostWeightVsTree","Ada Boost weights vs tree",fNTrees,0,fNTrees);
+   fBoostWeightVsTree->SetXTitle("#tree");
+   fBoostWeightVsTree->SetYTitle("boost weight");
+
    fErrFractHist = new TH1F("ErrFractHist","error fraction vs tree number",fNTrees,0,fNTrees);
+   fErrFractHist->SetXTitle("#tree");
+   fErrFractHist->SetYTitle("error fraction");
 
    fNodesBeforePruningVsTree = new TH1I("NodesBeforePruning","nodes before pruning",fNTrees,0,fNTrees);
+   fNodesBeforePruningVsTree->SetXTitle("#tree");
+   fNodesBeforePruningVsTree->SetYTitle("#tree nodes");
+
    fNodesAfterPruningVsTree = new TH1I("NodesAfterPruning","nodes after pruning",fNTrees,0,fNTrees); 
+   fNodesAfterPruningVsTree->SetXTitle("#tree");
+   fNodesAfterPruningVsTree->SetYTitle("#tree nodes");
 
    fMonitorNtuple= new TTree("MonitorNtuple","BDT variables");
    fMonitorNtuple->Branch("iTree",&fITree,"iTree/I");
@@ -201,47 +197,59 @@ void TMVA::MethodBDT::DeclareOptions()
    // BoostType=       the boosting type for the trees in the forest (AdaBoost e.t.c..)
    //                  known: AdaBoost
    //                         Bagging
+   // AdaBoostBeta     the boosting parameter, beta, for AdaBoost
+   // UseRandomisedTrees  choose at each node splitting a random set of variables 
+   // UseNvars         use UseNvars variables in randomised trees
    // SeparationType   the separation criterion applied in the node splitting
    //                  known: GiniIndex
    //                         MisClassificationError
    //                         CrossEntropy
    //                         SDivSqrtSPlusB
    // nEventsMin:      the minimum number of events in a node (leaf criteria, stop splitting)
-   // nCuts:           the number of steps in the optimisation of the cut for a node
+   // nCuts:           the number of steps in the optimisation of the cut for a node (if < 0, then
+   //                  step size is determined by the events)
    // UseYesNoLeaf     decide if the classification is done simply by the node type, or the S/B
    //                  (from the training) in the leaf node
+   // NodePurityLimit  the minimum purity to classify a node as a signal node (used in pruning and boosting to determine
+   //                  misclassification error rate)
    // UseWeightedTrees use average classification from the trees, or have the individual trees
    //                  trees in the forest weighted (e.g. log(boostweight) from AdaBoost
    // PruneMethod      The Pruning method: 
    //                  known: NoPruning  // switch off pruning completely
    //                         ExpectedError
    //                         CostComplexity 
-   //                         CostComplexity2
-   // PruneStrength    a parameter to adjust the amount of pruning. Should be large enouth such that overtraining is avoided");
+   // PruneStrength    a parameter to adjust the amount of pruning. Should be large enouth such that overtraining is avoided.
+   // PruneBeforeBoost flag to prune the tree before applying boosting algorithm
+   // NoNegWeightsInTraining  Ignore negative weight events in the training. 
 
    DeclareOptionRef(fNTrees, "NTrees", "Number of trees in the forest");
    DeclareOptionRef(fBoostType, "BoostType", "Boosting type for the trees in the forest");
    AddPreDefVal(TString("AdaBoost"));
    AddPreDefVal(TString("Bagging"));
-   DeclareOptionRef(fUseYesNoLeaf=kTRUE, "UseYesNoLeaf", 
-                    "Use Sig or Bkg node type or the ratio S/B as classification in the leaf node");
+   DeclareOptionRef(fAdaBoostBeta=1.0, "AdaBoostBeta", "Parameter for AdaBoost algorithm");
+   DeclareOptionRef(fRandomisedTrees,"UseRandomisedTrees","Choose at each node splitting a random set of variables");
+   DeclareOptionRef(fUseNvars,"UseNvars","Number of variables used if randomised Tree option is chosen");
    DeclareOptionRef(fUseWeightedTrees=kTRUE, "UseWeightedTrees", 
                     "Use weighted trees or simple average in classification from the forest");
    DeclareOptionRef(fSepTypeS="GiniIndex", "SeparationType", "Separation criterion for node splitting");
+   DeclareOptionRef(fUseYesNoLeaf=kTRUE, "UseYesNoLeaf", 
+                    "Use Sig or Bkg categories, or the purity=S/(S+B) as classification of the leaf node");
+   DeclareOptionRef(fNodePurityLimit=0.5, "NodePurityLimit", "In boosting/pruning, nodes with purity > NodePurityLimit are signal; background otherwise.");
    AddPreDefVal(TString("MisClassificationError"));
    AddPreDefVal(TString("GiniIndex"));
    AddPreDefVal(TString("CrossEntropy"));
    AddPreDefVal(TString("SDivSqrtSPlusB"));
-   DeclareOptionRef(fNodeMinEvents, "nEventsMin", "Minimum number of events in a leaf node (default: max(20, N_train/(Nvar^2)/10) ) ");
+   DeclareOptionRef(fNodeMinEvents, "nEventsMin", "Minimum number of events required in a leaf node (default: max(20, N_train/(Nvar^2)/10) ) ");
    DeclareOptionRef(fNCuts, "nCuts", "Number of steps during node cut optimisation");
-   DeclareOptionRef(fPruneStrength, "PruneStrength", "Pruning strength (negative value == automatic adjustment)");
-   DeclareOptionRef(fPruneMethodS, "PruneMethod", "Pruning method: NoPruning (switched off), ExpectedError or CostComplexity");
+   DeclareOptionRef(fPruneStrength, "PruneStrength", "Pruning strength");
+   DeclareOptionRef(fPruneMethodS, "PruneMethod", "Method used for pruning (removal) of statistically insignificant branches");
+   DeclareOptionRef(fPruneBeforeBoost=kFALSE, "PruneBeforeBoost", "Flag to prune the tree before applying boosting algorithm");
    AddPreDefVal(TString("NoPruning"));
    AddPreDefVal(TString("ExpectedError"));
    AddPreDefVal(TString("CostComplexity"));
-   AddPreDefVal(TString("CostComplexity2"));
-}
 
+   DeclareOptionRef(fNoNegWeightsInTraining,"NoNegWeightsInTraining","Ignore negative event weights in the training process" );
+}
 //_______________________________________________________________________
 void TMVA::MethodBDT::ProcessOptions() 
 {
@@ -262,7 +270,6 @@ void TMVA::MethodBDT::ProcessOptions()
    fPruneMethodS.ToLower();
    if      (fPruneMethodS == "expectederror" )   fPruneMethod = DecisionTree::kExpectedErrorPruning;
    else if (fPruneMethodS == "costcomplexity" )  fPruneMethod = DecisionTree::kCostComplexityPruning;
-   else if (fPruneMethodS == "costcomplexity2" ) fPruneMethod = DecisionTree::kMCC;
    else if (fPruneMethodS == "nopruning" )       fPruneMethod = DecisionTree::kNoPruning;
    else {
       fLogger << kINFO << GetOptions() << Endl;
@@ -271,6 +278,25 @@ void TMVA::MethodBDT::ProcessOptions()
 
    if (fPruneStrength < 0) fAutomatic = kTRUE;
    else fAutomatic = kFALSE;
+
+   if (this->Data().HasNegativeEventWeights()){
+     fLogger << kINFO << " You are using a Monte Carlo that has also negative weights. "
+	     << "That should in principle be fine as long as on average you end up with "
+	     << "something positive. For this you have to make sure that the minimal number "
+	     << "of (unweighted) events demanded for a tree node (currently you use: nEventsMin="
+	     <<fNodeMinEvents<<", you can set this via the BDT option string when booking the "
+	     << "classifier) is large enough to allow for reasonable averaging!!! "
+	     << " If this does not help.. maybe you want to try the option: NoNegWeightsInTraining  "
+	     << "which ignores events with negative weight in the training. " << Endl
+	     << Endl << "Note: You'll get a WARNING message during the training if that should ever happen" << Endl;
+   }
+   
+   if (fRandomisedTrees){
+      fLogger << kINFO << " Randomised trees use *bagging* as *boost* method and no pruning" << Endl;
+      fPruneMethod = DecisionTree::kNoPruning;
+      fBoostType   = "Bagging";
+   }
+
 }
 
 //_______________________________________________________________________
@@ -287,11 +313,15 @@ void TMVA::MethodBDT::InitBDT( void )
    fNCuts          = 20; 
    fPruneMethodS   = "CostComplexity";
    fPruneMethod    = DecisionTree::kCostComplexityPruning;
-   fPruneStrength  = 5;     // means automatic determination of the prune strength using a validation sample  
+   fPruneStrength  = 5;     
    fDeltaPruneStrength=0.1;
+   fNoNegWeightsInTraining=kFALSE;
+   fRandomisedTrees= kFALSE;
+   fUseNvars       = GetNvar();
 
    // reference cut value to distingiush signal-like from background-like events   
    SetSignalReferenceCut( 0 );
+
 }
 
 //_______________________________________________________________________
@@ -306,7 +336,7 @@ TMVA::MethodBDT::~MethodBDT( void )
 //_______________________________________________________________________
 void TMVA::MethodBDT::InitEventSample( void )
 {
-   // write all Events from the Tree into a vector of Events, that are 
+   // Write all Events from the Tree into a vector of Events, that are 
    // more easily manipulated.  
    // This method should never be called without existing trainingTree, as it
    // the vector of events from the ROOT training tree
@@ -315,14 +345,23 @@ void TMVA::MethodBDT::InitEventSample( void )
    Int_t nevents = Data().GetNEvtTrain();
    Int_t ievt=0;
 
+   Bool_t first=kTRUE;
+
    for (; ievt<nevents; ievt++) {
 
       ReadTrainingEvent(ievt);
-      // if fAutomatic you need a validation sample, hence split the training sample into 2
 
       Event* event = new Event( GetEvent() );
-      if (ievt%2 == 0 || !fAutomatic ) fEventSample     .push_back( event );
-      else                             fValidationSample.push_back( event );      
+      
+      if ( ! (fNoNegWeightsInTraining && event->GetWeight() < 0 ) ) {
+         if (first){
+            first = kFALSE;
+            fLogger << kINFO << "Events with negative event weights are ignored during the BDT training (option NoNegWeightsInTraining="<< fNoNegWeightsInTraining << Endl;
+         }
+	 // if fAutomatic you need a validation sample, hence split the training sample into 2
+         if ( ievt%2 == 0 || !fAutomatic ) fEventSample.push_back( event );
+         else                              fValidationSample.push_back( event );      
+      }
    }
    
    fLogger << kINFO << "<InitEventSample> Internally I use " << fEventSample.size() 
@@ -333,8 +372,6 @@ void TMVA::MethodBDT::InitEventSample( void )
 //_______________________________________________________________________
 void TMVA::MethodBDT::Train( void )
 {  
-   // some option, not yet set as "choosable option".. more for internal testing
-   Bool_t pruneBeforeBoost = kFALSE;
    // default sanity checks
    if (!CheckSanity()) fLogger << kFATAL << "<Train> sanity check failed" << Endl;
    if (IsNormalised()) fLogger << kFATAL << "\"Normalise\" option cannot be used with BDT; " 
@@ -352,128 +389,66 @@ void TMVA::MethodBDT::Train( void )
    Int_t nNodesAfterPruning = 0;
 
    SeparationBase *qualitySepType = new GiniIndex();
+
+   TH1D *alpha = new TH1D("alpha","PruneStrengths",fNTrees,0,fNTrees);
+   alpha->SetXTitle("#tree");
+   alpha->SetYTitle("PruneStrength");
+   
    for (int itree=0; itree<fNTrees; itree++) {
       timer.DrawProgressBar( itree );
 
-      fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts, qualitySepType ));
-      //use for the training of the next tree only those event, that have together
-      //95% of the weight. The others are.. not really important for the tree, but
-      //might be large in number ==> ommitting them reduces training ime considerably
-      // in order to do this properly, I would have to sort the events according to
-      // their weights, but I can get "at least 95%" also by ommitting simply all events
-      // for which the weight is less than 0.05
-      //
-      //       std::vector<Event*> sample;
-      //       for (std::vector<Event*>::iterator iev=fEventSample.begin(); 
-      //       iev != fEventSample.end(); iev++) {
-      //    if ((*iev)->GetWeight() > 0.1) sample.push_back(*iev);
-      //       }
-      //       nNodesBeforePruning = fForest.back()->BuildTree(sample);
+      fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts, qualitySepType,
+                                           fRandomisedTrees, fUseNvars, itree));
 
+      fForest.back()->SetNodePurityLimit(fNodePurityLimit); // set the signal purity limit
       nNodesBeforePruning = fForest.back()->BuildTree(fEventSample);
 
-      if (itree==1 && fgDebugLevel==1) {
-         //plot Cost Complexity versus #Nodes for increasing pruning strengths
-         DecisionTree *d = new DecisionTree(*(fForest[itree]));         
-
-         TH1D *h=new TH1D("h","CostComplexity",d->GetNNodes(),0,d->GetNNodes());
-         ofstream out1("theOriginal.txt");
-         ofstream out2("theCopy.txt");
-         fForest[itree]->Print(out1);
-         out2 << "************* pruned T " << 1 << " ****************" <<endl;
-         d->Print(out2);
-         
-         Int_t count=1;
-         h->SetBinContent(count++,d->GetCostComplexity(fPruneStrength));
-         while (d->GetNNodes() > 3) {
-            d->FillQualityMap();
-            d->FillQualityGainMap();
-            
-            multimap<Double_t, DecisionTreeNode* > qgm = d->GetQualityGainMap();
-            
-            multimap<Double_t, DecisionTreeNode* >::iterator it=qgm.begin();
-            d->PruneNode(it->second);
-            out2 << "************* pruned T " << count << " ****************" <<endl;
-            d->Print(out2);
-            h->SetBinContent(count++,d->GetCostComplexity(fPruneStrength));
-         }
-         h->Write();
-      }
-
-      if (itree==1 && fgDebugLevel==1) {
-         //plot Cost Complexity versus #Nodes for increasing pruning strengths
-         DecisionTree *d = new DecisionTree(*(fForest[itree]));         
-
-         TH1D *h=new TH1D("h2","Weakestlink",d->GetNNodes(),0,d->GetNNodes());
-         ofstream out2("theCopy2.txt");
-         out2 << "************* pruned T " << 1 << " ****************" <<endl;
-         d->Print(out2);
-         Int_t count=1;
-         while (d->GetNNodes() > 3) {
-            DecisionTreeNode *n = d->GetWeakestLink();
-            multimap<Double_t, DecisionTreeNode* > ls = d->GetLinkStrengthMap();
-            multimap<Double_t, DecisionTreeNode* >::iterator it=ls.begin();
-            fLogger << kINFO << "Nodes before " << d->CountNodes() << Endl;
-            h->SetBinContent(count++,it->first);
-            fLogger << kINFO << "Prune Node sequence: " << n->GetSequence() << ", depth:" << n->GetDepth() << Endl;
-            d->PruneNode(n);
-            fLogger << kINFO << "Nodes after  " << d->CountNodes() << Endl;
-            for (it=ls.begin();it!=ls.end();it++) cout << it->first << " / ";
-            fLogger << kINFO << Endl;                                      
-            out2 << "************* pruned T " << count << " ****************" <<endl;
-            d->Print(out2);
-
-
-         }
-         h->Write();
-      }
-
-
-      nNodesBeforePruningCount +=nNodesBeforePruning;
+      nNodesBeforePruningCount += nNodesBeforePruning;
       fNodesBeforePruningVsTree->SetBinContent(itree+1,nNodesBeforePruning);
-      if (pruneBeforeBoost && fPruneMethod !=  DecisionTree::kNoPruning) {
-         fForest.back()->SetPruneMethod(fPruneMethod);
-         fForest.back()->SetPruneStrength(fPruneStrength);
-         fForest.back()->PruneTree();
+      
+      if(!fPruneBeforeBoost || fPruneMethod == DecisionTree::kNoPruning) // no pruning, or prune after boosting
+	fBoostWeights.push_back( this->Boost(fEventSample, fForest.back(), itree) );
+
+      if(fPruneMethod != DecisionTree::kNoPruning) { 
+  	 fForest.back()->SetPruneMethod(fPruneMethod);
+	 if(!fAutomatic) { 
+	   fForest.back()->SetPruneStrength(fPruneStrength);
+	   fForest.back()->PruneTree();
+	 }
+	 else {
+	   if(fPruneMethod == DecisionTree::kCostComplexityPruning) { // automatic cost complexity pruning
+	     CCPruner* pruneTool = new CCPruner(fForest.back(), &fValidationSample, fSepType);
+	     pruneTool->Optimize();
+	     std::vector<DecisionTreeNode*> nodes = pruneTool->GetOptimalPruneSequence();
+	     fPruneStrength = pruneTool->GetOptimalPruneStrength();
+	     for(UInt_t i = 0; i < nodes.size(); i++) 
+	       fForest.back()->PruneNode(nodes[i]);
+	     delete pruneTool;
+	   }	   
+	   else { // automatic pruning, but not cost complexity
+	     fPruneStrength = this->PruneTree(fForest.back(), itree);
+	   }
+	 }
+         if (fUseYesNoLeaf){ // remove leaf nodes where both daughter nodes are of same type
+            fForest.back()->CleanTree(); 
+         }
          nNodesAfterPruning = fForest.back()->GetNNodes();
          nNodesAfterPruningCount += nNodesAfterPruning;
          fNodesAfterPruningVsTree->SetBinContent(itree+1,nNodesAfterPruning);
-      }
-      fBoostWeights.push_back( this->Boost(fEventSample, fForest.back(), itree) );
 
-
+         if(fPruneBeforeBoost) // prune before boosting
+	   fBoostWeights.push_back( this->Boost(fEventSample, fForest.back(), itree) );
+         alpha->SetBinContent(itree+1,fPruneStrength);
+      } 
       fITree = itree;
       fMonitorNtuple->Fill();
    }
+   
+   alpha->Write();
 
    // get elapsed time
    fLogger << kINFO << "<Train> elapsed time: " << timer.GetElapsedTime()    
            << "                              " << Endl;    
-   if (!pruneBeforeBoost  && fPruneMethod !=  DecisionTree::kNoPruning) {
-      fLogger << kINFO << "Pruning "<< fNTrees << " Decision Trees ... patience please" << Endl;
-      Timer timer2( fNTrees, GetName() ); 
-      TH1D *alpha = new TH1D("alpha","PruneStrengths",fNTrees,0,fNTrees);
-      alpha->SetXTitle("#tree");
-      alpha->SetYTitle("PruneStrength");
-      for (int itree=0; itree<fNTrees; itree++) {
-         timer2.DrawProgressBar( itree );
-         fForest[itree]->SetPruneMethod(fPruneMethod);
-         if (fAutomatic) {
-            fPruneStrength = this->PruneTree(fForest[itree], itree);
-         }
-         else{
-            fForest[itree]->SetPruneStrength(fPruneStrength);
-            fForest[itree]->PruneTree();
-         }
-         nNodesAfterPruning = fForest[itree]->GetNNodes();
-         nNodesAfterPruningCount += nNodesAfterPruning;
-         fNodesAfterPruningVsTree->SetBinContent(itree+1,nNodesAfterPruning);
-         alpha->SetBinContent(itree+1,fPruneStrength);
-      }
-      alpha->Write();
-      fLogger << kINFO << "<Train_Prune> elapsed time: " << timer2.GetElapsedTime()    
-              << "                              " << Endl;    
-   }
    if (fPruneMethod == DecisionTree::kNoPruning) {
       fLogger << kINFO << "<Train> average number of nodes (w/o pruning) : "
               << nNodesBeforePruningCount/fNTrees << Endl;
@@ -487,7 +462,7 @@ void TMVA::MethodBDT::Train( void )
 }
 
 //_______________________________________________________________________
-Double_t  TMVA::MethodBDT::PruneTree( DecisionTree *dt, Int_t itree)
+Double_t TMVA::MethodBDT::PruneTree( DecisionTree *dt, Int_t itree)
 {
    // prune a tree adjusting the prunestrength using the "test sample" until
    // the best efficiency on the test sample is obtained. In principle the
@@ -501,12 +476,12 @@ Double_t  TMVA::MethodBDT::PruneTree( DecisionTree *dt, Int_t itree)
    DecisionTree*  dcopy;
    vector<Double_t> q;
    multimap<Double_t,Double_t> quality;
-   Int_t nnodes=dt->GetNNodes();
+   Int_t nnodes = dt->GetNNodes();
 
    // find the maxiumum prune strength that still leaves some nodes 
    Bool_t forceStop = kFALSE;
-   Int_t troubleCount=0, previousNnodes=nnodes;
-
+   Int_t troubleCount = 0, 
+     previousNnodes = nnodes;
 
    nnodes=dt->GetNNodes();
    while (nnodes > 3 && !forceStop) {
@@ -515,7 +490,7 @@ Double_t  TMVA::MethodBDT::PruneTree( DecisionTree *dt, Int_t itree)
       dcopy->PruneTree();
       q.push_back(this->TestTreeQuality((dcopy)));
       quality.insert(pair<const Double_t,Double_t>(q.back(),alpha));
-      nnodes=dcopy->GetNNodes();
+      nnodes = dcopy->GetNNodes();
       if (previousNnodes == nnodes) troubleCount++;
       else { 
          troubleCount=0; // reset counter
@@ -591,7 +566,7 @@ Double_t TMVA::MethodBDT::TestTreeQuality( DecisionTree *dt )
 
    Double_t ncorrect=0, nfalse=0;
    for (UInt_t ievt=0; ievt<fValidationSample.size(); ievt++) {
-      Bool_t isSignalType= (dt->CheckEvent(*(fValidationSample[ievt])) > 0.5 ) ? 1 : 0;
+      Bool_t isSignalType= (dt->CheckEvent(*(fValidationSample[ievt])) > fNodePurityLimit ) ? 1 : 0;
       
       if (isSignalType == (fValidationSample[ievt]->IsSignal()) ) {
          ncorrect += fValidationSample[ievt]->GetWeight();
@@ -633,51 +608,50 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
    // and "beta" beeing a free parameter (standard: beta = 1) that modifies the
    // boosting.
 
-   Double_t adaBoostBeta=1.;   // that's apparently the standard value :)
+   Double_t err=0, sumw=0, sumwfalse=0;
 
-   Double_t err=0, sumw=0, sumwfalse=0, count=0;
-   vector<Bool_t> correctSelected;
-   correctSelected.reserve(eventSample.size());
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
-      Bool_t isSignalType = (dt->CheckEvent(*(*e),fUseYesNoLeaf) > 0.5 );
+      Bool_t isSignalType = (dt->CheckEvent(*(*e),fUseYesNoLeaf) > fNodePurityLimit );
       Double_t w = (*e)->GetWeight();
       sumw += w;
 
-      if (isSignalType == (*e)->IsSignal()) { 
-         correctSelected.push_back(kTRUE);
-      }
-      else {
+      if (!(isSignalType == (*e)->IsSignal())) { 
          sumwfalse+= w;
-         count++;
-         correctSelected.push_back(kFALSE);
       }    
    }
    err = sumwfalse/sumw;
 
    Double_t newSumw=0;
    Int_t i=0;
-   Double_t boostWeight;
-   if (err>0) {
-      if (err > 0.5) { // sanity check.. should never happen as otherwise s.th. there is apparently
-         // s.th. odd with the assignement of the leaf nodes. (rem: you use the training
-                    // events for this determination of the error rate
-         fLogger << kWARNING << " The error rate in the BDT boosting is > 0.5. " 
-                 << " That should not happen, please check your code (i.e... the BDT code) " << Endl;
-      } 
-      if (adaBoostBeta == 1) {
-         boostWeight = (1-err)/err;
-      }
-      else {
-         boostWeight =  TMath::Power((1.0 - err)/err, adaBoostBeta);
-      }
+   Double_t boostWeight=1.;
+   if (err > 0.5) { // sanity check.. should never happen as otherwise s.th. there is apparently
+      // s.th. odd with the assignement of the leaf nodes. (rem: you use the training
+      // events for this determination of the error rate
+      fLogger << kWARNING << " The error rate in the BDT boosting is > 0.5. " 
+              << " That should not happen, please check your code (i.e... the BDT code), I " 
+              << " set it to 0.5.. just to continue.." <<  Endl;
+      err = 0.5;
+   } else if (err < 0) {
+      fLogger << kWARNING << " The error rate in the BDT boosting is < 0. That can happen" 
+              << " due to improper treatment of negative weights in a Monte Carlo.. (if you have"
+              << " an idea on how to do it in a better way, please let me know (Helge.Voss@cern.ch)"
+              << " for the time being I set it to its absolute value.. just to continue.." <<  Endl;
+      err = TMath::Abs(err);         
+   }
+   if (fAdaBoostBeta == 1) {
+      boostWeight = (1-err)/err;
    }
    else {
-      boostWeight = 1000; // 
+      boostWeight =  TMath::Power((1.0 - err)/err, fAdaBoostBeta);
    }
 
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
-      if (!correctSelected[i]) {
-         (*e)->SetWeight( (*e)->GetWeight() * boostWeight);
+      if (!( (dt->CheckEvent(*(*e),fUseYesNoLeaf) > fNodePurityLimit ) == (*e)->IsSignal())) { 
+         if ( (*e)->GetWeight() > 0 ){
+            (*e)->SetBoostWeight( (*e)->GetBoostWeight() * boostWeight);
+         } else {
+            (*e)->SetBoostWeight( (*e)->GetBoostWeight() / boostWeight);
+         }               
       }
       newSumw+=(*e)->GetWeight();    
       i++;
@@ -685,7 +659,7 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
 
    // re-normalise the Weights
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
-      (*e)->SetWeight( (*e)->GetWeight() * sumw / newSumw );
+      (*e)->SetBoostWeight( (*e)->GetBoostWeight() * sumw / newSumw );
    }
 
    fBoostWeightHist->Fill(boostWeight);
@@ -707,14 +681,14 @@ Double_t TMVA::MethodBDT::Bagging( vector<TMVA::Event*> eventSample, Int_t iTree
    // else but applying "random Weights" to each event.
    Double_t newSumw=0;
    Double_t newWeight;
-   TRandom *trandom   = new TRandom(iTree);
+   TRandom2 *trandom   = new TRandom2(iTree);
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
-      newWeight = trandom->Rndm();
-      (*e)->SetWeight(newWeight);
-      newSumw+=(*e)->GetWeight();    
+      newWeight = trandom->PoissonD(1);
+      (*e)->SetBoostWeight(newWeight);
+      newSumw+=(*e)->GetBoostWeight();    
    }
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
-      (*e)->SetWeight( (*e)->GetWeight() * eventSample.size() / newSumw );
+      (*e)->SetBoostWeight( (*e)->GetBoostWeight() * eventSample.size() / newSumw );
    }
    return 1.;  //here as there are random weights for each event, just return a constant==1;
 }
@@ -767,13 +741,9 @@ void  TMVA::MethodBDT::ReadWeightsFromStream( istream& istr )
 //_______________________________________________________________________
 Double_t TMVA::MethodBDT::GetMvaValue()
 {
-   // return the MVA value (range [-1;1]) that classifies the
-   // event.according to the majority vote from the total number of
-   // decision trees
-   // In the literature I found that people actually use the 
-   // weighted majority vote (using the boost weights) .. However I
-   // did not see any improvement in doing so :(  
-   // --> this is currently switched off
+   // Return the MVA value (range [-1;1]) that classifies the
+   // event according to the majority vote from the total number of
+   // decision trees.
 
    Double_t myMVA = 0;
    Double_t norm  = 0;
@@ -794,7 +764,7 @@ Double_t TMVA::MethodBDT::GetMvaValue()
 //_______________________________________________________________________
 void  TMVA::MethodBDT::WriteMonitoringHistosToFile( void ) const
 {
-   // here we could write some histograms created during the processing
+   // Here we could write some histograms created during the processing
    // to the output file.
    fLogger << kINFO << "Write monitoring histograms to file: " << BaseDir()->GetPath() << Endl;
  
@@ -806,11 +776,10 @@ void  TMVA::MethodBDT::WriteMonitoringHistosToFile( void ) const
    fMonitorNtuple->Write();
 }
 
-// return the individual relative variable importance 
 //_______________________________________________________________________
 vector< Double_t > TMVA::MethodBDT::GetVariableImportance()
 {
-   // return the relative variable importance, normalized to all
+   // Return the relative variable importance, normalized to all
    // variables together having the importance 1. The importance in
    // evaluated as the total separation-gain that this variable had in
    // the decision trees (weighted by the number of events)
@@ -832,9 +801,9 @@ vector< Double_t > TMVA::MethodBDT::GetVariableImportance()
 //_______________________________________________________________________
 Double_t TMVA::MethodBDT::GetVariableImportance( UInt_t ivar )
 {
-   // returns the measure for the variable importance of variable "ivar"
-   // which is later used in GetVariableImportance() to calculat the
-   // relative variable importances
+   // Return the measure for the variable importance of variable "ivar"
+   // which is later used in GetVariableImportance() to calculate the
+   // relative variable importances.
 
    vector<Double_t> relativeImportance = this->GetVariableImportance();
    if (ivar < (UInt_t)relativeImportance.size()) return relativeImportance[ivar];
@@ -846,7 +815,7 @@ Double_t TMVA::MethodBDT::GetVariableImportance( UInt_t ivar )
 //_______________________________________________________________________
 const TMVA::Ranking* TMVA::MethodBDT::CreateRanking()
 {
-   // computes ranking of input variables
+   // Compute ranking of input variables
 
    // create the ranking object
    fRanking = new Ranking( GetName(), "Variable Importance" );
@@ -862,12 +831,12 @@ const TMVA::Ranking* TMVA::MethodBDT::CreateRanking()
 //_______________________________________________________________________
 void TMVA::MethodBDT::GetHelpMessage() const
 {
-   // get help message text
+   // Get help message text
    //
    // typical length of text line: 
    //         "|--------------------------------------------------------------|"
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Short description:" << Tools::Color("reset") << Endl;
+   fLogger << gTools().Color("bold") << "--- Short description:" << gTools().Color("reset") << Endl;
    fLogger << Endl;
    fLogger << "Boosted Decision Trees are a collection of individual decision" << Endl; 
    fLogger << "trees which form a multivariate classifier by (weighted) majority " << Endl; 
@@ -883,7 +852,7 @@ void TMVA::MethodBDT::GetHelpMessage() const
    fLogger << "(\"leaf\") node is classified as either signal or background" << Endl; 
    fLogger << "depending on the majority type of training events in that node." << Endl; 
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Performance optimisation:" << Tools::Color("reset") << Endl;
+   fLogger << gTools().Color("bold") << "--- Performance optimisation:" << gTools().Color("reset") << Endl;
    fLogger << Endl;
    fLogger << "By the nature of the binary splits performed on the individual" << Endl; 
    fLogger << "variables, decision trees do not deal well with linear correlations" << Endl;
@@ -892,7 +861,7 @@ void TMVA::MethodBDT::GetHelpMessage() const
    fLogger << "variables individually). Hence decorrelation could be useful " << Endl; 
    fLogger << "to optimise the BDT performance." << Endl;
    fLogger << Endl;
-   fLogger << Tools::Color("bold") << "--- Performance tuning via configuration options:" << Tools::Color("reset") << Endl;
+   fLogger << gTools().Color("bold") << "--- Performance tuning via configuration options:" << gTools().Color("reset") << Endl;
    fLogger << Endl;
    fLogger << "The two most important parameters in the configuration are the  " << Endl; 
    fLogger << "minimal number of events requested by a leaf node (option " << Endl; 
@@ -924,17 +893,18 @@ void TMVA::MethodBDT::MakeClassSpecific( std::ostream& fout, const TString& clas
    // make ROOT-independent C++ class for classifier response (classifier-specific implementation)
 
    // write BDT-specific classifier response
-   fout << "   std::vector<"<<className<<"_DecisionTreeNode*> fForest;       // i.e. root nodes of decision trees" << endl;
-   fout << "   std::vector<double>            fBoostWeights; // the weights applied in the individual boosts" << endl;
-   fout << "};" << endl;
-   fout << "double " << className << "::GetMvaValue__( const std::vector<double>& inputValues ) const{" << endl;
+   fout << "   std::vector<BDT_DecisionTreeNode*> fForest;       // i.e. root nodes of decision trees" << endl;
+   fout << "   std::vector<double>                fBoostWeights; // the weights applied in the individual boosts" << endl;
+   fout << "};" << endl << endl;
+   fout << "double " << className << "::GetMvaValue__( const std::vector<double>& inputValues ) const" << endl;
+   fout << "{" << endl;
    fout << "   double myMVA = 0;" << endl;
    fout << "   double norm  = 0;" << endl;
-   fout << "for (unsigned int itree=0; itree<fForest.size(); itree++){" << endl;
-   fout << "      "<<className<<"_DecisionTreeNode *current = fForest[itree];" << endl;
-   fout << "      while (current->GetNodeType() == 0){ //intermediate node" << endl;
-   fout << "         if (current->GoesRight(inputValues)) current=("<<className<<"_DecisionTreeNode*)current->GetRight();" << endl;
-   fout << "         else current=("<<className<<"_DecisionTreeNode*)current->GetLeft();" << endl;
+   fout << "   for (unsigned int itree=0; itree<fForest.size(); itree++){" << endl;
+   fout << "      BDT_DecisionTreeNode *current = fForest[itree];" << endl;
+   fout << "      while (current->GetNodeType() == 0) { //intermediate node" << endl;
+   fout << "         if (current->GoesRight(inputValues)) current=(BDT_DecisionTreeNode*)current->GetRight();" << endl;
+   fout << "         else current=(BDT_DecisionTreeNode*)current->GetLeft();" << endl;
    fout << "      }" << endl;
    if (fUseWeightedTrees) { 
       if (fUseYesNoLeaf) fout << "      myMVA += fBoostWeights[itree] *  current->GetNodeType();" << endl;
@@ -948,15 +918,13 @@ void TMVA::MethodBDT::MakeClassSpecific( std::ostream& fout, const TString& clas
    }
    fout << "   }" << endl;
    fout << "   return myMVA /= norm;" << endl;
-   fout << "};" << endl;
-
-   fout << "void " << className << "::Initialize(){" << endl;
-   fout << " " << endl;
-
+   fout << "};" << endl << endl;
+   fout << "void " << className << "::Initialize()" << endl;
+   fout << "{" << endl;
    //Now for each decision tree, write directly the constructors of the nodes in the tree structure 
    for (int itree=0; itree<fNTrees; itree++) {
       fout << "  // itree = " << itree << endl;
-      fout << "  fBoostWeights.push_back("<<fBoostWeights[itree]<<");" << endl;
+      fout << "  fBoostWeights.push_back(" << fBoostWeights[itree] << ");" << endl;
       fout << "  fForest.push_back( " << endl;
       this->MakeClassInstantiateNode((DecisionTreeNode*)fForest[itree]->GetRoot(), fout, className);
       fout <<"   );" << endl;
@@ -964,7 +932,6 @@ void TMVA::MethodBDT::MakeClassSpecific( std::ostream& fout, const TString& clas
    fout << "   return;" << endl;
    fout << "};" << endl;
    fout << " " << endl;
-
    fout << "// Clean up" << endl;
    fout << "inline void " << className << "::Clear() " << endl;
    fout << "{" << endl;
@@ -975,65 +942,79 @@ void TMVA::MethodBDT::MakeClassSpecific( std::ostream& fout, const TString& clas
 } 
 
 //_______________________________________________________________________
-void TMVA::MethodBDT::MakeClassSpecificHeader(  std::ostream& fout, const TString& className ) const
+void TMVA::MethodBDT::MakeClassSpecificHeader(  std::ostream& fout, const TString& ) const
 {
    // specific class header
-   fout << "#define NN new "<<className<<"_DecisionTreeNode" << endl;
-   fout << "class "<<className<<"_DecisionTreeNode{" << endl;
+   fout << "#ifndef NN" << endl;
+   fout << "#define NN new BDT_DecisionTreeNode" << endl;
+   fout << "#endif" << endl;
+   fout << "   " << endl;
+   fout << "#ifndef BDT_DecisionTreeNode__def" << endl;
+   fout << "#define BDT_DecisionTreeNode__def" << endl;
+   fout << "   " << endl;      
+   fout << "class BDT_DecisionTreeNode {" << endl;
    fout << "   " << endl;
    fout << "public:" << endl;
    fout << "   " << endl;
    fout << "   // constructor of an essentially \"empty\" node floating in space" << endl;
-   fout << "   "<<className<<"_DecisionTreeNode ( " << endl;
-   fout << "                      "<<className<<"_DecisionTreeNode* left," << endl;
-   fout << "                      "<<className<<"_DecisionTreeNode* right," << endl;
-   fout << "                      double cutValue, bool cutType, int selector," << endl; 
-   fout << "                      int nodeType, double purity):" << endl;
-   fout << "   fLeft(left)," << endl;
-   fout << "   fRight(right)," << endl;
-   fout << "   fCutValue(cutValue)," << endl;
-   fout << "   fCutType(cutType)," << endl;
-   fout << "   fSelector(selector)," << endl;
-   fout << "   fNodeType(nodeType)," << endl;
-   fout << "   fPurity(purity) {}" << endl;
-   fout << "   virtual ~"<<className<<"_DecisionTreeNode();  " << endl;
+   fout << "   BDT_DecisionTreeNode ( BDT_DecisionTreeNode* left," << endl;
+   fout << "                          BDT_DecisionTreeNode* right," << endl;
+   fout << "                          double cutValue, bool cutType, int selector," << endl; 
+   fout << "                          int nodeType, double purity ) :" << endl;
+   fout << "   fLeft    ( left     )," << endl;
+   fout << "   fRight   ( right    )," << endl;
+   fout << "   fCutValue( cutValue )," << endl;
+   fout << "   fCutType ( cutType  )," << endl;
+   fout << "   fSelector( selector )," << endl;
+   fout << "   fNodeType( nodeType )," << endl;
+   fout << "   fPurity  ( purity   ) {}" << endl << endl;
+   fout << "   virtual ~BDT_DecisionTreeNode();" << endl << endl;
    fout << "   // test event if it decends the tree at this node to the right" << endl;  
    fout << "   virtual bool GoesRight( const std::vector<double>& inputValues ) const;" << endl;
-   fout << "   "<<className<<"_DecisionTreeNode* GetRight( void ) {return fRight; };" << endl;
+   fout << "   BDT_DecisionTreeNode* GetRight( void )  {return fRight; };" << endl << endl;
    fout << "   // test event if it decends the tree at this node to the left " << endl;
    fout << "   virtual bool GoesLeft ( const std::vector<double>& inputValues ) const;" << endl;
-   fout << "   "<<className<<"_DecisionTreeNode* GetLeft( void ) {return fLeft; };   " << endl;
-   fout << "   //return  S/(S+B) (purity) at this node (from  training)" << endl;
-   fout << "   double GetPurity( void ) const {return fPurity;} " << endl;
-   fout << "   //return the node type" << endl;
-   fout << "   int    GetNodeType( void ) const {return fNodeType;}" << endl;
-   fout << "private:" << endl;
-   fout << "   "<<className<<"_DecisionTreeNode*   fLeft;    // pointer to the left daughter node" << endl;
-   fout << "   "<<className<<"_DecisionTreeNode*   fRight;   // pointer to the right daughter node" << endl;
-   fout << "   double              fCutValue;// cut value appplied on this node to discriminate bkg against sig" << endl;
-   fout << "   bool                fCutType; // true: if event variable > cutValue ==> signal , false otherwise" << endl;
-   fout << "   int                 fSelector;// index of variable used in node selection (decision tree)   " << endl;
-   fout << "   int                 fNodeType;// Type of node: -1 == Bkg-leaf, 1 == Signal-leaf, 0 = internal " << endl;
-   fout << "   double              fPurity;  // Purity of node from training"<< endl;
+   fout << "   BDT_DecisionTreeNode* GetLeft( void ) { return fLeft; };   " << endl << endl;
+   fout << "   // return  S/(S+B) (purity) at this node (from  training)" << endl << endl;
+   fout << "   double GetPurity( void ) const { return fPurity; } " << endl;
+   fout << "   // return the node type" << endl;
+   fout << "   int    GetNodeType( void ) const { return fNodeType; }" << endl << endl;
+   fout << "private:" << endl << endl;
+   fout << "   BDT_DecisionTreeNode*   fLeft;     // pointer to the left daughter node" << endl;
+   fout << "   BDT_DecisionTreeNode*   fRight;    // pointer to the right daughter node" << endl;
+   fout << "   double                  fCutValue; // cut value appplied on this node to discriminate bkg against sig" << endl;
+   fout << "   bool                    fCutType;  // true: if event variable > cutValue ==> signal , false otherwise" << endl;
+   fout << "   int                     fSelector; // index of variable used in node selection (decision tree)   " << endl;
+   fout << "   int                     fNodeType; // Type of node: -1 == Bkg-leaf, 1 == Signal-leaf, 0 = internal " << endl;
+   fout << "   double                  fPurity;   // Purity of node from training"<< endl;
    fout << "}; " << endl;
+   fout << "   " << endl;
    fout << "//_______________________________________________________________________" << endl;
-   fout << "  "<<className<<"_DecisionTreeNode::~"<<className<<"_DecisionTreeNode(){   " << endl;
-   fout << "   if (fLeft != NULL) delete fLeft;" << endl;
+   fout << "BDT_DecisionTreeNode::~BDT_DecisionTreeNode()" << endl;
+   fout << "{" << endl;
+   fout << "   if (fLeft  != NULL) delete fLeft;" << endl;
    fout << "   if (fRight != NULL) delete fRight;" << endl;
    fout << "}; " << endl;
+   fout << "   " << endl;
    fout << "//_______________________________________________________________________" << endl;
-   fout << "bool "<<className<<"_DecisionTreeNode::GoesRight(const  std::vector<double>& inputValues) const{" << endl;
+   fout << "bool BDT_DecisionTreeNode::GoesRight( const std::vector<double>& inputValues ) const" << endl;
+   fout << "{" << endl;
    fout << "   // test event if it decends the tree at this node to the right" << endl;
    fout << "   bool result = (inputValues[fSelector] > fCutValue );" << endl;
    fout << "   if (fCutType == true) return result; //the cuts are selecting Signal ;" << endl;
    fout << "   else return !result;" << endl;
    fout << "}" << endl;
+   fout << "   " << endl;
    fout << "//_______________________________________________________________________" << endl;
-   fout << "bool "<<className<<"_DecisionTreeNode::GoesLeft(const  std::vector<double>& inputValues) const{" << endl;
+   fout << "bool BDT_DecisionTreeNode::GoesLeft( const std::vector<double>& inputValues ) const" << endl;
+   fout << "{" << endl;
    fout << "   // test event if it decends the tree at this node to the left" << endl;
    fout << "   if (!this->GoesRight(inputValues)) return true;" << endl;
    fout << "   else return false;" << endl;
    fout << "}" << endl;
+   fout << "   " << endl;
+   fout << "#endif" << endl;
+   fout << "   " << endl;
 }
 
 //_______________________________________________________________________
@@ -1044,7 +1025,6 @@ void TMVA::MethodBDT::MakeClassInstantiateNode( DecisionTreeNode *n, std::ostrea
       fLogger << kFATAL << "MakeClassInstantiateNode: started with undefined node" <<Endl;
       return ;
    }
-   //   fout << "new "<<className<<"_DecisionTreeNode("<<endl;
    fout << "NN("<<endl;
    if (n->GetLeft() != NULL){
       this->MakeClassInstantiateNode( (DecisionTreeNode*)n->GetLeft() , fout, className);
@@ -1067,3 +1047,4 @@ void TMVA::MethodBDT::MakeClassInstantiateNode( DecisionTreeNode *n, std::ostrea
         << n->GetNodeType() << ", " 
         << n->GetPurity() << ") ";    
 }
+

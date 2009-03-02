@@ -1,6 +1,7 @@
 //______________________________________________________________________________
-// testrandom.C tests the generator TRandom3 against some ref values
-// and creates a timing table against TRandom and TRandom2.
+// Performance test of all the ROOT random generator (TRandom, TRandom1, TRandom2 and TRandom3)  
+// Tests the generator TRandom3 against some ref values
+// and creates a timing table against TRandom, TRandom1 and TRandom2.
 //
 // E.g. on an MacOSX with 2 GHz Intel Dual Core and compiled with gcc 4.0.1
 //
@@ -46,7 +47,7 @@ void testAll() {
   int i, N = 10000000;
   float cpn = 1000000000./N;
   double x,y;
-
+  TRandom *rsave = gRandom;
   TRandom *r0 = new TRandom();
   TRandom *r1 = new TRandom1();
   TRandom *r2 = new TRandom2();
@@ -438,6 +439,7 @@ void testAll() {
   delete r1;
   delete r2;
   delete r3;
+  gRandom = rsave;
 
 #ifdef LATER  
   // Binomial
