@@ -22,11 +22,11 @@
    Genome class definition
 ---------------------------------------------------------------------------- */
 GA3DBinaryStringGenome::
-GA3DBinaryStringGenome(unsigned int width,
-		       unsigned int height,
-		       unsigned int depth,
+GA3DBinaryStringGenome(unsigned int _width,
+		       unsigned int _height,
+		       unsigned int _depth,
 		       GAGenome::Evaluator f, void * u) :
-GABinaryString(width*height*depth),
+GABinaryString(_width*_height*_depth),
 GAGenome(DEFAULT_3DBINSTR_INITIALIZER,
 	 DEFAULT_3DBINSTR_MUTATOR,
 	 DEFAULT_3DBINSTR_COMPARATOR) {
@@ -34,7 +34,7 @@ GAGenome(DEFAULT_3DBINSTR_INITIALIZER,
   userData(u);
   crossover(DEFAULT_3DBINSTR_CROSSOVER);
   nx=minX=maxX=0; ny=minY=maxY=0; nz=minZ=maxZ=0;
-  resize(width, height, depth);
+  resize(_width, _height, _depth);
 }
 
 

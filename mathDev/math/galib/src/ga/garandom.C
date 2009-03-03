@@ -151,8 +151,8 @@ GAUnitGaussian(){
 static unsigned long iseed;
 
 void 
-bitseed(unsigned int seed) {
-  iseed = seed;
+bitseed(unsigned int _seed) {
+  iseed = _seed;
 }
 
 int 
@@ -279,11 +279,11 @@ static long iv[NTAB];
 static long idum=0;
 
 void 
-gasran2(unsigned int seed) {
+gasran2(unsigned int _seed) {
   int j;
   long k;
 
-  idum = STA_CAST(long,seed);
+  idum = STA_CAST(long,_seed);
   if (idum == 0) idum=1;
   if (idum < 0) idum = -idum;
   idum2=(idum);

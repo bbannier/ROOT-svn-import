@@ -97,7 +97,7 @@ GABin2DecPhenotypeCore::operator=(const GABin2DecPhenotypeCore& p){
 // space, otherwise just tag the new on then end.  We allocate space in chunks
 // so we don't spend too much time doing memory allocation stuff.
 void
-GABin2DecPhenotype::add(unsigned int nb, float min, float max){
+GABin2DecPhenotype::add(unsigned int nb, float _min, float _max){
   if(core->n + 1 > core->N){
     core->N += core->csz;
 
@@ -126,8 +126,8 @@ GABin2DecPhenotype::add(unsigned int nb, float min, float max){
     core->oset[core->n] = core->oset[core->n-1] + core->nbits[core->n-1];
   else
     core->oset[core->n] = 0;
-  core->minval[core->n] = min;
-  core->maxval[core->n] = max;
+  core->minval[core->n] = _min;
+  core->maxval[core->n] = _max;
   core->n++;
   core->sz += nb;
 }
