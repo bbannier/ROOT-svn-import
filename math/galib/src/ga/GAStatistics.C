@@ -191,7 +191,7 @@ updateBestIndividual(const GAPopulation & pop, GABoolean flag){
       while(i < pop.size() && pop.best(i).score() > boa->worst().score()){
 	for(k=0;
 	    pop.best(i).score() < boa->best(k).score() && k < boa->size();
-	    k++);
+	    k++) ;
 	for(j=k; j<boa->size(); j++){
 	  if(pop.best(i) == boa->best(j)) break;
 	  if(pop.best(i).score() > boa->best(j).score()){
@@ -207,7 +207,7 @@ updateBestIndividual(const GAPopulation & pop, GABoolean flag){
       while(i < pop.size() && pop.best(i).score() < boa->worst().score()){
 	for(k=0;
 	    pop.best(i).score() > boa->best(k).score() && k < boa->size();
-	    k++);
+	    k++) ;
 	for(j=k; j<boa->size(); j++){
 	  if(pop.best(i) == boa->best(j)) break;
 	  if(pop.best(i).score() < boa->best(j).score()){

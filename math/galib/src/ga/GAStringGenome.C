@@ -16,9 +16,9 @@ template <> int
 GA1DArrayAlleleGenome<char>::classID() const {return GAID::StringGenome;}
 
 template <> GA1DArrayAlleleGenome<char>::
-GA1DArrayAlleleGenome(unsigned int length, const GAAlleleSet<char> & s,
+GA1DArrayAlleleGenome(unsigned int _length, const GAAlleleSet<char> & s,
 		      GAGenome::Evaluator f, void * u) :
-GA1DArrayGenome<char>(length, f, u){
+GA1DArrayGenome<char>(_length, f, u){
   naset = 1;
   aset = new GAAlleleSet<char>[1];
   aset[0] = s;

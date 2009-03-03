@@ -505,8 +505,8 @@ GAQuickSort(unsigned int *c, float *s, int l, int r) {
   if(r > l){
     v = s[r]; i = l-1; j = r;
     for(;;){
-      while(s[++i] < v); // might exceed max array limit here
-      while(s[--j] > v && j > 0);
+      while(s[++i] < v) ; // might exceed max array limit here
+      while(s[--j] > v && j > 0) ;
       if(i >= j) break;
       tc = c[i]; c[i] = c[j]; c[j] = tc;
       ts = s[i]; s[i] = s[j]; s[j] = ts;

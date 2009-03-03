@@ -616,7 +616,7 @@ GAPopulation::replace(GAGenome * r, GAGenome * o)
   if(r == (GAGenome *)0 || o == (GAGenome *)0) return orig;
   if(r == o) return r;
   unsigned int i;
-  for(i=0; i<n && rind[i] != o; i++);
+  for(i=0; i<n && rind[i] != o; i++) ;
   if(i < n) orig = replace(r, i, RAW);
   return orig;
 }
@@ -671,7 +671,7 @@ GAPopulation::remove(GAGenome * r)
   GAGenome * removed=(GAGenome *)0;
   if(r == (GAGenome *)0) return removed;
   unsigned int i;
-  for(i=0; i<n && rind[i] != r; i++);
+  for(i=0; i<n && rind[i] != r; i++) ;
   if(i < n) removed = remove(i, RAW);
   return removed;
 }
@@ -746,8 +746,8 @@ GAPopulation::QuickSortAscendingRaw(GAGenome **c, int l, int r) {
   if(r > l){
     v = c[r]->score(); i = l-1; j = r;
     for(;;){
-      while(c[++i]->score() < v && i <= r);
-      while(c[--j]->score() > v && j > 0);
+      while(c[++i]->score() < v && i <= r) ;
+      while(c[--j]->score() > v && j > 0) ;
       if(i >= j) break;
       t = c[i]; c[i] = c[j]; c[j] = t;
     }
@@ -762,8 +762,8 @@ GAPopulation::QuickSortDescendingRaw(GAGenome **c, int l, int r) {
   if(r > l){
     v = c[r]->score(); i = l-1; j = r;
     for(;;){
-      while(c[++i]->score() > v && i <= r);
-      while(c[--j]->score() < v && j > 0);
+      while(c[++i]->score() > v && i <= r) ;
+      while(c[--j]->score() < v && j > 0) ;
       if(i >= j) break;
       t = c[i]; c[i] = c[j]; c[j] = t;
     }
@@ -779,8 +779,8 @@ GAPopulation::QuickSortAscendingScaled(GAGenome **c, int l, int r) {
   if(r > l){
     v = c[r]->fitness(); i = l-1; j = r;
     for(;;){
-      while(c[++i]->fitness() < v && i <= r);
-      while(c[--j]->fitness() > v && j > 0);
+      while(c[++i]->fitness() < v && i <= r) ;
+      while(c[--j]->fitness() > v && j > 0) ;
       if(i >= j) break;
       t = c[i]; c[i] = c[j]; c[j] = t;
     }
@@ -795,8 +795,8 @@ GAPopulation::QuickSortDescendingScaled(GAGenome **c, int l, int r) {
   if(r > l){
     v = c[r]->fitness(); i = l-1; j = r;
     for(;;){
-      while(c[++i]->fitness() > v && i <= r);
-      while(c[--j]->fitness() < v && j > 0);
+      while(c[++i]->fitness() > v && i <= r) ;
+      while(c[--j]->fitness() < v && j > 0) ;
       if(i >= j) break;
       t = c[i]; c[i] = c[j]; c[j] = t;
     }

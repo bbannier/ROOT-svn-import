@@ -21,9 +21,9 @@
    Genome class definition
 ---------------------------------------------------------------------------- */
 GA2DBinaryStringGenome::
-GA2DBinaryStringGenome(unsigned int width, unsigned int height, 
+GA2DBinaryStringGenome(unsigned int _width, unsigned int _height, 
 		       GAGenome::Evaluator f, void * u) :
-GABinaryString(width*height),
+GABinaryString(_width*_height),
 GAGenome(DEFAULT_2DBINSTR_INITIALIZER,
 	 DEFAULT_2DBINSTR_MUTATOR,
 	 DEFAULT_2DBINSTR_COMPARATOR) {
@@ -31,7 +31,7 @@ GAGenome(DEFAULT_2DBINSTR_INITIALIZER,
   userData(u);
   crossover(DEFAULT_2DBINSTR_CROSSOVER);
   nx=minX=maxX=0; ny=minY=maxY=0;
-  resize(width, height);
+  resize(_width, _height);
 }
 
 
