@@ -1880,7 +1880,7 @@ void TFitEditor::DoDataSet(Int_t selected)
    
    // Check the object exists and it is registered
    TObject* objSelected = gROOT->FindObject(name.substr(0, name.find(' ')).c_str());
-   assert(objSelected);
+   if ( !objSelected ) return;
 
    // If it is a tree, and there is no variables selected, show a dialog
    if ( objSelected->InheritsFrom("TTree") && 
