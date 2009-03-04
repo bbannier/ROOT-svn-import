@@ -67,6 +67,12 @@ public:
       fOptions(opt)
    {}
 
+
+   /// construct passing range and default options 
+   FitData(const DataRange & range) : 
+      fRange(range)
+   {}
+
    /// construct passing options and data range 
    FitData (const DataOptions & opt, const DataRange & range) : 
       fOptions(opt), 
@@ -83,6 +89,9 @@ public:
       access to range
     */
    const DataRange & Range() const { return fRange; }
+
+   // range cannot be modified afterwards
+   // since fit method functions use all data 
 
    /** 
        define a max size to avoid allocating too large arrays 
