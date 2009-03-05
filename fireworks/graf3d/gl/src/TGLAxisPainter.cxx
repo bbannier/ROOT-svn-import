@@ -331,19 +331,15 @@ void TGLAxisPainter::SetTitleFont(TGLRnrCtx &rnrCtx, const char* fontName, Int_t
 }
 
 //______________________________________________________________________________
-void TGLAxisPainter::RnrTitle(const char* txt, Float_t pos, TGLFont::ETextAlign_e align) const
+void TGLAxisPainter::RnrTitle(const char* txt, TGLVector3 &pos , TGLFont::ETextAlign_e align) const
 {
    // Draw title at given position.
 
-   if (txt)
-   {
-      TGLUtil::Color(fAttAxis->GetTitleColor());
-      const char* title = (fExp) ? Form("%s [10^%d]", fExp, txt) : txt;
-      fTitleFont.PreRender();
-      TGLVector3 pv(fDir.X()*pos, fDir.Y()*pos, fDir.Z()*pos);
-      RnrText(title, pv, align, fTitleFont);
-      fTitleFont.PostRender();
-   }
+   TGLUtil::Color(fAttAxis->GetTitleColor());
+   const char* title = (fExp) ? Form("%s [10^%d]", fExp, txt) : txt;
+   fTitleFont.PreRender();
+   RnrText(title, pos, align, fTitleFont);
+   fTitleFont.PostRender();
 }
 
 //______________________________________________________________________________
@@ -391,6 +387,13 @@ void TGLAxisPainter::PaintAxis(TGLRnrCtx &rnrCtx, TAxis* ax)
    // GL render TAxis.
 
    fAttAxis = ax;
+   Double_t min = ax->GetXmin();
+   Double_t max = ax->GetXmax();
+   if (min == max)
+   {
+      Error("TGLAxisPainter::PaintAxis", "axis without range");
+      return;
+   }
 
    //______________________________________________________________________________
    // Fill lablels value-pos and tick-marks position-length.
@@ -402,8 +405,6 @@ void TGLAxisPainter::PaintAxis(TGLRnrCtx &rnrCtx, TAxis* ax)
    Double_t bl1, bh1, bl2, bh2; // bin low, high values
 
    // Read limits from users range
-   Double_t min = ax->GetBinLowEdge(ax->GetFirst());
-   Double_t max = ax->GetBinUpEdge(ax->GetLast());
    THLimitsFinder::Optimize(min, max, n1a, bl1, bh1, bn1, bw1);
    THLimitsFinder::Optimize(bl1, bl1 + bw1, n2a, bl2, bh2, bn2, bw2);
 
@@ -492,4 +493,7 @@ void TGLAxisPainter::PaintAxis(TGLRnrCtx &rnrCtx, TAxis* ax)
    glDisable(GL_LIGHTING);
    RnrLines();
    RnrLabels();
+
+   if (ax->GetTitle())
+      RnrTitle(ax->GetTitle(), fTitlePos, fLabelAlign);
 }
