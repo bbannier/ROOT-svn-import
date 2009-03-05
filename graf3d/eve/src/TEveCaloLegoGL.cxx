@@ -441,87 +441,90 @@ void TEveCaloLegoGL::DrawAxis3D(TGLRnrCtx & rnrCtx) const
 
    // Z axis
    //
-   fZAxis->SetAxisColor(fM->fGridColor);
-   fZAxis->SetLabelColor(fM->fFontColor);
-   fZAxis->SetTitleColor(fM->fFontColor);
-   fZAxis->SetNdivisions(fM->fNZSteps*100 + 10);
-   fZAxis->SetLimits(0, fDataMax);
-   fZAxis->SetTitle(fM->GetPlotEt() ? "Et[GeV]" : "E[GeV]");
+   if (fM->fData->Empty() == kFALSE)
+   {
+      fZAxis->SetAxisColor(fM->fGridColor);
+      fZAxis->SetLabelColor(fM->fFontColor);
+      fZAxis->SetTitleColor(fM->fFontColor);
+      fZAxis->SetNdivisions(fM->fNZSteps*100 + 10);
+      fZAxis->SetLimits(0, fDataMax);
+      fZAxis->SetTitle(fM->GetPlotEt() ? "Et[GeV]" : "E[GeV]");
 
-   fAxisPainter.SetTMNDim(1);
-   fAxisPainter.RefDir().Set(0., 0., 1.);
-   fAxisPainter.SetLabelAlign(TGLFont::kRight);
-   glPushMatrix();
-   glTranslatef(fZAxisTitlePos.fX, fZAxisTitlePos.fY, 0);
-
-   // tickmark vector = 10 pixels left
-   TGLVertex3 worldRef(0, 0, fZAxisTitlePos.fZ);
-   fAxisPainter.RefTMOff(0) = rnrCtx.RefCamera().ViewportDeltaToWorld(worldRef, -10, 0, &mm);
-   fAxisPainter.RefTitlePos().Set(fAxisPainter.RefTMOff(0).X(),  fAxisPainter.RefTMOff(0).Y(), fZAxisTitlePos.fZ);
-   fAxisPainter.PaintAxis(rnrCtx, fZAxis);
-   glTranslated( fAxisPainter.RefTMOff(0).X(),  fAxisPainter.RefTMOff(0).Y(),  fAxisPainter.RefTMOff(0).Z());
-   glPopMatrix();
-
-   // repaint axis if tower dobule-clicked
-   if (fM->fTowerPicked >= 0) {
-      TEveCaloData::CellData_t cd;
-      fM->fData->GetCellData(fM->fCellList[fM->fTowerPicked], cd);
-      WrapTwoPi(cd.fPhiMin, cd.fPhiMax);
+      fAxisPainter.SetTMNDim(1);
+      fAxisPainter.RefDir().Set(0., 0., 1.);
+      fAxisPainter.SetLabelAlign(TGLFont::kRight);
       glPushMatrix();
-      glTranslatef(cd.EtaMin(), cd.PhiMin(), 0);
-      fAxisPainter.RnrLines();
-      fAxisPainter.RnrLabels();
+      glTranslatef(fZAxisTitlePos.fX, fZAxisTitlePos.fY, 0);
+
+      // tickmark vector = 10 pixels left
+      TGLVertex3 worldRef(0, 0, fZAxisTitlePos.fZ);
+      fAxisPainter.RefTMOff(0) = rnrCtx.RefCamera().ViewportDeltaToWorld(worldRef, -10, 0, &mm);
+      fAxisPainter.RefTitlePos().Set(fAxisPainter.RefTMOff(0).X(),  fAxisPainter.RefTMOff(0).Y(), fZAxisTitlePos.fZ);
+      fAxisPainter.PaintAxis(rnrCtx, fZAxis);
+      glTranslated( fAxisPainter.RefTMOff(0).X(),  fAxisPainter.RefTMOff(0).Y(),  fAxisPainter.RefTMOff(0).Z());
       glPopMatrix();
-   }
 
-   // draw box frame
-   //
-   if (fM->fBoxMode) {
-
-      glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT);
-
-      // box verticals
-      glLineWidth(1);
-      glBegin(GL_LINES);
-      TGLUtil::Color(fM->GetGridColor());
-
-      glVertex3f(fBackPlaneXConst[0].fX   ,fBackPlaneXConst[0].fY   ,0);
-      glVertex3f(fBackPlaneXConst[0].fX   ,fBackPlaneXConst[0].fY   ,fDataMax);
-      glVertex3f(fBackPlaneXConst[1].fX   ,fBackPlaneXConst[1].fY   ,0);
-      glVertex3f(fBackPlaneXConst[1].fX   ,fBackPlaneXConst[1].fY   ,fDataMax);
-
-
-      glVertex3f(fBackPlaneYConst[0].fX   ,fBackPlaneYConst[0].fY   ,0);
-      glVertex3f(fBackPlaneYConst[0].fX   ,fBackPlaneYConst[0].fY   ,fDataMax);
-      glVertex3f(fBackPlaneYConst[1].fX   ,fBackPlaneYConst[1].fY   ,0);
-      glVertex3f(fBackPlaneYConst[1].fX   ,fBackPlaneYConst[1].fY   ,fDataMax);
-
-      // box top
-      glVertex3f(fBackPlaneXConst[0].fX   ,fBackPlaneXConst[0].fY   ,fDataMax);
-      glVertex3f(fBackPlaneXConst[1].fX   ,fBackPlaneXConst[1].fY   ,fDataMax);
-      glVertex3f(fBackPlaneYConst[0].fX   ,fBackPlaneYConst[0].fY   ,fDataMax);
-      glVertex3f(fBackPlaneYConst[1].fX   ,fBackPlaneYConst[1].fY   ,fDataMax);
-
-      glEnd();
-
-      // box horizontals stippled
-      glEnable(GL_LINE_STIPPLE);
-      Int_t ondiv;
-      Double_t omin, omax, bw1;
-      THLimitsFinder::Optimize(0, fDataMax, fM->fNZSteps, omin, omax, ondiv, bw1);
-
-      glLineStipple(1, 0x5555);
-      glBegin(GL_LINES);
-      Float_t hz  = bw1;
-      for (Int_t i = 1; i <= ondiv; ++i, hz += bw1) {
-         glVertex3f(fBackPlaneXConst[0].fX   ,fBackPlaneXConst[0].fY   ,hz);
-         glVertex3f(fBackPlaneXConst[1].fX   ,fBackPlaneXConst[1].fY   ,hz);
-         glVertex3f(fBackPlaneYConst[0].fX   ,fBackPlaneYConst[0].fY   ,hz);
-         glVertex3f(fBackPlaneYConst[1].fX   ,fBackPlaneYConst[1].fY   ,hz);
+      // repaint axis if tower dobule-clicked
+      if (fM->fTowerPicked >= 0) {
+         TEveCaloData::CellData_t cd;
+         fM->fData->GetCellData(fM->fCellList[fM->fTowerPicked], cd);
+         WrapTwoPi(cd.fPhiMin, cd.fPhiMax);
+         glPushMatrix();
+         glTranslatef(cd.EtaMin(), cd.PhiMin(), 0);
+         fAxisPainter.RnrLines();
+         fAxisPainter.RnrLabels();
+         glPopMatrix();
       }
-      glEnd();
 
-      glPopAttrib();
+      // draw box frame
+      //
+      if (fM->fBoxMode) {
+
+         glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT);
+
+         // box verticals
+         glLineWidth(1);
+         glBegin(GL_LINES);
+         TGLUtil::Color(fM->GetGridColor());
+
+         glVertex3f(fBackPlaneXConst[0].fX   ,fBackPlaneXConst[0].fY   ,0);
+         glVertex3f(fBackPlaneXConst[0].fX   ,fBackPlaneXConst[0].fY   ,fDataMax);
+         glVertex3f(fBackPlaneXConst[1].fX   ,fBackPlaneXConst[1].fY   ,0);
+         glVertex3f(fBackPlaneXConst[1].fX   ,fBackPlaneXConst[1].fY   ,fDataMax);
+
+
+         glVertex3f(fBackPlaneYConst[0].fX   ,fBackPlaneYConst[0].fY   ,0);
+         glVertex3f(fBackPlaneYConst[0].fX   ,fBackPlaneYConst[0].fY   ,fDataMax);
+         glVertex3f(fBackPlaneYConst[1].fX   ,fBackPlaneYConst[1].fY   ,0);
+         glVertex3f(fBackPlaneYConst[1].fX   ,fBackPlaneYConst[1].fY   ,fDataMax);
+
+         // box top
+         glVertex3f(fBackPlaneXConst[0].fX   ,fBackPlaneXConst[0].fY   ,fDataMax);
+         glVertex3f(fBackPlaneXConst[1].fX   ,fBackPlaneXConst[1].fY   ,fDataMax);
+         glVertex3f(fBackPlaneYConst[0].fX   ,fBackPlaneYConst[0].fY   ,fDataMax);
+         glVertex3f(fBackPlaneYConst[1].fX   ,fBackPlaneYConst[1].fY   ,fDataMax);
+
+         glEnd();
+
+         // box horizontals stippled
+         glEnable(GL_LINE_STIPPLE);
+         Int_t ondiv;
+         Double_t omin, omax, bw1;
+         THLimitsFinder::Optimize(0, fDataMax, fM->fNZSteps, omin, omax, ondiv, bw1);
+
+         glLineStipple(1, 0x5555);
+         glBegin(GL_LINES);
+         Float_t hz  = bw1;
+         for (Int_t i = 1; i <= ondiv; ++i, hz += bw1) {
+            glVertex3f(fBackPlaneXConst[0].fX   ,fBackPlaneXConst[0].fY   ,hz);
+            glVertex3f(fBackPlaneXConst[1].fX   ,fBackPlaneXConst[1].fY   ,hz);
+            glVertex3f(fBackPlaneYConst[0].fX   ,fBackPlaneYConst[0].fY   ,hz);
+            glVertex3f(fBackPlaneYConst[1].fX   ,fBackPlaneYConst[1].fY   ,hz);
+         }
+         glEnd();
+
+         glPopAttrib();
+      }
    }
 
    // XY Axis
