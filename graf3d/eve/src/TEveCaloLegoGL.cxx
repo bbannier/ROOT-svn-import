@@ -446,7 +446,7 @@ void TEveCaloLegoGL::DrawAxis3D(TGLRnrCtx & rnrCtx) const
    fZAxis->SetTitleColor(fM->fFontColor);
    fZAxis->SetNdivisions(fM->fNZSteps*100 + 10);
    fZAxis->SetLimits(0, fDataMax);
-   const char* titleZ = fM->GetPlotEt() ? "Et[GeV]" : "E[GeV]";
+   fZAxis->SetTitle(fM->GetPlotEt() ? "Et[GeV]" : "E[GeV]");
 
    fAxisPainter.SetTMNDim(1);
    fAxisPainter.RefDir().Set(0., 0., 1.);
@@ -457,12 +457,9 @@ void TEveCaloLegoGL::DrawAxis3D(TGLRnrCtx & rnrCtx) const
    // tickmark vector = 10 pixels left
    TGLVertex3 worldRef(0, 0, fZAxisTitlePos.fZ);
    fAxisPainter.RefTMOff(0) = rnrCtx.RefCamera().ViewportDeltaToWorld(worldRef, -10, 0, &mm);
-
-
-
+   fAxisPainter.RefTitlePos().Set(fAxisPainter.RefTMOff(0).X(),  fAxisPainter.RefTMOff(0).Y(), fZAxisTitlePos.fZ);
    fAxisPainter.PaintAxis(rnrCtx, fZAxis);
    glTranslated( fAxisPainter.RefTMOff(0).X(),  fAxisPainter.RefTMOff(0).Y(),  fAxisPainter.RefTMOff(0).Z());
-   fAxisPainter.RnrTitle(titleZ, fZAxisTitlePos.fZ, TGLFont::kRight);
    glPopMatrix();
 
    // repaint axis if tower dobule-clicked
@@ -556,9 +553,11 @@ void TEveCaloLegoGL::DrawAxis3D(TGLRnrCtx & rnrCtx) const
    glTranslatef(0, fXAxisTitlePos.fY, 0);
    ax.SetNdivisions(710);
    ax.SetLimits(fM->GetEtaMin(), fM->GetEtaMax());
+   ax.SetTitle(fM->GetData()->GetEtaBins()->GetTitle());
+   fAxisPainter.RefTitlePos().Set(fXAxisTitlePos.fX, yOff*1.5*ax.GetTickLength(), -fDataMax*ax.GetTickLength());
    fAxisPainter.PaintAxis(rnrCtx, &ax);
    glTranslatef(0, yOff*1.5*ax.GetTickLength(), -fDataMax*ax.GetTickLength());
-   fAxisPainter.RnrTitle(fM->GetData()->GetEtaBins()->GetTitle(), fXAxisTitlePos.fX, TGLFont::kCenterUp);
+   //   fAxisPainter.RnrTitle(fM->GetData()->GetEtaBins()->GetTitle(), fXAxisTitlePos.fX, TGLFont::kCenterUp);
    glPopMatrix();
 
    // phi
@@ -566,11 +565,13 @@ void TEveCaloLegoGL::DrawAxis3D(TGLRnrCtx & rnrCtx) const
    fAxisPainter.RefTMOff(0).Set(xOff, 0, 0);
    ax.SetNdivisions(510);
    ax.SetLimits(fM->GetPhiMin(), fM->GetPhiMax());
+   ax.SetTitle(fM->GetData()->GetPhiBins()->GetTitle());
    glPushMatrix();
    glTranslatef(fYAxisTitlePos.fX, 0, 0);
+   fAxisPainter.RefTitlePos().Set( xOff*1.5*ax.GetTickLength(), fYAxisTitlePos.fY,  -fDataMax*ax.GetTickLength());
    fAxisPainter.PaintAxis(rnrCtx, &ax);
    glTranslatef(xOff*1.5*ax.GetTickLength(), 0,  -fDataMax*ax.GetTickLength());
-   fAxisPainter.RnrTitle(fM->GetData()->GetPhiBins()->GetTitle(), fYAxisTitlePos.fY, TGLFont::kCenterUp);
+   //fAxisPainter.RnrTitle(fM->GetData()->GetPhiBins()->GetTitle(), fYAxisTitlePos.fY, TGLFont::kCenterUp);
    glPopMatrix();
 
 } // DrawAxis3D
@@ -612,6 +613,8 @@ void TEveCaloLegoGL::DrawAxis2D(TGLRnrCtx & rnrCtx) const
    // eta
    ax.SetNdivisions(710);
    ax.SetLimits(fM->GetEtaMin(), fM->GetEtaMax());
+   ax.SetTitle(fM->GetData()->GetEtaBins()->GetTitle());
+   fAxisPainter.RefTitlePos().Set(fM->GetEtaMax(), -fM->GetPhiRng()*(ax.GetTickLength()+ ax.GetLabelOffset()), 0 );
    fAxisPainter.RefDir().Set(1, 0, 0);
    fAxisPainter.RefTMOff(0).Set(0,  -fM->GetPhiRng(), 0);
    fAxisPainter.SetLabelAlign(TGLFont::kCenterUp);
@@ -619,14 +622,13 @@ void TEveCaloLegoGL::DrawAxis2D(TGLRnrCtx & rnrCtx) const
    glPushMatrix();
    glTranslatef(0, fM->GetPhiMin(), 0);
    fAxisPainter.PaintAxis(rnrCtx, &ax);
-
-   glTranslatef(0, -fM->GetPhiRng()*(ax.GetTickLength()+ ax.GetLabelOffset()), 0);
-   fAxisPainter.RnrTitle(fM->GetData()->GetEtaBins()->GetTitle(), fM->GetEtaMax(), TGLFont::kCenterUp);
    glPopMatrix();
 
    // phi
    ax.SetNdivisions(510);
    ax.SetLimits(fM->GetPhiMin(), fM->GetPhiMax());
+   ax.SetTitle(fM->GetData()->GetPhiBins()->GetTitle());  
+   fAxisPainter.RefTitlePos().Set(-fM->GetEtaRng()*(ax.GetTickLength()+ ax.GetLabelOffset()), fM->GetPhiMax(), 0);
    fAxisPainter.RefDir().Set(0, 1, 0);
    fAxisPainter.RefTMOff(0).Set(-fM->GetEtaRng(), 0, 0);
    fAxisPainter.SetLabelAlign(TGLFont::kRight);
@@ -634,8 +636,6 @@ void TEveCaloLegoGL::DrawAxis2D(TGLRnrCtx & rnrCtx) const
    glPushMatrix();
    glTranslatef(fM->GetEtaMin(), 0, 0);
    fAxisPainter.PaintAxis(rnrCtx, &ax);
-   glTranslatef(-fM->GetEtaRng()*(ax.GetTickLength()+ ax.GetLabelOffset()), 0, 0);
-   fAxisPainter.RnrTitle(fM->GetData()->GetPhiBins()->GetTitle(), fM->GetPhiMax(), TGLFont::kRight);
    glPopMatrix();
 }
 
