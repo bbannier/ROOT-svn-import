@@ -43,7 +43,7 @@ private:
 
    // Print format.
    void LabelsLimits(const char *label, Int_t &first, Int_t &last) const;
-   void FormAxisValue(Float_t x, char* lab) const;
+   void FormAxisValue(Double_t x, TString &s) const;
 
 protected:
    TAttAxis        *fAttAxis;    // Model.
