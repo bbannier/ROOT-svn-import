@@ -22,7 +22,7 @@
 #include "THLimitsFinder.h"
 
 #include "TMath.h"
-
+#include "TPRegexp.h"
 
 //______________________________________________________________________________
 //
@@ -72,58 +72,30 @@ void TGLAxisPainter::LabelsLimits(const char *label, Int_t &first, Int_t &last) 
 }
 
 //______________________________________________________________________________
-void TGLAxisPainter::FormAxisValue(Float_t wlabel, char* label) const
+void TGLAxisPainter::FormAxisValue(Double_t  val, TString &s) const
 {
    // Returns formatted text suitable for display of value.
 
-   sprintf(label, &fFormat[0], wlabel);
-   Int_t first, last;
-   LabelsLimits(label, first, last);
+   static char label[256];
 
-   char chtemp[256];
-   if (label[first] == '.') { //check if '.' is preceeded by a digit
-      strcpy(chtemp, "0");
-      strcat(chtemp, &label[first]);
-      strcpy(label, chtemp);
-      first = 1;
-      last = strlen(label);
-   }
-   if (label[first] == '-' && label[first+1] == '.') {
-      strcpy(chtemp, "-0");
-      strcat(chtemp, &label[first+1]);
-      strcpy(label, chtemp);
-      first = 1;
-      last = strlen(label);
+   sprintf(label, &fFormat[0], val);
+   s =  label;
+
+   if (s == "-." || s == "-0")
+   {
+      s  = "0";
+      return;
    }
 
-   //  We eliminate the non significant 0 after '.'
-   if (fDecimals) {
-      char *adot = strchr(label, '.');
-      if (adot) adot[fDecimals] = 0;
-   } else {
-      while (label[last] == '0') {
-         label[last] = 0;
-         last--;
-      }
-   }
-   // We eliminate the dot, unless dot is forced.
-   if (label[last] == '.') {
-      label[last] = 0;
-      last--;
-   }
+   if (s.EndsWith("."))
+      s += '0';
 
-   //  Make sure the label is not "-0"
-   if (last - first == 1 && label[first] == '-' && label[last]  == '0') {
-      strcpy(label, "0");
-      label[last] = 0;
-   }
+   Ssiz_t ld = s.Last('.');
+   if (s.Length() - ld > fDecimals)
+      s.Remove(ld + fDecimals);
 
-   // Remove white space
-   Int_t cnt;
-   for (cnt=0; cnt<last; cnt++)
-      if (label[cnt] != ' ') break;
-
-   strcpy(label, &label[cnt]);
+   TPMERegexp zeroes("[-+]?0\\.0*$");
+   zeroes.Substitute(s, "0");   
 }
 
 //______________________________________________________________________________
@@ -300,11 +272,11 @@ void TGLAxisPainter::RnrLabels() const
 
    fLabelFont.PreRender();
    Double_t p = 0.;
-   char ctmp[10];
+   TString s;
    for (LabVec_t::const_iterator it = fLabVec.begin(); it != fLabVec.end(); ++it) {
-      FormAxisValue((*it).second, &ctmp[0]);
+      FormAxisValue((*it).second, s);
       p = (*it).first;
-      RnrText(&ctmp[0], fDir*p, fLabelAlign, fLabelFont);
+      RnrText(s.Data(), fDir*p, fLabelAlign, fLabelFont);
    }
 
    fLabelFont.PostRender();
