@@ -13,10 +13,33 @@
 /*
 BEGIN_HTML
 <p>
-BernsteinCorrection is a utility in RooStats to augment a nominal PDF with a polynomial correction term.  This is useful for incorporating systematic variations to the nominal PDF.  The Bernstein basis polynomails are particularly appropriate because they are positive definite. 
+BernsteinCorrection is a utility in RooStats to augment a nominal PDF with a polynomial 
+correction term.  This is useful for incorporating systematic variations to the nominal PDF.  
+The Bernstein basis polynomails are particularly appropriate because they are positive definite. 
 </p>
 <p>
-This tool was inspired by the work of Glen Cowan together with Stephan Horner, Sasha Caron, Eilam Gross, and others.  The initial implementation is independent work.  The major step forward in the approach was to provide a well defined algorithm that specifies the order of polynomial to be included in the correction.  This is an emperical algorithm, so in addition to the nominal model it needs either a real data set or a simulated one.  The algorithm basically consists of a hypothesis test of an nth-order correction (null) against a n+1-th order correction (alternate). The quantity q = -2 log LR is used to determine whether the n+1-th order correction is a major improvement to the n-th order correction.  The distribution of q is expected to be roughly \chi^2 with one degree of freedom if the n-th order correction is a good model for the data.  Thus, one only moves to the n+1-th order correction of q is relatively large.  The chance that one moves from the n-th to the n+1-th order correction when the n-th order correction (eg. a type 1 error) is sufficient is given by the Prob(\chi^2_1 > threshold).  The constructor of this class allows you to directly set this tolerance (in terms of probability that the n+1-th term is added unnecessarily).
+This tool was inspired by the work of Glen Cowan together with Stephan Horner, Sasha Caron, Eilam Gross, and others.  
+The initial implementation is independent work.  The major step forward in the approach was 
+to provide a well defined algorithm that specifies the order of polynomial to be included 
+in the correction.  This is an emperical algorithm, so in addition to the nominal model it 
+needs either a real data set or a simulated one.  The algorithm basically consists of a 
+hypothesis test of an nth-order correction (null) against a n+1-th order correction (alternate). 
+The quantity q = -2 log LR is used to determine whether the n+1-th order correction is a major 
+improvement to the n-th order correction.  The distribution of q is expected to be roughly 
+\chi^2 with one degree of freedom if the n-th order correction is a good model for the data. 
+ Thus, one only moves to the n+1-th order correction of q is relatively large.  The chance that 
+one moves from the n-th to the n+1-th order correction when the n-th order correction 
+(eg. a type 1 error) is sufficient is given by the Prob(\chi^2_1 > threshold).  The constructor 
+of this class allows you to directly set this tolerance (in terms of probability that the n+1-th
+ term is added unnecessarily).
+</p>
+<p>
+To do:
+Add another method to the utility that will make the sampling distribution for -2 log lambda 
+for various m vs. m+1 order corrections using a nominal model and perhaps having two ways of 
+generating the toys (either via a histogram or via an independent model that is supposed to
+ reflect reality).  That will allow one to make plots like Glen has at the end of his DRAFT
+ very easily. 
 </p>
 END_HTML
 */
