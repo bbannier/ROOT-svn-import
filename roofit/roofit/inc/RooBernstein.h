@@ -3,10 +3,8 @@
  * Package: RooFitModels                                                     *
  *    File: $Id$
  * Authors:                                                                  *
- *   GR, Gerhard Raven,   UC San Diego, Gerhard.Raven@slac.stanford.edu
+ *   Kyle Cranmer
  *                                                                           *
- * Copyright (c) 2000-2005, Regents of the University of California          *
- *                          and Stanford University. All rights reserved.    *
  *                                                                           *
  * Redistribution and use in source and binary forms,                        *
  * with or without modification, are permitted according to the terms        *
