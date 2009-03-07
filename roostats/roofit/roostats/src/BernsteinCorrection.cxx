@@ -86,22 +86,33 @@ Int_t BernsteinCorrection::ImportCorrectedPdf(RooWorkspace* wks,
 					      const char* nominalName, 
 					      const char* varName, 
 					      const char* dataName){
-  
+  // Main method for Bernstein correction.
+
+  // get ingredients out of workspace
   RooRealVar* x = wks->var(varName);
   RooAbsPdf* nominal = wks->pdf(nominalName);
   RooAbsData* data = wks->data(dataName);
 
+  // initialize alg, by checking how well nominal model fits
   RooFitResult* nominalResult = nominal->fitTo(*data,Save());
   Double_t lastNll= nominalResult->minNll();
-  cout << "first nll = " << lastNll << endl;
- 
+
+  // setup a log
+  std::stringstream log;
+  log << "------ Begin Bernstein Correction Log --------" << endl;
+
+  // Local variables that we want to keep in scope after loop
   RooArgList coeff;
   vector<RooRealVar*> coefficients;
   Double_t q = 1E6;
   Int_t degree = -1;
+
+  // The while loop
   bool keepGoing = true;
   while( keepGoing) {
     degree++;
+
+    // we need to generate names for vars on the fly
     std::stringstream str;
     str<<"_"<<degree;
 
@@ -111,30 +122,53 @@ Int_t BernsteinCorrection::ImportCorrectedPdf(RooWorkspace* wks,
     coeff.add(*newCoef);
     coefficients.push_back(newCoef);
 
+    // make the polynomial correction term
     RooBernstein* poly = new RooBernstein("poly", "Bernstein poly", *x, coeff);
 
+    // make the corrected PDF = nominal * poly
     RooProdPdf* corrected = new RooProdPdf("corrected","",RooArgList(*nominal,*poly));
 
-    RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
+    // check to see how well this correction fits
     RooFitResult* result = corrected->fitTo(*data,Save(),Minos(kFALSE), Hesse(kFALSE),PrintLevel(-1));
-    RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
 
+
+    // Hypothesis test between previous correction (null)
+    // and this one (alternate).  Use -2 log LR for test statistic
     q = 2*(lastNll - result->minNll()); // -2 log lambda, goes like significance^2
-    // check if we should keep going
+    // check if we should keep going based on rate of Type I error
     keepGoing = (degree < 1 || TMath::Prob(q,1) < fTolerance);
+
     if(!keepGoing){
+      // terminate loop, import corrected PDF
+      RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
       wks->import(*corrected);
-      //wks->Print();
-    } else { // memory management
+      RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+    } else { 
+      // memory management
       delete corrected;
       delete poly;
     }
-    //    cout << "\n\ndegree = " << degree << " last nll = " << lastNll << " this nll = " 
-    // << result->minNll() << " gof = " << q << endl;;
+
+    // for the log
+    if(degree == 0){
+      log << "degree = " << degree << 
+	" -log Lnom = " << lastNll ;
+    } else {
+      log << "degree = " << degree << 
+	" -log L("<<degree-1<<") = " << lastNll ;
+    }
+    log << " -log L(" << degree <<") = " << result->minNll() 
+	<< " q = " << q 
+	<< " P(chi^2_1 > q) = " << TMath::Prob(q,1) << endl;;
+
+    // update last result for next iteration in loop
     lastNll = result->minNll();
 
     delete result;
   }
+
+  log << "------ End Bernstein Correction Log --------" << endl;
+  cout << log.str();
 
   return degree;
 }
