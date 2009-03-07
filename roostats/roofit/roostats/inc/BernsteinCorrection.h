@@ -16,6 +16,7 @@
 #include "Rtypes.h"
 #endif
 
+#include "TH1F.h"
 #include "RooWorkspace.h"
 
 namespace RooStats {
@@ -28,6 +29,13 @@ namespace RooStats {
 
     Int_t ImportCorrectedPdf(RooWorkspace*, const char*,const char*,const char*);
     void SetMaxCorrection(Double_t maxCorr){fMaxCorrection = maxCorr;}
+    void CreateQSamplingDist(RooWorkspace* wks, 
+			      const char* nominalName, 
+			      const char* varName, 
+			      const char* dataName,
+			      TH1F*, TH1F*,
+			      Int_t degree, 
+			      Int_t nToys=500);
 
   private:
     Double_t fMaxCorrection; // maximum correction factor at any point

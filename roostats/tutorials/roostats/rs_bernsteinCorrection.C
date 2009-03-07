@@ -93,6 +93,34 @@ void rs_bernsteinCorrection(){
   RooAbsPdf* corrected = wks->pdf("corrected");  
   corrected->fitTo(*data,PrintLevel(-1));
   corrected->plotOn(frame,LineColor(kRed));
+  
+  // this is a switch to check the sampling distribution
+  // of -2 log LR for two comparisons:
+  // the first is for n-1 vs. n degree polynomial corrections
+  // the second is for n vs. n+1 degree polynomial corrections
+  // Here we choose n to be the one chosen by the tolerance
+  // critereon above, eg. n = "degree" in the code.
+  // Setting this to true is takes about 10 min.
+  bool checkSamplingDist = false;
+
+  TCanvas* c1 = new TCanvas();
+  if(checkSamplingDist) {
+    c1->Divide(1,2);
+    c1->cd(1);
+  }
   frame->Draw();
+
+  if(checkSamplingDist) {
+    // check sampling dist
+    TH1F* samplingDist = new TH1F("samplingDist","",20,0,10);
+    TH1F* samplingDistExtra = new TH1F("samplingDistExtra","",20,0,10);
+    int numToyMC = 100;
+    bernsteinCorrection.CreateQSamplingDist(wks,"nominal","x","data",samplingDist, samplingDistExtra, degree,numToyMC);
+    
+    c1->cd(2);
+    samplingDistExtra->SetLineColor(kRed);
+    samplingDistExtra->Draw();
+    samplingDist->Draw("same");
+  }
 }
 
