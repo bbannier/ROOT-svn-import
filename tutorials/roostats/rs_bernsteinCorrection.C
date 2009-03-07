@@ -83,15 +83,15 @@ void rs_bernsteinCorrection(){
   BernsteinCorrection bernsteinCorrection(tolerance);
   Int_t degree = bernsteinCorrection.ImportCorrectedPdf(wks,"nominal","x","data");
 
-  cout << " degree = " << degree << endl;
+  cout << " Correction based on Bernstein Poly of degree " << degree << endl;
 
   RooPlot* frame = x.frame();
   data->plotOn(frame);
-  nominal.fitTo(*data);
+  nominal.fitTo(*data,PrintLevel(-1));
   nominal.plotOn(frame);
 
   RooAbsPdf* corrected = wks->pdf("corrected");  
-  corrected->fitTo(*data);
+  corrected->fitTo(*data,PrintLevel(-1));
   corrected->plotOn(frame,LineColor(kRed));
   frame->Draw();
 }

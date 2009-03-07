@@ -7,6 +7,7 @@
 #pragma link C++ class RooBCPEffDecay+ ;
 #pragma link C++ class RooBCPGenDecay+ ;
 #pragma link C++ class RooBDecay+ ;
+#pragma link C++ class RooBernstein+ ;
 #pragma link C++ class RooBlindTools+ ;
 #pragma link C++ class RooBifurGauss+ ;
 #pragma link C++ class RooBMixDecay+ ;
