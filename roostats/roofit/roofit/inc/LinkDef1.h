@@ -37,7 +37,6 @@
 #pragma link C++ class RooChi2MCSModule+ ;
 #pragma link C++ class RooTFnBinding+ ;
 #pragma link C++ class RooTFnPdfBinding+ ;
-#pragma link C++ class RooBernstein+ ;
 //
 #pragma link C++ class RooCFunction1Binding<Double_t,Double_t>+ ;
 #pragma link C++ class RooCFunction1PdfBinding<Double_t,Double_t>+ ;
