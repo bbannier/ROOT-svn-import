@@ -79,7 +79,10 @@ void rs_bernsteinCorrection(){
   wks->import(*data, RenameDataset("data"));
   wks->import(nominal);
 
-  Double_t tolerance = 0.05; // probability to add an unecessary term
+  // The tolerance sets the probability to add an unecessary term.
+  // lower tolerance will add fewer terms, while higher tolerance
+  // will add more terms and provide a more flexible function.
+  Double_t tolerance = 0.05; 
   BernsteinCorrection bernsteinCorrection(tolerance);
   Int_t degree = bernsteinCorrection.ImportCorrectedPdf(wks,"nominal","x","data");
 
