@@ -66,6 +66,8 @@ END_HTML
 #include "RooProdPdf.h"
 #include "RooNLLVar.h"
 #include "RooWorkspace.h"
+#include "RooDataHist.h"
+#include "RooHistPdf.h"
 
 #include "RooBernstein.h"
 
@@ -171,4 +173,120 @@ Int_t BernsteinCorrection::ImportCorrectedPdf(RooWorkspace* wks,
   cout << log.str();
 
   return degree;
+}
+
+
+//____________________________________
+void BernsteinCorrection::CreateQSamplingDist(RooWorkspace* wks, 
+					       const char* nominalName, 
+					       const char* varName, 
+					       const char* dataName,
+					      TH1F* samplingDist,
+					      TH1F* samplingDistExtra,
+					       Int_t degree, 
+					       Int_t nToys){
+  // Create sampling distribution for q given degree-1 vs. degree corrections
+
+  // get ingredients out of workspace
+  RooRealVar* x = wks->var(varName);
+  RooAbsPdf* nominal = wks->pdf(nominalName);
+  RooAbsData* data = wks->data(dataName);
+
+  // setup a log
+  std::stringstream log;
+  log << "------ Begin Bernstein Correction Log --------" << endl;
+
+  // Local variables that we want to keep in scope after loop
+  RooArgList coeff; // n-th degree correction
+  RooArgList coeffNull; // n-1 correction
+  RooArgList coeffExtra; // n+1 correction
+  vector<RooRealVar*> coefficients;
+
+  cout << "make coefs" << endl;
+  for(int i = 0; i<=degree+1; ++i) {
+    // we need to generate names for vars on the fly
+    std::stringstream str;
+    str<<"_"<<i;
+
+    RooRealVar* newCoef = new RooRealVar(("c"+str.str()).c_str(),
+			"Bernstein basis poly coefficient", 
+			1., 0., fMaxCorrection);
+    
+    // keep three sets of coefficients for n-1, n, n+1 corrections
+    if(i<degree)  coeffNull.add(*newCoef); 
+    if(i<=degree) coeff.add(*newCoef); 
+    coeffExtra.add(*newCoef);
+    coefficients.push_back(newCoef);
+  }
+
+  coeffNull.Print();
+  coeff.Print();
+  // make the polynomial correction term
+  RooBernstein* poly 
+    = new RooBernstein("poly", "Bernstein poly", *x, coeff);
+
+  // make the polynomial correction term
+  RooBernstein* polyNull 
+    = new RooBernstein("polyNull", "Bernstein poly", *x, coeffNull);
+
+  // make the polynomial correction term
+  RooBernstein* polyExtra 
+    = new RooBernstein("polyExtra", "Bernstein poly", *x, coeffExtra);
+
+  // make the corrected PDF = nominal * poly
+  RooProdPdf* corrected 
+    = new RooProdPdf("corrected","",RooArgList(*nominal,*poly));
+
+  RooProdPdf* correctedNull
+    = new RooProdPdf("correctedNull","",RooArgList(*nominal,*polyNull));
+
+  RooProdPdf* correctedExtra
+    = new RooProdPdf("correctedExtra","",RooArgList(*nominal,*polyExtra));
+
+
+  cout << "made pdfs, make toy generator" << endl;
+
+  // makde a pDF to generate the toys
+  RooDataHist dataHist("dataHist","",*x,*data);
+  RooHistPdf toyGen("toyGen","",*x,dataHist);
+
+
+  //  TH1F* samplingDist = new TH1F("samplingDist","",20,0,10);
+  Double_t q = 0, qExtra = 0;
+  // do toys
+  for(int i=0; i<nToys; ++i){
+    cout << "on toy " << i << endl;
+    RooDataSet* tmpData = toyGen.generate(*x,data->numEntries());
+    // check to see how well this correction fits
+    RooFitResult* result 
+      = corrected->fitTo(*tmpData,Save(),Minos(kFALSE), 
+			 Hesse(kFALSE),PrintLevel(-1));
+
+    RooFitResult* resultNull 
+      = correctedNull->fitTo(*tmpData,Save(),Minos(kFALSE), 
+			 Hesse(kFALSE),PrintLevel(-1));
+
+
+    RooFitResult* resultExtra
+      = correctedExtra->fitTo(*tmpData,Save(),Minos(kFALSE), 
+			 Hesse(kFALSE),PrintLevel(-1));
+
+
+    // Hypothesis test between previous correction (null)
+    // and this one (alternate).  Use -2 log LR for test statistic
+    q = 2*(resultNull->minNll() - result->minNll()); 
+
+    qExtra = 2*(result->minNll() - resultExtra->minNll()); 
+
+    samplingDist->Fill(q);
+    samplingDistExtra->Fill(qExtra);
+    cout << resultNull->minNll() << " " << result->minNll() << " " << q << endl;
+    
+    delete tmpData;
+    delete result;
+    delete resultNull;
+    delete resultExtra;
+  }
+
+  //  return samplingDist;
 }
