@@ -947,6 +947,14 @@ Int_t TProof::AddWorkers(TList *workerList)
    inc.ReplaceAll("\"", " ");
    AddIncludePath(inc, addedWorkers);
 
+   // if the session is currently processing, then update the packetizer
+   if (fPlayer)
+      if (TVirtualPacketizer *packetizer = fPlayer->GetPacketizer()) {
+         nxsl.Reset();
+         while ((sl = (TSlave *) nxsl()))
+            packetizer->AddWorker(sl);
+      }
+
    // Cleanup
    delete addedWorkers;
 
