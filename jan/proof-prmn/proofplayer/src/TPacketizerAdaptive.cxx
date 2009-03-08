@@ -542,7 +542,7 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
    if (!fValid) return;
 
    // apply global range (first,num) to dset and rebuild structure
-   // ommitting TDSet elements that are not needed
+   // omitting TDSet elements that are not needed
 
    Int_t files = 0;
    fTotalEntries = 0;
@@ -840,7 +840,7 @@ void TPacketizerAdaptive::RemoveActiveNode(TFileNode *node)
 //______________________________________________________________________________
 void TPacketizerAdaptive::Reset()
 {
-   // Reset the internal datastructure for packet distribution.
+   // Reset the internal data structure for packet distribution.
 
    fUnAllocated->Clear();
    fUnAllocated->AddAll(fFileNodes);
@@ -1549,6 +1549,27 @@ Int_t TPacketizerAdaptive::GetEstEntriesProcessed(Float_t t, Long64_t &ent,
    bytes = (bytes > 0) ? bytes : fProgressStatus->GetBytesRead();
 
    // Done
+   return 0;
+}
+
+//______________________________________________________________________________
+Int_t TPacketizerAdaptive::AddWorker(TSlave *slave)
+{
+   // Add a worker during processing.
+   // It means creating a new TSlaveStat and make a connection to TFileNode
+
+   TSlaveStat *slstat = new TSlaveStat(slave);
+   fSlaveStats->Add(slave, slstat);
+   // the PerfIdxs can be removed as the adaptive packetizer does not use them
+   fMaxPerfIdx = slave->GetPerfIdx() > fMaxPerfIdx ?
+      slave->GetPerfIdx() : fMaxPerfIdx;
+
+   TFileNode* fn = (TFileNode*) fFileNodes->FindObject(slstat->GetName());
+   if (fn != 0 && fn->GetEventsLeftPerSlave()) {
+      slstat->SetFileNode(fn);
+      fn->IncMySlaveCnt();
+   }
+
    return 0;
 }
 

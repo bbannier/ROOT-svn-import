@@ -119,6 +119,7 @@ public:
    Double_t      GetCumProcTime() const { return fProgressStatus->GetProcTime(); }
    Float_t       GetInitTime() const { return fInitTime; }
    Float_t       GetProcTime() const { return fProcTime; }
+   virtual Int_t AddWorker(TSlave */*s*/) { return -1; }  //Add during processing
    virtual void  MarkBad(TSlave * /*s*/, TProofProgressStatus * /*status*/, TList ** /*missingFiles*/) { return; }
    virtual Int_t AddProcessed(TSlave * /*sl*/, TProofProgressStatus * /*st*/,
                     Double_t /*lat*/, TList ** /*missingFiles*/) { return 0; }
