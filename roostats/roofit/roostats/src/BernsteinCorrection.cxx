@@ -18,11 +18,14 @@ correction term.  This is useful for incorporating systematic variations to the 
 The Bernstein basis polynomails are particularly appropriate because they are positive definite. 
 </p>
 <p>
-This tool was inspired by the work of Glen Cowan together with Stephan Horner, Sasha Caron, Eilam Gross, and others.  
+This tool was inspired by the work of Glen Cowan together with Stephan Horner, Sascha Caron, 
+Eilam Gross, and others.  
 The initial implementation is independent work.  The major step forward in the approach was 
 to provide a well defined algorithm that specifies the order of polynomial to be included 
 in the correction.  This is an emperical algorithm, so in addition to the nominal model it 
-needs either a real data set or a simulated one.  The algorithm basically consists of a 
+needs either a real data set or a simulated one.  In the early work, the nominal model was taken
+to be a histogram from Monte Carlo simulations, but in this implementation it is generalized to an
+arbitrary PDF (which includes a RooHistPdf).  The algorithm basically consists of a 
 hypothesis test of an nth-order correction (null) against a n+1-th order correction (alternate). 
 The quantity q = -2 log LR is used to determine whether the n+1-th order correction is a major 
 improvement to the n-th order correction.  The distribution of q is expected to be roughly 
@@ -96,7 +99,7 @@ Int_t BernsteinCorrection::ImportCorrectedPdf(RooWorkspace* wks,
   RooAbsData* data = wks->data(dataName);
 
   // initialize alg, by checking how well nominal model fits
-  RooFitResult* nominalResult = nominal->fitTo(*data,Save());
+  RooFitResult* nominalResult = nominal->fitTo(*data,Save(),Minos(kFALSE), Hesse(kFALSE),PrintLevel(-1));
   Double_t lastNll= nominalResult->minNll();
 
   // setup a log
@@ -152,16 +155,13 @@ Int_t BernsteinCorrection::ImportCorrectedPdf(RooWorkspace* wks,
     }
 
     // for the log
-    if(degree == 0){
-      log << "degree = " << degree << 
-	" -log Lnom = " << lastNll ;
-    } else {
-      log << "degree = " << degree << 
-	" -log L("<<degree-1<<") = " << lastNll ;
+    if(degree != 0){
+      log << "degree = " << degree 
+	  << " -log L("<<degree-1<<") = " << lastNll 
+	  << " -log L(" << degree <<") = " << result->minNll() 
+	  << " q = " << q 
+	  << " P(chi^2_1 > q) = " << TMath::Prob(q,1) << endl;;
     }
-    log << " -log L(" << degree <<") = " << result->minNll() 
-	<< " q = " << q 
-	<< " P(chi^2_1 > q) = " << TMath::Prob(q,1) << endl;;
 
     // update last result for next iteration in loop
     lastNll = result->minNll();
