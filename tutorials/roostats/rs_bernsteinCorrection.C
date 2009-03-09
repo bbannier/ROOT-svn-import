@@ -90,12 +90,19 @@ void rs_bernsteinCorrection(){
 
   RooPlot* frame = x.frame();
   data->plotOn(frame);
+  // plot the best fit nominal model in blue
   nominal.fitTo(*data,PrintLevel(-1));
   nominal.plotOn(frame);
 
+  // plot the best fit corrected model in red
   RooAbsPdf* corrected = wks->pdf("corrected");  
   corrected->fitTo(*data,PrintLevel(-1));
   corrected->plotOn(frame,LineColor(kRed));
+
+  // plot the correction term (* norm constant) in dashed green
+  // should make norm constant just be 1, not depend on binning of data
+  RooAbsPdf* poly = wks->pdf("poly");  
+  poly->plotOn(frame,LineColor(kGreen), LineStyle(kDashed));
   
   // this is a switch to check the sampling distribution
   // of -2 log LR for two comparisons:
