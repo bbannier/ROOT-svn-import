@@ -56,6 +56,9 @@ public:
 
    template <typename T>
    static void LabelsOption(T* p, Option_t *option, Option_t *ax);
+
+   template <typename T>
+   static Double_t GetBinError(T* p, Int_t bin);
 };
 
 template <typename T>
@@ -673,6 +676,93 @@ void TProfileHelper::LabelsOption(T* p, Option_t *option, Option_t *ax)
    if (errors) delete [] errors;
    if (ent)    delete [] ent;
    if (entw2)  delete [] entw2;
+}
+
+template <typename T>
+Double_t TProfileHelper::GetBinError(T* p, Int_t bin)
+{
+
+   if (p->fBuffer) p->BufferEmpty();
+
+   if (bin < 0 || bin >= p->fNcells) return 0;
+   Double_t cont = p->fArray[bin];
+   Double_t sum  = p->fBinEntries.fArray[bin];
+   Double_t err2 = p->fSumw2.fArray[bin];
+   Double_t neff = p->GetBinEffectiveEntries(bin);
+   if (sum == 0) return 0;
+   Double_t contsum = cont/sum;
+   Double_t eprim2  = TMath::Abs(err2/sum - contsum*contsum);
+   Double_t eprim   = TMath::Sqrt(eprim2);
+   Double_t test = 1;
+   if (err2 != 0 && neff < 5) test = eprim2*sum/err2;
+   //Int_t cellLimit = (p->GetDimension() == 3)?1000404:10404;
+   if (p->fgApproximate && p->fNcells <=1000404 && (test < 1.e-4 || eprim2 < 1e-6)) { //3.04
+      Double_t scont, ssum, serr2;
+      scont = ssum = serr2 = 0;
+      for (Int_t i=1;i<p->fNcells;i++) {
+         if (p->fSumw2.fArray[i] <= 0) continue; //added in 3.10/02
+         scont += p->fArray[i];
+         ssum  += p->fBinEntries.fArray[i];
+         serr2 += p->fSumw2.fArray[i];
+      }
+      Double_t scontsum = scont/ssum;
+      Double_t seprim2  = TMath::Abs(serr2/ssum - scontsum*scontsum);
+      eprim           = 2*TMath::Sqrt(seprim2);
+      sum = ssum;
+   }
+   sum = TMath::Abs(sum);
+   if (p->fErrorMode == kERRORMEAN) return eprim/TMath::Sqrt(neff);
+   else if (p->fErrorMode == kERRORSPREAD) return eprim;
+   else if (p->fErrorMode == kERRORSPREADI) {
+      if (eprim != 0) return eprim/TMath::Sqrt(neff);
+      return 1/TMath::Sqrt(12*neff);
+   }
+   else if (p->fErrorMode == kERRORSPREADG) {
+      // it is supposed the values y are gaussian distributed y +/- dy
+      return 1./TMath::Sqrt(sum);
+   }
+   else return eprim;
+
+
+//    if (p->fBuffer) p->BufferEmpty();
+
+//    if (bin < 0 || bin >= p->fNcells) return 0;
+//    Double_t cont = p->fArray[bin];
+//    Double_t sum  = p->fBinEntries.fArray[bin];
+//    Double_t err2 = p->fSumw2.fArray[bin];
+//    Double_t neff = p->GetBinEffectiveEntries(bin);
+//    if (sum == 0) return 0;
+//    Double_t eprim;
+//    Double_t contsum = cont/sum;
+//    Double_t eprim2  = TMath::Abs(err2/sum - contsum*contsum);
+//    eprim          = TMath::Sqrt(eprim2);
+//    Double_t test = 1;
+//    if (err2 != 0 && sum < 5) test = eprim2*sum/err2;
+//    //if (eprim <= 0) { //was in 3.10/01
+//    Int_t cellLimit = (p->GetDimension()==2)?10404:1000404;
+//    if (p->fgApproximate && p->fNcells <=cellLimit && (test < 1.e-4 || eprim2 < 1e-6)) { //in 3.10/02
+//       Double_t scont, ssum, serr2;
+//       scont = ssum = serr2 = 0;
+//       for (Int_t i=1;i<p->fNcells;i++) {
+//          if (p->fSumw2.fArray[i] <= 0) continue; //added in 3.10/02
+//          scont += p->fArray[i];
+//          ssum  += p->fBinEntries.fArray[i];
+//          serr2 += p->fSumw2.fArray[i];
+//       }
+//       Double_t scontsum = scont/ssum;
+//       Double_t seprim2  = TMath::Abs(serr2/ssum - scontsum*scontsum);
+//       eprim           = TMath::Sqrt(seprim2);
+//    }
+//    if (p->fErrorMode == kERRORMEAN) return eprim/TMath::Sqrt(sum);
+//    else if (p->fErrorMode == kERRORSPREAD) return eprim;
+//    else if (p->fErrorMode == kERRORSPREADI) {
+//       if (eprim != 0) return eprim/TMath::Sqrt(sum);
+//       return 1/TMath::Sqrt(12*sum);
+//    }
+//    else if (p->fErrorMode == kERRORSPREADG) {
+//       return eprim/TMath::Sqrt(sum);
+//    }
+//    else return eprim;  
 }
 
 #endif
