@@ -834,8 +834,8 @@ Double_t TProfile::GetBinEffectiveEntries(Int_t bin) const
 //______________________________________________________________________________
 Double_t TProfile::GetBinError(Int_t bin) const
 {
-//*-*-*-*-*-*-*Return bin error of a Profile histogram*-*-*-*-*-*-*-*-*-*
-//*-*          =======================================
+// *-*-*-*-*-*-*Return bin error of a Profile histogram*-*-*-*-*-*-*-*-*-*
+// *-*          =======================================
 //
 // Computing errors: A moving field
 // =================================
@@ -863,51 +863,7 @@ Double_t TProfile::GetBinError(Int_t bin) const
 // received since our call for advice to roottalk in Jul 2002.
 // see for instance: http://root.cern.ch/root/roottalk/roottalk02/2916.html
 
-   if (fBuffer) ((TProfile*)this)->BufferEmpty();
-
-   if (bin < 0 || bin >= fNcells) return 0;
-   Double_t cont = fArray[bin];
-   Double_t sum  = fBinEntries.fArray[bin];
-   Double_t err2 = fSumw2.fArray[bin];
-   Double_t neff = GetBinEffectiveEntries(bin);
-   if (sum == 0) return 0;
-   Double_t contsum = cont/sum;
-   Double_t eprim2  = TMath::Abs(err2/sum - contsum*contsum);
-   Double_t eprim   = TMath::Sqrt(eprim2);
-   Double_t test = 1;
-   if (err2 != 0 && neff < 5) test = eprim2*sum/err2;
-//printf("bin=%d, cont=%g, sum=%g, err2=%g, eprim2=%g, test=%g\n",bin,cont,sum,err2,eprim2,test);
-   //if statistics is unsufficient, take approximation.
-   // error is set to the (average error on all bins) * 2
-   //if (eprim <= 0) {   test in version 2.25/03
-   //if (test < 1.e-4) { test in version 3.01/06
-   //if (test < 1.e-4 || eprim2 < 1e-6) { test in version 3.03/09
-   if (fgApproximate && fNcells <=1002 && (test < 1.e-4 || eprim2 < 1e-6)) { //3.04
-      Double_t scont, ssum, serr2;
-      scont = ssum = serr2 = 0;
-      for (Int_t i=1;i<fNcells;i++) {
-         if (fSumw2.fArray[i] <= 0) continue; //added in 3.10/02
-         scont += fArray[i];
-         ssum  += fBinEntries.fArray[i];
-         serr2 += fSumw2.fArray[i];
-      }
-      Double_t scontsum = scont/ssum;
-      Double_t seprim2  = TMath::Abs(serr2/ssum - scontsum*scontsum);
-      eprim           = 2*TMath::Sqrt(seprim2);
-      sum = ssum;
-   }
-   sum = TMath::Abs(sum);
-   if (fErrorMode == kERRORMEAN) return eprim/TMath::Sqrt(neff);
-   else if (fErrorMode == kERRORSPREAD) return eprim;
-   else if (fErrorMode == kERRORSPREADI) {
-      if (eprim != 0) return eprim/TMath::Sqrt(neff);
-      return 1/TMath::Sqrt(12*neff);
-   }
-   else if (fErrorMode == kERRORSPREADG) {
-      // it is supposed the values y are gaussian distributed y +/- dy
-      return 1./TMath::Sqrt(sum);
-   }
-   else return eprim;
+   return TProfileHelper::GetBinError((TProfile*)this, bin);
 }
 
 //______________________________________________________________________________

@@ -847,7 +847,7 @@ Double_t TProfile2D::GetBinEffectiveEntries(Int_t bin)
 //______________________________________________________________________________
 Double_t TProfile2D::GetBinError(Int_t bin) const
 {
-//*-*-*-*-*-*-*Return bin error of a Profile2D histogram*-*-*-*-*-*-*-*-*
+// *-*-*-*-*-*-*Return bin error of a Profile2D histogram*-*-*-*-*-*-*-*-*
 //
 // Computing errors: A moving field
 // =================================
@@ -864,43 +864,7 @@ Double_t TProfile2D::GetBinError(Int_t bin) const
 //   is introduced to enable or disable (default) the approximation.
 //   (see also comments in TProfile::GetBinError)
 
-   if (fBuffer) ((TProfile2D*)this)->BufferEmpty();
-
-   if (bin < 0 || bin >= fNcells) return 0;
-   Double_t cont = fArray[bin];
-   Double_t sum  = fBinEntries.fArray[bin];
-   Double_t err2 = fSumw2.fArray[bin];
-   if (sum == 0) return 0;
-   Double_t eprim;
-   Double_t contsum = cont/sum;
-   Double_t eprim2  = TMath::Abs(err2/sum - contsum*contsum);
-   eprim          = TMath::Sqrt(eprim2);
-   Double_t test = 1;
-   if (err2 != 0 && sum < 5) test = eprim2*sum/err2;
-   //if (eprim <= 0) { //was in 3.10/01
-   if (fgApproximate && fNcells <=10404 && (test < 1.e-4 || eprim2 < 1e-6)) { //in 3.10/02
-      Double_t scont, ssum, serr2;
-      scont = ssum = serr2 = 0;
-      for (Int_t i=1;i<fNcells;i++) {
-         if (fSumw2.fArray[i] <= 0) continue; //added in 3.10/02
-         scont += fArray[i];
-         ssum  += fBinEntries.fArray[i];
-         serr2 += fSumw2.fArray[i];
-      }
-      Double_t scontsum = scont/ssum;
-      Double_t seprim2  = TMath::Abs(serr2/ssum - scontsum*scontsum);
-      eprim           = TMath::Sqrt(seprim2);
-   }
-   if (fErrorMode == kERRORMEAN) return eprim/TMath::Sqrt(sum);
-   else if (fErrorMode == kERRORSPREAD) return eprim;
-   else if (fErrorMode == kERRORSPREADI) {
-      if (eprim != 0) return eprim/TMath::Sqrt(sum);
-      return 1/TMath::Sqrt(12*sum);
-   }
-   else if (fErrorMode == kERRORSPREADG) {
-      return eprim/TMath::Sqrt(sum);
-   }
-   else return eprim;
+   return TProfileHelper::GetBinError((TProfile2D*)this, bin);
 }
 
 //______________________________________________________________________________
