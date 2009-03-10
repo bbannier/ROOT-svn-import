@@ -2713,7 +2713,7 @@ void Cint::Internal::G__cppif_genconstructor(FILE* fp, FILE* /*hfp*/, int tagnum
    if (G__get_funcproperties(memfunc)->entry.ansi == 2) {
       // Handle a variadic function (variable number of arguments).
       fprintf(fp,             "   G__va_arg_buf G__va_arg_bufobj;\n");
-      fprintf(fp,             "   G__va_arg_put(&G__va_arg_bufobj, libp, %ld);\n", memfunc.FunctionParameterSize());
+      fprintf(fp,             "   G__va_arg_put(&G__va_arg_bufobj, libp, %ld);\n", (long)memfunc.FunctionParameterSize());
    }
 #endif
 #if defined(__x86_64__) && (defined(__linux) || defined(__APPLE__))
@@ -3875,7 +3875,7 @@ void Cint::Internal::G__cppif_genfunc(FILE* fp, FILE* /*hfp*/, int tagnum, const
 #ifndef G__VAARG_COPYFUNC
    if (G__get_funcproperties(ifunc)->entry.ansi == 2) {
       fprintf(fp, "   G__va_arg_buf G__va_arg_bufobj;\n");
-      fprintf(fp, "   G__va_arg_put(&G__va_arg_bufobj, libp, %ld);\n", ifunc.FunctionParameterSize());
+      fprintf(fp, "   G__va_arg_put(&G__va_arg_bufobj, libp, %ld);\n", (long)ifunc.FunctionParameterSize());
    }
 #endif // G__VAARG_COPYFUNC
 #if defined(__x86_64__) && (defined(__linux) || defined(__APPLE__))
@@ -5455,8 +5455,14 @@ void Cint::Internal::G__cpplink_memfunc(FILE* fp)
             if ((ifunc->IsPublic()) || G__precomp_private || G__isprivatectordtorassgn(i, *ifunc) || ((ifunc->IsProtected()) && (G__struct.protectedaccess[i] & G__PROTECTEDACCESS)) || (G__struct.protectedaccess[i] & G__PRIVATEACCESS)) {
                // public
 
-               if ((G__struct.globalcomp[i] == G__ONLYMETHODLINK) && (G__get_funcproperties(*ifunc)->globalcomp != G__METHODLINK)) {
+               int ifunc_globalcomp = G__get_funcproperties(*ifunc)->globalcomp;
+               if ((G__struct.globalcomp[i] == G__ONLYMETHODLINK) && ( ifunc_globalcomp != G__METHODLINK)) {
                   // not marked for link, skip it.
+                  continue;
+               }
+
+               if ( ifunc_globalcomp == G__CSTUB || ifunc_globalcomp == G__CPPSTUB) {
+                  // Do not generate a stub around the 'stubbed' method which are supposed to be interpreted!
                   continue;
                }
 
@@ -5556,7 +5562,7 @@ void Cint::Internal::G__cpplink_memfunc(FILE* fp)
 
                fprintf(fp, "%d, ", G__get_reftype(ifunc->TypeOf().ReturnType()));
 
-               fprintf(fp, "%ld, ", ifunc->FunctionParameterSize());
+               fprintf(fp, "%ld, ", (long)ifunc->FunctionParameterSize());
 
                if (2 == G__get_funcproperties(*ifunc)->entry.ansi)
                   fprintf(fp, "%d, ", 8 + ifunc->IsStatic()*2 + ifunc->IsExplicit()*4);
@@ -6245,7 +6251,7 @@ void Cint::Internal::G__cpplink_func(FILE* fp)
 
          fprintf(fp, "%d, ", G__get_reftype(ifunc->TypeOf().ReturnType()));
 
-         fprintf(fp, "%ld, ", ifunc->FunctionParameterSize());
+         fprintf(fp, "%ld, ", (long)ifunc->FunctionParameterSize());
 
          if (2 == G__get_funcproperties(*ifunc)->entry.ansi)
             fprintf(fp, "%d, ", 8 + ifunc->IsStatic()*2);
