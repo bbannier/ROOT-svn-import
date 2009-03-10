@@ -775,6 +775,38 @@ namespace {
       return callSelfIndex( args, "_vector__at" );
    }
 
+//- map behavior as primitives ------------------------------------------------
+   PyObject* MapContains( PyObject*, PyObject* args )
+   {
+      PyObject* result = 0;
+
+      PyObject* iter = CallPySelfObjMethod( args, "find", "OO" );
+      if ( ObjectProxy_Check( iter ) ) {
+         PyObject* arg1 = PyTuple_New( 1 );
+         PyObject* self = PyTuple_GET_ITEM( args, 0 );
+         Py_INCREF( self );
+         PyTuple_SET_ITEM( arg1, 0, self );
+         PyObject* end = CallPySelfMethod( arg1, "end", "O" );
+         if ( ObjectProxy_Check( end ) ) {
+            if ( *(void**)((ObjectProxy*)iter)->GetObject() != *(void**)((ObjectProxy*)end)->GetObject() ) {
+               Py_INCREF( Py_True );
+               result = Py_True;
+            }
+         }
+         Py_XDECREF( end );
+         Py_DECREF( arg1 );
+      }
+      Py_XDECREF( iter );
+
+      if ( ! result ) {
+         PyErr_Clear();            // e.g. wrong argument type, which should always lead to False
+         Py_INCREF( Py_False );
+         result = Py_False;
+      }
+
+      return result;
+   }
+
 //- STL container iterator support --------------------------------------------
    PyObject* StlSequenceIter( PyObject*, PyObject* args )
    {
@@ -1092,6 +1124,11 @@ namespace PyROOT {      // workaround for Intel icc on Linux
 
    public:
       virtual PyObject* GetSignature() { return PyString_FromString( "(...)" ); }
+      virtual PyObject* GetPrototype() { return PyObject_GetAttrString( (PyObject*)fOrg, (char*)"__doc__" ); }
+      virtual PyObject* GetScope()
+      {
+         return MakeRootClassFromString< TScopeAdapter, TBaseAdapter, TMemberAdapter >( "TTree" );
+      }
 
    protected:
       MethodProxy* fOrg;
@@ -1103,11 +1140,6 @@ namespace PyROOT {      // workaround for Intel icc on Linux
       TTreeBranch( MethodProxy* org ) : TTreeMemberFunction( org ) {}
 
    public:
-      virtual PyObject* GetPrototype()
-      {
-         return PyString_FromString( "TBranch* TTree::Branch( ... )" );
-      }
-
       virtual PyObject* operator()( ObjectProxy* self, PyObject* args, PyObject* kwds )
       {
       // acceptable signatures:
@@ -1720,6 +1752,12 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
    // provide a slice-able __getitem__, if possible
       if ( HasAttrDirect( pyclass, PyStrings::gVectorAt ) )
          Utility::AddToClass( pyclass, "__getitem__", (PyCFunction) VectorGetItem );
+
+      return kTRUE;
+   }
+
+   if ( IsTemplatedSTLClass( name, "map" ) ) {
+      Utility::AddToClass( pyclass, "__contains__", (PyCFunction) MapContains );
 
       return kTRUE;
    }

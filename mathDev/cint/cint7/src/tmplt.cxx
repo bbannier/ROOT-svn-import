@@ -2203,8 +2203,12 @@ void Cint::Internal::G__declare_template()
          // This should be removed from the func name (what we are looking for)
          // anything preceding combinations of *,& and const.
          c = G__fgetname_template(temp2, "*&(;=");
-         if (!strncmp(temp2, "operator", strlen("operator")) && strchr("&*=", c)) {
-            size_t len = strlen(temp2);
+
+         size_t len = strlen(temp2);
+         static size_t oplen( strlen( "::operator" ) ); 
+         if ((  !strncmp(temp2,"operator",strlen("operator"))
+              ||(len>=oplen && !strncmp(temp2+(len-oplen),"::operator",oplen)))
+             && strchr("&*=", c)) {
             while ((c == '&') || (c == '*') || (c == '=')) {
                temp2[len + 1] = 0;
                temp2[len] = c;
@@ -2302,8 +2306,21 @@ void Cint::Internal::G__declare_template()
       // Do nothing
    }
    else if (isspace(c) && !strcmp(temp, "operator")) {
-      temp[8] = ' ';
-      c = G__fgetname_template(temp + 9, "(");
+      unsigned int len = 8;
+      do {
+         temp[len++] = ' ';
+         temp[len] = '\0';
+         
+         char* ptr = temp + len;
+         c=G__fgetname_template(ptr,"(");
+         len = strlen(temp);
+         if (len >= G__LONGLINE)
+            {
+               temp[G__LONGLINE-1] = '\0';
+               G__fprinterr(G__serr,"line too long. '%s'\n", temp);
+               break;
+            }
+      } while (c != '(');
    }
    else if ((c == '(') && strstr(temp, "::")) {
       // template<..> inline A::A(T a,S b) { ... }
