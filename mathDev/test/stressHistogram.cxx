@@ -4115,6 +4115,39 @@ bool testLabel()
    return status;
 }
 
+bool testLabelsInflateProf1D()
+{
+   Int_t numberOfInflates=4;
+   Int_t numberOfFills = numberOfBins;
+   Double_t maxRangeInflate = maxRange;
+   for ( Int_t i = 0; i < numberOfInflates; ++i )
+   {
+      numberOfFills *= 2;
+      maxRangeInflate = 2*maxRangeInflate - 1;
+   }
+      
+
+   TProfile* p1 = new TProfile("tLI1D-p1", "p1-Title", numberOfBins, minRange, maxRange);
+   TProfile* p2 = new TProfile("tLI1D-p2", "p2-Title", numberOfFills, minRange, maxRangeInflate);
+
+   p1->GetXaxis()->SetTimeDisplay(1);
+
+   for ( Int_t e = 0; e < numberOfFills; ++e ) {
+      Double_t x = e;
+      Double_t y = sin(x/10);
+
+      p1->SetBinContent(int(x+0.5)+1, y );
+      p1->SetBinEntries(int(x+0.5)+1, 10.0);
+
+      p2->SetBinContent(int(x+0.5)+1, y );
+      p2->SetBinEntries(int(x+0.5)+1, 10.0);
+   }
+
+   bool ret = equals("LabelsInflateProf1D", p1, p2);
+   delete p1;
+   return ret;
+}
+
 Double_t function1D(Double_t x)
 {
    Double_t a = -1.8;
@@ -5592,8 +5625,9 @@ int stressHistogram()
                                         mergeTestPointer };
    // Test 10
    // Label Tests
-   const unsigned int numberOfLabel = 1;
-   pointer2Test labelTestPointer[numberOfLabel] = { testLabel
+   const unsigned int numberOfLabel = 2;
+   pointer2Test labelTestPointer[numberOfLabel] = { testLabel,
+                                                    testLabelsInflateProf1D
    };
    struct TTestSuite labelTestSuite = { numberOfLabel, 
                                         "Label tests for 1D Histograms (TAxis)............................",

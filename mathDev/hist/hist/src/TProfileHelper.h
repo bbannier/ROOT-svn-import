@@ -480,29 +480,28 @@ void TProfileHelper::LabelsInflate(T* p, Option_t *ax)
    nbins *= 2;
    Int_t  nbinsx = p->fXaxis.GetNbins();
    Int_t  nbinsy = p->fYaxis.GetNbins();
-   Int_t ncells = (nbinsx+2)*(nbinsy+2);
+   Int_t ncells = (p->GetDimension() == 2)?(nbinsx+2)*(nbinsy+2):nbins+2;
    p->SetBinsLength(ncells);
    p->fBinEntries.Set(ncells);
    p->fSumw2.Set(ncells);
    if (p->fBinSumw2.fN)  p->fBinSumw2.Set(ncells);
 
    //now loop on all bins and refill
-   Int_t bin,ibin,binx,biny;
-   for (biny=1;biny<=nbinsy;biny++) {
-      for (binx=1;binx<=nbinsx;binx++) {
-         bin   = biny*(nbxold+2) + binx;
-         ibin  = biny*(nbinsx+2) + binx;
-         if (binx <= nbxold && biny <= nbyold) {
-            p->fArray[ibin] = hold->fArray[bin];
-            p->fBinEntries.fArray[ibin] = hold->fBinEntries.fArray[bin];
-            p->fSumw2.fArray[ibin] = hold->fSumw2.fArray[bin];
-            if (p->fBinSumw2.fN) p->fBinSumw2.fArray[bin] = hold->fBinSumw2.fArray[bin];
-         } else {
-            p->fArray[ibin] = 0;
-            p->fBinEntries.fArray[ibin] = 0;
-            p->fSumw2.fArray[ibin] = 0;
-            if (p->fBinSumw2.fN) p->fBinSumw2.fArray[bin] = 0;
-         }
+   for (Int_t ibin =0; ibin < p->fN; ibin++)
+   {
+      Int_t binx, biny, binz;
+      p->GetBinXYZ(ibin, binx, biny, binz);
+      if (binx <= nbxold && biny <= nbyold) {
+         Int_t bin = hold->GetBin(binx, biny, binz);
+         p->fArray[ibin] = hold->fArray[bin];
+         p->fBinEntries.fArray[ibin] = hold->fBinEntries.fArray[bin];
+         p->fSumw2.fArray[ibin] = hold->fSumw2.fArray[bin];
+         if (p->fBinSumw2.fN) p->fBinSumw2.fArray[bin] = hold->fBinSumw2.fArray[bin];
+      } else {
+         p->fArray[ibin] = 0;
+         p->fBinEntries.fArray[ibin] = 0;
+         p->fSumw2.fArray[ibin] = 0;
+         if (p->fBinSumw2.fN) p->fBinSumw2.fArray[ibin] = 0;
       }
    }
    delete hold;
@@ -722,47 +721,6 @@ Double_t TProfileHelper::GetBinError(T* p, Int_t bin)
       return 1./TMath::Sqrt(sum);
    }
    else return eprim;
-
-
-//    if (p->fBuffer) p->BufferEmpty();
-
-//    if (bin < 0 || bin >= p->fNcells) return 0;
-//    Double_t cont = p->fArray[bin];
-//    Double_t sum  = p->fBinEntries.fArray[bin];
-//    Double_t err2 = p->fSumw2.fArray[bin];
-//    Double_t neff = p->GetBinEffectiveEntries(bin);
-//    if (sum == 0) return 0;
-//    Double_t eprim;
-//    Double_t contsum = cont/sum;
-//    Double_t eprim2  = TMath::Abs(err2/sum - contsum*contsum);
-//    eprim          = TMath::Sqrt(eprim2);
-//    Double_t test = 1;
-//    if (err2 != 0 && sum < 5) test = eprim2*sum/err2;
-//    //if (eprim <= 0) { //was in 3.10/01
-//    Int_t cellLimit = (p->GetDimension()==2)?10404:1000404;
-//    if (p->fgApproximate && p->fNcells <=cellLimit && (test < 1.e-4 || eprim2 < 1e-6)) { //in 3.10/02
-//       Double_t scont, ssum, serr2;
-//       scont = ssum = serr2 = 0;
-//       for (Int_t i=1;i<p->fNcells;i++) {
-//          if (p->fSumw2.fArray[i] <= 0) continue; //added in 3.10/02
-//          scont += p->fArray[i];
-//          ssum  += p->fBinEntries.fArray[i];
-//          serr2 += p->fSumw2.fArray[i];
-//       }
-//       Double_t scontsum = scont/ssum;
-//       Double_t seprim2  = TMath::Abs(serr2/ssum - scontsum*scontsum);
-//       eprim           = TMath::Sqrt(seprim2);
-//    }
-//    if (p->fErrorMode == kERRORMEAN) return eprim/TMath::Sqrt(sum);
-//    else if (p->fErrorMode == kERRORSPREAD) return eprim;
-//    else if (p->fErrorMode == kERRORSPREADI) {
-//       if (eprim != 0) return eprim/TMath::Sqrt(sum);
-//       return 1/TMath::Sqrt(12*sum);
-//    }
-//    else if (p->fErrorMode == kERRORSPREADG) {
-//       return eprim/TMath::Sqrt(sum);
-//    }
-//    else return eprim;  
 }
 
 #endif
