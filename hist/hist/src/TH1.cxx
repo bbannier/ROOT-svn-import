@@ -70,7 +70,7 @@ ROOT supports the following histogram types:
          <li>TH3F : histograms with one float per channel.  Maximum precision 7 digits
          <li>TH3D : histograms with one double per channel. Maximum precision 14 digits
    </ul>
-  <li>Profile histograms: See classes  TProfile and TProfile2D.
+  <li>Profile histograms: See classes  TProfile, TProfile2D and TProfile3D.
       Profile histograms are used to display the mean value of Y and its RMS
       for each bin in X. Profile histograms are in many cases an elegant
       replacement of two-dimensional histograms : the inter-relation of two
@@ -105,6 +105,9 @@ All histogram classes are derived from the base class TH1
                 -------------------------------------
                         |      |      |      |      |
                        TH3C   TH3S   TH3I   TH3F   TH3D
+                                                    |
+                                                    |
+                                                 TProfile3D
 
       The TH*C classes also inherit from the array class TArrayC.
       The TH*S classes also inherit from the array class TArrayS.
