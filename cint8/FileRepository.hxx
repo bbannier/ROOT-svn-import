@@ -22,18 +22,6 @@ namespace Cint {
       // Reference to a file entry, safe for deletion (in contrast to FileEntry*)
       typedef Reflex::Container<std::string, FileEntry*>::const_iterator Ref_t;
 
-      class Pos {
-      public:
-         Pos(FileEntry* file, std::basic_istream::pos_type pos, long line);
-         FileEntry* File() const;
-         long Line() const;
-         std::basic_istream::pos_type StreamPos() const;
-      private:
-         Ref_t fRef;
-         long fLine;
-         std::basic_istream::pos_type;
-      };
-
       // Representation of a file.
       FileEntry(const FullyQualifiedPath& filename, const FileRepository* repo);
       ~FileEntry();
@@ -54,19 +42,6 @@ namespace Cint {
 
       bool IsSharedLibrary() const;
       bool IsSourceFile() const;
-
-      // Close the file, only works if IsSourceFile()
-      void Close();
-      // Open the file, only works if IsSourceFile()
-      std::istream& Open();
-
-      // get the file's ifstream, calls Open() if needed
-      std::istream& GetStream() const;
-
-      // get the istream's current position
-      bool GetPos(Pos& out) const;
-      // set the istream's current position
-      bool SetPos(Pos& pos);
 
       // handle as returned by dlopen / ...
       ShLibHandle_t* GetSharedLibHandle() const;
@@ -150,10 +125,18 @@ namespace Cint {
       typedef void* PreLoadCallbackHandle_t;
       typedef void* PostLoadCallbackHandle_t;
 
+      // Sequence:
+      // if (DependencyHook()) if (PreLoadHook()) {Load(); PostLoadHook();}
+
+      // Callback returns whether a dependency for laoding FileEntry cannot be satisfied.
       DependencyCallbackHandle_t RegisterDependencyCallback(const Reflex::Callback<bool, Interpreter&, const FileEntry&>& callback);
       bool UnregisterDependencyCallback(DependencyCallbackHandle_t handle);
+
+      // Callback loads dependencies for laoding FileEntry; returns false for failure canceling load request.
       PreLoadCallbackHandle_t PreLoadCallback(const Reflex::Callback<bool, Interpreter&, const FileEntry&>& callback);
       bool UnregisterPreLoadCallback(PreLoadCallbackHandle_t handle);
+
+      // Callback to inform that a FileEntry has been loaded.
       PostLoadCallbackHandle_t PostLoadCallback(const Reflex::Callback<void, Interpreter&, const FileEntry&>& callback);
       bool UnregisterPostLoadCallback(PostLoadCallbackHandle_t handle);
    };

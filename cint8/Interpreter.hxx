@@ -84,14 +84,17 @@ namespace Cint {
 
       // Clone the interpreter, returning a new instance with its own, copied,
       // and thus independent context (aka fork).
+      // ???: Does it copy the call stack?
       Interpreter* Fork() const;
 
       // On-demand template instantiation: instantiate template named name.
+      // ???: Can we use clang lookup?
       Reflex::Type Instantiate(const char* name);
 
       // Lookup type named name, instantiating template if needed.
       // Note: Catalog().Lookup() does not instantiate templates!
       // Matches the functions of Reflex::NameLookup
+      // ???: forward to clang?
       Reflex::Type LookupType(const std::string& nam, const Reflex::Scope& current);
       Reflex::Scope LookupScope(const std::string& nam, const Reflex::Scope& current);
       Reflex::Member LookupMember(const std::string& nam, const Reflex::Scope& current);
@@ -166,6 +169,13 @@ namespace Cint {
       // Needed e.g. for handling "#pragma link"
       PragmaCallbackHandle_t RegisterPragmaCallback(const Reflex::Callback<void,const std::string&>& callback);
       bool UnregisterPragmaCallback(PragmaCallbackHandle_t pragmacallback);
+
+      typedef void* IncludeCallbackHandle_t;
+      // Register a void callback(const std::string& file, const std::string& includedAs) to be invoked when the parser
+      // sees a "#include FILE" line. 
+      // Needed e.g. for bookkeeping of dependent files.
+      IncludeCallbackHandle_t RegisterIncludeCallback(const Reflex::Callback<void,const std::string&, const std::string&>& callback);
+      bool UnregisterIncludeCallback(IncludeCallbackHandle_t callbackHandle);
 
 
 
