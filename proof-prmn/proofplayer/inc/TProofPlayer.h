@@ -247,14 +247,15 @@ protected:
    Bool_t              fMergeFiles;    // is True when merging output files centrally is needed
    TDSet              *fDSet;          //!tdset for current processing
    ErrorHandlerFunc_t  fErrorHandler;  // Store previous handler when redirecting output
-
+   TMessage           *fProcessMsg;    // used for dynamic worker addition
+   const char         *fSelectorName;  // name used for dynamic worker addition
    virtual Bool_t  HandleTimer(TTimer *timer);
    Int_t           InitPacketizer(TDSet *dset, Long64_t nentries,
                                   Long64_t first, const char *defpackunit,
                                   const char *defpackdata);
    TList          *MergeFeedback();
    Bool_t          MergeOutputFiles();
-   virtual Bool_t  SendSelector(const char *selector_file); //send selector to slaves
+   Bool_t          SendSelector(const char *selector_file); //send selector to slaves
    TProof         *GetProof() const { return fProof; }
    void            SetupFeedback();  // specialized setup
    void            StopFeedback();   // specialized teardown
@@ -262,7 +263,8 @@ protected:
 public:
    TProofPlayerRemote(TProof *proof = 0) : fProof(proof), fOutputLists(0), fFeedback(0),
                                            fFeedbackLists(0), fPacketizer(0),
-                                           fMergeFiles(kFALSE), fDSet(0), fErrorHandler(0)
+                                           fMergeFiles(kFALSE), fDSet(0), fErrorHandler(0),
+                                           fProcessMsg(0), fSelectorName(0)
                                            { fProgressStatus = new TProofProgressStatus(); }
    virtual ~TProofPlayerRemote();   // Owns the fOutput list
    virtual Long64_t Process(TDSet *set, const char *selector,
@@ -296,6 +298,8 @@ public:
                            evtrti, mbrti); } // *SIGNAL*
    void           Feedback(TList *objs); // *SIGNAL*
    TDSetElement  *GetNextPacket(TSlave *slave, TMessage *r);
+   TMessage      *GetProcessMsg() const { return fProcessMsg; }
+   const char    *GetSelectorName() const { return fSelectorName; }
    TVirtualPacketizer *GetPacketizer() const { return fPacketizer; }
 
    Bool_t         IsClient() const;
