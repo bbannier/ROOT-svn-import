@@ -4,6 +4,12 @@ namespace Cint {
    //    float* f = new float[5]
    // under GarbageCollection control will add the return value of new
    // as an address to watch, with &f as one of the references to it.
+
+   //???: Need to heap allocations and their types for deletion,
+   //     use callback / artificial instruction from bytecode?
+   //     Walk the call stack to determine whether any variable still referenced for
+   //     each allocated heap block.
+
    class GarbageCollector {
    public:
       // Delete unreferenced, garbage collected memory. Returns the number of deletions.

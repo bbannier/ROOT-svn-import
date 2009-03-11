@@ -58,6 +58,12 @@ namespace Cint {
       CompletionCallbackHandle_t RegisterCompletionCallback(const Reflex::Callback<bool,std:string&>& callback);
       bool UnregisterCompletionCallback(CompletionCallbackHandle_t handle);
 
+      // End of line bool callback(const std::string& line_that_ended), returning true
+      // if line is to be processed.
+      typedef void* EndOfLineCallbackHandle_t;
+      EndOfLineCallbackHandle_t RegisterEndOfLineCallback(const Reflex::Callback<bool,const std:string&>& callback);
+      bool UnregisterEndOfLineCallback(EndOfLineCallbackHandle_t handle);
+
    protected:
       class ReadlineInterface {
          // handle readline-based terminal interaction + history file management
