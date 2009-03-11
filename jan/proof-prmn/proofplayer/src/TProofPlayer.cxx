@@ -1405,8 +1405,9 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
    }
 
    if(!SendSelector(selector_file)) return -1;
+   fSelectorName = selector_file;
 
-   TMessage mesg(kPROOF_PROCESS);
+   fProcessMsg = new TMessage(kPROOF_PROCESS);
    TString fn(gSystem->BaseName(selector_file));
 
    // Parse option
@@ -1498,16 +1499,16 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
    TEventList *evl = (!fProof->IsMaster() && !enl) ? dynamic_cast<TEventList *>(set->GetEntryList())
                                            : (TEventList *)0;
    if (fProof->fProtocol > 14) {
-      mesg << set << fn << fInput << opt << num << fst << evl << sync << enl;
+      *fProcessMsg << set << fn << fInput << opt << num << fst << evl << sync << enl;
    } else {
-      mesg << set << fn << fInput << opt << num << fst << evl << sync;
+      *fProcessMsg << set << fn << fInput << opt << num << fst << evl << sync;
       if (enl)
          // Not supported remotely
          Warning("Process","entry lists not supported by the server");
    }
 
    PDB(kGlobal,1) Info("Process","Calling Broadcast");
-   fProof->Broadcast(mesg);
+   fProof->Broadcast(*fProcessMsg);
 
    // Reset streamer choice
    if (fProof->fProtocol < 13)

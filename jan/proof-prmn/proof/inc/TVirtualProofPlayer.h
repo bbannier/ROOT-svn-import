@@ -67,6 +67,10 @@ public:
    virtual void      StopProcess(Bool_t abort, Int_t timeout = -1) = 0;
    virtual void      AddInput(TObject *inp) = 0;
    virtual void      ClearInput() = 0;
+   // the 3 methods are only useful in the playerremote
+   virtual TMessage *GetProcessMsg() const { return 0; } 
+   virtual const char *GetSelectorName() const { return 0; }
+   virtual Bool_t  SendSelector(const char */*selector_file*/) { return kFALSE; }
    virtual TObject  *GetOutput(const char *name) const = 0;
    virtual TList    *GetOutputList() const = 0;
    virtual TList    *GetInputList() const = 0;

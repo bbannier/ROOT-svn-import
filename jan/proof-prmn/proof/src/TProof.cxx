@@ -953,6 +953,20 @@ Int_t TProof::AddWorkers(TList *workerList)
          nxsl.Reset();
          while ((sl = (TSlave *) nxsl()))
             packetizer->AddWorker(sl);
+
+         // resubmit the process request
+         if (!fPlayer->SendSelector(fPlayer->GetSelectorName()))
+            return -1;
+         
+         // Send input data, if any
+         TString emsg;
+         if (SendInputData(fPlayer->GetCurrentQuery(), this, emsg) != 0)
+         Warning("AddWorkers", "could not forward input data: %s", emsg.Data());
+
+         // Send large input data objects, if any
+         SendInputDataFile();
+
+         Broadcast(*(fPlayer->GetProcessMsg()), addedWorkers);
       }
 
    // Cleanup
