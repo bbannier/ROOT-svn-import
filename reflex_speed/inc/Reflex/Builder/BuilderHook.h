@@ -104,8 +104,11 @@ namespace Reflex {
       // Invalidate this hook pointer if there is no next one.
       void Pop() {
          delete fMemFunc;
-         if (fNext) *this = *fNext;
-         else {
+         if (fNext) {
+            BuilderHook* oldNext = fNext;
+            *this = *fNext;
+            delete oldNext;
+         } else {
             fCHook = 0;
             fMemFunc = 0;
          }
