@@ -91,6 +91,7 @@ void TGLEmbeddedViewer::DestroyGLWidget()
    }
 
    fGLWidget->UnmapWindow();
+   fGLWidget->SetEventHandler(0);
 
    fFrame->RemoveFrame(fGLWidget);
    fGLWidget->DeleteWindow();
