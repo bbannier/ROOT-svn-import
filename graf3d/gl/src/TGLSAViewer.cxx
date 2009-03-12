@@ -296,6 +296,7 @@ void TGLSAViewer::DestroyGLWidget()
    }
 
    fGLWidget->UnmapWindow();
+   fGLWidget->SetEventHandler(0);
 
    fRightVerticalFrame->RemoveFrame(fGLWidget);
    fGLWidget->DeleteWindow();
