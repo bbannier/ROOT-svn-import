@@ -31,6 +31,8 @@ public:
   virtual ~RooFFTConvPdf() ;
 
   void setShift(Double_t val1, Double_t val2) { _shift1 = val1 ; _shift2 = val2 ; }
+  void setCacheObservables(const RooArgSet& obs) { _cacheObs.removeAll() ; _cacheObs.add(obs) ; }
+  const RooArgSet& cacheObservables() const { return _cacheObs ; }
 
   Double_t bufferFraction() const { 
     // Return value of buffer fraction applied in FFT calculation array beyond either
@@ -38,6 +40,13 @@ public:
     return _bufFrac ; 
   }
   void setBufferFraction(Double_t frac) ;
+
+  void printMetaArgs(ostream& os) const ;
+
+  // Propagate maximum value estimate of pdf1 as convolution can only result in lower max values
+  virtual Int_t getMaxVal(const RooArgSet& vars) const { return _pdf1.arg().getMaxVal(vars) ; }
+  virtual Double_t maxVal(Int_t code) const { return _pdf1.arg().maxVal(code) ; }
+
 
 protected:
 
@@ -84,6 +93,7 @@ protected:
                                        const RooArgSet* auxProto=0, Bool_t verbose= kFALSE) const ;
 
   friend class RooConvGenContext ;
+  RooSetProxy  _cacheObs ; // Non-convolution observables that are also cached
 
 private:
 

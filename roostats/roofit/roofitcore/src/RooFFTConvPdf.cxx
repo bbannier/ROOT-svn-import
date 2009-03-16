@@ -116,6 +116,7 @@
 #include "RooLinearVar.h"
 #include "RooCustomizer.h"
 #include "RooGlobalFunc.h"
+#include "TClass.h"
 
 using namespace std ;
 
@@ -126,12 +127,13 @@ ClassImp(RooFFTConvPdf)
 //_____________________________________________________________________________
 RooFFTConvPdf::RooFFTConvPdf(const char *name, const char *title, RooRealVar& convVar, RooAbsPdf& pdf1, RooAbsPdf& pdf2, Int_t ipOrder) :
   RooAbsCachedPdf(name,title,ipOrder),
-  _x("x","Convolution Variable",this,convVar),
-  _pdf1("pdf1","pdf1",this,pdf1),
-  _pdf2("pdf2","pdf2",this,pdf2),
+  _x("!x","Convolution Variable",this,convVar),
+  _pdf1("!pdf1","pdf1",this,pdf1),
+  _pdf2("!pdf2","pdf2",this,pdf2),
   _bufFrac(0.1),
   _shift1(0),
-  _shift2(0)
+  _shift2(0),
+  _cacheObs("!cacheObs","Cached observables",this,kFALSE,kFALSE)
  { 
    // Constructor for convolution of pdf1 (x) pdf2 in observable convVar. The binning used for the FFT sampling is controlled
    // by the binning named "cache" in the convolution observable. The resulting FFT convolved histogram is interpolated at
@@ -146,12 +148,13 @@ RooFFTConvPdf::RooFFTConvPdf(const char *name, const char *title, RooRealVar& co
 //_____________________________________________________________________________
 RooFFTConvPdf::RooFFTConvPdf(const RooFFTConvPdf& other, const char* name) :  
   RooAbsCachedPdf(other,name),
-  _x("x",this,other._x),
-  _pdf1("pdf1",this,other._pdf1),
-  _pdf2("pdf2",this,other._pdf2),
+  _x("!x",this,other._x),
+  _pdf1("!pdf1",this,other._pdf1),
+  _pdf2("!pdf2",this,other._pdf2),
   _bufFrac(other._bufFrac),
   _shift1(other._shift1),
-  _shift2(other._shift2)
+  _shift2(other._shift2),
+  _cacheObs("!cacheObs",this,other._cacheObs)
  { 
    // Copy constructor
  } 
@@ -566,12 +569,28 @@ RooArgSet* RooFFTConvPdf::actualObservables(const RooArgSet& nset) const
   // For this p.d.f that is always nset, unless nset does not contain the
   // convolution observable, in which case it is nset plus the convolution
   // observable
-
+  
+  // Get complete list of observables 
   RooArgSet* obs1 = _pdf1.arg().getObservables(nset) ;
   RooArgSet* obs2 = _pdf2.arg().getObservables(nset) ;
   obs1->add(*obs2,kTRUE) ;
-  obs1->add(_x.arg(),kTRUE) ; // always add convolution observable
+  
+  // Now strip out all non-category observables
+  TIterator* iter = obs1->createIterator() ;
+  RooAbsArg* arg ;
+  RooArgSet killList ;
+  while((arg=(RooAbsArg*)iter->Next())) {
+    if (arg->IsA()->InheritsFrom(RooAbsReal::Class()) && !_cacheObs.find(arg->GetName())) {
+      killList.add(*arg) ;
+    }
+  }
+  delete iter ;
+  obs1->remove(killList) ;
+
+  // And add back the convolution observables
+  obs1->add(_x.arg(),kTRUE) ; 
   delete obs2 ;
+
   return obs1 ;  
 }
 
@@ -584,12 +603,12 @@ RooArgSet* RooFFTConvPdf::actualParameters(const RooArgSet& nset) const
   // set nset. For this p.d.f these are the parameters of the input p.d.f.
   // but never the convolution variable, it case it is not part of nset
 
-  RooArgSet* par1 = _pdf1.arg().getParameters(nset) ;
-  RooArgSet* par2 = _pdf2.arg().getParameters(nset) ;
-  par1->add(*par2,kTRUE) ;
-  par1->remove(_x.arg(),kTRUE,kTRUE) ;
-  delete par2 ;
-  return par1 ;
+  RooArgSet* vars = getVariables() ;
+  RooArgSet* obs = actualObservables(nset) ;
+  vars->remove(*obs) ;
+  delete obs ;
+
+  return vars ;
 }
 
 
@@ -658,3 +677,12 @@ void RooFFTConvPdf::setBufferFraction(Double_t frac)
   _bufFrac = frac ;
 }
 
+
+//_____________________________________________________________________________
+void RooFFTConvPdf::printMetaArgs(ostream& os) const 
+{
+  // Customized printing of arguments of a RooNumConvPdf to more intuitively reflect the contents of the
+  // product operator construction
+
+  os << _pdf1.arg().GetName() << "(" << _x.arg().GetName() << ") (*) " << _pdf2.arg().GetName() << "(" << _x.arg().GetName() << ") " ;
+}
