@@ -62,9 +62,14 @@
 #include "RooGlobalFunc.h"
 #include "RooParamBinning.h"
 #include "RooProfileLL.h"
+#include "RooFunctor.h"
+#include "RooDerivative.h"
+#include "RooGenFunction.h"
+#include "RooMultiGenFunction.h"
 
 #include "Riostream.h"
 
+#include "Math/IFunction.h"
 #include "TObjString.h"
 #include "TTree.h"
 #include "TH1.h"
@@ -73,6 +78,9 @@
 #include "TBranch.h"
 #include "TLeaf.h"
 #include "TAttLine.h"
+#include "TF1.h"
+#include "TF2.h"
+#include "TF3.h"
 
 #include <sstream>
 
@@ -2374,7 +2382,7 @@ RooAbsFunc *RooAbsReal::bindVars(const RooArgSet &vars, const RooArgSet* nset, B
   return binding;
 }
 
-void RooAbsReal::copyCache(const RooAbsArg* source) 
+void RooAbsReal::copyCache(const RooAbsArg* source, Bool_t /*valueOnly*/) 
 {
   // Copy the cached value of another RooAbsArg to our cache.
   // Warning: This function copies the cached values of source,
@@ -2764,7 +2772,7 @@ Int_t RooAbsReal::getMaxVal(const RooArgSet& /*vars*/) const
 
 
 //_____________________________________________________________________________
-Double_t RooAbsReal::maxVal(Int_t /*code*/) 
+Double_t RooAbsReal::maxVal(Int_t /*code*/) const
 {
   // Return maximum value for set of observables identified by code assigned
   // in getMaxVal
@@ -2801,8 +2809,8 @@ void RooAbsReal::logEvalError(const char* message, const char* serverValueString
     ostringstream oss ;
     Bool_t first(kTRUE) ;
     for (Int_t i=0 ; i<numProxies() ; i++) {
-      RooAbsProxy* p = getProxy(i) ;
-      if (p->name()[0]=='!') continue ;
+      //RooAbsProxy* p = getProxy(i) ;
+      //if (p->name()[0]=='!') continue ;
       if (first) {
 	first=kFALSE ;
       } else {
@@ -3159,3 +3167,132 @@ RooAbsReal* RooAbsReal::createIntRI(const RooArgSet& iset, const RooArgSet& nset
   return cdf ;
 }
 
+
+//_____________________________________________________________________________
+RooFunctor* RooAbsReal::functor(const RooArgList& obs, const RooArgList& pars, const RooArgSet& nset) const 
+{
+  // Return a RooFunctor object bound to this RooAbsReal with given definition of observables
+  // and parameters
+
+  RooArgSet* realObs = getObservables(obs) ;
+  if (realObs->getSize() != obs.getSize()) {
+    coutE(InputArguments) << "RooAbsReal::functor(" << GetName() << ") ERROR: one or more specified observables are not variables of this p.d.f" << endl ;
+    delete realObs ;
+    return 0 ;
+  }
+  RooArgSet* realPars = getObservables(pars) ;
+  if (realPars->getSize() != pars.getSize()) {
+    coutE(InputArguments) << "RooAbsReal::functor(" << GetName() << ") ERROR: one or more specified parameters are not variables of this p.d.f" << endl ;
+    delete realPars ;
+    return 0 ;
+  }
+  delete realObs ;
+  delete realPars ;
+    
+  return new RooFunctor(*this,obs,pars,nset) ;
+}
+
+
+
+//_____________________________________________________________________________
+TF1* RooAbsReal::asTF(const RooArgList& obs, const RooArgList& pars, const RooArgSet& nset) const 
+{
+  // Return a ROOT TF1,2,3 object bound to this RooAbsReal with given definition of observables
+  // and parameters
+
+  // Check that specified input are indeed variables of this function
+  RooArgSet* realObs = getObservables(obs) ;
+  if (realObs->getSize() != obs.getSize()) {
+    coutE(InputArguments) << "RooAbsReal::functor(" << GetName() << ") ERROR: one or more specified observables are not variables of this p.d.f" << endl ;
+    delete realObs ;
+    return 0 ;
+  }
+  RooArgSet* realPars = getObservables(pars) ;
+  if (realPars->getSize() != pars.getSize()) {
+    coutE(InputArguments) << "RooAbsReal::functor(" << GetName() << ") ERROR: one or more specified parameters are not variables of this p.d.f" << endl ;
+    delete realPars ;
+    return 0 ;
+  }
+  delete realObs ;
+  delete realPars ;
+  
+  // Check that all obs and par are of type RooRealVar
+  for (int i=0 ; i<obs.getSize() ; i++) {
+    if (dynamic_cast<RooRealVar*>(obs.at(i))==0) {
+      coutE(ObjectHandling) << "RooAbsReal::asTF(" << GetName() << ") ERROR: proposed observable " << obs.at(0)->GetName() << " is not of type RooRealVar" << endl ;
+      return 0 ;
+    }
+  }
+  for (int i=0 ; i<pars.getSize() ; i++) {
+    if (dynamic_cast<RooRealVar*>(pars.at(i))==0) {
+      coutE(ObjectHandling) << "RooAbsReal::asTF(" << GetName() << ") ERROR: proposed parameter " << pars.at(0)->GetName() << " is not of type RooRealVar" << endl ;
+      return 0 ;
+    }
+  }
+  
+  // Create functor and TFx of matching dimension
+  TF1* tf=0 ;
+  RooFunctor* f ;
+  switch(obs.getSize()) {
+  case 1: {
+    RooRealVar* x = (RooRealVar*)obs.at(0) ;
+    f = functor(obs,pars,nset) ;
+    tf = new TF1(GetName(),f,x->getMin(),x->getMax(),pars.getSize(),"RooFunctor") ;
+    break ;
+  }
+  case 2: {
+    RooRealVar* x = (RooRealVar*)obs.at(0) ;
+    RooRealVar* y = (RooRealVar*)obs.at(1) ;
+    f = functor(obs,pars,nset) ;
+    tf = new TF2(GetName(),f,x->getMin(),x->getMax(),y->getMin(),y->getMax(),pars.getSize(),"RooFunctor") ;
+    break ;
+  }
+  case 3: {
+    RooRealVar* x = (RooRealVar*)obs.at(0) ;
+    RooRealVar* y = (RooRealVar*)obs.at(1) ;
+    RooRealVar* z = (RooRealVar*)obs.at(2) ;
+    f = functor(obs,pars,nset) ;
+    tf = new TF3(GetName(),f,x->getMin(),x->getMax(),y->getMin(),y->getMax(),z->getMin(),z->getMax(),pars.getSize(),"RooFunctor") ;
+    break ;
+  }
+  default:
+    coutE(InputArguments) << "RooAbsReal::asTF(" << GetName() << ") ERROR: " << obs.getSize() 
+			  << " observables specified, but a ROOT TFx can only have  1,2 or3 observables" << endl ;
+    return 0 ;
+  }
+
+  // Set initial parameter values of TFx to those of RooRealVars
+  for (int i=0 ; i<pars.getSize() ; i++) {
+    RooRealVar* p = (RooRealVar*) pars.at(i) ;
+    tf->SetParameter(i,p->getVal()) ;
+  }
+
+  return tf ;
+}
+
+
+//_____________________________________________________________________________
+RooAbsReal* RooAbsReal::derivative(RooRealVar& obs, Int_t order, Double_t eps) 
+{
+  // Return function representing first, second or third order derivative of this function
+  string name=Form("%s_DERIV_%s",GetName(),obs.GetName()) ;
+  string title=Form("Derivative of %s w.r.t %s ",GetName(),obs.GetName()) ;
+  return new RooDerivative(name.c_str(),title.c_str(),*this,obs,order,eps) ;
+}
+
+
+
+
+//_____________________________________________________________________________
+RooGenFunction* RooAbsReal::iGenFunction(RooRealVar& x, const RooArgSet& nset) 
+{
+  return new RooGenFunction(*this,x,RooArgList(),nset.getSize()>0?nset:RooArgSet(x)) ;
+}
+
+
+
+//_____________________________________________________________________________
+RooMultiGenFunction* RooAbsReal::iGenFunction(const RooArgSet& observables, const RooArgSet& nset) 
+{
+  return new RooMultiGenFunction(*this,observables,RooArgList(),nset.getSize()>0?nset:observables) ;
+}

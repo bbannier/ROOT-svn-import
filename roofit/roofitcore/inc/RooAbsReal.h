@@ -20,6 +20,7 @@
 #include "RooCmdArg.h"
 #include "RooCurve.h"
 #include "RooArgSet.h"
+#include "RooArgList.h"
 
 class RooArgList ;
 class RooDataSet ;
@@ -31,6 +32,9 @@ class RooCategory ;
 class RooLinkedList ;
 class RooNumIntConfig ;
 class RooDataHist ;
+class RooFunctor ;
+class RooGenFunction ;
+class RooMultiGenFunction ;
 
 class TH1;
 class TH1F;
@@ -131,7 +135,8 @@ public:
   
   // Optimized accept/reject generator support
   virtual Int_t getMaxVal(const RooArgSet& vars) const ;
-  virtual Double_t maxVal(Int_t code) ;
+  virtual Double_t maxVal(Int_t code) const ;
+  virtual Int_t minTrialSamples(const RooArgSet& /*arGenObs*/) const { return 0 ; }
 
 
   // Plotting options
@@ -224,6 +229,14 @@ public:
     return 0 ; 
   }
 
+  RooGenFunction* iGenFunction(RooRealVar& x, const RooArgSet& nset=RooArgSet()) ;
+  RooMultiGenFunction* iGenFunction(const RooArgSet& observables, const RooArgSet& nset=RooArgSet()) ;
+
+  RooFunctor* functor(const RooArgList& obs, const RooArgList& pars=RooArgList(), const RooArgSet& nset=RooArgSet()) const ;
+  TF1* asTF(const RooArgList& obs, const RooArgList& pars=RooArgList(), const RooArgSet& nset=RooArgSet()) const ;
+
+  RooAbsReal* derivative(RooRealVar& obs, Int_t order=1, Double_t eps=0.001) ;
+
 protected:
 
   // PlotOn with command list
@@ -288,7 +301,7 @@ protected:
   // Hooks for RooDataSet interface
   friend class RooRealIntegral ;
   virtual void syncCache(const RooArgSet* set=0) { getVal(set) ; }
-  virtual void copyCache(const RooAbsArg* source) ;
+  virtual void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE) ;
   virtual void attachToTree(TTree& t, Int_t bufSize=32000) ;
   virtual void setTreeBranchStatus(TTree& t, Bool_t active) ;
   virtual void fillTreeBranch(TTree& t) ;
