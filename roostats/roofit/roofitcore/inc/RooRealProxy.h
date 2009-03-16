@@ -25,6 +25,8 @@ public:
 
   // Constructors, assignment etc.
   RooRealProxy() {} ;
+  RooRealProxy(const char* name, const char* desc, RooAbsArg* owner,
+	       Bool_t valueServer=kTRUE, Bool_t shapeServer=kFALSE, Bool_t proxyOwnsArg=kFALSE) ;
   RooRealProxy(const char* name, const char* desc, RooAbsArg* owner, RooAbsReal& ref,
 	       Bool_t valueServer=kTRUE, Bool_t shapeServer=kFALSE, Bool_t proxyOwnsArg=kFALSE) ;
   RooRealProxy(const char* name, RooAbsArg* owner, const RooRealProxy& other) ;
