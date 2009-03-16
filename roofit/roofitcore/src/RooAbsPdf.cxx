@@ -118,6 +118,8 @@
 #include "TList.h"
 #include "TH1.h"
 #include "TH2.h"
+#include "TMatrixD.h"
+#include "TMatrixDSym.h"
 #include "RooAbsPdf.h"
 #include "RooDataSet.h"
 #include "RooArgSet.h"
@@ -142,6 +144,8 @@
 #include "RooConstraintSum.h"
 #include "RooParamBinning.h"
 #include "RooNumCdf.h"
+#include "RooFitResult.h"
+#include "RooNumGenConfig.h"
 #include <string>
 
 ClassImp(RooAbsPdf) 
@@ -152,7 +156,7 @@ Int_t RooAbsPdf::_verboseEval = 0;
 Bool_t RooAbsPdf::_evalError = kFALSE ;
 
 //_____________________________________________________________________________
-RooAbsPdf::RooAbsPdf() : _norm(0), _normSet(0)
+RooAbsPdf::RooAbsPdf() : _norm(0), _normSet(0), _specGeneratorConfig(0)
 {
   // Default constructor
 }
@@ -161,10 +165,9 @@ RooAbsPdf::RooAbsPdf() : _norm(0), _normSet(0)
 
 //_____________________________________________________________________________
 RooAbsPdf::RooAbsPdf(const char *name, const char *title) : 
-  RooAbsReal(name,title), _norm(0), _normSet(0), _normMgr(this,10), _selectComp(kTRUE)
+  RooAbsReal(name,title), _norm(0), _normSet(0), _normMgr(this,10), _selectComp(kTRUE), _specGeneratorConfig(0)
 {
   // Constructor with name and title only
-
   resetErrorCounters() ;
   setTraceCounter(0) ;
 }
@@ -174,10 +177,9 @@ RooAbsPdf::RooAbsPdf(const char *name, const char *title) :
 //_____________________________________________________________________________
 RooAbsPdf::RooAbsPdf(const char *name, const char *title, 
 		     Double_t plotMin, Double_t plotMax) :
-  RooAbsReal(name,title,plotMin,plotMax), _norm(0), _normSet(0), _normMgr(this,10), _selectComp(kTRUE)
+  RooAbsReal(name,title,plotMin,plotMax), _norm(0), _normSet(0), _normMgr(this,10), _selectComp(kTRUE), _specGeneratorConfig(0)
 {
   // Constructor with name, title, and plot range
-
   resetErrorCounters() ;
   setTraceCounter(0) ;
 }
@@ -190,9 +192,14 @@ RooAbsPdf::RooAbsPdf(const RooAbsPdf& other, const char* name) :
 
 {
   // Copy constructor
-
   resetErrorCounters() ;
   setTraceCounter(other._traceCount) ;
+
+  if (other._specGeneratorConfig) {
+    _specGeneratorConfig = new RooNumGenConfig(*other._specGeneratorConfig) ;
+  } else {
+    _specGeneratorConfig = 0 ;
+  }
 }
 
 
@@ -201,6 +208,8 @@ RooAbsPdf::RooAbsPdf(const RooAbsPdf& other, const char* name) :
 RooAbsPdf::~RooAbsPdf()
 {
   // Destructor
+
+  if (_specGeneratorConfig) delete _specGeneratorConfig ;
 }
 
 
@@ -787,6 +796,11 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, RooCmdArg arg1, RooCmdArg arg2,
   // Strategy(Int_t flag)           -- Set Minuit strategy (0 through 2, default is 1)
   // FitOptions(const char* optStr) -- Steer fit with classic options string (for backward compatibility). Use of this option
   //                                   excludes use of any of the new style steering options.
+  // SumW2Error(Bool_t flag)        -- Apply correaction to errors and covariance matrix using sum-of-weights covariance matrix
+  //                                   to obtain correct error for weighted likelihood fits. If this option is activated the
+  //                                   corrected covariance matrix is calculated as Vcorr = V C-1 V, where V is the original 
+  //                                   covariance matrix and C is the inverse of the covariance matrix calculated using the
+  //                                   weights squared
   //
   // Options to control informational output
   // ---------------------------------------
@@ -847,6 +861,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineInt("numee","PrintEvalErrors",0,10) ;
   pc.defineInt("doEEWall","EvalErrorWall",0,1) ;
   pc.defineInt("doWarn","Warnings",0,1) ;
+  pc.defineInt("doSumW2","SumW2Error",0,-1) ;
   pc.defineObject("projDepSet","ProjectedObservables",0,0) ;
   pc.defineObject("minosSet","Minos",0,0) ;
   pc.defineObject("cPars","Constrain",0,0) ;
@@ -885,10 +900,47 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   Int_t numee    = pc.getInt("numee") ;
   Int_t doEEWall = pc.getInt("doEEWall") ;
   Int_t doWarn   = pc.getInt("doWarn") ;
+  Int_t doSumW2  = pc.getInt("doSumW2") ;
   const RooArgSet* minosSet = static_cast<RooArgSet*>(pc.getObject("minosSet")) ;
   const RooArgSet* cPars = static_cast<RooArgSet*>(pc.getObject("cPars")) ;
   const RooArgSet* extCons = static_cast<RooArgSet*>(pc.getObject("extCons")) ;
 
+  // Determine if the dataset has weights
+  Bool_t weightedData(kFALSE) ;
+  if (data.IsA() == RooDataSet::Class() && data.isWeighted()) {
+    // All unbinned data with weights are flagged as weighted
+    weightedData = kTRUE ;
+  } else {
+    // All binned data where the sum of the entries does not add up to an integere are flagged as weighted
+    // NB: This algorithm is not perfect, but that is not a serious problem as the weightedData flag
+    //     is only used to control warning messages to the user
+    Double_t sumEntries = data.sumEntries() ;
+    if (sumEntries != Int_t(sumEntries)) {
+      weightedData = kTRUE ;
+    }
+  }
+
+  // Warn user that a SumW2Error() argument should be provided if weighted data is offered
+  if (weightedData && doSumW2==-1) {
+    coutW(InputArguments) << "RooAbsPdf::fitTo(" << GetName() << ") WARNING: a likelihood fit is request of what appears to be weighted data. " << endl
+                          << "       While the estimated values of the parameters will always be calculated taking the weights into account, " << endl 
+			  << "       there are multiple ways to estimate the errors on these parameter values. You are advised to make an " << endl 
+			  << "       explicit choice on the error calculation: " << endl
+			  << "           - Either provide SumW2Error(kTRUE), to calculate a sum-of-weights corrected HESSE error matrix " << endl
+			  << "             (error will be proportional to the number of events)" << endl 
+			  << "           - Or provide SumW2Error(kFALSE), to return errors from original HESSE error matrix" << endl 
+			  << "             (which will be proportional to the sum of the weights)" << endl 
+			  << "       If you want the errors to reflect the information contained in the provided dataset, choose kTRUE. " << endl
+			  << "       If you want the errors to reflect the precision you would be able to obtain with an unweighted dataset " << endl 
+			  << "       with 'sum-of-weights' events, choose kFALSE." << endl ;
+  }
+
+
+  // Warn user that sum-of-weights correction does not apply to MINOS errrors
+  if (doSumW2==1 && minos) {
+    coutW(InputArguments) << "RooAbsPdf::fitTo(" << GetName() << ") WARNING: sum-of-weights correction does not apply to MINOS errors" << endl ;
+  }
+    
   // Process automatic extended option
   if (ext==2) {
     ext = ((extendMode()==CanBeExtended || extendMode()==MustBeExtended)) ? 1 : 0 ;
@@ -922,9 +974,12 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   // Construct NLL
   RooAbsReal::enableEvalErrorLogging(kTRUE) ;
   RooAbsReal* nll ;
+  list<RooNLLVar*> nllComponents ;
   if (!rangeName || strchr(rangeName,',')==0) {
     // Simple case: default range, or single restricted range
-    nll = new RooNLLVar("nll","-log(likelihood)",*this,data,projDeps,ext,rangeName,addCoefRangeName,numcpu,kFALSE,plevel!=-1,splitr) ;
+    RooNLLVar* tmp2 = new RooNLLVar("nll","-log(likelihood)",*this,data,projDeps,ext,rangeName,addCoefRangeName,numcpu,kFALSE,plevel!=-1,splitr) ;
+    nll = tmp2 ;
+    nllComponents.push_back(tmp2) ;
   } else {
     // Composite case: multiple ranges
     RooArgList nllList ;
@@ -932,8 +987,9 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
     strcpy(buf,rangeName) ;
     char* token = strtok(buf,",") ;
     while(token) {
-      RooAbsReal* nllComp = new RooNLLVar(Form("nll_%s",token),"-log(likelihood)",*this,data,projDeps,ext,token,addCoefRangeName,numcpu,kFALSE,plevel!=-1,splitr) ;
+      RooNLLVar* nllComp = new RooNLLVar(Form("nll_%s",token),"-log(likelihood)",*this,data,projDeps,ext,token,addCoefRangeName,numcpu,kFALSE,plevel!=-1,splitr) ;
       nllList.add(*nllComp) ;
+      nllComponents.push_back(nllComp) ;
       token = strtok(0,",") ;
     }
     delete[] buf ;
@@ -1018,6 +1074,61 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
       m.hesse() ;
     }
 
+    if (doSumW2==1) {
+      // Calculated corrected errors for weighted likelihood fits
+      RooFitResult* rw = m.save() ;
+      for (list<RooNLLVar*>::iterator iter=nllComponents.begin() ; iter!=nllComponents.end() ; iter++) {
+	(*iter)->applyWeightSquared(kTRUE) ;
+      }
+      coutI(Fitting) << "RooAbsPdf::fitTo(" << GetName() << ") Calculating sum-of-weights-squared correction matrix for covariance matrix" << endl ;
+      m.hesse() ;
+      RooFitResult* rw2 = m.save() ;
+      for (list<RooNLLVar*>::iterator iter=nllComponents.begin() ; iter!=nllComponents.end() ; iter++) {
+	(*iter)->applyWeightSquared(kFALSE) ;
+      }
+
+      // Apply correction matrix
+      const TMatrixDSym& V = rw->covarianceMatrix() ;
+      TMatrixDSym  C = rw2->covarianceMatrix() ;
+      
+      // Invert C
+      Double_t det(0) ;
+      C.Invert(&det) ;
+      if (det==0) {
+	coutE(Fitting) << "RooAbsPdf::fitTo(" << GetName() 
+		       << ") ERROR: Cannot apply sum-of-weights correction to covariance matrix: correction matrix calculated with weight-squared is singular" <<endl ;
+      } else {
+
+	// Calculate corrected covariance matrix = V C-1 V
+	TMatrixD VCV(V,TMatrixD::kMult,TMatrixD(C,TMatrixD::kMult,V)) ; 
+	
+	// Make matrix explicitly symmetric
+	Int_t n = VCV.GetNrows() ;
+	TMatrixDSym VCVsym(n) ;
+	for (Int_t i=0 ; i<n ; i++) {
+	  for (Int_t j=i ; j<n ; j++) {
+	    if (i==j) {
+	      VCVsym(i,j) = VCV(i,j) ;
+	    }
+	    if (i!=j) {
+	      Double_t deltaRel = (VCV(i,j)-VCV(j,i))/sqrt(VCV(i,i)*VCV(j,j)) ;
+	      if (fabs(deltaRel)>1e-3) {
+		coutW(Fitting) << "RooAbsPdf::fitTo(" << GetName() << ") WARNING: Corrected covariance matrix is not (completely) symmetric: V[" << i << "," << j << "] = " 
+			       << VCV(i,j) << " V[" << j << "," << i << "] = " << VCV(j,i) << " explicitly restoring symmetry by inserting average value" << endl ;
+	      }
+	      VCVsym(i,j) = (VCV(i,j)+VCV(j,i))/2 ;
+	    }
+	  }
+	}
+
+	// Propagate corrected errors to parameters objects
+	m.applyCovarianceMatrix(VCVsym) ;
+      }
+
+      delete rw ;
+      delete rw2 ;
+    }
+
     if (minos) {
       // Evaluate errs with Minos
       if (minosSet) {
@@ -1029,7 +1140,9 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
 
     // Optionally return fit result
     if (doSave) {
-      ret = m.save() ;
+      string name = Form("fitresult_%s_%s",GetName(),data.GetName()) ;
+      string title = Form("Result of fit of p.d.f. %s to dataset %s",GetName(),data.GetName()) ;
+      ret = m.save(name.c_str(),title.c_str()) ;
     } 
 
   }
@@ -1139,6 +1252,8 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooArgSet& projDeps, Opti
 void RooAbsPdf::printValue(ostream& os) const
 {
   // Print value of p.d.f, also print normalization integral that was last used, if any
+
+  getVal() ;
 
   if (_norm) {
     os << evaluate() << "/" << _norm->getVal() ;
@@ -2303,7 +2418,6 @@ RooArgSet* RooAbsPdf::getAllConstraints(const RooArgSet& observables, const RooA
 }
 
 
-
 //_____________________________________________________________________________
 void RooAbsPdf::clearEvalError() 
 { 
@@ -2328,3 +2442,65 @@ void RooAbsPdf::raiseEvalError()
   // Raise the evaluation error flag
   _evalError = kTRUE ; 
 }
+
+
+
+//_____________________________________________________________________________
+RooNumGenConfig* RooAbsPdf::defaultGeneratorConfig() 
+{
+  // Returns the default numeric MC generator configuration for all RooAbsReals
+  return &RooNumGenConfig::defaultConfig() ;
+}
+
+
+//_____________________________________________________________________________
+RooNumGenConfig* RooAbsPdf::specialGeneratorConfig() const 
+{
+  // Returns the specialized integrator configuration for _this_ RooAbsReal.
+  // If this object has no specialized configuration, a null pointer is returned
+  return _specGeneratorConfig ;
+}
+
+
+
+//_____________________________________________________________________________
+const RooNumGenConfig* RooAbsPdf::getGeneratorConfig() const 
+{
+  // Return the numeric MC generator configuration used for this object. If
+  // a specialized configuration was associated with this object, that configuration
+  // is returned, otherwise the default configuration for all RooAbsReals is returned
+
+  const RooNumGenConfig* config = specialGeneratorConfig() ;
+  if (config) return config ;
+  return defaultGeneratorConfig() ;
+}
+
+
+
+//_____________________________________________________________________________
+void RooAbsPdf::setGeneratorConfig(const RooNumGenConfig& config) 
+{
+  // Set the given configuration as default numeric MC generator
+  // configuration for this object
+  if (_specGeneratorConfig) {
+    delete _specGeneratorConfig ;
+  }
+  _specGeneratorConfig = new RooNumGenConfig(config) ;  
+}
+
+
+
+//_____________________________________________________________________________
+void RooAbsPdf::setGeneratorConfig() 
+{
+  // Remove the specialized numeric MC generator configuration associated
+  // with this object
+  if (_specGeneratorConfig) {
+    delete _specGeneratorConfig ;
+  }
+  _specGeneratorConfig = 0 ;
+}
+
+
+
+

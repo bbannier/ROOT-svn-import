@@ -34,6 +34,7 @@ class TH1F;
 class TH2F;
 class TList ;
 class RooLinkedList ;
+class RooNumGenConfig ;
 
 class RooAbsPdf : public RooAbsReal {
 public:
@@ -82,8 +83,14 @@ public:
   virtual Int_t getGenerator(const RooArgSet& directVars, RooArgSet &generateVars, Bool_t staticInitOK=kTRUE) const;
   virtual void initGenerator(Int_t code) ;
   virtual void generateEvent(Int_t code);  
-
   virtual Bool_t isDirectGenSafe(const RooAbsArg& arg) const ; 
+
+  // Configuration of MC generators used for this pdf
+  const RooNumGenConfig* getGeneratorConfig() const ;
+  static RooNumGenConfig* defaultGeneratorConfig()  ;
+  RooNumGenConfig* specialGeneratorConfig() const ;
+  void setGeneratorConfig() ;
+  void setGeneratorConfig(const RooNumGenConfig& config) ;
 
   // Interactions with a dataset  
   virtual RooFitResult* fitTo(RooAbsData& data, RooCmdArg arg1=RooCmdArg::none(),  RooCmdArg arg2=RooCmdArg::none(),  
@@ -176,7 +183,9 @@ public:
   static void clearEvalError() ;
   static Bool_t evalError() ;
   
-protected:
+
+  
+protected:   
 
 public:
   virtual const RooAbsReal* getNormObj(const RooArgSet* set, const RooArgSet* iset, const TNamed* rangeName=0) const ;
@@ -251,10 +260,13 @@ protected:
   Bool_t _selectComp ;               // Component selection flag for RooAbsPdf::plotCompOn
 
   static void raiseEvalError() ;
-  
+
   static Bool_t _evalError ;
+
+  RooNumGenConfig* _specGeneratorConfig ; //! MC generator configuration specific for this object
   
-  ClassDef(RooAbsPdf,1) // Abstract PDF with normalization support
+  
+  ClassDef(RooAbsPdf,2) // Abstract PDF with normalization support
 };
 
 
