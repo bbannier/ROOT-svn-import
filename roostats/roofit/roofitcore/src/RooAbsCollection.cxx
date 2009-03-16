@@ -321,6 +321,27 @@ RooAbsCollection &RooAbsCollection::operator=(const RooAbsCollection& other)
 
 
 //_____________________________________________________________________________
+RooAbsCollection &RooAbsCollection::assignFast(const RooAbsCollection& other) 
+{
+  // Functional equivalent of operator=() but assumes this and other collection
+  // have same layout. Also no attributes are copied
+
+  if (&other==this) return *this ;
+
+  RooAbsArg *elem, *theirs ;
+  RooLinkedListIter iter = _list.iterator() ;
+  RooLinkedListIter iter2 = other._list.iterator() ;
+  while((elem=(RooAbsArg*)iter.Next())) {
+    theirs= (RooAbsArg*)iter2.Next() ;
+    theirs->syncCache() ;
+    elem->copyCache(theirs,kTRUE) ;
+  }
+  return *this;
+}
+
+
+
+//_____________________________________________________________________________
 Bool_t RooAbsCollection::addOwned(RooAbsArg& var, Bool_t silent) 
 {
   // Add the specified argument to list. Returns kTRUE if successful, or
@@ -856,7 +877,7 @@ void RooAbsCollection::printMultiline(ostream&os, Int_t contents, Bool_t /*verbo
   // Implement multiline printin of collection, one line for each ontained object showing
   // the requested content
 
-  if (TString(GetName()).Length()>0) {
+  if (TString(GetName()).Length()>0 && (contents&kCollectionHeader)) {
     os << indent << ClassName() << "::" << GetName() << ":" << (_ownCont?" (Owning contents)":"") << endl;
   }
 

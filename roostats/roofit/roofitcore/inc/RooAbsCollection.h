@@ -41,6 +41,7 @@ public:
   // of the original variables.
   RooAbsCollection(const RooAbsCollection& other, const char *name="");
   RooAbsCollection& operator=(const RooAbsCollection& other);
+  RooAbsCollection& assignFast(const RooAbsCollection& other) ;
 
   // Copy list and contents (and optionally 'deep' servers)
   RooAbsCollection *snapshot(Bool_t deepCopy=kTRUE) const ;
@@ -140,6 +141,8 @@ public:
   void dump() const ;
 
   void releaseOwnership() { _ownCont = kFALSE ; }
+
+  void sort(Bool_t ascend=kTRUE) { _list.Sort(ascend) ; }
 
 protected:
 
