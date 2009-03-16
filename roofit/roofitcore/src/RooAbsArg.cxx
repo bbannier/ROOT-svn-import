@@ -1057,7 +1057,9 @@ void RooAbsArg::registerProxy(RooArgProxy& proxy)
 //        << (proxy.isValueServer()?"V":"-") << (proxy.isShapeServer()?"S":"-") << endl ;
 
   // Register proxied object as server
-  addServer(*proxy.absArg(),proxy.isValueServer(),proxy.isShapeServer()) ;
+  if (proxy.absArg()) {
+    addServer(*proxy.absArg(),proxy.isValueServer(),proxy.isShapeServer()) ;
+  }
 
   // Register proxy itself
   _proxyList.Add(&proxy) ;
@@ -1263,6 +1265,7 @@ void RooAbsArg::printArgs(ostream& os) const
       os << " " ;
     }
   }    
+  printMetaArgs(os) ;
   os << "]" ;  
 }
 
@@ -2014,3 +2017,6 @@ Bool_t RooAbsArg::flipAClean()
 {
   return _flipAClean ;
 }
+
+
+
