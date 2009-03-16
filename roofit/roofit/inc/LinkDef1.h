@@ -7,7 +7,6 @@
 #pragma link C++ class RooBCPEffDecay+ ;
 #pragma link C++ class RooBCPGenDecay+ ;
 #pragma link C++ class RooBDecay+ ;
-#pragma link C++ class RooBernstein+ ;
 #pragma link C++ class RooBlindTools+ ;
 #pragma link C++ class RooBifurGauss+ ;
 #pragma link C++ class RooBMixDecay+ ;
@@ -37,6 +36,7 @@
 #pragma link C++ class RooChi2MCSModule+ ;
 #pragma link C++ class RooTFnBinding+ ;
 #pragma link C++ class RooTFnPdfBinding+ ;
+#pragma link C++ class RooBernstein+ ;
 //
 #pragma link C++ class RooCFunction1Binding<Double_t,Double_t>+ ;
 #pragma link C++ class RooCFunction1PdfBinding<Double_t,Double_t>+ ;
@@ -94,4 +94,5 @@
 #else
 #pragma link C++ namespace RooFit ;
 #endif
+//
 #endif 
