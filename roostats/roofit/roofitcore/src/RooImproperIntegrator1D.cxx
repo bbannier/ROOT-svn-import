@@ -53,7 +53,6 @@ void RooImproperIntegrator1D::registerIntegrator(RooNumIntFactory& fact)
 
   RooImproperIntegrator1D* proto = new RooImproperIntegrator1D() ;
   fact.storeProtoIntegrator(proto,RooArgSet(),RooIntegrator1D::Class()->GetName()) ;
-  RooNumIntConfig::defaultConfig().method1DOpen().setLabel(proto->IsA()->GetName()) ;
 }
 
 
