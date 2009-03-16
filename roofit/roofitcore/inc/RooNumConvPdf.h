@@ -26,6 +26,8 @@ class RooDataSet ;
 class RooNumConvPdf : public RooAbsPdf {
 public:
 
+  RooNumConvPdf() ;
+
   RooNumConvPdf(const char *name, const char *title, 
                 RooRealVar& convVar, RooAbsPdf& pdf, RooAbsPdf& resmodel) ;
 
@@ -51,6 +53,8 @@ public:
   RooAbsReal&  pdf() const { return (RooAbsReal&) _origPdf.arg() ; }
   RooAbsReal&  model() const { return (RooAbsReal&) _origModel.arg() ; }
 
+  void printMetaArgs(ostream& os) const ;
+
 protected:
 
   // WVE Store all properties of RooNumConvolution here so that can be take
@@ -58,9 +62,9 @@ protected:
 
   RooNumConvolution& conv() const { if (!_init) initialize() ; return *_conv ; }
 
-  mutable Bool_t _init ;
+  mutable Bool_t _init ; //! do not persist
   void initialize() const ;
-  mutable RooNumConvolution* _conv ;
+  mutable RooNumConvolution* _conv ; //! Actual convolution calculation
 
   RooRealProxy _origVar ;         // Original convolution variable
   RooRealProxy _origPdf ;         // Original input PDF
@@ -71,7 +75,7 @@ protected:
 
   friend class RooConvGenContext ;
 
-  ClassDef(RooNumConvPdf,0)     // Operator PDF implementing numeric convolution of 2 input PDFs
+  ClassDef(RooNumConvPdf,1)     // Operator PDF implementing numeric convolution of 2 input PDFs
 };
 
 #endif
