@@ -75,7 +75,7 @@ public:
   virtual Bool_t selfNormalized() const { return _unitNorm ; }
 
   virtual Int_t getMaxVal(const RooArgSet& vars) const ;
-  virtual Double_t maxVal(Int_t code) ;
+  virtual Double_t maxVal(Int_t code) const ;
 
   virtual std::list<Double_t>* plotSamplingHint(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const ; 
 

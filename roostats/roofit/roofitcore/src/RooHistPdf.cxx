@@ -286,7 +286,7 @@ Int_t RooHistPdf::getMaxVal(const RooArgSet& /*vars*/) const
 
 
 //_____________________________________________________________________________
-Double_t RooHistPdf::maxVal(Int_t /*code*/) 
+Double_t RooHistPdf::maxVal(Int_t /*code*/) const 
 {
   // Not implemented yet
   return 0 ;
