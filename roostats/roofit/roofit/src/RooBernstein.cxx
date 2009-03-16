@@ -120,7 +120,7 @@ Double_t RooBernstein::analyticalIntegral(Int_t code, const char* rangeName) con
     // where the integral is straight forward.
     temp = 0;
     for (int j=i; j<=degree; ++j){ // power basis≈ß
-      temp += pow(-1,j-i) * TMath::Binomial(degree, j) * TMath::Binomial(j,i) / (j+1);
+      temp += pow(-1.,j-i) * TMath::Binomial(degree, j) * TMath::Binomial(j,i) / (j+1);
     }
     temp *= ((RooAbsReal&) _coefList[i]).getVal(); // include coeff
     norm += temp; // add this basis's contribution to total
