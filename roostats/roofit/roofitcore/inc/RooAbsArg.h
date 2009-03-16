@@ -197,6 +197,7 @@ public:
   virtual void printClassName(ostream& os) const ;
   virtual void printAddress(ostream& os) const ;
   virtual void printArgs(ostream& os) const ;
+  virtual void printMetaArgs(ostream& /*os*/) const {} ;
   virtual void printMultiline(ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const;
   virtual void printTree(ostream& os, TString indent="") const ;
 
@@ -257,6 +258,7 @@ public:
     // Has this argument a defined range (dummy interface always returns flase)
     return kFALSE ; 
   }
+
 
   enum ConstOpCode { Activate=0, DeActivate=1, ConfigChange=2, ValueChange=3 } ;
   
@@ -382,6 +384,7 @@ public:
   friend class RooArgProxy ;
   friend class RooSetProxy ;
   friend class RooListProxy ;
+  friend class RooObjectFactory ;
   void registerProxy(RooArgProxy& proxy) ;
   void registerProxy(RooSetProxy& proxy) ;
   void registerProxy(RooListProxy& proxy) ;
@@ -404,7 +407,7 @@ void printAttribList(ostream& os) const;
   friend class RooDataSet ;
   friend class RooRealMPFE ;
   virtual void syncCache(const RooArgSet* nset=0) = 0 ;
-  virtual void copyCache(const RooAbsArg* source) = 0 ;
+  virtual void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE) = 0 ;
   virtual void attachToTree(TTree& t, Int_t bufSize=32000) = 0 ;
   virtual void setTreeBranchStatus(TTree& t, Bool_t active) = 0 ;
   virtual void fillTreeBranch(TTree& t) = 0 ;
