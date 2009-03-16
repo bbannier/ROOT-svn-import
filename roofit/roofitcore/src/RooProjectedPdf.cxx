@@ -34,6 +34,7 @@
 #include "RooProjectedPdf.h" 
 #include "RooMsgService.h"
 #include "RooAbsReal.h" 
+#include "RooRealVar.h"
 
 
 
@@ -73,7 +74,7 @@ RooProjectedPdf::RooProjectedPdf() : _curNormSet(0)
  RooProjectedPdf::RooProjectedPdf(const RooProjectedPdf& other, const char* name) :  
    RooAbsPdf(other,name), 
    intpdf("IntegratedPdf",this,other.intpdf),
-   intobs("IntegrarionObservable",this,other.intobs),
+   intobs("IntegrationObservable",this,other.intobs),
    deps("!Dependents",this,other.deps),
    _cacheMgr(other._cacheMgr,this)
 { 
@@ -86,6 +87,7 @@ RooProjectedPdf::RooProjectedPdf() : _curNormSet(0)
 Double_t RooProjectedPdf::getVal(const RooArgSet* set) const 
 {
   // Special version of getVal() overrides RooAbsReal::getVal() to save value of current normalization set
+
 
   _curNormSet = (RooArgSet*)set ;
   return RooAbsPdf::getVal(set) ;
