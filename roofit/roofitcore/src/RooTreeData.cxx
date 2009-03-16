@@ -1150,7 +1150,7 @@ RooPlot* RooTreeData::plotOn(RooPlot* frame, const RooLinkedList& argList) const
   // Misc. other options
   // -------------------
   // Name(const chat* name)          -- Give curve specified name in frame. Useful if curve is to be referenced later
-  // Invisble(Bool_t flag)           -- Add curve to frame, but do not display. Useful in combination AddTo()
+  // Invisble()                      -- Add curve to frame, but do not display. Useful in combination AddTo()
   // AddTo(const char* name,         -- Add constructed histogram to already existing histogram with given name and relative weight factors
   // double_t wgtSelf, double_t wgtOther)
   // 
@@ -1744,10 +1744,15 @@ TH1 *RooTreeData::fillHistogram(TH1 *hist, const RooArgList &plotVars, const cha
 
     Double_t error2 = TMath::Power(hist->GetBinError(bin),2)-TMath::Power(weight(),2)  ;
     Double_t we = weightError(RooAbsData::SumW2) ;
+
+
     if (we==0) we = weight() ;
     error2 += TMath::Power(we,2) ;
     //hist->AddBinContent(bin,weight());
     hist->SetBinError(bin,sqrt(error2)) ;
+
+    //cout << "RooTreeData::fillHistogram() bin = " << bin << " weight() = " << weight() << " we = " << we << endl ;
+
   }
 
   if(0 != select) delete select;
