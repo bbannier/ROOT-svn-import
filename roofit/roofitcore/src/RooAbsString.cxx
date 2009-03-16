@@ -205,7 +205,7 @@ void RooAbsString::syncCache(const RooArgSet*)
 
 
 //_____________________________________________________________________________
-void RooAbsString::copyCache(const RooAbsArg* source) 
+void RooAbsString::copyCache(const RooAbsArg* source, Bool_t /*valueOnly*/) 
 {
   // Copy cache of another RooAbsArg to our cache
   //
