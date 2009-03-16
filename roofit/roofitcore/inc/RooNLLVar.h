@@ -49,6 +49,8 @@ public:
   
   virtual ~RooNLLVar();
 
+  void applyWeightSquared(Bool_t flag) { _weightSq = flag ; setValueDirty() ; } 
+
   virtual Double_t defaultErrorLevel() const { return 0.5 ; }
 
 protected:
@@ -57,6 +59,7 @@ protected:
 
   Bool_t _extended ;
   virtual Double_t evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_t stepSize) const ;
+  Bool_t _weightSq ; // Apply weights squared?
   
   ClassDef(RooNLLVar,1) // Function representing (extended) -log(L) of p.d.f and dataset
 };
