@@ -1006,7 +1006,7 @@ void RooRealVar::fillTreeBranch(TTree& t)
 
 
 //_____________________________________________________________________________
-void RooRealVar::copyCache(const RooAbsArg* source) 
+void RooRealVar::copyCache(const RooAbsArg* source, Bool_t valueOnly) 
 {
   // Copy the cached value of another RooAbsArg to our cache
   // Warning: This function copies the cached values of source,
@@ -1014,6 +1014,8 @@ void RooRealVar::copyCache(const RooAbsArg* source)
 
   // Follow usual procedure for valueklog
   RooAbsReal::copyCache(source) ;
+
+  if (valueOnly) return ;
 
   // Copy error too, if source has one
   RooRealVar* other = dynamic_cast<RooRealVar*>(const_cast<RooAbsArg*>(source)) ;

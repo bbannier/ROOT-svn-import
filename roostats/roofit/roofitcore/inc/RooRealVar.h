@@ -118,7 +118,7 @@ public:
 
 
   virtual Double_t evaluate() const { return _value ; } // dummy because we overloaded getVal()
-  virtual void copyCache(const RooAbsArg* source) ;
+  virtual void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE) ;
   virtual void attachToTree(TTree& t, Int_t bufSize=32000) ;
   virtual void fillTreeBranch(TTree& t) ;
 
