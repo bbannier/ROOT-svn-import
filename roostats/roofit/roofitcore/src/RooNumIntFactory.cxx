@@ -46,6 +46,7 @@
 #include "RooMCIntegrator.h"
 #include "RooGaussKronrodIntegrator1D.h"
 #include "RooAdaptiveGaussKronrodIntegrator1D.h"
+#include "RooAdaptiveIntegratorND.h"
 #include "RooSentinel.h"
 
 #include "RooMsgService.h"
@@ -73,6 +74,13 @@ RooNumIntFactory::RooNumIntFactory()
   RooMCIntegrator::registerIntegrator(*this) ;
   RooAdaptiveGaussKronrodIntegrator1D::registerIntegrator(*this) ;
   RooGaussKronrodIntegrator1D::registerIntegrator(*this) ;  
+  RooAdaptiveIntegratorND::registerIntegrator(*this) ;
+
+  RooNumIntConfig::defaultConfig().method1D().setLabel("RooGaussKronrodIntegrator1D") ;
+  RooNumIntConfig::defaultConfig().method1DOpen().setLabel("RooImproperIntegrator1D") ;
+  RooNumIntConfig::defaultConfig().method2D().setLabel("RooAdaptiveIntegratorND") ;
+  RooNumIntConfig::defaultConfig().methodND().setLabel("RooAdaptiveIntegratorND") ;
+  
 }
 
 
