@@ -37,6 +37,16 @@ ClassImp(RooCategoryProxy)
 
 
 //_____________________________________________________________________________
+RooCategoryProxy::RooCategoryProxy(const char* Name, const char* desc, RooAbsArg* owner,
+				   Bool_t valueServer, Bool_t shapeServer, Bool_t ownArg) : 
+  RooArgProxy(Name, desc, owner, valueServer, shapeServer, ownArg)
+{
+  // Constructor with owner and proxied category object
+}
+
+
+
+//_____________________________________________________________________________
 RooCategoryProxy::RooCategoryProxy(const char* Name, const char* desc, RooAbsArg* owner, RooAbsCategory& ref,
 				   Bool_t valueServer, Bool_t shapeServer, Bool_t ownArg) : 
   RooArgProxy(Name, desc, owner, ref, valueServer, shapeServer, ownArg)
