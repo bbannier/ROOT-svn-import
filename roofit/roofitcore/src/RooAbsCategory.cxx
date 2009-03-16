@@ -567,7 +567,7 @@ void RooAbsCategory::syncCache(const RooArgSet*)
 
 
 //_____________________________________________________________________________
-void RooAbsCategory::copyCache(const RooAbsArg* source) 
+void RooAbsCategory::copyCache(const RooAbsArg* source, Bool_t /*valueOnly*/) 
 {
   // Copy the cached value from given source and raise dirty flag.
   // It is the callers responsability to ensure that the sources
