@@ -694,6 +694,23 @@ void RooDataSet::add(const RooArgSet& data, Double_t wgt)
 
 
 //_____________________________________________________________________________
+void RooDataSet::addFast(const RooArgSet& data, Double_t wgt) 
+{
+  // Add a data point, with its coordinates specified in the 'data' argset, to the data set. 
+  // Layout and size of input argument data is ASSUMED to be the same as RooArgSet returned
+  // RooDataSet::get()
+  //
+
+  checkInit() ;
+
+  _varsNoWgt.assignFast(data);
+  if (_wgtVar) _wgtVar->setVal(wgt) ;
+  Fill();
+}
+
+
+
+//_____________________________________________________________________________
 Bool_t RooDataSet::merge(RooDataSet* data1, RooDataSet* data2, RooDataSet* data3, 
 			 RooDataSet* data4, RooDataSet* data5, RooDataSet* data6) 
 {

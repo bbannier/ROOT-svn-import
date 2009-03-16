@@ -78,6 +78,8 @@ public:
 
   // Add one ore more rows of data
   virtual void add(const RooArgSet& row, Double_t weight=1.0);
+  virtual void addFast(const RooArgSet& row, Double_t weight=1.0);
+
   void append(RooTreeData& data) ;
   Bool_t merge(RooDataSet* data1, RooDataSet* data2=0, RooDataSet* data3=0, 
 	       RooDataSet* data4=0, RooDataSet* data5=0, RooDataSet* data6=0) ;
