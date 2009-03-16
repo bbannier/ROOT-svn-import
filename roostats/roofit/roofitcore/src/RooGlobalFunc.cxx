@@ -142,6 +142,7 @@ namespace RooFit {
   RooCmdArg ExternalConstraints(const RooArgSet& cpdfs)  { return RooCmdArg("ExternalConstraints",0,0,0,0,0,0,&cpdfs,0) ; }
   RooCmdArg PrintEvalErrors(Int_t numErrors)             { return RooCmdArg("PrintEvalErrors",numErrors,0,0,0,0,0,0,0) ; }
   RooCmdArg EvalErrorWall(Bool_t flag)                   { return RooCmdArg("EvalErrorWall",flag,0,0,0,0,0,0,0) ; }
+  RooCmdArg SumW2Error(Bool_t flag)                      { return RooCmdArg("SumW2Error",flag,0,0,0,0,0,0,0) ; }
 
   
   // RooAbsPdf::paramOn arguments
@@ -154,7 +155,7 @@ namespace RooFit {
   RooCmdArg What(const char* str) { return RooCmdArg("What",0,0,0,0,str,0,0,0) ; }
 
   // RooProdPdf::ctor arguments
-  RooCmdArg Conditional(const RooArgSet& pdfSet, const RooArgSet& depSet) { return RooCmdArg("Conditional",0,0,0,0,0,0,&pdfSet,&depSet) ; } ;
+  RooCmdArg Conditional(const RooArgSet& pdfSet, const RooArgSet& depSet, Bool_t depsAreCond) { return RooCmdArg("Conditional",depsAreCond,0,0,0,0,0,&pdfSet,&depSet) ; } ;
   
   // RooAbsPdf::generate arguments
   RooCmdArg ProtoData(const RooDataSet& protoData, Bool_t randomizeOrder, Bool_t resample) 
@@ -230,7 +231,7 @@ namespace RooFit {
   RooCmdArg RenameAllNodes(const char* suffix)              { return RooCmdArg("RenameAllNodes",0,0,0,0,suffix,0,0,0) ; }
   RooCmdArg RenameAllVariables(const char* suffix)          { return RooCmdArg("RenameAllVariables",0,0,0,0,suffix,0,0,0) ; }
   RooCmdArg RenameVariable(const char* in, const char* out) { return RooCmdArg("RenameVar",0,0,0,0,in,out,0,0) ; }
-  RooCmdArg RenameDataset(const char* suffix)               { return RooCmdArg("RenameDataset",0,0,0,0,suffix,0,0,0) ; }
+  RooCmdArg Rename(const char* suffix)                      { return RooCmdArg("Rename",0,0,0,0,suffix,0,0,0) ; }
 
   // RooSimCloneTool::build() arguments
   RooCmdArg SplitParam(const char* varname, const char* catname)         { return RooCmdArg("SplitParam",0,0,0,0,varname,catname,0,0) ; }
