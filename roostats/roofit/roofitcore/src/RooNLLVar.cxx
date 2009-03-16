@@ -78,6 +78,7 @@ RooNLLVar::RooNLLVar(const char *name, const char* title, RooAbsPdf& pdf, RooAbs
   pc.process(arg7) ;  pc.process(arg8) ;  pc.process(arg9) ;
 
   _extended = pc.getInt("extended") ;
+  _weightSq = kFALSE ;
 }
 
 
@@ -87,7 +88,8 @@ RooNLLVar::RooNLLVar(const char *name, const char *title, RooAbsPdf& pdf, RooAbs
 		     Bool_t extended, const char* rangeName, const char* addCoefRangeName,
 		     Int_t nCPU, Bool_t interleave, Bool_t verbose, Bool_t splitRange) : 
   RooAbsOptTestStatistic(name,title,pdf,data,RooArgSet(),rangeName,addCoefRangeName,nCPU,interleave,verbose,splitRange),
-  _extended(extended)
+  _extended(extended),
+  _weightSq(kFALSE)
 {
   // Construct likelihood from given p.d.f and (binned or unbinned dataset)
   // For internal use.
@@ -101,7 +103,8 @@ RooNLLVar::RooNLLVar(const char *name, const char *title, RooAbsPdf& pdf, RooAbs
 		     const RooArgSet& projDeps, Bool_t extended, const char* rangeName,const char* addCoefRangeName, 
 		     Int_t nCPU,Bool_t interleave,Bool_t verbose, Bool_t splitRange) : 
   RooAbsOptTestStatistic(name,title,pdf,data,projDeps,rangeName,addCoefRangeName,nCPU,interleave,verbose,splitRange),
-  _extended(extended)
+  _extended(extended),
+  _weightSq(kFALSE)
 {
   // Construct likelihood from given p.d.f and (binned or unbinned dataset)
   // For internal use.  
@@ -114,7 +117,8 @@ RooNLLVar::RooNLLVar(const char *name, const char *title, RooAbsPdf& pdf, RooAbs
 //_____________________________________________________________________________
 RooNLLVar::RooNLLVar(const RooNLLVar& other, const char* name) : 
   RooAbsOptTestStatistic(other,name),
-  _extended(other._extended)
+  _extended(other._extended),
+  _weightSq(other._weightSq)
 {
   // Copy constructor
 }
@@ -156,8 +160,12 @@ Double_t RooNLLVar::evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_t s
     if (_dataClone->weight()==0) continue ;
 
     // cout << "evaluating nll for event #" << i << " of " << lastEvent-firstEvent << endl ;
-    Double_t term = _dataClone->weight() * pdfClone->getLogVal(_normSet);
-    sumWeight += _dataClone->weight() ;
+
+    Double_t eventWeight = _dataClone->weight() ;
+    if (_weightSq) eventWeight *= eventWeight ;
+
+    Double_t term = eventWeight * pdfClone->getLogVal(_normSet);
+    sumWeight += eventWeight ;
 
     //cout << "RooNLLVar term of event [" << i << "] is " << term << endl ; 
 
