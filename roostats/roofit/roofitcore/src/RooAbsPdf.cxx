@@ -905,20 +905,8 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   const RooArgSet* cPars = static_cast<RooArgSet*>(pc.getObject("cPars")) ;
   const RooArgSet* extCons = static_cast<RooArgSet*>(pc.getObject("extCons")) ;
 
-  // Determine if the dataset has weights
-  Bool_t weightedData(kFALSE) ;
-  if (data.IsA() == RooDataSet::Class() && data.isWeighted()) {
-    // All unbinned data with weights are flagged as weighted
-    weightedData = kTRUE ;
-  } else {
-    // All binned data where the sum of the entries does not add up to an integere are flagged as weighted
-    // NB: This algorithm is not perfect, but that is not a serious problem as the weightedData flag
-    //     is only used to control warning messages to the user
-    Double_t sumEntries = data.sumEntries() ;
-    if (sumEntries != Int_t(sumEntries)) {
-      weightedData = kTRUE ;
-    }
-  }
+  // Determine if the dataset has weights  
+  Bool_t weightedData = data.isNonPoissonWeighted() ;
 
   // Warn user that a SumW2Error() argument should be provided if weighted data is offered
   if (weightedData && doSumW2==-1) {

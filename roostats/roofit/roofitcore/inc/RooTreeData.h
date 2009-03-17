@@ -65,7 +65,7 @@ public:
   virtual RooArgSet* addColumns(const RooArgList& varList) ;
 
 
-  virtual Int_t numEntries(Bool_t useWeights=kFALSE) const ;
+  virtual Int_t numEntries() const ;
   virtual void reset() { Reset() ; }
 
   using RooAbsData::table ;
@@ -120,7 +120,8 @@ public:
   // WVE --- This needs to be public to avoid CINT problems
   struct PlotOpt {
    PlotOpt() : cuts(""), drawOptions("P"), bins(0), etype(RooAbsData::Poisson), cutRange(0), histName(0), histInvisible(kFALSE),
-              addToHistName(0),addToWgtSelf(1.),addToWgtOther(1.),xErrorSize(1),refreshFrameNorm(kFALSE),correctForBinWidth(kTRUE) {} ;
+              addToHistName(0),addToWgtSelf(1.),addToWgtOther(1.),xErrorSize(1),refreshFrameNorm(kFALSE),correctForBinWidth(kTRUE),
+              scaleFactor(1.) {} ;
    const char* cuts ;
    Option_t* drawOptions ;
    RooAbsBinning* bins ;
@@ -134,6 +135,7 @@ public:
    Double_t xErrorSize ;
    Bool_t refreshFrameNorm ;
    Bool_t correctForBinWidth ;
+   Double_t scaleFactor ;
   } ;
 	
   // PlotOn implementation

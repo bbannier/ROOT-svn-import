@@ -57,9 +57,9 @@ RooDataWeightedAverage::RooDataWeightedAverage(const char *name, const char *tit
 
   if (_showProgress) {
     coutI(Plotting) << "RooDataWeightedAverage::ctor(" << GetName() << ") constructing data weighted average of function " << pdf.GetName() 
-		    << " over " << data.numEntries() << " data points of " << *(data.get()) << " with a total weight of " << data.numEntries(kTRUE) << endl ;
+		    << " over " << data.numEntries() << " data points of " << *(data.get()) << " with a total weight of " << data.sumEntries() << endl ;
   }
-  _sumWeight = data.numEntries(kTRUE) ;
+  _sumWeight = data.sumEntries() ;
 }
 
 

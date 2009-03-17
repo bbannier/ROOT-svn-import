@@ -80,6 +80,7 @@ namespace RooFit {
   RooCmdArg XErrorSize(Double_t width)            { return RooCmdArg("XErrorSize",0,0,width,0,0,0,0,0) ; }
   RooCmdArg RefreshNorm()                         { return RooCmdArg("RefreshNorm",1,0,0,0,0,0,0,0) ; }
   RooCmdArg Efficiency(const RooCategory& cat)    { return RooCmdArg("Efficiency",0,0,0,0,0,0,&cat,0) ; }
+  RooCmdArg Rescale(Double_t factor)              { return RooCmdArg("Rescale",0,0,factor,0,0,0,0,0) ; }
 
   // RooDataHist::ctor arguments
   RooCmdArg Weight(Double_t wgt)                  { return RooCmdArg("Weight",0,0,wgt,0,0,0,0,0) ; }

@@ -82,6 +82,7 @@ RooCmdArg CutRange(const char* rangeName) ;
 RooCmdArg XErrorSize(Double_t width) ;
 RooCmdArg RefreshNorm() ;
 RooCmdArg Efficiency(const RooCategory& cat) ;
+RooCmdArg Rescale(Double_t factor) ;
 
 // RooDataHist::ctor arguments
 RooCmdArg Weight(Double_t wgt) ;
