@@ -49,9 +49,9 @@ public:
   inline const TH2* profileData() const { return conv().profileData() ; }
 
   // Access components
-  RooRealVar&  var() const { return (RooRealVar&) _origVar.arg() ; }
-  RooAbsReal&  pdf() const { return (RooAbsReal&) _origPdf.arg() ; }
-  RooAbsReal&  model() const { return (RooAbsReal&) _origModel.arg() ; }
+  RooRealVar&  var() const { return (RooRealVar&)(const_cast<RooAbsReal&>(_origVar.arg())) ; }
+  RooAbsReal&  pdf() const { return const_cast<RooAbsReal&>(_origPdf.arg()) ; }
+  RooAbsReal&  model() const { return const_cast<RooAbsReal&>(_origModel.arg()) ; }
 
   void printMetaArgs(ostream& os) const ;
 

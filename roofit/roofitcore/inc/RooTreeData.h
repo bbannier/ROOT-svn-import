@@ -182,7 +182,7 @@ protected:
 
   void checkInit() const {
     if (_defCtor) {
-      ((RooTreeData*)this)->initialize() ;
+      const_cast<RooTreeData*>(this)->initialize() ;
       _defCtor = kFALSE ;    
     }
   }
