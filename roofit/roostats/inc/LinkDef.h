@@ -53,7 +53,8 @@
 
 #pragma link C++ class RooStats::SamplingDistribution+;
 #pragma link C++ class RooStats::NeymanConstruction+;
-//#pragma link C++ class RooStats::ConfidenceBelt+; // in progress
+#pragma link C++ class RooStats::FeldmanCousins+;
+#pragma link C++ class RooStats::ConfidenceBelt+; // in progress
 
 #pragma link C++ class RooStats::BernsteinCorrection+;
 

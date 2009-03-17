@@ -93,7 +93,8 @@ namespace RooStats {
        cout << " = " << fProfile->evaluate()  << endl;
        */
 
-       Double_t value = fProfile->evaluate();
+       //       Double_t value = fProfile->evaluate();
+       Double_t value = fProfile->getVal();
        RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
        return value;
      }

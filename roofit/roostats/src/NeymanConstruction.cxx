@@ -79,9 +79,9 @@ NeymanConstruction::NeymanConstruction() {
 
 //_______________________________________________________
 TList* NeymanConstruction::GenSamplingDistribution(const char* asciiFilePat) const {
-//This method generates the sampling distribution for each point of the study. If a file path
-//is provided, the distribution is saved in a root file. Returns the list of the distributions
-//for each point.
+  //This method generates the sampling distribution for each point of the study. If a file path
+  //is provided, the distribution is saved in a root file. Returns the list of the distributions
+  //for each point.
 
   RooArgSet* point; 
   TList* SamplingList = new TList();
@@ -122,6 +122,7 @@ TList* NeymanConstruction::GenSamplingDistribution(const char* asciiFilePat) con
   return SamplingList;
 }
 
+//_______________________________________________________
 ConfInterval* NeymanConstruction::GetInterval() const {
   // Main interface to get a RooStats::ConfInterval.  
   // It constructs a RooStats::PointSetInterval.
@@ -139,13 +140,14 @@ ConfInterval* NeymanConstruction::GetInterval() const {
 
   assert(SamplingList->GetSize() > 0);
 
-  return run(SamplingList);
+  return Run(SamplingList);
 }
 
+//_______________________________________________________
 ConfInterval* NeymanConstruction::GetInterval(const char* asciiFilePat) const {
-//This method returns a confidence interval exactly like GetInterval(), but
-//instead of generating the sampling disribution (long computation) it takes
-//the distribution from the file provided
+  //This method returns a confidence interval exactly like GetInterval(), but
+  //instead of generating the sampling disribution (long computation) it takes
+  //the distribution from the file provided
 
   // local variables
   RooAbsData* data = fWS->data(fDataName);
@@ -170,10 +172,11 @@ ConfInterval* NeymanConstruction::GetInterval(const char* asciiFilePat) const {
 
   assert(SamplingList->GetSize() > 0);
 
-  return run(SamplingList);
+  return Run(SamplingList);
 }
 
-ConfInterval* NeymanConstruction::run(TList *SamplingList) const {
+//_______________________________________________________
+ConfInterval* NeymanConstruction::Run(TList *SamplingList) const {
   //Main method to perform the interval calculation
 
   // local variables
