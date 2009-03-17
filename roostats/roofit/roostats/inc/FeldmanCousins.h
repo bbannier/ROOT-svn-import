@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: NeymanConstruction.h 26805 2009-01-13 17:45:57Z cranmer $
+// @(#)root/roostats:$Id: FeldmanCousins.h 26805 2009-01-13 17:45:57Z cranmer $
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -8,8 +8,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOSTATS_NeymanConstruction
-#define ROOSTATS_NeymanConstruction
+#ifndef ROOSTATS_FeldmanCousins
+#define ROOSTATS_FeldmanCousins
 
 
 #ifndef ROOT_Rtypes
@@ -20,7 +20,7 @@
 #include "RooStats/IntervalCalculator.h"
 #endif
 
-#include "RooStats/TestStatSampler.h"
+#include "RooStats/ToyMCSampler.h"
 
 #include "RooTreeData.h"
 #include "RooWorkspace.h"
@@ -34,36 +34,14 @@ namespace RooStats {
 
    class ConfInterval; 
 
- class NeymanConstruction : public IntervalCalculator {
+ class FeldmanCousins : public IntervalCalculator {
 
    public:
-     NeymanConstruction();
-     virtual ~NeymanConstruction() {}
+     FeldmanCousins();
+     virtual ~FeldmanCousins() {}
     
       // Main interface to get a ConfInterval (will be a PointSetInterval)
       virtual ConfInterval* GetInterval() const;
-
-      // Interface extended with I/O support
-      virtual ConfInterval* GetInterval(const char* asciiFilePat) const;
-
-      // Actually generate teh sampling distribution
-      virtual TList*        GenSamplingDistribution(const char* asciiFilePat = 0) const; 
-      virtual ConfInterval* Run(TList *SamplingList) const;
-
-      // in addition to interface we also need:
-      // Set the TestStatSampler (eg. ToyMC or FFT, includes choice of TestStatistic)
-      void SetTestStatSampler(TestStatSampler& distCreator) {fTestStatSampler = &distCreator;}
-      // Choose upper limit and unified limits use 1., lower limits use (0.), and central limits use (0.5)
-      void SetLeftSideTailFraction(Double_t leftSideFraction = 1.) {fLeftSideFraction = leftSideFraction;} 
-
-      // User-defined set of points to test
-      void SetParameterPointsToTest(RooTreeData& pointsToTest) {fPointsToTest = &pointsToTest;}
-      // This class can make regularly spaced scans based on range stored in RooRealVars.
-      // Choose number of steps for a rastor scan (common for each dimension)
-      //      void SetNumSteps(Int_t);
-      // This class can make regularly spaced scans based on range stored in RooRealVars.
-      // Choose number of steps for a rastor scan (specific for each dimension)
-      //      void SetNumSteps(map<RooAbsArg, Int_t>)
 
       // Get the size of the test (eg. rate of Type I error)
       virtual Double_t Size() const {return fSize;}
@@ -101,8 +79,17 @@ namespace RooStats {
       virtual void SetTestSize(Double_t size) {fSize = size;}
       // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
       virtual void SetConfidenceLevel(Double_t cl) {fSize = 1.-cl;}
+
+      RooTreeData* GetPointsToScan() {return fPointsToTest;}
       
    private:
+
+      // initializes fPointsToTest data member (mutable)
+      void CreateParameterPoints() const;
+
+      // initializes fTestStatSampler data member (mutable)
+      void CreateTestStatSampler() const;
+
       Double_t fSize; // size of the test (eg. specified rate of Type I error)
       RooWorkspace* fWS; // a workspace that owns all the components to be used by the calculator
       Bool_t fOwnsWorkspace; // flag if this object owns its workspace
@@ -110,12 +97,11 @@ namespace RooStats {
       const char* fDataName; // name of data set in workspace
       RooArgSet* fPOI; // RooArgSet specifying  parameters of interest for interval
       RooArgSet* fNuisParams;// RooArgSet specifying  nuisance parameters for interval
-      TestStatSampler* fTestStatSampler;
-      RooTreeData* fPointsToTest;
-      Double_t fLeftSideFraction;
+      mutable ToyMCSampler* fTestStatSampler; // the test statistic sampler
+      mutable RooTreeData* fPointsToTest; // points to perform the construction
 
    protected:
-      ClassDef(NeymanConstruction,1)   // Interface for tools setting limits (producing confidence intervals)
+      ClassDef(FeldmanCousins,1)   // Interface for tools setting limits (producing confidence intervals)
    };
 }
 
