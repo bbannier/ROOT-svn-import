@@ -40,7 +40,7 @@ END_HTML
 
 #include <vector>
 
-#include "RooStats/DistributionCreator.h"
+#include "RooStats/TestStatSampler.h"
 #include "RooStats/SamplingDistribution.h"
 #include "RooStats/TestStatistic.h"
 #include "RooStats/RooStatsUtils.h"
@@ -51,7 +51,7 @@ END_HTML
 
 namespace RooStats {
 
-    class ToyMCSampler : public DistributionCreator {
+    class ToyMCSampler : public TestStatSampler {
 
 
   public:
@@ -203,7 +203,7 @@ namespace RooStats {
       TRandom* fRand;
 
    protected:
-      ClassDef(ToyMCSampler,1)   // A simple implementation of the DistributionCreator interface
+      ClassDef(ToyMCSampler,1)   // A simple implementation of the TestStatSampler interface
 	};
 }
 

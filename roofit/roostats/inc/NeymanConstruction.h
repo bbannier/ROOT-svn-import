@@ -20,7 +20,7 @@
 #include "RooStats/IntervalCalculator.h"
 #endif
 
-#include "RooStats/DistributionCreator.h"
+#include "RooStats/TestStatSampler.h"
 
 #include "RooTreeData.h"
 #include "RooWorkspace.h"
@@ -47,8 +47,8 @@ namespace RooStats {
       virtual ConfInterval* run(TList *SamplingList) const;
 
       // in addition to interface we also need:
-      // Set the DistributionCreator (eg. ToyMC or FFT, includes choice of TestStatistic)
-      void SetTestStatSampler(DistributionCreator& distCreator) {fDistCreator = &distCreator;}
+      // Set the TestStatSampler (eg. ToyMC or FFT, includes choice of TestStatistic)
+      void SetTestStatSampler(TestStatSampler& distCreator) {fTestStatSampler = &distCreator;}
       // Choose upper limit and unified limits use 1., lower limits use (0.), and central limits use (0.5)
       void SetLeftSideTailFraction(Double_t leftSideFraction = 1.) {fLeftSideFraction = leftSideFraction;} 
 
@@ -106,7 +106,7 @@ namespace RooStats {
       const char* fDataName; // name of data set in workspace
       RooArgSet* fPOI; // RooArgSet specifying  parameters of interest for interval
       RooArgSet* fNuisParams;// RooArgSet specifying  nuisance parameters for interval
-      DistributionCreator* fDistCreator;
+      TestStatSampler* fTestStatSampler;
       RooTreeData* fPointsToTest;
       Double_t fLeftSideFraction;
 

@@ -25,10 +25,14 @@
 
 #pragma link C++ class RooStats::SPlot+;
 #pragma link C++ class RooStats::NumberCountingPdfFactory+;
-#pragma link C++ class RooStats::SimpleInterval+;
-#pragma link C++ class RooStats::LikelihoodInterval+;
+
+
 #pragma link C++ class RooStats::HypoTestResult+;
 #pragma link C++ class RooStats::ConfInterval+; // interface, not concrete
+#pragma link C++ class RooStats::SimpleInterval+;
+#pragma link C++ class RooStats::LikelihoodInterval+;
+#pragma link C++ class RooStats::PointSetInterval+;
+
 #pragma link C++ class RooStats::IntervalCalculator+; // interface, not concrete
 #pragma link C++ class RooStats::HypoTestCalculator+; // interface, not concrete
 #pragma link C++ class RooStats::CombinedCalculator+; // interface, not concrete
@@ -40,19 +44,16 @@
 
 #pragma link C++ class RooStats::TestStatSampler+; // interface, not concrete
 #pragma link C++ class RooStats::DebuggingSampler+;
-#pragma link C++ class RooStats::DebuggingTestStat+;
-//#pragma link C++ class RooStats::TemplatedDistributionCreator+; // templated class
-//#pragma link C++ class RooStats::TemplatedDistributionCreator<DebuggingTestStatFunctor>+; // templated class
-//#pragma link C++ class RooStats::TestDistributionCreator+;   // type def to templated specialization
 #pragma link C++ class RooStats::ToyMCSampler+;
-#pragma link C++ class RooStats::TestStatistic+;
+
+#pragma link C++ class RooStats::TestStatistic+; // interface
+#pragma link C++ class RooStats::DebuggingTestStat+;
 #pragma link C++ class RooStats::ProfileLikelihoodTestStat+;
 #pragma link C++ class RooStats::NumEventsTestStat+;
-//#pragma link C++ class RooStats::ProfileDistributionCreator+; // type def to templated specialization
-#pragma link C++ class RooStats::PointSetInterval+;
+
 #pragma link C++ class RooStats::SamplingDistribution+;
 #pragma link C++ class RooStats::NeymanConstruction+;
-#pragma link C++ class RooStats::ConfidenceBelt+;
+//#pragma link C++ class RooStats::ConfidenceBelt+; // in progress
 
 #pragma link C++ class RooStats::BernsteinCorrection+;
 

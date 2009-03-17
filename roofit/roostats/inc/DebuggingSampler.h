@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: DebuggingDistributionCreator.h 26805 2009-01-13 17:45:57Z cranmer $
+// @(#)root/roostats:$Id: DebuggingSampler.h 26805 2009-01-13 17:45:57Z cranmer $
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -8,14 +8,14 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOSTATS_DebuggingDistributionCreator
-#define ROOSTATS_DebuggingDistributionCreator
+#ifndef ROOSTATS_DebuggingSampler
+#define ROOSTATS_DebuggingSampler
 
 //_________________________________________________
 /*
 BEGIN_HTML
 <p>
-DebuggingDistributionCreator is a simple implementation of the DistributionCreator interface used for debugging.
+DebuggingSampler is a simple implementation of the DistributionCreator interface used for debugging.
 The sampling distribution is uniformly random between [0,1] and is INDEPENDENT of the data.  So it is not useful
 for true statistical tests, but it is useful for debugging.
 </p>
@@ -29,7 +29,7 @@ END_HTML
 
 #include <vector>
 
-#include "RooStats/DistributionCreator.h"
+#include "RooStats/TestStatSampler.h"
 #include "RooStats/SamplingDistribution.h"
 
 #include "RooRealVar.h"
@@ -37,14 +37,14 @@ END_HTML
 
 namespace RooStats {
 
- class DebuggingDistributionCreator: public DistributionCreator {
+ class DebuggingSampler: public TestStatSampler {
 
    public:
-     DebuggingDistributionCreator() {
+     DebuggingSampler() {
        fTestStatistic = new RooRealVar("UniformTestStatistic","UniformTestStatistic",0,0,1);
        fRand = new TRandom();
      }
-     virtual ~DebuggingDistributionCreator() {
+     virtual ~DebuggingSampler() {
        delete fRand;
        delete fTestStatistic;
      }
@@ -102,7 +102,7 @@ namespace RooStats {
       TRandom* fRand;
 
    protected:
-      ClassDef(DebuggingDistributionCreator,1)   // A simple implementation of the DistributionCreator interface
+      ClassDef(DebuggingSampler,1)   // A simple implementation of the DistributionCreator interface
    };
 }
 

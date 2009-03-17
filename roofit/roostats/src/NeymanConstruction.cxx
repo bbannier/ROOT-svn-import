@@ -98,7 +98,7 @@ TList* NeymanConstruction::GenSamplingDistribution(const char* asciiFilePat) con
     point = (RooArgSet*) fPointsToTest->get(i)->clone("temp");
 
     // the next line is where most of the time will be spent generating the sampling dist of the test statistic.
-    SamplingDistribution* samplingDist = fDistCreator->GetSamplingDistribution(*point); 
+    SamplingDistribution* samplingDist = fTestStatSampler->GetSamplingDistribution(*point); 
 
     cout << "dbg: generating point number " << i << " of the interest interval" << endl;
 
@@ -198,7 +198,7 @@ ConfInterval* NeymanConstruction::run(TList *SamplingList) const {
     Double_t upperEdgeOfAcceptance = samplingDist->InverseCDF( 1. - ((1.-fLeftSideFraction) * fSize) );
 
     // get the value of the test statistic for this data set
-    Double_t thisTestStatistic = fDistCreator->EvaluateTestStatistic(*data, *point );
+    Double_t thisTestStatistic = fTestStatSampler->EvaluateTestStatistic(*data, *point );
 
     TIter      itr = point->createIterator();
     RooRealVar* myarg;
