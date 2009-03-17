@@ -429,13 +429,14 @@ void TEveCaloLegoGL::DrawAxis3D(TGLRnrCtx & rnrCtx) const
 
    GLdouble dn[3];
    GLdouble up[3];
-   gluProject(0, 0, 0, mm.Arr(), pm, vp, &dn[0], &dn[1], &dn[2]);
-   gluProject(0, 0, fDataMax,mm.Arr(), pm, vp, &up[0], &up[1], &up[2]);
+   gluProject(fZAxisTitlePos.fX, fZAxisTitlePos.fY, 0                , mm.Arr(), pm, vp, &dn[0], &dn[1], &dn[2]);
+   gluProject(fZAxisTitlePos.fX, fZAxisTitlePos.fY, fZAxisTitlePos.fZ, mm.Arr(), pm, vp, &up[0], &up[1], &up[2]);
    Double_t len = TMath::Sqrt((up[0] - dn[0]) * (up[0] - dn[0])
                               + (up[1] - dn[1]) * (up[1] - dn[1])
                               + (up[2] - dn[2]) * (up[2] - dn[2]));
 
-
+   TGLVertex3 worldRef(fZAxisTitlePos.fX, fZAxisTitlePos.fY, fZAxisTitlePos.fZ);
+   fAxisPainter.RefTMOff(0) = rnrCtx.RefCamera().ViewportDeltaToWorld(worldRef, -10, 0,  &mm);
    fAxisPainter.SetLabelPixelFontSize(TMath::CeilNint(len*fZAxis->GetLabelSize()));
    fAxisPainter.SetTitlePixelFontSize(TMath::CeilNint(len*fZAxis->GetTitleSize()));
 
@@ -457,8 +458,6 @@ void TEveCaloLegoGL::DrawAxis3D(TGLRnrCtx & rnrCtx) const
       glTranslatef(fZAxisTitlePos.fX, fZAxisTitlePos.fY, 0);
 
       // tickmark vector = 10 pixels left
-      TGLVertex3 worldRef(0, 0, fZAxisTitlePos.fZ);
-      fAxisPainter.RefTMOff(0) = rnrCtx.RefCamera().ViewportDeltaToWorld(worldRef, -10, 0, &mm);
       fAxisPainter.RefTitlePos().Set(fAxisPainter.RefTMOff(0).X(),  fAxisPainter.RefTMOff(0).Y(), fZAxisTitlePos.fZ);
       fAxisPainter.PaintAxis(rnrCtx, fZAxis);
       glTranslated( fAxisPainter.RefTMOff(0).X(),  fAxisPainter.RefTMOff(0).Y(),  fAxisPainter.RefTMOff(0).Z());
