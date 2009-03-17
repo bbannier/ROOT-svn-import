@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: DistributionCreator.h 26805 2009-01-13 17:45:57Z cranmer $
+// @(#)root/roostats:$Id: TestStatSampler.h 26805 2009-01-13 17:45:57Z cranmer $
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -8,14 +8,14 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOSTATS_DistributionCreator
-#define ROOSTATS_DistributionCreator
+#ifndef ROOSTATS_TestStatSampler
+#define ROOSTATS_TestStatSampler
 
 //_________________________________________________
 /*
 BEGIN_HTML
 <p>
-DistributionCreator is an interface class for a tools which produce RooStats SamplingDistributions.  
+TestStatSampler is an interface class for a tools which produce RooStats SamplingDistributions.  
 Tools that implement this interface are expected to be used for coverage studies, the Neyman Construction, etc.
 </p>
 END_HTML
@@ -32,11 +32,11 @@ namespace RooStats {
 
    class SamplingDistribution; 
 
-   class DistributionCreator {
+   class TestStatSampler {
 
    public:
-     //     DistributionCreator();
-     virtual ~DistributionCreator() {}
+     //     TestStatSampler();
+     virtual ~TestStatSampler() {}
     
       // Main interface to get a ConfInterval, pure virtual
       virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& paramsOfInterest) = 0; 
@@ -71,7 +71,7 @@ namespace RooStats {
       
 
    protected:
-      ClassDef(DistributionCreator,1)   // Interface for tools setting limits (producing confidence intervals)
+      ClassDef(TestStatSampler,1)   // Interface for tools setting limits (producing confidence intervals)
    };
 }
 

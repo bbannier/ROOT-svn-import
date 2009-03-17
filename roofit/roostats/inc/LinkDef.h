@@ -38,9 +38,9 @@
 #pragma link C++ class RooStats::HybridPlot+;
 #pragma link C++ class RooStats::HybridResult+;
 
-#pragma link C++ class RooStats::DistributionCreator+; // interface, not concrete
-#pragma link C++ class RooStats::DebuggingDistributionCreator+;
-#pragma link C++ class RooStats::DebuggingTestStatFunctor+;
+#pragma link C++ class RooStats::TestStatSampler+; // interface, not concrete
+#pragma link C++ class RooStats::DebuggingSampler+;
+#pragma link C++ class RooStats::DebuggingTestStat+;
 //#pragma link C++ class RooStats::TemplatedDistributionCreator+; // templated class
 //#pragma link C++ class RooStats::TemplatedDistributionCreator<DebuggingTestStatFunctor>+; // templated class
 //#pragma link C++ class RooStats::TestDistributionCreator+;   // type def to templated specialization
