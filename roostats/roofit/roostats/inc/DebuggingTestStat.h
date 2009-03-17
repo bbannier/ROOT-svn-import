@@ -1,4 +1,4 @@
-// @(#)root/roostats:$Id: DebuggingTestStatFunctor.h 26805 2009-01-13 17:45:57Z cranmer $
+// @(#)root/roostats:$Id: DebuggingTestStat.h 26805 2009-01-13 17:45:57Z cranmer $
 // Author: Kyle Cranmer, Lorenzo Moneta, Gregory Schott, Wouter Verkerke
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
@@ -8,14 +8,14 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOSTATS_DebuggingTestStatFunctor
-#define ROOSTATS_DebuggingTestStatFunctor
+#ifndef ROOSTATS_DebuggingTestStat
+#define ROOSTATS_DebuggingTestStat
 
 //_________________________________________________
 /*
 BEGIN_HTML
 <p>
-DebuggingTestStatFunctor is a simple implementation of the DistributionCreator interface used for debugging.
+DebuggingTestStat is a simple implementation of the DistributionCreator interface used for debugging.
 The sampling distribution is uniformly random between [0,1] and is INDEPENDENT of the data.  So it is not useful
 for true statistical tests, but it is useful for debugging.
 </p>
@@ -42,14 +42,14 @@ END_HTML
 
 namespace RooStats {
 
-  class DebuggingTestStatFunctor : public TestStatistic {
+  class DebuggingTestStat : public TestStatistic {
 
    public:
-     DebuggingTestStatFunctor() {
+     DebuggingTestStat() {
        fTestStatistic = new RooRealVar("UniformTestStatistic","UniformTestStatistic",0,0,1);
        fRand = new TRandom();
      }
-     virtual ~DebuggingTestStatFunctor() {
+     virtual ~DebuggingTestStat() {
        //       delete fRand;
        //       delete fTestStatistic;
      }
@@ -71,7 +71,7 @@ namespace RooStats {
       TRandom* fRand;
 
    protected:
-      ClassDef(DebuggingTestStatFunctor,1)   
+      ClassDef(DebuggingTestStat,1)   
    };
 
 }
