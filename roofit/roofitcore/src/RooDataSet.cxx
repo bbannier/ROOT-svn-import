@@ -624,17 +624,10 @@ const RooArgSet* RooDataSet::get(Int_t index) const
 
 
 //_____________________________________________________________________________
-Int_t RooDataSet::numEntries(Bool_t useWeights) const 
+Int_t RooDataSet::numEntries() const 
 {
-  // Return either number of entries (useWeights=false) or
-  // rounded sum of weights (useWeights=true). Use the
-  // sumEntries() function to get the exact sum of weight
-
-  // Return number of entries if no weights are requested or available
-  if (!useWeights || !_wgtVar) return (Int_t) GetEntries() ;
-
-  // Otherwise sum the weights in the event
-  return (Int_t)sumEntries() ;
+  // Return either number of entries 
+  return (Int_t)GetEntries() ;
 }
 
 
@@ -665,6 +658,25 @@ Double_t RooDataSet::sumEntries(const char* cutSpec, const char* cutRange) const
 
   return sumw ;  
 }
+
+
+
+//_____________________________________________________________________________
+Bool_t RooDataSet::isNonPoissonWeighted() const
+{
+  // Returns true if histogram contains bins with entries with a non-integer weight
+
+  // Return false if we have no weights
+  if (!_wgtVar) return kFALSE ;
+  
+  // Now examine individual weights
+  for (int i=0 ; i<numEntries() ; i++) {
+    get(i) ;
+    if (fabs(weight()-Int_t(weight()))>1e-10) return kTRUE ;
+  }
+  return kFALSE ;
+}
+
 
 
 
@@ -1269,7 +1281,7 @@ void RooDataSet::printMultiline(ostream& os, Int_t contents, Bool_t verbose, TSt
 void RooDataSet::printValue(ostream& os) const 
 {
   // Print value of the dataset, i.e. the sum of weights contained in the dataset
-  os << numEntries(kFALSE) << " entries" ;
+  os << numEntries() << " entries" ;
   if (isWeighted()) {
     os << " (" << sumEntries() << " weighted)" ;
   }

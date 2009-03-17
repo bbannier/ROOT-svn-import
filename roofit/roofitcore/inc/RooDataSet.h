@@ -52,7 +52,7 @@ public:
 
   RooDataHist* binnedClone(const char* newName=0, const char* newTitle=0) const ;
 
-  virtual Int_t numEntries(Bool_t useWeights=kFALSE) const ;
+  virtual Int_t numEntries() const ;
   virtual Double_t sumEntries(const char* cutSpec=0, const char* cutRange=0) const ;
 
   // Read data from a text file and create a dataset from it.
@@ -71,6 +71,7 @@ public:
     // Return true if dataset contains weighted events
     return _wgtVar ? kTRUE : kFALSE ; 
   }
+  virtual Bool_t isNonPoissonWeighted() const ;
 
   virtual Double_t weight() const ; 
   virtual const RooArgSet* get(Int_t index) const;

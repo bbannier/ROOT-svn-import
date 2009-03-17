@@ -1062,6 +1062,11 @@ void RooDataHist::weightError(Double_t& lo, Double_t& hi, ErrorType etype) const
   // Return the error on current weight
 
   switch (etype) {
+
+  case Auto:
+    throw string(Form("RooDataHist::weightError(%s) weight type Auto not allowed here",GetName())) ;
+    break ;
+
   case Poisson:
     if (_curWgtErrLo>=0) {
       // Weight is preset or precalculated    
@@ -1447,13 +1452,11 @@ void RooDataHist::calculatePartialBinVolume(const RooArgSet& dimSet) const
 
 
 //_____________________________________________________________________________
-Int_t RooDataHist::numEntries(Bool_t useWeights) const 
+Int_t RooDataHist::numEntries() const 
 {
-  // Return the number of bins (useWeights=false) or
-  // the sum of the weights of all bins (useWeight=true)
+  // Return the number of bins
 
-  if (!useWeights) return RooTreeData::numEntries() ;
-  return Int_t(sumEntries()) ;
+  return RooTreeData::numEntries() ;
 }
 
 
@@ -1621,7 +1624,7 @@ void RooDataHist::SetNameTitle(const char *name, const char* title)
 void RooDataHist::printValue(ostream& os) const 
 {
   // Print value of the dataset, i.e. the sum of weights contained in the dataset
-  os << numEntries(kFALSE) << " bins (" << sumEntries() << " weights)" ;
+  os << numEntries() << " bins (" << sumEntries() << " weights)" ;
 }
 
 
@@ -1686,6 +1689,20 @@ Bool_t RooDataHist::valid() const
 
   return kTRUE ;
 }
+
+
+
+//_____________________________________________________________________________
+Bool_t RooDataHist::isNonPoissonWeighted() const
+{
+  // Returns true if datasets contains entries with a non-integer weight
+
+  for (int i=0 ; i<numEntries() ; i++) {
+    if (fabs(_wgt[i]-Int_t(_wgt[i]))>1e-10) return kTRUE ;
+  }
+  return kFALSE ;
+}
+
 
 
 
