@@ -15,9 +15,14 @@
 /*
 BEGIN_HTML
 <p>
-ProfileLikelihoodTestStat is a simple implementation of the DistributionCreator interface used for debugging.
-The sampling distribution is uniformly random between [0,1] and is INDEPENDENT of the data.  So it is not useful
-for true statistical tests, but it is useful for debugging.
+ProfileLikelihoodTestStat is an implementation of the TestStatistic interface that calculates the profile
+likelihood ratio at a particular parameter point given a dataset.  It does not constitute a statistical test, for that one may either use:
+<ul>
+ <li> the ProfileLikelihoodCalculator that relies on asymptotic properties of the Profile Likelihood Ratio</li>
+ <li> the Neyman Construction classes with this class as a test statistic</li>
+ <li> the Hybrid Calculator class with this class as a test statistic</li>
+</ul>
+
 </p>
 END_HTML
 */

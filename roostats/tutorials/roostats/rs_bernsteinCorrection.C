@@ -76,7 +76,7 @@ void rs_bernsteinCorrection(){
 
   RooWorkspace* wks = new RooWorkspace("myWorksspace");
 
-  wks->import(*data, RenameDataset("data"));
+  wks->import(*data, Rename("data"));
   wks->import(nominal);
 
   // The tolerance sets the probability to add an unecessary term.

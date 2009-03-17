@@ -15,7 +15,8 @@
 /*
 BEGIN_HTML
 <p>
-NumEventsTestStat is a simple implementation of the DistributionCreator interface used for debugging.
+NumEventsTestStat is a simple implementation of the TestStatistic interface used for simple number counting.
+It should probably support simple cuts as well.
 </p>
 END_HTML
 */
