@@ -166,6 +166,8 @@ public:
    TGLViewer(TVirtualPad* pad);
    virtual ~TGLViewer();
 
+   void ResetInitGL();
+
    // TVirtualViewer3D interface ... mostly a facade
 
    // Forward to TGLScenePad
