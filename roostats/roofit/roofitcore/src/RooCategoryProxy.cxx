@@ -29,7 +29,7 @@
 
 #include "RooFit.h"
 #include "Riostream.h"
-
+#include "RooArgSet.h"
 #include "RooCategoryProxy.h"
 
 ClassImp(RooCategoryProxy)
@@ -88,3 +88,13 @@ RooAbsCategoryLValue* RooCategoryProxy::lvptr() const
   return Lvptr ;
 }
 
+
+
+//_____________________________________________________________________________
+Bool_t RooCategoryProxy::setArg(RooAbsCategory& newRef) 
+{
+  // Change object held in proxy into newRef
+
+  newRef.setAttribute(Form("ORIGNAME:%s",arg().GetName())) ;
+  changePointer(RooArgSet(newRef),kTRUE) ;
+}
