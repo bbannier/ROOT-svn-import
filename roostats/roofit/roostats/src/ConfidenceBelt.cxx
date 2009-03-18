@@ -39,6 +39,8 @@
 #include "RooDataSet.h"
 #include "RooDataHist.h"
 
+#include "RooStats/RooStatsUtils.h"
+
 ClassImp(RooStats::ConfidenceBelt) ;
 
 using namespace RooStats;
@@ -51,28 +53,28 @@ ConfidenceBelt::ConfidenceBelt()
 
 //____________________________________________________________________
 ConfidenceBelt::ConfidenceBelt(const char* name) :
-  TNamed(name,name), fParameterPointsInInterval(0)
+  TNamed(name,name), fParameterPoints(0)
 {
    // Alternate constructor
 }
 
 //____________________________________________________________________
 ConfidenceBelt::ConfidenceBelt(const char* name, const char* title) :
-   TNamed(name,title), fParameterPointsInInterval(0)
+   TNamed(name,title), fParameterPoints(0)
 {
    // Alternate constructor
 }
 
 //____________________________________________________________________
 ConfidenceBelt::ConfidenceBelt(const char* name, RooTreeData& data) :
-   TNamed(name,name), fParameterPointsInInterval(&data)
+   TNamed(name,name), fParameterPoints(&data)
 {
    // Alternate constructor
 }
 
 //____________________________________________________________________
 ConfidenceBelt::ConfidenceBelt(const char* name, const char* title, RooTreeData& data) :
-   TNamed(name,title), fParameterPointsInInterval(&data)
+   TNamed(name,title), fParameterPoints(&data)
 {
    // Alternate constructor
 }
@@ -88,13 +90,16 @@ ConfidenceBelt::~ConfidenceBelt()
 
 
 //____________________________________________________________________
-Double_t ConfidenceBelt::AcceptanceRegionMin(RooArgSet& parameterPoint, Double_t cl) {
-  return AcceptanceRegion(parameterPoint, cl)->first;
+Double_t ConfidenceBelt::GetAcceptanceRegionMin(RooArgSet& parameterPoint, Double_t cl, Double_t leftside) {
+
+  if(cl>0 || leftside > 0) cout <<"using default cl, leftside for now" <<endl;
+  return GetAcceptanceRegion(parameterPoint, cl,leftside)->GetUpperLimit();
 }
 
 //____________________________________________________________________
-Double_t ConfidenceBelt::AcceptanceRegionMax(RooArgSet& parameterPoint, Double_t cl) {
-  return AcceptanceRegion(parameterPoint, cl)->second;
+Double_t ConfidenceBelt::GetAcceptanceRegionMax(RooArgSet& parameterPoint, Double_t cl, Double_t leftside) {
+  if(cl>0 || leftside > 0) cout <<"using default cl, leftside for now" <<endl;
+  return GetAcceptanceRegion(parameterPoint, cl,leftside)->GetLowerLimit();
 }
 
 //____________________________________________________________________
@@ -104,42 +109,39 @@ vector<Double_t> ConfidenceBelt::ConfidenceLevels() const {
 }
 
 //____________________________________________________________________
-pair<Double_t, Double_t>* ConfidenceBelt::AcceptanceRegion(RooArgSet &parameterPoint, Double_t cl) 
+AcceptanceRegion* ConfidenceBelt::GetAcceptanceRegion(RooArgSet &parameterPoint, Double_t cl, Double_t leftside) 
 {  
    // Method to determine if a parameter point is in the interval
 
-  RooDataSet*  tree = dynamic_cast<RooDataSet*>(  fParameterPointsInInterval );
-  RooDataHist* hist = dynamic_cast<RooDataHist*>( fParameterPointsInInterval );
+  if(cl>0 || leftside > 0) cout <<"using default cl, leftside for now" <<endl;
+
+  RooDataSet*  tree = dynamic_cast<RooDataSet*>(  fParameterPoints );
+  RooDataHist* hist = dynamic_cast<RooDataHist*>( fParameterPoints );
   
   if( !this->CheckParameters(parameterPoint) ){
-    //    std::cout << "problem with parameters" << std::endl;
-    //    return false; 
+    std::cout << "problem with parameters" << std::endl;
+    return 0; 
   }
   
-  if(parameterPoint.getSize() != fParameterPointsInInterval->get()->getSize() ){
-    std::cout << "problem with parameters" << std::endl;
-    return 0;
-  }
-
   if( hist ) {
     // need a way to get index for given point
-    //    Int_t index = hist->get(parameterPoint);
-    Int_t index = 0;
-    Int_t clindex = 0;
-    return new RangeType(fBelts.at(clindex).second[index]);    
+    // Can do this by setting hist's internal parameters to desired values
+    // need a better way
+    RooStats::SetParameters(&parameterPoint, const_cast<RooArgSet*>(hist->get())); 
+    Int_t index = hist->calcTreeIndex(); // get index
+    return &(fSamplingSummaries.at(index).GetAcceptanceRegion());
   }
   else if( tree ){
     // need a way to get index for given point
-    //    Int_t index = tree->get(parameterPoint);
-    Int_t index = 0;
-    Int_t clindex = 0;
-    return new RangeType(fBelts.at(clindex).second[index]);    
+    //    RooStats::SetParameters(&parameterPoint, tree->get()); // set tree's parameters to desired values
+    Int_t index = 0; //need something like tree->calcTreeIndex(); 
+    return &(fSamplingSummaries.at(index).GetAcceptanceRegion());
   }
   else {
       std::cout << "dataset is not initialized properly" << std::endl;
   }
 
-   return 0;
+  return 0;
   
 }
 
@@ -147,18 +149,18 @@ pair<Double_t, Double_t>* ConfidenceBelt::AcceptanceRegion(RooArgSet &parameterP
 RooArgSet* ConfidenceBelt::GetParameters() const
 {  
    // returns list of parameters
-  return (RooArgSet*) fParameterPointsInInterval->get()->Clone();
+  return (RooArgSet*) fParameterPoints->get()->Clone();
 }
 
 //____________________________________________________________________
 Bool_t ConfidenceBelt::CheckParameters(RooArgSet &parameterPoint) const
 {  
 
-   if (parameterPoint.getSize() != fParameterPointsInInterval->get()->getSize() ) {
+   if (parameterPoint.getSize() != fParameterPoints->get()->getSize() ) {
       std::cout << "size is wrong, parameters don't match" << std::endl;
       return false;
    }
-   if ( ! parameterPoint.equals( *(fParameterPointsInInterval->get() ) ) ) {
+   if ( ! parameterPoint.equals( *(fParameterPoints->get() ) ) ) {
       std::cout << "size is ok, but parameters don't match" << std::endl;
       return false;
    }
