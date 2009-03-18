@@ -1134,6 +1134,7 @@ void TProfile2D::Reset(Option_t *option)
 //*-*                =======================================
    TH2D::Reset(option);
    fBinEntries.Reset();
+   fBinSumw2.Reset();
    TString opt = option;
    opt.ToUpper();
    if (opt.Contains("ICE")) return;

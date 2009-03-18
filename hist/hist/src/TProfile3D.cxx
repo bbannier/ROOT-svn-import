@@ -1154,6 +1154,7 @@ void TProfile3D::Reset(Option_t *option)
 //*-*-*-*-*-*-*-*-*-*Reset contents of a Profile3D histogram*-*-*-*-*-*-*-*
 //*-*                =======================================
    TH3D::Reset(option);
+   fBinSumw2.Reset();
    fBinEntries.Reset();
    TString opt = option;
    opt.ToUpper();
