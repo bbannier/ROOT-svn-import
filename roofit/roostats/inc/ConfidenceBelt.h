@@ -174,6 +174,8 @@ namespace RooStats {
     ConfidenceBelt(const char* name, const char* title, RooTreeData&);
     virtual ~ConfidenceBelt();
         
+    void AddAcceptanceRegion(RooArgSet&, AcceptanceRegion region, Double_t cl=-1., Double_t leftside=-1.);
+
     AcceptanceRegion* GetAcceptanceRegion(RooArgSet&, Double_t cl=-1., Double_t leftside=-1.);
     Double_t GetAcceptanceRegionMin(RooArgSet&, Double_t cl=-1., Double_t leftside=-1.);
     Double_t GetAcceptanceRegionMax(RooArgSet&, Double_t cl=-1., Double_t leftside=-1.);

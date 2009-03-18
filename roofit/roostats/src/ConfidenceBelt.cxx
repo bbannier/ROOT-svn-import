@@ -109,6 +109,43 @@ vector<Double_t> ConfidenceBelt::ConfidenceLevels() const {
 }
 
 //____________________________________________________________________
+void ConfidenceBelt::AddAcceptanceRegion(RooArgSet& parameterPoint, AcceptanceRegion region, 
+					 Double_t cl, Double_t leftside){
+  
+  if(cl>0 || leftside > 0) cout <<"using default cl, leftside for now" <<endl;
+
+  RooDataSet*  tree = dynamic_cast<RooDataSet*>(  fParameterPoints );
+  RooDataHist* hist = dynamic_cast<RooDataHist*>( fParameterPoints );
+
+  if( !this->CheckParameters(parameterPoint) )
+    std::cout << "problem with parameters" << std::endl;
+  
+  
+  if( hist ) {
+    // need a way to get index for given point
+    // Can do this by setting hist's internal parameters to desired values
+    // need a better way
+    RooStats::SetParameters(&parameterPoint, const_cast<RooArgSet*>(hist->get())); 
+    int index = hist->calcTreeIndex(); // get index
+
+    // allocate memory if necessary.  numEntries is overkill?
+    if(fSamplingSummaries.size() < index) fSamplingSummaries.reserve( hist->numEntries() ); 
+
+    // set the region for this point (check for duplicate?)
+    fSamplingSummaries.at(index) = region;
+  }
+  else if( tree ){
+    tree->add( parameterPoint ); // assume it's unique for now
+    int index = tree->numEntries() - 1; //check that last point added has index nEntries -1
+    // allocate memory if necessary.  numEntries is overkill?
+    if(fSamplingSummaries.size() < index) fSamplingSummaries.reserve( tree->numEntries()  ); 
+
+    // set the region for this point (check for duplicate?)
+    fSamplingSummaries.at( index ) = region;
+  }
+}
+
+//____________________________________________________________________
 AcceptanceRegion* ConfidenceBelt::GetAcceptanceRegion(RooArgSet &parameterPoint, Double_t cl, Double_t leftside) 
 {  
    // Method to determine if a parameter point is in the interval
