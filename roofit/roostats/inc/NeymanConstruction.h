@@ -42,6 +42,7 @@ namespace RooStats {
     
       // Main interface to get a ConfInterval (will be a PointSetInterval)
       virtual ConfInterval* GetInterval() const;
+      virtual ConfInterval* GetIntervalUsingList() const;
 
       // Interface extended with I/O support
       virtual ConfInterval* GetInterval(const char* asciiFilePat) const;

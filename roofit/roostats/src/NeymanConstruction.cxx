@@ -76,6 +76,61 @@ NeymanConstruction::NeymanConstruction() {
   fPdfName = "";
 }
 
+//_______________________________________________________
+ConfInterval* NeymanConstruction::GetInterval() const {
+  // Main interface to get a RooStats::ConfInterval.  
+  // It constructs a RooStats::SetInterval.
+
+  // local variables
+  RooAbsData* data = fWS->data(fDataName);
+  if(!data) {
+    cout << "Data is not set, NeymanConstruction not initialized" << endl;
+    return 0;
+  }
+  Int_t npass = 0;
+  RooArgSet* point; 
+
+  // loop over points to test
+  for(Int_t i=0; i<fPointsToTest->numEntries(); ++i){
+     // get a parameter point from the list of points to test.
+    point = (RooArgSet*) fPointsToTest->get(i)->clone("temp");
+
+    // the next line is where most of the time will be spent generating the sampling dist of the test statistic.
+    SamplingDistribution* samplingDist = fTestStatSampler->GetSamplingDistribution(*point); 
+    // find the lower & upper thresholds on the test statistic that define the acceptance region in the data
+    Double_t lowerEdgeOfAcceptance = samplingDist->InverseCDF( fLeftSideFraction * fSize );
+    Double_t upperEdgeOfAcceptance = samplingDist->InverseCDF( 1. - ((1.-fLeftSideFraction) * fSize) );
+
+     // get the value of the test statistic for this data set
+    Double_t thisTestStatistic = fTestStatSampler->EvaluateTestStatistic(*data, *point );
+
+    TIter      itr = point->createIterator();
+    RooRealVar* myarg;
+    while ((myarg = (RooRealVar *)itr.Next())) { 
+      cout << myarg->GetName() << "=" << myarg->getVal() << " ";
+    }
+    std::cout << "\tdbg= " << lowerEdgeOfAcceptance << ", " 
+    	      << upperEdgeOfAcceptance << ", " << thisTestStatistic <<  " " <<
+      (thisTestStatistic > lowerEdgeOfAcceptance && thisTestStatistic < upperEdgeOfAcceptance) << std::endl;
+
+    // Check if this data is in the acceptance region
+    if(thisTestStatistic > lowerEdgeOfAcceptance && thisTestStatistic < upperEdgeOfAcceptance) {
+      // if so, set this point to true
+      fPointsToTest->add(*point, 1.); 
+      ++npass;
+    }
+    delete samplingDist;
+    delete point;
+  }
+  std::cout << npass << " points in interval" << std::endl;
+
+  // create an interval based fPointsToTest
+  PointSetInterval* interval 
+    = new PointSetInterval("ClassicalConfidenceInterval", "ClassicalConfidenceInterval", *fPointsToTest);
+  
+  delete data;
+  return interval;
+}
 
 //_______________________________________________________
 TList* NeymanConstruction::GenSamplingDistribution(const char* asciiFilePat) const {
@@ -91,7 +146,7 @@ TList* NeymanConstruction::GenSamplingDistribution(const char* asciiFilePat) con
   if(asciiFilePat && *asciiFilePat){
     savedTree->Branch("distrVector",&distrVector);
   }
-
+  
   // loop over points to test
   for(Int_t i=0; i<fPointsToTest->numEntries(); ++i){
     // get a parameter point from the list of points to test.
@@ -100,7 +155,7 @@ TList* NeymanConstruction::GenSamplingDistribution(const char* asciiFilePat) con
     // the next line is where most of the time will be spent generating the sampling dist of the test statistic.
     SamplingDistribution* samplingDist = fTestStatSampler->GetSamplingDistribution(*point); 
 
-    cout << "dbg: generating point number " << i << " of the interest interval" << endl;
+    cout << "dbg: generating point number " << i << " of " << fPointsToTest->numEntries() << " in the interest interval" << endl;
 
     SamplingList->Add(samplingDist);
 
@@ -123,7 +178,7 @@ TList* NeymanConstruction::GenSamplingDistribution(const char* asciiFilePat) con
 }
 
 //_______________________________________________________
-ConfInterval* NeymanConstruction::GetInterval() const {
+ConfInterval* NeymanConstruction::GetIntervalUsingList() const {
   // Main interface to get a RooStats::ConfInterval.  
   // It constructs a RooStats::PointSetInterval.
 
@@ -187,6 +242,7 @@ ConfInterval* NeymanConstruction::Run(TList *SamplingList) const {
   }
   Int_t npass = 0;
   RooArgSet* point; 
+
 
   // loop over points to test
   for(Int_t i=0; i<fPointsToTest->numEntries(); ++i){

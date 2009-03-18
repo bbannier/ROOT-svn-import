@@ -87,6 +87,7 @@ void FeldmanCousins::CreateTestStatSampler() const{
     fTestStatSampler->SetParameters(*parameters);
     fTestStatSampler->SetNToys(500);
     fTestStatSampler->SetNEventsToys(data->numEntries());
+    cout << "nevents per toy = " << data->numEntries() << endl;
   }
 }
 
@@ -102,8 +103,16 @@ void FeldmanCousins::CreateParameterPoints() const{
 
     // get parameters (params of interest + nuisance)
     RooArgSet* parameters = pdf->getParameters(data);
-    
+
+    TIter it = parameters->createIterator();
+    RooRealVar *myarg; 
+    while ((myarg = (RooRealVar *)it.Next())) { 
+      if(!myarg) continue;
+      myarg->setBins(30);
+    }
+
     fPointsToTest= new RooDataHist("parameterScan", "", *parameters);
+    cout << "# points to test = " << fPointsToTest->numEntries() << endl;
   }
 }
 
@@ -132,7 +141,7 @@ ConfInterval* FeldmanCousins::GetInterval() const {
   nc.SetTestStatSampler(*fTestStatSampler);
   nc.SetTestSize(fSize); // set size of test
   nc.SetParameterPointsToTest( *fPointsToTest );
-  nc.SetLeftSideTailFraction(1.); // in definition of Feldman-Cousins
+  //  nc.SetLeftSideTailFraction(1.); // in definition of Feldman-Cousins
   nc.SetData(*data);
 
   // use it
