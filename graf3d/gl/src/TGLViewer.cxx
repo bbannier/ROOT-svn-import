@@ -361,6 +361,14 @@ void TGLViewer::PostSceneBuildSetup(Bool_t resetCameras)
 /**************************************************************************/
 /**************************************************************************/
 
+void TGLViewer::ResetInitGL()
+{
+   // Reset GL initialization flag.
+   // This is needed if GL-context is destroyed from outside.
+
+   fInitGL = kFALSE;
+}
+
 //______________________________________________________________________________
 void TGLViewer::InitGL()
 {
