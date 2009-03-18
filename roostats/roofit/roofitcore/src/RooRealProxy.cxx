@@ -91,3 +91,12 @@ RooAbsRealLValue* RooRealProxy::lvptr() const
   return Lvptr ;
 }
 
+
+//_____________________________________________________________________________
+Bool_t RooRealProxy::setArg(RooAbsReal& newRef) 
+{
+  // Change object held in proxy into newRef
+
+  newRef.setAttribute(Form("ORIGNAME:%s",arg().GetName())) ;
+  changePointer(RooArgSet(newRef),kTRUE) ;
+}
