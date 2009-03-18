@@ -501,16 +501,7 @@ RooProdPdf* RooFactoryWSTool::prod(const char *objName, const char* pdfList)
 //_____________________________________________________________________________
 RooSimultaneous* RooFactoryWSTool::simul(const char* objName, const char* indexCat, const char* pdfMap)
 {
-
-  // Create simultaneous p.d.f.
-  RooSimultaneous* pdf(0) ;
-  try {
-    pdf = new RooSimultaneous(objName,objName,asCATLV(indexCat)) ;
-  } catch (string err) {
-    coutE(ObjectHandling) << "RooFactoryWSTool::simul(" << objName << ") ERROR creating RooSimultaneous::" << objName << " " << err << endl ;
-    logError() ;
-  }
-
+  map<string,RooAbsPdf*> theMap ;
   // Add p.d.f. to index state mappings
   char buf[1024] ;
   strcpy(buf,pdfMap) ;
@@ -522,19 +513,28 @@ RooSimultaneous* RooFactoryWSTool::simul(const char* objName, const char* indexC
       coutE(ObjectHandling) << "RooFactoryWSTool::simul(" << objName << ") ERROR creating RooSimultaneous::" << objName 
 			    << " expect mapping token of form 'state=pdfName', but found '" << tok << "'" << endl ;
       logError() ;
-      delete pdf ;
       return 0 ;
     } else {
       *eq = 0 ;
 
       try {
-	pdf->addPdf(asPDF(eq+1),tok) ;
+	theMap[tok] = &asPDF(eq+1) ;
       } catch ( string err ) {
 	coutE(ObjectHandling) << "RooFactoryWSTool::simul(" << objName << ") ERROR creating RooSimultaneous: " << err << endl ;
 	logError() ;
       }
     }
     tok = strtok_r(0,",",&save) ;
+  }
+
+
+  // Create simultaneous p.d.f.
+  RooSimultaneous* pdf(0) ;
+  try {
+    pdf = new RooSimultaneous(objName,objName,theMap,asCATLV(indexCat)) ;
+  } catch (string err) {
+    coutE(ObjectHandling) << "RooFactoryWSTool::simul(" << objName << ") ERROR creating RooSimultaneous::" << objName << " " << err << endl ;
+    logError() ;
   }
 
   // Import p.d.f into workspace
