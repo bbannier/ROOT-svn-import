@@ -49,6 +49,9 @@ namespace RooStats {
     // do we want it to return list of parameters
     virtual RooArgSet* GetParameters() const;
 
+    // Accessor for making plots
+    RooTreeData* GetParameterPoints() const {return (RooTreeData*)fParameterPointsInInterval->Clone();}
+
     // check if parameters are correct. (dummy implementation to start)
     Bool_t CheckParameters(RooArgSet&) const ;
 

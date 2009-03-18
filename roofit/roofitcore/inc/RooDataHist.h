@@ -121,6 +121,8 @@ public:
   void SetName(const char *name) ;
   void SetNameTitle(const char *name, const char* title) ;
 
+  Int_t calcTreeIndex() const ;
+
 protected:
 
   friend class RooAbsCachedPdf ;
@@ -146,7 +148,6 @@ protected:
 
   virtual RooAbsData* cacheClone(const RooArgSet* newCacheVars, const char* newName=0) ;
 
-  Int_t calcTreeIndex() const ;
 
   Int_t       _arrSize ; //  Size of the weight array
   Int_t*      _idxMult ; //! Multiplier jump table for index calculation
