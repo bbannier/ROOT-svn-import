@@ -111,7 +111,7 @@ void rs_bernsteinCorrection(){
   // Here we choose n to be the one chosen by the tolerance
   // critereon above, eg. n = "degree" in the code.
   // Setting this to true is takes about 10 min.
-  bool checkSamplingDist = false;
+  bool checkSamplingDist = true;
 
   TCanvas* c1 = new TCanvas();
   if(checkSamplingDist) {
@@ -124,7 +124,7 @@ void rs_bernsteinCorrection(){
     // check sampling dist
     TH1F* samplingDist = new TH1F("samplingDist","",20,0,10);
     TH1F* samplingDistExtra = new TH1F("samplingDistExtra","",20,0,10);
-    int numToyMC = 100;
+    int numToyMC = 1000;
     bernsteinCorrection.CreateQSamplingDist(wks,"nominal","x","data",samplingDist, samplingDistExtra, degree,numToyMC);
     
     c1->cd(2);
