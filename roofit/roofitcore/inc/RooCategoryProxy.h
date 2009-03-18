@@ -53,6 +53,9 @@ public:
     return arg().hasRange(rangeName) ; 
   }
 
+  // Modifier
+  virtual Bool_t setArg(RooAbsCategory& newRef) ;
+			
 protected:
 
   RooAbsCategoryLValue* lvptr() const ;
