@@ -51,6 +51,7 @@
 #include "TRegexp.h"
 #include "RooFactoryWSTool.h"
 #include "TROOT.h"
+#include "TFile.h"
 #include "Api.h"
 #include <map>
 #include <string>
@@ -1261,6 +1262,17 @@ Bool_t RooWorkspace::cd(const char* path)
 {
   makeDir() ;
   return _dir->cd(path) ;
+}
+
+
+
+//_____________________________________________________________________________
+Bool_t RooWorkspace::writeToFile(const char* fileName, Bool_t recreate) 
+{
+  // Save this current workspace into given file
+  TFile f(fileName,recreate?"RECREATE":"UPDATE") ;
+  Write() ;
+  return kFALSE ;
 }
  
  

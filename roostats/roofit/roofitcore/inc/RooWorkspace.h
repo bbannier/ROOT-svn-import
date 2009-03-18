@@ -89,6 +89,8 @@ public:
   Bool_t makeDir() ; 
   Bool_t cd(const char* path = 0) ;
 
+  Bool_t writeToFile(const char* fileName, Bool_t recreate=kTRUE) ;
+
   // Tools management
   RooFactoryWSTool& factory() ;
   RooAbsArg* factory(const char* expr) ;
