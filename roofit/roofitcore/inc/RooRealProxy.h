@@ -37,6 +37,9 @@ public:
   inline operator Double_t() const { return _isFund?((RooAbsReal*)_arg)->_value:((RooAbsReal*)_arg)->getVal(_nset) ; }
   inline const RooAbsReal& arg() const { return (RooAbsReal&)*_arg ; }
 
+  // Modifier
+  virtual Bool_t setArg(RooAbsReal& newRef) ;
+
 protected:
 
   RooAbsRealLValue* lvptr() const ;
