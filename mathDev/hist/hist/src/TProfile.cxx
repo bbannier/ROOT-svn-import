@@ -1132,7 +1132,7 @@ TH1D *TProfile::ProjectionX(const char *name, Option_t *option) const
       // in case of option W bin error is deduced from bin sum of z**2 values of profile
       // this is correct only if the profile is filled with weights =1
       if (binWeight) h1->SetBinError(bin , TMath::Sqrt(fSumw2.fArray[bin] ) );
-      // in case of bin entries and h1 has sumw2 set set, we need to set the also bin error
+      // in case of bin entries and h1 has sumw2 set, we need to set also the bin error
       if (binEntries && h1->GetSumw2() ) {
          Double_t err2;
          if (fBinSumw2.fN) 
