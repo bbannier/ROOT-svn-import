@@ -50,7 +50,13 @@ RooDataHistSliceIter::RooDataHistSliceIter(RooDataHist& hist, RooAbsArg& sliceAr
   // Calculate base index (for 0th bin) for slice    
   RooAbsArg* sliceArgInt = hist.get()->find(sliceArg.GetName()) ;
   dynamic_cast<RooAbsLValue&>(*sliceArgInt).setBin(0,hist.bname()) ;
-  _baseIndex = hist.calcTreeIndex() ;
+
+  if (hist._vars.getSize()>1) {
+    _baseIndex = hist.calcTreeIndex() ;  
+  } else {
+    _baseIndex = 0 ;
+  }
+
   _nStep = dynamic_cast<RooAbsLValue&>(*sliceArgInt).numBins(hist.bname()) ;
 
   hist._iterator->Reset() ;
@@ -60,8 +66,7 @@ RooDataHistSliceIter::RooDataHistSliceIter(RooDataHist& hist, RooAbsArg& sliceAr
     if (arg==sliceArgInt) break ;
     i++ ;
   }
-  _stepSize = hist._idxMult[i] ;
-  
+  _stepSize = hist._idxMult[i] ;  
   _curStep = 0 ;  
 
 }
@@ -104,7 +109,9 @@ TObject* RooDataHistSliceIter::Next()
 {  
   // Iterator increment operator
 
-  if (_curStep==_nStep) return 0 ;
+  if (_curStep==_nStep) {
+    return 0 ;
+  }
   
   // Select appropriate entry in RooDataHist 
   _hist->get(_baseIndex + _curStep*_stepSize) ;
