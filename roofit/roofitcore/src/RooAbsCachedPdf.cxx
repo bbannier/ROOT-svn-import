@@ -227,13 +227,14 @@ RooAbsCachedPdf::PdfCacheElem::PdfCacheElem(const RooAbsCachedPdf& self, const R
 
   _hist = new RooDataHist(hname,hname,orderedObs,self.binningName()) ;
 
-  RooArgSet* observables= self.actualObservables(orderedObs) ;
-
+  //RooArgSet* observables= self.getObservables(orderedObs) ;
+  // cout << "orderedObs = " << orderedObs << " observables = " << *observables << endl ;
+  
   // Create RooHistPdf
   TString pdfname = self.inputBaseName() ;
   pdfname.Append("_CACHE") ;
   pdfname.Append(self.cacheNameSuffix(orderedObs)) ;
-  _pdf = new RooHistPdf(pdfname,pdfname,*observables,*_hist,self.getInterpolationOrder()) ;
+  _pdf = new RooHistPdf(pdfname,pdfname,orderedObs,*_hist,self.getInterpolationOrder()) ;
   if (nsetIn) {
     _nset.addClone(*nsetIn) ;
   }
@@ -251,7 +252,7 @@ RooAbsCachedPdf::PdfCacheElem::PdfCacheElem(const RooAbsCachedPdf& self, const R
   // Set initial state of cache to dirty
   _pdf->setValueDirty() ;
 
-  delete observables ;
+  //delete observables ;
   delete params ;
   delete nset2 ;
 
