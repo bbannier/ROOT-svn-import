@@ -1310,9 +1310,9 @@ RooAbsArg* RooWorkspace::factory(const char* expr)
 void RooWorkspace::Print(Option_t* /*opts*/) const 
 {
   // Print contents of the workspace 
-
+  
   cout << endl << "RooWorkspace(" << GetName() << ") " << GetTitle() << " contents" << endl << endl  ;
-
+  
   RooAbsArg* parg ;
 
   RooArgSet pdfSet ;
@@ -1362,6 +1362,9 @@ void RooWorkspace::Print(Option_t* /*opts*/) const
   }
   delete iter ;
 
+
+  RooMsgService::MsgLevel oldLevel = RooMsgService::instance().globalKillBelow() ;
+  RooMsgService::instance().setGlobalKillBelow(RooMsgService::WARNING) ;
 
   if (varSet.getSize()>0) {
     varSet.sort() ;
@@ -1499,6 +1502,8 @@ void RooWorkspace::Print(Option_t* /*opts*/) const
 //     }
 //     delete iter ;
 //   }
+
+  RooMsgService::instance().setGlobalKillBelow(oldLevel) ;
 
   return ;
 }
