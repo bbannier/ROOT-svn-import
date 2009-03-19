@@ -319,7 +319,7 @@ void RooFFTConvPdf::fillCacheObject(RooAbsCachedPdf::PdfCacheElem& cache) const
     otherObs.remove(*histArg,kTRUE,kTRUE) ;
     delete histArg ;
   } 
-  
+
   // Handle trivial scenario -- no other observables
   if (otherObs.getSize()==0) {
     fillCacheSlice((FFTCacheElem&)cache,RooArgSet()) ;
@@ -566,31 +566,49 @@ Double_t*  RooFFTConvPdf::scanPdf(RooRealVar& obs, RooAbsPdf& pdf, const RooData
 RooArgSet* RooFFTConvPdf::actualObservables(const RooArgSet& nset) const 
 {
   // Return the observables to be cached given the normalization set nset
-  // For this p.d.f that is always nset, unless nset does not contain the
-  // convolution observable, in which case it is nset plus the convolution
-  // observable
-  
+  //
+  // If the cache observables is in nset then this is 
+  //    - the convolution observable plus 
+  //    - any member of nset that is either a RooCategory, 
+  //    - or was previously specified through setCacheObservables().
+  //
+  // In case the cache observable is _not_ in nset, then it is
+  //    - the convolution observable plus 
+  //    - all member of nset are observables of this p.d.f.
+  // 
+
   // Get complete list of observables 
   RooArgSet* obs1 = _pdf1.arg().getObservables(nset) ;
   RooArgSet* obs2 = _pdf2.arg().getObservables(nset) ;
   obs1->add(*obs2,kTRUE) ;
-  
-  // Now strip out all non-category observables
-  TIterator* iter = obs1->createIterator() ;
-  RooAbsArg* arg ;
-  RooArgSet killList ;
-  while((arg=(RooAbsArg*)iter->Next())) {
-    if (arg->IsA()->InheritsFrom(RooAbsReal::Class()) && !_cacheObs.find(arg->GetName())) {
-      killList.add(*arg) ;
+
+  // Check if convolution observable is in nset
+  if (nset.contains(_x.arg())) {
+
+    // Now strip out all non-category observables
+    TIterator* iter = obs1->createIterator() ;
+    RooAbsArg* arg ;
+    RooArgSet killList ;
+    while((arg=(RooAbsArg*)iter->Next())) {
+      if (arg->IsA()->InheritsFrom(RooAbsReal::Class()) && !_cacheObs.find(arg->GetName())) {
+	killList.add(*arg) ;
+      }
     }
+    delete iter ;
+    obs1->remove(killList) ;
+    
+    // And add back the convolution observables
+    obs1->add(_x.arg(),kTRUE) ; 
+    delete obs2 ;
+    
+  } else {
+
+    // Make sure convolution observable is always in there
+    obs1->add(_x.arg(),kTRUE) ; 
+    delete obs2 ;
+    
   }
-  delete iter ;
-  obs1->remove(killList) ;
-
-  // And add back the convolution observables
-  obs1->add(_x.arg(),kTRUE) ; 
-  delete obs2 ;
-
+  
   return obs1 ;  
 }
 
