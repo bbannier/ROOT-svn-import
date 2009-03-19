@@ -1503,7 +1503,6 @@ void TFitEditor::FillFunctionList(Int_t)
        if ( newid != kFP_ALTFUNC )
             fFuncList->Select(newid-1);
        else if( fDim <= 1 ) {
-          cout << "SHIT!!" << endl;
           fTypeFit->Select(kFP_PRED1D, kTRUE);
        }
    } 
