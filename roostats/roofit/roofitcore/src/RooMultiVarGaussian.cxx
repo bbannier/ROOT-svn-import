@@ -54,6 +54,24 @@ RooMultiVarGaussian::RooMultiVarGaussian(const char *name, const char *title,
  _covI.Invert() ;
 }
 
+//_____________________________________________________________________________
+RooMultiVarGaussian::RooMultiVarGaussian(const char *name, const char *title,
+					 const RooArgList& xvec, const TMatrixDSym& cov) :
+  RooAbsPdf(name,title),
+  _x("x","Observables",this,kTRUE,kFALSE),
+  _mu(cov.GetNcols()),
+  _cov(cov),
+  _covI(cov),
+  _z(4)
+{
+ _x.add(xvec) ;
+
+ _det = _cov.Determinant() ;
+
+ // Invert covariance matrix
+ _covI.Invert() ;
+}
+
 
 
 //_____________________________________________________________________________
