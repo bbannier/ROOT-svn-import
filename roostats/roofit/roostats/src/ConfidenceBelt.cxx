@@ -125,8 +125,9 @@ void ConfidenceBelt::AddAcceptanceRegion(RooArgSet& parameterPoint, AcceptanceRe
     // need a way to get index for given point
     // Can do this by setting hist's internal parameters to desired values
     // need a better way
-    RooStats::SetParameters(&parameterPoint, const_cast<RooArgSet*>(hist->get())); 
-    int index = hist->calcTreeIndex(); // get index
+    //    RooStats::SetParameters(&parameterPoint, const_cast<RooArgSet*>(hist->get())); 
+    //    int index = hist->calcTreeIndex(); // get index
+    int index = hist->getIndex(parameterPoint); // get index
 
     // allocate memory if necessary.  numEntries is overkill?
     if(fSamplingSummaries.size() < index) fSamplingSummaries.reserve( hist->numEntries() ); 
@@ -164,8 +165,9 @@ AcceptanceRegion* ConfidenceBelt::GetAcceptanceRegion(RooArgSet &parameterPoint,
     // need a way to get index for given point
     // Can do this by setting hist's internal parameters to desired values
     // need a better way
-    RooStats::SetParameters(&parameterPoint, const_cast<RooArgSet*>(hist->get())); 
-    Int_t index = hist->calcTreeIndex(); // get index
+    //    RooStats::SetParameters(&parameterPoint, const_cast<RooArgSet*>(hist->get())); 
+    //    Int_t index = hist->calcTreeIndex(); // get index
+    int index = hist->getIndex(parameterPoint); // get index
     return &(fSamplingSummaries.at(index).GetAcceptanceRegion());
   }
   else if( tree ){

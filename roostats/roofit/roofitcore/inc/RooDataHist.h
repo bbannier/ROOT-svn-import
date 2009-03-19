@@ -122,7 +122,6 @@ public:
   void SetNameTitle(const char *name, const char* title) ;
 
   Int_t getIndex(const RooArgSet& coord) ;
-  Int_t calcTreeIndex() const ;
 
 protected:
 
@@ -131,6 +130,7 @@ protected:
   friend class RooDataHistSliceIter ;
   friend class RooAbsOptTestStatistic ;
 
+  Int_t calcTreeIndex() const ;
   void cacheValidEntries() ;
 
   void setAllWeights(Double_t value) ;
