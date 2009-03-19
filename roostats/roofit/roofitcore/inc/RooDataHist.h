@@ -121,6 +121,7 @@ public:
   void SetName(const char *name) ;
   void SetNameTitle(const char *name, const char* title) ;
 
+  Int_t getIndex(const RooArgSet& coord) ;
   Int_t calcTreeIndex() const ;
 
 protected:

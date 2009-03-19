@@ -862,6 +862,17 @@ RooDataHist::~RooDataHist()
 
 
 
+
+//_____________________________________________________________________________
+Int_t RooDataHist::getIndex(const RooArgSet& coord)
+{
+  _vars = coord ;
+  return calcTreeIndex() ;
+}
+
+
+
+
 //_____________________________________________________________________________
 Int_t RooDataHist::calcTreeIndex() const 
 {
