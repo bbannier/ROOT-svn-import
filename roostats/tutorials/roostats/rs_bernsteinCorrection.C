@@ -111,7 +111,7 @@ void rs_bernsteinCorrection(){
   // Here we choose n to be the one chosen by the tolerance
   // critereon above, eg. n = "degree" in the code.
   // Setting this to true is takes about 10 min.
-  bool checkSamplingDist = true;
+  bool checkSamplingDist = false;
 
   TCanvas* c1 = new TCanvas();
   if(checkSamplingDist) {

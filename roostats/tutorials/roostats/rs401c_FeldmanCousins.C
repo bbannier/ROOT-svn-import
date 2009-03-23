@@ -16,7 +16,10 @@
 
 #include "RooDataSet.h"
 #include "RooRealVar.h"
-#include "RooGaussian.h"
+#include "RooConstVar.h"
+#include "RooAddition.h"
+
+#include "RooPoisson.h"
 #include "RooPlot.h"
 
 #include "TCanvas.h"
@@ -31,7 +34,7 @@ using namespace RooFit ;
 using namespace RooStats ;
 
 
-void rs401_FeldmanCousins()
+void rs401c_FeldmanCousins()
 {
   
   // to time the macro
@@ -39,16 +42,17 @@ void rs401_FeldmanCousins()
   t.Start();
 
   // make a simple model
-  RooRealVar x("x","", 1,-5,5);
-  RooRealVar mu("mu","", 0,-.5, .5);
-  RooRealVar sigma("sigma","", 1, 0.5 ,1.5);
-  RooGaussian gaus("gaus", "", x, mu, sigma);
-  RooArgSet parameters(mu, sigma);
+  RooRealVar x("x","", 1,0,50);
+  RooRealVar mu("mu","", 2.5,0, 15); // with a limit on mu>=0
+  RooConstVar b("b","", 3.);
+  RooAddition mean("mean","",RooArgList(mu,b));
+  RooPoisson pois("pois", "", x, mean);
+  RooArgSet parameters(mu);
 
-  Int_t nEventsData = 100;
+  Int_t nEventsData = 1;
 
   // create a toy dataset
-  RooDataSet* data = gaus.generate(RooArgSet(x), nEventsData);
+  RooDataSet* data = pois.generate(RooArgSet(x), nEventsData);
   
   std::cout << "This data has mean, stdev = " << data->moment(x,1,0.) << ", " << data->moment(x,2,data->moment(x,1,0.) ) << endl; 
 
@@ -62,9 +66,9 @@ void rs401_FeldmanCousins()
   //////// show use of Feldman-Cousins
   RooStats::FeldmanCousins fc;
   // set the distribution creator, which encodes the test statistic
-  fc.SetPdf(gaus);
+  fc.SetPdf(pois);
   fc.SetParameters(parameters);
-  fc.SetTestSize(.2); // set size of test
+  fc.SetTestSize(.05); // set size of test
   fc.SetData(*data);
 
   // use the Feldman-Cousins tool
@@ -88,7 +92,7 @@ void rs401_FeldmanCousins()
   //  hist->Draw();
 
   RooDataHist* parameterScan = (RooDataHist*) fc.GetPointsToScan();
-  parameterScan->Draw("mu:sigma");
+  parameterScan->Draw("mu");
 
  
   RooArgSet* tmpPoint;
@@ -97,8 +101,7 @@ void rs401_FeldmanCousins()
     //    cout << "on parameter point " << i << " out of " << parameterScan->numEntries() << endl;
      // get a parameter point from the list of points to test.
     tmpPoint = (RooArgSet*) parameterScan->get(i)->clone("temp");
-      TMarker* mark = new TMarker(tmpPoint->getRealValue("sigma"), 
-				  tmpPoint->getRealValue("mu"), 25);
+    TMarker* mark = new TMarker(tmpPoint->getRealValue("mu"), 1, 25);
     if (interval->IsInInterval( *tmpPoint ) ) 
       mark->SetMarkerColor(kBlue);
     else
