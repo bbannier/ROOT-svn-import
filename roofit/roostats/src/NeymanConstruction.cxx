@@ -111,10 +111,10 @@ ConfInterval* NeymanConstruction::GetInterval() const {
     }
     std::cout << "\tdbg= " << lowerEdgeOfAcceptance << ", " 
     	      << upperEdgeOfAcceptance << ", " << thisTestStatistic <<  " " <<
-      (thisTestStatistic > lowerEdgeOfAcceptance && thisTestStatistic < upperEdgeOfAcceptance) << std::endl;
+      (thisTestStatistic >= lowerEdgeOfAcceptance && thisTestStatistic <= upperEdgeOfAcceptance) << std::endl;
 
     // Check if this data is in the acceptance region
-    if(thisTestStatistic > lowerEdgeOfAcceptance && thisTestStatistic < upperEdgeOfAcceptance) {
+    if(thisTestStatistic >= lowerEdgeOfAcceptance && thisTestStatistic <= upperEdgeOfAcceptance) {
       // if so, set this point to true
       fPointsToTest->add(*point, 1.); 
       ++npass;

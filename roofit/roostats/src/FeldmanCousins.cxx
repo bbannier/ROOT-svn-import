@@ -77,6 +77,7 @@ void FeldmanCousins::CreateTestStatSampler() const{
 
     // get parameters (params of interest + nuisance)
     RooArgSet* parameters = pdf->getParameters(data);
+    //RooArgSet* parameters = fPOI;
 
     // use the profile likelihood ratio as the test statistic
     ProfileLikelihoodTestStat* testStatistic = new ProfileLikelihoodTestStat(*pdf);
@@ -85,7 +86,7 @@ void FeldmanCousins::CreateTestStatSampler() const{
     fTestStatSampler = new ToyMCSampler(*testStatistic) ;
     fTestStatSampler->SetPdf(*pdf);
     fTestStatSampler->SetParameters(*parameters);
-    fTestStatSampler->SetNToys(500);
+    fTestStatSampler->SetNToys((int) 50./fSize); // adjust nToys so that at least 50 events outside acceptance region
     fTestStatSampler->SetNEventsToys(data->numEntries());
     cout << "nevents per toy = " << data->numEntries() << endl;
   }
@@ -108,7 +109,7 @@ void FeldmanCousins::CreateParameterPoints() const{
     RooRealVar *myarg; 
     while ((myarg = (RooRealVar *)it.Next())) { 
       if(!myarg) continue;
-      myarg->setBins(30);
+      myarg->setBins(100);
     }
 
     fPointsToTest= new RooDataHist("parameterScan", "", *parameters);
