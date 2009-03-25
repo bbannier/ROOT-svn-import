@@ -55,11 +55,13 @@ END_HTML
 #endif
 
 #include "RooStats/SamplingDistribution.h"
+#include "RooStats/ToyMCSampler.h"
 
 #include "RooDataSet.h"
 #include "RooGlobalFunc.h"
 #include "TFile.h"
 #include "TTree.h"
+#include "TMath.h"
 
 ClassImp(RooStats::NeymanConstruction) ;
 
@@ -74,6 +76,43 @@ NeymanConstruction::NeymanConstruction() {
   fOwnsWorkspace = true;
   fDataName = "";
   fPdfName = "";
+}
+
+//_______________________________________________________
+void NeymanConstruction::SetAdaptiveSampling(Double_t testStat, Int_t ndof)  const{
+  // this algorithm makes sense if the test statistic is a likelihood ratio and p-values can
+  // be approximated with Wilks' theorem.
+  ToyMCSampler* toyMCSampler = dynamic_cast<ToyMCSampler*>(fTestStatSampler);
+  if(toyMCSampler){
+    // p-value based on Wilks' theorem
+    double pWilks = TMath::Prob(testStat, ndof );
+    double quantile = TMath::ChisquareQuantile(pWilks, ndof );
+    // some parameters for nToys per experiment
+    int nominalToys = (int)1./fSize; // nominal situation 
+    int maxToys = (int) 10./fSize;  // ntoys will be maximized for this
+
+    // based on nominal number of toys and pWilks, the expected number of toys in tail is
+    // pWilks*nominalToys.  Prob to see 1 or more in tail is 1-Pois(0|expectation) = 1.-exp(-expectation)
+    double probToyInTail = 1.-exp(-nominalToys*pWilks);
+    // convert this fluctuation probability into an information measure \sum -p log(p) of two possibilities
+    double informationInToy = (-probToyInTail) * log(probToyInTail) 
+      - (1.-probToyInTail)*log(1.-probToyInTail);
+    int nToysForThisPoint =  TMath::Max( 10, (int) (maxToys*informationInToy));
+    if(pWilks > fSize) // mainly need to protect against testStat < lower bound in this case
+      nToysForThisPoint = TMath::Max( (int)(3./(1.-pWilks)), nToysForThisPoint ); // insure some samples in good regions
+    cout << "test stat = " << testStat << endl
+	 << "ndof = "<< ndof  << endl
+	 << "pWilks = " << pWilks  << endl
+	 << "alpha = " << fSize << endl
+	 << "prob for at least one toy in tail = " << probToyInTail << endl
+	 << "info in toy = " << informationInToy << endl
+	 << "toys for this point = " << nToysForThisPoint << endl;
+    
+    toyMCSampler->SetNEventsPerToy( nToysForThisPoint  );
+  } else {
+    cout << "Adaptive sampling can only be used with a ToyMCSampler" << endl;
+  }
+
 }
 
 //_______________________________________________________
@@ -95,23 +134,28 @@ ConfInterval* NeymanConstruction::GetInterval() const {
      // get a parameter point from the list of points to test.
     point = (RooArgSet*) fPointsToTest->get(i)->clone("temp");
 
+
+     // get the value of the test statistic for this data set
+    Double_t thisTestStatistic = fTestStatSampler->EvaluateTestStatistic(*data, *point );
+
+    if(fAdaptiveSampling)
+      this->SetAdaptiveSampling(thisTestStatistic, point->getSize());
+
     // the next line is where most of the time will be spent generating the sampling dist of the test statistic.
     SamplingDistribution* samplingDist = fTestStatSampler->GetSamplingDistribution(*point); 
     // find the lower & upper thresholds on the test statistic that define the acceptance region in the data
     Double_t lowerEdgeOfAcceptance = samplingDist->InverseCDF( fLeftSideFraction * fSize );
     Double_t upperEdgeOfAcceptance = samplingDist->InverseCDF( 1. - ((1.-fLeftSideFraction) * fSize) );
 
-     // get the value of the test statistic for this data set
-    Double_t thisTestStatistic = fTestStatSampler->EvaluateTestStatistic(*data, *point );
-
+    // printout some debug info
     TIter      itr = point->createIterator();
     RooRealVar* myarg;
     while ((myarg = (RooRealVar *)itr.Next())) { 
       cout << myarg->GetName() << "=" << myarg->getVal() << " ";
     }
-    std::cout << "\tdbg= " << lowerEdgeOfAcceptance << ", " 
+    std::cout << "\tdbg: "<< i<<"/"<<fPointsToTest->numEntries()<<" : " << lowerEdgeOfAcceptance << ", " 
     	      << upperEdgeOfAcceptance << ", " << thisTestStatistic <<  " " <<
-      (thisTestStatistic >= lowerEdgeOfAcceptance && thisTestStatistic <= upperEdgeOfAcceptance) << std::endl;
+      (thisTestStatistic >= lowerEdgeOfAcceptance && thisTestStatistic <= upperEdgeOfAcceptance) << std::endl << std::endl;
 
     // Check if this data is in the acceptance region
     if(thisTestStatistic >= lowerEdgeOfAcceptance && thisTestStatistic <= upperEdgeOfAcceptance) {

@@ -64,6 +64,7 @@ FeldmanCousins::FeldmanCousins() {
   fOwnsWorkspace = true;
   fDataName = "";
   fPdfName = "";
+  fAdaptiveSampling=false;
 }
 
 //_______________________________________________________
@@ -87,8 +88,13 @@ void FeldmanCousins::CreateTestStatSampler() const{
     fTestStatSampler->SetPdf(*pdf);
     fTestStatSampler->SetParameters(*parameters);
     fTestStatSampler->SetNToys((int) 50./fSize); // adjust nToys so that at least 50 events outside acceptance region
-    fTestStatSampler->SetNEventsToys(data->numEntries());
-    cout << "ntoys per point = " << (int) 50./fSize << endl;
+
+    if(!fAdaptiveSampling){
+      fTestStatSampler->SetNEventsPerToy(data->numEntries());
+      cout << "ntoys per point = " << (int) 50./fSize << endl;
+    } else{
+      cout << "ntoys per point: adaptive" << endl;
+    }
     cout << "nevents per toy = " << data->numEntries() << endl;
   }
 }
@@ -145,6 +151,7 @@ ConfInterval* FeldmanCousins::GetInterval() const {
   nc.SetParameterPointsToTest( *fPointsToTest );
   //  nc.SetLeftSideTailFraction(1.); // in definition of Feldman-Cousins
   nc.SetData(*data);
+  nc.UseAdaptiveSampling(fAdaptiveSampling);
 
   // use it
   return nc.GetInterval();

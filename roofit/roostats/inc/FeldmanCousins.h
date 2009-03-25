@@ -81,6 +81,8 @@ namespace RooStats {
       virtual void SetConfidenceLevel(Double_t cl) {fSize = 1.-cl;}
 
       RooTreeData* GetPointsToScan() {return fPointsToTest;}
+
+      void UseAdaptiveSampling(bool flag=true){fAdaptiveSampling=flag;}
       
    private:
 
@@ -99,6 +101,7 @@ namespace RooStats {
       RooArgSet* fNuisParams;// RooArgSet specifying  nuisance parameters for interval
       mutable ToyMCSampler* fTestStatSampler; // the test statistic sampler
       mutable RooTreeData* fPointsToTest; // points to perform the construction
+      bool fAdaptiveSampling; // controls use of adaptive sampling algorithm
 
    protected:
       ClassDef(FeldmanCousins,1)   // Interface for tools setting limits (producing confidence intervals)

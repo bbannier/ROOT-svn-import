@@ -143,7 +143,7 @@ namespace RooStats {
         fNtoys = ntoy;
       }
 
-      virtual void SetNEventsToys(const Int_t nevents) {
+      virtual void SetNEventsPerToy(const Int_t nevents) {
         fNevents = nevents;
       }
 
