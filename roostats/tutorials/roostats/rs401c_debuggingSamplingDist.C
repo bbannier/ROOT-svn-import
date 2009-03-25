@@ -61,7 +61,7 @@ void rs401c_debuggingSamplingDist()
   samplingDistCreator.SetPdf(gaus);
   samplingDistCreator.SetParameters(parameters);
   samplingDistCreator.SetNToys(500);
-  samplingDistCreator.SetNEventsToys(nEventsData); // this needs to match what was used for this dataset
+  samplingDistCreator.SetNEventsPerToy(nEventsData); // this needs to match what was used for this dataset
 
   //// show use of a distribution creator
   RooArgSet* point = new RooArgSet(mu, sigma);

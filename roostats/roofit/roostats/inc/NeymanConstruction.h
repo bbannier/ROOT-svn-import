@@ -103,8 +103,14 @@ namespace RooStats {
       virtual void SetTestSize(Double_t size) {fSize = size;}
       // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
       virtual void SetConfidenceLevel(Double_t cl) {fSize = 1.-cl;}
+
+      void UseAdaptiveSampling(bool flag=true){fAdaptiveSampling=flag;}
       
    private:
+
+      // for adaptively setting nToys / point based on asymptotic approximation
+      void SetAdaptiveSampling(Double_t , Int_t) const;
+
       Double_t fSize; // size of the test (eg. specified rate of Type I error)
       RooWorkspace* fWS; // a workspace that owns all the components to be used by the calculator
       Bool_t fOwnsWorkspace; // flag if this object owns its workspace
@@ -116,6 +122,7 @@ namespace RooStats {
       RooTreeData* fPointsToTest;
       Double_t fLeftSideFraction;
       ConfidenceBelt* fConfBelt;
+      bool fAdaptiveSampling; // controls use of adaptive sampling algorithm
 
    protected:
       ClassDef(NeymanConstruction,1)   // Interface for tools setting limits (producing confidence intervals)

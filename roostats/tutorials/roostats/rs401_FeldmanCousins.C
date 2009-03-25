@@ -66,6 +66,7 @@ void rs401_FeldmanCousins()
   fc.SetParameters(parameters);
   fc.SetTestSize(.2); // set size of test
   fc.SetData(*data);
+  fc.UseAdaptiveSampling(true);
 
   // use the Feldman-Cousins tool
   ConfInterval* interval = fc.GetInterval();
