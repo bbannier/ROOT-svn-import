@@ -88,6 +88,7 @@ void FeldmanCousins::CreateTestStatSampler() const{
     fTestStatSampler->SetParameters(*parameters);
     fTestStatSampler->SetNToys((int) 50./fSize); // adjust nToys so that at least 50 events outside acceptance region
     fTestStatSampler->SetNEventsToys(data->numEntries());
+    cout << "ntoys per point = " << (int) 50./fSize << endl;
     cout << "nevents per toy = " << data->numEntries() << endl;
   }
 }
@@ -109,7 +110,7 @@ void FeldmanCousins::CreateParameterPoints() const{
     RooRealVar *myarg; 
     while ((myarg = (RooRealVar *)it.Next())) { 
       if(!myarg) continue;
-      myarg->setBins(100);
+      myarg->setBins(10);
     }
 
     fPointsToTest= new RooDataHist("parameterScan", "", *parameters);

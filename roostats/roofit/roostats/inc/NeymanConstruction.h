@@ -21,6 +21,7 @@
 #endif
 
 #include "RooStats/TestStatSampler.h"
+#include "RooStats/ConfidenceBelt.h"
 
 #include "RooTreeData.h"
 #include "RooWorkspace.h"
@@ -114,6 +115,7 @@ namespace RooStats {
       TestStatSampler* fTestStatSampler;
       RooTreeData* fPointsToTest;
       Double_t fLeftSideFraction;
+      ConfidenceBelt* fConfBelt;
 
    protected:
       ClassDef(NeymanConstruction,1)   // Interface for tools setting limits (producing confidence intervals)
