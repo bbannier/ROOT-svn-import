@@ -143,10 +143,11 @@ Double_t SamplingDistribution::InverseCDF(Double_t pvalue,
   int variation = TMath::Min((int)(fSamplingDist.size()-1), 
 			 TMath::Max(0,nominal+delta));
 
-  std::cout << "samp dist db: size = " << fSamplingDist.size() 
-	    << "nominal = " << nominal 
-	    << "variation = " << variation 
+  /*  std::cout << "samp dist db: size = " << fSamplingDist.size() 
+	    << " nominal = " << nominal 
+	    << " variation = " << variation 
 	    << std::endl;
+  */
 
   /*
   for(int i=0; i<fSamplingDist.size(); ++i){

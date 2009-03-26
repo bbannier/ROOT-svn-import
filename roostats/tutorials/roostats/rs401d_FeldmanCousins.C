@@ -67,8 +67,8 @@ oscillations.
   RooRealVar L("L","", .800,.600, 1.0,"km"); // need these units in formula
   //  RooRealVar deltaMSq("deltaMSq","#Delta m^{2}",40,1,1000,"eV/c^{2}");
   //  RooRealVar sinSq2theta("sinSq2theta","sin^{2}(2#theta)", .006,5E-4,1);
-  RooRealVar deltaMSq("deltaMSq","#Delta m^{2}",40,20,50,"eV/c^{2}");
-  RooRealVar sinSq2theta("sinSq2theta","sin^{2}(2#theta)", .006,.004,.02);
+  RooRealVar deltaMSq("deltaMSq","#Delta m^{2}",40,10,70,"eV/c^{2}");
+  RooRealVar sinSq2theta("sinSq2theta","sin^{2}(2#theta)", .006,.001,.03);
 
   NuMuToNuE_Oscillation PnmuTone("PnmuTone","P(#nu_{#mu} #rightarrow #nu_{e}",L,E,sinSq2theta,deltaMSq);
   //  RooGenericPdf PnmuTone("PnmuTone","","sinSq2theta*pow(sin(1.27*deltaMSq*L/E),2)",
