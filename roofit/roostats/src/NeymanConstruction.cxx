@@ -76,6 +76,7 @@ NeymanConstruction::NeymanConstruction() {
   fOwnsWorkspace = true;
   fDataName = "";
   fPdfName = "";
+  fConfBelt = 0; // constructed with tree data
 }
 
 //_______________________________________________________
@@ -138,14 +139,81 @@ ConfInterval* NeymanConstruction::GetInterval() const {
      // get the value of the test statistic for this data set
     Double_t thisTestStatistic = fTestStatSampler->EvaluateTestStatistic(*data, *point );
 
-    if(fAdaptiveSampling)
-      this->SetAdaptiveSampling(thisTestStatistic, point->getSize());
+    // find the lower & upper thresholds on the test statistic that 
+    // define the acceptance region in the data
 
-    // the next line is where most of the time will be spent generating the sampling dist of the test statistic.
-    SamplingDistribution* samplingDist = fTestStatSampler->GetSamplingDistribution(*point); 
-    // find the lower & upper thresholds on the test statistic that define the acceptance region in the data
-    Double_t lowerEdgeOfAcceptance = samplingDist->InverseCDF( fLeftSideFraction * fSize );
-    Double_t upperEdgeOfAcceptance = samplingDist->InverseCDF( 1. - ((1.-fLeftSideFraction) * fSize) );
+    SamplingDistribution* samplingDist=0;
+    Double_t sigma;
+    Double_t upperEdgeOfAcceptance, upperEdgeMinusSigma, upperEdgePlusSigma;
+    Double_t lowerEdgeOfAcceptance, lowerEdgeMinusSigma, lowerEdgePlusSigma;
+    Int_t totalMC = 10, additionalMC=0;
+    ToyMCSampler* toyMCSampler = dynamic_cast<ToyMCSampler*>(fTestStatSampler);
+    if(fAdaptiveSampling && toyMCSampler) {
+      do{
+	// this will be executed first, then while conditioned checked
+	// as an exit condition for the loop.
+
+	// the next line is where most of the time will be spent 
+	// generating the sampling dist of the test statistic.
+	additionalMC = 2*totalMC; // grow by a factor of two
+	samplingDist = 
+	  toyMCSampler->AppendSamplingDistribution(*point, 
+						   samplingDist, 
+						   additionalMC); 
+	totalMC=samplingDist->GetSize();
+
+	sigma = 1;
+	upperEdgeOfAcceptance = 
+	  samplingDist->InverseCDF( 1. - ((1.-fLeftSideFraction) * fSize) , 
+				    sigma, upperEdgePlusSigma);
+	sigma = -1;
+	samplingDist->InverseCDF( 1. - ((1.-fLeftSideFraction) * fSize) , 
+				  sigma, upperEdgeMinusSigma);
+	
+	sigma = 1;
+	lowerEdgeOfAcceptance = 
+	  samplingDist->InverseCDF( fLeftSideFraction * fSize , 
+				    sigma, lowerEdgePlusSigma);
+	sigma = -1;
+	samplingDist->InverseCDF( fLeftSideFraction * fSize , 
+				  sigma, lowerEdgeMinusSigma);
+	
+	cout << "dbg:"
+	     << "total MC = " << totalMC 
+	     << " this test stat = " << thisTestStatistic << endl
+	     << " upper edge -1sigma = " << upperEdgeMinusSigma
+	     << " upperEdge = "<<upperEdgeOfAcceptance
+	     << " upper edge +1sigma = " << upperEdgePlusSigma << endl
+	     << " lower edge -1sigma = " << lowerEdgeMinusSigma
+	     << " lowerEdge = "<<lowerEdgeOfAcceptance
+	     << " lower edge +1sigma = " << lowerEdgePlusSigma << endl;
+      } while(( 
+	      (thisTestStatistic <= upperEdgeOfAcceptance &&
+	       thisTestStatistic > upperEdgeMinusSigma)
+	      || (thisTestStatistic >= upperEdgeOfAcceptance &&
+		  thisTestStatistic < upperEdgePlusSigma)
+	      || (thisTestStatistic <= lowerEdgeOfAcceptance &&
+		  thisTestStatistic > lowerEdgeMinusSigma)
+	      || (thisTestStatistic >= lowerEdgeOfAcceptance &&
+		  thisTestStatistic < lowerEdgePlusSigma) 
+		) && (totalMC < 100./fSize)
+	      ) ; // need ; here
+    } else {
+      // the next line is where most of the time will be spent 
+      // generating the sampling dist of the test statistic.
+      samplingDist = fTestStatSampler->GetSamplingDistribution(*point); 
+      
+      lowerEdgeOfAcceptance = 
+	samplingDist->InverseCDF( fLeftSideFraction * fSize );
+      upperEdgeOfAcceptance = 
+	samplingDist->InverseCDF( 1. - ((1.-fLeftSideFraction) * fSize) );
+    }
+    
+    // add acceptance region to ConfidenceBelt
+    //    fConfBelt->AddAcceptanceRegion(*point, 
+    //			   lowerEdgeOfAcceptance, 
+    //			   upperEdgeOfAcceptance);
+
 
     // printout some debug info
     TIter      itr = point->createIterator();

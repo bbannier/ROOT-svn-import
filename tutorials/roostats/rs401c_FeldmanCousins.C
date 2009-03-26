@@ -12,6 +12,7 @@
 #include "RooGlobalFunc.h"
 #endif
 #include "RooStats/ConfInterval.h"
+#include "RooStats/ConfidenceBelt.h"
 #include "RooStats/FeldmanCousins.h"
 
 #include "RooDataSet.h"
@@ -70,9 +71,12 @@ void rs401c_FeldmanCousins()
   fc.SetParameters(parameters);
   fc.SetTestSize(.05); // set size of test
   fc.SetData(*data);
+  fc.UseAdaptiveSampling(true);
 
   // use the Feldman-Cousins tool
   ConfInterval* interval = fc.GetInterval();
+
+  ConfidenceBelt* belt = fc.GetConfidenceBelt();
 
   // make a canvas for plots
   TCanvas* intervalCanvas =  new TCanvas("intervalCanvas");
@@ -101,6 +105,16 @@ void rs401c_FeldmanCousins()
     //    cout << "on parameter point " << i << " out of " << parameterScan->numEntries() << endl;
      // get a parameter point from the list of points to test.
     tmpPoint = (RooArgSet*) parameterScan->get(i)->clone("temp");
+
+    if(false){
+      // use belt
+      cout << "belt:" << tmpPoint->getRealValue("mu")
+	   << belt->GetAcceptanceRegionMin(*tmpPoint) 
+	   << " - " 
+	   << belt->GetAcceptanceRegionMax(*tmpPoint) 
+	   << endl;
+    }
+
     TMarker* mark = new TMarker(tmpPoint->getRealValue("mu"), 1, 25);
     if (interval->IsInInterval( *tmpPoint ) ) 
       mark->SetMarkerColor(kBlue);

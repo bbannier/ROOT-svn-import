@@ -47,10 +47,17 @@ namespace RooStats {
     
     // get the inverse of the Cumulative distribution function
     Double_t InverseCDF(Double_t );
+
+    // get the inverse of the Cumulative distribution function
+    // togetehr with the inverse based on sampling variation
+    Double_t InverseCDF(Double_t, Double_t&, Double_t& );
   
     // merge two sampling distributions
     void Add(SamplingDistribution* other);
     
+    // size of samples
+    Int_t GetSize() const{return fSamplingDist.size();}
+
     // Get test statistics values
     std::vector<Double_t> GetSamplingDistribution(){return fSamplingDist;}
     // Get the sampling weights 

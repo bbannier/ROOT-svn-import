@@ -161,6 +161,7 @@ namespace RooStats {
  class ConfidenceBelt : public TNamed {
 
   private:
+    SamplingSummaryLookup fSamplingSummaryLookup;
     vector<SamplingSummary> fSamplingSummaries; // composite of several AcceptanceRegions
     RooTreeData* fParameterPoints;  // either a histogram (RooDataHist) or a tree (RooDataSet)
 
@@ -176,6 +177,8 @@ namespace RooStats {
         
     void AddAcceptanceRegion(RooArgSet&, AcceptanceRegion region, Double_t cl=-1., Double_t leftside=-1.);
 
+    void AddAcceptanceRegion(RooArgSet&, Double_t lower, Double_t upper, Double_t cl=-1., Double_t leftside=-1.);
+
     AcceptanceRegion* GetAcceptanceRegion(RooArgSet&, Double_t cl=-1., Double_t leftside=-1.);
     Double_t GetAcceptanceRegionMin(RooArgSet&, Double_t cl=-1., Double_t leftside=-1.);
     Double_t GetAcceptanceRegionMax(RooArgSet&, Double_t cl=-1., Double_t leftside=-1.);
@@ -190,9 +193,6 @@ namespace RooStats {
 
     // check if parameters are correct. (dummy implementation to start)
     Bool_t CheckParameters(RooArgSet&) const ;
-
-
-
     
   protected:
     ClassDef(ConfidenceBelt,1)  // A confidence belt for the Neyman Construction
