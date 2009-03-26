@@ -59,7 +59,10 @@ namespace RooStats {
       void SetLeftSideTailFraction(Double_t leftSideFraction = 1.) {fLeftSideFraction = leftSideFraction;} 
 
       // User-defined set of points to test
-      void SetParameterPointsToTest(RooTreeData& pointsToTest) {fPointsToTest = &pointsToTest;}
+      void SetParameterPointsToTest(RooTreeData& pointsToTest) {
+	fPointsToTest = &pointsToTest;
+        fConfBelt = new ConfidenceBelt("ConfBelt",pointsToTest);
+      }
       // This class can make regularly spaced scans based on range stored in RooRealVars.
       // Choose number of steps for a rastor scan (common for each dimension)
       //      void SetNumSteps(Int_t);
@@ -104,7 +107,12 @@ namespace RooStats {
       // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
       virtual void SetConfidenceLevel(Double_t cl) {fSize = 1.-cl;}
 
+
+      ConfidenceBelt* GetConfidenceBelt() {return fConfBelt;}
+
+
       void UseAdaptiveSampling(bool flag=true){fAdaptiveSampling=flag;}
+
       
    private:
 

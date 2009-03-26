@@ -72,6 +72,22 @@ namespace RooStats {
     }
     
      // Main interface to get a ConfInterval, pure virtual
+    virtual SamplingDistribution* AppendSamplingDistribution(RooArgSet& allParameters, SamplingDistribution* last, Int_t additionalMC) {
+
+      Int_t tmp = fNtoys;
+      fNtoys = additionalMC;
+      SamplingDistribution* newSamples = GetSamplingDistribution(allParameters);
+
+      if(last){
+	last->Add(newSamples);
+	fNtoys = tmp;
+	delete newSamples;
+	return last;
+      }
+      return newSamples;
+    }
+
+     // Main interface to get a ConfInterval, pure virtual
     virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& allParameters) {
       std::vector<Double_t> testStatVec;
       //       cout << " about to generate sampling dist " << endl;

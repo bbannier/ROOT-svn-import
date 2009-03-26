@@ -153,6 +153,7 @@ ConfInterval* FeldmanCousins::GetInterval() const {
   nc.SetData(*data);
   nc.UseAdaptiveSampling(fAdaptiveSampling);
 
+  fConfBelt = nc.GetConfidenceBelt();
   // use it
   return nc.GetInterval();
 }

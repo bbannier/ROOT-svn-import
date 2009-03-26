@@ -21,6 +21,7 @@
 #endif
 
 #include "RooStats/ToyMCSampler.h"
+#include "RooStats/ConfidenceBelt.h"
 
 #include "RooTreeData.h"
 #include "RooWorkspace.h"
@@ -82,6 +83,8 @@ namespace RooStats {
 
       RooTreeData* GetPointsToScan() {return fPointsToTest;}
 
+      ConfidenceBelt* GetConfidenceBelt() {return fConfBelt;}
+
       void UseAdaptiveSampling(bool flag=true){fAdaptiveSampling=flag;}
       
    private:
@@ -101,6 +104,7 @@ namespace RooStats {
       RooArgSet* fNuisParams;// RooArgSet specifying  nuisance parameters for interval
       mutable ToyMCSampler* fTestStatSampler; // the test statistic sampler
       mutable RooTreeData* fPointsToTest; // points to perform the construction
+      mutable ConfidenceBelt* fConfBelt;
       bool fAdaptiveSampling; // controls use of adaptive sampling algorithm
 
    protected:
