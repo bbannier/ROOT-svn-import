@@ -87,10 +87,10 @@ void FeldmanCousins::CreateTestStatSampler() const{
     fTestStatSampler = new ToyMCSampler(*testStatistic) ;
     fTestStatSampler->SetPdf(*pdf);
     fTestStatSampler->SetParameters(*parameters);
+    fTestStatSampler->SetNEventsPerToy(data->numEntries());
     fTestStatSampler->SetNToys((int) 50./fSize); // adjust nToys so that at least 50 events outside acceptance region
 
     if(!fAdaptiveSampling){
-      fTestStatSampler->SetNEventsPerToy(data->numEntries());
       cout << "ntoys per point = " << (int) 50./fSize << endl;
     } else{
       cout << "ntoys per point: adaptive" << endl;

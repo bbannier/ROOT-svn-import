@@ -77,13 +77,14 @@ namespace RooStats {
       Int_t tmp = fNtoys;
       fNtoys = additionalMC;
       SamplingDistribution* newSamples = GetSamplingDistribution(allParameters);
+      fNtoys = tmp;
 
       if(last){
 	last->Add(newSamples);
-	fNtoys = tmp;
 	delete newSamples;
 	return last;
       }
+
       return newSamples;
     }
 
@@ -103,16 +104,22 @@ namespace RooStats {
       }
 
       cout << " generated sampling dist " << endl;
-      return new SamplingDistribution("SamplingDist", "Samplint Distribution of Test Statistic", testStatVec );
+      return new SamplingDistribution("SamplingDist", "Sampling Distribution of Test Statistic", testStatVec );
     } 
 
      virtual RooAbsData* GenerateToyData(RooArgSet& allParameters) const {
+
+       //       cout << "fNevents = " << fNevents << endl;
        RooAbsPdf* pdf = fWS->pdf(fPdfName);
        // need a nicer way to specify observables in the dataset
        RooArgSet* observables = pdf->getVariables();
 
        // Set the parameters to desired values for generating toys
        RooStats::SetParameters(&allParameters, observables);
+
+       if(fPOI) observables->remove(*fPOI, kFALSE, kTRUE);
+       if(fNuisParams) observables->remove(*fNuisParams, kFALSE, kTRUE);
+
        /*
        TIter      itr = observables->createIterator();
        RooRealVar* myarg;
@@ -121,9 +128,6 @@ namespace RooStats {
        }
        cout << endl;
        */
-
-       if(fPOI) observables->remove(*fPOI, kFALSE, kTRUE);
-       if(fNuisParams) observables->remove(*fNuisParams, kFALSE, kTRUE);
 
        //fluctuate the number of events if fExtended is on
        Int_t nEvents = fNevents;

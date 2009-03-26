@@ -120,7 +120,7 @@ void NeymanConstruction::SetAdaptiveSampling(Double_t testStat, Int_t ndof)  con
 ConfInterval* NeymanConstruction::GetInterval() const {
   // Main interface to get a RooStats::ConfInterval.  
   // It constructs a RooStats::SetInterval.
-
+  
   // local variables
   RooAbsData* data = fWS->data(fDataName);
   if(!data) {
@@ -161,6 +161,9 @@ ConfInterval* NeymanConstruction::GetInterval() const {
 						   samplingDist, 
 						   additionalMC); 
 	totalMC=samplingDist->GetSize();
+
+	//cout << "without sigma upper = " << 
+	//samplingDist->InverseCDF( 1. - ((1.-fLeftSideFraction) * fSize) ) << endl;
 
 	sigma = 1;
 	upperEdgeOfAcceptance = 
