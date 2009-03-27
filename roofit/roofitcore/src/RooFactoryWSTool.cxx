@@ -71,6 +71,8 @@ map<string,RooFactoryWSTool::IFace*>* RooFactoryWSTool::_hooks=0 ;
 static Int_t init()
 {
   RooFactoryWSTool::IFace* iface = new RooFactoryWSTool::SpecialsIFace ;
+
+  // Operator p.d.f.s
   RooFactoryWSTool::registerSpecial("SUM",iface) ;
   RooFactoryWSTool::registerSpecial("RSUM",iface) ;
   RooFactoryWSTool::registerSpecial("PROD",iface) ;
@@ -79,14 +81,26 @@ static Int_t init()
   RooFactoryWSTool::registerSpecial("FCONV",iface) ;
   RooFactoryWSTool::registerSpecial("NCONV",iface) ;
 
+  // Operator functions
   RooFactoryWSTool::registerSpecial("sum",iface) ;
   RooFactoryWSTool::registerSpecial("prod",iface) ;
   RooFactoryWSTool::registerSpecial("expr",iface) ;
   RooFactoryWSTool::registerSpecial("nconv",iface) ;
 
+  // Test statistics
   RooFactoryWSTool::registerSpecial("nll",iface) ;
   RooFactoryWSTool::registerSpecial("chi2",iface) ;
   RooFactoryWSTool::registerSpecial("profile",iface) ;
+
+  // Integration and derivation
+  RooFactoryWSTool::registerSpecial("int",iface) ;
+  RooFactoryWSTool::registerSpecial("deriv",iface) ;
+  RooFactoryWSTool::registerSpecial("cdf",iface) ;
+  RooFactoryWSTool::registerSpecial("PROJ",iface) ;
+
+  // Miscellaneous
+  RooFactoryWSTool::registerSpecial("dataobs",iface) ;
+
   return 0 ;
 }
 static Int_t dummy = init() ;
@@ -1703,18 +1717,22 @@ std::string RooFactoryWSTool::SpecialsIFace::create(RooFactoryWSTool& ft, const 
   string cl(typeName) ;
   if (cl=="SUM") {
 
+    // SUM::name[a*A,b*B,C]
     ft.add(instName,pargs,kFALSE) ;
 
   } else if (cl=="RSUM") {
 
+    // RSUM::name[a*A,b*B,C]
     ft.add(instName,pargs,kTRUE) ;
 
   } else if (cl=="PROD") {
 
+    // PROD::name[A,B,C]
     ft.prod(instName,pargs) ;
 
   } else if (cl=="SIMUL") {
 
+    // PROD::name[cat,state=Pdf,...]
     if (pargv.size()>1) {
       ft.simul(instName,pargv[0].c_str(),strchr(pargs,',')+1) ;
     } else {
@@ -1723,6 +1741,7 @@ std::string RooFactoryWSTool::SpecialsIFace::create(RooFactoryWSTool& ft, const 
 
   } else if (cl=="EXPR") {
     
+    // EXPR::name['expr',var,var,...]
     if (args.size()<=2) {
       ft.createArg("RooGenericPdf",instName,pargs) ;
     } else {      
@@ -1739,41 +1758,163 @@ std::string RooFactoryWSTool::SpecialsIFace::create(RooFactoryWSTool& ft, const 
   
   } else if (cl=="FCONV") {
 
+    // FCONV::name[var,pdf1,pdf2]
     ft.createArg("RooFFTConvPdf",instName,pargs) ;
   
   } else if (cl=="NCONV") {
 
+    // NCONV::name[var,pdf1,pdf2]
     ft.createArg("RooNumConvPdf",instName,pargs) ;
   
   } else if (cl=="sum") {
     
+    // sum::name[a,b,c]
     ft.addfunc(instName,pargs) ;
 
   } else if (cl=="prod") {
 
+    // prod::name[a,b,c]
     ft.prodfunc(instName,pargs) ;
     
   } else if (cl=="expr") {
 
-    ft.createArg("RooFormulaVar",instName,pargs) ;  
+    // expr::name['expr',var,var,...]
+    if (args.size()<=2) {
+      ft.createArg("RooFormulaVar",instName,pargs) ;
+    } else {      
+      char genargs[1024] ;
+      strcpy(genargs,args[0].c_str()) ;      
+      strcat(genargs,",{") ;
+      for (UInt_t i=1 ; i<args.size() ; i++) {
+	if (i!=1) strcat(genargs,",") ;
+	strcat(genargs,args[i].c_str()) ;
+      }
+      strcat(genargs,"}") ;
+      ft.createArg("RooFormulaVar",instName,genargs) ;
+    }
 
   } else if (cl=="nconv") {
 
+    // nconv::name[var,pdf1,pdf2]
     ft.createArg("RooNumConvolution",instName,pargs) ;
   
   } else if (cl=="nll") {
 
+    // nll::name[pdf,data]
     RooNLLVar nll(instName,instName,ft.asPDF(pargv[0].c_str()),ft.asDATA(pargv[1].c_str())) ;
     if (ft.ws().import(nll,Silence())) ft.logError() ;
     
   } else if (cl=="chi2") {
 
+    // chi2::name[pdf,data]
     RooChi2Var nll(instName,instName,ft.asPDF(pargv[0].c_str()),ft.asDHIST(pargv[1].c_str())) ;
     if (ft.ws().import(nll,Silence())) ft.logError() ;
     
   } else if (cl=="profile") {
 
+    // profile::name[func,vars]
     ft.createArg("RooProfileLL",instName,pargs) ;
+
+  } else if (cl=="dataobs") {
+
+    // dataobs::name[dset,func]
+    RooAbsReal* funcClone = static_cast<RooAbsReal*>(ft.asFUNC(pargv[1].c_str()).clone(instName)) ;
+    RooAbsArg* arg = ft.asDSET(pargv[0].c_str()).addColumn(*funcClone) ;
+    if (!ft.ws().fundArg(arg->GetName())) {
+      if (ft.ws().import(*arg,Silence())) ft.logError() ;
+    }
+    delete funcClone ;
+
+  } else if (cl=="int") {    
+    
+    // int::name[func,intobs]
+    // int::name[func,intobs|range]
+    // int::name[func,intobs,normobs]
+    // int::name[func,intobs|range,normobs]
+
+    if (pargv.size()<2 || pargv.size()>3) {
+      throw string(Form("int::%s, requires 2 or 3 arguments, have %d arguments",instName,pargv.size())) ;
+    }
+
+    RooAbsReal& func = ft.asFUNC(pargv[0].c_str()) ;
+
+    char buf[256] ;
+    strcpy(buf,pargv[1].c_str()) ;
+    char* save ;
+    char* intobs = strtok_r(buf,"|",&save) ;
+    char* range = strtok_r(0,"",&save) ;
+
+    RooAbsReal* integral = 0 ;
+    if (pargv.size()==2) {
+      if (range) {
+	integral = func.createIntegral(ft.asSET(intobs),Range(range)) ;
+      } else {
+	integral = func.createIntegral(ft.asSET(intobs)) ;
+      }
+    } else {
+      if (range) {
+	integral = func.createIntegral(ft.asSET(intobs),Range(range),NormSet(ft.asSET(pargv[2].c_str()))) ;
+      } else {
+	integral = func.createIntegral(ft.asSET(intobs),NormSet(ft.asSET(pargv[2].c_str()))) ;
+      }
+    }
+
+    integral->SetName(instName) ;
+    if (ft.ws().import(*integral,Silence())) ft.logError() ;
+    
+  } else if (cl=="deriv") {
+    
+    // derive::name[func,obs,order]
+
+    if (pargv.size()<2 || pargv.size()>3) {
+      throw string(Form("deriv::%s, requires 2 or 3 arguments, have %d arguments",instName,pargv.size())) ;
+    }
+
+    RooAbsReal& func = ft.asFUNC(pargv[0].c_str()) ;
+
+    RooAbsReal* derivative(0) ;
+    if (pargv.size()==2) {
+      derivative = func.derivative(ft.asVAR(pargv[1].c_str()),1) ;
+    } else {
+      derivative = func.derivative(ft.asVAR(pargv[1].c_str()),ft.asINT(pargv[2].c_str())) ;
+    }
+
+    derivative->SetName(instName) ;
+    if (ft.ws().import(*derivative,Silence())) ft.logError() ;
+
+  } else if (cl=="cdf") {
+
+    // cdf::name[pdf,obs,extranormobs]
+
+    if (pargv.size()<2 || pargv.size()>3) {
+      throw string(Form("cdf::%s, requires 2 or 3 arguments, have %d arguments",instName,pargv.size())) ;
+    }
+
+    RooAbsPdf& pdf = ft.asPDF(pargv[0].c_str()) ;
+
+    RooAbsReal* cdf(0) ;
+    if (pargv.size()==2) {
+      cdf = pdf.createCdf(ft.asSET(pargv[1].c_str())) ;
+    } else {
+      cdf = pdf.createCdf(ft.asSET(pargv[1].c_str()),ft.asSET(pargv[2].c_str())) ;
+    }
+
+    cdf->SetName(instName) ;
+    if (ft.ws().import(*cdf,Silence())) ft.logError() ;
+
+
+  } else if (cl=="PROJ") {
+
+    // PROJ::name[pdf,intobs]
+    if (pargv.size()!=2) {
+      throw string(Form("PROJ::%s, requires 2 argumentss, have %d arguments",instName,pargv.size())) ;
+    }
+
+    RooAbsPdf& pdf = ft.asPDF(pargv[0].c_str()) ;
+    RooAbsPdf* projection = pdf.createProjection(ft.asSET(pargv[1].c_str())) ;
+    projection->SetName(instName) ;
+
+    if (ft.ws().import(*projection)) ft.logError() ;
 
   } else {
 
