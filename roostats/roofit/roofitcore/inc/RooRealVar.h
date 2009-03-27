@@ -141,7 +141,7 @@ public:
   static RooRealVarSharedProperties _nullProp ; // Null property
   mutable RooRealVarSharedProperties* _sharedProp ; //! Shared properties associated with this instance
 
-  ClassDef(RooRealVar,4) // Real-valued variable 
+  ClassDef(RooRealVar,5) // Real-valued variable 
 };
 
 
