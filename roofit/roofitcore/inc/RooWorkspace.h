@@ -21,6 +21,7 @@
 #include "RooLinkedList.h"
 #include "RooCmdArg.h"
 #include "RooExpensiveObjectCache.h" 
+#include "TUUID.h"
 #include <map>
 #include <list>
 #include <string>
@@ -109,6 +110,8 @@ public:
   static void addClassImplImportDir(const char* dir) ;
   static void setClassFileExportDir(const char* dir=0) ; 
 
+  const TUUID& uuid() const { return _uuid ; }
+
   class CodeRepo : public TObject {
   public:
     CodeRepo(RooWorkspace* wspace=0) : _wspace(wspace), _compiledOK(kTRUE) {} ;
@@ -185,6 +188,8 @@ public:
   static std::list<std::string> _classImplDirList ;
   static std::string            _classFileExportDir ;
 
+  TUUID       _uuid ;  // Unique workspace ID
+
   static Bool_t _autoClass ; // Automatic import of non-distribution class code
   
   CodeRepo _classes ; // Repository of embedded class code. This data member _must_ be first
@@ -207,7 +212,7 @@ public:
   Bool_t      _openTrans ;    //! Is there a transaction open?
   RooArgSet   _sandboxNodes ; //! Sandbox for incoming objects in a transaction
 
-  ClassDef(RooWorkspace,4)  // Persistable project container for (composite) pdfs, functions, variables and datasets
+  ClassDef(RooWorkspace,5)  // Persistable project container for (composite) pdfs, functions, variables and datasets
   
 } ;
 
