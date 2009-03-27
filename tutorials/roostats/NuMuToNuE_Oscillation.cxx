@@ -19,12 +19,10 @@
  NuMuToNuE_Oscillation::NuMuToNuE_Oscillation(const char *name, const char *title, 
                         RooAbsReal& _L,
                         RooAbsReal& _E,
-                        RooAbsReal& _sinSq2theta,
                         RooAbsReal& _deltaMSq) :
    RooAbsPdf(name,title), 
    L("L","L",this,_L),
    E("E","E",this,_E),
-   sinSq2theta("sinSq2theta","sinSq2theta",this,_sinSq2theta),
    deltaMSq("deltaMSq","deltaMSq",this,_deltaMSq)
  { 
  } 
@@ -34,7 +32,6 @@
    RooAbsPdf(other,name), 
    L("L",this,other.L),
    E("E",this,other.E),
-   sinSq2theta("sinSq2theta",this,other.sinSq2theta),
    deltaMSq("deltaMSq",this,other.deltaMSq)
  { 
  } 
@@ -44,8 +41,6 @@
  Double_t NuMuToNuE_Oscillation::evaluate() const 
  { 
    // ENTER EXPRESSION IN TERMS OF VARIABLE ARGUMENTS HERE 
-   return sinSq2theta*pow(sin(1.27*deltaMSq*L/E),2) ; 
+   return pow(sin(1.27*deltaMSq*L/E),2) ; 
  } 
-
-
 
