@@ -549,8 +549,8 @@ void RooFitResult::fillCorrMatrix()
   // fill the internal arrays.
 
   // Sanity check
-  if (gMinuit->fNpar <= 1) {
-    coutI(Minimization) << "RooFitResult::fillCorrMatrix: number of floating parameters <=1, correlation matrix not filled" << endl ;
+  if (gMinuit->fNpar < 1) {
+    coutI(Minimization) << "RooFitResult::fillCorrMatrix: number of floating parameters is zero, correlation matrix not filled" << endl ;
     return ;
   }
 
