@@ -248,8 +248,6 @@ Double_t RooAbsPdf::getVal(const RooArgSet* nset) const
   // Return value of object. Calculated if dirty, otherwise cached value is returned.
   if ((isValueDirty() || nsetChanged || _norm->isValueDirty()) && operMode()!=AClean) {
 
-    // cout << "doEval" << endl ;
-    
     // Evaluate numerator
     Double_t rawVal = evaluate() ;
     Bool_t error = traceEvalPdf(rawVal) ; // Error checking and printing
@@ -652,7 +650,7 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineInt("optConst","Optimize",0,1) ;
   pc.defineObject("projDepSet","ProjectedObservables",0,0) ;
   pc.defineObject("cPars","Constrain",0,0) ;
-  pc.defineObject("extCons","ExternalConstraints",0,0) ;
+  pc.defineSet("extCons","ExternalConstraints",0,0) ;
   pc.defineMutex("Range","RangeWithName") ;
   
   // Process and check varargs 
@@ -670,7 +668,7 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   Bool_t verbose = pc.getInt("verbose") ;
   Int_t optConst = pc.getInt("optConst") ;
   const RooArgSet* cPars = static_cast<RooArgSet*>(pc.getObject("cPars")) ;
-  const RooArgSet* extCons = static_cast<RooArgSet*>(pc.getObject("extCons")) ;
+  const RooArgSet* extCons = pc.getSet("extCons") ;
 
   // Process automatic extended option
   if (ext==2) {
@@ -865,7 +863,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineObject("projDepSet","ProjectedObservables",0,0) ;
   pc.defineObject("minosSet","Minos",0,0) ;
   pc.defineObject("cPars","Constrain",0,0) ;
-  pc.defineObject("extCons","ExternalConstraints",0,0) ;
+  pc.defineSet("extCons","ExternalConstraints",0,0) ;
   pc.defineMutex("FitOptions","Verbose") ;
   pc.defineMutex("FitOptions","Save") ;
   pc.defineMutex("FitOptions","Timer") ;
@@ -903,7 +901,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   Int_t doSumW2  = pc.getInt("doSumW2") ;
   const RooArgSet* minosSet = static_cast<RooArgSet*>(pc.getObject("minosSet")) ;
   const RooArgSet* cPars = static_cast<RooArgSet*>(pc.getObject("cPars")) ;
-  const RooArgSet* extCons = static_cast<RooArgSet*>(pc.getObject("extCons")) ;
+  const RooArgSet* extCons = pc.getSet("extCons") ;
 
   // Determine if the dataset has weights  
   Bool_t weightedData = data.isNonPoissonWeighted() ;
@@ -2021,7 +2019,7 @@ RooPlot* RooAbsPdf::paramOn(RooPlot* frame, const RooCmdArg& arg1, const RooCmdA
   //
   //   Parameters(const RooArgSet& param) -- Only the specified subset of parameters will be shown. 
   //                                         By default all non-contant parameters are shown
-  //   ShowConstant(Bool_t flag)          -- Also display constant parameters
+  //   ShowConstants(Bool_t flag)         -- Also display constant parameters
   //   Format(const char* optStr)         -- Classing [arameter formatting options, provided for backward compatibility
   //   Format(const char* what,...)       -- Parameter formatting options, details given below
   //   Label(const chat* label)           -- Add header label to parameter box
@@ -2307,11 +2305,11 @@ RooAbsReal* RooAbsPdf::createCdf(const RooArgSet& iset, const RooCmdArg arg1, co
   //
   // SupNormSet(const RooArgSet&)         -- Observables over which should be normalized _in_addition_ to the
   //                                         integration observables
-  // ScanParameters(Int_t nbins,          -- Parameters for scanning technique of making CDF: number
-  //                Int_t intOrder)          of sampled bins and order of interpolation applied on numeric cdf
-  // ScanNum()                            -- Apply scanning technique if cdf integral involves numeric integration
+  // ScanNum()                            -- Apply scanning technique if cdf integral involves numeric integration [ default ] 
   // ScanAll()                            -- Always apply scanning technique 
   // ScanNone()                           -- Never apply scanning technique                  
+  // ScanParameters(Int_t nbins,          -- Parameters for scanning technique of making CDF: number
+  //                Int_t intOrder)          of sampled bins and order of interpolation applied on numeric cdf
 
   // Define configuration for this method
   RooCmdConfig pc(Form("RooAbsReal::createCdf(%s)",GetName())) ;
