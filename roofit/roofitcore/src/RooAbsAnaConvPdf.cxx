@@ -190,6 +190,7 @@ Int_t RooAbsAnaConvPdf::declareBasis(const char* expression, const RooArgList& p
   delete iter ;  
 
   RooFormulaVar* basisFunc = new RooFormulaVar(basisName,expression,basisArgs) ;
+  basisFunc->setAttribute("RooWorkspace::Recycle") ;
   basisFunc->setOperMode(operMode()) ;
   _basisList.addOwned(*basisFunc) ;
 
@@ -373,6 +374,8 @@ Int_t RooAbsAnaConvPdf::getAnalyticalIntegralWN(RooArgSet& allVars,
 
   // Handle trivial no-integration scenario
   if (allVars.getSize()==0) return 0 ;
+  
+  if (_forceNumInt) return 0 ;
 
   // Select subset of allVars that are actual dependents
   RooArgSet* allDeps = getObservables(allVars) ;
