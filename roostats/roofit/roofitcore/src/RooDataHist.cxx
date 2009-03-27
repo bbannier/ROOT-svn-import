@@ -65,7 +65,7 @@ RooDataHist::RooDataHist()
   _idxMult = 0 ;  
   _curWeight = 0 ;
   _curIndex = -1 ;
-  _realIter = 0 ;
+  _realIter = _realVars.createIterator() ;
   _binValid = 0 ;
   _binningName = 0 ;
 }
@@ -1522,7 +1522,8 @@ void RooDataHist::reset()
 {
   // Reset all bin weights to zero
 
-  RooTreeData::reset() ;
+  // WVE DO NOT CALL RooTreeData::reset() for binned
+  // datasets as this will delete the bin definitions
 
   Int_t i ;
   for (i=0 ; i<_arrSize ; i++) {
