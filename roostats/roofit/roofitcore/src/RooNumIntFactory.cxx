@@ -76,7 +76,7 @@ RooNumIntFactory::RooNumIntFactory()
   RooGaussKronrodIntegrator1D::registerIntegrator(*this) ;  
   RooAdaptiveIntegratorND::registerIntegrator(*this) ;
 
-  RooNumIntConfig::defaultConfig().method1D().setLabel("RooGaussKronrodIntegrator1D") ;
+  RooNumIntConfig::defaultConfig().method1D().setLabel("RooIntegrator1D") ;
   RooNumIntConfig::defaultConfig().method1DOpen().setLabel("RooImproperIntegrator1D") ;
   RooNumIntConfig::defaultConfig().method2D().setLabel("RooAdaptiveIntegratorND") ;
   RooNumIntConfig::defaultConfig().methodND().setLabel("RooAdaptiveIntegratorND") ;
