@@ -96,5 +96,5 @@ Bool_t RooCategoryProxy::setArg(RooAbsCategory& newRef)
   // Change object held in proxy into newRef
 
   newRef.setAttribute(Form("ORIGNAME:%s",arg().GetName())) ;
-  changePointer(RooArgSet(newRef),kTRUE) ;
+  return changePointer(RooArgSet(newRef),kTRUE) ;
 }
