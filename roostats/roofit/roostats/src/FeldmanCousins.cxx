@@ -65,6 +65,7 @@ FeldmanCousins::FeldmanCousins() {
   fDataName = "";
   fPdfName = "";
   fAdaptiveSampling=false;
+  fPointsToTest = 0;
 }
 
 //_______________________________________________________

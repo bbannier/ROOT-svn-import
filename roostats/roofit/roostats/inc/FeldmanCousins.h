@@ -81,7 +81,10 @@ namespace RooStats {
       // set the confidence level for the interval (eg. 0.95 for a 95% Confidence Interval)
       virtual void SetConfidenceLevel(Double_t cl) {fSize = 1.-cl;}
 
-      RooTreeData* GetPointsToScan() {return fPointsToTest;}
+      RooTreeData* GetPointsToScan() {
+	if(!fPointsToTest) CreateParameterPoints();	  
+	return fPointsToTest;
+      }
 
       ConfidenceBelt* GetConfidenceBelt() {return fConfBelt;}
 

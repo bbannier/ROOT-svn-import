@@ -1,11 +1,13 @@
 /////////////////////////////////////////////////////////////////////////
 //
-// 'Debugging Sampling Distribution' RooStats tutorial macro #401
+// 'Neutrino Oscillation Example from Feldman & Cousins' RooStats tutorial macro #401
 // author: Kyle Cranmer
-// date Jan. 2009
+// date March 2009
 //
-// This tutorial shows usage of a distribution creator, sampling distribution,
-// and the Neyman Construction.
+// This tutorial shows a more complex example using the FeldmanCousins utility
+// to create a confidence interval for a toy neutrino oscillation experiment.
+// The example attempts to faithfully reproduce the toy example described in Feldman & Cousins' 
+// original paper, Phys.Rev.D57:3873-3889,1998. 
 /////////////////////////////////////////////////////////////////////////
 
 #ifndef __CINT__
@@ -13,6 +15,7 @@
 #endif
 #include "RooStats/ConfInterval.h"
 #include "RooStats/FeldmanCousins.h"
+#include "RooStats/ProfileLikelihoodCalculator.h"
 
 #include "RooDataSet.h"
 #include "RooRealVar.h"
@@ -22,7 +25,6 @@
 #include "RooProdPdf.h"
 #include "RooAddPdf.h"
 
-//#include "RooGenericPdf.h"
 #include "NuMuToNuE_Oscillation.h"
 #include "RooPolynomial.h"
 
@@ -65,53 +67,67 @@ oscillations.
   // Make signal model model
   RooRealVar E("E","", 15,10,60,"GeV");
   RooRealVar L("L","", .800,.600, 1.0,"km"); // need these units in formula
-  //  RooRealVar deltaMSq("deltaMSq","#Delta m^{2}",40,1,1000,"eV/c^{2}");
-  //  RooRealVar sinSq2theta("sinSq2theta","sin^{2}(2#theta)", .006,5E-4,1);
-  RooRealVar deltaMSq("deltaMSq","#Delta m^{2}",40,10,70,"eV/c^{2}");
-  RooRealVar sinSq2theta("sinSq2theta","sin^{2}(2#theta)", .006,.001,.03);
+  RooRealVar deltaMSq("deltaMSq","#Delta m^{2}",40,35,45,"eV/c^{2}");
+  RooRealVar sinSq2theta("sinSq2theta","sin^{2}(2#theta)", .006,.005,.007);
+  // PDF for oscillation only describes deltaMSq dependence, sinSq2theta goes into sigNorm
+  NuMuToNuE_Oscillation PnmuTone("PnmuTone","P(#nu_{#mu} #rightarrow #nu_{e}",L,E,deltaMSq);
 
-  NuMuToNuE_Oscillation PnmuTone("PnmuTone","P(#nu_{#mu} #rightarrow #nu_{e}",L,E,sinSq2theta,deltaMSq);
-  //  RooGenericPdf PnmuTone("PnmuTone","","sinSq2theta*pow(sin(1.27*deltaMSq*L/E),2)",
-  //		 RooArgSet(sinSq2theta,factor,deltaMSq,L,E));
-
-  // need to create a signal model by integrating out L 
+  // only E is observable, so create the signal model by integrating out L 
   RooAbsPdf* sigModel = PnmuTone.createProjection(L);
 
+  //\int dE' dL' P(E',L' | \Delta m^2). 
+  // Given RooFit will renormalize the PDF in the range of the observables, 
+  // the total probability to oscillate in the experiment's acceptance
+  // needs to be incorporated into the extended term in the likelihood.
+  // Do this by creating a RooAbsReal representing the integral.
+  // The integral should be over "primed" observables, so we need
+  // an independent copy of PnmuTone
 
-  //\int dE dL P(E,L | \Delta m^2).  Guess for deltaMsq=0.006 from results of initial fits
-  // want to calculate by using a large range for E,L and then calculating integral in smaller range.
-  // Given RooFit will renormalize the PDF in the range of the observables, the PDF will be too large by 1/acceptance.
-  Double_t acceptance =.8;
+  // Independent copy for Integral
+  RooRealVar EPrime("EPrime","", 15,10,60,"GeV");
+  RooRealVar LPrime("LPrime","", .800,.600, 1.0,"km"); // need these units in formula
+  NuMuToNuE_Oscillation PnmuTonePrime("PnmuTonePrime","P(#nu_{#mu} #rightarrow #nu_{e}",
+				      LPrime,EPrime,deltaMSq);
+  RooAbsReal* probToOscInExp = PnmuTonePrime.createIntegral(RooArgSet(EPrime,LPrime));
+
 
   // flux * 1% chance per bin =  100 events / bin
-  RooConstVar flux("flux","#nu_{#mu} flux",10000*acceptance);
+  // therefore flux = 10000.
+  RooConstVar flux("flux","#nu_{#mu} flux",10000
+		   /(EPrime.getMax()-EPrime.getMin())
+		   /(LPrime.getMax()-LPrime.getMin()));
+  // sigNorm = flux * prob to oscillate in experiment * sin^2(2\theta)
+  RooProduct sigNorm("sigNorm", "", RooArgSet(flux, sinSq2theta, *probToOscInExp));
   // bkg = 5 bins * 100 events / bin
   RooConstVar bkgNorm("bkgNorm","normalization for background",500);
-  RooProduct newFlux("newFlux", "", RooArgSet(flux, sinSq2theta));
 
   // flat background
   RooPolynomial bkgEShape("bkgEShape","flat bkg shape", E);
-  //  RooPolynomial bkgLShape("bkgLShape","flat bkg shape", L);
-  //  RooProdPdf bkgShape("bkgShape","flat bkg shape",
-  //		      RooArgList(bkgLShape,bkgEShape));
 
+  // total model
   RooAddPdf model("model","",RooArgList(*sigModel,bkgEShape),
-		  RooArgList(newFlux,bkgNorm));
+		  RooArgList(sigNorm,bkgNorm));
 
-  model.printCompactTree();
+  // for debugging, check model tree
+  //  model.printCompactTree();
 
-  // nevents data = 100*5 (bkg) + flux*sin^2(2\theta)*\int dE dL P(E,L | \Delta m^2)
-  Int_t nEventsData = bkgNorm.getVal()+flux.getVal()*sinSq2theta.getVal()*acceptance; // assume int = 1 for now.
 
+  //////////////////////////////////////////////
+  // n events in data to data, simply sum of sig+bkg
+  Int_t nEventsData = bkgNorm.getVal()+sigNorm.getVal(); 
+  cout << "generate toy data with nEvents = " << nEventsData << endl;
   // create a toy dataset
   RooDataSet* data = model.generate(RooArgSet(E), nEventsData);
   
 
+  /////////////////////////////////////////////
+  // make some plots
   TCanvas* dataCanvas = new TCanvas("dataCanvas");
   dataCanvas->Divide(2,2);
   dataCanvas->cd(1);
   TH1* hh = PnmuTone.createHistogram("hh",E,Binning(40),YVar(L,Binning(40))) ;
   hh->SetLineColor(kBlue) ;
+  hh->SetTitle("True Signal Model");
   hh->Draw("surf");
 
   dataCanvas->cd(2);
@@ -122,12 +138,20 @@ oscillations.
   model.plotOn(Eframe,Components(*sigModel),LineColor(kRed));
   model.plotOn(Eframe,Components(bkgEShape),LineColor(kGreen));
   model.plotOn(Eframe);
+  Eframe->SetTitle("toy data with best fit model (and sig+bkg components)");
   Eframe->Draw();
+
+  dataCanvas->cd(3);
+  TH1* hhh = PnmuTone.createHistogram("hhh",E,Binning(40),YVar(L,Binning(40))) ;
+  hhh->SetLineColor(kBlue) ;
+  hhh->SetTitle("Best Fit Signal Model");
+  hhh->Draw("surf");
+
   dataCanvas->Update();
 
 
-
-  //////// show use of Feldman-Cousins
+  ///////////////////////////////////////
+  //////// show use of Feldman-Cousins utility in RooStats
   RooStats::FeldmanCousins fc;
   // set the distribution creator, which encodes the test statistic
   RooArgSet parameters(deltaMSq, sinSq2theta);
@@ -139,24 +163,27 @@ oscillations.
 
   // use the Feldman-Cousins tool
   ConfInterval* interval = fc.GetInterval();
+  //ConfInterval* interval = 0;
 
-  // make a canvas for plots
-  //  TCanvas* intervalCanvas =  new TCanvas("intervalCanvas");
-  dataCanvas->cd(3);
-  
-  std::cout << "is this point in the interval? " << 
-    interval->IsInInterval(parameters) << std::endl;
-  
-  // make a plot
-  //  RooPlot plot(param1, param2);
-  //  parameterScan.plotOn(&plot);
-  //  plot.Draw();
 
-  //  TTree* tree = const_cast<TTree*> (&parameterScan.tree());
-  //  tree->Print();
-  //  tree->Draw("param1:param2 >> hist");
-  //  TH2F* hist = (TH2F*) gROOT->Get("hist");
-  //  hist->Draw();
+  /////////////////////////////////////////
+  ///////// show use of ProfileLikeihoodCalculator utility in RooStats
+  RooStats::ProfileLikelihoodCalculator plc;
+  plc.SetPdf(model);
+  plc.SetParameters(parameters);
+  plc.SetTestSize(.1);
+  plc.SetData(*data);
+  
+  ConfInterval* plcInterval = plc.GetInterval();
+
+  ////////////////////////////////////////////
+  // make plot of resulting interval
+  dataCanvas->cd(4);
+  
+  if(interval){
+    std::cout << "is this point in the interval? " << 
+      interval->IsInInterval(parameters) << std::endl;
+  }
 
   RooDataHist* parameterScan = (RooDataHist*) fc.GetPointsToScan();
   parameterScan->Draw("deltaMSq:sinSq2theta");
@@ -165,19 +192,35 @@ oscillations.
   RooArgSet* tmpPoint;
   // loop over points to test
   for(Int_t i=0; i<parameterScan->numEntries(); ++i){
-    //    cout << "on parameter point " << i << " out of " << parameterScan->numEntries() << endl;
      // get a parameter point from the list of points to test.
     tmpPoint = (RooArgSet*) parameterScan->get(i)->clone("temp");
-    TMarker* mark = new TMarker(tmpPoint->getRealValue("sinSq2theta"), tmpPoint->getRealValue("deltaMSq"), 25);
-    if (interval->IsInInterval( *tmpPoint ) ) 
-      mark->SetMarkerColor(kBlue);
-    else
-      mark->SetMarkerColor(kRed);
 
-    mark->Draw("s");
+    TMarker* mark = new TMarker(tmpPoint->getRealValue("sinSq2theta"), tmpPoint->getRealValue("deltaMSq"), 25);
+    if (interval){
+      if (interval->IsInInterval( *tmpPoint ) ) 
+	mark->SetMarkerColor(kBlue);
+      else
+	mark->SetMarkerColor(kRed);
+      mark->Draw("s");
+    }
+    
+
+    // mark for ProfileLikelihood
+    TMarker* plcMark = new TMarker(tmpPoint->getRealValue("sinSq2theta"), tmpPoint->getRealValue("deltaMSq"), 22);
+    if (plcInterval){
+      if(plcInterval->IsInInterval( *tmpPoint ) ) 
+      plcMark->SetMarkerColor(kGreen);
+    else
+      plcMark->SetMarkerColor(kMagenta);
+
+      plcMark->Draw("s");
+    }
     //delete tmpPoint;
     //    delete mark;
   }
+
+
+  /// print timing info
   t.Stop();
   t.Print();
     
