@@ -47,6 +47,8 @@ protected:
   Double_t _epsRel ; // Relative precision
   Double_t _epsAbs ; // Absolute precision
   Int_t    _nmax ;   // Max number of divisions
+  Int_t    _nError ; // Number of error occurrences
+  Int_t    _nWarn ; // Max number of warnings to be issued ;
   RooMultiGenFunction* _func ; //! ROOT::Math multi-parameter function binding 
   ROOT::Math::AdaptiveIntegratorMultiDim* _integrator ;
 

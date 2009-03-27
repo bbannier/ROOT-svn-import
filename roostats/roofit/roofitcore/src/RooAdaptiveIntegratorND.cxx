@@ -37,6 +37,7 @@
 #include "Math/AdaptiveIntegratorMultiDim.h"
 
 #include <assert.h>
+#include <iomanip>
 
 
 
@@ -50,11 +51,12 @@ void RooAdaptiveIntegratorND::registerIntegrator(RooNumIntFactory& fact)
 {
   // Register RooAdaptiveIntegratorND, its parameters, dependencies and capabilities with RooNumIntFactory
 
-  RooRealVar nDivision2D("nDivision2D","Number of sub-divisions for 2-dim integrals",1000) ;
-  RooRealVar nDivision3D("nDivision3D","Number of sub-divisions for 3-dim integrals",10000) ;
-  RooRealVar nDivisionND("nDivisionND","Number of sub-divisions for >3-dim integrals",100000) ;
+  RooRealVar maxEval2D("maxEval2D","Max number of function evaluations for 2-dim integrals",100000) ;
+  RooRealVar maxEval3D("maxEval3D","Max number of function evaluations for 3-dim integrals",1000000) ;
+  RooRealVar maxEvalND("maxEvalND","Max number of function evaluations for >3-dim integrals",10000000) ;
+  RooRealVar maxWarn("maxWarn","Max number of warnings on precision not reached that is printed",5) ;
 
-  fact.storeProtoIntegrator(new RooAdaptiveIntegratorND(),RooArgSet(nDivision2D,nDivision3D,nDivisionND)) ;
+  fact.storeProtoIntegrator(new RooAdaptiveIntegratorND(),RooArgSet(maxEval2D,maxEval3D,maxEvalND,maxWarn)) ;
 }
  
 
@@ -67,6 +69,8 @@ RooAdaptiveIntegratorND::RooAdaptiveIntegratorND()
   _xmax = 0 ;
   _func = 0 ;
   _integrator = 0 ;
+  _nError = 0 ;
+  _nWarn = 0 ;
 }
 
 
@@ -78,8 +82,15 @@ RooAdaptiveIntegratorND::RooAdaptiveIntegratorND(const RooAbsFunc& function, con
   // Constructor of integral on given function binding and with given configuration. The
   // integration limits are taken from the definition in the function binding
   //_func = function.
-  _func = new RooMultiGenFunction(function) ;
-  _integrator = new ROOT::Math::AdaptiveIntegratorMultiDim(config.epsAbs(),config.epsRel(),10000) ;
+  _func = new RooMultiGenFunction(function) ;  
+  _nWarn = static_cast<Int_t>(config.getConfigSection("RooAdaptiveIntegratorND").getRealValue("maxWarn")) ;
+  switch (_func->NDim()) {
+  case 1: throw string(Form("RooAdaptiveIntegratorND::ctor ERROR dimension of function must be at least 2")) ;
+  case 2: _nmax = static_cast<Int_t>(config.getConfigSection("RooAdaptiveIntegratorND").getRealValue("maxEval2D")) ; break ; 
+  case 3: _nmax = static_cast<Int_t>(config.getConfigSection("RooAdaptiveIntegratorND").getRealValue("maxEval3D")) ; break ;
+  default: _nmax = static_cast<Int_t>(config.getConfigSection("RooAdaptiveIntegratorND").getRealValue("maxEvalND")) ; break ;
+  }
+  _integrator = new ROOT::Math::AdaptiveIntegratorMultiDim(config.epsAbs(),config.epsRel(),_nmax) ;
   _integrator->SetFunction(*_func) ;
 
   _xmin = 0 ;
@@ -108,6 +119,9 @@ RooAdaptiveIntegratorND::~RooAdaptiveIntegratorND()
   delete _xmax ;
   delete _integrator ;
   delete _func ;
+  if (_nError>_nWarn) {
+    coutW(NumIntegration) << "RooAdaptiveIntegratorND::dtor(" << integrand()->getName() << ") WARNING: Number of suppressed warningings about integral evaluations where target precision was not reached is " << _nError-_nWarn << endl ;
+  }
 }
 
 
@@ -139,7 +153,17 @@ Double_t RooAdaptiveIntegratorND::integral(const Double_t* /*yvec*/)
 {
   // Evaluate integral at given function binding parameter values
   Double_t ret = _integrator->Integral(_xmin,_xmax) ;  
-  //cout << " integral = " << ret << " neval = " << _integrator->NEval() << " error = " << _integrator->Error() << " rel.error = " << _integrator->RelError() << endl ;
+  if (_integrator->Status()==1) {
+    _nError++ ;
+    if (_nError<=_nWarn) {
+      coutW(NumIntegration) << "RooAdaptiveIntegratorND::integral(" << integrand()->getName() << ") WARNING: target rel. precision not reached due to nEval limit of "
+			    << _nmax << ", estimated rel. precision is " << Form("%3.1e",_integrator->RelError()) << endl ;
+    } 
+    if (_nError==_nWarn) {
+      coutW(NumIntegration) << "RooAdaptiveIntegratorND::integral(" << integrand()->getName() 
+			    << ") Further warnings on target precision are suppressed conform specification in integrator specification" << endl ;
+    }    
+  }  
   return ret ;
 }
 
