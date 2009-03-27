@@ -117,6 +117,7 @@
 #include "RooCustomizer.h"
 #include "RooGlobalFunc.h"
 #include "TClass.h"
+#include "TSystem.h"
 
 using namespace std ;
 
@@ -210,7 +211,8 @@ RooFFTConvPdf::FFTCacheElem::FFTCacheElem(const RooFFTConvPdf& self, const RooAr
   RooRealVar* convObs = (RooRealVar*) hist()->get()->find(self._x.arg().GetName()) ;
   
   if (self._shift1!=0) {
-    RooLinearVar* shiftObs1 = new RooLinearVar(Form("%s_shifted_FFTBuffer1",convObs->GetName()),"shiftObs1",*convObs,RooFit::RooConst(1),RooFit::RooConst(-1*self._shift1)) ;
+    RooLinearVar* shiftObs1 = new RooLinearVar(Form("%s_shifted_FFTBuffer1",convObs->GetName()),"shiftObs1",
+					       *convObs,RooFit::RooConst(1),RooFit::RooConst(-1*self._shift1)) ;
 
     RooArgSet clonedBranches1 ;
     RooCustomizer cust(*clonePdf1,"fft") ;
@@ -226,7 +228,8 @@ RooFFTConvPdf::FFTCacheElem::FFTCacheElem(const RooFFTConvPdf& self, const RooAr
   }
 
   if (self._shift2!=0) {
-    RooLinearVar* shiftObs2 = new RooLinearVar(Form("%s_shifted_FFTBuffer2",convObs->GetName()),"shiftObs2",*convObs,RooFit::RooConst(1),RooFit::RooConst(-1*self._shift2)) ;
+    RooLinearVar* shiftObs2 = new RooLinearVar(Form("%s_shifted_FFTBuffer2",convObs->GetName()),"shiftObs2",
+					       *convObs,RooFit::RooConst(1),RooFit::RooConst(-1*self._shift2)) ;
 
     RooArgSet clonedBranches2 ;
     RooCustomizer cust(*clonePdf2,"fft") ;
@@ -281,6 +284,12 @@ RooArgList RooFFTConvPdf::FFTCacheElem::containedArgs(Action a)
 
   ret.add(*pdf1Clone) ;
   ret.add(*pdf2Clone) ;
+  if (pdf1Clone->ownedComponents()) {
+    ret.add(*pdf1Clone->ownedComponents()) ;
+  }
+  if (pdf2Clone->ownedComponents()) {
+    ret.add(*pdf2Clone->ownedComponents()) ;
+  }
 
   return ret ;
 }
@@ -500,6 +509,7 @@ Double_t*  RooFFTConvPdf::scanPdf(RooRealVar& obs, RooAbsPdf& pdf, const RooData
     
   }
 
+
   // First scan hist into temp array 
   Double_t *tmp = new Double_t[N] ;
   TIterator* iter = const_cast<RooDataHist&>(hist).sliceIterator(obs,slicePos) ;
@@ -507,7 +517,7 @@ Double_t*  RooFFTConvPdf::scanPdf(RooRealVar& obs, RooAbsPdf& pdf, const RooData
   RooAbsArg* arg ;
   Double_t tmpSum(0) ;
   while((arg=(RooAbsArg*)iter->Next())) {
-    tmp[k++] = pdf.getVal(hist.get()) ;
+    tmp[k++] = pdf.getVal(hist.get()) ;    
     tmpSum += tmp[k-1] ;
   }
   delete iter ;
