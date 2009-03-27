@@ -17,6 +17,8 @@
 #define ROO_FUNCTOR
 
 #include "RooArgSet.h"
+#include "RooAbsReal.h"
+
 class RooAbsFunc ;
 class RooAbsPdf ;
 
