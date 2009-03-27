@@ -53,7 +53,7 @@ ClassImp(RooRealIntegral)
 ;
 
 
-Bool_t RooRealIntegral::_cacheExpensive(kFALSE) ;
+Bool_t RooRealIntegral::_cacheExpensive(kTRUE) ;
 
 
 //_____________________________________________________________________________
@@ -74,14 +74,14 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
 				 const char* rangeName) :
   RooAbsReal(name,title), 
   _valid(kTRUE), 
-  _sumList("sumList","Categories to be summed numerically",this,kFALSE,kFALSE), 
-  _intList("intList","Variables to be integrated numerically",this,kFALSE,kFALSE), 
-  _anaList("anaList","Variables to be integrated analytically",this,kFALSE,kFALSE), 
-  _jacList("jacList","Jacobian product term",this,kFALSE,kFALSE), 
-  _facList("facList","Variables independent of function",this,kFALSE,kTRUE),
+  _sumList("!sumList","Categories to be summed numerically",this,kFALSE,kFALSE), 
+  _intList("!intList","Variables to be integrated numerically",this,kFALSE,kFALSE), 
+  _anaList("!anaList","Variables to be integrated analytically",this,kFALSE,kFALSE), 
+  _jacList("!jacList","Jacobian product term",this,kFALSE,kFALSE), 
+  _facList("!facList","Variables independent of function",this,kFALSE,kTRUE),
   _facListIter(_facList.createIterator()),
   _jacListIter(_jacList.createIterator()),
-  _function("function","Function to be integrated",this,
+  _function("!func","Function to be integrated",this,
 	    const_cast<RooAbsReal&>(function),kFALSE,kFALSE), 
   _iconfig((RooNumIntConfig*)config),
   _sumCat("!sumCat","SuperCategory for summation",this,kFALSE,kFALSE),
@@ -630,11 +630,11 @@ Bool_t RooRealIntegral::initNumIntegrator() const
     return kFALSE;
   }
 
-  cxcoutI(Integration) << "RooRealIntegral::initNumIntegrator(" << GetName() << ") instantiated numeric integator of type " 
-			 << _numIntEngine->IsA()->GetName() << " to evaluate numeric integral of observables " << _intList << endl ;
+  cxcoutI(NumIntegration) << "RooRealIntegral::init(" << GetName() << ") using numeric integrator " 
+			  << _numIntEngine->IsA()->GetName() << " to calculate Int" << _intList << endl ;
 
-  if (_intList.getSize()>1) {
-    cxcoutI(Integration) << "RooRealIntegral::initNumIntegrator(" << GetName() << ") evaluation requires " << _intList.getSize() << "-D numeric integration step. Evaluation may be slow, sufficient numeric precision for fitting & minimization is not guaranteed" << endl ;
+  if (_intList.getSize()>3) {
+    cxcoutI(NumIntegration) << "RooRealIntegral::init(" << GetName() << ") evaluation requires " << _intList.getSize() << "-D numeric integration step. Evaluation may be slow, sufficient numeric precision for fitting & minimization is not guaranteed" << endl ;
   }
 
   _restartNumIntEngine = kFALSE ;
@@ -648,14 +648,14 @@ Bool_t RooRealIntegral::initNumIntegrator() const
 RooRealIntegral::RooRealIntegral(const RooRealIntegral& other, const char* name) : 
   RooAbsReal(other,name), 
   _valid(other._valid),
-  _sumList("sumList",this,other._sumList),
-  _intList("intList",this,other._intList), 
-  _anaList("anaList",this,other._anaList),
-  _jacList("jacList",this,other._jacList),
-  _facList("facList","Variables independent of function",this,kFALSE,kTRUE),
+  _sumList("!sumList",this,other._sumList),
+  _intList("!intList",this,other._intList), 
+  _anaList("!anaList",this,other._anaList),
+  _jacList("!jacList",this,other._jacList),
+  _facList("!facList","Variables independent of function",this,kFALSE,kTRUE),
   _facListIter(_facList.createIterator()),
   _jacListIter(_jacList.createIterator()),
-  _function("function",this,other._function), 
+  _function("!func",this,other._function), 
   _iconfig(other._iconfig),
   _sumCat("!sumCat",this,other._sumCat),
   _sumCatIter(0),
@@ -940,6 +940,40 @@ Bool_t RooRealIntegral::isValidReal(Double_t /*value*/, Bool_t /*printError*/) c
 {
   // Check if current value is valid
   return kTRUE ;
+}
+
+
+
+//_____________________________________________________________________________
+void RooRealIntegral::printMetaArgs(ostream& os) const
+{
+  // Customized printing of arguments of a RooRealIntegral to more intuitively reflect the contents of the
+  // integration operation
+
+  os << "Int " << _function.arg().GetName() ;
+  if (_funcNormSet) {
+    os << "_Norm" ;
+    os << *_funcNormSet ;
+    os << " " ;
+  }
+ 
+  // List internally integrated observables and factorizing observables as analytically integrated
+  RooArgSet tmp(_anaList) ;
+  tmp.add(_facList) ;
+  if (tmp.getSize()>0) {
+    os << "d[Ana]" ;
+    os << tmp ;
+    os << " " ;
+  }
+  
+  // List numerically integrated and summed observables as numerically integrated
+  RooArgSet tmp2(_intList) ;
+  tmp2.add(_sumList) ;
+  if (tmp2.getSize()>0) {
+    os << " d[Num]" ;
+    os << tmp2 ;
+    os << " " ;
+  }
 }
 
 
