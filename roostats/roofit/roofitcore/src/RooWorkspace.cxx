@@ -83,7 +83,7 @@ ClassImp(RooWorkspace::WSDir)
 
 list<string> RooWorkspace::_classDeclDirList ;
 list<string> RooWorkspace::_classImplDirList ;
-string RooWorkspace::_classFileExportDir = ".wscode.%s" ;
+string RooWorkspace::_classFileExportDir = ".wscode.%s.%s" ;
 Bool_t RooWorkspace::_autoClass = kFALSE ;
 
 
@@ -117,7 +117,7 @@ void RooWorkspace::setClassFileExportDir(const char* dir)
   if (dir) {
     _classFileExportDir = dir ;
   } else {
-    _classFileExportDir = ".wscode.%s" ;
+    _classFileExportDir = ".wscode.%s.%s" ;
   }
 }
 
@@ -161,7 +161,7 @@ RooWorkspace::RooWorkspace(const char* name, Bool_t doCINTExport)  :
 
 //_____________________________________________________________________________
 RooWorkspace::RooWorkspace(const RooWorkspace& other) : 
-  TNamed(other), _classes(this), _dir(0), _factory(0), _doExport(kFALSE), _openTrans(kFALSE)
+  TNamed(other), _uuid(other._uuid), _classes(this), _dir(0), _factory(0), _doExport(kFALSE), _openTrans(kFALSE)
 {
   // Workspace copy constructor
 
@@ -349,7 +349,7 @@ Bool_t RooWorkspace::import(const RooAbsArg& inArg, const RooCmdArg& arg1, const
   RooAbsArg* branch ;
   while ((branch=(RooAbsArg*)iter->Next())) {
     RooAbsArg* wsbranch = _allOwnedNodes.find(branch->GetName()) ;
-    if (wsbranch && wsbranch!=branch) {
+    if (wsbranch && wsbranch!=branch && !branch->getAttribute("RooWorkspace::Recycle")) {
       conflictNodes.add(*branch) ;
     }
   }
@@ -466,9 +466,10 @@ Bool_t RooWorkspace::import(const RooAbsArg& inArg, const RooCmdArg& arg1, const
     _eocache.importCacheObjects(oldCache,node->GetName(),kTRUE) ;
 
     // Check if node is already in workspace (can only happen for variables or identical instances, unless RecycleConflictNodes is specified)
-    if (_allOwnedNodes.find(node->GetName())) {
+    RooAbsArg* wsnode = _allOwnedNodes.find(node->GetName()) ;
+    if (wsnode) {
       // Do not import node, add not to list of nodes that require reconnection
-      if (!silence) {
+      if (!silence && useExistingNodes) {
 	coutI(ObjectHandling) << "RooWorkspace::import(" << GetName() << ") using existing copy of " << node->IsA()->GetName() 
 			      << "::" << node->GetName() << " for import of " << cloneTop2->IsA()->GetName() << "::" 
 			      << cloneTop2->GetName() << endl ;      
@@ -604,6 +605,12 @@ Bool_t RooWorkspace::import(RooAbsData& inData, const RooCmdArg& arg1, const Roo
   delete iter ;
     
   _dataList.Add(clone) ;
+  if (_dir) {	
+    _dir->InternalAppend(clone) ;
+  }
+  if (_doExport) {
+    exportObj(clone) ;
+  }
   return kFALSE ;
 }
 
@@ -1622,7 +1629,7 @@ Bool_t RooWorkspace::CodeRepo::compileClasses()
   Bool_t haveDir=kFALSE ;
 
   // Retrieve name of directory in which to export code files
-  string dirName = Form(_classFileExportDir.c_str(),_wspace->GetName()) ;
+  string dirName = Form(_classFileExportDir.c_str(),_wspace->uuid().AsString(),_wspace->GetName()) ;
 
   // Process all class entries in repository
   map<TString,ClassRelInfo>::iterator iter = _c2fmap.begin() ;
@@ -1830,7 +1837,12 @@ void RooWorkspace::exportToCint(const char* nsname)
   TObject* obj ;
   while((obj=iter->Next())) {
     exportObj(obj) ;
-  }
+  }  
+  delete iter ;
+  iter = _dataList.MakeIterator() ;
+  while((obj=iter->Next())) {
+    exportObj(obj) ;
+  }  
   delete iter ;
 }
 
