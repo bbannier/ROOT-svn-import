@@ -970,7 +970,154 @@ void TProfile2D::LabelsOption(Option_t *option, Option_t *ax)
 //         = "d" draw labels down (start of label left adjusted)
 
 
-   TProfileHelper::LabelsOption(this, option, ax);
+   TAxis *axis = GetXaxis();
+   if (ax[0] == 'y' || ax[0] == 'Y') axis = GetYaxis();
+   THashList *labels = axis->GetLabels();
+   if (!labels) {
+      Warning("LabelsOption","Cannot sort. No labels");
+      return;
+   }
+   TString opt = option;
+   opt.ToLower();
+   if (opt.Contains("h")) {
+      axis->SetBit(TAxis::kLabelsHori);
+      axis->ResetBit(TAxis::kLabelsVert);
+      axis->ResetBit(TAxis::kLabelsDown);
+      axis->ResetBit(TAxis::kLabelsUp);
+   }
+   if (opt.Contains("v")) {
+      axis->SetBit(TAxis::kLabelsVert);
+      axis->ResetBit(TAxis::kLabelsHori);
+      axis->ResetBit(TAxis::kLabelsDown);
+      axis->ResetBit(TAxis::kLabelsUp);
+   }
+   if (opt.Contains("u")) {
+      axis->SetBit(TAxis::kLabelsUp);
+      axis->ResetBit(TAxis::kLabelsVert);
+      axis->ResetBit(TAxis::kLabelsDown);
+      axis->ResetBit(TAxis::kLabelsHori);
+   }
+   if (opt.Contains("d")) {
+      axis->SetBit(TAxis::kLabelsDown);
+      axis->ResetBit(TAxis::kLabelsVert);
+      axis->ResetBit(TAxis::kLabelsHori);
+      axis->ResetBit(TAxis::kLabelsUp);
+   }
+   Int_t sort = -1;
+   if (opt.Contains("a")) sort = 0;
+   if (opt.Contains(">")) sort = 1;
+   if (opt.Contains("<")) sort = 2;
+   if (sort < 0) return;
+
+   Int_t nx = fXaxis.GetNbins()+2;
+   Int_t ny = fYaxis.GetNbins()+2;
+   Int_t n = TMath::Min(axis->GetNbins(), labels->GetSize());
+   Int_t *a = new Int_t[n+2];
+   Int_t i,j,k,bin;
+   Double_t *sumw   = new Double_t[nx*ny];
+   Double_t *errors = new Double_t[nx*ny];
+   Double_t *ent    = new Double_t[nx*ny];
+   THashList *labold = new THashList(labels->GetSize(),1);
+   TIter nextold(labels);
+   TObject *obj;
+   while ((obj=nextold())) {
+      labold->Add(obj);
+   }
+   labels->Clear();
+   if (sort > 0) {
+      //---sort by values of bins
+      Double_t *pcont = new Double_t[n+2];
+      for (i=0;i<=n;i++) pcont[i] = 0;
+      for (i=1;i<nx;i++) {
+         for (j=1;j<ny;j++) {
+            bin = i+nx*j;
+            sumw[bin]   = fArray[bin];
+            errors[bin] = fSumw2.fArray[bin];
+            ent[bin]    = fBinEntries.fArray[bin];
+            if (axis == GetXaxis()) k = i;
+            else                    k = j;
+            if (fBinEntries.fArray[bin] != 0) pcont[k-1] += fArray[bin]/fBinEntries.fArray[bin];
+         }
+      }
+      if (sort ==1) TMath::Sort(n,pcont,a,kTRUE);  //sort by decreasing values
+      else          TMath::Sort(n,pcont,a,kFALSE); //sort by increasing values
+      delete [] pcont;
+      for (i=0;i<n;i++) {
+         obj = labold->At(a[i]);
+         labels->Add(obj);
+         obj->SetUniqueID(i+1);
+      }
+      for (i=1;i<nx;i++) {
+         for (j=1;j<ny;j++) {
+            bin = i+nx*j;
+            if (axis == GetXaxis()) {
+               fArray[bin] = sumw[a[i-1]+1+nx*j];
+               fSumw2.fArray[bin] = errors[a[i-1]+1+nx*j];
+               fBinEntries.fArray[bin] = ent[a[i-1]+1+nx*j];
+            } else {
+               fArray[bin] = sumw[i+nx*(a[j-1]+1)];
+               fSumw2.fArray[bin] = errors[i+nx*(a[j-1]+1)];
+               fBinEntries.fArray[bin] = ent[i+nx*(a[j-1]+1)];
+            }
+         }
+      }
+   } else {
+      //---alphabetic sort
+      const UInt_t kUsed = 1<<18;
+      TObject *objk=0;
+      a[0] = 0;
+      a[n+1] = n+1;
+      for (i=1;i<=n;i++) {
+         const char *label = "zzzzzzzzzzzz";
+         for (j=1;j<=n;j++) {
+            obj = labold->At(j-1);
+            if (!obj) continue;
+            if (obj->TestBit(kUsed)) continue;
+            //use strcasecmp for case non-sensitive sort (may be an option)
+            if (strcmp(label,obj->GetName()) < 0) continue;
+            objk = obj;
+            a[i] = j;
+            label = obj->GetName();
+         }
+         if (objk) {
+            objk->SetUniqueID(i);
+            labels->Add(objk);
+            objk->SetBit(kUsed);
+         }
+      }
+      for (i=1;i<=n;i++) {
+         obj = labels->At(i-1);
+         if (!obj) continue;
+         obj->ResetBit(kUsed);
+      }
+      for (i=0;i<nx;i++) {
+         for (j=0;j<ny;j++) {
+            bin = i+nx*j;
+            sumw[bin]   = fArray[bin];
+            errors[bin] = fSumw2.fArray[bin];
+            ent[bin]    = fBinEntries.fArray[bin];
+         }
+      }
+      for (i=0;i<nx;i++) {
+         for (j=0;j<ny;j++) {
+            bin = i+nx*j;
+            if (axis == GetXaxis()) {
+               fArray[bin] = sumw[a[i]+nx*j];
+               fSumw2.fArray[bin] = errors[a[i]+nx*j];
+               fBinEntries.fArray[bin] = ent[a[i]+nx*j];
+            } else {
+               fArray[bin] = sumw[i+nx*a[j]];
+               fSumw2.fArray[bin] = errors[i+nx*a[j]];
+               fBinEntries.fArray[bin] = ent[i+nx*a[j]];
+            }
+         }
+      }
+   }
+   delete labold;
+   if (a)      delete [] a;
+   if (sumw)   delete [] sumw;
+   if (errors) delete [] errors;
+   if (ent)    delete [] ent;
 }
 
 //______________________________________________________________________________
