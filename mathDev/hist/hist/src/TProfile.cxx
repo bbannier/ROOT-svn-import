@@ -977,7 +977,125 @@ void TProfile::LabelsOption(Option_t *option, Option_t * ax)
 //         = "u" draw labels up (end of label right adjusted)
 //         = "d" draw labels down (start of label left adjusted)
 
-   TProfileHelper::LabelsOption(this, option, ax);
+   THashList *labels = fXaxis.GetLabels();
+   if (!labels) {
+      Warning("LabelsOption","Cannot sort. No labels");
+      return;
+   }
+   TString opt = option;
+   opt.ToLower();
+   if (opt.Contains("h")) {
+      fXaxis.SetBit(TAxis::kLabelsHori);
+      fXaxis.ResetBit(TAxis::kLabelsVert);
+      fXaxis.ResetBit(TAxis::kLabelsDown);
+      fXaxis.ResetBit(TAxis::kLabelsUp);
+   }
+   if (opt.Contains("v")) {
+      fXaxis.SetBit(TAxis::kLabelsVert);
+      fXaxis.ResetBit(TAxis::kLabelsHori);
+      fXaxis.ResetBit(TAxis::kLabelsDown);
+      fXaxis.ResetBit(TAxis::kLabelsUp);
+   }
+   if (opt.Contains("u")) {
+      fXaxis.SetBit(TAxis::kLabelsUp);
+      fXaxis.ResetBit(TAxis::kLabelsVert);
+      fXaxis.ResetBit(TAxis::kLabelsDown);
+      fXaxis.ResetBit(TAxis::kLabelsHori);
+   }
+   if (opt.Contains("d")) {
+      fXaxis.SetBit(TAxis::kLabelsDown);
+      fXaxis.ResetBit(TAxis::kLabelsVert);
+      fXaxis.ResetBit(TAxis::kLabelsHori);
+      fXaxis.ResetBit(TAxis::kLabelsUp);
+   }
+   Int_t sort = -1;
+   if (opt.Contains("a")) sort = 0;
+   if (opt.Contains(">")) sort = 1;
+   if (opt.Contains("<")) sort = 2;
+   if (sort < 0) return;
+
+   Int_t n = TMath::Min(fXaxis.GetNbins(), labels->GetSize());
+   Int_t *a = new Int_t[n+2];
+   Int_t i,j;
+   Double_t *cont   = new Double_t[n+2];
+   Double_t *sumw   = new Double_t[n+2];
+   Double_t *errors = new Double_t[n+2];
+   Double_t *ent    = new Double_t[n+2];
+   THashList *labold = new THashList(labels->GetSize(),1);
+   TIter nextold(labels);
+   TObject *obj;
+   while ((obj=nextold())) {
+      labold->Add(obj);
+   }
+   labels->Clear();
+   if (sort > 0) {
+      //---sort by values of bins
+      for (i=1;i<=n;i++) {
+         sumw[i-1]   = fArray[i];
+         errors[i-1] = fSumw2.fArray[i];
+         ent[i-1]    = fBinEntries.fArray[i];
+         if (fBinEntries.fArray[i] == 0) cont[i-1] = 0;
+         else cont[i-1] = fArray[i]/fBinEntries.fArray[i];
+      }
+      if (sort ==1) TMath::Sort(n,cont,a,kTRUE);  //sort by decreasing values
+      else          TMath::Sort(n,cont,a,kFALSE); //sort by increasing values
+      for (i=1;i<=n;i++) {
+         fArray[i] = sumw[a[i-1]];
+         fSumw2.fArray[i] = errors[a[i-1]];
+         fBinEntries.fArray[i] = ent[a[i-1]];
+      }
+      for (i=1;i<=n;i++) {
+         obj = labold->At(a[i-1]);
+         labels->Add(obj);
+         obj->SetUniqueID(i);
+      }
+   } else {
+      //---alphabetic sort
+      const UInt_t kUsed = 1<<18;
+      TObject *objk=0;
+      a[0] = 0;
+      a[n+1] = n+1;
+      for (i=1;i<=n;i++) {
+         const char *label = "zzzzzzzzzzzz";
+         for (j=1;j<=n;j++) {
+            obj = labold->At(j-1);
+            if (!obj) continue;
+            if (obj->TestBit(kUsed)) continue;
+            //use strcasecmp for case non-sensitive sort (may be an option)
+            if (strcmp(label,obj->GetName()) < 0) continue;
+            objk = obj;
+            a[i] = j;
+            label = obj->GetName();
+         }
+         if (objk) {
+            objk->SetUniqueID(i);
+            labels->Add(objk);
+            objk->SetBit(kUsed);
+         }
+      }
+      for (i=1;i<=n;i++) {
+         obj = labels->At(i-1);
+         if (!obj) continue;
+         obj->ResetBit(kUsed);
+      }
+
+      for (i=1;i<=n;i++) {
+         sumw[i]   = fArray[a[i]];
+         errors[i] = fSumw2.fArray[a[i]];
+         ent[i]    = fBinEntries.fArray[a[i]];
+      }
+      for (i=1;i<=n;i++) {
+         fArray[i] = sumw[i];
+         fSumw2.fArray[i] = errors[i];
+         fBinEntries.fArray[i] = ent[i];
+      }
+   }
+   delete labold;
+   if (a)      delete [] a;
+   if (sumw)   delete [] sumw;
+   if (cont)   delete [] cont;
+   if (errors) delete [] errors;
+   if (ent)    delete [] ent;
 }
 
 //______________________________________________________________________________
