@@ -117,7 +117,7 @@ void FeldmanCousins::CreateParameterPoints() const{
     RooRealVar *myarg; 
     while ((myarg = (RooRealVar *)it.Next())) { 
       if(!myarg) continue;
-      myarg->setBins(10);
+      myarg->setBins(30);
     }
 
     fPointsToTest= new RooDataHist("parameterScan", "", *parameters);
