@@ -261,15 +261,15 @@ bool testAdd2D1()
 
    TH2D* h1 = new TH2D("t2D1-h1", "h1", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    TH2D* h2 = new TH2D("t2D1-h2", "h2", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    TH2D* h3 = new TH2D("t2D1-h3", "h3=c1*h1+c2*h2", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();h2->Sumw2();h3->Sumw2();
 
@@ -289,7 +289,7 @@ bool testAdd2D1()
 
    TH2D* h4 = new TH2D("t2D1-h4", "h4=c1*h1+c2*h2", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    h4->Add(h1, h2, c1, c2);
    bool ret = equals("Add2D1", h3, h4, cmpOptStats , 1E-10);
    delete h1;
@@ -305,15 +305,15 @@ bool testAdd2DProfile1()
 
    TProfile2D* p1 = new TProfile2D("t2D1-p1", "p1", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
 
    TProfile2D* p2 = new TProfile2D("t2D1-p2", "p2", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
 
    TProfile2D* p3 = new TProfile2D("t2D1-p3", "p3=c1*p1+c2*p2", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -333,7 +333,7 @@ bool testAdd2DProfile1()
 
    TProfile2D* p4 = new TProfile2D("t2D1-p4", "p4=c1*p1+c2*p2", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    p4->Add(p1, p2, c1, c2);
    bool ret = equals("Add2DProfile1", p3, p4, cmpOptStats , 1E-10);
    delete p1;
@@ -348,15 +348,15 @@ bool testAdd2D2()
 
    TH2D* h1 = new TH2D("t2D2-h1", "h1", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    TH2D* h2 = new TH2D("t2D2-h2", "h2", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    TH2D* h3 = new TH2D("t2D2-h3", "h3=h1+c2*h2", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();h2->Sumw2();h3->Sumw2();
 
@@ -387,15 +387,15 @@ bool testAdd2DProfile2()
 
    TProfile2D* p1 = new TProfile2D("t2D2-p1", "p1", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
 
    TProfile2D* p2 = new TProfile2D("t2D2-p2", "p2", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
 
    TProfile2D* p3 = new TProfile2D("t2D2-p3", "p3=p1+c2*p2", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -427,18 +427,18 @@ bool testAdd3D1()
 
    TH3D* h1 = new TH3D("t3D1-h1", "h1", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    TH3D* h2 = new TH3D("t3D1-h2", "h2", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    TH3D* h3 = new TH3D("t3D1-h3", "h3=c1*h1+c2*h2", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();h2->Sumw2();h3->Sumw2();
 
@@ -460,8 +460,8 @@ bool testAdd3D1()
 
    TH3D* h4 = new TH3D("t3D1-h4", "h4=c1*h1+c2*h2", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    h4->Add(h1, h2, c1, c2);
    bool ret = equals("Add3D1", h3, h4, cmpOptStats, 1E-10);
    delete h1;
@@ -477,18 +477,18 @@ bool testAdd3DProfile1()
 
    TProfile3D* p1 = new TProfile3D("t3D1-p1", "p1", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
 
    TProfile3D* p2 = new TProfile3D("t3D1-p2", "p2", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
 
    TProfile3D* p3 = new TProfile3D("t3D1-p3", "p3=c1*p1+c2*p2", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -510,8 +510,8 @@ bool testAdd3DProfile1()
 
    TProfile3D* p4 = new TProfile3D("t3D1-p4", "p4=c1*p1+c2*p2", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
    p4->Add(p1, p2, c1, c2);
    bool ret = equals("Add3DProfile1", p3, p4, cmpOptStats, 1E-10);
    delete p1;
@@ -526,18 +526,18 @@ bool testAdd3D2()
 
    TH3D* h1 = new TH3D("t3D2-h1", "h1", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    TH3D* h2 = new TH3D("t3D2-h2", "h2", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    TH3D* h3 = new TH3D("t3D2-h3", "h3=h1+c2*h2", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();h2->Sumw2();h3->Sumw2();
 
@@ -570,18 +570,18 @@ bool testAdd3DProfile2()
 
    TProfile3D* p1 = new TProfile3D("t3D2-p1", "p1", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
    
    TProfile3D* p2 = new TProfile3D("t3D2-p2", "p2", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
    
    TProfile3D* p3 = new TProfile3D("t3D2-p3", "p3=p1+c2*p2", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
    
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -743,13 +743,13 @@ bool testMul2D1()
 
    TH2D* h1 = new TH2D("m2D1-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h2 = new TH2D("m2D1-h2", "h2-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h3 = new TH2D("m2D1-h3", "h3=c1*h1*c2*h2",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();h2->Sumw2();h3->Sumw2();
 
@@ -788,7 +788,7 @@ bool testMul2D1()
 
    TH2D* h4 = new TH2D("m2D1-h4", "h4=h1*h2", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    h4->Multiply(h1, h2, c1, c2);
 
    bool ret = equals("Multiply2D1", h3, h4, cmpOptStats, 1E-12);
@@ -802,13 +802,13 @@ bool testMul2D2()
 {
    TH2D* h1 = new TH2D("m2D2-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h2 = new TH2D("m2D2-h2", "h2-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h3 = new TH2D("m2D2-h3", "h3=h1*h2",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();h2->Sumw2();h3->Sumw2();
 
@@ -860,16 +860,16 @@ bool testMul3D1()
 
    TH3D* h1 = new TH3D("m3D1-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h2 = new TH3D("m3D1-h2", "h2-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h3 = new TH3D("m3D1-h3", "h3=c1*h1*c2*h2",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();h2->Sumw2();h3->Sumw2();
 
@@ -915,8 +915,8 @@ bool testMul3D1()
 
    TH3D* h4 = new TH3D("m3D1-h4", "h4=h1*h2", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    h4->Multiply(h1, h2, c1, c2);
 
    bool ret = equals("Multiply3D1", h3, h4, cmpOptStats, 1E-13);
@@ -930,16 +930,16 @@ bool testMul3D2()
 {
    TH3D* h1 = new TH3D("m3D2-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h2 = new TH3D("m3D2-h2", "h2-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h3 = new TH3D("m3D2-h3", "h3=h1*h2",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();h2->Sumw2();h3->Sumw2();
 
@@ -1180,10 +1180,10 @@ bool testDivide2D1()
 
    TH2D* h1 = new TH2D("d2D1-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h2 = new TH2D("d2D1-h2", "h2-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();h2->Sumw2();
 
@@ -1202,12 +1202,12 @@ bool testDivide2D1()
 
    TH2D* h3 = new TH2D("d2D1-h3", "h3=(c1*h1)/(c2*h2)", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    h3->Divide(h1, h2, c1, c2);
       
    TH2D* h4 = new TH2D("d2D1-h4", "h4=h3*h2)", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    h4->Multiply(h2, h3, c2/c1, 1);
    for ( Int_t i = 0; i <= h4->GetNbinsX() + 1; ++i ) {
       for ( Int_t j = 0; j <= h4->GetNbinsY() + 1; ++j ) {
@@ -1231,10 +1231,10 @@ bool testDivide2D2()
 {
    TH2D* h1 = new TH2D("d2D2-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h2 = new TH2D("d2D2-h2", "h2-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();h2->Sumw2();
 
@@ -1256,7 +1256,7 @@ bool testDivide2D2()
       
    TH2D* h4 = new TH2D("d2D2-h4", "h4=h3*h2)", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    h4->Multiply(h2, h3, 1.0, 1.0);
    for ( Int_t i = 0; i <= h4->GetNbinsX() + 1; ++i ) {
       for ( Int_t j = 0; j <= h4->GetNbinsY() + 1; ++j ) {
@@ -1283,12 +1283,12 @@ bool testDivide3D1()
 
    TH3D* h1 = new TH3D("d3D1-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h2 = new TH3D("d3D1-h2", "h2-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();h2->Sumw2();
 
@@ -1309,14 +1309,14 @@ bool testDivide3D1()
 
    TH3D* h3 = new TH3D("d3D1-h3", "h3=(c1*h1)/(c2*h2)", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    h3->Divide(h1, h2, c1, c2);
       
    TH3D* h4 = new TH3D("d3D1-h4", "h4=h3*h2)", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    h4->Multiply(h2, h3, c2/c1, 1.0);
    for ( Int_t i = 0; i <= h4->GetNbinsX() + 1; ++i ) {
       for ( Int_t j = 0; j <= h4->GetNbinsY() + 1; ++j ) {
@@ -1344,12 +1344,12 @@ bool testDivide3D2()
 {
    TH3D* h1 = new TH3D("d3D2-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h2 = new TH3D("d3D2-h2", "h2-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();h2->Sumw2();
 
@@ -1373,8 +1373,8 @@ bool testDivide3D2()
       
    TH3D* h4 = new TH3D("d3D2-h4", "h4=h3*h2)", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    h4->Multiply(h2, h3, 1.0, 1.0);
    for ( Int_t i = 0; i <= h4->GetNbinsX() + 1; ++i ) {
       for ( Int_t j = 0; j <= h4->GetNbinsY() + 1; ++j ) {
@@ -1507,7 +1507,7 @@ bool testAssign2D()
 {
    TH2D* h1 = new TH2D("=2D-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();
 
@@ -1519,7 +1519,7 @@ bool testAssign2D()
    
    TH2D* h2 = new TH2D("=2D-h2", "h2-Title", 
                        numberOfBins, minRange, maxRange, 
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    *h2 = *h1;
 
    bool ret = equals("Assign Oper Hist '='  2D", h1, h2, cmpOptStats);
@@ -1531,7 +1531,7 @@ bool testAssignProfile2D()
 {
    TProfile2D* p1 = new TProfile2D("=2D-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -1542,7 +1542,7 @@ bool testAssignProfile2D()
 
    TProfile2D* p2 = new TProfile2D("=2D-p2", "p2-Title", 
                                    numberOfBins, minRange, maxRange, 
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
    *p2 = *p1;
 
    bool ret = equals("Assign Oper Prof '='  2D", p1, p2, cmpOptStats);
@@ -1555,7 +1555,7 @@ bool testCopyConstructor2D()
 {
    TH2D* h1 = new TH2D("cc2D-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();
 
@@ -1576,7 +1576,7 @@ bool testCopyConstructorProfile2D()
 {
    TProfile2D* p1 = new TProfile2D("cc2D-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -1596,7 +1596,7 @@ bool testClone2D()
 {
    TH2D* h1 = new TH2D("cl2D-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();
 
@@ -1617,7 +1617,7 @@ bool testCloneProfile2D()
 {
    TProfile2D* p1 = new TProfile2D("cl2D-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -1637,8 +1637,8 @@ bool testAssign3D()
 {
    TH3D* h1 = new TH3D("=3D-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();
 
@@ -1651,8 +1651,8 @@ bool testAssign3D()
 
    TH3D* h2 = new TH3D("=3D-h2", "h2-Title", 
                        numberOfBins, minRange, maxRange, 
-                       numberOfBins, minRange, maxRange, 
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange, 
+                       numberOfBins + 2, minRange, maxRange);
    *h2 = *h1;
 
    bool ret = equals("Assign Oper Hist '='  3D", h1, h2, cmpOptStats);
@@ -1664,8 +1664,8 @@ bool testAssignProfile3D()
 {
    TProfile3D* p1 = new TProfile3D("=3D-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -1677,8 +1677,8 @@ bool testAssignProfile3D()
 
    TProfile3D* p2 = new TProfile3D("=3D-p2", "p2-Title", 
                                    numberOfBins, minRange, maxRange, 
-                                   numberOfBins, minRange, maxRange, 
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange, 
+                                   numberOfBins + 2, minRange, maxRange);
    *p2 = *p1;
 
    bool ret = equals("Assign Oper Prof '='  3D", p1, p2);
@@ -1690,8 +1690,8 @@ bool testCopyConstructor3D()
 {
    TH3D* h1 = new TH3D("cc3D-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();
 
@@ -1713,8 +1713,8 @@ bool testCopyConstructorProfile3D()
 {
    TProfile3D* p1 = new TProfile3D("cc3D-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -1735,8 +1735,8 @@ bool testClone3D()
 {
    TH3D* h1 = new TH3D("cl3D-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();
 
@@ -1758,8 +1758,8 @@ bool testCloneProfile3D()
 {
    TProfile3D* p1 = new TProfile3D("cl3D-p1", "p1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -1851,7 +1851,7 @@ bool testWriteRead2D()
 {
    TH2D* h1 = new TH2D("wr2D-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();
 
@@ -1877,7 +1877,7 @@ bool testWriteReadProfile2D()
 {
    TProfile2D* p1 = new TProfile2D("wr2D-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -1902,8 +1902,8 @@ bool testWriteRead3D()
 {
    TH3D* h1 = new TH3D("wr3D-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();
 
@@ -1930,8 +1930,8 @@ bool testWriteReadProfile3D()
 {
    TProfile3D* p1 = new TProfile3D("wr3D-p1", "p1-Title", 
                                  numberOfBins, minRange, maxRange,
-                                 numberOfBins, minRange, maxRange,
-                                 numberOfBins, minRange, maxRange);
+                                 numberOfBins + 1, minRange, maxRange,
+                                 numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -2075,16 +2075,16 @@ bool testMerge2D()
 {
    TH2D* h1 = new TH2D("merge2D-h1", "h1-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h2 = new TH2D("merge2D-h2", "h2-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h3 = new TH2D("merge2D-h3", "h3-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h4 = new TH2D("merge2D-h4", "h4-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();h2->Sumw2();h3->Sumw2();
 
@@ -2126,16 +2126,16 @@ bool testMergeProf2D()
 {
    TProfile2D* p1 = new TProfile2D("merge2D-p1", "p1-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile2D* p2 = new TProfile2D("merge2D-p2", "p2-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile2D* p3 = new TProfile2D("merge2D-p3", "p3-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile2D* p4 = new TProfile2D("merge2D-p4", "p4-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -2178,20 +2178,20 @@ bool testMerge3D()
 {
    TH3D* h1 = new TH3D("merge3D-h1", "h1-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h2 = new TH3D("merge3D-h2", "h2-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h3 = new TH3D("merge3D-h3", "h3-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h4 = new TH3D("merge3D-h4", "h4-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->Sumw2();h2->Sumw2();h3->Sumw2();
 
@@ -2236,20 +2236,20 @@ bool testMergeProf3D()
 {
    TProfile3D* p1 = new TProfile3D("merge3D-p1", "p1-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile3D* p2 = new TProfile3D("merge3D-p2", "p2-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile3D* p3 = new TProfile3D("merge3D-p3", "p3-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile3D* p4 = new TProfile3D("merge3D-p4", "p4-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
       Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
@@ -2394,16 +2394,16 @@ bool testMerge2DLabelSame()
 {
    TH2D* h1 = new TH2D("merge2DLabelSame-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h2 = new TH2D("merge2DLabelSame-h2", "h2-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h3 = new TH2D("merge2DLabelSame-h3", "h3-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h4 = new TH2D("merge2DLabelSame-h4", "h4-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->GetXaxis()->SetBinLabel(4, "alpha");
    h2->GetXaxis()->SetBinLabel(4, "alpha");
@@ -2448,20 +2448,20 @@ bool testMerge3DLabelSame()
 {
    TH3D* h1 = new TH3D("merge3DLabelSame-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h2 = new TH3D("merge3DLabelSame-h2", "h2-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h3 = new TH3D("merge3DLabelSame-h3", "h3-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h4 = new TH3D("merge3DLabelSame-h4", "h4-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->GetXaxis()->SetBinLabel(4, "alpha");
    h2->GetXaxis()->SetBinLabel(4, "alpha");
@@ -2558,16 +2558,16 @@ bool testMergeProf2DLabelSame()
 {
    TProfile2D* p1 = new TProfile2D("merge2DLabelSame-p1", "p1-Title",
                                    numberOfBins, minRange, maxRange, 
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile2D* p2 = new TProfile2D("merge2DLabelSame-p2", "p2-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile2D* p3 = new TProfile2D("merge2DLabelSame-p3", "p3-Title", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile2D* p4 = new TProfile2D("merge2DLabelSame-p4", "p4-Title",
                                    numberOfBins, minRange, maxRange, 
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
 
    // It does not work properly! Look, the bins with the same labels
    // are different ones and still the tests passes! This is not
@@ -2618,20 +2618,20 @@ bool testMergeProf3DLabelSame()
 {
    TProfile3D* p1 = new TProfile3D("merge3DLabelSame-p1", "p1-Title",
                                    numberOfBins, minRange, maxRange, 
-                                   numberOfBins, minRange, maxRange, 
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange, 
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile3D* p2 = new TProfile3D("merge3DLabelSame-p2", "p2-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange, 
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange, 
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile3D* p3 = new TProfile3D("merge3DLabelSame-p3", "p3-Title", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange, 
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange, 
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile3D* p4 = new TProfile3D("merge3DLabelSame-p4", "p4-Title",
                                    numberOfBins, minRange, maxRange, 
-                                   numberOfBins, minRange, maxRange, 
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange, 
+                                   numberOfBins + 2, minRange, maxRange);
 
    // It does not work properly! Look, the bins with the same labels
    // are different ones and still the tests passes! This is not
@@ -2734,16 +2734,16 @@ bool testMerge2DLabelDiff()
 
    TH2D* h1 = new TH2D("merge2DLabelDiff-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h2 = new TH2D("merge2DLabelDiff-h2", "h2-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h3 = new TH2D("merge2DLabelDiff-h3", "h3-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h4 = new TH2D("merge2DLabelDiff-h4", "h4-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->GetXaxis()->SetBinLabel(2, "gamma");
    h2->GetXaxis()->SetBinLabel(6, "beta");
@@ -2792,20 +2792,20 @@ bool testMerge3DLabelDiff()
 
    TH3D* h1 = new TH3D("merge3DLabelDiff-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h2 = new TH3D("merge3DLabelDiff-h2", "h2-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h3 = new TH3D("merge3DLabelDiff-h3", "h3-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h4 = new TH3D("merge3DLabelDiff-h4", "h4-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    h1->GetXaxis()->SetBinLabel(2, "gamma");
    h2->GetXaxis()->SetBinLabel(6, "beta");
@@ -2902,16 +2902,16 @@ bool testMergeProf2DLabelDiff()
 {
    TProfile2D* p1 = new TProfile2D("merge2DLabelDiff-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile2D* p2 = new TProfile2D("merge2DLabelDiff-p2", "p2-Title", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile2D* p3 = new TProfile2D("merge2DLabelDiff-p3", "p3-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile2D* p4 = new TProfile2D("merge2DLabelDiff-p4", "p4-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
 
    // It does not work properly! Look, the bins with the same labels
    // are different ones and still the tests passes! This is not
@@ -2962,20 +2962,20 @@ bool testMergeProf3DLabelDiff()
 {
    TProfile3D* p1 = new TProfile3D("merge3DLabelDiff-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile3D* p2 = new TProfile3D("merge3DLabelDiff-p2", "p2-Title", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile3D* p3 = new TProfile3D("merge3DLabelDiff-p3", "p3-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile3D* p4 = new TProfile3D("merge3DLabelDiff-p4", "p4-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
 
    // It does not work properly! Look, the bins with the same labels
    // are different ones and still the tests passes! This is not
@@ -3076,16 +3076,16 @@ bool testMerge2DLabelAll()
 {
    TH2D* h1 = new TH2D("merge2DLabelAll-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h2 = new TH2D("merge2DLabelAll-h2", "h2-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h3 = new TH2D("merge2DLabelAll-h3", "h3-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h4 = new TH2D("merge2DLabelAll-h4", "h4-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t i = 1; i <= numberOfBins; ++ i) {
       ostringstream name;
@@ -3134,20 +3134,20 @@ bool testMerge3DLabelAll()
 {
    TH3D* h1 = new TH3D("merge3DLabelAll-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h2 = new TH3D("merge3DLabelAll-h2", "h2-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h3 = new TH3D("merge3DLabelAll-h3", "h3-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h4 = new TH3D("merge3DLabelAll-h4", "h4-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t i = 1; i <= numberOfBins; ++ i) {
       ostringstream name;
@@ -3249,16 +3249,16 @@ bool testMergeProf2DLabelAll()
 {
    TProfile2D* p1 = new TProfile2D("merge2DLabelAll-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile2D* p2 = new TProfile2D("merge2DLabelAll-p2", "p2-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile2D* p3 = new TProfile2D("merge2DLabelAll-p3", "p3-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile2D* p4 = new TProfile2D("merge2DLabelAll-p4", "p4-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t i = 1; i <= numberOfBins; ++ i) {
       ostringstream name;
@@ -3310,20 +3310,20 @@ bool testMergeProf3DLabelAll()
 {
    TProfile3D* p1 = new TProfile3D("merge3DLabelAll-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile3D* p2 = new TProfile3D("merge3DLabelAll-p2", "p2-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile3D* p3 = new TProfile3D("merge3DLabelAll-p3", "p3-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile3D* p4 = new TProfile3D("merge3DLabelAll-p4", "p4-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t i = 1; i <= numberOfBins; ++ i) {
       ostringstream name;
@@ -3434,16 +3434,16 @@ bool testMerge2DLabelAllDiff()
 
    TH2D* h1 = new TH2D("merge2DLabelAllDiff-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h2 = new TH2D("merge2DLabelAllDiff-h2", "h2-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h3 = new TH2D("merge2DLabelAllDiff-h3", "h3-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
    TH2D* h4 = new TH2D("merge2DLabelAllDiff-h4", "h4-Title",
                        numberOfBins, minRange, maxRange, 
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t i = 1; i <= numberOfBins; ++ i) {
       ostringstream name;
@@ -3502,20 +3502,20 @@ bool testMerge3DLabelAllDiff()
 
    TH3D* h1 = new TH3D("merge3DLabelAllDiff-h1", "h1-Title", 
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h2 = new TH3D("merge3DLabelAllDiff-h2", "h2-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h3 = new TH3D("merge3DLabelAllDiff-h3", "h3-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange,
+                       numberOfBins + 2, minRange, maxRange);
    TH3D* h4 = new TH3D("merge3DLabelAllDiff-h4", "h4-Title",
                        numberOfBins, minRange, maxRange,
-                       numberOfBins, minRange, maxRange, 
-                       numberOfBins, minRange, maxRange);
+                       numberOfBins + 1, minRange, maxRange, 
+                       numberOfBins + 2, minRange, maxRange);
 
    for ( Int_t i = 1; i <= numberOfBins; ++ i) {
       ostringstream name;
@@ -3634,16 +3634,16 @@ bool testMergeProf2DLabelAllDiff()
 {
    TProfile2D* p1 = new TProfile2D("merge2DLabelAllDiff-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile2D* p2 = new TProfile2D("merge2DLabelAllDiff-p2", "p2-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile2D* p3 = new TProfile2D("merge2DLabelAllDiff-p3", "p3-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile2D* p4 = new TProfile2D("merge2DLabelAllDiff-p4", "p4-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 2, minRange, maxRange);
 
    // It does not work properly! Look, the bins with the same labels
    // are different ones and still the tests passes! This is not
@@ -3705,20 +3705,20 @@ bool testMergeProf3DLabelAllDiff()
 {
    TProfile3D* p1 = new TProfile3D("merge3DLabelAllDiff-p1", "p1-Title", 
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile3D* p2 = new TProfile3D("merge3DLabelAllDiff-p2", "p2-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile3D* p3 = new TProfile3D("merge3DLabelAllDiff-p3", "p3-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
    TProfile3D* p4 = new TProfile3D("merge3DLabelAllDiff-p4", "p4-Title",
                                    numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange,
-                                   numberOfBins, minRange, maxRange);
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
 
    // It does not work properly! Look, the bins with the same labels
    // are different ones and still the tests passes! This is not
