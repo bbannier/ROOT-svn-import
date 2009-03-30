@@ -288,6 +288,28 @@ void TTreeFormula::Init(const char*name, const char* expression)
    
    if (IsInteger(kFALSE)) SetBit(kIsInteger);
 
+   if (TestBit(TTreeFormula::kNeedEntries)) { 
+      // Call TTree::GetEntries() to insure that it is already calculated.
+      // This will need to be done anyway at the first iteration and insure
+      // that it will not mess up the branch reading (because TTree::GetEntries
+      // opens all the file in the chain and 'stays' on the last file.
+      
+      Long64_t readentry = fTree->GetReadEntry();
+      Int_t treenumber = fTree->GetTreeNumber();
+      fTree->GetEntries();
+      if (treenumber != fTree->GetTreeNumber()) {
+         if (readentry != -1) {
+            fTree->LoadTree(readentry);
+         }
+         UpdateFormulaLeaves();
+      } else {
+         if (readentry != -1) {
+            fTree->LoadTree(readentry);
+         }
+      }
+
+   }
+
    if(savedir) savedir->cd();
 }
 
@@ -2587,6 +2609,8 @@ Int_t TTreeFormula::DefinedVariable(TString &name, Int_t &action)
       Int_t code = fNcodes++;
       fCodes[code] = 0;
       fLookupType[code] = kEntries;
+      SetBit(kNeedEntries);
+      fManager->SetBit(kNeedEntries);
       return code;
    }
    if (name == "Iteration$") {
@@ -3188,6 +3212,13 @@ Int_t TTreeFormula::GetRealInstance(Int_t instance, Int_t codeindex) {
                      fVarIndexes[codeindex][0]->LoadBranches();
                   }
                   local_index = (Int_t)fVarIndexes[codeindex][0]->EvalInstance(local_index);
+                  if (local_index<0) {
+                     Error("EvalInstance","Index %s is out of bound (%d) in formula %s",
+                           fVarIndexes[codeindex][0]->GetTitle(),
+                           local_index,
+                           GetTitle());
+                     return fNdata[0]+1;
+                  }
                }
                real_instance = local_index * fCumulSizes[codeindex][1];
                virt_dim ++;

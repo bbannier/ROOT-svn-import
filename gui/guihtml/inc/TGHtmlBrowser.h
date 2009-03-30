@@ -59,11 +59,11 @@ public:
                  UInt_t w = 900, UInt_t h = 600);
    virtual ~TGHtmlBrowser() { ; }
 
-   virtual void      CloseWindow();
    virtual Bool_t    ProcessMessage(Long_t msg, Long_t parm1, Long_t);
    void              Selected(const char *txt);
    void              URLChanged();
    void              Back();
+   Bool_t            CheckAnchors(const char *);
    void              Forward();
    void              Reload();
    void              Stop();

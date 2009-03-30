@@ -370,7 +370,7 @@
 #endif
 
 /* added by Fons Radamakers in 2000 Oct 2 */
-#if defined(__linux) || defined(__linux__) || defined(linux)
+#if (defined(__linux) || defined(__linux__) || defined(linux)) && ! defined(__CINT__)
 #   include <features.h>
 #   if __GLIBC__ == 2 && __GLIBC_MINOR__ >= 2
 #      define G__NONSCALARFPOS2
@@ -1769,6 +1769,7 @@ extern G__EXPORT int G__tag_memfunc_reset G__P((void));
 extern G__EXPORT void G__letint G__P((G__value *buf,int type,long value));
 extern G__EXPORT void G__letdouble G__P((G__value *buf,int type,double value));
 extern G__EXPORT int G__value_get_type G__P((G__value* buf));
+extern G__EXPORT int G__value_get_tagnum G__P((G__value* buf));
 extern G__EXPORT void G__store_tempobject G__P((G__value reg));
 extern G__EXPORT int G__inheritance_setup G__P((int tagnum,int basetagnum,long baseoffset,int baseaccess,int property));
 extern G__EXPORT void G__add_compiledheader G__P((G__CONST char *headerfile));

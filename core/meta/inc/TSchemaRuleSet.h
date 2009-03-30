@@ -24,6 +24,7 @@ namespace ROOT {
          const TSchemaRule* GetRuleWithTarget( const TString& name ) const;
                Bool_t       HasRuleWithSource( const TString& name ) const;
                Bool_t       HasRuleWithTarget( const TString& name ) const;
+      ClassDef(TSchemaMatch,0);
    };
 
    class TSchemaRuleSet: public TObject
@@ -34,6 +35,7 @@ namespace ROOT {
          virtual ~TSchemaRuleSet();
 
          Bool_t              AddRule( TSchemaRule* rule, Bool_t checkConsistency = kTRUE );
+         Bool_t              AddRules( TSchemaRuleSet* rules, Bool_t checkConsistency = kTRUE );
          Bool_t              HasRuleWithSourceClass( const TString &source) const;
          const TObjArray*    FindRules( const TString &source ) const;
          const TSchemaMatch* FindRules( const TString &source, Int_t version ) const;
@@ -47,6 +49,8 @@ namespace ROOT {
          void                RemoveRule( TSchemaRule* rule );
          void                RemoveRules( TObjArray* rules );
          void                SetClass( TClass* cls );
+
+         void                ls(Option_t *option="") const;
 
          ClassDef( TSchemaRuleSet, 1 )
 
