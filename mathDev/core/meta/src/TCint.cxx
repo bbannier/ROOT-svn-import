@@ -904,7 +904,7 @@ void TCint::CreateListOfMethods(TClass *cl)
 
    if (!cl->fMethod) {
 
-      cl->fMethod = new TList;
+      cl->fMethod = new THashList;
 
       G__MethodInfo *a;
       G__MethodInfo t(*(G__ClassInfo*)cl->GetClassInfo());
@@ -2022,9 +2022,10 @@ const char *TCint::GetSTLIncludePath() const
 #endif
       if (!stldir.EndsWith("/"))
          stldir += '/';
-#ifdef R__BUILDING_CINT7
+#if defined(R__BUILDING_CINT7) || (R__BUILDING_ONLYCINT7)
       stldir += "cint7/stl";
 #else
+      // Default to Cint5's directory
       stldir += "cint/stl";
 #endif
    }

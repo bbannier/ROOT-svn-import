@@ -61,6 +61,7 @@ public:
    virtual void     ResetAttAxis(Option_t *option="");
    virtual void     SaveAttributes(ostream &out, const char *name, const char *subname);
    virtual void     SetNdivisions(Int_t n=510, Bool_t optim=kTRUE);  // *MENU*
+   virtual void     SetNdivisions(Int_t n1, Int_t n2, Int_t n3, Bool_t optim=kTRUE);
    virtual void     SetAxisColor(Color_t color=1);        // *MENU*
    virtual void     SetLabelColor(Color_t color=1);       // *MENU*
    virtual void     SetLabelFont(Style_t font=62);        // *MENU*

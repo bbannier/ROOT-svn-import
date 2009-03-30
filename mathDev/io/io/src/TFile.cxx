@@ -2316,7 +2316,10 @@ void TFile::ReadStreamerInfo()
          info = (TStreamerInfo*)lnk->GetObject();
 
          if (info->IsA() != TStreamerInfo::Class()) {
-            Warning("ReadStreamerInfo","%s: not a TStreamerInfo object", GetName());
+            if (mode==1) {
+               Warning("ReadStreamerInfo","%s: not a TStreamerInfo object", GetName());
+            }
+            lnk = lnk->Next();
             continue;
          }
          // This is a quick way (instead of parsing the name) to see if this is
@@ -2376,8 +2379,8 @@ void TFile::ShowStreamerInfo()
 //______________________________________________________________________________
 UShort_t TFile::WriteProcessID(TProcessID *pidd)
 {
-   // Check if the ProcessID pidd is already in the file.
-   // if not, add it and return the index  number in the local file list
+   // Check if the ProcessID pidd is already in the file,
+   // if not, add it and return the index  number in the local file list.
 
    TProcessID *pid = pidd;
    if (!pid) pid = TProcessID::GetPID();
@@ -2395,7 +2398,7 @@ UShort_t TFile::WriteProcessID(TProcessID *pidd)
    this->WriteTObject(pid,name);
    this->IncrementProcessIDs();
    if (gDebug > 0) {
-      printf("WriteProcessID, name=%s, file=%s\n",name,GetName());
+      Info("WriteProcessID", "name=%s, file=%s", name, GetName());
    }
    return (UShort_t)npids;
 }
@@ -3592,12 +3595,6 @@ Bool_t TFile::Cp(const char *src, const char *dst, Bool_t progressbar,
 copyout:
    if (sfile) sfile->Close();
    if (dfile) dfile->Close();
-
-   if (sfile->GetBytesRead() != dfile->GetBytesWritten()) {
-      ::Error("TFile::Cp", "read and written bytes differ (%lld != %lld)",
-                           sfile->GetBytesRead(), dfile->GetBytesWritten());
-      // success = kFALSE;       This should be just a severe warning
-   }
 
    if (sfile) delete sfile;
    if (dfile) delete dfile;

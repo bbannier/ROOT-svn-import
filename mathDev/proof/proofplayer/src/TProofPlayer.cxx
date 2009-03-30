@@ -724,6 +724,10 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
    fSelectorClass = 0;
    Int_t version = -1;
    TRY {
+      // Get selector files from cache
+      if (gProofServ)
+         gProofServ->CopyFromCache(selector_file, 1);
+
       if (!(fSelector = TSelector::GetSelector(selector_file))) {
          Error("Process", "cannot load: %s", selector_file );
          return -1;
@@ -3158,8 +3162,9 @@ void TProofPlayerSuperMaster::Progress(TSlave *sl, Long64_t total,
 {
    // Report progress.
 
-   Info("Progress","%s: %lld %lld %f %f %f %f", sl->GetName(),
-                   processed, bytesread, initTime, procTime, evtrti, mbrti);
+   PDB(kGlobal,2)
+      Info("Progress","%s: %lld %lld %f %f %f %f", sl->GetName(),
+                      processed, bytesread, initTime, procTime, evtrti, mbrti);
 
    Int_t idx = fSlaves.IndexOf(sl);
    if (fSlaveTotals[idx] != total)

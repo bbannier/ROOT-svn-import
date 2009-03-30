@@ -47,7 +47,7 @@ protected:
 
    // Default ctor
    TBuffer() : TObject(), fMode(0), fVersion(0), fBufSize(0), fBuffer(0),
-               fBufCur(0), fBufMax(0), fParent(0) {}
+     fBufCur(0), fBufMax(0), fParent(0), fReAllocFunc(0) {}
 
    // TBuffer objects cannot be copied or assigned
    TBuffer(const TBuffer &);           // not implemented
@@ -78,7 +78,7 @@ public:
    void     SetReadMode();
    void     SetWriteMode();
    void     SetBuffer(void *buf, UInt_t bufsiz = 0, Bool_t adopt = kTRUE, ReAllocCharFun_t reallocfunc = 0);
-   ReAllocCharFun_t GetReAllocFunc();
+   ReAllocCharFun_t GetReAllocFunc() const;
    void     SetReAllocFunc(ReAllocCharFun_t reallocfunc = 0);
    void     SetBufferOffset(Int_t offset = 0) { fBufCur = fBuffer+offset; }
    void     SetParent(TObject *parent);
