@@ -966,7 +966,7 @@ void TProfile::LabelsInflate(Option_t *options)
 }
 
 //___________________________________________________________________________
-void TProfile::LabelsOption(Option_t *option, Option_t * ax)
+void TProfile::LabelsOption(Option_t *option, Option_t * /*ax */)
 {
 //  Set option(s) to draw axis with labels
 //  option = "a" sort by alphabetic order
