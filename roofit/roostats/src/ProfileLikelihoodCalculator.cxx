@@ -112,7 +112,7 @@ ConfInterval* ProfileLikelihoodCalculator::GetInterval() const {
 
    LikelihoodInterval* interval 
       = new LikelihoodInterval("LikelihoodInterval", profile, fPOI);
-
+   interval->SetConfidenceLevel(1.-fSize);
    return interval;
 }
 

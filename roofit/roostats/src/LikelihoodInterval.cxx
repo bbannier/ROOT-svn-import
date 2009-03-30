@@ -143,6 +143,12 @@ Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint)
     return true;
   }
 
+  /*  std::cout << "in likelihood interval: LR = " <<
+    fLikelihoodRatio->getVal() << " with P = " <<
+    TMath::Prob( 2* fLikelihoodRatio->getVal(), parameterPoint.getSize())  <<
+    " and CL = " << fConfidenceLevel << std::endl;
+  */
+
   // here we use Wilks' theorem.
   if ( TMath::Prob( 2* fLikelihoodRatio->getVal(), parameterPoint.getSize()) < (1.-fConfidenceLevel) )
     return false;

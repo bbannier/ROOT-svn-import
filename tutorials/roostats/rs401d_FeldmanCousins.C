@@ -27,6 +27,7 @@
 
 #include "NuMuToNuE_Oscillation.h"
 #include "RooPolynomial.h"
+#include "RooNLLVar.h"
 
 #include "RooPlot.h"
 
@@ -67,8 +68,8 @@ oscillations.
   // Make signal model model
   RooRealVar E("E","", 15,10,60,"GeV");
   RooRealVar L("L","", .800,.600, 1.0,"km"); // need these units in formula
-  RooRealVar deltaMSq("deltaMSq","#Delta m^{2}",40,35,45,"eV/c^{2}");
-  RooRealVar sinSq2theta("sinSq2theta","sin^{2}(2#theta)", .006,.005,.007);
+  RooRealVar deltaMSq("deltaMSq","#Delta m^{2}",40,20,70,"eV/c^{2}");
+  RooRealVar sinSq2theta("sinSq2theta","sin^{2}(2#theta)", .006,.0001,.03);
   // PDF for oscillation only describes deltaMSq dependence, sinSq2theta goes into sigNorm
   NuMuToNuE_Oscillation PnmuTone("PnmuTone","P(#nu_{#mu} #rightarrow #nu_{e}",L,E,deltaMSq);
 
@@ -142,10 +143,14 @@ oscillations.
   Eframe->Draw();
 
   dataCanvas->cd(3);
-  TH1* hhh = PnmuTone.createHistogram("hhh",E,Binning(40),YVar(L,Binning(40))) ;
+  //  TH1* hhh = PnmuTone.createHistogram("hhh",E,Binning(40),YVar(L,Binning(40))) ;
+  RooNLLVar nll("nll", "nll", model, *data);
+  TH1* hhh = nll.createHistogram("hhh",sinSq2theta,Binning(40),YVar(deltaMSq,Binning(40))) ;
   hhh->SetLineColor(kBlue) ;
   hhh->SetTitle("Best Fit Signal Model");
   hhh->Draw("surf");
+
+  
 
   dataCanvas->Update();
 
@@ -162,8 +167,8 @@ oscillations.
   fc.UseAdaptiveSampling(true);
 
   // use the Feldman-Cousins tool
-  ConfInterval* interval = fc.GetInterval();
-  //ConfInterval* interval = 0;
+  //ConfInterval* interval = fc.GetInterval();
+  ConfInterval* interval = 0;
 
 
   /////////////////////////////////////////
@@ -175,6 +180,7 @@ oscillations.
   plc.SetData(*data);
   
   ConfInterval* plcInterval = plc.GetInterval();
+  //ConfInterval* plcInterval = 0;
 
   ////////////////////////////////////////////
   // make plot of resulting interval
@@ -209,9 +215,9 @@ oscillations.
     TMarker* plcMark = new TMarker(tmpPoint->getRealValue("sinSq2theta"), tmpPoint->getRealValue("deltaMSq"), 22);
     if (plcInterval){
       if(plcInterval->IsInInterval( *tmpPoint ) ) 
-      plcMark->SetMarkerColor(kGreen);
-    else
-      plcMark->SetMarkerColor(kMagenta);
+	plcMark->SetMarkerColor(kGreen);
+      else
+	plcMark->SetMarkerColor(kMagenta);
 
       plcMark->Draw("s");
     }
