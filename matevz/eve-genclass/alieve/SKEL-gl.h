@@ -1,8 +1,8 @@
-// @(#)root/eve:$Id$
-// Author: Matevz Tadel 2007
+// $Id$
+// Author: Matevz Tadel 2009
 
 /**************************************************************************
- * Copyright(c) 1998-2008, ALICE Experiment at CERN, all rights reserved. *
+ * Copyright(c) 1998-2009, ALICE Experiment at CERN, all rights reserved. *
  * See http://aliceinfo.cern.ch/Offline/AliRoot/License.html for          *
  * full copyright notice.                                                 *
  **************************************************************************/
