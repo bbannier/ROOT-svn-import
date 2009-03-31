@@ -439,6 +439,19 @@ TEveCalo2D::TEveCalo2D(const char* n, const char* t):
 }
 
 //______________________________________________________________________________
+TEveCalo2D::~TEveCalo2D()
+{
+   // Destructor.
+
+   for(UInt_t vi = 0; vi < fCellLists.size(); ++vi)
+   {
+      TEveCaloData::vCellId_t* cids = fCellLists[vi];
+      cids->clear();
+      delete cids;
+   }
+}
+
+//______________________________________________________________________________
 void TEveCalo2D::UpdateProjection()
 {
    // This is virtual method from base-class TEveProjected.
