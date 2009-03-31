@@ -70,8 +70,8 @@ oscillations.
   // Make signal model model
   RooRealVar E("E","", 15,10,60,"GeV");
   RooRealVar L("L","", .800,.600, 1.0,"km"); // need these units in formula
-  RooRealVar deltaMSq("deltaMSq","#Delta m^{2}",40,20,70,"eV/c^{2}");
-  RooRealVar sinSq2theta("sinSq2theta","sin^{2}(2#theta)", .006,.0001,.02);
+  RooRealVar deltaMSq("deltaMSq","#Delta m^{2}",40,1,300,"eV/c^{2}");
+  RooRealVar sinSq2theta("sinSq2theta","sin^{2}(2#theta)", .006,.0,.03);
   // PDF for oscillation only describes deltaMSq dependence, sinSq2theta goes into sigNorm
   NuMuToNuE_Oscillation PnmuTone("PnmuTone","P(#nu_{#mu} #rightarrow #nu_{e}",L,E,deltaMSq);
 
@@ -116,6 +116,12 @@ oscillations.
   model.graphVizTree("model.dot");
 
 
+  // turn off some messages
+  RooMsgService::instance().setStreamStatus(0,kFALSE);
+  RooMsgService::instance().setStreamStatus(1,kFALSE);
+  RooMsgService::instance().setStreamStatus(2,kFALSE);
+
+
   //////////////////////////////////////////////
   // n events in data to data, simply sum of sig+bkg
   Int_t nEventsData = bkgNorm.getVal()+sigNorm.getVal(); 
@@ -155,11 +161,8 @@ oscillations.
   hhh->SetTitle("Best Fit Signal Model");
   hhh->Draw("surf");
 
-  
-
   dataCanvas->Update();
 
-  model.fitTo(*data);
 
 
   ///////////////////////////////////////
@@ -172,6 +175,7 @@ oscillations.
   fc.SetTestSize(.1); // set size of test
   fc.SetData(*data);
   fc.UseAdaptiveSampling(true);
+  fc.SetNBins(20); 
 
   // use the Feldman-Cousins tool
   ConfInterval* interval = fc.GetInterval();
@@ -210,11 +214,12 @@ oscillations.
 
     TMarker* mark = new TMarker(tmpPoint->getRealValue("sinSq2theta"), tmpPoint->getRealValue("deltaMSq"), 25);
     if (interval){
-      if (interval->IsInInterval( *tmpPoint ) ) 
+      if (interval->IsInInterval( *tmpPoint ) ) {
 	mark->SetMarkerColor(kBlue);
-      else
-	mark->SetMarkerColor(kRed);
-      mark->Draw("s");
+	mark->Draw("s");
+      }
+      //      else
+      //	mark->SetMarkerColor(kRed);
     }
     
 
@@ -223,12 +228,13 @@ oscillations.
     parameters=*tmpPoint;
     //    cout << "pll = " << pll.getVal() << endl;;
     if (plcInterval){
-      if(plcInterval->IsInInterval( *tmpPoint ) ) 
+      if(plcInterval->IsInInterval( *tmpPoint ) ) {
 	plcMark->SetMarkerColor(kGreen);
-      else
-	plcMark->SetMarkerColor(kMagenta);
+	plcMark->Draw("s");
+      }
+      //      else
+      //plcMark->SetMarkerColor(kMagenta);
 
-      plcMark->Draw("s");
     }
     //delete tmpPoint;
     //    delete mark;
