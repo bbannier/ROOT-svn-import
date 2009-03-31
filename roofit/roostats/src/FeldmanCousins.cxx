@@ -66,6 +66,7 @@ FeldmanCousins::FeldmanCousins() {
   fPdfName = "";
   fAdaptiveSampling=false;
   fPointsToTest = 0;
+  fNbins = 10;
 }
 
 //_______________________________________________________
@@ -117,7 +118,7 @@ void FeldmanCousins::CreateParameterPoints() const{
     RooRealVar *myarg; 
     while ((myarg = (RooRealVar *)it.Next())) { 
       if(!myarg) continue;
-      myarg->setBins(15);
+      myarg->setBins(fNbins);
     }
 
     fPointsToTest= new RooDataHist("parameterScan", "", *parameters);

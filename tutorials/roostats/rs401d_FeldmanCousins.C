@@ -71,7 +71,7 @@ oscillations.
   RooRealVar E("E","", 15,10,60,"GeV");
   RooRealVar L("L","", .800,.600, 1.0,"km"); // need these units in formula
   RooRealVar deltaMSq("deltaMSq","#Delta m^{2}",40,20,70,"eV/c^{2}");
-  RooRealVar sinSq2theta("sinSq2theta","sin^{2}(2#theta)", .006,.0001,.1);
+  RooRealVar sinSq2theta("sinSq2theta","sin^{2}(2#theta)", .006,.0001,.02);
   // PDF for oscillation only describes deltaMSq dependence, sinSq2theta goes into sigNorm
   NuMuToNuE_Oscillation PnmuTone("PnmuTone","P(#nu_{#mu} #rightarrow #nu_{e}",L,E,deltaMSq);
 
@@ -137,7 +137,7 @@ oscillations.
   dataCanvas->cd(2);
   RooPlot* Eframe = E.frame();
   data->plotOn(Eframe);
-  model.fitTo(*data);
+  model.fitTo(*data, Extended());
   model.plotOn(Eframe);
   model.plotOn(Eframe,Components(*sigModel),LineColor(kRed));
   model.plotOn(Eframe,Components(bkgEShape),LineColor(kGreen));
@@ -147,7 +147,7 @@ oscillations.
 
   dataCanvas->cd(3);
   //  TH1* hhh = PnmuTone.createHistogram("hhh",E,Binning(40),YVar(L,Binning(40))) ;
-  RooNLLVar nll("nll", "nll", model, *data);
+  RooNLLVar nll("nll", "nll", model, *data, Extended());
   RooProfileLL pll("pll", "", nll, RooArgSet(deltaMSq, sinSq2theta));
   //  TH1* hhh = nll.createHistogram("hhh",sinSq2theta,Binning(40),YVar(deltaMSq,Binning(40))) ;
   TH1* hhh = pll.createHistogram("hhh",sinSq2theta,Binning(40),YVar(deltaMSq,Binning(40))) ;
@@ -221,7 +221,7 @@ oscillations.
     // mark for ProfileLikelihood
     TMarker* plcMark = new TMarker(tmpPoint->getRealValue("sinSq2theta"), tmpPoint->getRealValue("deltaMSq"), 22);
     parameters=*tmpPoint;
-    cout << "pll = " << pll.getVal() << endl;;
+    //    cout << "pll = " << pll.getVal() << endl;;
     if (plcInterval){
       if(plcInterval->IsInInterval( *tmpPoint ) ) 
 	plcMark->SetMarkerColor(kGreen);

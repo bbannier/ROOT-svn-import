@@ -89,6 +89,8 @@ namespace RooStats {
       ConfidenceBelt* GetConfidenceBelt() {return fConfBelt;}
 
       void UseAdaptiveSampling(bool flag=true){fAdaptiveSampling=flag;}
+
+      void SetNBins(Int_t bins) {fNbins = bins;}
       
    private:
 
@@ -109,7 +111,7 @@ namespace RooStats {
       mutable RooTreeData* fPointsToTest; // points to perform the construction
       mutable ConfidenceBelt* fConfBelt;
       bool fAdaptiveSampling; // controls use of adaptive sampling algorithm
-
+      Int_t fNbins;
    protected:
       ClassDef(FeldmanCousins,1)   // Interface for tools setting limits (producing confidence intervals)
    };

@@ -102,7 +102,7 @@ ConfInterval* ProfileLikelihoodCalculator::GetInterval() const {
    RooAbsData* data = fWS->data(fDataName);
    if (!data || !pdf || !fPOI) return 0;
 
-   RooNLLVar* nll = new RooNLLVar("nll","",*pdf,*data);
+   RooNLLVar* nll = new RooNLLVar("nll","",*pdf,*data, Extended());
    RooProfileLL* profile = new RooProfileLL("pll","",*nll, *fPOI);
    profile->addOwnedComponents(*nll) ;  // to avoid memory leak
 
