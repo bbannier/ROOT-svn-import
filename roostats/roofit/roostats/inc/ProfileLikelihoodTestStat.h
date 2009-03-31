@@ -66,7 +66,7 @@ namespace RooStats {
        RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
        bool needToRebuild = true; // try to avoid rebuilding if possible
        if(needToRebuild){
-	 RooNLLVar* nll = new RooNLLVar("nll","",*fPdf,data);
+	 RooNLLVar* nll = new RooNLLVar("nll","",*fPdf,data, RooFit::Extended());
 	 fNll = nll;
 	 fProfile = new RooProfileLL("pll","",*nll, paramsOfInterest);
 	 //	 fProfile->addOwnedComponents(*nll) ;  // to avoid memory leak       
