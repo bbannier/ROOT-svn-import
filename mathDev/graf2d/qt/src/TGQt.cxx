@@ -748,7 +748,7 @@ void TGQt::PostQtEvent(QObject *receiver, QEvent *event)
 //______________________________________________________________________________
 TGQt::TGQt() : TVirtualX(),fDisplayOpened(kFALSE),fQPainter(0),fQClientFilterBuffer(0)
 ,fCodec(0),fSymbolFontFamily("Symbol"),fQtEventHasBeenProcessed(0)
-,fFeedBackMode(kFALSE),fFeedBackWidget(0)
+,fFeedBackMode(kFALSE),fFeedBackWidget(0),fBlockRGB(kFALSE)
 {
    //*-*-*-*-*-*-*-*-*-*-*-*Default Constructor *-*-*-*-*-*-*-*-*-*-*-*-*-*-*
    //*-*                    ===================
@@ -762,7 +762,7 @@ TGQt::TGQt() : TVirtualX(),fDisplayOpened(kFALSE),fQPainter(0),fQClientFilterBuf
 TGQt::TGQt(const char *name, const char *title) : TVirtualX(name,title),fDisplayOpened(kFALSE)
 ,fQPainter(0),fCursors(kNumCursors),fQClientFilter(0),fQClientFilterBuffer(0),fPointerGrabber(0)
 ,fCodec(0),fSymbolFontFamily("Symbol"),fQtEventHasBeenProcessed(0)
-,fFeedBackMode(kFALSE),fFeedBackWidget(0)
+,fFeedBackMode(kFALSE),fFeedBackWidget(0),fBlockRGB(kFALSE)
 {
    //*-*-*-*-*-*-*-*-*-*-*-*-*-*Normal Constructor*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
    //*-*                        ==================                              *-*
@@ -1124,22 +1124,19 @@ const QColor &TGQt::ColorIndex(Color_t ic) const
    // There three different ways in ROOT to define RGB.
    // It took 4 months to figure out.
    // See #ifndef R_WIN32 with  TColor::SetRGB method
-
    if (!fPallete.contains(ic)) {
-      // Allocate color
+       Warning("ColorIndex","Unknown color. No RGB component for the index %d was defined\n",ic);
+       return unknownColor;
+   } else {
+      // Make sure the alpha channel was set properly
+      // due lack of the TVirtualX interface to account it elsewhere
       TColor *myColor = gROOT->GetColor(ic);
-      if (myColor) {
-         ((TGQt *)this)->SetRGB(ic,myColor->GetRed()
-            ,myColor->GetGreen()
-            ,myColor->GetBlue()
-            ,myColor->GetAlpha()
-            );
-      } else {
-         Warning("ColorIndex","Unknown color. No RGB component for the index %d was defined\n",ic);
-         return unknownColor;
+      Float_t a = myColor->GetAlpha();
+      colorBuffer = fPallete[ic];
+      if (TMath::Abs(colorBuffer->alphaF() - a) > 0.01) {
+         colorBuffer->setAlphaF(a);
       }
    }
-   colorBuffer = fPallete[ic];
    return *colorBuffer;
 }
 
@@ -1282,15 +1279,18 @@ void  TGQt::CopyPixmap(int wid, int xpos, int ypos)
          assert(dst != (QPaintDevice *)-1);
       }
       End();
-      TQtWidget *theWidget =  (TQtWidget *)fSelectedWindow;
-      dst = theWidget->GetOffScreenBuffer();
+      bool itIsWidget = fSelectedWindow->devType() == QInternal::Widget;
+      TQtWidget *theWidget = 0;
+      if (itIsWidget) { 
+          theWidget =  (TQtWidget *)fSelectedWindow;
+          dst = theWidget->GetOffScreenBuffer();
+      }
       { 
         QPainter paint(dst);
         paint.drawPixmap(xpos,ypos,*src);
       }
       Emitter()->EmitPadPainted(src);
-      if ( fSelectedWindow->devType() == QInternal::Widget  )
-      {  theWidget->EmitCanvasPainted();                    }
+      if (theWidget)  theWidget->EmitCanvasPainted();
    }
    Begin();
 }
@@ -2169,7 +2169,7 @@ void  TGQt::SetFillColor(Color_t cindex)
 
    if (fFillColor != cindex )
    {
-      fFillColor = cindex;
+      fFillColor = UpdateColor(cindex);
       if (fFillColor != -1) {
          fQBrush->SetColor(ColorIndex(cindex));
          UpdateBrush();
@@ -2216,7 +2216,7 @@ void  TGQt::SetLineColor(Color_t cindex)
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
   if (fLineColor != cindex) {
-    fLineColor = cindex;
+    fLineColor = UpdateColor(cindex);
     if (fLineColor >= 0) {
       fQPen->SetLineColor(fLineColor);
       UpdatePen();
@@ -2310,7 +2310,7 @@ void  TGQt::SetMarkerColor( Color_t cindex)
    //*-*  cindex : color index defined my IXSETCOL
    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
-   if (fMarkerColor != cindex) fMarkerColor = cindex;
+   if (fMarkerColor != cindex) fMarkerColor = UpdateColor(cindex);
 }
 
 //______________________________________________________________________________
@@ -2550,16 +2550,50 @@ void  TGQt::SetMarkerType( int type, int n, TPoint *xy )
 }
 
 //______________________________________________________________________________
+int  TGQt::UpdateColor(int cindex)
+{
+   // [protected] update the color parameters if needed.
+#define BIGGEST_RGB_VALUE 255  // 65535
+   //  if (fSelectedWindow == NoOperation) return;
+   if (cindex >= 0 ) {
+      //    if (cindex >= fPallete.size()) fPallete.resize(cindex+1);
+      //    fPallete[cindex].setRgb((r*BIGGEST_RGB_VALUE)
+      if (!fPallete.contains(cindex)) {
+         // qDebug() << "TGQt::UpdateRGB: Add the new index:" << cindex;
+         fBlockRGB = kTRUE; // to elimiabne double setting via TGQt::SetRGB()
+         TColor *rootColor = gROOT->GetColor(cindex);
+         fBlockRGB = kFALSE;
+         if (rootColor) {
+             float r,g,b,a;
+             rootColor->GetRGB(r,g,b);
+             a= rootColor->GetAlpha();
+
+             fPallete[cindex] =  new QColor(
+                int(r*BIGGEST_RGB_VALUE+0.5)
+               ,int(g*BIGGEST_RGB_VALUE+0.5)
+               ,int(b*BIGGEST_RGB_VALUE+0.5)
+               ,int(a*BIGGEST_RGB_VALUE+0.5)
+            );
+         }
+      }
+   }
+   return cindex;
+}
+//______________________________________________________________________________
 void  TGQt::SetRGB(int cindex, float r, float g, float b)
 {
 #define BIGGEST_RGB_VALUE 255  // 65535
    //  if (fSelectedWindow == NoOperation) return;
-   if (cindex < 0 ) return;
-   else {
+   if ( !fBlockRGB && cindex >= 0 ) {
       //    if (cindex >= fPallete.size()) fPallete.resize(cindex+1);
       //    fPallete[cindex].setRgb((r*BIGGEST_RGB_VALUE)
-      if (fPallete.contains(cindex)) delete fPallete[cindex];
-      fPallete[cindex] =  new QColor(
+       // qDebug() << "TGQt::SetRGB: Add the new index: " << cindex;
+       QMap<Color_t,QColor*>::iterator i = fPallete.find(cindex);
+       if (i != fPallete.end()) {
+          delete i.value();
+          fPallete.erase(i);
+       }
+       fPallete[cindex] =  new QColor(
           int(r*BIGGEST_RGB_VALUE+0.5)
          ,int(g*BIGGEST_RGB_VALUE+0.5)
          ,int(b*BIGGEST_RGB_VALUE+0.5)
@@ -2655,7 +2689,7 @@ void  TGQt::SetTextColor(Color_t cindex)
    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
    if (fTextColor == cindex) return;
-   fTextColor = cindex;
+   fTextColor = UpdateColor(cindex);
    if (cindex < 0) return;
 }
 
