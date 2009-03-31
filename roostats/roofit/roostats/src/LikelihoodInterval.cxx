@@ -143,8 +143,11 @@ Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint)
     return true;
   }
 
-  /*  std::cout << "in likelihood interval: LR = " <<
-    fLikelihoodRatio->getVal() << " with P = " <<
+  /*
+  std::cout << "in likelihood interval: LR = " <<
+    fLikelihoodRatio->getVal() << 
+    " ndof = " << parameterPoint.getSize() << 
+    " with P = " <<
     TMath::Prob( 2* fLikelihoodRatio->getVal(), parameterPoint.getSize())  <<
     " and CL = " << fConfidenceLevel << std::endl;
   */
