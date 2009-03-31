@@ -63,7 +63,7 @@ namespace RooStats {
       fPdfName = "";
       fPOI = 0;
       fNuisParams=0;
-      fExtended = kFALSE;
+      fExtended = kTRUE;
       fRand = new TRandom();
     }
 
@@ -131,7 +131,17 @@ namespace RooStats {
 
        //fluctuate the number of events if fExtended is on
        Int_t nEvents = fNevents;
-       if(fExtended) nEvents = fRand->Poisson(fNevents);
+       if(fExtended) {
+	 nEvents = fRand->Poisson(fNevents);
+	 if( pdf->expectedEvents(*observables) > 0){
+	   nEvents = fRand->Poisson(pdf->expectedEvents(*observables));
+	 } else
+	   nEvents = fNevents;
+       }
+       /*
+	 cout << "expected events = " <<  pdf->expectedEvents(*observables) 
+	    << "generating" << nEvents << " events = " << endl;
+       */
 
        RooAbsData* data = (RooAbsData*)pdf->generate(*observables, nEvents);
        delete observables;
