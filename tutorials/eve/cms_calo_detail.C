@@ -31,8 +31,6 @@
 #pragma comment(lib, "OpenGL32.lib")
 #endif
 
-#include <GL/gl.h>
-
 
 class ButtFaker : public TGLOverlayButton
 {
@@ -40,54 +38,31 @@ class ButtFaker : public TGLOverlayButton
    ButtFaker& operator=(const ButtFaker&); // Not implemented
 
 public:
-   Bool_t fShowLegend;
+   TEveCaloLego* fLego;
 
    ButtFaker(TGLViewerBase *parent) :
-      TGLOverlayButton(parent, "Legend", 10, 200, 50, 16),
-      fShowLegend(kTRUE)
-   {}
+      TGLOverlayButton(parent, "FlipColors", 10, 200, 80, 16),
+      fLego(0)
+   {
+   }
 
    virtual ~ButtFaker() {}
 
-   virtual void Clicked(TGLViewerBase *viewer)
+   virtual void Clicked(TGLViewerBase*)
    {
-      fShowLegend = !fShowLegend;
-      TGLOverlayButton::Clicked(viewer);
-   }
-
-   virtual void Render(TGLRnrCtx& rnrCtx)
-   {
-      TGLOverlayButton::Render(rnrCtx);
-
-      if (fShowLegend)
+      TEveCaloData* data = fLego->GetData();
+      if (data->GetSliceColor(0) == kRed)
       {
-         // Render other stuff here, see TGLOverlayButton.
-         // I guess you might want to move to pixel coordinates.
-
-         glMatrixMode(GL_PROJECTION);
-         glPushMatrix();
-         glLoadIdentity();
-         const TGLRect& vp = rnrCtx.RefCamera().RefViewport();
-         glOrtho(vp.X(), vp.Width(), vp.Y(), vp.Height(), 0, 1);
-         glMatrixMode(GL_MODELVIEW);
-         glPushMatrix();
-         glLoadIdentity();
-
-         glColor4f(1, 0, 0, 1);
-         fFont.PreRender(kFALSE);
-         glPushMatrix();
-         glTranslatef(20, vp.Height()-30, 0);
-         glRasterPos2i(0, 0);
-         fFont.Render("Ooogladoogla");
-         glPopMatrix();
-         fFont.PostRender();
-
-         glMatrixMode(GL_PROJECTION);
-         glPopMatrix();
-         glMatrixMode(GL_MODELVIEW);
-         glPopMatrix();
+         fLego->SetDataSliceColor(1, kRed);
+         fLego->SetDataSliceColor(0, kYellow);
       }
-   }
+      else
+      {
+         fLego->SetDataSliceColor(0, kRed);
+         fLego->SetDataSliceColor(1, kYellow);
+      }
+      gEve->Redraw3D();
+   } 
 
    ClassDef(ButtFaker,0);
 };
@@ -98,8 +73,10 @@ void cms_calo_detail()
    TEveManager::Create();
 
    TGLViewer* v = gEve->GetDefaultGLViewer(); // Default
-   v->SetCurrentCamera(TGLViewer::kCameraPerspXOY);
-   v->SetEventHandler(new TEveLegoEventHandler("Lego", (TGWindow*)v->GetGLWidget(), (TObject*)v));
+   v->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
+   TEveLegoEventHandler* eh = new TEveLegoEventHandler("Lego", (TGWindow*)v->GetGLWidget(), (TObject*)v);
+   eh->fMode = TEveLegoEventHandler::kLocked;
+   v->SetEventHandler(eh);
 
    // data
 
@@ -154,16 +131,15 @@ void cms_calo_detail()
    ls->SetLineColor(kBlue);
    gEve->AddElement(ls);
 
-
    // overlay lego
    TEveCaloLegoOverlay* overlay = new TEveCaloLegoOverlay();
    overlay->SetCaloLego(lego);
    v->AddOverlayElement(overlay);
    gEve->AddElement(overlay);
 
-   // overlay legend
-
+   // button overlay
    ButtFaker* legend = new ButtFaker(v);
+   legend->fLego = lego;
    v->AddOverlayElement(legend);
 
    gEve->Redraw3D(kTRUE);
