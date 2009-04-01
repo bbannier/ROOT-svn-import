@@ -146,6 +146,7 @@
 #include "RooNumCdf.h"
 #include "RooFitResult.h"
 #include "RooNumGenConfig.h"
+#include "RooCachedReal.h"
 #include <string>
 
 ClassImp(RooAbsPdf) 
@@ -156,7 +157,7 @@ Int_t RooAbsPdf::_verboseEval = 0;
 Bool_t RooAbsPdf::_evalError = kFALSE ;
 
 //_____________________________________________________________________________
-RooAbsPdf::RooAbsPdf() : _norm(0), _normSet(0), _specGeneratorConfig(0)
+RooAbsPdf::RooAbsPdf() : _norm(0), _normSet(0), _minDimNormValueCache(999), _valueCacheIntOrder(2), _specGeneratorConfig(0)
 {
   // Default constructor
 }
@@ -165,7 +166,7 @@ RooAbsPdf::RooAbsPdf() : _norm(0), _normSet(0), _specGeneratorConfig(0)
 
 //_____________________________________________________________________________
 RooAbsPdf::RooAbsPdf(const char *name, const char *title) : 
-  RooAbsReal(name,title), _norm(0), _normSet(0), _normMgr(this,10), _selectComp(kTRUE), _specGeneratorConfig(0)
+  RooAbsReal(name,title), _norm(0), _normSet(0), _minDimNormValueCache(999), _valueCacheIntOrder(2), _normMgr(this,10), _selectComp(kTRUE), _specGeneratorConfig(0)
 {
   // Constructor with name and title only
   resetErrorCounters() ;
@@ -177,7 +178,7 @@ RooAbsPdf::RooAbsPdf(const char *name, const char *title) :
 //_____________________________________________________________________________
 RooAbsPdf::RooAbsPdf(const char *name, const char *title, 
 		     Double_t plotMin, Double_t plotMax) :
-  RooAbsReal(name,title,plotMin,plotMax), _norm(0), _normSet(0), _normMgr(this,10), _selectComp(kTRUE), _specGeneratorConfig(0)
+  RooAbsReal(name,title,plotMin,plotMax), _norm(0), _normSet(0), _minDimNormValueCache(999), _valueCacheIntOrder(2), _normMgr(this,10), _selectComp(kTRUE), _specGeneratorConfig(0)
 {
   // Constructor with name, title, and plot range
   resetErrorCounters() ;
@@ -188,7 +189,8 @@ RooAbsPdf::RooAbsPdf(const char *name, const char *title,
 
 //_____________________________________________________________________________
 RooAbsPdf::RooAbsPdf(const RooAbsPdf& other, const char* name) : 
-  RooAbsReal(other,name), _norm(0), _normSet(0), _normMgr(other._normMgr,this), _selectComp(other._selectComp)
+  RooAbsReal(other,name), _norm(0), _normSet(0), _minDimNormValueCache(other._minDimNormValueCache), _valueCacheIntOrder(other._valueCacheIntOrder),
+  _normMgr(other._normMgr,this), _selectComp(other._selectComp)
 
 {
   // Copy constructor
@@ -446,9 +448,25 @@ Bool_t RooAbsPdf::syncNormalization(const RooArgSet* nset, Bool_t adjustProxies)
     TString ntitle(GetTitle()) ; ntitle.Append(" Unit Normalization") ;
     TString nname(GetName()) ; nname.Append("_UnitNorm") ;
     _norm = new RooRealVar(nname.Data(),ntitle.Data(),1) ;
-  } else {
-    _norm = createIntegral(*depList,*getIntegratorConfig()) ;
+  } else {    
+    RooRealIntegral* normInt = (RooRealIntegral*) createIntegral(*depList,*getIntegratorConfig()) ;
+    RooArgSet* normParams = normInt->getVariables() ;
+    if (normParams->getSize()>0 && normParams->getSize()<3 && normInt->numIntRealVars().getSize()>=_minDimNormValueCache) {
+      coutI(Caching) << "RooAbsPdf::syncNormalization(" << GetName() << ") INFO: constructing " << normParams->getSize() 
+		     << "-dim value cache for normalization integral over " << *depList << endl ;
+      string name = Form("%s_CACHE_[%s]",normInt->GetName(),normParams->contentsString().c_str()) ;
+      TIterator* iter = normParams->createIterator() ;
+      RooCachedReal* cachedNorm = new RooCachedReal(name.c_str(),name.c_str(),*normInt,*normParams) ;     
+      cachedNorm->setInterpolationOrder(_valueCacheIntOrder) ;
+      cachedNorm->addOwnedComponents(*normInt) ;
+      _norm = cachedNorm ;
+    } else {
+      _norm = normInt ;
+    } 
+    delete normParams ;
   }
+
+
 
   // Register new normalization with manager (takes ownership)
   cache = new CacheElem(*_norm) ;
@@ -457,6 +475,35 @@ Bool_t RooAbsPdf::syncNormalization(const RooArgSet* nset, Bool_t adjustProxies)
   delete depList ;
   return kTRUE ;
 }
+
+
+
+//_____________________________________________________________________________
+void RooAbsPdf::setNormValueCaching(Int_t minNumIntDim, Int_t ipOrder) 
+{ 
+  // Activate caching of normalization integral values in a interpolated histogram 
+  // for integrals that exceed the specified minimum number of numerically integrated
+  // dimensions, _and_ of which the integral has at most 2 parameters. 
+  //
+  // The cache is scanned with a granularity defined by a binning named "cache" in the 
+  // scanned integral parameters and is interpolated to given order.
+  // The cache values are kept for the livetime of the ROOT session/application
+  // and are persisted along with the object in case the p.d.f. is persisted
+  // in a RooWorkspace
+  // 
+  // This feature can substantially speed up fits and improve convergence with slow 
+  // multi-dimensional integrals whose value varies slowly with the parameters so that the
+  // an interpolated histogram is a good approximation of the true integral value.
+  // The improved convergence behavior is a result of making the value of the normalization
+  // integral deterministic for each value of the parameters. If (multi-dimensional) numeric
+  // integrals are calculated at insufficient precision (>=1e-7) MINUIT convergence may
+  // be impaired by the effects numerical noise that can cause that subsequent evaluations
+  // of an integral at the same point in parameter space can give slightly different answers.
+
+  _minDimNormValueCache = minNumIntDim ; 
+  _valueCacheIntOrder = ipOrder ; 
+}
+
 
 
 

@@ -131,6 +131,11 @@ public:
   virtual Double_t getVal(const RooArgSet* set=0) const ;
   virtual Double_t getLogVal(const RooArgSet* set=0) const ;
 
+  void setNormValueCaching(Int_t minNumIntDim, Int_t ipOrder=2) ;
+  Int_t minDimNormValueCaching() const { return _minDimNormValueCache ; }
+  Int_t intOrderNormValueCaching() const { return _valueCacheIntOrder ; }
+  
+
   Double_t getNorm(const RooArgSet& nset) const { 
     // Get p.d.f normalization term needed for observables 'nset'
     return getNorm(&nset) ; 
@@ -229,6 +234,8 @@ protected:
   mutable Double_t _rawValue ;
   mutable RooAbsReal* _norm   ;      //! Normalization integral (owned by _normMgr)
   mutable RooArgSet* _normSet ;      //! Normalization set with for above integral
+  Int_t _minDimNormValueCache ;      // Minimum number of numerically integrated dimensions to activate normalization value caching
+  Int_t _valueCacheIntOrder ;        // Interpolation order for numeric integral value cache
 
   class CacheElem : public RooAbsCacheElement {
   public:
