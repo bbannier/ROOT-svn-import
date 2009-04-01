@@ -471,6 +471,7 @@ RooAbsReal* RooAbsReal::createIntegral(const RooArgSet& iset, const RooCmdArg ar
 
 
 
+//_____________________________________________________________________________
 RooAbsReal* RooAbsReal::createIntegral(const RooArgSet& iset, const RooArgSet* nset, 
 				       const RooNumIntConfig* cfg, const char* rangeName) const 
 {
@@ -661,11 +662,15 @@ TString RooAbsReal::integralNameSuffix(const RooArgSet& iset, const RooArgSet* n
 {
   // Construct string with unique suffix name to give to integral object that encodes
   // integrated observables, normalization observables and the integration range name
-
+  
   TString name ;
   if (iset.getSize()>0) {
+
+    RooArgSet isetTmp(iset) ;
+    isetTmp.sort() ;  
+
     name.Append("_Int[") ;
-    TIterator* iter = iset.createIterator() ;
+    TIterator* iter = isetTmp.createIterator() ;
     RooAbsArg* arg ;
     Bool_t first(kTRUE) ;
     while((arg=(RooAbsArg*)iter->Next())) {
@@ -687,9 +692,13 @@ TString RooAbsReal::integralNameSuffix(const RooArgSet& iset, const RooArgSet* n
   }
 
   if (nset && nset->getSize()>0 ) {
+
+    RooArgSet nsetTmp(*nset) ;
+    nsetTmp.sort() ;
+
     name.Append("_Norm[") ;
     Bool_t first(kTRUE); 
-    TIterator* iter  = nset->createIterator() ;
+    TIterator* iter  = nsetTmp.createIterator() ;
     RooAbsArg* arg ;
     while((arg=(RooAbsArg*)iter->Next())) {
       if (first) {
@@ -2675,10 +2684,26 @@ RooNumIntConfig* RooAbsReal::defaultIntegratorConfig()
 
 
 //_____________________________________________________________________________
-RooNumIntConfig* RooAbsReal::specialIntegratorConfig() const 
+RooNumIntConfig* RooAbsReal::specialIntegratorConfig() const
 {
   // Returns the specialized integrator configuration for _this_ RooAbsReal.
-  // If this object has no specialized configuration, a null pointer is returned
+  // If this object has no specialized configuration, a null pointer is returned.
+
+  return _specIntegratorConfig ;
+}
+ 
+
+//_____________________________________________________________________________
+RooNumIntConfig* RooAbsReal::specialIntegratorConfig(Bool_t createOnTheFly) 
+{
+  // Returns the specialized integrator configuration for _this_ RooAbsReal.
+  // If this object has no specialized configuration, a null pointer is returned,
+  // unless createOnTheFly is kTRUE in which case a clone of the default integrator
+  // configuration is created, installed as specialized configuration, and returned
+
+  if (!_specIntegratorConfig && createOnTheFly) {
+    _specIntegratorConfig = new RooNumIntConfig(*defaultIntegratorConfig()) ;
+  }
   return _specIntegratorConfig ;
 }
 

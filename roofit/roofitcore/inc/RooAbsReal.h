@@ -149,8 +149,10 @@ public:
   }
 
   const RooNumIntConfig* getIntegratorConfig() const ;
+  RooNumIntConfig* getIntegratorConfig() ;
   static RooNumIntConfig* defaultIntegratorConfig()  ;
   RooNumIntConfig* specialIntegratorConfig() const ;
+  RooNumIntConfig* specialIntegratorConfig(Bool_t createOnTheFly) ;
   void setIntegratorConfig() ;
   void setIntegratorConfig(const RooNumIntConfig& config) ;
 
@@ -323,7 +325,7 @@ protected:
   friend class RooAbsAnaConvPdf ;
   friend class RooRealProxy ;
 
-  RooNumIntConfig* _specIntegratorConfig ; //! Numeric integrator configuration specific for this object
+  RooNumIntConfig* _specIntegratorConfig ; // Numeric integrator configuration specific for this object
 
   Bool_t   _treeVar ;       // !do not persist
 
