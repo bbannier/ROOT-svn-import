@@ -250,6 +250,22 @@ void RooNumIntConfig::setEpsAbs(Double_t newEpsAbs)
 }
 
 
+RooPrintable::StyleOption RooNumIntConfig::defaultPrintStyle(Option_t* opt) const 
+{ 
+  if (!opt) {
+    return kStandard ;
+  }
+
+  TString o(opt) ;
+  o.ToLower() ;
+
+  if (o.Contains("v")) {
+    return kVerbose ;
+  }
+  return kStandard ; 
+}
+
+
 
 //_____________________________________________________________________________
 void RooNumIntConfig::setEpsRel(Double_t newEpsRel) 
