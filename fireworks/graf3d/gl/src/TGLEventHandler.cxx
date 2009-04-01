@@ -269,6 +269,11 @@ Bool_t TGLEventHandler::HandleCrossing(Event_t *event)
    // Handle generic Event_t type 'event' - provided to catch focus changes
    // and terminate any interaction in viewer.
 
+   // Ignore grab and ungrab events.
+   if (event->fCode != 0) {
+      return kTRUE;
+   }
+
    fGLViewer->MouseIdle(0, 0, 0);
    if (event->fType == kEnterNotify) {
       if (fGLViewer->fDragAction != TGLViewer::kDragNone) {
