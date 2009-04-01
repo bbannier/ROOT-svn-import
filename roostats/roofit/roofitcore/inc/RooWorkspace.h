@@ -112,6 +112,8 @@ public:
 
   const TUUID& uuid() const { return _uuid ; }
 
+  RooExpensiveObjectCache& expensiveObjectCache() { return _eocache ; }
+
   class CodeRepo : public TObject {
   public:
     CodeRepo(RooWorkspace* wspace=0) : _wspace(wspace), _compiledOK(kTRUE) {} ;
