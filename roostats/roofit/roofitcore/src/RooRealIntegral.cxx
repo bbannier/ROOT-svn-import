@@ -102,7 +102,6 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
   // config object prescribes how these numeric integrations are configured.
   //
 
-
   //   A) Check that all dependents are lvalues 
   //
   //   B) Check if list of dependents can be re-expressed in        
@@ -129,6 +128,9 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
 				     << (funcNormSet?*funcNormSet:RooArgSet()) << " with range identifier " 
 				     << (rangeName?rangeName:"<none>") << endl ;
 
+  
+  // Choose same expensive object cache as integrand
+  setExpensiveObjectCache(function.expensiveObjectCache()) ;
 
   // Use objects integrator configuration if none is specified
   if (!_iconfig) _iconfig = (RooNumIntConfig*) function.getIntegratorConfig() ;
