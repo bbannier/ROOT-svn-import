@@ -18,6 +18,8 @@
 
 class GAGenome;
 class GAParameterList;
+class GAScalingScheme;
+
 template <class T> class GAAlleleSetArray;
 
 namespace ROOT { 
@@ -44,6 +46,29 @@ public:
     AllScores=0xff
     };
 
+   enum GAlibType {
+      GAlibTypeSimple,
+      GAlibTypeIncremental,
+      GAlibTypeSteadyState,
+      GAlibTypeDeme
+   };
+
+   enum GAlibSelector {
+      GAlibRankSelector,
+      GAlibRouletteWheelSelector,
+      GAlibTournamentSelector,
+      GAlibDSSelector,
+      GAlibSRSSelector,
+      GAlibUniformSelector
+   };
+
+   enum GAlibScaling {
+      GAlibNoScaling,
+      GAlibLinearScaling,
+      GAlibSigmaTruncationScaling,
+      GAlibPowerLawScaling
+   };
+
 public: 
 
    GAlibMinimizer ();
@@ -64,6 +89,11 @@ public:
    virtual unsigned int NDim() const;  
    virtual unsigned int NFree() const;  
 
+   void SetGAType(enum GAlibType type) { fGAType = type; };
+   void SetGASelector(enum GAlibSelector type) { fGASelector = type; };
+   void SetGAScaling(enum GAlibScaling type, double factor) 
+   { fGAScaling = type; fGAScalingFactor = factor; };
+   
    int SetProperty(const char*, const void*);
    int SetProperty(const char* s, int v);
    int SetProperty(const char* s, unsigned int v);
@@ -82,6 +112,10 @@ private:
    const ROOT::Math::IBaseFunctionMultiDim *fObjective;
    double fMinValue;
    double *fX;
+   GAlibType fGAType;
+   GAlibSelector fGASelector;
+   GAlibScaling fGAScaling;
+   double fGAScalingFactor;
    GAParameterList* fParams;
    GAAlleleSetArray<float>* fAllele;
 
