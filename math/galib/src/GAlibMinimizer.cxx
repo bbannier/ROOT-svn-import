@@ -24,7 +24,9 @@ namespace ROOT {
 namespace Math {
    
 GAlibMinimizer::GAlibMinimizer(): 
-   fObjective(0), fMinValue(0), fX(0)
+   fObjective(0), fMinValue(0), fX(0), 
+   fGAType(GAlibTypeSimple), fGASelector(GAlibRouletteWheelSelector),
+   fGAScaling(GAlibLinearScaling), fGAScalingFactor(1.2)
 {
    fParams = new GAParameterList();
    GASimpleGA::registerDefaultParameters(*fParams);
@@ -84,33 +86,89 @@ bool GAlibMinimizer::Minimize()
    assert(fAllele->size());
    GARealGenome genome(*fAllele, Objective, (void*)fObjective);
 
-   GASimpleGA ga(genome);
+   GAGeneticAlgorithm *ga = 0;
+   switch(fGAType) {
+   case GAlibTypeSteadyState:
+      ga = new GASteadyStateGA(genome);
+      break;
+   case GAlibTypeIncremental:
+      ga = new GAIncrementalGA(genome);
+      break;
+   case GAlibTypeDeme:
+      ga = new GADemeGA(genome);
+      break;
+   case GAlibTypeSimple:
+   default:
+      ga = new GASimpleGA(genome);
+   }
 
-   GASigmaTruncationScaling scale;
-   ga.scaling(scale);		// set the scaling method to our sharing
+   GASelectionScheme* selector = 0;
+   switch(fGASelector) {
+   case GAlibRankSelector:
+      selector = new GARankSelector();
+      break;
+   case GAlibTournamentSelector:
+      selector = new GATournamentSelector();
+      break;
+   case GAlibDSSelector:
+      selector = new GADSSelector();
+      break;
+   case GAlibSRSSelector:
+      selector = new GASRSSelector();
+      break;
+   case GAlibUniformSelector:
+      selector = new GAUniformSelector();
+      break;
+   default:
+   case GAlibRouletteWheelSelector:
+      selector = new GARouletteWheelSelector();
+      break;
+   }
 
-   ga.parameters(*fParams);
-   ga.initialize();
+   ga->selector(*selector);
+
+   GAScalingScheme* scale;
+   switch(fGAScaling) {
+   case GAlibNoScaling:
+      scale = new GANoScaling();
+      break;
+   case GAlibSigmaTruncationScaling:
+      scale = new GASigmaTruncationScaling(fGAScalingFactor);
+      break;
+   case GAlibPowerLawScaling:
+      scale = new GAPowerLawScaling( (int)fGAScalingFactor);
+      break;
+   default:
+   case GAlibLinearScaling:
+      scale = new GALinearScaling(fGAScalingFactor);
+      break;      
+   }
+
+   //GASigmaTruncationScaling scale;
+   ga->scaling(*scale);		// set the scaling method to our sharing
+
+   ga->parameters(*fParams);
+   ga->initialize();
    
 // dump the initial population to file
    ofstream outfile;
 
    cout << "printing initial population to file..." << endl;
    outfile.open("popi.dat", (STD_IOS_OUT | STD_IOS_TRUNC));
-   for(int ii=0; ii<ga.population().size(); ii++){
-      genome = ga.population().individual(ii);
+   for(int ii=0; ii<ga->population().size(); ii++){
+      genome = ga->population().individual(ii);
       outfile << genome.gene(0) << "\t" << genome.score() << "\n";
    }
    outfile.close();
 
-   while(!ga.done()) ga.step();
+   while(!ga->done()) ga->step();
 
 // dump the final population to file
    
    cout << "printing final population to file..." << endl;
    outfile.open("popf.dat", (STD_IOS_OUT | STD_IOS_TRUNC));
-   for(int i=0; i<ga.population().size(); i++){
-      genome = ga.population().individual(i);
+   for(int i=0; i<ga->population().size(); i++){
+      genome = ga->population().individual(i);
       outfile << genome.gene(0) << "\t" << genome.score() << "\n";
    }
    outfile.close();
@@ -127,11 +185,15 @@ bool GAlibMinimizer::Minimize()
    // save min values and array
    if ( fX ) delete fX;
    fX = new double[fAllele->size()];
-   genome = ga.population().individual(0);
+   genome = ga->population().individual(0);
    for ( int i = 0; i < fAllele->size(); ++i )
       fX[i] = genome.gene(i);
    fMinValue = genome.score();
    
+   delete ga;
+   delete selector;
+   delete scale;
+
    return true;
 }  
    
