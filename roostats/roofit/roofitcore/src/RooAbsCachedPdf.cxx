@@ -183,7 +183,7 @@ RooAbsCachedPdf::PdfCacheElem* RooAbsCachedPdf::getCache(const RooArgSet* nset, 
     fillCacheObject(*cache) ;  
 
     RooDataHist* eoclone = new RooDataHist(*cache->hist()) ;
-    eoclone->removeFromDir(eoclone) ;
+    eoclone->removeSelfFromDir() ;
     expensiveObjectCache().registerObject(GetName(),cache->hist()->GetName(),*eoclone,cache->paramTracker()->parameters()) ;
   } 
 
@@ -222,10 +222,11 @@ RooAbsCachedPdf::PdfCacheElem::PdfCacheElem(const RooAbsCachedPdf& self, const R
 
   // Create RooDataHist
   TString hname = self.inputBaseName() ;
-  hname.Append("_CACHEHIST_") ;
+  hname.Append("_CACHEHIST") ;
   hname.Append(self.cacheNameSuffix(orderedObs)) ;
-
+  hname.Append(self.histNameSuffix()) ;
   _hist = new RooDataHist(hname,hname,orderedObs,self.binningName()) ;
+  _hist->removeSelfFromDir() ;
 
   //RooArgSet* observables= self.getObservables(orderedObs) ;
   // cout << "orderedObs = " << orderedObs << " observables = " << *observables << endl ;
