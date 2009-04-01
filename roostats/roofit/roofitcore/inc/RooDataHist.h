@@ -123,6 +123,8 @@ public:
 
   Int_t getIndex(const RooArgSet& coord) ;
 
+  void removeSelfFromDir() { removeFromDir(this) ; }
+  
 protected:
 
   friend class RooAbsCachedPdf ;
@@ -135,7 +137,7 @@ protected:
 
   void setAllWeights(Double_t value) ;
  
-  void initialize(Bool_t fillTree=kTRUE) ;
+  void initialize(const char* binningName=0,Bool_t fillTree=kTRUE) ;
   RooDataHist(const char* name, const char* title, RooDataHist* h, const RooArgSet& varSubset, 
 	      const RooFormulaVar* cutVar, const char* cutRange, Int_t nStart, Int_t nStop, Bool_t copyCache) ;
   RooAbsData* reduceEng(const RooArgSet& varSubset, const RooFormulaVar* cutVar, const char* cutRange=0, 
@@ -169,16 +171,10 @@ protected:
   mutable Int_t    _curIndex ; // Current index
 
   mutable std::vector<Double_t>* _pbinv ; //! Partial bin volume array
-  mutable RooCacheManager<std::vector<Double_t> > _pbinvCacheMgr ; // Cache manager for arrays of partial bin volumes
+  mutable RooCacheManager<std::vector<Double_t> > _pbinvCacheMgr ; //! Cache manager for arrays of partial bin volumes
   std::list<RooAbsLValue*> _lvvars ; //! List of observables casted as RooAbsLValue
   std::list<const RooAbsBinning*> _lvbins ; //! List of used binnings associated with lvalues
 
-  char* _binningName ;               //!Name of binning to be used to define grid
-  inline const char* bname() const { 
-    // Return name of binning to be used for RooDataHist bin definition
-    return _binningName ; 
-  }
-    
 private:
 
   ClassDef(RooDataHist,2) // Binned data set
