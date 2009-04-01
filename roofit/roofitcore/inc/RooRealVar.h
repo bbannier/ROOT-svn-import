@@ -131,12 +131,12 @@ public:
   RooLinkedList _altNonSharedBinning ; // Non-shareable alternative binnings
 
   inline RooRealVarSharedProperties* sharedProp() const {
-     if (!_sharedProp) {
-     	_sharedProp = (RooRealVarSharedProperties*) _sharedPropList.registerProperties(new RooRealVarSharedProperties()) ;
-     }
-     return _sharedProp ;
+    if (!_sharedProp) {
+      _sharedProp = (RooRealVarSharedProperties*) _sharedPropList.registerProperties(new RooRealVarSharedProperties()) ;
+    }
+    return _sharedProp ;
   }
-
+  
   static RooSharedPropertiesList _sharedPropList; // List of properties shared among clone sets 
   static RooRealVarSharedProperties _nullProp ; // Null property
   mutable RooRealVarSharedProperties* _sharedProp ; //! Shared properties associated with this instance

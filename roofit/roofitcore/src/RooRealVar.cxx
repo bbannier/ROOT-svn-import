@@ -1058,14 +1058,12 @@ void RooRealVar::Streamer(TBuffer &R__b)
       R__b >> _sharedProp ;
       _sharedProp = (RooRealVarSharedProperties*) _sharedPropList.registerProperties(_sharedProp,kFALSE) ;
     }
-    if (R__v==4) {
+    if (R__v>=4) {
       RooRealVarSharedProperties* tmpSharedProp = new RooRealVarSharedProperties() ;
       tmpSharedProp->Streamer(R__b) ;
       if (!(_nullProp==*tmpSharedProp)) {
-	// 	  cout << "RooRealVar::streamer registering shared prop " << tmpSharedProp << endl ;
 	_sharedProp = (RooRealVarSharedProperties*) _sharedPropList.registerProperties(tmpSharedProp,kFALSE) ;
       } else {
-	// 	  cout << "RooRealVar::streamer deleting shared prop " << tmpSharedProp << endl ;
 	delete tmpSharedProp ;
 	_sharedProp = 0 ;
       }
