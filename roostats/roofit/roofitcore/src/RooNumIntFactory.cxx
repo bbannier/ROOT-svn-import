@@ -66,6 +66,8 @@ RooNumIntFactory::RooNumIntFactory()
   // Constructor. Register all known integrators by calling
   // their static registration functions
 
+  _instance = this ;
+
   RooIntegrator1D::registerIntegrator(*this) ;
   RooIntegrator2D::registerIntegrator(*this) ;
   RooSegmentedIntegrator1D::registerIntegrator(*this) ;
@@ -112,7 +114,7 @@ RooNumIntFactory& RooNumIntFactory::instance()
   // Static method returning reference to singleton instance of factory
 
   if (_instance==0) {
-    _instance = new RooNumIntFactory ;
+    new RooNumIntFactory ;
     RooSentinel::activate() ;
   } 
   return *_instance ;
