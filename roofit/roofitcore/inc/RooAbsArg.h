@@ -377,6 +377,8 @@ public:
   void removeServer(RooAbsArg& server, Bool_t force=kFALSE) ;
   RooAbsArg *findNewServer(const RooAbsCollection &newSet, Bool_t nameChange) const;
 
+  RooExpensiveObjectCache& expensiveObjectCache() const ;
+
  protected:
 
   // Proxy management
@@ -400,7 +402,7 @@ public:
   std::map<std::string,std::string> _stringAttrib ; // String attributes
   std::set<std::string> _boolAttribTransient ; //! Transient boolean attributes (not copied in ctor)
 
-void printAttribList(ostream& os) const;
+  void printAttribList(ostream& os) const;
 
   // Hooks for RooTreeData interface
   friend class RooTreeData ;
@@ -440,7 +442,6 @@ void printAttribList(ostream& os) const;
   mutable Bool_t _prohibitServerRedirect ; //! Prohibit server redirects -- Debugging tool
 
   void setExpensiveObjectCache(RooExpensiveObjectCache& cache) { _eocache = &cache ; }  
-  RooExpensiveObjectCache& expensiveObjectCache() const ;
   mutable RooExpensiveObjectCache* _eocache ; // Pointer to global cache manager for any expensive components created by this object
   
   ClassDef(RooAbsArg,4) // Abstract variable
