@@ -1914,7 +1914,7 @@ std::string RooFactoryWSTool::SpecialsIFace::create(RooFactoryWSTool& ft, const 
     RooAbsPdf* projection = pdf.createProjection(ft.asSET(pargv[1].c_str())) ;
     projection->SetName(instName) ;
 
-    if (ft.ws().import(*projection)) ft.logError() ;
+    if (ft.ws().import(*projection,Silence())) ft.logError() ;
 
   } else {
 
