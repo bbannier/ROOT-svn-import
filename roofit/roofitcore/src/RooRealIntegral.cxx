@@ -63,6 +63,8 @@ RooRealIntegral::RooRealIntegral() :
   _numIntegrand(0),
   _params(0)
 {
+  _facListIter = _facList.createIterator() ;
+  _jacListIter = _jacList.createIterator() ;
 }
 
 
@@ -641,7 +643,6 @@ Bool_t RooRealIntegral::initNumIntegrator() const
 
   _restartNumIntEngine = kFALSE ;
   return kTRUE;
-
 }
 
 
@@ -700,6 +701,24 @@ RooRealIntegral::~RooRealIntegral()
   delete _jacListIter ;
   if (_sumCatIter)  delete _sumCatIter ;
 }
+
+
+
+
+
+//_____________________________________________________________________________
+RooAbsReal* RooRealIntegral::createIntegral(const RooArgSet& iset, const RooArgSet* nset, const RooNumIntConfig* cfg, const char* rangeName) const 
+{
+  // Special handling of integral of integral, return RooRealIntegral that represents integral over all dimensions in one pass
+  RooArgSet isetAll(iset) ;
+  isetAll.add(_sumList) ;
+  isetAll.add(_intList) ;
+  isetAll.add(_anaList) ;
+  isetAll.add(_facList) ;
+
+  return _function.arg().createIntegral(isetAll,nset,cfg,rangeName) ;
+}
+
 
 
 
@@ -804,6 +823,8 @@ Double_t RooRealIntegral::evaluate() const
     ccxcoutD(Tracing) << "raw*fact = " << retVal << endl ;
 
   }
+
+  //   cout << "RooRealIntegral::evaluate(" << GetName() << ") value = " << retVal << endl ;
 
   return retVal ;
 }

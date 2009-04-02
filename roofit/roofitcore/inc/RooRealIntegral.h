@@ -67,6 +67,8 @@ public:
     return _function.arg().plotSamplingHint(obs,xlo,xhi) ;
   }
 
+  virtual RooAbsReal* createIntegral(const RooArgSet& iset, const RooArgSet* nset=0, const RooNumIntConfig* cfg=0, const char* rangeName=0) const ;  
+
 protected:
 
   mutable Bool_t _valid;
