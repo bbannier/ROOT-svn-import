@@ -237,6 +237,11 @@ Double_t RooAbsReal::traceEval(const RooArgSet* /*nset*/) const
   // Calculate current value of object, with error tracing wrapper
 
   Double_t value = evaluate() ;
+
+  if (isnan(value)) {
+    logEvalError("function value is NAN") ;
+  }
+
   cxcoutD(Tracing) << "RooAbsReal::getVal(" << GetName() << ") operMode = " << _operMode << " recalculated, new value = " << value << endl ;
   
   //Standard tracing code goes here
@@ -2391,6 +2396,9 @@ RooAbsFunc *RooAbsReal::bindVars(const RooArgSet &vars, const RooArgSet* nset, B
   return binding;
 }
 
+
+
+//_____________________________________________________________________________
 void RooAbsReal::copyCache(const RooAbsArg* source, Bool_t /*valueOnly*/) 
 {
   // Copy the cached value of another RooAbsArg to our cache.
@@ -2417,6 +2425,7 @@ void RooAbsReal::copyCache(const RooAbsArg* source, Bool_t /*valueOnly*/)
 
 
 
+//_____________________________________________________________________________
 void RooAbsReal::attachToTree(TTree& t, Int_t bufSize)
 {
   // Attach object to a branch of given TTree. By default it will
