@@ -455,7 +455,6 @@ Bool_t RooAbsPdf::syncNormalization(const RooArgSet* nset, Bool_t adjustProxies)
       coutI(Caching) << "RooAbsPdf::syncNormalization(" << GetName() << ") INFO: constructing " << normParams->getSize() 
 		     << "-dim value cache for normalization integral over " << *depList << endl ;
       string name = Form("%s_CACHE_[%s]",normInt->GetName(),normParams->contentsString().c_str()) ;
-      TIterator* iter = normParams->createIterator() ;
       RooCachedReal* cachedNorm = new RooCachedReal(name.c_str(),name.c_str(),*normInt,*normParams) ;     
       cachedNorm->setInterpolationOrder(_valueCacheIntOrder) ;
       cachedNorm->addOwnedComponents(*normInt) ;
@@ -1902,10 +1901,19 @@ RooPlot* RooAbsPdf::plotOn(RooPlot* frame, RooLinkedList& cmdList) const
     } else {
       dirSelNodes = (RooArgSet*) branchNodeSet.selectByName(compSpec) ;
     }
-    coutI(Plotting) << "RooAbsPdf::plotOn(" << GetName() << ") directly selected PDF components: " << *dirSelNodes << endl ;
-    
-    // Do indirect selection and activate both
-    plotOnCompSelect(dirSelNodes) ;
+    if (dirSelNodes->getSize()>0) {
+      coutI(Plotting) << "RooAbsPdf::plotOn(" << GetName() << ") directly selected PDF components: " << *dirSelNodes << endl ;
+      
+      // Do indirect selection and activate both
+      plotOnCompSelect(dirSelNodes) ;
+    } else {
+      if (compSet) {
+	coutE(Plotting) << "RooAbsPdf::plotOn(" << GetName() << ") ERROR: component selection set " << *compSet << " does not match any components of p.d.f." << endl ;
+      } else {
+	coutE(Plotting) << "RooAbsPdf::plotOn(" << GetName() << ") ERROR: component selection expression '" << compSpec << "' does not select any components of p.d.f." << endl ;
+      }
+      return 0 ;
+    }
 
     delete dirSelNodes ;
   }
