@@ -69,10 +69,6 @@ TFitParametersDialog::TFitParametersDialog(const TGWindow *p,
 {
    // Create a dialog for fit function parameters' settings.
 
-   fFunc->SetParNames("Amp1","Mean1","Sigma1","Amp2","Mean2","Sigma2");
-   printf("use fixed par names\n");
-   fFunc->SetRange(0,10);
-
    SetCleanup(kDeepCleanup);
 
    fFunc->GetRange(fRangexmin, fRangexmax);
