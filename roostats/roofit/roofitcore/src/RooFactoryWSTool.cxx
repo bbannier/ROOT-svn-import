@@ -57,6 +57,7 @@
 #include "RooAddition.h"
 #include "RooChi2Var.h"
 #include "RooNLLVar.h"
+#include "RooRealSumPdf.h"
 #include "TROOT.h"
 
 using namespace RooFit ;
@@ -75,6 +76,7 @@ static Int_t init()
   // Operator p.d.f.s
   RooFactoryWSTool::registerSpecial("SUM",iface) ;
   RooFactoryWSTool::registerSpecial("RSUM",iface) ;
+  RooFactoryWSTool::registerSpecial("ASUM",iface) ;
   RooFactoryWSTool::registerSpecial("PROD",iface) ;
   RooFactoryWSTool::registerSpecial("SIMUL",iface) ;
   RooFactoryWSTool::registerSpecial("EXPR",iface) ;
@@ -452,6 +454,47 @@ RooAddPdf* RooFactoryWSTool::add(const char *objName, const char* specList, Bool
 
 
 //_____________________________________________________________________________
+RooRealSumPdf* RooFactoryWSTool::amplAdd(const char *objName, const char* specList)
+{
+
+  // Spec list is of form a*A,b*B,c*C,D [ *d]
+
+  RooArgList amplList ;
+  RooArgList coefList ;
+  RooArgList amplList2 ;
+
+  try {
+
+    char buf[1024] ;
+    strcpy(buf,specList) ;
+    char* save ;
+    char* tok = strtok_r(buf,",",&save) ;
+    while(tok) {
+      char* star=strchr(tok,'*') ;
+      if (star) {
+	*star=0 ;
+	amplList.add(asFUNC(star+1)) ;
+	coefList.add(asFUNC(tok)) ;
+      } else {
+	amplList2.add(asFUNC(tok)) ;
+      }
+      tok = strtok_r(0,",",&save) ;
+    }
+    amplList.add(amplList2) ;
+
+  } catch (string err) {
+    coutE(ObjectHandling) << "RooFactoryWSTool::add(" << objName << ") ERROR creating RooRealSumPdf: " << err << endl ;    
+    logError() ;
+    return 0 ;
+  }
+  
+  RooRealSumPdf* pdf =  new RooRealSumPdf(objName,objName,amplList,coefList) ;
+  if (_ws->import(*pdf,Silence())) logError() ;
+  return (RooRealSumPdf*) _ws->pdf(objName) ;
+}
+
+
+//_____________________________________________________________________________
 RooProdPdf* RooFactoryWSTool::prod(const char *objName, const char* pdfList) 
 {
   _of = this ;
@@ -678,7 +721,8 @@ RooAbsArg* RooFactoryWSTool::process(const char* expr)
   //
   //
   // SUM::name(f1*pdf1,f2*pdf2,pdf3]  -- Create sum p.d.f name with value f1*pdf1+f2*pdf2+(1-f1-f2)*pdf3
-  // RSUM::name(f1*pdf1,f2*pdf2,pdf3] -- Create recursive sum pd.f. name with value f1*pdf1 + (1-f1)(f2*pdf2 + (1-f2)pdf3)
+  // RSUM::name(f1*pdf1,f2*pdf2,pdf3] -- Create recursive sum p.d.f. name with value f1*pdf1 + (1-f1)(f2*pdf2 + (1-f2)pdf3)
+  // ASUM::name(f1*amp1,f2*amp2,amp3] -- Create sum p.d.f. name with value f1*amp1+f2*amp2+(1-f1-f2)*amp3 where amplX are amplitudes of type RooAbsReal
   // sum::name(a1,a2,a3]              -- Create sum function with value a1+a2+a3
   // sum::name(a1*b1,a2*b2,a3*b 3]    -- Create sum function with value a1*b1+a2*b2+a3*b3
   //
@@ -1724,6 +1768,11 @@ std::string RooFactoryWSTool::SpecialsIFace::create(RooFactoryWSTool& ft, const 
 
     // RSUM::name[a*A,b*B,C]
     ft.add(instName,pargs,kTRUE) ;
+
+  } else if (cl=="ASUM") {
+
+    // ASUM::name[a*A,b*B,C]
+    ft.amplAdd(instName,pargs) ;
 
   } else if (cl=="PROD") {
 
