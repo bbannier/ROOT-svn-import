@@ -69,6 +69,13 @@ public:
       GAlibPowerLawScaling
    };
 
+   enum {
+      GAlibNothing=0x00,
+      GAlibInitialPop=0x01,
+      GAlibFinalPop=0x02,
+      GAlibParam=0x04
+   };
+
 public: 
 
    GAlibMinimizer ();
@@ -91,6 +98,8 @@ public:
 
    void SetGAType(enum GAlibType type) { fGAType = type; };
    void SetGASelector(enum GAlibSelector type) { fGASelector = type; };
+   void SetGAVerbose(int verbose) { fVerbose = verbose; };
+   void SetGASeed(int seed) { fSeed = seed; };
    void SetGAScaling(enum GAlibScaling type, double factor) 
    { fGAScaling = type; fGAScalingFactor = factor; };
    
@@ -116,6 +125,8 @@ private:
    GAlibSelector fGASelector;
    GAlibScaling fGAScaling;
    double fGAScalingFactor;
+   int fVerbose;
+   unsigned int fSeed;
    GAParameterList* fParams;
    GAAlleleSetArray<float>* fAllele;
 
