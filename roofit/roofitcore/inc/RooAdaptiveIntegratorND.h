@@ -42,6 +42,8 @@ public:
 
 protected:
   
+  RooAdaptiveIntegratorND(const RooAdaptiveIntegratorND&) ;
+
   mutable Double_t* _xmin ;  // Lower bound in each dimension
   mutable Double_t* _xmax ;  // Upper bound in each dimension
   Double_t _epsRel ; // Relative precision

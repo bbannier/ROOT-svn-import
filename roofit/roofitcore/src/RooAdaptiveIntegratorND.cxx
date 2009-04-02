@@ -82,6 +82,7 @@ RooAdaptiveIntegratorND::RooAdaptiveIntegratorND(const RooAbsFunc& function, con
   // Constructor of integral on given function binding and with given configuration. The
   // integration limits are taken from the definition in the function binding
   //_func = function.
+
   _func = new RooMultiGenFunction(function) ;  
   _nWarn = static_cast<Int_t>(config.getConfigSection("RooAdaptiveIntegratorND").getRealValue("maxWarn")) ;
   switch (_func->NDim()) {
@@ -95,6 +96,8 @@ RooAdaptiveIntegratorND::RooAdaptiveIntegratorND(const RooAbsFunc& function, con
 
   _xmin = 0 ;
   _xmax = 0 ;
+  _nError = 0 ;
+  _nWarn = 0 ;
   checkLimits() ;
 } 
 
@@ -104,8 +107,10 @@ RooAdaptiveIntegratorND::RooAdaptiveIntegratorND(const RooAbsFunc& function, con
 RooAbsIntegrator* RooAdaptiveIntegratorND::clone(const RooAbsFunc& function, const RooNumIntConfig& config) const
 {
   // Virtual constructor with given function and configuration. Needed by RooNumIntFactory
+
+  RooAbsIntegrator* ret = new RooAdaptiveIntegratorND(function,config) ;
   
-  return new RooAdaptiveIntegratorND(function,config) ;
+  return ret ;
 }
 
 
@@ -115,13 +120,14 @@ RooAbsIntegrator* RooAdaptiveIntegratorND::clone(const RooAbsFunc& function, con
 RooAdaptiveIntegratorND::~RooAdaptiveIntegratorND()
 {
   // Destructor
-  delete _xmin ;
-  delete _xmax ;
+  delete[] _xmin ;
+  delete[] _xmax ;
   delete _integrator ;
   delete _func ;
   if (_nError>_nWarn) {
     coutW(NumIntegration) << "RooAdaptiveIntegratorND::dtor(" << integrand()->getName() << ") WARNING: Number of suppressed warningings about integral evaluations where target precision was not reached is " << _nError-_nWarn << endl ;
   }
+
 }
 
 
