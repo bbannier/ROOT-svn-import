@@ -42,6 +42,7 @@ class RooAbsCategory ;
 class RooResolutionModel ;
 class RooAddition ;
 class RooProduct ;
+class RooRealSumPdf ;
 
 class RooFactoryWSTool : public TNamed, public RooPrintable {
 
@@ -63,6 +64,7 @@ public:
 
   // Create operator p.d.f.s
   RooAddPdf* add(const char *objName, const char* specList, Bool_t recursiveCoefs=kFALSE) ;
+  RooRealSumPdf* amplAdd(const char *objName, const char* specList) ;
   RooProdPdf* prod(const char *objName, const char* pdfList) ;
   RooSimultaneous* simul(const char* objName, const char* indexCat, const char* pdfMap) ;
 
