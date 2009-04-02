@@ -26,7 +26,8 @@ namespace Math {
 GAlibMinimizer::GAlibMinimizer(): 
    fObjective(0), fMinValue(0), fX(0), 
    fGAType(GAlibTypeSimple), fGASelector(GAlibRouletteWheelSelector),
-   fGAScaling(GAlibLinearScaling), fGAScalingFactor(1.2)
+   fGAScaling(GAlibLinearScaling), fGAScalingFactor(1.2),
+   fVerbose(0), fSeed(0)
 {
    fParams = new GAParameterList();
    GASimpleGA::registerDefaultParameters(*fParams);
@@ -37,9 +38,6 @@ GAlibMinimizer::GAlibMinimizer():
 
 GAlibMinimizer::~GAlibMinimizer()
 {
-   cout << "Writing parameters... ";
-   fParams->write("parameters.dat");
-   cout << "done!" << endl;
    if ( fX ) delete fX;
    if ( fParams ) delete fParams;
    if ( fAllele ) delete fAllele;
@@ -145,42 +143,45 @@ bool GAlibMinimizer::Minimize()
    }
 
    //GASigmaTruncationScaling scale;
-   ga->scaling(*scale);		// set the scaling method to our sharing
+   ga->scaling(*scale);	
 
    ga->parameters(*fParams);
    ga->initialize();
    
+   if ( fVerbose & GAlibParam )
+      fParams->write("parameters.dat");
+
 // dump the initial population to file
-   ofstream outfile;
-
-   cout << "printing initial population to file..." << endl;
-   outfile.open("popi.dat", (STD_IOS_OUT | STD_IOS_TRUNC));
-   for(int ii=0; ii<ga->population().size(); ii++){
-      genome = ga->population().individual(ii);
-      outfile << genome.gene(0) << "\t" << genome.score() << "\n";
+   if ( fVerbose & GAlibInitialPop ) {
+      ofstream outfile;
+      outfile.open("popi.dat", (STD_IOS_OUT | STD_IOS_TRUNC));
+      for(int ii=0; ii<ga->population().size(); ii++){
+         genome = ga->population().individual(ii);
+         outfile << genome.gene(0) << "\t" << genome.score() << "\n";
+      }
+      outfile.close();
    }
-   outfile.close();
 
-   while(!ga->done()) ga->step();
+   //while(!ga->done()) ga->step();
+   ga->evolve(fSeed);
 
 // dump the final population to file
-   
-   cout << "printing final population to file..." << endl;
-   outfile.open("popf.dat", (STD_IOS_OUT | STD_IOS_TRUNC));
-   for(int i=0; i<ga->population().size(); i++){
-      genome = ga->population().individual(i);
-      outfile << genome.gene(0) << "\t" << genome.score() << "\n";
+   if ( fVerbose & GAlibFinalPop ) {
+      ofstream outfile;
+      outfile.open("popf.dat", (STD_IOS_OUT | STD_IOS_TRUNC));
+      for(int i=0; i<ga->population().size(); i++){
+         genome = ga->population().individual(i);
+         outfile << genome.gene(0) << "\t" << genome.score() << "\n";
+      }
+      outfile.close();
    }
-   outfile.close();
    
 // dump the function to file so you can plot the population on it
-   
-   cout << "printing function to file..." << endl;
-   outfile.open("sinusoid.dat", (STD_IOS_OUT | STD_IOS_TRUNC));
-   for(float x=MIN_VALUE; x<=MAX_VALUE; x+=INC){
-      outfile << genome.gene(0,x) << "\t" << genome.score() << "\n";
-   }
-   outfile.close();
+//    outfile.open("sinusoid.dat", (STD_IOS_OUT | STD_IOS_TRUNC));
+//    for(float x=MIN_VALUE; x<=MAX_VALUE; x+=INC){
+//       outfile << genome.gene(0,x) << "\t" << genome.score() << "\n";
+//    }
+//    outfile.close();
    
    // save min values and array
    if ( fX ) delete fX;
