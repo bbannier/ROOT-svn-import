@@ -92,6 +92,7 @@
 #pragma link C++ class RooNumGenConfig+ ;
 #pragma link C++ class RooNumGenFactory+ ;
 #pragma link C++ class RooMultiVarGaussian+ ;
+#pragma link C++ class RooXYChi2Var+ ;
 #pragma link C++ namespace RooCintUtils+ ;
 #pragma link off class RooErrorHandler+ ;
 #pragma link off class RooNag+ ;
