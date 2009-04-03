@@ -52,7 +52,7 @@ public:
   virtual Bool_t changeObservableName(const char* from, const char* to) = 0 ;
 
   // Add one ore more rows of data
-  virtual void add(const RooArgSet& row, Double_t weight=1) = 0 ;
+  virtual void add(const RooArgSet& row, Double_t weight=1, Double_t weightError=0) = 0 ;
   virtual void fill() = 0 ;
 
   // Load a given row of data
