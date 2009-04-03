@@ -2247,7 +2247,7 @@ void RooTreeData::printMultiline(ostream& os, Int_t content, Bool_t verbose, TSt
   if (!verbose) {
     os << indent << "  Observables " << _vars << endl ;
   } else {
-    os << indent << "  Observables: " ;
+    os << indent << "  Observables: " << endl ;
     _vars.printStream(os,kName|kValue|kExtras|kTitle,kVerbose,indent+"  ") ;
   }
 
