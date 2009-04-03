@@ -409,13 +409,12 @@ Double_t RooRealSumPdf::analyticalIntegralWN(Int_t code, const RooArgSet* normSe
 //_____________________________________________________________________________
 Double_t RooRealSumPdf::expectedEvents(const RooArgSet* nset) const 
 {  
-
   _coefIter->Reset() ;
   
   Double_t coefSum(0) ;
   RooAbsReal* coef ;
   while((coef=(RooAbsReal*)_coefIter->Next())) {
-    coefSum += coef->getVal() ;
+    coefSum += coef->getVal(nset) ;
   }
   
   return coefSum ;
