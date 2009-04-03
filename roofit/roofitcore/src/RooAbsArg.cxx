@@ -1340,6 +1340,7 @@ void RooAbsArg::printMultiline(ostream& os, Int_t /*contents*/, Bool_t /*verbose
       TString moreIndent(indent) ;
       moreIndent.Append("    ") ;
       ((RooSetProxy*)proxy)->printStream(os,kName,kStandard,moreIndent.Data()) ;
+      os << endl ;
     }
   }
 }
