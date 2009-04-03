@@ -96,6 +96,8 @@ RooCmdArg WeightVar(const RooRealVar& arg) ;
 RooCmdArg Import(const char* state, RooDataSet& data) ;
 RooCmdArg Import(RooDataSet& data) ;
 RooCmdArg Import(TTree& tree) ;
+RooCmdArg StoreError(const RooArgSet& aset) ; 
+RooCmdArg StoreAsymError(const RooArgSet& aset) ; 
 
 // RooChi2Var::ctor arguments
 RooCmdArg Extended(Bool_t flag=kTRUE) ;
