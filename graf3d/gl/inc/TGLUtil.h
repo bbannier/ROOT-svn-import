@@ -897,6 +897,49 @@ inline void TGLMatrix::GetBaseVec(Int_t b, Double_t* x) const
 
 
 //////////////////////////////////////////////////////////////////////////
+//
+// TGLColor
+//
+// Encapsulate color in preferred GL format - UChar_t RGBA array.
+//
+//////////////////////////////////////////////////////////////////////////
+
+class TGLColor
+{
+protected:
+   UChar_t fRGBA[4];
+
+public:
+   TGLColor();
+   TGLColor(UChar_t r, UChar_t g, UChar_t b, UChar_t a=255);
+   TGLColor(Float_t r, Float_t g, Float_t b, Float_t a=1);
+   TGLColor(Color_t color_index, Char_t transparency=0);
+
+   UChar_t*        Arr()       { return fRGBA; }
+   const UChar_t* CArr() const { return fRGBA; }
+
+   UChar_t GetRed()   const { return fRGBA[0]; }
+   UChar_t GetGreen() const { return fRGBA[1]; }
+   UChar_t GetBlue()  const { return fRGBA[2]; }
+   UChar_t GetAlpha() const { return fRGBA[3]; }
+
+   void SetRed(UChar_t v)   { fRGBA[0] = v; }
+   void SetGreen(UChar_t v) { fRGBA[1] = v; }
+   void SetBlue(UChar_t v)  { fRGBA[2] = v; }
+   void SetAlpha(UChar_t v) { fRGBA[3] = v; }
+
+   void SetColor(UChar_t r, UChar_t g, UChar_t b, UChar_t a=255);
+   void SetColor(Float_t r, Float_t g, Float_t b, Float_t a=1);
+   void SetColor(Color_t color_index);
+   void SetColor(Color_t color_index, Char_t transparency);
+   void SetTransparency(Char_t transparency);
+
+   TString AsString() const;
+
+   ClassDef(TGLColor, 0); // Color in preferred GL format - RGBA.
+};
+
+//////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TGLUtil                                                              //
 //                                                                      //

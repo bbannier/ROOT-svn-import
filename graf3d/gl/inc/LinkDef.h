@@ -20,6 +20,7 @@
 #pragma link C++ class TGLRect;
 #pragma link C++ class TGLPlane;
 #pragma link C++ class TGLMatrix;
+#pragma link C++ class TGLColor;
 #pragma link C++ class TGLUtil;
 #pragma link C++ class TGLUtil::TColorLocker;
 #pragma link C++ class TGLUtil::TDrawQualityModifier;
