@@ -35,7 +35,7 @@ protected:
 
 private:
 
-  ClassDef(NuMuToNuE_Oscillation,1) // Your description goes here...
+  //  ClassDef(NuMuToNuE_Oscillation,1) // Your description goes here...
 };
  
 #endif

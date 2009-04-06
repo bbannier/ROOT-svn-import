@@ -23,8 +23,8 @@ a weighted set of points (eg. for the FFT method).
 The class supports merging.
 */
 
-
 #include "RooStats/SamplingDistribution.h"
+#include "RooNumber.h"
 #include "math.h"
 #include <algorithm>
 #include <iostream>
@@ -107,57 +107,87 @@ void SamplingDistribution::Add(SamplingDistribution* other)
 //_______________________________________________________
 Double_t SamplingDistribution::InverseCDF(Double_t pvalue)
 {
-   // merge SamplingDistributions
+   // returns the inverse of the cumulative distribution function
 
-  if(fSamplingDist.size() == 0) return 0;
-
-  // will need to deal with weights, but for now:
-  sort(fSamplingDist.begin(), fSamplingDist.end());
-  if(pvalue<0. ) return fSamplingDist[0]; // should return min of the test statistic instead
-  if( pvalue > 1.) return fSamplingDist[fSamplingDist.size() - 1]; // should return the max of the test statistic instead
-  
-  return fSamplingDist[(unsigned int) (pvalue*fSamplingDist.size())];
+  Double_t dummy=0;
+  return InverseCDF(pvalue,0,dummy);
 }
 
 //_______________________________________________________
 Double_t SamplingDistribution::InverseCDF(Double_t pvalue, 
-					  Double_t& sigmaVariation, 
+					  Double_t sigmaVariation, 
 					  Double_t& inverseWithVariation)
 {
-   // merge SamplingDistributions
-
-  if(fSamplingDist.size() == 0) return 0;
+   // returns the inverse of the cumulative distribution function, with variations depending on number of samples
 
   // will need to deal with weights, but for now:
   sort(fSamplingDist.begin(), fSamplingDist.end());
-  if(pvalue<0. ) return fSamplingDist[0]; // should return min of the test statistic instead
-  if( pvalue > 1.) return fSamplingDist[fSamplingDist.size() - 1]; // should return the max of the test statistic instead
+
+
+  // Acceptance regions are meant to be inclusive of (1-\alpha) of the probability
+  // so the returned values of the CDF should make this easy.
+  // in particular:
+  //   if finding the critical value for a lower bound
+  //     when p_i < p < p_j, one should return the value associated with i
+  //     if i=0, then one should return -infinity
+  //   if finding the critical value for an upper bound
+  //     when p_i < p < p_j, one should return the value associated with j
+  //     if i = size-1, then one should return +infinity
+  //   use pvalue < 0.5 to indicate a lower bound is requested
   
+  // casting will round down, eg. give i
   int nominal = (unsigned int) (pvalue*fSamplingDist.size());
-  int delta;
-  if(pvalue>0.5) 
-    delta = (int)(sigmaVariation*sqrt(fSamplingDist.size()- nominal));
-  else
-    delta = (int)(sigmaVariation*sqrt(nominal));
 
-  int variation = TMath::Min((int)(fSamplingDist.size()-1), 
-			 TMath::Max(0,nominal+delta));
 
-  /*  std::cout << "samp dist db: size = " << fSamplingDist.size() 
-	    << " nominal = " << nominal 
-	    << " variation = " << variation 
-	    << std::endl;
-  */
-
-  /*
-  for(int i=0; i<fSamplingDist.size(); ++i){
-    std::cout << "\t" << fSamplingDist[i];
+  if(nominal <= 0) {
+    inverseWithVariation = -1.*RooNumber::infinity();
+    return -1.*RooNumber::infinity();
   }
-  std::cout << std::endl;
-  */
+  else if(nominal >= fSamplingDist.size()-1 ) {
+    inverseWithVariation = RooNumber::infinity();
+    return RooNumber::infinity();
+  }
+  else if(pvalue < 0.5){
+    int delta = (int)(sigmaVariation*sqrt(nominal)); // note sqrt(small fraction)
+    int variation = nominal+delta;
 
-  inverseWithVariation =  fSamplingDist[ variation ];
-  return fSamplingDist[nominal];
+    if(variation>=fSamplingDist.size()-1)
+      inverseWithVariation = RooNumber::infinity();
+    else if(variation<=0)
+      inverseWithVariation = -1.*RooNumber::infinity();
+    else 
+      inverseWithVariation =  fSamplingDist[ variation ];
+
+    return fSamplingDist[nominal];
+  }
+  else if(pvalue >= 0.5){
+    int delta = (int)(sigmaVariation*sqrt(fSamplingDist.size()- nominal)); // note sqrt(small fraction)
+    int variation = nominal+delta;
+
+
+    if(variation>=fSamplingDist.size()-1)
+      inverseWithVariation = RooNumber::infinity();
+
+    else if(variation<=0)
+      inverseWithVariation = -1.*RooNumber::infinity();
+    else 
+      inverseWithVariation =  fSamplingDist[ variation+1 ];
+
+
+    /*
+      std::cout << "dgb SamplingDistribution::InverseCDF. variation = " << variation
+      << " size = " << fSamplingDist.size()
+      << " value = " << inverseWithVariation << std::endl;
+    */
+
+    return fSamplingDist[nominal+1];
+  }
+  else{
+    std::cout << "problem in SamplingDistribution::InverseCDF" << std::endl;
+  }
+  inverseWithVariation = RooNumber::infinity();
+  return RooNumber::infinity();
+
 }
 
 

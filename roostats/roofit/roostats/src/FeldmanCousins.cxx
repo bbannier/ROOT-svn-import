@@ -97,7 +97,7 @@ void FeldmanCousins::CreateTestStatSampler() const{
     } else{
       cout << "ntoys per point: adaptive" << endl;
     }
-    cout << "nevents per toy = " << data->numEntries() << endl;
+    cout << "nevents per toy taken from expectation" << endl;
   }
 }
 
@@ -151,7 +151,7 @@ ConfInterval* FeldmanCousins::GetInterval() const {
   nc.SetTestStatSampler(*fTestStatSampler);
   nc.SetTestSize(fSize); // set size of test
   nc.SetParameterPointsToTest( *fPointsToTest );
-  //  nc.SetLeftSideTailFraction(1.); // in definition of Feldman-Cousins
+  nc.SetLeftSideTailFraction(0.); // part of definition of Feldman-Cousins
   nc.SetData(*data);
   nc.UseAdaptiveSampling(fAdaptiveSampling);
 

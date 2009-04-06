@@ -10,7 +10,6 @@
 // original paper, Phys.Rev.D57:3873-3889,1998. 
 //
 // to run it:
-// .L tutorials/roostats/NuMuToNuE_Oscillation.cxx+
 // .x tutorials/roostats/rs401d_FeldmanCousins.C+
 /////////////////////////////////////////////////////////////////////////
 
@@ -48,6 +47,7 @@
 
 // PDF class created for this macro
 #include "NuMuToNuE_Oscillation.h"
+#include "tutorials/roostats/NuMuToNuE_Oscillation.cxx" // so that it can be executed directly
 
 // use this order for safety on library loading
 using namespace RooFit ;
@@ -61,7 +61,6 @@ void rs401d_FeldmanCousins()
   TStopwatch t;
   t.Start();
 
-  //  gROOT->ProcessLine(".L tutorials/roostats/NuMuToNuE_Oscillation.cxx+");
 
   /*
     Taken from Feldman & Cousins paper, Phys.Rev.D57:3873-3889,1998. 
@@ -206,11 +205,11 @@ void rs401d_FeldmanCousins()
   fc.SetTestSize(.1); // set size of test
   fc.SetData(*data);
   fc.UseAdaptiveSampling(true);
-  fc.SetNBins(25); // number of points to test per parameter
+  fc.SetNBins(10); // number of points to test per parameter
 
   // use the Feldman-Cousins tool
-  ConfInterval* interval = fc.GetInterval();
-  //ConfInterval* interval = 0;
+   ConfInterval* interval = fc.GetInterval();
+   //ConfInterval* interval = 0;
 
 
   ///////////////////////////////////////////////////////////////////

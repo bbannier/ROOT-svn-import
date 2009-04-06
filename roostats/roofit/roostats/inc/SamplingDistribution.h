@@ -46,11 +46,11 @@ namespace RooStats {
     virtual ~SamplingDistribution();
     
     // get the inverse of the Cumulative distribution function
-    Double_t InverseCDF(Double_t );
+    Double_t InverseCDF(Double_t pvalue);
 
     // get the inverse of the Cumulative distribution function
-    // togetehr with the inverse based on sampling variation
-    Double_t InverseCDF(Double_t, Double_t&, Double_t& );
+    // together with the inverse based on sampling variation
+    Double_t InverseCDF(Double_t pvalue, Double_t sigmaVariaton, Double_t& inverseVariation);
   
     // merge two sampling distributions
     void Add(SamplingDistribution* other);
