@@ -164,10 +164,10 @@ ConfInterval* NeymanConstruction::GetInterval() const {
 	cout << "dbg:"
 	     << "total MC = " << totalMC 
 	     << " this test stat = " << thisTestStatistic << endl
-	     << ", upper edge -1sigma = " << upperEdgeMinusSigma
+	     << " upper edge -1sigma = " << upperEdgeMinusSigma
 	     << ", upperEdge = "<<upperEdgeOfAcceptance
 	     << ", upper edge +1sigma = " << upperEdgePlusSigma << endl
-	     << ", lower edge -1sigma = " << lowerEdgeMinusSigma
+	     << " lower edge -1sigma = " << lowerEdgeMinusSigma
 	     << ", lowerEdge = "<<lowerEdgeOfAcceptance
 	     << ", lower edge +1sigma = " << lowerEdgePlusSigma << endl;
       } while(( 
@@ -193,9 +193,9 @@ ConfInterval* NeymanConstruction::GetInterval() const {
     }
     
     // add acceptance region to ConfidenceBelt
-    //    fConfBelt->AddAcceptanceRegion(*point, 
-    //			   lowerEdgeOfAcceptance, 
-    //			   upperEdgeOfAcceptance);
+    fConfBelt->AddAcceptanceRegion(*point, 
+				   lowerEdgeOfAcceptance, 
+				   upperEdgeOfAcceptance);
 
 
     // printout some debug info

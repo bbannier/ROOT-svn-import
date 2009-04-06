@@ -87,6 +87,8 @@ void rs401d_FeldmanCousins()
   RooRealVar L("L","", .800,.600, 1.0,"km"); // need these units in formula
   RooRealVar deltaMSq("deltaMSq","#Delta m^{2}",40,1,300,"eV/c^{2}");
   RooRealVar sinSq2theta("sinSq2theta","sin^{2}(2#theta)", .006,.0,.02);
+  //RooRealVar deltaMSq("deltaMSq","#Delta m^{2}",40,20,70,"eV/c^{2}");
+  //  RooRealVar sinSq2theta("sinSq2theta","sin^{2}(2#theta)", .006,.001,.01);
   // PDF for oscillation only describes deltaMSq dependence, sinSq2theta goes into sigNorm
   // 1) The code for this PDF was created by issuing these commands
   //    root [0] RooClassFactory x
@@ -205,7 +207,7 @@ void rs401d_FeldmanCousins()
   fc.SetTestSize(.1); // set size of test
   fc.SetData(*data);
   fc.UseAdaptiveSampling(true);
-  fc.SetNBins(10); // number of points to test per parameter
+  fc.SetNBins(30); // number of points to test per parameter
 
   // use the Feldman-Cousins tool
    ConfInterval* interval = fc.GetInterval();

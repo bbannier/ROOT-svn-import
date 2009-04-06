@@ -122,6 +122,12 @@ void ConfidenceBelt::AddAcceptanceRegion(RooArgSet& parameterPoint,
     std::cout << "problem with parameters" << std::endl;
 
   Int_t luIndex = fSamplingSummaryLookup.GetLookupIndex(cl, leftside);
+  //  cout << "lookup index = " << luIndex << endl;
+  if(luIndex <0 ) {
+    fSamplingSummaryLookup.Add(cl,leftside);
+    luIndex = fSamplingSummaryLookup.GetLookupIndex(cl, leftside);
+    //    cout << "lookup index = " << luIndex << endl;
+  }
   AcceptanceRegion* thisRegion = new AcceptanceRegion(luIndex, lower, upper);
   
   if( hist ) {
@@ -131,16 +137,23 @@ void ConfidenceBelt::AddAcceptanceRegion(RooArgSet& parameterPoint,
     //    RooStats::SetParameters(&parameterPoint, const_cast<RooArgSet*>(hist->get())); 
     //    int index = hist->calcTreeIndex(); // get index
     int index = hist->getIndex(parameterPoint); // get index
+    cout << "hist index = " << index << endl;
 
     // allocate memory if necessary.  numEntries is overkill?
-    if(fSamplingSummaries.size() < index) fSamplingSummaries.reserve( hist->numEntries() ); 
+    if(fSamplingSummaries.size() <= index) {
+      fSamplingSummaries.reserve( hist->numEntries() ); 
+      fSamplingSummaries.resize( hist->numEntries() ); 
+    }
 
     // set the region for this point (check for duplicate?)
     fSamplingSummaries.at(index) = *thisRegion;
   }
   else if( tree ){
+
     tree->add( parameterPoint ); // assume it's unique for now
     int index = tree->numEntries() - 1; //check that last point added has index nEntries -1
+    cout << "tree index = " << index << endl;
+
     // allocate memory if necessary.  numEntries is overkill?
     if(fSamplingSummaries.size() < index) fSamplingSummaries.reserve( tree->numEntries()  ); 
 
