@@ -25,8 +25,10 @@
 #include "RooProdPdf.h"
 #include "RooAddPdf.h"
 
+#include "TROOT.h"
 #include "NuMuToNuE_Oscillation.h"
 #include "RooPolynomial.h"
+#include "RooRandom.h"
 
 #include "RooNLLVar.h"
 #include "RooProfileLL.h"
@@ -53,6 +55,8 @@ void rs401d_FeldmanCousins()
   TStopwatch t;
   t.Start();
 
+  gROOT->ProcessLine(".L tutorials/roostats/NuMuToNuE_Oscillation.cxx+");
+
   /*
 Taken from Feldman & Cousins paper, Phys.Rev.D57:3873-3889,1998. 
 e-Print: physics/9711021 (see page 13.)
@@ -71,7 +75,7 @@ oscillations.
   RooRealVar E("E","", 15,10,60,"GeV");
   RooRealVar L("L","", .800,.600, 1.0,"km"); // need these units in formula
   RooRealVar deltaMSq("deltaMSq","#Delta m^{2}",40,1,300,"eV/c^{2}");
-  RooRealVar sinSq2theta("sinSq2theta","sin^{2}(2#theta)", .006,.0,.03);
+  RooRealVar sinSq2theta("sinSq2theta","sin^{2}(2#theta)", .006,.0,.02);
   // PDF for oscillation only describes deltaMSq dependence, sinSq2theta goes into sigNorm
   NuMuToNuE_Oscillation PnmuTone("PnmuTone","P(#nu_{#mu} #rightarrow #nu_{e}",L,E,deltaMSq);
 
@@ -91,16 +95,22 @@ oscillations.
   RooRealVar LPrime("LPrime","", .800,.600, 1.0,"km"); // need these units in formula
   NuMuToNuE_Oscillation PnmuTonePrime("PnmuTonePrime","P(#nu_{#mu} #rightarrow #nu_{e}",
 				      LPrime,EPrime,deltaMSq);
-  RooAbsReal* probToOscInExp = PnmuTonePrime.createIntegral(RooArgSet(EPrime,LPrime));
+  RooAbsReal* intProbToOscInExp = PnmuTonePrime.createIntegral(RooArgSet(EPrime,LPrime));
 
+  // Getting the flux is a bit tricky.  It is more celear to include a cross section term that is not
+  // explicitly refered to in the text, eg.
+  // # events in bin = flux * cross-section for nu_e interaction in E bin * average prob nu_mu osc. to nu_e in bin
+  // let maxEventsInBin = flux * cross-section for nu_e interaction in E bin 
+  // maxEventsInBin * 1% chance per bin =  100 events / bin
+  // therefore maxEventsInBin = 10,000.
+  // for 5 bins, this means maxEventsTot = 50,000
+   
+  RooConstVar maxEventsTot("maxEventsTot","maximum number of sinal events",50000);
+  RooConstVar inverseArea("inverseArea","1/(#Delta E #Delta L)",
+			   1./(EPrime.getMax()-EPrime.getMin())/(LPrime.getMax()-LPrime.getMin()));
 
-  // flux * 1% chance per bin =  100 events / bin
-  // therefore flux = 10000.
-  RooConstVar flux("flux","#nu_{#mu} flux",10000
-		   /(EPrime.getMax()-EPrime.getMin())
-		   /(LPrime.getMax()-LPrime.getMin()));
-  // sigNorm = flux * prob to oscillate in experiment * sin^2(2\theta)
-  RooProduct sigNorm("sigNorm", "", RooArgSet(flux, sinSq2theta, *probToOscInExp));
+  // sigNorm = maxEventsTot * (\int dE dL prob to oscillate in experiment / Area) * sin^2(2\theta)
+  RooProduct sigNorm("sigNorm", "", RooArgSet(maxEventsTot, *intProbToOscInExp, inverseArea, sinSq2theta));
   // bkg = 5 bins * 100 events / bin
   RooConstVar bkgNorm("bkgNorm","normalization for background",500);
 
@@ -126,6 +136,9 @@ oscillations.
   // n events in data to data, simply sum of sig+bkg
   Int_t nEventsData = bkgNorm.getVal()+sigNorm.getVal(); 
   cout << "generate toy data with nEvents = " << nEventsData << endl;
+  // adjust random seed to get a toy dataset similar to one in paper. 
+  // Found by trial and error (3 trials, so not very "fine tuned")
+  RooRandom::randomGenerator()->SetSeed(3); 
   // create a toy dataset
   RooDataSet* data = model.generate(RooArgSet(E), nEventsData);
   
@@ -158,7 +171,7 @@ oscillations.
   //  TH1* hhh = nll.createHistogram("hhh",sinSq2theta,Binning(40),YVar(deltaMSq,Binning(40))) ;
   TH1* hhh = pll.createHistogram("hhh",sinSq2theta,Binning(40),YVar(deltaMSq,Binning(40))) ;
   hhh->SetLineColor(kBlue) ;
-  hhh->SetTitle("Best Fit Signal Model");
+  hhh->SetTitle("Likelihood Function");
   hhh->Draw("surf");
 
   dataCanvas->Update();
@@ -175,7 +188,7 @@ oscillations.
   fc.SetTestSize(.1); // set size of test
   fc.SetData(*data);
   fc.UseAdaptiveSampling(true);
-  fc.SetNBins(20); 
+  fc.SetNBins(25); 
 
   // use the Feldman-Cousins tool
   ConfInterval* interval = fc.GetInterval();
