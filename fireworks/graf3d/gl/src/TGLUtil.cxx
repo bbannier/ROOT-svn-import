@@ -969,6 +969,139 @@ void TGLMatrix::Dump() const
 
 
 //==============================================================================
+// TGLColor
+//==============================================================================
+
+//______________________________________________________________________________
+//
+// Class encapsulating color information in preferred GL format - an
+// array of four unsigned bytes.
+//
+
+ClassImp(TGLColor);
+
+//______________________________________________________________________________
+TGLColor::TGLColor()
+{
+   // Default constructor. Color is initialized to black.
+
+   fRGBA[0] = fRGBA[1] = fRGBA[2] = 0;
+   fRGBA[3] = 255;
+}
+
+//______________________________________________________________________________
+TGLColor::TGLColor(UChar_t r, UChar_t g, UChar_t b, UChar_t a)
+{
+   // Constructor from UChar_t values.
+
+   SetColor(r, g, b, a);
+}
+
+//______________________________________________________________________________
+TGLColor::TGLColor(Float_t r, Float_t g, Float_t b, Float_t a)
+{
+   // Constructor from Float_t values.
+
+   SetColor(r, g, b, a);
+}
+
+//______________________________________________________________________________
+TGLColor::TGLColor(Color_t color_index, Char_t transparency)
+{
+   // Constructor from color-index and transparency.
+
+   SetColor(color_index, transparency);
+}
+
+//______________________________________________________________________________
+void TGLColor::SetColor(UChar_t r, UChar_t g, UChar_t b, UChar_t a)
+{
+   // Set color with UChar_t values.
+
+   fRGBA[0] = r;
+   fRGBA[1] = g;
+   fRGBA[2] = b;
+   fRGBA[3] = a;
+}
+
+//______________________________________________________________________________
+void TGLColor::SetColor(Float_t r, Float_t g, Float_t b, Float_t a)
+{
+   // Set color with Float_t values.
+
+   fRGBA[0] = (UChar_t)(255*r);
+   fRGBA[1] = (UChar_t)(255*g);
+   fRGBA[2] = (UChar_t)(255*b);
+   fRGBA[3] = (UChar_t)(255*a);
+}
+
+//______________________________________________________________________________
+void TGLColor::SetColor(Color_t color_index)
+{
+   // Set color by color-index. Alpha is not changed.
+   // If color_index is not valid, color is set to magenta.
+
+   TColor* c = gROOT->GetColor(color_index);
+   if (c)
+   {
+      fRGBA[0] = (UChar_t)(255*c->GetRed());
+      fRGBA[1] = (UChar_t)(255*c->GetGreen());
+      fRGBA[2] = (UChar_t)(255*c->GetBlue());
+   }
+   else
+   {
+      // Set to magenta.
+      fRGBA[0] = 255;
+      fRGBA[1] = 0;
+      fRGBA[2] = 255;
+   }
+}
+
+//______________________________________________________________________________
+void TGLColor::SetColor(Color_t color_index, Char_t transparency)
+{
+   // Set color by color-index and alpha from the transparency.
+   // If color_index is not valid, color is set to magenta.
+
+   UChar_t alpha = (255*(100 - transparency))/100;
+   
+   TColor* c = gROOT->GetColor(color_index);
+   if (c)
+   {
+      fRGBA[0] = (UChar_t)(255*c->GetRed());
+      fRGBA[1] = (UChar_t)(255*c->GetGreen());
+      fRGBA[2] = (UChar_t)(255*c->GetBlue());
+      fRGBA[3] = alpha;
+   }
+   else
+   {
+      // Set to magenta.
+      fRGBA[0] = 255;
+      fRGBA[1] = 0;
+      fRGBA[2] = 255;
+      fRGBA[3] = alpha;
+      return;
+   }
+}
+
+//______________________________________________________________________________
+void TGLColor::SetTransparency(Char_t transparency)
+{
+   // Set alpha from the transparency.
+
+   fRGBA[3] = (255*(100 - transparency))/100;
+}
+
+//______________________________________________________________________________
+TString TGLColor::AsString() const
+{
+   // Return string describing the color.
+
+   return TString::Format("rgba:%02hhx/%02hhx/%02hhx/%02hhx",
+                          fRGBA[0], fRGBA[1], fRGBA[2], fRGBA[3]);
+}
+
+//==============================================================================
 // TGLUtil
 //==============================================================================
 
