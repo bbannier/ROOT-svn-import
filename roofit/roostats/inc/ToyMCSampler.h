@@ -103,7 +103,7 @@ namespace RooStats {
 	delete toydata;
       }
 
-      cout << " generated sampling dist " << endl;
+      //      cout << " generated sampling dist " << endl;
       return new SamplingDistribution("SamplingDist", "Sampling Distribution of Test Statistic", testStatVec );
     } 
 
