@@ -55,8 +55,10 @@ namespace RooStats {
       // in addition to interface we also need:
       // Set the TestStatSampler (eg. ToyMC or FFT, includes choice of TestStatistic)
       void SetTestStatSampler(TestStatSampler& distCreator) {fTestStatSampler = &distCreator;}
-      // Choose upper limit and unified limits use 1., lower limits use (0.), and central limits use (0.5)
-      void SetLeftSideTailFraction(Double_t leftSideFraction = 1.) {fLeftSideFraction = leftSideFraction;} 
+      // fLeftSideTailFraction*fSize defines lower edge of acceptance region.
+      // Unified limits use 0, central limits use 0.5, 
+      // for upper/lower limits it is 0/1 depends on sign of test statistic w.r.t. parameter
+      void SetLeftSideTailFraction(Double_t leftSideFraction = 0.) {fLeftSideFraction = leftSideFraction;} 
 
       // User-defined set of points to test
       void SetParameterPointsToTest(RooTreeData& pointsToTest) {
@@ -115,9 +117,6 @@ namespace RooStats {
 
       
    private:
-
-      // for adaptively setting nToys / point based on asymptotic approximation
-      void SetAdaptiveSampling(Double_t , Int_t) const;
 
       Double_t fSize; // size of the test (eg. specified rate of Type I error)
       RooWorkspace* fWS; // a workspace that owns all the components to be used by the calculator

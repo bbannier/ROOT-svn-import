@@ -76,44 +76,8 @@ NeymanConstruction::NeymanConstruction() {
   fOwnsWorkspace = true;
   fDataName = "";
   fPdfName = "";
+  fLeftSideFraction = 0.;
   fConfBelt = 0; // constructed with tree data
-}
-
-//_______________________________________________________
-void NeymanConstruction::SetAdaptiveSampling(Double_t testStat, Int_t ndof)  const{
-  // this algorithm makes sense if the test statistic is a likelihood ratio and p-values can
-  // be approximated with Wilks' theorem.
-  ToyMCSampler* toyMCSampler = dynamic_cast<ToyMCSampler*>(fTestStatSampler);
-  if(toyMCSampler){
-    // p-value based on Wilks' theorem
-    double pWilks = TMath::Prob(testStat, ndof );
-    double quantile = TMath::ChisquareQuantile(pWilks, ndof );
-    // some parameters for nToys per experiment
-    int nominalToys = (int)1./fSize; // nominal situation 
-    int maxToys = (int) 10./fSize;  // ntoys will be maximized for this
-
-    // based on nominal number of toys and pWilks, the expected number of toys in tail is
-    // pWilks*nominalToys.  Prob to see 1 or more in tail is 1-Pois(0|expectation) = 1.-exp(-expectation)
-    double probToyInTail = 1.-exp(-nominalToys*pWilks);
-    // convert this fluctuation probability into an information measure \sum -p log(p) of two possibilities
-    double informationInToy = (-probToyInTail) * log(probToyInTail) 
-      - (1.-probToyInTail)*log(1.-probToyInTail);
-    int nToysForThisPoint =  TMath::Max( 10, (int) (maxToys*informationInToy));
-    if(pWilks > fSize) // mainly need to protect against testStat < lower bound in this case
-      nToysForThisPoint = TMath::Max( (int)(3./(1.-pWilks)), nToysForThisPoint ); // insure some samples in good regions
-    cout << "test stat = " << testStat << endl
-	 << "ndof = "<< ndof  << endl
-	 << "pWilks = " << pWilks  << endl
-	 << "alpha = " << fSize << endl
-	 << "prob for at least one toy in tail = " << probToyInTail << endl
-	 << "info in toy = " << informationInToy << endl
-	 << "toys for this point = " << nToysForThisPoint << endl;
-    
-    toyMCSampler->SetNEventsPerToy( nToysForThisPoint  );
-  } else {
-    cout << "Adaptive sampling can only be used with a ToyMCSampler" << endl;
-  }
-
 }
 
 //_______________________________________________________
@@ -146,7 +110,23 @@ ConfInterval* NeymanConstruction::GetInterval() const {
     Double_t sigma;
     Double_t upperEdgeOfAcceptance, upperEdgeMinusSigma, upperEdgePlusSigma;
     Double_t lowerEdgeOfAcceptance, lowerEdgeMinusSigma, lowerEdgePlusSigma;
-    Int_t totalMC = 10, additionalMC=0;
+    Int_t additionalMC=0;
+
+    // the adaptive sampling algorithm wants at least one toy event to be outside
+    // of the requested pvalue including the sampling variaton.  That leads to an equation
+    // N-1 = (1-alpha)N + Z sqrt(N - (1-alpha)N) // for upper limit and
+    // 1   = alpha N - Z sqrt(alpha N)  // for lower limit 
+    // 
+    // solving for N gives:
+    // N = 1/alpha * [3/2 + sqrt(5)] for Z = 1 (which is used currently)
+    // thus, a good guess for the first iteration of events is N=3.73/alpha~4/alpha
+    // should replace alpha here by smaller tail probability: eg. alpha*Min(leftsideFrac, 1.-leftsideFrac)
+    // totalMC will be incremented by 2 before first call, so initiated it at half the value
+    Int_t totalMC = (Int_t) (2./fSize/TMath::Min(fLeftSideFraction,1.-fLeftSideFraction)); 
+    if(fLeftSideFraction==0. || fLeftSideFraction ==1.){
+      totalMC = (Int_t) (2./fSize); 
+    }
+
     ToyMCSampler* toyMCSampler = dynamic_cast<ToyMCSampler*>(fTestStatSampler);
     if(fAdaptiveSampling && toyMCSampler) {
       do{
@@ -184,12 +164,12 @@ ConfInterval* NeymanConstruction::GetInterval() const {
 	cout << "dbg:"
 	     << "total MC = " << totalMC 
 	     << " this test stat = " << thisTestStatistic << endl
-	     << " upper edge -1sigma = " << upperEdgeMinusSigma
-	     << " upperEdge = "<<upperEdgeOfAcceptance
-	     << " upper edge +1sigma = " << upperEdgePlusSigma << endl
-	     << " lower edge -1sigma = " << lowerEdgeMinusSigma
-	     << " lowerEdge = "<<lowerEdgeOfAcceptance
-	     << " lower edge +1sigma = " << lowerEdgePlusSigma << endl;
+	     << ", upper edge -1sigma = " << upperEdgeMinusSigma
+	     << ", upperEdge = "<<upperEdgeOfAcceptance
+	     << ", upper edge +1sigma = " << upperEdgePlusSigma << endl
+	     << ", lower edge -1sigma = " << lowerEdgeMinusSigma
+	     << ", lowerEdge = "<<lowerEdgeOfAcceptance
+	     << ", lower edge +1sigma = " << lowerEdgePlusSigma << endl;
       } while(( 
 	      (thisTestStatistic <= upperEdgeOfAcceptance &&
 	       thisTestStatistic > upperEdgeMinusSigma)
