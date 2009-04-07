@@ -119,6 +119,9 @@ struct TTestSuite {
 
 // Methods for histogram comparisions (later implemented)
 void printResult(const char* msg, bool status);
+void FillVariableRange(Double_t v[numberOfBins+1]);
+void FillHistograms(TH1D* h1, TH1D* h2, Double_t c1 = 1.0, Double_t c2 = 1.0);
+void FillProfiles(TProfile* p1, TProfile* p2, Double_t c1 = 1.0, Double_t c2 = 1.0);
 int equals(const char* msg, TH1D* h1, TH1D* h2, int options = 0, double ERRORLIMIT = defaultErrorLimit);
 int equals(const char* msg, TH2D* h1, TH2D* h2, int options = 0, double ERRORLIMIT = defaultErrorLimit);
 int equals(const char* msg, TH3D* h1, TH3D* h2, int options = 0, double ERRORLIMIT = defaultErrorLimit);
@@ -141,17 +144,8 @@ bool testAdd1()
 
    h1->Sumw2();h2->Sumw2();h3->Sumw2();
 
-   for ( Int_t e = 0; e < nEvents; ++e ) {
-      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      h1->Fill(value,  1.0);
-      h3->Fill(value, c1);
-   }
-
-   for ( Int_t e = 0; e < nEvents; ++e ) {
-      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      h2->Fill(value,  1.0);
-      h3->Fill(value, c2);
-   }
+   FillHistograms(h1, h3, 1.0, c1);
+   FillHistograms(h2, h3, 1.0, c2);
 
    TH1D* h4 = new TH1D("t1D1-h4", "h4=c1*h1+h2*c2", numberOfBins, minRange, maxRange);
    h4->Add(h1, h2, c1, c2);
@@ -210,17 +204,8 @@ bool testAdd2()
 
    h5->Sumw2();h6->Sumw2();h7->Sumw2();
 
-   for ( Int_t e = 0; e < nEvents; ++e ) {
-      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      h6->Fill(value, 1.0);
-      h5->Fill(value, 1.0);
-   }
-
-   for ( Int_t e = 0; e < nEvents; ++e ) {
-      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      h7->Fill(value,  1.0);
-      h5->Fill(value, c2);
-   }
+   FillHistograms(h6, h5, 1.0, 1.0);
+   FillHistograms(h7, h5, 1.0, c2);
 
    h6->Add(h7, c2);
    
@@ -282,9 +267,119 @@ bool testAdd3()
    TH1D* h3 = new TH1D("t1D1-h3", "h3=c1*h1", numberOfBins, minRange, maxRange);
    h3->Add(h1, h1, c1, -1);
 
-   bool ret = equals("Add1D1", h2, h3, cmpOptStats, 1E-13);
+   bool ret = equals("Add1D3", h2, h3, cmpOptStats, 1E-13);
    delete h1;
    delete h2;
+   return ret;
+}
+
+bool testAddVar1()
+{
+   // Tests the second Add method for 1D Histograms with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   Double_t c1 = r.Rndm();
+   Double_t c2 = r.Rndm();
+
+   TH1D* h1 = new TH1D("h1", "h1-Title", numberOfBins, v);
+   TH1D* h2 = new TH1D("h2", "h2-Title", numberOfBins, v);
+   TH1D* h3 = new TH1D("h3", "h3=c1*h1+c2*h2", numberOfBins, v);
+
+   h1->Sumw2();h2->Sumw2();h3->Sumw2();
+
+   FillHistograms(h1, h3, 1.0, c1);
+   FillHistograms(h2, h3, 1.0, c2);
+
+   TH1D* h4 = new TH1D("t1D1-h4", "h4=c1*h1+h2*c2", numberOfBins, v);
+   h4->Add(h1, h2, c1, c2);
+
+   bool ret = equals("AddVar1D1", h3, h4, cmpOptStats, 1E-13);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testAddVarProf1()
+{
+
+   // Tests the first Add method for 1D Profiles with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   Double_t c1 = r.Rndm();
+   Double_t c2 = r.Rndm();
+
+   TProfile* p1 = new TProfile("t1D1-p1", "p1-Title", numberOfBins, v);
+   TProfile* p2 = new TProfile("t1D1-p2", "p2-Title", numberOfBins, v);
+   TProfile* p3 = new TProfile("t1D1-p3", "p3=c1*p1+c2*p2", numberOfBins, v);
+
+   FillProfiles(p1, p3, 1.0, c1);
+   FillProfiles(p2, p3, 1.0, c2);
+
+   TProfile* p4 = new TProfile("t1D1-p4", "p4=c1*p1+p2*c2", numberOfBins, v);
+   p4->Add(p1, p2, c1, c2);
+
+   bool ret = equals("AddVar1DProf1", p3, p4, cmpOptStats, 1E-13);
+   delete p1;
+   delete p2;
+   delete p3;
+
+   return ret;
+}
+
+bool testAddVar2()
+{
+   // Tests the second Add method for 1D Histograms with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   Double_t c2 = r.Rndm();
+
+   TH1D* h5 = new TH1D("t1D2-h5", "h5=   h6+c2*h7", numberOfBins, v);
+   TH1D* h6 = new TH1D("t1D2-h6", "h6-Title", numberOfBins, v);
+   TH1D* h7 = new TH1D("t1D2-h7", "h7-Title", numberOfBins, v);
+
+   h5->Sumw2();h6->Sumw2();h7->Sumw2();
+
+   FillHistograms(h6, h5, 1.0, 1.0);
+   FillHistograms(h7, h5, 1.0, c2);
+
+   h6->Add(h7, c2);
+   
+   bool ret = equals("AddVar1D2", h5, h6, cmpOptStats, 1E-13);
+   delete h5;
+   delete h7;
+   return ret;
+}
+
+bool testAddVarProf2()
+{
+   // Tests the second Add method for 1D Profiles with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   Double_t c2 = r.Rndm();
+
+   TProfile* p5 = new TProfile("t1D2-p5", "p5=   p6+c2*p7", numberOfBins, v);
+   TProfile* p6 = new TProfile("t1D2-p6", "p6-Title", numberOfBins, v);
+   TProfile* p7 = new TProfile("t1D2-p7", "p7-Title", numberOfBins, v);
+
+   p5->Sumw2();p6->Sumw2();p7->Sumw2();
+
+   FillProfiles(p6, p5, 1.0, 1.0);
+   FillProfiles(p7, p5, 1.0, c2);
+
+   p6->Add(p7, c2);
+   
+   bool ret = equals("AddVar1D2", p5, p6, cmpOptStats, 1E-13);
+   delete p5;
+   delete p7;
    return ret;
 }
 
@@ -829,6 +924,58 @@ bool testMul1()
    return ret;
 }
 
+bool testMulVar1() 
+{
+   // Tests the first Multiply method for 1D Histograms with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   Double_t c1 = r.Rndm();
+   Double_t c2 = r.Rndm();
+
+   TH1D* h1 = new TH1D("m1D1-h1", "h1-Title", numberOfBins, v);
+   TH1D* h2 = new TH1D("m1D1-h2", "h2-Title", numberOfBins, v);
+   TH1D* h3 = new TH1D("m1D1-h3", "h3=c1*h1*c2*h2", numberOfBins, v);
+
+   h1->Sumw2();h2->Sumw2();h3->Sumw2();
+
+   UInt_t seed = r.GetSeed();
+   // For possible problems
+   r.SetSeed(seed);
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(value,  1.0);
+      h3->Fill(value,  c1*c2*h1->GetBinContent( h1->GetXaxis()->FindBin(value) ) );
+   }
+
+   // h3 has to be filled again so that the erros are properly calculated
+   r.SetSeed(seed);
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(value,  c1*c2*h2->GetBinContent( h2->GetXaxis()->FindBin(value) ) );
+   }
+
+   // No the bin contents has to be reduced, as it was filled twice!
+   for ( Int_t bin = 0; bin <= h3->GetNbinsX() + 1; ++bin ) {
+      h3->SetBinContent(bin, h3->GetBinContent(bin) / 2 );
+   }
+
+   TH1D* h4 = new TH1D("m1D1-h4", "h4=h1*h2", numberOfBins, v);
+   h4->Multiply(h1, h2, c1, c2);
+
+   bool ret = equals("MultiVar1D1", h3, h4, cmpOptStats, 1E-14);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
 bool testMul2() 
 {
    // Tests the second Multiply method for 1D Histograms
@@ -866,6 +1013,51 @@ bool testMul2()
    h1->Multiply(h2);
 
    bool ret = equals("Multiply1D2", h3, h1, cmpOptStats, 1E-14);
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMulVar2() 
+{
+   // Tests the second Multiply method for 1D Histograms with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   TH1D* h1 = new TH1D("m1D2-h1", "h1-Title", numberOfBins, v);
+   TH1D* h2 = new TH1D("m1D2-h2", "h2-Title", numberOfBins, v);
+   TH1D* h3 = new TH1D("m1D2-h3", "h3=h1*h2", numberOfBins, v);
+
+   h1->Sumw2();h2->Sumw2();h3->Sumw2();
+
+   UInt_t seed = r.GetSeed();
+   // For possible problems
+   r.SetSeed(seed);
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value, 1.0);
+   }
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(value,  1.0);
+      h3->Fill(value,  h1->GetBinContent( h1->GetXaxis()->FindBin(value) ) );
+   }
+
+   r.SetSeed(seed);
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h3->Fill(value,  h2->GetBinContent( h2->GetXaxis()->FindBin(value) ) );
+   }
+
+   for ( Int_t bin = 0; bin <= h3->GetNbinsX() + 1; ++bin ) {
+      h3->SetBinContent(bin, h3->GetBinContent(bin) / 2 );
+   }
+
+   h1->Multiply(h2);
+
+   bool ret = equals("MultiVar1D2", h3, h1, cmpOptStats, 1E-14);
    delete h2;
    delete h3;
    return ret;
@@ -1247,6 +1439,54 @@ bool testDivide1()
    return ret;
 }
 
+bool testDivideVar1() 
+{
+   // Tests the first Divide method for 1D Histograms with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   Double_t c1 = r.Rndm() + 1;
+   Double_t c2 = r.Rndm() + 1;
+
+   TH1D* h1 = new TH1D("d1D1-h1", "h1-Title", numberOfBins, v);
+   TH1D* h2 = new TH1D("d1D1-h2", "h2-Title", numberOfBins, v);
+
+   h1->Sumw2();h2->Sumw2();
+
+   UInt_t seed = r.GetSeed();
+   // For possible problems
+   r.SetSeed(seed);
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value;
+      value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value, 1.0);
+      value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(value,  1.0);
+   }
+
+   TH1D* h3 = new TH1D("d1D1-h3", "h3=(c1*h1)/(c2*h2)", numberOfBins, v);
+   h3->Divide(h1, h2, c1, c2);
+      
+   TH1D* h4 = new TH1D("d1D1-h4", "h4=h3*h2)", numberOfBins, v);
+   h4->Multiply(h2, h3, c2/c1, 1);
+   for ( Int_t bin = 0; bin <= h4->GetNbinsX() + 1; ++bin ) {
+      Double_t error = h4->GetBinError(bin) * h4->GetBinError(bin);
+      error -= (2*(c2*c2)/(c1*c1)) * h3->GetBinContent(bin)*h3->GetBinContent(bin)*h2->GetBinError(bin)*h2->GetBinError(bin); 
+      h4->SetBinError( bin, sqrt(error) );
+   }
+
+   std::vector<double> stats(TH1::kNstat);
+   h1->PutStats(&stats[0]);
+
+   bool ret = equals("DivideVar1D1", h1, h4, cmpOptStats);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+
 bool testDivideProf1() 
 {
    // Tests the first Divide method for 1D Profiles
@@ -1317,7 +1557,51 @@ bool testDivide2()
    std::vector<double> stats(TH1::kNstat);
    h1->PutStats(&stats[0]);
 
-   bool ret = equals("Divide1D1", h1, h4, cmpOptStats);
+   bool ret = equals("Divide1D2", h1, h4, cmpOptStats);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testDivideVar2() 
+{
+   // Tests the second Divide method for 1D Histograms with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   TH1D* h1 = new TH1D("d1D2-h1", "h1-Title", numberOfBins, v);
+   TH1D* h2 = new TH1D("d1D2-h2", "h2-Title", numberOfBins, v);
+
+   h1->Sumw2();h2->Sumw2();
+
+   UInt_t seed = r.GetSeed();
+   // For possible problems
+   r.SetSeed(seed);
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value;
+      value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value, 1.0);
+      value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h2->Fill(value,  1.0);
+   }
+
+   TH1D* h3 = static_cast<TH1D*>( h1->Clone() );
+   h3->Divide(h2);
+      
+   TH1D* h4 = new TH1D("d1D2-h4", "h4=h3*h2)", numberOfBins, v);
+   h4->Multiply(h2, h3, 1.0, 1.0);
+   for ( Int_t bin = 0; bin <= h4->GetNbinsX() + 1; ++bin ) {
+      Double_t error = h4->GetBinError(bin) * h4->GetBinError(bin);
+      error -= 2 * h3->GetBinContent(bin)*h3->GetBinContent(bin)*h2->GetBinError(bin)*h2->GetBinError(bin); 
+      h4->SetBinError( bin, sqrt(error) );
+   }
+
+   std::vector<double> stats(TH1::kNstat);
+   h1->PutStats(&stats[0]);
+
+   bool ret = equals("DivideVar1D2", h1, h4, cmpOptStats);
    delete h1;
    delete h2;
    delete h3;
@@ -1576,6 +1860,30 @@ bool testAssign1D()
    return ret;
 }
 
+bool testAssignVar1D()
+{
+   // Tests the operator=() method for 1D Histograms with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   TH1D* h1 = new TH1D("=1D-h1", "h1-Title", numberOfBins, v);
+
+   h1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value, 1.0);
+   }
+
+   TH1D* h2 = new TH1D("=1D-h2", "h2-Title", numberOfBins, v);
+   *h2 = *h1;
+
+   bool ret = equals("Assign Oper VarH '='  1D", h1, h2, cmpOptStats);
+   delete h1;
+   return ret;
+}
+
 bool testAssignProfile1D()
 {
    // Tests the operator=() method for 1D Profiles
@@ -1592,6 +1900,29 @@ bool testAssignProfile1D()
    *p2 = *p1;
 
    bool ret = equals("Assign Oper Prof '='  1D", p1, p2, cmpOptStats);
+   delete p1;
+   return ret;
+}
+
+bool testAssignProfileVar1D()
+{
+   // Tests the operator=() method for 1D Profiles with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   TProfile* p1 = new TProfile("=1D-p1", "p1-Title", numberOfBins, v);
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, 1.0);
+   }
+
+   TProfile* p2 = new TProfile("=1D-p2", "p2-Title", numberOfBins, v);
+   *p2 = *p1;
+
+   bool ret = equals("Assign Oper VarP '='  1D", p1, p2, cmpOptStats);
    delete p1;
    return ret;
 }
@@ -1616,6 +1947,29 @@ bool testCopyConstructor1D()
    return ret;
 }
 
+bool testCopyConstructorVar1D()
+{
+   // Tests the copy constructor for 1D Histograms with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+   
+   TH1D* h1 = new TH1D("cc1D-h1", "h1-Title", numberOfBins, v);
+
+   h1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value, 1.0);
+   }
+
+   TH1D* h2 = new TH1D(*h1);
+
+   bool ret = equals("Copy Constructor VarH 1D", h1, h2, cmpOptStats);
+   delete h1;
+   return ret;
+}
+
 bool testCopyConstructorProfile1D()
 {
    // Tests the copy constructor for 1D Profiles
@@ -1631,6 +1985,28 @@ bool testCopyConstructorProfile1D()
    TProfile* p2 = new TProfile(*p1);
 
    bool ret = equals("Copy Constructor Prof 1D", p1, p2, cmpOptStats);
+   delete p1;
+   return ret;
+}
+
+bool testCopyConstructorProfileVar1D()
+{
+   // Tests the copy constructor for 1D Profiles with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   TProfile* p1 = new TProfile("cc1D-p1", "p1-Title", numberOfBins, v);
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, 1.0);
+   }
+
+   TProfile* p2 = new TProfile(*p1);
+
+   bool ret = equals("Copy Constructor VarP 1D", p1, p2, cmpOptStats);
    delete p1;
    return ret;
 }
@@ -1655,6 +2031,29 @@ bool testClone1D()
    return ret;
 }
 
+bool testCloneVar1D()
+{
+   // Tests the clone method for 1D Histograms with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   TH1D* h1 = new TH1D("cl1D-h1", "h1-Title", numberOfBins, v);
+
+   h1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value, 1.0);
+   }
+
+   TH1D* h2 = static_cast<TH1D*> ( h1->Clone() );
+
+   bool ret = equals("Clone Function VarH   1D", h1, h2, cmpOptStats);
+   delete h1;
+   return ret;
+}
+
 bool testCloneProfile1D()
 {
    // Tests the clone method for 1D Profiles
@@ -1670,6 +2069,28 @@ bool testCloneProfile1D()
    TProfile* p2 = static_cast<TProfile*> ( p1->Clone() );
 
    bool ret = equals("Clone Function Prof   1D", p1, p2, cmpOptStats);
+   delete p1;
+   return ret;
+}
+
+bool testCloneProfileVar1D()
+{
+   // Tests the clone method for 1D Profiles with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   TProfile* p1 = new TProfile("cl1D-p1", "p1-Title", numberOfBins, v);
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, 1.0);
+   }
+
+   TProfile* p2 = static_cast<TProfile*> ( p1->Clone() );
+
+   bool ret = equals("Clone Function VarP   1D", p1, p2, cmpOptStats);
    delete p1;
    return ret;
 }
@@ -2024,6 +2445,34 @@ bool testWriteRead1D()
    return ret;
 }
 
+bool testWriteReadVar1D()
+{
+   // Tests the write and read methods for 1D Histograms with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   TH1D* h1 = new TH1D("wr1D-h1", "h1-Title", numberOfBins, v);
+
+   h1->Sumw2();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value, 1.0);
+   }
+
+   TFile f("tmpHist.root", "RECREATE");
+   h1->Write();
+   f.Close();
+
+   TFile f2("tmpHist.root");
+   TH1D* h2 = static_cast<TH1D*> ( f2.Get("wr1D-h1") );
+
+   bool ret = equals("Read/Write VarH 1D", h1, h2, cmpOptStats);
+   delete h1;
+   return ret;
+}
+
 bool testWriteReadProfile1D()
 {
    // Tests the write and read methods for 1D Profiles
@@ -2044,6 +2493,33 @@ bool testWriteReadProfile1D()
    TProfile* p2 = static_cast<TProfile*> ( f2.Get("wr1D-p1") );
 
    bool ret = equals("Read/Write Prof 1D", p1, p2, cmpOptStats);
+   delete p1;
+   return ret;
+}
+
+bool testWriteReadProfileVar1D()
+{
+   // Tests the write and read methods for 1D Profiles with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   TProfile* p1 = new TProfile("wr1D-p1", "p1-Title", numberOfBins, v);
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, 1.0);
+   }
+
+   TFile f("tmpHist.root", "RECREATE");
+   p1->Write();
+   f.Close();
+
+   TFile f2("tmpHist.root");
+   TProfile* p2 = static_cast<TProfile*> ( f2.Get("wr1D-p1") );
+
+   bool ret = equals("Read/Write VarP 1D", p1, p2, cmpOptStats);
    delete p1;
    return ret;
 }
@@ -2212,23 +2688,9 @@ bool testMerge1D()
 
    h1->Sumw2();h2->Sumw2();h3->Sumw2();
 
-   for ( Int_t e = 0; e < nEvents; ++e ) {
-      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      h1->Fill(value, 1.0);
-      h4->Fill(value, 1.0);
-   }
-
-   for ( Int_t e = 0; e < nEvents; ++e ) {
-      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      h2->Fill(value, 1.0);
-      h4->Fill(value, 1.0);
-   }
-
-   for ( Int_t e = 0; e < nEvents; ++e ) {
-      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      h3->Fill(value, 1.0);
-      h4->Fill(value, 1.0);
-   }
+   FillHistograms(h1, h4);
+   FillHistograms(h2, h4);
+   FillHistograms(h3, h4);
 
    TList *list = new TList;
    list->Add(h2);
@@ -2237,6 +2699,37 @@ bool testMerge1D()
    h1->Merge(list);
 
    bool ret = equals("Merge1D", h1, h4, cmpOptStats, 1E-10);
+   delete h1;
+   delete h2;
+   delete h3;
+   return ret;
+}
+
+bool testMergeVar1D() 
+{
+   // Tests the merge method for 1D Histograms with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   TH1D* h1 = new TH1D("merge1D-h1", "h1-Title", numberOfBins, v);
+   TH1D* h2 = new TH1D("merge1D-h2", "h2-Title", numberOfBins, v);
+   TH1D* h3 = new TH1D("merge1D-h3", "h3-Title", numberOfBins, v);
+   TH1D* h4 = new TH1D("merge1D-h4", "h4-Title", numberOfBins, v);
+
+   h1->Sumw2();h2->Sumw2();h3->Sumw2();
+
+   FillHistograms(h1, h4);
+   FillHistograms(h2, h4);
+   FillHistograms(h3, h4);
+
+   TList *list = new TList;
+   list->Add(h2);
+   list->Add(h3);
+
+   h1->Merge(list);
+
+   bool ret = equals("MergeVar1D", h1, h4, cmpOptStats, 1E-10);
    delete h1;
    delete h2;
    delete h3;
@@ -2252,26 +2745,9 @@ bool testMergeProf1D()
    TProfile* p3 = new TProfile("merge1D-p3", "p3-Title", numberOfBins, minRange, maxRange);
    TProfile* p4 = new TProfile("merge1D-p4", "p4-Title", numberOfBins, minRange, maxRange);
 
-   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
-      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      p1->Fill(x, y, 1.0);
-      p4->Fill(x, y, 1.0);
-   }
-
-   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
-      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      p2->Fill(x, y, 1.0);
-      p4->Fill(x, y, 1.0);
-   }
-
-   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
-      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
-      p3->Fill(x, y, 1.0);
-      p4->Fill(x, y, 1.0);
-   }
+   FillProfiles(p1, p4);
+   FillProfiles(p2, p4);
+   FillProfiles(p3, p4);
 
    TList *list = new TList;
    list->Add(p2);
@@ -2280,6 +2756,35 @@ bool testMergeProf1D()
    p1->Merge(list);
 
    bool ret = equals("Merge1DProf", p1, p4, cmpOptStats, 1E-10);
+   delete p1;
+   delete p2;
+   delete p3;
+   return ret;
+}
+
+bool testMergeProfVar1D() 
+{
+   // Tests the merge method for 1D Profiles with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   TProfile* p1 = new TProfile("merge1D-p1", "p1-Title", numberOfBins, v);
+   TProfile* p2 = new TProfile("merge1D-p2", "p2-Title", numberOfBins, v);
+   TProfile* p3 = new TProfile("merge1D-p3", "p3-Title", numberOfBins, v);
+   TProfile* p4 = new TProfile("merge1D-p4", "p4-Title", numberOfBins, v);
+
+   FillProfiles(p1, p4);
+   FillProfiles(p2, p4);
+   FillProfiles(p3, p4);
+
+   TList *list = new TList;
+   list->Add(p2);
+   list->Add(p3);
+
+   p1->Merge(list);
+
+   bool ret = equals("Merge1DVarP", p1, p4, cmpOptStats, 1E-10);
    delete p1;
    delete p2;
    delete p3;
@@ -4481,6 +4986,45 @@ bool testInterpolation1D()
    return status; 
 }
 
+bool testInterpolationVar1D() 
+{
+   // Tests interpolation method for 1D Histogram with variable bin size
+
+   Double_t v[numberOfBins+1];
+   FillVariableRange(v);
+
+   bool status = false;
+
+   TH1D* h1 = new TH1D("h1", "h1", numberOfBins, v);
+   
+   h1->Reset();
+
+   for ( Int_t nbinsx = 1; nbinsx <= h1->GetXaxis()->GetNbins(); ++nbinsx ) {
+      Double_t x = h1->GetXaxis()->GetBinCenter(nbinsx);
+      h1->Fill(x, function1D(x));
+   }
+   
+   int itest = 0;
+   for (itest = 0; itest < 1000; ++itest) { 
+      double xp = r.Uniform( h1->GetXaxis()->GetBinCenter(1), h1->GetXaxis()->GetBinCenter(numberOfBins) ); 
+      
+      double ip = h1->Interpolate(xp); 
+     
+      if (  fabs(ip  - function1D(xp) ) > 1.E-13*fabs(ip) ) {
+         status = true;
+         cout << "x: " << xp 
+              << " h3->Inter: " << ip
+              << " functionD: " << function1D(xp)
+              << " diff: " << fabs(ip  - function1D(xp))
+              << endl;
+      }
+   }
+
+   delete h1;
+   if ( defaultEqualOptions & cmpOptPrint ) cout << "testInterpolaVar1D: \t" << (status?"FAILED":"OK") << endl;
+   return status; 
+}
+
 Double_t function2D(Double_t x, Double_t y)
 {
    Double_t a = -2.1;
@@ -5852,10 +6396,12 @@ int stressHistogram()
 
    // Test 4
    // Add Tests
-   const unsigned int numberOfAdds = 16;
+   const unsigned int numberOfAdds = 20;
    pointer2Test addTestPointer[numberOfAdds] = { testAdd1,    testAddProfile1, 
                                                  testAdd2,    testAddProfile2,
-                                                 testAdd3,    
+                                                 testAdd3,   
+                                                 testAddVar1, testAddVarProf1, 
+                                                 testAddVar2, testAddVarProf2,
                                                  testAdd2D3,
                                                  testAdd3D3,
                                                  testAdd2D1,  testAdd2DProfile1,
@@ -5870,8 +6416,9 @@ int stressHistogram()
 
    // Test 5
    // Multiply Tests
-   const unsigned int numberOfMultiply = 7;
+   const unsigned int numberOfMultiply = 9;
    pointer2Test multiplyTestPointer[numberOfMultiply] = { testMul1,    testMul2,
+                                                          testMulVar1, testMulVar2,
                                                           testMul2D1,  testMul2D2,
                                                           testMul3D1,  testMul3D2,
                                                           testMulSparse
@@ -5882,8 +6429,9 @@ int stressHistogram()
 
    // Test 6
    // Divide Tests
-   const unsigned int numberOfDivide = 6;
+   const unsigned int numberOfDivide = 8;
    pointer2Test divideTestPointer[numberOfDivide] = { testDivide1,     testDivide2,
+                                                      testDivideVar1,  testDivideVar2,
                                                       testDivide2D1,   testDivide2D2,
                                                       testDivide3D1,   testDivide3D2
    };
@@ -5898,16 +6446,19 @@ int stressHistogram()
 
    // Test 7
    // Copy Tests
-   const unsigned int numberOfCopy = 19;
-   pointer2Test copyTestPointer[numberOfCopy] = { testAssign1D,          testAssignProfile1D, 
-                                                  testCopyConstructor1D, testCopyConstructorProfile1D, 
-                                                  testClone1D,           testCloneProfile1D,
-                                                  testAssign2D,          testAssignProfile2D,
-                                                  testCopyConstructor2D, testCopyConstructorProfile2D,
-                                                  testClone2D,           testCloneProfile2D,
-                                                  testAssign3D,          testAssignProfile3D,
-                                                  testCopyConstructor3D, testCopyConstructorProfile3D,
-                                                  testClone3D,           testCloneProfile3D,
+   const unsigned int numberOfCopy = 25;
+   pointer2Test copyTestPointer[numberOfCopy] = { testAssign1D,             testAssignProfile1D, 
+                                                  testAssignVar1D,          testAssignProfileVar1D, 
+                                                  testCopyConstructor1D,    testCopyConstructorProfile1D, 
+                                                  testCopyConstructorVar1D, testCopyConstructorProfileVar1D, 
+                                                  testClone1D,              testCloneProfile1D,
+                                                  testCloneVar1D,           testCloneProfileVar1D,
+                                                  testAssign2D,             testAssignProfile2D,
+                                                  testCopyConstructor2D,    testCopyConstructorProfile2D,
+                                                  testClone2D,              testCloneProfile2D,
+                                                  testAssign3D,             testAssignProfile3D,
+                                                  testCopyConstructor3D,    testCopyConstructorProfile3D,
+                                                  testClone3D,              testCloneProfile3D,
                                                   testCloneSparse
    };
    struct TTestSuite copyTestSuite = { numberOfCopy, 
@@ -5916,10 +6467,11 @@ int stressHistogram()
 
    // Test 8
    // WriteRead Tests
-   const unsigned int numberOfReadwrite = 7;
-   pointer2Test readwriteTestPointer[numberOfReadwrite] = { testWriteRead1D,  testWriteReadProfile1D,
-                                                            testWriteRead2D,  testWriteReadProfile2D,
-                                                            testWriteRead3D,  testWriteReadProfile3D, 
+   const unsigned int numberOfReadwrite = 9;
+   pointer2Test readwriteTestPointer[numberOfReadwrite] = { testWriteRead1D,     testWriteReadProfile1D,
+                                                            testWriteReadVar1D,  testWriteReadProfileVar1D,
+                                                            testWriteRead2D,     testWriteReadProfile2D,
+                                                            testWriteRead3D,     testWriteReadProfile3D, 
                                                             testWriteReadSparse
    };
    struct TTestSuite readwriteTestSuite = { numberOfReadwrite, 
@@ -5928,8 +6480,9 @@ int stressHistogram()
 
    // Test 9
    // Merge Tests
-   const unsigned int numberOfMerge = 32;
+   const unsigned int numberOfMerge = 34;
    pointer2Test mergeTestPointer[numberOfMerge] = { testMerge1D,                 testMergeProf1D,
+                                                    testMergeVar1D,              testMergeProfVar1D,
                                                     testMerge2D,                 testMergeProf2D,
                                                     testMerge3D,                 testMergeProf3D,
                                                     testMergeSparse,
@@ -5965,8 +6518,9 @@ int stressHistogram()
 
    // Test 11
    // Interpolation Tests
-   const unsigned int numberOfInterpolation = 3;
+   const unsigned int numberOfInterpolation = 4;
    pointer2Test interpolationTestPointer[numberOfInterpolation] = { testInterpolation1D,
+                                                                    testInterpolationVar1D,
                                                                     testInterpolation2D, 
                                                                     testInterpolation3D
    };
@@ -6063,6 +6617,44 @@ void printResult(const char* msg, bool status)
        << msg
        << (status?"FAILED":"OK") << endl;
    counter += 1;
+}
+
+void FillVariableRange(Double_t v[numberOfBins+1])
+{
+   //Double_t v[numberOfBins+1];
+   Double_t minLimit = (maxRange-minRange)  / (numberOfBins*2);
+   Double_t maxLimit = (maxRange-minRange)*4/ (numberOfBins);   
+   v[0] = 0;
+   for ( Int_t i = 1; i < numberOfBins + 1; ++i )
+   {
+      Double_t limit = r.Uniform(minLimit, maxLimit);
+      v[i] = v[i-1] + limit;
+   }
+   
+   Double_t k = (maxRange-minRange)/v[numberOfBins];
+   for ( Int_t i = 0; i < numberOfBins + 1; ++i )
+   {
+      v[i] = v[i] * k + minRange;
+   }
+}
+
+void FillHistograms(TH1D* h1, TH1D* h2, Double_t c1, Double_t c2)
+{
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      h1->Fill(value, c1);
+      h2->Fill(value, c2);
+   }
+}
+
+void FillProfiles(TProfile* p1, TProfile* p2, Double_t c1, Double_t c2)
+{
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, c1);
+      p2->Fill(x, y, c2);
+   }
 }
 
 // Methods for histogram comparisions
