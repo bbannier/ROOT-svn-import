@@ -89,6 +89,8 @@ public:
 
   // Add one ore more rows of data
   virtual void add(const RooArgSet& row, Double_t weight=1.0, Double_t weightError=0);
+  virtual void add(const RooArgSet& row, Double_t weight, Double_t weightErrorLo, Double_t weightErrorHi);
+
   virtual void addFast(const RooArgSet& row, Double_t weight=1.0, Double_t weightError=0);
 
   void append(RooTreeData& data) ;
