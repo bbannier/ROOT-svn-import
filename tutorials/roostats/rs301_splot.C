@@ -190,7 +190,7 @@ void AddData(RooWorkspace* ws){
   RooDataSet* data = model->generate(RooArgSet(*invMass, *isolation),nEvents);
   
   // import data into workspace
-  ws->import(*data, RenameDataset("data"));
+  ws->import(*data, Rename("data"));
 
 }
 
@@ -222,7 +222,7 @@ void DoSPlot(RooWorkspace* ws){
 
   // import this new dataset with sWeights
  std::cout << "import new dataset with sWeights" << std::endl;
- ws->import(*sData, RenameDataset("dataWithSWeights"));
+ ws->import(*sData, Rename("dataWithSWeights"));
 
 
 }
