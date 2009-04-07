@@ -301,6 +301,10 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *tit
   optimizeCaching() ;
 
   delete realDepSet ;  
+
+  // Redirect pointers of base class to clone 
+  _func = _funcClone ;
+  _data = _dataClone ;
   
 }
 
@@ -345,6 +349,9 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const RooAbsOptTestStatistic& oth
   } else {
     _projDeps = 0 ;
   }
+
+  _func = _funcClone ;
+  _data = _dataClone ;
 }
 
 
