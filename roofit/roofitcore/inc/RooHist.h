@@ -40,6 +40,9 @@ public:
   // add a datapoint for a bin with n entries, using a given error
   void addBinWithError(Axis_t binCenter, Double_t n, Double_t elow, Double_t ehigh, Double_t binWidth= 0, 
 		       Double_t xErrorFrac=1.0, Bool_t correctForBinWidth=kTRUE, Double_t scaleFactor=1.0);
+  // add a datapoint for a bin with n entries, using a given x and y error
+  void addBinWithXYError(Axis_t binCenter, Double_t n, Double_t exlow, Double_t exhigh, Double_t eylow, Double_t eyhigh, 
+                         Double_t scaleFactor=1.0);
   // add a datapoint for the asymmetry (n1-n2)/(n1+n2), using a binomial error
   void addAsymmetryBin(Axis_t binCenter, Int_t n1, Int_t n2, Double_t binWidth= 0, Double_t xErrorFrac=1.0, Double_t scaleFactor=1.0);
   // add a datapoint for the efficiency (n1)/(n1+n2), using a binomial error

@@ -375,6 +375,25 @@ void RooHist::addBinWithError(Axis_t binCenter, Double_t n, Double_t elow, Doubl
 
 
 
+//_____________________________________________________________________________
+void RooHist::addBinWithXYError(Axis_t binCenter, Double_t n, Double_t exlow, Double_t exhigh, Double_t eylow, Double_t eyhigh, 
+				Double_t scaleFactor)
+{
+  // Add a bin to this histogram with the specified bin contents
+  // and error. The bin width is used to set the relative scale of 
+  // bins with different widths.
+
+  _entries+= n;
+  Int_t index= GetN();
+
+  SetPoint(index,binCenter,n*scaleFactor);
+  SetPointError(index,exlow,exhigh,eylow*scaleFactor,eyhigh*scaleFactor);
+  updateYAxisLimits(scaleFactor*(n-eylow));
+  updateYAxisLimits(scaleFactor*(n+eyhigh));
+}
+
+
+
 
 
 //_____________________________________________________________________________
