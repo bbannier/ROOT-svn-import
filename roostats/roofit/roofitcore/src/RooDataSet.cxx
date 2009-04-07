@@ -146,7 +146,7 @@ RooDataSet::RooDataSet(const char* name, const char* title, const RooArgSet& var
   const RooLinkedList& impSliceData = pc.getObjectList("impSliceData") ;
   RooCategory* indexCat = static_cast<RooCategory*>(pc.getObject("indexCat")) ;
   RooArgSet* errorSet = pc.getSet("errorSet") ;
-  RooArgSet* asymErrorSet = pc.getSet("asymErrorSet") ;
+  RooArgSet* asymErrorSet = pc.getSet("asymErrSet") ;
 
   // Make import mapping if index category is specified
   map<string,RooDataSet*> hmap ;  
@@ -1093,7 +1093,7 @@ RooPlot* RooDataSet::plotOnXY(RooPlot* frame, const RooCmdArg& arg1, const RooCm
   // Misc. other options
   // -------------------
   // Name(const chat* name)          -- Give curve specified name in frame. Useful if curve is to be referenced later
-  // Invisble(Bool_t flag)           -- Add curve to frame, but do not display. Useful in combination AddTo()
+  // Invisible(Bool_t flag)          -- Add curve to frame, but do not display. Useful in combination AddTo()
   // 
 
   // Sanity check. XY plotting only applies to weighted datasets with one observable
@@ -1146,11 +1146,12 @@ RooPlot* RooDataSet::plotOnXY(RooPlot* frame, const RooCmdArg& arg1, const RooCm
   for (int i=0 ; i<numEntries() ; i++) {
     get(i) ;
     Double_t x = xvar->getVal() ;
-    Double_t ex = xvar->getError() ;
+    Double_t exlo = xvar->getErrorLo() ;
+    Double_t exhi = xvar->getErrorHi() ;
     Double_t y = weight() ;
     Double_t eylo, eyhi ;
     weightError(eylo,eyhi) ;
-    graph->addBinWithError(x,y,eylo,eyhi,2*ex,1,kFALSE,scaleFactor) ;
+    graph->addBinWithXYError(x,y,-1*exlo,exhi,-1*eylo,eyhi,scaleFactor) ;
   }
 
   // Adjust style options according to named arguments
