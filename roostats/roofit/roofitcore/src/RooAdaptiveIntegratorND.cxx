@@ -71,6 +71,7 @@ RooAdaptiveIntegratorND::RooAdaptiveIntegratorND()
   _integrator = 0 ;
   _nError = 0 ;
   _nWarn = 0 ;
+  _useIntegrandLimits = kTRUE ;
 }
 
 
@@ -93,6 +94,7 @@ RooAdaptiveIntegratorND::RooAdaptiveIntegratorND(const RooAbsFunc& function, con
   }
   _integrator = new ROOT::Math::AdaptiveIntegratorMultiDim(config.epsAbs(),config.epsRel(),_nmax) ;
   _integrator->SetFunction(*_func) ;
+  _useIntegrandLimits=kTRUE ;
 
   _xmin = 0 ;
   _xmax = 0 ;
@@ -142,13 +144,35 @@ Bool_t RooAdaptiveIntegratorND::checkLimits() const
     _xmin = new Double_t[_func->NDim()] ;
     _xmax = new Double_t[_func->NDim()] ;
   }
-
-  for (UInt_t i=0 ; i<_func->NDim() ; i++) {
-    _xmin[i]= integrand()->getMinLimit(i);
-    _xmax[i]= integrand()->getMaxLimit(i);
+  
+  if (_useIntegrandLimits) {
+    for (UInt_t i=0 ; i<_func->NDim() ; i++) {
+      _xmin[i]= integrand()->getMinLimit(i);
+      _xmax[i]= integrand()->getMaxLimit(i);
+    }
   }
 
   return kTRUE ;
+}
+
+
+//_____________________________________________________________________________
+Bool_t RooAdaptiveIntegratorND::setLimits(Double_t *xmin, Double_t *xmax) 
+{
+  // Change our integration limits. Return kTRUE if the new limits are
+  // ok, or otherwise kFALSE. Always returns kFALSE and does nothing
+  // if this object was constructed to always use our integrand's limits.
+
+  if(_useIntegrandLimits) {
+    oocoutE((TObject*)0,Integration) << "RooAdaptiveIntegratorND::setLimits: cannot override integrand's limits" << endl;
+    return kFALSE;
+  }
+  for (UInt_t i=0 ; i<_func->NDim() ; i++) {
+    _xmin[i]= xmin[i];
+    _xmax[i]= xmax[i];
+  }
+
+  return checkLimits();
 }
 
 
