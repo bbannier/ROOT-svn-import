@@ -141,6 +141,10 @@ RooFFTConvPdf::RooFFTConvPdf(const char *name, const char *title, RooRealVar& co
    // Constructor for convolution of pdf1 (x) pdf2 in observable convVar. The binning used for the FFT sampling is controlled
    // by the binning named "cache" in the convolution observable. The resulting FFT convolved histogram is interpolated at
    // order 'ipOrder' A minimum binning of 1000 bins is recommended.
+
+   if (!convVar.hasBinning("cache")) {
+     convVar.setBinning(convVar.getBinning(),"cache") ;
+   }
    
    _shift2 = (convVar.getMax()+convVar.getMin())/2 ;
 
@@ -383,7 +387,7 @@ void RooFFTConvPdf::fillCacheObject(RooAbsCachedPdf::PdfCacheElem& cache) const
     // Set current slice position
     for (Int_t j=0 ; j<n ; j++) { obsLV[j]->setBin(binCur[j],binningName()) ; }
 
-    // cout << "filling slice: bin of obsLV[0] = " << obsLV[0]->getBin() << endl ;
+//     cout << "filling slice: bin of obsLV[0] = " << obsLV[0]->getBin() << endl ;
 
     // Fill current slice
     fillCacheSlice((FFTCacheElem&)cache,otherObs) ;
