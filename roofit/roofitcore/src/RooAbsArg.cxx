@@ -795,7 +795,8 @@ void RooAbsArg::setValueDirty(const RooAbsArg* source) const
   } else if (source==this) {
     // Cyclical dependency, abort
     coutE(LinkStateMgmt) << "RooAbsArg::setValueDirty(" << GetName()
-	 << "): cyclical dependency detected" << endl ;
+			 << "): cyclical dependency detected, source = " << source->GetName() << endl ;
+    assert(0) ;
     return ;
   }
 
@@ -1337,10 +1338,10 @@ void RooAbsArg::printMultiline(ostream& os, Int_t /*contents*/, Bool_t /*verbose
       ((RooArgProxy*)proxy)->absArg()->printStream(os,kName,kSingleLine) ;
     } else {
       os << indent << "    " << proxy->name() << " -> " ;
+      os << endl ;
       TString moreIndent(indent) ;
       moreIndent.Append("    ") ;
       ((RooSetProxy*)proxy)->printStream(os,kName,kStandard,moreIndent.Data()) ;
-      os << endl ;
     }
   }
 }
