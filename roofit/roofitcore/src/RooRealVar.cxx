@@ -286,26 +286,30 @@ void RooRealVar::setBinning(const RooAbsBinning& binning, const char* name)
 
   // Process insert hooks required for parameterized binnings
   if (!name) {
+    RooAbsBinning* newBinning = binning.clone() ;
     if (_binning) {
       _binning->removeHook(*this) ;
       delete _binning ;
     }
-    _binning = binning.clone() ;
-    _binning->insertHook(*this) ;
+    newBinning->insertHook(*this) ;
+    _binning = newBinning ;
   } else {
 
     RooLinkedList* altBinning = binning.isShareable() ? &(sharedProp()->_altBinning) : &_altNonSharedBinning ;
+
+    RooAbsBinning* newBinning = binning.clone() ;
 
     // Remove any old binning with this name
     RooAbsBinning* oldBinning = (RooAbsBinning*) altBinning->FindObject(name) ;
     if (oldBinning) {
       altBinning->Remove(oldBinning) ;
       oldBinning->removeHook(*this) ;
+      cout << "--> deleting original named binning " << _binning << " " << name << endl ;
       delete oldBinning ;
     }
 
     // Insert new binning in list of alternative binnings
-    RooAbsBinning* newBinning = binning.clone() ;
+    cout << "--> cloning incoming binning into new named binning " << newBinning << " " << name << endl ;
     newBinning->SetName(name) ;
     newBinning->SetTitle(name) ;
     newBinning->insertHook(*this) ;

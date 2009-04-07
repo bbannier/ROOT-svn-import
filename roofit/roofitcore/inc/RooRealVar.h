@@ -56,6 +56,9 @@ public:
   inline Bool_t hasAsymError(Bool_t allowZero=kTRUE) const { return allowZero ? ((_asymErrHi>=0 && _asymErrLo<=0)) :  ((_asymErrHi>0 && _asymErrLo<0)) ; }
   inline void removeAsymError() { _asymErrLo = 1 ; _asymErrHi = -1 ; }
   inline void setAsymError(Double_t lo, Double_t hi) { _asymErrLo = lo ; _asymErrHi = hi ; }
+  inline Double_t getErrorLo() const { return _asymErrLo<=0?_asymErrLo:-1*_error ; }
+  inline Double_t getErrorHi() const { return _asymErrHi>=0?_asymErrHi:_error ; }
+  
   RooErrorVar* errorVar() const ;
 
   // Set/get finite fit range limits
