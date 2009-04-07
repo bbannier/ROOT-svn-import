@@ -210,7 +210,7 @@ RooImproperIntegrator1D::~RooImproperIntegrator1D()
 
 
 //_____________________________________________________________________________
-Bool_t RooImproperIntegrator1D::setLimits(Double_t xmin, Double_t xmax) 
+Bool_t RooImproperIntegrator1D::setLimits(Double_t *xmin, Double_t *xmax) 
 {
   // Change our integration limits. Return kTRUE if the new limits are
   // ok, or otherwise kFALSE. Always returns kFALSE and does nothing
@@ -221,8 +221,8 @@ Bool_t RooImproperIntegrator1D::setLimits(Double_t xmin, Double_t xmax)
     return kFALSE;
   }
 
-  _xmin= xmin;
-  _xmax= xmax;
+  _xmin= *xmin;
+  _xmax= *xmax;
   return checkLimits();
 }
 
