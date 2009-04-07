@@ -74,10 +74,10 @@ Double_t RooAbsIntegrator::calculate(const Double_t *yvec)
 
 
 //_____________________________________________________________________________
-Bool_t RooAbsIntegrator::setLimits(Double_t, Double_t) 
+Bool_t RooAbsIntegrator::setLimits(Double_t xmin, Double_t xmax) 
 { 
   // Interface to set limits on integration
-  return kFALSE ; 
+  return setLimits(&xmin,&xmax) ; 
 }
  
 
