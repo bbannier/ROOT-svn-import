@@ -21,14 +21,15 @@
 #include "RooCmdArg.h"
 #include "RooDataSet.h"
 #include "RooAbsPdf.h"
+#include "RooNumIntConfig.h"
 
 class RooXYChi2Var : public RooAbsOptTestStatistic {
 public:
 
   // Constructors, assignment etc
-  RooXYChi2Var() {} ;
-  RooXYChi2Var(const char *name, const char* title, RooAbsReal& func, RooDataSet& data) ;
-  RooXYChi2Var(const char *name, const char* title, RooAbsPdf& extPdf, RooDataSet& data) ;
+  RooXYChi2Var() ;
+  RooXYChi2Var(const char *name, const char* title, RooAbsReal& func, RooDataSet& data, Bool_t integrate=kFALSE) ;
+  RooXYChi2Var(const char *name, const char* title, RooAbsPdf& extPdf, RooDataSet& data, Bool_t integrate=kFALSE) ;
   
   RooXYChi2Var(const RooXYChi2Var& other, const char* name=0);
   virtual TObject* clone(const char* newname) const { return new RooXYChi2Var(*this,newname); }
@@ -46,11 +47,34 @@ public:
     return 1.0 ; 
   }
 
+  RooNumIntConfig& binIntegratorConfig() { return _intConfig ; }
+  const RooNumIntConfig& binIntegratorConfig() const { return _intConfig ; }
+
 protected:
 
-  Bool_t _extended ;
+  Bool_t allowFunctionCache() { 
+    // Disable function (component) caching if integration is requested as the function
+    // will be evaluated at coordinates other than the points in the dataset
+    return !_integrate ; 
+  }
+
+  Double_t fy() const ; 
+
+  Bool_t _extended ; // Is the input function and extended p.d.f.
+  Bool_t _integrate ; // Is integration over the bin volume requested
+ 
+  RooArgSet _rrvArgs ; // Set of real-valued observables
+  TIterator* _rrvIter ; //! Iterator over set of real-valued observables
+
+  void initialize() ;
+  void initIntegrator() ;
+  Double_t xErrorContribution(Double_t ydata) const ;
 
   virtual Double_t evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_t stepSize) const ;
+
+  RooNumIntConfig   _intConfig ; // Numeric integrator configuration for integration of function over bin
+  RooAbsFunc*       _funcBinding ; //! Integrator binding of fit function
+  RooAbsIntegrator* _funcIntegrator ; //! Numeric integrator engine over fit function
   
   ClassDef(RooXYChi2Var,1) // Chi^2 function of p.d.f w.r.t a unbinned dataset with X and Y values
 };
