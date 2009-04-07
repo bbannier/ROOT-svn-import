@@ -37,6 +37,11 @@ public:
 
   virtual Double_t combinedValue(RooAbsReal** gofArray, Int_t nVal) const ;
 
+  RooAbsReal& function() { return *_funcClone ; }
+  const RooAbsReal& function() const { return *_funcClone ; }
+  RooAbsData& data() { return *_dataClone ; }
+  const RooAbsData& data() const { return *_dataClone ; }
+
 protected:
 
   friend class RooAbsReal ;
