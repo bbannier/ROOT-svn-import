@@ -35,14 +35,21 @@ public:
   virtual Bool_t checkLimits() const;
   virtual Double_t integral(const Double_t *yvec=0) ;
 
+  using RooAbsIntegrator::setLimits ;
+  Bool_t setLimits(Double_t* xmin, Double_t* xmax);
+
   virtual Bool_t canIntegrate1D() const { return kFALSE ; }
   virtual Bool_t canIntegrate2D() const { return kTRUE ; }
   virtual Bool_t canIntegrateND() const { return kTRUE ; }
   virtual Bool_t canIntegrateOpenEnded() const { return kFALSE ; }
 
+  virtual Bool_t setUseIntegrandLimits(Bool_t flag) {_useIntegrandLimits = flag ; return kTRUE ; }
+
 protected:
   
   RooAdaptiveIntegratorND(const RooAdaptiveIntegratorND&) ;
+
+  Bool_t _useIntegrandLimits;  // If true limits of function binding are ued
 
   mutable Double_t* _xmin ;  // Lower bound in each dimension
   mutable Double_t* _xmax ;  // Upper bound in each dimension
