@@ -914,6 +914,7 @@ public:
    TGLColor(UChar_t r, UChar_t g, UChar_t b, UChar_t a=255);
    TGLColor(Float_t r, Float_t g, Float_t b, Float_t a=1);
    TGLColor(Color_t color_index, Char_t transparency=0);
+   virtual ~TGLColor();
 
    UChar_t*        Arr()       { return fRGBA; }
    const UChar_t* CArr() const { return fRGBA; }

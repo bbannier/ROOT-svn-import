@@ -1014,6 +1014,12 @@ TGLColor::TGLColor(Color_t color_index, Char_t transparency)
 }
 
 //______________________________________________________________________________
+TGLColor::~TGLColor()
+{
+   // Dectructor.
+}
+
+//______________________________________________________________________________
 void TGLColor::SetColor(UChar_t r, UChar_t g, UChar_t b, UChar_t a)
 {
    // Set color with UChar_t values.
