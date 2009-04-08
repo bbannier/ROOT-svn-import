@@ -69,10 +69,13 @@ namespace RooStats {
 
     virtual ~ToyMCSampler() {
       if(fOwnsWorkspace) delete fWS;
+      if(fRand) delete fRand;
     }
     
-     // Main interface to get a ConfInterval, pure virtual
-    virtual SamplingDistribution* AppendSamplingDistribution(RooArgSet& allParameters, SamplingDistribution* last, Int_t additionalMC) {
+    // Extended interface to append to sampling distribution more samples
+    virtual SamplingDistribution* AppendSamplingDistribution(RooArgSet& allParameters, 
+							     SamplingDistribution* last, 
+							     Int_t additionalMC) {
 
       Int_t tmp = fNtoys;
       fNtoys = additionalMC;
@@ -88,7 +91,7 @@ namespace RooStats {
       return newSamples;
     }
 
-     // Main interface to get a ConfInterval, pure virtual
+     // Main interface to get a SamplingDistribution
     virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& allParameters) {
       std::vector<Double_t> testStatVec;
       //       cout << " about to generate sampling dist " << endl;
@@ -129,19 +132,26 @@ namespace RooStats {
        cout << endl;
        */
 
-       //fluctuate the number of events if fExtended is on
+       //fluctuate the number of events if fExtended is on.  
+       // This is a bit slippery for number counting expts. where entry in data and
+       // model is number of events, and so number of entries in data always =1.
        Int_t nEvents = fNevents;
        if(fExtended) {
-	 nEvents = fRand->Poisson(fNevents);
 	 if( pdf->expectedEvents(*observables) > 0){
+	   // if PDF knows expected events use it instead
 	   nEvents = fRand->Poisson(pdf->expectedEvents(*observables));
-	 } else
-	   nEvents = fNevents;
+	 } else{
+	   nEvents = fRand->Poisson(fNevents);
+	 }
        }
-       /*
+
+       /*       
 	 cout << "expected events = " <<  pdf->expectedEvents(*observables) 
-	    << "generating" << nEvents << " events = " << endl;
+	    << "fExtended = " << fExtended
+	    << "fNevents = " << fNevents << " fNevents " 
+	    << "generating" << nEvents << " events " << endl;
        */
+       
 
        RooAbsData* data = (RooAbsData*)pdf->generate(*observables, nEvents);
        delete observables;

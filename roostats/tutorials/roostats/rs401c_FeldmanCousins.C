@@ -72,6 +72,7 @@ void rs401c_FeldmanCousins()
   fc.SetTestSize(.05); // set size of test
   fc.SetData(*data);
   fc.UseAdaptiveSampling(true);
+  fc.FluctuateNumDataEntries(false); // number counting analysis: dataset always has 1 entry with N events observed
   fc.SetNBins(30); // number of points to test per parameter
 
   // use the Feldman-Cousins tool
