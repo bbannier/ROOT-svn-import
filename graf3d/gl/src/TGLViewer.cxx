@@ -115,7 +115,6 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
    fRedrawTimer(0),
    fMaxSceneDrawTimeHQ(5000),
    fMaxSceneDrawTimeLQ(100),
-   fClearColor(1),
    fAxesType(TGLUtil::kAxesNone),
    fAxesDepthTest(kTRUE),
    fReferenceOn(kFALSE),
@@ -171,7 +170,6 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
    fRedrawTimer(0),
    fMaxSceneDrawTimeHQ(5000),
    fMaxSceneDrawTimeLQ(100),
-   fClearColor(1),
    fAxesType(TGLUtil::kAxesNone),
    fAxesDepthTest(kTRUE),
    fReferenceOn(kFALSE),
@@ -220,6 +218,10 @@ void TGLViewer::InitSecondaryObjects()
 
    fSelectedPShapeRef = new TGLManipSet; fOverlay.push_back(fSelectedPShapeRef);
    fSelectedPShapeRef->SetDrawBBox(kTRUE);
+
+   fDarkColorSet .StdDarkBackground();
+   fLightColorSet.StdLightBackground();
+   fRnrCtx->ChangeBaseColorSet(&fDarkColorSet);
 
    fCameraOverlay = new TGLCameraOverlay(kFALSE, kFALSE);
    AddOverlayElement(fCameraOverlay);
@@ -687,14 +689,17 @@ void TGLViewer::PreDraw()
    }
 
    // For embedded gl clear color must be pad's background color.
-   Color_t ci = (fGLDevice != -1) ? gPad->GetFillColor() : fClearColor;
-   TColor *color = gROOT->GetColor(ci);
-   if (color)
-      color->GetRGB(fClearColorRGB[0], fClearColorRGB[1], fClearColorRGB[2]);
-   else
-      fClearColorRGB[0] = fClearColorRGB[1] = fClearColorRGB[2] = 1.0f;
+   {
+      Color_t ci = (fGLDevice != -1) ? gPad->GetFillColor() : fRnrCtx->ColorSet().Background().GetColorIndex();
+      TColor *color = gROOT->GetColor(ci);
+      Float_t rgb[3];
+      if (color)
+         color->GetRGB(rgb[0], rgb[1], rgb[2]);
+      else
+         rgb[0] = rgb[1] = rgb[2] = 0.0f;
 
-   glClearColor(fClearColorRGB[0], fClearColorRGB[1], fClearColorRGB[2], 1.0f);
+      glClearColor(rgb[0], rgb[1], rgb[2], 1.0f);
+   }
 
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -736,7 +741,7 @@ void TGLViewer::FadeView(Float_t alpha)
       TGLCapabilitySwitch blend(GL_BLEND,    kTRUE);
       TGLCapabilitySwitch light(GL_LIGHTING, kFALSE);
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-      glColor4f(fClearColorRGB[0], fClearColorRGB[1], fClearColorRGB[2], alpha);
+      TGLUtil::Color(fRnrCtx->ColorSet().Background(), alpha);
       glBegin(GL_QUADS);
       glVertex3f(-1, -1, z);  glVertex3f( 1, -1, z);
       glVertex3f( 1,  1, z);  glVertex3f(-1,  1, z);
@@ -1044,6 +1049,35 @@ void TGLViewer::AutoFade(Float_t fade, Float_t time, Int_t steps)
 
    TGLFaderHelper* fh = new TGLFaderHelper(this, fade, time, steps);
    fh->MakeFadeStep();
+}
+
+//______________________________________________________________________________
+void TGLViewer::UseDarkColorSet()
+{
+   // Use the dark color-set.
+
+   fRnrCtx->ChangeBaseColorSet(&fDarkColorSet);
+   RefreshPadEditor(this);
+}
+
+//______________________________________________________________________________
+void TGLViewer::UseLightColorSet()
+{
+   // Use the light color-set.
+
+   fRnrCtx->ChangeBaseColorSet(&fLightColorSet);
+   RefreshPadEditor(this);
+}
+
+//______________________________________________________________________________
+void TGLViewer::SwitchColorSet()
+{
+   // Swtich between dark and light colorsets.
+
+   if (fRnrCtx->GetBaseColorSet() == &fLightColorSet)
+      UseDarkColorSet();
+   else
+      UseLightColorSet();
 }
 
 /**************************************************************************/

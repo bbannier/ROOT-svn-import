@@ -55,6 +55,7 @@ const char * TGLSAViewer::fgHelpText1 = "\
 DIRECT SCENE INTERACTIONS\n\n\
    Press:\n\
    \tw          --- wireframe mode\n\
+   \te          --- switch between dark / light color-set\n\
    \tr          --- filled polygons mode\n\
    \tt          --- outline mode\n\
    \tj          --- ZOOM in\n\

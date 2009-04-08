@@ -117,8 +117,8 @@ protected:
    Float_t              fMaxSceneDrawTimeLQ; //! max time for scene rendering at high LOD (in ms)
 
    TGLRect        fViewport;       //! viewport - drawn area
-   Color_t        fClearColor;     //! clear-color
-   Float_t        fClearColorRGB[3]; //! clear-color cache
+   TGLColorSet    fDarkColorSet;   //! color-set with dark background
+   TGLColorSet    fLightColorSet;  //! color-set with dark background
    Int_t          fAxesType;       //! axes type
    Bool_t         fAxesDepthTest;  //! remove guides hidden-lines
    Bool_t         fReferenceOn;    //! reference marker on?
@@ -200,10 +200,14 @@ public:
    virtual void  DestroyGLWidget() {}
 
    Int_t   GetDev()          const           { return fGLDevice; }
-   Color_t GetClearColor()   const           { return fClearColor; }
-   void    SetClearColor(Color_t col)        { fClearColor = col; }
    Bool_t  GetSmartRefresh() const           { return fSmartRefresh; }
    void    SetSmartRefresh(Bool_t smart_ref) { fSmartRefresh = smart_ref; }
+
+   TGLColorSet& RefDarkColorSet()  { return fDarkColorSet;  }
+   TGLColorSet& RefLightColorSet() { return fLightColorSet; }
+   void         UseDarkColorSet();
+   void         UseLightColorSet();
+   void         SwitchColorSet();
 
    TGLLightSet* GetLightSet() const { return fLightSet; }
    TGLClipSet * GetClipSet()  const { return fClipSet; }
