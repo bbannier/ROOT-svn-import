@@ -51,6 +51,8 @@ namespace RooStats {
        fPdf = &pdf;
        fProfile = 0;
        fNll = 0;
+       fLastBestFitParams = 0;
+       fLastData = 0;
      }
      virtual ~ProfileLikelihoodTestStat() {
        //       delete fRand;
@@ -60,19 +62,57 @@ namespace RooStats {
      // Main interface to evaluate the test statistic on a dataset
      virtual Double_t Evaluate(RooAbsData& data, RooArgSet& paramsOfInterest)  {       
        if(!&data){ cout << "problem with data" << endl;}
-       if(fProfile) delete fProfile; 
-       if (fNll)    delete fNll;
        
        RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
        bool needToRebuild = true; // try to avoid rebuilding if possible
+
+       if(fLastData == &data) // simple pointer comparison for now (note NLL makes COPY of data)
+	 needToRebuild=false;
+       else
+	 fLastData = &data; // keep a copy of pointer to original data
+
        if(needToRebuild){
+	 if(fProfile) delete fProfile; 
+	 if (fNll)    delete fNll;
+
 	 RooNLLVar* nll = new RooNLLVar("nll","",*fPdf,data, RooFit::Extended());
 	 fNll = nll;
 	 fProfile = new RooProfileLL("pll","",*nll, paramsOfInterest);
 	 //	 fProfile->addOwnedComponents(*nll) ;  // to avoid memory leak       
+
+
+	 // set parameters to previous best fit params, to speed convergence
+	 // and to avoid local minima
+	 if(fLastBestFitParams){
+	   // these parameters are not guaranteed to be the best for this data
+	   SetParameters(fLastBestFitParams, fProfile->getParameters(data) );
+	   // now evaluate to force this profile to evaluate and store
+	   // best fit parameters for this data
+	   fProfile->getVal();
+	   // possibly store last MLE for reference
+	   //	 Double mle = fNll->getVal();
+
+	 } else {
+	   // evaluate to force this profile to evaluate and store
+	   // best fit parameters for this data
+	   fProfile->getVal();
+	   
+	   // store best fit parameters
+	   fLastBestFitParams = &(fProfile->bestFitParams());
+
+	 }
+
+
        }
        if(!fProfile){ cout << "problem making profile" << endl;}
 
+
+
+       // set parameters
+       SetParameters(&paramsOfInterest, fProfile->getParameters(data) );
+
+
+       /*
        RooArgSet* paramsToChange = fProfile->getParameters(data);
 
        TIter it = paramsOfInterest.createIterator();
@@ -85,6 +125,7 @@ namespace RooStats {
 	 mytarget->setVal( myarg->getVal() );
        }
        delete paramsToChange;
+       */
 
        /*       TIter      itr = fProfile->getParameters(data)->createIterator();
        while ((myarg = (RooRealVar *)itr.Next())) { 
@@ -93,9 +134,13 @@ namespace RooStats {
        cout << " = " << fProfile->evaluate()  << endl;
        */
 
-       //       Double_t value = fProfile->evaluate();
        Double_t value = fProfile->getVal();
        RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+
+       // warning message
+       if(value<0)
+	 cout << "ProfileLikelihoodTestStat: problem that profileLL<0, indicates false minimum used earlier"<<endl;
+
        return value;
      }
 
@@ -107,6 +152,9 @@ namespace RooStats {
       RooProfileLL* fProfile;
       RooAbsPdf* fPdf;
       RooNLLVar* fNll;
+      const RooArgSet* fLastBestFitParams;
+      RooAbsData* fLastData;
+      //      Double_t fLastMLE;
 
    protected:
       ClassDef(ProfileLikelihoodTestStat,1)   
