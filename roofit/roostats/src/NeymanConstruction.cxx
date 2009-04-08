@@ -206,7 +206,8 @@ ConfInterval* NeymanConstruction::GetInterval() const {
     }
     std::cout << "\tdbg: "<< i<<"/"<<fPointsToTest->numEntries()<<" : " << lowerEdgeOfAcceptance << ", " 
     	      << upperEdgeOfAcceptance << ", " << thisTestStatistic <<  " " <<
-      (thisTestStatistic >= lowerEdgeOfAcceptance && thisTestStatistic <= upperEdgeOfAcceptance) << std::endl << std::endl;
+      (thisTestStatistic >= lowerEdgeOfAcceptance && thisTestStatistic <= upperEdgeOfAcceptance) 
+	      << std::endl << std::endl;
 
     // Check if this data is in the acceptance region
     if(thisTestStatistic >= lowerEdgeOfAcceptance && thisTestStatistic <= upperEdgeOfAcceptance) {

@@ -78,13 +78,12 @@ namespace RooStats {
 	 RooNLLVar* nll = new RooNLLVar("nll","",*fPdf,data, RooFit::Extended());
 	 fNll = nll;
 	 fProfile = new RooProfileLL("pll","",*nll, paramsOfInterest);
-	 //	 fProfile->addOwnedComponents(*nll) ;  // to avoid memory leak       
 
 
 	 // set parameters to previous best fit params, to speed convergence
 	 // and to avoid local minima
 	 if(fLastBestFitParams){
-	   // these parameters are not guaranteed to be the best for this data
+	   // these parameters are not guaranteed to be the best for this data	   
 	   SetParameters(fLastBestFitParams, fProfile->getParameters(data) );
 	   // now evaluate to force this profile to evaluate and store
 	   // best fit parameters for this data
@@ -98,7 +97,7 @@ namespace RooStats {
 	   fProfile->getVal();
 	   
 	   // store best fit parameters
-	   fLastBestFitParams = &(fProfile->bestFitParams());
+	   fLastBestFitParams = (RooArgSet*) (fProfile->bestFitParams().clone("lastBestFit"));
 
 	 }
 

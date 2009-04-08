@@ -91,6 +91,8 @@ namespace RooStats {
       void UseAdaptiveSampling(bool flag=true){fAdaptiveSampling=flag;}
 
       void SetNBins(Int_t bins) {fNbins = bins;}
+
+      void FluctuateNumDataEntries(bool flag=true){fFluctuateData = flag;}
       
    private:
 
@@ -111,7 +113,8 @@ namespace RooStats {
       mutable RooTreeData* fPointsToTest; // points to perform the construction
       mutable ConfidenceBelt* fConfBelt;
       bool fAdaptiveSampling; // controls use of adaptive sampling algorithm
-      Int_t fNbins;
+      Int_t fNbins; // number of samples per variable
+      Bool_t fFluctuateData;  // tell ToyMCSampler to fluctuate number of entries in dataset
    protected:
       ClassDef(FeldmanCousins,1)   // Interface for tools setting limits (producing confidence intervals)
    };
