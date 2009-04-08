@@ -45,6 +45,9 @@
 
 #include <iostream>
 
+// debugging
+//#include "RooStats/ProfileLikelihoodTestStat.h"
+
 // PDF class created for this macro
 #include "NuMuToNuE_Oscillation.h"
 #include "tutorials/roostats/NuMuToNuE_Oscillation.cxx" // so that it can be executed directly
@@ -210,8 +213,8 @@ void rs401d_FeldmanCousins()
   fc.SetNBins(30); // number of points to test per parameter
 
   // use the Feldman-Cousins tool
-   ConfInterval* interval = fc.GetInterval();
-   //ConfInterval* interval = 0;
+  ConfInterval* interval = fc.GetInterval();
+  //ConfInterval* interval = 0;
 
 
   ///////////////////////////////////////////////////////////////////
@@ -233,6 +236,11 @@ void rs401d_FeldmanCousins()
   RooDataHist* parameterScan = (RooDataHist*) fc.GetPointsToScan();
   parameterScan->Draw("deltaMSq:sinSq2theta");
 
+
+  // debugging
+  //  ProfileLikelihoodTestStat testStat(model);
+
+
   // now loop through the points and put a marker if it's in the interval
   RooArgSet* tmpPoint;
   // loop over points to test
@@ -252,7 +260,14 @@ void rs401d_FeldmanCousins()
     // mark for ProfileLikelihood
     TMarker* plcMark = new TMarker(tmpPoint->getRealValue("sinSq2theta"), tmpPoint->getRealValue("deltaMSq"), 22);
     parameters=*tmpPoint;
-    //    cout << "pll = " << pll.getVal() << endl;;
+
+    /* for debugging test stat
+    cout << "\n deltaMSq " << tmpPoint->getRealValue("deltaMSq") 
+	 << " sinSq2theta = " << tmpPoint->getRealValue("sinSq2theta") << endl;
+    cout << " \tpll = " << pll.getVal() << endl;;
+    cout << " \ttest stat = " << testStat.Evaluate(*data, parameters) << endl;
+    */
+
     if (plcInterval){
       if(plcInterval->IsInInterval( *tmpPoint ) ) {
 	plcMark->SetMarkerColor(kGreen);
