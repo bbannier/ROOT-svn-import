@@ -990,9 +990,9 @@ TGLColor::TGLColor()
 }
 
 //______________________________________________________________________________
-TGLColor::TGLColor(UChar_t r, UChar_t g, UChar_t b, UChar_t a)
+TGLColor::TGLColor(Int_t r, Int_t g, Int_t b, Int_t a)
 {
-   // Constructor from UChar_t values.
+   // Constructor from Int_t values.
 
    SetColor(r, g, b, a);
 }
@@ -1020,9 +1020,37 @@ TGLColor::~TGLColor()
 }
 
 //______________________________________________________________________________
-void TGLColor::SetColor(UChar_t r, UChar_t g, UChar_t b, UChar_t a)
+TGLColor& TGLColor::operator=(const TGLColor& c)
 {
-   // Set color with UChar_t values.
+   // Assignment operator.
+
+   fRGBA[0] = c.fRGBA[0];
+   fRGBA[1] = c.fRGBA[1];
+   fRGBA[2] = c.fRGBA[2];
+   fRGBA[3] = c.fRGBA[3];
+   return *this;
+}
+
+//______________________________________________________________________________
+Color_t TGLColor::GetColorIndex() const
+{
+   // Returns color-index representing the color.
+
+   return TColor::GetColor(fRGBA[0], fRGBA[1], fRGBA[2]);
+}
+
+//______________________________________________________________________________
+Char_t TGLColor::GetTransparency() const
+{
+   // Returns transparecy value.
+
+   return TMath::Nint(100.0*(1.0 - fRGBA[3]/255.0));
+}
+
+//______________________________________________________________________________
+void TGLColor::SetColor(Int_t r, Int_t g, Int_t b, Int_t a)
+{
+   // Set color with Int_t values.
 
    fRGBA[0] = r;
    fRGBA[1] = g;
@@ -1106,6 +1134,81 @@ TString TGLColor::AsString() const
    return TString::Format("rgba:%02hhx/%02hhx/%02hhx/%02hhx",
                           fRGBA[0], fRGBA[1], fRGBA[2], fRGBA[3]);
 }
+
+
+//==============================================================================
+// TGLColorSet
+//==============================================================================
+
+//______________________________________________________________________________
+//
+// Class encapsulating a set of colors used throughout standard rendering.
+//
+
+ClassImp(TGLColorSet);
+
+//______________________________________________________________________________
+TGLColorSet::TGLColorSet()
+{
+   // Constructor. Sets default for dark background.
+
+   StdDarkBackground();
+}
+
+//______________________________________________________________________________
+TGLColorSet::~TGLColorSet()
+{
+   // Destructor.
+}
+
+//______________________________________________________________________________
+TGLColorSet& TGLColorSet::operator=(const TGLColorSet& s)
+{
+   // Assignment operator.
+
+   fBackground = s.fBackground;
+   fForeground = s.fForeground;
+   fOutline    = s.fOutline;
+   fMarkup     = s.fMarkup;
+   for (Int_t i = 0; i < 5; ++i)
+      fSelection[i] = s.fSelection[i];
+   return *this;
+}
+
+//______________________________________________________________________________
+void TGLColorSet::StdDarkBackground()
+{
+   // Set defaults for dark (black) background.
+
+   fBackground .SetColor(0,   0,   0);
+   fForeground .SetColor(255, 255, 255);
+   fOutline    .SetColor(240, 255, 240);
+   fMarkup     .SetColor(200, 200, 200);
+
+   fSelection[0].SetColor(  0,   0,   0);
+   fSelection[1].SetColor(255, 220, 220);
+   fSelection[2].SetColor(255, 220, 220);
+   fSelection[3].SetColor(200, 200, 255);
+   fSelection[4].SetColor(200, 200, 255);
+}
+
+//______________________________________________________________________________
+void TGLColorSet::StdLightBackground()
+{
+   // Set defaults for light (white) background.
+
+   fBackground .SetColor(255, 255, 255);
+   fForeground .SetColor(0,   0,   0);
+   fOutline    .SetColor(0,   0,   0);
+   fMarkup     .SetColor(100, 100, 100);
+
+   fSelection[0].SetColor(0,   0,   0);
+   fSelection[1].SetColor(200, 100, 100);
+   fSelection[2].SetColor(200, 100, 100);
+   fSelection[3].SetColor(100, 100, 200);
+   fSelection[4].SetColor(100, 100, 200);
+}
+
 
 //==============================================================================
 // TGLUtil
@@ -1289,9 +1392,30 @@ UInt_t TGLUtil::UnlockColor()
 //______________________________________________________________________________
 Bool_t TGLUtil::IsColorLocked()
 {
-   //static: return true if color lockcount is greater than 0
+   // Returns true if color lockcount is greater than 0.
+
    return fgColorLockCount > 0;
 }
+
+//______________________________________________________________________________
+void TGLUtil::Color(const TGLColor& color)
+{
+   // Set color from TGLColor.
+
+   if (fgColorLockCount == 0) glColor4ubv(color.CArr());
+}
+
+//______________________________________________________________________________
+void TGLUtil::Color(const TGLColor& color, Float_t alpha)
+{
+   // Set color from TGLColor and alpha value.
+
+   if (fgColorLockCount == 0)
+   {
+      glColor4ub(color.GetRed(), color.GetGreen(), color.GetBlue(), 255*alpha);
+   }
+}
+
 
 //______________________________________________________________________________
 void TGLUtil::Color(Color_t color_index, Float_t alpha)
@@ -1308,7 +1432,7 @@ void TGLUtil::Color(Color_t color_index, Float_t alpha)
 }
 
 //______________________________________________________________________________
-void TGLUtil::ColorTransparency(Color_t color_index, UChar_t transparency)
+void TGLUtil::ColorTransparency(Color_t color_index, Char_t transparency)
 {
    // Set color from color_index and ROOT-style transparency (default 0).
 
