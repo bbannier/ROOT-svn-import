@@ -304,12 +304,10 @@ void RooRealVar::setBinning(const RooAbsBinning& binning, const char* name)
     if (oldBinning) {
       altBinning->Remove(oldBinning) ;
       oldBinning->removeHook(*this) ;
-      cout << "--> deleting original named binning " << _binning << " " << name << endl ;
       delete oldBinning ;
     }
 
     // Insert new binning in list of alternative binnings
-    cout << "--> cloning incoming binning into new named binning " << newBinning << " " << name << endl ;
     newBinning->SetName(name) ;
     newBinning->SetTitle(name) ;
     newBinning->insertHook(*this) ;
