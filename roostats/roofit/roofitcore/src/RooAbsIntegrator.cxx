@@ -59,15 +59,13 @@ Double_t RooAbsIntegrator::calculate(const Double_t *yvec)
 {
   // Calculate integral value with given array of parameter values
 
-  if (_printEvalCounter) integrand()->resetNumCall() ;
+  integrand()->resetNumCall() ;
 
   integrand()->saveXVec() ;
   Double_t ret = integral(yvec) ; 
   integrand()->restoreXVec() ;
   
-  if (_printEvalCounter) {
-    cxcoutD(Tracing) << IsA()->GetName() << "::calculate() number of function calls = " << integrand()->numCall() << endl ;
-  }
+  cxcoutD(NumIntegration) << IsA()->GetName() << "::calculate(" << _function->getName() << ") number of function calls = " << integrand()->numCall() << endl ;
   return ret ;
 }
 
