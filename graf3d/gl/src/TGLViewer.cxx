@@ -1113,6 +1113,15 @@ Bool_t TGLViewer::IsUsingDefaultColorSet() const
 }
 
 //______________________________________________________________________________
+void TGLViewer::SetClearColor(Color_t col)
+{
+   // Set background method.
+   // Deprecated method - set background color in the color-set.
+
+   fRnrCtx->GetBaseColorSet()->Background().SetColor(col);
+}
+
+//______________________________________________________________________________
 TGLColorSet& TGLViewer::GetDefaultColorSet()
 {
    // Returns reference to the default color-set.

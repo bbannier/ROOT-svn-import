@@ -209,13 +209,15 @@ public:
 
    TGLColorSet& RefDarkColorSet()  { return fDarkColorSet;  }
    TGLColorSet& RefLightColorSet() { return fLightColorSet; }
-   TGLColorSet& ColorSet()         { return fRnrCtx->ColorSet(); }
+   TGLColorSet& ColorSet()         { return * fRnrCtx->GetBaseColorSet(); }
    void         UseDarkColorSet();
    void         UseLightColorSet();
    void         SwitchColorSet();
 
    void         UseDefaultColorSet(Bool_t x);
    Bool_t       IsUsingDefaultColorSet() const;
+
+   void         SetClearColor(Color_t col);
 
    static TGLColorSet& GetDefaultColorSet();
    static void         UseDefaultColorSetForNewViewers(Bool_t x);
