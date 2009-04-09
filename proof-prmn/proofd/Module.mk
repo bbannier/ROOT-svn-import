@@ -111,11 +111,19 @@ endif
 endif
 
 # Extra include paths and libs
+XPROOFDEXELIBS :=
+XPROOFDEXE     :=
 ifeq ($(BUILDXRD),yes)
 XPDINCEXTRA    := $(XROOTDDIRI:%=-I%)
 XPDINCEXTRA    += $(PROOFDDIRI:%=-I%)
 XPDLIBEXTRA    += -L$(XROOTDDIRL) -lXrdOuc -lXrdNet -lXrdSys \
                   -L$(XROOTDDIRP) -lXrdClient -lXrdSut
+ifeq ($(PLATFORM),linux)
+XPROOFDEXELIBS := $(XROOTDDIRL)/libXrd.a $(XROOTDDIRL)/libXrdClient.a \
+                  $(XROOTDDIRL)/libXrdNet.a $(XROOTDDIRL)/libXrdOuc.a \
+                  $(XROOTDDIRL)/libXrdSys.a $(XROOTDDIRL)/libXrdSut.a
+XPROOFDEXE     := bin/xproofd
+endif
 endif
 
 # used in the main Makefile
@@ -123,6 +131,7 @@ ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(PROOFDEXEH))
 ALLEXECS     += $(PROOFDEXE)
 ifeq ($(BUILDXRD),yes)
 ALLLIBS      += $(XPDLIB)
+ALLEXECS     += $(XPROOFDEXE)
 endif
 
 # include all dependency files
@@ -142,12 +151,15 @@ $(PROOFDEXE):   $(PROOFDEXEO) $(RSAO) $(SNPRINTFO) $(GLBPATCHO) $(RPDUTILO)
 		$(LD) $(LDFLAGS) -o $@ $(PROOFDEXEO) $(RPDUTILO) $(GLBPATCHO) \
 		   $(RSAO) $(SNPRINTFO) $(CRYPTLIBS) $(AUTHLIBS) $(SYSLIBS)
 
+$(XPROOFDEXE):  $(XPDO) $(XPROOFDEXELIBS) $(XRDPROOFXD)
+		$(LD) $(LDFLAGS) -o $@ $(XPDO) $(XPROOFDEXELIBS) $(SYSLIBS)
+
 $(XPDLIB):      $(XPDO) $(XPDH) $(ORDER_) $(MAINLIBS) $(XRDPROOFXD)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libXrdProofd.$(SOEXT) $@ "$(XPDO)" \
 		   "$(XPDLIBEXTRA)"
 
-all-$(MODNAME): $(PROOFDEXE) $(XPDLIB)
+all-$(MODNAME): $(PROOFDEXE) $(XPROOFDEXE) $(XPDLIB)
 
 clean-$(MODNAME):
 		@rm -f $(PROOFDEXEO) $(XPDO)
@@ -155,7 +167,7 @@ clean-$(MODNAME):
 clean::         clean-$(MODNAME)
 
 distclean-$(MODNAME): clean-$(MODNAME)
-		@rm -f $(PROOFDDEP) $(PROOFDEXE) $(XPDDEP) $(XPDLIB)
+		@rm -f $(PROOFDDEP) $(PROOFDEXE) $(XPROOFDEXE) $(XPDDEP) $(XPDLIB)
 
 distclean::     distclean-$(MODNAME)
 
