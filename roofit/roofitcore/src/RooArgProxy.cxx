@@ -20,6 +20,8 @@
 #include "RooArgProxy.h"
 #include "RooArgSet.h"
 #include "RooAbsArg.h"
+#include <iostream>
+using namespace std ;
 
 //////////////////////////////////////////////////////////////////////////////
 // 
@@ -105,16 +107,20 @@ Bool_t RooArgProxy::changePointer(const RooAbsCollection& newServerList, Bool_t 
   // the existence of a boolean attribute "origName:MyName" where MyName is the name of this instance
   
   RooAbsArg* newArg ;
+  Bool_t initEmpty = _arg ? kFALSE : kTRUE ;
   if (_arg) {
     newArg= _arg->findNewServer(newServerList, nameChange);
   } else if (factoryInitMode) {
     newArg = newServerList.first() ;
     _owner->addServer(*newArg,_valueServer,_shapeServer) ;
+  } else {
+    newArg = 0 ;
   }
   if (newArg) {
     _arg = newArg ;
     _isFund = _arg->isFundamental() ;
-  }
+  }  
+  if (initEmpty && !factoryInitMode) return kTRUE ;
   return newArg?kTRUE:kFALSE ;
 }
 
