@@ -130,8 +130,10 @@ ClassImp(RooFFTConvPdf)
 RooFFTConvPdf::RooFFTConvPdf(const char *name, const char *title, RooRealVar& convVar, RooAbsPdf& pdf1, RooAbsPdf& pdf2, Int_t ipOrder) :
   RooAbsCachedPdf(name,title,ipOrder),
   _x("!x","Convolution Variable",this,convVar),
-  _pdf1("!pdf1","pdf1",this,pdf1),
-  _pdf2("!pdf2","pdf2",this,pdf2),
+  _xprime("!xprime","External Convolution Variable",this,0),
+  _pdf1("!pdf1","pdf1",this,pdf1,kFALSE),
+  _pdf2("!pdf2","pdf2",this,pdf2,kFALSE),
+  _params("!params","effective parameters",this),
   _bufFrac(0.1),
   _bufStrat(Extend),
   _shift1(0),
@@ -148,6 +150,37 @@ RooFFTConvPdf::RooFFTConvPdf(const char *name, const char *title, RooRealVar& co
    
    _shift2 = (convVar.getMax()+convVar.getMin())/2 ;
 
+   calcParams() ;
+
+ } 
+
+
+
+//_____________________________________________________________________________
+RooFFTConvPdf::RooFFTConvPdf(const char *name, const char *title, RooAbsReal& pdfConvVar, RooRealVar& convVar, RooAbsPdf& pdf1, RooAbsPdf& pdf2, Int_t ipOrder) :
+  RooAbsCachedPdf(name,title,ipOrder),
+  _x("!x","Convolution Variable",this,convVar,kFALSE,kFALSE),
+  _xprime("!xprime","External Convolution Variable",this,pdfConvVar),
+  _pdf1("!pdf1","pdf1",this,pdf1,kFALSE),
+  _pdf2("!pdf2","pdf2",this,pdf2,kFALSE),
+  _params("!params","effective parameters",this),
+  _bufFrac(0.1),
+  _bufStrat(Extend),
+  _shift1(0),
+  _shift2(0),
+  _cacheObs("!cacheObs","Cached observables",this,kFALSE,kFALSE)
+ { 
+   // Constructor for convolution of pdf1 (x) pdf2 in observable convVar. The binning used for the FFT sampling is controlled
+   // by the binning named "cache" in the convolution observable. The resulting FFT convolved histogram is interpolated at
+   // order 'ipOrder' A minimum binning of 1000 bins is recommended.
+
+   if (!convVar.hasBinning("cache")) {
+     convVar.setBinning(convVar.getBinning(),"cache") ;
+   }
+   
+   _shift2 = (convVar.getMax()+convVar.getMin())/2 ;
+
+   calcParams() ;
  } 
 
 
@@ -156,8 +189,10 @@ RooFFTConvPdf::RooFFTConvPdf(const char *name, const char *title, RooRealVar& co
 RooFFTConvPdf::RooFFTConvPdf(const RooFFTConvPdf& other, const char* name) :  
   RooAbsCachedPdf(other,name),
   _x("!x",this,other._x),
+  _xprime("!xprime",this,other._xprime),
   _pdf1("!pdf1",this,other._pdf1),
   _pdf2("!pdf2",this,other._pdf2),
+  _params("!params",this,other._params),
   _bufFrac(other._bufFrac),
   _bufStrat(other._bufStrat),
   _shift1(other._shift1),
@@ -213,7 +248,6 @@ RooFFTConvPdf::FFTCacheElem::FFTCacheElem(const RooFFTConvPdf& self, const RooAr
   RooAbsPdf* clonePdf2 = (RooAbsPdf*) self._pdf2.arg().cloneTree() ;
   clonePdf1->attachDataSet(*hist()) ;
   clonePdf2->attachDataSet(*hist()) ;
-
    
    // Shift observable
    RooRealVar* convObs = (RooRealVar*) hist()->get()->find(self._x.arg().GetName()) ;
@@ -674,6 +708,20 @@ RooArgSet* RooFFTConvPdf::actualParameters(const RooArgSet& nset) const
 
 
 //_____________________________________________________________________________
+RooAbsArg& RooFFTConvPdf::pdfObservable(RooAbsArg& histObservable) const 
+{
+  // Return p.d.f. observable (which can be a function) to substitute given
+  // p.d.f. observable. Substitute x by xprime if xprime is set
+
+  if (_xprime.absArg() && string(histObservable.GetName())==_x.absArg()->GetName()) {
+    return (*_xprime.absArg()) ;
+  }
+  return histObservable ;
+}
+
+
+
+//_____________________________________________________________________________
 RooAbsGenContext* RooFFTConvPdf::genContext(const RooArgSet &vars, const RooDataSet *prototype, 
 					    const RooArgSet* auxProto, Bool_t verbose) const 
 {
@@ -766,4 +814,29 @@ void RooFFTConvPdf::printMetaArgs(ostream& os) const
   // product operator construction
 
   os << _pdf1.arg().GetName() << "(" << _x.arg().GetName() << ") (*) " << _pdf2.arg().GetName() << "(" << _x.arg().GetName() << ") " ;
+}
+
+
+
+//_____________________________________________________________________________
+void RooFFTConvPdf::calcParams() 
+{
+  // (Re)calculate effective parameters of this p.d.f.
+
+  RooArgSet* params1 = _pdf1.arg().getParameters(_x.arg()) ;
+  RooArgSet* params2 = _pdf2.arg().getParameters(_x.arg()) ;
+  _params.removeAll() ;
+  _params.add(*params1) ;
+  _params.add(*params2,kTRUE) ;
+  delete params1 ;
+  delete params2 ;
+}
+
+
+
+//_____________________________________________________________________________
+Bool_t RooFFTConvPdf::redirectServersHook(const RooAbsCollection& /*newServerList*/, Bool_t /*mustReplaceAll*/, Bool_t /*nameChange*/, Bool_t /*isRecursive*/) 
+{
+  //calcParams() ;
+  return kFALSE ;
 }
