@@ -14,6 +14,7 @@
 
 #include "RooAbsCachedPdf.h"
 #include "RooRealProxy.h"
+#include "RooSetProxy.h"
 #include "RooAbsReal.h"
 #include "RooHistPdf.h"
 #include "TVirtualFFT.h"
@@ -26,6 +27,7 @@ public:
 
   RooFFTConvPdf() {} ;
   RooFFTConvPdf(const char *name, const char *title, RooRealVar& convVar, RooAbsPdf& pdf1, RooAbsPdf& pdf2, Int_t ipOrder=2);
+  RooFFTConvPdf(const char *name, const char *title, RooAbsReal& pdfConvVar, RooRealVar& convVar, RooAbsPdf& pdf1, RooAbsPdf& pdf2, Int_t ipOrder=2);
   RooFFTConvPdf(const RooFFTConvPdf& other, const char* name=0) ;
   virtual TObject* clone(const char* newname) const { return new RooFFTConvPdf(*this,newname); }
   virtual ~RooFFTConvPdf() ;
@@ -60,9 +62,14 @@ public:
 
 protected:
 
-  RooRealProxy _x ;    // Convolution observable
+  RooRealProxy _x ;       // Convolution observable
+  RooRealProxy _xprime ;  // Input function representing value of convolution observable
   RooRealProxy _pdf1 ; // First input p.d.f
   RooRealProxy _pdf2 ; // Second input p.d.f
+  RooSetProxy _params ; // Effective parameters of this p.d.f.
+
+  void calcParams() ;
+  Bool_t redirectServersHook(const RooAbsCollection& newServerList, Bool_t mustReplaceAll, Bool_t nameChange, Bool_t isRecursive) ;
 
   Double_t*  scanPdf(RooRealVar& obs, RooAbsPdf& pdf, const RooDataHist& hist, const RooArgSet& slicePos, Int_t& N, Int_t& N2, Int_t& zeroBin, Double_t shift) const ;
 
@@ -91,6 +98,7 @@ protected:
   virtual const char* inputBaseName() const ;
   virtual RooArgSet* actualObservables(const RooArgSet& nset) const ;
   virtual RooArgSet* actualParameters(const RooArgSet& nset) const ;
+  virtual RooAbsArg& pdfObservable(RooAbsArg& histObservable) const ;
   virtual void fillCacheObject(PdfCacheElem& cache) const ;
   void fillCacheSlice(FFTCacheElem& cache, const RooArgSet& slicePosition) const ;
 
