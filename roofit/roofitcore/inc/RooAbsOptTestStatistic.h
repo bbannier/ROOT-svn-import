@@ -46,6 +46,7 @@ protected:
 
   friend class RooAbsReal ;
 
+  virtual Bool_t allowFunctionCache() { return kTRUE ;  }
   void constOptimizeTestStatistic(ConstOpCode opcode) ;
   
   virtual Bool_t redirectServersHook(const RooAbsCollection& newServerList, Bool_t mustReplaceAll, Bool_t nameChange, Bool_t isRecursive) ;
