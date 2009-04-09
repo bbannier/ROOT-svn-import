@@ -393,7 +393,9 @@ RooAbsArg* RooFactoryWSTool::createArg(const char* className, const char* objNam
 
   if (arg) {
     if (_ws->import(*arg,Silence())) logError() ;
-    return _ws->arg(objName) ;
+    RooAbsArg* ret = _ws->arg(objName) ;
+    delete arg ;
+    return ret ;
   } else {
     coutE(ObjectHandling) << "RooFactoryWSTool::createArg() ERROR in CINT constructor call to create object" << endl ;
     logError() ;
