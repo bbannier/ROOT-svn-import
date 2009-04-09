@@ -88,7 +88,7 @@ protected:
   // Evaluation and validation implementation
   Double_t evaluate() const ;
   virtual Bool_t isValidReal(Double_t value, Bool_t printError=kFALSE) const ;
-  Bool_t servesExclusively(const RooAbsArg* server,const RooArgSet& exclLVBranches) const ;
+  Bool_t servesExclusively(const RooAbsArg* server,const RooArgSet& exclLVBranches, const RooArgSet& allBranches) const ;
 
 
   virtual Bool_t redirectServersHook(const RooAbsCollection& newServerList, 

@@ -47,6 +47,7 @@
 #include "RooNumIntConfig.h"
 #include "RooNameReg.h"
 #include "RooExpensiveObjectCache.h"
+#include "RooConstVar.h"
 #include "RooDouble.h"
 
 ClassImp(RooRealIntegral) 
@@ -205,10 +206,13 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
   }
   delete bIter ;
   exclLVBranches.remove(depList,kTRUE,kTRUE) ;
+//   cout << "exclLVBranches = " << exclLVBranches << endl ;
 
   // Initial fill of list of LValue leaf servers (put in intDepList)
   RooArgSet exclLVServers("exclLVServers") ;
   exclLVServers.add(intDepList) ;
+
+//   cout << "begin exclLVServers = " << exclLVServers << endl ;
   
   // Obtain mutual exclusive dependence by iterative reduction
   TIterator *sIter = exclLVServers.createIterator() ;
@@ -221,8 +225,9 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
     // Reduce exclLVServers to only those serving exclusively exclLVBranches
     sIter->Reset() ;
     while ((server=(RooAbsArg*)sIter->Next())) {
-      if (!servesExclusively(server,exclLVBranches)) {
+      if (!servesExclusively(server,exclLVBranches,branchList)) {
 	exclLVServers.remove(*server) ;
+// 	cout << "removing " << server->GetName() << " from exclLVServers because servesExclusively(" << server->GetName() << "," << exclLVBranches << ") faile" << endl ;
 	converged=kFALSE ;
       }
     }
@@ -236,15 +241,19 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
       bsList.remove(exclLVServers,kTRUE,kTRUE) ;
       if (bsList.getSize()>0) {
 	exclLVBranches.remove(*branch,kTRUE,kTRUE) ;
+// 	cout << "removing " << branch->GetName() << " from exclLVBranches" << endl ;
 	converged=kFALSE ;
       }
     }
   }
   delete sIter ;
   delete bIter ;
+
+//   cout << "end exclLVServers = " << exclLVServers << endl ;
      
   // Replace exclusive lvalue branch servers with lvalue branches
   if (exclLVServers.getSize()>0) {
+//     cout << "activating LVservers " << exclLVServers << " for use in integration " << endl ;
     intDepList.remove(exclLVServers) ;
     intDepList.add(exclLVBranches) ;
   }
@@ -277,12 +286,12 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
   sIter = function.serverIterator() ;
   while((arg=(RooAbsArg*)sIter->Next())) {
 
-    //cout << "considering server" << arg->GetName() << endl ;
+//     cout << "considering server" << arg->GetName() << endl ;
 
     // Dependent or parameter?
     if (!arg->dependsOnValue(intDepList)) {
 
-      //cout << " server does not depend on observables, adding server as value server to integral" << endl ;
+//       cout << " server does not depend on observables, adding server as value server to integral" << endl ;
 
       if (function.dependsOnValue(*arg)) {
 	addServer(*arg,kTRUE,kFALSE) ;
@@ -296,12 +305,12 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
       RooArgSet argLeafServers ;
       arg->leafNodeServerList(&argLeafServers,0,kFALSE) ;
 
-      //arg->printCompactTree() ;
-      //cout << "leaf nodes of server are " << argLeafServers << " depList = " << depList << endl ;
+//       arg->printCompactTree() ;
+//       cout << "leaf nodes of server are " << argLeafServers << " depList = " << depList << endl ;
 
       // Skip arg if it is neither value or shape server
       if (!arg->isValueServer(function) && !arg->isShapeServer(function)) {
-	//cout << " server is neither value not shape server of function, ignoring" << endl ;
+// 	cout << " server is neither value not shape server of function, ignoring" << endl ;
 	continue ;
       }
       
@@ -309,7 +318,7 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
       RooAbsArg* leaf ;
       while((leaf=(RooAbsArg*)lIter->Next())) {
 
-	//cout << " considering leafnode " << leaf->GetName() << " of server " << arg->GetName() << endl ;
+// 	cout << " considering leafnode " << leaf->GetName() << " of server " << arg->GetName() << endl ;
 
 	if (depList.find(leaf->GetName()) && function.dependsOnValue(*leaf)) {
 
@@ -340,8 +349,11 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
     if (arg->isDerived()) {
       RooAbsRealLValue    *realArgLV = dynamic_cast<RooAbsRealLValue*>(arg) ;
       RooAbsCategoryLValue *catArgLV = dynamic_cast<RooAbsCategoryLValue*>(arg) ;
-      if ((realArgLV && intDepList.find(realArgLV->GetName()) && (realArgLV->isJacobianOK(intDepList)!=0)) || catArgLV) {
-	
+//       cout << "realArgLV = " << realArgLV << " intDepList = " << intDepList << endl ;
+      if ((realArgLV && intDepList.find(realArgLV->GetName()) && (realArgLV->isJacobianOK(intDepList)!=0)) || catArgLV) {	
+
+// 	cout  << " arg " << arg->GetName() << " is derived LValue with valid jacobian" << endl ;
+
 	// Derived LValue with valid jacobian
 	depOK = kTRUE ;
 	
@@ -352,11 +364,15 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
 	while((otherArg=(RooAbsArg*)sIter2->Next())) {
 	  // skip comparison with self
 	  if (arg==otherArg) continue ;
+	  if (otherArg->IsA()==RooConstVar::Class()) continue ;
 	  if (arg->overlaps(*otherArg)) {
+// 	    cout << "arg " << arg->GetName() << " overlaps with " << otherArg->GetName() << endl ;
 	    overlapOK=kFALSE ;
 	  }
 	}      	
 	if (!overlapOK) depOK=kFALSE ;      
+
+// 	cout << "overlap check returns " << (depOK?"T":"F") << endl ;
 
 	delete sIter2 ;
       }
@@ -551,9 +567,9 @@ void RooRealIntegral::autoSelectDirtyMode()
 
 
 //_____________________________________________________________________________
-Bool_t RooRealIntegral::servesExclusively(const RooAbsArg* server,const RooArgSet& exclLVBranches) const
+Bool_t RooRealIntegral::servesExclusively(const RooAbsArg* server,const RooArgSet& exclLVBranches, const RooArgSet& allBranches) const
 {  
-  // Utility function that teturns true if 'object server' is a server
+  // Utility function that returns true if 'object server' is a server
   // to exactly one of the RooAbsArgs in 'exclLVBranches'
 
   // Determine if given server serves exclusively exactly one of the given nodes in exclLVBranches
@@ -572,9 +588,8 @@ Bool_t RooRealIntegral::servesExclusively(const RooAbsArg* server,const RooArgSe
    TIterator* cIter = server->clientIterator() ;
    while((client=(RooAbsArg*)cIter->Next())) {
      // If client is not an LValue, recurse
-     if (!exclLVBranches.find(client->GetName())) {
-       
-       if (!servesExclusively(client,exclLVBranches)) {
+     if (!(exclLVBranches.find(client->GetName())==client)) {
+       if (allBranches.find(client->GetName())==client && !servesExclusively(client,exclLVBranches,allBranches)) {
 	 // Client is a non-LValue that doesn't have an exclusive LValue server
 	 delete cIter ;
 	 return kFALSE ;	 
@@ -847,7 +862,9 @@ Double_t RooRealIntegral::jacobianProduct() const
     jacProd *= arg->jacobian() ;
   }
 
-  return jacProd ;
+  // Take fabs() here: if jacobian is negative, min and max are swapped and analytical integral
+  // will be positive, so must multiply with positive jacobian.
+  return fabs(jacProd) ;
 }
 
 
