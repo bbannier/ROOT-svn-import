@@ -428,6 +428,11 @@ void RooAbsOptTestStatistic::constOptimizeTestStatistic(ConstOpCode opcode)
   // be abanoned. If codes ConfigChange or ValueChange are sent, any existing
   // constant term optimizations will be redone.
 
+  if (!allowFunctionCache()) {
+    cxcoutI(Optimization) << "RooAbsOptTestStatistic::constOptimize(" << GetName() 
+			  << ") function caching prohibited by test statistic, no constant term optimization is applied" << endl ;
+    return ;
+  }
 
   RooAbsTestStatistic::constOptimizeTestStatistic(opcode);
   if (operMode()!=Slave) return ;
