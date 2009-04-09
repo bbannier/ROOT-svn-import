@@ -89,6 +89,9 @@
 
 ClassImp(TGLViewer);
 
+TGLColorSet TGLViewer::fgDefaultColorSet;
+Bool_t      TGLViewer::fgUseDefaultColorSetForNewViewers = kFALSE;
+
 //______________________________________________________________________________
 TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
                      Int_t width, Int_t height) :
@@ -219,9 +222,11 @@ void TGLViewer::InitSecondaryObjects()
    fSelectedPShapeRef = new TGLManipSet; fOverlay.push_back(fSelectedPShapeRef);
    fSelectedPShapeRef->SetDrawBBox(kTRUE);
 
-   fDarkColorSet .StdDarkBackground();
    fLightColorSet.StdLightBackground();
-   fRnrCtx->ChangeBaseColorSet(&fDarkColorSet);
+   if (fgUseDefaultColorSetForNewViewers)
+      fRnrCtx->ChangeBaseColorSet(&fgDefaultColorSet);
+   else
+      fRnrCtx->ChangeBaseColorSet(&fDarkColorSet);
 
    fCameraOverlay = new TGLCameraOverlay(kFALSE, kFALSE);
    AddOverlayElement(fCameraOverlay);
@@ -1074,11 +1079,68 @@ void TGLViewer::SwitchColorSet()
 {
    // Swtich between dark and light colorsets.
 
+   if (IsUsingDefaultColorSet())
+   {
+      Info("SwitchColorSet()", "Global color-set is in use, switch not supported.");
+      return;
+   }
+
    if (fRnrCtx->GetBaseColorSet() == &fLightColorSet)
       UseDarkColorSet();
    else
       UseLightColorSet();
 }
+
+//______________________________________________________________________________
+void TGLViewer::UseDefaultColorSet(Bool_t x)
+{
+   // Set usage of the default color set.
+
+   if (x)
+      fRnrCtx->ChangeBaseColorSet(&fgDefaultColorSet);
+   else
+      fRnrCtx->ChangeBaseColorSet(&fDarkColorSet);
+   RefreshPadEditor(this);
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::IsUsingDefaultColorSet() const
+{
+   // Check if the viewer is using the default color set.
+   // If yes, some operations might be disabled.
+
+   return fRnrCtx->GetBaseColorSet() == &fgDefaultColorSet;
+}
+
+//______________________________________________________________________________
+TGLColorSet& TGLViewer::GetDefaultColorSet()
+{
+   // Returns reference to the default color-set.
+   // Static function.
+
+   return fgDefaultColorSet;
+}
+
+//______________________________________________________________________________
+void TGLViewer::UseDefaultColorSetForNewViewers(Bool_t x)
+{
+   // Sets static flag that determines if new viewers should use the
+   // default color-set.
+   // This is false at startup.
+
+   fgUseDefaultColorSetForNewViewers = x;
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::IsUsingDefaultColorSetForNewViewers()
+{
+   // Returns the value of the static flag that determines if new
+   // viewers should use the default color-set.
+   // This is false at startup.
+
+   return fgUseDefaultColorSetForNewViewers;
+}
+
 
 /**************************************************************************/
 // Viewport

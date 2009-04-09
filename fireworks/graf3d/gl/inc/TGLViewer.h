@@ -135,6 +135,10 @@ protected:
    TString        fPictureFileName;      //! default file-name for SavePicture()
    Float_t        fFader;                //! fade the view (0 - no fade/default, 1 - full fade/no rendering done)
 
+   static TGLColorSet fgDefaultColorSet;                 //! a shared, default color-set
+   static Bool_t      fgUseDefaultColorSetForNewViewers; //! name says it all
+
+
    ///////////////////////////////////////////////////////////////////////
    // Methods
    ///////////////////////////////////////////////////////////////////////
@@ -205,9 +209,17 @@ public:
 
    TGLColorSet& RefDarkColorSet()  { return fDarkColorSet;  }
    TGLColorSet& RefLightColorSet() { return fLightColorSet; }
+   TGLColorSet& ColorSet()         { return fRnrCtx->ColorSet(); }
    void         UseDarkColorSet();
    void         UseLightColorSet();
    void         SwitchColorSet();
+
+   void         UseDefaultColorSet(Bool_t x);
+   Bool_t       IsUsingDefaultColorSet() const;
+
+   static TGLColorSet& GetDefaultColorSet();
+   static void         UseDefaultColorSetForNewViewers(Bool_t x);
+   static Bool_t       IsUsingDefaultColorSetForNewViewers();
 
    TGLLightSet* GetLightSet() const { return fLightSet; }
    TGLClipSet * GetClipSet()  const { return fClipSet; }
