@@ -408,6 +408,7 @@ public:
   friend class RooTreeData ;
   friend class RooDataSet ;
   friend class RooRealMPFE ;
+  friend class RooHistPdf ;
   virtual void syncCache(const RooArgSet* nset=0) = 0 ;
   virtual void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE) = 0 ;
   virtual void attachToTree(TTree& t, Int_t bufSize=32000) = 0 ;
