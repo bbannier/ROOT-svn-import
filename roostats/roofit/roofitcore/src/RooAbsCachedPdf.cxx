@@ -185,6 +185,7 @@ RooAbsCachedPdf::PdfCacheElem* RooAbsCachedPdf::getCache(const RooArgSet* nset, 
     RooDataHist* eoclone = new RooDataHist(*cache->hist()) ;
     eoclone->removeSelfFromDir() ;
     expensiveObjectCache().registerObject(GetName(),cache->hist()->GetName(),*eoclone,cache->paramTracker()->parameters()) ;
+    
   } 
 
   
@@ -221,7 +222,9 @@ RooAbsCachedPdf::PdfCacheElem::PdfCacheElem(const RooAbsCachedPdf& self, const R
   }
 
   // Create RooDataHist
-  TString hname = self.inputBaseName() ;
+  TString hname = self.GetName() ;
+  hname.Append("_") ;
+  hname.Append(self.inputBaseName()) ;
   hname.Append("_CACHEHIST") ;
   hname.Append(self.cacheNameSuffix(orderedObs)) ;
   hname.Append(self.histNameSuffix()) ;
@@ -230,18 +233,39 @@ RooAbsCachedPdf::PdfCacheElem::PdfCacheElem(const RooAbsCachedPdf& self, const R
 
   //RooArgSet* observables= self.getObservables(orderedObs) ;
   // cout << "orderedObs = " << orderedObs << " observables = " << *observables << endl ;
-  
+
+  // Get set of p.d.f. observable corresponding to set of histogram observables
+  RooArgSet pdfObs ;
+  RooArgSet pdfFinalObs ;
+  TIterator* iter = orderedObs.createIterator() ;
+  RooAbsArg* harg ;
+  while((harg=(RooAbsArg*)iter->Next())) {
+    RooAbsArg& po = self.pdfObservable(*harg) ;
+    pdfObs.add(po) ;
+    if (po.isFundamental()) {
+      pdfFinalObs.add(po) ;
+    } else {      
+      RooArgSet* tmp = po.getVariables() ;
+      pdfFinalObs.add(*tmp) ;
+      delete tmp ;
+    }
+  }
+  delete iter ;
+
   // Create RooHistPdf
   TString pdfname = self.inputBaseName() ;
   pdfname.Append("_CACHE") ;
-  pdfname.Append(self.cacheNameSuffix(orderedObs)) ;
-  _pdf = new RooHistPdf(pdfname,pdfname,orderedObs,*_hist,self.getInterpolationOrder()) ;
+  pdfname.Append(self.cacheNameSuffix(pdfFinalObs)) ;
+  _pdf = new RooHistPdf(pdfname,pdfname,pdfObs,orderedObs,*_hist,self.getInterpolationOrder()) ;
   if (nsetIn) {
     _nset.addClone(*nsetIn) ;
   }
 
   // Create pseudo-object that tracks changes in parameter values
-  RooArgSet* params = self.actualParameters(orderedObs) ;
+
+  RooArgSet* params = self.actualParameters(pdfFinalObs) ;
+  params->remove(pdfFinalObs,kTRUE,kTRUE) ;
+  
   string name= Form("%s_CACHEPARAMS",_pdf->GetName()) ;
   _paramTracker = new RooChangeTracker(name.c_str(),name.c_str(),*params,kTRUE) ;
   _paramTracker->hasChanged(kTRUE) ; // clear dirty flag as cache is up-to-date upon creation

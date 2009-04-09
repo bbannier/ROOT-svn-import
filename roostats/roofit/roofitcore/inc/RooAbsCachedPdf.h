@@ -100,6 +100,7 @@ protected:
   virtual const char* inputBaseName() const = 0 ;
   virtual RooArgSet* actualObservables(const RooArgSet& nset) const = 0 ;
   virtual RooArgSet* actualParameters(const RooArgSet& nset) const = 0 ;
+  virtual RooAbsArg& pdfObservable(RooAbsArg& histObservable) const { return histObservable ; }
   virtual void fillCacheObject(PdfCacheElem& cache) const = 0 ;
 
   mutable RooObjCacheManager _cacheMgr ; // The cache manager  
