@@ -29,9 +29,10 @@ class RooHistPdf : public RooAbsPdf {
 public:
   RooHistPdf() ; 
   RooHistPdf(const char *name, const char *title, const RooArgSet& vars, const RooDataHist& dhist, Int_t intOrder=0);
+  RooHistPdf(const char *name, const char *title, const RooArgList& pdfObs, const RooArgList& histObs, const RooDataHist& dhist, Int_t intOrder=0);
   RooHistPdf(const RooHistPdf& other, const char* name=0);
   virtual TObject* clone(const char* newname) const { return new RooHistPdf(*this,newname); }
-  inline virtual ~RooHistPdf() { }
+  virtual ~RooHistPdf() ;
 
   RooDataHist& dataHist()  { 
     // Return RooDataHist that is represented
@@ -86,15 +87,18 @@ protected:
   friend class RooAbsCachedPdf ;
   Double_t totVolume() const ;
 
-  RooSetProxy       _depList ;   // List of dependents defining dimensions of histogram
+  RooSetProxy       _histObsList ; // List of observables defining dimensions of histogram
+  RooSetProxy       _pdfObsList ;  // List of observables mapped onto histogram observables
   RooDataHist*      _dataHist ;  // Unowned pointer to underlying histogram
+  TIterator*         _histObsIter ; //! 
+  TIterator*         _pdfObsIter ; //! 
   mutable RooAICRegistry _codeReg ; //! Auxiliary class keeping tracking of analytical integration code
   Int_t             _intOrder ; // Interpolation order
   Bool_t            _cdfBoundaries ; // Use boundary conditions for CDFs.
   mutable Double_t  _totVolume ; //! Total volume of space (product of ranges of observables)
   Bool_t            _unitNorm  ; //! Assume contents is unit normalized (for use as pdf cache)
 
-  ClassDef(RooHistPdf,1) // Histogram based PDF
+  ClassDef(RooHistPdf,2) // Histogram based PDF
 };
 
 #endif
