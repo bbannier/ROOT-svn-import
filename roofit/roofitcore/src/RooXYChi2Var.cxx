@@ -50,8 +50,7 @@ ClassImp(RooXYChi2Var)
 //_____________________________________________________________________________
 RooXYChi2Var::RooXYChi2Var() 
 {
-  _funcBinding = 0 ;
-  _funcIntegrator = 0 ;
+  _funcInt = 0 ;
   _rrvIter = _rrvArgs.createIterator() ;
 }
 
@@ -62,8 +61,7 @@ RooXYChi2Var::RooXYChi2Var(const char *name, const char* title, RooAbsReal& func
   _extended(kFALSE),
   _integrate(integrate),
   _intConfig(*defaultIntegratorConfig()),
-  _funcBinding(0), 
-  _funcIntegrator(0)
+  _funcInt(0)
 {
   //
   //  RooXYChi2Var constructor with function and X-Y values dataset
@@ -90,8 +88,7 @@ RooXYChi2Var::RooXYChi2Var(const char *name, const char* title, RooAbsPdf& extPd
   _extended(kTRUE),
   _integrate(integrate),
   _intConfig(*defaultIntegratorConfig()),
-  _funcBinding(0), 
-  _funcIntegrator(0)
+  _funcInt(0)
 {
   //
   // RooXYChi2Var constructor with an extended p.d.f. and X-Y values dataset
@@ -124,8 +121,7 @@ RooXYChi2Var::RooXYChi2Var(const RooXYChi2Var& other, const char* name) :
   _extended(other._extended),
   _integrate(other._integrate),
   _intConfig(other._intConfig),
-  _funcBinding(0), 
-  _funcIntegrator(0)
+  _funcInt(0)
 {
   // Copy constructor
 
@@ -170,12 +166,15 @@ void RooXYChi2Var::initIntegrator()
 {
   // Initialize bin content integrator
 
-  if (!_funcBinding) {
-    _funcBinding = _funcClone->bindVars(*_dataClone->get(),_dataClone->get()) ;    
-    _funcIntegrator = RooNumIntFactory::instance().createIntegrator(*_funcBinding,_intConfig) ;
-    _funcIntegrator->setUseIntegrandLimits(kFALSE) ;
+  if (!_funcInt) {
+    _funcInt = _funcClone->createIntegral(_rrvArgs,_rrvArgs,_intConfig,"bin") ;
+    _rrvIter->Reset() ;
+    RooRealVar* x ;
+    while((x=(RooRealVar*)_rrvIter->Next())) {
+      _binList.push_back(&x->getBinning("bin",kFALSE,kTRUE)) ;
+    }
   }
-
+  
 }
 
 
@@ -186,8 +185,7 @@ RooXYChi2Var::~RooXYChi2Var()
   // Destructor
 
   delete _rrvIter ;
-  if (_funcBinding) delete _funcBinding ;
-  if (_funcIntegrator) delete _funcIntegrator ;
+  if (_funcInt) delete _funcInt ;
 }
 
 
@@ -277,19 +275,17 @@ Double_t RooXYChi2Var::fy() const
   if (!_integrate) {
     yfunc = _funcClone->getVal(_dataClone->get()) ;
   } else {
-    Double_t xmin[10],xmax[10] ;
-    _rrvIter->Reset() ;
-    RooRealVar* x ;
-    Int_t i(0) ;
     Double_t volume(1) ;
-    while(x=(RooRealVar*)_rrvIter->Next()) {
-      xmin[i] = x->getVal() + x->getErrorLo() ;
-      xmax[i] = x->getVal() + x->getErrorHi() ;
-      volume *= (xmax[i] - xmin[i]) ;
-      i++ ;
+    _rrvIter->Reset() ;
+    for (list<RooAbsBinning*>::const_iterator iter = _binList.begin() ; iter != _binList.end() ; iter++) {
+      RooRealVar* x = (RooRealVar*) _rrvIter->Next() ;
+      Double_t xmin = x->getVal() + x->getErrorLo() ;
+      Double_t xmax = x->getVal() + x->getErrorHi() ;
+      (*iter)->setRange(xmin,xmax) ;
+      x->setShapeDirty() ;
+      volume *= (xmax - xmin) ;
     }
-    _funcIntegrator->setLimits(xmin,xmax) ;
-    Double_t ret =  _funcIntegrator->calculate() ;
+    Double_t ret = _funcInt->getVal() ;
     return ret / volume ;
   }
   if (_extended) {      

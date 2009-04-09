@@ -22,6 +22,9 @@
 #include "RooDataSet.h"
 #include "RooAbsPdf.h"
 #include "RooNumIntConfig.h"
+#include <list>
+class RooAbsIntegrator ;
+
 
 class RooXYChi2Var : public RooAbsOptTestStatistic {
 public:
@@ -73,8 +76,8 @@ protected:
   virtual Double_t evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_t stepSize) const ;
 
   RooNumIntConfig   _intConfig ; // Numeric integrator configuration for integration of function over bin
-  RooAbsFunc*       _funcBinding ; //! Integrator binding of fit function
-  RooAbsIntegrator* _funcIntegrator ; //! Numeric integrator engine over fit function
+  RooAbsReal*       _funcInt ; //! Function integral
+  std::list<RooAbsBinning*> _binList ; //! Bin ranges
   
   ClassDef(RooXYChi2Var,1) // Chi^2 function of p.d.f w.r.t a unbinned dataset with X and Y values
 };
