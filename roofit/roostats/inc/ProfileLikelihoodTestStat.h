@@ -42,6 +42,8 @@ END_HTML
 #include "RooProfileLL.h"
 #include "RooNLLVar.h"
 
+#include "RooMinuit.h"
+
 namespace RooStats {
 
   class ProfileLikelihoodTestStat : public TestStatistic{
@@ -51,7 +53,7 @@ namespace RooStats {
        fPdf = &pdf;
        fProfile = 0;
        fNll = 0;
-       fLastBestFitParams = 0;
+       fCachedBestFitParams = 0;
        fLastData = 0;
      }
      virtual ~ProfileLikelihoodTestStat() {
@@ -82,59 +84,79 @@ namespace RooStats {
 
 	 // set parameters to previous best fit params, to speed convergence
 	 // and to avoid local minima
-	 if(fLastBestFitParams){
+	 if(fCachedBestFitParams){
+	   // store original values, since minimization will change them.
+	   RooArgSet* origParamVals = (RooArgSet*) paramsOfInterest.snapshot();
+
 	   // these parameters are not guaranteed to be the best for this data	   
-	   SetParameters(fLastBestFitParams, fProfile->getParameters(data) );
+	   SetParameters(fCachedBestFitParams, fProfile->getParameters(data) );
 	   // now evaluate to force this profile to evaluate and store
 	   // best fit parameters for this data
 	   fProfile->getVal();
 	   // possibly store last MLE for reference
 	   //	 Double mle = fNll->getVal();
 
+	   // restore parameters
+	   SetParameters(origParamVals, &paramsOfInterest );
+	   
+	   // cleanup
+	   delete origParamVals;
+
 	 } else {
+	   
+	   // store best fit parameters
+	   // RooProfileLL::bestFitParams returns best fit of nuisance parameters only
+	   //	   fCachedBestFitParams = (RooArgSet*) (fProfile->bestFitParams().clone("lastBestFit"));
+	   // ProfileLL::getParameters returns current value of the parameters
+	   //	   fCachedBestFitParams = (RooArgSet*) (fProfile->getParameters(data)->clone("lastBestFit"));
+	   //cout << "making fCachedBestFitParams: " << fCachedBestFitParams << fCachedBestFitParams->getSize() << endl;
+
+	   // store original values, since minimization will change them.
+	   RooArgSet* origParamVals = (RooArgSet*) paramsOfInterest.snapshot();
+
+	   // find minimum
+	   RooMinuit minuit(*nll);
+	   minuit.setPrintLevel(-999);
+	   minuit.setNoWarn();
+	   minuit.migrad();
+
+	   // store the best fit values for future use
+	   fCachedBestFitParams = (RooArgSet*) (nll->getParameters(data)->snapshot());
+
+	   // restore parameters
+	   SetParameters(origParamVals, &paramsOfInterest );
+
 	   // evaluate to force this profile to evaluate and store
 	   // best fit parameters for this data
 	   fProfile->getVal();
-	   
-	   // store best fit parameters
-	   fLastBestFitParams = (RooArgSet*) (fProfile->bestFitParams().clone("lastBestFit"));
+
+	   // cleanup
+	   delete origParamVals;
 
 	 }
 
-
        }
+       // issue warning if problems
        if(!fProfile){ cout << "problem making profile" << endl;}
 
-
-
-       // set parameters
+       // set parameters to point being requested
        SetParameters(&paramsOfInterest, fProfile->getParameters(data) );
-
-
-       /*
-       RooArgSet* paramsToChange = fProfile->getParameters(data);
-
-       TIter it = paramsOfInterest.createIterator();
-       RooRealVar *myarg; 
-       RooRealVar *mytarget; 
-       while ((myarg = (RooRealVar *)it.Next())) { 
-	 if(!myarg) continue;
-	 mytarget = (RooRealVar*) paramsToChange->find(myarg->GetName());
-	 if(!mytarget) continue;
-	 mytarget->setVal( myarg->getVal() );
-       }
-       delete paramsToChange;
-       */
-
-       /*       TIter      itr = fProfile->getParameters(data)->createIterator();
-       while ((myarg = (RooRealVar *)itr.Next())) { 
-	 cout << myarg->GetName() << myarg->getVal();
-       }
-       cout << " = " << fProfile->evaluate()  << endl;
-       */
 
        Double_t value = fProfile->getVal();
        RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+
+       
+       /*
+       // for debugging caching
+       cout << "current value of input params: " << endl;
+       paramsOfInterest.Print("verbose");
+
+       cout << "current value of params in profile: " << endl;
+       fProfile->getParameters(data)->Print("verbose");
+
+       cout << "cached last best fit: " << endl;
+       fCachedBestFitParams->Print("verbose");
+       */     
 
        // warning message
        if(value<0)
@@ -151,7 +173,7 @@ namespace RooStats {
       RooProfileLL* fProfile;
       RooAbsPdf* fPdf;
       RooNLLVar* fNll;
-      const RooArgSet* fLastBestFitParams;
+      const RooArgSet* fCachedBestFitParams;
       RooAbsData* fLastData;
       //      Double_t fLastMLE;
 

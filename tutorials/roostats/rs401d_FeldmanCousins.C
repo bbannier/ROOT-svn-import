@@ -210,7 +210,7 @@ void rs401d_FeldmanCousins()
   fc.SetTestSize(.1); // set size of test
   fc.SetData(*data);
   fc.UseAdaptiveSampling(true);
-  fc.SetNBins(30); // number of points to test per parameter
+  fc.SetNBins(20); // number of points to test per parameter
 
   // use the Feldman-Cousins tool
   ConfInterval* interval = fc.GetInterval();
@@ -261,7 +261,8 @@ void rs401d_FeldmanCousins()
     TMarker* plcMark = new TMarker(tmpPoint->getRealValue("sinSq2theta"), tmpPoint->getRealValue("deltaMSq"), 22);
     parameters=*tmpPoint;
 
-    /* for debugging test stat
+    /*
+    //for debugging test stat
     cout << "\n deltaMSq " << tmpPoint->getRealValue("deltaMSq") 
 	 << " sinSq2theta = " << tmpPoint->getRealValue("sinSq2theta") << endl;
     cout << " \tpll = " << pll.getVal() << endl;;
