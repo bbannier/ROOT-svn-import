@@ -158,10 +158,18 @@ namespace RooStats {
        fCachedBestFitParams->Print("verbose");
        */     
 
-       // warning message
-       if(value<0)
-	 cout << "ProfileLikelihoodTestStat: problem that profileLL<0, indicates false minimum used earlier"<<endl;
-
+       // catch false minimum 
+       if(value<0){
+	 //	 cout << "ProfileLikelihoodTestStat: problem that profileLL = " << value 
+	 //   << " < 0, indicates false min.  Try again."<<endl;
+	 delete fNll;
+	 delete fProfile;
+	 RooNLLVar* nll = new RooNLLVar("nll","",*fPdf,data, RooFit::Extended());
+	 fNll = nll;
+	 fProfile = new RooProfileLL("pll","",*nll, paramsOfInterest);
+	 value = fProfile->getVal();
+	 //	 cout << "now profileLL = " << value << endl;
+       }
        return value;
      }
 
