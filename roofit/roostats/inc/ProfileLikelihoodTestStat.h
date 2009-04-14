@@ -73,6 +73,11 @@ namespace RooStats {
        else
 	 fLastData = &data; // keep a copy of pointer to original data
 
+       // pointer comparison causing problems.  See multiple datasets with same value of pointer
+       // but actually a new dataset
+       needToRebuild = true; 
+
+
        if(needToRebuild){
 	 if(fProfile) delete fProfile; 
 	 if (fNll)    delete fNll;
@@ -93,6 +98,7 @@ namespace RooStats {
 	   // now evaluate to force this profile to evaluate and store
 	   // best fit parameters for this data
 	   fProfile->getVal();
+
 	   // possibly store last MLE for reference
 	   //	 Double mle = fNll->getVal();
 
@@ -145,7 +151,6 @@ namespace RooStats {
        Double_t value = fProfile->getVal();
        RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
 
-       
        /*
        // for debugging caching
        cout << "current value of input params: " << endl;
@@ -161,12 +166,16 @@ namespace RooStats {
        // catch false minimum 
        if(value<0){
 	 //	 cout << "ProfileLikelihoodTestStat: problem that profileLL = " << value 
-	 //   << " < 0, indicates false min.  Try again."<<endl;
+	 //	      << " < 0, indicates false min.  Try again."<<endl;
 	 delete fNll;
 	 delete fProfile;
 	 RooNLLVar* nll = new RooNLLVar("nll","",*fPdf,data, RooFit::Extended());
 	 fNll = nll;
 	 fProfile = new RooProfileLL("pll","",*nll, paramsOfInterest);
+
+	 // set parameters to point being requested
+	 SetParameters(&paramsOfInterest, fProfile->getParameters(data) );
+
 	 value = fProfile->getVal();
 	 //	 cout << "now profileLL = " << value << endl;
        }

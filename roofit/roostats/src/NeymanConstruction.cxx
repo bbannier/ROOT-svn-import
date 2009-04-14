@@ -62,6 +62,9 @@ END_HTML
 #include "TFile.h"
 #include "TTree.h"
 #include "TMath.h"
+#include "TH1F.h"
+
+
 
 ClassImp(RooStats::NeymanConstruction) ;
 
@@ -84,6 +87,8 @@ NeymanConstruction::NeymanConstruction() {
 ConfInterval* NeymanConstruction::GetInterval() const {
   // Main interface to get a RooStats::ConfInterval.  
   // It constructs a RooStats::SetInterval.
+
+  TFile f("SamplingDistributions.root","recreate");
   
   // local variables
   RooAbsData* data = fWS->data(fDataName);
@@ -215,6 +220,18 @@ ConfInterval* NeymanConstruction::GetInterval() const {
       fPointsToTest->add(*point, 1.); 
       ++npass;
     }
+
+    //write to file
+    samplingDist->Write();
+    std::string tmpName = "hist_";
+    tmpName+=samplingDist->GetName();
+    TH1F* h = new TH1F(tmpName.c_str(),"",500,0.,5.);
+    for(int i=0; i<samplingDist->GetSize(); ++i){
+      h->Fill(samplingDist->GetSamplingDistribution().at(i) );
+    }
+    h->Write();
+    delete h;
+
     delete samplingDist;
     delete point;
   }
@@ -224,6 +241,8 @@ ConfInterval* NeymanConstruction::GetInterval() const {
   PointSetInterval* interval 
     = new PointSetInterval("ClassicalConfidenceInterval", "ClassicalConfidenceInterval", *fPointsToTest);
   
+  f.Close();
+
   delete data;
   return interval;
 }
