@@ -39,6 +39,7 @@ END_HTML
 #endif
 
 #include <vector>
+#include <sstream>
 
 #include "RooStats/TestStatSampler.h"
 #include "RooStats/SamplingDistribution.h"
@@ -65,6 +66,7 @@ namespace RooStats {
       fNuisParams=0;
       fExtended = kTRUE;
       fRand = new TRandom();
+      fCounter=0;
     }
 
     virtual ~ToyMCSampler() {
@@ -107,7 +109,8 @@ namespace RooStats {
       }
 
       //      cout << " generated sampling dist " << endl;
-      return new SamplingDistribution("SamplingDist", "Sampling Distribution of Test Statistic", testStatVec );
+      return new SamplingDistribution( MakeName(allParameters),
+				      "Sampling Distribution of Test Statistic", testStatVec );
     } 
 
      virtual RooAbsData* GenerateToyData(RooArgSet& allParameters) const {
@@ -123,14 +126,7 @@ namespace RooStats {
        if(fPOI) observables->remove(*fPOI, kFALSE, kTRUE);
        if(fNuisParams) observables->remove(*fNuisParams, kFALSE, kTRUE);
 
-       /*
-       TIter      itr = observables->createIterator();
-       RooRealVar* myarg;
-       while ((myarg = (RooRealVar *)itr.Next())) { 
-	 cout << myarg->GetName() << " = " << myarg->getVal() << "  " ;
-       }
-       cout << endl;
-       */
+       // observables->Print("verbose");
 
        //fluctuate the number of events if fExtended is on.  
        // This is a bit slippery for number counting expts. where entry in data and
@@ -159,7 +155,27 @@ namespace RooStats {
        return data;
      }
 
+     // helper method to create meaningful names for sampling dist
+     const char* MakeName(RooArgSet& params){
+       /*
+       std::string name;
+       TIter      itr = params.createIterator();
+       RooRealVar* myarg;
+       while ((myarg = (RooRealVar *)itr.Next())) { 
+	 name += myarg->GetName();
+	 std::stringstream str;
+	 str<<"_"<< myarg->getVal() << "__";
 
+	 name += str.str();
+       }
+       */
+
+       std::stringstream str;
+       str<<"SamplingDist_"<< fCounter;
+       fCounter++;
+       return str.str().c_str();
+       
+     }
 
       // Main interface to evaluate the test statistic on a dataset
      virtual Double_t EvaluateTestStatistic(RooAbsData& data, RooArgSet& allParameters) {
@@ -241,6 +257,8 @@ namespace RooStats {
       Int_t fNevents;
       Bool_t fExtended;
       TRandom* fRand;
+      
+      Int_t fCounter;
 
    protected:
       ClassDef(ToyMCSampler,1)   // A simple implementation of the TestStatSampler interface

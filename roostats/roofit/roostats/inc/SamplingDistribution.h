@@ -49,6 +49,9 @@ namespace RooStats {
     Double_t InverseCDF(Double_t pvalue);
 
     // get the inverse of the Cumulative distribution function
+    Double_t InverseCDFInterpolate(Double_t pvalue);
+
+    // get the inverse of the Cumulative distribution function
     // together with the inverse based on sampling variation
     Double_t InverseCDF(Double_t pvalue, Double_t sigmaVariaton, Double_t& inverseVariation);
   

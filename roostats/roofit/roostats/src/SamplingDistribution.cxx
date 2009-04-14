@@ -113,6 +113,7 @@ Double_t SamplingDistribution::InverseCDF(Double_t pvalue)
   return InverseCDF(pvalue,0,dummy);
 }
 
+
 //_______________________________________________________
 Double_t SamplingDistribution::InverseCDF(Double_t pvalue, 
 					  Double_t sigmaVariation, 
@@ -191,7 +192,30 @@ Double_t SamplingDistribution::InverseCDF(Double_t pvalue,
 }
 
 
+//_______________________________________________________
+Double_t SamplingDistribution::InverseCDFInterpolate(Double_t pvalue)
+{
+   // returns the inverse of the cumulative distribution function
 
+  // will need to deal with weights, but for now:
+  sort(fSamplingDist.begin(), fSamplingDist.end());
 
+  // casting will round down, eg. give i
+  int nominal = (unsigned int) (pvalue*fSamplingDist.size());
 
+  if(nominal <= 0) {
+    return -1.*RooNumber::infinity();
+  }
+  if(nominal >= fSamplingDist.size()-1 ) {
+    return RooNumber::infinity();
+  }
+  Double_t upperX = fSamplingDist[nominal+1];
+  Double_t upperY = ((Double_t) (nominal+1))/fSamplingDist.size();
+  Double_t lowerX =  fSamplingDist[nominal];
+  Double_t lowerY = ((Double_t) nominal)/fSamplingDist.size();
+  
+  std::cout << upperX << " " << upperY << " " << lowerX << " " << lowerY << std::endl;
 
+  return (upperX-lowerX)/(upperY-lowerY)*(pvalue-lowerY)+lowerX;
+
+}
