@@ -50,6 +50,8 @@ END_HTML
 #include "RooWorkspace.h"
 #include "TRandom.h"
 
+#include "RooDataSet.h"
+
 namespace RooStats {
 
     class ToyMCSampler : public TestStatSampler {
@@ -103,7 +105,11 @@ namespace RooStats {
 
       for(Int_t i=0; i<fNtoys; ++i){
 	//cout << " on toy number " << i << endl;
-	RooAbsData* toydata = (RooAbsData*)GenerateToyData(allParameters);
+	//	RooAbsData* toydata = (RooAbsData*)GenerateToyData(allParameters);
+	//	testStatVec.push_back( fTestStat->Evaluate(*toydata, allParameters) );
+	//	delete toydata;
+
+	RooDataSet* toydata = (RooDataSet*)GenerateToyData(allParameters);
 	testStatVec.push_back( fTestStat->Evaluate(*toydata, allParameters) );
 	delete toydata;
       }

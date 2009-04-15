@@ -77,6 +77,9 @@ namespace RooStats {
        // but actually a new dataset
        needToRebuild = true; 
 
+       // check mem leak in NLL or Profile. Should remove.
+       // if(fProfile) needToRebuild = false; 
+
 
        if(needToRebuild){
 	 if(fProfile) delete fProfile; 
