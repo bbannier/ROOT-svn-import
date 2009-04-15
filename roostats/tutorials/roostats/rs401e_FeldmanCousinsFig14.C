@@ -16,6 +16,7 @@ void Inspect(TH1F* cutoff, TH2F* cutoffMap){
    TKey *key; 
 
    Double_t chi2Nom = 4.61;
+   //   chi2Nom=3.;
    Double_t prob = 1.-TMath::Prob(chi2Nom, 2);
 
    if(!cutoff) cutoff = new TH1F("cutoff","",60,0.,6.);
