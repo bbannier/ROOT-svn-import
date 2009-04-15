@@ -214,7 +214,7 @@ Double_t SamplingDistribution::InverseCDFInterpolate(Double_t pvalue)
   Double_t lowerX =  fSamplingDist[nominal];
   Double_t lowerY = ((Double_t) nominal)/fSamplingDist.size();
   
-  std::cout << upperX << " " << upperY << " " << lowerX << " " << lowerY << std::endl;
+  //  std::cout << upperX << " " << upperY << " " << lowerX << " " << lowerY << std::endl;
 
   return (upperX-lowerX)/(upperY-lowerY)*(pvalue-lowerY)+lowerX;
 
