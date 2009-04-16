@@ -72,10 +72,10 @@ RooAbsOptTestStatistic:: RooAbsOptTestStatistic()
 
 
 //_____________________________________________________________________________
-RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *title, RooAbsReal& real, RooAbsData& data,
+RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *title, RooAbsReal& real, RooAbsData& indata,
 					       const RooArgSet& projDeps, const char* rangeName, const char* addCoefRangeName,
 					       Int_t nCPU, Bool_t interleave, Bool_t verbose, Bool_t splitCutRange, Bool_t cloneInputData) : 
-  RooAbsTestStatistic(name,title,real,data,projDeps,rangeName, addCoefRangeName, nCPU, interleave, verbose, splitCutRange),
+  RooAbsTestStatistic(name,title,real,indata,projDeps,rangeName, addCoefRangeName, nCPU, interleave, verbose, splitCutRange),
   _projDeps(0)
 {
   // Constructor taking function (real), a dataset (data), a set of projected observables (projSet). If 
@@ -97,7 +97,7 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *tit
     return ;
   }
 
-  RooArgSet obs(*data.get()) ;
+  RooArgSet obs(*indata.get()) ;
   obs.remove(projDeps,kTRUE,kTRUE) ;
 
   // Check that the FUNC is valid for use with this dataset
@@ -110,7 +110,7 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *tit
   
 
   // Get list of actual observables of test statistic function
-  RooArgSet* realDepSet = real.getObservables(&data) ;
+  RooArgSet* realDepSet = real.getObservables(&indata) ;
 
   // Expand list of observables with any observables used in parameterized ranges
   TIterator* iter9 = realDepSet->createIterator() ;
@@ -128,7 +128,7 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *tit
 
 
   // Check if the fit ranges of the dependents in the data and in the FUNC are consistent
-  const RooArgSet* dataDepSet = data.get() ;
+  const RooArgSet* dataDepSet = indata.get() ;
   TIterator* iter = realDepSet->createIterator() ;
   RooAbsArg* arg ;
   while((arg=(RooAbsArg*)iter->Next())) {
@@ -162,14 +162,14 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *tit
       coutW(InputArguments) << "RooAbsOptTestStatistic::ctor(" << GetName() 
 			    << ") WARNING: Must clone input data when a range specification is given, ignoring request to use original input dataset" << endl ; 
     }
-    _dataClone = ((RooAbsData&)data).reduce(RooFit::SelectVars(*realDepSet),RooFit::CutRange(rangeName)) ;  
+    _dataClone = ((RooAbsData&)indata).reduce(RooFit::SelectVars(*realDepSet),RooFit::CutRange(rangeName)) ;  
     _ownData = kTRUE ;
   } else {
     if (cloneInputData) {
-      _dataClone = data.reduce(RooFit::SelectVars(*data.get())) ; //  ((RooAbsData&)data).reduce(RooFit::SelectVars(*realDepSet)) ;  
+      _dataClone = indata.reduce(RooFit::SelectVars(*indata.get())) ; //  ((RooAbsData&)data).reduce(RooFit::SelectVars(*realDepSet)) ;  
       _ownData = kTRUE ;
     } else {
-      _dataClone = &data ;
+      _dataClone = &indata ;
       _ownData = kFALSE ;
     }
   }
@@ -269,7 +269,7 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *tit
 
 
   // Store normalization set  
-  _normSet = (RooArgSet*) data.get()->snapshot(kFALSE) ;
+  _normSet = (RooArgSet*) indata.get()->snapshot(kFALSE) ;
 
   // Remove projected dependents from normalization set
   if (projDeps.getSize()>0) {
@@ -570,7 +570,7 @@ void RooAbsOptTestStatistic::optimizeConstantTerms(Bool_t activate)
 
 
 //_____________________________________________________________________________
-Bool_t RooAbsOptTestStatistic::setData(RooAbsData& data, Bool_t cloneData) 
+Bool_t RooAbsOptTestStatistic::setData(RooAbsData& indata, Bool_t cloneData) 
 { 
   // Change dataset that is used to given one. If cloneData is kTRUE, a clone of
   // in the input dataset is made.  If the test statistic was constructed with
@@ -588,13 +588,13 @@ Bool_t RooAbsOptTestStatistic::setData(RooAbsData& data, Bool_t cloneData)
 
   if (cloneData) {
     if (_rangeName.size()==0) {
-      _dataClone = (RooAbsData*) data.reduce(*data.get()) ;
+      _dataClone = (RooAbsData*) indata.reduce(*indata.get()) ;
     } else {
-      _dataClone = ((RooAbsData&)data).reduce(RooFit::SelectVars(*data.get()),RooFit::CutRange(_rangeName.c_str())) ;  
+      _dataClone = ((RooAbsData&)indata).reduce(RooFit::SelectVars(*indata.get()),RooFit::CutRange(_rangeName.c_str())) ;  
     }
     _ownData = kTRUE ;
   } else {
-    _dataClone = &data ;
+    _dataClone = &indata ;
     _ownData = kFALSE ;
   }    
 

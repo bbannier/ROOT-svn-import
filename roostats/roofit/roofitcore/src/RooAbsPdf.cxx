@@ -1027,26 +1027,26 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
       list<RooNLLVar*> nllComponents ;
       RooArgSet* comps = nll->getComponents() ;
       RooAbsArg* arg ;
-      TIterator* iter = comps->createIterator() ;
-      while((arg=(RooAbsArg*)iter->Next())) {
+      TIterator* citer = comps->createIterator() ;
+      while((arg=(RooAbsArg*)citer->Next())) {
 	RooNLLVar* nllComp = dynamic_cast<RooNLLVar*>(arg) ;
 	if (nllComp) {
 	  nllComponents.push_back(nllComp) ;
 	}
       }
-      delete iter ;
+      delete citer ;
       delete comps ;  
 
       // Calculated corrected errors for weighted likelihood fits
       RooFitResult* rw = m.save() ;
-      for (list<RooNLLVar*>::iterator iter=nllComponents.begin() ; iter!=nllComponents.end() ; iter++) {
-	(*iter)->applyWeightSquared(kTRUE) ;
+      for (list<RooNLLVar*>::iterator iter1=nllComponents.begin() ; iter1!=nllComponents.end() ; iter1++) {
+	(*iter1)->applyWeightSquared(kTRUE) ;
       }
       coutI(Fitting) << "RooAbsPdf::fitTo(" << GetName() << ") Calculating sum-of-weights-squared correction matrix for covariance matrix" << endl ;
       m.hesse() ;
       RooFitResult* rw2 = m.save() ;
-      for (list<RooNLLVar*>::iterator iter=nllComponents.begin() ; iter!=nllComponents.end() ; iter++) {
-	(*iter)->applyWeightSquared(kFALSE) ;
+      for (list<RooNLLVar*>::iterator iter2=nllComponents.begin() ; iter2!=nllComponents.end() ; iter2++) {
+	(*iter2)->applyWeightSquared(kFALSE) ;
       }
 
       // Apply correction matrix

@@ -369,14 +369,14 @@ Double_t RooXYChi2Var::evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_
   Double_t result(0) ;
 
   // Loop over bins of dataset
-  RooDataSet* data = (RooDataSet*) _dataClone ;
+  RooDataSet* xydata = (RooDataSet*) _dataClone ;
 
   for (Int_t i=firstEvent ; i<lastEvent ; i+=stepSize) {
     
     // get the data values for this event
-    data->get(i);
+    xydata->get(i);
     
-    if (!data->valid()) {
+    if (!xydata->valid()) {
       continue ;
     }
 
@@ -391,8 +391,8 @@ Double_t RooXYChi2Var::evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_
       eylo = -1*_yvar->getErrorLo() ;
       eyhi = _yvar->getErrorHi() ;
     } else {
-      ydata = data->weight() ;
-      data->weightError(eylo,eyhi) ;
+      ydata = xydata->weight() ;
+      xydata->weightError(eylo,eyhi) ;
     }
 
     // Calculate external error

@@ -775,7 +775,7 @@ void RooDataSet::add(const RooArgSet& data, Double_t wgt, Double_t wgtError)
 
 
 //_____________________________________________________________________________
-void RooDataSet::add(const RooArgSet& data, Double_t weight, Double_t weightErrorLo, Double_t weightErrorHi) 
+void RooDataSet::add(const RooArgSet& indata, Double_t inweight, Double_t weightErrorLo, Double_t weightErrorHi) 
 {
   // Add a data point, with its coordinates specified in the 'data' argset, to the data set. 
   // Any variables present in 'data' but not in the dataset will be silently ignored
@@ -783,9 +783,9 @@ void RooDataSet::add(const RooArgSet& data, Double_t weight, Double_t weightErro
 
   checkInit() ;
 
-  _varsNoWgt = data;
+  _varsNoWgt = indata;
   if (_wgtVar) {
-    _wgtVar->setVal(weight) ;
+    _wgtVar->setVal(inweight) ;
     _wgtVar->setAsymError(weightErrorLo,weightErrorHi) ;
   }
   Fill();
