@@ -66,6 +66,10 @@
 #include "RooDerivative.h"
 #include "RooGenFunction.h"
 #include "RooMultiGenFunction.h"
+#include "RooCmdConfig.h"
+#include "RooXYChi2Var.h"
+#include "RooMinuit.h"
+#include "RooChi2Var.h"
 
 #include "Riostream.h"
 
@@ -3330,3 +3334,406 @@ RooMultiGenFunction* RooAbsReal::iGenFunction(const RooArgSet& observables, cons
 {
   return new RooMultiGenFunction(*this,observables,RooArgList(),nset.getSize()>0?nset:observables) ;
 }
+
+
+
+
+//_____________________________________________________________________________
+RooFitResult* RooAbsReal::chi2FitTo(RooDataHist& data, RooCmdArg arg1,  RooCmdArg arg2,  
+				    RooCmdArg arg3,  RooCmdArg arg4, RooCmdArg arg5,  
+				    RooCmdArg arg6,  RooCmdArg arg7, RooCmdArg arg8) 
+{  
+  // Perform a chi^2 fit to given histogram By default the fit is executed through the MINUIT
+  // commands MIGRAD, HESSE in succession
+  //
+  // The following named arguments are supported
+  //
+  // Options to control construction of -log(L)
+  // ------------------------------------------
+  // Range(const char* name)         -- Fit only data inside range with given name
+  // Range(Double_t lo, Double_t hi) -- Fit only data inside given range. A range named "fit" is created on the fly on all observables.
+  //                                    Multiple comma separated range names can be specified.
+  // NumCPU(int num)                 -- Parallelize NLL calculation on num CPUs
+  // Optimize(Bool_t flag)           -- Activate constant term optimization (on by default)
+  //
+  // Options to control flow of fit procedure
+  // ----------------------------------------
+  // InitialHesse(Bool_t flag)      -- Flag controls if HESSE before MIGRAD as well, off by default
+  // Hesse(Bool_t flag)             -- Flag controls if HESSE is run after MIGRAD, on by default
+  // Minos(Bool_t flag)             -- Flag controls if MINOS is run after HESSE, on by default
+  // Minos(const RooArgSet& set)    -- Only run MINOS on given subset of arguments
+  // Save(Bool_t flag)              -- Flac controls if RooFitResult object is produced and returned, off by default
+  // Strategy(Int_t flag)           -- Set Minuit strategy (0 through 2, default is 1)
+  // FitOptions(const char* optStr) -- Steer fit with classic options string (for backward compatibility). Use of this option
+  //                                   excludes use of any of the new style steering options.
+  //
+  // Options to control informational output
+  // ---------------------------------------
+  // Verbose(Bool_t flag)           -- Flag controls if verbose output is printed (NLL, parameter changes during fit
+  // Timer(Bool_t flag)             -- Time CPU and wall clock consumption of fit steps, off by default
+  // PrintLevel(Int_t level)        -- Set Minuit print level (-1 through 3, default is 1). At -1 all RooFit informational 
+  //                                   messages are suppressed as well
+  // Warnings(Bool_t flag)          -- Enable or disable MINUIT warnings (enabled by default)
+  // PrintEvalErrors(Int_t numErr)  -- Control number of p.d.f evaluation errors printed per likelihood evaluation. A negative
+  //                                   value suppress output completely, a zero value will only print the error count per p.d.f component,
+  //                                   a positive value is will print details of each error up to numErr messages per p.d.f component.
+  // 
+  // 
+  
+  RooLinkedList l ;
+  l.Add((TObject*)&arg1) ;  l.Add((TObject*)&arg2) ;  
+  l.Add((TObject*)&arg3) ;  l.Add((TObject*)&arg4) ;
+  l.Add((TObject*)&arg5) ;  l.Add((TObject*)&arg6) ;  
+  l.Add((TObject*)&arg7) ;  l.Add((TObject*)&arg8) ;
+  return chi2FitTo(data,l) ;
+  
+}
+
+
+
+//_____________________________________________________________________________
+RooFitResult* RooAbsReal::chi2FitTo(RooDataHist& data, const RooLinkedList& cmdList) 
+{
+  // Internal back-end function to steer chi2 fits
+
+  // Select the pdf-specific commands 
+  RooCmdConfig pc(Form("RooAbsPdf::chi2FitTo(%s)",GetName())) ;
+
+  // Pull arguments to be passed to chi2 construction from list
+  RooLinkedList fitCmdList(cmdList) ;
+  RooLinkedList chi2CmdList = pc.filterCmdList(fitCmdList,"Range,RangeWithName,NumCPU,Optimize") ;
+
+  RooAbsReal* chi2 = createChi2(data,chi2CmdList) ;
+  RooFitResult* ret = chi2FitDriver(*chi2,fitCmdList) ;
+  
+  // Cleanup
+  delete chi2 ;
+  return ret ;
+}
+
+
+
+
+//_____________________________________________________________________________
+RooAbsReal* RooAbsReal::createChi2(RooDataHist& data, RooCmdArg arg1,  RooCmdArg arg2,  
+				   RooCmdArg arg3,  RooCmdArg arg4, RooCmdArg arg5,  
+				   RooCmdArg arg6,  RooCmdArg arg7, RooCmdArg arg8) 
+{
+  // Create a chi-2 from a histogram and this function.
+  //
+  // The following named arguments are supported
+  //
+  //  Options to control construction of the chi^2
+  //  ------------------------------------------
+  //  DataError(RooAbsData::ErrorType)  -- Choose between Poisson errors and Sum-of-weights errors
+  //  NumCPU(Int_t)                     -- Activate parallel processing feature on N processes
+  //  Range()                           -- Calculate Chi2 only in selected region
+
+  string name = Form("chi2_%s_%s",GetName(),data.GetName()) ;
+ 
+  return new RooChi2Var(name.c_str(),name.c_str(),*this,data,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8) ;
+}
+
+
+
+
+//_____________________________________________________________________________
+RooAbsReal* RooAbsReal::createChi2(RooDataHist& data, const RooLinkedList& cmdList) 
+{
+  // Internal back-end function to create a chi2
+
+  // Fill array of commands
+  const RooCmdArg* cmds[8] ;
+  TIterator* iter = cmdList.MakeIterator() ;
+  Int_t i(0) ;
+  RooCmdArg* arg ;
+  while((arg=(RooCmdArg*)iter->Next())) {
+    cmds[i++] = arg ;
+  }
+  for (;i<8 ; i++) {
+    cmds[i++] = &RooCmdArg::none() ;
+  }
+  delete iter ;
+  
+  // Construct chi2
+  string name = Form("chi2_%s_%s",GetName(),data.GetName()) ;
+  return new RooChi2Var(name.c_str(),name.c_str(),*this,data,*cmds[0],*cmds[1],*cmds[2],*cmds[3],*cmds[4],*cmds[5],*cmds[6],*cmds[7]) ;
+  
+}
+
+
+
+
+
+//_____________________________________________________________________________
+RooFitResult* RooAbsReal::chi2FitTo(RooDataSet& xydata, RooCmdArg arg1,  RooCmdArg arg2,  
+				      RooCmdArg arg3,  RooCmdArg arg4, RooCmdArg arg5,  
+				      RooCmdArg arg6,  RooCmdArg arg7, RooCmdArg arg8) 
+{
+  // Create a chi-2 from a series of x and y value stored in a dataset.
+  // The y values can either be the event weights, or can be another column designated
+  // by the YVar() argument. The y value must have errors defined for the chi-2 to
+  // be well defined.
+  //
+  // The following named arguments are supported
+  //
+  // Options to control construction of the chi^2
+  // ------------------------------------------
+  // YVar(RooRealVar& yvar)          -- Designate given column in dataset as Y value 
+  // Integrate(Bool_t flag)          -- Integrate function over range specified by X errors
+  //                                    rather than take value at bin center.
+  //
+  // Options to control flow of fit procedure
+  // ----------------------------------------
+  // InitialHesse(Bool_t flag)      -- Flag controls if HESSE before MIGRAD as well, off by default
+  // Hesse(Bool_t flag)             -- Flag controls if HESSE is run after MIGRAD, on by default
+  // Minos(Bool_t flag)             -- Flag controls if MINOS is run after HESSE, on by default
+  // Minos(const RooArgSet& set)    -- Only run MINOS on given subset of arguments
+  // Save(Bool_t flag)              -- Flac controls if RooFitResult object is produced and returned, off by default
+  // Strategy(Int_t flag)           -- Set Minuit strategy (0 through 2, default is 1)
+  // FitOptions(const char* optStr) -- Steer fit with classic options string (for backward compatibility). Use of this option
+  //                                   excludes use of any of the new style steering options.
+  //
+  // Options to control informational output
+  // ---------------------------------------
+  // Verbose(Bool_t flag)           -- Flag controls if verbose output is printed (NLL, parameter changes during fit
+  // Timer(Bool_t flag)             -- Time CPU and wall clock consumption of fit steps, off by default
+  // PrintLevel(Int_t level)        -- Set Minuit print level (-1 through 3, default is 1). At -1 all RooFit informational 
+  //                                   messages are suppressed as well
+  // Warnings(Bool_t flag)          -- Enable or disable MINUIT warnings (enabled by default)
+  // PrintEvalErrors(Int_t numErr)  -- Control number of p.d.f evaluation errors printed per likelihood evaluation. A negative
+  //                                   value suppress output completely, a zero value will only print the error count per p.d.f component,
+  //                                   a positive value is will print details of each error up to numErr messages per p.d.f component.
+
+  RooLinkedList l ;
+  l.Add((TObject*)&arg1) ;  l.Add((TObject*)&arg2) ;  
+  l.Add((TObject*)&arg3) ;  l.Add((TObject*)&arg4) ;
+  l.Add((TObject*)&arg5) ;  l.Add((TObject*)&arg6) ;  
+  l.Add((TObject*)&arg7) ;  l.Add((TObject*)&arg8) ;
+  return chi2FitTo(xydata,l) ;  
+}
+
+
+
+
+//_____________________________________________________________________________
+RooFitResult* RooAbsReal::chi2FitTo(RooDataSet& xydata, const RooLinkedList& cmdList) 
+{  
+  // Internal back-end function to steer chi2 fits
+  
+  // Select the pdf-specific commands 
+  RooCmdConfig pc(Form("RooAbsPdf::chi2FitTo(%s)",GetName())) ;
+
+  // Pull arguments to be passed to chi2 construction from list
+  RooLinkedList fitCmdList(cmdList) ;
+  RooLinkedList chi2CmdList = pc.filterCmdList(fitCmdList,"YVar,Integrate") ;
+
+  RooAbsReal* xychi2 = createChi2(xydata,chi2CmdList) ;
+  RooFitResult* ret = chi2FitDriver(*xychi2,fitCmdList) ;
+  
+  // Cleanup
+  delete xychi2 ;
+  return ret ;
+}
+
+
+
+
+//_____________________________________________________________________________
+RooAbsReal* RooAbsReal::createChi2(RooDataSet& data, RooCmdArg arg1,  RooCmdArg arg2,  
+				     RooCmdArg arg3,  RooCmdArg arg4, RooCmdArg arg5,  
+				     RooCmdArg arg6,  RooCmdArg arg7, RooCmdArg arg8) 
+{
+  // Create a chi-2 from a series of x and y value stored in a dataset.
+  // The y values can either be the event weights (default), or can be another column designated
+  // by the YVar() argument. The y value must have errors defined for the chi-2 to
+  // be well defined. 
+  //
+  // The following named arguments are supported
+  //
+  // Options to control construction of the chi^2
+  // ------------------------------------------
+  // YVar(RooRealVar& yvar)          -- Designate given column in dataset as Y value 
+  // Integrate(Bool_t flag)          -- Integrate function over range specified by X errors
+  //                                    rather than take value at bin center.
+  // 
+  
+  RooLinkedList l ;
+  l.Add((TObject*)&arg1) ;  l.Add((TObject*)&arg2) ;  
+  l.Add((TObject*)&arg3) ;  l.Add((TObject*)&arg4) ;
+  l.Add((TObject*)&arg5) ;  l.Add((TObject*)&arg6) ;  
+  l.Add((TObject*)&arg7) ;  l.Add((TObject*)&arg8) ;
+  return createChi2(data,l) ;
+}
+
+
+
+//_____________________________________________________________________________
+RooAbsReal* RooAbsReal::createChi2(RooDataSet& data, const RooLinkedList& cmdList) 
+{
+  // Internal back-end function to create a chi^2 from a function and a dataset
+
+  // Select the pdf-specific commands 
+  RooCmdConfig pc(Form("RooAbsPdf::fitTo(%s)",GetName())) ;
+
+  pc.defineInt("integrate","Integrate",0,0) ;
+  pc.defineObject("yvar","YVar",0,0) ;
+  
+  // Process and check varargs 
+  pc.process(cmdList) ;
+  if (!pc.ok(kTRUE)) {
+    return 0 ;
+  }
+
+  // Decode command line arguments 
+  Bool_t integrate = pc.getInt("integrate") ;
+  RooRealVar* yvar = (RooRealVar*) pc.getObject("yvar") ;
+
+  string name = Form("chi2_%s_%s",GetName(),data.GetName()) ;
+ 
+  if (yvar) {
+    return new RooXYChi2Var(name.c_str(),name.c_str(),*this,data,*yvar,integrate) ;
+  } else {
+    return new RooXYChi2Var(name.c_str(),name.c_str(),*this,data,integrate) ;
+  }  
+}
+
+
+
+
+
+
+//_____________________________________________________________________________
+RooFitResult* RooAbsReal::chi2FitDriver(RooAbsReal& fcn, RooLinkedList& cmdList) 
+{
+  // Internal driver function for chi2 fits
+
+  // Select the pdf-specific commands 
+  RooCmdConfig pc(Form("RooAbsPdf::chi2FitDriver(%s)",GetName())) ;
+
+  pc.defineString("fitOpt","FitOptions",0,"") ;
+
+  pc.defineInt("optConst","Optimize",0,1) ;
+  pc.defineInt("verbose","Verbose",0,0) ;
+  pc.defineInt("doSave","Save",0,0) ;
+  pc.defineInt("doTimer","Timer",0,0) ;
+  pc.defineInt("plevel","PrintLevel",0,1) ;
+  pc.defineInt("strat","Strategy",0,1) ;
+  pc.defineInt("initHesse","InitialHesse",0,0) ;
+  pc.defineInt("hesse","Hesse",0,1) ;
+  pc.defineInt("minos","Minos",0,0) ;
+  pc.defineInt("ext","Extended",0,2) ;
+  pc.defineInt("numee","PrintEvalErrors",0,10) ;
+  pc.defineInt("doWarn","Warnings",0,1) ;
+  pc.defineObject("minosSet","Minos",0,0) ;
+
+  pc.defineMutex("FitOptions","Verbose") ;
+  pc.defineMutex("FitOptions","Save") ;
+  pc.defineMutex("FitOptions","Timer") ;
+  pc.defineMutex("FitOptions","Strategy") ;
+  pc.defineMutex("FitOptions","InitialHesse") ;
+  pc.defineMutex("FitOptions","Hesse") ;
+  pc.defineMutex("FitOptions","Minos") ;
+  
+  // Process and check varargs 
+  pc.process(cmdList) ;
+  if (!pc.ok(kTRUE)) {
+    return 0 ;
+  }
+
+  // Decode command line arguments
+  const char* fitOpt = pc.getString("fitOpt",0,kTRUE) ;
+  Int_t optConst = pc.getInt("optConst") ;
+  Int_t verbose  = pc.getInt("verbose") ;
+  Int_t doSave   = pc.getInt("doSave") ;
+  Int_t doTimer  = pc.getInt("doTimer") ;
+  Int_t plevel    = pc.getInt("plevel") ;
+  Int_t strat    = pc.getInt("strat") ;
+  Int_t initHesse= pc.getInt("initHesse") ;
+  Int_t hesse    = pc.getInt("hesse") ;
+  Int_t minos    = pc.getInt("minos") ;
+  Int_t numee    = pc.getInt("numee") ;
+  Int_t doWarn   = pc.getInt("doWarn") ;
+  const RooArgSet* minosSet = static_cast<RooArgSet*>(pc.getObject("minosSet")) ;
+
+  // Instantiate MINUIT
+  RooMinuit m(fcn) ;
+
+  if (doWarn==0) {
+    m.setNoWarn() ;
+  }
+  
+  m.setPrintEvalErrors(numee) ;
+  if (plevel!=1) {
+    m.setPrintLevel(plevel) ;
+  }
+
+  if (optConst) {
+    // Activate constant term optimization
+    m.optimizeConst(1) ;
+  }
+
+  RooFitResult *ret = 0 ;
+
+  if (fitOpt) {
+
+    // Play fit options as historically defined
+    ret = m.fit(fitOpt) ;
+    
+  } else {
+
+    if (verbose) {
+      // Activate verbose options
+      m.setVerbose(1) ;
+    }
+    if (doTimer) {
+      // Activate timer options
+      m.setProfile(1) ;
+    }
+    
+    if (strat!=1) {
+      // Modify fit strategy
+      m.setStrategy(strat) ;
+    }
+
+    if (initHesse) {
+      // Initialize errors with hesse
+      m.hesse() ;
+    }
+
+    // Minimize using migrad
+    m.migrad() ;
+
+    if (hesse) {
+      // Evaluate errors with Hesse
+      m.hesse() ;
+    }
+
+    if (minos) {
+      // Evaluate errs with Minos
+      if (minosSet) {
+	m.minos(*minosSet) ;
+      } else {
+	m.minos() ;
+      }
+    }
+
+    // Optionally return fit result
+    if (doSave) {
+      string name = Form("fitresult_%s",fcn.GetName()) ;
+      string title = Form("Result of fit of %s ",GetName()) ;
+      ret = m.save(name.c_str(),title.c_str()) ;
+    } 
+
+  }
+  
+  // Cleanup
+  return ret ;
+
+}
+
+
+
+
+
+
