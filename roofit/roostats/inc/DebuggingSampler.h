@@ -61,7 +61,7 @@ namespace RooStats {
      } 
 
       // Main interface to evaluate the test statistic on a dataset
-     virtual Double_t EvaluateTestStatistic(RooAbsData& data, RooArgSet& paramsOfInterest)  {
+     virtual Double_t EvaluateTestStatistic(RooAbsData& /*data*/, RooArgSet& /*paramsOfInterest*/)  {
        //       data = data; // avoid warning
        //       paramsOfInterest = paramsOfInterest; // avoid warning
        return fRand->Uniform();
