@@ -92,20 +92,30 @@ public:
   void setGeneratorConfig() ;
   void setGeneratorConfig(const RooNumGenConfig& config) ;
 
-  // Interactions with a dataset  
+  // -log(L) fits to binned and unbinned data
   virtual RooFitResult* fitTo(RooAbsData& data, RooCmdArg arg1=RooCmdArg::none(),  RooCmdArg arg2=RooCmdArg::none(),  
                               RooCmdArg arg3=RooCmdArg::none(),  RooCmdArg arg4=RooCmdArg::none(), RooCmdArg arg5=RooCmdArg::none(),  
                               RooCmdArg arg6=RooCmdArg::none(),  RooCmdArg arg7=RooCmdArg::none(), RooCmdArg arg8=RooCmdArg::none()) ;
   virtual RooFitResult* fitTo(RooAbsData& data, const RooLinkedList& cmdList) ;
 
-  virtual RooFitResult* fitTo(RooAbsData& data, const RooArgSet& projDeps, 
-			      Option_t *fitOpt = "", Option_t *optOpt = "c", const char* fitRange=0) ;
-  virtual RooFitResult* fitTo(RooAbsData& data, Option_t *fitOpt, Option_t *optOpt = "c", const char* fitRange=0) ;
-
   virtual RooAbsReal* createNLL(RooAbsData& data, const RooLinkedList& cmdList) ;
   virtual RooAbsReal* createNLL(RooAbsData& data, RooCmdArg arg1=RooCmdArg::none(),  RooCmdArg arg2=RooCmdArg::none(),  
 				RooCmdArg arg3=RooCmdArg::none(),  RooCmdArg arg4=RooCmdArg::none(), RooCmdArg arg5=RooCmdArg::none(),  
 				RooCmdArg arg6=RooCmdArg::none(),  RooCmdArg arg7=RooCmdArg::none(), RooCmdArg arg8=RooCmdArg::none()) ;
+
+  // Chi^2 fits to histograms
+  using RooAbsReal::chi2FitTo ;
+  using RooAbsReal::createChi2 ;
+  virtual RooFitResult* chi2FitTo(RooDataHist& data, const RooLinkedList& cmdList) ;
+  virtual RooAbsReal* createChi2(RooDataHist& data, RooCmdArg arg1=RooCmdArg::none(),  RooCmdArg arg2=RooCmdArg::none(),  
+				 RooCmdArg arg3=RooCmdArg::none(),  RooCmdArg arg4=RooCmdArg::none(), RooCmdArg arg5=RooCmdArg::none(),  
+				 RooCmdArg arg6=RooCmdArg::none(),  RooCmdArg arg7=RooCmdArg::none(), RooCmdArg arg8=RooCmdArg::none()) ;
+
+  // Chi^2 fits to X-Y datasets
+  virtual RooAbsReal* createChi2(RooDataSet& data, const RooLinkedList& cmdList) ;
+  
+
+
 
 
   // Constraint management
@@ -187,7 +197,7 @@ public:
 
   static void clearEvalError() ;
   static Bool_t evalError() ;
-  
+
 
   
 protected:   
