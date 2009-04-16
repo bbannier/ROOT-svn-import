@@ -77,6 +77,34 @@ RooXYChi2Var::RooXYChi2Var(const char *name, const char* title, RooAbsReal& func
   //                                 are the Double_t values that correspond to the Y and its error
   //
   _extended = kFALSE ;
+  _yvar = 0 ;
+
+  initialize() ;
+}
+
+
+//_____________________________________________________________________________
+RooXYChi2Var::RooXYChi2Var(const char *name, const char* title, RooAbsReal& func, RooDataSet& xydata, RooRealVar& yvar, Bool_t integrate) :
+  RooAbsOptTestStatistic(name,title,func,xydata,RooArgSet(),0,0,1,1,0,0), 
+  _extended(kFALSE),
+  _integrate(integrate),
+  _intConfig(*defaultIntegratorConfig()),
+  _funcInt(0)  
+{
+  //
+  //  RooXYChi2Var constructor with function and X-Y values dataset
+  //
+  // An X-Y dataset is a weighted dataset with one or more observables X where given yvar is interpreted
+  // as the Y value. The Y variable must have a non-zero error defined at each point for the chi^2 calculation to be meaningful.
+  //
+  // To store errors associated with the x and y values in a RooDataSet, call RooRealVar::setAttribute("StoreError")
+  // on each X-type observable for which the error should be stored and add datapoints to the dataset as follows
+  //
+  // RooDataSet::add(xset,yval,yerr) where xset is the RooArgSet of x observables (with or without errors) and yval and yerr
+  //                                 are the Double_t values that correspond to the Y and its error
+  //
+  _extended = kFALSE ;
+  _yvar = (RooRealVar*) _dataClone->get()->find(yvar.GetName()) ;
 
   initialize() ;
 }
@@ -108,7 +136,40 @@ RooXYChi2Var::RooXYChi2Var(const char *name, const char* title, RooAbsPdf& extPd
   if (!extPdf.canBeExtended()) {
     throw(string(Form("RooXYChi2Var::ctor(%s) ERROR: Input p.d.f. must be an extendible"))) ;
   }
-  
+  _yvar = 0 ;
+  initialize() ;
+}
+
+
+
+
+//_____________________________________________________________________________
+RooXYChi2Var::RooXYChi2Var(const char *name, const char* title, RooAbsPdf& extPdf, RooDataSet& xydata, RooRealVar& yvar, Bool_t integrate) :
+  RooAbsOptTestStatistic(name,title,extPdf,xydata,RooArgSet(),0,0,1,1,0,0), 
+  _extended(kTRUE),
+  _integrate(integrate),
+  _intConfig(*defaultIntegratorConfig()),
+  _funcInt(0)
+{
+  //
+  // RooXYChi2Var constructor with an extended p.d.f. and X-Y values dataset
+  // The value of the function that defines the chi^2 in this form is takes as
+  // the p.d.f. times the expected number of events
+  //
+  // An X-Y dataset is a weighted dataset with one or more observables X where the weight is interpreted
+  // as the Y value and the weight error is interpreted as the Y value error. The weight must have an
+  // non-zero error defined at each point for the chi^2 calculation to be meaningful.
+  //
+  // To store errors associated with the x and y values in a RooDataSet, call RooRealVar::setAttribute("StoreError")
+  // on each X-type observable for which the error should be stored and add datapoints to the dataset as follows
+  //
+  // RooDataSet::add(xset,yval,yerr) where xset is the RooArgSet of x observables (with or without errors) and yval and yerr
+  //                                 are the Double_t values that correspond to the Y and its error
+  //
+  if (!extPdf.canBeExtended()) {
+    throw(string(Form("RooXYChi2Var::ctor(%s) ERROR: Input p.d.f. must be an extendible"))) ;
+  }
+  _yvar = (RooRealVar*) _dataClone->get()->find(yvar.GetName()) ;
   initialize() ;
 }
 
@@ -125,7 +186,9 @@ RooXYChi2Var::RooXYChi2Var(const RooXYChi2Var& other, const char* name) :
 {
   // Copy constructor
 
+  _yvar = other._yvar ? (RooRealVar*) _dataClone->get()->find(other._yvar->GetName()) : 0 ;
   initialize() ;
+  
 }
 
 
@@ -230,7 +293,7 @@ Double_t RooXYChi2Var::xErrorContribution(Double_t ydata) const
 	ret += pow(xerrLo*slope,2) ;
       }
       
-    } else {
+    } else if (var->hasError()) {
 
       // Get value at central X
       Double_t cxval = var->getVal() ;
@@ -321,9 +384,16 @@ Double_t RooXYChi2Var::evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_
     Double_t yfunc = fy() ;
 
     // Get data value and error
-    Double_t ydata = data->weight() ;
+    Double_t ydata ;
     Double_t eylo,eyhi ;
-    data->weightError(eylo,eyhi) ;
+    if (_yvar) {
+      ydata = _yvar->getVal() ;
+      eylo = -1*_yvar->getErrorLo() ;
+      eyhi = _yvar->getErrorHi() ;
+    } else {
+      ydata = data->weight() ;
+      data->weightError(eylo,eyhi) ;
+    }
 
     // Calculate external error
     Double_t eExt = yfunc-ydata ;
@@ -332,7 +402,7 @@ Double_t RooXYChi2Var::evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_
     Double_t eInt = (eExt>0) ? eyhi : eylo ;
 
     // Add contributions due to error in x coordinates    
-    Double_t eIntX2 = xErrorContribution(ydata) ;
+    Double_t eIntX2 = _integrate ? 0 : xErrorContribution(ydata) ;
 
     // Return 0 if eInt=0, special handling in MINUIT will follow
     if (eInt==0.) {
@@ -346,6 +416,15 @@ Double_t RooXYChi2Var::evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_
   }
 
   return result ;
+}
+
+
+
+RooArgSet RooXYChi2Var::requiredExtraObservables() const 
+{
+  // Inform base class that observable yvar cannot be optimized away from the dataset
+  if (_yvar) return RooArgSet(*_yvar) ;
+  return RooArgSet() ;
 }
 
 
