@@ -35,6 +35,7 @@ class RooDataHist ;
 class RooFunctor ;
 class RooGenFunction ;
 class RooMultiGenFunction ;
+class RooFitResult ;
 
 class TH1;
 class TH1F;
@@ -95,6 +96,29 @@ public:
     // and all integrals are calculated numerically
     _forceNumInt = flag ; 
   }
+
+  // Chi^2 fits to histograms
+  virtual RooFitResult* chi2FitTo(RooDataHist& data, RooCmdArg arg1=RooCmdArg::none(),  RooCmdArg arg2=RooCmdArg::none(),  
+                              RooCmdArg arg3=RooCmdArg::none(),  RooCmdArg arg4=RooCmdArg::none(), RooCmdArg arg5=RooCmdArg::none(),  
+                              RooCmdArg arg6=RooCmdArg::none(),  RooCmdArg arg7=RooCmdArg::none(), RooCmdArg arg8=RooCmdArg::none()) ;
+  virtual RooFitResult* chi2FitTo(RooDataHist& data, const RooLinkedList& cmdList) ;
+
+  virtual RooAbsReal* createChi2(RooDataHist& data, const RooLinkedList& cmdList) ;
+  virtual RooAbsReal* createChi2(RooDataHist& data, RooCmdArg arg1=RooCmdArg::none(),  RooCmdArg arg2=RooCmdArg::none(),  
+				 RooCmdArg arg3=RooCmdArg::none(),  RooCmdArg arg4=RooCmdArg::none(), RooCmdArg arg5=RooCmdArg::none(),  
+				 RooCmdArg arg6=RooCmdArg::none(),  RooCmdArg arg7=RooCmdArg::none(), RooCmdArg arg8=RooCmdArg::none()) ;
+
+  // Chi^2 fits to X-Y datasets
+  virtual RooFitResult* chi2FitTo(RooDataSet& xydata, RooCmdArg arg1=RooCmdArg::none(),  RooCmdArg arg2=RooCmdArg::none(),  
+                              RooCmdArg arg3=RooCmdArg::none(),  RooCmdArg arg4=RooCmdArg::none(), RooCmdArg arg5=RooCmdArg::none(),  
+                              RooCmdArg arg6=RooCmdArg::none(),  RooCmdArg arg7=RooCmdArg::none(), RooCmdArg arg8=RooCmdArg::none()) ;
+  virtual RooFitResult* chi2FitTo(RooDataSet& xydata, const RooLinkedList& cmdList) ;
+
+  virtual RooAbsReal* createChi2(RooDataSet& data, const RooLinkedList& cmdList) ;
+  virtual RooAbsReal* createChi2(RooDataSet& data, RooCmdArg arg1=RooCmdArg::none(),  RooCmdArg arg2=RooCmdArg::none(),  
+				   RooCmdArg arg3=RooCmdArg::none(),  RooCmdArg arg4=RooCmdArg::none(), RooCmdArg arg5=RooCmdArg::none(),  
+				   RooCmdArg arg6=RooCmdArg::none(),  RooCmdArg arg7=RooCmdArg::none(), RooCmdArg arg8=RooCmdArg::none()) ;
+
 
   virtual RooAbsReal* createProfile(const RooArgSet& paramsOfInterest) ;
 
@@ -239,6 +263,7 @@ public:
 
   RooAbsReal* derivative(RooRealVar& obs, Int_t order=1, Double_t eps=0.001) ;
 
+
 protected:
 
   // PlotOn with command list
@@ -266,6 +291,7 @@ protected:
 				         RooArgSet *&cloneSet, const char* rangeName=0) const;
  protected:
 
+  RooFitResult* chi2FitDriver(RooAbsReal& fcn, RooLinkedList& cmdList) ;
 
   // Support interface for subclasses to advertise their analytic integration
   // and generator capabilities in their analticalIntegral() and generateEvent()
