@@ -66,6 +66,7 @@ RooAbsOptTestStatistic:: RooAbsOptTestStatistic()
   _dataClone = 0 ;
   _funcClone = 0 ;
   _projDeps = 0 ;
+  _ownData = kTRUE ;
 }
 
 
@@ -73,7 +74,7 @@ RooAbsOptTestStatistic:: RooAbsOptTestStatistic()
 //_____________________________________________________________________________
 RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *title, RooAbsReal& real, RooAbsData& data,
 					       const RooArgSet& projDeps, const char* rangeName, const char* addCoefRangeName,
-					       Int_t nCPU, Bool_t interleave, Bool_t verbose, Bool_t splitCutRange) : 
+					       Int_t nCPU, Bool_t interleave, Bool_t verbose, Bool_t splitCutRange, Bool_t cloneInputData) : 
   RooAbsTestStatistic(name,title,real,data,projDeps,rangeName, addCoefRangeName, nCPU, interleave, verbose, splitCutRange),
   _projDeps(0)
 {
@@ -157,9 +158,20 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *tit
   
   // Copy data and strip entries lost by adjusted fit range, _dataClone ranges will be copied from realDepSet ranges
   if (rangeName && strlen(rangeName)) {
+    if (!cloneInputData) {
+      coutW(InputArguments) << "RooAbsOptTestStatistic::ctor(" << GetName() 
+			    << ") WARNING: Must clone input data when a range specification is given, ignoring request to use original input dataset" << endl ; 
+    }
     _dataClone = ((RooAbsData&)data).reduce(RooFit::SelectVars(*realDepSet),RooFit::CutRange(rangeName)) ;  
+    _ownData = kTRUE ;
   } else {
-    _dataClone = ((RooAbsData&)data).reduce(RooFit::SelectVars(*realDepSet)) ;  
+    if (cloneInputData) {
+      _dataClone = data.reduce(RooFit::SelectVars(*data.get())) ; //  ((RooAbsData&)data).reduce(RooFit::SelectVars(*realDepSet)) ;  
+      _ownData = kTRUE ;
+    } else {
+      _dataClone = &data ;
+      _ownData = kFALSE ;
+    }
   }
 
   // Copy any non-shared parameterized range definitions from pdf observables to dataset observables
@@ -334,7 +346,13 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const RooAbsOptTestStatistic& oth
   delete iter ;
 
   // WVE Must use clone with cache redirection here
-  _dataClone = (RooAbsData*) other._dataClone->cacheClone(_funcCloneSet) ;
+  if (other._ownData) {
+    _dataClone = (RooAbsData*) other._dataClone->cacheClone(_funcCloneSet) ;
+    _ownData = kTRUE ;
+  } else {
+    _dataClone = other._dataClone ;
+    _ownData = kFALSE ;
+  }
 
   // Attach function clone to dataset
   _funcClone->attachDataSet(*_dataClone) ;
@@ -363,7 +381,11 @@ RooAbsOptTestStatistic::~RooAbsOptTestStatistic()
 
   if (operMode()==Slave) {
     delete _funcCloneSet ;
-    delete _dataClone ;
+    if (_ownData) {
+      delete _dataClone ;
+    } else {
+      _dataClone->resetCache() ;
+    }
     delete _projDeps ;
   } 
   delete _normSet ;
@@ -492,7 +514,7 @@ void RooAbsOptTestStatistic::optimizeCaching()
   _dataClone->setDirtyProp(kFALSE) ;  
 
   // Disable reading of observables that are not used
-  _dataClone->optimizeReadingWithCaching(*_funcClone, RooArgSet()) ;
+  _dataClone->optimizeReadingWithCaching(*_funcClone, RooArgSet(),requiredExtraObservables()) ;
 }
 
 
@@ -529,7 +551,7 @@ void RooAbsOptTestStatistic::optimizeConstantTerms(Bool_t activate)
     delete cIter ;  
     
     // Disable reading of observables that are no longer used
-    _dataClone->optimizeReadingWithCaching(*_funcClone, cacheableNodes) ;
+    _dataClone->optimizeReadingWithCaching(*_funcClone, cacheableNodes,requiredExtraObservables()) ;
 
   } else {
     
@@ -543,6 +565,51 @@ void RooAbsOptTestStatistic::optimizeConstantTerms(Bool_t activate)
     optimizeCaching() ;
     
   }
+}
+
+
+
+//_____________________________________________________________________________
+Bool_t RooAbsOptTestStatistic::setData(RooAbsData& data, Bool_t cloneData) 
+{ 
+  // Change dataset that is used to given one. If cloneData is kTRUE, a clone of
+  // in the input dataset is made.  If the test statistic was constructed with
+  // a range specification on the data, the cloneData argument is ignore and
+  // the data is always cloned.
+
+  RooAbsData* origData = _dataClone ;
+  Bool_t deleteOrigData = _ownData ;
+
+  if (!cloneData && _rangeName.size()>0) {
+    coutW(InputArguments) << "RooAbsOptTestStatistic::setData(" << GetName() << ") WARNING: test statistic was constructed with range selection on data, "
+			 << "ignoring request to _not_ clone the input dataset" << endl ; 
+    cloneData = kTRUE ;
+  }
+
+  if (cloneData) {
+    if (_rangeName.size()==0) {
+      _dataClone = (RooAbsData*) data.reduce(*data.get()) ;
+    } else {
+      _dataClone = ((RooAbsData&)data).reduce(RooFit::SelectVars(*data.get()),RooFit::CutRange(_rangeName.c_str())) ;  
+    }
+    _ownData = kTRUE ;
+  } else {
+    _dataClone = &data ;
+    _ownData = kFALSE ;
+  }    
+
+  // Attach function clone to dataset
+  _funcClone->attachDataSet(*_dataClone) ;
+
+  _data = _dataClone ;
+
+  if (deleteOrigData) {
+    delete origData ;
+  } else {
+    origData->resetCache() ;
+  }
+ 
+  return kTRUE ;
 }
 
 
