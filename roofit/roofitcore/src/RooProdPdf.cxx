@@ -1432,7 +1432,7 @@ void RooProdPdf::printMetaArgs(ostream& os) const
 	TIterator* nciter = ncset->createIterator() ;
 	RooAbsArg* arg ;
 	Bool_t first(kTRUE) ;
-	while(arg=(RooAbsArg*)nciter->Next()) {
+	while((arg=(RooAbsArg*)nciter->Next())) {
 	  if (!first) {
 	    os << "," ;
 	  } else {

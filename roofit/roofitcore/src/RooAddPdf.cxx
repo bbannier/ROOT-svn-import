@@ -1056,7 +1056,7 @@ void RooAddPdf::printMetaArgs(ostream& os) const
     
   RooAbsArg* coef, *pdf ;
   if (_coefList.getSize()!=0) { 
-    while(coef=(RooAbsArg*)_coefIter->Next()) {
+    while((coef=(RooAbsArg*)_coefIter->Next())) {
       if (!first) {
 	os << " + " ;
       } else {
@@ -1071,7 +1071,7 @@ void RooAddPdf::printMetaArgs(ostream& os) const
     }
   } else {
     
-    while(pdf=(RooAbsArg*)_pdfIter->Next()) {
+    while((pdf=(RooAbsArg*)_pdfIter->Next())) {
       if (!first) {
 	os << " + " ;
       } else {

@@ -132,11 +132,13 @@ public:
   
   class IFace {
   public:
+    virtual ~IFace() {} ;
     virtual std::string create(RooFactoryWSTool& ft, const char* typeName, const char* instanceName, std::vector<std::string> args) = 0 ;
   } ;
 
   class SpecialsIFace : public IFace {
   public:
+    virtual ~SpecialsIFace() {} ;
     std::string create(RooFactoryWSTool& ft, const char* typeName, const char* instanceName, std::vector<std::string> args) ;    
   } ;
 

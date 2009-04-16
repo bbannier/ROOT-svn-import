@@ -436,7 +436,7 @@ void RooRealSumPdf::printMetaArgs(ostream& os) const
     
   RooAbsArg* coef, *func ;
   if (_coefList.getSize()!=0) { 
-    while(coef=(RooAbsArg*)_coefIter->Next()) {
+    while((coef=(RooAbsArg*)_coefIter->Next())) {
       if (!first) {
 	os << " + " ;
       } else {
@@ -451,7 +451,7 @@ void RooRealSumPdf::printMetaArgs(ostream& os) const
     }
   } else {
     
-    while(func=(RooAbsArg*)_funcIter->Next()) {
+    while((func=(RooAbsArg*)_funcIter->Next())) {
       if (!first) {
 	os << " + " ;
       } else {
