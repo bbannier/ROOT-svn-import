@@ -590,20 +590,22 @@ Double_t*  RooFFTConvPdf::scanPdf(RooRealVar& obs, RooAbsPdf& pdf, const RooData
   case Flat:    
     // Sample original range (N samples) and fill lower and upper buffer
     // bins with p.d.f. value at respective boundary
-    histX->setBin(0) ;
-    Double_t val = pdf.getVal(hist.get()) ;  
-    for (k=0 ; k<Nbuf ; k++) {
-      tmp[k] = val ;
+    {
+      histX->setBin(0) ;
+      Double_t val = pdf.getVal(hist.get()) ;  
+      for (k=0 ; k<Nbuf ; k++) {
+	tmp[k] = val ;
+      }
+      for (k=0 ; k<N ; k++) {
+	histX->setBin(k) ;
+	tmp[k+Nbuf] = pdf.getVal(hist.get()) ;    
+      }  
+      histX->setBin(N-1) ;
+      val = pdf.getVal(hist.get()) ;  
+      for (k=0 ; k<Nbuf ; k++) {
+	tmp[N+Nbuf+k] = val ;
+      }  
     }
-    for (k=0 ; k<N ; k++) {
-      histX->setBin(k) ;
-      tmp[k+Nbuf] = pdf.getVal(hist.get()) ;    
-    }  
-    histX->setBin(N-1) ;
-    val = pdf.getVal(hist.get()) ;  
-    for (k=0 ; k<Nbuf ; k++) {
-      tmp[N+Nbuf+k] = val ;
-    }  
     break ;
 
   case Mirror:
