@@ -2267,7 +2267,7 @@ void RooTreeData::printMultiline(ostream& os, Int_t content, Bool_t verbose, TSt
 
 
 //_____________________________________________________________________________
-void RooTreeData::optimizeReadingWithCaching(RooAbsArg& arg, const RooArgSet& cacheList)
+void RooTreeData::optimizeReadingWithCaching(RooAbsArg& arg, const RooArgSet& cacheList, const RooArgSet& keepObsList)
 {
   // Prepare dataset for use with cached constant terms listed in
   // 'cacheList' of expression 'arg'. Deactivate tree branches
@@ -2318,6 +2318,10 @@ void RooTreeData::optimizeReadingWithCaching(RooAbsArg& arg, const RooArgSet& ca
     }
     delete uIter ;
   }
+
+
+  // Remove all observables in keep list from prune list
+  pruneSet.remove(keepObsList,kTRUE,kTRUE) ;
 
   if (pruneSet.getSize()!=0) {
     

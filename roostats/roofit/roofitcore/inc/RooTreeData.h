@@ -151,7 +151,7 @@ protected:
 
   friend class RooMCStudy ;
 
-  virtual void optimizeReadingWithCaching(RooAbsArg& arg, const RooArgSet& cacheList) ;
+  virtual void optimizeReadingWithCaching(RooAbsArg& arg, const RooArgSet& cacheList, const RooArgSet& keepObsList) ;
   Bool_t allClientsCached(RooAbsArg*, const RooArgSet&) ;
 
 
