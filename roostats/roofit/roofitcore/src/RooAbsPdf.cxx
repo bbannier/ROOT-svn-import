@@ -147,6 +147,8 @@
 #include "RooFitResult.h"
 #include "RooNumGenConfig.h"
 #include "RooCachedReal.h"
+#include "RooXYChi2Var.h"
+#include "RooChi2Var.h"
 #include <string>
 
 ClassImp(RooAbsPdf) 
@@ -885,12 +887,10 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   // Select the pdf-specific commands 
   RooCmdConfig pc(Form("RooAbsPdf::fitTo(%s)",GetName())) ;
 
+  RooLinkedList fitCmdList(cmdList) ;
+  RooLinkedList nllCmdList = pc.filterCmdList(fitCmdList,"ProjectedObservables,Extended,Range,RangeWithName,SumCoefRange,NumCPU,Optimize,SplitRange,Constrain,ExternalConstraints") ;
+
   pc.defineString("fitOpt","FitOptions",0,"") ;
-  pc.defineString("rangeName","RangeWithName",0,"",kTRUE) ;
-  pc.defineString("addCoefRange","SumCoefRange",0,"") ;
-  pc.defineDouble("rangeLo","Range",0,-999.) ;
-  pc.defineDouble("rangeHi","Range",1,-999.) ;
-  pc.defineInt("splitRange","SplitRange",0,0) ;
   pc.defineInt("optConst","Optimize",0,1) ;
   pc.defineInt("verbose","Verbose",0,0) ;
   pc.defineInt("doSave","Save",0,0) ;
@@ -906,7 +906,6 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineInt("doEEWall","EvalErrorWall",0,1) ;
   pc.defineInt("doWarn","Warnings",0,1) ;
   pc.defineInt("doSumW2","SumW2Error",0,-1) ;
-  pc.defineObject("projDepSet","ProjectedObservables",0,0) ;
   pc.defineObject("minosSet","Minos",0,0) ;
   pc.defineObject("cPars","Constrain",0,0) ;
   pc.defineSet("extCons","ExternalConstraints",0,0) ;
@@ -920,15 +919,13 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineMutex("Range","RangeWithName") ;
   
   // Process and check varargs 
-  pc.process(cmdList) ;
+  pc.process(fitCmdList) ;
   if (!pc.ok(kTRUE)) {
     return 0 ;
   }
 
   // Decode command line arguments
   const char* fitOpt = pc.getString("fitOpt",0,kTRUE) ;
-  const char* rangeName = pc.getString("rangeName",0,kTRUE) ;
-  const char* addCoefRangeName = pc.getString("addCoefRange",0,kTRUE) ;
   Int_t optConst = pc.getInt("optConst") ;
   Int_t verbose  = pc.getInt("verbose") ;
   Int_t doSave   = pc.getInt("doSave") ;
@@ -938,16 +935,11 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   Int_t initHesse= pc.getInt("initHesse") ;
   Int_t hesse    = pc.getInt("hesse") ;
   Int_t minos    = pc.getInt("minos") ;
-  Int_t ext      = pc.getInt("ext") ;
-  Int_t numcpu   = pc.getInt("numcpu") ;
-  Int_t splitr   = pc.getInt("splitRange") ;
   Int_t numee    = pc.getInt("numee") ;
   Int_t doEEWall = pc.getInt("doEEWall") ;
   Int_t doWarn   = pc.getInt("doWarn") ;
   Int_t doSumW2  = pc.getInt("doSumW2") ;
   const RooArgSet* minosSet = static_cast<RooArgSet*>(pc.getObject("minosSet")) ;
-  const RooArgSet* cPars = static_cast<RooArgSet*>(pc.getObject("cPars")) ;
-  const RooArgSet* extCons = pc.getSet("extCons") ;
 
   // Determine if the dataset has weights  
   Bool_t weightedData = data.isNonPoissonWeighted() ;
@@ -973,84 +965,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
     coutW(InputArguments) << "RooAbsPdf::fitTo(" << GetName() << ") WARNING: sum-of-weights correction does not apply to MINOS errors" << endl ;
   }
     
-  // Process automatic extended option
-  if (ext==2) {
-    ext = ((extendMode()==CanBeExtended || extendMode()==MustBeExtended)) ? 1 : 0 ;
-    if (ext) {
-      coutI(Minimization) << "p.d.f. provides expected number of events, including extended term in likelihood." << endl ;
-    }
-  }
-
-  if (pc.hasProcessed("Range")) {
-    Double_t rangeLo = pc.getDouble("rangeLo") ;
-    Double_t rangeHi = pc.getDouble("rangeHi") ;
-   
-    // Create range with name 'fit' with above limits on all observables
-    RooArgSet* obs = getObservables(&data) ;
-    TIterator* iter = obs->createIterator() ;
-    RooAbsArg* arg ;
-    while((arg=(RooAbsArg*)iter->Next())) {
-      RooRealVar* rrv =  dynamic_cast<RooRealVar*>(arg) ;
-      if (rrv) rrv->setRange("fit",rangeLo,rangeHi) ;
-    }
-    // Set range name to be fitted to "fit"
-    rangeName = "fit" ;
-  }
-
-  RooArgSet projDeps ;
-  RooArgSet* tmp = (RooArgSet*) pc.getObject("projDepSet") ;  
-  if (tmp) {
-    projDeps.add(*tmp) ;
-  }
-
-  // Construct NLL
-  RooAbsReal::enableEvalErrorLogging(kTRUE) ;
-  RooAbsReal* nll ;
-  list<RooNLLVar*> nllComponents ;
-  if (!rangeName || strchr(rangeName,',')==0) {
-    // Simple case: default range, or single restricted range
-    RooNLLVar* tmp2 = new RooNLLVar("nll","-log(likelihood)",*this,data,projDeps,ext,rangeName,addCoefRangeName,numcpu,kFALSE,plevel!=-1,splitr) ;
-    nll = tmp2 ;
-    nllComponents.push_back(tmp2) ;
-  } else {
-    // Composite case: multiple ranges
-    RooArgList nllList ;
-    char* buf = new char[strlen(rangeName)+1] ;
-    strcpy(buf,rangeName) ;
-    char* token = strtok(buf,",") ;
-    while(token) {
-      RooNLLVar* nllComp = new RooNLLVar(Form("nll_%s",token),"-log(likelihood)",*this,data,projDeps,ext,token,addCoefRangeName,numcpu,kFALSE,plevel!=-1,splitr) ;
-      nllList.add(*nllComp) ;
-      nllComponents.push_back(nllComp) ;
-      token = strtok(0,",") ;
-    }
-    delete[] buf ;
-    nll = new RooAddition("nll","-log(likelihood)",nllList,kTRUE) ;
-  }
-  RooAbsReal::enableEvalErrorLogging(kFALSE) ;
-  
-  // Collect internal and external constraint specifications
-  RooArgSet allConstraints ;
-  if (cPars) {
-    RooArgSet* constraints = getAllConstraints(*data.get(),*cPars) ;
-    allConstraints.add(*constraints) ;
-    delete constraints ;
-  }
-  if (extCons) {
-    allConstraints.add(*extCons) ;
-  }
-
-  // Include constraints, if any, in likelihood
-  RooAbsReal* nllCons(0) ;
-  if (allConstraints.getSize()>0) {   
-
-    coutI(Minimization) << " Including the following contraint terms in minimization: " << allConstraints << endl ;
-
-    nllCons = new RooConstraintSum("nllCons","nllCons",allConstraints) ;
-    RooAbsReal* orignll = nll ;
-    nll = new RooAddition("nllWithCons","nllWithCons",RooArgSet(*nll,*nllCons)) ;
-    nll->addOwnedComponents(RooArgSet(*orignll,*nllCons)) ;
-  }
+  RooAbsReal* nll = createNLL(data,nllCmdList) ;
 
   // Instantiate MINUIT
   RooMinuit m(*nll) ;
@@ -1107,6 +1022,21 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
     }
 
     if (doSumW2==1) {
+
+      // Make list of RooNLLVar components of FCN
+      list<RooNLLVar*> nllComponents ;
+      RooArgSet* comps = nll->getComponents() ;
+      RooAbsArg* arg ;
+      TIterator* iter = comps->createIterator() ;
+      while((arg=(RooAbsArg*)iter->Next())) {
+	RooNLLVar* nllComp = dynamic_cast<RooNLLVar*>(arg) ;
+	if (nllComp) {
+	  nllComponents.push_back(nllComp) ;
+	}
+      }
+      delete iter ;
+      delete comps ;  
+
       // Calculated corrected errors for weighted likelihood fits
       RooFitResult* rw = m.save() ;
       for (list<RooNLLVar*>::iterator iter=nllComponents.begin() ; iter!=nllComponents.end() ; iter++) {
@@ -1187,96 +1117,85 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
 
 
 //_____________________________________________________________________________
-RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, Option_t *fitOpt, Option_t *optOpt, const char* fitRange) 
+RooFitResult* RooAbsPdf::chi2FitTo(RooDataHist& data, const RooLinkedList& cmdList) 
 {
-  // OLD STYLE INTERFACE, PLEASE USE NEW INTERFACE fitTo(RooAbsData& data, RooCmdArg arg1,...,RooCmdArg arg8) 
- 
-  return fitTo(data,RooArgSet(),fitOpt,optOpt,fitRange) ;
+  // Internal back-end function to steer chi2 fits
+
+  // Select the pdf-specific commands 
+  RooCmdConfig pc(Form("RooAbsPdf::chi2FitTo(%s)",GetName())) ;
+
+  // Pull arguments to be passed to chi2 construction from list
+  RooLinkedList fitCmdList(cmdList) ;
+  RooLinkedList chi2CmdList = pc.filterCmdList(fitCmdList,"Range,RangeWithName,NumCPU,Optimize,ProjectedObservables,AddCoefRange,SplitRange") ;
+
+  RooAbsReal* chi2 = createChi2(data,chi2CmdList) ;
+  RooFitResult* ret = chi2FitDriver(*chi2,fitCmdList) ;
+  
+  // Cleanup
+  delete chi2 ;
+  return ret ;
 }
+
 
 
 
 //_____________________________________________________________________________
-RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooArgSet& projDeps, Option_t *fitOpt, Option_t *optOpt, const char* fitRange) 
+RooAbsReal* RooAbsPdf::createChi2(RooDataHist& data, RooCmdArg arg1,  RooCmdArg arg2,  
+				   RooCmdArg arg3,  RooCmdArg arg4, RooCmdArg arg5,  
+				   RooCmdArg arg6,  RooCmdArg arg7, RooCmdArg arg8) 
 {
-  // Fit this PDF to given data set
+  // Create a chi-2 from a histogram and this function.
   //
-  // OLD STYLE INTERFACE, PLEASE USE NEW INTERFACE fitTo(RooAbsData& data, RooCmdArg arg1,...,RooCmdArg arg8) 
+  // The following named arguments are supported
   //
-  // The dataset can be either binned, in which case a binned maximum likelihood fit
-  // is performed, or unbinned, in which case an unbinned maximum likelihood fit is performed
-  //
-  // Available fit options:
-  //
-  //  "m" = MIGRAD only, i.e. no MINOS 
-  //  "s" = estimate step size with HESSE before starting MIGRAD
-  //  "h" = run HESSE after MIGRAD
-  //  "e" = Perform extended MLL fit
-  //  "0" = Run MIGRAD with strategy MINUIT 0 (no correlation matrix calculation at end)
-  //        Does not apply to HESSE or MINOS, if run afterwards.
-  // 
-  //  "q" = Switch off verbose mode
-  //  "l" = Save log file with parameter values at each MINUIT step
-  //  "v" = Show changed parameters at each MINUIT step
-  //  "t" = Time fit 
-  //  "r" = Save fit output in RooFitResult object (return value is object RFR pointer)
-  //
-  // Available optimizer options
-  //
-  //  "c" = Cache and precalculate components of PDF that exclusively depend on constant parameters
-  //  "2" = Do NLL calculation in multi-processor mode on 2 processors
-  //  "3" = Do NLL calculation in multi-processor mode on 3 processors
-  //  "4" = Do NLL calculation in multi-processor mode on 4 processors
-  //
-  // The actual fit is performed to a temporary copy of both PDF and data set. Several optimization
-  // algorithm are run to increase the efficiency of the likelihood calculation and may increase
-  // the speed of complex fits up to an order of magnitude. All optimizations are exact, i.e the fit result
-  // of any fit should _exactly_ the same with and without optimization. We strongly encourage
-  // to stick to the default optimizer setting (all on). If for any reason you see a difference in the result
-  // with and without optimizer, please file a bug report.
-  //
-  // The function always return null unless the "r" fit option is specified. In that case a pointer to a RooFitResult
-  // is returned. The RooFitResult object contains the full fit output, including the correlation matrix.
+  //  Options to control construction of the chi^2
+  //  ------------------------------------------
+  //  Extended()   -- Use expected number of events of an extended p.d.f as normalization 
+  //  DataError()  -- Choose between Poisson errors and Sum-of-weights errors
+  //  NumCPU()     -- Activate parallel processing feature
+  //  Range()      -- Fit only selected region
+  //  SumCoefRange() -- Set the range in which to interpret the coefficients of RooAddPdf components 
+  //  SplitRange() -- Fit range is split by index catory of simultaneous PDF
+  //  ConditionalObservables() -- Define projected observables 
 
-  // Parse option strings
-  TString fopt(fitOpt) ;
-  TString oopt(optOpt) ;
-  fopt.ToLower() ;
-  oopt.ToLower() ;
-
-  Bool_t extended = fopt.Contains("e") ;  
-  // Bool_t saveRes  = fopt.Contains("r") ;
-  Bool_t cOpt     = oopt.Contains("p") || // for backward compatibility
-                    oopt.Contains("c") ;
-  Bool_t blindfit   = fopt.Contains("b") ;  
-
-
-  Int_t  ncpu = 1 ;
-  if (oopt.Contains("2")) ncpu=2 ;
-  if (oopt.Contains("3")) ncpu=3 ;
-  if (oopt.Contains("4")) ncpu=4 ;
-  if (oopt.Contains("5")) ncpu=5 ;
-  if (oopt.Contains("6")) ncpu=6 ;
-  if (oopt.Contains("7")) ncpu=7 ;
-  if (oopt.Contains("8")) ncpu=8 ;
-  if (oopt.Contains("9")) ncpu=9 ;
-
-  // Construct NLL
-
-  RooAbsReal::enableEvalErrorLogging(kTRUE) ;
-  RooNLLVar nll("nll","-log(likelihood)",*this,data,projDeps,extended,fitRange,0,ncpu) ;
-  RooAbsReal::enableEvalErrorLogging(kFALSE) ;
-  
-  // Minimize NLL
-  RooMinuit m(nll) ;
-  if(blindfit)
-    m.setPrintLevel(-1);
-
-  if (cOpt) m.optimizeConst(1) ;
-
-  return m.fit(fopt) ;
-  
+  string name = Form("chi2_%s_%s",GetName(),data.GetName()) ;
+ 
+  return new RooChi2Var(name.c_str(),name.c_str(),*this,data,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8) ;
 }
+
+
+
+
+//_____________________________________________________________________________
+RooAbsReal* RooAbsPdf::createChi2(RooDataSet& data, const RooLinkedList& cmdList) 
+{
+  // Internal back-end function to create a chi^2 from a p.d.f. and a dataset
+
+  // Select the pdf-specific commands 
+  RooCmdConfig pc(Form("RooAbsPdf::fitTo(%s)",GetName())) ;
+
+  pc.defineInt("integrate","Integrate",0,0) ;
+  pc.defineObject("yvar","YVar",0,0) ;
+  
+  // Process and check varargs 
+  pc.process(cmdList) ;
+  if (!pc.ok(kTRUE)) {
+    return 0 ;
+  }
+
+  // Decode command line arguments 
+  Bool_t integrate = pc.getInt("integrate") ;
+  RooRealVar* yvar = (RooRealVar*) pc.getObject("yvar") ;
+
+  string name = Form("chi2_%s_%s",GetName(),data.GetName()) ;
+ 
+  if (yvar) {
+    return new RooXYChi2Var(name.c_str(),name.c_str(),*this,data,*yvar,integrate) ;
+  } else {
+    return new RooXYChi2Var(name.c_str(),name.c_str(),*this,data,integrate) ;
+  }  
+}
+
 
 
 
