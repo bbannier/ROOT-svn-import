@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitModels                                                     *
- *    File: $Id: RooChiSquare.h 27709 2009-03-06 21:31:58Z cranmer $
+ *    File: $Id: RooChiSquarePdf.h 27709 2009-03-06 21:31:58Z cranmer $
  * Authors:                                                                  *
  *   Kyle Cranmer
  *                                                                           *
@@ -19,16 +19,16 @@
 class RooRealVar;
 class RooArgList ;
 
-class RooChiSquare : public RooAbsPdf {
+class RooChiSquarePdf : public RooAbsPdf {
 public:
 
-  RooChiSquare() ;
-  RooChiSquare(const char *name, const char *title,
+  RooChiSquarePdf() ;
+  RooChiSquarePdf(const char *name, const char *title,
                RooAbsReal& x,  RooAbsReal& ndof) ;
 
-  RooChiSquare(const RooChiSquare& other, const char* name = 0);
-  virtual TObject* clone(const char* newname) const { return new RooChiSquare(*this, newname); }
-  inline virtual ~RooChiSquare() { }
+  RooChiSquarePdf(const RooChiSquarePdf& other, const char* name = 0);
+  virtual TObject* clone(const char* newname) const { return new RooChiSquarePdf(*this, newname); }
+  inline virtual ~RooChiSquarePdf() { }
 
   
   Int_t getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* rangeName=0) const ;
@@ -42,7 +42,7 @@ private:
 
   Double_t evaluate() const;
 
-  ClassDef(RooChiSquare,1) // Chi Square distribution (eg. the PDF )
+  ClassDef(RooChiSquarePdf,1) // Chi Square distribution (eg. the PDF )
 };
 
 #endif
