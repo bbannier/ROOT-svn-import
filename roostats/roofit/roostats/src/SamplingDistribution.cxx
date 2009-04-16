@@ -97,7 +97,7 @@ void SamplingDistribution::Add(SamplingDistribution* other)
   fSampleWeights.reserve(fSampleWeights.size()+newSampleWeights.size());
 
   // push back elements
-  for(int i=0; i<newSamplingDist.size(); ++i){
+  for(unsigned int i=0; i<newSamplingDist.size(); ++i){
     fSamplingDist.push_back(newSamplingDist[i]);
     fSampleWeights.push_back(newSampleWeights[i]);
   }
@@ -144,7 +144,7 @@ Double_t SamplingDistribution::InverseCDF(Double_t pvalue,
     inverseWithVariation = -1.*RooNumber::infinity();
     return -1.*RooNumber::infinity();
   }
-  else if(nominal >= fSamplingDist.size()-1 ) {
+  else if(nominal >= (Int_t)fSamplingDist.size()-1 ) {
     inverseWithVariation = RooNumber::infinity();
     return RooNumber::infinity();
   }
@@ -152,7 +152,7 @@ Double_t SamplingDistribution::InverseCDF(Double_t pvalue,
     int delta = (int)(sigmaVariation*sqrt(nominal)); // note sqrt(small fraction)
     int variation = nominal+delta;
 
-    if(variation>=fSamplingDist.size()-1)
+    if(variation>=(Int_t)fSamplingDist.size()-1)
       inverseWithVariation = RooNumber::infinity();
     else if(variation<=0)
       inverseWithVariation = -1.*RooNumber::infinity();
@@ -166,7 +166,7 @@ Double_t SamplingDistribution::InverseCDF(Double_t pvalue,
     int variation = nominal+delta;
 
 
-    if(variation>=fSamplingDist.size()-1)
+    if(variation>=(Int_t)fSamplingDist.size()-1)
       inverseWithVariation = RooNumber::infinity();
 
     else if(variation<=0)
@@ -206,7 +206,7 @@ Double_t SamplingDistribution::InverseCDFInterpolate(Double_t pvalue)
   if(nominal <= 0) {
     return -1.*RooNumber::infinity();
   }
-  if(nominal >= fSamplingDist.size()-1 ) {
+  if(nominal >= (Int_t)fSamplingDist.size()-1 ) {
     return RooNumber::infinity();
   }
   Double_t upperX = fSamplingDist[nominal+1];
