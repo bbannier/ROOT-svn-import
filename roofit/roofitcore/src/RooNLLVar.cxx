@@ -57,7 +57,8 @@ RooNLLVar::RooNLLVar(const char *name, const char* title, RooAbsPdf& pdf, RooAbs
 			 RooCmdConfig::decodeIntOnTheFly("RooNLLVar::RooNLLVar","NumCPU",0,1,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9),
 			 kFALSE,
 			 RooCmdConfig::decodeIntOnTheFly("RooNLLVar::RooNLLVar","Verbose",0,1,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9),
-			 RooCmdConfig::decodeIntOnTheFly("RooNLLVar::RooNLLVar","SplitRange",0,0,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9))             
+			 RooCmdConfig::decodeIntOnTheFly("RooNLLVar::RooNLLVar","SplitRange",0,0,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9),
+			 RooCmdConfig::decodeIntOnTheFly("RooNLLVar::RooNLLVar","CloneData",0,1,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9))             
 {
   // Construct likelihood from given p.d.f and (binned or unbinned dataset)
   //
@@ -68,6 +69,7 @@ RooNLLVar::RooNLLVar(const char *name, const char* title, RooAbsPdf& pdf, RooAbs
   //  SplitRange()   -- Fit range is split by index catory of simultaneous PDF
   //  ConditionalObservables() -- Define conditional observables 
   //  Verbose()      -- Verbose output of GOF framework classes
+  //  CloneData()    -- Clone input dataset for internal use (default is kTRUE)
 
   RooCmdConfig pc("RooNLLVar::RooNLLVar") ;
   pc.allowUndefined() ;
