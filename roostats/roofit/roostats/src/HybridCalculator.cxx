@@ -30,7 +30,7 @@ The basic idea is the following:
 The class allows the user to input models as RooAbsPdf or TH1 object 
 pointers (the pdfs must be "extended": for more information please refer to 
 http://roofit.sourceforge.net). The dataset can be entered as a 
-RooTreeData or TH1 object pointer. 
+RooTreeData or TH1 object pointer.  
 
 Unlike the TLimit Class a complete MC generation is performed at each step 
 and not a simple Poisson fluctuation of the contents of the bins.
