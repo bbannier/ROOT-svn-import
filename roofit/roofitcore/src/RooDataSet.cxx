@@ -1077,7 +1077,11 @@ RooPlot* RooDataSet::plotOnXY(RooPlot* frame, const RooCmdArg& arg1, const RooCm
 {
   // Special plot method for 'X-Y' datasets used in Chi^2 fitting. These datasets 
   // have one observable (X) and have weights (Y) and associated errors.
-  // 
+  //
+  // Contents options
+  // ---------------------
+  // YVar(RooRealVar& var)           -- Designate specified observable as 'y' variable
+  //                                    If not specified, the event weight will be the y variable
   // Histogram drawing options
   // -------------------------
   // DrawOption(const char* opt)     -- Select ROOT draw option for resulting TGraph object
@@ -1095,12 +1099,6 @@ RooPlot* RooDataSet::plotOnXY(RooPlot* frame, const RooCmdArg& arg1, const RooCm
   // Name(const chat* name)          -- Give curve specified name in frame. Useful if curve is to be referenced later
   // Invisible(Bool_t flag)          -- Add curve to frame, but do not display. Useful in combination AddTo()
   // 
-
-  // Sanity check. XY plotting only applies to weighted datasets with one observable
-  if (!_wgtVar || _varsNoWgt.getSize()!=1) {
-    coutE(InputArguments) << "RooDataSet::plotOnXY(" << GetName() << ") ERROR: this method is only defined for weighted datasets with one observable" << endl ;
-    return 0 ;
-  }
 
   RooLinkedList argList ;
   argList.Add((TObject*)&arg1) ;  argList.Add((TObject*)&arg2) ;  
@@ -1122,35 +1120,62 @@ RooPlot* RooDataSet::plotOnXY(RooPlot* frame, const RooCmdArg& arg1, const RooCm
   pc.defineInt("fillStyle","FillStyle",0,-999) ;
   pc.defineInt("histInvisible","Invisible",0,0) ;
   pc.defineDouble("scaleFactor","Rescale",0,1.) ;
+  pc.defineObject("xvar","XVar",0,0) ;
+  pc.defineObject("yvar","YVar",0,0) ;
 
+  
   // Process & check varargs 
   pc.process(argList) ;
   if (!pc.ok(kTRUE)) {
     return frame ;
   }
-
+  
   // Extract values from named arguments
   const char* drawOptions = pc.getString("drawOption") ;
   Int_t histInvisible = pc.getInt("histInvisible") ;
   const char* histName = pc.getString("histName",0,kTRUE) ;
   Double_t scaleFactor = pc.getDouble("scaleFactor") ;
 
+  RooRealVar* xvar = (RooRealVar*) _vars.find(frame->getPlotVar()->GetName()) ;
+
+  // Determine Y variable (default is weight, if present)
+  RooRealVar* yvar = (RooRealVar*)(pc.getObject("yvar")) ;
+
+  // Sanity check. XY plotting only applies to weighted datasets if no YVar is specified
+  if (!_wgtVar && !yvar) {
+    coutE(InputArguments) << "RooDataSet::plotOnXY(" << GetName() << ") ERROR: no YVar() argument specified and dataset is not weighted" << endl ;
+    return 0 ;
+  }
+  
+  RooRealVar* dataY = yvar ? (RooRealVar*) _vars.find(yvar->GetName()) : 0 ;
+  if (yvar && !dataY) {
+    coutE(InputArguments) << "RooDataSet::plotOnXY(" << GetName() << ") ERROR on YVar() argument, dataset does not contain a variable named " << yvar->GetName() << endl ;
+    return 0 ;
+  }
+
+
   // Make RooHist representing XY contents of data
-  RooRealVar* xvar = (RooRealVar*) get()->first() ;
   RooHist* graph = new RooHist ;
   if (histName) {
     graph->SetName(histName) ;
   } else {
     graph->SetName(Form("hxy_%s",GetName())) ;
   }
+  
   for (int i=0 ; i<numEntries() ; i++) {
     get(i) ;
     Double_t x = xvar->getVal() ;
     Double_t exlo = xvar->getErrorLo() ;
     Double_t exhi = xvar->getErrorHi() ;
-    Double_t y = weight() ;
-    Double_t eylo, eyhi ;
-    weightError(eylo,eyhi) ;
+    Double_t y,eylo,eyhi ;
+    if (!dataY) {
+      y = weight() ;
+      weightError(eylo,eyhi) ;
+    } else {
+      y = dataY->getVal() ;
+      eylo = dataY->getErrorLo() ;
+      eyhi = dataY->getErrorHi() ;
+    }
     graph->addBinWithXYError(x,y,-1*exlo,exhi,-1*eylo,eyhi,scaleFactor) ;
   }
 
