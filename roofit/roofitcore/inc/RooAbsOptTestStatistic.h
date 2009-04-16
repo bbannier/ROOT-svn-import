@@ -31,7 +31,8 @@ public:
   RooAbsOptTestStatistic() ;
   RooAbsOptTestStatistic(const char *name, const char *title, RooAbsReal& real, RooAbsData& data,
 			 const RooArgSet& projDeps, const char* rangeName=0, const char* addCoefRangeName=0, 
-			 Int_t nCPU=1, Bool_t interleave=kFALSE, Bool_t verbose=kTRUE, Bool_t splitCutRange=kFALSE) ;
+			 Int_t nCPU=1, Bool_t interleave=kFALSE, Bool_t verbose=kTRUE, Bool_t splitCutRange=kFALSE,
+			 Bool_t cloneInputData=kTRUE) ;
   RooAbsOptTestStatistic(const RooAbsOptTestStatistic& other, const char* name=0);
   virtual ~RooAbsOptTestStatistic();
 
@@ -42,6 +43,8 @@ public:
   RooAbsData& data() { return *_dataClone ; }
   const RooAbsData& data() const { return *_dataClone ; }
 
+  Bool_t setData(RooAbsData& data, Bool_t cloneData=kTRUE) ;
+
 protected:
 
   friend class RooAbsReal ;
@@ -51,7 +54,7 @@ protected:
   
   virtual Bool_t redirectServersHook(const RooAbsCollection& newServerList, Bool_t mustReplaceAll, Bool_t nameChange, Bool_t isRecursive) ;
   virtual void printCompactTreeHook(ostream& os, const char* indent="") ;
-
+  virtual RooArgSet requiredExtraObservables() const { return RooArgSet() ; }
   void optimizeCaching() ;
   void optimizeConstantTerms(Bool_t) ;
 
@@ -60,8 +63,9 @@ protected:
   RooAbsData* _dataClone ; // Pointer to internal clone if input data
   RooAbsReal* _funcClone ; // Pointer to internal clone of input function
   RooArgSet*  _projDeps ; // Set of projected observable
+  Bool_t      _ownData  ; // Do we own the dataset
 
-  ClassDef(RooAbsOptTestStatistic,1) // Abstract base class for optimized test statistics
+  ClassDef(RooAbsOptTestStatistic,2) // Abstract base class for optimized test statistics
 };
 
 #endif
