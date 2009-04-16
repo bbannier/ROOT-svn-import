@@ -91,7 +91,7 @@ void FeldmanCousins::CreateTestStatSampler() const{
     fTestStatSampler->SetPdf(*pdf);
     fTestStatSampler->SetParameters(*parameters);
     fTestStatSampler->SetNEventsPerToy(data->numEntries());
-    fTestStatSampler->SetNToys((int) 50./fSize); // adjust nToys so that at least 50 events outside acceptance region
+    fTestStatSampler->SetNToys((int) (50./fSize)); // adjust nToys so that at least 50 events outside acceptance region
     fTestStatSampler->SetExtended(fFluctuateData);
 
     if(!fAdaptiveSampling){
