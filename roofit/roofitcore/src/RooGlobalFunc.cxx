@@ -147,6 +147,8 @@ namespace RooFit {
   RooCmdArg PrintEvalErrors(Int_t numErrors)             { return RooCmdArg("PrintEvalErrors",numErrors,0,0,0,0,0,0,0) ; }
   RooCmdArg EvalErrorWall(Bool_t flag)                   { return RooCmdArg("EvalErrorWall",flag,0,0,0,0,0,0,0) ; }
   RooCmdArg SumW2Error(Bool_t flag)                      { return RooCmdArg("SumW2Error",flag,0,0,0,0,0,0,0) ; }
+  RooCmdArg CloneData(Bool_t flag)                       { return RooCmdArg("CloneData",flag,0,0,0,0,0,0,0) ; }
+  RooCmdArg Integrate(Bool_t flag)                       { return RooCmdArg("Integrate",flag,0,0,0,0,0,0,0) ; }
 
   
   // RooAbsPdf::paramOn arguments
