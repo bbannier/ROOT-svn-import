@@ -68,14 +68,14 @@ namespace RooStats {
       }
 
       // check that it was found
-      if(index == fLookupTable.size())
+      if(index == (Int_t)fLookupTable.size())
 	index = -1;
 
       return index;
     }
 
   Double_t GetConfidenceLevel(Int_t index){
-    if(index<0 || index>fLookupTable.size()) {
+    if(index<0 || index>(Int_t)fLookupTable.size()) {
       cout << "SamplingSummaryLookup::GetConfidenceLevel, index not in lookup table" << endl;
       return -1;
     }
@@ -83,7 +83,7 @@ namespace RooStats {
   }
 
   Double_t GetLeftSideTailFraction(Int_t index){
-    if(index<0 || index>fLookupTable.size()) {
+    if(index<0 || index>(Int_t)fLookupTable.size()) {
       cout << "SamplingSummaryLookup::GetLeftSideTailFraction, index not in lookup table" << endl;
       return -1;
     }
