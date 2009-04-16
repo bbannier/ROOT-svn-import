@@ -1,7 +1,7 @@
 /*****************************************************************************
  * Project: RooFit                                                           *
  * Package: RooFitModels                                                     *
- * @(#)root/roofit:$Id: RooChiSquare.cxx 27775 2009-03-16 15:47:18Z cranmer $
+ * @(#)root/roofit:$Id: RooChiSquarePdf.cxx 27775 2009-03-16 15:47:18Z cranmer $
  * Authors:                                                                  *
  *   Kyle Cranmer
  *                                                                           *
@@ -22,22 +22,22 @@
 #include "Riostream.h"
 #include <math.h>
 #include "TMath.h"
-#include "RooChiSquare.h"
+#include "RooChiSquarePdf.h"
 #include "RooAbsReal.h"
 #include "RooRealVar.h"
 
-ClassImp(RooChiSquare)
+ClassImp(RooChiSquarePdf)
 ;
 
 
 //_____________________________________________________________________________
-RooChiSquare::RooChiSquare()
+RooChiSquarePdf::RooChiSquarePdf()
 {
 }
 
 
 //_____________________________________________________________________________
-RooChiSquare::RooChiSquare(const char* name, const char* title, 
+RooChiSquarePdf::RooChiSquarePdf(const char* name, const char* title, 
                            RooAbsReal& x, RooAbsReal& ndof): 
   RooAbsPdf(name, title),
   _x("x", "Dependent", this, x),
@@ -48,7 +48,7 @@ RooChiSquare::RooChiSquare(const char* name, const char* title,
 
 
 //_____________________________________________________________________________
-RooChiSquare::RooChiSquare(const RooChiSquare& other, const char* name) :
+RooChiSquarePdf::RooChiSquarePdf(const RooChiSquarePdf& other, const char* name) :
   RooAbsPdf(other, name), 
   _x("x", this, other._x), 
   _ndof("ndof",this,other._ndof)
@@ -57,7 +57,7 @@ RooChiSquare::RooChiSquare(const RooChiSquare& other, const char* name) :
 
 
 //_____________________________________________________________________________
-Double_t RooChiSquare::evaluate() const 
+Double_t RooChiSquarePdf::evaluate() const 
 {
 
   if(_x <= 0) return 0;
@@ -69,7 +69,7 @@ Double_t RooChiSquare::evaluate() const
 
 
 //_____________________________________________________________________________
-Int_t RooChiSquare::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* rangeName) const 
+Int_t RooChiSquarePdf::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* rangeName) const 
 {
   // No analytical calculation available (yet) of integrals over subranges
   if (rangeName && strlen(rangeName)) {
@@ -83,7 +83,7 @@ Int_t RooChiSquare::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVar
 
 
 //_____________________________________________________________________________
-Double_t RooChiSquare::analyticalIntegral(Int_t code, const char* rangeName) const 
+Double_t RooChiSquarePdf::analyticalIntegral(Int_t code, const char* rangeName) const 
 {
   assert(code==1) ;
   Double_t xmin = _x.min(rangeName); Double_t xmax = _x.max(rangeName);
