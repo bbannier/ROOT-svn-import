@@ -1902,7 +1902,7 @@ void RooWorkspace::unExport()
   char buf[1024] ;
   TIterator* iter = _allOwnedNodes.createIterator() ;
   TObject* obj ;
-  while(obj=iter->Next()) {
+  while((obj=iter->Next())) {
     if (isValidCPPID(obj->GetName())) {
       strcpy(buf,Form("%s::%s",_exportNSName.c_str(),obj->GetName())) ;
       G__deletevariable(buf) ;

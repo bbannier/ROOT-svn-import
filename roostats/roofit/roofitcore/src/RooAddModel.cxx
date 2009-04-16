@@ -969,7 +969,7 @@ void RooAddModel::printMetaArgs(ostream& os) const
     
   os << "(" ;
   RooAbsArg* coef, *pdf ;
-  while(coef=(RooAbsArg*)_coefIter->Next()) {
+  while((coef=(RooAbsArg*)_coefIter->Next())) {
     if (!first) {
       os << " + " ;
     } else {
