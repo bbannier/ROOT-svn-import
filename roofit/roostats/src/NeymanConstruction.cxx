@@ -226,8 +226,8 @@ ConfInterval* NeymanConstruction::GetInterval() const {
     std::string tmpName = "hist_";
     tmpName+=samplingDist->GetName();
     TH1F* h = new TH1F(tmpName.c_str(),"",500,0.,5.);
-    for(int i=0; i<samplingDist->GetSize(); ++i){
-      h->Fill(samplingDist->GetSamplingDistribution().at(i) );
+    for(int ii=0; ii<samplingDist->GetSize(); ++ii){
+      h->Fill(samplingDist->GetSamplingDistribution().at(ii) );
     }
     h->Write();
     delete h;

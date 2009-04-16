@@ -230,12 +230,12 @@ void RooExpensiveObjectCache::clearAll()
 
 
 //_____________________________________________________________________________
-RooExpensiveObjectCache::ExpensiveObject::ExpensiveObject(Int_t uid, const char* inOwnerName, TObject& inPayload, TIterator* parIter) 
+RooExpensiveObjectCache::ExpensiveObject::ExpensiveObject(Int_t uidIn, const char* inOwnerName, TObject& inPayload, TIterator* parIter) 
 {
   // Construct ExpensiveObject oject for inPayLoad and store reference values
   // for all RooAbsReal and RooAbsCategory parameters in params.
 
-  _uid = uid ;
+  _uid = uidIn ;
   _ownerName = inOwnerName;
 
   _payload = &inPayload ;
@@ -261,8 +261,8 @@ RooExpensiveObjectCache::ExpensiveObject::ExpensiveObject(Int_t uid, const char*
 
 
 //_____________________________________________________________________________
-RooExpensiveObjectCache::ExpensiveObject::ExpensiveObject(Int_t uid, const ExpensiveObject& other) : 
-  _uid(uid),
+RooExpensiveObjectCache::ExpensiveObject::ExpensiveObject(Int_t uidIn, const ExpensiveObject& other) : 
+  _uid(uidIn),
   _realRefParams(other._realRefParams), 
   _catRefParams(other._catRefParams),
   _ownerName(other._ownerName)

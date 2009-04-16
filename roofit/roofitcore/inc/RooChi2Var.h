@@ -49,11 +49,11 @@ public:
   RooChi2Var(const RooChi2Var& other, const char* name=0);
   virtual TObject* clone(const char* newname) const { return new RooChi2Var(*this,newname); }
 
-  virtual RooAbsTestStatistic* create(const char *name, const char *title, RooAbsReal& pdf, RooAbsData& data,
+  virtual RooAbsTestStatistic* create(const char *name, const char *title, RooAbsReal& pdf, RooAbsData& dhist,
 				      const RooArgSet& projDeps, const char* rangeName=0, const char* addCoefRangeName=0, 
 				      Int_t nCPU=1, Bool_t interleave=kFALSE,Bool_t verbose=kTRUE, Bool_t splitCutRange=kTRUE) {
     // Virtual constructor
-    return new RooChi2Var(name,title,(RooAbsPdf&)pdf,(RooDataHist&)data,projDeps,_funcMode,rangeName,
+    return new RooChi2Var(name,title,(RooAbsPdf&)pdf,(RooDataHist&)dhist,projDeps,_funcMode,rangeName,
 			  addCoefRangeName,nCPU,interleave,verbose, splitCutRange) ;
   }
   

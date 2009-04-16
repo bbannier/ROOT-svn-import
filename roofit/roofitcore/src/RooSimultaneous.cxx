@@ -116,7 +116,7 @@ RooSimultaneous::RooSimultaneous(const char *name, const char *title,
   TIterator* pIter = inPdfList.createIterator() ;
   TIterator* cIter = inIndexCat.typeIterator() ;
   RooAbsPdf* pdf ;
-  RooCatType* type ;
+  RooCatType* type(0) ;
   while ((pdf=(RooAbsPdf*)pIter->Next())) {
     pdfMap[string(type->GetName())] = pdf ;
   }
