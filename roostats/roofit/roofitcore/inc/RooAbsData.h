@@ -127,7 +127,7 @@ public:
 
 protected:
 
-  virtual void optimizeReadingWithCaching(RooAbsArg& arg, const RooArgSet& cacheList) =0 ;
+  virtual void optimizeReadingWithCaching(RooAbsArg& arg, const RooArgSet& cacheList, const RooArgSet& keepObsList) =0 ;
 
 
   // Constant term optimizer interface
