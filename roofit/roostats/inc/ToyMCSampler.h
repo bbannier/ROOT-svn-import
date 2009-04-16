@@ -162,7 +162,7 @@ namespace RooStats {
      }
 
      // helper method to create meaningful names for sampling dist
-     const char* MakeName(RooArgSet& params){
+     const char* MakeName(RooArgSet& /*params*/){
        /*
        std::string name;
        TIter      itr = params.createIterator();
@@ -196,9 +196,9 @@ namespace RooStats {
       virtual Double_t ConfidenceLevel()  const {return 1.-fSize;}  
 
       // Common Initialization
-      virtual void Initialize(RooAbsArg& testStatistic, 
-			      RooArgSet& paramsOfInterest, 
-			      RooArgSet& nuisanceParameters) {}
+      virtual void Initialize(RooAbsArg& /*testStatistic*/, 
+			      RooArgSet& /*paramsOfInterest*/, 
+			      RooArgSet& /*nuisanceParameters*/) {}
 
       //set the parameters for the toyMC generation
       virtual void SetNToys(const Int_t ntoy) {
