@@ -140,7 +140,7 @@ void ConfidenceBelt::AddAcceptanceRegion(RooArgSet& parameterPoint,
     cout << "hist index = " << index << endl;
 
     // allocate memory if necessary.  numEntries is overkill?
-    if(fSamplingSummaries.size() <= index) {
+    if((Int_t)fSamplingSummaries.size() <= index) {
       fSamplingSummaries.reserve( hist->numEntries() ); 
       fSamplingSummaries.resize( hist->numEntries() ); 
     }
@@ -155,7 +155,7 @@ void ConfidenceBelt::AddAcceptanceRegion(RooArgSet& parameterPoint,
     cout << "tree index = " << index << endl;
 
     // allocate memory if necessary.  numEntries is overkill?
-    if(fSamplingSummaries.size() < index) fSamplingSummaries.reserve( tree->numEntries()  ); 
+    if((Int_t)fSamplingSummaries.size() < index) fSamplingSummaries.reserve( tree->numEntries()  ); 
 
     // set the region for this point (check for duplicate?)
     fSamplingSummaries.at( index ) = *thisRegion;
@@ -184,7 +184,7 @@ void ConfidenceBelt::AddAcceptanceRegion(RooArgSet& parameterPoint, AcceptanceRe
     int index = hist->getIndex(parameterPoint); // get index
 
     // allocate memory if necessary.  numEntries is overkill?
-    if(fSamplingSummaries.size() < index) fSamplingSummaries.reserve( hist->numEntries() ); 
+    if((Int_t)fSamplingSummaries.size() < index) fSamplingSummaries.reserve( hist->numEntries() ); 
 
     // set the region for this point (check for duplicate?)
     fSamplingSummaries.at(index) = region;
@@ -193,7 +193,7 @@ void ConfidenceBelt::AddAcceptanceRegion(RooArgSet& parameterPoint, AcceptanceRe
     tree->add( parameterPoint ); // assume it's unique for now
     int index = tree->numEntries() - 1; //check that last point added has index nEntries -1
     // allocate memory if necessary.  numEntries is overkill?
-    if(fSamplingSummaries.size() < index) fSamplingSummaries.reserve( tree->numEntries()  ); 
+    if((Int_t)fSamplingSummaries.size() < index) fSamplingSummaries.reserve( tree->numEntries()  ); 
 
     // set the region for this point (check for duplicate?)
     fSamplingSummaries.at( index ) = region;
