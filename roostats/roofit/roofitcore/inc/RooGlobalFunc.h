@@ -151,6 +151,8 @@ RooCmdArg ExternalConstraints(const RooArgSet& constraintPdfs) ;
 RooCmdArg PrintEvalErrors(Int_t numErrors) ;
 RooCmdArg EvalErrorWall(Bool_t flag) ;
 RooCmdArg SumW2Error(Bool_t flag) ;
+RooCmdArg CloneData(Bool_t flag) ;
+RooCmdArg Integrate(Bool_t flag) ;
 
 // RooAbsPdf::paramOn arguments
 RooCmdArg Label(const char* str) ;
