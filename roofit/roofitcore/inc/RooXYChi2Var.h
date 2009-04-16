@@ -32,7 +32,9 @@ public:
   // Constructors, assignment etc
   RooXYChi2Var() ;
   RooXYChi2Var(const char *name, const char* title, RooAbsReal& func, RooDataSet& data, Bool_t integrate=kFALSE) ;
+  RooXYChi2Var(const char *name, const char* title, RooAbsReal& func, RooDataSet& data, RooRealVar& yvar, Bool_t integrate=kFALSE) ;
   RooXYChi2Var(const char *name, const char* title, RooAbsPdf& extPdf, RooDataSet& data, Bool_t integrate=kFALSE) ;
+  RooXYChi2Var(const char *name, const char* title, RooAbsPdf& extPdf, RooDataSet& data, RooRealVar& yvar, Bool_t integrate=kFALSE) ;
   
   RooXYChi2Var(const RooXYChi2Var& other, const char* name=0);
   virtual TObject* clone(const char* newname) const { return new RooXYChi2Var(*this,newname); }
@@ -61,11 +63,14 @@ protected:
     return !_integrate ; 
   }
 
+  RooArgSet requiredExtraObservables() const ;
+
   Double_t fy() const ; 
 
   Bool_t _extended ; // Is the input function and extended p.d.f.
   Bool_t _integrate ; // Is integration over the bin volume requested
  
+  RooRealVar* _yvar ; // Y variable if so designated
   RooArgSet _rrvArgs ; // Set of real-valued observables
   TIterator* _rrvIter ; //! Iterator over set of real-valued observables
 
