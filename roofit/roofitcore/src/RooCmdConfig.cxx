@@ -773,6 +773,35 @@ void RooCmdConfig::stripCmdList(RooLinkedList& cmdList, const char* cmdsToPurge)
 
 
 //_____________________________________________________________________________
+RooLinkedList RooCmdConfig::filterCmdList(RooLinkedList& cmdInList, const char* cmdNameList, Bool_t removeFromInList) 
+{
+  // Utility function to filter commands listed in cmdNameList from cmdInList. Filtered arguments are put in the returned list.
+  // If removeFromInList is true then these commands are removed from the input list
+
+  RooLinkedList filterList ;
+  if (!cmdNameList) return filterList ;
+
+  // Copy command list for parsing
+  char buf[1024] ;
+  strcpy(buf,cmdNameList) ;
+  
+  char* name = strtok(buf,",") ;
+  while(name) {
+    TObject* cmd = cmdInList.FindObject(name) ;
+    if (cmd) {
+      if (removeFromInList) {
+	cmdInList.Remove(cmd) ;
+      }
+      filterList.Add(cmd) ;
+    }
+    name = strtok(0,",") ;
+  }
+  return filterList ;  
+}
+
+
+
+//_____________________________________________________________________________
 Int_t RooCmdConfig::decodeIntOnTheFly(const char* callerID, const char* cmdArgName, Int_t intIdx, Int_t defVal, const RooCmdArg& arg1, 
 				      const RooCmdArg& arg2, const RooCmdArg& arg3, const RooCmdArg& arg4,
 				      const RooCmdArg& arg5, const RooCmdArg& arg6, const RooCmdArg& arg7,
