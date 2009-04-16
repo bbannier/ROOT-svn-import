@@ -48,6 +48,38 @@ RooArgSet RooChi2Var::_emptySet ;
 
 
 //_____________________________________________________________________________
+RooChi2Var::RooChi2Var(const char *name, const char* title, RooAbsReal& func, RooDataHist& data,
+		       const RooCmdArg& arg1,const RooCmdArg& arg2,const RooCmdArg& arg3,
+		       const RooCmdArg& arg4,const RooCmdArg& arg5,const RooCmdArg& arg6,
+		       const RooCmdArg& arg7,const RooCmdArg& arg8,const RooCmdArg& arg9) :
+  RooAbsOptTestStatistic(name,title,func,data,_emptySet,
+			 RooCmdConfig::decodeStringOnTheFly("RooChi2Var::RooChi2Var","RangeWithName",0,"",arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9),
+			 0,
+			 RooCmdConfig::decodeIntOnTheFly("RooChi2Var::RooChi2Var","NumCPU",0,1,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9),
+			 RooCmdConfig::decodeIntOnTheFly("RooChi2Var::RooChi2Var","Verbose",0,1,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9),
+			 0)
+  //  RooChi2Var constructor. Optional arguments taken
+  //
+  //  DataError()  -- Choose between Poisson errors and Sum-of-weights errors
+  //  NumCPU()     -- Activate parallel processing feature
+  //  Range()      -- Fit only selected region
+  //  Verbose()    -- Verbose output of GOF framework
+{
+  RooCmdConfig pc("RooChi2Var::RooChi2Var") ;
+  pc.defineInt("etype","DataError",0,(Int_t)RooDataHist::SumW2) ;  
+  pc.allowUndefined() ;
+
+  pc.process(arg1) ;  pc.process(arg2) ;  pc.process(arg3) ;
+  pc.process(arg4) ;  pc.process(arg5) ;  pc.process(arg6) ;
+  pc.process(arg7) ;  pc.process(arg8) ;  pc.process(arg9) ;
+
+  _funcMode = Function ;
+  _etype = (RooDataHist::ErrorType) pc.getInt("etype") ;
+}
+
+
+
+//_____________________________________________________________________________
 RooChi2Var::RooChi2Var(const char *name, const char* title, RooAbsPdf& pdf, RooDataHist& data,
 		       const RooCmdArg& arg1,const RooCmdArg& arg2,const RooCmdArg& arg3,
 		       const RooCmdArg& arg4,const RooCmdArg& arg5,const RooCmdArg& arg6,
@@ -80,7 +112,7 @@ RooChi2Var::RooChi2Var(const char *name, const char* title, RooAbsPdf& pdf, RooD
   pc.process(arg4) ;  pc.process(arg5) ;  pc.process(arg6) ;
   pc.process(arg7) ;  pc.process(arg8) ;  pc.process(arg9) ;
 
-  _extended = pc.getInt("extended") ;
+  _funcMode = pc.getInt("extended") ? ExtendedPdf : Pdf ;
   _etype = (RooDataHist::ErrorType) pc.getInt("etype") ;
 }
 
@@ -91,7 +123,7 @@ RooChi2Var::RooChi2Var(const char *name, const char *title, RooAbsPdf& pdf, RooD
 		       Bool_t extended, const char* cutRange, const char* addCoefRange,
 		       Int_t nCPU, Bool_t interleave, Bool_t verbose, Bool_t splitCutRange) : 
   RooAbsOptTestStatistic(name,title,pdf,data,RooArgSet(),cutRange,addCoefRange,nCPU,interleave,verbose,splitCutRange),
-   _etype(RooAbsData::SumW2), _extended(extended)
+   _etype(RooAbsData::SumW2), _funcMode(extended?ExtendedPdf:Pdf)
 {
   // Constructor of a chi2 for given p.d.f. with respect given binned
   // dataset. If cutRange is specified the calculation of the chi2 is
@@ -112,11 +144,11 @@ RooChi2Var::RooChi2Var(const char *name, const char *title, RooAbsPdf& pdf, RooD
 
 
 //_____________________________________________________________________________
-RooChi2Var::RooChi2Var(const char *name, const char *title, RooAbsPdf& pdf, RooDataHist& data,
-		       const RooArgSet& projDeps, Bool_t extended, const char* cutRange, const char* addCoefRange, 
+RooChi2Var::RooChi2Var(const char *name, const char *title, RooAbsReal& func, RooDataHist& data,
+		       const RooArgSet& projDeps, RooChi2Var::FuncMode fmode, const char* cutRange, const char* addCoefRange, 
 		       Int_t nCPU, Bool_t interleave, Bool_t verbose, Bool_t splitCutRange) : 
-  RooAbsOptTestStatistic(name,title,pdf,data,projDeps,cutRange,addCoefRange,nCPU,interleave,verbose,splitCutRange),
-  _etype(RooAbsData::SumW2), _extended(extended)
+  RooAbsOptTestStatistic(name,title,func,data,projDeps,cutRange,addCoefRange,nCPU,interleave,verbose,splitCutRange),
+  _etype(RooAbsData::SumW2), _funcMode(fmode)
 {
   // Constructor of a chi2 for given p.d.f. with respect given binned
   // dataset taking the observables specified in projDeps as projected
@@ -141,7 +173,7 @@ RooChi2Var::RooChi2Var(const char *name, const char *title, RooAbsPdf& pdf, RooD
 RooChi2Var::RooChi2Var(const RooChi2Var& other, const char* name) : 
   RooAbsOptTestStatistic(other,name),
   _etype(other._etype),
-  _extended(other._extended)
+  _funcMode(other._funcMode)
 {
   // Copy constructor
 }
@@ -164,14 +196,13 @@ Double_t RooChi2Var::evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_t 
   Int_t i ;
   Double_t result(0) ;
 
-  RooAbsPdf* pdfClone = (RooAbsPdf*)_funcClone ;
 
-  // Determine total number of data events to be used for PDF normalization
-  Double_t nDataTotal ;
-  if (_extended) {
-    nDataTotal = pdfClone->expectedEvents(_dataClone->get()) ;
-  } else {
-    nDataTotal = _dataClone->sumEntries() ;
+  // Determine normalization factor depending on type of input function
+  Double_t normFactor ;
+  switch (_funcMode) {
+  case Function: normFactor=1 ; break ;
+  case Pdf: normFactor = _dataClone->sumEntries() ; break ;
+  case ExtendedPdf: normFactor = ((RooAbsPdf*)_funcClone)->expectedEvents(_dataClone->get()) ; break ;
   }
 
   // Loop over bins of dataset
@@ -186,8 +217,8 @@ Double_t RooChi2Var::evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_t 
     }
 
     Double_t nData = data->weight() ;
-    Double_t nPdf = pdfClone->getVal(_normSet) * nDataTotal * data->binVolume() ;
 
+    Double_t nPdf = _funcClone->getVal(_normSet) * normFactor * data->binVolume() ;
 
     Double_t eExt = nPdf-nData ;
 
