@@ -112,7 +112,7 @@ Bool_t PointSetInterval::IsInInterval(RooArgSet &parameterPoint)
       return false;
   }
   else if( tree ){
-    RooArgSet* thisPoint = 0;
+    //RooArgSet* thisPoint = 0;
     // need to check if the parameter point is the same as any point in tree. 
     for(Int_t i = 0; i<tree->numEntries(); ++i){
       // This method is not complete
