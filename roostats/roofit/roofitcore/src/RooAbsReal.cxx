@@ -74,6 +74,7 @@
 #include "Riostream.h"
 
 #include "Math/IFunction.h"
+#include "TMath.h"
 #include "TObjString.h"
 #include "TTree.h"
 #include "TH1.h"
@@ -242,7 +243,7 @@ Double_t RooAbsReal::traceEval(const RooArgSet* /*nset*/) const
 
   Double_t value = evaluate() ;
 
-  if (isnan(value)) {
+  if (TMath::IsNaN(value)) {
     logEvalError("function value is NAN") ;
   }
 
@@ -2730,6 +2731,19 @@ const RooNumIntConfig* RooAbsReal::getIntegratorConfig() const
   // is returned, otherwise the default configuration for all RooAbsReals is returned
 
   const RooNumIntConfig* config = specialIntegratorConfig() ;
+  if (config) return config ;
+  return defaultIntegratorConfig() ;
+}
+
+
+//_____________________________________________________________________________
+RooNumIntConfig* RooAbsReal::getIntegratorConfig() 
+{
+  // Return the numeric integration configuration used for this object. If
+  // a specialized configuration was associated with this object, that configuration
+  // is returned, otherwise the default configuration for all RooAbsReals is returned
+
+  RooNumIntConfig* config = specialIntegratorConfig() ;
   if (config) return config ;
   return defaultIntegratorConfig() ;
 }

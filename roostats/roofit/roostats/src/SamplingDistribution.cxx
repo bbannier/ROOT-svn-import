@@ -149,7 +149,7 @@ Double_t SamplingDistribution::InverseCDF(Double_t pvalue,
     return RooNumber::infinity();
   }
   else if(pvalue < 0.5){
-    int delta = (int)(sigmaVariation*sqrt(nominal)); // note sqrt(small fraction)
+    int delta = (int)(sigmaVariation*sqrt(1.0*nominal)); // note sqrt(small fraction)
     int variation = nominal+delta;
 
     if(variation>=(Int_t)fSamplingDist.size()-1)
@@ -162,7 +162,7 @@ Double_t SamplingDistribution::InverseCDF(Double_t pvalue,
     return fSamplingDist[nominal];
   }
   else if(pvalue >= 0.5){
-    int delta = (int)(sigmaVariation*sqrt(fSamplingDist.size()- nominal)); // note sqrt(small fraction)
+    int delta = (int)(sigmaVariation*sqrt(1.0*fSamplingDist.size()- nominal)); // note sqrt(small fraction)
     int variation = nominal+delta;
 
 
