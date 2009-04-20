@@ -332,7 +332,7 @@ Double_t RooIntegrator1D::integral(const Double_t *yvec)
   for(j= 1; j <= _maxSteps; j++) {
     ooccoutW((TObject*)0,Integration) << "   [" << j << "] h = " << _h[j] << " , s = " << _s[j] << endl;
   }
-  return 0;
+  return _s[_maxSteps] ;
 }
 
 

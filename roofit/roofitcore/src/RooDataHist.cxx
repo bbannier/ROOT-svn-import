@@ -612,7 +612,8 @@ void RooDataHist::initialize(const char* binningName, Bool_t fillTree)
       }
     }
     _lvvars.push_back(dynamic_cast<RooAbsLValue*>(rvarg)) ;    
-    _lvbins.push_back(dynamic_cast<RooAbsLValue*>(rvarg)->getBinningPtr(0)->clone()) ;    
+    const RooAbsBinning* binning = dynamic_cast<RooAbsLValue*>(rvarg)->getBinningPtr(0) ;
+    _lvbins.push_back(binning ? binning->clone() : 0) ;    
   }
 
   

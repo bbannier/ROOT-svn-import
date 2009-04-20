@@ -82,6 +82,7 @@ RooFoamGenerator::RooFoamGenerator(const RooAbsReal &func, const RooArgSet &genV
   _tfoam = new TFoam("TFOAM") ;
   _tfoam->SetkDim(_realVars.getSize()) ;
   _tfoam->SetRho(_binding) ;
+  _tfoam->SetPseRan(RooRandom::randomGenerator()) ;
   switch(_realVars.getSize()) {
   case 1:_tfoam->SetnCells((Int_t)config.getConfigSection("RooFoamGenerator").getRealValue("nCell1D")) ; break ;
   case 2:_tfoam->SetnCells((Int_t)config.getConfigSection("RooFoamGenerator").getRealValue("nCell2D")) ; break ;

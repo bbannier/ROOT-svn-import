@@ -608,7 +608,8 @@ Bool_t RooAbsOptTestStatistic::setData(RooAbsData& indata, Bool_t cloneData)
   } else {
     origData->resetCache() ;
   }
- 
+
+  setValueDirty() ;
   return kTRUE ;
 }
 

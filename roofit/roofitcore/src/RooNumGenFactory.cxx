@@ -60,6 +60,8 @@ RooNumGenFactory::RooNumGenFactory()
   // Constructor. Register all known integrators by calling
   // their static registration functions
 
+  _instance = this ;
+
   RooAcceptReject::registerSampler(*this) ;
   RooFoamGenerator::registerSampler(*this) ;
 
@@ -110,7 +112,7 @@ RooNumGenFactory& RooNumGenFactory::instance()
   // Static method returning reference to singleton instance of factory
 
   if (_instance==0) {
-    _instance = new RooNumGenFactory ;
+    new RooNumGenFactory ;
     RooSentinel::activate() ;
   } 
   return *_instance ;
