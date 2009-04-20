@@ -129,6 +129,9 @@ public:
   RooDataHist& asDHIST(const char*) ;
   RooDataSet& asDSET(const char*) ;
 
+  const char* asSTRING(const char*) ;
+  Int_t asINT(const char*) ;
+  Double_t asDOUBLE(const char*) ;
   
   class IFace {
   public:
@@ -144,6 +147,8 @@ public:
 
   static void registerSpecial(const char* typeName, RooFactoryWSTool::IFace* iface) ;
 
+  void logError() { _errorCount++ ; }
+
 protected:
 
   std::stack<std::string> _autoNamePrefix ; 
@@ -151,9 +156,6 @@ protected:
 
   static void checkIndex(UInt_t index) ;
 
-  const char* asSTRING(const char*) ;
-  Int_t asINT(const char*) ;
-  Double_t asDOUBLE(const char*) ;
   
   std::string processCompositeExpression(const char* arg) ;
   std::string processSingleExpression(const char* arg) ;
@@ -176,7 +178,6 @@ protected:
 
   RooWorkspace* _ws ; //! Associated workspace
 
-  void logError() { _errorCount++ ; }
   void clearError() { _errorCount = 0 ; }
   Int_t errorCount() { return _errorCount ; }
 

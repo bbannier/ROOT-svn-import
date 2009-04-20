@@ -1470,7 +1470,7 @@ RooPlot* RooTreeData::plotAsymOn(RooPlot* frame, const RooAbsCategoryLValue& asy
   }
 
   // convert this histogram to a RooHist object on the heap
-  RooHist *graph= new RooHist(*hist1,*hist2,0,1,o.xErrorSize,o.scaleFactor);
+  RooHist *graph= new RooHist(*hist1,*hist2,0,1,o.xErrorSize,kFALSE,o.scaleFactor);
   graph->setYAxisLabel(Form("Asymmetry in %s",asymCat.GetName())) ;
 
   // initialize the frame's normalization setup, if necessary

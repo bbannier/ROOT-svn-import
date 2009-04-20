@@ -385,8 +385,8 @@ void RooProdPdf::initializeFromCmdArgList(const RooArgSet& fullPdfSet, const Roo
     if (!TString(carg->GetName()).CompareTo("Conditional")) {
 
       Int_t argType = carg->getInt(0) ;
-      RooArgSet* pdfSet = (RooArgSet*) carg->getObject(0) ;
-      RooArgSet* normSet = (RooArgSet*) carg->getObject(1) ;
+      RooArgSet* pdfSet = (RooArgSet*) carg->getSet(0) ;
+      RooArgSet* normSet = (RooArgSet*) carg->getSet(1) ;
 
       TIterator* siter2 = pdfSet->createIterator() ;
       RooAbsPdf* thePdf ;
@@ -531,15 +531,15 @@ void RooProdPdf::factorizeProduct(const RooArgSet& normSet, const RooArgSet& int
     // Reduce pdfNSet to actual dependents
     if (string("nset")==pdfNSet->GetName()) {
       pdfNSet = pdf->getObservables(*pdfNSet) ;
-//       cout << "term pdf = " << pdf->GetName() << " old-style mode: pdfNSet = " << *pdfNSet << endl ;
     } else if (string("cset") == pdfNSet->GetName()) {
       RooArgSet* tmp = pdf->getObservables(normSet) ;
       tmp->remove(*pdfNSet,kTRUE,kTRUE) ;
       pdfNSet = tmp ;
-//       cout << "term pdf = " << pdf->GetName() << " new-style mode: pdfNSet = " << *pdfNSet << endl ;
     } else {
-      coutE(InputArguments) << "RooProdPdf::factorizeProduct(" << GetName() << ") ERROR: internal error encountered in input arguments set of observables associated with pdf " 
-			    << pdf->GetName() << " is labeled neither 'nset' nor 'cset'" << endl ;
+      // Legacy mode. Interpret at NSet for backward compatibility
+      pdfNSet = pdf->getObservables(*pdfNSet) ;
+//       coutE(InputArguments) << "RooProdPdf::factorizeProduct(" << GetName() << ") ERROR: internal error encountered in input arguments set of observables associated with pdf " 
+// 			    << pdf->GetName() << " is labeled neither 'nset' nor 'cset'" << endl ;
       return ;
     }
 
