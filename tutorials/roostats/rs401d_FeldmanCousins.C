@@ -215,7 +215,7 @@ void rs401d_FeldmanCousins(bool doFeldmanCousins=false)
   // use the Feldman-Cousins tool
   ConfInterval* interval = 0;
   if(doFeldmanCousins)
-    ConfInterval* interval = fc.GetInterval();
+    interval = fc.GetInterval();
 
 
 
