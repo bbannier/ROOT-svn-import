@@ -411,21 +411,21 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
          if ( !sbIsEmpty ) nEvents = sbData->numEntries();
          sbVals.push_back(nEvents);
       } else if ( fTestStatisticsIdx==3 ) {
-	/// profiled likelihood ratio used as test statistics
-	RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*sbData,RooFit::Extended());
-	fSbModel->fitTo(*sbData);
-	double sb_nll_val = sb_nll.getVal();
-	RooNLLVar b_nll("b_nll","b_nll",*fBModel,*sbData,RooFit::Extended());
-	fBModel->fitTo(*sbData);
-	double b_nll_val = b_nll.getVal();
-	double m2lnQ = 2*(sb_nll_val-b_nll_val);
+         /// profiled likelihood ratio used as test statistics
+         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*sbData,RooFit::Extended());
+         fSbModel->fitTo(*sbData);
+         double sb_nll_val = sb_nll.getVal();
+         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*sbData,RooFit::Extended());
+         fBModel->fitTo(*sbData);
+         double b_nll_val = b_nll.getVal();
+         double m2lnQ = 2*(sb_nll_val-b_nll_val);
          sbVals.push_back(m2lnQ);
       } else if ( fTestStatisticsIdx==1 ) {
-	/// likelihood ratio used as test statistics (default)
-	RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*sbData,RooFit::Extended());
-	RooNLLVar b_nll("b_nll","b_nll",*fBModel,*sbData,RooFit::Extended());
-	double m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
-	sbVals.push_back(m2lnQ);
+         /// likelihood ratio used as test statistics (default)
+         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*sbData,RooFit::Extended());
+         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*sbData,RooFit::Extended());
+         double m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
+         sbVals.push_back(m2lnQ);
       }
 
       /// evaluate the test statistic in the B-only case
@@ -435,21 +435,21 @@ void HybridCalculator::RunToys(std::vector<double>& bVals, std::vector<double>& 
          if ( !bIsEmpty ) nEvents = bData->numEntries();
          bVals.push_back(nEvents);
       } else if ( fTestStatisticsIdx==3 ) {
-	/// profiled likelihood ratio used as test statistics
-	RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*bData,RooFit::Extended());
-	fSbModel->fitTo(*bData);
-	double sb_nll_val = sb_nll.getVal();
-	RooNLLVar b_nll("b_nll","b_nll",*fBModel,*bData,RooFit::Extended());
-	fBModel->fitTo(*bData);
-	double b_nll_val = b_nll.getVal();
-	double m2lnQ = 2*(sb_nll_val-b_nll_val);
-         sbVals.push_back(m2lnQ);
+         /// profiled likelihood ratio used as test statistics
+         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*bData,RooFit::Extended());
+         fSbModel->fitTo(*bData);
+         double sb_nll_val = sb_nll.getVal();
+         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*bData,RooFit::Extended());
+         fBModel->fitTo(*bData);
+         double b_nll_val = b_nll.getVal();
+         double m2lnQ = 2*(sb_nll_val-b_nll_val);
+         bVals.push_back(m2lnQ);
       } else if ( fTestStatisticsIdx==1 ) {
-	/// likelihood ratio used as test statistics (default)
-	RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*bData,RooFit::Extended());
-	RooNLLVar b_nll("b_nll","b_nll",*fBModel,*bData,RooFit::Extended());
-	double m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
-	sbVals.push_back(m2lnQ);
+         /// likelihood ratio used as test statistics (default)
+         RooNLLVar sb_nll("sb_nll","sb_nll",*fSbModel,*bData,RooFit::Extended());
+         RooNLLVar b_nll("b_nll","b_nll",*fBModel,*bData,RooFit::Extended());
+         double m2lnQ = 2*(sb_nll.getVal()-b_nll.getVal());
+         bVals.push_back(m2lnQ);
       }
 
       /// delete the toy-MC datasets
