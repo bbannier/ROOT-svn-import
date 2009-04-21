@@ -74,10 +74,7 @@ namespace RooStats {
       virtual Double_t ConfidenceLevel()  const {return 1.-fSize;}  
 
       // Common Initialization
-      virtual void Initialize(RooAbsArg& testStatistic, RooArgSet& paramsOfInterest, RooArgSet& nuisanceParameters) {
-	paramsOfInterest = paramsOfInterest; // avoid warning
-	testStatistic = testStatistic;
-	nuisanceParameters = nuisanceParameters;
+      virtual void Initialize(RooAbsArg& /* testStatistic */, RooArgSet& /* paramsOfInterest */, RooArgSet& /* nuisanceParameters */ ) {
       }
 
       // Set the Pdf, add to the the workspace if not already there
