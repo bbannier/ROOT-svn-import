@@ -50,14 +50,14 @@
 
 // PDF class created for this macro
 #include "NuMuToNuE_Oscillation.h"
-#include "tutorials/roostats/NuMuToNuE_Oscillation.cxx" // so that it can be executed directly
+#include "NuMuToNuE_Oscillation.cxx" // so that it can be executed directly
 
 // use this order for safety on library loading
 using namespace RooFit ;
 using namespace RooStats ;
 
 
-void rs401d_FeldmanCousins()
+void rs401d_FeldmanCousins(bool doFeldmanCousins=false)
 {
   
   // to time the macro
@@ -213,8 +213,10 @@ void rs401d_FeldmanCousins()
   fc.SetNBins(30); // number of points to test per parameter
 
   // use the Feldman-Cousins tool
-  ConfInterval* interval = fc.GetInterval();
-  //ConfInterval* interval = 0;
+  ConfInterval* interval = 0;
+  if(doFeldmanCousins)
+    ConfInterval* interval = fc.GetInterval();
+
 
 
   ///////////////////////////////////////////////////////////////////
