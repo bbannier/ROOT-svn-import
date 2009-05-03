@@ -15,5 +15,5 @@ void latex2(){
    #Leftrightarrow(#Box+m^{2})#psi=0");
    l.DrawLatex(0.5,0.3,"L_{em}=eJ^{#mu}_{em}A_{#mu} , J^{#mu}_{em}=#bar{I}\
    #gamma_{#mu}I , M^{j}_{i}=#SigmaA_{#alpha}#tau^{#alphaj}_{i}");
-   c1->Print("latex2.ps");
+//   c1->Print("latex2.ps");
 }

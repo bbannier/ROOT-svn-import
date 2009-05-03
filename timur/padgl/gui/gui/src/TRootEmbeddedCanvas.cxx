@@ -130,6 +130,23 @@ TRootEmbeddedCanvas::TRootEmbeddedCanvas(const char *name, const TGWindow *p,
       }
       if (gGLManager) {
          fCWinId = gGLManager->InitGLWindow((ULong_t)GetViewPort()->GetId());
+/*         if (fCanvasID != -1) {
+            //Create gl context.
+            fCanvas->fGLDevice = gGLManager->CreateGLContext(fCanvasID);
+            if (fCanvas->fGLDevice != -1) {
+               //Create gl painter.
+               TPluginHandler *ph = gROOT->GetPluginManager()->FindHandler("TGLPadPainter", "");
+               if (ph && ph->LoadPlugin() != -1) {
+                  fCanvas->fPainter = (TVirtualPadPainter *)ph->ExecPlugin(1, fCanvas);
+                  if (!fCanvas->fPainter) {
+                     Error("CreateCanvas", "Plugin for TGLPadPainter failed");
+                     gGLManager->DeleteGLContext(fCanvas->fGLDevice);
+                     fCanvas->fGLDevice = -1;
+                  } else
+                     fCanvas->SetSupportGL(kTRUE);   
+               }
+            } else
+               Error("CreateCanvas", "GL context creation failed.");*/
       }
    }
 

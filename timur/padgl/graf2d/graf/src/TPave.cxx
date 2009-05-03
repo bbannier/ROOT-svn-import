@@ -307,7 +307,6 @@ void TPave::PaintPave(Double_t x1, Double_t y1,Double_t x2, Double_t  y2,
                       Int_t bordersize ,Option_t *option)
 {
    // Draw this pave with new coordinates.
-
    Double_t x[7],y[7];
    TString opt = option;
    opt.ToLower();
@@ -325,6 +324,7 @@ void TPave::PaintPave(Double_t x1, Double_t y1,Double_t x2, Double_t  y2,
 
    // Draw first pave as a normal filled box
    if (fBorderSize <= 0 && fillstyle <= 0) return;
+   
    TBox::PaintBox(x1,y1,x2,y2);
    if (fBorderSize <= 0) return;
    if (fBorderSize == 1) {
@@ -334,7 +334,7 @@ void TPave::PaintPave(Double_t x1, Double_t y1,Double_t x2, Double_t  y2,
       gPad->PaintLine(x1,y2,x1,y1);
       return;
    }
-
+   
    Double_t wy = gPad->PixeltoY(0) - gPad->PixeltoY(fBorderSize);
    Double_t wx = gPad->PixeltoX(fBorderSize) - gPad->PixeltoX(0);
    Int_t mode = 0;

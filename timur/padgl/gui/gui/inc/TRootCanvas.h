@@ -87,6 +87,9 @@ private:
    Int_t                fCanvasID;   // index in fWindows array of TGX11
    Bool_t               fAutoFit;    // when true canvas container keeps same size as canvas
    Int_t                fButton;     // currently pressed button
+   
+   //
+   Int_t                fGLCtx;
 
    TRootCanvas(const TRootCanvas&); // Not implemented
    TRootCanvas& operator=(const TRootCanvas&); // Not implemented

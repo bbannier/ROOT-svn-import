@@ -27,6 +27,7 @@
 #endif
 
 class TVirtualViewer3D;
+class TVirtualPadPainter;
 class TBrowser;
 class TBox;
 class TLegend;
@@ -118,6 +119,8 @@ protected:
 
    // 3D Viewer support
    TVirtualViewer3D *fViewer3D;    //! Current 3D viewer
+   //
+   TVirtualPadPainter *fPainter;   //! Interface to X11 or OpenGL. Per-canvas painter.
 
    void          DestroyExternalViewer3D();
    virtual Int_t DistancetoPrimitive(Int_t px, Int_t py);
@@ -370,6 +373,8 @@ public:
    virtual TVirtualViewer3D *GetViewer3D(Option_t * type = "");
    virtual Bool_t            HasViewer3D() const { return (fViewer3D); }
    virtual void              ReleaseViewer3D(Option_t * type = "");
+   
+   TVirtualPadPainter *GetPadPainter() const;
 
    virtual void      RecordPave(const TObject *obj);              // *SIGNAL*
    virtual void      RecordLatex(const TObject *obj);             // *SIGNAL*

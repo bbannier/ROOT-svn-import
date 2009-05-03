@@ -34,6 +34,7 @@
 #include "TClass.h"
 #include "TSystem.h"
 #include "TCanvas.h"
+#include "TPadPainter.h"
 #include "TBrowser.h"
 #include "TClassTree.h"
 #include "TMarker.h"
@@ -295,7 +296,6 @@ TRootCanvas::TRootCanvas(TCanvas *c, const char *name, UInt_t width, UInt_t heig
    : TGMainFrame(gClient->GetRoot(), width, height), TCanvasImp(c)
 {
    // Create a basic ROOT canvas.
-
    CreateCanvas(name);
 
    ShowToolBar(kFALSE);
@@ -309,7 +309,6 @@ TRootCanvas::TRootCanvas(TCanvas *c, const char *name, Int_t x, Int_t y, UInt_t 
    : TGMainFrame(gClient->GetRoot(), width, height), TCanvasImp(c)
 {
    // Create a basic ROOT canvas.
-
    CreateCanvas(name);
 
    ShowToolBar(kFALSE);
@@ -512,8 +511,9 @@ void TRootCanvas::CreateCanvas(const char *name)
                                 kSunkenFrame | kDoubleBorder);
 
    fCanvasID = -1;
-
+   
    if (fCanvas->UseGL()) {
+      fCanvas->SetSupportGL(kFALSE);
       //first, initialize GL (if not yet)
       if (!gGLManager) {
          TString x = "win32";
@@ -524,25 +524,40 @@ void TRootCanvas::CreateCanvas(const char *name)
 
          if (ph && ph->LoadPlugin() != -1) {
             if (!ph->ExecPlugin(0))
-               Warning("CreateCanvas",
-                       "Can not load GL, will use default canvas imp instead\n");
+               Error("CreateCanvas", "GL manager plugin failed");
          }
       }
 
       if (gGLManager) {
          fCanvasID = gGLManager->InitGLWindow((ULong_t)fCanvasWindow->GetViewPort()->GetId());
-         if (fCanvasID != -1)
-            fCanvas->SetSupportGL(kTRUE);
-         else {
-            fCanvas->SetSupportGL(kFALSE);
-            Warning("CreateCanvas", "Cannot init gl window, will use default instead\n");
-         }
+         if (fCanvasID != -1) {
+            //Create gl context.
+            fCanvas->fGLDevice = gGLManager->CreateGLContext(fCanvasID);
+            if (fCanvas->fGLDevice != -1) {
+               //Create gl painter.
+               TPluginHandler *ph = gROOT->GetPluginManager()->FindHandler("TGLPadPainter", "");
+               if (ph && ph->LoadPlugin() != -1) {
+                  fCanvas->fPainter = (TVirtualPadPainter *)ph->ExecPlugin(1, fCanvas);
+                  if (!fCanvas->fPainter) {
+                     Error("CreateCanvas", "Plugin for TGLPadPainter failed");
+                     gGLManager->DeleteGLContext(fCanvas->fGLDevice);
+                     fCanvas->fGLDevice = -1;
+                  } else
+                     fCanvas->SetSupportGL(kTRUE);   
+               }
+            } else
+               Error("CreateCanvas", "GL context creation failed.");
+         } else
+            Error("CreateCanvas", "GL window creation failed\n");
       }
    }
 
    if (fCanvasID == -1)
       fCanvasID = gVirtualX->InitWindow((ULong_t)fCanvasWindow->GetViewPort()->GetId());
 
+   if (!fCanvas->fPainter)
+      fCanvas->fPainter = new TPadPainter;
+      
    Window_t win = gVirtualX->GetWindowID(fCanvasID);
    fCanvasContainer = new TRootContainer(this, win, fCanvasWindow->GetViewPort());
    fCanvasWindow->SetContainer(fCanvasContainer);
@@ -639,7 +654,11 @@ TRootCanvas::~TRootCanvas()
 void TRootCanvas::Close()
 {
    // Called via TCanvasImp interface by TCanvas.
-
+   if (fCanvas->UseGL()) {
+      if (fCanvas->fGLDevice != -1)
+         gGLManager->DeleteGLContext(fCanvas->fGLDevice);
+   }
+   
    TVirtualPadEditor* gged = TVirtualPadEditor::GetPadEditor(kFALSE);
    if(gged && gged->GetCanvas() == fCanvas)
       gged->Hide();
@@ -1620,7 +1639,6 @@ Bool_t TRootCanvas::HandleContainerDoubleClick(Event_t *event)
 Bool_t TRootCanvas::HandleContainerConfigure(Event_t *)
 {
    // Handle configure (i.e. resize) event.
-
    if (fAutoFit) {
       fCanvas->Resize();
       fCanvas->Update();
@@ -1693,8 +1711,9 @@ Bool_t TRootCanvas::HandleContainerExpose(Event_t *event)
 {
    // Handle expose events.
 
-   if (event->fCount == 0)
+   if (event->fCount == 0) {
       fCanvas->Flush();
+   }   
 
    return kTRUE;
 }
