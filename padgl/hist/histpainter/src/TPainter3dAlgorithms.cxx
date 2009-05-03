@@ -21,7 +21,7 @@ and  Evgueni Tcherniaev.
 This class is a subset of the original system. It has been converted to a C++
 class by Rene Brun.
 End_Html */
-
+#include <iostream>
 #include <stdlib.h>
 
 #include "TROOT.h"
@@ -376,7 +376,7 @@ void TPainter3dAlgorithms::DrawFaceMode1(Int_t *icodes, Double_t *xyz, Int_t np,
    }
 
    //          D R A W   F A C E
-   if (z > 0)         SetFillColor(kF3FillColor1);
+   if (z > 0) SetFillColor(kF3FillColor1);
    if (z <= 0) SetFillColor(kF3FillColor2);
    SetFillStyle(1001);
    TAttFill::Modify();

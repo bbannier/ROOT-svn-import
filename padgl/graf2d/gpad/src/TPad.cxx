@@ -55,12 +55,14 @@
 #include "TAtt3D.h"
 #include "TObjString.h"
 #include "TApplication.h"
+#include "TVirtualPadPainter.h"
 
 
 // Local scratch buffer for screen points, faster than allocating buffer on heap
 const Int_t kPXY       = 1002;
 
-static TPoint gPXY[kPXY];
+//static TPoint gPXY[kPXY];
+static TPointD gPXY[kPXY];
 static Int_t gReadLevel = 0;
 
 Int_t TPad::fgMaxPickDistance = 5;
@@ -177,6 +179,8 @@ TPad::TPad()
    fViewer3D = 0;
    SetBit(kMustCleanup);
 
+   fPainter = 0; //To be created in a TCanvas ctor.
+
    // the following line is temporarily disabled. It has side effects
    // when the pad is a TDrawPanelHist or a TFitPanel.
    // the line was supposed to fix a problem with DrawClonePad
@@ -230,7 +234,6 @@ TPad::TPad(const char *name, const char *title, Double_t xlow,
    fPadPaint   = 0;
    fPadView3D  = 0;
    fPixmapID   = -1;      // -1 means pixmap will be created by ResizePad()
-   fGLDevice   = -1;
    fCopyGLDevice = kFALSE;
    fEmbeddedGL = kFALSE;
    fNumber     = 0;
@@ -244,6 +247,11 @@ TPad::TPad(const char *name, const char *title, Double_t xlow,
 
    fViewer3D = 0;
 
+   //Setup painter.
+   fPainter = fCanvas->GetPadPainter();
+   fGLDevice = fCanvas->GetGLDevice();   
+   //
+   
    // Set default world coordinates to NDC [0,1]
    fX1 = 0;
    fX2 = 1;
@@ -301,9 +309,6 @@ TPad::~TPad()
    SafeDelete(fPrimitives);
    SafeDelete(fExecs);
    delete fViewer3D;
-
-   if (fGLDevice != -1)
-      gGLManager->DeleteGLContext(fGLDevice);
 }
 
 
@@ -465,7 +470,7 @@ TVirtualPad *TPad::cd(Int_t subpadnumber)
 
    if (!subpadnumber) {
       gPad = this;
-      if (!gPad->IsBatch()) gVirtualX->SelectWindow(fPixmapID);
+      if (!gPad->IsBatch()) fPainter->SelectDrawable(fPixmapID);
       return gPad;
    }
 
@@ -506,7 +511,7 @@ void TPad::Clear(Option_t *option)
 
    if (TestBit(kClearAfterCR)) getchar();
 
-   if (!gPad->IsBatch()) gVirtualX->ClearWindow();
+   if (!gPad->IsBatch()) fPainter->ClearDrawable();
    if (gVirtualPS && gPad == gPad->GetCanvas()) gVirtualPS->NewPage();
 
    PaintBorder(GetFillColor(), kTRUE);
@@ -876,8 +881,8 @@ void TPad::Close(Option_t *)
    if (fPixmapID != -1) {
       if (gPad) {
          if (!gPad->IsBatch()) {
-            gVirtualX->SelectWindow(fPixmapID);
-            gVirtualX->ClosePixmap();
+            fPainter->SelectDrawable(fPixmapID);
+            fPainter->DestroyDrawable();
          }
       }
       fPixmapID = -1;
@@ -918,15 +923,9 @@ void TPad::CopyPixmap()
    XYtoAbsPixel(fX1, fY2, px, py);
 
    if (fPixmapID != -1)
-      gVirtualX->CopyPixmap(fPixmapID, px, py);
+      fPainter->CopyDrawable(fPixmapID, px, py);
 
    if (this == gPad) HighLight(gPad->GetHighLightColor());
-
-   if (fCopyGLDevice) {
-      Int_t borderSize = fBorderSize > 0 ? fBorderSize : 2;
-      Int_t realInd = gGLManager->GetVirtualXInd(fGLDevice);
-      gVirtualX->CopyPixmap(realInd, px + borderSize, py + borderSize);
-   }
 }
 
 
@@ -1168,6 +1167,9 @@ void TPad::Draw(Option_t *option)
       if (fMother) fMother->GetListOfPrimitives()->Remove(this);
       TPad *oldMother = fMother;
       fCanvas = gPad->GetCanvas();
+      //
+      fPainter = fCanvas->GetPadPainter();
+      //
       fMother = (TPad*)gPad;
       if (oldMother != fMother || fPixmapID == -1) ResizePad();
    }
@@ -1417,16 +1419,16 @@ void TPad::DrawCrosshair()
       pymin = 0;
       pymax = cpad->GetWh();
    }
-   if(pxold) gVirtualX->DrawLine(pxold,pymin,pxold,pymax);
-   if(pyold) gVirtualX->DrawLine(pxmin,pyold,pxmax,pyold);
+   if(pxold) /*fPainter->DrawLine(pxold, pymin, pxold, pymax);*/gVirtualX->DrawLine(pxold,pymin,pxold,pymax);
+   if(pyold) /*fPainter->DrawLine(pxold, pymin, pxold, pymax);*/gVirtualX->DrawLine(pxmin,pyold,pxmax,pyold);
    if (cpad->GetEvent() == kButton1Down ||
        cpad->GetEvent() == kButton1Up   ||
        cpad->GetEvent() == kMouseLeave) {
       fCrosshairPos = 0;
       return;
    }
-   gVirtualX->DrawLine(px,pymin,px,pymax);
-   gVirtualX->DrawLine(pxmin,py,pxmax,py);
+   /*fPainter->DrawLine(px, pymin, px, pymax);*/gVirtualX->DrawLine(px,pymin,px,pymax);
+   /*fPainter->DrawLine(pxmin, py, pxmax, py);*/gVirtualX->DrawLine(pxmin,py,pxmax,py);
    fCrosshairPos = px + 10000*py;
 }
 
@@ -1438,7 +1440,6 @@ TH1F *TPad::DrawFrame(Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax
    //
    //  Compute real pad range taking into account all margins
    //  Use services of TH1F class
-
    if (!IsEditable()) return 0;
    TPad *padsav = (TPad*)gPad;
    if (this !=  padsav) {
@@ -1659,13 +1660,13 @@ again:
 #ifdef WIN32
       Pop(); //this should be for cases where mouse has only two buttons
 #endif
-      gVirtualX->SetLineColor(-1);
+      fPainter->SetLineColor(-1);
       TAttLine::Modify();  //Change line attributes only if necessary
       if (GetFillColor())
-         gVirtualX->SetLineColor(GetFillColor());
+         fPainter->SetLineColor(GetFillColor());
       else
-         gVirtualX->SetLineColor(1);
-      gVirtualX->SetLineWidth(2);
+         fPainter->SetLineColor(1);
+      fPainter->SetLineWidth(2);
 
       // No break !!!
 
@@ -1782,7 +1783,8 @@ again:
       wx = wy = 0;
 
       if (pA) {
-         if (!ropaque) gVirtualX->DrawBox(pxold, pyt, pxt, pyold, TVirtualX::kHollow);  // draw the old box
+         if (!ropaque) gVirtualX->DrawBox(pxold, pyt, pxt, pyold, TVirtualX::kHollow);
+         //fPainter->DrawBox(pxold, pyt, pxt, pyold, TVirtualPadPainter::kHollow);// draw the old box
          if (px > pxt-kMinSize) { px = pxt-kMinSize; wx = px; }
          if (py > pyt-kMinSize) { py = pyt-kMinSize; wy = py; }
          if (px < pxlp) { px = pxlp; wx = px; }
@@ -1800,10 +1802,12 @@ again:
 
             wx = wy = 0;
          }
-         if (!ropaque) gVirtualX->DrawBox(px   , pyt, pxt, py,    TVirtualX::kHollow);  // draw the new box
+         if (!ropaque) //fPainter->DrawBox(px, pyt, pxt, py, TVirtualPadPainter::kHollow);// draw the new box
+            gVirtualX->DrawBox(px, pyt, pxt, py, TVirtualX::kHollow);
       }
       if (pB) {
-         if (!ropaque) gVirtualX->DrawBox(pxl  , pyt, pxold, pyold, TVirtualX::kHollow);
+         if (!ropaque) //fPainter->DrawBox(pxl, pyt, pxold, pyold, TVirtualPadPainter::kHollow);
+            gVirtualX->DrawBox(pxl  , pyt, pxold, pyold, TVirtualX::kHollow);
          if (px < pxl+kMinSize) { px = pxl+kMinSize; wx = px; }
          if (py > pyt-kMinSize) { py = pyt-kMinSize; wy = py; }
          if (px > pxtp) { px = pxtp; wx = px; }
@@ -1821,10 +1825,12 @@ again:
 
             wx = wy = 0;
          }
-         if (!ropaque) gVirtualX->DrawBox(pxl  , pyt, px ,  py,    TVirtualX::kHollow);
+         if (!ropaque) //fPainter->DrawBox(pxl, pyt, px,  py, TVirtualPadPainter::kHollow);;
+            gVirtualX->DrawBox(pxl  , pyt, px ,  py,    TVirtualX::kHollow);
       }
       if (pC) {
-         if (!ropaque) gVirtualX->DrawBox(pxl  , pyl, pxold, pyold, TVirtualX::kHollow);
+         if (!ropaque) //fPainter->DrawBox(pxl, pyl, pxold, pyold, TVirtualPadPainter::kHollow);
+            gVirtualX->DrawBox(pxl  , pyl, pxold, pyold, TVirtualX::kHollow);
          if (px < pxl+kMinSize) { px = pxl+kMinSize; wx = px; }
          if (py < pyl+kMinSize) { py = pyl+kMinSize; wy = py; }
          if (px > pxtp) { px = pxtp; wx = px; }
@@ -1842,10 +1848,12 @@ again:
 
             wx = wy = 0;
          }
-         if (!ropaque) gVirtualX->DrawBox(pxl  , pyl, px ,   py,    TVirtualX::kHollow);
+         if (!ropaque) //fPainter->DrawBox(pxl, pyl, px, py, TVirtualPadPainter::kHollow);
+            gVirtualX->DrawBox(pxl, pyl, px, py, TVirtualX::kHollow);
       }
       if (pD) {
-         if (!ropaque) gVirtualX->DrawBox(pxold, pyold, pxt, pyl, TVirtualX::kHollow);
+         if (!ropaque) //fPainter->DrawBox(pxold, pyold, pxt, pyl, TVirtualPadPainter::kHollow);
+            gVirtualX->DrawBox(pxold, pyold, pxt, pyl, TVirtualX::kHollow);
          if (px > pxt-kMinSize) { px = pxt-kMinSize; wx = px; }
          if (py < pyl+kMinSize) { py = pyl+kMinSize; wy = py; }
          if (px < pxlp) { px = pxlp; wx = px; }
@@ -1863,10 +1871,12 @@ again:
 
             wx = wy = 0;
          }
-         if (!ropaque) gVirtualX->DrawBox(px   , py ,   pxt, pyl, TVirtualX::kHollow);
+         if (!ropaque) //fPainter->DrawBox(px, py, pxt, pyl, TVirtualPadPainter::kHollow);
+            gVirtualX->DrawBox(px, py, pxt, pyl, TVirtualX::kHollow);
       }
       if (pTop) {
-         if (!ropaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+         if (!ropaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
+            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
          py2 += py - pyold;
          if (py2 > py1-kMinSize) { py2 = py1-kMinSize; wy = py2; }
          if (py2 < py2p) { py2 = py2p; wy = py2; }
@@ -1879,10 +1889,12 @@ again:
             else
                px2 = npx2;
          }
-         if (!ropaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+         if (!ropaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
+            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
       }
       if (pBot) {
-         if (!ropaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+         if (!ropaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
+            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
          py1 += py - pyold;
          if (py1 < py2+kMinSize) { py1 = py2+kMinSize; wy = py1; }
          if (py1 > py1p) { py1 = py1p; wy = py1; }
@@ -1895,10 +1907,12 @@ again:
             else
                px2 = npx2;
          }
-         if (!ropaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+         if (!ropaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
+            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
       }
       if (pL) {
-         if (!ropaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+         if (!ropaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
+            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
          px1 += px - pxold;
          if (px1 > px2-kMinSize) { px1 = px2-kMinSize; wx = px1; }
          if (px1 < px1p) { px1 = px1p; wx = px1; }
@@ -1912,10 +1926,12 @@ again:
             else
                py2 = npy2;
          }
-         if (!ropaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+         if (!ropaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
+            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
       }
       if (pR) {
-         if (!ropaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+         if (!ropaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
+            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
          px2 += px - pxold;
          if (px2 < px1+kMinSize) { px2 = px1+kMinSize; wx = px2; }
          if (px2 > px2p) { px2 = px2p; wx = px2; }
@@ -1929,10 +1945,12 @@ again:
             else
                py2 = npy2;
          }
-         if (!ropaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+         if (!ropaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
+            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
       }
       if (pINSIDE) {
-         if (!opaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);  // draw the old box
+         if (!opaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);  // draw the old box
+            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);  // draw the old box
          Int_t dx = px - pxold;
          Int_t dy = py - pyold;
          px1 += dx; py1 += dy; px2 += dx; py2 += dy;
@@ -1940,7 +1958,8 @@ again:
          if (px2 > px2p) { dx = px2 - px2p; px1 -= dx; px2 -= dx; wx = px-dx; }
          if (py1 > py1p) { dy = py1 - py1p; py1 -= dy; py2 -= dy; wy = py-dy; }
          if (py2 < py2p) { dy = py2p - py2; py1 += dy; py2 += dy; wy = py+dy; }
-         if (!opaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);  // draw the new box
+         if (!opaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);  // draw the new box
+            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);  // draw the new box
       }
 
       if (wx || wy) {
@@ -2003,8 +2022,8 @@ again:
       if (pA || pB || pC || pD || pTop || pL || pR || pBot)
          Modified(kTRUE);
 
-      gVirtualX->SetLineColor(-1);
-      gVirtualX->SetLineWidth(-1);
+      fPainter->SetLineColor(-1);//gVirtualX->SetLineColor(-1);
+      fPainter->SetLineColor(-1);//gVirtualX->SetLineWidth(-1);
 
       if (px != pxorg || py != pyorg) {
 
@@ -2138,16 +2157,18 @@ void TPad::ExecuteEventAxis(Int_t event, Int_t px, Int_t py, TAxis *axis)
             px2old = XtoAbsPixel(GetX2());
             py2old = py1old;
          }
-         gVirtualX->DrawBox(px1old, py1old, px2old, py2old, TVirtualX::kHollow);
+         fPainter->DrawBox(px1old, py1old, px2old, py2old, TVirtualPadPainter::kHollow);
+         //gVirtualX->DrawBox(px1old, py1old, px2old, py2old, TVirtualX::kHollow);
       }
-      gVirtualX->SetLineColor(-1);
+      fPainter->SetLineColor(-1);//gVirtualX->SetLineColor(-1);
       // No break !!!
 
    case kButton1Motion:
       if (view) {
          view->GetDistancetoAxis(axisNumber, px, py, ratio2);
       } else {
-         gVirtualX->DrawBox(px1old, py1old, px2old, py2old, TVirtualX::kHollow);
+         //gVirtualX->DrawBox(px1old, py1old, px2old, py2old, TVirtualX::kHollow);
+         fPainter->DrawBox(px1old, py1old, px2old, py2old, TVirtualPadPainter::kHollow);
          if (axisNumber == 1) {
             ratio2 = (AbsPixeltoX(px) - GetUxmin())/(GetUxmax() - GetUxmin());
             px2old = XtoAbsPixel(GetUxmin()+ratio2*(GetUxmax() - GetUxmin()));
@@ -2155,7 +2176,8 @@ void TPad::ExecuteEventAxis(Int_t event, Int_t px, Int_t py, TAxis *axis)
             ratio2 = (AbsPixeltoY(py) - GetUymin())/(GetUymax() - GetUymin());
             py2old = YtoAbsPixel(GetUymin()+ratio2*(GetUymax() - GetUymin()));
          }
-         gVirtualX->DrawBox(px1old, py1old, px2old, py2old, TVirtualX::kHollow);
+         fPainter->DrawBox(px1old, py1old, px2old, py2old, TVirtualPadPainter::kHollow);
+         //gVirtualX->DrawBox(px1old, py1old, px2old, py2old, TVirtualX::kHollow);
       }
    break;
 
@@ -2270,7 +2292,8 @@ void TPad::ExecuteEventAxis(Int_t event, Int_t px, Int_t py, TAxis *axis)
             Modified(kTRUE);
          }
       }
-      gVirtualX->SetLineColor(-1);
+      //gVirtualX->SetLineColor(-1);
+      fPainter->SetLineColor(-1);
       break;
    }
 }
@@ -2732,7 +2755,6 @@ Double_t TPad::YtoPad(Double_t y) const
 void TPad::Paint(Option_t * /*option*/)
 {
    // Paint all primitives in pad.
-
    if (!fPrimitives) fPrimitives = new TList;
    if (fViewer3D && fViewer3D->CanLoopOnPrimitives()) {
       fViewer3D->PadPaint(this);
@@ -2817,6 +2839,9 @@ void TPad::PaintBorder(Color_t color, Bool_t tops)
    Int_t bordersize = fBorderSize;
    if (bordersize <= 0) bordersize = 2;
 
+   const Double_t realBsX = bordersize / (GetAbsWNDC() * GetWw()) * (fX2 - fX1);
+   const Double_t realBsY = bordersize / (GetAbsHNDC() * GetWh()) * (fY2 - fY1);
+   
    Short_t pxl,pyl,pxt,pyt,px1,py1,px2,py2;
    Double_t xl, xt, yl, yt;
 
@@ -2838,44 +2863,45 @@ void TPad::PaintBorder(Color_t color, Bool_t tops)
    if (py1 > py2) {pyl = py1; pyt = py2; yl = fY1; yt = fY2;}
    else           {pyl = py2; pyt = py1; yl = fY2; yt = fY1;}
 
+   Double_t frameXs[7] = {}, frameYs[7] = {};
+   
+      
    if (!IsBatch()) {
-      TPoint frame[7];
-
       // Draw top&left part of the box
-      frame[0].fX = pxl;                 frame[0].fY = pyl;
-      frame[1].fX = pxl + bordersize;    frame[1].fY = pyl - bordersize;
-      frame[2].fX = frame[1].fX;         frame[2].fY = pyt + bordersize;
-      frame[3].fX = pxt - bordersize;    frame[3].fY = frame[2].fY;
-      frame[4].fX = pxt;                 frame[4].fY = pyt;
-      frame[5].fX = pxl;                 frame[5].fY = pyt;
-      frame[6].fX = pxl;                 frame[6].fY = pyl;
-
-      if (fBorderMode == -1) gVirtualX->SetFillColor(dark);
-      else                   gVirtualX->SetFillColor(light);
-      gVirtualX->DrawFillArea(7, frame);
+      frameXs[0] = xl;           frameYs[0] = yl;
+      frameXs[1] = xl + realBsX; frameYs[1] = yl + realBsY;
+      frameXs[2] = frameXs[1];   frameYs[2] = yt - realBsY;
+      frameXs[3] = xt - realBsX; frameYs[3] = frameYs[2];
+      frameXs[4] = xt;           frameYs[4] = yt;
+      frameXs[5] = xl;           frameYs[5] = yt;
+      frameXs[6] = xl;           frameYs[6] = yl;
+      
+      if (fBorderMode == -1) fPainter->SetFillColor(dark);
+      else                   fPainter->SetFillColor(light);
+      fPainter->DrawFillArea(7, frameXs, frameYs);//BACK
 
       // Draw bottom&right part of the box
-      frame[0].fX = pxl;                 frame[0].fY = pyl;
-      frame[1].fX = pxl + bordersize;    frame[1].fY = pyl - bordersize;
-      frame[2].fX = pxt - bordersize;    frame[2].fY = frame[1].fY;
-      frame[3].fX = frame[2].fX;         frame[3].fY = pyt + bordersize;
-      frame[4].fX = pxt;                 frame[4].fY = pyt;
-      frame[5].fX = pxt;                 frame[5].fY = pyl;
-      frame[6].fX = pxl;                 frame[6].fY = pyl;
+      frameXs[0] = xl;              frameYs[0] = yl;
+      frameXs[1] = xl + realBsX;    frameYs[1] = yl + realBsY;
+      frameXs[2] = xt - realBsX;    frameYs[2] = frameYs[1];
+      frameXs[3] = frameXs[2];      frameYs[3] = yt - realBsY;
+      frameXs[4] = xt;              frameYs[4] = yt;
+      frameXs[5] = xt;              frameYs[5] = yl;
+      frameXs[6] = xl;              frameYs[6] = yl;
 
-      if (fBorderMode == -1) gVirtualX->SetFillColor(light);
-      else                   gVirtualX->SetFillColor(dark);
-      gVirtualX->DrawFillArea(7, frame);
+      if (fBorderMode == -1) fPainter->SetFillColor(light);
+      else                   fPainter->SetFillColor(dark);
+      fPainter->DrawFillArea(7, frameXs, frameYs);
 
       // If this pad is a button, highlight it
       if (InheritsFrom("TButton") && fBorderMode == -1) {
          if (TestBit(kFraming)) {  // bit set in TButton::SetFraming
-            if (GetFillColor() != 2) gVirtualX->SetLineColor(2);
-            else                     gVirtualX->SetLineColor(4);
-            gVirtualX->DrawBox(px1+2,py1-2,px2-2,py2+2, TVirtualX::kHollow);
+            if (GetFillColor() != 2) fPainter->SetLineColor(2);
+            else                     fPainter->SetLineColor(4);
+            fPainter->DrawBox(xl + realBsX, yl + realBsY, xt - realBsX, yt - realBsY, TVirtualPadPainter::kHollow);
          }
       }
-      gVirtualX->SetFillColor(-1);
+      fPainter->SetFillColor(-1);
       SetFillColor(oldcolor);
    }
 
@@ -2982,7 +3008,7 @@ void TPad::PaintModified()
    cd();
    if (IsModified() || IsTransparent()) {
       if ((fFillStyle < 3026) && (fFillStyle > 3000)) {
-         if (!gPad->IsBatch()) gVirtualX->ClearWindow();
+         if (!gPad->IsBatch()) fPainter->ClearDrawable();//gVirtualX->ClearWindow();
       }
       PaintBorder(GetFillColor(), kTRUE);
    }
@@ -3050,17 +3076,18 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
       if (TMath::Abs(px2-px1) < 1) px2 = px1+1;
       if (TMath::Abs(py1-py2) < 1) py1 = py2+1;
 
-      Int_t style0 = gVirtualX->GetFillStyle();
+      Int_t style0 = fPainter->GetFillStyle();
       Int_t style  = style0;
       if (option[0] == 's') {
-         gVirtualX->SetFillStyle(0);
+         fPainter->SetFillStyle(0);
          style = 0;
       }
       if (style) {
          if (style > 3000 && style < 4000) {
             if (style < 3026) {
                // draw stipples with fFillColor foreground
-               gVirtualX->DrawBox(px1,py1,px2,py2,TVirtualX::kFilled);
+               //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kFilled);
+               fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
             }
 
             if (style >= 3100 && style < 4000) {
@@ -3070,11 +3097,12 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
                PaintFillAreaHatches(4, xb, yb, style);
                return;
             }
-               //special case for TAttFillCanvas
-            if (gVirtualX->GetFillColor() == 10) {
-               gVirtualX->SetFillColor(1);
-               gVirtualX->DrawBox(px1,py1,px2,py2,TVirtualX::kFilled);
-               gVirtualX->SetFillColor(10);
+            //special case for TAttFillCanvas
+            if (fPainter->GetFillColor() == 10) {
+               fPainter->SetFillColor(1);
+               //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kFilled);
+               fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
+               fPainter->SetFillColor(10);
             }
          } else if (style >= 4000 && style <= 4100) {
             // For style >=4000 we make the window transparent.
@@ -3082,7 +3110,8 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
 
             //ignore this style option when this is the canvas itself
             if (this == fMother)
-               gVirtualX->DrawBox(px1,py1,px2,py2,TVirtualX::kFilled);
+               //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kFilled);
+               fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
             else {
                //draw background by blitting all bottom pads
                int px, py;
@@ -3093,15 +3122,17 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
                   CopyBackgroundPixmaps(fMother, this, px, py);
                }
 
-               gVirtualX->SetOpacity(style-4000);
+               fPainter->SetOpacity(style - 4000);//gVirtualX->SetOpacity(style-4000);
             }
          } else {
-            gVirtualX->DrawBox(px1,py1,px2,py2,TVirtualX::kFilled);
+            //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kFilled);
+            fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
          }
-         if (option[0] == 'l') gVirtualX->DrawBox(px1,py1,px2,py2,TVirtualX::kHollow);
+         if (option[0] == 'l') fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kHollow);//fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
       } else {
-         gVirtualX->DrawBox(px1,py1,px2,py2,TVirtualX::kHollow);
-         if (option[0] == 's') gVirtualX->SetFillStyle(style0);
+         //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
+         fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kHollow);
+         if (option[0] == 's') fPainter->SetFillStyle(style0);
       }
    }
 
@@ -3156,7 +3187,7 @@ void TPad::CopyBackgroundPixmap(Int_t x, Int_t y)
 
    int px, py;
    XYtoAbsPixel(fX1, fY2, px, py);
-   gVirtualX->CopyPixmap(GetPixmapID(), px-x, py-y);
+   fPainter->CopyDrawable(GetPixmapID(), px-x, py-y);
 }
 
 
@@ -3217,7 +3248,7 @@ void TPad::PaintFillArea(Int_t nn, Float_t *xx, Float_t *yy, Option_t *)
    }
 
    // Paint the fill area with hatches
-   Int_t fillstyle = gVirtualX->GetFillStyle();
+   Int_t fillstyle = fPainter->GetFillStyle();//gVirtualX->GetFillStyle();
    if (gPad->IsBatch() && gVirtualPS) fillstyle = gVirtualPS->GetFillStyle();
    if (fillstyle >= 3100 && fillstyle < 4000) {
       PaintFillAreaHatches(nn, x, y, fillstyle);
@@ -3226,13 +3257,15 @@ void TPad::PaintFillArea(Int_t nn, Float_t *xx, Float_t *yy, Option_t *)
       return;
    }
 
-   TPoint *pxy;
+   //TPoint *pxy;
+   TPointD *pxy;
 
    // Create temporary array to store array in pixel coordinates
 
    if (!gPad->IsBatch()) {
       if (n <kPXY) pxy = &gPXY[0];
-      else         pxy = new TPoint[n+1];
+      //else         pxy = new TPoint[n+1];
+      else         pxy = new TPointD[n+1];
    // convert points from world to pixel coordinates
       for (i=0;i<n;i++) {
          pxy[i].fX = gPad->XtoPixel(x[i]);
@@ -3242,9 +3275,9 @@ void TPad::PaintFillArea(Int_t nn, Float_t *xx, Float_t *yy, Option_t *)
       if (fillstyle == 0) {
          pxy[n].fX = pxy[0].fX;
          pxy[n].fY = pxy[0].fY;
-         gVirtualX->DrawFillArea(n+1,pxy);
+         //fPainter->DrawFillArea(n+1, pxy);//BACK
       } else {
-         gVirtualX->DrawFillArea(n,pxy);
+         //fPainter->DrawFillArea(n, pxy);//BACK
       }
       if (n >= kPXY) delete [] pxy;
    }
@@ -3284,7 +3317,7 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
    }
 
    // Paint the fill area with hatches
-   Int_t fillstyle = gVirtualX->GetFillStyle();
+   Int_t fillstyle = fPainter->GetFillStyle();//gVirtualX->GetFillStyle();
    if (gPad->IsBatch() && gVirtualPS) fillstyle = gVirtualPS->GetFillStyle();
    if (fillstyle >= 3100 && fillstyle < 4000) {
       PaintFillAreaHatches(nn, x, y, fillstyle);
@@ -3293,13 +3326,15 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
       return;
    }
 
-   TPoint *pxy;
+   //TPoint *pxy;
+   TPointD *pxy;
 
    // Create temporary array to store array in pixel coordinates
 
    if (!gPad->IsBatch()) {
       if (n <kPXY) pxy = &gPXY[0];
-      else         pxy = new TPoint[n+1];
+      else         pxy = new TPointD[n+1];
+      //else         pxy = new TPoint[n+1];
       // convert points from world to pixel coordinates
       for (i=0;i<n;i++) {
          pxy[i].fX = gPad->XtoPixel(x[i]);
@@ -3309,9 +3344,10 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
       if (fillstyle == 0) {
          pxy[n].fX = pxy[0].fX;
          pxy[n].fY = pxy[0].fY;
-         gVirtualX->DrawFillArea(n+1,pxy);
+         //fPainter->DrawFillArea(n+1, pxy);//BACK
+         fPainter->DrawFillArea(n, x, y);//BACK
       } else {
-         gVirtualX->DrawFillArea(n,pxy);
+         fPainter->DrawFillArea(n, x, y);//BACK
       }
       if (n >= kPXY) delete [] pxy;
    }
@@ -3378,9 +3414,9 @@ void TPad::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t Fill
 
    // Save the current line attributes
    if (!gPad->IsBatch()) {
-      lws = gVirtualX->GetLineWidth();
-      lss = gVirtualX->GetLineStyle();
-      lcs = gVirtualX->GetLineColor();
+      lws = fPainter->GetLineWidth();//gVirtualX->GetLineWidth();
+      lss = fPainter->GetLineStyle();//gVirtualX->GetLineStyle();
+      lcs = fPainter->GetLineColor();//gVirtualX->GetLineColor();
    } else {
       if (gVirtualPS) {
          lws = gVirtualPS->GetLineWidth();
@@ -3391,9 +3427,13 @@ void TPad::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t Fill
 
    // Change the current line attributes to draw the hatches
    if (!gPad->IsBatch()) {
+      fPainter->SetLineStyle(1);
+      fPainter->SetLineWidth(Short_t(lw));
+      fPainter->SetLineColor(fPainter->GetFillColor());
+      /*
       gVirtualX->SetLineStyle(1);
       gVirtualX->SetLineWidth(Short_t(lw));
-      gVirtualX->SetLineColor(gVirtualX->GetFillColor());
+      gVirtualX->SetLineColor(gVirtualX->GetFillColor());*/
    }
    if (gVirtualPS) {
       gVirtualPS->SetLineStyle(1);
@@ -3407,9 +3447,13 @@ void TPad::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t Fill
 
    // Restore the line attributes
    if (!gPad->IsBatch()) {
+      /*
       gVirtualX->SetLineStyle(lss);
       gVirtualX->SetLineWidth(lws);
-      gVirtualX->SetLineColor(lcs);
+      gVirtualX->SetLineColor(lcs);*/
+      fPainter->SetLineStyle(lss);
+      fPainter->SetLineWidth(lws);
+      fPainter->SetLineColor(lcs);
    }
    if (gVirtualPS) {
       gVirtualPS->SetLineStyle(lss);
@@ -3588,14 +3632,9 @@ void TPad::PaintLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
    } else {
       if (Clip(x,y,fX1,fY1,fX2,fY2) == 2) return;
    }
-   if (!gPad->IsBatch()) {
-      Int_t px1 = XtoPixel(x[0]);
-      Int_t px2 = XtoPixel(x[1]);
-      Int_t py1 = YtoPixel(y[0]);
-      Int_t py2 = YtoPixel(y[1]);
-
-      gVirtualX->DrawLine(px1, py1, px2, py2);
-   }
+   
+   if (!gPad->IsBatch())
+      fPainter->DrawLine(x[0], y[0], x[1], y[1]);
 
    if (gVirtualPS) {
       gVirtualPS->DrawPS(2, x, y);
@@ -3608,15 +3647,17 @@ void TPad::PaintLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
 //______________________________________________________________________________
 void TPad::PaintLineNDC(Double_t u1, Double_t v1,Double_t u2, Double_t v2)
 {
-   // Draw a line with coordinates in NDC.
-
    static Double_t xw[2], yw[2];
    if (!gPad->IsBatch()) {
       Int_t px1 = UtoPixel(u1);
       Int_t py1 = VtoPixel(v1);
       Int_t px2 = UtoPixel(u2);
       Int_t py2 = VtoPixel(v2);
-      gVirtualX->DrawLine(px1, py1, px2, py2);
+      //gVirtualX->DrawLine(px1, py1, px2, py2);
+      //fPainter->DrawLine(px1, py1, px2, py2);
+      const Double_t xRange = fX2 - fX1;
+      const Double_t yRange = fY2 - fY1;
+      fPainter->DrawLine(u1 * xRange + fX1, v1 * yRange + fY1, u2 * xRange + fX1, v2 * yRange + fY1);
    }
 
    if (gVirtualPS) {
@@ -3657,7 +3698,6 @@ void TPad::PaintLine3D(Double_t *p1, Double_t *p2)
 
    //take into account perspective view
    if (!fView) return;
-
    // convert from 3-D to 2-D pad coordinate system
    Double_t xpad[6];
    Double_t temp[3];
@@ -3676,17 +3716,14 @@ void TPad::PaintPolyLine(Int_t n, Float_t *x, Float_t *y, Option_t *)
    // Paint polyline in CurrentPad World coordinates.
 
    if (n < 2) return;
-   TPoint *pxy = &gPXY[0];
-   if (!gPad->IsBatch()) {
-      if (n >= kPXY) pxy = new TPoint[n+1]; if (!pxy) return;
-   }
+   
    Double_t xmin,xmax,ymin,ymax;
    if (TestBit(TGraph::kClipFrame)) {
       xmin = fUxmin; ymin = fUymin; xmax = fUxmax; ymax = fUymax;
    } else {
       xmin = fX1; ymin = fY1; xmax = fX2; ymax = fY2;
    }
-   Int_t i,j,i1=-1,np=1;
+   Int_t i, i1=-1,np=1;
    for (i=0; i<n-1; i++) {
       Double_t x1=x[i];
       Double_t y1=y[i];
@@ -3700,13 +3737,8 @@ void TPad::PaintPolyLine(Int_t n, Float_t *x, Float_t *y, Option_t *)
       np++;
       if (i1 < 0) i1 = i;
       if (iclip == 0 && i < n-2) continue;
-      if (!gPad->IsBatch()) {
-         for (j=0;j<np;j++) {
-            pxy[j].fX = XtoPixel(x[i1+j]);
-            pxy[j].fY = YtoPixel(y[i1+j]);
-         }
-         gVirtualX->DrawPolyLine(np,pxy);
-      }
+      if (!gPad->IsBatch())
+         fPainter->DrawPolyLine(np, x + i1, y + i1);
       if (gVirtualPS) {
          gVirtualPS->DrawPS(np, &x[i1], &y[i1]);
       }
@@ -3719,9 +3751,7 @@ void TPad::PaintPolyLine(Int_t n, Float_t *x, Float_t *y, Option_t *)
       i1 = -1;
       np = 1;
    }
-   if (!gPad->IsBatch()) {
-      if (n >= kPXY)   delete [] pxy;
-   }
+   
    Modified();
 }
 
@@ -3734,10 +3764,7 @@ void TPad::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option)
    //  If option[0] == 'C' no clipping
 
    if (n < 2) return;
-   TPoint *pxy = &gPXY[0];
-   if (!gPad->IsBatch()) {
-      if (n >= kPXY) pxy = new TPoint[n+1]; if (!pxy) return;
-   }
+   
    Double_t xmin,xmax,ymin,ymax;
    Bool_t mustClip = kTRUE;
    if (TestBit(TGraph::kClipFrame)) {
@@ -3746,8 +3773,10 @@ void TPad::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option)
       xmin = fX1; ymin = fY1; xmax = fX2; ymax = fY2;
       if (option && (option[0] == 'C')) mustClip = kFALSE;
    }
-   Int_t i,j,i1=-1,np=1,iclip=0;
-   for (i=0; i<n-1; i++) {
+   
+   Int_t i, i1=-1, np=1, iclip=0;
+   
+   for (i=0; i < n-1; i++) {
       Double_t x1=x[i];
       Double_t y1=y[i];
       Double_t x2=x[i+1];
@@ -3762,13 +3791,8 @@ void TPad::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option)
       np++;
       if (i1 < 0) i1 = i;
       if (iclip == 0 && i < n-2) continue;
-      if (!gPad->IsBatch()) {
-         for (j=0;j<np;j++) {
-            pxy[j].fX = XtoPixel(x[i1+j]);
-            pxy[j].fY = YtoPixel(y[i1+j]);
-         }
-         gVirtualX->DrawPolyLine(np,pxy);
-      }
+      if (!gPad->IsBatch())
+         fPainter->DrawPolyLine(np, x + i1, y + i1);
       if (gVirtualPS) {
          gVirtualPS->DrawPS(np, &x[i1], &y[i1]);
       }
@@ -3781,19 +3805,17 @@ void TPad::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option)
       i1 = -1;
       np = 1;
    }
-   if (!gPad->IsBatch()) {
-      if (n >= kPXY)   delete [] pxy;
-   }
+   
    Modified();
 }
-
 
 //______________________________________________________________________________
 void TPad::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *)
 {
    // Paint polyline in CurrentPad NDC coordinates.
 
-   TPoint *pxy;
+   //TPoint *pxy;
+   TPointD *pxy;
    Int_t i;
 
    // Create temporary array to store array in pixel coordinates
@@ -3801,14 +3823,15 @@ void TPad::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *)
 
    if (!gPad->IsBatch()) {
       if (n <kPXY) pxy = &gPXY[0];
-      else         pxy = new TPoint[n+1]; if (!pxy) return;
+      else         pxy = new TPointD[n+1]; if (!pxy) return;
+      //else         pxy = new TPoint[n+1]; if (!pxy) return;
       // convert points from world to pixel coordinates
       for (i=0; i<n; i++) {
          pxy[i].fX = UtoPixel(x[i]);
          pxy[i].fY = VtoPixel(y[i]);
       }
       // invoke the graphics subsystem
-      gVirtualX->DrawPolyLine(n,pxy);
+      //fPainter->DrawPolyLine(n, pxy);//BACK
       if (n >= kPXY)  delete [] pxy;
    }
 
@@ -3831,7 +3854,6 @@ void TPad::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *)
 void TPad::PaintPolyLine3D(Int_t n, Double_t *p)
 {
    // Paint 3-D polyline in the CurrentPad.
-
    if (!fView) return;
 
    // Loop on each individual line
@@ -3848,9 +3870,11 @@ void TPad::PaintPolyMarker(Int_t nn, Float_t *x, Float_t *y, Option_t *)
    // Paint polymarker in CurrentPad World coordinates.
 
    Int_t n = TMath::Abs(nn);
-   TPoint *pxy = &gPXY[0];
+//   TPoint *pxy = &gPXY[0];
+   TPointD *pxy = &gPXY[0];
    if (!gPad->IsBatch()) {
-      if (n >= kPXY) pxy = new TPoint[n+1]; if (!pxy) return;
+      //if (n >= kPXY) pxy = new TPoint[n+1]; if (!pxy) return;
+      if (n >= kPXY) pxy = new TPointD[n+1]; if (!pxy) return;
    }
    Double_t xmin,xmax,ymin,ymax;
    if (nn > 0 || TestBit(TGraph::kClipFrame)) {
@@ -3871,7 +3895,7 @@ void TPad::PaintPolyMarker(Int_t nn, Float_t *x, Float_t *y, Option_t *)
             pxy[j].fX = XtoPixel(x[i1+j]);
             pxy[j].fY = YtoPixel(y[i1+j]);
          }
-         gVirtualX->DrawPolyMarker(np,pxy);
+         //fPainter->DrawPolyMarker(np, pxy);//BACK
       }
       if (gVirtualPS) {
          gVirtualPS->DrawPolyMarker(np, &x[i1], &y[i1]);
@@ -3892,17 +3916,13 @@ void TPad::PaintPolyMarker(Int_t nn, Double_t *x, Double_t *y, Option_t *)
    // Paint polymarker in CurrentPad World coordinates.
 
    Int_t n = TMath::Abs(nn);
-   TPoint *pxy = &gPXY[0];
-   if (!gPad->IsBatch()) {
-      if (n >= kPXY) pxy = new TPoint[n+1]; if (!pxy) return;
-   }
    Double_t xmin,xmax,ymin,ymax;
    if (nn > 0 || TestBit(TGraph::kClipFrame)) {
       xmin = fUxmin; ymin = fUymin; xmax = fUxmax; ymax = fUymax;
    } else {
       xmin = fX1; ymin = fY1; xmax = fX2; ymax = fY2;
    }
-   Int_t i,j,i1=-1,np=0;
+   Int_t i,i1=-1,np=0;
    for (i=0; i<n; i++) {
       if (x[i] >= xmin && x[i] <= xmax && y[i] >= ymin && y[i] <= ymax) {
          np++;
@@ -3910,21 +3930,13 @@ void TPad::PaintPolyMarker(Int_t nn, Double_t *x, Double_t *y, Option_t *)
          if (i < n-1) continue;
       }
       if (np == 0) continue;
-      if (!gPad->IsBatch()) {
-         for (j=0;j<np;j++) {
-            pxy[j].fX = XtoPixel(x[i1+j]);
-            pxy[j].fY = YtoPixel(y[i1+j]);
-         }
-         gVirtualX->DrawPolyMarker(np,pxy);
-      }
+      if (!gPad->IsBatch())
+         fPainter->DrawPolyMarker(np, x + i1, y + i1);
       if (gVirtualPS) {
          gVirtualPS->DrawPolyMarker(np, &x[i1], &y[i1]);
       }
       i1 = -1;
       np = 0;
-   }
-   if (!gPad->IsBatch()) {
-      if (n >= kPXY)   delete [] pxy;
    }
    Modified();
 }
@@ -3940,8 +3952,9 @@ void TPad::PaintText(Double_t x, Double_t y, const char *text)
    if (!gPad->IsBatch()) {
       Int_t px = XtoPixel(x);
       Int_t py = YtoPixel(y);
-      Float_t angle = gVirtualX->GetTextAngle();
-      gVirtualX->DrawText(px, py, angle, gVirtualX->GetTextMagnitude(), text, TVirtualX::kClear);
+      Float_t angle = fPainter->GetTextAngle();//gVirtualX->GetTextAngle();
+      //gVirtualX->DrawText(px, py, angle, gVirtualX->GetTextMagnitude(), text, TVirtualX::kClear);
+      fPainter->DrawText(x, y, angle, fPainter->GetTextMagnitude(), text, TVirtualPadPainter::kClear);
    }
 
    if (gVirtualPS) gVirtualPS->Text(x, y, text);
@@ -3958,9 +3971,10 @@ void TPad::PaintTextNDC(Double_t u, Double_t v, const char *text)
    if (!gPad->IsBatch()) {
       Int_t px = UtoPixel(u);
       Int_t py = VtoPixel(v);
-      Float_t angle = gVirtualX->GetTextAngle();
+      Float_t angle = fPainter->GetTextAngle();//gVirtualX->GetTextAngle();
 
-      gVirtualX->DrawText(px, py, angle, gVirtualX->GetTextMagnitude(), text, TVirtualX::kClear);
+      //gVirtualX->DrawText(px, py, angle, gVirtualX->GetTextMagnitude(), text, TVirtualX::kClear);
+      fPainter->DrawText(px, py, angle, fPainter->GetTextMagnitude(), text, TVirtualPadPainter::kClear);
    }
 
    if (gVirtualPS) {
@@ -4067,7 +4081,6 @@ TPad *TPad::Pick(Int_t px, Int_t py, TObjLink *&pickobj)
       Double_t dx = 0.05*(fUxmax-fUxmin);
       if ((x > fUxmin + dx) && (x < fUxmax-dx)) {
 
-         //if (fViewer3D && fCanvas->UseGL() && fGLDevice != -1) {
          if (fEmbeddedGL) {
             //No 2d stuff was selected, but we have gl-viewer. Let it select an object in
             //scene (or select itself). In any case it'll internally call
@@ -4260,6 +4273,9 @@ void TPad::Print(const char *filenam, Option_t *option)
    //
    // The delay between each frame must be specified in each Print() statement.
 
+   if (fCanvas->UseGL())
+      return;
+   
    TString psname, fs1, fs2;
    char *filename;
 
@@ -4305,6 +4321,7 @@ void TPad::Print(const char *filenam, Option_t *option)
    }
    if (!gPad->IsBatch() && fCanvas)
       gVirtualX->SelectWindow(GetCanvasID());
+      //fPainter->SelectDrawable(GetCanvasID());
 
    // Save pad/canvas in alternative formats
    TImage::EImageFileTypes gtype = TImage::kUnknown;
@@ -4442,6 +4459,7 @@ void TPad::Print(const char *filenam, Option_t *option)
 
    // in case we read directly from a Root file and the canvas
    // is not on the screen, set batch mode
+   
    Bool_t mustOpen  = kTRUE;
    Bool_t mustClose = kTRUE;
    char *copen=0, *cclose=0, *copenb=0, *ccloseb=0;
@@ -4474,7 +4492,7 @@ void TPad::Print(const char *filenam, Option_t *option)
    TPad *padsav = (TPad*)gPad;
    cd();
    TVirtualPS *psave = gVirtualPS;
-
+   
    if (!gVirtualPS || mustOpen) {
       // Plugin Postscript driver
       TPluginHandler *h;
@@ -4506,6 +4524,7 @@ void TPad::Print(const char *filenam, Option_t *option)
       }
       if (noScreen) GetCanvas()->SetBatch(kFALSE);
       if (!gSystem->AccessPathName(psname)) Info("Print", "%s file %s has been created", opt, psname.Data());
+      
       if (mustClose) {
          gROOT->GetListOfSpecials()->Remove(gVirtualPS);
          delete gVirtualPS;
@@ -4563,6 +4582,8 @@ void TPad::Range(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
    // compute pad conversion coefficients
    ResizePad();
 
+   fPainter->InvalidateCS();
+   
    // emit signal
    RangeChanged();
 }
@@ -4821,12 +4842,15 @@ void TPad::ResizePad(Option_t *option)
          ((TPad*)obj)->ResizePad(option);
    }
 
+   
    // Reset all current sizes
    if (gPad->IsBatch())
       fPixmapID = 0;
    else {
-      gVirtualX->SetLineWidth(-1);
-      gVirtualX->SetTextSize(-1);
+      fPainter->SetLineWidth(-1);
+      fPainter->SetTextSize(-1);
+      //gVirtualX->SetLineWidth(-1);
+      //gVirtualX->SetTextSize(-1);
 
       // create or re-create off-screen pixmap
       if (fPixmapID) {
@@ -4848,20 +4872,8 @@ void TPad::ResizePad(Option_t *option)
             h = 10;
          }
          if (fPixmapID == -1) {      // this case is handled via the ctor
-            fPixmapID = gVirtualX->OpenPixmap(w, h);
+            fPixmapID = fPainter->CreateDrawable(w, h);//gVirtualX->OpenPixmap(w, h);
          } else {
-            if (fGLDevice != -1) {
-               Int_t borderSize = fBorderSize > 0 ? fBorderSize : 2;
-               Int_t w2 = w - 2 * borderSize;
-               Int_t h2 = h - 2 * borderSize;
-               Int_t px = 0, py = 0;
-               XYtoAbsPixel(fX1, fY2, px, py);
-               if (w2 < 0) w2 = 1;//not to get HUGE pixmap :)
-               if (h2 < 0) h2 = 1;//not to get HUGE pixmap :)
-               if (gGLManager->ResizeOffScreenDevice(fGLDevice, px + borderSize, py + borderSize, w2, h2))
-                  Modified(kTRUE);
-            }
-
             if (gVirtualX->ResizePixmap(fPixmapID, w, h)) {
                Modified(kTRUE);
             }
@@ -5884,13 +5896,6 @@ TVirtualViewer3D *TPad::GetViewer3D(Option_t *type)
 
    Bool_t createdExternal = kFALSE;
 
-   if (fGLDevice != -1) {
-      gGLManager->DeleteGLContext(fGLDevice);
-      fCanvas->SetSelected(this);
-      fGLDevice = -1;
-      fCopyGLDevice = kFALSE;
-      fEmbeddedGL = kFALSE;
-   }
    // External viewers need to be created via plugin manager via interface...
    if (!strstr(type,"pad")) {
       newViewer = TVirtualViewer3D::Viewer3D(this,type);
@@ -5950,21 +5955,6 @@ void TPad::ReleaseViewer3D(Option_t * /*type*/ )
 Int_t TPad::GetGLDevice()
 {
    // Get GL device.
-
-   if (fGLDevice == -1 && gGLManager && fCanvas->UseGL()) {
-      Int_t borderSize = fBorderSize > 0 ? fBorderSize : 2;
-      UInt_t w = TMath::Abs(XtoPixel(fX2) - XtoPixel(fX1)) - 2 * borderSize;
-      UInt_t h = TMath::Abs(YtoPixel(fY2) - YtoPixel(fY1)) - 2 * borderSize;
-      Int_t px = 0, py = 0;
-      XYtoAbsPixel(fX1, fY2, px, py);
-      px += borderSize, py += borderSize;
-      fGLDevice = gGLManager->CreateGLContext(fCanvas->GetCanvasID());
-      if (fGLDevice != -1 && !gGLManager->AttachOffScreenDevice(fGLDevice, px, py, w, h)) {
-         gGLManager->DeleteGLContext(fGLDevice);
-         fGLDevice = -1;
-      }
-   }
-
    return fGLDevice;
 }
 
@@ -5984,3 +5974,5 @@ void TPad::RecordLatex(const TObject *obj)
    Emit("RecordLatex(const TObject*)", (Long_t)obj);
 }
 
+//______________________________________________________________________________
+TVirtualPadPainter *TPad::GetPadPainter() const {return fPainter;}

@@ -31,9 +31,9 @@
 #include "TColor.h"
 #include "TVirtualPadEditor.h"
 #include "TVirtualViewer3D.h"
+#include "TPadPainter.h"
 #include "TVirtualGL.h"
 #include "TObjectSpy.h"
-
 
 class TCanvasInit {
 public:
@@ -126,7 +126,8 @@ TCanvas::TCanvas(Bool_t build) : TPad()
 {
    // Canvas default constructor.
 
-   fUseGL = kFALSE;
+   fUseGL = gStyle->GetCanvasPreferGL();
+
    if (!build || TClass::IsCallingNew()) {
       Constructor();
    } else {
@@ -267,6 +268,8 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t form)
       fCh           = fWindowHeight;
       fCanvasImp    = gBatchGuiFactory->CreateCanvasImp(this, name, fCw, fCh);
       fBatch        = kTRUE;
+      
+      fPainter = new TPadPainter;
    } else {                  //normal mode with a screen window
       Float_t cx = gStyle->GetScreenFactor();
       if (form < 1 || form > 5) form = 1;
@@ -349,6 +352,8 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t ww, Int_t w
       fCh           = wh;
       fCanvasImp    = gBatchGuiFactory->CreateCanvasImp(this, name, fCw, fCh);
       fBatch        = kTRUE;
+      
+      fPainter = new TPadPainter;
    } else {
       Float_t cx = gStyle->GetScreenFactor();
       fCanvasImp = gGuiFactory->CreateCanvasImp(this, name, UInt_t(cx*ww), UInt_t(cx*wh));
@@ -423,6 +428,8 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t wtopx,
       fCh           = wh;
       fCanvasImp    = gBatchGuiFactory->CreateCanvasImp(this, name, fCw, fCh);
       fBatch        = kTRUE;
+      
+      fPainter = new TPadPainter;
    } else {                   //normal mode with a screen window
       Float_t cx = gStyle->GetScreenFactor();
       fCanvasImp = gGuiFactory->CreateCanvasImp(this, name, Int_t(cx*wtopx), Int_t(cx*wtopy), UInt_t(cx*ww), UInt_t(cx*wh));
@@ -500,12 +507,12 @@ void TCanvas::Build()
 
    if (!IsBatch()) {    //normal mode with a screen window
       // Set default physical canvas attributes
+      //Should be done via gVirtualX, but can be done via fPainter too. No changes here.
       gVirtualX->SelectWindow(fCanvasID);
       gVirtualX->SetFillColor(1);         //Set color index for fill area
       gVirtualX->SetLineColor(1);         //Set color index for lines
       gVirtualX->SetMarkerColor(1);       //Set color index for markers
       gVirtualX->SetTextColor(1);         //Set color index for text
-
       // Clear workstation
       gVirtualX->ClearWindow();
 
@@ -546,7 +553,8 @@ void TCanvas::Build()
       fBorderMode=gStyle->GetCanvasBorderMode(); // do not call SetBorderMode (function redefined in TCanvas)
       SetPad(0, 0, 1, 1);
       Range(0, 0, 1, 1);   //pad range is set by default to [0,1] in x and y
-      gVirtualX->SelectPixmap(fPixmapID);    //pixmap must be selected
+      
+      fPainter->SelectDrawable(fPixmapID);//gVirtualX->SelectPixmap(fPixmapID);    //pixmap must be selected
       PaintBorder(GetFillColor(), kTRUE);    //paint background
    }
 
@@ -598,13 +606,15 @@ void TCanvas::Destructor()
       arr[1] = this;
       if ((*gThreadXAR)("CDEL", 2, arr, 0)) return;
    }
-
+   
    if (!TestBit(kNotDeleted)) return;
 
    if (fContextMenu) { delete fContextMenu; fContextMenu = 0; }
    if (!gPad) return;
 
    Close();
+   
+   delete fPainter;
 }
 
 
@@ -622,7 +632,7 @@ TVirtualPad *TCanvas::cd(Int_t subpadnumber)
    // in case doublebuffer is off, draw directly onto display window
    if (!IsBatch()) {
       if (!fDoubleBuffer)
-         gVirtualX->SelectWindow(fCanvasID);
+         gVirtualX->SelectWindow(fCanvasID);//Ok, does not matter for glpad.
    }
    return gPad;
 }
@@ -978,7 +988,6 @@ void TCanvas::ExecuteEvent(Int_t event, Int_t px, Int_t py)
 void TCanvas::FeedbackMode(Bool_t set)
 {
    // Turn rubberband feedback mode on or off.
-
    if (set) {
       SetDoubleBuffer(0);             // turn off double buffer mode
       gVirtualX->SetDrawMode(TVirtualX::kInvert);  // set the drawing mode to XOR mode
@@ -999,10 +1008,19 @@ void TCanvas::Flush()
    TPad *padsav = (TPad*)gPad;
    cd();
    if (!IsBatch()) {
-      gVirtualX->SelectWindow(fCanvasID);
-      gPad = padsav; //don't do cd() because than also the pixmap is changed
-      CopyPixmaps();
-      gVirtualX->UpdateWindow(1);
+      if (!UseGL()) {
+         gVirtualX->SelectWindow(fCanvasID);
+         gPad = padsav; //don't do cd() because than also the pixmap is changed
+         CopyPixmaps();
+         gVirtualX->UpdateWindow(1);
+      } else {
+         gGLManager->MakeCurrent(fGLDevice);
+         fPainter->InitPainter();
+         Paint();
+         if (padsav && padsav->GetCanvas() == this) 
+            padsav->HighLight(padsav->GetHighLightColor());
+         gGLManager->Flush(fGLDevice);
+      }
    }
    if (padsav) padsav->cd();
 }
@@ -1207,7 +1225,6 @@ void TCanvas::HandleInput(EEventType event, Int_t px, Int_t py)
 
       if (pad->GetGLDevice() != -1)
          fSelected->ExecuteEvent(event, px, py);
-
       break;   // don't want fPadSave->cd() to be executed at the end
 
    case kButton2Motion:
@@ -1774,7 +1791,6 @@ void TCanvas::SetCursor(ECursor cursor)
 void TCanvas::SetDoubleBuffer(Int_t mode)
 {
    // Set Double Buffer On/Off.
-
    if (IsBatch()) return;
    fDoubleBuffer = mode;
    gVirtualX->SetDoubleBuffer(fCanvasID, mode);
@@ -1782,9 +1798,9 @@ void TCanvas::SetDoubleBuffer(Int_t mode)
    // depending of the buffer mode set the drawing window to either
    // the canvas pixmap or to the canvas on-screen window
    if (fDoubleBuffer) {
-      if (fPixmapID != -1) gVirtualX->SelectWindow(fPixmapID);
+      if (fPixmapID != -1) fPainter->SelectDrawable(fPixmapID);
    } else
-      if (fCanvasID != -1) gVirtualX->SelectWindow(fCanvasID);
+      if (fCanvasID != -1) fPainter->SelectDrawable(fCanvasID);
 }
 
 
@@ -2046,7 +2062,14 @@ void TCanvas::Update()
 
    if (!IsBatch()) FeedbackMode(kFALSE);      // Goto double buffer mode
 
-   PaintModified();           // Repaint all modified pad's
+   /*if (UseGL()) {
+      gGLManager->MakeCurrent(fGLDevice);
+      fPainter->InitPainter();
+      //Paint();
+      //gGLManager->Flush(fGLDevice);
+   } else*/
+   if (!UseGL())
+      PaintModified();           // Repaint all modified pad's
 
    Flush();                   // Copy all pad pixmaps to the screen
 

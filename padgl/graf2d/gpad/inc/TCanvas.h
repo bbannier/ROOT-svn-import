@@ -47,6 +47,7 @@ class TBrowser;
 
 class TCanvas : public TPad {
 
+friend class TRootCanvas;
 friend class TCanvasImp;
 friend class TThread;
 friend class TInterpreter;
