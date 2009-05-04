@@ -948,84 +948,205 @@ int Cint::Internal::G__get_tagnum(const ::Reflex::Scope in)
    // Note: The typenum is tried first, then tagnum, then type.
    // We should NOT consider type q and a as pointer (ever).
 
-   std::string name;
-   switch (type) {
-      /****************************************************
-       * Automatic variable and macro
-       *   p : macro int
-       *   P : macro double
-       *   o : auto int
-       *   O : auto double
-       *   a : switchStart (but also sometimes pointer to member function)
-       *   z : switchDefault
-       *   Z : codeBreak (continue, break, goto)
-       ****************************************************/
-   //case 'a': return ::Reflex::Type::ByName("switchStart$");
-   case 'z': return ::Reflex::Type::ByName("switchDefault$");
-   case 'Z': return ::Reflex::Type::ByName("codeBreak$");
-   case 'p': return ::Reflex::Type::ByName("macroInt$");
-   case 'j': return ::Reflex::Type::ByName("macro$");
-   case 'P': return ::Reflex::Type::ByName("macroDouble$");
-   case 'o': return ::Reflex::Type::ByName("autoInt$");
-   case 'O': return ::Reflex::Type::ByName("autoDouble$");
-   case 'T': return ::Reflex::Type::ByName("macroChar*$");
-   case '\001': return ::Reflex::Type::ByName("blockBreakContinueGoto$");
-   case G__DEFAULT_FUNCCALL: return ::Reflex::Type::ByName("defaultFunccall$");
+   /****************************************************
+    * Automatic variable and macro
+    *   p : macro int
+    *   P : macro double
+    *   o : auto int
+    *   O : auto double
+    *   a : switchStart (but also sometimes pointer to member function)
+    *   z : switchDefault
+    *   Z : codeBreak (continue, break, goto)
+    ****************************************************/
+   static Reflex::Type typeCache[] = {
+      Reflex::PointerToMemberBuilder(Reflex::Type(), Reflex::Scope()), // 'a'
+      Reflex::Type::ByName("unsigned char"), // 'b'
+      Reflex::Type::ByName("char"), // 'c'
+      Reflex::Type::ByName("double"), // 'd'
+      Reflex::Type::ByName("FILE"), // 'e'
+      Reflex::Type::ByName("float"), // 'f'
+      Reflex::Type::ByName("bool"), // 'g'
+      Reflex::Type::ByName("unsigned int"), // 'h'
+      Reflex::Type::ByName("int"), // 'i'
+      Reflex::Type(), // 'j' - macro$""
+      Reflex::Type::ByName("unsigned long"), // 'k'
+      Reflex::Type::ByName("long"), // 'l'
+      Reflex::Type::ByName("unsigned long long"), // 'm'
+      Reflex::Type::ByName("long long"), // 'n'
+      Reflex::Type(), // 'o' - "autoInt$"
+      Reflex::Type(), // 'p' - "macroInt$"
+      Reflex::Type::ByName("long double"), // 'q'
+      Reflex::Type::ByName("unsigned short"), // 'r'
+      Reflex::Type::ByName("short"), // 's'
+      Reflex::Type(), // 't' - "#define"
+      Reflex::Type(), // 'u' - "enum"
+      Reflex::Type(), // 'v'
+      Reflex::Type(), // 'w'
+      Reflex::Type(), // 'x'
+      Reflex::Type::ByName("void"), // 'y'
+      Reflex::Type(), // 'z' - "switchDefault$"
+      Reflex::Type(), // '\0'
+      Reflex::Type(), // \001 - "blockBreakContinueGoto$"
+      Reflex::Type(), // G__DEFAULT_FUNCCALL = "defaultFunccall$"
+#ifndef G__OLDIMPLEMENTATION2191
+      Reflex::Type::ByName("void") // '1'
+#endif
+   };
+
+   static std::vector<Reflex::Type> typePCache;
+   static std::vector<Reflex::Type> typeCPCache;
+   if (typePCache.empty()) {
+      const size_t numtypes = sizeof(typeCache)/sizeof(Reflex::Type);
+      typePCache.resize(numtypes);
+      typeCPCache.resize(numtypes);
+      for (size_t i = 0; i < numtypes; ++i) {
+         switch (i + 'A') {
+         case 'Z': 
+            typePCache[i] = Reflex::Type(); // "codeBreak$"
+            typeCPCache[i] = typePCache[i];
+            break;
+         case 'P':
+            typePCache[i] = Reflex::Type(); // "macroDouble$"
+            typeCPCache[i] = typePCache[i];
+            break;
+         case 'O':
+            typePCache[i] = Reflex::Type(); // "autoDouble$"
+            typeCPCache[i] = typePCache[i];
+            break;
+         case 'T':
+            typePCache[i] = Reflex::Type(); // "macroChar*$"
+            typeCPCache[i] = typePCache[i];
+            break;
+         case 'A':
+            typePCache[i] = Reflex::Type();
+            typeCPCache[i] = typePCache[i];
+            break;
+         default:
+            if (typeCache[i]) {
+               typePCache[i] = Reflex::PointerBuilder(typeCache[i]);
+               typeCPCache[i] = Reflex::Type(typeCache[i], Reflex::CONST,
+                                             Reflex::Type::APPEND);
+               typeCPCache[i] = Reflex::PointerBuilder(typeCPCache[i]);
+            }
+            break;
+         }
+      }
    }
 
-   switch(tolower(type)) {
-      case 'b': name = "unsigned char"; break;
-      case 'c': name = "char"; break;
-      case 'r': name = "unsigned short"; break;
-      case 's': name = "short"; break;
-      case 'h': name = "unsigned int"; break;
-      case 'i': name = "int"; break;
-      case 'k': name = "unsigned long"; break;
-      case 'l': name = "long"; break;
-      case 'g': name = "bool"; break;
-      case 'n': name = "long long"; break;
-      case 'm': name = "unsigned long long"; break;
-      case 'q': name = "long double"; break;
-      case 'f': name = "float"; break;
-      case 'd': name = "double"; break;
+   Reflex::Type raw;
+   if (type >= 'a' && type <= 'z' ) {
+      raw = typeCache[type - 'a'];
+      if (!raw) {
+         // special macro, not yet set up
+         switch (type) {
+         case 'j':
+            raw = typeCache['j' - 'a'] = Reflex::Type::ByName("macro$");
+            break;
+         case 'o':
+            raw = typeCache['o' - 'a'] = Reflex::Type::ByName("autoInt$");
+            break;
+         case 'p':
+            raw = typeCache['p' - 'a'] = Reflex::Type::ByName("macroInt$");
+            break;
+         case 't':
+            raw = typeCache['t' - 'a'] = Reflex::Type::ByName("#define");
+            break;
+         case 'u':
+            raw = typeCache['u' - 'a'] = Reflex::Type::ByName("enum");
+            break;
+         case 'z':
+            raw = typeCache['z' - 'a'] = Reflex::Type::ByName("switchDefault$");
+            break;
+         case 'e':
+            raw = typeCache['e' - 'a'] = Reflex::Type::ByName("FILE");
+            break;            
+         }
+      }
+      if (isconst & G__CONSTVAR) {
+         raw = Reflex::Type(raw, Reflex::CONST, Reflex::Type::APPEND);
+      }      
+   } else if (type >= 'A' && type <= 'Z') {
+      if (type=='E') {
+         if (createpointer) {
+            if (isconst & G__CONSTVAR) {
+               raw = typeCPCache['E' - 'A'];            
+               if (!raw) {
+                  raw = typeCPCache['E' - 'A'] = Reflex::PointerBuilder(Reflex::Type(Reflex::Type::ByName("FILE"), Reflex::CONST, Reflex::Type::APPEND));
+               }
+            } else {
+               raw = typePCache['E' - 'A'];
+               if (!raw) {
+                  raw = typePCache['E' - 'A'] = Reflex::PointerBuilder(Reflex::Type::ByName("FILE"));
+               }
+            }
+         } else {
+            raw = typeCache['E' - 'A'];
+            if (!raw) {
+               raw = typeCache['E' - 'A'] = Reflex::Type::ByName("FILE");
+            }           
+            if (isconst & G__CONSTVAR) {
+               raw = Reflex::Type(raw, Reflex::CONST, Reflex::Type::APPEND);
+            }
+         }
+         return raw;
+      } else if (type == 'Z' || type == 'P' || type == 'O' || type == 'T' || type == 'A') {
+         raw = typePCache[type - 'A'];
+         if (!raw) {
+            // special macro, not yet set up
+            switch (type) {
+            case 'Z':
+               raw = typePCache['Z' - 'A'] = Reflex::Type::ByName("codeBreak$");
+               break;
+            case 'P':
+               raw = typePCache['P' - 'A'] = Reflex::Type::ByName("macroDouble$");
+               break;
+            case 'O':
+               raw = typePCache['O' - 'A'] = Reflex::Type::ByName("autoDouble$");
+               break;
+            case 'T':
+               raw = typePCache['T' - 'A'] = Reflex::Type::ByName("macroChar*$");
+               break;
+            }
+         }
+         return raw;
+      }
+      if (createpointer) {
+         if (isconst & G__CONSTVAR) { 
+            raw = typeCPCache[type - 'A'];
+         } else {
+            raw = typePCache[type - 'A'];
+         }
+      } else {
+         raw = typeCache[type - 'A'];
+         if (isconst & G__CONSTVAR) {
+            raw = Reflex::Type(raw, Reflex::CONST, Reflex::Type::APPEND);
+         }
+      }
+   } else {
+      switch (type) {
+      case '\0':
+         return typeCache['z' - 'a' + 1];
+      case '\001':
+         raw = typeCache['z' - 'a' + 2];
+         if (!raw) {
+            return typeCache['z' - 'a' + 2] = Reflex::Type::ByName("blockBreakContinueGoto$");
+         }
+         return raw;
+      case G__DEFAULT_FUNCCALL:
+         raw = typeCache['z' - 'a' + 3];
+         if (!raw) {
+            return typeCache['z' - 'a' + 3] = Reflex::Type::ByName("defaultFunccall$");
+         }
+         return raw;
 #ifndef G__OLDIMPLEMENTATION2191
       case '1':
-#else
-      case 'q':
+         return typeCache['z' - 'a' + 4];
 #endif
-      case 'y': name = "void"; break;
-      case 'e': name = "FILE"; break;
-      case 'u': name = "enum";
-         break;
-      case 't':
-#ifndef G__OLDIMPLEMENTATION2191
-      case 'j':
-#else
-      case 'm':
-#endif
-      case 'p': name = "#define"; break;
-      case 'o': name[0]='\0'; /* sprintf(name,""); */ break;
-      case 'a':
-         /* G__ASSERT(isupper(type)); */
-         //name = "G__p2memfunc";
-         //type=tolower(type);
-         return Reflex::PointerToMemberBuilder(Reflex::Dummy::Type(), Reflex::Dummy::Scope());
-         break;
-      default:  name = "(unknown)"; break;
+      default: break;
+      }
    }
 
-   if (createpointer & !isupper(type)) {
-      createpointer = 0;
-   }
-   Reflex::Type raw( ::Reflex::Type::ByName(name) );
-   if (isconst & G__CONSTVAR) { 
-      raw = Reflex::Type(raw,Reflex::CONST,Reflex::Type::APPEND);
-   }
-   if (createpointer /*&& (type != 'q') && (type != 'a')*/) {
-      return ::Reflex::PointerBuilder(raw);
-   } else {
-      return raw;
-   }
+   return raw;
 }
 
 #if 0
@@ -2006,9 +2127,9 @@ void Cint::Internal::G__BuilderInfo::AddParameter(int /* ifn */, int type, int n
       !m // not previous declared
    ) {
       struct G__inheritance* baseclass = G__struct.baseclass[G__get_tagnum(G__tagdefining)];
-      for (int basen = 0; basen < baseclass->basen; ++basen) {
-         G__incsetup_memfunc(baseclass->basetagnum[basen]);
-         ::Reflex::Scope scope(G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]));
+      for (size_t basen = 0; basen < baseclass->vec.size(); ++basen) {
+         G__incsetup_memfunc(baseclass->vec[basen].basetagnum);
+         ::Reflex::Scope scope(G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum));
          //fprintf(stderr, "G__BuilderInfo::Build: search base class '%s' for function member '%s' type '%s'\n", scope.Name(Reflex::SCOPED).c_str(), name.c_str(), modftype.Name(Reflex::SCOPED | Reflex::QUALIFIED).c_str());
          ::Reflex::Member base_m = scope.FunctionMemberByNameAndSignature(name, modftype, modifiers_mask);
          //if (base_m) {

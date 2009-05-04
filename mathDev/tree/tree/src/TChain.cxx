@@ -82,6 +82,8 @@ TChain::TChain()
    fTreeOffset[0]  = 0;
    gDirectory->Remove(this);
    gROOT->GetListOfSpecials()->Add(this);
+   fFile = 0;
+   fDirectory = 0;
 
    // Reset PROOF-related bits
    ResetBit(kProofUptodate);
@@ -148,6 +150,8 @@ TChain::TChain(const char* name, const char* title)
    fTreeOffset[0]  = 0;
    gDirectory->Remove(this);
    gROOT->GetListOfSpecials()->Add(this);
+   fFile = 0;
+   fDirectory = 0;
 
    // Reset PROOF-related bits
    ResetBit(kProofUptodate);
@@ -1857,7 +1861,7 @@ Long64_t TChain::Merge(TFile* file, Int_t basketsize, Option_t* option)
                }
             }
          }
-         TTreeCloner cloner(GetTree(), newTree, option);
+         TTreeCloner cloner(GetTree(), newTree, option, TTreeCloner::kNoWarnings);
          if (cloner.IsValid()) {
             newTree->SetEntries(newTree->GetEntries() + GetTree()->GetEntries());
             cloner.Exec();
@@ -1865,10 +1869,25 @@ Long64_t TChain::Merge(TFile* file, Int_t basketsize, Option_t* option)
                newTree->GetTreeIndex()->Append(GetTree()->GetTreeIndex(),kTRUE);
             }
          } else {
-            if (GetFile()) {
-               Warning("Merge", "Skipped file %s\n", GetFile()->GetName());
+            if (cloner.NeedConversion()) {
+               TTree *localtree = GetTree();
+               Long64_t tentries = localtree->GetEntries();
+               for (Long64_t ii = 0; ii < tentries; ii++) {
+                  if (localtree->GetEntry(ii) <= 0) {
+                     break;
+                  }
+                  newTree->Fill();
+               }
+               if (newTree->GetTreeIndex()) {
+                  newTree->GetTreeIndex()->Append(GetTree()->GetTreeIndex(), kTRUE);
+               }
             } else {
-               Warning("Merge", "Skipped file number %d\n", fTreeNumber);
+               Warning("Merge",cloner.GetWarning());
+               if (GetFile()) {
+                  Warning("Merge", "Skipped file %s\n", GetFile()->GetName());
+               } else {
+                  Warning("Merge", "Skipped file number %d\n", fTreeNumber);
+               }
             }
          }
       }

@@ -4650,6 +4650,11 @@ void TPad::RedrawAxis(Option_t *option)
          if (g) g->GetHistogram()->DrawCopy("sameaxis");
          return;
       }
+      if (obj->InheritsFrom("THStack")) {
+         THStack *hs = (THStack*)obj;
+         if (hs) hs->GetHistogram()->DrawCopy("sameaxis");
+         return;
+      }
    }
 
    if (padsav) padsav->cd();

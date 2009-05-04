@@ -102,7 +102,7 @@ static void G__class_2nd_decl(const ::Reflex::Member& var)
    G__decl = 0;
    G__StrBuf temp_sb(G__ONELINE);
    char *temp = temp_sb;
-   sprintf(temp, "~%s()", tagnum.Name().c_str());
+   sprintf(temp, "~%s()", tagnum.Name_c_str());
    if (G__dispsource) {
       G__fprinterr(G__serr, "\n!!!Calling destructor 0x%lx.%s for declaration of %s", G__store_struct_offset, temp, var.Name(::Reflex::SCOPED).c_str());
    }
@@ -187,7 +187,7 @@ static void G__class_2nd_decl_i(const ::Reflex::Member& var)
    G__inc_cp_asm(1, 0);
    G__StrBuf temp_sb(G__ONELINE);
    char *temp = temp_sb;
-   sprintf(temp, "~%s()", G__tagnum.Name().c_str());
+   sprintf(temp, "~%s()", G__tagnum.Name_c_str());
    if (G__get_varlabel(var.TypeOf(), 1) /* number of elements */ || G__get_paran(var)) {
       // array
       int size = G__struct.size[G__get_tagnum(G__tagnum)];
@@ -262,7 +262,7 @@ static void G__class_2nd_decl_c(const ::Reflex::Member& var)
    G__inc_cp_asm(1, 0);
    G__StrBuf temp_sb(G__ONELINE);
    char *temp = temp_sb;
-   sprintf(temp, "~%s()", G__tagnum.Name().c_str());
+   sprintf(temp, "~%s()", G__tagnum.Name_c_str());
    int known = 0;
    G__getfunction(temp, &known, G__TRYDESTRUCTOR);
    G__redecl(var);
@@ -1043,7 +1043,7 @@ G__value Cint::Internal::G__letvariable(const char* item, G__value expression, c
                int local_done = 0;
                G__store_struct_offset = G__globalvarpointer;
                G__globalvarpointer = G__PVOID;
-               std::sprintf(protect_temp, "~%s()", G__tagnum.Name().c_str());
+               std::sprintf(protect_temp, "~%s()", G__tagnum.Name_c_str());
                G__fprinterr(G__serr, ". %s called\n", protect_temp);
                G__getfunction(protect_temp, &local_done, G__TRYDESTRUCTOR);
                G__store_struct_offset = protect_struct_offset;
@@ -1962,7 +1962,7 @@ G__value Cint::Internal::G__letstructmem(int store_var_type, const char* /*varna
       (G__get_type(G__value_typenum(result)) == 'u') &&
       (objptr == 2) &&
       /**/
-      !strncmp(G__value_typenum(result).RawType().Name().c_str(), "auto_ptr<", 9)
+      !strncmp(G__value_typenum(result).RawType().Name_c_str(), "auto_ptr<", 9)
    ) {
       int knownx = 0;
       char comm[20];
@@ -5808,7 +5808,7 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
                (
                   !variable.DeclaringScope().IsTopScope() &&
                   variable.DeclaringScope().IsNamespace() &&
-                  (variable.DeclaringScope().Name()[variable.DeclaringScope().Name().size()-1] != '$') // not function local scope.
+                  (variable.DeclaringScope().Name_c_str()[strlen(variable.DeclaringScope().Name_c_str())-1] != '$') // not function local scope.
                )
             )
          )
@@ -5913,7 +5913,7 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
       //
       //  Note: We return here if we are not a pointer variable.
       int type_code = G__get_type(variable.TypeOf());
-      if (variable.Name()[0] == '$') { // Hack ROOT specials, we really need to give these guys their own type.
+      if (variable.Name_c_str()[0] == '$') { // Hack ROOT specials, we really need to give these guys their own type.
          type_code = 'Z';
       }
       switch (type_code) {
@@ -6400,11 +6400,11 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
             // root special
             if (G__GetSpecialObject) {
                store_var_type = G__var_type;
-               if (variable.Name()[0] == '$') { // FIXME: I assume the name is not the empty string!
-                  result = (*G__GetSpecialObject)(const_cast<char*>(variable.Name().c_str() + 1), (void**)G__get_offset(variable), (void**)(G__get_offset(variable) + G__LONGALLOC));
+               if (variable.Name_c_str()[0] == '$') { // FIXME: I assume the name is not the empty string!
+                  result = (*G__GetSpecialObject)(const_cast<char*>(variable.Name_c_str() + 1), (void**)G__get_offset(variable), (void**)(G__get_offset(variable) + G__LONGALLOC));
                }
                else {
-                  result = (*G__GetSpecialObject)(const_cast<char*>(variable.Name().c_str()), (void**)G__get_offset(variable), (void**)(G__get_offset(variable) + G__LONGALLOC));
+                  result = (*G__GetSpecialObject)(const_cast<char*>(variable.Name_c_str()), (void**)G__get_offset(variable), (void**)(G__get_offset(variable) + G__LONGALLOC));
                }
                // G__var_type was stored in store_var_type just before the
                // call to G__GetSpecialObject which might have recursive
@@ -6416,7 +6416,7 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
                }
                else { // We got something, change the result type.
                   Reflex::Scope local_varscope = variable.DeclaringScope();
-                  std::string name = variable.Name();
+                  std::string name = variable.Name();  // Need to cache the name in a string (the storage might go away with the call to RemoveDataMember)
                   char* offset = G__get_offset(variable);
                   G__RflxVarProperties* prop = G__get_properties(variable);
                   local_varscope.RemoveDataMember(variable);
@@ -6777,7 +6777,7 @@ G__value Cint::Internal::G__getstructmem(int store_var_type, char* varname, char
       (G__get_type(G__value_typenum(result)) == 'u') &&
       (objptr == 2) &&
       G__value_typenum(result).IsClass() &&
-      !strncmp(G__value_typenum(result).RawType().Name().c_str(), "auto_ptr<", 9)
+      !strncmp(G__value_typenum(result).RawType().Name_c_str(), "auto_ptr<", 9)
    ) {
       int knownx = 0;
       char comm[20];
@@ -7057,7 +7057,7 @@ void Cint::Internal::G__returnvartype(G__value* presult, const ::Reflex::Member&
    int ilg = 0;
    int in_memfunc = 0;
 #ifdef G__NEWINHERIT
-   int basen;
+   size_t basen;
    int isbase;
    int accesslimit;
    int memfunc_or_friend = 0;
@@ -7177,24 +7177,24 @@ void Cint::Internal::G__returnvartype(G__value* presult, const ::Reflex::Member&
          //--
          // Next base class if searching for class member.
          if (isbase) {
-            while (baseclass && (basen < baseclass->basen)) {
+            while (baseclass && (basen < baseclass->vec.size())) {
                if (memfunc_or_friend) {
                   if (
-                     (baseclass->baseaccess[basen] & G__PUBLIC_PROTECTED) ||
-                     (baseclass->property[basen] & G__ISDIRECTINHERIT)
+                     (baseclass->vec[basen].baseaccess & G__PUBLIC_PROTECTED) ||
+                     (baseclass->vec[basen].property & G__ISDIRECTINHERIT)
                   ) {
                      accesslimit = G__PUBLIC_PROTECTED;
-                     G__incsetup_memvar(baseclass->basetagnum[basen]);
-                     varscope = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
+                     G__incsetup_memvar(baseclass->vec[basen].basetagnum);
+                     varscope = G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum);
                      ++basen;
                      goto next_base;
                   }
                }
                else {
-                  if (baseclass->baseaccess[basen] & G__PUBLIC) {
+                  if (baseclass->vec[basen].baseaccess & G__PUBLIC) {
                      accesslimit = G__PUBLIC;
-                     G__incsetup_memvar(baseclass->basetagnum[basen]);
-                     varscope = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
+                     G__incsetup_memvar(baseclass->vec[basen].basetagnum);
+                     varscope = G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum);
                      ++basen;
                      goto next_base;
                   }
@@ -7296,7 +7296,7 @@ void Cint::Internal::G__get_stack_varname(std::string& output, const char* varna
    int in_memfunc = 0;
    char* scope_struct_offset = 0;
    ::Reflex::Scope scope_tagnum;
-   int basen = 0;
+   size_t basen = 0;
    int isbase = 0;
    int accesslimit = 0;
    int memfunc_or_friend = 0;
@@ -7457,43 +7457,43 @@ void Cint::Internal::G__get_stack_varname(std::string& output, const char* varna
             isbase = 0;
          }
          if (isbase) {
-            while (baseclass && (basen < baseclass->basen)) {
+            while (baseclass && (basen < baseclass->vec.size())) {
                if (memfunc_or_friend) {
                   if (
-                     (baseclass->baseaccess[basen] & G__PUBLIC_PROTECTED) ||
-                     (baseclass->property[basen] & G__ISDIRECTINHERIT)
+                     (baseclass->vec[basen].baseaccess & G__PUBLIC_PROTECTED) ||
+                     (baseclass->vec[basen].property & G__ISDIRECTINHERIT)
                   ) {
                      accesslimit = G__PUBLIC_PROTECTED;
-                     G__incsetup_memvar(baseclass->basetagnum[basen]);
-                     var = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
+                     G__incsetup_memvar(baseclass->vec[basen].basetagnum);
+                     var = G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum);
 #ifdef G__VIRTUALBASE
-                     if (baseclass->property[basen] & G__ISVIRTUALBASE) {
+                     if (baseclass->vec[basen].property & G__ISVIRTUALBASE) {
                         *pG__struct_offset = *pstore_struct_offset + G__getvirtualbaseoffset(*pstore_struct_offset, G__get_tagnum(scope_tagnum), baseclass, basen);
                      }
                      else {
-                        *pG__struct_offset = *pstore_struct_offset + (size_t) baseclass->baseoffset[basen];
+                        *pG__struct_offset = *pstore_struct_offset + (size_t) baseclass->vec[basen].baseoffset;
                      }
 #else // G__VIRTUALBASE
-                     *pG__struct_offset = *pstore_struct_offset + (size_t) baseclass->baseoffset[basen];
+                     *pG__struct_offset = *pstore_struct_offset + (size_t) baseclass->vec[basen].baseoffset;
 #endif // G__VIRTUALBASE
                      ++basen;
                      goto next_base;
                   }
                }
                else {
-                  if (baseclass->baseaccess[basen] & G__PUBLIC) {
+                  if (baseclass->vec[basen].baseaccess & G__PUBLIC) {
                      accesslimit = G__PUBLIC;
-                     G__incsetup_memvar(baseclass->basetagnum[basen]);
-                     var = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
+                     G__incsetup_memvar(baseclass->vec[basen].basetagnum);
+                     var = G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum);
 #ifdef G__VIRTUALBASE
-                     if (baseclass->property[basen] & G__ISVIRTUALBASE) {
+                     if (baseclass->vec[basen].property & G__ISVIRTUALBASE) {
                         *pG__struct_offset = *pstore_struct_offset + G__getvirtualbaseoffset(*pstore_struct_offset, G__get_tagnum(scope_tagnum), baseclass, basen);
                      }
                      else {
-                        *pG__struct_offset = *pstore_struct_offset + (size_t) baseclass->baseoffset[basen];
+                        *pG__struct_offset = *pstore_struct_offset + (size_t) baseclass->vec[basen].baseoffset;
                      }
 #else // G__VIRTUALBASE
-                     *pG__struct_offset = *pstore_struct_offset + (size_t) baseclass->baseoffset[basen];
+                     *pG__struct_offset = *pstore_struct_offset + (size_t) baseclass->vec[basen].baseoffset;
 #endif // G__VIRTUALBASE
                      ++basen;
                      goto next_base;
@@ -7833,7 +7833,7 @@ extern "C" int G__deletevariable(const char* varname)
             store_tagnum = G__tagnum;
             G__store_struct_offset = G__get_offset(var);
             G__set_G__tagnum(var.TypeOf());
-            temp += var.Name();
+            temp += var.Name_c_str();
             temp += "()";
             // Destruction of array.
             if (G__struct.iscpplink[G__get_tagnum(G__tagnum)] == G__CPPLINK) {

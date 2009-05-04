@@ -16,7 +16,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-// TQtTimer is a singelton QTimer to awake the ROOT event loop from Qt event loop
+// TQtTimer is a singelton singleshot QTimer to awake the ROOT event loop from Qt event loop
 //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -27,14 +27,15 @@ TQtTimer *TQtTimer::fgQTimer=0;
 void TQtTimer::AwakeRootEvent(){
      // proceess the ROOT events inside of Qt event loop
      gSystem->DispatchOneEvent(kFALSE);
-     start(300,TRUE);
+     start(300);
 }
 //______________________________________________________________________________
-TQtTimer * TQtTimer::Create(QObject *parent, const char *name)
+TQtTimer * TQtTimer::Create(QObject *parent)
 {
    // Create a singelton object TQtTimer
    if (!fgQTimer) {
-      fgQTimer = new  TQtTimer(parent,name);
+      fgQTimer = new  TQtTimer(parent);
+      fgQTimer->setSingleShot(true);
       connect(fgQTimer,SIGNAL(timeout()),fgQTimer,SLOT(AwakeRootEvent()) );
    }
    return fgQTimer;

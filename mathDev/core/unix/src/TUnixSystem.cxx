@@ -433,7 +433,7 @@ static void DylibAdded(const struct mach_header *mh, intptr_t /* vmaddr_slide */
 
    // add all libs loaded before libSystem.B.dylib
    if (!gotFirstSo && (lib.EndsWith(".dylib") || lib.EndsWith(".so"))) {
-      if (i > 1)
+      if (linkedDylibs.Length())
          linkedDylibs += " ";
       linkedDylibs += lib;
    }
@@ -4247,10 +4247,10 @@ char *TUnixSystem::DynamicPathName(const char *lib, Bool_t quiet)
       ext  = 1;
    } else {
       TString fname;
-      fname.Form("%s.dll", lib);
+      fname.Form("%s.so", lib);
       name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
       if (!name) {
-         fname.Form("%s.so", lib);
+         fname.Form("%s.dll", lib);
          name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
          if (!name) {
             fname.Form("%s.sl", lib);

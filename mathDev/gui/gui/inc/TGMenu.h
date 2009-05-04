@@ -87,6 +87,7 @@ protected:
    Int_t             fEx, fEy;   // position of entry
    UInt_t            fEw, fEh;   // width and height of entry
    TGHotString      *fLabel;     // menu entry label
+   TGString         *fShortcut;  // menu entry shortcut
    const TGPicture  *fPic;       // menu entry icon
    TGPopupMenu      *fPopup;     // pointer to popup menu (in case of cascading menus)
 
@@ -96,15 +97,17 @@ private:
 
 public:
    TGMenuEntry(): fEntryId(0), fUserData(0), fType(), fStatus(0),
-      fEx(0), fEy(0), fEw(0), fEh(0), fLabel(0), fPic(0), fPopup(0) { }
-   virtual ~TGMenuEntry() { if (fLabel) delete fLabel; }
+      fEx(0), fEy(0), fEw(0), fEh(0), fLabel(0), fShortcut(0), fPic(0), fPopup(0) { }
+   virtual ~TGMenuEntry() { if (fLabel) delete fLabel; if (fShortcut) delete fShortcut; }
 
    Int_t          GetEntryId() const { return fEntryId; }
    const char    *GetName() const { return fLabel ? fLabel->GetString() : 0; }
+   const char    *GetShortcutText() const { return fShortcut ? fShortcut->GetString() : 0; }
    virtual Int_t  GetStatus() const { return fStatus; }
    EMenuEntryType GetType() const { return fType; }
    TGPopupMenu   *GetPopup() const { return fPopup; }
    TGHotString   *GetLabel() const  { return fLabel; }
+   TGString      *GetShortcut() const { return fShortcut; }
    Int_t          GetEx() const { return fEx; }
    Int_t          GetEy() const { return fEy; }
    UInt_t         GetEw() const { return fEw; }

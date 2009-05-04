@@ -48,6 +48,7 @@ TGLCameraOverlay::TGLCameraOverlay(Bool_t showOrtho, Bool_t showPersp) :
 
    fAxis = new TAxis();
    fAxis->SetNdivisions(710);
+   fAxis->SetLabelSize(0.018);
    fAxis->SetLabelOffset(0.01);
    fAxis->SetAxisColor(kGray+1);
    fAxis->SetLabelColor(kGray+1);
@@ -68,7 +69,7 @@ TGLCameraOverlay::~TGLCameraOverlay()
 //______________________________________________________________________________
 TAttAxis* TGLCameraOverlay::GetAttAxis()
 {
-   return (TAttAxis*) fAxis;
+   return dynamic_cast<TAttAxis*>(fAxis);
 }
 
 //______________________________________________________________________________
@@ -102,7 +103,7 @@ void TGLCameraOverlay::RenderPlaneIntersect(TGLRnrCtx& rnrCtx)
 
       TGLRect &vp = rnrCtx.GetCamera()->RefViewport();
       TGLFont font;
-      Int_t fs = TGLFontManager::GetFontSize((vp.Width()+vp.Height())*0.01, 10, 128);
+      Int_t fs = TGLFontManager::GetFontSize((vp.Width()+vp.Height())*0.01);
       rnrCtx.RegisterFont(fs, "arial", TGLFont::kPixmap, font);
       Float_t bb[6];
       const char* txt = Form("(%f, %f, %f)", v[0], v[1], v[2]);
@@ -148,9 +149,7 @@ void TGLCameraOverlay::RenderAxis(TGLRnrCtx& rnrCtx)
    fAxisPainter->SetAttAxis(fAxis);
    GLint   vp[4]; glGetIntegerv(GL_VIEWPORT, vp);
    Float_t rl = 0.5 *((vp[2]-vp[0]) + (vp[3]-vp[1]));
-   Float_t als = 0.025;
-   Float_t sizeX = als*rl/(vp[2]-vp[0]);
-   Float_t sizeY = als*rl/(vp[3]-vp[1]);
+   Int_t fsize = (Int_t)(fAxis->GetLabelSize()*rl);
    Float_t tlY = 0.015*rl/(vp[2]-vp[0]);
    Float_t tlX = 0.015*rl/(vp[3]-vp[1]);
 
@@ -163,7 +162,7 @@ void TGLCameraOverlay::RenderAxis(TGLRnrCtx& rnrCtx)
    // horizontal X
    //
    {
-      fAxis->SetLabelSize(sizeX);
+      fAxisPainter->SetLabelPixelFontSize(fsize);
       fAxis->SetTickLength(tlX);
       fAxisPainter->RefDir() = xdir;
       Float_t axisXOff = (fFrustum[2] - fFrustum[0]) * (1 - fAxisExtend);
@@ -192,7 +191,6 @@ void TGLCameraOverlay::RenderAxis(TGLRnrCtx& rnrCtx)
    //
    // vertical Y
    {
-      fAxis->SetLabelSize(sizeY);
       fAxis->SetTickLength(tlY);
       fAxisPainter->RefDir() = ydir;
       Float_t axisYOff = (fFrustum[3] - fFrustum[1]) * (1 - fAxisExtend);
@@ -241,13 +239,13 @@ void TGLCameraOverlay::RenderBar(TGLRnrCtx&  rnrCtx)
    }
 
    TGLVector3 v;
-   TGLVector3 v1;
    TGLVector3 xdir = rnrCtx.RefCamera().GetCamBase().GetBaseVec(2); // left
    TGLVector3 ydir = rnrCtx.RefCamera().GetCamBase().GetBaseVec(3); // up
    xdir.Normalise();
    ydir.Normalise();
 
-   TGLUtil::Color(kWhite);
+   TGLUtil::Color(rnrCtx.ColorSet().Foreground());
+
    const char* txt = Form("%.*f", (exp < 0) ? -exp : 0, red);
    Float_t bb[6];
    TGLFont font;

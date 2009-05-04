@@ -78,8 +78,8 @@ public:
   virtual Bool_t isTestAvailable() { return kTRUE ; }
   virtual Bool_t testCode() = 0 ;  
 
-  virtual Double_t htol() { return 2e-4 ; } // histogram test tolerance (KS dist != prob)
-  virtual Double_t ctol() { return 1e-3 ; } // curve test tolerance
+  virtual Double_t htol() { return 5e-4 ; } // histogram test tolerance (KS dist != prob)
+  virtual Double_t ctol() { return 2e-3 ; } // curve test tolerance
   virtual Double_t fptol() { return 1e-3 ; } // fit parameter test tolerance
   virtual Double_t fctol() { return 1e-3 ; } // fit correlation test tolerance
   virtual Double_t vtol() { return 1e-3 ; } // value test tolerance
@@ -583,6 +583,7 @@ Bool_t RooFitTestUnit::runTest()
   RooMsgService::instance().clearErrorCount() ;
 
   // Reset random generator seed to make results independent of test ordering
+  gRandom->SetSeed(12345) ;
   RooRandom::randomGenerator()->SetSeed(12345) ;
 
   if (!testCode()) return kFALSE ;
@@ -784,13 +785,13 @@ int main(int argc,const char *argv[])
   Int_t dryRun    = kFALSE ;
   Bool_t doDump   = kFALSE ;
 
-  string refFileName = "http://root.cern.ch/files/stressRooFit_v522_ref.root" ;
+  string refFileName = "http://root.cern.ch/files/stressRooFit_v524_ref.root" ;
 
   // Parse command line arguments 
   for (Int_t i=1 ;  i<argc ; i++) {
     string arg = argv[i] ;
 
-    if (arg=="-r") {
+    if (arg=="-f") {
       cout << "stressRooFit: using reference file " << argv[i+1] << endl ;
       refFileName = argv[++i] ;
     }
@@ -828,6 +829,21 @@ int main(int argc,const char *argv[])
     if (arg=="-c") {
       cout << "stressRooFit: dumping comparison file for failed tests " << endl ;
       doDump=kTRUE ;
+    }
+
+    if (arg=="-h") {
+      cout << "usage: stressRooFit [ options ] " << endl ;
+      cout << "" << endl ;
+      cout << "       -f <file> : use given reference file instead of default (" <<  refFileName << ")" << endl ;
+      cout << "       -w        : write reference file, instead of reading file and running comparison tests" << endl ;
+      cout << " " << endl ;
+      cout << "       -n N      : Only run test with sequential number N instead of full suite of tests" << endl ;
+      cout << "       -c        : dump file stressRooFit_DEBUG.root to which results of both current result and reference for each failed test are written" << endl ;
+      cout << "       -mc       : memory check mode, no regression test are performed. Set this flag when running with valgrind" << endl ;
+      cout << "       -v/-vv    : set verbose mode (show result of each regression test) or very verbose mode (show all roofit output as well)" << endl ;
+      cout << "       -d N      : set ROOT gDebug flag to N" << endl ;
+      cout << " " << endl ;
+      return 0 ;
     }
 
    }

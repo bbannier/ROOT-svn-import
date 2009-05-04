@@ -114,9 +114,11 @@ class TProofDataSetManager;
 //           and kPROOF_GETNEXTPACKET messages in Master - worker communication
 // 19 -> 20: Fix the asynchronous mode (required changes in some messages)
 // 20 -> 21: Add support for session queuing
+// 21 -> 22: Add support for switching from sync to async while running ('Ctrl-Z' functionality)
+// 22 -> 23: New dataset features (default tree name; classification per fileserver)
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 21;            // protocol version number
+const Int_t       kPROOF_Protocol        = 23;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
@@ -315,7 +317,8 @@ private:
       kMergeDataSet        = 8,  //Add new files to an existing dataset
       kShowDataSets        = 9,  //Shows datasets, returns formatted output
       kGetQuota            = 10, //Get quota info per group
-      kShowQuota           = 11  //Show quotas
+      kShowQuota           = 11, //Show quotas
+      kSetDefaultTreeName  = 12  //Set the default tree name
    };
    enum ESendFileOpt {
       kAscii               = 0x0,
@@ -624,6 +627,8 @@ public:
    Int_t       Retrieve(Int_t query, const char *path = 0);
    Int_t       Retrieve(const char *queryref, const char *path = 0);
 
+   void        DisableGoAsyn();
+   void        GoAsynchronous();
    void        StopProcess(Bool_t abort, Int_t timeout = -1);
    void        Browse(TBrowser *b);
 
@@ -676,11 +681,14 @@ public:
    TMap       *GetDataSetQuota(const char* optStr = "");
    void        ShowDataSetQuota(Option_t* opt = 0);
 
+   virtual Bool_t ExistsDataSet(const char *dataset);
    void        ShowDataSet(const char *dataset = "", const char* opt = "M");
    virtual Int_t RemoveDataSet(const char *dataset, const char* optStr = "");
    virtual Int_t VerifyDataSet(const char *dataset, const char* optStr = "");
    virtual TFileCollection *GetDataSet(const char *dataset, const char* optStr = "");
    TList       *FindDataSets(const char *searchString, const char* optStr = "");
+
+   virtual Int_t SetDataSetTreeName( const char *dataset, const char *treename);
 
    const char *GetMaster() const { return fMaster; }
    const char *GetConfDir() const { return fConfDir; }

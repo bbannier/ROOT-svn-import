@@ -91,6 +91,9 @@
 <li><a href="#HP14">The COLor option</li></a>
 <li><a href="#HP15">The TEXT and TEXTnn Option</li></a>
 <li><a href="#HP16">The CONTour options</li></a>
+<ul>
+<li><a href="#HP16a">The LIST option</li></a>
+</ul>
 <li><a href="#HP17">The LEGO options</li></a>
 <li><a href="#HP18">The "SURFace" options</li></a>
 <li><a href="#HP19">Cylindrical, Polar, Spherical and PseudoRapidity/Phi options</li></a>
@@ -755,10 +758,28 @@ The default value is:
       gStyle->SetOptStat("nemr");
 </pre>
 
-<p>When a histogram is drawn, a <tt>TPaveStats</tt> object is created and added
+<p>When a histogram is painted, a <tt>TPaveStats</tt> object is created and added
 to the list of functions of the histogram. If a <tt>TPaveStats</tt> object
 already exists in the histogram list of functions, the existing object is just
 updated with the current histogram parameters.
+
+<p>Once a histogram is painted, the statistics box can be accessed using
+<tt>h->FindObject("stats")</tt>. In the command line it is enough to do:
+<pre>
+      Root > h->Draw()
+      Root > TPaveStats *st = (TPaveStats*)h->FindObject("stats")
+</pre>
+because after <tt>h->Draw()</tt> the histogram is automatically painted. But
+in a script file the painting should be forced using <tt>gPad->Update()</tt>
+in order to make sure the statistics box is created:
+<pre>
+      h->Draw();
+      gPad->Update();
+      TPaveStats *st = (TPaveStats*)h->FindObject("stats");
+</pre>
+
+<p>Without <tt>gPad->Update()</tt> the line <tt>h->FindObject("stats")</tt>
+returns a null pointer.
 
 <p>When a histogram is drawn with the option "<tt>SAME</tt>", the statistics box
 is not drawn. To force the statistics box drawing with the option
@@ -1325,9 +1346,19 @@ Begin_Html
 The default number of contour levels is 20 equidistant levels and can be changed
 with <tt>TH1::SetContour()</tt> or <tt>TStyle::SetNumberContours()</tt>.
 
+<a name="HP16a"></a><h4><u>The LIST option</u></h4>
+
 <p>When option <tt>"LIST"</tt> is specified together with option
 <tt>"CONT"</tt>, the points used to draw the contours are saved in
-<tt>TGraph</tt> objects and are accessible in the following way:
+<tt>TGraph</tt> objects:
+<pre>
+      h->Draw("CONT LIST");
+      gPad->Update();
+</pre>
+The contour are saved in <tt>TGraph</tt> objects once the pad is painted.
+Therefore to use this funtionnality in a macro, <tt>gPad->Update()</tt>
+should be performed after the histogram drawing. Once the list is
+built, the contours are accessible in the following way:
 <pre>
       TObjArray *contours = gROOT->GetListOfSpecials()->FindObject("contours")
       Int_t ncontours     = contours->GetSize();
@@ -7947,7 +7978,11 @@ const char * THistPainter::GetBestFormat(Double_t v, Double_t e, const char *f)
          if (e < 1) {
             sprintf(ef,"%s.1f","%");
          } else {
-            sprintf(ef,"%sg","%");
+            if (ie >= 0) {
+               sprintf(ef,"%s.%de","%",ie-id-1);
+            } else {
+               sprintf(ef,"%s.%dE","%",iE-id-1);
+            }
          }
       } else {
          if (ie >= 0) {
