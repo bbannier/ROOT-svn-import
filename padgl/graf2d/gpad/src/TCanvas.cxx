@@ -184,8 +184,6 @@ TCanvas::TCanvas(const char *name, Int_t ww, Int_t wh, Int_t winid)
    //  If "name" starts with "gl" the canvas is ready to receive GL output.
    Init();
 
-   fUseGL = gStyle->GetCanvasPreferGL();
-
    fCanvasID     = winid;
    fWindowTopX   = 0;
    fWindowTopY   = 0;
@@ -196,8 +194,16 @@ TCanvas::TCanvas(const char *name, Int_t ww, Int_t wh, Int_t winid)
    fBatch        = kFALSE;
    fUpdating     = kFALSE;
 
-   //This is a bit special ctor. A window exists already! No gGuiFactory call here.
+   //This is a very special ctor. A window exists already!
    //Can create painter now.
+   fUseGL = gStyle->GetCanvasPreferGL();
+   
+   if (fUseGL) {
+      fGLDevice = gGLManager->CreateGLContext(winid);
+      if (fGLDevice == -1)
+         fUseGL = kFALSE;
+   }
+
    CreatePainter();
    
    fCanvasImp    = gBatchGuiFactory->CreateCanvasImp(this, name, fCw, fCh);
@@ -725,6 +731,10 @@ void TCanvas::Close(Option_t *option)
 
    if (!IsBatch()) {
       gVirtualX->SelectWindow(fCanvasID);    //select current canvas
+      
+      if (fGLDevice != -1)
+         gGLManager->DeleteGLContext(fGLDevice);//?
+      
       if (fCanvasImp) fCanvasImp->Close();
    }
    fCanvasID = -1;
