@@ -13,6 +13,8 @@ to gVirtualX, gl implementation will delegate part of calls
 to gVirtualX, and has to implement some of the calls from the scratch.
 */
 
+class TVirtualPad;
+
 class TVirtualPadPainter {
 public:
    enum EBoxMode  {kHollow, kFilled};
@@ -86,6 +88,8 @@ public:
    
    
    virtual void     InvalidateCS() = 0;
+   
+   static TVirtualPadPainter *PadPainter(TVirtualPad *pad, Option_t *opt = "");
 
    ClassDef(TVirtualPadPainter, 0)//Painter interface for pad.
 };
