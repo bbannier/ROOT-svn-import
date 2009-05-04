@@ -624,8 +624,8 @@ void TGLHistPainter::PadToViewport(Bool_t selectionPass)
    if (const TPad *pad = dynamic_cast<TPad *>(gPad)) {
       TGLRect vp;
       //const Int_t borderSize = pad->GetBorderSize() > 0 ? pad->GetBorderSize() : 2;   
-      vp.Width()  = pad->GetAbsWNDC() * pad->GetWw();//TMath::Abs(pad->XtoPixel(pad->GetX2()) - pad->XtoPixel(pad->GetX1()));// - 2 * borderSize;
-      vp.Height() = pad->GetAbsHNDC() * pad->GetWh();//TMath::Abs(pad->YtoPixel(pad->GetY2()) - pad->YtoPixel(pad->GetY1()));// - 2 * borderSize;
+      vp.Width()  = Int_t(pad->GetAbsWNDC() * pad->GetWw());
+      vp.Height() = Int_t(pad->GetAbsHNDC() * pad->GetWh());
       if (!selectionPass) {
          pad->XYtoAbsPixel(pad->GetX1(), pad->GetY1(), vp.X(), vp.Y());
          //vp.X() += borderSize;
