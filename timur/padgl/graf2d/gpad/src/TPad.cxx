@@ -3244,7 +3244,7 @@ void TPad::PaintFillArea(Int_t nn, Float_t *xx, Float_t *yy, Option_t *)
    }
 
    // Paint the fill area with hatches
-   Int_t fillstyle = fPainter->GetFillStyle();//gVirtualX->GetFillStyle();
+   Int_t fillstyle = fPainter->GetFillStyle();
    if (gPad->IsBatch() && gVirtualPS) fillstyle = gVirtualPS->GetFillStyle();
    if (fillstyle >= 3100 && fillstyle < 4000) {
       PaintFillAreaHatches(nn, x, y, fillstyle);
@@ -3253,27 +3253,9 @@ void TPad::PaintFillArea(Int_t nn, Float_t *xx, Float_t *yy, Option_t *)
       return;
    }
 
-   TPoint *pxy;
-   // Create temporary array to store array in pixel coordinates
-
-   if (!gPad->IsBatch()) {
-      if (n <kPXY) pxy = &gPXY[0];
-      else         pxy = new TPoint[n+1];
-   // convert points from world to pixel coordinates
-      for (i=0;i<n;i++) {
-         pxy[i].fX = gPad->XtoPixel(x[i]);
-         pxy[i].fY = gPad->YtoPixel(y[i]);
-      }
-   // invoke the graphics subsystem
-      if (fillstyle == 0) {
-         pxy[n].fX = pxy[0].fX;
-         pxy[n].fY = pxy[0].fY;
-         //fPainter->DrawFillArea(n+1, pxy);//BACK
-      } else {
-         //fPainter->DrawFillArea(n, pxy);//BACK
-      }
-      if (n >= kPXY) delete [] pxy;
-   }
+   if (!gPad->IsBatch())
+      // invoke the graphics subsystem
+      fPainter->DrawFillArea(n, x, y);
 
    if (gVirtualPS) {
       gVirtualPS->DrawPS(-n, x, y);
@@ -3290,7 +3272,7 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
    // Paint fill area in CurrentPad World coordinates.
 
    if (nn <3) return;
-   Int_t i,n=0;
+   Int_t n=0;
    Double_t xmin,xmax,ymin,ymax;
    if (TestBit(TGraph::kClipFrame)) {
       xmin = fUxmin; ymin = fUymin; xmax = fUxmax; ymax = fUymax;
@@ -3319,27 +3301,9 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
       return;
    }
 
-   TPoint *pxy;
-   // Create temporary array to store array in pixel coordinates
-
-   if (!gPad->IsBatch()) {
-      if (n <kPXY) pxy = &gPXY[0];
-      else         pxy = new TPoint[n+1];
-      // convert points from world to pixel coordinates
-      for (i=0;i<n;i++) {
-         pxy[i].fX = gPad->XtoPixel(x[i]);
-         pxy[i].fY = gPad->YtoPixel(y[i]);
-      }
+   if (!gPad->IsBatch())
       // invoke the graphics subsystem
-      if (fillstyle == 0) {
-         pxy[n].fX = pxy[0].fX;
-         pxy[n].fY = pxy[0].fY;
-         fPainter->DrawFillArea(n, x, y);
-      } else {
-         fPainter->DrawFillArea(n, x, y);
-      }
-      if (n >= kPXY) delete [] pxy;
-   }
+      fPainter->DrawFillArea(n, x, y);
 
    if (gVirtualPS) {
       gVirtualPS->DrawPS(-n, x, y);
