@@ -285,8 +285,6 @@ void TGLPadPainter::InitPainter()
    glMatrixMode(GL_MODELVIEW);
    glLoadIdentity();
    glTranslated(0., 0., -1.);
-   /*glTranslated(0, -fW / 4, 0.);
-   glRotated(15., 0., 0., 1.);*/
 }
 
 /*
@@ -437,6 +435,7 @@ void TGLPadPainter::DrawPolyLineNDC(Int_t n, const Double_t *u, const Double_t *
 
 namespace {
 
+//Aux. function.
 template<class ValueType>
 void ConvertMarkerPoints(Int_t n, const ValueType *x, const ValueType *y, std::vector<TPoint> & dst);
 
