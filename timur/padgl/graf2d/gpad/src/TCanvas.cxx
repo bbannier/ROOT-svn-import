@@ -1033,8 +1033,11 @@ void TCanvas::Flush()
          gGLManager->MakeCurrent(fGLDevice);
          fPainter->InitPainter();
          Paint();
-         if (padsav && padsav->GetCanvas() == this) 
+         if (padsav && padsav->GetCanvas() == this) {
+            padsav->cd();
             padsav->HighLight(padsav->GetHighLightColor());
+            //cd();
+         }
          gGLManager->Flush(fGLDevice);
       }
    }

@@ -2656,7 +2656,6 @@ void TPad::GetRangeAxis(Double_t &xmin, Double_t &ymin, Double_t &xmax, Double_t
 void TPad::HighLight(Color_t color, Bool_t set)
 {
    // Highlight pad.
-
    //do not highlight when printing on Postscript
    if (gVirtualPS && gVirtualPS->TestBit(kPrintingPS)) return;
 
@@ -2822,7 +2821,6 @@ void TPad::Paint(Option_t * /*option*/)
 void TPad::PaintBorder(Color_t color, Bool_t tops)
 {
    // Paint the pad border.
-
    // Draw first  a box as a normal filled box
    if(color >= 0) {
       TAttLine::Modify();  //Change line attributes only if necessary
@@ -2841,7 +2839,7 @@ void TPad::PaintBorder(Color_t color, Bool_t tops)
    const Double_t realBsX = bordersize / (GetAbsWNDC() * GetWw()) * (fX2 - fX1);
    const Double_t realBsY = bordersize / (GetAbsHNDC() * GetWh()) * (fY2 - fY1);
    
-   Short_t pxl,pyl,pxt,pyt,px1,py1,px2,py2;
+   Short_t px1,py1,px2,py2;
    Double_t xl, xt, yl, yt;
 
    // GetDarkColor() and GetLightColor() use GetFillColor()
@@ -2857,10 +2855,10 @@ void TPad::PaintBorder(Color_t color, Bool_t tops)
    // Compute real left bottom & top right of the box in pixels
    px1 = XtoPixel(fX1);   py1 = YtoPixel(fY1);
    px2 = XtoPixel(fX2);   py2 = YtoPixel(fY2);
-   if (px1 < px2) {pxl = px1; pxt = px2; xl = fX1; xt = fX2; }
-   else           {pxl = px2; pxt = px1; xl = fX2; xt = fX1;}
-   if (py1 > py2) {pyl = py1; pyt = py2; yl = fY1; yt = fY2;}
-   else           {pyl = py2; pyt = py1; yl = fY2; yt = fY1;}
+   if (px1 < px2) {xl = fX1; xt = fX2; }
+   else           {xl = fX2; xt = fX1;}
+   if (py1 > py2) {yl = fY1; yt = fY2;}
+   else           {yl = fY2; yt = fY1;}
 
    Double_t frameXs[7] = {}, frameYs[7] = {};
       
@@ -4524,7 +4522,8 @@ void TPad::Range(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
    // compute pad conversion coefficients
    ResizePad();
 
-   fPainter->InvalidateCS();
+   if (gPad == this)
+      fPainter->InvalidateCS();
    
    // emit signal
    RangeChanged();
