@@ -47,7 +47,6 @@ class TBrowser;
 
 class TCanvas : public TPad {
 
-friend class TRootCanvas;
 friend class TCanvasImp;
 friend class TThread;
 friend class TInterpreter;
@@ -228,9 +227,14 @@ public:
    virtual void      ToggleToolBar();
    virtual void      ToggleEditor();
    virtual void      Update();
+   //Still need this.
    Bool_t            UseGL() const { return fUseGL; }
    void              SetSupportGL(Bool_t support) {fUseGL = support;}
-
+   
+   //Initialize PadPainter.
+   void                CreatePainter();
+   TVirtualPadPainter *GetPainter();
+   
    static TCanvas   *MakeDefCanvas();
 
    ClassDef(TCanvas,6)  //Graphics canvas

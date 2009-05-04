@@ -40,7 +40,7 @@ private:
 
    std::vector<TPoint>         fPoly;
 public:
-   TGLPadPainter(TCanvas *cnv);
+   TGLPadPainter(TVirtualPad *pad);
    
    //Final overriders for TVirtualPadPainter pure virtual functions.
    //1. Part, which simply delegates to TVirtualX.

@@ -196,6 +196,10 @@ TCanvas::TCanvas(const char *name, Int_t ww, Int_t wh, Int_t winid)
    fBatch        = kFALSE;
    fUpdating     = kFALSE;
 
+   //This is a bit special ctor. A window exists already! No gGuiFactory call here.
+   //Can create painter now.
+   CreatePainter();
+   
    fCanvasImp    = gBatchGuiFactory->CreateCanvasImp(this, name, fCw, fCh);
    SetName(name);
    Build();
@@ -267,8 +271,6 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t form)
       fCh           = fWindowHeight;
       fCanvasImp    = gBatchGuiFactory->CreateCanvasImp(this, name, fCw, fCh);
       fBatch        = kTRUE;
-      
-      fPainter = new TPadPainter;
    } else {                  //normal mode with a screen window
       Float_t cx = gStyle->GetScreenFactor();
       if (form < 1 || form > 5) form = 1;
@@ -288,6 +290,9 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t form)
       fCanvasImp->ShowMenuBar(TestBit(kMenuBar));
       fBatch = kFALSE;
    }
+   
+   CreatePainter();
+
    SetName(name);
    SetTitle(title); // requires fCanvasImp set
    Build();
@@ -351,14 +356,15 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t ww, Int_t w
       fCh           = wh;
       fCanvasImp    = gBatchGuiFactory->CreateCanvasImp(this, name, fCw, fCh);
       fBatch        = kTRUE;
-      
-      fPainter = new TPadPainter;
    } else {
       Float_t cx = gStyle->GetScreenFactor();
       fCanvasImp = gGuiFactory->CreateCanvasImp(this, name, UInt_t(cx*ww), UInt_t(cx*wh));
       fCanvasImp->ShowMenuBar(TestBit(kMenuBar));
       fBatch = kFALSE;
    }
+   
+   CreatePainter();
+   
    SetName(name);
    SetTitle(title); // requires fCanvasImp set
    Build();
@@ -427,14 +433,15 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t wtopx,
       fCh           = wh;
       fCanvasImp    = gBatchGuiFactory->CreateCanvasImp(this, name, fCw, fCh);
       fBatch        = kTRUE;
-      
-      fPainter = new TPadPainter;
    } else {                   //normal mode with a screen window
       Float_t cx = gStyle->GetScreenFactor();
       fCanvasImp = gGuiFactory->CreateCanvasImp(this, name, Int_t(cx*wtopx), Int_t(cx*wtopy), UInt_t(cx*ww), UInt_t(cx*wh));
       fCanvasImp->ShowMenuBar(TestBit(kMenuBar));
       fBatch = kFALSE;
    }
+   
+   CreatePainter();
+   
    SetName(name);
    SetTitle(title); // requires fCanvasImp set
    Build();
@@ -2101,4 +2108,43 @@ void TCanvas::SetGrayscale(Bool_t set /*= kTRUE*/)
    if (IsGrayscale() == set) return;
    SetBit(kIsGrayscale, set);
    Paint(); // update canvas and all sub-pads, unconditionally!
+}
+
+//______________________________________________________________________________
+void TCanvas::CreatePainter()
+{
+   //Create pad painter for non batch mode.
+   if (fBatch)
+      return;
+   /*
+   Probably, TPadPainter must be placed in a separate ROOT module, like
+   padpainter (the same as "histpainter"). But now, it's directly in a
+   gpad dir, so, in case of default painter, no *.so should be loaded,
+   no need in plugin managers yet.
+   May change in a future.
+   */
+   
+   Option_t *type = UseGL() ? "gl" : "";
+   if (!UseGL())
+      fPainter = new TPadPainter(this);//Do not need plugin manager for this!
+   else {
+      fPainter = TVirtualPadPainter::PadPainter(this, type);
+      if (!fPainter) {
+         Error("CreatePainter", "GL Painter creation failed! Will use default!");
+         fPainter = new TPadPainter(this);//this is only for debugging.
+      }
+   }
+}
+
+//______________________________________________________________________________
+TVirtualPadPainter *TCanvas::GetPainter()
+{
+   if (fBatch) {
+      Warning("GetPainter", "Painter was requested for batch mode!");//for debug only.
+      return 0;
+   }
+   if (!fPainter)
+      CreatePainter();
+   
+   return fPainter;
 }

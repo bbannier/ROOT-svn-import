@@ -1,8 +1,6 @@
 #ifndef ROOT_TGLPadPainter
 #define ROOT_TGLPadPainter
 
-#include <vector>
-
 #ifndef ROOT_TVirtualPadPainter
 #include "TVirtualPadPainter.h"
 #endif
@@ -12,14 +10,13 @@ TVirtualPadPainter is an attempt to abstract
 painting operation furthermore. gVirtualX can
 be X11 or GDI, but pad painter can be gVirtualX (X11 or GDI),
 or gl pad painter.
-This class does not require any data (except point buffer). 
-It's quite trivial.
-Just delegates _everything_ to TVirtualX, that enough 
-(or ignore unsupported operation like InitPainter).
 */
+
+class TVirtualPad;
+
 class TPadPainter : public TVirtualPadPainter {
 public:
-   TPadPainter();
+   TPadPainter(TVirtualPad *pad);
    //Final overriders for TVirtualPadPainter pure virtual functions.
    //1. Part, which simply delegates to TVirtualX.
    //Line attributes.

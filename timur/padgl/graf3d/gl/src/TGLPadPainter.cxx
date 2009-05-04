@@ -14,11 +14,11 @@
 ClassImp(TGLPadPainter)
 
 //______________________________________________________________________________
-TGLPadPainter::TGLPadPainter(TCanvas *cnv)
-                  : fCanvas(cnv)
+TGLPadPainter::TGLPadPainter(TVirtualPad *cnv)
+                  : fCanvas(0)
 {
-   if (!fCanvas) {
-      Error("TGLPadPainter::TGLPadPainter", "Null canvas pointer was psecified\n");
+   if (!(fCanvas = dynamic_cast<TCanvas *>(cnv))) {
+      Error("TGLPadPainter::TGLPadPainter", "Bad canvas pointer was psecified\n");
       throw std::runtime_error("");
    }
    //So, now I can use fCanvas without checks.
