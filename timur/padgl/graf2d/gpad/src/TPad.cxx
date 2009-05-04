@@ -3720,7 +3720,7 @@ void TPad::PaintPolyLine(Int_t n, Float_t *x, Float_t *y, Option_t *)
       if (i1 < 0) i1 = i;
       if (iclip == 0 && i < n-2) continue;
       if (!gPad->IsBatch())
-         fPainter->DrawPolyLine(np, x + i1, y + i1);
+         fPainter->DrawPolyLine(np, &x[i1], &y[i1]);
       if (gVirtualPS) {
          gVirtualPS->DrawPS(np, &x[i1], &y[i1]);
       }
@@ -3774,7 +3774,7 @@ void TPad::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option)
       if (i1 < 0) i1 = i;
       if (iclip == 0 && i < n-2) continue;
       if (!gPad->IsBatch())
-         fPainter->DrawPolyLine(np, x + i1, y + i1);
+         fPainter->DrawPolyLine(np, &x[i1], &y[i1]);
       if (gVirtualPS) {
          gVirtualPS->DrawPS(np, &x[i1], &y[i1]);
       }
@@ -3850,7 +3850,7 @@ void TPad::PaintPolyMarker(Int_t nn, Float_t *x, Float_t *y, Option_t *)
       }
       if (np == 0) continue;
       if (!gPad->IsBatch())
-         fPainter->DrawPolyMarker(np, x + i1, y + i1);
+         fPainter->DrawPolyMarker(np, &x[i1], &y[i1]);
       if (gVirtualPS) {
          gVirtualPS->DrawPolyMarker(np, &x[i1], &y[i1]);
       }
@@ -3882,7 +3882,7 @@ void TPad::PaintPolyMarker(Int_t nn, Double_t *x, Double_t *y, Option_t *)
       }
       if (np == 0) continue;
       if (!gPad->IsBatch())
-         fPainter->DrawPolyMarker(np, x + i1, y + i1);
+         fPainter->DrawPolyMarker(np, &x[i1], &y[i1]);
       if (gVirtualPS) {
          gVirtualPS->DrawPolyMarker(np, &x[i1], &y[i1]);
       }
