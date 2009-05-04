@@ -235,66 +235,76 @@ Now, the most interesting part of TPadPainter: painting operations.
 //______________________________________________________________________________
 void TPadPainter::DrawLine(Double_t /*x1*/, Double_t /*y1*/, Double_t /*x2*/, Double_t /*y2*/)
 {
-   //Cast floats, draw the line.
-//   gVirtualX->DrawLine(Int_t(x1), Int_t(y1), Int_t(x2), Int_t(y2));
+   //
+}
+
+//______________________________________________________________________________
+void TPadPainter::DrawLineNDC(Double_t /*u1*/, Double_t /*v1*/, Double_t /*u2*/, Double_t /*v2*/)
+{
+   //
 }
 
 //______________________________________________________________________________
 void TPadPainter::DrawBox(Double_t /*x1*/, Double_t /*y1*/, Double_t /*x2*/, Double_t /*y2*/, EBoxMode /*mode*/)
 {
-   //Cast floats, draw the box
-/*   gVirtualX->DrawBox(Int_t(x1), Int_t(y1), Int_t(x2), Int_t(y2), 
-                      mode == kHollow ? TVirtualX::kHollow : TVirtualX::kFilled);*/
+   //
 }
 
 //______________________________________________________________________________
 void TPadPainter::DrawFillArea(UInt_t /*n*/, const Double_t */*x*/, const Double_t */*y*/)
 {
-/*   //Pass the call to gVirtualX.
-   gVirtualX->DrawFillArea(Int_t(n), &fBuff[0]);*/
+   //
 }
+
+//______________________________________________________________________________
+void TPadPainter::DrawFillArea(UInt_t /*n*/, const Float_t */*x*/, const Float_t */*y*/)
+{
+   //
+}
+
 
 //______________________________________________________________________________
 void TPadPainter::DrawPolyLine(UInt_t /*n*/, const Double_t */*x*/, const Double_t */*y*/)
 {
-/*   //Pass the call to gVirtualX.
-   gVirtualX->DrawPolyLine(Int_t(n), &fBuff[0]);*/
+   //
+}
+
+//______________________________________________________________________________
+void TPadPainter::DrawPolyLine(UInt_t /*n*/, const Float_t */*x*/, const Float_t */*y*/)
+{
+   //
+}
+
+//______________________________________________________________________________
+void TPadPainter::DrawPolyLineNDC(UInt_t /*n*/, const Double_t */*u*/, const Double_t */*v*/)
+{
+   //
 }
 
 //______________________________________________________________________________
 void TPadPainter::DrawPolyMarker(UInt_t /*n*/, const Double_t */*x*/, const Double_t */*y*/)
 {
-/*   //Pass the call to gVirtualX.
-   gVirtualX->DrawPolyMarker(Int_t(n), &fBuff[0]);*/
+   //
+}
+
+//______________________________________________________________________________
+void TPadPainter::DrawPolyMarker(UInt_t /*n*/, const Float_t */*x*/, const Float_t */*y*/)
+{
+   //
 }
 
 //______________________________________________________________________________
 void TPadPainter::DrawText(Double_t /*x*/, Double_t /*y*/, Double_t /*angle*/, Double_t /*mgn*/,
                            const char */*text*/, ETextMode /*mode*/)
 {
-   //Pass the call to gVirtualX.
-   //gVirtualX->DrawText(Int_t(x), Int_t(y), angle, mgn, text, mode == kClear ? TVirtualX::kClear : TVirtualX::kOpaque);
+   //
 }
 
 //______________________________________________________________________________
-void TPadPainter::DrawFillArea(UInt_t /*n*/, const Float_t */*x*/, const Float_t */*y*/)
+void TPadPainter::DrawTextNDC(Double_t /*u*/, Double_t /*v*/, Double_t /*angle*/, Double_t /*mgn*/,
+                           const char */*text*/, ETextMode /*mode*/)
 {
-/*   //Pass the call to gVirtualX.
-   gVirtualX->DrawFillArea(Int_t(n), &fBuff[0]);*/
-}
-
-//______________________________________________________________________________
-void TPadPainter::DrawPolyLine(UInt_t /*n*/, const Float_t */*x*/, const Float_t */*y*/)
-{
-/*   //Pass the call to gVirtualX.
-   gVirtualX->DrawPolyLine(Int_t(n), &fBuff[0]);*/
-}
-
-//______________________________________________________________________________
-void TPadPainter::DrawPolyMarker(UInt_t /*n*/, const Float_t */*x*/, const Float_t */*y*/)
-{
-/*   //Pass the call to gVirtualX.
-   gVirtualX->DrawPolyMarker(Int_t(n), &fBuff[0]);*/
+   //
 }
 
 //______________________________________________________________________________
@@ -302,3 +312,4 @@ void TPadPainter::InvalidateCS()
 {
    //
 }
+

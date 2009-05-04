@@ -65,19 +65,26 @@ public:
    
    //Now, drawing primitives.
    virtual void     DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2) = 0;
+   virtual void     DrawLineNDC(Double_t u1, Double_t v1, Double_t u2, Double_t v2) = 0;
+   
    virtual void     DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, EBoxMode mode) = 0;
    
    virtual void     DrawFillArea(UInt_t n, const Double_t *x, const Double_t *y) = 0;
-   virtual void     DrawPolyLine(UInt_t n, const Double_t *x, const Double_t *y) = 0;
-   virtual void     DrawPolyMarker(UInt_t n, const Double_t *x, const Double_t *y) = 0;
-   
    virtual void     DrawFillArea(UInt_t n, const Float_t *x, const Float_t *y) = 0;
+      
+   virtual void     DrawPolyLine(UInt_t n, const Double_t *x, const Double_t *y) = 0;
    virtual void     DrawPolyLine(UInt_t n, const Float_t *x, const Float_t *y) = 0;
+   virtual void     DrawPolyLineNDC(UInt_t n, const Double_t *u, const Double_t *v) = 0;
+   
+   virtual void     DrawPolyMarker(UInt_t n, const Double_t *x, const Double_t *y) = 0;
    virtual void     DrawPolyMarker(UInt_t n, const Float_t *x, const Float_t *y) = 0;
    
    virtual void     DrawText(Double_t x, Double_t y, Double_t angle, Double_t mgn, 
                              const char *text, ETextMode mode) = 0;
-                             
+   virtual void     DrawTextNDC(Double_t u, Double_t v, Double_t angle, Double_t mgn, 
+                                const char *text, ETextMode mode) = 0;
+   
+   
    virtual void     InvalidateCS() = 0;
 
    ClassDef(TVirtualPadPainter, 0)//Painter interface for pad.

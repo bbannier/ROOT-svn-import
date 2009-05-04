@@ -19,29 +19,17 @@
 class TCanvas;
 
 /*
-The _only_ purpose of TGLPadPainter is to enable 2d gl raphics
+The _main_ purpose of TGLPadPainter is to enable 2d gl raphics
 inside standard TPad/TCanvas.
-So, all TPad/TCanvas dependencies _ARE_ required,
-and this is _VERY_ specific class, designed and 
-implemented for TPad/TCanvas exclusively.
-
-I'm not interested at all, how can it work/crush 
-outside of TPad/TCanvas.
 */
 class TGLPadPainter : public TVirtualPadPainter {
 private:
-   //std::deque<Rgl::Pad::OffScreenDevice> fOffs;
    Rgl::Pad::PolygonStippleSet fSSet;
    Rgl::Pad::Tesselator        fTess;
    Rgl::Pad::MarkerPainter     fMarker;
    Rgl::Pad::GLLimits          fLimits;
    //
    TCanvas                    *fCanvas;
-   //
-   Double_t fX;
-   Double_t fY;
-   Double_t fW;
-   Double_t fH;
    
    std::vector<Double_t>       fVs;//Vertex buffer for tesselator.
    
@@ -53,7 +41,6 @@ private:
    std::vector<TPoint>         fPoly;
 public:
    TGLPadPainter(TCanvas *cnv);
-   //~TGLPadPainter();
    
    //Final overriders for TVirtualPadPainter pure virtual functions.
    //1. Part, which simply delegates to TVirtualX.
@@ -98,34 +85,40 @@ public:
    void     InitPainter();
    
    void     DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2);
-   void     DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, EBoxMode mode);
+   void     DrawLineNDC(Double_t u1, Double_t v1, Double_t u2, Double_t v2);
    
+   void     DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, EBoxMode mode);
+   //TPad needs double and float versions.
    void     DrawFillArea(UInt_t n, const Double_t *x, const Double_t *y);
-   void     DrawPolyLine(UInt_t n, const Double_t *x, const Double_t *y);
-   void     DrawPolyMarker(UInt_t n, const Double_t *x, const Double_t *y);
-   //
    void     DrawFillArea(UInt_t n, const Float_t *x, const Float_t *y);
+   
+   //TPad needs both double and float versions of DrawPolyLine.
+   void     DrawPolyLine(UInt_t n, const Double_t *x, const Double_t *y);
    void     DrawPolyLine(UInt_t n, const Float_t *x, const Float_t *y);
+   void     DrawPolyLineNDC(UInt_t n, const Double_t *u, const Double_t *v);
+   
+   //TPad needs both versions.
+   void     DrawPolyMarker(UInt_t n, const Double_t *x, const Double_t *y);
    void     DrawPolyMarker(UInt_t n, const Float_t *x, const Float_t *y);
    
    void     DrawText(Double_t x, Double_t y, Double_t angle, Double_t mgn, 
                      const char *text, ETextMode mode);
+   void     DrawTextNDC(Double_t x, Double_t y, Double_t angle, Double_t mgn, 
+                        const char *text, ETextMode mode);
                      
    void     InvalidateCS();
 private:
-   Double_t GetX(Double_t x)const;
-   Double_t GetY(Double_t y)const;
    
-   void SaveProjectionMatrix()const;
-   void RestoreProjectionMatrix()const;
+   void     SaveProjectionMatrix()const;
+   void     RestoreProjectionMatrix()const;
    
-   void SaveModelviewMatrix()const;
-   void RestoreModelviewMatrix()const;
+   void     SaveModelviewMatrix()const;
+   void     RestoreModelviewMatrix()const;
    
-   void SaveViewport();
-   void RestoreViewport();
-
-   void ConvertMarkerPoints(UInt_t n, const Double_t *x, const Double_t *y);
+   void     SaveViewport();
+   void     RestoreViewport();
+   
+   void     DrawPolyMarker();
    
    TGLPadPainter(const TGLPadPainter &rhs);
    TGLPadPainter & operator = (const TGLPadPainter &rhs);

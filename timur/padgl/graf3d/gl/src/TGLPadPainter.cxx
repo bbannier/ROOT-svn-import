@@ -1,6 +1,5 @@
 #include <stdexcept>
 #include <iostream>
-#include <fstream>
 
 #include "TAttMarker.h"
 #include "TVirtualX.h"
@@ -16,8 +15,7 @@ ClassImp(TGLPadPainter)
 
 //______________________________________________________________________________
 TGLPadPainter::TGLPadPainter(TCanvas *cnv)
-                  : fCanvas(cnv),
-                    fX(0.), fY(0.), fW(0.), fH(0.)
+                  : fCanvas(cnv)
 {
    if (!fCanvas) {
       Error("TGLPadPainter::TGLPadPainter", "Null canvas pointer was psecified\n");
@@ -273,10 +271,7 @@ void TGLPadPainter::InitPainter()
    glDisable(GL_LIGHTING);
    
    //Clear the buffer
-   fW = fCanvas->GetWw();
-   fH = fCanvas->GetWh();
-   
-   glViewport(0, 0, GLsizei(fW), GLsizei(fH));
+   glViewport(0, 0, GLsizei(fCanvas->GetWw()), GLsizei(fCanvas->GetWh()));
    
    glDepthMask(GL_TRUE);
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -311,6 +306,19 @@ void TGLPadPainter::DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
 }
 
 //______________________________________________________________________________
+void TGLPadPainter::DrawLineNDC(Double_t u1, Double_t v1, Double_t u2, Double_t v2)
+{
+   const Rgl::Pad::LineAttribSet lineAttribs(kTRUE, gVirtualX->GetLineStyle(), fLimits.GetMaxLineWidth(), kTRUE);
+   const Double_t xRange = gPad->GetX2() - gPad->GetX1();
+   const Double_t yRange = gPad->GetY2() - gPad->GetY1();
+
+   glBegin(GL_LINES);
+   glVertex2d(gPad->GetX1() + u1 * xRange, gPad->GetY1() + v1 * yRange);
+   glVertex2d(gPad->GetX1() + u2 * xRange, gPad->GetY1() + v2 * yRange);
+   glEnd();   
+}
+
+//______________________________________________________________________________
 void TGLPadPainter::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, EBoxMode mode)
 {
    if (mode == kHollow) {
@@ -324,7 +332,6 @@ void TGLPadPainter::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, 
       const Rgl::Pad::FillAttribSet fillAttribs(fSSet, kFALSE);//Set filling parameters.
       glRectd(x1, y1, x2, y2);
    }
-//   std::cout<<"Drawing the box "<<gPad->GetX1()<<' '<<gPad->GetY1()<<' '<<gPad->GetX2()<<' '<<gPad->GetY2()<<std::endl;
 }
 
 //______________________________________________________________________________
@@ -352,11 +359,32 @@ void TGLPadPainter::DrawFillArea(UInt_t n, const Double_t *x, const Double_t *y)
 
       
    gluEndPolygon(t);
+}
+
+//______________________________________________________________________________
+void TGLPadPainter::DrawFillArea(UInt_t n, const Float_t *x, const Float_t *y)
+{
+   if (!gVirtualX->GetFillStyle())
+      return DrawPolyLine(n, x, y);
+
+   fVs.resize(n * 3);
    
-   std::ofstream out("ellipse.txt");
-   out<<gPad->GetX1()<<' '<<gPad->GetY1()<<' '<<gPad->GetX2()<<' '<<gPad->GetY2()<<std::endl;
-   for(UInt_t i = 0; i < n; ++i)
-      out<<x[i]<<' '<<y[i]<<std::endl;
+   for (UInt_t i = 0; i < n; ++i) {
+      fVs[i * 3]     = x[i];
+      fVs[i * 3 + 1] = y[i];
+   }
+
+   const Rgl::Pad::FillAttribSet fillAttribs(fSSet, kFALSE);
+
+   GLUtesselator *t = (GLUtesselator *)fTess.GetTess();
+   gluBeginPolygon(t);
+   gluNextContour(t, (GLenum)GLU_UNKNOWN);
+
+   for (UInt_t i = 0; i < n; ++i)
+      gluTessVertex(t, &fVs[i * 3], &fVs[i * 3]);
+
+      
+   gluEndPolygon(t);
 }
 
 //______________________________________________________________________________
@@ -377,7 +405,59 @@ void TGLPadPainter::DrawPolyLine(UInt_t n, const Double_t *x, const Double_t *y)
 }
 
 //______________________________________________________________________________
+void TGLPadPainter::DrawPolyLine(UInt_t n, const Float_t *x, const Float_t *y)
+{
+   //xs is ok (with fX addition). ys must be converted from windows coordinates into gl.
+   const Rgl::Pad::LineAttribSet lineAttribs(kTRUE, gVirtualX->GetLineStyle(), fLimits.GetMaxLineWidth(), kTRUE);
+
+   glBegin(GL_LINE_STRIP);
+
+   for (UInt_t i = 0; i < n; ++i)
+      glVertex2f(x[i], y[i]);
+
+   glEnd();
+}
+
+//______________________________________________________________________________
+void TGLPadPainter::DrawPolyLineNDC(UInt_t n, const Double_t *u, const Double_t *v)
+{
+//xs is ok (with fX addition). ys must be converted from windows coordinates into gl.
+   const Rgl::Pad::LineAttribSet lineAttribs(kTRUE, gVirtualX->GetLineStyle(), fLimits.GetMaxLineWidth(), kTRUE);
+   const Double_t xRange = gPad->GetX2() - gPad->GetX1();
+   const Double_t yRange = gPad->GetY2() - gPad->GetY1();
+   const Double_t x1 = gPad->GetX1(), y1 = gPad->GetY1();
+   
+   glBegin(GL_LINE_STRIP);
+
+   for (UInt_t i = 0; i < n; ++i)
+      glVertex2d(x1 + u[i] * xRange, y1 + v[i] * yRange);
+
+   glEnd();
+}
+
+namespace {
+
+template<class ValueType>
+void ConvertMarkerPoints(UInt_t n, const ValueType *x, const ValueType *y, std::vector<TPoint> & dst);
+
+}
+
+//______________________________________________________________________________
 void TGLPadPainter::DrawPolyMarker(UInt_t n, const Double_t *x, const Double_t *y)
+{
+   ConvertMarkerPoints(n, x, y, fPoly);
+   DrawPolyMarker();
+}
+
+//______________________________________________________________________________
+void TGLPadPainter::DrawPolyMarker(UInt_t n, const Float_t *x, const Float_t *y)
+{
+   ConvertMarkerPoints(n, x, y, fPoly);
+   DrawPolyMarker();
+}
+
+//______________________________________________________________________________
+void TGLPadPainter::DrawPolyMarker()
 {
    SaveProjectionMatrix();
    glLoadIdentity();
@@ -389,11 +469,10 @@ void TGLPadPainter::DrawPolyMarker(UInt_t n, const Double_t *x, const Double_t *
    Float_t rgba[3] = {};
    Rgl::Pad::ExtractRGB(gVirtualX->GetMarkerColor(), rgba);
    glColor3fv(rgba);
-
-   ConvertMarkerPoints(n, x, y);
    
    const TPoint *xy = &fPoly[0];
    const Style_t markerStyle = gVirtualX->GetMarkerStyle();
+   const UInt_t n = UInt_t(fPoly.size());
    switch (markerStyle) {
    case kDot:
       fMarker.DrawDot(n, xy);
@@ -453,7 +532,6 @@ void TGLPadPainter::DrawPolyMarker(UInt_t n, const Double_t *x, const Double_t *
       fMarker.DrawOpenStar(n, xy);
    }
    
-   //Switch into user coords!!!.
    RestoreProjectionMatrix();
    glMatrixMode(GL_MODELVIEW);
 }
@@ -484,111 +562,12 @@ void TGLPadPainter::DrawText(Double_t x, Double_t y, Double_t angle, Double_t mg
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawFillArea(UInt_t n, const Float_t *x, const Float_t *y)
+void TGLPadPainter::DrawTextNDC(Double_t u, Double_t v, Double_t angle, Double_t mgn,
+                                const char *text, ETextMode mode)
 {
-   if (!gVirtualX->GetFillStyle())
-      return DrawPolyLine(n, x, y);
-
-   fVs.resize(n * 3);
-   
-   for (UInt_t i = 0; i < n; ++i) {
-      fVs[i * 3]     = x[i];
-      fVs[i * 3 + 1] = y[i];
-   }
-
-   const Rgl::Pad::FillAttribSet fillAttribs(fSSet, kFALSE);
-
-   GLUtesselator *t = (GLUtesselator *)fTess.GetTess();
-   gluBeginPolygon(t);
-   gluNextContour(t, (GLenum)GLU_UNKNOWN);
-
-   for (UInt_t i = 0; i < n; ++i)
-      gluTessVertex(t, &fVs[i * 3], &fVs[i * 3]);
-
-      
-   gluEndPolygon(t);
-}
-
-//______________________________________________________________________________
-void TGLPadPainter::DrawPolyLine(UInt_t n, const Float_t *x, const Float_t *y)
-{
-   //xs is ok (with fX addition). ys must be converted from windows coordinates into gl.
-   const Rgl::Pad::LineAttribSet lineAttribs(kTRUE, gVirtualX->GetLineStyle(), fLimits.GetMaxLineWidth(), kTRUE);
-
-   glBegin(GL_LINE_STRIP);
-
-   for (UInt_t i = 0; i < n; ++i)
-      glVertex2f(x[i], y[i]);
-
-   glEnd();
-}
-
-//______________________________________________________________________________
-void TGLPadPainter::DrawPolyMarker(UInt_t /*n*/, const Float_t */*x*/, const Float_t */*y*/)
-{/*
-   Float_t rgba[3] = {};
-   Rgl::Pad::ExtractRGB(gVirtualX->GetMarkerColor(), rgba);
-   glColor3fv(rgba);
-   
-   fMarker.SetShifts(fX, fH - fY);
-   
-   const Style_t markerStyle = gVirtualX->GetMarkerStyle();
-   switch (markerStyle) {
-   case kDot:
-      return fMarker.DrawDot(n, xy);
-   case kPlus:
-      return fMarker.DrawPlus(n, xy);
-   case kStar:
-      return fMarker.DrawStar(n, xy);
-   case kCircle:
-   case kOpenCircle:
-      return fMarker.DrawCircle(n, xy);
-   case kMultiply:
-      return fMarker.DrawX(n, xy);
-   case kFullDotSmall://"Full dot small"
-      return fMarker.DrawFullDotSmall(n, xy);
-   case kFullDotMedium:
-      return fMarker.DrawFullDotMedium(n, xy);
-   case kFullDotLarge:
-   case kFullCircle:
-      return fMarker.DrawFullDotLarge(n, xy);
-   case kFullSquare:
-      return fMarker.DrawFullSquare(n, xy);
-   case kFullTriangleUp:
-      return fMarker.DrawFullTrianlgeUp(n, xy);
-   case kFullTriangleDown:
-      return fMarker.DrawFullTrianlgeDown(n, xy);
-   case kOpenSquare:
-      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-      fMarker.DrawFullSquare(n, xy);
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-      break;
-   case kOpenTriangleUp:
-      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-      fMarker.DrawFullTrianlgeUp(n, xy);
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-      break;
-   case kOpenDiamond:
-      return fMarker.DrawDiamond(n, xy);
-   case kOpenCross:
-      return fMarker.DrawCross(n, xy);
-   case kFullStar:
-      return fMarker.DrawFullStar(n, xy);
-   case kOpenStar:
-      fMarker.DrawOpenStar(n, xy);
-   }*/
-}
-
-//______________________________________________________________________________
-Double_t TGLPadPainter::GetX(Double_t x)const
-{
-   return x + fX;
-}
-
-//______________________________________________________________________________
-Double_t TGLPadPainter::GetY(Double_t y)const
-{
-   return fH - (y + fY);
+   const Double_t xRange = gPad->GetX2() - gPad->GetX1();
+   const Double_t yRange = gPad->GetY2() - gPad->GetY1();
+   DrawText(gPad->GetX1() + u * xRange, gPad->GetY1() + v * yRange, angle, mgn, text, mode);
 }
 
 //______________________________________________________________________________
@@ -632,18 +611,6 @@ void TGLPadPainter::RestoreViewport()
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::ConvertMarkerPoints(UInt_t n, const Double_t *x, const Double_t *y)
-{
-   const UInt_t padH = UInt_t(gPad->GetAbsHNDC() * fCanvas->GetWh());
-   
-   fPoly.resize(n);
-   for (UInt_t i = 0; i < n; ++i) {
-      fPoly[i].fX = gPad->XtoPixel(x[i]);
-      fPoly[i].fY = padH - gPad->YtoPixel(y[i]);
-   }   
-}
-
-//______________________________________________________________________________
 void TGLPadPainter::InvalidateCS()
 {
    glMatrixMode(GL_PROJECTION);
@@ -652,4 +619,21 @@ void TGLPadPainter::InvalidateCS()
    glOrtho(gPad->GetX1(), gPad->GetX2(), gPad->GetY1(), gPad->GetY2(), -10., 10.);
    
    glMatrixMode(GL_MODELVIEW);
+}
+
+//Aux. functions.
+namespace {
+
+template<class ValueType>
+void ConvertMarkerPoints(UInt_t n, const ValueType *x, const ValueType *y, std::vector<TPoint> & dst)
+{
+   const UInt_t padH = UInt_t(gPad->GetAbsHNDC() * gPad->GetWh());
+   
+   dst.resize(n);
+   for (UInt_t i = 0; i < n; ++i) {
+      dst[i].fX = gPad->XtoPixel(x[i]);
+      dst[i].fY = padH - gPad->YtoPixel(y[i]);
+   }   
+}
+
 }
