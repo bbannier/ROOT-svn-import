@@ -89,17 +89,17 @@ public:
    
    void     DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, EBoxMode mode);
    //TPad needs double and float versions.
-   void     DrawFillArea(UInt_t n, const Double_t *x, const Double_t *y);
-   void     DrawFillArea(UInt_t n, const Float_t *x, const Float_t *y);
+   void     DrawFillArea(Int_t n, const Double_t *x, const Double_t *y);
+   void     DrawFillArea(Int_t n, const Float_t *x, const Float_t *y);
    
    //TPad needs both double and float versions of DrawPolyLine.
-   void     DrawPolyLine(UInt_t n, const Double_t *x, const Double_t *y);
-   void     DrawPolyLine(UInt_t n, const Float_t *x, const Float_t *y);
-   void     DrawPolyLineNDC(UInt_t n, const Double_t *u, const Double_t *v);
+   void     DrawPolyLine(Int_t n, const Double_t *x, const Double_t *y);
+   void     DrawPolyLine(Int_t n, const Float_t *x, const Float_t *y);
+   void     DrawPolyLineNDC(Int_t n, const Double_t *u, const Double_t *v);
    
    //TPad needs both versions.
-   void     DrawPolyMarker(UInt_t n, const Double_t *x, const Double_t *y);
-   void     DrawPolyMarker(UInt_t n, const Float_t *x, const Float_t *y);
+   void     DrawPolyMarker(Int_t n, const Double_t *x, const Double_t *y);
+   void     DrawPolyMarker(Int_t n, const Float_t *x, const Float_t *y);
    
    void     DrawText(Double_t x, Double_t y, Double_t angle, Double_t mgn, 
                      const char *text, ETextMode mode);

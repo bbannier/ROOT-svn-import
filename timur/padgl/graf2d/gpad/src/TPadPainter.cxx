@@ -251,44 +251,44 @@ void TPadPainter::DrawBox(Double_t /*x1*/, Double_t /*y1*/, Double_t /*x2*/, Dou
 }
 
 //______________________________________________________________________________
-void TPadPainter::DrawFillArea(UInt_t /*n*/, const Double_t */*x*/, const Double_t */*y*/)
+void TPadPainter::DrawFillArea(Int_t /*n*/, const Double_t */*x*/, const Double_t */*y*/)
 {
    //
 }
 
 //______________________________________________________________________________
-void TPadPainter::DrawFillArea(UInt_t /*n*/, const Float_t */*x*/, const Float_t */*y*/)
+void TPadPainter::DrawFillArea(Int_t /*n*/, const Float_t */*x*/, const Float_t */*y*/)
 {
    //
 }
 
 
 //______________________________________________________________________________
-void TPadPainter::DrawPolyLine(UInt_t /*n*/, const Double_t */*x*/, const Double_t */*y*/)
+void TPadPainter::DrawPolyLine(Int_t /*n*/, const Double_t */*x*/, const Double_t */*y*/)
 {
    //
 }
 
 //______________________________________________________________________________
-void TPadPainter::DrawPolyLine(UInt_t /*n*/, const Float_t */*x*/, const Float_t */*y*/)
+void TPadPainter::DrawPolyLine(Int_t /*n*/, const Float_t */*x*/, const Float_t */*y*/)
 {
    //
 }
 
 //______________________________________________________________________________
-void TPadPainter::DrawPolyLineNDC(UInt_t /*n*/, const Double_t */*u*/, const Double_t */*v*/)
+void TPadPainter::DrawPolyLineNDC(Int_t /*n*/, const Double_t */*u*/, const Double_t */*v*/)
 {
    //
 }
 
 //______________________________________________________________________________
-void TPadPainter::DrawPolyMarker(UInt_t /*n*/, const Double_t */*x*/, const Double_t */*y*/)
+void TPadPainter::DrawPolyMarker(Int_t /*n*/, const Double_t */*x*/, const Double_t */*y*/)
 {
    //
 }
 
 //______________________________________________________________________________
-void TPadPainter::DrawPolyMarker(UInt_t /*n*/, const Float_t */*x*/, const Float_t */*y*/)
+void TPadPainter::DrawPolyMarker(Int_t /*n*/, const Float_t */*x*/, const Float_t */*y*/)
 {
    //
 }
@@ -312,4 +312,3 @@ void TPadPainter::InvalidateCS()
 {
    //
 }
-

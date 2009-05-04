@@ -335,14 +335,14 @@ void TGLPadPainter::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, 
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawFillArea(UInt_t n, const Double_t *x, const Double_t *y)
+void TGLPadPainter::DrawFillArea(Int_t n, const Double_t *x, const Double_t *y)
 {
    if (!gVirtualX->GetFillStyle())
       return DrawPolyLine(n, x, y);
 
    fVs.resize(n * 3);
    
-   for (UInt_t i = 0; i < n; ++i) {
+   for (Int_t i = 0; i < n; ++i) {
       fVs[i * 3]     = x[i];
       fVs[i * 3 + 1] = y[i];
       fVs[i * 3 + 2] = 0.;
@@ -354,7 +354,7 @@ void TGLPadPainter::DrawFillArea(UInt_t n, const Double_t *x, const Double_t *y)
    gluBeginPolygon(t);
    gluNextContour(t, (GLenum)GLU_UNKNOWN);
 
-   for (UInt_t i = 0; i < n; ++i)
+   for (Int_t i = 0; i < n; ++i)
       gluTessVertex(t, &fVs[i * 3], &fVs[i * 3]);
 
       
@@ -362,14 +362,14 @@ void TGLPadPainter::DrawFillArea(UInt_t n, const Double_t *x, const Double_t *y)
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawFillArea(UInt_t n, const Float_t *x, const Float_t *y)
+void TGLPadPainter::DrawFillArea(Int_t n, const Float_t *x, const Float_t *y)
 {
    if (!gVirtualX->GetFillStyle())
       return DrawPolyLine(n, x, y);
 
    fVs.resize(n * 3);
    
-   for (UInt_t i = 0; i < n; ++i) {
+   for (Int_t i = 0; i < n; ++i) {
       fVs[i * 3]     = x[i];
       fVs[i * 3 + 1] = y[i];
    }
@@ -380,7 +380,7 @@ void TGLPadPainter::DrawFillArea(UInt_t n, const Float_t *x, const Float_t *y)
    gluBeginPolygon(t);
    gluNextContour(t, (GLenum)GLU_UNKNOWN);
 
-   for (UInt_t i = 0; i < n; ++i)
+   for (Int_t i = 0; i < n; ++i)
       gluTessVertex(t, &fVs[i * 3], &fVs[i * 3]);
 
       
@@ -388,14 +388,14 @@ void TGLPadPainter::DrawFillArea(UInt_t n, const Float_t *x, const Float_t *y)
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawPolyLine(UInt_t n, const Double_t *x, const Double_t *y)
+void TGLPadPainter::DrawPolyLine(Int_t n, const Double_t *x, const Double_t *y)
 {
    //xs is ok (with fX addition). ys must be converted from windows coordinates into gl.
    const Rgl::Pad::LineAttribSet lineAttribs(kTRUE, gVirtualX->GetLineStyle(), fLimits.GetMaxLineWidth(), kTRUE);
 
    glBegin(GL_LINE_STRIP);
 
-   for (UInt_t i = 0; i < n; ++i)
+   for (Int_t i = 0; i < n; ++i)
       glVertex2d(x[i], y[i]);
       
    if (!gVirtualX->GetFillStyle())
@@ -405,21 +405,21 @@ void TGLPadPainter::DrawPolyLine(UInt_t n, const Double_t *x, const Double_t *y)
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawPolyLine(UInt_t n, const Float_t *x, const Float_t *y)
+void TGLPadPainter::DrawPolyLine(Int_t n, const Float_t *x, const Float_t *y)
 {
    //xs is ok (with fX addition). ys must be converted from windows coordinates into gl.
    const Rgl::Pad::LineAttribSet lineAttribs(kTRUE, gVirtualX->GetLineStyle(), fLimits.GetMaxLineWidth(), kTRUE);
 
    glBegin(GL_LINE_STRIP);
 
-   for (UInt_t i = 0; i < n; ++i)
+   for (Int_t i = 0; i < n; ++i)
       glVertex2f(x[i], y[i]);
 
    glEnd();
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawPolyLineNDC(UInt_t n, const Double_t *u, const Double_t *v)
+void TGLPadPainter::DrawPolyLineNDC(Int_t n, const Double_t *u, const Double_t *v)
 {
 //xs is ok (with fX addition). ys must be converted from windows coordinates into gl.
    const Rgl::Pad::LineAttribSet lineAttribs(kTRUE, gVirtualX->GetLineStyle(), fLimits.GetMaxLineWidth(), kTRUE);
@@ -429,7 +429,7 @@ void TGLPadPainter::DrawPolyLineNDC(UInt_t n, const Double_t *u, const Double_t 
    
    glBegin(GL_LINE_STRIP);
 
-   for (UInt_t i = 0; i < n; ++i)
+   for (Int_t i = 0; i < n; ++i)
       glVertex2d(x1 + u[i] * xRange, y1 + v[i] * yRange);
 
    glEnd();
@@ -438,19 +438,19 @@ void TGLPadPainter::DrawPolyLineNDC(UInt_t n, const Double_t *u, const Double_t 
 namespace {
 
 template<class ValueType>
-void ConvertMarkerPoints(UInt_t n, const ValueType *x, const ValueType *y, std::vector<TPoint> & dst);
+void ConvertMarkerPoints(Int_t n, const ValueType *x, const ValueType *y, std::vector<TPoint> & dst);
 
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawPolyMarker(UInt_t n, const Double_t *x, const Double_t *y)
+void TGLPadPainter::DrawPolyMarker(Int_t n, const Double_t *x, const Double_t *y)
 {
    ConvertMarkerPoints(n, x, y, fPoly);
    DrawPolyMarker();
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawPolyMarker(UInt_t n, const Float_t *x, const Float_t *y)
+void TGLPadPainter::DrawPolyMarker(Int_t n, const Float_t *x, const Float_t *y)
 {
    ConvertMarkerPoints(n, x, y, fPoly);
    DrawPolyMarker();
@@ -625,12 +625,12 @@ void TGLPadPainter::InvalidateCS()
 namespace {
 
 template<class ValueType>
-void ConvertMarkerPoints(UInt_t n, const ValueType *x, const ValueType *y, std::vector<TPoint> & dst)
+void ConvertMarkerPoints(Int_t n, const ValueType *x, const ValueType *y, std::vector<TPoint> & dst)
 {
    const UInt_t padH = UInt_t(gPad->GetAbsHNDC() * gPad->GetWh());
    
    dst.resize(n);
-   for (UInt_t i = 0; i < n; ++i) {
+   for (Int_t i = 0; i < n; ++i) {
       dst[i].fX = gPad->XtoPixel(x[i]);
       dst[i].fY = padH - gPad->YtoPixel(y[i]);
    }   

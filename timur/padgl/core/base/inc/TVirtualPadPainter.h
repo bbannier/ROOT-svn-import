@@ -69,15 +69,15 @@ public:
    
    virtual void     DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, EBoxMode mode) = 0;
    
-   virtual void     DrawFillArea(UInt_t n, const Double_t *x, const Double_t *y) = 0;
-   virtual void     DrawFillArea(UInt_t n, const Float_t *x, const Float_t *y) = 0;
+   virtual void     DrawFillArea(Int_t n, const Double_t *x, const Double_t *y) = 0;
+   virtual void     DrawFillArea(Int_t n, const Float_t *x, const Float_t *y) = 0;
       
-   virtual void     DrawPolyLine(UInt_t n, const Double_t *x, const Double_t *y) = 0;
-   virtual void     DrawPolyLine(UInt_t n, const Float_t *x, const Float_t *y) = 0;
-   virtual void     DrawPolyLineNDC(UInt_t n, const Double_t *u, const Double_t *v) = 0;
+   virtual void     DrawPolyLine(Int_t n, const Double_t *x, const Double_t *y) = 0;
+   virtual void     DrawPolyLine(Int_t n, const Float_t *x, const Float_t *y) = 0;
+   virtual void     DrawPolyLineNDC(Int_t n, const Double_t *u, const Double_t *v) = 0;
    
-   virtual void     DrawPolyMarker(UInt_t n, const Double_t *x, const Double_t *y) = 0;
-   virtual void     DrawPolyMarker(UInt_t n, const Float_t *x, const Float_t *y) = 0;
+   virtual void     DrawPolyMarker(Int_t n, const Double_t *x, const Double_t *y) = 0;
+   virtual void     DrawPolyMarker(Int_t n, const Float_t *x, const Float_t *y) = 0;
    
    virtual void     DrawText(Double_t x, Double_t y, Double_t angle, Double_t mgn, 
                              const char *text, ETextMode mode) = 0;
