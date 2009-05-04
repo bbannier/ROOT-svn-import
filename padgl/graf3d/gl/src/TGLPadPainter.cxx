@@ -15,7 +15,8 @@ ClassImp(TGLPadPainter)
 
 //______________________________________________________________________________
 TGLPadPainter::TGLPadPainter(TVirtualPad *cnv)
-                  : fCanvas(0)
+                  : fCanvas(0),
+                    fIsHollowArea(kFALSE)
 {
    if (!(fCanvas = dynamic_cast<TCanvas *>(cnv))) {
       Error("TGLPadPainter::TGLPadPainter", "Bad canvas pointer was psecified\n");
@@ -335,8 +336,10 @@ void TGLPadPainter::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, 
 //______________________________________________________________________________
 void TGLPadPainter::DrawFillArea(Int_t n, const Double_t *x, const Double_t *y)
 {
-   if (!gVirtualX->GetFillStyle())
+   if (!gVirtualX->GetFillStyle()) {
+      fIsHollowArea = kTRUE;
       return DrawPolyLine(n, x, y);
+   }
 
    fVs.resize(n * 3);
    
@@ -362,8 +365,10 @@ void TGLPadPainter::DrawFillArea(Int_t n, const Double_t *x, const Double_t *y)
 //______________________________________________________________________________
 void TGLPadPainter::DrawFillArea(Int_t n, const Float_t *x, const Float_t *y)
 {
-   if (!gVirtualX->GetFillStyle())
+   if (!gVirtualX->GetFillStyle()) {
+      fIsHollowArea = kTRUE;
       return DrawPolyLine(n, x, y);
+   }
 
    fVs.resize(n * 3);
    
@@ -395,10 +400,11 @@ void TGLPadPainter::DrawPolyLine(Int_t n, const Double_t *x, const Double_t *y)
 
    for (Int_t i = 0; i < n; ++i)
       glVertex2d(x[i], y[i]);
-      
-   if (!gVirtualX->GetFillStyle())
-      glVertex2d(x[0], y[0]);
 
+   if (fIsHollowArea) {
+      glVertex2d(x[0], y[0]);
+      fIsHollowArea = kFALSE;
+   }
    glEnd();
 }
 
@@ -413,6 +419,11 @@ void TGLPadPainter::DrawPolyLine(Int_t n, const Float_t *x, const Float_t *y)
    for (Int_t i = 0; i < n; ++i)
       glVertex2f(x[i], y[i]);
 
+   if (fIsHollowArea) {
+      glVertex2f(x[0], y[0]);
+      fIsHollowArea = kFALSE;
+   }
+      
    glEnd();
 }
 
