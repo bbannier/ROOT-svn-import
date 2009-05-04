@@ -182,10 +182,9 @@ TCanvas::TCanvas(const char *name, Int_t ww, Int_t wh, Int_t winid)
    // TRootEmbeddedCanvas class.
    //
    //  If "name" starts with "gl" the canvas is ready to receive GL output.
-
    Init();
 
-   fUseGL = (name && name == strstr(name, "gl")) || gStyle->GetCanvasPreferGL() ? kTRUE : kFALSE;
+   fUseGL = gStyle->GetCanvasPreferGL();
 
    fCanvasID     = winid;
    fWindowTopX   = 0;
@@ -217,7 +216,7 @@ TCanvas::TCanvas(const char *name, const char *title, Int_t form) : TPad()
    //
    //  If "name" starts with "gl" the canvas is ready to receive GL output.
 
-   fUseGL = (name && name == strstr(name, "gl")) || gStyle->GetCanvasPreferGL() ? kTRUE : kFALSE;
+   fUseGL = gStyle->GetCanvasPreferGL();
 
    Constructor(name, title, form);
 }
@@ -309,7 +308,7 @@ TCanvas::TCanvas(const char *name, const char *title, Int_t ww, Int_t wh) : TPad
    //
    //  If "name" starts with "gl" the canvas is ready to receive GL output.
 
-   fUseGL = (name && name == strstr(name, "gl")) || gStyle->GetCanvasPreferGL() ? kTRUE : kFALSE;
+   fUseGL = gStyle->GetCanvasPreferGL();
 
    Constructor(name, title, ww, wh);
 }
@@ -382,7 +381,7 @@ TCanvas::TCanvas(const char *name, const char *title, Int_t wtopx, Int_t wtopy, 
    //
    //  If "name" starts with "gl" the canvas is ready to receive GL output.
 
-   fUseGL = (name && name == strstr(name, "gl")) || gStyle->GetCanvasPreferGL() ? kTRUE : kFALSE;
+   fUseGL = gStyle->GetCanvasPreferGL();
 
    Constructor(name, title, wtopx, wtopy, ww, wh);
 }
