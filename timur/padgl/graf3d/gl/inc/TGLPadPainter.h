@@ -39,6 +39,7 @@ private:
    Int_t                       fVp[4];
 
    std::vector<TPoint>         fPoly;
+   Bool_t                      fIsHollowArea;
 public:
    TGLPadPainter(TVirtualPad *pad);
    
