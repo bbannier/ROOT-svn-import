@@ -247,7 +247,7 @@ TPad::TPad(const char *name, const char *title, Double_t xlow,
    fViewer3D = 0;
 
    //Setup painter.
-   fPainter = fCanvas->GetPadPainter();
+   fPainter = fCanvas->GetPainter();
    fGLDevice = fCanvas->GetGLDevice();   
    //
    
@@ -1167,7 +1167,7 @@ void TPad::Draw(Option_t *option)
       TPad *oldMother = fMother;
       fCanvas = gPad->GetCanvas();
       //
-      fPainter = fCanvas->GetPadPainter();
+      fPainter = fCanvas->GetPainter();
       //
       fMother = (TPad*)gPad;
       if (oldMother != fMother || fPixmapID == -1) ResizePad();
@@ -5915,6 +5915,3 @@ void TPad::RecordLatex(const TObject *obj)
 
    Emit("RecordLatex(const TObject*)", (Long_t)obj);
 }
-
-//______________________________________________________________________________
-TVirtualPadPainter *TPad::GetPadPainter() const {return fPainter;}

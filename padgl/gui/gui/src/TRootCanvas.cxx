@@ -532,19 +532,10 @@ void TRootCanvas::CreateCanvas(const char *name)
          fCanvasID = gGLManager->InitGLWindow((ULong_t)fCanvasWindow->GetViewPort()->GetId());
          if (fCanvasID != -1) {
             //Create gl context.
-            fCanvas->fGLDevice = gGLManager->CreateGLContext(fCanvasID);
-            if (fCanvas->fGLDevice != -1) {
-               //Create gl painter.
-               TPluginHandler *ph = gROOT->GetPluginManager()->FindHandler("TGLPadPainter", "");
-               if (ph && ph->LoadPlugin() != -1) {
-                  fCanvas->fPainter = (TVirtualPadPainter *)ph->ExecPlugin(1, fCanvas);
-                  if (!fCanvas->fPainter) {
-                     Error("CreateCanvas", "Plugin for TGLPadPainter failed");
-                     gGLManager->DeleteGLContext(fCanvas->fGLDevice);
-                     fCanvas->fGLDevice = -1;
-                  } else
-                     fCanvas->SetSupportGL(kTRUE);   
-               }
+            const Int_t glCtx = gGLManager->CreateGLContext(fCanvasID);
+            if (glCtx != -1) {
+               fCanvas->SetSupportGL(kTRUE);
+               fCanvas->SetGLDevice(glCtx);
             } else
                Error("CreateCanvas", "GL context creation failed.");
          } else
@@ -554,9 +545,6 @@ void TRootCanvas::CreateCanvas(const char *name)
 
    if (fCanvasID == -1)
       fCanvasID = gVirtualX->InitWindow((ULong_t)fCanvasWindow->GetViewPort()->GetId());
-
-   if (!fCanvas->fPainter)
-      fCanvas->fPainter = new TPadPainter;
       
    Window_t win = gVirtualX->GetWindowID(fCanvasID);
    fCanvasContainer = new TRootContainer(this, win, fCanvasWindow->GetViewPort());
@@ -655,8 +643,8 @@ void TRootCanvas::Close()
 {
    // Called via TCanvasImp interface by TCanvas.
    if (fCanvas->UseGL()) {
-      if (fCanvas->fGLDevice != -1)
-         gGLManager->DeleteGLContext(fCanvas->fGLDevice);
+      if (fCanvas->GetGLDevice() != -1)
+         gGLManager->DeleteGLContext(fCanvas->GetGLDevice());
    }
    
    TVirtualPadEditor* gged = TVirtualPadEditor::GetPadEditor(kFALSE);
