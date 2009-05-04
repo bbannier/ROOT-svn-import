@@ -535,7 +535,7 @@ void TRootCanvas::CreateCanvas(const char *name)
             const Int_t glCtx = gGLManager->CreateGLContext(fCanvasID);
             if (glCtx != -1) {
                fCanvas->SetSupportGL(kTRUE);
-               fCanvas->SetGLDevice(glCtx);
+               fCanvas->SetGLDevice(glCtx);//Now, fCanvas is responsible for context deletion!
             } else
                Error("CreateCanvas", "GL context creation failed.");
          } else
@@ -642,11 +642,6 @@ TRootCanvas::~TRootCanvas()
 void TRootCanvas::Close()
 {
    // Called via TCanvasImp interface by TCanvas.
-   if (fCanvas->UseGL()) {
-      if (fCanvas->GetGLDevice() != -1)
-         gGLManager->DeleteGLContext(fCanvas->GetGLDevice());
-   }
-   
    TVirtualPadEditor* gged = TVirtualPadEditor::GetPadEditor(kFALSE);
    if(gged && gged->GetCanvas() == fCanvas)
       gged->Hide();
