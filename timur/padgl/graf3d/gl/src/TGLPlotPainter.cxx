@@ -121,13 +121,12 @@ void TGLPlotPainter::Paint()
    //Save projection and modelview matrix, used by glpad.
    SaveProjectionMatrix();
    SaveModelviewMatrix();
-/*   glMatrixMode(GL_PROJECTION);//[1
-   glPushMatrix();
-   glMatrixMode(GL_MODELVIEW);//[2
-   glPushMatrix();*/
       
    //glOrtho etc.
    fCamera->SetCamera();
+   //
+   glClear(GL_DEPTH_BUFFER_BIT);
+   //
    if (fCamera->ViewportChanged())
       fUpdateSelection = kTRUE;
    //Set light.
@@ -146,10 +145,6 @@ void TGLPlotPainter::Paint()
    DeInitGL();//Disable/enable, what concrete plot painter enabled/disabled
 
    //Restore projection and modelview matrices.
-/*   glMatrixMode(GL_PROJECTION);//1]
-   glPopMatrix();
-   glMatrixMode(GL_MODELVIEW);//2]
-   glPopMatrix();*/
    RestoreProjectionMatrix();
    RestoreModelviewMatrix();
 

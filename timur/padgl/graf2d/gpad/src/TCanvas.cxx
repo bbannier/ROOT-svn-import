@@ -1228,7 +1228,7 @@ void TCanvas::HandleInput(EEventType event, Int_t px, Int_t py)
                     // we will only use its coordinate system
 
       FeedbackMode(kTRUE);
-
+      
       fSelected->Pop();           // pop object to foreground
       pad->cd();                  // and make its pad the current pad
       if (gDebug)
@@ -1242,8 +1242,9 @@ void TCanvas::HandleInput(EEventType event, Int_t px, Int_t py)
             tc->Update();
       }
 
-      if (pad->GetGLDevice() != -1)
-         fSelected->ExecuteEvent(event, px, py);
+      /*if (pad->GetGLDevice() != -1 && fSelected)
+         fSelected->ExecuteEvent(event, px, py);*/
+
       break;   // don't want fPadSave->cd() to be executed at the end
 
    case kButton2Motion:
