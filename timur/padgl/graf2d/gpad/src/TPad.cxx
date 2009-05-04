@@ -3064,14 +3064,6 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
    // if option[0] = 'l' the box contour is drawn
 
    if (!gPad->IsBatch()) {
-      Int_t px1 = XtoPixel(x1);
-      Int_t px2 = XtoPixel(x2);
-      Int_t py1 = YtoPixel(y1);
-      Int_t py2 = YtoPixel(y2);
-      //box width must be at least one pixel
-      if (TMath::Abs(px2-px1) < 1) px2 = px1+1;
-      if (TMath::Abs(py1-py2) < 1) py1 = py2+1;
-
       Int_t style0 = fPainter->GetFillStyle();
       Int_t style  = style0;
       if (option[0] == 's') {
@@ -3082,7 +3074,6 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
          if (style > 3000 && style < 4000) {
             if (style < 3026) {
                // draw stipples with fFillColor foreground
-               //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kFilled);
                fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
             }
 
@@ -3096,7 +3087,6 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
             //special case for TAttFillCanvas
             if (fPainter->GetFillColor() == 10) {
                fPainter->SetFillColor(1);
-               //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kFilled);
                fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
                fPainter->SetFillColor(10);
             }
@@ -3106,7 +3096,6 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
 
             //ignore this style option when this is the canvas itself
             if (this == fMother)
-               //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kFilled);
                fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
             else {
                //draw background by blitting all bottom pads
@@ -3118,15 +3107,13 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
                   CopyBackgroundPixmaps(fMother, this, px, py);
                }
 
-               fPainter->SetOpacity(style - 4000);//gVirtualX->SetOpacity(style-4000);
+               fPainter->SetOpacity(style - 4000);
             }
          } else {
-            //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kFilled);
             fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
          }
-         if (option[0] == 'l') fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kHollow);//fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
+         if (option[0] == 'l') fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kHollow);
       } else {
-         //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
          fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kHollow);
          if (option[0] == 's') fPainter->SetFillStyle(style0);
       }
