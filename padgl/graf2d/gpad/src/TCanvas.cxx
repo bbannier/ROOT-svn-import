@@ -2082,12 +2082,6 @@ void TCanvas::Update()
 
    if (!IsBatch()) FeedbackMode(kFALSE);      // Goto double buffer mode
 
-   /*if (UseGL()) {
-      gGLManager->MakeCurrent(fGLDevice);
-      fPainter->InitPainter();
-      //Paint();
-      //gGLManager->Flush(fGLDevice);
-   } else*/
    if (!UseGL())
       PaintModified();           // Repaint all modified pad's
 
