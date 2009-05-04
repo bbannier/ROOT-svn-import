@@ -1413,16 +1413,16 @@ void TPad::DrawCrosshair()
       pymin = 0;
       pymax = cpad->GetWh();
    }
-   if(pxold) /*fPainter->DrawLine(pxold, pymin, pxold, pymax);*/gVirtualX->DrawLine(pxold,pymin,pxold,pymax);
-   if(pyold) /*fPainter->DrawLine(pxold, pymin, pxold, pymax);*/gVirtualX->DrawLine(pxmin,pyold,pxmax,pyold);
+   if(pxold) gVirtualX->DrawLine(pxold,pymin,pxold,pymax);
+   if(pyold) gVirtualX->DrawLine(pxmin,pyold,pxmax,pyold);
    if (cpad->GetEvent() == kButton1Down ||
        cpad->GetEvent() == kButton1Up   ||
        cpad->GetEvent() == kMouseLeave) {
       fCrosshairPos = 0;
       return;
    }
-   /*fPainter->DrawLine(px, pymin, px, pymax);*/gVirtualX->DrawLine(px,pymin,px,pymax);
-   /*fPainter->DrawLine(pxmin, py, pxmax, py);*/gVirtualX->DrawLine(pxmin,py,pxmax,py);
+   gVirtualX->DrawLine(px,pymin,px,pymax);
+   gVirtualX->DrawLine(pxmin,py,pxmax,py);
    fCrosshairPos = px + 10000*py;
 }
 
@@ -1778,7 +1778,6 @@ again:
 
       if (pA) {
          if (!ropaque) gVirtualX->DrawBox(pxold, pyt, pxt, pyold, TVirtualX::kHollow);
-         //fPainter->DrawBox(pxold, pyt, pxt, pyold, TVirtualPadPainter::kHollow);// draw the old box
          if (px > pxt-kMinSize) { px = pxt-kMinSize; wx = px; }
          if (py > pyt-kMinSize) { py = pyt-kMinSize; wy = py; }
          if (px < pxlp) { px = pxlp; wx = px; }
@@ -1796,12 +1795,10 @@ again:
 
             wx = wy = 0;
          }
-         if (!ropaque) //fPainter->DrawBox(px, pyt, pxt, py, TVirtualPadPainter::kHollow);// draw the new box
-            gVirtualX->DrawBox(px, pyt, pxt, py, TVirtualX::kHollow);
+         if (!ropaque) gVirtualX->DrawBox(px, pyt, pxt, py, TVirtualX::kHollow);
       }
       if (pB) {
-         if (!ropaque) //fPainter->DrawBox(pxl, pyt, pxold, pyold, TVirtualPadPainter::kHollow);
-            gVirtualX->DrawBox(pxl  , pyt, pxold, pyold, TVirtualX::kHollow);
+         if (!ropaque) gVirtualX->DrawBox(pxl  , pyt, pxold, pyold, TVirtualX::kHollow);
          if (px < pxl+kMinSize) { px = pxl+kMinSize; wx = px; }
          if (py > pyt-kMinSize) { py = pyt-kMinSize; wy = py; }
          if (px > pxtp) { px = pxtp; wx = px; }
@@ -1819,12 +1816,10 @@ again:
 
             wx = wy = 0;
          }
-         if (!ropaque) //fPainter->DrawBox(pxl, pyt, px,  py, TVirtualPadPainter::kHollow);;
-            gVirtualX->DrawBox(pxl  , pyt, px ,  py,    TVirtualX::kHollow);
+         if (!ropaque) gVirtualX->DrawBox(pxl  , pyt, px ,  py,    TVirtualX::kHollow);
       }
       if (pC) {
-         if (!ropaque) //fPainter->DrawBox(pxl, pyl, pxold, pyold, TVirtualPadPainter::kHollow);
-            gVirtualX->DrawBox(pxl  , pyl, pxold, pyold, TVirtualX::kHollow);
+         if (!ropaque) gVirtualX->DrawBox(pxl  , pyl, pxold, pyold, TVirtualX::kHollow);
          if (px < pxl+kMinSize) { px = pxl+kMinSize; wx = px; }
          if (py < pyl+kMinSize) { py = pyl+kMinSize; wy = py; }
          if (px > pxtp) { px = pxtp; wx = px; }
@@ -1842,12 +1837,10 @@ again:
 
             wx = wy = 0;
          }
-         if (!ropaque) //fPainter->DrawBox(pxl, pyl, px, py, TVirtualPadPainter::kHollow);
-            gVirtualX->DrawBox(pxl, pyl, px, py, TVirtualX::kHollow);
+         if (!ropaque) gVirtualX->DrawBox(pxl, pyl, px, py, TVirtualX::kHollow);
       }
       if (pD) {
-         if (!ropaque) //fPainter->DrawBox(pxold, pyold, pxt, pyl, TVirtualPadPainter::kHollow);
-            gVirtualX->DrawBox(pxold, pyold, pxt, pyl, TVirtualX::kHollow);
+         if (!ropaque) gVirtualX->DrawBox(pxold, pyold, pxt, pyl, TVirtualX::kHollow);
          if (px > pxt-kMinSize) { px = pxt-kMinSize; wx = px; }
          if (py < pyl+kMinSize) { py = pyl+kMinSize; wy = py; }
          if (px < pxlp) { px = pxlp; wx = px; }
@@ -1865,12 +1858,10 @@ again:
 
             wx = wy = 0;
          }
-         if (!ropaque) //fPainter->DrawBox(px, py, pxt, pyl, TVirtualPadPainter::kHollow);
-            gVirtualX->DrawBox(px, py, pxt, pyl, TVirtualX::kHollow);
+         if (!ropaque) gVirtualX->DrawBox(px, py, pxt, pyl, TVirtualX::kHollow);
       }
       if (pTop) {
-         if (!ropaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
-            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+         if (!ropaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
          py2 += py - pyold;
          if (py2 > py1-kMinSize) { py2 = py1-kMinSize; wy = py2; }
          if (py2 < py2p) { py2 = py2p; wy = py2; }
@@ -1883,12 +1874,10 @@ again:
             else
                px2 = npx2;
          }
-         if (!ropaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
-            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+         if (!ropaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
       }
       if (pBot) {
-         if (!ropaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
-            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+         if (!ropaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
          py1 += py - pyold;
          if (py1 < py2+kMinSize) { py1 = py2+kMinSize; wy = py1; }
          if (py1 > py1p) { py1 = py1p; wy = py1; }
@@ -1901,12 +1890,10 @@ again:
             else
                px2 = npx2;
          }
-         if (!ropaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
-            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+         if (!ropaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
       }
       if (pL) {
-         if (!ropaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
-            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+         if (!ropaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
          px1 += px - pxold;
          if (px1 > px2-kMinSize) { px1 = px2-kMinSize; wx = px1; }
          if (px1 < px1p) { px1 = px1p; wx = px1; }
@@ -1920,12 +1907,10 @@ again:
             else
                py2 = npy2;
          }
-         if (!ropaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
-            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+         if (!ropaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
       }
       if (pR) {
-         if (!ropaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
-            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+         if (!ropaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
          px2 += px - pxold;
          if (px2 < px1+kMinSize) { px2 = px1+kMinSize; wx = px2; }
          if (px2 > px2p) { px2 = px2p; wx = px2; }
@@ -1939,12 +1924,10 @@ again:
             else
                py2 = npy2;
          }
-         if (!ropaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);
-            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
+         if (!ropaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);
       }
       if (pINSIDE) {
-         if (!opaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);  // draw the old box
-            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);  // draw the old box
+         if (!opaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);  // draw the old box
          Int_t dx = px - pxold;
          Int_t dy = py - pyold;
          px1 += dx; py1 += dy; px2 += dx; py2 += dy;
@@ -1952,8 +1935,7 @@ again:
          if (px2 > px2p) { dx = px2 - px2p; px1 -= dx; px2 -= dx; wx = px-dx; }
          if (py1 > py1p) { dy = py1 - py1p; py1 -= dy; py2 -= dy; wy = py-dy; }
          if (py2 < py2p) { dy = py2p - py2; py1 += dy; py2 += dy; wy = py+dy; }
-         if (!opaque) //fPainter->DrawBox(px1, py1, px2, py2, TVirtualPadPainter::kHollow);  // draw the new box
-            gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);  // draw the new box
+         if (!opaque) gVirtualX->DrawBox(px1, py1, px2, py2, TVirtualX::kHollow);  // draw the new box
       }
 
       if (wx || wy) {
@@ -2016,8 +1998,8 @@ again:
       if (pA || pB || pC || pD || pTop || pL || pR || pBot)
          Modified(kTRUE);
 
-      fPainter->SetLineColor(-1);//gVirtualX->SetLineColor(-1);
-      fPainter->SetLineColor(-1);//gVirtualX->SetLineWidth(-1);
+      gVirtualX->SetLineColor(-1);
+      gVirtualX->SetLineWidth(-1);
 
       if (px != pxorg || py != pyorg) {
 
@@ -2151,18 +2133,16 @@ void TPad::ExecuteEventAxis(Int_t event, Int_t px, Int_t py, TAxis *axis)
             px2old = XtoAbsPixel(GetX2());
             py2old = py1old;
          }
-         fPainter->DrawBox(px1old, py1old, px2old, py2old, TVirtualPadPainter::kHollow);
-         //gVirtualX->DrawBox(px1old, py1old, px2old, py2old, TVirtualX::kHollow);
+         gVirtualX->DrawBox(px1old, py1old, px2old, py2old, TVirtualX::kHollow);
       }
-      fPainter->SetLineColor(-1);//gVirtualX->SetLineColor(-1);
+      gVirtualX->SetLineColor(-1);
       // No break !!!
 
    case kButton1Motion:
       if (view) {
          view->GetDistancetoAxis(axisNumber, px, py, ratio2);
       } else {
-         //gVirtualX->DrawBox(px1old, py1old, px2old, py2old, TVirtualX::kHollow);
-         fPainter->DrawBox(px1old, py1old, px2old, py2old, TVirtualPadPainter::kHollow);
+         gVirtualX->DrawBox(px1old, py1old, px2old, py2old, TVirtualX::kHollow);
          if (axisNumber == 1) {
             ratio2 = (AbsPixeltoX(px) - GetUxmin())/(GetUxmax() - GetUxmin());
             px2old = XtoAbsPixel(GetUxmin()+ratio2*(GetUxmax() - GetUxmin()));
@@ -2170,8 +2150,7 @@ void TPad::ExecuteEventAxis(Int_t event, Int_t px, Int_t py, TAxis *axis)
             ratio2 = (AbsPixeltoY(py) - GetUymin())/(GetUymax() - GetUymin());
             py2old = YtoAbsPixel(GetUymin()+ratio2*(GetUymax() - GetUymin()));
          }
-         fPainter->DrawBox(px1old, py1old, px2old, py2old, TVirtualPadPainter::kHollow);
-         //gVirtualX->DrawBox(px1old, py1old, px2old, py2old, TVirtualX::kHollow);
+         gVirtualX->DrawBox(px1old, py1old, px2old, py2old, TVirtualX::kHollow);
       }
    break;
 
@@ -2286,8 +2265,7 @@ void TPad::ExecuteEventAxis(Int_t event, Int_t px, Int_t py, TAxis *axis)
             Modified(kTRUE);
          }
       }
-      //gVirtualX->SetLineColor(-1);
-      fPainter->SetLineColor(-1);
+      gVirtualX->SetLineColor(-1);
       break;
    }
 }
@@ -2999,7 +2977,7 @@ void TPad::PaintModified()
    cd();
    if (IsModified() || IsTransparent()) {
       if ((fFillStyle < 3026) && (fFillStyle > 3000)) {
-         if (!gPad->IsBatch()) fPainter->ClearDrawable();//gVirtualX->ClearWindow();
+         if (!gPad->IsBatch()) fPainter->ClearDrawable();
       }
       PaintBorder(GetFillColor(), kTRUE);
    }
@@ -3274,7 +3252,7 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
    }
 
    // Paint the fill area with hatches
-   Int_t fillstyle = fPainter->GetFillStyle();//gVirtualX->GetFillStyle();
+   Int_t fillstyle = fPainter->GetFillStyle();
    if (gPad->IsBatch() && gVirtualPS) fillstyle = gVirtualPS->GetFillStyle();
    if (fillstyle >= 3100 && fillstyle < 4000) {
       PaintFillAreaHatches(nn, x, y, fillstyle);
@@ -3349,9 +3327,9 @@ void TPad::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t Fill
 
    // Save the current line attributes
    if (!gPad->IsBatch()) {
-      lws = fPainter->GetLineWidth();//gVirtualX->GetLineWidth();
-      lss = fPainter->GetLineStyle();//gVirtualX->GetLineStyle();
-      lcs = fPainter->GetLineColor();//gVirtualX->GetLineColor();
+      lws = fPainter->GetLineWidth();
+      lss = fPainter->GetLineStyle();
+      lcs = fPainter->GetLineColor();
    } else {
       if (gVirtualPS) {
          lws = gVirtualPS->GetLineWidth();
@@ -3365,10 +3343,6 @@ void TPad::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t Fill
       fPainter->SetLineStyle(1);
       fPainter->SetLineWidth(Short_t(lw));
       fPainter->SetLineColor(fPainter->GetFillColor());
-      /*
-      gVirtualX->SetLineStyle(1);
-      gVirtualX->SetLineWidth(Short_t(lw));
-      gVirtualX->SetLineColor(gVirtualX->GetFillColor());*/
    }
    if (gVirtualPS) {
       gVirtualPS->SetLineStyle(1);
@@ -3382,10 +3356,6 @@ void TPad::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t Fill
 
    // Restore the line attributes
    if (!gPad->IsBatch()) {
-      /*
-      gVirtualX->SetLineStyle(lss);
-      gVirtualX->SetLineWidth(lws);
-      gVirtualX->SetLineColor(lcs);*/
       fPainter->SetLineStyle(lss);
       fPainter->SetLineWidth(lws);
       fPainter->SetLineColor(lcs);
@@ -4206,8 +4176,7 @@ void TPad::Print(const char *filenam, Option_t *option)
       psname.Prepend(gEnv->GetValue("Canvas.PrintDirectory","."));
    }
    if (!gPad->IsBatch() && fCanvas)
-      gVirtualX->SelectWindow(GetCanvasID());
-      //fPainter->SelectDrawable(GetCanvasID());
+      fPainter->SelectDrawable(GetCanvasID());
 
    // Save pad/canvas in alternative formats
    TImage::EImageFileTypes gtype = TImage::kUnknown;
@@ -4242,7 +4211,7 @@ void TPad::Print(const char *filenam, Option_t *option)
          gPad->GetCanvas()->SetHighLightColor(-1);
          gPad->Modified();
          gPad->Update();
-         gVirtualX->SelectWindow(wid);
+         fPainter->SelectDrawable(wid);
          if (gVirtualX->WriteGIF((char*)psname.Data())) {
             if (!gSystem->AccessPathName(psname.Data())) {
                Info("Print", "GIF file %s has been created", psname.Data());
@@ -4736,8 +4705,6 @@ void TPad::ResizePad(Option_t *option)
    else {
       fPainter->SetLineWidth(-1);
       fPainter->SetTextSize(-1);
-      //gVirtualX->SetLineWidth(-1);
-      //gVirtualX->SetTextSize(-1);
 
       // create or re-create off-screen pixmap
       if (fPixmapID) {
@@ -4759,7 +4726,7 @@ void TPad::ResizePad(Option_t *option)
             h = 10;
          }
          if (fPixmapID == -1) {      // this case is handled via the ctor
-            fPixmapID = fPainter->CreateDrawable(w, h);//gVirtualX->OpenPixmap(w, h);
+            fPixmapID = fPainter->CreateDrawable(w, h);
          } else {
             if (gVirtualX->ResizePixmap(fPixmapID, w, h)) {
                Modified(kTRUE);
