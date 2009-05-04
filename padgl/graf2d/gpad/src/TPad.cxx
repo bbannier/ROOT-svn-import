@@ -57,11 +57,6 @@
 #include "TApplication.h"
 #include "TVirtualPadPainter.h"
 
-
-// Local scratch buffer for screen points, faster than allocating buffer on heap
-const Int_t kPXY       = 1002;
-
-static TPoint gPXY[kPXY];
 static Int_t gReadLevel = 0;
 
 Int_t TPad::fgMaxPickDistance = 5;
