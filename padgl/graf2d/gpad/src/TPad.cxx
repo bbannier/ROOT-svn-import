@@ -2863,7 +2863,6 @@ void TPad::PaintBorder(Color_t color, Bool_t tops)
    else           {pyl = py2; pyt = py1; yl = fY2; yt = fY1;}
 
    Double_t frameXs[7] = {}, frameYs[7] = {};
-   
       
    if (!IsBatch()) {
       // Draw top&left part of the box
@@ -2877,7 +2876,7 @@ void TPad::PaintBorder(Color_t color, Bool_t tops)
       
       if (fBorderMode == -1) fPainter->SetFillColor(dark);
       else                   fPainter->SetFillColor(light);
-      fPainter->DrawFillArea(7, frameXs, frameYs);//BACK
+      fPainter->DrawFillArea(7, frameXs, frameYs);
 
       // Draw bottom&right part of the box
       frameXs[0] = xl;              frameYs[0] = yl;
@@ -3640,17 +3639,8 @@ void TPad::PaintLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
 void TPad::PaintLineNDC(Double_t u1, Double_t v1,Double_t u2, Double_t v2)
 {
    static Double_t xw[2], yw[2];
-   if (!gPad->IsBatch()) {
-      Int_t px1 = UtoPixel(u1);
-      Int_t py1 = VtoPixel(v1);
-      Int_t px2 = UtoPixel(u2);
-      Int_t py2 = VtoPixel(v2);
-      //gVirtualX->DrawLine(px1, py1, px2, py2);
-      //fPainter->DrawLine(px1, py1, px2, py2);
-      const Double_t xRange = fX2 - fX1;
-      const Double_t yRange = fY2 - fY1;
-      fPainter->DrawLine(u1 * xRange + fX1, v1 * yRange + fY1, u2 * xRange + fX1, v2 * yRange + fY1);
-   }
+   if (!gPad->IsBatch())
+      fPainter->DrawLineNDC(u1, v1, u2, v2);
 
    if (gVirtualPS) {
       xw[0] = fX1 + u1*(fX2 - fX1);
@@ -3805,30 +3795,15 @@ void TPad::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option)
 void TPad::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *)
 {
    // Paint polyline in CurrentPad NDC coordinates.
-
-   TPoint *pxy;
-   Int_t i;
-
-   // Create temporary array to store array in pixel coordinates
    if (n <=0) return;
 
-   if (!gPad->IsBatch()) {
-      if (n <kPXY) pxy = &gPXY[0];
-      else         pxy = new TPoint[n+1]; if (!pxy) return;
-      // convert points from world to pixel coordinates
-      for (i=0; i<n; i++) {
-         pxy[i].fX = UtoPixel(x[i]);
-         pxy[i].fY = VtoPixel(y[i]);
-      }
-      // invoke the graphics subsystem
-      //fPainter->DrawPolyLine(n, pxy);//BACK
-      if (n >= kPXY)  delete [] pxy;
-   }
+   if (!gPad->IsBatch())
+      fPainter->DrawPolyLineNDC(n, x, y);
 
    if (gVirtualPS) {
       Double_t *xw = new Double_t[n];
       Double_t *yw = new Double_t[n];
-      for (i=0; i<n; i++) {
+      for (Int_t i=0; i<n; i++) {
          xw[i] = fX1 + x[i]*(fX2 - fX1);
          yw[i] = fY1 + y[i]*(fY2 - fY1);
       }
@@ -3860,17 +3835,13 @@ void TPad::PaintPolyMarker(Int_t nn, Float_t *x, Float_t *y, Option_t *)
    // Paint polymarker in CurrentPad World coordinates.
 
    Int_t n = TMath::Abs(nn);
-   TPoint *pxy = &gPXY[0];
-   if (!gPad->IsBatch()) {
-      if (n >= kPXY) pxy = new TPoint[n+1]; if (!pxy) return;
-   }
    Double_t xmin,xmax,ymin,ymax;
    if (nn > 0 || TestBit(TGraph::kClipFrame)) {
       xmin = fUxmin; ymin = fUymin; xmax = fUxmax; ymax = fUymax;
    } else {
       xmin = fX1; ymin = fY1; xmax = fX2; ymax = fY2;
    }
-   Int_t i,j,i1=-1,np=0;
+   Int_t i,i1=-1,np=0;
    for (i=0; i<n; i++) {
       if (x[i] >= xmin && x[i] <= xmax && y[i] >= ymin && y[i] <= ymax) {
          np++;
@@ -3878,21 +3849,13 @@ void TPad::PaintPolyMarker(Int_t nn, Float_t *x, Float_t *y, Option_t *)
          if (i < n-1) continue;
       }
       if (np == 0) continue;
-      if (!gPad->IsBatch()) {
-         for (j=0;j<np;j++) {
-            pxy[j].fX = XtoPixel(x[i1+j]);
-            pxy[j].fY = YtoPixel(y[i1+j]);
-         }
-         //fPainter->DrawPolyMarker(np, pxy);//BACK
-      }
+      if (!gPad->IsBatch())
+         fPainter->DrawPolyMarker(np, x + i1, y + i1);
       if (gVirtualPS) {
          gVirtualPS->DrawPolyMarker(np, &x[i1], &y[i1]);
       }
       i1 = -1;
       np = 0;
-   }
-   if (!gPad->IsBatch()) {
-      if (n >= kPXY)   delete [] pxy;
    }
    Modified();
 }
@@ -3937,13 +3900,8 @@ void TPad::PaintText(Double_t x, Double_t y, const char *text)
 
    Modified();
 
-   if (!gPad->IsBatch()) {
-      Int_t px = XtoPixel(x);
-      Int_t py = YtoPixel(y);
-      Float_t angle = fPainter->GetTextAngle();//gVirtualX->GetTextAngle();
-      //gVirtualX->DrawText(px, py, angle, gVirtualX->GetTextMagnitude(), text, TVirtualX::kClear);
-      fPainter->DrawText(x, y, angle, fPainter->GetTextMagnitude(), text, TVirtualPadPainter::kClear);
-   }
+   if (!gPad->IsBatch())
+      fPainter->DrawText(x, y, fPainter->GetTextAngle(), fPainter->GetTextMagnitude(), text, TVirtualPadPainter::kClear);
 
    if (gVirtualPS) gVirtualPS->Text(x, y, text);
 }
@@ -3957,12 +3915,8 @@ void TPad::PaintTextNDC(Double_t u, Double_t v, const char *text)
    Modified();
 
    if (!gPad->IsBatch()) {
-      Int_t px = UtoPixel(u);
-      Int_t py = VtoPixel(v);
-      Float_t angle = fPainter->GetTextAngle();//gVirtualX->GetTextAngle();
-
-      //gVirtualX->DrawText(px, py, angle, gVirtualX->GetTextMagnitude(), text, TVirtualX::kClear);
-      fPainter->DrawText(px, py, angle, fPainter->GetTextMagnitude(), text, TVirtualPadPainter::kClear);
+      Float_t angle = fPainter->GetTextAngle();
+      fPainter->DrawTextNDC(u, v, angle, fPainter->GetTextMagnitude(), text, TVirtualPadPainter::kClear);
    }
 
    if (gVirtualPS) {
