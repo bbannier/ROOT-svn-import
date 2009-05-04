@@ -275,14 +275,6 @@ Bool_t TGLPlotPainter::PlotSelected(Int_t px, Int_t py)
       //New object was selected (or surface deselected) - re-paint.
       fSelectedPart = newSelected;
       gPad->GetCanvas()->Flush();
-      //Paint();
-      /*
-      TGLAdapter *glAdapter = dynamic_cast<TGLAdapter *>(fGLDevice);
-      if (glAdapter)
-         glAdapter->MarkForDirectCopy(kTRUE);
-      Paint();
-      if (glAdapter)
-         glAdapter->MarkForDirectCopy(kFALSE);*/
    }
 
    return fSelectedPart ? kTRUE : kFALSE;
