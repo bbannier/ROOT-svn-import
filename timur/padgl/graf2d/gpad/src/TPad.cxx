@@ -61,8 +61,7 @@
 // Local scratch buffer for screen points, faster than allocating buffer on heap
 const Int_t kPXY       = 1002;
 
-//static TPoint gPXY[kPXY];
-static TPointD gPXY[kPXY];
+static TPoint gPXY[kPXY];
 static Int_t gReadLevel = 0;
 
 Int_t TPad::fgMaxPickDistance = 5;
@@ -3257,15 +3256,12 @@ void TPad::PaintFillArea(Int_t nn, Float_t *xx, Float_t *yy, Option_t *)
       return;
    }
 
-   //TPoint *pxy;
-   TPointD *pxy;
-
+   TPoint *pxy;
    // Create temporary array to store array in pixel coordinates
 
    if (!gPad->IsBatch()) {
       if (n <kPXY) pxy = &gPXY[0];
-      //else         pxy = new TPoint[n+1];
-      else         pxy = new TPointD[n+1];
+      else         pxy = new TPoint[n+1];
    // convert points from world to pixel coordinates
       for (i=0;i<n;i++) {
          pxy[i].fX = gPad->XtoPixel(x[i]);
@@ -3326,15 +3322,12 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
       return;
    }
 
-   //TPoint *pxy;
-   TPointD *pxy;
-
+   TPoint *pxy;
    // Create temporary array to store array in pixel coordinates
 
    if (!gPad->IsBatch()) {
       if (n <kPXY) pxy = &gPXY[0];
-      else         pxy = new TPointD[n+1];
-      //else         pxy = new TPoint[n+1];
+      else         pxy = new TPoint[n+1];
       // convert points from world to pixel coordinates
       for (i=0;i<n;i++) {
          pxy[i].fX = gPad->XtoPixel(x[i]);
@@ -3344,10 +3337,9 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
       if (fillstyle == 0) {
          pxy[n].fX = pxy[0].fX;
          pxy[n].fY = pxy[0].fY;
-         //fPainter->DrawFillArea(n+1, pxy);//BACK
-         fPainter->DrawFillArea(n, x, y);//BACK
+         fPainter->DrawFillArea(n, x, y);
       } else {
-         fPainter->DrawFillArea(n, x, y);//BACK
+         fPainter->DrawFillArea(n, x, y);
       }
       if (n >= kPXY) delete [] pxy;
    }
@@ -3814,8 +3806,7 @@ void TPad::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *)
 {
    // Paint polyline in CurrentPad NDC coordinates.
 
-   //TPoint *pxy;
-   TPointD *pxy;
+   TPoint *pxy;
    Int_t i;
 
    // Create temporary array to store array in pixel coordinates
@@ -3823,8 +3814,7 @@ void TPad::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *)
 
    if (!gPad->IsBatch()) {
       if (n <kPXY) pxy = &gPXY[0];
-      else         pxy = new TPointD[n+1]; if (!pxy) return;
-      //else         pxy = new TPoint[n+1]; if (!pxy) return;
+      else         pxy = new TPoint[n+1]; if (!pxy) return;
       // convert points from world to pixel coordinates
       for (i=0; i<n; i++) {
          pxy[i].fX = UtoPixel(x[i]);
@@ -3870,11 +3860,9 @@ void TPad::PaintPolyMarker(Int_t nn, Float_t *x, Float_t *y, Option_t *)
    // Paint polymarker in CurrentPad World coordinates.
 
    Int_t n = TMath::Abs(nn);
-//   TPoint *pxy = &gPXY[0];
-   TPointD *pxy = &gPXY[0];
+   TPoint *pxy = &gPXY[0];
    if (!gPad->IsBatch()) {
-      //if (n >= kPXY) pxy = new TPoint[n+1]; if (!pxy) return;
-      if (n >= kPXY) pxy = new TPointD[n+1]; if (!pxy) return;
+      if (n >= kPXY) pxy = new TPoint[n+1]; if (!pxy) return;
    }
    Double_t xmin,xmax,ymin,ymax;
    if (nn > 0 || TestBit(TGraph::kClipFrame)) {
