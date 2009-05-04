@@ -212,7 +212,6 @@ Int_t TGLHistPainter::DistancetoPrimitive(Int_t px, Int_t py)
    if (fPlotType == kGLDefaultPlot)
       return fDefaultPainter.get() ? fDefaultPainter->DistancetoPrimitive(px, py) : 9999;
    else {
-      //return 9999;
       //Adjust px and py - canvas can have several pads inside, so we need to convert
       //the from canvas' system into pad's.
       py -= Int_t((1 - gPad->GetHNDC() - gPad->GetYlowNDC()) * gPad->GetWh());
