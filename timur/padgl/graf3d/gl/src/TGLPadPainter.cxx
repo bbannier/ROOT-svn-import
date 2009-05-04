@@ -547,7 +547,7 @@ void TGLPadPainter::DrawPolyMarker()
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawText(Double_t x, Double_t y, Double_t angle, Double_t mgn, const char *text, ETextMode /*mode*/)
+void TGLPadPainter::DrawText(Double_t x, Double_t y, const char *text, ETextMode /*mode*/)
 {
    SaveProjectionMatrix();
    glLoadIdentity();
@@ -560,11 +560,13 @@ void TGLPadPainter::DrawText(Double_t x, Double_t y, Double_t angle, Double_t mg
    Rgl::Pad::ExtractRGB(gVirtualX->GetTextColor(), rgba);
    glColor3fv(rgba);
 
-   fFM.RegisterFont(Int_t(gVirtualX->GetTextSize()) - 1, TGLFontManager::GetFontNameFromId(gVirtualX->GetTextFont()), TGLFont::kTexture, fF);
+   fFM.RegisterFont(Int_t(gVirtualX->GetTextSize()) - 1, 
+                    TGLFontManager::GetFontNameFromId(gVirtualX->GetTextFont()),
+                    TGLFont::kTexture, fF);
    fF.PreRender();
 
    const UInt_t padH = UInt_t(gPad->GetAbsHNDC() * fCanvas->GetWh());
-   fF.Render(text, gPad->XtoPixel(x), padH - gPad->YtoPixel(y), angle, mgn);
+   fF.Render(text, gPad->XtoPixel(x), padH - gPad->YtoPixel(y), GetTextAngle(), GetTextMagnitude());
 
    fF.PostRender();
    RestoreProjectionMatrix();
@@ -572,12 +574,11 @@ void TGLPadPainter::DrawText(Double_t x, Double_t y, Double_t angle, Double_t mg
 }
 
 //______________________________________________________________________________
-void TGLPadPainter::DrawTextNDC(Double_t u, Double_t v, Double_t angle, Double_t mgn,
-                                const char *text, ETextMode mode)
+void TGLPadPainter::DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMode mode)
 {
    const Double_t xRange = gPad->GetX2() - gPad->GetX1();
    const Double_t yRange = gPad->GetY2() - gPad->GetY1();
-   DrawText(gPad->GetX1() + u * xRange, gPad->GetY1() + v * yRange, angle, mgn, text, mode);
+   DrawText(gPad->GetX1() + u * xRange, gPad->GetY1() + v * yRange, text, mode);
 }
 
 //______________________________________________________________________________

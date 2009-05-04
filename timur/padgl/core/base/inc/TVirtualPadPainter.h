@@ -81,10 +81,8 @@ public:
    virtual void     DrawPolyMarker(Int_t n, const Double_t *x, const Double_t *y) = 0;
    virtual void     DrawPolyMarker(Int_t n, const Float_t *x, const Float_t *y) = 0;
    
-   virtual void     DrawText(Double_t x, Double_t y, Double_t angle, Double_t mgn, 
-                             const char *text, ETextMode mode) = 0;
-   virtual void     DrawTextNDC(Double_t u, Double_t v, Double_t angle, Double_t mgn, 
-                                const char *text, ETextMode mode) = 0;
+   virtual void     DrawText(Double_t x, Double_t y, const char *text, ETextMode mode) = 0;
+   virtual void     DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMode mode) = 0;
    
    
    virtual void     InvalidateCS() = 0;

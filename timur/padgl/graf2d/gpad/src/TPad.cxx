@@ -3815,7 +3815,7 @@ void TPad::PaintText(Double_t x, Double_t y, const char *text)
    Modified();
 
    if (!gPad->IsBatch())
-      fPainter->DrawText(x, y, fPainter->GetTextAngle(), fPainter->GetTextMagnitude(), text, TVirtualPadPainter::kClear);
+      fPainter->DrawText(x, y, text, TVirtualPadPainter::kClear);
 
    if (gVirtualPS) gVirtualPS->Text(x, y, text);
 }
@@ -3828,10 +3828,8 @@ void TPad::PaintTextNDC(Double_t u, Double_t v, const char *text)
 
    Modified();
 
-   if (!gPad->IsBatch()) {
-      Float_t angle = fPainter->GetTextAngle();
-      fPainter->DrawTextNDC(u, v, angle, fPainter->GetTextMagnitude(), text, TVirtualPadPainter::kClear);
-   }
+   if (!gPad->IsBatch())
+      fPainter->DrawTextNDC(u, v, text, TVirtualPadPainter::kClear);
 
    if (gVirtualPS) {
       Double_t x = fX1 + u*(fX2 - fX1);

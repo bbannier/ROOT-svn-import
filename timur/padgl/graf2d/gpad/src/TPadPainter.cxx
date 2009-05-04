@@ -456,25 +456,27 @@ void TPadPainter::DrawPolyMarker(Int_t n, const Float_t *x, const Float_t *y)
 
 
 //______________________________________________________________________________
-void TPadPainter::DrawText(Double_t x, Double_t y, Double_t angle, Double_t mgn,
-                           const char *text, ETextMode mode)
+void TPadPainter::DrawText(Double_t x, Double_t y, const char *text, ETextMode mode)
 {
    // Paint text.
 
    Int_t px = gPad->XtoPixel(x);
    Int_t py = gPad->YtoPixel(y);
+   Double_t angle = GetTextAngle();
+   Double_t mgn = GetTextMagnitude();
    gVirtualX->DrawText(px, py, angle, mgn, text, (TVirtualX::ETextMode)mode);
 }
 
 
 //______________________________________________________________________________
-void TPadPainter::DrawTextNDC(Double_t u, Double_t v, Double_t angle, Double_t mgn,
-                           const char *text, ETextMode mode)
+void TPadPainter::DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMode mode)
 {
    // Paint text in normalized coordinates.
 
    Int_t px = gPad->UtoPixel(u);
    Int_t py = gPad->VtoPixel(v);
+   Double_t angle = GetTextAngle();
+   Double_t mgn = GetTextMagnitude();
    gVirtualX->DrawText(px, py, angle, mgn, text, (TVirtualX::ETextMode)mode);
 }
 
