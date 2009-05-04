@@ -71,30 +71,4 @@ inline bool operator!=(const TPoint& p1, const TPoint& p2)
    return p1.fX != p2.fX || p1.fY != p2.fY;
 }
 
-template<class ValueType>
-class TPointFD {//F float D double
-public:
-   typedef ValueType Value_t;
-   
-   Value_t fX;
-   Value_t fY;
-   
-   TPointFD() : fX(0), fY(0) {}
-   explicit TPointFD(Value_t xy) : fX(xy), fY(xy) {}
-   TPointFD(Value_t x, Value_t y) : fX(x), fY(y) {}
-   //Do not need explicit dtor, copy ctor or copy assignment operator.
-
-private:
-   /*
-   Declared as private and not implemented, doubles and floats
-   cannot be correctly compared with ==, !=. Eps of comparision: abs(a - b) < eps 
-   can be different.
-   */
-   bool operator == (const TPointFD &rhs)const;
-   bool operator != (const TPointFD &rhs)const;
-};
-
-typedef TPointFD<Float_t>  TPointF;
-typedef TPointFD<Double_t> TPointD;
-
 #endif
