@@ -157,8 +157,7 @@ static void G__close_inputfiles_upto(G__dictposition* pos)
             G__struct.type[itag] = 'a';
             G__struct.hash[itag] = hash;
             G__struct.size[itag] = 0;
-            G__struct.baseclass[itag] = (struct G__inheritance*) malloc(sizeof(struct G__inheritance));
-            memset(G__struct.baseclass[itag], 0, sizeof(struct G__inheritance));
+            G__struct.baseclass[itag] = new G__inheritance();
             G__struct.virtual_offset[itag] = (char*) -1;
             G__struct.globalcomp[itag] = 0;
             G__struct.iscpplink[itag] = G__default_link ? G__globalcomp : G__NOLINK;
@@ -171,8 +170,6 @@ static void G__close_inputfiles_upto(G__dictposition* pos)
             G__struct.istypedefed[itag] = 0;
             G__struct.istrace[itag] = 0;
             G__struct.isbreak[itag] = 0;
-            G__struct.comment[itag].p.com = 0;
-            G__struct.comment[itag].filenum = -1;
             G__struct.friendtag[itag] = 0;
             // Clean up G__setup_memfunc and G__setup_memvar pointers list
             if (G__struct.incsetup_memvar[itag])
@@ -436,7 +433,7 @@ static int G__free_struct_upto(int tagnum)
       G__free_friendtag(G__struct.friendtag[G__struct.alltag]);
 #endif // G__FRIEND
       // freeing class inheritance table
-      free((void*) G__struct.baseclass[G__struct.alltag]);
+      delete G__struct.baseclass[G__struct.alltag];
       G__struct.baseclass[G__struct.alltag] = 0;
 
       // Free member functions

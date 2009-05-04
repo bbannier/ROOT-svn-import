@@ -828,6 +828,7 @@ struct G__DUMMY_FOR_CINT5 {
    // Stuff we removed from Cint5
    int type;
    int tagnum;
+   int typenum;
 #ifndef G__OLDIMPLEMENTATION1259
    G__SIGNEDCHAR_T isconst;
 #endif
@@ -1330,8 +1331,7 @@ G__EXPORT void G__SET_CINT_API_POINTERS_FUNCNAME (void *a[G__NUMBER_OF_API_FUNCT
  **************************************************************************/
 
 #endif /* __CINT__ */
-
-
+   
 #endif /* __MAKECINT__ */
 /**************************************************************************
 * endif #ifndef G__MAKECINT
@@ -1348,5 +1348,31 @@ typedef struct {
 } /* extern "C" */
 #endif
 
+/***********************************************************************/
+#if defined(__cplusplus) && !defined(__CINT__)
+   // Helper class to avoid compiler warning about casting function pointer
+   // to void pointer.
+   class G__func2void {
+      typedef void (*funcptr_t)();
+      
+      union funcptr_and_voidptr {
+         typedef void (*funcptr_t)();
+         void *read;
+         funcptr_t write;
+      };
+      
+      funcptr_and_voidptr _tmp;
+   public:
+      template <typename T>
+      G__func2void( T vfp ) {
+         _tmp.write = ( funcptr_t )vfp;
+      }
+      
+      operator void* () const {
+         return _tmp.read;
+      }
+   };
+#endif
+   
 #endif /* G__CI_H */
 

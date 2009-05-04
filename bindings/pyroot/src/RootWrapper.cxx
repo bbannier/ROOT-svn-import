@@ -323,6 +323,10 @@ int PyROOT::BuildRootClassDict( const T& klass, PyObject* pyclass ) {
    if ( ! isNamespace && ! hasConstructor )
       cache[ "__init__" ].push_back( new TConstructorHolder< T, M >( klass ) );
 
+// bypass custom __getattr__ for efficiency
+   getattrofunc oldgetattro = pyclass->ob_type->tp_getattro;
+   pyclass->ob_type->tp_getattro = PyType_Type.tp_getattro;
+
 // add the methods to the class dictionary
    for ( CallableCache_t::iterator imd = cache.begin(); imd != cache.end(); ++imd ) {
    // in order to prevent removing templated editions of this method (which were set earlier,
@@ -376,6 +380,9 @@ int PyROOT::BuildRootClassDict( const T& klass, PyObject* pyclass ) {
          Py_DECREF( property );
       }
    }
+
+// restore custom __getattr__
+   pyclass->ob_type->tp_getattro = oldgetattro;
 
 // all ok, done
    return 0;
@@ -739,11 +746,9 @@ PyObject* PyROOT::BindRootObjectNoCast( void* address, TClass* klass, Bool_t isR
 //____________________________________________________________________________
 PyObject* PyROOT::BindRootObject( void* address, TClass* klass, Bool_t isRef )
 {
-// for safety (None can't be used as NULL pointer)
-   if ( ! address ) {
-      Py_INCREF( Py_None );
-      return Py_None;
-   }
+// if the object is a null pointer, return a typed one (as needed for overloading)
+   if ( ! address )
+      return BindRootObjectNoCast( address, klass, kFALSE );
 
 // only known or knowable objects will be bound
    if ( ! klass ) {

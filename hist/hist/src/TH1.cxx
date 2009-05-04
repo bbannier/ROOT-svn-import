@@ -2876,7 +2876,7 @@ void TH1::FillRandom(const char *fname, Int_t ntimes)
    for (loop=0;loop<ntimes;loop++) {
       r1 = gRandom->Rndm(loop);
       ibin = TMath::BinarySearch(nbinsx,&integral[0],r1);
-      binx = 1 + ibin;
+      //binx = 1 + ibin;
       //x    = fXaxis.GetBinCenter(binx); //this is not OK when SetBuffer is used
       x    = fXaxis.GetBinLowEdge(ibin+1)
              +fXaxis.GetBinWidth(ibin+1)*(r1-integral[ibin])/(integral[ibin+1] - integral[ibin]);
@@ -2947,6 +2947,42 @@ Int_t TH1::FindBin(Double_t x, Double_t y, Double_t z)
       Int_t biny = fYaxis.FindBin(y);
       Int_t binz = fZaxis.FindBin(z);
       return  binx + nx*(biny +ny*binz);
+   }
+   return -1;
+}
+
+
+//______________________________________________________________________________
+Int_t TH1::FindFirstBinAbove(Double_t threshold, Int_t axis) const
+{
+   //find first bin with content > threshold for axis (1=x, 2=y, 3=z)
+   //if no bins with content > threshold is found the function returns -1.
+   
+   if (axis != 1) {
+      Warning("FindFirstBinAbove","Invalid axis number : %d, axis x assumed\n",axis);
+      axis = 1;
+   }
+   Int_t nbins = fXaxis.GetNbins();
+   for (Int_t bin=1;bin<=nbins;bin++) {
+      if (GetBinContent(bin) > threshold) return bin;
+   }
+   return -1;
+}
+
+
+//______________________________________________________________________________
+Int_t TH1::FindLastBinAbove(Double_t threshold, Int_t axis) const
+{
+   //find last bin with content > threshold for axis (1=x, 2=y, 3=z)
+   //if no bins with content > threshold is found the function returns -1.
+   
+   if (axis != 1) {
+      Warning("FindLastBinAbove","Invalid axis number : %d, axis x assumed\n",axis);
+      axis = 1;
+   }
+   Int_t nbins = fXaxis.GetNbins();
+   for (Int_t bin=nbins;bin>=1;bin--) {
+      if (GetBinContent(bin) > threshold) return bin;
    }
    return -1;
 }
@@ -4225,12 +4261,15 @@ void TH1::LabelsInflate(Option_t *ax)
    Double_t err,cu;
    Double_t oldEntries = fEntries;
    Int_t bin,ibin,binx,biny,binz;
+   Int_t binxmin = 1;
+   Int_t binxmax = nbinsx;
+   if (fDimension > 1) {binxmin--; binxmax++;}
    for (binz=1;binz<=nbinsz;binz++) {
       for (biny=1;biny<=nbinsy;biny++) {
-         for (binx=1;binx<=nbinsx;binx++) {
+         for (binx=binxmin;binx<=binxmax;binx++) {
             bin = hold->GetBin(binx,biny,binz);
             ibin= GetBin(binx,biny,binz);
-            if (binx > nbxold || biny > nbyold || binz > nbzold) bin = -1;
+            if (binx > nbxold+1 || biny > nbyold || binz > nbzold) bin = -1;
             if (bin > 0) cu  = hold->GetBinContent(bin);
             else         cu = 0;
             SetBinContent(ibin,cu);

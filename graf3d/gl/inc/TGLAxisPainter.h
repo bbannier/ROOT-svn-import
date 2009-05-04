@@ -17,7 +17,13 @@
 
 class TAttAxis;
 class TAxis;
+class TH1;
 class TGLRnrCtx;
+
+
+//==============================================================================
+// TGLAxisPainter
+//==============================================================================
 
 class TGLAxisPainter
 {
@@ -43,11 +49,11 @@ private:
 
    // Print format.
    void LabelsLimits(const char *label, Int_t &first, Int_t &last) const;
-   void FormAxisValue(Float_t x, char* lab) const;
+   void FormAxisValue(Double_t x, TString &s) const;
 
 protected:
    TAttAxis        *fAttAxis;    // Model.
-   TGLFont::EMode   fFontMode;   // Later in AttAxis
+   TGLFont::EMode   fFontMode;   // To be put into TAttAxis
    LabVec_t         fLabVec;     // List of Labels position-value pairs
    TMVec_t          fTMVec;      // List of tick-mark position-value pairs
 
@@ -67,6 +73,7 @@ protected:
 
    // Labels options. Allready exist in TAttAxis, but can't be set.
    TGLFont::ETextAlign_e fLabelAlign;
+   TGLVector3 fTitlePos;
 
 public:
    TGLAxisPainter();
@@ -88,6 +95,9 @@ public:
    void         SetTitlePixelFontSize(Int_t fs) { fTitlePixelFontSize=fs; }
    Int_t        GetTitlePixelFontSize() const { return fTitlePixelFontSize; }
 
+   TGLVector3&  RefTitlePos() { return fTitlePos; }
+
+
    TGLFont::ETextAlign_e GetLabelAlign() const { return fLabelAlign; }
    void         SetLabelAlign(TGLFont::ETextAlign_e x) { fLabelAlign = x; }
 
@@ -104,14 +114,37 @@ public:
    void SetTextFormat(Double_t min, Double_t max, Double_t binWidth);
 
    // Renderers.
-   void RnrText( const char* txt, const TGLVector3 &pos, const TGLFont::ETextAlign_e align, const TGLFont &font) const;
-   void RnrTitle(const char* title, Float_t pos, TGLFont::ETextAlign_e align) const;
+   void RnrText (const char* txt, const TGLVector3 &pos, const TGLFont::ETextAlign_e align, const TGLFont &font) const;
+   void RnrTitle(const char* title, TGLVector3 &pos, TGLFont::ETextAlign_e align) const;
    void RnrLabels() const;
    void RnrLines() const;
 
    void PaintAxis(TGLRnrCtx& ctx, TAxis* ax);
 
    ClassDef(TGLAxisPainter, 0); // GL axis painter.
+};
+
+
+//==============================================================================
+// TGLAxisPainterBox
+//==============================================================================
+
+class TGLAxisPainterBox : public TGLAxisPainter
+{
+protected:
+   TGLVector3          fAxisTitlePos[3];
+   TAxis*              fAxis[3];
+
+public:
+   TGLAxisPainterBox();
+   virtual ~TGLAxisPainterBox();
+
+   void SetAxis3DTitlePos(TGLRnrCtx &rnrCtx);
+   void DrawAxis3D(TGLRnrCtx &rnrCtx);
+
+   void PlotStandard(TGLRnrCtx &rnrCtx, const TH1* histo, const TGLBoundingBox& bbox);
+
+   ClassDef(TGLAxisPainterBox, 0); // Painter of GL axes for a 3D box.
 };
 
 #endif

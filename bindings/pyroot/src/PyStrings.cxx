@@ -10,6 +10,8 @@ PyObject* PyROOT::PyStrings::gBases = 0;
 PyObject* PyROOT::PyStrings::gClass = 0;
 PyObject* PyROOT::PyStrings::gDeref = 0;
 PyObject* PyROOT::PyStrings::gDict = 0;
+PyObject* PyROOT::PyStrings::gEmptyString = 0;
+PyObject* PyROOT::PyStrings::gEq = 0;
 PyObject* PyROOT::PyStrings::gFollow = 0;
 PyObject* PyROOT::PyStrings::gGetItem = 0;
 PyObject* PyROOT::PyStrings::gInit = 0;
@@ -18,12 +20,12 @@ PyObject* PyROOT::PyStrings::gLen = 0;
 PyObject* PyROOT::PyStrings::gLifeLine = 0;
 PyObject* PyROOT::PyStrings::gModule = 0;
 PyObject* PyROOT::PyStrings::gName = 0;
+PyObject* PyROOT::PyStrings::gNe = 0;
 PyObject* PyROOT::PyStrings::gTypeCode = 0;
 
 PyObject* PyROOT::PyStrings::gAt = 0;
 PyObject* PyROOT::PyStrings::gBegin = 0;
 PyObject* PyROOT::PyStrings::gEnd = 0;
-PyObject* PyROOT::PyStrings::gEmptyString = 0;
 PyObject* PyROOT::PyStrings::gFirst = 0;
 PyObject* PyROOT::PyStrings::gSecond = 0;
 PyObject* PyROOT::PyStrings::gSize = 0;
@@ -39,7 +41,7 @@ PyObject* PyROOT::PyStrings::gTClassDynCast = 0;
 
 //____________________________________________________________________________
 #define PYROOT_INITIALIZE_STRING( var, str )                                 \
-   if ( ! ( PyStrings::var = PyString_FromString( (char*)#str ) ) )          \
+   if ( ! ( PyStrings::var = PyString_InternFromString( (char*)#str ) ) )    \
       return kFALSE
 
 Bool_t PyROOT::CreatePyStrings() {
@@ -47,8 +49,9 @@ Bool_t PyROOT::CreatePyStrings() {
    PYROOT_INITIALIZE_STRING( gClass, __class__ );
    PYROOT_INITIALIZE_STRING( gDeref, __deref__ );
    PYROOT_INITIALIZE_STRING( gDict, __dict__ );
-   if ( ! ( PyStrings::gEmptyString = PyString_FromString( (char*)"" ) ) ) 
+   if ( ! ( PyStrings::gEmptyString = PyString_FromString( (char*)"" ) ) )
       return kFALSE;
+   PYROOT_INITIALIZE_STRING( gEq, __eq__ );
    PYROOT_INITIALIZE_STRING( gFollow, __follow__ );
    PYROOT_INITIALIZE_STRING( gGetItem, __getitem__ );
    PYROOT_INITIALIZE_STRING( gInit, __init__ );
@@ -57,6 +60,7 @@ Bool_t PyROOT::CreatePyStrings() {
    PYROOT_INITIALIZE_STRING( gLifeLine, __lifeline );
    PYROOT_INITIALIZE_STRING( gModule, __module__ );
    PYROOT_INITIALIZE_STRING( gName, __name__ );
+   PYROOT_INITIALIZE_STRING( gNe, __ne__ );
    PYROOT_INITIALIZE_STRING( gTypeCode, typecode );
 
    PYROOT_INITIALIZE_STRING( gAt, at );
@@ -84,6 +88,7 @@ PyObject* PyROOT::DestroyPyStrings() {
    Py_DECREF( PyStrings::gDeref ); PyStrings::gDeref = 0;
    Py_DECREF( PyStrings::gDict ); PyStrings::gDict = 0;
    Py_DECREF( PyStrings::gEmptyString ); PyStrings::gEmptyString = 0;
+   Py_DECREF( PyStrings::gEq ); PyStrings::gEq = 0;
    Py_DECREF( PyStrings::gFollow ); PyStrings::gFollow = 0;
    Py_DECREF( PyStrings::gGetItem ); PyStrings::gGetItem = 0;
    Py_DECREF( PyStrings::gInit ); PyStrings::gInit = 0;
@@ -92,6 +97,7 @@ PyObject* PyROOT::DestroyPyStrings() {
    Py_DECREF( PyStrings::gLifeLine ); PyStrings::gLifeLine = 0;
    Py_DECREF( PyStrings::gModule ); PyStrings::gModule = 0;
    Py_DECREF( PyStrings::gName ); PyStrings::gName = 0;
+   Py_DECREF( PyStrings::gNe ); PyStrings::gNe = 0;
    Py_DECREF( PyStrings::gTypeCode ); PyStrings::gTypeCode = 0;
 
    Py_DECREF( PyStrings::gAt ); PyStrings::gAt = 0;

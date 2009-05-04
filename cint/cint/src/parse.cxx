@@ -148,7 +148,7 @@ static void G__toUniquePath(char* s)
    char* d = (char*) malloc(strlen(s) + 1);
    int j = 0;
    for (int i = 0; s[i]; ++i) {
-      d[j] = tolower(s[i]);
+      d[j] = s[i];
       if (!i || (s[i] != '\\') || (s[i-1] != '\\')) {
          ++j;
       }
@@ -4397,7 +4397,9 @@ static int G__defined_type(char* type_name, int len)
       //
       G__tagnum = G__defined_tagname(type_name, 1);
       if (G__tagnum != -1) {
-         // -- Ok, we found it, now check again as a typedef name (FIXME: Why???).
+         // -- Ok, we found it, now check again as a typedef name
+         // to pick up template aliases that might have been generated
+         // by template instantiation during above G__defined_tagname
          G__typenum = G__defined_typename(type_name);
          if (G__typenum != -1) {
             // Note: G__var_type was set by the G__defined_typename() call above to G__newtype.type[G__typenum] + ptroffset.
@@ -6718,6 +6720,21 @@ G__value G__exec_statement(int* mparen)
                }
                G__ASSERT(!G__decl || (G__decl == 1));
                if (G__prerun && !G__decl) {
+                  if (iout == 12) {
+                     // -- Handle _attribute_.
+                     if (!strcmp(statement, "_attribute_(")) {
+                        // -- Handle '_attribute_( ... )'.
+                        //                       ^
+                        // also get (...)
+                        G__fignorestream(")");
+                        // We just ignore it.
+                        // Reset the statement buffer.
+                        iout = 0;
+                        // Flag that any following whitespace does not trigger any semantic action.
+                        spaceflag = -1;
+                        break;
+                     }
+                  }
                   // -- Make ifunc table at prerun and skip out.
                   // We have: 'functionname(...)'
                   G__var_type = 'i';
@@ -6732,8 +6749,22 @@ G__value G__exec_statement(int* mparen)
                   spaceflag = 0;
                   break;
                }
-               // Handle return(, switch(, if(, while(, catch(, throw(, for(.
+               // Handle _attribute(,return(, switch(, if(, while(, catch(, throw(, for(.
                switch (iout) {
+                  case 12:
+                     // -- Handle _attribute_.
+                     if (!strcmp(statement, "_attribute_(")) {
+                        // -- Handle '_attribute_( ... )'.
+                        //                       ^
+                        // also get (...)
+                        G__fignorestream(")");
+                        // We just ignore it.
+                        // Reset the statement buffer.
+                        iout = 0;
+                        // Flag that any following whitespace does not trigger any semantic action.
+                        spaceflag = -1;
+                        break;
+                     }
                   case 7:
                      if (!strcmp(statement, "return(")) {
                         //

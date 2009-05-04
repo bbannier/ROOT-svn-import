@@ -19,15 +19,19 @@
 
 #include "TAttAxis.h"
 #include "TAxis.h"
+#include "TH1.h"
 #include "THLimitsFinder.h"
 
 #include "TMath.h"
+#include "TPRegexp.h"
 
+//==============================================================================
+// TGLAxisPainterBox
+//==============================================================================
 
 //______________________________________________________________________________
 //
 // Utility class to paint axis in GL.
-
 
 ClassImp(TGLAxisPainter);
 
@@ -72,58 +76,30 @@ void TGLAxisPainter::LabelsLimits(const char *label, Int_t &first, Int_t &last) 
 }
 
 //______________________________________________________________________________
-void TGLAxisPainter::FormAxisValue(Float_t wlabel, char* label) const
+void TGLAxisPainter::FormAxisValue(Double_t  val, TString &s) const
 {
    // Returns formatted text suitable for display of value.
 
-   sprintf(label, &fFormat[0], wlabel);
-   Int_t first, last;
-   LabelsLimits(label, first, last);
+   static char label[256];
 
-   char chtemp[256];
-   if (label[first] == '.') { //check if '.' is preceeded by a digit
-      strcpy(chtemp, "0");
-      strcat(chtemp, &label[first]);
-      strcpy(label, chtemp);
-      first = 1;
-      last = strlen(label);
-   }
-   if (label[first] == '-' && label[first+1] == '.') {
-      strcpy(chtemp, "-0");
-      strcat(chtemp, &label[first+1]);
-      strcpy(label, chtemp);
-      first = 1;
-      last = strlen(label);
+   sprintf(label, &fFormat[0], val);
+   s =  label;
+
+   if (s == "-." || s == "-0")
+   {
+      s  = "0";
+      return;
    }
 
-   //  We eliminate the non significant 0 after '.'
-   if (fDecimals) {
-      char *adot = strchr(label, '.');
-      if (adot) adot[fDecimals] = 0;
-   } else {
-      while (label[last] == '0') {
-         label[last] = 0;
-         last--;
-      }
-   }
-   // We eliminate the dot, unless dot is forced.
-   if (label[last] == '.') {
-      label[last] = 0;
-      last--;
-   }
+   if (s.EndsWith("."))
+      s += '0';
 
-   //  Make sure the label is not "-0"
-   if (last - first == 1 && label[first] == '-' && label[last]  == '0') {
-      strcpy(label, "0");
-      label[last] = 0;
-   }
+   Ssiz_t ld = s.Last('.');
+   if (s.Length() - ld > fDecimals)
+      s.Remove(ld + fDecimals);
 
-   // Remove white space
-   Int_t cnt;
-   for (cnt=0; cnt<last; cnt++)
-      if (label[cnt] != ' ') break;
-
-   strcpy(label, &label[cnt]);
+   TPMERegexp zeroes("[-+]?0\\.0*$");
+   zeroes.Substitute(s, "0");   
 }
 
 //______________________________________________________________________________
@@ -271,12 +247,11 @@ void TGLAxisPainter::SetLabelFont(TGLRnrCtx &rnrCtx, const char* fontName, Int_t
 {
    // Set label font derived from TAttAxis.
 
-   fLabelPixelFontSize = TGLFontManager::GetFontSize(fontSize, 10, 128);
+   fLabelPixelFontSize = TGLFontManager::GetFontSize(fontSize);
    fLabel3DFontSize = size3d;
-
    if (fLabelFont.GetMode() == TGLFont::kUndef)
    {
-      rnrCtx.RegisterFont(fontSize, fontName, fFontMode, fLabelFont);
+      rnrCtx.RegisterFont(fLabelPixelFontSize, fontName, fFontMode, fLabelFont);
    }
    else if (fLabelFont.GetSize() != fontSize|| fLabelFont.GetFile() != fAttAxis->GetLabelFont() || fLabelFont.GetMode() != fFontMode )
    {
@@ -300,11 +275,11 @@ void TGLAxisPainter::RnrLabels() const
 
    fLabelFont.PreRender();
    Double_t p = 0.;
-   char ctmp[10];
+   TString s;
    for (LabVec_t::const_iterator it = fLabVec.begin(); it != fLabVec.end(); ++it) {
-      FormAxisValue((*it).second, &ctmp[0]);
+      FormAxisValue((*it).second, s);
       p = (*it).first;
-      RnrText(&ctmp[0], fDir*p, fLabelAlign, fLabelFont);
+      RnrText(s.Data(), fDir*p, fLabelAlign, fLabelFont);
    }
 
    fLabelFont.PostRender();
@@ -312,11 +287,12 @@ void TGLAxisPainter::RnrLabels() const
 }
 
 //______________________________________________________________________________
-void TGLAxisPainter::SetTitleFont(TGLRnrCtx &rnrCtx, const char* fontName, Int_t fontSize, Double_t size3d)
+void TGLAxisPainter::SetTitleFont(TGLRnrCtx &rnrCtx, const char* fontName,
+                                  Int_t fontSize, Double_t size3d)
 {
    // Set title font derived from TAttAxis.
 
-   fTitlePixelFontSize = TGLFontManager::GetFontSize(fontSize, 10, 128);
+   fTitlePixelFontSize = TGLFontManager::GetFontSize(fontSize);
    fTitle3DFontSize = size3d;
 
    if (fTitleFont.GetMode() == TGLFont::kUndef)
@@ -331,19 +307,15 @@ void TGLAxisPainter::SetTitleFont(TGLRnrCtx &rnrCtx, const char* fontName, Int_t
 }
 
 //______________________________________________________________________________
-void TGLAxisPainter::RnrTitle(const char* txt, Float_t pos, TGLFont::ETextAlign_e align) const
+void TGLAxisPainter::RnrTitle(const char* txt, TGLVector3 &pos , TGLFont::ETextAlign_e align) const
 {
    // Draw title at given position.
 
-   if (txt)
-   {
-      TGLUtil::Color(fAttAxis->GetTitleColor());
-      const char* title = (fExp) ? Form("%s [10^%d]", fExp, txt) : txt;
-      fTitleFont.PreRender();
-      TGLVector3 pv(fDir.X()*pos, fDir.Y()*pos, fDir.Z()*pos);
-      RnrText(title, pv, align, fTitleFont);
-      fTitleFont.PostRender();
-   }
+   TGLUtil::Color(fAttAxis->GetTitleColor());
+   const char* title = (fExp) ? Form("%s [10^%d]", fExp, txt) : txt;
+   fTitleFont.PreRender();
+   RnrText(title, pos, align, fTitleFont);
+   fTitleFont.PostRender();
 }
 
 //______________________________________________________________________________
@@ -391,6 +363,13 @@ void TGLAxisPainter::PaintAxis(TGLRnrCtx &rnrCtx, TAxis* ax)
    // GL render TAxis.
 
    fAttAxis = ax;
+   Double_t min = ax->GetXmin();
+   Double_t max = ax->GetXmax();
+   if (min == max)
+   {
+      Error("TGLAxisPainter::PaintAxis", "axis without range");
+      return;
+   }
 
    //______________________________________________________________________________
    // Fill lablels value-pos and tick-marks position-length.
@@ -402,8 +381,6 @@ void TGLAxisPainter::PaintAxis(TGLRnrCtx &rnrCtx, TAxis* ax)
    Double_t bl1, bh1, bl2, bh2; // bin low, high values
 
    // Read limits from users range
-   Double_t min = ax->GetBinLowEdge(ax->GetFirst());
-   Double_t max = ax->GetBinUpEdge(ax->GetLast());
    THLimitsFinder::Optimize(min, max, n1a, bl1, bh1, bn1, bw1);
    THLimitsFinder::Optimize(bl1, bl1 + bw1, n2a, bl2, bh2, bn2, bw2);
 
@@ -456,35 +433,32 @@ void TGLAxisPainter::PaintAxis(TGLRnrCtx &rnrCtx, TAxis* ax)
    // Set font.
 
    // First projected axis length needed if use realtive font size.
-   const char* labFontName = TGLFontManager::GetFontNameFromId(fAttAxis->GetLabelFont());
+   const char* labFontName   = TGLFontManager::GetFontNameFromId(fAttAxis->GetLabelFont());
    const char* titleFontName = TGLFontManager::GetFontNameFromId(fAttAxis->GetTitleFont());
 
    if (fFontMode == TGLFont::kPolygon || fFontMode == TGLFont::kTexture)
    {
       // get sensible pixel resolution relative to projected axis length
       // in pixmap for this is given explicitly
-      Double_t len = 0;
-      GLdouble mm[16];
-      GLdouble pm[16];
+      GLdouble mm[16], pm[16];
       GLint    vp[4];
       glGetDoublev(GL_MODELVIEW_MATRIX,  mm);
       glGetDoublev(GL_PROJECTION_MATRIX, pm);
       glGetIntegerv(GL_VIEWPORT, vp);
 
-      GLdouble dn[3];
-      GLdouble up[3];
+      GLdouble dn[3], up[3];
       gluProject(fDir.X()*min, fDir.Y()*min, fDir.Z()*min, mm, pm, vp, &dn[0], &dn[1], &dn[2]);
       gluProject(fDir.X()*max, fDir.Y()*max, fDir.Z()*max, mm, pm, vp, &up[0], &up[1], &up[2]);
-      len = TMath::Sqrt((up[0] - dn[0]) * (up[0] - dn[0])
-                        + (up[1] - dn[1]) * (up[1] - dn[1])
-                        + (up[2] - dn[2]) * (up[2] - dn[2]));
+      Double_t len = TMath::Sqrt((up[0] - dn[0]) * (up[0] - dn[0]) +
+                                 (up[1] - dn[1]) * (up[1] - dn[1]) +
+                                 (up[2] - dn[2]) * (up[2] - dn[2]));
 
       fLabelPixelFontSize = TMath::CeilNint(len*fAttAxis->GetLabelSize());
       fTitlePixelFontSize = TMath::CeilNint(len*fAttAxis->GetTitleSize());
    }
 
-   SetLabelFont(rnrCtx, labFontName, fLabelPixelFontSize,   (max -min)*fAttAxis->GetLabelSize());
-   SetTitleFont(rnrCtx, titleFontName, fTitlePixelFontSize, (max -min)*fAttAxis->GetTitleSize());
+   SetLabelFont(rnrCtx, labFontName,   fLabelPixelFontSize, (max - min)*fAttAxis->GetLabelSize());
+   SetTitleFont(rnrCtx, titleFontName, fTitlePixelFontSize, (max - min)*fAttAxis->GetTitleSize());
 
    //______________________________________________________________________________
    // Draw.
@@ -492,4 +466,210 @@ void TGLAxisPainter::PaintAxis(TGLRnrCtx &rnrCtx, TAxis* ax)
    glDisable(GL_LIGHTING);
    RnrLines();
    RnrLabels();
+
+   if (ax->GetTitle())
+      RnrTitle(ax->GetTitle(), fTitlePos, fLabelAlign);
+}
+
+
+//==============================================================================
+// TGLAxisPainterBox
+//==============================================================================
+
+//______________________________________________________________________________
+//
+// Painter class for axes encompassing a 3D box.
+
+ClassImp(TGLAxisPainterBox);
+
+//______________________________________________________________________________
+TGLAxisPainterBox::TGLAxisPainterBox() :
+   TGLAxisPainter()
+{
+   // Constructor.
+
+   fAxis[0] = fAxis[1] = fAxis[2] = 0;
+}
+
+//______________________________________________________________________________
+TGLAxisPainterBox::~TGLAxisPainterBox()
+{
+   // Destructor.
+}
+
+//______________________________________________________________________________
+void TGLAxisPainterBox::SetAxis3DTitlePos(TGLRnrCtx &rnrCtx)
+{
+   // Get position of axes and titles from projected corners.
+
+   Double_t x0 =  fAxis[0]->GetXmin();
+   Double_t x1 =  fAxis[0]->GetXmax();
+
+   Double_t y0 =  fAxis[1]->GetXmin();
+   Double_t y1 =  fAxis[1]->GetXmax();
+ 
+   Double_t z0 =  fAxis[2]->GetXmin();
+   Double_t z1 =  fAxis[2]->GetXmax();
+
+   // project corner points
+   const GLdouble *pm = rnrCtx.RefCamera().RefLastNoPickProjM().CArr();
+   GLdouble mm[16];
+   GLint    vp[4];
+   glGetDoublev(GL_MODELVIEW_MATRIX,  mm);
+   glGetIntegerv(GL_VIEWPORT, vp);
+   GLdouble projX[4], projY[4], projZ[4];
+   GLdouble cornerX[4];
+   GLdouble cornerY[4];
+   cornerX[0] = x0; cornerY[0] = y0;
+   cornerX[1] = x1; cornerY[1] = y0;
+   cornerX[2] = x1; cornerY[2] = y1;
+   cornerX[3] = x0; cornerY[3] = y1;
+   gluProject(cornerX[0], cornerY[0], z0, mm, pm, vp, &projX[0], &projY[0], &projZ[0]);
+   gluProject(cornerX[1], cornerY[1], z0, mm, pm, vp, &projX[1], &projY[1], &projZ[1]);
+   gluProject(cornerX[2], cornerY[2], z0, mm, pm, vp, &projX[2], &projY[2], &projZ[2]);
+   gluProject(cornerX[3], cornerY[3], z0, mm, pm, vp, &projX[3], &projY[3], &projZ[3]);
+
+
+   // Z axis location (left most corner)
+   //
+   Int_t idxLeft = 0;
+   Float_t xt = projX[0];
+   for (Int_t i = 1; i < 4; ++i) {
+      if (projX[i] < xt) {
+         xt  = projX[i];
+         idxLeft = i;
+      }
+   }
+   fAxisTitlePos[2].Set(cornerX[idxLeft], cornerY[idxLeft], z1);
+
+
+   // XY axis location (closest to eye) first
+   //
+   Float_t zt = 1.f;
+   Float_t zMin = 0.f;
+   Int_t idxFront = 0;
+   for (Int_t i = 0; i < 4; ++i) {
+      if (projZ[i] < zt) {
+         zt  = projZ[i];
+         idxFront = i;
+      }
+      if (projZ[i] > zMin) zMin = projZ[i];
+   }
+   Int_t xyIdx = idxFront;
+   if (zMin - zt < 1e-2) xyIdx = 0; // avoid flipping in front view
+
+
+   switch (xyIdx) {
+      case 0:
+         fAxisTitlePos[0].Set(x1, y0, z0);
+         fAxisTitlePos[1].Set(x0, y1, z0);
+         break;
+      case 1:
+         fAxisTitlePos[0].Set(x1, y0, z0);
+         fAxisTitlePos[1].Set(x0, y1, z0);
+         break;
+      case 2:
+         fAxisTitlePos[0].Set(x0, y1, z0);
+         fAxisTitlePos[1].Set(x1, y0, z0);
+         break;
+      case 3:
+         fAxisTitlePos[0].Set(x1, y1, z0);
+         fAxisTitlePos[1].Set(x0, y0, z0);
+         break;
+   }
+}
+
+//______________________________________________________________________________
+void TGLAxisPainterBox::DrawAxis3D(TGLRnrCtx &rnrCtx)
+{
+   // Draw XYZ axis with bitmap font.
+
+   // set font size first depending on size of projected axis
+   TGLMatrix mm;
+   GLdouble pm[16];
+   GLint    vp[4];
+   glGetDoublev(GL_MODELVIEW_MATRIX, mm.Arr());
+   glGetDoublev(GL_PROJECTION_MATRIX, pm);
+   glGetIntegerv(GL_VIEWPORT, vp);
+
+   // determine bitmap font size from lenght of projected vertical
+   GLdouble dn[3];
+   GLdouble up[3];
+   gluProject(fAxisTitlePos[2].X(), fAxisTitlePos[2].Y(), fAxis[2]->GetXmin(), mm.Arr(), pm, vp, &dn[0], &dn[1], &dn[2]);
+   gluProject(fAxisTitlePos[2].X(), fAxisTitlePos[2].Y(), fAxis[2]->GetXmax(), mm.Arr(), pm, vp, &up[0], &up[1], &up[2]);
+   Double_t len = TMath::Sqrt((up[0] - dn[0]) * (up[0] - dn[0]) +
+                              (up[1] - dn[1]) * (up[1] - dn[1]) +
+                              (up[2] - dn[2]) * (up[2] - dn[2]));
+   SetLabelPixelFontSize(TMath::CeilNint(len*fAxis[2]->GetLabelSize()));
+   SetTitlePixelFontSize(TMath::CeilNint(len*fAxis[2]->GetTitleSize()));
+
+ 
+   // Z axis
+   //  
+   // tickmark vector = 10 pixels left
+   fAxis[2]->SetTickLength(1.); // leave this relative factor neutral
+   TGLVertex3 worldRef(fAxisTitlePos[2].X(), fAxisTitlePos[2].Y(), fAxisTitlePos[2].Z());
+   RefTMOff(0) = rnrCtx.RefCamera().ViewportDeltaToWorld(worldRef, -10, 0, &mm);
+   SetTMNDim(1);
+   RefDir().Set(0., 0., 1.);
+   SetLabelAlign(TGLFont::kRight);
+   glPushMatrix();  
+   glTranslatef(fAxisTitlePos[2].X(), fAxisTitlePos[2].Y(), 0);
+   RefTitlePos().Set(RefTMOff(0).X(), RefTMOff(0).Y(),fAxisTitlePos[2].Z());
+   PaintAxis(rnrCtx, fAxis[2]);
+   glPopMatrix();
+
+   // XY Axis
+   //
+   SetTMNDim(2);
+   RefTMOff(1).Set(0, 0, fAxis[2]->GetXmin()- fAxis[2]->GetXmax());
+   SetLabelAlign(TGLFont::kCenterUp);
+   // X
+   glPushMatrix();
+   RefDir().Set(1, 0, 0);
+   Float_t yOff = fAxis[0]->GetXmax() - fAxis[0]->GetXmin();
+   yOff *= 0.5f;
+   if (fAxisTitlePos[0].Y() < fAxis[1]->GetXmax()) yOff = -yOff;
+   RefTMOff(0).Set(0, yOff, 0);
+   glTranslatef(0, fAxisTitlePos[0].Y(), fAxisTitlePos[0].Z());
+   RefTitlePos().Set(fAxisTitlePos[0].X(), yOff*1.5*fAxis[0]->GetTickLength(), 0);
+   PaintAxis(rnrCtx, fAxis[0]);
+   glPopMatrix();
+
+   // Y
+   glPushMatrix();
+   RefDir().Set(0, 1, 0);
+   Float_t xOff = fAxis[1]->GetXmax() - fAxis[1]->GetXmin();
+   if (fAxisTitlePos[1].X() < fAxis[0]->GetXmax()) xOff = -xOff;
+   RefTMOff(0).Set(xOff, 0, 0);
+   glTranslatef(fAxisTitlePos[1].X(), 0, fAxisTitlePos[1].Z());
+   RefTitlePos().Set(xOff*1.5*fAxis[1]->GetTickLength(), fAxisTitlePos[1].Y(), 0);
+   PaintAxis(rnrCtx, fAxis[1]);
+   glPopMatrix();
+}
+
+//______________________________________________________________________________
+void TGLAxisPainterBox::PlotStandard(      TGLRnrCtx      &rnrCtx,
+                                     const TH1            *histo,
+                                     const TGLBoundingBox &bbox)
+{
+   //
+
+   fAxis[0] = histo->GetXaxis();
+   fAxis[1] = histo->GetYaxis();
+   fAxis[2] = histo->GetZaxis();
+   // fAxis[2]->SetTitle("Z");
+   // fAxis[2]->SetLabelSize(0.04);
+   // fAxis[2]->SetTitleSize(0.05);
+
+   Double_t sx = (bbox.XMax() - bbox.XMin()) / (fAxis[0]->GetXmax() - fAxis[0]->GetXmin());
+   Double_t sy = (bbox.YMax() - bbox.YMin()) / (fAxis[1]->GetXmax() - fAxis[1]->GetXmin());
+   Double_t sz = (bbox.ZMax() - bbox.ZMin()) / (fAxis[2]->GetXmax() - fAxis[2]->GetXmin());
+
+   // draw
+   glPushMatrix();
+   glScaled(sx, sy, sz);
+   SetAxis3DTitlePos(rnrCtx);
+   DrawAxis3D(rnrCtx);
+   glPopMatrix();
 }

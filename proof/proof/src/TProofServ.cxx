@@ -1726,6 +1726,24 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
          }
          break;
 
+      case kPROOF_GOASYNC:
+         {  // The client requested to switch to asynchronous mode:
+            // communicate the sequential number of the running query for later
+            // identification, if any
+            if (!fIdle && fPlayer) {
+               // Get query currently being processed
+               TProofQueryResult *pq = (TProofQueryResult *) fPlayer->GetCurrentQuery();
+               TMessage m(kPROOF_QUERYSUBMITTED);
+               m << pq->GetSeqNum() << kFALSE;
+               fSocket->Send(m);
+            } else {
+               // Idle or undefined: nothing to do; ignore
+               SendAsynMessage("Processing request to go asynchronous:"
+                               " idle or undefined player - ignoring");
+            }
+         }
+         break;
+
       default:
          Error("HandleSocketInput", "unknown command %d", what);
          rc = -2;
@@ -4204,6 +4222,10 @@ Int_t TProofServ::HandleCache(TMessage *mess)
                      }
                   }
                }
+            } else {
+               // Notify the user
+               PDB(kPackage, 1)
+                  Info("HandleCache", "no PROOF-INF/BUILD.sh found for package %s", package.Data());
             }
             gSystem->ChangeDirectory(ocwd);
          }
@@ -5119,7 +5141,7 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
    }
 
    // Used in most cases
-   TString dsUser, dsGroup, dsName, uri, opt;
+   TString dsUser, dsGroup, dsName, dsTree, uri, opt;
    Int_t rc = 0;
 
    // Message type
@@ -5248,6 +5270,17 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
                fDataSetManager->ShowQuota(opt);
             } else {
                Info("HandleDataSets", "quota control disabled");
+            }
+         }
+         break;
+      case TProof::kSetDefaultTreeName:
+         {
+            if (fDataSetManager->TestBit(TProofDataSetManager::kAllowRegister)) {
+               (*mess) >> uri;
+               rc = fDataSetManager->ScanDataSet(uri, (UInt_t)TProofDataSetManager::kSetDefaultTree);
+            } else {
+               Info("HandleDataSets", "kSetDefaultTreeName: modification of dataset info not allowed");
+               return -1;
             }
          }
          break;

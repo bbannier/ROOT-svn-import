@@ -119,9 +119,7 @@ namespace std {} using namespace std;
 #endif
 
 #ifdef R__BUILDCINT7
-#ifdef _WIN32
-extern "C" void* LoadLibrary( const char* lpFileName);
-#else
+#ifndef _WIN32
 #define R__DLOPEN_NOW 2
 extern "C" void* dlopen(const char*, int);
 extern "C" char* dlerror();
@@ -194,7 +192,11 @@ namespace {
       libMetaTCintDir += "\\bin\\";
       hLibMetaTCint = (void*) ::LoadLibrary((libMetaTCintDir + libMetaTCint).Data());
 #else
+#ifdef ROOTLIBDIR
+      libMetaTCintDir = ROOTLIBDIR"/";
+#else
       libMetaTCintDir += "/lib/";
+#endif
 # if defined (R__MACOSX)
       hLibMetaTCint = (void*) dlopen((libMetaTCintDir + libMetaTCint + ".dylib").Data(), R__DLOPEN_NOW);
       // continue below if failed

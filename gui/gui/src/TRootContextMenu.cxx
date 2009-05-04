@@ -115,6 +115,9 @@ void TRootContextMenu::DisplayPopup(Int_t x, Int_t y)
    yy = topy + y + 1;
 
    PlaceMenu(xx, yy, kFALSE, kTRUE);
+   // add some space for the right-side '?' (help)
+   fMenuWidth += 5;
+   Resize(GetDefaultWidth()+5, GetDefaultHeight());
 }
 
 //______________________________________________________________________________
@@ -426,7 +429,7 @@ void TRootContextMenu::Dialog(TObject *object, TFunction *function)
       if (selfobjpos != argpos) {
          char       *argname    = fContextMenu->CreateArgumentTitle(argument);
          const char *type       = argument->GetTypeName();
-         TDataType    *datatype   = gROOT->GetType(type);
+         TDataType  *datatype   = gROOT->GetType(type);
          const char *charstar   = "char*";
          char        basictype[32];
 
@@ -443,6 +446,12 @@ void TRootContextMenu::Dialog(TObject *object, TFunction *function)
             strcat(basictype, "*");
             if (!strncmp(type, "char", 4))
                type = charstar;
+            else if (strstr(argname, "[default:")) {
+               // skip arguments that are pointers (but not char *)
+               // and have a default value
+               argpos++;
+               continue;
+            }
          }
 
          TDataMember *m = argument->GetDataMember();
@@ -518,17 +527,39 @@ void TRootContextMenu::Dialog(TObject *object, TFunction *function)
 }
 
 //______________________________________________________________________________
+void TRootContextMenu::DrawEntry(TGMenuEntry *entry)
+{
+   // Draw context menu entry.
+
+   int ty, offset;
+   static int max_ascent = 0, max_descent = 0;
+
+   TGPopupMenu::DrawEntry(entry);
+   // draw the ? (help) in the right side when highlighting a menu entry
+   if (entry->GetType() == kMenuEntry && (entry->GetStatus() & kMenuActiveMask)) {
+      if (max_ascent == 0) {
+         gVirtualX->GetFontProperties(fFontStruct, max_ascent, max_descent);
+      }
+      offset = (entry->GetEh() - (max_ascent + max_descent)) / 2;
+      ty = entry->GetEy() + max_ascent + offset - 1;
+      TGHotString s("&?");
+      s.Draw(fId, fSelGC, fMenuWidth-12, ty);
+   }
+}
+
+//______________________________________________________________________________
 Bool_t TRootContextMenu::HandleButton(Event_t *event)
 {
-   // Handle button event in the popup menu.
+   // Handle button event in the context menu.
 
    int   id;
    void *ud;
-   if ((event->fState & kKeyControlMask) &&
-       (event->fType == kButtonRelease)) {
+   if ((event->fType == kButtonRelease) && (event->fX >= (Int_t)(fMenuWidth-15)) &&
+       (event->fX <= (Int_t)fMenuWidth)) {
       id = EndMenu(ud);
       if (fHasGrab) gVirtualX->GrabPointer(0, 0, 0, 0, kFALSE);  // ungrab
       if (ud) {
+         // retrieve the highlighted function
          TFunction *function = 0;
          if (id < kToggleStart) {
             TMethod *m = (TMethod *)ud;
@@ -548,6 +579,54 @@ Bool_t TRootContextMenu::HandleButton(Event_t *event)
       return kTRUE;
    }
    return TGPopupMenu::HandleButton(event);
+}
+
+//______________________________________________________________________________
+Bool_t TRootContextMenu::HandleCrossing(Event_t *event)
+{
+   // Handle pointer crossing event in context menu.
+
+   if (event->fType == kLeaveNotify) {
+      // just to reset the mouse pointer...
+      HandleMotion(event);
+   }
+   return TGPopupMenu::HandleCrossing(event);
+}
+
+//______________________________________________________________________________
+Bool_t TRootContextMenu::HandleMotion(Event_t *event)
+{
+   // Handle pointer motion event in context menu.
+
+   static int toggle = 0;
+   static Cursor_t handCur = kNone, rightCur = kNone;
+   static UInt_t mask = kButtonPressMask | kButtonReleaseMask | kPointerMotionMask;
+
+   if (handCur == kNone)
+      handCur    = gVirtualX->CreateCursor(kHand);
+   if (rightCur == kNone)
+      rightCur   = gVirtualX->CreateCursor(kArrowRight);
+
+   if (event->fType == kLeaveNotify) {
+      gVirtualX->ChangeActivePointerGrab(fId, mask, rightCur);
+      toggle = 0;
+      return kTRUE;
+   }
+   // change the cursot to a small hand when over the ? (help)
+   if ((event->fX >= (Int_t)(fMenuWidth-15)) && (event->fX <= (Int_t)fMenuWidth) &&
+       fCurrent && (fCurrent->GetType() == kMenuEntry)) {
+      if (toggle == 0) {
+         gVirtualX->ChangeActivePointerGrab(fId, mask, handCur);
+         toggle = 1;
+      }
+   }
+   else {
+      if (toggle == 1) {
+         gVirtualX->ChangeActivePointerGrab(fId, mask, rightCur);
+         toggle = 0;
+      }
+   }
+   return TGPopupMenu::HandleMotion(event);
 }
 
 //______________________________________________________________________________

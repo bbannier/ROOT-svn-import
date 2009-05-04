@@ -148,10 +148,13 @@ gsl_poly_complex_solve_quartic (double a, double b, double c, double d,
         double Q3 = Q * Q * Q;
         double R2 = R * R;
 
-        double CR2 = 729 * rcub * rcub;
-        double CQ3 = 2916 * qcub * qcub * qcub;
+        disc = R2 - Q3; 
 
-        disc = (CR2 - CQ3) / 2125764.0;
+//       more numerical problems with this calculation of disc          
+//       double CR2 = 729 * rcub * rcub;
+//       double CQ3 = 2916 * qcub * qcub * qcub;
+//       disc = (CR2 - CQ3) / 2125764.0;       
+
 
         if (0 == R && 0 == Q)
           {
@@ -159,7 +162,7 @@ gsl_poly_complex_solve_quartic (double a, double b, double c, double d,
             u[1] = -rc / 3;
             u[2] = -rc / 3;
           }
-        else if (CR2 == CQ3)
+        else if (R2 == Q3) 
           {
             double sqrtQ = sqrt (Q);
             if (R > 0)
@@ -175,13 +178,18 @@ gsl_poly_complex_solve_quartic (double a, double b, double c, double d,
                 u[2] = 2 * sqrtQ - rc / 3;
               }
           }
-        else if (CR2 < CQ3)
+        else if ( R2 < Q3)
           {
             double sqrtQ = sqrt (Q);
             double sqrtQ3 = sqrtQ * sqrtQ * sqrtQ;
-            double theta = acos (R / sqrtQ3);
-            if (R / sqrtQ3 >= 1.0)
-              theta = 0.0;
+            double ctheta = R / sqrtQ3;
+            double theta = 0; 
+            // protect against numerical error can make this larger than one
+            if ( fabs(ctheta) < 1.0 )
+               theta = acos( ctheta); 
+            else if ( ctheta <= -1.0) 
+               theta = M_PI; 
+
             double norm = -2 * sqrtQ;
 
             u[0] = norm * cos (theta / 3) - rc / 3;
@@ -192,7 +200,7 @@ gsl_poly_complex_solve_quartic (double a, double b, double c, double d,
           {
             double sgnR = (R >= 0 ? 1 : -1);
             double modR = fabs (R);
-            double sqrt_disc = sqrt (R2 - Q3);
+            double sqrt_disc = sqrt (disc);
             double A = -sgnR * pow (modR + sqrt_disc, 1.0 / 3.0);
             double B = Q / A;
 
@@ -211,10 +219,7 @@ gsl_poly_complex_solve_quartic (double a, double b, double c, double d,
        * mt=2 : 0 real roots
        * mt=3 : 2 real roots
        */
-      if (0 == disc)
-        {
-          u[2] = u[1];
-        }
+      // when disc == 0  2 roots are identicals 
       if (0 >= disc)
         {
           mt = 2;

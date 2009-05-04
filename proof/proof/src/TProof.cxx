@@ -89,13 +89,34 @@ Bool_t TProofInterruptHandler::Notify()
 {
    // TProof interrupt handler.
 
-   Info("Notify","Processing interrupt signal ...");
+   if (isatty(0) == 0 || isatty(1) == 0 || fProof->GetRemoteProtocol() < 22) {
 
-   // Stop any remote processing
-   fProof->StopProcess(kTRUE);
+      // Cannot ask the user : abort any remote processing
+      fProof->StopProcess(kTRUE);
 
-   // Handle also interrupt condition on socket(s)
-   fProof->Interrupt(TProof::kLocalInterrupt);
+   } else {
+      // Real stop or request to switch to asynchronous?
+      char *a = 0;
+      if (fProof->GetRemoteProtocol() < 22) {
+         a = Getline("\nSwith to asynchronous mode not supported remotely:"
+                     "\nEnter S/s to stop, Q/q to quit, any other key to continue: ");
+      } else {
+         a = Getline("\nEnter A/a to switch asynchronous, S/s to stop, Q/q to quit,"
+                     " any other key to continue: ");
+      }
+      if (a[0] == 'Q' || a[0] == 'S' || a[0] == 'q' || a[0] == 's') {
+
+         Info("Notify","Processing interrupt signal ... %c", a[0]);
+
+         // Stop or abort any remote processing
+         Bool_t abort = (a[0] == 'Q' || a[0] == 'q') ? kTRUE : kFALSE;
+         fProof->StopProcess(abort);
+
+      } else if ((a[0] == 'A' || a[0] == 'a') && fProof->GetRemoteProtocol() >= 22) {
+         // Stop any remote processing
+         fProof->GoAsynchronous();
+      }
+   }
 
    return kTRUE;
 }
@@ -278,12 +299,16 @@ TProof::TProof(const char *masterurl, const char *conffile, const char *confdir,
 
    // Server type
    if (strlen(fUrl.GetOptions()) > 0) {
+      TString opts(fUrl.GetOptions());
       if (!(strncmp(fUrl.GetOptions(),"std",3))) {
          fServType = TProofMgr::kProofd;
+         opts.Remove(0,3);
+         fUrl.SetOptions(opts.Data());
       } else if (!(strncmp(fUrl.GetOptions(),"lite",4))) {
          fServType = TProofMgr::kProofLite;
+         opts.Remove(0,4);
+         fUrl.SetOptions(opts.Data());
       }
-      fUrl.SetOptions("");
    }
 
    // Instance type
@@ -466,7 +491,7 @@ TProof::~TProof()
          fclose(fLogFileR);
       if (fLogFileW)
          fclose(fLogFileW);
-      if (fLogFileName.Length())
+      if (fLogFileName.Length() > 0)
          gSystem->Unlink(fLogFileName);
    }
 
@@ -564,8 +589,8 @@ Int_t TProof::Init(const char *, const char *conffile,
    // Client logging of messages from the master and slaves
    fRedirLog = kFALSE;
    if (TestBit(TProof::kIsClient)) {
-      fLogFileName    = "ProofLog_";
-      if ((fLogFileW = gSystem->TempFileName(fLogFileName)) == 0)
+      fLogFileName.Form("%s/ProofLog_%d", gSystem->TempDirectory(), gSystem->GetPid());
+      if ((fLogFileW = fopen(fLogFileName, "w")) == 0)
          Error("Init", "could not create temporary logfile");
       if ((fLogFileR = fopen(fLogFileName, "r")) == 0)
          Error("Init", "could not open temp logfile for reading");
@@ -2775,6 +2800,7 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess)
                Activate();
                fSync = kFALSE;
             }
+            DisableGoAsyn();
             // Check if the query has been enqueued
             fIsWaiting = kTRUE;
             // For Proof-Lite this variable is the number of workers and is set by the player
@@ -4039,6 +4065,34 @@ void TProof::StopProcess(Bool_t abort, Int_t timeout)
       if (sl->IsValid())
          // Ask slave to progate the stop/abort request
          sl->StopProcess(abort, timeout);
+}
+
+//______________________________________________________________________________
+void TProof::DisableGoAsyn()
+{
+   // Signal to disable related switches
+
+   Emit("DisableGoAsyn()");
+}
+
+//______________________________________________________________________________
+void TProof::GoAsynchronous()
+{
+   // Send GOASYNC message to the master.
+
+   if (!IsValid()) return;
+
+   if (GetRemoteProtocol() < 22) {
+      Info("GoAsynchronous", "functionality not supported by the server - ignoring");
+      return;
+   }
+
+   if (fSync && !IsIdle()) {
+      TMessage m(kPROOF_GOASYNC);
+      Broadcast(m);
+   } else {
+      Info("GoAsynchronous", "either idle or already in asynchronous mode - ignoring");
+   }
 }
 
 //______________________________________________________________________________
@@ -7893,6 +7947,47 @@ Bool_t TProof::RegisterDataSet(const char *dataSetName,
 }
 
 //______________________________________________________________________________
+Int_t TProof::SetDataSetTreeName(const char *dataset, const char *treename)
+{
+   // Set/Change the name of the default tree. The tree name may contain
+   // subdir specification in the form "subdir/name".
+   // Returns 0 on success, -1 otherwise.
+
+   // Check TFileInfo compatibility
+   if (fProtocol < 23) {
+      Info("SetDataSetTreeName", "functionality not supported by the server");
+      return -1;
+   }
+
+   if (!dataset || strlen(dataset) <= 0) {
+      Info("SetDataSetTreeName", "specifying a dataset name is mandatory");
+      return -1;
+   }
+
+   if (!treename || strlen(treename) <= 0) {
+      Info("SetDataSetTreeName", "specifying a tree name is mandatory");
+      return -1;
+   }
+
+   TUri uri(dataset);
+   TString fragment(treename);
+   if (!fragment.BeginsWith("/")) fragment.Insert(0, "/");
+   uri.SetFragment(fragment);
+
+   TMessage mess(kPROOF_DATASETS);
+   mess << Int_t(kSetDefaultTreeName);
+   mess << uri.GetUri();
+   Broadcast(mess);
+
+   Collect();
+   if (fStatus != 0) {
+      Error("SetDataSetTreeName", "some error occured: default tree name not changed");
+      return -1;
+   }
+   return 0;
+}
+
+//______________________________________________________________________________
 TMap *TProof::GetDataSets(const char *uri, const char* optStr)
 {
    // Lists all datasets that match given uri.
@@ -7964,6 +8059,34 @@ void TProof::ShowDataSets(const char *uri, const char* optStr)
    Collect(kActive, fCollectTimeout);
    if (fStatus != 0)
       Error("ShowDataSets", "error receiving datasets information");
+}
+
+//______________________________________________________________________________
+Bool_t TProof::ExistsDataSet(const char *dataset)
+{
+   // Returns kTRUE if 'dataset' exists, kFALSE otherwise
+
+   if (fProtocol < 15) {
+      Info("ExistsDataSet", "functionality not available: the server has an"
+                            " incompatible version of TFileInfo");
+      return kFALSE;
+   }
+
+   if (!dataset || strlen(dataset) <= 0) {
+      Error("ExistsDataSet", "dataset name missing");
+      return kFALSE;
+   }
+
+   TMessage msg(kPROOF_DATASETS);
+   msg << Int_t(kCheckDataSetName) << TString(dataset);
+   Broadcast(msg);
+   Collect(kActive, fCollectTimeout);
+   if (fStatus == -1) {
+      // The dataset exists
+      return kTRUE;
+   }
+   // The dataset does not exists
+   return kFALSE;
 }
 
 //______________________________________________________________________________

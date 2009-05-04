@@ -772,6 +772,7 @@ void XrdProofdManager::RegisterDirectives()
    Register("allowedusers", new XrdProofdDirective("allowedusers", this, &DoDirectiveClass));
    Register("role", new XrdProofdDirective("role", this, &DoDirectiveClass));
    Register("cron", new XrdProofdDirective("cron", this, &DoDirectiveClass));
+   Register("port", new XrdProofdDirective("port", this, &DoDirectiveClass));
    Register("xrd.protocol", new XrdProofdDirective("xrd.protocol", this, &DoDirectiveClass));
    // Register config directives for strings
    Register("tmp", new XrdProofdDirective("tmp", (void *)&fTMPdir, &DoDirectiveString));
@@ -788,7 +789,11 @@ int XrdProofdManager::ResolveKeywords(XrdOucString &s, XrdProofdClient *pcl)
    // Resolve special keywords in 's' for client 'pcl'. Recognized keywords
    //     <workdir>          root for working dirs
    //     <host>             local host name
+   //     <homedir>          user home dir
    //     <user>             user name
+   //     <group>            user group
+   //     <uid>              user ID
+   //     <gid>              user group ID
    // Return the number of keywords resolved.
    XPDLOC(ALL, "Manager::ResolveKeywords")
 
@@ -812,6 +817,30 @@ int XrdProofdManager::ResolveKeywords(XrdOucString &s, XrdProofdClient *pcl)
    if (pcl)
       if (s.replace("<user>", pcl->User()))
          nk++;
+
+   // Parse <group>
+   if (pcl)
+      if (s.replace("<group>", pcl->Group()))
+         nk++;
+
+   // Parse <homedir>
+   if (pcl)
+      if (s.replace("<homedir>", pcl->UI().fHomeDir.c_str()))
+         nk++;
+
+   // Parse <uid>
+   if (pcl && (s.find("<uid>") != STR_NPOS)) {
+      XrdOucString suid; suid += pcl->UI().fUid;
+      if (s.replace("<uid>", suid.c_str()))
+         nk++;
+   }
+
+   // Parse <gid>
+   if (pcl && (s.find("<gid>") != STR_NPOS)) {
+      XrdOucString sgid; sgid += pcl->UI().fGid;
+      if (s.replace("<gid>", sgid.c_str()))
+         nk++;
+   }
 
    TRACE(HDBG,"exit: "<<s);
 
@@ -849,7 +878,7 @@ int XrdProofdManager::DoDirective(XrdProofdDirective *d,
       return DoDirectiveRole(val, cfg, rcf);
    } else if (d->fName == "multiuser") {
       return DoDirectiveMultiUser(val, cfg, rcf);
-   } else if (d->fName == "xrd.protocol") {
+   } else if (d->fName == "xrd.protocol" || d->fName == "port") {
       return DoDirectivePort(val, cfg, rcf);
    }
    TRACE(XERR, "unknown directive: "<<d->fName);
@@ -1134,21 +1163,23 @@ int XrdProofdManager::DoDirectiveRole(char *val, XrdOucStream *cfg, bool)
 }
 
 //______________________________________________________________________________
-int XrdProofdManager::DoDirectivePort(char *, XrdOucStream *cfg, bool)
+int XrdProofdManager::DoDirectivePort(char *val, XrdOucStream *, bool)
 {
    // Process 'xrd.protocol' directive to find the port
 
-   if (!cfg)
+   if (!val)
       // undefined inputs
       return -1;
 
-   // Get the value
-   XrdOucString proto = cfg->GetToken();
-   if (proto.length() > 0 && proto.beginswith("xproofd:")) {
-      proto.replace("xproofd:","");
-      fPort = strtol(proto.c_str(), 0, 10);
-      fPort = (fPort < 0) ? XPD_DEF_PORT : fPort;
+   XrdOucString port(val);
+   if (port.beginswith("xproofd:")) {
+      port.replace("xproofd:","");
    }
+   if (port.length() > 0) {
+      fPort = strtol(port.c_str(), 0, 10);
+   }
+   fPort = (fPort < 0) ? XPD_DEF_PORT : fPort;
+
    return 0;
 }
 
