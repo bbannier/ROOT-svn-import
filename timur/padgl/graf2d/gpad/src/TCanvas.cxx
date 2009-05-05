@@ -2154,3 +2154,12 @@ TVirtualPadPainter *TCanvas::GetCanvasPainter()
    
    return fPainter;
 }
+
+//______________________________________________________________________________
+void TCanvas::DestroyNonGLCanvas()
+{
+   //
+   FreePixmaps();
+   delete fPainter;
+   fPainter = 0;
+}
