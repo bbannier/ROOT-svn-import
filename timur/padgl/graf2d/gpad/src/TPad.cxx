@@ -173,8 +173,6 @@ TPad::TPad()
    fViewer3D = 0;
    SetBit(kMustCleanup);
 
-   fPainter = 0; //To be created in a TCanvas ctor.
-
    // the following line is temporarily disabled. It has side effects
    // when the pad is a TDrawPanelHist or a TFitPanel.
    // the line was supposed to fix a problem with DrawClonePad
@@ -241,11 +239,7 @@ TPad::TPad(const char *name, const char *title, Double_t xlow,
 
    fViewer3D = 0;
 
-   //Setup painter.
-   fPainter = fCanvas->GetPainter();
    fGLDevice = fCanvas->GetGLDevice();   
-   //
-   
    // Set default world coordinates to NDC [0,1]
    fX1 = 0;
    fX2 = 1;
@@ -464,7 +458,7 @@ TVirtualPad *TPad::cd(Int_t subpadnumber)
 
    if (!subpadnumber) {
       gPad = this;
-      if (!gPad->IsBatch()) fPainter->SelectDrawable(fPixmapID);
+      if (!gPad->IsBatch()) GetPadPainter()->SelectDrawable(fPixmapID);
       return gPad;
    }
 
@@ -505,7 +499,7 @@ void TPad::Clear(Option_t *option)
 
    if (TestBit(kClearAfterCR)) getchar();
 
-   if (!gPad->IsBatch()) fPainter->ClearDrawable();
+   if (!gPad->IsBatch()) GetPadPainter()->ClearDrawable();
    if (gVirtualPS && gPad == gPad->GetCanvas()) gVirtualPS->NewPage();
 
    PaintBorder(GetFillColor(), kTRUE);
@@ -875,8 +869,8 @@ void TPad::Close(Option_t *)
    if (fPixmapID != -1) {
       if (gPad) {
          if (!gPad->IsBatch()) {
-            fPainter->SelectDrawable(fPixmapID);
-            fPainter->DestroyDrawable();
+            GetPadPainter()->SelectDrawable(fPixmapID);
+            GetPadPainter()->DestroyDrawable();
          }
       }
       fPixmapID = -1;
@@ -917,7 +911,7 @@ void TPad::CopyPixmap()
    XYtoAbsPixel(fX1, fY2, px, py);
 
    if (fPixmapID != -1)
-      fPainter->CopyDrawable(fPixmapID, px, py);
+      GetPadPainter()->CopyDrawable(fPixmapID, px, py);
 
    if (this == gPad) HighLight(gPad->GetHighLightColor());
 }
@@ -1161,8 +1155,6 @@ void TPad::Draw(Option_t *option)
       if (fMother) fMother->GetListOfPrimitives()->Remove(this);
       TPad *oldMother = fMother;
       fCanvas = gPad->GetCanvas();
-      //
-      fPainter = fCanvas->GetPainter();
       //
       fMother = (TPad*)gPad;
       if (oldMother != fMother || fPixmapID == -1) ResizePad();
@@ -1654,13 +1646,13 @@ again:
 #ifdef WIN32
       Pop(); //this should be for cases where mouse has only two buttons
 #endif
-      fPainter->SetLineColor(-1);
+      GetPadPainter()->SetLineColor(-1);
       TAttLine::Modify();  //Change line attributes only if necessary
       if (GetFillColor())
-         fPainter->SetLineColor(GetFillColor());
+         GetPadPainter()->SetLineColor(GetFillColor());
       else
-         fPainter->SetLineColor(1);
-      fPainter->SetLineWidth(2);
+         GetPadPainter()->SetLineColor(1);
+      GetPadPainter()->SetLineWidth(2);
 
       // No break !!!
 
@@ -2845,9 +2837,9 @@ void TPad::PaintBorder(Color_t color, Bool_t tops)
       frameXs[5] = xl;           frameYs[5] = yt;
       frameXs[6] = xl;           frameYs[6] = yl;
       
-      if (fBorderMode == -1) fPainter->SetFillColor(dark);
-      else                   fPainter->SetFillColor(light);
-      fPainter->DrawFillArea(7, frameXs, frameYs);
+      if (fBorderMode == -1) GetPadPainter()->SetFillColor(dark);
+      else                   GetPadPainter()->SetFillColor(light);
+      GetPadPainter()->DrawFillArea(7, frameXs, frameYs);
 
       // Draw bottom&right part of the box
       frameXs[0] = xl;              frameYs[0] = yl;
@@ -2858,19 +2850,19 @@ void TPad::PaintBorder(Color_t color, Bool_t tops)
       frameXs[5] = xt;              frameYs[5] = yl;
       frameXs[6] = xl;              frameYs[6] = yl;
 
-      if (fBorderMode == -1) fPainter->SetFillColor(light);
-      else                   fPainter->SetFillColor(dark);
-      fPainter->DrawFillArea(7, frameXs, frameYs);
+      if (fBorderMode == -1) GetPadPainter()->SetFillColor(light);
+      else                   GetPadPainter()->SetFillColor(dark);
+      GetPadPainter()->DrawFillArea(7, frameXs, frameYs);
 
       // If this pad is a button, highlight it
       if (InheritsFrom("TButton") && fBorderMode == -1) {
          if (TestBit(kFraming)) {  // bit set in TButton::SetFraming
-            if (GetFillColor() != 2) fPainter->SetLineColor(2);
-            else                     fPainter->SetLineColor(4);
-            fPainter->DrawBox(xl + realBsX, yl + realBsY, xt - realBsX, yt - realBsY, TVirtualPadPainter::kHollow);
+            if (GetFillColor() != 2) GetPadPainter()->SetLineColor(2);
+            else                     GetPadPainter()->SetLineColor(4);
+            GetPadPainter()->DrawBox(xl + realBsX, yl + realBsY, xt - realBsX, yt - realBsY, TVirtualPadPainter::kHollow);
          }
       }
-      fPainter->SetFillColor(-1);
+      GetPadPainter()->SetFillColor(-1);
       SetFillColor(oldcolor);
    }
 
@@ -2977,7 +2969,7 @@ void TPad::PaintModified()
    cd();
    if (IsModified() || IsTransparent()) {
       if ((fFillStyle < 3026) && (fFillStyle > 3000)) {
-         if (!gPad->IsBatch()) fPainter->ClearDrawable();
+         if (!gPad->IsBatch()) GetPadPainter()->ClearDrawable();
       }
       PaintBorder(GetFillColor(), kTRUE);
    }
@@ -3037,17 +3029,17 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
    // if option[0] = 'l' the box contour is drawn
 
    if (!gPad->IsBatch()) {
-      Int_t style0 = fPainter->GetFillStyle();
+      Int_t style0 = GetPadPainter()->GetFillStyle();
       Int_t style  = style0;
       if (option[0] == 's') {
-         fPainter->SetFillStyle(0);
+         GetPadPainter()->SetFillStyle(0);
          style = 0;
       }
       if (style) {
          if (style > 3000 && style < 4000) {
             if (style < 3026) {
                // draw stipples with fFillColor foreground
-               fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
+               GetPadPainter()->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
             }
 
             if (style >= 3100 && style < 4000) {
@@ -3058,10 +3050,10 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
                return;
             }
             //special case for TAttFillCanvas
-            if (fPainter->GetFillColor() == 10) {
-               fPainter->SetFillColor(1);
-               fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
-               fPainter->SetFillColor(10);
+            if (GetPadPainter()->GetFillColor() == 10) {
+               GetPadPainter()->SetFillColor(1);
+               GetPadPainter()->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
+               GetPadPainter()->SetFillColor(10);
             }
          } else if (style >= 4000 && style <= 4100) {
             // For style >=4000 we make the window transparent.
@@ -3069,7 +3061,7 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
 
             //ignore this style option when this is the canvas itself
             if (this == fMother)
-               fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
+               GetPadPainter()->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
             else {
                //draw background by blitting all bottom pads
                int px, py;
@@ -3080,15 +3072,15 @@ void TPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Option_t
                   CopyBackgroundPixmaps(fMother, this, px, py);
                }
 
-               fPainter->SetOpacity(style - 4000);
+               GetPadPainter()->SetOpacity(style - 4000);
             }
          } else {
-            fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
+            GetPadPainter()->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
          }
-         if (option[0] == 'l') fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kHollow);
+         if (option[0] == 'l') GetPadPainter()->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kHollow);
       } else {
-         fPainter->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kHollow);
-         if (option[0] == 's') fPainter->SetFillStyle(style0);
+         GetPadPainter()->DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kHollow);
+         if (option[0] == 's') GetPadPainter()->SetFillStyle(style0);
       }
    }
 
@@ -3143,7 +3135,7 @@ void TPad::CopyBackgroundPixmap(Int_t x, Int_t y)
 
    int px, py;
    XYtoAbsPixel(fX1, fY2, px, py);
-   fPainter->CopyDrawable(GetPixmapID(), px-x, py-y);
+   GetPadPainter()->CopyDrawable(GetPixmapID(), px-x, py-y);
 }
 
 
@@ -3204,7 +3196,7 @@ void TPad::PaintFillArea(Int_t nn, Float_t *xx, Float_t *yy, Option_t *)
    }
 
    // Paint the fill area with hatches
-   Int_t fillstyle = fPainter->GetFillStyle();
+   Int_t fillstyle = GetPadPainter()->GetFillStyle();
    if (gPad->IsBatch() && gVirtualPS) fillstyle = gVirtualPS->GetFillStyle();
    if (fillstyle >= 3100 && fillstyle < 4000) {
       PaintFillAreaHatches(nn, x, y, fillstyle);
@@ -3215,7 +3207,7 @@ void TPad::PaintFillArea(Int_t nn, Float_t *xx, Float_t *yy, Option_t *)
 
    if (!gPad->IsBatch())
       // invoke the graphics subsystem
-      fPainter->DrawFillArea(n, x, y);
+      GetPadPainter()->DrawFillArea(n, x, y);
 
    if (gVirtualPS) {
       gVirtualPS->DrawPS(-n, x, y);
@@ -3252,7 +3244,7 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
    }
 
    // Paint the fill area with hatches
-   Int_t fillstyle = fPainter->GetFillStyle();
+   Int_t fillstyle = GetPadPainter()->GetFillStyle();
    if (gPad->IsBatch() && gVirtualPS) fillstyle = gVirtualPS->GetFillStyle();
    if (fillstyle >= 3100 && fillstyle < 4000) {
       PaintFillAreaHatches(nn, x, y, fillstyle);
@@ -3263,7 +3255,7 @@ void TPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
 
    if (!gPad->IsBatch())
       // invoke the graphics subsystem
-      fPainter->DrawFillArea(n, x, y);
+      GetPadPainter()->DrawFillArea(n, x, y);
 
    if (gVirtualPS) {
       gVirtualPS->DrawPS(-n, x, y);
@@ -3327,9 +3319,9 @@ void TPad::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t Fill
 
    // Save the current line attributes
    if (!gPad->IsBatch()) {
-      lws = fPainter->GetLineWidth();
-      lss = fPainter->GetLineStyle();
-      lcs = fPainter->GetLineColor();
+      lws = GetPadPainter()->GetLineWidth();
+      lss = GetPadPainter()->GetLineStyle();
+      lcs = GetPadPainter()->GetLineColor();
    } else {
       if (gVirtualPS) {
          lws = gVirtualPS->GetLineWidth();
@@ -3340,9 +3332,9 @@ void TPad::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t Fill
 
    // Change the current line attributes to draw the hatches
    if (!gPad->IsBatch()) {
-      fPainter->SetLineStyle(1);
-      fPainter->SetLineWidth(Short_t(lw));
-      fPainter->SetLineColor(fPainter->GetFillColor());
+      GetPadPainter()->SetLineStyle(1);
+      GetPadPainter()->SetLineWidth(Short_t(lw));
+      GetPadPainter()->SetLineColor(GetPadPainter()->GetFillColor());
    }
    if (gVirtualPS) {
       gVirtualPS->SetLineStyle(1);
@@ -3356,9 +3348,9 @@ void TPad::PaintFillAreaHatches(Int_t nn, Double_t *xx, Double_t *yy, Int_t Fill
 
    // Restore the line attributes
    if (!gPad->IsBatch()) {
-      fPainter->SetLineStyle(lss);
-      fPainter->SetLineWidth(lws);
-      fPainter->SetLineColor(lcs);
+      GetPadPainter()->SetLineStyle(lss);
+      GetPadPainter()->SetLineWidth(lws);
+      GetPadPainter()->SetLineColor(lcs);
    }
    if (gVirtualPS) {
       gVirtualPS->SetLineStyle(lss);
@@ -3539,7 +3531,7 @@ void TPad::PaintLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
    }
    
    if (!gPad->IsBatch())
-      fPainter->DrawLine(x[0], y[0], x[1], y[1]);
+      GetPadPainter()->DrawLine(x[0], y[0], x[1], y[1]);
 
    if (gVirtualPS) {
       gVirtualPS->DrawPS(2, x, y);
@@ -3554,7 +3546,7 @@ void TPad::PaintLineNDC(Double_t u1, Double_t v1,Double_t u2, Double_t v2)
 {
    static Double_t xw[2], yw[2];
    if (!gPad->IsBatch())
-      fPainter->DrawLineNDC(u1, v1, u2, v2);
+      GetPadPainter()->DrawLineNDC(u1, v1, u2, v2);
 
    if (gVirtualPS) {
       xw[0] = fX1 + u1*(fX2 - fX1);
@@ -3634,7 +3626,7 @@ void TPad::PaintPolyLine(Int_t n, Float_t *x, Float_t *y, Option_t *)
       if (i1 < 0) i1 = i;
       if (iclip == 0 && i < n-2) continue;
       if (!gPad->IsBatch())
-         fPainter->DrawPolyLine(np, &x[i1], &y[i1]);
+         GetPadPainter()->DrawPolyLine(np, &x[i1], &y[i1]);
       if (gVirtualPS) {
          gVirtualPS->DrawPS(np, &x[i1], &y[i1]);
       }
@@ -3688,7 +3680,7 @@ void TPad::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option)
       if (i1 < 0) i1 = i;
       if (iclip == 0 && i < n-2) continue;
       if (!gPad->IsBatch())
-         fPainter->DrawPolyLine(np, &x[i1], &y[i1]);
+         GetPadPainter()->DrawPolyLine(np, &x[i1], &y[i1]);
       if (gVirtualPS) {
          gVirtualPS->DrawPS(np, &x[i1], &y[i1]);
       }
@@ -3712,7 +3704,7 @@ void TPad::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *)
    if (n <=0) return;
 
    if (!gPad->IsBatch())
-      fPainter->DrawPolyLineNDC(n, x, y);
+      GetPadPainter()->DrawPolyLineNDC(n, x, y);
 
    if (gVirtualPS) {
       Double_t *xw = new Double_t[n];
@@ -3764,7 +3756,7 @@ void TPad::PaintPolyMarker(Int_t nn, Float_t *x, Float_t *y, Option_t *)
       }
       if (np == 0) continue;
       if (!gPad->IsBatch())
-         fPainter->DrawPolyMarker(np, &x[i1], &y[i1]);
+         GetPadPainter()->DrawPolyMarker(np, &x[i1], &y[i1]);
       if (gVirtualPS) {
          gVirtualPS->DrawPolyMarker(np, &x[i1], &y[i1]);
       }
@@ -3796,7 +3788,7 @@ void TPad::PaintPolyMarker(Int_t nn, Double_t *x, Double_t *y, Option_t *)
       }
       if (np == 0) continue;
       if (!gPad->IsBatch())
-         fPainter->DrawPolyMarker(np, &x[i1], &y[i1]);
+         GetPadPainter()->DrawPolyMarker(np, &x[i1], &y[i1]);
       if (gVirtualPS) {
          gVirtualPS->DrawPolyMarker(np, &x[i1], &y[i1]);
       }
@@ -3815,7 +3807,7 @@ void TPad::PaintText(Double_t x, Double_t y, const char *text)
    Modified();
 
    if (!gPad->IsBatch())
-      fPainter->DrawText(x, y, text, TVirtualPadPainter::kClear);
+      GetPadPainter()->DrawText(x, y, text, TVirtualPadPainter::kClear);
 
    if (gVirtualPS) gVirtualPS->Text(x, y, text);
 }
@@ -3829,7 +3821,7 @@ void TPad::PaintTextNDC(Double_t u, Double_t v, const char *text)
    Modified();
 
    if (!gPad->IsBatch())
-      fPainter->DrawTextNDC(u, v, text, TVirtualPadPainter::kClear);
+      GetPadPainter()->DrawTextNDC(u, v, text, TVirtualPadPainter::kClear);
 
    if (gVirtualPS) {
       Double_t x = fX1 + u*(fX2 - fX1);
@@ -4174,7 +4166,7 @@ void TPad::Print(const char *filenam, Option_t *option)
       psname.Prepend(gEnv->GetValue("Canvas.PrintDirectory","."));
    }
    if (!gPad->IsBatch() && fCanvas)
-      fPainter->SelectDrawable(GetCanvasID());
+      GetPadPainter()->SelectDrawable(GetCanvasID());
 
    // Save pad/canvas in alternative formats
    TImage::EImageFileTypes gtype = TImage::kUnknown;
@@ -4209,7 +4201,7 @@ void TPad::Print(const char *filenam, Option_t *option)
          gPad->GetCanvas()->SetHighLightColor(-1);
          gPad->Modified();
          gPad->Update();
-         fPainter->SelectDrawable(wid);
+         GetPadPainter()->SelectDrawable(wid);
          if (gVirtualX->WriteGIF((char*)psname.Data())) {
             if (!gSystem->AccessPathName(psname.Data())) {
                Info("Print", "GIF file %s has been created", psname.Data());
@@ -4436,7 +4428,7 @@ void TPad::Range(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
    ResizePad();
 
    if (gPad == this)
-      fPainter->InvalidateCS();
+      GetPadPainter()->InvalidateCS();
    
    // emit signal
    RangeChanged();
@@ -4701,8 +4693,8 @@ void TPad::ResizePad(Option_t *option)
    if (gPad->IsBatch())
       fPixmapID = 0;
    else {
-      fPainter->SetLineWidth(-1);
-      fPainter->SetTextSize(-1);
+      GetPadPainter()->SetLineWidth(-1);
+      GetPadPainter()->SetTextSize(-1);
 
       // create or re-create off-screen pixmap
       if (fPixmapID) {
@@ -4724,7 +4716,7 @@ void TPad::ResizePad(Option_t *option)
             h = 10;
          }
          if (fPixmapID == -1) {      // this case is handled via the ctor
-            fPixmapID = fPainter->CreateDrawable(w, h);
+            fPixmapID = GetPadPainter()->CreateDrawable(w, h);
          } else {
             if (gVirtualX->ResizePixmap(fPixmapID, w, h)) {
                Modified(kTRUE);
@@ -5824,4 +5816,11 @@ void TPad::RecordLatex(const TObject *obj)
    // Emit RecordLatex() signal.
 
    Emit("RecordLatex(const TObject*)", (Long_t)obj);
+}
+
+//______________________________________________________________________________
+TVirtualPadPainter *TPad::GetPadPainter()
+{
+   //Get pad painter from TCanvas.
+   return fCanvas->GetPainter();
 }

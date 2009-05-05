@@ -125,7 +125,7 @@ End_Html */
 TCanvas::TCanvas(Bool_t build) : TPad()
 {
    // Canvas default constructor.
-
+   fPainter = 0;
    fUseGL = gStyle->GetCanvasPreferGL();
 
    if (!build || TClass::IsCallingNew()) {
@@ -182,6 +182,7 @@ TCanvas::TCanvas(const char *name, Int_t ww, Int_t wh, Int_t winid)
    // TRootEmbeddedCanvas class.
    //
    //  If "name" starts with "gl" the canvas is ready to receive GL output.
+   fPainter = 0;
    Init();
 
    fCanvasID     = winid;
@@ -225,7 +226,7 @@ TCanvas::TCanvas(const char *name, const char *title, Int_t form) : TPad()
    //  form = 5    500x500 at 50,50
    //
    //  If "name" starts with "gl" the canvas is ready to receive GL output.
-
+   fPainter = 0;
    fUseGL = gStyle->GetCanvasPreferGL();
 
    Constructor(name, title, form);
@@ -318,7 +319,7 @@ TCanvas::TCanvas(const char *name, const char *title, Int_t ww, Int_t wh) : TPad
    //  wh is the canvas size in pixels along Y
    //
    //  If "name" starts with "gl" the canvas is ready to receive GL output.
-
+   fPainter = 0;
    fUseGL = gStyle->GetCanvasPreferGL();
 
    Constructor(name, title, ww, wh);
@@ -392,7 +393,7 @@ TCanvas::TCanvas(const char *name, const char *title, Int_t wtopx, Int_t wtopy, 
    //  wh is the canvas size in pixels along Y
    //
    //  If "name" starts with "gl" the canvas is ready to receive GL output.
-
+   fPainter = 0;
    fUseGL = gStyle->GetCanvasPreferGL();
 
    Constructor(name, title, wtopx, wtopy, ww, wh);
@@ -585,6 +586,7 @@ void TCanvas::Build()
 TCanvas::TCanvas(const TCanvas &) : TPad()
 {
    // Intentionally not implemented
+   fPainter = 0;
 }
 
 
@@ -2122,25 +2124,23 @@ void TCanvas::SetGrayscale(Bool_t set /*= kTRUE*/)
 //______________________________________________________________________________
 void TCanvas::CreatePainter()
 {
-   //Create pad painter for non batch mode.
-   if (fBatch)
-      return;
    /*
-   Probably, TPadPainter must be placed in a separate ROOT module, like
-   padpainter (the same as "histpainter"). But now, it's directly in a
+   Probably, TPadPainter must be placed in a separate ROOT module - 
+   "padpainter" (the same as "histpainter"). But now, it's directly in a
    gpad dir, so, in case of default painter, no *.so should be loaded,
-   no need in plugin managers yet.
-   May change in a future.
+   no need in plugin managers.
+   May change in future.
    */
-   
-   Option_t *type = UseGL() ? "gl" : "";
-   if (!UseGL())
+
+   //Even for batch mode painter is still required, just to delegate
+   //some calls to batch "virtual X".
+   if (!UseGL() || fBatch)
       fPainter = new TPadPainter(this);//Do not need plugin manager for this!
    else {
-      fPainter = TVirtualPadPainter::PadPainter(this, type);
+      fPainter = TVirtualPadPainter::PadPainter(this, "gl");
       if (!fPainter) {
          Error("CreatePainter", "GL Painter creation failed! Will use default!");
-         fPainter = new TPadPainter(this);//this is only for debugging.
+         fPainter = new TPadPainter(this);
       }
    }
 }
@@ -2148,10 +2148,7 @@ void TCanvas::CreatePainter()
 //______________________________________________________________________________
 TVirtualPadPainter *TCanvas::GetPainter()
 {
-   if (fBatch) {
-      Warning("GetPainter", "Painter was requested for batch mode!");//for debug only.
-      return 0;
-   }
+   //Access and (probably) creation of pad painter.
    if (!fPainter)
       CreatePainter();
    

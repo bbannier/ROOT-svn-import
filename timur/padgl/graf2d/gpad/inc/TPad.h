@@ -119,8 +119,6 @@ protected:
 
    // 3D Viewer support
    TVirtualViewer3D *fViewer3D;    //! Current 3D viewer
-   //
-   TVirtualPadPainter *fPainter;   //! Interface to X11 or OpenGL. Per-canvas painter.
 
    void          DestroyExternalViewer3D();
    virtual Int_t DistancetoPrimitive(Int_t px, Int_t py);
@@ -132,6 +130,7 @@ protected:
    virtual void  SavePrimitive(ostream &out, Option_t *option = "");
    virtual void  SetBatch(Bool_t batch=kTRUE);
 
+   TVirtualPadPainter *GetPadPainter();
 private:
    TPad(const TPad &pad);  // cannot copy pads, use TObject::Clone()
    TPad &operator=(const TPad &rhs);  // idem
