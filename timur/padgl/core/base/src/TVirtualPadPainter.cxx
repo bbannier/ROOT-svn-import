@@ -10,9 +10,27 @@ TVirtualPadPainter::~TVirtualPadPainter()
 }
 
 //______________________________________________________________________________
+void TVirtualPadPainter::InitPainter()
+{
+   //Empty definition.
+}
+
+//______________________________________________________________________________
+void TVirtualPadPainter::InvalidateCS()
+{
+   //Empty definition.
+}
+
+//______________________________________________________________________________
+void TVirtualPadPainter::LockPainter()
+{
+   //Empty definition.
+}
+
+//______________________________________________________________________________
 TVirtualPadPainter *TVirtualPadPainter::PadPainter(TVirtualPad *pad, Option_t *type)
 {
-   // Create a Viewer 3D of specified type.
+   // Create a pad painter of specified type.
 
    TVirtualPadPainter *painter = 0;
    TPluginHandler *h = gPluginMgr->FindHandler("TVirtualPadPainter", type);

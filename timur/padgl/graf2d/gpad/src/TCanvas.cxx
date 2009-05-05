@@ -1038,6 +1038,7 @@ void TCanvas::Flush()
             padsav->HighLight(padsav->GetHighLightColor());
             //cd();
          }
+         fPainter->LockPainter();
          gGLManager->Flush(fGLDevice);
       }
    }

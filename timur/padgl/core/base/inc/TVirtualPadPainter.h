@@ -63,8 +63,11 @@ public:
    virtual void     DestroyDrawable() = 0;//gVirtualX->CloseWindow
    virtual void     SelectDrawable(Int_t device) = 0;//gVirtualX->SelectWindow
    //
-   virtual void     InitPainter() = 0;//This is not required by X11/GDI. This is for OpenGL.
-   
+   //These functions are not required by X11/GDI.
+   virtual void     InitPainter();
+   virtual void     InvalidateCS();
+   virtual void     LockPainter();
+      
    //Now, drawing primitives.
    virtual void     DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2) = 0;
    virtual void     DrawLineNDC(Double_t u1, Double_t v1, Double_t u2, Double_t v2) = 0;
@@ -83,9 +86,6 @@ public:
    
    virtual void     DrawText(Double_t x, Double_t y, const char *text, ETextMode mode) = 0;
    virtual void     DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMode mode) = 0;
-   
-   
-   virtual void     InvalidateCS() = 0;
    
    static TVirtualPadPainter *PadPainter(TVirtualPad *pad, Option_t *opt = "");
 
