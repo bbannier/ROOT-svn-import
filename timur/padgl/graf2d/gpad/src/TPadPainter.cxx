@@ -12,7 +12,7 @@ ClassImp(TPadPainter)
 
 
 //______________________________________________________________________________
-TPadPainter::TPadPainter(TVirtualPad * /*pad*/)
+TPadPainter::TPadPainter()
 {
    //Empty ctor. Here only because of explicit copy ctor.
 }

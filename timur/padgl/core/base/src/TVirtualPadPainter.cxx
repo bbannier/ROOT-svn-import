@@ -28,7 +28,7 @@ void TVirtualPadPainter::LockPainter()
 }
 
 //______________________________________________________________________________
-TVirtualPadPainter *TVirtualPadPainter::PadPainter(TVirtualPad *pad, Option_t *type)
+TVirtualPadPainter *TVirtualPadPainter::PadPainter(Option_t *type)
 {
    // Create a pad painter of specified type.
 
@@ -36,7 +36,7 @@ TVirtualPadPainter *TVirtualPadPainter::PadPainter(TVirtualPad *pad, Option_t *t
    TPluginHandler *h = gPluginMgr->FindHandler("TVirtualPadPainter", type);
    
    if (h && h->LoadPlugin() != -1)
-      painter = (TVirtualPadPainter *) h->ExecPlugin(1, pad);
+      painter = (TVirtualPadPainter *) h->ExecPlugin(0);
 
    return painter;
 }

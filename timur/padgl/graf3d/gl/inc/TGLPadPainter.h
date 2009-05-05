@@ -16,8 +16,6 @@
 #include "TPoint.h"
 #endif
 
-class TCanvas;
-
 /*
 The _main_ purpose of TGLPadPainter is to enable 2d gl raphics
 inside standard TPad/TCanvas.
@@ -28,8 +26,6 @@ private:
    Rgl::Pad::Tesselator        fTess;
    Rgl::Pad::MarkerPainter     fMarker;
    Rgl::Pad::GLLimits          fLimits;
-   //
-   TCanvas                    *fCanvas;
    
    std::vector<Double_t>       fVs;//Vertex buffer for tesselator.
    
@@ -43,7 +39,7 @@ private:
    
    Bool_t                      fLocked;
 public:
-   TGLPadPainter(TVirtualPad *pad);
+   TGLPadPainter();
    
    //Final overriders for TVirtualPadPainter pure virtual functions.
    //1. Part, which simply delegates to TVirtualX.

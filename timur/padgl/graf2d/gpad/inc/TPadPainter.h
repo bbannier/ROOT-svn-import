@@ -16,7 +16,7 @@ class TVirtualPad;
 
 class TPadPainter : public TVirtualPadPainter {
 public:
-   TPadPainter(TVirtualPad *pad);
+   TPadPainter();
    //Final overriders for TVirtualPadPainter pure virtual functions.
    //1. Part, which simply delegates to TVirtualX.
    //Line attributes.
