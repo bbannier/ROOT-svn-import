@@ -5,7 +5,6 @@
 #include "TClass.h"
 #include "TVirtualGL.h"
 #include "KeySymbols.h"
-#include "TCanvas.h"
 #include "TMath.h"
 #include "TPad.h"
 #include "TF3.h"
@@ -232,8 +231,6 @@ Int_t TGLHistPainter::DistancetoPrimitive(Int_t px, Int_t py)
          gPad->SetSelected(gPad);
       }
 
-      //gPad->GetCanvas()->Update();
-      
       return 0;
    }
 }
@@ -314,7 +311,7 @@ void TGLHistPainter::ExecuteEvent(Int_t event, Int_t px, Int_t py)
             fCamera.RotateCamera(px, py);
          //Draw modified scene onto canvas' window.
          //gGLManager->PaintSingleObject(fGLPainter.get());
-         gPad->GetCanvas()->Flush();
+         gPad->Update();
          break;
       case kButton1Up:
       case kButton2Up:
@@ -336,7 +333,7 @@ void TGLHistPainter::ExecuteEvent(Int_t event, Int_t px, Int_t py)
       case 8://kButton1Motion + shift modifier
          gGLManager->PanObject(fGLPainter.get(), px, py);
          //gGLManager->PaintSingleObject(fGLPainter.get());
-         gPad->GetCanvas()->Flush();
+         gPad->Update();
          break;
       case kKeyPress:
       case 5:
@@ -350,12 +347,12 @@ void TGLHistPainter::ExecuteEvent(Int_t event, Int_t px, Int_t py)
             fCamera.ZoomIn();
             fGLPainter->InvalidateSelection();
             //gGLManager->PaintSingleObject(fGLPainter.get());
-            gPad->GetCanvas()->Flush();
+            gPad->Update();
          } else if (event == 5 || py == kKey_K || py == kKey_k) {
             fCamera.ZoomOut();
             fGLPainter->InvalidateSelection();
             //gGLManager->PaintSingleObject(fGLPainter.get());
-            gPad->GetCanvas()->Flush();
+            gPad->Update();
          } else if (py == kKey_p || py == kKey_P || py == kKey_S || py == kKey_s
                     || py == kKey_c || py == kKey_C || py == kKey_x || py == kKey_X
                     || py == kKey_y || py == kKey_Y || py == kKey_z || py == kKey_Z
@@ -363,7 +360,7 @@ void TGLHistPainter::ExecuteEvent(Int_t event, Int_t px, Int_t py)
          {
             fGLPainter->ProcessEvent(event, px, py);
             //gGLManager->PaintSingleObject(fGLPainter.get());
-            gPad->GetCanvas()->Flush();
+            gPad->Update();
          }
          gGLManager->MarkForDirectCopy(glContext, kFALSE);
          break;
@@ -620,16 +617,19 @@ void TGLHistPainter::PadToViewport(Bool_t selectionPass)
    if (!fGLPainter.get())
       return;
       
-   if (const TPad *pad = dynamic_cast<TPad *>(gPad)) {
-      TGLRect vp;
-      //const Int_t borderSize = pad->GetBorderSize() > 0 ? pad->GetBorderSize() : 2;   
-      vp.Width()  = Int_t(pad->GetAbsWNDC() * pad->GetWw());
-      vp.Height() = Int_t(pad->GetAbsHNDC() * pad->GetWh());
-      if (!selectionPass) {
-         pad->XYtoAbsPixel(pad->GetX1(), pad->GetY1(), vp.X(), vp.Y());
-         //vp.X() += borderSize;
-         vp.Y() = pad->GetCanvas()->GetWh() - vp.Y();// + borderSize;
-      }
+   TGLRect vp;
+   vp.Width()  = Int_t(gPad->GetAbsWNDC() * gPad->GetWw());
+   vp.Height() = Int_t(gPad->GetAbsHNDC() * gPad->GetWh());
+   
+   if (!selectionPass) {
+      vp.X() = Int_t(gPad->GetAbsXlowNDC() * gPad->GetWw());
+      vp.Y() = Int_t(gPad->GetAbsYlowNDC() * gPad->GetWh());
+      
+      vp.X() = Int_t(gPad->XtoAbsPixel(gPad->GetX1()));
+      vp.Y() = gPad->GetWh() - gPad->YtoAbsPixel(gPad->GetY1());
+      
       fCamera.SetViewport(vp);
    }
+   
+   fCamera.SetViewport(vp);
 }

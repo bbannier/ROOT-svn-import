@@ -2135,12 +2135,13 @@ void TCanvas::CreatePainter()
    //Even for batch mode painter is still required, just to delegate
    //some calls to batch "virtual X".
    if (!UseGL() || fBatch)
-      fPainter = new TPadPainter(this);//Do not need plugin manager for this!
+      fPainter = new TPadPainter;//Do not need plugin manager for this!
    else {
-      fPainter = TVirtualPadPainter::PadPainter(this, "gl");
+      fPainter = TVirtualPadPainter::PadPainter("gl");
       if (!fPainter) {
          Error("CreatePainter", "GL Painter creation failed! Will use default!");
-         fPainter = new TPadPainter(this);
+         fPainter = new TPadPainter;
+         fUseGL = kFALSE;
       }
    }
 }

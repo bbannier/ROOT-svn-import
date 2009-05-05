@@ -14,16 +14,10 @@
 ClassImp(TGLPadPainter)
 
 //______________________________________________________________________________
-TGLPadPainter::TGLPadPainter(TVirtualPad *cnv)
-                  : fCanvas(0),
-                    fIsHollowArea(kFALSE),
+TGLPadPainter::TGLPadPainter()
+                  : fIsHollowArea(kFALSE),
                     fLocked(kTRUE)
 {
-   if (!(fCanvas = dynamic_cast<TCanvas *>(cnv))) {
-      Error("TGLPadPainter::TGLPadPainter", "Bad canvas pointer was psecified\n");
-      throw std::runtime_error("");
-   }
-   //So, now I can use fCanvas without checks.
 }
 
 /*
@@ -249,9 +243,9 @@ void TGLPadPainter::SelectDrawable(Int_t /*device*/)
       
       pad->XYtoAbsPixel(pad->GetX1(), pad->GetY1(), px, py);
       
-      py = fCanvas->GetWh() - py;
+      py = gPad->GetWh() - py;
       //
-      glViewport(px, py, GLsizei(fCanvas->GetWw() * pad->GetAbsWNDC()), GLsizei(fCanvas->GetWh() * pad->GetAbsHNDC()));
+      glViewport(px, py, GLsizei(gPad->GetWw() * pad->GetAbsWNDC()), GLsizei(gPad->GetWh() * pad->GetAbsHNDC()));
       
       glMatrixMode(GL_PROJECTION);
       glLoadIdentity();
@@ -282,7 +276,7 @@ void TGLPadPainter::InitPainter()
    glDisable(GL_LIGHTING);
    
    //Clear the buffer
-   glViewport(0, 0, GLsizei(fCanvas->GetWw()), GLsizei(fCanvas->GetWh()));
+   glViewport(0, 0, GLsizei(gPad->GetWw()), GLsizei(gPad->GetWh()));
    
    glDepthMask(GL_TRUE);
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -291,7 +285,7 @@ void TGLPadPainter::InitPainter()
    glMatrixMode(GL_PROJECTION);
    glLoadIdentity();
    
-   glOrtho(fCanvas->GetX1(), fCanvas->GetX2(), fCanvas->GetY1(), fCanvas->GetY2(), -10., 10.);
+   glOrtho(gPad->GetX1(), gPad->GetX2(), gPad->GetY1(), gPad->GetY2(), -10., 10.);
 
    glMatrixMode(GL_MODELVIEW);
    glLoadIdentity();
@@ -583,7 +577,7 @@ void TGLPadPainter::DrawPolyMarker()
    SaveProjectionMatrix();
    glLoadIdentity();
    //
-   glOrtho(0, gPad->GetAbsWNDC() * fCanvas->GetWw(), 0, gPad->GetAbsHNDC() * fCanvas->GetWh(), -10., 10.);
+   glOrtho(0, gPad->GetAbsWNDC() * gPad->GetWw(), 0, gPad->GetAbsHNDC() * gPad->GetWh(), -10., 10.);
    //
    glMatrixMode(GL_MODELVIEW);
    //
@@ -670,7 +664,7 @@ void TGLPadPainter::DrawText(Double_t x, Double_t y, const char *text, ETextMode
    SaveProjectionMatrix();
    glLoadIdentity();
    //
-   glOrtho(0, gPad->GetAbsWNDC() * fCanvas->GetWw(), 0, gPad->GetAbsHNDC() * fCanvas->GetWh(), -10., 10.);
+   glOrtho(0, gPad->GetAbsWNDC() * gPad->GetWw(), 0, gPad->GetAbsHNDC() * gPad->GetWh(), -10., 10.);
    //
    glMatrixMode(GL_MODELVIEW);
 
@@ -683,7 +677,7 @@ void TGLPadPainter::DrawText(Double_t x, Double_t y, const char *text, ETextMode
                     TGLFont::kTexture, fF);
    fF.PreRender();
 
-   const UInt_t padH = UInt_t(gPad->GetAbsHNDC() * fCanvas->GetWh());
+   const UInt_t padH = UInt_t(gPad->GetAbsHNDC() * gPad->GetWh());
    fF.Render(text, gPad->XtoPixel(x), padH - gPad->YtoPixel(y), GetTextAngle(), GetTextMagnitude());
 
    fF.PostRender();
