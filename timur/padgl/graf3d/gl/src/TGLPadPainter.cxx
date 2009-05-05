@@ -342,6 +342,23 @@ void TGLPadPainter::DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
    glVertex2d(x1, y1);
    glVertex2d(x2, y2);
    glEnd();
+   /*
+   if (gVirtualX->GetLineWidth() > 1.) {
+      Double_t pointSize = gVirtualX->GetLineWidth();
+      if (pointSize > fLimits.GetMaxPointSize())
+         pointSize = fLimits.GetMaxPointSize();
+      glPointSize((GLfloat)pointSize);
+      const TGLEnableGuard pointSmooth(GL_POINT_SMOOTH);
+      glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
+      glBegin(GL_POINTS);
+
+      glVertex2d(x1, y1);
+      glVertex2d(x2, y2);
+
+      glEnd(); 
+      glPointSize(1.f);
+   }
+   */
 }
 
 //______________________________________________________________________________
@@ -466,6 +483,22 @@ void TGLPadPainter::DrawPolyLine(Int_t n, const Double_t *x, const Double_t *y)
       fIsHollowArea = kFALSE;
    }
    glEnd();
+   /*
+   if (gVirtualX->GetLineWidth() > 1.) {
+      Double_t pointSize = gVirtualX->GetLineWidth();
+      if (pointSize > fLimits.GetMaxPointSize())
+         pointSize = fLimits.GetMaxPointSize();
+      glPointSize((GLfloat)pointSize);
+      const TGLEnableGuard pointSmooth(GL_POINT_SMOOTH);
+      glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
+      glBegin(GL_POINTS);
+
+      for (Int_t i = 0; i < n; ++i)
+         glVertex2d(x[i], y[i]);
+
+      glEnd(); 
+      glPointSize(1.f);
+   }*/
 }
 
 //______________________________________________________________________________

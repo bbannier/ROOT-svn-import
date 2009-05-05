@@ -165,8 +165,10 @@ public:
    GLLimits();
 
    Double_t GetMaxLineWidth()const;
+   Double_t GetMaxPointSize()const;
 private:
    mutable Double_t fMaxLineWidth;
+   mutable Double_t fMaxPointSize;
 };
 
 }//namespace Pad
