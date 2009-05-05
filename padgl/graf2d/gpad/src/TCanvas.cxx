@@ -520,7 +520,7 @@ void TCanvas::Build()
 
    if (!IsBatch()) {    //normal mode with a screen window
       // Set default physical canvas attributes
-      //Should be done via gVirtualX, but can be done via fPainter too. No changes here.
+      //Should be done via gVirtualX, not via fPainter (at least now). No changes here.
       gVirtualX->SelectWindow(fCanvasID);
       gVirtualX->SetFillColor(1);         //Set color index for fill area
       gVirtualX->SetLineColor(1);         //Set color index for lines
@@ -2146,7 +2146,7 @@ void TCanvas::CreatePainter()
 }
 
 //______________________________________________________________________________
-TVirtualPadPainter *TCanvas::GetPainter()
+TVirtualPadPainter *TCanvas::GetCanvasPainter()
 {
    //Access and (probably) creation of pad painter.
    if (!fPainter)

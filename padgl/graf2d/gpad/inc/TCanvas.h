@@ -239,7 +239,7 @@ public:
    //Name is GetPainter, not GetPadPainter
    //to avoid name hiding and confusion.
    //GetPadPainter and GetPainter are non-virtual (no need, in fact).
-   TVirtualPadPainter *GetPainter();
+   TVirtualPadPainter *GetCanvasPainter();
    
    static TCanvas   *MakeDefCanvas();
 
