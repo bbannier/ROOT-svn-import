@@ -5824,23 +5824,3 @@ TVirtualPadPainter *TPad::GetPainter()
    //Get pad painter from TCanvas.
    return fCanvas->GetCanvasPainter();
 }
-
-//______________________________________________________________________________
-void TPad::FreePixmaps()
-{
-   //This function must be called only when TRootCanvas re-creates
-   //canvas window for gl. So, it's private.
-   if (TList * lst = GetListOfPrimitives()) {
-      TIter next(lst);
-      while (TObject *obj = next()) {
-         if (TPad * subPad = dynamic_cast<TPad *>(obj))
-            subPad->FreePixmaps();
-      }
-   }
-   /*
-   if (fPixmapID != -1) {
-      GetPainter()->SelectDrawable(fPixmapID);
-      GetPainter()->DestroyDrawable();
-      fPixmapID = 0;
-   }*/
-}

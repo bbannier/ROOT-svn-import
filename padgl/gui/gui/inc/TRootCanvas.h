@@ -88,9 +88,6 @@ private:
    Bool_t               fAutoFit;    // when true canvas container keeps same size as canvas
    Int_t                fButton;     // currently pressed button
    
-   
-   Bool_t               fIsGL;
-   
    TRootCanvas(const TRootCanvas&); // Not implemented
    TRootCanvas& operator=(const TRootCanvas&); // Not implemented
    void     CreateCanvas(const char *name);
@@ -109,8 +106,6 @@ private:
                               Int_t xroot, Int_t yroot);
    Atom_t   HandleDNDEnter(Atom_t * typelist);
    Bool_t   HandleDNDLeave();
-   
-   void     RecreateCanvas(Bool_t withGL);
 
 public:
    TRootCanvas(TCanvas *c = 0, const char *name = "ROOT Canvas", UInt_t width = 500, UInt_t height = 300);
