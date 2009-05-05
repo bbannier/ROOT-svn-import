@@ -559,13 +559,15 @@ OffScreenDevice::OffScreenDevice(UInt_t w, UInt_t h, UInt_t x, UInt_t y, Bool_t 
 
 //______________________________________________________________________________
 GLLimits::GLLimits()
-            : fMaxLineWidth(0.)
+            : fMaxLineWidth(0.),
+              fMaxPointSize(0.)
 {
 }
 
+//______________________________________________________________________________
 Double_t GLLimits::GetMaxLineWidth()const
 {
-   if (fMaxLineWidth < 1.) {
+   if (!fMaxLineWidth) {
       Double_t lp[2] = {};
       glGetDoublev(GL_SMOOTH_LINE_WIDTH_RANGE, lp);
       fMaxLineWidth = lp[1];
@@ -573,6 +575,19 @@ Double_t GLLimits::GetMaxLineWidth()const
    
    return fMaxLineWidth;
 }
+
+//______________________________________________________________________________
+Double_t GLLimits::GetMaxPointSize()const
+{
+   if (!fMaxPointSize) {
+      Double_t lp[2] = {};
+      glGetDoublev(GL_SMOOTH_POINT_SIZE_RANGE, lp);
+      fMaxPointSize = lp[1];
+   }
+   
+   return fMaxLineWidth;
+}
+
 
 //______________________________________________________________________________
 void ExtractRGB(Color_t colorIndex, Float_t *rgb)
