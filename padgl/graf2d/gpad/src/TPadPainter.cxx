@@ -278,14 +278,6 @@ void TPadPainter::SelectDrawable(Int_t device)
    gVirtualX->SelectWindow(device);
 }
 
-
-//______________________________________________________________________________
-void TPadPainter::InitPainter()
-{
-   // Nothing to do for gVirtualX.
-}
-
-
 //______________________________________________________________________________
 void TPadPainter::DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
 {
@@ -478,11 +470,4 @@ void TPadPainter::DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMod
    Double_t angle = GetTextAngle();
    Double_t mgn = GetTextMagnitude();
    gVirtualX->DrawText(px, py, angle, mgn, text, (TVirtualX::ETextMode)mode);
-}
-
-
-//______________________________________________________________________________
-void TPadPainter::InvalidateCS()
-{
-   // Needed in OpenGL version.
 }

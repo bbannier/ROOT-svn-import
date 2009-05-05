@@ -40,6 +40,8 @@ private:
 
    std::vector<TPoint>         fPoly;
    Bool_t                      fIsHollowArea;
+   
+   Bool_t                      fLocked;
 public:
    TGLPadPainter(TVirtualPad *pad);
    
@@ -84,6 +86,8 @@ public:
    void     SelectDrawable(Int_t device);
 
    void     InitPainter();
+   void     InvalidateCS();
+   void     LockPainter();
    
    void     DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2);
    void     DrawLineNDC(Double_t u1, Double_t v1, Double_t u2, Double_t v2);
@@ -105,12 +109,15 @@ public:
    void     DrawText(Double_t x, Double_t y, const char *text, ETextMode mode);
    void     DrawTextNDC(Double_t x, Double_t y, const char *text, ETextMode mode);
                      
-   void     InvalidateCS();
 private:
    
+   //Attention! GL_PROJECTION will become 
+   //the current matrix after these calls.
    void     SaveProjectionMatrix()const;
    void     RestoreProjectionMatrix()const;
    
+   //Attention! GL_MODELVIEW will become the 
+   //current matrix after these calls.
    void     SaveModelviewMatrix()const;
    void     RestoreModelviewMatrix()const;
    
