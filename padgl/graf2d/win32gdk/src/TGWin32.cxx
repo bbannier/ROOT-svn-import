@@ -3876,6 +3876,8 @@ void TGWin32::SetTextAlign(Short_t talign)
       }
       break;
    }
+   
+   TAttText::SetTextAlign(fTextAlign);
 }
 
 //______________________________________________________________________________
@@ -3887,6 +3889,8 @@ void TGWin32::SetTextColor(Color_t cindex)
    GdkGCValues values;
    if ((cindex < 0) || (Int_t(cindex)==current)) return;
 
+   TAttText::SetTextColor(cindex);
+   
    SetColor(gGCtext, Int_t(cindex));
    gdk_gc_get_values(gGCtext, &values);
    gdk_gc_set_foreground(gGCinvt, &values.background);
