@@ -149,9 +149,7 @@ enum ERootCanvasCommands {
    kToolCurlyArc,
    kToolLatex,
    kToolMarker,
-   kToolCutG,
-   
-   kViewGLPad
+   kToolCutG
 
 };
 
@@ -298,8 +296,6 @@ TRootCanvas::TRootCanvas(TCanvas *c, const char *name, UInt_t width, UInt_t heig
    : TGMainFrame(gClient->GetRoot(), width, height), TCanvasImp(c)
 {
    // Create a basic ROOT canvas.
-   fIsGL = kFALSE;
-   
    CreateCanvas(name);
 
    ShowToolBar(kFALSE);
@@ -391,7 +387,6 @@ void TRootCanvas::CreateCanvas(const char *name)
    fViewWithMenu = new TGPopupMenu(fClient->GetDefaultRoot());
    fViewWithMenu->AddEntry("&X3D",      kViewX3D);
    fViewWithMenu->AddEntry("&OpenGL",   kViewOpenGL);
-   fViewWithMenu->AddEntry("&GL pad",   kViewGLPad);
 
    fViewMenu = new TGPopupMenu(fClient->GetDefaultRoot());
    fViewMenu->AddEntry("&Editor",       kViewEditor);
@@ -539,7 +534,6 @@ void TRootCanvas::CreateCanvas(const char *name)
             //Create gl context.
             const Int_t glCtx = gGLManager->CreateGLContext(fCanvasID);
             if (glCtx != -1) {
-               fIsGL = kTRUE;
                fCanvas->SetSupportGL(kTRUE);
                fCanvas->SetGLDevice(glCtx);//Now, fCanvas is responsible for context deletion!
             } else
@@ -969,12 +963,7 @@ again:
                   case kViewOpenGL:
                      gPad->GetViewer3D("ogl");
                      break;
-                  case kViewGLPad:
-                     if (!fIsGL) {
-                        RecreateCanvas(kTRUE);
-                        fCanvas->Flush();
-                     }
-                     break;
+
                   // Handle Option menu items...
                   case kOptionAutoExec:
                      fCanvas->ToggleAutoExec();
@@ -1834,73 +1823,3 @@ void TRootContainer::SavePrimitive(ostream &out, Option_t * /*= ""*/)
        << "," << GetParent()->GetName() << ");" << endl;
 }
 
-//______________________________________________________________________________
-void TRootCanvas::RecreateCanvas(Bool_t withGL)
-{
-   Int_t canvasID = -1;
-   
-   if (withGL) {
-      //first, initialize GL (if not yet)
-      if (!gGLManager) {
-         TString x = "win32";
-         if (gVirtualX->InheritsFrom("TGX11"))
-            x = "x11";
-
-         TPluginHandler *ph = gROOT->GetPluginManager()->FindHandler("TGLManager", x);
-
-         if (ph && ph->LoadPlugin() != -1 && !ph->ExecPlugin(0))
-            Error("RecreateCanvas", "GL manager plugin failed");
-      }
-
-      if (gGLManager) {
-         canvasID = gGLManager->InitGLWindow((ULong_t)fCanvasWindow->GetViewPort()->GetId());
-         if (canvasID != -1) {
-            //Create gl context.
-            const Int_t glCtx = gGLManager->CreateGLContext(canvasID);
-            if (glCtx != -1) {
-               fIsGL = kTRUE;
-               fCanvas->SetSupportGL(kTRUE);
-               fCanvas->SetGLDevice(glCtx);//Now, fCanvas is responsible for context deletion!
-            } else {
-               Error("RecreateCanvas", "GL context creation failed.");
-               gVirtualX->SelectWindow(canvasID);
-               gVirtualX->CloseWindow();
-            }
-         } else {
-            Error("RecreateCanvas", "GL window creation failed\n");
-         }   
-      }
-   }
-
-   if (canvasID != -1) {//Only in default -> GL transition.
-      gVirtualX->SelectWindow(fCanvasID);
-      gVirtualX->CloseWindow();
-      
-      fCanvasID = canvasID;
-      
-      fCanvas->DestroyNonGLCanvas();
-      fCanvas->fCanvasID = fCanvasID;
-      fCanvas->ResizePad();
-
-      delete fCanvasContainer;
-      
-      Window_t win = gVirtualX->GetWindowID(fCanvasID);
-      fCanvasContainer = new TRootContainer(this, win, fCanvasWindow->GetViewPort());
-      fCanvasWindow->SetContainer(fCanvasContainer);
-
-      SetEditDisabled(kEditDisable);
-      MapSubwindows();
-
-      // by default status bar, tool bar and pad editor are hidden
-      HideFrame(fStatusBar);
-      HideFrame(fToolDock);
-      HideFrame(fToolBarSep);
-      HideFrame(fHorizontal1);
-
-      ShowToolBar(kFALSE);
-      ShowEditor(kFALSE);
-
-      // we need to use GetDefaultSize() to initialize the layout algorithm...
-      //Resize(GetDefaultSize());
-   }
-}

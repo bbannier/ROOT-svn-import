@@ -47,7 +47,6 @@ class TBrowser;
 
 class TCanvas : public TPad {
 
-friend class TRootCanvas;
 friend class TCanvasImp;
 friend class TThread;
 friend class TInterpreter;
@@ -101,8 +100,6 @@ private:
    //Initialize PadPainter.
    void     CreatePainter();
 
-   void     DestroyNonGLCanvas();
-   
 protected:
    virtual void ExecuteEvent(Int_t event, Int_t px, Int_t py);
    //-- used by friend TThread class
