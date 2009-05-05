@@ -130,7 +130,7 @@ protected:
    virtual void  SavePrimitive(ostream &out, Option_t *option = "");
    virtual void  SetBatch(Bool_t batch=kTRUE);
 
-   TVirtualPadPainter *GetPadPainter();
+   TVirtualPadPainter *GetPainter();
 private:
    TPad(const TPad &pad);  // cannot copy pads, use TObject::Clone()
    TPad &operator=(const TPad &rhs);  // idem
