@@ -16,6 +16,18 @@ namespace Pad {
 
 const UInt_t PolygonStippleSet::fgBitSwap[] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
 
+
+/*
+Temporary fix.
+*/
+#ifndef GL_VERSION_1_2
+const GLenum lineWidthPNAME = GLenum(0xB22);
+const GLenum pointSizePNAME = GLenum(0xB12);
+#else
+const GLenum lineWidthPNAME = GLenum(GL_SMOOTH_LINE_WIDTH_RANGE);//Cast for real enums and macros.
+const GLenum pointSizePNAME = GLenum(GL_SMOOTH_POINT_SIZE_RANGE);
+#endif
+
 /*
 Auxiliary class to converts ROOT's polygon stipples from
 RStipples.h into GL's stipples and hold them in a fStipples array.
@@ -219,12 +231,12 @@ void MarkerPainter::DrawPlus(UInt_t n, const TPoint *xy)const
 void MarkerPainter::DrawStar(UInt_t n, const TPoint *xy)const
 {
    //* - marker.
-   Double_t im = 4 * gVirtualX->GetMarkerSize() + 0.5;
+   SCoord_t im = SCoord_t(4 * gVirtualX->GetMarkerSize() + 0.5);
    fStar[0].fX = -im;  fStar[0].fY = 0;
    fStar[1].fX =  im;  fStar[1].fY = 0;
    fStar[2].fX = 0  ;  fStar[2].fY = -im;
    fStar[3].fX = 0  ;  fStar[3].fY = im;
-   im = 0.707*Float_t(im) + 0.5;
+   im = SCoord_t(0.707*Float_t(im) + 0.5);
    fStar[4].fX = -im;  fStar[4].fY = -im;
    fStar[5].fX =  im;  fStar[5].fY = im;
    fStar[6].fX = -im;  fStar[6].fY = im;
@@ -324,7 +336,7 @@ void MarkerPainter::DrawCircle(UInt_t n, const TPoint *xy)const
 void MarkerPainter::DrawFullDotLarge(UInt_t n, const TPoint *xy)const
 {
    fCircle.clear();
-   fCircle.push_back(TPoint(0., 0.));
+   fCircle.push_back(TPoint(0, 0));
    
    Double_t r = 4 * gVirtualX->GetMarkerSize() + 0.5;
    if (r > 100.)
@@ -569,7 +581,7 @@ Double_t GLLimits::GetMaxLineWidth()const
 {
    if (!fMaxLineWidth) {
       Double_t lp[2] = {};
-      glGetDoublev(GL_SMOOTH_LINE_WIDTH_RANGE, lp);
+      glGetDoublev(lineWidthPNAME, lp);//lineWidthPNAME is defined at the top of this file.
       fMaxLineWidth = lp[1];
    }
    
@@ -581,7 +593,7 @@ Double_t GLLimits::GetMaxPointSize()const
 {
    if (!fMaxPointSize) {
       Double_t lp[2] = {};
-      glGetDoublev(GL_SMOOTH_POINT_SIZE_RANGE, lp);
+      glGetDoublev(pointSizePNAME, lp);//pointSizePNAME is defined at the top of this file.
       fMaxPointSize = lp[1];
    }
    
@@ -608,8 +620,8 @@ void CalculateCircle(std::vector<TPoint> &circle, Double_t r, UInt_t pts)
    circle.resize(circle.size() + pts + 1);
    
    for (UInt_t i = 0; i < pts; ++i, angle += delta) {
-      circle[first + i].fX = r * TMath::Cos(angle);
-      circle[first + i].fY = r * TMath::Sin(angle);
+      circle[first + i].fX = SCoord_t(r * TMath::Cos(angle));
+      circle[first + i].fY = SCoord_t(r * TMath::Sin(angle));
    }
    
    circle.back().fX = circle[first].fX;
