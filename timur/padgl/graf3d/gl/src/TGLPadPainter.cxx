@@ -316,12 +316,18 @@ void TGLPadPainter::LockPainter()
    //Locked state of painter means, that
    //GL context can be invalid, so no GL calls
    //can be executed.
+   if (fLocked)
+      return;
+      
+   glFinish();
    fLocked = kTRUE;
 }
 
 /*
 2D primitives.
 */
+
+const Double_t lineWidthTS = 3.;
 
 //______________________________________________________________________________
 void TGLPadPainter::DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
@@ -336,8 +342,8 @@ void TGLPadPainter::DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
    glVertex2d(x1, y1);
    glVertex2d(x2, y2);
    glEnd();
-   /*
-   if (gVirtualX->GetLineWidth() > 1.) {
+   
+   if (gVirtualX->GetLineWidth() > lineWidthTS) {
       Double_t pointSize = gVirtualX->GetLineWidth();
       if (pointSize > fLimits.GetMaxPointSize())
          pointSize = fLimits.GetMaxPointSize();
@@ -352,7 +358,7 @@ void TGLPadPainter::DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
       glEnd(); 
       glPointSize(1.f);
    }
-   */
+
 }
 
 //______________________________________________________________________________
@@ -477,8 +483,8 @@ void TGLPadPainter::DrawPolyLine(Int_t n, const Double_t *x, const Double_t *y)
       fIsHollowArea = kFALSE;
    }
    glEnd();
-   /*
-   if (gVirtualX->GetLineWidth() > 1.) {
+   
+   if (gVirtualX->GetLineWidth() > lineWidthTS) {
       Double_t pointSize = gVirtualX->GetLineWidth();
       if (pointSize > fLimits.GetMaxPointSize())
          pointSize = fLimits.GetMaxPointSize();
@@ -492,7 +498,7 @@ void TGLPadPainter::DrawPolyLine(Int_t n, const Double_t *x, const Double_t *y)
 
       glEnd(); 
       glPointSize(1.f);
-   }*/
+   }
 }
 
 //______________________________________________________________________________
