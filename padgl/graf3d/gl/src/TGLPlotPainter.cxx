@@ -13,7 +13,6 @@
 #include "TVirtualPad.h"
 #include "TVirtualPS.h"
 #include "TVirtualX.h"
-#include "TCanvas.h"
 #include "TGaxis.h"
 #include "TGraph.h"
 #include "TStyle.h"
@@ -269,7 +268,7 @@ Bool_t TGLPlotPainter::PlotSelected(Int_t px, Int_t py)
    if (newSelected != fSelectedPart) {
       //New object was selected (or surface deselected) - re-paint.
       fSelectedPart = newSelected;
-      gPad->GetCanvas()->Flush();
+      gPad->Update();
    }
 
    return fSelectedPart ? kTRUE : kFALSE;
