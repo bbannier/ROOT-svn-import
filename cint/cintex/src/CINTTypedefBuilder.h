@@ -14,23 +14,16 @@
 
 #include "Reflex/Type.h"
 
-/*
- *   Cintex namespace declaration
- */
-namespace ROOT {  namespace Cintex {
+namespace ROOT {
+namespace Cintex {
 
-      /*  @class CINTTypedefBuilder CINTTypedefBuilder.h
-       *
-       *    @author  M.Frank
-       *    @version 1.0
-       *    @date    10/04/2005
-       */
-      class CINTTypedefBuilder {
-      public:
-         // Declare typedef to CINT
-         static int Setup(const ROOT::Reflex::Type& t);
-         static void Set( const char* name, const char* value);
-      };
-   }}
+class CINTTypedefBuilder {
+public:
+   static int Setup(const ROOT::Reflex::Type&);
+   static void Set(const char* name, const char* value);
+};
+
+} // namespace Cintex
+} // namespace ROOT
 
 #endif // ROOT_Cintex_CINTTypdefBuilder

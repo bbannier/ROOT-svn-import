@@ -70,6 +70,13 @@ namespace Reflex{
          const char * value );
 
 
+      /** 
+      * EnableCallback Enable or disable the callback call in the destructor
+      * @param  enable true to enable callback call, false to disable callback call
+      */
+      EnumBuilder& EnableCallback(const bool enable = true);
+
+
       /*
       * ToType will return the currently produced Type (class)
       * @return the type currently being built
@@ -83,6 +90,9 @@ namespace Reflex{
 
       /** last added enum item */
       Member fLastMember;
+
+      /** flag, fire callback in destructor */
+      bool fCallbackEnabled;
 
    }; // class EnumBuilder
 
@@ -131,6 +141,13 @@ namespace Reflex{
       template  < typename P >
       EnumBuilderT & AddProperty( const char * key, 
          P value );
+
+
+      /** 
+      * EnableCallback Enable or disable the callback call in the destructor
+      * @param  enable true to enable callback call, false to disable callback call
+      */
+      EnumBuilderT& EnableCallback(const bool enable = true);
 
 
       /*
@@ -188,6 +205,15 @@ Reflex::EnumBuilderT<T>::AddProperty( const char * key,
    return * this;
 }
 
+
+//-------------------------------------------------------------------------------
+template<typename T>
+inline Reflex::EnumBuilderT<T>& Reflex::EnumBuilderT<T>::EnableCallback(const bool enable /*= true*/) {
+//-------------------------------------------------------------------------------
+   fEnumBuilderImpl.EnableCallback(enable);
+   return *this;
+}
+   
 
 //-------------------------------------------------------------------------------
 template < typename T > inline Reflex::Type

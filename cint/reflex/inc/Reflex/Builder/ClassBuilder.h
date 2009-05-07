@@ -77,7 +77,6 @@ namespace Reflex {
       // This is for anonymous union support.
       //void addUnion(const char* nam, const char* values, const std::type_info& ti, unsigned int modifiers = 0);
 
-
       /** AddProperty will add a PropertyNth to the PropertyNth stack
       * which will be emtpied with the next call of a builder
       * class and attached to the item built with this call
@@ -88,6 +87,11 @@ namespace Reflex {
       void AddProperty(const char* key, Any value);
       void AddProperty(const char* key, const char* value);
 
+      /** 
+      * EnableCallback Enable or disable the callback call in the destructor
+      * @param  enable true to enable callback call, false to disable callback call
+      */
+      void EnableCallback(const bool enable = true);
 
       /** SetSizeOf will set the SizeOf property for this class.
       * It currently ignore all actual content.
@@ -108,6 +112,9 @@ namespace Reflex {
 
       /** last added MemberAt */
       Member fLastMember;    
+
+      /** flag, fire callback in destructor */
+      bool fCallbackEnabled;
 
    }; // class ClassBuilderImpl
 
@@ -181,6 +188,12 @@ namespace Reflex {
       * @return a reference to the building class
       */
       template <typename P> ClassBuilder& AddProperty(const char* key, P value);
+
+      /** 
+      * EnableCallback Enable or disable the callback call in the destructor
+      * @param  enable true to enable callback call, false to disable callback call
+      */
+      ClassBuilder& EnableCallback(const bool enable = true);
 
       /** SetSizeOf will set the SizeOf property for this class.
       * It currently ignore all actual content.
@@ -307,6 +320,13 @@ namespace Reflex {
       template < typename P >
       ClassBuilderT & AddProperty( const char * key, 
          P value );
+
+
+      /** 
+      * EnableCallback Enable or disable the callback call in the destructor
+      * @param  enable true to enable callback call, false to disable callback call
+      */
+      ClassBuilderT& EnableCallback(const bool enable = true);
 
 
       /** SetSizeOf will set the SizeOf property for this class.
@@ -526,6 +546,14 @@ Reflex::ClassBuilderT<C>::AddProperty( const char * key,
 {
    fClassBuilderImpl.AddProperty(key , value);
    return * this;
+}
+
+
+//______________________________________________________________________________
+template<typename C> inline Reflex::ClassBuilderT<C>& Reflex::ClassBuilderT<C>::EnableCallback(const bool enable /*= true*/)
+{
+   fClassBuilderImpl.EnableCallback(enable);
+   return *this;
 }
 
 

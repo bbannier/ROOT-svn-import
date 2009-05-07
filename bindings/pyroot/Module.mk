@@ -51,13 +51,13 @@ endif
 ROOTPYC      := $(ROOTPY:.py=.pyc)
 ROOTPYO      := $(ROOTPY:.py=.pyo)
 
-ifneq ($(BUILDBOTHCINT),)
-ifeq ($(ARCH),win32)
-PYROOTEXTRALIB   := $(LPATH)/libCint.lib
-else
-PYROOTEXTRALIB   := -lMetaTCint
-endif
-endif
+#ifneq ($(BUILDBOTHCINT),)
+#ifeq ($(ARCH),win32)
+#PYROOTEXTRALIB   := $(LPATH)/libCint.lib
+#else
+#PYROOTEXTRALIB   := -lMetaTCint
+#endif
+#endif
 
 # used in the main Makefile
 ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(PYROOTH))

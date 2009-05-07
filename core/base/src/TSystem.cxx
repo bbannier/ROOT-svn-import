@@ -3375,7 +3375,9 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    };
 
    if (gDebug<=5) {
+//#if 0
       gSystem->Unlink( dict );
+//#endif // 0
       gSystem->Unlink( dicth );
       gSystem->Unlink( dictObj );
       gSystem->Unlink( linkdef );

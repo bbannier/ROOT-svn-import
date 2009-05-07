@@ -139,17 +139,15 @@ static void G__close_inputfiles_upto(G__dictposition* pos)
             
             // Since we are keeping the class in G__struct we also need to keep it (more exactly put it back) in Reflex
             if (0) {
-               ::Reflex::ClassBuilder *b = new ::Reflex::ClassBuilder(fullname.c_str(), typeid(::Reflex::UnknownType), 0, ::Reflex::CLASS);
-               cl =  b->ToType();
-               G__RflxProperties* prop = 0;
+               cl = ::Reflex::ClassBuilder(fullname.c_str(), typeid(::Reflex::UnknownType), 0, ::Reflex::CLASS).EnableCallback(false).ToType();
+               G__Dict::GetDict().RegisterScope(itag, cl);
+               G__RflxProperties* prop = 0; // FIXME: Should be: G__get_properties(cl), not zero.
                if (prop) {
-                  prop->builder.Set(b);
                   prop->typenum = -1;
                   prop->tagnum = itag;
                   prop->globalcomp = G__default_link ? G__globalcomp : G__NOLINK;
                   prop->autoload = true;
                }
-               G__Dict::GetDict().RegisterScope(itag,cl);
             }
 
             G__struct.name[itag] = name;

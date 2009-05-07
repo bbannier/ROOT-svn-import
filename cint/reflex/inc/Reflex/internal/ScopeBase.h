@@ -514,6 +514,22 @@ namespace Reflex {
    public:
 
       /**
+      * AddBase will add information about a Base class
+      * @param base type of the base class
+      * @param offsFP pointer to a function stub for calculating the base class offset
+      * @param modifiers the modifiers of the base class
+      */
+      virtual void AddBase(const Type & bas, OffsetFunction offsFP, unsigned int modifiers = 0) const;
+
+
+      /**
+      * AddBase will add the information about a Base class
+      * @param b pointer to the base class
+      */
+      virtual void AddBase(const Base& b) const;
+
+
+      /**
       * AddDataMember will add the information about a data MemberAt
       * @param dm pointer to data MemberAt
       */
@@ -526,13 +542,9 @@ namespace Reflex {
       * AddFunctionMember will add the information about a function MemberAt
       * @param fm pointer to function MemberAt
       */
-      virtual void AddFunctionMember( const Member & fm ) const;
-      virtual void AddFunctionMember( const char * name,
-         const Type & type,
-         StubFunction stubFP,
-         void * stubCtx = 0,
-         const char * params = 0,
-         unsigned int modifiers = 0 ) const;
+      virtual void AddFunctionMember(const Member& fm) const;
+      virtual void AddFunctionMember(const char* name, const Type& type, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0) const;
+      virtual void AddFunctionMember(Member* mbr_out, const char* name, const Type type, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0) const;
 
 
       virtual void AddMemberTemplate( const MemberTemplate & mt ) const ;

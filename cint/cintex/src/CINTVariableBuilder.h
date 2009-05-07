@@ -16,19 +16,21 @@
 #include "CINTdefs.h"
 
 namespace ROOT {
-   namespace Cintex {
+namespace Cintex {
 
-      class CINTVariableBuilder {
-      public:
-         CINTVariableBuilder(const ROOT::Reflex::Member& m);
-         ~CINTVariableBuilder();
-         void Setup(void);
-         static void Setup(const ROOT::Reflex::Member&);
-      private:
-         const ROOT::Reflex::Member&  fVariable;
-      };
-    
-   }
-}
+class CINTVariableBuilder {
+   // --
+public:
+   static void Setup(const ROOT::Reflex::Member);
+private:
+   const ROOT::Reflex::Member& fVariable;
+public:
+   CINTVariableBuilder(const ROOT::Reflex::Member&);
+   ~CINTVariableBuilder();
+   void Setup(void);
+};
+
+} // namespace Cintex
+} // namespace ROOT
 
 #endif // ROOT_Cintex_CINTVariableBuilder

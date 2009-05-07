@@ -2025,11 +2025,10 @@ const char *TCint::GetSTLIncludePath() const
 #endif
       if (!stldir.EndsWith("/"))
          stldir += '/';
-#if defined(R__BUILDING_CINT7) || (R__BUILDING_ONLYCINT7)
+#ifdef R__BUILDING_CINT7
       stldir += "cint7/stl";
 #else
-      // Default to Cint5's directory
-      stldir += "cint/stl";
+      stldir += "cint7/stl";
 #endif
    }
    return stldir;

@@ -4,9 +4,9 @@
 
 PLATFORM      = linux
 
-DEBUGFLAGS    = -g
+DEBUGFLAGS    = -g -O0 #-Werror
 #DEBUGFLAGS    = -gstabs
-OPTFLAGS      = -O2
+OPTFLAGS      = -g -O0 #-Werror
 # Optional compiler options for gcc >= 3.4.0
 #OPTFLAGS      = -O3 -march=opteron
 ifeq (debug,$(findstring debug,$(ROOTBUILD)))
@@ -20,15 +20,15 @@ endif
 # Compiler:
 CXX           = g++
 CC            = gcc
-CXXFLAGS      = -pipe -m64 -Wall -W -Woverloaded-virtual \
+CXXFLAGS      = -pipe -m64 -Wall -W -Woverloaded-virtual -Wshadow -fdiagnostics-show-option \
                 -fPIC $(EXTRA_CXXFLAGS)
-CFLAGS        = -pipe -m64 -Wall -W -fPIC $(EXTRA_CFLAGS)
-CINTCXXFLAGS  = -pipe -m64 -Wall -W -Woverloaded-virtual \
+CFLAGS        = -pipe -m64 -Wall -W -Wshadow -fPIC $(EXTRA_CFLAGS)
+CINTCXXFLAGS  = -pipe -m64 -Wall -W -Woverloaded-virtual -Wshadow -fdiagnostics-show-option \
                 -fPIC $(EXTRA_CXXFLAGS) \
                 -DG__REGEXP -DG__UNIX -DG__SHAREDLIB \
                 -DG__OSFDLL -DG__ROOT -DG__REDIRECTIO \
                 -DG__STD_EXCEPTION -DG__64BIT
-CINTCFLAGS    = -pipe -m64 -Wall -W -fPIC $(EXTRA_CFLAGS) \
+CINTCFLAGS    = -pipe -m64 -Wall -W -Wshadow -fPIC $(EXTRA_CFLAGS) \
                 -DG__REGEXP -DG__UNIX -DG__SHAREDLIB \
                 -DG__OSFDLL -DG__ROOT -DG__REDIRECTIO \
                 -DG__STD_EXCEPTION -DG__64BIT
@@ -53,7 +53,11 @@ ifeq ($(F77),)
 F77           = gfortran
 endif
 F77FLAGS      = -fPIC -m64 -std=legacy
+ifneq ($(shell $(F77) -print-file-name=libgfortran.$(SOEXT)),libgfortran.$(SOEXT))
 F77LIBS      := $(shell $(F77) -m64 -print-file-name=libgfortran.$(SOEXT))
+else
+F77LIBS      := $(shell $(F77) -m64 -print-file-name=libgfortran.a)
+endif
 F77LIBS      += $(shell $(F77) -m64 -print-file-name=libgfortranbegin.a)
 endif
 

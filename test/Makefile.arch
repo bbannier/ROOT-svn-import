@@ -23,15 +23,15 @@ DllSuf        = so
 OutPutOpt     = -o # keep whitespace after "-o"
 
 ifeq (debug,$(findstring debug,$(ROOTBUILD)))
-OPT           = -g
-OPT2          = -g
+OPT           = -g -O0
+OPT2          = -g -O0
 else
 ifneq ($(findstring debug, $(strip $(shell $(ROOTCONFIG) --config))),)
-OPT           = -g
-OPT2          = -g
+OPT           = -g -O0
+OPT2          = -g -O0
 else
-OPT           = -O
-OPT2          = -O2
+OPT           = -g -O0
+OPT2          = -g -O0
 endif
 endif
 

@@ -16,13 +16,14 @@
 #include "CINTdefs.h"
 
 namespace ROOT {
-   namespace Cintex {
+namespace Cintex {
+namespace CINTScopeBuilder {
 
-      namespace CINTScopeBuilder {
-         void Setup(const ROOT::Reflex::Scope&);
-         void Setup(const ROOT::Reflex::Type&);    
-      }
-   }
-}
+void Setup(const ROOT::Reflex::Scope);
+void Setup(const ROOT::Reflex::Type);
+
+} // namespace CINTScopeBuilder
+} // namespace Cintex
+} // namespace ROOT
 
 #endif // ROOT_Cintex_CINTScopeBuilder

@@ -14,18 +14,15 @@
 
 #include "Reflex/Type.h"
 
-/*
- *   Cintex namespace declaration
- */
-namespace ROOT {  namespace Cintex {
+namespace ROOT {
+namespace Cintex {
 
-      /*  @class CINTEnumBuilder CINTEnumBuilder.h
-       */
-      class CINTEnumBuilder {
-      public:
-         // Declare typedef to CINT
-         static void Setup(const ROOT::Reflex::Type& t);    
-      };
-   }}
+class CINTEnumBuilder {
+public:
+   static void Setup(const ROOT::Reflex::Type&);
+};
+
+} // namespace Cintex
+} // namespace ROOT
 
 #endif // ROOT_Cintex_CINTEnumBuilder

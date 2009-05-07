@@ -19,58 +19,55 @@
 #include <map>
 
 namespace ROOT {
-   namespace Cintex {
-    
-      // forward declarations
-      class CINTClassBuilders;
+namespace Cintex {
 
-      class CINTClassBuilder {
-         typedef std::vector<std::pair<ROOT::Reflex::Base,int> > Bases;
-      private:
-         CINTClassBuilder(const ROOT::Reflex::Type& TypeNth);
-      public:
-         ~CINTClassBuilder();
-         static CINTClassBuilder& Get(const ROOT::Reflex::Type& TypeNth);
-         void Setup(void);
-         void Setup_environment(void);
-         void Setup_tagtable(void);
-         void Setup_memfunc(void);
-         void Setup_memvar(void);
-         void Setup_inheritance();
-         void Setup_inheritance(ROOT::Reflex::Object& obj);
-         void Setup_typetable(void);
-         const std::string& Name() const {  return fName;     }
-         ROOT::Reflex::Type& TypeGet()      {  return fClass;    }
-         Bases* GetBases();
-         static void Setup_memfunc_with_context(void*);
-         static void Setup_memvar_with_context(void*);
-      private:
-         static void*               fgFakeObject;
-         static void*               fgFakeAddress;
-         ROOT::Reflex::Type         fClass;
-         G__linked_taginfo*         fTaginfo;
-         std::string                fName;
-         bool                       fPending;
-         FuncVoidPtr_t              fSetup_memvar;
-         FuncVoidPtr_t              fSetup_memfunc;
-         Bases*                     fBases;
-
-         class CINTClassBuilders : public std::map<ROOT::Reflex::Type, CINTClassBuilder*>  {
-         public: 
-            static CINTClassBuilders& Instance() {
-               static CINTClassBuilders s_builders;
-               return s_builders;
-            }
-         private:
-            CINTClassBuilders() {}
-            ~CINTClassBuilders()  {
-               for( CINTClassBuilders::iterator j = begin(); j != end(); ++j)
-                  delete (*j).second;
-               clear();
-            }
-         };
-      };
+class CINTClassBuilder {
+private: // Private Types
+   typedef std::vector<std::pair<ROOT::Reflex::Base, int> > Bases;
+   class CINTClassBuilders : public std::map<ROOT::Reflex::Type, CINTClassBuilder*>  {
+   public:
+      static CINTClassBuilders& Instance();
+   private:
+      CINTClassBuilders();
+      ~CINTClassBuilders();
+   };
+private: // Private Static Members
+   static void* fgFakeObject;
+   static void* fgFakeAddress;
+public: // Public Static Interface
+   static CINTClassBuilder& Get(const ROOT::Reflex::Type&);
+   static void Setup_memfunc_with_context(void*);
+   static void Setup_memvar_with_context(void*);
+private: // Private Data Members
+   ROOT::Reflex::Type fClass;
+   G__linked_taginfo* fTaginfo;
+   std::string fName;
+   bool fPending;
+   FuncVoidPtr_t fSetup_memvar;
+   FuncVoidPtr_t fSetup_memfunc;
+   Bases* fBases;
+private: // Private Interface
+   CINTClassBuilder(const ROOT::Reflex::Type&);
+public: // Public Interface
+   ~CINTClassBuilder();
+   void Setup(void);
+   void Setup_environment(void); // NOT IMPLEMENTED
+   void Setup_tagtable(void);
+   void Setup_memfunc(void);
+   void Setup_memvar(void);
+   void Setup_inheritance();
+   void Setup_inheritance(ROOT::Reflex::Object&);
+   void Setup_typetable(void);
+   const std::string& Name() const {
+      return fName;
    }
-}
+   ROOT::Reflex::Type& TypeGet() {
+      return fClass;
+   }
+   Bases* GetBases();
+};
+
+} // namespace Cintex
+} // namespace ROOT
 
 #endif // ROOT_Cintex_CINTClassBuilder

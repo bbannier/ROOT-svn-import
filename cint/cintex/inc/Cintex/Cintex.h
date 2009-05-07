@@ -16,48 +16,61 @@
 #include "Reflex/Type.h"
 #include "Reflex/Member.h"
 
-// ROOT forward declarations
-namespace ROOT { class TGenericClassInfo; }
+namespace ROOT {
+class TGenericClassInfo;
+} // namespace ROOT
 class TClass;
 
+//class Cintex {
+//public:
+//static void Enable();
+//};
 
 namespace ROOT {
-  class TGenericClassInfo;
-  namespace Cintex {
-    
-    class Callback : public ROOT::Reflex::ICallback {
-     public:
-      virtual void operator () ( const ROOT::Reflex::Type& t );
-      virtual void operator () ( const ROOT::Reflex::Member& m );
-    };
+namespace Cintex {
 
-    typedef TClass* (*ROOTCreator_t)( ROOT::Reflex::Type, ROOT::TGenericClassInfo* );
- 
-    class Cintex {
-    public:
-      Cintex();
-      ~Cintex();
-      static void Enable();
-      static void SetROOTCreator(ROOTCreator_t);
-      static ROOTCreator_t GetROOTCreator();
-      static int  Debug();
-      static void SetDebug(int);
-      static bool PropagateClassTypedefs();
-      static void SetPropagateClassTypedefs(bool);
-      static bool PropagateClassEnums();
-      static void SetPropagateClassEnums(bool);
-      static void Default_CreateClass(const char* name, TGenericClassInfo* gci);
 
-    private:
-      static Cintex& Instance();
-      Callback*     fCallback;
-      ROOTCreator_t fRootcreator;
-      int           fDbglevel;
-      bool          fPropagateClassTypedefs;
-      bool          fPropagateClassEnums;
-      bool          fEnabled;
-    };
+//______________________________________________________________________________
+class Callback : public ROOT::Reflex::ICallback {
+public:
+   virtual void operator()(const ROOT::Reflex::Type&);
+   virtual void operator()(const ROOT::Reflex::Member&);
+};
 
-  }
-}
+//______________________________________________________________________________
+typedef TClass* (*ROOTCreator_t)(ROOT::Reflex::Type, ROOT::TGenericClassInfo*);
+
+//______________________________________________________________________________
+class Cintex {
+   // Master Cintex controller, singleton.
+private: // Static Data Members.
+   static Cintex& Instance();
+public: // Static Interface.
+   static void Enable();
+   static void SetROOTCreator(ROOTCreator_t);
+   static ROOTCreator_t GetROOTCreator();
+   static int Debug();
+   static void SetDebug(int);
+   static bool PropagateClassTypedefs();
+   static void SetPropagateClassTypedefs(bool);
+   static bool PropagateClassEnums();
+   static void SetPropagateClassEnums(bool);
+   static void Default_CreateClass(const char* name, TGenericClassInfo*);
+private: // Data Members.
+   Callback* fCallback;
+   ROOTCreator_t fRootcreator;
+   int fDbglevel;
+   bool fPropagateClassTypedefs;
+   bool fPropagateClassEnums;
+   bool fEnabled;
+public: // Public Interface.
+   Cintex();
+   ~Cintex();
+};
+
+} // namespace Cintex
+} // namespace ROOT
+
+using ROOT::Cintex::Cintex;
+
 #endif // ROOT_Cintex_Cintex

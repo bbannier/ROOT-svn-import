@@ -9,94 +9,143 @@
 //
 // This software is provided "as is" without express or implied warranty.
 
-#include "Reflex/Reflex.h"
-#include "Reflex/Tools.h"
-#include "CINTdefs.h"
 #include "CINTScopeBuilder.h"
+
+#include "CINTdefs.h"
 #include "CINTClassBuilder.h"
 #include "CINTTypedefBuilder.h"
 #include "CINTEnumBuilder.h"
 #include "CINTFunctional.h"
-#include "ROOTClassEnhancer.h"
+
+#include "TClass.h"
+#include "TGenericClassInfo.h"
+#include "Reflex/Reflex.h"
+#include "Reflex/Tools.h"
 #include "Api.h"
 
 
 using namespace ROOT::Reflex;
 using namespace std;
 
-namespace ROOT { namespace Cintex {
 
-   void CINTScopeBuilder::Setup(const Scope& scope) {
-      if ( scope ) {
-         if (scope.IsTopScope() ) return;
-         Setup( scope.DeclaringScope() );
+namespace ROOT {
+
+class TForNamespace {}; // Dummy class to give a typeid to namespace.
+
+namespace Cintex {
+
+//______________________________________________________________________________
+void CINTScopeBuilder::Setup(const Scope scope)
+{
+   if (scope) {
+      if (scope.IsTopScope()) {
+         return;
       }
-      else {
-         if ( scope.Name() == "" ) return;
-         Scope dcl_scope = Scope::ByName(Tools::GetScopeName(scope.Name(SCOPED)));
-         if( dcl_scope.Id() ) Setup(dcl_scope);
+      Setup(scope.DeclaringScope());
+   }
+   else {
+      if (scope.Name() == "") {
+         return;
       }
-      string sname = CintName(scope.Name(SCOPED));
-      G__linked_taginfo taginfo;
-      taginfo.tagnum  = -1;   // >> need to be pre-initialized to be understood by CINT
-      if (scope.IsNamespace() )  taginfo.tagtype = 'n';
-      else if (scope.IsClass() ) taginfo.tagtype = 'c';
-      else  {
-         if ( sname.find('<') != string::npos )
-            taginfo.tagtype = 'c'; // Is a templated class
-         else
-            taginfo.tagtype = 'a'; // Undefined. Do not assume namespace
+      Scope declaring_scope = Scope::ByName(Tools::GetScopeName(scope.Name(SCOPED)));
+      if (declaring_scope.Id()) {
+         Setup(declaring_scope);
       }
-      taginfo.tagname = sname.c_str();
-      int tagnum = G__defined_tagname(taginfo.tagname, 2);
-      G__ClassInfo info(tagnum);
-      if ( !info.IsLoaded() )  {
-         G__get_linked_tagnum(&taginfo);
-         //--Setup the namespace---
-         if ( scope.IsClass() )  {                  //--Setup the class scope
-            CINTClassBuilder::Get(Type::ByName(sname));
-         }
-         else if (taginfo.tagtype == 'n' ) {
-            G__tagtable_setup( taginfo.tagnum,       // tag number
-                               0,                    // size
-                               G__CPPLINK,           // cpplink
-                               9600,                 // isabstract
-                               0,                    // comment
-                               0,                    // Variable Setup func
-                               0);                   // Function Setup func
-            //-- Create a TClass Instance to please PyROOT adnd ROOT that also wats to have
-            //   TClass for namespaces
-            if (scope) ROOTClassEnhancer::CreateClassForNamespace(sname);
-         }
-         else {
-            //--Tag_table not possible to be setup at this moment....
-         }
-      }
+   }
+   string sname = CintName(scope.Name(SCOPED));
+   G__linked_taginfo taginfo;
+   taginfo.tagname = sname.c_str();
+   taginfo.tagtype = 'a'; // init to autoload for invalid case
+   taginfo.tagnum = -1; // init to invalid
+   if (scope.IsNamespace()) {
+      taginfo.tagtype = 'n'; // namespace
+   }
+   else if (scope.IsClass()) {
+      taginfo.tagtype = 'c'; // class
+   }
+   else if (sname.find('<') != string::npos) { // check for class template-id
+     taginfo.tagtype = 'c'; // class template-id
+   }
+   int tagnum = G__defined_tagname(taginfo.tagname, 2); // check if cint knows this scope
+   if (tagnum != -1) {
       return;
    }
+   G__get_linked_tagnum(&taginfo); // have cint create a tagnum for the new scope
+   if (scope.IsClass()) { // scope is a class, use the class builder
+      CINTClassBuilder::Get(Type::ByName(sname));
+      return;
+   }
+   if (!scope.IsNamespace()) {
+      return;
+   }
+   //
+   //  Since we do not have a namespace
+   //  builder, we do the work here.
+   //
+   //--
+   // Do the cint part of the dictionary.
+   G__tagtable_setup(
+        taginfo.tagnum // tagnum, tag number
+      , 0 // size
+      , -1 // cpplink
+      , 0 // isabstract
+      , 0 // comment
+      , 0 // setup_memvar, member variable setup func
+      , 0 // setup_memfunc, member function setup func
+   );
+   // Do the root part of the dictionary.
+   ROOT::AddClass(
+        sname.c_str() // cname, class name
+      , 0 // id, version number
+      , typeid(ROOT::TForNamespace) // info, type info
+      , 0 // dict, dictionary getter
+      , 0 // pragmabits
+   ); // Add the class to the global class table (TODO: We should have a dictionary function!)
+   ROOT::CreateClass(
+        sname.c_str() // Name
+      , 0 // version
+      , typeid(ROOT::TForNamespace) // typeid
+      , 0 // TVirtualIsAProxy *isa,
+      , 0 // ShowMembersFunc_t show,
+      , "" // definition file
+      , "" // implementation file
+      , 1 // definition line number
+      , 1 // implementation line number
+   ); // Do what the dictionary getter would have done, create the root class.
+   return;
+}
 
-   void CINTScopeBuilder::Setup(const Type& type) {
-      if ( type.IsFunction() ) {
-         Setup(type.ReturnType());
-         for ( size_t i = 0; i < type.FunctionParameterSize(); i++ ) Setup(type.FunctionParameterAt(i));
+//______________________________________________________________________________
+void CINTScopeBuilder::Setup(const Type type)
+{
+   if (type.IsFunction()) {
+      Setup(type.ReturnType());
+      for (size_t i = 0; i < type.FunctionParameterSize(); ++i) {
+         Setup(type.FunctionParameterAt(i));
       }
-      else if ( type.IsTypedef() ) {
-         CINTTypedefBuilder::Setup(type);
-         Setup(type.ToType());
-      }
-      else if ( type.IsEnum() ) {
-         CINTEnumBuilder::Setup(type);
-         Setup(type.DeclaringScope());
+   }
+   else if (type.IsTypedef()) {
+      CINTTypedefBuilder::Setup(type);
+      Setup(type.ToType());
+   }
+   else if (type.IsEnum()) {
+      CINTEnumBuilder::Setup(type);
+      Setup(type.DeclaringScope());
+   }
+   else {
+      Scope scope = type.DeclaringScope();
+      if (scope) {
+         Setup(scope);
       }
       else {
-         Scope scope = type.DeclaringScope();
-         if ( scope ) Setup(scope);
-         else {
-            // Type not yet defined. Get the ScopeNth anyway...
-            scope = Scope::ByName(Tools::GetScopeName(type.Name(SCOPED)));
-            if( scope.Id() ) Setup(scope);
+         // Type not yet defined. Get the Scope anyway.
+         scope = Scope::ByName(Tools::GetScopeName(type.Name(SCOPED)));
+         if (scope.Id()) {
+            Setup(scope);
          }
       }
    }
+}
 
-}}
+} // namespace Cintex
+} // namespace ROOT

@@ -43,25 +43,39 @@ bool Reflex::Union::IsComplete() const
 }
 
 //______________________________________________________________________________
-void Reflex::Union::AddFunctionMember(const Member & fm) const
+void Reflex::Union::AddFunctionMember(const Member& mbr) const
 {
-// Add function member fm to this union
-   ScopeBase::AddFunctionMember(fm);
-   if (fm.IsConstructor()) {
-      fConstructors.push_back(fm);
+   ScopeBase::AddFunctionMember(mbr);
+   if (mbr.IsConstructor()) {
+      fConstructors.push_back(mbr);
    }
-   else if (fm.IsDestructor()) {
-      fDestructor = fm;
+   else if (mbr.IsDestructor()) {
+      fDestructor = mbr;
    }
 }
 
 //______________________________________________________________________________
-void Reflex::Union::AddFunctionMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx, const char* params, unsigned int modifiers) const
+void Reflex::Union::AddFunctionMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx /*= 0*/, const char* params /*= 0*/, unsigned int modifiers /*= 0*/) const
 {
-// Add function member to this union.
-   ScopeBase::AddFunctionMember(nam, typ, stubFP, stubCtx, params, modifiers);
-   if (modifiers & CONSTRUCTOR) {
-      fConstructors.push_back(fFunctionMembers[fFunctionMembers.size()-1]);
+   Member mbr;
+   ScopeBase::AddFunctionMember(&mbr, nam, typ, stubFP, stubCtx, params, modifiers);
+   if (mbr.IsConstructor()) {
+      fConstructors.push_back(mbr);
    }
-   // setting the destructor is not needed because it is always provided when building the union
+   else if (mbr.IsDestructor()) {
+      fDestructor = mbr;
+   }
 }
+
+//______________________________________________________________________________
+void Reflex::Union::AddFunctionMember(Member* out_mbr, const char* nam, const Type typ, StubFunction stubFP, void* stubCtx /*= 0*/, const char* params /*= 0*/, unsigned int modifiers /*= 0*/) const
+{
+   ScopeBase::AddFunctionMember(out_mbr, nam, typ, stubFP, stubCtx, params, modifiers);
+   if (out_mbr->IsConstructor()) {
+      fConstructors.push_back(*out_mbr);
+   }
+   else if (out_mbr->IsDestructor()) {
+      fDestructor = *out_mbr;
+   }
+}
+

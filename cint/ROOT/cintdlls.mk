@@ -3,7 +3,7 @@
 #
 # Author: Axel Naumann, 2006-09-14
 
-.PHONY: cintdlls distclean-cintdll distclean-cint7dll clean-cintdll distclean-cint7dll
+.PHONY: cintdlls distclean-cintdll clean-cintdll
 
 # no: iterator pair
 # already in libCore (core/base/inc/Linkdef2.h): string 
@@ -22,18 +22,13 @@ CINTDLLS = $(addsuffix .dll,$(addprefix $(CINTDLLDIRSTL)/,$(CINTSTLDLLNAMES)) \
 
 CINTDLLNAMES = $(CINTSTLDLLNAMES) $(CINTINCDLLNAMES)
 
-ifeq ($(subst cint7,,$(CINTDLLDIRL)),$(CINTDLLDIRL))
+#ifeq ($(subst cint7,,$(CINTDLLDIRL)),$(CINTDLLDIRL))
 BUILDINGCINT :=5
 CINT7VERSIONNO:=
-else
-ifneq ($(BUILDBOTHCINT),)
-BUILDINGCINT :=7
-CINT7VERSIONNO:=7
-else
-BUILDINGCINT :=5
-CINT7VERSIONNO:=
-endif
-endif
+#else
+#BUILDINGCINT := 7
+#CINT7VERSIONNO:=7
+#endif
 
 
 .PRECIOUS: \
@@ -140,11 +135,11 @@ ifeq ($(ICC_MAJOR),10)
   CINTDLLINCDIRS := -iquote. -iquote$(CINTDLLDIRDLLSTL)
 endif
 
-ifeq ($(BUILDINGCINT),5)
+#ifeq ($(BUILDINGCINT),5)
 $(CINTDLLS): CINTCXXFLAGS += $(CINTDLLINCDIRS)
-else
-$(CINTDLLS): CINT7CXXFLAGS += $(CINTDLLINCDIRS)
-endif
+#else
+#$(CINTDLLS): CINT7CXXFLAGS += $(CINTDLLINCDIRS)
+#endif
 
 ##### all cintdlls end on .dll
 ifneq ($(SOEXT),dll)
@@ -189,6 +184,7 @@ core/metautils/src/stlLoader$(CINT7VERSIONNO)_%.cc: core/metautils/src/stlLoader
 	cp -f $< $@
 
 core/metautils/src/stlLoader$(CINT7VERSIONNO)_%.o: core/metautils/src/stlLoader$(CINT7VERSIONNO)_%.cc
+	@echo "from rule:CINTDLLCXXFLAGS=$(CINTDLLCXXFLAGS)"
 	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- $(CINTDLLCXXFLAGS) -D__cplusplus -- $<
 	$(CXX) $(OPT) $(CINTDLLCXXFLAGS) $(INCDIRS) -DWHAT=\"$*\" $(CXXOUT)$@ -c $<
 
@@ -242,17 +238,15 @@ $(CINTDLLDIRDLLS)/sys/ipc.dll: $(CINTDLLDIRL)/G__c_ipc.o
 ##### ipc special treatment - END
 
 ##### dictionaries
-ifeq ($(BUILDBOTHCINT),)
+#$(CINTDLLDIRDLLSTL)/rootcint_%.cxx: core/metautils/src/%Linkdef.h $(CINTDLLROOTCINTTMPDEP)
+#	core/utils/src/root$(patsubst cint/%/lib/dll_stl/,%,$(dir $@))_tmp -f $@ -c \
+#	   $(subst multi,,${*:2=}) \
+#	   core/metautils/src/$*Linkdef.h
+
 $(CINTDLLDIRDLLSTL)/rootcint_%.cxx: core/metautils/src/%Linkdef.h $(CINTDLLROOTCINTTMPDEP)
 	core/utils/src/rootcint_tmp -f $@ -c \
 	   $(subst multi,,${*:2=}) \
 	   core/metautils/src/$*Linkdef.h
-else
-$(CINTDLLDIRDLLSTL)/rootcint_%.cxx: core/metautils/src/%Linkdef.h $(CINTDLLROOTCINTTMPDEP)
-	core/utils/src/root$(patsubst cint/%/lib/dll_stl/,%,$(dir $@))_tmp -f $@ -c \
-	   $(subst multi,,${*:2=}) \
-	   core/metautils/src/$*Linkdef.h
-endif
 
 $(patsubst lib/lib%Dict.$(SOEXT),$(CINTDLLDIRDLLSTL)/rootcint_%.o,$(CINTDICTDLLS)): CINTCXXFLAGS += -I.
 $(patsubst lib/lib%Dict.$(SOEXT),$(CINTDLLDIRDLLSTL)/rootcint_%.cxx,$(CINTDICTDLLS)): $(CINTDLLROOTCINTTMPDEP)
@@ -271,11 +265,11 @@ endif
 ##### clean
 
 # remove only .o, .dll, .$(SOEXT)
-ifeq ($(BUILDINGCINT),5)
+#ifeq ($(BUILDINGCINT),5)
 CLEANCINTDLLSTARGET := cintdll
-else
-CLEANCINTDLLSTARGET := cint7dll
-endif
+#else
+#CLEANCINTDLLSTARGET := cint7dll
+#endif
 
 clean-$(CLEANCINTDLLSTARGET):
 	@(for cintdll in $(CINTDLLNAMES); do \

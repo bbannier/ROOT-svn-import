@@ -525,29 +525,42 @@ void Reflex::Class::RemoveDataMember(const Member & dm) const
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Class::AddFunctionMember(const Member & fm) const
+void Reflex::Class::AddFunctionMember(const Member& mbr) const
 {
-//-------------------------------------------------------------------------------
-// Add function member fm to this class
-   ScopeBase::AddFunctionMember(fm);
-   if (fm.IsConstructor())    fConstructors.push_back(fm);
-   else if (fm.IsDestructor()) fDestructor = fm;
+   ScopeBase::AddFunctionMember(mbr);
+   if (mbr.IsConstructor()) {
+      fConstructors.push_back(mbr);
+   }
+   else if (mbr.IsDestructor()) {
+      fDestructor = mbr;
+   }
 }
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Class::AddFunctionMember(const char * nam,
-                                      const Type & typ,
-                                      StubFunction stubFP,
-                                      void * stubCtx,
-                                      const char * params,
-                                      unsigned int modifiers) const
+void Reflex::Class::AddFunctionMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx /*= 0*/, const char* params /*= 0*/, unsigned int modifiers /*= 0*/) const
 {
+   Member mbr;
+   ScopeBase::AddFunctionMember(&mbr, nam, typ, stubFP, stubCtx, params, modifiers);
+   if (mbr.IsConstructor()) {
+      fConstructors.push_back(mbr);
+   }
+   else if (mbr.IsDestructor()) {
+      fDestructor = mbr;
+   }
+}
+
+
 //-------------------------------------------------------------------------------
-// Add function member to this class
-   ScopeBase::AddFunctionMember(nam, typ, stubFP, stubCtx, params, modifiers);
-   if (0 != (modifiers & CONSTRUCTOR)) fConstructors.push_back(fFunctionMembers[fFunctionMembers.size()-1]);
-   // setting the destructor is not needed because it is always provided when building the class
+void Reflex::Class::AddFunctionMember(Member* out_mbr, const char* nam, const Type typ, StubFunction stubFP, void* stubCtx /*= 0*/, const char* params /*= 0*/, unsigned int modifiers /*= 0*/) const
+{
+   ScopeBase::AddFunctionMember(out_mbr, nam, typ, stubFP, stubCtx, params, modifiers);
+   if (out_mbr->IsConstructor()) {
+      fConstructors.push_back(*out_mbr);
+   }
+   else if (out_mbr->IsDestructor()) {
+      fDestructor = *out_mbr;
+   }
 }
 
 

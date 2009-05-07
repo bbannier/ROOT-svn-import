@@ -460,7 +460,7 @@ void TBuildRealData::Inspect(TClass* cl, const char* pname, const char* mname, c
          if (dmclass) {
             if (dmclass->Property()) {
                if (dmclass->Property() & kIsAbstract) {
-                  fprintf(stderr, "TBuildRealDataRecursive::Inspect(): data member class: '%s'  is abstract.\n", dmclass->GetName());
+                  Error("TBuildRealDataRecursive::Inspect","data member class: '%s'  is abstract.\n", dmclass->GetName());
                }
             }
             if ((dmclass != cl) && !dm->IsaPointer()) {

@@ -1117,7 +1117,7 @@ void Cint::Internal::G__set_stdio()
    G__intp_sin = G__sin;
 
    // FILE is a fundamental type for CINT
-   ::Reflex::ClassBuilder("FILE", typeid(FILE), 0, ::Reflex::STRUCT);
+   ::Reflex::ClassBuilder("FILE", typeid(FILE), 0, ::Reflex::STRUCT).EnableCallback(false);
 
    G__var_type = 'E';
    sprintf(temp, "stdout=(FILE*)(%ld)", (long)G__intp_sout);

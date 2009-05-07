@@ -12,28 +12,4 @@
 #ifndef ROOT_Cintex_CintexCommentBuffer
 #define ROOT_Cintex_CintexCommentBuffer
 
-#include <vector>
-
-namespace ROOT { namespace Cintex {
-   class CommentBuffer  {
-   private:
-      typedef std::vector<char*> VecC;
-      VecC fC;
-      CommentBuffer() {}
-      ~CommentBuffer()  {
-         for(VecC::iterator i=fC.begin(); i != fC.end(); ++i)
-            delete [] *i;
-         fC.clear();
-      }
-   public:
-      static CommentBuffer& Instance()  {     
-         static CommentBuffer inst;
-         return inst;
-      }
-      void Add(char* cm)  {
-         fC.push_back(cm);
-      }
-   };
-} }
-
 #endif // ROOT_Cintex_CintexCommentBuffer

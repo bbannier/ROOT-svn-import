@@ -23,7 +23,8 @@
 //-------------------------------------------------------------------------------
 Reflex::EnumBuilder::EnumBuilder( const char * nam,
                                         const std::type_info & ti,
-                                        unsigned int modifiers ) {
+                                        unsigned int modifiers )
+   : fCallbackEnabled(true) {
 //-------------------------------------------------------------------------------
 // Construct a new enum dictionary info.
    fEnum = new Enum( nam, ti, modifiers );
@@ -33,7 +34,17 @@ Reflex::EnumBuilder::EnumBuilder( const char * nam,
 Reflex::EnumBuilder::~EnumBuilder() {
 //-------------------------------------------------------------------------------
 // Destructor of enum builder. Used for call back functions.
-   FireClassCallback( *fEnum );
+   if (fCallbackEnabled) {
+      FireClassCallback(*fEnum);
+   }
+}
+
+
+//-------------------------------------------------------------------------------
+Reflex::EnumBuilder& Reflex::EnumBuilder::EnableCallback(const bool enable /*= true*/) {
+//-------------------------------------------------------------------------------
+   fCallbackEnabled = enable;
+   return *this;
 }
 
 

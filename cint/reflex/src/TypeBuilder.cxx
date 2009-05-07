@@ -27,19 +27,56 @@
 #include "Reflex/Tools.h"
 
 
-//-------------------------------------------------------------------------------
-Reflex::Type Reflex::TypeBuilder( const char * n, 
-                                              unsigned int modifiers ) {
-//-------------------------------------------------------------------------------
-// Construct the type information for a type.
-   const Type & ret = Type::ByName(n);
-   if ( ret.Id() ) return Type(ret, modifiers);
-   else {
-      TypeName* tname = new TypeName(n, 0);
-      std::string sname = Tools::GetScopeName(n);
-      if ( ! Scope::ByName( sname ).Id() )  new ScopeName( sname.c_str(), 0 );
-      return Type(tname, modifiers);
+//______________________________________________________________________________
+Reflex::Type Reflex::TypeBuilder(const char* name, unsigned int modifiers /*= 0*/)
+{
+   // Forward declare a type by name.  The returned type is invalid but named.
+   //--
+   //
+   //  Make sure the core C++ typenames exist first.
+   //
+   //  This is important for the dictionary format, they
+   //  forward declare the types they use for data members
+   //  and we need to make sure that the only representation
+   //  type we need for invalid types is 'u' for class, struct,
+   //  or union.
+   //
+   //  For example:
+   //
+   //  class B;
+   //
+   //  class A {
+   //    B* b;
+   //    void* v;
+   //  };
+   //
+   //  In the dictionary code we will have:
+   //
+   //  namespace {
+   //    Type type_101 = PointerBuilder(TypeBuilder("B"));
+   //    Type type_102 = PointerBuilder(TypeBuilder("void"));
+   //  }
+   //
+   //  The representation type for "B" will be 'u' because that
+   //  is the default for an invalid type, so the representation
+   //  type for type_101 will be 'U', which is what we want.
+   //
+   //  The representation type for "void" will be 'y' because we
+   //  make sure it is a valid type first, and then we have the
+   //  representation type for type_102 is "Y".  If we did not
+   //  make it valid first we would get "U", which would be wrong.
+   //
+   Reflex::Instance::Instance();
+   const Type ret = Type::ByName(name);
+   if (ret.Id()) { // a type name already exists
+      return Type(ret, modifiers);
    }
+   TypeName* type_name = new TypeName(name, 0); // create a named invalid type
+   std::string sname = Tools::GetScopeName(name);
+   if (!Scope::ByName(sname).Id()) { // the scope part does not exist
+      new ScopeName(sname.c_str(), 0); // create a named invalid scope
+   }
+   return Type(type_name, modifiers); // we return an invalid type, but it has a name
 }
 
 

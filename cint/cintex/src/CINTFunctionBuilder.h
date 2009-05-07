@@ -12,23 +12,26 @@
 #ifndef ROOT_Cintex_CINTFunctionBuilder
 #define ROOT_Cintex_CINTFunctionBuilder
 
+#include "Reflex/Member.h"
 #include "Reflex/Type.h"
 #include "CINTdefs.h"
 
 namespace ROOT {
-   namespace Cintex {
+namespace Cintex {
 
-      class CINTFunctionBuilder {
-      public:
-         CINTFunctionBuilder(const ROOT::Reflex::Member& m);
-         ~CINTFunctionBuilder();
-         void Setup(void);
-         static void Setup(const ROOT::Reflex::Member&);
-      private:
-         const ROOT::Reflex::Member&  fFunction;
-      };
+class CINTFunctionBuilder {
+   // --
+public: // Static Interface
+   static void Setup(ROOT::Reflex::Member);
+private: // Data Member
+   ROOT::Reflex::Member fFunction;
+public: // Public Interface
+   CINTFunctionBuilder(ROOT::Reflex::Member m);
+   ~CINTFunctionBuilder();
+   void Setup(void);
+};
 
-   }
-}
+} // namespace Cintex
+} // namespace ROOT
 
 #endif // ROOT_Cintex_CINTFunctionBuilder

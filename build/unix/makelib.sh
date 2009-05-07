@@ -59,7 +59,7 @@ if [ "x$EXPLICIT" = "xyes" ]; then
               NEEDREFLEX="-lCintex $NEEDREFLEX"
           fi
       fi
-      if [ $LIB != "lib/libCore.$soext" ]; then
+      if [ "$LIB" != "lib/libCore.$soext" ]; then
          EXPLLNKCORE="-Llib $NEEDREFLEX -lCore -lCint"
       else
          EXPLLNKCORE="-Llib -lCint"
@@ -177,12 +177,14 @@ elif [ $LD = "build/unix/wingcc_ld.sh" ]; then
 else
    if [ "x$MAJOR" = "x" ] ; then
       cmd="$LD $SOFLAGS$SONAME $LDFLAGS -o $LIB $OBJS $EXTRA $EXPLLNKCORE"
-      echo $cmd
+      echo "Making library $LIB ..."
+      #echo $cmd
       $cmd
    else
       cmd="$LD $SOFLAGS$SONAME.$MAJOR.$MINOR $LDFLAGS \
            -o $LIB.$MAJOR.$MINOR $OBJS $EXTRA $EXPLLNKCORE"
-      echo $cmd
+      #echo $cmd
+      echo "Making library $LIB.$MAJOR.$MINOR ..."
       $cmd
    fi
 fi

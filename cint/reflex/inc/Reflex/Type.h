@@ -1043,6 +1043,22 @@ namespace Reflex {
    public:
 
       /**
+      * AddBase will add information about a Base class
+      * @param base type of the base class
+      * @param offsFP pointer to a function stub for calculating the base class offset
+      * @param modifiers the modifiers of the base class
+      */
+      void AddBase(const Type & bas, OffsetFunction offsFP, unsigned int modifiers = 0) const;
+
+
+      /**
+      * AddBase will add the information about a Base class
+      * @param b pointer to the base class
+      */
+      void AddBase(const Base& b) const;
+
+
+      /**
       * AddDataMember will add the information about a data member
       * @param dm data member to add
       */
@@ -1066,7 +1082,7 @@ namespace Reflex {
       * AddFunctionMember will add the information about a function member
       * @param fm function member to add
       */
-      void AddFunctionMember( const Member & fm ) const;
+      void AddFunctionMember(const Member& fm) const;
 
 
       /**
@@ -1078,12 +1094,8 @@ namespace Reflex {
       * @param params a semi colon separated list of parameters 
       * @param modifiers of the function member
       */ 
-      void AddFunctionMember( const char * nam,
-         const Type & typ,
-         StubFunction stubFP,
-         void * stubCtx = 0,
-         const char * params = 0,
-         unsigned int modifiers = 0 ) const;
+      void AddFunctionMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0) const;
+      void AddFunctionMember(Member* out_mbr, const char* nam, const Type typ, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0) const;
 
 
       /**
@@ -1998,6 +2010,20 @@ inline const Reflex::TypeBase * Reflex::Type::ToTypeBase() const {
 
 
 //-------------------------------------------------------------------------------
+inline void Reflex::Type::AddBase(const Type & bas, OffsetFunction offsFP, unsigned int modifiers /*= 0*/) const {
+//-------------------------------------------------------------------------------
+   operator Scope().AddBase(bas, offsFP, modifiers);
+}
+
+
+//-------------------------------------------------------------------------------
+inline void Reflex::Type::AddBase(const Base& b) const {
+//-------------------------------------------------------------------------------
+   operator Scope().AddBase(b);
+}
+
+
+//-------------------------------------------------------------------------------
 inline void Reflex::Type::AddDataMember( const Member & dm ) const {
 //-------------------------------------------------------------------------------
    return operator Scope().AddDataMember(dm);
@@ -2015,21 +2041,23 @@ inline void Reflex::Type::AddDataMember( const char * nam,
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::Type::AddFunctionMember( const Member & fm ) const {
-//-------------------------------------------------------------------------------
-   return operator Scope().AddFunctionMember( fm );
+inline void Reflex::Type::AddFunctionMember(const Member& fm) const
+{
+   return operator Scope().AddFunctionMember(fm);
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::Type::AddFunctionMember( const char * nam,
-                                                   const Type & typ,
-                                                   StubFunction stubFP,
-                                                   void * stubCtx,
-                                                   const char * params,
-                                                   unsigned int modifiers ) const {
+inline void Reflex::Type::AddFunctionMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx /*= 0*/, const char* params /*= 0*/, unsigned int modifiers /*= 0*/) const
+{
+   return operator Scope().AddFunctionMember(nam, typ, stubFP, stubCtx, params, modifiers);
+}
+
+
 //-------------------------------------------------------------------------------
-   return operator Scope().AddFunctionMember( nam, typ, stubFP, stubCtx, params, modifiers );
+inline void Reflex::Type::AddFunctionMember(Member* out_mbr, const char* nam, const Type typ, StubFunction stubFP, void* stubCtx /*= 0*/, const char* params /*= 0*/, unsigned int modifiers /*= 0*/) const
+{
+   return operator Scope().AddFunctionMember(out_mbr, nam, typ, stubFP, stubCtx, params, modifiers);
 }
 
 

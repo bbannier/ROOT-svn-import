@@ -14,31 +14,31 @@
 
 #include "Reflex/Type.h"
 
-// ROOT classes forward declarations
 class TClass;
 class TMemberInspector;
 
 namespace ROOT {
-   class TGenericClassInfo;
-
-   namespace Cintex {
-
-      class ROOTClassEnhancer {
-      public:
-         ROOTClassEnhancer(const Reflex::Type& TypeNth);
-         ~ROOTClassEnhancer();
-         void Setup(void);
-         void CreateInfo(void);
-         static void CreateClassForNamespace(const std::string&);
-         static TClass* Default_CreateClass(Reflex::Type typ, ROOT::TGenericClassInfo* info);
-
-      private:
-         ROOT::Reflex::Type  fClass;
-         std::string         fName;
-         void*               fEnhancerinfo;
-      };
-    
-   }
+class TGenericClassInfo;
 }
+
+namespace ROOT {
+namespace Cintex {
+
+class ROOTClassEnhancer {
+   // --
+private: // Data Members
+   ROOT::Reflex::Type fClass;
+   std::string fName;
+   void* fEnhancerinfo;
+public: // Public Interface
+   ROOTClassEnhancer(const ROOT::Reflex::Type&);
+   ~ROOTClassEnhancer();
+   void Setup(void);
+   void CreateInfo(void);
+   static TClass* Default_CreateClass(ROOT::Reflex::Type, ROOT::TGenericClassInfo*);
+};
+
+} // namespace Cintex
+} // namespace ROOT
 
 #endif // ROOT_Cintex_ROOTClassEnhancer

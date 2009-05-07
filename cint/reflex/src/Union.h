@@ -50,6 +50,7 @@ public:
    */
    virtual void AddFunctionMember(const Member& fm) const;
    virtual void AddFunctionMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0) const;
+   virtual void AddFunctionMember(Member* out_mbr, const char* nam, const Type typ, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0) const;
 
 private:
 

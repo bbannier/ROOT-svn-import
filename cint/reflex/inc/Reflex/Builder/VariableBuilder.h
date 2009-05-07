@@ -31,10 +31,7 @@ namespace Reflex {
    public:
 
       /** constructor */
-      VariableBuilder( const char * nam,
-         const Type & typ,
-         size_t offs,
-         unsigned int modifiers = 0 );
+      VariableBuilder(const char* nam, const Type& typ, size_t offs, unsigned int modifiers = 0);
 
 
       /** destructor */
@@ -47,10 +44,15 @@ namespace Reflex {
       * @param  value the value of the property
       * @return a reference to the building class
       */
-      VariableBuilder & AddProperty( const char * key, 
-         Any value );
-      VariableBuilder & AddProperty( const char * key,
-         const char * value );
+      VariableBuilder& AddProperty(const char* key, Any value);
+      VariableBuilder& AddProperty(const char* key, const char* value);
+
+
+      /** 
+      * EnableCallback Enable or disable the callback call in the destructor
+      * @param  enable true to enable callback call, false to disable callback call
+      */
+      VariableBuilder& EnableCallback(const bool enable = true);
 
 
       /**
@@ -63,6 +65,9 @@ namespace Reflex {
 
       /** function member */
       Member fDataMember;
+
+      /** flag, fire callback in destructor */
+      bool fCallbackEnabled;
 
    }; // class VariableBuilder
 
@@ -78,10 +83,7 @@ namespace Reflex {
    public:
 
       /** constructor */
-      VariableBuilderImpl( const char * nam,
-         const Type & typ,
-         size_t offs,
-         unsigned int modifiers = 0 );
+      VariableBuilderImpl(const char* nam, const Type& typ, size_t offs, unsigned int modifiers = 0);
 
 
       /** destructor */
@@ -93,10 +95,15 @@ namespace Reflex {
       * @param  value the value of the property
       * @return a reference to the building class
       */
-      void AddProperty( const char * key, 
-         Any value );
-      void AddProperty( const char * key, 
-         const char * value );
+      void AddProperty(const char* key, Any value);
+      void AddProperty(const char* key, const char* value);
+
+
+      /** 
+      * EnableCallback Enable or disable the callback call in the destructor
+      * @param  enable true to enable callback call, false to disable callback call
+      */
+      void EnableCallback(const bool enable = true);
 
 
       /**
@@ -110,6 +117,9 @@ namespace Reflex {
       /** member being built */
       Member fDataMember;
 
+      /** flag, fire callback in destructor */
+      bool fCallbackEnabled;
+
    }; // class VariableBuilderImpl
 
 
@@ -119,14 +129,12 @@ namespace Reflex {
    * @date 6/4/2005
    * @ingroup RefBld
    */
-   template < typename D > class VariableBuilderT {
+   template<typename D> class VariableBuilderT {
 
    public:
 
       /** constructor */
-      VariableBuilderT( const char * nam,
-         size_t offs,
-         unsigned int modifiers = 0 );
+      VariableBuilderT(const char* nam, size_t offs, unsigned int modifiers = 0);
 
 
       /** destructor */
@@ -139,8 +147,14 @@ namespace Reflex {
       * @param  value the value of the property
       * @return a reference to the building class
       */
-      template < typename P >
-      VariableBuilderT & AddProperty( const char * key, P value );
+      template<typename P> VariableBuilderT& AddProperty(const char* key, P value);
+
+
+      /** 
+      * EnableCallback Enable or disable the callback call in the destructor
+      * @param  enable true to enable callback call, false to disable callback call
+      */
+      VariableBuilderT& EnableCallback(const bool enable = true);
 
 
       /**
@@ -161,22 +175,16 @@ namespace Reflex {
 
 
 //-------------------------------------------------------------------------------
-template < typename D > 
-inline Reflex::VariableBuilderT<D>::VariableBuilderT( const char * nam,
-                                                            size_t offs,
-                                                            unsigned int modifiers ) 
+template<typename D> 
+inline Reflex::VariableBuilderT<D>::VariableBuilderT(const char* nam, size_t offs, unsigned int modifiers ) 
+   : fDataMemberBuilderImpl(nam, TypeDistiller<D>::Get(), offs, modifiers) {
 //-------------------------------------------------------------------------------
-   : fDataMemberBuilderImpl( nam,
-                             TypeDistiller<D>::Get(),
-                             offs,
-                             modifiers ) {}
+}
 
 
 //-------------------------------------------------------------------------------
-template < typename D > template < typename P >
-inline Reflex::VariableBuilderT<D> &
-Reflex::VariableBuilderT<D>::AddProperty( const char * key, 
-                                                P value ) {
+template<typename D> template<typename P>
+inline Reflex::VariableBuilderT<D>& Reflex::VariableBuilderT<D>::AddProperty(const char* key, P value) {
 //-------------------------------------------------------------------------------
    fDataMemberBuilderImpl.AddProperty(key, value);
    return * this;
@@ -184,8 +192,17 @@ Reflex::VariableBuilderT<D>::AddProperty( const char * key,
 
 
 //-------------------------------------------------------------------------------
-template < typename D > inline Reflex::Member
-Reflex::VariableBuilderT<D>::ToMember() {
+template<typename D>
+inline Reflex::VariableBuilderT<D>& Reflex::VariableBuilderT<D>::EnableCallback(const bool enable /*= true*/) {
+//-------------------------------------------------------------------------------
+   fDataMemberBuilderImpl.EnableCallback(enable);
+   return *this;
+}
+
+
+//-------------------------------------------------------------------------------
+template<typename D>
+inline Reflex::Member Reflex::VariableBuilderT<D>::ToMember() {
 //-------------------------------------------------------------------------------
    return fDataMemberBuilderImpl.ToMember();
 }

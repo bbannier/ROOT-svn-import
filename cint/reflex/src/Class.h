@@ -289,6 +289,7 @@ public:
    */
    virtual void AddFunctionMember(const Member& fm) const;
    virtual void AddFunctionMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0) const;
+   virtual void AddFunctionMember(Member* mbr_out, const char* nam, const Type typ, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0) const;
 
    /**
    * RemoveDataMember will remove the information about a data MemberAt

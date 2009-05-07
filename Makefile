@@ -3,6 +3,18 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
+# Make sure the all target is the default.
+all:
+
+ifneq (,$(strip $(V)))
+export VERBOSE := $(strip $(V))
+endif
+
+ifneq (,$(strip $(VERBOSE)))
+export CMDECHO :=
+else
+export CMDECHO := @
+endif
 
 ##### Include path/location macros (result of ./configure) #####
 ##### However, if we are building packages or cleaning,    #####
@@ -71,7 +83,7 @@ include $(MAKEFILEDEP)
 
 ##### Modules to build #####
 
-MODULES       = build cint/cint core/metautils core/pcre core/utils core/base \
+MODULES       = build cint/cint7 core/metautils core/pcre core/utils core/base \
                 core/cont core/meta io/io math/mathcore net/net core/zip \
                 core/clib core/thread math/matrix core/newdelete hist/hist \
                 tree/tree graf2d/freetype graf2d/graf graf2d/gpad graf3d/g3d \
@@ -183,8 +195,9 @@ ifeq ($(BUILDMATHMORE),yes)
 MODULES      += math/mathmore
 endif
 ifeq ($(BUILDREFLEX),yes)
+MODULES      += cint/reflex
 # put reflex right in front of CINT; CINT needs it
-MODULES      := $(subst cint/cint,cint/reflex cint/cint,$(MODULES))
+#MODULES      := $(subst cint/cint,cint/reflex cint/cint,$(MODULES))
 endif
 ifeq ($(BUILDMINUIT2),yes)
 MODULES      += math/minuit2
@@ -192,13 +205,9 @@ endif
 ifeq ($(BUILDUNURAN),yes)
 MODULES      += math/unuran
 endif
-ifeq ($(BUILDCINT7),yes)
-ifeq ($(BUILDCINT5),yes)
-MODULES      := $(subst cint/cint,cint/cint cint/cint7,$(MODULES))
-else
-MODULES      := $(subst cint/cint,cint/cint7,$(MODULES))
-endif
-endif
+#ifeq ($(BUILDCINT7),yes)
+#MODULES      := $(subst cint/cint,cint/cint7,$(MODULES))
+#endif
 ifeq ($(BUILDCINTEX),yes)
 MODULES      += cint/cintex
 endif
@@ -283,28 +292,26 @@ LPATH         = lib
 
 ifneq ($(PLATFORM),win32)
 RPATH        := -L$(LPATH)
-CINTLIBS     := -lCint
-CINT7LIBS    := -lCint7 -lReflex
+CINTLIBS     := -lCint -lReflex
 NEWLIBS      := -lNew
-ROOTLIBS     := -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
+ROOTLIBS     := -lCore -lCint -lReflex -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
                 -lTree -lMatrix -lMathCore -lThread
-BOOTLIBS     := -lCore -lCint -lMathCore
+BOOTLIBS     := -lCore -lCint -lReflex -lMathCore
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBS     += -lCintex -lReflex
 BOOTLIBS     += -lCintex -lReflex
 endif
 RINTLIBS     := -lRint
 else
-CINTLIBS     := $(LPATH)/libCint.lib
-CINT7LIBS    := $(LPATH)/libCint7.lib $(LPATH)/libReflex.lib
+CINTLIBS     := $(LPATH)/libCint.lib $(LPATH)/libReflex.lib
 NEWLIBS      := $(LPATH)/libNew.lib
-ROOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
+ROOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib $(LPATH)/libReflex.lib \
                 $(LPATH)/libRIO.lib $(LPATH)/libNet.lib \
                 $(LPATH)/libHist.lib $(LPATH)/libGraf.lib \
                 $(LPATH)/libGraf3d.lib $(LPATH)/libGpad.lib \
                 $(LPATH)/libTree.lib $(LPATH)/libMatrix.lib \
                 $(LPATH)/libMathcore.lib $(LPATH)/libThread.lib
-BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
+BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib $(LPATH)/libReflex.lib \
                 $(LPATH)/libMathcore.lib
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
@@ -314,10 +321,10 @@ RINTLIBS     := $(LPATH)/libRint.lib
 endif
 
 # ROOTLIBSDEP is intended to match the content of ROOTLIBS
-ROOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB) $(IOLIB) $(NETLIB) $(HISTLIB) \
+ROOTLIBSDEP   = $(ORDER_) $(CORELIB) $(REFLEXLIB) $(CINTLIB) $(IOLIB) $(NETLIB) $(HISTLIB) \
                 $(GRAFLIB) $(G3DLIB) $(GPADLIB) $(TREELIB) $(MATRIXLIB) \
                 $(MATHCORELIB)
-BOOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB) $(MATHCORELIB)
+BOOTLIBSDEP   = $(ORDER_) $(CORELIB) $(REFLEXLIB) $(CINTLIB) $(MATHCORELIB)
 ifneq ($(ROOTDICTTYPE),cint)
 ROOTLIBSDEP  += $(CINTEXLIB) $(REFLEXLIB)
 BOOTLIBSDEP  += $(CINTEXLIB) $(REFLEXLIB)
@@ -487,7 +494,7 @@ endif
 ##### In case shared libs need to resolve all symbols (e.g.: aix, win32) #####
 
 ifeq ($(EXPLICITLINK),yes)
-MAINLIBS     := $(CORELIB) $(CINTLIB)
+MAINLIBS     := $(CORELIB) $(CINTLIB) $(REFLEXLIB)
 ifneq ($(ROOTDICTTYPE),cint)
 MAINLIBS     += $(CINTEXLIB) $(REFLEXLIB)
 endif
@@ -516,53 +523,72 @@ INCLUDEFILES :=
 
 # special rules (need to be defined before generic ones)
 G__%.o: G__%.cxx
-	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
+	@echo "Depending $(@:.o=.d)"
+	$(CMDECHO)$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
 	   $(CXXFLAGS) -D__cplusplus -I$(CINTDIR)/lib/prec_stl \
 	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
-	$(CXX) $(NOOPT) $(CXXFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CXX) $(NOOPT) $(CXXFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
 G__c_%.o: G__c_%.c
-	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
+	@echo "Depending $(@:.o=.d)"
+	$(CMDECHO)$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
 	   $(CFLAGS) -I$(CINTDIR)/lib/prec_stl \
 	   -I$(CINTDIR)/stl -I$(CINTDIR)/inc -- $<
-	$(CC) $(NOOPT) $(CFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CC) $(NOOPT) $(CFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
-cint/cint/%.o: cint/cint/%.cxx
-	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -I. -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CINTCXXFLAGS) -I. $(CXXOUT)$@ -c $<
+#cint/cint/%.o: cint/cint/%.cxx
+#	@echo "Depending $(@:.o=.d)"
+#	$(CMDECHO)$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -I. -D__cplusplus -- $<
+#	@echo "Compiling $<"
+#	$(CMDECHO)$(CXX) $(OPT) $(CINTCXXFLAGS) -I. $(CXXOUT)$@ -c $<
 
-cint/cint/%.o: cint/cint/%.c
-	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -I. -- $<
-	$(CC) $(OPT) $(CINTCFLAGS) -I. $(CXXOUT)$@ -c $<
+#cint/cint/%.o: cint/cint/%.c
+#	@echo "Depending $(@:.o=.d)"
+#	$(CMDECHO)$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCFLAGS) -I. -- $<
+#	@echo "Compiling $<"
+#	$(CMDECHO)$(CC) $(OPT) $(CINTCFLAGS) -I. $(CXXOUT)$@ -c $<
 
 cint/cint7/%.o: cint/cint7/%.cxx
-	$(MAKEDEP) -R -fcint/cint7/$*.d -Y -w 1000 -- $(CINT7CXXFLAGS) -I. -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CINT7CXXFLAGS) -I. $(CXXOUT)$@ -c $<
+	@echo "Depending $(@:.o=.d)"
+	$(CMDECHO)$(MAKEDEP) -R -fcint/cint7/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -I. -D__cplusplus -- $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CXX) $(OPT) $(CINTCXXFLAGS) -I. $(CXXOUT)$@ -c $<
 
 cint/cint7/%.o: cint/cint7/%.c
-	$(MAKEDEP) -R -fcint/cint7/$*.d -Y -w 1000 -- $(CINT7CFLAGS) -I. -- $<
-	$(CC) $(OPT) $(CINT7CFLAGS) -I. $(CXXOUT)$@ -c $<
+	@echo "Depending $(@:.o=.d)"
+	$(CMDECHO)$(MAKEDEP) -R -fcint/cint7/$*.d -Y -w 1000 -- $(CINTCFLAGS) -I. -- $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CC) $(OPT) $(CINTCFLAGS) -I. $(CXXOUT)$@ -c $<
 
 build/%.o: build/%.cxx
-	$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CXX) $(OPT) $(CXXFLAGS) $(CXXOUT)$@ -c $<
 
 build/%.o: build/%.c
-	$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
 
 %.o: %.cxx
-	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CXXFLAGS) $(PCHCXXFLAGS) $(CXXOUT)$@ -c $<
+	@echo "Depending $(@:.o=.d)"
+	$(CMDECHO)$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CXX) $(OPT) $(CXXFLAGS) $(PCHCXXFLAGS) $(CXXOUT)$@ -c $<
 
 %.o: %.c
-	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CFLAGS) -- $<
-	$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
+	@echo "Depending $(@:.o=.d)"
+	$(CMDECHO)$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CFLAGS) -- $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
 
 %.o: %.f
 ifeq ($(F77),f2c)
-	f2c -a -A $<
-	$(CC) $(F77OPT) $(CFLAGS) $(CXXOUT)$@ -c $*.c
+	$(CMDECHO)f2c -a -A $<
+	$(CMDECHO)$(CC) $(F77OPT) $(CFLAGS) $(CXXOUT)$@ -c $*.c
 else
-	$(F77) $(F77OPT) $(F77FLAGS) $(CXXOUT)$@ -c $<
+	@echo "Compiling $<"
+	$(CMDECHO)$(F77) $(F77OPT) $(F77FLAGS) $(CXXOUT)$@ -c $<
 endif
 
 ##### TARGETS #####
@@ -576,6 +602,8 @@ ifneq ($(findstring map, $(MAKECMDGOALS)),)
 endif
 
 all:            rootexecs postbin
+#all:            postbin
+#postbin:        rootexecs
 
 fast:           rootexecs
 
@@ -602,11 +630,19 @@ endif
 endif
 endif
 
-rootcint:       all-cint all-utils
+rootcint:       all-cint7 all-utils
+#rootcint:       all-utils
+#all-utils:       all-cint7
 
 rootlibs:       rootcint compiledata $(ALLLIBS) $(ALLMAPS)
+#rootlibs:       $(ALLMAPS)
+#$(ALLMAPS):     $(ALLLIBS)
+#$(ALLLIBS):     compiledata
+#compiledata:    rootcint
 
 rootexecs:      rootlibs $(ALLEXECS)
+#rootexecs:      $(ALLEXECS)
+#$(ALLEXECS):    rootlibs
 
 postbin:        $(POSTBIN)
 
@@ -669,7 +705,8 @@ else
 endif
 
 $(COREMAP): $(RLIBMAP) $(MAKEFILEDEP) $(COREL)
-	$(RLIBMAP) -o $(COREMAP) -l $(CORELIB) -d $(CORELIBDEPM) -c $(COREL)
+	@echo "Making core map"
+	$(CMDECHO)$(RLIBMAP) -o $(COREMAP) -l $(CORELIB) -d $(CORELIBDEPM) -c $(COREL)
 
 map::   $(ALLMAPS)
 
