@@ -86,23 +86,43 @@ public: // Public Interface.
       Type t_void = TypeBuilder("void");
       Type t_int = TypeBuilder("int");
       Type t_bool = TypeBuilder("bool");
+
+
+      ClassBuilderT<ROOT::Cintex::Cintex>("ROOT::Cintex", PUBLIC)
+         .EnableCallback(false)
+         .AddFunctionMember(FunctionTypeBuilder(t_void), "Enable", Enable, 0, 0, PUBLIC | STATIC)
+         .AddFunctionMember(FunctionTypeBuilder(t_void, t_int), "SetDebug", SetDebug, 0, 0, PUBLIC | STATIC)
+         .AddFunctionMember(FunctionTypeBuilder(t_int), "Debug", Debug, 0, 0, PUBLIC | STATIC)
+         .AddFunctionMember(FunctionTypeBuilder(t_bool), "PropagateClassTypedefs", PropagateClassTypedefs, 0, 0, PUBLIC | STATIC)
+         .AddFunctionMember(FunctionTypeBuilder(t_void, t_bool), "SetPropagateClassTypedefs", SetPropagateClassTypedefs, 0, 0, PUBLIC | STATIC);
+
+
+
       ClassBuilderT<ROOT::Cintex::Cintex>("ROOT::Cintex::Cintex", PUBLIC)
-      .EnableCallback(false)
-      .AddFunctionMember(FunctionTypeBuilder(t_void), "Enable", Enable, 0, 0, PUBLIC | STATIC)
-      .AddFunctionMember(FunctionTypeBuilder(t_void, t_int), "SetDebug", SetDebug, 0, 0, PUBLIC | STATIC)
-      .AddFunctionMember(FunctionTypeBuilder(t_int), "Debug", Debug, 0, 0, PUBLIC | STATIC)
-      .AddFunctionMember(FunctionTypeBuilder(t_bool), "PropagateClassTypedefs", PropagateClassTypedefs, 0, 0, PUBLIC | STATIC)
-      .AddFunctionMember(FunctionTypeBuilder(t_void, t_bool), "SetPropagateClassTypedefs", SetPropagateClassTypedefs, 0, 0, PUBLIC | STATIC);
-      Type t = Type::ByName("ROOT::Cintex::Cintex");
+         .EnableCallback(false)
+         .AddFunctionMember(FunctionTypeBuilder(t_void), "Enable", Enable, 0, 0, PUBLIC | STATIC)
+         .AddFunctionMember(FunctionTypeBuilder(t_void, t_int), "SetDebug", SetDebug, 0, 0, PUBLIC | STATIC)
+         .AddFunctionMember(FunctionTypeBuilder(t_int), "Debug", Debug, 0, 0, PUBLIC | STATIC)
+         .AddFunctionMember(FunctionTypeBuilder(t_bool), "PropagateClassTypedefs", PropagateClassTypedefs, 0, 0, PUBLIC | STATIC)
+         .AddFunctionMember(FunctionTypeBuilder(t_void, t_bool), "SetPropagateClassTypedefs", SetPropagateClassTypedefs, 0, 0, PUBLIC | STATIC);
+
       G__linked_taginfo G__mydictLN_ROOT = { "ROOT" , 110 , -1 };
       G__mydictLN_ROOT.tagnum = -1 ;
       G__get_linked_tagnum_fwd(&G__mydictLN_ROOT);
+
       G__linked_taginfo G__mydictLN_ROOTcLcLCintex = { "ROOT::Cintex" , 110 , -1 };
       G__mydictLN_ROOTcLcLCintex.tagnum = -1 ;
       G__get_linked_tagnum_fwd(&G__mydictLN_ROOTcLcLCintex);
-      //G__linked_taginfo G__mydictLN_ROOTcLcLCintexcLcLCintex = { "ROOT::Cintex::Cintex" , 99 , -1 };
-      //G__mydictLN_ROOTcLcLCintexcLcLCintex.tagnum = -1 ;
+
+      G__linked_taginfo G__mydictLN_ROOTcLcLCintexcLcLCintex = { "ROOT::Cintex::Cintex" , 99 , -1 };
+      G__mydictLN_ROOTcLcLCintexcLcLCintex.tagnum = -1 ;
+      G__get_linked_tagnum_fwd(&G__mydictLN_ROOTcLcLCintexcLcLCintex);
+
+      Type t = Type::ByName("ROOT::Cintex");
       ::ROOT::Cintex::CINTClassBuilder::Get(t).Setup();
+
+      Type nested = Type::ByName("ROOT::Cintex::Cintex");
+      ::ROOT::Cintex::CINTClassBuilder::Get(nested).Setup();
    }
 
 };
