@@ -1,0 +1,62 @@
+<br> 
+<hr> 
+<a name="graf2d"></a> 
+
+
+<h3>Graphical Output</h3>
+
+<h4>TASImage / libAfterImage</h4>
+<ul>
+
+<li> In <tt>TImageDump</tt> the way the markers 6 and 7 are drawn 
+     (medium dot and big dot) has been changed to make sure they have
+     the same size as the one on screen.
+<li> Changes in libAfterImage (draw.c & draw.h), TASImage.cxx
+     and TImageDump.cxx in order to produce nice looking 
+     circular (hollow and solid) markers. Previously the line 
+     used to draw hollow circular markers looked very thick and 
+     the solid ones did not look circular.
+<li> Remove the global variable named "dpy" in libAfterImage. It produced
+     an error if a user program used that simple variable name. "dpy"
+     was a pointer to a "Display".
+</ul>
+
+<h4>PostScript and PDF</h4>
+<ul>
+<li> Now, a text with size 0 is not drawn in PDF files. An invalid
+     PDF file is created if a text with size 0 is produced.
+<li> The landscape orientation is now correct in pdf files. gv recognizes
+     the files as "Landscape" and the orientation is not upside down
+     as it was before (seascape).
+</ul>
+
+<h4>TLegend</h4>
+<ul>
+<li> When a object is added "by name" in a legend, the
+  TMultiGraph and THStack present in the current pad
+  are scanned if an object with this name has not been
+  found in the pad. Previously the graphs and histograms
+  were hidden in multi-graphs and histogram-stacks when one
+  tried to add them by name.
+<li> New reference guide.
+</ul>
+
+<h4>TGaxis</h4>
+<ul>
+<li> In <tt>PaintAxis</tt> The option "U", for unlabeled axis, was not 
+     implemented in case of alphanumeric axis' labels.
+</ul>
+
+<h4>TCrown</h4>
+<ul>
+<li> The crown picking did not work.
+<li> Improve help.
+</ul>
+
+<h4>TCanvas</h4>
+<ul>
+<li> A canvas is turned into GL mode only if the
+  canvas name starts with "gl". Before the
+  "gl" string could be anywhere in the name.
+</ul>
+
