@@ -106,6 +106,13 @@ public:
    virtual void     PutStats(Double_t *stats);
    virtual void     Reset(Option_t *option="");
    virtual void     SetShowProjection(const char *option="xy",Int_t nbins=1);   // *MENU*
+
+protected:
+   TH1       *Project1D(char* title, char* name, TAxis* projX, 
+                        bool computeErrors, bool useUF, bool useOF) const;
+   TH1       *Project2D(char* title, char* name, TAxis* projX, TAxis* projY, 
+                        bool computeErrors, bool useUF, bool useOF) const;
+
    
    ClassDef(TH3,5)  //3-Dim histogram base class
 };
