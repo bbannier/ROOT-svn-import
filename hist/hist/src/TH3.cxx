@@ -2079,6 +2079,7 @@ TH1 *TH3::Project3D(Option_t *option) const
 //______________________________________________________________________________
 TProfile2D *TH3::AbstractProject3DProfile(char* title, char* name, TAxis* projX, TAxis* projY, bool useUF, bool useOF) const
 {
+   // Get the ranges where we will work.
    Int_t ixmin = projX->GetFirst();
    Int_t ixmax = projX->GetLast();
    Int_t iymin = projY->GetFirst();
@@ -2086,6 +2087,7 @@ TProfile2D *TH3::AbstractProject3DProfile(char* title, char* name, TAxis* projX,
    Int_t nx = ixmax-ixmin+1;
    Int_t ny = iymax-iymin+1;
 
+   // Create the projected profiles
    TProfile2D *p2 = 0;
    const TArrayD *xbins = projX->GetXbins();
    const TArrayD *ybins = projY->GetXbins();
@@ -2102,7 +2104,7 @@ TProfile2D *TH3::AbstractProject3DProfile(char* title, char* name, TAxis* projX,
       p2 = new TProfile2D(name,title,ny,&ybins->fArray[iymin-1],nx,&xbins->fArray[ixmin-1]);
    }
 
-   // Set references to the axis, so that the bucle has no branches.
+   // Set references to the axis, so that the loop has no branches.
    TAxis* out = 0;
    if ( projX != GetXaxis() && projY != GetXaxis() ) {
       out = GetXaxis();
@@ -2112,9 +2114,11 @@ TProfile2D *TH3::AbstractProject3DProfile(char* title, char* name, TAxis* projX,
       out = GetZaxis();
    }
 
+   // Weights management
    bool useWeights = (GetSumw2N() > 0); 
    if (useWeights ) p2->Sumw2(); // store sum of w2 in profile if histo is weighted
    
+   // If under/over flow, then update the range
    Int_t outmin = out->GetFirst();
    Int_t outmax = out->GetLast();
    if (!out->TestBit(TAxis::kAxisRange)) {
@@ -2123,6 +2127,7 @@ TProfile2D *TH3::AbstractProject3DProfile(char* title, char* name, TAxis* projX,
    }
    Double_t entries  = 0;
    
+   // Set references to the bins, so that the loop has no branches.
    Int_t *refX = 0, *refY = 0, *refZ = 0;
    Int_t ixbin, iybin, outbin;
    if ( projX == GetXaxis() && projY == GetYaxis() ) { refX = &ixbin;  refY = &iybin;  refZ = &outbin; }
@@ -2132,6 +2137,7 @@ TProfile2D *TH3::AbstractProject3DProfile(char* title, char* name, TAxis* projX,
    if ( projX == GetYaxis() && projY == GetZaxis() ) { refX = &outbin; refY = &ixbin;  refZ = &iybin;  }
    if ( projX == GetZaxis() && projY == GetYaxis() ) { refX = &outbin; refY = &iybin;  refZ = &ixbin;  }
 
+   // Call specific method for the projection
    for (ixbin=0;ixbin<=1+projX->GetNbins();ixbin++){
       for ( iybin=0;iybin<=1+projY->GetNbins();iybin++){
          for (outbin=outmin;outbin<=outmax;outbin++){
@@ -2207,6 +2213,8 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    char *title = new char[nch];
    sprintf(title,"%s_p%s",GetTitle(),option);
    delete gROOT->FindObject(name);
+
+   // Call the method with the specific projected axes.
    switch (pcase) {
       case 4:
          // "xy"
