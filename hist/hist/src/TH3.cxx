@@ -1693,7 +1693,8 @@ TH1D *TH3::ProjectionZ(const char *name, Int_t ixmin, Int_t ixmax, Int_t iymin, 
 
 //______________________________________________________________________________
 TH1 *TH3::Project1D(char* title, char* name, TAxis* projX, 
-                    bool computeErrors, bool useUF, bool useOF) const
+                    bool computeErrors, bool originalRange, 
+                    bool useUF, bool useOF) const
 {
    // Create the projection histogram
    TH1D *h1 = 0;
@@ -1703,8 +1704,8 @@ TH1 *TH3::Project1D(char* title, char* name, TAxis* projX,
    if (h1obj && !h1obj->InheritsFrom("TH1")) h1obj = 0;
 
    // Get range to use as well as bin limits
-   Int_t ixmin = projX->GetFirst();
-   Int_t ixmax = projX->GetLast();
+   Int_t ixmin = originalRange?1:projX->GetFirst();
+   Int_t ixmax = originalRange?projX->GetNbins():projX->GetLast();
    Int_t nx = ixmax-ixmin+1;
 
    // Create the histogram, either reseting a preexisting one or
@@ -1809,7 +1810,8 @@ TH1 *TH3::Project1D(char* title, char* name, TAxis* projX,
 
 //______________________________________________________________________________
 TH1 *TH3::Project2D(char* title, char* name, TAxis* projX, TAxis* projY,  
-                    bool computeErrors, bool useUF, bool useOF) const
+                    bool computeErrors, bool originalRange,
+                    bool useUF, bool useOF) const
 {
    TH2D *h2 = 0;
 
@@ -1818,10 +1820,10 @@ TH1 *TH3::Project2D(char* title, char* name, TAxis* projX, TAxis* projY,
    if (h1obj && !h1obj->InheritsFrom("TH1")) h1obj = 0;
 
    // Get range to use as well as bin limits
-   Int_t ixmin = projX->GetFirst();
-   Int_t ixmax = projX->GetLast();
-   Int_t iymin = projY->GetFirst();
-   Int_t iymax = projY->GetLast();
+   Int_t ixmin = originalRange?1:projX->GetFirst();
+   Int_t ixmax = originalRange?projX->GetNbins():projX->GetLast();
+   Int_t iymin = originalRange?1:projY->GetFirst();
+   Int_t iymax = originalRange?projY->GetNbins():projY->GetLast();
    Int_t nx = ixmax-ixmin+1;
    Int_t ny = iymax-iymin+1;
 
@@ -2005,6 +2007,13 @@ TH1 *TH3::Project3D(Option_t *option) const
    bool useUF = !opt.Contains("nuf");
    bool useOF = !opt.Contains("nof");
 
+   bool originalRange = false;
+   if ( opt.Contains("nof") )
+      originalRange = (opt.CountChar('o') > 1);
+   else
+      originalRange = (opt.Contains('o'));
+
+
    // Create the projection histogram
    TH1 *h = 0;
    Int_t nch = strlen(GetName()) +opt.Length() +2;
@@ -2017,55 +2026,55 @@ TH1 *TH3::Project3D(Option_t *option) const
    switch (pcase) {
       case 1:
          h = Project1D(title, name, this->GetXaxis(), 
-                       computeErrors, useUF, useOF);
+                       computeErrors, originalRange, useUF, useOF);
          break;
 
       case 2:
          // "y"
          h = Project1D(title, name, this->GetYaxis(), 
-                       computeErrors, useUF, useOF);
+                       computeErrors, originalRange, useUF, useOF);
          break;
 
       case 3:
          // "z"
          h = Project1D(title, name, this->GetZaxis(), 
-                       computeErrors, useUF, useOF);
+                       computeErrors, originalRange, useUF, useOF);
          break;
 
       case 4:
          // "xy"
          h = Project2D(title, name, this->GetXaxis(),this->GetYaxis(), 
-                       computeErrors, useUF, useOF);
+                       computeErrors, originalRange, useUF, useOF);
          break;
 
       case 5:
          // "yx"
          h = Project2D(title, name, this->GetYaxis(),this->GetXaxis(), 
-                       computeErrors, useUF, useOF);
+                       computeErrors, originalRange, useUF, useOF);
          break;
 
       case 6:
          // "xz"
          h = Project2D(title, name, this->GetXaxis(),this->GetZaxis(), 
-                       computeErrors, useUF, useOF);
+                       computeErrors, originalRange, useUF, useOF);
          break;
          
       case 7:
          // "zx"
          h = Project2D(title, name, this->GetZaxis(),this->GetXaxis(), 
-                       computeErrors, useUF, useOF);
+                       computeErrors, originalRange, useUF, useOF);
          break;
 
       case 8:
          // "yz"
          h = Project2D(title, name, this->GetYaxis(),this->GetZaxis(), 
-                       computeErrors, useUF, useOF);
+                       computeErrors, originalRange, useUF, useOF);
          break;
 
       case 9:
          // "zy"
          h = Project2D(title, name, this->GetZaxis(),this->GetYaxis(), 
-                       computeErrors, useUF, useOF);
+                       computeErrors, originalRange, useUF, useOF);
          break;
 
    }
@@ -2077,13 +2086,14 @@ TH1 *TH3::Project3D(Option_t *option) const
 }
 
 //______________________________________________________________________________
-TProfile2D *TH3::AbstractProject3DProfile(char* title, char* name, TAxis* projX, TAxis* projY, bool useUF, bool useOF) const
+TProfile2D *TH3::AbstractProject3DProfile(char* title, char* name, TAxis* projX, TAxis* projY, 
+                                          bool originalRange, bool useUF, bool useOF) const
 {
    // Get the ranges where we will work.
-   Int_t ixmin = projX->GetFirst();
-   Int_t ixmax = projX->GetLast();
-   Int_t iymin = projY->GetFirst();
-   Int_t iymax = projY->GetLast();
+   Int_t ixmin = originalRange?1:projX->GetFirst();
+   Int_t ixmax = originalRange?projX->GetNbins():projX->GetLast();
+   Int_t iymin = originalRange?1:projY->GetFirst();
+   Int_t iymax = originalRange?projY->GetNbins():projY->GetLast();
    Int_t nx = ixmax-ixmin+1;
    Int_t ny = iymax-iymin+1;
 
@@ -2204,6 +2214,12 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    bool useUF = opt.Contains("uf");
    bool useOF = opt.Contains("of");
 
+   bool originalRange = false;
+   if ( opt.Contains("nof") )
+      originalRange = (opt.CountChar('o') > 1);
+   else
+      originalRange = (opt.Contains('o'));
+
    // Create the projection histogram
    TProfile2D *p2 = 0;
    Int_t nch = strlen(GetName()) +opt.Length() +3;
@@ -2218,32 +2234,32 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    switch (pcase) {
       case 4:
          // "xy"
-         p2 = AbstractProject3DProfile(title, name, GetXaxis(), GetYaxis(), useUF, useOF);
+         p2 = AbstractProject3DProfile(title, name, GetXaxis(), GetYaxis(), originalRange, useUF, useOF);
          break;
 
       case 5:
          // "yx"
-         p2 = AbstractProject3DProfile(title, name, GetYaxis(), GetXaxis(), useUF, useOF);
+         p2 = AbstractProject3DProfile(title, name, GetYaxis(), GetXaxis(), originalRange, useUF, useOF);
          break;
 
       case 6:
          // "xz"
-         p2 = AbstractProject3DProfile(title, name, GetXaxis(), GetZaxis(), useUF, useOF);
+         p2 = AbstractProject3DProfile(title, name, GetXaxis(), GetZaxis(), originalRange, useUF, useOF);
          break;
 
       case 7:
          // "zx"
-         p2 = AbstractProject3DProfile(title, name, GetZaxis(), GetXaxis(), useUF, useOF);
+         p2 = AbstractProject3DProfile(title, name, GetZaxis(), GetXaxis(), originalRange, useUF, useOF);
          break;
 
       case 8:
          // "yz"
-         p2 = AbstractProject3DProfile(title, name, GetYaxis(), GetZaxis(), useUF, useOF);
+         p2 = AbstractProject3DProfile(title, name, GetYaxis(), GetZaxis(), originalRange, useUF, useOF);
          break;
 
       case 9:
          // "zy"
-         p2 = AbstractProject3DProfile(title, name, GetZaxis(), GetYaxis(), useUF, useOF);
+         p2 = AbstractProject3DProfile(title, name, GetZaxis(), GetYaxis(), originalRange, useUF, useOF);
          break;
 
    }
