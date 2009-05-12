@@ -1357,20 +1357,19 @@ typedef struct {
       
       union funcptr_and_voidptr {
          typedef void (*funcptr_t)();
-         funcptr_and_voidptr(void *val) : _read(val) {}         
-         void *_read;
-         funcptr_t _write;
+         void *read;
+         funcptr_t write;
       };
       
       funcptr_and_voidptr _tmp;
    public:
       template <typename T>
-      G__func2void( T vfp ) : _tmp(0) {
-         _tmp._write = ( funcptr_t )vfp;
+      G__func2void( T vfp ) {
+         _tmp.write = ( funcptr_t )vfp;
       }
       
       operator void* () const {
-         return _tmp._read;
+         return _tmp.read;
       }
    };
 #endif
