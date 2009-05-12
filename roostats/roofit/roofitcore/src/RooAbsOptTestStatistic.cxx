@@ -166,7 +166,8 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *tit
     _ownData = kTRUE ;
   } else {
     if (cloneInputData) {
-      _dataClone = indata.reduce(RooFit::SelectVars(*indata.get())) ; //  ((RooAbsData&)data).reduce(RooFit::SelectVars(*realDepSet)) ;  
+      _dataClone = (RooAbsData*) indata.Clone() ;
+      //reduce(RooFit::SelectVars(*indata.get())) ; //  ((RooAbsData&)data).reduce(RooFit::SelectVars(*realDepSet)) ;  
       _ownData = kTRUE ;
     } else {
       _dataClone = &indata ;
