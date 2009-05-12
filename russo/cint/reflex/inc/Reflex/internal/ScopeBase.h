@@ -188,6 +188,12 @@ namespace Reflex {
 
 
       /**
+      * GetBasePosition will return fBasePosition
+      * @return The position where the unscoped Name starts in the typename
+      */
+      size_t GetBasePosition() const;
+
+      /**
       * GlobalScope will return the global scope representation\
       * @return global scope
       */
@@ -785,6 +791,12 @@ inline size_t Reflex::ScopeBase::BaseSize() const {
    return 0;
 }
 
+//-------------------------------------------------------------------------------
+inline size_t Reflex::ScopeBase::GetBasePosition() const {
+//-------------------------------------------------------------------------------
+   return fBasePosition;
+}
+            
 
 //-------------------------------------------------------------------------------
 inline Reflex::Base_Iterator Reflex::ScopeBase::Base_Begin() const {
