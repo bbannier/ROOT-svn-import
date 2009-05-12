@@ -288,7 +288,7 @@ void ROOTClassEnhancerInfo::CreateInfo()
          , 1 // declFileLine, declaration line number
          , TypeGet().TypeInfo() // info, typeid
          , ROOT::DefineBehavior(0, 0) // action, default behavior
-         , (void*)&fShowMembers_func // showmembers, show members function
+         , 0 // (void*)&fShowMembers_func // showmembers, show members function
          , fDictionary_func // dictionary, dictionary function
          , fIsa_func // isa, IsA function
          , 0 // pragmabits, pragma bits
