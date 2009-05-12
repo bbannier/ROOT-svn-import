@@ -45,6 +45,7 @@
 
 #include "Riostream.h"
 #include "TClass.h"
+#include "TMath.h"
 #include <iomanip>
 #include <math.h>
 #include <assert.h>
@@ -683,6 +684,70 @@ Double_t RooCurve::interpolate(Double_t xvalue, Double_t tolerance) const
  
   return retVal ;
 }
+
+
+
+
+//_____________________________________________________________________________
+RooCurve* RooCurve::makeErrorBand(const vector<RooCurve*>& variations, Double_t Z) const
+{
+  RooCurve* band = new RooCurve ;
+  band->SetName(Form("%s_errorband",GetName())) ;
+  band->SetLineWidth(1) ;
+  band->SetFillColor(kCyan) ;
+  band->SetLineColor(kCyan) ;
+
+  vector<double> bandLo(GetN()) ;
+  vector<double> bandHi(GetN()) ;
+  for (int i=0 ; i<GetN() ; i++) {
+    calcBandInterval(variations,i,Z,bandLo[i],bandHi[i],kFALSE) ;
+  }
+  
+  for (int i=0 ; i<GetN() ; i++) {
+    band->addPoint(GetX()[i],bandLo[i]) ;
+  }
+  for (int i=GetN()-1 ; i>=0 ; i--) {
+    band->addPoint(GetX()[i],bandHi[i]) ;
+  }	   
+  
+  return band ;
+}
+
+
+
+
+//_____________________________________________________________________________
+void RooCurve::calcBandInterval(const vector<RooCurve*>& variations,Int_t i,Double_t Z, Double_t& lo, Double_t& hi, Bool_t approxGauss) const
+{
+  vector<double> y(variations.size()) ;
+  Int_t j(0) ;
+  for (vector<RooCurve*>::const_iterator iter=variations.begin() ; iter!=variations.end() ; iter++) {
+    y[j++] = (*iter)->interpolate(GetX()[i]) ;
+}
+
+  if (!approxGauss) {
+    // Construct central 68% interval from variations collected at each point
+    Double_t pvalue = TMath::Erfc(Z/sqrt(2)) ;
+    Int_t delta = Int_t( y.size()*(pvalue)/2 + 0.5) ;
+    sort(y.begin(),y.end()) ;    
+    lo = y[delta] ;
+    hi = y[y.size()-delta] ;  
+  } else {
+    // Estimate R.M.S of variations at each point and use that as Gaussian sigma
+    Double_t sum_y(0), sum_ysq(0) ;
+    for (unsigned int k=0 ; k<y.size() ; k++) {
+      sum_y   += y[k] ;
+      sum_ysq += y[k]*y[k] ;
+    }
+    sum_y /= y.size() ;
+    sum_ysq /= y.size() ;
+
+    Double_t rms = sqrt(sum_ysq - (sum_y*sum_y)) ;
+    lo = GetY()[i] - Z*rms ;
+    hi = GetY()[i] + Z*rms ;    
+  }
+}
+
 
 
 
