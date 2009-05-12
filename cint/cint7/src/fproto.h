@@ -675,7 +675,7 @@ int G__sizeof_deref(const G__value*);
 ::Reflex::Type G__get_from_type(int type, int createpointer, int isconst = 0);
 ::Reflex::Type G__find_type(const char *type_name, int errorflag, int templateflag);
 ::Reflex::Type G__find_typedef(const char*);
-::Reflex::Type G__findInScope(const ::Reflex::Scope scope, const char* name);
+::Reflex::Scope G__findInScope(const ::Reflex::Scope scope, const char* name);
 ::Reflex::Type G__declare_typedef(const char *typenamein,
                                         int typein,int tagnum,int reftype,
                                         int isconst, int globalcomp,
