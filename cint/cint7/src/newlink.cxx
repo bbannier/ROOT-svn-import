@@ -6762,7 +6762,6 @@ extern "C" int G__memfunc_setup(const char* funcname, int /*hash*/, G__Interface
          }
       }
    }
-#if 0
    //
    //  Create some fake member functions.
    //
@@ -6858,7 +6857,6 @@ extern "C" int G__memfunc_setup(const char* funcname, int /*hash*/, G__Interface
          }
       }
    }
-#endif // 0
    return 0;
 }
 
