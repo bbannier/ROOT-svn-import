@@ -70,6 +70,7 @@
 #include "RooXYChi2Var.h"
 #include "RooMinuit.h"
 #include "RooChi2Var.h"
+#include "RooFitResult.h"
 
 #include "Riostream.h"
 
@@ -1406,6 +1407,9 @@ RooPlot* RooAbsReal::plotOn(RooPlot* frame, RooLinkedList& argList) const
   pc.defineInt("shiftToZero","ShiftToZero",0,0) ;  
   pc.defineObject("projDataSet","ProjData",0) ;
   pc.defineObject("projData","ProjData",1) ;
+  pc.defineObject("errorFR","VisualizeError",0) ;
+  pc.defineDouble("errorZ","VisualizeError",0,1.) ;
+  pc.defineSet("errorPars","VisualizeError",0) ;
   pc.defineInt("binProjData","ProjData",0,0) ;
   pc.defineDouble("rangeLo","Range",0,-999.) ;
   pc.defineDouble("rangeHi","Range",1,-999.) ;
@@ -1431,6 +1435,7 @@ RooPlot* RooAbsReal::plotOn(RooPlot* frame, RooLinkedList& argList) const
   pc.defineMutex("SliceVars","Project") ;
   pc.defineMutex("AddTo","Asymmetry") ;
   pc.defineMutex("Range","RangeWithName") ;
+  pc.defineMutex("VisualizeError","VisualizeErrorData") ;
 
   // Process & check varargs 
   pc.process(argList) ;
@@ -1440,6 +1445,12 @@ RooPlot* RooAbsReal::plotOn(RooPlot* frame, RooLinkedList& argList) const
 
   PlotOpt o ;
 
+  RooFitResult* errFR = (RooFitResult*) pc.getObject("errorFR") ;
+  Double_t errZ = pc.getDouble("errorZ") ;
+  RooArgSet* errPars = pc.getSet("errorPars") ;
+  if (errFR) {
+    return plotOnWithErrorBand(frame,*errFR,errZ,errPars,argList) ;
+  }
 
   // Extract values from named arguments
   o.numee       = pc.getInt("numee") ;
@@ -2259,6 +2270,115 @@ RooPlot* RooAbsReal::plotAsymOn(RooPlot *frame, const RooAbsCategoryLValue& asym
 
   return frame;
 }
+
+
+
+
+
+//_____________________________________________________________________________
+RooPlot* RooAbsReal::plotOnWithErrorBand(RooPlot* frame,const RooFitResult& fr, Double_t Z,const RooArgSet* params, const RooLinkedList& argList) const 
+{
+  RooLinkedList plotArgList(argList) ;
+  RooCmdConfig pc(Form("RooAbsPdf::plotOn(%s)",GetName())) ;
+  pc.stripCmdList(plotArgList,"VisualizeError,MoveToBack") ;  
+
+
+  // Generate central value curve
+  RooLinkedList tmp(plotArgList) ;
+  plotOn(frame,tmp) ;
+  RooCurve* cenCurve = frame->getCurve() ;
+  frame->remove(0,kFALSE) ;
+
+  // Clone self for internal use
+  RooAbsReal* cloneFunc = (RooAbsReal*) cloneTree() ;
+  RooArgSet* cloneParams = cloneFunc->getObservables(fr.floatParsFinal()) ;
+  RooArgSet* errorParams = params?((RooArgSet*)cloneParams->selectCommon(*params)):cloneParams ;
+
+  // Generate 100 random parameter points distributed according to fit result covariance matrix
+  RooAbsPdf* paramPdf = fr.createPdf(*errorParams) ;
+  Int_t n = Int_t(30./TMath::Erfc(Z/sqrt(2))) ;
+  if (n<100) n=100 ;
+
+  coutI(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") INFO: visualizing " << Z << "-sigma uncertainties in parameters " 
+		  << *errorParams << " from fit result " << fr.GetName() << " using " << n << " samplings." << endl ;
+
+  // Generate variation curves with above set of parameter values
+  RooDataSet* d = paramPdf->generate(*errorParams,n) ;
+  vector<RooCurve*> cvec ;
+  for (int i=0 ; i<d->numEntries() ; i++) {
+    *cloneParams = (*d->get(i)) ;
+    RooLinkedList tmp2(plotArgList) ;
+    cloneFunc->plotOn(frame,tmp2) ;
+    cvec.push_back(frame->getCurve()) ;
+    frame->remove(0,kFALSE) ;
+  }
+
+
+  // Generate upper and lower curve points from 68% interval around each point of central curve
+  RooCurve* band = cenCurve->makeErrorBand(cvec,Z) ;
+
+  // Cleanup 
+  delete cenCurve ;
+  delete paramPdf ;
+  delete cloneFunc ;
+  for (vector<RooCurve*>::iterator i=cvec.begin() ; i!=cvec.end() ; i++) {
+    delete (*i) ;
+  }
+
+  
+  // Define configuration for this method
+  pc.defineString("drawOption","DrawOption",0,"F") ;
+  pc.defineString("curveNameSuffix","CurveNameSuffix",0,"") ;
+  pc.defineInt("lineColor","LineColor",0,-999) ;
+  pc.defineInt("lineStyle","LineStyle",0,-999) ;
+  pc.defineInt("lineWidth","LineWidth",0,-999) ;
+  pc.defineInt("fillColor","FillColor",0,-999) ;
+  pc.defineInt("fillStyle","FillStyle",0,-999) ;
+  pc.defineString("curveName","Name",0,"") ;
+  pc.defineInt("curveInvisible","Invisible",0,0) ;
+  pc.defineInt("moveToBack","MoveToBack",0,0) ;
+  pc.allowUndefined() ;
+
+  // Process & check varargs 
+  pc.process(argList) ;
+  if (!pc.ok(kTRUE)) {
+    return frame ;
+  }
+
+  // Insert error band in plot frame
+  frame->addPlotable(band,pc.getString("drawOption"),pc.getInt("curveInvisible")) ;
+
+
+  // Optionally adjust line/fill attributes
+  Int_t lineColor = pc.getInt("lineColor") ;
+  Int_t lineStyle = pc.getInt("lineStyle") ;
+  Int_t lineWidth = pc.getInt("lineWidth") ;
+  Int_t fillColor = pc.getInt("fillColor") ;
+  Int_t fillStyle = pc.getInt("fillStyle") ;
+  if (lineColor!=-999) frame->getAttLine()->SetLineColor(lineColor) ;
+  if (lineStyle!=-999) frame->getAttLine()->SetLineStyle(lineStyle) ;
+  if (lineWidth!=-999) frame->getAttLine()->SetLineWidth(lineWidth) ;
+  if (fillColor!=-999) frame->getAttFill()->SetFillColor(fillColor) ;
+  if (fillStyle!=-999) frame->getAttFill()->SetFillStyle(fillStyle) ;
+
+  // Adjust name if requested
+  if (pc.getString("curveName",0,kTRUE)) {
+    band->SetName(pc.getString("curveName",0,kTRUE)) ;
+  } else if (pc.getString("curveNameSuffix",0,kTRUE)) {
+    TString name(band->GetName()) ;
+    name.Append(pc.getString("curveNameSuffix",0,kTRUE)) ;
+    band->SetName(name.Data()) ;
+  }
+
+  // Move last inserted object to back to drawing stack if requested
+  if (pc.getInt("moveToBack") && frame->numItems()>1) {   
+    frame->drawBefore(frame->getObject(0)->GetName(), frame->getCurve()->GetName());    
+  }
+  
+  
+  return frame ;
+}
+
 
 
 
@@ -3240,7 +3360,7 @@ RooFunctor* RooAbsReal::functor(const RooArgList& obs, const RooArgList& pars, c
   }
   delete realObs ;
   delete realPars ;
-    
+
   return new RooFunctor(*this,obs,pars,nset) ;
 }
 
@@ -3296,8 +3416,7 @@ TF1* RooAbsReal::asTF(const RooArgList& obs, const RooArgList& pars, const RooAr
     RooRealVar* x = (RooRealVar*)obs.at(0) ;
     RooRealVar* y = (RooRealVar*)obs.at(1) ;
     f = functor(obs,pars,nset) ;
-    const char* name = "RooFunctor" ;
-    tf = new TF2(GetName(),(void*)f,x->getMin(),x->getMax(),y->getMin(),y->getMax(),pars.getSize(),(char*)name) ;
+    tf = new TF2(GetName(),f,x->getMin(),x->getMax(),y->getMin(),y->getMax(),pars.getSize(),"RooFunctor") ;
     break ;
   }
   case 3: {
@@ -3305,8 +3424,7 @@ TF1* RooAbsReal::asTF(const RooArgList& obs, const RooArgList& pars, const RooAr
     RooRealVar* y = (RooRealVar*)obs.at(1) ;
     RooRealVar* z = (RooRealVar*)obs.at(2) ;
     f = functor(obs,pars,nset) ;
-    const char* name = "RooFunctor" ;
-    tf = new TF3(GetName(),(void*)f,x->getMin(),x->getMax(),y->getMin(),y->getMax(),z->getMin(),z->getMax(),pars.getSize(),(char*)name) ;
+    tf = new TF3(GetName(),f,x->getMin(),x->getMax(),y->getMin(),y->getMax(),z->getMin(),z->getMax(),pars.getSize(),"RooFunctor") ;
     break ;
   }
   default:
@@ -3467,7 +3585,7 @@ RooAbsReal* RooAbsReal::createChi2(RooDataHist& data, const RooLinkedList& cmdLi
     cmds[i++] = arg ;
   }
   for (;i<8 ; i++) {
-    cmds[i++] = &RooCmdArg::none() ;
+    cmds[i] = &RooCmdArg::none() ;
   }
   delete iter ;
   

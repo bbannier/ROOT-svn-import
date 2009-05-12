@@ -293,6 +293,8 @@ protected:
 
   RooFitResult* chi2FitDriver(RooAbsReal& fcn, RooLinkedList& cmdList) ;
 
+  RooPlot* plotOnWithErrorBand(RooPlot* frame,const RooFitResult& fr, Double_t Z, const RooArgSet* params, const RooLinkedList& argList) const ;
+
   // Support interface for subclasses to advertise their analytic integration
   // and generator capabilities in their analticalIntegral() and generateEvent()
   // implementations.
