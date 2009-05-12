@@ -25,6 +25,7 @@
 #include "RooDataSet.h"
 #include "RooNumIntConfig.h"
 #include "RooRealVar.h"
+#include "RooFitResult.h"
 #include "TH1.h"
 
 namespace RooFit {
@@ -59,6 +60,10 @@ namespace RooFit {
   RooCmdArg AddTo(const char* name, double wgtSel, double wgtOther) { return RooCmdArg("AddTo",0,0,wgtSel,wgtOther,name,0,0,0) ; }
   RooCmdArg EvalErrorValue(Double_t val)           { return RooCmdArg("EvalErrorValue",1,0,val,0,0,0,0,0) ; }
   RooCmdArg MoveToBack()                           { return RooCmdArg("MoveToBack",1,0,0,0,0,0,0,0) ; }
+  RooCmdArg VisualizeError(const RooFitResult& fitres, Double_t Z, Int_t nSample)  { return RooCmdArg("VisualizeError",nSample,0,Z,0,0,0,&fitres,0) ; }
+  RooCmdArg VisualizeError(const RooFitResult& fitres, const RooArgSet& param, Double_t Z, Int_t nSample) 
+                                                                  { return RooCmdArg("VisualizeError",nSample,0,Z,0,0,0,&fitres,0,0,0,&param) ; }
+  RooCmdArg VisualizeError(const RooDataSet& paramData, Double_t Z) { return RooCmdArg("VisualizeErrorData",0,0,Z,0,0,0,&paramData,0) ; }
   
   // RooAbsPdf::plotOn arguments
   RooCmdArg Components(const RooArgSet& compSet) { return RooCmdArg("SelectCompSet",0,0,0,0,0,0,&compSet,0) ; }
