@@ -66,6 +66,8 @@ namespace RooStats {
                        RooAbsPdf* prior_pdf);
 
 
+   private: // not yet available 
+ 
       /// Constructor for HybridCalculator using name, title, a workspace and pdf names
       HybridCalculator(RooWorkspace & wks, 
                        const char* data, 
@@ -84,6 +86,8 @@ namespace RooStats {
                        RooArgSet* nuisance_parameters,
                        const char* prior_pdf);
 
+   public: 
+
       /// Destructor of HybridCalculator
       virtual ~HybridCalculator();
 
@@ -92,6 +96,7 @@ namespace RooStats {
 
       // inherited setter methods from HypoTestCalculator
 
+   private: 
       // set a workspace that owns all the necessary components for the analysis
       virtual void SetWorkspace(RooWorkspace& ws);
       // set the PDF for the null hypothesis (only B)
@@ -100,6 +105,9 @@ namespace RooStats {
       virtual void SetAlternatePdf(const char* name ) { fSbModelName = name;} 
       // set a common PDF for both the null and alternate hypotheses
       virtual void SetCommonPdf(const char* name) {fSbModelName = name; }
+
+   public: 
+
       // Set a common PDF for both the null and alternate
       virtual void SetCommonPdf(RooAbsPdf & pdf) { fSbModel = &pdf; }
       // Set the PDF for the null (only B)
@@ -123,6 +131,7 @@ namespace RooStats {
          fPriorPdf = &prior_pdf; 
          fUsePriorPdf = true; // if set by default turn it on
       } 
+
       // set name of a  prior pdf for the nuisance parameters in the previously given workspace
       void SetNuisancePdf(const char * name) { 
          fPriorPdfName = name; 
@@ -141,7 +150,7 @@ namespace RooStats {
       void SetTestStatistics(int index);
 
       HybridResult* Calculate(TH1& data, unsigned int nToys, bool usePriors) const;
-      HybridResult* Calculate(RooTreeData& data, unsigned int nToys, bool usePriors) const;
+      HybridResult* Calculate(RooAbsData& data, unsigned int nToys, bool usePriors) const;
       HybridResult* Calculate(unsigned int nToys, bool usePriors) const;
       void PrintMore(const char* options) const;
 
