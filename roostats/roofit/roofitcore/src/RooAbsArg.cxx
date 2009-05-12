@@ -51,6 +51,7 @@
 #include "RooRealIntegral.h"
 #include "RooMsgService.h"
 #include "RooExpensiveObjectCache.h"
+#include "RooAbsDataStore.h"
 
 #include <string.h>
 #include <iomanip>
@@ -1393,6 +1394,26 @@ void RooAbsArg::attachDataSet(const RooAbsData &data)
   // with those data set variables, making this PDF directly dependent on the dataset
 
   const RooArgSet* set = data.get() ;
+  RooArgSet branches ;
+  branchNodeServerList(&branches,0,kTRUE) ;
+
+  TIterator* iter = branches.createIterator() ;
+  RooAbsArg* branch ;
+  while((branch=(RooAbsArg*)iter->Next())) {
+    branch->redirectServers(*set,kFALSE,kFALSE) ;
+  }
+  delete iter ;
+}
+
+
+
+//_____________________________________________________________________________
+void RooAbsArg::attachDataStore(const RooAbsDataStore &dstore)
+{
+  // Replace server nodes with names matching the dataset variable names
+  // with those data set variables, making this PDF directly dependent on the dataset
+
+  const RooArgSet* set = dstore.get() ;
   RooArgSet branches ;
   branchNodeServerList(&branches,0,kTRUE) ;
 
