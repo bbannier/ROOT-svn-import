@@ -65,7 +65,7 @@ Reflex::Type G__strip_one_array(const Reflex::Type typein);
 Reflex::Type G__deref(const Reflex::Type typein);
 ::Reflex::Type G__modify_type(const ::Reflex::Type typein, bool ispointer, int reftype, int isconst, int nindex, int* index);
 ::Reflex::Type G__cint5_tuple_to_type(int type, int tagnum, int typenum, int reftype, int isconst);
-::Reflex::Type G__findInScope(const ::Reflex::Scope scope, const char* name);
+::Reflex::Scope G__findInScope(const ::Reflex::Scope scope, const char* name);
 bool G__test_access(const ::Reflex::Member var, int access);
 bool G__is_cppmacro(const ::Reflex::Member var);
 bool G__filescopeaccess(int filenum, int statictype);
@@ -1580,10 +1580,10 @@ extern "C" void G__dump_reflex_function(const ::Reflex::Scope scope, int level)
 }
 
 //______________________________________________________________________________
-::Reflex::Type Cint::Internal::G__findInScope(const ::Reflex::Scope scope, const char* name)
+::Reflex::Scope Cint::Internal::G__findInScope(const ::Reflex::Scope scope, const char* name)
 {
-   // -- Find a REFLEX Type in a REFLEX Scope by name.
-   ::Reflex::Type cl;
+   // -- Find a REFLEX Scope in a REFLEX Scope by name.
+   ::Reflex::Scope cl;
 #ifdef __GNUC__
 #else
 #pragma message (FIXME("This needs to be in Reflex itself"))
@@ -1591,13 +1591,13 @@ extern "C" void G__dump_reflex_function(const ::Reflex::Scope scope, int level)
    if (name==0 || name[0]==0) {
       return cl;
    }
-   ::Reflex::Type_Iterator end = scope.SubType_End();
+   ::Reflex::Scope_Iterator end = scope.SubScope_End();
    for (
-      ::Reflex::Type_Iterator itype = scope.SubType_Begin();
+      ::Reflex::Scope_Iterator itype = scope.SubScope_Begin();
       itype != end;
       ++itype
    ) {
-      const char *iname = itype->Name_c_str();
+      const char *iname = itype->Name_c_str() + itype->ToScopeBase()->GetBasePosition();
       if ( iname[0]==name[0] && iname[1]==name[1] && 0==strcmp(iname,name) ) {
          cl = *itype;
          break;

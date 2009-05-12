@@ -2255,9 +2255,9 @@ extern "C" int G__search_tagname(const char* tagname, int type)
          ::Reflex::Type cl;
          ::Reflex::Scope newscope;
          if (atom_tagname[0]) {
-            cl = G__findInScope(scope, atom_tagname);
-         }
-         if (!cl) {
+            newscope = G__findInScope(scope, atom_tagname);
+         } 
+         if (!newscope) {
             std::string fullname;
             if (G__struct.parent_tagnum[i] != -1) {
                fullname = G__fulltagname(G__struct.parent_tagnum[i], 0); // parentScope.Name(SCOPED);
@@ -2303,7 +2303,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
                      //fprintf(stderr, "G__search_tagname: New namespace scope: '%s'\n", fullname.c_str());
                      newscope = ::Reflex::NamespaceBuilder(fullname.c_str()).ToScope();
                      G__Dict::GetDict().RegisterScope(i, newscope);
-                    break;
+                     break;
                   }
                case 'e': // Enum.
                   {
@@ -2329,6 +2329,9 @@ extern "C" int G__search_tagname(const char* tagname, int type)
             // we must have been called from cintex which
             // is responding to a reflex class creation
             // callback.
+            if (type != 'n') {
+               cl = newscope;
+            }
             switch (type) {
                case 0: // Unknown type.
                   // Note: When called from G__parse_parameter_link
@@ -2360,7 +2363,7 @@ extern "C" int G__search_tagname(const char* tagname, int type)
                case 'n': // Namespace.
                   {
                      //fprintf(stderr, "G__search_tagname: New namespace scope: '%s'\n", fullname.c_str());
-                     G__Dict::GetDict().RegisterScope(i, cl);
+                     G__Dict::GetDict().RegisterScope(i, newscope);
                     break;
                   }
                case 'e': // Enum.
