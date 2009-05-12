@@ -29,7 +29,6 @@
 #pragma link C++ class RooThresholdCategory+ ;
 #pragma link C++ class RooTObjWrap+ ;
 #pragma link C++ class RooTrace+ ;
-#pragma link C++ class RooTreeData+ ;
 #pragma link C++ class RooUniformBinning+ ;
 #pragma link C++ class RooSimultaneous+ ;
 #pragma link C++ class RooRealSumPdf+ ;
@@ -93,6 +92,9 @@
 #pragma link C++ class RooNumGenFactory+ ;
 #pragma link C++ class RooMultiVarGaussian+ ;
 #pragma link C++ class RooXYChi2Var+ ;
+#pragma link C++ class RooAbsDataStore+ ;
+#pragma link C++ class RooTreeDataStore+ ;
+#pragma link C++ class RooTreeData+ ;
 #pragma link C++ namespace RooCintUtils+ ;
 #pragma link off class RooErrorHandler+ ;
 #pragma link off class RooNag+ ;
