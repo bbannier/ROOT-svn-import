@@ -954,8 +954,19 @@ RooAbsPdf* RooFitResult::createPdf(const RooArgSet& params) const
   }
   delete iter ;
 
+  // Need to order params in vector in same order as in covariance matrix
+  RooArgList params3 ;
+  iter = _finalPars->createIterator() ;
+  while((arg=(RooAbsArg*)iter->Next())) {
+    if (params2.find(arg->GetName())) {
+      params3.add(*arg) ;
+    }
+  }
+  delete iter ;
+
+
   // Handle special case of representing full covariance matrix here
-  if (params2.getSize()==_finalPars->getSize()) {
+  if (params3.getSize()==_finalPars->getSize()) {
 
     TVectorD mu(_finalPars->getSize())  ;
     for (Int_t i=0 ; i<_finalPars->getSize() ; i++) {
@@ -966,7 +977,7 @@ RooAbsPdf* RooFitResult::createPdf(const RooArgSet& params) const
     string title = Form("P.d.f of %s",GetTitle()) ;
     
     // Create p.d.f.
-    return  new RooMultiVarGaussian(name.c_str(),title.c_str(),params2,mu,V) ;         
+    return  new RooMultiVarGaussian(name.c_str(),title.c_str(),params3,mu,V) ;         
   }
 
   //                                       -> ->
@@ -975,10 +986,10 @@ RooAbsPdf* RooFitResult::createPdf(const RooArgSet& params) const
   // Find (subset) of parameters that are stored in the covariance matrix
   vector<int> map1, map2 ;
   for (int i=0 ; i<_finalPars->getSize() ; i++) {
-    if (params2.find(_finalPars->at(i)->GetName())) {
-      map2.push_back(i) ;
-    } else {
+    if (params3.find(_finalPars->at(i)->GetName())) {
       map1.push_back(i) ;
+    } else {
+      map2.push_back(i) ;
     }
   }
 
@@ -1013,7 +1024,7 @@ RooAbsPdf* RooFitResult::createPdf(const RooArgSet& params) const
   string title = Form("P.d.f of %s",GetTitle()) ;
 
   // Create p.d.f.
-  RooAbsPdf* ret =  new RooMultiVarGaussian(name.c_str(),title.c_str(),params2,mu1,Vred) ;
+  RooAbsPdf* ret =  new RooMultiVarGaussian(name.c_str(),title.c_str(),params3,mu1,Vred) ;
   
   return ret ;
 }
