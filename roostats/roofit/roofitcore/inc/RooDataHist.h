@@ -16,7 +16,7 @@
 #ifndef ROO_DATA_HIST
 #define ROO_DATA_HIST
 
-#include "RooTreeData.h"
+#include "RooAbsData.h"
 #include "RooDirItem.h"
 #include "RooArgSet.h"
 #include "RooNameSet.h"
@@ -36,7 +36,7 @@ class RooArgSet ;
 class RooLinkedList ;
 class RooAbsLValue ;
 
-class RooDataHist : public RooTreeData, public RooDirItem {
+class RooDataHist : public RooAbsData, public RooDirItem {
 public:
 
   // Constructors, factory methods etc.
@@ -108,7 +108,7 @@ public:
     return (lo+hi)/2 ;
   }
 
-  using RooTreeData::plotOn ;
+  using RooAbsData::plotOn ;
   virtual RooPlot *plotOn(RooPlot *frame, PlotOpt o) const;
   
   virtual void reset() ;
