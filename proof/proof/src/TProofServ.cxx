@@ -2570,8 +2570,11 @@ Int_t TProofServ::SetupCommon()
       fGroupPriority = GetPriority();
       // Dataset manager instance via plug-in
       TPluginHandler *h = 0;
-      TString dsm = gEnv->GetValue("Proof.DataSetManager", "");
-      if (!dsm.IsNull()) {
+      TString dsms = gEnv->GetValue("Proof.DataSetManager", "");
+      if (!dsms.IsNull()) {
+         TString dsm;
+         Int_t from  = 0;
+         dsms.Tokenize(dsm, from, ",");
          // Get plugin manager to load the appropriate TProofDataSetManager
          if (gROOT->GetPluginManager()) {
             // Find the appropriate handler
@@ -5185,17 +5188,39 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
 
       case TProof::kShowDataSets:
          {
-            (*mess) >> uri;
-            // Scan the existing datasets and print the content
-            fDataSetManager->GetDataSets(uri, (UInt_t)TProofDataSetManager::kPrint);
+            (*mess) >> uri >> opt;
+            // Show content
+            fDataSetManager->ShowDataSets(uri, opt);
          }
          break;
 
       case TProof::kGetDataSets:
          {
-            (*mess) >> uri;
+            (*mess) >> uri >> opt;
             // Get the datasets and fill a map
             TMap *returnMap = fDataSetManager->GetDataSets(uri, (UInt_t)TProofDataSetManager::kExport);
+            // If defines, option gives the name of a server for which to extract the information
+            if (returnMap && !opt.IsNull()) {
+               // The return map will be in the form   </group/user/datasetname> --> <dataset> 
+               TMap *rmap = new TMap;
+               TObject *k = 0;
+               TFileCollection *fc = 0, *xfc = 0;
+               TIter nxd(returnMap);
+               while ((k = nxd()) && (fc = (TFileCollection *) returnMap->GetValue(k))) {
+                  // Get subset on specified server, if any
+                  if ((xfc = fc->GetFilesOnServer(opt.Data()))) {
+                     rmap->Add(new TObjString(k->GetName()), xfc);
+                  }
+               }
+               returnMap->DeleteAll();
+               if (rmap->GetSize() > 0) {
+                  returnMap = rmap;
+               } else {
+                  Info("HandleDataSets", "no dataset found on server '%s'", opt.Data());
+                  delete rmap;
+                  returnMap = 0;
+               }
+            }
             if (returnMap) {
                // Send them back
                fSocket->SendObject(returnMap, kMESS_OK);
@@ -5208,9 +5233,9 @@ Int_t TProofServ::HandleDataSets(TMessage *mess)
          break;
       case TProof::kGetDataSet:
          {
-            (*mess) >> uri;
+            (*mess) >> uri >> opt;
             // Get the list
-            TFileCollection *fileList = fDataSetManager->GetDataSet(uri);
+            TFileCollection *fileList = fDataSetManager->GetDataSet(uri,opt);
             if (fileList) {
                fSocket->SendObject(fileList, kMESS_OK);
                delete fileList;

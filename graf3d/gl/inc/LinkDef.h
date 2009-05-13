@@ -125,6 +125,10 @@
 #pragma link C++ class TGLEmbeddedViewer;
 #pragma link C++ class TGLEventHandler;
 #pragma link C++ class TGLPadPainter;
+#pragma link C++ class TKDEFGT;
+#pragma link C++ class TGL5DDataSet;
+#pragma link C++ class TGL5DPainter;
+#pragma link C++ class TGL5DDataSetEditor;
 
 #ifndef _WIN32
 #pragma link C++ class TX11GLManager;

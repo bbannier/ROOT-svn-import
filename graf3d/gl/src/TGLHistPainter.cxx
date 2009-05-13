@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <iostream>
 #include <cstring>
 
@@ -5,8 +6,10 @@
 #include "TClass.h"
 #include "TVirtualGL.h"
 #include "KeySymbols.h"
+#include "TGL5D.h"
 #include "TMath.h"
 #include "TPad.h"
+#include "TH3.h"
 #include "TF3.h"
 
 #include "TGLSurfacePainter.h"
@@ -200,6 +203,31 @@ TGLHistPainter::TGLHistPainter(TGLParametricEquation *equation)
 }
 
 //______________________________________________________________________________
+TGLHistPainter::TGLHistPainter(TGL5DDataSet *data)
+                   : fEq(0),
+                     fHist(data->GetHist()),
+                     fF3(0),
+                     fStack(0),
+                     fPlotType(kGL5D)//THistPainter
+{
+   //This ctor creates gl-parametric plot's painter.
+   fGLPainter.reset(new TGL5DPainter(data, &fCamera, &fCoord));
+}
+
+//______________________________________________________________________________
+/*
+TGLHistPainter::TGLHistPainter(TGL5D *gl5d)
+                   : fEq(0),
+                     fHist(0),
+                     fF3(0),
+                     fStack(0),
+                     fPlotType(kGL5D)//THistPainter
+{
+   //This ctor creates gl-parametric plot's painter.
+   //fGLPainter.reset(new TGLParametricPlot(equation, &fCamera));
+}
+*/
+//______________________________________________________________________________
 Int_t TGLHistPainter::DistancetoPrimitive(Int_t px, Int_t py)
 {
    //Selects plot or axis.
@@ -213,8 +241,12 @@ Int_t TGLHistPainter::DistancetoPrimitive(Int_t px, Int_t py)
    else {
       //Adjust px and py - canvas can have several pads inside, so we need to convert
       //the from canvas' system into pad's.
-      py -= Int_t((1 - gPad->GetHNDC() - gPad->GetYlowNDC()) * gPad->GetWh());
-      px -= Int_t(gPad->GetXlowNDC() * gPad->GetWw());
+      
+      /*py -= Int_t((1 - gPad->GetHNDC() - gPad->GetYlowNDC()) * gPad->GetWh());
+      px -= Int_t(gPad->GetXlowNDC() * gPad->GetWw());*/
+      
+      py = gPad->GetWh() - py;//-= Int_t((1 - gPad->GetHNDC() - gPad->GetYlowNDC()) * gPad->GetWh());
+
       //One hist can be appended to several pads,
       //the current pad should have valid OpenGL context.
       const Int_t glContext = gPad->GetGLDevice();
@@ -356,7 +388,8 @@ void TGLHistPainter::ExecuteEvent(Int_t event, Int_t px, Int_t py)
          } else if (py == kKey_p || py == kKey_P || py == kKey_S || py == kKey_s
                     || py == kKey_c || py == kKey_C || py == kKey_x || py == kKey_X
                     || py == kKey_y || py == kKey_Y || py == kKey_z || py == kKey_Z
-                    || py == kKey_w || py == kKey_W || py == kKey_l || py == kKey_L)
+                    || py == kKey_w || py == kKey_W || py == kKey_l || py == kKey_L
+                    /*|| py == kKey_r || py == kKey_R*/)
          {
             fGLPainter->ProcessEvent(event, px, py);
             //gGLManager->PaintSingleObject(fGLPainter.get());
@@ -493,14 +526,14 @@ void TGLHistPainter::Paint(Option_t *o)
    const Ssiz_t glPos = option.Index("gl");
    if (glPos != kNPOS)
       option.Remove(glPos, 2);
-   else if (fPlotType != kGLParametricPlot){
+   else if (fPlotType != kGLParametricPlot && fPlotType != kGL5D) {
       gPad->SetCopyGLDevice(kFALSE);
       if (fDefaultPainter.get())
          fDefaultPainter->Paint(o);//option.Data());
       return;
    }
 
-   if (fPlotType != kGLParametricPlot)
+   if (fPlotType != kGLParametricPlot && fPlotType != kGL5D)
       CreatePainter(ParsePaintOption(option), option);
 
    if (fPlotType == kGLDefaultPlot) {
@@ -564,7 +597,6 @@ TGLHistPainter::ParsePaintOption(const TString &option)const
    if (option.Index("iso") != kNPOS)
       parsedOption.fPlotType = kGLIsoPlot;
 
-
    return parsedOption;
 }
 
@@ -612,24 +644,19 @@ void TGLHistPainter::SetShowProjection(const char *, Int_t)
 }
 
 //______________________________________________________________________________
-void TGLHistPainter::PadToViewport(Bool_t selectionPass)
+void TGLHistPainter::PadToViewport(Bool_t /*selectionPass*/)
 {
    if (!fGLPainter.get())
       return;
-      
+
    TGLRect vp;
    vp.Width()  = Int_t(gPad->GetAbsWNDC() * gPad->GetWw());
    vp.Height() = Int_t(gPad->GetAbsHNDC() * gPad->GetWh());
    
-   if (!selectionPass) {
-      vp.X() = Int_t(gPad->GetAbsXlowNDC() * gPad->GetWw());
-      vp.Y() = Int_t(gPad->GetAbsYlowNDC() * gPad->GetWh());
-      
-      vp.X() = Int_t(gPad->XtoAbsPixel(gPad->GetX1()));
-      vp.Y() = gPad->GetWh() - gPad->YtoAbsPixel(gPad->GetY1());
-      
-      fCamera.SetViewport(vp);
-   }
+   vp.X() = Int_t(gPad->XtoAbsPixel(gPad->GetX1()));
+   vp.Y() = gPad->GetWh() - gPad->YtoAbsPixel(gPad->GetY1());
    
    fCamera.SetViewport(vp);
+   if (fCamera.ViewportChanged() && fGLPainter.get())
+      fGLPainter->InvalidateSelection();
 }
