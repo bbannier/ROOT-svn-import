@@ -214,7 +214,8 @@ void TMinuitMinimizer::FcnGrad( int &, double * g, double & f, double * x , int 
 bool TMinuitMinimizer::SetVariable(unsigned int ivar, const std::string & name, double val, double step) { 
    // set a free variable.
    if (fMinuit == 0) { 
-      Error("SetVariable","invalid TMinuit pointer. Set function first "); 
+      Error("SetVariable","invalid TMinuit pointer. Need to call first SetFunction"); 
+      return false; 
    }
 
 #ifdef USE_STATIC_TMINUIT
@@ -232,7 +233,8 @@ bool TMinuitMinimizer::SetVariable(unsigned int ivar, const std::string & name, 
 bool TMinuitMinimizer::SetLimitedVariable(unsigned int ivar, const std::string & name, double val, double step, double lower, double upper) { 
    // set a limited variable.
    if (fMinuit == 0) { 
-      std::cerr << "TMinuitMinimizer: ERROR : invalid TMinuit pointer. Set function first " << std::endl;
+      Error("SetVariable","invalid TMinuit pointer. Need to call first SetFunction"); 
+      return false; 
    }
 
 #ifdef USE_STATIC_TMINUIT
@@ -248,6 +250,11 @@ bool TMinuitMinimizer::SetLimitedVariable(unsigned int ivar, const std::string &
 #ifdef LATER
 bool Minuit2Minimizer::SetLowerLimitedVariable(unsigned int ivar , const std::string & name , double val , double step , double lower ) {
     // add a lower bounded variable as a double bound one, using a very large number for the upper limit
+
+   if (fMinuit == 0) { 
+      Error("SetVariable","invalid TMinuit pointer. Need to call first SetFunction"); 
+      return false; 
+   }
 
 #ifdef USE_STATIC_TMINUIT
    fUsed = fgUsed; 
@@ -267,7 +274,8 @@ bool Minuit2Minimizer::SetLowerLimitedVariable(unsigned int ivar , const std::st
 bool TMinuitMinimizer::SetFixedVariable(unsigned int ivar, const std::string & name, double val) { 
    // set a fixed variable.
    if (fMinuit == 0) { 
-      std::cerr << "TMinuitMinimizer: ERROR : invalid TMinuit pointer. Set function first " << std::endl;
+      Error("SetVariable","invalid TMinuit pointer. Need to call first SetFunction"); 
+      return false; 
    }
 
    // clear after minimization when setting params
@@ -289,6 +297,12 @@ bool TMinuitMinimizer::SetFixedVariable(unsigned int ivar, const std::string & n
 bool TMinuitMinimizer::SetVariableValue(unsigned int ivar, double val) { 
    // set the value of an existing variable
    // parameter must exist or return false
+
+   if (fMinuit == 0) { 
+      Error("SetVariable","invalid TMinuit pointer. Need to call first SetFunction"); 
+      return false; 
+   }
+
    double arglist[2]; 
    int ierr = 0; 
    arglist[0] = ivar+1;  // TMinuit starts from 1 
@@ -306,8 +320,17 @@ bool TMinuitMinimizer::Minimize() {
    // migradResult + 10*minosResult + 100*hesseResult + 1000*improveResult
 
 
-   assert(fMinuit != 0 );
+   if (fMinuit == 0) { 
+      Error("Minimize","invalid TMinuit pointer. Need to call first SetFunction and SetVariable"); 
+      return false; 
+   }
 
+
+   // total number of parameter defined in Minuit is fNu
+   if (fMinuit->fNu <  static_cast<int>(fDim) ) { 
+      Error("Minimize","The total number of defined parameters is different than the function dimension, npar = %d, dim = %d",fMinuit->fNu, fDim);
+      return false; 
+   }
 
    double arglist[10]; 
    int ierr = 0; 
@@ -380,7 +403,6 @@ bool TMinuitMinimizer::Minimize() {
    int nfree; 
    double errdef = 0;
    fMinuit->mnstat(fMinVal,fEdm,errdef,nfree,ntot,istat);
-   assert (static_cast<unsigned int>(ntot) == fDim); 
    assert( nfree == fMinuit->GetNumFreePars() );
    fNFree = nfree;
    assert (errdef == ErrorDef());
@@ -438,13 +460,25 @@ bool TMinuitMinimizer::Minimize() {
 
 }
 
+unsigned int TMinuitMinimizer::NCalls() const { 
+   if (fMinuit == 0) return 0; 
+   return fMinuit->fNfcn;
+}
+
+
 bool TMinuitMinimizer::GetMinosError(unsigned int i, double & errLow, double & errUp) { 
    // Perform Minos analysis for the given parameter  i 
 
+   if (fMinuit == 0) { 
+      Error("SetVariable","invalid TMinuit pointer. Need to call first SetFunction and SetVariable"); 
+      return false; 
+   }
+
+   double arglist[2];
+   int ierr = 0; 
+
    // if Minos is not run run it 
    if (!fMinosRun) { 
-      double arglist[2];
-      int ierr = 0; 
 
       // set error and print level 
       arglist[0] = ErrorDef(); 
@@ -455,17 +489,18 @@ bool TMinuitMinimizer::GetMinosError(unsigned int i, double & errLow, double & e
 
       // suppress warning in case Printlevel() == 0 
       if (PrintLevel() == 0)    fMinuit->mnexcm("SET NOW",arglist,0,ierr);
-
-      arglist[0] = MaxFunctionCalls(); 
-      arglist[1] = Tolerance(); 
-   
-      int nargs = 2; 
-      fMinuit->mnexcm("MINOS",arglist,nargs,ierr);
-      fStatus += 10*ierr;
-
-      fMinosRun = true; 
-
    }
+
+   // syntax of MINOS is MINOS [maxcalls] [parno]
+   // if parno = 0 all parameters are done 
+   arglist[0] = MaxFunctionCalls(); 
+   arglist[1] = i+1;  // parno starts from 1 in TMInuit
+   
+   int nargs = 2; 
+   fMinuit->mnexcm("MINOS",arglist,nargs,ierr);
+   fStatus += 10*ierr;
+
+   fMinosRun = true; 
 
    double errParab = 0; 
    double gcor = 0; 
@@ -496,6 +531,9 @@ void TMinuitMinimizer::DoClear() {
 }
 
 void TMinuitMinimizer::PrintResults() { 
+
+   if (fMinuit == 0) return; 
+
    // print minimizer result
    int ntot; 
    int istat;
