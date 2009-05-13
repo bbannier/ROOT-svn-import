@@ -12,9 +12,6 @@
 #ifndef ROOT_TGLPlotCamera
 #include "TGLPlotCamera.h"
 #endif
-#ifndef ROOT_TGLAdapter
-#include "TGLAdapter.h"
-#endif
 
 /*
    TGLHistPainter is a proxy class. It inherits TVirtualHistPainter and
@@ -28,6 +25,7 @@
 */
 
 class TGLParametricEquation;
+class TGL5DDataSet;
 class TString;
 class TList;
 class TF3;
@@ -49,11 +47,10 @@ private:
    TGLPlotCamera          fCamera;
    TGLPlotCoordinates     fCoord;
 
-   TGLAdapter             fGLDevice;
-
 public:
    TGLHistPainter(TH1 *hist);
    TGLHistPainter(TGLParametricEquation *equation);
+   TGLHistPainter(TGL5DDataSet *data);
 
    //TVirtualHistPainter final overriders
    Int_t          DistancetoPrimitive(Int_t px, Int_t py);
@@ -72,6 +69,7 @@ public:
    Int_t          MakeCuts(char *cutsOpt);
    void           SetShowProjection(const char *option, Int_t nbins);
 
+   TGLPlotPainter *GetRealPainter(){return fGLPainter.get();}
 private:
 
    struct PlotOption_t;
@@ -80,10 +78,12 @@ private:
    void           CreatePainter(const PlotOption_t &parsed,
                                 const TString &option);
 
+   void           PadToViewport(Bool_t selectionPass = kFALSE);
+                                
    TGLHistPainter(const TGLHistPainter &);
    TGLHistPainter &operator = (const TGLHistPainter &);
 
-   ClassDef(TGLHistPainter, 0) //Proxy class for GL hist painter
+   ClassDef(TGLHistPainter, 0) //Proxy class for GL hist painters.
 };
 
 #endif

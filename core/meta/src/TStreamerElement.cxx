@@ -30,6 +30,7 @@
 #include "TInterpreter.h"
 #include "TError.h"
 #include "TDataType.h"
+#include "TVirtualMutex.h"
 #include <iostream>
 
 #include <string>
@@ -277,11 +278,11 @@ const char *TStreamerElement::GetFullName() const
 {
    // Return element name including dimensions, if any
    // Note that this function stores the name into a static array.
-   // You should may be copy the result.
+   // You should copy the result.
 
    static char name[kMaxLen];
    char cdim[20];
-   sprintf(name,GetName());
+   sprintf(name,"%s",GetName());
    for (Int_t i=0;i<fArrayDim;i++) {
       sprintf(cdim,"[%d]",fMaxIndex[i]);
       strcat(name,cdim);
@@ -357,9 +358,11 @@ void TStreamerElement::ls(Option_t *) const
 {
    // Print the content of the element.
 
-   sprintf(gIncludeName,GetTypeName());
+   sprintf(gIncludeName,"%s",GetTypeName());
    if (IsaPointer() && !fTypeName.Contains("*")) strcat(gIncludeName,"*");
-   printf("  %-14s %-15s offset=%3d type=%2d %s%-20s\n",gIncludeName,GetFullName(),fOffset,fType,TestBit(kCache)?"(cached) ":"",GetTitle());
+   printf("  %-14s %-15s offset=%3d type=%2d %s%-20s\n",
+      gIncludeName,GetFullName(),fOffset,fType,TestBit(kCache)?"(cached) ":"",
+      GetTitle());
 }
 
 //______________________________________________________________________________
@@ -586,6 +589,7 @@ Int_t TStreamerBase::ReadBuffer (TBuffer &b, char *pointer)
    if (fMethod) {
       ULong_t args[1];
       args[0] = (ULong_t)&b;
+      R__LOCKGUARD2(gCINTMutex);
       fMethod->SetParamPtrs(args);
       fMethod->Execute((void*)(pointer+fOffset));
    } else {
@@ -669,6 +673,7 @@ Int_t TStreamerBase::WriteBuffer (TBuffer &b, char *pointer)
    }
    ULong_t args[1];
    args[0] = (ULong_t)&b;
+   R__LOCKGUARD2(gCINTMutex);
    fMethod->SetParamPtrs(args);
    fMethod->Execute((void*)(pointer+fOffset));
    b.ForceWriteInfo(fBaseClass->GetStreamerInfo(),kFALSE);
@@ -1607,13 +1612,14 @@ void TStreamerSTL::ls(Option_t *) const
 
    char name[kMaxLen];
    char cdim[20];
-   sprintf(name,GetName());
+   sprintf(name,"%s",GetName());
    for (Int_t i=0;i<fArrayDim;i++) {
       sprintf(cdim,"[%d]",fMaxIndex[i]);
       strcat(name,cdim);
    }
-   printf("  %-14s %-15s offset=%3d type=%2d %s,stl=%d, ctype=%d, %-20s",GetTypeName(),name,fOffset,fType,TestBit(kCache)?"(cached)":"",fSTLtype,fCtype,GetTitle());
-   printf("\n");
+   printf("  %-14s %-15s offset=%3d type=%2d %s,stl=%d, ctype=%d, %-20s\n",
+      GetTypeName(),name,fOffset,fType,TestBit(kCache)?"(cached)":"",
+      fSTLtype,fCtype,GetTitle());
 }
 
 //______________________________________________________________________________

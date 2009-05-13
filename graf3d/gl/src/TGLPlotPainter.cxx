@@ -14,6 +14,7 @@
 #include "TVirtualPS.h"
 #include "TVirtualX.h"
 #include "TGaxis.h"
+#include "TGraph.h"
 #include "TStyle.h"
 #include "TError.h"
 #include "TColor.h"
@@ -39,10 +40,8 @@ ClassImp(TGLPlotPainter)
 
 //______________________________________________________________________________
 TGLPlotPainter::TGLPlotPainter(TH1 *hist, TGLPlotCamera *camera, TGLPlotCoordinates *coord,
-                               TGLPaintDevice *dev, Bool_t xoy, Bool_t xoz, Bool_t yoz)
-                  : //fGLContext(context),
-                    fGLDevice(dev),
-                    fPadColor(0),
+                               Bool_t xoy, Bool_t xoz, Bool_t yoz)
+                  : fPadColor(0),
                     fPadPhi(45.),
                     fPadTheta(0.),
                     fHist(hist),
@@ -64,8 +63,6 @@ TGLPlotPainter::TGLPlotPainter(TH1 *hist, TGLPlotCamera *camera, TGLPlotCoordina
                     fDrawPalette(kFALSE)
 {
    //TGLPlotPainter's ctor.
-   if (MakeGLContextCurrent())
-      fCamera->SetViewport(fGLDevice);
    if (gPad) {
       fPadPhi   = gPad->GetPhi();
       fPadTheta = gPad->GetTheta();
@@ -73,10 +70,8 @@ TGLPlotPainter::TGLPlotPainter(TH1 *hist, TGLPlotCamera *camera, TGLPlotCoordina
 }
 
 //______________________________________________________________________________
-TGLPlotPainter::TGLPlotPainter(TGLPlotCamera *camera, TGLPaintDevice *dev)
-                  : //fGLContext(context),
-                    fGLDevice(dev),
-                    fPadColor(0),
+TGLPlotPainter::TGLPlotPainter(TGLPlotCamera *camera)
+                  : fPadColor(0),
                     fPadPhi(45.),
                     fPadTheta(0.),
                     fHist(0),
@@ -98,8 +93,6 @@ TGLPlotPainter::TGLPlotPainter(TGLPlotCamera *camera, TGLPaintDevice *dev)
                     fDrawPalette(kFALSE)
 {
    //TGLPlotPainter's ctor.
-   if (MakeGLContextCurrent())
-      fCamera->SetViewport(fGLDevice);
    if (gPad) {
       fPadPhi   = gPad->GetPhi();
       fPadTheta = gPad->GetTheta();
@@ -109,38 +102,77 @@ TGLPlotPainter::TGLPlotPainter(TGLPlotCamera *camera, TGLPaintDevice *dev)
 //______________________________________________________________________________
 void TGLPlotPainter::Paint()
 {
-   //Draw lego.
-   if (!MakeGLContextCurrent())
-      return;
-
+   //Draw lego/surf/whatever you can.
    fHighColor = kFALSE;
    fSelectionBase = fHighColor ? kHighColorSelectionBase : kTrueColorSelectionBase;
 
+   int vp[4] = {};
+   glGetIntegerv(GL_VIEWPORT, vp);
+      
+   //GL pad painter does not use depth test,
+   //so, switch it on now.
+   glDepthMask(GL_TRUE);//[0
+   //
    InitGL();
    //Save material/light properties in a stack.
    glPushAttrib(GL_LIGHTING_BIT);
 
-   fCamera->SetViewport(fGLDevice);//GetGLContext());
-   if (fCamera->ViewportChanged())
-      fUpdateSelection = kTRUE;
+   //Save projection and modelview matrix, used by glpad.
+   SaveProjectionMatrix();
+   SaveModelviewMatrix();
+      
    //glOrtho etc.
    fCamera->SetCamera();
-   //Clear buffer (possibly, with pad's background color).
-   ClearBuffers();
+   //
+   glClear(GL_DEPTH_BUFFER_BIT);
+   //
+/*   if (fCamera->ViewportChanged()) {
+      std::cout<<"Set need update\n";
+      fUpdateSelection = kTRUE;
+   }*/
    //Set light.
    const Float_t pos[] = {0.f, 0.f, 0.f, 1.f};
    glLightfv(GL_LIGHT0, GL_POSITION, pos);
    //Set transformation - shift and rotate the scene.
    fCamera->Apply(fPadPhi, fPadTheta);
    fBackBox.FindFrontPoint();
+   
    if (gVirtualPS)
       PrintPlot();
    DrawPlot();
    //Restore material properties from stack.
    glPopAttrib();
-   glFinish();
-   //LegoPainter work is now finished, axes are drawn by axis painter.
-   //Here changes are possible in future, if we have real 3d axis painter.
+   //
+   DeInitGL();//Disable/enable, what concrete plot painter enabled/disabled
+
+   //Restore projection and modelview matrices.
+   RestoreProjectionMatrix();
+   RestoreModelviewMatrix();
+
+   glViewport(vp[0], vp[1], vp[2], vp[3]);
+   //GL pad painter does not use depth test, so,
+   //switch it off now.
+   glDepthMask(GL_FALSE);//0]
+   
+   if (fCoord && fCoord->GetCoordType() == kGLCartesian) {
+   
+      Bool_t old = gPad->TestBit(TGraph::kClipFrame);
+      if (!old)
+         gPad->SetBit(TGraph::kClipFrame);
+   
+      const Int_t viewport[] = {fCamera->GetX(), fCamera->GetY(), fCamera->GetWidth(), fCamera->GetHeight()};
+      Rgl::DrawAxes(fBackBox.GetFrontPoint(), viewport, fBackBox.Get2DBox(), fCoord, fXAxis, fYAxis, fZAxis);
+      if (fDrawPalette)
+         DrawPaletteAxis();
+         
+      if (!old)
+         gPad->ResetBit(TGraph::kClipFrame);
+   } else if(fDrawPalette)
+      DrawPaletteAxis();
+      
+   
+
+   /*
    TGLAdapter *glAdapter = dynamic_cast<TGLAdapter *>(fGLDevice);
    if (glAdapter) {
       glAdapter->ReadGLBuffer();
@@ -159,8 +191,7 @@ void TGLPlotPainter::Paint()
          gVirtualX->SelectWindow(gPad->GetPixmapID());
       }
    }
-
-   fGLDevice->SwapBuffers();
+   */
 }
 
 //______________________________________________________________________________
@@ -168,21 +199,23 @@ void TGLPlotPainter::PrintPlot()const
 {
    // Generate PS using gl2ps
    using namespace std;
-
+   
    TGLOutput::StartEmbeddedPS();
    FILE *output = fopen(gVirtualPS->GetName(), "a");
    Int_t gl2psFormat = GL2PS_EPS;
    Int_t gl2psSort   = GL2PS_BSP_SORT;
    Int_t buffsize    = 0;
    Int_t state       = GL2PS_OVERFLOW;
+   GLint gl2psoption = GL2PS_USE_CURRENT_VIEWPORT | 
+                       GL2PS_SILENT               |
+                       GL2PS_BEST_ROOT            |
+                       GL2PS_OCCLUSION_CULL       |
+                       0;
 
    while (state == GL2PS_OVERFLOW) {
       buffsize += 1024*1024;
       gl2psBeginPage ("ROOT Scene Graph", "ROOT", NULL,
-                      gl2psFormat, gl2psSort, GL2PS_USE_CURRENT_VIEWPORT
-                      | GL2PS_POLYGON_OFFSET_FILL | GL2PS_SILENT
-                      | GL2PS_BEST_ROOT | GL2PS_OCCLUSION_CULL
-                      | 0,
+                      gl2psFormat, gl2psSort, gl2psoption,
                       GL_RGBA, 0, NULL,0, 0, 0,
                       buffsize, output, NULL);
       DrawPlot();
@@ -197,26 +230,44 @@ void TGLPlotPainter::PrintPlot()const
 //______________________________________________________________________________
 Bool_t TGLPlotPainter::PlotSelected(Int_t px, Int_t py)
 {
-   // Plot selected.
-
-   if (!MakeGLContextCurrent())
-      return kFALSE;
    //Read color buffer content to find selected object
    if (fUpdateSelection) {
+      //Save projection and modelview matrix, used by glpad.
+      glMatrixMode(GL_PROJECTION);//[1
+      glPushMatrix();
+      glMatrixMode(GL_MODELVIEW);//[2
+      glPushMatrix();
+   
       fSelectionPass = kTRUE;
       fCamera->SetCamera();
-      TGLDisableGuard lightGuard(GL_LIGHTING);
+      
+      glDepthMask(GL_TRUE);
       glClearColor(0.f, 0.f, 0.f, 0.f);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      
       fCamera->Apply(fPadPhi, fPadTheta);
       DrawPlot();
-      glFlush();
-      fSelection.ReadColorBuffer(fCamera->GetWidth(), fCamera->GetHeight());
-      fSelectionPass = kFALSE;
+      
+      glFinish();
+      //fSelection.ReadColorBuffer(fCamera->GetWidth(), fCamera->GetHeight());
+      fSelection.ReadColorBuffer(fCamera->GetX(), fCamera->GetY(), fCamera->GetWidth(), fCamera->GetHeight());
+      fSelectionPass   = kFALSE;
       fUpdateSelection = kFALSE;
+      
+      glDepthMask(GL_FALSE);
+      glDisable(GL_DEPTH_TEST);
+      
+      //Restore projection and modelview matrices.
+      glMatrixMode(GL_PROJECTION);//1]
+      glPopMatrix();
+      glMatrixMode(GL_MODELVIEW);//2]
+      glPopMatrix();
    }
+   
    //Convert from window top-bottom into gl bottom-top.
-   py = fCamera->GetHeight() - py;
+   px -= Int_t(gPad->GetXlowNDC() * gPad->GetWw());
+   py -= Int_t(gPad->GetWh() - gPad->YtoAbsPixel(gPad->GetY1()));
+   //py = fCamera->GetHeight() - py;
    //Y is a number of a row, x - column.
    std::swap(px, py);
    Int_t newSelected(Rgl::ColorToObjectID(fSelection.GetPixelColor(px, py), fHighColor));
@@ -224,12 +275,7 @@ Bool_t TGLPlotPainter::PlotSelected(Int_t px, Int_t py)
    if (newSelected != fSelectedPart) {
       //New object was selected (or surface deselected) - re-paint.
       fSelectedPart = newSelected;
-      TGLAdapter *glAdapter = dynamic_cast<TGLAdapter *>(fGLDevice);
-      if (glAdapter)
-         glAdapter->MarkForDirectCopy(kTRUE);
-      Paint();
-      if (glAdapter)
-         glAdapter->MarkForDirectCopy(kFALSE);
+      gPad->Update();
    }
 
    return fSelectedPart ? kTRUE : kFALSE;
@@ -263,26 +309,12 @@ void TGLPlotPainter::InvalidateSelection()
    //Selection must be updated.
    fUpdateSelection = kTRUE;
 }
-/*
-//______________________________________________________________________________
-Int_t TGLPlotPainter::GetGLContext()const
-{
-   //Get gl context.
-   return -1;//fGLContext;
-}
-  */
+
 //______________________________________________________________________________
 const TColor *TGLPlotPainter::GetPadColor()const
 {
    //Get pad color.
    return fPadColor;
-}
-
-//______________________________________________________________________________
-Bool_t TGLPlotPainter::MakeGLContextCurrent()const
-{
-   //Make gl context current.
-   return fGLDevice ? fGLDevice->MakeCurrent() : kFALSE;
 }
 
 //______________________________________________________________________________
@@ -481,18 +513,48 @@ void TGLPlotPainter::DrawSections()const
 //______________________________________________________________________________
 void TGLPlotPainter::ClearBuffers()const
 {
+/*
    // Clear buffer.
    Float_t rgb[3] = {1.f, 1.f, 1.f};
    if (const TColor *color = GetPadColor())
       color->GetRGB(rgb[0], rgb[1], rgb[2]);
    glClearColor(rgb[0], rgb[1], rgb[2], 1.);
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+   */
 }
 
 //______________________________________________________________________________
 void TGLPlotPainter::DrawPaletteAxis()const
 {
    //Draw. Palette. Axis.
+}
+
+//______________________________________________________________________________
+void TGLPlotPainter::SaveModelviewMatrix()const
+{
+   glMatrixMode(GL_MODELVIEW);
+   glPushMatrix();
+}
+
+//______________________________________________________________________________
+void TGLPlotPainter::SaveProjectionMatrix()const
+{
+   glMatrixMode(GL_PROJECTION);
+   glPushMatrix();
+}
+
+//______________________________________________________________________________
+void TGLPlotPainter::RestoreModelviewMatrix()const
+{
+   glMatrixMode(GL_MODELVIEW);
+   glPopMatrix();
+}
+
+//______________________________________________________________________________
+void TGLPlotPainter::RestoreProjectionMatrix()const
+{
+   glMatrixMode(GL_PROJECTION);
+   glPopMatrix();
 }
 
 //______________________________________________________________________________
@@ -1172,9 +1234,17 @@ void TGLBoxCut::TurnOnOff()
          break;
       }
 
-      fCenter.Z() = box[4].Z();
+      fCenter.Z() = box[0].Z() * 0.5 + box[4].Z() * 0.5;
       AdjustBox();
    }
+}
+
+//______________________________________________________________________________
+void TGLBoxCut::SetActive(Bool_t a)
+{
+   if (a == fActive)
+      return;
+   TurnOnOff();
 }
 
 //______________________________________________________________________________
@@ -1215,7 +1285,7 @@ void TGLBoxCut::DrawBox(Bool_t selectionPass, Int_t selected)const
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 
-      const Float_t diffuseColor[] = {0.f, 0.f, 1.f, 0.2f};
+      const Float_t diffuseColor[] = {0.f, 0.f, 1.f, 0.1f};
       glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuseColor);
 
       Rgl::DrawBoxFront(fXRange.first, fXRange.second, fYRange.first, fYRange.second,

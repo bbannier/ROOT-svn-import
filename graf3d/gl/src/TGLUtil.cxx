@@ -2205,6 +2205,17 @@ void TGLSelectionBuffer::ReadColorBuffer(Int_t w, Int_t h)
 }
 
 //______________________________________________________________________________
+void TGLSelectionBuffer::ReadColorBuffer(Int_t x, Int_t y, Int_t w, Int_t h)
+{
+   // Read color buffer.
+   fWidth = w;
+   fHeight = h;
+   fBuffer.resize(w * h * 4);
+   glPixelStorei(GL_PACK_ALIGNMENT, 1);
+   glReadPixels(x, y, w, h, GL_RGBA, GL_UNSIGNED_BYTE, &fBuffer[0]);
+}
+
+//______________________________________________________________________________
 const UChar_t *TGLSelectionBuffer::GetPixelColor(Int_t px, Int_t py)const
 {
    // Get pixel color.
@@ -2984,22 +2995,22 @@ namespace Rgl {
    {
       //Using front point, find, where to draw axes and which labels to use for them
       //gVirtualX->SelectWindow(gGLManager->GetVirtualXInd(fGLDevice));
-      gVirtualX->SetDrawMode(TVirtualX::kCopy);//TCanvas by default sets in kInverse
+      //gVirtualX->SetDrawMode(TVirtualX::kCopy);//TCanvas by default sets in kInverse
 
       const Int_t left  = gFramePoints[fp][0];
       const Int_t right = gFramePoints[fp][1];
       const Double_t xLeft = gPad->AbsPixeltoX(Int_t(gPad->GetXlowNDC() * gPad->GetWw()
-                                               + box[left].X()));
+                                               + box[left].X() - vp[0]));
       const Double_t yLeft = gPad->AbsPixeltoY(Int_t(vp[3] - box[left].Y()
                                                + (1 - gPad->GetHNDC() - gPad->GetYlowNDC())
                                                * gPad->GetWh() + vp[1]));
       const Double_t xMid = gPad->AbsPixeltoX(Int_t(gPad->GetXlowNDC() * gPad->GetWw()
-                                              + box[fp].X()));
+                                              + box[fp].X()  - vp[0]));
       const Double_t yMid = gPad->AbsPixeltoY(Int_t(vp[3] - box[fp].Y()
                                               + (1 - gPad->GetHNDC() - gPad->GetYlowNDC())
                                               * gPad->GetWh() + vp[1]));
       const Double_t xRight = gPad->AbsPixeltoX(Int_t(gPad->GetXlowNDC()
-                                                * gPad->GetWw() + box[right].X()));
+                                                * gPad->GetWw() + box[right].X() - vp[0]));
       const Double_t yRight = gPad->AbsPixeltoY(Int_t(vp[3] - box[right].Y()
                                                 + (1 - gPad->GetHNDC() - gPad->GetYlowNDC())
                                                 * gPad->GetWh() + vp[1]));
@@ -3036,7 +3047,7 @@ namespace Rgl {
       }
 
       const Double_t xUp = gPad->AbsPixeltoX(Int_t(gPad->GetXlowNDC() * gPad->GetWw()
-                                             + box[left + 4].X()));
+                                             + box[left + 4].X() - vp[0]));
       const Double_t yUp = gPad->AbsPixeltoY(Int_t(vp[3] - box[left + 4].Y()
                                              + (1 - gPad->GetHNDC() - gPad->GetYlowNDC())
                                              * gPad->GetWh() + vp[1]));
@@ -3443,7 +3454,7 @@ void TGLLevelPalette::EnableTexture(Int_t mode)const
    glEnable(GL_TEXTURE_1D);
 
    glGenTextures(1, &fTexture);
-
+   
    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
    glBindTexture(GL_TEXTURE_1D, fTexture);
    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -3458,8 +3469,8 @@ void TGLLevelPalette::EnableTexture(Int_t mode)const
 void TGLLevelPalette::DisableTexture()const
 {
    //Disable 1D texture
-   glDisable(GL_TEXTURE_1D);
    glDeleteTextures(1, &fTexture);
+   glDisable(GL_TEXTURE_1D);
 }
 
 //______________________________________________________________________________
