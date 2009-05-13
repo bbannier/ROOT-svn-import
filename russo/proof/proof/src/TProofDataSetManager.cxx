@@ -370,7 +370,7 @@ Long64_t TProofDataSetManager::ToBytes(const char *size)
 }
 
 //______________________________________________________________________________
-TFileCollection *TProofDataSetManager::GetDataSet(const char *)
+TFileCollection *TProofDataSetManager::GetDataSet(const char *, const char *)
 {
    // Utility function used in various methods for user dataset upload.
 
@@ -805,4 +805,146 @@ Bool_t TProofDataSetManager::ParseUri(const char *uri,
       *dsTree = tree;
 
    return kTRUE;
+}
+
+//______________________________________________________________________________
+TMap *TProofDataSetManager::GetSubDataSets(const char *ds, const char *exclude)
+{
+   // Partition dataset 'ds' accordingly to the servers.
+   // The returned TMap contains:
+   //                <server> --> <subdataset> (TFileCollection)
+   // where <subdataset> is the subset of 'ds' on <server>
+   // The partitioning is done using all the URLs in the TFileInfo's, so the
+   // resulting datasets are not mutually exclusive.
+   // The string 'exclude' contains a comma-separated list of servers to exclude
+   // from the map.
+
+   TMap *map = (TMap *)0;
+
+   if (!ds || strlen(ds) <= 0) {
+      Info("GetDataSets", "dataset name undefined!");
+      return map;
+   }
+
+   // Get the dataset
+   TFileCollection *fc = GetDataSet(ds);
+   if (!fc) {
+      Info("GetDataSets", "could not retrieve the dataset '%s'", ds);
+      return map;
+   }
+
+   // Get the subset
+   if (!(map = fc->GetFilesPerServer(exclude))) {
+      if (gDebug > 0)
+         Info("GetDataSets", "could not get map for '%s'", ds);
+   }
+
+   // Cleanup
+   delete fc;
+
+   // Done
+   return map;
+}
+
+//______________________________________________________________________________
+void TProofDataSetManager::PrintDataSet(TFileCollection *fc, Int_t popt)
+{
+   // Formatted printout of the content of TFileCollection 'fc'.
+   // Options in the form
+   //           popt = u * 10 + f
+   //     f    0 => header only, 1 => header + files
+   //   when printing files
+   //     u    0 => print file name only, 1 => print full URL
+
+   if (!fc) return;
+
+   Int_t f = popt%10;
+   Int_t u = popt - 10 * f;
+
+   Printf("+++");
+   if (fc->GetTitle() && (strlen(fc->GetTitle()) > 0)) {
+      Printf("+++ Dumping: %s: ", fc->GetTitle());
+   } else {
+      Printf("+++ Dumping: %s: ", fc->GetName());
+   }
+   Printf("%s", fc->ExportInfo("+++ Summary:", 1)->GetName());
+   if (f == 1) {
+      Printf("+++ Files:");
+      Int_t nf = 0;
+      TIter nxfi(fc->GetList());
+      TFileInfo *fi = 0;
+      while ((fi = (TFileInfo *)nxfi())) {
+         if (u == 1)
+            Printf("+++ %5d. %s", ++nf, fi->GetCurrentUrl()->GetUrl());
+         else
+            Printf("+++ %5d. %s", ++nf, fi->GetCurrentUrl()->GetFile());
+      }
+   }
+   Printf("+++");
+}
+
+//______________________________________________________________________________
+void TProofDataSetManager::ShowDataSets(const char *uri, const char *opt)
+{
+   // Prints formatted information about the dataset 'uri'.
+   // The type and format of output is driven by 'opt':
+   //
+   //   1. opt = "server:srv1[,srv2[,srv3[,...]]]"
+   //            Print info about the subsets of 'uri' on servers srv1, srv2, ...
+   //   2. opt = "servers[:exclude:srv1[,srv2[,srv3[,...]]]]"
+   //            Print info about the subsets of 'uri' on all servers, except
+   //            the ones in the exclude list srv1, srv2, ...
+   //   3. opt = <any>
+   //            Print info about all datasets matching 'uri'
+   //
+   //   If 'opt' contains 'full:' the list of files in the datasets are also printed.
+   //   In case 3. this is enabled only if 'uri' matches a single dataset.
+
+
+   TFileCollection *fc = 0;
+   TString o(opt);
+   Int_t popt = 0;
+   if (o.Contains("full:")) {
+      o.ReplaceAll("full:","");
+      popt = 1;
+   }
+   if (o.BeginsWith("server:")) {
+      o.ReplaceAll("server:", "");
+      TString srv;
+      Int_t from = 0;
+      while ((o.Tokenize(srv, from, ","))) {
+         fc = GetDataSet(uri, srv.Data());
+         PrintDataSet(fc, popt);
+         delete fc;
+      }
+   } else if (o.BeginsWith("servers")) {
+      o.ReplaceAll("servers", "");
+      if (o.BeginsWith(":exclude:"))
+         o.ReplaceAll(":exclude:", "");
+      else
+         o = "";
+      TMap *dsmap = GetSubDataSets(uri, o.Data());
+      if (dsmap) {
+         TIter nxk(dsmap);
+         TObject *k = 0;
+         while ((k = nxk()) && (fc = (TFileCollection *) dsmap->GetValue(k))) {
+            PrintDataSet(fc, popt);
+         }
+         delete dsmap;
+      }
+   } else {
+      TString u(uri);
+      if (!u.IsNull() && !u.Contains("*") && (fc = GetDataSet(uri))) {
+         // Single dataset
+         PrintDataSet(fc, 10 + popt);
+         delete fc;
+      } else {
+         // Support for "*" or "/*"
+         if (u == "" || u == "*" || u == "/*" || u == "/*/" || u == "/*/*") u = "/*/*/";
+         // Scan the existing datasets and print the content
+         GetDataSets(u.Data(), (UInt_t)TProofDataSetManager::kPrint);
+      }
+   }
+
+   return;
 }

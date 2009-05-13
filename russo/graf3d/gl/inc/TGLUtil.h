@@ -73,6 +73,7 @@ enum EGLPlotType {
    kGLStackPlot,
    kGLParametricPlot,
    kGLIsoPlot,
+   kGL5D,
    kGLDefaultPlot
 };
 
@@ -141,7 +142,7 @@ public:
 
    void Dump() const;
 
-   ClassDef(TGLVertex3,0) // GL 3 component vertex helper/wrapper class
+   ClassDef(TGLVertex3,0); // GL 3 component vertex helper/wrapper class
 };
 
 //______________________________________________________________________________
@@ -267,7 +268,7 @@ public:
    Double_t Mag() const;
    void     Normalise();
 
-   ClassDef(TGLVector3,0) // GL 3 component vector helper/wrapper class
+   ClassDef(TGLVector3,0); // GL 3 component vector helper/wrapper class
 };
 
 // Inline for TGLVertex3 requiring full TGLVector definition
@@ -415,7 +416,7 @@ public:
    // Debug
    void Draw() const;
 
-   ClassDef(TGLLine3,0) // GL line wrapper class
+   ClassDef(TGLLine3,0); // GL line wrapper class
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -471,7 +472,7 @@ public:
    Double_t Aspect() const;
    EOverlap Overlap(const TGLRect & other) const;
 
-   ClassDef(TGLRect,0) // GL rect helper/wrapper class
+   ClassDef(TGLRect,0); // GL rect helper/wrapper class
 };
 
 //______________________________________________________________________________
@@ -576,7 +577,7 @@ public:
    TGLPlane(Double_t eq[4]);
    TGLPlane(const TGLVector3 & norm, const TGLVertex3 & point);
    TGLPlane(const TGLVertex3 & p1, const TGLVertex3 & p2, const TGLVertex3 & p3);
-   virtual ~TGLPlane(); // ClassDef introduces virtual fns
+   virtual ~TGLPlane();
 
    // Manipulators
    void Set(const TGLPlane & other);
@@ -602,103 +603,18 @@ public:
 
    void Dump() const;
 
-   ClassDef(TGLPlane,0) // GL plane helper/wrapper class
+   ClassDef(TGLPlane,0); // GL plane helper/wrapper class
 };
 
 typedef std::vector<TGLPlane>                 TGLPlaneSet_t;
 typedef std::vector<TGLPlane>::iterator       TGLPlaneSet_i;
 typedef std::vector<TGLPlane>::const_iterator TGLPlaneSet_ci;
 
-//______________________________________________________________________________
-inline void TGLPlane::Set(const TGLPlane & other)
-{
-   fVals[0] = other.fVals[0];
-   fVals[1] = other.fVals[1];
-   fVals[2] = other.fVals[2];
-   fVals[3] = other.fVals[3];
-}
-
-//______________________________________________________________________________
-inline void TGLPlane::Set(Double_t a, Double_t b, Double_t c, Double_t d)
-{
-   fVals[0] = a;
-   fVals[1] = b;
-   fVals[2] = c;
-   fVals[3] = d;
-   Normalise();
-}
-
-//______________________________________________________________________________
-inline void TGLPlane::Set(Double_t eq[4])
-{
-   fVals[0] = eq[0];
-   fVals[1] = eq[1];
-   fVals[2] = eq[2];
-   fVals[3] = eq[3];
-   Normalise();
-}
-
-//______________________________________________________________________________
-inline void TGLPlane::Set(const TGLVector3 & norm, const TGLVertex3 & point)
-{
-   // Set plane from a normal vector and in-plane point pair
-   fVals[0] = norm[0];
-   fVals[1] = norm[1];
-   fVals[2] = norm[2];
-   fVals[3] = -(fVals[0]*point[0] + fVals[1]*point[1] + fVals[2]*point[2]);
-   Normalise();
-}
-
-//______________________________________________________________________________
-inline void TGLPlane::Set(const TGLVertex3 & p1, const TGLVertex3 & p2, const TGLVertex3 & p3)
-{
-   TGLVector3 norm = Cross(p2 - p1, p3 - p1);
-   Set(norm, p2);
-}
-
-//______________________________________________________________________________
-inline void TGLPlane::Negate()
-{
-   fVals[0] = -fVals[0];
-   fVals[1] = -fVals[1];
-   fVals[2] = -fVals[2];
-   fVals[3] = -fVals[3];
-}
-
-//______________________________________________________________________________
-inline void TGLPlane::Normalise()
-{
-   Double_t mag = sqrt( fVals[0]*fVals[0] + fVals[1]*fVals[1] + fVals[2]*fVals[2] );
-
-   if ( mag == 0.0 ) {
-      Error("TGLPlane::Normalise", "trying to normalise plane with zero magnitude normal");
-      return;
-   }
-
-   fVals[0] /= mag;
-   fVals[1] /= mag;
-   fVals[2] /= mag;
-   fVals[3] /= mag;
-}
-
-//______________________________________________________________________________
-inline Double_t TGLPlane::DistanceTo(const TGLVertex3 & vertex) const
-{
-   return (fVals[0]*vertex[0] + fVals[1]*vertex[1] + fVals[2]*vertex[2] + fVals[3]);
-}
-
-//______________________________________________________________________________
-inline TGLVertex3 TGLPlane::NearestOn(const TGLVertex3 & point) const
-{
-   TGLVector3 o = Norm() * (Dot(Norm(), TGLVector3(point[0], point[1], point[2])) + D() / Dot(Norm(), Norm()));
-   TGLVertex3 v = point - o;
-   return v;
-}
-
 // Some free functions for planes
 std::pair<Bool_t, TGLLine3>   Intersection(const TGLPlane & p1, const TGLPlane & p2);
 std::pair<Bool_t, TGLVertex3> Intersection(const TGLPlane & p1, const TGLPlane & p2, const TGLPlane & p3);
 std::pair<Bool_t, TGLVertex3> Intersection(const TGLPlane & plane, const TGLLine3 & line, Bool_t extend);
+
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
@@ -733,7 +649,7 @@ public:
    TGLMatrix(const TGLVertex3 & origin, const TGLVector3 & zAxis);
    TGLMatrix(const Double_t vals[16]);
    TGLMatrix(const TGLMatrix & other);
-   virtual ~TGLMatrix(); // ClassDef introduces virtual fns
+   virtual ~TGLMatrix();
 
    // Operators
    TGLMatrix & operator =(const TGLMatrix & rhs);
@@ -787,7 +703,7 @@ public:
 
    void Dump() const;
 
-   ClassDef(TGLMatrix,0) // GL matrix helper/wrapper class
+   ClassDef(TGLMatrix,0); // GL matrix helper/wrapper class
 };
 
 //______________________________________________________________________________
@@ -1116,7 +1032,7 @@ public:
                           const TGLVertex3 & pos,
                                 Bool_t       center = kFALSE);
 
-   ClassDef(TGLUtil,0) // Wrapper class for misc GL pieces
+   ClassDef(TGLUtil,0); // Wrapper class for misc GL pieces
 };
 
 /**************************************************************************/
@@ -1189,13 +1105,14 @@ public:
    virtual ~TGLSelectionBuffer();
 
    void           ReadColorBuffer(Int_t width, Int_t height);
+   void           ReadColorBuffer(Int_t x, Int_t y, Int_t width, Int_t height);
    const UChar_t *GetPixelColor(Int_t px, Int_t py)const;
 
 private:
    TGLSelectionBuffer(const TGLSelectionBuffer &);
    TGLSelectionBuffer &operator = (const TGLSelectionBuffer &);
 
-   ClassDef(TGLSelectionBuffer, 0)//Holds color buffer content for selection
+   ClassDef(TGLSelectionBuffer, 0); //Holds color buffer content for selection
 };
 
 template<class T>

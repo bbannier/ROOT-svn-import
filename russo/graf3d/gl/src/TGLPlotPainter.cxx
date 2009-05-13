@@ -126,8 +126,10 @@ void TGLPlotPainter::Paint()
    //
    glClear(GL_DEPTH_BUFFER_BIT);
    //
-   if (fCamera->ViewportChanged())
+/*   if (fCamera->ViewportChanged()) {
+      std::cout<<"Set need update\n";
       fUpdateSelection = kTRUE;
+   }*/
    //Set light.
    const Float_t pos[] = {0.f, 0.f, 0.f, 1.f};
    glLightfv(GL_LIGHT0, GL_POSITION, pos);
@@ -197,21 +199,23 @@ void TGLPlotPainter::PrintPlot()const
 {
    // Generate PS using gl2ps
    using namespace std;
-
+   
    TGLOutput::StartEmbeddedPS();
    FILE *output = fopen(gVirtualPS->GetName(), "a");
    Int_t gl2psFormat = GL2PS_EPS;
    Int_t gl2psSort   = GL2PS_BSP_SORT;
    Int_t buffsize    = 0;
    Int_t state       = GL2PS_OVERFLOW;
+   GLint gl2psoption = GL2PS_USE_CURRENT_VIEWPORT | 
+                       GL2PS_SILENT               |
+                       GL2PS_BEST_ROOT            |
+                       GL2PS_OCCLUSION_CULL       |
+                       0;
 
    while (state == GL2PS_OVERFLOW) {
       buffsize += 1024*1024;
       gl2psBeginPage ("ROOT Scene Graph", "ROOT", NULL,
-                      gl2psFormat, gl2psSort, GL2PS_USE_CURRENT_VIEWPORT
-                      | GL2PS_POLYGON_OFFSET_FILL | GL2PS_SILENT
-                      | GL2PS_BEST_ROOT | GL2PS_OCCLUSION_CULL
-                      | 0,
+                      gl2psFormat, gl2psSort, gl2psoption,
                       GL_RGBA, 0, NULL,0, 0, 0,
                       buffsize, output, NULL);
       DrawPlot();
@@ -234,7 +238,6 @@ Bool_t TGLPlotPainter::PlotSelected(Int_t px, Int_t py)
       glMatrixMode(GL_MODELVIEW);//[2
       glPushMatrix();
    
-   
       fSelectionPass = kTRUE;
       fCamera->SetCamera();
       
@@ -246,7 +249,8 @@ Bool_t TGLPlotPainter::PlotSelected(Int_t px, Int_t py)
       DrawPlot();
       
       glFinish();
-      fSelection.ReadColorBuffer(fCamera->GetWidth(), fCamera->GetHeight());
+      //fSelection.ReadColorBuffer(fCamera->GetWidth(), fCamera->GetHeight());
+      fSelection.ReadColorBuffer(fCamera->GetX(), fCamera->GetY(), fCamera->GetWidth(), fCamera->GetHeight());
       fSelectionPass   = kFALSE;
       fUpdateSelection = kFALSE;
       
@@ -259,8 +263,11 @@ Bool_t TGLPlotPainter::PlotSelected(Int_t px, Int_t py)
       glMatrixMode(GL_MODELVIEW);//2]
       glPopMatrix();
    }
+   
    //Convert from window top-bottom into gl bottom-top.
-   py = fCamera->GetHeight() - py;
+   px -= Int_t(gPad->GetXlowNDC() * gPad->GetWw());
+   py -= Int_t(gPad->GetWh() - gPad->YtoAbsPixel(gPad->GetY1()));
+   //py = fCamera->GetHeight() - py;
    //Y is a number of a row, x - column.
    std::swap(px, py);
    Int_t newSelected(Rgl::ColorToObjectID(fSelection.GetPixelColor(px, py), fHighColor));
@@ -1227,9 +1234,17 @@ void TGLBoxCut::TurnOnOff()
          break;
       }
 
-      fCenter.Z() = box[4].Z();
+      fCenter.Z() = box[0].Z() * 0.5 + box[4].Z() * 0.5;
       AdjustBox();
    }
+}
+
+//______________________________________________________________________________
+void TGLBoxCut::SetActive(Bool_t a)
+{
+   if (a == fActive)
+      return;
+   TurnOnOff();
 }
 
 //______________________________________________________________________________
@@ -1270,7 +1285,7 @@ void TGLBoxCut::DrawBox(Bool_t selectionPass, Int_t selected)const
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 
-      const Float_t diffuseColor[] = {0.f, 0.f, 1.f, 0.2f};
+      const Float_t diffuseColor[] = {0.f, 0.f, 1.f, 0.1f};
       glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuseColor);
 
       Rgl::DrawBoxFront(fXRange.first, fXRange.second, fYRange.first, fYRange.second,

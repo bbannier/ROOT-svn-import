@@ -25,6 +25,7 @@
 */
 
 class TGLParametricEquation;
+class TGL5DDataSet;
 class TString;
 class TList;
 class TF3;
@@ -49,6 +50,7 @@ private:
 public:
    TGLHistPainter(TH1 *hist);
    TGLHistPainter(TGLParametricEquation *equation);
+   TGLHistPainter(TGL5DDataSet *data);
 
    //TVirtualHistPainter final overriders
    Int_t          DistancetoPrimitive(Int_t px, Int_t py);
@@ -67,6 +69,7 @@ public:
    Int_t          MakeCuts(char *cutsOpt);
    void           SetShowProjection(const char *option, Int_t nbins);
 
+   TGLPlotPainter *GetRealPainter(){return fGLPainter.get();}
 private:
 
    struct PlotOption_t;
