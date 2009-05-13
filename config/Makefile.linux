@@ -4,8 +4,8 @@
 
 PLATFORM      = linux
 
-DEBUGFLAGS    = -g -O0 -Wshadow -Werror
-OPTFLAGS      = -g -O0 -Wshadow -Werror
+DEBUGFLAGS    = -g
+OPTFLAGS      = -O2
 ifeq (debug,$(findstring debug,$(ROOTBUILD)))
 OPT           = $(DEBUGFLAGS)
 NOOPT         =
@@ -50,11 +50,7 @@ ifeq ($(F77),)
 F77           = gfortran
 endif
 F77FLAGS      = -m32 -fPIC -std=legacy
-ifneq ($(shell $(F77) -print-file-name=libgfortran.$(SOEXT)),libgfortran.$(SOEXT))
 F77LIBS      := $(shell $(F77) -m32 -print-file-name=libgfortran.$(SOEXT))
-else
-F77LIBS      := $(shell $(F77) -m32 -print-file-name=libgfortran.a)
-endif
 F77LIBS      += $(shell $(F77) -m32 -print-file-name=libgfortranbegin.a)
 endif
 

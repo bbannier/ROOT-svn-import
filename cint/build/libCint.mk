@@ -19,19 +19,19 @@ CINTTMP       = bin/cint_tmp$(G__CFG_EXEEXT)
 CINTLIBIMPORT = lib/libCint$(G__CFG_IMPLIBEXT)
 
 CXXAPIO    = $(addsuffix $(G__CFG_OBJEXT),$(addprefix $(G__CFG_COREVERSION)/src/,\
-	      Api Class BaseCls Type DataMbr Dict Method MethodAr \
+	      Api Class BaseCls Type DataMbr Method MethodAr \
               CallFunc Typedf Token Shadow))
 
 CXXAPIH    = $(addsuffix .h,$(addprefix $(G__CFG_COREVERSION)/inc/,\
-	      Api Class BaseCls Type DataMbr Dict Method MethodAr \
+	      Api Class BaseCls Type DataMbr Method MethodAr \
               CallFunc Typedf Token Shadow))
 
-#ifeq ($(G__CFG_COREVERSION),cint7)
-#CXXAPIO   += $(addsuffix $(G__CFG_OBJEXT),$(addprefix $(G__CFG_COREVERSION)/src/,\
-#	      Dict))
-#CXXAPIH   += $(addsuffix .h,$(addprefix $(G__CFG_COREVERSION)/src/,\
-#              Dict))
-#endif
+ifeq ($(G__CFG_COREVERSION),cint7)
+CXXAPIO   += $(addsuffix $(G__CFG_OBJEXT),$(addprefix $(G__CFG_COREVERSION)/src/,\
+	      Dict))
+CXXAPIH   += $(addsuffix .h,$(addprefix $(G__CFG_COREVERSION)/src/,\
+              Dict))
+endif
 
 RFLXO      = $(addsuffix $(G__CFG_OBJEXT),$(addprefix $(G__CFG_COREVERSION)/src/,\
               rflx_gendict rflx_gensrc rflx_tools))
