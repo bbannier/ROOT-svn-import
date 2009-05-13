@@ -132,6 +132,6 @@ $(BASEDO4): PCHCXXFLAGS =
 
 # reconfigure might change enable/dicable cint7:
 $(BASEDIRS)/TROOT.o: config/Makefile.config
-#ifneq ($(BUILDBOTHCINT),)
-#$(BASEDIRS)/TROOT.o: CXXFLAGS += -DR__BUILDCINT7
-#endif
+ifneq ($(BUILDBOTHCINT),)
+$(BASEDIRS)/TROOT.o: CXXFLAGS += -DR__BUILDCINT7
+endif

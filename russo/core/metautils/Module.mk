@@ -17,10 +17,10 @@ METAUTILSH     := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 METAUTILSS     := $(filter-out %7.cxx,$(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx)))
 METAUTILSO     := $(METAUTILSS:.cxx=.o)
 
-#ifneq ($(BUILDBOTHCINT),)
-#METAUTILS7S     := $(patsubst %.cxx,%7.cxx,$(METAUTILSS))
-#METAUTILS7O     := $(METAUTILS7S:.cxx=.o)
-#endif
+ifneq ($(BUILDBOTHCINT),)
+METAUTILS7S     := $(patsubst %.cxx,%7.cxx,$(METAUTILSS))
+METAUTILS7O     := $(METAUTILS7S:.cxx=.o)
+endif
 
 METAUTILSL     := $(MODDIRI)/LinkDef.h
 METAUTILSDS    := $(MODDIRS)/G__MetaUtils.cxx
@@ -59,6 +59,6 @@ distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
 $(METAUTILSO):  PCHCXXFLAGS =
-#ifneq ($(BUILDBOTHCINT),)
-#$(METAUTILS7O): CXXFLAGS += -DR__BUILDING_CINT7
-#endif
+ifneq ($(BUILDBOTHCINT),)
+$(METAUTILS7O): CXXFLAGS += -DR__BUILDING_CINT7
+endif

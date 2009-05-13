@@ -120,7 +120,7 @@ int main(int argc, char **argv)
 {
    TApplication theApp("App", &argc, argv);
    gBenchmark = new TBenchmark();
-   Int_t nevent = 1;      // by default create 1000 events
+   Int_t nevent = 1000;      // by default create 1000 events
    if (argc > 1)  nevent = atoi(argv[1]);
    Int_t style  = 1;        // by default the new branch style
    if (argc > 2) style  = atoi(argv[2]);
@@ -143,13 +143,14 @@ int gPrintSubBench = 0;
 
 Double_t ntotin=0, ntotout=0;
 
-void stress(Int_t nevent, Int_t style = 1, Int_t printSubBenchmark = kFALSE, UInt_t portion = 65535)
+void stress(Int_t nevent, Int_t style = 1, 
+            Int_t printSubBenchmark = kFALSE, UInt_t portion = 65535)
 {
    //Main control function invoking all test programs
    
    gPrintSubBench = printSubBenchmark;
    
-   //if (nevent < 11) nevent = 11; // must have at least 10 events
+   if (nevent < 11) nevent = 11; // must have at least 10 events
    //Delete all possible objects in memory (to execute stress several times)
    gROOT->GetListOfFunctions()->Delete();
    gROOT->GetList()->Delete();
@@ -840,9 +841,7 @@ Int_t HistCompare(TH1 *h1, TH1 *h2)
    Double_t mean2 = h2->GetMean();
    Double_t rms2  = h2->GetRMS();
    Float_t xrange = h1->GetXaxis()->GetXmax() - h1->GetXaxis()->GetXmin();
-   if (TMath::Abs(xrange) > 1e-6) {
-      if (TMath::Abs((mean1-mean2)/xrange) > 0.001*xrange) return -1;
-   }
+   if (TMath::Abs((mean1-mean2)/xrange) > 0.001*xrange) return -1;
    if (rms1 && TMath::Abs((rms1-rms2)/rms1) > 0.001)    return -2;
    return n1-n2;
 }
