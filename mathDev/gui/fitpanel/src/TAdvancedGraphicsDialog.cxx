@@ -248,7 +248,7 @@ void TAdvancedGraphicsDialog::CreateConfFrame()
    fConfFrame = new TGVerticalFrame(fTab);
    TGHorizontalFrame* frame = new TGHorizontalFrame(fConfFrame);
 
-   TGLabel* label = new TGLabel(frame, "Number of Points: ");
+   TGLabel* label = new TGLabel(frame, "Confidence Level: ");
    frame->AddFrame(label, new TGLayoutHints(kLHintsTop | kLHintsLeft, 5, 5, 5, 0));
 
    fConfLevel = new TGNumberEntry(frame, 0.95, 
