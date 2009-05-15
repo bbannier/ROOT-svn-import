@@ -658,6 +658,7 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, RooCmdArg arg1, RooCmdArg arg
   // Constrain(const RooArgSet&pars) -- Include constraints to listed parameters in likelihood using internal constrains in p.d.f
   // ExternalConstraints(const RooArgSet& ) -- Include given external constraints to likelihood
   // Verbose(Bool_t flag)           -- Constrols RooFit informational messages in likelihood construction
+  // CloneData(Bool flag)           -- Use clone of dataset in NLL (default is true)
   // 
   // 
   
@@ -696,6 +697,7 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineInt("numcpu","NumCPU",0,1) ;
   pc.defineInt("verbose","Verbose",0,0) ;
   pc.defineInt("optConst","Optimize",0,1) ;
+  pc.defineInt("cloneData","CloneData",0,1) ;
   pc.defineObject("projDepSet","ProjectedObservables",0,0) ;
   pc.defineObject("cPars","Constrain",0,0) ;
   pc.defineSet("extCons","ExternalConstraints",0,0) ;
@@ -715,6 +717,7 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   Int_t splitr   = pc.getInt("splitRange") ;
   Bool_t verbose = pc.getInt("verbose") ;
   Int_t optConst = pc.getInt("optConst") ;
+  Bool_t cloneData = pc.getInt("cloneData") ;
   const RooArgSet* cPars = static_cast<RooArgSet*>(pc.getObject("cPars")) ;
   const RooArgSet* extCons = pc.getSet("extCons") ;
 
@@ -754,7 +757,7 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   string baseName = Form("nll_%s_%s",GetName(),data.GetName()) ;
   if (!rangeName || strchr(rangeName,',')==0) {
     // Simple case: default range, or single restricted range
-    nll = new RooNLLVar(baseName.c_str(),"-log(likelihood)",*this,data,projDeps,ext,rangeName,addCoefRangeName,numcpu,kFALSE,verbose,splitr) ;
+    nll = new RooNLLVar(baseName.c_str(),"-log(likelihood)",*this,data,projDeps,ext,rangeName,addCoefRangeName,numcpu,kFALSE,verbose,splitr,cloneData) ;
 
   } else {
     // Composite case: multiple ranges
@@ -763,7 +766,7 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
     strcpy(buf,rangeName) ;
     char* token = strtok(buf,",") ;
     while(token) {
-      RooAbsReal* nllComp = new RooNLLVar(Form("%s_%s",baseName.c_str(),token),"-log(likelihood)",*this,data,projDeps,ext,token,addCoefRangeName,numcpu,kFALSE,verbose,splitr) ;
+      RooAbsReal* nllComp = new RooNLLVar(Form("%s_%s",baseName.c_str(),token),"-log(likelihood)",*this,data,projDeps,ext,token,addCoefRangeName,numcpu,kFALSE,verbose,splitr,cloneData) ;
       nllList.add(*nllComp) ;
       token = strtok(0,",") ;
     }
@@ -889,7 +892,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   RooCmdConfig pc(Form("RooAbsPdf::fitTo(%s)",GetName())) ;
 
   RooLinkedList fitCmdList(cmdList) ;
-  RooLinkedList nllCmdList = pc.filterCmdList(fitCmdList,"ProjectedObservables,Extended,Range,RangeWithName,SumCoefRange,NumCPU,Optimize,SplitRange,Constrain,ExternalConstraints") ;
+  RooLinkedList nllCmdList = pc.filterCmdList(fitCmdList,"ProjectedObservables,Extended,Range,RangeWithName,SumCoefRange,NumCPU,Optimize,SplitRange,Constrain,ExternalConstraints,CloneData") ;
 
   pc.defineString("fitOpt","FitOptions",0,"") ;
   pc.defineInt("optConst","Optimize",0,1) ;
@@ -1548,6 +1551,124 @@ Bool_t RooAbsPdf::isDirectGenSafe(const RooAbsArg& arg) const
   return kTRUE ;
 }
 
+
+
+
+//_____________________________________________________________________________
+RooDataHist *RooAbsPdf::generateBinned(const RooArgSet& whatVars, Int_t nEvents, const RooCmdArg& arg1,
+				       const RooCmdArg& arg2, const RooCmdArg& arg3,const RooCmdArg& arg4, const RooCmdArg& arg5) 
+{
+  // Generate a new dataset containing the specified variables with events sampled from our distribution. 
+  // Generate the specified number of events or expectedEvents() if not specified.
+  //
+  // Any variables of this PDF that are not in whatVars will use their
+  // current values and be treated as fixed parameters. Returns zero
+  // in case of an error. The caller takes ownership of the returned
+  // dataset.
+  //
+  // The following named arguments are supported
+  //
+  // Verbose(Bool_t flag)               -- Print informational messages during event generation
+  // Extended()                         -- The actual number of events generated will be sampled from a Poisson distribution
+  //                                       with mu=nevt. For use with extended maximum likelihood fits
+  return generateBinned(whatVars,RooFit::NumEvents(nEvents),arg1,arg2,arg3,arg4,arg5) ;
+}
+
+
+
+//_____________________________________________________________________________
+RooDataHist *RooAbsPdf::generateBinned(const RooArgSet& whatVars, const RooCmdArg& arg1,const RooCmdArg& arg2,
+				       const RooCmdArg& arg3,const RooCmdArg& arg4, const RooCmdArg& arg5,const RooCmdArg& arg6) 
+{
+  // Generate a new dataset containing the specified variables with events sampled from our distribution. 
+  // Generate the specified number of events or expectedEvents() if not specified.
+  //
+  // Any variables of this PDF that are not in whatVars will use their
+  // current values and be treated as fixed parameters. Returns zero
+  // in case of an error. The caller takes ownership of the returned
+  // dataset.
+  //
+  // The following named arguments are supported
+  //
+  // Name(const char* name)             -- Name of the output dataset
+  // Verbose(Bool_t flag)               -- Print informational messages during event generation
+  // NumEvent(int nevt)                 -- Generate specified number of events
+  // Extended()                         -- The actual number of events generated will be sampled from a Poisson distribution
+  //                                       with mu=nevt. For use with extended maximum likelihood fits
+
+  // Select the pdf-specific commands 
+  RooCmdConfig pc(Form("RooAbsPdf::generate(%s)",GetName())) ;
+  pc.defineString("dsetName","Name",0,"") ;
+  pc.defineInt("verbose","Verbose",0,0) ;
+  pc.defineInt("extended","Extended",0,0) ;
+  pc.defineInt("nEvents","NumEvents",0,0) ;
+  
+  
+  // Process and check varargs 
+  pc.process(arg1,arg2,arg3,arg4,arg5,arg6) ;
+  if (!pc.ok(kTRUE)) {
+    return 0 ;
+  }
+
+  // Decode command line arguments
+  Int_t nEvents = pc.getInt("nEvents") ;
+  Bool_t verbose = pc.getInt("verbose") ;
+  Bool_t extended = pc.getInt("extended") ;
+  const char* dsetName = pc.getString("dsetName") ;
+
+  if (extended) {
+    nEvents = RooRandom::randomGenerator()->Poisson(nEvents==0?expectedEvents(&whatVars):nEvents) ;
+    cxcoutI(Generation) << " Extended mode active, number of events generated (" << nEvents << ") is Poisson fluctuation on " 
+			  << GetName() << "::expectedEvents() = " << nEvents << endl ;
+    // If Poisson fluctuation results in zero events, stop here
+    if (nEvents==0) {
+      return 0 ;
+    }
+  } else if (nEvents==0) {
+    cxcoutI(Generation) << "No number of events specified , number of events generated is " 
+			  << GetName() << "::expectedEvents() = " << expectedEvents(&whatVars)<< endl ;
+  }
+
+  // Forward to appropiate implementation
+  RooDataHist* data = generateBinned(whatVars,nEvents,verbose) ;
+
+  // Rename dataset to given name if supplied
+  if (dsetName && strlen(dsetName)>0) {
+    data->SetName(dsetName) ;
+  }
+
+  return data ;
+}
+
+
+
+
+//_____________________________________________________________________________
+RooDataHist *RooAbsPdf::generateBinned(const RooArgSet &whatVars, Int_t nEvents, Bool_t verbose) const 
+{
+  // Generate a new dataset containing the specified variables with
+  // events sampled from our distribution. Generate the specified
+  // number of events or else try to use expectedEvents() if nEvents <= 0.
+  // Any variables of this PDF that are not in whatVars will use their
+  // current values and be treated as fixed parameters. Returns zero
+  // in case of an error. The caller takes ownership of the returned
+  // dataset.
+
+  // Create empty RooDataHist
+  RooDataHist* hist = new RooDataHist("genData","genData",whatVars) ;
+  
+  // Sample p.d.f. distribution
+  fillDataHist(hist,&whatVars,1,kTRUE) ;
+
+
+  // Scale to number of events and introduce Poisson fluctuations
+  for (int i=0 ; i<hist->numEntries() ; i++) {
+    hist->get(i) ;
+    hist->set(RooRandom::randomGenerator()->Poisson(hist->weight()*nEvents)) ;
+  }
+  
+  return hist;
+}
 
 
 
