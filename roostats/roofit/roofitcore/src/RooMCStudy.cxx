@@ -557,7 +557,7 @@ Bool_t RooMCStudy::run(Bool_t doGenerate, Bool_t DoFit, Int_t nSamples, Int_t nE
   for (iter=_modList.begin() ; iter!= _modList.end() ; ++iter) {
     RooDataSet* auxData = (*iter)->finalizeRun() ;
     if (auxData) {
-      _fitParData->merge(auxData) ;
+      // WVE FIX THIS      _fitParData->merge(auxData) ;
     }
   }  
 
@@ -572,7 +572,7 @@ Bool_t RooMCStudy::run(Bool_t doGenerate, Bool_t DoFit, Int_t nSamples, Int_t nE
     }
     delete iter2 ;
    
-    _fitParData->merge(_genParData) ;
+    // WVE FIX THIS _fitParData->merge(_genParData) ;
   }
 
   if (DoFit) calcPulls() ;
