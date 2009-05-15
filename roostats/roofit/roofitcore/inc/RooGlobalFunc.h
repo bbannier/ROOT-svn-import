@@ -64,8 +64,8 @@ RooCmdArg AddTo(const char* name, double wgtSel=1.0, double wgtOther=1.0) ;
 RooCmdArg EvalErrorValue(Double_t value) ;
 RooCmdArg MoveToBack()  ;
 RooCmdArg VisualizeError(const RooDataSet& paramData, Double_t Z=1) ;
-RooCmdArg VisualizeError(const RooFitResult& fitres, Double_t Z=1, Int_t nSample=-1) ;
-RooCmdArg VisualizeError(const RooFitResult& fitres, const RooArgSet& param, Double_t Z=1, Int_t nSample=-1) ;
+RooCmdArg VisualizeError(const RooFitResult& fitres, Double_t Z=1, Bool_t EVmethod=kFALSE) ;
+RooCmdArg VisualizeError(const RooFitResult& fitres, const RooArgSet& param, Double_t Z=1, Bool_t EVmethod=kFALSE) ;
 
 // RooAbsPdf::plotOn arguments
 RooCmdArg Normalization(Double_t scaleFactor, RooAbsPdf::ScaleType scaleType) ;
