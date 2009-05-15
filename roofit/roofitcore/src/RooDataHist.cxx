@@ -1773,11 +1773,11 @@ void RooDataHist::Streamer(TBuffer &R__b)
      
       if (R__v>1) {
 
-	R__b.ReadClassBuffer(RooDataHist::Class(),this,R__v,R__s,R__v);
+	R__b.ReadClassBuffer(RooDataHist::Class(),this,R__v,R__s,R__c);
 
       } else {	
 
-	// Legacy dataset conversion happens here. Legacy RooDataSet inherits from RooTreeData
+	// Legacy dataset conversion happens here. Legacy RooDataHist inherits from RooTreeData
 	// which in turn inherits from RooAbsData. Manually stream RooTreeData contents on 
 	// file here and convert it into a RooTreeDataStore which is installed in the 
 	// new-style RooAbsData base class
@@ -1828,6 +1828,7 @@ void RooDataHist::Streamer(TBuffer &R__b)
       }
       
    } else {
+
       R__b.WriteClassBuffer(RooDataHist::Class(),this);
    }
 }
