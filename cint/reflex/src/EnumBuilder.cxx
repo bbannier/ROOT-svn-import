@@ -35,16 +35,8 @@ Reflex::EnumBuilder::~EnumBuilder() {
 //-------------------------------------------------------------------------------
 // Destructor of enum builder. Used for call back functions.
    if (fCallbackEnabled) {
-      FireClassCallback(*fEnum);
+      FireClassCallback( *fEnum );
    }
-}
-
-
-//-------------------------------------------------------------------------------
-Reflex::EnumBuilder& Reflex::EnumBuilder::EnableCallback(const bool enable /*= true*/) {
-//-------------------------------------------------------------------------------
-   fCallbackEnabled = enable;
-   return *this;
 }
 
 
@@ -78,6 +70,15 @@ Reflex::EnumBuilder &  Reflex::EnumBuilder::AddProperty( const char * key,
 //-------------------------------------------------------------------------------
 // Add a property info to this enum as string.
    AddProperty( key, Any(value));
+   return *this;
+}
+
+
+//-------------------------------------------------------------------------------
+Reflex::EnumBuilder & Reflex::EnumBuilder::EnableCallback( const bool enable
+                                                           /* = true */ ) {
+//-------------------------------------------------------------------------------
+   fCallbackEnabled = enable;
    return *this;
 }
 

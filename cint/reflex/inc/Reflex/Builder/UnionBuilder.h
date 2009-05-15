@@ -16,7 +16,8 @@
 #include "Reflex/Builder/TypeBuilder.h"
 #include "Reflex/Member.h"
 
-namespace Reflex {
+namespace Reflex
+{
 
 // forward declarations
 class Union;
@@ -133,7 +134,7 @@ public:
    * @param At the At of the union item
    * @return a reference to the UnionBuilder
    */
-   template<class T> UnionBuilder& AddItem(const char* nam);
+   template <typename T> UnionBuilder& AddItem(const char* nam);
 
    /**
    * AddItem will add one union item
@@ -151,7 +152,7 @@ public:
    * @param  modifiers the modifiers of the data MemberAt
    * @return a reference to the UnionBuilder
    */
-   template<class T> UnionBuilder& AddDataMember(const char* nam, size_t offs, unsigned int modifiers = 0);
+   template <class T> UnionBuilder& AddDataMember(const char* nam, size_t offs, unsigned int modifiers = 0);
    UnionBuilder& AddDataMember(const Type& typ, const char* nam, size_t offs, unsigned int modifiers = 0);
 
    /** AddFunctionMember will add the information about one
@@ -165,7 +166,7 @@ public:
    * @param  modifiers the modifiers of the data MemberAt
    * @return a reference to the UnionBuilder
    */
-   template<class F> UnionBuilder& AddFunctionMember(const char* nam, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0);
+   template <class F> UnionBuilder& AddFunctionMember(const char* nam, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers  = 0);
    UnionBuilder& AddFunctionMember(const Type& typ, const char* nam, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0);
 
    /**
@@ -176,7 +177,7 @@ public:
    * @param  value the value of the PropertyNth
    * @return a reference to the building class
    */
-   template<class P> UnionBuilder& AddProperty(const char* key, P value);
+   template <typename P> UnionBuilder& AddProperty(const char* key, P value);
 
    /** 
    * EnableCallback Enable or disable the callback call in the destructor
@@ -206,7 +207,7 @@ private:
 } // namespace Reflex
 
 //-------------------------------------------------------------------------------
-template<class T> Reflex::UnionBuilder& Reflex::UnionBuilder::AddItem(const char* nam)
+template <typename T> Reflex::UnionBuilder& Reflex::UnionBuilder::AddItem(const char* nam)
 {
    // -- !!! Obsolete, do not use.
    fUnionBuilderImpl.AddItem(nam, TypeDistiller<T>::Get());
@@ -214,21 +215,21 @@ template<class T> Reflex::UnionBuilder& Reflex::UnionBuilder::AddItem(const char
 }
 
 //______________________________________________________________________________
-template<class T> Reflex::UnionBuilder& Reflex::UnionBuilder::AddDataMember(const char* nam, size_t offs, unsigned int modifiers /*= 0*/)
+template<typename T> Reflex::UnionBuilder& Reflex::UnionBuilder::AddDataMember(const char* nam, size_t offs, unsigned int modifiers /*= 0*/)
 {
    fUnionBuilderImpl.AddDataMember(nam, TypeDistiller<T>::Get(), offs, modifiers);
    return *this;
 }
 
 //______________________________________________________________________________
-template<class F> Reflex::UnionBuilder& Reflex::UnionBuilder::AddFunctionMember(const char* nam, StubFunction stubFP, void* stubCtx /*= 0*/, const char* params /*= 0*/, unsigned int modifiers /*= 0*/)
+template <typename F> Reflex::UnionBuilder& Reflex::UnionBuilder::AddFunctionMember(const char* nam, StubFunction stubFP, void* stubCtx /*= 0*/, const char* params /*= 0*/, unsigned int modifiers /*= 0*/)
 {
    fUnionBuilderImpl.AddFunctionMember(nam, FunctionDistiller<F>::Get(), stubFP, stubCtx, params, modifiers);
    return *this;
 }
 
 //______________________________________________________________________________
-template<class P> Reflex::UnionBuilder& Reflex::UnionBuilder::AddProperty(const char* key, P value)
+template <typename P> Reflex::UnionBuilder& Reflex::UnionBuilder::AddProperty(const char* key, P value)
 {
    fUnionBuilderImpl.AddProperty(key, value);
    return *this;

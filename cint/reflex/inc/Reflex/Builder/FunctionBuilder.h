@@ -59,7 +59,7 @@ namespace Reflex {
       * EnableCallback Enable or disable the callback call in the destructor
       * @param  enable true to enable callback call, false to disable callback call
       */
-      FunctionBuilder& EnableCallback(const bool enable = true);
+      FunctionBuilder & EnableCallback( const bool enable = true );
 
 
       /**
@@ -117,7 +117,7 @@ namespace Reflex {
       * EnableCallback Enable or disable the callback call in the destructor
       * @param  enable true to enable callback call, false to disable callback call
       */
-      void EnableCallback(const bool enable = true);
+      void EnableCallback( const bool enable = true );
 
 
       /**
@@ -171,7 +171,7 @@ namespace Reflex {
       * EnableCallback Enable or disable the callback call in the destructor
       * @param  enable true to enable callback call, false to disable callback call
       */
-      FunctionBuilderT& EnableCallback(const bool enable = true);
+      FunctionBuilderT & EnableCallback( const bool enable = true );
 
 
       /**
@@ -220,10 +220,12 @@ Reflex::FunctionBuilderT<F>::AddProperty( const char * key,
 
 
 //______________________________________________________________________________
-template<typename F> inline Reflex::FunctionBuilderT<F>& Reflex::FunctionBuilderT<F>::EnableCallback(const bool enable /*= true*/)
+template < typename F >
+inline Reflex::FunctionBuilderT<F> &
+Reflex::FunctionBuilderT<F>::EnableCallback( const bool enable /* = true */ )
 {
    fFunctionBuilderImpl.EnableCallback(enable);
-   return *this;
+   return * this;
 }
 
 

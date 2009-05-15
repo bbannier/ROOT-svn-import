@@ -152,6 +152,7 @@ namespace Reflex {
        */
       size_t GetBasePosition() const;
 
+
       /**
       * IsAbstract will return true if the the class is abstract
       * @return true if the class is abstract
@@ -558,13 +559,14 @@ inline size_t Reflex::TypeBase::CalculateSize() const {
    return fSize;
 }
 
+
 //-------------------------------------------------------------------------------
 inline size_t Reflex::TypeBase::GetBasePosition() const {
 //-------------------------------------------------------------------------------
    return fBasePosition;
 }
-            
 
+ 
 //-------------------------------------------------------------------------------
 inline bool Reflex::TypeBase::IsAbstract() const {
 //-------------------------------------------------------------------------------

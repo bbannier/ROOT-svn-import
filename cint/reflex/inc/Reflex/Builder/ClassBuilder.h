@@ -77,6 +77,7 @@ namespace Reflex {
       // This is for anonymous union support.
       //void addUnion(const char* nam, const char* values, const std::type_info& ti, unsigned int modifiers = 0);
 
+
       /** AddProperty will add a PropertyNth to the PropertyNth stack
       * which will be emtpied with the next call of a builder
       * class and attached to the item built with this call
@@ -87,11 +88,13 @@ namespace Reflex {
       void AddProperty(const char* key, Any value);
       void AddProperty(const char* key, const char* value);
 
+
       /** 
       * EnableCallback Enable or disable the callback call in the destructor
       * @param  enable true to enable callback call, false to disable callback call
       */
       void EnableCallback(const bool enable = true);
+ 
 
       /** SetSizeOf will set the SizeOf property for this class.
       * It currently ignore all actual content.
@@ -326,7 +329,7 @@ namespace Reflex {
       * EnableCallback Enable or disable the callback call in the destructor
       * @param  enable true to enable callback call, false to disable callback call
       */
-      ClassBuilderT& EnableCallback(const bool enable = true);
+      ClassBuilderT & EnableCallback( const bool enable = true );
 
 
       /** SetSizeOf will set the SizeOf property for this class.
@@ -550,10 +553,13 @@ Reflex::ClassBuilderT<C>::AddProperty( const char * key,
 
 
 //______________________________________________________________________________
-template<typename C> inline Reflex::ClassBuilderT<C>& Reflex::ClassBuilderT<C>::EnableCallback(const bool enable /*= true*/)
+template < class C >
+inline Reflex::ClassBuilderT<C> &
+Reflex::ClassBuilderT<C>::EnableCallback( const bool enable /* = true */ )
+//-------------------------------------------------------------------------------
 {
    fClassBuilderImpl.EnableCallback(enable);
-   return *this;
+   return * this;
 }
 
 
