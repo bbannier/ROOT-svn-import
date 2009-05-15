@@ -87,6 +87,8 @@
 #include "TF1.h"
 #include "TF2.h"
 #include "TF3.h"
+#include "TMatrixD.h"
+#include "TVector.h"
 
 #include <sstream>
 
@@ -1410,6 +1412,7 @@ RooPlot* RooAbsReal::plotOn(RooPlot* frame, RooLinkedList& argList) const
   pc.defineObject("errorFR","VisualizeError",0) ;
   pc.defineDouble("errorZ","VisualizeError",0,1.) ;
   pc.defineSet("errorPars","VisualizeError",0) ;
+  pc.defineInt("imethod","VisualizeError",0,0) ;
   pc.defineInt("binProjData","ProjData",0,0) ;
   pc.defineDouble("rangeLo","Range",0,-999.) ;
   pc.defineDouble("rangeHi","Range",1,-999.) ;
@@ -1448,8 +1451,9 @@ RooPlot* RooAbsReal::plotOn(RooPlot* frame, RooLinkedList& argList) const
   RooFitResult* errFR = (RooFitResult*) pc.getObject("errorFR") ;
   Double_t errZ = pc.getDouble("errorZ") ;
   RooArgSet* errPars = pc.getSet("errorPars") ;
+  Int_t imethod = pc.getInt("imethod") ;
   if (errFR) {
-    return plotOnWithErrorBand(frame,*errFR,errZ,errPars,argList) ;
+    return plotOnWithErrorBand(frame,*errFR,errZ,errPars,argList,imethod) ;
   }
 
   // Extract values from named arguments
@@ -2276,7 +2280,7 @@ RooPlot* RooAbsReal::plotAsymOn(RooPlot *frame, const RooAbsCategoryLValue& asym
 
 
 //_____________________________________________________________________________
-RooPlot* RooAbsReal::plotOnWithErrorBand(RooPlot* frame,const RooFitResult& fr, Double_t Z,const RooArgSet* params, const RooLinkedList& argList) const 
+RooPlot* RooAbsReal::plotOnWithErrorBand(RooPlot* frame,const RooFitResult& fr, Double_t Z,const RooArgSet* params, const RooLinkedList& argList, Bool_t method1) const 
 {
   RooLinkedList plotArgList(argList) ;
   RooCmdConfig pc(Form("RooAbsPdf::plotOn(%s)",GetName())) ;
@@ -2289,42 +2293,126 @@ RooPlot* RooAbsReal::plotOnWithErrorBand(RooPlot* frame,const RooFitResult& fr, 
   RooCurve* cenCurve = frame->getCurve() ;
   frame->remove(0,kFALSE) ;
 
-  // Clone self for internal use
-  RooAbsReal* cloneFunc = (RooAbsReal*) cloneTree() ;
-  RooArgSet* cloneParams = cloneFunc->getObservables(fr.floatParsFinal()) ;
-  RooArgSet* errorParams = params?((RooArgSet*)cloneParams->selectCommon(*params)):cloneParams ;
+  RooCurve* band(0) ;
+  if (!method1) {
 
-  // Generate 100 random parameter points distributed according to fit result covariance matrix
-  RooAbsPdf* paramPdf = fr.createPdf(*errorParams) ;
-  Int_t n = Int_t(30./TMath::Erfc(Z/sqrt(2))) ;
-  if (n<100) n=100 ;
-
-  coutI(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") INFO: visualizing " << Z << "-sigma uncertainties in parameters " 
+    // Clone self for internal use
+    RooAbsReal* cloneFunc = (RooAbsReal*) cloneTree() ;
+    RooArgSet* cloneParams = cloneFunc->getObservables(fr.floatParsFinal()) ;
+    RooArgSet* errorParams = params?((RooArgSet*)cloneParams->selectCommon(*params)):cloneParams ;
+    
+    // Generate 100 random parameter points distributed according to fit result covariance matrix
+    RooAbsPdf* paramPdf = fr.createPdf(*errorParams) ;
+    Int_t n = Int_t(30./TMath::Erfc(Z/sqrt(2))) ;
+    if (n<100) n=100 ;
+    
+    coutI(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") INFO: visualizing " << Z << "-sigma uncertainties in parameters " 
 		  << *errorParams << " from fit result " << fr.GetName() << " using " << n << " samplings." << endl ;
+    
+    // Generate variation curves with above set of parameter values
+    RooDataSet* d = paramPdf->generate(*errorParams,n) ;
+    vector<RooCurve*> cvec ;
+    for (int i=0 ; i<d->numEntries() ; i++) {
+      *cloneParams = (*d->get(i)) ;
+      RooLinkedList tmp2(plotArgList) ;
+      cloneFunc->plotOn(frame,tmp2) ;
+      cvec.push_back(frame->getCurve()) ;
+      frame->remove(0,kFALSE) ;
+    }
+    
+    
+    // Generate upper and lower curve points from 68% interval around each point of central curve
+    band = cenCurve->makeErrorBand(cvec,Z) ;
+    
+    // Cleanup 
+    delete paramPdf ;
+    delete cloneFunc ;
+    for (vector<RooCurve*>::iterator i=cvec.begin() ; i!=cvec.end() ; i++) {
+      delete (*i) ;
+    }
 
-  // Generate variation curves with above set of parameter values
-  RooDataSet* d = paramPdf->generate(*errorParams,n) ;
-  vector<RooCurve*> cvec ;
-  for (int i=0 ; i<d->numEntries() ; i++) {
-    *cloneParams = (*d->get(i)) ;
-    RooLinkedList tmp2(plotArgList) ;
-    cloneFunc->plotOn(frame,tmp2) ;
-    cvec.push_back(frame->getCurve()) ;
-    frame->remove(0,kFALSE) ;
+  } else {
+
+    //TMatrixDSym C = fr.correlationMatrix() ;
+    TMatrixDSym C = fr.covarianceMatrix() ;
+    TVectorD eigenValues ;
+    TMatrixD eigenVectors = C.EigenVectors(eigenValues) ;
+//     TMatrixD eigenVectors ;
+//     eigenVectors.ResizeTo(C) ;
+//     for (int k=0 ; k<eigenVectors.GetNcols() ; k++) eigenVectors(k,k)=1 ;
+    
+    cout << "eigenvectors" << endl ;
+    eigenVectors.Print() ;
+
+    // Clone self for internal use
+    RooAbsReal* cloneFunc = (RooAbsReal*) cloneTree() ;
+    RooArgSet* cloneParams = cloneFunc->getObservables(fr.floatParsFinal()) ;
+    RooArgSet* errorParams = params?((RooArgSet*)cloneParams->selectCommon(*params)):cloneParams ;    
+
+    // Make list of parameter instances of cloneFunc in order of error matrix
+    RooArgList paramList ;
+    const RooArgList& fpf = fr.floatParsFinal() ;
+    for (Int_t i=0 ; i<fpf.getSize() ; i++) {
+      RooAbsArg* par = errorParams->find(fpf[i].GetName()) ;
+      if (par) {
+	paramList.add(*par) ;
+      }
+    }
+    paramList.Print() ;
+
+    // Loop over eigen-vector variations of parameters
+    
+    vector<RooCurve*> plusVar, minusVar ;
+    
+    for (Int_t ivar=0 ; ivar<paramList.getSize() ; ivar++) {
+
+      // Positive variation of eigenvector of errors
+      for (Int_t ipar=0 ; ipar<paramList.getSize() ; ipar++) {
+	RooRealVar& rrv = (RooRealVar&)fpf[ipar] ;
+	((RooRealVar&)paramList[ipar]).setVal( rrv.getVal() + eigenVectors(ivar,ipar)*eigenValues(ivar)) ;
+      }
+
+      cout << "plus variation #" << ivar << endl ;
+      paramList.Print("v") ;
+
+      RooLinkedList tmp2(plotArgList) ;
+      cloneFunc->plotOn(frame,tmp2) ;
+      plusVar.push_back(frame->getCurve()) ;
+      frame->remove(0,kFALSE) ;
+
+
+      // Negative variation of eigenvector of errors
+      for (Int_t ipar=0 ; ipar<paramList.getSize() ; ipar++) {
+	RooRealVar& rrv = (RooRealVar&)fpf[ipar] ;
+	((RooRealVar&)paramList[ipar]).setVal( rrv.getVal() - eigenVectors(ivar,ipar)*eigenValues(ivar)) ;
+      }
+
+      cout << "minus variation #" << ivar << endl ;
+      paramList.Print("v") ;
+
+      RooLinkedList tmp3(plotArgList) ;
+      cloneFunc->plotOn(frame,tmp3) ;
+      minusVar.push_back(frame->getCurve()) ;
+      frame->remove(0,kFALSE) ;
+      
+    }
+
+    // Generate upper and lower curve points from 68% interval around each point of central curve
+    band = cenCurve->makeErrorBand(plusVar,minusVar,Z) ;
+    
+    // Cleanup 
+    delete cloneFunc ;
+    for (vector<RooCurve*>::iterator i=plusVar.begin() ; i!=plusVar.end() ; i++) {
+      delete (*i) ;
+    }
+    for (vector<RooCurve*>::iterator i=minusVar.begin() ; i!=minusVar.end() ; i++) {
+      delete (*i) ;
+    }
+
   }
 
-
-  // Generate upper and lower curve points from 68% interval around each point of central curve
-  RooCurve* band = cenCurve->makeErrorBand(cvec,Z) ;
-
-  // Cleanup 
   delete cenCurve ;
-  delete paramPdf ;
-  delete cloneFunc ;
-  for (vector<RooCurve*>::iterator i=cvec.begin() ; i!=cvec.end() ; i++) {
-    delete (*i) ;
-  }
-
+  if (!band) return frame ;
   
   // Define configuration for this method
   pc.defineString("drawOption","DrawOption",0,"F") ;
