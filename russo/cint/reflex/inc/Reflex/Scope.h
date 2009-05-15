@@ -861,7 +861,7 @@ namespace Reflex {
       * AddBase will add the information about a Base class
       * @param b pointer to the base class
       */
-      void AddBase(const Base& b) const;
+      void AddBase(const Base & b) const;
 
 
       /**
@@ -897,7 +897,7 @@ namespace Reflex {
       * AddFunctionMember will add the information about a function member
       * @param fm function member to add
       */
-      void AddFunctionMember(const Member& fm) const;
+      void AddFunctionMember( const Member & fm ) const;
 
 
       /**
@@ -909,8 +909,19 @@ namespace Reflex {
       * @param params a semi colon separated list of parameters 
       * @param modifiers of the function member
       */ 
-      void AddFunctionMember(const char* name, const Type& type, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0) const;
-      void AddFunctionMember(Member* out_mbr, const char* name, const Type type, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0) const;
+      void AddFunctionMember( const char * name,
+         const Type & type,
+         StubFunction stubFP,
+         void * stubCtx = 0,
+         const char * params = 0,
+         unsigned int modifiers = 0 ) const;
+      void AddFunctionMember( Member * out_mbr,
+         const char * name,
+         const Type type,
+         StubFunction stubFP,
+         void * stubCtx = 0,
+         const char * params = 0,
+         unsigned int modifiers = 0) const;
 
 
       /** 
@@ -1560,16 +1571,18 @@ inline Reflex::Reverse_Scope_Iterator Reflex::Scope::UsingDirective_REnd() const
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::Scope::AddBase(const Type & bas, OffsetFunction offsFP, unsigned int modifiers /*= 0*/) const {
+inline void Reflex::Scope::AddBase( const Type & bas,
+                                    OffsetFunction offsFP,
+                                    unsigned int modifiers /* = 0 */) const {
 //-------------------------------------------------------------------------------
-   if ( * this) fScopeName->fScopeBase->AddBase(bas, offsFP, modifiers);
+   if ( * this) fScopeName->fScopeBase->AddBase( bas, offsFP, modifiers );
 }
 
 
 //-------------------------------------------------------------------------------
-inline void Reflex::Scope::AddBase(const Base& b) const {
+inline void Reflex::Scope::AddBase(const Base & b) const {
 //-------------------------------------------------------------------------------
-   if ( * this) fScopeName->fScopeBase->AddBase(b);
+   if ( * this) fScopeName->fScopeBase->AddBase( b );
 }
 
 

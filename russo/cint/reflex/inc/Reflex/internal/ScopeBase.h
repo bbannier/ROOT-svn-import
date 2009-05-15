@@ -193,6 +193,7 @@ namespace Reflex {
       */
       size_t GetBasePosition() const;
 
+
       /**
       * GlobalScope will return the global scope representation\
       * @return global scope
@@ -525,7 +526,7 @@ namespace Reflex {
       * @param offsFP pointer to a function stub for calculating the base class offset
       * @param modifiers the modifiers of the base class
       */
-      virtual void AddBase(const Type & bas, OffsetFunction offsFP, unsigned int modifiers = 0) const;
+      virtual void AddBase(const Type& bas, OffsetFunction offsFP, unsigned int modifiers = 0) const;
 
 
       /**
@@ -548,9 +549,20 @@ namespace Reflex {
       * AddFunctionMember will add the information about a function MemberAt
       * @param fm pointer to function MemberAt
       */
-      virtual void AddFunctionMember(const Member& fm) const;
-      virtual void AddFunctionMember(const char* name, const Type& type, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0) const;
-      virtual void AddFunctionMember(Member* mbr_out, const char* name, const Type type, StubFunction stubFP, void* stubCtx = 0, const char* params = 0, unsigned int modifiers = 0) const;
+      virtual void AddFunctionMember( const Member & fm ) const;
+      virtual void AddFunctionMember( const char * name,
+         const Type & type,
+         StubFunction stubFP,
+         void * stubCtx = 0,
+         const char * params = 0,
+         unsigned int modifiers = 0 ) const;
+      virtual void AddFunctionMember( Member* mbr_out,
+         const char * name,
+         const Type type,
+         StubFunction stubFP,
+         void * stubCtx = 0,
+         const char * params = 0,
+         unsigned int modifiers = 0 ) const;
 
 
       virtual void AddMemberTemplate( const MemberTemplate & mt ) const ;
@@ -791,12 +803,6 @@ inline size_t Reflex::ScopeBase::BaseSize() const {
    return 0;
 }
 
-//-------------------------------------------------------------------------------
-inline size_t Reflex::ScopeBase::GetBasePosition() const {
-//-------------------------------------------------------------------------------
-   return fBasePosition;
-}
-            
 
 //-------------------------------------------------------------------------------
 inline Reflex::Base_Iterator Reflex::ScopeBase::Base_Begin() const {
@@ -889,6 +895,13 @@ inline Reflex::Reverse_Member_Iterator Reflex::ScopeBase::FunctionMember_REnd(EM
 }
 
 
+//-------------------------------------------------------------------------------
+inline size_t Reflex::ScopeBase::GetBasePosition() const {
+//-------------------------------------------------------------------------------
+   return fBasePosition;
+}
+
+ 
 //-------------------------------------------------------------------------------
 inline Reflex::Scope_Iterator Reflex::ScopeBase::SubScope_Begin() const {
 //-------------------------------------------------------------------------------

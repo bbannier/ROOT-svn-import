@@ -43,33 +43,33 @@ bool Reflex::Union::IsComplete() const
 }
 
 //______________________________________________________________________________
-void Reflex::Union::AddFunctionMember(const Member& mbr) const
+void Reflex::Union::AddFunctionMember(const Member & fm) const
 {
-   ScopeBase::AddFunctionMember(mbr);
-   if (mbr.IsConstructor()) {
-      fConstructors.push_back(mbr);
+// Add function member fm to this union
+   ScopeBase::AddFunctionMember(fm);
+   if (fm.IsConstructor()) {
+      fConstructors.push_back(fm);
    }
-   else if (mbr.IsDestructor()) {
-      fDestructor = mbr;
+   else if (fm.IsDestructor()) {
+      fDestructor = fm;
    }
 }
 
 //______________________________________________________________________________
-void Reflex::Union::AddFunctionMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx /*= 0*/, const char* params /*= 0*/, unsigned int modifiers /*= 0*/) const
+void Reflex::Union::AddFunctionMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx, const char* params, unsigned int modifiers) const
 {
-   Member mbr;
-   ScopeBase::AddFunctionMember(&mbr, nam, typ, stubFP, stubCtx, params, modifiers);
-   if (mbr.IsConstructor()) {
-      fConstructors.push_back(mbr);
+// Add function member to this union.
+   ScopeBase::AddFunctionMember(nam, typ, stubFP, stubCtx, params, modifiers);
+   if (modifiers & CONSTRUCTOR) {
+      fConstructors.push_back(fFunctionMembers[fFunctionMembers.size()-1]);
    }
-   else if (mbr.IsDestructor()) {
-      fDestructor = mbr;
-   }
+   // setting the destructor is not needed because it is always provided when building the union
 }
 
 //______________________________________________________________________________
 void Reflex::Union::AddFunctionMember(Member* out_mbr, const char* nam, const Type typ, StubFunction stubFP, void* stubCtx /*= 0*/, const char* params /*= 0*/, unsigned int modifiers /*= 0*/) const
 {
+// Add function member to this union.
    ScopeBase::AddFunctionMember(out_mbr, nam, typ, stubFP, stubCtx, params, modifiers);
    if (out_mbr->IsConstructor()) {
       fConstructors.push_back(*out_mbr);

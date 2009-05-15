@@ -74,7 +74,7 @@ namespace Reflex{
       * EnableCallback Enable or disable the callback call in the destructor
       * @param  enable true to enable callback call, false to disable callback call
       */
-      EnumBuilder& EnableCallback(const bool enable = true);
+      EnumBuilder & EnableCallback( const bool enable = true );
 
 
       /*
@@ -147,7 +147,7 @@ namespace Reflex{
       * EnableCallback Enable or disable the callback call in the destructor
       * @param  enable true to enable callback call, false to disable callback call
       */
-      EnumBuilderT& EnableCallback(const bool enable = true);
+      EnumBuilderT & EnableCallback( const bool enable = true );
 
 
       /*
@@ -207,13 +207,14 @@ Reflex::EnumBuilderT<T>::AddProperty( const char * key,
 
 
 //-------------------------------------------------------------------------------
-template<typename T>
-inline Reflex::EnumBuilderT<T>& Reflex::EnumBuilderT<T>::EnableCallback(const bool enable /*= true*/) {
+template < typename T >
+inline Reflex::EnumBuilderT<T> &
+Reflex::EnumBuilderT<T>::EnableCallback( const bool enable /* = true */ ) {
 //-------------------------------------------------------------------------------
-   fEnumBuilderImpl.EnableCallback(enable);
-   return *this;
+   fEnumBuilderImpl.EnableCallback( enable );
+   return * this;
 }
-   
+
 
 //-------------------------------------------------------------------------------
 template < typename T > inline Reflex::Type
