@@ -691,6 +691,10 @@ Double_t RooCurve::interpolate(Double_t xvalue, Double_t tolerance) const
 //_____________________________________________________________________________
 RooCurve* RooCurve::makeErrorBand(const vector<RooCurve*>& variations, Double_t Z) const
 {
+  // Construct filled RooCurve represented error band that captures alpha% of the variations
+  // of the curves passed through argument variations, where the percentage alpha corresponds to
+  // the central interval fraction of a significance Z
+  
   RooCurve* band = new RooCurve ;
   band->SetName(Form("%s_errorband",GetName())) ;
   band->SetLineWidth(1) ;
@@ -713,6 +717,82 @@ RooCurve* RooCurve::makeErrorBand(const vector<RooCurve*>& variations, Double_t 
   return band ;
 }
 
+
+
+
+//_____________________________________________________________________________
+RooCurve* RooCurve::makeErrorBand(const vector<RooCurve*>& plusVar, const vector<RooCurve*>& minusVar, Double_t Z) const
+{
+  // Construct filled RooCurve represented error band represent the error added in quadrature defined by the curves arguments
+  // plusVar and minusVar. The resulting error band is multiplied with the significance parameter Z to construct the equivalent
+  // of a Z sigma error band (in Gaussian approximation)
+  
+  RooCurve* band = new RooCurve ;
+  band->SetName(Form("%s_errorband",GetName())) ;
+  band->SetLineWidth(1) ;
+  band->SetFillColor(kCyan) ;
+  band->SetLineColor(kCyan) ;
+
+  vector<double> bandLo(GetN()) ;
+  vector<double> bandHi(GetN()) ;
+  for (int i=0 ; i<GetN() ; i++) {
+    calcBandInterval(plusVar,minusVar,i,Z,bandLo[i],bandHi[i]) ;
+  }
+  
+  for (int i=0 ; i<GetN() ; i++) {
+    band->addPoint(GetX()[i],bandLo[i]) ;
+  }
+  for (int i=GetN()-1 ; i>=0 ; i--) {
+    band->addPoint(GetX()[i],bandHi[i]) ;
+  }	   
+  
+  return band ;
+}
+
+
+
+
+
+//_____________________________________________________________________________
+void RooCurve::calcBandInterval(const vector<RooCurve*>& plusVar, const vector<RooCurve*>& minusVar,Int_t i,Double_t Z, Double_t& lo, Double_t& hi) const
+{
+  vector<double> y_plus(plusVar.size()), y_minus(minusVar.size()) ;
+  Int_t j(0) ;
+  for (vector<RooCurve*>::const_iterator iter=plusVar.begin() ; iter!=plusVar.end() ; iter++) {
+    y_plus[j++] = (*iter)->interpolate(GetX()[i]) ;
+  }
+  j=0 ;
+  for (vector<RooCurve*>::const_iterator iter=minusVar.begin() ; iter!=minusVar.end() ; iter++) {
+    y_minus[j++] = (*iter)->interpolate(GetX()[i]) ;
+  }
+  Double_t y_cen = GetY()[i] ;
+  Int_t n = j ;
+
+  Double_t y_plus_sum(0), y_minus_sum(0) ;
+  for (j=0 ; j<n ; j++) {
+    Double_t diff_plus = y_plus[j]-y_cen ;
+    Double_t diff_minus = y_minus[j]-y_cen ;
+    y_plus_sum += diff_plus ; //pow(diff_plus,2) ;
+    y_minus_sum += diff_minus ; //pow(diff_minus,2) ;
+  }
+
+
+  if (fabs(GetX()[i])<0.1) {
+    cout << " y_cen = " << y_cen << endl ;
+    for (int k=0 ; k<n ; k++) {
+      cout << "y_plus[" << k << "] - y_cen = " << y_plus[k]-y_cen << endl ;
+    }
+    for (int k=0 ; k<n ; k++) {
+      cout << "y_minus[" << k << "] - y_cen = " << y_minus[k]-y_cen << endl ;
+    }
+    cout << "y_plus_sum = " << y_plus_sum << " sqrt = " << sqrt(y_plus_sum) << endl ;
+    cout << "y_minus_sum = " << y_minus_sum << " sqrt = " << sqrt(y_minus_sum) << endl ;
+  }
+
+
+  lo= y_cen + Z*fabs(y_minus_sum) ;
+  hi= y_cen - Z*fabs(y_plus_sum) ;
+}
 
 
 
