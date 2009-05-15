@@ -479,11 +479,7 @@ RooDataSet::RooDataSet(const char *name, const char *title, RooDataSet *dset,
 {
   // Protected constructor for internal use only
 
-  cout << "input arg vars = " << vars << endl ;
-
   _dstore = new RooTreeDataStore(name,title,*dset->_dstore,_vars,cutVar,cutRange,nStart,nStop,copyCache) ;
-  cout << "dset special ctor dset->vars = " << dset->_vars << " store = " << *dset->store()->get() << endl ;
-  cout << "new dstore = " << *_dstore->get() << endl ;
 
   appendToDir(this,kTRUE) ;
   initialize(dset->_wgtVar?dset->_wgtVar->GetName():0) ;
