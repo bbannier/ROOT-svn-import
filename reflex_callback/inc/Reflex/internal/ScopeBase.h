@@ -16,6 +16,7 @@
 #include "Reflex/Kernel.h"
 
 #include "Reflex/Scope.h"
+#include "Reflex/Catalog.h"
 #include "Reflex/internal/OwnedPropertyList.h"
 #include <vector>
 
@@ -52,7 +53,8 @@ namespace Reflex {
 
       /** constructor within a At*/
       ScopeBase( const char * scope, 
-         TYPE scopeType );
+                 TYPE scopeType,
+                 const Catalog& catalog = Catalog::Instance());
 
 
       /** destructor */
@@ -509,7 +511,7 @@ namespace Reflex {
    protected:
 
       /** protected constructor for initialisation of the global namespace */
-      ScopeBase();
+      ScopeBase(const Catalog& catalog = Catalog::Instance());
 
    public:
 
@@ -615,6 +617,10 @@ namespace Reflex {
       /** Initialize the vector of inherited members.
           Returns false if one of the bases is not complete. */
       virtual bool UpdateMembers() const;
+
+      /** Retrieve the ScopeName object for this scope
+       */
+      ScopeName* ToScopeName() const;
 
    protected:
 
@@ -946,6 +952,16 @@ inline Reflex::Reverse_TypeTemplate_Iterator Reflex::ScopeBase::SubTypeTemplate_
 inline Reflex::Reverse_TypeTemplate_Iterator Reflex::ScopeBase::SubTypeTemplate_REnd() const {
 //-------------------------------------------------------------------------------
    return ((const std::vector<TypeTemplate>&)fTypeTemplates).rend();
+}
+
+
+//-------------------------------------------------------------------------------
+inline
+Reflex::ScopeName*
+Reflex::ScopeBase::ToScopeName() const {
+//-------------------------------------------------------------------------------
+// Retrieve the ScopeName object for this scope
+   return fScopeName;
 }
 
 

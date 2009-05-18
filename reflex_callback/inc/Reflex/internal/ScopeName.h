@@ -14,6 +14,7 @@
 
 // Include files
 #include "Reflex/Kernel.h"
+#include "Reflex/Catalog.h"
 #include <string>
 
 namespace Reflex {
@@ -37,8 +38,12 @@ namespace Reflex {
 
       /** constructor */
       ScopeName( const char * name, 
-         ScopeBase * scopeBase );
+                 ScopeBase * scopeBase,
+                 const Catalog& catalog = Catalog::Instance());
 
+
+      /** destructor */
+      ~ScopeName();
 
       /**
       * ByName will return a pointer to a At which is given as an argument
@@ -49,18 +54,6 @@ namespace Reflex {
       static Scope ByName( const std::string & name );
 
 
-      static void CleanUp();
-
-
-      /**
-      * DeleteScope will call the destructor of the ScopeBase this ScopeName is
-      * pointing to and aremove it's information from the data structures. The
-      * ScopeName information will remain.
-      */
-      void DeleteScope() const;
-
-
-      
       /**
        * Hide this scope from any lookup by appending the string " @HIDDEN@" to its name.
        */      
@@ -113,11 +106,6 @@ namespace Reflex {
       static Scope_Iterator Scope_End();
       static Reverse_Scope_Iterator Scope_RBegin();
       static Reverse_Scope_Iterator Scope_REnd();
-
-   private:
-
-      /** destructor */
-      ~ScopeName();
 
    private:
 
