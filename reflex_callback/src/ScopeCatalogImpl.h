@@ -14,6 +14,9 @@
 
 #include "Reflex/Scope.h"
 
+#include "Reflex/Callback.h"
+
+#include <list>
 #include "stl_hash.h"
 
 namespace Reflex {
@@ -45,7 +48,7 @@ namespace Reflex {
          ScopeName* __NIRVANA__() const { return fNirvana; }
 
          // Callbacks
-         void UnregisterCallback(const CallbackBase& cb) const {
+         void UnregisterCallback(const Callback<Scope>& cb) {
             fCallbacks.remove(cb);
          }
 
@@ -55,7 +58,7 @@ namespace Reflex {
          ScopeVec_t           fScopeVec;
          ScopeName*           fGlobalScope;
          ScopeName*           fNirvana;
-         std::list<CallbackBase*>  fCallbacks;
+         std::list<Callback<Scope> >  fCallbacks;
       };
    }
 }

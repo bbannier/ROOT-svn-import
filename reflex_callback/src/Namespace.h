@@ -56,12 +56,6 @@ namespace Reflex {
 
 
       /**
-      * function for initialisation of the global namespace
-      */
-      static const Scope & GlobalScope();
-
-
-      /**
       * Properties will return a pointer to the PropertyNth list attached
       * to this item
       * @return pointer to PropertyNth list

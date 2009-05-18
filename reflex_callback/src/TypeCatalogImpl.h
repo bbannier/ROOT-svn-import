@@ -13,7 +13,9 @@
 #define Reflex_TypeCatalogImpl
 
 #include "Reflex/internal/TypeName.h"
+#include "Reflex/Callback.h"
 
+#include <list>
 #include "stl_hash.h"
 
 namespace Reflex {
@@ -46,12 +48,18 @@ namespace Reflex {
                            const std::type_info & oldti = typeid(NullType));
          void Remove(TypeName& type);
 
+         // Callbacks
+         void UnregisterCallback(const Callback<Type>& cb) {
+            fCallbacks.remove(cb);
+         }
+
       private:
 
          const CatalogImpl*       fCatalog;
          Name2TypeNameMap_t       fName2TypeNameMap;
          TypeIdName2TypeNameMap_t fTypeIdName2TypeNameMap;
          TypeVec_t                fTypeVec;
+         std::list<Callback<Type> >  fCallbacks;
       };
    }
 }

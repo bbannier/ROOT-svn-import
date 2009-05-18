@@ -80,34 +80,3 @@ void Reflex::FireFunctionCallback( const Reflex::Member & mem ) {
       (**i)(mem);
    }
 }
-
-//-------------------------------------------------------------------------------
-void
-Reflex::CallbackBase::UnregisterFor(const Type& t) const {
-//-------------------------------------------------------------------------------
-// Unregister this callback from the list of Type callbacks.
-   t.DeclaringScope().InCatalog().UnregisterTypeCallback(*this);
-}
-
-//-------------------------------------------------------------------------------
-void
-Reflex::CallbackBase::UnregisterFor(const Scope& s) const {
-//-------------------------------------------------------------------------------
-// Unregister this callback from the list of Type callbacks.
-   s.InCatalog().UnregisterScopeCallback(*this);
-}
-
-//-------------------------------------------------------------------------------
-void
-Reflex::CallbackBase::UnregisterFor(const Member& m) const {
-//-------------------------------------------------------------------------------
-// Unregister this callback from the list of Type callbacks.
-   m.DeclaringScope().InCatalog().UnregisterMemberCallback(*this);
-}
-
-//-------------------------------------------------------------------------------
-Reflex::Callback::Callback(const CallbackBase& cb) const {
-//-------------------------------------------------------------------------------
-// Construct a callback from a CallbackBase.
-   fImpl = cb.Clone();
-}
