@@ -16,12 +16,11 @@
 #include "Reflex/internal/ScopeName.h"
 
 #include "Reflex/Scope.h"
-#include "Reflex/internal/ScopeBase.h"
 #include "Reflex/Type.h"
-
 #include "Reflex/Tools.h"
+#include "Reflex/internal/ScopeBase.h"
 #include "Reflex/internal/OwnedMember.h"
-
+#include "CatalogImpl.h"
 #include "stl_hash.h"
 #include <vector>
 
@@ -52,18 +51,19 @@ static ScopeVec_t & sScopeVec() {
 
 //-------------------------------------------------------------------------------
 Reflex::ScopeName::ScopeName( const char * name,
-                                    ScopeBase * scopeBase ) 
+                              ScopeBase * scopeBase,
+                              const Catalog& catalog) 
    : fName(name),
      fScopeBase(scopeBase) {
 //-------------------------------------------------------------------------------
 // Create the scope name dictionary info.
    fThisScope = new Scope(this);
-   sScopes() [ &fName ] = *fThisScope;
-   sScopeVec().push_back(*fThisScope);
+   catalog.ToImpl()->Scopes().Add(*this);
    //---Build recursively the declaring scopeNames
    if( fName != "@N@I@R@V@A@N@A@" ) {
       std::string decl_name = Tools::GetScopeName(fName);
-      if ( ! Scope::ByName( decl_name ).Id() )  new ScopeName( decl_name.c_str(), 0 );
+      if ( ! catalog.ScopeByName( decl_name ).Id() )
+         new ScopeName( decl_name.c_str(), 0, catalog );
    }
 }
 
@@ -72,6 +72,8 @@ Reflex::ScopeName::ScopeName( const char * name,
 Reflex::ScopeName::~ScopeName() {
 //-------------------------------------------------------------------------------
 // Destructor.
+   delete fScopeBase;
+   delete fThisScope;
 }
 
 
@@ -98,31 +100,6 @@ Reflex::Scope Reflex::ScopeName::ByName( const std::string & name ) {
       return Dummy::Scope();
    }
    // END OF UGLY HACK
-}
-
-
-//-------------------------------------------------------------------------------
-void Reflex::ScopeName::CleanUp() {
-//-------------------------------------------------------------------------------
-   // Cleanup memory allocations for scopes.
-   ScopeVec_t::iterator it;
-   for ( it = sScopeVec().begin(); it != sScopeVec().end(); ++it ) {
-      Scope * s = ((ScopeName*)it->Id())->fThisScope;
-      if ( *s ) s->Unload();
-      delete s;
-   }
-   for ( it = sScopeVec().begin(); it != sScopeVec().end(); ++it ) {
-      delete ((ScopeName*)it->Id());
-   }
-}
-
-
-//-------------------------------------------------------------------------------
-void Reflex::ScopeName::DeleteScope() const {
-//-------------------------------------------------------------------------------
-// Delete the scope base information.
-   delete fScopeBase;
-   fScopeBase = 0;
 }
 
 

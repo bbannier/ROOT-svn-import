@@ -16,24 +16,26 @@
 #include "Namespace.h"
 #include "Reflex/internal/OwnedMember.h"
 #include "Reflex/DictionaryGenerator.h"
+#include "CatalogImpl.h"
 
 
 //-------------------------------------------------------------------------------
-Reflex::Namespace::Namespace( const char * scop ) 
+Reflex::Namespace::Namespace( const char * scop, const Catalog& catalog ) 
 //-------------------------------------------------------------------------------
-   : ScopeBase( scop, NAMESPACE ),
+   : ScopeBase( scop, NAMESPACE, catalog ),
      fPropertyList( OwnedPropertyList( new PropertyListImpl())) {
    // Create dictionary info for a namespace scope.
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Namespace::Namespace() 
+Reflex::Namespace::Namespace(const Internal::CatalogImpl* catalogImpl) 
 //-------------------------------------------------------------------------------
-   : ScopeBase(),
+   : ScopeBase(catalogImpl->ThisCatalog()),
      fPropertyList( OwnedPropertyList( new PropertyListImpl())) {
    // Default Constructore (for the global namespace)
 }
+
 
 //-------------------------------------------------------------------------------
 Reflex::Namespace::~Namespace() {
@@ -41,16 +43,6 @@ Reflex::Namespace::~Namespace() {
 // Default destructor
    fPropertyList.Delete();
 }
-
-//-------------------------------------------------------------------------------
-const Reflex::Scope & Reflex::Namespace::GlobalScope() {
-//-------------------------------------------------------------------------------
-// Initialise the global namespace at startup.
-   static Scope s = (new Namespace())->ThisScope();
-   return s;
-}
-
-
 
 
 //-------------------------------------------------------------------------------

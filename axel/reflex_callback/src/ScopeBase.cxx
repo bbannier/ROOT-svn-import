@@ -36,7 +36,8 @@
 
 //-------------------------------------------------------------------------------
 Reflex::ScopeBase::ScopeBase( const char * scope, 
-                                    TYPE scopeType )
+                              TYPE scopeType,
+                              const Catalog& catalog)
    : fScopeName( 0 ),
      fScopeType( scopeType ),
      fBasePosition( Tools::GetBasePosition( scope )) {
@@ -53,20 +54,20 @@ Reflex::ScopeBase::ScopeBase( const char * scope,
    }
 
    // Construct Scope
-   Scope scopePtr = Scope::ByName(sname);
+   Scope scopePtr = catalog.ScopeByName(sname);
    if ( scopePtr.Id() == 0 ) { 
       // create a new Scope
-      fScopeName = new ScopeName(scope, this); 
+      fScopeName = new ScopeName(scope, this, catalog); 
    }
    else {
       fScopeName = (ScopeName*)scopePtr.Id();
       fScopeName->fScopeBase = this;
    }
 
-   Scope declScopePtr = Scope::ByName(declScope);
+   Scope declScopePtr = catalog.ScopeByName(declScope);
    if ( ! declScopePtr ) {
-      if ( scopeType == NAMESPACE ) declScopePtr = (new Namespace( declScope.c_str() ))->ThisScope();
-      else                          declScopePtr = (new ScopeName( declScope.c_str(), 0 ))->ThisScope();
+      if ( scopeType == NAMESPACE ) declScopePtr = (new Namespace( declScope.c_str(), catalog ))->ThisScope();
+      else                          declScopePtr = (new ScopeName( declScope.c_str(), 0, catalog ))->ThisScope();
    }
 
    // Set declaring Scope and sub-scopes
@@ -76,14 +77,14 @@ Reflex::ScopeBase::ScopeBase( const char * scope,
 
 
 //-------------------------------------------------------------------------------
-Reflex::ScopeBase::ScopeBase() 
+Reflex::ScopeBase::ScopeBase(const Catalog& catalog) 
    : fScopeName( 0 ),
      fScopeType( NAMESPACE ),
      fDeclaringScope( Scope::__NIRVANA__() ),
      fBasePosition( 0 ) {
 //-------------------------------------------------------------------------------
    // Default constructor for the ScopeBase (used at init time for the global scope)
-   fScopeName = new ScopeName("", this);
+   fScopeName = new ScopeName("", this, catalog);
    PropertyList().AddProperty("Description", "global namespace");
 }
 

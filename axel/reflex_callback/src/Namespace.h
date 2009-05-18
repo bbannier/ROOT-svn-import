@@ -22,6 +22,10 @@ namespace Reflex {
    class Scope;
    class DictionaryGenerator;
 
+   namespace Internal {
+      class CatalogImpl;
+   }
+
 
    /**
    * @class Namespace Namespace.h Reflex/Namespace.h
@@ -34,8 +38,11 @@ namespace Reflex {
    public:
 
       /** default constructor */
-      Namespace( const char * scop );
+      Namespace( const char * scop, const Catalog& catalog = Catalog::Instance() );
 
+
+      /** constructor for initialisation of the global namespace */
+      Namespace(const Internal::CatalogImpl* catalogImpl);
 
       /** destructor */
       virtual ~Namespace();
@@ -61,11 +68,6 @@ namespace Reflex {
       */
       virtual PropertyList Properties() const;
 
-
-   private:
-
-      /** constructor for initialisation of the global namespace */
-      Namespace();
 
    private:
       /**

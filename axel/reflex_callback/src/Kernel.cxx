@@ -25,6 +25,7 @@
 #include "Reflex/PropertyList.h"
 #include "Reflex/MemberTemplate.h"
 #include "Reflex/Any.h"
+#include "Reflex/Catalog.h"
 
 #include "Fundamental.h"
 #include "Namespace.h"
@@ -184,8 +185,8 @@ void Reflex::Instance::Shutdown() {
    // function to be called at tear down of Reflex, removes all memory allocations
    MemberTemplateName::CleanUp();
    TypeTemplateName::CleanUp();
-   TypeName::CleanUp();
-   ScopeName::CleanUp();
+
+   Catalog::Instance().Unload();
 }
 
 
