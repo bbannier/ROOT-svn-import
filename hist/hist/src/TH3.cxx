@@ -1634,6 +1634,100 @@ Long64_t TH3::Merge(TCollection *list)
 }
 
 //______________________________________________________________________________
+TH1D *TH3::ProjectionX(const char *name, Int_t iymin, Int_t iymax, Int_t izmin, Int_t izmax, Option_t *option) const
+{
+   //*-*-*-*-*Project a 3-D histogram into a 1-D histogram along Z*-*-*-*-*-*-*
+   //*-*      ====================================================
+   //
+   //   The projection is always of the type TH1D.
+   //   The projection is made from the cells along the X axis
+   //   ranging from iymin to iymax and izmin to izmax included.
+   //   By default, bins 1 to nx and 1 to ny  are included
+   //
+   //   if option "e" is specified, the errors are computed.
+   //   if option "d" is specified, the projection is drawn in the current pad.
+   //
+   //  implemented using Project3D
+
+
+   TString opt = option;
+   opt.ToLower();
+
+   Int_t piymin = GetYaxis()->GetFirst();
+   Int_t piymax = GetYaxis()->GetLast();
+   Int_t pizmin = GetZaxis()->GetFirst();
+   Int_t pizmax = GetZaxis()->GetLast();   
+
+   GetYaxis()->SetRange(iymin,iymax);
+   GetZaxis()->SetRange(izmin,izmax);
+   opt.Append("x");
+   TH1D * h1 = (TH1D* ) Project3D(opt.Data());
+
+   // rename the histogram to the given name
+   char *pname = (char*)name;
+   if (strcmp(name,"_px") == 0) {
+      Int_t nch = strlen(GetName()) + 4;
+      pname = new char[nch];
+      sprintf(pname,"%s%s",GetName(),name);
+   }
+   h1->SetName(pname);
+
+   if (pname != name) delete [] pname;
+
+   GetYaxis()->SetRange(piymin,piymax);
+   GetZaxis()->SetRange(pizmin,pizmax);
+
+   return h1;
+}
+
+//______________________________________________________________________________
+TH1D *TH3::ProjectionY(const char *name, Int_t ixmin, Int_t ixmax, Int_t izmin, Int_t izmax, Option_t *option) const
+{
+   //*-*-*-*-*Project a 3-D histogram into a 1-D histogram along Z*-*-*-*-*-*-*
+   //*-*      ====================================================
+   //
+   //   The projection is always of the type TH1D.
+   //   The projection is made from the cells along the Y axis
+   //   ranging from ixmin to ixmax and izmin to izmax included.
+   //   By default, bins 1 to nx and 1 to nz  are included
+   //
+   //   if option "e" is specified, the errors are computed.
+   //   if option "d" is specified, the projection is drawn in the current pad.
+   //
+   //  implemented using Project3D
+
+
+   TString opt = option;
+   opt.ToLower();
+
+   Int_t pixmin = GetXaxis()->GetFirst();
+   Int_t pixmax = GetXaxis()->GetLast();
+   Int_t pizmin = GetZaxis()->GetFirst();
+   Int_t pizmax = GetZaxis()->GetLast();   
+
+   GetXaxis()->SetRange(ixmin,ixmax);
+   GetZaxis()->SetRange(izmin,izmax);
+   opt.Append("y");
+   TH1D * h1 = (TH1D* ) Project3D(opt.Data());
+
+   // rename the histogram to the given name
+   char *pname = (char*)name;
+   if (strcmp(name,"_py") == 0) {
+      Int_t nch = strlen(GetName()) + 4;
+      pname = new char[nch];
+      sprintf(pname,"%s%s",GetName(),name);
+   }
+   h1->SetName(pname);
+
+   if (pname != name) delete [] pname;
+
+   GetXaxis()->SetRange(pixmin,pixmax);
+   GetZaxis()->SetRange(pizmin,pizmax);
+   
+   return h1;
+}
+
+//______________________________________________________________________________
 TH1D *TH3::ProjectionZ(const char *name, Int_t ixmin, Int_t ixmax, Int_t iymin, Int_t iymax, Option_t *option) const
 {
    //*-*-*-*-*Project a 3-D histogram into a 1-D histogram along Z*-*-*-*-*-*-*
@@ -1653,6 +1747,11 @@ TH1D *TH3::ProjectionZ(const char *name, Int_t ixmin, Int_t ixmax, Int_t iymin, 
    TString opt = option;
    opt.ToLower();
 
+   Int_t pixmin = GetXaxis()->GetFirst();
+   Int_t pixmax = GetXaxis()->GetLast();
+   Int_t piymin = GetYaxis()->GetFirst();
+   Int_t piymax = GetYaxis()->GetLast();  
+
    GetXaxis()->SetRange(ixmin,ixmax);
    GetYaxis()->SetRange(iymin,iymax);
    opt.Append("z");
@@ -1669,24 +1768,8 @@ TH1D *TH3::ProjectionZ(const char *name, Int_t ixmin, Int_t ixmax, Int_t iymin, 
 
    if (pname != name) delete [] pname;
 
-   GetXaxis()->SetRange(0,0);
-   GetYaxis()->SetRange(0,0);
-
-   if (opt.Contains("d")) {
-      TVirtualPad *padsav = gPad;
-      TVirtualPad *pad = gROOT->GetSelectedPad();
-      if (pad) pad->cd();
-      char optin[100];
-      strcpy(optin,opt.Data());
-      char *d = (char*)strstr(optin,"d"); if (d) {*d = ' '; if (*(d+1) == 0) *d=0;}
-      char *e = (char*)strstr(optin,"e"); if (e) {*e = ' '; if (*(e+1) == 0) *e=0;}
-      if (!gPad->FindObject(h1)) {
-         h1->Draw(optin);
-      } else {
-         h1->Paint(optin);
-      }
-      if (padsav) padsav->cd();
-   }
+   GetXaxis()->SetRange(pixmin,pixmax);
+   GetYaxis()->SetRange(piymin,piymax);
 
    return h1;
 }
@@ -1713,6 +1796,7 @@ TH1 *TH3::Project1D(char* title, char* name, TAxis* projX,
    if (h1obj && h1obj->InheritsFrom("TH1D")) {
       h1 = (TH1D*)h1obj;
       h1->Reset();
+      cout << "HERE!" << endl;
    } else {
       const TArrayD *bins = projX->GetXbins();
       if (bins->fN == 0) {
@@ -2081,6 +2165,22 @@ TH1 *TH3::Project3D(Option_t *option) const
 
    delete [] name;
    delete [] title;
+
+   if (opt.Contains("d")) {
+      TVirtualPad *padsav = gPad;
+      TVirtualPad *pad = gROOT->GetSelectedPad();
+      if (pad) pad->cd();
+      char optin[100];
+      strcpy(optin,opt.Data());
+      char *d = (char*)strstr(optin,"d"); if (d) {*d = ' '; if (*(d+1) == 0) *d=0;}
+      char *e = (char*)strstr(optin,"e"); if (e) {*e = ' '; if (*(e+1) == 0) *e=0;}
+      if (!gPad->FindObject(h)) {
+         h->Draw(optin);
+      } else {
+         h->Paint(optin);
+      }
+      if (padsav) padsav->cd();
+   }
 
    return h;
 }
