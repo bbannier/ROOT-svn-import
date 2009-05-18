@@ -25,6 +25,7 @@
 #include "TObjString.h"
 #include "TVirtualHistPainter.h"
 
+#include "Riostream.h"
 
 ClassImp(TH2)
 
@@ -1990,6 +1991,8 @@ TH2 *TH2::Rebin2D(Int_t nxgroup, Int_t nygroup, const char *newname)
 TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastbin, Option_t *option) const
 {
    TString opt = option;
+   opt.ToLower();
+   bool originalRange = opt.Contains("o");
 
    const TAxis& outAxis = ( onX ? fXaxis : fYaxis );
    const TAxis&  inAxis = ( onX ? fYaxis : fXaxis );
@@ -1997,6 +2000,28 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
    Int_t  inN = inAxis.GetNbins();
    const char *expectedName = ( onX ? "_pfx" : "_pfy" );
 
+   Int_t firstOutBin, lastOutBin;
+   if ( originalRange ) 
+   {
+      firstOutBin = 0;
+      lastOutBin = outAxis.GetNbins() + 1;
+   } else {
+      firstOutBin = outAxis.GetFirst();
+      lastOutBin = outAxis.GetLast();
+   }
+
+   if ( lastbin < firstbin && inAxis.TestBit(TAxis::kAxisRange) ) {
+      firstbin = inAxis.GetFirst();
+      lastbin = inAxis.GetLast();
+      // For special case of TAxis::SetRange, when first == 1 and last
+      // = N and the range bit has been set, the TAxis will return 0
+      // for both.
+      if (firstbin == 0 && lastbin == 0) 
+      {
+         firstbin = 1;
+         lastbin = inAxis.GetNbins();
+      }
+   } 
    if (firstbin < 0) firstbin = 1;
    if (lastbin  < 0) lastbin  = inN;
    if (lastbin  > inN+1) lastbin  = inN;
@@ -2027,7 +2052,10 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
    if (!h1) {
       const TArrayD *bins = outAxis.GetXbins();
       if (bins->fN == 0) {
-         h1 = new TProfile(pname,GetTitle(),outN,outAxis.GetXmin(),outAxis.GetXmax(),option);
+         if ( originalRange ) 
+            h1 = new TProfile(pname,GetTitle(),outN,outAxis.GetXmin(),outAxis.GetXmax(),option);
+         else
+            h1 = new TProfile(pname,GetTitle(),outN,outAxis.GetBinLowEdge(firstOutBin),outAxis.GetBinUpEdge(lastOutBin));
       } else {
          h1 = new TProfile(pname,GetTitle(),outN,bins->fArray,option);
       }
@@ -2050,7 +2078,7 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
    // no entries/bin is available so can fill only using bin content as weight
    Double_t cont;
    TArrayD & binSumw2 = *(h1->GetBinSumw2()); 
-   for (Int_t outBin =0;outBin<=outN+1;outBin++) {
+   for (Int_t outBin =0;outBin<=h1->GetNbinsX()+1;outBin++) {
       for (Int_t inBin=firstbin;inBin<=lastbin;inBin++) {
          Int_t binx = (onX ? outBin :  inBin );
          Int_t biny = (onX ?  inBin : outBin );
@@ -2171,8 +2199,14 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
 
    const char *expectedName = 0;
    Int_t outNbin, inNbin;
+   Int_t firstOutBin, lastOutBin;
    TAxis* outAxis;
+   TAxis* inAxis;
 
+
+   TString opt = option;
+   opt.ToLower();  //must be called after MakeCuts
+   bool originalRange = opt.Contains("o");
 
    if ( onX )
    {
@@ -2180,6 +2214,7 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
       outNbin = fXaxis.GetNbins();
       inNbin = fYaxis.GetNbins();
       outAxis = GetXaxis();
+      inAxis = GetYaxis();
    }
    else
    {
@@ -2187,6 +2222,16 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
       outNbin = fYaxis.GetNbins();
       inNbin = fXaxis.GetNbins();
       outAxis = GetYaxis();
+      inAxis = GetXaxis();
+   }
+
+   if ( originalRange ) 
+   {
+      firstOutBin = 0;
+      lastOutBin = outAxis->GetNbins() + 1;
+   } else {
+      firstOutBin = outAxis->GetFirst();
+      lastOutBin = outAxis->GetLast();
    }
 
    
@@ -2198,7 +2243,18 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
    th1Stats[2] = th2Stats[(onX) ? 2 : 4];
    th1Stats[3] = th2Stats[(onX) ? 3 : 5];
 
-   TString opt = option;
+   if ( lastbin < firstbin && inAxis->TestBit(TAxis::kAxisRange) ) {
+      firstbin = inAxis->GetFirst();
+      lastbin = inAxis->GetLast();
+      // For special case of TAxis::SetRange, when first == 1 and last
+      // = N and the range bit has been set, the TAxis will return 0
+      // for both.
+      if (firstbin == 0 && lastbin == 0) 
+      {
+         firstbin = 1;
+         lastbin = inAxis->GetNbins();
+      }
+   } 
    if (firstbin < 0) firstbin = 0;
    if (lastbin  < 0) lastbin  = inNbin + 1;
    if (lastbin  > inNbin+1) lastbin  = inNbin + 1;
@@ -2223,12 +2279,14 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
       ((TH2 *)this)->GetPainter();
       if (fPainter) ncuts = fPainter->MakeCuts((char*)opt.Data());
    }
-   opt.ToLower();  //must be called after MakeCuts
 
    if (!h1) {
       const TArrayD *bins = outAxis->GetXbins();
       if (bins->fN == 0) {
-         h1 = new TH1D(pname,GetTitle(),outNbin,outAxis->GetXmin(),outAxis->GetXmax());
+         if ( originalRange ) 
+            h1 = new TH1D(pname,GetTitle(),outNbin,outAxis->GetXmin(),outAxis->GetXmax());
+         else
+            h1 = new TH1D(pname,GetTitle(),outNbin,outAxis->GetBinLowEdge(firstOutBin),outAxis->GetBinUpEdge(lastOutBin));
       } else {
          h1 = new TH1D(pname,GetTitle(),outNbin,bins->fArray);
       }
@@ -2257,7 +2315,7 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
    // Fill the projected histogram
    Double_t cont,err2;
    Double_t entries = 0;
-   for (Int_t binOut =0;binOut<=outNbin+1;binOut++) {
+   for (Int_t binOut=0;binOut<=h1->GetNbinsX() + 1;binOut++) {
       err2 = 0;
       cont = 0;
       for (Int_t binIn=firstbin;binIn<=lastbin;binIn++) {
