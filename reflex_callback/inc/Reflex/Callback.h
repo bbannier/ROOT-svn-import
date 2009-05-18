@@ -29,7 +29,7 @@
  *    int MyCallback(const Type& t); // or Scope or Member
  *
  * The main use cases are
- *    Type::RegisterCallback(MakeCallback(&MyCallback));
+ *    Type::RegisterCallback(&MyCallback);
  *    // copy myObject into the callback:
  *    Type::RegisterCallback(MakeCallback(myObject, &MyClass::MyCallback));
  *    // share myObject with the callback, caller must ensure that the object stays valid:
@@ -81,6 +81,15 @@ namespace Reflex {
       kNotifyBoth = kNotifyBefore | kNotifyAfter,
 
       kNotifyDisabled = 4, // never called; bit combined with kNotifyBefore and / or kNotifyAfter
+   };
+
+   /**
+    * Callback messages to the callback handler; return values of the callback function
+    */
+   enum ECallbackReturn {
+      kCallbackReturnNothing = 0, // default
+      kCallbackReturnHandled = 1, // stop processing other callbacks
+      kCallbackReturnVeto    = 2, // for kNotifyBefore: veto the action that should follow (e.g. unloading)
    };
 
 
@@ -141,7 +150,7 @@ namespace Reflex {
          {}
 
       template <class MEMBEROF>
-      Callback(const MEMBEROF& obj, ECallbackReturn (MEMBEROF::* &ptr)(const WHAT&),
+      Callback(const MEMBEROF& obj, int (MEMBEROF::* &ptr)(const WHAT&),
                char notifyMask = kNotifyDeclared | kNotifyUnloaded,
                char notifyTiming = kNotifyAfter):
          CallbackBase(notifyMask, notifyTiming),
@@ -149,7 +158,7 @@ namespace Reflex {
          {}
 
       template <class MEMBEROF>
-      Callback(const MEMBEROF* objptr, ECallbackReturn (MEMBEROF::* &ptr)(const WHAT&),
+      Callback(const MEMBEROF* objptr, int (MEMBEROF::* &ptr)(const WHAT&),
                char notifyMask = kNotifyDeclared | kNotifyUnloaded,
                char notifyTiming = kNotifyAfter):
          CallbackBase(notifyMask, notifyTiming),
@@ -163,6 +172,22 @@ namespace Reflex {
    private:
       Internal::RefCountedPtr<CallbackInterface<WHAT> > fCallback;
    };
+
+   template <class WHAT, class MEMBEROF>
+   Callback<WHAT>
+   MakeCallback(const MEMBEROF& obj, int (MEMBEROF::* &ptr)(const WHAT&),
+                char notifyMask = kNotifyDeclared | kNotifyUnloaded,
+                char notifyTiming = kNotifyAfter) {
+      return Callback<WHAT>(obj, ptr, notifyMask, notifyTiming);
+   }
+
+   template <class WHAT, class MEMBEROF>
+   Callback<WHAT>
+   MakeCallback(const MEMBEROF* objptr, int (MEMBEROF::* &ptr)(const WHAT&),
+                char notifyMask = kNotifyDeclared | kNotifyUnloaded,
+                char notifyTiming = kNotifyAfter) {
+      return Callback<WHAT>(objptr, ptr, notifyMask, notifyTiming);
+   }
 
 
    /** 
@@ -178,10 +203,10 @@ namespace Reflex {
       virtual void operator () (const Type& t) = 0;
       virtual void operator () (const Member& m) = 0;
 
-      virtual ECallbackReturn Invoke(const Type& t) const {
+      virtual int Invoke(const Type& t) const {
          const_cast<ICallback*>(this)->operator()(t); return kCallbackReturnNothing;
       }
-      virtual ECallbackReturn Invoke(const Member& m) const {
+      virtual int Invoke(const Member& m) const {
          const_cast<ICallback*>(this)->operator()(m); return kCallbackReturnNothing;
       }
       virtual bool IsEqual(const CallbackInterface<Type>* other) const {

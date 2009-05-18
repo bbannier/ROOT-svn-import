@@ -32,25 +32,14 @@ namespace Reflex {
    } // namespace Internal
 
 
-   /**
-    * Callback messages to the callback handler; return values of the callback function
-    */
-   enum ECallbackReturn {
-      kCallbackReturnNothing = 0, // default
-      kCallbackReturnHandled = 1, // stop processing other callbacks
-      kCallbackReturnVeto    = 2, // for kNotifyBefore: veto the action that should follow (e.g. unloading)
-   };
-
-
    template <class WHAT>
    class CallbackInterface: public Internal::RefCounted {
    public:
-      virtual ECallbackReturn Invoke(const WHAT&) const = 0;
+      virtual int Invoke(const WHAT&) const = 0;
       virtual bool IsEqual(const CallbackInterface* other) const = 0;
    };
 
    namespace Internal {
-
 
       template <typename T /* e.g. deriving from RefCounted*/ >
       class RefCountedPtr {
@@ -70,10 +59,10 @@ namespace Reflex {
       template <class WHAT>
       class CallbackFreeFuncPtr: public CallbackInterface<WHAT> {
       public:
-         typedef ECallbackReturn (*FuncPtr_t)(const WHAT&);
+         typedef int (*FuncPtr_t)(const WHAT&);
          CallbackFreeFuncPtr(const FuncPtr_t& ptr): fFuncPtr(ptr) {}
 
-         ECallbackReturn Invoke(const WHAT& w) const { return fFuncPtr(w); }
+         int Invoke(const WHAT& w) const { return fFuncPtr(w); }
 
          bool IsEqual(const CallbackInterface<WHAT>* other) const {
             const CallbackFreeFuncPtr* cbo = dynamic_cast<const CallbackFreeFuncPtr*>(other);
@@ -91,10 +80,10 @@ namespace Reflex {
       template <class MEMBEROF, class WHAT>
       class CallbackMemFuncPtr: public CallbackInterface<WHAT>  {
       public:
-         typedef ECallbackReturn (MEMBEROF::*FuncPtr_t)(const WHAT&);
+         typedef int (MEMBEROF::*FuncPtr_t)(const WHAT&);
          CallbackMemFuncPtr(const MEMBEROF obj, const FuncPtr_t& ptr): fObj(obj), fFuncPtr(ptr) {}
 
-         ECallbackReturn Invoke(const WHAT& w) { return (fObj.*fFuncPtr)(w); }
+         int Invoke(const WHAT& w) { return (fObj.*fFuncPtr)(w); }
 
          bool IsEqual(const CallbackInterface<WHAT>* other) const {
             const CallbackMemFuncPtr* cbo = dynamic_cast<const CallbackMemFuncPtr*>(other);
@@ -115,10 +104,10 @@ namespace Reflex {
       template <class MEMBEROF, class WHAT>
       class CallbackMemFuncPtr<MEMBEROF*, WHAT>: public CallbackInterface<WHAT>  {
       public:
-         typedef ECallbackReturn (MEMBEROF::* FuncPtr_t)(const WHAT&);
+         typedef int (MEMBEROF::* FuncPtr_t)(const WHAT&);
          CallbackMemFuncPtr(MEMBEROF* obj, const FuncPtr_t& ptr): fObjPtr(obj), fFuncPtr(ptr) {}
 
-         ECallbackReturn Invoke(const WHAT& w) const { return (fObjPtr->*fFuncPtr)(w); }
+         int Invoke(const WHAT& w) const { return (fObjPtr->*fFuncPtr)(w); }
 
          bool IsEqual(const CallbackInterface<WHAT>* other) const {
             const CallbackMemFuncPtr* cbo = dynamic_cast<const CallbackMemFuncPtr*>(other);
