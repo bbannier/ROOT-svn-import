@@ -1796,7 +1796,6 @@ TH1 *TH3::Project1D(char* title, char* name, TAxis* projX,
    if (h1obj && h1obj->InheritsFrom("TH1D")) {
       h1 = (TH1D*)h1obj;
       h1->Reset();
-      cout << "HERE!" << endl;
    } else {
       const TArrayD *bins = projX->GetXbins();
       if (bins->fN == 0) {
