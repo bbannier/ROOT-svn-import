@@ -83,32 +83,7 @@ namespace Reflex {
       kNotifyDisabled = 4, // never called; bit combined with kNotifyBefore and / or kNotifyAfter
    };
 
-   /**
-    * What to notify on.
-    */
-   enum ENotifyWhat {
-      kNotifyType = 1,
-      kNotifyScope = 2,
-      kNotifyMember = 4,
-      kNotifyAnyEntity = kNotifyType | kNotifyScope | kNotifyMember
-   };
 
-   /**
-    * Callback messages to the callback handler; return values of the callback function
-    */
-   enum ECallbackReturn {
-      kCallbackReturnNothing = 0, // default
-      kCallbackReturnHandled = 1, // stop processing other callbacks
-      kCallbackReturnVeto    = 2, // for kNotifyBefore: veto the action that should follow (e.g. unloading)
-   };
-
-
-   namespace Internal {
-      template <class WHAT> struct NotifyWhatHelper_t {};
-      template <> struct NotifyWhatHelper_t<Type> { enum { kValue = Reflex::kNotifyType }; };
-      template <> struct NotifyWhatHelper_t<Scope> { enum { kValue = Reflex::kNotifyScope }; };
-      template <> struct NotifyWhatHelper_t<Member> { enum { kValue = Reflex::kNotifyMember }; };
-   }
 
    /** 
     * Common functionality for callbacks: registration and
@@ -120,34 +95,20 @@ namespace Reflex {
 
       /** constructor */
       CallbackBase(char notifyMask = kNotifyDeclared | kNotifyUnloaded,
-                   char notifyTiming = kNotifyAfter,
-                   char notifyWhat = kNotifyAnyEntity):
-         fNotifyMask(notifyMask), fNotifyTiming(notifyTiming), fNotifyWhat(notifyWhat),
-         fRefCount(0)
-      {}
+                   char notifyTiming = kNotifyAfter):
+         fNotifyMask(notifyMask), fNotifyTiming(notifyTiming), fRefCount(0)
+         {}
 
       char GetNotifyMask() const { return fNotifyMask; }
       char GetNotifyTiming() const { return fNotifyTiming; }
-      char GetNotifyWhat() const { return fNotifyWhat; }
 
       bool IsEnabled() const { return !(fNotifyTiming & kNotifyDisabled); }
 
       void Enable() { fNotifyTiming &= ~kNotifyDisabled; }
       void Disable() { fNotifyTiming |= kNotifyDisabled; }
 
-      virtual int InvokeForType(const Type& t) { UnregisterFor(t); return true; }
-      virtual int InvokeForScope(const Scope& s) { UnregisterFor(s); return true; }
-      virtual int InvokeForMember(const Member& m) { UnregisterFor(m); return true; }
-
-      virtual CallbackBase* Clone() const = 0;
-
-      size_t AddRef() { return ++fRefCount; }
-      size_t RemoveRef() { return --fRefCount; }
-
-   protected:
-      void UnregisterFor(const Type& dummy) const;
-      void UnregisterFor(const Scope& dummy) const;
-      void UnregisterFor(const Member& dummy) const;
+      size_t IncRef() { return ++fRefCount; }
+      size_t DecRef() { return --fRefCount; }
 
    private:
       char fNotifyMask; // combination of ENotifyOnChange bits
@@ -157,120 +118,91 @@ namespace Reflex {
    }; // class CallbackBase
 
 
-   namespace Internal {
-      template <class WHAT, class IMPLEMENTS>
-      struct CallbackInvocationAdaptor {
-         int Invoke(const CallbackBase& cb, const WHAT& w, const Internal::CallbackFuncPtrBase<IMPLEMENTS>&) {
-            cb.UnregisterFor(w);
-            return true;
-         }
-      };
-
-      template <class WHAT>
-      struct CallbackInvocationAdaptor<WHAT, WHAT> {
-         int Invoke(const CallbackBase&, const WHAT& t, const Internal::CallbackFuncPtrBase<WHAT>& func) {
-            return func.Invoke(t);
-         }
-      };
-   }
-
    /**
-    * Callback given a (member) function
+    * Wrapper object around the actual CallbackBase-derived implementation
     */
+
    template <class WHAT>
-   class RFLX_API CallbackT: public CallbackBase {
+   class RFLX_API Callback: public CallbackBase {
    public:
+      Callback(const CallbackInterface<WHAT>* ci,
+               char notifyMask = kNotifyDeclared | kNotifyUnloaded,
+               char notifyTiming = kNotifyAfter): // don't copy the interface object
+         CallbackBase(notifyMask, notifyTiming),
+         fCallback(ci, false)
+         {}
 
-      /** constructor taking a free function int func_ptr(const WHAT&) */
-      CallbackT(int (&callback)(const WHAT&),
+
+      Callback(int (&callback)(const WHAT&),
                char notifyMask = kNotifyDeclared | kNotifyUnloaded,
                char notifyTiming = kNotifyAfter):
-         CallbackBase(notifyMask, notifyTiming, Internal::NotifyWhatHelper_t<WHAT>::kValue),
-         fCallback(new Internal::CallbackFreeFuncPtr<WHAT>(callback)) {}
+         CallbackBase(notifyMask, notifyTiming),
+         fCallback(new Internal::CallbackFreeFuncPtr<WHAT>(callback), true)
+         {}
 
-      /** constructor taking a member function int obj::func_ptr(const WHAT&) */
       template <class MEMBEROF>
-      CallbackT(MEMBEROF& obj, int (MEMBEROF::* callback)(const WHAT&),
+      Callback(const MEMBEROF& obj, ECallbackReturn (MEMBEROF::* &ptr)(const WHAT&),
                char notifyMask = kNotifyDeclared | kNotifyUnloaded,
                char notifyTiming = kNotifyAfter):
-         CallbackBase(notifyMask, notifyTiming, Internal::NotifyWhatHelper_t<WHAT>::kValue),
-         fCallback(new Internal::CallbackMemFuncPtr<MEMBEROF, WHAT>(obj, callback))
+         CallbackBase(notifyMask, notifyTiming),
+         fCallback(new Internal::CallbackMemFuncPtr<MEMBEROF, WHAT>(obj, ptr), true)
          {}
 
-      /** constructor taking a member function int obj::func_ptr(const WHAT&) */
-      CallbackT(const Internal::CallbackFuncPtrBase<WHAT>* callback,
+      template <class MEMBEROF>
+      Callback(const MEMBEROF* objptr, ECallbackReturn (MEMBEROF::* &ptr)(const WHAT&),
                char notifyMask = kNotifyDeclared | kNotifyUnloaded,
                char notifyTiming = kNotifyAfter):
-         CallbackBase(notifyMask, notifyTiming, Internal::NotifyWhatHelper_t<WHAT>::kValue),
-         fCallback(callback->Clone())
+         CallbackBase(notifyMask, notifyTiming),
+         fCallback(new Internal::CallbackMemFuncPtr<MEMBEROF, WHAT>(objptr, ptr), true)
          {}
 
-      /** destructor */
-      virtual ~CallbackT() { delete fCallback; }
+      CallbackInterface<WHAT>* Get() const { return fCallback; }
 
-      CallbackBase* Clone() const {
-         return new CallbackT(fCallback, GetNotifyMask(), GetNotifyTiming()); }
+      bool operator==(const Callback<WHAT>& other) { return fCallback == other.fCallback; }
 
-      virtual int InvokeForType(const Type& t) { return Internal::CallbackInvocationAdaptor<Type,WHAT>(*this, t, fCallback); }
-      virtual int InvokeForScope(const Scope& s) { return Internal::CallbackInvocationAdaptor<Scope,WHAT>(*this, s, fCallback); }
-      virtual int InvokeForMember(const Member& m) { return Internal::CallbackInvocationAdaptor<Member,WHAT>(*this, m, fCallback); }
    private:
-      Internal::CallbackFuncPtrBase<WHAT>* fCallback;
-   }; // class CallbackT
+      Internal::RefCountedPtr<CallbackInterface<WHAT> > fCallback;
+   };
 
-
-   template <class WHAT>
-   CallbackT<WHAT> MakeCallback(int (&callback)(const WHAT&)) {
-      return CallbackT<WHAT>(callback);
-   }
-
-   template <class MEMBEROF, class WHAT>
-   CallbackT<WHAT> MakeCallback(MEMBEROF& obj, int (&callback)(const WHAT&)) {
-      return CallbackT<WHAT>(obj, callback);
-   }
 
    /** 
-   * Callback class for backward compatibility; derive from ICallbackT instead
+   * Callback class for backward compatibility; derive from CallbackInterface instead
    */
-   class RFLX_API ICallback: public CallbackBase {
+   class RFLX_API ICallback: public CallbackInterface<Type>, public CallbackInterface<Member> {
 
    public:
 
       /** constructor */
       ICallback() {}
 
-      virtual void operator () (const Type& t) { InvokeForType(t); }
-      virtual void operator () (const Member& m) { InvokeForMember(m); }
+      virtual void operator () (const Type& t) = 0;
+      virtual void operator () (const Member& m) = 0;
+
+      virtual ECallbackReturn Invoke(const Type& t) const {
+         const_cast<ICallback*>(this)->operator()(t); return kCallbackReturnNothing;
+      }
+      virtual ECallbackReturn Invoke(const Member& m) const {
+         const_cast<ICallback*>(this)->operator()(m); return kCallbackReturnNothing;
+      }
+      virtual bool IsEqual(const CallbackInterface<Type>* other) const {
+         return this == other;
+      }
+      virtual bool IsEqual(const CallbackInterface<Member>* other) const {
+         return this == other;
+      }
 
       /** destructor */
       virtual ~ICallback() {}
    }; // class ICallback
 
-
    /** 
-   * Free callback functions for backward compatibility; use members instead
+   * Free callback functions for backward compatibility;
+   * use member functions of Catalog / Type / Scope / Member instead.
    */
    RFLX_API void InstallClassCallback( ICallback * cb );
    RFLX_API void UninstallClassCallback( ICallback * cb );
    RFLX_API void FireClassCallback( const Type & );
    RFLX_API void FireFunctionCallback( const Member & );
-
-   /**
-    * Wrapper object around the actual CallbackBase-derived implementation
-    */
-
-   class Callback {
-   public:
-      Callback(const CallbackBase& cb);
-      Callback(Callback& other): fImpl(other.fImpl) { fImpl->AddRef(); }
-      Callback& operator=(const Callback& other) {
-         fImpl = other.fImpl;
-         fImpl->AddRef();
-      }
-      ~Callback();
-   private:
-      CallbackBase* fImpl;
-   };
 
 } // namespace Reflex
 

@@ -93,23 +93,31 @@ Reflex::Catalog::Scope_Begin() const {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Catalog::UnregisterTypeCallback(const CallbackBase& cb) const {
+Reflex::Catalog::UnregisterCallback(const Callback<Type>& cb) const {
 //-------------------------------------------------------------------------------
-   return fImpl->UnregisterTypeCallback(cb);
+   return fImpl->UnregisterCallback(cb);
 }
 
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Catalog::UnregisterScopeCallback(const CallbackBase& cb) const {
+Reflex::Catalog::UnregisterCallback(const Callback<Scope>& cb) const {
 //-------------------------------------------------------------------------------
-   return fImpl->UnregisterScopeCallback(cb);
+   return fImpl->UnregisterCallback(cb);
 }
 
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Catalog::UnregisterMemberCallback(const CallbackBase& cb) const {
+Reflex::Catalog::UnregisterCallback(const Callback<Member>& cb) const {
 //-------------------------------------------------------------------------------
-   return fImpl->UnregisterMemberCallback(cb);
+   return fImpl->UnregisterCallback(cb);
+}
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Catalog::Unload() {
+//-------------------------------------------------------------------------------
+   delete fImpl;
+   fImpl = 0;
 }
