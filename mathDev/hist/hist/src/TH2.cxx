@@ -25,8 +25,6 @@
 #include "TObjString.h"
 #include "TVirtualHistPainter.h"
 
-#include "Riostream.h"
-
 ClassImp(TH2)
 
 //______________________________________________________________________________

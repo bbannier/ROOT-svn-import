@@ -6130,9 +6130,20 @@ public:
       
       // TH1 derived from TH3
       options = cmpOptStats;
+      TH1D* tmp1 = 0;
       status += equals("TH3 -> X", h1X, (TH1D*) h3->Project3D("x"), options);
+      tmp1 = h3->ProjectionX("x335");
+      status += equals("TH3 -> X(x2)", tmp1, (TH1D*) h3->Project3D("x2"), options);
+      delete tmp1; tmp1 = 0;
       status += equals("TH3 -> Y", h1Y, (TH1D*) h3->Project3D("y"), options);
+      tmp1 = h3->ProjectionY("y335");
+      status += equals("TH3 -> Y(x2)", tmp1, (TH1D*) h3->Project3D("y2"), options);
+      delete tmp1; tmp1 = 0;
       status += equals("TH3 -> Z", h1Z, (TH1D*) h3->Project3D("z"), options);
+      tmp1 = h3->ProjectionZ("z335");
+      status += equals("TH3 -> Z(x2)", tmp1, (TH1D*) h3->Project3D("z2"), options);
+      delete tmp1; tmp1 = 0;
+
       options = 0;
       if ( defaultEqualOptions & cmpOptPrint )
          cout << "----------------------------------------------" << endl;
