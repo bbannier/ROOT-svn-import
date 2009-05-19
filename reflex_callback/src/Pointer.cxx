@@ -23,9 +23,12 @@ using namespace std;
 
 //-------------------------------------------------------------------------------
 Reflex::Pointer::Pointer( const Type & pointerType,
-                                const std::type_info & ti )
+                          const std::type_info & ti,
+                          const Catalog& catalog)
 //-------------------------------------------------------------------------------
-   : TypeBase( BuildTypeName(pointerType).c_str(), sizeof(void*), POINTER, ti, Type(), (REPRESTYPE)toupper(pointerType.RepresType()) ), 
+   : TypeBase( BuildTypeName(pointerType).c_str(), sizeof(void*),
+               POINTER, ti, Type(), catalog,
+               (REPRESTYPE)toupper(pointerType.RepresType()) ),
      fPointerType( pointerType ) { 
    // Construct the dictionary info for a pointer type.
 }

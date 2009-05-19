@@ -48,7 +48,7 @@ Reflex::UnionBuilderImpl::UnionBuilderImpl(const char* nam, size_t size, const s
          throw RuntimeError("Attempt to replace a non-class type with a union"); // FIXME: We should not throw!
       }
    }
-   fUnion = new Union(nam2.c_str(), size, ti, modifiers, typ);
+   fUnion = new Union(nam2.c_str(), size, ti, modifiers, Catalog::Instance(), typ);
 }
 
 //______________________________________________________________________________

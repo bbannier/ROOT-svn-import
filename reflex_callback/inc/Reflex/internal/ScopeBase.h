@@ -622,6 +622,10 @@ namespace Reflex {
        */
       ScopeName* ToScopeName() const;
 
+      /** Set the decaring scope of this scope
+       */
+      void DeclaringScope(Scope s);
+
    protected:
 
       /** The MemberByName work-horse: find a member called name in members,
@@ -812,6 +816,13 @@ inline Reflex::Reverse_Base_Iterator Reflex::ScopeBase::Base_REnd() const {
 inline Reflex::Scope Reflex::ScopeBase::DeclaringScope() const {
 //-------------------------------------------------------------------------------
    return fDeclaringScope;
+}
+
+
+//-------------------------------------------------------------------------------
+inline void Reflex::ScopeBase::DeclaringScope(Scope s) {
+//-------------------------------------------------------------------------------
+   fDeclaringScope = s;
 }
 
 

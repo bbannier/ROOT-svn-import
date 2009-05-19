@@ -36,7 +36,9 @@ public:
    /** constructor */
    ScopedType(const char* name, size_t size, TYPE typeType,
               const std::type_info& ti, const Type& finalType = Dummy::Type(),
-              unsigned int modifiers = 0, REPRESTYPE represType = REPRES_NOTYPE);
+              unsigned int modifiers = 0,
+              const Catalog& catalog = Catalog::Instance(),
+              REPRESTYPE represType = REPRES_NOTYPE);
 
    /** destructor */
    virtual ~ScopedType() {}

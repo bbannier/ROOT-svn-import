@@ -19,10 +19,10 @@
 Reflex::ScopedType::ScopedType( const char * name, size_t size,
                                 TYPE typeType, const std::type_info & ti,
                                 const Type& finalType, unsigned int modifiers,
-                                REPRESTYPE represType)
+                                const Catalog& catalog, REPRESTYPE represType)
 //-------------------------------------------------------------------------------
 // Construct the dictionary information for an enum
-   : TypeBase( name, size, typeType, ti, finalType, represType ),
-     ScopeBase( name, typeType),
+   : TypeBase( name, size, typeType, ti, finalType, catalog, represType ),
+     ScopeBase( name, typeType, catalog),
      fModifiers(modifiers)
      {}

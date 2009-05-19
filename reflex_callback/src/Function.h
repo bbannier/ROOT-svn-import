@@ -34,9 +34,10 @@ namespace Reflex {
 
       /** default constructor */
       Function( const Type & retType,
-         const std::vector< Type > & parameters,
-         const std::type_info & ti,
-         TYPE functionType = FUNCTION );
+                const std::vector< Type > & parameters,
+                const std::type_info & ti,
+                TYPE functionType = FUNCTION,
+                const Catalog& catalog = Catalog::Instance());
 
 
       /** destructor */

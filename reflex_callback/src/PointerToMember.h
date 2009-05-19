@@ -33,8 +33,9 @@ namespace Reflex {
 
       /** default constructor */
       PointerToMember( const Type & pointerToMemberType,
-         const Scope & pointerToMemberScope,
-         const std::type_info & ti );
+                       const Scope & pointerToMemberScope,
+                       const std::type_info & ti,
+                       const Catalog& catalog = Catalog::Instance());
 
 
       /** destructor */

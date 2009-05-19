@@ -43,14 +43,15 @@
 
 //-------------------------------------------------------------------------------
 Reflex::TypeBase::TypeBase( const char * nam, 
-                                  size_t size,
-                                  TYPE typeTyp, 
-                                  const std::type_info & ti,
-                                  const Type & finalType,
-                                  REPRESTYPE represType /*= REPRES_NOTYPE */) 
+                            size_t size,
+                            TYPE typeTyp, 
+                            const std::type_info & ti,
+                            const Type & finalType,
+                            const Catalog& catalog,
+                            REPRESTYPE represType /*= REPRES_NOTYPE */) 
    : fTypeInfo( &ti ), 
      fRepresType(represType),
-     fScope( Scope::__NIRVANA__() ),
+     fScope( catalog.__NIRVANA__() ),
      fSize( size ),
      fTypeType( typeTyp ),
      fPropertyList( OwnedPropertyList( new PropertyListImpl())),
@@ -59,7 +60,7 @@ Reflex::TypeBase::TypeBase( const char * nam,
      fRawType(0) {
 //-------------------------------------------------------------------------------
 // Construct the dictinary info for a type.
-   Type t = TypeName::ByName( nam );
+   Type t = catalog.TypeByName( nam );
    if ( t.Id() == 0 ) { 
       fTypeName = new TypeName( nam, this, &ti ); 
    }
@@ -74,8 +75,8 @@ Reflex::TypeBase::TypeBase( const char * nam,
         typeTyp != FUNCTION &&
         typeTyp != POINTER  ) {
       std::string sname = Tools::GetScopeName(nam);
-      fScope = Scope::ByName(sname);
-      if ( fScope.Id() == 0 ) fScope = (new ScopeName(sname.c_str(), 0))->ThisScope();
+      fScope = catalog.ScopeByName(sname);
+      if ( fScope.Id() == 0 ) fScope = (new ScopeName(sname.c_str(), 0, catalog))->ThisScope();
     
       // Set declaring At
       if ( fScope ) fScope.AddSubType(ThisType());

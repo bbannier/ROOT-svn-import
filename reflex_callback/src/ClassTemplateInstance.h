@@ -34,9 +34,10 @@ namespace Reflex {
 
       /** default constructor */
       ClassTemplateInstance( const char * typ, 
-         size_t size, 
-         const std::type_info & ti, 
-         unsigned int modifiers );
+                             size_t size, 
+                             const std::type_info & ti, 
+                             unsigned int modifiers,
+                             const Catalog& catalog = Catalog::Instance());
 
 
       /** destructor */

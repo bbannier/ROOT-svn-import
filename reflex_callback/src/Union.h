@@ -31,7 +31,8 @@ class Union : public ScopedType
 public:
 
    /** constructor */
-   Union(const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers, TYPE unionType = UNION);
+   Union(const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers,
+         const Catalog& catalog = Catalog::Instance(), TYPE unionType = UNION);
 
    /** destructor */
    virtual ~Union();

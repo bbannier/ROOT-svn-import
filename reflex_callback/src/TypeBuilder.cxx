@@ -153,7 +153,8 @@ Reflex::Type Reflex::TypedefTypeBuilder(const char * nam,
    // We found the typedef type
    else if ( ret ) return ret;
    // Create a new typedef
-   return (new Typedef(nam , t, Reflex::TYPEDEF, Reflex::Dummy::Type(), represType))->ThisType();        
+   return (new Typedef(nam , t, Reflex::TYPEDEF, Reflex::Dummy::Type(),
+                       Catalog::Instance(), represType))->ThisType();
 }
 
 

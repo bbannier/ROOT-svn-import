@@ -57,7 +57,7 @@ Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info
       fClass = new ClassTemplateInstance(nam2.c_str(), size, ti, modifiers);
    }
    else {
-      fClass = new Class(nam2.c_str(), size, ti, modifiers, typ);
+      fClass = new Class(nam2.c_str(), size, ti, modifiers, Catalog::Instance(), typ);
    }
 }
 

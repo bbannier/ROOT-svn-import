@@ -32,8 +32,9 @@ namespace Reflex {
 
       /** default constructor */
       Array( const Type & arrayType,
-         size_t len,
-         const std::type_info & typeinfo );
+             size_t len,
+             const std::type_info & typeinfo,
+             const Catalog& catalog = Catalog::Instance());
 
 
       /** destructor */

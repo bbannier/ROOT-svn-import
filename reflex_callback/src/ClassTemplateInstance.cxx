@@ -29,11 +29,13 @@ Reflex::ClassTemplateInstance::
 ClassTemplateInstance( const char * typ, 
                        size_t size, 
                        const std::type_info & ti, 
-                       unsigned int modifiers )
+                       unsigned int modifiers,
+                       const Catalog& catalog)
    : Class( typ, 
             size, 
             ti, 
             modifiers,
+            catalog,
             TYPETEMPLATEINSTANCE ),
      TemplateInstance( Tools::GetTemplateArguments( typ )),
      fTemplateFamily( TypeTemplate()) {

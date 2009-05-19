@@ -33,7 +33,7 @@ Reflex::Internal::CatalogImpl::Instance() {
 
 //-------------------------------------------------------------------------------
 Reflex::Internal::CatalogImpl::CatalogImpl():
-   fScopes(this), fTypes(this), fName("Global Reflex Catalog") {
+   fScopes(this), fTypes(this), fName("Global Reflex Catalog"), fCatalog(this) {
 //-------------------------------------------------------------------------------
    fScopes.Init();
    fTypes.Init();
