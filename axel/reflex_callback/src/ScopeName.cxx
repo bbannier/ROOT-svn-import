@@ -24,7 +24,7 @@
 #include "stl_hash.h"
 #include <vector>
 
-
+/*
 //-------------------------------------------------------------------------------
 typedef __gnu_cxx::hash_map < const std::string *, Reflex::Scope > Name2Scope_t;
 typedef std::vector< Reflex::Scope > ScopeVec_t;
@@ -47,14 +47,15 @@ static ScopeVec_t & sScopeVec() {
    if (!m) m = new ScopeVec_t;
    return *m;
 }
-
+*/
 
 //-------------------------------------------------------------------------------
 Reflex::ScopeName::ScopeName( const char * name,
                               ScopeBase * scopeBase,
                               const Catalog& catalog) 
    : fName(name),
-     fScopeBase(scopeBase) {
+     fScopeBase(scopeBase),
+     fCatalog(catalog) {
 //-------------------------------------------------------------------------------
 // Create the scope name dictionary info.
    fThisScope = new Scope(this);
@@ -72,7 +73,10 @@ Reflex::ScopeName::ScopeName( const char * name,
 Reflex::ScopeName::~ScopeName() {
 //-------------------------------------------------------------------------------
 // Destructor.
-   delete fScopeBase;
+   if (fScopeBase) {
+      fScopeBase->DeclaringScope(Scope());
+      delete fScopeBase;
+   }
    delete fThisScope;
 }
 
@@ -81,25 +85,7 @@ Reflex::ScopeName::~ScopeName() {
 Reflex::Scope Reflex::ScopeName::ByName( const std::string & name ) {
 //-------------------------------------------------------------------------------
 // Lookup a scope by fully qualified name.
-   Name2Scope_t::iterator it;
-   if (name.size()>2 && name[0]==':' && name[1]==':') {
-      const std::string & k = name.substr(2);
-      it = sScopes().find(&k);
-   } else {
-      it = sScopes().find(&name);
-   }
-   if (it != sScopes().end() ) return it->second;
-   else {
-      // HERE STARTS AN UGLY HACK WHICH HAS TO BE UNDONE ASAP
-      // (also remove inlcude Reflex/Type.h)
-      Type t = Type::ByName(name);
-      if ( t && t.IsTypedef()) {
-         while ( t.IsTypedef()) t = t.ToType();
-         if ( t.IsClass() || t.IsEnum() || t.IsUnion() ) return t.operator Scope ();
-      }
-      return Dummy::Scope();
-   }
-   // END OF UGLY HACK
+   return Catalog::Instance().ScopeByName(name);
 }
 
 
@@ -108,9 +94,9 @@ void Reflex::ScopeName::HideName() {
 //-------------------------------------------------------------------------------
 // Append the string " @HIDDEN@" to a scope name.
    if ( fName.length() == 0 || fName[fName.length()-1] != '@' ) {
-      sScopes().erase(&fName);
+      fCatalog.ToImpl()->Scopes().Remove(*this);
       fName += " @HIDDEN@";
-      sScopes()[&fName] = this;
+      fCatalog.ToImpl()->Scopes().Add(*this);
    }
 }
 
@@ -119,10 +105,12 @@ void Reflex::ScopeName::UnhideName() {
    //-------------------------------------------------------------------------------
    // Remove the string " @HIDDEN@" to a scope name.
    static const unsigned int len = strlen(" @HIDDEN@");
-   if ( fName.length() > len && fName[fName.length()-1] == '@' && 0==strcmp(" @HIDDEN@",fName.c_str()+fName.length()-len) ){
-      sScopes().erase(&fName);
+   if ( fName.length() > len
+        && fName[fName.length()-1] == '@'
+        && 0==strcmp(" @HIDDEN@",fName.c_str()+fName.length()-len) ){
+      fCatalog.ToImpl()->Scopes().Remove(*this);
       fName.erase(fName.length()-len);
-      sScopes()[&fName] = this;
+      fCatalog.ToImpl()->Scopes().Add(*this);
    }
 }
 
@@ -138,8 +126,7 @@ Reflex::Scope Reflex::ScopeName::ThisScope() const {
 Reflex::Scope Reflex::ScopeName::ScopeAt( size_t nth ) {
 //-------------------------------------------------------------------------------
 // Return the nth scope defined in Reflex.
-   if ( nth < sScopeVec().size()) return sScopeVec()[nth];
-   return Dummy::Scope();
+   return Catalog::Instance().ScopeAt(nth);
 }
 
 
@@ -147,7 +134,7 @@ Reflex::Scope Reflex::ScopeName::ScopeAt( size_t nth ) {
 size_t Reflex::ScopeName::ScopeSize() {
 //-------------------------------------------------------------------------------
 // Return the number of scopes defined in Reflex.
-   return sScopeVec().size();
+   return Catalog::Instance().ScopeSize();
 }
 
 
@@ -155,7 +142,7 @@ size_t Reflex::ScopeName::ScopeSize() {
 Reflex::Scope_Iterator Reflex::ScopeName::Scope_Begin() {
 //-------------------------------------------------------------------------------
 // Return the begin iterator of the scope collection.
-   return sScopeVec().begin();
+   return Catalog::Instance().Scope_Begin();
 }
 
 
@@ -163,7 +150,7 @@ Reflex::Scope_Iterator Reflex::ScopeName::Scope_Begin() {
 Reflex::Scope_Iterator Reflex::ScopeName::Scope_End() {
 //-------------------------------------------------------------------------------
 // Return the end iterator of the scope collection.
-   return sScopeVec().end();
+   return Catalog::Instance().Scope_End();
 }
 
 
@@ -171,7 +158,7 @@ Reflex::Scope_Iterator Reflex::ScopeName::Scope_End() {
 Reflex::Reverse_Scope_Iterator Reflex::ScopeName::Scope_RBegin() {
 //-------------------------------------------------------------------------------
 // Return the rbegin iterator of the scope collection.
-   return ((const std::vector<Scope>&)sScopeVec()).rbegin();
+   return Catalog::Instance().Scope_RBegin();
 }
 
 
@@ -179,7 +166,7 @@ Reflex::Reverse_Scope_Iterator Reflex::ScopeName::Scope_RBegin() {
 Reflex::Reverse_Scope_Iterator Reflex::ScopeName::Scope_REnd() {
 //-------------------------------------------------------------------------------
 // Return the rend iterator of the scope collection.
-   return ((const std::vector<Scope>&)sScopeVec()).rend();
+   return Catalog::Instance().Scope_REnd();
 }
 
 

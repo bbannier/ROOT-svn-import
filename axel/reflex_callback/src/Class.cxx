@@ -37,10 +37,11 @@ Reflex::Class::Class(const char *           typ,
                      size_t                 size,
                      const std::type_info & ti,
                      unsigned int           modifiers,
+                     const Catalog& catalog,
                      TYPE                   classType)
 //-------------------------------------------------------------------------------
 // Construct a Class instance.
-   : ScopedType(typ, size, classType, ti, Type(), modifiers,
+   : ScopedType(typ, size, classType, ti, Type(), modifiers, catalog,
                 (typ && (typ[0] == 'F') && !strcmp(typ, "FILE")) ? (REPRESTYPE)'e' : REPRES_STRUCT),
      fAllBases(0),
      fCompleteType(false),

@@ -33,8 +33,9 @@ namespace Reflex {
 
       /** default constructor */
       Enum( const char * enumType,
-         const std::type_info & ti,
-         unsigned int modifiers );
+            const std::type_info & ti,
+            unsigned int modifiers,
+            const Catalog& catalog = Catalog::Instance());
 
 
       /** destructor */

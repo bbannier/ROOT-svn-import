@@ -1026,7 +1026,7 @@ namespace Reflex {
       * @label __NIRVANA__
       * @link association 
       */
-      static Scope & __NIRVANA__();
+      static Scope __NIRVANA__();
 
    private:
 

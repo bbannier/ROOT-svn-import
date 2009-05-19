@@ -15,6 +15,7 @@
 
 #include "TypeCatalogImpl.h"
 
+#include "CatalogImpl.h"
 #include "Reflex/Type.h"
 #include "Typedef.h"
 
@@ -25,15 +26,17 @@ namespace {
       FundamentalDeclarator(const char* name, size_t size, const std::type_info& ti,
                             Reflex::REPRESTYPE repres) {
          Reflex::TypeBase* tb = new Reflex::TypeBase(name, size, Reflex::FUNDAMENTAL,
-                                                     ti, Reflex::Type(), repres);
+                                                     ti, Reflex::Type(), fgCatalog, repres);
          tb->Properties().AddProperty( "Description", "fundamental type" );
          fType = tb->ThisType();
       }
 
       FundamentalDeclarator& Typedef(const char* name) {
-         new Reflex::Typedef(name, fType, Reflex::FUNDAMENTAL, fType);
+         new Reflex::Typedef(name, fType, Reflex::FUNDAMENTAL, fType, fgCatalog);
          return *this;
       }
+
+      static Reflex::Catalog fgCatalog;
    private:
       Reflex::Type fType;
    };
@@ -57,6 +60,8 @@ namespace {
 
    Reflex::Instance instantiate;
 
+   Reflex::Catalog FundamentalDeclarator::fgCatalog;
+
 }
 
 
@@ -67,6 +72,8 @@ Reflex::Internal::TypeCatalogImpl::Init() {
 // Initialize the fundamental types of a catalog; only called for the static
 // instance of the CatalogImpl.
    // initialising fundamental types
+
+   FundamentalDeclarator::fgCatalog = fCatalog->ThisCatalog();
    // char [3.9.1.1]
    DeclFundamental<char>("char", REPRES_CHAR);
 

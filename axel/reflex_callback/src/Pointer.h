@@ -31,7 +31,8 @@ namespace Reflex {
 
       /** default constructor */
       Pointer( const Type & pointerType, 
-         const std::type_info & ti );
+               const std::type_info & ti,
+               const Catalog& catalog = Catalog::Instance());
 
       /** destructor */
       virtual ~Pointer() {}

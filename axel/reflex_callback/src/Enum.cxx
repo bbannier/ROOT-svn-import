@@ -25,10 +25,11 @@
 //-------------------------------------------------------------------------------
 Reflex::Enum::Enum( const char * enumType,
                     const std::type_info & ti,
-                    unsigned int modifiers )
+                    unsigned int modifiers,
+                    const Catalog& catalog)
 //-------------------------------------------------------------------------------
 // Construct the dictionary information for an enum
-   : ScopedType( enumType, sizeof(int), ENUM, ti, Type(),modifiers, REPRES_ENUM )
+   : ScopedType( enumType, sizeof(int), ENUM, ti, Type(),modifiers, catalog, REPRES_ENUM )
      {}
 
 

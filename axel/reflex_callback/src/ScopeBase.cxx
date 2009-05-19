@@ -80,7 +80,7 @@ Reflex::ScopeBase::ScopeBase( const char * scope,
 Reflex::ScopeBase::ScopeBase(const Catalog& catalog) 
    : fScopeName( 0 ),
      fScopeType( NAMESPACE ),
-     fDeclaringScope( Scope::__NIRVANA__() ),
+     fDeclaringScope( catalog.__NIRVANA__() ),
      fBasePosition( 0 ) {
 //-------------------------------------------------------------------------------
    // Default constructor for the ScopeBase (used at init time for the global scope)
@@ -266,8 +266,8 @@ size_t Reflex::ScopeBase::FunctionMemberSize(EMEMBERQUERY) const {
 //-------------------------------------------------------------------------------
 Reflex::Scope Reflex::ScopeBase::GlobalScope() {
 //-------------------------------------------------------------------------------
-   // Return a ref to the global scope.
-   return Namespace::GlobalScope();
+   // Return a ref to the static catalog's global scope.
+   return Catalog::Instance().GlobalScope();
 }
 
 
@@ -774,13 +774,13 @@ void Reflex::ScopeBase::AddSubType( const char * type,
    TypeBase * tb = 0;
    switch ( typeType ) {
    case CLASS:
-      tb = new Class(type,size,ti,modifiers);
+      tb = new Class(type,size,ti,modifiers, fScopeName->InCatalog());
       break;
    case STRUCT:
-      tb = new Class(type,size,ti,modifiers,STRUCT);
+      tb = new Class(type,size,ti,modifiers, fScopeName->InCatalog(), STRUCT);
       break;
    case ENUM:
-      tb = new Enum(type,ti,modifiers);
+      tb = new Enum(type,ti,modifiers, fScopeName->InCatalog());
       break;
    case FUNCTION:
       break;
@@ -795,10 +795,10 @@ void Reflex::ScopeBase::AddSubType( const char * type,
    case TYPEDEF:
       break;
    case UNION:
-      tb = new Union(type,size,ti,modifiers); 
+      tb = new Union(type,size,ti,modifiers, fScopeName->InCatalog()); 
       break;
    default:
-      tb = new TypeBase( type, size, typeType, ti );
+      tb = new TypeBase( type, size, typeType, ti, Type(), fScopeName->InCatalog() );
    }
    if ( tb ) AddSubType( * tb );
 }

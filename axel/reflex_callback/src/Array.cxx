@@ -22,11 +22,12 @@
 
 //-------------------------------------------------------------------------------
 Reflex::Array::Array( const Type & arrayType,
-                            size_t len,
-                            const std::type_info & typeinfo ) 
+                      size_t len,
+                      const std::type_info & typeinfo,
+                      const Catalog& catalog) 
 //-------------------------------------------------------------------------------
 // Constructs an array type.
-   : TypeBase(BuildTypeName(arrayType, len).c_str(), arrayType.SizeOf() * len, ARRAY, typeinfo, Type(), arrayType.RepresType()), 
+   : TypeBase(BuildTypeName(arrayType, len).c_str(), arrayType.SizeOf() * len, ARRAY, typeinfo, Type(), catalog, arrayType.RepresType()), 
      fArrayType(arrayType), 
      fLength(len) {
 }

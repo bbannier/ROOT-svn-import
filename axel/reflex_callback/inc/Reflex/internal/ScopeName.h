@@ -54,6 +54,8 @@ namespace Reflex {
       static Scope ByName( const std::string & name );
 
 
+      Catalog InCatalog() const { return fCatalog; }
+
       /**
        * Hide this scope from any lookup by appending the string " @HIDDEN@" to its name.
        */      
@@ -126,6 +128,8 @@ namespace Reflex {
       * This scope
       */
       Scope * fThisScope;
+
+      Catalog fCatalog;
 
    }; // class ScopeName
 } // namespace Reflex

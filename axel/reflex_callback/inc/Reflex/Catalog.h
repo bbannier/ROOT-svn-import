@@ -34,8 +34,8 @@ namespace Reflex {
       bool operator==(Catalog other) const { return fImpl == other.fImpl; }
       bool operator!=(Catalog other) const { return fImpl != other.fImpl; }
 
-      Type ByName(const std::string& name) const;
-      Type ByTypeInfo(const std::type_info & ti) const;
+      Type TypeByName(const std::string& name) const;
+      Type TypeByTypeInfo(const std::type_info & ti) const;
       Scope ScopeByName(const std::string& name) const;
 
       // iterator access

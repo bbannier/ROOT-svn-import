@@ -26,11 +26,10 @@
 #include "Class.h"
 
 //-------------------------------------------------------------------------------
-Reflex::Scope & Reflex::Scope::__NIRVANA__() {
+Reflex::Scope Reflex::Scope::__NIRVANA__() {
 //-------------------------------------------------------------------------------
 // static wraper around NIRVANA, the base of the top scope.
-   static Scope s = Scope( new ScopeName( "@N@I@R@V@A@N@A@", 0 ));
-   return s;
+   return Catalog::Instance().__NIRVANA__();
 }
 
 

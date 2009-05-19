@@ -15,6 +15,7 @@
 // Include files
 #include "Reflex/Kernel.h"
 #include "Reflex/Scope.h"
+#include "Reflex/Catalog.h"
 #include "Reflex/internal/OwnedPropertyList.h"
 #include <vector>
 #include <typeinfo>
@@ -44,6 +45,7 @@ namespace Reflex {
          TYPE                   typeTyp,
          const std::type_info & ti,
          const Type &           finalType = Dummy::Type(),
+         const Catalog& catalog = Catalog::Instance(),
          REPRESTYPE represType = REPRES_NOTYPE);
 
 

@@ -39,6 +39,24 @@ Reflex::Catalog::Catalog(Reflex::Internal::CatalogImpl* impl)
 }
 
 //-------------------------------------------------------------------------------
+Reflex::Scope
+Reflex::Catalog::GlobalScope() const {
+//-------------------------------------------------------------------------------
+// Return the global scope
+   return fImpl->Scopes().GlobalScope();
+}
+
+
+//-------------------------------------------------------------------------------
+Reflex::Scope
+Reflex::Catalog::__NIRVANA__() const {
+//-------------------------------------------------------------------------------
+// Return the scope "containing" the global scope
+   return fImpl->Scopes().__NIRVANA__();
+}
+
+
+//-------------------------------------------------------------------------------
 Reflex::Catalog
 Reflex::Catalog::Instance() {
 //-------------------------------------------------------------------------------
@@ -50,7 +68,7 @@ Reflex::Catalog::Instance() {
 
 //-------------------------------------------------------------------------------
 Reflex::Type
-Reflex::Catalog::ByName(const std::string& name) const {
+Reflex::Catalog::TypeByName(const std::string& name) const {
 //-------------------------------------------------------------------------------
    if (name[0] == ':' && name[1] == ':')
       return fImpl->Types().ByName(name.substr(2));
@@ -60,7 +78,7 @@ Reflex::Catalog::ByName(const std::string& name) const {
 
 //-------------------------------------------------------------------------------
 Reflex::Type
-Reflex::Catalog::ByTypeInfo(const std::type_info & ti) const {
+Reflex::Catalog::TypeByTypeInfo(const std::type_info & ti) const {
 //-------------------------------------------------------------------------------
    return fImpl->Types().ByTypeInfo(ti);
 }
@@ -92,6 +110,48 @@ Reflex::Catalog::Scope_Begin() const {
 
 
 //-------------------------------------------------------------------------------
+Reflex::Scope_Iterator
+Reflex::Catalog::Scope_End() const {
+//-------------------------------------------------------------------------------
+   return fImpl->Scopes().ScopeVec().end();
+}
+
+
+//-------------------------------------------------------------------------------
+Reflex::Reverse_Scope_Iterator
+Reflex::Catalog::Scope_RBegin() const {
+//-------------------------------------------------------------------------------
+   return fImpl->Scopes().ScopeVec().rbegin();
+}
+
+
+//-------------------------------------------------------------------------------
+Reflex::Reverse_Scope_Iterator
+Reflex::Catalog::Scope_REnd() const {
+//-------------------------------------------------------------------------------
+   return fImpl->Scopes().ScopeVec().rend();
+}
+
+
+//-------------------------------------------------------------------------------
+Reflex::Scope
+Reflex::Catalog::ScopeAt(size_t nth) const {
+//-------------------------------------------------------------------------------
+   if (ScopeSize() > nth)
+      return fImpl->Scopes().ScopeVec()[nth];
+   return Dummy::Scope();
+}
+
+
+//-------------------------------------------------------------------------------
+size_t
+Reflex::Catalog::ScopeSize() const {
+//-------------------------------------------------------------------------------
+   return fImpl->Scopes().ScopeVec().size();
+}
+
+
+//-------------------------------------------------------------------------------
 void
 Reflex::Catalog::UnregisterCallback(const Callback<Type>& cb) const {
 //-------------------------------------------------------------------------------
@@ -118,6 +178,8 @@ Reflex::Catalog::UnregisterCallback(const Callback<Member>& cb) const {
 void
 Reflex::Catalog::Unload() {
 //-------------------------------------------------------------------------------
-   delete fImpl;
-   fImpl = 0;
+   if (fImpl != &Internal::CatalogImpl::Instance()) {
+      delete fImpl;
+      fImpl = 0;
+   }
 }

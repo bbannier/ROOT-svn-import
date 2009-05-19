@@ -41,6 +41,7 @@ namespace Reflex {
          const Type & typedefType,
          TYPE typeTyp = TYPEDEF,
          const Type & finalType = Dummy::Type(),
+         const Catalog& catalog = Catalog::Instance(),
          REPRESTYPE represType = REPRES_NOTYPE) ;
 
 

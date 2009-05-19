@@ -42,7 +42,8 @@ class Class : public ScopedType
 public:
 
    /** constructor */
-   Class(const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers = 0, TYPE classType = CLASS);
+   Class(const char* typ, size_t size, const std::type_info& ti, unsigned int modifiers = 0,
+         const Catalog& catalog = Catalog::Instance(), TYPE classType = CLASS);
 
    /** destructor */
    virtual ~Class();
