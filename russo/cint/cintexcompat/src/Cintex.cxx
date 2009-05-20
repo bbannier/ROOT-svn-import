@@ -88,6 +88,14 @@ public: // Public Interface.
       Type t_bool = TypeBuilder("bool");
 
 
+      ClassBuilderT<ROOT::Cintex::Cintex>("Cintex", PUBLIC)
+         .EnableCallback(false)
+         .AddFunctionMember(FunctionTypeBuilder(t_void), "Enable", Enable, 0, 0, PUBLIC | STATIC)
+         .AddFunctionMember(FunctionTypeBuilder(t_void, t_int), "SetDebug", SetDebug, 0, 0, PUBLIC | STATIC)
+         .AddFunctionMember(FunctionTypeBuilder(t_int), "Debug", Debug, 0, 0, PUBLIC | STATIC)
+         .AddFunctionMember(FunctionTypeBuilder(t_bool), "PropagateClassTypedefs", PropagateClassTypedefs, 0, 0, PUBLIC | STATIC)
+         .AddFunctionMember(FunctionTypeBuilder(t_void, t_bool), "SetPropagateClassTypedefs", SetPropagateClassTypedefs, 0, 0, PUBLIC | STATIC);
+
       ClassBuilderT<ROOT::Cintex::Cintex>("ROOT::Cintex", PUBLIC)
          .EnableCallback(false)
          .AddFunctionMember(FunctionTypeBuilder(t_void), "Enable", Enable, 0, 0, PUBLIC | STATIC)
@@ -110,6 +118,10 @@ public: // Public Interface.
       G__mydictLN_ROOT.tagnum = -1 ;
       G__get_linked_tagnum_fwd(&G__mydictLN_ROOT);
 
+      G__linked_taginfo G__mydictLN_Cintex = { "Cintex" , 110 , -1 };
+      G__mydictLN_Cintex.tagnum = -1 ;
+      G__get_linked_tagnum_fwd(&G__mydictLN_Cintex);
+
       G__linked_taginfo G__mydictLN_ROOTcLcLCintex = { "ROOT::Cintex" , 110 , -1 };
       G__mydictLN_ROOTcLcLCintex.tagnum = -1 ;
       G__get_linked_tagnum_fwd(&G__mydictLN_ROOTcLcLCintex);
@@ -117,6 +129,9 @@ public: // Public Interface.
       G__linked_taginfo G__mydictLN_ROOTcLcLCintexcLcLCintex = { "ROOT::Cintex::Cintex" , 99 , -1 };
       G__mydictLN_ROOTcLcLCintexcLcLCintex.tagnum = -1 ;
       G__get_linked_tagnum_fwd(&G__mydictLN_ROOTcLcLCintexcLcLCintex);
+
+      Type outer = Type::ByName("Cintex");
+      ::ROOT::Cintex::CINTClassBuilder::Get(outer).Setup();
 
       Type t = Type::ByName("ROOT::Cintex");
       ::ROOT::Cintex::CINTClassBuilder::Get(t).Setup();
