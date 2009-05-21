@@ -21,6 +21,7 @@
 #include "value.h"
 #include "../../reflex/src/FunctionMember.h"
 #include "Reflex/internal/MemberBase.h"
+#include "Reflex/Builder/TypeBuilder.h"
 
 #ifndef G__TESTMAIN
 #include <sys/stat.h>

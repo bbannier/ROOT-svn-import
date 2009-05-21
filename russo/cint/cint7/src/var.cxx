@@ -22,6 +22,8 @@
 #include <cstring>
 #include <sstream>
 
+#include "Reflex/Builder/TypeBuilder.h"
+
 using namespace Cint::Internal;
 
 namespace Cint {
