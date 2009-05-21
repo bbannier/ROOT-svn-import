@@ -20,12 +20,6 @@
 #include "Reflex/Type.h"
 #include "Reflex/Member.h"
 
-#include "Reflex/Builder/TypeBuilder.h"
-#include "Reflex/Builder/NamespaceBuilder.h"
-#include "Reflex/Builder/ClassBuilder.h"
-#include "Reflex/Builder/UnionBuilder.h"
-#include "Reflex/Builder/EnumBuilder.h"
-
 #else
 namespace Reflex {
    class Type;

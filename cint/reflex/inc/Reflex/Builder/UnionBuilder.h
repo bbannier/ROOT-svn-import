@@ -80,12 +80,6 @@ public:
    void AddProperty(const char* key, Any value);
    void AddProperty(const char* key, const char* value);
 
-   /** 
-   * EnableCallback Enable or disable the callback call in the destructor
-   * @param  enable true to enable callback call, false to disable callback call
-   */
-   void EnableCallback(const bool enable = true);
-
    /** SetSizeOf will set the SizeOf property for this union.
    * It currently ignores all actual content.
    * @size Size of the union
@@ -98,6 +92,16 @@ public:
    */
    Type ToType();
 
+protected:
+
+   friend class UnionBuilder;
+   
+   /** 
+    * EnableCallback Enable or disable the callback call in the destructor
+    * @param  enable true to enable callback call, false to disable callback call
+    */
+   void EnableCallback(const bool enable = true);
+   
 private:
 
    /** the union currently being built */
@@ -179,12 +183,6 @@ public:
    */
    template <typename P> UnionBuilder& AddProperty(const char* key, P value);
 
-   /** 
-   * EnableCallback Enable or disable the callback call in the destructor
-   * @param  enable true to enable callback call, false to disable callback call
-   */
-   UnionBuilder& EnableCallback(const bool enable = true);
-
    /** SetSizeOf will set the SizeOf property for this union.
    * It currently ignores all actual content.
    * @size Size of the union
@@ -197,8 +195,20 @@ public:
    */
    Type ToType();
 
-private:
+protected:
 
+#ifdef G__COMMON_H
+   friend int ::G__search_tagname(const char*, int);
+#endif
+   
+   /** 
+    * EnableCallback Enable or disable the callback call in the destructor
+    * @param  enable true to enable callback call, false to disable callback call
+    */
+   UnionBuilder& EnableCallback(const bool enable = true);
+   
+private:
+   
    /** the union information */
    UnionBuilderImpl fUnionBuilderImpl;
 

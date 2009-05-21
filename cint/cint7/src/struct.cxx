@@ -15,10 +15,6 @@
 
 #include "common.h"
 #include "Reflex/Base.h"
-#include "Reflex/Builder/TypeBuilder.h"
-#include "Reflex/Builder/NamespaceBuilder.h"
-#include "Reflex/Builder/ClassBuilder.h"
-#include "Reflex/Builder/UnionBuilder.h"
 #include "Dict.h"
 
 #include <cctype>
@@ -61,6 +57,10 @@ extern "C" void G__set_class_autoloading_table(char* classname, char* libname);
 extern "C" int G__defined_tagname(const char* tagname, int noerror);
 extern "C" int G__search_tagname(const char* tagname, int type);
 
+#include "Reflex/Builder/TypeBuilder.h"
+#include "Reflex/Builder/NamespaceBuilder.h"
+#include "Reflex/Builder/ClassBuilder.h"
+#include "Reflex/Builder/UnionBuilder.h"
 
 //______________________________________________________________________________
 static const char G__CLASS_AUTOLOAD = 'a';

@@ -19,6 +19,9 @@
 #include "Reflex/Member.h"
 #include "Reflex/Callback.h"
 
+// Forward declaration for 'friendship' purpose.
+namespace Cint { namespace Internal {} }
+
 namespace Reflex {
 
    // forward declarations 
@@ -89,13 +92,6 @@ namespace Reflex {
       void AddProperty(const char* key, const char* value);
 
 
-      /** 
-      * EnableCallback Enable or disable the callback call in the destructor
-      * @param  enable true to enable callback call, false to disable callback call
-      */
-      void EnableCallback(const bool enable = true);
- 
-
       /** SetSizeOf will set the SizeOf property for this class.
       * It currently ignore all actual content.
       * @size Size of the class
@@ -108,7 +104,18 @@ namespace Reflex {
       */
       Type ToType();
 
-   private:
+protected:
+      
+      friend class ClassBuilder;
+      template <class T> friend class ClassBuilderT;
+      
+      /** 
+       * EnableCallback Enable or disable the callback call in the destructor
+       * @param  enable true to enable callback call, false to disable callback call
+       */
+      void EnableCallback(const bool enable = true);
+      
+private:
 
       /** current class being built */
       Class * fClass;
@@ -192,12 +199,6 @@ namespace Reflex {
       */
       template <typename P> ClassBuilder& AddProperty(const char* key, P value);
 
-      /** 
-      * EnableCallback Enable or disable the callback call in the destructor
-      * @param  enable true to enable callback call, false to disable callback call
-      */
-      ClassBuilder& EnableCallback(const bool enable = true);
-
       /** SetSizeOf will set the SizeOf property for this class.
       * It currently ignore all actual content.
       * @size Size of the class
@@ -210,7 +211,21 @@ namespace Reflex {
       */
       Type ToType();
 
-   private:
+protected:
+
+#ifdef G__COMMON_H
+      friend int ::G__search_tagname(const char*, int);
+      friend void Cint::Internal::G__set_stdio();
+      friend void Cint::Internal::G__create_bytecode_arena();
+#endif
+
+      /** 
+       * EnableCallback Enable or disable the callback call in the destructor
+       * @param  enable true to enable callback call, false to disable callback call
+       */
+      ClassBuilder& EnableCallback(const bool enable = true);
+      
+private:
 
       ClassBuilderImpl fClassBuilderImpl;
 
@@ -325,13 +340,6 @@ namespace Reflex {
          P value );
 
 
-      /** 
-      * EnableCallback Enable or disable the callback call in the destructor
-      * @param  enable true to enable callback call, false to disable callback call
-      */
-      ClassBuilderT & EnableCallback( const bool enable = true );
-
-
       /** SetSizeOf will set the SizeOf property for this class.
       * It currently ignore all actual content.
       * @size Size of the class
@@ -344,6 +352,14 @@ namespace Reflex {
       */
       Type ToType();
 
+   protected:
+
+      /** 
+       * EnableCallback Enable or disable the callback call in the destructor
+       * @param  enable true to enable callback call, false to disable callback call
+       */
+      ClassBuilderT & EnableCallback( const bool enable = true );
+      
    private:
 
       ClassBuilderImpl fClassBuilderImpl;
