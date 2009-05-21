@@ -265,6 +265,8 @@ endif
 
 BUILDCINTEX    := @buildcintex@
 
+BUILDCINTEXCOMPAT := @buildcintexcompat@
+
 BUILDREFLEX    := @buildreflex@
 
 BUILDROOFIT    := @buildroofit@
