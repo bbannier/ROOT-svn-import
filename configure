@@ -4941,7 +4941,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@zliblib@|$zliblib|"                  \
     -e "s|@zliblibdir@|$zliblibdir|"            \
     -e "s|@buildcintex@|$enable_cintex|"        \
-    -e "s|@buildcintexcompat@|$enable_cintexcompat|" \
+    -e "s|@buildcintexcompat@|$enable_cintex|" \
     -e "s|@buildreflex@|$enable_reflex|"        \
     -e "s|@buildroofit@|$enable_roofit|"        \
     -e "s|@buildminuit2@|$enable_minuit2|"      \
