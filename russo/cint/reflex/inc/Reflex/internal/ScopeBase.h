@@ -541,8 +541,11 @@ namespace Reflex {
       * @param dm pointer to data MemberAt
       */
       virtual void AddDataMember(const Member& dm) const;
-      virtual void AddDataMember(const char* name, const Type& type, size_t offset, unsigned int modifiers = 0) const;
-      virtual void AddDataMember(Member& output, const char* name, const Type& type, size_t offset, unsigned int modifiers = 0, char* interpreterOffset = 0) const;
+      virtual Member & AddDataMember(const char * name,
+         const Type & type,
+         size_t offset,
+         unsigned int modifiers = 0,
+         char * interpreterOffset = 0 ) const;
       
 
       /**
@@ -550,15 +553,8 @@ namespace Reflex {
       * @param fm pointer to function MemberAt
       */
       virtual void AddFunctionMember( const Member & fm ) const;
-      virtual void AddFunctionMember( const char * name,
+      virtual Member & AddFunctionMember( const char * name,
          const Type & type,
-         StubFunction stubFP,
-         void * stubCtx = 0,
-         const char * params = 0,
-         unsigned int modifiers = 0 ) const;
-      virtual void AddFunctionMember( Member* mbr_out,
-         const char * name,
-         const Type type,
          StubFunction stubFP,
          void * stubCtx = 0,
          const char * params = 0,
