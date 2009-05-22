@@ -1802,7 +1802,7 @@ void Cint::Internal::G__set_G__tagnum(const G__value& result)
    }
    // etc...
    varscope.RemoveDataMember(member);
-   varscope.AddDataMember(member, name.c_str(), newType, offset, modifiers, cint_offset);
+   member = varscope.AddDataMember(name.c_str(), newType, offset, modifiers, cint_offset);
    *G__get_properties(member) = prop;
    G__get_offset(member) = cint_offset;
    return member;
@@ -2338,7 +2338,7 @@ void Cint::Internal::G__BuilderInfo::AddParameter(int /* ifn */, int type, int n
                   }
                }
                if (!from_reflex_callback) {
-                  G__p_ifunc.AddFunctionMember(&m, name.c_str(), ftype, (Reflex::StubFunction) 0, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
+                  m = G__p_ifunc.AddFunctionMember(name.c_str(), ftype, (Reflex::StubFunction) 0, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
                   //modftype = ::Reflex::Type(ftype, modifiers);
                   //m = G__p_ifunc.FunctionMemberByNameAndSignature(name, modftype, modifiers_mask);
                   //fprintf(stderr, "G__BuilderInfo::Build: added member function '%s'.\n", m.Name(Reflex::SCOPED | Reflex::QUALIFIED).c_str());
@@ -2354,7 +2354,7 @@ void Cint::Internal::G__BuilderInfo::AddParameter(int /* ifn */, int type, int n
                   //}
                   //fullname += name;
                   //m = Reflex::FunctionBuilder(ftype, fullname.c_str(), 0 /*stubFP*/, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers).EnableCallback(false).ToMember();
-                  G__p_ifunc.AddFunctionMember(&m, name.c_str(), ftype, (Reflex::StubFunction) 0, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
+                  m = G__p_ifunc.AddFunctionMember(name.c_str(), ftype, (Reflex::StubFunction) 0, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
                   //modftype = ::Reflex::Type(ftype, modifiers);
                   //m = G__p_ifunc.FunctionMemberByNameAndSignature(name, modftype, modifiers_mask);
                   //fprintf(stderr, "G__BuilderInfo::Build: added member function '%s'.\n", m.Name(Reflex::SCOPED | Reflex::QUALIFIED).c_str());
@@ -2365,7 +2365,7 @@ void Cint::Internal::G__BuilderInfo::AddParameter(int /* ifn */, int type, int n
             {
                if (!from_reflex_callback) {
                   //m = Reflex::FunctionBuilder(ftype, name.c_str(), 0 /*stubFP*/, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers).EnableCallback(false).ToMember();
-                  ::Reflex::Scope::GlobalScope().AddFunctionMember(&m, name.c_str(), ftype, (Reflex::StubFunction) 0, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
+                  m = ::Reflex::Scope::GlobalScope().AddFunctionMember(name.c_str(), ftype, (Reflex::StubFunction) 0, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
                   //modftype = ::Reflex::Type(ftype, modifiers);
                   //m = G__p_ifunc.FunctionMemberByNameAndSignature(name, modftype, modifiers_mask);
                   //fprintf(stderr, "G__BuilderInfo::Build: added member function '%s'.\n", m.Name(Reflex::SCOPED | Reflex::QUALIFIED).c_str());

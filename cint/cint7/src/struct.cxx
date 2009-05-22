@@ -613,8 +613,7 @@ int Cint::Internal::G__class_autoloading(int* ptagnum)
             break;
       };
    }
-   ::Reflex::Member d;
-   scope.AddDataMember(d, name, type, reflex_offset, modifiers, cint_offset);
+   ::Reflex::Member d = scope.AddDataMember(name, type, reflex_offset, modifiers, cint_offset);
    G__get_properties(d)->statictype = var_statictype;
    return d;
 }
