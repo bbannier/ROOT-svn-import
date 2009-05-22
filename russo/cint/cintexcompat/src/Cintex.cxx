@@ -87,9 +87,10 @@ public: // Public Interface.
       Type t_int = TypeBuilder("int");
       Type t_bool = TypeBuilder("bool");
 
+      // No need to disable the CallBack here since we should be ran before Cintex is enable
+      // (i.e. to is run at library load time while the Cintex::Enable needs to be explicit)
 
       ClassBuilderT<ROOT::Cintex::Cintex>("Cintex", PUBLIC)
-         .EnableCallback(false)
          .AddFunctionMember(FunctionTypeBuilder(t_void), "Enable", Enable, 0, 0, PUBLIC | STATIC)
          .AddFunctionMember(FunctionTypeBuilder(t_void, t_int), "SetDebug", SetDebug, 0, 0, PUBLIC | STATIC)
          .AddFunctionMember(FunctionTypeBuilder(t_int), "Debug", Debug, 0, 0, PUBLIC | STATIC)
@@ -97,17 +98,13 @@ public: // Public Interface.
          .AddFunctionMember(FunctionTypeBuilder(t_void, t_bool), "SetPropagateClassTypedefs", SetPropagateClassTypedefs, 0, 0, PUBLIC | STATIC);
 
       ClassBuilderT<ROOT::Cintex::Cintex>("ROOT::Cintex", PUBLIC)
-         .EnableCallback(false)
          .AddFunctionMember(FunctionTypeBuilder(t_void), "Enable", Enable, 0, 0, PUBLIC | STATIC)
          .AddFunctionMember(FunctionTypeBuilder(t_void, t_int), "SetDebug", SetDebug, 0, 0, PUBLIC | STATIC)
          .AddFunctionMember(FunctionTypeBuilder(t_int), "Debug", Debug, 0, 0, PUBLIC | STATIC)
          .AddFunctionMember(FunctionTypeBuilder(t_bool), "PropagateClassTypedefs", PropagateClassTypedefs, 0, 0, PUBLIC | STATIC)
          .AddFunctionMember(FunctionTypeBuilder(t_void, t_bool), "SetPropagateClassTypedefs", SetPropagateClassTypedefs, 0, 0, PUBLIC | STATIC);
 
-
-
       ClassBuilderT<ROOT::Cintex::Cintex>("ROOT::Cintex::Cintex", PUBLIC)
-         .EnableCallback(false)
          .AddFunctionMember(FunctionTypeBuilder(t_void), "Enable", Enable, 0, 0, PUBLIC | STATIC)
          .AddFunctionMember(FunctionTypeBuilder(t_void, t_int), "SetDebug", SetDebug, 0, 0, PUBLIC | STATIC)
          .AddFunctionMember(FunctionTypeBuilder(t_int), "Debug", Debug, 0, 0, PUBLIC | STATIC)
