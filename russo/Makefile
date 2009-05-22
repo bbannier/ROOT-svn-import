@@ -200,10 +200,13 @@ MODULES      := $(subst cint/cint,cint/cint7,$(MODULES))
 endif
 endif
 ifeq ($(BUILDCINTEX),yes)
-MODULES      += cint/cintex
-endif
-ifeq ($(BUILDCINTEXCOMPAT),yes)
-MODULES      += cint/cintexcompat
+   ifeq ($(BUILDCINT5),yes)
+   MODULES      += cint/cintex
+   else 
+     ifneq ($(BUILDBOTH),yes)
+     MODULES      += cint/cintexcompat
+     endif
+   endif
 endif
 ifeq ($(BUILDROOFIT),yes)
 MODULES      += roofit/roofitcore roofit/roofit roofit/roostats
