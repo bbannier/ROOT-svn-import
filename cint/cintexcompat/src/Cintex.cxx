@@ -187,14 +187,14 @@ namespace ROOT {
 namespace Cintex {
 
 //______________________________________________________________________________
-::ROOT::Cintex::Cintex& ::ROOT::Cintex::Cintex::Instance()
+Cintex& Cintex::Instance()
 {
    static Cintex s_instance;
    return s_instance;
 }
 
 //______________________________________________________________________________
-::ROOT::Cintex::Cintex::Cintex()
+Cintex::Cintex()
 {
    fCallback = new Callback();
    fRootcreator = 0;
@@ -205,7 +205,7 @@ namespace Cintex {
 }
 
 //______________________________________________________________________________
-::ROOT::Cintex::Cintex::~Cintex()
+Cintex::~Cintex()
 {
    if (fCallback) {
       UninstallClassCallback(fCallback);
@@ -214,7 +214,7 @@ namespace Cintex {
 }
 
 //______________________________________________________________________________
-void ::ROOT::Cintex::Cintex::Enable()
+void Cintex::Enable()
 {
    if (Instance().fEnabled) {
       return;
@@ -270,55 +270,55 @@ void ::ROOT::Cintex::Cintex::Enable()
 }
 
 //______________________________________________________________________________
-void ::ROOT::Cintex::Cintex::SetROOTCreator(ROOTCreator_t c)
+void Cintex::SetROOTCreator(ROOTCreator_t c)
 {
    Instance().fRootcreator = c;
 }
 
 //______________________________________________________________________________
-ROOTCreator_t ::ROOT::Cintex::Cintex::GetROOTCreator()
+ROOTCreator_t Cintex::GetROOTCreator()
 {
    return Instance().fRootcreator;
 }
 
 //______________________________________________________________________________
-int ::ROOT::Cintex::Cintex::Debug()
+int Cintex::Debug()
 {
    return Instance().fDbglevel;
 }
 
 //______________________________________________________________________________
-void ::ROOT::Cintex::Cintex::SetDebug(int l)
+void Cintex::SetDebug(int l)
 {
    Instance().fDbglevel = l;
 }
 
 //______________________________________________________________________________
-bool ::ROOT::Cintex::Cintex::PropagateClassTypedefs()
+bool Cintex::PropagateClassTypedefs()
 {
    return Instance().fPropagateClassTypedefs;
 }
 
 //______________________________________________________________________________
-void ::ROOT::Cintex::Cintex::SetPropagateClassTypedefs(bool val)
+void Cintex::SetPropagateClassTypedefs(bool val)
 {
    Instance().fPropagateClassTypedefs = val;
 }
 
 //______________________________________________________________________________
-bool ::ROOT::Cintex::Cintex::PropagateClassEnums()
+bool Cintex::PropagateClassEnums()
 {
    return Instance().fPropagateClassEnums;
 }
 
 //______________________________________________________________________________
-void ::ROOT::Cintex::Cintex::SetPropagateClassEnums(bool val)
+void Cintex::SetPropagateClassEnums(bool val)
 {
    Instance().fPropagateClassEnums = val;
 }
 
 //______________________________________________________________________________
-void ::ROOT::Cintex::Cintex::Default_CreateClass(const char* name, TGenericClassInfo* gci)
+void Cintex::Default_CreateClass(const char* name, TGenericClassInfo* gci)
 {
    // Create a TClass object from the Reflex data; forward to ROOTClassEnhancer.
    ROOTClassEnhancer::Default_CreateClass(Reflex::Type::ByName(name), gci);
@@ -380,7 +380,7 @@ void Callback::operator()(const Member& mbr)
    }
    if (!p) { // Not known to cint
       if (mbr.IsFunctionMember() || mbr.IsTemplateInstance()) {
-         if (::ROOT::Cintex::Cintex::Debug()) {
+         if (Cintex::Debug()) {
             cout << "Cintex: Building function " << mbr.Name(SCOPED | QUALIFIED) << endl;
          }
          if (!mbr.Stubfunction()) {
@@ -389,7 +389,7 @@ void Callback::operator()(const Member& mbr)
          CINTFunctionBuilder(mbr).Setup();
       }
       else if (mbr.IsDataMember()) {
-         if (::ROOT::Cintex::Cintex::Debug()) {
+         if (Cintex::Debug()) {
             cout << "Cintex: Building variable " << mbr.Name(SCOPED | QUALIFIED) << endl;
          }
          CINTVariableBuilder(mbr).Setup();
