@@ -2317,6 +2317,8 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
    for (Int_t binOut=0;binOut<=h1->GetNbinsX() + 1;binOut++) {
       err2 = 0;
       cont = 0;
+      // when the range is set in the out axis, overflow and underflow
+      // are not considered
       if ( firstOutBin > 1 && binOut == 0 ) continue;
       if ( lastOutBin < outAxis->GetNbins() && binOut == h1->GetNbinsX() + 1 ) continue;
       for (Int_t binIn=firstbin;binIn<=lastbin;binIn++) {
