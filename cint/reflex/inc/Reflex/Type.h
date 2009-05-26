@@ -1074,7 +1074,7 @@ namespace Reflex {
       * @param offs the offset of the data member relative to the beginning of the scope
       * @param modifiers of the data member
       */
-      Member & AddDataMember( const char * nam,
+      Member AddDataMember( const char * nam,
          const Type & typ,
          size_t offs,
          unsigned int modifiers = 0,
@@ -1097,7 +1097,7 @@ namespace Reflex {
       * @param params a semi colon separated list of parameters 
       * @param modifiers of the function member
       */ 
-      Member & AddFunctionMember( const char * nam,
+      Member AddFunctionMember( const char * nam,
          const Type & typ,
          StubFunction stubFP,
          void * stubCtx = 0,
@@ -2040,33 +2040,9 @@ inline void Reflex::Type::AddDataMember( const Member & dm ) const {
 
 
 //-------------------------------------------------------------------------------
-inline Reflex::Member & Reflex::Type::AddDataMember( const char * nam,
-                                             const Type & typ,
-                                             size_t offs,
-                                             unsigned int modifiers /* = 0 */,
-                                             char * interpreterOffset /* = 0 */
-                                                ) const {
-//-------------------------------------------------------------------------------
-   return operator Scope().AddDataMember( nam, typ, offs, modifiers, interpreterOffset );
-}
-
-
-//-------------------------------------------------------------------------------
 inline void Reflex::Type::AddFunctionMember( const Member & fm ) const {
 //-------------------------------------------------------------------------------
    operator Scope().AddFunctionMember( fm );
-}
-
-
-//-------------------------------------------------------------------------------
-inline Reflex::Member & Reflex::Type::AddFunctionMember( const char * nam,
-                                                 const Type & typ,
-                                                 StubFunction stubFP,
-                                                 void * stubCtx,
-                                                 const char * params,
-                                                 unsigned int modifiers ) const {
-//-------------------------------------------------------------------------------
-   return operator Scope().AddFunctionMember( nam, typ, stubFP, stubCtx, params, modifiers );
 }
 
 

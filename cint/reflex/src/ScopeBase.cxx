@@ -630,7 +630,7 @@ void Reflex::ScopeBase::AddDataMember( const Member & dm ) const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Member & Reflex::ScopeBase::AddDataMember(const char * name,
+Reflex::Member Reflex::ScopeBase::AddDataMember(const char * name,
                                           const Type & type,
                                           size_t offset,
                                           unsigned int modifiers,
@@ -641,7 +641,7 @@ Reflex::Member & Reflex::ScopeBase::AddDataMember(const char * name,
    dm.SetScope( ThisScope() );
    fDataMembers.push_back( dm );
    fMembers.push_back( dm );
-   return fDataMembers.back();
+   return dm;
 }
 
 
@@ -677,7 +677,7 @@ void Reflex::ScopeBase::AddFunctionMember( const Member & fm ) const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Member & Reflex::ScopeBase::AddFunctionMember( const char * name,
+Reflex::Member Reflex::ScopeBase::AddFunctionMember( const char * name,
                                                const Type & type,
                                                StubFunction stubFP,
                                                void * stubCtx,
@@ -689,7 +689,7 @@ Reflex::Member & Reflex::ScopeBase::AddFunctionMember( const char * name,
    fm.SetScope( ThisScope() );
    fFunctionMembers.push_back( fm );
    fMembers.push_back( fm );
-   return fFunctionMembers.back();
+   return fm;
 }
 
 

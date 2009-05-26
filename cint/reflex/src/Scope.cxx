@@ -412,18 +412,17 @@ void Reflex::Scope::AddDataMember( const Member & dm ) const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Member & Reflex::Scope::AddDataMember( const char * name,
+Reflex::Member Reflex::Scope::AddDataMember( const char * name,
                                    const Type & type,
                                    size_t offset,
                                    unsigned int modifiers /* = 0 */,
                                    char* interpreterOffset /* = 0 */ ) const {
 //-------------------------------------------------------------------------------
 // Add data member to this scope.
-   static Reflex::Member invalid;
    if ( * this ) {
       return fScopeName->fScopeBase->AddDataMember( name, type, offset, modifiers, interpreterOffset );
    }
-   return invalid;
+   return Dummy::Member();
 }
 
 
@@ -444,7 +443,7 @@ void Reflex::Scope::AddFunctionMember( const Member & fm ) const {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Member & Reflex::Scope::AddFunctionMember( const char * nam,
+Reflex::Member Reflex::Scope::AddFunctionMember( const char * nam,
                                            const Type & typ,
                                            StubFunction stubFP,
                                            void * stubCtx,
@@ -452,11 +451,10 @@ Reflex::Member & Reflex::Scope::AddFunctionMember( const char * nam,
                                            unsigned int modifiers ) const {
 //-------------------------------------------------------------------------------
 // Add function member to this scope.
-   static Reflex::Member invalid;
    if ( * this ) {
       return fScopeName->fScopeBase->AddFunctionMember( nam, typ, stubFP, stubCtx, params, modifiers );
    }
-   return invalid;
+   return Dummy::Member();
 }
 
 
