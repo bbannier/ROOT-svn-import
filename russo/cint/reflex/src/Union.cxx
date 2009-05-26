@@ -56,15 +56,15 @@ void Reflex::Union::AddFunctionMember(const Member & fm) const
 }
 
 //______________________________________________________________________________
-Reflex::Member & Reflex::Union::AddFunctionMember( const char * nam,
+Reflex::Member Reflex::Union::AddFunctionMember( const char * nam,
                                            const Type & typ,
                                            StubFunction stubFP,
                                            void * stubCtx,
                                            const char * params,
                                            unsigned int modifiers ) const
 {
-// Add function member to this union.
-   Member& fm( ScopeBase::AddFunctionMember( nam, typ, stubFP, stubCtx, params, modifiers ) );
+   // Add function member to this union.
+   Member fm( ScopeBase::AddFunctionMember( nam, typ, stubFP, stubCtx, params, modifiers ) );
    if ( fm.IsConstructor() ) {
       fConstructors.push_back(fm);
    }

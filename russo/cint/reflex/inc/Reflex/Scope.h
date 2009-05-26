@@ -878,7 +878,7 @@ namespace Reflex {
       * @param offs the offset of the data member relative to the beginning of the scope
       * @param modifiers of the data member
       */
-      Member & AddDataMember( const char * name,
+      Member AddDataMember( const char * name,
          const Type & type,
          size_t offset,
          unsigned int modifiers = 0,
@@ -900,7 +900,7 @@ namespace Reflex {
       * @param params a semi colon separated list of parameters 
       * @param modifiers of the function member
       */ 
-      Member & AddFunctionMember( const char * name,
+      Member AddFunctionMember( const char * name,
          const Type & type,
          StubFunction stubFP,
          void * stubCtx = 0,

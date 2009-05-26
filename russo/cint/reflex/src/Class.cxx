@@ -495,11 +495,11 @@ void Reflex::Class::AddDataMember(const Member & dm) const
 
 
 //-------------------------------------------------------------------------------
-Reflex::Member & Reflex::Class::AddDataMember(const char * nam,
-                                  const Type & typ,
-                                  size_t offs,
-                                  unsigned int modifiers /* = 0 */,
-                                  char * interpreterOffset /* = 0 */ ) const
+Reflex::Member Reflex::Class::AddDataMember(const char * nam,
+                                            const Type & typ,
+                                            size_t offs,
+                                            unsigned int modifiers /* = 0 */,
+                                            char * interpreterOffset /* = 0 */ ) const
 {
 //-------------------------------------------------------------------------------
 // Add data member to this class
@@ -528,7 +528,7 @@ void Reflex::Class::AddFunctionMember(const Member & fm) const
 
 
 //-------------------------------------------------------------------------------
-Reflex::Member & Reflex::Class::AddFunctionMember(const char * nam,
+Reflex::Member Reflex::Class::AddFunctionMember(const char * nam,
                                           const Type & typ,
                                           StubFunction stubFP,
                                           void * stubCtx,
@@ -537,7 +537,7 @@ Reflex::Member & Reflex::Class::AddFunctionMember(const char * nam,
 {
 //-------------------------------------------------------------------------------
 // Add function member to this class
-   Member& fm(ScopeBase::AddFunctionMember(nam, typ, stubFP, stubCtx, params, modifiers));
+   Member fm(ScopeBase::AddFunctionMember(nam, typ, stubFP, stubCtx, params, modifiers));
    if (fm.IsConstructor()) {
       fConstructors.push_back(fm);
    }
