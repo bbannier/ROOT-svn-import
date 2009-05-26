@@ -2225,7 +2225,7 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
 
    if ( originalRange ) 
    {
-      firstOutBin = 0;
+      firstOutBin = 1;
       lastOutBin = outAxis->GetNbins() + 1;
    } else {
       firstOutBin = outAxis->GetFirst();
@@ -2284,7 +2284,8 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
          if ( originalRange ) 
             h1 = new TH1D(pname,GetTitle(),outNbin,outAxis->GetXmin(),outAxis->GetXmax());
          else
-            h1 = new TH1D(pname,GetTitle(),outNbin,outAxis->GetBinLowEdge(firstOutBin),outAxis->GetBinUpEdge(lastOutBin));
+            h1 = new TH1D(pname,GetTitle(),lastOutBin-firstOutBin+1,
+                          outAxis->GetBinLowEdge(firstOutBin),outAxis->GetBinUpEdge(lastOutBin));
       } else {
          h1 = new TH1D(pname,GetTitle(),outNbin,bins->fArray);
       }
@@ -2316,10 +2317,12 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
    for (Int_t binOut=0;binOut<=h1->GetNbinsX() + 1;binOut++) {
       err2 = 0;
       cont = 0;
+      if ( firstOutBin > 1 && binOut == 0 ) continue;
+      if ( lastOutBin < outAxis->GetNbins() && binOut == h1->GetNbinsX() + 1 ) continue;
       for (Int_t binIn=firstbin;binIn<=lastbin;binIn++) {
          Int_t binx, biny;
-         if ( onX ) { binx = binOut; biny = binIn;  }
-         else       { binx = binIn;  biny = binOut; }
+         if ( onX ) { binx = binOut + firstOutBin - 1; biny = binIn;  }
+         else       { binx = binIn;  biny = binOut + firstOutBin - 1; }
 
          if (ncuts) {
             if (!fPainter->IsInside(binx,biny)) continue;
