@@ -4,9 +4,9 @@
 
 PLATFORM      = linux
 
-DEBUGFLAGS    = -g
+DEBUGFLAGS    = -g -O0
 #DEBUGFLAGS    = -gstabs
-OPTFLAGS      = -O2
+OPTFLAGS      = -g -O0
 # Optional compiler options for gcc >= 3.4.0
 #OPTFLAGS      = -O3 -march=opteron
 ifeq (debug,$(findstring debug,$(ROOTBUILD)))
@@ -53,7 +53,11 @@ ifeq ($(F77),)
 F77           = gfortran
 endif
 F77FLAGS      = -fPIC -m64 -std=legacy
+ifneq ($(shell $(F77) -print-file-name=libgfortran.$(SOEXT)),libgfortran.$(SOEXT))
 F77LIBS      := $(shell $(F77) -m64 -print-file-name=libgfortran.$(SOEXT))
+else
+F77LIBS      := $(shell $(F77) -m64 -print-file-name=libgfortran.a)
+endif
 F77LIBS      += $(shell $(F77) -m64 -print-file-name=libgfortranbegin.a)
 endif
 
