@@ -1848,7 +1848,8 @@ TH1 *TH3::Project1D(char* title, char* name, TAxis* projX,
    // Fill the projected histogram excluding underflow/overflows if considered in the option
    // if specified in the option (by default they considered)
    Double_t cont,e,e1;
-   Double_t entries  = 0;
+   Double_t totcont  = 0;
+//   Double_t toterr2  = 0;
    Double_t newerror = 0;
    Int_t ix = 0;
 
@@ -1875,18 +1876,57 @@ TH1 *TH3::Project1D(char* title, char* name, TAxis* projX,
                h1->SetBinError(ix,newerror);
             }
 
-            if (cont) {
-               if (computeErrors) {
-                  e   = GetBinError(bin);
-                  Double_t e2 = e * e;
-                  if (e2 > 0) entries += cont*cont/e2;
-               }
-               else
-                  entries += cont;
-            }
+            if (cont)   totcont += cont;
+//             if (computeErrors) {
+//                e   = GetBinError(bin);
+//                Double_t e2 = e * e;
+//                toterr2 += e2;
+//             }
          }
       }
    }
+
+   // since we use fill we need to reset and recalculate the statistics
+   // or keep original statistics if consistent sumw2  
+   bool resetStats = true; 
+   double eps = 1.E-12;
+   if (IsA() == TH3F::Class() ) eps = 1.E-6;
+   if (fTsumw != 0 && TMath::Abs( fTsumw - totcont) <  TMath::Abs(fTsumw) * eps) resetStats = false; 
+
+//    if ( out1->TestBit(TAxis::kAxisRange)  || out2->TestBit(TAxis::kAxisRange) 
+//          || (useUF && useOF && fgStatOverflows == false)     // case of overflow/underflow 
+//          || ( fgStatOverflows == true && (!useUF || !useOF) ) )  
+//       resetStats = true; 
+
+
+   Double_t stats[kNstat];
+   if (!resetStats) {
+      GetStats(stats); 
+      if ( projX == GetYaxis() ) {
+         stats[2] = stats[4];
+         stats[3] = stats[5]; 
+      }
+      else if  ( projX == GetZaxis() ) {
+         stats[2] = stats[7];
+         stats[3] = stats[8]; 
+      }
+   }
+   else {
+      // reset statistics 
+      for (Int_t i=0;i<kNstat;i++) stats[i] = 0;
+   }
+
+   h1->PutStats(stats);
+   Double_t entries = fEntries; 
+   // recalculate the statistics
+   if (resetStats) { 
+      h1->GetStats(stats); 
+      entries = stats[0]; 
+      // calculate effective entries in case of weighted hstograms
+      if (computeErrors & stats[1] > 0) 
+         entries = stats[0] * stats[0] / stats[1];
+   }
+
    h1->SetEntries(entries);
    return h1;
 }
@@ -1988,7 +2028,7 @@ TH1 *TH3::Project2D(char* title, char* name, TAxis* projX, TAxis* projY,
    // Fill the projected histogram excluding underflow/overflows if considered in the option
    // if specified in the option (by default they considered)
    Double_t cont,e,e1;
-   Double_t entries  = 0;
+   Double_t totcont  = 0;
    Double_t newerror = 0;
    for (ixbin=0;ixbin<=1+projX->GetNbins();ixbin++){
       Int_t ix = ixbin-ixmin;
@@ -2014,18 +2054,76 @@ TH1 *TH3::Project2D(char* title, char* name, TAxis* projX, TAxis* projY,
                h2->SetCellError(iy,ix,newerror);
             }
 
-            if (cont) {
-               if (computeErrors) {
-                  e   = GetBinError(bin);
-                  Double_t e2 = e * e;
-                  if (e2 > 0) entries += cont*cont/e2;
-               }
-               else
-                  entries += cont;
-            }
+            if (cont) totcont += cont; 
          }
       }
    }
+
+   // since we use fill we need to reset and recalculate the statistics
+   // or keep original statistics if consistent sumw2  
+   bool resetStats = true; 
+   double eps = 1.E-12;
+   if (IsA() == TH3F::Class() ) eps = 1.E-6;
+   if (fTsumw != 0 && TMath::Abs( fTsumw - totcont) <  TMath::Abs(fTsumw) * eps) resetStats = false; 
+
+   //std::cout << "reset stats " << resetStats << "  " << fTsumw << "   " << totcont << "  " <<  TMath::Abs( fTsumw - totcont)/fTsumw << std::endl;
+
+   Double_t stats[kNstat];
+   Double_t oldst[kNstat]; // old statistics
+   if (!resetStats) {
+      GetStats(oldst); 
+      std::copy(oldst,oldst+kNstat,stats);
+      // not that projX refer to Y axis and projX refer to the X axis of projected histogram
+      // nothing to do for projection in Y vs X
+      if ( projY == GetXaxis() && projX == GetZaxis() ) {  // case XZ
+         stats[4] = oldst[7];
+         stats[5] = oldst[8];
+         stats[6] = oldst[9];
+      }
+      if ( projY == GetYaxis() ) {
+         stats[2] = oldst[4];
+         stats[3] = oldst[5]; 
+         if ( projX == GetXaxis() )  { // case YX
+            stats[4] = oldst[2]; 
+            stats[5] = oldst[3];
+         }
+         if ( projX == GetZaxis() )  { // case YZ
+            stats[4] = oldst[7]; 
+            stats[5] = oldst[8];
+            stats[6] = oldst[10];
+         }
+      }
+      else if  ( projY == GetZaxis() ) {
+         stats[2] = oldst[7];
+         stats[3] = oldst[8]; 
+         if ( projX == GetXaxis() )  { // case ZX
+            stats[4] = oldst[2]; 
+            stats[5] = oldst[3];
+            stats[6] = oldst[9];
+         }
+         if ( projX == GetZaxis() )  { // case ZY
+            stats[4] = oldst[4]; 
+            stats[5] = oldst[5];
+            stats[6] = oldst[10];
+         }
+      }
+   }
+   else {
+      // reset statistics 
+      for (Int_t i=0;i<kNstat;i++) stats[i] = 0;
+   }
+
+   h2->PutStats(stats);
+   Double_t entries = fEntries; 
+   // recalculate the statistics
+   if (resetStats) { 
+      h2->GetStats(stats); 
+      entries = stats[0]; 
+      // calculate effective entries in case of weighted hstograms
+      if (computeErrors & stats[1] > 0) 
+         entries = stats[0] * stats[0] / stats[1];
+   }
+
    h2->SetEntries(entries);
    return h2;
 }
@@ -2184,6 +2282,28 @@ TH1 *TH3::Project3D(Option_t *option) const
    return h;
 }
 
+void TH3::DoFillProfileProjection(TProfile2D * p2, const TAxis & a1, const TAxis & a2,  const TAxis & a3, Int_t bin1, Int_t bin2, Int_t bin3, Int_t inBin, Bool_t useWeights ) const { 
+   // internal function to fill the bins of the projected profile histogram 
+   Double_t cont = GetBinContent(inBin); 
+   if (!cont) return; 
+   TArrayD & binSumw2 = *(p2->GetBinSumw2()); 
+   if (useWeights && binSumw2.fN <= 0) useWeights = false;  
+   // the following fill update wrongly the fBinSumw2- need to save it before
+   Double_t u = a1.GetBinCenter(bin1);
+   Double_t v = a2.GetBinCenter(bin2);
+   Double_t w = a3.GetBinCenter(bin3);
+   Int_t outBin = p2->FindBin(u, v);
+   Double_t tmp = 0;
+   if ( useWeights ) tmp = binSumw2.fArray[outBin];            
+   p2->Fill( u , v, w, cont);
+//    std::cout << "use "  << useWeights; 
+//    std::cout << " size " << binSumw2.fN << " inBin " << inBin << " o " << outBin << "  "  << bin1 << "  " << bin2 << " " << fSumw2.fN 
+//              << " u " << u << " v " << v << " w " << w << " tmp " << tmp << " sumw2 " << fSumw2.fArray[outBin] 
+//              << " fbinsumw2 " << binSumw2.fArray[outBin]
+//              << std::endl; 
+   if (useWeights ) binSumw2.fArray[outBin] = tmp + fSumw2.fArray[inBin];
+} 
+
 //______________________________________________________________________________
 TProfile2D *TH3::AbstractProject3DProfile(char* title, char* name, TAxis* projX, TAxis* projY, 
                                           bool originalRange, bool useUF, bool useOF) const
@@ -2234,7 +2354,6 @@ TProfile2D *TH3::AbstractProject3DProfile(char* title, char* name, TAxis* projX,
       if (useUF) outmin--; 
       if (useOF) outmax++;
    }
-   Double_t entries  = 0;
    
    // Set references to the bins, so that the loop has no branches.
    Int_t *refX = 0, *refY = 0, *refZ = 0;
@@ -2254,15 +2373,29 @@ TProfile2D *TH3::AbstractProject3DProfile(char* title, char* name, TAxis* projX,
 
             DoFillProfileProjection(p2, *projY, *projX, *out, iybin, ixbin, outbin, bin, useWeights); 
   
-            Double_t cont = GetBinContent(bin); 
-            if (cont) {
-               // count total effective entries of the profile
-               Double_t err = GetBinError(bin);
-               entries += cont*cont/(err*err);
-            }
          }
       }
    }
+
+   // recompute statistics for the projected profiles 
+   // forget about preserving old statistics
+   bool resetStats = true; 
+   Double_t stats[kNstat];
+   // reset statistics 
+   if (resetStats) 
+      for (Int_t i=0;i<kNstat;i++) stats[i] = 0;
+
+   p2->PutStats(stats);
+   Double_t entries = fEntries; 
+   // recalculate the statistics
+   if (resetStats) { 
+      p2->GetStats(stats); 
+      entries = stats[0]; 
+      // calculate effective entries in case of weighted profile
+//       if (useWeights & stats[1] > 0) 
+//          entries = stats[0] * stats[0] / stats[1];
+   }
+
    p2->SetEntries(entries);
 
    return p2;
@@ -2369,27 +2502,6 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    return p2;
 }
 
-void TH3::DoFillProfileProjection(TProfile2D * p2, const TAxis & a1, const TAxis & a2,  const TAxis & a3, Int_t bin1, Int_t bin2, Int_t bin3, Int_t inBin, Bool_t useWeights ) const { 
-   // internal function to fill the bins of the projected profile histogram 
-   Double_t cont = GetBinContent(inBin); 
-   if (!cont) return; 
-   TArrayD & binSumw2 = *(p2->GetBinSumw2()); 
-   if (useWeights && binSumw2.fN <= 0) useWeights = false;  
-   // the following fill update wrongly the fBinSumw2- need to save it before
-   Double_t u = a1.GetBinCenter(bin1);
-   Double_t v = a2.GetBinCenter(bin2);
-   Double_t w = a3.GetBinCenter(bin3);
-   Int_t outBin = p2->FindBin(u, v);
-   Double_t tmp = 0;
-   if ( useWeights ) tmp = binSumw2.fArray[outBin];            
-   p2->Fill( u , v, w, cont);
-//    std::cout << "use "  << useWeights; 
-//    std::cout << " size " << binSumw2.fN << " inBin " << inBin << " o " << outBin << "  "  << bin1 << "  " << bin2 << " " << fSumw2.fN 
-//              << " u " << u << " v " << v << " w " << w << " tmp " << tmp << " sumw2 " << fSumw2.fArray[outBin] 
-//              << " fbinsumw2 " << binSumw2.fArray[outBin]
-//              << std::endl; 
-   if (useWeights ) binSumw2.fArray[outBin] = tmp + fSumw2.fArray[inBin];
-} 
 
 //______________________________________________________________________________
 void TH3::PutStats(Double_t *stats)
