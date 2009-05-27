@@ -566,6 +566,10 @@ class genDictionary(object) :
     classDefImpl = ClassDefImplementation(selclasses, self)
 
     f_buffer = ''
+    # Need to specialize templated class's functions (e.g. A<T>::Class())
+    # before first instantiation (stubs), so classDefImpl before stubs.
+    f_buffer += classDefImpl
+
     f_shadow =  '\n// Shadow classes to obtain the data member offsets \n'
     f_shadow += 'namespace __shadow__ {\n'
     for c in selclasses :
@@ -592,7 +596,6 @@ class genDictionary(object) :
         f_shadow += self.genClassShadow(c)
     f_shadow += '}\n\n'
     f_buffer += self.genFunctionsStubs( selfunctions )
-    f_buffer += classDefImpl
     f_buffer += self.genInstantiateDict(selclasses, selfunctions, selenums, selvariables)
     f.write('namespace {\n')
     f.write(self.genNamespaces(selclasses + selfunctions + selenums + selvariables))
@@ -1621,8 +1624,14 @@ class genDictionary(object) :
             body += iden + '  if (retaddr) *(void**)retaddr = (void*)&%s(' % ( name, )
             head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
             body += ');\n'
-            body += iden + " // The seemingly useless '&' below is to work around Microsoft's compiler odd complaint C2027 if there reference has only been forward declared.\n"
-            body += iden + '  else &%s(' % ( name, )
+            # The seemingly useless '&' below is to work around Microsoft's
+            # compiler 7.1-9 odd complaint C2027 if the reference has only
+            # been forward declared.
+            if sys.platform == 'win32':
+              body += iden + '  else &%s(' % ( name, )
+            else:
+              # but '&' will trigger an "unused value" warning on != MSVC
+              body += iden + '  else %s(' % ( name, )
             head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
             body += ');\n'
           else :
@@ -1860,10 +1869,16 @@ class genDictionary(object) :
           head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
           body += '));\n' + iden + 'else '
       if returns[-1] == '&' :
-          body += iden + " // The seemingly useless '&' below is to work around Microsoft's compiler odd complaint C2027 if there reference has only been forward declared.\n"
+        # The seemingly useless '&' below is to work around Microsoft's
+        # compiler 7.1-9 odd complaint C2027 if the reference has only
+        # been forward declared.
+        if sys.platform == 'win32':
           body += iden + '  &(((%s*)o)->%s)(' % ( cl, name )
-      else: 
+        else:
+          # but '&' will trigger an "unused value" warning on != MSVC
           body += iden + '  (((%s*)o)->%s)(' % ( cl, name )
+      else: 
+        body += iden + '  (((%s*)o)->%s)(' % ( cl, name )
       head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
       body += ');\n'
       if ndarg : 
@@ -2468,28 +2483,33 @@ def ClassDefImplementation(selclasses, self) :
       else                      : attrs['extra'] = {'ClassDef': extraval}
       attrs['extra']['DictionaryFunc'] = '!RAW!' + clname + '::Dictionary';
       id = attrs['id']
+      template = ""
+      if clname.find('<') != -1: template = "template<> "
 
-      returnValue += 'TClass* ' + clname + '::fgIsA = 0;\n'
-      returnValue += '::ROOT::TGenericClassInfo genericClassInfo' + attrs['id'] + '("' + clname[2:] + '",\n   ' + clname + '::Class_Version(),\n   '
-      returnValue += clname + '::DeclFileName(),\n   ' + clname + '::DeclFileLine(),\n   '
-      returnValue += 'typeid( ' + clname + ' ),\n   ::ROOT::DefineBehavior(0,0), 0, ' + clname + '::Dictionary,\n   '
-      returnValue += 'new ::TInstrumentedIsAProxy< ' + clname + ' >(0),\n   '
-      returnValue += '0, sizeof( ' + clname + '));\n'
-      returnValue += 'TClass* ' + clname + '::Class() {\n'
+      returnValue += 'namespace { extern ::ROOT::TGenericClassInfo genericClassInfo' + attrs['id'] + '; }\n'
+      returnValue += template + 'TClass* ' + clname + '::Class() {\n'
       returnValue += '   if (!fgIsA)\n'
       returnValue += '      fgIsA = TClass::GetClass("' + clname[2:] + '");\n'
       returnValue += '   return fgIsA;\n'
       returnValue += '}\n'
-      returnValue += 'const char * ' + clname + '::Class_Name() {return "' + clname[2:]  + '";}\n'
-      returnValue += 'void ' + clname + '::Dictionary() {\n'
+      returnValue += template + 'const char * ' + clname + '::Class_Name() {return "' + clname[2:]  + '";}\n'
+      haveNewDel = 0
+      if 'GetNewDelFunctions' in listOfMembers:
+        haveNewDel = 1
+        # need to fwd decl newdel wrapper because ClassDef is before stubs
+        returnValue += 'namespace {\n'
+        returnValue += '   static void method_newdel' + id + '(void*, void*, const std::vector<void*>&, void*);\n'
+        returnValue += '}\n'
+      returnValue += template + 'void ' + clname + '::Dictionary() {\n'
       returnValue += '   genericClassInfo' + id + '.SetImplFile("", 1);\n'
-      returnValue += '   ::Reflex::NewDelFunctions* ndf = 0;\n'
-      returnValue += '   method_newdel' + id + '(&ndf, 0, std::vector<void*>(), 0);\n'
-      returnValue += '   genericClassInfo' + id + '.SetNew(ndf->fNew);\n'
-      returnValue += '   genericClassInfo' + id + '.SetNewArray(ndf->fNewArray);\n'
-      returnValue += '   genericClassInfo' + id + '.SetDelete(ndf->fDelete);\n'
-      returnValue += '   genericClassInfo' + id + '.SetDeleteArray(ndf->fDeleteArray);\n'
-      returnValue += '   genericClassInfo' + id + '.SetDestructor(ndf->fDestructor);\n'
+      if haveNewDel:
+        returnValue += '   ::Reflex::NewDelFunctions* ndf = 0;\n'
+        returnValue += '   method_newdel' + id + '(&ndf, 0, std::vector<void*>(), 0);\n'
+        returnValue += '   genericClassInfo' + id + '.SetNew(ndf->fNew);\n'
+        returnValue += '   genericClassInfo' + id + '.SetNewArray(ndf->fNewArray);\n'
+        returnValue += '   genericClassInfo' + id + '.SetDelete(ndf->fDelete);\n'
+        returnValue += '   genericClassInfo' + id + '.SetDeleteArray(ndf->fDeleteArray);\n'
+        returnValue += '   genericClassInfo' + id + '.SetDestructor(ndf->fDestructor);\n'
       for rule in ('ioread', 'ioreadraw'):
         if attrs['extra'].has_key(rule):
           if rule == 'ioreadraw': setrrr = 'Raw'
@@ -2504,11 +2524,11 @@ def ClassDefImplementation(selclasses, self) :
       returnValue += '      ::ROOT::Cintex::Cintex::Default_CreateClass( "' + clname + '", &genericClassInfo' + attrs['id'] + ' );\n'
       returnValue += '   }\n'
       returnValue += '}\n'
-      returnValue += 'const char *' + clname  + '::ImplFileName() {return "";}\n'
+      returnValue += template + 'const char *' + clname  + '::ImplFileName() {return "";}\n'
 
-      returnValue += 'int ' + clname + '::ImplFileLine() {return 1;}\n'
+      returnValue += template + 'int ' + clname + '::ImplFileLine() {return 1;}\n'
 
-      returnValue += 'void '+ clname  +'::ShowMembers(TMemberInspector &R__insp, char *R__parent) {\n'
+      returnValue += template + 'void '+ clname  +'::ShowMembers(TMemberInspector &R__insp, char *R__parent) {\n'
       returnValue += '   TClass *R__cl = ' + clname  + '::IsA();\n'
       returnValue += '   Int_t R__ncp = strlen(R__parent);\n'
       returnValue += '   if (R__ncp || R__cl || R__insp.IsA()) { }\n'
@@ -2559,28 +2579,35 @@ def ClassDefImplementation(selclasses, self) :
           poscol = b.find(':')
           if poscol == -1 : baseid = b
           else            : baseid = b[poscol + 1:]
-          baseDerivesFromTObject = (baseid == self.TObject_id)
-          # a base cannot possibly derive from TObject if we don't derive from TObject:
-          if not baseDerivesFromTObject and derivesFromTObject :
-            allbasebases = []
-            self.getAllBases(baseid, allbasebases)
-            if len( filter( lambda b: b[0] == self.TObject_id, allbasebases ) ) :
-              baseDerivesFromTObject = 1
-          # basename = self.xref[baseid]['attrs']['fullname']
           basename = self.genTypeName(baseid)
-          if baseDerivesFromTObject :
+          basemem = self.xref[baseid]['attrs']['members']
+          baseMembersList = basemem.split()
+          baseHasShowMembers = 0
+          for ml in baseMembersList:
+            if ml[1].isdigit() :
+              if self.xref[ml]['attrs']['name'] == 'ShowMembers' :
+                baseHasShowMembers = 1
+                break
+          # basename = self.xref[baseid]['attrs']['fullname']
+          if baseHasShowMembers :
             returnValue +=  '   %s::ShowMembers(R__insp,R__parent);\n' % basename
           else :
             returnValue +=  '   ::ROOT::GenericShowMembers("%s", ( ::%s *)(this), R__insp, R__parent, false);\n' % (basename, basename)
 
       returnValue += '}\n'
 
-      returnValue += 'void '+ clname  +'::Streamer(TBuffer &b) {\n   if (b.IsReading()) {\n'
+      returnValue += template + 'void '+ clname  +'::Streamer(TBuffer &b) {\n   if (b.IsReading()) {\n'
       returnValue += '      b.ReadClassBuffer(' + clname + '::Class(),this);\n'
       returnValue += '   } else {\n'
       returnValue += '      b.WriteClassBuffer(' + clname  + '::Class(),this);\n'
       returnValue += '   }\n'
       returnValue += '}\n'
+      returnValue += template + 'TClass* ' + clname + '::fgIsA = 0;\n'
+      returnValue += 'namespace { ::ROOT::TGenericClassInfo genericClassInfo' + attrs['id'] + '("' + clname[2:] + '",\n   ' + clname + '::Class_Version(),\n   '
+      returnValue += clname + '::DeclFileName(),\n   ' + clname + '::DeclFileLine(),\n   '
+      returnValue += 'typeid( ' + clname + ' ),\n   ::ROOT::DefineBehavior(0,0), 0, ' + clname + '::Dictionary,\n   '
+      returnValue += 'new ::TInstrumentedIsAProxy< ' + clname + ' >(0),\n   '
+      returnValue += '0, sizeof( ' + clname + ')); }\n'
     elif derivesFromTObject :
       # no fgIsA etc members but derives from TObject!
       print '--->> genreflex: ERROR: class %s derives from TObject but does not use ClassDef!' % attrs['fullname']
