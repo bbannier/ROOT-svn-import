@@ -29,6 +29,7 @@
 #include "TAtt3D.h"
 #endif
 
+class TH2; 
 class TProfile2D;
 
 class TH3 : public TH1, public TAtt3D {
@@ -112,13 +113,13 @@ public:
    virtual void     SetShowProjection(const char *option="xy",Int_t nbins=1);   // *MENU*
 
 protected:
-   TH1        *Project1D(char* title, char* name, TAxis* projX, 
+   TH1        *DoProject1D(char* title, char* name, TAxis* projX, 
                          bool computeErrors, bool originalRange,
                          bool useUF, bool useOF) const;
-   TH1        *Project2D(char* title, char* name, TAxis* projX, TAxis* projY, 
+   TH2        *DoProject2D(char* title, char* name, TAxis* projX, TAxis* projY, 
                         bool computeErrors, bool originalRange,
                          bool useUF, bool useOF) const;
-   TProfile2D *AbstractProject3DProfile(char* title, char* name,TAxis* projX, TAxis* projY, 
+   TProfile2D *DoProjectProfile2D(char* title, char* name,TAxis* projX, TAxis* projY, 
                                         bool originalRange, bool useUF, bool useOF) const;
    
    ClassDef(TH3,5)  //3-Dim histogram base class

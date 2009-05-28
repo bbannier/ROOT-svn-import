@@ -1775,7 +1775,7 @@ TH1D *TH3::ProjectionZ(const char *name, Int_t ixmin, Int_t ixmax, Int_t iymin, 
 }
 
 //______________________________________________________________________________
-TH1 *TH3::Project1D(char* title, char* name, TAxis* projX, 
+TH1 *TH3::DoProject1D(char* title, char* name, TAxis* projX, 
                     bool computeErrors, bool originalRange, 
                     bool useUF, bool useOF) const
 {
@@ -1886,8 +1886,10 @@ TH1 *TH3::Project1D(char* title, char* name, TAxis* projX,
       }
    }
 
-   // since we use fill we need to reset and recalculate the statistics
-   // or keep original statistics if consistent sumw2  
+   // since we use a combination of fill and SetBinError we need to reset and recalculate the statistics
+   // for weighted histograms otherwise sumw2 will be wrong. 
+   // We  can keep the original statistics from the TH3 if the projected sumw is consistent with original one
+   // i.e. when no events are thrown away  
    bool resetStats = true; 
    double eps = 1.E-12;
    if (IsA() == TH3F::Class() ) eps = 1.E-6;
@@ -1922,7 +1924,8 @@ TH1 *TH3::Project1D(char* title, char* name, TAxis* projX,
    if (resetStats) { 
       h1->GetStats(stats); 
       entries = stats[0]; 
-      // calculate effective entries in case of weighted hstograms
+      // in case of weighted hstograms use the effective entries for the entries
+      // since there is noway to estimate them
       if (computeErrors && stats[1] > 0) 
          entries = stats[0] * stats[0] / stats[1];
    }
@@ -1932,7 +1935,7 @@ TH1 *TH3::Project1D(char* title, char* name, TAxis* projX,
 }
 
 //______________________________________________________________________________
-TH1 *TH3::Project2D(char* title, char* name, TAxis* projX, TAxis* projY,  
+TH2 *TH3::DoProject2D(char* title, char* name, TAxis* projX, TAxis* projY,  
                     bool computeErrors, bool originalRange,
                     bool useUF, bool useOF) const
 {
@@ -2059,7 +2062,7 @@ TH1 *TH3::Project2D(char* title, char* name, TAxis* projX, TAxis* projY,
       }
    }
 
-   // since we use fill we need to reset and recalculate the statistics
+   // since we use fill we need to reset and recalculate the statistics (see comment in DoProject1D )
    // or keep original statistics if consistent sumw2  
    bool resetStats = true; 
    double eps = 1.E-12;
@@ -2206,55 +2209,55 @@ TH1 *TH3::Project3D(Option_t *option) const
 
    switch (pcase) {
       case 1:
-         h = Project1D(title, name, this->GetXaxis(), 
+         h = DoProject1D(title, name, this->GetXaxis(), 
                        computeErrors, originalRange, useUF, useOF);
          break;
 
       case 2:
          // "y"
-         h = Project1D(title, name, this->GetYaxis(), 
+         h = DoProject1D(title, name, this->GetYaxis(), 
                        computeErrors, originalRange, useUF, useOF);
          break;
 
       case 3:
          // "z"
-         h = Project1D(title, name, this->GetZaxis(), 
+         h = DoProject1D(title, name, this->GetZaxis(), 
                        computeErrors, originalRange, useUF, useOF);
          break;
 
       case 4:
          // "xy"
-         h = Project2D(title, name, this->GetXaxis(),this->GetYaxis(), 
+         h = DoProject2D(title, name, this->GetXaxis(),this->GetYaxis(), 
                        computeErrors, originalRange, useUF, useOF);
          break;
 
       case 5:
          // "yx"
-         h = Project2D(title, name, this->GetYaxis(),this->GetXaxis(), 
+         h = DoProject2D(title, name, this->GetYaxis(),this->GetXaxis(), 
                        computeErrors, originalRange, useUF, useOF);
          break;
 
       case 6:
          // "xz"
-         h = Project2D(title, name, this->GetXaxis(),this->GetZaxis(), 
+         h = DoProject2D(title, name, this->GetXaxis(),this->GetZaxis(), 
                        computeErrors, originalRange, useUF, useOF);
          break;
          
       case 7:
          // "zx"
-         h = Project2D(title, name, this->GetZaxis(),this->GetXaxis(), 
+         h = DoProject2D(title, name, this->GetZaxis(),this->GetXaxis(), 
                        computeErrors, originalRange, useUF, useOF);
          break;
 
       case 8:
          // "yz"
-         h = Project2D(title, name, this->GetYaxis(),this->GetZaxis(), 
+         h = DoProject2D(title, name, this->GetYaxis(),this->GetZaxis(), 
                        computeErrors, originalRange, useUF, useOF);
          break;
 
       case 9:
          // "zy"
-         h = Project2D(title, name, this->GetZaxis(),this->GetYaxis(), 
+         h = DoProject2D(title, name, this->GetZaxis(),this->GetYaxis(), 
                        computeErrors, originalRange, useUF, useOF);
          break;
 
@@ -2305,7 +2308,7 @@ void TH3::DoFillProfileProjection(TProfile2D * p2, const TAxis & a1, const TAxis
 } 
 
 //______________________________________________________________________________
-TProfile2D *TH3::AbstractProject3DProfile(char* title, char* name, TAxis* projX, TAxis* projY, 
+TProfile2D *TH3::DoProjectProfile2D(char* title, char* name, TAxis* projX, TAxis* projY, 
                                           bool originalRange, bool useUF, bool useOF) const
 {
    // Get the ranges where we will work.
@@ -2466,32 +2469,32 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    switch (pcase) {
       case 4:
          // "xy"
-         p2 = AbstractProject3DProfile(title, name, GetXaxis(), GetYaxis(), originalRange, useUF, useOF);
+         p2 = DoProjectProfile2D(title, name, GetXaxis(), GetYaxis(), originalRange, useUF, useOF);
          break;
 
       case 5:
          // "yx"
-         p2 = AbstractProject3DProfile(title, name, GetYaxis(), GetXaxis(), originalRange, useUF, useOF);
+         p2 = DoProjectProfile2D(title, name, GetYaxis(), GetXaxis(), originalRange, useUF, useOF);
          break;
 
       case 6:
          // "xz"
-         p2 = AbstractProject3DProfile(title, name, GetXaxis(), GetZaxis(), originalRange, useUF, useOF);
+         p2 = DoProjectProfile2D(title, name, GetXaxis(), GetZaxis(), originalRange, useUF, useOF);
          break;
 
       case 7:
          // "zx"
-         p2 = AbstractProject3DProfile(title, name, GetZaxis(), GetXaxis(), originalRange, useUF, useOF);
+         p2 = DoProjectProfile2D(title, name, GetZaxis(), GetXaxis(), originalRange, useUF, useOF);
          break;
 
       case 8:
          // "yz"
-         p2 = AbstractProject3DProfile(title, name, GetYaxis(), GetZaxis(), originalRange, useUF, useOF);
+         p2 = DoProjectProfile2D(title, name, GetYaxis(), GetZaxis(), originalRange, useUF, useOF);
          break;
 
       case 9:
          // "zy"
-         p2 = AbstractProject3DProfile(title, name, GetZaxis(), GetYaxis(), originalRange, useUF, useOF);
+         p2 = DoProjectProfile2D(title, name, GetZaxis(), GetYaxis(), originalRange, useUF, useOF);
          break;
 
    }
