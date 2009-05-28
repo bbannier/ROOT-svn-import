@@ -1787,8 +1787,8 @@ TH1 *TH3::DoProject1D(char* title, char* name, TAxis* projX,
    if (h1obj && !h1obj->InheritsFrom("TH1")) h1obj = 0;
 
    // Get range to use as well as bin limits
-   Int_t ixmin = originalRange?1:projX->GetFirst();
-   Int_t ixmax = originalRange?projX->GetNbins():projX->GetLast();
+   Int_t ixmin = /*originalRange?1:*/projX->GetFirst();
+   Int_t ixmax = /*originalRange?projX->GetNbins():*/projX->GetLast();
    Int_t nx = ixmax-ixmin+1;
 
    // Create the histogram, either reseting a preexisting one or
@@ -1798,10 +1798,19 @@ TH1 *TH3::DoProject1D(char* title, char* name, TAxis* projX,
       h1->Reset();
    } else {
       const TArrayD *bins = projX->GetXbins();
-      if (bins->fN == 0) {
-         h1 = new TH1D(name,title,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
+      if ( originalRange )
+      {
+         if (bins->fN == 0) {
+            h1 = new TH1D(name,title,projX->GetNbins(),projX->GetXmin(),projX->GetXmax());
+         } else {
+            h1 = new TH1D(name,title,projX->GetNbins(),bins->fArray);
+         }
       } else {
-         h1 = new TH1D(name,title,nx,&bins->fArray[ixmin-1]);
+         if (bins->fN == 0) {
+            h1 = new TH1D(name,title,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
+         } else {
+            h1 = new TH1D(name,title,nx,&bins->fArray[ixmin-1]);
+         }
       }
    }
 
@@ -1857,6 +1866,9 @@ TH1 *TH3::DoProject1D(char* title, char* name, TAxis* projX,
       ix = ixbin-ixmin;
       if (ixmin>0) ix +=1;
       if (ix < 0) ix=0; if (ix > nx+1) ix = nx+1;
+      if ( ix == 0 && projX->TestBit(TAxis::kAxisRange)) continue;
+      if ( ix == nx+1 && projX->TestBit(TAxis::kAxisRange)) continue;
+      if ( originalRange && projX->TestBit(TAxis::kAxisRange) && ( ixbin < ixmin || ixbin > ixmax )) continue;
       for (out1bin= out1->GetFirst() - ( useUF && !out1->TestBit(TAxis::kAxisRange) ); 
            out1bin <= out1->GetLast() + ( useOF && !out1->TestBit(TAxis::kAxisRange) );
            out1bin++){
