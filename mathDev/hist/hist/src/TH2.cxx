@@ -1994,14 +1994,13 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
 
    const TAxis& outAxis = ( onX ? fXaxis : fYaxis );
    const TAxis&  inAxis = ( onX ? fYaxis : fXaxis );
-   Int_t outN = outAxis.GetNbins();
    Int_t  inN = inAxis.GetNbins();
    const char *expectedName = ( onX ? "_pfx" : "_pfy" );
 
    Int_t firstOutBin, lastOutBin;
    if ( originalRange ) 
    {
-      firstOutBin = 0;
+      firstOutBin = 1;
       lastOutBin = outAxis.GetNbins() + 1;
    } else {
       firstOutBin = outAxis.GetFirst();
@@ -2051,11 +2050,13 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
       const TArrayD *bins = outAxis.GetXbins();
       if (bins->fN == 0) {
          if ( originalRange ) 
-            h1 = new TProfile(pname,GetTitle(),outN,outAxis.GetXmin(),outAxis.GetXmax(),option);
+            h1 = new TProfile(pname,GetTitle(),outAxis.GetNbins(),outAxis.GetXmin(),outAxis.GetXmax(),option);
          else
-            h1 = new TProfile(pname,GetTitle(),outN,outAxis.GetBinLowEdge(firstOutBin),outAxis.GetBinUpEdge(lastOutBin));
+            h1 = new TProfile(pname,GetTitle(),lastOutBin-firstOutBin+1,
+                              outAxis.GetBinLowEdge(firstOutBin),
+                              outAxis.GetBinUpEdge(lastOutBin));
       } else {
-         h1 = new TProfile(pname,GetTitle(),outN,bins->fArray,option);
+         h1 = new TProfile(pname,GetTitle(),outAxis.GetNbins(),bins->fArray,option);
       }
    }
    if (pname != name)  delete [] pname;
@@ -2077,9 +2078,11 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
    Double_t cont;
    TArrayD & binSumw2 = *(h1->GetBinSumw2()); 
    for (Int_t outBin =0;outBin<=h1->GetNbinsX()+1;outBin++) {
+      if ( firstOutBin > 1 && outBin == 0 ) continue;
+      if ( lastOutBin < outAxis.GetNbins() && outBin == h1->GetNbinsX() + 1 ) continue;
       for (Int_t inBin=firstbin;inBin<=lastbin;inBin++) {
-         Int_t binx = (onX ? outBin :  inBin );
-         Int_t biny = (onX ?  inBin : outBin );
+         Int_t binx = (onX ? outBin  + firstOutBin - 1:  inBin );
+         Int_t biny = (onX ?  inBin : outBin + firstOutBin - 1 );
          Int_t bin = GetBin(binx,biny); 
          if (ncuts) {
             if (!fPainter->IsInside(binx,biny)) continue;
@@ -2090,9 +2093,10 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
             Double_t tmp = 0; 
             // the following fill update wrongly the fBinSumw2- need to save it before
             if ( useWeights ) tmp = binSumw2.fArray[outBin];            
-            h1->Fill(outAxis.GetBinCenter(outBin),inAxis.GetBinCenter(inBin), cont );
+            h1->Fill(h1->GetXaxis()->GetBinCenter(outBin),inAxis.GetBinCenter(inBin), cont );
             if ( useWeights ) binSumw2.fArray[outBin] = tmp + fSumw2.fArray[bin];
          }
+
       }
    }
    if ((firstbin <=1 && lastbin >= inN) && !ncuts) h1->SetEntries(fEntries);
@@ -2196,7 +2200,7 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
    // called by ProjectionX or ProjectionY
 
    const char *expectedName = 0;
-   Int_t outNbin, inNbin;
+   Int_t inNbin;
    Int_t firstOutBin, lastOutBin;
    TAxis* outAxis;
    TAxis* inAxis;
@@ -2209,7 +2213,6 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
    if ( onX )
    {
       expectedName = "_px";
-      outNbin = fXaxis.GetNbins();
       inNbin = fYaxis.GetNbins();
       outAxis = GetXaxis();
       inAxis = GetYaxis();
@@ -2217,7 +2220,6 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
    else
    {
       expectedName = "_py";
-      outNbin = fYaxis.GetNbins();
       inNbin = fXaxis.GetNbins();
       outAxis = GetYaxis();
       inAxis = GetXaxis();
@@ -2252,10 +2254,21 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
          firstbin = 1;
          lastbin = inAxis->GetNbins();
       }
+//       if ( originalRange )
+//       {
+//          firstbin = 1;
+//          lastbin = inAxis->GetNbins() + 1;
+//       }
    } 
    if (firstbin < 0) firstbin = 0;
    if (lastbin  < 0) lastbin  = inNbin + 1;
    if (lastbin  > inNbin+1) lastbin  = inNbin + 1;
+
+   if ( originalRange )
+   {
+      firstbin = 0;
+      lastbin = inAxis->GetNbins() + 1;
+   }
 
    // Create the projection histogram
    char *pname = (char*)name;
@@ -2268,8 +2281,7 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
    //check if histogram with identical name exist
    TObject *h1obj = gROOT->FindObject(pname);
    if (h1obj && h1obj->InheritsFrom("TH1D")) {
-      h1 = (TH1D*)h1obj;
-      h1->Reset();
+      delete h1obj;
    }
 
    Int_t ncuts = 0;
@@ -2282,12 +2294,12 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
       const TArrayD *bins = outAxis->GetXbins();
       if (bins->fN == 0) {
          if ( originalRange ) 
-            h1 = new TH1D(pname,GetTitle(),outNbin,outAxis->GetXmin(),outAxis->GetXmax());
+            h1 = new TH1D(pname,GetTitle(),outAxis->GetNbins(),outAxis->GetXmin(),outAxis->GetXmax());
          else
             h1 = new TH1D(pname,GetTitle(),lastOutBin-firstOutBin+1,
                           outAxis->GetBinLowEdge(firstOutBin),outAxis->GetBinUpEdge(lastOutBin));
       } else {
-         h1 = new TH1D(pname,GetTitle(),outNbin,bins->fArray);
+         h1 = new TH1D(pname,GetTitle(),outAxis->GetNbins(),bins->fArray);
       }
       if (opt.Contains("e") || GetSumw2N() ) h1->Sumw2();
    }
