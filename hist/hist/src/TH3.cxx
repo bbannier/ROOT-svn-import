@@ -1923,7 +1923,7 @@ TH1 *TH3::Project1D(char* title, char* name, TAxis* projX,
       h1->GetStats(stats); 
       entries = stats[0]; 
       // calculate effective entries in case of weighted hstograms
-      if (computeErrors & stats[1] > 0) 
+      if (computeErrors && stats[1] > 0) 
          entries = stats[0] * stats[0] / stats[1];
    }
 
@@ -2120,7 +2120,7 @@ TH1 *TH3::Project2D(char* title, char* name, TAxis* projX, TAxis* projY,
       h2->GetStats(stats); 
       entries = stats[0]; 
       // calculate effective entries in case of weighted hstograms
-      if (computeErrors & stats[1] > 0) 
+      if (computeErrors && stats[1] > 0) 
          entries = stats[0] * stats[0] / stats[1];
    }
 
