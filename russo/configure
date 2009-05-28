@@ -47,7 +47,6 @@ options="                    \
    enable_cint5              \
    enable_cint7              \
    enable_cintex             \
-   enable_cintexcompat       \
    enable_clarens            \
    enable_dcache             \
    enable_exceptions         \
@@ -1016,7 +1015,6 @@ enable/disable options, prefix with either --enable- or --disable-
   cint5              Build the legacy CINT library
   cint7              Build the *experimental* new CINT library
   cintex             Build the libCintex Reflex interface library
-  cintexcompat       Build the libCintex Reflex interface library for cint7
   clarens            Clarens RPC support, optionally used by PROOF
   dcache             dCache support, requires libdcap from DESY
   exceptions         Turn on compiler exception handling capability
@@ -4280,19 +4278,6 @@ fi
 
 ######################################################################
 #
-### echo %%% Cintexcompat Library - Contributed library
-#
-message "Checking whether to build libCintex for cintexcompat"
-if test ! "x$enable_cintexcompat" = "xno"; then
-    enable_cintexcompat="yes"
-    result "yes"
-else
-    enable_cintexcompat=""
-    result "no"
-fi
-
-######################################################################
-#
 ### echo %%% Reflex Library - Contributed library
 #
 message "Checking whether to build libReflex"
@@ -4510,7 +4495,7 @@ case "$dicttype" in
     cint);;
     reflex | gccxml)
         # check that cintex is enabled for reflex/gccxml
-        if test "x$enable_cintex" != "xyes" -a "x$enable_cintexcompat" != "xyes"; then
+        if test "x$enable_cintex" != "xyes"; then
             result "Cannot generate $dicttype dictionaries with cintex disabled."
             dicttype=cint
         fi ;;
@@ -4941,7 +4926,6 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@zliblib@|$zliblib|"                  \
     -e "s|@zliblibdir@|$zliblibdir|"            \
     -e "s|@buildcintex@|$enable_cintex|"        \
-    -e "s|@buildcintexcompat@|$enable_cintex|" \
     -e "s|@buildreflex@|$enable_reflex|"        \
     -e "s|@buildroofit@|$enable_roofit|"        \
     -e "s|@buildminuit2@|$enable_minuit2|"      \
