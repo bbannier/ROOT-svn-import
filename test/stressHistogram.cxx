@@ -95,6 +95,7 @@ enum compareOptions {
 };
 
 const int defaultEqualOptions = 0; //cmpOptPrint;
+//const int defaultEqualOptions = cmpOptPrint;
 
 const double defaultErrorLimit = 1.E-10;
 
@@ -917,7 +918,7 @@ bool testMul1()
    TH1D* h4 = new TH1D("m1D1-h4", "h4=h1*h2", numberOfBins, minRange, maxRange);
    h4->Multiply(h1, h2, c1, c2);
 
-   bool ret = equals("Multiply1D1", h3, h4, cmpOptStats, 1E-14);
+   bool ret = equals("Multiply1D1", h3, h4, cmpOptStats  , 1E-14);
    delete h1;
    delete h2;
    delete h3;
@@ -1428,11 +1429,11 @@ bool testDivide1()
       error -= (2*(c2*c2)/(c1*c1)) * h3->GetBinContent(bin)*h3->GetBinContent(bin)*h2->GetBinError(bin)*h2->GetBinError(bin); 
       h4->SetBinError( bin, sqrt(error) );
    }
+   h4->SetEntries( h4->GetEffectiveEntries() ); 
 
-   std::vector<double> stats(TH1::kNstat);
-   h1->PutStats(&stats[0]);
+   h1->ResetStats(); 
 
-   bool ret = equals("Divide1D1", h1, h4, cmpOptStats);
+   bool ret = equals("Divide1D1", h1, h4, cmpOptStats );
    delete h1;
    delete h2;
    delete h3;
@@ -1475,9 +1476,8 @@ bool testDivideVar1()
       error -= (2*(c2*c2)/(c1*c1)) * h3->GetBinContent(bin)*h3->GetBinContent(bin)*h2->GetBinError(bin)*h2->GetBinError(bin); 
       h4->SetBinError( bin, sqrt(error) );
    }
-
-   std::vector<double> stats(TH1::kNstat);
-   h1->PutStats(&stats[0]);
+   h4->SetEntries( h4->GetEffectiveEntries() ); 
+   h1->ResetStats(); 
 
    bool ret = equals("DivideVar1D1", h1, h4, cmpOptStats);
    delete h1;
@@ -1554,8 +1554,8 @@ bool testDivide2()
       h4->SetBinError( bin, sqrt(error) );
    }
 
-   std::vector<double> stats(TH1::kNstat);
-   h1->PutStats(&stats[0]);
+   h4->SetEntries( h4->GetEffectiveEntries() ); 
+   h1->ResetStats(); 
 
    bool ret = equals("Divide1D2", h1, h4, cmpOptStats);
    delete h1;
@@ -1598,8 +1598,8 @@ bool testDivideVar2()
       h4->SetBinError( bin, sqrt(error) );
    }
 
-   std::vector<double> stats(TH1::kNstat);
-   h1->PutStats(&stats[0]);
+   h4->SetEntries( h4->GetEffectiveEntries() ); 
+   h1->ResetStats(); 
 
    bool ret = equals("DivideVar1D2", h1, h4, cmpOptStats);
    delete h1;
@@ -1654,8 +1654,8 @@ bool testDivide2D1()
       }
    }
 
-   std::vector<double> stats(TH1::kNstat);
-   h1->PutStats(&stats[0]);
+   h4->SetEntries( h4->GetEffectiveEntries() ); 
+   h1->ResetStats(); 
 
    bool ret = equals("Divide2D1", h1, h4, cmpOptStats);
    delete h1;
@@ -1705,8 +1705,8 @@ bool testDivide2D2()
       }
    }
 
-   std::vector<double> stats(TH1::kNstat);
-   h1->PutStats(&stats[0]);
+   h4->SetEntries( h4->GetEffectiveEntries() ); 
+   h1->ResetStats(); 
 
    bool ret = equals("Divide2D2", h1, h4, cmpOptStats);
    delete h1;
@@ -1771,8 +1771,8 @@ bool testDivide3D1()
       }
    }
 
-   std::vector<double> stats(TH1::kNstat);
-   h1->PutStats(&stats[0]);
+   h4->SetEntries( h4->GetEffectiveEntries() ); 
+   h1->ResetStats(); 
 
    bool ret = equals("Divide3D1", h1, h4, cmpOptStats);
    delete h1;
@@ -1829,8 +1829,8 @@ bool testDivide3D2()
       }
    }
 
-   std::vector<double> stats(TH1::kNstat);
-   h1->PutStats(&stats[0]);
+   h4->SetEntries( h4->GetEffectiveEntries() ); 
+   h1->ResetStats(); 
 
    bool ret = equals("Divide3D2", h1, h4, cmpOptStats);
    delete h1;
@@ -5645,7 +5645,7 @@ bool testSparseRebin1()
 
 // In case of deviation, the profiles' content will not work anymore
 // try only for testing the statistics
-static const double centre_deviation = 0.0;
+static const double centre_deviation = 0.3;
 
 
 class ProjectionTester {
@@ -5869,11 +5869,14 @@ public:
       if (h3->GetSumw2N() ) s3->Sumw2();
 
       for ( int ix = 0; ix <= h3->GetXaxis()->GetNbins() + 1; ++ix ) {
-         double x = centre_deviation * h3->GetXaxis()->GetBinWidth(ix) + h3->GetXaxis()->GetBinCenter(ix);
+         double xc = h3->GetXaxis()->GetBinCenter(ix);
+         double x = xc + centre_deviation * h3->GetXaxis()->GetBinWidth(ix); 
          for ( int iy = 0; iy <= h3->GetYaxis()->GetNbins() + 1; ++iy ) {
-            double y = centre_deviation * h3->GetYaxis()->GetBinWidth(iy) + h3->GetYaxis()->GetBinCenter(iy);
+            double yc = h3->GetYaxis()->GetBinCenter(iy);
+            double y = yc + centre_deviation * h3->GetYaxis()->GetBinWidth(iy);
             for ( int iz = 0; iz <= h3->GetZaxis()->GetNbins() + 1; ++iz ) {
-               double z = centre_deviation * h3->GetZaxis()->GetBinWidth(iz) + h3->GetZaxis()->GetBinCenter(iz);
+               double zc =  h3->GetZaxis()->GetBinCenter(iz);
+               double z  = zc + centre_deviation * h3->GetZaxis()->GetBinWidth(iz);
                for ( int i = 0; i < (int) r.Uniform(1,3); ++i )
                {
                   h3->Fill(x,y,z);
@@ -5901,33 +5904,37 @@ public:
                      h1ZStats->Fill(z);
                   }
 
-                  pe2XY->Fill(x,y,z);
-                  pe2XZ->Fill(x,z,y);
-                  pe2YX->Fill(y,x,z);
-                  pe2YZ->Fill(y,z,x);
-                  pe2ZX->Fill(z,x,y);
-                  pe2ZY->Fill(z,y,x);
+                  // for filling reference profile need to use bin center 
+                  // because projection from histogram can use only bin center 
+                  pe2XY->Fill(xc,yc,zc);
+                  pe2XZ->Fill(xc,zc,yc);
+                  pe2YX->Fill(yc,xc,zc);
+                  pe2YZ->Fill(yc,zc,xc);
+                  pe2ZX->Fill(zc,xc,yc);
+                  pe2ZY->Fill(zc,yc,xc);
                   
-                  h2wXY->Fill(x,y,z);
-                  h2wXZ->Fill(x,z,y);
-                  h2wYX->Fill(y,x,z);
-                  h2wYZ->Fill(y,z,x);
-                  h2wZX->Fill(z,x,y);
-                  h2wZY->Fill(z,y,x);
+                  // reference histogram to test with option W. 
+                  // need to use bin center for the weight
+                  h2wXY->Fill(x,y,zc);
+                  h2wXZ->Fill(x,z,yc);
+                  h2wYX->Fill(y,x,zc);
+                  h2wYZ->Fill(y,z,xc);
+                  h2wZX->Fill(z,x,yc);
+                  h2wZY->Fill(z,y,xc);
 
-                  pe1XY->Fill(x,y);
-                  pe1XZ->Fill(x,z);
-                  pe1YX->Fill(y,x);
-                  pe1YZ->Fill(y,z);
-                  pe1ZX->Fill(z,x);
-                  pe1ZY->Fill(z,y);
+                  pe1XY->Fill(xc,yc);
+                  pe1XZ->Fill(xc,zc);
+                  pe1YX->Fill(yc,xc);
+                  pe1YZ->Fill(yc,zc);
+                  pe1ZX->Fill(zc,xc);
+                  pe1ZY->Fill(zc,yc);
 
-                  hw1XY->Fill(x,y);
-                  hw1XZ->Fill(x,z);
-                  hw1YX->Fill(y,x);
-                  hw1YZ->Fill(y,z);
-                  hw1ZX->Fill(z,x);
-                  hw1ZY->Fill(z,y);
+                  hw1XY->Fill(x,yc);
+                  hw1XZ->Fill(x,zc);
+                  hw1YX->Fill(y,xc);
+                  hw1YZ->Fill(y,zc);
+                  hw1ZX->Fill(z,xc);
+                  hw1ZY->Fill(z,yc);
                }
             }
          }
@@ -5938,15 +5945,18 @@ public:
 
    void buildHistogramsWithWeights()
    {
-
       s3->Sumw2();
 
       for ( int ix = 0; ix <= h3->GetXaxis()->GetNbins() + 1; ++ix ) {
-         double x = centre_deviation * h3->GetXaxis()->GetBinWidth(ix) + h3->GetXaxis()->GetBinCenter(ix);
+         double xc = h3->GetXaxis()->GetBinCenter(ix);
+         double x = xc + centre_deviation * h3->GetXaxis()->GetBinWidth(ix); 
          for ( int iy = 0; iy <= h3->GetYaxis()->GetNbins() + 1; ++iy ) {
-            double y = centre_deviation * h3->GetYaxis()->GetBinWidth(iy) + h3->GetYaxis()->GetBinCenter(iy);
+            double yc = h3->GetYaxis()->GetBinCenter(iy);
+            double y = yc + centre_deviation * h3->GetYaxis()->GetBinWidth(iy);
             for ( int iz = 0; iz <= h3->GetZaxis()->GetNbins() + 1; ++iz ) {
-               double z = centre_deviation * h3->GetZaxis()->GetBinWidth(iz) + h3->GetZaxis()->GetBinCenter(iz);
+               double zc =  h3->GetZaxis()->GetBinCenter(iz);
+               double z  = zc + centre_deviation * h3->GetZaxis()->GetBinWidth(iz);
+
                Double_t w = (Double_t) r.Uniform(1,3);
 
                h3->Fill(x,y,z,w);
@@ -5974,33 +5984,33 @@ public:
                   h1ZStats->Fill(z,w);
                }              
 
-               pe2XY->Fill(x,y,z,w);
-               pe2XZ->Fill(x,z,y,w);
-               pe2YX->Fill(y,x,z,w);
-               pe2YZ->Fill(y,z,x,w);
-               pe2ZX->Fill(z,x,y,w);
-               pe2ZY->Fill(z,y,x,w);
+               pe2XY->Fill(xc,yc,zc,w);
+               pe2XZ->Fill(xc,zc,yc,w);
+               pe2YX->Fill(yc,xc,zc,w);
+               pe2YZ->Fill(yc,zc,xc,w);
+               pe2ZX->Fill(zc,xc,yc,w);
+               pe2ZY->Fill(zc,yc,xc,w);
                
-               h2wXY->Fill(x,y,z*w);
-               h2wXZ->Fill(x,z,y*w);
-               h2wYX->Fill(y,x,z*w);
-               h2wYZ->Fill(y,z,x*w);
-               h2wZX->Fill(z,x,y*w);
-               h2wZY->Fill(z,y,x*w);
+               h2wXY->Fill(x,y,zc*w);
+               h2wXZ->Fill(x,z,yc*w);
+               h2wYX->Fill(y,x,zc*w);
+               h2wYZ->Fill(y,z,xc*w);
+               h2wZX->Fill(z,x,yc*w);
+               h2wZY->Fill(z,y,xc*w);
                
-               pe1XY->Fill(x,y,w);
-               pe1XZ->Fill(x,z,w);
-               pe1YX->Fill(y,x,w);
-               pe1YZ->Fill(y,z,w);
-               pe1ZX->Fill(z,x,w);
-               pe1ZY->Fill(z,y,w);
+               pe1XY->Fill(xc,yc,w);
+               pe1XZ->Fill(xc,zc,w);
+               pe1YX->Fill(yc,xc,w);
+               pe1YZ->Fill(yc,zc,w);
+               pe1ZX->Fill(zc,xc,w);
+               pe1ZY->Fill(zc,yc,w);
                
-               hw1XY->Fill(x,y*w);
-               hw1XZ->Fill(x,z*w);
-               hw1YX->Fill(y,x*w);
-               hw1YZ->Fill(y,z*w);
-               hw1ZX->Fill(z,x*w);
-               hw1ZY->Fill(z,y*w);
+               hw1XY->Fill(x,yc*w);
+               hw1XZ->Fill(x,zc*w);
+               hw1YX->Fill(y,xc*w);
+               hw1YZ->Fill(y,zc*w);
+               hw1ZX->Fill(z,xc*w);
+               hw1ZY->Fill(z,yc*w);
             }
          }
       }
@@ -6013,11 +6023,15 @@ public:
                         int zmin, int zmax)
    {
       for ( int ix = 0; ix <= h3->GetXaxis()->GetNbins() + 1; ++ix ) {
-         double x = centre_deviation * h3->GetXaxis()->GetBinCenter(ix);
+         double xc = h3->GetXaxis()->GetBinCenter(ix);
+         double x = xc + centre_deviation * h3->GetXaxis()->GetBinWidth(ix); 
          for ( int iy = 0; iy <= h3->GetYaxis()->GetNbins() + 1; ++iy ) {
-            double y = centre_deviation * h3->GetYaxis()->GetBinCenter(iy);
+            double yc = h3->GetYaxis()->GetBinCenter(iy);
+            double y = yc + centre_deviation * h3->GetYaxis()->GetBinWidth(iy);
             for ( int iz = 0; iz <= h3->GetZaxis()->GetNbins() + 1; ++iz ) {
-               double z = centre_deviation * h3->GetZaxis()->GetBinCenter(iz);
+               double zc =  h3->GetZaxis()->GetBinCenter(iz);
+               double z  = zc + centre_deviation * h3->GetZaxis()->GetBinWidth(iz);
+
                for ( int i = 0; i < (int) r.Uniform(1,3); ++i )
                {
                   h3->Fill(x,y,z);
@@ -6043,12 +6057,12 @@ public:
                      h1Y->Fill(y);
                      h1Z->Fill(z);
                      
-                     pe2XY->Fill(x,y,z);
-                     pe2XZ->Fill(x,z,y);
-                     pe2YX->Fill(y,x,z);
-                     pe2YZ->Fill(y,z,x);
-                     pe2ZX->Fill(z,x,y);
-                     pe2ZY->Fill(z,y,x);
+                     pe2XY->Fill(xc,yc,zc);
+                     pe2XZ->Fill(xc,zc,yc);
+                     pe2YX->Fill(yc,xc,zc);
+                     pe2YZ->Fill(yc,zc,xc);
+                     pe2ZX->Fill(zc,xc,yc);
+                     pe2ZY->Fill(zc,yc,xc);
                      
                      h2wXY->Fill(x,y,z);
                      h2wXZ->Fill(x,z,y);
@@ -6057,12 +6071,12 @@ public:
                      h2wZX->Fill(z,x,y);
                      h2wZY->Fill(z,y,x);
 
-                     pe1XY->Fill(x,y);
-                     pe1XZ->Fill(x,z);
-                     pe1YX->Fill(y,x);
-                     pe1YZ->Fill(y,z);
-                     pe1ZX->Fill(z,x);
-                     pe1ZY->Fill(z,y);
+                     pe1XY->Fill(xc,yc);
+                     pe1XZ->Fill(xc,zc);
+                     pe1YX->Fill(yc,xc);
+                     pe1YZ->Fill(yc,zc);
+                     pe1ZX->Fill(zc,xc);
+                     pe1ZY->Fill(zc,yc);
                      
                      hw1XY->Fill(x,y);
                      hw1XZ->Fill(x,z);
@@ -6170,10 +6184,25 @@ public:
       options = 0;
       if ( defaultEqualOptions & cmpOptPrint )
          cout << "----------------------------------------------" << endl;
+
+      // in the following comparison with profiles we need to re-calculate statistics using bin centers 
+      // on the reference histograms
+      if (centre_deviation != 0) { 
+         h2XY->ResetStats();      
+         h2YX->ResetStats();
+         h2XZ->ResetStats();      
+         h2ZX->ResetStats();
+         h2YZ->ResetStats();      
+         h2ZY->ResetStats();
+
+         h1X->ResetStats(); 
+         h1Y->ResetStats(); 
+         h1Z->ResetStats(); 
+      }
       
       // Now the histograms comming from the Profiles!
       options = cmpOptStats;
-      status += equals("TH3 -> PBXY", h2XY, (TH2D*) h3->Project3DProfile("yx UF OF")->ProjectionXY("1", "B"), options );
+      status += equals("TH3 -> PBXY", h2XY, (TH2D*) h3->Project3DProfile("yx UF OF")->ProjectionXY("1", "B"), options  );
       status += equals("TH3 -> PBXZ", h2XZ, (TH2D*) h3->Project3DProfile("zx UF OF")->ProjectionXY("2", "B"), options);
       status += equals("TH3 -> PBYX", h2YX, (TH2D*) h3->Project3DProfile("xy UF OF")->ProjectionXY("3", "B"), options);
       status += equals("TH3 -> PBYZ", h2YZ, (TH2D*) h3->Project3DProfile("zy UF OF")->ProjectionXY("4", "B"), options);
@@ -6226,7 +6255,7 @@ public:
       // ProfileX re-use the same histo if sme name is given. 
       // need to give a diffrent name for each projectino (x,y,Z) otherwise we end-up in different bins
       // t.b.d: ProfileX make a new histo if non compatible
-      status += equals("TH2XY -> PBX", h1X, (TH1D*) h2XY->ProfileX("PBX", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
+      status += equals("TH2XY -> PBX", h1X, (TH1D*) h2XY->ProfileX("PBX", 0,h2XY->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options  );
       status += equals("TH2XY -> PBY", h1Y, (TH1D*) h2XY->ProfileY("PBY", 0,h2XY->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
       status += equals("TH2XZ -> PBX", h1X, (TH1D*) h2XZ->ProfileX("PBX", 0,h2XZ->GetYaxis()->GetNbins()+1)->ProjectionX("1", "B"),options);
       status += equals("TH2XZ -> PBZ", h1Z, (TH1D*) h2XZ->ProfileY("PBZ", 0,h2XZ->GetXaxis()->GetNbins()+1)->ProjectionX("1", "B"),options,1E-12);
@@ -6374,7 +6403,7 @@ int stressHistogram()
    
    ProjectionTester* ht = new ProjectionTester();
    ht->buildHistograms();
-   //ht->buildHistograms(2,4,5,6,8,10);
+   //Ht->buildHistograms(2,4,5,6,8,10);
    status = ht->compareHistograms();
    GlobalStatus += status;
    printResult("Testing Projections without weights..............................", status);
@@ -6923,12 +6952,24 @@ int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT)
            << endl;  
 
    // Number of Entries
-//    differents += (bool) equals( h1->GetEffectiveEntries(), h2->GetEffectiveEntries(), 100*ERRORLIMIT);
-//    if ( debug )
-//       cout << "Entries: " << h1->GetEffectiveEntries() << " " << h2->GetEffectiveEntries() 
-//            << " | " << fabs( h1->GetEffectiveEntries() - h2->GetEffectiveEntries() ) 
-//            << " " << differents
-//            << endl;  
+   // check if is an unweighted histogram compare entries otherwise only effective entries
+   if (h1->GetEntries() == h1->GetEffectiveEntries() ) { 
+
+      differents += (bool) equals( h1->GetEntries(), h2->GetEntries(), 100*ERRORLIMIT);
+      if ( debug )
+         cout << "Entries: " << h1->GetEntries() << " " << h2->GetEntries() 
+              << " | " << fabs( h1->GetEntries() - h2->GetEntries() ) 
+              << " " << differents
+              << endl;  
+   }
+
+   // Number of Effective Entries
+   differents += (bool) equals( h1->GetEffectiveEntries(), h2->GetEffectiveEntries(), 100*ERRORLIMIT);
+   if ( debug )
+      cout << "Eff Entries: " << h1->GetEffectiveEntries() << " " << h2->GetEffectiveEntries() 
+           << " | " << fabs( h1->GetEffectiveEntries() - h2->GetEffectiveEntries() ) 
+           << " " << differents
+           << endl;  
    
    return differents;
 }

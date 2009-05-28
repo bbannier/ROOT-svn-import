@@ -1913,8 +1913,8 @@ TH1 *TH3::DoProject1D(char* title, char* name, TAxis* projX,
 //       resetStats = true; 
 
 
-   Double_t stats[kNstat];
    if (!resetStats) {
+      Double_t stats[kNstat];
       GetStats(stats); 
       if ( projX == GetYaxis() ) {
          stats[2] = stats[4];
@@ -1924,25 +1924,17 @@ TH1 *TH3::DoProject1D(char* title, char* name, TAxis* projX,
          stats[2] = stats[7];
          stats[3] = stats[8]; 
       }
+      h1->PutStats(stats);
+      h1->SetEntries( fEntries );
    }
    else {
       // reset statistics 
-      for (Int_t i=0;i<kNstat;i++) stats[i] = 0;
-   }
-
-   h1->PutStats(stats);
-   Double_t entries = fEntries; 
-   // recalculate the statistics
-   if (resetStats) { 
-      h1->GetStats(stats); 
-      entries = stats[0]; 
+      h1->ResetStats();
       // in case of weighted hstograms use the effective entries for the entries
       // since there is noway to estimate them
-      if (computeErrors && stats[1] > 0) 
-         entries = stats[0] * stats[0] / stats[1];
+      h1->SetEntries( h1->GetEffectiveEntries() );  
    }
 
-   h1->SetEntries(entries);
    return h1;
 }
 
@@ -2081,11 +2073,10 @@ TH2 *TH3::DoProject2D(char* title, char* name, TAxis* projX, TAxis* projY,
    if (IsA() == TH3F::Class() ) eps = 1.E-6;
    if (fTsumw != 0 && TMath::Abs( fTsumw - totcont) <  TMath::Abs(fTsumw) * eps) resetStats = false; 
 
-   //std::cout << "reset stats " << resetStats << "  " << fTsumw << "   " << totcont << "  " <<  TMath::Abs( fTsumw - totcont)/fTsumw << std::endl;
 
-   Double_t stats[kNstat];
-   Double_t oldst[kNstat]; // old statistics
    if (!resetStats) {
+      Double_t stats[kNstat];
+      Double_t oldst[kNstat]; // old statistics
       GetStats(oldst); 
       std::copy(oldst,oldst+kNstat,stats);
       // not that projX refer to Y axis and projX refer to the X axis of projected histogram
@@ -2122,24 +2113,17 @@ TH2 *TH3::DoProject2D(char* title, char* name, TAxis* projX, TAxis* projY,
             stats[6] = oldst[10];
          }
       }
+      // set the new statistics 
+      h2->PutStats(stats);
+      h2->SetEntries(fEntries); 
    }
-   else {
-      // reset statistics 
-      for (Int_t i=0;i<kNstat;i++) stats[i] = 0;
-   }
-
-   h2->PutStats(stats);
-   Double_t entries = fEntries; 
-   // recalculate the statistics
-   if (resetStats) { 
-      h2->GetStats(stats); 
-      entries = stats[0]; 
-      // calculate effective entries in case of weighted hstograms
-      if (computeErrors && stats[1] > 0) 
-         entries = stats[0] * stats[0] / stats[1];
+   else { 
+      // recalculate the statistics
+      h2->ResetStats(); 
+      // use as entries the effective entries
+      h2->SetEntries( h2->GetEffectiveEntries() ); 
    }
 
-   h2->SetEntries(entries);
    return h2;
 }
 

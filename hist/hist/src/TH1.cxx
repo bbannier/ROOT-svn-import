@@ -2153,12 +2153,6 @@ void TH1::Divide(TF1 *f1, Double_t c1)
    if (fDimension < 2) nbinsy = -1;
    if (fDimension < 3) nbinsz = -1;
 
-//   - Add statistics
-   Double_t nEntries = fEntries;
-   Double_t s1[10];
-   Int_t i;
-   for (i=0;i<10;i++) {s1[i] = 0;}
-   PutStats(s1);
 
    SetMinimum();
    SetMaximum();
@@ -2196,7 +2190,8 @@ void TH1::Divide(TF1 *f1, Double_t c1)
          }
       }
    }
-   SetEntries(nEntries);
+   ResetStats(); 
+   SetEntries( GetEffectiveEntries() );
 }
 
 //______________________________________________________________________________
@@ -2246,9 +2241,6 @@ void TH1::Divide(const TH1 *h1)
 //    Create Sumw2 if h1 has Sumw2 set
    if (fSumw2.fN == 0 && h1->GetSumw2N() != 0) Sumw2();
 
-//   - Reset statistics
-   Double_t nEntries = fEntries;
-   fEntries = fTsumw = 0;
 
 //    Reset the kCanRebin option. Otherwise SetBinContent on the overflow bin
 //    would resize the axis limits!
@@ -2266,7 +2258,6 @@ void TH1::Divide(const TH1 *h1)
             if (c1) w = c0/c1;
             else    w = 0;
             SetBinContent(bin,w);
-            fEntries++;
             if (fSumw2.fN) {
                Double_t e0 = GetBinError(bin);
                Double_t e1 = h1->GetBinError(bin);
@@ -2277,10 +2268,8 @@ void TH1::Divide(const TH1 *h1)
          }
       }
    }
-   Double_t s[kNstat];
-   GetStats(s);
-   PutStats(s);
-   SetEntries(nEntries);
+   ResetStats(); 
+   SetEntries( GetEffectiveEntries() );
 }
 
 
@@ -2354,10 +2343,6 @@ void TH1::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Option_
 //    Create Sumw2 if h1 or h2 have Sumw2 set
    if (fSumw2.fN == 0 && (h1->GetSumw2N() != 0 || h2->GetSumw2N() != 0)) Sumw2();
 
-//   - Reset statistics
-   Double_t nEntries = fEntries;
-   fEntries = fTsumw = 0;
-
    SetMinimum();
    SetMaximum();
 
@@ -2379,7 +2364,6 @@ void TH1::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Option_
             if (b2) w = c1*b1/(c2*b2);
             else    w = 0;
             SetBinContent(bin,w);
-            fEntries++;
             if (fSumw2.fN) {
                Double_t e1 = h1->GetBinError(bin);
                Double_t e2 = h2->GetBinError(bin);
@@ -2405,12 +2389,12 @@ void TH1::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Option_
          }
       }
    }
-   Double_t s[kNstat];
-   GetStats(s);
-   PutStats(s);
-   if (nEntries == 0) nEntries = h1->GetEntries();
-   if (nEntries == 0) nEntries = 1;
-   SetEntries(nEntries);
+   ResetStats(); 
+   if (binomial)  
+      // in case of binomial division use denominator for number of entries
+      SetEntries ( h2->GetEntries() ); 
+   else 
+      SetEntries( GetEffectiveEntries() );
 }
 
 //______________________________________________________________________________
@@ -4830,13 +4814,7 @@ void TH1::Multiply(TF1 *f1, Double_t c1)
    if (fDimension < 2) nbinsy = -1;
    if (fDimension < 3) nbinsz = -1;
 
-   //   - Add statistics
-   Double_t nEntries = fEntries;
-   Double_t s1[10];
-   Int_t i;
-   for (i=0;i<10;i++) {s1[i] = 0;}
-   PutStats(s1);
-
+   // reset min-maximum
    SetMinimum();
    SetMaximum();
 
@@ -4870,7 +4848,8 @@ void TH1::Multiply(TF1 *f1, Double_t c1)
          }
       }
    }
-   SetEntries(nEntries);
+   ResetStats(); 
+   SetEntries( GetEffectiveEntries() );
 }
 
 //______________________________________________________________________________
@@ -4918,10 +4897,7 @@ void TH1::Multiply(const TH1 *h1)
    //    Create Sumw2 if h1 has Sumw2 set
    if (fSumw2.fN == 0 && h1->GetSumw2N() != 0) Sumw2();
 
-   //   - Reset statistics
-   Double_t nEntries = fEntries;
-   fEntries = fTsumw = 0;
-
+   //   - Reset min-  maximum
    SetMinimum();
    SetMaximum();
 
@@ -4940,7 +4916,6 @@ void TH1::Multiply(const TH1 *h1)
             c1  = h1->GetBinContent(bin);
             w   = c0*c1;
             SetBinContent(bin,w);
-            fEntries++;
             if (fSumw2.fN) {
                Double_t e0 = GetBinError(bin);
                Double_t e1 = h1->GetBinError(bin);
@@ -4949,10 +4924,8 @@ void TH1::Multiply(const TH1 *h1)
          }
       }
    }
-   Double_t s[kNstat];
-   GetStats(s);
-   PutStats(s);
-   SetEntries(nEntries);
+   ResetStats(); 
+   SetEntries( GetEffectiveEntries() );
 }
 
 
@@ -5013,9 +4986,7 @@ void TH1::Multiply(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Optio
    //    Create Sumw2 if h1 or h2 have Sumw2 set
    if (fSumw2.fN == 0 && (h1->GetSumw2N() != 0 || h2->GetSumw2N() != 0)) Sumw2();
 
-   //   - Reset statistics
-   Double_t nEntries = fEntries;
-   fEntries = fTsumw   = fTsumw2 = fTsumwx = fTsumwx2 = 0;
+   //   - Reset min - maximum
    SetMinimum();
    SetMaximum();
 
@@ -5036,7 +5007,6 @@ void TH1::Multiply(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Optio
             b2  = h2->GetBinContent(bin);
             w   = (c1*b1)*(c2*b2);
             SetBinContent(bin,w);
-            fEntries++;
             if (fSumw2.fN) {
                Double_t e1 = h1->GetBinError(bin);
                Double_t e2 = h2->GetBinError(bin);
@@ -5045,10 +5015,8 @@ void TH1::Multiply(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Optio
          }
       }
    }
-   Double_t s[kNstat];
-   GetStats(s);
-   PutStats(s);
-   SetEntries(nEntries);
+   ResetStats(); 
+   SetEntries( GetEffectiveEntries() );
 }
 
 //______________________________________________________________________________
