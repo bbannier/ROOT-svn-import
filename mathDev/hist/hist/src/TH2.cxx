@@ -2034,9 +2034,7 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
    //check if a profile with identical name exist
    TObject *h1obj = gROOT->FindObject(pname);
    if (h1obj && h1obj->InheritsFrom("TProfile")) {
-      h1 = (TProfile*)h1obj;
-      // tb.d. check if number of bin is consistent ?
-      h1->Reset();
+      delete h1obj;
    }
 
    Int_t ncuts = 0;
