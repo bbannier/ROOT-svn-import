@@ -2074,6 +2074,7 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
    // Fill the profile histogram
    // no entries/bin is available so can fill only using bin content as weight
    Double_t cont;
+   Double_t totcont = 0; 
    TArrayD & binSumw2 = *(h1->GetBinSumw2()); 
    for (Int_t outBin =0;outBin<=h1->GetNbinsX()+1;outBin++) {
       if ( firstOutBin > 1 && outBin == 0 ) continue;
@@ -2093,11 +2094,21 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
             if ( useWeights ) tmp = binSumw2.fArray[outBin];            
             h1->Fill(h1->GetXaxis()->GetBinCenter(outBin),inAxis.GetBinCenter(inBin), cont );
             if ( useWeights ) binSumw2.fArray[outBin] = tmp + fSumw2.fArray[bin];
+            totcont += cont; 
          }
 
       }
    }
-   if ((firstbin <=1 && lastbin >= inN) && !ncuts) h1->SetEntries(fEntries);
+
+
+   // the statistics must be recalculated since by using the Fill method the total sum of weight^2 is 
+   // not computed correctly
+   // for a profile does not much sense to re-use statistics of original TH2 
+   h1->ResetStats();
+   // Also we need to set the entries since they have not been correctly calculated during the projection
+   // we can only set them to the effective entries
+   h1->SetEntries( h1->GetEffectiveEntries() ); 
+
 
    if (opt.Contains("d")) {
       TVirtualPad *padsav = gPad;
@@ -2233,14 +2244,6 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
    }
 
    
-   Double_t th2Stats[7];
-   GetStats(th2Stats);
-   Double_t th1Stats[4];
-   th1Stats[0] = th2Stats[0];
-   th1Stats[1] = th2Stats[1];
-   th1Stats[2] = th2Stats[(onX) ? 2 : 4];
-   th1Stats[3] = th2Stats[(onX) ? 3 : 5];
-
    if ( lastbin < firstbin && inAxis->TestBit(TAxis::kAxisRange) ) {
       firstbin = inAxis->GetFirst();
       lastbin = inAxis->GetLast();
@@ -2323,7 +2326,7 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
 
    // Fill the projected histogram
    Double_t cont,err2;
-   Double_t entries = 0;
+   Double_t totcont = 0;
    for (Int_t binOut=0;binOut<=h1->GetNbinsX() + 1;binOut++) {
       err2 = 0;
       cont = 0;
@@ -2344,13 +2347,43 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
          Double_t exy2 = exy*exy;
          cont  += cxy;
          err2 += exy2;
-         // count all effective entries bin by bin
-         if (cxy && exy2 > 0) entries += cxy*cxy/exy2;
+         // sum  all content
+//         if (cxy && exy2 > 0) entries += cxy*cxy/exy2;
+         if (cxy ) totcont += cxy;
       }
       h1->SetBinContent(binOut,cont);
       if (h1->GetSumw2N()) h1->SetBinError(binOut,TMath::Sqrt(err2));
    }
-   h1->SetEntries(entries);
+
+   // check if we can re-use the original statistics from  the previous histogram 
+   bool reuseStats = false; 
+   if ( ( fgStatOverflows == false && firstbin == 1 && lastbin == inNbin     ) ||
+        ( fgStatOverflows == true  && firstbin == 0 && lastbin == inNbin + 1 ) )
+      reuseStats = true; 
+   else {
+      // also if total content match we can re-use 
+      double eps = 1.E-12;
+      if (IsA() == TH2F::Class() ) eps = 1.E-6;
+      if (fTsumw != 0 && TMath::Abs( fTsumw - totcont) <  TMath::Abs(fTsumw) * eps) 
+         reuseStats = true; 
+   }
+   // retrieve  the statistics and set in projected histogram if we can re-use it 
+   if (reuseStats) { 
+      Double_t stats[kNstat];
+      GetStats(stats);
+      if (!onX) {  // case of projection on Y 
+         stats[2] = stats[4]; 
+         stats[3] = stats[5]; 
+      }
+      h1->PutStats(stats);
+      h1->SetEntries(fEntries); 
+   }
+   else { 
+      // the statistics is automatically recalulated since it is reset by the call to SetBinContent
+      // we just need to set the entries since they have not been correctly calculated during the projection
+      // we can only set them to the effective entries
+      h1->SetEntries( h1->GetEffectiveEntries() ); 
+   }
 
    if (opt.Contains("d")) {
       TVirtualPad *padsav = gPad;
@@ -2367,11 +2400,6 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
       }
       if (padsav) padsav->cd();
    }
-
-
-   if ( ( fgStatOverflows == false && firstbin == 1 && lastbin == inNbin     ) ||
-        ( fgStatOverflows == true  && firstbin == 0 && lastbin == inNbin + 1 ) )
-   h1->PutStats(&th1Stats[0]);
 
    return h1;
 }
