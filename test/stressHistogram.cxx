@@ -95,7 +95,7 @@ enum compareOptions {
 };
 
 const int defaultEqualOptions = 0; //cmpOptPrint;
-//const int defaultEqualOptions = cmpOptPrint;
+//int defaultEqualOptions = cmpOptPrint;
 
 const double defaultErrorLimit = 1.E-10;
 
@@ -109,6 +109,10 @@ TFile * refFile = 0;
 const char* refFileName = "http://root.cern.ch/files/stressHistogram.5.18.00.root";
 
 TRandom2 r;
+// set to zero if want to run different every time
+const int initialSeed = 0;   
+
+
 
 typedef bool ( * pointer2Test) ();
 
@@ -1390,7 +1394,7 @@ bool testMulSparse()
 
    s1->Multiply(s2);
 
-   bool ret = equals("MultSparse", s3, s1, cmpOptNone, 1E-13);
+   bool ret = equals("MultSparse", s3, s1, cmpOptNone, 1E-10);
    delete s2;
    delete s3;
    return ret;
@@ -1418,6 +1422,10 @@ bool testDivide1()
       value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       h2->Fill(value,  1.0);
    }
+   // avoid bins in h2 with zero content
+   for (int i = 0; i < h2->GetSize(); ++i) 
+      if (h2->GetBinContent(i) == 0) h2->SetBinContent(i,1);
+
 
    TH1D* h3 = new TH1D("d1D1-h3", "h3=(c1*h1)/(c2*h2)", numberOfBins, minRange, maxRange);
    h3->Divide(h1, h2, c1, c2);
@@ -1465,6 +1473,10 @@ bool testDivideVar1()
       value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       h2->Fill(value,  1.0);
    }
+   // avoid bins in h2 with zero content
+   for (int i = 0; i < h2->GetSize(); ++i) 
+      if (h2->GetBinContent(i) == 0) h2->SetBinContent(i,1);
+
 
    TH1D* h3 = new TH1D("d1D1-h3", "h3=(c1*h1)/(c2*h2)", numberOfBins, v);
    h3->Divide(h1, h2, c1, c2);
@@ -1512,6 +1524,7 @@ bool testDivideProf1()
       p2->Fill(x, y, 1.0);
    }
 
+
    TProfile* p3 = new TProfile("d1D1-p3", "p3=(c1*p1)/(c2*p2)", numberOfBins, minRange, maxRange);
    p3->Divide(p1, p2, c1, c2);
 
@@ -1542,6 +1555,9 @@ bool testDivide2()
       value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       h2->Fill(value,  1.0);
    }
+   // avoid bins in h2 with zero content
+   for (int i = 0; i < h2->GetSize(); ++i) 
+      if (h2->GetBinContent(i) == 0) h2->SetBinContent(i,1);
 
    TH1D* h3 = static_cast<TH1D*>( h1->Clone() );
    h3->Divide(h2);
@@ -1586,6 +1602,9 @@ bool testDivideVar2()
       value = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       h2->Fill(value,  1.0);
    }
+   // avoid bins in h2 with zero content
+   for (int i = 0; i < h2->GetSize(); ++i) 
+      if (h2->GetBinContent(i) == 0) h2->SetBinContent(i,1);
 
    TH1D* h3 = static_cast<TH1D*>( h1->Clone() );
    h3->Divide(h2);
@@ -1636,6 +1655,9 @@ bool testDivide2D1()
       y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       h2->Fill(x, y, 1.0);
    }
+   // avoid bins in h2 with zero content
+   for (int i = 0; i < h2->GetSize(); ++i) 
+      if (h2->GetBinContent(i) == 0) h2->SetBinContent(i,1);
 
    TH2D* h3 = new TH2D("d2D1-h3", "h3=(c1*h1)/(c2*h2)", 
                        numberOfBins, minRange, maxRange,
@@ -1657,7 +1679,7 @@ bool testDivide2D1()
    h4->SetEntries( h4->GetEffectiveEntries() ); 
    h1->ResetStats(); 
 
-   bool ret = equals("Divide2D1", h1, h4, cmpOptStats);
+   bool ret = equals("Divide2D1", h1, h4, cmpOptStats );
    delete h1;
    delete h2;
    delete h3;
@@ -1689,6 +1711,9 @@ bool testDivide2D2()
       y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       h2->Fill(x, y, 1.0);
    }
+   // avoid bins in h2 with zero content
+   for (int i = 0; i < h2->GetSize(); ++i) 
+      if (h2->GetBinContent(i) == 0) h2->SetBinContent(i,1);
 
    TH2D* h3 = static_cast<TH2D*>( h1->Clone() );
    h3->Divide(h2);
@@ -1747,6 +1772,9 @@ bool testDivide3D1()
       z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       h2->Fill(x, y, z, 1.0);
    }
+   // avoid bins in h2 with zero content
+   for (int i = 0; i < h2->GetSize(); ++i) 
+      if (h2->GetBinContent(i) == 0) h2->SetBinContent(i,1);
 
    TH3D* h3 = new TH3D("d3D1-h3", "h3=(c1*h1)/(c2*h2)", 
                        numberOfBins, minRange, maxRange,
@@ -1810,6 +1838,9 @@ bool testDivide3D2()
       z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
       h2->Fill(x, y, z, 1.0);
    }
+   // avoid bins in h2 with zero content
+   for (int i = 0; i < h2->GetSize(); ++i) 
+      if (h2->GetBinContent(i) == 0) h2->SetBinContent(i,1);
 
    TH3D* h3 = static_cast<TH3D*>( h1->Clone() );
    h3->Divide(h2);
@@ -5708,7 +5739,6 @@ private:
 
    bool buildWithWeights;
 
-   TRandom2 r;
    
 public:
    ProjectionTester()
@@ -6379,7 +6409,7 @@ public:
 
 int stressHistogram()
 {
-   r.SetSeed(0);
+   r.SetSeed(initialSeed);
 
    int GlobalStatus = false;
    int status = false;
@@ -6400,6 +6430,12 @@ int stressHistogram()
 
 
    TH1::SetDefaultSumw2(); 
+   // to avoid cases in chi2-test of profiles when error is zero  
+   TProfile::Approximate();
+   TProfile2D::Approximate();
+   TProfile3D::Approximate();
+
+
    
    ProjectionTester* ht = new ProjectionTester();
    ht->buildHistograms();
@@ -6917,6 +6953,9 @@ int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT)
 {
    int differents = 0;
 
+   int pr = std::cout.precision(12);
+
+
    int precLevel = gErrorIgnoreLevel; 
    // switch off Info mesaage from chi2 test
    if (!debug) gErrorIgnoreLevel = 1001; 
@@ -6925,11 +6964,15 @@ int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT)
    
    std::string option = "WW OF UF";
    const char * opt = option.c_str(); 
-   differents += (h1->Chi2Test(h2, opt) < 1);
-   differents += (h2->Chi2Test(h1,opt) < 1);         
-   differents += (bool) equals(h1->Chi2Test(h2,opt), h2->Chi2Test(h1,opt), ERRORLIMIT);
+
+   double chi_12 = h1->Chi2Test(h2, opt);
+   double chi_21 = h2->Chi2Test(h1, opt);
+
+   differents += (bool) equals(chi_12, 1, ERRORLIMIT);
+   differents += (bool) equals(chi_21, 1, ERRORLIMIT);  
+   differents += (bool) equals(chi_12, chi_21, ERRORLIMIT);
    if ( debug )
-      cout << "Chi2Test " << h1->Chi2Test(h2, opt) << " " << h2->Chi2Test(h1, opt) 
+      cout << "Chi2Test " << chi_12 << " " <<  chi_21 
            << " | " << differents
            << endl;
 
@@ -6970,7 +7013,9 @@ int compareStatistics( TH1* h1, TH1* h2, bool debug, double ERRORLIMIT)
            << " | " << fabs( h1->GetEffectiveEntries() - h2->GetEffectiveEntries() ) 
            << " " << differents
            << endl;  
-   
+
+   std::cout.precision(pr);   
+
    return differents;
 }
 
