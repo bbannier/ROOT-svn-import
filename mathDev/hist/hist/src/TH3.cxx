@@ -1787,8 +1787,8 @@ TH1 *TH3::DoProject1D(char* title, char* name, TAxis* projX,
    if (h1obj && !h1obj->InheritsFrom("TH1")) h1obj = 0;
 
    // Get range to use as well as bin limits
-   Int_t ixmin = /*originalRange?1:*/projX->GetFirst();
-   Int_t ixmax = /*originalRange?projX->GetNbins():*/projX->GetLast();
+   Int_t ixmin = projX->GetFirst();
+   Int_t ixmax = projX->GetLast();
    Int_t nx = ixmax-ixmin+1;
 
    // Create the histogram, either reseting a preexisting one or
@@ -1950,32 +1950,47 @@ TH2 *TH3::DoProject2D(char* title, char* name, TAxis* projX, TAxis* projY,
    if (h1obj && !h1obj->InheritsFrom("TH1")) h1obj = 0;
 
    // Get range to use as well as bin limits
-   Int_t ixmin = originalRange?1:projX->GetFirst();
-   Int_t ixmax = originalRange?projX->GetNbins():projX->GetLast();
-   Int_t iymin = originalRange?1:projY->GetFirst();
-   Int_t iymax = originalRange?projY->GetNbins():projY->GetLast();
+   Int_t ixmin = projX->GetFirst();
+   Int_t ixmax = projX->GetLast();
+   Int_t iymin = projY->GetFirst();
+   Int_t iymax = projY->GetLast();
    Int_t nx = ixmax-ixmin+1;
    Int_t ny = iymax-iymin+1;
 
    // Create the histogram, either reseting a preexisting one or
    // creating one from scratch.
    if (h1obj && h1obj->InheritsFrom("TH2D")) {
-      h2 = (TH2D*)h1obj;
-      h2->Reset();
+      delete h1obj;
    } else {
       const TArrayD *xbins = projX->GetXbins();
       const TArrayD *ybins = projY->GetXbins();
-      if (xbins->fN == 0 && ybins->fN == 0) {
-         h2 = new TH2D(name,title,ny,projY->GetBinLowEdge(iymin),projY->GetBinUpEdge(iymax)
-                       ,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
-      } else if (ybins->fN == 0) {
-         h2 = new TH2D(name,title,ny,projY->GetBinLowEdge(iymin),projY->GetBinUpEdge(iymax)
-                       ,nx,&xbins->fArray[ixmin-1]);
-      } else if (xbins->fN == 0) {
-         h2 = new TH2D(name,title,ny,&ybins->fArray[iymin-1]
-                       ,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
+      if ( originalRange )
+      {
+         if (xbins->fN == 0 && ybins->fN == 0) {
+            h2 = new TH2D(name,title,projY->GetNbins(),projY->GetXmin(),projY->GetXmax()
+                          ,projX->GetNbins(),projX->GetXmin(),projX->GetXmax());
+         } else if (ybins->fN == 0) {
+            h2 = new TH2D(name,title,projY->GetNbins(),projY->GetXmin(),projY->GetXmax()
+                          ,projX->GetNbins(),&xbins->fArray[ixmin-1]);
+         } else if (xbins->fN == 0) {
+            h2 = new TH2D(name,title,projY->GetNbins(),&ybins->fArray[iymin-1]
+                          ,projX->GetNbins(),projX->GetXmin(),projX->GetXmax());
+         } else {
+            h2 = new TH2D(name,title,projY->GetNbins(),&ybins->fArray[iymin-1],projX->GetNbins(),&xbins->fArray[ixmin-1]);
+         }
       } else {
-         h2 = new TH2D(name,title,ny,&ybins->fArray[iymin-1],nx,&xbins->fArray[ixmin-1]);
+         if (xbins->fN == 0 && ybins->fN == 0) {
+            h2 = new TH2D(name,title,ny,projY->GetBinLowEdge(iymin),projY->GetBinUpEdge(iymax)
+                          ,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
+         } else if (ybins->fN == 0) {
+            h2 = new TH2D(name,title,ny,projY->GetBinLowEdge(iymin),projY->GetBinUpEdge(iymax)
+                          ,nx,&xbins->fArray[ixmin-1]);
+         } else if (xbins->fN == 0) {
+            h2 = new TH2D(name,title,ny,&ybins->fArray[iymin-1]
+                          ,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
+         } else {
+            h2 = new TH2D(name,title,ny,&ybins->fArray[iymin-1],nx,&xbins->fArray[ixmin-1]);
+         }
       }
    }
 
@@ -2041,10 +2056,18 @@ TH2 *TH3::DoProject2D(char* title, char* name, TAxis* projX, TAxis* projY,
       Int_t ix = ixbin-ixmin;
       if (ixmin>0) ix +=1;
       if (ix < 0) ix=0; if (ix > nx+1) ix = nx+1;
+      if ( ix == 0 && projX->TestBit(TAxis::kAxisRange)) continue;
+      if ( ix == nx+1 && projX->TestBit(TAxis::kAxisRange)) continue;
+      if ( originalRange && projX->TestBit(TAxis::kAxisRange) && ( ixbin < ixmin || ixbin > ixmax )) continue;
+
       for (iybin=0;iybin<=1+projY->GetNbins();iybin++){
          Int_t iy = iybin-iymin;
          if (iymin>0) iy +=1;
          if (iy < 0) iy=0; if (iy > ny+1) iy = ny+1;
+         if ( iy == 0 && projY->TestBit(TAxis::kAxisRange)) continue;
+         if ( iy == ny+1 && projY->TestBit(TAxis::kAxisRange)) continue;
+         if ( originalRange && projY->TestBit(TAxis::kAxisRange) && ( iybin < iymin || iybin > iymax )) continue;
+
          for (outbin=out->GetFirst() - ( useUF && !out->TestBit(TAxis::kAxisRange) );
               outbin <= out->GetLast() + ( useOF && !out->TestBit(TAxis::kAxisRange) );
               outbin++){
@@ -2308,10 +2331,11 @@ TProfile2D *TH3::DoProjectProfile2D(char* title, char* name, TAxis* projX, TAxis
                                           bool originalRange, bool useUF, bool useOF) const
 {
    // Get the ranges where we will work.
-   Int_t ixmin = originalRange?1:projX->GetFirst();
-   Int_t ixmax = originalRange?projX->GetNbins():projX->GetLast();
-   Int_t iymin = originalRange?1:projY->GetFirst();
-   Int_t iymax = originalRange?projY->GetNbins():projY->GetLast();
+
+   Int_t ixmin = projX->GetFirst();
+   Int_t ixmax = projX->GetLast();
+   Int_t iymin = projY->GetFirst();
+   Int_t iymax = projY->GetLast();
    Int_t nx = ixmax-ixmin+1;
    Int_t ny = iymax-iymin+1;
 
@@ -2319,40 +2343,47 @@ TProfile2D *TH3::DoProjectProfile2D(char* title, char* name, TAxis* projX, TAxis
    TProfile2D *p2 = 0;
    const TArrayD *xbins = projX->GetXbins();
    const TArrayD *ybins = projY->GetXbins();
-   if (xbins->fN == 0 && ybins->fN == 0) {
-      p2 = new TProfile2D(name,title,ny,projY->GetBinLowEdge(iymin),projY->GetBinUpEdge(iymax)
-                          ,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
-   } else if (ybins->fN == 0) {
-      p2 = new TProfile2D(name,title,ny,projY->GetBinLowEdge(iymin),projY->GetBinUpEdge(iymax)
-                          ,nx,&xbins->fArray[ixmin-1]);
-   } else if (xbins->fN == 0) {
-      p2 = new TProfile2D(name,title,ny,&ybins->fArray[iymin-1]
-                          ,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
+   if ( originalRange ) {
+      if (xbins->fN == 0 && ybins->fN == 0) {
+         p2 = new TProfile2D(name,title,projY->GetNbins(),projY->GetXmin(),projY->GetXmax()
+                             ,projX->GetNbins(),projX->GetXmin(),projX->GetXmax());
+      } else if (ybins->fN == 0) {
+         p2 = new TProfile2D(name,title,projY->GetNbins(),projY->GetXmin(),projY->GetXmax()
+                          ,projX->GetNbins(),&xbins->fArray[ixmin-1]);
+      } else if (xbins->fN == 0) {
+         p2 = new TProfile2D(name,title,projY->GetNbins(),&ybins->fArray[iymin-1]
+                             ,projX->GetNbins(),projX->GetXmin(),projX->GetXmax());
+      } else {
+         p2 = new TProfile2D(name,title,projY->GetNbins(),&ybins->fArray[iymin-1],projX->GetNbins(),&xbins->fArray[ixmin-1]);
+      }
    } else {
-      p2 = new TProfile2D(name,title,ny,&ybins->fArray[iymin-1],nx,&xbins->fArray[ixmin-1]);
+      if (xbins->fN == 0 && ybins->fN == 0) {
+         p2 = new TProfile2D(name,title,ny,projY->GetBinLowEdge(iymin),projY->GetBinUpEdge(iymax)
+                             ,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
+      } else if (ybins->fN == 0) {
+         p2 = new TProfile2D(name,title,ny,projY->GetBinLowEdge(iymin),projY->GetBinUpEdge(iymax)
+                             ,nx,&xbins->fArray[ixmin-1]);
+      } else if (xbins->fN == 0) {
+         p2 = new TProfile2D(name,title,ny,&ybins->fArray[iymin-1]
+                             ,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
+      } else {
+         p2 = new TProfile2D(name,title,ny,&ybins->fArray[iymin-1],nx,&xbins->fArray[ixmin-1]);
+      }
    }
 
    // Set references to the axis, so that the loop has no branches.
-   TAxis* out = 0;
+   TAxis* outAxis = 0;
    if ( projX != GetXaxis() && projY != GetXaxis() ) {
-      out = GetXaxis();
+      outAxis = GetXaxis();
    } else if ( projX != GetYaxis() && projY != GetYaxis() ) {
-      out = GetYaxis();
+      outAxis = GetYaxis();
    } else {
-      out = GetZaxis();
+      outAxis = GetZaxis();
    }
 
    // Weights management
    bool useWeights = (GetSumw2N() > 0); 
    if (useWeights ) p2->Sumw2(); // store sum of w2 in profile if histo is weighted
-   
-   // If under/over flow, then update the range
-   Int_t outmin = out->GetFirst();
-   Int_t outmax = out->GetLast();
-   if (!out->TestBit(TAxis::kAxisRange)) {
-      if (useUF) outmin--; 
-      if (useOF) outmax++;
-   }
    
    // Set references to the bins, so that the loop has no branches.
    Int_t *refX = 0, *refY = 0, *refZ = 0;
@@ -2366,11 +2397,29 @@ TProfile2D *TH3::DoProjectProfile2D(char* title, char* name, TAxis* projX, TAxis
 
    // Call specific method for the projection
    for (ixbin=0;ixbin<=1+projX->GetNbins();ixbin++){
+      if ( (ixbin < ixmin || ixbin > ixmax) && projX->TestBit(TAxis::kAxisRange)) continue;
       for ( iybin=0;iybin<=1+projY->GetNbins();iybin++){
-         for (outbin=outmin;outbin<=outmax;outbin++){
+         if ( (iybin < iymin || iybin > iymax) && projX->TestBit(TAxis::kAxisRange)) continue;
+         for (outbin=outAxis->GetFirst() - ( useUF && !outAxis->TestBit(TAxis::kAxisRange) );
+              outbin<=outAxis->GetLast() + ( useOF && !outAxis->TestBit(TAxis::kAxisRange) );
+              ++outbin){
             Int_t bin = GetBin(*refX,*refY,*refZ);
 
-            DoFillProfileProjection(p2, *projY, *projX, *out, iybin, ixbin, outbin, bin, useWeights); 
+            //DoFillProfileProjection(p2, *projY, *projX, *outAxis, iybin, ixbin, outbin, bin, useWeights); 
+
+            Double_t cont = GetBinContent(bin); 
+            if (!cont) continue; 
+
+            TArrayD & binSumw2 = *(p2->GetBinSumw2()); 
+            if (useWeights && binSumw2.fN <= 0) useWeights = false;  
+
+            // the following fill update wrongly the fBinSumw2- need to save it before
+            Int_t outBin = p2->FindBin(projY->GetBinCenter(iybin), projX->GetBinCenter(ixbin));
+
+            Double_t tmp = 0;
+            if ( useWeights ) tmp = binSumw2.fArray[outBin];            
+            p2->Fill( projY->GetBinCenter(iybin) , projX->GetBinCenter(ixbin), outAxis->GetBinCenter(outbin), cont);
+            if (useWeights ) binSumw2.fArray[outBin] = tmp + fSumw2.fArray[bin];
   
          }
       }
@@ -2446,7 +2495,7 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    bool useOF = opt.Contains("of");
 
    bool originalRange = false;
-   if ( opt.Contains("nof") )
+   if ( opt.Contains("nof") || opt.Contains("of") )
       originalRange = (opt.CountChar('o') > 1);
    else
       originalRange = (opt.Contains('o'));
