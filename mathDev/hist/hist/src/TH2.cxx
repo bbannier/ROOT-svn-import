@@ -1998,14 +1998,8 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
    const char *expectedName = ( onX ? "_pfx" : "_pfy" );
 
    Int_t firstOutBin, lastOutBin;
-   if ( originalRange ) 
-   {
-      firstOutBin = 1;
-      lastOutBin = outAxis.GetNbins() + 1;
-   } else {
-      firstOutBin = outAxis.GetFirst();
-      lastOutBin = outAxis.GetLast();
-   }
+   firstOutBin = outAxis.GetFirst();
+   lastOutBin = outAxis.GetLast();
 
    if ( lastbin < firstbin && inAxis.TestBit(TAxis::kAxisRange) ) {
       firstbin = inAxis.GetFirst();
@@ -2077,11 +2071,13 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
    Double_t totcont = 0; 
    TArrayD & binSumw2 = *(h1->GetBinSumw2()); 
    for (Int_t outBin =0;outBin<=h1->GetNbinsX()+1;outBin++) {
+      if ( outBin < firstOutBin && originalRange && outAxis.TestBit(TAxis::kAxisRange) ) continue;
+      if ( outBin > lastOutBin && originalRange && outAxis.TestBit(TAxis::kAxisRange) ) continue;
       if ( firstOutBin > 1 && outBin == 0 ) continue;
       if ( lastOutBin < outAxis.GetNbins() && outBin == h1->GetNbinsX() + 1 ) continue;
       for (Int_t inBin=firstbin;inBin<=lastbin;inBin++) {
-         Int_t binx = (onX ? outBin  + firstOutBin - 1:  inBin );
-         Int_t biny = (onX ?  inBin : outBin + firstOutBin - 1 );
+         Int_t binx = (onX ? outBin  + (originalRange?0:(firstOutBin - 1)) :  inBin );
+         Int_t biny = (onX ?  inBin : outBin + (originalRange?0:(firstOutBin - 1)) );
          Int_t bin = GetBin(binx,biny); 
          if (ncuts) {
             if (!fPainter->IsInside(binx,biny)) continue;
@@ -2234,15 +2230,8 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
       inAxis = GetXaxis();
    }
 
-   if ( originalRange ) 
-   {
-      firstOutBin = 1;
-      lastOutBin = outAxis->GetNbins() + 1;
-   } else {
-      firstOutBin = outAxis->GetFirst();
-      lastOutBin = outAxis->GetLast();
-   }
-
+   firstOutBin = outAxis->GetFirst();
+   lastOutBin = outAxis->GetLast();
    
    if ( lastbin < firstbin && inAxis->TestBit(TAxis::kAxisRange) ) {
       firstbin = inAxis->GetFirst();
@@ -2255,21 +2244,10 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
          firstbin = 1;
          lastbin = inAxis->GetNbins();
       }
-//       if ( originalRange )
-//       {
-//          firstbin = 1;
-//          lastbin = inAxis->GetNbins() + 1;
-//       }
    } 
    if (firstbin < 0) firstbin = 0;
    if (lastbin  < 0) lastbin  = inNbin + 1;
    if (lastbin  > inNbin+1) lastbin  = inNbin + 1;
-
-   if ( originalRange )
-   {
-      firstbin = 0;
-      lastbin = inAxis->GetNbins() + 1;
-   }
 
    // Create the projection histogram
    char *pname = (char*)name;
@@ -2327,17 +2305,20 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
    // Fill the projected histogram
    Double_t cont,err2;
    Double_t totcont = 0;
+
    for (Int_t binOut=0;binOut<=h1->GetNbinsX() + 1;binOut++) {
       err2 = 0;
       cont = 0;
       // when the range is set in the out axis, overflow and underflow
       // are not considered
+      if ( binOut < firstOutBin && originalRange && outAxis->TestBit(TAxis::kAxisRange) ) continue;
+      if ( binOut > lastOutBin && originalRange && outAxis->TestBit(TAxis::kAxisRange) ) continue;
       if ( firstOutBin > 1 && binOut == 0 ) continue;
       if ( lastOutBin < outAxis->GetNbins() && binOut == h1->GetNbinsX() + 1 ) continue;
       for (Int_t binIn=firstbin;binIn<=lastbin;binIn++) {
          Int_t binx, biny;
-         if ( onX ) { binx = binOut + firstOutBin - 1; biny = binIn;  }
-         else       { binx = binIn;  biny = binOut + firstOutBin - 1; }
+         if ( onX ) { binx = binOut + (originalRange?0:(firstOutBin - 1)); biny = binIn;  }
+         else       { binx = binIn;  biny = binOut + (originalRange?0:(firstOutBin - 1)); }
 
          if (ncuts) {
             if (!fPainter->IsInside(binx,biny)) continue;
