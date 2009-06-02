@@ -79,7 +79,8 @@ UnBinData::UnBinData(unsigned int n, const double * dataX, const double * dataY 
    FitData( ), 
    fDim(2), 
    fNPoints(n),
-   fDataVector(0)
+   fDataVector(0),
+   fDataWrapper(0)
 { 
    //    constructor for 2D external data
    fDataWrapper = new DataWrapper(dataX, dataY, 0, 0, 0, 0);
@@ -99,7 +100,8 @@ UnBinData::UnBinData(unsigned int n, const double * dataX, const DataRange & ran
    FitData(range), 
    fDim(1), 
    fNPoints(0),
-   fDataVector(0)
+   fDataVector(0),
+   fDataWrapper(0)
 { 
    // constructor for 1D array data using a range to select the data
    if ( n > MaxSize() ) 
@@ -118,7 +120,8 @@ UnBinData::UnBinData(unsigned int n, const double * dataX, const double * dataY,
    FitData(range), 
    fDim(2), 
    fNPoints(0),
-   fDataVector(0)
+   fDataVector(0),
+   fDataWrapper(0)
 { 
    // constructor for 2D array data using a range to select the data
    if ( n > MaxSize() ) 
@@ -140,7 +143,8 @@ UnBinData::UnBinData(unsigned int n, const double * dataX, const double * dataY,
    FitData(range ), 
    fDim(3), 
    fNPoints(0),
-   fDataVector(0)
+   fDataVector(0),
+   fDataWrapper(0)
 { 
    // constructor for 3D array data using a range to select the data
    if ( n > MaxSize() ) 

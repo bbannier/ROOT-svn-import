@@ -120,7 +120,8 @@ public :
       FitData( ), 
       fDim(dim), 
       fNPoints(0),
-      fDataVector(0)
+      fDataVector(0),
+      fDataWrapper(0)
    { 
       unsigned int n = dim*maxpoints; 
       if ( n > MaxSize() ) {
@@ -244,7 +245,7 @@ public:
    /**
       add multi-dim coordinate data
    */
-   void Add(double *x) { 
+   void Add(const double *x) { 
       int index = fNPoints*PointSize(); 
 
       assert(fDataVector != 0);

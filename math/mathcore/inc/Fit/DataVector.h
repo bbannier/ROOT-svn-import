@@ -201,6 +201,8 @@ private:
 /**
    class maintaining a pointer to external data
    Using this class avoids copying the data when performing a fit
+   NOTE: this class is not thread-safe and should not be used in parallel fits
+   
 
    @ingroup FitData
  */
@@ -304,6 +306,12 @@ public:
       fX(std::vector<double>(dim) ),
       fErr(std::vector<double>(dim) )
    { }
+
+   // destructor 
+   ~DataWrapper() { 
+      //printf("Delete Data wrapper\n");
+      // no operations
+   }
 
    // use default copy constructor and assignment operator
    // copy the pointer of the data not the data
