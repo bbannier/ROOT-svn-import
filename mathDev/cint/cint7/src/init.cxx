@@ -948,6 +948,10 @@ static void G__platformMacro()
 #ifdef __SUNPRO_C   /* Sun C compiler */
    G__DEFINE_MACRO_C(__SUNPRO_C);
 #endif
+#ifdef _STLPORT_VERSION
+   // stlport version, used on e.g. SUN
+   G__DEFINE_MACRO_C(_STLPORT_VERSION);
+#endif
 #ifdef G__VISUAL    /* Microsoft Visual C++ compiler */
    if (G__globalcomp == G__NOLINK) {
       sprintf(temp, "G__VISUAL=%ld", (long)G__VISUAL);
@@ -1117,7 +1121,7 @@ void Cint::Internal::G__set_stdio()
    G__intp_sin = G__sin;
 
    // FILE is a fundamental type for CINT
-   ::Reflex::ClassBuilder("FILE", typeid(FILE), 0, ::Reflex::STRUCT);
+   ::Reflex::ClassBuilder("FILE", typeid(FILE), 0, ::Reflex::STRUCT).EnableCallback(false);
 
    G__var_type = 'E';
    sprintf(temp, "stdout=(FILE*)(%ld)", (long)G__intp_sout);

@@ -85,6 +85,12 @@ ifeq ($(PLATFORM),win32)
 ALLEXECS   += $(XRDEXECS)
 endif
 
+# Local targets
+TARGETS    := $(XRDLIBS)
+ifeq ($(PLATFORM),win32)
+TARGETS    += $(XRDEXECS)
+endif
+
 ##### local rules #####
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
 
@@ -126,10 +132,23 @@ $(XROOTDMAKE): $(XROOTDCFGD)
 		if [ ! "x$(SSLLIBDIR)" = "x" ] ; then \
 		   xlib=`echo $(SSLLIBDIR) | cut -c3-`; \
 		   xopt="$$xopt --with-ssl-libdir=$$xlib"; \
+		elif [ ! "x$(SSLLIB)" = "x" ] ; then \
+		   xlibs=`echo $(SSLLIB)`; \
+		   for l in $$xlibs; do \
+   		      if [ ! "x$$l" = "x-lssl" ] && [ ! "x$$l" = "x-lcrypto" ]  ; then \
+		         xlib=`dirname $$l`; \
+  		         xopt="$$xopt --with-ssl-libdir=$$xlib"; \
+      		         break; \
+     		      fi; \
+   		   done; \
 		fi; \
 		if [ ! "x$(SSLINCDIR)" = "x" ] ; then \
 		   xinc=`echo $(SSLINCDIR)`; \
 		   xopt="$$xopt --with-ssl-incdir=$$xinc"; \
+		fi; \
+		if [ ! "x$(SSLSHARED)" = "x" ] ; then \
+		   xsha=`echo $(SSLSHARED)`; \
+		   xopt="$$xopt --with-ssl-shared=$$xsha"; \
 		fi; \
 		if [ ! "x$(SHADOWFLAGS)" = "x" ] ; then \
 		   xopt="$$xopt --enable-shadowpw"; \
@@ -149,7 +168,7 @@ $(XROOTDMAKE): $(XROOTDCFGD)
 		   xaddopts=`echo $(XRDADDOPTS)`; \
 		   xopt="$$xopt $$xaddopts"; \
 		fi; \
-		xopt="$$xopt --disable-krb4 --enable-echo --no-arch-subdirs --disable-mon"; \
+		xopt="$$xopt --disable-krb4 --enable-echo --no-arch-subdirs --disable-mon --with-cxx=$(CXX) --with-ld=$(LD)"; \
 		cd xrootd; \
 		echo "Options to Xrootd-configure: $$xarch $$xopt $(XRDDBG)"; \
 		GNUMAKE=$(MAKE) ./configure.classic $$xarch $$xopt $(XRDDBG); \
@@ -243,7 +262,7 @@ $(XROOTDDIRL)/libXrdSut.a: $(XROOTDBUILD)
 
 ### General rules
 
-all-$(MODNAME): $(XRDPLUGINS) $(XRDEXECS)
+all-$(MODNAME): $(TARGETS)
 
 clean-$(MODNAME):
 ifneq ($(PLATFORM),win32)

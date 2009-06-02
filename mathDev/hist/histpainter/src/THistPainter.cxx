@@ -1097,6 +1097,11 @@ content.
 
 <p>The color table used is defined in the current style.
 
+<p>The default number of color levels used to paint the cells is 20.
+It can be changed with <tt>TH1::SetContour()</tt> or
+<tt>TStyle::SetNumberContours()</tt>. The higher this number is, the smoother
+is the color change between cells.
+
 <p>The color palette in TStyle can be modified via <tt>gStyle->SePalette()</tt>.
 
 <p>All the none empty bins are painted. Empty bins are not painted unless
@@ -3435,6 +3440,35 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    if (Hoption.Axis == -1) return;
    if (Hoption.Same && Hoption.Axis <= 0) return;
 
+   // Repainting alphanumeric labels axis on a plot done with
+   // the option HBAR (horizontal) needs some adjustements.
+   TAxis *xaxis = 0;
+   TAxis *yaxis = 0;
+   if (Hoption.Same && Hoption.Axis) { // Axis repainted (TPad::RedrawAxis)
+      if (fXaxis->GetLabels() || fYaxis->GetLabels()) { // One axis has alphanumeric labels
+         TIter next(gPad->GetListOfPrimitives());
+         TObject *obj;
+         // Check if the first TH1 of THStack in the pad is drawn with the option HBAR
+         while ((obj = next())) {
+            if (!obj->InheritsFrom("TH1") &&
+                !obj->InheritsFrom("THStack")) continue;
+            TString opt = obj->GetDrawOption();
+            opt.ToLower();
+            // if drawn with HBAR, the axis should be inverted and the pad set to horizontal
+            if (strstr(opt,"hbar")) {
+               gPad->SetVertical(kFALSE);
+               xaxis = fXaxis;
+               yaxis = fYaxis;
+               if (!strcmp(xaxis->GetName(),"xaxis")) {
+                  fXaxis = yaxis;
+                  fYaxis = xaxis;
+               }
+            }
+            break;
+         }
+      }
+   }
+
    static char chopt[10] = "";
    Double_t gridl = 0;
    Int_t ndiv, ndivx, ndivy, nx1, nx2, ndivsave;
@@ -3633,6 +3667,12 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
       axis.PaintAxis(yAxisXPos2, aymin,
                      yAxisXPos2, aymax,
                      uminsave, umaxsave,  ndivsave, chopt, gridl, drawGridOnly);
+   }
+
+   // Reset the axis if they have been inverted in case of option HBAR
+   if (xaxis) {
+      fXaxis = xaxis;
+      fYaxis = yaxis;
    }
 }
 
@@ -7168,12 +7208,29 @@ void THistPainter::PaintTriangles(Option_t *option)
    if (!fGraph2DPainter) fGraph2DPainter = new TGraph2DPainter(dt);
 
    // Define the 3D view
-   fXbuf[0] = Hparam.xmin;
-   fYbuf[0] = Hparam.xmax;
-   fXbuf[1] = Hparam.ymin;
-   fYbuf[1] = Hparam.ymax;
-   fXbuf[2] = Hparam.zmin;
-   fYbuf[2] = Hparam.zmax;
+   if (Hoption.Same) {
+      TView *viewsame = gPad->GetView();
+      if (!viewsame) {
+         Error("PaintTriangles", "no TView in current pad, do not use option SAME");
+         return;
+      }
+      Double_t *rmin = viewsame->GetRmin();
+      Double_t *rmax = viewsame->GetRmax();
+      fXbuf[0] = rmin[0];
+      fYbuf[0] = rmax[0];
+      fXbuf[1] = rmin[1];
+      fYbuf[1] = rmax[1];
+      fXbuf[2] = rmin[2];
+      fYbuf[2] = rmax[2];
+   } else {
+      fXbuf[0] = Hparam.xmin;
+      fYbuf[0] = Hparam.xmax;
+      fXbuf[1] = Hparam.ymin;
+      fYbuf[1] = Hparam.ymax;
+      fXbuf[2] = Hparam.zmin;
+      fYbuf[2] = Hparam.zmax;
+   }
+
    fLego = new TPainter3dAlgorithms(fXbuf, fYbuf);
    TView *view = gPad->GetView();
    if (!view) {

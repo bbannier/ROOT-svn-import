@@ -39,6 +39,7 @@
 Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, TYPE typ)
 : fClass(0)
 , fLastMember()
+, fCallbackEnabled(true)
 {
    // -- Construct a class information (internal).
    std::string nam2(nam);
@@ -65,7 +66,9 @@ Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info
 Reflex::ClassBuilderImpl::~ClassBuilderImpl()
 {
    // -- ClassBuilderImpl destructor. Used for call back functions (e.g. Cintex).
-   FireClassCallback(fClass->ThisType());
+   if (fCallbackEnabled) {
+      FireClassCallback(fClass->ThisType());
+   }
 }
 
 //______________________________________________________________________________
@@ -167,6 +170,15 @@ void Reflex::ClassBuilderImpl::AddProperty(const char* key, Any value)
 }
 
 //______________________________________________________________________________
+void Reflex::ClassBuilderImpl::EnableCallback(bool enable /*= true*/)
+{
+   // Enable (or disable) the calling of the callback when this object is 
+   // destructed.
+
+   fCallbackEnabled = enable;
+}
+
+//______________________________________________________________________________
 void Reflex::ClassBuilderImpl::SetSizeOf(size_t size)
 {
    // -- Set the size of the class (internal).
@@ -259,6 +271,16 @@ Reflex::ClassBuilder& Reflex::ClassBuilder::addUnion(const char* nam, const char
   return *this;
 }
 */
+
+//______________________________________________________________________________
+Reflex::ClassBuilder& Reflex::ClassBuilder::EnableCallback(bool enable /*=true*/)
+{
+   // Enable (or disable) the calling of the callback when this object is 
+   // destructed.
+
+   fClassBuilderImpl.EnableCallback(enable);
+   return *this;
+}
 
 //______________________________________________________________________________
 Reflex::ClassBuilder& Reflex::ClassBuilder::SetSizeOf(size_t size)

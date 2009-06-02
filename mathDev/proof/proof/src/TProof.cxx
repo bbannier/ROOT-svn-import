@@ -337,7 +337,8 @@ TProof::TProof(const char *masterurl, const char *conffile, const char *confdir,
 
    // Old-style server type: we add this to the list and set the global pointer
    if (IsProofd() || TestBit(TProof::kIsMaster))
-      gROOT->GetListOfProofs()->Add(this);
+      if (!gROOT->GetListOfProofs()->FindObject(this))
+         gROOT->GetListOfProofs()->Add(this);
 
    // Still needed by the packetizers: needs to be changed
    gProof = this;
@@ -425,7 +426,8 @@ TProof::TProof() : fUrl(""), fServType(TProofMgr::kXProofd)
 
    fCloseMutex = 0;
 
-   gROOT->GetListOfProofs()->Add(this);
+   if (!gROOT->GetListOfProofs()->FindObject(this))
+      gROOT->GetListOfProofs()->Add(this);
 
    gProof = this;
 }
@@ -497,6 +499,10 @@ TProof::~TProof()
 
    // Remove for the global list
    gROOT->GetListOfProofs()->Remove(this);
+   // ... and from the manager list
+   if (fManager && fManager->IsValid())
+      fManager->DiscardSession(this);
+
    if (gProof && gProof == this) {
       // Set previous as default
       TIter pvp(gROOT->GetListOfProofs(), kIterBackward);
@@ -1269,6 +1275,7 @@ TSlave *TProof::CreateSlave(const char *url, const char *ord,
 
    return sl;
 }
+
 
 //______________________________________________________________________________
 TSlave *TProof::CreateSubmaster(const char *url, const char *ord,
@@ -3254,7 +3261,7 @@ void TProof::MarkBad(TSlave *wrk, const char *reason)
       // and deleted, since it is not valid anymore
       fSlaves->Remove(wrk);
       if (fManager)
-         fManager->ShutdownSession(this);
+         fManager->DiscardSession(this);
    }
 }
 
@@ -5680,7 +5687,10 @@ Int_t TProof::UploadPackage(const char *pack, EUploadPackageOpt opt)
    }
 
    // Nothing more to do if we are a Lite-session
-   if (IsLite()) return 0;
+   if (IsLite()) {
+      delete md5;
+      return 0;
+   }
 
    TString smsg;
    smsg.Form("+%s", gSystem->BaseName(par));

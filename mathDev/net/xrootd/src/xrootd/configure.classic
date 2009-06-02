@@ -344,7 +344,8 @@ check_symbol() {
 
     # Assert that we got enough arguments
     if test $# -ne 3 ; then
-	echo "check_symbol: Not 3 arguments"
+	echo "check_symbol: not 3 arguments"
+        found_symbol=0
 	return 1
     fi
 
@@ -353,31 +354,98 @@ check_symbol() {
     symbollib=$1  ; shift
     symboldir=$1
 
+    if test "x$symbollib" = "x" ; then
+        found_symbol=0
+        return 1
+    fi
+
+    symbollib=`echo $symbollib | sed -e 's/^-l/lib/'`
+
+    if test ! "x$symboldir" = "x" ; then
+        symboldir=`echo $symboldir | sed -e 's/^-L//'`
+    fi
+
     # Check if we got a specific argument as to where the library
     # is to be found
     symbolfile=$symbollib
-    if test ! "x$symboldir" = "x" ; then
-        symbolfile=$symboldir/$symbollib
-        if test ! -r $symbolfile ; then
-            for i in .a .so .lib ; do
-                if test -r $symbolfile$i ; then
-                    symbolfile=$symbolfile$i
-                    break
-                fi
-             done
-        fi
+    exts=".so .lib"
+    if test ! "x$shared" = "xno" ; then
+	exts="$exts .a"
+    else
+	exts=".a $exts"
     fi
+
+    usrlib="/usr/lib"
+    # look first in the lib32 directories
+    if test "x$checklib32" = "xyes" ; then
+        usrlib="/usr/lib32 $usrlib"
+    fi
+    # look first in the lib64 directories
+    if test "x$checklib64" = "xyes" ; then
+        usrlib="/usr/lib64 $usrlib"
+    fi
+    # look only in the lib64 directories
+    if test "x$checkonlylib64" = "xyes" ; then
+        usrlib="/usr/lib64"
+    fi
+    # look only in the hpux64 directories
+    if test "x$checkhpux64" = "xyes" ; then
+        usrlib="/usr/lib/hpux64"
+    fi
+
+    for d in "$symboldir" $usrlib ; do
+        if test ! -r $d/$symbollib ; then
+           for i in $exts ; do
+              if test -r $d/$symbollib$i ; then
+                 symbolfile=$d/$symbollib$i
+                 break 2
+              fi
+           done
+        else
+            symbolfile=$d/$symbollib
+            break
+        fi
+    done
 
     if test "x$symbolfile" = "x" || test ! -r $symbolfile ; then
        found_symbol=0
+       echo " Symbol not found"
        return 1
     fi
 
-    symbol_in_lib=`nm $symbolfile | grep $symbol > /dev/null 2>&1`
+    checking_msg "$symbol in $symbolfile"
+    nm $symbolfile 2>&1 | grep $symbol > /dev/null 2>&1
     if test $? -eq 0 ; then
         found_symbol=1
     else
-        found_symbol=0
+        nm $symbolfile 2>&1 | grep "no symbols" > /dev/null 2>&1
+        if test $? -eq 0 ; then
+           # stripped library - only safe test is to link against the
+           # library!  However, we do not know what compiler to use
+           # so we can not do the test.  Assume the symbol is in
+           testfile="config/test/test-symbol.cc"
+           if test -f $testfile ; then
+              rm -f $testfile
+           fi
+cat << EOF > $testfile
+extern int $symbol ();
+int main() { $symbol (); return 0; }
+EOF
+           check_prototype "symbol" $ccbin "-c"
+           if test "x$found_prototype" = "xyes" ; then
+              found_symbol=1
+           else
+              found_symbol=0
+           fi
+           rm -f $testfile
+        else
+           found_symbol=0
+        fi
+    fi
+    if test $found_symbol -eq 1 ; then
+       echo "yes"
+    else
+       echo "no"
     fi
 }
 
@@ -616,9 +684,16 @@ with options, prefix with --with-, enables corresponding support
    krb5-incdir     Kerberos5 support, location of krb5.h
    krb5-libdir     Kerberos5 support, location of libkrb5
    perl            Path to the perl executable to be used for the perl module
-   ssl-incdir      OpenSSL support, location of openssl headers
-   ssl-libdir      OpenSSL support, location of libssl
+   ssl             OpenSSL support, location of openssl installation
+   ssl-incdir      OpenSSL support, location of openssl headers (has priority over ssl-dir)
+   ssl-libdir      OpenSSL support, location of libssl, libcrypto (has priority over ssl-dir)
+   ssl-shared      OpenSSL support, controls usage of shared linkage SSL libraries {yes/no}
    thread-libdir   Path to libpthread
+
+with compiler options, prefix with --with-, overrides default value
+
+   cxx             alternative C++ compiler to be used
+   ld              alternative Linker to be used
 
 Advanced options:
 
@@ -696,8 +771,12 @@ hassigwti=""
 hasfstatat=""
 afslibdir=""
 afsincdir=""
+ssldir=""
 ssllibdir=""
 sslincdir=""
+sslshared=""
+altcxx=""
+altld=""
 nccflv="$ccflv"
 if test $# -gt 0 ; then
    while test ! "x$1" = "x" ; do
@@ -734,9 +813,13 @@ if test $# -gt 0 ; then
       --with-krb5-incdir=*)    krb5incdir=$optarg    ; enable_krb5="yes"    ;;
       --with-krb5-libdir=*)    krb5libdir=$optarg    ; enable_krb5="yes"    ;;
       --with-perl=*)           perlbin=$optarg       ; enable_perlint="yes" ;;
+      --with-ssl=*)            ssldir=$optarg        ; enable_ssl="yes"     ;;
       --with-ssl-incdir=*)     sslincdir=$optarg     ; enable_ssl="yes"     ;;
       --with-ssl-libdir=*)     ssllibdir=$optarg     ; enable_ssl="yes"     ;;
+      --with-ssl-shared=*)     sslshared=$optarg     ; enable_ssl="yes"     ;;
       --with-thread-libdir=*)  threadlibdir=$optarg  ; enable_thread="yes"  ;;
+      --with-cxx=*)            altcxx=$optarg        ;;
+      --with-ld=*)             altld=$optarg         ;;
       ################################################################
       #
       # Enable/disable to turn on/off third party software linkage and
@@ -848,6 +931,16 @@ if test "x$platform" = "xmacosx" ; then
       echo "$macosx_major.$macosx_minor: OS version not supported (must be >= 10.3). Sorry."
       exit 1
    fi
+fi
+
+#
+#  Check alternatice compiler / linker
+#
+if test ! "x$altcxx" = "x" ; then
+   altcxx="TYPECC = $altcxx"
+fi
+if test ! "x$altld" = "x" ; then
+   altld="TYPELD = $altld"
 fi
 
 #
@@ -1812,7 +1905,7 @@ if test ! "x$enable_afs" = "xno" ; then
           afslib=""
           afslibdir=""
           enable_afs="no"
-          break
+          continue
        fi
        #
        # Check symbols
@@ -1941,6 +2034,31 @@ sslextracflags=""
 if test "x$enable_ssl" = "xyes" ; then
 
     #
+    # dirs: --with-ssl-incdir and --with-ssl-libdir have priority on --with-ssl-dir
+    #       in both cases we link statically unless --with-ssl-shared is 'yes'
+    #
+    if test ! "x$ssldir" = "x" ; then
+       if test "x$sslincdir" = "x" ; then
+          sslincdir=$ssldir/include
+       fi
+       if test "x$ssllibdir" = "x" ; then
+          ssllibdir=$ssldir/lib
+       fi
+       if test "x$sslshared" = "x" ; then
+          sslshared=no
+       fi
+    else
+       if test ! "x$ssllibdir" = "x" ; then
+          if test "x$sslshared" = "x" ; then
+             sslshared=no
+          fi
+       fi
+    fi
+    if test "x$sslshared" = "x" ; then
+       sslshared="$enable_shared"
+    fi
+
+    #
     # Version
     #
     check_header "openssl/opensslv.h" "$sslincdir" $SSL $SSL/include \
@@ -2004,8 +2122,7 @@ if test "x$enable_ssl" = "xyes" ; then
     #
     # libraries
     #
-    ssl_shared="$enable_shared"
-    check_library "libssl" "$ssl_shared" "$ssllibdir" \
+    check_library "libssl" "$sslshared" "$ssllibdir" \
         $SSL $SSL/lib /lib /usr/lib /usr/local/lib /opt/lib $finkdir/lib
     if test "x$found_lib" = "x" ; then
         ssllib=""
@@ -2022,15 +2139,15 @@ if test "x$enable_ssl" = "xyes" ; then
              tmpssllibdir=`dirname $found_lib`
           fi
           ssllibdir=""
-          if test ! "x$ssl_shared" = "xno" ; then
-             ssl_shared=no
+          if test ! "x$sslshared" = "xno" ; then
+             sslshared=no
           fi
        else
           ssllibdir="$found_dir"
           tmpssllibdir=`echo $ssllibdir | cut -c3-`
        fi
        # All libraries in the same directory
-       check_library "libcrypto" "$ssl_shared" "$tmpssllibdir" /usr/lib
+       check_library "libcrypto" "$sslshared" "$tmpssllibdir" /usr/lib
        if test "x$found_lib" = "x" ; then
           ssllib=""
           ssllibdir=""
@@ -2040,11 +2157,14 @@ if test "x$enable_ssl" = "xyes" ; then
           ssllibdir="$found_dir"
        fi
     fi
+    if test "x$sslshared" = "xno" ; then
+       echo "Using OpenSSL static libraries"
+    fi
     #
     # header files
     #
     if test "x$enable_ssl" = "xyes" ; then
-     
+
        incssl="asn1.h asn1_mac.h bio.h dh.h evp.h err.h pem.h \
                rand.h rsa.h ssl.h x509.h x509v3.h"
        for i in $incssl ; do
@@ -2066,7 +2186,7 @@ if test "x$enable_ssl" = "xyes" ; then
         incssl="INCSSL = "
         libssl="LIBSSL = "
         # GSI needs OpenSSL
-        echo "Disabling GSI ... (requires OpenSSL)" 
+        echo "Disabling GSI ... (requires OpenSSL)"
         havegsi=""
         if test "x$havepwd" = "x" ; then
            xrdsut=""
@@ -2299,6 +2419,8 @@ sed -e "s|@arch@|$arch|"                 \
     -e "s|@perlccflags@|$perlccflags|" \
     -e "s|@nostrictalias@|$nostrictalias|" \
     -e "s|@hasoldhdrs@|$hasoldhdrs|" \
+    -e "s|@altcxx@|$altcxx|" \
+    -e "s|@altld@|$altld|" \
     < GNUmake.env.tmp > $ENVOUT
 rm -f GNUmake.env.tmp
 
