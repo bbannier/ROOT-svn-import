@@ -40,6 +40,7 @@ options="                    \
    enable_builtin_afterimage \
    enable_builtin_ftgl       \
    enable_builtin_freetype   \
+   enable_builtin_glew       \
    enable_builtin_pcre       \
    enable_builtin_zlib       \
    enable_castor             \
@@ -127,6 +128,7 @@ no_stubs_test=no         # complete Dictionaries by default (All stubs)
 enable_unuran=no
 enable_winrtdebug=
 enable_xrootd=           # must be set explicitely via --enable-xrootd
+enable_builtin_glew=no
 
 # Remove old log file
 rm -f $logfile
@@ -1008,6 +1010,7 @@ enable/disable options, prefix with either --enable- or --disable-
   builtin-afterimage Built included libAfterImage, or use system libAfterImage
   builtin-ftgl       Built included libFTGL, or use system libftgl
   builtin-freetype   Built included libfreetype, or use system libfreetype
+  builtin-glew       Built included libGLEW, or use system libGLEW
   builtin-pcre       Built included libpcre, or use system libpcre
   builtin-zlib       Built included libz, or use system libz
   castor             CASTOR support, requires libshift from CASTOR >= 1.5.2
@@ -1082,6 +1085,8 @@ with options, prefix with --with-, enables corresponding support
   fftw3-libdir       FFTW3 support, location of libfftw3 (libfftw3-3 for windows)
   gfal-incdir        GFAL support, location of gfal_api.h
   gfal-libdir        GFAL support, location of libgfal
+  glew-incdir        GLEW support, location of glew.h
+  glew-libdir        GLEW support, location of libGLEW
   g4-incdir          GEANT4 support, location of GEANT4 header files
   g4-libdir          GEANT4 support, location of GEANT4 libraries
   clhep-incdir       CLHEP support, location of CLHEP header files
@@ -1124,8 +1129,10 @@ with options, prefix with --with-, enables corresponding support
   srp                Secure Remote Passwd support, location of SRP distribution
   srp-incdir         SRP support, location header of t_server.h
   srp-libdir         SRP support, location header of libsrp.a
+  ssl                OpenSSL support, location of openssl installation
   ssl-incdir         OpenSSL support, location of openssl headers
   ssl-libdir         OpenSSL support, location of libssl
+  ssl-shared         OpenSSL support, controls usage of shared linkage SSL libraries {yes/no}
   sys-iconpath       Extra icon path
   thread-libdir      Thread support, path to libpthread
   xml-incdir         XML support, location of libxml/tree.h
@@ -1286,6 +1293,8 @@ if test $# -gt 0 ; then
       --with-fftw3-libdir=*)   fftw3libdir=$optarg   ; enable_fftw3="yes"   ;;
       --with-gfal-incdir=*)    gfalincdir=$optarg    ; enable_gfal="yes"    ;;
       --with-gfal-libdir=*)    gfallibdir=$optarg    ; enable_gfal="yes"    ;;
+      --with-glew-incdir=*)    glewincdir=$optarg    ; enable_builtin_glew=no;;
+      --with-glew-libdir=*)    glewlibdir=$optarg    ; enable_builtin_glew=no;;
       --with-g4-incdir=*)      g4incdir=$optarg      ; enable_g4root="yes"  ;;
       --with-g4-libdir=*)      g4libdir=$optarg      ; enable_g4root="yes"  ;;
       --with-clhep-incdir=*)   clhepincdir=$optarg   ;;
@@ -1332,8 +1341,10 @@ if test $# -gt 0 ; then
       --with-srp=*)            srpdir=$optarg        ; enable_srp="yes"     ;;
       --with-srp-incdir=*)     srpincdir=$optarg     ; enable_srp="yes"     ;;
       --with-srp-libdir=*)     srplibdir=$optarg     ; enable_srp="yes"     ;;
+      --with-ssl=*)            ssldir=$optarg        ; enable_ssl="yes"     ;;
       --with-ssl-incdir=*)     sslincdir=$optarg     ; enable_ssl="yes"     ;;
       --with-ssl-libdir=*)     ssllibdir=$optarg     ; enable_ssl="yes"     ;;
+      --with-ssl-shared=*)     sslshared=$optarg     ; enable_ssl="yes"     ;;
       --with-sys-iconpath=*)   extraiconpath=$optarg ;;
       --with-thread-libdir=*)  threadlibdir=$optarg  ; enable_thread="yes"  ;;
       --with-xml-incdir=*)     xmlincdir=$optarg     ; enable_xml="yes"     ;;
@@ -1886,13 +1897,14 @@ result "$enable_builtin_zlib"
 #
 if test ! "x$enable_opengl" = "xno" && test ! "x$platform" = "xwin32" ; then
     # Check for OpenGL compatible include and library
-    check_header "GL/gl.h" "$openglincdir" $OPENGL $OPENGL/include \
+    openglincdirs="$OPENGL $OPENGL/include \
 	/usr/include /usr/include/X11 /usr/X11/include \
 	/usr/X11R6/include /usr/local/include/X11 \
 	/usr/local/X11R6/include /usr/local/include \
 	/usr/include/Mesa /usr/local/include/Mesa /usr/Mesa/include \
 	/usr/local/Mesa/include /usr/Mesa /usr/local/Mesa /opt/Mesa \
-	/opt/Mesa/include /opt/graphics/OpenGL/include
+	/opt/Mesa/include /opt/graphics/OpenGL/include"
+    check_header "GL/gl.h" "$openglincdir" $openglincdirs
     openglinc=$found_hdr
     openglincdir=$found_dir
 
@@ -1924,6 +1936,25 @@ if test ! "x$enable_opengl" = "xno" && test ! "x$platform" = "xwin32" ; then
        test "x$opengllib" = "x" || \
        test "x$openglulib" = "x" ; then
         enable_opengl="no"
+        enable_builtin_glew="no"
+    else
+        check_header "GL/glew.h" "$glewincdir" $openglincdirs
+        glewinc=$found_hdr
+        glewincdir=$found_dir
+
+        check_library "libGLEW" "$enable_shared" "$keep" $opengllibdirs
+        glewlib=$found_lib
+        glewlibdir=$found_dir
+
+        if test "x$glewincdir" = "x" || test "x$glewlib" = "x" ||
+           test "x$enable_builtin_glew_explicit" = "xyes" ; then
+            enable_builtin_glew="yes"
+            glewincdir=include
+            glewlibdir=-Llib
+            glewlibs=-lGLEW
+        fi
+        message "Checking whether to build included GLEW"
+        result "$enable_builtin_glew"
     fi
 fi
 check_explicit "$enable_opengl" "$enable_opengl_explicit" \
@@ -1938,6 +1969,11 @@ check_explicit "$enable_opengl" "$enable_opengl_explicit" \
 if test "x$platform" = "xwin32"; then
    enable_opengl="yes"
    openglincdir="include"
+
+   enable_builtin_glew="yes"
+   glewincdir=include
+   glewlibdir=
+   glewlibs=lib/libGLEW.lib
 fi
 
 ######################################################################
@@ -3587,12 +3623,37 @@ check_explicit "$enable_globus" "$enable_globus_explicit" \
 # conflicts.
 #
 if test "x$enable_ssl" = "xyes" ; then
+
+     #
+     # dirs: --with-ssl-incdir and --with-ssl-libdir have priority on --with-ssl-dir
+     #       in both cases we link statically unless --with-ssl-shared is 'yes'
+     #
+     if test ! "x$ssldir" = "x" ; then
+        if test "x$sslincdir" = "x" ; then
+           sslincdir=$ssldir/include
+        fi
+        if test "x$ssllibdir" = "x" ; then
+           ssllibdir=$ssldir/lib
+        fi
+        if test "x$sslshared" = "x" ; then
+           sslshared=no
+        fi
+     else
+        if test ! "x$ssllibdir" = "x" ; then
+           if test "x$sslshared" = "x" ; then
+              sslshared=no
+           fi
+        fi
+     fi
+     if test "x$sslshared" = "x" ; then
+        sslshared="$enable_shared"
+     fi
      #
      # libssl
      #
      libssl="libssl"
      tmpssllibdir=""
-     check_library "$libssl" "$enable_shared" "$ssllibdir" \
+     check_library "$libssl" "$sslshared" "$ssllibdir" \
          $SSL $SSL/lib /usr/lib /usr/local/lib /opt/lib $finkdir/lib
      if test "x$found_lib" != "x" ; then
          ssllib="$found_lib"
@@ -3602,8 +3663,8 @@ if test "x$enable_ssl" = "xyes" ; then
             if test ! "x$tmpssllibdir" = "x" ; then
                tmpssllibdir=`dirname $found_lib`
             fi
-            if test ! "x$ssl_shared" = "xno" ; then
-               ssl_shared=no
+            if test ! "x$sslshared" = "xno" ; then
+               sslshared=no
             fi
          else
             ssllibdir="$found_dir"
@@ -3614,7 +3675,7 @@ if test "x$enable_ssl" = "xyes" ; then
          # libcrypto, in the same dir
          #
          libcrypto="libcrypto"
-         check_library "$libcrypto" "$enable_shared" "$tmpssllibdir" \
+         check_library "$libcrypto" "$sslshared" "$tmpssllibdir" \
                       $SSL $SSL/lib /usr/lib /opt/lib /usr/local/lib $finkdir/lib
          if test "x$found_lib" != "x" ; then
              ssllib="$ssllib $found_lib"
@@ -3632,6 +3693,11 @@ if test "x$enable_ssl" = "xyes" ; then
 fi
 
 if test "x$enable_ssl" = "xyes" ; then
+
+    if test "x$sslshared" = "xno" ; then
+       echo "Using OpenSSL static libraries"
+    fi
+
     incssl="bio.h blowfish.h err.h pem.h rand.h rsa.h"
     ssl_incdir=""
     for i in $incssl ; do
@@ -4887,6 +4953,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@buildasimage@|$enable_asimage|"      \
     -e "s|@builtinafterimage@|$enable_builtin_afterimage|"  \
     -e "s|@buildftgl@|$enable_builtin_ftgl|"      \
+    -e "s|@buildglew@|$enable_builtin_glew|"      \
     -e "s|@builtinfreetype@|$enable_builtin_freetype|"      \
     -e "s|@builtinpcre@|$enable_builtin_pcre|"  \
     -e "s|@buildxrd@|$buildxrd|"                \
@@ -4919,6 +4986,9 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@ftglincdir@|$ftglincdir|"            \
     -e "s|@ftgllibdir@|$ftgllibdir|"            \
     -e "s|@ftgllibs@|$ftgllibs|"                \
+    -e "s|@glewincdir@|$glewincdir|"            \
+    -e "s|@glewlibdir@|$glewlibdir|"            \
+    -e "s|@glewlibs@|$glewlibs|"                \
     -e "s|@gslflags@|$gslflags|"                \
     -e "s|@gsllibdir@|$gsllibdir|"              \
     -e "s|@gsllibs@|$gsllibs|"                  \
@@ -5041,6 +5111,7 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@sslincdir@|$sslincdir|"              \
     -e "s|@ssllib@|$ssllib|"                    \
     -e "s|@ssllibdir@|$ssllibdir|"              \
+    -e "s|@sslshared@|$sslshared|"              \
     -e "s|@sslextracflags@|$sslextracflags|"    \
     -e "s|@testdir@|$testdir|"                  \
     -e "s|@threadflag@|$threadflag|"            \

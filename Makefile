@@ -108,6 +108,9 @@ ifeq ($(BUILDGL),yes)
 ifeq ($(BUILDFTGL),yes)
 MODULES      += graf3d/ftgl
 endif
+ifeq ($(BUILDGLEW),yes)
+MODULES      += graf3d/glew
+endif
 MODULES      += graf3d/gl graf3d/eve
 endif
 ifeq ($(BUILDMYSQL),yes)
@@ -200,7 +203,13 @@ MODULES      := $(subst cint/cint,cint/cint7,$(MODULES))
 endif
 endif
 ifeq ($(BUILDCINTEX),yes)
-MODULES      += cint/cintex
+   ifeq ($(BUILDCINT5),yes)
+   MODULES      += cint/cintex
+   else 
+     ifneq ($(BUILDBOTH),yes)
+     MODULES      += cint/cintexcompat
+     endif
+   endif
 endif
 ifeq ($(BUILDROOFIT),yes)
 MODULES      += roofit/roofitcore roofit/roofit roofit/roostats
@@ -259,7 +268,7 @@ endif
 
 ifneq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean),)
 MODULES      += core/unix core/winnt graf2d/x11 graf2d/x11ttf \
-                graf3d/gl graf3d/ftgl io/rfio io/castor \
+                graf3d/gl graf3d/ftgl graf3d/glew io/rfio io/castor \
                 montecarlo/pythia6 montecarlo/pythia8 misc/table \
                 sql/mysql sql/pgsql sql/sapdb net/srputils graf3d/x3d \
                 rootx net/rootd io/dcache io/chirp hist/hbook graf2d/asimage \
@@ -268,6 +277,7 @@ MODULES      += core/unix core/winnt graf2d/x11 graf2d/x11ttf \
                 graf2d/qt gui/qtroot gui/qtgsi net/xrootd net/netx net/alien \
                 proof/proofd proof/proofx proof/clarens proof/peac \
                 sql/oracle io/xmlparser math/mathmore cint/reflex cint/cintex \
+                cint/cintexcompat \
                 cint/cint7 roofit/roofitcore roofit/roofit roofit/roostats \
                 math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
                 geom/gdml graf3d/eve montecarlo/g4root net/glite misc/memstat \
@@ -955,6 +965,11 @@ install: all
 	   $(INSTALLDATA) cint/cint/include     $(DESTDIR)$(CINTINCDIR)/cint; \
 	   $(INSTALLDATA) cint/cint/lib         $(DESTDIR)$(CINTINCDIR)/cint; \
 	   $(INSTALLDATA) cint/cint/stl         $(DESTDIR)$(CINTINCDIR)/cint; \
+	   echo "Installing cint/cint7/include cint/cint7/lib and cint/cint7/stl in $(DESTDIR)$(CINTINCDIR)"; \
+	   $(INSTALLDIR)                        $(DESTDIR)$(CINTINCDIR)/cint7; \
+	   $(INSTALLDATA) cint/cint7/include    $(DESTDIR)$(CINTINCDIR)/cint7; \
+	   $(INSTALLDATA) cint/cint7/lib        $(DESTDIR)$(CINTINCDIR)/cint7; \
+	   $(INSTALLDATA) cint/cint7/stl        $(DESTDIR)$(CINTINCDIR)/cint7; \
 	   find $(DESTDIR)$(CINTINCDIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
 	   find $(DESTDIR)$(CINTINCDIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	   echo "Installing icons in $(DESTDIR)$(ICONPATH)"; \
@@ -1063,7 +1078,7 @@ uninstall:
               . \
               Math/GenVector Math \
               Reflex/internal Reflex/Builder Reflex \
-              Cintex TMVA Minuit2; do \
+              Cintex GL TMVA Minuit2; do \
               if test -d include/$${subdir}; then \
 	         for i in include/$${subdir}/*.h ; do \
 	            rm -f $(DESTDIR)$(INCDIR)/$${subdir}/`basename $$i`; \

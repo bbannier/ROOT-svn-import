@@ -20,7 +20,6 @@
 #include "Reflex/internal/TypeName.h"
 #include "Reflex/Builder/TypeBuilder.h"
 #include "Reflex/Builder/NamespaceBuilder.h"
-#include "Reflex/Builder/FunctionBuilder.h"
 #include "bc_exec.h"
 #include <vector>
 #include <sstream>
@@ -251,8 +250,8 @@ int Cint::G__compile_function_bytecode(const ::Reflex::Member& ifunc)
       G__tagdefining = bytecodeArena;
       G__struct.size[bytecodeTagnum] = 0;
       {
-         G__RflxProperties* prop = G__get_properties(bytecodeArena);
-         prop->builder.Class().SetSizeOf(0);
+         Reflex::Type type = bytecodeArena;
+         type.SetSize(0);
       }
       G__no_exec = 0;
       G__prerun = 0;
@@ -4255,7 +4254,7 @@ static ::Reflex::Member G__overload_match(const char* funcname, G__param* libp, 
    // Perform function overload matching, and if found and requested, convert arguments guided by the prototype.
    ::Reflex::Scope store_ifunc = p_ifunc;
 #ifdef G__ASM
-   int active_run = doconvert && !G__asm_wholefunction && !G__asm_noverflow;
+   int active_run = doconvert && !G__asm_wholefunction && !G__asm_noverflow && !(G__no_exec_compile==1 && funcname[0]=='~' /* loop compilation of temporary destruction */);
 #else
    int active_run = doconvert;
 #endif

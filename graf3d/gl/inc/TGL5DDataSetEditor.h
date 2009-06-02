@@ -1,4 +1,4 @@
-// @(#)root/gl:$Id:$
+// @(#)root/gl:$Id$
 // Author: Bertrand Bellenot 2009
 
 /*************************************************************************
@@ -30,8 +30,12 @@ class TGL5DDataSetEditor : public TGedFrame
 private:
    TGCheckButton    *fShowBoxCut;
    TGNumberEntry    *fNumberOfPlanes;
+   TGNumberEntry    *fAlpha;
    TGCheckButton    *fLogScale;
    TGDoubleSlider   *fSlideRange;
+
+   TGTextButton     *fApplyAlpha;
+   TGTextButton     *fApplyPlanes;
 
    //Model
    TGL5DPainter     *fPainter;
@@ -50,10 +54,13 @@ public:
 
    virtual void   SetModel(TObject* obj);
 
+   void           DoAlpha();
    void           DoLogScale();
-   void           DoNumberOfPlanes();
+   void           DoPlanes();
    void           DoShowBoxCut();
    void           DoSliderRangeMoved();
+   void           DoAlphaChanged();
+   void           DoNContoursChanged();
 
    ClassDef(TGL5DDataSetEditor, 0); //GUI for editing OpenGL 5D Viewer attributes
 };
