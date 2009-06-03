@@ -36,18 +36,20 @@ using namespace RooStats;
 
 //_______________________________________________________
 SamplingDistribution::SamplingDistribution( const char *name, const char *title,
-					    std::vector<Double_t>& samplingDist) :
+					    std::vector<Double_t>& samplingDist, const TString varName) :
   TNamed(name,title)
 {
   // SamplingDistribution constructor
   fSamplingDist = samplingDist;
   // need to check STL stuff here.  Will this = operator work as wanted, or do we need:
   //  std::copy(samplingDist.begin(), samplingDist.end(), fSamplingDist.begin());
+
+  fVarName = varName;
 }
 
 //_______________________________________________________
 SamplingDistribution::SamplingDistribution( const char *name, const char *title,
-					    std::vector<Double_t>& samplingDist, std::vector<Double_t>& sampleWeights) :
+					    std::vector<Double_t>& samplingDist, std::vector<Double_t>& sampleWeights, const TString varName) :
   TNamed(name,title)
 {
   // SamplingDistribution constructor
@@ -55,13 +57,16 @@ SamplingDistribution::SamplingDistribution( const char *name, const char *title,
   fSampleWeights = sampleWeights;
   // need to check STL stuff here.  Will this = operator work as wanted, or do we need:
   //  std::copy(samplingDist.begin(), samplingDist.end(), fSamplingDist.begin());
+
+  fVarName = varName;
 }
 
 //_______________________________________________________
-SamplingDistribution::SamplingDistribution( const char *name, const char *title) :
+SamplingDistribution::SamplingDistribution( const char *name, const char *title, const TString varName) :
   TNamed(name,title)
 {
    // SamplingDistribution constructor (with name and title)
+  fVarName = varName;
 }
 
 //_______________________________________________________
