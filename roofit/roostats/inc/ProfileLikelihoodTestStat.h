@@ -188,6 +188,7 @@ namespace RooStats {
       // Get the TestStatistic
       virtual const RooAbsArg* GetTestStatistic()  const {return fProfile;}  
     
+      virtual const TString GetVarName() const {return "Profile Likelihood Ratio";}
       
    private:
       RooProfileLL* fProfile;

@@ -69,6 +69,7 @@ namespace RooStats {
       fExtended = kTRUE;
       fRand = new TRandom();
       fCounter=0;
+      fVarName = fTestStat->GetVarName();
     }
 
     virtual ~ToyMCSampler() {
@@ -116,7 +117,7 @@ namespace RooStats {
 
       //      cout << " generated sampling dist " << endl;
       return new SamplingDistribution( MakeName(allParameters),
-				      "Sampling Distribution of Test Statistic", testStatVec );
+				       "Sampling Distribution of Test Statistic", testStatVec, fVarName );
     } 
 
      virtual RooAbsData* GenerateToyData(RooArgSet& allParameters) const {
@@ -263,7 +264,8 @@ namespace RooStats {
       Int_t fNevents;
       Bool_t fExtended;
       TRandom* fRand;
-      
+      TString fVarName;
+
       Int_t fCounter;
 
    protected:

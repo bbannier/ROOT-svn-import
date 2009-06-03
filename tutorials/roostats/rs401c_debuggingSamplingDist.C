@@ -16,6 +16,7 @@
 #include "RooStats/ToyMCSampler.h"
 #include "RooStats/ProfileLikelihoodTestStat.h"
 #include "RooStats/NeymanConstruction.h"
+#include "RooStats/SamplingDistPlot.h"
 
 #include "RooDataSet.h"
 #include "RooRealVar.h"
@@ -66,6 +67,11 @@ void rs401c_debuggingSamplingDist()
   //// show use of a distribution creator
   RooArgSet* point = new RooArgSet(mu, sigma);
   SamplingDistribution* samp = samplingDistCreator.GetSamplingDistribution(*point);
+
+  mu.setVal(0.5);
+  sigma.setVal(1.2);
+  SamplingDistribution* samp1 = samplingDistCreator.GetSamplingDistribution(*point);
+
   //  samp = samplingDistCreator.GetSamplingDistribution(*point);
 
   // should give a number close to 0.1 b/c the distribution is uniform on [0,1]
@@ -88,6 +94,21 @@ void rs401c_debuggingSamplingDist()
   frame->Draw();
   dataCanvas->Update();
 
+  //plot the sampling distribution
+  SamplingDistPlot plotSampl(10);
+  plotSampl.AddSamplingDistribution(samp,"");
+  plotSampl.AddSamplingDistribution(samp1,"");
+
+  plotSampl.SetLineColor(kGreen,samp);
+
+  //plotSampl.SetAxisTitle("Whaterveryouwant");
+
+  TCanvas *samplCanvas = new TCanvas("samplCanvas");
+  samplCanvas->cd();
+  plotSampl.Draw();
+  samplCanvas->SaveAs("samplingPlot.ps");
+
+  return;
 
   //////// show use of NeymanConstruction
   // Create points to test
