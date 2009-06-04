@@ -353,6 +353,9 @@ RooMCStudy::RooMCStudy(const RooAbsPdf& genModel, const RooAbsPdf& fitModel,
   // Place holder for NLL
   _nllVar = new RooRealVar("NLL","-log(Likelihood)",0) ;
   
+  // Place holder for number of generated events
+  _ngenVar = new RooRealVar("ngen","number of generated events",0) ;
+  
   // Create data set containing parameter values, errors and pulls
   RooArgSet tmp2(*_fitParams) ;
   tmp2.add(*_nllVar) ;
