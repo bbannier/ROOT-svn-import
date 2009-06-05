@@ -44,7 +44,7 @@ FitResult::FitResult() :
    // Default constructor implementation.
 }
 
-      FitResult::FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, const IModelFunction * func,  bool isValid,  unsigned int sizeOfData, bool binnedFit, const  ROOT::Math::IMultiGenFunction * chi2func, bool minosErr, unsigned int ncalls ) : 
+FitResult::FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, const IModelFunction * func,  bool isValid,  unsigned int sizeOfData, bool binnedFit, const  ROOT::Math::IMultiGenFunction * chi2func, unsigned int ncalls ) : 
    fValid(isValid),
    fNormalized(false),
    fNFree(min.NFree() ),
@@ -110,7 +110,7 @@ FitResult::FitResult() :
    if (ncalls !=0) fNCalls = ncalls;
 
       
-//    // fill error matrix
+   // fill error matrix
    // cov matrix rank 
    if (fValid) { 
 
@@ -123,13 +123,14 @@ FitResult::FitResult() :
       assert (fCovMatrix.size() == r ); 
 
       // minos errors 
-      if (minosErr) { 
-         fMinosErrors.reserve(npar);
-         for (unsigned int i = 0; i < npar; ++i) { 
-            double elow, eup; 
-            bool ret = min.GetMinosError(i, elow, eup); 
-            if (ret) fMinosErrors.push_back(std::make_pair(elow,eup) );
-            else fMinosErrors.push_back(std::make_pair(0.,0.) );
+      if (fconfig.MinosErrors()) { 
+         const std::vector<unsigned int> & ipars = fconfig.MinosParams(); 
+         unsigned int n = (ipars.size() > 0) ? ipars.size() : npar; 
+         for (unsigned int i = 0; i < n; ++i) {
+          double elow, eup;
+          unsigned int index = (ipars.size() > 0) ? ipars[i] : i; 
+          bool ret = min.GetMinosError(index, elow, eup);
+          if (ret) SetMinosError(index, elow, eup); 
          }
       }
 
@@ -216,14 +217,34 @@ void FitResult::NormalizeErrors() {
    fNormalized = true; 
 } 
 
+
 double FitResult::Prob() const { 
    // fit probability
    return ROOT::Math::chisquared_cdf_c(fChi2, static_cast<double>(fNdf) ); 
 }
 
+double FitResult::LowerError(unsigned int i) const { 
+   // return lower Minos error for parameter i 
+   //  return 0 if Minos error has not been calculated for the parameter i 
+   std::map<unsigned int, std::pair<double,double> >::const_iterator itr = fMinosErrors.find(i); 
+   return ( itr != fMinosErrors.end() ) ? itr->second.first : 0. ;  
+}
+
+double FitResult::UpperError(unsigned int i) const { 
+   // return upper Minos error for parameter i
+   //  return 0 if Minos error has not been calculated for the parameter i 
+   std::map<unsigned int, std::pair<double,double> >::const_iterator itr = fMinosErrors.find(i); 
+   return ( itr != fMinosErrors.end() ) ? itr->second.second : 0. ;  
+}
+
+void FitResult::SetMinosError(unsigned int i, double elow, double eup) { 
+   // set the Minos error for parameter i 
+   fMinosErrors[i] = std::make_pair(elow,eup);
+}
+
 int FitResult::Index(const std::string & name) const { 
-   if (! fFitFunc) return -1;
    // find index for given parameter name
+   if (! fFitFunc) return -1;
    unsigned int npar = fParams.size(); 
    for (unsigned int i = 0; i < npar; ++i) 
       if ( fFitFunc->ParameterName(i) == name) return i; 
@@ -390,7 +411,7 @@ void FitResult::GetConfidenceIntervals(unsigned int n, unsigned int stride1, uns
       vsum.assign(npar,0.0);
       for (unsigned int ipar = 0; ipar < npar; ++ipar) { 
          for (unsigned int jpar = 0; jpar < npar; ++jpar) {
-            vsum[ipar] += CovMatrix(ipar,jpar) * grad[jpar]; 
+             vsum[ipar] += CovMatrix(ipar,jpar) * grad[jpar]; 
          }
       }
       // multiply gradient by vsum

@@ -13,6 +13,8 @@
 
 #include "TApplication.h"
 #include "TLegend.h"
+#include "TCanvas.h"
+#include "TStyle.h"
 
 //#define DEBUG
 
@@ -137,16 +139,21 @@ int GAMinTutorial()
 {
    double x1=0, x2=0;
 
+
    // create a TF1 from fit function and generate histogram 
    TF1 * fitFunc = new TF1("fitFunc",fitFunction,0,10,8);
    fitFunc->SetParameters(par0); 
 
    // Create a histogram filled with random data from TF1
-   TH1D * h1 = new TH1D("h1","h1",100, 0, 10); 
+   TH1D * h1 = new TH1D("h1","",100, 0, 10); 
    for (int i = 0; i < ndata; ++i) { 
       h1->Fill(fitFunc->GetRandom() ); 
    } 
+   
    h1->Draw(); 
+   gPad->SetFillColor(kYellow-10);
+   h1->SetFillColor(kYellow-5);
+   gStyle->SetOptStat(0);
 
    // perform the fit 
    ROOT::Fit::BinData d; 
@@ -159,8 +166,10 @@ int GAMinTutorial()
    // Minimizer a first time with Minuit2
    const double* xmin1 = Min2Minimize(chi2Func, 0, 0);
    fitFunc->SetParameters(&xmin1[0]);
-   fitFunc->SetLineColor(kRed);
-   fitFunc->DrawCopy("same");
+   fitFunc->SetLineColor(kBlue+3);
+   TF1 * fitFunc0 = new TF1; 
+   fitFunc->Copy(*fitFunc0);
+   fitFunc0->Draw("same");
 
    // Look for an approximation with a Genetic Algorithm
    GAMinimize(chi2Func, x1,x2);
@@ -168,12 +177,13 @@ int GAMinTutorial()
    // Minimize a second time with Minuit2 
    const double* xmin2 = Min2Minimize(chi2Func, x1, x2);
    fitFunc->SetParameters(&xmin2[0]);
-   fitFunc->SetLineColor(kGreen);
+   fitFunc->SetLineColor(kRed+3);
    fitFunc->DrawCopy("same");
 
    TLegend* legend = new TLegend(0.61,0.72,0.86,0.86);
-   legend->AddEntry(h1, "Random Data");
-   legend->AddEntry(fitFunc, "Fitting based on minimization");
+   legend->AddEntry(h1, "Histogram Data","F");
+   legend->AddEntry(fitFunc0, "Minuit only minimization");
+   legend->AddEntry(fitFunc, "Minuit+Genetic minimization");
    legend->Draw();
 
    return 0; 

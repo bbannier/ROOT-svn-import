@@ -219,6 +219,15 @@ public:
    } 
 
    /**
+      perform an error analysis on the result
+      (to be called only after fitting) 
+      The result will be appended in the fit result class 
+      Optionally a vector of parameter indeces can be passed for selecting 
+      the parameters to analysise using FitConfig::SetMinosErrors 
+    */
+   bool CalculateErrors();  
+
+   /**
       access to the fit configuration (const method)
    */
    const FitConfig & Config() const { return fConfig; } 
