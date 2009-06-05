@@ -22,6 +22,7 @@
 #include <cassert>
 #include <algorithm>
 #include <functional>
+#include <cmath>
 
 //______________________________________________________________________________
 //
@@ -286,10 +287,11 @@ bool TMinuitMinimizer::SetFixedVariable(unsigned int ivar, const std::string & n
    // clear after minimization when setting params
    if (fUsed) DoClear(); 
 
-   // put an arbitrary step (0.1) otherwise TMinuit consider the parameter as constant
+   // put an arbitrary step (0.1*abs(value) otherwise TMinuit consider the parameter as constant
    // constant parameters are treated differently (they are ignored inside TMinuit and not considered in the
    // total list of parameters) 
-   fMinuit->DefineParameter(ivar, name.c_str(), val, 0.1, 0., 0. ); 
+   double step = ( val != 0) ? 0.1 * std::abs(val) : 0.1;
+   fMinuit->DefineParameter(ivar, name.c_str(), val, step, 0., 0. ); 
    fMinuit->FixParameter(ivar);
    return true; 
 }
@@ -398,15 +400,7 @@ bool TMinuitMinimizer::Minimize() {
    }
 
 
-   int ntot; 
-   int istat;
-   int nfree; 
-   double errdef = 0;
-   fMinuit->mnstat(fMinVal,fEdm,errdef,nfree,ntot,istat);
-   assert( nfree == fMinuit->GetNumFreePars() );
-   fNFree = nfree;
-   assert (errdef == ErrorDef());
-   
+   unsigned int nfree = NFree();
 
    // get parameter values 
    fParams.resize( fDim); 
@@ -419,14 +413,13 @@ bool TMinuitMinimizer::Minimize() {
    // ignore cases when Hesse or IMprove return error different than zero
    if (minErrStatus == 0) { 
       fCovar.resize(fDim*fDim); 
-      if (fNFree >= fDim) { // no fixed parameters 
+      if (nfree >= fDim) { // no fixed parameters 
          fMinuit->mnemat(&fCovar.front(), fDim); 
       } 
       else { 
          // case of fixed params need to take care 
-         if (fNFree > fDim) return true;
-         std::vector<double> tmpMat(fNFree*fNFree); 
-         fMinuit->mnemat(&tmpMat.front(), fNFree); 
+         std::vector<double> tmpMat(nfree*nfree); 
+         fMinuit->mnemat(&tmpMat.front(), nfree); 
 
 
          unsigned int l = 0; 
@@ -436,7 +429,7 @@ bool TMinuitMinimizer::Minimize() {
                unsigned int m = 0; 
                for (unsigned int j = 0; j <= i; ++j) { 
                   if ( fMinuit->fNiofex[j] > 0 ) {  //not fixed
-                     fCovar[i*fDim + j] = tmpMat[l*fNFree + m];
+                     fCovar[i*fDim + j] = tmpMat[l*nfree + m];
                      fCovar[j*fDim + i] = fCovar[i*fDim + j]; 
                      m++;
                   }
@@ -465,6 +458,51 @@ unsigned int TMinuitMinimizer::NCalls() const {
    return fMinuit->fNfcn;
 }
 
+double TMinuitMinimizer::MinValue() const { 
+   // return minimum function value
+
+   // use part of code from mnstat
+   if (!fMinuit) return 0; 
+   double minval = fMinuit->fAmin; 
+   if (minval == fMinuit->fUndefi) return 0; 
+   return minval; 
+}
+
+double TMinuitMinimizer::Edm() const { 
+   // return expected distance from the minimum
+
+   // use part of code from mnstat
+   if (!fMinuit) return -1; 
+   if (fMinuit->fAmin == fMinuit->fUndefi || fMinuit->fEDM == fMinuit->fBigedm) return fMinuit->fUp; 
+   return fMinuit->fEDM; 
+}
+
+unsigned int TMinuitMinimizer::NFree() const { 
+    // return number of free parameters 
+   if (!fMinuit) return 0; 
+   if (fMinuit->fNpar < 0) return 0; 
+   return fMinuit->fNpar; 
+}
+
+int TMinuitMinimizer::CovMatrixStatus() const { 
+   // return status of covariance matrix 
+   //           status:  0= not calculated at all
+   //                    1= approximation only, not accurate
+   //                    2= full matrix, but forced positive-definite
+   //                    3= full accurate covariance matrix
+
+   // use part of code from mnstat
+   if (!fMinuit) return 0; 
+   if (fMinuit->fAmin == fMinuit->fUndefi) return 0; 
+   return fMinuit->fISW[1];
+}
+
+double TMinuitMinimizer::GlobalCC(unsigned int i) const { 
+   // global correlation coefficient for parameter i 
+   if (!fMinuit) return 0; 
+   if (!fMinuit->fGlobcc) return 0; 
+   return fMinuit->fGlobcc[i];   
+}
 
 bool TMinuitMinimizer::GetMinosError(unsigned int i, double & errLow, double & errUp) { 
    // Perform Minos analysis for the given parameter  i 
@@ -494,7 +532,7 @@ bool TMinuitMinimizer::GetMinosError(unsigned int i, double & errLow, double & e
    // syntax of MINOS is MINOS [maxcalls] [parno]
    // if parno = 0 all parameters are done 
    arglist[0] = MaxFunctionCalls(); 
-   arglist[1] = i+1;  // parno starts from 1 in TMInuit
+   arglist[1] = i+1;  // par number starts from 1 in TMInuit
    
    int nargs = 2; 
    fMinuit->mnexcm("MINOS",arglist,nargs,ierr);
@@ -535,15 +573,10 @@ void TMinuitMinimizer::PrintResults() {
    if (fMinuit == 0) return; 
 
    // print minimizer result
-   int ntot; 
-   int istat;
-   int nfree; 
-   double errdef = 0;
-   fMinuit->mnstat(fMinVal,fEdm,errdef,nfree,ntot,istat);
    if (PrintLevel() > 2) 
-      fMinuit->mnprin(4,fMinVal);
+      fMinuit->mnprin(4,fMinuit->fAmin);
    else
-      fMinuit->mnprin(3,fMinVal);
+      fMinuit->mnprin(3,fMinuit->fAmin);
 }
 
 
@@ -654,6 +687,39 @@ bool TMinuitMinimizer::Scan(unsigned int ipar, unsigned int & nstep, double * x,
    nstep = gr->GetN(); 
    return true; 
 }
+
+bool TMinuitMinimizer::Hesse() { 
+   // perform calculation of Hessian
+
+   if (fMinuit == 0) { 
+      Error("Hesse","invalid TMinuit pointer. Need to call first SetFunction and SetVariable"); 
+      return false; 
+   }
+
+
+   double arglist[10]; 
+   int ierr = 0; 
+
+   // set error and print level 
+   arglist[0] = ErrorDef(); 
+   fMinuit->mnexcm("SET Err",arglist,1,ierr);
+
+   int printlevel = PrintLevel(); 
+   arglist[0] = printlevel - 1;
+   fMinuit->mnexcm("SET PRINT",arglist,1,ierr);
+
+   // suppress warning in case Printlevel() == 0 
+   if (printlevel == 0)    fMinuit->mnexcm("SET NOW",arglist,0,ierr);
+
+   arglist[0] = MaxFunctionCalls(); 
+
+   fMinuit->mnexcm("HESSE",arglist,1,ierr);
+   fStatus += 100*ierr; 
+   
+   if (ierr != 0) return false;    
+   return true;
+}
+
 
 //    } // end namespace Fit
 

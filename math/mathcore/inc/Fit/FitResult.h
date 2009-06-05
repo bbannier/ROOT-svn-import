@@ -21,6 +21,7 @@
 #endif
 
 #include <vector>
+#include <map>
 #include <string>
 #include <cmath>
 #include <cassert>
@@ -60,7 +61,7 @@ public:
    /**
       Construct from a Minimizer instance 
     */
-   FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, const IModelFunction * f, bool isValid, unsigned int sizeOfData = 0, bool binFit = true, const ROOT::Math::IMultiGenFunction * chi2func = 0, bool minosErr = false, unsigned int ncalls = 0);
+   FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, const IModelFunction * f, bool isValid, unsigned int sizeOfData = 0, bool binFit = true, const ROOT::Math::IMultiGenFunction * chi2func = 0, unsigned int ncalls = 0);
 
    /** 
       Copy constructor. 
@@ -142,15 +143,14 @@ public:
 //    /// Minos  Errors 
 //    const std::vector<std::pair<double, double> > MinosErrors() const; 
 
+   /// set the Minos errors for parameter i 
+   void SetMinosError(unsigned int i, double elow, double eup);
+
    /// lower Minos error
-   double LowerError(unsigned int i) const { 
-      return (i < fMinosErrors.size() ) ? fMinosErrors[i].first : fErrors[i]; 
-   } 
+   double LowerError(unsigned int i) const;
 
    /// upper Minos error
-   double UpperError(unsigned int i) const { 
-      return (i < fMinosErrors.size() ) ? fMinosErrors[i].second : fErrors[i]; 
-   }
+   double UpperError(unsigned int i) const;
 
    /// parameter global correlation coefficient 
    double GlobalCC(unsigned int i) const { 
@@ -241,8 +241,8 @@ public:
    /// flag to chek if errors are normalized
    bool NormalizedErrors() { return fNormalized; }
 
-   /// get confidence level given an array of x data points
-
+   /// calculate Minos errors for the parameters according to given configuration 
+   bool CalculateErrors(ROOT::Fit::FitConfig & config); 
 
    /// print the result and optionaly covariance matrix and correlations
    void Print(std::ostream & os, bool covmat = false) const;
@@ -289,7 +289,7 @@ private:
    std::vector<double>         fErrors;  // errors 
    std::vector<double>         fCovMatrix;  // covariance matrix (size is npar*(npar+1)/2) where npar is total parameters
    std::vector<double>         fGlobalCC;   // global Correlation coefficient
-   std::vector<std::pair<double,double> > fMinosErrors;   // vector contains the two Minos errors 
+   std::map<unsigned int, std::pair<double,double> > fMinosErrors;   // map contains the two Minos errors
    std::string fMinimType;              // string indicating type of minimizer
    std::vector<std::string> fParNames;  // parameter names (only with FCN only fites, when fFitFunc=0)
 
