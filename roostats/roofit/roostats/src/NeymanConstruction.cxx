@@ -241,6 +241,10 @@ ConfInterval* NeymanConstruction::GetInterval() const {
   PointSetInterval* interval 
     = new PointSetInterval("ClassicalConfidenceInterval", "ClassicalConfidenceInterval", *fPointsToTest);
   
+  // write belt to file
+  fConfBelt->Write();
+
+
   f.Close();
 
   delete data;

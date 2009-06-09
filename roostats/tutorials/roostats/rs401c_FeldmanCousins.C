@@ -108,7 +108,7 @@ void rs401c_FeldmanCousins()
      // get a parameter point from the list of points to test.
     tmpPoint = (RooArgSet*) parameterScan->get(i)->clone("temp");
 
-    if(false){
+    if(true){
       // use belt
       cout << "belt:" << tmpPoint->getRealValue("mu")
 	   << belt->GetAcceptanceRegionMin(*tmpPoint) 
