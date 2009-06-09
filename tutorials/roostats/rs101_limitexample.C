@@ -41,7 +41,7 @@ void rs101_limitexample()
   // The Model building stage
   /////////////////////////////////////////
   RooWorkspace* wspace = new RooWorkspace();
-  wspace->factory("Poisson::countingModel(obs[150,0,300], sum::tot(prod::sig(s[50,0,300],ratioSigEff[1.,0,2.]),prod::bkg(b[100,0,300],ratioBkgEff[1.,0.,2.])))"); // counting model
+  wspace->factory("Poisson::countingModel(obs[150,0,300], sum(s[50,0,300]*ratioSigEff[1.,0,2.],b[100,0,300]*ratioBkgEff[1.,0.,2.]))"); // counting model
   wspace->factory("Gaussian::sigConstraint(ratioSigEff,1,0.05)"); // 5% signal efficiency uncertainty
   wspace->factory("Gaussian::bkgConstraint(ratioBkgEff,1,0.1)"); // 10% background efficiency uncertainty
   wspace->factory("PROD::modelWithConstraints(countingModel,sigConstraint,bkgConstraint)"); // product of terms
