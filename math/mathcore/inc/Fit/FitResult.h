@@ -241,9 +241,6 @@ public:
    /// flag to chek if errors are normalized
    bool NormalizedErrors() { return fNormalized; }
 
-   /// calculate Minos errors for the parameters according to given configuration 
-   bool CalculateErrors(ROOT::Fit::FitConfig & config); 
-
    /// print the result and optionaly covariance matrix and correlations
    void Print(std::ostream & os, bool covmat = false) const;
 
