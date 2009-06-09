@@ -102,8 +102,13 @@ ConfInterval* ProfileLikelihoodCalculator::GetInterval() const {
    RooAbsData* data = fWS->data(fDataName);
    if (!data || !pdf || !fPOI) return 0;
 
-   RooNLLVar* nll = new RooNLLVar("nll","",*pdf,*data, Extended());
-   RooProfileLL* profile = new RooProfileLL("pll","",*nll, *fPOI);
+   //   RooNLLVar* nll = new RooNLLVar("nll","",*pdf,*data, Extended());
+   //   RooProfileLL* profile = new RooProfileLL("pll","",*nll, *fPOI);
+
+   RooArgSet* constrainedParams = pdf->getParameters(*data);
+   RooAbsReal* nll = pdf->createNLL(*data, Constrain(*constrainedParams));
+   RooAbsReal* profile = nll->createProfile(*fPOI);
+
    profile->addOwnedComponents(*nll) ;  // to avoid memory leak
 
    RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
@@ -130,7 +135,8 @@ HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
    if (!data || !pdf) return 0;
 
    // calculate MLE
-   RooFitResult* fit = pdf->fitTo(*data,Extended(kFALSE),Strategy(0),Hesse(kFALSE),Save(kTRUE),PrintLevel(-1));
+   RooArgSet* constrainedParams = pdf->getParameters(*data);
+   RooFitResult* fit = pdf->fitTo(*data,Extended(kFALSE), Constrain(*constrainedParams),Strategy(0),Hesse(kFALSE),Save(kTRUE),PrintLevel(-1));
   
 
    fit->Print();

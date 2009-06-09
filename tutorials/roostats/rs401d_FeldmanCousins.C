@@ -39,6 +39,7 @@
 
 #include "TCanvas.h"
 #include "TH1F.h"
+#include "TH2F.h"
 #include "TTree.h"
 #include "TMarker.h"
 #include "TStopwatch.h"
@@ -236,7 +237,14 @@ void rs401d_FeldmanCousins(bool doFeldmanCousins=false)
   
   // first plot a small dot for every point tested
   RooDataHist* parameterScan = (RooDataHist*) fc.GetPointsToScan();
-  parameterScan->Draw("deltaMSq:sinSq2theta");
+  //  TH2F* hist = (TH2F*) parameterScan->createHistogram("deltaMSq:sinSq2theta",30,30);
+  TH2F* hist = (TH2F*) parameterScan->createHistogram("sinSq2theta:deltaMSq",30,30);
+  cout << hist->GetXaxis()->GetXmin()<<" " << hist->GetXaxis()->GetXmax()  << endl;
+  cout << hist->GetYaxis()->GetXmin()<<" " << hist->GetYaxis()->GetXmax()  << endl;
+  hist->Draw();
+  //  ((TH2F*)(parameterScan->createHistogram("deltaMSq:sinSq2theta")))->Draw();
+  //TH2F* hist = new TH2F("tmp","",20,0.0001,1,20,10,60);
+  //  hist->Draw();
 
 
   // debugging
