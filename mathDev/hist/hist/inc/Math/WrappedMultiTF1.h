@@ -45,13 +45,18 @@ public:
  
 
    /** 
-      constructor from a function pointer. 
-      
+      constructor from a function pointer to a TF1 
+      If dim = 0 dimension is taken from TF1::GetNdim(). 
+      IN case of multi-dimensional function created using directly TF1 object the dimension 
+      returned by TF1::GetNdim is always 1. The user must then pass the correct value of dim
    */ 
-   WrappedMultiTF1 (TF1 & f )  : 
+   WrappedMultiTF1 (TF1 & f, int dim = 0 )  : 
       fFunc(&f),
+      fDim(dim),
       fParams(f.GetParameters(),f.GetParameters()+f.GetNpar())
-   { }
+   { 
+      if (fDim == 0) fDim = fFunc->GetNdim(); 
+   }
 
    /** 
       Destructor (no operations). Function pointer is not owned
@@ -65,7 +70,8 @@ public:
       BaseFunc(),
       BaseParamFunc(),
       fFunc(rhs.fFunc),
-      fParams(rhs.fParams)
+      fDim(rhs.fDim),
+      fParams(rhs.fParams) 
    {}
 
    /** 
@@ -74,6 +80,7 @@ public:
    WrappedMultiTF1 & operator = (const WrappedMultiTF1 & rhs) { 
       if (this == &rhs) return *this;  // time saving self-test
       fFunc = rhs.fFunc; 
+      fDim = rhs.fDim;
       fParams = rhs.fParams;
       return *this;
    } 
@@ -91,7 +98,7 @@ public:
 
    /// function dimension
    unsigned int NDim() const { 
-      return fFunc->GetNdim(); 
+      return fDim;
    }
 
 
@@ -128,6 +135,7 @@ private:
 
 
    TF1 * fFunc;                   // pointer to ROOT function
+   unsigned int fDim;             // cached value of dimension
    std::vector<double> fParams;   // cached vector with parameter values
 
 }; 
