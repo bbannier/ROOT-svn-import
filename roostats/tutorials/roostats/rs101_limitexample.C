@@ -16,6 +16,7 @@
 #include "RooGlobalFunc.h"
 #endif
 #include "RooStats/ProfileLikelihoodCalculator.h"
+#include "RooStats/FeldmanCousins.h"
 #include "RooStats/NumberCountingPdfFactory.h"
 #include "RooStats/ConfInterval.h"
 #include "RooStats/LikelihoodInterval.h"
@@ -76,17 +77,35 @@ void rs101_limitexample()
   paramOfInterest.Print("v");
   ProfileLikelihoodCalculator plc;
   plc.SetWorkspace(*wspace);
-  plc.SetCommonPdf(*modelWithConstraints);
+  plc.SetPdf(*modelWithConstraints);
   plc.SetData(*data); 
   plc.SetParameters( paramOfInterest );
   plc.SetTestSize(.05);
 
   ConfInterval* lrint = plc.GetInterval();  // that was easy.
   //  lrint->SetConfidenceLevel(0.95);
+
+  FeldmanCousins fc;
+  fc.SetWorkspace(*wspace);
+  fc.SetPdf(*modelWithConstraints);
+  fc.SetData(*data); 
+  fc.SetParameters( paramOfInterest );
+  fc.FluctuateNumDataEntries(false); // number counting analysis: dataset always has 1 entry with N events observed
+  fc.SetNBins(5); // number of points to test per parameter
+  fc.SetTestSize(.05);
+  //  ConfInterval* fcint = fc.GetInterval();  // that was easy.
+  
+
   if( lrint->IsInInterval(paramOfInterest) ) 
     cout << "s = " << s->getVal() << " is in interval" << endl;
   else
     cout << "s = " << s->getVal() << " is NOT in interval" << endl;
+
+  /*  if( fcint->IsInInterval(paramOfInterest) ) 
+    cout << "s = " << s->getVal() << " is in FC interval" << endl;
+  else
+    cout << "s = " << s->getVal() << " is NOT in FC interval" << endl;
+  */
 
   s->setVal(0);
   if( lrint->IsInInterval(paramOfInterest) ) 
