@@ -143,8 +143,8 @@ public:
        The ordering of the variables is the same as in errors
    */ 
    virtual double CovMatrix(unsigned int i, unsigned int j) const { 
-      return fCovar[i + fDim* j]; 
-   }
+      return ( fCovar.size() > (i + fDim* j) ) ? fCovar[i + fDim* j] : 0; 
+ }
 
    ///return status of covariance matrix 
    virtual int CovMatrixStatus() const; 
@@ -188,6 +188,12 @@ protected:
 
    /// reset 
    void DoClear(); 
+
+   /// retrieve minimum parameters and errors from TMinuit
+   void RetrieveParams(); 
+
+   /// retrieve error matrix from TMinuit
+   void RetrieveErrorMatrix(); 
 
 private: 
 

@@ -399,58 +399,74 @@ bool TMinuitMinimizer::Minimize() {
       fStatus += 100*ierr; 
    }
 
+   // retrieve parameters and errors  from TMinuit
+   RetrieveParams(); 
 
-   unsigned int nfree = NFree();
-
-   // get parameter values 
-   fParams.resize( fDim); 
-   fErrors.resize( fDim); 
-   for (unsigned int i = 0; i < fDim; ++i) { 
-      fMinuit->GetParameter( i, fParams[i], fErrors[i]);
-   }
-   // get covariance matrix
-   // store global min results (only if minimization is OK)
-   // ignore cases when Hesse or IMprove return error different than zero
    if (minErrStatus == 0) { 
-      fCovar.resize(fDim*fDim); 
-      if (nfree >= fDim) { // no fixed parameters 
-         fMinuit->mnemat(&fCovar.front(), fDim); 
-      } 
-      else { 
-         // case of fixed params need to take care 
-         std::vector<double> tmpMat(nfree*nfree); 
-         fMinuit->mnemat(&tmpMat.front(), nfree); 
 
-
-         unsigned int l = 0; 
-         for (unsigned int i = 0; i < fDim; ++i) { 
-            
-            if ( fMinuit->fNiofex[i] > 0 ) {  // not fixed ?
-               unsigned int m = 0; 
-               for (unsigned int j = 0; j <= i; ++j) { 
-                  if ( fMinuit->fNiofex[j] > 0 ) {  //not fixed
-                     fCovar[i*fDim + j] = tmpMat[l*nfree + m];
-                     fCovar[j*fDim + i] = fCovar[i*fDim + j]; 
-                     m++;
-                  }
-               }
-               l++;
-            }
-         }
-
-      }
+      // store global min results (only if minimization is OK)
+      // ignore cases when Hesse or IMprove return error different than zero
+      RetrieveErrorMatrix(); 
 
       // need to re-run Minos again if requested
       fMinosRun = false; 
 
       return true;
+
    }
+   return false; 
 
+}
 
-   else {
-      return false; 
+void TMinuitMinimizer::RetrieveParams() {
+   // retrieve from TMinuit minimum parameter values 
+   // and errors
+
+   assert(fMinuit != 0); 
+
+   // get parameter values 
+   if (fParams.size() != fDim) fParams.resize( fDim); 
+   if (fErrors.size() != fDim) fErrors.resize( fDim); 
+   for (unsigned int i = 0; i < fDim; ++i) { 
+      fMinuit->GetParameter( i, fParams[i], fErrors[i]);
    }
+}
 
+void TMinuitMinimizer::RetrieveErrorMatrix() {
+   // get covariance error matrix from TMinuit
+   // when some parameters are fixed filled the corresponding rows and column with zero's
+
+   assert(fMinuit != 0); 
+
+   unsigned int nfree = NFree();
+
+   unsigned int ndim2 = fDim*fDim; 
+   if (fCovar.size() != ndim2 )  fCovar.resize(fDim*fDim); 
+   if (nfree >= fDim) { // no fixed parameters 
+      fMinuit->mnemat(&fCovar.front(), fDim); 
+   } 
+   else { 
+      // case of fixed params need to take care 
+      std::vector<double> tmpMat(nfree*nfree); 
+      fMinuit->mnemat(&tmpMat.front(), nfree); 
+      
+      unsigned int l = 0; 
+      for (unsigned int i = 0; i < fDim; ++i) { 
+         
+         if ( fMinuit->fNiofex[i] > 0 ) {  // not fixed ?
+            unsigned int m = 0; 
+            for (unsigned int j = 0; j <= i; ++j) { 
+               if ( fMinuit->fNiofex[j] > 0 ) {  //not fixed
+                  fCovar[i*fDim + j] = tmpMat[l*nfree + m];
+                  fCovar[j*fDim + i] = fCovar[i*fDim + j]; 
+                  m++;
+               }
+            }
+            l++;
+         }
+      }
+      
+   }
 }
 
 unsigned int TMinuitMinimizer::NCalls() const { 
@@ -567,6 +583,7 @@ void TMinuitMinimizer::DoClear() {
 #endif
 
 }
+
 
 void TMinuitMinimizer::PrintResults() { 
 
@@ -702,7 +719,7 @@ bool TMinuitMinimizer::Hesse() {
 
    // set error and print level 
    arglist[0] = ErrorDef(); 
-   fMinuit->mnexcm("SET Err",arglist,1,ierr);
+   fMinuit->mnexcm("SET ERR",arglist,1,ierr);
 
    int printlevel = PrintLevel(); 
    arglist[0] = printlevel - 1;
@@ -715,8 +732,15 @@ bool TMinuitMinimizer::Hesse() {
 
    fMinuit->mnexcm("HESSE",arglist,1,ierr);
    fStatus += 100*ierr; 
-   
+
    if (ierr != 0) return false;    
+
+   // retrieve results (parameter and error matrix)
+   // only if result is OK
+
+   RetrieveParams(); 
+   RetrieveErrorMatrix(); 
+
    return true;
 }
 
