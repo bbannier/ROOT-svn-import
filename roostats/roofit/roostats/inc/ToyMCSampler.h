@@ -70,11 +70,13 @@ namespace RooStats {
       fRand = new TRandom();
       fCounter=0;
       fVarName = fTestStat->GetVarName();
+      fLastDataSet = 0;
     }
 
     virtual ~ToyMCSampler() {
       if(fOwnsWorkspace) delete fWS;
       if(fRand) delete fRand;
+      if(fLastDataSet) delete fLastDataSet;
     }
     
     // Extended interface to append to sampling distribution more samples
@@ -96,7 +98,7 @@ namespace RooStats {
       return newSamples;
     }
 
-     // Main interface to get a SamplingDistribution
+    // Main interface to get a SamplingDistribution
     virtual SamplingDistribution* GetSamplingDistribution(RooArgSet& allParameters) {
       std::vector<Double_t> testStatVec;
       //       cout << " about to generate sampling dist " << endl;
@@ -112,8 +114,16 @@ namespace RooStats {
 
 	RooDataSet* toydata = (RooDataSet*)GenerateToyData(allParameters);
 	testStatVec.push_back( fTestStat->Evaluate(*toydata, allParameters) );
-	delete toydata;
+
+	// want to clean up memory, but delete toydata causes problem with 
+	// nll->setData(data, noclone) because pointer to last data set is no longer valid
+	//	delete toydata; 
+
+	// instead, delete previous data set
+	if(fLastDataSet) delete fLastDataSet;
+	fLastDataSet = toydata;
       }
+     
 
       //      cout << " generated sampling dist " << endl;
       return new SamplingDistribution( MakeName(allParameters),
@@ -267,6 +277,8 @@ namespace RooStats {
       TString fVarName;
 
       Int_t fCounter;
+
+      RooDataSet* fLastDataSet; // work around for memory issues in nllvar->setData(data, noclone)
 
    protected:
       ClassDef(ToyMCSampler,1)   // A simple implementation of the TestStatSampler interface
