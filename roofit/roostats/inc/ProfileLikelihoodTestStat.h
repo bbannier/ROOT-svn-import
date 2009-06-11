@@ -91,6 +91,8 @@ namespace RooStats {
 	 fProfile = new RooProfileLL("pll","",*nll, paramsOfInterest);
 	 */
 	 RooArgSet* constrainedParams = fPdf->getParameters(data);
+	 RemoveConstantParameters(constrainedParams);
+
 	 RooNLLVar* nll = (RooNLLVar*) fPdf->createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*constrainedParams));
 	 fNll=nll;
 	 fProfile = (RooProfileLL*) nll->createProfile(paramsOfInterest);

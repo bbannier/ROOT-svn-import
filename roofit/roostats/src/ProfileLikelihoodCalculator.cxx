@@ -106,6 +106,7 @@ ConfInterval* ProfileLikelihoodCalculator::GetInterval() const {
    //   RooProfileLL* profile = new RooProfileLL("pll","",*nll, *fPOI);
 
    RooArgSet* constrainedParams = pdf->getParameters(*data);
+   RemoveConstantParameters(constrainedParams);
    RooAbsReal* nll = pdf->createNLL(*data, Constrain(*constrainedParams));
    RooAbsReal* profile = nll->createProfile(*fPOI);
 
@@ -136,6 +137,7 @@ HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
 
    // calculate MLE
    RooArgSet* constrainedParams = pdf->getParameters(*data);
+   RemoveConstantParameters(constrainedParams);
    RooFitResult* fit = pdf->fitTo(*data,Extended(kFALSE), Constrain(*constrainedParams),Strategy(0),Hesse(kFALSE),Save(kTRUE),PrintLevel(-1));
   
 
