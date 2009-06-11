@@ -47,6 +47,7 @@ END_HTML
 #include "RooStats/NeymanConstruction.h"
 
 #include "RooDataSet.h"
+#include "RooDataHist.h"
 #include "RooGlobalFunc.h"
 #include "TFile.h"
 #include "TTree.h"
