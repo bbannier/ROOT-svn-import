@@ -85,6 +85,8 @@ public:
    /**
       Update the fit result with a new minimization status
       To be run only if same fit is performed with same configuration 
+      Note that in this case MINOS is not re-run. If one wants to run also MINOS
+      a new result must be created 
     */
    bool Update(const ROOT::Math::Minimizer & min, bool isValid, unsigned int ncalls = 0 );
 

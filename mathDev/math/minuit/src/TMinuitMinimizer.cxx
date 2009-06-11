@@ -77,6 +77,7 @@ TMinuitMinimizer::TMinuitMinimizer(const char *  type ) :
    if (algoname == "minimize" ) algoType = ROOT::Minuit::kCombined; 
    if (algoname == "migradimproved" ) algoType = ROOT::Minuit::kMigradImproved; 
    if (algoname == "scan" )           algoType = ROOT::Minuit::kScan; 
+   if (algoname == "seek" )           algoType = ROOT::Minuit::kSeek; 
 
    fType = algoType; 
 }
@@ -372,6 +373,13 @@ bool TMinuitMinimizer::Minimize() {
       // case of Scan (scan all parameters with default values)
       nargs = 0; 
       fMinuit->mnexcm("SCAN",arglist,nargs,ierr);
+      break; 
+   case ROOT::Minuit::kSeek: 
+      // case of Seek (random find minimum in a hypercube around current parameter values
+      // use Tolerance as measures for standard deviation (if < 1) used default value in Minuit ( supposed to be  3)
+      nargs = 1; 
+      if (arglist[1] >= 1.) nargs = 2; 
+      fMinuit->mnexcm("SEEK",arglist,nargs,ierr);
       break; 
    default: 
       // default: use Migrad 

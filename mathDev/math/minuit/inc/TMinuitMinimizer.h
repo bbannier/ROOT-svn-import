@@ -36,7 +36,8 @@ namespace ROOT {
          kSimplex, 
          kCombined, 
          kMigradImproved, 
-         kScan
+         kScan, 
+         kSeek
       };
 
    }
