@@ -50,13 +50,7 @@ public:
       IN case of multi-dimensional function created using directly TF1 object the dimension 
       returned by TF1::GetNdim is always 1. The user must then pass the correct value of dim
    */ 
-   WrappedMultiTF1 (TF1 & f, int dim = 0 )  : 
-      fFunc(&f),
-      fDim(dim),
-      fParams(f.GetParameters(),f.GetParameters()+f.GetNpar())
-   { 
-      if (fDim == 0) fDim = fFunc->GetNdim(); 
-   }
+   WrappedMultiTF1 (TF1 & f, unsigned int dim = 0 );  
 
    /** 
       Destructor (no operations). Function pointer is not owned
@@ -66,25 +60,12 @@ public:
    /** 
       Copy constructor
    */ 
-   WrappedMultiTF1(const WrappedMultiTF1 & rhs) :
-      BaseFunc(),
-      BaseParamFunc(),
-      fFunc(rhs.fFunc),
-      fDim(rhs.fDim),
-      fParams(rhs.fParams) 
-   {}
+   WrappedMultiTF1(const WrappedMultiTF1 & rhs); 
 
    /** 
       Assignment operator
    */ 
-   WrappedMultiTF1 & operator = (const WrappedMultiTF1 & rhs) { 
-      if (this == &rhs) return *this;  // time saving self-test
-      fFunc = rhs.fFunc; 
-      fDim = rhs.fDim;
-      fParams = rhs.fParams;
-      return *this;
-   } 
-
+   WrappedMultiTF1 & operator = (const WrappedMultiTF1 & rhs); 
 
 
    /** @name interface inherited from IFunction */
