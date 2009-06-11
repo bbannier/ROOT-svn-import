@@ -926,7 +926,7 @@ const TMatrixDSym& RooFitResult::correlationMatrix() const
 
 
 //_____________________________________________________________________________
-RooAbsPdf* RooFitResult::createPdf(const RooArgSet& params) const
+RooAbsPdf* RooFitResult::createHessePdf(const RooArgSet& params) const
 {
   // Return a p.d.f that represents the fit result as a multi-variate probability densisty
   // function on the floating fit parameters, including correlations
@@ -935,7 +935,7 @@ RooAbsPdf* RooFitResult::createPdf(const RooArgSet& params) const
   Double_t det = V.Determinant() ;
 
   if (det<=0) {
-    coutE(Eval) << "RooFitResult::createPdf(" << GetName() << ") ERROR: covariance matrix is not positive definite (|V|=" 
+    coutE(Eval) << "RooFitResult::createHessePdf(" << GetName() << ") ERROR: covariance matrix is not positive definite (|V|=" 
 		<< det << ") cannot construct p.d.f" << endl ;
     return 0 ;
   }
@@ -948,7 +948,7 @@ RooAbsPdf* RooFitResult::createPdf(const RooArgSet& params) const
     if (_finalPars->find(arg->GetName())) {
       params2.add(*arg) ;
     } else {
-      coutW(InputArguments) << "RooFitResult::createPdf(" << GetName() << ") WARNING input variable " 
+      coutW(InputArguments) << "RooFitResult::createHessePdf(" << GetName() << ") WARNING input variable " 
 			    << arg->GetName() << " was not a floating parameters in fit result and is ignored" << endl ;
     }
   }
