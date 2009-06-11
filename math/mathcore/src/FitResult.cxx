@@ -203,7 +203,65 @@ FitResult & FitResult::operator = (const FitResult &rhs) {
 
 }  
 
+bool FitResult::Update(const ROOT::Math::Minimizer & min, bool isValid, unsigned int ncalls) { 
+   // update fit result with new status from minimizer 
 
+   const unsigned int npar = fParams.size();
+   if (min.NDim() != npar ) { 
+      MATH_ERROR_MSG("FitResult::Update","Wrong minimizer status ");
+      return false; 
+   }
+   if (min.X() == 0 ) { 
+      MATH_ERROR_MSG("FitResult::Update","Invalid minimizer status ");
+      return false; 
+   }
+   //fNFree = min.NFree(); 
+   if (fNFree != min.NFree() ) { 
+      MATH_ERROR_MSG("FitResult::Update","Configuration has changed  ");
+      return false; 
+   }
+
+   fValid = isValid; 
+   // update minimum value
+   fVal = min.MinValue(); 
+   fEdm = min.Edm(); 
+   fStatus = min.Status(); 
+   // update number of function calls
+   if (ncalls != 0)    fNCalls += min.NCalls(); 
+   else fNCalls += ncalls; 
+
+   // copy parameter value and set also in fit model function 
+   std::copy(min.X(), min.X() + npar, fParams.begin());
+
+   if (fFitFunc) 
+        fFitFunc->SetParameters(&fParams.front());
+   
+   if (fValid) { 
+
+      // update error matrix
+      unsigned int r = npar * (  npar + 1 )/2;  
+      if (fCovMatrix.size() != r) fCovMatrix.resize(r);
+      unsigned int l = 0; 
+      for (unsigned int i = 0; i < npar; ++i) {
+         for (unsigned int j = 0; j <= i; ++j)  
+            fCovMatrix[l++] = min.CovMatrix(i,j);
+      }
+               
+      // update global CC       
+      if (fGlobalCC.size() != npar) fGlobalCC.resize(npar);
+      for (unsigned int i = 0; i < npar; ++i) { 
+         double globcc = min.GlobalCC(i); 
+         if (globcc < 0) { 
+            break; // it is not supported by that minimizer
+            fGlobalCC.clear(); 
+         }
+         fGlobalCC[i] = globcc; 
+      }
+    
+   }
+   return true;
+}
+ 
 void FitResult::NormalizeErrors() { 
    // normalize errors and covariance matrix according to chi2 value
    if (fNdf == 0 || fChi2 <= 0) return; 
