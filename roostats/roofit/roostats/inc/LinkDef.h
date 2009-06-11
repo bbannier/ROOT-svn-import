@@ -33,6 +33,8 @@
 #pragma link C++ class RooStats::LikelihoodInterval+;
 #pragma link C++ class RooStats::PointSetInterval+;
 
+#pragma link C++ class RooStats::ModelConfig+;
+
 #pragma link C++ class RooStats::IntervalCalculator+; // interface, not concrete
 #pragma link C++ class RooStats::HypoTestCalculator+; // interface, not concrete
 #pragma link C++ class RooStats::CombinedCalculator+; // interface, not concrete
