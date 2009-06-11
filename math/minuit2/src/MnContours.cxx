@@ -29,8 +29,8 @@ namespace ROOT {
 void PrintContourPoint(const std::pair<double,double> & point)  { 
 #ifdef WARNINGMSG 
 #ifdef USE_ROOT_ERROR
-   std::string msg = "\tx = " + ROOT::Util::ToString(point.first) + "\ty = " + ROOT::Util::ToString(point.first);
-   MN_INFO_MSG(msg);
+   std::string msg = "\tx = " + ROOT::Math::Util::ToString(point.first) + "\ty = " + ROOT::Math::Util::ToString(point.first);
+   MN_INFO_MSG(msg.c_str());
 #else
    std::cout << " x  = " << point.first << "  y = " << point.second << std::endl;
 #endif
