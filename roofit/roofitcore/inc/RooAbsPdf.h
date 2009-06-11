@@ -60,13 +60,13 @@ public:
 		       Bool_t verbose=kFALSE, Bool_t randProtoOrder=kFALSE, Bool_t resampleProto=kFALSE) const;
 
   RooDataHist *generateBinned(const RooArgSet &whatVars, Int_t nEvents, const RooCmdArg& arg1,
-                       const RooCmdArg& arg2=RooCmdArg::none(), const RooCmdArg& arg3=RooCmdArg::none(),
-                       const RooCmdArg& arg4=RooCmdArg::none(), const RooCmdArg& arg5=RooCmdArg::none()) ;
+			      const RooCmdArg& arg2=RooCmdArg::none(), const RooCmdArg& arg3=RooCmdArg::none(),
+			      const RooCmdArg& arg4=RooCmdArg::none(), const RooCmdArg& arg5=RooCmdArg::none()) ;
   RooDataHist *generateBinned(const RooArgSet &whatVars,  
-                       const RooCmdArg& arg1=RooCmdArg::none(),const RooCmdArg& arg2=RooCmdArg::none(),
-                       const RooCmdArg& arg3=RooCmdArg::none(),const RooCmdArg& arg4=RooCmdArg::none(),
-                       const RooCmdArg& arg5=RooCmdArg::none(),const RooCmdArg& arg6=RooCmdArg::none()) ;
-  RooDataHist *generateBinned(const RooArgSet &whatVars, Int_t nEvents = 0, Bool_t verbose=kFALSE) const;
+			      const RooCmdArg& arg1=RooCmdArg::none(),const RooCmdArg& arg2=RooCmdArg::none(),
+			      const RooCmdArg& arg3=RooCmdArg::none(),const RooCmdArg& arg4=RooCmdArg::none(),
+			      const RooCmdArg& arg5=RooCmdArg::none(),const RooCmdArg& arg6=RooCmdArg::none()) ;
+  RooDataHist *generateBinned(const RooArgSet &whatVars, Int_t nEvents, Bool_t expectedData=kFALSE, Bool_t extended=kFALSE) const;
 
   virtual RooPlot* plotOn(RooPlot* frame, 
 			  const RooCmdArg& arg1=RooCmdArg::none(), const RooCmdArg& arg2=RooCmdArg::none(),

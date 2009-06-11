@@ -697,7 +697,7 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineInt("numcpu","NumCPU",0,1) ;
   pc.defineInt("verbose","Verbose",0,0) ;
   pc.defineInt("optConst","Optimize",0,1) ;
-  pc.defineInt("cloneData","CloneData",0,1) ;
+  pc.defineInt("cloneData","CloneData",0,0) ;
   pc.defineObject("projDepSet","ProjectedObservables",0,0) ;
   pc.defineObject("cPars","Constrain",0,0) ;
   pc.defineSet("extCons","ExternalConstraints",0,0) ;
@@ -1568,9 +1568,11 @@ RooDataHist *RooAbsPdf::generateBinned(const RooArgSet& whatVars, Int_t nEvents,
   //
   // The following named arguments are supported
   //
+  // Name(const char* name)             -- Name of the output dataset
   // Verbose(Bool_t flag)               -- Print informational messages during event generation
   // Extended()                         -- The actual number of events generated will be sampled from a Poisson distribution
   //                                       with mu=nevt. For use with extended maximum likelihood fits
+  // ExpectedData()                     -- Return a binned dataset _without_ statistical fluctuations (also aliased as Asimov())
   return generateBinned(whatVars,RooFit::NumEvents(nEvents),arg1,arg2,arg3,arg4,arg5) ;
 }
 
@@ -1595,6 +1597,8 @@ RooDataHist *RooAbsPdf::generateBinned(const RooArgSet& whatVars, const RooCmdAr
   // NumEvent(int nevt)                 -- Generate specified number of events
   // Extended()                         -- The actual number of events generated will be sampled from a Poisson distribution
   //                                       with mu=nevt. For use with extended maximum likelihood fits
+  // ExpectedData()                     -- Return a binned dataset _without_ statistical fluctuations (also aliased as Asimov())
+  
 
   // Select the pdf-specific commands 
   RooCmdConfig pc(Form("RooAbsPdf::generate(%s)",GetName())) ;
@@ -1602,7 +1606,7 @@ RooDataHist *RooAbsPdf::generateBinned(const RooArgSet& whatVars, const RooCmdAr
   pc.defineInt("verbose","Verbose",0,0) ;
   pc.defineInt("extended","Extended",0,0) ;
   pc.defineInt("nEvents","NumEvents",0,0) ;
-  
+  pc.defineInt("expectedData","ExpectedData",0,0) ;
   
   // Process and check varargs 
   pc.process(arg1,arg2,arg3,arg4,arg5,arg6) ;
@@ -1612,25 +1616,26 @@ RooDataHist *RooAbsPdf::generateBinned(const RooArgSet& whatVars, const RooCmdAr
 
   // Decode command line arguments
   Int_t nEvents = pc.getInt("nEvents") ;
-  Bool_t verbose = pc.getInt("verbose") ;
+  //Bool_t verbose = pc.getInt("verbose") ;
   Bool_t extended = pc.getInt("extended") ;
+  Bool_t expectedData = pc.getInt("expectedData") ;
   const char* dsetName = pc.getString("dsetName") ;
 
   if (extended) {
-    nEvents = RooRandom::randomGenerator()->Poisson(nEvents==0?expectedEvents(&whatVars):nEvents) ;
+    nEvents = (nEvents==0?Int_t(expectedEvents(&whatVars)+0.5):nEvents) ;
     cxcoutI(Generation) << " Extended mode active, number of events generated (" << nEvents << ") is Poisson fluctuation on " 
-			  << GetName() << "::expectedEvents() = " << nEvents << endl ;
+			<< GetName() << "::expectedEvents() = " << nEvents << endl ;
     // If Poisson fluctuation results in zero events, stop here
     if (nEvents==0) {
       return 0 ;
     }
   } else if (nEvents==0) {
     cxcoutI(Generation) << "No number of events specified , number of events generated is " 
-			  << GetName() << "::expectedEvents() = " << expectedEvents(&whatVars)<< endl ;
+			<< GetName() << "::expectedEvents() = " << expectedEvents(&whatVars)<< endl ;
   }
 
   // Forward to appropiate implementation
-  RooDataHist* data = generateBinned(whatVars,nEvents,verbose) ;
+  RooDataHist* data = generateBinned(whatVars,nEvents,expectedData,extended) ;
 
   // Rename dataset to given name if supplied
   if (dsetName && strlen(dsetName)>0) {
@@ -1644,11 +1649,15 @@ RooDataHist *RooAbsPdf::generateBinned(const RooArgSet& whatVars, const RooCmdAr
 
 
 //_____________________________________________________________________________
-RooDataHist *RooAbsPdf::generateBinned(const RooArgSet &whatVars, Int_t nEvents, Bool_t verbose) const 
+RooDataHist *RooAbsPdf::generateBinned(const RooArgSet &whatVars, Int_t nEvents, Bool_t expectedData, Bool_t extended) const 
 {
   // Generate a new dataset containing the specified variables with
   // events sampled from our distribution. Generate the specified
   // number of events or else try to use expectedEvents() if nEvents <= 0.
+  //
+  // If expectedData is kTRUE (it is kFALSE by default), the returned histogram returns the 'expected'
+  // data sample, i.e. no statistical fluctuations are present.
+  //
   // Any variables of this PDF that are not in whatVars will use their
   // current values and be treated as fixed parameters. Returns zero
   // in case of an error. The caller takes ownership of the returned
@@ -1656,17 +1665,100 @@ RooDataHist *RooAbsPdf::generateBinned(const RooArgSet &whatVars, Int_t nEvents,
 
   // Create empty RooDataHist
   RooDataHist* hist = new RooDataHist("genData","genData",whatVars) ;
-  
-  // Sample p.d.f. distribution
-  fillDataHist(hist,&whatVars,1,kTRUE) ;
-
 
   // Scale to number of events and introduce Poisson fluctuations
+  if (nEvents<=0) {
+    if (!canBeExtended()) {
+      coutE(InputArguments) << "RooAbsPdf::generateBinned(" << GetName() << ") ERROR: No event count provided and p.d.f does not provide expected number of events" << endl ;
+      delete hist ;
+      return 0 ;
+    } else {
+      nEvents = Int_t(expectedEvents(&whatVars)+0.5) ;
+    }
+  } 
+  
+  // Sample p.d.f. distribution
+  fillDataHist(hist,&whatVars,1,kTRUE) ;  
+
+  vector<int> histOut(hist->numEntries()) ;
+  Double_t histMax(-1) ;
+  Int_t histOutSum(0) ;
   for (int i=0 ; i<hist->numEntries() ; i++) {
     hist->get(i) ;
-    hist->set(RooRandom::randomGenerator()->Poisson(hist->weight()*nEvents)) ;
+    if (expectedData) {
+
+      // Expected data, multiply p.d.f by nEvents
+      Double_t w=hist->weight()*nEvents ;
+      hist->set(w,sqrt(w)) ;
+
+    } else if (extended) {
+
+      // Extended mode, set contents to Poisson(pdf*nEvents)
+      Double_t w = RooRandom::randomGenerator()->Poisson(hist->weight()*nEvents) ;
+      hist->set(w,sqrt(w)) ;
+
+    } else {
+
+      // Regular mode, fill array of weights with Poisson(pdf*nEvents), but to not fill
+      // histogram yet.
+      if (hist->weight()>histMax) {
+	histMax = hist->weight() ;
+      }
+      histOut[i] = RooRandom::randomGenerator()->Poisson(hist->weight()*nEvents) ;
+      histOutSum += histOut[i] ;
+    }
   }
-  
+
+
+  if (!expectedData && !extended) {
+
+    // Second pass for regular mode - Trim/Extend dataset to exact number of entries
+
+    // Calculate difference between what is generated so far and what is requested
+    Int_t nEvtExtra = abs(nEvents-histOutSum) ;
+    Int_t wgt = (histOutSum>nEvents) ? -1 : 1 ;
+
+    // Perform simple binned accept/reject procedure to get to exact event count
+    while(nEvtExtra>0) {
+
+      Int_t ibinRand = RooRandom::randomGenerator()->Integer(hist->numEntries()) ;
+      hist->get(ibinRand) ;
+      Double_t ranY = RooRandom::randomGenerator()->Uniform(histMax) ;
+
+      if (ranY<hist->weight()) {
+	if (wgt==1) {
+	  histOut[ibinRand]++ ;
+	} else {
+	  // If weight is negative, prior bin content must be at least 1
+	  if (histOut[ibinRand]>0) {
+	    histOut[ibinRand]-- ;
+	  } else {
+	    continue ;
+	  }
+	}
+	nEvtExtra-- ;
+      }
+    }
+
+    // Transfer working array to histogram
+    for (int i=0 ; i<hist->numEntries() ; i++) {
+      hist->get(i) ;
+      hist->set(histOut[i],sqrt(histOut[i])) ;
+    }    
+
+  } else if (expectedData) {
+
+    // Second pass for expectedData mode -- Normalize to exact number of requested events
+    // Minor difference may be present in first round due to difference between 
+    // bin average and bin integral in sampling bins
+    Double_t corr = nEvents/hist->sumEntries() ;
+    for (int i=0 ; i<hist->numEntries() ; i++) {
+      hist->get(i) ;
+      hist->set(hist->weight()*corr,sqrt(hist->weight()*corr)) ;
+    }
+
+  }
+
   return hist;
 }
 
@@ -1761,7 +1853,7 @@ RooPlot* RooAbsPdf::plotOn(RooPlot* frame, RooLinkedList& cmdList) const
   // Select the pdf-specific commands 
   RooCmdConfig pc(Form("RooAbsPdf::plotOn(%s)",GetName())) ;
   pc.defineDouble("scaleFactor","Normalization",0,1.0) ;
-  pc.defineInt("scaleType","Normalization",0,RooAbsPdf::Relative) ;  
+  pc.defineInt("scaleType","Normalization",0,Relative) ;  
   pc.defineObject("compSet","SelectCompSet",0) ;
   pc.defineString("compSpec","SelectCompSpec",0) ;
   pc.defineObject("asymCat","Asymmetry",0) ;
