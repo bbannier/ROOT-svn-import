@@ -111,9 +111,9 @@ ConfInterval* ProfileLikelihoodCalculator::GetInterval() const {
 
    profile->addOwnedComponents(*nll) ;  // to avoid memory leak
 
-   RooMsgService::instance().setGlobalKillBelow(RooMsgService::FATAL) ;
+   RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL) ;
    profile->getVal();
-   RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+   RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
 
    LikelihoodInterval* interval 
       = new LikelihoodInterval("LikelihoodInterval", profile, fPOI);
