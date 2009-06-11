@@ -26,6 +26,7 @@
 #include "RooNumIntConfig.h"
 #include "RooRealVar.h"
 #include "RooFitResult.h"
+#include "RooAbsPdf.h"
 #include "TH1.h"
 
 namespace RooFit {
@@ -68,7 +69,7 @@ namespace RooFit {
   // RooAbsPdf::plotOn arguments
   RooCmdArg Components(const RooArgSet& compSet) { return RooCmdArg("SelectCompSet",0,0,0,0,0,0,&compSet,0) ; }
   RooCmdArg Components(const char* compSpec) { return RooCmdArg("SelectCompSpec",0,0,0,0,compSpec,0,0,0) ; }
-  RooCmdArg Normalization(Double_t scaleFactor, RooAbsPdf::ScaleType scaleType) 
+  RooCmdArg Normalization(Double_t scaleFactor, Int_t scaleType) 
                                                    { return RooCmdArg("Normalization",scaleType,0,scaleFactor,0,0,0,0,0) ; }
   
   // RooAbsData::plotOn arguments
@@ -105,7 +106,7 @@ namespace RooFit {
 
   // RooChi2Var::ctor arguments
   RooCmdArg Extended(Bool_t flag) { return RooCmdArg("Extended",flag,0,0,0,0,0,0,0) ; }
-  RooCmdArg DataError(RooDataHist::ErrorType etype) { return RooCmdArg("DataError",(Int_t)etype,0,0,0,0,0,0,0) ; }
+  RooCmdArg DataError(Int_t etype) { return RooCmdArg("DataError",(Int_t)etype,0,0,0,0,0,0,0) ; }
   RooCmdArg NumCPU(Int_t nCPU, Bool_t interleave)   { return RooCmdArg("NumCPU",nCPU,interleave,0,0,0,0,0,0) ; }
   
   // RooAbsCollection::printLatex arguments
@@ -172,6 +173,8 @@ namespace RooFit {
   RooCmdArg ProtoData(const RooDataSet& protoData, Bool_t randomizeOrder, Bool_t resample) 
                                          { return RooCmdArg("PrototypeData",randomizeOrder,resample,0,0,0,0,&protoData,0) ; }
   RooCmdArg NumEvents(Int_t numEvents)   { return RooCmdArg("NumEvents",numEvents,0,0,0,0,0,0,0) ; }
+  RooCmdArg ExpectedData(Bool_t flag)    { return RooCmdArg("ExpectedData",flag,0,0,0,0,0,0,0) ; }
+  RooCmdArg Asimov(Bool_t flag)          { return ExpectedData(flag) ; }
   
   // RooAbsRealLValue::createHistogram arguments
   RooCmdArg YVar(const RooAbsRealLValue& var, const RooCmdArg& arg)       { return RooCmdArg("YVar",0,0,0,0,0,0,&var,0,&arg) ; }
