@@ -45,11 +45,13 @@
 #include "RooMsgService.h"
 #include "RooAbsPdf.h"
 #include "RooAbsData.h"
+#include "RooDataHist.h"
 #include "RooArgSet.h"
 #include "RooRealVar.h"
 #include "RooErrorHandler.h"
 #include "RooGlobalFunc.h"
 #include "RooBinning.h"
+#include "RooCategory.h"
 
 ClassImp(RooAbsOptTestStatistic)
 ;
@@ -76,7 +78,8 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *tit
 					       const RooArgSet& projDeps, const char* rangeName, const char* addCoefRangeName,
 					       Int_t nCPU, Bool_t interleave, Bool_t verbose, Bool_t splitCutRange, Bool_t cloneInputData) : 
   RooAbsTestStatistic(name,title,real,indata,projDeps,rangeName, addCoefRangeName, nCPU, interleave, verbose, splitCutRange),
-  _projDeps(0)
+  _projDeps(0),
+  _dataVersion("!dataVersion","dataset version number",this)
 {
   // Constructor taking function (real), a dataset (data), a set of projected observables (projSet). If 
   // rangeName is not null, only events in the dataset inside the range will be used in the test
@@ -90,6 +93,12 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *tit
   // i takes all bins for which (ibin % ncpu == i) which is more likely to result in an even workload.
   // If splitCutRange is true, a different rangeName constructed as rangeName_{catName} will be used
   // as range definition for each index state of a RooSimultaneous
+
+  TString vvarName = Form("%s_dataset_version",name) ;
+  RooRealVar* versionVar = new RooRealVar(vvarName.Data(),vvarName.Data(),1) ;
+  versionVar->setConstant(kTRUE) ;
+  _dataVersion.setArg(*versionVar) ;
+  addOwnedComponents(*versionVar) ;
 
   // Don't do a thing in master mode
   if (operMode()!=Slave) {
@@ -324,7 +333,8 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *tit
 
 //_____________________________________________________________________________
 RooAbsOptTestStatistic::RooAbsOptTestStatistic(const RooAbsOptTestStatistic& other, const char* name) : 
-  RooAbsTestStatistic(other,name)
+  RooAbsTestStatistic(other,name),
+  _dataVersion("!dataVersion",this,other._dataVersion)
 {
   // Copy constructor
 
@@ -609,6 +619,9 @@ Bool_t RooAbsOptTestStatistic::setData(RooAbsData& indata, Bool_t cloneData)
   } else {
     origData->resetCache() ;
   }
+
+  // Increment dataset version parameter so that clients know that functional form has changed
+  _dataVersion = _dataVersion + 1 ;
 
   setValueDirty() ;
   return kTRUE ;
