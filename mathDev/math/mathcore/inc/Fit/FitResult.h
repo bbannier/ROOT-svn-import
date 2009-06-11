@@ -59,7 +59,8 @@ public:
    FitResult (); 
 
    /**
-      Construct from a Minimizer instance 
+      Construct from a Minimizer instance after fitting
+      Run also Minos if requested from the configuration
     */
    FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, const IModelFunction * f, bool isValid, unsigned int sizeOfData = 0, bool binFit = true, const ROOT::Math::IMultiGenFunction * chi2func = 0, unsigned int ncalls = 0);
 
@@ -81,6 +82,11 @@ public:
 
 public: 
 
+   /**
+      Update the fit result with a new minimization status
+      To be run only if same fit is performed with same configuration 
+    */
+   bool Update(const ROOT::Math::Minimizer & min, bool isValid, unsigned int ncalls = 0 );
 
    /** minimization quantities **/
 
@@ -140,10 +146,7 @@ public:
       return (i < fErrors.size() ) ? fErrors[i] : 0; 
    } 
 
-//    /// Minos  Errors 
-//    const std::vector<std::pair<double, double> > MinosErrors() const; 
-
-   /// set the Minos errors for parameter i 
+   /// set the Minos errors for parameter i (called by the Fitter class when running Minos)
    void SetMinosError(unsigned int i, double elow, double eup);
 
    /// lower Minos error
@@ -257,6 +260,7 @@ public:
    std::string GetParameterName(unsigned int ipar) const;
 
 protected: 
+
 
 
 private: 

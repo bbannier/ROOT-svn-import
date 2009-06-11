@@ -375,7 +375,24 @@ bool Fitter::DoMinimization(const ObjFunc & objFunc, unsigned int dataSize, cons
    return ret; 
 }
 
-bool Fitter::CalculateErrors() { 
+bool Fitter::CalculateHessErrors() { 
+   // compute the Minos errors according to configuration
+   // set in the parameters and append value in fit result
+   if (!fMinimizer.get()  || !fResult.get()) { 
+       MATH_ERROR_MSG("Fitter::CalculateHessErrors","Need to do a fit before calculating the errors");
+       return false; 
+   }
+
+   //run Hesse
+   bool ret = fMinimizer->Hesse();
+
+   // update minimizer results with what comes out from Hesse
+   ret |= fResult->Update(*fMinimizer, ret); 
+   return ret; 
+}
+
+
+bool Fitter::CalculateMinosErrors() { 
    // compute the Minos errors according to configuration
    // set in the parameters and append value in fit result
    
@@ -383,12 +400,12 @@ bool Fitter::CalculateErrors() {
    fConfig.SetMinosErrors(); 
 
    if (!fMinimizer.get() ) { 
-       MATH_ERROR_MSG("Fitter::CalculateErrors","minimizer does not exist - cannot calculate Minos errors");
+       MATH_ERROR_MSG("Fitter::CalculateMinosErrors","Minimizer does not exist - cannot calculate Minos errors");
        return false; 
    }
 
    if (!fResult.get() || fResult->IsEmpty() ) { 
-       MATH_ERROR_MSG("Fitter::CalculateErrors","invalid Fit Result - cannot calculate Minos errors");
+       MATH_ERROR_MSG("Fitter::CalculateMinosErrors","Invalid Fit Result - cannot calculate Minos errors");
        return false; 
    }
 
@@ -403,7 +420,7 @@ bool Fitter::CalculateErrors() {
       ok |= ret; 
    }
    if (!ok) 
-       MATH_ERROR_MSG("Fitter::CalculateErrors","Minos error calculation failed for all parameters");
+       MATH_ERROR_MSG("Fitter::CalculateMinosErrors","Minos error calculation failed for all parameters");
 
    return ok; 
 }
