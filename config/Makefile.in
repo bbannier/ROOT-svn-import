@@ -151,6 +151,11 @@ GAW_CPPFLAGS   := $(filter-out /usr/include, @gaw_cppflags@)
 
 BUILDMEMSTAT   := @buildmemstat@
 
+BUILDBONJOUR   := @buildbonjour@
+DNSSDLIBDIR    := @dnssdlibdir@
+DNSSDLIB       := @dnssdlib@
+DNSSDINCDIR    := $(filter-out /usr/include, @dnssdincdir@)
+
 BUILDCHIRP     := @buildchirp@
 CHIRPLIBDIR    := @chirplibdir@
 CHIRPCLILIB    := @chirplib@
@@ -220,7 +225,9 @@ SRPUTILINCDIR  := $(filter-out /usr/include, @srputilincdir@)
 
 AFSLIB         := @afslib@
 AFSLIBDIR      := @afslibdir@
+AFSINCDIR      := @afsincdir@
 AFSEXTRACFLAGS := @afsextracflags@
+AFSSHARED      := @afsshared@
 
 BUILDKRB5      := @buildkrb5@
 KRB5LIB        := @krb5lib@

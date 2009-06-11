@@ -1781,6 +1781,13 @@ void TFitEditor::DoFit()
       }
    }
 
+   // if SAME is set re-plot the function
+   // useful in case histogram was drawn with HIST 
+   //  and no function will be drawm)
+   if (fDrawSame->GetState() == kButtonDown && fitFunc) 
+      fitFunc->Draw("same");
+
+
    // update parameters value shown in dialog 
    //if (!fFuncPars) fFuncPars = new Double_t[fitFunc->GetNpar()][3];
    GetParameters(fFuncPars,fitFunc);
@@ -2772,9 +2779,6 @@ void TFitEditor::RetrieveOptions(Foption_t& fitOpts, TString& drawOpts, ROOT::Ma
       fitOpts.Robust = 1;
       fitOpts.hRobust = fRobustValue->GetNumber();
    }
-
-   if (fDrawSame->GetState() == kButtonDown)
-      drawOpts += "SAME";
 
    drawOpts = GetDrawOption();
 
