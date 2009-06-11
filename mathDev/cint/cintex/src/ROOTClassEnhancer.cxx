@@ -205,7 +205,6 @@ namespace ROOT { namespace Cintex {
          return;
       }
       else if (TypeGet().Properties().HasProperty("ClassDef")) {
-         //--- create TGenericClassInfo Instance
          return;
       }
       else    {
@@ -237,31 +236,27 @@ namespace ROOT { namespace Cintex {
       if ( dict ) return;
 
       ::ROOT::TGenericClassInfo* info = 0;
-      if (TypeGet().Properties().HasProperty("ClassDef")) {
-         info = 0;
-      } else {
-         void* context = this;
+      void* context = this;
 #if ROOT_VERSION_CODE >= ROOT_VERSION(5,1,1)
-         fIsa_func = new IsAProxy(this);
+      fIsa_func = new IsAProxy(this);
 #else
-         fIsa_func = (IsAFunc_t)Allocate_1arg_function(context, Stub_IsA2);
+      fIsa_func = (IsAFunc_t)Allocate_1arg_function(context, Stub_IsA2);
 #endif
-         fDictionary_func = Allocate_void_function(context, Stub_Dictionary);
+      fDictionary_func = Allocate_void_function(context, Stub_Dictionary);
 
-         info = new ::ROOT::TGenericClassInfo(
-                                              Name().c_str(),           // Class Name
-                                              Version(),                // class version
-                                              "",                       // declaration file Name
-                                              1,                        // declaration line number
-                                              TypeGet().TypeInfo(),     // typeid
-                                              ROOT::DefineBehavior(0,0),// default behavior
-                                              0,                        // show members function
-                                              fDictionary_func,         // dictionary function
-                                              fIsa_func,                // IsA function
-                                              0,                        // pragma bits
-                                              TypeGet().SizeOf()        // sizeof
-                                              );
-      } // if ClassDef was used
+      info = new ::ROOT::TGenericClassInfo(
+                                           Name().c_str(),           // Class Name
+                                           Version(),                // class version
+                                           "",                       // declaration file Name
+                                           1,                        // declaration line number
+                                           TypeGet().TypeInfo(),     // typeid
+                                           ROOT::DefineBehavior(0,0),// default behavior
+                                           0,                        // show members function
+                                           fDictionary_func,         // dictionary function
+                                           fIsa_func,                // IsA function
+                                           0,                        // pragma bits
+                                           TypeGet().SizeOf()        // sizeof
+                                           );
 
       if (info) info->SetImplFile("", 1);
       //----Fill the New and Deletete functions
@@ -400,6 +395,9 @@ namespace ROOT { namespace Cintex {
          case TClassEdit::kMultiSet:
             cl_info.SetVersion(4);
             break;
+         case TClassEdit::kBitSet:
+            cl_info.SetVersion(2);
+            break;
          case TClassEdit::kNotSTL:
          case TClassEdit::kEnd:
             cl_info.SetVersion(1);
@@ -422,6 +420,7 @@ namespace ROOT { namespace Cintex {
          case TClassEdit::kMultiMap:
          case TClassEdit::kSet:
          case TClassEdit::kMultiSet:
+         case TClassEdit::kBitSet:
             {
                Member method = typ.MemberByName("createCollFuncTable", Reflex::Type(), INHERITEDMEMBERS_NO);
                if ( !method )   {

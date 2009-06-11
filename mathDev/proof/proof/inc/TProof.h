@@ -108,7 +108,7 @@ class TProofDataSetManager;
 // 13 -> 14: new proofserv environment setting
 // 14 -> 15: add support for entry lists; new version of TFileInfo
 // 15 -> 16: add support for generic non-data based processing
-// 16 -> 17: new dataset handling system; support for TFileCollection processing 
+// 16 -> 17: new dataset handling system; support for TFileCollection processing
 // 17 -> 18: support for reconnection on daemon restarts
 // 18 -> 19: TProofProgressStatus used in kPROOF_PROGRESS, kPROOF_STOPPROCESS
 //           and kPROOF_GETNEXTPACKET messages in Master - worker communication
@@ -116,9 +116,10 @@ class TProofDataSetManager;
 // 20 -> 21: Add support for session queuing
 // 21 -> 22: Add support for switching from sync to async while running ('Ctrl-Z' functionality)
 // 22 -> 23: New dataset features (default tree name; classification per fileserver)
+// 23 -> 24: Merging optimization
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 23;            // protocol version number
+const Int_t       kPROOF_Protocol        = 24;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
@@ -158,11 +159,10 @@ typedef void (*PrintProgress_t)(Long64_t tot, Long64_t proc, Float_t proctime);
 // PROOF Interrupt signal handler
 class TProofInterruptHandler : public TSignalHandler {
 private:
+   TProof *fProof;
 
    TProofInterruptHandler(const TProofInterruptHandler&); // Not implemented
    TProofInterruptHandler& operator=(const TProofInterruptHandler&); // Not implemented
-
-   TProof *fProof;
 public:
    TProofInterruptHandler(TProof *p)
       : TSignalHandler(kSigInterrupt, kFALSE), fProof(p) { }
@@ -172,12 +172,11 @@ public:
 // Input handler for messages from TProofServ
 class TProofInputHandler : public TFileHandler {
 private:
+   TSocket *fSocket;
+   TProof  *fProof;
 
    TProofInputHandler(const TProofInputHandler&); // Not implemented
    TProofInputHandler& operator=(const TProofInputHandler&); // Not implemented
-
-   TSocket *fSocket;
-   TProof  *fProof;
 public:
    TProofInputHandler(TProof *p, TSocket *s);
    Bool_t Notify();
@@ -211,6 +210,25 @@ public:
 
    ClassDef(TSlaveInfo,2) //basic info on slave
 };
+
+// Small auxilliary class for merging progress notification
+class TProofMergePrg {
+private:
+   TString      fExp;
+   Int_t        fIdx;
+   Int_t        fNWrks;
+   static char  fgCr[4];
+public:
+   TProofMergePrg() : fIdx(-1), fNWrks(-1) { }
+
+   const char  *Export() { fExp.Form("%c (%d workers still sending)   ", fgCr[fIdx], fNWrks);
+                           return fExp.Data(); }
+   void         DecreaseNWrks() { fNWrks--; }
+   void         IncreaseIdx() { fIdx++; if (fIdx == 4) fIdx = 0; }
+   void         Reset(Int_t n = -1) { fIdx = -1; SetNWrks(n); }
+   void         SetNWrks(Int_t n) { fNWrks = n; }
+};
+
 
 class TProof : public TNamed, public TQObject {
 
@@ -389,6 +407,8 @@ private:
    FILE           *fLogFileR;        //temp file to read redirected logs
    Bool_t          fLogToWindowOnly; //send log to window only
 
+   TProofMergePrg  fMergePrg;        //Merging progress
+
    TList          *fWaitingSlaves;   //stores a TPair of the slaves's TSocket and TMessage
    TList          *fQueries;         //list of TProofQuery objects
    Int_t           fOtherQueries;    //number of queries in list from previous sessions
@@ -415,6 +435,8 @@ private:
    TList          *fLoadedMacros;    // List of loaded macros (just file names)
    static TList   *fgProofEnvList;   // List of TNameds defining environment
                                      // variables to pass to proofserv
+   static TPluginHandler *fgLogViewer;  // Log dialog box plugin
+
 protected:
    enum ESlaves { kAll, kActive, kUnique, kAllUnique };
 
@@ -534,6 +556,8 @@ private:
    Int_t    GetQueryReference(Int_t qry, TString &ref);
 
    void     PrintProgress(Long64_t total, Long64_t processed, Float_t procTime = -1.);
+
+   void     ResetMergePrg();
 
 protected:
    TProof(); // For derived classes to use
@@ -823,6 +847,7 @@ public:
    // Opening and managing PROOF connections
    static TProof       *Open(const char *url = 0, const char *conffile = 0,
                              const char *confdir = 0, Int_t loglevel = 0);
+   static void          LogViewer(const char *url = 0, Int_t sessionidx = 0);
    static TProofMgr    *Mgr(const char *url);
    static void          Reset(const char *url, Bool_t hard = kFALSE);
 

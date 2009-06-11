@@ -118,12 +118,13 @@ XPDINCEXTRA    := $(XROOTDDIRI:%=-I%)
 XPDINCEXTRA    += $(PROOFDDIRI:%=-I%)
 XPDLIBEXTRA    += -L$(XROOTDDIRL) -lXrdOuc -lXrdNet -lXrdSys \
                   -L$(XROOTDDIRP) -lXrdClient -lXrdSut
-ifeq ($(PLATFORM),linux)
 XPROOFDEXELIBS := $(XROOTDDIRL)/libXrd.a $(XROOTDDIRL)/libXrdClient.a \
                   $(XROOTDDIRL)/libXrdNet.a $(XROOTDDIRL)/libXrdOuc.a \
                   $(XROOTDDIRL)/libXrdSys.a $(XROOTDDIRL)/libXrdSut.a
-XPROOFDEXE     := bin/xproofd
+ifeq ($(PLATFORM),solaris)
+XPROOFDEXELIBS += -lsendfile
 endif
+XPROOFDEXE     := bin/xproofd
 endif
 
 # used in the main Makefile

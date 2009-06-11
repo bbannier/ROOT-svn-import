@@ -243,7 +243,7 @@ void TAdvancedGraphicsDialog::CreateScanFrame()
 void TAdvancedGraphicsDialog::CreateConfFrame()
 {
    // Create the frame that contains all the necessary information for
-   // the Scan method.
+   // the Confidence Level  method.
 
    fConfFrame = new TGVerticalFrame(fTab);
    TGHorizontalFrame* frame = new TGHorizontalFrame(fConfFrame);
@@ -258,7 +258,7 @@ void TAdvancedGraphicsDialog::CreateConfFrame()
                                   TGNumberFormat::kNELLimitMinMax,
                                   0, 0.9999);
    fConfLevel->Resize(140, 20);
-   fConfLevel->GetNumberEntry()->SetToolTipText("Sets the number of points used in the confidence level");
+   fConfLevel->GetNumberEntry()->SetToolTipText("Sets the value of the confidence level");
    frame->AddFrame(fConfLevel, new TGLayoutHints(kLHintsNormal, 0, 0, 5, 0));
    fConfFrame->AddFrame(frame, new TGLayoutHints(kLHintsExpandX, 5, 5, 0, 0));
 

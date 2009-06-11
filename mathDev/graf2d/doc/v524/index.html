@@ -73,6 +73,18 @@
      axis4->SetTitle("LG+"); axis4->Draw();
   }
   </pre>
+<li> <tt>gStyle.SetStripDecimals(kFALSE)</tt> did not work in cases like the
+  following one:
+  <pre>
+  {
+     gStyle.SetStripDecimals(kFALSE);
+     gStyle.SetPadLeftMargin(.15);
+     TGraph graph_freq;
+     graph_freq.SetPoint(0, 933., 40078879.);
+     graph_freq.SetPoint(1, 934., 40078966.);
+     graph_freq.Draw("A*");
+  }
+  </pre>
 </ul>
 
 <h4>TCrown</h4>
@@ -100,3 +112,12 @@
   "gl" string could be anywhere in the name.
 </ul>
 
+<h4>QtRoot/ libGQt</h4>
+<ul>
+<li> The redundant Qt3-related code was removed.
+<li> The Q3_SUPPORT  flag was eliminated. 
+     The plug-in can be used with and without Q3_SUPPORT now.
+<li> The code was adjusted to work under the Qt 4.5.x.
+<li> Many platform depended (win32) sections 
+     were replaced with the cross-platform code
+</ul>

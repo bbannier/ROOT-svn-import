@@ -51,6 +51,7 @@ class genDictionary(object) :
     self.globalNamespaceID = ''
     self.typedefs_for_usr = []
     self.gccxmlvers = gccxmlvers
+    self.split = opts.get('split', '')
     # The next is to avoid a known problem with gccxml that it generates a
     # references to id equal '_0' which is not defined anywhere
     self.xref['_0'] = {'elem':'Unknown', 'attrs':{'id':'_0','name':''}, 'subelems':[]}
@@ -568,9 +569,23 @@ class genDictionary(object) :
     f_buffer = ''
     # Need to specialize templated class's functions (e.g. A<T>::Class())
     # before first instantiation (stubs), so classDefImpl before stubs.
-    f_buffer += classDefImpl
+    if self.split.find('classdef') >= 0:
+      posExt = file.rfind('.')
+      if posExt > 0:
+        cdFileName = file[0:posExt] + '_classdef' + file[posExt:]
+      else:
+        cdFileName = file + '_classdef.cpp'
+      cdFile = open(cdFileName, 'w')
+      cdFile.write(self.genHeaders(cppinfo))
+      cdFile.write('\n')
+      cdFile.write('namespace {' )
+      cdFile.write(classDefImpl)
+      cdFile.write('} // unnamed namespace\n')
+    else :
+      f_buffer += classDefImpl
 
-    f_shadow =  '\n// Shadow classes to obtain the data member offsets \n'
+    f_shadow =  '\n#ifndef __CINT__\n'
+    f_shadow +=  '\n// Shadow classes to obtain the data member offsets \n'
     f_shadow += 'namespace __shadow__ {\n'
     for c in selclasses :
       if 'incomplete' not in c :
@@ -595,6 +610,7 @@ class genDictionary(object) :
         f_buffer += scons
         f_shadow += self.genClassShadow(c)
     f_shadow += '}\n\n'
+    f_shadow +=  '\n#endif // __CINT__\n'
     f_buffer += self.genFunctionsStubs( selfunctions )
     f_buffer += self.genInstantiateDict(selclasses, selfunctions, selenums, selvariables)
     f.write('namespace {\n')
@@ -1450,7 +1466,9 @@ class genDictionary(object) :
       if (attrs.get('volatile') == '1') : s += ' volatile'
     elif elem == 'ArrayType' :
       max = attrs['max'].rstrip('u')
-      arr = '[%s]' % str(int(max)+1)
+      arr = '[]'
+      if len(max):
+        arr = '[%s]' % str(int(max)+1)
       typ = self.genTypeName(attrs['type'], enum, const, colon)
       if typ[-1] == ']' :
         pos = typ.find('[')
@@ -1745,6 +1763,49 @@ class genDictionary(object) :
       for pname, pval in xattrs.items() : 
         if pname not in ('name', 'transient', 'pattern') :
           c += '\n  .AddProperty("%s","%s")' % (pname, pval)     
+    return c
+#----------------------------------------------------------------------------------
+  def genVariableBuild(self, attrs, childs):
+    if 'access' in attrs and attrs['access'] in ('private','protected') : return ''
+    type   = self.genTypeName(attrs['type'], enum=False, const=False)
+    cl     = self.genTypeName(attrs['context'],colon=True)
+    cls    = self.genTypeName(attrs['context'])
+    name = attrs['name']
+    if not name :
+      ftype = self.xref[attrs['type']]
+      # if the member type is an unnamed union we try to take the first member of the union as name
+      if ftype['elem'] == 'Union':
+        firstMember = ftype['attrs']['members'].split()[0]
+        if firstMember : name = self.xref[firstMember]['attrs']['name']
+        else           : return ''       # then this must be an unnamed union without members
+    if type[-1] == '&' :
+      print '--->> genreflex: WARNING: References are not supported as data members (%s %s::%s)' % ( type, cls, name )
+      self.warnings += 1
+      return ''
+    if 'bits' in attrs:
+      print '--->> genreflex: WARNING: Bit-fields are not supported as data members (%s %s::%s:%s)' % ( type, cls, name, attrs['bits'] )
+      self.warnings += 1
+      return ''
+    if self.selector : xattrs = self.selector.selfield( cls,name)
+    else             : xattrs = None
+    mod = self.genModifier(attrs,xattrs)
+    if mod : mod += ' | Reflex::STATIC'
+    else   : mod =  'Reflex::STATIC'
+    if attrs['type'][-1] == 'c' :
+      if mod : mod += ' | Reflex::CONST'
+      else   : mod =  'Reflex::CONST'
+    if attrs['type'][-1] == 'v' :
+      if mod : mod += ' | Reflex::VOLATILE'
+      else   : mod = 'Reflex::VOLATILE'
+    c = ''
+    if not attrs.has_key('init'):
+      c = '  .AddDataMember(%s, "%s", (size_t)&%s::%s, %s)' % (self.genTypeID(attrs['type']), name, cls, name, mod)
+      c += self.genCommentProperty(attrs)
+      # Other properties
+      if xattrs : 
+        for pname, pval in xattrs.items() : 
+          if pname not in ('name', 'transient', 'pattern') :
+            c += '\n  .AddProperty("%s","%s")' % (pname, pval)     
     return c
 #----------------------------------------------------------------------------------    
   def genCommentProperty(self, attrs):
@@ -2096,10 +2157,16 @@ class genDictionary(object) :
     cl       = self.genTypeName(attrs['context'], colon=True)
     clt      = string.translate(str(cl), self.transtable)
     t        = getTemplateArgs(cl)[0]
-    s  = 'static void method%s( void* retaddr, void*, const std::vector<void*>&, void*)\n{\n' %( attrs['id'], )
-    s += '  if (retaddr) *(void**) retaddr = ::Reflex::Proxy< %s >::Generate();\n' % (cl,)
-    s += '  else ::Reflex::Proxy< %s >::Generate();\n' % (cl,)
-    s += '}\n'
+    if cl[:13] == '::std::bitset'  :
+      s  = 'static void method%s( void* retaddr, void*, const std::vector<void*>&, void*)\n{\n' %( attrs['id'], )
+      s += '  if (retaddr) *(void**) retaddr = ::Reflex::Proxy< ::Reflex::StdBitSetHelper< %s > >::Generate();\n' % (cl,)
+      s += '  else ::Reflex::Proxy< ::Reflex::StdBitSetHelper< %s > >::Generate();\n' % (cl,)
+      s += '}\n'
+    else:
+      s  = 'static void method%s( void* retaddr, void*, const std::vector<void*>&, void*)\n{\n' %( attrs['id'], )
+      s += '  if (retaddr) *(void**) retaddr = ::Reflex::Proxy< %s >::Generate();\n' % (cl,)
+      s += '  else ::Reflex::Proxy< %s >::Generate();\n' % (cl,)
+      s += '}\n'
     return s
 #----BasesMap stuff--------------------------------------------------------
   def genGetBasesTableDecl( self, attrs, args ) :
@@ -2297,6 +2364,7 @@ def getContainerId(c):
   elif c[:21] == 'stdext::hash_multiset':    return ('HASHMULTISET','set')
   elif c[:10] == 'std::stack'   :            return ('STACK','stack')
   elif c[:11] == 'std::vector'  :            return ('VECTOR','vector')
+  elif c[:11] == 'std::bitset'  :            return ('BITSET','bitset')
   else : return ('NOCONTAINER','')
 #---------------------------------------------------------------------------------------
 stldeftab = {}
@@ -2440,7 +2508,6 @@ def ClassDefImplementation(selclasses, self) :
   returnValue += '#include "TClass.h"\n'
   returnValue += '#include "TMemberInspector.h"\n'
   returnValue += '#include "RtypesImp.h"\n' # for GenericShowMembers etc
-  returnValue += '#include "Cintex/Cintex.h"\n'
   returnValue += '#include "TIsAProxy.h"\n'
   haveClassDef = 0
 
@@ -2481,12 +2548,10 @@ def ClassDefImplementation(selclasses, self) :
       extraval = '!RAW!' + str(derivesFromTObject)
       if attrs.has_key('extra') : attrs['extra']['ClassDef'] = extraval
       else                      : attrs['extra'] = {'ClassDef': extraval}
-      attrs['extra']['DictionaryFunc'] = '!RAW!' + clname + '::Dictionary';
       id = attrs['id']
       template = ""
       if clname.find('<') != -1: template = "template<> "
 
-      returnValue += 'namespace { extern ::ROOT::TGenericClassInfo genericClassInfo' + attrs['id'] + '; }\n'
       returnValue += template + 'TClass* ' + clname + '::Class() {\n'
       returnValue += '   if (!fgIsA)\n'
       returnValue += '      fgIsA = TClass::GetClass("' + clname[2:] + '");\n'
@@ -2500,30 +2565,7 @@ def ClassDefImplementation(selclasses, self) :
         returnValue += 'namespace {\n'
         returnValue += '   static void method_newdel' + id + '(void*, void*, const std::vector<void*>&, void*);\n'
         returnValue += '}\n'
-      returnValue += template + 'void ' + clname + '::Dictionary() {\n'
-      returnValue += '   genericClassInfo' + id + '.SetImplFile("", 1);\n'
-      if haveNewDel:
-        returnValue += '   ::Reflex::NewDelFunctions* ndf = 0;\n'
-        returnValue += '   method_newdel' + id + '(&ndf, 0, std::vector<void*>(), 0);\n'
-        returnValue += '   genericClassInfo' + id + '.SetNew(ndf->fNew);\n'
-        returnValue += '   genericClassInfo' + id + '.SetNewArray(ndf->fNewArray);\n'
-        returnValue += '   genericClassInfo' + id + '.SetDelete(ndf->fDelete);\n'
-        returnValue += '   genericClassInfo' + id + '.SetDeleteArray(ndf->fDeleteArray);\n'
-        returnValue += '   genericClassInfo' + id + '.SetDestructor(ndf->fDestructor);\n'
-      for rule in ('ioread', 'ioreadraw'):
-        if attrs['extra'].has_key(rule):
-          if rule == 'ioreadraw': setrrr = 'Raw'
-          else:                   setrrr = ''
-          returnValue += '   Any& obj = TypeGet().Properties().PropertyValue( "' + rule + '" );\n'
-          returnValue += '   std::vector<ROOT::TSchemaHelper> rules = any_cast<std::vector<ROOT::TSchemaHelper> >( obj );\n'
-          returnValue += '   info->SetRead' + setrrr + 'Rules( rules );\n'
-      returnValue += '   if( ::ROOT::Cintex::Cintex::GetROOTCreator() ) {\n'
-      returnValue += '      (* ::ROOT::Cintex::Cintex::GetROOTCreator())( Reflex::Type::ByName("' + clname + '"), &genericClassInfo' + attrs['id'] + ' );\n'
-
-      returnValue += '   } else {\n'
-      returnValue += '      ::ROOT::Cintex::Cintex::Default_CreateClass( "' + clname + '", &genericClassInfo' + attrs['id'] + ' );\n'
-      returnValue += '   }\n'
-      returnValue += '}\n'
+      returnValue += template + 'void ' + clname + '::Dictionary() {}\n'
       returnValue += template + 'const char *' + clname  + '::ImplFileName() {return "";}\n'
 
       returnValue += template + 'int ' + clname + '::ImplFileLine() {return 1;}\n'
@@ -2603,11 +2645,6 @@ def ClassDefImplementation(selclasses, self) :
       returnValue += '   }\n'
       returnValue += '}\n'
       returnValue += template + 'TClass* ' + clname + '::fgIsA = 0;\n'
-      returnValue += 'namespace { ::ROOT::TGenericClassInfo genericClassInfo' + attrs['id'] + '("' + clname[2:] + '",\n   ' + clname + '::Class_Version(),\n   '
-      returnValue += clname + '::DeclFileName(),\n   ' + clname + '::DeclFileLine(),\n   '
-      returnValue += 'typeid( ' + clname + ' ),\n   ::ROOT::DefineBehavior(0,0), 0, ' + clname + '::Dictionary,\n   '
-      returnValue += 'new ::TInstrumentedIsAProxy< ' + clname + ' >(0),\n   '
-      returnValue += '0, sizeof( ' + clname + ')); }\n'
     elif derivesFromTObject :
       # no fgIsA etc members but derives from TObject!
       print '--->> genreflex: ERROR: class %s derives from TObject but does not use ClassDef!' % attrs['fullname']

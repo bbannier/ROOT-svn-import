@@ -207,6 +207,10 @@ int PyROOT::BuildRootClassDict( const T& klass, PyObject* pyclass ) {
    typedef std::map< std::string, Callables_t > CallableCache_t;
    CallableCache_t cache;
 
+// bypass custom __getattr__ for efficiency
+   getattrofunc oldgetattro = pyclass->ob_type->tp_getattro;
+   pyclass->ob_type->tp_getattro = PyType_Type.tp_getattro;
+
    const size_t nMethods = klass.FunctionMemberSize();
    for ( size_t inm = 0; inm < nMethods; ++inm ) {
       const M& method = klass.FunctionMemberAt( inm );
@@ -245,7 +249,7 @@ int PyROOT::BuildRootClassDict( const T& klass, PyObject* pyclass ) {
          // operator[]/() returning a reference type will be used for __setitem__
             std::string cpd = Utility::Compound(
                method.TypeOf().ReturnType().Name( ROOT::Reflex::Q | ROOT::Reflex::S ) );
-            if ( cpd[ cpd.size() - 1 ] == '&' )
+            if ( ! cpd.empty() && cpd[ cpd.size() - 1 ] == '&' )
                setupSetItem = kTRUE;
          } else if ( op == "*" ) {
          // dereference v.s. multiplication of two instances
@@ -323,10 +327,6 @@ int PyROOT::BuildRootClassDict( const T& klass, PyObject* pyclass ) {
 // add a pseudo-default ctor, if none defined
    if ( ! isNamespace && ! hasConstructor )
       cache[ "__init__" ].push_back( new TConstructorHolder< T, M >( klass ) );
-
-// bypass custom __getattr__ for efficiency
-   getattrofunc oldgetattro = pyclass->ob_type->tp_getattro;
-   pyclass->ob_type->tp_getattro = PyType_Type.tp_getattro;
 
 // add the methods to the class dictionary
    for ( CallableCache_t::iterator imd = cache.begin(); imd != cache.end(); ++imd ) {
@@ -622,7 +622,7 @@ PyObject* PyROOT::MakeRootClassFromString( const std::string& fullname, PyObject
    // fill the dictionary, if successful
       if ( pyclass != 0 ) {
       // get the class anew, to cover the case where it was updated by the autoloading mechanism
-         klass =  T::ByName( klass.Name( ROOT::Reflex::FINAL | ROOT::Reflex::SCOPED ) );
+         klass = T::ByName( klass.Name( ROOT::Reflex::FINAL | ROOT::Reflex::SCOPED ) );
          if ( BuildRootClassDict< T, B, M >( klass, pyclass ) != 0 ) {
          // something failed in building the dictionary
             Py_DECREF( pyclass );
