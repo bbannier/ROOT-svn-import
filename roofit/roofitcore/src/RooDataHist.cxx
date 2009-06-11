@@ -707,9 +707,11 @@ RooDataHist::RooDataHist(const RooDataHist& other, const char* newname) :
   Int_t i ;
 
   Int_t nVar = _vars.getSize() ;
-  _idxMult = new Int_t[nVar] ;
-  for (i=0 ; i<nVar ; i++) {
-    _idxMult[i] = other._idxMult[i] ;  
+  if (other._idxMult) {
+    _idxMult = new Int_t[nVar] ;
+    for (i=0 ; i<nVar ; i++) {
+      _idxMult[i] = other._idxMult[i] ;  
+    }
   }
 
   // Allocate and initialize weight array 
