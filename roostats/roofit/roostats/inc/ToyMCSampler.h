@@ -106,7 +106,6 @@ namespace RooStats {
       //       cout << " about to generate sampling dist " << endl;
 
       RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
-      RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
 
       for(Int_t i=0; i<fNtoys; ++i){
 	//cout << " on toy number " << i << endl;
@@ -167,8 +166,13 @@ namespace RooStats {
 	    << "generating" << nEvents << " events " << endl;
        */
        
+       RooFit::MsgLevel level = RooMsgService::instance().globalKillBelow();
+       RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
 
+       //       cout << "nEvents = " << nEvents << endl;
        RooAbsData* data = (RooAbsData*)pdf->generate(*observables, nEvents);
+
+       RooMsgService::instance().setGlobalKillBelow(level) ;
        delete observables;
        //       delete pdf;
        return data;

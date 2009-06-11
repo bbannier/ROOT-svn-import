@@ -82,7 +82,8 @@ void FeldmanCousins::CreateTestStatSampler() const{
 
     // get parameters (params of interest + nuisance)
     RooArgSet* parameters = pdf->getParameters(data);
-    //RooArgSet* parameters = fPOI;
+    RemoveConstantParameters(parameters);
+   //RooArgSet* parameters = fPOI;
 
     // use the profile likelihood ratio as the test statistic
     ProfileLikelihoodTestStat* testStatistic = new ProfileLikelihoodTestStat(*pdf);
@@ -100,7 +101,10 @@ void FeldmanCousins::CreateTestStatSampler() const{
     } else{
       cout << "ntoys per point: adaptive" << endl;
     }
-    cout << "nevents per toy taken from expectation" << endl;
+    if(fFluctuateData)
+      cout << "nEvents per toy will fluctuate about  expectation" << endl;
+    else
+      cout << "nEvents per toy will not fluctuate, will always be " << data->numEntries() << endl;
   }
 }
 
@@ -116,6 +120,7 @@ void FeldmanCousins::CreateParameterPoints() const{
 
     // get parameters (params of interest + nuisance)
     RooArgSet* parameters = pdf->getParameters(data);
+    RemoveConstantParameters(parameters);
 
     TIter it = parameters->createIterator();
     RooRealVar *myarg; 

@@ -27,6 +27,8 @@
 #include "RooPlot.h"
 #include "RooDataSet.h"
 
+#include "RooStats/RooStatsUtils.h"
+
 // use this order for safety on library loading
 using namespace RooFit ;
 using namespace RooStats ;
@@ -60,8 +62,6 @@ void rs101_limitexample()
   // a toy dataset
   RooDataSet* data = modelWithConstraints->generate(*obs, 1);
 
-  
-
   modelWithConstraints->fitTo(*data, Constrain(constrainedParams) );
 
   RooPlot* frame = s->frame();
@@ -80,20 +80,29 @@ void rs101_limitexample()
   plc.SetPdf(*modelWithConstraints);
   plc.SetData(*data); 
   plc.SetParameters( paramOfInterest );
-  plc.SetTestSize(.05);
+  plc.SetTestSize(.1);
 
   ConfInterval* lrint = plc.GetInterval();  // that was easy.
   //  lrint->SetConfidenceLevel(0.95);
+
+
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  // temp for debugging
+  //  ratioSigEff->setConstant();
+  //  ratioBkgEff->setConstant();
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
 
   FeldmanCousins fc;
   fc.SetWorkspace(*wspace);
   fc.SetPdf(*modelWithConstraints);
   fc.SetData(*data); 
   fc.SetParameters( paramOfInterest );
+  fc.UseAdaptiveSampling(true);
   fc.FluctuateNumDataEntries(false); // number counting analysis: dataset always has 1 entry with N events observed
   fc.SetNBins(5); // number of points to test per parameter
-  fc.SetTestSize(.05);
-  //  ConfInterval* fcint = fc.GetInterval();  // that was easy.
+  fc.SetTestSize(.1);
+  ConfInterval* fcint = fc.GetInterval();  // that was easy.
   
 
   if( lrint->IsInInterval(paramOfInterest) ) 
@@ -101,11 +110,11 @@ void rs101_limitexample()
   else
     cout << "s = " << s->getVal() << " is NOT in interval" << endl;
 
-  /*  if( fcint->IsInInterval(paramOfInterest) ) 
+  if( fcint->IsInInterval(paramOfInterest) ) 
     cout << "s = " << s->getVal() << " is in FC interval" << endl;
   else
     cout << "s = " << s->getVal() << " is NOT in FC interval" << endl;
-  */
+  
 
   s->setVal(0);
   if( lrint->IsInInterval(paramOfInterest) ) 

@@ -21,6 +21,7 @@
 #include "RooStats/ProfileLikelihoodCalculator.h"
 
 #include "RooDataSet.h"
+#include "RooDataHist.h"
 #include "RooRealVar.h"
 #include "RooConstVar.h"
 #include "RooAddition.h"
