@@ -59,7 +59,6 @@ Double_t RooPoisson::evaluate() const
   // Implementation in terms of the TMath Poisson function
 
   Double_t k = floor(x);  
-  //  if(mean<0) std::cout << "mean < 0 " << endl;
   return TMath::Poisson(k,mean) ;
 } 
 
