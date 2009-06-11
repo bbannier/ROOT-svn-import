@@ -732,11 +732,16 @@ RooAbsDataStore* RooTreeDataStore::merge(const RooArgSet& allVars, list<RooAbsDa
 
   Int_t nevt = dstoreList.front()->numEntries() ;
   for (int i=0 ; i<nevt ; i++) {
+
+    // Cope data from self
+    mergedStore->_vars = *get(i) ;
       
     // Copy variables from merge sets
     for (list<RooAbsDataStore*>::iterator iter = dstoreList.begin() ; iter!=dstoreList.end() ; iter++) {
-      mergedStore->_vars = *(*iter)->get(i) ;
+      const RooArgSet* partSet = (*iter)->get(i) ;
+      mergedStore->_vars = *partSet ;
     }
+
     mergedStore->fill() ;
   }
   return mergedStore ;
