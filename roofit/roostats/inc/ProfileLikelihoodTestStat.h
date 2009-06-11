@@ -85,10 +85,15 @@ namespace RooStats {
 	 if(fProfile) delete fProfile; 
 	 if (fNll)    delete fNll;
 
+	 /*
 	 RooNLLVar* nll = new RooNLLVar("nll","",*fPdf,data, RooFit::Extended());
 	 fNll = nll;
 	 fProfile = new RooProfileLL("pll","",*nll, paramsOfInterest);
-
+	 */
+	 RooArgSet* constrainedParams = fPdf->getParameters(data);
+	 RooNLLVar* nll = (RooNLLVar*) fPdf->createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*constrainedParams));
+	 fNll=nll;
+	 fProfile = (RooProfileLL*) nll->createProfile(paramsOfInterest);
 
 	 // set parameters to previous best fit params, to speed convergence
 	 // and to avoid local minima
