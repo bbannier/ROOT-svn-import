@@ -61,7 +61,7 @@ public:
   virtual Int_t defaultPrintContents(Option_t* opt) const ;
   virtual StyleOption defaultPrintStyle(Option_t* opt) const ;
 
-  RooAbsPdf* createPdf(const RooArgSet& params) const ;
+  RooAbsPdf* createHessePdf(const RooArgSet& params) const ;
 
   // Accessors
   inline Int_t status() const {
