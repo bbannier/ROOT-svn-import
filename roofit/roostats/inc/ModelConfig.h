@@ -75,9 +75,9 @@ namespace RooStats {
       if (!fWS)
 	fWS = &ws;
       else{
-	RooMsgService::instance().setGlobalKillBelow(RooMsgService::ERROR) ;
+	RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
 	fWS->merge(ws);
-	RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+	RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
       }
       
     }
@@ -89,9 +89,9 @@ namespace RooStats {
 	fOwnsWorkspace = true; 
       }
       if (! fWS->set( name )){
-	RooMsgService::instance().setGlobalKillBelow(RooMsgService::ERROR) ;
+	RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
 	fWS->defineSet(name, set);
-	RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+	RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
       }
     }
     
@@ -103,9 +103,9 @@ namespace RooStats {
 	fOwnsWorkspace = true; 
       }
       if (! fWS->data( data.GetName() ) ){
-	RooMsgService::instance().setGlobalKillBelow(RooMsgService::ERROR) ;
+	RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
 	fWS->import(data);
-	RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+	RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
       }
       SetData( data.GetName() );
       
@@ -118,9 +118,9 @@ namespace RooStats {
 	fOwnsWorkspace = true; 
       }
       if (! fWS->data( data.GetName() ) ){
-	RooMsgService::instance().setGlobalKillBelow(RooMsgService::ERROR) ;
+	RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
 	fWS->import(data);
-	RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+	RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
       }
       SetProtoData( data.GetName() );
     }
@@ -130,9 +130,9 @@ namespace RooStats {
       if (!fWS) 
 	fWS = new RooWorkspace();
       if (! fWS->pdf( pdf.GetName() ) ){
-	RooMsgService::instance().setGlobalKillBelow(RooMsgService::ERROR) ;
+	RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
 	fWS->import(pdf);
-	RooMsgService::instance().setGlobalKillBelow(RooMsgService::DEBUG) ;
+	RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
       }
       SetPdf( pdf.GetName() );
     }
