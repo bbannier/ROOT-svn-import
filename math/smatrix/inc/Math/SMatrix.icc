@@ -58,14 +58,6 @@
 #include "Math/StaticCheck.h"
 #endif
 
-#ifndef ROOT_Math_CholeskyDecomp
-#include "Math/CholeskyDecomp.h"
-#endif
-
-// #ifndef ROOT_Math_QRDecomposition
-// #include "Math/QRDecomposition.h"
-// #endif
-
 
 
 
@@ -452,10 +444,9 @@ inline SMatrix<T,D1,D2,R> SMatrix<T,D1,D2,R>::InverseFast(int & ifail) const {
 template <class T, unsigned int D1, unsigned int D2, class R>
 inline bool SMatrix<T,D1,D2, R>::InvertChol() {
    STATIC_CHECK( D1 == D2,SMatrix_not_square); 
-    CholeskyDecomp<T, D1> decomp(*this);
-    return decomp.Invert(*this);
-//   return SymPosInverter<D1>::Dinv((*this).fRep);
+   return CholInverter<D1>::Dinv((*this).fRep);
 }
+
 template <class T, unsigned int D1, unsigned int D2, class R>
 inline SMatrix<T,D1,D2, R>  SMatrix<T,D1,D2, R>::InverseChol(int &ifail) const {
    SMatrix<T,D1,D2,R > tmp(*this);
@@ -652,16 +643,6 @@ inline T& SMatrix<T,D1,D2,R>::operator()(unsigned int i, unsigned int j) {
    return fRep(i,j);
 }
 
-// operator [][]
-// template <class T, unsigned int D1, unsigned int D2, class R>
-// inline const SMatrixRow_const_t SMatrix<T,D1,D2,R>::operator[](unsigned int i) const {
-//    return SMatrixRow_const_t( *this, i);
-// }
-
-// template <class T, unsigned int D1, unsigned int D2, class R>
-// inline SMatrix<T,D1,D2,R>::SMatrixRow SMatrix<T,D1,D2,R>::operator[](unsigned int i) {
-//    return SMatrixRow_t(*this,i);
-// }
  
 //==============================================================================
 // Element access with At()
