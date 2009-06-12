@@ -44,7 +44,7 @@ void rs101_limitexample()
   // The Model building stage
   /////////////////////////////////////////
   RooWorkspace* wspace = new RooWorkspace();
-  wspace->factory("Poisson::countingModel(obs[150,0,300], sum(s[50,0,300]*ratioSigEff[1.,0,2.],b[100,0,300]*ratioBkgEff[1.,0.,2.]))"); // counting model
+  wspace->factory("Poisson::countingModel(obs[150,0,300], sum(s[50,0,100]*ratioSigEff[1.,0,2.],b[100,0,300]*ratioBkgEff[1.,0.,2.]))"); // counting model
   wspace->factory("Gaussian::sigConstraint(ratioSigEff,1,0.05)"); // 5% signal efficiency uncertainty
   wspace->factory("Gaussian::bkgConstraint(ratioBkgEff,1,0.1)"); // 10% background efficiency uncertainty
   wspace->factory("PROD::modelWithConstraints(countingModel,sigConstraint,bkgConstraint)"); // product of terms
@@ -61,9 +61,9 @@ void rs101_limitexample()
 
   // a toy dataset
   RooDataSet* data = modelWithConstraints->generate(*obs, 1);
+  cout << "----------" << endl;
 
-  modelWithConstraints->fitTo(*data, Constrain(constrainedParams) );
-
+  // make a plot of the -log likelihood ratio and -log profile likelihood ratio
   RooPlot* frame = s->frame();
   RooAbsReal* nll = modelWithConstraints->createNLL(*data, Constrain(constrainedParams) );
   RooAbsReal* profile = nll->createProfile(*s);
@@ -71,19 +71,7 @@ void rs101_limitexample()
   profile->plotOn(frame);
   frame->Draw();
 
-
-
-  RooArgSet paramOfInterest(*s);
-  paramOfInterest.Print("v");
-  ProfileLikelihoodCalculator plc;
-  plc.SetWorkspace(*wspace);
-  plc.SetPdf(*modelWithConstraints);
-  plc.SetData(*data); 
-  plc.SetParameters( paramOfInterest );
-  plc.SetTestSize(.1);
-
-  ConfInterval* lrint = plc.GetInterval();  // that was easy.
-  //  lrint->SetConfidenceLevel(0.95);
+  cout << "----------" << endl;
 
 
   // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -92,45 +80,92 @@ void rs101_limitexample()
   //  ratioBkgEff->setConstant();
   // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
+  // Now let's make some confidence intervals for s, our parameter of interest
+  RooArgSet paramOfInterest(*s);
 
+  // First, let's use a Calculator based on the Profile Likelihood Ratio
+  ProfileLikelihoodCalculator plc;
+  //  plc.SetWorkspace(*wspace);
+  plc.SetPdf(*modelWithConstraints);
+  plc.SetData(*data); 
+  plc.SetParameters( paramOfInterest );
+  plc.SetTestSize(.1);
+  ConfInterval* lrint = plc.GetInterval();  // that was easy.
+
+  s->setVal(55);
+  if( lrint->IsInInterval(paramOfInterest) ) 
+    cout << "s = " << s->getVal() << " is in interval" << endl;
+  else
+    cout << "s = " << s->getVal() << " is NOT in interval" << endl;
+
+
+  cout << "----------" << endl;
+
+  // Second, use a Calculator based on the Feldman Cousins technique
   FeldmanCousins fc;
-  fc.SetWorkspace(*wspace);
+  //  fc.SetWorkspace(*wspace);
   fc.SetPdf(*modelWithConstraints);
   fc.SetData(*data); 
   fc.SetParameters( paramOfInterest );
   fc.UseAdaptiveSampling(true);
   fc.FluctuateNumDataEntries(false); // number counting analysis: dataset always has 1 entry with N events observed
-  fc.SetNBins(5); // number of points to test per parameter
+  fc.SetNBins(3); // number of points to test per parameter
   fc.SetTestSize(.1);
-  ConfInterval* fcint = fc.GetInterval();  // that was easy.
+  ConfInterval* fcint = 0;
+  //  fcint = fc.GetInterval();  // that was easy.
+
+  // Now let's check some specific points to see if they are in the interval
+
+  s->setVal(55);
+  if( lrint->IsInInterval(paramOfInterest) ) 
+    cout << "s = " << s->getVal() << " is in interval" << endl;
+  else
+    cout << "s = " << s->getVal() << " is NOT in interval" << endl;
+
+  if(fcint){
+    if( fcint->IsInInterval(paramOfInterest) ) 
+      cout << "s = " << s->getVal() << " is in FC interval" << endl;
+    else
+      cout << "s = " << s->getVal() << " is NOT in FC interval" << endl;
+  }
+
+
+  // if fcint is not commented out the profile in the lrint doesn't work properly
+  ratioBkgEff->setVal(1.33);
+  ratioSigEff->setVal(1.06);
+  s->setVal(55);
+  if( lrint->IsInInterval(paramOfInterest) ) 
+    cout << "s = " << s->getVal() << " is in interval" << endl;
+  else
+    cout << "s = " << s->getVal() << " is NOT in interval" << endl;
+
+  if(fcint){
+    if( fcint->IsInInterval(paramOfInterest) ) 
+      cout << "s = " << s->getVal() << " is in FC interval" << endl;
+    else
+      cout << "s = " << s->getVal() << " is NOT in FC interval" << endl;
+  }
   
-
-  if( lrint->IsInInterval(paramOfInterest) ) 
-    cout << "s = " << s->getVal() << " is in interval" << endl;
-  else
-    cout << "s = " << s->getVal() << " is NOT in interval" << endl;
-
-  if( fcint->IsInInterval(paramOfInterest) ) 
-    cout << "s = " << s->getVal() << " is in FC interval" << endl;
-  else
-    cout << "s = " << s->getVal() << " is NOT in FC interval" << endl;
   
-
-  s->setVal(0);
+  s->setVal(20);
   if( lrint->IsInInterval(paramOfInterest) ) 
     cout << "s = " << s->getVal() << " is in interval" << endl;
   else
     cout << "s = " << s->getVal() << " is NOT in interval" << endl;
 
-  s->setVal(170);
-  paramOfInterest.Print("v");
+  s->setVal(80);
   if( lrint->IsInInterval(paramOfInterest) ) 
     cout << "s = " << s->getVal() << " is in interval" << endl;
   else
     cout << "s = " << s->getVal() << " is NOT in interval" << endl;
+
   //  cout << "ll = " << ((LikelihoodInterval*) lrint)->LowerLimit(*s) << endl;
   //  cout << "ul = " << ((LikelihoodInterval*) lrint)->UpperLimit(*s) << endl;
   // now use a tool
 
-
+  delete wspace;
+  delete lrint;
+  delete fcint;
+  delete data;
+  //  delete frame;
 }
