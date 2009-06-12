@@ -528,13 +528,17 @@ public:
       ( this method changes the current matrix).
       Return true if inversion is successfull.
       The method used is based on Choleski decomposition
-      A compile error is given if the matrix is not symmetric and a run-time failure if the 
-      matrix is not positive defined 
+      A compile error is given if the matrix is not of type symmetric and a run-time failure if the 
+      matrix is not positive defined. 
+      For solving  a linear system, it is possible to use also the function 
+      ROOT::Math::SolveChol(matrix, vector) which will be faster than performing the inversion
    */
    bool InvertChol();
 
    /**
       Invert of a symmetric positive defined Matrix using Choleski decomposition.
+      A compile error is given if the matrix is not of type symmetric and a run-time failure if the 
+      matrix is not positive defined. 
       In case the inversion fails the current matrix is returned. 
       \param ifail . ifail will be set to 0 when inversion is successfull.  
       See ROOT::Math::SMatrix::InvertChol for the inversion algorithm
