@@ -28,7 +28,7 @@ Reflex::Pointer::Pointer( const Type & pointerType,
 //-------------------------------------------------------------------------------
    : TypeBase( BuildTypeName(pointerType).c_str(), sizeof(void*),
                POINTER, ti, Type(), catalog,
-               (REPRESTYPE)toupper(pointerType.RepresType()) ),
+               (REPRESTYPE)toupper(pointerType.RepresType() ? pointerType.RepresType() : Reflex::REPRES_CLASS)),
      fPointerType( pointerType ) { 
    // Construct the dictionary info for a pointer type.
 }

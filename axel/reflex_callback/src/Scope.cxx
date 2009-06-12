@@ -159,6 +159,7 @@ bool Reflex::Scope::HasBase( const Type & cl ) const {
 //-------------------------------------------------------------------------------
 bool Reflex::Scope::IsPrivate() const {
 //-------------------------------------------------------------------------------
+// True if the the type's access is private.
    return operator Type().IsPrivate(); 
 }
 
@@ -166,6 +167,7 @@ bool Reflex::Scope::IsPrivate() const {
 //-------------------------------------------------------------------------------
 bool Reflex::Scope::IsProtected() const {
 //-------------------------------------------------------------------------------
+// True if the the type's access is protected.
    return operator Type().IsProtected(); 
 }
 
@@ -173,6 +175,7 @@ bool Reflex::Scope::IsProtected() const {
 //-------------------------------------------------------------------------------
 bool Reflex::Scope::IsPublic() const {
 //-------------------------------------------------------------------------------
+// True if the the type is publicly accessible.
    return operator Type().IsPublic(); 
 }
 
@@ -411,25 +414,19 @@ void Reflex::Scope::AddDataMember( const Member & dm ) const {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Scope::AddDataMember( const char * name,
+Reflex::Member Reflex::Scope::AddDataMember( const char * name,
                                    const Type & type,
                                    size_t offset,
-                                   unsigned int modifiers ) const {
+                                   unsigned int modifiers /* = 0 */,
+                                   char* interpreterOffset /* = 0 */ ) const {
 //-------------------------------------------------------------------------------
 // Add data member to this scope.
-   if ( * this ) fScopeName->fScopeBase->AddDataMember( name, 
-                                                       type, 
-                                                       offset, 
-                                                       modifiers );
+   if ( * this ) {
+      return fScopeName->fScopeBase->AddDataMember( name, type, offset, modifiers, interpreterOffset );
+   }
+   return Dummy::Member();
 }
 
-
-//-------------------------------------------------------------------------------
-void Reflex::Scope::AddDataMember(Member& output, const char* name, const Type& type, size_t offset, unsigned int modifiers, char* interpreterOffset) const
-{
-   // Add data member to this scope.
-   if (*this) fScopeName->fScopeBase->AddDataMember(output, name, type, offset, modifiers, interpreterOffset);
-}
 
 //-------------------------------------------------------------------------------
 void Reflex::Scope::RemoveDataMember( const Member & dm ) const {
@@ -448,20 +445,18 @@ void Reflex::Scope::AddFunctionMember( const Member & fm ) const {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Scope::AddFunctionMember( const char * nam,
-                                             const Type & typ,
-                                             StubFunction stubFP,
-                                             void * stubCtx,
-                                             const char * params,
-                                             unsigned int modifiers ) const {
+Reflex::Member Reflex::Scope::AddFunctionMember( const char * nam,
+                                           const Type & typ,
+                                           StubFunction stubFP,
+                                           void * stubCtx,
+                                           const char * params,
+                                           unsigned int modifiers ) const {
 //-------------------------------------------------------------------------------
 // Add function member to this scope.
-   if ( * this ) fScopeName->fScopeBase->AddFunctionMember( nam, 
-                                                            typ, 
-                                                            stubFP, 
-                                                            stubCtx, 
-                                                            params, 
-                                                            modifiers );
+   if ( * this ) {
+      return fScopeName->fScopeBase->AddFunctionMember( nam, typ, stubFP, stubCtx, params, modifiers );
+   }
+   return Dummy::Member();
 }
 
 
@@ -540,6 +535,7 @@ void Reflex::Scope::RemoveSubTypeTemplate( const TypeTemplate & tt ) const {
 //-------------------------------------------------------------------------------
 size_t Reflex::Scope::TemplateArgumentSize() const {
 //-------------------------------------------------------------------------------
+// Return the number of template arguments.
    return operator Type().TemplateArgumentSize();
 }
 
@@ -547,6 +543,7 @@ size_t Reflex::Scope::TemplateArgumentSize() const {
 //-------------------------------------------------------------------------------
 Reflex::Type_Iterator Reflex::Scope::TemplateArgument_Begin() const {
 //-------------------------------------------------------------------------------
+// Return the 'begin' of the iterator on the template arguments.
    return operator Type().TemplateArgument_Begin();
 }
 
@@ -554,6 +551,7 @@ Reflex::Type_Iterator Reflex::Scope::TemplateArgument_Begin() const {
 //-------------------------------------------------------------------------------
 Reflex::Type_Iterator Reflex::Scope::TemplateArgument_End() const {
 //-------------------------------------------------------------------------------
+// Return the 'end' of the iterator on the template arguments.
    return operator Type().TemplateArgument_End();
 }
 
@@ -561,6 +559,7 @@ Reflex::Type_Iterator Reflex::Scope::TemplateArgument_End() const {
 //-------------------------------------------------------------------------------
 Reflex::Reverse_Type_Iterator Reflex::Scope::TemplateArgument_RBegin() const {
 //-------------------------------------------------------------------------------
+// Return the 'begin' of the reverse iterator on the template arguments.
    return operator Type().TemplateArgument_RBegin();
 }
 
@@ -568,6 +567,7 @@ Reflex::Reverse_Type_Iterator Reflex::Scope::TemplateArgument_RBegin() const {
 //-------------------------------------------------------------------------------
 Reflex::Reverse_Type_Iterator Reflex::Scope::TemplateArgument_REnd() const {
 //-------------------------------------------------------------------------------
+// Return the 'end' of the reverse iterator on the template arguments.
    return operator Type().TemplateArgument_REnd();
 }
 
