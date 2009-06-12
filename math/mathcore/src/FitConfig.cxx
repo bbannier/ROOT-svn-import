@@ -76,6 +76,7 @@ FitConfig & FitConfig::operator = (const FitConfig &rhs) {
    fMinimAlgoType = rhs.fMinimAlgoType; 
    fMinimizerOpts = rhs.fMinimizerOpts;
 
+   return *this;
 }
 
 void FitConfig::SetParamsSettings(unsigned int npar, const double *params, const double * vstep ) { 
