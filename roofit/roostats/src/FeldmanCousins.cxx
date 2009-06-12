@@ -72,6 +72,14 @@ FeldmanCousins::FeldmanCousins() {
 }
 
 //_______________________________________________________
+FeldmanCousins::~FeldmanCousins() {
+   // destructor
+  if(fOwnsWorkspace && fWS) delete fWS;
+  if(fPointsToTest) delete fPointsToTest;
+  if(fTestStatSampler) delete fTestStatSampler;
+}
+
+//_______________________________________________________
 void FeldmanCousins::CreateTestStatSampler() const{
   // specify the Test Statistic and create a ToyMC test statistic sampler
 
@@ -92,6 +100,7 @@ void FeldmanCousins::CreateTestStatSampler() const{
     fTestStatSampler = new ToyMCSampler(*testStatistic) ;
     fTestStatSampler->SetPdf(*pdf);
     fTestStatSampler->SetParameters(*parameters);
+    //    fTestStatSampler->SetNuisanceParameters(*parameters);
     fTestStatSampler->SetNEventsPerToy(data->numEntries());
     fTestStatSampler->SetNToys((int) (50./fSize)); // adjust nToys so that at least 50 events outside acceptance region
     fTestStatSampler->SetExtended(fFluctuateData);

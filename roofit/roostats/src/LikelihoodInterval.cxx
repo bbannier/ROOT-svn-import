@@ -63,6 +63,13 @@ END_HTML
 
 #include <string>
 
+/*
+// for debugging
+#include "RooNLLVar.h"
+#include "RooProfileLL.h"
+#include "RooDataSet.h"
+#include "RooAbsData.h"
+*/
 
 ClassImp(RooStats::LikelihoodInterval) ;
 
@@ -110,6 +117,7 @@ LikelihoodInterval::LikelihoodInterval(const char* name, const char* title, RooA
 LikelihoodInterval::~LikelihoodInterval()
 {
    // Destructor
+  if(fLikelihoodRatio) delete fLikelihoodRatio;
 
 }
 
@@ -133,6 +141,29 @@ Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint)
     return false;
   }
 
+  
+  /*
+  ///////////////////////////
+  // Debugging
+  RooProfileLL* profile = (RooProfileLL*) fLikelihoodRatio;
+  profile->nll().Print();
+  //  profile->nll().printCompactTree();
+  RooNLLVar* nll = (RooNLLVar*) (profile->getComponents()->find("nll_modelWithConstraints_modelWithConstraintsData"));
+  RooDataSet* tmpData = (RooDataSet*) &(nll->data());
+  nll->Print();
+  std::cout << "nll = " << nll << " data = " << &(nll->data()) <<  " " << tmpData << std::endl;
+  tmpData->Print();
+  for(int i=0; i<tmpData->numEntries(); ++i)
+    tmpData->get(i)->Print("v");
+
+  std::cout<< "best fit params = " << std::endl;
+  profile->bestFitParams().Print("v");
+
+  SetParameters(&(profile->bestFitParams()), fLikelihoodRatio->getVariables() );
+  //////////////////////////
+  */
+
+
   // set parameters
   SetParameters(&parameterPoint, fLikelihoodRatio->getVariables() );
 
@@ -143,16 +174,20 @@ Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint)
     return true;
   }
 
-  
-  /*  std::cout << "in likelihood interval: LR = " <<
-    fLikelihoodRatio->getVal() << 
+
+  /*
+    std::cout << "in likelihood interval: LR = " <<
+      fLikelihoodRatio->getVal() << " " << 
     " ndof = " << parameterPoint.getSize() << 
     " alpha = " << 1.-fConfidenceLevel << " cl = " << fConfidenceLevel <<
     " with P = " <<
     TMath::Prob( 2* fLikelihoodRatio->getVal(), parameterPoint.getSize())  <<
     " and CL = " << fConfidenceLevel << std::endl;
+
+    parameterPoint.Print("v");
+    fLikelihoodRatio->getVariables()->Print("v");
   */
-  
+    
 
   // here we use Wilks' theorem.
   if ( TMath::Prob( 2* fLikelihoodRatio->getVal(), parameterPoint.getSize()) < (1.-fConfidenceLevel) )

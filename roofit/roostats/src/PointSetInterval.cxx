@@ -97,14 +97,9 @@ Bool_t PointSetInterval::IsInInterval(RooArgSet &parameterPoint)
   
   if( !this->CheckParameters(parameterPoint) ){
     //    std::cout << "problem with parameters" << std::endl;
-    //    return false; 
+    return false; 
   }
   
-  if(parameterPoint.getSize() != fParameterPointsInInterval->get()->getSize() ){
-    std::cout << "problem with parameters" << std::endl;
-    return false;
-  }
-
   if( hist ) {
     if ( hist->weight( parameterPoint , 0 ) > 0 ) // positive value indicates point is in interval
       return true; 

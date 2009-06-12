@@ -96,7 +96,8 @@ namespace RooStats {
 	 RooNLLVar* nll = (RooNLLVar*) fPdf->createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*constrainedParams));
 	 fNll=nll;
 	 fProfile = (RooProfileLL*) nll->createProfile(paramsOfInterest);
-
+	 //	 paramsOfInterest.Print("v");
+	 
 	 // set parameters to previous best fit params, to speed convergence
 	 // and to avoid local minima
 	 if(fCachedBestFitParams){
@@ -187,8 +188,9 @@ namespace RooStats {
 	 SetParameters(&paramsOfInterest, fProfile->getParameters(data) );
 
 	 value = fProfile->getVal();
-	 //	 cout << "now profileLL = " << value << endl;
+	 //cout << "now profileLL = " << value << endl;
        }
+       //       cout << "now profileLL = " << value << endl;
        return value;
      }
 

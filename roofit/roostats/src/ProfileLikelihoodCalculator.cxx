@@ -102,18 +102,31 @@ ConfInterval* ProfileLikelihoodCalculator::GetInterval() const {
    RooAbsData* data = fWS->data(fDataName);
    if (!data || !pdf || !fPOI) return 0;
 
-   //   RooNLLVar* nll = new RooNLLVar("nll","",*pdf,*data, Extended());
-   //   RooProfileLL* profile = new RooProfileLL("pll","",*nll, *fPOI);
-
    RooArgSet* constrainedParams = pdf->getParameters(*data);
    RemoveConstantParameters(constrainedParams);
-   RooAbsReal* nll = pdf->createNLL(*data, Constrain(*constrainedParams));
+
+   /* debugging
+   constrainedParams->Print("v");
+   cout << "--" << endl;
+   fPOI->Print("v");
+   cout << "--" << endl;
+   constrainedParams->remove(*fPOI,kFALSE,kTRUE);
+   constrainedParams->Print("v");
+   cout << "--" << endl;
+   */
+
+   /*
+   RooNLLVar* nll = new RooNLLVar("nll","",*pdf,*data, Extended(),Constrain(*constrainedParams));
+   RooProfileLL* profile = new RooProfileLL("pll","",*nll, *fPOI);
+   profile->addOwnedComponents(*nll) ;  // to avoid memory leak
+   */
+
+   RooAbsReal* nll = pdf->createNLL(*data, CloneData(kTRUE), Constrain(*constrainedParams));
    RooAbsReal* profile = nll->createProfile(*fPOI);
 
-   profile->addOwnedComponents(*nll) ;  // to avoid memory leak
 
    RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL) ;
-   profile->getVal();
+   profile->getVal(); // do this so profile will cache the minimum
    RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
 
    LikelihoodInterval* interval 
