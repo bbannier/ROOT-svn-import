@@ -3101,15 +3101,28 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
 //      Note that option "I" gives better results but is slower.
 //
 //
-//      Changing the fitting function
+//      Changing the fitting objective function
 //      =============================
-//     By default the fitting function H1FitChisquare is used.
+//     By default a chi square function is used for fitting. When option "L" (or "LL") is used 
+//     a Poisson likelihood function (see note below) is used. 
+//     The functions are defined in the header Fit/Chi2Func.h or Fit/PoissonLikelihoodFCN and they are implemented 
+//     using the routines FitUtil::EvaluateChi2 or FitUtil::EvaluatePoissonLogL in the file math/mathcore/src/FitUtil.cxx.
 //     To specify a User defined fitting function, specify option "U" and
 //     call the following functions:
 //       TVirtualFitter::Fitter(myhist)->SetFCN(MyFittingFunction)
 //     where MyFittingFunction is of type:
 //     extern void MyFittingFunction(Int_t &npar, Double_t *gin, Double_t &f, Double_t *u, Int_t flag);
 //
+//     Likelihood Fits
+//     =================
+//     When using option "L" a likelihood fit is used instead of the default chi2 square fit.
+//     The likelihood is built assuming a Poisson probability density function for each bin.
+//     This method can then be used only when the bin content represents counts (i.e. errors are  = sqrt(N) ).
+//     The likelihood method has the advantage of treating correctly the empty bins and use them in the fit procedure.
+//     In the chi2 method the empty bins are skipped and not considered in the fit.
+//     The likelihood method, although a bit slower, it is the recommended method in case of low bin statistics, where 
+//     the chi2 method may give incorrect results. 
+//     
 //      Fitting a histogram of dimension N with a function of dimension N-1
 //      ===================================================================
 //     It is possible to fit a TH2 with a TF1 or a TH3 with a TF2.
@@ -3224,6 +3237,7 @@ Int_t TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xxmin, Dou
 //
 //   -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
+   // implementation of Fit method is in file hist/src/HFitImpl.cxx
    return DoFit( f1 , option , goption, xxmin, xxmax); 
 }
 
