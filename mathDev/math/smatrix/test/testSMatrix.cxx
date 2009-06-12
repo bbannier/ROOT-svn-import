@@ -955,7 +955,13 @@ int test16() {
   // this fails on Windows (bad calculations)
   iret |= compare( Z==Y,true,"mult");
 #else 
-  for (int i = 0; i< 9; ++i) iret |= compare(Z.apply(i),Y.apply(i),"index");
+  for (int i = 0; i< 9; ++i) { 
+    // avoid small value of a 
+    double a = Z.apply(i); 
+    double eps = std::numeric_limits<double>::epsilon();
+    if (a < eps) a = 0; 
+    iret |= compare(a,Y.apply(i),"index");
+  }
 #endif
 
   Z = (A+W)*(B+Y); 
