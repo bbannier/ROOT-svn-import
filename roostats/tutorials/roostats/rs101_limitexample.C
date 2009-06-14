@@ -83,20 +83,6 @@ void rs101_limitexample()
   // Now let's make some confidence intervals for s, our parameter of interest
   RooArgSet paramOfInterest(*s);
 
-  // First, let's use a Calculator based on the Profile Likelihood Ratio
-  ProfileLikelihoodCalculator plc;
-  //  plc.SetWorkspace(*wspace);
-  plc.SetPdf(*modelWithConstraints);
-  plc.SetData(*data); 
-  plc.SetParameters( paramOfInterest );
-  plc.SetTestSize(.1);
-  ConfInterval* lrint = plc.GetInterval();  // that was easy.
-
-  s->setVal(55);
-  if( lrint->IsInInterval(paramOfInterest) ) 
-    cout << "s = " << s->getVal() << " is in interval" << endl;
-  else
-    cout << "s = " << s->getVal() << " is NOT in interval" << endl;
 
 
   cout << "----------" << endl;
@@ -112,7 +98,24 @@ void rs101_limitexample()
   fc.SetNBins(3); // number of points to test per parameter
   fc.SetTestSize(.1);
   ConfInterval* fcint = 0;
-  //  fcint = fc.GetInterval();  // that was easy.
+    fcint = fc.GetInterval();  // that was easy.
+
+  cout << "----------" << endl;
+
+  // First, let's use a Calculator based on the Profile Likelihood Ratio
+  ProfileLikelihoodCalculator plc;
+  //  plc.SetWorkspace(*wspace);
+  plc.SetPdf(*modelWithConstraints);
+  plc.SetData(*data); 
+  plc.SetParameters( paramOfInterest );
+  plc.SetTestSize(.1);
+  ConfInterval* lrint = plc.GetInterval();  // that was easy.
+
+  s->setVal(55);
+  if( lrint->IsInInterval(paramOfInterest) ) 
+    cout << "s = " << s->getVal() << " is in interval" << endl;
+  else
+    cout << "s = " << s->getVal() << " is NOT in interval" << endl;
 
   // Now let's check some specific points to see if they are in the interval
 
