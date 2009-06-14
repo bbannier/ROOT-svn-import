@@ -100,7 +100,8 @@ LikelihoodInterval::LikelihoodInterval(const char* name, RooAbsReal* lr, RooArgS
    ConfInterval(name,name)
 {
    // Alternate constructor
-   fLikelihoodRatio = lr;
+  //   fLikelihoodRatio = lr;
+    fLikelihoodRatio = (RooAbsReal*) lr->clone("dummy");
    fParameters = params;
 }
 
@@ -109,7 +110,8 @@ LikelihoodInterval::LikelihoodInterval(const char* name, const char* title, RooA
    ConfInterval(name,title)
 {
    // Alternate constructor
-   fLikelihoodRatio = lr;
+  //   fLikelihoodRatio = lr;
+  fLikelihoodRatio = (RooAbsReal*) lr->clone("dummy");
    fParameters = params;
 }
 
@@ -175,7 +177,7 @@ Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint)
   }
 
 
-  /*
+  
     std::cout << "in likelihood interval: LR = " <<
       fLikelihoodRatio->getVal() << " " << 
     " ndof = " << parameterPoint.getSize() << 
@@ -186,7 +188,8 @@ Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint)
 
     parameterPoint.Print("v");
     fLikelihoodRatio->getVariables()->Print("v");
-  */
+    //    fLikelihoodRatio->printCompactTree();
+
     
 
   // here we use Wilks' theorem.
