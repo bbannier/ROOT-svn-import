@@ -177,7 +177,7 @@ Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint)
   }
 
 
-  
+  /*  
     std::cout << "in likelihood interval: LR = " <<
       fLikelihoodRatio->getVal() << " " << 
     " ndof = " << parameterPoint.getSize() << 
@@ -189,7 +189,7 @@ Bool_t LikelihoodInterval::IsInInterval(RooArgSet &parameterPoint)
     parameterPoint.Print("v");
     fLikelihoodRatio->getVariables()->Print("v");
     //    fLikelihoodRatio->printCompactTree();
-
+    */
     
 
   // here we use Wilks' theorem.
