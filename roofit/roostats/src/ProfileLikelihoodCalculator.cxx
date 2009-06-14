@@ -105,15 +105,6 @@ ConfInterval* ProfileLikelihoodCalculator::GetInterval() const {
    RooArgSet* constrainedParams = pdf->getParameters(*data);
    RemoveConstantParameters(constrainedParams);
 
-   /* debugging
-   constrainedParams->Print("v");
-   cout << "--" << endl;
-   fPOI->Print("v");
-   cout << "--" << endl;
-   constrainedParams->remove(*fPOI,kFALSE,kTRUE);
-   constrainedParams->Print("v");
-   cout << "--" << endl;
-   */
 
    /*
    RooNLLVar* nll = new RooNLLVar("nll","",*pdf,*data, Extended(),Constrain(*constrainedParams));
@@ -123,6 +114,7 @@ ConfInterval* ProfileLikelihoodCalculator::GetInterval() const {
 
    RooAbsReal* nll = pdf->createNLL(*data, CloneData(kTRUE), Constrain(*constrainedParams));
    RooAbsReal* profile = nll->createProfile(*fPOI);
+   profile->addOwnedComponents(*nll) ;  // to avoid memory leak
 
 
    RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL) ;
@@ -132,6 +124,7 @@ ConfInterval* ProfileLikelihoodCalculator::GetInterval() const {
    LikelihoodInterval* interval 
       = new LikelihoodInterval("LikelihoodInterval", profile, fPOI);
    interval->SetConfidenceLevel(1.-fSize);
+   delete constrainedParams;
    return interval;
 }
 
@@ -173,7 +166,7 @@ HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
       mytarget->Print();
    }
   
-   RooFitResult* fit2 = pdf->fitTo(*data,Extended(kFALSE),Hesse(kFALSE),Strategy(0), Minos(kFALSE), Save(kTRUE),PrintLevel(-1));
+   RooFitResult* fit2 = pdf->fitTo(*data,Extended(kFALSE),Constrain(*constrainedParams),Hesse(kFALSE),Strategy(0), Minos(kFALSE), Save(kTRUE),PrintLevel(-1));
 
    Double_t NLLatCondMLE= fit2->minNll();
    fit2->Print();
@@ -182,7 +175,7 @@ HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
    HypoTestResult* htr = 
       new HypoTestResult("ProfileLRHypoTestResult",
                          SignificanceToPValue(sqrt( 2*(NLLatCondMLE-NLLatMLE))), 0 );
-  
+   delete constrainedParams;
    return htr;
 
 }
