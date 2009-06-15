@@ -27,6 +27,24 @@ namespace ROOT {
 namespace Math { 
 
 
+
+// struct using for evaluating the function 
+template<class MultiFuncType>
+struct EvaluatorOneDim { 
+   // evaluate function (in general case no param) 
+   static double F (MultiFuncType f, const double * x, const double *  = 0 ) { 
+      return f( x );
+   }
+};
+// specialized for param functions
+template<>
+struct EvaluatorOneDim< const ROOT::Math::IParamMultiFunction &> { 
+   static double F ( const ROOT::Math::IParamMultiFunction &  f, const double * x, const double * p = 0 ) { 
+      return f( x, p );
+   }
+};
+
+
 /** 
    OneDimMultiFunctionAdapter class to wrap a multidimensional function in 
    one dimensional one. 
@@ -48,12 +66,13 @@ public:
       Constructor from the function object , pointer to an external array of x values 
       and coordinate we want to adapt
    */ 
-   OneDimMultiFunctionAdapter (MultiFuncType f, const double * x, unsigned int icoord =0 ) : 
+   OneDimMultiFunctionAdapter (MultiFuncType f, const double * x, unsigned int icoord =0, const double * p = 0 ) : 
       fFunc(f), 
       fX( const_cast<double *>(x) ), // wee need to modify x but then we restore it as before 
+      fParams(p),
       fCoord(icoord), 
-      fOwn(false), 
-      fDim(0)
+      fDim(0), 
+      fOwn(false)
    {
       assert(fX != 0); 
    }  
@@ -63,12 +82,13 @@ public:
       The coordinate cached vector is created inside and eventually the values must be passed 
       later with the SetX which will copy them
    */ 
-   OneDimMultiFunctionAdapter (MultiFuncType f, unsigned int dim = 1, unsigned int icoord =0 ) : 
+   OneDimMultiFunctionAdapter (MultiFuncType f, unsigned int dim = 1, unsigned int icoord =0, const double * p = 0 ) : 
       fFunc(f), 
       fX(0 ), 
+      fParams(p),
       fCoord(icoord), 
-      fOwn(true), 
-      fDim(dim)
+      fDim(dim),
+      fOwn(true)
    {
       fX = new double[dim]; 
    }  
@@ -76,28 +96,30 @@ public:
    /** 
       Destructor (no operations)
    */ 
-   virtual ~OneDimMultiFunctionAdapter ()  { if (fOwn) delete [] fX; }  
+   virtual ~OneDimMultiFunctionAdapter ()  { if (fOwn && fX) delete [] fX; }  
 
    /**
       clone
    */
    virtual OneDimMultiFunctionAdapter * Clone( ) const { 
       if (fOwn) 
-         return new OneDimMultiFunctionAdapter( fFunc, fDim, fCoord); 
+         return new OneDimMultiFunctionAdapter( fFunc, fDim, fCoord, fParams); 
       else 
-         return new OneDimMultiFunctionAdapter( fFunc, fX, fCoord); 
+         return new OneDimMultiFunctionAdapter( fFunc, fX, fCoord, fParams); 
    }
 
 public: 
 
    /** 
-       Set X values in case vector is own, iterator size must muched previous 
+       Set X values in case vector is own, iterator size must match previous 
        set dimension
    */ 
    template<class Iterator>
    void SetX(Iterator begin, Iterator end) { 
       if (fOwn) std::copy(begin, end, fX);
    }
+
+
    /**
       set pointer without copying the values
     */
@@ -105,7 +127,41 @@ public:
       if (!fOwn) fX = x; 
    }
 
+   /** 
+       set values 
+   */
+   void SetX(const double * x) { 
+      if (fOwn) std::copy(x, x+fDim, fX);
+      else 
+         SetX( const_cast<double *>(x) ); // wee need to modify x but then we restore it as before
+   }
+
+
+   void SetCoord(int icoord) { fCoord=icoord;}
+
+   // copy constructor
+   OneDimMultiFunctionAdapter( const OneDimMultiFunctionAdapter & rhs) : 
+      fFunc(rhs.fFunc), 
+      fParams(rhs.fParams),
+      fCoord(rhs.fCoord),
+      fDim(rhs.fDim), 
+      fOwn(rhs.fOwn)
+   { 
+      if (fOwn) { 
+         fX = new double[fDim]; 
+         std::copy( rhs.fX, rhs.fX+fDim, fX);
+      }         
+      else fX = rhs.fX; 
+   }
+
+
 private: 
+
+   // dummy assignment (should never be called and clone must be used) 
+   OneDimMultiFunctionAdapter & operator= ( const OneDimMultiFunctionAdapter & rhs) { 
+      if (this == &rhs)  return *this;
+      assert(false); 
+   }
 
    /**
       evaluate function at the  values x[] given in the constructor and  
@@ -114,7 +170,7 @@ private:
    double DoEval(double x) const {
       if (fOwn) { 
          fX[fCoord] = x; 
-         return fFunc( fX );
+         return EvaluatorOneDim<MultiFuncType>::F( fFunc, fX, fParams );
       }
       else { 
 
@@ -122,7 +178,7 @@ private:
          // need to modify fX and restore afterwards the original values
          double xprev = fX[fCoord]; // keep original value to restore in fX
          fX[fCoord] = x; 
-         double y =  fFunc( fX );
+         double y = EvaluatorOneDim<MultiFuncType>::F( fFunc, fX, fParams );
          // restore original values
          fX[fCoord] = xprev; 
          return y; 
@@ -133,10 +189,11 @@ private:
 private: 
 
    MultiFuncType fFunc; 
-   mutable double * fX; 
+   mutable double * fX;
+   const double   * fParams;
    unsigned int fCoord;
-   bool fOwn;
    unsigned int fDim; 
+   bool fOwn;
 
 }; 
 
@@ -183,6 +240,8 @@ public:
    virtual OneDimParamFunctionAdapter * Clone( ) const { 
       return new OneDimParamFunctionAdapter(fFunc, fX, fParams, fIpar);
    }
+
+   // can use default copy constructor
 
 private: 
 

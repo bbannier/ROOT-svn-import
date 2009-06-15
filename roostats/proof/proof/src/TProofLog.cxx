@@ -37,6 +37,21 @@ TProofLog::TProofLog(const char *stag, const char *url, TProofMgr *mgr)
    fElem = new TList;
    fElem->SetOwner();
    fMgr = mgr;
+   // Set a fake starting time
+   fStartTime.Set((UInt_t)0);
+   // Extract real starting time
+   TString st(stag);
+   Int_t idx = st.Index('-');
+   if (idx != kNPOS) {
+      st.Remove(0, idx+1);
+      idx = st.Index('-');
+      if (idx != kNPOS) {
+         st.Remove(idx);
+         if (st.IsDigit()) {
+            fStartTime.Set(st.Atoi());
+         }
+      }
+   }
 }
 
 //________________________________________________________________________
@@ -142,11 +157,11 @@ void TProofLog::Print(Option_t *opt) const
 
    Int_t nel = (fElem) ? fElem->GetSize() : 0;
    // Write global header
-   fprintf(stderr,Form("// --------- PROOF Session logs object --------\n"));
-   fprintf(stderr,Form("// Server: %s \n", GetTitle()));
-   fprintf(stderr,Form("// Session: %s \n", GetName()));
-   fprintf(stderr,Form("// # of elements: %d \n", nel));
-   fprintf(stderr,Form("// --------------------------------------------\n"));
+   fprintf(stderr, "// --------- PROOF Session logs object --------\n");
+   fprintf(stderr, "// Server: %s \n", GetTitle());
+   fprintf(stderr, "// Session: %s \n", GetName());
+   fprintf(stderr, "// # of elements: %d \n", nel);
+   fprintf(stderr, "// --------------------------------------------\n");
 
    // Iterate over the elements
    TIter nxe(fElem);
@@ -155,7 +170,7 @@ void TProofLog::Print(Option_t *opt) const
       ple->Print(opt);
 
    // Write global tail
-   fprintf(stderr,Form("// --------------------------------------------\n"));
+   fprintf(stderr, "// --------------------------------------------\n");
 }
 
 //________________________________________________________________________
@@ -166,7 +181,7 @@ void TProofLog::Prt(const char *what)
    if (what) {
       if (LogToBox()) {
          // Send to log box:
-         EmitVA("Prt(const char*)", 2, what, kFALSE);
+         Emit("Prt(const char*)", what);
       } else {
          FILE *where = (fFILE) ? (FILE *)fFILE : stderr;
          fprintf(where, "%s\n", what);
@@ -301,6 +316,17 @@ TProofLogElem::TProofLogElem(const char *ord, const char *url,
    fSize = -1;
    fFrom = -1;
    fTo = -1;
+
+   //Note the role here, don't redo at each call of Display()
+   if (strstr(GetTitle(), "worker-")) {
+      fRole = "worker";
+   } else {
+      if (strchr(GetName(), '.')) {
+         fRole = "submaster";
+      } else {
+         fRole = "master";
+      }
+   }
 }
 
 //________________________________________________________________________
@@ -392,17 +418,6 @@ Int_t TProofLogElem::Retrieve(TProofLog::ERetrieveOpt opt, const char *pattern)
       delete os;
    }
 
-   //Note the role here, don't redo at each call of Display()
-   if (strstr(GetTitle(), "worker-")) {
-      fRole = "worker";
-   } else {
-      if (strchr(GetName(), '.')) {
-         fRole = "submaster";
-      } else {
-         fRole = "master";
-      }
-   }
-
    // Done
    return 0;
 }
@@ -471,7 +486,7 @@ void TProofLogElem::Print(Option_t *) const
                 fMacro->GetListOfLines()->GetSize() : 0;
    const char *role = (strstr(GetTitle(), "worker-")) ? "worker" : "master";
 
-   fprintf(stderr, Form("Ord: %s Host: Role: %s lines: %d\n", GetName(), role, nls));
+   fprintf(stderr, "Ord: %s Host: Role: %s lines: %d\n", GetName(), role, nls);
 }
 
 //________________________________________________________________________

@@ -1,10 +1,15 @@
+#include <stdexcept>
+#include <iostream>
 #include <cstring>
 
 #include "TROOT.h"
 #include "TClass.h"
-#include "TVirtualPad.h"
 #include "TVirtualGL.h"
 #include "KeySymbols.h"
+#include "TGL5D.h"
+#include "TMath.h"
+#include "TPad.h"
+#include "TH3.h"
 #include "TF3.h"
 
 #include "TGLSurfacePainter.h"
@@ -198,24 +203,58 @@ TGLHistPainter::TGLHistPainter(TGLParametricEquation *equation)
 }
 
 //______________________________________________________________________________
+TGLHistPainter::TGLHistPainter(TGL5DDataSet *data)
+                   : fEq(0),
+                     fHist(data->GetHist()),
+                     fF3(0),
+                     fStack(0),
+                     fPlotType(kGL5D)//THistPainter
+{
+   //This ctor creates gl-parametric plot's painter.
+   fGLPainter.reset(new TGL5DPainter(data, &fCamera, &fCoord));
+}
+
+//______________________________________________________________________________
+/*
+TGLHistPainter::TGLHistPainter(TGL5D *gl5d)
+                   : fEq(0),
+                     fHist(0),
+                     fF3(0),
+                     fStack(0),
+                     fPlotType(kGL5D)//THistPainter
+{
+   //This ctor creates gl-parametric plot's painter.
+   //fGLPainter.reset(new TGLParametricPlot(equation, &fCamera));
+}
+*/
+//______________________________________________________________________________
 Int_t TGLHistPainter::DistancetoPrimitive(Int_t px, Int_t py)
 {
    //Selects plot or axis.
    //9999 is the magic number, ROOT's classes use in DistancetoPrimitive.
+   
+   //[tp: return statement added.
+   //tp]
+   
    if (fPlotType == kGLDefaultPlot)
       return fDefaultPainter.get() ? fDefaultPainter->DistancetoPrimitive(px, py) : 9999;
    else {
       //Adjust px and py - canvas can have several pads inside, so we need to convert
       //the from canvas' system into pad's.
-      py -= Int_t((1 - gPad->GetHNDC() - gPad->GetYlowNDC()) * gPad->GetWh());
-      px -= Int_t(gPad->GetXlowNDC() * gPad->GetWw());
+      
+      /*py -= Int_t((1 - gPad->GetHNDC() - gPad->GetYlowNDC()) * gPad->GetWh());
+      px -= Int_t(gPad->GetXlowNDC() * gPad->GetWw());*/
+      
+      py = gPad->GetWh() - py;//-= Int_t((1 - gPad->GetHNDC() - gPad->GetYlowNDC()) * gPad->GetWh());
+
       //One hist can be appended to several pads,
       //the current pad should have valid OpenGL context.
       const Int_t glContext = gPad->GetGLDevice();
 
       if (glContext != -1) {
-         fGLDevice.SetGLDevice(glContext);
-         fGLPainter->SetGLDevice(&fGLDevice);
+         //Add "viewport" extraction here.
+         PadToViewport(kTRUE);
+
          if (!gGLManager->PlotSelected(fGLPainter.get(), px, py))
             gPad->SetSelected(gPad);
       } else {
@@ -252,8 +291,9 @@ void TGLHistPainter::ExecuteEvent(Int_t event, Int_t px, Int_t py)
    //4. Moving dynamic profile.
    //5. Plot specific events - for example, 's' or 'S' key press for TF3.
    if (fPlotType == kGLDefaultPlot) {
-      if(fDefaultPainter.get())
+      if(fDefaultPainter.get()) {
          fDefaultPainter->ExecuteEvent(event, px, py);
+      }
    } else {
       //One hist can be appended to several pads,
       //the current pad should have valid OpenGL context.
@@ -264,8 +304,10 @@ void TGLHistPainter::ExecuteEvent(Int_t event, Int_t px, Int_t py)
                "Attempt to use TGLHistPainter, while the current pad (gPad) does not support gl");
          return;
       } else {
-         fGLDevice.SetGLDevice(glContext);
-         fGLPainter->SetGLDevice(&fGLDevice);
+         //Add viewport extraction here.
+         /*fGLDevice.SetGLDevice(glContext);
+         fGLPainter->SetGLDevice(&fGLDevice);*/
+         PadToViewport();
       }
 
       if (event != kKeyPress) {
@@ -289,7 +331,7 @@ void TGLHistPainter::ExecuteEvent(Int_t event, Int_t px, Int_t py)
             fGLPainter->StartPan(px, py);
          //During rotation, usual TCanvas/TPad machinery (CopyPixmap/Flush/UpdateWindow/etc.)
          //is skipped - I use "bit blasting" functions to copy picture directly onto window.
-         gGLManager->MarkForDirectCopy(glContext, kTRUE);
+         //gGLManager->MarkForDirectCopy(glContext, kTRUE);
          break;
       case kButton1Motion:
          //Rotation invalidates "selection buffer"
@@ -300,7 +342,8 @@ void TGLHistPainter::ExecuteEvent(Int_t event, Int_t px, Int_t py)
          else
             fCamera.RotateCamera(px, py);
          //Draw modified scene onto canvas' window.
-         gGLManager->PaintSingleObject(fGLPainter.get());
+         //gGLManager->PaintSingleObject(fGLPainter.get());
+         gPad->Update();
          break;
       case kButton1Up:
       case kButton2Up:
@@ -321,7 +364,8 @@ void TGLHistPainter::ExecuteEvent(Int_t event, Int_t px, Int_t py)
          break;
       case 8://kButton1Motion + shift modifier
          gGLManager->PanObject(fGLPainter.get(), px, py);
-         gGLManager->PaintSingleObject(fGLPainter.get());
+         //gGLManager->PaintSingleObject(fGLPainter.get());
+         gPad->Update();
          break;
       case kKeyPress:
       case 5:
@@ -334,18 +378,22 @@ void TGLHistPainter::ExecuteEvent(Int_t event, Int_t px, Int_t py)
          if (event == 6 || py == kKey_J || py == kKey_j) {
             fCamera.ZoomIn();
             fGLPainter->InvalidateSelection();
-            gGLManager->PaintSingleObject(fGLPainter.get());
+            //gGLManager->PaintSingleObject(fGLPainter.get());
+            gPad->Update();
          } else if (event == 5 || py == kKey_K || py == kKey_k) {
             fCamera.ZoomOut();
             fGLPainter->InvalidateSelection();
-            gGLManager->PaintSingleObject(fGLPainter.get());
+            //gGLManager->PaintSingleObject(fGLPainter.get());
+            gPad->Update();
          } else if (py == kKey_p || py == kKey_P || py == kKey_S || py == kKey_s
                     || py == kKey_c || py == kKey_C || py == kKey_x || py == kKey_X
                     || py == kKey_y || py == kKey_Y || py == kKey_z || py == kKey_Z
-                    || py == kKey_w || py == kKey_W || py == kKey_l || py == kKey_L)
+                    || py == kKey_w || py == kKey_W || py == kKey_l || py == kKey_L
+                    /*|| py == kKey_r || py == kKey_R*/)
          {
             fGLPainter->ProcessEvent(event, px, py);
-            gGLManager->PaintSingleObject(fGLPainter.get());
+            //gGLManager->PaintSingleObject(fGLPainter.get());
+            gPad->Update();
          }
          gGLManager->MarkForDirectCopy(glContext, kFALSE);
          break;
@@ -478,20 +526,23 @@ void TGLHistPainter::Paint(Option_t *o)
    const Ssiz_t glPos = option.Index("gl");
    if (glPos != kNPOS)
       option.Remove(glPos, 2);
-   else if (fPlotType != kGLParametricPlot){
+   else if (fPlotType != kGLParametricPlot && fPlotType != kGL5D) {
       gPad->SetCopyGLDevice(kFALSE);
       if (fDefaultPainter.get())
          fDefaultPainter->Paint(o);//option.Data());
       return;
    }
 
-   if (fPlotType != kGLParametricPlot)
+   if (fPlotType != kGLParametricPlot && fPlotType != kGL5D)
       CreatePainter(ParsePaintOption(option), option);
 
    if (fPlotType == kGLDefaultPlot) {
       //In case of default plot pad
       //should not copy gl-buffer (it will be simply black)
-      gPad->SetCopyGLDevice(kFALSE);
+      
+      //[tp: code was commented.
+      //gPad->SetCopyGLDevice(kFALSE);
+      //tp]
 
       if (fDefaultPainter.get())
          fDefaultPainter->Paint(option.Data());
@@ -501,10 +552,15 @@ void TGLHistPainter::Paint(Option_t *o)
       if (glContext != -1) {
          //With gl-plot, pad should copy
          //gl-buffer into the final pad/canvas pixmap/DIB.
-         fGLDevice.SetGLDevice(glContext);
-         gPad->SetCopyGLDevice(kTRUE);
-         //fGLPainter->SetGLContext(glContext);
-         fGLPainter->SetGLDevice(&fGLDevice);
+         //fGLDevice.SetGLDevice(glContext);
+         
+         //[tp: code commented.
+         //gPad->SetCopyGLDevice(kTRUE);
+         //tp]
+         //fGLPainter->SetGLDevice(&fGLDevice);
+         //Add viewport extraction here.
+         PadToViewport();
+         
          if (gPad->GetFrameFillColor() != kWhite)
             fGLPainter->SetFrameColor(gROOT->GetColor(gPad->GetFrameFillColor()));
          fGLPainter->SetPadColor(gROOT->GetColor(gPad->GetFillColor()));
@@ -540,7 +596,6 @@ TGLHistPainter::ParsePaintOption(const TString &option)const
       parsedOption.fPlotType = kGLBoxPlot;
    if (option.Index("iso") != kNPOS)
       parsedOption.fPlotType = kGLIsoPlot;
-
 
    return parsedOption;
 }
@@ -586,4 +641,24 @@ void TGLHistPainter::CreatePainter(const PlotOption_t &option, const TString &ad
 void TGLHistPainter::SetShowProjection(const char *, Int_t)
 {
    // Set show projection.
+
+   Warning("SetShowProjection", "Not yet implemented for GL canvases.");
+}
+
+//______________________________________________________________________________
+void TGLHistPainter::PadToViewport(Bool_t /*selectionPass*/)
+{
+   if (!fGLPainter.get())
+      return;
+
+   TGLRect vp;
+   vp.Width()  = Int_t(gPad->GetAbsWNDC() * gPad->GetWw());
+   vp.Height() = Int_t(gPad->GetAbsHNDC() * gPad->GetWh());
+   
+   vp.X() = Int_t(gPad->XtoAbsPixel(gPad->GetX1()));
+   vp.Y() = gPad->GetWh() - gPad->YtoAbsPixel(gPad->GetY1());
+   
+   fCamera.SetViewport(vp);
+   if (fCamera.ViewportChanged() && fGLPainter.get())
+      fGLPainter->InvalidateSelection();
 }

@@ -8,9 +8,14 @@
 #include "TClassEdit.h"
 #include <ctype.h>
 #include "Rstrstream.h"
+#include <set>
 
 // CINT's API.
-#include "cint/Api.h"
+#ifndef R__BUILDING_CINT7
+#include "Api.h"
+#else
+#include "cint7/Api.h"
+#endif
 
 namespace std {} using namespace std;
 
@@ -23,7 +28,7 @@ int   TClassEdit::STLKind(const char *type)
    if (strncmp(type,"std::",5)==0) { offset = 5; }
 
    static const char *stls[] =                  //container names
-   {"any","vector","list","deque","map","multimap","set","multiset",0};
+   {"any","vector","list","deque","map","multimap","set","multiset","bitset",0};
 
 //              kind of stl container
    for(int k=1;stls[k];k++) {if (strcmp(type+offset,stls[k])==0) return k;}
@@ -301,11 +306,11 @@ string TClassEdit::CleanType(const char *typeDesc, int mode, const char **tail)
          if (done) continue;
       }
 
-      kbl = (!isalnum(c[ 0]) && c[ 0]!='_' && c[ 0]!='$' && c[0]!='[' && c[0]!=']');
+      kbl = (!isalnum(c[ 0]) && c[ 0]!='_' && c[ 0]!='$' && c[0]!='[' && c[0]!=']' && c[0]!='-');
 
       if (*c == '<')   lev++;
       if (lev==0 && !isalnum(*c)) {
-         if (!strchr("*:_$ []",*c)) break;
+         if (!strchr("*:_$ []-",*c)) break;
       }
       if (c[0]=='>' && result.size() && result[result.size()-1]=='>') result+=" ";
 
@@ -328,6 +333,7 @@ string TClassEdit::ShortType(const char *typeDesc, int mode)
    // if (mode&4) remove all     allocators from STL containers
    // if (mode&8) return inner class of stl container. list<innerClass>
    // if (mode&16) return deapest class of stl container. vector<list<deapest>>
+   // if (mode&kDropAllDefault) remove default template arguments
    /////////////////////////////////////////////////////////////////////////////
 
    //fprintf(stderr,"calling ShortType with mode %d\n",mode);
@@ -456,10 +462,35 @@ string TClassEdit::ShortType(const char *typeDesc, int mode)
 
    if (!arglist[0].empty()) {answ += arglist[0]; answ +="<";}
 
-
+   if (mode & kDropAllDefault) {
+      int nargNonDefault = 0;
+      std::string nonDefName = answ;
+      // "superlong" because tLong might turn typeDesc into an even longer name
+      std::string nameSuperLong = typeDesc;
+      G__TypedefInfo td;
+      td.Init(nameSuperLong.c_str());
+      if (td.IsValid())
+         nameSuperLong = td.TrueName();
+      while (++nargNonDefault < narg) {
+         // If T<a> is a "typedef" (aka default template params)
+         // to T<a,b> then we can strip the "b".
+         const char* closeTemplate = " >";
+         if (nonDefName[nonDefName.length() - 1] != '>')
+            ++closeTemplate;
+         td.Init((nonDefName + closeTemplate).c_str());
+         if (td.IsValid() && nameSuperLong == td.TrueName())
+            break;
+         if (nargNonDefault>1) nonDefName += ",";
+         nonDefName += arglist[nargNonDefault];
+      }
+      if (nargNonDefault < narg)
+         narg = nargNonDefault;
+   }
+   
+   
    { for (int i=1;i<narg-1; i++) { answ += arglist[i]; answ+=",";} }
    if (narg>1) { answ += arglist[narg-1]; }
-
+   
    if (!arglist[0].empty()) {
       if ( answ.at(answ.size()-1) == '>') {
          answ += " >";
@@ -473,6 +504,16 @@ string TClassEdit::ShortType(const char *typeDesc, int mode)
 //     fprintf(stderr,"2. mode %d reduce \"%s\" into \"%s\"\n",
 //             imode, typeDesc,answ.c_str());
    return answ;
+}
+
+//______________________________________________________________________________
+bool TClassEdit::IsSTLBitset(const char *classname)
+{
+   // Return true is the name is std::bitset<number> or bitset<number>
+
+   if ( strncmp(classname,"bitset<",strlen("bitset<"))==0) return true;
+   if ( strncmp(classname,"std::bitset<",strlen("std::bitset<"))==0) return true;
+   return false;
 }
 
 //______________________________________________________________________________
@@ -539,6 +580,7 @@ bool TClassEdit::IsStdClass(const char *classname)
 
    if ( strncmp(classname,"std::",5)==0 ) classname += 5;
    if ( strcmp(classname,"string")==0 ) return true;
+   if ( strncmp(classname,"bitset<",strlen("bitset<"))==0) return true;
    if ( strncmp(classname,"pair<",strlen("pair<"))==0) return true;
    if ( strcmp(classname,"allocator")==0) return true;
    if ( strncmp(classname,"allocator<",strlen("allocator<"))==0) return true;
@@ -586,7 +628,7 @@ string TClassEdit::ResolveTypedef(const char *tname, bool resolveAll)
    // Return the name of type 'tname' with all its typedef components replaced
    // by the actual type its points to
    // For example for "typedef MyObj MyObjTypedef;"
-   //    vector<MyObjTypedef> return vector<MyObjTypedef>
+   //    vector<MyObjTypedef> return vector<MyObj>
    //
 
    if ( tname==0 || tname[0]==0) return tname;
@@ -682,5 +724,179 @@ string TClassEdit::ResolveTypedef(const char *tname, bool resolveAll)
 
 }
 
+
+//______________________________________________________________________________
+string TClassEdit::InsertStd(const char *tname)
+{
+
+   // Return the name of type 'tname' with all STL classes prepended by "std::".
+   // For example for "vector<set<auto_ptr<int*> > >" it returns
+   //    "std::vector<std::set<std::auto_ptr<int*> > >"
+   //
+
+   static const char* sSTLtypes[] = {
+      "allocator",
+      "auto_ptr",
+      "bad_alloc",
+      "bad_cast",
+      "bad_exception",
+      "bad_typeid",
+      "basic_filebuf",
+      "basic_fstream",
+      "basic_ifstream",
+      "basic_ios",
+      "basic_iostream",
+      "basic_istream",
+      "basic_istringstream",
+      "basic_ofstream",
+      "basic_ostream",
+      "basic_ostringstream",
+      "basic_streambuf",
+      "basic_string",
+      "basic_stringbuf",
+      "basic_stringstream",
+      "binary_function",
+      "binary_negate",
+      "bitset",
+      "char_traits",
+      "codecvt_byname",
+      "codecvt",
+      "collate",
+      "collate_byname",
+      "compare",
+      "complex",
+      "ctype_byname",
+      "ctype",
+      "deque",
+      "divides",
+      "domain_error",
+      "equal_to",
+      "exception",
+      "fpos",
+      "greater_equal",
+      "greater",
+      "gslice_array",
+      "gslice",
+      "indirect_array",
+      "invalid_argument",
+      "ios_base",
+      "istream_iterator",
+      "istreambuf_iterator",
+      "istrstream",
+      "iterator_traits",
+      "iterator",
+      "length_error",
+      "less_equal",
+      "less",
+      "list",
+      "locale",
+      "localedef utility",
+      "locale utility",
+      "logic_error",
+      "logical_and",
+      "logical_not",
+      "logical_or",
+      "map",
+      "mask_array",
+      "mem_fun",
+      "mem_fun_ref",
+      "messages",
+      "messages_byname",
+      "minus",
+      "modulus",
+      "money_get",
+      "money_put",
+      "moneypunct",
+      "moneypunct_byname",
+      "multimap",
+      "multiplies",
+      "multiset",
+      "negate",
+      "not_equal_to",
+      "num_get",
+      "num_put",
+      "numeric_limits",
+      "numpunct",
+      "numpunct_byname",
+      "ostream_iterator",
+      "ostreambuf_iterator",
+      "ostrstream",
+      "out_of_range",
+      "overflow_error",
+      "pair",
+      "plus",
+      "pointer_to_binary_function",
+      "pointer_to_unary_function",
+      "priority_queue",
+      "queue",
+      "range_error",
+      "raw_storage_iterator",
+      "reverse_iterator",
+      "runtime_error",
+      "set",
+      "slice_array",
+      "slice",
+      "stack",
+      "string",
+      "strstream",
+      "strstreambuf",
+      "time_get_byname",
+      "time_get",
+      "time_put_byname",
+      "time_put",
+      "unary_function",
+      "unary_negate",
+      "underflow_error",
+      "valarray",
+      "vector",
+      "wstring"
+   };
+   static set<string> sSetSTLtypes;
+
+   if ( tname==0 || tname[0]==0) return tname;
+
+   if (sSetSTLtypes.empty()) {
+      // set up static set
+      const size_t nSTLtypes = sizeof(sSTLtypes) / sizeof(const char*);
+      for (size_t i = 0; i < nSTLtypes; ++i)
+         sSetSTLtypes.insert(sSTLtypes[i]);
+   }
+
+   size_t b = 0;
+   size_t len = strlen(tname);
+   string ret;
+   ret.reserve(len + 20); // expect up to 4 extra "std::" to insert
+   string id;
+   while (b < len) {
+      // find beginning of next identifier
+      bool precScope = false; // whether the identifier was preceded by "::"
+      while (!(isalnum(tname[b]) || tname[b] == '_') && b < len) {
+         precScope = (b < len - 2) && (tname[b] == ':') && (tname[b + 1] == ':');
+         if (precScope) {
+            ret += "::";
+            b += 2;
+         } else
+            ret += tname[b++];
+      }
+
+      // now b is at the beginning of an identifier or len
+      size_t e = b;
+      // find end of identifier
+      id.clear();
+      while (e < len && (isalnum(tname[e]) || tname[e] == '_'))
+         id += tname[e++];
+      if (!id.empty()) {
+         if (!precScope) {
+            set<string>::const_iterator iSTLtype = sSetSTLtypes.find(id);
+            if (iSTLtype != sSetSTLtypes.end())
+               ret += "std::";
+         }
+
+         ret += id;
+         b = e;
+      }
+   }
+   return ret;
+}
 
 

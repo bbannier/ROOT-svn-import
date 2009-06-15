@@ -119,9 +119,7 @@ namespace std {} using namespace std;
 #endif
 
 #ifdef R__BUILDCINT7
-#ifdef _WIN32
-extern "C" void* LoadLibrary( const char* lpFileName);
-#else
+#ifndef _WIN32
 #define R__DLOPEN_NOW 2
 extern "C" void* dlopen(const char*, int);
 extern "C" char* dlerror();
@@ -194,7 +192,11 @@ namespace {
       libMetaTCintDir += "\\bin\\";
       hLibMetaTCint = (void*) ::LoadLibrary((libMetaTCintDir + libMetaTCint).Data());
 #else
+#ifdef ROOTLIBDIR
+      libMetaTCintDir = ROOTLIBDIR"/";
+#else
       libMetaTCintDir += "/lib/";
+#endif
 # if defined (R__MACOSX)
       hLibMetaTCint = (void*) dlopen((libMetaTCintDir + libMetaTCint + ".dylib").Data(), R__DLOPEN_NOW);
       // continue below if failed
@@ -525,6 +527,10 @@ TROOT::~TROOT()
       fGeometries->Delete(); SafeDelete(fGeometries);
       fBrowsers->Delete();   SafeDelete(fBrowsers);
       //fBrowsables->Delete(); SafeDelete(fBrowsables);
+      
+      // Stop emitting signals
+      TQObject::BlockAllSignals(kTRUE);
+
       fMessageHandlers->Delete(); SafeDelete(fMessageHandlers);
 //      if (fTypes) fTypes->Delete();
 //      SafeDelete(fTypes);
@@ -533,9 +539,6 @@ TROOT::~TROOT()
 //      if (fGlobalFunctions) fGlobalFunctions->Delete();
 //      SafeDelete(fGlobalFunctions);
 //      fClasses->Delete();    SafeDelete(fClasses);     // TClass'es must be deleted last
-
-      // Stop emitting signals
-      TQObject::BlockAllSignals(kTRUE);
 
       // Remove shared libraries produced by the TSystem::CompileMacro() call
       gSystem->CleanCompiledMacros();
@@ -1320,10 +1323,11 @@ TClass *TROOT::LoadClass(const char *classname) const
 }
 
 //______________________________________________________________________________
-Int_t TROOT::LoadClass(const char *classname, const char *libname,
+Int_t TROOT::LoadClass(const char * /*classname*/, const char *libname,
                        Bool_t check)
 {
-   // Check if class "classname" is known to the interpreter. If
+   // Check if class "classname" is known to the interpreter (in fact,
+   // this check is not needed anymore, so classname is ignored). If
    // not it will load library "libname". If the library name does
    // not start with "lib", "lib" will be prepended and a search will
    // be made in the DynamicPath (see .rootrc). If not found a search
@@ -1334,10 +1338,6 @@ Int_t TROOT::LoadClass(const char *classname, const char *libname,
    // readable.
    // Returns 0 on successful loading, -1 in case libname does not
    // exist or in case of error and -2 in case of version mismatch.
-
-   if (TClassTable::GetDict(classname)) {
-      return 0;
-   }
 
    Int_t err = -1;
 
@@ -1506,9 +1506,9 @@ void  TROOT::Message(Int_t id, const TObject *obj)
 Long_t TROOT::ProcessLine(const char *line, Int_t *error)
 {
    // Process interpreter command via TApplication::ProcessLine().
-   // On Win32 the line will be processed a-synchronously by sending
-   // it to the CINT interpreter thread. For explicit synchrounous processing
-   // use ProcessLineSync(). On non-Win32 platforms there is not difference
+   // On Win32 the line will be processed asynchronously by sending
+   // it to the CINT interpreter thread. For explicit synchronous processing
+   // use ProcessLineSync(). On non-Win32 platforms there is no difference
    // between ProcessLine() and ProcessLineSync().
    // The possible error codes are defined by TInterpreter::EErrorCode. In
    // particular, error will equal to TInterpreter::kProcessing until the
@@ -1530,7 +1530,7 @@ Long_t TROOT::ProcessLineSync(const char *line, Int_t *error)
    // Process interpreter command via TApplication::ProcessLine().
    // On Win32 the line will be processed synchronously (i.e. it will
    // only return when the CINT interpreter thread has finished executing
-   // the line). On non-Win32 platforms there is not difference between
+   // the line). On non-Win32 platforms there is no difference between
    // ProcessLine() and ProcessLineSync().
    // The possible error codes are defined by TInterpreter::EErrorCode.
    // Returns the result of the command, cast to a Long_t.

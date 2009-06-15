@@ -27,7 +27,12 @@
 #include "TNamed.h"
 #endif
 
+#ifndef ROOT_TString
+#include "TString.h"
+#endif
+
 class THashList;
+class TMap;
 class TList;
 class TFileInfo;
 class TFileInfoMeta;
@@ -40,6 +45,7 @@ private:
    THashList  *fList;               //-> list of TFileInfos
    TList      *fMetaDataList;       //-> generic list of file meta data object(s)
                                     //  (summed over entries of fList)
+   TString     fDefaultTree;        // name of default tree
    Long64_t    fTotalSize;          // total size of files in the list
    Long64_t    fNFiles;             // number of files ( == fList->GetEntries(), needed
                                     // because TFileCollection might be read without fList)
@@ -64,8 +70,9 @@ public:
    THashList      *GetList() { return fList; }
    void            SetList(THashList* list) { fList = list; }
 
-   TObjString     *ExportInfo(const char *name = 0);
+   TObjString     *ExportInfo(const char *name = 0, Int_t popt = 0);
 
+   Int_t           RemoveDuplicates();
    Int_t           Update(Long64_t avgsize = -1);
    void            Sort();
    void            SetAnchor(const char *anchor);
@@ -84,14 +91,20 @@ public:
                    { return (fNFiles > 0) ? 100. * fNCorruptFiles / fNFiles : 0; }
 
    const char     *GetDefaultTreeName() const;
+   void            SetDefaultTreeName(const char* treeName) { fDefaultTree = treeName; }
    Long64_t        GetTotalEntries(const char *tree) const;
+
    TFileInfoMeta  *GetMetaData(const char *meta = 0) const;
    void            SetDefaultMetaData(const char *meta);
+   Bool_t          AddMetaData(TObject *meta);
    void            RemoveMetaData(const char *meta = 0);
 
    TFileCollection *GetStagedSubset();
 
-   ClassDef(TFileCollection, 2)  // Collection of TFileInfo objects
+   TFileCollection *GetFilesOnServer(const char *server);
+   TMap            *GetFilesPerServer(const char *exclude = 0);
+
+   ClassDef(TFileCollection, 3)  // Collection of TFileInfo objects
 };
 
 #endif

@@ -99,6 +99,10 @@ namespace {
                return kFALSE;
             }
          }
+         static TClassRef stringClass("std::string");
+         if (cl == stringClass || cl == TString::Class()) {
+            return kFALSE;
+         }
          // Here we could scan through the TStreamerInfo to see if there
          // is any pointer anywhere and know whether this is a possibility
          // of selfreference (but watch out for very indirect cases).
@@ -470,7 +474,7 @@ void TBranchElement::Init(TTree *tree, TBranch *parent,const char* bname, TStrea
             Unroll(name, clOfClones, clOfClones, pointer, basketsize, splitlevel+splitSTLP, 31);
             BuildTitle(name);
             return;
-         } else if (((fSTLtype >= TClassEdit::kVector) && (fSTLtype <= TClassEdit::kMultiSet)) || ((fSTLtype >= -TClassEdit::kMultiSet) && (fSTLtype <= -TClassEdit::kVector))) {
+         } else if (((fSTLtype >= TClassEdit::kVector) && (fSTLtype < TClassEdit::kEnd)) || ((fSTLtype > -TClassEdit::kEnd) && (fSTLtype <= -TClassEdit::kVector))) {
             // -- We are an STL container element.
             TClass* contCl = TClass::GetClass(elem_type);
             fCollProxy = contCl->GetCollectionProxy()->Generate();
@@ -1593,7 +1597,7 @@ void TBranchElement::InitInfo()
    // FIXME:  What if the class code was unloaded/reloaded since we were cached?
 
    if (fInfo) {
-      if (!fInfo->GetOffsets()) {
+      if (!fInfo->GetOffsets() || (GetID()>-1 && !TestBit(TVirtualStreamerInfo::kCannotOptimize)) ) {
          // Streamer info has not yet been compiled.
          //
          // Optimizing does not work with splitting.
@@ -1763,11 +1767,16 @@ TClass* TBranchElement::GetCurrentClass()
    TString newType;
    if (!dm) {
       // Either the class is not loaded or the data member is gone
-      if (! motherCl->IsLoaded()) {
+      if (!motherCl->IsLoaded()) {
          TVirtualStreamerInfo* newInfo = motherCl->GetStreamerInfo();
          if (newInfo != brInfo) {
             TStreamerElement* newElems = (TStreamerElement*) newInfo->GetElements()->FindObject(currentStreamerElement->GetName());
-            newType = newElems->GetClassPointer()->GetName();
+            if (newElems) {
+               newType = newElems->GetClassPointer()->GetName();
+            }
+         }
+         if (newType.Length()==0) {
+            newType = currentStreamerElement->GetClassPointer()->GetName();
          }
       }
    } else {
@@ -2208,6 +2217,9 @@ void TBranchElement::InitializeOffsets()
          }
          localOffset = branchElem->GetOffset();
          branchClass = branchElem->GetClassPointer();
+         if (localOffset == TStreamerInfo::kMissing) {
+            fObject = 0;
+         }
       }
       if (!branchClass) {
          Error("InitializeOffsets", "Could not find class for branch: %s", GetName());
@@ -2245,11 +2257,19 @@ void TBranchElement::InitializeOffsets()
          }
 
          localOffset = subBranchElement->GetOffset();
+         if (localOffset == TStreamerInfo::kMissing) {
+            subBranch->fObject = 0;
+         }
 
          {
             Int_t streamerType = subBranchElement->GetType();
-            if (streamerType > TStreamerInfo::kObject && aSubBranch->GetListOfBranches()->GetEntries()==0) {
+            if (streamerType > TStreamerInfo::kObject 
+                && aSubBranch->GetListOfBranches()->GetEntries()==0
+                && CanSelfReference(subBranchElement->GetClass())) 
+            {
                aSubBranch->SetBit(kBranchAny);
+            } else {
+               aSubBranch->ResetBit(kBranchAny);
             }
          }
 
@@ -2551,7 +2571,11 @@ void TBranchElement::InitializeOffsets()
          } else {
             // -- Set fBranchOffset for sub-branch.
             Int_t numOfSubSubBranches = subBranch->GetListOfBranches()->GetEntriesFast();
-            if (numOfSubSubBranches) {
+            if (subBranch->fObject == 0 && localOffset == TStreamerInfo::kMissing) {
+               // The branch is missing
+               fBranchOffset[subBranchIdx] = TStreamerInfo::kMissing;
+            
+            } else if (numOfSubSubBranches) {
                if (isBaseSubBranch) {
                   // We are split, so we need to add in our local offset
                   // to get our absolute address for our children.
@@ -3266,6 +3290,7 @@ void TBranchElement::Reset(Option_t* option)
       TBranch* branch = (TBranch*) fBranches[i];
       branch->Reset(option);
    }
+   fBranchID = -1;
    TBranch::Reset(option);
 }
 
@@ -3842,7 +3867,14 @@ void TBranchElement::SetAddress(void* addr)
    for (Int_t i = 0; i < nbranches; ++i) {
       TBranch* abranch = (TBranch*) fBranches[i];
       // FIXME: This is a tail recursion!
-      abranch->SetAddress(fObject + fBranchOffset[i]);
+      if (fBranchOffset[i] != TStreamerInfo::kMissing) {
+         abranch->SetAddress(fObject + fBranchOffset[i]);
+      } else {
+         // When the member is missing, just leave the address alone
+         // (since setting explicitly to 0 would trigger error/warning
+         // messages).
+         // abranch->SetAddress(0);
+      }
    }
 }
 

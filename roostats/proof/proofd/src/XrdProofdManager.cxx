@@ -15,7 +15,7 @@
 //                                                                      //
 // Author: G. Ganis, CERN, 2007                                         //
 //                                                                      //
-// Class mapping manager fonctionality.                                 //
+// Class mapping manager functionality.                                 //
 // On masters it keeps info about the available worker nodes and allows //
 // communication with them.                                             //
 // On workers it handles the communication with the master.             //
@@ -378,7 +378,7 @@ XrdProofSched *XrdProofdManager::LoadScheduler()
             }
          }
       } else {
-         m.form("failure opening config file; errno: %d", errno);
+         XPDFORM(m, "failure opening config file; errno: %d", errno);
          TRACE(XERR, m);
       }
    }
@@ -387,7 +387,7 @@ XrdProofSched *XrdProofdManager::LoadScheduler()
    if (name == "default" || !(name.length() > 0 && lib.length() > 0)) {
       if ((name.length() <= 0 && lib.length() > 0) ||
           (name.length() > 0 && lib.length() <= 0)) {
-         m.form("missing or incomplete info (name: %s, lib: %s)", name.c_str(), lib.c_str());
+         XPDFORM(m, "missing or incomplete info (name: %s, lib: %s)", name.c_str(), lib.c_str());
          TRACE(DBG, m);
       }
       TRACE(DBG, "instantiating default scheduler");
@@ -406,7 +406,7 @@ XrdProofSched *XrdProofdManager::LoadScheduler()
          return (XrdProofSched *)0;
       }
       // Get the scheduler object
-      if (!(sched = (*ep)(cfn, this, fGroupsMgr, fEDest))) {
+      if (!(sched = (*ep)(cfn, this, fGroupsMgr, cfn, fEDest))) {
          TRACE(XERR, "unable to create scheduler object from " << lib);
          return (XrdProofSched *)0;
       }
@@ -425,7 +425,8 @@ XrdProofSched *XrdProofdManager::LoadScheduler()
 }
 
 //__________________________________________________________________________
-int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps)
+int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps,
+                                 const char *query)
 {
    // Get a list of workers from the available resource broker
    XPDLOC(ALL, "Manager::GetWorkers")
@@ -441,28 +442,41 @@ int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps)
 
    // Query the scheduler for the list of workers
    std::list<XrdProofWorker *> wrks;
-   fProofSched->GetWorkers(xps, &wrks);
-   TRACE(DBG, "list size: " << wrks.size());
+   if ((rc = fProofSched->GetWorkers(xps, &wrks, query)) < 0) {
+      TRACE(XERR, "error getting list of workers from the scheduler");
+      return -1;
+   }
+   // If we got a new list we save it into the session object
+   if (rc == 0) {
 
-   // The full list
-   XrdOucString ord;
-   int ii = -1;
-   std::list<XrdProofWorker *>::iterator iw;
-   for (iw = wrks.begin(); iw != wrks.end() ; iw++) {
-      XrdProofWorker *w = *iw;
-      // Add separator if not the first
-      if (lw.length() > 0)
-         lw += '&';
-      // Add export version of the info
-      lw += w->Export();
-      // Count (fActive is increased inside here)
-      if (ii == -1) 
-         ord.form("master");
-      else
-         ord.form("%d", ii);
-      ii++;
-      xps->AddWorker(ord.c_str(), w);
-      w->fProofServs.push_back(xps);
+      TRACE(DBG, "list size: " << wrks.size());
+
+      // The full list
+      XrdOucString ord;
+      int ii = -1;
+      std::list<XrdProofWorker *>::iterator iw;
+      for (iw = wrks.begin(); iw != wrks.end() ; iw++) {
+         XrdProofWorker *w = *iw;
+         // Count (fActive is increased inside here)
+         if (ii == -1) 
+            ord = "master";
+         else
+            XPDFORM(ord, "%d", ii);
+         ii++;
+         xps->AddWorker(ord.c_str(), w);
+         // Add proofserv and increase the counter
+         w->AddProofServ(xps);
+      }
+   }
+
+   int proto = (xps->ROOT()) ? xps->ROOT()->SrvProtVers() : -1;
+   if (rc != 2 || (proto < 21 && rc == 0)) {
+      // Get the list in exported format
+      xps->ExportWorkers(lw);
+      TRACE(DBG, "from ExportWorkers: " << lw);
+   } else if (proto >= 21) {
+      // Signal enqueing
+      lw = XPD_GW_QueryEnqueued;
    }
 
    if (TRACING(REQ)) fNetMgr->Dump();
@@ -470,7 +484,7 @@ int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps)
    return rc;
 }
 
-//__________________________________________________________________________
+//______________________________________________________________________________
 static int FillKeyValues(const char *k, int *d, void *s)
 {
    // Add the key value in the string passed via the void argument
@@ -493,7 +507,7 @@ static int FillKeyValues(const char *k, int *d, void *s)
    return 0;
 }
 
-//__________________________________________________________________________
+//______________________________________________________________________________
 int XrdProofdManager::Config(bool rcf)
 {
    // Run configuration and parse the entered config directives.
@@ -516,7 +530,7 @@ int XrdProofdManager::Config(bool rcf)
    fChangeOwn = (fMultiUser && getuid()) ? 0 : 1;
 
    // Notify port
-   msg.form("listening on port %d",fPort);
+   XPDFORM(msg, "listening on port %d",fPort);
    TRACE(ALL, msg);
 
    XrdProofUI ui;
@@ -526,7 +540,7 @@ int XrdProofdManager::Config(bool rcf)
       if (XrdProofdAux::GetUserInfo(effuid, ui) == 0) {
          fEffectiveUser = ui.fUser;
       } else {
-         msg.form("could not resolve effective uid %d (errno: %d)", effuid, errno);
+         XPDFORM(msg, "could not resolve effective uid %d (errno: %d)", effuid, errno);
          XPDERR(msg);
          return -1;
       }
@@ -556,7 +570,7 @@ int XrdProofdManager::Config(bool rcf)
       pidfile += "/xrootd.pid";
       FILE *fpid = fopen(pidfile.c_str(), "w");
       if (!fpid) {
-         msg.form("unable to open pid file: %s; errno: %d", pidfile.c_str(), errno);
+         XPDFORM(msg, "unable to open pid file: %s; errno: %d", pidfile.c_str(), errno);
          XPDERR(msg);
          return -1;
       }
@@ -564,7 +578,7 @@ int XrdProofdManager::Config(bool rcf)
       fclose(fpid);
    } else {
       if (XrdProofdAux::GetUserInfo(effuid, ui) == 0) {
-         msg.form("could not resolve effective uid %d (errno: %d)", effuid, errno);
+         XPDFORM(msg, "could not resolve effective uid %d (errno: %d)", effuid, errno);
          XPDERR(msg);
       }
    }
@@ -621,10 +635,11 @@ int XrdProofdManager::Config(bool rcf)
          fSuperUsers += sui.fUser;
       }
    } else {
-      msg.form("could not resolve effective uid %d (errno: %d)", XrdProofdProtocol::EUidAtStartup(), errno);
+      XPDFORM(msg, "could not resolve effective uid %d (errno: %d)",
+                   XrdProofdProtocol::EUidAtStartup(), errno);
       XPDERR(msg);
    }
-   msg.form("list of superusers: %s", fSuperUsers.c_str());
+   XPDFORM(msg, "list of superusers: %s", fSuperUsers.c_str());
    TRACE(ALL, msg);
 
    // Notify controlled mode, if such
@@ -639,14 +654,14 @@ int XrdProofdManager::Config(bool rcf)
       XrdOucString uls;
       fAllowedUsers.Apply(FillKeyValues, (void *)&uls);
       if (uls.length()) {
-         msg.form("running in controlled access mode: users allowed: %s", uls.c_str());
+         XPDFORM(msg, "running in controlled access mode: users allowed: %s", uls.c_str());
          TRACE(ALL, msg);
       }
       // Extract now the list of allowed groups
       XrdOucString gls;
       fAllowedGroups.Apply(FillKeyValues, (void *)&gls);
       if (gls.length()) {
-         msg.form("running in controlled access mode: UNIX groups allowed: %s", gls.c_str());
+         XPDFORM(msg, "running in controlled access mode: UNIX groups allowed: %s", gls.c_str());
          TRACE(ALL, msg);
       }
    }
@@ -722,6 +737,12 @@ int XrdProofdManager::Config(bool rcf)
       return -1;
    }
 
+   // Config the scheduler
+   if (fProofSched && fProofSched->Config(rcf) != 0) {
+      XPDERR("problems configuring the scheduler");
+      return -1;
+   }
+
    if (!rcf) {
       // Start cron thread
       pthread_t tid;
@@ -737,7 +758,7 @@ int XrdProofdManager::Config(bool rcf)
    return 0;
 }
 
-//__________________________________________________________________________
+//______________________________________________________________________________
 void XrdProofdManager::RegisterDirectives()
 {
    // Register directives for configuration
@@ -752,6 +773,8 @@ void XrdProofdManager::RegisterDirectives()
    Register("allowedusers", new XrdProofdDirective("allowedusers", this, &DoDirectiveClass));
    Register("role", new XrdProofdDirective("role", this, &DoDirectiveClass));
    Register("cron", new XrdProofdDirective("cron", this, &DoDirectiveClass));
+   Register("port", new XrdProofdDirective("port", this, &DoDirectiveClass));
+   Register("datasetsrc", new XrdProofdDirective("datasetsrc", this, &DoDirectiveClass));
    Register("xrd.protocol", new XrdProofdDirective("xrd.protocol", this, &DoDirectiveClass));
    // Register config directives for strings
    Register("tmp", new XrdProofdDirective("tmp", (void *)&fTMPdir, &DoDirectiveString));
@@ -768,7 +791,11 @@ int XrdProofdManager::ResolveKeywords(XrdOucString &s, XrdProofdClient *pcl)
    // Resolve special keywords in 's' for client 'pcl'. Recognized keywords
    //     <workdir>          root for working dirs
    //     <host>             local host name
+   //     <homedir>          user home dir
    //     <user>             user name
+   //     <group>            user group
+   //     <uid>              user ID
+   //     <gid>              user group ID
    // Return the number of keywords resolved.
    XPDLOC(ALL, "Manager::ResolveKeywords")
 
@@ -792,6 +819,30 @@ int XrdProofdManager::ResolveKeywords(XrdOucString &s, XrdProofdClient *pcl)
    if (pcl)
       if (s.replace("<user>", pcl->User()))
          nk++;
+
+   // Parse <group>
+   if (pcl)
+      if (s.replace("<group>", pcl->Group()))
+         nk++;
+
+   // Parse <homedir>
+   if (pcl)
+      if (s.replace("<homedir>", pcl->UI().fHomeDir.c_str()))
+         nk++;
+
+   // Parse <uid>
+   if (pcl && (s.find("<uid>") != STR_NPOS)) {
+      XrdOucString suid; suid += pcl->UI().fUid;
+      if (s.replace("<uid>", suid.c_str()))
+         nk++;
+   }
+
+   // Parse <gid>
+   if (pcl && (s.find("<gid>") != STR_NPOS)) {
+      XrdOucString sgid; sgid += pcl->UI().fGid;
+      if (s.replace("<gid>", sgid.c_str()))
+         nk++;
+   }
 
    TRACE(HDBG,"exit: "<<s);
 
@@ -829,7 +880,12 @@ int XrdProofdManager::DoDirective(XrdProofdDirective *d,
       return DoDirectiveRole(val, cfg, rcf);
    } else if (d->fName == "multiuser") {
       return DoDirectiveMultiUser(val, cfg, rcf);
+   } else if (d->fName == "port") {
+      return DoDirectivePort(val, cfg, rcf);
+   } else if (d->fName == "datasetsrc") {
+      return DoDirectiveDataSetSrc(val, cfg, rcf);
    } else if (d->fName == "xrd.protocol") {
+      val = cfg->GetToken();
       return DoDirectivePort(val, cfg, rcf);
    }
    TRACE(XERR, "unknown directive: "<<d->fName);
@@ -1114,21 +1170,23 @@ int XrdProofdManager::DoDirectiveRole(char *val, XrdOucStream *cfg, bool)
 }
 
 //______________________________________________________________________________
-int XrdProofdManager::DoDirectivePort(char *, XrdOucStream *cfg, bool)
+int XrdProofdManager::DoDirectivePort(char *val, XrdOucStream *, bool)
 {
    // Process 'xrd.protocol' directive to find the port
 
-   if (!cfg)
+   if (!val)
       // undefined inputs
       return -1;
 
-   // Get the value
-   XrdOucString proto = cfg->GetToken();
-   if (proto.length() > 0 && proto.beginswith("xproofd:")) {
-      proto.replace("xproofd:","");
-      fPort = strtol(proto.c_str(), 0, 10);
-      fPort = (fPort < 0) ? XPD_DEF_PORT : fPort;
+   XrdOucString port(val);
+   if (port.beginswith("xproofd:")) {
+      port.replace("xproofd:","");
    }
+   if (port.length() > 0) {
+      fPort = strtol(port.c_str(), 0, 10);
+   }
+   fPort = (fPort < 0) ? XPD_DEF_PORT : fPort;
+
    return 0;
 }
 
@@ -1149,6 +1207,73 @@ int XrdProofdManager::DoDirectiveMultiUser(char *val, XrdOucStream *cfg, bool)
    // Multi-user option
    int mu = strtol(val,0,10);
    fMultiUser = (mu == 1) ? 1 : fMultiUser;
+   return 0;
+}
+
+//______________________________________________________________________________
+int XrdProofdManager::DoDirectiveDataSetSrc(char *val, XrdOucStream *cfg, bool)
+{
+   // Process 'datasetsrc' directive
+   XPDLOC(ALL, "Manager::DoDirectiveDataSetSrc")
+
+   if (!val)
+      // undefined inputs
+      return -1;
+
+   // URL for this source
+   XrdOucString type(val), url, opts;
+   bool rw = 0, local = 0, goodsrc = 1;
+   char *nxt = 0;
+   while ((nxt = cfg->GetToken())) {
+      XPDPRT("tok: " << nxt);
+      if (!strcmp(nxt, "rw=1")) {
+         rw = 1;
+      } else if (!strncmp(nxt, "url:", 4)) {
+         url = nxt+4;
+      } else if (!strncmp(nxt, "opt:", 4)) {
+         opts = nxt+4;
+      }
+   }
+
+   if (url.length() > 0) {
+
+      // Check if local source
+      if (url.beginswith("file:")) url.replace("file:","");
+      if (url.beginswith("/")) {
+	 local = 1;
+	 goodsrc = 0;
+	 // Make sure the directory exists and has mode 0755
+	 XrdProofUI ui;
+	 XrdProofdAux::GetUserInfo(fEffectiveUser.c_str(), ui);
+	 if (XrdProofdAux::AssertDir(url.c_str(), ui, ChangeOwn()) == 0) {
+	    goodsrc = 1;
+	 } else {
+	    TRACE(XERR,"Cannot assert path '"<<url<<"' - ignoring");   
+	 }
+      }
+   }
+
+   // Add to the list
+   if (goodsrc) {
+      // If first local, add it in front
+      std::list<XrdProofdDSInfo *>::iterator ii = fDataSetSrcs.begin();
+      bool haslocal = 0;
+      for (ii = fDataSetSrcs.begin(); ii != fDataSetSrcs.end(); ii++) {
+	 if ((*ii)->fLocal) {
+            haslocal = 1;
+            break;
+         }
+      }
+      // Default options      
+      if (opts.length() <= 0) {
+         opts = rw ? "Ar:Av:" : "-Ar:-Av:";
+      }
+      if (haslocal || !local) {
+	 fDataSetSrcs.push_back(new XrdProofdDSInfo(type.c_str(), url.c_str(), local, rw, opts.c_str()));
+      } else {
+	 fDataSetSrcs.push_front(new XrdProofdDSInfo(type.c_str(), url.c_str(), local, rw, opts.c_str()));
+      }
+   }
    return 0;
 }
 

@@ -10,35 +10,40 @@
  *************************************************************************/
 
 #include "TH2GL.h"
-#include <TH2.h>
+#include "TH2.h"
 #include "TVirtualPad.h"
+#include "TAxis.h"
+#include "TMath.h"
 
 #include "TGLSurfacePainter.h"
 #include "TGLHistPainter.h"
 #include "TGLLegoPainter.h"
 #include "TGLBoxPainter.h"
 #include "TGLTF3Painter.h"
-#include "TGLAxis.h"
+#include "TGLAxisPainter.h"
+#include "TGLCamera.h"
 
 #include "TGLRnrCtx.h"
 
 #include "TGLIncludes.h"
 
-//______________________________________________________________________
-// TH2GL
+//______________________________________________________________________________
 //
 // Rendering of TH2 and derived classes.
 // Interface to plot-painters also used for gl-in-pad.
 
-ClassImp(TH2GL)
+ClassImp(TH2GL);
 
-TH2GL::TH2GL() : TGLObject(), fM(0), fPlotPainter(0)
+//______________________________________________________________________________
+TH2GL::TH2GL() :
+TGLObject(), fM(0), fPlotPainter(0)
 {
    // Constructor.
 
    fDLCache = kFALSE; // Disable display list.
 }
 
+//______________________________________________________________________________
 TH2GL::~TH2GL()
 {
    // Destructor.
@@ -46,24 +51,20 @@ TH2GL::~TH2GL()
    delete fPlotPainter;
 }
 
-/**************************************************************************/
-
+//______________________________________________________________________________
 Bool_t TH2GL::SetModel(TObject* obj, const Option_t* opt)
 {
    // Set model object.
 
-   if(SetModelCheckClass(obj, TH2::Class()))
+   TString option(opt);
+   option.ToLower();
+
+   if (SetModelCheckClass(obj, TH2::Class()))
    {
       fM = dynamic_cast<TH2*>(obj);
 
-      TString option(opt);
-
       // Plot type
-      if (option.Index("iso") != kNPOS)
-         fPlotPainter = new TGLIsoPainter(fM, 0, &fCoord);
-      else if (option.Index("box") != kNPOS)
-         fPlotPainter = new TGLBoxPainter(fM, 0, &fCoord);
-      else if (option.Index("surf") != kNPOS)
+      if (option.Index("surf") != kNPOS)
          fPlotPainter = new TGLSurfacePainter(fM, 0, &fCoord);
       else
          fPlotPainter = new TGLLegoPainter(fM, 0, &fCoord);
@@ -81,13 +82,13 @@ Bool_t TH2GL::SetModel(TObject* obj, const Option_t* opt)
          fCoord.SetCoordType(kGLCylindrical);
 
       fPlotPainter->AddOption(option);
-
       fPlotPainter->InitGeometry();
       return kTRUE;
    }
    return kFALSE;
 }
 
+//______________________________________________________________________________
 void TH2GL::SetBBox()
 {
    // Setup bounding-box.
@@ -95,30 +96,26 @@ void TH2GL::SetBBox()
    fBoundingBox.Set(fPlotPainter->RefBackBox().Get3DBox());
 }
 
-/**************************************************************************/
-
-void TH2GL::DirectDraw(TGLRnrCtx & /*rnrCtx*/) const
+//______________________________________________________________________________
+void TH2GL::DirectDraw(TGLRnrCtx & rnrCtx) const
 {
    // Render the object.
 
    fPlotPainter->RefBackBox().FindFrontPoint();
+
    glPushAttrib(GL_ENABLE_BIT | GL_LIGHTING_BIT);
+
    glEnable(GL_NORMALIZE);
+   glDisable(GL_COLOR_MATERIAL);
+
    fPlotPainter->InitGL();
    fPlotPainter->DrawPlot();
 
    glDisable(GL_CULL_FACE);
-
-   TGLAxis ap;
-   const Rgl::Range_t & xr = fCoord.GetXRange();
-   ap.PaintGLAxis(fBoundingBox[0].CArr(), fBoundingBox[1].CArr(),
-                  xr.first, xr.second, 205);
-   const Rgl::Range_t & yr = fCoord.GetXRange();
-   ap.PaintGLAxis(fBoundingBox[0].CArr(), fBoundingBox[3].CArr(),
-                  yr.first, yr.second, 205);
-   const Rgl::Range_t & zr = fCoord.GetXRange();
-   ap.PaintGLAxis(fBoundingBox[0].CArr(), fBoundingBox[4].CArr(),
-                  zr.first, zr.second, 205);
-
    glPopAttrib();
+
+   // Axes
+   TGLAxisPainterBox axe_painter;
+   axe_painter.SetFontMode(TGLFont::kPixmap);
+   axe_painter.PlotStandard(rnrCtx, fM, fBoundingBox);
 }

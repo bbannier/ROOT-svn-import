@@ -175,6 +175,7 @@ public:
    void                BuildOld();
    virtual Bool_t      BuildFor( const TClass *cl );
    void                Clear(Option_t *);
+   Bool_t              CompareContent(TClass *cl,TVirtualStreamerInfo *info, Bool_t warn, Bool_t complete);
    void                Compile();
    void                ComputeSize();
    void                ForceWriteInfo(TFile *file, Bool_t force=kFALSE);
@@ -272,6 +273,7 @@ public:
    Int_t               WriteBufferAux      (TBuffer &b, char ** const &arr, Int_t first,Int_t narr,Int_t eoffset,Int_t mode);
    Int_t               WriteBufferAux      (TBuffer &b, const TVirtualCollectionProxy &arr, Int_t first,Int_t narr,Int_t eoffset,Int_t mode);
    Int_t               WriteBufferAux      (TBuffer &b, const TPointerCollectionAdapter &arr, Int_t first,Int_t narr,Int_t eoffset,Int_t mode);
+   Int_t               WriteBufferAux      (TBuffer &b, const TVirtualArray &arr, Int_t first,Int_t narr,Int_t eoffset,Int_t mode);
 #else
    template <class T>
    Int_t               WriteBufferAux      (TBuffer &b, const T &arr, Int_t first,Int_t narr,Int_t eoffset,Int_t mode);

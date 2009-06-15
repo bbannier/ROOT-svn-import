@@ -313,7 +313,7 @@ namespace TMath {
    Double_t Erf(Double_t x);
    Double_t ErfInverse(Double_t x);
    Double_t Erfc(Double_t x);
-   inline Double_t ErfcInverse(Double_t x) {return TMath::ErfInverse(1-x);}
+   Double_t ErfcInverse(Double_t x);
    Double_t Freq(Double_t x);
    Double_t Gamma(Double_t z);
    Double_t Gamma(Double_t a,Double_t x);
@@ -548,7 +548,8 @@ struct CompareDesc {
 
    CompareDesc(T d) : fData(d) {}
 
-   bool operator()(int i1, int i2) { 
+   template<typename Index>
+   bool operator()(Index i1, Index i2) { 
       return *(fData + i1) > *(fData + i2);
    }
 
@@ -560,7 +561,8 @@ struct CompareAsc {
 
    CompareAsc(T d) : fData(d) {}
 
-   bool operator()(int i1, int i2) { 
+   template<typename Index>
+   bool operator()(Index i1, Index i2) { 
       return *(fData + i1) < *(fData + i2);
    }
 

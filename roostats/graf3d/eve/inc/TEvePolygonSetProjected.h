@@ -23,12 +23,6 @@
 
 class TBuffer3D;
 
-namespace std
-{
-template<typename _Tp> class allocator;
-template<typename _Tp, typename _Alloc > class list;
-}
-
 class TEveVector;
 
 class TEvePolygonSetProjected :  public TEveElementList,
@@ -85,7 +79,7 @@ protected:
    Float_t      fLineWidth; // outline width of polygons
 
 public:
-   TEvePolygonSetProjected(const Text_t* n="TEvePolygonSetProjected", const Text_t* t="");
+   TEvePolygonSetProjected(const char* n="TEvePolygonSetProjected", const char* t="");
    virtual ~TEvePolygonSetProjected();
 
    virtual void    SetProjection(TEveProjectionManager* mng, TEveProjectable* model);

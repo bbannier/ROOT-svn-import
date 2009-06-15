@@ -108,14 +108,18 @@ class TProofDataSetManager;
 // 13 -> 14: new proofserv environment setting
 // 14 -> 15: add support for entry lists; new version of TFileInfo
 // 15 -> 16: add support for generic non-data based processing
-// 16 -> 17: new dataset handling system; support for TFileCollection processing 
+// 16 -> 17: new dataset handling system; support for TFileCollection processing
 // 17 -> 18: support for reconnection on daemon restarts
 // 18 -> 19: TProofProgressStatus used in kPROOF_PROGRESS, kPROOF_STOPPROCESS
 //           and kPROOF_GETNEXTPACKET messages in Master - worker communication
 // 19 -> 20: Fix the asynchronous mode (required changes in some messages)
+// 20 -> 21: Add support for session queuing
+// 21 -> 22: Add support for switching from sync to async while running ('Ctrl-Z' functionality)
+// 22 -> 23: New dataset features (default tree name; classification per fileserver)
+// 23 -> 24: Merging optimization
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 20;            // protocol version number
+const Int_t       kPROOF_Protocol        = 24;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
@@ -152,64 +156,13 @@ R__EXTERN TVirtualMutex *gProofMutex;
 
 typedef void (*PrintProgress_t)(Long64_t tot, Long64_t proc, Float_t proctime);
 
-// Helper classes used for parallel startup
-class TProofThreadArg {
-public:
-   TUrl         *fUrl;
-   TString       fOrd;
-   Int_t         fPerf;
-   TString       fImage;
-   TString       fWorkdir;
-   TString       fMsd;
-   TList        *fSlaves;
-   TProof       *fProof;
-   TCondorSlave *fCslave;
-   TList        *fClaims;
-   Int_t         fType;
-
-   TProofThreadArg(const char *h, Int_t po, const char *o, Int_t pe,
-                   const char *i, const char *w,
-                   TList *s, TProof *prf);
-
-   TProofThreadArg(TCondorSlave *csl, TList *clist,
-                   TList *s, TProof *prf);
-
-   TProofThreadArg(const char *h, Int_t po, const char *o,
-                   const char *i, const char *w, const char *m,
-                   TList *s, TProof *prf);
-
-   virtual ~TProofThreadArg() { if (fUrl) delete fUrl; }
-
-private:
-
-   TProofThreadArg(const TProofThreadArg&); // Not implemented
-   TProofThreadArg& operator=(const TProofThreadArg&); // Not implemented
-
-};
-
-// PROOF Thread class for parallel startup
-class TProofThread {
-public:
-   TThread         *fThread;
-   TProofThreadArg *fArgs;
-
-   TProofThread(TThread *t, TProofThreadArg *a): fThread(t), fArgs(a) {}
-   virtual ~TProofThread() { SafeDelete(fThread); SafeDelete(fArgs); }
-private:
-
-   TProofThread(const TProofThread&); // Not implemented
-   TProofThread& operator=(const TProofThread&); // Not implemented
-
-};
-
 // PROOF Interrupt signal handler
 class TProofInterruptHandler : public TSignalHandler {
 private:
+   TProof *fProof;
 
    TProofInterruptHandler(const TProofInterruptHandler&); // Not implemented
    TProofInterruptHandler& operator=(const TProofInterruptHandler&); // Not implemented
-
-   TProof *fProof;
 public:
    TProofInterruptHandler(TProof *p)
       : TSignalHandler(kSigInterrupt, kFALSE), fProof(p) { }
@@ -219,12 +172,11 @@ public:
 // Input handler for messages from TProofServ
 class TProofInputHandler : public TFileHandler {
 private:
+   TSocket *fSocket;
+   TProof  *fProof;
 
    TProofInputHandler(const TProofInputHandler&); // Not implemented
    TProofInputHandler& operator=(const TProofInputHandler&); // Not implemented
-
-   TSocket *fSocket;
-   TProof  *fProof;
 public:
    TProofInputHandler(TProof *p, TSocket *s);
    Bool_t Notify();
@@ -258,6 +210,25 @@ public:
 
    ClassDef(TSlaveInfo,2) //basic info on slave
 };
+
+// Small auxilliary class for merging progress notification
+class TProofMergePrg {
+private:
+   TString      fExp;
+   Int_t        fIdx;
+   Int_t        fNWrks;
+   static char  fgCr[4];
+public:
+   TProofMergePrg() : fIdx(-1), fNWrks(-1) { }
+
+   const char  *Export() { fExp.Form("%c (%d workers still sending)   ", fgCr[fIdx], fNWrks);
+                           return fExp.Data(); }
+   void         DecreaseNWrks() { fNWrks--; }
+   void         IncreaseIdx() { fIdx++; if (fIdx == 4) fIdx = 0; }
+   void         Reset(Int_t n = -1) { fIdx = -1; SetNWrks(n); }
+   void         SetNWrks(Int_t n) { fNWrks = n; }
+};
+
 
 class TProof : public TNamed, public TQObject {
 
@@ -364,7 +335,8 @@ private:
       kMergeDataSet        = 8,  //Add new files to an existing dataset
       kShowDataSets        = 9,  //Shows datasets, returns formatted output
       kGetQuota            = 10, //Get quota info per group
-      kShowQuota           = 11  //Show quotas
+      kShowQuota           = 11, //Show quotas
+      kSetDefaultTreeName  = 12  //Set the default tree name
    };
    enum ESendFileOpt {
       kAscii               = 0x0,
@@ -397,7 +369,6 @@ private:
    Int_t           fCheckFileStatus; //remote return status after kPROOF_CHECKFILE
    TList          *fRecvMessages;    //Messages received during collect not yet processed
    TList          *fSlaveInfo;       //!list returned by kPROOF_GETSLAVEINFO
-   Bool_t          fMasterServ;      //true if we are a master server
    Bool_t          fSendGroupView;   //if true send new group view
    TList          *fActiveSlaves;    //list of active slaves (subset of all slaves)
    TList          *fInactiveSlaves;  //list of inactive slaves (good but not used for processing)
@@ -428,12 +399,15 @@ private:
    Int_t           fNotIdle;         //Number of non-idle sub-nodes
    Bool_t          fSync;            //true if type of currently processed query is sync
    ERunStatus      fRunStatus;       //run status
+   Bool_t          fIsWaiting;       //true if queries have been enqueued
 
    Bool_t          fRedirLog;        //redirect received log info
    TString         fLogFileName;     //name of the temp file for redirected logs
    FILE           *fLogFileW;        //temp file to redirect logs
    FILE           *fLogFileR;        //temp file to read redirected logs
    Bool_t          fLogToWindowOnly; //send log to window only
+
+   TProofMergePrg  fMergePrg;        //Merging progress
 
    TList          *fWaitingSlaves;   //stores a TPair of the slaves's TSocket and TMessage
    TList          *fQueries;         //list of TProofQuery objects
@@ -461,9 +435,12 @@ private:
    TList          *fLoadedMacros;    // List of loaded macros (just file names)
    static TList   *fgProofEnvList;   // List of TNameds defining environment
                                      // variables to pass to proofserv
+   static TPluginHandler *fgLogViewer;  // Log dialog box plugin
+
 protected:
    enum ESlaves { kAll, kActive, kUnique, kAllUnique };
 
+   Bool_t          fMasterServ;     //true if we are a master server
    TUrl            fUrl;            //Url of the master
    TString         fConfFile;       //file containing config information
    TString         fConfDir;        //directory containing cluster config information
@@ -580,12 +557,14 @@ private:
 
    void     PrintProgress(Long64_t total, Long64_t processed, Float_t procTime = -1.);
 
+   void     ResetMergePrg();
+
 protected:
    TProof(); // For derived classes to use
    Int_t           Init(const char *masterurl, const char *conffile,
                         const char *confdir, Int_t loglevel,
                         const char *alias = 0);
-   virtual Bool_t  StartSlaves(Bool_t parallel, Bool_t attach = kFALSE);
+   virtual Bool_t  StartSlaves(Bool_t attach = kFALSE);
    Int_t AddWorkers(TList *wrks);
    Int_t RemoveWorkers(TList *wrks);
 
@@ -626,6 +605,9 @@ protected:
    static Int_t GetInputData(TList *input, const char *cachedir, TString &emsg);
    static Int_t SaveInputData(TQueryResult *qr, const char *cachedir, TString &emsg);
    static Int_t SendInputData(TQueryResult *qr, TProof *p, TString &emsg);
+
+   // Parse CINT commands
+   static Bool_t GetFileInCmd(const char *cmd, TString &fn);
 
 public:
    TProof(const char *masterurl, const char *conffile = kPROOF_ConfFile,
@@ -669,6 +651,8 @@ public:
    Int_t       Retrieve(Int_t query, const char *path = 0);
    Int_t       Retrieve(const char *queryref, const char *path = 0);
 
+   void        DisableGoAsyn();
+   void        GoAsynchronous();
    void        StopProcess(Bool_t abort, Int_t timeout = -1);
    void        Browse(TBrowser *b);
 
@@ -689,10 +673,11 @@ public:
    Int_t       ClearPackage(const char *package);
    Int_t       EnablePackage(const char *package, Bool_t notOnClient = kFALSE);
    Int_t       UploadPackage(const char *par, EUploadPackageOpt opt = kUntar);
-   Int_t       Load(const char *macro, Bool_t notOnClient = kFALSE, Bool_t uniqueOnly = kTRUE);
+   Int_t       Load(const char *macro, Bool_t notOnClient = kFALSE, Bool_t uniqueOnly = kTRUE,
+                    TList *wrks = 0);
 
-   Int_t       AddDynamicPath(const char *libpath, Bool_t onClient = kFALSE);
-   Int_t       AddIncludePath(const char *incpath, Bool_t onClient = kFALSE);
+   Int_t       AddDynamicPath(const char *libpath, Bool_t onClient = kFALSE, TList *wrks = 0);
+   Int_t       AddIncludePath(const char *incpath, Bool_t onClient = kFALSE, TList *wrks = 0);
    Int_t       RemoveDynamicPath(const char *libpath, Bool_t onClient = kFALSE);
    Int_t       RemoveIncludePath(const char *incpath, Bool_t onClient = kFALSE);
 
@@ -720,11 +705,14 @@ public:
    TMap       *GetDataSetQuota(const char* optStr = "");
    void        ShowDataSetQuota(Option_t* opt = 0);
 
+   virtual Bool_t ExistsDataSet(const char *dataset);
    void        ShowDataSet(const char *dataset = "", const char* opt = "M");
    virtual Int_t RemoveDataSet(const char *dataset, const char* optStr = "");
    virtual Int_t VerifyDataSet(const char *dataset, const char* optStr = "");
    virtual TFileCollection *GetDataSet(const char *dataset, const char* optStr = "");
    TList       *FindDataSets(const char *searchString, const char* optStr = "");
+
+   virtual Int_t SetDataSetTreeName( const char *dataset, const char *treename);
 
    const char *GetMaster() const { return fMaster; }
    const char *GetConfDir() const { return fConfDir; }
@@ -760,6 +748,7 @@ public:
    Bool_t      IsValid() const { return fValid; }
    Bool_t      IsParallel() const { return GetParallel() > 0 ? kTRUE : kFALSE; }
    Bool_t      IsIdle() const { return (fNotIdle <= 0) ? kTRUE : kFALSE; }
+   Bool_t      IsWaiting() const { return fIsWaiting; }
 
    ERunStatus  GetRunStatus() const { return fRunStatus; }
    TList      *GetLoadedMacros() const { return fLoadedMacros; }
@@ -858,6 +847,7 @@ public:
    // Opening and managing PROOF connections
    static TProof       *Open(const char *url = 0, const char *conffile = 0,
                              const char *confdir = 0, Int_t loglevel = 0);
+   static void          LogViewer(const char *url = 0, Int_t sessionidx = 0);
    static TProofMgr    *Mgr(const char *url);
    static void          Reset(const char *url, Bool_t hard = kFALSE);
 

@@ -104,7 +104,7 @@ void TGeoTorus::ComputeBBox()
 {
 // Compute bounding box of the torus.
    fDZ = fRmax;
-   if (fDphi == 360.) {
+   if (TGeoShape::IsSameWithinTolerance(fDphi,360)) {
       fDX = fDY = fR+fRmax;
       return;
    }
@@ -160,7 +160,7 @@ void TGeoTorus::ComputeNormal(Double_t *point, Double_t *dir, Double_t *norm)
 
       Double_t daxis = Daxis(point,dir,0);
       if ((fRmax-daxis)>1E-5) {
-         if (fRmin==0 || (daxis-fRmin)>1E-5) {
+         if (TGeoShape::IsSameWithinTolerance(fRmin,0) || (daxis-fRmin)>1E-5) {
             TGeoShape::NormalPhi(point,dir,norm,c1,s1,c2,s2);
             return;
          }
@@ -192,7 +192,7 @@ Bool_t TGeoTorus::Contains(Double_t *point) const
 {
 // Test if point is inside the torus.
    // check phi range
-   if (fDphi!=360) {
+   if (!TGeoShape::IsSameWithinTolerance(fDphi,360)) {
       Double_t phi = TMath::ATan2(point[1], point[0]) * TMath::RadToDeg();
       if (phi < 0) phi+=360.0;
       Double_t ddp = phi-fPhi1;
@@ -237,7 +237,7 @@ Double_t TGeoTorus::DDaxis(Double_t *pt, Double_t *dir, Double_t t) const
    Double_t rxy = TMath::Sqrt(p[0]*p[0]+p[1]*p[1]);
    if (rxy<1E-4) return ((p[2]*dir[2]-fR*TMath::Sqrt(dir[0]*dir[0]+dir[1]*dir[1]))/TMath::Sqrt(fR*fR+p[2]*p[2]));
    Double_t d = TMath::Sqrt((rxy-fR)*(rxy-fR)+p[2]*p[2]);
-   if (d==0) return 0.;
+   if (TGeoShape::IsSameWithinTolerance(d,0)) return 0.;
    Double_t dd = (p[0]*dir[0]+p[1]*dir[1]+p[2]*dir[2] - (p[0]*dir[0]+p[1]*dir[1])*fR/rxy)/d;
    return dd;
 }   
@@ -251,7 +251,7 @@ Double_t TGeoTorus::DDDaxis(Double_t *pt, Double_t *dir, Double_t t) const
    Double_t rxy = TMath::Sqrt(p[0]*p[0]+p[1]*p[1]);
    if (rxy<1E-6) return 0;
    Double_t daxis = TMath::Sqrt((rxy-fR)*(rxy-fR)+p[2]*p[2]);
-   if (daxis==0) return 0;
+   if (TGeoShape::IsSameWithinTolerance(daxis,0)) return 0;
    Double_t ddaxis = (p[0]*dir[0]+p[1]*dir[1]+p[2]*dir[2] - (p[0]*dir[0]+p[1]*dir[1])*fR/rxy)/daxis;
    Double_t dddaxis = 1 - ddaxis*ddaxis - (1-dir[2]*dir[2])*fR/rxy +
                       fR*(p[0]*dir[0]+p[1]*dir[1])*(p[0]*dir[0]+p[1]*dir[1])/(rxy*rxy*rxy);
@@ -272,18 +272,10 @@ Double_t TGeoTorus::DistFromInside(Double_t *point, Double_t *dir, Int_t iact, D
    Bool_t hasphi = (fDphi<360)?kTRUE:kFALSE;
    Bool_t hasrmin = (fRmin>0)?kTRUE:kFALSE;
    Double_t dout = ToBoundary(point,dir,fRmax);
-   if (dout>1E10) {
-      Double_t pt[3];
-      for (Int_t i=0; i<3; i++) pt[i] = point[i]-1E-4*dir[i];
-      dout = ToBoundary(pt,dir,fRmax)-1E-4;
-      if (dout<1E10) return dout;
-      Error("DistFromInside", "cannot get outside");
-      printf("point (%f,%f,%f) daxis=%f contains=%i\n", point[0],point[1],point[2],
-             Daxis(point,dir,0), Contains(point));
-      return TGeoShape::Big();
-   }
+//   Double_t dax = Daxis(point,dir,dout);
    Double_t din = (hasrmin)?ToBoundary(point,dir,fRmin):TGeoShape::Big();
    snext = TMath::Min(dout,din);
+   if (snext>1E10) return TGeoShape::Tolerance();
    Double_t dphi = TGeoShape::Big();
    if (hasphi) {
       // Torus segment case.
@@ -299,17 +291,8 @@ Double_t TGeoTorus::DistFromInside(Double_t *point, Double_t *dir, Int_t iact, D
       sm=TMath::Sin(fio);
       cdfi = TMath::Cos(0.5*(phi2-phi1));
       dphi = TGeoTubeSeg::DistFromInsideS(point,dir,fR-fRmax,fR+fRmax, fRmax, c1,s1,c2,s2,cm,sm,cdfi);
-      if (dphi>1E10) {
-         Double_t pt[3];
-         for (Int_t i=0; i<3; i++) pt[i] = point[i]-1E-4*dir[i];
-         dphi = TGeoTubeSeg::DistFromInsideS(pt,dir,fR-fRmax,fR+fRmax, fRmax, c1,s1,c2,s2,cm,sm,cdfi)-1E-4;
-         if (dphi>1E10) {
-            Error("DistFromInside", "cannot get outside");
-            return TGeoShape::Big();
-         }   
-      }
-      Double_t daxis = Daxis(point,dir,dphi+1E-8);
-      if (daxis>=fRmin && daxis<=fRmax) snext=TMath::Min(snext,dphi);
+      Double_t daxis = Daxis(point,dir,dphi);
+      if (daxis>=fRmin+1.E-8 && daxis<=fRmax-1.E-8) snext=TMath::Min(snext,dphi);
    }      
    return snext;
 }
@@ -366,12 +349,13 @@ Double_t TGeoTorus::DistFromOutside(Double_t *point, Double_t *dir, Int_t iact, 
    
    // If outside the ring, compute distance to it.
    Double_t dring = TGeoShape::Big();
+   Double_t eps = 1.E-5;
    snext = 0;
    daxis = -1;
    memcpy(pt,point,3*sizeof(Double_t));
    if (!inbring) {
-      if (hasphi) dring = TGeoTubeSeg::DistFromOutsideS(point,dir,fR-fRmax,fR+fRmax, fRmax, c1,s1,c2,s2,cm,sm,cdfi);            
-      else        dring = TGeoTube::DistFromOutsideS(point,dir,fR-fRmax,fR+fRmax, fRmax);
+      if (hasphi) dring = TGeoTubeSeg::DistFromOutsideS(point,dir,TMath::Max(0.,fR-fRmax-eps),fR+fRmax+eps, fRmax+eps, c1,s1,c2,s2,cm,sm,cdfi);            
+      else        dring = TGeoTube::DistFromOutsideS(point,dir,TMath::Max(0.,fR-fRmax-eps),fR+fRmax+eps, fRmax+eps);
       // If not crossing it, return BIG.
       if (dring>1E10) return TGeoShape::Big();
       snext = dring;
@@ -388,36 +372,36 @@ Double_t TGeoTorus::DistFromOutside(Double_t *point, Double_t *dir, Int_t iact, 
       // We are in the hole. Check if we came from outside.
       if (snext>0) {
          // we can cross either the inner torus or exit the other hole.
-         snext += 1E-6;
-         for (i=0; i<3; i++) pt[i] += 1E-6*dir[i];
+         snext += 0.1*eps;
+         for (i=0; i<3; i++) pt[i] += 0.1*eps*dir[i];
       }
       // We are in the hole from the begining.   
       // find first crossing with inner torus
       dd = ToBoundary(pt,dir, fRmin);
       // find exit distance from inner bounding ring
-      if (hasphi) dring = TGeoTubeSeg::DistFromInsideS(point,dir,fR-fRmin,fR+fRmin, fRmin, c1,s1,c2,s2,cm,sm,cdfi);            
-      else        dring = TGeoTube::DistFromInsideS(point,dir,fR-fRmin,fR+fRmin, fRmin);
+      if (hasphi) dring = TGeoTubeSeg::DistFromInsideS(pt,dir,fR-fRmin,fR+fRmin, fRmin, c1,s1,c2,s2,cm,sm,cdfi);
+      else        dring = TGeoTube::DistFromInsideS(pt,dir,fR-fRmin,fR+fRmin, fRmin);
       if (dd<dring) return (snext+dd);
       // we were exiting a hole
       return TGeoShape::Big();
    }    
    // We are inside the outer ring, having daxis>fRmax
-   // Check intersection with outer torus
-   dd = ToBoundary(pt, dir, fRmax);
    // Compute distance to exit the bounding ring (again)
    if (snext>0) {
       // we can cross either the inner torus or exit the other hole.
-      snext += 1E-6;
-      for (i=0; i<3; i++) pt[i] += 1E-6*dir[i];
+      snext += 0.1*eps;
+      for (i=0; i<3; i++) pt[i] += 0.1*eps*dir[i];
    }
-   if (hasphi) dring = TGeoTubeSeg::DistFromInsideS(pt,dir,fR-fRmax,fR+fRmax, fRmax, c1,s1,c2,s2,cm,sm,cdfi);            
-   else        dring = TGeoTube::DistFromInsideS(pt,dir,fR-fRmax,fR+fRmax, fRmax);
+   // Check intersection with outer torus
+   dd = ToBoundary(pt, dir, fRmax);
+   if (hasphi) dring = TGeoTubeSeg::DistFromInsideS(pt,dir,TMath::Max(0.,fR-fRmax-eps),fR+fRmax+eps, fRmax+eps, c1,s1,c2,s2,cm,sm,cdfi);            
+   else        dring = TGeoTube::DistFromInsideS(pt,dir,TMath::Max(0.,fR-fRmax-eps),fR+fRmax+eps, fRmax+eps);
    if (dd<dring) {
       snext += dd;
       return snext;
    }
    // We are exiting the bounding ring before crossing the torus -> propagate
-   snext += dring+1E-6;   
+   snext += dring+eps;   
    for (i=0; i<3; i++) pt[i] = point[i] + snext*dir[i];
    snext += DistFromOutside(pt,dir,3);
    return snext;
@@ -709,7 +693,7 @@ Double_t TGeoTorus::Safety(Double_t *point, Bool_t in) const
    Double_t rad = TMath::Sqrt((rxy-fR)*(rxy-fR) + point[2]*point[2]);
    saf[0] = rad-fRmin;
    saf[1] = fRmax-rad;
-   if (fDphi==360) {
+   if (TGeoShape::IsSameWithinTolerance(fDphi,360)) {
       if (in) return TMath::Min(saf[0],saf[1]);
       for (i=0; i<2; i++) saf[i]=-saf[i];
       return TMath::Max(saf[0], saf[1]);
@@ -972,7 +956,7 @@ Int_t TGeoTorus::SolveQuartic(Double_t a, Double_t b, Double_t c, Double_t d, Do
    Double_t h=0;
    Int_t ireal = 0;
    Int_t i;
-   if (f==0) {
+   if (TGeoShape::IsSameWithinTolerance(f,0)) {
       delta = e*e-4.*g;
       if (delta<0) return 0;
       delta = TMath::Sqrt(delta);
@@ -996,7 +980,7 @@ Int_t TGeoTorus::SolveQuartic(Double_t a, Double_t b, Double_t c, Double_t d, Do
       return ireal; 
    }     
    
-   if (g==0) {
+   if (TGeoShape::IsSameWithinTolerance(g,0)) {
       x[ireal++] = -0.25*a;
       ind[0] = SolveCubic(0,e,f,xx);
       for (i=0; i<ind[0]; i++) x[ireal++] = xx[i]-0.25*a;      
@@ -1052,6 +1036,7 @@ Double_t TGeoTorus::ToBoundary(Double_t *pt, Double_t *dir, Double_t r) const
 // to the torus is decreasing while moving along the given direction.
    
    // Compute coeficients of the quartic
+   Double_t s = TGeoShape::Big();
    Double_t r0sq  = pt[0]*pt[0]+pt[1]*pt[1]+pt[2]*pt[2];
    Double_t rdotn = pt[0]*dir[0]+pt[1]*dir[1]+pt[2]*dir[2];
    Double_t rsumsq = fR*fR+r*r;
@@ -1061,11 +1046,56 @@ Double_t TGeoTorus::ToBoundary(Double_t *pt, Double_t *dir, Double_t r) const
    Double_t d = r0sq*r0sq-2.*r0sq*rsumsq+4.*fR*fR*pt[2]*pt[2]+(fR*fR-r*r)*(fR*fR-r*r);
    
    Double_t x[4];
-   Int_t nsol = SolveQuartic(a,b,c,d,x);
+   Int_t nsol = 0;
+
+   if (TMath::Abs(dir[2])<1.E-3 && TMath::Abs(pt[2])<r) {
+      Double_t r0 = fR - TMath::Sqrt((r-pt[2])*(r+pt[2]));
+      Double_t b0 = (pt[0]*dir[0]+pt[1]*dir[1])/(dir[0]*dir[0]+dir[1]*dir[1]);
+      Double_t c0 = (pt[0]*pt[0] + (pt[1]-r0)*(pt[1]+r0))/(dir[0]*dir[0]+dir[1]*dir[1]);
+      Double_t delta = b0*b0-c0;
+      if (delta>0) {
+         x[nsol] = -b0-TMath::Sqrt(delta);
+         if (x[nsol]>0) nsol++;
+         else {
+            x[nsol] = -b0+TMath::Sqrt(delta);
+            if (x[nsol]>0) nsol++;
+         }
+      }
+      r0 = fR + TMath::Sqrt((r-pt[2])*(r+pt[2]));
+      c0 = (pt[0]*pt[0] + (pt[1]-r0)*(pt[1]+r0))/(dir[0]*dir[0]+dir[1]*dir[1]);
+      delta = b0*b0-c0;
+      if (delta>0) {
+         x[nsol] = -b0-TMath::Sqrt(delta);
+         if (x[nsol]>0) nsol++;
+         else {
+            x[nsol] = -b0+TMath::Sqrt(delta);
+            if (x[nsol]>0) nsol++;
+         }
+      }
+      if (nsol==2) {
+         x[0] = TMath::Min(x[0], x[1]);
+         nsol = 1;
+      }
+   } else {               
+      nsol = SolveQuartic(a,b,c,d,x);
+   }   
    if (!nsol) return TGeoShape::Big();
    // look for first positive solution
    for (Int_t i=0; i<nsol; i++) {
-      if (x[i]>1.e-7) return x[i];
+      if (x[i]<1.e-7) continue;
+      s = x[i];
+      Double_t eps = TGeoShape::Big();
+      Double_t delta = s*s*s*s + a*s*s*s + b*s*s + c*s + d;
+      Double_t eps0 = -delta/(4.*s*s*s + 3.*a*s*s + 2.*b*s + c);
+      while (TMath::Abs(eps)>TGeoShape::Tolerance()) {
+         if ((s+eps0)<TGeoShape::Tolerance()) break;
+         s += eps0;
+         delta = s*s*s*s + a*s*s*s + b*s*s + c*s + d;
+         eps = -delta/(4.*s*s*s + 3.*a*s*s + 2.*b*s + c);
+         if (TMath::Abs(eps)>TMath::Abs(eps0)) break;
+         eps0 = eps;
+      }
+      return s;   
    }
    return TGeoShape::Big();   
 }      

@@ -361,6 +361,8 @@ Bool_t TFormLeafInfo::IsInteger() const
       case kLong64_t:
       case kULong64_t:
          return kTRUE;
+      case kCharStar:
+         return kTRUE; // For consistency with the leaf list method and proper axis setting
       case kFloat_t:
       case kFloat16_t:
       case kDouble_t:
@@ -967,7 +969,8 @@ TFormLeafInfoNumerical::TFormLeafInfoNumerical(TVirtualCollectionProxy *collecti
       fKind = (EDataType)collection->GetType();
       if (fKind == TStreamerInfo::kOffsetL + TStreamerInfo::kChar) {
          // Could be a bool
-         if (strcmp( collection->GetCollectionClass()->GetName(), "vector<bool>") == 0 ) {
+         if (strcmp( collection->GetCollectionClass()->GetName(), "vector<bool>") == 0 
+             || strncmp( collection->GetCollectionClass()->GetName(), "bitset<", strlen("bitset<") ) ==0 ) {
             fIsBool = kTRUE;
             fKind = (EDataType)18;
          }

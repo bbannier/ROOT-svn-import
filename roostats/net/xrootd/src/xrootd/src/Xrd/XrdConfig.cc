@@ -181,6 +181,7 @@ XrdConfig::XrdConfig(void)
    ProtInfo.ConnMax  = -1;     // Max       connections (fd limit)
    ProtInfo.readWait = 3*1000; // Wait time for data before we reschedule
    ProtInfo.idleWait = 0;      // Seconds connection may remain idle (0=off)
+   ProtInfo.hailWait =30*1000; // Wait time for data before we drop connection
    ProtInfo.DebugON  = 0;      // 1 if started with -d
    ProtInfo.argc     = 0;
    ProtInfo.argv     = 0;
@@ -203,11 +204,12 @@ int XrdConfig::Configure(int argc, char **argv)
    const char *xrdName="XRDNAME=";
    const char *xrdHost="XRDHOST=";
    const char *xrdProg="XRDPROG=";
+   const char *xrdCfn ="XRDCONFIGFN=";
 
    static sockaddr myIPAddr;
    int n, retc, dotrim = 1, NoGo = 0, aP = 1, clPort = -1, optbg = 0;
    const char *temp;
-   char c, *Penv, buff[512], *dfltProt, *logfn = 0;
+   char c, buff[512], *dfltProt, *logfn = 0;
    long long logkeep = 0;
    uid_t myUid = 0;
    gid_t myGid = 0;
@@ -294,9 +296,13 @@ int XrdConfig::Configure(int argc, char **argv)
 // Bind the log file if we have one
 //
    if (logfn)
-      {if (!(logfn = XrdOucUtils::subLogfn(XrdLog, myInsName, logfn))) _exit(16);
+      {char ldbuff[1024], *lP;
+       if (!(logfn = XrdOucUtils::subLogfn(XrdLog, myInsName, logfn))) _exit(16);
        if (logkeep) XrdLogger.setKeep(logkeep);
        XrdLogger.Bind(logfn, 24*60*60);
+       if ((lP = rindex(logfn,'/'))) {*(lP+1) = '\0'; lP = logfn;}
+          else lP = (char *)"./";
+       strcpy(ldbuff, "XRDLOGDIR="); strcat(ldbuff, lP); putenv(strdup(ldbuff));
        free(logfn);
       }
 
@@ -338,16 +344,13 @@ int XrdConfig::Configure(int argc, char **argv)
    putenv(myInstance);
    myInstance += strlen(xrdInst);
    sprintf(buff, "%s%s", xrdHost, myName);
-   Penv = strdup(buff);
-   putenv(Penv);
+   putenv(strdup(buff));
    if (myInsName)
       {sprintf(buff, "%s%s", xrdName, myInsName);
-       Penv = strdup(buff);
-       putenv(Penv);
+       putenv(strdup(buff));
       }
    sprintf(buff, "%s%s", xrdProg, myProg);
-   Penv = strdup(buff);
-   putenv(Penv);
+   putenv(strdup(buff));
 
 // Put out the herald
 //
@@ -369,6 +372,8 @@ int XrdConfig::Configure(int argc, char **argv)
    if (ConfigFN && *ConfigFN)
       {XrdLog.Say("Config using configuration file ", ConfigFN);
        ProtInfo.ConfigFN = ConfigFN;
+       sprintf(buff, "%s%s", xrdCfn, ConfigFN);
+       putenv(strdup(buff));
        NoGo = ConfigProc();
       }
    if (clPort >= 0) PortTCP = clPort;
@@ -1221,13 +1226,18 @@ int XrdConfig::xsched(XrdSysError *eDest, XrdOucStream &Config)
 
 /* Function: xtmo
 
-   Purpose:  To parse directive: timeout [read <msd>] [idle <msi>]
+   Purpose:  To parse directive: timeout [read <msd>] [hail <msh>]
+                                         [idle <msi>] [kill <msk>]
 
              <msd>    is the maximum number of seconds to wait for pending
                       data to arrive before we reschedule the link
                       (default is 5 seconds).
+             <msh>    is the maximum number of seconds to wait for the initial
+                      data after a connection  (default is 30 seconds)
              <msi>    is the minimum number of seconds a connection may remain
                       idle before it is closed (default is 5400 = 90 minutes)
+             <msk>    is the minimum number of seconds to wait after killing a
+                      connection for it to end (default is 3 seconds)
 
    Output: 0 upon success or 1 upon failure.
 */
@@ -1236,13 +1246,15 @@ int XrdConfig::xtmo(XrdSysError *eDest, XrdOucStream &Config)
 {
     char *val;
     int  i, ppp, rc;
-    int  V_read = -1, V_idle = -1;
+    int  V_read = -1, V_idle = -1, V_hail = -1, V_kill = -1;
     static struct tmoopts { const char *opname; int istime; int minv;
                             int  *oploc;  const char *etxt;}
            tmopts[] =
        {
         {"read",       1, 1, &V_read, "timeout read"},
-        {"idle",       1, 0, &V_idle, "timeout idle"}
+        {"hail",       1, 1, &V_hail, "timeout hail"},
+        {"idle",       1, 0, &V_idle, "timeout idle"},
+        {"kill",       1, 0, &V_kill, "timeout kill"}
        };
     int numopts = sizeof(tmopts)/sizeof(struct tmoopts);
 
@@ -1274,7 +1286,9 @@ int XrdConfig::xtmo(XrdSysError *eDest, XrdOucStream &Config)
 // Set values and return
 //
    if (V_read >  0) ProtInfo.readWait = V_read*1000;
+   if (V_hail >= 0) ProtInfo.hailWait = V_hail*1000;
    if (V_idle >= 0) ProtInfo.idleWait = V_idle;
+   XrdLink::setKWT(V_read, V_kill);
    return 0;
 }
   

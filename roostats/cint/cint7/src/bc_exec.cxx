@@ -4,6 +4,9 @@ using namespace ::Cint::Internal;
 namespace Cint {
 namespace Internal {
 int G__exec_asm(int start, int stack, G__value* presult, char* localmem);
+} // namespace Internal
+} // namespace Cint
+
 extern "C" int G__exec_bytecode(G__value* result7, G__CONST char* funcname, struct G__param* libp, int /*hash*/)
 {
    int i;
@@ -193,10 +196,6 @@ extern "C" int G__exec_bytecode(G__value* result7, G__CONST char* funcname, stru
    ++G__get_funcproperties(bytecode->ifunc)->entry.busy;
    G__exec_asm(0 /*start*/, libp->paran /*stack*/, result7, localmem);
    --G__get_funcproperties(bytecode->ifunc)->entry.busy;
-#ifndef G__OLDIMPLEMENTATION1259
-#pragma message(FIXME("constness of return type should already be handled by its Reflex::Type"))
-   //result7->isconst = bytecode->ifunc->isconst[bytecode->func];
-#endif // G__OLDIMPLEMENTATION1259
 #ifdef G__ASM_DBG
    if (G__asm_dbg) {
       G__StrBuf temp_sb(G__ONELINE);
@@ -248,8 +247,6 @@ extern "C" int G__exec_bytecode(G__value* result7, G__CONST char* funcname, stru
    }
    return 0;
 }
-} // namespace Internal
-} // namespace Cint
 
 #include "bc_exec_asm.h"
 

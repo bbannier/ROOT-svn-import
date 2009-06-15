@@ -45,7 +45,7 @@ extern "C" int G__EnableAutoDictionary;
 #define G__NUM_STDBOTH 3
 
 //______________________________________________________________________________
-static void G__unredirectoutput(FILE **sout, FILE **serr, FILE **sin, char *keyword, char *pipefile);
+static void G__unredirectoutput(FILE **sout, FILE **serr, FILE **sin, const char *keyword, const char *pipefile);
 
 //______________________________________________________________________________
 #ifdef G__BORLANDCC5
@@ -57,9 +57,9 @@ void G__init_undo(void);
 int G__clearfilebusy(int ifn);
 void G__storerewindposition(void);
 #ifndef G__OLDIMPLEMENTATION1917
-static void G__display_keyword(FILE *fout, char *keyword, FILE *keyfile);
+static void G__display_keyword(FILE *fout, const char *keyword, FILE *keyfile);
 #else
-static void G__display_keyword(FILE *fout, char *keyword, char *fname);
+static void G__display_keyword(FILE *fout, const char *keyword, const char *fname);
 #endif
 void G__rewinddictionary(void);
 void G__UnlockCriticalSection(void);
@@ -74,7 +74,7 @@ static int G__atevaluate(G__value buf);
 static G__input_file G__multi_line_temp;
 
 //______________________________________________________________________________
-#define G__SET_TEMPENV                                 \
+#define G__SET_TEMPENV(store)                       \
    store.var_local = G__p_local;                    \
    store.struct_offset = G__store_struct_offset;    \
    store.tagnum=G__tagnum;                          \
@@ -86,7 +86,7 @@ static G__input_file G__multi_line_temp;
    G__storerewindposition()
 
 //______________________________________________________________________________
-#define G__RESET_TEMPENV                               \
+#define G__RESET_TEMPENV(store)                     \
    G__p_local=store.var_local;                      \
    G__store_struct_offset=store.struct_offset;      \
    G__tagnum = store.tagnum;                        \
@@ -244,7 +244,7 @@ extern "C" int G__autoloading(char *com)
       classname[j] = 0;
    }
    if (classname[0] && -1 == G__defined_tagname(classname, 2)) {
-      char *dllpost = G__getmakeinfo1("DLLPOST");
+      const char *dllpost = G__getmakeinfo1("DLLPOST");
       G__StrBuf fname_sb(G__MAXFILENAME);
       char *fname = fname_sb;
       G__StrBuf prompt_sb(G__ONELINE);
@@ -282,7 +282,8 @@ extern "C" void G__set_autoloading(int (*p2f)(char*))
 //______________________________________________________________________________
 static int G__is_valid_dictpos(G__dictposition* dict)
 {
-   int flag = 0;
+   // Return if the dictpos is valid.
+   
    ::Reflex::Scope var = ::Reflex::Scope::GlobalScope();
    ::Reflex::Scope ifunc = ::Reflex::Scope::GlobalScope();
 
@@ -291,7 +292,7 @@ static int G__is_valid_dictpos(G__dictposition* dict)
    if (ifunc != dict->ifunc) return 0;
 
    if (G__struct.alltag < dict->tagnum) return(0);
-   if (G__Dict::GetDict().GetNumTypes() < dict->typenum) return(0);
+   if ( (int)G__Dict::GetDict().GetNumTypes() < dict->typenum) return(0);
 #ifdef G__SHAREDLIB  /* ???, reported by A.Yu.Isupov, anyway no harm */
    if (G__allsl < dict->allsl) return(0);
 #endif
@@ -316,7 +317,6 @@ static void G__init_undo()
    undoindex = 0;
    for (i = 0;i < G__MAXUNDO;i++) {
       undodictpos[i].var =::Reflex::Scope();
-      undodictpos[i].ptype = (char*)NULL;
    }
 }
 
@@ -341,10 +341,6 @@ static void G__cancel_undo_position()
 {
    G__decrement_undo_index(&undoindex);
    undodictpos[undoindex].var =::Reflex::Scope();
-   if (undodictpos[undoindex].ptype && undodictpos[undoindex].ptype != (char*)G__PVOID) {
-      free((void*)undodictpos[undoindex].ptype);
-      undodictpos[undoindex].ptype = 0;
-   }
 }
 
 //______________________________________________________________________________
@@ -378,7 +374,7 @@ static void G__show_undo_position(int index)
    fprintf(G__sout, "\n");
 
    fprintf(G__sout, "Typedef  : ");
-   while (typenum < G__Dict::GetDict().GetNumTypes()) {
+   while (typenum < (int)G__Dict::GetDict().GetNumTypes()) {
       ::Reflex::Type typedf(G__Dict::GetDict().GetTypedef(typenum));
       if (typedf.IsTypedef()) fprintf(G__sout, "%s ", typedf.Name(::Reflex::SCOPED).c_str());
       ++typenum;
@@ -441,10 +437,7 @@ static struct G__input_file errorifile;
 //______________________________________________________________________________
 void Cint::Internal::G__clear_errordictpos()
 {
-   if (0 != errordictpos.ptype && (char*)G__PVOID != errordictpos.ptype) {
-      free((void*)errordictpos.ptype);
-      errordictpos.ptype = 0;
-   }
+   // Used to free the data member ptype from the global variable errordictpos.
 }
 
 //______________________________________________________________________________
@@ -602,11 +595,11 @@ static void G__display_tempobj(FILE* fout)
 }
 
 //______________________________________________________________________________
-static void G__display_keyword(FILE* fout, char* keyword,
+static void G__display_keyword(FILE* fout, const char* keyword,
 #ifndef G__OLDIMPLEMENTATION1917
                                FILE *keyfile
 #else
-                               char *fname
+                               const char *fname
 #endif
                               )
 {
@@ -641,7 +634,7 @@ static void G__display_keyword(FILE* fout, char* keyword,
 }
 
 //______________________________________________________________________________
-extern "C" int G__reloadfile(char* filename)
+extern "C" int G__reloadfile(char* filename, bool keep)
 {
    int i, j = 0;
    char *storefname[G__MAXFILE];
@@ -659,31 +652,34 @@ extern "C" int G__reloadfile(char* filename)
       if (!flag &&
             G__matchfilename(i, filename)
          ) {
-         if (G__srcfile[i].hasonlyfunc && G__do_smart_unload) {
+         if (!keep && G__srcfile[i].hasonlyfunc && G__do_smart_unload) {
             G__smart_unload(i);
             flag = 0;
          }
          else flag = 1;
-         j = i;
-         while (-1 != G__srcfile[j].included_from
-                /* do not take the tempfile in consideration! */
-                && (G__srcfile[j].included_from <= G__gettempfilenum())
-               ) {
-            if (G__srcfile[G__srcfile[j].included_from].filename == 0) {
-               /* It is possibly a closed temporary file let's ignore
-                  it to */
-               break;
+         if (!keep) {
+            j = i;
+            while (-1 != G__srcfile[j].included_from
+                   /* do not take the tempfile in consideration! */
+                   && (G__srcfile[j].included_from <= G__gettempfilenum())
+                   ) {
+               if (G__srcfile[G__srcfile[j].included_from].filename == 0) {
+                  /* It is possibly a closed temporary file let's ignore
+                     it to */
+                  break;
+               }
+               // sanity check; this can only happen if something went wrong during loadfile
+               if (j != G__srcfile[j].included_from)
+                  j = G__srcfile[j].included_from;
+               else break;
             }
-            // sanity check; this can only happen if something went wrong during loadfile
-            if (j != G__srcfile[j].included_from)
-               j = G__srcfile[j].included_from;
-            else break;
          }
          break;
       }
    }
 
    if (flag) {
+      if (keep) return 1;
       for (i = j;i < G__nfile;i++) {
          if (G__srcfile[i].filename[0]) {
             if (G__srcfile[i].prepname) storecpp[storen] = 1;
@@ -721,7 +717,7 @@ extern "C" int G__reloadfile(char* filename)
 }
 
 //______________________________________________________________________________
-void Cint::Internal::G__display_classkeyword(FILE* fout, char* classnamein, char* keyword, int base)
+void Cint::Internal::G__display_classkeyword(FILE* fout, const char* classnamein, const char* keyword, int base)
 {
 #ifndef G__OLDIMPLEMENTATION1823
    G__StrBuf buf_sb(G__BUFLEN);
@@ -838,7 +834,7 @@ extern "C" int G__security_recover(FILE* fout)
 #endif
 
 //______________________________________________________________________________
-static struct G__store_env store;
+static struct G__store_env global_store;
 static struct G__view view;
 static int init_process_cmd_called = 0;
 #if defined(G__REDIRECTIO) && !defined(G__WIN32)
@@ -949,13 +945,13 @@ extern "C" int G__pause()
 #ifndef G__ROOT
          signal(SIGINT, G__killproc);
 #endif // G__ROOT
-         G__SET_TEMPENV;
+         G__SET_TEMPENV(global_store);
          G__in_pause = 1;
       }
       strcpy(command, G__input(command));
       if (!more) {
          G__in_pause = 0;
-         G__RESET_TEMPENV;
+         G__RESET_TEMPENV(global_store);
       }
       oldhandler = (void (*)(int)) signal(SIGINT, G__breakkey);
       G__pause_return = 0;
@@ -1011,7 +1007,7 @@ static void G__redirectoutput(char* com, FILE** psout, FILE** pserr
    char* doublequote;
    char* paren;
    char* blacket;
-   char* openmode;
+   const char* openmode;
    G__StrBuf filename_sb(G__MAXFILENAME);
    char* filename = filename_sb;
    int i = 0;
@@ -1222,7 +1218,7 @@ static void G__redirectoutput(char* com, FILE** psout, FILE** pserr
 }
 
 //______________________________________________________________________________
-static void G__unredirectoutput(FILE** sout, FILE** serr, FILE** sin, char* keyword, char* pipefile)
+static void G__unredirectoutput(FILE** sout, FILE** serr, FILE** sin, const char* keyword, const char* pipefile)
 {
    // --
 #ifdef G__REDIRECTIO
@@ -1377,7 +1373,7 @@ int Cint::Internal::G__ReadInputMode()
 {
    static int inputmodeflag = 0;
    if (inputmodeflag == 0) {
-      char *inputmodebuf;
+      const char *inputmodebuf;
       inputmodeflag = 1;
       inputmodebuf = getenv("INPUTMODE");
       if (inputmodebuf == 0) inputmodebuf = G__getmakeinfo1("INPUTMODE");
@@ -1420,7 +1416,7 @@ static void G__debugvariable(FILE* fp, ::Reflex::Scope var, char* name)
             fp,
             "%s p=%ld type=%c typenum=%d tagnum=%d const=%x static=%d\n paran=%d ",
             iter->Name().c_str(),
-            (long) prop->addressOffset,
+            (long) iter->InterpreterOffset(),
             type,
             typenum,
             tagnum,
@@ -1464,14 +1460,18 @@ static void G__create_input_tmpfile(G__input_file& ftemp)
 }
 
 //______________________________________________________________________________
+#ifdef G__WIN32
 static void G__remove_input_tmpfile(G__input_file& ftemp)
 {
    // --
-#ifdef G__WIN32
    unlink(ftemp.name);
-#endif // G__WIN32
    // --
 }
+#else
+static void G__remove_input_tmpfile(G__input_file&)
+{
+}
+#endif // G__WIN32
 
 //______________________________________________________________________________
 extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt)
@@ -2194,9 +2194,10 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
       // must match a function in the source file. This function
       // will be automatically executed.
       //
-      struct G__store_env store;
-      G__SET_TEMPENV;
+      struct G__store_env local_store;
+      G__SET_TEMPENV(local_store);
 
+      bool keepIfLoaded = com[1] == 'k';
       temp = 0;
       while (isspace(string[temp])) {
          ++temp;
@@ -2222,7 +2223,7 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
       temp2 = G__prerun;
       G__prerun = 1;  // suppress warning message if file already loaded
       temp1 = G__loadfile(string + temp);
-      if (temp1 == 1) {
+      if (!keepIfLoaded && temp1 == 1) {
          G__prerun = 0;
          G__unloadfile(string + temp);
          G__storerewindposition();
@@ -2312,28 +2313,30 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
       else {
          fprintf(G__sout, "Expecting . in filename\n");
       }
-      G__RESET_TEMPENV;
+      G__RESET_TEMPENV(local_store);
    }
 
    else if (
       (G__do_smart_unload && strncmp("L", com, 1) == 0) ||
       strncmp("Lall", com, 2) == 0
    ) {
+      bool keepIfLoaded = com[1] == 'k';
       temp = 0;
       while (isspace(string[temp])) temp++;
       G__UnlockCriticalSection();
-      G__reloadfile(string + temp);
+      G__reloadfile(string + temp, keepIfLoaded);
       G__unredirectoutput(&store_stdout, &store_stderr, &store_stdin
                           , keyword, pipefile);
       *err |= G__security_recover(G__serr);
       return(ignore);
    }
 
-   else if (strncmp("L", com, 1) == 0 || strncmp("Load", com, 4) == 0) {
+   else if (strncmp("L", com, 1) == 0) {
       /*******************************************************
        * Load(Re-Load) a C/C++ source file.
        *******************************************************/
 
+      bool keepIfLoaded = com[1] == 'k';
       temp = 0;
       while (isspace(string[temp])) temp++;
       if (string[temp] == '\0') {
@@ -2350,7 +2353,7 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
       temp2 = G__prerun;
       G__prerun = 1;  /* suppress warning message if file already loaded */
       temp1 = G__loadfile(string + temp);
-      if (temp1 == 1) {
+      if (!keepIfLoaded && temp1 == 1) {
          G__unloadfile(string + temp);
          G__storerewindposition();
          if (G__loadfile(string + temp)) {
@@ -2522,11 +2525,14 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
 #ifndef G__ROOT
       G__more(G__sout, "             x [file]  : load [file] and evaluate {statements} in the file\n");
 #else
-      G__more(G__sout, "             x [file]  : load [file] and execute function [file](wo extension)\n");
+      G__more(G__sout, "             x [file]  : load [file] and execute function [file](w/o extension)\n");
+      G__more(G__sout, "             xk [file] : keep [file] if already loaded else load it, and execute function [file](w/o extension)\n");
 #endif
-      G__more(G__sout, "             X [file]  : load [file] and execute function [file](wo extension)\n");
+      G__more(G__sout, "             X [file]  : load [file] and execute function [file](w/o extension)\n");
+      G__more(G__sout, "             Xk [file] : keep [file] it already loaded else load it. and execute function [file](w/o extension)\n");
       G__more(G__sout, "             E <[file]>: open editor and evaluate {statements} in the file\n");
       G__more(G__sout, "Load/Unload: L [file]  : load [file]\n");
+      G__more(G__sout, "             Lk [file] : keep [file] if already loaded, else load it\n");
       G__more(G__sout, "             La [file] : reload all files loaded after [file]\n");
       G__more(G__sout, "             U [file]  : unload [file]\n");
       G__more(G__sout, "             C [1|0]   : copy source to $TMPDIR (on/off)\n");
@@ -2705,11 +2711,11 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
       store_var_type = G__var_type;
       G__var_type = 'p';
 
-      G__SET_TEMPENV;
+      G__SET_TEMPENV(global_store);
       if ('g' == command[0]) G__varmonitor(G__sout,::Reflex::Scope::GlobalScope(), command + index, "", 0);
       else if ('G' == command[0]) G__varmonitor(G__sout,::Reflex::Scope::GlobalScope(), command + index, "", 0);
       else G__varmonitor(G__sout, G__p_local, command + index, "", 0);
-      G__RESET_TEMPENV;
+      G__RESET_TEMPENV(global_store);
 
 #ifdef G__ASM
       G__RECOVER_ASMENV;
@@ -3187,8 +3193,8 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
       if (strstr(syscom, "rootlogon.")) G__init_undo();
 #endif
       {
-         struct G__store_env store;
-         G__SET_TEMPENV;
+         struct G__store_env local_store;
+         G__SET_TEMPENV(local_store);
          buf = G__exec_tempfile(syscom);
          if (rslt) *rslt = buf;
          if (G__ifile.filenum >= 0)
@@ -3220,7 +3226,7 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
 #endif
          if (type.RawType().IsFundamental() && 0 == G__atevaluate(buf)) fprintf(G__sout, "%s\n", syscom);
 #endif
-         G__RESET_TEMPENV;
+         G__RESET_TEMPENV(local_store);
       }
       if (G__security_error) G__cancel_undo_position();
 #ifdef G__SECURITY
@@ -3347,10 +3353,11 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
           * Execute temp file
           *******************************************************/
          G__store_undo_position();
+         ++G__templevel;
          G__more_pause((FILE*)NULL, 1);
          {
-            struct G__store_env store;
-            G__SET_TEMPENV;
+            struct G__store_env local_store;
+            G__SET_TEMPENV(local_store);
             if (!istmpnam) {
                G__command_eval = 1 ;
                buf = G__exec_tempfile_fp(ftemp.fp);
@@ -3390,9 +3397,10 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
                strcat(syscom, tmp2);
             }
 #endif // G__OLDIMPLEMENTATION1259
-            G__RESET_TEMPENV;
+            G__RESET_TEMPENV(local_store);
          }
          if (!G__func_now) {
+            global_store.var_local = G__p_local;
             G__p_local = ::Reflex::Scope();
          }
          if (
@@ -3405,8 +3413,9 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
          noprintflag = 0;
          G__command_eval = 0;
          G__free_tempobject();
+         --G__templevel;
          if (!G__func_now) {
-            G__p_local = store.var_local;
+            G__p_local = global_store.var_local;
          }
          if (G__security_error) {
             G__cancel_undo_position();
@@ -3479,7 +3488,7 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
                   break;
             }
          }
-         G__SET_TEMPENV;
+         G__SET_TEMPENV(global_store);
          if (evalbase) {
             *evalbase = '\0';
             temp1 = 1;
@@ -3590,7 +3599,7 @@ extern "C" int G__process_cmd(char* line, char* prompt, int* more, int* err, G__
             }
 #endif
          }
-         G__RESET_TEMPENV;
+         G__RESET_TEMPENV(global_store);
 
 #ifdef G__ASM
          G__RECOVER_ASMENV;

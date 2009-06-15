@@ -36,7 +36,7 @@ namespace PyROOT {
       virtual ~TConverter() {}
 
    public:
-      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0 ) = 0;
+      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0, Long_t = 0 ) = 0;
       virtual PyObject* FromMemory( void* address );
       virtual Bool_t ToMemory( PyObject* value, void* address );
    };
@@ -44,7 +44,7 @@ namespace PyROOT {
 #define PYROOT_DECLARE_BASIC_CONVERTER( name )                                \
    class T##name##Converter : public TConverter {                             \
    public:                                                                    \
-      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0 );      \
+      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0, Long_t = 0 );\
       virtual PyObject* FromMemory( void* );                                  \
       virtual Bool_t ToMemory( PyObject*, void* );                            \
    }
@@ -60,7 +60,7 @@ namespace PyROOT {
    class T##name##Converter : public TConverter {                             \
    public:                                                                    \
       T##name##Converter( Py_ssize_t size = -1 ) { fSize = size; }            \
-      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0 );      \
+      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0, Long_t = 0 );\
       virtual PyObject* FromMemory( void* );                                  \
       virtual Bool_t ToMemory( PyObject*, void* );                            \
    private:                                                                   \
@@ -85,9 +85,17 @@ namespace PyROOT {
    PYROOT_DECLARE_BASIC_CONVERTER2( Float, Double );
    PYROOT_DECLARE_BASIC_CONVERTER( DoubleRef );
 
+   class TConstLongRefConverter : public TLongConverter {
+   public:
+      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0, Long_t = 0 );
+
+   private:
+      long fBuffer;
+   };
+
    class TConstDoubleRefConverter : public TDoubleConverter { // required for Cintex only
    public:
-      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0 );
+      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0, Long_t = 0 );
 
    private:
       double fBuffer;
@@ -95,12 +103,12 @@ namespace PyROOT {
 
    class TVoidConverter : public TConverter {
    public:
-      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0 );
+      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0, Long_t = 0 );
    };
 
    class TMacroConverter : public TConverter {
    public:
-      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0 );
+      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0, Long_t = 0 );
       virtual PyObject* FromMemory( void* address );
    };
 
@@ -109,7 +117,7 @@ namespace PyROOT {
       TCStringConverter( UInt_t maxSize = UINT_MAX ) : fMaxSize( maxSize ) {}
 
    public:
-      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0 );
+      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0, Long_t = 0 );
       virtual PyObject* FromMemory( void* address );
       virtual Bool_t ToMemory( PyObject* value, void* address );
 
@@ -122,7 +130,7 @@ namespace PyROOT {
    class TVoidArrayConverter : public TConverter {
    public:
       TVoidArrayConverter( Bool_t keepControl = kTRUE ) { fKeepControl = keepControl; }
-      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0 );
+      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0, Long_t = 0 );
       virtual PyObject* FromMemory( void* address );
       virtual Bool_t ToMemory( PyObject* value, void* address );
 
@@ -147,7 +155,7 @@ namespace PyROOT {
 
    class TLongLongArrayConverter : public TVoidArrayConverter {
    public:
-      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0 );
+      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0, Long_t = 0 );
    };
 
 // converters for special cases
@@ -157,7 +165,7 @@ namespace PyROOT {
          TVoidArrayConverter( keepControl ), fClass( klass ) {}
 
    public:
-      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0);
+      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0, Long_t = 0 );
       virtual PyObject* FromMemory( void* address );
       virtual Bool_t ToMemory( PyObject* value, void* address );
 
@@ -180,19 +188,19 @@ namespace PyROOT {
          TRootObjectConverter( klass, keepControl ) {}
 
    public:
-      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0 );
+      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0, Long_t = 0 );
       virtual PyObject* FromMemory( void* address );
       virtual Bool_t ToMemory( PyObject* value, void* address );
    };
 
    class TVoidPtrRefConverter : public TConverter {
    public:
-      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0 );
+      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0, Long_t = 0 );
    };
 
    class TVoidPtrPtrConverter : public TConverter {
    public:
-      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0 );
+      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0, Long_t = 0 );
       virtual PyObject* FromMemory( void* address );
    };
 
@@ -203,7 +211,7 @@ namespace PyROOT {
    public:                                                                    \
       T##name##Converter();                                                   \
    public:                                                                    \
-      virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0 );       \
+   virtual Bool_t SetArg( PyObject*, TParameter&, G__CallFunc* = 0, Long_t = 0 );\
       virtual PyObject* FromMemory( void* address );                          \
       virtual Bool_t ToMemory( PyObject* value, void* address );              \
    private:                                                                   \

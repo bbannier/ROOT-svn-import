@@ -21,14 +21,14 @@
 #include "TGLFontManager.h"
 #include "TGLContext.h"
 
-#include <TError.h>
-#include <TMathBase.h>
+#include "TError.h"
+#include "TMathBase.h"
 
+#include <list>
 #include <algorithm>
-#include <assert.h>
+#include <cassert>
 
 //______________________________________________________________________
-// TGLRnrCtx
 //
 // The TGLRnrCtx class aggregates data for a given redering context as
 // needed by various parts of the ROOT's OpenGL infractructure. It
@@ -48,7 +48,7 @@
 // scenes can assume they're ok.
 
 
-ClassImp(TGLRnrCtx)
+ClassImp(TGLRnrCtx);
 
 //______________________________________________________________________
 TGLRnrCtx::TGLRnrCtx(TGLViewerBase* viewer) :
@@ -80,6 +80,8 @@ TGLRnrCtx::TGLRnrCtx(TGLViewerBase* viewer) :
    fPickRectangle(0),
    fSelectBuffer (0),
 
+   fColorSetStack(0),
+
    fDLCaptureOpen (kFALSE),
    fGLCtxIdentity (0),
    fQuadric       (0),
@@ -88,6 +90,10 @@ TGLRnrCtx::TGLRnrCtx(TGLViewerBase* viewer) :
    fGrabbedImage  (0)
 {
    // Constructor.
+
+   
+   fColorSetStack = new lpTGLColorSet_t;
+   fColorSetStack->push_back(0);
 
    fSelectBuffer = new TGLSelectBuffer;
    fQuadric = gluNewQuadric();
@@ -101,13 +107,6 @@ TGLRnrCtx::TGLRnrCtx(TGLViewerBase* viewer) :
       fViewerStyle = fSceneStyle = kFill;
       fDrawPass = kPassFill;
    }
-
-   // Colors for different shape-selection-levels.
-   fSSLColor[0][0] =   0; fSSLColor[0][1] =   0; fSSLColor[0][2] =   0; fSSLColor[0][3] =   0;
-   fSSLColor[1][0] = 255; fSSLColor[1][1] = 255; fSSLColor[1][2] = 255; fSSLColor[1][3] = 255;
-   fSSLColor[2][0] = 255; fSSLColor[2][1] = 255; fSSLColor[2][2] = 255; fSSLColor[2][3] = 255;
-   fSSLColor[3][0] = 200; fSSLColor[3][1] = 200; fSSLColor[3][2] = 255; fSSLColor[3][3] = 255;
-   fSSLColor[4][0] = 200; fSSLColor[4][1] = 200; fSSLColor[4][2] = 255; fSSLColor[4][3] = 255;
 }
 
 //______________________________________________________________________
@@ -118,6 +117,7 @@ TGLRnrCtx::~TGLRnrCtx()
    gluDeleteQuadric(fQuadric);
    delete fPickRectangle;
    delete fSelectBuffer;
+   delete fColorSetStack;
 }
 
 //______________________________________________________________________
@@ -251,30 +251,73 @@ Int_t TGLRnrCtx::GetPickRadius()
 }
 
 
-/******************************************************************************/
-// Colors for Shape-Selection-Level
+/**************************************************************************/
+// ColorSet access & management
 /******************************************************************************/
 
-void TGLRnrCtx::SetSSLColor(Int_t level, UChar_t r, UChar_t g, UChar_t b, UChar_t a)
+//______________________________________________________________________________
+void TGLRnrCtx::PushColorSet()
 {
-   // Set highlight color for shape-selection-level level.
+   // Create copy of current color-set on the top of the stack.
 
-   fSSLColor[level][0] = r;
-   fSSLColor[level][1] = g;
-   fSSLColor[level][2] = b;
-   fSSLColor[level][3] = a;
+   fColorSetStack->push_back(new TGLColorSet(*fColorSetStack->back()));
 }
 
-void TGLRnrCtx::SetSSLColor(Int_t level, UChar_t rgba[4])
+//______________________________________________________________________________
+TGLColorSet& TGLRnrCtx::ColorSet()
 {
-   // Set highlight color for shape-selection-level level.
+   // Return reference to current color-set (top of hte stack).
 
-   fSSLColor[level][0] = rgba[0];
-   fSSLColor[level][1] = rgba[1];
-   fSSLColor[level][2] = rgba[2];
-   fSSLColor[level][3] = rgba[3];
+   return * fColorSetStack->back();
 }
 
+//______________________________________________________________________________
+void TGLRnrCtx::PopColorSet()
+{
+   // Pops the top-most color-set.
+   // If only one entry is available, error is printed and the entry remains.
+
+   if (fColorSetStack->size() >= 2)
+   {
+      delete fColorSetStack->back();
+      fColorSetStack->pop_back();
+   }
+   else
+   {
+      Error("PopColorSet()", "Attempting to remove the last entry.");
+   }
+}
+
+//______________________________________________________________________________
+TGLColorSet* TGLRnrCtx::ChangeBaseColorSet(TGLColorSet* set)
+{
+   // Change the default/bottom color-set.
+   // Returns the previous color-set.
+
+   TGLColorSet* old = fColorSetStack->front();
+   fColorSetStack->front() = set;
+   return old;
+}
+
+//______________________________________________________________________________
+TGLColorSet* TGLRnrCtx::GetBaseColorSet()
+{
+   // Returns the current base color-set.
+
+   return fColorSetStack->front();
+}
+
+//______________________________________________________________________________
+void TGLRnrCtx::ColorOrForeground(Color_t col)
+{
+   // Set col if it is different from background, otherwise use
+   // current foreground color.
+
+   if (fColorSetStack->back()->Background().GetColorIndex() == col)
+      TGLUtil::Color(fColorSetStack->back()->Foreground());
+   else
+      TGLUtil::Color(col);
+}
 
 /**************************************************************************/
 // Display-list state
@@ -312,7 +355,7 @@ void TGLRnrCtx::RegisterFont(Int_t size, Int_t file, Int_t mode, TGLFont& out)
 }
 
 //______________________________________________________________________
-void TGLRnrCtx::RegisterFont(Int_t size, const Text_t* name, Int_t mode, TGLFont& out)
+void TGLRnrCtx::RegisterFont(Int_t size, const char* name, Int_t mode, TGLFont& out)
 {
    // Get font in the GL rendering context.
 

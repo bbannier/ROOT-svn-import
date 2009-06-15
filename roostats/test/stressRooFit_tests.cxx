@@ -106,6 +106,7 @@ public:
 #endif
 #include "RooRealVar.h"
 #include "RooDataSet.h"
+#include "RooDataHist.h"
 #include "RooGaussian.h"
 #include "TCanvas.h"
 #include "RooPlot.h"
@@ -276,6 +277,7 @@ public:
 #include "RooDataSet.h"
 #include "RooGaussian.h"
 #include "TCanvas.h"
+#include "RooConstVar.h"
 #include "RooPlot.h"
 #include "RooFitResult.h"
 #include "RooGenericPdf.h"
@@ -422,7 +424,7 @@ public:
     // -----------------------------------------------------------------------
     
     // Bind pdf ROOT::Math::Beta with three variables as RooAbsPdf function
-    RooRealVar x2("x2","x2",0,1) ;
+    RooRealVar x2("x2","x2",0,0.999) ;
     RooRealVar a("a","a",5,0,10) ;
     RooRealVar b("b","b",2,0,10) ;
     RooAbsPdf* beta = bindPdf("beta",ROOT::Math::beta_pdf,x2,a,b) ;
@@ -3548,6 +3550,7 @@ public:
 #include "RooArgusBG.h"
 #include "TCanvas.h"
 #include "RooPlot.h"
+#include "RooRealConstant.h"
 using namespace RooFit ;
 
 
@@ -6067,8 +6070,8 @@ public:
 
   // Background component (Chebychev)
   RooRealVar c0("c0","Chebychev coefficient 0",-0.846,-1.,1.) ;
-  RooRealVar c1("c1","Chebychev coefficient 1", 0.112,-1.,1.) ;
-  RooRealVar c2("c2","Chebychev coefficient 2", 0.076,-1.,1.) ;
+  RooRealVar c1("c1","Chebychev coefficient 1", 0.112, 0.,1.) ;
+  RooRealVar c2("c2","Chebychev coefficient 2", 0.076, 0.,1.) ;
   RooChebychev bkg("bkg","combinatorial background",mjjj,RooArgList(c0,c1,c2)) ;
 
   // Composite model

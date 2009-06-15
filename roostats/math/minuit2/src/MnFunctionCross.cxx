@@ -47,6 +47,7 @@ MnCross MnFunctionCross::operator()(const std::vector<unsigned int>& par, const 
    // of aopt is within tla of previous value of aopt
    double up = fFCN.Up();
    double tlf = tlr*up;
+   // tolerance used when calling Migrad
    double mgr_tlr = 0.05 * up;   // to be consistent with F77 version 
    double tla = tlr;
    unsigned int maxitr = 15;
@@ -354,9 +355,8 @@ L500:
                    << x2 << " s1 = " << s1 << " s2 = " << s2 << std::endl;   
 #endif
          
-         if(s1*s2 > 0.) 
 #ifdef WARNINGMSG
-            MN_INFO_MSG("MnFunctionCross problem 1");
+         if(s1*s2 > 0.)   MN_INFO_MSG("MnFunctionCross problem 1");
 #endif
          // find with root is the right one
          aopt = x1;

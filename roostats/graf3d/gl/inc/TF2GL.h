@@ -47,7 +47,7 @@ public:
    // virtual Bool_t SupportsSecondarySelect() const { return kTRUE; }
    // virtual void ProcessSelection(UInt_t* ptr, TGLViewer*, TGLScene*);
 
-   ClassDef(TF2GL, 0) // GL renderer for TF2 and TF3.
+   ClassDef(TF2GL, 0); // GL renderer for TF2 and TF3.
 };
 
 #endif

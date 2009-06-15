@@ -53,7 +53,7 @@ class THashList;
 class TList;
 class TDSetElement;
 class TMessage;
-class TTimer;
+class TShutdownTimer;
 class TReaperTimer;
 class TMutex;
 class TFileCollection;
@@ -73,7 +73,7 @@ friend class TProofServLite;
 friend class TXProofServ;
 
 public:
-   enum EQueryAction { kQueryOK, kQueryModify, kQueryStop };
+   enum EQueryAction { kQueryOK, kQueryModify, kQueryStop, kQueryEnqueued };
 
 private:
    TString       fService;          //service we are running, either "proofserv" or "proofslave"
@@ -130,10 +130,12 @@ private:
 
    Bool_t        fRealTimeLog;      //TRUE if log messages should be send back in real-time
 
-   TTimer       *fShutdownTimer;    // Timer used to shutdown out-of-control sessions
-   TReaperTimer *fReaperTimer;      // Timer used to control children state
+   TShutdownTimer *fShutdownTimer;  // Timer used to shutdown out-of-control sessions
+   TReaperTimer   *fReaperTimer;    // Timer used to control children state
 
    Int_t         fInflateFactor;    // Factor in 1/1000 to inflate the CPU time
+
+   Int_t         fCompressMsg;     // Compression level for messages
 
    TProofDataSetManager* fDataSetManager; // dataset manager
 
@@ -149,7 +151,10 @@ private:
    Long_t        fVirtMemHWM;       //Above this we terminate gently (in kB)
    Long_t        fVirtMemMax;       //Hard limit enforced by the system (in kB)
 
-   static FILE  *fgErrorHandlerFile; // File where to log 
+   // In bytes; default is 1MB
+   Long64_t      fMsgSizeHWM;       //High-Water-Mark on the size of messages with results
+
+   static FILE  *fgErrorHandlerFile; // File where to log
    static Int_t  fgRecursive;       // Keep track of recursive inputs during processing
 
    void          RedirectOutput(const char *dir = 0, const char *mode = "w");
@@ -165,6 +170,9 @@ private:
                                       const char *selec, TObject *elist);
    void          SetQueryRunning(TProofQueryResult *pq);
 
+   // Results handling
+   void          SendResults(TSocket *sock, TList *outlist = 0, TQueryResult *pq = 0);
+
 protected:
    virtual void  HandleArchive(TMessage *mess);
    virtual Int_t HandleCache(TMessage *mess);
@@ -178,6 +186,7 @@ protected:
    virtual void  HandleRetrieve(TMessage *mess);
    virtual void  HandleWorkerLists(TMessage *mess);
 
+   virtual void  ProcessNext();
    virtual Int_t Setup();
    Int_t         SetupCommon();
    virtual void  MakePlayer();
@@ -217,6 +226,8 @@ public:
 
    Long_t         GetVirtMemHWM() const { return fVirtMemHWM; }
 
+   Long64_t       GetMsgSizeHWM() const { return fMsgSizeHWM; }
+
    const char    *GetPrefix()     const { return fPrefix; }
 
    void           FlushLogFile();
@@ -224,8 +235,8 @@ public:
    Int_t          CopyFromCache(const char *name, Bool_t cpbin);
    Int_t          CopyToCache(const char *name, Int_t opt = 0);
 
-   virtual EQueryAction GetWorkers(TList *workers, Int_t &prioritychange);
-
+   virtual EQueryAction GetWorkers(TList *workers, Int_t &prioritychange,
+                                   Bool_t resume = kFALSE);
    virtual void   HandleException(Int_t sig);
    virtual Int_t  HandleSocketInput(TMessage *mess, Bool_t all);
    virtual void   HandleSocketInput();

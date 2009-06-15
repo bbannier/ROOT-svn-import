@@ -17,11 +17,10 @@
 #ifdef G__ROOT
 #include "RConfigure.h"
 #define G__EXTRA_TOPDIR "cint"
-#define G__CINT_LIBNAME "Cint"
 #else
 #define G__EXTRA_TOPDIR ""
-#define G__CINT_LIBNAME "cint"
 #endif
+#define G__CINT_LIBNAME "Cint"
 #if defined(G__HAVE_CONFIG)
 #include "configcint.h"
 #endif
@@ -39,6 +38,7 @@
 #include <list>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 std::string G__DLLID;
 std::string G__MACRO;
@@ -572,7 +572,11 @@ void G__outputmakefile(int argc,char **argv)
 #ifdef G__CFG_LIBDIR
   if(builddir)
   {
+#if defined(G__WIN32)
+      out << "CINTLIB     := " << builddir << "/bin/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;
+#else
       out << "CINTLIB     := " << builddir << "/lib/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;
+#endif
   }
   else
   {
@@ -582,7 +586,11 @@ void G__outputmakefile(int argc,char **argv)
       //out << "CINTLIB     := " << G__CFG_LIBDIR << "/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;      
 
       // new code
+#if defined(G__WIN32)
+      out << "CINTLIB     := $(shell cint-config --unix --bindir)/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;
+#else
       out << "CINTLIB     := $(shell cint-config --unix --libdir)/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;
+#endif
       // changes end --------------------------------------------
       
   }
@@ -594,7 +602,11 @@ void G__outputmakefile(int argc,char **argv)
   //out << "CINTLIB     := $(CINTSYSDIRU)/lib/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;
 
   // new code
+#if defined(G__WIN32)
+  out << "CINTLIB     := $(shell cint-config --unix --bindir)/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;
+#else
   out << "CINTLIB     := $(shell cint-config --unix --libdir)/lib" << G__CINT_LIBNAME << G__CFG_SOEXT << std::endl;
+#endif
 
   // changes end --------------------------------------------
   
@@ -650,7 +662,7 @@ void G__outputmakefile(int argc,char **argv)
   // new code
   if(builddir)
   {
-      out << G__CFG_LIBP << "\"" << builddir << "/lib\" $(subst @imp@," << G__CINT_LIBNAME << "," << G__CFG_LIBL << ") ";
+     out << G__CFG_LIBP << "\"" << builddir << "/lib\" $(subst @imp@," << G__CINT_LIBNAME << "," << G__CFG_LIBL << ") ";
   }
   else
   {
@@ -692,11 +704,6 @@ void G__outputmakefile(int argc,char **argv)
       << "CXXSTUBCINT := " << G__CXXSTUB << std::endl
       << std::endl;
 
-#if defined(G__CYGWIN) || defined(_MSC_VER) || \
-  defined(__BORLANDC__) || defined(__BCPLUSPLUS__) || defined(G__BORLANDCC5)
-  out << "MAINDIRU    := ./" << std::endl;
-  out << "MAINDIRW    := ./" << std::endl;
-#else
 # ifdef G__CFG_DATADIRCINT
   std::string maindiru(G__CFG_DATADIRCINT);
   std::string maindirw(G__CFG_DATADIRCINT);
@@ -717,7 +724,6 @@ void G__outputmakefile(int argc,char **argv)
   maindir2 += "/main/";
   out << "MAINDIRU    := " << maindiru << maindir2 << std::endl;
   out << "MAINDIRW    := " << maindirw << maindir2 << std::endl;
-#endif
 
 #if !defined(G__CFG_EXPLLINK)
 #define G__CFG_EXPLLINK 0
@@ -808,11 +814,12 @@ TODO!
   if (G__quiet) out << "@";
 #if defined(G__CYGWIN) || defined(_MSC_VER) || \
   defined(__BORLANDC__) || defined(__BCPLUSPLUS__) || defined(G__BORLANDCC5)
-  out << "$(CXX) "
+  out << "$(CXX) $(CXXMACRO) $(CXXFLAGS) $(CCOPT) "
 #else
-  out << "$(CC) "
+  out << "$(CC)  $(CMACRO) $(CFLAGS) $(CCOPT) "
 #endif
-      << "$(LINKSPEC) $(CINTIPATH) -o $@ -c $<" << std::endl;
+      << "$(LINKSPEC) $(CINTIPATH) "
+      << G__CFG_COUT << "$@ -c $<\n" << std::endl;
 
   out << "# Compile dictionary setup routine #######################" << std::endl;
   out << "G__setup" << G__CFG_OBJEXT << ": $(MAINDIRU)/G__setup.c $(CINTINCDIRU)/G__ci.h" << std::endl
@@ -820,7 +827,7 @@ TODO!
   if (G__quiet) out << "@";
   out << "$(CC) $(LINKSPEC) $(CINTIPATH) $(CMACRO) $(CFLAGS) "
       << G__CFG_COUT << "$@ " 
-      << G__CFG_COMP << " $(MAINDIRW)/G__setup.c" << std::endl;
+      << G__CFG_COMP << " $(MAINDIRW)/G__setup.c\n" << std::endl;
 
   /***************************************************************************
    * Interface routine
@@ -942,7 +949,7 @@ void G__outputmain()
   fprintf(mainfp,"}\n");
   fprintf(mainfp,"\n");
 #ifndef G__OLDIMPLEMENTATION874
-  if(G__ismain) {
+  if(G__flags & G__ismain) {
     fprintf(mainfp,"class G__DMYp2fsetup {\n");
     fprintf(mainfp," public:\n");
     fprintf(mainfp,"  G__DMYp2fsetup() { \n");
@@ -956,8 +963,8 @@ void G__outputmain()
     fprintf(mainfp,"int main(int argc,char **argv)\n");
     fprintf(mainfp,"{\n");
     fprintf(mainfp,"  int result;\n");
-    if(G__CHDR.empty()) fprintf(mainfp,"  G__set_p2fsetup(G__c_setup%s);\n",G__DLLID);
-    if(G__CXXHDR.empty()) fprintf(mainfp,"  G__set_p2fsetup(G__cpp_setup%s);\n",G__DLLID);
+    if(!G__CHDR.empty()) fprintf(mainfp,"  G__set_p2fsetup(G__c_setup%s);\n",G__DLLID);
+    if(!G__CXXHDR.empty()) fprintf(mainfp,"  G__set_p2fsetup(G__cpp_setup%s);\n",G__DLLID);
     fprintf(mainfp,"  G__setothermain(0);\n");
     fprintf(mainfp,"  result=G__main(argc,argv);\n");
     fprintf(mainfp,"  G__free_p2fsetup();\n");

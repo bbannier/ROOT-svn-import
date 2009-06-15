@@ -19,7 +19,7 @@
 #include <vector>
 
 #if defined(__ICC)
-#define OffsetOf(c1,mem) (int(&((volatile const char&)((c1*)0)->mem)))
+#define OffsetOf(c1,mem) (long(&((volatile const char&)((c1*)0)->mem)))
 #else
 #define OffsetOf(c1,mem) ((size_t)(&reinterpret_cast<const volatile char&>(((c1*)64)->mem))-64)
 #endif
@@ -58,7 +58,8 @@ namespace Reflex {
       unsigned int modifiers = 0 );
 
    RFLX_API Type TypedefTypeBuilder( const char * Name, 
-      const Type & t );
+      const Type & t,
+      REPRESTYPE represType = REPRES_NOTYPE );
 
 
    RFLX_API Type FunctionTypeBuilder( const Type & r,

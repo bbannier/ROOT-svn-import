@@ -22,11 +22,13 @@
 #include <cstring>
 #include <sstream>
 
+#include "Reflex/Builder/TypeBuilder.h"
+
 using namespace Cint::Internal;
 
 namespace Cint {
 namespace Internal {
-static G__value G__allocvariable(G__value result, G__value para[], const ::Reflex::Scope& varglobal, const ::Reflex::Scope& varlocal, int paran, int /* varhash */, const char* item, std::string& varname, int parameter00);
+   static G__value G__allocvariable(G__value result, G__value para[], const ::Reflex::Scope& varglobal, const ::Reflex::Scope& varlocal, int paran, int /* varhash */, const char* item, std::string& varname, int parameter00, Reflex::Member &output_var);
 static int G__asm_gen_stvar(long arg_G__struct_offset, const ::Reflex::Member& var, int paran, const char* item, long store_struct_offset, int var_type, G__value* presult);
 } // namespace Internal
 } // namespace Cint
@@ -102,7 +104,7 @@ static void G__class_2nd_decl(const ::Reflex::Member& var)
    G__decl = 0;
    G__StrBuf temp_sb(G__ONELINE);
    char *temp = temp_sb;
-   sprintf(temp, "~%s()", tagnum.Name().c_str());
+   sprintf(temp, "~%s()", tagnum.Name_c_str());
    if (G__dispsource) {
       G__fprinterr(G__serr, "\n!!!Calling destructor 0x%lx.%s for declaration of %s", G__store_struct_offset, temp, var.Name(::Reflex::SCOPED).c_str());
    }
@@ -187,7 +189,7 @@ static void G__class_2nd_decl_i(const ::Reflex::Member& var)
    G__inc_cp_asm(1, 0);
    G__StrBuf temp_sb(G__ONELINE);
    char *temp = temp_sb;
-   sprintf(temp, "~%s()", G__tagnum.Name().c_str());
+   sprintf(temp, "~%s()", G__tagnum.Name_c_str());
    if (G__get_varlabel(var.TypeOf(), 1) /* number of elements */ || G__get_paran(var)) {
       // array
       int size = G__struct.size[G__get_tagnum(G__tagnum)];
@@ -262,7 +264,7 @@ static void G__class_2nd_decl_c(const ::Reflex::Member& var)
    G__inc_cp_asm(1, 0);
    G__StrBuf temp_sb(G__ONELINE);
    char *temp = temp_sb;
-   sprintf(temp, "~%s()", G__tagnum.Name().c_str());
+   sprintf(temp, "~%s()", G__tagnum.Name_c_str());
    int known = 0;
    G__getfunction(temp, &known, G__TRYDESTRUCTOR);
    G__redecl(var);
@@ -407,7 +409,7 @@ static void G__getpointer2pointer(G__value* presult, const ::Reflex::Member& var
 //
 
 template<class CASTTYPE, class CONVFUNC, class XTYPE>
-inline G__value G__assign_var(::Reflex::Member& var, char* local_G__struct_offset, int& paran, int linear_index, G__value& result, char* item, int SIZE, CONVFUNC f, XTYPE& X)
+inline G__value G__assign_var(::Reflex::Member& var, char* local_G__struct_offset, int& paran, int linear_index, G__value& result, const char* item, int SIZE, CONVFUNC f, XTYPE& X)
 {
    switch (G__var_type) {
       case 'v':
@@ -445,8 +447,8 @@ inline G__value G__assign_var(::Reflex::Member& var, char* local_G__struct_offse
 #define G__ASSIGN_VAR(SIZE, CASTTYPE, CONVFUNC, X) \
    switch (G__var_type) { \
       case 'v': \
-         /* Assign by dereferencing a pointer.  *var = result; */ \
-         if (((paran + 1) == G__get_paran(var)) && !linear_index && islower(G__get_type(G__value_typenum(result)))) { \
+         /* Assign by dereferencing a pointer.  *output_var = result; */ \
+         if (((paran + 1) == G__get_paran(output_var)) && !linear_index && islower(G__get_type(G__value_typenum(result)))) { \
             /* Pointer to array reimplementation. */ \
             ++paran; \
             /* Fall through to case 'p'. */ \
@@ -457,12 +459,12 @@ inline G__value G__assign_var(::Reflex::Member& var, char* local_G__struct_offse
          } \
       case 'p': \
          /* Assign result to variable. */ \
-         if (paran >= G__get_paran(var)) { \
+         if (paran >= G__get_paran(output_var)) { \
             /* MyType var[ddd]; var[xxx] = result; */ \
             /* FIXME: The greater than case requires pointer arithmetic. */ \
-            result.ref = ((long) local_G__struct_offset) + ((long) G__get_offset(var)) + (linear_index * SIZE); \
+            result.ref = ((long) local_G__struct_offset) + ((long) G__get_offset(output_var)) + (linear_index * SIZE); \
             *((CASTTYPE*) result.ref) = (CASTTYPE) CONVFUNC(result); \
-            G__value_typenum(result) = var.TypeOf(); \
+            G__value_typenum(result) = output_var.TypeOf(); \
             /**/ \
             X = *((CASTTYPE*) result.ref); \
             break; \
@@ -487,29 +489,29 @@ inline G__value G__assign_var(::Reflex::Member& var, char* local_G__struct_offse
    switch (G__var_type) { \
       case 'v': \
          /* -- Assign to what pointer is pointing at. */ \
-         switch (G__get_reftype(var.TypeOf())) { \
+         switch (G__get_reftype(output_var.TypeOf())) { \
             case G__PARANORMAL: \
-               /* -- Assignment through a pointer dereference.  MyType* var; *var = result; */ \
-               result.ref = *((long*) (local_G__struct_offset + ((long) G__get_offset(var)) + (linear_index * G__LONGALLOC))); \
+               /* -- Assignment through a pointer dereference.  MyType* output_var; *output_var = result; */ \
+               result.ref = *((long*) (local_G__struct_offset + ((long) G__get_offset(output_var)) + (linear_index * G__LONGALLOC))); \
                *((CASTTYPE*) result.ref) = (CASTTYPE) CONVFUNC(result); \
-               G__value_typenum(result) = G__deref(var.TypeOf()); /* FIXME: We want to remove the top-level pointer node here, but not all the typedef info! */ \
+               G__value_typenum(result) = G__deref(output_var.TypeOf()); /* FIXME: We want to remove the top-level pointer node here, but not all the typedef info! */ \
                X = *((CASTTYPE*) result.ref); \
                break; \
             case G__PARAP2P: \
                /* -- Assignment through a pointer to a pointer dereference. */ \
-               if (paran > G__get_paran(var)) { \
+               if (paran > G__get_paran(output_var)) { \
                   /* -- Pointer to array reimplementation. */ \
-                  /* MyType** var[ddd]; *var[xxx][yyy] = result; */ \
-                  address = local_G__struct_offset + ((long) G__get_offset(var)) + (linear_index * G__LONGALLOC); \
+                  /* MyType** output_var[ddd]; *output_var[xxx][yyy] = result; */ \
+                  char *address = local_G__struct_offset + ((long) G__get_offset(output_var)) + (linear_index * G__LONGALLOC); \
                   result.ref = *(((long*) (*((long *) address))) + secondary_linear_index); \
                   *((CASTTYPE*) result.ref) = (CASTTYPE) CONVFUNC(result); \
-                  G__value_typenum(result) = G__deref(G__strip_array(var.TypeOf())); /* FIXME: We want to remove the top-level pointer node here, but not all the typedef info! */ \
+                  G__value_typenum(result) = G__deref(G__strip_array(output_var.TypeOf())); /* FIXME: We want to remove the top-level pointer node here, but not all the typedef info! */ \
                   X = *((CASTTYPE*) result.ref); \
                } \
                else { \
-                  /* paran <= G__get_paran(var) */ \
+                  /* paran <= G__get_paran(output_var) */ \
                   /* MyType** var[ddd][nnn]; *var[xxx][yyy] = result; */ \
-                  result.ref = *((long*) (local_G__struct_offset + ((long) G__get_offset(var)) + (linear_index * G__LONGALLOC))); \
+                  result.ref = *((long*) (local_G__struct_offset + ((long) G__get_offset(output_var)) + (linear_index * G__LONGALLOC))); \
                   *((long*) result.ref) = G__int(result); \
                } \
                break; \
@@ -517,17 +519,17 @@ inline G__value G__assign_var(::Reflex::Member& var, char* local_G__struct_offse
          break; \
       case 'p': \
          /* Assign to the pointer variable itself, no dereferencing. */ \
-         if (paran > G__get_paran(var)) { \
+         if (paran > G__get_paran(output_var)) { \
             /* -- Pointer to array reimplementation. */ \
             /* -- More array dimensions used than variable has, start using up pointer to pointers. */ \
-            address = local_G__struct_offset + ((long) G__get_offset(var)) + (linear_index * G__LONGALLOC); \
-            if (G__get_reftype(var.TypeOf()) == G__PARANORMAL) { \
+            char *address = local_G__struct_offset + ((long) G__get_offset(output_var)) + (linear_index * G__LONGALLOC); \
+            if (G__get_reftype(output_var.TypeOf()) == G__PARANORMAL) { \
                result.ref = (long) (((CASTTYPE*) (*((long*) address))) + secondary_linear_index); \
                *((CASTTYPE*) result.ref) = (CASTTYPE) CONVFUNC(result); \
-               G__value_typenum(result) = G__deref(G__strip_array(var.TypeOf())); /* FIXME: We want to remove the top-level pointer node here, but not all the typedef info! */ \
+               G__value_typenum(result) = G__deref(G__strip_array(output_var.TypeOf())); /* FIXME: We want to remove the top-level pointer node here, but not all the typedef info! */ \
                X = *((CASTTYPE*) result.ref); \
             } \
-            else if (G__get_paran(var) == (paran - 1)) { \
+            else if (G__get_paran(output_var) == (paran - 1)) { \
                /* -- One extra dimension. */ \
                result.ref = (long) (((long*) (*((long*) address))) + secondary_linear_index); \
                *((long*) result.ref) = G__int(result); \
@@ -535,10 +537,10 @@ inline G__value G__assign_var(::Reflex::Member& var, char* local_G__struct_offse
             else { \
                /* -- Two or more extra dimensions. */ \
                long* phyaddress = (long*) (*((long*) address)); \
-               for (int ip = G__get_paran(var); ip < (paran - 1); ++ip) { \
+               for (int ip = G__get_paran(output_var); ip < (paran - 1); ++ip) { \
                   phyaddress = (long*) phyaddress[para[ip].obj.i]; \
                } \
-               switch (G__get_reftype(var.TypeOf()) - paran + G__get_paran(var)) { \
+               switch (G__get_reftype(output_var.TypeOf()) - paran + G__get_paran(output_var)) { \
                   case G__PARANORMAL: \
                      ((CASTTYPE*) phyaddress)[para[paran-1].obj.i] = (CASTTYPE) CONVFUNC(result); \
                      break; \
@@ -553,7 +555,7 @@ inline G__value G__assign_var(::Reflex::Member& var, char* local_G__struct_offse
             /* assign to array element (which is a pointer). */ \
             /* MyType* var[ddd][nnn]; *var[xxx] = result; */ \
             /* MyType* var[ddd][nnn]; var[xxx][yyy] = result; */ \
-            result.ref = ((long) local_G__struct_offset) + ((long) G__get_offset(var)) + (linear_index * G__LONGALLOC); \
+            result.ref = ((long) local_G__struct_offset) + ((long) G__get_offset(output_var)) + (linear_index * G__LONGALLOC); \
             *((long*) result.ref) = G__int(result); \
          } \
          break; \
@@ -563,16 +565,21 @@ inline G__value G__assign_var(::Reflex::Member& var, char* local_G__struct_offse
    }
 
 //______________________________________________________________________________
-G__value Cint::Internal::G__letvariable(char* item, G__value expression, const ::Reflex::Scope& varglobal, const ::Reflex::Scope& varlocal)
+G__value Cint::Internal::G__letvariable(const char* item, G__value expression, const ::Reflex::Scope varglobal, const ::Reflex::Scope varlocal)
+{
+   ::Reflex::Member dummy;
+   return G__letvariable(item, expression, varglobal, varlocal, dummy);
+}
+
+//______________________________________________________________________________
+G__value Cint::Internal::G__letvariable(const char* item, G__value expression, const ::Reflex::Scope varglobal, const ::Reflex::Scope varlocal, ::Reflex::Member& output_var)
 {
    // -- FIXME: Describe me!
-   ::Reflex::Member var;
+
    //--
    int paran = 0;
    int ig25 = 0;
    int lenitem = 0;
-   int single_quote = 0;
-   int double_quote = 0;
    int paren = 0;
    int done = 0;
    //--
@@ -584,7 +591,6 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
    char* tagname = 0;
    char* membername = 0;
    int varhash = 0;
-   char* address = 0;
    char* store_struct_offset = 0;
    ::Reflex::Scope store_tagnum;
    int store_exec_memberfunc = 0;
@@ -596,7 +602,6 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
    int store_getarraydim = 0;
    int store_asm_noverflow = 0;
    G__StrBuf tmp_sb(G__ONELINE);
-   char *tmp = tmp_sb;
    G__StrBuf result7_sb(G__ONELINE);
    char *result7 = result7_sb;
    G__StrBuf parameter_sb(G__MAXVARDIM * G__ONELINE);
@@ -608,9 +613,10 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
    ::Reflex::Scope varscope;
    //--
    G__value result = G__null;
+
 #ifdef G__ASM
    if (G__asm_exec) {
-      var = G__asm_index;
+      output_var = G__asm_index;
       paran = G__asm_param->paran;
       for (int i = 0; i < paran; ++i) {
          para[i] = G__asm_param->para[i];
@@ -629,7 +635,6 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
 #endif // G__ASM
    parameter[0][0] = '\0';
    lenitem = std::strlen(item);
-   //--  1
    //--  2
    //--  3
    //--  4
@@ -674,8 +679,7 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
                   G__reftype = G__PARAP2P + pointlevel - 2;
                   break;
             }
-            strcpy(tmp, item + i - 1);
-            strcpy(item, tmp);
+            item = item + i - 1;
             if (G__var_type == 'p') {
                G__var_type = 'v';
             }
@@ -706,8 +710,7 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
       case '&':
          // -- Should not happen!
          G__var_type = 'P';
-         strcpy(tmp, item + 1);
-         strcpy(item, tmp);
+         item = item + 1;
          break;
       case '0':
       case '1':
@@ -732,62 +735,66 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
    lenitem = std::strlen(item);
    ig2 = 0;
    flag = 0;
-   while ((ig2 < lenitem) && !flag) {
-      switch (item[ig2]) {
-         case '.':
-            if (!paren && !double_quote && !single_quote) {
-               strcpy(result7, item);
-               result7[ig2++] = '\0';
-               tagname = result7;
-               membername = result7 + ig2;
-               flag = 1;
-            }
-            break;
-         case '-':
-            if (!paren && !double_quote && !single_quote && (item[ig2+1] == '>')) {
-               strcpy(result7, item);
-               result7[ig2++] = '\0';
-               result7[ig2++] = '\0';
-               tagname = result7;
-               membername = result7 + ig2;
-               flag = 2;
-            }
-            break;
-         case '\\':
-            ++ig2;
-            break;
-         case '\'':
-            if (!double_quote) {
-               single_quote ^= 1;
-            }
-            break;
-         case '\"':
-            if (!single_quote) {
-               double_quote ^= 1;
-            }
-            break;
-         case '{':
-         case '[':
-         case '(':
-            if (!single_quote && !double_quote) {
-               ++paren;
-            }
-            break;
-         case '}':
-         case ']':
-         case ')':
-            if (!single_quote && !double_quote) {
-               --paren;
-            }
-            break;
+   {
+      // To keep track of the quote variables
+      int single_quote = 0;
+      int double_quote = 0;
+
+      while ((ig2 < lenitem) && !flag) {
+         switch (item[ig2]) {
+            case '.':
+               if (!paren && !double_quote && !single_quote) {
+                  strcpy(result7, item);
+                  result7[ig2++] = '\0';
+                  tagname = result7;
+                  membername = result7 + ig2;
+                  flag = 1;
+               }
+               break;
+            case '-':
+               if (!paren && !double_quote && !single_quote && (item[ig2+1] == '>')) {
+                  strcpy(result7, item);
+                  result7[ig2++] = '\0';
+                  result7[ig2++] = '\0';
+                  tagname = result7;
+                  membername = result7 + ig2;
+                  flag = 2;
+               }
+               break;
+            case '\\':
+               ++ig2;
+               break;
+            case '\'':
+               if (!double_quote) {
+                  single_quote ^= 1;
+               }
+               break;
+            case '\"':
+               if (!single_quote) {
+                  double_quote ^= 1;
+               }
+               break;
+            case '{':
+            case '[':
+            case '(':
+               if (!single_quote && !double_quote) {
+                  ++paren;
+               }
+               break;
+            case '}':
+            case ']':
+            case ')':
+               if (!single_quote && !double_quote) {
+                  --paren;
+               }
+               break;
+         }
+         ++ig2;
       }
-      ++ig2;
    }
-   single_quote = 0;
-   double_quote = 0;
    paren = 0;
    if (flag) {
-      result = G__letstructmem(store_var_type, varname.c_str(), membername, tagname, varglobal, expression, flag);
+      result = G__letstructmem(store_var_type, varname.c_str(), membername, tagname, varglobal, expression, flag, output_var);
 
 
 
@@ -861,11 +868,11 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
          int single_quote = 0;
          int double_quote = 0;
          while (item_cursor < lenitem) {
-            char c = item[item_cursor];
-            if ((c == ']') && !nest && !single_quote && !double_quote) {
+            char peek = item[item_cursor];
+            if ((peek == ']') && !nest && !single_quote && !double_quote) {
                break;
             }
-            switch (c) {
+            switch (peek) {
                case '"':
                   if (!single_quote) {
                      double_quote ^= 1;
@@ -891,7 +898,7 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
                   }
                   break;
             }
-            parameter[paran][idx++] = c;
+            parameter[paran][idx++] = peek;
             ++item_cursor;
          }
          // Skip the terminating square bracket.
@@ -989,23 +996,25 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
    //
    // Search local and global variables.
    //
-   var = ::Reflex::Member();
-   // Avoid searching variables when processing
-   // a function-local const static during prerun.
-   if (
-      !G__func_now ||       // Not in a function declaration/definition.
-      !G__decl ||           // Not in a declaration.
-      !G__static_alloc ||   // Not a static/const/enumerator declaration.
-      !G__constvar ||       // Not a const.
-      !G__prerun            // Not in prerun (we are actually executing).
-   ) {
-      int ig15 = 0;
-      var = G__find_variable(varname.c_str(), varhash, varlocal, varglobal, &local_G__struct_offset, &store_struct_offset, &ig15, G__decl || G__def_struct_member);
+   output_var = ::Reflex::Member();
+   if (!G__in_memvar_setup) {
+      // Avoid searching variables when processing
+      // a function-local const static during prerun.
+      if (
+         !G__func_now ||       // Not in a function declaration/definition.
+         !G__decl ||           // Not in a declaration.
+         !G__static_alloc ||   // Not a static/const/enumerator declaration.
+         !G__constvar ||       // Not a const.
+         !G__prerun            // Not in prerun (we are actually executing).
+      ) {
+         int ig15 = 0;
+         output_var = G__find_variable(varname.c_str(), varhash, varlocal, varglobal, &local_G__struct_offset, &store_struct_offset, &ig15, G__decl || G__def_struct_member);
+      }
    }
    //
    // Assign value.
    //
-   if (var) {
+   if (output_var) {
       // -- We have found a variable.
       //
       //  Block duplicate declaration.
@@ -1014,23 +1023,23 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
       if (
          (G__decl || G__cppconstruct) &&
          (G__var_type != 'p') &&
-         (G__get_properties(var)->statictype == G__AUTO) &&
+         (G__get_properties(output_var)->statictype == G__AUTO) &&
          (
-            (G__get_type(var.TypeOf()) != G__var_type) ||
-            (var.TypeOf().RawType().IsClass() && (var.TypeOf().RawType() != G__tagnum))
+            (G__get_type(output_var.TypeOf()) != G__var_type) ||
+            (output_var.TypeOf().RawType().IsClass() && (output_var.TypeOf().RawType() != G__tagnum))
          )
       ) {
          G__fprinterr(G__serr, "Error: %s already declared as different type", item);
          if (
-            isupper(G__get_type(var.TypeOf())) &&
+            isupper(G__get_type(output_var.TypeOf())) &&
             isupper(G__var_type) &&
-            !G__get_varlabel(var.TypeOf(), 1) /* number of elements */ &&
-            (*((long*) G__get_offset(var)) == 0)
+            !G__get_varlabel(output_var.TypeOf(), 1) /* number of elements */ &&
+            (*((long*) G__get_offset(output_var)) == 0)
          ) {
             G__fprinterr(G__serr, ". Switch to new type\n");
-            //var->type[ig15] = G__var_type;  FIXME: Translate this!
-            //var->p_tagtable[ig15] = G__tagnum;
-            //var->p_typetable[ig15] = G__typenum;
+            //output_var->type[ig15] = G__var_type;  FIXME: Translate this!
+            //output_var->p_tagtable[ig15] = G__tagnum;
+            //output_var->p_typetable[ig15] = G__typenum;
          }
          else {
             if (
@@ -1042,12 +1051,12 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
                G__StrBuf protect_temp_sb(G__ONELINE);
                char *protect_temp = protect_temp_sb;
                char* protect_struct_offset = G__store_struct_offset;
-               int done = 0;
+               int local_done = 0;
                G__store_struct_offset = G__globalvarpointer;
                G__globalvarpointer = G__PVOID;
-               std::sprintf(protect_temp, "~%s()", G__tagnum.Name().c_str());
+               std::sprintf(protect_temp, "~%s()", G__tagnum.Name_c_str());
                G__fprinterr(G__serr, ". %s called\n", protect_temp);
-               G__getfunction(protect_temp, &done, G__TRYDESTRUCTOR);
+               G__getfunction(protect_temp, &local_done, G__TRYDESTRUCTOR);
                G__store_struct_offset = protect_struct_offset;
             }
             G__genericerror(0);
@@ -1056,16 +1065,16 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
 
             return G__null;
          }
-      } else if ((G__get_properties(var)->statictype == G__LOCALSTATIC) && (!var.DeclaringScope().IsNamespace()) && (G__get_type(var.TypeOf()) == 'u')) {
-         //fprintf(stderr,"humm .. declaration of static variable %s\n",var->varnamebuf[ig15]);
+      } else if ((G__get_properties(output_var)->statictype == G__LOCALSTATIC) && (!output_var.DeclaringScope().IsNamespace()) && (G__get_type(output_var.TypeOf()) == 'u')) {
+         //fprintf(stderr,"humm .. declaration of static variable %s\n",output_var->varnamebuf[ig15]);
          // Let's assume this is the first definition of the class static variable (CINT currently allows the
          // declaration to be there several times  ...
          // First delete the memory allocated at the time of the declaration (inside the class declaration)
-         free(G__get_offset(var));
-         G__get_offset(var) = 0;
+         free(G__get_offset(output_var));
+         G__get_offset(output_var) = 0;
          // And let's allocate the object (currently CINT does not allow a constructor in this case).
          // (this is inpired from code in G__define_var
-         int vtagnum = G__get_tagnum( var.TypeOf() );
+         int vtagnum = G__get_tagnum( output_var.TypeOf() );
          if ( G__struct.iscpplink[vtagnum] == G__CPPLINK) {
             // -- The struct is compiled code.
             char temp1[G__ONELINE];
@@ -1073,27 +1082,27 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
             int known;
             sprintf(temp1, "%s()", G__struct.name[vtagnum]);
             if (G__struct.parent_tagnum[vtagnum] != -1) {
-               int store_exec_memberfunc = G__exec_memberfunc;
+               int local_store_exec_memberfunc = G__exec_memberfunc;
                ::Reflex::Scope store_memberfunc_tagnum = G__memberfunc_tagnum;
                G__exec_memberfunc = 1;
-               G__memberfunc_tagnum = var.DeclaringScope();
+               G__memberfunc_tagnum = output_var.DeclaringScope();
                reg = G__getfunction(temp1, &known, G__CALLCONSTRUCTOR);
-               G__exec_memberfunc = store_exec_memberfunc;
+               G__exec_memberfunc = local_store_exec_memberfunc;
                G__memberfunc_tagnum = store_memberfunc_tagnum;
             }
             else {
-               int store_exec_memberfunc = G__exec_memberfunc;
+               int local_store_exec_memberfunc = G__exec_memberfunc;
                ::Reflex::Scope store_memberfunc_tagnum = G__memberfunc_tagnum;
                ::Reflex::Scope store_G__tagnum = G__tagnum;
                G__exec_memberfunc = 0;
                G__memberfunc_tagnum = ::Reflex::Scope();
-               G__tagnum = var.TypeOf().RawType();
+               G__tagnum = output_var.TypeOf().RawType();
                reg = G__getfunction(temp1, &known, G__CALLCONSTRUCTOR);
-               G__exec_memberfunc = store_exec_memberfunc;
+               G__exec_memberfunc = local_store_exec_memberfunc;
                G__memberfunc_tagnum = store_memberfunc_tagnum;
                G__tagnum = store_G__tagnum;
             }
-            G__get_offset(var)  = (char*)G__int(reg);
+            G__get_offset(output_var)  = (char*)G__int(reg);
          }
          else {
             // -- The struct is interpreted.
@@ -1103,25 +1112,23 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
             // int known;
             sprintf(temp1, "new %s", G__struct.name[vtagnum]);
             
-            int store_exec_memberfunc = G__exec_memberfunc;
+            int local_store_exec_memberfunc = G__exec_memberfunc;
             ::Reflex::Scope store_memberfunc_tagnum = G__memberfunc_tagnum;
-            ::Reflex::Scope store_tagnum = G__tagnum;
+            ::Reflex::Scope local_store_tagnum = G__tagnum;
             int store_prerun = G__prerun;
-            int store_vartype = G__var_type;
+            int local_store_vartype = G__var_type;
             G__exec_memberfunc = 0;
             G__memberfunc_tagnum = ::Reflex::Scope();
             G__prerun = 0;
-            G__tagnum = var.TypeOf().RawType();
+            G__tagnum = output_var.TypeOf().RawType();
             G__value reg = G__getexpr(temp1);
-            G__exec_memberfunc = store_exec_memberfunc;
+            G__exec_memberfunc = local_store_exec_memberfunc;
             G__memberfunc_tagnum = store_memberfunc_tagnum;
-            G__tagnum = store_tagnum;
+            G__tagnum = local_store_tagnum;
             G__prerun = store_prerun;
-            G__var_type = store_vartype;
+            G__var_type = local_store_vartype;
             
-            G__get_offset(var)  = (char*) G__int(reg);
-            
-            // G__letvariable(var->varnamebuf[ig15], reg, &G__global, var);
+            G__get_offset(output_var)  = (char*) G__int(reg);            
          }
          
       }
@@ -1130,7 +1137,7 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
       //
       //
       if (
-         (tolower(G__get_type(var.TypeOf())) != 'u') &&
+         (tolower(G__get_type(output_var.TypeOf())) != 'u') &&
          (G__get_type(G__value_typenum(result)) == 'u') &&
          G__value_typenum(result)
       ) {
@@ -1145,7 +1152,7 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
             G__asm_inst[G__asm_cp+1] = paran;
             G__inc_cp_asm(2, 0);
          }
-         G__fundamental_conversion_operator(G__get_type(var.TypeOf()), G__get_tagnum(var.TypeOf().RawType()), var.TypeOf(), G__get_reftype(var.TypeOf()), var.TypeOf().IsConst(), &result);
+         G__fundamental_conversion_operator(G__get_type(output_var.TypeOf()), G__get_tagnum(output_var.TypeOf().RawType()), output_var.TypeOf(), G__get_reftype(output_var.TypeOf()), output_var.TypeOf().IsConst(), &result);
          if (G__asm_noverflow && paran) {
             // --
 #ifdef G__ASM_DBG
@@ -1164,11 +1171,11 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
       //
       G__ASSERT(!G__decl || (G__decl == 1));
       if (G__asm_noverflow && !G__decl_obj) {
-         if ((G__var_type != 'v') || (G__get_type(var.TypeOf()) != 'u')) {
+         if ((G__var_type != 'v') || (G__get_type(output_var.TypeOf()) != 'u')) {
             // --
             if (G__get_type(G__value_typenum(result))) {
                // --
-               G__asm_gen_stvar((long) local_G__struct_offset, var, paran, item, (long) store_struct_offset, G__var_type, &result);
+               G__asm_gen_stvar((long) local_G__struct_offset, output_var, paran, item, (long) store_struct_offset, G__var_type, &result);
             }
             else if (G__var_type == 'u') {
                // --
@@ -1177,26 +1184,26 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
                   // --
                   if (G__reftype) {
                      // --
-                     G__redecl(var);
+                     G__redecl(output_var);
                      if (G__no_exec_compile) {
                         G__abortbytecode();
                      }
                   }
                   else {
                      // --
-                     G__class_2nd_decl_i(var);
+                     G__class_2nd_decl_i(output_var);
                   }
                }
                else if (G__cppconstruct) {
                   // --
-                  G__class_2nd_decl_c(var);
+                  G__class_2nd_decl_c(output_var);
                }
             }
          }
       }
       else if (
          (G__var_type == 'u') &&
-         (G__get_properties(var)->statictype == G__AUTO) &&
+         (G__get_properties(output_var)->statictype == G__AUTO) &&
          (G__decl || G__cppconstruct)
       ) {
          // --
@@ -1205,14 +1212,14 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
             // --
 #ifdef G__ASM_DBG
             if (G__asm_dbg) {
-               G__fprinterr(G__serr, "%3x,%3x: LD_VAR  %s paran=%d  %s:%d\n", G__asm_cp, G__asm_dt, var.Name(::Reflex::SCOPED).c_str(), 0, __FILE__, __LINE__);
+               G__fprinterr(G__serr, "%3x,%3x: LD_VAR  %s paran=%d  %s:%d\n", G__asm_cp, G__asm_dt, output_var.Name(::Reflex::SCOPED).c_str(), 0, __FILE__, __LINE__);
             }
 #endif // G__ASM_DBG
             G__asm_inst[G__asm_cp] = G__LD_VAR;
             G__asm_inst[G__asm_cp+1] = 0; // ig15;
             G__asm_inst[G__asm_cp+2] = 0;
             G__asm_inst[G__asm_cp+3] = 'p';
-            G__asm_inst[G__asm_cp+4] = (long) var.Id();
+            G__asm_inst[G__asm_cp+4] = (long) output_var.Id();
             G__inc_cp_asm(5, 0);
 #ifdef G__ASM_DBG
             if (G__asm_dbg) {
@@ -1230,12 +1237,12 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
             G__inc_cp_asm(1, 0);
          }
 #endif // G__ASM
-         G__class_2nd_decl(var);
-         result.obj.i = (size_t) G__get_offset(var);
-         G__value_typenum(result) = var.TypeOf();
+         G__class_2nd_decl(output_var);
+         result.obj.i = (size_t) G__get_offset(output_var);
+         G__value_typenum(result) = output_var.TypeOf();
 
 
-         result.ref = (size_t) G__get_offset(var);
+         result.ref = (size_t) G__get_offset(output_var);
          G__var_type = 'p';
 
 
@@ -1248,8 +1255,8 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
       if (
          local_G__struct_offset &&
          (
-            (G__get_properties(var)->statictype == G__LOCALSTATIC) ||
-            ((G__get_properties(var)->statictype == G__COMPILEDGLOBAL) && (var.DeclaringScope().IsNamespace() && !var.DeclaringScope().IsTopScope()))
+            (G__get_properties(output_var)->statictype == G__LOCALSTATIC) ||
+            ((G__get_properties(output_var)->statictype == G__COMPILEDGLOBAL) && (output_var.DeclaringScope().IsNamespace() && !output_var.DeclaringScope().IsTopScope()))
          )
       ) {
          local_G__struct_offset = 0;
@@ -1260,22 +1267,22 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
          if (
             G__asm_noverflow &&
             (G__var_type == 'u') &&
-            (G__get_properties(var)->statictype == G__AUTO) &&
+            (G__get_properties(output_var)->statictype == G__AUTO) &&
             (G__decl || G__cppconstruct)
          ) {
-            int store_asm_noverflow = G__asm_noverflow;
+            int local_store_asm_noverflow = G__asm_noverflow;
             G__asm_noverflow = 0;
-            G__class_2nd_decl(var);
-            G__asm_noverflow = store_asm_noverflow;
-            result.obj.i = (size_t) G__get_offset(var);
-            G__value_typenum(result) = var.TypeOf();
+            G__class_2nd_decl(output_var);
+            G__asm_noverflow = local_store_asm_noverflow;
+            result.obj.i = (size_t) G__get_offset(output_var);
+            G__value_typenum(result) = output_var.TypeOf();
 
 
-            result.ref = (size_t) G__get_offset(var);
+            result.ref = (size_t) G__get_offset(output_var);
          }
          G__var_type = 'p';
          if (G__reftype && (G__globalvarpointer != G__PVOID)) {
-            G__get_offset(var) = G__globalvarpointer;
+            G__get_offset(output_var) = G__globalvarpointer;
          }
 
 
@@ -1303,19 +1310,19 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
       }
       // Check const variable.
       { 
-        int constvar = G__get_isconst(var.TypeOf());
+        int constvar = G__get_isconst(output_var.TypeOf());
         if (constvar &&
             !G__funcheader &&
-            !G__is_cppmacro(var)) {
+            !G__is_cppmacro(output_var)) {
            if (
-               ((!G__prerun && !G__decl) || (G__get_properties(var)->statictype == G__COMPILEDGLOBAL)) &&
+               ((!G__prerun && !G__decl) || (G__get_properties(output_var)->statictype == G__COMPILEDGLOBAL)) &&
                (
-                 islower(G__get_type(var.TypeOf())) ||
+                 islower(G__get_type(output_var.TypeOf())) ||
                 ((G__var_type == 'p') && (constvar & G__PCONSTVAR)) ||
                 ((G__var_type == 'v') && (constvar & G__CONSTVAR))
                  )
                ) {
-              G__changeconsterror(var.Name(::Reflex::SCOPED).c_str(), "ignored const");
+              G__changeconsterror(output_var.Name(::Reflex::SCOPED).c_str(), "ignored const");
               G__var_type = 'p';
 
               return result;
@@ -1337,43 +1344,43 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
       {
          // -- Calculate linear_index
          // tmp = B*C*D
-         int tmp = G__get_varlabel(var.TypeOf(), 0) /* stride */;
-         for (ig25 = 0; (ig25 < paran) && (ig25 < G__get_paran(var)); ++ig25) {
+         int tmp = G__get_varlabel(output_var.TypeOf(), 0) /* stride */;
+         for (ig25 = 0; (ig25 < paran) && (ig25 < G__get_paran(output_var)); ++ig25) {
             linear_index += tmp * G__int(para[ig25]);
-            tmp /= G__get_varlabel(var.TypeOf(), ig25 + 2);
+            tmp /= G__get_varlabel(output_var.TypeOf(), ig25 + 2);
          }
       }
       int secondary_linear_index = 0;
       {
          // -- Calculate secondary_linear_index
          // tmp = j*k*m
-         int tmp = G__get_varlabel(var.TypeOf(), ig25 + 3);
-         while ((ig25 < paran) && G__get_varlabel(var.TypeOf(), ig25 + 4)) {
+         int tmp = G__get_varlabel(output_var.TypeOf(), ig25 + 3);
+         while ((ig25 < paran) && G__get_varlabel(output_var.TypeOf(), ig25 + 4)) {
             secondary_linear_index += tmp * G__int(para[ig25]);
-            tmp /= G__get_varlabel(var.TypeOf(), ig25 + 4);
+            tmp /= G__get_varlabel(output_var.TypeOf(), ig25 + 4);
             ++ig25;
          }
       }
 #ifdef G__ASM
-      if (G__no_exec_compile && ((tolower(G__get_type(var.TypeOf())) != 'u') || (ig25 < paran))) {
+      if (G__no_exec_compile && ((tolower(G__get_type(output_var.TypeOf())) != 'u') || (ig25 < paran))) {
          result.obj.d = 0;
          result.obj.i = 1;
-         G__value_typenum(result) = var.TypeOf();
+         G__value_typenum(result) = output_var.TypeOf();
          //--
-         if (isupper(G__get_type(var.TypeOf()))) {
+         if (isupper(G__get_type(output_var.TypeOf()))) {
             switch (G__var_type) {
                case 'v':
-                  G__value_typenum(result) = G__deref(var.TypeOf());
+                  G__value_typenum(result) = G__deref(output_var.TypeOf());
                   break;
                case 'P':
-                  G__value_typenum(result) = var.TypeOf();
+                  G__value_typenum(result) = output_var.TypeOf();
                   break;
                default:
-                  if (G__get_paran(var) < paran) {
-                     G__value_typenum(result) = G__deref(var.TypeOf());
+                  if (G__get_paran(output_var) < paran) {
+                     G__value_typenum(result) = G__deref(output_var.TypeOf());
                   }
                   else {
-                     G__value_typenum(result) = var.TypeOf();
+                     G__value_typenum(result) = output_var.TypeOf();
                   }
                   break;
             }
@@ -1381,11 +1388,11 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
          else {
             switch (G__var_type) {
                case 'p':
-                  if (G__get_paran(var) <= paran) {
-                     G__value_typenum(result) = var.TypeOf();
+                  if (G__get_paran(output_var) <= paran) {
+                     G__value_typenum(result) = output_var.TypeOf();
                   }
                   else {
-                     G__value_typenum(result) = ::Reflex::PointerBuilder(var.TypeOf());
+                     G__value_typenum(result) = ::Reflex::PointerBuilder(output_var.TypeOf());
                   }
                   if ((G__get_type(G__value_typenum(result)) == 'u') && !G__value_typenum(result).RawType().IsEnum()) {
                      result.ref = 1;
@@ -1395,7 +1402,7 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
                   }
                   break;
                case 'P':
-                  G__value_typenum(result) = ::Reflex::PointerBuilder(var.TypeOf());
+                  G__value_typenum(result) = ::Reflex::PointerBuilder(output_var.TypeOf());
                   break;
                default:
                   G__reference_error(item);
@@ -1418,16 +1425,16 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
       //
       if (
          !G__no_exec_compile &&
-         G__get_varlabel(var.TypeOf(), 1) /* number of elements */ &&
-         (G__get_reftype(var.TypeOf()) == G__PARANORMAL) &&
+         G__get_varlabel(output_var.TypeOf(), 1) /* number of elements */ &&
+         (G__get_reftype(output_var.TypeOf()) == G__PARANORMAL) &&
          (
             (linear_index < 0) ||
             // We intentionally allow the index to go one past the end.
-            (linear_index > G__get_varlabel(var.TypeOf(), 1) /* number of elements*/) ||
-            ((ig25 < paran) && (std::tolower(G__get_type(var.TypeOf())) != 'u'))
+            (linear_index > G__get_varlabel(output_var.TypeOf(), 1) /* number of elements*/) ||
+            ((ig25 < paran) && (std::tolower(G__get_type(output_var.TypeOf())) != 'u'))
          )
       ) {
-         G__arrayindexerror(var, item, linear_index);
+         G__arrayindexerror(output_var, item, linear_index);
 
 
 
@@ -1437,10 +1444,10 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
       if (
          !G__no_exec_compile &&
          (G__var_type == 'v') &&
-         std::isupper(G__get_type(var.TypeOf())) &&
-         (G__get_reftype(var.TypeOf()) == G__PARANORMAL) &&
-         !G__get_varlabel(var.TypeOf(), 1) /* number of elements */ &&
-         ((*((long*) (local_G__struct_offset + ((size_t) G__get_offset(var))))) == 0)
+         std::isupper(G__get_type(output_var.TypeOf())) &&
+         (G__get_reftype(output_var.TypeOf()) == G__PARANORMAL) &&
+         !G__get_varlabel(output_var.TypeOf(), 1) /* number of elements */ &&
+         ((*((long*) (local_G__struct_offset + ((size_t) G__get_offset(output_var))))) == 0)
       ) {
          G__assign_error(item, &result);
 
@@ -1452,17 +1459,17 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
       if (
          (G__security & G__SECURE_POINTER_TYPE) &&
          !G__definemacro &&
-         isupper(G__get_type(var.TypeOf())) &&
+         isupper(G__get_type(output_var.TypeOf())) &&
          (G__var_type == 'p') &&
          !paran &&
 #ifndef G__OLDIMPLEMENTATION2191
-         (G__get_type(var.TypeOf()) != '1') &&
+         (G__get_type(output_var.TypeOf()) != '1') &&
 #else // G__OLDIMPLEMENTATION2191
-         (G__get_type(var.TypeOf()) != 'Q') &&
+         (G__get_type(output_var.TypeOf()) != 'Q') &&
 #endif // G__OLDIMPLEMENTATION2191
          (
             (
-               (G__get_type(var.TypeOf()) != 'Y') &&
+               (G__get_type(output_var.TypeOf()) != 'Y') &&
                (G__get_type(G__value_typenum(result)) != 'Y') &&
                result.obj.i
             ) ||
@@ -1470,14 +1477,14 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
          )
       ) {
          if (
-            G__get_type(var.TypeOf()) != G__get_type(G__value_typenum(result)) ||
+            G__get_type(output_var.TypeOf()) != G__get_type(G__value_typenum(result)) ||
             (
                (G__get_type(G__value_typenum(result)) == 'U') &&
                (G__security & G__SECURE_CAST2P) &&
 #ifdef G__VIRTUALBASE
-               (G__ispublicbase(var.TypeOf(), G__value_typenum(result), (void*) G__STATICRESOLUTION2) == -1)
+               (G__ispublicbase(output_var.TypeOf(), G__value_typenum(result), (void*) G__STATICRESOLUTION2) == -1)
 #else // G__VIRTUALBASE
-               (G__ispublicbase(var.TypeOf(), G__value_typenum(result)) == -1)
+               (G__ispublicbase(output_var.TypeOf(), G__value_typenum(result)) == -1)
 #endif // G__VIRTUALBASE
                // --
             )
@@ -1485,21 +1492,21 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
             G__CHECK(G__SECURE_POINTER_TYPE, 0 != result.obj.i, return G__null);
          }
       }
-      G__CHECK(G__SECURE_POINTER_AS_ARRAY, (G__get_paran(var) < paran && isupper(G__get_type(var.TypeOf()))), return(G__null));
-      G__CHECK(G__SECURE_POINTER_ASSIGN, G__get_paran(var) > paran || isupper(G__get_type(var.TypeOf())), return(G__null));
+      G__CHECK(G__SECURE_POINTER_AS_ARRAY, (G__get_paran(output_var) < paran && isupper(G__get_type(output_var.TypeOf()))), return(G__null));
+      G__CHECK(G__SECURE_POINTER_ASSIGN, G__get_paran(output_var) > paran || isupper(G__get_type(output_var.TypeOf())), return(G__null));
 #ifdef G__SECURITY
       if (
          G__security & G__SECURE_GARBAGECOLLECTION &&
          !G__no_exec_compile &&
-         std::isupper(G__get_type(var.TypeOf())) &&
+         std::isupper(G__get_type(output_var.TypeOf())) &&
          (G__var_type != 'v') &&
          (G__var_type != 'P') &&
          (
-            (!paran && !G__get_varlabel(var.TypeOf(), 1) /* number of elements */) ||
-            ((paran == 1) && (G__get_varlabel(var.TypeOf(), 2) == 1) && !G__get_varlabel(var.TypeOf(), 3))
+            (!paran && !G__get_varlabel(output_var.TypeOf(), 1) /* number of elements */) ||
+            ((paran == 1) && (G__get_varlabel(output_var.TypeOf(), 2) == 1) && !G__get_varlabel(output_var.TypeOf(), 3))
          )
       ) {
-         address = local_G__struct_offset + ((size_t) G__get_offset(var)) + (linear_index * G__LONGALLOC);
+         char *address = local_G__struct_offset + ((size_t) G__get_offset(output_var)) + (linear_index * G__LONGALLOC);
          if (address && *((long*) address)) {
             G__del_refcount((void*)(*(long*)address), (void**) address);
          }
@@ -1511,15 +1518,15 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
       //
       // Assign bit-field value.
       //
-      if (G__get_bitfield_width(var) && (G__var_type == 'p')) {
+      if (G__get_bitfield_width(output_var) && (G__var_type == 'p')) {
          int mask;
          int finalval;
          int original;
-         address = local_G__struct_offset + ((size_t) G__get_offset(var));
+         char *address = local_G__struct_offset + ((size_t) G__get_offset(output_var));
          original = *((int*) address);
-         mask = (1 << G__get_bitfield_width(var)) - 1;
-         mask = mask << G__get_bitfield_start(var);
-         finalval = (original & (~mask)) + ((result.obj.i << G__get_bitfield_start(var)) & mask);
+         mask = (1 << G__get_bitfield_width(output_var)) - 1;
+         mask = mask << G__get_bitfield_start(output_var);
+         finalval = (original & (~mask)) + ((result.obj.i << G__get_bitfield_start(output_var)) & mask);
          (*(int*) address) = finalval;
 
 
@@ -1529,7 +1536,7 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
       //
       //  Do the assignment now.
       //
-      switch (G__get_type(var.TypeOf())) {
+      switch (G__get_type(output_var.TypeOf())) {
          case 'n':
             // G__int64
             G__ASSIGN_VAR(G__LONGLONGALLOC, G__int64, G__Longlong, result.obj.ll)
@@ -1557,11 +1564,11 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
          case 'i':
             // int
             //G__ASSIGN_VAR(G__INTALLOC, int, G__int, result.obj.i)
-            G__assign_var<int>(var, local_G__struct_offset, paran, linear_index, result, item, G__INTALLOC, G__int, result.obj.i);
+            G__assign_var<int>(output_var, local_G__struct_offset, paran, linear_index, result, item, G__INTALLOC, G__int, result.obj.i);
             break;
          case 'd':
             // double
-            G__assign_var<double>(var, local_G__struct_offset, paran, linear_index, result, item, G__DOUBLEALLOC, G__double, result.obj.d);
+            G__assign_var<double>(output_var, local_G__struct_offset, paran, linear_index, result, item, G__DOUBLEALLOC, G__double, result.obj.d);
             break;
          case 'c':
             // char
@@ -1571,9 +1578,9 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
                // an unspecified length array first.
                if (
                   G__decl &&
-                  (G__get_varlabel(var.TypeOf(), 1) /* number of elements */ == INT_MAX /* unspecified length flag */) &&
+                  (G__get_varlabel(output_var.TypeOf(), 1) /* number of elements */ == INT_MAX /* unspecified length flag */) &&
                   paran &&
-                  (paran == G__get_paran(var)) &&
+                  (paran == G__get_paran(output_var)) &&
                   (G__var_type  == 'p') &&
                   !local_G__struct_offset &&
                   (G__get_type(G__value_typenum(result)) == 'C') &&
@@ -1581,16 +1588,16 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
                ) {
                   // -- An unspecified length array of characters initialized by a character pointer.
                   // Release any storage previously allocated.  FIXME: I don't think there is any.
-                  if (G__get_offset(var)) {
-                     free(G__get_offset(var));
+                  if (G__get_offset(output_var)) {
+                     free(G__get_offset(output_var));
                   }
                   // Allocate enough storage for a copy of the initializer string.
                   int len = strlen((const char*) result.obj.i);
-                  G__get_offset(var) = (char*) malloc(len + 1);
+                  G__get_offset(output_var) = (char*) malloc(len + 1);
                   // And copy the initializer into the allocated space.
-                  strcpy((char*) G__get_offset(var), (const char*) result.obj.i);
+                  strcpy((char*) G__get_offset(output_var), (const char*) result.obj.i);
                   // Change the variable into a fixed-size array of characters.
-                  var = G__update_array_dimension(var, len);
+                  output_var = G__update_array_dimension(output_var, len);
                   // And return, we are done.
 
 
@@ -1704,8 +1711,8 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
                if (ig25 < paran) {
                   //--
                   //--
-                  result.ref = (long) (local_G__struct_offset + ((size_t) G__get_offset(var)) + (linear_index * var.TypeOf().RawType().SizeOf()));
-                  G__letpointer(&result, result.ref, var.TypeOf().RawType());
+                  result.ref = (long) (local_G__struct_offset + ((size_t) G__get_offset(output_var)) + (linear_index * output_var.TypeOf().RawType().SizeOf()));
+                  G__letpointer(&result, result.ref, output_var.TypeOf().RawType());
                   G__tryindexopr(&result, para, paran, ig25);
                   para[0] = G__letVvalue(&result, expression);
                   //--
@@ -1714,7 +1721,7 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
                   return para[0];
                }
                else {
-                  G__letstruct(&result, linear_index, var, item, paran, local_G__struct_offset);
+                  G__letstruct(&result, linear_index, output_var, item, paran, local_G__struct_offset);
                }
             }
             break;
@@ -1731,16 +1738,16 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
                if (
                   (ig25 < paran) &&
                   (
-                     (G__get_reftype(var.TypeOf()) == G__PARANORMAL) ||
-                     (G__get_reftype(var.TypeOf()) == (paran - ig25))
+                     (G__get_reftype(output_var.TypeOf()) == G__PARANORMAL) ||
+                     (G__get_reftype(output_var.TypeOf()) == (paran - ig25))
                   )
                ) {
                   //--
                   //--
                   result.ref = 0;
-                  address = local_G__struct_offset + ((size_t) G__get_offset(var)) + (linear_index * G__LONGALLOC);
-                  result.ref = ((*(long*)address) + (secondary_linear_index * var.TypeOf().RawType().SizeOf()));
-                  G__letpointer(&result, result.ref, var.TypeOf().RawType());
+                  char *address = local_G__struct_offset + ((size_t) G__get_offset(output_var)) + (linear_index * G__LONGALLOC);
+                  result.ref = ((*(long*)address) + (secondary_linear_index * output_var.TypeOf().RawType().SizeOf()));
+                  G__letpointer(&result, result.ref, output_var.TypeOf().RawType());
                   G__tryindexopr(&result, para, paran, ig25);
                   para[0] = G__letVvalue(&result, expression);
                   //--
@@ -1749,13 +1756,13 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
                   return para[0];
                }
                else {
-                  G__letstructp(result, local_G__struct_offset, linear_index, var, paran, item, para, secondary_linear_index);
+                  G__letstructp(result, local_G__struct_offset, linear_index, output_var, paran, item, para, secondary_linear_index);
                }
             }
             break;
          case 'a':
             // pointer to member function
-            G__letpointer2memfunc(var, paran, item, linear_index, &result, local_G__struct_offset);
+            G__letpointer2memfunc(output_var, paran, item, linear_index, &result, local_G__struct_offset);
             break;
          case 'T':
             // macro char*
@@ -1767,7 +1774,7 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
                ) {
                   G__changeconsterror(varname.c_str(), "enforced macro");
                }
-               *((long*) G__get_offset(var)) = result.obj.i;
+               *((long*) G__get_offset(output_var)) = result.obj.i;
             }
             break;
          case 'p':
@@ -1785,7 +1792,7 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
             }
          default:
             // case 'X' automatic variable
-            G__letautomatic(var, local_G__struct_offset, linear_index, result);
+            G__letautomatic(output_var, local_G__struct_offset, linear_index, result);
             break;
       }
    }
@@ -1798,7 +1805,7 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
    //
    if (!done) {
       // -- No old variable, allocate new variable.
-      result = G__allocvariable(result, para, varglobal, varlocal, paran, varhash, item, varname, parameter[0][0]);
+      result = G__allocvariable(result, para, varglobal, varlocal, paran, varhash, item, varname, parameter[0][0], output_var);
    }
    G__var_type = 'p';
    //--
@@ -1811,7 +1818,7 @@ G__value Cint::Internal::G__letvariable(char* item, G__value expression, const :
 #undef G_ASSIGN_PVAR
 
 //______________________________________________________________________________
-void Cint::Internal::G__letpointer2memfunc(const ::Reflex::Member& var, int paran, char* item, int linear_index, G__value* presult, char* arg_G__struct_offset)
+void Cint::Internal::G__letpointer2memfunc(const ::Reflex::Member& var, int paran, const char* item, int linear_index, G__value* presult, char* arg_G__struct_offset)
 {
    // -- FIXME: Describe me!
    switch (G__var_type) {
@@ -1850,7 +1857,7 @@ void Cint::Internal::G__letautomatic(const ::Reflex::Member& var, char* arg_G__s
 }
 
 //______________________________________________________________________________
-G__value Cint::Internal::G__letstructmem(int store_var_type, const char* /*varname_input*/, char* membername, char* tagname, const ::Reflex::Scope& varglobal, G__value expression, int objptr /* 1: object, 2: pointer */)
+G__value Cint::Internal::G__letstructmem(int store_var_type, const char* /*varname_input*/, char* membername, char* tagname, const ::Reflex::Scope& varglobal, G__value expression, int objptr /* 1: object, 2: pointer */, Reflex::Member &output_var)
 {
    // -- FIXME: Describe me!
    G__value result;
@@ -1966,7 +1973,7 @@ G__value Cint::Internal::G__letstructmem(int store_var_type, const char* /*varna
       (G__get_type(G__value_typenum(result)) == 'u') &&
       (objptr == 2) &&
       /**/
-      !strncmp(G__value_typenum(result).RawType().Name().c_str(), "auto_ptr<", 9)
+      !strncmp(G__value_typenum(result).RawType().Name_c_str(), "auto_ptr<", 9)
    ) {
       int knownx = 0;
       char comm[20];
@@ -1997,13 +2004,13 @@ G__value Cint::Internal::G__letstructmem(int store_var_type, const char* /*varna
    //
    if (!G__value_typenum(result).FinalType().IsPointer() && (objptr == 2)) {
       char buf[30] = "operator->()";
-      int flag = 0;
-      ::Reflex::Scope store_tagnum = G__tagnum;
-      char* store_struct_offset = G__store_struct_offset;
+      int local_flag = 0;
+      ::Reflex::Scope local_store_tagnum = G__tagnum;
+      char* local_store_struct_offset = G__store_struct_offset;
       G__set_G__tagnum(result);
       G__store_struct_offset = (char*) result.obj.i;
-      result = G__getfunction(buf, &flag, G__TRYMEMFUNC);
-      if (flag) {
+      result = G__getfunction(buf, &local_flag, G__TRYMEMFUNC);
+      if (local_flag) {
          G__set_G__tagnum(result);
          G__store_struct_offset = (char*) result.obj.i;
 #ifdef G__ASM
@@ -2021,8 +2028,8 @@ G__value Cint::Internal::G__letstructmem(int store_var_type, const char* /*varna
          // --
       }
       else {
-         G__tagnum = store_tagnum;
-         G__store_struct_offset = store_struct_offset;
+         G__tagnum = local_store_tagnum;
+         G__store_struct_offset = local_store_struct_offset;
          if (
             (G__dispmsg >= G__DISPROOTSTRICT) ||
             (G__ifile.filenum <= G__gettempfilenum())
@@ -2051,7 +2058,7 @@ G__value Cint::Internal::G__letstructmem(int store_var_type, const char* /*varna
    store_do_setmemfuncenv = G__do_setmemfuncenv;
    G__do_setmemfuncenv = 1;
    G__incsetup_memvar(G__tagnum);
-   result = G__letvariable(membername, expression, ::Reflex::Scope(), G__tagnum);
+   result = G__letvariable(membername, expression, ::Reflex::Scope(), G__tagnum, output_var);
    G__do_setmemfuncenv = store_do_setmemfuncenv;
    G__tagnum = store_tagnum;
    G__store_struct_offset = store_struct_offset;
@@ -2468,7 +2475,7 @@ void Cint::Internal::G__letstruct(G__value* result, int linear_index, const ::Re
 }
 
 //______________________________________________________________________________
-void Cint::Internal::G__letstructp(G__value result, char* arg_G__struct_offset, int linear_index, const ::Reflex::Member& var, int paran, char* item, G__value* para, int secondary_linear_index)
+void Cint::Internal::G__letstructp(G__value result, char* arg_G__struct_offset, int linear_index, const ::Reflex::Member& var, int paran, const char* item, G__value* para, int secondary_linear_index)
 {
    // -- FIXME: Describe me!
    int baseoffset = 0;
@@ -3159,8 +3166,11 @@ inline void G__alloc_var_ref(unsigned int SIZE, CONVFUNC f, const char* item, ::
             /*memset(G__get_offset(var), 0, SIZE);*/
          }
       }
+      int varlabel_1 = G__get_varlabel(var.TypeOf(), 1);
       /* Now do initialization. */
       if (
+         /* Variable has storage to initialize */
+         (G__get_offset(var) || (varlabel_1 && G__funcheader) ) &&
          /* Not bytecode compiling */
          (G__asm_wholefunction == G__ASM_FUNC_NOP) &&
          (
@@ -3182,7 +3192,7 @@ inline void G__alloc_var_ref(unsigned int SIZE, CONVFUNC f, const char* item, ::
             G__get_type(G__value_typenum(result))
          )
       ) {
-         if (G__get_varlabel(var.TypeOf(), 1) /* number of elements */ == INT_MAX /* unspecified length flag */) {
+         if (varlabel_1 /* number of elements */ == INT_MAX /* unspecified length flag */) {
             /* -- We are initializing an unspecified length array. */
             if (G__funcheader) {
                /* -- In a function header, we point at our actual argument. */
@@ -3191,7 +3201,7 @@ inline void G__alloc_var_ref(unsigned int SIZE, CONVFUNC f, const char* item, ::
                /* -- Syntax errror. */
             }
          }
-         else if (G__get_varlabel(var.TypeOf(), 1) /* number of elements */) {
+         else if (varlabel_1 /* number of elements */) {
             /* -- We are initializing an array. */
             if (G__funcheader) {
                /* -- In a function header, we point at our actual argument. */
@@ -3268,7 +3278,10 @@ inline void G__alloc_var_ref(unsigned int SIZE, CONVFUNC f, const char* item, ::
          }
       }
       /* Now do initialization. */
+      int varlabel_1 = G__get_varlabel(var.TypeOf(), 1);
       if (
+         /* Variable has storage to initialize */
+         (G__get_offset(var) || (varlabel_1 && G__funcheader) ) &&
          (
             /* Not a class member and not bytecompiling. */
             (!G__def_struct_member && (G__asm_wholefunction == G__ASM_FUNC_NOP)) ||
@@ -3288,7 +3301,7 @@ inline void G__alloc_var_ref(unsigned int SIZE, CONVFUNC f, const char* item, ::
             G__get_type(G__value_typenum(result))
          )
       ) {
-         if (G__get_varlabel(var.TypeOf(), 1) /* number of elements */ == INT_MAX /* unspecified length flag */) {
+         if (varlabel_1 /* number of elements */ == INT_MAX /* unspecified length flag */) {
             /* -- We are initializing an unspecified length array of pointers. */
             if (G__funcheader) {
                /* -- In a function header, we point at our actual argument. */
@@ -3297,7 +3310,7 @@ inline void G__alloc_var_ref(unsigned int SIZE, CONVFUNC f, const char* item, ::
                /* -- Syntax errror. */
             }
          }
-         else if (G__get_varlabel(var.TypeOf(), 1) /* number of elements */) {
+         else if (varlabel_1 /* number of elements */) {
             /* -- We are initializing an array of pointers. */
             if (G__funcheader) {
                /* -- In a function header, we point at our actual argument. */
@@ -3318,7 +3331,7 @@ inline void G__alloc_var_ref(unsigned int SIZE, CONVFUNC f, const char* item, ::
 #endif // G__ASM_WHOLEFUNC
 
 //______________________________________________________________________________
-static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[], const ::Reflex::Scope& varglobal, const ::Reflex::Scope& varlocal, int paran, int /* varhash */, const char* item, std::string& varname, int parameter00)
+static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[], const ::Reflex::Scope& varglobal, const ::Reflex::Scope& varlocal, int paran, int /* varhash */, const char* item, std::string& varname, int parameter00, Reflex::Member &output_var)
 {
    // -- Allocate memory for a variable and initialize it.
    //
@@ -3865,7 +3878,7 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
          }
       }
    }
-   if (G__funcheader && var_varlabel.size()) {
+   if (G__funcheader && !var_varlabel.empty()) {
       // -- We are a function parameter of array type.
       // We share our storage with our caller, on function
       // exit, we must not free the memory.
@@ -3882,9 +3895,9 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
    //  Store comment information which is specific to root.
    //
    G__comment_info var_comment;
-   if (G__setcomment) {
-      var_comment.p.com = G__setcomment;
-      var_comment.filenum = -2;
+   if (G__setcomment) { // If the dictionary interface is passing us a comment string.
+      var_comment.p.com = G__setcomment; // Note: We do not take ownership, we make a copy of the char pointer.  This string must have a lifetime matching the variable!
+      var_comment.filenum = -2; // Flag that comment is an immediate string, not in a source file.
    }
    else {
       var_comment.p.com = 0;
@@ -4061,7 +4074,7 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
       }
    }
    // Note: We add only the first paran elements to the varlabel, the rest are from the typedef.
-   var_type = G__modify_type(var_type, var_ispointer, var_reftype, var_constvar, paran, &var_varlabel[0]);
+   var_type = G__modify_type(var_type, var_ispointer, var_reftype, var_constvar, paran, var_varlabel.empty() ? 0 : &var_varlabel[0]);
    //
    //  A variable of type void is not allowed.
    //
@@ -4069,7 +4082,7 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
       !var_ispointer &&
       (G__var_type != '1') &&
       (G__var_type != 'Q') &&
-      (::Reflex::Tools::FundamentalType(var_type) == ::Reflex::kVOID)
+      (::Reflex::Tools::FundamentalType(var_type.FinalType()) == ::Reflex::kVOID)
    )  {
       // -- Do *not* create void variable!
       G__genericerror("Error: void type variable can not be declared");
@@ -4088,32 +4101,61 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
    //
    //  Create the variable.
    //
-#ifdef __GNUC__
-#else // __GNUC__
-#pragma message (FIXME("Need to initialize the var's offset to something sensible."))
-#endif // __GNUC__
-   size_t reflex_offset = 0;
-   char* var_offset = 0;
-   int reflex_modifiers = 0;
-   // Create the variable as a data member of its continaing scope, either a namespace or a class.
-   ::Reflex::Member var = G__add_scopemember(varscope, varname.c_str(), var_type, reflex_modifiers, reflex_offset, var_offset, var_access, var_statictype);
+   {
+      //
+      //  Lookup variable in scope to see if reflex already knows
+      //  about it.  This can happen if we are called from a reflex
+      //  builder callback through cintex.
+      //
+#if 0
+      int dm_size = varscope.DataMemberSize();
+      const char* varname_c_str = varname.c_str();
+      for (int i = 0; i < dm_size; ++i ) {
+         ::Reflex::Member mbr = varscope.DataMemberAt(i);
+         if (!strcmp(mbr.Name_c_str(), varname_c_str)) {
+            output_var = mbr;
+            break;
+         }
+      }
+#endif // 0
+      output_var = varscope.DataMemberByName(varname, ::Reflex::INHERITEDMEMBERS_NO);
+   }
+   if (
+      !output_var || // var does not exist, or
+      (
+         !G__in_memvar_setup && // we are not being called by dictionary setup, and
+         (
+            G__static_alloc && // we are doing a static variable, and
+            G__func_now // it is a function-local static
+         )
+      )
+   ) {
+      size_t reflex_offset = 0;
+      char* var_offset = 0;
+      int reflex_modifiers = 0;
+      // Create the variable as a data member of its continaing scope, either a namespace or a class.
+      output_var = G__add_scopemember(varscope, varname.c_str(), var_type, reflex_modifiers, reflex_offset, var_offset, var_access, var_statictype);
+   }
+   else if (!G__in_memvar_setup && (varname != "G__virtualinfo")) {
+      assert(0); // Not in dict interface, and variable is found, should be impossible.
+   }
    //
    //  Set variable properties.
    //
-   G__get_properties(var)->statictype = var_statictype;
-   G__get_properties(var)->comment = var_comment;
-   G__get_properties(var)->globalcomp = var_globalcomp;
+   G__get_properties(output_var)->statictype = var_statictype;
+   G__get_properties(output_var)->comment = var_comment;
+   G__get_properties(output_var)->globalcomp = var_globalcomp;
 #ifdef G__VARIABLEFPOS
    //
    //  Store file number and line number of declaration.
    //
-   G__get_properties(var)->filenum = G__ifile.filenum;
-   G__get_properties(var)->linenum = G__ifile.line_number;
+   G__get_properties(output_var)->filenum = G__ifile.filenum;
+   G__get_properties(output_var)->linenum = G__ifile.line_number;
 #endif // G__VARIABLEFPOS
    //
    //  Fetch info about number of array elements we are declared to have.
    //
-   int num_elements = G__get_varlabel(var.TypeOf(), 1);
+   int num_elements = G__get_varlabel(output_var.TypeOf(), 1);
    if (num_elements == INT_MAX) {
       num_elements = 0;
    }
@@ -4139,7 +4181,7 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
    //
    if (
       // -- Initializer is of class type and var is fundamental
-      (std::tolower(G__get_type(var.TypeOf())) != 'u') &&
+      (std::tolower(G__get_type(output_var.TypeOf())) != 'u') &&
       (G__get_type(G__value_typenum(result)) == 'u') &&
       G__value_typenum(result).RawType().IsClass()
    ) {
@@ -4206,27 +4248,27 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
       if (
          // -- The variable is not an array.
          !num_elements &&
-         (G__get_varlabel(var.TypeOf(), 1) /* number of elements */ != INT_MAX /* unspecified length flag */)
+         (G__get_varlabel(output_var.TypeOf(), 1) /* number of elements */ != INT_MAX /* unspecified length flag */)
       ) {
          // -- Handle variables which are not of array type.
          if (G__funcheader) {
             // -- We are a function parameter declaration.
             if (G__reftype != G__PARAREFERENCE) {
                // -- Initialize a non-reference parameter.
-               G__asm_gen_stvar(0, var, G__get_paran(var), item, G__ASM_VARLOCAL, 'p', &result);
+               G__asm_gen_stvar(0, output_var, G__get_paran(output_var), item, G__ASM_VARLOCAL, 'p', &result);
             }
             else {
                // -- Initialize a reference parameter.
 #ifdef G__ASM_DBG
                if (G__asm_dbg) {
-                  G__fprinterr(G__serr, "%3x,%3x: INIT_REF  paran: %d type: '%c' var: %08lx  %s:%d\n", G__asm_cp, G__asm_dt, paran, G__var_type, (long) var.Id(), __FILE__, __LINE__);
+                  G__fprinterr(G__serr, "%3x,%3x: INIT_REF  paran: %d type: '%c' var: %08lx  %s:%d\n", G__asm_cp, G__asm_dt, paran, G__var_type, (long) output_var.Id(), __FILE__, __LINE__);
                }
 #endif // G__ASM_DBG
                G__asm_inst[G__asm_cp] = G__INIT_REF;
                G__asm_inst[G__asm_cp+1] = 0;
                G__asm_inst[G__asm_cp+2] = paran;
                G__asm_inst[G__asm_cp+3] = G__var_type;
-               G__asm_inst[G__asm_cp+4] = (long) var.Id();
+               G__asm_inst[G__asm_cp+4] = (long) output_var.Id();
                G__inc_cp_asm(5, 0);
             }
 #ifdef G__ASM_DBG
@@ -4239,7 +4281,7 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
          }
          else if (G__get_type(G__value_typenum(result)) && !G__static_alloc) {
             // -- We have an initializer and we are not a static or const variable.
-            G__asm_gen_stvar(0, var, paran, item, G__ASM_VARLOCAL, 'p', &result);
+            G__asm_gen_stvar(0, output_var, paran, item, G__ASM_VARLOCAL, 'p', &result);
          }
 #ifndef G__OLDIMPLEMENTATION1073
          else if (
@@ -4262,7 +4304,7 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
 #endif // G__ASM_DBG
                G__asm_inst[G__asm_cp] = G__CTOR_SETGVP;
                G__asm_inst[G__asm_cp+1] = 0L;
-               G__asm_inst[G__asm_cp+2] = (long) var.Id();
+               G__asm_inst[G__asm_cp+2] = (long) output_var.Id();
                G__asm_inst[G__asm_cp+3] = 0L; // This is the 'mode'. I am not sure what it should be.
                G__inc_cp_asm(4, 0);
                G__inc_cp_asm(6, 0); // increment for moved LD_FUNC instruction.
@@ -4285,14 +4327,14 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
                // -- Interpreted class.
 #ifdef G__ASM_DBG
                if (G__asm_dbg) {
-                  G__fprinterr(G__serr, "%3x,%3x: LD_VAR  item: '%s' paran: %d type: '%c' var: %08lx  %s:%d\n", G__asm_cp, G__asm_dt, item, paran, 'p', (long) var.Id(), __FILE__, __LINE__);
+                  G__fprinterr(G__serr, "%3x,%3x: LD_VAR  item: '%s' paran: %d type: '%c' var: %08lx  %s:%d\n", G__asm_cp, G__asm_dt, item, paran, 'p', (long) output_var.Id(), __FILE__, __LINE__);
                }
 #endif // G__ASM_DBG
                G__asm_inst[G__asm_cp] = G__LD_LVAR;
                G__asm_inst[G__asm_cp+1] = 0;
                G__asm_inst[G__asm_cp+2] = paran;
                G__asm_inst[G__asm_cp+3] = 'p';
-               G__asm_inst[G__asm_cp+4] = (long) var.Id();
+               G__asm_inst[G__asm_cp+4] = (long) output_var.Id();
                G__inc_cp_asm(5, 0);
 #ifdef G__ASM_DBG
                if (G__asm_dbg) {
@@ -4320,15 +4362,15 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
             if (!G__static_alloc) {
                // -- We are not a static, const, or enumerator variable.
                // Example:  f(int var[2][3][2], ...){...};
-               if (G__get_varlabel(var.TypeOf(), 1) /* number of elements */ == INT_MAX /* unspecified length flag */) {
+               if (G__get_varlabel(output_var.TypeOf(), 1) /* number of elements */ == INT_MAX /* unspecified length flag */) {
                   // -- This is a parameter of unspecified length array type, handle like a pointer.
                   // Example:  f(int var[], ...){...};
-                  G__asm_gen_stvar(0, var, 0, item, G__ASM_VARLOCAL, 'p', &result);
+                  G__asm_gen_stvar(0, output_var, 0, item, G__ASM_VARLOCAL, 'p', &result);
                }
                else {
                   // -- This is *not* a parameter of unspecified length array type.
                   // Example:  f(int var[2][3][2], ...){...};
-                  G__asm_gen_stvar(0, var, 0, item, G__ASM_VARLOCAL, 'p', &result);
+                  G__asm_gen_stvar(0, output_var, 0, item, G__ASM_VARLOCAL, 'p', &result);
                }
             }
             else {
@@ -4369,23 +4411,23 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
       // --
    ) {
       if (G__get_type(G__value_typenum(result))) {
-         G__asm_gen_stvar(0, var, paran, item, 0, 'p', &result);
+         G__asm_gen_stvar(0, output_var, paran, item, 0, 'p', &result);
       }
       else if (G__var_type == 'u') {
          G__ASSERT(!G__decl || (G__decl == 1));
          if (G__decl) {
             if (G__reftype) {
-               G__redecl(var);
+               G__redecl(output_var);
                if (G__no_exec_compile) {
                   G__abortbytecode();
                }
             }
             else {
-               G__class_2nd_decl_i(var);
+               G__class_2nd_decl_i(output_var);
             }
          }
          else if (G__cppconstruct) {
-            G__class_2nd_decl_c(var);
+            G__class_2nd_decl_c(output_var);
          }
       }
    }
@@ -4406,18 +4448,18 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
    //  Handle bitfields first.
    //
    if (G__bitfield) {
-      G__get_properties(var)->bitfield_start = bitlocation;
-      G__get_properties(var)->bitfield_width = G__bitfield;
+      G__get_properties(output_var)->bitfield_start = bitlocation;
+      G__get_properties(output_var)->bitfield_width = G__bitfield;
       G__bitfield = 0;
    }
-   if (G__get_bitfield_width(var)) {
+   if (G__get_bitfield_width(output_var)) {
       //--
       //--
-      if (!G__get_bitfield_start(var)) {
-         G__get_offset(var) = (char*) G__malloc(1, G__INTALLOC, item);
+      if (!G__get_bitfield_start(output_var)) {
+         G__get_offset(output_var) = (char*) G__malloc(1, G__INTALLOC, item);
       }
       else {
-         G__get_offset(var) = (char*) G__malloc(1, 0, item) - G__INTALLOC;
+         G__get_offset(output_var) = (char*) G__malloc(1, 0, item) - G__INTALLOC;
       }
       return result;
    }
@@ -4430,7 +4472,7 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
    // the 2nd expression to be evaluated first!
    if (G__tagdefining) {
       bool tmp = G__get_properties(G__tagdefining)->isBytecodeArena;
-      G__get_properties(var)->isBytecodeArena = tmp;
+      G__get_properties(output_var)->isBytecodeArena = tmp;
    }
    switch (G__var_type) {
       case 'u':
@@ -4449,37 +4491,37 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
             // --
          }
          // type var; normal variable
-         G__get_offset(var) = (char*) G__malloc(num_elements ? num_elements : 1, G__struct.size[G__get_tagnum(G__tagnum)], item);
+         G__get_offset(output_var) = (char*) G__malloc(num_elements ? num_elements : 1, G__struct.size[G__get_tagnum(G__tagnum)], item);
          if (
             G__ansiheader &&
             G__get_type(G__value_typenum(result)) &&
             (G__globalvarpointer == G__PVOID) &&
             (!G__static_alloc || !G__func_now)
          ) {
-            std::memcpy(G__get_offset(var), (void*) G__int(result), var.TypeOf().SizeOf());
+            std::memcpy(G__get_offset(output_var), (void*) G__int(result), output_var.TypeOf().SizeOf());
          }
-         result.obj.i = reinterpret_cast<long>(G__get_offset(var));
+         result.obj.i = reinterpret_cast<long>(G__get_offset(output_var));
          break;
       case 'U':
          // pointer to struct, union
          if ((num_elements > 0) && G__get_type(G__value_typenum(result))) {
             // char* argv[];
-            G__get_offset(var) = (char*) G__int(result);
+            G__get_offset(output_var) = (char*) G__int(result);
          }
          else {
-            G__get_offset(var) = (char*) G__malloc(num_elements ? num_elements : 1, G__LONGALLOC, item);
+            G__get_offset(output_var) = (char*) G__malloc(num_elements ? num_elements : 1, G__LONGALLOC, item);
             if (
                (G__asm_wholefunction == G__ASM_FUNC_NOP) &&
                !G__def_struct_member &&
                (!G__static_alloc || G__prerun) &&
                ((G__globalvarpointer == G__PVOID) || G__get_type(G__value_typenum(result)))
             ) {
-               int baseoffset = G__ispublicbase(var.TypeOf(), G__value_typenum(result), (void*) result.obj.i);
+               int baseoffset = G__ispublicbase(output_var.TypeOf(), G__value_typenum(result), (void*) result.obj.i);
                if (baseoffset != -1) {
-                  *((long*) G__get_offset(var)) = G__int(result) + baseoffset;
+                  *((long*) G__get_offset(output_var)) = G__int(result) + baseoffset;
                }
                else {
-                  *((long*) G__get_offset(var)) = G__int(result);
+                  *((long*) G__get_offset(output_var)) = G__int(result);
                }
             }
          }
@@ -4491,39 +4533,39 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
 #ifdef G__ROOT
       case 'Z':
          // ROOT special object.
-         G__get_offset(var) = (char*) malloc(2 * G__LONGALLOC);
-         *((long*) G__get_offset(var)) = 0L;
-         *((long*) (G__get_offset(var) + G__LONGALLOC)) = 0L;
+         G__get_offset(output_var) = (char*) malloc(2 * G__LONGALLOC);
+         *((long*) G__get_offset(output_var)) = 0L;
+         *((long*) (G__get_offset(output_var) + G__LONGALLOC)) = 0L;
          break;
 #endif // G__ROOT
 #ifndef G__OLDIMPLEMENTATION2191
       case '1':
          // void
-         G__alloc_var_ref<char>(G__CHARALLOC, G__int, item, var, result);
+         G__alloc_var_ref<char>(G__CHARALLOC, G__int, item, output_var, result);
          break;
 #else // G__OLDIMPLEMENTATION2191
       case 'Q':
          // void
-         G__alloc_var_ref<char>(G__CHARALLOC, G__int, item, var, result);
+         G__alloc_var_ref<char>(G__CHARALLOC, G__int, item, output_var, result);
          break;
 #endif // G__OLDIMPLEMENTATION2191
       case 'Y':
          // pointer to void
-         G__alloc_var_ref<char>(G__CHARALLOC, G__int, item, var, result);
+         G__alloc_var_ref<char>(G__CHARALLOC, G__int, item, output_var, result);
          break;
       case 'E':
          // pointer to FILE
-         G__alloc_var_ref<char>(G__CHARALLOC, G__int, item, var, result);
+         G__alloc_var_ref<char>(G__CHARALLOC, G__int, item, output_var, result);
          break;
       case 'C':
          // pointer to char
-         G__alloc_var_ref<char>(G__CHARALLOC, G__int, item, var, result);
+         G__alloc_var_ref<char>(G__CHARALLOC, G__int, item, output_var, result);
          break;
       case 'c':
          // char
-         G__alloc_var_ref<char>(G__CHARALLOC, G__int, item, var, result);
+         G__alloc_var_ref<char>(G__CHARALLOC, G__int, item, output_var, result);
          // Check for initialization of a character variable with a string constant.
-         if ((G__var_type == 'c') && G__get_varlabel(var.TypeOf(), 1) /* number of elements */ && (G__get_type(G__value_typenum(result)) == 'C')) {
+         if ((G__var_type == 'c') && G__get_varlabel(output_var.TypeOf(), 1) /* number of elements */ && (G__get_type(G__value_typenum(result)) == 'C')) {
             // -- We are a char array being initialized with a string constant.
             if (G__asm_wholefunction != G__ASM_FUNC_COMPILE) {
                // -- Note: In whole function compilation G__get_offset(var) is an offset.
@@ -4533,24 +4575,24 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
                   !(G__static_alloc && G__func_now && !G__prerun) // Not a static variable in function scope at runtime (init was done in prerun).
                ) {
                   int len = strlen((char*) result.obj.i);
-                  if (G__get_varlabel(var.TypeOf(), 1) /* number of elements */ == INT_MAX /* unspecified length flag */) {
+                  if (G__get_varlabel(output_var.TypeOf(), 1) /* number of elements */ == INT_MAX /* unspecified length flag */) {
                      // -- We are an unspecified length array of char being initialized with a string constant.
                      // FIXME: Can this happen?
-                     G__get_offset(var) = (char*) malloc(len + 1);
-                     strcpy(G__get_offset(var), (char*) result.obj.i);
+                     G__get_offset(output_var) = (char*) malloc(len + 1);
+                     strcpy(G__get_offset(output_var), (char*) result.obj.i);
                   }
-                  else if (len > G__get_varlabel(var.TypeOf(), 1) /* number of elements */) {
+                  else if (len > G__get_varlabel(output_var.TypeOf(), 1) /* number of elements */) {
                      // -- We are an array of char being initialized with a string constant that is too big.
                      // FIXME: Can this happen?
                      // FIXME: We need to give an error message here!
-                     strncpy(G__get_offset(var), (char*) result.obj.i, G__get_varlabel(var.TypeOf(), 1) /* number of elements */);
+                     strncpy(G__get_offset(output_var), (char*) result.obj.i, G__get_varlabel(output_var.TypeOf(), 1) /* number of elements */);
                   }
                   else {
                      // -- We are an array of char being initialized with a string constant.
                      // FIXME: Can this happen?
-                     strcpy(G__get_offset(var), (char*) result.obj.i);
-                     int num_omitted = G__get_varlabel(var.TypeOf(), 1) /* number of elements */ - len;
-                     memset(G__get_offset(var) + len, 0, num_omitted);
+                     strcpy(G__get_offset(output_var), (char*) result.obj.i);
+                     int num_omitted = G__get_varlabel(output_var.TypeOf(), 1) /* number of elements */ - len;
+                     memset(G__get_offset(output_var) + len, 0, num_omitted);
                   }
                }
             }
@@ -4558,14 +4600,14 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
                // --
 #ifdef G__ASM_DBG
                if (G__asm_dbg) {
-                  G__fprinterr(G__serr, "%3x,%3x: LD_VAR '%s' paran: %d type: 'P'  %s:%d\n", G__asm_cp, G__asm_dt, var.Name(::Reflex::SCOPED).c_str(), 0, __FILE__, __LINE__);
+                  G__fprinterr(G__serr, "%3x,%3x: LD_VAR '%s' paran: %d type: 'P'  %s:%d\n", G__asm_cp, G__asm_dt, output_var.Name(::Reflex::SCOPED).c_str(), 0, __FILE__, __LINE__);
                }
 #endif // G__ASM_DBG
                G__asm_inst[G__asm_cp] = G__LD_LVAR;
                G__asm_inst[G__asm_cp+1] = 0; // index
                G__asm_inst[G__asm_cp+2] = 0; // paran
                G__asm_inst[G__asm_cp+3] = 'P'; // type
-               G__asm_inst[G__asm_cp+4] = (long) var.Id();
+               G__asm_inst[G__asm_cp+4] = (long) output_var.Id();
                G__inc_cp_asm(5, 0);
 #ifdef G__ASM_DBG
                if (G__asm_dbg) {
@@ -4590,111 +4632,111 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
          }
          break;
       case 'n':
-         G__alloc_var_ref<G__int64>(G__LONGLONGALLOC, G__Longlong, item, var, result);
+         G__alloc_var_ref<G__int64>(G__LONGLONGALLOC, G__Longlong, item, output_var, result);
          break;
       case 'N':
-         G__alloc_var_ref<G__int64>(G__LONGLONGALLOC, G__Longlong, item, var, result);
+         G__alloc_var_ref<G__int64>(G__LONGLONGALLOC, G__Longlong, item, output_var, result);
          break;
       case 'm':
-         G__alloc_var_ref<G__int64>(G__LONGLONGALLOC, G__Longlong, item, var, result);
+         G__alloc_var_ref<G__int64>(G__LONGLONGALLOC, G__Longlong, item, output_var, result);
          break;
       case 'M':
-         G__alloc_var_ref<G__int64>(G__LONGLONGALLOC, G__Longlong, item, var, result);
+         G__alloc_var_ref<G__int64>(G__LONGLONGALLOC, G__Longlong, item, output_var, result);
          break;
 #ifndef G__OLDIMPLEMENTATION2191
       case 'q':
       case 'Q':
-         G__alloc_var_ref<long double>(G__LONGDOUBLEALLOC, G__Longdouble, item, var, result);
+         G__alloc_var_ref<long double>(G__LONGDOUBLEALLOC, G__Longdouble, item, output_var, result);
          break;
 #endif // G__OLDIMPLEMENTATION2191
       case 'g':
          // bool
          result.obj.i = G__int(result) ? 1 : 0;
 #ifdef G__BOOL4BYTE
-         G__alloc_var_ref<int>(G__INTALLOC, G__int, item, var, result);
+         G__alloc_var_ref<int>(G__INTALLOC, G__int, item, output_var, result);
 #else // G__BOOL4BYTE
-         G__alloc_var_ref<unsigned char>(G__CHARALLOC, G__int, item, var, result);
+         G__alloc_var_ref<unsigned char>(G__CHARALLOC, G__int, item, output_var, result);
 #endif // G__BOOL4BYTE
          break;
       case 'G':
          // bool pointer
 #ifdef G__BOOL4BYTE
-         G__alloc_var_ref<int>(G__INTALLOC, G__int, item, var, result);
+         G__alloc_var_ref<int>(G__INTALLOC, G__int, item, output_var, result);
 #else // G__BOOL4BYTE
-         G__alloc_var_ref<unsigned char>(G__CHARALLOC, G__int, item, var, result);
+         G__alloc_var_ref<unsigned char>(G__CHARALLOC, G__int, item, output_var, result);
 #endif // G__BOOL4BYTE
          break;
       case 'b':
          // unsigned char
-         G__alloc_var_ref<unsigned char>(G__CHARALLOC, G__int, item, var, result);
+         G__alloc_var_ref<unsigned char>(G__CHARALLOC, G__int, item, output_var, result);
          break;
       case 'B':
          // pointer to unsigned char
-         G__alloc_var_ref<unsigned char>(G__CHARALLOC, G__int, item, var, result);
+         G__alloc_var_ref<unsigned char>(G__CHARALLOC, G__int, item, output_var, result);
          break;
       case 's':
          // short int
-         G__alloc_var_ref<short>(G__SHORTALLOC, G__int, item, var, result);
+         G__alloc_var_ref<short>(G__SHORTALLOC, G__int, item, output_var, result);
          break;
       case 'S':
          // pointer to short int
-         G__alloc_var_ref<short>(G__SHORTALLOC, G__int, item, var, result);
+         G__alloc_var_ref<short>(G__SHORTALLOC, G__int, item, output_var, result);
          break;
       case 'r':
          // unsigned short int
-         G__alloc_var_ref<unsigned short>(G__SHORTALLOC, G__int, item, var, result);
+         G__alloc_var_ref<unsigned short>(G__SHORTALLOC, G__int, item, output_var, result);
          break;
       case 'R':
          // pointer to unsigned short int
-         G__alloc_var_ref<unsigned short>(G__SHORTALLOC, G__int, item, var, result);
+         G__alloc_var_ref<unsigned short>(G__SHORTALLOC, G__int, item, output_var, result);
          break;
       case 'i':
          // int
-         G__alloc_var_ref<int>(G__INTALLOC, G__int, item, var, result);
+         G__alloc_var_ref<int>(G__INTALLOC, G__int, item, output_var, result);
          break;
       case 'I':
          // pointer to int
-         G__alloc_var_ref<int>(G__INTALLOC, G__int, item, var, result);
+         G__alloc_var_ref<int>(G__INTALLOC, G__int, item, output_var, result);
          break;
       case 'h':
          // unsigned int
-         G__alloc_var_ref<unsigned int>(G__INTALLOC, G__int, item, var, result);
+         G__alloc_var_ref<unsigned int>(G__INTALLOC, G__int, item, output_var, result);
          break;
       case 'H':
          // pointer to unsigned int
-         G__alloc_var_ref<unsigned int>(G__INTALLOC, G__int, item, var, result);
+         G__alloc_var_ref<unsigned int>(G__INTALLOC, G__int, item, output_var, result);
          break;
       case 'l':
          // long int
-         G__alloc_var_ref<long>(G__LONGALLOC, G__int, item, var, result);
+         G__alloc_var_ref<long>(G__LONGALLOC, G__int, item, output_var, result);
          break;
       case 'L':
          // pointer to long int
-         G__alloc_var_ref<long>(G__LONGALLOC, G__int, item, var, result);
+         G__alloc_var_ref<long>(G__LONGALLOC, G__int, item, output_var, result);
          break;
       case 'k':
          // unsigned long int
-         G__alloc_var_ref<unsigned long>(G__LONGALLOC, G__int, item, var, result);
+         G__alloc_var_ref<unsigned long>(G__LONGALLOC, G__int, item, output_var, result);
          break;
       case 'K':
          // pointer to unsigned long int
-         G__alloc_var_ref<unsigned long>(G__LONGALLOC, G__int, item, var, result);
+         G__alloc_var_ref<unsigned long>(G__LONGALLOC, G__int, item, output_var, result);
          break;
       case 'f':
          // float
-         G__alloc_var_ref<float>(G__FLOATALLOC, G__double, item, var, result);
+         G__alloc_var_ref<float>(G__FLOATALLOC, G__double, item, output_var, result);
          break;
       case 'F':
          // pointer to float
-         G__alloc_var_ref<float>(G__FLOATALLOC, G__double, item, var, result);
+         G__alloc_var_ref<float>(G__FLOATALLOC, G__double, item, output_var, result);
          break;
       case 'd':
          // double
-         G__alloc_var_ref<double>(G__DOUBLEALLOC, G__double, item, var, result);
+         G__alloc_var_ref<double>(G__DOUBLEALLOC, G__double, item, output_var, result);
          break;
       case 'D':
          // pointer to double
-         G__alloc_var_ref<double>(G__DOUBLEALLOC, G__double, item, var, result);
+         G__alloc_var_ref<double>(G__DOUBLEALLOC, G__double, item, output_var, result);
          break;
       case 'e':
          // FILE
@@ -4713,12 +4755,12 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
       case 'm':
          // macro file position
 #endif // G__OLDIMPLEMENTATION2191
-         G__get_offset(var) = (char*) G__malloc(1, sizeof(std::fpos_t), item);
-         *((std::fpos_t*) G__get_offset(var)) = *((std::fpos_t*) result.obj.i);
+         G__get_offset(output_var) = (char*) G__malloc(1, sizeof(std::fpos_t), item);
+         *((std::fpos_t*) G__get_offset(output_var)) = *((std::fpos_t*) result.obj.i);
          break;
       case 'a':
          // pointer to member function
-         G__get_offset(var) = (char*) G__malloc(num_elements ? num_elements : 1, G__P2MFALLOC, item);
+         G__get_offset(output_var) = (char*) G__malloc(num_elements ? num_elements : 1, G__P2MFALLOC, item);
          if (
             (G__asm_wholefunction == G__ASM_FUNC_NOP) &&
             !G__def_struct_member &&
@@ -4729,13 +4771,13 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
             // --
 #ifdef G__PTR2MEMFUNC
             if (G__get_type(G__value_typenum(result)) == 'C') {
-               *((long*) G__get_offset(var)) = result.obj.i;
+               *((long*) G__get_offset(output_var)) = result.obj.i;
             }
             else {
-               std::memcpy(G__get_offset(var), (void*) result.obj.i, G__P2MFALLOC);
+               std::memcpy(G__get_offset(output_var), (void*) result.obj.i, G__P2MFALLOC);
             }
 #else // G__PTR2MEMFUNC
-            std::memcpy(G__get_offset(var), (void*) result.obj.i, G__P2MFALLOC);
+            std::memcpy(G__get_offset(output_var), (void*) result.obj.i, G__P2MFALLOC);
 #endif // G__PTR2MEMFUNC
             // --
          }
@@ -4747,7 +4789,7 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
       case 'q':
          // function, ???Questionable???
 #endif // G__OLDIMPLEMENTATION2191
-         G__get_offset(var) = (char*) G__malloc(num_elements ? num_elements : 1, sizeof(long), item);
+         G__get_offset(output_var) = (char*) G__malloc(num_elements ? num_elements : 1, sizeof(long), item);
          break;
       default:
          //
@@ -4761,7 +4803,7 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
          //
          // If not macro definition, print out warning.
          if (!G__definemacro && (G__globalcomp == G__NOLINK)) {
-            if (G__get_tagnum(var.DeclaringScope()) != -1) {
+            if (G__get_tagnum(output_var.DeclaringScope()) != -1) {
                // -- We are a data member.
                if (G__dispmsg >= G__DISPWARN) {
                   G__fprinterr(G__serr, "Warning: Undeclared data member %s", item);
@@ -4773,7 +4815,7 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
                G__fprinterr(G__serr, "Error: Undeclared variable %s", item);
                G__genericerror(0);
             }
-            //var->type[ig15] = 'o';
+            //output_var->type[ig15] = 'o';
          }
          //--
          //--
@@ -4792,13 +4834,13 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
          if (G__isdouble(result)) {
             // 'P' macro double, 'O' auto double.
             //--
-            G__get_offset(var) = (char*) G__malloc(num_elements ? num_elements : 1, G__DOUBLEALLOC, item);
+            G__get_offset(output_var) = (char*) G__malloc(num_elements ? num_elements : 1, G__DOUBLEALLOC, item);
             if (
                (G__asm_wholefunction == G__ASM_FUNC_NOP) &&
                (!G__static_alloc || G__prerun) &&
                ((G__globalvarpointer == G__PVOID) || G__get_type(G__value_typenum(result)))
             ) {
-               *(((double*) G__get_offset(var)) + ((num_elements ? num_elements : 1) - 1)) = G__double(result);
+               *(((double*) G__get_offset(output_var)) + ((num_elements ? num_elements : 1) - 1)) = G__double(result);
             }
          }
          else {
@@ -4806,13 +4848,13 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
             //--
             //--
             //--
-            G__get_offset(var) = (char*) G__malloc(num_elements ? num_elements : 1, G__LONGALLOC, item);
+            G__get_offset(output_var) = (char*) G__malloc(num_elements ? num_elements : 1, G__LONGALLOC, item);
             if (
                (G__asm_wholefunction == G__ASM_FUNC_NOP) &&
                (!G__static_alloc || G__prerun) &&
                ((G__globalvarpointer == G__PVOID) || G__get_type(G__value_typenum(result)))
             ) {
-               *(((long*) G__get_offset(var)) + ((num_elements ? num_elements : 1) - 1)) = G__int(result);
+               *(((long*) G__get_offset(output_var)) + ((num_elements ? num_elements : 1) - 1)) = G__int(result);
             }
          }
          break;
@@ -4820,16 +4862,16 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
    //
    //  Security, check for unassigned internal pointer.
    //
-   //PSRXXXG__CHECK(G__SECURE_POINTER_INIT, !G__def_struct_member && std::isupper(G__var_type) && (G__ASM_FUNC_NOP == G__asm_wholefunction) && G__get_offset(var) && (0 == (*((long*) G__get_offset(var)))), *((long*) G__get_offset(var)) = 0);
+   //PSRXXXG__CHECK(G__SECURE_POINTER_INIT, !G__def_struct_member && std::isupper(G__var_type) && (G__ASM_FUNC_NOP == G__asm_wholefunction) && G__get_offset(output_var) && (0 == (*((long*) G__get_offset(output_var)))), *((long*) G__get_offset(output_var)) = 0);
    if (G__security & G__SECURE_POINTER_INIT) {
       if (G__security_handle(G__SECURE_POINTER_INIT)) {
          if (!G__def_struct_member) {
             if (isupper(G__var_type)) {
                if (G__asm_wholefunction == G__ASM_FUNC_NOP) {
                   if (G__asm_wholefunction == G__ASM_FUNC_NOP) {
-                     if (G__get_offset(var)) {
-                        if (!(*((long*) G__get_offset(var)))) {
-                           *((long*) G__get_offset(var)) = 0;
+                     if (G__get_offset(output_var)) {
+                        if (!(*((long*) G__get_offset(output_var)))) {
+                           *((long*) G__get_offset(output_var)) = 0;
                         }
                      }
                   }
@@ -4847,10 +4889,10 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
       !G__def_struct_member &&
       !G__no_exec_compile &&
       std::isupper(G__var_type) &&
-      G__get_offset(var) &&
-      (*((long*) G__get_offset(var)))
+      G__get_offset(output_var) &&
+      (*((long*) G__get_offset(output_var)))
    ) {
-      G__add_refcount((void*) (*((long*) G__get_offset(var))), (void**) G__get_offset(var));
+      G__add_refcount((void*) (*((long*) G__get_offset(output_var))), (void**) G__get_offset(output_var));
    }
 #endif // G__SECURITY
    //
@@ -4871,12 +4913,12 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
    if (
       // -- Not running, is a public data member, and is the special virtual offset member.
       G__prerun && // not running
-      (G__get_tagnum(var.DeclaringScope()) != -1) && // data member
+      (G__get_tagnum(output_var.DeclaringScope()) != -1) && // data member
       (G__access == G__PUBLIC) && // public access
       (varname == "G__virtualinfo") // special virtual offset variable
    ) {
       // -- Copy the virtual offset data member value to the class metadata.
-      G__struct.virtual_offset[G__get_tagnum(var.DeclaringScope())] = G__get_offset(var);
+      G__struct.virtual_offset[G__get_tagnum(output_var.DeclaringScope())] = G__get_offset(output_var);
    }
    return result;
 }
@@ -4884,7 +4926,11 @@ static G__value Cint::Internal::G__allocvariable(G__value result, G__value para[
 #undef G__ALLOC_VAR_REF
 
 //______________________________________________________________________________
+#ifdef G__ASM_DBG
 static int Cint::Internal::G__asm_gen_stvar(long arg_G__struct_offset, const ::Reflex::Member& var, int paran, const char* item, long store_struct_offset, int var_type, G__value* /*presult*/)
+#else
+static int Cint::Internal::G__asm_gen_stvar(long arg_G__struct_offset, const ::Reflex::Member& var, int paran, const char* /* item */, long store_struct_offset, int var_type, G__value* /*presult*/)
+#endif
 {
    // -- FIXME: Describe me!
    ::Reflex::Type type(var.TypeOf().FinalType());
@@ -4992,7 +5038,7 @@ static int Cint::Internal::G__asm_gen_stvar(long arg_G__struct_offset, const ::R
 
 //--
 template<class CASTTYPE, class CONVFUNC>
-inline void G__get_var(int SIZE, CONVFUNC f, char TYPE, char PTYPE, char* item, ::Reflex::Member& variable, char* local_G__struct_offset, int paran, int linear_index, G__value* result)
+inline void G__get_var(int SIZE, CONVFUNC f, char TYPE, char PTYPE, const char* item, ::Reflex::Member& variable, char* local_G__struct_offset, int paran, int linear_index, G__value* result)
 {
    switch (G__var_type) {
       case 'p':
@@ -5211,7 +5257,6 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
    char* local_G__struct_offset = 0;
    char store_var_type = '\0';
    int varhash = 0;
-   char* address = 0;
    struct G__input_file store_ifile;
    int store_vartype = 0;
    char* store_struct_offset = 0;
@@ -5265,13 +5310,13 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
             (item[lenitem-1] == '+') ||
             (item[lenitem-1] == '-')
          ) {
-            int store_var_type = G__var_type;
+            int local_store_var_type = G__var_type;
             G__var_type = 'p';
             *known = 1;
             G__value tmpval = G__getexpr(item + 1);
             G__value v = G__tovalue(tmpval);
-            if (store_var_type != 'p') {
-               v = G__toXvalue(v, store_var_type);
+            if (local_store_var_type != 'p') {
+               v = G__toXvalue(v, local_store_var_type);
             }
             return v;
          }
@@ -5782,13 +5827,13 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
             if (G__get_reftype(variable.TypeOf()) > G__PARAREFERENCE) {
                varparan += (G__get_reftype(variable.TypeOf()) % G__PARAREF) - G__PARAP2P + 1;
             }
-            int ig25 = 0;
-            for (; (ig25 < paran) && (ig25 < varparan); ++ig25) {}
-            while ((ig25 < paran) && G__get_varlabel(variable.TypeOf(), ig25 + 4)) {
-               ++ig25;
+            int nelem = 0;
+            for (; (nelem < paran) && (nelem < varparan); ++nelem) {}
+            while ((nelem < paran) && G__get_varlabel(variable.TypeOf(), nelem + 4)) {
+               ++nelem;
             }
-            if (ig25 < paran) {
-               G__tryindexopr(&result, para, paran, ig25);
+            if (nelem < paran) {
+               G__tryindexopr(&result, para, paran, nelem);
             }
          }
          return result;
@@ -5809,7 +5854,7 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
                (
                   !variable.DeclaringScope().IsTopScope() &&
                   variable.DeclaringScope().IsNamespace() &&
-                  (variable.DeclaringScope().Name()[variable.DeclaringScope().Name().size()-1] != '$') // not function local scope.
+                  (variable.DeclaringScope().Name_c_str()[strlen(variable.DeclaringScope().Name_c_str())-1] != '$') // not function local scope.
                )
             )
          )
@@ -5896,7 +5941,7 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
       G__CHECK(G__SECURE_POINTER_REFERENCE, (isupper(G__get_type(variable.TypeOf()) && (G__get_type(variable.TypeOf()) != 'E')) || (G__get_paran(variable) > paran)), return(G__null));
       // Get bit-field value.
       if (G__get_bitfield_width(variable) && 'p' == G__var_type) {
-         address = local_G__struct_offset + (size_t) G__get_offset(variable);
+         char *address = local_G__struct_offset + (size_t) G__get_offset(variable);
          int original = *((int*) address);
          int mask = (1 << G__get_bitfield_width(variable)) - 1;
          int finalval = (original >> G__get_bitfield_start(variable)) & mask;
@@ -5914,7 +5959,7 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
       //
       //  Note: We return here if we are not a pointer variable.
       int type_code = G__get_type(variable.TypeOf());
-      if (variable.Name()[0] == '$') { // Hack ROOT specials, we really need to give these guys their own type.
+      if (variable.Name_c_str()[0] == '$') { // Hack ROOT specials, we really need to give these guys their own type.
          type_code = 'Z';
       }
       switch (type_code) {
@@ -6125,7 +6170,7 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
                      char *refopr = refopr_sb;
                      char* store_struct_offsetX = G__store_struct_offset;
                      ::Reflex::Scope store_tagnumX = G__tagnum;
-                     int done = 0;
+                     int local_done = 0;
                      int store_asm_exec = G__asm_exec;
                      int store_asm_noverflow = G__asm_noverflow;
                      G__asm_exec = 0;
@@ -6133,12 +6178,12 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
                      G__store_struct_offset = local_G__struct_offset + ((size_t) G__get_offset(variable)) + (linear_index * variable.TypeOf().RawType().SizeOf());
                      G__set_G__tagnum(variable.TypeOf());
                      strcpy(refopr, "operator*()");
-                     result = G__getfunction(refopr, &done, G__TRYMEMFUNC);
+                     result = G__getfunction(refopr, &local_done, G__TRYMEMFUNC);
                      G__asm_exec = store_asm_exec;
                      G__asm_noverflow = store_asm_noverflow;
                      G__tagnum = store_tagnumX;
                      G__store_struct_offset = store_struct_offsetX;
-                     if (!done) {
+                     if (!local_done) {
                         G__reference_error(item);
                      }
                   }
@@ -6242,7 +6287,7 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
                         // MyType* p;  MyType v = p[x];
                         // MyType* p[a];  MyType v = p[x][y];
                         // MyType** p[a];  MyType* v = p[x][y];
-                        address = local_G__struct_offset + ((size_t) G__get_offset(variable)) + (linear_index * G__LONGALLOC);
+                        char *address = local_G__struct_offset + ((size_t) G__get_offset(variable)) + (linear_index * G__LONGALLOC);
                         if (G__get_reftype(variable.TypeOf()) == G__PARANORMAL) {
                            // MyType* p;  MyType v = p[x];
                            // MyType* p[a];  MyType v = p[x][y];
@@ -6401,11 +6446,11 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
             // root special
             if (G__GetSpecialObject) {
                store_var_type = G__var_type;
-               if (variable.Name()[0] == '$') { // FIXME: I assume the name is not the empty string!
-                  result = (*G__GetSpecialObject)(const_cast<char*>(variable.Name().c_str() + 1), (void**)G__get_offset(variable), (void**)(G__get_offset(variable) + G__LONGALLOC));
+               if (variable.Name_c_str()[0] == '$') { // FIXME: I assume the name is not the empty string!
+                  result = (*G__GetSpecialObject)(const_cast<char*>(variable.Name_c_str() + 1), (void**)G__get_offset(variable), (void**)(G__get_offset(variable) + G__LONGALLOC));
                }
                else {
-                  result = (*G__GetSpecialObject)(const_cast<char*>(variable.Name().c_str()), (void**)G__get_offset(variable), (void**)(G__get_offset(variable) + G__LONGALLOC));
+                  result = (*G__GetSpecialObject)(const_cast<char*>(variable.Name_c_str()), (void**)G__get_offset(variable), (void**)(G__get_offset(variable) + G__LONGALLOC));
                }
                // G__var_type was stored in store_var_type just before the
                // call to G__GetSpecialObject which might have recursive
@@ -6416,15 +6461,15 @@ G__value Cint::Internal::G__getvariable(char* item, int* known, const ::Reflex::
                   *known = 0;
                }
                else { // We got something, change the result type.
-                  Reflex::Scope varscope = variable.DeclaringScope();
-                  std::string name = variable.Name();
+                  Reflex::Scope local_varscope = variable.DeclaringScope();
+                  std::string name = variable.Name();  // Need to cache the name in a string (the storage might go away with the call to RemoveDataMember)
                   char* offset = G__get_offset(variable);
                   G__RflxVarProperties* prop = G__get_properties(variable);
-                  varscope.RemoveDataMember(variable);
+                  local_varscope.RemoveDataMember(variable);
                   if (G__var_type == 'v') {
                      G__value_typenum(result) = G__deref(G__value_typenum(result));
                   }
-                  variable = G__add_scopemember(varscope, name.c_str(), G__value_typenum(result), 0, (size_t)offset, offset, G__PUBLIC, prop->statictype);
+                  variable = G__add_scopemember(local_varscope, name.c_str(), G__value_typenum(result), 0, 0, offset, G__PUBLIC, prop->statictype);
                   *G__get_properties(variable) = *prop; // Overwrite the new properties with the previous ones.
                }
                switch (G__var_type) {
@@ -6778,7 +6823,7 @@ G__value Cint::Internal::G__getstructmem(int store_var_type, char* varname, char
       (G__get_type(G__value_typenum(result)) == 'u') &&
       (objptr == 2) &&
       G__value_typenum(result).IsClass() &&
-      !strncmp(G__value_typenum(result).RawType().Name().c_str(), "auto_ptr<", 9)
+      !strncmp(G__value_typenum(result).RawType().Name_c_str(), "auto_ptr<", 9)
    ) {
       int knownx = 0;
       char comm[20];
@@ -6918,7 +6963,7 @@ G__value Cint::Internal::G__getstructmem(int store_var_type, char* varname, char
 }
 
 //______________________________________________________________________________
-int Cint::Internal::G__getthis(G__value* result7, char* varname, char* item)
+int Cint::Internal::G__getthis(G__value* result7, const char* varname, const char* item)
 {
    // -- FIXME: Describe me!
    if (G__exec_memberfunc && !strcmp(varname, "this")) {
@@ -7058,7 +7103,7 @@ void Cint::Internal::G__returnvartype(G__value* presult, const ::Reflex::Member&
    int ilg = 0;
    int in_memfunc = 0;
 #ifdef G__NEWINHERIT
-   int basen;
+   size_t basen;
    int isbase;
    int accesslimit;
    int memfunc_or_friend = 0;
@@ -7149,7 +7194,6 @@ void Cint::Internal::G__returnvartype(G__value* presult, const ::Reflex::Member&
          basen = 0;
       }
       // Search for variable name and access rule match. 
-      const Reflex::Type ZType = Reflex::Type::ByName("codeBreak$");
       do {
          next_base:
          ::Reflex::Member var = varscope.DataMemberByName(varname);
@@ -7179,24 +7223,24 @@ void Cint::Internal::G__returnvartype(G__value* presult, const ::Reflex::Member&
          //--
          // Next base class if searching for class member.
          if (isbase) {
-            while (baseclass && (basen < baseclass->basen)) {
+            while (baseclass && (basen < baseclass->vec.size())) {
                if (memfunc_or_friend) {
                   if (
-                     (baseclass->baseaccess[basen] & G__PUBLIC_PROTECTED) ||
-                     (baseclass->property[basen] & G__ISDIRECTINHERIT)
+                     (baseclass->vec[basen].baseaccess & G__PUBLIC_PROTECTED) ||
+                     (baseclass->vec[basen].property & G__ISDIRECTINHERIT)
                   ) {
                      accesslimit = G__PUBLIC_PROTECTED;
-                     G__incsetup_memvar(baseclass->basetagnum[basen]);
-                     varscope = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
+                     G__incsetup_memvar(baseclass->vec[basen].basetagnum);
+                     varscope = G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum);
                      ++basen;
                      goto next_base;
                   }
                }
                else {
-                  if (baseclass->baseaccess[basen] & G__PUBLIC) {
+                  if (baseclass->vec[basen].baseaccess & G__PUBLIC) {
                      accesslimit = G__PUBLIC;
-                     G__incsetup_memvar(baseclass->basetagnum[basen]);
-                     varscope = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
+                     G__incsetup_memvar(baseclass->vec[basen].basetagnum);
+                     varscope = G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum);
                      ++basen;
                      goto next_base;
                   }
@@ -7298,7 +7342,7 @@ void Cint::Internal::G__get_stack_varname(std::string& output, const char* varna
    int in_memfunc = 0;
    char* scope_struct_offset = 0;
    ::Reflex::Scope scope_tagnum;
-   int basen = 0;
+   size_t basen = 0;
    int isbase = 0;
    int accesslimit = 0;
    int memfunc_or_friend = 0;
@@ -7311,7 +7355,7 @@ void Cint::Internal::G__get_stack_varname(std::string& output, const char* varna
    varname.reserve(2 * strlen(varname_in));
    varname = (char*) varname_in;
 #ifdef G__ROOT
-   if ((varname[0] == '$') && G__GetSpecialObject && (G__GetSpecialObject != G__getreserved)) {
+   if ((varname[0] == '$') && G__GetSpecialObject && (G__GetSpecialObject != (G__value(*)(char*, void**, void**))G__getreserved)) {
       //varname = ((char*) varname_in) + 1;
       //--
       //--
@@ -7330,7 +7374,7 @@ void Cint::Internal::G__get_stack_varname(std::string& output, const char* varna
       scope_tagnum = G__tagnum;
    }
    int intScopeTagnum = G__get_tagnum(scope_tagnum);
-   switch (G__scopeoperator((char*) varname.c_str(), &varhash, &scope_struct_offset, &intScopeTagnum)) {
+   switch (G__scopeoperator(/*FIXME*/(char*) varname.c_str(), &varhash, &scope_struct_offset, &intScopeTagnum)) {
       case G__GLOBALSCOPE:
          ilg = G__GLOBAL;
          break;
@@ -7426,14 +7470,15 @@ void Cint::Internal::G__get_stack_varname(std::string& output, const char* varna
          }
       }
       // Search for variable name and access rule match.
-      const Reflex::Type ZType = ::Reflex::PointerBuilder(Reflex::Type::ByName("codeBreak$"));
       do {
          next_base:
          ig15 = 0;
-         for (::Reflex::Member_Iterator iter = var.DataMember_Begin(); iter != var.DataMember_End(); ++iter, ++ig15) {
-            if (*iter && !strcmp(iter->Name().c_str(), varname.c_str())) { // Names match
+         const ::Reflex::Member_Iterator end( var.DataMember_End() );
+         for (::Reflex::Member_Iterator iter = var.DataMember_Begin(); iter != end; ++iter, ++ig15) {
+            assert( (bool)(*iter) );
+            const char *mname = iter->Name_c_str();
+            if (mname[0]==varname[0] && 0==strcmp(mname, varname.c_str())) { // Names match
                if (
-                  //iter->TypeOf() != ZType && // This is to exclude the 'Z' type coming from a SpecialObject lookup
                   (
                    (G__get_properties(*iter)->statictype < 0) || // Not file scope, or
                     G__filescopeaccess(G__ifile.filenum, G__get_properties(*iter)->filenum) // File scope access match.
@@ -7458,43 +7503,43 @@ void Cint::Internal::G__get_stack_varname(std::string& output, const char* varna
             isbase = 0;
          }
          if (isbase) {
-            while (baseclass && (basen < baseclass->basen)) {
+            while (baseclass && (basen < baseclass->vec.size())) {
                if (memfunc_or_friend) {
                   if (
-                     (baseclass->baseaccess[basen] & G__PUBLIC_PROTECTED) ||
-                     (baseclass->property[basen] & G__ISDIRECTINHERIT)
+                     (baseclass->vec[basen].baseaccess & G__PUBLIC_PROTECTED) ||
+                     (baseclass->vec[basen].property & G__ISDIRECTINHERIT)
                   ) {
                      accesslimit = G__PUBLIC_PROTECTED;
-                     G__incsetup_memvar(baseclass->basetagnum[basen]);
-                     var = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
+                     G__incsetup_memvar(baseclass->vec[basen].basetagnum);
+                     var = G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum);
 #ifdef G__VIRTUALBASE
-                     if (baseclass->property[basen] & G__ISVIRTUALBASE) {
+                     if (baseclass->vec[basen].property & G__ISVIRTUALBASE) {
                         *pG__struct_offset = *pstore_struct_offset + G__getvirtualbaseoffset(*pstore_struct_offset, G__get_tagnum(scope_tagnum), baseclass, basen);
                      }
                      else {
-                        *pG__struct_offset = *pstore_struct_offset + (size_t) baseclass->baseoffset[basen];
+                        *pG__struct_offset = *pstore_struct_offset + (size_t) baseclass->vec[basen].baseoffset;
                      }
 #else // G__VIRTUALBASE
-                     *pG__struct_offset = *pstore_struct_offset + (size_t) baseclass->baseoffset[basen];
+                     *pG__struct_offset = *pstore_struct_offset + (size_t) baseclass->vec[basen].baseoffset;
 #endif // G__VIRTUALBASE
                      ++basen;
                      goto next_base;
                   }
                }
                else {
-                  if (baseclass->baseaccess[basen] & G__PUBLIC) {
+                  if (baseclass->vec[basen].baseaccess & G__PUBLIC) {
                      accesslimit = G__PUBLIC;
-                     G__incsetup_memvar(baseclass->basetagnum[basen]);
-                     var = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
+                     G__incsetup_memvar(baseclass->vec[basen].basetagnum);
+                     var = G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum);
 #ifdef G__VIRTUALBASE
-                     if (baseclass->property[basen] & G__ISVIRTUALBASE) {
+                     if (baseclass->vec[basen].property & G__ISVIRTUALBASE) {
                         *pG__struct_offset = *pstore_struct_offset + G__getvirtualbaseoffset(*pstore_struct_offset, G__get_tagnum(scope_tagnum), baseclass, basen);
                      }
                      else {
-                        *pG__struct_offset = *pstore_struct_offset + (size_t) baseclass->baseoffset[basen];
+                        *pG__struct_offset = *pstore_struct_offset + (size_t) baseclass->vec[basen].baseoffset;
                      }
 #else // G__VIRTUALBASE
-                     *pG__struct_offset = *pstore_struct_offset + (size_t) baseclass->baseoffset[basen];
+                     *pG__struct_offset = *pstore_struct_offset + (size_t) baseclass->vec[basen].baseoffset;
 #endif // G__VIRTUALBASE
                      ++basen;
                      goto next_base;
@@ -7529,10 +7574,11 @@ void Cint::Internal::G__get_stack_varname(std::string& output, const char* varna
       G__var_type = 'Z';
       G__value para[1];
       std::string final_varname = varname;
-      G__allocvariable(G__null, para, varglobal, ::Reflex::Scope(), 0, varhash, varname.c_str(), final_varname, 0);
+      Reflex::Member m;
+      G__allocvariable(G__null, para, varglobal, ::Reflex::Scope(), 0, varhash, varname.c_str(), final_varname, 0, m);
       G__var_type = store_var_type;
       G__p_local = store_local;
-      ::Reflex::Member m = G__find_variable(final_varname.c_str(), varhash, varlocal, varglobal, pG__struct_offset, pstore_struct_offset, pig15, isdecl);
+      // ::Reflex::Member m = G__find_variable(final_varname.c_str(), varhash, varlocal, varglobal, pG__struct_offset, pstore_struct_offset, pig15, isdecl);
       if (m) {
          G__gettingspecial = 0;
          return m;
@@ -7833,7 +7879,7 @@ extern "C" int G__deletevariable(const char* varname)
             store_tagnum = G__tagnum;
             G__store_struct_offset = G__get_offset(var);
             G__set_G__tagnum(var.TypeOf());
-            temp += var.Name();
+            temp += var.Name_c_str();
             temp += "()";
             // Destruction of array.
             if (G__struct.iscpplink[G__get_tagnum(G__tagnum)] == G__CPPLINK) {
@@ -7848,13 +7894,13 @@ extern "C" int G__deletevariable(const char* varname)
             }
             else {
                int size = G__struct.size[G__get_tagnum(G__tagnum)];
-               int i = G__get_varlabel(var.TypeOf(), 1) /* number of elements */;
-               if (!i) {
-                  i = 1;
+               int nelem = G__get_varlabel(var.TypeOf(), 1) /* number of elements */;
+               if (!nelem) {
+                  nelem = 1;
                }
-               --i;
-               for (; i >= 0; --i) {
-                  G__store_struct_offset = G__get_offset(var) + (i * size);
+               --nelem;
+               for (; nelem >= 0; --nelem) {
+                  G__store_struct_offset = G__get_offset(var) + (nelem * size);
                   if (G__dispsource) {
                      G__fprinterr(G__serr, "\n0x%lx.%s", G__store_struct_offset, temp.c_str());
                   }

@@ -29,6 +29,7 @@
 #  include "XrdSys/XrdSysLogger.hh"
 #endif
 #include "XrdSys/XrdSysPriv.hh"
+#include "XrdOuc/XrdOucStream.hh"
 
 #include "XrdVersion.hh"
 #include "Xrd/XrdBuffer.hh"
@@ -36,12 +37,14 @@
 
 #include "XrdProofdClient.h"
 #include "XrdProofdClientMgr.h"
+#include "XrdProofdConfig.h"
 #include "XrdProofdManager.h"
 #include "XrdProofdPriorityMgr.h"
 #include "XrdProofdProofServMgr.h"
 #include "XrdProofdProtocol.h"
 #include "XrdProofdResponse.h"
 #include "XrdProofdProofServ.h"
+#include "XrdProofSched.h"
 
 // Tracing utils
 #include "XrdProofdTrace.h"
@@ -108,6 +111,58 @@ typedef struct {
    kXR_int32 styp;
 } hs_response_t;
 
+//
+// Derivation of XrdProofdConfig to read the port from the config file
+class XrdProofdProtCfg : public XrdProofdConfig {
+public:
+   int  fPort; // The port on which we listen
+   XrdProofdProtCfg(const char *cfg, XrdSysError *edest = 0);
+   int  DoDirective(XrdProofdDirective *, char *, XrdOucStream *, bool);
+   void RegisterDirectives();
+};
+
+//__________________________________________________________________________
+XrdProofdProtCfg::XrdProofdProtCfg(const char *cfg, XrdSysError *edest)
+                 : XrdProofdConfig(cfg, edest)
+{
+   // Constructor
+
+   fPort = -1;
+   RegisterDirectives();
+}
+
+//__________________________________________________________________________
+void XrdProofdProtCfg::RegisterDirectives()
+{
+   // Register directives for configuration
+
+   Register("port", new XrdProofdDirective("port", this, &DoDirectiveClass));
+   Register("xrd.protocol", new XrdProofdDirective("xrd.protocol", this, &DoDirectiveClass));
+}
+
+//______________________________________________________________________________
+int XrdProofdProtCfg::DoDirective(XrdProofdDirective *d,
+                                  char *val, XrdOucStream *cfg, bool)
+{
+   // Parse directives
+
+   if (!d) return -1;
+
+   XrdOucString port(val);
+   if (d->fName == "xrd.protocol") {
+      port = cfg->GetToken();
+      port.replace("xproofd:", "");
+   } else if (d->fName != "port") {
+      return -1;
+   }
+   if (port.length() > 0) {
+      fPort = strtol(port.c_str(), 0, 10);
+   }
+   fPort = (fPort < 0) ? XPD_DEF_PORT : fPort;
+   return 0;
+}
+
+
 extern "C" {
 //_________________________________________________________________________________
 XrdProtocol *XrdgetProtocol(const char *, char *parms, XrdProtocol_Config *pi)
@@ -130,8 +185,18 @@ int XrdgetProtocolPort(const char * /*pname*/, char * /*parms*/, XrdProtocol_Con
       // This function is called early on to determine the port we need to use. The
       // The default is ostensibly 1093 but can be overidden; which we allow.
 
+      XrdProofdProtCfg pcfg(pi->ConfigFN, pi->eDest);
+      pcfg.Config(0);
+
       // Default XPD_DEF_PORT (1093)
-      int port = (pi && pi->Port > 0) ? pi->Port : XPD_DEF_PORT;
+      int port = XPD_DEF_PORT;
+
+      if (pcfg.fPort > 0) {
+         port = pcfg.fPort;
+      } else {
+         port = (pi && pi->Port > 0) ? pi->Port : XPD_DEF_PORT;
+      }
+
       return port;
 }}
 
@@ -174,7 +239,7 @@ XrdProofdResponse *XrdProofdProtocol::GetNewResponse(kXR_unt16 sid)
    XPDLOC(ALL, "Protocol::GetNewResponse")
 
    XrdOucString msg;
-   msg.form("sid: %d", sid);
+   XPDFORM(msg, "sid: %d", sid);
    if (sid > 0) {
       if (sid > fResponses.size()) {
          if (sid > fResponses.capacity()) {
@@ -350,13 +415,10 @@ int XrdProofdProtocol::Configure(char *, XrdProtocol_Config *pi)
    if (!getuid()) XrdSysPriv::ChangePerm((uid_t)0, (gid_t)0);
 
    // Process the config file for directives meaningful to us
-   if (pi->ConfigFN) {
-      // Create and Configure the manager
-      fgMgr = new XrdProofdManager(pi, &fgEDest);
-      if (fgMgr->Config(0))
-         return 0;
-   }
-   mp.form("global manager created");
+   // Create and Configure the manager
+   fgMgr = new XrdProofdManager(pi, &fgEDest);
+   if (fgMgr->Config(0)) return 0;
+   mp = "global manager created";
    TRACE(ALL, mp);
 
    // Issue herald indicating we configured successfully
@@ -504,10 +566,10 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
 
    // Document the disconnect
    if (fPClient)
-      buf.form("user %s disconnected; type: %s", fPClient->User(),
-               srvtype[fConnType+1]);
+      XPDFORM(buf, "user %s disconnected; type: %s", fPClient->User(),
+                   srvtype[fConnType+1]);
    else
-      buf.form("user disconnected; type: %s", srvtype[fConnType+1]);
+      XPDFORM(buf, "user disconnected; type: %s", srvtype[fConnType+1]);
    TRACEP(this, LOGIN, buf);
 
    // If we have a buffer, release it
@@ -527,7 +589,7 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
          // Signal the client manager that a client has just gone
          if (fgMgr && fgMgr->ClientMgr()) {
             TRACE(HDBG, "fAdminPath: "<<fAdminPath);
-            buf.form("%s %p %d %d", fAdminPath.c_str(), pmgr, fCID, fPid);
+            XPDFORM(buf, "%s %p %d %d", fAdminPath.c_str(), pmgr, fCID, fPid);
             TRACE(DBG, "sending to ClientMgr: "<<buf);
             fgMgr->ClientMgr()->Pipe()->Post(XrdProofdClientMgr::kClientDisconnect, buf.c_str());
          }
@@ -657,12 +719,12 @@ int XrdProofdProtocol::SendData(XrdProofdProofServ *xps,
       // Send
       if (sid > -1) {
          if (TRACING(HDBG))
-            msg.form("EXT: server ID: %d, sending: %d bytes", sid, quantum);
+            XPDFORM(msg, "EXT: server ID: %d, sending: %d bytes", sid, quantum);
          if (!response || response->Send(kXR_attn, kXPD_msgsid, sid,
                                          argp->buff, quantum) != 0) {
             { XrdSysMutexHelper mh(fgBMutex); fgBPool->Release(argp); }
-            msg.form("EXT: server ID: %d, problems sending: %d bytes to server",
-                     sid, quantum);
+            XPDFORM(msg, "EXT: server ID: %d, problems sending: %d bytes to server",
+                         sid, quantum);
             TRACEP(this, XERR, msg);
             return 0;
          }
@@ -671,11 +733,11 @@ int XrdProofdProtocol::SendData(XrdProofdProofServ *xps,
          // Get ID of the client
          int cid = ntohl(fRequest.sendrcv.cid);
          if (TRACING(HDBG))
-            msg.form("INT: client ID: %d, sending: %d bytes", cid, quantum);
+            XPDFORM(msg, "INT: client ID: %d, sending: %d bytes", cid, quantum);
          if (xps->SendData(cid, argp->buff, quantum) != 0) {
             { XrdSysMutexHelper mh(fgBMutex); fgBPool->Release(argp); }
-            msg.form("INT: client ID: %d, problems sending: %d bytes to client",
-                     cid, quantum);
+            XPDFORM(msg, "INT: client ID: %d, problems sending: %d bytes to client",
+                         cid, quantum);
             TRACEP(this, XERR, msg);
             return 0;
          }
@@ -751,8 +813,8 @@ int XrdProofdProtocol::SendMsg()
    // Handle a request to forward a message to another process
    XPDLOC(ALL, "Protocol::SendMsg")
 
-   static const char *crecv[4] = {"master proofserv", "top master",
-                                  "client", "undefined"};
+   static const char *crecv[5] = {"master proofserv", "top master",
+                                  "client", "undefined", "any"};
    int rc = 0;
 
    XPD_SETRESP(this, "SendMsg");
@@ -765,7 +827,7 @@ int XrdProofdProtocol::SendMsg()
    // Find server session
    XrdProofdProofServ *xps = 0;
    if (!fPClient || !(xps = fPClient->GetServer(psid))) {
-      msg.form("%s: session ID not found: %d", (Internal() ? "INT" : "EXT"), psid);
+      XPDFORM(msg, "%s: session ID not found: %d", (Internal() ? "INT" : "EXT"), psid);
       TRACEP(this, XERR, msg.c_str());
       response->Send(kXR_InvalidRequest, msg.c_str());
       return 0;
@@ -777,16 +839,9 @@ int XrdProofdProtocol::SendMsg()
    if (!Internal()) {
 
       // Notify
-      msg.form("EXT: sending %d bytes to proofserv (psid: %d, xps: %p, status: %d,"
-               " cid: %d)", len, psid, xps, xps->Status(), fCID);
+      XPDFORM(msg, "EXT: sending %d bytes to proofserv (psid: %d, xps: %p, status: %d,"
+                   " cid: %d)", len, psid, xps, xps->Status(), fCID);
       TRACEP(this, REQ, msg.c_str());
-
-      if (opt & kXPD_process) {
-         TRACEP(this, DBG, "EXT: setting proofserv in 'running' state");
-         xps->SetStatus(kXPD_running);
-         PostSession(1, fPClient->UI().fUser.c_str(),
-                        fPClient->UI().fGroup.c_str(), xps->SrvPID());
-      }
 
       // Send to proofsrv our client ID
       if (fCID == -1) {
@@ -806,8 +861,8 @@ int XrdProofdProtocol::SendMsg()
    } else {
 
       // Notify
-      msg.form("INT: sending %d bytes to client/master (psid: %d, xps: %p, status: %d)",
-               len, psid, xps, xps->Status());
+      XPDFORM(msg, "INT: sending %d bytes to client/master (psid: %d, xps: %p, status: %d)",
+                   len, psid, xps, xps->Status());
       TRACEP(this, REQ, msg.c_str());
 
       bool saveStartMsg = 0;
@@ -817,8 +872,7 @@ int XrdProofdProtocol::SendMsg()
          TRACEP(this, DBG, "INT: setting proofserv in 'idle' state");
          xps->SetStatus(kXPD_idle);
          PostSession(-1, fPClient->UI().fUser.c_str(),
-                         fPClient->UI().fGroup.c_str(), xps->SrvPID());
-
+                         fPClient->UI().fGroup.c_str(), xps);
       } else if (opt & kXPD_querynum) {
          TRACEP(this, DBG, "INT: got message with query number");
          // Save query num message for later clients
@@ -826,6 +880,8 @@ int XrdProofdProtocol::SendMsg()
       } else if (opt & kXPD_startprocess) {
          TRACEP(this, DBG, "INT: setting proofserv in 'running' state");
          xps->SetStatus(kXPD_running);
+         PostSession(1, fPClient->UI().fUser.c_str(),
+                        fPClient->UI().fGroup.c_str(), xps);
          // Save start processing message for later clients
          xps->DeleteStartMsg();
          saveStartMsg = 1;
@@ -860,7 +916,10 @@ int XrdProofdProtocol::SendMsg()
          xps->SetStartMsg(savedBuf);
 
       if (TRACING(DBG)) {
-         msg.form("INT: message sent to %s (%d bytes)", crecv[xps->SrvType()], len);
+         int ii = xps->SrvType();
+         if (ii > 3) ii = 3;
+         if (ii < 0) ii = 4;
+         XPDFORM(msg, "INT: message sent to %s (%d bytes)", crecv[ii], len);
          TRACEP(this, DBG, msg);
       }
       // Notify to proofsrv
@@ -970,8 +1029,8 @@ int XrdProofdProtocol::Interrupt()
       }
 
       XrdOucString msg;
-      msg.form("xps: %p, link ID: %s, proofsrv PID: %d",
-                xps, xps->Response()->TraceID(), xps->SrvPID());
+      XPDFORM(msg, "xps: %p, link ID: %s, proofsrv PID: %d",
+                   xps, xps->Response()->TraceID(), xps->SrvPID());
       TRACEP(this, DBG, msg.c_str());
 
       // Propagate the type as unsolicited
@@ -1100,21 +1159,36 @@ int XrdProofdProtocol::Ping()
 }
 
 //___________________________________________________________________________
-void XrdProofdProtocol::PostSession(int on, const char *u, const char *g, int pid)
+void XrdProofdProtocol::PostSession(int on, const char *u, const char *g,
+                                    XrdProofdProofServ *xps)
 {
    // Post change of session status
    XPDLOC(ALL, "Protocol::PostSession")
 
+   // Tell the priority manager
    if (fgMgr && fgMgr->PriorityMgr()) {
+      int pid = (xps) ? xps->SrvPID() : -1;
+      if (pid < 0) {
+         TRACE(XERR, "undefined session or process id");
+         return;
+      }
       XrdOucString buf;
-      buf.form("%d %s %s %d", on, u, g, pid);
+      XPDFORM(buf, "%d %s %s %d", on, u, g, pid);
 
       if (fgMgr->PriorityMgr()->Pipe()->Post(XrdProofdPriorityMgr::kChangeStatus,
                                              buf.c_str()) != 0) {
-         TRACE(XERR, "problem posting the pipe");
+         TRACE(XERR, "problem posting the prority manager pipe");
       }
    }
-
+   // Tell the scheduler
+   if (fgMgr && fgMgr->ProofSched()) {
+      if (on == -1 && xps && xps->SrvType() == kXPD_TopMaster) {
+         TRACE(DBG, "posting the scheduler pipe");
+         if (fgMgr->ProofSched()->Pipe()->Post(XrdProofSched::kReschedule, 0) != 0) {
+            TRACE(XERR, "problem posting the scheduler pipe");
+         }
+      }
+   }
    // Done
    return;
 }

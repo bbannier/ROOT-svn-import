@@ -115,7 +115,10 @@
 
 
 // Include files
+#include <stdlib.h>
+#include <string.h>
 #include <string>
+#include <cstring>
 #include <vector>
 #include <utility>
 #include <exception>
@@ -207,19 +210,24 @@ namespace Reflex {
    }
 
 
-   /** some general information about the Reflex package */
+   /** The Reflex instance ensures the setup of the databases
+       and provides access to some general information about the Reflex package */
    class RFLX_API Instance {
    public:
 
       /** default constructor */
-     Instance();
+      Instance();
 
       /** destructor */
       ~Instance();
 
    private:
-      void Shutdown();
+      Instance(Instance* createSingleton);
+      static Instance& CreateReflexInstance();
 
+      static Instance* fgSingleton;
+      void Shutdown();
+      /** default constructor */
    }; // struct Reflex
 
    /** the Name of the package - used for messages */
@@ -307,8 +315,43 @@ namespace Reflex {
       FUNCTIONMEMBER,
       UNRESOLVED
    };
+   
+   /** enum containing all possible 'representation' types */
+   enum REPRESTYPE {
+      REPRES_POINTER             = 'a' - 'A',  // To be added to the other value to refer to a pointer to
+      REPRES_CHAR                = 'c',
+      REPRES_SIGNED_CHAR         = 'c',
+      REPRES_SHORT_INT           = 's',
+      REPRES_INT                 = 'i',
+      REPRES_LONG_INT            = 'l',
+      REPRES_UNSIGNED_CHAR       = 'b',
+      REPRES_UNSIGNED_SHORT_INT  = 'r',
+      REPRES_UNSIGNED_INT        = 'h',
+      REPRES_UNSIGNED_LONG_INT   = 'k',
+      REPRES_BOOL                = 'g',
+      REPRES_FLOAT               = 'f',
+      REPRES_DOUBLE              = 'd',
+      REPRES_LONG_DOUBLE         = 'q',
+      REPRES_VOID                = 'y',
+      REPRES_LONGLONG            = 'n',
+      REPRES_ULONGLONG           = 'm',
+      REPRES_STRUCT              = 'u',
+      REPRES_CLASS               = 'u',
+      REPRES_ENUM                = 'i', // Intentionally equal to REPRES_INT
+      REPRES_NOTYPE              = '\0'
+      // '1' is also a value used (for legacy implementation of function pointer)
+      // 'E' is also a value used (for legacy implementation of FILE*)
+      // 'a', 'j', 'T', 'o', 'O', 'p', 'P', 'z', 'Z', '\011', '\001', 'w' are also a value used (for support of various interpreter types)
+   };
 
-
+   enum EMEMBERQUERY {
+      INHERITEDMEMBERS_DEFAULT, // NO by default, set to ALSO by UpdateMembers()
+      INHERITEDMEMBERS_NO,
+      INHERITEDMEMBERS_ALSO
+   };
+   
+   // Note TYPE and REPRESTYPE are 'small' enums and could be stored as 'char' to save space
+   
    /** the max unsigned int */
    size_t NPos();
 

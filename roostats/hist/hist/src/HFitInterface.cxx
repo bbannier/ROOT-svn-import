@@ -54,17 +54,47 @@ bool IsPointOutOfRange(const TF1 * func, const double * x) {
    return !func->IsInside(x);       
 }
 
-bool AdjustError(const DataOptions & option, double & error) {
+bool AdjustError(const DataOptions & option, double & error, double value = 1) {
    // adjust the given error according to the option
-   //  if false is returned bin must be skipped 
-   if (error <= 0 ) { 
-      if (option.fUseEmpty) 
-         error = 1.; // set error to 1 for empty bins 
-      else 
-         return false; 
-   }
-   if (option.fErrors1) error = 1;
+   // return false when point must be skipped.
+   // When point error = 0, the point is kept if the option UseEmpty is set or if 
+   // fErrors1 is set and the point value is not zero.
+   // The value should be used only for points representing counts (histograms), not for the graph. 
+   // In the graph points with zero errors are by default skipped indepentently of the value. 
+   // If one wants to keep the points, the option fUseEmpty must be set
+
+   if (error <= 0) { 
+      if (option.fUseEmpty || (option.fErrors1 && std::abs(value) > 0 ) ) 
+         error = 1.; // set error to 1 
+      else
+         return false;   // skip  bins with zero errors or empty
+   } else if (option.fErrors1) 
+      error = 1;   // set all error to 1 for non-empty bins
    return true; 
+}
+
+void ExamineRange(TAxis * axis, std::pair<double,double> range,int &hxfirst,int &hxlast) {
+   // examine the range given with the pair on the given histogram axis
+   // correct in case the bin values hxfirst hxlast
+   double xlow   = range.first; 
+   double xhigh  = range.second; 
+#ifdef DEBUG
+   std::cout << "xlow " << xlow << " xhigh = " << xhigh << std::endl;
+#endif
+   // ignore ranges specified outside histogram range
+   int ilow = axis->FindBin(xlow);
+   int ihigh = axis->FindBin(xhigh);
+   if (ilow > hxlast || ihigh < hxfirst) { 
+      Warning("ROOT::Fit::FillData","fit range is outside histogram range, no fit data for %s",axis->GetName()); 
+   } 
+   // consider only range defined with-in histogram not oustide. Always exclude underflow/overflow
+   hxfirst =  std::min( std::max( ilow, hxfirst), hxlast+1) ;
+   hxlast  =  std::max( std::min( ihigh, hxlast), hxfirst-1) ;
+   // exclude bins where range coverage is less than half bin width
+   if (hxfirst < hxlast) { 
+      if ( axis->GetBinCenter(hxfirst) < xlow)  hxfirst++;
+      if ( axis->GetBinCenter(hxlast)  > xhigh) hxlast--;
+   }
 }
 
 
@@ -103,40 +133,20 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
    // to check if inclusion/exclusion at end/point
    const DataRange & range = dv.Range(); 
    if (range.Size(0) != 0) { 
-      double xlow   = range(0).first; 
-      double xhigh  = range(0).second; 
-#ifdef DEBUG
-      std::cout << "xlow " << xlow << " xhigh = " << xhigh << std::endl;
-#endif
-      // consider only range defined with-in histogram not oustide. Always exclude underflow/overflow
-      hxfirst =  std::max( hfit->GetXaxis()->FindBin(xlow), hxfirst);
-      hxlast  =  std::min( hfit->GetXaxis()->FindBin(xhigh), hxlast);
-      // exclude bins where range coverage is almsler than half bin width
-      if ( hfit->GetXaxis()->GetBinCenter(hxfirst) < xlow)  hxfirst++;
-      if ( hfit->GetXaxis()->GetBinCenter(hxlast)  > xhigh) hxlast--;
+      HFitInterface::ExamineRange( hfit->GetXaxis(), range(0), hxfirst, hxlast); 
       if (range.Size(0) > 1  ) { 
          Warning("ROOT::Fit::FillData","support only one range interval for X coordinate"); 
       }
    }
-
+         
    if (hfit->GetDimension() > 1 && range.Size(1) != 0) { 
-      double ylow   = range(1).first; 
-      double yhigh  = range(1).second; 
-      hyfirst =  std::max( hfit->GetYaxis()->FindBin(ylow), hyfirst);
-      hylast  =  std::min( hfit->GetYaxis()->FindBin(yhigh), hylast);
-      if ( hfit->GetYaxis()->GetBinCenter(hyfirst) < ylow)  hyfirst++;
-      if ( hfit->GetYaxis()->GetBinCenter(hylast)  > yhigh) hylast--;
+      HFitInterface::ExamineRange( hfit->GetYaxis(), range(1), hyfirst, hylast); 
       if (range.Size(1) > 1  ) 
          Warning("ROOT::Fit::FillData","support only one range interval for Y coordinate"); 
    }
 
    if (hfit->GetDimension() > 2 && range.Size(2) != 0) { 
-      double zlow   = range(2).first; 
-      double zhigh  = range(2).second; 
-      hzfirst =  std::max( hfit->GetZaxis()->FindBin(zlow), hzfirst);
-      hzlast  =  std::min( hfit->GetZaxis()->FindBin(zhigh), hzlast);
-      if ( hfit->GetZaxis()->GetBinCenter(hzfirst) < zlow)  hzfirst++;
-      if ( hfit->GetZaxis()->GetBinCenter(hzlast)  > zhigh) hzlast--;
+      HFitInterface::ExamineRange( hfit->GetZaxis(), range(2), hzfirst, hzlast); 
       if (range.Size(2) > 1  ) 
          Warning("ROOT::Fit::FillData","support only one range interval for Z coordinate"); 
    }
@@ -147,7 +157,7 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
    
 #ifdef DEBUG
    std::cout << "THFitInterface: ifirst = " << hxfirst << " ilast =  " << hxlast 
-             << " total bins  " << hxlast-hxfirst+1  
+             << " total bins  " << n  
              << std::endl; 
 #endif
    
@@ -203,24 +213,26 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
                   else
                      x[2] = zaxis->GetBinCenter(binz);
 //                  if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func,&x.front()) ) continue;
+                  double value =  hfit->GetBinContent(binx, biny, binz);
                   double error =  hfit->GetBinError(binx, biny, binz); 
-                  if (!HFitInterface::AdjustError(fitOpt,error) ) continue; 
+                  if (!HFitInterface::AdjustError(fitOpt,error,value) ) continue; 
                   //dv.Add(BinPoint(  x,  hfit->GetBinContent(binx, biny, binz), error ) );
                   if (ndim < hdim) // case of fitting a function with less dimension
                      dv.Add(   &x.front(),  x[2], error * zaxis->GetBinWidth(binz)  );
                   else 
-                     dv.Add(   &x.front(),  hfit->GetBinContent(binx, biny, binz), error  );
+                     dv.Add(   &x.front(),  value, error  );
                }  // end loop on z bins
             }
             else if (hdim == 2) { 
                // for dim == 2
 //               if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func,&x.front()) ) continue;
+               double value =  hfit->GetBinContent(binx, biny);
                double error =  hfit->GetBinError(binx, biny); 
-               if (!HFitInterface::AdjustError(fitOpt,error) ) continue; 
+               if (!HFitInterface::AdjustError(fitOpt,error,value) ) continue; 
                if (ndim < hdim) // case of fitting a function with less dimension
                   dv.Add(   &x.front(),  x[1], error * yaxis->GetBinWidth(biny)  );
                else 
-                  dv.Add( &x.front(), hfit->GetBinContent(binx, biny), error  );
+                  dv.Add( &x.front(), value, error  );
             }   
             
          }  // end loop on y bins
@@ -232,9 +244,10 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
 #endif
          // for 1D 
 //         if (fitOpt.fUseRange && HFitInterface::IsPointOutOfRange(func,&x.front()) ) continue;
+         double value =  hfit->GetBinContent(binx);
          double error =  hfit->GetBinError(binx); 
-         if (!HFitInterface::AdjustError(fitOpt,error) ) continue; 
-         dv.Add( x.front(),  hfit->GetBinContent(binx), error  );
+         if (!HFitInterface::AdjustError(fitOpt,error,value) ) continue; 
+         dv.Add( x.front(),  value, error  );
       }
       
    }   // end 1D loop 
@@ -277,7 +290,9 @@ void InitGaus(const ROOT::Fit::BinData & data, TF1 * f1)
    double allcha = 0;
    double valmax = 0; 
    double rangex = data.Coords(n-1)[0] - data.Coords(0)[0];
-   double binwidth = rangex;
+   // to avoid binwidth = 0 set arbitrarly to 1
+   double binwidth = 1;
+   if ( rangex > 0) binwidth = rangex; 
    double x0 = 0;
    for (unsigned int i = 0; i < n; ++ i) { 
       double val; 
@@ -481,7 +496,8 @@ void DoFillData ( BinData  & dv,  const TGraph * gr,  BinData::ErrorType type, T
       // (like in a case of a graph)
       else if (type == BinData::kValueError)  { 
          double errorY =  gr->GetErrorY(i);    
-         // consider error = 0 as 1 
+         // should consider error = 0 as 1 ? Decide to skip points with zero errors 
+         // in case want to keep points with error = 0 as errrors=1 need to set the option UseEmpty
          if (!HFitInterface::AdjustError(fitOpt,errorY) ) continue; 
          dv.Add( gx[i], gy[i], errorY );
 
@@ -494,19 +510,25 @@ void DoFillData ( BinData  & dv,  const TGraph * gr,  BinData::ErrorType type, T
       else { // case use error in x or asym errors 
          double errorX = 0; 
          if (fitOpt.fCoordErrors)  
+            // shoulkd take combined average (sqrt(0.5(e1^2+e2^2))  or math average ? 
+            // gr->GetErrorX(i) returns combined average
+            // use math average for same behaviour as before 
             errorX =  std::max( 0.5 * ( gr->GetErrorXlow(i) + gr->GetErrorXhigh(i) ) , 0. ) ;
+         
+
+         // adjust error in y according to option 
+         double errorY = std::max(gr->GetErrorY(i), 0.); 
+         HFitInterface::AdjustError(fitOpt, errorY); 
+
+         // skip points with totla error = 0
+         if ( errorX <=0 && errorY <= 0 ) continue; 
          
          if (type == BinData::kAsymError)   { 
             // asymmetric errors 
-            double erry = gr->GetErrorY(i); 
-            if ( !HFitInterface::AdjustError(fitOpt, erry)  ) continue; 
             dv.Add( gx[i], gy[i], errorX, gr->GetErrorYlow(i), gr->GetErrorYhigh(i) );            
          }
-         // case sym errors
          else {             
-            double errorY =  gr->GetErrorY(i);    
-            if (errorX <= 0 ) errorX = 0;  
-            if (!HFitInterface::AdjustError(fitOpt,errorY) ) continue; 
+            // case symmetric Y errors
             dv.Add( gx[i], gy[i], errorX, errorY );
          }
       }
@@ -530,7 +552,8 @@ void FillData ( BinData  & dv, const TGraph * gr,  TF1 * func ) {
    BinData::ErrorType type = GetDataType(gr,fitOpt); 
    // adjust option according to type
    fitOpt.fErrors1 = (type == BinData::kNoError);
-   if (fitOpt.fErrors1) fitOpt.fUseEmpty = true; // need to use empty
+   // set this if we want to have error=1 for points with zero errors (by default they are skipped)
+   // fitOpt.fUseEmpty = true;
    fitOpt.fCoordErrors = (type ==  BinData::kCoordError);
    fitOpt.fAsymErrors = (type ==  BinData::kAsymError);
 

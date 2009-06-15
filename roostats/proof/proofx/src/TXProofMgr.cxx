@@ -33,6 +33,7 @@
 #include "TXProofMgr.h"
 #include "TXSocket.h"
 #include "TROOT.h"
+#include "XProofProtocol.h"
 
 ClassImp(TXProofMgr)
 
@@ -182,7 +183,9 @@ TProof *TXProofMgr::AttachSession(TProofDesc *d, Bool_t gui)
 void TXProofMgr::DetachSession(Int_t id, Option_t *opt)
 {
    // Detach session with 'id' from its proofserv. The 'id' is the number
-   // shown by QuerySessions.
+   // shown by QuerySessions. The correspondent TProof object is deleted.
+   // If id == 0 all the known sessions are detached.
+   // Option opt="S" or "s" forces session shutdown.
 
    if (!IsValid()) {
       Warning("DetachSession","invalid TXProofMgr - do nothing");
@@ -196,8 +199,8 @@ void TXProofMgr::DetachSession(Int_t id, Option_t *opt)
          if (fSocket)
             fSocket->DisconnectSession(d->GetRemoteId(), opt);
          TProof *p = d->GetProof();
-         SafeDelete(p);
          fSessions->Remove(d);
+         SafeDelete(p);
          delete d;
       }
    } else if (id == 0) {
@@ -216,6 +219,32 @@ void TXProofMgr::DetachSession(Int_t id, Option_t *opt)
             SafeDelete(p);
          }
          fSessions->Delete();
+      }
+   }
+
+   return;
+}
+
+//______________________________________________________________________________
+void TXProofMgr::DetachSession(TProof *p, Option_t *opt)
+{
+   // Detach session 'p' from its proofserv. The instance 'p' is invalidated
+   // and should be deleted by the caller
+
+   if (!IsValid()) {
+      Warning("DetachSession","invalid TXProofMgr - do nothing");
+      return;
+   }
+
+   if (p) {
+      // Single session request
+      TProofDesc *d = GetProofDesc(p);
+      if (d) {
+         if (fSocket)
+            fSocket->DisconnectSession(d->GetRemoteId(), opt);
+         fSessions->Remove(d);
+         p->Close(opt);
+         delete d;
       }
    }
 
@@ -271,7 +300,7 @@ void TXProofMgr::ShowWorkers()
    }
 
    // Send the request
-   TObjString *os = fSocket->SendCoordinator(TXSocket::kQueryWorkers);
+   TObjString *os = fSocket->SendCoordinator(kQueryWorkers);
    if (os) {
       TObjArray *oa = TString(os->GetName()).Tokenize(TString("&"));
       if (oa) {
@@ -307,7 +336,7 @@ TList *TXProofMgr::QuerySessions(Option_t *opt)
 
    // Send the request
    TList *ocl = new TList;
-   TObjString *os = fSocket->SendCoordinator(TXSocket::kQuerySessions);
+   TObjString *os = fSocket->SendCoordinator(kQuerySessions);
    if (os) {
       TObjArray *oa = TString(os->GetName()).Tokenize(TString("|"));
       if (oa) {
@@ -442,7 +471,7 @@ Int_t TXProofMgr::Reset(Bool_t hard, const char *usr)
    }
 
    Int_t h = (hard) ? 1 : 0;
-   fSocket->SendCoordinator(TXSocket::kCleanupSessions, usr, h);
+   fSocket->SendCoordinator(kCleanupSessions, usr, h);
 
    return 0;
 }
@@ -458,7 +487,10 @@ TProofLog *TXProofMgr::GetSessionLogs(Int_t isess,
    //              for the next to last session; the absolute value is taken
    //              so -1 and 1 are equivalent.
    //      stag    specifies the unique tag of the wanted session
-   // If 'stag' is specified 'isess' is ignored.
+   // The special value stag = "NR" allows to just initialize the TProofLog
+   // object w/o retrieving the files; this may be useful when the number
+   // of workers is large and only a subset of logs is required.
+   // If 'stag' is specified 'isess' is ignored (unless stag = "NR").
    // If 'pattern' is specified only the lines containing it are retrieved
    // (remote grep functionality); to filter out a pattern 'pat' use
    // pattern = "-v pat".
@@ -476,8 +508,16 @@ TProofLog *TXProofMgr::GetSessionLogs(Int_t isess,
    // The absolute value of isess counts
    isess = (isess > 0) ? -isess : isess;
 
+   // Special option in stag
+   bool retrieve = 1;
+   TString sesstag(stag);
+   if (sesstag == "NR") {
+      retrieve = 0;
+      sesstag = "";
+   }
+
    // Get the list of paths
-   TObjString *os = fSocket->SendCoordinator(TXSocket::kQueryLogPaths, stag, isess);
+   TObjString *os = fSocket->SendCoordinator(kQueryLogPaths, sesstag.Data(), isess);
 
    // Analyse it now
    Int_t ii = 0;
@@ -500,7 +540,7 @@ TProofLog *TXProofMgr::GetSessionLogs(Int_t isess,
       }
       // Create the instance now
       if (!pl)
-         pl = new TProofLog(tag, purl, this);
+         pl = new TProofLog(tag, GetUrl(), this);
 
       // Per-node info
       TString to;
@@ -522,8 +562,8 @@ TProofLog *TXProofMgr::GetSessionLogs(Int_t isess,
       }
       // Cleanup
       SafeDelete(os);
-      // Retrieve the default part
-      if (pl) {
+      // Retrieve the default part if required
+      if (pl && retrieve) {
          if (pattern && strlen(pattern) > 0)
             pl->Retrieve("*", TProofLog::kGrep, 0, pattern);
          else
@@ -548,7 +588,7 @@ TObjString *TXProofMgr::ReadBuffer(const char *fin, Long64_t ofs, Int_t len)
    }
 
    // Send the request
-   return fSocket->SendCoordinator(TXSocket::kReadBuffer, fin, len, ofs, 0);
+   return fSocket->SendCoordinator(kReadBuffer, fin, len, ofs, 0);
 }
 
 //______________________________________________________________________________
@@ -572,7 +612,7 @@ TObjString *TXProofMgr::ReadBuffer(const char *fin, const char *pattern)
    buf[lfi+plen] = 0;
 
    // Send the request
-   return fSocket->SendCoordinator(TXSocket::kReadBuffer, buf, plen, 0, 1);
+   return fSocket->SendCoordinator(kReadBuffer, buf, plen, 0, 1);
 }
 
 //______________________________________________________________________________
@@ -587,7 +627,7 @@ void TXProofMgr::ShowROOTVersions()
    }
 
    // Send the request
-   TObjString *os = fSocket->SendCoordinator(TXSocket::kQueryROOTVersions);
+   TObjString *os = fSocket->SendCoordinator(kQueryROOTVersions);
    if (os) {
       // Display it
       Printf("----------------------------------------------------------\n");
@@ -613,7 +653,7 @@ void TXProofMgr::SetROOTVersion(const char *tag)
    }
 
    // Send the request
-   fSocket->SendCoordinator(TXSocket::kROOTVersion, tag);
+   fSocket->SendCoordinator(kROOTVersion, tag);
 
    // We are done
    return;
@@ -707,7 +747,7 @@ Int_t TXProofMgr::SendMsgToUsers(const char *msg, const char *usr)
 //   fprintf(stderr,"%s\n", buf);
 
    // Send the request
-   fSocket->SendCoordinator(TXSocket::kSendMsgToUser, buf);
+   fSocket->SendCoordinator(kSendMsgToUser, buf);
 
    return rc;
 }

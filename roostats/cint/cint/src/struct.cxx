@@ -481,6 +481,7 @@ int G__class_autoloading(int* ptagnum)
       char* copyLibname = new char[strlen(libname) + 1];
       strcpy(copyLibname, libname);
       if (G__p_class_autoloading) {
+         int oldAutoLoading = G__enable_autoloading;
          G__enable_autoloading = 0;
          // reset the def tagnums to not collide with dict setup
          int store_def_tagnum = G__def_tagnum;
@@ -526,21 +527,22 @@ int G__class_autoloading(int* ptagnum)
                }
             }
          }
-         G__enable_autoloading = 1;
+         G__enable_autoloading = oldAutoLoading;
          delete[] copyLibname;
          return res;
       }
       else {
+         int oldAutoLoading = G__enable_autoloading;
          G__enable_autoloading = 0;
          int ret = G__loadfile(copyLibname);
          if (ret >= G__LOADFILE_SUCCESS) {
-            G__enable_autoloading = 1;
+            G__enable_autoloading = oldAutoLoading;
             delete[] copyLibname;
             return 1;
          }
          else {
             G__struct.type[tagnum] = G__CLASS_AUTOLOAD;
-            G__enable_autoloading = 1;
+            G__enable_autoloading = oldAutoLoading;
             delete[] copyLibname;
             return -1;
          }
@@ -1131,6 +1133,7 @@ void G__define_struct(char type)
             G__prerun = 1;
             struct G__var_array* store_local = G__p_local;
             G__p_local = G__struct.memvar[G__tagnum];
+            G__struct.memvar[G__tagnum]->prev_local = 0;
             int store_tagdefining = G__tagdefining;
             G__tagdefining = G__tagnum;
             int store_def_struct_member = G__def_struct_member;
@@ -1262,11 +1265,11 @@ void G__define_struct(char type)
       int store_linenum = G__ifile.line_number;
       G__disp_mask = 1000; // FIXME: Crazy!
       char buf[G__ONELINE];
-      int c = G__fgetname(buf, ";,(");
+      int ch = G__fgetname(buf, ";,(");
       int errflag = 0;
-      if (isspace(c) && (buf[0] != '*') && !strchr(buf, '[')) {
+      if (isspace(ch) && (buf[0] != '*') && !strchr(buf, '[')) {
          char tmp[G__ONELINE];
-         c = G__fgetname(tmp, ";,(");
+         ch = G__fgetname(tmp, ";,(");
          if (isalnum(tmp[0])) {
             errflag = 1;
          }
@@ -1274,7 +1277,7 @@ void G__define_struct(char type)
       G__disp_mask = 0;
       fsetpos(G__ifile.fp, &store_pos);
       G__ifile.line_number = store_linenum;
-      if (errflag || (isclassdef && (c == '('))) {
+      if (errflag || (isclassdef && (ch == '('))) {
          G__genericerror("Error: ';' missing after class/struct/enum declaration");
          G__tagnum = store_tagnum;
          G__def_tagnum = store_def_tagnum;
@@ -1431,7 +1434,12 @@ void G__set_class_autoloading_table(char* classname, char* libname)
    G__enable_autoloading = 0;
    tagnum = G__search_tagname(classname, G__CLASS_AUTOLOAD);
    if (libname == (void*)-1) {
-      if (G__struct.name[tagnum][0]) {
+      if (G__struct.type[tagnum] != 'a') {
+         if (G__struct.libname[tagnum]) {
+            free((void*)G__struct.libname[tagnum]);
+         }
+         G__struct.libname[tagnum] = 0;
+      } else if (G__struct.name[tagnum][0]) {
          G__struct.name[tagnum][0] = '@';
       }
       G__enable_autoloading = store_enable_autoloading;
@@ -1499,6 +1507,9 @@ int G__defined_tagname(const char* tagname, int noerror)
    //         = 2   if not found just return without trying template
    //         = 3   like 2, and no autoloading
    //         = 4   like 3, and don't look for typedef
+   // noerror & 0x1000: do not look in enclosing scope, i.e. G__tagnum is
+   //               defining a fully qualified identifier. With this bit
+   //               set, tagname="C" and G__tagnum=A::B will not find to A::C.
    //
    // CAUTION:
    // If template class with constant argument is given to this function,
@@ -1517,7 +1528,12 @@ int G__defined_tagname(const char* tagname, int noerror)
       case '"':
       case '\'':
          return -1;
+      case 'c':
+         if (!strcmp(tagname, "const"))
+            return -1;
    }
+   bool enclosing = !(noerror & 0x1000);
+   noerror &= ~0x1000;
    if (strchr(tagname, '>')) {
       // handles X<X<int>> as X<X<int> >
       while (0 != (p = (char*) strstr(tagname, ">>"))) {
@@ -1589,6 +1605,8 @@ int G__defined_tagname(const char* tagname, int noerror)
    }
    p = (char*)G__find_last_scope_operator(temp);
    if (p) {
+      // A::B::C means we want A::B::C, not A::C, even if it exists.
+      enclosing = false;
       strcpy(atom_tagname, p + 2);
       *p = '\0';
       if (p == temp) {
@@ -1605,7 +1623,12 @@ int G__defined_tagname(const char* tagname, int noerror)
       }
 #endif // G__STD_NAMESPACE
       else {
-         env_tagnum = G__defined_tagname(temp, noerror);
+         // first try a typedef, so we don't trigger autoloading here:
+         long env_typenum = G__defined_typename_noerror(temp, 1);
+         if (env_typenum != -1 && G__newtype.type[env_typenum] == 'u')
+            env_tagnum = G__newtype.tagnum[env_typenum];
+         else
+            env_tagnum = G__defined_tagname(temp, noerror);
          if (env_tagnum == -1) {
             return -1;
          }
@@ -1621,7 +1644,7 @@ int G__defined_tagname(const char* tagname, int noerror)
 try_again:
    for (i = G__struct.alltag - 1; i >= 0; --i) {
       if ((len == G__struct.hash[i]) && !strcmp(atom_tagname, G__struct.name[i])) {
-         if ((!p && (G__struct.parent_tagnum[i] == -1)) || (env_tagnum == G__struct.parent_tagnum[i])) {
+         if ((!p && (enclosing || env_tagnum == -1) && (G__struct.parent_tagnum[i] == -1)) || (env_tagnum == G__struct.parent_tagnum[i])) {
             if (noerror < 3) {
                G__class_autoloading(&i);
             }
@@ -1636,16 +1659,16 @@ try_again:
 #else // G__VIRTUALBASE
                (G__isanybase(G__struct.parent_tagnum[i], env_tagnum) != -1) ||
 #endif // G__VIRTUALBASE
-               G__isenclosingclass(G__struct.parent_tagnum[i], env_tagnum) ||
-               G__isenclosingclassbase(G__struct.parent_tagnum[i], env_tagnum) ||
+               (enclosing && G__isenclosingclass(G__struct.parent_tagnum[i], env_tagnum)) ||
+               (enclosing && G__isenclosingclassbase(G__struct.parent_tagnum[i], env_tagnum)) ||
                (!p && (G__tmplt_def_tagnum == G__struct.parent_tagnum[i]))
 #ifdef G__VIRTUALBASE
                || -1 != G__isanybase(G__struct.parent_tagnum[i], G__tmplt_def_tagnum, G__STATICRESOLUTION)
 #else // G__VIRTUALBASE
                || -1 != G__isanybase(G__struct.parent_tagnum[i], G__tmplt_def_tagnum)
 #endif // G__VIRTUALBASE
-               || G__isenclosingclass(G__struct.parent_tagnum[i], G__tmplt_def_tagnum)
-               || G__isenclosingclassbase(G__struct.parent_tagnum[i], G__tmplt_def_tagnum)
+               || (enclosing && G__isenclosingclass(G__struct.parent_tagnum[i], G__tmplt_def_tagnum))
+               || (enclosing && G__isenclosingclassbase(G__struct.parent_tagnum[i], G__tmplt_def_tagnum))
             )
          ) {
             // --
@@ -1769,13 +1792,19 @@ int G__search_tagname(const char* tagname, int type)
       strcpy(atom_tagname, tagname);
       p = (char*)G__strrstr(atom_tagname, "::");
       *p = 0;
-      envtagnum = G__defined_tagname(atom_tagname, 1);
+      // first try a typedef, so we don't trigger autoloading here:
+      long envtypenum = G__defined_typename_noerror(atom_tagname, 1);
+      if (envtypenum != -1 && G__newtype.type[envtypenum] == 'u')
+	envtagnum = G__newtype.tagnum[envtypenum];
+      else
+	envtagnum = G__defined_tagname(atom_tagname, 1);
    }
    else {
       envtagnum = G__get_envtagnum();
    }
    // If name not found, create a tagtable entry for it.
    if ((i == -1) || (isstructdecl && (envtagnum != G__struct.parent_tagnum[i]))) {
+      ++G__struct.nactives;
       i = G__struct.alltag;
       if (i == G__MAXSTRUCT) {
          G__fprinterr(G__serr, "Limitation: Number of struct/union tag exceed %d FILE:%s LINE:%d\nFatal error, exit program. Increase G__MAXSTRUCT in G__ci.h and recompile %s\n", G__MAXSTRUCT, G__ifile.name, G__ifile.line_number, G__nam);
@@ -1796,10 +1825,10 @@ int G__search_tagname(const char* tagname, int type)
             G__struct.parent_tagnum[i] = -1;
          }
          else {
-            G__struct.parent_tagnum[i] = G__defined_tagname(temp, noerror);
+            G__struct.parent_tagnum[i] = G__defined_tagname(temp, noerror | 0x1000);
          }
 #else // G__STD_NAMESPACE
-         G__struct.parent_tagnum[i] = G__defined_tagname(temp, noerror);
+         G__struct.parent_tagnum[i] = G__defined_tagname(temp, noerror | 0x1000);
 #endif // G__STD_NAMESPACE
          // --
       }
@@ -1924,6 +1953,7 @@ int G__search_tagname(const char* tagname, int type)
    }
    else if (!G__struct.type[i] || (G__struct.type[i] == 'a')) {
       G__struct.type[i] = type;
+      ++G__struct.nactives;
    }
 #ifndef G__OLDIMPLEMENTATION1823
    if (buf != temp) {

@@ -20,7 +20,6 @@
 #include "Reflex/internal/TypeName.h"
 #include "Reflex/Builder/TypeBuilder.h"
 #include "Reflex/Builder/NamespaceBuilder.h"
-#include "Reflex/Builder/FunctionBuilder.h"
 #include "bc_exec.h"
 #include <vector>
 #include <sstream>
@@ -251,8 +250,8 @@ int Cint::G__compile_function_bytecode(const ::Reflex::Member& ifunc)
       G__tagdefining = bytecodeArena;
       G__struct.size[bytecodeTagnum] = 0;
       {
-         G__RflxProperties* prop = G__get_properties(bytecodeArena);
-         prop->builder.Class().SetSizeOf(0);
+         Reflex::Type type = bytecodeArena;
+         type.SetSize(0);
       }
       G__no_exec = 0;
       G__prerun = 0;
@@ -280,10 +279,10 @@ int Cint::G__compile_function_bytecode(const ::Reflex::Member& ifunc)
 #endif // G__ASM
       {
          G__StrBuf funcname_sb(G__LONGLINE);
-         char* funcname = funcname_sb;
-         strcpy(funcname, ifunc.Name().c_str());
+         char* local_funcname = funcname_sb;
+         strcpy(local_funcname, ifunc.Name().c_str());
          ::Reflex::Scope scope = ifunc.DeclaringScope();
-         G__interpret_func(&buf, funcname, &para, 0, scope, G__EXACT, funcstatus);
+         G__interpret_func(&buf, local_funcname, &para, 0, scope, G__EXACT, funcstatus);
       }
 #ifdef G__ASM
 #ifdef G__ASM_DBG
@@ -522,7 +521,8 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
                const char* posEndType = oprtype;
                while (
                   isalnum(*posEndType) ||
-                  ((posEndType[0] == ':') && (posEndType[1] == ':')) ||
+                      // NOTE this increases posEndType to skip '::'!
+                  ((posEndType[0] == ':') && (posEndType[1] == ':') && (++posEndType)) ||
                   (*posEndType == '_')
                ) {
                   ++posEndType;
@@ -656,6 +656,7 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
    if (
       G__def_struct_member && // member of a class, enum, namespace, struct or union
       G__def_tagnum && // outer class is known
+      G__def_tagnum != Reflex::Scope::GlobalScope() &&
       (funcname == G__struct.name[G__get_tagnum(G__def_tagnum)]) // member name is same as class name
    ) {
       // -- This is a constructor, handle specially.
@@ -963,7 +964,10 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
       (
          !paraname[0]
 #ifndef G__OLDIMPLEMETATION817
-         || ((!strncmp(paraname, "throw", 5) || !strncmp(paraname, "const throw", 11)) && !strchr(paraname, '='))
+         || ((!strncmp(paraname, "throw", 5) ||
+              !strncmp(paraname, "const throw", 11) ||
+              !strncmp(paraname, "_attribute_", 11))
+             && !strchr(paraname, '='))
 #endif // G__OLDIMPLEMETATION817
          // --
       ) &&
@@ -1000,7 +1004,7 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
             !strncmp(funcname.c_str(), "DeclFileLine(", 13)
          )
       ) {
-         G__fsetcomment(&G__struct.comment[G__get_tagnum(G__tagdefining)]);
+         G__fsetcomment(G__tagdefining);
       }
    }
    else if (
@@ -1008,7 +1012,10 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
       !strncmp(paraname, "const =", 7) ||
       !strncmp(paraname, "const=", 6)
 #ifndef G__OLDIMPLEMETATION817
-      || ((!strncmp(paraname, "throw", 5) || !strncmp(paraname, "const throw", 11)) && strchr(paraname, '='))
+      || ((!strncmp(paraname, "throw", 5) ||
+           !strncmp(paraname, "const throw", 11) ||
+           !strncmp(paraname, "_attribute_", 11))
+          && strchr(paraname, '='))
 #endif // G__OLDIMPLEMETATION817
       // --
    ) {
@@ -1127,7 +1134,7 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
             !strncmp(paraname, "ClassDefT(", 10)
          )
       ) {
-         G__fsetcomment(&G__struct.comment[G__get_tagnum(G__tagdefining)]);
+         G__fsetcomment(G__tagdefining);
       }
       return;
    }
@@ -1215,7 +1222,8 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
          /* Destructor */
          G__struct.funcs[G__get_tagnum(G__def_tagnum)] |= G__HAS_DESTRUCTOR;
       }
-      else if (strcmp(G__struct.name[G__get_tagnum(G__def_tagnum)], funcname.c_str()) == 0) {
+      else if (G__def_tagnum != Reflex::Scope::GlobalScope() &&
+         strcmp(G__struct.name[G__get_tagnum(G__def_tagnum)], funcname.c_str()) == 0) {
          if (0 == newFunction.TypeOf().FunctionParameterSize() || newFunction.FunctionParameterDefaultAt(0).length()) {
             /* Default constructor */
             G__struct.funcs[G__get_tagnum(G__def_tagnum)] |= G__HAS_DEFAULTCONSTRUCTOR;
@@ -1292,7 +1300,7 @@ void Cint::Internal::G__make_ifunctable(char* funcheader)
             strncmp(newFunction.Name().c_str(), "ClassDefT(", 10) == 0 ||
             strncmp(newFunction.Name().c_str(), "DeclFileLine", 12) == 0 ||
             strncmp(newFunction.Name().c_str(), "DeclFileLine(", 13) == 0)) {
-         G__fsetcomment(&G__struct.comment[G__get_tagnum(G__tagdefining)]);
+         G__fsetcomment(G__tagdefining);
       }
       else {
          G__fsetcomment(&G__get_funcproperties(newFunction)->comment);
@@ -1542,9 +1550,9 @@ static int Cint::Internal::G__readansiproto(std::vector<Reflex::Type>& i_params_
                   else {
                      type = 'u';
                      if (strchr(buf, '<')) { // Possibly a template id.
-                        ::Reflex::Type ty = G__find_typedef(buf);  // The previous lookup may have created a typedef.
-                        if (ty) {
-                           typenum = G__get_properties(ty)->typenum;
+                        ::Reflex::Type bufty( G__find_typedef(buf) );  // The previous lookup may have created a typedef.
+                        if (bufty) {
+                           typenum = G__get_properties(bufty)->typenum;
                         }
                      }
                   }
@@ -2804,30 +2812,30 @@ static unsigned int G__rate_inheritance(int basetagnum, int derivedtagnum)
    if (0 > derivedtagnum || 0 > basetagnum) return(G__NOMATCH);
    if (basetagnum == derivedtagnum) return(G__EXACTMATCH);
    derived = G__struct.baseclass[derivedtagnum];
-   n = derived->basen;
+   n = derived->vec.size();
 
    for (i = 0;i < n;i++) {
-      if (basetagnum == derived->basetagnum[i]) {
-         if (derived->baseaccess[i] == G__PUBLIC ||
+      if (basetagnum == derived->vec[i].basetagnum) {
+         if (derived->vec[i].baseaccess == G__PUBLIC ||
                (G__exec_memberfunc && G__tagnum == G__Dict::GetDict().GetScope(derivedtagnum) &&
-                G__GRANDPRIVATE != derived->baseaccess[i])) {
-            if (G__ISDIRECTINHERIT&derived->property[i]) {
+                G__GRANDPRIVATE != derived->vec[i].baseaccess)) {
+            if (G__ISDIRECTINHERIT&derived->vec[i].property) {
                return(G__BASECONVMATCH);
             }
             else {
                int distance = 1;
-               int ii = i; /* i is not 0, because !G__ISDIRECTINHERIT */
+               size_t ii = i; /* i is not 0, because !G__ISDIRECTINHERIT */
                G__inheritance* derived2 = derived;
                int derivedtagnum2 = derivedtagnum;
-               while (0 == (derived2->property[ii]&G__ISDIRECTINHERIT)) {
+               while (0 == (derived2->vec[ii].property&G__ISDIRECTINHERIT)) {
                   ++distance;
-                  while (ii && 0 == (derived2->property[--ii]&G__ISDIRECTINHERIT)) {}
-                  derivedtagnum2 = derived2->basetagnum[ii];
+                  while (ii && 0 == (derived2->vec[--ii].property&G__ISDIRECTINHERIT)) {}
+                  derivedtagnum2 = derived2->vec[ii].basetagnum;
                   derived2 = G__struct.baseclass[derivedtagnum2];
-                  for (ii = 0;ii < derived2->basen;ii++) {
-                     if (derived2->basetagnum[ii] == basetagnum) break;
+                  for (ii = 0;ii < derived2->vec.size();ii++) {
+                     if (derived2->vec[ii].basetagnum == basetagnum) break;
                   }
-                  if (ii == derived2->basen) return(G__NOMATCH);
+                  if (ii == derived2->vec.size()) return(G__NOMATCH);
                }
                return(distance*G__BASECONVMATCH);
             }
@@ -2878,10 +2886,10 @@ static int G__igrd(int formal_type)
 
 //______________________________________________________________________________
 #ifndef __CINT__
-static ::Reflex::Member G__overload_match(char* funcname, G__param* libp, int hash, const ::Reflex::Scope p_ifunc, int memfunc_flag, int access, int* pifn, int isrecursive, int doconvert, int* match_error);
+static ::Reflex::Member G__overload_match(const char* funcname, G__param* libp, int hash, const ::Reflex::Scope p_ifunc, int memfunc_flag, int access, int* pifn, int isrecursive, int doconvert, int* match_error);
 #endif // __CINT__
 
-static void G__display_param(FILE* fp, const ::Reflex::Scope scopetagnum, char* funcname, G__param* libp);
+static void G__display_param(FILE* fp, const ::Reflex::Scope scopetagnum, const char* funcname, G__param* libp);
 static void G__display_func(FILE* fp, const ::Reflex::Member func);
 
 //______________________________________________________________________________
@@ -3357,7 +3365,7 @@ static int G__convert_param(G__param* libp, const ::Reflex::Member& func, G__fun
    char *store_struct_offset; /* used to be int */
    ::Reflex::Scope store_tagnum;
    int store_isconst;
-   int baseoffset;
+   int baseoffset = -1;
    G__value reg;
    int store_oprovld;
    int rewindflag = 0;
@@ -3657,9 +3665,9 @@ static int G__convert_param(G__param* libp, const ::Reflex::Member& func, G__fun
             }
          }
          else if (-1 != G__get_tagnum(G__value_typenum(*param))) {
-            char *store_struct_offset = G__store_struct_offset;
-            ::Reflex::Scope store_tagnum = G__tagnum;
-            int store_isconst = G__isconst;
+            char *local_store_struct_offset = G__store_struct_offset;
+            ::Reflex::Scope local_store_tagnum = G__tagnum;
+            int local_store_isconst = G__isconst;
             int intTagnum = G__get_tagnum(formal_tagnum);
             if (intTagnum == 0) intTagnum = -1;
             sprintf(conv, "operator %s()", G__type2string(formal_type, intTagnum, -1, 0, 0));
@@ -3689,16 +3697,16 @@ static int G__convert_param(G__param* libp, const ::Reflex::Member& func, G__fun
 #endif
             reg = G__getfunction(conv, &match, G__TRYMEMFUNC);
             if (!match && 0 != formal_isconst) {
-               int intTagnum = G__get_tagnum(formal_tagnum);
-               if (intTagnum == 0) intTagnum = -1;
-               sprintf(conv, "operator const %s()", G__type2string(formal_type, intTagnum, -1, 0, 0));
+               int local_intTagnum = G__get_tagnum(formal_tagnum);
+               if (local_intTagnum == 0) local_intTagnum = -1;
+               sprintf(conv, "operator const %s()", G__type2string(formal_type, local_intTagnum, -1, 0, 0));
                G__store_struct_offset = (char*)param->obj.i;
                G__tagnum = G__value_typenum(*param).RawType();
                reg = G__getfunction(conv, &match, G__TRYMEMFUNC);
             }
-            G__isconst = store_isconst;
-            G__tagnum = store_tagnum;
-            G__store_struct_offset = store_struct_offset;
+            G__isconst = local_store_isconst;
+            G__tagnum = local_store_tagnum;
+            G__store_struct_offset = local_store_struct_offset;
 #ifdef G__ASM
             if (G__asm_noverflow) {
                if (rewind_arg) {
@@ -4024,7 +4032,7 @@ static int G__convert_param(G__param* libp, const ::Reflex::Member& func, G__fun
 }
 
 //______________________________________________________________________________
-static void G__display_param(FILE* fp, const ::Reflex::Scope scopetagnum, char* funcname, G__param* libp)
+static void G__display_param(FILE* fp, const ::Reflex::Scope scopetagnum, const char* funcname, G__param* libp)
 {
    int i;
 #ifndef G__OLDIMPLEMENTATION1485
@@ -4161,7 +4169,7 @@ static void G__display_func(FILE* fp, const ::Reflex::Member func)
 }
 
 //______________________________________________________________________________
-static void G__display_ambiguous(const ::Reflex::Scope& scopetagnum, char* funcname, G__param* libp, G__funclist* funclist, unsigned int bestmatch)
+static void G__display_ambiguous(const ::Reflex::Scope& scopetagnum, const char* funcname, G__param* libp, G__funclist* funclist, unsigned int bestmatch)
 {
    G__fprinterr(G__serr, "Calling : ");
    G__display_param(G__serr, scopetagnum, funcname, libp);
@@ -4175,7 +4183,7 @@ static void G__display_ambiguous(const ::Reflex::Scope& scopetagnum, char* funcn
 }
 
 //______________________________________________________________________________
-static G__funclist* G__rate_binary_operator(const ::Reflex::Scope p_ifunc, G__param* libp, const ::Reflex::Type tagnum, char* funcname, int /*hash*/, G__funclist* funclist, int isrecursive)
+static G__funclist* G__rate_binary_operator(const ::Reflex::Scope p_ifunc, G__param* libp, const ::Reflex::Type tagnum, const char* funcname, int /*hash*/, G__funclist* funclist, int isrecursive)
 {
    // Set first argument to the object.
    G__param fpara;
@@ -4242,12 +4250,12 @@ static int G__identical_function(G__funclist *match, G__funclist *func)
 }
 
 //______________________________________________________________________________
-static ::Reflex::Member G__overload_match(char* funcname, G__param* libp, int hash, const ::Reflex::Scope p_ifunc, int memfunc_flag, int access, int* pifn, int isrecursive, int doconvert, int* match_error)
+static ::Reflex::Member G__overload_match(const char* funcname, G__param* libp, int hash, const ::Reflex::Scope p_ifunc, int memfunc_flag, int access, int* pifn, int isrecursive, int doconvert, int* match_error)
 {
    // Perform function overload matching, and if found and requested, convert arguments guided by the prototype.
    ::Reflex::Scope store_ifunc = p_ifunc;
 #ifdef G__ASM
-   int active_run = doconvert && !G__asm_wholefunction && !G__asm_noverflow;
+   int active_run = doconvert && !G__asm_wholefunction && !G__asm_noverflow && !(G__no_exec_compile==1 && funcname[0]=='~' /* loop compilation of temporary destruction */);
 #else
    int active_run = doconvert;
 #endif
@@ -4260,7 +4268,7 @@ static ::Reflex::Member G__overload_match(char* funcname, G__param* libp, int ha
    G__funclist* match = 0;
    ::Reflex::Member result;
    ::Reflex::Scope ifunc = p_ifunc;
-   int ix = 0;
+   size_t ix = 0;
    while (ifunc) { // Loop over given scope, and any "using namespace" scopes.
       int index = 0;
       for (
@@ -4302,8 +4310,8 @@ static ::Reflex::Member G__overload_match(char* funcname, G__param* libp, int ha
             }
          }
       }
-      if ((store_ifunc == G__p_ifunc) && (ix < G__globalusingnamespace.basen)) {
-         ifunc = G__Dict::GetDict().GetScope(G__globalusingnamespace.basetagnum[ix]);
+      if ((store_ifunc == G__p_ifunc) && (ix < G__globalusingnamespace.vec.size())) {
+         ifunc = G__Dict::GetDict().GetScope(G__globalusingnamespace.vec[ix].basetagnum);
          ++ix;
       }
       else {
@@ -4314,8 +4322,8 @@ static ::Reflex::Member G__overload_match(char* funcname, G__param* libp, int ha
       funclist =  G__add_templatefunc(funcname, libp, hash, funclist, store_ifunc, isrecursive);
    }
    if (!match && ((memfunc_flag == G__TRYUNARYOPR) || (memfunc_flag == G__TRYBINARYOPR))) {
-      for (ix = 0;ix < G__globalusingnamespace.basen;ix++) {
-         funclist = G__rate_binary_operator(G__Dict::GetDict().GetScope(G__globalusingnamespace.basetagnum[ix]), libp, G__tagnum, funcname, hash, funclist, isrecursive);
+      for (ix = 0;ix < G__globalusingnamespace.vec.size();ix++) {
+         funclist = G__rate_binary_operator(G__Dict::GetDict().GetScope(G__globalusingnamespace.vec[ix].basetagnum), libp, G__tagnum, funcname, hash, funclist, isrecursive);
       }
       funclist = G__rate_binary_operator(::Reflex::Scope::GlobalScope(), libp, G__tagnum, funcname, hash, funclist, isrecursive);
    }
@@ -4466,7 +4474,7 @@ int Cint::Internal::G__interpret_func(G__value* result7, G__param* libp, int has
 #endif // 0
 
 //______________________________________________________________________________
-int Cint::Internal::G__interpret_func(G__value* return_value, char* funcname, G__param* libp, int hash, const ::Reflex::Scope input_ifunc, int funcmatch, int memfunc_flag)
+int Cint::Internal::G__interpret_func(G__value* return_value, const char* funcname, G__param* libp, int hash, const ::Reflex::Scope input_ifunc, int funcmatch, int memfunc_flag)
 {
    // -- FIXME: Describe this function!
    //
@@ -4539,7 +4547,7 @@ int Cint::Internal::G__interpret_func(G__value* return_value, char* funcname, G_
    ::Reflex::Scope localvar;
 #endif
 #ifdef G__NEWINHERIT
-   int basen = 0;
+   size_t basen = 0;
    int isbase;
    int access;
    int memfunc_or_friend = 0;
@@ -4657,40 +4665,40 @@ int Cint::Internal::G__interpret_func(G__value* return_value, char* funcname, G_
       )
    ) {
       if (isbase) {
-         while (baseclass && (basen < baseclass->basen)) {
+         while (baseclass && (basen < baseclass->vec.size())) {
             if (memfunc_or_friend) {
                if (
-                  (baseclass->baseaccess[basen] & G__PUBLIC_PROTECTED) ||
-                  (baseclass->property[basen] & G__ISDIRECTINHERIT)
+                  (baseclass->vec[basen].baseaccess & G__PUBLIC_PROTECTED) ||
+                  (baseclass->vec[basen].property & G__ISDIRECTINHERIT)
                ) {
                   access = G__PUBLIC_PROTECTED;
-                  G__incsetup_memfunc(baseclass->basetagnum[basen]);
-                  p_ifunc = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
+                  G__incsetup_memfunc(baseclass->vec[basen].basetagnum);
+                  p_ifunc = G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum);
 #ifdef G__VIRTUALBASE
                   // require !G__prerun, else store_inherit_offset might not point
                   // to a valid object with vtable, and G__getvirtualbaseoffset()
                   // might fail. We should not need the voffset in this case
                   // anyway, as we don't actually call the function.
-                  if (!G__prerun && (baseclass->property[basen] & G__ISVIRTUALBASE)) {
+                  if (!G__prerun && (baseclass->vec[basen].property & G__ISVIRTUALBASE)) {
                      G__store_struct_offset = store_inherit_offset + G__getvirtualbaseoffset(store_inherit_offset, G__get_tagnum(G__tagnum), baseclass, basen);
                   }
                   else {
-                     G__store_struct_offset = store_inherit_offset + (long)baseclass->baseoffset[basen];
+                     G__store_struct_offset = store_inherit_offset + (long)baseclass->vec[basen].baseoffset;
                   }
 #else // G__VIRTUALBASE
-                  G__store_struct_offset = store_inherit_offset + baseclass->baseoffset[basen];
+                  G__store_struct_offset = store_inherit_offset + baseclass->vec[basen].baseoffset;
 #endif // G__VIRTUALBASE
-                  G__tagnum = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
+                  G__tagnum = G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum);
                   ++basen;
                   store_p_ifunc = p_ifunc;
                   goto next_base;
                }
             }
             else {
-               if (baseclass->baseaccess[basen] & G__PUBLIC) {
+               if (baseclass->vec[basen].baseaccess & G__PUBLIC) {
                   access = G__PUBLIC;
-                  G__incsetup_memfunc(baseclass->basetagnum[basen]);
-                  p_ifunc = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
+                  G__incsetup_memfunc(baseclass->vec[basen].basetagnum);
+                  p_ifunc = G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum);
 #ifdef G__VIRTUALBASE
                   // require !G__prerun, else store_inherit_offset might not point
                   // to a valid object with vtable, and G__getvirtualbaseoffset()
@@ -4698,17 +4706,17 @@ int Cint::Internal::G__interpret_func(G__value* return_value, char* funcname, G_
                   // anyway, as we don't actually call the function.
                   if (
                      !G__prerun &&
-                     (baseclass->property[basen] & G__ISVIRTUALBASE)
+                     (baseclass->vec[basen].property & G__ISVIRTUALBASE)
                   ) {
                      G__store_struct_offset = store_inherit_offset + G__getvirtualbaseoffset(store_inherit_offset, G__get_tagnum(G__tagnum), baseclass, basen);
                   }
                   else {
-                     G__store_struct_offset = store_inherit_offset + (long) baseclass->baseoffset[basen];
+                     G__store_struct_offset = store_inherit_offset + (long) baseclass->vec[basen].baseoffset;
                   }
 #else // G__VIRTUALBASE
-                  G__store_struct_offset = store_inherit_offset + baseclass->baseoffset[basen];
+                  G__store_struct_offset = store_inherit_offset + baseclass->vec[basen].baseoffset;
 #endif // G__VIRTUALBASE
-                  G__tagnum = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
+                  G__tagnum = G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum);
                   ++basen;
                   store_p_ifunc = p_ifunc;
                   goto next_base;
@@ -5070,15 +5078,15 @@ int Cint::Internal::G__interpret_func(G__value* return_value, char* funcname, G_
          virtualtag = G__tagnum;
       }
       if (virtualtag != G__tagnum) {
-         G__inheritance* baseclass = G__struct.baseclass[G__get_tagnum(virtualtag)];
+         G__inheritance* local_baseclass = G__struct.baseclass[G__get_tagnum(virtualtag)];
          int xbase[G__MAXBASE], ybase[G__MAXBASE];
          int nxbase = 0, nybase;
-         int basen;
+         size_t local_basen;
          G__incsetup_memfunc((virtualtag));
          ::Reflex::Member iexist = G__ifunc_exist(ifn, virtualtag, true);
-         for (basen = 0;!iexist && basen < baseclass->basen;basen++) {
-            virtualtag = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
-            if (0 == (baseclass->property[basen]&G__ISDIRECTINHERIT)) continue;
+         for (local_basen = 0;!iexist && local_basen < local_baseclass->vec.size();local_basen++) {
+            virtualtag = G__Dict::GetDict().GetScope(local_baseclass->vec[local_basen].basetagnum);
+            if (0 == (local_baseclass->vec[local_basen].property&G__ISDIRECTINHERIT)) continue;
             xbase[nxbase++] = G__get_tagnum(virtualtag);
             G__incsetup_memfunc((virtualtag));
             iexist
@@ -5088,10 +5096,10 @@ int Cint::Internal::G__interpret_func(G__value* return_value, char* funcname, G_
             int xxx;
             nybase = 0;
             for (xxx = 0;!iexist && xxx < nxbase;xxx++) {
-               baseclass = G__struct.baseclass[xbase[xxx]];
-               for (basen = 0;!iexist && basen < baseclass->basen;basen++) {
-                  virtualtag = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
-                  if (0 == (baseclass->property[basen]&G__ISDIRECTINHERIT)) continue;
+               local_baseclass = G__struct.baseclass[xbase[xxx]];
+               for (local_basen = 0;!iexist && local_basen < local_baseclass->vec.size();local_basen++) {
+                  virtualtag = G__Dict::GetDict().GetScope(local_baseclass->vec[local_basen].basetagnum);
+                  if (0 == (local_baseclass->vec[local_basen].property&G__ISDIRECTINHERIT)) continue;
                   ybase[nybase++] = G__get_tagnum(virtualtag);
                   G__incsetup_memfunc((virtualtag));
                   iexist
@@ -5113,8 +5121,8 @@ int Cint::Internal::G__interpret_func(G__value* return_value, char* funcname, G_
             G__store_struct_offset -= G__find_virtualoffset(G__get_tagnum(virtualtag));
             G__tagnum = virtualtag;
             if ('~' == funcname[0]) {
-               strcpy(funcname + 1, G__struct.name[G__get_tagnum(G__tagnum)]);
-               G__hash(funcname, hash, itemp);
+               G__hash(G__struct.name[G__get_tagnum(G__tagnum)], hash, itemp);
+               hash += '~';
             }
          }
          else if (ifn.IsAbstract()) {
@@ -6507,15 +6515,17 @@ int Cint::Internal::G__function_signature_match(const Reflex::Member func1, cons
    //
    // Returns function member if found, invalid member otherwise.
    //
+   const char *func_now_name = ifunc_now.Name_c_str();
    for (::Reflex::Member_Iterator mbr_iter = ifunc.FunctionMember_Begin(); mbr_iter != ifunc.FunctionMember_End(); ++mbr_iter) {
+      const char *mbr_iter_name = mbr_iter->Name_c_str();
       if ( // destructor matches with ~
-         (ifunc_now.Name()[0] == '~') &&
-         (mbr_iter->Name()[0] == '~')
+         (func_now_name[0] == '~') &&
+         (mbr_iter_name[0] == '~')
       ) { // destructor matches with ~
          return *mbr_iter;
       }
       if (
-         (ifunc_now.Name() != mbr_iter->Name()) ||
+         (0!=strcmp(func_now_name, mbr_iter_name)) ||
          (ifunc_now.FunctionParameterSize() != mbr_iter->FunctionParameterSize()) ||
          (ifunc_now.IsConst() != mbr_iter->IsConst()) ||
          (
@@ -6559,17 +6569,19 @@ int Cint::Internal::G__function_signature_match(const Reflex::Member func1, cons
 
 //______________________________________________________________________________
 ::Reflex::Member Cint::Internal::G__ifunc_ambiguous(const ::Reflex::Member &ifunc_now, const ::Reflex::Scope &ifunc, const ::Reflex::Type &derivedtagnum)
-{
+{  
    int j, paran;
+   const char *func_now_name = ifunc_now.Name_c_str();
    for (::Reflex::Member_Iterator i = ifunc.FunctionMember_Begin();
          i != ifunc.FunctionMember_End();
          ++i) {
-      if ('~' == ifunc_now.Name().c_str()[0] &&
-            '~' == i->Name().c_str()[0]) { /* destructor matches with ~ */
+      const char *i_name = i->Name_c_str();
+      if ('~' == func_now_name[0] &&
+            '~' == i_name[0]) { /* destructor matches with ~ */
          return(*i);
       }
       if (/* ifunc_now->hash[allifunc]!=ifunc->hash[i] || */
-         ifunc_now.Name() == i->Name()
+         (0==strcmp(func_now_name, i_name))
       ) continue; /* unmatch */
       if (ifunc_now.FunctionParameterSize() < i->FunctionParameterSize())
          paran = ifunc_now.FunctionParameterSize();
@@ -6608,7 +6620,7 @@ int Cint::Internal::G__function_signature_match(const Reflex::Member func1, cons
 }
 
 //______________________________________________________________________________
-::Reflex::Member G__get_ifunchandle(char* funcname, G__param* libp, int hash, const ::Reflex::Scope p_ifunc, long* pifn, int access, int funcmatch)
+static ::Reflex::Member G__get_ifunchandle(const char* funcname, G__param* libp, int hash, const ::Reflex::Scope p_ifunc, long* pifn, int access, int funcmatch)
 {
    int ipara = 0;
    int itemp = 0;
@@ -6696,7 +6708,7 @@ int Cint::Internal::G__function_signature_match(const Reflex::Member func1, cons
 }
 
 //______________________________________________________________________________
-::Reflex::Member G__get_ifunchandle_base(char* funcname, G__param* libp, int hash, const ::Reflex::Scope p_ifunc, long* pifn, char** poffset, int access, int funcmatch, int withInheritance)
+static ::Reflex::Member G__get_ifunchandle_base(const char* funcname, G__param* libp, int hash, const ::Reflex::Scope p_ifunc, long* pifn, char** poffset, int access, int funcmatch, int withInheritance)
 {
    // Search for function.
    *poffset = 0;
@@ -6711,12 +6723,12 @@ int Cint::Internal::G__function_signature_match(const Reflex::Member func1, cons
    int tagnum = G__get_tagnum(p_ifunc);
    if (tagnum != -1) {
       G__inheritance* baseclass = G__struct.baseclass[tagnum];
-      for (int basen = 0; basen < baseclass->basen; ++basen) {
-         if (baseclass->baseaccess[basen] & G__PUBLIC) {
+      for (size_t basen = 0; basen < baseclass->vec.size(); ++basen) {
+         if (baseclass->vec[basen].baseaccess & G__PUBLIC) {
             // Cannot handle virtual base class member function for ERTTI
             // because pointer to the object is not given.
-            *poffset = baseclass->baseoffset[basen];
-            mbr = G__get_ifunchandle(funcname, libp, hash, G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]), pifn, access, funcmatch);
+            *poffset = baseclass->vec[basen].baseoffset;
+            mbr = G__get_ifunchandle(funcname, libp, hash, G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum), pifn, access, funcmatch);
             if (mbr) { // Found, we are done.
                return mbr;
             }
@@ -6727,13 +6739,13 @@ int Cint::Internal::G__function_signature_match(const Reflex::Member func1, cons
 }
 
 //______________________________________________________________________________
-void Cint::Internal::G__argtype2param(char *argtype, G__param *libp)
+void Cint::Internal::G__argtype2param(const char *argtype, G__param *libp)
 {
    G__StrBuf typenam_sb(G__MAXNAME*2);
    char *typenam = typenam_sb;
    int p = 0;
    int c;
-   char *endmark = ",);";
+   const char *endmark = ",);";
 
    libp->paran = 0;
    libp->para[0] = G__null;
@@ -6755,7 +6767,7 @@ void Cint::Internal::G__argtype2param(char *argtype, G__param *libp)
 }
 
 //______________________________________________________________________________
-extern "C" G__ifunc_table* G__get_methodhandle(char* funcname, char* argtype, G__ifunc_table* p_ifunc, long* pifn, long* poffset, int withConversion, int withInheritance)
+extern "C" G__ifunc_table* G__get_methodhandle(const char* funcname, const char* argtype, G__ifunc_table* p_ifunc, long* pifn, long* poffset, int withConversion, int withInheritance)
 {
    ::Reflex::Scope ifunc = G__Dict::GetDict().GetScope(p_ifunc);
    G__param para;
@@ -6789,11 +6801,11 @@ extern "C" G__ifunc_table* G__get_methodhandle(char* funcname, char* argtype, G_
       }
       if (tagnum != -1) {
          G__inheritance* baseclass = G__struct.baseclass[tagnum];
-         for (int basen = 0; basen < baseclass->basen; ++basen) {
-            if (baseclass->baseaccess[basen] & G__PUBLIC) {
-               G__incsetup_memfunc(baseclass->basetagnum[basen]);
-               *poffset = (long) baseclass->baseoffset[basen];
-               ifunc = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
+         for (size_t basen = 0; basen < baseclass->vec.size(); ++basen) {
+            if (baseclass->vec[basen].baseaccess & G__PUBLIC) {
+               G__incsetup_memfunc(baseclass->vec[basen].basetagnum);
+               *poffset = (long) baseclass->vec[basen].baseoffset;
+               ifunc = G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum);
                mbr = G__overload_match(funcname, &para, hash, ifunc, G__TRYNORMAL, G__PUBLIC_PROTECTED_PRIVATE, &ifn, 0, 0, &match_error);
                *pifn = ifn;
                if (mbr) {
@@ -6832,7 +6844,7 @@ extern "C" G__ifunc_table* G__get_methodhandle(char* funcname, char* argtype, G_
 }
 
 //______________________________________________________________________________
-extern "C" G__ifunc_table* G__get_methodhandle2(char* funcname, G__param* libp, G__ifunc_table* p_ifunc, long* pifn, long* poffset, int withConversion, int withInheritance)
+extern "C" G__ifunc_table* G__get_methodhandle2(const char* funcname, G__param* libp, G__ifunc_table* p_ifunc, long* pifn, long* poffset, int withConversion, int withInheritance)
 {
    ::Reflex::Scope ifunc = G__Dict::GetDict().GetScope(p_ifunc);
    //
@@ -6853,13 +6865,13 @@ extern "C" G__ifunc_table* G__get_methodhandle2(char* funcname, G__param* libp, 
          return (G__ifunc_table*) mbr.Id();
       }
       if (tagnum != -1) {
-         int basen = 0;
+         size_t basen = 0;
          G__inheritance* baseclass = G__struct.baseclass[tagnum];
-         while (basen < baseclass->basen) {
-            if (baseclass->baseaccess[basen] & G__PUBLIC) {
-               G__incsetup_memfunc(baseclass->basetagnum[basen]);
-               *poffset = (long) baseclass->baseoffset[basen];
-               ifunc = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
+         while (basen < baseclass->vec.size()) {
+            if (baseclass->vec[basen].baseaccess & G__PUBLIC) {
+               G__incsetup_memfunc(baseclass->vec[basen].basetagnum);
+               *poffset = (long) baseclass->vec[basen].baseoffset;
+               ifunc = G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum);
                mbr = G__overload_match(funcname, libp, hash, ifunc, G__TRYNORMAL, G__PUBLIC_PROTECTED_PRIVATE, &ifn, 0, 0, &match_error);
                *pifn = ifn;
                if (mbr) {

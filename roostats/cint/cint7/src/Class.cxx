@@ -48,15 +48,7 @@ Cint::G__ClassInfo::G__ClassInfo(const char* classname) : fTagnum(0) , fClassPro
 //______________________________________________________________________________
 void Cint::G__ClassInfo::Init(const char* classname)
 {
-   if (strchr(classname,'<')) {
-      // G__defined_tagnum might modify classname.
-      char *tmp = new char[1+strlen(classname)*2];
-      strcpy(tmp,classname);
-      fTagnum = G__defined_tagname(tmp,1);
-      delete [] tmp;
-   } else {
-      fTagnum = G__defined_tagname(classname,1);
-   }
+   fTagnum = G__defined_tagname(classname,1);
    fClassProperty = 0;
 }
 
@@ -123,7 +115,11 @@ const char* Cint::G__ClassInfo::Title()
    static char buf[G__INFO_TITLELEN];
    buf[0] = '\0';
    if (IsValid()) {
-      G__getcomment(buf, &G__struct.comment[fTagnum], (int) fTagnum);
+      ::Reflex::Scope var = G__Dict::GetDict().GetScope(fTagnum);
+      G__RflxProperties *prop = G__get_properties(var);
+      if (prop) {
+         G__getcomment(buf, &prop->comment, (int) fTagnum);
+      }
       return buf; // FIXME: We are returning a pointer to a statically allocated buffer, this is not thread-safe.
    }
    return 0;
@@ -222,11 +218,11 @@ long Cint::G__ClassInfo::IsBase(G__ClassInfo& a)
    }
    long isbase = 0L;
    G__inheritance* baseclass = G__struct.baseclass[fTagnum];
-   for (int i = 0; i < baseclass->basen; ++i) {
-      if (a.Tagnum() != baseclass->basetagnum[i]) {
+   for (size_t i = 0; i < baseclass->vec.size(); ++i) {
+      if (a.Tagnum() != baseclass->vec[i].basetagnum) {
          continue;
       }
-      switch (baseclass->baseaccess[i]) {
+      switch (baseclass->vec[i].baseaccess) {
          case G__PUBLIC:
             isbase = G__BIT_ISPUBLIC;
             break;
@@ -239,10 +235,10 @@ long Cint::G__ClassInfo::IsBase(G__ClassInfo& a)
          default:
             break;
       }
-      if (baseclass->property[i] & G__ISDIRECTINHERIT) {
+      if (baseclass->vec[i].property & G__ISDIRECTINHERIT) {
          isbase |= G__BIT_ISDIRECTINHERIT;
       }
-      if (baseclass->property[i] & G__ISVIRTUALBASE) {
+      if (baseclass->vec[i].property & G__ISVIRTUALBASE) {
          isbase |= G__BIT_ISVIRTUALBASE;
       }
       break;

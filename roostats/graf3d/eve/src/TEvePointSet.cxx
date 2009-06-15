@@ -69,7 +69,7 @@ TEvePointSet::TEvePointSet(Int_t n_points, ETreeVarType_e tv_type) :
 }
 
 //______________________________________________________________________________
-TEvePointSet::TEvePointSet(const Text_t* name, Int_t n_points, ETreeVarType_e tv_type) :
+TEvePointSet::TEvePointSet(const char* name, Int_t n_points, ETreeVarType_e tv_type) :
    TEveElement(fMarkerColor),
    TPointSet3D(n_points),
    TEvePointSelectorConsumer(tv_type),
@@ -110,6 +110,35 @@ TEvePointSet::~TEvePointSet()
    // Destructor.
 
    delete fIntIds;
+}
+
+/******************************************************************************/
+
+//______________________________________________________________________________
+void TEvePointSet::ClonePoints(const TEvePointSet& e)
+{
+   // Clone points and all point-related information from point-set 'e'.
+
+   // TPolyMarker3D
+   delete [] fP;
+   fN = e.fN;
+   if (fN > 0)
+   {
+      const Int_t nn = 3 * e.fN;
+      fP = new Float_t [nn];
+      for (Int_t i = 0; i < nn; i++) fP[i] = e.fP[i];
+   } else {
+      fP = 0;
+   }
+   fLastPoint = e.fLastPoint;
+
+   // TPointSet3D
+   CopyIds(e);
+
+   // TEvePointSet
+   delete fIntIds;
+   fIntIds         = e.fIntIds ? new TArrayI(*e.fIntIds) : 0;
+   fIntIdsPerPoint = e.fIntIdsPerPoint;
 }
 
 /******************************************************************************/
@@ -408,8 +437,8 @@ void TEvePointSet::PointSelected(Int_t id)
 ClassImp(TEvePointSetArray);
 
 //______________________________________________________________________________
-TEvePointSetArray::TEvePointSetArray(const Text_t* name,
-                                     const Text_t* title) :
+TEvePointSetArray::TEvePointSetArray(const char* name,
+                                     const char* title) :
    TEveElement(fMarkerColor),
    TNamed(name, title),
 
@@ -562,7 +591,7 @@ Int_t TEvePointSetArray::Size(Bool_t under, Bool_t over) const
 }
 
 //______________________________________________________________________________
-void TEvePointSetArray::InitBins(const Text_t* quant_name,
+void TEvePointSetArray::InitBins(const char* quant_name,
                                  Int_t nbins, Double_t min, Double_t max)
 {
    // Initialize internal point-sets with given binning parameters.

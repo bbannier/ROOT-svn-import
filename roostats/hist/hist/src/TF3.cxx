@@ -154,7 +154,7 @@ TF3::TF3(const char *name, ROOT::Math::ParamFunctor f, Double_t xmin, Double_t x
 }
 
 //______________________________________________________________________________
-TF3::TF3(const char *name, void * ptr, Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Double_t zmin, Double_t zmax, Int_t npar, char *className)
+TF3::TF3(const char *name, void * ptr, Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Double_t zmin, Double_t zmax, Int_t npar, const char *className)
    : TF2(name, ptr, xmin, xmax, ymin, ymax,  npar, className), 
    fZmin(zmin), 
    fZmax(zmax), 
@@ -173,7 +173,7 @@ TF3::TF3(const char *name, void * ptr, Double_t xmin, Double_t xmax, Double_t ym
 }
 
 //______________________________________________________________________________
-TF3::TF3(const char *name, void * ptr, void *,Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Double_t zmin, Double_t zmax, Int_t npar, char *className, char * methodName)
+TF3::TF3(const char *name, void * ptr, void *,Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Double_t zmin, Double_t zmax, Int_t npar, const char *className, const char * methodName)
    : TF2(name, ptr, (void*)0,xmin, xmax, ymin, ymax, npar,className, methodName), 
    fZmin(zmin), 
    fZmax(zmax), 
@@ -283,7 +283,7 @@ void TF3::GetMinimumXYZ(Double_t &x, Double_t &y, Double_t &z)
 // Method:
 //   First, a grid search is performed to find the initial estimate of the 
 //   minimum location. The range of the function is divided 
-//   into fNpx,fNpy and fNpz sub-ranges. If the function is "good"(or "bad"), 
+//   into fNpx,fNpy and fNpz sub-ranges. If the function is "good" (or "bad"), 
 //   these values can be changed by SetNpx(), SetNpy() and SetNpz() functions.
 //   Then, Minuit minimization is used with starting values found by the grid search
 

@@ -1,5 +1,5 @@
 // @(#)root/gl:$Id$
-// Author:  Olivier Couet  12/04/2007
+// Author: Alja Mrak-Tadel 2008
 
 /*************************************************************************
  * Copyright (C) 1995-2007, Rene Brun and Fons Rademakers.               *
@@ -8,10 +8,13 @@
  * For the licensing terms see $ROOTSYS/LICENSE.                         *
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
-
+#include <iostream>
 #include "RConfigure.h"
 #include "TGLFontManager.h"
 
+
+#include "TVirtualX.h"
+#include "TMath.h"
 #include "TSystem.h"
 #include "TEnv.h"
 #include "TObjString.h"
@@ -102,12 +105,124 @@ void TGLFont::CopyAttributes(const TGLFont &o)
 /******************************************************************************/
 
 //______________________________________________________________________________
-void TGLFont::BBox(const char* txt, Float_t& llx, Float_t& lly, Float_t& llz, Float_t& urx, Float_t& ury, Float_t& urz) const
+Float_t TGLFont::GetAscent() const
+{
+   // Get font's ascent.
+
+   return fFont->Ascender();
+}
+
+//______________________________________________________________________________
+Float_t TGLFont::GetDescent() const
+{
+   // Get font's descent. The returned value is positive.
+
+   return -fFont->Descender();
+}
+
+//______________________________________________________________________________
+Float_t TGLFont::GetLineHeight() const
+{
+   // Get font's line-height.
+
+   return fFont->LineHeight();
+}
+
+//______________________________________________________________________________
+void TGLFont::MeasureBaseLineParams(Float_t& ascent, Float_t& descent, Float_t& line_height,
+                                    const char* txt) const
+{
+   // Measure font's base-line parameters from the passed text.
+   // Note that the measured parameters are not the same as the ones
+   // returned by get-functions - those were set by the font designer.
+
+   Float_t dum, lly, ury;
+   const_cast<FTFont*>(fFont)->BBox(txt, dum, lly, dum, dum, ury, dum);
+   ascent      =  ury;
+   descent     = -lly;
+   line_height =  ury - lly;
+}
+
+//______________________________________________________________________________
+void TGLFont::BBox(const char* txt,
+                   Float_t& llx, Float_t& lly, Float_t& llz,
+                   Float_t& urx, Float_t& ury, Float_t& urz) const
 {
    // Get bounding box.
 
    // FTGL is not const correct.
    const_cast<FTFont*>(fFont)->BBox(txt, llx, lly, llz, urx, ury, urz);
+}
+
+//______________________________________________________________________________
+void TGLFont::Render(const char* txt, Double_t x, Double_t y, Double_t angle, Double_t /*mgn*/) const
+{
+   //mgn is simply ignored, because ROOT's TVirtualX TGX11 are complete mess with
+   //painting attributes.
+   glPushMatrix();
+   //glLoadIdentity();
+   
+   // FTGL is not const correct.
+   Float_t llx = 0.f, lly = 0.f, llz = 0.f, urx = 0.f, ury = 0.f, urz = 0.f;
+   BBox(txt, llx, lly, llz, urx, ury, urz);
+   
+   /*
+    V\H   | left | center | right
+   _______________________________
+   bottom |  7   |   8    |   9
+   _______________________________
+   center |  4   |   5    |   6
+   _______________________________
+    top   |  1   |   2    |   3
+   */
+   const Double_t dx = urx - llx, dy = ury - lly;
+   Double_t xc = 0., yc = 0.;
+   const UInt_t align = gVirtualX->GetTextAlign();
+
+   switch (align) {
+   case 7:
+      xc += 0.5 * dx;
+      yc += 0.5 * dy;
+      break;
+   case 8:
+      yc += 0.5 * dy;
+      break;
+   case 9:
+      xc -= 0.5 * dx;
+      yc += 0.5 * dy;
+      break;
+   case 4:
+      xc += 0.5 * dx;
+      break;
+   case 5:
+      break;
+   case 6:
+      xc = -0.5 * dx;
+      break;
+   case 1:
+      xc += 0.5 * dx;
+      yc -= 0.5 * dy;
+      break;
+   case 2:
+      yc -= 0.5 * dy;
+      break;
+   case 3:
+      xc -= 0.5 * dx;
+      yc -= 0.5 * dy;
+      break;
+   }
+   
+   glTranslated(x, y, 0.);
+   glRotated(angle, 0., 0., 1.);
+   glTranslated(xc, yc, 0.);
+   glTranslated(-0.5 * dx, -0.5 * dy, 0.);
+   //glScaled(mgn, mgn, 1.);
+      
+   const_cast<FTFont*>(fFont)->Render(txt);
+   
+   glPopMatrix();
+   
+   
 }
 
 //______________________________________________________________________________
@@ -309,7 +424,7 @@ void TGLFontManager::RegisterFont(Int_t size, Int_t fileID, TGLFont::EMode mode,
 }
 
 //______________________________________________________________________________
-void TGLFontManager::RegisterFont(Int_t size, const Text_t* name, TGLFont::EMode mode, TGLFont &out)
+void TGLFontManager::RegisterFont(Int_t size, const char* name, TGLFont::EMode mode, TGLFont &out)
 {
    // Get mapping from ttf id to font names. Table taken from TTF.cxx.
 
@@ -369,53 +484,37 @@ TGLFontManager::FontSizeVec_t* TGLFontManager::GetFontSizeArray()
 }
 
 //______________________________________________________________________________
-Int_t TGLFontManager::GetFontSize(Float_t ds, Int_t min, Int_t max)
+Int_t TGLFontManager::GetFontSize(Float_t ds)
 {
    // Get availabe font size.
 
    if (fgStaticInitDone == kFALSE) InitStatics();
 
-   Int_t  nums = fgFontSizeArray.size();
-   Int_t i = 0;
-   while (i<nums)
-   {
-      if (ds<=fgFontSizeArray[i]) break;
-      i++;
-   }
+   Int_t idx = TMath::BinarySearch(fgFontSizeArray.size(), &fgFontSizeArray[0],
+                                   TMath::CeilNint(ds));
+   if (idx < 0) idx = 0;
+   return fgFontSizeArray[idx];
+}
 
-   Int_t fs =  fgFontSizeArray[i];
+//______________________________________________________________________________
+Int_t TGLFontManager::GetFontSize(Float_t ds, Int_t min, Int_t max)
+{
+   // Get availabe font size.
 
-   if (min>0 && fs<min)
-      fs = min;
-
-   if (max>0 && fs>max)
-      fs = max;
-
-   return fs;
+   if (ds < min) ds = min;
+   if (ds > max) ds = max;
+   return GetFontSize(ds);
 }
 
 //______________________________________________________________________________
 const char* TGLFontManager::GetFontNameFromId(Int_t id)
 {
-   static const char *fonttable[] = {
-      /* 0 */  "arialbd",
-      /* 1 */  "timesi",
-      /* 2 */  "timesbd",
-      /* 3 */  "timesbi",
-      /* 4 */  "arial",
-      /* 5 */  "ariali",
-      /* 6 */  "arialbd",
-      /* 7 */  "arialbi",
-      /* 8 */  "cour",
-      /* 9 */  "couri",
-      /*10 */  "courbd",
-      /*11 */  "courbi",
-      /*12 */  "symbol",
-      /*13 */  "times",
-      /*14 */  "wingding"
-   };
+   // Get font name from TAttAxis font id.
 
-   return fonttable[id / 10];
+   if (fgStaticInitDone == kFALSE) InitStatics();
+
+   TObjString* os = (TObjString*)fgFontFileArray[id / 10];
+   return os->GetString().Data();
 }
 
 //______________________________________________________________________________
@@ -423,25 +522,25 @@ void TGLFontManager::InitStatics()
 {
    // Create a list of available font files and allowed font sizes.
 
-   const char *ttpath = gEnv->GetValue("Root.TTFontPath",
-# ifdef TTFFONTDIR
-                                       TTFFONTDIR);
-# else
-                                       "$(ROOTSYS)/fonts");
-# endif
+   fgFontFileArray.Add(new TObjString("arialbd"));  //   0
 
-   void *dir = gSystem->OpenDirectory(ttpath);
-   const char* name = 0;
-   TString s;
-   while ((name = gSystem->GetDirEntry(dir))) {
-      s = name;
-      if (s.EndsWith(".ttf")) {
-         s.Resize(s.Sizeof() -5);
-         fgFontFileArray.Add(new TObjString(s.Data()));
-      }
-   }
-   fgFontFileArray.Sort();
-   gSystem->FreeDirectory(dir);
+   fgFontFileArray.Add(new TObjString("timesi"));   //  10
+   fgFontFileArray.Add(new TObjString("timesbd"));  //  20
+   fgFontFileArray.Add(new TObjString("timesbi"));  //  30
+ 
+   fgFontFileArray.Add(new TObjString("arial"));    //  40
+   fgFontFileArray.Add(new TObjString("ariali"));   //  50
+   fgFontFileArray.Add(new TObjString("arialbd"));  //  60
+   fgFontFileArray.Add(new TObjString("arialbi"));  //  70
+
+   fgFontFileArray.Add(new TObjString("cour"));     //  80
+   fgFontFileArray.Add(new TObjString("couri"));    //  90
+   fgFontFileArray.Add(new TObjString("courbd"));   // 100
+   fgFontFileArray.Add(new TObjString("courbi"));   // 110
+
+   fgFontFileArray.Add(new TObjString("symbol"));   // 120
+   fgFontFileArray.Add(new TObjString("times"));    // 130
+   fgFontFileArray.Add(new TObjString("wingding")); // 140
 
 
    // font sizes
@@ -449,7 +548,7 @@ void TGLFontManager::InitStatics()
       fgFontSizeArray.push_back(i);
    for (Int_t i = 24; i <= 64; i+=4)
       fgFontSizeArray.push_back(i);
-   for (Int_t i = 72; i <= 120; i+=8)
+   for (Int_t i = 72; i <= 128; i+=8)
       fgFontSizeArray.push_back(i);
 
    fgStaticInitDone = kTRUE;

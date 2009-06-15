@@ -20,10 +20,10 @@
 #define G__CINT_VER6  1
 #endif
 
-#define G__CINTVERSION_V6      60010029
-#define G__CINTVERSIONSTR_V6  "6.1.29, Jan 08, 2008"
-#define G__CINTVERSION_V5      50160029
-#define G__CINTVERSIONSTR_V5  "5.16.29, Jan 08, 2008"
+#define G__CINTVERSION_V6      60020000
+#define G__CINTVERSIONSTR_V6  "6.2.00, Dec 21, 2008"
+#define G__CINTVERSION_V5      50170000
+#define G__CINTVERSIONSTR_V5  "5.17.00, Dec 21, 2008"
 
 #define G__ALWAYS
 /* #define G__NEVER */
@@ -370,7 +370,7 @@
 #endif
 
 /* added by Fons Radamakers in 2000 Oct 2 */
-#if defined(__linux) || defined(__linux__) || defined(linux)
+#if (defined(__linux) || defined(__linux__) || defined(linux)) && ! defined(__CINT__)
 #   include <features.h>
 #   if __GLIBC__ == 2 && __GLIBC_MINOR__ >= 2
 #      define G__NONSCALARFPOS2
@@ -393,6 +393,8 @@ typedef unsigned long long G__uint64;
 /***********************************************************************
  * Something that depends on platform
  ***********************************************************************/
+
+#define ENABLE_CPP_EXCEPTIONS 1
 
 /* Exception */
 #if defined(G__WIN32) && !defined(G__STD_EXCEPTION)
@@ -915,6 +917,7 @@ struct G__DUMMY_FOR_CINT7 {
    void* fTypeName;
    unsigned int fModifiers;
 };
+
 #ifdef __cplusplus
 struct G__value {
 #else
@@ -923,7 +926,7 @@ typedef struct {
   union {
     double d;
     long    i; /* used to be int */
-#if defined(G__PRIVATE_GVALUE) && !defined(_WINDOWS)
+#if defined(G__PRIVATE_GVALUE) && !defined(_WIN32)
 #if defined(private) && defined(ROOT_RVersion)
 #define G__alt_private private
 #undef private
@@ -931,7 +934,7 @@ typedef struct {
 private:
 #endif
     struct G__p2p reftype;
-#if defined(G__PRIVATE_GVALUE) && !defined(_WINDOWS)
+#if defined(G__PRIVATE_GVALUE) && !defined(_WIN32)
 public:
 #endif
     char ch;
@@ -949,7 +952,7 @@ public:
 #ifdef G__REFERENCETYPE2
   long ref;
 #endif
-#if defined(G__PRIVATE_GVALUE) && !defined(_WINDOWS)
+#if defined(G__PRIVATE_GVALUE) && !defined(_WIN32)
 private:
 #if defined(G__alt_private) && defined(ROOT_RVersion)
 #define private public
@@ -993,7 +996,7 @@ private:
 
 
 #ifndef G__ANSI
-#if (__GNUC__>=3)  /* ||defined(__SUNPRO_CC)||defined(__SUNPRO_C) */
+#if (__GNUC__>=3) || defined(_STLPORT_VERSION)
 #define G__ANSI
 #endif
 #endif
@@ -1766,6 +1769,7 @@ extern G__EXPORT int G__tag_memfunc_reset G__P((void));
 extern G__EXPORT void G__letint G__P((G__value *buf,int type,long value));
 extern G__EXPORT void G__letdouble G__P((G__value *buf,int type,double value));
 extern G__EXPORT int G__value_get_type G__P((G__value* buf));
+extern G__EXPORT int G__value_get_tagnum G__P((G__value* buf));
 extern G__EXPORT void G__store_tempobject G__P((G__value reg));
 extern G__EXPORT int G__inheritance_setup G__P((int tagnum,int basetagnum,long baseoffset,int baseaccess,int property));
 extern G__EXPORT void G__add_compiledheader G__P((G__CONST char *headerfile));
@@ -2525,6 +2529,34 @@ extern G__EXPORT G__uint64 G__expr_strtoull G__P((const char *nptr, char **endpt
 } /* extern C 3 */
 #endif
 
+/***********************************************************************/
+#if defined(__cplusplus) && !defined(__CINT__)
+// Helper class to avoid compiler warning about casting function pointer
+// to void pointer.
+class G__func2void {
+   typedef void (*funcptr_t)();
+
+   union funcptr_and_voidptr {
+      typedef void (*funcptr_t)();
+      
+      funcptr_and_voidptr(void *val) : _read(val) {}
+      
+      void *_read;
+      funcptr_t _write;
+   };
+
+   funcptr_and_voidptr _tmp;
+public:
+   template <typename T>
+   G__func2void( T vfp ) : _tmp(0) {
+      _tmp._write = ( funcptr_t )vfp;
+   }
+
+   operator void* () const {
+      return _tmp._read;
+   }
+};
+#endif
 #endif /* __MAKECINT__ */
 /**************************************************************************
 * endif #ifndef G__MAKECINT

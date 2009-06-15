@@ -23,7 +23,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
    char* struct_offset_stack[G__MAXSTRSTACK]; // struct offset stack
    int gvpp = 0; // struct offset stack pointer
    char* store_globalvarpointer[G__MAXSTRSTACK];
-   char* funcname = 0; // function name
+   const char* funcname = 0; // function name
    G__InterfaceMethod pfunc;
    struct G__param fpara; // func,var parameter buf
    int* cntr = 0;
@@ -106,12 +106,12 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             ***************************************/
 #ifdef G__ASM_DBG
             if (G__asm_dbg) {
-               var = G__Dict::GetDict().GetDataMember(G__asm_inst[pc+4]);
+               var = G__Dict::GetDataMember(G__asm_inst[pc+4]);
                G__fprinterr(G__serr, "%3x,%3x: LDST_VAR_P ldst: %d var: '%s'", pc, sp, G__asm_inst[pc+3], var.Name().c_str());
             }
 #endif // G__ASM_DBG
             p2fldst = (p2fldst_t) G__asm_inst[pc+2];
-            (*p2fldst)(G__asm_stack, &sp, 0, G__Dict::GetDict().GetDataMember(G__asm_inst[pc+4]));
+            (*p2fldst)(G__asm_stack, &sp, 0, G__Dict::GetDataMember(G__asm_inst[pc+4]));
             pc += 5;
 #ifdef G__ASM_DBG
             if (G__asm_dbg) {
@@ -139,12 +139,12 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             ***************************************/
 #ifdef G__ASM_DBG
             if (G__asm_dbg) {
-               var = G__Dict::GetDict().GetDataMember(G__asm_inst[pc+4]);
+               var = G__Dict::GetDataMember(G__asm_inst[pc+4]);
                G__fprinterr(G__serr, "%3x,%3x: LDST_LVAR_P name: '%s' index: %ld ldst: %s %d ", pc, sp, var.Name(::Reflex::SCOPED).c_str(), G__asm_inst[pc+1], G__asm_inst[pc+3] ? "(store)" : "(load)", G__asm_inst[pc+3]);
             }
 #endif // G__ASM_DBG
             p2fldst = (p2fldst_t) G__asm_inst[pc+2];
-            (*p2fldst)(G__asm_stack, &sp, localmem, G__Dict::GetDict().GetDataMember(G__asm_inst[pc+4]));
+            (*p2fldst)(G__asm_stack, &sp, localmem, G__Dict::GetDataMember(G__asm_inst[pc+4]));
 #ifdef G__ASM_DBG
             if (G__asm_dbg) {
                G__fprinterr(G__serr, "val: 0x%08lx,%ld,%g\n", G__asm_stack[sp-1].obj.i, G__asm_stack[sp-1].obj.i, G__asm_stack[sp-1].obj.d);
@@ -172,12 +172,12 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             ***************************************/
 #ifdef G__ASM_DBG
             if (G__asm_dbg) {
-               var = G__Dict::GetDict().GetDataMember(G__asm_inst[pc+4]);
+               var = G__Dict::GetDataMember(G__asm_inst[pc+4]);
                G__fprinterr(G__serr, "%3x,%3x: LDST_MSTR_P index=%d ldst=%d %s stos=%lx\n", pc, sp, G__asm_inst[pc+1], G__asm_inst[pc+3], var.Name().c_str(), G__store_struct_offset);
             }
 #endif // G__ASM_DBG
             p2fldst = (p2fldst_t) G__asm_inst[pc+2];
-            (*p2fldst)(G__asm_stack, &sp, G__store_struct_offset, G__Dict::GetDict().GetDataMember(G__asm_inst[pc+4]));
+            (*p2fldst)(G__asm_stack, &sp, G__store_struct_offset, G__Dict::GetDataMember(G__asm_inst[pc+4]));
             pc += 5;
 #ifdef G__ASM_DBG
             break;
@@ -201,14 +201,17 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             ***************************************/
 #ifdef G__ASM_DBG
             if (G__asm_dbg) {
-               var = G__Dict::GetDict().GetDataMember(G__asm_inst[pc+6]);
+               var = G__Dict::GetDataMember(G__asm_inst[pc+6]);
                G__fprinterr(G__serr, "%3x,%3x: LDST_VAR_INDEX index=%d %s\n", pc, sp, G__asm_inst[pc+3], var.Name().c_str());
             }
 #endif // G__ASM_DBG
             G__asm_stack[sp].obj.i = (G__asm_inst[pc+5] & 1) ? *(int*)(G__asm_inst[pc+1] + localmem) : *(int*)G__asm_inst[pc+1];
-            G__value_typenum(G__asm_stack[sp++]) = Reflex::Type::ByName("int");
+            {
+               static Reflex::Type int_type = Reflex::Type::ByName("int");
+               G__value_typenum(G__asm_stack[sp++]) = int_type;
+            }
             p2fldst = (p2fldst_t) G__asm_inst[pc+2];
-            (*p2fldst)(G__asm_stack, &sp, (G__asm_inst[pc+5] & 2) ? localmem : 0, G__Dict::GetDict().GetDataMember(G__asm_inst[pc+6]));
+            (*p2fldst)(G__asm_stack, &sp, (G__asm_inst[pc+5] & 2) ? localmem : 0, G__Dict::GetDataMember(G__asm_inst[pc+6]));
             pc += G__asm_inst[pc+4];
 #ifdef G__ASM_DBG
             break;
@@ -234,7 +237,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             ***************************************/
 #ifdef G__ASM_DBG
             if (G__asm_dbg) {
-               var = G__Dict::GetDict().GetDataMember(G__asm_inst[pc+8]);
+               var = G__Dict::GetDataMember(G__asm_inst[pc+8]);
                G__fprinterr(G__serr, "%3x,%3x: LDST_VAR_INDEX_OPR index=%d %s\n", pc, sp, G__asm_inst[pc+5], var.Name().c_str());
             }
 #endif // G__ASM_DBG
@@ -257,9 +260,12 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
                       (*(int*)(G__asm_inst[pc+2] + localmem)) : (*(int*)G__asm_inst[pc+2]));
                   break;
             }
-            G__value_typenum(G__asm_stack[sp++]) = Reflex::Type::ByName("int");
+            {
+               static Reflex::Type int_type = Reflex::Type::ByName("int");
+               G__value_typenum(G__asm_stack[sp++]) = int_type;
+            }
             p2fldst = (p2fldst_t) G__asm_inst[pc+4];
-            (*p2fldst)(G__asm_stack, &sp, (G__asm_inst[pc+7] & 4) ? localmem : 0, G__Dict::GetDict().GetDataMember(G__asm_inst[pc+8]));
+            (*p2fldst)(G__asm_stack, &sp, (G__asm_inst[pc+7] & 4) ? localmem : 0, G__Dict::GetDataMember(G__asm_inst[pc+8]));
             pc += G__asm_inst[pc+6];
 #ifdef G__ASM_DBG
             break;
@@ -603,7 +609,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
                         G__fprinterr(G__serr, "%3x,%3x: LD_FUNC '%s' paran: %d  %s:%d\n", pc, sp, (char*) G__asm_inst[pc+2], G__asm_inst[pc+3], __FILE__, __LINE__);
                         break;
                      case 2:
-                        G__fprinterr(G__serr, "%3x,%3x: LD_FUNC '%s' paran: %d  %s:%d\n", pc, sp, G__Dict::GetDict().GetFunction(G__asm_inst[pc+2]).Name(::Reflex::SCOPED | ::Reflex::QUALIFIED).c_str(), G__asm_inst[pc+3], __FILE__, __LINE__);
+                        G__fprinterr(G__serr, "%3x,%3x: LD_FUNC '%s' paran: %d  %s:%d\n", pc, sp, G__Dict::GetFunction(G__asm_inst[pc+2]).Name(::Reflex::SCOPED | ::Reflex::QUALIFIED).c_str(), G__asm_inst[pc+3], __FILE__, __LINE__);
                         break;
                      case 3:
                         G__fprinterr(G__serr, "%3x,%3x: LD_FUNC '%s' paran: %d  %s:%d\n", pc, sp, ((G__bytecodefunc*)G__asm_inst[pc+2])->ifunc.Name().c_str(), G__asm_inst[pc+3], __FILE__, __LINE__);
@@ -614,10 +620,10 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
                }
 #endif
                if (flag == 1) {
-                  funcname = (char*)G__asm_inst[pc+2];
+                  funcname = (const char*)G__asm_inst[pc+2];
                   hash = G__asm_inst[pc+1] / 10;
                } else if (flag == 3) {
-                  funcname = (char*)G__asm_inst[pc+2]; 
+                  funcname = (const char*)G__asm_inst[pc+2]; 
                } else {
                   funcname = "Cint bytecode compiler G__LD_FUNC";
                }
@@ -631,7 +637,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
                for (int i = 0; i < fpara.paran; ++i) {
                   fpara.para[i] = G__asm_stack[sp-fpara.paran+i];
                   if (!fpara.para[i].ref) {
-                     switch (Reflex::Tools::FundamentalType(G__value_typenum(fpara.para[i]))) {
+                     switch (Reflex::Tools::FundamentalType(G__value_typenum(fpara.para[i]).FinalType())) {
                         case Reflex::kFLOAT:
                         case Reflex::kUNSIGNED_CHAR:
                         case Reflex::kCHAR:
@@ -671,10 +677,10 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
                //
 #ifdef G__EXCEPTIONWRAPPER
                G__asm_exec = 0;
-               dtorfreeoffset = (char*) G__ExceptionWrapper(pfunc, result, funcname, &fpara, hash);
+               dtorfreeoffset = (char*) (long) G__ExceptionWrapper(pfunc, result, (char*)funcname, &fpara, hash);
                G__asm_exec = 1;
 #else // G__EXCEPTIONWRAPPER
-               dtorfreeoffset = (char*) (*pfunc)(result, funcname, &fpara, hash);
+               dtorfreeoffset = (char*) (long) (*pfunc)(result, (char*)funcname, &fpara, hash);
 #endif // G__EXCEPTIONWRAPPER
                //
                //  Function has returned.
@@ -682,7 +688,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
                if (flag == 0) {
                   //FIXME: By going through Type::Id we lose the modifiers.
                   //however the Cint5 code was not really passing it either!
-                  G__value_typenum(*result) = G__Dict::GetDict().GetTypeFromId(G__asm_inst[pc+2]); 
+                  G__value_typenum(*result) = G__Dict::GetTypeFromId(G__asm_inst[pc+2]); 
                }
                // Restore state.
                G__store_struct_offset -= G__asm_inst[pc+5];
@@ -971,7 +977,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             * sp-1
             * sp
             ***************************************/
-            G__asm_index = G__Dict::GetDict().GetDataMember((size_t) G__asm_inst[pc+4]);
+            G__asm_index = G__Dict::GetDataMember((size_t) G__asm_inst[pc+4]);
 #ifdef G__ASM_DBG
             if (G__asm_dbg) {
                G__fprinterr(G__serr, "%3x,%3x: LD_VAR index: %d paran: %d type: '%c' var: '%s' %08lx  %s:%d\n", pc, sp, G__asm_inst[pc+1], G__asm_inst[pc+2], G__asm_inst[pc+3], G__asm_index.Name().c_str(), (long) G__asm_inst[pc+4], __FILE__, __LINE__);
@@ -992,7 +998,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             sp -= fpara.paran;
             {
               int known = 0;
-              G__asm_stack[sp] = G__getvariable("", &known, G__asm_index.DeclaringScope(), Reflex::Scope());
+              G__asm_stack[sp] = G__getvariable(/*FIXME*/(char*)"", &known, G__asm_index.DeclaringScope(), Reflex::Scope());
             }
             pc += 5;
 #ifdef G__ASM_DBG
@@ -1027,7 +1033,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
                G__fprinterr(G__serr, "%3x,%3x: ST_VAR index: %d paran: %d point '%c'  %s:%d\n", pc, sp, G__asm_inst[pc+1], G__asm_inst[pc+2], G__asm_inst[pc+3], __FILE__, __LINE__);
             }
 #endif // G__ASM_DBG
-            G__asm_index = G__Dict::GetDict().GetDataMember((size_t)G__asm_inst[pc+4]);
+            G__asm_index = G__Dict::GetDataMember((size_t)G__asm_inst[pc+4]);
             fpara.paran= G__asm_inst[pc+2];
             G__var_type=(char) G__asm_inst[pc+3];
             for (int i = 0; i < fpara.paran; ++i) {
@@ -1074,7 +1080,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
                G__fprinterr(G__serr, "%3x,%3x: LD_MSTR index: %d paran: %d 0x%lx  %s:%d\n", pc, sp, G__asm_inst[pc+1], G__asm_inst[pc+2], G__store_struct_offset, __FILE__, __LINE__);
             }
 #endif // G__ASM_DBG
-            G__asm_index = G__Dict::GetDict().GetDataMember((size_t)G__asm_inst[pc+4]);
+            G__asm_index = G__Dict::GetDataMember((size_t)G__asm_inst[pc+4]);
             fpara.paran = G__asm_inst[pc+2];
             G__var_type=(char) G__asm_inst[pc+3];
             for (int i = 0; i < fpara.paran; ++i) {
@@ -1090,7 +1096,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             sp -= fpara.paran;
             {
                int known = 0;
-               G__asm_stack[sp] = G__getvariable("", &known, G__asm_index.DeclaringScope(), Reflex::Scope::GlobalScope());
+               G__asm_stack[sp] = G__getvariable(/*FIXME*/(char*)"", &known, G__asm_index.DeclaringScope(), Reflex::Scope::GlobalScope());
             }
             pc += 5;
 #ifdef G__ASM_DBG
@@ -1126,7 +1132,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
                G__fprinterr(G__serr, "%3x,%3x: ST_MSTR index: %d paran: %d 0x%lx  %s:%d\n", pc, sp, G__asm_inst[pc+1], G__asm_inst[pc+2], G__store_struct_offset, __FILE__, __LINE__);
             }
 #endif // G__ASM_DBG
-            G__asm_index = G__Dict::GetDict().GetDataMember((size_t) G__asm_inst[pc+4]);
+            G__asm_index = G__Dict::GetDataMember((size_t) G__asm_inst[pc+4]);
             fpara.paran = G__asm_inst[pc+2];
             G__var_type = (char) G__asm_inst[pc+3];
             for (int i = 0; i < fpara.paran; ++i) {
@@ -1169,7 +1175,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             * sp-1
             * sp
             ***************************************/
-            G__asm_index = G__Dict::GetDict().GetDataMember((size_t) G__asm_inst[pc+4]);
+            G__asm_index = G__Dict::GetDataMember((size_t) G__asm_inst[pc+4]);
 #ifdef G__ASM_DBG
             if (G__asm_dbg) {
                G__fprinterr(G__serr, "%3x,%3x: LD_LVAR name: '%s' offset: 0x%08lx type: '%s' index: %ld paran: %ld point '%c'  %s:%d\n", pc, sp, G__asm_index.Name(::Reflex::SCOPED).c_str(), G__get_offset(G__asm_index), G__asm_index.TypeOf().Name().c_str(), G__asm_inst[pc+1], G__asm_inst[pc+2], (char) G__asm_inst[pc+3], __FILE__, __LINE__);
@@ -1192,7 +1198,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             G__store_struct_offset = localmem;
             {
                int known = 0;
-               G__asm_stack[sp] = G__getvariable("", &known, G__asm_index.DeclaringScope(), Reflex::Scope::GlobalScope());
+               G__asm_stack[sp] = G__getvariable(/*FIXME*/(char*)"", &known, G__asm_index.DeclaringScope(), Reflex::Scope::GlobalScope());
             }
             G__store_struct_offset = store_struct_offset_localmem;
             pc += 5;
@@ -1228,7 +1234,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
                G__fprinterr(G__serr, "%3x,%3x: ST_LVAR paran: %d type: '%c' var: 0x%08lx  %s:%d\n", pc, sp, G__asm_inst[pc+2], G__asm_inst[pc+3], G__asm_inst[pc+4], __FILE__, __LINE__);
             }
 #endif // G__ASM_DBG
-            G__asm_index = G__Dict::GetDict().GetDataMember((size_t) G__asm_inst[pc+4]);
+            G__asm_index = G__Dict::GetDataMember((size_t) G__asm_inst[pc+4]);
             fpara.paran = G__asm_inst[pc+2];
             G__var_type = (char) G__asm_inst[pc+3];
             for (int i = 0; i < fpara.paran; ++i) {
@@ -1502,7 +1508,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             * sp-1
             * sp
             ***************************************/
-            G__asm_index = G__Dict::GetDict().GetFunction((size_t) G__asm_inst[pc+4]);
+            G__asm_index = G__Dict::GetFunction((size_t) G__asm_inst[pc+4]);
 #ifdef G__ASM_DBG
             if (G__asm_dbg) {
                G__fprinterr(G__serr, "%3x,%3x: LD_IFUNC '%s' paran: %d  %s:%d\n", pc, sp, G__asm_index.Name().c_str(), G__asm_inst[pc+3], __FILE__, __LINE__);
@@ -1553,10 +1559,10 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
                int store_asm_noverflow = G__asm_noverflow;
                G__asm_noverflow = 0;
                G__StrBuf funcname_sb(G__LONGLINE);
-               char* funcname = funcname_sb;
-               strcpy(funcname, G__asm_index.Name().c_str());
+               char* local_funcname = funcname_sb;
+               strcpy(local_funcname, G__asm_index.Name().c_str());
                ::Reflex::Scope scope = G__asm_index.DeclaringScope();
-               G__interpret_func(&G__asm_stack[sp], funcname, &fpara, G__asm_inst[pc+2], scope, G__asm_inst[pc+5], G__asm_inst[pc+6]);
+               G__interpret_func(&G__asm_stack[sp], local_funcname, &fpara, G__asm_inst[pc+2], scope, G__asm_inst[pc+5], G__asm_inst[pc+6]);
                G__asm_noverflow = store_asm_noverflow;
             }
             G__memberfunc_tagnum = store_memberfunc_tagnum;
@@ -2075,7 +2081,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             * sp-1           ->
             * sp
             ***************************************/
-            var = G__Dict::GetDict().GetDataMember((size_t) G__asm_inst[pc+1]);
+            var = G__Dict::GetDataMember((size_t) G__asm_inst[pc+1]);
             G__get_offset(var) = (char*) G__int(G__asm_stack[sp-1]);
 #ifdef G__ASM_DBG
             if (G__asm_dbg) {
@@ -2142,7 +2148,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             * sp-1            <-
             * sp
             ***************************************/
-            var = G__Dict::GetDict().GetDataMember((size_t) G__asm_inst[pc+4]);
+            var = G__Dict::GetDataMember((size_t) G__asm_inst[pc+4]);
 #ifdef G__ASM_DBG
             if (G__asm_dbg) {
                G__fprinterr(G__serr, "%3x,%3x: INIT_REF name: '%s' index: %d paran: %d point '%c' ref: 0x%lx\n", pc, sp, var.Name(::Reflex::SCOPED).c_str(), G__asm_inst[pc+1], G__asm_inst[pc+2], G__asm_inst[pc+3], G__asm_stack[sp-1].ref);
@@ -2272,7 +2278,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
             * 3 mode, 0 local block scope, 1 member offset, 2 static
             ***************************************/
             store_globalvarpointer[gvpp++] = G__globalvarpointer; /* ??? */
-            var = G__Dict::GetDict().GetDataMember((size_t) G__asm_inst[pc+2]);
+            var = G__Dict::GetDataMember((size_t) G__asm_inst[pc+2]);
             switch (G__asm_inst[pc+3]) {
                case 0:
                   G__globalvarpointer = (long) localmem + G__get_offset(var);
@@ -2549,7 +2555,7 @@ int G__exec_asm(int start, int stack, G__value* presult, char* localmem)
                G__fprinterr(G__serr, "%3x,%3x: PUTAUTOOBJ\n", pc, sp);
             }
 #endif // G__ASM_DBG
-            var = G__Dict::GetDict().GetDataMember(G__asm_inst[pc+1]);
+            var = G__Dict::GetDataMember(G__asm_inst[pc+1]);
             //
             //G__push_autoobjectstack((void*) (localmem + (long) G__get_offset(var)), var.TypeOf(), G__get_varlabel(var, 1) /* number of elements */, G__scopelevel, 0);
             pc += 3;

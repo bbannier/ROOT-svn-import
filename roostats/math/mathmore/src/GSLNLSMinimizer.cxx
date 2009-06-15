@@ -11,6 +11,7 @@
 // Implementation file for class GSLNLSMinimizer
 
 #include "Math/GSLNLSMinimizer.h"
+#include "Math/Error.h"
 #include "GSLMultiFit.h"
 #include "gsl/gsl_errno.h"
 
@@ -69,6 +70,20 @@ bool GSLNLSMinimizer::SetVariable(unsigned int ivar, const std::string & name, d
    return true; 
 }
 
+bool GSLNLSMinimizer::SetLowerLimitedVariable(unsigned int ivar, const std::string & name, double val, double step, double ) { 
+   MATH_WARN_MSGVAL("GSLNLSMinimizer::SetLowerLimitedVariable","Ignore lower limit on variable ",ivar);
+   return SetVariable(ivar, name, val, step); 
+}
+bool GSLNLSMinimizer::SetUpperLimitedVariable(unsigned int ivar, const std::string & name, double val, double step, double ) { 
+   MATH_WARN_MSGVAL("GSLNLSMinimizer::SetUpperLimitedVariable","Ignore upper limit on variable ",ivar);
+   return SetVariable(ivar, name, val, step); 
+}
+bool GSLNLSMinimizer::SetLimitedVariable(unsigned int ivar, const std::string & name, double val, double step, double, double ) { 
+   MATH_WARN_MSGVAL("GSLNLSMinimizer::SetLimitedVariable","Ignore bounds on variable ",ivar);
+   return SetVariable(ivar, name, val, step); 
+}
+
+
 bool GSLNLSMinimizer::SetVariableValue(unsigned int ivar, double val) { 
    // set variable value in minimizer 
    // no transformation implemented - so far
@@ -121,9 +136,15 @@ bool GSLNLSMinimizer::Minimize() {
 
 
    assert (fGSLMultiFit != 0);   
-   if (fResiduals.size() !=  fSize) {
-      std::cout << "GSLNLSMinimizer : Error - wrong residual size." << std::endl;
+   if (fResiduals.size() !=  fSize || fObjFunc == 0) {
+      MATH_ERROR_MSG("GSLNLSMinimizer::Minimize","Function has not been  set");
       return false; 
+   }
+
+   unsigned int npar = fValues.size();
+   if (npar == 0 || npar < fDim) { 
+       MATH_ERROR_MSGVAL("GSLNLSMinimizer::Minimize","Wrong number of parameters",npar);
+       return false; 
    }
    
 

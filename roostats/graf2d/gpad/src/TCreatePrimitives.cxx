@@ -308,6 +308,9 @@ void TCreatePrimitives::Pave(Int_t event, Int_t px, Int_t py, Int_t mode)
    static char atext[kTMAX];
    TObject *pave = 0;
 
+   if (mode == kPaveLabel)
+      ((TPad *)gPad)->EventPave();
+
    switch (event) {
 
    case kButton1Down:
@@ -344,6 +347,8 @@ void TCreatePrimitives::Pave(Int_t event, Int_t px, Int_t py, Int_t mode)
       if (mode == kPavesText) pave = new TPavesText(xp0,yp0,xp1,yp1);
       if (mode == kDiamond)   pave = new TDiamond(x0,y0,x1,y1);
       if (mode == kPaveLabel || mode == kButton) {
+         ((TPad *)gPad)->StartEditing();
+         gSystem->ProcessEvents();
          pxl = (px0 + px)/2;
          pyl = (py0 + py)/2;
          for (i=0;i<kTMAX;i++) atext[i] = ' ';
@@ -355,8 +360,12 @@ void TCreatePrimitives::Pave(Int_t event, Int_t px, Int_t py, Int_t mode)
                break;
             }
          }
-         if (mode == kPaveLabel) pave = new TPaveLabel(xp0,yp0,xp1,yp1,atext);
-         if (mode == kButton)    pave = new TButton(atext,"",
+         if (mode == kPaveLabel) { 
+            pave = new TPaveLabel(xp0,yp0,xp1,yp1,atext);
+            gSystem->ProcessEvents();
+            ((TPad *)gPad)->RecordPave(pave);
+         }
+         if (mode == kButton) pave = new TButton(atext,"",
                               (x0-gPad->GetX1())/(gPad->GetX2() - gPad->GetX1()),
                               (y0-gPad->GetY1())/(gPad->GetY2() - gPad->GetY1()),
                               (x1-gPad->GetX1())/(gPad->GetX2() - gPad->GetX1()),
@@ -497,6 +506,7 @@ void TCreatePrimitives::Text(Int_t event, Int_t px, Int_t py, Int_t mode)
          gROOT->SetEditorMode();
          break;
       }
+      ((TPad *)gPad)->StartEditing();
       gSystem->ProcessEvents();
       for (i=0;i<kTMAX;i++) atext[i] = ' ';
       atext[kTMAX-1] = 0;
@@ -519,6 +529,9 @@ void TCreatePrimitives::Text(Int_t event, Int_t px, Int_t py, Int_t mode)
       gPad->GetCanvas()->Selected((TPad*)gPad, newtext, event);
       gROOT->SetEditorMode();
       gPad->Update();
+      TLatex copytext(x, y, atext);
+      gSystem->ProcessEvents();
+      ((TPad *)gPad)->RecordLatex(&copytext);
       break;
    }
 }

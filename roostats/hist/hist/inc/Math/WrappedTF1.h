@@ -8,7 +8,7 @@
  *                                                                    *
  **********************************************************************/
 
-// Header file for class WrappedTFunction
+// Header file for class WrappedTF1
 
 #ifndef ROOT_Math_WrappedTF1
 #define ROOT_Math_WrappedTF1
@@ -21,7 +21,6 @@
 #ifndef ROOT_TF1
 #include "TF1.h"
 #endif
-#include <cmath>
 
 namespace ROOT { 
 
@@ -48,33 +47,9 @@ public:
    WrappedTF1() {}
 
    /** 
-      constructor from a function pointer. 
+      constructor from a TF1 function pointer. 
    */ 
-   WrappedTF1 ( TF1 & f  )  : 
-      fLinear(false), 
-      fPolynomial(false),
-      fFunc(&f), 
-      fParams(f.GetParameters(),f.GetParameters()+f.GetNpar())
-
-   {
-      // init the pointers for CINT
-      if (fFunc->GetMethodCall() )  fFunc->InitArgs(fX, &fParams.front() );
-      // distinguish case of polynomial functions and linear functions
-      if (fFunc->GetNumber() >= 300 && fFunc->GetNumber() < 310) { 
-         fLinear = true; 
-         fPolynomial = true; 
-      }
-      // check that in case function is linear the linear terms are not zero
-      if (fFunc->IsLinear() ) { 
-         unsigned int ip = 0; 
-         fLinear = true;
-         while (fLinear && ip < fParams.size() )  { 
-            fLinear &= (fFunc->GetLinearPart(ip) != 0) ; 
-            ip++;
-         }
-      }
-
-   }
+   WrappedTF1 ( TF1 & f  ); 
 
    /** 
       Destructor (no operations). TF1 Function pointer is not owned
@@ -84,30 +59,12 @@ public:
    /** 
       Copy constructor
    */ 
-   WrappedTF1(const WrappedTF1 & rhs) :
-      BaseFunc(),
-      BaseGradFunc(),
-      fLinear(rhs.fLinear), 
-      fPolynomial(rhs.fPolynomial),
-      fFunc(rhs.fFunc), 
-      fParams(rhs.fParams)
-   {
-      fFunc->InitArgs(fX,&fParams.front()  );
-   }
+   WrappedTF1(const WrappedTF1 & rhs);
 
    /** 
       Assignment operator
    */ 
-   WrappedTF1 & operator = (const WrappedTF1 & rhs) { 
-      if (this == &rhs) return *this;  // time saving self-test
-      fLinear = rhs.fLinear;  
-      fPolynomial = rhs.fPolynomial; 
-      fFunc = rhs.fFunc; 
-      fFunc->InitArgs(fX, &fParams.front() );
-      fParams = rhs.fParams;
-      return *this;
-   } 
-
+   WrappedTF1 & operator = (const WrappedTF1 & rhs); 
 
    /** @name interface inherited from IFunction */
 
@@ -123,7 +80,7 @@ public:
 
    /// get the parameter values (return values cachen inside, those inside TF1 might be different) 
    const double * Parameters() const {
-      return &fParams.front(); 
+      return  (fParams.size() > 0) ? &fParams.front() : 0;
    }
 
    /// set parameter values (only the cached one in this class,leave unchanges those of TF1)
@@ -145,19 +102,9 @@ public:
    using BaseGradFunc::operator();
 
    /// evaluate the derivative of the function with respect to the parameters
-   void  ParameterGradient(double x, const double * par, double * grad ) const { 
-      if (!fLinear) { 
-         // need to set parameter values
-         fFunc->SetParameters( par );
-         static const double kEps = 0.001;
-         fFunc->GradientPar(&x,grad,kEps);
-      }
-      else { 
-         unsigned int np = NPar();
-         for (unsigned int i = 0; i < np; ++i) 
-            grad[i] = DoParameterDerivative(x, par, i);
-      }
-   }
+   void  ParameterGradient(double x, const double * par, double * grad ) const;
+
+   static void SetDerivStepSize(double eps) { fgEps = eps; }
 
 
 private: 
@@ -176,46 +123,23 @@ private:
       // no need to call InitArg for interpreted functions (done in ctor)
       // use EvalPar since it is much more efficient than Eval
       fX[0] = x;  
-      return fFunc->EvalPar(fX,&fParams.front()); 
+      const double * p = (fParams.size() > 0) ? &fParams.front() : 0;
+      return fFunc->EvalPar(fX, p ); 
    }
 
    /// return the function derivatives w.r.t. x 
-   double DoDerivative( double  x  ) const { 
-      static const double kEps = 0.001;
-      // parameter are passed as non-const in Derivative
-      double * p = const_cast<double *>(&fParams.front() );
-      return  fFunc->Derivative(x,p,kEps); 
-   }
+   double DoDerivative( double  x  ) const;
 
    /// evaluate the derivative of the function with respect to the parameters
-   double  DoParameterDerivative(double x, const double * p, unsigned int ipar ) const { 
-      // not very efficient - use ParameterGradient
-      if (! fLinear ) {  
-         std::vector<double> grad(NPar());
-         ParameterGradient(x, p, &grad[0] ); 
-         return grad[ipar]; 
-      }
-      else if (fPolynomial) { 
-         // case of polynomial function (no parameter dependency)  
-         return std::pow(x, static_cast<int>(ipar) );  
-      }
-      else { 
-         // case of general linear function (bbuilt with ++ )
-         const TFormula * df = dynamic_cast<const TFormula*>( fFunc->GetLinearPart(ipar) );
-         assert(df != 0); 
-         fX[0] = x; 
-         // hack since TFormula::EvalPar is not const
-         return (const_cast<TFormula*> ( df) )->EvalPar( fX ) ; // derivatives should not depend on parameters since func is linear 
-      }
-   }
-
-
+   double  DoParameterDerivative(double x, const double * p, unsigned int ipar ) const; 
 
    bool fLinear;                 // flag for linear functions 
    bool fPolynomial;             // flag for polynomial functions 
    TF1 * fFunc;                  // pointer to ROOT function
    mutable double fX[1];         //! cached vector for x value (needed for TF1::EvalPar signature) 
    std::vector<double> fParams;  //  cached vector with parameter values
+
+   static double fgEps;          // epsilon used in derivative calculation
 }; 
 
    } // end namespace Fit

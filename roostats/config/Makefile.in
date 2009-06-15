@@ -126,6 +126,14 @@ ifeq ($(BUILDFTGL), yes)
 FTGLCPPFLAGS   := -DBUILTIN_FTGL
 endif
 
+BUILDGLEW      := @buildglew@
+GLEWLIBDIR     := @glewlibdir@
+GLEWLIBS       := @glewlibs@
+GLEWINCDIR     := $(filter-out /usr/include, @glewincdir@)
+ifeq ($(BUILDGLEW), yes)
+GLEWCPPFLAGS   := -DBUILTIN_GLEW
+endif
+
 BUILDGFAL      := @buildgfal@
 GFALLIBDIR     := @gfallibdir@
 GFALCLILIB     := @gfallib@
@@ -142,6 +150,11 @@ GAWLIB         := @glitelib@
 GAW_CPPFLAGS   := $(filter-out /usr/include, @gaw_cppflags@)
 
 BUILDMEMSTAT   := @buildmemstat@
+
+BUILDBONJOUR   := @buildbonjour@
+DNSSDLIBDIR    := @dnssdlibdir@
+DNSSDLIB       := @dnssdlib@
+DNSSDINCDIR    := $(filter-out /usr/include, @dnssdincdir@)
 
 BUILDCHIRP     := @buildchirp@
 CHIRPLIBDIR    := @chirplibdir@
@@ -212,7 +225,9 @@ SRPUTILINCDIR  := $(filter-out /usr/include, @srputilincdir@)
 
 AFSLIB         := @afslib@
 AFSLIBDIR      := @afslibdir@
+AFSINCDIR      := @afsincdir@
 AFSEXTRACFLAGS := @afsextracflags@
+AFSSHARED      := @afsshared@
 
 BUILDKRB5      := @buildkrb5@
 KRB5LIB        := @krb5lib@
@@ -242,6 +257,7 @@ MONALISAINCDIR := $(filter-out /usr/include, @monalisaincdir@)
 SSLLIB         := @ssllib@
 SSLLIBDIR      := @ssllibdir@
 SSLINCDIR      := $(filter-out /usr/include, @sslincdir@)
+SSLSHARED      := @sslshared@
 
 SHADOWFLAGS    := @shadowpw@
 SHADOWLIB      :=
@@ -255,7 +271,13 @@ GSLLIBDIR      := @gsllibdir@
 GSLLIBS        := @gsllibs@
 GSLVERSION     := @gslversion@
 
+BUILDCINT5     := @buildcint5@
 BUILDCINT7     := @buildcint7@
+ifeq ($(BUILDCINT5)_$(BUILDCINT7),yes_yes)
+BUILDBOTHCINT  := yes
+else
+BUILDBOTHCINT  :=
+endif
 
 BUILDCINTEX    := @buildcintex@
 

@@ -307,15 +307,17 @@ public:
    virtual Long64_t        GetSelectedRows() { return GetPlayer()->GetSelectedRows(); }
    virtual Int_t           GetTimerInterval() const { return fTimerInterval; }
    virtual Long64_t        GetTotBytes() const { return fTotBytes; }
-   virtual TTree          *GetTree() const { return (TTree*)this; }
+   virtual TTree          *GetTree() const { return const_cast<TTree*>(this); }
    virtual TVirtualIndex  *GetTreeIndex() const { return fTreeIndex; }
    virtual Int_t           GetTreeNumber() const { return 0; }
    virtual Int_t           GetUpdate() const { return fUpdate; }
    virtual TList          *GetUserInfo();
+   TTreeFormula           *GetVar(Int_t i)  { return GetPlayer()->GetVar(i); }
    TTreeFormula           *GetVar1() { return GetPlayer()->GetVar1(); }
    TTreeFormula           *GetVar2() { return GetPlayer()->GetVar2(); }
    TTreeFormula           *GetVar3() { return GetPlayer()->GetVar3(); }
    TTreeFormula           *GetVar4() { return GetPlayer()->GetVar4(); }
+   virtual Double_t       *GetVal(Int_t i)   { return GetPlayer()->GetVal(i); }
    virtual Double_t       *GetV1()   { return GetPlayer()->GetV1(); }
    virtual Double_t       *GetV2()   { return GetPlayer()->GetV2(); }
    virtual Double_t       *GetV3()   { return GetPlayer()->GetV3(); }
@@ -350,6 +352,7 @@ public:
    virtual TSQLResult     *Query(const char* varexp = "", const char* selection = "", Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0);
    virtual Long64_t        ReadFile(const char* filename, const char* branchDescriptor = "");
    virtual void            Refresh();
+   virtual void            RecursiveRemove(TObject *obj);
    virtual void            RemoveFriend(TTree*);
    virtual void            Reset(Option_t* option = "");
    virtual void            ResetBranchAddress(TBranch *);

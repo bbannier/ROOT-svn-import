@@ -25,6 +25,7 @@
 #pragma link C++ class TF12+;
 #pragma link C++ class TF2-;
 #pragma link C++ class TF3-;
+#pragma link C++ class Foption_t+;
 #pragma link C++ class TGraph-;
 #pragma link C++ class TGraphErrors-;
 #pragma link C++ class TGraphAsymmErrors-;
@@ -82,6 +83,7 @@
 #pragma link C++ class TVirtualGraphPainter+;
 #pragma link C++ class TBackCompFitter+;
 #pragma link C++ class TUnfold+;
+#pragma link C++ class TUnfoldSys+;
 
 
 #pragma link C++ typedef THnSparseD;
@@ -222,6 +224,22 @@
 #pragma link C++ function ROOT::Fit::FillData(ROOT::Fit::BinData &, const TGraph *,  TF1 * );
 #pragma link C++ function ROOT::Fit::FillData(ROOT::Fit::BinData &, const TMultiGraph *,  TF1 * );
 
+#pragma link C++ function ROOT::Fit::FitResult::GetCovarianceMatrix<TMatrixDSym>( TMatrixDSym & );
+#pragma link C++ function ROOT::Fit::FitResult::GetCorrelationMatrix<TMatrixDSym>( TMatrixDSym & );
+
+
+
+
+// for having backward comptibility after new data member in TProfile
+#pragma read sourceClass="TProfile" version="[1-5]" targetClass="TProfile" \
+  source="" target="fBinSumw2" \
+  code="{ fBinSumw2.Reset(); }"
+#pragma read sourceClass="TProfile2D" version="[1-6]" targetClass="TProfile2D" \
+  source="" target="fBinSumw2" \
+  code="{ fBinSumw2.Reset(); }"
+#pragma read sourceClass="TProfile3D" version="[1-6]" targetClass="TProfile3D" \
+  source="" target="fBinSumw2" \
+  code="{ fBinSumw2.Reset(); }"
 
 
 #endif

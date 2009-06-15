@@ -21,6 +21,7 @@
 #include "value.h"
 #include "../../reflex/src/FunctionMember.h"
 #include "Reflex/internal/MemberBase.h"
+#include "Reflex/Builder/TypeBuilder.h"
 
 #ifndef G__TESTMAIN
 #include <sys/stat.h>
@@ -302,10 +303,9 @@ void G__gen_cppheader(char *headerfilein);
 static void G__gen_headermessage(FILE *fp, char *fname);
 void G__add_macro(char *macroin);
 int G__isnonpublicnew(int tagnum);
-void  G__if_ary_union_reset(int ifn, struct G__ifunc_table *ifunc);
 static int G__isprotecteddestructoronelevel(int tagnum);
 void  G__if_ary_union(FILE *fp, int ifn, struct G__ifunc_table *ifunc);
-char *G__mark_linked_tagnum(int tagnum);
+const char *G__mark_linked_tagnum(int tagnum);
 static int G__isprivateconstructorifunc(int tagnum, int iscopy);
 static int G__isprivateconstructorvar(int tagnum, int iscopy);
 static int G__isprivatedestructorifunc(int tagnum);
@@ -314,7 +314,6 @@ static int G__isprivateassignoprifunc(int tagnum);
 static int G__isprivateassignoprvar(int tagnum);
 void G__cppif_gendefault(FILE *fp, FILE *hfp, int tagnum, int ifn, struct G__ifunc_table *ifunc, int isconstructor, int iscopyconstructor, int isdestructor, int isassignmentoperator, int isnonpublicnew);
 static char* G__vbo_funcname(int tagnum, int basetagnum, int basen);
-static int G__hascompiledoriginalbase(int tagnum);
 static void G__declaretruep2f(FILE *fp, struct G__ifunc_table *ifunc, int j);
 static void G__printtruep2f(FILE *fp, struct G__ifunc_table *ifunc, int j);
 int G__tagtable_setup(int tagnum, int size, int cpplink, int isabstract, char *comment, G__incsetup setup_memvar, G__incsetup setup_memfunc);
@@ -542,7 +541,7 @@ void Cint::Internal::G__gen_cpplink()
       char *sysstl;
       G__getcintsysdir();
       sysstl = (char*)malloc(strlen(G__cintsysdir) + 20);
-      sprintf(sysstl, "%s/%s/stl/", G__cintsysdir, G__CFG_COREVERSION);
+      sprintf(sysstl,"%s%s%s%sstl%s",G__cintsysdir,G__psep,G__CFG_COREVERSION,G__psep,G__psep);
       lenstl = strlen(sysstl);
       for (filen = 0;filen < G__nfile;filen++) {
          fname = G__srcfile[filen].filename;
@@ -730,8 +729,8 @@ void Cint::Internal::G__clink_header(FILE* fp)
    G__getcintsysdir();
    fprintf(fp, "#include \"%s/%s/inc/G__ci.h\"\n", G__cintsysdir, G__CFG_COREVERSION);
 #elif defined(G__ROOT)
-   fprintf(fp,"#include \"cint7/G__ci.h\"\n");
-   //fprintf(fp, "#include \"G__ci.h\"\n");
+   //fprintf(fp,"#include \"cint7/G__ci.h\"\n");
+   fprintf(fp, "#include \"G__ci.h\"\n");
 #else
    fprintf(fp, "#include \"G__ci.h\"\n");
 #endif
@@ -786,8 +785,8 @@ void Cint::Internal::G__cpplink_header(FILE* fp)
    G__getcintsysdir();
    fprintf(fp, "#include \"%s/%s/inc/G__ci.h\"\n", G__cintsysdir, G__CFG_COREVERSION);
 #elif defined(G__ROOT)
-   fprintf(fp,"#include \"cint7/G__ci.h\"\n");
-   //fprintf(fp, "#include \"G__ci.h\"\n");
+   //fprintf(fp,"#include \"cint7/G__ci.h\"\n");
+   fprintf(fp, "#include \"G__ci.h\"\n");
 #else
    fprintf(fp, "#include \"G__ci.h\"\n");
 #endif
@@ -963,7 +962,7 @@ static char *G__map_cpp_funcname(const ::Reflex::Member& ifunc)
 char* Cint::Internal::G__map_cpp_funcname(int tagnum, char* /*funcname*/, long ifn, int page)
 {
    static char mapped_name[G__MAXNAME];
-   char *dllid;
+   const char *dllid;
 
    if (G__DLLID[0]) dllid = G__DLLID;
    else if (G__PROJNAME[0]) dllid = G__PROJNAME;
@@ -992,11 +991,11 @@ static void G__cpplink_protected_stub_ctor(int tagnum, FILE* hfp)
             }
             ::Reflex::Type param_type = func_mbr_iter->TypeOf().FunctionParameterAt(i);
             char type = '\0';
-            int tagnum = -1;
+            int local_tagnum = -1;
             int typenum = -1;
             int reftype = 0;
             int isconst = 0;
-            G__get_cint5_type_tuple(param_type, &type, &tagnum, &typenum, &reftype, &isconst);
+            G__get_cint5_type_tuple(param_type, &type, &local_tagnum, &typenum, &reftype, &isconst);
             fprintf(hfp, "%s a%d", G__type2string(type, tagnum, typenum, reftype, isconst), i);
          }
          fprintf(hfp, ")\n");
@@ -1021,7 +1020,7 @@ static void G__cpplink_protected_stub(FILE* fp, FILE* hfp)
    for (i = 0;i < G__struct.alltag;i++) {
       if (G__CPPLINK == G__struct.globalcomp[i] && G__struct.hash[i] &&
             G__struct.protectedaccess[i]) {
-         int ig15, ifn, n;
+         unsigned int n;
          fprintf(hfp, "class %s_PR : public %s {\n"
                  , G__get_link_tagname(i), G__fulltagname(i, 1));
          fprintf(hfp, " public:\n");
@@ -1081,7 +1080,7 @@ static void G__cpplink_protected_stub(FILE* fp, FILE* hfp)
                   }
                }
                fprintf(hfp, ") {\n");
-               if (::Reflex::Tools::FundamentalType(memfunc->TypeOf().ReturnType()) !=::Reflex::kVOID) fprintf(hfp, "    return(");
+               if (::Reflex::Tools::FundamentalType(memfunc->TypeOf().ReturnType().FinalType()) !=::Reflex::kVOID) fprintf(hfp, "    return(");
                else                                                                                  fprintf(hfp, "    ");
                fprintf(hfp, "%s(", memfunc->Name().c_str());
                for (n = 0;n < memfunc->FunctionParameterSize();n++) {
@@ -1089,7 +1088,7 @@ static void G__cpplink_protected_stub(FILE* fp, FILE* hfp)
                   fprintf(hfp, "G__%d", n);
                }
                fprintf(hfp, ")");
-               if (::Reflex::Tools::FundamentalType(memfunc->TypeOf().ReturnType()) !=::Reflex::kVOID) fprintf(hfp, ")");
+               if (::Reflex::Tools::FundamentalType(memfunc->TypeOf().ReturnType().FinalType()) !=::Reflex::kVOID) fprintf(hfp, ")");
                fprintf(hfp, ";\n");
                fprintf(hfp, "  }\n");
             }
@@ -1193,50 +1192,34 @@ void Cint::Internal::G__cpplink_linked_taginfo(FILE* fp, FILE* hfp)
 //______________________________________________________________________________
 extern "C" int G__get_linked_tagnum(G__linked_taginfo* p)
 {
-   // -- Setup and return tagnum.
-   if (!p) return(-1);
-   if (-1 == p->tagnum) {
+   // Setup and return tagnum.
+   if (!p) {
+      return -1;
+   }
+   if (p->tagnum == -1) {
       p->tagnum = G__search_tagname(p->tagname, p->tagtype);
       if (G__UserSpecificUpdateClassInfo) {
-         char *varp = G__globalvarpointer;
+         char* varp = G__globalvarpointer;
          G__globalvarpointer = G__PVOID;
-         (*G__UserSpecificUpdateClassInfo)((char*)p->tagname, p->tagnum);
+         (*G__UserSpecificUpdateClassInfo)((char*) p->tagname, p->tagnum);
          G__globalvarpointer = varp;
       }
    }
-   return(p->tagnum);
+   return p->tagnum;
 }
 
 //______________________________________________________________________________
 int G__get_linked_tagnum_fwd(G__linked_taginfo* p)
 {
-   // -- Setup and return tagnum; no autoloading.
-   if (!p) return(-1);
+   // Setup and return tagnum; no autoloading.
+   if (!p) {
+      return -1;
+   }
    int type = p->tagtype;
    p->tagtype = toupper(type);
    int ret = G__get_linked_tagnum(p);
    p->tagtype = type;
    return ret;
-}
-
-//______________________________________________________________________________
-static int G__get_linked_tagnum_with_param(G__linked_taginfo* p, void* param)
-{
-   // -- Setup and return tagnum; also set user parameter.
-   int tag = G__get_linked_tagnum(p);
-   if (tag != -1) {
-      G__struct.userparam[tag] = param;
-      return tag;
-   }
-   return -1;
-}
-
-//______________________________________________________________________________
-static void* G__get_linked_user_param(int tag_num)
-{
-   // -- Retrieve user parameter.
-   if (tag_num < 0 || tag_num > G__MAXSTRUCT) return 0;
-   return G__struct.userparam[tag_num];
 }
 
 //______________________________________________________________________________
@@ -1256,7 +1239,7 @@ char* Cint::Internal::G__get_link_tagname(int tagnum)
 }
 
 //______________________________________________________________________________
-static char* G__mark_linked_tagnum(int tagnum)
+static const char* G__mark_linked_tagnum(int tagnum)
 {
    // -- Setup and return tagnum.
    int tagnumorig = tagnum;
@@ -1296,12 +1279,12 @@ void Cint::Internal::G__setPROJNAME(char* proj)
 
 //______________________________________________________________________________
 #ifdef G__GENWINDEF
-void Cint::Internal::G__setCINTLIBNAME(char* cintlib)
+void Cint::Internal::G__setCINTLIBNAME(const char* cintlib)
 {
    strcpy(G__CINTLIBNAME, cintlib);
 }
 #else
-void Cint::Internal::G__setCINTLIBNAME(char* /*cintlib*/)
+void Cint::Internal::G__setCINTLIBNAME(const char* /*cintlib*/)
 {}
 #endif
 
@@ -1435,7 +1418,7 @@ static void G__write_windef_header()
 #endif // G__GENWINDEF
 
 //______________________________________________________________________________
-void Cint::Internal::G__set_globalcomp(char* mode, char* linkfilename, char* dllid)
+void Cint::Internal::G__set_globalcomp(const char* mode, const char* linkfilename, const char* dllid)
 {
    FILE *fp;
    G__StrBuf buf_sb(G__LONGLINE);
@@ -2039,8 +2022,7 @@ static int G__isnonpublicnew(int tagnum)
 {
    int i;
    int hash;
-   char *namenew = "operator new";
-   struct G__ifunc_table *ifunc;
+   const char *namenew = "operator new";
 
    G__hash(namenew, hash, i);
 
@@ -2076,8 +2058,8 @@ int Cint::Internal::G__method_inbase(const Reflex::Member mbr)
       //fprintf(stderr, "G__method_inbase: %s: class of member has no base classes, done.\n", name);
       return 0;
    }
-   for (int i = 0; i < bases->basen; ++i) { // loop over all base classes
-      Reflex::Type base_type = G__Dict::GetDict().GetType(bases->basetagnum[i]);
+   for (size_t i = 0; i < bases->vec.size(); ++i) { // loop over all base classes
+      Reflex::Type base_type = G__Dict::GetDict().GetType(bases->vec[i].basetagnum);
       if (!base_type) { // invalid base, skip it
          //fprintf(stderr, "G__method_inbase: %s: invalid base, skipping ...\n", name);
          continue;
@@ -2317,52 +2299,6 @@ static void G__if_ary_union(FILE* fp, const ::Reflex::Member& ifunc)
    }
 }
 
-//______________________________________________________________________________
-static void G__if_ary_union_reset(const ::Reflex::Member& ifunc)
-{
-   int k, m;
-   int type;
-   char *p;
-
-   m = ifunc.FunctionParameterSize();
-
-   for (k = 0; k < m; ++k) {
-      if (ifunc.FunctionParameterNameAt(k).c_str()[0]) {
-         p = strchr(ifunc.FunctionParameterNameAt(k).c_str(), '[');
-         if (p) {
-            fprintf(stderr, "G__if_ary_union_reset: idx: %d  name: '%s'\n", k, ifunc.FunctionParameterNameAt(k).c_str());
-            assert(0);
-            //int pointlevel = 1;
-            //*p = 0;
-            //while ((p = strchr(p+1, '['))) ++pointlevel;
-            //type = G__get_type(ifunc.TypeOf().FunctionParameterAt(k));
-            //if (isupper(type)) {
-            //   switch (pointlevel) {
-            // case 2:
-            //    ifunc->para_reftype[ifn][k] = G__PARAP2P2P;
-            //    break;
-            // default:
-            //    G__genericerror("Cint internal error ary parameter dimension");
-            //    break;
-            //   }
-            //} else {
-            //   ifunc->para_type[ifn][k] = toupper(type);
-            //   switch (pointlevel) {
-            // case 2:
-            //    ifunc->para_reftype[ifn][k] = G__PARAP2P;
-            //    break;
-            // case 3:
-            //    ifunc->para_reftype[ifn][k] = G__PARAP2P2P;
-            //    break;
-            // default:
-            //    G__genericerror("Cint internal error ary parameter dimension");
-            //    break;
-            //   }
-            //}
-         }
-      }
-   }
-}
 
 #ifdef G__CPPIF_EXTERNC
 //______________________________________________________________________________
@@ -2731,7 +2667,7 @@ static void G__x8664_vararg_epilog(FILE* fp, const ::Reflex::Member& ifunc)
 #endif // __x86_64__ && (__linux || __APPLE__)
 
 //______________________________________________________________________________
-void Cint::Internal::G__cppif_genconstructor(FILE* fp, FILE* /*hfp*/, int tagnum, const ::Reflex::Member& ifunc)
+void Cint::Internal::G__cppif_genconstructor(FILE* fp, FILE* /*hfp*/, int tagnum, const ::Reflex::Member& memfunc)
 {
    // -- FIXME: Describe this function!
    // Write a special constructor wrapper that handles placement new
@@ -2745,7 +2681,7 @@ void Cint::Internal::G__cppif_genconstructor(FILE* fp, FILE* /*hfp*/, int tagnum
 
    G__ASSERT(tagnum != -1);
 
-   if (G__test_access(ifunc, G__PROTECTED) || G__test_access(ifunc, G__PRIVATE)) {
+   if (G__test_access(memfunc, G__PROTECTED) || G__test_access(memfunc, G__PRIVATE)) {
       sprintf(buf, "%s_PR", G__get_link_tagname(tagnum));
    }
    else {
@@ -2753,18 +2689,18 @@ void Cint::Internal::G__cppif_genconstructor(FILE* fp, FILE* /*hfp*/, int tagnum
    }
 
 #ifdef G__CPPIF_EXTERNC
-   G__p2f_typedef(fp, ifn, ifunc);
+   G__p2f_typedef(fp, ifn, memfunc);
 #endif
 
 #ifdef G__CPPIF_STATIC
-   fprintf(fp,               "static int %s(G__value* result7, G__CONST char* funcname, struct G__param* libp, int hash)", ::G__map_cpp_funcname(ifunc));
+   fprintf(fp,               "static int %s(G__value* result7, G__CONST char* funcname, struct G__param* libp, int hash)", ::G__map_cpp_funcname(memfunc));
 #else /* G__CPPIF_STATIC */
 #ifdef G__GENWINDEF
-   fprintf(G__WINDEFfp,      "        %s @%d\n", G__map_cpp_funcname(tagnum, G__struct.name[tagnum], ifunc), ++G__nexports);
+   fprintf(G__WINDEFfp,      "        %s @%d\n", G__map_cpp_funcname(tagnum, G__struct.name[tagnum], memfunc), ++G__nexports);
 #endif
-   fprintf(hfp,              "extern \"C\" int %s(G__value* result7, G__CONST char* funcname, struct G__param* libp, int hash);\n", ::G__map_cpp_funcname(ifunc));
+   fprintf(hfp,              "extern \"C\" int %s(G__value* result7, G__CONST char* funcname, struct G__param* libp, int hash);\n", ::G__map_cpp_funcname(memfunc));
 
-   fprintf(fp,               "extern \"C\" int %s(G__value* result7, G__CONST char* funcname, struct G__param* libp, int hash)", ::G__map_cpp_funcname(ifunc));
+   fprintf(fp,               "extern \"C\" int %s(G__value* result7, G__CONST char* funcname, struct G__param* libp, int hash)", ::G__map_cpp_funcname(memfunc));
 #endif /* G__CPPIF_STATIC */
 
 
@@ -2779,18 +2715,18 @@ void Cint::Internal::G__cppif_genconstructor(FILE* fp, FILE* /*hfp*/, int tagnum
 
 
 #ifndef G__VAARG_COPYFUNC
-   if (G__get_funcproperties(ifunc)->entry.ansi == 2) {
+   if (G__get_funcproperties(memfunc)->entry.ansi == 2) {
       // Handle a variadic function (variable number of arguments).
       fprintf(fp,             "   G__va_arg_buf G__va_arg_bufobj;\n");
-      fprintf(fp,             "   G__va_arg_put(&G__va_arg_bufobj, libp, %ld);\n", ifunc.FunctionParameterSize());
+      fprintf(fp,             "   G__va_arg_put(&G__va_arg_bufobj, libp, %ld);\n", (long)memfunc.FunctionParameterSize());
    }
 #endif
 #if defined(__x86_64__) && (defined(__linux) || defined(__APPLE__))
-   if (G__get_funcproperties(ifunc)->entry.ansi == 2)
-      G__x8664_vararg(fp, ifunc, buf, tagnum, buf);
+   if (G__get_funcproperties(memfunc)->entry.ansi == 2)
+      G__x8664_vararg(fp, memfunc, buf, tagnum, buf);
 #endif
 
-   G__if_ary_union(fp, ifunc);
+   G__if_ary_union(fp, memfunc);
 
    fprintf(fp,               "   char* gvp = (char*)G__getgvp();\n");
 
@@ -2819,9 +2755,9 @@ void Cint::Internal::G__cppif_genconstructor(FILE* fp, FILE* /*hfp*/, int tagnum
    //fprintf(fp,               "   //has_own_new2arg: %d\n", has_own_new2arg);
    //fprintf(fp,               "   //\n");
 
-   m = ifunc.FunctionParameterSize() ;
+   m = memfunc.FunctionParameterSize() ;
 
-   if ((m > 0) && ifunc.FunctionParameterDefaultAt(m - 1).c_str()[0]) {
+   if ((m > 0) && memfunc.FunctionParameterDefaultAt(m - 1).c_str()[0]) {
       // Handle a constructor with arguments where some of them are defaulted.
       fprintf(fp,             "   switch (libp->paran) {\n");
       do {
@@ -2905,9 +2841,9 @@ void Cint::Internal::G__cppif_genconstructor(FILE* fp, FILE* /*hfp*/, int tagnum
             }
             // Copy in the arguments the caller gave us.
             for (k = 0; k < m; ++k) {
-               G__cppif_paratype(fp, ifunc, k);
+               G__cppif_paratype(fp, memfunc, k);
             }
-            if (G__get_funcproperties(ifunc)->entry.ansi == 2 && ifunc.FunctionParameterSize()) {
+            if (G__get_funcproperties(memfunc)->entry.ansi == 2 && memfunc.FunctionParameterSize()) {
                // Handle a variadic constructor (varying number of arguments).
 #if defined(G__VAARG_COPYFUNC)
                fprintf(fp,       ", libp, %d", k);
@@ -2946,9 +2882,9 @@ void Cint::Internal::G__cppif_genconstructor(FILE* fp, FILE* /*hfp*/, int tagnum
             }
             // Copy in the arguments the caller gave us.
             for (k = 0; k < m; ++k) {
-               G__cppif_paratype(fp, ifunc, k);
+               G__cppif_paratype(fp, memfunc, k);
             }
-            if (G__get_funcproperties(ifunc)->entry.ansi == 2 && ifunc.FunctionParameterSize()) {
+            if (G__get_funcproperties(memfunc)->entry.ansi == 2 && memfunc.FunctionParameterSize()) {
                // Handle a variadic constructor (varying number of arguments).
 #if defined(G__VAARG_COPYFUNC)
                fprintf(fp,       ", libp, %d", k);
@@ -2977,7 +2913,7 @@ void Cint::Internal::G__cppif_genconstructor(FILE* fp, FILE* /*hfp*/, int tagnum
          fprintf(fp,           "     break;\n");
          --m;
       }
-      while ((m >= 0) && ifunc.FunctionParameterDefaultAt(m).c_str()[0]);
+      while ((m >= 0) && memfunc.FunctionParameterDefaultAt(m).c_str()[0]);
       fprintf(fp,             "   }\n");
    }
    else if (m > 0) {
@@ -3000,9 +2936,9 @@ void Cint::Internal::G__cppif_genconstructor(FILE* fp, FILE* /*hfp*/, int tagnum
          fprintf(fp,           "\n");
       }
       for (k = 0; k < m; ++k) {
-         G__cppif_paratype(fp, ifunc, k);
+         G__cppif_paratype(fp, memfunc, k);
       }
-      if (G__get_funcproperties(ifunc)->entry.ansi == 2 && ifunc.FunctionParameterSize()) {
+      if (G__get_funcproperties(memfunc)->entry.ansi == 2 && memfunc.FunctionParameterSize()) {
          // handle a varadic constructor (varying number of arguments)
 #if defined(G__VAARG_COPYFUNC)
          fprintf(fp,           ", libp, %d", k);
@@ -3040,9 +2976,9 @@ void Cint::Internal::G__cppif_genconstructor(FILE* fp, FILE* /*hfp*/, int tagnum
          fprintf(fp,           "\n");
       }
       for (k = 0; k < m; ++k) {
-         G__cppif_paratype(fp, ifunc, k);
+         G__cppif_paratype(fp, memfunc, k);
       }
-      if (G__get_funcproperties(ifunc)->entry.ansi == 2 && ifunc.FunctionParameterSize()) {
+      if (G__get_funcproperties(memfunc)->entry.ansi == 2 && memfunc.FunctionParameterSize()) {
          // handle a varadic constructor (varying number of arguments)
 #if defined(G__VAARG_COPYFUNC)
          fprintf(fp,           ", libp, %d", k);
@@ -3132,7 +3068,6 @@ void Cint::Internal::G__cppif_genconstructor(FILE* fp, FILE* /*hfp*/, int tagnum
    fprintf(fp,               "   result7->ref = (long) p;\n");
    fprintf(fp,               "   G__set_tagnum(result7,G__get_linked_tagnum(&%s));\n", G__mark_linked_tagnum(tagnum));
 
-   //G__if_ary_union_reset(ifunc);
    G__cppif_dummyfuncname(fp);
 
    fprintf(fp,               "}\n\n");
@@ -3188,10 +3123,10 @@ static int G__isprivateconstructorifunc(int tagnum, int iscopy)
 }
 
 //______________________________________________________________________________
-static int G__isprivateconstructorvar(int tagnum, int iscopy)
+static int G__isprivateconstructorvar(int scope_tagnum, int iscopy)
 {
    // -- Check if private constructor exists in this particular class.
-   ::Reflex::Scope scope = G__Dict::GetDict().GetScope(tagnum);
+   ::Reflex::Scope scope = G__Dict::GetDict().GetScope(scope_tagnum);
    for (
       ::Reflex::Member_Iterator var = scope.DataMember_Begin();
       var != scope.DataMember_End();
@@ -3249,8 +3184,8 @@ int Cint::Internal::G__isprivateconstructor(int tagnum, int iscopy)
    // -- Check if private constructor exists in base class or class of member obj.
    // Check base class private constructor
    struct G__inheritance* baseclass = G__struct.baseclass[tagnum];
-   for (int basen = 0; basen < baseclass->basen; ++basen) {
-      int basetagnum = baseclass->basetagnum[basen];
+   for (size_t basen = 0; basen < baseclass->vec.size(); ++basen) {
+      int basetagnum = baseclass->vec[basen].basetagnum;
       if (G__isprivateconstructorclass(basetagnum, iscopy)) {
          return 1;
       }
@@ -3299,10 +3234,10 @@ static int G__isprivatedestructorifunc(int tagnum)
 }
 
 //______________________________________________________________________________
-static int G__isprivatedestructorvar(int tagnum)
+static int G__isprivatedestructorvar(int scope_tagnum)
 {
    // -- Check if private destructor exists in this particular class.
-   ::Reflex::Scope scope = G__Dict::GetDict().GetScope(tagnum);
+   ::Reflex::Scope scope = G__Dict::GetDict().GetScope(scope_tagnum);
    for (
       ::Reflex::Member_Iterator var = scope.DataMember_Begin();
       var != scope.DataMember_End();
@@ -3352,8 +3287,8 @@ static int G__isprivatedestructor(int tagnum)
    // -- Check if private destructor exists in base class or class of member obj.
    // Check base class private destructor
    struct G__inheritance* baseclass = G__struct.baseclass[tagnum];
-   for (int basen = 0; basen < baseclass->basen; ++basen) {
-      int basetagnum = baseclass->basetagnum[basen];
+   for (size_t basen = 0; basen < baseclass->vec.size(); ++basen) {
+      int basetagnum = baseclass->vec[basen].basetagnum;
       if (G__isprivatedestructorclass(basetagnum)) {
          return 1;
       }
@@ -3473,8 +3408,8 @@ static int G__isprivateassignopr(int tagnum)
    // -- Check if private assignopr exists in base class or class of member obj.
    // Check base class private assignopr
    struct G__inheritance* baseclass = G__struct.baseclass[tagnum];
-   for (int basen = 0; basen < baseclass->basen; ++basen) {
-      int basetagnum = baseclass->basetagnum[basen];
+   for (size_t basen = 0; basen < baseclass->vec.size(); ++basen) {
+      int basetagnum = baseclass->vec[basen].basetagnum;
       if (G__isprivateassignoprclass(basetagnum)) {
          return 1;
       }
@@ -3945,7 +3880,7 @@ void Cint::Internal::G__cppif_genfunc(FILE* fp, FILE* /*hfp*/, int tagnum, const
 #ifndef G__VAARG_COPYFUNC
    if (G__get_funcproperties(ifunc)->entry.ansi == 2) {
       fprintf(fp, "   G__va_arg_buf G__va_arg_bufobj;\n");
-      fprintf(fp, "   G__va_arg_put(&G__va_arg_bufobj, libp, %ld);\n", ifunc.FunctionParameterSize());
+      fprintf(fp, "   G__va_arg_put(&G__va_arg_bufobj, libp, %ld);\n", (long)ifunc.FunctionParameterSize());
    }
 #endif // G__VAARG_COPYFUNC
 #if defined(__x86_64__) && (defined(__linux) || defined(__APPLE__))
@@ -4117,7 +4052,6 @@ void Cint::Internal::G__cppif_genfunc(FILE* fp, FILE* /*hfp*/, int tagnum, const
 #endif // __x86_64__ && (__linux || __APPLE__)
       // --
    }
-   //G__if_ary_union_reset(ifunc);
    G__cppif_dummyfuncname(fp);
    fprintf(fp, "}\n\n");
 #ifndef G__OLDIMPLEMENTATION1823
@@ -4379,8 +4313,8 @@ void Cint::Internal::G__cppif_paratype(FILE* fp, const ::Reflex::Member& ifunc, 
    if (k) {
       fprintf(fp, ", ");
    }
-   if (param_name.size()) {
-      char* p = strchr(param_name.c_str(), '[');
+   if (!param_name.empty()) {
+      const char* p = strchr(param_name.c_str(), '[');
       if (p) {
          fprintf(fp, "G__Ap%d->a", k);
          return;
@@ -4715,7 +4649,7 @@ void Cint::Internal::G__cpplink_tagtable(FILE* fp, FILE* hfp)
             /* G__genericerror((char*)NULL); */
          }
 
-         G__getcommentstring(buf, i, &G__struct.comment[i]);
+         G__getcommentstring(buf, i, &G__get_properties(G__Dict::GetDict().GetScope(i))->comment);
 
          strcpy(tagname, G__fulltagname(i, 0));
          if (-1 != G__struct.line_number[i]
@@ -4893,7 +4827,7 @@ static char* G__vbo_funcname(int tagnum, int basetagnum, int basen)
 void Cint::Internal::G__cppif_inheritance(FILE* fp)
 {
    int i;
-   int basen;
+   size_t basen;
    int basetagnum;
    G__StrBuf temp_sb(G__LONGLINE*2);
    char *temp = temp_sb;
@@ -4913,12 +4847,12 @@ void Cint::Internal::G__cppif_inheritance(FILE* fp)
          switch (G__struct.type[i]) {
             case 'c': /* class */
             case 's': /* struct */
-               if (G__struct.baseclass[i]->basen > 0) {
-                  for (basen = 0;basen < G__struct.baseclass[i]->basen;basen++) {
-                     if (G__PUBLIC != G__struct.baseclass[i]->baseaccess[basen] ||
-                           0 == (G__struct.baseclass[i]->property[basen]&G__ISVIRTUALBASE))
+               if (!G__struct.baseclass[i]->vec.empty()) {
+                  for (basen = 0;basen < G__struct.baseclass[i]->vec.size();basen++) {
+                     if (G__PUBLIC != G__struct.baseclass[i]->vec[basen].baseaccess ||
+                           0 == (G__struct.baseclass[i]->vec[basen].property&G__ISVIRTUALBASE))
                         continue;
-                     basetagnum = G__struct.baseclass[i]->basetagnum[basen];
+                     basetagnum = G__struct.baseclass[i]->vec[basen].basetagnum;
                      fprintf(fp, "static long %s(long pobject) {\n"
                              , G__vbo_funcname(i, basetagnum, basen));
                      strcpy(temp, G__fulltagname(i, 1));
@@ -4943,7 +4877,7 @@ void Cint::Internal::G__cpplink_inheritance(FILE* fp)
    // --
 #ifndef G__SMALLOBJECT
    int i;
-   int basen;
+   size_t basen;
    int basetagnum;
    G__StrBuf temp_sb(G__MAXNAME*6);
    char *temp = temp_sb;
@@ -4969,24 +4903,24 @@ void Cint::Internal::G__cpplink_inheritance(FILE* fp)
          switch (G__struct.type[i]) {
             case 'c': /* class */
             case 's': /* struct */
-               if (G__struct.baseclass[i]->basen > 0) {
+               if (!G__struct.baseclass[i]->vec.empty()) {
                   fprintf(fp, "   if(0==G__getnumbaseclass(G__get_linked_tagnum(&%s))) {\n"
                           , G__get_link_tagname(i));
                   flag = 0;
-                  for (basen = 0;basen < G__struct.baseclass[i]->basen;basen++) {
-                     if (0 == (G__struct.baseclass[i]->property[basen]&G__ISVIRTUALBASE))
+                  for (basen = 0;basen < G__struct.baseclass[i]->vec.size();basen++) {
+                     if (0 == (G__struct.baseclass[i]->vec[basen].property&G__ISVIRTUALBASE))
                         ++flag;
                   }
                   if (flag) {
                      fprintf(fp, "     %s *G__Lderived;\n", G__fulltagname(i, 0));
                      fprintf(fp, "     G__Lderived=(%s*)0x1000;\n", G__fulltagname(i, 1));
                   }
-                  for (basen = 0;basen < G__struct.baseclass[i]->basen;basen++) {
-                     basetagnum = G__struct.baseclass[i]->basetagnum[basen];
+                  for (basen = 0;basen < G__struct.baseclass[i]->vec.size();basen++) {
+                     basetagnum = G__struct.baseclass[i]->vec[basen].basetagnum;
                      fprintf(fp, "     {\n");
 #ifdef G__VIRTUALBASE
                      strcpy(temp, G__mark_linked_tagnum(basetagnum));
-                     if (G__struct.baseclass[i]->property[basen]&G__ISVIRTUALBASE) {
+                     if (G__struct.baseclass[i]->vec[basen].property&G__ISVIRTUALBASE) {
                         G__StrBuf temp2_sb(G__LONGLINE*2);
                         char *temp2 = temp2_sb;
                         strcpy(temp2, G__vbo_funcname(i, basetagnum, basen));
@@ -4994,19 +4928,19 @@ void Cint::Internal::G__cpplink_inheritance(FILE* fp)
                                 , G__mark_linked_tagnum(i)
                                 , temp
                                 , temp2
-                                , G__struct.baseclass[i]->baseaccess[basen]
-                                , (long)G__struct.baseclass[i]->property[basen]
+                                , G__struct.baseclass[i]->vec[basen].baseaccess
+                                , (long)G__struct.baseclass[i]->vec[basen].property
                                );
                      }
                      else {
-                        int basen2, flag2 = 0;
-                        for (basen2 = 0;basen2 < G__struct.baseclass[i]->basen;basen2++) {
+                        size_t basen2, flag2 = 0;
+                        for (basen2 = 0;basen2 < G__struct.baseclass[i]->vec.size();basen2++) {
                            if (basen2 != basen &&
-                                 (G__struct.baseclass[i]->basetagnum[basen]
-                                  == G__struct.baseclass[i]->basetagnum[basen2]) &&
-                                 ((G__struct.baseclass[i]->property[basen]&G__ISVIRTUALBASE)
+                                 (G__struct.baseclass[i]->vec[basen].basetagnum
+                                  == G__struct.baseclass[i]->vec[basen2].basetagnum) &&
+                                 ((G__struct.baseclass[i]->vec[basen].property&G__ISVIRTUALBASE)
                                   == 0 ||
-                                  (G__struct.baseclass[i]->property[basen2]&G__ISVIRTUALBASE)
+                                  (G__struct.baseclass[i]->vec[basen2].property&G__ISVIRTUALBASE)
                                   == 0)) {
                               flag2 = 1;
                            }
@@ -5026,13 +4960,13 @@ void Cint::Internal::G__cpplink_inheritance(FILE* fp)
                         fprintf(fp, "       G__inheritance_setup(G__get_linked_tagnum(&%s),G__get_linked_tagnum(&%s),(long)G__Lpbase-(long)G__Lderived,%d,%ld);\n"
                                 , G__mark_linked_tagnum(i)
                                 , temp
-                                , G__struct.baseclass[i]->baseaccess[basen]
-                                , (long)G__struct.baseclass[i]->property[basen]
+                                , G__struct.baseclass[i]->vec[basen].baseaccess
+                                , (long)G__struct.baseclass[i]->vec[basen].property
                                );
                      }
 #else
                      strcpy(temp, G__fulltagname(basetagnum, 1));
-                     if (G__struct.baseclass[i]->property[basen]&G__ISVIRTUALBASE) {
+                     if (G__struct.baseclass[i]->vec[basen].property&G__ISVIRTUALBASE) {
                         fprintf(fp, "       %s *pbase=(%s*)0x1000;\n"
                                 , temp, G__fulltagname(basetagnum, 1));
                      }
@@ -5044,8 +4978,8 @@ void Cint::Internal::G__cpplink_inheritance(FILE* fp)
                      fprintf(fp, "       G__inheritance_setup(G__get_linked_tagnum(&%s),G__get_linked_tagnum(&%s),(long)pbase-(long)G__Lderived,%d,%ld);\n"
                              , G__mark_linked_tagnum(i)
                              , temp
-                             , G__struct.baseclass[i]->baseaccess[basen]
-                             , G__struct.baseclass[i]->property[basen]
+                             , G__struct.baseclass[i]->vec[basen].baseaccess
+                             , G__struct.baseclass[i]->vec[basen].property
                             );
 #endif
                      fprintf(fp, "     }\n");
@@ -5087,7 +5021,7 @@ void Cint::Internal::G__cpplink_typetable(FILE* fp, FILE* /*hfp*/)
    //
    size_t max_type = ::Reflex::Type::TypeSize();
    if (G__nestedtypedef) { // We are including nested typedefs in the dictionary.
-      for (int i = 0; i < max_type; ++i) {
+      for (size_t i = 0; i < max_type; ++i) {
          ::Reflex::Type ty = ::Reflex::Type::TypeAt(i);
          if (!ty.IsTypedef()) {
             continue;
@@ -5100,7 +5034,7 @@ void Cint::Internal::G__cpplink_typetable(FILE* fp, FILE* /*hfp*/)
          }
       }
    }
-   for (int i = 0; i < max_type; ++i) {
+   for (size_t i = 0; i < max_type; ++i) {
       ::Reflex::Type ty = ::Reflex::Type::TypeAt(i);
       if (!ty.IsTypedef()) {
          continue;
@@ -5165,31 +5099,13 @@ void Cint::Internal::G__cpplink_typetable(FILE* fp, FILE* /*hfp*/)
             for (; typ && typ.IsArray(); typ = typ.ToType()) {
                bounds.push_back(typ.ArrayLength());
             }
-            for (int i = bounds.size() - 1; i > -1; --i) {
-               fprintf(fp, "   G__setnewtypeindex(%d,%d);\n", i, bounds[i]);
+            for (int tind = bounds.size() - 1; tind > -1; --tind) {
+               fprintf(fp, "   G__setnewtypeindex(%d,%d);\n", tind, bounds[tind]);
             }
          }
       }
    }
    fprintf(fp, "}\n");
-}
-
-//______________________________________________________________________________
-static int G__hascompiledoriginalbase(int tagnum)
-{
-   struct G__inheritance *baseclass = G__struct.baseclass[tagnum];
-   int basen;
-   for (basen = 0;basen < baseclass->basen;basen++) {
-      if (G__CPPLINK != G__struct.iscpplink[baseclass->basetagnum[basen]])
-         continue;
-      ::Reflex::Scope scope = G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]);
-      for (::Reflex::Member_Iterator ifunc = scope.FunctionMember_Begin();
-            ifunc != scope.FunctionMember_End();
-            ++ifunc) {
-         if (ifunc->IsVirtual()) return 1;
-      }
-   }
-   return(0);
 }
 
 //______________________________________________________________________________
@@ -5297,41 +5213,50 @@ void Cint::Internal::G__cpplink_memvar(FILE* fp)
                G__get_cint5_type_tuple(mbr_iter->TypeOf(), &type, &tagnum, &typenum, &reftype, &isconst);
                G__RflxVarProperties* prop = G__get_properties(*mbr_iter);
                int pvoidflag = 0;
-               if ( // Is enumerator or unaddressable bool.
+               if ( // Is enumerator or unaddressable bool or const static fundamental.
                   (
                      islower(type) && // not a pointer, and
                      isconst && // is const, and
                      (tagnum != -1) && // class tag is valid, and
                      mbr_iter->TypeOf().RawType().IsEnum() // data member of an enum
-                  )
+                  ) || // or,
 #ifdef G__UNADDRESSABLEBOOL
-                  || (type == 'g') // or, is an unaddressable bool
+                  (type == 'g') || // or, is an unaddressable bool
 #endif // G__UNADDRESSABLEBOOL
-                  // --
-               ) { // Is enumerator or unaddressable bool.
-                  pvoidflag = 1; // Pass a null pointer as the address of these things.
+                  (
+                     prop->statictype == G__LOCALSTATIC && // static, and
+                     isconst && // const, and
+                     islower(type) && // not a pointer, and
+                     (type != 'u') && // not a class, enum, struct, or union, and
+                     G__get_offset(*mbr_iter) // has allocated memory (is initialized???)
+                   )
+               ) { // Is enumerator or unaddressable bool or const static fundamental.
+                  pvoidflag = 1; // Pass G__PVOID as the address to force G__malloc to allocate storage.
                }
                fprintf(fp, "   G__memvar_setup(");
                //
                //  Offset in object for a non-static data member, or
-               //  the address of global variable for a static data
+               //  the address of a member for a static data
                //  member, or a namespace member.
                //
                if (mbr_iter->IsPublic() && !G__get_bitfield_width(*mbr_iter)) { // Public member, not a bitfield.
-                  if (!G__struct.name[i][0] || (G__struct.name[i][strlen(G__struct.name[i])-1] == '$')) { // Anonymous union or namespace, we pass a null pointer.
+                  if (!G__struct.name[i][0] || (G__struct.name[i][strlen(G__struct.name[i])-1] == '$')) {
+                     // Anonymous union or namespace, we pass a null pointer.
+                     // We pass a null pointer, which means no data allocation (unfortunate,
+                     // but we have no way to take the address!).
                      fprintf(fp, "(void*)0,");
                   }
                   else if ( // Static member or namespace member.
                      (prop->statictype == G__LOCALSTATIC) || // Static member, or
                      scope.IsNamespace() // Namespace member
                   ) { // Static member or namespace member.
-                     // We pass the address of the global variable, or a null pointer.
+                     // We pass the special G__PVOID flag, or the address of the member.
                      if (pvoidflag) {
-                        // Special case, is enumerator or unaddressable bool, pass G__PVOID (is -1).
-                        fprintf(fp, "(void*)G__PVOID,");
+                        // Special case, is enumerator, unaddressable bool, or static.
+                        fprintf(fp, "(void*)G__PVOID,"); // Pass G__PVOID to force G__malloc to allocate storage.
                      }
                      else {
-                        // We pass the address of the global variable.
+                        // We pass the address of the member.
                         fprintf(fp, "(void*)(&%s::%s),", G__fulltagname(i, 1), mbr_iter->Name().c_str());
                      }
                   }
@@ -5343,7 +5268,9 @@ void Cint::Internal::G__cpplink_memvar(FILE* fp)
                else if (mbr_iter->IsProtected() && G__struct.protectedaccess[i]) { // Protected member.
                   fprintf(fp, "(void*)((%s_PR*)p)->G__OS_%s(),", G__get_link_tagname(i), mbr_iter->Name().c_str());
                }
-               else { // Private or protected member, we pass a null pointer.
+               else {
+                  // Private or protected member, we pass a null pointer, unfortunate,
+                  // but we have no way to take the address of these.
                   fprintf(fp, "(void*)0,");
                }
                //
@@ -5398,12 +5325,18 @@ void Cint::Internal::G__cpplink_memvar(FILE* fp)
                for (int k = 1; k < G__get_paran(*mbr_iter); ++k) {
                   fprintf(fp, "[%d]", G__get_varlabel(*mbr_iter, k + 1));
                }
-               if ( // Enumerator in a static enum.
+               if ( // Enumerator in a static enum or const static fundamental.
                   pvoidflag && // Is enumerator or unaddressable bool, and
                   (prop->statictype == G__LOCALSTATIC) // is static
+                  && (
 #ifdef G__UNADDRESSABLEBOOL
-                  && (type != 'g') // and is unaddressable bool FIXME: Should be or here?
+                      type != 'g' || // and is unaddressable bool FIXME: Should be or here?
 #endif // G__UNADDRESSABLEBOOL
+                      (isconst && // const static
+                       islower(type) && type != 'u' && // of fundamental
+                       G__get_offset(*mbr_iter) // with initializer
+                      )
+                  )
                   // --
                ) { // Enumerator in a static enum.
                   // Enumerator in a static enum has a special initializer.
@@ -5413,10 +5346,25 @@ void Cint::Internal::G__cpplink_memvar(FILE* fp)
                   sprintf(ttt, "%s::%s", G__fulltagname(i, 1), mbr_iter->Name().c_str());
                   int store_var_type = G__var_type;
                   G__var_type = 'p';
-                  G__value buf = G__getitem(ttt);
-                  G__var_type = store_var_type;
+                  G__value buf;
                   G__StrBuf value_sb(G__MAXNAME*6);
                   char* value = value_sb;
+                  if (isconst && // const static
+                      (isupper(type) || type != 'u') && // of fundamental
+                      G__get_offset(*mbr_iter) // with initializer
+                      ) {
+                     // local static, can be private thus cannot call G__getitem.
+                     // Take the value from var->p instead. If var is an enum constant
+                     // it will be stored as an int, so convert it accordingly.
+                     bool isInt = (type == 'i');
+                     sprintf(value, "*(%s*)0x%lx",
+                             isInt ? "int" : G__type2string(type, tagnum, typenum, 0, 0),
+                             (unsigned long)G__get_offset(*mbr_iter));
+                     buf = G__calc_internal(value);
+                  } else {
+                     buf = G__getitem(ttt);
+                  }
+                  G__var_type = store_var_type;
                   G__string(buf, value);
                   G__quotedstring(value, ttt);
                   fprintf(fp, "=%s\"", ttt);
@@ -5469,7 +5417,7 @@ void Cint::Internal::G__cpplink_memvar(FILE* fp)
 }
 
 //______________________________________________________________________________
-static int G__isprivatectordtorassgn(int tagnum, const ::Reflex::Member& ifunc)
+static int G__isprivatectordtorassgn(int /* tagnum */, const ::Reflex::Member& ifunc)
 {
    if (ifunc.IsPublic()) return 0;
    if ('~' == ifunc.Name().c_str()[0]) return(1);
@@ -5483,7 +5431,8 @@ void Cint::Internal::G__cpplink_memfunc(FILE* fp)
 {
    // --
 #ifndef G__SMALLOBJECT
-   int i, k;
+   int i;
+   unsigned int k;
    int hash;
    G__StrBuf funcname_sb(G__MAXNAME*6);
    char *funcname = funcname_sb;
@@ -5543,8 +5492,14 @@ void Cint::Internal::G__cpplink_memfunc(FILE* fp)
             if ((ifunc->IsPublic()) || G__precomp_private || G__isprivatectordtorassgn(i, *ifunc) || ((ifunc->IsProtected()) && (G__struct.protectedaccess[i] & G__PROTECTEDACCESS)) || (G__struct.protectedaccess[i] & G__PRIVATEACCESS)) {
                // public
 
-               if ((G__struct.globalcomp[i] == G__ONLYMETHODLINK) && (G__get_funcproperties(*ifunc)->globalcomp != G__METHODLINK)) {
+               int ifunc_globalcomp = G__get_funcproperties(*ifunc)->globalcomp;
+               if ((G__struct.globalcomp[i] == G__ONLYMETHODLINK) && ( ifunc_globalcomp != G__METHODLINK)) {
                   // not marked for link, skip it.
+                  continue;
+               }
+
+               if ( ifunc_globalcomp == G__CSTUB || ifunc_globalcomp == G__CPPSTUB) {
+                  // Do not generate a stub around the 'stubbed' method which are supposed to be interpreted!
                   continue;
                }
 
@@ -5596,10 +5551,10 @@ void Cint::Internal::G__cpplink_memfunc(FILE* fp)
                /* function name and return type */
                fprintf(fp, "   G__memfunc_setup(");
                {
-                  int hash = 0;
+                  int local_hash = 0;
                   int junk = 0;
-                  G__hash(ifunc->Name().c_str(), hash, junk)
-                  fprintf(fp, "\"%s\",%d,", ifunc->Name().c_str(), hash);
+                  G__hash(ifunc->Name().c_str(), local_hash, junk)
+                  fprintf(fp, "\"%s\",%d,", ifunc->Name().c_str(), local_hash);
                }
                if (G__test_access(*ifunc, G__PUBLIC)
                      || (((ifunc->IsProtected() &&
@@ -5633,7 +5588,9 @@ void Cint::Internal::G__cpplink_memfunc(FILE* fp)
 
                if (G__get_cint5_typenum(ifunc->TypeOf().ReturnType()) != -1) {
                   ::Reflex::Type ty = ifunc->TypeOf().ReturnType();
-                  for ( ; !ty.IsTypedef(); ty = ty.ToType());
+                  for ( ; !ty.IsTypedef(); ty = ty.ToType()) {
+                     // Intentionally empty
+                  }
                   fprintf(fp, "G__defined_typename(\"%s\"), ", ty.Name(::Reflex::SCOPED).c_str());
                }
                else {
@@ -5642,7 +5599,7 @@ void Cint::Internal::G__cpplink_memfunc(FILE* fp)
 
                fprintf(fp, "%d, ", G__get_reftype(ifunc->TypeOf().ReturnType()));
 
-               fprintf(fp, "%ld, ", ifunc->FunctionParameterSize());
+               fprintf(fp, "%ld, ", (long)ifunc->FunctionParameterSize());
 
                if (2 == G__get_funcproperties(*ifunc)->entry.ansi)
                   fprintf(fp, "%d, ", 8 + ifunc->IsStatic()*2 + ifunc->IsExplicit()*4);
@@ -5723,8 +5680,7 @@ void Cint::Internal::G__cpplink_memfunc(FILE* fp)
                   && G__MACROLINK != G__get_funcproperties(*ifunc)->globalcomp
                ) {
 #ifndef G__OLDIMPLEMENTATION1993
-                  int k;
-                  fprintf(fp, ", (void*) (%s (*)("
+                  fprintf(fp, ", (void*) G__func2void( (%s (*)("
                           , G__type2string(G__get_type(ifunc->TypeOf().ReturnType())
                                            , G__get_tagnum(ifunc->TypeOf().ReturnType().RawType())
                                            , G__get_typenum(ifunc->TypeOf().ReturnType())
@@ -5732,16 +5688,16 @@ void Cint::Internal::G__cpplink_memfunc(FILE* fp)
                                            , G__get_isconst(ifunc->TypeOf().ReturnType()) /* g++ may have problem */
                                           )
                          );
-                  for (k = 0; k < ifunc->FunctionParameterSize(); k++) {
-                     if (k) fprintf(fp, ", ");
+                  for (unsigned int fpind = 0; fpind < ifunc->FunctionParameterSize(); fpind++) {
+                     if (fpind) fprintf(fp, ", ");
                      fprintf(fp, "%s"
-                             , G__type2string(G__get_type(ifunc->TypeOf().FunctionParameterAt(k))
-                                              , G__get_tagnum(ifunc->TypeOf().FunctionParameterAt(k).RawType())
-                                              , G__get_typenum(ifunc->TypeOf().FunctionParameterAt(k))
-                                              , G__get_reftype(ifunc->TypeOf().FunctionParameterAt(k))
-                                              , G__get_isconst(ifunc->TypeOf().FunctionParameterAt(k))));
+                             , G__type2string(G__get_type(ifunc->TypeOf().FunctionParameterAt(fpind))
+                                              , G__get_tagnum(ifunc->TypeOf().FunctionParameterAt(fpind).RawType())
+                                              , G__get_typenum(ifunc->TypeOf().FunctionParameterAt(fpind))
+                                              , G__get_reftype(ifunc->TypeOf().FunctionParameterAt(fpind))
+                                              , G__get_isconst(ifunc->TypeOf().FunctionParameterAt(fpind))));
                   }
-                  fprintf(fp, "))(&%s::%s)", ifunc->DeclaringScope().Name(::Reflex::SCOPED).c_str(), ifunc->Name().c_str());
+                  fprintf(fp, "))(&%s::%s) ) ", ifunc->DeclaringScope().Name(::Reflex::SCOPED).c_str(), ifunc->Name().c_str());
 #else // G__OLDIMPLEMENTATION1993
                   fprintf(fp, ", (void*)%s::%s", ifunc->DeclaringScope().Name(::Reflex::SCOPED).c_str(), ifunc->Name().c_str());
 #endif // G__OLDIMPLEMENTATION1993
@@ -6006,6 +5962,9 @@ void Cint::Internal::G__cpplink_global(FILE* fp)
 #ifdef G__UNADDRESSABLEBOOL
             || (type == 'g') // or, is an unaddressable bool
 #endif // G__UNADDRESSABLEBOOL
+            || (prop->statictype == G__LOCALSTATIC && isconst && // const static
+                islower(type) && type != 'u' && // of fundamental
+                G__get_offset(*mbr_iter)) // with initializer
                // --
          ) { // Is enumerator or unaddressable bool.
             pvoidflag = 1; // Pass a null pointer as the address of these things.
@@ -6253,7 +6212,7 @@ static void G__printtruep2f(FILE* fp, const ::Reflex::Member& ifunc)
 void Cint::Internal::G__cpplink_func(FILE* fp)
 {
    // -- Making C++ link routine to global function.
-   int k;
+   unsigned int k;
    G__StrBuf buf_sb(G__ONELINE);
    char *buf = buf_sb;
    int divn = 0;
@@ -6321,7 +6280,9 @@ void Cint::Internal::G__cpplink_func(FILE* fp)
 
          if (G__get_cint5_typenum(ifunc->TypeOf().ReturnType()) != -1) {
             ::Reflex::Type ty = ifunc->TypeOf().ReturnType();
-            for ( ; !ty.IsTypedef(); ty = ty.ToType());
+            for ( ; !ty.IsTypedef(); ty = ty.ToType()) {
+               // Intentionally empty
+            }
             fprintf(fp, "G__defined_typename(\"%s\"), ", ty.Name().c_str());
          }
          else {
@@ -6330,7 +6291,7 @@ void Cint::Internal::G__cpplink_func(FILE* fp)
 
          fprintf(fp, "%d, ", G__get_reftype(ifunc->TypeOf().ReturnType()));
 
-         fprintf(fp, "%ld, ", ifunc->FunctionParameterSize());
+         fprintf(fp, "%ld, ", (long)ifunc->FunctionParameterSize());
 
          if (2 == G__get_funcproperties(*ifunc)->entry.ansi)
             fprintf(fp, "%d, ", 8 + ifunc->IsStatic()*2);
@@ -6439,59 +6400,57 @@ char G__incsetup_exist(std::list<G__incsetup>* incsetuplist, G__incsetup incsetu
 extern "C" int G__tagtable_setup(int tagnum, int size, int cpplink, int isabstract, const char* comment, G__incsetup setup_memvar, G__incsetup setup_memfunc)
 {
    // -- FIXME: Describe this function!
-   char *p;
+   char* p;
 #ifndef G__OLDIMPLEMENTATION1823
    G__StrBuf xbuf_sb(G__BUFLEN);
-   char *xbuf = xbuf_sb;
-   char *buf = xbuf;
+   char* xbuf = xbuf_sb;
+   char* buf = xbuf;
 #else // G__OLDIMPLEMENTATION1823
    G__StrBuf buf_sb(G__ONELINE);
-   char *buf = buf_sb;
+   char* buf = buf_sb;
 #endif // G__OLDIMPLEMENTATION1823
-
-   if (G__struct.incsetup_memvar[tagnum]==0)
+   if (!G__struct.incsetup_memvar[tagnum]) {
       G__struct.incsetup_memvar[tagnum] = new std::list<G__incsetup>();
-
-   if (G__struct.incsetup_memfunc[tagnum]==0)
+   }
+   if (!G__struct.incsetup_memfunc[tagnum]) {
       G__struct.incsetup_memfunc[tagnum] = new std::list<G__incsetup>();
-
-   if (0 == size && 0 != G__struct.size[tagnum]
-         && 'n' != G__struct.type[tagnum]
-      ) return(0);
-
-   if (0 != G__struct.size[tagnum]
-         && 'n' != G__struct.type[tagnum]
-      ) {
+   }
+   if (!size && G__struct.size[tagnum] && (G__struct.type[tagnum] != 'n')) {
+      return 0;
+   }
+   if (
+      ((G__struct.type[tagnum] != 'n') && G__struct.size[tagnum]) || // Class already setup
+      ((G__struct.type[tagnum] == 'n') && G__struct.iscpplink[tagnum]) // Namespace already setup
+   ) {
+      // --
 #ifndef G__OLDIMPLEMENTATION1656
-     char found = G__incsetup_exist(G__struct.incsetup_memvar[tagnum],setup_memvar);
-     // If setup_memvar is not NULL we push the G__setup_memvarXXX pointer into the list 
-     if (setup_memvar&&!found)
-        G__struct.incsetup_memvar[tagnum]->push_back(setup_memvar);
-
-     found = G__incsetup_exist(G__struct.incsetup_memfunc[tagnum],setup_memfunc);
-     // If setup_memfunc is not NULL we push the G__setup_memfuncXXX pointer into the list 
-     if (setup_memfunc&&!found)
-        G__struct.incsetup_memfunc[tagnum]->push_back(setup_memfunc);
-
+      char found = G__incsetup_exist(G__struct.incsetup_memvar[tagnum], setup_memvar);
+      // If setup_memvar is not NULL we push the G__setup_memvarXXX pointer into the list
+      if (setup_memvar && !found) {
+         G__struct.incsetup_memvar[tagnum]->push_back(setup_memvar);
+      }
+      found = G__incsetup_exist(G__struct.incsetup_memfunc[tagnum], setup_memfunc);
+      // If setup_memfunc is not NULL we push the G__setup_memfuncXXX pointer into the list
+      if (setup_memfunc && !found) {
+         G__struct.incsetup_memfunc[tagnum]->push_back(setup_memfunc);
+      }
 #endif // G__OLDIMPLEMENTATION1656
       if (G__asm_dbg) {
          if (G__dispmsg >= G__DISPWARN) {
-            G__fprinterr(G__serr, "Warning: Try to reload %s from DLL\n"
-                         , G__fulltagname(tagnum, 1));
+            G__fprinterr(G__serr, "Warning: Try to reload %s from DLL\n", G__fulltagname(tagnum, 1));
          }
       }
-      return(0);
+      return 0;
    }
    G__struct.size[tagnum] = size;
-
-   Reflex::Scope type = G__Dict::GetDict().GetScope(tagnum);
-   if (type.IsClass() || type.IsUnion()) {
-      G__get_properties(type)->builder.Class().SetSizeOf(size);
+   Reflex::Scope scope = G__Dict::GetDict().GetScope(tagnum);
+   G__RflxProperties* prop = G__get_properties(scope);
+   if (scope.IsClass() || scope.IsUnion()) {
+      Reflex::Type type = scope;
+      type.SetSize(size);
    }
-
-   G__get_properties(type)->iscpplink = cpplink;
+   prop->iscpplink = cpplink;
    G__struct.iscpplink[tagnum] = cpplink;
-
 #ifndef G__OLDIMPLEMENTATION1545
    G__struct.rootflag[tagnum] = (isabstract / 0x10000) % 0x100;
    G__struct.funcs[tagnum] = (isabstract / 0x100) % 0x100;
@@ -6500,52 +6459,44 @@ extern "C" int G__tagtable_setup(int tagnum, int size, int cpplink, int isabstra
    G__struct.funcs[tagnum] = isabstract / 0x100;
    G__struct.isabstract[tagnum] = isabstract % 0x100;
 #endif // G__OLDIMPLEMENTATION1545
-
    G__struct.filenum[tagnum] = G__ifile.filenum;
-   G__get_properties(type)->filenum = G__ifile.filenum;
-
-   G__struct.comment[tagnum].p.com = (char*)comment;
-   if (comment) G__struct.comment[tagnum].filenum = -2;
-   else         G__struct.comment[tagnum].filenum = -1;
-   G__get_properties(type)->comment.p.com = (char*)comment;
-   G__get_properties(type)->comment.filenum = G__struct.comment[tagnum].filenum;
-
-
-   if(0==type.DataMemberSize()
-      || type.IsNamespace()){
-         char found = G__incsetup_exist(G__struct.incsetup_memvar[tagnum],setup_memvar);
-         // If setup_memvar is not NULL we push the G__setup_memvarXXX pointer into the list 
-         if (setup_memvar&&!found)
-            G__struct.incsetup_memvar[tagnum]->push_back(setup_memvar);
+   prop->filenum = G__ifile.filenum;
+   prop->comment.p.com = (char*) comment;
+   if (comment) {
+      prop->comment.filenum = -2;
    }
-
-if (
+   else {
+      prop->comment.filenum = -1;
+   }
+   if (!scope.DataMemberSize() || scope.IsNamespace()) {
+         char found = G__incsetup_exist(G__struct.incsetup_memvar[tagnum], setup_memvar);
+         if (setup_memvar && !found) {
+            G__struct.incsetup_memvar[tagnum]->push_back(setup_memvar);
+         }
+   }
+   if (
+      !G__Dict::GetDict().GetScope(tagnum).FunctionMemberSize() ||
+      (G__struct.type[tagnum]  == 'n') ||
+      (
+         // --
 #ifndef G__OLDIMPLEMENTATION2027
-    0 /* was 1 */ == G__Dict::GetDict().GetScope(tagnum).FunctionMemberSize()
+         (G__get_funcproperties(G__Dict::GetDict().GetScope(tagnum).FunctionMemberAt(0))->entry.size != -1) &&
 #else // G__OLDIMPLEMENTATION2027
-    0 == G__Dict::GetDict().GetScope(tagnum).FunctionMemberSize()
+         (G__struct.memfunc[tagnum]->pentry[0]->size != -1) &&
 #endif // G__OLDIMPLEMENTATION2027
-      || 'n' == G__struct.type[tagnum]
-      || (
-#ifndef G__OLDIMPLEMENTATION2027
-          - 1 != G__get_funcproperties(G__Dict::GetDict().GetScope(tagnum).FunctionMemberAt(0))->entry.size // G__struct.memfunc[tagnum]->pentry[1]->size
-#else // G__OLDIMPLEMENTATION2027
-         - 1 != G__struct.memfunc[tagnum]->pentry[0]->size
-#endif // G__OLDIMPLEMENTATION2027
-          && 2 >= G__Dict::GetDict().GetScope(tagnum).FunctionMemberSize()))
-      {
-         char found = 0;
-         found = G__incsetup_exist(G__struct.incsetup_memfunc[tagnum], setup_memfunc);
-         if (setup_memfunc&&!found)
-            G__struct.incsetup_memfunc[tagnum]->push_back(setup_memfunc);
-         else
-            G__struct.incsetup_memfunc[tagnum]->clear();
+         (G__Dict::GetDict().GetScope(tagnum).FunctionMemberSize() <= 2)
+      )
+   ) {
+      char found = 0;
+      found = G__incsetup_exist(G__struct.incsetup_memfunc[tagnum], setup_memfunc);
+      if (setup_memfunc && !found) {
+         G__struct.incsetup_memfunc[tagnum]->push_back(setup_memfunc);
       }
-
-   /* add template names */
+   }
+   // add template names
 #ifndef G__OLDIMPLEMENTATION1823
-   if (strlen(G__struct.name[tagnum]) > G__BUFLEN - 10) {
-      buf = (char*)malloc(strlen(G__struct.name[tagnum]) + 10);
+   if (strlen(G__struct.name[tagnum]) > (G__BUFLEN - 10)) {
+      buf = (char*) malloc(strlen(G__struct.name[tagnum]) + 10);
    }
 #endif // G__OLDIMPLEMENTATION1823
    strcpy(buf, G__struct.name[tagnum]);
@@ -6555,19 +6506,21 @@ if (
          ::Reflex::Scope store_def_tagnum = G__def_tagnum;
          ::Reflex::Scope store_tagdefining = G__tagdefining;
          FILE* store_fp = G__ifile.fp;
-         G__ifile.fp = (FILE*)NULL;
+         G__ifile.fp = 0;
          G__def_tagnum = G__Dict::GetDict().GetScope(G__struct.parent_tagnum[tagnum]);
          G__tagdefining = G__Dict::GetDict().GetScope(G__struct.parent_tagnum[tagnum]);
-         G__createtemplateclass(buf, (struct G__Templatearg*)NULL, 0);
+         G__createtemplateclass(buf, 0, 0);
          G__ifile.fp = store_fp;
          G__def_tagnum = store_def_tagnum;
          G__tagdefining = store_tagdefining;
       }
    }
 #ifndef G__OLDIMPLEMENTATION1823
-   if (buf != xbuf) free((void*)buf);
+   if (buf != xbuf) {
+      free(buf);
+   }
 #endif // G__OLDIMPLEMENTATION1823
-   return(0);
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -6575,14 +6528,8 @@ extern "C" int G__inheritance_setup(int tagnum, int basetagnum, long baseoffset,
 {
    // --
 #ifndef G__SMALLOBJECT
-   int basen;
    G__ASSERT(0 <= tagnum && 0 <= basetagnum);
-   basen = G__struct.baseclass[tagnum]->basen;
-   G__struct.baseclass[tagnum]->basetagnum[basen] = basetagnum;
-   G__struct.baseclass[tagnum]->baseoffset[basen] = (char*)baseoffset;
-   G__struct.baseclass[tagnum]->baseaccess[basen] = baseaccess;
-   G__struct.baseclass[tagnum]->property[basen] = property;
-   ++G__struct.baseclass[tagnum]->basen;
+   G__struct.baseclass[tagnum]->vec.push_back(G__inheritance::G__Entry(basetagnum,(char*)baseoffset, baseaccess, property));
 #endif // G__SMALLOBJECT
    return(0);
 }
@@ -6623,26 +6570,25 @@ extern "C" int G__tag_memvar_setup(int tagnum)
 //______________________________________________________________________________
 extern "C" int G__memvar_setup(void* p, int type, int reftype, int constvar, int tagnum, int typenum, int statictype, int accessin, const char* expr, int definemacro, const char* comment)
 {
-   int store_asm_noverflow;
-   int store_prerun;
-   int store_asm_wholefunction;
-   int store_constvar = G__constvar;
+   int store_in_memvar_setup = G__in_memvar_setup;
+   G__in_memvar_setup = 1;
    int store_def_struct_member = G__def_struct_member;
    ::Reflex::Scope store_tagdefining = G__tagdefining;
    ::Reflex::Scope store_p_local = G__p_local;
-   if ('p' == type && G__def_struct_member) {
+   if ((type == 'p') && G__def_struct_member) {
       G__def_struct_member = 0;
       G__tagdefining = ::Reflex::Scope();
       G__p_local = ::Reflex::Scope();
    }
-
-   G__setcomment = (char*)comment;
-
-   G__globalvarpointer = (char*)p;
-   G__var_type = type;
-   G__reftype = reftype;
-   G__tagnum = G__Dict::GetDict().GetScope(tagnum);
-   G__typenum = G__Dict::GetDict().GetTypedef(typenum);
+   G__setcomment = (char*) comment; // FIXME: We don't save this!
+   G__globalvarpointer = (char*) p; // FIXME: We don't save this!
+   G__var_type = type; // FIXME: We don't save this!
+   G__tagnum = G__Dict::GetDict().GetScope(tagnum); // FIXME: We don't save this!
+   G__typenum = G__Dict::GetDict().GetTypedef(typenum); // FIXME: We don't save this!
+   G__reftype = reftype; // FIXME: We don't save this!
+   int store_constvar = G__constvar;
+   G__constvar = constvar;
+   //int save_static_alloc = G__static_alloc; // FIXME: We probably need a line like this here.
    if ((statictype == G__AUTO) || (statictype == G__AUTOARYDISCRETEOBJ)) {
       G__static_alloc = 0;
    }
@@ -6650,36 +6596,39 @@ extern "C" int G__memvar_setup(void* p, int type, int reftype, int constvar, int
       G__static_alloc = 1;
    }
    else if (statictype == G__COMPILEDGLOBAL) {
-      G__static_alloc = 1;  // FIXME: This is probaby wrong!
+      G__static_alloc = 1; // FIXME: This is probaby wrong!
    }
    else {
-      // -- File scope static variable, which is actually a static data member.
-      G__static_alloc = 1;
+      G__static_alloc = 1; // File scope static variable, which is actually a static data member.
    }
-   /* G__access = constvar;*/  /* dummy statement to avoid lint error */
-   G__constvar = constvar; /* Not sure why I didn't do this for a long time */
-   G__access = accessin;
+   //int store_access = G__access; // FIXME: We probably need a line like this here.
+   G__access = accessin; // FIXME: We don't save this!
    G__definemacro = definemacro;
-   store_asm_noverflow = G__asm_noverflow;
+   int store_asm_noverflow = G__asm_noverflow;
    G__asm_noverflow = 0;
-   store_prerun = G__prerun;
+   int store_prerun = G__prerun;
    G__prerun = 1;
-   store_asm_wholefunction = G__asm_wholefunction;
+   int store_asm_wholefunction = G__asm_wholefunction;
    G__asm_wholefunction = G__ASM_FUNC_NOP;
+   //
    G__getexpr((char*)expr);
-   if ('p' == type && store_def_struct_member) {
+   //
+   G__asm_wholefunction = store_asm_wholefunction;
+   G__prerun = store_prerun;
+   G__asm_noverflow = store_asm_noverflow;
+   G__definemacro = 0; // FIXME: Shouldn't we restore this?
+   //G__access = store_access; // FIXME: We probably need a line like this here.
+   //G__static_alloc = save_static_alloc; // FIXME: We probably need a line like this here.
+   G__constvar = store_constvar;
+   G__reftype = G__PARANORMAL; // FIXME: We should probably restore this instead.
+   G__setcomment = 0; // FIXME: Shouldn't we restore this?
+   if ((type == 'p') && store_def_struct_member) {
       G__def_struct_member = store_def_struct_member;
       G__tagdefining = store_tagdefining;
       G__p_local = store_p_local;
    }
-   G__asm_wholefunction = store_asm_wholefunction;
-   G__prerun = store_prerun;
-   G__asm_noverflow = store_asm_noverflow;
-   G__definemacro = 0;
-   G__setcomment = (char*)NULL;
-   G__reftype = G__PARANORMAL;
-   G__constvar = store_constvar;
-   return(0);
+   G__in_memvar_setup = store_in_memvar_setup;
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -6772,10 +6721,10 @@ extern "C" int G__memfunc_setup(const char* funcname, int /*hash*/, G__Interface
    //   builder.fReturnType = G__modify_type(builder.fReturnType, return_is_pointer, reftype, isconst & ~G__CONSTVAR, 0, 0);
    //}
    if (ansi & 0x08) {
-      builder.fProp.entry.ansi = 2;
+      builder.fProp.entry.ansi = 2; // ansi-style prototype and varadic
    }
    else if (ansi & 0x01) {
-      builder.fProp.entry.ansi = 1;
+      builder.fProp.entry.ansi = 1; // ansi-style prototype, not varadic
    }
    builder.fAccess = accessin;
    builder.fIsexplicit = (ansi & 0x04) >> 2;
@@ -6809,8 +6758,8 @@ extern "C" int G__memfunc_setup(const char* funcname, int /*hash*/, G__Interface
       G__inheritance* cbases = G__struct.baseclass[G__get_tagnum(G__p_ifunc)];
       if (cbases) {
          void* base_memberfunc_addr = 0;
-         for (int idx = 0; (idx < cbases->basen) && !base_memberfunc_addr; ++idx) {
-            int basetagnum = cbases->basetagnum[idx];
+         for (size_t idx = 0; (idx < cbases->vec.size()) && !base_memberfunc_addr; ++idx) {
+            int basetagnum = cbases->vec[idx].basetagnum;
             {
                Reflex::Scope store_ifunc = G__p_ifunc;
                G__incsetup_memfunc(basetagnum); // Force memfunc_setup for the base.
@@ -6969,11 +6918,16 @@ int Cint::Internal::G__separate_parameter(const char* original, int* pos, char* 
       int c = original[i];
       switch (c) {
          case '\'':
-            if (!double_quote)
-               if (single_quote) single_quote = 0;
+            if (!double_quote) {
+               if (single_quote) {
+                  single_quote = 0;
             // only turn on single_quote if at the beginning!
-               else if (i == startPos)  single_quote = 1;
-               else if (single_arg_quote) single_arg_quote = 0;
+               } else if (i == startPos)  {
+                  single_quote = 1;
+               } else if (single_arg_quote) {
+                  single_arg_quote = 0;
+               }
+            }
             break;
          case '"':
             if (!single_quote) double_quote ^= 1;
@@ -7377,8 +7331,8 @@ void Cint::Internal::G__specify_link(int link_stub)
             else {
                std::string verStr = iOpt->substr( fb+1, lb-fb-1 );
                bool noDigit       = false;
-               for( std::string::size_type i = 0; i<verStr.size(); ++i )
-                  if( !isdigit( verStr[i] ) ) noDigit = true;
+               for( std::string::size_type di = 0; di<verStr.size(); ++di )
+                  if( !isdigit( verStr[di] ) ) noDigit = true;
  
                if( noDigit )
                   G__fprinterr(G__serr, "Malformed version option! \"%s\" is not a non-negative number!\n", verStr.c_str() );
@@ -7894,26 +7848,26 @@ void Cint::Internal::G__specify_link(int link_stub)
    else if (strncmp(buf, "all_datamembers", 5) == 0) {
       if (';' != c) c = G__fgetstream_template(buf, ";\n\r");
       if (buf[0]) {
-         ::Reflex::Scope var;
+         ::Reflex::Scope localvar;
          if (strcmp(buf, "::") == 0) {
-            var = ::Reflex::Scope::GlobalScope();
+            localvar = ::Reflex::Scope::GlobalScope();
          }
          else {
             int tagnum = G__defined_tagname(buf, 0);
             if (-1 != tagnum) {
-               var = G__Dict::GetDict().GetScope(tagnum);
+               localvar = G__Dict::GetDict().GetScope(tagnum);
             }
             else { /* must be an error */
                return;
             }
          }
-         for (::Reflex::Member_Iterator memvar = var.DataMember_Begin();
-               memvar != var.DataMember_End();
+         for (::Reflex::Member_Iterator memvar = localvar.DataMember_Begin();
+               memvar != localvar.DataMember_End();
                ++memvar) {
             G__get_properties(*memvar)->globalcomp = globalcomp;
             //The following require a modification of the privacy, why?
             //For now, explicitly kill the program, if we reach this.
-            assert(0);
+            assert(0 /* code not yet port from cint5 */);
             //if(G__NOLINK==globalcomp) var->access[ig15] = G__PRIVATE;
             //else                      var->access[ig15] = G__PUBLIC;
          }
@@ -7929,28 +7883,28 @@ void Cint::Internal::G__specify_link(int link_stub)
       if (';' != c) c = G__fgetstream_template(buf, ";\n\r");
       if (G__CPPLINK == globalcomp) globalcomp = G__METHODLINK;
       if (buf[0]) {
-         ::Reflex::Scope ifunc;
+         ::Reflex::Scope funcscope;
          if (strcmp(buf, "::") == 0) {
-            ifunc = ::Reflex::Scope::GlobalScope();
+            funcscope = ::Reflex::Scope::GlobalScope();
          }
          else {
             int tagnum = G__defined_tagname(buf, 0);
             if (-1 != tagnum) {
-               ifunc = G__Dict::GetDict().GetScope(tagnum);
+               funcscope = G__Dict::GetDict().GetScope(tagnum);
             }
             else { /* must be an error */
                return;
             }
          }
-         for (::Reflex::Member_Iterator memfunc = ifunc.FunctionMember_Begin();
-               memfunc != ifunc.FunctionMember_End();
+         for (::Reflex::Member_Iterator memfunc = funcscope.FunctionMember_Begin();
+               memfunc != funcscope.FunctionMember_End();
                ++memfunc) {
             G__get_properties(*memfunc)->globalcomp = globalcomp;
             //The following require a modification of the privacy, why?
             //For now, explicitly kill the program, if we reach this.
-            assert(0);
-            //if(G__NOLINK==globalcomp) ifunc->access[ifn] = G__PRIVATE;
-            //else                      ifunc->access[ifn] = G__PUBLIC;
+            assert(0 /* code not yet ported from cint5 */);
+            //if(G__NOLINK==globalcomp) memfunc->access[ifn] = G__PRIVATE;
+            //else                      memfunc->access[ifn] = G__PUBLIC;
          }
       }
       else {
@@ -8154,13 +8108,13 @@ void Cint::Internal::G__specify_link(int link_stub)
                   for (i = 0;i < G__struct.alltag;i++) {
                      if (G__struct.filenum[i] == ifile) {
                         ::Reflex::Scope scope = G__Dict::GetDict().GetScope(i);
-                        for (::Reflex::Member_Iterator var = scope.DataMember_Begin();
-                              var != scope.DataMember_End();
-                              ++var) {
-                           if (G__get_properties(*var)->filenum == ifile
+                        for (::Reflex::Member_Iterator variter = scope.DataMember_Begin();
+                              variter != scope.DataMember_End();
+                              ++variter) {
+                           if (G__get_properties(*variter)->filenum == ifile
 #define G__OLDIMPLEMENTATION1740
                               ) {
-                              G__get_properties(*var)->globalcomp = globalcomp;
+                              G__get_properties(*variter)->globalcomp = globalcomp;
                            }
                         }
                         for (::Reflex::Member_Iterator func = scope.FunctionMember_Begin();
@@ -8189,11 +8143,11 @@ void Cint::Internal::G__specify_link(int link_stub)
                   }
 #ifdef G__VARIABLEFPOS
                   /* link global variable */
-                  for (::Reflex::Member_Iterator var = ::Reflex::Scope::GlobalScope().DataMember_Begin();
-                        var != ::Reflex::Scope::GlobalScope().DataMember_End();
-                        ++var) {
-                     if (G__get_properties(*var)->filenum == ifile) {
-                        G__get_properties(*var)->globalcomp = globalcomp;
+                  for (::Reflex::Member_Iterator variter = ::Reflex::Scope::GlobalScope().DataMember_Begin();
+                        variter != ::Reflex::Scope::GlobalScope().DataMember_End();
+                        ++variter) {
+                     if (G__get_properties(*variter)->filenum == ifile) {
+                        G__get_properties(*variter)->globalcomp = globalcomp;
                      }
                   }
 #endif
@@ -8222,13 +8176,13 @@ void Cint::Internal::G__specify_link(int link_stub)
          int j, flag;
          if (-1 != parent_tagnum) {
             ::Reflex::Scope scope = G__Dict::GetDict().GetScope(parent_tagnum);
-            for (::Reflex::Member_Iterator var = scope.DataMember_Begin();
-                  var != scope.DataMember_End();
-                  ++var) {
+            for (::Reflex::Member_Iterator variter = scope.DataMember_Begin();
+                  variter != scope.DataMember_End();
+                  ++variter) {
                // NOTE: the test is here on the filnum.  It sounds like
                // it should on the tagnum of the parent scope
-               if (G__get_properties(*var)->filenum == ifile) {
-                  G__get_properties(*var)->globalcomp = globalcomp;
+               if (G__get_properties(*variter)->filenum == ifile) {
+                  G__get_properties(*variter)->globalcomp = globalcomp;
                }
             }
             scope = G__Dict::GetDict().GetScope(parent_tagnum);
@@ -8249,18 +8203,18 @@ void Cint::Internal::G__specify_link(int link_stub)
                   j = G__struct.parent_tagnum[j];
                }
                if (flag) {
-                  ::Reflex::Scope scope = G__Dict::GetDict().GetScope(i);
+                  ::Reflex::Scope localscope = G__Dict::GetDict().GetScope(i);
                   done = 1;
-                  for (::Reflex::Member_Iterator var = scope.DataMember_Begin();
-                        var != scope.DataMember_End();
-                        ++var) {
-                     if (G__get_properties(*var)->filenum == ifile
-                           && G__test_access(*var, G__PUBLIC)
+                  for (::Reflex::Member_Iterator variter = localscope.DataMember_Begin();
+                        variter != localscope.DataMember_End();
+                        ++variter) {
+                     if (G__get_properties(*variter)->filenum == ifile
+                           && G__test_access(*variter, G__PUBLIC)
                         ) {
-                        G__get_properties(*var)->globalcomp = globalcomp;
+                        G__get_properties(*variter)->globalcomp = globalcomp;
                      }
                   }
-                  scope = G__Dict::GetDict().GetScope(i);
+                  localscope = G__Dict::GetDict().GetScope(i);
                   for (::Reflex::Member_Iterator func = ::Reflex::Scope::GlobalScope().FunctionMember_Begin();
                         func != ::Reflex::Scope::GlobalScope().FunctionMember_End();
                         ++func) {
@@ -8344,14 +8298,14 @@ void Cint::Internal::G__specify_link(int link_stub)
          }
       }
       else if (strncmp(buf, "global", 3) == 0) {
-         for (::Reflex::Member_Iterator var = ::Reflex::Scope::GlobalScope().DataMember_Begin();
-               var != ::Reflex::Scope::GlobalScope().DataMember_End();
-               ++var) {
+         for (::Reflex::Member_Iterator variter = ::Reflex::Scope::GlobalScope().DataMember_Begin();
+               variter != ::Reflex::Scope::GlobalScope().DataMember_End();
+               ++variter) {
             if (G__NOLINK == globalcomp ||
-                  (0 <= G__get_properties(*var)->filenum &&
-                   0 == (G__srcfile[G__get_properties(*var)->filenum].hdrprop&G__CINTHDR))
+                  (0 <= G__get_properties(*variter)->filenum &&
+                   0 == (G__srcfile[G__get_properties(*variter)->filenum].hdrprop&G__CINTHDR))
                ) {
-               G__get_properties(*var)->globalcomp = globalcomp;
+               G__get_properties(*variter)->globalcomp = globalcomp;
             }
          }
       }
@@ -8489,6 +8443,11 @@ void Cint::Internal::G__incsetup_memfunc(int tagnum)
       store_var_type = G__var_type;
       G__input_file store_ifile = G__ifile;
       int fileno = G__struct.filenum[tagnum];
+      if (fileno >= G__nfile) {
+         // Most likely we are in the unloading of the shared library holding this
+         // dictionary.  Let's avoid a spurrious message (Function can not be defined in a command line or a tempfile).
+         fileno = -1;
+      }
       G__ifile.filenum = fileno;
       G__ifile.line_number = -1;
       G__ifile.str = 0;
@@ -8497,7 +8456,7 @@ void Cint::Internal::G__incsetup_memfunc(int tagnum)
 
       if (fileno != -1) {
          G__ifile.fp = G__srcfile[fileno].fp;
-         strcpy(G__ifile.name, G__srcfile[fileno].filename);
+         if (G__srcfile[fileno].filename) strcpy(G__ifile.name, G__srcfile[fileno].filename);
       }
 #ifdef G__OLDIMPLEMENTATION1125_YET /* G__PHILIPPE26 */
       if (0 == G__struct.memfunc[tagnum]->allifunc
@@ -8531,7 +8490,7 @@ void Cint::Internal::G__incsetup_memfunc(int tagnum)
 //______________________________________________________________________________
 extern "C" int G__getnumbaseclass(int tagnum)
 {
-   return(G__struct.baseclass[tagnum]->basen);
+   return(G__struct.baseclass[tagnum]->vec.size());
 }
 
 //______________________________________________________________________________
@@ -8552,7 +8511,6 @@ void G__setnewtype_settypenum(::Reflex::Type typenum)
 //______________________________________________________________________________
 extern "C" void G__setnewtype(int globalcomp, const char* comment, int /*nindex*/)
 {
-   bool typenum_isvalid = G__setnewtype_typenum;
    G__RflxProperties* prop = G__get_properties(G__setnewtype_typenum);
    if (prop) {
       prop->iscpplink = globalcomp;
@@ -8867,12 +8825,12 @@ extern "C" int G__get_no_exec_compile()
 #endif // G__WILDCARD  // FIXME: What do the previous functions have to do with wildcards?
 
 //______________________________________________________________________________
-template <typename T>
-inline T* G__refT(G__value* buf)
+template<class T> inline T* G__refT(G__value* buf)
 {
-   int type = G__get_type(*buf);
-   if (type == G__gettypechar<T>() && buf->ref)
-      return (T*)buf->ref;
+   char type = G__get_type(*buf);
+   if (type == G__gettypechar<T>() && buf->ref) {
+      return (T*) buf->ref;
+   }
    G__setvalue(buf, G__convertT<T>(buf));
    return &G__value_ref<T>(*buf);
 }

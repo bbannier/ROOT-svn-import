@@ -264,20 +264,32 @@ int XrdProofdAdmin::GetWorkers(XrdProofdProtocol *p)
    TRACEP(p, REQ, "request from session "<<pid);
 
    // We should query the chosen resource provider
-   XrdOucString wrks;
+   XrdOucString wrks("");
 
-   if (fMgr->GetWorkers(wrks, xps) !=0 ) {
+   // Read the message associated with the request; needs to do like this because
+   // of a bug in the XrdOucString constructor when length is 0
+   XrdOucString msg;
+   if (p->Request()->header.dlen > 0)
+      msg.assign((const char *) p->Argp()->buff, 0, p->Request()->header.dlen);
+   if (fMgr->GetWorkers(wrks, xps, msg.c_str()) < 0 ) {
       // Something wrong
-      response->Send(kXR_InvalidRequest,"failure");
+      response->Send(kXR_InvalidRequest, "GetWorkers failed");
       return 0;
-   } else {
-      // Send buffer
-      char *buf = (char *) wrks.c_str();
-      int len = wrks.length() + 1;
-      TRACEP(p, DBG, "sending: "<<buf);
+   }
 
-      // Send back to user
+   // Send buffer
+   // In case the session was enqueued, pass an empty list.
+   char *buf = (char *) wrks.c_str();
+   int len = wrks.length() + 1;
+   TRACEP(p, DBG, "sending: "<<buf);
+
+   // Send back to user
+   if (buf) {
       response->Send(buf, len);
+   } else {
+      // Something wrong
+      response->Send(kXR_InvalidRequest, "GetWorkers failed");
+      return 0;
    }
 
    // Over
@@ -314,7 +326,7 @@ int XrdProofdAdmin::SetGroupProperties(XrdProofdProtocol *p)
    // Tell the priority manager
    if (fMgr && fMgr->PriorityMgr()) {
       XrdOucString buf;
-      buf.form("%s %d", grp, priority);
+      XPDFORM(buf, "%s %d", grp, priority);
       if (fMgr->PriorityMgr()->Pipe()->Post(XrdProofdPriorityMgr::kSetGroupPriority,
                                              buf.c_str()) != 0) {
          TRACEP(p, XERR, "problem sending message on the pipe");
@@ -574,6 +586,9 @@ int XrdProofdAdmin::QueryLogPaths(XrdProofdProtocol *p)
                   }
                   rmsg += ln; rmsg += '/';
                   rmsg += pp;
+                  // Reposition on the file name
+                  char *ppl = strrchr(pp, '/');
+                  pp = (ppl) ? ppl : pp;
                   // If the line is for a submaster, we have to get the info
                   // about its workers
                   bool ismst = (strstr(pp, "master-")) ? 1 : 0;
@@ -608,7 +623,7 @@ int XrdProofdAdmin::QueryLogPaths(XrdProofdProtocol *p)
 //______________________________________________________________________________
 int XrdProofdAdmin::CleanupSessions(XrdProofdProtocol *p)
 {
-   // Handle request of 
+   // Handle request of
    XPDLOC(ALL, "Admin::CleanupSessions")
 
    int rc = 0;
@@ -680,12 +695,12 @@ int XrdProofdAdmin::CleanupSessions(XrdProofdProtocol *p)
 
    // Asynchronous notification to requester
    if (fMgr->SrvType() != kXPD_Worker) {
-      cmsg.form("CleanupSessions: %s: signalling active sessions for termination", lab);
+      XPDFORM(cmsg, "CleanupSessions: %s: signalling active sessions for termination", lab);
       response->Send(kXR_attn, kXPD_srvmsg, (char *) cmsg.c_str(), cmsg.length());
    }
 
    // Send a termination request to client sessions
-   cmsg.form("CleanupSessions: %s: cleaning up client: requested by: %s", lab, p->Link()->ID);
+   XPDFORM(cmsg, "CleanupSessions: %s: cleaning up client: requested by: %s", lab, p->Link()->ID);
    int srvtype = ntohl(p->Request()->proof.int2);
    fMgr->ClientMgr()->TerminateSessions(tgtclnt, cmsg.c_str(), srvtype);
 
@@ -693,7 +708,7 @@ int XrdProofdAdmin::CleanupSessions(XrdProofdProtocol *p)
    if (hard && fMgr->SrvType() != kXPD_Worker) {
 
       // Asynchronous notification to requester
-      cmsg.form("CleanupSessions: %s: forwarding the reset request to next tier(s) ", lab);
+      XPDFORM(cmsg, "CleanupSessions: %s: forwarding the reset request to next tier(s) ", lab);
       response->Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
 
       int type = ntohl(p->Request()->proof.int1);
@@ -708,7 +723,7 @@ int XrdProofdAdmin::CleanupSessions(XrdProofdProtocol *p)
    while (twait > 0 &&
           fMgr->SessionMgr()->CheckCounter(XrdProofdProofServMgr::kCleanSessionsCnt) > 0) {
       if (twait < 7) {
-         cmsg.form("CleanupSessions: %s: wait %d more seconds for completion ...", lab, twait);
+         XPDFORM(cmsg, "CleanupSessions: %s: wait %d more seconds for completion ...", lab, twait);
          response->Send(kXR_attn, kXPD_srvmsg, 0, (char *) cmsg.c_str(), cmsg.length());
       }
       sleep(1);

@@ -327,6 +327,7 @@ int XrdXrootdProtocol::do_Close()
 {
    XrdXrootdFile *fp;
    XrdXrootdFHandle fh(Request.close.fhandle);
+   int rc;
 
 // Keep statistics
 //
@@ -347,14 +348,17 @@ int XrdXrootdProtocol::do_Close()
 //
    if (monFILE && Monitor) Monitor->Close(fp->FileID,fp->readCnt,fp->writeCnt);
 
+// Do an explicit close of the file here; reflecting any errors
+//
+   rc = fp->XrdSfsp->close();
+   TRACEP(FS, "close rc=" <<rc <<" fh=" <<fh.handle);
+   if (SFS_OK != rc)
+      return Response.Send(kXR_FSError, fp->XrdSfsp->error.getErrText());
+
 // Delete the file from the file table; this will unlock/close the file
 //
    FTab->Del(fh.handle);
    numFiles--;
-
-// Respond that all went well
-//
-   TRACEP(FS, "close fh=" <<fh.handle);
    return Response.Send();
 }
 
@@ -449,6 +453,10 @@ int XrdXrootdProtocol::do_Endsess()
    memcpy((void *)&sessID.FD,   &sp->FD,   sizeof(sessID.FD));
    memcpy((void *)&sessID.Inst, &sp->Inst, sizeof(sessID.Inst));
 
+// Trace this request
+//
+   TRACEP(LOGIN, "endsess " <<sessID.Pid <<':' <<sessID.FD <<'.' <<sessID.Inst);
+
 // If this session id does not refer to us, ignore the request
 //
    if (sessID.Pid != myPID) return Response.Send();
@@ -461,13 +469,17 @@ int XrdXrootdProtocol::do_Endsess()
 // Trace this request
 //
    TRACEP(LOGIN, "endsess " <<sessID.Pid <<':' <<sessID.FD <<'.' <<sessID.Inst
-          <<" rc=" <<rc <<" (" <<strerror(rc) <<")");
+          <<" rc=" <<rc <<" (" <<strerror(rc < 0 ? -rc : EAGAIN) <<")");
 
 // Return result
 //
-   if (rc == EACCES) return Response.Send(kXR_NotAuthorized, "not session owner");
-   if (rc == ESRCH)  return Response.Send(kXR_NotFound, "session not found");
-   if (rc == EBUSY)  return Response.Send(kXR_InvalidRequest, "session is active");
+   if (rc >  0)
+      return (rc = Response.Send(kXR_wait, rc, "session still active")) ? rc:1;
+
+   if (rc == -EACCES)return Response.Send(kXR_NotAuthorized, "not session owner");
+   if (rc == -ESRCH) return Response.Send(kXR_NotFound, "session not found");
+   if (rc == -ETIME) return Response.Send(kXR_Cancelled,"session not ended");
+
    return Response.Send();
 }
 
@@ -760,7 +772,7 @@ int XrdXrootdProtocol::do_Offload(int pathID, int isWrite)
           pp->Response.Set(streamID);
           pp->streamMutex.UnLock();
           Link->setRef(1);
-          Sched->Schedule((XrdJob *)pp);
+          Sched->Schedule((XrdJob *)(pp->Link));
           isAvail.Wait();
           return 0;
          }
@@ -897,6 +909,7 @@ int XrdXrootdProtocol::do_Open()
                                        UPSTATS(Refresh);
                                       }
    if (opts & kXR_retstat)            {*op++ = 't'; retStat = 1;}
+   if (opts & kXR_posc)               {*op++ = 'p'; openopts |= SFS_O_POSC;}
    *op = '\0';
    TRACEP(FS, "open " <<opt <<' ' <<fn);
 
@@ -1057,7 +1070,7 @@ int XrdXrootdProtocol::do_Prepare()
    XrdOucTList *pFirst=0, *pP, *pLast = 0;
    XrdOucTList *oFirst=0, *oP, *oLast = 0;
    XrdOucTListHelper pHelp(&pFirst), oHelp(&oFirst);
-   XrdXrootdPrepArgs pargs(0, 1);
+   XrdXrootdPrepArgs pargs(0, 0);
    XrdSfsPrep fsprep;
 
 // Grab the options
@@ -2221,7 +2234,7 @@ int XrdXrootdProtocol::fsError(int rc, XrdOucErrInfo &myError)
        TRACEI(STALL, Response.ID() <<"delaying client up to " <<ecode <<" sec");
        rc = Response.Send(kXR_waitresp, ecode, eMsg);
        myError.getErrCB()->Done(ecode, &myError);
-       return rc;
+       return (rc ? rc : 1);
       }
 
 // Process the data response
@@ -2236,7 +2249,7 @@ int XrdXrootdProtocol::fsError(int rc, XrdOucErrInfo &myError)
    if (rc >= SFS_STALL)
       {SI->stallCnt++;
        TRACEI(STALL, Response.ID() <<"stalling client for " <<rc <<" sec");
-       return Response.Send(kXR_wait, rc, eMsg);
+       return (rc = Response.Send(kXR_wait, rc, eMsg)) ? rc : 1;
       }
 
 // Unknown conditions, report it
@@ -2300,6 +2313,7 @@ int XrdXrootdProtocol::mapError(int rc)
         case ENOTBLK:      return kXR_NotFile;
         case EISDIR:       return kXR_isDirectory;
         case EEXIST:       return kXR_InvalidRequest;
+        case ETXTBSY:      return kXR_inProgress;
         default:           return kXR_FSError;
        }
 }

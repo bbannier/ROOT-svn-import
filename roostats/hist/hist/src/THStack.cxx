@@ -381,8 +381,7 @@ Int_t THStack::DistancetoPrimitive(Int_t px, Int_t py)
 //______________________________________________________________________________
 void THStack::Draw(Option_t *option)
 {
-   //*-*-*-*-*-*-*-*-*-*-*Draw this multihist with its current attributes*-*-*-*-*-*-*
-   //*-*                  ==========================================
+   // Draw this multihist with its current attributes.
    //
    //   Options to draw histograms  are described in THistPainter::Paint
    // By default (if option "nostack" is not specified), histograms will be paint
@@ -400,6 +399,14 @@ void THStack::Draw(Option_t *option)
       }
    }
    AppendPad(opt.Data());
+
+   // For stacks of 1D histograms the axis need to be redrawn because the
+   // tick marks have been very likely erased.
+   if (fHists->GetSize()) {
+      TH1* h = (TH1*)fHists->At(0);
+      if (h->GetDimension()==1 && !strstr(opt.Data(),"lego"))
+         gPad->RedrawAxis();
+   }
 }
 
 //______________________________________________________________________________
@@ -432,6 +439,7 @@ Double_t THStack::GetMaximum(Option_t *option)
    TString opt = option;
    opt.ToLower();
    Double_t them=0, themax = -1e300;
+   if (!fHists) return 0;
    Int_t nhists = fHists->GetSize();
    TH1 *h;
    if (!opt.Contains("nostack")) {
@@ -459,6 +467,7 @@ Double_t THStack::GetMinimum(Option_t *option)
    TString opt = option;
    opt.ToLower();
    Double_t them=0, themin = 1e300;
+   if (!fHists) return 0;
    Int_t nhists = fHists->GetSize();
    TH1 *h;
    if (!opt.Contains("nostack")) {
@@ -582,8 +591,8 @@ void THStack::Paint(Option_t *option)
          padsav->Clear();
          Int_t nx = (Int_t)TMath::Sqrt((Double_t)npads);
          if (nx*nx < npads) nx++;
-	 Int_t ny = nx;
-	 if (((nx*ny)-nx) >= npads) ny--;
+         Int_t ny = nx;
+         if (((nx*ny)-nx) >= npads) ny--;
          padsav->Divide(nx,ny);
       }
       TH1 *h;
@@ -753,7 +762,6 @@ void THStack::Paint(Option_t *option)
          lnk = (TObjOptLink*)lnk->Prev();
       }
    }
-   gPad->RedrawAxis();
 }
 
 //______________________________________________________________________________
@@ -801,6 +809,17 @@ void THStack::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    }
    if (fMaximum != -1111) {
       out<<"   "<<GetName()<<"->SetMaximum("<<fMaximum<<");"<<endl;
+   }
+
+   static Int_t frameNumber = 0;
+   if (fHistogram) {
+      frameNumber++;
+      TString hname = fHistogram->GetName();
+      hname += frameNumber;
+      fHistogram->SetName(hname.Data());
+      fHistogram->SavePrimitive(out,"nodraw");
+      out<<"   "<<GetName()<<"->SetHistogram("<<fHistogram->GetName()<<");"<<endl;
+      out<<"   "<<endl;
    }
 
    TH1 *h;

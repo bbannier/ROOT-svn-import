@@ -419,7 +419,7 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
                // file ending on .root but does not exist, likely a typo, warn user...
                Warning("GetOptions", "file %s not found", dir);
             } else {
-               char *mac, *s = strtok(dir, "+(");
+               char *mac, *s = Strip(dir, '+');
                if ((mac = gSystem->Which(TROOT::GetMacroPath(), s,
                                          kReadPermission))) {
                   // if file add to list of files to be processed
@@ -433,6 +433,7 @@ void TApplication::GetOptions(Int_t *argc, char **argv)
                   if (!strcmp(gROOT->GetName(), "Rint"))
                      Warning("GetOptions", "macro %s not found", s);
                }
+               delete [] s;
             }
          }
          delete [] dir;
@@ -786,14 +787,17 @@ Long_t TApplication::ProcessLine(const char *line, Bool_t sync, Int_t *err)
          Error("ProcessLine", "macro %s not found in path %s", fname.Data(),
                TROOT::GetMacroPath());
       else {
-         char cmd = line[1];
+         TString cmd(line+1);
+         Ssiz_t posSpace = cmd.Index(' ');
+         if (posSpace == -1) cmd.Remove(1);
+         else cmd.Remove(posSpace);
          static TString tempbuf;
          if (sync) {
-            tempbuf.Form(".%c %s%s%s", cmd, mac, aclicMode.Data(),io.Data());
+            tempbuf.Form(".%s %s%s%s", cmd.Data(), mac, aclicMode.Data(),io.Data());
             retval = gInterpreter->ProcessLineSynch(tempbuf,
                                                    (TInterpreter::EErrorCode*)err);
          } else {
-            tempbuf.Form(".%c %s%s%s", cmd, mac, aclicMode.Data(),io.Data());
+            tempbuf.Form(".%s %s%s%s", cmd.Data(), mac, aclicMode.Data(),io.Data());
             retval = gInterpreter->ProcessLine(tempbuf,
                                               (TInterpreter::EErrorCode*)err);
          }
@@ -807,7 +811,7 @@ Long_t TApplication::ProcessLine(const char *line, Bool_t sync, Int_t *err)
    }
 
    if (!strncmp(line, ".X", 2) || !strncmp(line, ".x", 2)) {
-      return ProcessFile(line+3, err);
+      return ProcessFile(line+3, err, line[2] == 'k');
    }
 
    if (!strcmp(line, ".reset")) {
@@ -830,15 +834,15 @@ Long_t TApplication::ProcessLine(const char *line, Bool_t sync, Int_t *err)
 }
 
 //______________________________________________________________________________
-Long_t TApplication::ProcessFile(const char *file, Int_t *error)
+Long_t TApplication::ProcessFile(const char *file, Int_t *error, Bool_t keep)
 {
    // Process a file containing a C++ macro.
 
-   return ExecuteFile(file, error);
+   return ExecuteFile(file, error, keep);
 }
 
 //______________________________________________________________________________
-Long_t TApplication::ExecuteFile(const char *file, Int_t *error)
+Long_t TApplication::ExecuteFile(const char *file, Int_t *error, Bool_t keep)
 {
    // Execute a file containing a C++ macro (static method). Can be used
    // while TApplication is not yet created.
@@ -947,7 +951,7 @@ again:
       if (tempfile) {
          tempbuf.Form(".x %s", exname.Data());
       } else {
-         tempbuf.Form(".X %s", exname.Data());
+         tempbuf.Form(".X%s %s", keep ? "k" : " ", exname.Data());
       }
       retval = gInterpreter->ProcessLineSynch(tempbuf,(TInterpreter::EErrorCode*)error);
    }

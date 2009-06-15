@@ -85,8 +85,13 @@ RFLX_UNITTESTX = $(subst .cxx,,$(RFLX_UNITTESTS))
 
 RFLX_GENMAPS   = $(REFLEXDIRS)/genmap/genmap.cxx
 RFLX_GENMAPO   = $(RFLX_GENMAPS:.cxx=.o)
+RFLX_GENMAPDEP = $(RFLX_GENMAPS:.cxx=.d)
+
+# include all dependency files
+INCLUDEFILES += $(RFLX_GENMAPDEP)
 
 ALLEXECS += $(RFLX_GENMAPX)
+
 
 ##### local rules #####
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME) \
@@ -121,8 +126,7 @@ $(RFLX_GRFLXDD)/%.py: $(RFLX_GRFLXSD)/%.py $(RFLX_GCCXMLPATHPY)
 $(RFLX_GRFLXDD)/%.pyc: $(RFLX_GRFLXDD)/%.py
 		@python -c 'import py_compile; py_compile.compile( "$<" )'
 
-$(RFLX_GENMAPO) : $(RFLX_GENMAPS)
-	$(CXX) $(OPT) $(CXXFLAGS) -Iinclude -I$(REFLEXDIRS)/genmap -c $< $(CXXOUT)$@
+$(RFLX_GENMAPO) : CXXFLAGS += -I$(REFLEXDIRS)/genmap
 
 $(RFLX_GENMAPX) : $(RFLX_GENMAPO) $(REFLEXLIB)
 	$(LD) $(LDFLAGS) -o $@ $(RFLX_GENMAPO) $(RFLX_REFLEXLL)
@@ -156,13 +160,13 @@ clean-check-$(MODNAME):
 
 clean-$(MODNAME): clean-genreflex clean-check-$(MODNAME)
 		@rm -f $(RFLX_GENMAPX)
-		@rm -f $(REFLEXO) $(REFLEXDO)
+		@rm -f $(REFLEXO) $(REFLEXDO) $(RFLX_GENMAPO) $(RFLX_UNITTESTO) $(RFLX_TESTLIBO)
 
 clean::         clean-$(MODNAME)
 
 distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -f $(REFLEXDEP) $(REFLEXDS) $(REFLEXDH) $(REFLEXLIB) \
-		   $(REFLEXDICTLIB) $(REFLEXDICTMAP)
+		   $(REFLEXDICTLIB) $(REFLEXDICTMAP) $(RFLX_GENMAPDEP)  $(RFLX_TESTLIB)
 		@rm -rf include/Reflex lib/python
 
 distclean::     distclean-$(MODNAME)

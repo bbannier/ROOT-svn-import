@@ -41,13 +41,6 @@ protected:
    Double_t     fTsumwy2;         //Total Sum of weight*Y*Y
    Double_t     fTsumwxy;         //Total Sum of weight*X*Y
 
-   virtual Int_t     BufferFill(Double_t, Double_t) {return -2;} //may not use
-   virtual Int_t     BufferFill(Double_t x, Double_t y, Double_t w);
-   virtual TH1D     *DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbin, Option_t *option) const;
-   virtual TProfile *DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastbin, Option_t *option) const;
-   virtual void      DoFitSlices(bool onX, TF1 *f1, Int_t firstbin, Int_t lastbin, Int_t cut, Option_t *option, TObjArray* arr);
-
-public:
    TH2();
    TH2(const char *name,const char *title,Int_t nbinsx,Double_t xlow,Double_t xup
                                          ,Int_t nbinsy,Double_t ylow,Double_t yup);
@@ -59,6 +52,14 @@ public:
                                          ,Int_t nbinsy,const Double_t *ybins);
    TH2(const char *name,const char *title,Int_t nbinsx,const Float_t  *xbins
                                          ,Int_t nbinsy,const Float_t  *ybins);
+
+   virtual Int_t     BufferFill(Double_t, Double_t) {return -2;} //may not use
+   virtual Int_t     BufferFill(Double_t x, Double_t y, Double_t w);
+   virtual TH1D     *DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbin, Option_t *option) const;
+   virtual TProfile *DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastbin, Option_t *option) const;
+   virtual void      DoFitSlices(bool onX, TF1 *f1, Int_t firstbin, Int_t lastbin, Int_t cut, Option_t *option, TObjArray* arr);
+
+public:
    TH2(const TH2&);
    virtual ~TH2();
    virtual Int_t    BufferEmpty(Int_t action=0);
@@ -74,6 +75,8 @@ public:
    virtual void     FillN(Int_t ntimes, const Double_t *x, const Double_t *y, const Double_t *w, Int_t stride=1);
    virtual void     FillRandom(const char *fname, Int_t ntimes=5000);
    virtual void     FillRandom(TH1 *h, Int_t ntimes=5000);
+   virtual Int_t    FindFirstBinAbove(Double_t threshold=0, Int_t axis=1) const;
+   virtual Int_t    FindLastBinAbove (Double_t threshold=0, Int_t axis=1) const;
    virtual void     FitSlicesX(TF1 *f1=0,Int_t firstybin=0, Int_t lastybin=-1, Int_t cut=0, Option_t *option="QNR", TObjArray* arr = 0); // *MENU*
    virtual void     FitSlicesY(TF1 *f1=0,Int_t firstxbin=0, Int_t lastxbin=-1, Int_t cut=0, Option_t *option="QNR", TObjArray* arr = 0); // *MENU*
    virtual Double_t GetBinWithContent2(Double_t c, Int_t &binx, Int_t &biny, Int_t firstxbin=1, Int_t lastxbin=-1,Int_t firstybin=1, Int_t lastybin=-1, Double_t maxdiff=0) const;

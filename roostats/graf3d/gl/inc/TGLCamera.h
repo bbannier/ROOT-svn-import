@@ -12,15 +12,9 @@
 #ifndef ROOT_TGLCamera
 #define ROOT_TGLCamera
 
-#ifndef ROOT_TGLUtil
 #include "TGLUtil.h"
-#endif
-#ifndef ROOT_TGLBoundingBox
 #include "TGLBoundingBox.h"
-#endif
-#ifndef ROOT_TPoint
 #include "TPoint.h"
-#endif
 
 #include <cassert>
 #include <cmath>
@@ -135,6 +129,7 @@ public:
 
    virtual Bool_t Dolly(Int_t delta, Bool_t mod1, Bool_t mod2);
    virtual Bool_t Zoom (Int_t delta, Bool_t mod1, Bool_t mod2) = 0;
+   virtual Bool_t Truck(Double_t xDelta, Double_t yDelta);
    virtual Bool_t Truck(Int_t xDelta, Int_t yDelta, Bool_t mod1, Bool_t mod2) = 0;
    virtual Bool_t Rotate(Int_t xDelta, Int_t yDelta, Bool_t mod1, Bool_t mod2);
    virtual Bool_t RotateRad(Double_t hRotate, Double_t vRotate);

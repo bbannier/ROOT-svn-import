@@ -22,14 +22,11 @@ ROOTEXE      := bin/root_exe.exe
 else
 ROOTEXE      := bin/root.exe
 endif
-ifneq ($(BUILDCINT7),)
+ifneq ($(BUILDBOTHCINT),)
 ROOT7EXE     := $(subst root,rootc7,$(ROOTEXE))
 endif
 ifneq ($(PLATFORM),win32)
 ROOTNEXE     := bin/rootn.exe
-endif
-ifeq ($(PLATFORM),win32)
-ROOTICON     := icons/RootIcon.obj
 endif
 
 ##### proofserv #####
@@ -41,10 +38,10 @@ PROOFSERVEXE := bin/proofserv_exe.exe
 else
 PROOFSERVEXE := bin/proofserv.exe
 PROOFSERVSH  := bin/proofserv
-ifeq ($(PLATFORM),win32)
-PROOFSERVEXE :=
-PROOFSERVSH  :=
-endif
+#ifeq ($(PLATFORM),win32)
+#PROOFSERVEXE :=
+#PROOFSERVSH  :=
+#endif
 endif
 ifeq ($(PROOFLIB),)
 PROOFSERVEXE :=
@@ -124,7 +121,7 @@ $(ROOTEXE):     $(ROOTEXEO) $(BOOTLIBSDEP) $(RINTLIB)
 		$(LD) $(LDFLAGS) -o $@ $(ROOTEXEO) $(ROOTICON) $(BOOTULIBS) \
 		   $(RPATH) $(BOOTLIBS) $(RINTLIBS) $(SYSLIBS)
 
-ifneq ($(BUILDCINT7),)
+ifneq ($(BUILDBOTHCINT),)
 $(ROOT7EXE):    $(ROOTEXEO) $(subst Cint,Cint7,$(BOOTLIBSDEP)) $(RINTLIB) $(REFLEXLIB)
 		$(LD) $(LDFLAGS) -o $@ $(ROOTEXEO) $(ROOTICON) $(BOOTULIBS) \
 		   $(RPATH) $(subst Cint,Cint7,$(BOOTLIBS)) $(RINTLIBS) $(RFLX_REFLEXLL) $(SYSLIBS)

@@ -50,6 +50,7 @@ XrdProofdNetMgr::XrdProofdNetMgr(XrdProofdManager *mgr,
    fResourceType = kRTNone;
    fPROOFcfg.fName = "";
    fPROOFcfg.fMtime = 0;
+   fReloadPROOFcfg = 1;
    fWorkers.clear();
    fNodes.clear();
    fNumLocalWrks = XrdProofdAux::GetNumCPUs();
@@ -129,21 +130,21 @@ int XrdProofdNetMgr::Config(bool rcf)
                fPROOFcfg.fMtime = 0;
                return 0;
             }
+            TRACE(ALL, "PROOF config file will " <<
+                      ((fReloadPROOFcfg) ? "" : "not ") <<"be reloaded upon change");
          }
       } else if (fResourceType == kRTNone && fWorkers.size() <= 1) {
          // Nothing defined: use default
          CreateDefaultPROOFcfg();
       }
-      msg.form("%d worker nodes defined", fWorkers.size() - 1);
-      TRACE(ALL, msg);
 
       // Find unique nodes
       FindUniqueNodes();
    }
 
-   if (fPROOFcfg.fName.length() <= 0)
-      // Enable user config files
-      fWorkerUsrCfg = 1;
+   // Notification
+   XPDFORM(msg, "%d worker nodes defined at start-up", fWorkers.size() - 1);
+   TRACE(ALL, msg);
 
    // Done
    return 0;
@@ -210,6 +211,8 @@ int XrdProofdNetMgr::DoDirectiveResource(char *val, XrdOucStream *cfg, bool)
          XrdOucString s(val);
          if (s.beginswith("ucfg:")) {
             fWorkerUsrCfg = s.endswith("yes") ? 1 : 0;
+         } else if (s.beginswith("reload:")) {
+            fReloadPROOFcfg = (s.endswith("1") || s.endswith("yes")) ? 1 : 0;
          } else if (s.beginswith("wmx:")) {
          } else if (s.beginswith("selopt:")) {
          } else {
@@ -249,7 +252,7 @@ int XrdProofdNetMgr::DoDirectiveWorker(char *val, XrdOucStream *cfg, bool)
    if (val) {
       // Build the line
       XrdOucString line;
-      line.form("%s %s", val, rest);
+      XPDFORM(line, "%s %s", val, rest);
       // Parse it now
       if (!strcmp(val, "master") || !strcmp(val, "node")) {
          // Init a master instance
@@ -262,17 +265,29 @@ int XrdProofdNetMgr::DoDirectiveWorker(char *val, XrdOucStream *cfg, bool)
          }
          SafeDelete(pw);
       } else {
-         // Build the worker object
-         XrdProofdMultiStr mline(line.c_str());
-         if (mline.IsValid()) {
-            TRACE(DBG, "found multi-line with: "<<mline.N()<<" tokens");
-            for (int i = 0; i < mline.N(); i++) {
-               TRACE(HDBG, "found token: "<<mline.Get(i));
-               fWorkers.push_back(new XrdProofWorker(mline.Get(i).c_str()));
+         // How many lines like this?
+         int nr = 1;
+         int ir = line.find("repeat=");
+         if (ir != STR_NPOS) {
+            XrdOucString r(line, ir + strlen("repeat="));
+            r.erase(r.find(' '));
+            nr = r.atoi();
+            if (nr < 0 || !XPD_LONGOK(nr)) nr = 1;
+            TRACE(DBG, "found repeat = "<<nr);
+         }
+         while (nr--) {
+            // Build the worker object
+            XrdProofdMultiStr mline(line.c_str());
+            if (mline.IsValid()) {
+               TRACE(DBG, "found multi-line with: "<<mline.N()<<" tokens");
+               for (int i = 0; i < mline.N(); i++) {
+                  TRACE(HDBG, "found token: "<<mline.Get(i));
+                  fWorkers.push_back(new XrdProofWorker(mline.Get(i).c_str()));
+               }
+            } else {
+               TRACE(DBG, "found line: "<<line);
+               fWorkers.push_back(new XrdProofWorker(line.c_str()));
             }
-         } else {
-            TRACE(DBG, "Found line: "<<line);
-            fWorkers.push_back(new XrdProofWorker(line.c_str()));
          }
       }
    }
@@ -571,14 +586,14 @@ int XrdProofdNetMgr::ReadBuffer(XrdProofdProtocol *p)
       if (lout > 0) {
          if (grep > 0) {
             if (TRACING(DBG)) {
-               emsg.form("nothing found by 'grep' in %s, pattern: %s", filen, pattern);
+               XPDFORM(emsg, "nothing found by 'grep' in %s, pattern: %s", filen, pattern);
                TRACEP(p, DBG, emsg);
             }
             response->Send();
             return 0;
          } else {
-            emsg.form("could not read buffer from %s %s",
-                     (local) ? "local file " : "remote file ", file);
+            XPDFORM(emsg, "could not read buffer from %s %s",
+                          (local) ? "local file " : "remote file ", file);
             TRACEP(p, XERR, emsg);
             response->Send(kXR_InvalidRequest, emsg.c_str());
             return 0;
@@ -962,7 +977,7 @@ std::list<XrdProofWorker *> *XrdProofdNetMgr::GetActiveWorkers()
 
    if (fResourceType == kRTStatic && fPROOFcfg.fName.length() > 0) {
       // Check if there were any changes in the config file
-      if (ReadPROOFcfg(1) != 0) {
+      if (fReloadPROOFcfg && ReadPROOFcfg(1) != 0) {
          TRACE(XERR, "unable to read the configuration file");
          return (std::list<XrdProofWorker *> *)0;
       }
@@ -1007,7 +1022,7 @@ std::list<XrdProofWorker *> *XrdProofdNetMgr::GetNodes()
 
    if (fResourceType == kRTStatic && fPROOFcfg.fName.length() > 0) {
       // Check if there were any changes in the config file
-      if (ReadPROOFcfg(1) != 0) {
+      if (fReloadPROOFcfg && ReadPROOFcfg(1) != 0) {
          TRACE(XERR, "unable to read the configuration file");
          return (std::list<XrdProofWorker *> *)0;
       }
@@ -1033,8 +1048,15 @@ int XrdProofdNetMgr::ReadPROOFcfg(bool reset)
 
    // Get the modification time
    struct stat st;
-   if (stat(fPROOFcfg.fName.c_str(), &st) != 0)
-      return -1;
+   if (stat(fPROOFcfg.fName.c_str(), &st) != 0) {
+      if (fWorkers.size() > 1) {
+        TRACE(XERR, "unable to stat file: "<<fPROOFcfg.fName<<" - errno: "<<errno);
+        TRACE(XERR, "continuing with existing list of workers.");
+        return 0;
+      } else {
+        return -1;
+      }
+   }
    TRACE(DBG, "time of last modification: " << st.st_mtime);
 
    // File should be loaded only once
@@ -1044,6 +1066,18 @@ int XrdProofdNetMgr::ReadPROOFcfg(bool reset)
    // Save the modification time
    fPROOFcfg.fMtime = st.st_mtime;
 
+   // Open the defined path.
+   FILE *fin = 0;
+   if (!(fin = fopen(fPROOFcfg.fName.c_str(), "r"))) {
+      if (fWorkers.size() > 1) {
+        TRACE(XERR, "unable to fopen file: "<<fPROOFcfg.fName<<" - errno: "<<errno);
+        TRACE(XERR, "continuing with existing list of workers.");
+        return 0;
+      } else {
+        return -1;
+      }
+   }
+
    if (reset) {
       // Cleanup the worker list
       std::list<XrdProofWorker *>::iterator w = fWorkers.begin();
@@ -1051,14 +1085,6 @@ int XrdProofdNetMgr::ReadPROOFcfg(bool reset)
          delete *w;
          w = fWorkers.erase(w);
       }
-   }
-
-   // Open the defined path.
-   FILE *fin = 0;
-   if (!(fin = fopen(fPROOFcfg.fName.c_str(), "r")))
-      return -1;
-
-   if (reset) {
       // Create a default master line
       XrdOucString mm("master ",128);
       mm += fMgr->Host();

@@ -16,7 +16,7 @@
 #include "common.h"
 
 #include "Reflex/Builder/TypeBuilder.h"
-#include "Reflex/Builder/FunctionBuilder.h"
+//#include "Reflex/Builder/FunctionBuilder.h"
 #include "Reflex/Tools.h"
 #include "Dict.h"
 #include <cassert>
@@ -25,6 +25,9 @@
 #include <string>
 
 using namespace std;
+
+#include "Reflex/internal/MemberBase.h"
+#include "Reflex/internal/TypeBase.h"
 
 //
 // Function Directory
@@ -37,8 +40,6 @@ size_t GetReflexPropertyID();
 void G__get_cint5_type_tuple(const ::Reflex::Type in_type, char* out_type, int* out_tagnum, int* out_typenum, int* out_reftype, int* out_constvar);
 void G__get_cint5_type_tuple_long(const ::Reflex::Type in_type, long* out_type, long* out_tagnum, long* out_typenum, long* out_reftype, long* out_constvar);
 int G__get_cint5_typenum(const ::Reflex::Type in_type);
-int G__get_type(const ::Reflex::Type in);
-int G__get_type(const G__value in);
 int G__get_tagtype(const ::Reflex::Type in);
 int G__get_tagtype(const ::Reflex::Scope in);
 int G__get_reftype(const ::Reflex::Type in);
@@ -55,19 +56,16 @@ int G__get_varlabel(const Reflex::Type passed_var, int idx);
 int G__get_typenum(const ::Reflex::Type in);
 int G__get_tagnum(const ::Reflex::Type in);
 int G__get_tagnum(const ::Reflex::Scope in);
-::Reflex::Type& G__value_typenum(G__value& gv);
-const ::Reflex::Type& G__value_typenum(const G__value& gv);
 ::Reflex::Type G__get_from_type(int type, int createpointer, int isconst /*=0*/);
 int G__get_paran(const Reflex::Member var);
 size_t G__get_bitfield_width(const Reflex::Member var);
 size_t G__get_bitfield_start(const Reflex::Member var);
-char*& G__get_offset(const ::Reflex::Member var);
 Reflex::Type G__strip_array(const Reflex::Type typein);
 Reflex::Type G__strip_one_array(const Reflex::Type typein);
 Reflex::Type G__deref(const Reflex::Type typein);
 ::Reflex::Type G__modify_type(const ::Reflex::Type typein, bool ispointer, int reftype, int isconst, int nindex, int* index);
 ::Reflex::Type G__cint5_tuple_to_type(int type, int tagnum, int typenum, int reftype, int isconst);
-::Reflex::Type G__findInScope(const ::Reflex::Scope scope, const char* name);
+::Reflex::Scope G__findInScope(const ::Reflex::Scope scope, const char* name);
 bool G__test_access(const ::Reflex::Member var, int access);
 bool G__is_cppmacro(const ::Reflex::Member var);
 bool G__filescopeaccess(int filenum, int statictype);
@@ -84,6 +82,7 @@ int G__get_access(const ::Reflex::Member mem);
 // C interface functions.
 extern "C" {
 int G__value_get_type(G__value *buf);
+int G__value_get_tagnum(G__value *buf);
 void G__dump_reflex();
 void G__dump_reflex_atlevel(const ::Reflex::Scope scope, int level);
 void G__dump_reflex_function(const ::Reflex::Scope scope, int level);
@@ -307,133 +306,15 @@ extern "C" int G__value_get_type(G__value *buf)
 }
 
 //______________________________________________________________________________
-int Cint::Internal::G__get_type(const ::Reflex::Type in)
+extern "C" int G__value_get_tagnum(G__value *buf)
 {
-   // -- Get CINT type code for data type.
-   // Note: Structures are all 'u'.
-   if (!in) return 0;
-
-   // FINAL for a typedef only remove the typedef layer!
-
-   ::Reflex::Type final = in.FinalType();
-
-   if (in.IsPointerToMember() || in.ToType().IsPointerToMember() ||  final.IsPointerToMember()) return 'a';
-
-   // The type code for a variable in cint5 ignores any array part.
-   for (; final.IsArray(); final = final.ToType()) {}
-
-   int pointerThusUppercase = final.IsPointer();
-   pointerThusUppercase *= 'A' - 'a';
-   ::Reflex::Type raw = in.RawType();
-
-   if (raw.IsFundamental()) {
-      if (in.TypeType() == Reflex::TYPEDEF) {
-         // they are all typedefs to (pointer to) fundamental types:
-         const std::string name(in.Name());
-         const char name0 = name[0];
-         if (name0 == 'm') {
-            if (name == "macro$") return 'j';
-            if (name == "macroInt$")    return 'p';
-            if (name == "macroDouble$") return 'P';
-            if (name == "macroChar*$") return 'T';
-         } else if (name0 == 'a') {
-            if (name == "autoInt$")     return 'o';
-            if (name == "autoDouble$")  return 'O';
-         } else if (name0 == 's') {
-            if (name == "switchStart$")  return 'a';
-            if (name == "switchDefault$")  return 'z';
-         } else if (name0 == 'c') {
-            if (name == "codeBreak$")  return 'Z';
-            if (name == "codeBreak$*")  return 'Z'; // This is actually a 'slot' for a not yet found special object
-         } else if (name0 == 'd')
-            if (name == "defaultFunccall$") return G__DEFAULT_FUNCCALL;
-      }
-
-      ::Reflex::EFUNDAMENTALTYPE fundamental = ::Reflex::Tools::FundamentalType(raw);
-      char unsigned_flag = (fundamental == ::Reflex::kUNSIGNED_CHAR
-         || fundamental == ::Reflex::kUNSIGNED_SHORT_INT
-         || fundamental == ::Reflex::kUNSIGNED_INT
-         || fundamental == ::Reflex::kUNSIGNED_LONG_INT
-         || fundamental == ::Reflex::kULONGLONG
-         );
-      switch (fundamental) {
-         // NOTE: "raw unsigned" (type 'h') is gone - it's equivalent to unsigned int.
-         case ::Reflex::kCHAR:
-         case ::Reflex::kSIGNED_CHAR:
-         case ::Reflex::kUNSIGNED_CHAR:
-            return ((int) 'c') - unsigned_flag + pointerThusUppercase;
-         case ::Reflex::kSHORT_INT:
-         case ::Reflex::kUNSIGNED_SHORT_INT:
-            return ((int) 's') - unsigned_flag + pointerThusUppercase;
-         case ::Reflex::kINT:
-         case ::Reflex::kUNSIGNED_INT:
-            return ((int) 'i') - unsigned_flag + pointerThusUppercase;
-         case ::Reflex::kLONG_INT:
-         case ::Reflex::kUNSIGNED_LONG_INT:
-            return ((int) 'l') - unsigned_flag + pointerThusUppercase;
-         case ::Reflex::kLONGLONG:
-         case ::Reflex::kULONGLONG:
-            return ((int) 'n') - unsigned_flag + pointerThusUppercase;
-
-         case ::Reflex::kBOOL:
-            return ((int) 'g') + pointerThusUppercase;
-         case ::Reflex::kVOID: {
-            if (final.IsPointer()) {
-               return 'Y';
-            } else
-               if (final.TypeType()==Reflex::FUNCTION
-                   || final.TypeType()==Reflex::FUNCTIONMEMBER
-                   || strstr(in.Name().c_str(),"(")) {
-               return '1';
-            } else {
-               return 'y';
-            };
-            // return ((int) 'y') + pointerThusUppercase;
-         }
-         case ::Reflex::kFLOAT:
-            return ((int) 'f') + pointerThusUppercase;
-         case ::Reflex::kDOUBLE:
-            return ((int) 'd') + pointerThusUppercase;
-         case ::Reflex::kLONG_DOUBLE:
-            return ((int) 'q') + pointerThusUppercase;
-         default:
-            printf("G__gettype error: fundamental Reflex::Type %s %s is not taken into account!\n",
-               raw.TypeTypeAsString().c_str(), raw.Name_c_str());
-            return 0;
-      } // switch fundamental
-   }
-
-   static Reflex::Type stFile;
-   if (!stFile.Id()) stFile = Reflex::Type::ByName("FILE");
-   if ((stFile.Id() && raw.Id() == stFile.Id())
-       || (!stFile.Id() && raw.Name() == "FILE"))
-      return ((int) 'e') + pointerThusUppercase;
-   if (raw.IsClass()|| raw.IsStruct() ||
-       /* raw.IsEnum() || */ raw.IsUnion())
-       return ((int) 'u') + pointerThusUppercase;
-   if (raw.IsEnum()) return ((int)'i') + pointerThusUppercase;
-   // Handle function and function pointer (both '1'):
-   Reflex::Type fn( in );
-   if (fn.IsPointer()) {
-      fn = fn.ToType();
-   }
-   if (fn.TypeType() == Reflex::FUNCTION || fn.TypeType() == Reflex::FUNCTIONMEMBER) return '1';
-   
-   return 0;
-}
-
-//______________________________________________________________________________
-int Cint::Internal::G__get_type(const G__value in)
-{
-   // -- Get CINT type code for a G__value.
-   int ret = G__get_type(G__value_typenum(in));
-   return ret;
+   return Cint::Internal::G__get_tagnum(G__value_typenum(*buf));
 }
 
 //______________________________________________________________________________
 int Cint::Internal::G__get_tagtype(const ::Reflex::Type in)
 {
-   // -- Get CINT type code for a structure (c,s,e,u).
+   // Get CINT type code for a structure (c,s,e,u).
    switch (in.RawType().TypeType()) {
       case ::Reflex::TYPETEMPLATEINSTANCE: return 'c';
       case ::Reflex::CLASS: return 'c';
@@ -459,8 +340,7 @@ int Cint::Internal::G__get_tagtype(const ::Reflex::Type in)
 //______________________________________________________________________________
 int Cint::Internal::G__get_tagtype(const ::Reflex::Scope in)
 {
-   // -- Get CINT type code for a structure (c,s,e,u).
-   
+   // Get CINT type code for a structure (c,s,e,u).
    switch (in.ScopeType()) {
       case ::Reflex::TYPETEMPLATEINSTANCE: return 'c';
       case ::Reflex::CLASS: return 'c';
@@ -486,7 +366,7 @@ int Cint::Internal::G__get_tagtype(const ::Reflex::Scope in)
 //______________________________________________________________________________
 int Cint::Internal::G__get_reftype(const ::Reflex::Type in)
 {
-   // -- Get CINT reftype for a type (PARANORMAL, PARAREFERENCE, etc.).
+   // Get CINT reftype for a type (PARANORMAL, PARAREFERENCE, etc.).
    //
    // Given this:
    //
@@ -516,7 +396,6 @@ int Cint::Internal::G__get_reftype(const ::Reflex::Type in)
    // Note that cint v5 cannot remember more than one level of typedef deep.
    //
    bool isref = in.IsReference();
-
    ::Reflex::Type current = in; 
    while (!isref && current && current.IsTypedef()) {
       current = current.ToType();
@@ -547,20 +426,21 @@ int Cint::Internal::G__get_reftype(const ::Reflex::Type in)
 //______________________________________________________________________________
 G__RflxProperties* Cint::Internal::G__get_properties(const ::Reflex::Type in)
 {
-   // -- Get REFLEX property list from a data type.
+   // Get REFLEX property list from a data type.
    if (!in) {
       abort();
       //return 0;
    }
-   size_t pid = GetReflexPropertyID();
-   if (!in.Properties().HasProperty(pid)) {
-      G__set_properties(in, G__RflxProperties());
-   }
-   G__RflxProperties* p = ::Reflex::any_cast<G__RflxProperties>(&in.Properties().PropertyValue(pid));
+   static size_t pid = GetReflexPropertyID();
+   G__RflxProperties* p = (G__RflxVarProperties*)(in.ToTypeBase()->Properties().PropertyValue(pid).Address());
    if (!p) {
-      abort();
-   }
-   return p;
+      G__set_properties(in, G__RflxProperties());
+      p  = (G__RflxProperties*)(in.ToTypeBase()->Properties().PropertyValue(pid).Address());
+      if (!p) {
+         abort();
+      }
+    }
+    return p;
 }
 
 //______________________________________________________________________________
@@ -571,13 +451,14 @@ G__RflxProperties* Cint::Internal::G__get_properties(const ::Reflex::Scope in)
       abort();
       //return 0;
    }
-   size_t pid = GetReflexPropertyID();
-   if (!in.Properties().HasProperty(pid)) {
-      G__set_properties(in, G__RflxProperties());
-   }
-   G__RflxProperties* p = ::Reflex::any_cast<G__RflxProperties>(&in.Properties().PropertyValue(pid));
+   static size_t pid = GetReflexPropertyID();
+   G__RflxProperties* p = (G__RflxProperties*)(in.ToScopeBase()->Properties().PropertyValue(pid).Address());
    if (!p) {
-      abort();
+      G__set_properties(in, G__RflxProperties());
+      p  = (G__RflxProperties*)(in.ToScopeBase()->Properties().PropertyValue(pid).Address());
+      if (!p) {
+         abort();
+      }
    }
    return p;
 }
@@ -590,6 +471,7 @@ G__RflxVarProperties* Cint::Internal::G__get_properties(const ::Reflex::Member i
       abort();
       //return 0;
    }
+#if 0
    size_t pid = GetReflexPropertyID();
    if (!in.Properties().HasProperty(pid)) {
       G__set_properties(in, G__RflxVarProperties());
@@ -598,6 +480,17 @@ G__RflxVarProperties* Cint::Internal::G__get_properties(const ::Reflex::Member i
    if (!p) {
       abort();
    }
+#else
+   static size_t pid = GetReflexPropertyID();
+   G__RflxVarProperties* p = (G__RflxVarProperties*)(in.ToMemberBase()->Properties().PropertyValue(pid).Address());
+   if (!p) {
+      G__set_properties(in, G__RflxVarProperties());  
+      p  = (G__RflxVarProperties*)(in.ToMemberBase()->Properties().PropertyValue(pid).Address());
+      if (!p) {
+         abort();
+      }
+   }
+#endif
    return p;
 }
 
@@ -613,13 +506,14 @@ G__RflxFuncProperties* Cint::Internal::G__get_funcproperties(const ::Reflex::Mem
       abort();
       //return 0;
    }
-   size_t pid = GetReflexPropertyID();
-   if (!in.Properties().HasProperty(pid)) {
-      G__set_properties(in, G__RflxFuncProperties());
-   }
-   G__RflxFuncProperties* p = ::Reflex::any_cast<G__RflxFuncProperties>(&in.Properties().PropertyValue(pid));
+   static size_t pid = GetReflexPropertyID();
+   G__RflxFuncProperties* p = (G__RflxFuncProperties*)(in.ToMemberBase()->Properties().PropertyValue(pid).Address());
    if (!p) {
-      abort();
+      G__set_properties(in, G__RflxFuncProperties());
+      p  = (G__RflxFuncProperties*)(in.ToMemberBase()->Properties().PropertyValue(pid).Address());
+      if (!p) {
+        abort();
+      }
    }
    return p;
 }
@@ -1048,107 +942,301 @@ int Cint::Internal::G__get_tagnum(const ::Reflex::Scope in)
 }
 
 //______________________________________________________________________________
-::Reflex::Type& Cint::Internal::G__value_typenum(G__value& gv)
-{
-   // -- Get access to the buf_typenum field of a G__value.
-   //
-   // Note: The return value must be by-reference, because this routine
-   //       is commonly used as a lvalue on the left-hand side of
-   //       an assignment expresssion.
-   return *((::Reflex::Type*) &gv.buf_typenum);
-}
-
-//______________________________________________________________________________
-const ::Reflex::Type& Cint::Internal::G__value_typenum(const G__value& gv)
-{
-   return *((::Reflex::Type*)&gv.buf_typenum);
-}
-
-//______________________________________________________________________________
 ::Reflex::Type Cint::Internal::G__get_from_type(int type, int createpointer, int isconst /*=0*/)
 {
    // -- Get a REFLEX Type from a CINT type.
    // Note: The typenum is tried first, then tagnum, then type.
    // We should NOT consider type q and a as pointer (ever).
 
-   std::string name;
-   switch (type) {
-      /****************************************************
-       * Automatic variable and macro
-       *   p : macro int
-       *   P : macro double
-       *   o : auto int
-       *   O : auto double
-       *   a : switchStart (but also sometimes pointer to member function)
-       *   z : switchDefault
-       *   Z : codeBreak (continue, break, goto)
-       ****************************************************/
-   //case 'a': return ::Reflex::Type::ByName("switchStart$");
-   case 'z': return ::Reflex::Type::ByName("switchDefault$");
-   case 'Z': return ::Reflex::Type::ByName("codeBreak$");
-   case 'p': return ::Reflex::Type::ByName("macroInt$");
-   case 'j': return ::Reflex::Type::ByName("macro$");
-   case 'P': return ::Reflex::Type::ByName("macroDouble$");
-   case 'o': return ::Reflex::Type::ByName("autoInt$");
-   case 'O': return ::Reflex::Type::ByName("autoDouble$");
-   case 'T': return ::Reflex::Type::ByName("macroChar*$");
-   case G__DEFAULT_FUNCCALL: return ::Reflex::Type::ByName("defaultFunccall$");
+   /****************************************************
+    * Automatic variable and macro
+    *   p : macro int
+    *   P : macro double
+    *   o : auto int
+    *   O : auto double
+    *   a : switchStart (but also sometimes pointer to member function)
+    *   z : switchDefault
+    *   Z : codeBreak (continue, break, goto)
+    ****************************************************/
+   static Reflex::Type typeCache[] = {
+      Reflex::PointerToMemberBuilder(Reflex::Type(), Reflex::Scope()), // 'a'
+      Reflex::Type::ByName("unsigned char"), // 'b'
+      Reflex::Type::ByName("char"), // 'c'
+      Reflex::Type::ByName("double"), // 'd'
+      Reflex::Type::ByName("FILE"), // 'e'
+      Reflex::Type::ByName("float"), // 'f'
+      Reflex::Type::ByName("bool"), // 'g'
+      Reflex::Type::ByName("unsigned int"), // 'h'
+      Reflex::Type::ByName("int"), // 'i'
+      Reflex::Type(), // 'j' - macro$""
+      Reflex::Type::ByName("unsigned long"), // 'k'
+      Reflex::Type::ByName("long"), // 'l'
+      Reflex::Type::ByName("unsigned long long"), // 'm'
+      Reflex::Type::ByName("long long"), // 'n'
+      Reflex::Type(), // 'o' - "autoInt$"
+      Reflex::Type(), // 'p' - "macroInt$"
+      Reflex::Type::ByName("long double"), // 'q'
+      Reflex::Type::ByName("unsigned short"), // 'r'
+      Reflex::Type::ByName("short"), // 's'
+      Reflex::Type(), // 't' - "#define"
+      Reflex::Type(), // 'u' - "enum"
+      Reflex::Type(), // 'v'
+      Reflex::Type(), // 'w'
+      Reflex::Type(), // 'x'
+      Reflex::Type::ByName("void"), // 'y'
+      Reflex::Type(), // 'z' - "switchDefault$"
+      Reflex::Type(), // '\0'
+      Reflex::Type(), // \001 - "blockBreakContinueGoto$"
+      Reflex::Type(), // G__DEFAULT_FUNCCALL = "defaultFunccall$"
+#ifndef G__OLDIMPLEMENTATION2191
+      Reflex::Type::ByName("void") // '1'
+#endif
+   };
+
+   static std::vector<Reflex::Type> typePCache;
+   static std::vector<Reflex::Type> typeCPCache;
+   if (typePCache.empty()) {
+      const size_t numtypes = sizeof(typeCache)/sizeof(Reflex::Type);
+      typePCache.resize(numtypes);
+      typeCPCache.resize(numtypes);
+      for (size_t i = 0; i < numtypes; ++i) {
+         switch (i + 'A') {
+         case 'Z': 
+            typePCache[i] = Reflex::Type(); // "codeBreak$"
+            typeCPCache[i] = typePCache[i];
+            break;
+         case 'P':
+            typePCache[i] = Reflex::Type(); // "macroDouble$"
+            typeCPCache[i] = typePCache[i];
+            break;
+         case 'O':
+            typePCache[i] = Reflex::Type(); // "autoDouble$"
+            typeCPCache[i] = typePCache[i];
+            break;
+         case 'T':
+            typePCache[i] = Reflex::Type(); // "macroChar*$"
+            typeCPCache[i] = typePCache[i];
+            break;
+         case 'A':
+            typePCache[i] = Reflex::Type();
+            typeCPCache[i] = typePCache[i];
+            break;
+         default:
+            if (typeCache[i]) {
+               typePCache[i] = Reflex::PointerBuilder(typeCache[i]);
+               typeCPCache[i] = Reflex::Type(typeCache[i], Reflex::CONST,
+                                             Reflex::Type::APPEND);
+               typeCPCache[i] = Reflex::PointerBuilder(typeCPCache[i]);
+            }
+            break;
+         }
+      }
    }
 
-   switch(tolower(type)) {
-      case 'b': name = "unsigned char"; break;
-      case 'c': name = "char"; break;
-      case 'r': name = "unsigned short"; break;
-      case 's': name = "short"; break;
-      case 'h': name = "unsigned int"; break;
-      case 'i': name = "int"; break;
-      case 'k': name = "unsigned long"; break;
-      case 'l': name = "long"; break;
-      case 'g': name = "bool"; break;
-      case 'n': name = "long long"; break;
-      case 'm': name = "unsigned long long"; break;
-      case 'q': name = "long double"; break;
-      case 'f': name = "float"; break;
-      case 'd': name = "double"; break;
+   Reflex::Type raw;
+   if (type >= 'a' && type <= 'z' ) {
+      raw = typeCache[type - 'a'];
+      if (!raw) {
+         // special macro, not yet set up
+         switch (type) {
+         case 'j':
+            raw = typeCache['j' - 'a'] = Reflex::Type::ByName("macro$");
+            break;
+         case 'o':
+            raw = typeCache['o' - 'a'] = Reflex::Type::ByName("autoInt$");
+            break;
+         case 'p':
+            raw = typeCache['p' - 'a'] = Reflex::Type::ByName("macroInt$");
+            break;
+         case 't':
+            raw = typeCache['t' - 'a'] = Reflex::Type::ByName("#define");
+            break;
+         case 'u':
+            raw = typeCache['u' - 'a'] = Reflex::Type::ByName("enum");
+            break;
+         case 'z':
+            raw = typeCache['z' - 'a'] = Reflex::Type::ByName("switchDefault$");
+            break;
+         case 'e':
+            raw = typeCache['e' - 'a'] = Reflex::Type::ByName("FILE");
+            break;            
+         }
+      }
+      if (isconst & G__CONSTVAR) {
+         raw = Reflex::Type(raw, Reflex::CONST, Reflex::Type::APPEND);
+      }      
+   } else if (type >= 'A' && type <= 'Z') {
+      if (type=='E') {
+         if (createpointer) {
+            if (isconst & G__CONSTVAR) {
+               raw = typeCPCache['E' - 'A'];            
+               if (!raw) {
+                  raw = typeCPCache['E' - 'A'] = Reflex::PointerBuilder(Reflex::Type(Reflex::Type::ByName("FILE"), Reflex::CONST, Reflex::Type::APPEND));
+               }
+            } else {
+               raw = typePCache['E' - 'A'];
+               if (!raw) {
+                  raw = typePCache['E' - 'A'] = Reflex::PointerBuilder(Reflex::Type::ByName("FILE"));
+               }
+            }
+         } else {
+            raw = typeCache['E' - 'A'];
+            if (!raw) {
+               raw = typeCache['E' - 'A'] = Reflex::Type::ByName("FILE");
+            }           
+            if (isconst & G__CONSTVAR) {
+               raw = Reflex::Type(raw, Reflex::CONST, Reflex::Type::APPEND);
+            }
+         }
+         return raw;
+      } else if (type == 'Z' || type == 'P' || type == 'O' || type == 'T' || type == 'A') {
+         raw = typePCache[type - 'A'];
+         if (!raw) {
+            // special macro, not yet set up
+            switch (type) {
+            case 'Z':
+               raw = typePCache['Z' - 'A'] = Reflex::Type::ByName("codeBreak$");
+               break;
+            case 'P':
+               raw = typePCache['P' - 'A'] = Reflex::Type::ByName("macroDouble$");
+               break;
+            case 'O':
+               raw = typePCache['O' - 'A'] = Reflex::Type::ByName("autoDouble$");
+               break;
+            case 'T':
+               raw = typePCache['T' - 'A'] = Reflex::Type::ByName("macroChar*$");
+               break;
+            }
+         }
+         return raw;
+      }
+      if (createpointer) {
+         if (isconst & G__CONSTVAR) { 
+            raw = typeCPCache[type - 'A'];
+         } else {
+            raw = typePCache[type - 'A'];
+         }
+      } else {
+         raw = typeCache[type - 'A'];
+         if (isconst & G__CONSTVAR) {
+            raw = Reflex::Type(raw, Reflex::CONST, Reflex::Type::APPEND);
+         }
+      }
+   } else {
+      switch (type) {
+      case '\0':
+         return typeCache['z' - 'a' + 1];
+      case '\001':
+         raw = typeCache['z' - 'a' + 2];
+         if (!raw) {
+            return typeCache['z' - 'a' + 2] = Reflex::Type::ByName("blockBreakContinueGoto$");
+         }
+         return raw;
+      case G__DEFAULT_FUNCCALL:
+         raw = typeCache['z' - 'a' + 3];
+         if (!raw) {
+            return typeCache['z' - 'a' + 3] = Reflex::Type::ByName("defaultFunccall$");
+         }
+         return raw;
 #ifndef G__OLDIMPLEMENTATION2191
       case '1':
-#else
-      case 'q':
+         return typeCache['z' - 'a' + 4];
 #endif
-      case 'y': name = "void"; break;
-      case 'e': name = "FILE"; break;
-      case 'u': name = "enum";
-         break;
-      case 't':
-#ifndef G__OLDIMPLEMENTATION2191
-      case 'j':
-#else
-      case 'm':
-#endif
-      case 'p': name = "#define"; break;
-      case 'o': name[0]='\0'; /* sprintf(name,""); */ break;
-      case 'a':
-         /* G__ASSERT(isupper(type)); */
-         //name = "G__p2memfunc";
-         //type=tolower(type);
-         return Reflex::PointerToMemberBuilder(Reflex::Dummy::Type(), Reflex::Dummy::Scope());
-         break;
-      default:  name = "(unknown)"; break;
+      default: break;
+      }
    }
 
+   return raw;
+}
+
+#if 0
+//______________________________________________________________________________
+::Reflex::Type Cint::Internal::G__get_from_type(int type, int createpointer, int isconst /*=0*/)
+{
+   // Get a reflex type from a cint type.
+   static ::Reflex::Type void_type(::Reflex::Type::ByTypeInfo(typeid(void)));
+   static ::Reflex::Type bool_type(::Reflex::Type::ByTypeInfo(typeid(bool)));
+   static ::Reflex::Type uchar_type(::Reflex::Type::ByTypeInfo(typeid(unsigned char)));
+   static ::Reflex::Type char_type(::Reflex::Type::ByTypeInfo(typeid(char)));
+   static ::Reflex::Type ushort_type(::Reflex::Type::ByTypeInfo(typeid(unsigned short)));
+   static ::Reflex::Type short_type(::Reflex::Type::ByTypeInfo(typeid(short)));
+   static ::Reflex::Type uint_type(::Reflex::Type::ByTypeInfo(typeid(unsigned int)));
+   static ::Reflex::Type int_type(::Reflex::Type::ByTypeInfo(typeid(int)));
+   static ::Reflex::Type ulong_type(::Reflex::Type::ByTypeInfo(typeid(unsigned long)));
+   static ::Reflex::Type long_type(::Reflex::Type::ByTypeInfo(typeid(long)));
+   static ::Reflex::Type ulonglong_type(::Reflex::Type::ByTypeInfo(typeid(unsigned long long)));
+   static ::Reflex::Type longlong_type(::Reflex::Type::ByTypeInfo(typeid(long long)));
+   static ::Reflex::Type float_type(::Reflex::Type::ByTypeInfo(typeid(float)));
+   static ::Reflex::Type double_type(::Reflex::Type::ByTypeInfo(typeid(double)));
+   static ::Reflex::Type longdouble_type(::Reflex::Type::ByTypeInfo(typeid(long double)));
+   //static ::Reflex::Type switchStart(::Reflex::Type::ByName("switchStart$"));
+   static ::Reflex::Type switchDefault(::Reflex::Type::ByName("switchDefault$"));
+   static ::Reflex::Type rootSpecial(::Reflex::Type::ByName("rootSpecial$"));
+   static ::Reflex::Type blockBreakContinueGoto(::Reflex::Type::ByName("blockBreakContinueGoto$"));
+   static ::Reflex::Type macroInt(::Reflex::Type::ByName("macroInt$"));
+   static ::Reflex::Type macro(::Reflex::Type::ByName("macro$"));
+   static ::Reflex::Type macroDouble(::Reflex::Type::ByName("macroDouble$"));
+   static ::Reflex::Type autoInt(::Reflex::Type::ByName("autoInt$"));
+   static ::Reflex::Type autoDouble(::Reflex::Type::ByName("autoDouble$"));
+   static ::Reflex::Type macroCharStar(::Reflex::Type::ByName("macroChar*$"));
+   static ::Reflex::Type defaultFunccall(::Reflex::Type::ByName("defaultFunccall$"));
+   static ::Reflex::Type ptr_to_mbr_type(::Reflex::PointerToMemberBuilder(::Reflex::Type(), ::Reflex::Scope()));
+   switch (type) {
+      case '\001': return blockBreakContinueGoto;
+      case G__DEFAULT_FUNCCALL: return defaultFunccall;
+      case 'O': return autoDouble;
+      case 'P': return macroDouble;
+      case 'T': return macroCharStar;
+      case 'Z': return rootSpecial;
+      case 'a': return ptr_to_mbr_type;
+      //case 'a': return switchStart;
+      case 'j': return macro;
+      case 'o': return autoInt;
+      case 'p': return macroInt;
+      case 'z': return switchDefault;
+   }
+   ::Reflex::Type raw;
+   switch (tolower(type)) {
+      case '1': raw = void_type; break; // ptr to function
+      //case 'a': // handled above
+      case 'b': raw = uchar_type; break;
+      case 'c': raw = char_type; break;
+      case 'd': raw = double_type; break;
+      //case 'e': // FILE
+      case 'f': raw = float_type; break;
+      case 'g': raw = bool_type; break;
+      case 'h': raw = uint_type; break;
+      case 'i': raw = int_type; break;
+      //case 'j': // handled above
+      case 'k': raw = ulong_type; break;
+      case 'l': raw = long_type; break;
+      case 'm': raw = ulonglong_type; break;
+      case 'n': raw = longlong_type; break;
+      //case 'o': // handled above
+      //case 'p': // handled above
+      case 'q': raw = longdouble_type; break;
+      case 'r': raw = ushort_type; break;
+      case 's': raw = short_type; break;
+      //case 't': // obsolete, see below
+      //case 'u': // class, enum, namespace, struct, union
+      //case 'v': // unused
+      //case 'w': // logic
+      //case 'x': // unused
+      case 'y': raw = void_type; break;
+      //case 'z': // handled above
+   }
    if (createpointer & !isupper(type)) {
       createpointer = 0;
    }
-   Reflex::Type raw( ::Reflex::Type::ByName(name) );
    if (isconst & G__CONSTVAR) { 
-      raw = Reflex::Type(raw,Reflex::CONST,Reflex::Type::APPEND);
+      raw = ::Reflex::Type(raw, Reflex::CONST, Reflex::Type::APPEND);
    }
-   if (createpointer /*&& (type != 'q') && (type != 'a')*/) {
-      return ::Reflex::PointerBuilder(raw);
-   } else {
-      return raw;
+   if (createpointer) {
+      raw = ::Reflex::PointerBuilder(raw);
    }
+   return raw;
 }
+#endif // 0
 
 //______________________________________________________________________________
 int Cint::Internal::G__get_paran(const Reflex::Member var)
@@ -1169,12 +1257,6 @@ size_t Cint::Internal::G__get_bitfield_width(const Reflex::Member var)
 size_t Cint::Internal::G__get_bitfield_start(const Reflex::Member var)
 {
    return G__get_properties(var)->bitfield_start;
-}
-
-//______________________________________________________________________________
-char*& Cint::Internal::G__get_offset(const ::Reflex::Member var)
-{
-   return G__get_properties(var)->addressOffset;
 }
 
 //______________________________________________________________________________
@@ -1498,20 +1580,25 @@ extern "C" void G__dump_reflex_function(const ::Reflex::Scope scope, int level)
 }
 
 //______________________________________________________________________________
-::Reflex::Type Cint::Internal::G__findInScope(const ::Reflex::Scope scope, const char* name)
+::Reflex::Scope Cint::Internal::G__findInScope(const ::Reflex::Scope scope, const char* name)
 {
-   // -- Find a REFLEX Type in a REFLEX Scope by name.
-   ::Reflex::Type cl;
+   // -- Find a REFLEX Scope in a REFLEX Scope by name.
+   ::Reflex::Scope cl;
 #ifdef __GNUC__
 #else
 #pragma message (FIXME("This needs to be in Reflex itself"))
 #endif
+   if (name==0 || name[0]==0) {
+      return cl;
+   }
+   ::Reflex::Scope_Iterator end = scope.SubScope_End();
    for (
-      ::Reflex::Type_Iterator itype = scope.SubType_Begin();
-      itype != scope.SubType_End();
+      ::Reflex::Scope_Iterator itype = scope.SubScope_Begin();
+      itype != end;
       ++itype
    ) {
-      if (itype->Name() == name) {
+      const char *iname = itype->Name_c_str() + itype->ToScopeBase()->GetBasePosition();
+      if ( iname[0]==name[0] && iname[1]==name[1] && 0==strcmp(iname,name) ) {
          cl = *itype;
          break;
       }
@@ -1538,8 +1625,9 @@ bool Cint::Internal::G__test_access(const ::Reflex::Member var, int access)
 //______________________________________________________________________________
 bool Cint::Internal::G__is_cppmacro(const ::Reflex::Member var)
 {
-  const Reflex::Type type = var.TypeOf();
-  return (type.Name()  == "macroInt$") || (type.Name()  == "macroDouble$");
+   const Reflex::Type type = var.TypeOf();
+   const char *type_name = type.Name_c_str();
+   return type_name[0]=='m' && ( 0==strcmp(type_name,"macroInt$") || 0==strcmp(type_name,"macroDouble$") );
 }
 
 //______________________________________________________________________________
@@ -1589,7 +1677,7 @@ Reflex::Type Cint::Internal::G__replace_rawtype(const Reflex::Type target, const
    }
    Reflex::Type out = G__replace_rawtype(target.ToType(), raw); // Recurse to the bottom of the type chain.
    if (target.IsTypedef()) {
-      out = Reflex::TypedefTypeBuilder(target.Name().c_str(), out);
+      out = Reflex::TypedefTypeBuilder(target.Name_c_str(), out);
    }
    else if (target.IsPointer()) {
       out = Reflex::PointerBuilder(out, target.TypeInfo());
@@ -1624,7 +1712,7 @@ Reflex::Type Cint::Internal::G__apply_const_to_typedef(const Reflex::Type target
    }
    Reflex::Type out = G__apply_const_to_typedef(target.ToType()); // Recurse to the bottom of the type chain.
    if (target.IsTypedef()) {
-      out = ::Reflex::Type(Reflex::TypedefTypeBuilder(target.Name().c_str(), out), ::Reflex::CONST, ::Reflex::Type::APPEND);
+      out = ::Reflex::Type(Reflex::TypedefTypeBuilder(target.Name_c_str(), out), ::Reflex::CONST, ::Reflex::Type::APPEND);
    }
    else if (target.IsPointer()) {
       out = Reflex::PointerBuilder(out, target.TypeInfo());
@@ -1690,6 +1778,7 @@ void Cint::Internal::G__set_G__tagnum(const G__value& result)
    assert(member.TypeOf().FinalType().IsPointer() || member.TypeOf().FinalType().IsArray());
    ::Reflex::Type newType(::Reflex::ArrayBuilder(member.TypeOf().FinalType().ToType(), nelem));
    size_t offset = member.Offset();
+   char* cint_offset = member.InterpreterOffset();
 #ifdef __GNUC__
 #else
 #pragma message (FIXME("Should call ::Reflex::Member::Modifiers()"))
@@ -1713,9 +1802,9 @@ void Cint::Internal::G__set_G__tagnum(const G__value& result)
    }
    // etc...
    varscope.RemoveDataMember(member);
-   varscope.AddDataMember(name.c_str(), newType, offset, modifiers);
-   member = varscope.DataMemberByName(name);
+   member = varscope.AddDataMember(name.c_str(), newType, offset, modifiers, cint_offset);
    *G__get_properties(member) = prop;
+   G__get_offset(member) = cint_offset;
    return member;
 }
 
@@ -1957,7 +2046,7 @@ void Cint::Internal::G__BuilderInfo::AddParameter(int /* ifn */, int type, int n
 //______________________________________________________________________________
 ::Reflex::Member Cint::Internal::G__BuilderInfo::Build(const std::string name)
 {
-   // -- Create the reflex database entries for function name.
+   // Create the reflex database entries for function name.
    //
    //  Make the entry into the reflex database.
    //
@@ -2025,6 +2114,29 @@ void Cint::Internal::G__BuilderInfo::AddParameter(int /* ifn */, int type, int n
    //else {
    //   fprintf(stderr, "G__BuilderInfo::Build: search failed.\n");
    //}
+   //bool has_reflex_stub = false;
+   bool from_reflex_callback = false;
+   if (m) {
+      //
+      //  Check for the existence of a reflex dictionary
+      //  stub function pointer.  If it is there, then this
+      //  function was entered by a reflex dictionary.
+      //
+      //if (m.StubFunction()) {
+      //   has_reflex_stub = true;
+      //}
+      //
+      //  Check for the existence of cint properties on
+      //  this function.  If they are not there then cint
+      //  does not know about this function so it must
+      //  come from a reflex callback through cintex.
+      //
+      static size_t pid = GetReflexPropertyID();
+      G__RflxFuncProperties* prop = (G__RflxFuncProperties*) m.ToMemberBase()->Properties().PropertyValue(pid).Address();
+      if (!prop) {
+         from_reflex_callback = true;
+      }
+   }
    //
    //  If we implement a pure virtual function from
    //  a base class, decrement the pure virtual count
@@ -2035,12 +2147,15 @@ void Cint::Internal::G__BuilderInfo::AddParameter(int /* ifn */, int type, int n
    //
    if ( // is a member function, and not previously declared
       (G__tagdefining && G__tagdefining.IsClass()) && // is a member function, and
-      !m // not previous declared
+      (
+         !m  || // not previous declared, or
+         from_reflex_callback // cint does not yet know about this function
+      )
    ) {
       struct G__inheritance* baseclass = G__struct.baseclass[G__get_tagnum(G__tagdefining)];
-      for (int basen = 0; basen < baseclass->basen; ++basen) {
-         G__incsetup_memfunc(baseclass->basetagnum[basen]);
-         ::Reflex::Scope scope(G__Dict::GetDict().GetScope(baseclass->basetagnum[basen]));
+      for (size_t basen = 0; basen < baseclass->vec.size(); ++basen) {
+         G__incsetup_memfunc(baseclass->vec[basen].basetagnum);
+         ::Reflex::Scope scope = G__Dict::GetDict().GetScope(baseclass->vec[basen].basetagnum);
          //fprintf(stderr, "G__BuilderInfo::Build: search base class '%s' for function member '%s' type '%s'\n", scope.Name(Reflex::SCOPED).c_str(), name.c_str(), modftype.Name(Reflex::SCOPED | Reflex::QUALIFIED).c_str());
          ::Reflex::Member base_m = scope.FunctionMemberByNameAndSignature(name, modftype, modifiers_mask);
          //if (base_m) {
@@ -2071,12 +2186,15 @@ void Cint::Internal::G__BuilderInfo::AddParameter(int /* ifn */, int type, int n
       G__genericerror("You need to write it in a source file");
       return m;
    }
-   if (m) { // function was previously declared
-      // -- Now handle the parts which go into the function property.
+   if (m && !from_reflex_callback) { // function was previously declared
+      //
+      //  Now handle the parts which go into the function property.
       //
       G__RflxFuncProperties* prop = G__get_funcproperties(m);
 #ifdef G__FRIEND
-      // Consume the friendtag, put it into the function properties friendtag list.
+      //
+      //  Consume the friendtag.
+      //
       if (fProp.entry.friendtag) { // New decl has a friendtag list.
          if (!prop->entry.friendtag) { // Old dcl did not have one, copy over from new decl.
             prop->entry.friendtag = fProp.entry.friendtag;
@@ -2103,7 +2221,7 @@ void Cint::Internal::G__BuilderInfo::AddParameter(int /* ifn */, int type, int n
       //      - Avoid double counting pure virtual function.
       //
       if (
-         fProp.entry.p && // we have file pointer to text of body, and
+         fProp.entry.p && // we have a stub function pointer for compiled func, or file pointer to body for interpreted func
          (
             !G__def_struct_member || // not a class member, or
             (G__struct.iscpplink[G__get_tagnum(G__def_tagnum)] != G__CPPLINK) // is not precompiled
@@ -2131,7 +2249,7 @@ void Cint::Internal::G__BuilderInfo::AddParameter(int /* ifn */, int type, int n
          prop->entry = fProp.entry;
          prop->entry.friendtag = prev_friendtag;
          prop->entry.para_default = prev_para_default;
-         prop->entry.for_tp2f = m.Name();
+         prop->entry.for_tp2f = m.Name_c_str();
          prop->entry.tp2f = (void*) prop->entry.for_tp2f.c_str();
          //for (unsigned int i = 0; i < fParams_name.size(); ++i) {
          //   if (fParams_name[i].second.size()) {
@@ -2151,7 +2269,7 @@ void Cint::Internal::G__BuilderInfo::AddParameter(int /* ifn */, int type, int n
    }
    else if ( // function not seen before, and ok to process
       (
-         fProp.entry.p || // we have a file pointer to the function body (definition), or
+         fProp.entry.p || // we have a stub function pointer for compiled func, or file pointer to body for interpreted func, or
          fProp.entry.ansi || // ansi-style declaration, or
          G__nonansi_func || // not ansi-style declaration, or // FIXME: What???  Combined with previous clause is always true???
          (G__globalcomp < G__NOLINK) || // is precompiled, or
@@ -2170,7 +2288,8 @@ void Cint::Internal::G__BuilderInfo::AddParameter(int /* ifn */, int type, int n
 #endif // G__OLDIMPLEMENTATION2027
       // --
    ) {
-      int modifiers = 0;
+      // Reset modifier to take in consideration the change above (in particular) fIsvirtual.
+      modifiers = 0;
       if (fIsconst) {
          modifiers |= ::Reflex::CONST;
       }
@@ -2198,77 +2317,64 @@ void Cint::Internal::G__BuilderInfo::AddParameter(int /* ifn */, int type, int n
             break;
       };
       switch (G__get_tagtype(G__p_ifunc)) {
-         case 'c':
-         case 's':
-            // -- Class or struct.
-            //
-            //  Do special processing for a constructor/destructor.
-            //
-            if (name[0] == '~') {
-               modifiers |= ::Reflex::DESTRUCTOR;
-            }
-            else if (name == G__p_ifunc.Name()) { // FIXME: Is this correct for templated classes?
-               modifiers |= ::Reflex::CONSTRUCTOR;
-               if (ftype.FunctionParameterSize() == 1) {
-                  // Get the type without any modifiers
-                  // (i.e., reference and const) nor any typedefs.
-                  ::Reflex::Type argtype  = ftype.FunctionParameterAt(0).FinalType().ToTypeBase()->ThisType();
-                  if (argtype == (::Reflex::Type) G__p_ifunc) {
-                     modifiers |= ::Reflex::COPYCONSTRUCTOR;
+         case 'c': // class
+         case 's': // struct
+         case 'u': // union
+            {
+               //
+               //  Do special processing for a constructor/destructor.
+               //
+               if (name[0] == '~') { // destructor
+                  modifiers |= ::Reflex::DESTRUCTOR;
+               }
+               else if (name == G__p_ifunc.Name()) { // constructor
+                  modifiers |= ::Reflex::CONSTRUCTOR;
+                  if (ftype.FunctionParameterSize() == 1) { // possible copy constructor
+                     // Get the first parameter type without modifiers.
+                     ::Reflex::Type first_param_type = ftype.FunctionParameterAt(0).FinalType().ToTypeBase()->ThisType();
+                     if (first_param_type == (Reflex::Type) G__p_ifunc) { // we have a copy constructor
+                        modifiers |= ::Reflex::COPYCONSTRUCTOR;
+                     }
                   }
                }
-            }
-            G__get_properties(G__p_ifunc)->builder.Class().AddFunctionMember(ftype, name.c_str(), 0 /*stubFP*/, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
-            modftype = ::Reflex::Type(ftype, modifiers);
-            m = G__p_ifunc.FunctionMemberByNameAndSignature(name, modftype, modifiers_mask);
-            //fprintf(stderr, "G__BuilderInfo::Build: added member function '%s'.\n", m.Name(Reflex::SCOPED | Reflex::QUALIFIED).c_str());
-            break;
-         case 'n':
-            // -- Namespace.
-            {
-               std::string fullname = G__p_ifunc.Name(::Reflex::SCOPED);
-               if (fullname.size()) {
-                  fullname += "::";
+               if (!from_reflex_callback) {
+                  m = G__p_ifunc.AddFunctionMember(name.c_str(), ftype, (Reflex::StubFunction) 0, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
+                  //modftype = ::Reflex::Type(ftype, modifiers);
+                  //m = G__p_ifunc.FunctionMemberByNameAndSignature(name, modftype, modifiers_mask);
+                  //fprintf(stderr, "G__BuilderInfo::Build: added member function '%s'.\n", m.Name(Reflex::SCOPED | Reflex::QUALIFIED).c_str());
                }
-               fullname += name;
-               ::Reflex::FunctionBuilder funcBuilder(ftype, fullname.c_str(), 0 /*stubFP*/, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
-               m = funcBuilder.ToMember();
+            }
+            break;
+         case 'n': // Namespace.
+            {
+               if (!from_reflex_callback) {
+                  //std::string fullname = G__p_ifunc.Name(::Reflex::SCOPED);
+                  //if (fullname.size()) {
+                  //   fullname += "::";
+                  //}
+                  //fullname += name;
+                  //m = Reflex::FunctionBuilder(ftype, fullname.c_str(), 0 /*stubFP*/, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers).EnableCallback(false).ToMember();
+                  m = G__p_ifunc.AddFunctionMember(name.c_str(), ftype, (Reflex::StubFunction) 0, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
+                  //modftype = ::Reflex::Type(ftype, modifiers);
+                  //m = G__p_ifunc.FunctionMemberByNameAndSignature(name, modftype, modifiers_mask);
+                  //fprintf(stderr, "G__BuilderInfo::Build: added member function '%s'.\n", m.Name(Reflex::SCOPED | Reflex::QUALIFIED).c_str());
+               }
                break;
             }
-         case 'u':
-            // -- Union.
-            //
-            //  Do special processing for a constructor/destructor.
-            //
-            if (name[0] == '~') {
-               modifiers |= ::Reflex::DESTRUCTOR;
-            }
-            else if (name == G__p_ifunc.Name()) { // FIXME: Is this correct for templated classes?
-               modifiers |= ::Reflex::CONSTRUCTOR;
-               if (ftype.FunctionParameterSize() == 1) {
-                  // Get the type without any modifiers
-                  // (i.e., reference and const) nor any typedefs.
-                  Reflex::Type argtype(ftype.FunctionParameterAt(0).FinalType().ToTypeBase()->ThisType());
-                  if (argtype == (Reflex::Type) G__p_ifunc) {
-                     modifiers |= ::Reflex::COPYCONSTRUCTOR;
-                  }
+         default: // Assume this means we want it in the global namespace.
+            {
+               if (!from_reflex_callback) {
+                  //m = Reflex::FunctionBuilder(ftype, name.c_str(), 0 /*stubFP*/, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers).EnableCallback(false).ToMember();
+                  m = ::Reflex::Scope::GlobalScope().AddFunctionMember(name.c_str(), ftype, (Reflex::StubFunction) 0, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
+                  //modftype = ::Reflex::Type(ftype, modifiers);
+                  //m = G__p_ifunc.FunctionMemberByNameAndSignature(name, modftype, modifiers_mask);
+                  //fprintf(stderr, "G__BuilderInfo::Build: added member function '%s'.\n", m.Name(Reflex::SCOPED | Reflex::QUALIFIED).c_str());
                }
+               //int tag = G__get_tagtype( G__p_ifunc ) ;
+               //fprintf(stderr,"value=%d\n",tag);
+               //G__genericerror("Attempt to add a function to something that does not appear to be a scope");
             }
-            G__get_properties(G__p_ifunc)->builder.Union().AddFunctionMember(ftype, name.c_str(), 0 /*stubFP*/, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
-            modftype = ::Reflex::Type(ftype, modifiers);
-            m = G__p_ifunc.FunctionMemberByNameAndSignature(name, modftype, modifiers_mask);
-            //fprintf(stderr, "G__BuilderInfo::Build: added member function '%s'.\n", m.Name(Reflex::SCOPED | Reflex::QUALIFIED).c_str());
-            break;
-         default:
-            // -- Assume this means we want it in the global namespace.
-            ::Reflex::FunctionBuilder funcBuilder(ftype, name.c_str(), 0 /*stubFP*/, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
-            m = (funcBuilder.ToMember());
-            //int tag = G__get_tagtype( G__p_ifunc ) ;
-            //fprintf(stderr,"value=%d\n",tag);
-            //G__genericerror("Attempt to add a function to something that does not appear to be a scope");
       }
-      //::Reflex::FunctionBuilder funcBuilder(ftype, fullname.c_str(), 0 /*stubFP*/, 0 /*stubCtx*/, GetParamNames().c_str(), modifiers);
-      //m = funcBuilder.ToMember();
       if (!m) {
          fprintf(stderr, "G__BuilderInfo::Build: Something went wrong creating entry for '%s' in '%s'\n", name.c_str(), G__p_ifunc.Name(::Reflex::SCOPED | ::Reflex::QUALIFIED).c_str());
          G__dump_reflex_function(G__p_ifunc, 1);
@@ -2281,7 +2387,7 @@ void Cint::Internal::G__BuilderInfo::AddParameter(int /* ifn */, int type, int n
       //fprintf(stderr, "G__BuilderInfo::Build: a->entry.ptradjust: %ld  %s:%d\n", a->entry.ptradjust, __FILE__, __LINE__);
       a->entry.para_default = fDefault_vals;
       if (!a->entry.tp2f) {
-         a->entry.for_tp2f = m.Name();
+         a->entry.for_tp2f = m.Name_c_str();
          a->entry.tp2f = (void*) a->entry.for_tp2f.c_str();
       }
    }

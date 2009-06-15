@@ -31,14 +31,18 @@
 #include "TList.h"
 #include "TMath.h"
 
-#include "TH2.h"         // Preliminary support for GL plot painters
+// Preliminary support for GL plot painters
+#include "TH3.h"
+#include "TH3GL.h"
+#include "TH2.h"
 #include "TH2GL.h"
 #include "TF2.h"
 #include "TF2GL.h"
 #include "TGLParametric.h"
 #include "TGLParametricEquationGL.h"
 
-//______________________________________________________________________
+
+//______________________________________________________________________________
 // TGLScenePad
 //
 // Implements VirtualViewer3D interface and fills the base-class
@@ -47,7 +51,8 @@
 
 ClassImp(TGLScenePad)
 
-//______________________________________________________________________
+
+//______________________________________________________________________________
 TGLScenePad::TGLScenePad(TVirtualPad* pad) :
    TVirtualViewer3D(),
    TGLScene(),
@@ -65,9 +70,9 @@ TGLScenePad::TGLScenePad(TVirtualPad* pad) :
 }
 
 
-/**************************************************************************/
+/******************************************************************************/
 // Histo import and Sub-pad traversal
-/**************************************************************************/
+/******************************************************************************/
 
 //______________________________________________________________________________
 void TGLScenePad::AddHistoPhysical(TGLLogicalShape* log)
@@ -90,6 +95,19 @@ void TGLScenePad::AddHistoPhysical(TGLLogicalShape* log)
    Double_t ty = gPad->GetAbsYlowNDC() * how + lh;
    TGLVector3 transVec(0, ty, tx); // For viewer convention (starts looking along -x).
 
+   // XXXX plots no longer centered at 0. Or they never were?
+   // Impossible to translate and scale them as they should be, it
+   // seems. This requers further investigation, eventually.
+   //
+   // bb.Dump();
+   // printf("lm=%f, size=%f, scale=%f, tx=%f, ty=%f\n",
+   //        lm, size, scale, tx, ty);
+   //
+   // TGLVector3 c(bb.Center().Arr());
+   // c.Negate();
+   // c.Dump();
+   // mat.Translate(c);
+
    TGLMatrix mat;
    mat.Scale(scaleVec);
    mat.Translate(transVec);
@@ -100,6 +118,9 @@ void TGLScenePad::AddHistoPhysical(TGLLogicalShape* log)
    TGLPhysicalShape* phys = new TGLPhysicalShape
       (fNextInternalPID++, *log, mat, false, rgba);
    AdoptPhysical(*phys);
+
+   // Part of XXXX above.
+   // phys->BoundingBox().Dump();
 }
 
 //______________________________________________________________________________
@@ -124,6 +145,7 @@ void TGLScenePad::SubPadPaint(TVirtualPad* pad)
    gPad = padsav;
 }
 
+
 //______________________________________________________________________________
 void TGLScenePad::ObjectPaint(TObject* obj, Option_t* opt)
 {
@@ -131,8 +153,20 @@ void TGLScenePad::ObjectPaint(TObject* obj, Option_t* opt)
    // Special handling of 2D/3D histograms to activate Timur's
    // histo-painters.
 
-   if (obj->InheritsFrom(TAtt3D::Class()))
+   if (obj->InheritsFrom(TH3::Class()))
    {
+      // TH3 in principle inherits from TAtt3D, but it gets painted
+      // via the histo-painters - which we need to bypass.
+      // printf("histo 3d\n");
+      TGLObject* log = new TH3GL();
+      log->SetModel(obj, opt);
+      log->SetBBox();
+      AdoptLogical(*log);
+      AddHistoPhysical(log);
+   }
+   else if (obj->InheritsFrom(TAtt3D::Class()))
+   {
+      //Since TH3's derived from TAtt3D, it should be checked here.
       //printf("normal-painting %s / %s\n", obj->GetName(), obj->ClassName());
       obj->Paint(opt);
    }
@@ -210,9 +244,9 @@ void TGLScenePad::PadPaint(TVirtualPad* pad)
 }
 
 
-/**************************************************************************/
+//==============================================================================
 // VV3D
-/**************************************************************************/
+//==============================================================================
 
 //______________________________________________________________________________
 void TGLScenePad::BeginScene()

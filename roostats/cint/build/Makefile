@@ -32,9 +32,13 @@ ORDER_ := $(shell test $(MAKE_VERSION_MAJOR) -gt 3 || \
                   test $(MAKE_VERSION_MINOR) -ge 80 && echo '|')
 
 # libraries
-CINTLIBSHARED = lib/libcint$(G__CFG_SOEXT)
-CINTIMPLIB    = lib/libcint$(G__CFG_IMPLIBEXT)
-CINTLIBSTATIC = lib/libcint_static$(G__CFG_LIBEXT)
+ifeq ($(subst msvc,,$(G__CFG_ARCH)), $(G__CFG_ARCH))
+CINTLIBSHARED = lib/libCint$(G__CFG_SOEXT)
+else
+CINTLIBSHARED = bin/libCint$(G__CFG_SOEXT)
+endif
+CINTIMPLIB    = lib/libCint$(G__CFG_IMPLIBEXT)
+CINTLIBSTATIC = lib/libCint_static$(G__CFG_LIBEXT)
 CINT          = bin/cint$(G__CFG_EXEEXT)
 RMKDEPEND     = tool/rmkdepend/rmkdepend$(G__CFG_EXEEXT)
 CONFIGCINTH   = $(G__CFG_COREVERSION)/inc/configcint.h
@@ -103,29 +107,35 @@ ifneq ($(G__CFG_LIBEXT),)
 endif
 	find . -name \*.d -exec rm {} \; || true
 	find . -name \*.dll -exec rm {} \; || true
+	find . -name \*.manifest -exec rm {} \; || true
+	find . -name \*.exp -exec rm {} \; || true
+	find . -name \*.pdb -exec rm {} \; || true
 
 cintreflextest: REFLEXTESTFLAGS = -m -r
 
 debugtest: TESTDEBUG = -DDEBUG
 
 ifeq ($(G__CFG_COREVERSION),cint)
-  TESTFLAGS ?= --ignore-diff-errors -k
+  TESTFLAGS ?= --ignore-diff-errors -k --hide-known-defects
+else
+  TESTFLAGS ?= -k --hide-known-defects
 endif
 
 test debugtest cintreflextest:
 	(cd test && \
-	PATH=../bin:.:$$PATH \
-	LD_LIBRARY_PATH=../lib:.:$$LD_LIBRARY_PATH \
-	DYLD_LIBRARY_PATH=../lib:.:$$DYLD_LIBRARY_PATH \
+	PATH=$$PWD/../bin:.:$$PATH; \
+	LD_LIBRARY_PATH=$$PWD/../lib:.:$$LD_LIBRARY_PATH; \
+	DYLD_LIBRARY_PATH=$$PWD/../lib:.:$$DYLD_LIBRARY_PATH; \
 	cint$(G__CFG_EXEEXT) $(TESTDEBUG) testall.cxx $(TEST) $(TESTFLAGS) $(REFLEXTESTFLAGS) )
 
 ifeq ($(findstring clean,$(MAKECMDGOALS)),)
 Makefile: $(RMKDEPEND)
 
 Makefile.conf $(CONFIGCINTH): configure
-	@echo "Run ./configure first!"
-	@./configure -h
-	@exit 1
+	@[ -x reconfigure ] && ./reconfigure || ( \
+	echo "Run ./configure first!" ; \
+	./configure -h ; \
+	exit 1 )
 endif
 
 MAKEINFO:  configure $(CONFIGCINTH)
@@ -169,15 +179,15 @@ install:
 	  exit 1; \
 	fi
 	if [ ! -d $(DESTDIR)$(G__CFG_BINDIR) ]; then mkdir -p $(DESTDIR)$(G__CFG_BINDIR); fi
-	cp $(CINT)     $(DESTDIR)$(G__CFG_BINDIR)/$(notdir $(CINT))$(ALTERNATIVENAME)
-	cp $(MAKECINT) $(DESTDIR)$(G__CFG_BINDIR)/$(notdir $(MAKECINT))$(ALTERNATIVENAME)
+	cp $(CINT)     $(DESTDIR)$(G__CFG_BINDIR)/$(notdir $(CINT))
+	cp $(MAKECINT) $(DESTDIR)$(G__CFG_BINDIR)/$(notdir $(MAKECINT))
 	if [ -f bin/cint-config ] ; then cp bin/cint-config $(DESTDIR)$(G__CFG_BINDIR)/ ; fi
 # install manual pages
 	if [ ! -d $(DESTDIR)$(G__CFG_MANDIR)/man1 ] ; then \
 	  mkdir -p $(DESTDIR)$(G__CFG_MANDIR)/man1; \
 	fi
-	cp doc/man1/cint.1 $(DESTDIR)$(G__CFG_MANDIR)/man1/cint$(ALTERNATIVENAME).1
-	cp doc/man1/makecint.1 $(DESTDIR)$(G__CFG_MANDIR)/man1/makecint$(ALTERNATIVENAME).1
+	cp doc/man1/cint.1 $(DESTDIR)$(G__CFG_MANDIR)/man1/cint.1
+	cp doc/man1/makecint.1 $(DESTDIR)$(G__CFG_MANDIR)/man1/makecint.1
 
 	if [ ! -d $(DESTDIR)$(G__CFG_LIBDIR) ]; then mkdir -p $(DESTDIR)$(G__CFG_LIBDIR); fi
 	cp $(CINTLIBSHARED) $(DESTDIR)$(G__CFG_LIBDIR)/
@@ -224,6 +234,8 @@ include build/deb.mk
 else
 deb :
 	$(MAKE) INCLUDE_DEB_MK=1 deb
+debinstall :
+	$(MAKE) INCLUDE_DEB_MK=1 debinstall
 endif
 
 ifeq ($(INCLUDE_RPM_MK),1)
@@ -231,5 +243,7 @@ include build/rpm.mk
 else
 rpm :
 	$(MAKE) INCLUDE_RPM_MK=1 rpm
+rpminstall :
+	$(MAKE) INCLUDE_RPM_MK=1 rpminstall
 endif
 

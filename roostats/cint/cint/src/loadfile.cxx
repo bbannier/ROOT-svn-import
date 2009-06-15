@@ -33,6 +33,7 @@
 
 #include "common.h"
 #include "Api.h"
+#include "strbuf.h"
 
 #ifndef G__TESTMAIN
 #include <sys/stat.h>
@@ -44,7 +45,9 @@
 
 #define G__OLDIMPLEMENTATION1849
 
+#ifdef G__SHAREDLIB
 extern std::list<G__DLLINIT>* G__initpermanentsl;
+#endif
 
 extern "C" {
 
@@ -914,21 +917,15 @@ static void G__checkIfOnlyFunction(int fentry)
   int varflag = 1;
   int tagflag ;
 
-  if(dictpos->tagnum == G__struct.alltag) {
-    tagflag = 1;
-    if(dictpos->ptype && (char*)G__PVOID!=dictpos->ptype) {
-      int i;
-      for(i=0; i<G__struct.alltag; i++) {
-        if(dictpos->ptype[i]!=G__struct.type[i]) {
-          tagflag=0;
-          break;
-        }
-      }
-    }
+  // Sum the number of G__struct slot used by any of the file
+  // we enclosed:
+  int nSubdefined = 0;
+  for(int filecur = fentry+1; filecur < G__nfile; ++filecur) {
+    nSubdefined += G__srcfile[filecur].definedStruct;
   }
-  else {
-    tagflag = 0;
-  }
+  G__srcfile[fentry].definedStruct = G__struct.nactives - dictpos->nactives - nSubdefined;
+  
+  tagflag = ( G__srcfile[fentry].definedStruct == 0 ); 
 
   var = &G__global;
   while(var->next) var=var->next;
@@ -971,9 +968,8 @@ static void G__checkIfOnlyFunction(int fentry)
      dictpos->definedtemplatefunc == definedtemplatefunc) {
     G__srcfile[fentry].hasonlyfunc =
       (struct G__dictposition*)malloc(sizeof(struct G__dictposition));
-    G__srcfile[fentry].hasonlyfunc->ptype = (char*)G__PVOID;
     G__store_dictposition(G__srcfile[fentry].hasonlyfunc);
-  }
+  } 
 }
 
 /******************************************************************
@@ -1049,7 +1045,6 @@ int G__loadfile_tmpfile(FILE *fp)
 
   G__srcfile[fentry].dictpos
     = (struct G__dictposition*)malloc(sizeof(struct G__dictposition));
-  G__srcfile[fentry].dictpos->ptype = (char*)NULL;
   G__store_dictposition(G__srcfile[fentry].dictpos);
 
   G__srcfile[fentry].hdrprop = hdrprop;
@@ -1068,6 +1063,7 @@ int G__loadfile_tmpfile(FILE *fp)
   G__srcfile[fentry].ispermanentsl = G__ispermanentsl;
   G__srcfile[fentry].initsl = 0;
   G__srcfile[fentry].hasonlyfunc = (struct G__dictposition*)NULL;
+  G__srcfile[fentry].definedStruct = 0;
   G__srcfile[fentry].parent_tagnum = G__get_envtagnum();
   G__srcfile[fentry].slindex = -1;
 
@@ -1300,8 +1296,8 @@ int G__statfilename(const char *filenamein, struct stat *statBuf)
        * try $CINTSYSDIR/stl
        **********************************************/
       if('\0'!=G__cintsysdir[0]) {
-         sprintf(workname,"%s/%s/stl/%s%s",G__cintsysdir,G__CFG_COREVERSION
-                 ,filename,addpost[i2]);
+         sprintf(workname,"%s%s%s%sstl%s%s%s",G__cintsysdir,G__psep,G__CFG_COREVERSION
+                 ,G__psep,G__psep,filename,addpost[i2]);
          res = stat( workname, statBuf );         
          if (res==0) return res;
       }
@@ -1311,8 +1307,8 @@ int G__statfilename(const char *filenamein, struct stat *statBuf)
        **********************************************/
       /* G__getcintsysdir(); */
       if('\0'!=G__cintsysdir[0]) {
-         sprintf(workname,"%s/%s/lib/%s%s",G__cintsysdir,G__CFG_COREVERSION
-                 ,filename,addpost[i2]);
+         sprintf(workname,"%s%s%s%slib%s%s%s",G__cintsysdir,G__psep,G__CFG_COREVERSION
+                 ,G__psep,G__psep,filename,addpost[i2]);
          res = stat( workname, statBuf );         
          if (res==0) return res;
       }
@@ -1450,8 +1446,10 @@ int G__loadfile(const char *filenamein)
   int temp;
   int store_macroORtemplateINfile;
   int len;
+#ifdef G__SHAREDLIB
   int len1;
   const char *dllpost;
+#endif //G__SHAREDLIB
   short store_iscpp;
   G__UINT32 store_security;
   char addpost[3][8];
@@ -1797,8 +1795,8 @@ int G__loadfile(const char *filenamein)
        **********************************************/
       G__getcintsysdir();
       if('\0'!=G__cintsysdir[0]) {
-        sprintf(G__ifile.name,"%s/%s/include/%s%s",G__cintsysdir,G__CFG_COREVERSION
-                ,filename,addpost[i2]);
+        sprintf(G__ifile.name,"%s%s%s%sinclude%s%s%s",G__cintsysdir,G__psep,G__CFG_COREVERSION
+                ,G__psep,G__psep,filename,addpost[i2]);
 #ifndef G__WIN32
         G__ifile.fp = fopen(G__ifile.name,"r");
 #else
@@ -1818,8 +1816,8 @@ int G__loadfile(const char *filenamein)
        **********************************************/
       G__getcintsysdir();
       if('\0'!=G__cintsysdir[0]) {
-        sprintf(G__ifile.name,"%s/%s/stl/%s%s",G__cintsysdir,G__CFG_COREVERSION
-                ,filename,addpost[i2]);
+        sprintf(G__ifile.name,"%s%s%s%sstl%s%s%s",G__cintsysdir, G__psep, G__CFG_COREVERSION,
+                G__psep, G__psep, filename,addpost[i2]);
 #ifndef G__WIN32
         G__ifile.fp = fopen(G__ifile.name,"r");
 #else
@@ -1839,8 +1837,8 @@ int G__loadfile(const char *filenamein)
        **********************************************/
       /* G__getcintsysdir(); */
       if('\0'!=G__cintsysdir[0]) {
-        sprintf(G__ifile.name,"%s/%s/lib/%s%s",G__cintsysdir,G__CFG_COREVERSION
-                ,filename,addpost[i2]);
+        sprintf(G__ifile.name,"%s%s%s%slib%s%s%s",G__cintsysdir, G__psep, G__CFG_COREVERSION,
+                G__psep, G__psep,filename,addpost[i2]);
 #ifndef G__WIN32
         G__ifile.fp = fopen(G__ifile.name,"r");
 #else
@@ -1959,7 +1957,6 @@ int G__loadfile(const char *filenamein)
        **********************************************/
 
       sprintf(G__ifile.name,"sys$common:decc$lib.reference.decc$rtdef]%s",filename);
-      printf("Trying to open %s\n",G__ifile.name,"r");
 
       G__ifile.fp = fopen(G__ifile.name,"r");
       G__globalcomp=G__store_globalcomp;
@@ -2135,7 +2132,6 @@ int G__loadfile(const char *filenamein)
     G__ifile.filenum = fentry;
     G__srcfile[fentry].dictpos
       = (struct G__dictposition*)malloc(sizeof(struct G__dictposition));
-    G__srcfile[fentry].dictpos->ptype = (char*)NULL;
     G__store_dictposition(G__srcfile[fentry].dictpos);
     if(null_entry == -1) {
       G__nfile++;
@@ -2176,6 +2172,7 @@ int G__loadfile(const char *filenamein)
     G__srcfile[fentry].ispermanentsl = G__ispermanentsl;
     G__srcfile[fentry].initsl = 0;
     G__srcfile[fentry].hasonlyfunc = (struct G__dictposition*)NULL;
+    G__srcfile[fentry].definedStruct = 0;
     G__srcfile[fentry].parent_tagnum = G__get_envtagnum();
     G__srcfile[fentry].slindex = -1;
     G__srcfile[fentry].breakpoint = 0;
@@ -2426,7 +2423,6 @@ int  G__setfilecontext(const char* filename, G__input_file* ifile)
 
       G__srcfile[fentry].dictpos
          = (struct G__dictposition*)malloc(sizeof(struct G__dictposition));
-      G__srcfile[fentry].dictpos->ptype = (char*)NULL;
       G__store_dictposition(G__srcfile[fentry].dictpos);
       if (null_entry == -1) {
          G__nfile++;
@@ -2447,6 +2443,7 @@ int  G__setfilecontext(const char* filename, G__input_file* ifile)
       G__srcfile[fentry].ispermanentsl = 1;
       G__srcfile[fentry].initsl = 0;
       G__srcfile[fentry].hasonlyfunc = (struct G__dictposition*)NULL;
+      G__srcfile[fentry].definedStruct = 0;
       G__srcfile[fentry].parent_tagnum = G__get_envtagnum();
       G__srcfile[fentry].slindex = -1;
       G__srcfile[fentry].breakpoint = 0;
@@ -2479,7 +2476,6 @@ int G__preprocessor(      char *outname,const char *inname,int cppflag
                    ,const char *macros,const char *undeflist,const char *ppopt
                    ,const char *includepath)
 {
-  char temp[G__LARGEBUF];
   /* char *envcpp; */
   char tmpfile[G__MAXFILENAME];
   int tmplen;
@@ -2644,19 +2640,20 @@ int G__preprocessor(      char *outname,const char *inname,int cppflag
     }
 #endif
 
+    G__StrBuf temp(G__LARGEBUF);
 #if defined(G__SYMANTEC)
     /**************************************************************
      * preprocessor statement for Symantec C++
      ***************************************************************/
     if(G__cintsysdir[0]) {
-      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/%s/include -I%s/%s/stl -I%s/%s/lib %s -o%s"
-              ,G__ccom ,macros,undeflist,ppopt ,includepath,
-              ,G__cintsysdir, G__CFG_COREVERSION, G__cintsysdir,G__CFG_COREVERSION
-              ,G__cintsysdir, G__CFG_COREVERSION, tmpfile,outname);
+       temp.Format("%s %s %s -I. %s %s -D__CINT__ -I%s/%s/include -I%s/%s/stl -I%s/%s/lib %s -o%s"
+                   ,G__ccom ,macros,undeflist,ppopt ,includepath,
+                   ,G__cintsysdir, G__CFG_COREVERSION, G__cintsysdir,G__CFG_COREVERSION
+                   ,G__cintsysdir, G__CFG_COREVERSION, tmpfile,outname);
     }
     else {
-      sprintf(temp,"%s %s %s %s -I. %s -D__CINT__ %s -o%s" ,G__ccom
-              ,macros,undeflist,ppopt ,includepath ,tmpfile,outname);
+       temp.Format("%s %s %s %s -I. %s -D__CINT__ %s -o%s" ,G__ccom
+                   ,macros,undeflist,ppopt ,includepath ,tmpfile,outname);
     }
 #elif defined(G__BORLAND)
     /**************************************************************
@@ -2665,14 +2662,14 @@ int G__preprocessor(      char *outname,const char *inname,int cppflag
      ***************************************************************/
     strcat(outname,".i");
     if(G__cintsysdir[0]) {
-      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/%s/include -I%s/%s/stl -I%s/%s/lib -o%s %s"
-              ,G__ccom ,macros,undeflist,ppopt ,includepath
-              ,G__cintsysdir,G__CFG_COREVERSION,G__cintsysdir,G__CFG_COREVERSION,
-              G__cintsysdir,G__CFG_COREVERSION,outname,tmpfile);
+       temp.Format("%s %s %s -I. %s %s -D__CINT__ -I%s/%s/include -I%s/%s/stl -I%s/%s/lib -o%s %s"
+                   ,G__ccom ,macros,undeflist,ppopt ,includepath
+                   ,G__cintsysdir,G__CFG_COREVERSION,G__cintsysdir,G__CFG_COREVERSION,
+                   G__cintsysdir,G__CFG_COREVERSION,outname,tmpfile);
     }
     else {
-      sprintf(temp,"%s %s %s %s -I. %s -D__CINT__ -o%s %s" ,G__ccom
-              ,macros,undeflist,ppopt ,includepath ,outname,tmpfile);
+       temp.Format("%s %s %s %s -I. %s -D__CINT__ -o%s %s" ,G__ccom
+                   ,macros,undeflist,ppopt ,includepath ,outname,tmpfile);
     }
 #else
     /**************************************************************
@@ -2682,19 +2679,20 @@ int G__preprocessor(      char *outname,const char *inname,int cppflag
     /**************************************************************
      * preprocessor statement for UNIX
      ***************************************************************/
-   if(G__cintsysdir[0]) {
-      sprintf(temp,"%s %s %s -I. %s %s -D__CINT__ -I%s/%s/include -I%s/%s/stl -I%s/%s/lib %s > %s"
-              ,G__ccom ,macros,undeflist,ppopt ,includepath
-              ,G__cintsysdir,G__CFG_COREVERSION,G__cintsysdir,G__CFG_COREVERSION,
-              G__cintsysdir,G__CFG_COREVERSION,tmpfile,outname);
+    if(G__cintsysdir[0]) {
+       temp.Format("%s %s %s -I. %s %s -D__CINT__ -I%s/%s/include -I%s/%s/stl -I%s/%s/lib %s > %s"
+                   ,G__ccom ,macros,undeflist,ppopt ,includepath
+                   ,G__cintsysdir,G__CFG_COREVERSION,G__cintsysdir,G__CFG_COREVERSION,
+                   G__cintsysdir,G__CFG_COREVERSION,tmpfile,outname);
     }
     else {
-      sprintf(temp,"%s %s %s %s -I. %s -D__CINT__ %s > %s" ,G__ccom
-              ,macros,undeflist,ppopt ,includepath ,tmpfile,outname);
+       temp.Format("%s %s %s %s -I. %s -D__CINT__ %s > %s" ,G__ccom
+                   ,macros,undeflist,ppopt ,includepath ,tmpfile,outname);
     }
 #endif
-    if(G__debugtrace||G__steptrace||G__step||G__asm_dbg)
-      G__fprinterr(G__serr," %s\n",temp);
+     if(G__debugtrace||G__steptrace||G__step||G__asm_dbg) {
+        G__fprinterr(G__serr," %s\n",temp.data());
+     }
     int pres = system(temp);
 
     if(tmplen) remove(tmpfile);
@@ -3044,7 +3042,6 @@ int G__register_sharedlib(const char *libname)
  
    G__srcfile[fentry].dictpos
       = (struct G__dictposition*)malloc(sizeof(struct G__dictposition));
-   G__srcfile[fentry].dictpos->ptype = (char*)NULL;
    G__store_dictposition(G__srcfile[fentry].dictpos);
    
    G__srcfile[fentry].hdrprop = G__NONCINTHDR;
@@ -3062,6 +3059,7 @@ int G__register_sharedlib(const char *libname)
    G__srcfile[fentry].ispermanentsl = 2;
    G__srcfile[fentry].initsl = 0;
    G__srcfile[fentry].hasonlyfunc = (struct G__dictposition*)NULL;
+   G__srcfile[fentry].definedStruct = 0;
    G__srcfile[fentry].parent_tagnum = G__get_envtagnum();
    G__srcfile[fentry].slindex = -1;
 

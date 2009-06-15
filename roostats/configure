@@ -37,13 +37,16 @@ options="                    \
    enable_alien              \
    enable_asimage            \
    enable_astiff             \
+   enable_bonjour            \
    enable_builtin_afterimage \
    enable_builtin_ftgl       \
    enable_builtin_freetype   \
+   enable_builtin_glew       \
    enable_builtin_pcre       \
    enable_builtin_zlib       \
    enable_castor             \
    enable_chirp              \
+   enable_cint5              \
    enable_cint7              \
    enable_cintex             \
    enable_clarens            \
@@ -51,17 +54,18 @@ options="                    \
    enable_exceptions         \
    enable_explicitlink       \
    enable_fftw3              \
-   enable_gdml               \
-   enable_gfal               \
    enable_g4root             \
+   enable_gdml               \
+   enable_genvector          \
+   enable_gfal               \
    enable_glite              \
    enable_globus             \
    enable_gsl_shared         \
    enable_krb5               \
    enable_ldap               \
-   enable_genvector          \
    enable_mathmore           \
    enable_memstat            \
+   enable_minuit2            \
    enable_monalisa           \
    enable_mysql              \
    enable_odbc               \
@@ -77,7 +81,6 @@ options="                    \
    enable_qtgsi              \
    enable_reflex             \
    enable_roofit             \
-   enable_minuit2            \
    enable_ruby               \
    enable_rfio               \
    enable_rpath              \
@@ -104,6 +107,7 @@ for c in $deprecated_options ; do eval ${c}="yes" ; done
 for c in $options ; do eval ${c}_explicit="" ; done
 
 enable_afs=no
+enable_cint5=yes
 enable_cint7=no
 enable_gdml=no
 enable_globus=no
@@ -125,6 +129,7 @@ no_stubs_test=no         # complete Dictionaries by default (All stubs)
 enable_unuran=no
 enable_winrtdebug=
 enable_xrootd=           # must be set explicitely via --enable-xrootd
+enable_builtin_glew=no
 
 # Remove old log file
 rm -f $logfile
@@ -151,6 +156,7 @@ FFTW3            \
 PYTHONDIR        \
 DCACHE           \
 CHIRP            \
+DNSSD            \
 ALIEN            \
 ASIMAGE          \
 LDAP             \
@@ -1003,13 +1009,16 @@ enable/disable options, prefix with either --enable- or --disable-
   alien              AliEn support, requires libgapiUI from ALICE
   asimage            Image processing support, requires libAfterImage
   astiff             Include tiff support in image processing
+  bonjour            Bonjour support, requires libdns_sd
   builtin-afterimage Built included libAfterImage, or use system libAfterImage
   builtin-ftgl       Built included libFTGL, or use system libftgl
   builtin-freetype   Built included libfreetype, or use system libfreetype
+  builtin-glew       Built included libGLEW, or use system libGLEW
   builtin-pcre       Built included libpcre, or use system libpcre
   builtin-zlib       Built included libz, or use system libz
   castor             CASTOR support, requires libshift from CASTOR >= 1.5.2
   chirp              Chirp support (Condor remote I/O), requires libchirp_client
+  cint5              Build the legacy CINT library
   cint7              Build the *experimental* new CINT library
   cintex             Build the libCintex Reflex interface library
   clarens            Clarens RPC support, optionally used by PROOF
@@ -1063,6 +1072,9 @@ enable/disable options, prefix with either --enable- or --disable-
 with options, prefix with --with-, enables corresponding support
 
   afs                AFS support, location of AFS distribution
+  afs-incdir         AFS support, location of AFS headers
+  afs-libdir         AFS support, location of libafsrpc. libasauthent
+  afs-shared         AFS support, controls usage of shared linkage AFS libraries {yes/no}
   alien-incdir       AliEn support, location of gapiUI.h
   alien-libdir       AliEn support, location of libapiUI
   castor-incdir      CASTOR support, location of stager_api.h
@@ -1073,12 +1085,16 @@ with options, prefix with --with-, enables corresponding support
   dcap-incdir        dCache support, location of dcap.h
   dcap-libdir        dCache support, location of libdcap
   dicttype           dictionary type: "cint" (default), "reflex", or "gccxml"
+  dnssd-libdir       Bonjour support, location of libdns_sd
+  dnssd-incdir       Bonjour support, location of dns_sd.h
   ftgl-incdir        FTGL support, location of FTGL.h
   ftgl-libdir        FTGL support, location of libftgl
   fftw3-incdir       FFTW3 support, location of fftw3.h
   fftw3-libdir       FFTW3 support, location of libfftw3 (libfftw3-3 for windows)
   gfal-incdir        GFAL support, location of gfal_api.h
   gfal-libdir        GFAL support, location of libgfal
+  glew-incdir        GLEW support, location of glew.h
+  glew-libdir        GLEW support, location of libGLEW
   g4-incdir          GEANT4 support, location of GEANT4 header files
   g4-libdir          GEANT4 support, location of GEANT4 libraries
   clhep-incdir       CLHEP support, location of CLHEP header files
@@ -1121,8 +1137,10 @@ with options, prefix with --with-, enables corresponding support
   srp                Secure Remote Passwd support, location of SRP distribution
   srp-incdir         SRP support, location header of t_server.h
   srp-libdir         SRP support, location header of libsrp.a
+  ssl                OpenSSL support, location of openssl installation
   ssl-incdir         OpenSSL support, location of openssl headers
   ssl-libdir         OpenSSL support, location of libssl
+  ssl-shared         OpenSSL support, controls usage of shared linkage SSL libraries {yes/no}
   sys-iconpath       Extra icon path
   thread-libdir      Thread support, path to libpthread
   xml-incdir         XML support, location of libxml/tree.h
@@ -1264,6 +1282,9 @@ if test $# -gt 0 ; then
       --no-stubs)              no_stubs="yes";;
       --no-stubs-test)         no_stubs="yes"; no_stubs_test="yes";;
       --with-afs=*)            afsdir=$optarg        ; enable_afs="yes"     ;;
+      --with-afs-incdir=*)     afsincdir=$optarg     ; enable_afs="yes"     ;;
+      --with-afs-libdir=*)     afslibdir=$optarg     ; enable_afs="yes"     ;;
+      --with-afs-shared=*)     afsshared=$optarg     ; enable_afs="yes"     ;;
       --with-alien-incdir=*)   alienincdir=$optarg   ; enable_alien="yes"   ;;
       --with-alien-libdir=*)   alienlibdir=$optarg   ; enable_alien="yes"   ;;
       --with-afterimage-incdir=*) afterimageincdir=$optarg; enable_builtin_afterimage=no ;;
@@ -1277,12 +1298,16 @@ if test $# -gt 0 ; then
       --with-dcap-incdir=*)    dcapincdir=$optarg    ; enable_dcache="yes"  ;;
       --with-dcap-libdir=*)    dcaplibdir=$optarg    ; enable_dcache="yes"  ;;
       --with-dicttype=*)       dicttype=$optarg      ;;
+      --with-dnssd-incdir=*)   dnssdincdir=$optarg   ; enable_bonjour="yes" ;;
+      --with-dnssd-libdir=*)   dnssdlibdir=$optarg   ; enable_bonjour="yes" ;;
       --with-ftgl-incdir=*)    ftglincdir=$optarg    ; enable_builtin_ftgl=no;;
       --with-ftgl-libdir=*)    ftgllibdir=$optarg    ; enable_builtin_ftgl=no;;
       --with-fftw3-incdir=*)   fftw3incdir=$optarg   ; enable_fftw3="yes"   ;;
       --with-fftw3-libdir=*)   fftw3libdir=$optarg   ; enable_fftw3="yes"   ;;
       --with-gfal-incdir=*)    gfalincdir=$optarg    ; enable_gfal="yes"    ;;
       --with-gfal-libdir=*)    gfallibdir=$optarg    ; enable_gfal="yes"    ;;
+      --with-glew-incdir=*)    glewincdir=$optarg    ; enable_builtin_glew=no;;
+      --with-glew-libdir=*)    glewlibdir=$optarg    ; enable_builtin_glew=no;;
       --with-g4-incdir=*)      g4incdir=$optarg      ; enable_g4root="yes"  ;;
       --with-g4-libdir=*)      g4libdir=$optarg      ; enable_g4root="yes"  ;;
       --with-clhep-incdir=*)   clhepincdir=$optarg   ;;
@@ -1329,8 +1354,10 @@ if test $# -gt 0 ; then
       --with-srp=*)            srpdir=$optarg        ; enable_srp="yes"     ;;
       --with-srp-incdir=*)     srpincdir=$optarg     ; enable_srp="yes"     ;;
       --with-srp-libdir=*)     srplibdir=$optarg     ; enable_srp="yes"     ;;
+      --with-ssl=*)            ssldir=$optarg        ; enable_ssl="yes"     ;;
       --with-ssl-incdir=*)     sslincdir=$optarg     ; enable_ssl="yes"     ;;
       --with-ssl-libdir=*)     ssllibdir=$optarg     ; enable_ssl="yes"     ;;
+      --with-ssl-shared=*)     sslshared=$optarg     ; enable_ssl="yes"     ;;
       --with-sys-iconpath=*)   extraiconpath=$optarg ;;
       --with-thread-libdir=*)  threadlibdir=$optarg  ; enable_thread="yes"  ;;
       --with-xml-incdir=*)     xmlincdir=$optarg     ; enable_xml="yes"     ;;
@@ -1883,13 +1910,14 @@ result "$enable_builtin_zlib"
 #
 if test ! "x$enable_opengl" = "xno" && test ! "x$platform" = "xwin32" ; then
     # Check for OpenGL compatible include and library
-    check_header "GL/gl.h" "$openglincdir" $OPENGL $OPENGL/include \
+    openglincdirs="$OPENGL $OPENGL/include \
 	/usr/include /usr/include/X11 /usr/X11/include \
 	/usr/X11R6/include /usr/local/include/X11 \
 	/usr/local/X11R6/include /usr/local/include \
 	/usr/include/Mesa /usr/local/include/Mesa /usr/Mesa/include \
 	/usr/local/Mesa/include /usr/Mesa /usr/local/Mesa /opt/Mesa \
-	/opt/Mesa/include /opt/graphics/OpenGL/include
+	/opt/Mesa/include /opt/graphics/OpenGL/include"
+    check_header "GL/gl.h" "$openglincdir" $openglincdirs
     openglinc=$found_hdr
     openglincdir=$found_dir
 
@@ -1921,6 +1949,25 @@ if test ! "x$enable_opengl" = "xno" && test ! "x$platform" = "xwin32" ; then
        test "x$opengllib" = "x" || \
        test "x$openglulib" = "x" ; then
         enable_opengl="no"
+        enable_builtin_glew="no"
+    else
+        check_header "GL/glew.h" "$glewincdir" $openglincdirs
+        glewinc=$found_hdr
+        glewincdir=$found_dir
+
+        check_library "libGLEW" "$enable_shared" "$keep" $opengllibdirs
+        glewlib=$found_lib
+        glewlibdir=$found_dir
+
+        if test "x$glewincdir" = "x" || test "x$glewlib" = "x" ||
+           test "x$enable_builtin_glew_explicit" = "xyes" ; then
+            enable_builtin_glew="yes"
+            glewincdir=include
+            glewlibdir=-Llib
+            glewlibs=-lGLEW
+        fi
+        message "Checking whether to build included GLEW"
+        result "$enable_builtin_glew"
     fi
 fi
 check_explicit "$enable_opengl" "$enable_opengl_explicit" \
@@ -1935,6 +1982,11 @@ check_explicit "$enable_opengl" "$enable_opengl_explicit" \
 if test "x$platform" = "xwin32"; then
    enable_opengl="yes"
    openglincdir="include"
+
+   enable_builtin_glew="yes"
+   glewincdir=include
+   glewlibdir=
+   glewlibs=lib/libGLEW.lib
 fi
 
 ######################################################################
@@ -2268,6 +2320,12 @@ if test ! "x$enable_qt" = "xno" || \
 		"$enable_shared" "$found_raw_dir" ""
 	    qtlib="$qtlib $found_lib"
 	    check_library "libQtXml QtXml QtXml$qt4suffix QtXml4" \
+		"$enable_shared" "$found_raw_dir" ""
+	    qtlib="$qtlib $found_lib"
+	    check_library "libQtWebKit QtWebKit QtWebKit$qt4suffix QtWebKit4" \
+		"$enable_shared" "$found_raw_dir" ""
+	    qtlib="$qtlib $found_lib"
+	    check_library "libQtNetwork QtNetwork QtNetwork$qt4suffix QtNetwork4" \
 		"$enable_shared" "$found_raw_dir" ""
 	    qtlib="$qtlib $found_lib"
 	else
@@ -2757,6 +2815,36 @@ if test ! "x$enable_chirp" = "xno" ; then
 fi
 check_explicit "$enable_chirp" "$enable_chirp_explicit" \
      "Explicitly required Chirp dependencies not fulfilled"
+
+######################################################################
+#
+### echo %%% Bonjour Support - Third party libraries
+#
+# (See http://developer.apple.com/networking/bonjour/index.html)
+#
+# By default available on MacOS X and on Linux via the Avahi package.
+#
+# Check for libdns_sd
+#
+if test ! "x$enable_bonjour" = "xno" ; then
+    # Bonjour is built-in on MacOS X (i.e. available in libSystem)
+    if test ! "x$platform" = "xmacosx"; then
+        check_header "dns_sd.h" "$dnssdincdir" $DNSSD $DNSSD/include \
+	/opt/dnssd/include /usr/include /usr/local/include
+        dnssdincdir=$found_dir
+
+        check_library "libdns_sd" "$enable_shared" "$dnssdlibdir" \
+	$DNSSD $DNSSD/lib /opt/dnssd/lib /usr/lib /usr/local/lib
+        dnssdlib=$found_lib
+        dnssdlibdir=$found_dir
+
+        if test "x$dnssdincdir" = "x" || test "x$dnssdlib" = "x"; then
+            enable_bonjour="no"
+        fi
+    fi
+fi
+check_explicit "$enable_bonjour" "$enable_bonjour_explicit" \
+     "Explicitly required Bonjour dependencies not fulfilled"
 
 ######################################################################
 #
@@ -3578,12 +3666,37 @@ check_explicit "$enable_globus" "$enable_globus_explicit" \
 # conflicts.
 #
 if test "x$enable_ssl" = "xyes" ; then
+
+     #
+     # dirs: --with-ssl-incdir and --with-ssl-libdir have priority on --with-ssl-dir
+     #       in both cases we link statically unless --with-ssl-shared is 'yes'
+     #
+     if test ! "x$ssldir" = "x" ; then
+        if test "x$sslincdir" = "x" ; then
+           sslincdir=$ssldir/include
+        fi
+        if test "x$ssllibdir" = "x" ; then
+           ssllibdir=$ssldir/lib
+        fi
+        if test "x$sslshared" = "x" ; then
+           sslshared=no
+        fi
+     else
+        if test ! "x$ssllibdir" = "x" ; then
+           if test "x$sslshared" = "x" ; then
+              sslshared=no
+           fi
+        fi
+     fi
+     if test "x$sslshared" = "x" ; then
+        sslshared="$enable_shared"
+     fi
      #
      # libssl
      #
      libssl="libssl"
      tmpssllibdir=""
-     check_library "$libssl" "$enable_shared" "$ssllibdir" \
+     check_library "$libssl" "$sslshared" "$ssllibdir" \
          $SSL $SSL/lib /usr/lib /usr/local/lib /opt/lib $finkdir/lib
      if test "x$found_lib" != "x" ; then
          ssllib="$found_lib"
@@ -3593,8 +3706,8 @@ if test "x$enable_ssl" = "xyes" ; then
             if test ! "x$tmpssllibdir" = "x" ; then
                tmpssllibdir=`dirname $found_lib`
             fi
-            if test ! "x$ssl_shared" = "xno" ; then
-               ssl_shared=no
+            if test ! "x$sslshared" = "xno" ; then
+               sslshared=no
             fi
          else
             ssllibdir="$found_dir"
@@ -3605,8 +3718,8 @@ if test "x$enable_ssl" = "xyes" ; then
          # libcrypto, in the same dir
          #
          libcrypto="libcrypto"
-         check_library "$libcrypto" "$enable_shared" "$tmpglbslibdir" \
-                      /usr/lib /opt/lib /usr/local/lib $finkdir/lib
+         check_library "$libcrypto" "$sslshared" "$tmpssllibdir" \
+                      $SSL $SSL/lib /usr/lib /opt/lib /usr/local/lib $finkdir/lib
          if test "x$found_lib" != "x" ; then
              ssllib="$ssllib $found_lib"
              ssllibdir="$found_dir"
@@ -3623,6 +3736,11 @@ if test "x$enable_ssl" = "xyes" ; then
 fi
 
 if test "x$enable_ssl" = "xyes" ; then
+
+    if test "x$sslshared" = "xno" ; then
+       echo "Using OpenSSL static libraries"
+    fi
+
     incssl="bio.h blowfish.h err.h pem.h rand.h rsa.h"
     ssl_incdir=""
     for i in $incssl ; do
@@ -3780,71 +3898,107 @@ check_explicit "$enable_srp" "$enable_srp_explicit" \
 #
 afsextracflags=""
 if test ! "x$enable_afs" = "xno" ; then
+
     if test ! "x$afsdir" = "x" ; then
-       afsdir="$afsdir $afsdir/afs"
+       # Set the search paths, giving priority to explicit settings
+       if test "x$afslibdir" = "x" ; then
+          afslibdir="$afsdir/lib"
+       fi
+       if test "x$afsincdir" = "x" ; then
+          afsincdir="$afsdir/include"
+       fi
+       if test "x$afsshared" = "x" ; then
+          # With external libs, default is static
+          afsshared="no"
+       fi
+    fi
+
+    if test "x$afsshared" = "x" ; then
+       # Use global default if none set
+       afsshared=$enable_shared
     fi
 
     hasafserrormessage="no"
-    afs_shared=$enable_shared
-    afslibdirs="$AFS/lib /usr/lib /usr/local/lib /opt/lib $finkdir/lib"
+    afssearchlibdirs="$afsdir/afs $AFS/lib /usr/lib /usr/local/lib /opt/lib $finkdir/lib"
     afslibs="libafsrpc libafsauthent"
-    if test "x$afs_shared" = "xyes" ; then
+    if test "x$afsshared" = "xyes" ; then
 
        # We try to use the shared version of the libraries; however, for OpenAFS
        # versions <= 1.4.6 these were inconsistent, some needed symbols not being
        # exported. We need to check the symbols first
        echo "Checking for shared AFS libs:"
-       check_library libafsrpc "$afs_shared" "$afsdir" $afslibdirs
-       if test "x$found_lib" = "x" ; then
-          afslib=""
-          afslibdir=""
-          enable_afs="no"
-          break
-       fi
-       #
-       # Check symbols
-       #
-       afssymbols="afs_add_to_error_table strcompose stolower ucstring lcstring AssertionFailed"
-       for s in $afssymbols ; do
-          check_symbol $s "$found_lib" "$found_dir"
-          if test  $found_symbol -eq 0 ; then
-             result "Checking for AFS symbols: '$s' not found"
-             afs_shared="no"
-             break
-          fi
-       done
-       #
-       # Save lib, if OK
-       if test "x$afs_shared" = "xyes" ; then
-          afslib="$found_lib"
-          afslibdir="$found_dir"
-          afslibs="libafsauthent"
-          # Check for afs_error_message, if needed
-          if test "x$hasafserrormessage" = "xno" ; then
-             check_symbol afs_error_message "$found_lib" "$found_dir"
-             if test  $found_symbol -eq 1 ; then
-                hasafserrormessage="yes"
-             fi
-          fi
+       check_library libafsrpc "$afsshared" "$afslibdir" $afssearchlibdirs
+       if test ! "x$found_lib" = "x"; then
+         afslib="$found_lib"
+         afslibdirs="$found_dir"
+         #
+         # Check symbols
+         #
+         afssymbols="afs_add_to_error_table strcompose stolower ucstring lcstring AssertionFailed"
+         for s in $afssymbols ; do
+            check_symbol $s "$found_lib" "$found_dir"
+            if test  $found_symbol -eq 0 ; then
+               afslib=""
+               afslibdirs=""
+               afsshared="no"
+               break
+            fi
+         done
+         #
+         # Save lib, if OK
+         if test "x$afsshared" = "xyes" ; then
+            # Check for afs_error_message, if needed
+            if test "x$hasafserrormessage" = "xno" ; then
+               check_symbol afs_error_message "$found_lib" "$found_dir"
+               if test  $found_symbol -eq 1 ; then
+                  hasafserrormessage="yes"
+               fi
+            fi
+            check_library libafsauthent "$afsshared" "$afslibdir" $afssearchlibdirs
+            if test ! "x$found_lib" = "x" ; then
+               check_symbol ka_GetAFSTicket "$found_lib" "$found_dir"
+               if test  $found_symbol -eq 0 ; then
+                  afslib=""
+                  afslibdirs=""
+                  afsshared="no"
+                  break
+               else
+                  afslib="$afslib $found_lib"
+                  havedir="no"
+                  for l in $afslibdirs ; do
+                     if test "x$l" = "x$found_dir" ; then
+                        havedir="yes"
+                     fi
+                  done
+                  if test "x$havedir" = "xno" ; then
+                     afslibdirs="$afslibdirs $found_dir"
+                  fi
+               fi
+            else
+               afslib=""
+               afslibdirs=""
+               afsshared="no"
+            fi
+         fi
        else
-          echo "Checking for static AFS libs:"
+         afsshared="no"
        fi
     fi
 
-    if test "x$enable_afs" = "xyes" ; then
+    if test "x$enable_afs" = "xyes" && test "x$afsshared" = "xno" ; then
        #
-       # Libraries
+       # Static Libraries
+       echo "Checking for static AFS libs:"
        #
        for i in $afslibs ; do
-          check_library "$i" "$afs_shared" "$afsdir" $afslibdirs
+          check_library "$i" "$afsshared" "$afslibdir" $afssearchlibdirs
           if test "x$found_lib" = "x" ; then
              afslib=""
-             afslibdir=""
+             afslibdirs=""
              enable_afs="no"
              break
           fi
           afslib="$found_lib $afslib"
-          afslibdir=" $found_dir $afslibdir"
 
           # Check for afs_error_message, if needed
           if test "x$hasafserrormessage" = "xno" ; then
@@ -3859,29 +4013,27 @@ if test ! "x$enable_afs" = "xno" ; then
     # header files
     #
     if test "x$enable_afs" = "xyes" ; then
-       incafs="stds.h kautils.h com_err.h"
-       for i in $incafs ; do
-           check_header "afs/$i" "$found_dir" \
-              /usr/include /usr/local/include /opt/include $finkdir/include
-           if test "x$found_hdr" = "x" ; then
-               afsincdir=""
-               enable_afs="no"
-               break
-           fi
-           if test "x$afsincdir" = "x" ; then
-              afsincdir="-I$found_dir"
-           else
-              have_already="no"
-              for k in $afsincdir ; do
-                 if test "x$k" = "x-I$found_dir" ; then
-                    have_already="yes"
-                 fi
-              done
-              if test "x$have_already" = "xno" ; then
-                 afsincdir="-I$found_dir $afsincdir"
-              fi
-           fi
-       done
+
+       check_header "afs/kautils.h" "$afsincdir" \
+          /usr/include /usr/local/include /opt/include $finkdir/include
+       if test ! "x$found_hdr" = "x" ; then
+          afsincdir="-I$found_dir"
+          tmpincdir=$found_dir
+          otherincafs="stds.h com_err.h"
+          for i in $otherincafs ; do
+             if test ! -f "$tmpincdir/afs/$i" ; then
+                echo "Checking for afs/$i ... no"
+                afsincdir=""
+                enable_afs="no"
+                break
+             else
+                echo "Checking for afs/$i ... $tmpincdir"
+             fi
+          done 
+       else
+          afsincdir=""
+          enable_afs="no"
+       fi
     fi
 
     if test "x$afslib" = "x" ; then
@@ -3892,11 +4044,11 @@ if test ! "x$enable_afs" = "xno" ; then
            afsextracflags="-DR__AFSOLDCOMERR"
         fi
         # Warn about usage of static libs to build a shared object
-        if test "x$afs_shared" = "xno" ; then
+        if test "x$afsshared" = "xno" ; then
             echo "### WARNING: AFS enabled using static libraries: this may lead to relocation-related"
             echo "### errors or warnings if the static libraries are not compiled with the correct options;"
-            echo "### if this happens, please re-run with --enable-shared or move to openafs >= 1.5.x"
-            echo "### or rebuild the AFS static libs with the '-fPIC' option."
+            echo "### if this happens, please re-run with --enable-shared or rebuild the AFS static libs "
+            echo "### with the '-fPIC' option."
         fi
     fi
 fi
@@ -4019,7 +4171,7 @@ check_explicit "$enable_krb5" "$enable_krb5_explicit" \
 #
 if test "x$enable_afs" = "xyes" || test "x$enable_krb5" = "xyes" ; then
     if test ! "x$afsdir" = "x" ; then
-        comerrlibdir=$afsdir
+        comerrlibdir="$afsdir/lib"
     fi
     if test ! "x$krb5libdirorg" = "x" ; then
         if test ! "x$comerrlibdir" = "x" ; then
@@ -4029,7 +4181,7 @@ if test "x$enable_afs" = "xyes" || test "x$enable_krb5" = "xyes" ; then
         fi
     fi
     check_library libcom_err "$enable_shared" "$comerrlibdir" \
-                                              "$afslibdirs $krb5libdirs"
+                                              "$afssearchlibdirs $krb5libdirs"
     if test "x$found_lib" = "x" ; then
 	enable_krb5=no
         krb5incdir=""
@@ -4120,11 +4272,16 @@ if test ! "x$enable_mathmore" = "xno"; then
 	    gsllibs=$found_lib
 	    gsllibdir=$found_dir
 	    # in case of shared libs (gsllibdir is not empty) need gslcblas
-	    # assume libgslcblas is in same dir as libgsl
+	    # assume libgslcblas is in same dir as libgsl or in ../cblas/
 	    #if test ! "x$gsllibdir" = "x"; then
-		check_library "libgslcblas gslcblasML gslcblas cblas" "$enable_gsl_shared" "$gsllibdir0" \
-		    $GSL $GSL/lib $GSL/.libs /usr/local/lib /usr/lib /opt/gsl/lib \
-		    $finkdir/lib
+		if test ! "x$gsllibdir0" = "x"; then
+		    gsllibdir1=$gsllibdir0/../cblas/.libs
+		fi
+		check_library "libgslcblas gslcblasML gslcblas cblas" \
+		    "$enable_gsl_shared" "" \
+		    $gsllibdir0 $gsllibdir1 $GSL $GSL/lib \
+		    $GSL/.libs $GSL/cblas/.libs /usr/local/lib \
+		    /usr/lib /opt/gsl/lib $finkdir/lib
 		if test ! "x$found_lib" = "x"; then
 		    gsllibs="$gsllibs $found_lib"
 		    gsllibdir=$found_dir
@@ -4219,6 +4376,19 @@ check_explicit "$enable_genvector" "$enable_genvector_explicit" \
 
 ######################################################################
 #
+### echo %%% Legacy CINT Library
+#
+message "Checking whether to build CINT5"
+if test ! "x$enable_cint5" = "xno"; then
+    enable_cint5="yes"
+    result "yes"
+else
+    enable_cint5=""
+    result "no"
+fi
+
+######################################################################
+#
 ### echo %%% Experimental CINT7 Library
 #
 message "Checking whether to build CINT7"
@@ -4226,17 +4396,14 @@ if test ! "x$enable_cint7" = "xno"; then
     enable_cint7="yes"
     enable_reflex="yes"
     result "yes"
-    # remove CINT5's include/G__ci.h etc
-    if test -d include/cint; then
-        for f in `cd include/cint/; ls`; do
-            if test -f include/$f; then
-                rm include/$f
-            fi
-        done
-    fi
 else
     enable_cint7=""
     result "no"
+fi
+
+if test "x${enable_cint5}${enable_cint7}" = "x"; then
+   result "`basename $0`: Need to enable at least one of cint5 and cint7"
+   exit 1
 fi
 
 ######################################################################
@@ -4523,6 +4690,7 @@ if test "x$show_pkglist" = "xyes" ; then
     test "x$enable_g4root"   = "xyes" && pl="$pl root-plugin-montecarlo-g4root"
     test "x$enable_pythia6"  = "xyes" && pl="$pl root-plugin-montecarlo-pythia6"
     test "x$enable_alien"    = "xyes" && pl="$pl root-plugin-net-alien"
+    test "x$enable_bonjour"  = "xyes" && pl="$pl root-plugin-net-bonjour"
     test "x$enable_globus"   = "xyes" && pl="$pl root-plugin-net-globus"
     test "x$enable_krb5"     = "xyes" && pl="$pl root-plugin-net-krb5"
     test "x$enable_monalisa" = "xyes" && pl="$pl root-plugin-net-monalisa"
@@ -4672,6 +4840,9 @@ if test -d new ; then
 fi
 if test -d star ; then
    rm -rf star
+fi
+if test -d include/cint ; then
+   rm -rf include/cint
 fi
 if test -d freetype/src/freetype-2.1.9 ; then
    rm -rf freetype/src/freetype-2.1.9
@@ -4838,9 +5009,10 @@ fi
 message "Writing $MAKEOUT"
 sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@afslib@|$afslib|"                    \
-    -e "s|@afslibdir@|$afslibdir|"              \
+    -e "s|@afslibdir@|$afslibdirs|"              \
     -e "s|@afsincdir@|$afsincdir|"              \
     -e "s|@afsextracflags@|$afsextracflags|"    \
+    -e "s|@afsshared@|$afsshared|"              \
     -e "s|@alienincdir@|$alienincdir|"          \
     -e "s|@alienlib@|$alienlib|"                \
     -e "s|@alienlibdir@|$alienlibdir|"          \
@@ -4858,6 +5030,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@buildasimage@|$enable_asimage|"      \
     -e "s|@builtinafterimage@|$enable_builtin_afterimage|"  \
     -e "s|@buildftgl@|$enable_builtin_ftgl|"      \
+    -e "s|@buildglew@|$enable_builtin_glew|"      \
     -e "s|@builtinfreetype@|$enable_builtin_freetype|"      \
     -e "s|@builtinpcre@|$enable_builtin_pcre|"  \
     -e "s|@buildxrd@|$buildxrd|"                \
@@ -4868,6 +5041,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@chirpincdir@|$chirpincdir|"          \
     -e "s|@chirplib@|$chirplib|"                \
     -e "s|@chirplibdir@|$chirplibdir|"          \
+    -e "s|@buildcint5@|$enable_cint5|"          \
     -e "s|@buildcint7@|$enable_cint7|"          \
     -e "s|@clarensincdir@|$clarensincdir|"      \
     -e "s|@clarenslibs@|$clarenslibs|"          \
@@ -4889,6 +5063,9 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@ftglincdir@|$ftglincdir|"            \
     -e "s|@ftgllibdir@|$ftgllibdir|"            \
     -e "s|@ftgllibs@|$ftgllibs|"                \
+    -e "s|@glewincdir@|$glewincdir|"            \
+    -e "s|@glewlibdir@|$glewlibdir|"            \
+    -e "s|@glewlibs@|$glewlibs|"                \
     -e "s|@gslflags@|$gslflags|"                \
     -e "s|@gsllibdir@|$gsllibdir|"              \
     -e "s|@gsllibs@|$gsllibs|"                  \
@@ -4953,6 +5130,9 @@ sed -e "s|@globusincdir@|$globusincdir|"        \
     -e "s|@fftw3incdir@|$fftw3incdir|"          \
     -e "s|@fftw3lib@|$fftw3lib|"                \
     -e "s|@fftw3libdir@|$fftw3libdir|"          \
+    -e "s|@dnssdincdir@|$dnssdincdir|"          \
+    -e "s|@dnssdlib@|$dnssdlib|"                \
+    -e "s|@dnssdlibdir@|$dnssdlibdir|"          \
     -e "s|@mysqlincdir@|$mysqlincdir|"          \
     -e "s|@mysqllib@|$mysqllib|"                \
     -e "s|@mysqllibdir@|$mysqllibdir|"          \
@@ -5011,6 +5191,7 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@sslincdir@|$sslincdir|"              \
     -e "s|@ssllib@|$ssllib|"                    \
     -e "s|@ssllibdir@|$ssllibdir|"              \
+    -e "s|@sslshared@|$sslshared|"              \
     -e "s|@sslextracflags@|$sslextracflags|"    \
     -e "s|@testdir@|$testdir|"                  \
     -e "s|@threadflag@|$threadflag|"            \
@@ -5042,6 +5223,7 @@ sed -e "s|@srcdir@|$srcdir|"                    \
     -e "s|@buildfftw3@|$enable_fftw3|"          \
     -e "s|@buildgfal@|$enable_gfal|"            \
     -e "s|@buildg4root@|$enable_g4root|"        \
+    -e "s|@buildbonjour@|$enable_bonjour|"      \
     -e "s|@buildchirp@|$enable_chirp|"          \
     -e "s|@buildalien@|$enable_alien|"          \
     -e "s|@buildasimage@|$enable_asimage|"      \
@@ -5216,6 +5398,7 @@ sed -e "s|@architecture@|$arch|"           \
     -e "s|@altld@|$altld2|"                \
     -e "s|@no_stubs@|$no_stubs|"           \
     -e "s|@no_stubs_test@|$no_stubs_test|" \
+    -e "s|@cint5enabled|$enable_cint5|"    \
    < root-config.tmp > $RCONFOUT
 rm -f root-config.tmp
 chmod 755 $RCONFOUT

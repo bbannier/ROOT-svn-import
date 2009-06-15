@@ -785,6 +785,11 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
          // Request for remote touch: post a message to do that
          PostMsg(kPROOF_TOUCH);
          break;
+      case kXPD_resume:
+         //
+         // process the next query (in the TXProofServ)
+         PostMsg(kPROOF_STARTPROCESS);
+         break;
      default:
          Error("ProcessUnsolicitedMsg","%p: unknown action code: %d received from '%s' - disabling",
                                        this, acod, GetTitle());
@@ -914,11 +919,11 @@ Int_t TXSocket::Flush()
          // Save size for later semaphore cleanup
          Int_t sz = fAQue.size();
          // get the highest interrupt level
-         for (i = fAQue.begin(); i != fAQue.end(); i++) {
+         for (i = fAQue.begin(); i != fAQue.end();) {
             if (*i) {
                splist.push_back(*i);
-               fAQue.erase(i);
                nf += (*i)->fLen;
+               i = fAQue.erase(i);
             }
          }
 
@@ -932,9 +937,9 @@ Int_t TXSocket::Flush()
    // Move spares to the spare queue
    if (splist.size() > 0) {
       R__LOCKGUARD(&fgSMtx);
-      for (i = splist.begin(); i != splist.end(); i++) {
+      for (i = splist.begin(); i != splist.end();) {
          fgSQue.push_back(*i);
-         splist.erase(i);
+         i = splist.erase(i);
       }
    }
 
@@ -1629,6 +1634,11 @@ oncemore:
    if (RecvProcessIDs(mess))
       goto oncemore;
 
+   if (mess->What() & kMESS_ACK) {
+      // Acknowledgement embedded: ignore ...
+      mess->SetWhat(mess->What() & ~kMESS_ACK);
+   }
+
    return n;
 }
 
@@ -1685,7 +1695,9 @@ TObjString *TXSocket::SendCoordinator(Int_t kind, const char *msg, Int_t int2,
          break;
       case kGetWorkers:
          reqhdr.proof.sid = fSessionID;
-         reqhdr.header.dlen = 0;
+         reqhdr.header.dlen = (msg) ? strlen(msg) : 0;
+         if (msg)
+            buf = (const void *)msg;
          vout = (char **)&bout;
          break;
       case kReadBuffer:
@@ -1789,6 +1801,7 @@ void TXSocket::InitEnvs()
             XrdProofdTrace->What |= TRACE_ALL;
       }
    }
+   const char *cenv = 0;
 
    // List of domains where connection is allowed
    TString allowCO = gEnv->GetValue("XProof.ConnectDomainAllowRE", "");
@@ -1837,7 +1850,8 @@ void TXSocket::InitEnvs()
 
    // For password-based authentication
    TString autolog = gEnv->GetValue("XSec.Pwd.AutoLogin","1");
-   if (autolog.Length() > 0)
+   if (autolog.Length() > 0 &&
+      (!(cenv = gSystem->Getenv("XrdSecPWDAUTOLOG")) || strlen(cenv) <= 0))
       gSystem->Setenv("XrdSecPWDAUTOLOG",autolog.Data());
 
    // For password-based authentication
@@ -1850,7 +1864,8 @@ void TXSocket::InitEnvs()
       gSystem->Setenv("XrdSecPWDALOGFILE",alogfile.Data());
 
    TString verisrv = gEnv->GetValue("XSec.Pwd.VerifySrv","1");
-   if (verisrv.Length() > 0)
+   if (verisrv.Length() > 0 &&
+      (!(cenv = gSystem->Getenv("XrdSecPWDVERIFYSRV")) || strlen(cenv) <= 0))
       gSystem->Setenv("XrdSecPWDVERIFYSRV",verisrv.Data());
 
    TString srvpuk = gEnv->GetValue("XSec.Pwd.ServerPuk","");
@@ -1887,7 +1902,8 @@ void TXSocket::InitEnvs()
       gSystem->Setenv("XrdSecGSIPROXYVALID",valid.Data());
 
    TString deplen = gEnv->GetValue("XSec.GSI.ProxyForward","0");
-   if (deplen.Length() > 0)
+   if (deplen.Length() > 0 &&
+      (!(cenv = gSystem->Getenv("XrdSecGSIPROXYDEPLEN")) || strlen(cenv) <= 0))
       gSystem->Setenv("XrdSecGSIPROXYDEPLEN",deplen.Data());
 
    TString pxybits = gEnv->GetValue("XSec.GSI.ProxyKeyBits","");
@@ -1895,15 +1911,18 @@ void TXSocket::InitEnvs()
       gSystem->Setenv("XrdSecGSIPROXYKEYBITS",pxybits.Data());
 
    TString crlcheck = gEnv->GetValue("XSec.GSI.CheckCRL","1");
-   if (crlcheck.Length() > 0)
+   if (crlcheck.Length() > 0 &&
+      (!(cenv = gSystem->Getenv("XrdSecGSICRLCHECK")) || strlen(cenv) <= 0))
       gSystem->Setenv("XrdSecGSICRLCHECK",crlcheck.Data());
 
    TString delegpxy = gEnv->GetValue("XSec.GSI.DelegProxy","0");
-   if (delegpxy.Length() > 0)
+   if (delegpxy.Length() > 0 &&
+      (!(cenv = gSystem->Getenv("XrdSecGSIDELEGPROXY")) || strlen(cenv) <= 0))
       gSystem->Setenv("XrdSecGSIDELEGPROXY",delegpxy.Data());
 
    TString signpxy = gEnv->GetValue("XSec.GSI.SignProxy","1");
-   if (signpxy.Length() > 0)
+   if (signpxy.Length() > 0 &&
+      (!(cenv = gSystem->Getenv("XrdSecGSISIGNPROXY")) || strlen(cenv) <= 0))
       gSystem->Setenv("XrdSecGSISIGNPROXY",signpxy.Data());
 
    // Print the tag, if required (only once)

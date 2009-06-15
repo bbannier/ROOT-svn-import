@@ -827,7 +827,7 @@ VOID CALLBACK MyTimerProc(HWND hwnd, UINT message, UINT idTimer, DWORD dwTime)
    // Windows timer handling events while moving/resizing windows
 
    gSystem->ProcessEvents();
-   gVirtualX->UpdateWindow(1);
+   //gVirtualX->UpdateWindow(1); // cause problems with OpenGL in pad...
 } 
 
 //______________________________________________________________________________
@@ -3876,6 +3876,7 @@ void TGWin32::SetTextAlign(Short_t talign)
       }
       break;
    }
+   TAttText::SetTextAlign(fTextAlign);
 }
 
 //______________________________________________________________________________
@@ -4976,11 +4977,14 @@ void TGWin32::GetWindowAttributes(Window_t id, WindowAttributes_t & attr)
    if (!id) return;
 
    GdkWindowAttr xattr;
+   RECT rcClient, rcWind;
+   ::GetClientRect((HWND)GDK_DRAWABLE_XID((GdkWindow *) id), &rcClient);
+   ::GetWindowRect((HWND)GDK_DRAWABLE_XID((GdkWindow *) id), &rcWind);
 
-   gdk_window_get_geometry((GdkWindow *) id,
-                           &attr.fX,
-                           &attr.fY,
+   gdk_window_get_geometry((GdkWindow *) id, &attr.fX, &attr.fY,
                            &attr.fWidth, &attr.fHeight, &attr.fDepth);
+   attr.fX = ((rcWind.right - rcWind.left) - rcClient.right) / 2;
+   attr.fY = ((rcWind.bottom - rcWind.top) - rcClient.bottom) - attr.fX;
 
    attr.fRoot = (Window_t) GDK_ROOT_PARENT();
    attr.fColormap = (Colormap_t) gdk_window_get_colormap((GdkWindow *) id);

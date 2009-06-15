@@ -392,7 +392,7 @@ TAlienFile *TAlienFile::Open(const char *url, Option_t *option,
             ::Info("TAlienFile::Open", "Accessing image %u of %s", imagenr, purl.GetUrl());
       }
       // the treatement of ZIP files is done in the following way:
-      // LFNs in AliEn pointint to files in ZIP archives don't contain the .zip suffix in the file name
+      // LFNs in AliEn pointing to files in ZIP archives don't contain the .zip suffix in the file name
       // to tell TArchiveFile about the ZIP nature, we add to the URL options 'zip=<member>'
       // This options are not visible in the file name, they are passed through TXNetFile to TNetFile to TArchiveFile
 
@@ -509,11 +509,12 @@ void TAlienFile::Close(Option_t * option)
 
    if (!IsOpen()) return;
 
-   if (fOption == "READ") {
-      // Close file.
-      TXNetFile::Close(option);
+
+   // Close file
+   TXNetFile::Close(option);
+
+   if (fOption == "READ")
       return;
-   }
 
    // set GCLIENT_EXTRA_ARG environment
    gSystem->Setenv("GCLIENT_EXTRA_ARG", fAuthz.Data());
@@ -522,8 +523,9 @@ void TAlienFile::Close(Option_t * option)
    TString command("commit ");
 
    Long64_t siz = GetSize();
-   if (!siz)
-      Error("Close", "the reported size of the written file is 0");
+   if (siz <= 0)
+      Error("Close", "the reported size of the written file is <= 0");
+
    command += siz;
    command += " ";
    command += fLfn;
@@ -536,6 +538,7 @@ void TAlienFile::Close(Option_t * option)
          delete result;
       }
       Error("Close", "cannot commit envelope for %s", fLfn.Data());
+      gSystem->Unlink(fLfn);
    }
    TIterator *iter = list->MakeIterator();
    TObject *object = 0;
@@ -553,6 +556,7 @@ void TAlienFile::Close(Option_t * option)
          }
 
          Error("Close", "cannot register %s!", fLfn.Data());
+         gSystem->Unlink(fLfn);
          // there is only one result line .... in case it is at all ....
          break;
       }
@@ -562,8 +566,6 @@ void TAlienFile::Close(Option_t * option)
 
    gSystem->Unsetenv("GCLIENT_EXTRA_ARG");
 
-   // Close file.
-   TXNetFile::Close(option);
 }
 
 //______________________________________________________________________________

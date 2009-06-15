@@ -16,7 +16,7 @@
 ############################################################################
 
 CINTTMP       = bin/cint_tmp$(G__CFG_EXEEXT)
-CINTLIBIMPORT = lib/libcint$(G__CFG_IMPLIBEXT)
+CINTLIBIMPORT = lib/libCint$(G__CFG_IMPLIBEXT)
 
 CXXAPIO    = $(addsuffix $(G__CFG_OBJEXT),$(addprefix $(G__CFG_COREVERSION)/src/,\
 	      Api Class BaseCls Type DataMbr Method MethodAr \
@@ -38,7 +38,7 @@ RFLXO      = $(addsuffix $(G__CFG_OBJEXT),$(addprefix $(G__CFG_COREVERSION)/src/
 
 BCO        = $(addsuffix $(G__CFG_OBJEXT),$(addprefix $(G__CFG_COREVERSION)/src/,\
               bc_autoobj bc_cfunc bc_inst bc_item bc_parse \
-              bc_reader bc_type bc_exec bc_vtbl bc_eh bc_debug \
+              bc_reader bc_type bc_exec bc_vtbl bc_debug \
               bc_assign))
 
 STUBSCXX     = $(addprefix $(G__CFG_COREVERSION)/src/,symbols.cxx)
@@ -49,12 +49,15 @@ COREO        = $(filter-out $(CXXAPIO),\
 	      $(filter-out $(G__CFG_COREVERSION)/src/dmy%,\
 	      $(filter-out $(G__CFG_COREVERSION)/src/bc_%,\
 	      $(filter-out $(G__CFG_COREVERSION)/src/stdstrct.cxx,\
+	      $(filter-out $(G__CFG_COREVERSION)/src/sunos.cxx,\
+	      $(filter-out $(G__CFG_COREVERSION)/src/newsos.cxx,\
 	      $(filter-out $(G__CFG_COREVERSION)/src/macos.cxx,\
 	      $(filter-out $(G__CFG_COREVERSION)/src/winnt.cxx,\
-              $(filter-out $(STUBSCXX), \
+	      $(filter-out $(G__CFG_COREVERSION)/src/oldlink.cxx,\
+         $(filter-out $(STUBSCXX), \
 	      $(filter-out $(PRAGMATMPCXX),\
 	      $(filter-out $(LOADFILETMPCXX),\
-	      $(wildcard $(G__CFG_COREVERSION)/src/*.cxx))))))))))))
+	      $(wildcard $(G__CFG_COREVERSION)/src/*.cxx)))))))))))))))
 
 STREAMO    = $(G__CFG_COREVERSION)/src/dict/$(G__CFG_STREAMDIR)$(G__CFG_OBJEXT)
 
@@ -98,13 +101,20 @@ $(CINTLIBSTATIC): $(LIBOBJECTS) $(SETUPO)
 # Cint core as shared library
 shared: $(CINTLIBSHARED)
 
+CINTLIBIMPORTINSODIR:=$(subst $(dir $(CINTLIBIMPORT)),$(dir $(CINTLIBSHARED)),$(CINTLIBIMPORT))
 $(CINTLIBSHARED): $(LIBOBJECTS) $(SETUPO) $(REFLEXLIBDEP)
-	$(G__CFG_LD) $(subst @so@,lib/libcint,$(G__CFG_SOFLAGS)) \
+	$(G__CFG_LD) $(subst @so@,$(dir $@)/libCint,$(G__CFG_SOFLAGS)) \
 	  $(G__CFG_SOOUT)$@ $(LIBOBJECTS) $(SETUPO) \
 	  $(G__CFG_READLINELIB4SHLIB) $(G__CFG_CURSESLIB4SHLIB) $(G__CFG_DEFAULTLIBS) $(REFLEXLINK)
 ifneq ($(G__CFG_MAKEIMPLIB),)
-	$(subst @imp@,$(@:$(G__CFG_SOEXT)=$(G__CFG_IMPLIBEXT)),\
+	$(subst @imp@,$(CINTLIBIMPORT),\
 	  $(subst @so@,${PWD}/$@,$(G__CFG_MAKEIMPLIB)))
+endif
+ifneq ($(CINTLIBIMPORT),$(CINTLIBIMPORTINSODIR))
+# Windows automatically creates the import lib next to the DLL; move it to lib/
+	[ -f $(CINTLIBIMPORTINSODIR) ] \
+	  && mv -f $(CINTLIBIMPORTINSODIR) $(CINTLIBIMPORT) \
+	  || true
 endif
 
 ############################################################################
@@ -142,7 +152,7 @@ $(IOSENUMH): $(ORDER_) $(CINTTMP) $(G__CFG_COREVERSION)/include/stdio.h $(MAKECI
 		( cd $(G__CFG_COREVERSION)/include;$(G__CFG_RM) stdfunc$(G__CFG_SOEXT) ) && \
 		unset VS_UNICODE_OUTPUT && \
 		cd $(G__CFG_COREVERSION) && \
-		  (LD_LIBRARY_PATH=$${LD_LIBRARY_PATH}:../lib DYLD_LIBRARY_PATH=../lib:.:$$DYLD_LIBRARY_PATH ../$(CINTTMP) $(G__CFG_INCP)inc include/iosenum.cxx ) && \
+		  (PATH=../lib:$${PATH} LD_LIBRARY_PATH=$${LD_LIBRARY_PATH}:../lib DYLD_LIBRARY_PATH=../lib:.:$$DYLD_LIBRARY_PATH ../$(CINTTMP) $(G__CFG_INCP)inc include/iosenum.cxx ) && \
 		  mv -f iosenum.h include/iosenum.h); \
 	fi)
 
@@ -159,7 +169,7 @@ $(LOADFILETMPCXX): $(LOADFILECXX)
 $(PRAGMATMPO) $(LOADFILETMPO): CXXFLAGS += -DG__BUILDING_CINTTMP
 
 $(APIDICTCXX): $(APIDICTHDRS) $(ORDER_) $(CINTTMP) $(IOSENUMH)
-	cd $(G__CFG_COREVERSION)/src/dict && LD_LIBRARY_PATH=../../../lib:$$LD_LIBRARY_PATH DYLD_LIBRARY_PATH=../lib:.:$$DYLD_LIBRARY_PATH\
+	cd $(G__CFG_COREVERSION)/src/dict && PATH=../../../lib:$$PATH LD_LIBRARY_PATH=../../../lib:$$LD_LIBRARY_PATH DYLD_LIBRARY_PATH=../lib:.:$$DYLD_LIBRARY_PATH\
 	  ../../../$(CINTTMP) -n$(notdir $@) -NG__API -Z0 -D__MAKECINT__ \
 	  -c-1 -I../../inc -I../../../reflex/inc -I.. Api.h
 

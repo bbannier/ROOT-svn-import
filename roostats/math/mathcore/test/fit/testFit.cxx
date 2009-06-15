@@ -241,6 +241,7 @@ int testHisto1DFit() {
    ROOT::Fit::BinData dger; 
    // not needed since they are used by default
    //dger.Opt().fCoordErrors = true;  // use coordinate errors
+   dger.Opt().fUseEmpty = true;  // this will set error 1 for the empty bins
    ROOT::Fit::FillData(dger,&gr);
 
    f.SetParameters(p);   
@@ -255,7 +256,11 @@ int testHisto1DFit() {
 
    // compare with TGraphErrors::Fit
    std::cout << "\n******************************\n\t TGraphErrors::Fit Result \n" << std::endl; 
-   func->SetParameters(p);   
+   func->SetParameters(p); 
+   // set error = 1 for empty bins
+   for (int ip = 0; ip < gr.GetN(); ++ip) 
+      if (gr.GetErrorY(ip) <= 0) gr.SetPointError(ip, gr.GetErrorX(ip), 1.);
+
    gr.Fit(func); 
    std::cout << "Ndf of TGraphErrors::Fit  = " << func->GetNDF() << std::endl;
    iret |= compareResult(func->GetChisquare(),fitter.Result().Chi2(),"TGraphErrors::Fit ",0.001);
@@ -496,7 +501,7 @@ int testHisto2DFit() {
 
 
    std::string fname("pol2");
-   TF2 * func = new TF2("f2d",ROOT::Math::ParamFunctor(GradFunc2D() ), -5.,5.,-5,5,5);
+   TF2 * func = new TF2("f2d",ROOT::Math::ParamFunctor(GradFunc2D() ), 0.,10.,0,10,5);
    double p0[5] = { 1.,2.,0.5,1.,3. }; 
    func->SetParameters(p0);
    assert(func->GetNpar() == 5); 
@@ -506,7 +511,7 @@ int testHisto2DFit() {
    int iret = 0;
 
    // fill an histogram 
-   TH2D * h2 = new TH2D("h2d","h2d",30,-5.,5.,30,-5.,5.);
+   TH2D * h2 = new TH2D("h2d","h2d",30,0,10.,30,0.,10.);
 //      h1->FillRandom(fname.c_str(),100);
    for (int i = 0; i <10000; ++i) {
       double x,y = 0;
@@ -554,11 +559,41 @@ int testHisto2DFit() {
    }
    iret |= compareResult(fitter.Result().Chi2(), chi2ref,"2D histogram chi2 fit");
 
+   // test Poisson bin likelihood fit (no gradient)
+   std::cout <<"\ntest result without gradient and binned likelihood" << std::endl;
+   f.SetParameters(p); 
+   fitter.SetFunction(static_cast<const ROOT::Math::IParamMultiFunction &>(f) ); 
+   fitter.Config().ParSettings(0).SetLimits(0,100);
+   fitter.Config().ParSettings(1).SetLimits(0,100);
+   fitter.Config().ParSettings(2).SetLimits(0,100);
+   fitter.Config().ParSettings(3).SetLimits(0,100);
+   fitter.Config().ParSettings(4).SetLowerLimit(0);
+   //fitter.Config().MinimizerOptions().SetPrintLevel(3);
+   ret = fitter.LikelihoodFit(d);
+   if (ret)  
+      fitter.Result().Print(std::cout); 
+   else {
+      std::cout << "Poisson 2D Bin Likelihood  Fit Failed " << std::endl;
+      return -1; 
+   }
+
    // test binned likelihood gradient
    std::cout <<"\ntest result using gradient and binned likelihood" << std::endl;
    f.SetParameters(p); 
-   ret = fitter.LikelihoodFit(d, f);
-   if (ret)  
+   fitter.SetFunction(f);
+   //fitter.Config().MinimizerOptions().SetPrintLevel(3);
+   fitter.Config().ParSettings(0).SetLimits(0,100);
+   fitter.Config().ParSettings(1).SetLimits(0,100);
+   fitter.Config().ParSettings(2).SetLimits(0,100);
+   fitter.Config().ParSettings(3).SetLimits(0,100);
+   fitter.Config().ParSettings(4).SetLowerLimit(0);
+   ret = fitter.LikelihoodFit(d);
+   if (ret)  {
+      // redo fit releasing the parameters   
+      f.SetParameters(&(fitter.Result().Parameters().front()) );
+      ret = fitter.LikelihoodFit(d,f);
+   }
+   if (ret)   
       fitter.Result().Print(std::cout); 
    else {
       std::cout << "Gradient Bin Likelihood  Fit Failed " << std::endl;

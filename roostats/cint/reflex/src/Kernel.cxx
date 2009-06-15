@@ -32,133 +32,131 @@
 #include "Class.h"
 #include <typeinfo>
 
+namespace {
+   // Helper to factor out common code
+   class FundamentalDeclarator {
+   public:
+      FundamentalDeclarator(const char* name, size_t size, const std::type_info& ti,
+                            Reflex::REPRESTYPE repres) {
+         Reflex::TypeBase* tb = new Reflex::TypeBase(name, size, Reflex::FUNDAMENTAL,
+                                                     ti, Reflex::Type(), repres);
+         tb->Properties().AddProperty( "Description", "fundamental type" );
+         fType = tb->ThisType();
+      }
+
+      FundamentalDeclarator& Typedef(const char* name) {
+         new Reflex::Typedef(name, fType, Reflex::FUNDAMENTAL, fType);
+         return *this;
+      }
+   private:
+      Reflex::Type fType;
+   };
+
+   // sizeof(void) doesn't work; we want it to return 0.
+   // This template with the specialization does just that.
+   template <typename T>
+   struct GetSizeOf {
+      size_t operator()() const { return sizeof(T); }
+   };
+   template <>
+   struct GetSizeOf<void> {
+      size_t operator()() const { return 0; }
+   };
+
+   // Helper function constructing the declarator
+   template <typename T>
+   FundamentalDeclarator DeclFundamental(const char* name, Reflex::REPRESTYPE repres) {
+      return FundamentalDeclarator(name, GetSizeOf<T>()(), typeid(T), repres);
+   }
+
+   Reflex::Instance instantiate;
+
+}
+
+//-------------------------------------------------------------------------------
+Reflex::Instance* Reflex::Instance::fgSingleton = 0;
+//-------------------------------------------------------------------------------
+
+//-------------------------------------------------------------------------------
+Reflex::Instance& Reflex::Instance::CreateReflexInstance() {
+//-------------------------------------------------------------------------------
+// Initialize the singleton.
+
+   static Reflex::Instance instance((Reflex::Instance*)0);
+   return instance;
+}
 
 //-------------------------------------------------------------------------------
 Reflex::Instance::Instance() {
 //-------------------------------------------------------------------------------
+// Ensure that Reflex is properly initialized.
+   CreateReflexInstance();
+}
+
+//-------------------------------------------------------------------------------
+Reflex::Instance::Instance(Instance*) {
+//-------------------------------------------------------------------------------
 // Initialisation of Reflex.Setup of global scope, fundamental types.
 
-   static bool initialized = false;
-
-   if (initialized) {
-      return;
-   }
-
-   initialized = true;
+   fgSingleton = this;
 
    /** initialisation of the global namespace */
    Namespace::GlobalScope();
 
    // initialising fundamental types
-   Fundamental * tb = 0;
-   Type t = Type();
- 
    // char [3.9.1.1]
-   tb = new Fundamental( "char", 
-                         sizeof( char ), 
-                         typeid( char ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   DeclFundamental<char>("char", REPRES_CHAR);
 
    // signed integer types [3.9.1.2]
-   tb = new Fundamental( "signed char", 
-                         sizeof( signed char ), 
-                         typeid( signed char ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   DeclFundamental<signed char>("signed char", REPRES_SIGNED_CHAR);
 
-   tb = new Fundamental( "short int", 
-                         sizeof( short int ), 
-                         typeid( short int ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
-   t = tb->ThisType();
-   new Typedef( "short", t, FUNDAMENTAL, t );
-   new Typedef( "signed short", t, FUNDAMENTAL, t );
-   new Typedef( "short signed", t, FUNDAMENTAL, t );
-   new Typedef( "signed short int", t, FUNDAMENTAL, t );
-   new Typedef( "short signed int", t, FUNDAMENTAL, t );
+   DeclFundamental<short int>("short int", REPRES_SHORT_INT)
+      .Typedef("short")
+      .Typedef("signed short")
+      .Typedef("short signed")
+      .Typedef("signed short int")
+      .Typedef("short signed int");
 
-   tb = new Fundamental( "int", 
-                         sizeof( int ), 
-                         typeid( int ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
-   t = tb->ThisType();
-   new Typedef( "signed", t, FUNDAMENTAL, t );
-   new Typedef( "signed int", t, FUNDAMENTAL, t );
+   DeclFundamental<int>("int", REPRES_INT)
+      .Typedef("signed")
+      .Typedef("signed int");
 
-   tb = new Fundamental( "long int", 
-                         sizeof( long int ), 
-                         typeid( long int ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
-   t = tb->ThisType();
-   new Typedef( "long", t, FUNDAMENTAL, t );
-   new Typedef( "signed long", t, FUNDAMENTAL, t );
-   new Typedef( "long signed", t, FUNDAMENTAL, t );
-   new Typedef( "signed long int", t, FUNDAMENTAL, t );
-   new Typedef( "long signed int", t, FUNDAMENTAL, t );
+   DeclFundamental<long int>("long int", REPRES_LONG_INT)
+      .Typedef("long")
+      .Typedef("signed long")
+      .Typedef("long signed")
+      .Typedef("signed long int")
+      .Typedef("long signed int");
 
    // unsigned integer types [3.9.1.3]
-   tb = new Fundamental( "unsigned char", 
-                         sizeof( unsigned char ), 
-                         typeid( unsigned char ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   DeclFundamental<unsigned char>("unsigned char", REPRES_UNSIGNED_CHAR);
 
-   tb = new Fundamental( "unsigned short int", 
-                         sizeof( unsigned short int ), 
-                         typeid( unsigned short int ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
-   t = tb->ThisType();
-   new Typedef( "unsigned short", t, FUNDAMENTAL, t );
-   new Typedef( "short unsigned int", t, FUNDAMENTAL, t );
+   DeclFundamental<unsigned short int>("unsigned short int", REPRES_UNSIGNED_SHORT_INT)
+      .Typedef("unsigned short")
+      .Typedef("short unsigned int");
 
-   tb = new Fundamental( "unsigned int", 
-                         sizeof( unsigned int ), 
-                         typeid( unsigned int ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
-   t = tb->ThisType();
-   new Typedef( "unsigned", t, FUNDAMENTAL, t );
+   DeclFundamental<unsigned int>("unsigned int", REPRES_UNSIGNED_INT)
+      .Typedef("unsigned");
 
-   tb = new Fundamental( "unsigned long int", 
-                         sizeof( unsigned long int ), 
-                         typeid( unsigned long int ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
-   t = tb->ThisType();
-   new Typedef( "unsigned long", t, FUNDAMENTAL, t );
-   new Typedef( "long unsigned", t, FUNDAMENTAL, t );
-   new Typedef( "long unsigned int", t, FUNDAMENTAL, t );
+   DeclFundamental<unsigned long int>("unsigned long int", REPRES_UNSIGNED_LONG_INT)
+      .Typedef("unsigned long")
+      .Typedef("long unsigned")
+      .Typedef("long unsigned int");
 
-   /*/ w_chart [3.9.1.5]
-     tb = new Fundamental( "w_chart", 
-     sizeof( w_chart ), 
-     & typeid( w_chart ));
-     tb->Properties().AddProperty( "Description", "fundamental type" );
+   /* w_chart [3.9.1.5]
+      DeclFundamental<w_chart>("w_chart", REPRES_WCHART);
    */
 
    // bool [3.9.1.6]
-   tb = new Fundamental( "bool", 
-                         sizeof( bool ), 
-                         typeid( bool ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   DeclFundamental<bool>("bool", REPRES_BOOL);
 
    // floating point types [3.9.1.8]
-   tb = new Fundamental( "float", 
-                         sizeof( float ), 
-                         typeid( float ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
-
-   tb = new Fundamental( "double", 
-                         sizeof( double ), 
-                         typeid( double ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
-
-   tb = new Fundamental( "long double", 
-                         sizeof( long double ), 
-                         typeid( long double ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   DeclFundamental<float>("float", REPRES_FLOAT);
+   DeclFundamental<double>("double", REPRES_DOUBLE);
+   DeclFundamental<long double>("long double", REPRES_LONG_DOUBLE);
 
    // void [3.9.1.9]
-   tb = new Fundamental( "void", 
-                         0, 
-                         typeid( void ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
+   DeclFundamental<void>("void", REPRES_VOID);
 
       // Large integer definition depends of the platform
 #if defined(_WIN32) && !defined(__CINT__)
@@ -170,21 +168,13 @@ Reflex::Instance::Instance() {
 #endif
 
    // non fundamental types but also supported at initialisation
-   tb = new Fundamental( "long long", 
-                         sizeof( longlong ), 
-                         typeid( longlong ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
-   t = tb->ThisType();
-   new Typedef( "long long int", t, FUNDAMENTAL, t );
+   DeclFundamental<longlong>("long long", REPRES_LONGLONG)
+      .Typedef("long long int");
 
-   tb = new Fundamental( "unsigned long long", 
-                         sizeof( ulonglong ), 
-                         typeid( ulonglong ));
-   tb->Properties().AddProperty( "Description", "fundamental type" );
-   t = tb->ThisType();
-   new Typedef( "long long unsigned", t, FUNDAMENTAL, t );
-   new Typedef( "unsigned long long int", t, FUNDAMENTAL, t );
-   new Typedef( "long long unsigned int", t, FUNDAMENTAL, t );
+   DeclFundamental<ulonglong>("unsigned long long", REPRES_ULONGLONG)
+      .Typedef("long long unsigned")
+      .Typedef("unsigned long long int")
+      .Typedef("long long unsigned int");
 
 }
 
@@ -192,7 +182,8 @@ Reflex::Instance::Instance() {
 //-------------------------------------------------------------------------------
 void Reflex::Instance::Shutdown() {
 //-------------------------------------------------------------------------------
-   // function to be called at tear down of Reflex, removes all memory allocations
+// Function to be called at tear down of Reflex, removes all memory allocations.
+
    MemberTemplateName::CleanUp();
    TypeTemplateName::CleanUp();
    TypeName::CleanUp();
@@ -204,10 +195,11 @@ void Reflex::Instance::Shutdown() {
 
 Reflex::Instance::~Instance() {
 //-------------------------------------------------------------------------------
-   // Destructor
+// Destructor.  This will shutdown Reflex only if this instance is the 'main'
+// instance.
 
-   // Uncomment this once Unload work:
-   // Shutdown;
+   if (fgSingleton == this)
+      Shutdown();
 }
 
 
@@ -356,13 +348,6 @@ const std::string & Reflex::Argv0() {
    static std::string str = "REFLEX";
    return str;
 }
-
-
-//-------------------------------------------------------------------------------
-namespace {
-   Reflex::Instance initialise;
-}
-//-------------------------------------------------------------------------------
 
 
 

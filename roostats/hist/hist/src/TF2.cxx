@@ -179,7 +179,7 @@ TF2::TF2(const char *name, ROOT::Math::ParamFunctor f, Double_t xmin, Double_t x
 }
 
 //______________________________________________________________________________
-TF2::TF2(const char *name, void * ptr, Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Int_t npar, char *className)
+TF2::TF2(const char *name, void * ptr, Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Int_t npar, const char *className)
       : TF1(name, ptr, xmin, xmax, npar,className)
 {
 //*-*-*-*-*-*-*F2 constructor used by CINT for interpreted function objects
@@ -404,7 +404,7 @@ void TF2::GetMinimumXY(Double_t &x, Double_t &y)
 // Method:
 //   First, a grid search is performed to find the initial estimate of the 
 //   minimum location. The range of the function is divided into fNpx and fNpy
-//   sub-ranges. If the function is "good"(or "bad"), these values can be changed
+//   sub-ranges. If the function is "good" (or "bad"), these values can be changed
 //   by SetNpx and SetNpy functions
 //   Then, Minuit minimization is used with starting values found by the grid search
 

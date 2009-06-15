@@ -22,6 +22,7 @@
 #include "TEnv.h"
 #include "TGlobal.h"
 #include "THtml.h"
+#include "TInterpreter.h"
 #include "TMethod.h"
 #include "TROOT.h"
 #include "TSystem.h"
@@ -132,9 +133,9 @@ std::set<std::string>  TDocParser::fgKeywords;
 TDocParser::TDocParser(TClassDocOutput& docOutput, TClass* cl):
    fHtml(docOutput.GetHtml()), fDocOutput(&docOutput), fLineNo(0),
    fCurrentClass(cl), fRecentClass(0), fCurrentModule(0),
-   fDirectiveCount(0), fDocContext(kIgnore), 
+   fDirectiveCount(0), fLineNumber(0), fDocContext(kIgnore), 
    fCheckForMethod(kFALSE), fClassDocState(kClassDoc_Uninitialized), 
-   fCommentAtBOL(kFALSE)
+   fCommentAtBOL(kFALSE), fAllowDirectives(kTRUE)
 {
    // Constructor called for parsing class sources
 
@@ -167,9 +168,10 @@ TDocParser::TDocParser(TClassDocOutput& docOutput, TClass* cl):
 //______________________________________________________________________________
 TDocParser::TDocParser(TDocOutput& docOutput):
    fHtml(docOutput.GetHtml()), fDocOutput(&docOutput), fLineNo(0),
-   fCurrentClass(0), fRecentClass(0), fDirectiveCount(0), fDocContext(kIgnore), 
+   fCurrentClass(0), fRecentClass(0), fDirectiveCount(0),
+   fLineNumber(0), fDocContext(kIgnore), 
    fCheckForMethod(kFALSE), fClassDocState(kClassDoc_Uninitialized),
-   fCommentAtBOL(kFALSE)
+   fCommentAtBOL(kFALSE), fAllowDirectives(kFALSE)
 {
    // constructor called for parsing text files with Convert()
    InitKeywords();
@@ -308,8 +310,29 @@ void TDocParser::AddClassDataMembersRecursively(TBaseClass* bc) {
 
       const Int_t flagEnumConst = G__BIT_ISENUM | G__BIT_ISCONSTANT | G__BIT_ISSTATIC;
       if ((dm->Property() & flagEnumConst) == flagEnumConst
-         && dm->GetDataType() && dm->GetDataType()->GetType() == kInt_t)
-         mtype += 3;
+          && dm->GetDataType() && dm->GetDataType()->GetType() == kInt_t) {
+         mtype = 3;
+         // The access of the enum constant is defined by the access of the enum:
+         // for CINT, all enum constants are public.
+         // There is no TClass or TDataType for enum types; instead, use CINT:
+         /*
+           No - CINT does not know their access restriction.
+           With CINT5 we have no way of determining it...
+           Wait for CINT57
+
+         ClassInfo_t* enumCI = gInterpreter->ClassInfo_Factory(dm->GetTypeName());
+         if (enumCI) {
+            Long_t prop = gInterpreter->ClassInfo_Property(enumCI);
+            if (kIsPrivate & prop)
+               mtype = 3;
+            else if (kIsProtected & prop)
+               mtype = 4;
+            else if (kIsPublic & prop)
+               mtype = 5;
+            gInterpreter->ClassInfo_Delete(enumCI);
+         }
+         */
+      }
 
       fDataMembers[mtype].Add(dm);
    }
@@ -351,16 +374,18 @@ void TDocParser::AnchorFromLine(const TString& line, TString& anchor) {
 
 //______________________________________________________________________________
 void TDocParser::Convert(std::ostream& out, std::istream& in, const char* relpath,
-                         Bool_t isCode)
+                         Bool_t isCode, Bool_t interpretDirectives)
 {
    // Parse text file "in", add links etc, and write output to "out".
    // If "isCode", "in" is assumed to be C++ code.
+   fLineNumber = 0;
    fParseContext.clear();
    if (isCode) fParseContext.push_back(kCode);
    else        fParseContext.push_back(kComment); // so we can find "BEGIN_HTML"/"END_HTML" in plain text
 
    while (!in.eof()) {
       fLineRaw.ReadLine(in, kFALSE);
+      ++fLineNumber;
       if (in.eof())
          break;
 
@@ -373,12 +398,25 @@ void TDocParser::Convert(std::ostream& out, std::istream& in, const char* relpat
       DecorateKeywords(fLineSource);
       ProcessComment();
 
-      if (fLineComment.Length() || InContext(kDirective)) {
-         GetDocOutput()->AdjustSourcePath(fLineComment, relpath);
-         out << fLineComment << endl;
+      // Changes in this bit of code have consequences for:
+      // * module index,
+      // * source files,
+      // * THtml::Convert() e.g. in tutorials/html/MakeTutorials.C
+      if (!interpretDirectives) {
+         // Only write the raw, uninterpreted directive code:
+         if (!InContext(kDirective)) {
+            GetDocOutput()->AdjustSourcePath(fLineSource, relpath);
+            out << fLineSource << endl;
+         }
       } else {
-         GetDocOutput()->AdjustSourcePath(fLineSource, relpath);
-         out << fLineSource << endl;
+         // Write source for source and interpreted directives if they exist.
+         if (fLineComment.Length() ) { 	 
+            GetDocOutput()->AdjustSourcePath(fLineComment, relpath); 	 
+            out << fLineComment << endl; 	 
+         } else if (!InContext(kDirective)) {
+            GetDocOutput()->AdjustSourcePath(fLineSource, relpath);
+            out << fLineSource << endl;
+         }
       }
    }
 }
@@ -1286,6 +1324,9 @@ TMethod* TDocParser::LocateMethodInCurrentLine(Ssiz_t &posMethodName, TString& r
       name.Remove(0);
       TMethod * meth = 0;
       Ssiz_t posBlock = fLineRaw.Index('{');
+      Ssiz_t posQuote = fLineRaw.Index('"');
+      if (posQuote != kNPOS && (posBlock == kNPOS || posQuote < posBlock))
+         posBlock = posQuote;
       if (posBlock == kNPOS) 
          posBlock = fLineRaw.Length();
       for (MethodCount_t::iterator iMethodName = fMethodCounts.begin();
@@ -1402,6 +1443,7 @@ TMethod* TDocParser::LocateMethodInCurrentLine(Ssiz_t &posMethodName, TString& r
             if (srcOut)
                srcOut << "<a name=\"" << anchor << "\"></a>";
          }
+         ++fLineNumber;
          if (srcOut)
             WriteSourceLine(srcOut);
 
@@ -1560,9 +1602,10 @@ void TDocParser::LocateMethods(std::ostream& out, const char* filename,
 
    std::ofstream srcHtmlOut;
    TString srcHtmlOutName;
-   if (sourceExt && sourceExt[0])
+   if (sourceExt && sourceExt[0]) {
       dynamic_cast<TClassDocOutput*>(fDocOutput)->CreateSourceOutputStream(srcHtmlOut, sourceExt, srcHtmlOutName);
-   else {
+      fLineNumber = 0;
+   } else {
       sourceExt = 0;
       srcHtmlOutName = fCurrentClass->GetName();
       fDocOutput->NameSpace2FileName(srcHtmlOutName);
@@ -1645,6 +1688,15 @@ void TDocParser::LocateMethods(std::ostream& out, const char* filename,
          if (!wroteMethodNowWaitingForOpenBlock) {
             // check for method
             Ssiz_t posPattern = pattern.Length() ? fLineRaw.Index(pattern) : kNPOS;
+            if (posPattern != kNPOS && pattern.Length()) {
+               // no strings, no blocks in front of function declarations / implementations
+               static const char vetoChars[] = "{\"";
+               for (int ich = 0; posPattern != kNPOS && vetoChars[ich]; ++ich) {
+                  Ssiz_t posVeto = fLineRaw.Index(vetoChars[ich]);
+                  if (posVeto != kNPOS && posVeto < posPattern)
+                     posPattern = kNPOS;
+               }
+            }
             if (posPattern != kNPOS || !pattern.Length()) {
                posPattern += pattern.Length();
                LocateMethodInCurrentLine(posPattern, methodRet, methodName, 
@@ -1705,6 +1757,7 @@ void TDocParser::LocateMethods(std::ostream& out, const char* filename,
 
 
       // write to .cxx.html
+      ++fLineNumber;
       if (srcHtmlOut)
          WriteSourceLine(srcHtmlOut);
       else if (needAnchor)
@@ -1722,6 +1775,11 @@ void TDocParser::LocateMethods(std::ostream& out, const char* filename,
       WriteClassDoc(out);
 
    srcHtmlOut << "</pre>" << std::endl;
+
+   fDocOutput->WriteLineNumbers(srcHtmlOut, fLineNumber, gSystem->BaseName(fCurrentFile));
+
+   srcHtmlOut << "</div>" << std::endl;
+
    fDocOutput->WriteHtmlFooter(srcHtmlOut, "../");
 
    fParseContext.clear();
@@ -1751,7 +1809,6 @@ void TDocParser::LocateMethodsInSource(std::ostream& out)
    if (fHtml->GetImplFileName(fCurrentClass, kTRUE, implFileName))
       LocateMethods(out, implFileName, kFALSE /*source info*/, useDocxxStyle, 
                     kFALSE /*allowPureVirtual*/, pattern, ".cxx.html");
-   else out << "</div>" << endl; // close class descr div
 }
 
 //______________________________________________________________________________
@@ -2029,4 +2086,5 @@ void TDocParser::WriteSourceLine(std::ostream& out)
 
    fDocOutput->AdjustSourcePath(fLineSource);
    out << fLineSource << std::endl;
+
 }

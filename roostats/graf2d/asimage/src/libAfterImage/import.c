@@ -1546,6 +1546,7 @@ jpeg2ASImage( const char * path, ASImageImportParams *params )
 	 * working space (which is allocated as needed by the JPEG library).
 	 */
 	struct jpeg_decompress_struct cinfo;
+	void *temp_cinfo = NULL;
 	/* We use our private extension JPEG error handler.
 	 * Note that this struct must live as long as the main JPEG parameter
 	 * struct, to avoid dangling-pointer problems.
@@ -1653,8 +1654,9 @@ jpeg2ASImage( const char * path, ASImageImportParams *params )
 		prepare_scanline( im->width, 0, &buf, False );
 
 	/* Make a one-row-high sample array that will go away when done with image */
-	buffer =(*cinfo.mem->alloc_sarray)((j_common_ptr) & cinfo, JPOOL_IMAGE,
-										cinfo.output_width * cinfo.output_components, 1);
+	temp_cinfo = &cinfo;
+	buffer = cinfo.mem->alloc_sarray((j_common_ptr) temp_cinfo, JPOOL_IMAGE,
+									cinfo.output_width * cinfo.output_components, 1);
 
 	/* Step 6: while (scan lines remain to be read) */
 	SHOW_TIME("loading initialization",started);

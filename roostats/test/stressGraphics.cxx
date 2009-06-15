@@ -93,6 +93,7 @@ void     tlatex3        ();
 void     tlatex4        ();
 void     tlatex5        ();
 void     transpad       ();
+void     statfitparam   ();
 void     tgaxis1        ();
 void     tgaxis2        ();
 void     tgaxis3        ();
@@ -102,6 +103,7 @@ void     tellipse       ();
 void     feynman        ();
 void     tgraph1        ();
 void     tgraph2        ();
+void     tgraph3        ();
 void     tmultigraph1   ();
 void     tmultigraph2   ();
 void     options2d1     ();
@@ -133,18 +135,18 @@ void     cleanup        ();
 // Global variables.
 Int_t     gVerbose;
 Int_t     gTestNum;
-Int_t     gPS1RefNb[40];
-Int_t     gPS1ErrNb[40];
-Int_t     gPDFRefNb[40];
-Int_t     gPDFErrNb[40];
-Int_t     gGIFRefNb[40];
-Int_t     gGIFErrNb[40];
-Int_t     gJPGRefNb[40];
-Int_t     gJPGErrNb[40];
-Int_t     gPNGRefNb[40];
-Int_t     gPNGErrNb[40];
-Int_t     gPS2RefNb[40];
-Int_t     gPS2ErrNb[40];
+Int_t     gPS1RefNb[50];
+Int_t     gPS1ErrNb[50];
+Int_t     gPDFRefNb[50];
+Int_t     gPDFErrNb[50];
+Int_t     gGIFRefNb[50];
+Int_t     gGIFErrNb[50];
+Int_t     gJPGRefNb[50];
+Int_t     gJPGErrNb[50];
+Int_t     gPNGRefNb[50];
+Int_t     gPNGErrNb[50];
+Int_t     gPS2RefNb[50];
+Int_t     gPS2ErrNb[50];
 Bool_t    gOptionR;
 Bool_t    gOptionK;
 TH2F     *gH2;
@@ -281,6 +283,7 @@ void stressGraphics(Int_t verbose = 0)
    tlatex4      ();
    tlatex5      ();
    transpad     ();
+   statfitparam ();
    if (!gOptionR) {
       cout << "**********************************************************************" <<endl;
       cout << "*  Starting High Level 2D Primitives - S T R E S S                   *" <<endl;
@@ -295,6 +298,7 @@ void stressGraphics(Int_t verbose = 0)
    feynman      ();
    tgraph1      ();
    tgraph2      ();
+   tgraph3      ();
    tmultigraph1 ();
    tmultigraph2 ();
    waves        ();
@@ -1131,6 +1135,65 @@ void transpad()
 
 
 //______________________________________________________________________________
+void statfitparam ()
+{
+   // Stat and fit parameters with errors.
+
+   TCanvas *C = StartTest(800,500);
+
+   C->Divide(3,2);
+   gStyle->SetOptFit(1111);  
+   gStyle->SetOptStat(111111); 
+   gStyle->SetStatW(0.43);
+   gStyle->SetStatH(0.35);
+
+   TH1 *hsf1 = new TH1F("hsf1","hsf1", 2,0.,1.);
+   TH1 *hsf2 = new TH1F("hsf2","hsf2", 2,0.,1.);
+   TH1 *hsf3 = new TH1F("hsf3","hsf3", 2,0.,1.);
+   TH1 *hsf4 = new TH1F("hsf4","hsf4", 2,0.,1.);
+   TH1 *hsf5 = new TH1F("hsf5","hsf5", 2,0.,1.);
+
+   C->cd(1);
+   hsf1->SetBinContent (1, 5.3E5); hsf1->SetBinError (1, 0.9);
+   hsf1->SetBinContent (2, 5.3E5); hsf1->SetBinError (2, 0.1);
+   hsf1->Fit("pol0","Q");
+
+   C->cd(2);
+   hsf2->SetBinContent (1, 5.0E15); hsf2->SetBinError (1, 4.9E15);
+   hsf2->SetBinContent (2, 5.0E15); hsf2->SetBinError (2, 4.9E11);
+   hsf2->Fit("pol0","Q");
+
+   C->cd(3);
+   hsf3->SetBinContent (1, 5.0E-15); hsf3->SetBinError (1, 4.9E-15);
+   hsf3->SetBinContent (2, 5.0E-15); hsf3->SetBinError (2, 4.9E-11);
+   hsf3->Fit("pol0","Q");
+
+   C->cd(4);
+   hsf4->SetBinContent (1, 5); hsf4->SetBinError (1, 3);     
+   hsf4->SetBinContent (2, 5); hsf4->SetBinError (2, 1);     
+   hsf4->Fit("pol0","Q");
+
+   C->cd(5);
+   hsf5->SetBinContent (1, 5.3); hsf5->SetBinError (1, 0.9);
+   hsf5->SetBinContent (2, 5.3); hsf5->SetBinError (2, 0.1);
+   hsf5->Fit("pol0","Q");
+
+   C->cd(6);
+   TPaveText *pt = new TPaveText(0.02,0.2,0.98,0.8,"brNDC");
+   pt->SetFillColor(18);
+   pt->SetTextAlign(12);
+   pt->AddText("This example test all the possible cases");
+   pt->AddText("handled by ThistPainter::GetBestFormat.");
+   pt->AddText("This method returns the best format to");
+   pt->AddText("paint the fit parameters errors.");
+   pt->Draw();
+
+   TestReport1(C, "Stat and fit parameters with errors");
+   DoCcode(C);
+   TestReport2();
+}
+
+//______________________________________________________________________________
 void tgaxis1()
 {
    // 1st TGaxis test.
@@ -1535,6 +1598,57 @@ void tgraph2()
    mg->Draw("AC");
 
    TestReport1(C, "TGraph 2 (Exclusion Zone)");
+   DoCcode(C);
+   TestReport2();
+}
+
+
+//______________________________________________________________________________
+void tgraph3()
+{
+   // 3rd TGraph test.
+
+   TCanvas *C = StartTest(800,400);
+
+   C->Divide(2,1);
+
+   TGraph *g1 = new TGraph();
+   g1->SetPoint(0, 1e-4, 1);
+   g1->SetPoint(1, 1e-2, 2);
+   g1->SetPoint(2, 1e-1, 3);
+   g1->SetPoint(3, 1, 4);
+   g1->SetPoint(4, 1e1, 5);
+   g1->SetPoint(5, 1e2, 5);
+   g1->SetPoint(6, 1e3, 4);
+   g1->SetPoint(7, 1e4, 3);
+   g1->SetPoint(8, 1e5, 2);
+   g1->SetPoint(9, 1e6, 1);
+   g1->SetTitle("10 blue circles should be visible");
+
+   g1->SetMarkerStyle(kFullCircle);
+   g1->SetMarkerSize(1.0);
+   g1->SetMarkerColor(kBlue);
+   g1->SetLineColor(kBlue);
+
+   C->cd(1);
+   g1->Fit("gaus","Q");       
+   g1->Draw("AP");
+   gPad->SetLogx(); 
+   
+   C->cd(2);
+   gPad->SetLogx();
+   gPad->SetLogy();
+   TGraph* g2 = new TGraph();
+   for (int i = 0; i < 10; i++) g2->SetPoint(i, i + 1, i + 1);
+   g2->SetTitle("2 log scales from 1e-2 to 1e2;x;y");
+   g2->GetXaxis()->SetLimits(1e-2, 1e2);
+   g2->GetHistogram()->SetMinimum(1e-2);
+   g2->GetHistogram()->SetMaximum(1e2);
+   g2->GetXaxis()->CenterTitle();
+   g2->GetYaxis()->CenterTitle();
+   g2->Draw("a*");
+
+   TestReport1(C, "TGraph 3 (Fitting and log scales)");
    DoCcode(C);
    TestReport2();
 }

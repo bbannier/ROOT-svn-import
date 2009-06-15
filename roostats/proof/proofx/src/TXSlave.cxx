@@ -34,6 +34,7 @@
 #include "TXSocket.h"
 #include "TXSocketHandler.h"
 #include "Varargs.h"
+#include "XProofProtocol.h"
 
 ClassImp(TXSlave)
 
@@ -137,15 +138,13 @@ void TXSlave::Init(const char *host, Int_t stype)
    url.SetProtocol(fProof->fUrl.GetProtocol());
    // Check port
    if (url.GetPort() == TUrl("a").GetPort()) {
-      // For the time being we use 'rootd' service as default.
-      // This will be changed to 'proofd' as soon as XRD will be able to
-      // accept on multiple ports
+      // We use 'rootd' service as default.
       Int_t port = gSystem->GetServiceByName("proofd");
       if (port < 0) {
          if (gDebug > 0)
             Info("Init","service 'proofd' not found by GetServiceByName"
                         ": using default IANA assigned tcp port 1093");
-         port = 1094;
+         port = 1093;
       } else {
          if (gDebug > 1)
             Info("Init","port from GetServiceByName: %d", port);
@@ -196,6 +195,11 @@ void TXSlave::Init(const char *host, Int_t stype)
    TString envlist;
    if (!fProof->GetManager() ||
         fProof->GetManager()->GetRemoteProtocol() > 1001) {
+         if (gSystem->Getenv("XrdSecPROTOCOL")) {
+            // The user forced locally a given authentication protocol:
+            // we need to do the same remotely to get the right ceredentials
+            TProof::AddEnvVar("XrdSecPROTOCOL", gSystem->Getenv("XrdSecPROTOCOL"));
+         }
          const TList *envs = TProof::GetEnvVars();
          if (envs != 0 ) {
             TIter next(envs);
@@ -497,7 +501,7 @@ void TXSlave::SetAlias(const char *alias)
    // Nothing to do if not in contact with coordinator
    if (!IsValid()) return;
 
-   ((TXSocket *)fSocket)->SendCoordinator(TXSocket::kSessionAlias, alias);
+   ((TXSocket *)fSocket)->SendCoordinator(kSessionAlias, alias);
 
    return;
 }
@@ -512,7 +516,7 @@ Int_t TXSlave::SendGroupPriority(const char *grp, Int_t priority)
    // Nothing to do if not in contact with coordinator
    if (!IsValid()) return -1;
 
-   ((TXSocket *)fSocket)->SendCoordinator(TXSocket::kGroupProperties, grp, priority);
+   ((TXSocket *)fSocket)->SendCoordinator(kGroupProperties, grp, priority);
 
    return 0;
 }

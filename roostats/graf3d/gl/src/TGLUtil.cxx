@@ -47,7 +47,7 @@
 // required.                                                            //
 //////////////////////////////////////////////////////////////////////////
 
-ClassImp(TGLVertex3)
+ClassImp(TGLVertex3);
 
 //______________________________________________________________________________
 TGLVertex3::TGLVertex3()
@@ -137,7 +137,7 @@ void TGLVertex3::Dump() const
 // minimum required.                                                    //
 //////////////////////////////////////////////////////////////////////////
 
-ClassImp(TGLVector3)
+ClassImp(TGLVector3);
 
 //______________________________________________________________________________
 TGLVector3::TGLVector3() :
@@ -182,7 +182,7 @@ TGLVector3::~TGLVector3()
 // pair.                                                                //
 //////////////////////////////////////////////////////////////////////////
 
-ClassImp(TGLLine3)
+ClassImp(TGLLine3);
 
 //______________________________________________________________________________
 TGLLine3::TGLLine3(const TGLVertex3 & start, const TGLVertex3 & end) :
@@ -239,7 +239,7 @@ void TGLLine3::Draw() const
 // Viewport (pixel base) 2D rectangle class                             //
 //////////////////////////////////////////////////////////////////////////
 
-ClassImp(TGLRect)
+ClassImp(TGLRect);
 
 //______________________________________________________________________________
 TGLRect::TGLRect() :
@@ -302,7 +302,7 @@ EOverlap TGLRect::Overlap(const TGLRect & other) const
 // required.                                                            //
 //////////////////////////////////////////////////////////////////////////
 
-ClassImp(TGLPlane)
+ClassImp(TGLPlane);
 
 //______________________________________________________________________________
 TGLPlane::TGLPlane()
@@ -358,11 +358,115 @@ TGLPlane::~TGLPlane()
 }
 
 //______________________________________________________________________________
+void TGLPlane::Normalise()
+{
+   // Normalise the plane.
+
+   Double_t mag = sqrt(fVals[0]*fVals[0] + fVals[1]*fVals[1] + fVals[2]*fVals[2]);
+
+   if (mag == 0.0 ) {
+      Error("TGLPlane::Normalise", "trying to normalise plane with zero magnitude normal");
+      return;
+   }
+   mag = 1.0 / mag;
+   fVals[0] *= mag;
+   fVals[1] *= mag;
+   fVals[2] *= mag;
+   fVals[3] *= mag;
+}
+
+//______________________________________________________________________________
 void TGLPlane::Dump() const
 {
    // Output plane equation to std::out
+
    std::cout.precision(6);
    std::cout << "Plane : " << fVals[0] << "x + " << fVals[1] << "y + " << fVals[2] << "z + " << fVals[3] << std::endl;
+}
+
+//______________________________________________________________________________
+void TGLPlane::Set(const TGLPlane & other)
+{
+   // Assign from other.
+
+   fVals[0] = other.fVals[0];
+   fVals[1] = other.fVals[1];
+   fVals[2] = other.fVals[2];
+   fVals[3] = other.fVals[3];
+}
+
+//______________________________________________________________________________
+void TGLPlane::Set(Double_t a, Double_t b, Double_t c, Double_t d)
+{
+   // Set by values.
+
+   fVals[0] = a;
+   fVals[1] = b;
+   fVals[2] = c;
+   fVals[3] = d;
+   Normalise();
+}
+
+//______________________________________________________________________________
+void TGLPlane::Set(Double_t eq[4])
+{
+   // Set by array values.
+
+   fVals[0] = eq[0];
+   fVals[1] = eq[1];
+   fVals[2] = eq[2];
+   fVals[3] = eq[3];
+   Normalise();
+}
+
+//______________________________________________________________________________
+void TGLPlane::Set(const TGLVector3 & norm, const TGLVertex3 & point)
+{
+   // Set plane from a normal vector and in-plane point pair
+
+   fVals[0] = norm[0];
+   fVals[1] = norm[1];
+   fVals[2] = norm[2];
+   fVals[3] = -(fVals[0]*point[0] + fVals[1]*point[1] + fVals[2]*point[2]);
+   Normalise();
+}
+
+//______________________________________________________________________________
+void TGLPlane::Set(const TGLVertex3 & p1, const TGLVertex3 & p2, const TGLVertex3 & p3)
+{
+   // Set plane by three points.
+
+   TGLVector3 norm = Cross(p2 - p1, p3 - p1);
+   Set(norm, p2);
+}
+
+//______________________________________________________________________________
+void TGLPlane::Negate()
+{
+   // Negate the plane.
+
+   fVals[0] = -fVals[0];
+   fVals[1] = -fVals[1];
+   fVals[2] = -fVals[2];
+   fVals[3] = -fVals[3];
+}
+
+//______________________________________________________________________________
+Double_t TGLPlane::DistanceTo(const TGLVertex3 & vertex) const
+{
+   // Distance from plane to vertex.
+
+   return (fVals[0]*vertex[0] + fVals[1]*vertex[1] + fVals[2]*vertex[2] + fVals[3]);
+}
+
+//______________________________________________________________________________
+TGLVertex3 TGLPlane::NearestOn(const TGLVertex3 & point) const
+{
+   // Return nearest point on plane.
+
+   TGLVector3 o = Norm() * (Dot(Norm(), TGLVector3(point[0], point[1], point[2])) + D() / Dot(Norm(), Norm()));
+   TGLVertex3 v = point - o;
+   return v;
 }
 
 // Some free functions for plane intersections
@@ -453,7 +557,7 @@ std::pair<Bool_t, TGLVertex3> Intersection(const TGLPlane & plane, const TGLLine
 // required.                                                            //
 //////////////////////////////////////////////////////////////////////////
 
-ClassImp(TGLMatrix)
+ClassImp(TGLMatrix);
 
 //______________________________________________________________________________
 TGLMatrix::TGLMatrix()
@@ -603,8 +707,8 @@ void TGLMatrix::Set(const TGLVertex3 & origin, const TGLVector3 & zAxis, const T
 void TGLMatrix::Set(const Double_t vals[16])
 {
    // Set matrix using the 16 Double_t 'vals' passed,
-   // ordering is maintained - i.e. should be column major
-   // as we are
+   // ordering is maintained - i.e. should be column major.
+
    for (UInt_t i=0; i < 16; i++) {
       fVals[i] = vals[i];
    }
@@ -613,12 +717,8 @@ void TGLMatrix::Set(const Double_t vals[16])
 //______________________________________________________________________________
 void TGLMatrix::SetIdentity()
 {
-   // Set matrix to identity:
-   //
-   // 1 0 0 0
-   // 0 1 0 0
-   // 0 0 1 0
-   // 0 0 0 1
+   // Set matrix to identity.
+
    fVals[0] = 1.0; fVals[4] = 0.0; fVals[8 ] = 0.0; fVals[12] = 0.0;
    fVals[1] = 0.0; fVals[5] = 1.0; fVals[9 ] = 0.0; fVals[13] = 0.0;
    fVals[2] = 0.0; fVals[6] = 0.0; fVals[10] = 1.0; fVals[14] = 0.0;
@@ -628,28 +728,16 @@ void TGLMatrix::SetIdentity()
 //______________________________________________________________________________
 void TGLMatrix::SetTranslation(Double_t x, Double_t y, Double_t z)
 {
-   // Set matrix translation components x,y,z:
-   //
-   // . . . x
-   // . . . y
-   // . . . z
-   // . . . .
-   //
-   // The other components are NOT modified
+   // Set matrix translation components x,y,z.
+
    SetTranslation(TGLVertex3(x,y,z));
 }
 
 //______________________________________________________________________________
 void TGLMatrix::SetTranslation(const TGLVertex3 & translation)
 {
-   // Set matrix translation components x,y,z:
-   //
-   // . . . translation.X()
-   // . . . translation.Y()
-   // . . . translation.Z()
-   // . . . .
-   //
-   // . = Exisiting component value - NOT modified
+   // Set matrix translation components x,y,z.
+
    fVals[12] = translation[0];
    fVals[13] = translation[1];
    fVals[14] = translation[2];
@@ -658,12 +746,7 @@ void TGLMatrix::SetTranslation(const TGLVertex3 & translation)
 //______________________________________________________________________________
 TGLVector3 TGLMatrix::GetTranslation() const
 {
-   // Return the translation component of matrix
-   //
-   // . . . X()
-   // . . . Y()
-   // . . . Z()
-   // . . . .
+   // Return the translation component of matrix.
 
    return TGLVector3(fVals[12], fVals[13], fVals[14]);
 }
@@ -671,14 +754,8 @@ TGLVector3 TGLMatrix::GetTranslation() const
 //______________________________________________________________________________
 void TGLMatrix::Translate(const TGLVector3 & vect)
 {
-   // Offset (shift) matrix translation components by 'vect'
-   //
-   // . . . . + vect.X()
-   // . . . . + vect.Y()
-   // . . . . + vect.Z()
-   // . . . .
-   //
-   // . = Exisiting component value - NOT modified
+   // Shift matrix translation components by 'vect' in parent frame.
+
    fVals[12] += vect[0];
    fVals[13] += vect[1];
    fVals[14] += vect[2];
@@ -692,6 +769,16 @@ void TGLMatrix::MoveLF(Int_t ai, Double_t amount)
 
    const Double_t *C = fVals + 4*--ai;
    fVals[12] += amount*C[0]; fVals[13] += amount*C[1]; fVals[14] += amount*C[2];
+}
+
+//______________________________________________________________________________
+void TGLMatrix::Move3LF(Double_t x, Double_t y, Double_t z)
+{
+   // Translate in local frame along all base vectors simultaneously.
+
+   fVals[12] += x*fVals[0] + y*fVals[4] + z*fVals[8];
+   fVals[13] += x*fVals[1] + y*fVals[5] + z*fVals[9];
+   fVals[14] += x*fVals[2] + y*fVals[6] + z*fVals[10];
 }
 
 //______________________________________________________________________________
@@ -986,6 +1073,260 @@ void TGLMatrix::Dump() const
 
 
 //==============================================================================
+// TGLColor
+//==============================================================================
+
+//______________________________________________________________________________
+//
+// Class encapsulating color information in preferred GL format - an
+// array of four unsigned bytes.
+// Color index is also cached for easier interfacing with the
+// traditional ROOT graphics.
+//
+
+ClassImp(TGLColor);
+
+//______________________________________________________________________________
+TGLColor::TGLColor()
+{
+   // Default constructor. Color is initialized to black.
+
+   fRGBA[0] = fRGBA[1] = fRGBA[2] = 0;
+   fRGBA[3] = 255;
+   fIndex   = -1;
+}
+
+//______________________________________________________________________________
+TGLColor::TGLColor(Int_t r, Int_t g, Int_t b, Int_t a)
+{
+   // Constructor from Int_t values.
+
+   SetColor(r, g, b, a);
+}
+
+//______________________________________________________________________________
+TGLColor::TGLColor(Float_t r, Float_t g, Float_t b, Float_t a)
+{
+   // Constructor from Float_t values.
+
+   SetColor(r, g, b, a);
+}
+
+//______________________________________________________________________________
+TGLColor::TGLColor(Color_t color_index, Char_t transparency)
+{
+   // Constructor from color-index and transparency.
+
+   SetColor(color_index, transparency);
+}
+
+//______________________________________________________________________________
+TGLColor::~TGLColor()
+{
+   // Dectructor.
+}
+
+//______________________________________________________________________________
+TGLColor& TGLColor::operator=(const TGLColor& c)
+{
+   // Assignment operator.
+
+   fRGBA[0] = c.fRGBA[0];
+   fRGBA[1] = c.fRGBA[1];
+   fRGBA[2] = c.fRGBA[2];
+   fRGBA[3] = c.fRGBA[3];
+   fIndex   = c.fIndex;
+   return *this;
+}
+
+//______________________________________________________________________________
+Color_t TGLColor::GetColorIndex() const
+{
+   // Returns color-index representing the color.
+
+   if (fIndex == -1)
+      fIndex = TColor::GetColor(fRGBA[0], fRGBA[1], fRGBA[2]);
+   return fIndex;
+}
+
+//______________________________________________________________________________
+Char_t TGLColor::GetTransparency() const
+{
+   // Returns transparecy value.
+
+   return TMath::Nint(100.0*(1.0 - fRGBA[3]/255.0));
+}
+
+//______________________________________________________________________________
+void TGLColor::SetColor(Int_t r, Int_t g, Int_t b, Int_t a)
+{
+   // Set color with Int_t values.
+
+   fRGBA[0] = r;
+   fRGBA[1] = g;
+   fRGBA[2] = b;
+   fRGBA[3] = a;
+   fIndex   = -1;
+}
+
+//______________________________________________________________________________
+void TGLColor::SetColor(Float_t r, Float_t g, Float_t b, Float_t a)
+{
+   // Set color with Float_t values.
+
+   fRGBA[0] = (UChar_t)(255*r);
+   fRGBA[1] = (UChar_t)(255*g);
+   fRGBA[2] = (UChar_t)(255*b);
+   fRGBA[3] = (UChar_t)(255*a);
+   fIndex   = -1;
+}
+
+//______________________________________________________________________________
+void TGLColor::SetColor(Color_t color_index)
+{
+   // Set color by color-index. Alpha is not changed.
+   // If color_index is not valid, color is set to magenta.
+
+   TColor* c = gROOT->GetColor(color_index);
+   if (c)
+   {
+      fRGBA[0] = (UChar_t)(255*c->GetRed());
+      fRGBA[1] = (UChar_t)(255*c->GetGreen());
+      fRGBA[2] = (UChar_t)(255*c->GetBlue());
+      fIndex   = color_index;
+   }
+   else
+   {
+      // Set to magenta.
+      fRGBA[0] = 255;
+      fRGBA[1] = 0;
+      fRGBA[2] = 255;
+      fIndex   = -1;
+   }
+}
+
+//______________________________________________________________________________
+void TGLColor::SetColor(Color_t color_index, Char_t transparency)
+{
+   // Set color by color-index and alpha from the transparency.
+   // If color_index is not valid, color is set to magenta.
+
+   UChar_t alpha = (255*(100 - transparency))/100;
+   
+   TColor* c = gROOT->GetColor(color_index);
+   if (c)
+   {
+      fRGBA[0] = (UChar_t)(255*c->GetRed());
+      fRGBA[1] = (UChar_t)(255*c->GetGreen());
+      fRGBA[2] = (UChar_t)(255*c->GetBlue());
+      fRGBA[3] = alpha;
+      fIndex   = color_index;
+   }
+   else
+   {
+      // Set to magenta.
+      fRGBA[0] = 255;
+      fRGBA[1] = 0;
+      fRGBA[2] = 255;
+      fRGBA[3] = alpha;
+      fIndex   = -1;
+      return;
+   }
+}
+
+//______________________________________________________________________________
+void TGLColor::SetTransparency(Char_t transparency)
+{
+   // Set alpha from the transparency.
+
+   fRGBA[3] = (255*(100 - transparency))/100;
+}
+
+//______________________________________________________________________________
+TString TGLColor::AsString() const
+{
+   // Return string describing the color.
+
+   return TString::Format("rgba:%02hhx/%02hhx/%02hhx/%02hhx",
+                          fRGBA[0], fRGBA[1], fRGBA[2], fRGBA[3]);
+}
+
+
+//==============================================================================
+// TGLColorSet
+//==============================================================================
+
+//______________________________________________________________________________
+//
+// Class encapsulating a set of colors used throughout standard rendering.
+//
+
+ClassImp(TGLColorSet);
+
+//______________________________________________________________________________
+TGLColorSet::TGLColorSet()
+{
+   // Constructor. Sets default for dark background.
+
+   StdDarkBackground();
+}
+
+//______________________________________________________________________________
+TGLColorSet::~TGLColorSet()
+{
+   // Destructor.
+}
+
+//______________________________________________________________________________
+TGLColorSet& TGLColorSet::operator=(const TGLColorSet& s)
+{
+   // Assignment operator.
+
+   fBackground = s.fBackground;
+   fForeground = s.fForeground;
+   fOutline    = s.fOutline;
+   fMarkup     = s.fMarkup;
+   for (Int_t i = 0; i < 5; ++i)
+      fSelection[i] = s.fSelection[i];
+   return *this;
+}
+
+//______________________________________________________________________________
+void TGLColorSet::StdDarkBackground()
+{
+   // Set defaults for dark (black) background.
+
+   fBackground .SetColor(0,   0,   0);
+   fForeground .SetColor(255, 255, 255);
+   fOutline    .SetColor(240, 255, 240);
+   fMarkup     .SetColor(200, 200, 200);
+
+   fSelection[0].SetColor(  0,   0,   0);
+   fSelection[1].SetColor(255, 220, 220);
+   fSelection[2].SetColor(255, 220, 220);
+   fSelection[3].SetColor(200, 200, 255);
+   fSelection[4].SetColor(200, 200, 255);
+}
+
+//______________________________________________________________________________
+void TGLColorSet::StdLightBackground()
+{
+   // Set defaults for light (white) background.
+
+   fBackground .SetColor(255, 255, 255);
+   fForeground .SetColor(0,   0,   0);
+   fOutline    .SetColor(0,   0,   0);
+   fMarkup     .SetColor(100, 100, 100);
+
+   fSelection[0].SetColor(0,   0,   0);
+   fSelection[1].SetColor(200, 100, 100);
+   fSelection[2].SetColor(200, 100, 100);
+   fSelection[3].SetColor(100, 100, 200);
+   fSelection[4].SetColor(100, 100, 200);
+}
+
+
+//==============================================================================
 // TGLUtil
 //==============================================================================
 
@@ -1006,10 +1347,14 @@ UInt_t TGLUtil::fgColorLockCount     = 0;
 #endif
 
 extern "C" {
-#if defined(R__AIXGCC) || (defined(__APPLE_CC__) && __APPLE_CC__ > 4000 && __APPLE_CC__ < 5341 && !defined(__INTEL_COMPILER))
-   typedef extern "C" void (*tessfuncptr_t)(...);
+#if defined(__APPLE_CC__) && __APPLE_CC__ > 4000 && __APPLE_CC__ < 5450 && !defined(__INTEL_COMPILER)
+    typedef GLvoid (*tessfuncptr_t)(...);
+#elif defined( __mips ) || defined( __linux__ ) || defined( __FreeBSD__ ) || defined( __OpenBSD__ ) || defined( __sun ) || defined (__CYGWIN__) || defined (__APPLE__)
+    typedef GLvoid (*tessfuncptr_t)();
+#elif defined ( WIN32)
+    typedef GLvoid (CALLBACK *tessfuncptr_t)( );
 #else
-   typedef void (CALLBACK *tessfuncptr_t)();
+    #error "Error - need to define type tessfuncptr_t for this platform/compiler"
 #endif
 }
 
@@ -1167,8 +1512,39 @@ UInt_t TGLUtil::UnlockColor()
 //______________________________________________________________________________
 Bool_t TGLUtil::IsColorLocked()
 {
-   //static: return true if color lockcount is greater than 0
+   // Returns true if color lockcount is greater than 0.
+
    return fgColorLockCount > 0;
+}
+
+//______________________________________________________________________________
+void TGLUtil::Color(const TGLColor& color)
+{
+   // Set color from TGLColor.
+
+   if (fgColorLockCount == 0) glColor4ubv(color.CArr());
+}
+
+//______________________________________________________________________________
+void TGLUtil::Color(const TGLColor& color, UChar_t alpha)
+{
+   // Set color from TGLColor and alpha value.
+
+   if (fgColorLockCount == 0)
+   {
+      glColor4ub(color.GetRed(), color.GetGreen(), color.GetBlue(), alpha);
+   }
+}
+
+//______________________________________________________________________________
+void TGLUtil::Color(const TGLColor& color, Float_t alpha)
+{
+   // Set color from TGLColor and alpha value.
+
+   if (fgColorLockCount == 0)
+   {
+      glColor4ub(color.GetRed(), color.GetGreen(), color.GetBlue(), (UChar_t)(255*alpha));
+   }
 }
 
 //______________________________________________________________________________
@@ -1186,7 +1562,7 @@ void TGLUtil::Color(Color_t color_index, Float_t alpha)
 }
 
 //______________________________________________________________________________
-void TGLUtil::ColorTransparency(Color_t color_index, UChar_t transparency)
+void TGLUtil::ColorTransparency(Color_t color_index, Char_t transparency)
 {
    // Set color from color_index and ROOT-style transparency (default 0).
 
@@ -1910,7 +2286,7 @@ TGLDisableGuard::~TGLDisableGuard()
    glEnable(GLenum(fCap));
 }
 
-ClassImp(TGLSelectionBuffer)
+ClassImp(TGLSelectionBuffer);
 
 //______________________________________________________________________________
 TGLSelectionBuffer::TGLSelectionBuffer()
@@ -1934,6 +2310,17 @@ void TGLSelectionBuffer::ReadColorBuffer(Int_t w, Int_t h)
    fBuffer.resize(w * h * 4);
    glPixelStorei(GL_PACK_ALIGNMENT, 1);
    glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, &fBuffer[0]);
+}
+
+//______________________________________________________________________________
+void TGLSelectionBuffer::ReadColorBuffer(Int_t x, Int_t y, Int_t w, Int_t h)
+{
+   // Read color buffer.
+   fWidth = w;
+   fHeight = h;
+   fBuffer.resize(w * h * 4);
+   glPixelStorei(GL_PACK_ALIGNMENT, 1);
+   glReadPixels(x, y, w, h, GL_RGBA, GL_UNSIGNED_BYTE, &fBuffer[0]);
 }
 
 //______________________________________________________________________________
@@ -2716,22 +3103,22 @@ namespace Rgl {
    {
       //Using front point, find, where to draw axes and which labels to use for them
       //gVirtualX->SelectWindow(gGLManager->GetVirtualXInd(fGLDevice));
-      gVirtualX->SetDrawMode(TVirtualX::kCopy);//TCanvas by default sets in kInverse
+      //gVirtualX->SetDrawMode(TVirtualX::kCopy);//TCanvas by default sets in kInverse
 
       const Int_t left  = gFramePoints[fp][0];
       const Int_t right = gFramePoints[fp][1];
       const Double_t xLeft = gPad->AbsPixeltoX(Int_t(gPad->GetXlowNDC() * gPad->GetWw()
-                                               + box[left].X()));
+                                               + box[left].X() - vp[0]));
       const Double_t yLeft = gPad->AbsPixeltoY(Int_t(vp[3] - box[left].Y()
                                                + (1 - gPad->GetHNDC() - gPad->GetYlowNDC())
                                                * gPad->GetWh() + vp[1]));
       const Double_t xMid = gPad->AbsPixeltoX(Int_t(gPad->GetXlowNDC() * gPad->GetWw()
-                                              + box[fp].X()));
+                                              + box[fp].X()  - vp[0]));
       const Double_t yMid = gPad->AbsPixeltoY(Int_t(vp[3] - box[fp].Y()
                                               + (1 - gPad->GetHNDC() - gPad->GetYlowNDC())
                                               * gPad->GetWh() + vp[1]));
       const Double_t xRight = gPad->AbsPixeltoX(Int_t(gPad->GetXlowNDC()
-                                                * gPad->GetWw() + box[right].X()));
+                                                * gPad->GetWw() + box[right].X() - vp[0]));
       const Double_t yRight = gPad->AbsPixeltoY(Int_t(vp[3] - box[right].Y()
                                                 + (1 - gPad->GetHNDC() - gPad->GetYlowNDC())
                                                 * gPad->GetWh() + vp[1]));
@@ -2768,7 +3155,7 @@ namespace Rgl {
       }
 
       const Double_t xUp = gPad->AbsPixeltoX(Int_t(gPad->GetXlowNDC() * gPad->GetWw()
-                                             + box[left + 4].X()));
+                                             + box[left + 4].X() - vp[0]));
       const Double_t yUp = gPad->AbsPixeltoY(Int_t(vp[3] - box[left + 4].Y()
                                              + (1 - gPad->GetHNDC() - gPad->GetYlowNDC())
                                              * gPad->GetWh() + vp[1]));
@@ -3175,7 +3562,7 @@ void TGLLevelPalette::EnableTexture(Int_t mode)const
    glEnable(GL_TEXTURE_1D);
 
    glGenTextures(1, &fTexture);
-
+   
    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
    glBindTexture(GL_TEXTURE_1D, fTexture);
    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -3190,8 +3577,8 @@ void TGLLevelPalette::EnableTexture(Int_t mode)const
 void TGLLevelPalette::DisableTexture()const
 {
    //Disable 1D texture
-   glDisable(GL_TEXTURE_1D);
    glDeleteTextures(1, &fTexture);
+   glDisable(GL_TEXTURE_1D);
 }
 
 //______________________________________________________________________________

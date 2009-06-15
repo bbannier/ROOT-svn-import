@@ -20,12 +20,6 @@
 #include "Reflex/Type.h"
 #include "Reflex/Member.h"
 
-#include "Reflex/Builder/TypeBuilder.h"
-#include "Reflex/Builder/NamespaceBuilder.h"
-#include "Reflex/Builder/ClassBuilder.h"
-#include "Reflex/Builder/UnionBuilder.h"
-#include "Reflex/Builder/EnumBuilder.h"
-
 #else
 namespace Reflex {
    class Type;
@@ -33,6 +27,8 @@ namespace Reflex {
    class Type_Iterator;
 } // namespace Reflex
 #endif
+
+#include "vector"
 
 /**************************************************************************
 * Note, Warning message display flag
@@ -308,9 +304,9 @@ namespace Reflex {
 * loop compile mode turned on
 *********************************************/
 #define G__ASM
-#ifndef G__ASM_DBG
-#define G__ASM_DBG
-#endif
+//#ifndef G__ASM_DBG
+//#define G__ASM_DBG
+//#endif
 
 /*********************************************
 * Old style compiled function name buffer size
@@ -748,21 +744,15 @@ struct G__Definetemplatefunc {
 *
 **************************************************************************/
 
-extern "C" {
-
-struct G__breakcontinue_list {
-   struct G__breakcontinue_list* next; // next entry in list
-   int isbreak; // is it a break or a continue
-   int idx; // index into bytecode array to patch
-};
-
-
 struct G__Charlist {
+   G__Charlist() : string(0), next(0) {}
    char *string;
    struct G__Charlist *next;
 };
 
 struct G__Callfuncmacro{
+   G__Callfuncmacro() : call_fp(0),line(-1),next(0),call_filenum(-1) {}
+   
    FILE *call_fp;
    fpos_t call_pos;
    int line;
@@ -772,16 +762,26 @@ struct G__Callfuncmacro{
 } ;
 
 struct G__Deffuncmacro {
-  char *name;
-  int hash;
-  int line;
-  FILE *def_fp;
-  fpos_t def_pos;
-  struct G__Charlist def_para;
-  struct G__Callfuncmacro callfuncmacro;
-  struct G__Deffuncmacro *next;
-  short def_filenum;
+   G__Deffuncmacro() : name(0), hash(0), line(-1), def_fp(0), next(0), def_filenum(-1) {}
+   
+   char *name;
+   int hash;
+   int line;
+   FILE *def_fp;
+   fpos_t def_pos;
+   G__Charlist def_para;
+   struct G__Callfuncmacro callfuncmacro;
+   struct G__Deffuncmacro *next;
+   short def_filenum;
 } ;
+
+extern "C" {
+
+struct G__breakcontinue_list {
+   struct G__breakcontinue_list* next; // next entry in list
+   int isbreak; // is it a break or a continue
+   int idx; // index into bytecode array to patch
+};
 
 /**************************************************************************
 * preprocessed file keystring list
@@ -839,6 +839,7 @@ struct G__filetable {
   int ispermanentsl;
   std::list<G__DLLINIT>* initsl;
   struct G__dictposition *hasonlyfunc;
+  int definedStruct; /* number of struct/class/namespace defined in this file */
   char hdrprop;
 #ifndef G__OLDIMPLEMENTATION1649
   char *str;
@@ -892,8 +893,12 @@ struct G__view {
 * comment information
 *
 **************************************************************************/
+namespace Cint { namespace Internal { extern int G__nfile; } } 
 struct G__comment_info {
-   G__comment_info() : filenum(-1) { p.com = 0; }
+   G__comment_info()  {
+      filenum = -1;
+      p.com = 0;
+   }
    union {
       char  *com;
       fpos_t pos;
@@ -1030,134 +1035,21 @@ public: // -- Member Functions.
 
 };
 
-
-#if 0
-/**************************************************************************
-* structure for ifunc (Interpleted FUNCtion) table
-*
-**************************************************************************/
-struct G__ifunc_table {
-  /* number of interpreted function */
-  int allifunc;
-
-  /* function name and hash for identification */
-  char *funcname[G__MAXIFUNC];
-  int  hash[G__MAXIFUNC];
-
-  struct G__funcentry entry[G__MAXIFUNC],*pentry[G__MAXIFUNC];
-
-  /* type of return value */
-  G__SIGNEDCHAR_T type[G__MAXIFUNC];
-  short p_tagtable[G__MAXIFUNC];
-  ::Reflex::Type p_typetable[G__MAXIFUNC];
-  G__SIGNEDCHAR_T reftype[G__MAXIFUNC];
-  short para_nu[G__MAXIFUNC];
-  G__SIGNEDCHAR_T isconst[G__MAXIFUNC];
-  G__SIGNEDCHAR_T isexplicit[G__MAXIFUNC];
-
-  /* number and type of function parameter */
-  /* G__inheritclass() depends on type of following members */
-  char para_reftype[G__MAXIFUNC][G__MAXFUNCPARA];
-  char para_type[G__MAXIFUNC][G__MAXFUNCPARA];
-  char para_isconst[G__MAXIFUNC][G__MAXFUNCPARA];
-  short para_p_tagtable[G__MAXIFUNC][G__MAXFUNCPARA];
-  ::Reflex::Type para_p_typetable[G__MAXIFUNC][G__MAXFUNCPARA];
-  char *para_name[G__MAXIFUNC][G__MAXFUNCPARA];
-  char *para_def[G__MAXIFUNC][G__MAXFUNCPARA];
-
-  /* C or C++ */
-  char iscpp[G__MAXIFUNC];
-
-  struct G__ifunc_table *next;
-  short page;
-
-  G__SIGNEDCHAR_T access[G__MAXIFUNC];  /* private, protected, public */
-  char staticalloc[G__MAXIFUNC];
-
-  int tagnum;
-  char isvirtual[G__MAXIFUNC]; /* virtual function flag */
-  char ispurevirtual[G__MAXIFUNC]; /* virtual function flag */
-
-  G__SIGNEDCHAR_T globalcomp[G__MAXIFUNC];
-
-  struct G__comment_info comment[G__MAXIFUNC];
-
-};
-#endif
-
 /**************************************************************************
 * structure for class inheritance
 *
 **************************************************************************/
 struct G__inheritance {
-  int basen;
-  short basetagnum[G__MAXBASE];
-#ifdef G__VIRTUALBASE
-  char* baseoffset[G__MAXBASE];
-#else
-  char* baseoffset[G__MAXBASE];
-#endif
-  G__SIGNEDCHAR_T baseaccess[G__MAXBASE];
-  char property[G__MAXBASE];
+   struct G__Entry {
+      G__Entry(short tag = 0, char* off = 0, G__SIGNEDCHAR_T acc = G__PUBLIC, char prop = 0):
+         basetagnum(tag), baseoffset(off), baseaccess(acc), property(prop) {}
+      short basetagnum;
+      char* baseoffset;
+      G__SIGNEDCHAR_T baseaccess;
+      char property;
+   };
+   std::vector<G__Entry> vec;
 };
-
-#if 0
-/**************************************************************************
-* structure for variable table
-*
-**************************************************************************/
-struct G__var_array {
-  /* union for variable pointer */
-  long p[G__MEMDEPTH]; /* used to be int */
-  int allvar;
-  char *varnamebuf[G__MEMDEPTH]; /* variable name */
-  int hash[G__MEMDEPTH];                    /* hash table of varname */
-  int varlabel[G__MEMDEPTH+1][G__MAXVARDIM];  /* points varpointer */
-  short paran[G__MEMDEPTH];
-  char bitfield[G__MEMDEPTH];
-#ifdef G__VARIABLEFPOS
-  int filenum[G__MEMDEPTH];
-  int linenum[G__MEMDEPTH];
-#endif
-
-  /* type information,
-     if pointer : Char,Int,Short,Long,Double,U(struct,union)
-     if value   : char,int,short,long,double,u(struct,union) */
-  G__SIGNEDCHAR_T  type[G__MEMDEPTH];
-  G__SIGNEDCHAR_T constvar[G__MEMDEPTH];
-  short p_tagtable[G__MEMDEPTH];        /* tagname if struct,union */
-  ::Reflex::Type p_typetable[G__MEMDEPTH];       /* typename if typedef */
-  short statictype[G__MEMDEPTH];
-  G__SIGNEDCHAR_T reftype[G__MEMDEPTH];
-
-  /* chain for next G__var_array */
-  struct G__var_array *next;
-
-  G__SIGNEDCHAR_T access[G__MEMDEPTH];  /* private, protected, public */
-
-#ifdef G__SHOWSTACK
-  ::Reflex::Member ifunc;
-  ::Reflex::Scope prev_local;
-  int prev_filenum;
-  short prev_line_number;
-  char* struct_offset;
-  int tagnum;
-  int exec_memberfunc;
-#endif
-#ifdef G__VAARG
-  struct G__param *libp;
-#endif
-
-#ifndef G__NEWINHERIT
-  char isinherit[G__MEMDEPTH];
-#endif
-  G__SIGNEDCHAR_T globalcomp[G__MEMDEPTH];
-
-  struct G__comment_info comment[G__MEMDEPTH];
-
-} ;
-#endif
-
 
 /**************************************************************************
 * structure struct,union tag information
@@ -1166,7 +1058,12 @@ struct G__var_array {
 
 #ifdef __cplusplus
 
+namespace Cint { namespace Internal { extern int G__global1_init; } }
+
 struct G__tagtable {
+  static int inited;
+  G__tagtable(); // Implemented in global1.cxx for now.
+
   /* tag entry information */
   char type[G__MAXSTRUCT]; /* struct,union,enum,class */
 
@@ -1174,8 +1071,7 @@ struct G__tagtable {
   int  hash[G__MAXSTRUCT];
   int  size[G__MAXSTRUCT];
   /* member information */
-  struct G__var_array *memvar[G__MAXSTRUCT];
-  // struct G__ifunc_table *memfunc[G__MAXSTRUCT]; go via Reflex if you need funcs!
+
   struct G__inheritance *baseclass[G__MAXSTRUCT];
   char* virtual_offset[G__MAXSTRUCT];
   G__SIGNEDCHAR_T globalcomp[G__MAXSTRUCT];
@@ -1192,12 +1088,11 @@ struct G__tagtable {
   char istrace[G__MAXSTRUCT];
   char isbreak[G__MAXSTRUCT];
   int  alltag;
+  int  nactives; // List of active (i.e. non disable, non autoload entries).
 
 #ifdef G__FRIEND
   struct G__friendtag *friendtag[G__MAXSTRUCT];
 #endif
-
-  struct G__comment_info comment[G__MAXSTRUCT];
 
   std::list<G__incsetup> *incsetup_memvar[G__MAXSTRUCT];
   std::list<G__incsetup> *incsetup_memfunc[G__MAXSTRUCT];
@@ -1218,34 +1113,6 @@ struct G__tagtable {
 #else
 struct G__tagtable;
 #endif
-
-/**************************************************************************
-* structure typedef information
-*
-**************************************************************************/
-/*
-struct G__typedef {
-  char type[G__MAXTYPEDEF];
-  char *name[G__MAXTYPEDEF];
-  int  hash[G__MAXTYPEDEF];
-  short  tagnum[G__MAXTYPEDEF];
-  char reftype[G__MAXTYPEDEF];
-#ifdef G__CPPLINK1
-  G__SIGNEDCHAR_T globalcomp[G__MAXTYPEDEF];
-#endif
-  int nindex[G__MAXTYPEDEF];
-  int *index[G__MAXTYPEDEF];
-  short parent_tagnum[G__MAXTYPEDEF];
-  char iscpplink[G__MAXTYPEDEF];
-  struct G__comment_info comment[G__MAXTYPEDEF];
-#ifdef G__TYPEDEFFPOS
-  int filenum[G__MAXTYPEDEF];
-  int linenum[G__MAXTYPEDEF];
-#endif
-  int alltype;
-  G__SIGNEDCHAR_T isconst[G__MAXTYPEDEF];
-};
-*/
 
 /**************************************************************************
 * tempobject list
@@ -1314,68 +1181,10 @@ public:
    // --
 }; 
 
-class BuilderHolder {
-public: // Public Interface
-   BuilderHolder() : u(0), tagtype(0) {}
-   BuilderHolder(const BuilderHolder& rhs) : tagtype(rhs.tagtype)
-   {
-      switch (tagtype) {
-         case 'a':
-         case 'c':
-         case 's': c = rhs.c; break;
-         case 'e': e = rhs.e; break;
-         case 'u': u = rhs.u; break;
-         case 'n': n = rhs.n; break;
-      }
-   }
-   ~BuilderHolder() {
-      switch (tagtype) {
-         case 'a':
-         case 'c':
-         case 's': delete c; break;
-         case 'e': delete e; break;
-         case 'u': delete u; break;
-         case 'n': delete n; break;
-      }
-   }
-   BuilderHolder& operator=(const BuilderHolder& rhs)
-   {
-      if (this != &rhs) {
-         tagtype = rhs.tagtype;
-         switch (tagtype) {
-            case 'a':
-            case 'c':
-            case 's': c = rhs.c; break;
-            case 'e': e = rhs.e; break;
-            case 'u': u = rhs.u; break;
-            case 'n': n = rhs.n; break;
-         }
-      }
-      return *this;
-   }
-   Reflex::UnionBuilder& Union() { return *u; }
-   Reflex::ClassBuilder& Class() { return *c; }
-   Reflex::EnumBuilder& Enum()  { return *e; }
-   Reflex::NamespaceBuilder& Namespace() { return *n; }
-   void Set(Reflex::UnionBuilder* b) { u = b; tagtype = 'u'; }
-   void Set(Reflex::ClassBuilder* b) { c = b; tagtype = 'c'; }
-   void Set(Reflex::EnumBuilder* b)  { e = b; tagtype = 'e'; }
-   void Set(Reflex::NamespaceBuilder* b)  { n = b; tagtype = 'n'; }
-   char Tagtype() { return tagtype; }
-private: // Private Data Members
-   union {
-      Reflex::UnionBuilder* u;
-      Reflex::ClassBuilder* c;
-      Reflex::EnumBuilder* e;
-      Reflex::NamespaceBuilder* n;
-   };
-   char tagtype;
-};
-   
 class G__RflxProperties {
 public:
    G__RflxProperties() : autoload(0), filenum(-1), linenum(-1), globalcomp(G__NOLINK), iscpplink(G__NOLINK), typenum(-1), tagnum(-1), isFromUsing(false), vtable(0), isBytecodeArena(0), statictype(0) {}
-   G__RflxProperties(const G__RflxProperties& rhs) : autoload(rhs.autoload), filenum(rhs.filenum), linenum(rhs.linenum), globalcomp(rhs.globalcomp), iscpplink(rhs.iscpplink), typenum(rhs.typenum), tagnum(rhs.tagnum), isFromUsing(rhs.isFromUsing), comment(rhs.comment), stackinfo(rhs.stackinfo), builder(rhs.builder), vtable(rhs.vtable), isBytecodeArena(rhs.isBytecodeArena), statictype(rhs.statictype) {}
+   G__RflxProperties(const G__RflxProperties& rhs) : autoload(rhs.autoload), filenum(rhs.filenum), linenum(rhs.linenum), globalcomp(rhs.globalcomp), iscpplink(rhs.iscpplink), typenum(rhs.typenum), tagnum(rhs.tagnum), isFromUsing(rhs.isFromUsing), comment(rhs.comment), stackinfo(rhs.stackinfo), vtable(rhs.vtable), isBytecodeArena(rhs.isBytecodeArena), statictype(rhs.statictype) {}
    virtual ~G__RflxProperties();
    G__RflxProperties& operator=(const G__RflxProperties& rhs)
    {
@@ -1390,7 +1199,6 @@ public:
          isFromUsing = rhs.isFromUsing;
          comment = rhs.comment;
          stackinfo = rhs.stackinfo;
-         builder = rhs.builder;
          vtable = rhs.vtable;
          isBytecodeArena = rhs.isBytecodeArena;
          statictype = rhs.statictype;
@@ -1408,7 +1216,6 @@ public:
    bool isFromUsing;
    G__comment_info comment;
    G__RflxStackProperties stackinfo;
-   BuilderHolder builder;
    void* vtable;
    bool isBytecodeArena;
    int statictype;
@@ -1416,8 +1223,8 @@ public:
 
 class G__RflxVarProperties : public G__RflxProperties {
 public:
-   G__RflxVarProperties(): G__RflxProperties(), bitfield_start(0), bitfield_width(0), addressOffset(0), lock(false) {}
-   G__RflxVarProperties(const G__RflxVarProperties& rhs): G__RflxProperties(rhs), bitfield_start(rhs.bitfield_start), bitfield_width(rhs.bitfield_width), addressOffset(rhs.addressOffset), lock(rhs.lock) {}
+   G__RflxVarProperties(): G__RflxProperties(), bitfield_start(0), bitfield_width(0), lock(false) {}
+   G__RflxVarProperties(const G__RflxVarProperties& rhs): G__RflxProperties(rhs), bitfield_start(rhs.bitfield_start), bitfield_width(rhs.bitfield_width), lock(rhs.lock) {}
    virtual ~G__RflxVarProperties();
    G__RflxVarProperties& operator=(const G__RflxVarProperties& rhs)
    {
@@ -1425,7 +1232,6 @@ public:
          this->G__RflxProperties::operator=(rhs);
          bitfield_start = rhs.bitfield_start;
          bitfield_width = rhs.bitfield_width;
-         addressOffset = rhs.addressOffset;
          lock = rhs.lock;
       }
       return *this;
@@ -1433,7 +1239,6 @@ public:
 public:
    short bitfield_start;
    short bitfield_width;
-   char* addressOffset;   // Offset to be added to the 'base' address (the object address for data member, 0 for global variable, etc.)
    bool lock;
 };
 

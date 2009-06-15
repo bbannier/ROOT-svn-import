@@ -31,7 +31,7 @@
 #endif
 
 class TGLPlotCoordinates;
-class TGLOrthoCamera;
+class TGLPlotCamera;
 class TString;
 class TColor;
 class TAxis;
@@ -66,6 +66,8 @@ public:
 
    void   TurnOnOff();
    Bool_t IsActive()const{return fActive;}
+   void   SetActive(Bool_t a);
+   
    void   SetFactor(Double_t f){fFactor = f;}
 
    void   DrawBox(Bool_t selectionPass, Int_t selected)const;
@@ -75,6 +77,22 @@ public:
 
    Bool_t IsInCut(Double_t xMin, Double_t xMax, Double_t yMin, Double_t yMax,
                   Double_t zMin, Double_t zMax)const;
+
+   template<class V>
+   Bool_t IsInCut(const V * v) const
+   {
+      //Check, if box defined by xmin/xmax etc. is in cut.
+      if (v[0] >= fXRange.first && v[0] < fXRange.second &&
+          v[1] >= fYRange.first && v[1] < fYRange.second &&
+          v[2] >= fZRange.first && v[2] < fZRange.second)
+         return kTRUE;
+      return kFALSE;
+   }
+   
+   Rgl::Range_t GetXRange()const{return fXRange;}
+   Rgl::Range_t GetYRange()const{return fYRange;}
+   Rgl::Range_t GetZRange()const{return fZRange;}
+
 private:
    void AdjustBox();
 
@@ -148,8 +166,8 @@ private:
 
 class TGLPlotPainter : public TVirtualGLPainter {
 private:
-//   Int_t                 fGLContext;
-   TGLPaintDevice       *fGLDevice;
+   //Int_t                 fGLContext;
+   //TGLPaintDevice       *fGLDevice;
    const TColor         *fPadColor;
 
 protected:
@@ -161,8 +179,9 @@ protected:
    TAxis                *fZAxis;
 
    TGLPlotCoordinates   *fCoord;
-   TGLOrthoCamera       *fCamera;
+   TGLPlotCamera        *fCamera;
    TGLSelectionBuffer    fSelection;
+   
    Bool_t                fUpdateSelection;
    Bool_t                fSelectionPass;
    Int_t                 fSelectedPart;
@@ -185,16 +204,17 @@ protected:
    mutable Bool_t        fDrawPalette;
 
 public:
-/*   TGLPlotPainter(TH1 *hist, TGLOrthoCamera *camera, TGLPlotCoordinates *coord, Int_t context,
+/*   TGLPlotPainter(TH1 *hist, TGLPlotCamera *camera, TGLPlotCoordinates *coord, Int_t context,
                   Bool_t xoySelectable, Bool_t xozSelectable, Bool_t yozSelectable);
-   TGLPlotPainter(TGLOrthoCamera *camera, Int_t context);*/
-   TGLPlotPainter(TH1 *hist, TGLOrthoCamera *camera, TGLPlotCoordinates *coord, TGLPaintDevice *dev,
+   TGLPlotPainter(TGLPlotCamera *camera, Int_t context);*/
+   TGLPlotPainter(TH1 *hist, TGLPlotCamera *camera, TGLPlotCoordinates *coord,
                   Bool_t xoySelectable, Bool_t xozSelectable, Bool_t yozSelectable);
-   TGLPlotPainter(TGLOrthoCamera *camera, TGLPaintDevice *dev);
+   TGLPlotPainter(TGLPlotCamera *camera);
 
    const TGLPlotBox& RefBackBox() const { return fBackBox; }
 
    virtual void     InitGL()const = 0;
+   virtual void     DeInitGL()const = 0;
    virtual void     DrawPlot()const = 0;
    virtual void     Paint();
 
@@ -211,9 +231,8 @@ public:
    //Function to process additional events (key presses, mouse clicks.)
    virtual void     ProcessEvent(Int_t event, Int_t px, Int_t py) = 0;
    //Used by GLpad
-   //   void             SetGLContext(Int_t context);
-   void             SetGLDevice(TGLPaintDevice *dev){fGLDevice = dev;}
    void             SetPadColor(const TColor *color);
+   
    virtual void     SetFrameColor(const TColor *frameColor);
    //Camera is external to painter, if zoom was changed, or camera
    //was rotated, selection must be invalidated.
@@ -226,11 +245,9 @@ public:
    };
 
    Bool_t           CutAxisSelected()const{return !fHighColor && fSelectedPart <= kZAxis && fSelectedPart >= kXAxis;}
-
+   
 protected:
-//   Int_t            GetGLContext()const;
    const TColor    *GetPadColor()const;
-   Bool_t           MakeGLContextCurrent()const;
    //
    void             MoveSection(Int_t px, Int_t py);
    void             DrawSections()const;
@@ -243,6 +260,16 @@ protected:
    virtual void     ClearBuffers()const;
 
    void             PrintPlot()const;
+   
+   //Attention! After one of this methods was called,
+   //the GL_MATRIX_MODE could become different from what
+   //you had before the call: for example, SaveModelviewMatrix will 
+   //change it to GL_MODELVIEW.
+   void             SaveModelviewMatrix()const;
+   void             SaveProjectionMatrix()const;
+   
+   void             RestoreModelviewMatrix()const;
+   void             RestoreProjectionMatrix()const;
    //
 
    ClassDef(TGLPlotPainter, 0) //Base for gl plots
@@ -349,8 +376,8 @@ class TGLLevelPalette;
 
 namespace Rgl {
 
-   void DrawPalette(const TGLOrthoCamera * camera, const TGLLevelPalette & palette);
-   void DrawPaletteAxis(const TGLOrthoCamera * camera, const Range_t & minMax, Bool_t logZ);
+   void DrawPalette(const TGLPlotCamera * camera, const TGLLevelPalette & palette);
+   void DrawPaletteAxis(const TGLPlotCamera * camera, const Range_t & minMax, Bool_t logZ);
 
 }
 
