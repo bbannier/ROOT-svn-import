@@ -49,6 +49,7 @@ namespace RooStats {
   private:
 
     Int_t fColor;
+    Int_t fFillStyle;
     Int_t fLineColor;
     Int_t fNdimPlot;
 

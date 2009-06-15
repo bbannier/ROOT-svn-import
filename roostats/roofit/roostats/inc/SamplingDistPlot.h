@@ -38,9 +38,9 @@ namespace RooStats {
     // Destructor of SamplingDistribution
     virtual ~SamplingDistPlot();
 
-    void AddSamplingDistribution(const SamplingDistribution *samplingDist, Option_t *drawOptions);
+    void AddSamplingDistribution(const SamplingDistribution *samplingDist, Option_t *drawOptions=0);
 
-    void Draw(const Option_t *options);
+    void Draw(const Option_t *options=0);
 
     void SetLineColor(const Color_t color, const SamplingDistribution *samplDist = 0);
     void SetLineWidth(const Width_t lwidth, const SamplingDistribution *samplDist = 0);
@@ -76,7 +76,7 @@ namespace RooStats {
 
     void SetSampleWeights(const SamplingDistribution *samplingDist);
 
-    void addObject(TObject *obj, Option_t *drawOptions);
+    void addObject(TObject *obj, Option_t *drawOptions=0);
     void GetAbsoluteInterval(Float_t &theMin, Float_t &theMax, Float_t &theYMax) const;
 
     ClassDef(SamplingDistPlot,1)  // Class containing the results of the HybridCalculator

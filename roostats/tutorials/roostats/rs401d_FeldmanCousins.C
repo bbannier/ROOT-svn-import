@@ -19,6 +19,7 @@
 #include "RooStats/ConfInterval.h"
 #include "RooStats/FeldmanCousins.h"
 #include "RooStats/ProfileLikelihoodCalculator.h"
+#include "RooStats/LikelihoodIntervalPlot.h"
 
 #include "RooDataSet.h"
 #include "RooDataHist.h"
@@ -220,7 +221,6 @@ void rs401d_FeldmanCousins(bool doFeldmanCousins=false)
     interval = fc.GetInterval();
 
 
-
   ///////////////////////////////////////////////////////////////////
   ///////// show use of ProfileLikeihoodCalculator utility in RooStats
   RooStats::ProfileLikelihoodCalculator plc;
@@ -234,23 +234,19 @@ void rs401d_FeldmanCousins(bool doFeldmanCousins=false)
 
   ////////////////////////////////////////////
   // make plot of resulting interval
+
   dataCanvas->cd(4);
+  LikelihoodIntervalPlot plotInt((LikelihoodInterval*)plcInterval);
+  plotInt.SetTitle("Parameters contour plot");
+  plotInt.Draw();
+  dataCanvas->Update();
+
+
   
   // first plot a small dot for every point tested
   RooDataHist* parameterScan = (RooDataHist*) fc.GetPointsToScan();
-  //  TH2F* hist = (TH2F*) parameterScan->createHistogram("deltaMSq:sinSq2theta",30,30);
   TH2F* hist = (TH2F*) parameterScan->createHistogram("sinSq2theta:deltaMSq",30,30);
-  cout << hist->GetXaxis()->GetXmin()<<" " << hist->GetXaxis()->GetXmax()  << endl;
-  cout << hist->GetYaxis()->GetXmin()<<" " << hist->GetYaxis()->GetXmax()  << endl;
-  hist->Draw();
-  //  ((TH2F*)(parameterScan->createHistogram("deltaMSq:sinSq2theta")))->Draw();
-  //TH2F* hist = new TH2F("tmp","",20,0.0001,1,20,10,60);
   //  hist->Draw();
-
-
-  // debugging
-  //  ProfileLikelihoodTestStat testStat(model);
-
 
   // now loop through the points and put a marker if it's in the interval
   RooArgSet* tmpPoint;
@@ -289,7 +285,7 @@ void rs401d_FeldmanCousins(bool doFeldmanCousins=false)
     delete tmpPoint;
   }
 
-
+  
   /// print timing info
   t.Stop();
   t.Print();
