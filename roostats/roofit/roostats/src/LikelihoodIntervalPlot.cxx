@@ -112,7 +112,8 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
 
     RooPlot *frame = myarg->frame();
     frame->SetTitle(GetTitle());
-    frame->GetYaxis()->SetTitle("- log likelihood");
+    frame->GetYaxis()->SetTitle("- log #lambda");
+    //    frame->GetYaxis()->SetTitle("- log profile likelihood ratio");
 
     newProfile->plotOn(frame); 
 
