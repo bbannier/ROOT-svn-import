@@ -27,8 +27,10 @@ object.
 #include <iostream>
 
 #include "TROOT.h"
+#include "TMath.h"
 #include "TLine.h"
 #include "TObjArray.h"
+#include "TList.h"
 #include "TGraph.h"
 
 #include "RooRealVar.h"
@@ -47,6 +49,7 @@ LikelihoodIntervalPlot::LikelihoodIntervalPlot()
   fNdimPlot = 0;
   fParamsPlot = 0;
   fColor = 0;
+  fFillStyle = 4050; // half transparent
   fLineColor = 0;
   fMaximum = 2.;
 }
@@ -58,8 +61,9 @@ LikelihoodIntervalPlot::LikelihoodIntervalPlot(LikelihoodInterval* theInterval)
   fInterval = theInterval;
   fParamsPlot = fInterval->GetParameters();
   fNdimPlot = fParamsPlot->getSize();
-  fColor = 2;
+  fColor = kBlue;
   fLineColor = kGreen;
+  fFillStyle = 4050; // half transparent
   fMaximum = 2.;
 }
 
@@ -101,12 +105,14 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
   TIter it = fParamsPlot->createIterator();
   RooRealVar *myparam = (RooRealVar*)it.Next();
 
-  const Double_t xcont_min = fInterval->LowerLimit(*myparam);
-  const Double_t xcont_max = fInterval->UpperLimit(*myparam);
 
-  RooAbsReal* newProfile = fInterval->GetLikelihoodRatio()->createProfile(*fParamsPlot);
+  //  RooAbsReal* newProfile = fInterval->GetLikelihoodRatio()->createProfile(*fParamsPlot);
+  RooAbsReal* newProfile = fInterval->GetLikelihoodRatio(); 
 
   if(fNdimPlot == 1){
+
+    const Double_t xcont_min = fInterval->LowerLimit(*myparam);
+    const Double_t xcont_max = fInterval->UpperLimit(*myparam);
 
     RooRealVar* myarg = (RooRealVar *) newProfile->getVariables()->find(myparam->GetName());
 
@@ -150,22 +156,41 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
 
     RooRealVar *myparamY = (RooRealVar*)it.Next();
 
-    TH2F* hist2D = (TH2F*)newProfile->createHistogram("_hist2D",*myparam,RooFit::YVar(*myparamY),RooFit::Binning(40),RooFit::Scaling(kFALSE));
+    TH2F* hist2D = (TH2F*)newProfile->createHistogram("_hist2D",*myparamY,RooFit::YVar(*myparam),RooFit::Binning(40),RooFit::Scaling(kFALSE));
+
 
     hist2D->SetTitle(GetTitle());
     hist2D->SetStats(kFALSE);
 
-    Double_t *cont_level = new Double_t(fInterval->ConfidenceLevel());
-    hist2D->SetContour(1,cont_level);
+    Double_t cont_level = TMath::ChisquareQuantile(fInterval->ConfidenceLevel(),fNdimPlot); // level for -2log LR
+    cont_level = cont_level/2; // since we are plotting -log LR
+    hist2D->SetContour(1,&cont_level);
 
-    hist2D->SetFillColor(fColor);
-    hist2D->SetLineColor(fColor);
+    hist2D->SetFillColor(fColor); 
+    hist2D->SetFillStyle(fFillStyle); 
+    hist2D->SetLineColor(fLineColor);
 
     TString tmpOpt(options);
 
     if(!tmpOpt.Contains("CONT")) tmpOpt.Append("CONT");
+    if(!tmpOpt.Contains("LIST")) tmpOpt.Append("LIST"); // if you want the contour TGraphs
 
     hist2D->Draw(tmpOpt.Data());
+    hist2D->Draw("cont2,list,same");
+
+    // get TGraphs and add them
+    gROOT->GetListOfSpecials()->Print();
+    TObjArray *contours = (TObjArray*) gROOT->GetListOfSpecials()->FindObject("contours"); 
+    if(contours){
+      TList *list = (TList*)contours->At(0); 
+      TGraph *gr1 = (TGraph*)list->First();
+      gr1->SetLineColor(kBlue);
+      gr1->SetLineStyle(kDashed);
+      gr1->Draw("same");
+    } else{
+      std::cout << "no countours found in ListOfSpecials" << std::endl;
+    }
+
     return;
   }
 
