@@ -797,7 +797,7 @@ void RooCurve::calcBandInterval(const vector<RooCurve*>& variations,Int_t i,Doub
 
   if (!approxGauss) {
     // Construct central 68% interval from variations collected at each point
-    Double_t pvalue = TMath::Erfc(Z/sqrt(2)) ;
+    Double_t pvalue = TMath::Erfc(Z/sqrt(2.)) ;
     Int_t delta = Int_t( y.size()*(pvalue)/2 + 0.5) ;
     sort(y.begin(),y.end()) ;    
     lo = y[delta] ;

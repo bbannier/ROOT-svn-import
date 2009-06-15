@@ -838,6 +838,18 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, RooCmdArg arg1, RooCmdArg arg2,
   //
   // Options to control flow of fit procedure
   // ----------------------------------------
+  //
+  // Minimizer(type,algo)           -- Choose minimization package and algorithm to use. Default is MINUIT/MIGRAD through the RooMinuit
+  //                                   interface, but others can be specified (through RooMinimizer interface)
+  //
+  //                                          Type         Algorithm
+  //                                          ------       ---------
+  //                                          Minuit       migrad, simplex, minimize (=migrad+simplex), migradimproved (=migrad+improve)
+  //                                          Minuit2      migrad, simplex, minimize, scan
+  //                                          GSLMultiMin  conjugatefr, conjugatepr, bfgs, bfgs2, steepestdescent
+  //                                          GSLSimAn     -
+  //
+  // 
   // InitialHesse(Bool_t flag)      -- Flag controls if HESSE before MIGRAD as well, off by default
   // Hesse(Bool_t flag)             -- Flag controls if HESSE is run after MIGRAD, on by default
   // Minos(Bool_t flag)             -- Flag controls if MINOS is run after HESSE, on by default
@@ -846,6 +858,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, RooCmdArg arg1, RooCmdArg arg2,
   // Strategy(Int_t flag)           -- Set Minuit strategy (0 through 2, default is 1)
   // FitOptions(const char* optStr) -- Steer fit with classic options string (for backward compatibility). Use of this option
   //                                   excludes use of any of the new style steering options.
+  //
   // SumW2Error(Bool_t flag)        -- Apply correaction to errors and covariance matrix using sum-of-weights covariance matrix
   //                                   to obtain correct error for weighted likelihood fits. If this option is activated the
   //                                   corrected covariance matrix is calculated as Vcorr = V C-1 V, where V is the original 
@@ -910,6 +923,8 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineInt("doEEWall","EvalErrorWall",0,1) ;
   pc.defineInt("doWarn","Warnings",0,1) ;
   pc.defineInt("doSumW2","SumW2Error",0,-1) ;
+  pc.defineString("mintype","Minimizer",0,"") ;
+  pc.defineString("minalg","Minimizer",1,"") ;
   pc.defineObject("minosSet","Minos",0,0) ;
   pc.defineObject("cPars","Constrain",0,0) ;
   pc.defineSet("extCons","ExternalConstraints",0,0) ;
@@ -921,6 +936,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineMutex("FitOptions","Hesse") ;
   pc.defineMutex("FitOptions","Minos") ;
   pc.defineMutex("Range","RangeWithName") ;
+  pc.defineMutex("InitialHesse","Minimizer") ;
   
   // Process and check varargs 
   pc.process(fitCmdList) ;
@@ -944,6 +960,8 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   Int_t doWarn   = pc.getInt("doWarn") ;
   Int_t doSumW2  = pc.getInt("doSumW2") ;
   const RooArgSet* minosSet = static_cast<RooArgSet*>(pc.getObject("minosSet")) ;
+  const char* minType = pc.getString("mintype","",kTRUE) ;
+  const char* minAlg = pc.getString("minalg","",kTRUE) ;
 
   // Determine if the dataset has weights  
   Bool_t weightedData = data.isNonPoissonWeighted() ;
@@ -969,11 +987,13 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
     coutW(InputArguments) << "RooAbsPdf::fitTo(" << GetName() << ") WARNING: sum-of-weights correction does not apply to MINOS errors" << endl ;
   }
     
-  RooAbsReal* nll = createNLL(data,nllCmdList) ;
+  RooAbsReal* nll = createNLL(data,nllCmdList) ;  
 
-  // Instantiate MINUIT
+  RooFitResult *ret = 0 ;    
+
+
   RooMinuit m(*nll) ;
-
+  
   m.setEvalErrorWall(doEEWall) ;
   if (doWarn==0) {
     m.setNoWarn() ;
@@ -981,23 +1001,21 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   
   m.setPrintEvalErrors(numee) ;
   if (plevel!=1) {
-    m.setPrintLevel(plevel) ;
+      m.setPrintLevel(plevel) ;
   }
-
+  
   if (optConst) {
     // Activate constant term optimization
     m.optimizeConst(1) ;
   }
-
-  RooFitResult *ret = 0 ;
-
+  
   if (fitOpt) {
-
+    
     // Play fit options as historically defined
     ret = m.fit(fitOpt) ;
     
   } else {
-
+    
     if (verbose) {
       // Activate verbose options
       m.setVerbose(1) ;
@@ -1011,22 +1029,22 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
       // Modify fit strategy
       m.setStrategy(strat) ;
     }
-
+    
     if (initHesse) {
       // Initialize errors with hesse
       m.hesse() ;
     }
-
+    
     // Minimize using migrad
     m.migrad() ;
-
+    
     if (hesse) {
       // Evaluate errors with Hesse
       m.hesse() ;
     }
-
+    
     if (doSumW2==1) {
-
+      
       // Make list of RooNLLVar components of FCN
       list<RooNLLVar*> nllComponents ;
       RooArgSet* comps = nll->getComponents() ;
@@ -1040,7 +1058,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
       }
       delete citer ;
       delete comps ;  
-
+	
       // Calculated corrected errors for weighted likelihood fits
       RooFitResult* rw = m.save() ;
       for (list<RooNLLVar*>::iterator iter1=nllComponents.begin() ; iter1!=nllComponents.end() ; iter1++) {
@@ -1052,7 +1070,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
       for (list<RooNLLVar*>::iterator iter2=nllComponents.begin() ; iter2!=nllComponents.end() ; iter2++) {
 	(*iter2)->applyWeightSquared(kFALSE) ;
       }
-
+      
       // Apply correction matrix
       const TMatrixDSym& V = rw->covarianceMatrix() ;
       TMatrixDSym  C = rw2->covarianceMatrix() ;
@@ -1064,7 +1082,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
 	coutE(Fitting) << "RooAbsPdf::fitTo(" << GetName() 
 		       << ") ERROR: Cannot apply sum-of-weights correction to covariance matrix: correction matrix calculated with weight-squared is singular" <<endl ;
       } else {
-
+	
 	// Calculate corrected covariance matrix = V C-1 V
 	TMatrixD VCV(V,TMatrixD::kMult,TMatrixD(C,TMatrixD::kMult,V)) ; 
 	
@@ -1086,15 +1104,15 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
 	    }
 	  }
 	}
-
+	
 	// Propagate corrected errors to parameters objects
 	m.applyCovarianceMatrix(VCVsym) ;
       }
-
+      
       delete rw ;
       delete rw2 ;
     }
-
+    
     if (minos) {
       // Evaluate errs with Minos
       if (minosSet) {
@@ -1103,15 +1121,16 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
 	m.minos() ;
       }
     }
-
+    
     // Optionally return fit result
     if (doSave) {
       string name = Form("fitresult_%s_%s",GetName(),data.GetName()) ;
       string title = Form("Result of fit of p.d.f. %s to dataset %s",GetName(),data.GetName()) ;
       ret = m.save(name.c_str(),title.c_str()) ;
     } 
+    
+    }
 
-  }
   
   // Cleanup
   delete nll ;
@@ -1743,7 +1762,7 @@ RooDataHist *RooAbsPdf::generateBinned(const RooArgSet &whatVars, Int_t nEvents,
     // Transfer working array to histogram
     for (int i=0 ; i<hist->numEntries() ; i++) {
       hist->get(i) ;
-      hist->set(histOut[i],sqrt(histOut[i])) ;
+      hist->set(histOut[i],sqrt(1.0*histOut[i])) ;
     }    
 
   } else if (expectedData) {

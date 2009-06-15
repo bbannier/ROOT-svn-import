@@ -542,6 +542,101 @@ void RooFitResult::printMultiline(ostream& os, Int_t /*contents*/, Bool_t verbos
 
 
 //_____________________________________________________________________________
+void RooFitResult::fillCorrMatrix(const std::vector<double>& globalCC, const TMatrixDSym& corrs, const TMatrixDSym& covs)
+{
+  // Sanity check
+  if (globalCC.empty() || corrs.GetNoElements() < 1 || covs.GetNoElements() < 1) {
+    coutI(Minimization) << "RooFitResult::fillCorrMatrix: number of floating parameters is zero, correlation matrix not filled" << endl ;
+    return ;
+  }
+
+  if (!_initPars) {
+    coutE(Minimization) << "RooFitResult::fillCorrMatrix: ERROR: list of initial parameters must be filled first" << endl ;
+    return ;
+  }
+
+  // Delete eventual prevous correlation data holders
+  if (_globalCorr) delete _globalCorr ;
+  if (_CM) delete _CM ;
+  if (_VM) delete _VM ;
+
+  _corrMatrix.Delete();
+
+  // Build holding arrays for correlation coefficients
+  _globalCorr = new RooArgList("globalCorrelations") ;
+  _CM = new TMatrixDSym(_initPars->getSize()) ;
+  _VM = new TMatrixDSym(_initPars->getSize()) ;
+
+  TIterator* vIter = _initPars->createIterator() ;
+  RooAbsArg* arg ;
+  Int_t idx(0) ;
+  while((arg=(RooAbsArg*)vIter->Next())) {
+    // Create global correlation value holder
+    TString gcName("GC[") ;
+    gcName.Append(arg->GetName()) ;
+    gcName.Append("]") ;
+    TString gcTitle(arg->GetTitle()) ;
+    gcTitle.Append(" Global Correlation") ;
+    _globalCorr->addOwned(*(new RooRealVar(gcName.Data(),gcTitle.Data(),0.))) ;
+
+    // Create array with correlation holders for this parameter
+    TString name("C[") ;
+    name.Append(arg->GetName()) ;
+    name.Append(",*]") ;
+    RooArgList* corrMatrixRow = new RooArgList(name.Data()) ;
+    _corrMatrix.Add(corrMatrixRow) ;
+    TIterator* vIter2 = _initPars->createIterator() ;
+    RooAbsArg* arg2 ;
+    while((arg2=(RooAbsArg*)vIter2->Next())) {
+
+      TString cName("C[") ;
+      cName.Append(arg->GetName()) ;
+      cName.Append(",") ;
+      cName.Append(arg2->GetName()) ;
+      cName.Append("]") ;
+      TString cTitle("Correlation between ") ;
+      cTitle.Append(arg->GetName()) ;
+      cTitle.Append(" and ") ;
+      cTitle.Append(arg2->GetName()) ;
+      corrMatrixRow->addOwned(*(new RooRealVar(cName.Data(),cTitle.Data(),0.))) ;      
+    }
+    delete vIter2 ;
+    idx++ ;
+  }
+  delete vIter ;
+
+  TIterator *gcIter = _globalCorr->createIterator() ;
+  TIterator *parIter = _finalPars->createIterator() ;
+  RooRealVar* gcVal = 0;
+  for (unsigned int i = 0; i < globalCC.size(); ++i) {
+
+    // Find the next global correlation slot to fill, skipping fixed parameters
+    gcVal = (RooRealVar*) gcIter->Next() ;
+    gcVal->setVal(globalCC[i]);
+
+    // Fill a row of the correlation matrix
+    TIterator* cIter = ((RooArgList*)_corrMatrix.At(i))->createIterator() ;
+    for (unsigned int it = 0; it < globalCC.size() ; ++it) {
+      RooRealVar* cVal = (RooRealVar*) cIter->Next() ;
+      double value = corrs(i,it);
+      cVal->setVal(value);      
+      (*_CM)(i,it) = value;
+      (*_VM)(i,it) = covs(i,it);
+    }
+    delete cIter ;
+
+  }
+
+  delete gcIter ;
+  delete parIter ;
+
+}
+
+
+
+
+
+//_____________________________________________________________________________
 void RooFitResult::fillCorrMatrix()
 {
   // Internal utility method to extract the correlation matrix and the
