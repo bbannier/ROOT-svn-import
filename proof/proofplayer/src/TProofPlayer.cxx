@@ -1637,10 +1637,9 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
                return fProof->Finalize(Form("%s:%s", fQuery->GetTitle(),
                                                      fQuery->GetName()), force);
       } else {
-         if (fProof->fProtocol < 11) {
-            PDB(kGlobal,1) Info("Finalize","Calling Merge Output");
-            MergeOutput();
-         }
+         // Make sure the all objects are in the output list
+         PDB(kGlobal,1) Info("Finalize","Calling Merge Output to finalize the output list");
+         MergeOutput();
       }
    }
 
@@ -2240,7 +2239,8 @@ Int_t TProofPlayerRemote::Incorporate(TObject *newobj, TList *outlist, Bool_t &m
    }
 
    // Special treatment for histograms in autobin mode
-   if (newobj->InheritsFrom("TH1")) {
+   Bool_t specialH = !fProof->TestBit(TProof::kIsClient) || fProof->IsLite();
+   if (specialH && newobj->InheritsFrom("TH1")) {
       if (!HandleHistogram(newobj)) {
          PDB(kOutput,1) Info("Incorporate", "histogram object '%s' added to the"
                              " appropriate list for delayed merging", newobj->GetName());
