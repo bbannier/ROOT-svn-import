@@ -180,12 +180,12 @@ public:
       return SetLimitedVariable(ivar, name, val, step, - std::numeric_limits<double>::infinity(), upper );  
    } 
    /// set upper/lower limited variable (override if minimizer supports them )
-   virtual bool SetLimitedVariable(unsigned int ivar , const std::string & name , double val , double step , double /* lower */, double /* upper */) { 
-      return SetVariable(ivar, name, val, step );  
+   virtual bool SetLimitedVariable(unsigned int /* ivar */ , const std::string & /* name */ , double /*val */ , double /* step  */, double /* lower */, double /* upper */) { 
+      return false;  
    }
    /// set fixed variable (override if minimizer supports them )
-   virtual bool SetFixedVariable(unsigned int ivar , const std::string & name , double val ) { 
-      return SetLimitedVariable(ivar, name, val, 0., val, val); 
+   virtual bool SetFixedVariable(unsigned int /* ivar */ , const std::string & /* name */ , double /* val */ ) { 
+      return false; 
    }
    /// set the value of an existing variable 
    virtual bool SetVariableValue(unsigned int , double ) { return false;  }
@@ -237,6 +237,10 @@ public:
    */ 
    virtual double CovMatrix(unsigned int i, unsigned int j) const = 0;  
 
+   ///return status of covariance matrix 
+   /// using Minuit convention {0 not calculated 1 approximated 2 made pos def , 3 accurate}
+   virtual int CovMatrixStatus() const {  return ( (fValidError) ? 3 : 1); }
+
    /**
       return correlation coefficient between variable i and j.
       If the variable is fixed or const the return value is zero
@@ -262,6 +266,11 @@ public:
       errLow = 0; errUp = 0; 
       return false; 
    }  
+
+   /**
+      perform a full calculation of the Hessian matrix for error calculation
+    */
+   virtual bool Hesse() { return false; }
 
    /**
       scan function minimum for variable i. Variable and funciton must be set before using Scan 

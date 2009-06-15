@@ -183,6 +183,8 @@ public:
    virtual void     FillRandom(const char *fname, Int_t ntimes=5000);
    virtual void     FillRandom(TH1 *h, Int_t ntimes=5000);
    virtual Int_t    FindBin(Double_t x, Double_t y=0, Double_t z=0);
+   virtual Int_t    FindFirstBinAbove(Double_t threshold=0, Int_t axis=1) const;
+   virtual Int_t    FindLastBinAbove (Double_t threshold=0, Int_t axis=1) const;
    virtual TObject *FindObject(const char *name) const;
    virtual TObject *FindObject(const TObject *obj) const;
    virtual Int_t    Fit(const char *formula ,Option_t *option="" ,Option_t *goption="", Double_t xmin=0, Double_t xmax=0); // *MENU*
@@ -275,6 +277,8 @@ public:
    virtual Double_t Interpolate(Double_t x);
    virtual Double_t Interpolate(Double_t x, Double_t y);
    virtual Double_t Interpolate(Double_t x, Double_t y, Double_t z);
+           Bool_t   IsBinOverflow(Int_t bin) const;
+           Bool_t   IsBinUnderflow(Int_t bin) const;
    virtual Double_t KolmogorovTest(const TH1 *h2, Option_t *option="") const;
    virtual void     LabelsDeflate(Option_t *axis="X");
    virtual void     LabelsInflate(Option_t *axis="X");
@@ -291,6 +295,7 @@ public:
    virtual void     Rebuild(Option_t *option="");
    virtual void     RecursiveRemove(TObject *obj);
    virtual void     Reset(Option_t *option="");
+   virtual void     ResetStats() { fTsumw = 0; }
    virtual void     SavePrimitive(ostream &out, Option_t *option = "");
    virtual void     Scale(Double_t c1=1, Option_t *option="");
    virtual void     SetAxisColor(Color_t color=1, Option_t *axis="X");

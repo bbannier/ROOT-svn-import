@@ -32,6 +32,7 @@
 #include "TContextMenu.h"
 #include "TGToolTip.h"
 #include "KeySymbols.h"
+#include "TGLAnnotation.h"
 
 //______________________________________________________________________________
 //
@@ -268,6 +269,11 @@ Bool_t TGLEventHandler::HandleCrossing(Event_t *event)
    // Handle generic Event_t type 'event' - provided to catch focus changes
    // and terminate any interaction in viewer.
 
+   // Ignore grab and ungrab events.
+   if (event->fCode != 0) {
+      return kTRUE;
+   }
+
    fGLViewer->MouseIdle(0, 0, 0);
    if (event->fType == kEnterNotify) {
       if (fGLViewer->fDragAction != TGLViewer::kDragNone) {
@@ -299,7 +305,7 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
    if (fGLViewer->IsLocked()) {
       if (gDebug>2) {
          Info("TGLEventHandler::HandleButton", "ignored - viewer is %s",
-            fGLViewer->LockName(fGLViewer->CurrentLock()));
+              fGLViewer->LockName(fGLViewer->CurrentLock()));
       }
       return kFALSE;
    }
@@ -316,20 +322,29 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
       eventSt.fY = event->fY;
       eventSt.fCode = event->fCode;
 
-      if (fGLViewer->GetPushAction() == TGLViewer::kPushCamCenter)
+      if ( fGLViewer->GetPushAction() != TGLViewer::kPushStd )
       {
-         fGLViewer->fPushAction = TGLViewer::kPushStd;
          fGLViewer->RequestSelect(event->fX, event->fY);
          if (fGLViewer->fSelRec.GetN() > 0)
          {
             TGLVector3 v(event->fX, event->fY, 0.5*fGLViewer->fSelRec.GetMinZ());
             fGLViewer->CurrentCamera().WindowToViewport(v);
             v = fGLViewer->CurrentCamera().ViewportToWorld(v);
-            fGLViewer->CurrentCamera().SetExternalCenter(kTRUE);
-            fGLViewer->CurrentCamera().SetCenterVec(v.X(), v.Y(), v.Z());
+            if (fGLViewer->GetPushAction() == TGLViewer::kPushCamCenter)
+            {
+               fGLViewer->CurrentCamera().SetExternalCenter(kTRUE);
+               fGLViewer->CurrentCamera().SetCenterVec(v.X(), v.Y(), v.Z());
+            }
+            else
+            { 
+               TGLSelectRecord& rec = fGLViewer->GetSelRec();
+               TObject* obj = rec.GetObject();
+               TGLRect& vp = fGLViewer->CurrentCamera().RefViewport();
+               new TGLAnnotation(fGLViewer, obj->GetTitle(),  eventSt.fX*1.f/vp.Width(),  1 - eventSt.fY*1.f/vp.Height(), v);
+            }
+
             fGLViewer->RequestDraw();
          }
-         fGLViewer->RefreshPadEditor(this);
          return kTRUE;
       }
 
@@ -435,7 +450,14 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
          fInPointerGrab = kFALSE;
       }
 
-      if (fGLViewer->fDragAction == TGLViewer::kDragOverlay)
+      if (fGLViewer->GetPushAction() !=  TGLViewer::kPushStd)
+      {
+         // This should be 'tool' dependant.
+         fGLViewer->fPushAction = TGLViewer::kPushStd;
+         fGLViewer->RefreshPadEditor(fGLViewer);
+         return kTRUE;
+      }
+      else if (fGLViewer->fDragAction == TGLViewer::kDragOverlay && fGLViewer->fCurrentOvlElm)
       {
          fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event);
          fGLViewer->OverlayDragFinished();
@@ -471,10 +493,13 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
       }
       fGLViewer->fDragAction = TGLViewer::kDragNone;
       if (fGLViewer->fGLDevice != -1)
+      {
          gGLManager->MarkForDirectCopy(fGLViewer->fGLDevice, kFALSE);
+      }
       if ((event->fX == eventSt.fX) &&
           (event->fY == eventSt.fY) &&
-          (eventSt.fCode == event->fCode)) {
+          (eventSt.fCode == event->fCode))
+      {
          TObject *obj = 0;
          fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY, kFALSE);
          TGLPhysicalShape *phys_shape = fGLViewer->fSelRec.GetPhysShape();
@@ -488,7 +513,8 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
          eventSt.fCode = 0;
          eventSt.fState = 0;
       }
-      if (event->fCode == kButton1 && fMouseTimer) {
+      if (event->fCode == kButton1 && fMouseTimer)
+      {
          fMouseTimer->TurnOn();
       }
    }
@@ -603,28 +629,21 @@ Bool_t TGLEventHandler::HandleKey(Event_t *event)
          case kKey_R:
          case kKey_r:
             fGLViewer->SetStyle(TGLRnrCtx::kFill);
-            if (fGLViewer->fClearColor == 0) {
-               fGLViewer->fClearColor = 1; // Black
-               fGLViewer->RefreshPadEditor(this);
-            }
+            redraw = kTRUE;
+            break;
+         case kKey_E:
+         case kKey_e:
+            fGLViewer->SwitchColorSet();
             redraw = kTRUE;
             break;
          case kKey_W:
          case kKey_w:
             fGLViewer->SetStyle(TGLRnrCtx::kWireFrame);
-            if (fGLViewer->fClearColor == 0) {
-               fGLViewer->fClearColor = 1; // Black
-               fGLViewer->RefreshPadEditor(this);
-            }
             redraw = kTRUE;
             break;
          case kKey_T:
          case kKey_t:
             fGLViewer->SetStyle(TGLRnrCtx::kOutline);
-            if (fGLViewer->fClearColor == 1) {
-               fGLViewer->fClearColor = 0; // White
-               fGLViewer->RefreshPadEditor(this);
-            }
             redraw = kTRUE;
             break;
 
@@ -860,10 +879,25 @@ void TGLEventHandler::TriggerTooltip(const char* text)
 {
    // Trigger display of tooltip.
 
+   static UInt_t screenW = 0, screenH = 0;
    fTooltipPos   = fLastGlobalPos;
    fTooltipShown = kTRUE;
    fTooltip->SetText(text);
-   fTooltip->SetPosition(fTooltipPos.fX + 16, fTooltipPos.fY - 16);
+   Int_t x = fTooltipPos.fX + 16, y = fTooltipPos.fY + 16;
+   if (screenW == 0 || screenH == 0) {
+      screenW = gClient->GetDisplayWidth();
+      screenH = gClient->GetDisplayHeight();
+   }
+   if (x + 5 + fTooltip->GetWidth() > screenW) {
+      x = screenW - fTooltip->GetWidth() - 5;
+      if (y + 5 + fTooltip->GetHeight() > screenH) {
+         y -= (25 + fTooltip->GetHeight());
+      }
+   }
+   if (y + 5 + fTooltip->GetHeight() > screenH) {
+      y = screenH - fTooltip->GetHeight() - 10;
+   }
+   fTooltip->SetPosition(x, y);
    fTooltip->Reset();
 }
 

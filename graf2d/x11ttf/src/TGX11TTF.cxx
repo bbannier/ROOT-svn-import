@@ -689,7 +689,7 @@ void TGX11TTF::DrawString(Drawable_t xwindow, GContext_t gc, Int_t x, Int_t y,
 
    // check if drawable is bitmap
    XGetGeometry(fDisplay, (Drawable)xwindow, &droot, &dx, &dy,
-	             &width, &height, &bwidth, &depth);
+                &width, &height, &bwidth, &depth);
 
    if (depth <= 1) {
       TGX11::DrawString(xwindow, gc, x, y, text, len);

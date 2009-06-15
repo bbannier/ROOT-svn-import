@@ -17,6 +17,9 @@ ifeq ($(VC_MAJOR),)
    VC_MINOR     := $(shell unset VS_UNICODE_OUTPUT ; cl.exe 2>&1 | \
                    awk '{ if (NR==1) print $$8 }' | \
                    cut -d'.' -f2)
+   VC_MICRO     := $(shell unset VS_UNICODE_OUTPUT ; cl.exe 2>&1 | \
+                   awk '{ if (NR==1) print $$8 }' | \
+                   cut -d'.' -f3)
 endif
 
 BUILDING_WITHIN_IDE = $(VS_UNICODE_OUTPUT)
@@ -72,14 +75,14 @@ endif
 NOOPT         =
 
 # Compiler:
-CXX           = cl
-CC            = cl
-CPPPREP       = cl -E -C -nologo
+CXX           = cl.exe
+CC            = cl.exe
+CPPPREP       = cl.exe -E -C -nologo
 CXXFLAGS      = -nologo -FIw32pragma.h \
-                $(BLDCXXFLAGS) $(EXTRA_CXXFLAGS)
+                $(BLDCXXFLAGS) $(EXTRA_CXXFLAGS) -D_WIN32
 CXXOUT        = -Fo
 CFLAGS        = -nologo -Ibuild/win -FIw32pragma.h -FIsehmap.h \
-                $(BLDCFLAGS) $(EXTRA_CFLAGS)
+                $(BLDCFLAGS) $(EXTRA_CFLAGS) -D_WIN32
 CINTCXXFLAGS := $(CXXFLAGS) $(CINTOPT)
 CINTCFLAGS   := $(CFLAGS) $(CINTOPT)
 
@@ -88,6 +91,11 @@ LD            = build/win/ld.sh
 LDFLAGS       = -nologo -ignore:4049,4075,4217,4221 -incremental:no \
                 $(LDOPT) $(EXTRA_LDFLAGS) 
 SOFLAGS       = -DLL
+HAVEDYNAMICBASE := $(shell unset VS_UNICODE_OUTPUT ; \
+                     $(LD) /? 2>&1 | grep DYNAMICBASE > /dev/null)
+ifneq ($(HAVEDYNAMICBASE),)
+  SOFLAGS += -DYNAMICBASE
+endif
 SOEXT         = dll
 EXEEXT        = .exe
 

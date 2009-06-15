@@ -90,6 +90,7 @@ TGVSlider::TGVSlider(const TGWindow *p, UInt_t h, UInt_t type, Int_t id,
                          kButtonPressMask | kButtonReleaseMask |
                          kPointerMotionMask, kNone, kNone);
 
+   AddInput(kStructureNotifyMask);
    // set initial values
    fPos = h/2; fVmin = 0; fVmax = h;
    fEditDisabled = kEditDisableWidth;
@@ -179,6 +180,8 @@ Bool_t TGVSlider::HandleButton(Event_t *event)
             // set absolute position
             fPos = ((fVmax - fVmin) * event->fY) / (fHeight-16) + fVmin;
          }
+         if (fPos > fVmax) fPos = fVmax;
+         if (fPos < fVmin) fPos = fVmin;
          SendMessage(fMsgWindow, MK_MSG(kC_VSLIDER, kSL_POS),
                      fWidgetId, fPos);
          fClient->ProcessLine(fCommand, MK_MSG(kC_VSLIDER, kSL_POS),
@@ -223,7 +226,15 @@ Bool_t TGVSlider::HandleMotion(Event_t *event)
    return kTRUE;
 }
 
+//______________________________________________________________________________
+Bool_t TGVSlider::HandleConfigureNotify(Event_t* event)
+{
+   // Handles resize events for this widget.
 
+   TGFrame::HandleConfigureNotify(event);
+   fClient->NeedRedraw(this);
+   return kTRUE;
+}
 
 //______________________________________________________________________________
 TGHSlider::TGHSlider(const TGWindow *p, UInt_t w, UInt_t type, Int_t id,
@@ -244,6 +255,7 @@ TGHSlider::TGHSlider(const TGWindow *p, UInt_t w, UInt_t type, Int_t id,
                          kButtonPressMask | kButtonReleaseMask |
                          kPointerMotionMask, kNone, kNone);
 
+   AddInput(kStructureNotifyMask);
    // set initial values
    fPos = w/2; fVmin = 0; fVmax = w;
    fEditDisabled = kEditDisableHeight;
@@ -325,6 +337,8 @@ Bool_t TGHSlider::HandleButton(Event_t *event)
          } else if (event->fCode == kButton2) {
             fPos = ((fVmax - fVmin) * event->fX) / (fWidth-16) + fVmin;
          }
+         if (fPos > fVmax) fPos = fVmax;
+         if (fPos < fVmin) fPos = fVmin;
          SendMessage(fMsgWindow, MK_MSG(kC_HSLIDER, kSL_POS),
                      fWidgetId, fPos);
          fClient->ProcessLine(fCommand, MK_MSG(kC_HSLIDER, kSL_POS),
@@ -371,6 +385,17 @@ Bool_t TGHSlider::HandleMotion(Event_t *event)
    }
    return kTRUE;
 }
+
+//______________________________________________________________________________
+Bool_t TGHSlider::HandleConfigureNotify(Event_t* event)
+{
+   // Handles resize events for this widget.
+
+   TGFrame::HandleConfigureNotify(event);
+   fClient->NeedRedraw(this);
+   return kTRUE;
+}
+
 
 //______________________________________________________________________________
 TString TGSlider::GetTypeString() const

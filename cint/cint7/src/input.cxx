@@ -36,8 +36,8 @@ void Cint::Internal::G__set_history_size(int s)
 }
 
 #ifdef G__GNUREADLINE
-extern "C" char *readline(char* prompt);
-extern "C" int add_history(char* str);
+extern "C" char *readline(const char* prompt);
+extern "C" int add_history(const char* str);
 
 /************************************************************
 * G__input_history()
@@ -156,7 +156,7 @@ static void G__input_history(int *state,char *string)
 *
 *  command input frontend
 *************************************************************/
-extern "C" char *G__input(char *prompt)
+extern "C" char *G__input(const char *prompt)
 {
   static char line[G__LONGLINE];
   char *pchar;
@@ -299,9 +299,9 @@ int Cint::Internal::G__init_readline()
 
 
 
-char *Cint::Internal::G__strrstr(char *string1,char *string2)
+const char *Cint::Internal::G__strrstr(const char *string1,const char *string2)
 {
-  char *p=NULL,*s,*result=NULL;
+  const char *p=NULL,*s,*result=NULL;
   s=string1;
   while((p=strstr(s,string2))) {
     result=p;
@@ -309,6 +309,18 @@ char *Cint::Internal::G__strrstr(char *string1,char *string2)
   }
   return(result);
 }
+
+char *Cint::Internal::G__strrstr(char *string1,const char *string2)
+{
+   char *p=NULL,*s,*result=NULL;
+   s=string1;
+   while((p=strstr(s,string2))) {
+      result=p;
+      s=p+1;
+   }
+   return(result);
+}
+
 
 /*
  * Local Variables:

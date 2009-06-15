@@ -118,19 +118,16 @@ G__defined_templatememfunc expr.cxx
 // Static Functions
 static G__IntList* G__IntList_new(long iin, G__IntList* prev);
 static void G__IntList_init(G__IntList* body, long iin, G__IntList* prev);
-static void G__IntList_add(G__IntList* body, long iin); // UNUSED
 static void G__IntList_addunique(G__IntList* body, long iin);
-static void G__IntList_delete(G__IntList* body); // UNUSED
-static G__IntList* G__IntList_find(G__IntList* body, long iin); // UNUSED
 static void G__IntList_free(G__IntList* body);
 
 static int G__generate_template_dict(const char* template_id, G__Definedtemplateclass* class_tmpl, G__Charlist* tmpl_arg_list);
-static int G__getIndex(int index, int tagnum, std::vector<std::string>& headers);
+static int G__getIndex(int index,::Reflex::Type tagnum, std::vector<std::string>& headers);
 static bool G__isSource(const char* filename);
 
 static void G__freetemplatearg(G__Templatearg* def_para);
-static void G__replacetemplate(char* templatename, char* tagname, G__Charlist* callpara, FILE* def_fp, int line, int filenum, fpos_t* pdef_pos, G__Templatearg* def_para, int isclasstemplate, int npara, int parent_tagnum);
-static int G__templatesubstitute(char* symbol, G__Charlist* callpara, G__Templatearg* defpara, char* templatename, char* tagname, int c, int npara, int isnew);
+static void G__replacetemplate(char* templatename, const char* tagname, G__Charlist* callpara, FILE* def_fp, int line, int filenum, fpos_t* pdef_pos, G__Templatearg* def_para, int isclasstemplate, int npara, int parent_tagnum);
+static int G__templatesubstitute(char* symbol, G__Charlist* callpara, G__Templatearg* defpara, char* templatename, const char* tagname, int c, int npara, int isnew);
 //858//static int G__gettemplatearglist(char* tmpl_arg_string, G__Charlist* tmpl_arg_list_in, G__Templatearg* tmpl_para_list, int* pnpara, int parent_tagnum, G__Definedtemplateclass* specialization);
 static int G__gettemplatearglist(char* tmpl_arg_string, G__Charlist* tmpl_arg_list_in, G__Templatearg* tmpl_para_list, int* pnpara, int parent_tagnum);
 static void G__templatemaptypename(char* string);
@@ -153,8 +150,8 @@ static void G__cattemplatearg(char* template_id, G__Charlist* tmpl_arg_list, int
 static void G__settemplatealias(const char* scope_name, const char* template_id, int tagnum, G__Charlist* tmpl_arg_list, G__Templatearg* tmpl_param, int create_in_envtagnum);
 static G__Definedtemplateclass* G__resolve_specialization(char* tmpl_args_string, G__Definedtemplateclass* class_tmpl, G__Charlist* expanded_tmpl_arg_list);
 static void G__modify_callpara(G__Templatearg* spec_arg_in, G__Templatearg* given_spec_arg_in, G__Charlist* expanded_tmpl_arg_in);
-static void G__delete_string(char* str, char* del);
-static void G__delete_end_string(char* str, char* del);
+static void G__delete_string(char* str, const char* del);
+static void G__delete_end_string(char* str, const char* del);
 
 static ::Reflex::Type G__getobjecttagnum(char *name);
 
@@ -167,16 +164,16 @@ int G__createtemplateclass(char* new_name, G__Templatearg* targ, int isforwardde
 void G__freedeftemplateclass(G__Definedtemplateclass* deftmpclass);
 void G__freetemplatefunc(G__Definetemplatefunc* deftmpfunc);
 int G__instantiate_templateclass(char* tagnamein, int noerror);
-int G__templatefunc(G__value* result, char* funcname, G__param* libp, int hash, int funcmatch);
-G__funclist* G__add_templatefunc(char* funcnamein, G__param* libp, int hash, G__funclist* funclist, const ::Reflex::Scope p_ifunc, int isrecursive);
+int G__templatefunc(G__value* result, const char* funcname, G__param* libp, int hash, int funcmatch);
+G__funclist* G__add_templatefunc(const char* funcnamein, G__param* libp, int hash, G__funclist* funclist, const ::Reflex::Scope p_ifunc, int isrecursive);
 char* G__gettemplatearg(int n, G__Templatearg* def_para);
 G__Definetemplatefunc* G__defined_templatefunc(const char* name);
-G__Definetemplatefunc* G__defined_templatememfunc(char* name);
+G__Definetemplatefunc* G__defined_templatememfunc(const char* name);
 }
 }
 
 // Functions in the C interface.
-extern "C" G__Definedtemplateclass* G__defined_templateclass(char* name);
+extern "C" G__Definedtemplateclass* G__defined_templateclass(const char* name);
 
 
 static int G__templatearg_enclosedscope = 0; // Used only to determine parent_tagnum parameter to G__settemplatealias.
@@ -204,15 +201,6 @@ static void G__IntList_init(G__IntList* body, long iin, G__IntList* prev)
 }
 
 //______________________________________________________________________________
-static void G__IntList_add(G__IntList* body, long iin)
-{
-   while (body->next) {
-      body = body->next;
-   }
-   body->next = G__IntList_new(iin, body);
-}
-
-//______________________________________________________________________________
 static void G__IntList_addunique(G__IntList* body, long iin)
 {
    while (body->next) {
@@ -225,37 +213,6 @@ static void G__IntList_addunique(G__IntList* body, long iin)
       return;
    }
    body->next = G__IntList_new(iin, body);
-}
-
-//______________________________________________________________________________
-static void G__IntList_delete(G__IntList* body)
-{
-   if (body->prev && body->next) {
-      body->prev->next = body->next;
-      body->next->prev = body->prev;
-   }
-   else if (body->next) {
-      body->next->prev = 0;
-   }
-   else if (body->prev) {
-      body->prev->next = 0;
-   }
-   delete body;
-}
-
-//______________________________________________________________________________
-static G__IntList* G__IntList_find(G__IntList* body, long iin)
-{
-   while (body->next) {
-      if (body->i == iin) {
-         return body;
-      }
-      body = body->next;
-   }
-   if (body->i == iin) {
-      return body;
-   }
-   return 0;
 }
 
 //______________________________________________________________________________
@@ -298,7 +255,7 @@ static int G__generate_template_dict(const char* template_id, G__Definedtemplate
    if (fileNum < 0) {
       return -1;
    }
-   fileNum = G__getIndex(fileNum, -1, headers);
+   fileNum = G__getIndex(fileNum, Reflex::Type(), headers);
    if (fileNum == -1) {
       return -1;
    }
@@ -310,12 +267,7 @@ static int G__generate_template_dict(const char* template_id, G__Definedtemplate
       G__value gValue = G__string2type_body(tmpl_arg_list->string, 1);
       ::Reflex::Type ty = G__value_typenum(gValue).RawType();
       if (ty.IsClass()) { // FIXME: We need to support union here too!
-         int tagnum = G__get_tagnum(ty);
-         int index = G__struct.filenum[tagnum];
-         if (index < 0) {
-            return -1;
-         }
-         index = G__getIndex(index, tagnum, headers); // Note: Do real work, headers is modified here.
+         int index = G__getIndex(-1, ty, headers); // Note: Do real work, headers is modified here.
          if (index == -1) {
             return -1;
          }
@@ -332,27 +284,28 @@ static int G__generate_template_dict(const char* template_id, G__Definedtemplate
    //
    //  Now lookup the passed template-id.
    //
-   int tagnum = G__defined_tagname(template_id_str.c_str(), 3); // FIXME: This is illegal, G__defined_tagname alters the string!
+   int tagnum = G__defined_tagname(template_id_str.c_str(), 3); 
    //
    //  If dictionary generation succeeded, remember what
    //  header files we used in the comment string for
    //  the generated template instantiation.
    //
    if (tagnum != -1) {
-      if (!G__struct.comment[tagnum].p.com) {
+      G__RflxProperties *prop = G__get_properties(G__Dict::GetDict().GetType(tagnum));
+      if (!prop->comment.p.com) {
          string headersToInclude("//[INCLUDE:");
          for (vector<string>::iterator iter = headers.begin(); iter != headers.end(); ++iter) {
             headersToInclude += *iter + ";";
          }
-         G__struct.comment[tagnum].p.com = new char[headersToInclude.size() + 1];
-         strcpy(G__struct.comment[tagnum].p.com, headersToInclude.c_str());
+         prop->comment.p.com = new char[headersToInclude.size() + 1];
+         strcpy(prop->comment.p.com, headersToInclude.c_str());
       }
    }
    return tagnum;
 }
 
 //______________________________________________________________________________
-static int G__getIndex(int index, int tagnum, std::vector<std::string>& headers)
+static int G__getIndex(int index, Reflex::Type tagnum, std::vector<std::string>& headers)
 {
    // Find the header file or shared library which contains the definition
    // of the passed template instantiation.  If no instantiation is passed,
@@ -374,6 +327,22 @@ static int G__getIndex(int index, int tagnum, std::vector<std::string>& headers)
    //  index looking for the index of the last file included from
    //  a shared library or a source file (not a header file).
    //
+   G__RflxProperties *prop = 0;
+   if (tagnum) {
+      prop = G__get_properties(tagnum);
+      if (index==-1) {
+         index = prop->filenum;
+         if (index < 0) {
+            return -1;
+         }
+         if (G__srcfile[index].filename[0] == '{') {
+            // ignore "{CINTEX dictionary translator}"
+            return -1;
+         }
+      }
+   } else if (index == -1) {
+      return -1;
+   }
    for (
       ;
       (G__srcfile[index].included_from > -1) && (G__srcfile[index].included_from < G__nfile);
@@ -398,7 +367,7 @@ static int G__getIndex(int index, int tagnum, std::vector<std::string>& headers)
    //
    //  At this point, we have a shared library.
    //
-   if (tagnum == -1) { // No template instantiation given, return error.
+   if (!tagnum) { // No template instantiation given, return error.
       return -1;
    }
    //
@@ -408,10 +377,11 @@ static int G__getIndex(int index, int tagnum, std::vector<std::string>& headers)
    //  FIXME: to the next filename after finding the first one.
    //
    if ( // The template instantiation has our special comment.
-      G__struct.comment[tagnum].p.com &&
-      strstr(G__struct.comment[tagnum].p.com, "//[INCLUDE:")
+      prop &&
+      prop->comment.p.com &&
+      strstr(prop->comment.p.com, "//[INCLUDE:")
    ) { // The template instantiation has our special comment.
-      char* p = G__struct.comment[tagnum].p.com;
+      char* p = prop->comment.p.com;
       while (*p && (*p != ':')) {
          ++p;
       }
@@ -483,7 +453,7 @@ static void G__freetemplatearg(G__Templatearg* def_para)
    fsetpos(G__mfp,&out_pos)
 
 //______________________________________________________________________________
-static void G__replacetemplate(char* templatename, char* tagname, G__Charlist* tmpl_arg_list, FILE* def_fp, int line, int filenum, fpos_t* pdef_pos, G__Templatearg* tmpl_para_list, int isclasstemplate, int npara, int parent_tagnum)
+static void G__replacetemplate(char* templatename, const char* tagname, G__Charlist* tmpl_arg_list, FILE* def_fp, int line, int filenum, fpos_t* pdef_pos, G__Templatearg* tmpl_para_list, int isclasstemplate, int npara, int parent_tagnum)
 {
    // Replace template string and prerun
    //
@@ -598,7 +568,7 @@ static void G__replacetemplate(char* templatename, char* tagname, G__Charlist* t
    //  Read template definition from file and substitute the template arguments.
    //
    int isnew = 0;
-   char* punctuation = "\t\n !\"#$%&'()*+,-./:;<=>?@[\\]^{|}~"; // not alpha, numeric, underscore, CR, FF, VT, backtick
+   const char* punctuation = "\t\n !\"#$%&'()*+,-./:;<=>?@[\\]^{|}~"; // not alpha, numeric, underscore, CR, FF, VT, backtick
    mparen = 0;
    while (1) { // loop over all punctuation and whitespace separated words in definition
       G__disp_mask = 10000;
@@ -1127,7 +1097,7 @@ static void G__replacetemplate(char* templatename, char* tagname, G__Charlist* t
 #undef SET_READINGFILE
 
 //______________________________________________________________________________
-static int G__templatesubstitute(char* symbol, G__Charlist* tmpl_arg_list, G__Templatearg* tmpl_para_list, char* templatename, char* tagname, int c, int npara, int isnew)
+static int G__templatesubstitute(char* symbol, G__Charlist* tmpl_arg_list, G__Templatearg* tmpl_para_list, char* templatename, const char* tagname, int c, int npara, int isnew)
 {
    // If given symbol matches a template parameter, substitute it with the matching given argument.
    static int state = 0; // Controls our result, flags that we are in a template-id and counts params processed.
@@ -1324,9 +1294,7 @@ static int G__gettemplatearglist(char* tmpl_arg_string, G__Charlist* tmpl_arg_li
       //
       //  And allocate a new empty entry to mark the end.
       //
-      tmpl_arg->next = (G__Charlist*) malloc(sizeof(G__Charlist));
-      tmpl_arg->next->next = 0;
-      tmpl_arg->next->string = 0;
+      tmpl_arg->next = new G__Charlist;
       tmpl_arg = tmpl_arg->next;
       ++(*pnpara); // Increment the number of arguments processed.
    }
@@ -1357,8 +1325,6 @@ static int G__gettemplatearglist(char* tmpl_arg_string, G__Charlist* tmpl_arg_li
          G__ASSERT((int) strlen(tmpl_arg->string) <= (int) len);
       }
       tmpl_arg->next = new G__Charlist;
-      tmpl_arg->next->next = 0;
-      tmpl_arg->next->string = 0;
       tmpl_arg = tmpl_arg->next;
       searchflag = 3; // Flag that a template arg was defaulted.
    }
@@ -1486,7 +1452,6 @@ static void G__templatemaptypename(char* string)
          }
          int target_tagnum = G__get_tagnum(typenum);
          if ((target_tagnum != -1) && (G__struct.name[target_tagnum][0] == '$')) {
-            int type = G__get_type(typenum);
             type = tolower(type);
          }
          strcpy(string, G__type2string(type, target_tagnum, -1, ref, 0));
@@ -1514,7 +1479,7 @@ static void G__templatemaptypename(char* string)
 static char* G__expand_def_template_arg(char* str_in, G__Templatearg* def_para, G__Charlist* charlist)
 {
    // Returns a malloc'd string.
-   char* punctuation = " \t\n;:=+-)(*&^%$#@!~'\"\\|][}{/?.>,<";
+   const char* punctuation = " \t\n;:=+-)(*&^%$#@!~'\"\\|][}{/?.>,<";
    int siz_out = strlen(str_in) * 2;
    char* str_out;
    char* temp;
@@ -1568,7 +1533,10 @@ static char* G__expand_def_template_arg(char* str_in, G__Templatearg* def_para, 
       }
       {
          int rlen = strlen(reslt);
-         if (isconst && !strncmp(reslt, "const ", 6) && (rlen > 0) && (reslt[rlen-1] == '*')) {
+         if (isconst &&
+             !strncmp(reslt, "const ", 6) &&
+             (rlen > 0) &&
+             (reslt[rlen-1] == '*')) {
             strcpy(str_out + iout, reslt + 6);
             strcat(str_out, " const");
             iout += lreslt;
@@ -1584,6 +1552,17 @@ static char* G__expand_def_template_arg(char* str_in, G__Templatearg* def_para, 
             strcpy(str_out + iout - 6, reslt);
             strcat(str_out, " const");
             iout += lreslt;
+            isconst = 0;
+         }
+         else if (
+            isconst &&
+            (iout >= 6) &&
+            !strncmp(str_out + iout - 6, "const ", 6) &&
+            !strncmp(reslt, "const ", 6)
+         ) {
+            // const T with T="const A" becomes "const const A", so skip one const
+            strcpy(str_out + iout, reslt + 6);
+            iout += lreslt - 6;
             isconst = 0;
          }
          else {
@@ -1613,9 +1592,6 @@ static G__Templatearg* G__read_specializationarg(G__Templatearg* tmpl_params, ch
    G__StrBuf type_sb(G__MAXNAME);
    char* type = type_sb;
    bool done = false;
-   int i;
-   int j;
-   int nest;
    int isrc = 0;
    int len;
    do {
@@ -1643,8 +1619,10 @@ static G__Templatearg* G__read_specializationarg(G__Templatearg* tmpl_params, ch
          isrc += 6;
       }
       len = strlen(source);
-      for (i = isrc, j = 0, nest = 0; i < len; ++i) {
-         switch (source[i]) {
+      unsigned int newlen = 0;
+      { // additional block against MSVC 7.1 warning "conflicting var decl for i in for loop and in line 1720"
+         for (int i = isrc, nest = 0; i < len; ++i) {
+            switch (source[i]) {
             case '<':
                ++nest;
                break;
@@ -1663,11 +1641,12 @@ static G__Templatearg* G__read_specializationarg(G__Templatearg* tmpl_params, ch
                   continue;
                }
                break;
+            }
+            type[newlen++] = source[i];
          }
-         type[j++] = source[i];
       }
-      type[j] = 0;
-      len = strlen(type);
+      type[newlen] = 0;
+      len = newlen;
       //
       //  Accumulate and remove a possible reference qualifier.
       //
@@ -1792,8 +1771,6 @@ static int G__checkset_charlist(char* type_name, G__Charlist* pcall_para, int na
    for (int i = 1; i < narg; ++i) {
       if (!pcall_para->next) {
          pcall_para->next = new G__Charlist;
-         pcall_para->next->next = 0;
-         pcall_para->next->string = 0;
       }
       pcall_para = pcall_para->next;
    }
@@ -1841,7 +1818,6 @@ static int G__matchtemplatefunc(G__Definetemplatefunc* deftmpfunc, G__param* lib
    int reftype;
    int ref;
    int fargtmplt;
-   int i;
    G__StrBuf paratype_sb(G__LONGLINE);
    char* paratype = paratype_sb;
    int* fntarg;
@@ -1858,7 +1834,7 @@ static int G__matchtemplatefunc(G__Definetemplatefunc* deftmpfunc, G__param* lib
          return 0;
       }
    }
-   for (i = 0; i < paran; ++i) {
+   for (int i = 0; i < paran; ++i) {
       // get template information for simplicity
       ftype = deftmpfunc->func_para.type[i];
       ftagnum = deftmpfunc->func_para.tagnum[i];
@@ -1899,7 +1875,7 @@ static int G__matchtemplatefunc(G__Definetemplatefunc* deftmpfunc, G__param* lib
             return 0;
          }
          // template argument  (T<E> a)
-         basen = G__struct.baseclass[tagnum]->basen;
+         basen = G__struct.baseclass[tagnum]->vec.size();
          bn = -1;
          basetagnum = tagnum;
          bmatch = 0;
@@ -1907,7 +1883,7 @@ static int G__matchtemplatefunc(G__Definetemplatefunc* deftmpfunc, G__param* lib
             int nest = 0;
             cnt = 0;
             if (bn >= 0) {
-               basetagnum = G__struct.baseclass[tagnum]->basetagnum[bn];
+               basetagnum = G__struct.baseclass[tagnum]->vec[bn].basetagnum;
             }
             ++bn;
             bmatch = 1;
@@ -2017,20 +1993,20 @@ static int G__matchtemplatefunc(G__Definetemplatefunc* deftmpfunc, G__param* lib
             strcpy(paratype, G__type2string(type, tagnum, -1, reftype, 0));
          }
          if (!strncmp(paratype, "class ", 6)) {
-            int i = 6;
-            int j = 0;
+            int subi = 6;
+            int subj = 0;
             do {
-               paratype[j++] = paratype[i];
+               paratype[subj++] = paratype[subi];
             }
-            while (paratype[i++]);
+            while (paratype[subi++]);
          }
          else if (!strncmp(paratype, "struct ", 7)) {
-            int i = 7;
-            int j = 0;
+            int subi = 7;
+            int subj = 0;
             do {
-               paratype[j++] = paratype[i];
+               paratype[subj++] = paratype[subi];
             }
-            while (paratype[i++]);
+            while (paratype[subi++]);
          }
          if (G__checkset_charlist(paratype, pcall_para, fargtmplt, ftype)) {
             // match or newly set template argument
@@ -2242,8 +2218,12 @@ void Cint::Internal::G__declare_template()
          // This should be removed from the func name (what we are looking for)
          // anything preceding combinations of *,& and const.
          c = G__fgetname_template(temp2, "*&(;=");
-         if (!strncmp(temp2, "operator", strlen("operator")) && strchr("&*=", c)) {
-            size_t len = strlen(temp2);
+
+         size_t len = strlen(temp2);
+         static size_t oplen( strlen( "::operator" ) ); 
+         if ((  !strncmp(temp2,"operator",strlen("operator"))
+              ||(len>=oplen && !strncmp(temp2+(len-oplen),"::operator",oplen)))
+             && strchr("&*=", c)) {
             while ((c == '&') || (c == '*') || (c == '=')) {
                temp2[len + 1] = 0;
                temp2[len] = c;
@@ -2341,8 +2321,21 @@ void Cint::Internal::G__declare_template()
       // Do nothing
    }
    else if (isspace(c) && !strcmp(temp, "operator")) {
-      temp[8] = ' ';
-      c = G__fgetname_template(temp + 9, "(");
+      unsigned int len = 8;
+      do {
+         temp[len++] = ' ';
+         temp[len] = '\0';
+         
+         char* ptr = temp + len;
+         c=G__fgetname_template(ptr,"(");
+         len = strlen(temp);
+         if (len >= G__LONGLINE)
+            {
+               temp[G__LONGLINE-1] = '\0';
+               G__fprinterr(G__serr,"line too long. '%s'\n", temp);
+               break;
+            }
+      } while (c != '(');
    }
    else if ((c == '(') && strstr(temp, "::")) {
       // template<..> inline A::A(T a,S b) { ... }
@@ -2964,7 +2957,6 @@ static int G__createtemplatefunc(char* funcname, G__Templatearg* targ, int line_
    int tagnum;
    ::Reflex::Type typenum;
    int narg;
-   int i;
    //
    //  Get to the end of the list.
    //
@@ -3017,7 +3009,7 @@ static int G__createtemplatefunc(char* funcname, G__Templatearg* targ, int line_
    deftmpfunc->next->next = 0;
    deftmpfunc->next->def_para = 0;
    deftmpfunc->next->name = 0;
-   for (i = 0; i < G__MAXFUNCPARA; ++i) {
+   for (int i = 0; i < G__MAXFUNCPARA; ++i) {
       deftmpfunc->next->func_para.ntarg[i] = 0;
       deftmpfunc->next->func_para.nt[i] = 0;
    }
@@ -3121,7 +3113,6 @@ static int G__createtemplatefunc(char* funcname, G__Templatearg* targ, int line_
          char* ntargc[20];
          int ntarg[20];
          int nt = 0;
-         int i;
          // f(T<E,K> a) or f(c<E,K> a) or f(c<E,b> a)
          // f(T<E> a) or f(c<T> a) or f(T<c> a)
          deftmpfunc->func_para.type[tmp] = 'u';
@@ -3171,7 +3162,7 @@ static int G__createtemplatefunc(char* funcname, G__Templatearg* targ, int line_
          deftmpfunc->func_para.nt[tmp] = nt;
          deftmpfunc->func_para.ntarg[tmp] = (int*) malloc(sizeof(int) * nt);
          deftmpfunc->func_para.ntargc[tmp] = (char**) malloc(sizeof(char*) * nt);
-         for (i = 0; i < nt; ++i) {
+         for (int i = 0; i < nt; ++i) {
             deftmpfunc->func_para.ntarg[tmp][i] = ntarg[i];
             deftmpfunc->func_para.ntargc[tmp][i] = 0;
             if (!ntarg[i]) {
@@ -3281,8 +3272,8 @@ static int G__createtemplatefunc(char* funcname, G__Templatearg* targ, int line_
    G__tagdefining = store_tagdefining;
    // Hack by Scott Snyder: try not to gag on forward decl of template memfunc
    {
-      int c = G__fignorestream(";{");
-      if (c != ';') {
+      int ch = G__fignorestream(";{");
+      if (ch != ';') {
          G__fignorestream("}");
       }
    }
@@ -3377,7 +3368,8 @@ static void G__instantiate_templatememfunclater(G__Definedtemplateclass* deftmpc
          ++arg;
       }
       else {
-         arg = "";
+         static char cnull[1] = "";
+         arg = cnull;
       }
       call_para.string = 0;
       call_para.next = 0;
@@ -3517,7 +3509,7 @@ void Cint::Internal::G__freetemplatefunc(G__Definetemplatefunc* deftmpfunc)
    //   G__inheritance* baseclass = 0;
    //   ::Reflex::Scope env_tagnum = G__get_envtagnum();
    //   int int_env_tagnum = G__get_tagnum(env_tagnum);
-   //   if (env_tagnum && !env_tagnum.IsTopScope() && G__struct.baseclass[int_env_tagnum]->basen) {
+   //   if (env_tagnum && !env_tagnum.IsTopScope() && G__struct.baseclass[int_env_tagnum]->vec.size()) {
    //      baseclass = G__struct.baseclass[int_env_tagnum];
    //   }
    //   //
@@ -3593,8 +3585,8 @@ void Cint::Internal::G__freetemplatefunc(G__Definetemplatefunc* deftmpfunc)
    //      if (baseclass) {
    //         // look for using directive scope resolution
    //         bool found = false;
-   //         for (temp = 0; temp < baseclass->basen; ++temp) {
-   //            if (baseclass->basetagnum[temp] == class_tmpl->parent_tagnum) {
+   //         for (temp = 0; temp < baseclass->vec.size(); ++temp) {
+   //            if (baseclass->vec[temp].basetagnum == class_tmpl->parent_tagnum) {
    //               found = true;
    //               break;
    //            }
@@ -3614,8 +3606,8 @@ void Cint::Internal::G__freetemplatefunc(G__Definetemplatefunc* deftmpfunc)
    //               break;
    //            }
    //            if (G__struct.baseclass[G__get_tagnum(env_parent_tagnum)]) {
-   //               for (temp = 0; temp < G__struct.baseclass[G__get_tagnum(env_parent_tagnum)]->basen; ++temp) {
-   //                  if (G__struct.baseclass[G__get_tagnum(env_parent_tagnum)]->basetagnum[temp] == class_tmpl->parent_tagnum) {
+   //               for (temp = 0; temp < G__struct.baseclass[G__get_tagnum(env_parent_tagnum)]->vec.size(); ++temp) {
+   //                  if (G__struct.baseclass[G__get_tagnum(env_parent_tagnum)]->vec[temp].basetagnum == class_tmpl->parent_tagnum) {
    //                     found = true;
    //                     break;
    //                  }
@@ -3945,7 +3937,8 @@ int Cint::Internal::G__instantiate_templateclass(char* tagnamein, int noerror)
       ++tmpl_args_string;
    }
    else {
-      tmpl_args_string = "";
+      static char cnull[1] = "";
+      tmpl_args_string = cnull;
    }
    //
    //  Collect any using directives in our enclosing scope.
@@ -3953,7 +3946,7 @@ int Cint::Internal::G__instantiate_templateclass(char* tagnamein, int noerror)
    G__inheritance* baseclass = 0;
    ::Reflex::Scope env_tagnum = G__get_envtagnum();
    int int_env_tagnum = G__get_tagnum(env_tagnum);
-   if (env_tagnum && !env_tagnum.IsTopScope() && G__struct.baseclass[int_env_tagnum]->basen) {
+   if (env_tagnum && !env_tagnum.IsTopScope() && !G__struct.baseclass[int_env_tagnum]->vec.empty()) {
       baseclass = G__struct.baseclass[int_env_tagnum];
    }
    //
@@ -4045,8 +4038,8 @@ int Cint::Internal::G__instantiate_templateclass(char* tagnamein, int noerror)
       if (baseclass) {
          // look for using directive scope resolution
          bool found = false;
-         for (temp = 0; temp < baseclass->basen; ++temp) {
-            if (baseclass->basetagnum[temp] == class_tmpl->parent_tagnum) {
+         for (size_t temp1 = 0; temp1 < baseclass->vec.size(); ++temp1) {
+            if (baseclass->vec[temp1].basetagnum == class_tmpl->parent_tagnum) {
                found = true;
                break;
             }
@@ -4066,8 +4059,8 @@ int Cint::Internal::G__instantiate_templateclass(char* tagnamein, int noerror)
                break;
             }
             if (G__struct.baseclass[G__get_tagnum(env_parent_tagnum)]) {
-               for (temp = 0; temp < G__struct.baseclass[G__get_tagnum(env_parent_tagnum)]->basen; ++temp) {
-                  if (G__struct.baseclass[G__get_tagnum(env_parent_tagnum)]->basetagnum[temp] == class_tmpl->parent_tagnum) {
+               for (size_t temp1 = 0; temp1 < G__struct.baseclass[G__get_tagnum(env_parent_tagnum)]->vec.size(); ++temp1) {
+                  if (G__struct.baseclass[G__get_tagnum(env_parent_tagnum)]->vec[temp1].basetagnum == class_tmpl->parent_tagnum) {
                      found = true;
                      break;
                   }
@@ -4084,8 +4077,8 @@ int Cint::Internal::G__instantiate_templateclass(char* tagnamein, int noerror)
       // look in global scope (handle using declaration)
       {
          bool found = false;
-         for (temp = 0; temp < G__globalusingnamespace.basen; ++temp) {
-            if (G__globalusingnamespace.basetagnum[temp] == class_tmpl->parent_tagnum) {
+         for (size_t temp1 = 0; temp1 < G__globalusingnamespace.vec.size(); ++temp1) {
+            if (G__globalusingnamespace.vec[temp1].basetagnum == class_tmpl->parent_tagnum) {
                found = true;
                break;
             }
@@ -4123,8 +4116,6 @@ int Cint::Internal::G__instantiate_templateclass(char* tagnamein, int noerror)
    //  arguments provided.
    //
    G__Charlist* tmpl_arg_list = new G__Charlist;
-   tmpl_arg_list->string = 0;
-   tmpl_arg_list->next = 0;
    int npara = 0;
    int defarg = 0;
    int create_in_envtagnum = 0;
@@ -4324,13 +4315,15 @@ int Cint::Internal::G__instantiate_templateclass(char* tagnamein, int noerror)
    //  FIXME: Member function templates should not be defined unless they are used, they should just be forward declared.
    //
    //  TODO: Why are class template member function template instantiations instantiated in the enclosing namespace scope?
-   ::Reflex::Scope parent_tagnum = G__Dict::GetDict().GetScope(class_tmpl->parent_tagnum);
-   while (parent_tagnum && !parent_tagnum.IsNamespace()) {
-      parent_tagnum = parent_tagnum.DeclaringScope();
-   }
-   G__Definedtemplatememfunc* tmpl_mbrfunc = &class_tmpl->memfunctmplt;
-   for ( ; tmpl_mbrfunc->next; tmpl_mbrfunc = tmpl_mbrfunc->next) {
-      G__replacetemplate(simple_templatename, tagname, tmpl_arg_list, tmpl_mbrfunc->def_fp, tmpl_mbrfunc->line, tmpl_mbrfunc->filenum, &(tmpl_mbrfunc->def_pos), class_tmpl->def_para, 0, npara, G__get_tagnum(parent_tagnum));
+   {
+      ::Reflex::Scope parent_tagnum = G__Dict::GetDict().GetScope(class_tmpl->parent_tagnum);
+      while (parent_tagnum && !parent_tagnum.IsNamespace()) {
+         parent_tagnum = parent_tagnum.DeclaringScope();
+      }
+      G__Definedtemplatememfunc* tmpl_mbrfunc = &class_tmpl->memfunctmplt;
+      for ( ; tmpl_mbrfunc->next; tmpl_mbrfunc = tmpl_mbrfunc->next) {
+         G__replacetemplate(simple_templatename, tagname, tmpl_arg_list, tmpl_mbrfunc->def_fp, tmpl_mbrfunc->line, tmpl_mbrfunc->filenum, &(tmpl_mbrfunc->def_pos), class_tmpl->def_para, 0, npara, G__get_tagnum(parent_tagnum));
+      }
    }
    //
    //  Restore state.
@@ -4577,10 +4570,15 @@ static void G__settemplatealias(const char* scope_name, const char* template_id,
          //  Replace the final ',' with '>' temporarily.
          //
          char oldp = p[-1];
+         char oldp2 = *(p-2);
          if (oldp == '<') { // all template args have defaults
             p[-1] = 0;
          }
          else {
+            if (oldp2 == '>') {
+               *(p-1) = ' ';
+               ++p;
+            }
             p[-1] = '>';
             *p = 0;
          }
@@ -4609,6 +4607,9 @@ static void G__settemplatealias(const char* scope_name, const char* template_id,
             G__declare_typedef(short_name, 'u', tagnum, G__PARANORMAL, 0, G__globalcomp, parent_tagnum, false);
          }
          // Restore final ','.
+         if (oldp2 == '>') {
+            --p;
+         }
          p[-1] = oldp;
       }
       //
@@ -4622,6 +4623,11 @@ static void G__settemplatealias(const char* scope_name, const char* template_id,
       if (tmpl_arg_list->next) {
          *p = ',';
          ++p;
+      } else {
+         if (p[-1] == '>') {
+            *p = ' ';
+            ++p;
+         }
       }
    }
 }
@@ -4758,8 +4764,6 @@ static G__Definedtemplateclass* G__resolve_specialization(char* tmpl_args_string
       //  appropriate for the selected specialization.
       //
       G__Charlist* new_tmpl_arg_head = new G__Charlist;
-      new_tmpl_arg_head->string = 0;
-      new_tmpl_arg_head->next = 0;
       int i = 1;
       G__Charlist* new_tmpl_arg = new_tmpl_arg_head;
       for (G__Templatearg* spec_def_para = best_match->def_para; spec_def_para; spec_def_para = spec_def_para->next) { // Create an argument for each specialization parameter.
@@ -4775,8 +4779,6 @@ static G__Definedtemplateclass* G__resolve_specialization(char* tmpl_args_string
                if (i != 1) {
                   new_tmpl_arg->next = new G__Charlist;
                   new_tmpl_arg = new_tmpl_arg->next;
-                  new_tmpl_arg->string = 0;
-                  new_tmpl_arg->next = 0;
                }
                new_tmpl_arg->string = (char*) malloc(strlen(expanded_tmpl_arg->string) + 1);
                strcpy(new_tmpl_arg->string, expanded_tmpl_arg->string);
@@ -4800,7 +4802,7 @@ static G__Definedtemplateclass* G__resolve_specialization(char* tmpl_args_string
       expanded_tmpl_arg_list->next = new_tmpl_arg_head->next;
       free(new_tmpl_arg_head->string);
       new_tmpl_arg_head->next = 0;
-      free(new_tmpl_arg_head);
+      delete (new_tmpl_arg_head);
       new_tmpl_arg_head = 0;
    }
    return best_match;
@@ -4845,7 +4847,7 @@ static void G__modify_callpara(G__Templatearg* spec_arg_in, G__Templatearg* give
 }
 
 //______________________________________________________________________________
-static void G__delete_string(char* str, char* del)
+static void G__delete_string(char* str, const char* del)
 {
    char* p = strstr(str, del);
    if (p) {
@@ -4858,7 +4860,7 @@ static void G__delete_string(char* str, char* del)
 }
 
 //______________________________________________________________________________
-static void G__delete_end_string(char* str, char* del)
+static void G__delete_end_string(char* str, const char* del)
 {
    // Remove the last occurence of 'del' (if any)
    char* e;
@@ -4877,7 +4879,7 @@ static void G__delete_end_string(char* str, char* del)
 }
 
 //______________________________________________________________________________
-int Cint::Internal::G__templatefunc(G__value* result, char* funcname, G__param* libp, int hash, int funcmatch)
+int Cint::Internal::G__templatefunc(G__value* result, const char* funcname, G__param* libp, int hash, int funcmatch)
 {
    // Search matching template function, search by name then parameter.
    // If match found, expand template, parse as pre-run and execute it.
@@ -4888,7 +4890,7 @@ int Cint::Internal::G__templatefunc(G__value* result, char* funcname, G__param* 
    ::Reflex::Scope env_tagnum = G__get_envtagnum();
    ::Reflex::Scope store_friendtagnum = G__friendtagnum;
    G__inheritance* baseclass = 0;
-   if (env_tagnum && !env_tagnum.IsTopScope() && G__struct.baseclass[G__get_tagnum(env_tagnum)]->basen) {
+   if (env_tagnum && !env_tagnum.IsTopScope() && !G__struct.baseclass[G__get_tagnum(env_tagnum)]->vec.empty()) {
       baseclass = G__struct.baseclass[G__get_tagnum(env_tagnum)];
    }
    pexplicitarg = (char*) strchr(funcname, '<');
@@ -4925,14 +4927,14 @@ int Cint::Internal::G__templatefunc(G__value* result, char* funcname, G__param* 
             (env_tagnum != G__Dict::GetDict().GetScope(deftmpfunc->parent_tagnum))
          ) {
             if (baseclass) {
-               for (int temp = 0; temp < baseclass->basen; ++temp) {
-                  if (baseclass->basetagnum[temp] == deftmpfunc->parent_tagnum) {
+               for (size_t temp = 0; temp < baseclass->vec.size(); ++temp) {
+                  if (baseclass->vec[temp].basetagnum == deftmpfunc->parent_tagnum) {
                      goto match_found;
                   }
                }
                // look in global scope (handle for using declaration info
-               for (int temp = 0; temp < G__globalusingnamespace.basen; ++temp) {
-                  if (G__globalusingnamespace.basetagnum[temp] == deftmpfunc->parent_tagnum) {
+               for (size_t temp = 0; temp < G__globalusingnamespace.vec.size(); ++temp) {
+                  if (G__globalusingnamespace.vec[temp].basetagnum == deftmpfunc->parent_tagnum) {
                      goto match_found;
                   }
                }
@@ -4956,7 +4958,8 @@ int Cint::Internal::G__templatefunc(G__value* result, char* funcname, G__param* 
             G__hash(funcname, hash, tmp);
          }
          else {
-            pexplicitarg = "";
+            static char cnull[1] = "";
+            pexplicitarg = cnull;
          }
          // matches funcname and parameter,
          // then expand the template and parse as prerun
@@ -4995,7 +4998,7 @@ int Cint::Internal::G__templatefunc(G__value* result, char* funcname, G__param* 
 #define G__NOMATCH 0xffffffff
 
 //______________________________________________________________________________
-G__funclist* Cint::Internal::G__add_templatefunc(char* funcnamein, G__param* libp, int hash, G__funclist* funclist, const ::Reflex::Scope p_ifunc, int isrecursive)
+G__funclist* Cint::Internal::G__add_templatefunc(const char* funcnamein, G__param* libp, int hash, G__funclist* funclist, const ::Reflex::Scope p_ifunc, int isrecursive)
 {
    // Attempt a function template instantiation by name and argument list, if we succeed, parse as pre-run.
    //
@@ -5015,7 +5018,7 @@ G__funclist* Cint::Internal::G__add_templatefunc(char* funcnamein, G__param* lib
    if (env_tagnum != -1) {
       baseclass = G__struct.baseclass[env_tagnum];
    }
-   if (!baseclass->basen) {
+   if (baseclass->vec.empty()) {
       baseclass = 0;
    }
    //
@@ -5091,8 +5094,8 @@ G__funclist* Cint::Internal::G__add_templatefunc(char* funcnamein, G__param* lib
             if (!baseclass) {
                continue;
             }
-            for (int n = 0; n < baseclass->basen; ++n) {
-               if (baseclass->basetagnum[n] == f->parent_tagnum) {
+            for (size_t n = 0; n < baseclass->vec.size(); ++n) {
+               if (baseclass->vec[n].basetagnum == f->parent_tagnum) {
                   goto match_found;
                }
             }
@@ -5164,7 +5167,7 @@ char* Cint::Internal::G__gettemplatearg(int n, G__Templatearg* def_para)
 }
 
 //______________________________________________________________________________
-extern "C" G__Definedtemplateclass* G__defined_templateclass(char* name)
+extern "C" G__Definedtemplateclass* G__defined_templateclass(const char* name)
 {
    // Check if the template class is declared
    // but maybe in future I might need this to handle case 4,5
@@ -5196,7 +5199,7 @@ extern "C" G__Definedtemplateclass* G__defined_templateclass(char* name)
    if (env_tagnum && !env_tagnum.IsTopScope()) {
       int tagnum = G__get_tagnum(env_tagnum);
       assert(tagnum != -1);
-      if (G__struct.baseclass[tagnum]->basen) {
+      if (!G__struct.baseclass[tagnum]->vec.empty()) {
          baseclass = G__struct.baseclass[tagnum];
       }
    }
@@ -5242,8 +5245,8 @@ extern "C" G__Definedtemplateclass* G__defined_templateclass(char* name)
             ::Reflex::Scope env_parent_tagnum = env_tagnum;
             if (baseclass && !candidate) {
                // look for using directive scope resolution
-               for (temp = 0; temp < baseclass->basen; ++temp) {
-                  if (baseclass->basetagnum[temp] == deftmplt->parent_tagnum) {
+               for (size_t temp1 = 0; temp1 < baseclass->vec.size(); ++temp1) {
+                  if (baseclass->vec[temp1].basetagnum == deftmplt->parent_tagnum) {
                      candidate = deftmplt;
                   }
                }
@@ -5258,8 +5261,8 @@ extern "C" G__Definedtemplateclass* G__defined_templateclass(char* name)
                int parent_tagnum = G__get_tagnum(env_parent_tagnum);
                if (parent_tagnum != -1) {
                   if (G__struct.baseclass[parent_tagnum]) {
-                     for (temp = 0; temp < G__struct.baseclass[parent_tagnum]->basen; ++temp) {
-                        if (G__struct.baseclass[parent_tagnum]->basetagnum[temp] == deftmplt->parent_tagnum) {
+                     for (size_t temp1 = 0; temp1 < G__struct.baseclass[parent_tagnum]->vec.size(); ++temp1) {
+                        if (G__struct.baseclass[parent_tagnum]->vec[temp1].basetagnum == deftmplt->parent_tagnum) {
                            candidate = deftmplt;
                            break;
                         }
@@ -5272,8 +5275,8 @@ extern "C" G__Definedtemplateclass* G__defined_templateclass(char* name)
             }
             // look in global scope (handle for using declaration info
             if (!candidate) {
-               for (temp = 0; temp < G__globalusingnamespace.basen; ++temp) {
-                  if (G__globalusingnamespace.basetagnum[temp] == deftmplt->parent_tagnum) {
+               for (size_t temp1 = 0; temp1 < G__globalusingnamespace.vec.size(); ++temp1) {
+                  if (G__globalusingnamespace.vec[temp1].basetagnum == deftmplt->parent_tagnum) {
                      candidate = deftmplt;
                   }
                }
@@ -5303,7 +5306,7 @@ G__Definetemplatefunc* Cint::Internal::G__defined_templatefunc(const char* name)
    }
    // get a handle for using declaration info
    baseclass = 0;
-   if (!env_tagnum.IsTopScope() && G__struct.baseclass[G__get_tagnum(env_tagnum)]->basen) {
+   if (!env_tagnum.IsTopScope() && !G__struct.baseclass[G__get_tagnum(env_tagnum)]->vec.empty()) {
       baseclass = G__struct.baseclass[G__get_tagnum(env_tagnum)];
    }
    // scope operator resolution, A::templatename<int> ...
@@ -5358,8 +5361,8 @@ G__Definetemplatefunc* Cint::Internal::G__defined_templatefunc(const char* name)
             ::Reflex::Scope env_parent_tagnum = env_tagnum;
             if (baseclass) {
                // look for using directive scope resolution
-               for (temp = 0; temp < baseclass->basen; ++temp) {
-                  if (baseclass->basetagnum[temp] == deftmplt->parent_tagnum) {
+               for (size_t temp2 = 0; temp2 < baseclass->vec.size(); ++temp2) {
+                  if (baseclass->vec[temp2].basetagnum == deftmplt->parent_tagnum) {
                      return deftmplt;
                   }
                }
@@ -5377,16 +5380,17 @@ G__Definetemplatefunc* Cint::Internal::G__defined_templatefunc(const char* name)
                   return deftmplt;
                }
                if (G__struct.baseclass[G__get_tagnum(env_parent_tagnum)]) {
-                  for (temp = 0; temp < G__struct.baseclass[G__get_tagnum(env_parent_tagnum)]->basen; ++temp) {
-                     if (G__struct.baseclass[G__get_tagnum(env_parent_tagnum)]->basetagnum[temp] == deftmplt->parent_tagnum) {
+                  size_t nbases = G__struct.baseclass[G__get_tagnum(env_parent_tagnum)]->vec.size();
+                  for (size_t temp2 = 0; temp2 < nbases; ++temp2) {
+                     if (G__struct.baseclass[G__get_tagnum(env_parent_tagnum)]->vec[temp2].basetagnum == deftmplt->parent_tagnum) {
                         return deftmplt;
                      }
                   }
                }
             }
             // look in global scope (handle for using declaration info
-            for (temp = 0; temp < G__globalusingnamespace.basen; ++temp) {
-               if (G__globalusingnamespace.basetagnum[temp] == deftmplt->parent_tagnum) {
+            for (size_t temp1 = 0; temp1 < G__globalusingnamespace.vec.size(); ++temp1) {
+               if (G__globalusingnamespace.vec[temp1].basetagnum == deftmplt->parent_tagnum) {
                   return deftmplt;
                }
             }
@@ -5398,7 +5402,7 @@ G__Definetemplatefunc* Cint::Internal::G__defined_templatefunc(const char* name)
 }
 
 //______________________________________________________________________________
-G__Definetemplatefunc* Cint::Internal::G__defined_templatememfunc(char* name)
+G__Definetemplatefunc* Cint::Internal::G__defined_templatememfunc(const char* name)
 {
    //
    // t.Handle<int>();

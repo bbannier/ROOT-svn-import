@@ -926,6 +926,8 @@ void TGCompositeFrame::Cleanup()
    while ((el = (TGFrameElement *) next())) {
       if (el->fFrame) {
          el->fFrame->SetFrameElement(0);
+         if (!gVirtualX->InheritsFrom("TGX11"))
+            el->fFrame->DestroyWindow();
          delete el->fFrame;
       }
 
@@ -996,7 +998,7 @@ void TGCompositeFrame::ChangeOptions(UInt_t options)
 
    if (options & kHorizontalFrame)
       SetLayoutManager(new TGHorizontalLayout(this));
-   else
+   else if (options & kVerticalFrame)
       SetLayoutManager(new TGVerticalLayout(this));
 }
 
@@ -1471,7 +1473,7 @@ Bool_t TGMainFrame::HandleKey(Event_t *event)
       char str[2];
       gVirtualX->LookupString(event, str, sizeof(str), keysym);
 
-      if (str[0] == 19) {  // ctrl-s
+      if ((keysym & ~0x20) == kKey_S) { // case insensitive ctrl-s
          static TString dir(".");
          static Bool_t overwr = kFALSE;
          TGFileInfo fi;
@@ -1489,8 +1491,8 @@ Bool_t TGMainFrame::HandleKey(Event_t *event)
          else {
             Int_t retval;
             new TGMsgBox(fClient->GetDefaultRoot(), this, "Error...",
-                        Form("file (%s) must have extension .C", fname),
-                        kMBIconExclamation, kMBRetry | kMBCancel, &retval);
+                         TString::Format("file (%s) must have extension .C", fname),
+                         kMBIconExclamation, kMBRetry | kMBCancel, &retval);
             if (retval == kMBRetry)
                HandleKey(event);
          }
@@ -2907,7 +2909,7 @@ void TGMainFrame::SaveSource(const char *filename, Option_t *option)
          out << endl;
 
          if (rb - lb > 1 && eq == -1) {
-            p = Form(" par%d", pnumber);
+            p = TString::Format(" par%d", pnumber);
             s.Insert(rb, p);
             pnumber++;
             out << "void " << s << endl;
@@ -3395,7 +3397,7 @@ void TGTransientFrame::SaveSource(const char *filename, Option_t *option)
          out << endl;
 
          if (rb - lb > 1 && eq == -1) {
-            p = Form(" par%d", pnumber);
+            p = TString::Format(" par%d", pnumber);
             s.Insert(rb, p);
             pnumber++;
             out << "void " << s << endl;

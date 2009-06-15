@@ -36,6 +36,7 @@ struct G__setup_func_struct
 {
    char* libname;
    G__incsetup func;
+   int filenum;
    int inited;
 };
 
@@ -66,7 +67,7 @@ static char G__memsetup_init;
 //______________________________________________________________________________
 extern "C" void G__add_setup_func(const char* libname, G__incsetup func)
 {
-   int i, islot = -1;
+   int islot = -1;
 
    if (!G__memsetup_init) {
       for (int i = 0; i < G__MAXSTRUCT; i++) {
@@ -87,19 +88,19 @@ extern "C" void G__add_setup_func(const char* libname, G__incsetup func)
       G__max_libs += 10;
       G__setup_func_list = (G__setup_func_struct**)realloc(G__setup_func_list,
                            G__max_libs * sizeof(G__setup_func_struct*));
-      for (i = G__nlibs; i < G__max_libs; i++)
-         G__setup_func_list[i] = 0;
+      for (int libi = G__nlibs; libi < G__max_libs; libi++)
+         G__setup_func_list[libi] = 0;
    }
 
    /* if already in table: ignore (could also print warning) */
-   for (i = 0; i < G__nlibs; i++)
-      if (G__setup_func_list[i] &&
-            !strcmp(G__setup_func_list[i]->libname, libname)) return;
+   for (int libi = 0; libi < G__nlibs; libi++)
+      if (G__setup_func_list[libi] &&
+            !strcmp(G__setup_func_list[libi]->libname, libname)) return;
 
    /* find empty slot */
-   for (i = 0; i < G__nlibs; i++)
-      if (!G__setup_func_list[i]) {
-         islot = i;
+   for (int libi = 0; libi < G__nlibs; libi++)
+      if (!G__setup_func_list[libi]) {
+         islot = libi;
          break;
       }
    if (islot == -1) islot = G__nlibs++;
@@ -109,8 +110,7 @@ extern "C" void G__add_setup_func(const char* libname, G__incsetup func)
    G__setup_func_list[islot]->func    = func;
    G__setup_func_list[islot]->inited  = 0;
    strcpy(G__setup_func_list[islot]->libname, libname);
-
-   G__RegisterLibrary(func);
+   G__setup_func_list[islot]->filenum = G__RegisterLibrary(func);
 }
 
 //______________________________________________________________________________
@@ -130,15 +130,23 @@ extern "C" void G__remove_setup_func(const char* libname)
       }
 }
 
+
 //______________________________________________________________________________
 extern "C" int G__call_setup_funcs()
 {
+   if ( ! G__tagtable::inited ) { 
+      // Don't do anything until G__struct (at least) is initialized
+      return 0;
+   }
+
    int init_counter = 0; // Number of initializers run.
    ::Reflex::Scope store_p_local = G__p_local; // changed by setupfuncs
    G__LockCriticalSection();
+#ifdef G__SHAREDLIB
    if (!G__initpermanentsl) {
       G__initpermanentsl = new std::list<G__DLLINIT>;
    }
+#endif //G__SHAREDLIB
    // Call G__RegisterLibrary() again, after it got called already
    // in G__init_setup_funcs(), because G__scratchall might have been
    // called in between.
@@ -147,7 +155,7 @@ extern "C" int G__call_setup_funcs()
    // initialization
    for (int i = 0; i < G__nlibs; ++i) {
       if (G__setup_func_list[i] && !G__setup_func_list[i]->inited) {
-         G__RegisterLibrary(G__setup_func_list[i]->func);
+         G__setup_func_list[i]->filenum = G__RegisterLibrary(G__setup_func_list[i]->func);
       }
    }
 
@@ -157,7 +165,24 @@ extern "C" int G__call_setup_funcs()
 #ifdef G__DEBUG
          fprintf(G__sout, "Initializing dictionary for '%s'.\n", G__setup_func_list[i]->libname);
 #endif // G__DEBUG
+         // Temporarily set G__ifile to the shared library.
+         G__input_file store_ifile = G__ifile;
+         int fileno = G__setup_func_list[i]->filenum;
+         G__ifile.filenum = fileno;
+         G__ifile.line_number = 1;
+         G__ifile.str = 0;
+         G__ifile.pos = 0;
+         G__ifile.vindex = 0;
+         
+         if (fileno != -1) {
+            G__ifile.fp = G__srcfile[fileno].fp;
+            strcpy(G__ifile.name,G__srcfile[fileno].filename);
+         }
+
          (G__setup_func_list[i]->func)();
+
+         G__ifile = store_ifile;
+
          G__setup_func_list[i]->inited = 1; // FIXME: Should set before calling func to make sure we run func only once, but because of stupid way G__get_linked_tagnum calls back into root, G__setup_tagtable needs this to allow double calling.
          G__initpermanentsl->push_back(G__setup_func_list[i]->func);
          ++init_counter;
@@ -325,7 +350,7 @@ char* G__optarg;
 #define getopt G__getopt
 
 //______________________________________________________________________________
-extern "C" int G__getopt(int argc, char** argv, char* optlist)
+extern "C" int G__getopt(int argc, char** argv, const char* optlist)
 {
    if (optind >= argc) {
       return EOF;
@@ -334,7 +359,7 @@ extern "C" int G__getopt(int argc, char** argv, char* optlist)
       return EOF;
    }
    int optkey = argv[optind][1];
-   for (char* p = optlist; *p; ++p) {
+   for (const char* p = optlist; *p; ++p) {
       if ((*p) != optkey) {
          continue;
       }
@@ -366,6 +391,7 @@ extern int G__quiet;
 //______________________________________________________________________________
 int Cint::Internal::G__init_globals()
 {
+   Reflex::Instance initReflex;
    // Explicit initialization of all necessary global variables.
    if (G__init) {
       return 1;
@@ -502,10 +528,8 @@ int Cint::Internal::G__init_globals()
 #ifdef G__SHAREDLIB
    G__allsl = 0;
 #endif // G__SHAREDLIB
+   memset(&G__tempbuf, 0, sizeof(G__tempobject_list));
    G__p_tempbuf = &G__tempbuf;
-   G__tempbuf.level = 0;
-   G__tempbuf.obj = G__null; // FIXME: G__null is not initialized until later!
-   G__tempbuf.prev = 0;
    G__templevel = 0;
    G__reftype = G__PARANORMAL;
    G__access = G__PUBLIC;
@@ -528,7 +552,6 @@ int Cint::Internal::G__init_globals()
    G__cintsysdir[0] = '*';
    G__cintsysdir[1] = '\0';
    G__p_local = 0;
-   G__globalusingnamespace.basen = 0;
    G__cpp_aryconstruct = 0;
    G__cppconstruct = 0;
    G__breakfile[0] = '\0';
@@ -540,7 +563,7 @@ int Cint::Internal::G__init_globals()
    G__one.ref = 0;
    {
       //fprintf(stderr, "G__init_globals: calling Reflex::TypedefTypeBuilder for 'switchStart$'\n");
-      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("switchStart$", ::Reflex::Type::ByName("int")); // 'a' type
+      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("switchStart$", ::Reflex::Type::ByName("int"), (Reflex::REPRESTYPE)'a'); // 'a' type
       G__RflxProperties* prop = G__get_properties(result);
       if (prop) {
          //fprintf(stderr, "G__init_globals: registering typedef '%s'\n", result.Name(Reflex::QUALIFIED).c_str());
@@ -551,34 +574,48 @@ int Cint::Internal::G__init_globals()
    G__start.ref = 0;
    {
       //fprintf(stderr, "G__init_globals: calling Reflex::TypedefTypeBuilder for 'switchDefault$'\n");
-      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("switchDefault$", ::Reflex::Type::ByName("int")); // 'z' type
+      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("switchDefault$", ::Reflex::Type::ByName("int"), (Reflex::REPRESTYPE)'z'); // 'z' type
       G__RflxProperties* prop = G__get_properties(result);
       if (prop) {
          //fprintf(stderr, "G__init_globals: registering typedef '%s'\n", result.Name(Reflex::QUALIFIED).c_str());
          prop->typenum = G__Dict::GetDict().Register(result);
       }
    }
+
+   //new TypeBase("rootSpecial$", sizeof(void*) * 2, FUNDAMENTAL, typeid(::Reflex::UnknownType), Type(), (Reflex::REPRESTYPE)'Z'); // 'Z' type
+   {
+      //fprintf(stderr, "G__init_globals: calling Reflex::TypedefTypeBuilder for 'rootSpecial$'\n");
+      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("rootSpecial$", ::Reflex::ArrayBuilder( ::Reflex::PointerBuilder(Reflex::Type::ByName("void")), 2 ), (Reflex::REPRESTYPE)'Z'); // 'Z' type
+      G__RflxProperties* prop = G__get_properties(result);
+      if (prop) {
+         //fprintf(stderr, "G__init_globals: registering typedef '%s'\n", result.Name(Reflex::QUALIFIED).c_str());
+         prop->typenum = G__Dict::GetDict().Register(result);
+      }      
+   }
+
+   // new TypeBase("blockBreakContinueGoto$", sizeof(int), FUNDAMENTAL, typeid(::Reflex::UnknownType), Type(), (Reflex::REPRESTYPE)'\001'); // was also 'Z' type (confusing)
+   {
+      //fprintf(stderr, "G__init_globals: calling Reflex::TypedefTypeBuilder for 'blockBreakContinueGoto$'\n");
+      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("blockBreakContinueGoto$", ::Reflex::Type::ByName("int"), (Reflex::REPRESTYPE)'\001'); // was also 'Z' type (confusing)
+      G__RflxProperties* prop = G__get_properties(result);
+      if (prop) {
+         //fprintf(stderr, "G__init_globals: registering typedef '%s'\n", result.Name(Reflex::QUALIFIED).c_str());
+         prop->typenum = G__Dict::GetDict().Register(result);
+      }
+   }
+
    G__letint(&G__default, 'z', G__SWITCH_DEFAULT);
    G__default.ref = 0;
-   {
-      //fprintf(stderr, "G__init_globals: calling Reflex::TypedefTypeBuilder for 'codeBreak$'\n");
-      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("codeBreak$", ::Reflex::Type::ByName("int")); // 'Z' type
-      G__RflxProperties* prop = G__get_properties(result);
-      if (prop) {
-         //fprintf(stderr, "G__init_globals: registering typedef '%s'\n", result.Name(Reflex::QUALIFIED).c_str());
-         prop->typenum = G__Dict::GetDict().Register(result);
-      }
-   }
-   G__letint(&G__block_break, 'Z', G__BLOCK_BREAK);
+   G__letint(&G__block_break, '\001', G__BLOCK_BREAK);
    G__block_break.ref = 0;
-   G__letint(&G__block_continue, 'Z', G__BLOCK_CONTINUE);
+   G__letint(&G__block_continue, '\001', G__BLOCK_CONTINUE);
    G__block_continue.ref = 0;
-   G__letint(&G__block_goto, 'Z', G__BLOCK_BREAK);
+   G__letint(&G__block_goto, '\001', G__BLOCK_BREAK);
    G__block_goto.ref = 1;
    G__gotolabel[0] = '\0';
    {
       //fprintf(stderr, "G__init_globals: calling Reflex::TypedefTypeBuilder for 'defaultFunccall$'\n");
-      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("defaultFunccall$", ::Reflex::Type::ByName("int")); // 'Z' type
+      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("defaultFunccall$", ::Reflex::Type::ByName("int"), (Reflex::REPRESTYPE)'\011'); // '\011' type
       G__RflxProperties* prop = G__get_properties(result);
       if (prop) {
          //fprintf(stderr, "G__init_globals: registering typedef '%s'\n", result.Name(Reflex::QUALIFIED).c_str());
@@ -638,16 +675,17 @@ int Cint::Internal::G__init_globals()
    G__preprocessfilekey.next = 0;
    G__precomp_private = 0;
    // The first entry in the const string is a blank string which is never used.
-   G__conststringlist.string = "";
+   static char clnull[1] = ""; 
+   G__conststringlist.string = clnull;
    G__conststringlist.hash = 0;
    G__conststringlist.prev = 0;
    G__plastconststring = &G__conststringlist;
 #ifdef G__ROOT
    if (!G__GetSpecialObject) {
-      G__GetSpecialObject = G__getreserved;
+      G__GetSpecialObject = (G__value(*)(char*, void**, void**)) G__getreserved;
    }
 #else // G__ROOT
-   G__GetSpecialObject = G__getreserved;
+   G__GetSpecialObject = (G__value(*)(char*, void**, void**)) G__getreserved;
 #endif // G__ROOT
    G__is_operator_newdelete = G__DUMMYARG_NEWDELETE | G__NOT_USING_2ARG_NEW;
    G__fpundeftype = 0;
@@ -754,7 +792,7 @@ static void G__platformMacro()
     ****************************************************/
    {
       //fprintf(stderr, "G__platformMacro: calling Reflex::TypedefTypeBuilder for 'macroInt$'\n");
-      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("macroInt$", ::Reflex::ConstBuilder(::Reflex::Type::ByName("int")));
+      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("macroInt$", ::Reflex::ConstBuilder(::Reflex::Type::ByName("int")), (Reflex::REPRESTYPE) 'p'); // type 'p'
       G__RflxProperties* prop = G__get_properties(result);
       if (prop) {
          //fprintf(stderr, "G__platformMacro: registering typedef '%s'\n", result.Name(Reflex::QUALIFIED).c_str());
@@ -764,7 +802,7 @@ static void G__platformMacro()
 
    {
       //fprintf(stderr, "G__platformMacro: calling Reflex::TypedefTypeBuilder for 'macroDouble$'\n");
-      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("macroDouble$", ::Reflex::ConstBuilder(::Reflex::Type::ByName("double")));
+      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("macroDouble$", ::Reflex::ConstBuilder(::Reflex::Type::ByName("double")), (Reflex::REPRESTYPE) 'P'); // type 'P'
       G__RflxProperties* prop = G__get_properties(result);
       if (prop) {
          //fprintf(stderr, "G__platformMacro: registering typedef '%s'\n", result.Name(Reflex::QUALIFIED).c_str());
@@ -774,7 +812,7 @@ static void G__platformMacro()
 
    {
       //fprintf(stderr, "G__platformMacro: calling Reflex::TypedefTypeBuilder for 'autoInt$'\n");
-      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("autoInt$", ::Reflex::Type::ByName("int"));
+      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("autoInt$", ::Reflex::Type::ByName("int"), (Reflex::REPRESTYPE) 'o'); // type 'o'
       G__RflxProperties* prop = G__get_properties(result);
       if (prop) {
          //fprintf(stderr, "G__platformMacro: registering typedef '%s'\n", result.Name(Reflex::QUALIFIED).c_str());
@@ -784,7 +822,7 @@ static void G__platformMacro()
 
    {
       //fprintf(stderr, "G__platformMacro: calling Reflex::TypedefTypeBuilder for 'autoDouble$'\n");
-      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("autoDouble$", ::Reflex::Type::ByName("double"));
+      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("autoDouble$", ::Reflex::Type::ByName("double"), (Reflex::REPRESTYPE)'O'); // type 'O'
       G__RflxProperties* prop = G__get_properties(result);
       if (prop) {
          //fprintf(stderr, "G__platformMacro: registering typedef '%s'\n", result.Name(Reflex::QUALIFIED).c_str());
@@ -794,7 +832,7 @@ static void G__platformMacro()
 
    {
       //fprintf(stderr, "G__platformMacro: calling Reflex::TypedefTypeBuilder for 'macroChar*$'\n");
-      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("macroChar*$", ::Reflex::PointerBuilder(::Reflex::ConstBuilder(::Reflex::Type::ByName("char"))));
+      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("macroChar*$", ::Reflex::PointerBuilder(::Reflex::ConstBuilder(::Reflex::Type::ByName("char"))),  (Reflex::REPRESTYPE)'T'); // type 'T'
       G__RflxProperties* prop = G__get_properties(result);
       if (prop) {
          //fprintf(stderr, "G__platformMacro: registering typedef '%s'\n", result.Name(Reflex::QUALIFIED).c_str());
@@ -804,7 +842,7 @@ static void G__platformMacro()
 
    {
       //fprintf(stderr, "G__platformMacro: calling Reflex::TypedefTypeBuilder for 'macro$'\n");
-      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("macro$", ::Reflex::PointerBuilder(::Reflex::ConstBuilder(::Reflex::Type::ByName("char"))));
+      ::Reflex::Type result = ::Reflex::TypedefTypeBuilder("macro$", ::Reflex::PointerBuilder(::Reflex::ConstBuilder(::Reflex::Type::ByName("char"))), (Reflex::REPRESTYPE) 'j'); // type 'j'
       G__RflxProperties* prop = G__get_properties(result);
       if (prop) {
          //fprintf(stderr, "G__platformMacro: registering typedef '%s'\n", result.Name(Reflex::QUALIFIED).c_str());
@@ -910,6 +948,10 @@ static void G__platformMacro()
 #ifdef __SUNPRO_C   /* Sun C compiler */
    G__DEFINE_MACRO_C(__SUNPRO_C);
 #endif
+#ifdef _STLPORT_VERSION
+   // stlport version, used on e.g. SUN
+   G__DEFINE_MACRO_C(_STLPORT_VERSION);
+#endif
 #ifdef G__VISUAL    /* Microsoft Visual C++ compiler */
    if (G__globalcomp == G__NOLINK) {
       sprintf(temp, "G__VISUAL=%ld", (long)G__VISUAL);
@@ -918,6 +960,16 @@ static void G__platformMacro()
 #endif
 #ifdef _MSC_VER     /* Microsoft Visual C++ version */
    G__DEFINE_MACRO_C(_MSC_VER);
+   if (G__globalcomp == G__NOLINK) {
+#ifdef _HAS_ITERATOR_DEBUGGING
+      sprintf(temp, "G__HAS_ITERATOR_DEBUGGING=%d", _HAS_ITERATOR_DEBUGGING);
+      G__add_macro(temp);
+#endif
+#ifdef _SECURE_SCL
+      sprintf(temp, "G__SECURE_SCL=%d", _SECURE_SCL);
+      G__add_macro(temp);
+#endif
+   }
 #endif
 #ifdef __SC__       /* Symantec C/C++ compiler */
    G__DEFINE_MACRO_N_C(__SC__, "G__SYMANTEC");
@@ -947,7 +999,7 @@ static void G__platformMacro()
    }
    G__DEFINE_MACRO_C(__xlc__);
 #endif
-#endif
+#endif //G__SIGNAL
 
    if (G__globalcomp == G__NOLINK) {
       G__initcxx();
@@ -1069,7 +1121,7 @@ void Cint::Internal::G__set_stdio()
    G__intp_sin = G__sin;
 
    // FILE is a fundamental type for CINT
-   ::Reflex::ClassBuilder("FILE", typeid(FILE), 0, ::Reflex::STRUCT);
+   ::Reflex::ClassBuilder("FILE", typeid(FILE), 0, ::Reflex::STRUCT).EnableCallback(false);
 
    G__var_type = 'E';
    sprintf(temp, "stdout=(FILE*)(%ld)", (long)G__intp_sout);
@@ -1369,12 +1421,11 @@ extern "C" int G__main(int argc, char** argv)
    G__StrBuf dumpfile_sb(G__MAXFILENAME);
    char* dumpfile = dumpfile_sb;
    G__value result = G__null;
-   char* linkfilename = 0;
+   const char* linkfilename = 0;
    int linkflag = 0;
-   char* dllid = 0;
+   const char* dllid = 0;
    G__dictposition stubbegin;
    char* icom = 0;
-   stubbegin.ptype = (char*) G__PVOID;
    //
    // Setting STDIOs.  May need to modify in init.c, end.c, scrupto.c, pause.c.
    //
@@ -1891,6 +1942,7 @@ extern "C" int G__main(int argc, char** argv)
    //  Catch signals if not embedded in ROOT.
    //
 #ifndef G__ROOT
+#ifdef G__SIGNAL
 #ifndef G__DONT_CATCH_SIGINT
    signal(SIGINT, G__breakkey);
 #endif // G__DONT_CATCH_SIGINT
@@ -1916,6 +1968,7 @@ extern "C" int G__main(int argc, char** argv)
 #endif // SIGBUS
       // --
    }
+#endif // G__SIGNAL
 #endif // G__ROOT
    //
    //  Initialize pointer to member function size.
@@ -1987,7 +2040,6 @@ extern "C" int G__main(int argc, char** argv)
          continue;
       }
       else if (strcmp(sourcefile, "+STUB") == 0) {
-         stubbegin.ptype = (char*)G__PVOID;
          G__store_dictposition(&stubbegin);
          continue;
       }

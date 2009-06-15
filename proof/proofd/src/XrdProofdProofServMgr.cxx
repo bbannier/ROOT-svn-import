@@ -90,6 +90,7 @@ void *XrdProofdProofServCron(void *p)
 
    XpdManagerCron_t *mc = (XpdManagerCron_t *)p;
    XrdProofdProofServMgr *mgr = mc->fSessionMgr;
+   XrdProofSched *sched = mc->fProofSched;
    if (!(mgr)) {
       TRACE(XERR,  "undefined session manager: cannot start");
       return (void *)0;
@@ -136,8 +137,14 @@ void *XrdProofdProofServCron(void *p)
             XrdSysMutexHelper mhp(mgr->Mutex());
             // Remove it from the hash list
             mgr->DeleteFromSessions(fpid.c_str());
-            // Move the netry to the terminated sessions area
+            // Move the entry to the terminated sessions area
             mgr->MvSession(fpid.c_str());
+            // Notify the scheduler too
+            if (sched) {
+               if (sched->Pipe()->Post(XrdProofSched::kReschedule, 0) != 0) {
+                  TRACE(XERR, "kSessionRemoval: problem posting the scheduler pipe");
+               }
+            }
             // Notify action
             TRACE(REQ, "kSessionRemoval: session: "<<fpid<<
                         " has been removed from the active list");
@@ -158,7 +165,7 @@ void *XrdProofdProofServCron(void *p)
             // Quick check of active sessions in case of disconnections
             mgr->CheckActiveSessions(0);
         } else if (msg.Type() == XrdProofdProofServMgr::kCleanSessions) {
-            // Request for cleanup all sessions of a client (or all clients) 
+            // Request for cleanup all sessions of a client (or all clients)
             XpdSrvMgrCreateCnt cnt(mgr, XrdProofdProofServMgr::kCleanSessionsCnt);
             XrdOucString usr;
             rc = msg.Get(usr);
@@ -213,7 +220,7 @@ void *XrdProofdProofServCron(void *p)
             if (clnlostscale <= 0) {
                mgr->CleanupLostProofServ();
                clnlostscale = 10;
-            } else{
+            } else {
                clnlostscale--;
             }
             // How many active sessions do we have
@@ -301,6 +308,7 @@ XrdProofdProofServMgr::XrdProofdProofServMgr(XrdProofdManager *mgr,
    fVerifyTimeOut = 3 * fCheckFrequency;
    fRecoverTimeOut = 10;
    fCheckLost = 1;
+   fParentExecs = "xproofd,xrootd";
 
    // Recover-related quantities
    fRecoverClients = 0;
@@ -334,14 +342,14 @@ int XrdProofdProofServMgr::Config(bool rcf)
    XPDPRT(msg);
 
    // Notify timeout on internal communications
-   msg.form("setting internal timeout to %d secs", fInternalWait);
+   XPDFORM(msg, "setting internal timeout to %d secs", fInternalWait);
    XPDPRT(msg);
 
    // Shutdown options
    msg = "client sessions shutdown after disconnection";
    if (fShutdownOpt > 0) {
-      msg.form("client sessions kept %sfor %d secs after disconnection",
-               (fShutdownOpt == 1) ? "idle " : "", fShutdownDelay);
+      XPDFORM(msg, "client sessions kept %sfor %d secs after disconnection",
+                   (fShutdownOpt == 1) ? "idle " : "", fShutdownDelay);
    }
    XPDPRT(msg);
 
@@ -374,7 +382,7 @@ int XrdProofdProofServMgr::Config(bool rcf)
       if ((nr = PrepareSessionRecovering()) < 0) {
          TRACE(XERR, "problems trying to recover active sessions");
       } else if (nr > 0) {
-         msg.form("%d active sessions have been recovered", nr);
+         XPDFORM(msg, "%d active sessions have been recovered", nr);
          XPDPRT(msg);
       }
 
@@ -412,7 +420,7 @@ int XrdProofdProofServMgr::AddSession(XrdProofdProtocol *p, XrdProofdProofServ *
 
    // Path
    XrdOucString path;
-   path.form("%s/%s.%s.%d", fActiAdminPath.c_str(), c->User(), c->Group(), s->SrvPID());
+   XPDFORM(path, "%s/%s.%s.%d", fActiAdminPath.c_str(), c->User(), c->Group(), s->SrvPID());
 
    // Save session info to file
    XrdProofSessionInfo info(c, s);
@@ -441,7 +449,7 @@ bool XrdProofdProofServMgr::IsSessionSocket(const char *fpid)
    if (!spath.endswith(".sock")) return 0;
    if (!spath.beginswith(fActiAdminPath.c_str())) {
       // We are given a partial path: create full paths
-      spath.form("%s/%s", fActiAdminPath.c_str(), fpid);
+      XPDFORM(spath, "%s/%s", fActiAdminPath.c_str(), fpid);
    }
    XrdOucString apath = spath;
    apath.replace(".sock", "");
@@ -464,7 +472,7 @@ bool XrdProofdProofServMgr::IsSessionSocket(const char *fpid)
 //______________________________________________________________________________
 int XrdProofdProofServMgr::MvSession(const char *fpid)
 {
-   // Move session file from the active to the terminated areas 
+   // Move session file from the active to the terminated areas
    XPDLOC(SMGR, "ProofServMgr::MvSession")
 
    TRACE(REQ, "moving "<<fpid<<" ...");
@@ -479,8 +487,8 @@ int XrdProofdProofServMgr::MvSession(const char *fpid)
    XrdOucString opath(fpid), npath;
    if (!opath.beginswith(fActiAdminPath.c_str())) {
       // We are given a partial path: create full paths
-      opath.form("%s/%s", fActiAdminPath.c_str(), fpid);
-      npath.form("%s/%s", fTermAdminPath.c_str(), fpid);
+      XPDFORM(opath, "%s/%s", fActiAdminPath.c_str(), fpid);
+      XPDFORM(npath, "%s/%s", fTermAdminPath.c_str(), fpid);
    } else {
       // Full path: just create the new path
       npath = fpid;
@@ -523,7 +531,7 @@ int XrdProofdProofServMgr::RmSession(const char *fpid)
 
    // Path
    XrdOucString path;
-   path.form("%s/%s", fTermAdminPath.c_str(), fpid);
+   XPDFORM(path, "%s/%s", fTermAdminPath.c_str(), fpid);
 
    // remove the file
    if (unlink(path.c_str()) == 0)
@@ -551,7 +559,7 @@ int XrdProofdProofServMgr::TouchSession(const char *fpid, const char *fpath)
    // Path
    XrdOucString path(fpath);
    if (!fpath || strlen(fpath) == 0)
-      path.form("%s/%s", fActiAdminPath.c_str(), fpid);
+      XPDFORM(path, "%s/%s", fActiAdminPath.c_str(), fpid);
 
    // Update file time stamps
    if (utime(path.c_str(), 0) == 0)
@@ -581,9 +589,9 @@ int XrdProofdProofServMgr::VerifySession(const char *fpid,
    // Path
    XrdOucString path;
    if (fpath && strlen(fpath) > 0)
-      path.form("%s/%s", fpath, fpid);
+      XPDFORM(path, "%s/%s", fpath, fpid);
    else
-      path.form("%s/%s", fActiAdminPath.c_str(), fpid);
+      XPDFORM(path, "%s/%s", fActiAdminPath.c_str(), fpid);
 
    // Current settings
    struct stat st;
@@ -631,7 +639,7 @@ int XrdProofdProofServMgr::DeleteFromSessions(const char *fpid)
    if (xps) {
       // Tell other attached clients, if any, that this session is gone
       XrdOucString msg;
-      msg.form("session: %s terminated by peer", fpid);
+      XPDFORM(msg, "session: %s terminated by peer", fpid);
       TRACE(DBG, msg);
       // Reset this instance
       int tp = xps->Reset(msg.c_str(), kXPD_wrkmortem);
@@ -694,6 +702,7 @@ int XrdProofdProofServMgr::PrepareSessionRecovering()
       // Fill manager pointers structure
       fManagerCron.fClientMgr = fMgr->ClientMgr();
       fManagerCron.fSessionMgr = this;
+      fManagerCron.fProofSched = fMgr->ProofSched();
       if (XrdSysThread::Run(&tid, XrdProofdProofServRecover, (void *)&fManagerCron,
                             0, "ProofServMgr session recover thread") != 0) {
          TRACE(XERR, "could not start session recover thread");
@@ -947,13 +956,13 @@ int XrdProofdProofServMgr::CheckTerminatedSessions()
 
       // Full path
       XrdOucString path;
-      path.form("%s/%s", fTermAdminPath.c_str(), ent->d_name);
+      XPDFORM(path, "%s/%s", fTermAdminPath.c_str(), ent->d_name);
 
       // Check termination time
       struct stat st;
       int rcst = stat(path.c_str(), &st);
       TRACE(DBG, pid<<": rcst: "<<rcst<<", now - mtime: "<<now - st.st_mtime<<" secs")
-      if ((now - st.st_mtime) > fTerminationTimeOut || rcst != 0) { 
+      if ((now - st.st_mtime) > fTerminationTimeOut || rcst != 0) {
          // Check if the process is still alive
          if (XrdProofdAux::VerifyProcessByID(pid) != 0) {
             // Send again an hard-kill signal
@@ -1018,7 +1027,7 @@ int XrdProofdProofServMgr::CleanClientSessions(const char *usr, int srvtype)
          int pid = XrdProofdAux::ParsePidPath(ent->d_name, rest);
          if (!XPD_LONGOK(pid) || pid <= 0) continue;
          // Read info from file and check that we are interested in this session
-         path.form("%s/%s", fTermAdminPath.c_str(), ent->d_name);
+         XPDFORM(path, "%s/%s", fTermAdminPath.c_str(), ent->d_name);
          XrdProofSessionInfo info(path.c_str());
          // Check user
          if (!all && info.fUser != usr) continue;
@@ -1056,7 +1065,7 @@ int XrdProofdProofServMgr::CleanClientSessions(const char *usr, int srvtype)
       int pid = XrdProofdAux::ParsePidPath(ent->d_name, rest);
       if (!XPD_LONGOK(pid) || pid <= 0) continue;
       // Read info from file and check that we are intersted in this session
-      path.form("%s/%s", fActiAdminPath.c_str(), ent->d_name);
+      XPDFORM(path, "%s/%s", fActiAdminPath.c_str(), ent->d_name);
       XrdProofSessionInfo info(path.c_str());
       if (!all && info.fUser != usr) continue;
       // Check server type
@@ -1067,7 +1076,7 @@ int XrdProofdProofServMgr::CleanClientSessions(const char *usr, int srvtype)
       // Check if the process is still alive
       if (XrdProofdAux::VerifyProcessByID(pid) != 0) {
          // Check if a session-object is still available
-         key.form("%d", pid);
+         XPDFORM(key, "%d", pid);
          XrdProofdProofServ *xps = 0;
          {  XrdSysMutexHelper mhp(fMutex);
             xps = fSessions.Find(key.c_str()); }
@@ -1102,6 +1111,8 @@ void XrdProofdProofServMgr::RegisterDirectives()
    // Register config directives for strings
    Register("proofplugin",
                   new XrdProofdDirective("proofplugin", (void *)&fProofPlugin, &DoDirectiveString));
+   Register("proofservparents",
+                  new XrdProofdDirective("proofservparents", (void *)&fParentExecs, &DoDirectiveString));
 }
 
 //______________________________________________________________________________
@@ -1181,7 +1192,7 @@ int XrdProofdProofServMgr::DoDirectiveProofServMgr(char *val, XrdOucStream *cfg,
    if (XPD_LONGOK(checklost)) fCheckLost = (checklost != 0) ? 1 : 0;
 
    XrdOucString msg;
-   msg.form("checkfq: %d s, termto: %d s, verifyto: %d s, recoverto: %d s, checklost: %d",
+   XPDFORM(msg, "checkfq: %d s, termto: %d s, verifyto: %d s, recoverto: %d s, checklost: %d",
             fCheckFrequency, fTerminationTimeOut, fVerifyTimeOut, fRecoverTimeOut, fCheckLost);
    TRACE(ALL, msg);
 
@@ -1449,7 +1460,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       int cursess = CurrentSessions();
       TRACEP(p,ALL," cursess: "<<cursess);
       if (mxsess <= cursess) {
-         msg.form(" ++++ Max number of sessions reached (%d) - please retry later ++++ \n", cursess); 
+         XPDFORM(msg, " ++++ Max number of sessions reached (%d) - please retry later ++++ \n", cursess); 
          response->Send(kXR_attn, kXPD_srvmsg, (char *) msg.c_str(), msg.length());
          response->Send(kXP_TooManySess, "cannot start a new session");
          return 0;
@@ -1534,12 +1545,12 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
 
    // The ROOT version to be used
    xps->SetROOT(p->Client()->ROOT());
-   msg.form("using ROOT version: %s", xps->ROOT()->Export());
+   XPDFORM(msg, "using ROOT version: %s", xps->ROOT()->Export());
    TRACEP(p, REQ, msg);
    if (p->ConnType() == kXPD_ClientMaster) {
       // Notify the client if using a version different from the default one
       if (p->Client()->ROOT() != fMgr->ROOTMgr()->DefaultVersion()) {
-         msg.form("++++ Using NON-default ROOT version: %s ++++\n", xps->ROOT()->Export());
+         XPDFORM(msg, "++++ Using NON-default ROOT version: %s ++++\n", xps->ROOT()->Export());
          response->Send(kXR_attn, kXPD_srvmsg, (char *) msg.c_str(), msg.length());
       }
    }
@@ -1578,18 +1589,18 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       // Get unique tag and relevant dirs for this session
       ProofServEnv_t in = {xps, loglevel, cffile.c_str(), "", "", "", "", ""};
       GetTagDirs(p, xps, in.fSessionTag, in.fTopSessionTag, in.fSessionDir, in.fWrkDir);
-      in.fLogFile.form("%s.log", in.fWrkDir.c_str());
+      XPDFORM(in.fLogFile, "%s.log", in.fWrkDir.c_str());
       TRACE(FORK, "log file: "<<in.fLogFile);
 
       // Path
       XrdOucString path, sockpath;
-      path.form("%s/%s.%s.%d", fActiAdminPath.c_str(),
-                               p->Client()->User(), p->Client()->Group(), getpid());
+      XPDFORM(path, "%s/%s.%s.%d", fActiAdminPath.c_str(),
+                               p->Client()->User(), p->Client()->Group(), (int)getpid());
       xps->SetAdminPath(path.c_str());
 
       // UNIX Socket Path
       sockpath = path;
-      sockpath.form("%s.sock", path.c_str());
+      XPDFORM(sockpath, "%s.sock", path.c_str());
       xps->SetUNIXSockPath(sockpath.c_str());
 
       // Log to the session log file from now on
@@ -1650,6 +1661,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
          close(fp[1]);
          exit(1);
       }
+      TRACE(FORK, (int)getpid() << ": proofserv env set up");
 
       // Setup OK: now we go
       // Communicate the logfile path
@@ -1670,6 +1682,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
             }
          }
       }
+      TRACE(FORK, (int)getpid()<< ": log file path communicated");
 
       // Unblock SIGUSR1 and SIGUSR2
       sigset_t myset;
@@ -1682,7 +1695,7 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
       close(fp[0]);
       close(fp[1]);
 
-      TRACE(FORK, "user: "<<p->Client()->User()<<
+      TRACE(FORK, (int)getpid()<<": user: "<<p->Client()->User()<<
                   ", uid: "<<getuid()<<", euid:"<<geteuid());
       // Run the program
       execv(xps->ROOT()->PrgmSrv(), argvv);
@@ -1717,9 +1730,9 @@ int XrdProofdProofServMgr::Create(XrdProofdProtocol *p)
    // Admin and UNIX Socket Path (set path and create the socket); we need to
    // set and create them in here, otherwise the cleaning may remove the socket
    XrdOucString path, sockpath;
-   path.form("%s/%s.%s.%d", fActiAdminPath.c_str(),
-                            p->Client()->User(), p->Client()->Group(), pid);
-   sockpath.form("%s.sock", path.c_str());
+   XPDFORM(path, "%s/%s.%s.%d", fActiAdminPath.c_str(),
+                                p->Client()->User(), p->Client()->Group(), pid);
+   XPDFORM(sockpath, "%s.sock", path.c_str());
    xps->SetAdminPath(path.c_str());
    xps->SetUNIXSockPath(sockpath.c_str());
    if (xps->CreateUNIXSock(fEDest) != 0) {
@@ -1906,7 +1919,7 @@ int XrdProofdProofServMgr::ResolveSession(const char *fpid)
 
    // Path to the session file
    XrdOucString path;
-   path.form("%s/%s", fActiAdminPath.c_str(), fpid);
+   XPDFORM(path, "%s/%s", fActiAdminPath.c_str(), fpid);
 
    // Read info
    XrdProofSessionInfo si(path.c_str());
@@ -1987,7 +2000,7 @@ int XrdProofdProofServMgr::Recover(XpdClientSessions *cl)
    while (nps--) {
 
       { XrdSysMutexHelper mhp(cl->fMutex); xps = cl->fProofServs.front();
-        cl->fProofServs.pop_front(); cl->fProofServs.push_back(xps); }
+        cl->fProofServs.remove(xps); cl->fProofServs.push_back(xps); }
 
       // Short steps of 1 sec
       if (Accept(xps, 1, emsg) != 0) {
@@ -2156,6 +2169,8 @@ int XrdProofdProofServMgr::Destroy(XrdProofdProtocol *p)
    psid = ntohl(p->Request()->proof.sid);
    TRACEP(p, REQ, "psid: "<<psid);
 
+   XrdOucString msg;
+
    // Find server session
    XrdProofdProofServ *xpsref = 0;
    if (psid > -1) {
@@ -2165,11 +2180,12 @@ int XrdProofdProofServMgr::Destroy(XrdProofdProtocol *p)
          response->Send(kXR_InvalidRequest,"reference session ID not found");
          return 0;
       }
+      XPDFORM(msg, "session %d destroyed by %s", xpsref->SrvPID(), p->Link()->ID);
+   } else {
+      XPDFORM(msg, "all sessions destroyed by %s", p->Link()->ID);
    }
 
    // Terminate the servers
-   XrdOucString msg;
-   msg.form("session %d destroyed by %s", xpsref->SrvPID(), p->Link()->ID);
    p->Client()->TerminateSessions(kXPD_AnyServer, xpsref,
                                   msg.c_str(), Pipe(), fMgr->ChangeOwn());
 
@@ -2209,7 +2225,7 @@ int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p, void *input)
       TRACE(XERR, "unable to get instance of proofserv proxy");
       return -1;
    }
-   int psid = xps->ID();   
+   int psid = xps->ID();
    TRACE(REQ,  "psid: "<<psid<<", log: "<<in->fLogLevel);
 
    // Work directory
@@ -2245,7 +2261,7 @@ int XrdProofdProofServMgr::SetProofServEnvOld(XrdProofdProtocol *p, void *input)
    envfile += ".env";
    FILE *fenv = fopen(envfile.c_str(), "w");
    if (!fenv) {
-      TRACE(XERR, 
+      TRACE(XERR,
                   "unable to open env file: "<<envfile);
       return -1;
    }
@@ -2438,26 +2454,32 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdManager *mgr, XrdROOT *r)
    TRACE(REQ,  "ROOT dir: "<< (r ? r->Dir() : "*** undef ***"));
 
    if (r) {
-      char *rootsys = (char *) r->Dir();
-#ifndef ROOTLIBDIR
+      char *libdir = (char *) r->LibDir();
       char *ldpath = 0;
       if (mgr->BareLibPath() && strlen(mgr->BareLibPath()) > 0) {
-         ldpath = new char[32 + strlen(rootsys) + strlen(mgr->BareLibPath())];
-         sprintf(ldpath, "%s=%s/lib:%s", XPD_LIBPATH, rootsys, mgr->BareLibPath());
+         ldpath = new char[32 + strlen(libdir) + strlen(mgr->BareLibPath())];
+         sprintf(ldpath, "%s=%s:%s", XPD_LIBPATH, libdir, mgr->BareLibPath());
       } else {
-         ldpath = new char[32 + strlen(rootsys)];
-         sprintf(ldpath, "%s=%s/lib", XPD_LIBPATH, rootsys);
-      } 
+         ldpath = new char[32 + strlen(libdir)];
+         sprintf(ldpath, "%s=%s", XPD_LIBPATH, libdir);
+      }
       putenv(ldpath);
-#endif
       // Set ROOTSYS
+      char *rootsys = (char *) r->Dir();
       ev = new char[15 + strlen(rootsys)];
       sprintf(ev, "ROOTSYS=%s", rootsys);
       putenv(ev);
 
+      // Set bin directory
+      char *bindir = (char *) r->BinDir();
+      ev = new char[15 + strlen(bindir)];
+      sprintf(ev, "ROOTBINDIR=%s", bindir);
+      putenv(ev);
+
       // Set conf dir
-      ev = new char[20 + strlen(rootsys)];
-      sprintf(ev, "ROOTCONFDIR=%s", rootsys);
+      char *confdir = (char *) r->DataDir();
+      ev = new char[20 + strlen(confdir)];
+      sprintf(ev, "ROOTCONFDIR=%s", confdir);
       putenv(ev);
 
       // Set TMPDIR
@@ -2479,7 +2501,8 @@ void XrdProofdProofServMgr::GetTagDirs(XrdProofdProtocol *p, XrdProofdProofServ 
                                        XrdOucString &sesstag, XrdOucString &topsesstag,
                                        XrdOucString &sessiondir, XrdOucString &sesswrkdir)
 {
-   // Detarmine the unique tag and relevant dirs for this session
+   // Determine the unique tag and relevant dirs for this session
+   XPDLOC(SMGR, "ProofServMgr::GetTagDirs")
 
    // Client sandbox
    XrdOucString udir = p->Client()->Sandbox()->Dir();
@@ -2488,7 +2511,9 @@ void XrdProofdProofServMgr::GetTagDirs(XrdProofdProtocol *p, XrdProofdProofServ 
    XrdOucString host = fMgr->Host();
    if (host.find(".") != STR_NPOS)
       host.erase(host.find("."));
-   sesstag.form("%s-%d-%d", host.c_str(), (int)time(0), getpid());
+   TRACE(XERR, "sesstag: "<<sesstag);
+   XPDFORM(sesstag, "%s-%d-%d", host.c_str(), (int)time(0), (int)getpid());
+   TRACE(XERR, "sesstag: "<<sesstag);
 
    // Session dir
    topsesstag = sesstag;
@@ -2513,9 +2538,9 @@ void XrdProofdProofServMgr::GetTagDirs(XrdProofdProtocol *p, XrdProofdProofServ 
    // The session working dir depends on the role
    sesswrkdir = sessiondir;
    if (p->ConnType() == kXPD_MasterWorker) {
-      sesswrkdir.form("%s/worker-%s-%s", sessiondir.c_str(), xps->Ordinal(), sesstag.c_str());
+      XPDFORM(sesswrkdir, "%s/worker-%s-%s", sessiondir.c_str(), xps->Ordinal(), sesstag.c_str());
    } else {
-      sesswrkdir.form("%s/master-%s-%s", sessiondir.c_str(), xps->Ordinal(), sesstag.c_str());
+      XPDFORM(sesswrkdir, "%s/master-%s-%s", sessiondir.c_str(), xps->Ordinal(), sesstag.c_str());
    }
 
    // Done
@@ -2550,7 +2575,7 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
       TRACE(XERR, "unable to get instance of proofserv proxy");
       return -1;
    }
-   int psid = xps->ID();   
+   int psid = xps->ID();
    TRACE(REQ,  "psid: "<<psid<<", log: "<<in->fLogLevel);
 
    // Client sandbox
@@ -2586,7 +2611,7 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
    if (XrdProofdAux::SymLink(rcfile.c_str(), "session.rootrc") != 0) {
       TRACE(XERR, "problems creating symlink to 'session.rootrc' (errno: "<<errno<<")");
    }
-   TRACE(DBG, "session rootrc file: "<< rcfile);
+   TRACE(REQ, "session rootrc file: "<< rcfile);
 
    // Port
    fprintf(frc, "# XrdProofdProtocol listening port\n");
@@ -2685,9 +2710,15 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
 
    // Config file
    if (in->fCfg.length() > 0) {
-      fprintf(frc, "# Config file\n");
-      // User defined
-      fprintf(frc, "ProofServ.ProofConfFile: %s\n", in->fCfg.c_str());
+      if (in->fCfg == "masteronly") {
+         fprintf(frc, "# MasterOnly option\n");
+         // Master Only setup
+         fprintf(frc, "Proof.MasterOnly: 1\n");
+      } else {
+         fprintf(frc, "# Config file\n");
+         // User defined
+         fprintf(frc, "ProofServ.ProofConfFile: %s\n", in->fCfg.c_str());
+      }
    } else {
       fprintf(frc, "# Config file\n");
       if (fMgr->IsSuperMst()) {
@@ -2699,15 +2730,43 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
       }
    }
 
+   // We set this to avoid blocking to much on xrdclient actions; they can be
+   // oevrwritten with explicit putrc directives
+   fprintf(frc, "# Default settings for XrdClient\n");
+   fprintf(frc, "XNet.FirstConnectMaxCnt 3\n");
+   fprintf(frc, "XNet.ConnectTimeout     5\n");
+
    // Additional rootrcs (xpd.putrc directive)
    if (fProofServRCs.length() > 0) {
       fprintf(frc, "# Additional rootrcs (xpd.putrc directives)\n");
       // Go through the list
       XrdOucString rc;
       int from = 0;
-      while ((from = fProofServRCs.tokenize(rc, from, ',')) != -1)
-         if (rc.length() > 0)
-            fprintf(frc, "%s\n", rc.c_str());
+      while ((from = fProofServRCs.tokenize(rc, from, ',')) != -1) {
+         if (rc.length() > 0) {
+	    if (rc.find("Proof.DataSetManager") != STR_NPOS) {
+	       TRACE(ALL,"Proof.DataSetManager ignored: use xpd.datasetsrc to define dataset managers");
+	    } else {
+	       fprintf(frc, "%s\n", rc.c_str());
+	    }
+	 }
+      }
+   }
+
+   // If applicable, add dataset managers initiators
+   if (fMgr->DataSetSrcs()->size() > 0) {
+      fprintf(frc, "# Dataset sources\n");
+      XrdOucString rc("Proof.DataSetManager: ");
+      std::list<XrdProofdDSInfo *>::iterator ii;
+      for (ii = fMgr->DataSetSrcs()->begin(); ii != fMgr->DataSetSrcs()->end(); ii++) {
+         if (ii != fMgr->DataSetSrcs()->begin()) rc += ", ";
+         rc += (*ii)->fType;
+	 rc += " dir:";
+         rc += (*ii)->fUrl;
+	 rc += " opt:";
+	 rc += (*ii)->fOpts;
+      }
+      fprintf(frc, "%s\n", rc.c_str());
    }
 
    // Done with this
@@ -2721,7 +2780,7 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
       TRACE(XERR, "unable to open env file: "<<envfile);
       return -1;
    }
-   TRACE(DBG, "environment file: "<< envfile);
+   TRACE(REQ, "environment file: "<< envfile);
 
    // Forwarded sec credentials, if any
    if (p->AuthProt()) {
@@ -2796,12 +2855,14 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
    sprintf(ev, "ROOTRCFILE=%s", rcfile.c_str());
    putenv(ev);
    fprintf(fenv, "%s\n", ev);
+   TRACE(DBG, ev);
 
    // ROOT version tag (needed in building packages)
    ev = new char[strlen("ROOTVERSIONTAG=")+strlen(p->Client()->ROOT()->Tag())+2];
    sprintf(ev, "ROOTVERSIONTAG=%s", p->Client()->ROOT()->Tag());
    putenv(ev);
    fprintf(fenv, "%s\n", ev);
+   TRACE(DBG, ev);
 
    // Log file in the log dir
    ev = new char[strlen("ROOTPROOFLOGFILE=") + in->fLogFile.length() + 2];
@@ -2809,12 +2870,16 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
    putenv(ev);
    fprintf(fenv, "%s\n", ev);
    xps->SetFileout(in->fLogFile.c_str());
+   TRACE(DBG, ev);
 
    // Xrootd config file
-   ev = new char[strlen("XRDCF=")+strlen(CfgFile())+2];
-   sprintf(ev, "XRDCF=%s", CfgFile());
-   putenv(ev);
-   fprintf(fenv, "%s\n", ev);
+   if (CfgFile()) {
+      ev = new char[strlen("XRDCF=")+strlen(CfgFile())+2];
+      sprintf(ev, "XRDCF=%s", CfgFile());
+      putenv(ev);
+      fprintf(fenv, "%s\n", ev);
+      TRACE(DBG, ev);
+   }
 
    // Additional envs (xpd.putenv directive)
    if (fProofServEnvs.length() > 0) {
@@ -2869,7 +2934,7 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
    fclose(fenv);
 
    // Create or Update symlink to last session
-   TRACE(DBG, "creating symlink");
+   TRACE(REQ, "creating symlink");
    XrdOucString syml = udir;
    if (p->ConnType() == kXPD_MasterWorker)
       syml += "/last-worker-session";
@@ -2881,7 +2946,7 @@ int XrdProofdProofServMgr::SetProofServEnv(XrdProofdProtocol *p, void *input)
    }
 
    // We are done
-   TRACE(DBG, "done");
+   TRACE(REQ, "done");
    return 0;
 }
 
@@ -2937,11 +3002,11 @@ int XrdProofdProofServMgr::CleanupLostProofServ()
             continue;
          }
          // Extract daemon PID and check that it is alive
-         pidpath.form("%s/xrootd.pid", apath.c_str());
+         XPDFORM(pidpath, "%s/xrootd.pid", apath.c_str());
          int xpid = XrdProofdAux::GetIDFromPath(pidpath.c_str(), emsg);
          int *alive = xrdproc.Find(xpid);
          if (!alive) {
-            a = (XrdProofdAux::VerifyProcessByID(xpid, "xrootd")) ? 1 : 0;
+            a = (XrdProofdAux::VerifyProcessByID(xpid, fParentExecs.c_str())) ? 1 : 0;
             xrdproc.Add(xpid, a);
             if (!(alive = xrdproc.Find(xpid))) {
                TRACE(ALL, "unable to add info in the Rash table!");
@@ -2955,11 +3020,11 @@ int XrdProofdProofServMgr::CleanupLostProofServ()
          if (a == 1) {
             const char *subdir[2] = {"activesessions", "terminatedsessions"};
             for (int i = 0; i < 2; i++) {
-               sessiondir.form("%s/%s", apath.c_str(), subdir[i]);
+               XPDFORM(sessiondir, "%s/%s", apath.c_str(), subdir[i]);
                if (!sessionspaths.Find(sessiondir.c_str())) {
                   DIR *sdir = opendir(sessiondir.c_str());
                   if (!sdir) {
-                     emsg.form("cannot open '%s' - errno: %d", apath.c_str(), errno);
+                     XPDFORM(emsg, "cannot open '%s' - errno: %d", apath.c_str(), errno);
                      TRACE(XERR, emsg.c_str());
                      continue;
                   }
@@ -3072,7 +3137,7 @@ int XrdProofdProofServMgr::CleanupProofServ(bool all, const char *usr)
             if (xppid && strstr(line, "PPid:")) {
                ppid = (int) XrdProofdAux::GetLong(&line[strlen("PPid:")]);
                // Parent process must be us or be dead
-               if (ppid != getpid() && XrdProofdAux::VerifyProcessByID(ppid, "xrootd"))
+               if (ppid != getpid() && XrdProofdAux::VerifyProcessByID(ppid, fParentExecs.c_str()))
                   // Process created by another running xrootd
                   break;
                xppid = 0;
@@ -3160,7 +3225,7 @@ int XrdProofdProofServMgr::CleanupProofServ(bool all, const char *usr)
          }
          // Parent process must be us or be dead
          int ppid = psi.pr_ppid;
-         if (ppid != getpid() && XrdProofdAux::VerifyProcessByID(ppid, "xrootd")) {
+         if (ppid != getpid() && XrdProofdAux::VerifyProcessByID(ppid, fParentExecs.c_str())) {
             // Process created by another running xrootd
             continue;
             xppid = 0;
@@ -3278,7 +3343,7 @@ int XrdProofdProofServMgr::CleanupProofServ(bool all, const char *usr)
             int ppid = (int) XrdProofdAux::GetLong(pi);
             TRACE(HDBG, "found alternative parent ID: "<< ppid);
             // If still running then skip
-            if (XrdProofdAux::VerifyProcessByID(ppid, "xrootd"))
+            if (XrdProofdAux::VerifyProcessByID(ppid, fParentExecs.c_str()))
                continue;
          }
          // Get pid now
@@ -3348,7 +3413,34 @@ int XrdProofdProofServMgr::SetUserEnvironment(XrdProofdProtocol *p)
       initgroups(p->Client()->UI().fUser.c_str(), p->Client()->UI().fGid);
    }
 
+   // If applicable, make sure that the private dataset dir for this user exists 
+   // and has the right permissions
+   if (fMgr->DataSetSrcs()->size() > 0) {
+      std::list<XrdProofdDSInfo *>::iterator ii;
+      for (ii = fMgr->DataSetSrcs()->begin(); ii != fMgr->DataSetSrcs()->end(); ii++) {
+	 if ((*ii)->fLocal && (*ii)->fRW) {
+	    XrdOucString d = (*ii)->fUrl;
+	    if (!d.endswith("/")) d += "/";
+	    d += p->Client()->UI().fGroup; d += "/";
+	    d += p->Client()->UI().fUser;
+	    if (XrdProofdAux::AssertDir(d.c_str(), p->Client()->UI(),
+                                                   fMgr->ChangeOwn()) != 0) {
+	       TRACE(XERR, "can't assert "<<d);
+	    }
+	 }
+      }
+   }
+
    if (fMgr->ChangeOwn()) {
+
+      // Change ownership of '.creds'
+      XrdOucString creds(p->Client()->Sandbox()->Dir());
+      creds += "/.creds";
+      if (XrdProofdAux::ChangeOwn(creds.c_str(), p->Client()->UI()) != 0) {
+         TRACE(XERR, "can't change ownership of "<<creds);
+         return -1;
+      }
+
       // acquire permanently target user privileges
       TRACE(DBG, "acquiring target user identity");
       if (XrdSysPriv::ChangePerm((uid_t)p->Client()->UI().fUid,

@@ -32,7 +32,7 @@
 ClassImp(TEveStraightLineSet);
 
 //______________________________________________________________________________
-TEveStraightLineSet::TEveStraightLineSet(const Text_t* n, const Text_t* t):
+TEveStraightLineSet::TEveStraightLineSet(const char* n, const char* t):
    TEveElement (),
    TNamed      (n, t),
 
@@ -42,6 +42,7 @@ TEveStraightLineSet::TEveStraightLineSet(const Text_t* n, const Text_t* t):
    fOwnMarkersIds (kFALSE),
    fRnrMarkers    (kTRUE),
    fRnrLines      (kTRUE),
+   fDepthTest     (kTRUE),
    fLastLine      (0)
 {
    // Constructor.

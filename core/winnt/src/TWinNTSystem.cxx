@@ -59,6 +59,7 @@
 #include <conio.h>
 
 extern "C" {
+   extern void Gl_setwidth(int width);
    extern int G__get_security_error();
    extern int G__genericerror(const char* msg);
    void *_ReturnAddress(void);
@@ -875,6 +876,8 @@ namespace {
 
       char pszNewWindowTitle[1024]; // contains fabricated WindowTitle
       char pszOldWindowTitle[1024]; // contains original WindowTitle
+      HANDLE hStdout; 
+      CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
 
       if (!::GetConsoleTitle(pszOldWindowTitle, 1024))
          return;
@@ -890,9 +893,15 @@ namespace {
       if (gConsoleWindow) {
          // restore original window title
          ::ShowWindow((HWND)gConsoleWindow, SW_RESTORE);
-         ::SetForegroundWindow((HWND)gConsoleWindow);
+         //::SetForegroundWindow((HWND)gConsoleWindow);
          ::SetConsoleTitle("ROOT session");
       }
+      hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+      ::SetConsoleMode(hStdout, ENABLE_PROCESSED_OUTPUT | 
+                       ENABLE_WRAP_AT_EOL_OUTPUT);
+      if (!::GetConsoleScreenBufferInfo(hStdout, &csbiInfo))
+         return;
+      Gl_setwidth(csbiInfo.dwMaximumWindowSize.X);
    }
 
 } // end unnamed namespace
@@ -1542,22 +1551,23 @@ void TWinNTSystem::DispatchOneEvent(Bool_t pendingOnly)
    // Dispatch a single event in TApplication::Run() loop
 
    // check for keyboard events
-   if (_kbhit()) {
-      if (gROOT->GetApplication()) {
-         gApplication->HandleTermInput();
-         if (gSplash) {    // terminate splash window after first key press
-            delete gSplash;
-            gSplash = 0;
-         }
-         ::SetConsoleMode(::GetStdHandle(STD_OUTPUT_HANDLE),
-                          ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT);
-      }
-   }
    if (pendingOnly && gGlobalEvent) ::SetEvent(gGlobalEvent);
 
    Bool_t pollOnce = pendingOnly;
 
    while (1) {
+      if (_kbhit()) {
+         if (gROOT->GetApplication()) {
+            gApplication->HandleTermInput();
+            if (gSplash) {    // terminate splash window after first key press
+               delete gSplash;
+               gSplash = 0;
+            }
+            if (!pendingOnly) {
+               return;
+            }
+         }
+      }
       if (gROOT->IsLineProcessing() && (!gVirtualX || !gVirtualX->IsCmdThread())) {
          if (!pendingOnly) {
             // yield execution to another thread that is ready to run
@@ -2030,6 +2040,9 @@ const char *TWinNTSystem::WorkingDirectory(char driveletter)
       return 0;
    }
    fWdpath = wdpath;
+   // Make sure the drive letter is upper case
+   if (fWdpath[1] == ':')
+      fWdpath[0] = toupper(fWdpath[0]);
    free(wdpath);
    return fWdpath;
 }
@@ -2055,7 +2068,15 @@ const char *TWinNTSystem::HomeDirectory(const char *userName)
          h = ::getenv("HOMEPATH");
          if(h) strcat(mydir, h);
       }
+      // on Windows Vista HOME is usually defined as $(USERPROFILE)
+      if (!h) {
+         h = ::getenv("USERPROFILE");
+         if (h) strcpy(mydir, h);
+      }
    }
+   // Make sure the drive letter is upper case
+   if (mydir[1] == ':')
+      mydir[0] = toupper(mydir[0]);
    return mydir;
 }
 
@@ -4368,17 +4389,87 @@ int TWinNTSystem::AnnounceUnixService(int port, int backlog)
    SOCKET sock;
 
    // Create socket
-   if ((sock = ::socket(AF_UNIX, SOCK_STREAM, 0)) == INVALID_SOCKET) {
+   if ((sock = ::socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
       ::SysError("TWinNTSystem::AnnounceUnixService", "socket");
       return -1;
    }
 
+   struct sockaddr_in inserver;
+   memset(&inserver, 0, sizeof(inserver));
+   inserver.sin_family = AF_INET;
+   inserver.sin_addr.s_addr = ::htonl(INADDR_LOOPBACK);
+   inserver.sin_port = port;
+
+   // Bind socket
+   if (port > 0) {
+      if (::bind(sock, (struct sockaddr*) &inserver, sizeof(inserver)) == SOCKET_ERROR) {
+         ::SysError("TWinNTSystem::AnnounceUnixService", "bind");
+         return -2;
+      }
+   }
    // Start accepting connections
    if (::listen(sock, backlog)) {
       ::SysError("TWinNTSystem::AnnounceUnixService", "listen");
       return -1;
    }
    return (int)sock;
+}
+
+//______________________________________________________________________________
+int TWinNTSystem::AnnounceUnixService(const char *sockpath, int backlog)
+{
+   // Open a socket on path 'sockpath', bind to it and start listening for Unix
+   // domain connections to it. Returns socket fd or -1.
+
+   if (!sockpath || strlen(sockpath) <= 0) {
+      ::SysError("TWinNTSystem::AnnounceUnixService", "socket path undefined");
+      return -1;
+   }
+
+   struct sockaddr_in myaddr;
+   FILE * fp;
+   int len = sizeof myaddr;
+   int rc;
+   int sock;
+
+   // Create socket
+   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+      ::SysError("TWinNTSystem::AnnounceUnixService", "socket");
+      return -1;
+   }
+
+   memset(&myaddr, 0, sizeof(myaddr));
+   myaddr.sin_port = 0;
+   myaddr.sin_family = AF_INET;
+   myaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+   rc = bind(sock, (struct sockaddr *)&myaddr, len);
+   if (rc) {
+      ::SysError("TWinNTSystem::AnnounceUnixService", "bind");
+      return rc;
+   }
+   rc = getsockname(sock, (struct sockaddr *)&myaddr, &len);
+   if (rc) {
+      ::SysError("TWinNTSystem::AnnounceUnixService", "getsockname");
+      return rc;
+   }
+   TString socketpath = sockpath;
+   socketpath.ReplaceAll("/", "\\");
+   fp = fopen(socketpath, "wb");
+   if (!fp) {
+      ::SysError("TWinNTSystem::AnnounceUnixService", "fopen");
+      return -1;
+   }
+   fprintf(fp, "%d", myaddr.sin_port);
+   fclose(fp);
+
+   // Start accepting connections
+   if (listen(sock, backlog)) {
+      ::SysError("TWinNTSystem::AnnounceUnixService", "listen");
+      return -1;
+   }
+
+   return sock;
 }
 
 //______________________________________________________________________________
@@ -4690,8 +4781,11 @@ int TWinNTSystem::ConnectService(const char *servername, int port,
    struct servent *sp;
 
    if (!strcmp(servername, "unix")) {
-      printf(" Error don't know how to do UnixUnixConnect under WIN32 \n");
-      return -1;
+      return WinNTUnixConnect(port);
+   } 
+   else if (!gSystem->AccessPathName(servername) || servername[0] == '/' || 
+            (servername[1] == ':' && servername[2] == '/')) {
+      return WinNTUnixConnect(servername);
    }
 
    if ((sp = ::getservbyport(::htons(port), kProtocolName))) {
@@ -4729,6 +4823,67 @@ int TWinNTSystem::ConnectService(const char *servername, int port,
    }
    return (int) sock;
 }
+
+//______________________________________________________________________________
+int TWinNTSystem::WinNTUnixConnect(int port)
+{
+   // Connect to a Unix domain socket.
+
+   struct sockaddr_in myaddr;
+   int sock;
+   
+   memset(&myaddr, 0, sizeof(myaddr));
+   myaddr.sin_family = AF_INET;
+   myaddr.sin_port = port; 
+   myaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+   // Open socket
+   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+      ::SysError("TWinNTSystem::WinNTUnixConnect", "socket");
+      return -1;
+   }
+
+   while ((connect(sock, (struct sockaddr *)&myaddr, sizeof myaddr)) == -1) {
+      if (GetErrno() == EINTR)
+         ResetErrno();
+      else {
+         ::SysError("TWinNTSystem::WinNTUnixConnect", "connect");
+         close(sock);
+         return -1;
+      }
+   }
+   return sock;
+}
+
+//______________________________________________________________________________
+int TWinNTSystem::WinNTUnixConnect(const char *sockpath)
+{
+   // Connect to a Unix domain socket. Returns -1 in case of error.
+
+   FILE *fp;
+   int port = 0;
+
+   if (!sockpath || strlen(sockpath) <= 0) {
+      ::SysError("TWinNTSystem::WinNTUnixConnect", "socket path undefined");
+      return -1;
+   }
+   TString socketpath = sockpath;
+   socketpath.ReplaceAll("/", "\\");
+   fp = fopen(socketpath.Data(), "rb");
+   if (!fp) {
+      ::SysError("TWinNTSystem::WinNTUnixConnect", "fopen");
+      return -1;
+   }
+   fscanf(fp, "%d", &port);
+   fclose(fp);
+   /* XXX: set errno in this case */
+   if (port < 0 || port > 65535) {
+      ::SysError("TWinNTSystem::WinNTUnixConnect", "invalid port");
+      return -1;
+   }
+   return WinNTUnixConnect(port); 
+}
+
 
 //______________________________________________________________________________
 int TWinNTSystem::OpenConnection(const char *server, int port, int tcpwindowsize)

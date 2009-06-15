@@ -226,7 +226,7 @@ void writeTutorials(THtml& html) {
    }
 
    fptop << "</ul>" << endl;
-   fptop << "<p>To run the tutorials yourself <a href=\"Availability.html#download\">download</a> the ROOT Development Kit (RDK).</p>" << endl;
+   fptop << "<p><a href=\"http://root.cern.ch/drupal/content/downloading-root\">Download ROOT</a> and run the tutorials in $ROOTSYS/tutorials yourself!</p>" << endl;
    writeTrailer(html, fptop);
 }
 
@@ -234,8 +234,8 @@ void GetMacroTitle(const char *fullpath, TString &comment, Bool_t &compile) {
    // Find the best line with a title by scanning the first 50 lines of a macro.
    // "fullpath" location of the macro
    // "comment"  is set to the comment (i.e. title) found in the macro
-   // "compile"  is set to true if the macro should be compiled, i.e. one of the
-   //            comment lines starts with "//+ " (note the space)
+   // "compile"  is set to true if the macro should be compiled, i.e. the
+   //            title line starts with "//+ " (note the space)
    compile = kFALSE;
    FILE *fp = fopen(fullpath,"r");
    char line[250];
@@ -244,8 +244,6 @@ void GetMacroTitle(const char *fullpath, TString &comment, Bool_t &compile) {
       nlines++;
       char *com = strstr(line,"//");
       if (com) {
-         if (!strncmp(line,"//+ ", 4))
-            compile = kTRUE;
          if (strstr(line,"Author")) continue;
          if (strstr(line,"@(#)")) continue;
          if (strstr(line,"****")) continue;
@@ -255,6 +253,10 @@ void GetMacroTitle(const char *fullpath, TString &comment, Bool_t &compile) {
          if (strstr(line,"----")) continue;
          if (strstr(line,"____")) continue;
          if (strlen(com+1)  < 5)  continue;
+         if (!strncmp(com,"//+ ", 4)) {
+            compile = kTRUE;
+            com += 2; // skip "+ ", too.
+         }
          comment = com+2;
          break;
       }
@@ -296,7 +298,7 @@ Bool_t CreateOutput_Dir(const char* dir) {
      if (strstr(dir,"foam"))  return kFALSE;
      if (strstr(dir,"unuran"))  return kFALSE;
      if (strstr(dir,"roofit"))  return kFALSE;
-     if (strstr(dir,"threads"))  return kFALSE;
+     if (strstr(dir,"thread"))  return kFALSE;
 
    /* They should all work now:
 
@@ -324,28 +326,20 @@ Bool_t CreateOutput_Tutorial(const char* tut) {
       "mathcore",
       "permute",
       "testrandom",
-      //"testUnfold",
-      //"tStudent",
-      //"seism",
       "psview",
       "readCode",
       "importCode",
-      //"analyze",
       "hadd",
-      //"langaus",
-      //"fithist",
-      //"fit2dHist",
-      //"fitLinearRobust",
+      "Legendre",
+      "solveLinear",
+      "threadsh1",
+      "threadsh2",
       "line3Dfit",
       "gtime",
       "event",
       "exec1",
       "exec2",
       "exec3",
-      //"quantiles",
-      //"gui",
-      //"TwoHistoFit2D",
-      //"CPUMeter",
       "games",
       "guiWithCINT",
       "statusBar",
@@ -354,8 +348,8 @@ Bool_t CreateOutput_Tutorial(const char* tut) {
       "viewer3DMaster.C",
       "anim",
       "pack",
-      //"hsumTimer",
       "htest",
+      "h1chain",
       "jets",
       "bill",
       "tcl",
@@ -429,6 +423,7 @@ void scandir(THtml& html, const char *dir, const char *title, TObjLink* toplnk) 
       if(strstr(direntry,"na49")) continue;
       if(strstr(direntry,"fit1_C")) continue;
       if(strstr(direntry,"MDF.C")) continue;
+      if(strstr(direntry,"threadsh2")) continue;
       if(strstr(direntry,"cms_calo_detail")) continue;
       TString atut(inpath + direntry);
       TString comment;

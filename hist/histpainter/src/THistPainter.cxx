@@ -91,6 +91,9 @@
 <li><a href="#HP14">The COLor option</li></a>
 <li><a href="#HP15">The TEXT and TEXTnn Option</li></a>
 <li><a href="#HP16">The CONTour options</li></a>
+<ul>
+<li><a href="#HP16a">The LIST option</li></a>
+</ul>
 <li><a href="#HP17">The LEGO options</li></a>
 <li><a href="#HP18">The "SURFace" options</li></a>
 <li><a href="#HP19">Cylindrical, Polar, Spherical and PseudoRapidity/Phi options</li></a>
@@ -755,10 +758,28 @@ The default value is:
       gStyle->SetOptStat("nemr");
 </pre>
 
-<p>When a histogram is drawn, a <tt>TPaveStats</tt> object is created and added
+<p>When a histogram is painted, a <tt>TPaveStats</tt> object is created and added
 to the list of functions of the histogram. If a <tt>TPaveStats</tt> object
 already exists in the histogram list of functions, the existing object is just
 updated with the current histogram parameters.
+
+<p>Once a histogram is painted, the statistics box can be accessed using
+<tt>h->FindObject("stats")</tt>. In the command line it is enough to do:
+<pre>
+      Root > h->Draw()
+      Root > TPaveStats *st = (TPaveStats*)h->FindObject("stats")
+</pre>
+because after <tt>h->Draw()</tt> the histogram is automatically painted. But
+in a script file the painting should be forced using <tt>gPad->Update()</tt>
+in order to make sure the statistics box is created:
+<pre>
+      h->Draw();
+      gPad->Update();
+      TPaveStats *st = (TPaveStats*)h->FindObject("stats");
+</pre>
+
+<p>Without <tt>gPad->Update()</tt> the line <tt>h->FindObject("stats")</tt>
+returns a null pointer.
 
 <p>When a histogram is drawn with the option "<tt>SAME</tt>", the statistics box
 is not drawn. To force the statistics box drawing with the option
@@ -1076,6 +1097,16 @@ content.
 
 <p>The color table used is defined in the current style.
 
+<p>If the histogram's minimum and maximum are the same (flat histogram), the
+mapping on colors is not possible, therefore nothing is painted. To paint a
+flat histogram it is enough to set the histogram minimum
+(<tt>TH1::SetMinimum()</tt>) different from the bins' content.
+
+<p>The default number of color levels used to paint the cells is 20.
+It can be changed with <tt>TH1::SetContour()</tt> or
+<tt>TStyle::SetNumberContours()</tt>. The higher this number is, the smoother
+is the color change between cells.
+
 <p>The color palette in TStyle can be modified via <tt>gStyle->SePalette()</tt>.
 
 <p>All the none empty bins are painted. Empty bins are not painted unless
@@ -1325,9 +1356,19 @@ Begin_Html
 The default number of contour levels is 20 equidistant levels and can be changed
 with <tt>TH1::SetContour()</tt> or <tt>TStyle::SetNumberContours()</tt>.
 
+<a name="HP16a"></a><h4><u>The LIST option</u></h4>
+
 <p>When option <tt>"LIST"</tt> is specified together with option
 <tt>"CONT"</tt>, the points used to draw the contours are saved in
-<tt>TGraph</tt> objects and are accessible in the following way:
+<tt>TGraph</tt> objects:
+<pre>
+      h->Draw("CONT LIST");
+      gPad->Update();
+</pre>
+The contour are saved in <tt>TGraph</tt> objects once the pad is painted.
+Therefore to use this funtionnality in a macro, <tt>gPad->Update()</tt>
+should be performed after the histogram drawing. Once the list is
+built, the contours are accessible in the following way:
 <pre>
       TObjArray *contours = gROOT->GetListOfSpecials()->FindObject("contours")
       Int_t ncontours     = contours->GetSize();
@@ -3404,6 +3445,35 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    if (Hoption.Axis == -1) return;
    if (Hoption.Same && Hoption.Axis <= 0) return;
 
+   // Repainting alphanumeric labels axis on a plot done with
+   // the option HBAR (horizontal) needs some adjustements.
+   TAxis *xaxis = 0;
+   TAxis *yaxis = 0;
+   if (Hoption.Same && Hoption.Axis) { // Axis repainted (TPad::RedrawAxis)
+      if (fXaxis->GetLabels() || fYaxis->GetLabels()) { // One axis has alphanumeric labels
+         TIter next(gPad->GetListOfPrimitives());
+         TObject *obj;
+         // Check if the first TH1 of THStack in the pad is drawn with the option HBAR
+         while ((obj = next())) {
+            if (!obj->InheritsFrom("TH1") &&
+                !obj->InheritsFrom("THStack")) continue;
+            TString opt = obj->GetDrawOption();
+            opt.ToLower();
+            // if drawn with HBAR, the axis should be inverted and the pad set to horizontal
+            if (strstr(opt,"hbar")) {
+               gPad->SetVertical(kFALSE);
+               xaxis = fXaxis;
+               yaxis = fYaxis;
+               if (!strcmp(xaxis->GetName(),"xaxis")) {
+                  fXaxis = yaxis;
+                  fYaxis = xaxis;
+               }
+            }
+            break;
+         }
+      }
+   }
+
    static char chopt[10] = "";
    Double_t gridl = 0;
    Int_t ndiv, ndivx, ndivy, nx1, nx2, ndivsave;
@@ -3602,6 +3672,12 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
       axis.PaintAxis(yAxisXPos2, aymin,
                      yAxisXPos2, aymax,
                      uminsave, umaxsave,  ndivsave, chopt, gridl, drawGridOnly);
+   }
+
+   // Reset the axis if they have been inverted in case of option HBAR
+   if (xaxis) {
+      fXaxis = xaxis;
+      fYaxis = yaxis;
    }
 }
 
@@ -7137,12 +7213,29 @@ void THistPainter::PaintTriangles(Option_t *option)
    if (!fGraph2DPainter) fGraph2DPainter = new TGraph2DPainter(dt);
 
    // Define the 3D view
-   fXbuf[0] = Hparam.xmin;
-   fYbuf[0] = Hparam.xmax;
-   fXbuf[1] = Hparam.ymin;
-   fYbuf[1] = Hparam.ymax;
-   fXbuf[2] = Hparam.zmin;
-   fYbuf[2] = Hparam.zmax;
+   if (Hoption.Same) {
+      TView *viewsame = gPad->GetView();
+      if (!viewsame) {
+         Error("PaintTriangles", "no TView in current pad, do not use option SAME");
+         return;
+      }
+      Double_t *rmin = viewsame->GetRmin();
+      Double_t *rmax = viewsame->GetRmax();
+      fXbuf[0] = rmin[0];
+      fYbuf[0] = rmax[0];
+      fXbuf[1] = rmin[1];
+      fYbuf[1] = rmax[1];
+      fXbuf[2] = rmin[2];
+      fYbuf[2] = rmax[2];
+   } else {
+      fXbuf[0] = Hparam.xmin;
+      fYbuf[0] = Hparam.xmax;
+      fXbuf[1] = Hparam.ymin;
+      fYbuf[1] = Hparam.ymax;
+      fXbuf[2] = Hparam.zmin;
+      fYbuf[2] = Hparam.zmax;
+   }
+
    fLego = new TPainter3dAlgorithms(fXbuf, fYbuf);
    TView *view = gPad->GetView();
    if (!view) {
@@ -7947,7 +8040,11 @@ const char * THistPainter::GetBestFormat(Double_t v, Double_t e, const char *f)
          if (e < 1) {
             sprintf(ef,"%s.1f","%");
          } else {
-            sprintf(ef,"%s.0f","%");
+            if (ie >= 0) {
+               sprintf(ef,"%s.%de","%",ie-id-1);
+            } else {
+               sprintf(ef,"%s.%dE","%",iE-id-1);
+            }
          }
       } else {
          if (ie >= 0) {
@@ -7957,7 +8054,7 @@ const char * THistPainter::GetBestFormat(Double_t v, Double_t e, const char *f)
          }
       }
 
-   // The is not '.' in tv. e will be printed with one decimal digit.
+   // There is not '.' in tv. e will be printed with one decimal digit.
    } else if (id < 0) {
       sprintf(ef,"%s.1f","%");
 

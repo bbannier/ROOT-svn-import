@@ -85,6 +85,7 @@ TProofLite::TProofLite(const char *url, const char *conffile, const char *confdi
    // Protocol and Host
    fUrl.SetProtocol("proof");
    fUrl.SetHost("__lite__");
+   fUrl.SetPort(1093);
 
    // User
    if (strlen(fUrl.GetUser()) <= 0) {
@@ -105,6 +106,10 @@ TProofLite::TProofLite(const char *url, const char *conffile, const char *confdi
 
    // Init the session now
    Init(url, conffile, confdir, loglevel, alias);
+
+   // For final cleanup
+   if (!gROOT->GetListOfProofs()->FindObject(this))
+      gROOT->GetListOfProofs()->Add(this);
 
    // Still needed by the packetizers: needs to be changed
    gProof = this;
@@ -1407,10 +1412,59 @@ Bool_t TProofLite::RegisterDataSet(const char *uri,
 }
 
 //______________________________________________________________________________
-TMap *TProofLite::GetDataSets(const char *uri, const char *)
+Int_t TProofLite::SetDataSetTreeName(const char *dataset, const char *treename)
 {
-   // lists all datasets
-   // that match given uri
+   // Set/Change the name of the default tree. The tree name may contain
+   // subdir specification in the form "subdir/name".
+   // Returns 0 on success, -1 otherwise.
+
+   if (!fDataSetManager) {
+      Info("ExistsDataSet", "dataset manager not available");
+      return kFALSE;
+   }
+
+   if (!dataset || strlen(dataset) <= 0) {
+      Info("SetDataSetTreeName", "specifying a dataset name is mandatory");
+      return -1;
+   }
+
+   if (!treename || strlen(treename) <= 0) {
+      Info("SetDataSetTreeName", "specifying a tree name is mandatory");
+      return -1;
+   }
+
+   TUri uri(dataset);
+   TString fragment(treename);
+   if (!fragment.BeginsWith("/")) fragment.Insert(0, "/");
+   uri.SetFragment(fragment);
+
+   return fDataSetManager->ScanDataSet(uri.GetUri().Data(),
+                                      (UInt_t)TProofDataSetManager::kSetDefaultTree);
+}
+
+//______________________________________________________________________________
+Bool_t TProofLite::ExistsDataSet(const char *uri)
+{
+   // Returns kTRUE if 'dataset' described by 'uri' exists, kFALSE otherwise
+
+   if (!fDataSetManager) {
+      Info("ExistsDataSet", "dataset manager not available");
+      return kFALSE;
+   }
+
+   if (!uri || strlen(uri) <= 0) {
+      Error("ExistsDataSet", "dataset name missing");
+      return kFALSE;
+   }
+
+   // Check if the dataset exists
+   return fDataSetManager->ExistsDataSet(uri);
+}
+
+//______________________________________________________________________________
+TMap *TProofLite::GetDataSets(const char *uri, const char *srvex)
+{
+   // lists all datasets that match given uri
 
    if (!fDataSetManager) {
       Info("GetDataSets", "dataset manager not available");
@@ -1418,12 +1472,16 @@ TMap *TProofLite::GetDataSets(const char *uri, const char *)
    }
 
    // Get the datasets and return the map
-   UInt_t opt = (UInt_t)TProofDataSetManager::kExport;
-   return fDataSetManager->GetDataSets(uri, opt);
+   if (srvex && strlen(srvex) > 0) {
+      return fDataSetManager->GetSubDataSets(uri, srvex);
+   } else {
+      UInt_t opt = (UInt_t)TProofDataSetManager::kExport;
+      return fDataSetManager->GetDataSets(uri, opt);
+   }
 }
 
 //______________________________________________________________________________
-void TProofLite::ShowDataSets(const char *uri, const char *)
+void TProofLite::ShowDataSets(const char *uri, const char *opt)
 {
    // Shows datasets in locations that match the uri
    // By default shows the user's datasets and global ones
@@ -1433,9 +1491,7 @@ void TProofLite::ShowDataSets(const char *uri, const char *)
       return;
    }
 
-   // Scan the existing datasets and print the content
-   UInt_t opt = (UInt_t)TProofDataSetManager::kPrint;
-   fDataSetManager->GetDataSets(uri, opt);
+   fDataSetManager->ShowDataSets(uri, opt);
 }
 
 //______________________________________________________________________________

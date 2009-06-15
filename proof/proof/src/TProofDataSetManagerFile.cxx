@@ -58,12 +58,27 @@ TProofDataSetManagerFile::TProofDataSetManagerFile(const char *group,
    if (!fUser.IsNull() && !fGroup.IsNull() && !fDataSetDir.IsNull()) {
 
       // Make sure that the dataset dir exists
-      TString dir(Form("%s/%s/%s", fDataSetDir.Data(), fGroup.Data(), fUser.Data()));
+      TString dir;
+      dir.Form("%s/%s/%s", fDataSetDir.Data(), fGroup.Data(), fUser.Data());
       if (gSystem->AccessPathName(dir)) {
          if (gSystem->mkdir(dir, kTRUE) != 0) {
-            Error("TProofDataSetManagerFile", "could not create the dataset dir");
-            SetBit(TObject::kInvalidObject);
-            return;
+            TString emsg = dir;
+            // Read only dataset info system: switch to COMMON
+	    fUser = fCommonUser;
+	    fGroup = fCommonGroup;
+            ResetBit(TProofDataSetManager::kCheckQuota);
+            ResetBit(TProofDataSetManager::kAllowRegister);
+            ResetBit(TProofDataSetManager::kAllowVerify);
+            ResetBit(TProofDataSetManager::kAllowStaging);
+            dir.Form("%s/%s/%s", fDataSetDir.Data(), fGroup.Data(), fUser.Data());
+	    if (gSystem->AccessPathName(dir)) {
+		Error("TProofDataSetManagerFile",
+                      "could not attach to a valid the dataset dir; paths tried:");
+		Error("TProofDataSetManagerFile", "    %s", emsg.Data());
+		Error("TProofDataSetManagerFile", "    %s", dir.Data());
+		SetBit(TObject::kInvalidObject);
+		return;
+	    }
          }
       }
 
@@ -341,45 +356,45 @@ TMap *TProofDataSetManagerFile::GetDataSets(const char *group, const char *user,
    // group, user defined, no looping needed
    if (user && group) {
       BrowseDataSets(group, user, option, result);
-      return (TMap *)result;
-   }
+      if (!printing) return (TMap *)result;
+   } else {
+      // loop needed
+      void *dataSetDir = 0;
+      if ((dataSetDir = gSystem->OpenDirectory(fDataSetDir))) {
+         // loop over groups
+         const char *currentGroup = 0;
+         while ((currentGroup = gSystem->GetDirEntry(dataSetDir))) {
 
-   void *dataSetDir = 0;
-   if ((dataSetDir = gSystem->OpenDirectory(fDataSetDir))) {
-      // loop over groups
-      const char *currentGroup = 0;
-      while ((currentGroup = gSystem->GetDirEntry(dataSetDir))) {
-
-         if (strcmp(currentGroup, ".") == 0 || strcmp(currentGroup, "..") == 0)
-            continue;
-
-         if (group && strcmp(group, currentGroup))
-            continue;
-
-         TString groupDirPath;
-         groupDirPath.Form("%s/%s", fDataSetDir.Data(), currentGroup);
-
-         void *groupDir = gSystem->OpenDirectory(groupDirPath);
-         if (!groupDir)
-            continue;
-
-         // loop over users
-         const char *currentUser = 0;
-         while ((currentUser = gSystem->GetDirEntry(groupDir))) {
-
-            if (strcmp(currentUser, ".") == 0 || strcmp(currentUser, "..") == 0)
+            if (strcmp(currentGroup, ".") == 0 || strcmp(currentGroup, "..") == 0)
                continue;
 
-            if (user && strcmp(user, currentUser))
+            if (group && strcmp(group, currentGroup))
                continue;
 
-            BrowseDataSets(currentGroup, currentUser, option, result);
+            TString groupDirPath;
+            groupDirPath.Form("%s/%s", fDataSetDir.Data(), currentGroup);
+
+            void *groupDir = gSystem->OpenDirectory(groupDirPath);
+            if (!groupDir)
+               continue;
+
+            // loop over users
+            const char *currentUser = 0;
+            while ((currentUser = gSystem->GetDirEntry(groupDir))) {
+
+               if (strcmp(currentUser, ".") == 0 || strcmp(currentUser, "..") == 0)
+                  continue;
+
+               if (user && strcmp(user, currentUser))
+                  continue;
+
+               BrowseDataSets(currentGroup, currentUser, option, result);
+            }
+            gSystem->FreeDirectory(groupDir);
          }
-         gSystem->FreeDirectory(groupDir);
+         gSystem->FreeDirectory(dataSetDir);
       }
-      gSystem->FreeDirectory(dataSetDir);
    }
-
    // Print the result, if required
    if (printing) {
       TList *output = (TList *)result;
@@ -671,18 +686,31 @@ Int_t TProofDataSetManagerFile::RegisterDataSet(const char *uri,
    return ((success) ? 0 : -1);
 }
 //______________________________________________________________________________
-Int_t TProofDataSetManagerFile::ScanDataSet(const char *uri, UInt_t)
+Int_t TProofDataSetManagerFile::ScanDataSet(const char *uri, UInt_t opt)
 {
    // Scans the dataset indicated by <uri> and returns the number of missing files.
-   // Returns -1 if any failure occurs.
+   // Returns -1 if any failure occurs, >= 0 on success.
    // For more details, see documentation of
    // ScanDataSet(TFileCollection *dataset, const char *option)
 
-   TString dsName;
-   if (TestBit(TProofDataSetManager::kAllowVerify)) {
-      if (ParseUri(uri, 0, 0, &dsName, 0, kTRUE)) {
-         if (ScanDataSet(fGroup, fUser, dsName, (UInt_t)(kReopen | kDebug)) > 0)
-            return GetNDisapparedFiles();
+   TString dsName, dsTree;
+   if ((opt & kSetDefaultTree)) {
+      if (TestBit(TProofDataSetManager::kAllowRegister)) {
+         if (ParseUri(uri, 0, 0, &dsName, &dsTree, kTRUE)) {
+            TFileCollection *dataset = GetDataSet(fGroup, fUser, dsName);
+            if (!dataset) return -1;
+            dataset->SetDefaultTreeName(dsTree.Data());
+            Int_t rc = WriteDataSet(fGroup, fUser, dsName, dataset);
+            delete dataset;
+            return (rc == 0) ? -1 : 0;
+         }
+      }
+   } else {
+      if (TestBit(TProofDataSetManager::kAllowVerify)) {
+         if (ParseUri(uri, 0, 0, &dsName, 0, kTRUE)) {
+            if (ScanDataSet(fGroup, fUser, dsName, (UInt_t)(kReopen | kDebug)) > 0)
+               return GetNDisapparedFiles();
+         }
       }
    }
    return -1;
@@ -703,10 +731,12 @@ Int_t TProofDataSetManagerFile::ScanDataSet(const char *group, const char *user,
 
    Int_t result = ScanDataSet(dataset, option);
 
-   if (result == 2)
-      if (WriteDataSet(group, user, dsName, dataset) == 0)
+   if (result == 2) {
+      if (WriteDataSet(group, user, dsName, dataset) == 0) {
+         delete dataset;
          return -2;
-
+      }
+   }
    delete dataset;
 
    return result;
@@ -899,6 +929,8 @@ Int_t TProofDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
 
       if (file->GetSize() > 0)
           fileInfo->SetSize(file->GetSize());
+      fileInfo->SetUUID(file->GetUUID().AsString());
+
       file->Close();
       delete file;
 
@@ -962,6 +994,7 @@ Int_t TProofDataSetManagerFile::ScanDataSet(TFileCollection *dataset,
 
    TFile::SetOnlyStaged(oldStatus);
 
+   dataset->RemoveDuplicates();
    dataset->Update(fAvgFileSize);
 
    Int_t result = (changed) ? 2 : 1;
@@ -1004,14 +1037,38 @@ TMap *TProofDataSetManagerFile::GetDataSets(const char *uri, UInt_t option)
 }
 
 //______________________________________________________________________________
-TFileCollection *TProofDataSetManagerFile::GetDataSet(const char *uri)
+TFileCollection *TProofDataSetManagerFile::GetDataSet(const char *uri, const char *srv)
 {
    // Utility function used in various methods for user dataset upload.
 
    TString dsUser, dsGroup, dsName;
-   if (ParseUri(uri, &dsGroup, &dsUser, &dsName))
-      return GetDataSet(dsGroup, dsUser, dsName);
-   return (TFileCollection *)0;
+
+   if (!ParseUri(uri, &dsGroup, &dsUser, &dsName))
+      return (TFileCollection *)0;
+   TFileCollection *fc = GetDataSet(dsGroup, dsUser, dsName);
+
+   if (fc && srv && strlen(srv) > 0) {
+      // Build up the subset
+      TFileCollection *sfc = 0;
+      TString ss(srv), s;
+      Int_t from = 0;
+      while (ss.Tokenize(s, from, ",")) {
+         TFileCollection *xfc = fc->GetFilesOnServer(s.Data());
+         if (xfc) {
+            if (sfc) {
+               sfc->Add(xfc);
+               delete xfc;
+            } else {
+               sfc = xfc;
+            }
+         }
+      }
+      // Cleanup
+      delete fc;
+      fc = sfc;
+   }
+   // Done
+   return fc;
 }
 
 //______________________________________________________________________________

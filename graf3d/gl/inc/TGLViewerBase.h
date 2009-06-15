@@ -16,6 +16,7 @@
 
 #include "TGLLockable.h"
 #include <TGLBoundingBox.h>
+#include "TGLOverlay.h"
 
 #include <list>
 #include <vector>
@@ -39,12 +40,13 @@ private:
 
 protected:
    typedef std::list<TGLSceneInfo*>             SceneInfoList_t;
-   typedef std::list<TGLSceneInfo*>::iterator   SceneInfoList_i;
+   typedef SceneInfoList_t::iterator            SceneInfoList_i;
 
    typedef std::vector<TGLSceneInfo*>           SceneInfoVec_t;
-   typedef std::vector<TGLSceneInfo*>::iterator SceneInfoVec_i;
+   typedef SceneInfoVec_t::iterator             SceneInfoVec_i;
 
    typedef std::vector<TGLOverlayElement*>      OverlayElmVec_t;
+   typedef OverlayElmVec_t::iterator            OverlayElmVec_i;
 
    SceneInfoList_i FindScene(TGLSceneBase* scene);
 
@@ -87,8 +89,10 @@ public:
 
    TGLSceneInfo* GetSceneInfo(TGLSceneBase* scene);
 
-   void AddOverlayElement(TGLOverlayElement* el);
-   void RemoveOverlayElement(TGLOverlayElement* el);
+   virtual void AddOverlayElement(TGLOverlayElement* el);
+   virtual void RemoveOverlayElement(TGLOverlayElement* el);
+   virtual void DeleteOverlayAnnotations();
+   virtual void DeleteOverlayElements(TGLOverlayElement::ERole r);
 
    TGLClip* Clip()         const { return fClip; }
    void     SetClip(TGLClip *p)  { fClip = p;    }
@@ -134,7 +138,8 @@ public:
    // Demangle overlay select buffer
    Bool_t FindClosestOverlayRecord(TGLOvlSelectRecord& rec, Int_t& recIdx);
 
-   TGLRnrCtx* GetRnrCtx() const { return fRnrCtx;}
+   TGLRnrCtx* GetRnrCtx() const { return  fRnrCtx; }
+   TGLRnrCtx& RnrCtx() const    { return *fRnrCtx; }
 
    ClassDef(TGLViewerBase, 0); // GL Viewer base-class.
 };

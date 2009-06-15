@@ -76,6 +76,7 @@ protected:
    Int_t    GetNOpenedFiles() const { return fNOpenedFiles; }
    Int_t    GetNDisapparedFiles() const { return fNDisappearedFiles; }
    void     GetQuota(const char *group, const char *user, const char *dsName, TFileCollection *dataset);
+   void     PrintDataSet(TFileCollection *fc, Int_t popt = 0);
    void     PrintUsedSpace();
    Bool_t   ReadGroupConfig(const char *cf = 0);
    virtual void UpdateUsedSpace();
@@ -93,7 +94,7 @@ public:
 
    enum EDataSetWorkOpts { // General (bits 1-8)
                            kDebug = 1, kShowDefault = 2, kPrint = 4, kExport = 8,
-                           kQuotaUpdate = 16,
+                           kQuotaUpdate = 16, kSetDefaultTree = 32,
                            // File-based specific (bits 9-16)
                            kReopen = 256, kTouch = 512, kMaxFiles = 1024, kReadShort = 2048,
                            kFileMustExist = 4096};
@@ -101,8 +102,10 @@ public:
    TProofDataSetManager(const char *group = 0, const char *user = 0, const char *options = 0);
    virtual ~TProofDataSetManager();
 
-   virtual TFileCollection *GetDataSet(const char *uri);
+   virtual TFileCollection *GetDataSet(const char *uri, const char *server = 0);
    virtual TMap            *GetDataSets(const char *uri, UInt_t /*option*/ = 0);
+   virtual TMap            *GetSubDataSets(const char *uri, const char *excludeservers);
+
    virtual Long64_t         GetGroupQuota(const char *group);
    virtual TMap            *GetGroupQuotaMap() { return &fGroupQuota; }
    virtual Long64_t         GetGroupUsed(const char *group);
@@ -114,8 +117,10 @@ public:
    virtual void             ParseInitOpts(const char *opts);
    virtual Bool_t           RemoveDataSet(const char *uri);
    virtual Int_t            RegisterDataSet(const char *uri, TFileCollection *dataSet, const char *opt);
-   virtual Int_t            ScanDataSet(const char *uri, UInt_t /*option*/ = 0);
+   virtual Int_t            ScanDataSet(const char *uri, UInt_t option = 0);
    virtual void             ShowQuota(const char *opt);
+
+   virtual void             ShowDataSets(const char *uri = "*", const char *opt = "");
 
    static TString           CreateUri(const char *dsGroup = 0, const char *dsUser = 0,
                                       const char *dsName = 0, const char *dsTree = 0);

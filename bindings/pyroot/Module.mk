@@ -51,7 +51,7 @@ endif
 ROOTPYC      := $(ROOTPY:.py=.pyc)
 ROOTPYO      := $(ROOTPY:.py=.pyo)
 
-ifeq ($(BUILDCINT7),yes)
+ifneq ($(BUILDBOTHCINT),)
 ifeq ($(ARCH),win32)
 PYROOTEXTRALIB   := $(LPATH)/libCint.lib
 else
@@ -87,7 +87,16 @@ $(PYROOTLIB):   $(PYROOTO) $(PYROOTDO) $(ROOTPY) $(ROOTPYC) $(ROOTPYO) \
 		  "$(ROOTULIBS) $(RPATH) $(ROOTLIBS) $(PYROOTEXTRALIB) \
 		   $(PYTHONLIBDIR) $(PYTHONLIB)" "$(PYTHONLIBFLAGS)"
 ifeq ($(ARCH),win32)
-		cp -f bin/$(notdir $@) $(PYROOTPYD)
+	link /dll /nologo /IGNORE:4001 /machine:ix86 /export:initlibPyROOT \
+	lib/libPyROOT.lib /nodefaultlib kernel32.lib msvcrt.lib \
+	/out:$(PYROOTPYD)
+	@(if [ -f $(PYROOTPYD).manifest ]; then \
+		mt -nologo -manifest $(PYROOTPYD).manifest \
+			-outputresource\:$(PYROOTPYD)\;2 ; \
+		rm -f $(PYROOTPYD).manifest ; \
+	fi)
+	@rm -f bin/libPyROOT.lib
+	@rm -f bin/libPyROOT.exp
 endif
 
 $(PYROOTDS):    $(PYROOTH) $(PYROOTL) $(ROOTCINTTMPDEP)
@@ -126,3 +135,6 @@ else
 $(PYROOTO): CXXFLAGS += $(PYTHONINCDIR:%=-I%)
 endif
 $(PYTHON64O): CFLAGS += $(PYTHONINCDIR:%=-I%)
+ifeq ($(GCC_MAJOR),4)
+$(PYROOTO): CXXFLAGS += -fno-strict-aliasing
+endif

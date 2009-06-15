@@ -40,7 +40,8 @@ namespace Reflex {
       Typedef( const char * typ,
          const Type & typedefType,
          TYPE typeTyp = TYPEDEF,
-         const Type & finalType = Dummy::Type()) ;
+         const Type & finalType = Dummy::Type(),
+         REPRESTYPE represType = REPRES_NOTYPE) ;
 
 
       /** destructor */
@@ -371,6 +372,15 @@ namespace Reflex {
       */
       virtual Type ToType() const;
 
+      /**
+      * Calculate the size for types based on other types,
+      * if the other type was not yet available to calculate the
+      * size at construction time.
+      * @return The calculated size, 0 if the underlying size is unknown.
+      */
+      size_t CalculateSize() const;
+
+
    private:  
 
       bool ForwardStruct() const;
@@ -447,6 +457,13 @@ inline Reflex::Reverse_Base_Iterator Reflex::Typedef::Base_REnd() const {
 
 
 //-------------------------------------------------------------------------------
+inline size_t Reflex::Typedef::CalculateSize() const {
+//-------------------------------------------------------------------------------
+   return fTypedefType.SizeOf();
+}
+
+
+//-------------------------------------------------------------------------------
 inline Reflex::Object Reflex::Typedef::CastObject( const Type & to,
                                                                const Object & obj ) const {
 //-------------------------------------------------------------------------------
@@ -513,7 +530,7 @@ inline Reflex::Reverse_Member_Iterator Reflex::Typedef::DataMember_REnd() const 
 
 //-------------------------------------------------------------------------------
 inline void Reflex::Typedef::Destruct( void * instance,
-                                             bool dealloc ) const {
+                                       bool dealloc ) const {
 //-------------------------------------------------------------------------------
    if ( ForwardStruct()) fTypedefType.Destruct( instance, dealloc );
 }

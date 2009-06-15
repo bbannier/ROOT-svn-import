@@ -1540,8 +1540,9 @@ TString TTabCom::DeterminePath(const TString & fileName,
    if (PathIsSpecifiedInFileName(fileName)) {
       TString path = fileName;
       gSystem->ExpandPathName(path);
-      path = gSystem->DirName(path);
-
+      if (path.Length()>0 && path[path.Length()-1]!='/' && path[path.Length()-1]!='\\') {
+         path = gSystem->DirName(path);
+      }
       return path;
    } else {
       TString newBase;
@@ -1647,7 +1648,7 @@ Int_t TTabCom::Hook(char *buf, int *pLoc)
    case kCINT_stderr:
    case kCINT_stdin:
       {
-         auto TString fileName = s3("[^ ><]*$");
+         TString fileName = s3("[^ ><]*$");
          gSystem->ExpandPathName(fileName);
          const TString filePath = gSystem->DirName(fileName);
          const TSeqCollection *pListOfFiles =
@@ -1733,7 +1734,7 @@ Int_t TTabCom::Hook(char *buf, int *pLoc)
 
    case kSYS_FileName:
       {
-         auto TString fileName = s3("[^ \"]*$");
+         TString fileName = s3("[^ \"]*$");
          gSystem->ExpandPathName(fileName);
          const TString filePath = gSystem->DirName(fileName);
          const TSeqCollection *pListOfFiles =

@@ -11,9 +11,10 @@
 # Solaris sh is not, so we have to start bash, and call ourselves again.
 
 [ "x$1" != "x__have_the_proper_shell@" ] && ( \
-( ( uname -a | grep -i sunos > /dev/null) || (ls -l `which sh` | grep dash > /dev/null ) ) \
-  && (bash $0 __have_the_proper_shell@ "$@") \
-  || (sh $0 __have_the_proper_shell@ "$@" ) \
+  WHICHSH=`which sh`; \
+  NEEDBASH=`uname -a | grep -i sunos 2> /dev/null;ls -l $WHICHSH | grep dash 2> /dev/null `; \
+  [ "x$NEEDBASH" != "x" ] && bash $0 __have_the_proper_shell@ "$@"; \
+  [ "x$NEEDBASH" = "x" ] && sh $0 __have_the_proper_shell@ "$@" \
 )
 
 [ "x$1" != "x__have_the_proper_shell@" ] && exit
@@ -146,7 +147,7 @@ function config_macos {
 
 #    PLATFORMO=macos
 
-    AR="ar -q -cs "
+    AR="ar -r -cs "
     IMPLIBEXT=.dylib
 
     MAKEIMPLIB="ln -sf @so@ @imp@"
@@ -185,7 +186,7 @@ function config_cygwin {
     EXEEXT=.exe
     SOEXT=.dll
     IMPLIBEXT=.dll.a
-    CMACROS="-DG__CYGWIN -DG__STD_EXCEPTION"
+    CMACROS="-DG__SHAREDLIB -DG__OSFDLL -DG__NEWSTDHEADER -DG__CYGWIN -DG__NATIVELONGLONG -DG__STD_EXCEPTION"
     CXXMACROS="$CMACROS"
     EXPLLINK=1
     SOFLAGS="$SOFLAGS --export-all-symbols"
@@ -223,8 +224,8 @@ function config_msvc7 {
     IMPLIBEXT=.lib
 
     CC=cl
-    CFLAGS="-G5 -nologo -wd4996 -wd4190 -GX"
-    CMACROS="-DG__REDIRECTIO -DG__SHAREDLIB -DG__UNIX -DG__WIN32 -DWIN32 -D_WIN32 -DG__NEWSTDHEADER"
+    CFLAGS="-G5 -nologo -wd4996  -GX"
+    CMACROS="-DG__REDIRECTIO -DG__SHAREDLIB -DG__WIN32 -DWIN32 -D_WIN32 -DG__NEWSTDHEADER"
     CPP="cl -E -C -nologo"
     COUT=-Fo
     COUTEXE=-Fe
@@ -232,7 +233,7 @@ function config_msvc7 {
     CDBGFLAGS="-Zi -MDd"
 
     CXX=cl
-    CXXFLAGS="$CXXFLAGS $CFLAGS -GR -wd4181"
+    CXXFLAGS="$CXXFLAGS $CFLAGS -TP -GR -wd4181"
     CXXMACROS="$CMACROS"
     CXXOPTFLAGS="$COPTFLAGS"
     CXXDBGFLAGS="$CDBGFLAGS"
@@ -328,7 +329,7 @@ function add_opt {
 
 add_opt "--help -h" 'Show this help.'
 add_opt "--arch=" "Architecture, one of ${ARCHS[*]}"
-add_opt "--coreversion=" "CINT core version, one of old, new"
+add_opt "--coreversion=" "CINT core version, one of old, new [new]"
 add_opt "--with-prefix" 'Prefix-based build (instead of using CINTSYSDIR)'
 add_opt "--prefix=" 'Topdir for architecture-independent files [/usr/local]'
 add_opt "--exec-prefix=" 'Topdir for architecture-dependent files [$PREFIX]'
@@ -602,8 +603,8 @@ if [ "$ARCH" = "" ]; then
 fi
 
 if [ "$COREVERSION" = "" ]; then
-    COREVERSION=cint
-    echo Using old CINT core
+    COREVERSION=cint7
+    echo Using new CINT core
 fi
 
 if [ "$DEBUG" = "1" ]; then
@@ -756,12 +757,16 @@ for exp in ${EXPORTS[*]}; do
     echo '#define 'G__CFG_$exp \""$value"\" >> $file
 done
 
+echo Removing Apiif.cxx
+rm -f ${COREVERSION}/src/dict/Apiif*.*
+
 # now write the cint-config script
 
 
 $RM bin/cint-config
 echo Writing bin/cint-config...
-[ "x$INCLUDEDIR" = "x" ] && INCLUDEDIR='$CINTSYSDIR'/${COREVERSION}/inc && INCLUDEDIRCINT='$CINTSYSDIR'/${COREVERSION}/include
+[ "x$BINDIR" = "x" ] && BINDIR='$CINTSYSDIR/bin'
+[ "x$INCLUDEDIR" = "x" ] && INCLUDEDIR='$CINTSYSDIR'/${COREVERSION}/inc && INCLUDEDIRCINT='$CINTSYSDIR'/${COREVERSION}/inc
 [ "x$LIBDIR" = "x" ] && LIBDIR='$CINTSYSDIR/lib'
 [ "x$DATADIR" = "x" ] && DATADIR='$CINTSYSDIR/'${COREVERSION}'/'
 
@@ -772,6 +777,7 @@ cat <<_EOF
 
 Usage: cint-config [options]
 
+  --bindir         print the directory of cint executables
   --incdir         print the directory of cint header files
   --cflags         print the necessary flags for the compiler
   --libs           print the necessary libs for linking 
@@ -796,9 +802,10 @@ pathconvert=echo
 while [ \$# -gt 0 ] ; do
   case \$1 in
     --unix|-u) pathconvert="$MANGLEPATHSU" ;;
+    --bindir)  \$pathconvert "${BINDIR}" ;;
     --incdir)  \$pathconvert "${INCLUDEDIR}" ;;
-    --cflags)  \$pathconvert "${INCP}${INCLUDEDIR}" ;;
-    --libs)    \$pathconvert "${LIBP}${LIBDIR} -lcint -lReflex" ;;
+    --cflags)  \$pathconvert "${INCP}${INCLUDEDIR} ${INCP}$CINTSYSDIR/reflex/inc" ;;
+    --libs)    \$pathconvert "${LIBP}${LIBDIR} -lCint -lReflex" ;;
     --libdir)  \$pathconvert "${LIBDIR}" ;;
     --datadir) \$pathconvert "${DATADIR}/cint" ;;
     --version|-v) echo "$CINTVERSION" ;;

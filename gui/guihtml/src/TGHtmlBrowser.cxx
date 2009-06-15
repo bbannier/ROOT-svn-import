@@ -56,7 +56,7 @@ enum EMyMessageTypes {
 };
 
 static const char *gHtmlFTypes[] = {
-   "HTML files",    "*.html",
+   "HTML files",    "*.htm*",
    "All files",     "*",
     0,               0
 };
@@ -124,13 +124,13 @@ TGHtmlBrowser::TGHtmlBrowser(const char *filename, const TGWindow *p, UInt_t w, 
    fMenuBar = new TGMenuBar(this, 35, 50, kHorizontalFrame);
 
    fMenuFile = new TGPopupMenu(gClient->GetDefaultRoot());
-   fMenuFile->AddEntry(" &Open...            Ctrl+O", kM_FILE_OPEN, 0,
+   fMenuFile->AddEntry(" &Open...\tCtrl+O", kM_FILE_OPEN, 0,
                        gClient->GetPicture("ed_open.png"));
-   fMenuFile->AddEntry(" Save &As...       Ctrl+A", kM_FILE_SAVEAS, 0,
+   fMenuFile->AddEntry(" Save &As...\tCtrl+A", kM_FILE_SAVEAS, 0,
                        gClient->GetPicture("ed_save.png"));
-   fMenuFile->AddEntry(" &Browse...         Ctrl+B", kM_FILE_BROWSE);
+   fMenuFile->AddEntry(" &Browse...\tCtrl+B", kM_FILE_BROWSE);
    fMenuFile->AddSeparator();
-   fMenuFile->AddEntry(" E&xit                   Ctrl+Q", kM_FILE_EXIT, 0,
+   fMenuFile->AddEntry(" E&xit\tCtrl+Q", kM_FILE_EXIT, 0,
                        gClient->GetPicture("bld_exit.png"));
    fMenuFile->Associate(this);
 
@@ -221,21 +221,56 @@ TGHtmlBrowser::TGHtmlBrowser(const char *filename, const TGWindow *p, UInt_t w, 
    fHtml->Connect("MouseOver(const char *)", "TGHtmlBrowser", this, "MouseOver(const char *)");
    fHtml->Connect("MouseDown(const char *)", "TGHtmlBrowser", this, "MouseDown(const char *)");
 
-   Selected(filename);
-
    MapSubwindows();
    Resize(GetDefaultSize());
    MapWindow();
    Resize(w, h);
+
+   if (filename)
+      Selected(filename);
 }
 
 //______________________________________________________________________________
-void TGHtmlBrowser::CloseWindow()
+Ssiz_t ReadSize(const char *url)
 {
-   // Close TGHtmlBrowser window.
+   // Read (open) remote files.
 
-   Cleanup();
-   DeleteWindow();
+   char buf[4096];
+   TUrl fUrl(url);
+
+   // Give full URL so Apache's virtual hosts solution works.
+   TString msg = "HEAD ";
+   msg += fUrl.GetProtocol();
+   msg += "://";
+   msg += fUrl.GetHost();
+   msg += ":";
+   msg += fUrl.GetPort();
+   msg += "/";
+   msg += fUrl.GetFile();
+   msg += " HTTP/1.0";
+   msg += "\r\n";
+   msg += "User-Agent: ROOT-TWebFile/1.1";
+   msg += "\r\n\r\n";
+
+   TString uri(url);
+   if (!uri.BeginsWith("http://"))
+      return 0;
+   TSocket s(fUrl.GetHost(), fUrl.GetPort());
+   if (!s.IsValid())
+      return 0;
+   if (s.SendRaw(msg.Data(), msg.Length()) == -1)
+      return 0;
+   if (s.RecvRaw(buf, 4096) == -1) {
+      return 0;
+   }
+   TString reply(buf);
+   Ssiz_t idx = reply.Index("Content-length:", 0, TString::kIgnoreCase);
+   if (idx > 0) {
+      idx += 15;
+      TString slen = reply(idx, reply.Length() - idx);
+      return (Ssiz_t)atol(slen.Data());
+   }
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -245,6 +280,9 @@ static char *ReadRemote(const char *url)
 
    static char *buf = 0;
    TUrl fUrl(url);
+
+   Ssiz_t size = ReadSize(url);
+   if (size <= 0) size = 1024*1024;
 
    TString msg = "GET ";
    msg += fUrl.GetProtocol();
@@ -264,7 +302,6 @@ static char *ReadRemote(const char *url)
       return 0;
    if (s.SendRaw(msg.Data(), msg.Length()) == -1)
       return 0;
-   Int_t size = 1024*1024;
    buf = (char *)calloc(size, sizeof(char));
    if (s.RecvRaw(buf, size) == -1) {
       free(buf);
@@ -281,10 +318,19 @@ void TGHtmlBrowser::Selected(const char *uri)
    char *buf = 0;
    FILE *f;
 
+   if (CheckAnchors(uri))
+      return;
+
    TString surl(gSystem->UnixPathName(uri));
-   if (!surl.BeginsWith("http://") && !surl.BeginsWith("file://"))
-      surl.Prepend("file://");
+   if (!surl.BeginsWith("http://") && !surl.BeginsWith("ftp://") &&
+       !surl.BeginsWith("file://")) {
+      if (surl.BeginsWith("file:"))
+         surl.ReplaceAll("file:", "file://");
+      else
+         surl.Prepend("file://");
+   }
    if (surl.EndsWith(".root")) {
+      // in case of root file, just open it and refresh browsers
       gVirtualX->SetCursor(fHtml->GetId(), gVirtualX->CreateCursor(kWatch));
       gROOT->ProcessLine(Form("TFile::Open(\"%s\");", surl.Data()));
       Clicked((char *)surl.Data());
@@ -294,7 +340,32 @@ void TGHtmlBrowser::Selected(const char *uri)
    }
    gVirtualX->SetCursor(fHtml->GetId(), gVirtualX->CreateCursor(kWatch));
    TUrl url(surl.Data());
+   if (surl.EndsWith(".pdf", TString::kIgnoreCase)) {
+      // special case: open pdf files with external viewer
+      // works only on Windows for the time being...
+      if (!gVirtualX->InheritsFrom("TGX11")) {
+         TString cmd = TString::Format("explorer %s", surl.Data());
+         gSystem->Exec(cmd.Data());
+      }
+      gVirtualX->SetCursor(fHtml->GetId(), gVirtualX->CreateCursor(kPointer));
+      return;
+   }
+   if (surl.EndsWith(".gif") || surl.EndsWith(".jpg") || surl.EndsWith(".png")) {
+      // special case: single picture
+      fHtml->Clear();
+      char imgHtml[1024];
+      sprintf(imgHtml, "<IMG src=\"%s\"> ", surl.Data());
+      fHtml->ParseText(imgHtml);
+      fHtml->SetBaseUri(url.GetUrl());
+      fURL->SetText(surl.Data());
+      if (!fComboBox->FindEntry(surl.Data()))
+         fComboBox->AddEntry(surl.Data(), fComboBox->GetNumberOfEntries()+1);
+      fHtml->Layout();
+      gVirtualX->SetCursor(fHtml->GetId(), gVirtualX->CreateCursor(kPointer));
+      return;
+   }
    if ((!strcmp(url.GetProtocol(), "http"))) {
+      // standard web page
       buf = ReadRemote(url.GetUrl());
       if (buf) {
          fHtml->Clear();
@@ -316,11 +387,15 @@ void TGHtmlBrowser::Selected(const char *uri)
       }
    }
    else {
+      // local file
       f = fopen(url.GetFile(), "r");
       if (f) {
+         TString fpath = url.GetUrl();
+         fpath.ReplaceAll(gSystem->BaseName(fpath.Data()), "");
+         fpath.ReplaceAll("file://", "");
          fHtml->Clear();
          fHtml->Layout();
-         fHtml->SetBaseUri("");
+         fHtml->SetBaseUri(fpath.Data());
          buf = (char *)calloc(4096, sizeof(char));
          while (fgets(buf, 4096, f)) {
             fHtml->ParseText(buf);
@@ -340,8 +415,15 @@ void TGHtmlBrowser::Selected(const char *uri)
          }
       }
    }
+   // restore cursor
    gVirtualX->SetCursor(fHtml->GetId(), gVirtualX->CreateCursor(kPointer));
    fHtml->Layout();
+   Ssiz_t idx = surl.Last('#');
+   if (idx > 0) {
+      idx +=1; // skip #
+      TString anchor = surl(idx, surl.Length() - idx);
+      fHtml->GotoAnchor(anchor.Data());
+   }
    SetWindowName(Form("%s - RHTML",surl.Data()));
 }
 
@@ -375,6 +457,46 @@ void TGHtmlBrowser::Back()
             Selected(string);
       }
    }
+}
+
+//______________________________________________________________________________
+Bool_t TGHtmlBrowser::CheckAnchors(const char *uri)
+{
+   // Check if we just change position in the page (using anchor)
+   // and return kTRUE if any anchor has been found and followed.
+
+   TString surl(gSystem->UnixPathName(uri));
+
+   if (!fHtml->GetBaseUri())
+      return kFALSE;
+   TString actual = fHtml->GetBaseUri();
+   Ssiz_t idx = surl.Last('#');
+   Ssiz_t idy = actual.Last('#');
+   TString short1(surl.Data());
+   TString short2(actual.Data());
+   if (idx > 0)
+      short1 = surl(0, idx);
+   if (idy > 0)
+      short2 = actual(0, idy);
+
+   if (short1 == short2) {
+      if (idx > 0) {
+         idx +=1; // skip #
+         TString anchor = surl(idx, surl.Length() - idx);
+         fHtml->GotoAnchor(anchor.Data());
+      }
+      else {
+         fHtml->ScrollToPosition(TGLongPosition(0, 0));
+      }
+      fHtml->SetBaseUri(surl.Data());
+      if (!fComboBox->FindEntry(surl.Data()))
+         fComboBox->AddEntry(surl.Data(), fComboBox->GetNumberOfEntries()+1);
+      fURL->SetText(surl.Data());
+      fComboBox->Select(fComboBox->GetNumberOfEntries(), kFALSE);
+      SetWindowName(Form("%s - RHTML",surl.Data()));
+      return kTRUE;
+   }
+   return kFALSE;
 }
 
 //______________________________________________________________________________

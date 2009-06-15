@@ -19,6 +19,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include <string.h>
+#include <typeinfo>
 
 #include "TFile.h"
 #include "TBufferFile.h"
@@ -51,7 +52,6 @@ const UInt_t kByteCountMask     = 0x40000000;  // OR the byte count with this
 const UInt_t kMaxMapCount       = 0x3FFFFFFE;  // last valid fMapCount and byte count
 const Version_t kByteCountVMask = 0x4000;      // OR the version byte count with this
 const Version_t kMaxVersion     = 0x3FFF;      // highest possible version number
-const Int_t  kExtraSpace        = 8;   // extra space at end of buffer (used for free block count)
 const Int_t  kMapOffset         = 2;   // first 2 map entries are taken by null obj and self obj
 
 Int_t TBufferFile::fgMapSize   = kMapSize;
@@ -102,8 +102,8 @@ TBufferFile::TBufferFile(TBuffer::EMode mode, Int_t bufsiz)
 }
 
 //______________________________________________________________________________
-TBufferFile::TBufferFile(TBuffer::EMode mode, Int_t bufsiz, void *buf, Bool_t adopt) :
-   TBuffer(mode,bufsiz,buf,adopt),
+TBufferFile::TBufferFile(TBuffer::EMode mode, Int_t bufsiz, void *buf, Bool_t adopt, ReAllocCharFun_t reallocfunc) :
+   TBuffer(mode,bufsiz,buf,adopt,reallocfunc),
    fDisplacement(0),fPidOffset(0), fMap(0), fClassMap(0),
    fInfo(0), fInfoStack()
 {
@@ -112,6 +112,9 @@ TBufferFile::TBufferFile(TBuffer::EMode mode, Int_t bufsiz, void *buf, Bool_t ad
    // TBuffer::kInitialSize (1024) bytes. An external buffer can be passed
    // to TBuffer via the buf argument. By default this buffer will be adopted
    // unless adopt is false.
+   // If the new buffer is _not_ adopted and no memory allocation routine
+   // is provided, a Fatal error will be issued if the Buffer attempts to
+   // expand.
 
    fMapCount = 0;
    fMapSize  = fgMapSize;
@@ -160,16 +163,16 @@ void TBufferFile::DecrementLevel(TVirtualStreamerInfo* /*info*/)
 //______________________________________________________________________________
 void TBufferFile::PushDataCache(TVirtualArray *obj)
 {
-   // Push a new data cache area onto the list of area to be used for 
+   // Push a new data cache area onto the list of area to be used for
    // temporarily store 'missing' data members.
 
    fCacheStack.push_back(obj);
 }
 
 //______________________________________________________________________________
-TVirtualArray *TBufferFile::PeekDataCache() const 
+TVirtualArray *TBufferFile::PeekDataCache() const
 {
-   // Return the 'current' data cache area from the list of area to be used for 
+   // Return the 'current' data cache area from the list of area to be used for
    // temporarily store 'missing' data members.
 
    if (fCacheStack.empty()) return 0;
@@ -177,9 +180,9 @@ TVirtualArray *TBufferFile::PeekDataCache() const
 }
 
 //______________________________________________________________________________
-TVirtualArray *TBufferFile::PopDataCache() 
+TVirtualArray *TBufferFile::PopDataCache()
 {
-   // Pop and Return the 'current' data cache area from the list of area to be used for 
+   // Pop and Return the 'current' data cache area from the list of area to be used for
    // temporarily store 'missing' data members.
 
    TVirtualArray *val = PeekDataCache();
@@ -1475,7 +1478,7 @@ void TBufferFile::ReadFastArray(void **start, const TClass *cl, Int_t n,
          //delete the object or collection
          void *old = start[j];
          start[j] = ReadObjectAny(cl);
-         if (old && old!=start[j] && 
+         if (old && old!=start[j] &&
              TStreamerInfo::CanDelete()
              // There are some cases where the user may set up a pointer in the (default)
              // constructor but not mark this pointer as transient.  Sometime the value
@@ -2191,15 +2194,15 @@ void *TBufferFile::ReadObjectAny(const TClass *clCast)
       //baseOffset will be -1 if clRef does not inherit from clCast.
       baseOffset = clRef->GetBaseClassOffset(clCast);
       if (baseOffset == -1) {
-         // The 2 classes are unrelated, maybe there is a converter between the 2.  
-         
-         if (!clCast->GetSchemaRules() || 
-             !clCast->GetSchemaRules()->HasRuleWithSourceClass(clRef->GetName())) 
+         // The 2 classes are unrelated, maybe there is a converter between the 2.
+
+         if (!clCast->GetSchemaRules() ||
+             !clCast->GetSchemaRules()->HasRuleWithSourceClass(clRef->GetName()))
          {
             // There is no converter
             Error("ReadObject", "got object of wrong class! requested %s but got %s",
                   clCast->GetName(), clRef->GetName());
-            
+
             CheckByteCount(startpos, tag, (TClass*)0); // avoid mis-leading byte count error message
             return 0; // We better return at this point
          }
@@ -2507,7 +2510,7 @@ TClass *TBufferFile::ReadClass(const TClass *clReq, UInt_t *objTag)
       cl = (TClass *)fMap->GetValue(clTag);
    }
 
-   if (cl && clReq && 
+   if (cl && clReq &&
        (!cl->InheritsFrom(clReq) &&
         !(clReq->GetSchemaRules() &&
           clReq->GetSchemaRules()->HasRuleWithSourceClass(cl->GetName()) )
@@ -2850,30 +2853,6 @@ UInt_t TBufferFile::CheckObject(UInt_t offset, const TClass *cl, Bool_t readClas
 }
 
 //______________________________________________________________________________
-void TBufferFile::SetBuffer(void *buf, UInt_t newsiz, Bool_t adopt)
-{
-   // Sets a new buffer in an existing TBuffer object. If newsiz=0 then the
-   // new buffer is expected to have the same size as the previous buffer.
-   // The current buffer position is reset to the start of the buffer.
-   // If the TBuffer owned the previous buffer, it will be deleted prior
-   // to accepting the new buffer. By default the new buffer will be
-   // adopted unless adopt is false.
-
-   if (fBuffer && TestBit(kIsOwner))
-      delete [] fBuffer;
-
-   if (adopt)
-      SetBit(kIsOwner);
-   else
-      ResetBit(kIsOwner);
-
-   fBuffer = (char *)buf;
-   fBufCur = fBuffer;
-   if (newsiz > 0) fBufSize = newsiz;
-   fBufMax = fBuffer + fBufSize;
-}
-
-//______________________________________________________________________________
 Bool_t TBufferFile::CheckObject(const TObject *obj)
 {
    // Check if the specified object is already in the buffer.
@@ -3115,7 +3094,7 @@ void TBufferFile::WriteBuf(const void *buf, Int_t max)
 }
 
 //______________________________________________________________________________
-Text_t *TBufferFile::ReadString(Text_t *s, Int_t max)
+char *TBufferFile::ReadString(char *s, Int_t max)
 {
    // Read string from I/O buffer. String is read till 0 character is
    // found or till max-1 characters are read (i.e. string s has max
@@ -3144,12 +3123,12 @@ Text_t *TBufferFile::ReadString(Text_t *s, Int_t max)
 }
 
 //______________________________________________________________________________
-void TBufferFile::WriteString(const Text_t *s)
+void TBufferFile::WriteString(const char *s)
 {
    // Write string to I/O buffer. Writes string upto and including the
    // terminating 0.
 
-   WriteBuf(s, (strlen(s)+1)*sizeof(Text_t));
+   WriteBuf(s, (strlen(s)+1)*sizeof(char));
 }
 
 //______________________________________________________________________________
@@ -3204,7 +3183,7 @@ UInt_t TBufferFile::GetTRefExecId()
 UShort_t TBufferFile::WriteProcessID(TProcessID *pid)
 {
    // Check if the ProcessID pid is already in the file.
-   // If not, add it and return the index  number in the local file list.
+   // If not, add it and return the index number in the local file list.
 
    TFile *file = (TFile*)GetParent();
    if (!file) return 0;
@@ -3217,10 +3196,10 @@ UShort_t TBufferFile::WriteProcessID(TProcessID *pid)
 void TBufferFile::ForceWriteInfo(TVirtualStreamerInfo *info, Bool_t force)
 {
    // force writing the TStreamerInfo to the file
-   
+
    if (info) info->ForceWriteInfo((TFile*)GetParent(),force);
 }
-   
+
 
 //______________________________________________________________________________
 void TBufferFile::ForceWriteInfoClones(TClonesArray *a)
@@ -3341,7 +3320,7 @@ Int_t TBufferFile::ReadClassBuffer(const TClass *cl, void *pointer, Int_t versio
          sinfo->BuildOld();
       }
    }
-   
+
    // Deserialize the object.
    void *ptr = &pointer;
    sinfo->ReadBuffer(*this, (char**)ptr,-1);

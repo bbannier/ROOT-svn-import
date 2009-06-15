@@ -69,7 +69,7 @@ XrdClient::XrdClient(const char *url) {
     if (!ConnectionManager)
 	Info(XrdClientDebug::kNODEBUG,
 	     "Create",
-	     "(C) 2004 SLAC INFN XrdClient $Revision: 1.128 $ - Xrootd version: " << XrdVSTRING);
+	     "(C) 2004 SLAC INFN XrdClient $Revision: 1.136 $ - Xrootd version: " << XrdVSTRING);
 
 #ifndef WIN32
     signal(SIGPIPE, SIG_IGN);
@@ -104,6 +104,8 @@ XrdClient::~XrdClient()
    fOpenProgCnd->Lock();
 
    if (fOpenerTh) {
+      fOpenerTh->Cancel();
+      fOpenerTh->Join();
       delete fOpenerTh;
       fOpenerTh = 0;
    }
@@ -144,6 +146,7 @@ bool XrdClient::IsOpen_wait() {
     if (fOpenPars.inprogress) {
 	fOpenProgCnd->Wait();
 	if (fOpenerTh) {
+            fOpenerTh->Join();
 	    delete fOpenerTh;
 	    fOpenerTh = 0;
 	}
@@ -464,10 +467,9 @@ int XrdClient::Read(void *buf, long long offset, int len) {
 			 " offset=" << offset);
 
 		    // Are we using read ahead?
-		    // We read ahead only if the last byte we got is near (or over) to the last byte read
-		    // in advance. But not too much over.
+		    // We read ahead only if (offs+len) lies in an interval of fReadAheadLast not bigger than the readahead size
 		    if ( (fReadAheadLast - (offset+len) < fReadAheadSize) &&
-			 //(fReadAheadLast - (offset+len) > -10*rasize) &&
+			 (fReadAheadLast - (offset+len) > -fReadAheadSize) &&
 			 (fReadAheadSize > 0) ) {
 
 			kXR_int64 araoffset;
@@ -516,13 +518,13 @@ int XrdClient::Read(void *buf, long long offset, int len) {
 	
 		// Here we forget to have read in advance if the last byte taken is
 		// too much before the first read ahead byte
-		if ( fReadAheadLast - 2*fReadAheadSize > (offset+len) ) fReadAheadLast = offset+len-1;
+		// if ( fReadAheadLast - 2*fReadAheadSize > (offset+len) ) fReadAheadLast = offset+len-1;
 
 		// Are we using read ahead?
-		// We read ahead only if the last byte we got is near (or over) to the last byte read
+		// We read ahead only if (offs+len) lies in an interval of fReadAheadLast not bigger than the readahead size
 		// in advance. But not too much over.
 		if ( (fReadAheadLast - (offset+len) < fReadAheadSize) &&
-		     //(fReadAheadLast - (offset+len) > -10*rasize) &&
+		     (fReadAheadLast - (offset+len) > -fReadAheadSize) &&
 		     (fReadAheadSize > 0) ) {
 
 		    kXR_int64 araoffset;
@@ -531,12 +533,12 @@ int XrdClient::Read(void *buf, long long offset, int len) {
 		    // This is a HIT case. Async readahead will try to put some data
 		    // in advance into the cache. The higher the araoffset will be,
 		    // the best chances we have not to cause overhead
-                    if (!bytesgot && !blkstowait && !cacheholes.GetSize()) {
-		      araoffset = xrdmax(fReadAheadLast, offset);
-                      blkstowait++;
-                    }
-                    else
-                      araoffset = xrdmax(fReadAheadLast, offset + len);
+                    //if (!bytesgot && !blkstowait && !cacheholes.GetSize()) {
+		    //  araoffset = xrdmax(fReadAheadLast, offset);
+                    //  blkstowait++;
+                    //}
+                    //else
+		     araoffset = xrdmax(fReadAheadLast, offset + len);
 
 		    aralen = xrdmin(fReadAheadSize,
 				    offset + len + fReadAheadSize -
@@ -566,6 +568,7 @@ int XrdClient::Read(void *buf, long long offset, int len) {
 		if (retrysync) fReadAheadLast = offset+len;
 
 		retrysync = false;
+                memset(&fConnModule->LastServerError, 0, sizeof(fConnModule->LastServerError));
 
 		Info( XrdClientDebug::kHIDEBUG, "Read",
 		      "Read(offs=" << offset <<
@@ -581,8 +584,9 @@ int XrdClient::Read(void *buf, long long offset, int len) {
 		readFileRequest.read.rlen = len;
 		readFileRequest.read.dlen = 0;
 
-		fConnModule->SendGenCommand(&readFileRequest, 0, 0, (void *)buf,
-					    FALSE, (char *)"ReadBuffer");
+		if (!fConnModule->SendGenCommand(&readFileRequest, 0, 0, (void *)buf,
+                                                 FALSE, (char *)"ReadBuffer"))
+                   return 0;
 
 		return fConnModule->LastServerResp.dlen;
 	    }
@@ -590,17 +594,20 @@ int XrdClient::Read(void *buf, long long offset, int len) {
 	    // Now it's time to sleep
 	    // This thread will be awakened when new data will arrive
 	    if ((blkstowait > 0)|| cacheholes.GetSize()) {
-		Info( XrdClientDebug::kUSERDEBUG, "Read",
+		Info( XrdClientDebug::kHIDEBUG, "Read",
 		      "Waiting " << blkstowait+cacheholes.GetSize() << "outstanding blocks." );
 
 		if (!fConnModule->IsPhyConnConnected() ||
-		    fReadWaitData->Wait( EnvGetLong(NAME_REQUESTTIMEOUT) )) {
+		    fReadWaitData->Wait( EnvGetLong(NAME_REQUESTTIMEOUT) ) ||
+                    (fConnModule->LastServerError.errnum != kXR_noErrorYet) ) {
+
+                   fConnModule->LastServerError.errnum = kXR_noErrorYet;
 
                   if (DebugLevel() >= XrdClientDebug::kUSERDEBUG) {
                     fConnModule->PrintCache();
 
 		    Error( "Read",
-                           "Timeout waiting outstanding blocks. "
+                           "Timeout or error waiting outstanding blocks. "
                            "Retrying sync! "
                            "List of outstanding reqs follows." );
                     ConnectionManager->SidManager()->PrintoutOutstandingRequests();
@@ -619,7 +626,7 @@ int XrdClient::Read(void *buf, long long offset, int len) {
 
     // To lower caching overhead in copy-like applications
     if (EnvGetLong(NAME_REMUSEDCACHEBLKS))
-       fConnModule->RemoveDataFromCache(0, offset+len+1);
+       fConnModule->RemoveDataFromCache(0, offset);
 
     return len;
 }
@@ -740,6 +747,10 @@ bool XrdClient::Write(const void *buf, long long offset, int len) {
       writeFileRequest.write.offset = offset;
       ret = fConnModule->SendGenCommand(&writeFileRequest, (void *)buf, 0, 0,
 					FALSE, (char *)"Write");
+
+      if (ret && fStatInfo.stated)
+         fStatInfo.size = xrdmax(fStatInfo.size, offset + len);
+
       return ret;
     }
 
@@ -747,6 +758,8 @@ bool XrdClient::Write(const void *buf, long long offset, int len) {
     // An unrecoverable error in an old request gives no sense to continue here.
     // Rather unfortunate but happens. One more weird metaphor of life?!?!?
     if (!fConnModule->DoWriteSoftCheckPoint()) return false;
+
+    fConnModule->RemoveDataFromCache(offset, offset+len+1, true);
 
     XrdClientVector<XrdClientMStream::ReadChunk> rl;
     XrdClientMStream::SplitReadRequest(fConnModule, offset, len, rl);
@@ -846,8 +859,8 @@ bool XrdClient::TryOpen(kXR_unt16 mode, kXR_unt16 options, bool doitparallel) {
 	    if (!thrst) {
 		// The thread start seems OK. This open will go in parallel
 
-		if (fOpenerTh->Detach())
-		    Error("XrdClient", "Thread detach failed. Low system resources?");
+		//if (fOpenerTh->Detach())
+		//    Error("XrdClient", "Thread detach failed. Low system resources?");
 
 		return true;
 	    }
@@ -1347,7 +1360,7 @@ UnsolRespProcResult XrdClient::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *se
 		     unsolmsg->HeaderSID() << " father=" <<
 		     si->fathersid );
                 
-		// We are interested in data, not errors...
+		// We are interested in data, not errors here...
 		if ( (unsolmsg->HeaderStatus() == kXR_oksofar) || 
 		     (unsolmsg->HeaderStatus() == kXR_ok) ) {
 
@@ -1420,6 +1433,62 @@ UnsolRespProcResult XrdClient::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *se
 		    }
 		    
 		} // if oksofar or ok
+                else {
+                   // And here we treat the errors which can be fatal or just ugly to ignore
+                   //  even if the strategy should be completely async
+                    switch (req->header.requestid) {
+
+		    case kXR_read: {
+                        // We invalidate the whole request in the cache
+	    
+			Info(XrdClientDebug::kHIDEBUG, "ProcessUnsolicitedMsg",
+			     "Got a kxr_read error. Req offset=" <<
+			     req->read.offset <<
+			     " len=" <<
+			     req->read.rlen);
+
+			{
+			// Keep in sync with the cache lookup
+			XrdSysCondVarHelper cndh(fReadWaitData);
+
+			// To compute the end offset of the block we have to take 1 from the size!
+                        // Note that this is an error, we try to invalidate everythign which
+                        // can be related to this chunk
+			fConnModule->RemoveDataFromCache(req->read.offset,
+                                                         req->read.offset + req->read.rlen - 1, true);
+
+			}
+
+
+                        // Print out the error information, as received by the server	
+                        struct ServerResponseBody_Error *body_err;
+                        body_err = (struct ServerResponseBody_Error *)(unsolmsg->GetData());
+                        if (body_err)
+                           Info(XrdClientDebug::kNODEBUG, "ProcessUnsolicitedMsg", "Server declared: " <<
+                                (const char*)body_err->errmsg << "(error code: " << ntohl(body_err->errnum) << ")");
+                        
+                        // Save the last error received
+                        memset(&fConnModule->LastServerError, 0, sizeof(fConnModule->LastServerError));
+                        memcpy(&fConnModule->LastServerError, body_err,
+                               xrdmin(sizeof(fConnModule->LastServerError), (unsigned)unsolmsg->DataLen()) );
+                        fConnModule->LastServerError.errnum = ntohl(body_err->errnum);
+	
+
+			// Awaken all the waiting threads, some of them may be interested
+			fReadWaitData->Broadcast();
+
+			// Other clients might be interested
+			return kUNSOL_CONTINUE;
+
+			break;
+		    }
+
+                    } // switch
+                } // else
+
+
+
+
 			 
 	 
 	    }

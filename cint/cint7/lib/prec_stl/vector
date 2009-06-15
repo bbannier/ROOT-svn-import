@@ -50,7 +50,7 @@ class vector {
  public:
   typedef T value_type;
 
-#if ((defined(G__GNUC) || defined(G__SGI)) && !defined(G__KCC)) || defined(G__HPUX) 
+#if ((defined(G__GNUC) || defined(G__SGI)) && !defined(G__KCC)) || defined(G__HPUX) || defined(G__STLPORT_VERSION)
   typedef value_type* pointer;
   typedef const value_type* const_pointer;
   typedef value_type& reference;
@@ -88,7 +88,10 @@ class vector {
 #elif defined(G__SUN) && !defined(G__GNUC)
   typedef T* iterator;
   typedef const T* const_iterator;
-
+#if defined(G__STLPORT_VERSION)
+  typedef reverse_iterator<const T*> const_reverse_iterator;
+  typedef reverse_iterator<T*> reverse_iterator;
+#else
     typedef reverse_iterator<const_iterator, 
       random_access_iterator_tag, value_type, 
       const_reference, const_pointer, difference_type>
@@ -97,9 +100,11 @@ class vector {
       random_access_iterator_tag, value_type,
       reference, pointer, difference_type>
       reverse_iterator;
-
+#endif // defined(G__STLPORT_VERSION)
 #elif defined(G__VISUAL) && (G__MSC_VER>=1300)
 
+   #define G__VECTOR_HAS_CLASS_ITERATOR
+   
         // CLASS const_iterator
 	class const_iterator;
 	friend class const_iterator;
@@ -118,10 +123,12 @@ class vector {
 		typedef const_reference reference;
 
 		const_iterator();
-#if (G__MSC_VER>=1310) && (G__MSC_VER<1400)
+#if (G__MSC_VER>=1310) && \
+	!_HAS_ITERATOR_DEBUGGING && !G__HAS_ITERATOR_DEBUGGING &&\
+	!_SECURE_SCL && !G__SECURE_SCL
 		//const_iterator(pointer _Ptr);
 		const_iterator(T *const  _Ptr);
-#elif (G__MSC_VER>=1400)
+#elif _HAS_ITERATOR_DEBUGGING || _SECURE_SCL || G__HAS_ITERATOR_DEBUGGING || G__SECURE_SCL
 		const_iterator(T *const  _Ptr, const vector<T>* _Pvector );
 #endif
 
@@ -200,7 +207,9 @@ class vector {
 	typedef std::reverse_iterator<iterator> reverse_iterator;
 	typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-#elif (!defined(G__INTEL_COMPILER) && (G__GNUC_VER>3001)) 
+#elif (!defined(G__INTEL_COMPILER) && (G__GNUC_VER>3001))
+
+  #define G__VECTOR_HAS_CLASS_ITERATOR
 
 #ifndef G__OLDIMPLEMENTATION1703
   class iterator {
@@ -265,6 +274,8 @@ class vector {
 
 #elif (!defined(G__INTEL_COMPILER) && (G__GNUC_VER==3001))
 
+  #define G__VECTOR_HAS_CLASS_ITERATOR
+
   class iterator {
    public:
      typedef vector::pointer pointer;
@@ -310,6 +321,8 @@ class vector {
   typedef const iterator const_iterator;
 
 #elif (!defined(G__INTEL_COMPILER) && (G__GNUC_VER==3000))
+  #define G__VECTOR_HAS_CLASS_ITERATOR
+
   typedef vector<T, Allocator> vector_type;
   typedef std::__normal_iterator<T*, vector_type> iterator;
   typedef std::__normal_iterator<T*, vector_type> const_iterator;
@@ -347,7 +360,8 @@ class vector {
   class reverse_iterator 
 #if defined(G__VISUAL) 
 	: public _Ranit<T,difference_type>
-#elif !defined(G__SUNPRO_CC) && !defined(G__INTEL_COMPILER) && !defined(G__KCC) && !defined(G__AIX) && !defined(G__ALPHA)
+#elif (!defined(G__SUNPRO_CC) && !defined(G__INTEL_COMPILER) && !defined(G__KCC) && !defined(G__AIX) && !defined(G__ALPHA)) \
+  || defined(G__STLPORT_VERSION)
     	: public std::random_access_iterator<T,difference_type>
 #endif
 	{

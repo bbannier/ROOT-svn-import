@@ -658,7 +658,8 @@ void G__make_ifunctable(char* funcheader)
             ) {
                const char* posEndType = oprtype;
                while (isalnum(*posEndType)
-                      || (posEndType[0] == ':' && posEndType[1] == ':')
+                      // NOTE this increases posEndType to skip '::'!
+                      || (posEndType[0] == ':' && posEndType[1] == ':' && (++posEndType))
                       || *posEndType == '_')
                   ++posEndType;
                char* ptrrefbuf = 0;
@@ -1122,7 +1123,8 @@ void G__make_ifunctable(char* funcheader)
    if ((paraname[0] == '\0'
 #ifndef G__OLDIMPLEMETATION817
          || ((strncmp(paraname, "throw", 5) == 0
-              || strncmp(paraname, "const throw", 11) == 0) && 0 == strchr(paraname, '='))
+              || strncmp(paraname, "const throw", 11) == 0
+              || strncmp(paraname, "_attribute_", 11) == 0) && 0 == strchr(paraname, '='))
 #endif
        ) && ((cin == ',') || (cin == ';'))
          && strncmp(funcheader, "ClassDef", 8) != 0
@@ -1171,7 +1173,8 @@ void G__make_ifunctable(char* funcheader)
       || (
          (
             strncmp(paraname, "throw", 5) == 0 ||
-            strncmp(paraname, "const throw", 11) == 0
+            strncmp(paraname, "const throw", 11) == 0 ||
+            strncmp(paraname, "_attribute_", 11) == 0
          ) &&
          0 != strchr(paraname, '=')
       )
@@ -4691,7 +4694,7 @@ struct G__ifunc_table_internal* G__overload_match(const char* funcname, G__param
    struct G__ifunc_table_internal *store_ifunc = p_ifunc;
    int ix = 0;
 #ifdef G__ASM
-   int active_run = doconvert && !G__asm_wholefunction && !G__asm_noverflow;
+   int active_run = doconvert && !G__asm_wholefunction && !G__asm_noverflow && !(G__no_exec_compile==1 && funcname[0]=='~' /* loop compilation of temporary destruction */);
 #else
    int active_run = doconvert;
 #endif

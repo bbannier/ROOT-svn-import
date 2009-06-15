@@ -39,6 +39,7 @@
 #include "TDataType.h"
 #include "TError.h"
 #include "TExMap.h"
+#include "THashList.h"
 #include "TInterpreter.h"
 #include "TMemberInspector.h"
 #include "TMethod.h"
@@ -58,6 +59,7 @@
 #include "THashTable.h"
 #include "TSchemaRuleSet.h"
 #include "TGenericClassInfo.h"
+#include "TIsAProxy.h"
 
 #include <cstdio>
 #include <cctype>
@@ -65,6 +67,7 @@
 #include <sstream>
 #include <string>
 #include <map>
+#include <typeinfo>
 #include <cmath>
 #include <assert.h>
 
@@ -451,9 +454,9 @@ void TBuildRealData::Inspect(TClass* cl, const char* pname, const char* mname, c
          // classes composing this object (base classes, type of
          // embedded object and same for their data members).
          //
-         TClass* dmclass = TClass::GetClass(dm->GetTypeName(),kTRUE,isTransient);
+         TClass* dmclass = TClass::GetClass(dm->GetTypeName(), kTRUE, isTransient);
          if (!dmclass) {
-            dmclass = TClass::GetClass(dm->GetTrueTypeName(),kTRUE,isTransient);
+            dmclass = TClass::GetClass(dm->GetTrueTypeName(), kTRUE, isTransient);
          }
          if (dmclass) {
             if (dmclass->Property()) {
@@ -466,7 +469,7 @@ void TBuildRealData::Inspect(TClass* cl, const char* pname, const char* mname, c
                   TClass* valcl = dmclass->GetCollectionProxy()->GetValueClass();
                   if (valcl) valcl->BuildRealData();
                } else {
-                  dmclass->BuildRealData(const_cast<void*>(add));
+                  dmclass->BuildRealData(const_cast<void*>(add), isTransient);
                }
             }
          }
@@ -635,49 +638,45 @@ void TAutoInspector::Inspect(TClass *cl, const char *tit, const char *name,
 ClassImp(TClass)
 
 //______________________________________________________________________________
-TClass::TClass() : TDictionary(), fNew(0), fNewArray(0), fDelete(0),
-                   fDeleteArray(0), fDestructor(0), fDirAutoAdd(0), fSizeof(-1),
-                   fVersionUsed(kFALSE), fOffsetStreamer(0), fStreamerType(kNone),
-                   fCurrentInfo(0), fRefStart(0), fRefProxy(0),
-                   fSchemaRules( 0 )
+TClass::TClass() :
+   TDictionary(),
+   fStreamerInfo(0), fConversionStreamerInfo(0), fRealData(0),
+   fBase(0), fData(0), fMethod(0), fAllPubData(0), fAllPubMethod(0),
+   fClassMenuList(0),
+   fDeclFileName(""), fImplFileName(""), fDeclFileLine(0), fImplFileLine(0),
+   fInstanceCount(0), fOnHeap(0),
+   fCheckSum(0), fCollectionProxy(0), fClassVersion(0), fClassInfo(0),
+   fTypeInfo(0), fShowMembers(0), fInterShowMembers(0),
+   fStreamer(0), fIsA(0), fGlobalIsA(0), fIsAMethod(0),
+   fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
+   fDestructor(0), fDirAutoAdd(0), fSizeof(-1),
+   fVersionUsed(kFALSE), fProperty(0),
+   fInterStreamer(0), fOffsetStreamer(0), fStreamerType(kNone),
+   fCurrentInfo(0), fRefStart(0), fRefProxy(0),
+   fSchemaRules(0)
 {
    // Default ctor.
 
    fDeclFileLine   = -2;    // -2 for standalone TClass (checked in dtor)
-   fBase           = 0;
-   fData           = 0;
-   fMethod         = 0;
-   fRealData       = 0;
-   fClassInfo      = 0;
-   fAllPubData     = 0;
-   fAllPubMethod   = 0;
-   fCheckSum       = 0;
-   fCollectionProxy= 0;
-   fStreamer       = 0;
-   fStreamerInfo   = 0;
-   fShowMembers    = 0;
-   fIsA            = 0;
-   fGlobalIsA      = 0;
-   fIsAMethod      = 0;
-   fTypeInfo       = 0;
-   fInterStreamer  = 0;
-
-   ResetInstanceCount();
-
-   fClassMenuList  = new TList();
-   fClassMenuList->Add(new TClassMenuItem(TClassMenuItem::kPopupStandardList, this));
-   fContextMenuTitle = "";
-   fConversionStreamerInfo = 0;
 }
 
 //______________________________________________________________________________
-TClass::TClass(const char *name, Bool_t silent) : TDictionary(), fNew(0), fNewArray(0),
-                                   fDelete(0), fDeleteArray(0), fDestructor(0),
-                                   fDirAutoAdd(0),
-                                   fSizeof(-1), fVersionUsed(kFALSE),
-                                   fOffsetStreamer(0), fStreamerType(kNone),
-                                   fCurrentInfo(0), fRefStart(0), fRefProxy(0),
-                                   fSchemaRules(0) 
+TClass::TClass(const char *name, Bool_t silent) :
+   TDictionary(name),
+   fStreamerInfo(0), fConversionStreamerInfo(0), fRealData(0),
+   fBase(0), fData(0), fMethod(0), fAllPubData(0), fAllPubMethod(0),
+   fClassMenuList(0),
+   fDeclFileName(""), fImplFileName(""), fDeclFileLine(0), fImplFileLine(0),
+   fInstanceCount(0), fOnHeap(0),
+   fCheckSum(0), fCollectionProxy(0), fClassVersion(0), fClassInfo(0),
+   fTypeInfo(0), fShowMembers(0), fInterShowMembers(0),
+   fStreamer(0), fIsA(0), fGlobalIsA(0), fIsAMethod(0),
+   fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
+   fDestructor(0), fDirAutoAdd(0), fSizeof(-1),
+   fVersionUsed(kFALSE), fProperty(0),
+   fInterStreamer(0), fOffsetStreamer(0), fStreamerType(kNone),
+   fCurrentInfo(0), fRefStart(0), fRefProxy(0),
+   fSchemaRules(0)
 {
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
@@ -689,61 +688,43 @@ TClass::TClass(const char *name, Bool_t silent) : TDictionary(), fNew(0), fNewAr
    if (!gROOT)
       ::Fatal("TClass::TClass", "ROOT system not initialized");
 
-   SetName(name);
-   fClassVersion   = 0;
-   fDeclFileName   = "";
-   fImplFileName   = "";
    fDeclFileLine   = -2;    // -2 for standalone TClass (checked in dtor)
-   fImplFileLine   = 0;
-   fBase           = 0;
-   fData           = 0;
-   fMethod         = 0;
-   fRealData       = 0;
-   fClassInfo      = 0;
-   fAllPubData     = 0;
-   fAllPubMethod   = 0;
-   fCheckSum       = 0;
-   fCollectionProxy= 0;
-   fTypeInfo       = 0;
-   fIsA            = 0;
-   fGlobalIsA      = 0;
-   fIsAMethod      = 0;
-   fShowMembers    = 0;
-   fStreamerInfo   = 0;
-   fStreamer       = 0;
-   fInterStreamer  = 0;
 
-   ResetInstanceCount();
+   SetBit(kLoading);
+   if (!gInterpreter)
+      ::Fatal("TClass::TClass", "gInterpreter not initialized");
 
-   fClassMenuList  = new TList();
-   fContextMenuTitle = "";
-   fClassMenuList->Add(new TClassMenuItem(TClassMenuItem::kPopupStandardList, this));
-
+   gInterpreter->SetClassInfo(this);   // sets fClassInfo pointer
    if (!fClassInfo) {
-      SetBit(kLoading);
-      if (!gInterpreter)
-         ::Fatal("TClass::TClass", "gInterpreter not initialized");
-
-      gInterpreter->SetClassInfo(this);   // sets fClassInfo pointer
-      if (!fClassInfo) {
-         gInterpreter->InitializeDictionaries();
-         gInterpreter->SetClassInfo(this);
-      }
-      if (!silent && !fClassInfo && fName.First('@')==kNPOS) 
-         ::Warning("TClass::TClass", "no dictionary for class %s is available", name);
-      ResetBit(kLoading);
+      gInterpreter->InitializeDictionaries();
+      gInterpreter->SetClassInfo(this);
    }
+   if (!silent && !fClassInfo && fName.First('@')==kNPOS) 
+      ::Warning("TClass::TClass", "no dictionary for class %s is available", name);
+   ResetBit(kLoading);
+
    if (fClassInfo) SetTitle(gCint->ClassInfo_Title(fClassInfo));
    fConversionStreamerInfo = 0;
 }
 
 //______________________________________________________________________________
 TClass::TClass(const char *name, Version_t cversion,
-               const char *dfil, const char *ifil, Int_t dl, Int_t il, Bool_t silent)
-   : TDictionary(), fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
-     fDestructor(0), fDirAutoAdd(0), fSizeof(-1), fVersionUsed(kFALSE), fOffsetStreamer(0),
-     fStreamerType(kNone), fCurrentInfo(0), fRefStart(0), fRefProxy(0),
-     fSchemaRules(0) 
+               const char *dfil, const char *ifil, Int_t dl, Int_t il, Bool_t silent) :
+   TDictionary(name),
+   fStreamerInfo(0), fConversionStreamerInfo(0), fRealData(0),
+   fBase(0), fData(0), fMethod(0), fAllPubData(0), fAllPubMethod(0),
+   fClassMenuList(0),
+   fDeclFileName(""), fImplFileName(""), fDeclFileLine(0), fImplFileLine(0),
+   fInstanceCount(0), fOnHeap(0),
+   fCheckSum(0), fCollectionProxy(0), fClassVersion(0), fClassInfo(0),
+   fTypeInfo(0), fShowMembers(0), fInterShowMembers(0),
+   fStreamer(0), fIsA(0), fGlobalIsA(0), fIsAMethod(0),
+   fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
+   fDestructor(0), fDirAutoAdd(0), fSizeof(-1),
+   fVersionUsed(kFALSE), fProperty(0),
+   fInterStreamer(0), fOffsetStreamer(0), fStreamerType(kNone),
+   fCurrentInfo(0), fRefStart(0), fRefProxy(0),
+   fSchemaRules(0)
 {
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
@@ -756,11 +737,22 @@ TClass::TClass(const char *name, Version_t cversion,
                const type_info &info, TVirtualIsAProxy *isa,
                ShowMembersFunc_t showmembers,
                const char *dfil, const char *ifil, Int_t dl, Int_t il,
-               Bool_t silent)
-   : TDictionary(), fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
-     fDestructor(0), fDirAutoAdd(0), fSizeof(-1), fVersionUsed(kFALSE), fOffsetStreamer(0),
-     fStreamerType(kNone), fCurrentInfo(0), fRefStart(0), fRefProxy(0),
-     fSchemaRules( 0 )
+               Bool_t silent) :
+   TDictionary(name),
+   fStreamerInfo(0), fConversionStreamerInfo(0), fRealData(0),
+   fBase(0), fData(0), fMethod(0), fAllPubData(0), fAllPubMethod(0),
+   fClassMenuList(0),
+   fDeclFileName(""), fImplFileName(""), fDeclFileLine(0), fImplFileLine(0),
+   fInstanceCount(0), fOnHeap(0),
+   fCheckSum(0), fCollectionProxy(0), fClassVersion(0), fClassInfo(0),
+   fTypeInfo(0), fShowMembers(0), fInterShowMembers(0),
+   fStreamer(0), fIsA(0), fGlobalIsA(0), fIsAMethod(0),
+   fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
+   fDestructor(0), fDirAutoAdd(0), fSizeof(-1),
+   fVersionUsed(kFALSE), fProperty(0),
+   fInterStreamer(0), fOffsetStreamer(0), fStreamerType(kNone),
+   fCurrentInfo(0), fRefStart(0), fRefProxy(0),
+   fSchemaRules(0)
 {
    // Create a TClass object. This object contains the full dictionary
    // of a class. It has list to baseclasses, datamembers and methods.
@@ -811,28 +803,12 @@ void TClass::Init(const char *name, Version_t cversion,
    fImplFileName   = ifil ? ifil : "";
    fDeclFileLine   = dl;
    fImplFileLine   = il;
-   fBase           = 0;
-   fData           = 0;
-   fMethod         = 0;
-   fRealData       = 0;
-   fClassInfo      = 0;
-   fAllPubData     = 0;
-   fAllPubMethod   = 0;
-   fCheckSum       = 0;
-   fCollectionProxy= 0;
    fTypeInfo       = typeinfo;
    fIsA            = isa;
    if ( fIsA ) fIsA->SetClass(this);
-   fGlobalIsA      = 0;
-   fIsAMethod      = 0;
    fShowMembers    = showmembers;
-   fStreamer       = 0;
    fStreamerInfo   = new TObjArray(fClassVersion+2+10,-1); // +10 to read new data by old
    fProperty       = -1;
-   fInterStreamer  = 0;
-   fClassMenuList  = 0;
-   fContextMenuTitle = "";
-   fConversionStreamerInfo = 0;
 
    ResetInstanceCount();
 
@@ -971,9 +947,6 @@ void TClass::Init(const char *name, Version_t cversion,
 
    ResetBit(kLoading);
 
-   fClassMenuList = new TList();
-   fClassMenuList->Add(new TClassMenuItem(TClassMenuItem::kPopupStandardList,this));
-
    Int_t stl = TClassEdit::IsSTLCont(GetName(), 0);
 
    if ( stl || !strncmp(GetName(),"stdext::hash_",13) || !strncmp(GetName(),"__gnu_cxx::hash_",16) ) {
@@ -990,13 +963,14 @@ void TClass::Init(const char *name, Version_t cversion,
 TClass::TClass(const TClass& cl) :
   TDictionary(cl),
   fStreamerInfo(cl.fStreamerInfo),
-  fConversionStreamerInfo( cl.fConversionStreamerInfo ),
+  fConversionStreamerInfo(cl.fConversionStreamerInfo),
   fRealData(cl.fRealData),
   fBase(cl.fBase),
   fData(cl.fData),
   fMethod(cl.fMethod),
   fAllPubData(cl.fAllPubData),
   fAllPubMethod(cl.fAllPubMethod),
+  fClassMenuList(0),
   fDeclFileName(cl.fDeclFileName),
   fImplFileName(cl.fImplFileName),
   fDeclFileLine(cl.fDeclFileLine),
@@ -1008,9 +982,9 @@ TClass::TClass(const TClass& cl) :
   fClassVersion(cl.fClassVersion),
   fClassInfo(cl.fClassInfo),
   fContextMenuTitle(cl.fContextMenuTitle),
-  fClassMenuList(cl.fClassMenuList),
   fTypeInfo(cl.fTypeInfo),
   fShowMembers(cl.fShowMembers),
+  fInterShowMembers(cl.fInterShowMembers),
   fStreamer(cl.fStreamer),
   fSharedLibs(cl.fSharedLibs),
   fIsA(cl.fIsA),
@@ -1029,7 +1003,9 @@ TClass::TClass(const TClass& cl) :
   fOffsetStreamer(cl.fOffsetStreamer),
   fStreamerType(cl.fStreamerType),
   fCurrentInfo(cl.fCurrentInfo),
-  fRefStart(cl.fRefStart)
+  fRefStart(cl.fRefStart),
+  fRefProxy(cl.fRefProxy),
+  fSchemaRules(cl.fSchemaRules)
 {
    //copy constructor
    
@@ -1125,6 +1101,8 @@ TClass::~TClass()
    if ( fInterStreamer ) gCint->CallFunc_Delete((CallFunc_t*)fInterStreamer);
    fInterStreamer=0;
 
+   if (fInterShowMembers) gCint->CallFunc_Delete(fInterShowMembers);
+
    if ( fIsA ) delete fIsA;
 
    if ( fRefProxy ) fRefProxy->Release();
@@ -1215,35 +1193,30 @@ Int_t TClass::Browse(void *obj, TBrowser *b) const
 
    if (!obj) return 0;
 
-   if (fShowMembers) {
-      char cbuf[1000]; *cbuf=0;
+   TClass *actual = GetActualClass(obj);
+   if (IsTObject()) {
+      // Call TObject::Browse.
 
-      TClass *actual = GetActualClass(obj);
-      if (actual!=this) {
-
-         actual->Browse(obj,b);
-
-      } else {
-
-         TAutoInspector insp(b);
-         fShowMembers(obj,insp,cbuf);
-         return insp.fCount;
-
+      if (!fInterStreamer) {
+         CalculateStreamerOffset();
       }
-
+      TObject* realTObject = (TObject*)((size_t)obj + fOffsetStreamer);
+      realTObject->Browse(b);
+      return 1;
+   } else if (actual != this) {
+      return actual->Browse(obj, b);
    } else if (GetCollectionProxy()) {
 
       // do something useful.
 
-   } else if (IsTObject()) {
-      // Call TObject::Browse.
+   } else {
+      char cbuf[1000]; *cbuf=0;
 
-      if (!fInterStreamer) {
-         const_cast<TClass*>(this)->CalculateStreamerOffset();
-      }
-      TObject* realTObject = (TObject*)((size_t)obj + fOffsetStreamer);
-      realTObject->Browse(b);
+      TAutoInspector insp(b);
+      CallShowMembers(obj,insp,cbuf,0);
+      return insp.fCount;
    }
+
    return 0;
 }
 
@@ -1265,7 +1238,7 @@ void TClass::Browse(TBrowser *b)
 }
 
 //______________________________________________________________________________
-void TClass::BuildRealData(void* pointer)
+void TClass::BuildRealData(void* pointer, Bool_t isTransient)
 {
    // Build a full list of persistent data members.
    // Scans the list of all data members in the class itself and also
@@ -1281,7 +1254,7 @@ void TClass::BuildRealData(void* pointer)
    }
 
    // Handle emulated classes and STL containers specially.
-   if (!fClassInfo || TClassEdit::IsSTLCont(GetName(), 0)) {
+   if (!fClassInfo || TClassEdit::IsSTLCont(GetName(), 0) || TClassEdit::IsSTLBitset(GetName())) {
       // We are an emulated class or an STL container.
       fRealData = new TList;
       BuildEmulatedRealData("", 0, this);
@@ -1319,49 +1292,19 @@ void TClass::BuildRealData(void* pointer)
 
       TBuildRealData brd(realDataObject, this);
 
-      // Force a call to InheritsFrom. This function indirectly
-      // calls TClass::GetClass.  It forces the loading of new
-      // typedefs in case some of them were not yet loaded.
-      Bool_t isATObject = InheritsFrom(TObject::Class());
-
-      if (fShowMembers) {
-         // This should always works since 'pointer' should be pointing
-         // to an object of the actual type of this TClass object.
-         fShowMembers(realDataObject, brd, parent);
-      } else {
-         // Always call ShowMembers via the interpreter. A direct call
-         // like:
-         //
-         //      realDataObject->ShowMembers(brd, parent);
-         //
-         // will not work if the class derives from TObject but does not
-         // have TObject as the leftmost base class.
-         //
-         if (isATObject) {
-            if (!fInterStreamer) {
-               CalculateStreamerOffset();
-            }
-            TObject* realTObject = (TObject*)((size_t)realDataObject + fOffsetStreamer);
-            realTObject->ShowMembers(brd, parent);
+      // CallShowMember will force a call to InheritsFrom, which indirectly
+      // calls TClass::GetClass.  It forces the loading of new typedefs in 
+      // case some of them were not yet loaded.
+      if ( ! CallShowMembers(realDataObject, brd, parent) ) {
+         if ( isTransient ) {
+            // This is a transient data member, so it is probably fine to not have 
+            // access to its content.  However let's no mark it as definitively setup,
+            // since another class might use this class for a persistent data member and
+            // in this case we really want the error message.
+            delete fRealData;
+            fRealData = 0;            
          } else {
-            R__LOCKGUARD2(gCINTMutex);
-            CallFunc_t *func = gCint->CallFunc_Factory();
-            void* address = 0;
-            Long_t offset = 0;
-            gCint->CallFunc_SetFuncProto(func,fClassInfo,"ShowMembers", "TMemberInspector&,char*", &offset);
-            if (!gCint->CallFunc_IsValid(func)) {
-               if (strcmp(GetName(), "string") != 0) {
-                  // For std::string we know that we do not have a ShowMembers
-                  // function and that it's okay.
-                  Error("BuildRealData", "Cannot find any ShowMembers function for %s!", GetName());
-               }
-            } else {
-               gCint->CallFunc_SetArg(func,(long) &brd);
-               gCint->CallFunc_SetArg(func,(long) parent);
-               address = (void*) (((long) realDataObject) + offset);
-               gCint->CallFunc_Exec(func,address);
-            }
-            gCint->CallFunc_Delete(func);
+            Error("BuildRealData", "Cannot find any ShowMembers function for %s!", GetName());
          }
       }
 
@@ -1376,7 +1319,7 @@ void TClass::BuildRealData(void* pointer)
          }
          TClass* c = base->GetClassPointer();
          if (c) {
-            c->BuildRealData(((char*) realDataObject) + base->GetDelta());
+            c->BuildRealData(((char*) realDataObject) + base->GetDelta(), isTransient);
          }
       }
    }
@@ -1436,7 +1379,7 @@ void TClass::BuildEmulatedRealData(const char *name, Long_t offset, TClass *cl)
 
 
 //______________________________________________________________________________
-void TClass::CalculateStreamerOffset()
+void TClass::CalculateStreamerOffset() const
 {
    // Calculate the offset between an object of this class to
    // its base class TObject. The pointer can be adjusted by
@@ -1446,8 +1389,88 @@ void TClass::CalculateStreamerOffset()
       CallFunc_t *f  = gCint->CallFunc_Factory();
       gCint->CallFunc_SetFuncProto(f,fClassInfo,"Streamer","TBuffer&",&fOffsetStreamer);
       fInterStreamer = f;
-      fOffsetStreamer = GetBaseClassOffset(TObject::Class());
+      fOffsetStreamer = const_cast<TClass*>(this)->GetBaseClassOffset(TObject::Class());
    }
+}
+
+
+//______________________________________________________________________________
+Bool_t TClass::CallShowMembers(void* obj, TMemberInspector &insp, char *parent,
+                               Int_t isATObject) const
+{
+   // Call ShowMembers() on the obj of this class type, passing insp and parent.
+   // isATObject is -1 if unknown, 0 if it is not a TObject, and 1 if it is a TObject.
+   // The function returns whether it was able to call ShowMembers().
+
+   if (fShowMembers) {
+      // This should always works since 'pointer' should be pointing
+      // to an object of the actual type of this TClass object.
+      fShowMembers(obj, insp, parent);
+      return kTRUE;
+   } else {
+
+      if (isATObject == -1) {
+         // Force a call to InheritsFrom. This function indirectly
+         // calls TClass::GetClass.  It forces the loading of new
+         // typedefs in case some of them were not yet loaded.
+         isATObject = (Int_t) (InheritsFrom(TObject::Class()));
+      }
+
+      if (isATObject == 1) {
+         // We have access to the TObject interface, so let's use it.
+         if (!fInterStreamer) {
+            CalculateStreamerOffset();
+         }
+         TObject* realTObject = (TObject*)((size_t)obj + fOffsetStreamer);
+         realTObject->ShowMembers(insp, parent);
+         return kTRUE;
+      } else if (fClassInfo) {
+         
+         // Always call ShowMembers via the interpreter. A direct call
+         // like:
+         //
+         //      realDataObject->ShowMembers(brd, parent);
+         //
+         // will not work if the class derives from TObject but does not
+         // have TObject as the leftmost base class.
+         //
+
+         if (!fInterShowMembers) {
+            CallFunc_t* ism = gCint->CallFunc_Factory();
+            Long_t offset = 0;
+            
+            R__LOCKGUARD2(gCINTMutex);
+            gCint->CallFunc_SetFuncProto(ism,fClassInfo,"ShowMembers", "TMemberInspector&,char*", &offset);
+            if (fInterStreamer && offset != fOffsetStreamer) {
+               Error("CallShowMembers", "Logic Error: offset for Streamer() and ShowMembers() differ!");
+               fInterShowMembers = 0;
+               return kFALSE;
+            }
+
+            fInterShowMembers = ism;
+         }
+         if (!gCint->CallFunc_IsValid(fInterShowMembers)) {
+            if (strcmp(GetName(), "string") == 0) {
+               // For std::string we know that we do not have a ShowMembers
+               // function and that it's okay.
+               return kTRUE;
+            }
+            // Let the caller protest:
+            // Error("CallShowMembers", "Cannot find any ShowMembers function for %s!", GetName());
+            return kFALSE;
+         } else {
+            R__LOCKGUARD2(gCINTMutex);
+            gCint->CallFunc_ResetArg(fInterShowMembers);
+            gCint->CallFunc_SetArg(fInterShowMembers,(long) &insp);
+            gCint->CallFunc_SetArg(fInterShowMembers,(long) parent);
+            void* address = (void*) (((long) obj) + fOffsetStreamer);
+            gCint->CallFunc_Exec((CallFunc_t*)fInterShowMembers,address);
+            return kTRUE;
+         }
+      } // isATObject
+   } // fShowMembers is set
+
+   return kFALSE;
 }
 
 //______________________________________________________________________________
@@ -1501,6 +1524,11 @@ Bool_t TClass::CanSplit() const
          }
       }
    }
+   
+   if (Size()==1) {
+      // 'Empty' class there is nothing to split!.
+      return kFALSE;
+   }
 
    TClass *ncThis = const_cast<TClass*>(this);
    TIter nextb(ncThis->GetListOfBases());
@@ -1511,6 +1539,66 @@ Bool_t TClass::CanSplit() const
 
    return kTRUE;
 }
+
+//______________________________________________________________________________
+TObject *TClass::Clone(const char *new_name) const
+{
+   // Create a Clone of this TClass object using a different name but using the same 'dictionary'.
+   // This effectively creates a hard alias for the class name.
+
+   if (new_name == 0 || new_name[0]=='\0' || fName == new_name) {
+      Error("Clone","The name of the class must be changed when cloning a TClass object.");
+      return 0;
+   }
+   // Temporarily remove the original from the list of classes.
+   TClass::RemoveClass(const_cast<TClass*>(this));
+ 
+   TClass *copy;
+   if (fTypeInfo) {
+      copy = new TClass(GetName(),
+                        fClassVersion,
+                        *fTypeInfo,
+                        new TIsAProxy(*fTypeInfo),
+                        fShowMembers,
+                        GetDeclFileName(),
+                        GetImplFileName(),
+                        GetDeclFileLine(),
+                        GetImplFileLine());
+   } else {
+      copy = new TClass(GetName(),
+                        fClassVersion,
+                        GetDeclFileName(),
+                        GetImplFileName(),
+                        GetDeclFileLine(),
+                        GetImplFileLine());
+      copy->fShowMembers = fShowMembers;
+   }
+   // Remove the copy before renaming it
+   TClass::RemoveClass(copy);
+   copy->SetName(new_name);
+   TClass::AddClass(copy);
+
+   copy->SetNew(fNew);
+   copy->SetNewArray(fNewArray);
+   copy->SetDelete(fDelete);
+   copy->SetDeleteArray(fDeleteArray);
+   copy->SetDestructor(fDestructor);
+   copy->SetDirectoryAutoAdd(fDirAutoAdd);
+   if (fStreamer) {
+      copy->AdoptStreamer(fStreamer->Generate());
+   }
+   // If IsZombie is true, something went wrong and we will not be
+   // able to properly copy the collection proxy
+   if (fCollectionProxy && !copy->IsZombie()) {
+      copy->CopyCollectionProxy(*fCollectionProxy);
+   }
+   copy->SetClassSize(fSizeof);
+   if (fRefProxy) {
+      copy->AdoptReferenceProxy( fRefProxy->Clone() );
+   }
+   TClass::AddClass(const_cast<TClass*>(this));
+   return copy;
+}   
 
 //______________________________________________________________________________
 void TClass::CopyCollectionProxy(const TVirtualCollectionProxy &orig)
@@ -1584,27 +1672,8 @@ void TClass::Dump(void *obj) const
    char parent[256];
    parent[0] = 0;
    TDumpMembers dm;
-   if (fShowMembers) {
-      fShowMembers(obj,dm, parent);
-   } else {
-      //Always call ShowMembers via the interpreter. A direct call like
-      //      realDataObject->ShowMembers(brd, parent);
-      //will not work if the class derives from TObject but not as primary
-      //inheritance.
-      R__LOCKGUARD2(gCINTMutex);
-      CallFunc_t *func = gCint->CallFunc_Factory();
-      void *address;
-      Long_t offset;
-      gCint->CallFunc_SetFuncProto(func,fClassInfo,"ShowMembers","TMemberInspector&,char*", &offset);
-      if (!gCint->CallFunc_IsValid(func)) {
-         Printf("==>No Showmembers functions ... dumping disabled\n");
-      } else {
-         gCint->CallFunc_SetArg(func,(long)&dm);
-         gCint->CallFunc_SetArg(func,(long)parent);
-         address = (void*)((long)obj + offset);
-         gCint->CallFunc_Exec(func,address);
-      }
-      gCint->CallFunc_Delete(func);
+   if (!CallShowMembers(obj, dm, parent)) {
+      Info("Dump", "No ShowMembers function, dumping disabled");
    }
 }
 
@@ -2066,6 +2135,12 @@ TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
 }
 
 //______________________________________________________________________________
+THashTable *TClass::GetClassShortTypedefHash() {
+   // Return the class namesmassaged with TClassEdit::ShortType with kDropStlDefault.
+   return fgClassShortTypedefHash;
+}
+
+//______________________________________________________________________________
 TClass *TClass::GetClass(const type_info& typeinfo, Bool_t load, Bool_t /* silent */)
 {
    // Return pointer to class with name.
@@ -2401,7 +2476,7 @@ TList *TClass::GetListOfMethods()
    // Return list containing the TMethods of a class.
 
    if (!fClassInfo) {
-      if (!fMethod) fMethod = new TList;
+      if (!fMethod) fMethod = new THashList;
       return fMethod;
    }
 
@@ -2627,7 +2702,8 @@ void TClass::MakeCustomMenuList()
 
    TClassMenuItem *menuItem;
 
-   fClassMenuList->Delete();
+   // Make sure fClassMenuList is initialized and empty.
+   GetMenuList()->Delete();
 
    TList* methodList = new TList;
    GetMenuItems(methodList);
@@ -2676,20 +2752,25 @@ void TClass::Move(void *arenaFrom, void *arenaTo) const
    }
 }
 
+//______________________________________________________________________________
+TList *TClass::GetMenuList() const {
+   // Return the list of menu items associated with the class.
+   if (!fClassMenuList) {
+      fClassMenuList = new TList();
+      fClassMenuList->Add(new TClassMenuItem(TClassMenuItem::kPopupStandardList, const_cast<TClass*>(this)));
+   }
+   return fClassMenuList;
+}
+
+
+//______________________________________________________________________________
 TMethod *TClass::GetMethodAny(const char *method)
 {
    // Return pointer to method without looking at parameters.
    // Does not look in (possible) base classes.
 
    if (!fClassInfo) return 0;
-
-   TMethod *m;
-   TIter    next(GetListOfMethods());
-
-   while ((m = (TMethod *) next())) {
-      if (strcmp(method, m->GetName()) == 0) return m;
-   }
-   return 0;
+   return (TMethod*) GetListOfMethods()->FindObject(method);
 }
 
 //______________________________________________________________________________
@@ -2700,12 +2781,8 @@ TMethod *TClass::GetMethodAllAny(const char *method)
 
    if (!fClassInfo) return 0;
 
-   TMethod *m;
-   TIter    next(GetListOfMethods());
-
-   while ((m = (TMethod *) next())) {
-      if (strcmp(method, m->GetName()) == 0) return m;
-   }
+   TMethod* m = GetMethodAny(method);
+   if (m) return m;
 
    TBaseClass *base;
    TIter       nextb(GetListOfBases());
@@ -2841,23 +2918,25 @@ TMethod *TClass::GetClassMethod(const char *name, const char* params)
    // Need to go through those loops to get the signature from
    // the valued params (i.e. from "1.0,3" to "double,int")
 
-   R__LOCKGUARD2(gCINTMutex);
-   CallFunc_t  *func = gCint->CallFunc_Factory();
-   Long_t       offset;
-   gCint->CallFunc_SetFunc(func,GetClassInfo(), name, params, &offset);
-   MethodInfo_t *info = gCint->CallFunc_FactoryMethod(func);
-   TMethod request(info,this);
-
-   TMethod *m;
-   TIter    next(GetListOfMethods());
-   while ((m = (TMethod *) next())) {
-      if (!strcmp(name,m->GetName())
-          &&!strcmp(request.GetSignature(),m->GetSignature())) {
-         gCint->CallFunc_Delete(func);
-         return m;
+   TList* bucketForMethod = ((THashList*)GetListOfMethods())->GetListForObject(name);
+   if (bucketForMethod) {
+      R__LOCKGUARD2(gCINTMutex);
+      CallFunc_t  *func = gCint->CallFunc_Factory();
+      Long_t       offset;
+      gCint->CallFunc_SetFunc(func,GetClassInfo(), name, params, &offset);
+      MethodInfo_t *info = gCint->CallFunc_FactoryMethod(func);
+      TMethod request(info,this);
+      TMethod *m;
+      TIter    next(bucketForMethod);
+      while ((m = (TMethod *) next())) {
+         if (!strcmp(name,m->GetName())
+             &&!strcmp(request.GetSignature(),m->GetSignature())) {
+            gCint->CallFunc_Delete(func);
+            return m;
+         }
       }
+      gCint->CallFunc_Delete(func);
    }
-   gCint->CallFunc_Delete(func);
    return 0;
 }
 
@@ -3859,7 +3938,7 @@ void TClass::PostLoadCheck()
    {
       TVirtualStreamerInfo *info = (TVirtualStreamerInfo*)(fStreamerInfo->At(fClassVersion));
       // Here we need to check whether this TVirtualStreamerInfo (which presumably has been
-      // loaded from a file) is consisten with the definition in the library we just loaded.
+      // loaded from a file) is consistent with the definition in the library we just loaded.
       // BuildCheck is not appropriate here since it check a streamerinfo against the
       // 'current streamerinfo' which, at time point, would be the same as 'info'!
       if (info && GetListOfDataMembers() && !GetCollectionProxy()
@@ -3897,6 +3976,7 @@ void TClass::PostLoadCheck()
    the files will not be readable.\n"
                        , fClassVersion, GetName(), GetName(), fStreamerInfo->GetLast()+1);
             }
+            info->CompareContent(this,0,kTRUE,kTRUE);
             SetBit(kWarned);
          }
       }
@@ -3946,7 +4026,8 @@ Long_t TClass::Property() const
          kl->fStreamerType  = kForeign;
 
       } else if ( kl->fStreamerType == kNone ) {
-         if (strcmp( gCint->ClassInfo_FileName(fClassInfo),"{CINTEX dictionary translator}")==0) {
+         if ( gCint->ClassInfo_FileName(fClassInfo) 
+             && strcmp( gCint->ClassInfo_FileName(fClassInfo),"{CINTEX dictionary translator}")==0) {
             kl->SetBit(kIsForeign);
          }
          kl->fStreamerType  = kInstrumented;
@@ -4379,7 +4460,7 @@ void TClass::Streamer(void *object, TBuffer &b, const TClass *onfile_class) cons
       case kTObject:
       {
          if (!fInterStreamer) {
-            const_cast<TClass*>(this)->CalculateStreamerOffset();
+            CalculateStreamerOffset();
          }
          TObject *tobj = (TObject*)((Long_t)object + fOffsetStreamer);
          tobj->Streamer(b);

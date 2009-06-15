@@ -681,6 +681,92 @@ void TH3::FillRandom(TH1 *h, Int_t ntimes)
 
 
 //______________________________________________________________________________
+Int_t TH3::FindFirstBinAbove(Double_t threshold, Int_t axis) const
+{
+   //find first bin with content > threshold for axis (1=x, 2=y, 3=z)
+   //if no bins with content > threshold is found the function returns -1.
+   
+   if (axis < 1 || axis > 3) {
+      Warning("FindFirstBinAbove","Invalid axis number : %d, axis x assumed\n",axis);
+      axis = 1;
+   }
+   Int_t nbinsx = fXaxis.GetNbins();
+   Int_t nbinsy = fYaxis.GetNbins();
+   Int_t nbinsz = fZaxis.GetNbins();
+   Int_t binx, biny, binz;
+   if (axis == 1) {
+      for (binx=1;binx<=nbinsx;binx++) {
+         for (biny=1;biny<=nbinsy;biny++) {
+            for (binz=1;binz<=nbinsz;binz++) {
+               if (GetBinContent(binx,biny,binz) > threshold) return binx;
+            }
+         }
+      }
+   } else if (axis == 2) {
+      for (biny=1;biny<=nbinsy;biny++) {
+         for (binx=1;binx<=nbinsx;binx++) {
+            for (binz=1;binz<=nbinsz;binz++) {
+               if (GetBinContent(binx,biny,binz) > threshold) return biny;
+            }
+         }
+      }
+   } else {
+      for (binz=1;binz<=nbinsz;binz++) {
+         for (binx=1;binx<=nbinsx;binx++) {
+            for (biny=1;biny<=nbinsy;biny++) {
+               if (GetBinContent(binx,biny,binz) > threshold) return binz;
+            }
+         }
+      }
+   }
+   return -1;
+}
+
+
+//______________________________________________________________________________
+Int_t TH3::FindLastBinAbove(Double_t threshold, Int_t axis) const
+{
+   //find last bin with content > threshold for axis (1=x, 2=y, 3=z)
+   //if no bins with content > threshold is found the function returns -1.
+   
+   if (axis < 1 || axis > 3) {
+      Warning("FindLastBinAbove","Invalid axis number : %d, axis x assumed\n",axis);
+      axis = 1;
+   }
+   Int_t nbinsx = fXaxis.GetNbins();
+   Int_t nbinsy = fYaxis.GetNbins();
+   Int_t nbinsz = fZaxis.GetNbins();
+   Int_t binx, biny, binz;
+   if (axis == 1) {
+      for (binx=nbinsx;binx>=1;binx--) {
+         for (biny=1;biny<=nbinsy;biny++) {
+            for (binz=1;binz<=nbinsz;binz++) {
+               if (GetBinContent(binx,biny,binz) > threshold) return binx;
+            }
+         }
+      }
+   } else if (axis == 2) {
+      for (biny=nbinsy;biny>=1;biny--) {
+         for (binx=1;binx<=nbinsx;binx++) {
+            for (binz=1;binz<=nbinsz;binz++) {
+               if (GetBinContent(binx,biny,binz) > threshold) return biny;
+            }
+         }
+      }
+   } else {
+      for (binz=nbinsz;binz>=1;binz--) {
+         for (binx=1;binx<=nbinsx;binx++) {
+            for (biny=1;biny<=nbinsy;biny++) {
+               if (GetBinContent(binx,biny,binz) > threshold) return binz;
+            }
+         }
+      }
+   }
+   return -1;
+}
+
+
+//______________________________________________________________________________
 void TH3::FitSlicesZ(TF1 *f1, Int_t binminx, Int_t binmaxx, Int_t binminy, Int_t binmaxy, Int_t cut, Option_t *option)
 {
    // Project slices along Z in case of a 3-D histogram, then fit each slice
@@ -962,7 +1048,7 @@ void TH3::GetStats(Double_t *stats) const
    Int_t bin, binx, biny, binz;
    Double_t w,err;
    Double_t x,y,z;
-   if (fTsumw == 0 || fXaxis.TestBit(TAxis::kAxisRange) || fYaxis.TestBit(TAxis::kAxisRange) || fZaxis.TestBit(TAxis::kAxisRange)) {
+   if ((fTsumw == 0 && fEntries > 0) || fXaxis.TestBit(TAxis::kAxisRange) || fYaxis.TestBit(TAxis::kAxisRange) || fZaxis.TestBit(TAxis::kAxisRange)) {
       for (bin=0;bin<9;bin++) stats[bin] = 0;
 
       Int_t firstBinX = fXaxis.GetFirst();
@@ -1097,12 +1183,66 @@ Double_t TH3::Interpolate(Double_t, Double_t)
 }
 
 //______________________________________________________________________________
-Double_t TH3::Interpolate(Double_t, Double_t, Double_t)
+Double_t TH3::Interpolate(Double_t x, Double_t y, Double_t z)
 {
-   
-   //Not yet implemented
-   Error("Interpolate","This function is not yet implemented for a TH3");
-   return 0;
+   // Given a point P(x,y,z), Interpolate approximates the value via trilinear interpolation
+   // based on the 8 nearest bin center points ( corner of the cube surronding the points) 
+   // The Algorithm is described in http://en.wikipedia.org/wiki/Trilinear_interpolation
+   // The given values (x,y,z) must be between first bin center and  last bin center for each coordinate: 
+   //
+   //   fXAxis.GetBinCenter(1) < x  < fXaxis.GetBinCenter(nbinX)     AND
+   //   fYAxis.GetBinCenter(1) < y  < fYaxis.GetBinCenter(nbinY)     AND
+   //   fZAxis.GetBinCenter(1) < z  < fZaxis.GetBinCenter(nbinZ) 
+
+   Int_t ubx = fXaxis.FindBin(x);
+   if ( x < fXaxis.GetBinCenter(ubx) ) ubx -= 1;
+   Int_t obx = ubx + 1;
+
+   Int_t uby = fYaxis.FindBin(y);
+   if ( y < fYaxis.GetBinCenter(uby) ) uby -= 1;
+   Int_t oby = uby + 1;
+
+   Int_t ubz = fZaxis.FindBin(z);
+   if ( z < fZaxis.GetBinCenter(ubz) ) ubz -= 1;
+   Int_t obz = ubz + 1;
+
+
+//    if ( IsBinUnderflow(GetBin(ubx, uby, ubz)) ||
+//         IsBinOverflow (GetBin(obx, oby, obz)) ) {
+   if (ubx <=0 || uby <=0 || ubz <= 0 ||
+       obx > fXaxis.GetNbins() || oby > fYaxis.GetNbins() || obz > fZaxis.GetNbins() ) {
+      Error("Interpolate","Cannot interpolate outside histogram domain.");
+      return 0;
+   }
+
+   Double_t xw = fXaxis.GetBinCenter(obx) - fXaxis.GetBinCenter(ubx);
+   Double_t yw = fYaxis.GetBinCenter(oby) - fYaxis.GetBinCenter(uby);
+   Double_t zw = fZaxis.GetBinCenter(obz) - fZaxis.GetBinCenter(ubz);
+
+   Double_t xd = (x - fXaxis.GetBinCenter(ubx)) / xw;
+   Double_t yd = (y - fYaxis.GetBinCenter(uby)) / yw;
+   Double_t zd = (z - fZaxis.GetBinCenter(ubz)) / zw;
+
+
+   Double_t v[] = { GetBinContent( ubx, uby, ubz ), GetBinContent( ubx, uby, obz ),
+                    GetBinContent( ubx, oby, ubz ), GetBinContent( ubx, oby, obz ),
+                    GetBinContent( obx, uby, ubz ), GetBinContent( obx, uby, obz ),
+                    GetBinContent( obx, oby, ubz ), GetBinContent( obx, oby, obz ) };
+
+
+   Double_t i1 = v[0] * (1 - zd) + v[1] * zd;
+   Double_t i2 = v[2] * (1 - zd) + v[3] * zd;
+   Double_t j1 = v[4] * (1 - zd) + v[5] * zd;
+   Double_t j2 = v[6] * (1 - zd) + v[7] * zd;
+
+
+   Double_t w1 = i1 * (1 - yd) + i2 * yd;
+   Double_t w2 = j1 * (1 - yd) + j2 * yd;
+
+
+   Double_t result = w1 * (1 - xd) + w2 * xd;
+
+   return result;
 }
 
 //______________________________________________________________________________
@@ -1494,6 +1634,100 @@ Long64_t TH3::Merge(TCollection *list)
 }
 
 //______________________________________________________________________________
+TH1D *TH3::ProjectionX(const char *name, Int_t iymin, Int_t iymax, Int_t izmin, Int_t izmax, Option_t *option) const
+{
+   //*-*-*-*-*Project a 3-D histogram into a 1-D histogram along Z*-*-*-*-*-*-*
+   //*-*      ====================================================
+   //
+   //   The projection is always of the type TH1D.
+   //   The projection is made from the cells along the X axis
+   //   ranging from iymin to iymax and izmin to izmax included.
+   //   By default, bins 1 to nx and 1 to ny  are included
+   //
+   //   if option "e" is specified, the errors are computed.
+   //   if option "d" is specified, the projection is drawn in the current pad.
+   //
+   //  implemented using Project3D
+
+
+   TString opt = option;
+   opt.ToLower();
+
+   Int_t piymin = GetYaxis()->GetFirst();
+   Int_t piymax = GetYaxis()->GetLast();
+   Int_t pizmin = GetZaxis()->GetFirst();
+   Int_t pizmax = GetZaxis()->GetLast();   
+
+   GetYaxis()->SetRange(iymin,iymax);
+   GetZaxis()->SetRange(izmin,izmax);
+   opt.Append("x");
+   TH1D * h1 = (TH1D* ) Project3D(opt.Data());
+
+   // rename the histogram to the given name
+   char *pname = (char*)name;
+   if (strcmp(name,"_px") == 0) {
+      Int_t nch = strlen(GetName()) + 4;
+      pname = new char[nch];
+      sprintf(pname,"%s%s",GetName(),name);
+   }
+   h1->SetName(pname);
+
+   if (pname != name) delete [] pname;
+
+   GetYaxis()->SetRange(piymin,piymax);
+   GetZaxis()->SetRange(pizmin,pizmax);
+
+   return h1;
+}
+
+//______________________________________________________________________________
+TH1D *TH3::ProjectionY(const char *name, Int_t ixmin, Int_t ixmax, Int_t izmin, Int_t izmax, Option_t *option) const
+{
+   //*-*-*-*-*Project a 3-D histogram into a 1-D histogram along Z*-*-*-*-*-*-*
+   //*-*      ====================================================
+   //
+   //   The projection is always of the type TH1D.
+   //   The projection is made from the cells along the Y axis
+   //   ranging from ixmin to ixmax and izmin to izmax included.
+   //   By default, bins 1 to nx and 1 to nz  are included
+   //
+   //   if option "e" is specified, the errors are computed.
+   //   if option "d" is specified, the projection is drawn in the current pad.
+   //
+   //  implemented using Project3D
+
+
+   TString opt = option;
+   opt.ToLower();
+
+   Int_t pixmin = GetXaxis()->GetFirst();
+   Int_t pixmax = GetXaxis()->GetLast();
+   Int_t pizmin = GetZaxis()->GetFirst();
+   Int_t pizmax = GetZaxis()->GetLast();   
+
+   GetXaxis()->SetRange(ixmin,ixmax);
+   GetZaxis()->SetRange(izmin,izmax);
+   opt.Append("y");
+   TH1D * h1 = (TH1D* ) Project3D(opt.Data());
+
+   // rename the histogram to the given name
+   char *pname = (char*)name;
+   if (strcmp(name,"_py") == 0) {
+      Int_t nch = strlen(GetName()) + 4;
+      pname = new char[nch];
+      sprintf(pname,"%s%s",GetName(),name);
+   }
+   h1->SetName(pname);
+
+   if (pname != name) delete [] pname;
+
+   GetXaxis()->SetRange(pixmin,pixmax);
+   GetZaxis()->SetRange(pizmin,pizmax);
+   
+   return h1;
+}
+
+//______________________________________________________________________________
 TH1D *TH3::ProjectionZ(const char *name, Int_t ixmin, Int_t ixmax, Int_t iymin, Int_t iymax, Option_t *option) const
 {
    //*-*-*-*-*Project a 3-D histogram into a 1-D histogram along Z*-*-*-*-*-*-*
@@ -1513,6 +1747,11 @@ TH1D *TH3::ProjectionZ(const char *name, Int_t ixmin, Int_t ixmax, Int_t iymin, 
    TString opt = option;
    opt.ToLower();
 
+   Int_t pixmin = GetXaxis()->GetFirst();
+   Int_t pixmax = GetXaxis()->GetLast();
+   Int_t piymin = GetYaxis()->GetFirst();
+   Int_t piymax = GetYaxis()->GetLast();  
+
    GetXaxis()->SetRange(ixmin,ixmax);
    GetYaxis()->SetRange(iymin,iymax);
    opt.Append("z");
@@ -1529,26 +1768,386 @@ TH1D *TH3::ProjectionZ(const char *name, Int_t ixmin, Int_t ixmax, Int_t iymin, 
 
    if (pname != name) delete [] pname;
 
-   GetXaxis()->SetRange(0,0);
-   GetYaxis()->SetRange(0,0);
+   GetXaxis()->SetRange(pixmin,pixmax);
+   GetYaxis()->SetRange(piymin,piymax);
 
-   if (opt.Contains("d")) {
-      TVirtualPad *padsav = gPad;
-      TVirtualPad *pad = gROOT->GetSelectedPad();
-      if (pad) pad->cd();
-      char optin[100];
-      strcpy(optin,opt.Data());
-      char *d = (char*)strstr(optin,"d"); if (d) {*d = ' '; if (*(d+1) == 0) *d=0;}
-      char *e = (char*)strstr(optin,"e"); if (e) {*e = ' '; if (*(e+1) == 0) *e=0;}
-      if (!gPad->FindObject(h1)) {
-         h1->Draw(optin);
+   return h1;
+}
+
+//______________________________________________________________________________
+TH1 *TH3::DoProject1D(char* title, char* name, TAxis* projX, 
+                    bool computeErrors, bool originalRange, 
+                    bool useUF, bool useOF) const
+{
+   // Create the projection histogram
+   TH1D *h1 = 0;
+
+   // Does an object with the same name exists?
+   TObject *h1obj = gROOT->FindObject(name);
+   if (h1obj && !h1obj->InheritsFrom("TH1")) h1obj = 0;
+
+   // Get range to use as well as bin limits
+   Int_t ixmin = projX->GetFirst();
+   Int_t ixmax = projX->GetLast();
+   Int_t nx = ixmax-ixmin+1;
+
+   // Create the histogram, either reseting a preexisting one or
+   // creating one from scratch.
+   if (h1obj && h1obj->InheritsFrom("TH1D")) {
+      h1 = (TH1D*)h1obj;
+      h1->Reset();
+   } else {
+      const TArrayD *bins = projX->GetXbins();
+      if ( originalRange )
+      {
+         if (bins->fN == 0) {
+            h1 = new TH1D(name,title,projX->GetNbins(),projX->GetXmin(),projX->GetXmax());
+         } else {
+            h1 = new TH1D(name,title,projX->GetNbins(),bins->fArray);
+         }
       } else {
-         h1->Paint(optin);
+         if (bins->fN == 0) {
+            h1 = new TH1D(name,title,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
+         } else {
+            h1 = new TH1D(name,title,nx,&bins->fArray[ixmin-1]);
+         }
       }
-      if (padsav) padsav->cd();
+   }
+
+   // Copy the axis attributes and the axis labels if needed.
+   h1->GetXaxis()->ImportAttributes(projX);
+   THashList* labels = projX->GetLabels();
+   if (labels) {
+      TIter iL(labels);
+      TObjString* lb;
+      Int_t i = 1;
+      while ((lb=(TObjString*)iL())) {
+         h1->GetXaxis()->SetBinLabel(i,lb->String().Data());
+         i++;
+      }
+   }
+   h1->SetLineColor(this->GetLineColor());
+   h1->SetFillColor(this->GetFillColor());
+   h1->SetMarkerColor(this->GetMarkerColor());
+   h1->SetMarkerStyle(this->GetMarkerStyle());
+
+   // Activate errors
+   if ( computeErrors ) h1->Sumw2();
+
+   // Set references to the axis, so that the bucle has no branches.
+   TAxis* out1 = 0;
+   TAxis* out2 = 0;
+   if ( projX == GetXaxis() ) {
+      out1 = GetYaxis();
+      out2 = GetZaxis();
+   } else if ( projX == GetYaxis() ) {
+      out1 = GetZaxis();
+      out2 = GetXaxis();
+   } else {
+      out1 = GetYaxis();
+      out2 = GetXaxis();
+   }
+
+   Int_t *refX = 0, *refY = 0, *refZ = 0;
+   Int_t ixbin, out1bin, out2bin;
+   if ( projX == GetXaxis() ) { refX = &ixbin;   refY = &out1bin; refZ = &out2bin; }
+   if ( projX == GetYaxis() ) { refX = &out2bin; refY = &ixbin;   refZ = &out1bin; }
+   if ( projX == GetZaxis() ) { refX = &out2bin; refY = &out1bin; refZ = &ixbin;   }
+
+   // Fill the projected histogram excluding underflow/overflows if considered in the option
+   // if specified in the option (by default they considered)
+   Double_t cont,e,e1;
+   Double_t totcont  = 0;
+//   Double_t toterr2  = 0;
+   Double_t newerror = 0;
+   Int_t ix = 0;
+
+   for (ixbin=0;ixbin<=1+projX->GetNbins();ixbin++){
+      ix = ixbin-ixmin;
+      if (ixmin>0) ix +=1;
+      if (ix < 0) ix=0; if (ix > nx+1) ix = nx+1;
+      if ( ix == 0 && projX->TestBit(TAxis::kAxisRange)) continue;
+      if ( ix == nx+1 && projX->TestBit(TAxis::kAxisRange)) continue;
+      if ( originalRange && projX->TestBit(TAxis::kAxisRange) && ( ixbin < ixmin || ixbin > ixmax )) continue;
+      for (out1bin= out1->GetFirst() - ( useUF && !out1->TestBit(TAxis::kAxisRange) ); 
+           out1bin <= out1->GetLast() + ( useOF && !out1->TestBit(TAxis::kAxisRange) );
+           out1bin++){
+         for (out2bin=out2->GetFirst() - ( useUF && !out2->TestBit(TAxis::kAxisRange) );
+              out2bin <= out2->GetLast() + ( useOF && !out2->TestBit(TAxis::kAxisRange) );
+              out2bin++){
+
+            Int_t bin = GetBin(*refX, *refY, *refZ);
+            cont = GetBinContent(bin);
+
+            // "x"
+            e1       = h1->GetBinError(ix);
+            if (cont) h1->Fill(projX->GetBinCenter(ixbin), cont);
+            if (computeErrors) {
+               e        = GetBinError(bin);
+               newerror = TMath::Sqrt(e*e + e1*e1);
+               h1->SetBinError(ix,newerror);
+            }
+
+            if (cont)   totcont += cont;
+//             if (computeErrors) {
+//                e   = GetBinError(bin);
+//                Double_t e2 = e * e;
+//                toterr2 += e2;
+//             }
+         }
+      }
+   }
+
+   // since we use a combination of fill and SetBinError we need to reset and recalculate the statistics
+   // for weighted histograms otherwise sumw2 will be wrong. 
+   // We  can keep the original statistics from the TH3 if the projected sumw is consistent with original one
+   // i.e. when no events are thrown away  
+   bool resetStats = true; 
+   double eps = 1.E-12;
+   if (IsA() == TH3F::Class() ) eps = 1.E-6;
+   if (fTsumw != 0 && TMath::Abs( fTsumw - totcont) <  TMath::Abs(fTsumw) * eps) resetStats = false; 
+
+//    if ( out1->TestBit(TAxis::kAxisRange)  || out2->TestBit(TAxis::kAxisRange) 
+//          || (useUF && useOF && fgStatOverflows == false)     // case of overflow/underflow 
+//          || ( fgStatOverflows == true && (!useUF || !useOF) ) )  
+//       resetStats = true; 
+
+
+   if (!resetStats) {
+      Double_t stats[kNstat];
+      GetStats(stats); 
+      if ( projX == GetYaxis() ) {
+         stats[2] = stats[4];
+         stats[3] = stats[5]; 
+      }
+      else if  ( projX == GetZaxis() ) {
+         stats[2] = stats[7];
+         stats[3] = stats[8]; 
+      }
+      h1->PutStats(stats);
+      h1->SetEntries( fEntries );
+   }
+   else {
+      // reset statistics 
+      h1->ResetStats();
+      // in case of weighted hstograms use the effective entries for the entries
+      // since there is noway to estimate them
+      h1->SetEntries( h1->GetEffectiveEntries() );  
    }
 
    return h1;
+}
+
+//______________________________________________________________________________
+TH2 *TH3::DoProject2D(char* title, char* name, TAxis* projX, TAxis* projY,  
+                    bool computeErrors, bool originalRange,
+                    bool useUF, bool useOF) const
+{
+   TH2D *h2 = 0;
+
+   // Does an object with the same name exists?
+   TObject *h1obj = gROOT->FindObject(name);
+   if (h1obj && !h1obj->InheritsFrom("TH1")) h1obj = 0;
+
+   // Get range to use as well as bin limits
+   Int_t ixmin = projX->GetFirst();
+   Int_t ixmax = projX->GetLast();
+   Int_t iymin = projY->GetFirst();
+   Int_t iymax = projY->GetLast();
+   Int_t nx = ixmax-ixmin+1;
+   Int_t ny = iymax-iymin+1;
+
+   // Create the histogram, either reseting a preexisting one or
+   // creating one from scratch.
+   if (h1obj && h1obj->InheritsFrom("TH2D")) {
+      delete h1obj;
+   } else {
+      const TArrayD *xbins = projX->GetXbins();
+      const TArrayD *ybins = projY->GetXbins();
+      if ( originalRange )
+      {
+         if (xbins->fN == 0 && ybins->fN == 0) {
+            h2 = new TH2D(name,title,projY->GetNbins(),projY->GetXmin(),projY->GetXmax()
+                          ,projX->GetNbins(),projX->GetXmin(),projX->GetXmax());
+         } else if (ybins->fN == 0) {
+            h2 = new TH2D(name,title,projY->GetNbins(),projY->GetXmin(),projY->GetXmax()
+                          ,projX->GetNbins(),&xbins->fArray[ixmin-1]);
+         } else if (xbins->fN == 0) {
+            h2 = new TH2D(name,title,projY->GetNbins(),&ybins->fArray[iymin-1]
+                          ,projX->GetNbins(),projX->GetXmin(),projX->GetXmax());
+         } else {
+            h2 = new TH2D(name,title,projY->GetNbins(),&ybins->fArray[iymin-1],projX->GetNbins(),&xbins->fArray[ixmin-1]);
+         }
+      } else {
+         if (xbins->fN == 0 && ybins->fN == 0) {
+            h2 = new TH2D(name,title,ny,projY->GetBinLowEdge(iymin),projY->GetBinUpEdge(iymax)
+                          ,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
+         } else if (ybins->fN == 0) {
+            h2 = new TH2D(name,title,ny,projY->GetBinLowEdge(iymin),projY->GetBinUpEdge(iymax)
+                          ,nx,&xbins->fArray[ixmin-1]);
+         } else if (xbins->fN == 0) {
+            h2 = new TH2D(name,title,ny,&ybins->fArray[iymin-1]
+                          ,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
+         } else {
+            h2 = new TH2D(name,title,ny,&ybins->fArray[iymin-1],nx,&xbins->fArray[ixmin-1]);
+         }
+      }
+   }
+
+   // Copy the axis attributes and the axis labels if needed.
+   THashList* labels1 = 0;
+   THashList* labels2 = 0;
+   // "xy"
+   h2->GetXaxis()->ImportAttributes(projY);
+   h2->GetYaxis()->ImportAttributes(projX);
+   labels1 = projY->GetLabels();
+   labels2 = projX->GetLabels();
+   if (labels1) {
+      TIter iL(labels1);
+      TObjString* lb;
+      Int_t i = 1;
+      while ((lb=(TObjString*)iL())) {
+         h2->GetXaxis()->SetBinLabel(i,lb->String().Data());
+         i++;
+      }
+   }
+   if (labels2) {
+      TIter iL(labels2);
+      TObjString* lb;
+      Int_t i = 1;
+      while ((lb=(TObjString*)iL())) {
+         h2->GetYaxis()->SetBinLabel(i,lb->String().Data());
+         i++;
+      }
+   }
+   h2->SetLineColor(this->GetLineColor());
+   h2->SetFillColor(this->GetFillColor());
+   h2->SetMarkerColor(this->GetMarkerColor());
+   h2->SetMarkerStyle(this->GetMarkerStyle());
+
+   // Activate errors
+   if ( computeErrors) h2->Sumw2();
+
+   // Set references to the axis, so that the bucle has no branches.
+   TAxis* out = 0;
+   if ( projX != GetXaxis() && projY != GetXaxis() ) {
+      out = GetXaxis();
+   } else if ( projX != GetYaxis() && projY != GetYaxis() ) {
+      out = GetYaxis();
+   } else {
+      out = GetZaxis();
+   }
+
+   Int_t *refX = 0, *refY = 0, *refZ = 0;
+   Int_t ixbin, iybin, outbin;
+   if ( projX == GetXaxis() && projY == GetYaxis() ) { refX = &ixbin;  refY = &iybin;  refZ = &outbin; }
+   if ( projX == GetYaxis() && projY == GetXaxis() ) { refX = &iybin;  refY = &ixbin;  refZ = &outbin; }
+   if ( projX == GetXaxis() && projY == GetZaxis() ) { refX = &ixbin;  refY = &outbin; refZ = &iybin;  }
+   if ( projX == GetZaxis() && projY == GetXaxis() ) { refX = &iybin;  refY = &outbin; refZ = &ixbin;  }
+   if ( projX == GetYaxis() && projY == GetZaxis() ) { refX = &outbin; refY = &ixbin;  refZ = &iybin;  }
+   if ( projX == GetZaxis() && projY == GetYaxis() ) { refX = &outbin; refY = &iybin;  refZ = &ixbin;  }
+
+   // Fill the projected histogram excluding underflow/overflows if considered in the option
+   // if specified in the option (by default they considered)
+   Double_t cont,e,e1;
+   Double_t totcont  = 0;
+   Double_t newerror = 0;
+   for (ixbin=0;ixbin<=1+projX->GetNbins();ixbin++){
+      Int_t ix = ixbin-ixmin;
+      if (ixmin>0) ix +=1;
+      if (ix < 0) ix=0; if (ix > nx+1) ix = nx+1;
+      if ( ix == 0 && projX->TestBit(TAxis::kAxisRange)) continue;
+      if ( ix == nx+1 && projX->TestBit(TAxis::kAxisRange)) continue;
+      if ( originalRange && projX->TestBit(TAxis::kAxisRange) && ( ixbin < ixmin || ixbin > ixmax )) continue;
+
+      for (iybin=0;iybin<=1+projY->GetNbins();iybin++){
+         Int_t iy = iybin-iymin;
+         if (iymin>0) iy +=1;
+         if (iy < 0) iy=0; if (iy > ny+1) iy = ny+1;
+         if ( iy == 0 && projY->TestBit(TAxis::kAxisRange)) continue;
+         if ( iy == ny+1 && projY->TestBit(TAxis::kAxisRange)) continue;
+         if ( originalRange && projY->TestBit(TAxis::kAxisRange) && ( iybin < iymin || iybin > iymax )) continue;
+
+         for (outbin=out->GetFirst() - ( useUF && !out->TestBit(TAxis::kAxisRange) );
+              outbin <= out->GetLast() + ( useOF && !out->TestBit(TAxis::kAxisRange) );
+              outbin++){
+
+            Int_t bin = GetBin(*refX,*refY,*refZ);
+            cont = GetBinContent(bin);
+
+            // "xy"
+            e1       = h2->GetCellError(iy,ix);
+            if (cont) h2->Fill(projY->GetBinCenter(iybin),projX->GetBinCenter(ixbin), cont);
+            if (computeErrors) {
+               e        = GetBinError(bin);
+               newerror = TMath::Sqrt(e*e + e1*e1);
+               h2->SetCellError(iy,ix,newerror);
+            }
+
+            if (cont) totcont += cont; 
+         }
+      }
+   }
+
+   // since we use fill we need to reset and recalculate the statistics (see comment in DoProject1D )
+   // or keep original statistics if consistent sumw2  
+   bool resetStats = true; 
+   double eps = 1.E-12;
+   if (IsA() == TH3F::Class() ) eps = 1.E-6;
+   if (fTsumw != 0 && TMath::Abs( fTsumw - totcont) <  TMath::Abs(fTsumw) * eps) resetStats = false; 
+
+
+   if (!resetStats) {
+      Double_t stats[kNstat];
+      Double_t oldst[kNstat]; // old statistics
+      GetStats(oldst); 
+      std::copy(oldst,oldst+kNstat,stats);
+      // not that projX refer to Y axis and projX refer to the X axis of projected histogram
+      // nothing to do for projection in Y vs X
+      if ( projY == GetXaxis() && projX == GetZaxis() ) {  // case XZ
+         stats[4] = oldst[7];
+         stats[5] = oldst[8];
+         stats[6] = oldst[9];
+      }
+      if ( projY == GetYaxis() ) {
+         stats[2] = oldst[4];
+         stats[3] = oldst[5]; 
+         if ( projX == GetXaxis() )  { // case YX
+            stats[4] = oldst[2]; 
+            stats[5] = oldst[3];
+         }
+         if ( projX == GetZaxis() )  { // case YZ
+            stats[4] = oldst[7]; 
+            stats[5] = oldst[8];
+            stats[6] = oldst[10];
+         }
+      }
+      else if  ( projY == GetZaxis() ) {
+         stats[2] = oldst[7];
+         stats[3] = oldst[8]; 
+         if ( projX == GetXaxis() )  { // case ZX
+            stats[4] = oldst[2]; 
+            stats[5] = oldst[3];
+            stats[6] = oldst[9];
+         }
+         if ( projX == GetZaxis() )  { // case ZY
+            stats[4] = oldst[4]; 
+            stats[5] = oldst[5];
+            stats[6] = oldst[10];
+         }
+      }
+      // set the new statistics 
+      h2->PutStats(stats);
+      h2->SetEntries(fEntries); 
+   }
+   else { 
+      // recalculate the statistics
+      h2->ResetStats(); 
+      // use as entries the effective entries
+      h2->SetEntries( h2->GetEffectiveEntries() ); 
+   }
+
+   return h2;
 }
 
 //______________________________________________________________________________
@@ -1566,6 +2165,7 @@ TH1 *TH3::Project3D(Option_t *option) const
    // option = "zx" return the z versus x projection into a TH2D histogram
    // option = "yz" return the y versus z projection into a TH2D histogram
    // option = "zy" return the z versus y projection into a TH2D histogram
+   // NB: the notation "a vs b" means "a" vertical and "b" horizontal
    //
    // If option contains the string "e", errors are computed
    //
@@ -1594,15 +2194,6 @@ TH1 *TH3::Project3D(Option_t *option) const
    //          
 
    TString opt = option; opt.ToLower();
-   Int_t ixmin = fXaxis.GetFirst();
-   Int_t ixmax = fXaxis.GetLast();
-   Int_t iymin = fYaxis.GetFirst();
-   Int_t iymax = fYaxis.GetLast();
-   Int_t izmin = fZaxis.GetFirst();
-   Int_t izmax = fZaxis.GetLast();
-   Int_t nx = ixmax-ixmin+1;
-   Int_t ny = iymax-iymin+1;
-   Int_t nz = izmax-izmin+1;
    Int_t pcase = 0;
    if (opt.Contains("x"))  pcase = 1;
    if (opt.Contains("y"))  pcase = 2;
@@ -1614,477 +2205,249 @@ TH1 *TH3::Project3D(Option_t *option) const
    if (opt.Contains("yz")) pcase = 8;
    if (opt.Contains("zy")) pcase = 9;
 
+   Bool_t computeErrors = kFALSE;
+   if (opt.Contains("e") || GetSumw2N() ) computeErrors = kTRUE;
+
+   bool useUF = !opt.Contains("nuf");
+   bool useOF = !opt.Contains("nof");
+
+   bool originalRange = false;
+   if ( opt.Contains("nof") )
+      originalRange = (opt.CountChar('o') > 1);
+   else
+      originalRange = (opt.Contains('o'));
+
+
    // Create the projection histogram
-   TH1D *h1 = 0;
-   TH2D *h2 = 0;
+   TH1 *h = 0;
    Int_t nch = strlen(GetName()) +opt.Length() +2;
    char *name = new char[nch];
    sprintf(name,"%s_%s",GetName(),option);
    nch = strlen(GetTitle()) +opt.Length() +2;
    char *title = new char[nch];
    sprintf(title,"%s_%s",GetTitle(),option);
-   TObject *h1obj = gROOT->FindObject(name);
-   if (h1obj && !h1obj->InheritsFrom("TH1")) h1obj = 0;
-   const TArrayD *bins;
-   const TArrayD *xbins;
-   const TArrayD *ybins;
-   const TArrayD *zbins;
+
    switch (pcase) {
       case 1:
-         // "x"
-         if (h1obj && h1obj->InheritsFrom("TH1D")) {
-            h1 = (TH1D*)h1obj;
-            h1->Reset();
-            break;
-         }
-         bins = fXaxis.GetXbins();
-         if (bins->fN == 0) {
-            h1 = new TH1D(name,title,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax));
-         } else {
-            h1 = new TH1D(name,title,nx,&bins->fArray[ixmin-1]);
-         }
+         h = DoProject1D(title, name, this->GetXaxis(), 
+                       computeErrors, originalRange, useUF, useOF);
          break;
 
       case 2:
          // "y"
-         if (h1obj && h1obj->InheritsFrom("TH1D")) {
-            h1 = (TH1D*)h1obj;
-            h1->Reset();
-            break;
-         }
-         bins = fYaxis.GetXbins();
-         if (bins->fN == 0) {
-            h1 = new TH1D(name,title,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax));
-         } else {
-            h1 = new TH1D(name,title,ny,&bins->fArray[iymin-1]);
-         }
+         h = DoProject1D(title, name, this->GetYaxis(), 
+                       computeErrors, originalRange, useUF, useOF);
          break;
 
       case 3:
          // "z"
-         if (h1obj && h1obj->InheritsFrom("TH1D")) {
-            h1 = (TH1D*)h1obj;
-            h1->Reset();
-            break;
-         }
-         bins = fZaxis.GetXbins();
-         if (bins->fN == 0) {
-            h1 = new TH1D(name,title,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax));
-         } else {
-            h1 = new TH1D(name,title,nz,&bins->fArray[izmin-1]);
-         }
+         h = DoProject1D(title, name, this->GetZaxis(), 
+                       computeErrors, originalRange, useUF, useOF);
          break;
+
       case 4:
          // "xy"
-         if (h1obj && h1obj->InheritsFrom("TH2D")) {
-            h2 = (TH2D*)h1obj;
-            h2->Reset();
-            break;
-         }
-         xbins = fXaxis.GetXbins();
-         ybins = fYaxis.GetXbins();
-         if (xbins->fN == 0 && ybins->fN == 0) {
-            h2 = new TH2D(name,title,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax)
-               ,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax));
-         } else if (ybins->fN == 0) {
-            h2 = new TH2D(name,title,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax)
-               ,nx,&xbins->fArray[ixmin-1]);
-         } else if (xbins->fN == 0) {
-            h2 = new TH2D(name,title,ny,&ybins->fArray[iymin-1]
-            ,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax));
-         } else {
-            h2 = new TH2D(name,title,ny,&ybins->fArray[iymin-1],nx,&xbins->fArray[ixmin-1]);
-         }
+         h = DoProject2D(title, name, this->GetXaxis(),this->GetYaxis(), 
+                       computeErrors, originalRange, useUF, useOF);
          break;
 
       case 5:
          // "yx"
-         if (h1obj && h1obj->InheritsFrom("TH2D")) {
-            h2 = (TH2D*)h1obj;
-            h2->Reset();
-            break;
-         }
-         xbins = fXaxis.GetXbins();
-         ybins = fYaxis.GetXbins();
-         if (xbins->fN == 0 && ybins->fN == 0) {
-            h2 = new TH2D(name,title,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax)
-               ,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax));
-         } else if (xbins->fN == 0) {
-            h2 = new TH2D(name,title,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax)
-               ,ny,&ybins->fArray[iymin-1]);
-         } else if (ybins->fN == 0) {
-            h2 = new TH2D(name,title,nx,&xbins->fArray[ixmin-1]
-            ,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax));
-         } else {
-            h2 = new TH2D(name,title,nx,&xbins->fArray[ixmin-1],ny,&ybins->fArray[iymin-1]);
-         }
+         h = DoProject2D(title, name, this->GetYaxis(),this->GetXaxis(), 
+                       computeErrors, originalRange, useUF, useOF);
          break;
 
       case 6:
          // "xz"
-         if (h1obj && h1obj->InheritsFrom("TH2D")) {
-            h2 = (TH2D*)h1obj;
-            h2->Reset();
-            break;
-         }
-         xbins = fXaxis.GetXbins();
-         zbins = fZaxis.GetXbins();
-         if (xbins->fN == 0 && zbins->fN == 0) {
-            h2 = new TH2D(name,title,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax)
-               ,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax));
-         } else if (zbins->fN == 0) {
-            h2 = new TH2D(name,title,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax)
-               ,nx,&xbins->fArray[ixmin-1]);
-         } else if (xbins->fN == 0) {
-            h2 = new TH2D(name,title,nz,&zbins->fArray[izmin-1]
-            ,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax));
-         } else {
-            h2 = new TH2D(name,title,nz,&zbins->fArray[izmin-1],nx,&xbins->fArray[ixmin-1]);
-         }
+         h = DoProject2D(title, name, this->GetXaxis(),this->GetZaxis(), 
+                       computeErrors, originalRange, useUF, useOF);
          break;
-
+         
       case 7:
          // "zx"
-         if (h1obj && h1obj->InheritsFrom("TH2D")) {
-            h2 = (TH2D*)h1obj;
-            h2->Reset();
-            break;
-         }
-         xbins = fXaxis.GetXbins();
-         zbins = fZaxis.GetXbins();
-         if (xbins->fN == 0 && zbins->fN == 0) {
-            h2 = new TH2D(name,title,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax)
-               ,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax));
-         } else if (xbins->fN == 0) {
-            h2 = new TH2D(name,title,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax)
-               ,nz,&zbins->fArray[izmin-1]);
-         } else if (zbins->fN == 0) {
-            h2 = new TH2D(name,title,nx,&xbins->fArray[ixmin-1]
-            ,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax));
-         } else {
-            h2 = new TH2D(name,title,nx,&xbins->fArray[ixmin-1],nz,&zbins->fArray[izmin-1]);
-         }
+         h = DoProject2D(title, name, this->GetZaxis(),this->GetXaxis(), 
+                       computeErrors, originalRange, useUF, useOF);
          break;
 
       case 8:
          // "yz"
-         if (h1obj && h1obj->InheritsFrom("TH2D")) {
-            h2 = (TH2D*)h1obj;
-            h2->Reset();
-            break;
-         }
-         ybins = fYaxis.GetXbins();
-         zbins = fZaxis.GetXbins();
-         if (ybins->fN == 0 && zbins->fN == 0) {
-            h2 = new TH2D(name,title,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax)
-               ,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax));
-         } else if (zbins->fN == 0) {
-            h2 = new TH2D(name,title,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax)
-               ,ny,&ybins->fArray[iymin-1]);
-         } else if (ybins->fN == 0) {
-            h2 = new TH2D(name,title,nz,&zbins->fArray[izmin-1]
-            ,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax));
-         } else {
-            h2 = new TH2D(name,title,nz,&zbins->fArray[izmin-1],ny,&ybins->fArray[iymin-1]);
-         }
+         h = DoProject2D(title, name, this->GetYaxis(),this->GetZaxis(), 
+                       computeErrors, originalRange, useUF, useOF);
          break;
 
       case 9:
          // "zy"
-         if (h1obj && h1obj->InheritsFrom("TH2D")) {
-            h2 = (TH2D*)h1obj;
-            h2->Reset();
-            break;
-         }
-         ybins = fYaxis.GetXbins();
-         zbins = fZaxis.GetXbins();
-         if (ybins->fN == 0 && zbins->fN == 0) {
-            h2 = new TH2D(name,title,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax)
-               ,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax));
-         } else if (ybins->fN == 0) {
-            h2 = new TH2D(name,title,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax)
-               ,nz,&zbins->fArray[izmin-1]);
-         } else if (zbins->fN == 0) {
-            h2 = new TH2D(name,title,ny,&ybins->fArray[iymin-1]
-            ,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax));
-         } else {
-            h2 = new TH2D(name,title,ny,&ybins->fArray[iymin-1],nz,&zbins->fArray[izmin-1]);
-         }
+         h = DoProject2D(title, name, this->GetZaxis(),this->GetYaxis(), 
+                       computeErrors, originalRange, useUF, useOF);
          break;
 
    }
 
-   // Copy the axis attributes and the axis labels if needed.
-   if (pcase >=1 && pcase <=3) {
-      THashList* labels = 0;
-      switch (pcase) {
-         case 1:
-            // "x"
-            h1->GetXaxis()->ImportAttributes(this->GetXaxis());
-            labels = GetXaxis()->GetLabels();
-            break;
-         case 2:
-            // "y"
-            h1->GetXaxis()->ImportAttributes(this->GetYaxis());
-            labels = GetYaxis()->GetLabels();
-            break;
-         case 3:
-            // "z"
-            h1->GetXaxis()->ImportAttributes(this->GetZaxis());
-            labels = GetZaxis()->GetLabels();
-            break;
-      }
-      if (labels) {
-         TIter iL(labels);
-         TObjString* lb;
-         Int_t i = 1;
-         while ((lb=(TObjString*)iL())) {
-            h1->GetXaxis()->SetBinLabel(i,lb->String().Data());
-            i++;
-         }
-      }
-      h1->SetLineColor(this->GetLineColor());
-      h1->SetFillColor(this->GetFillColor());
-      h1->SetMarkerColor(this->GetMarkerColor());
-      h1->SetMarkerStyle(this->GetMarkerStyle());
-   }
-   if (pcase >=4 && pcase <=9) {
-      THashList* labels1 = 0;
-      THashList* labels2 = 0;
-      switch (pcase) {
-         case 4:
-            // "xy"
-            h2->GetXaxis()->ImportAttributes(this->GetYaxis());
-            h2->GetYaxis()->ImportAttributes(this->GetXaxis());
-            labels1 = GetYaxis()->GetLabels();
-            labels2 = GetXaxis()->GetLabels();
-            break;
-         case 5:
-            // "yx"
-            h2->GetXaxis()->ImportAttributes(this->GetXaxis());
-            h2->GetYaxis()->ImportAttributes(this->GetYaxis());
-            labels1 = GetXaxis()->GetLabels();
-            labels2 = GetYaxis()->GetLabels();
-            break;
-         case 6:
-            // "xz"
-            h2->GetXaxis()->ImportAttributes(this->GetZaxis());
-            h2->GetYaxis()->ImportAttributes(this->GetXaxis());
-            labels1 = GetZaxis()->GetLabels();
-            labels2 = GetXaxis()->GetLabels();
-            break;
-         case 7:
-            // "zx"
-            h2->GetXaxis()->ImportAttributes(this->GetXaxis());
-            h2->GetYaxis()->ImportAttributes(this->GetZaxis());
-            labels1 = GetXaxis()->GetLabels();
-            labels2 = GetZaxis()->GetLabels();
-            break;
-         case 8:
-            // "yz"
-            h2->GetXaxis()->ImportAttributes(this->GetZaxis());
-            h2->GetYaxis()->ImportAttributes(this->GetYaxis());
-            labels1 = GetZaxis()->GetLabels();
-            labels2 = GetYaxis()->GetLabels();
-            break;
-         case 9:
-            // "zy"
-            h2->GetXaxis()->ImportAttributes(this->GetYaxis());
-            h2->GetYaxis()->ImportAttributes(this->GetZaxis());
-            labels1 = GetYaxis()->GetLabels();
-            labels2 = GetZaxis()->GetLabels();
-            break;
-      }
-      if (labels1) {
-         TIter iL(labels1);
-         TObjString* lb;
-         Int_t i = 1;
-         while ((lb=(TObjString*)iL())) {
-            h2->GetXaxis()->SetBinLabel(i,lb->String().Data());
-            i++;
-         }
-      }
-      if (labels2) {
-         TIter iL(labels2);
-         TObjString* lb;
-         Int_t i = 1;
-         while ((lb=(TObjString*)iL())) {
-            h2->GetYaxis()->SetBinLabel(i,lb->String().Data());
-            i++;
-         }
-      }
-      h2->SetLineColor(this->GetLineColor());
-      h2->SetFillColor(this->GetFillColor());
-      h2->SetMarkerColor(this->GetMarkerColor());
-      h2->SetMarkerStyle(this->GetMarkerStyle());
-   }
-
    delete [] name;
    delete [] title;
-   TH1 *h = h1;
-   if (h2) h = h2;
-   if (h == 0) return 0;
 
-   Bool_t computeErrors = kFALSE;
-   if (opt.Contains("e") || GetSumw2N() ) {h->Sumw2(); computeErrors = kTRUE;}
-
-   bool useUF = !opt.Contains("nuf");
-   bool useOF = !opt.Contains("nof");
-   // Fill the projected histogram excluding underflow/overflows if considered in the option
-   // if specified in the option (by default they considered)
-   if (!fXaxis.TestBit(TAxis::kAxisRange)) {
-      if (useUF) ixmin--; 
-      if (useOF) ixmax++; 
-   }
-   if (!fYaxis.TestBit(TAxis::kAxisRange)) {
-      if (useUF) iymin--; 
-      if (useOF) iymax++;
-   }
-   if (!fZaxis.TestBit(TAxis::kAxisRange)) {
-      if (useUF) izmin--; 
-      if (useOF) izmax++;
+   if (opt.Contains("d")) {
+      TVirtualPad *padsav = gPad;
+      TVirtualPad *pad = gROOT->GetSelectedPad();
+      if (pad) pad->cd();
+      char optin[100];
+      strcpy(optin,opt.Data());
+      char *d = (char*)strstr(optin,"d"); if (d) {*d = ' '; if (*(d+1) == 0) *d=0;}
+      char *e = (char*)strstr(optin,"e"); if (e) {*e = ' '; if (*(e+1) == 0) *e=0;}
+      if (!gPad->FindObject(h)) {
+         h->Draw(optin);
+      } else {
+         h->Paint(optin);
+      }
+      if (padsav) padsav->cd();
    }
 
-   Double_t cont,e,e1;
-   Double_t entries  = 0;
-   Double_t newerror = 0;
-   for (Int_t ixbin=0;ixbin<=1+fXaxis.GetNbins();ixbin++){
-      Int_t ix = ixbin-ixmin+1;
-      if (ix < 0) ix=0; if (ix > nx+1) ix = nx+1;
-      for (Int_t iybin=0;iybin<=1+fYaxis.GetNbins();iybin++){
-         Int_t iy = iybin-iymin+1;
-         if (iy < 0) iy=0; if (iy > ny+1) iy = ny+1;
-         for (Int_t izbin=0;izbin<=1+fZaxis.GetNbins();izbin++){
-            Int_t iz = izbin-izmin+1;
-            if (iz < 0) iz=0; if (iz > nz+1) iz = nz+1;
-            Int_t bin = GetBin(ixbin,iybin,izbin);
-            cont = GetBinContent(bin);
-            switch (pcase) {
-               case 1:
-                  // "x"
-                  if (iybin < iymin || iybin > iymax) continue;
-                  if (izbin < izmin || izbin > izmax) continue;
-                  e1       = h1->GetBinError(ix);
-                  if (cont) h1->Fill(fXaxis.GetBinCenter(ixbin), cont);
-                  if (computeErrors) {
-                     e        = GetBinError(bin);
-                     newerror = TMath::Sqrt(e*e + e1*e1);
-                     h1->SetBinError(ix,newerror);
-                  }
-                  break;
+   return h;
+}
 
-               case 2:
-                  // "y"
-                  if (ixbin < ixmin || ixbin > ixmax) continue;
-                  if (izbin < izmin || izbin > izmax) continue;
-                  e1       = h1->GetBinError(iy);
-                  if (cont) h1->Fill(fYaxis.GetBinCenter(iybin), cont);
-                  if (computeErrors) {
-                     e        = GetBinError(bin);
-                     newerror = TMath::Sqrt(e*e + e1*e1);
-                     h1->SetBinError(iy,newerror);
-                  }
-                  break;
+void TH3::DoFillProfileProjection(TProfile2D * p2, const TAxis & a1, const TAxis & a2,  const TAxis & a3, Int_t bin1, Int_t bin2, Int_t bin3, Int_t inBin, Bool_t useWeights ) const { 
+   // internal function to fill the bins of the projected profile histogram 
+   Double_t cont = GetBinContent(inBin); 
+   if (!cont) return; 
+   TArrayD & binSumw2 = *(p2->GetBinSumw2()); 
+   if (useWeights && binSumw2.fN <= 0) useWeights = false;  
+   // the following fill update wrongly the fBinSumw2- need to save it before
+   Double_t u = a1.GetBinCenter(bin1);
+   Double_t v = a2.GetBinCenter(bin2);
+   Double_t w = a3.GetBinCenter(bin3);
+   Int_t outBin = p2->FindBin(u, v);
+   Double_t tmp = 0;
+   if ( useWeights ) tmp = binSumw2.fArray[outBin];            
+   p2->Fill( u , v, w, cont);
+//    std::cout << "use "  << useWeights; 
+//    std::cout << " size " << binSumw2.fN << " inBin " << inBin << " o " << outBin << "  "  << bin1 << "  " << bin2 << " " << fSumw2.fN 
+//              << " u " << u << " v " << v << " w " << w << " tmp " << tmp << " sumw2 " << fSumw2.fArray[outBin] 
+//              << " fbinsumw2 " << binSumw2.fArray[outBin]
+//              << std::endl; 
+   if (useWeights ) binSumw2.fArray[outBin] = tmp + fSumw2.fArray[inBin];
+} 
 
-               case 3:
-                  // "z"
-                  if (ixbin < ixmin || ixbin > ixmax) continue;
-                  if (iybin < iymin || iybin > iymax) continue;
-                  e1       = h1->GetBinError(iz);
-                  if (cont) h1->Fill(fZaxis.GetBinCenter(izbin), cont);
-                  if (computeErrors) {
-                     e        = GetBinError(bin);
-                     newerror = TMath::Sqrt(e*e + e1*e1);
-                     h1->SetBinError(iz,newerror);
-                  }
-                  break;
+//______________________________________________________________________________
+TProfile2D *TH3::DoProjectProfile2D(char* title, char* name, TAxis* projX, TAxis* projY, 
+                                          bool originalRange, bool useUF, bool useOF) const
+{
+   // Get the ranges where we will work.
 
-               case 4:
-                  // "xy"
-                  if (izbin < izmin || izbin > izmax) continue;
-                  e1       = h2->GetCellError(iy,ix);
-                  if (cont) h2->Fill(fYaxis.GetBinCenter(iybin),fXaxis.GetBinCenter(ixbin), cont);
-                  if (computeErrors) {
-                     e        = GetBinError(bin);
-                     newerror = TMath::Sqrt(e*e + e1*e1);
-                     h2->SetCellError(iy,ix,newerror);
-                  }
-                  break;
+   Int_t ixmin = projX->GetFirst();
+   Int_t ixmax = projX->GetLast();
+   Int_t iymin = projY->GetFirst();
+   Int_t iymax = projY->GetLast();
+   Int_t nx = ixmax-ixmin+1;
+   Int_t ny = iymax-iymin+1;
 
-               case 5:
-                  // "yx"
-                  if (izbin < izmin || izbin > izmax) continue;
-                  e1       = h2->GetCellError(ix,iy);
-                  if (cont) h2->Fill(fXaxis.GetBinCenter(ixbin),fYaxis.GetBinCenter(iybin), cont);
-                  if (computeErrors) {
-                     e        = GetBinError(bin);
-                     newerror = TMath::Sqrt(e*e + e1*e1);
-                     h2->SetCellError(ix,iy,newerror);
-                  }
-                  break;
+   // Create the projected profiles
+   TProfile2D *p2 = 0;
+   const TArrayD *xbins = projX->GetXbins();
+   const TArrayD *ybins = projY->GetXbins();
+   if ( originalRange ) {
+      if (xbins->fN == 0 && ybins->fN == 0) {
+         p2 = new TProfile2D(name,title,projY->GetNbins(),projY->GetXmin(),projY->GetXmax()
+                             ,projX->GetNbins(),projX->GetXmin(),projX->GetXmax());
+      } else if (ybins->fN == 0) {
+         p2 = new TProfile2D(name,title,projY->GetNbins(),projY->GetXmin(),projY->GetXmax()
+                          ,projX->GetNbins(),&xbins->fArray[ixmin-1]);
+      } else if (xbins->fN == 0) {
+         p2 = new TProfile2D(name,title,projY->GetNbins(),&ybins->fArray[iymin-1]
+                             ,projX->GetNbins(),projX->GetXmin(),projX->GetXmax());
+      } else {
+         p2 = new TProfile2D(name,title,projY->GetNbins(),&ybins->fArray[iymin-1],projX->GetNbins(),&xbins->fArray[ixmin-1]);
+      }
+   } else {
+      if (xbins->fN == 0 && ybins->fN == 0) {
+         p2 = new TProfile2D(name,title,ny,projY->GetBinLowEdge(iymin),projY->GetBinUpEdge(iymax)
+                             ,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
+      } else if (ybins->fN == 0) {
+         p2 = new TProfile2D(name,title,ny,projY->GetBinLowEdge(iymin),projY->GetBinUpEdge(iymax)
+                             ,nx,&xbins->fArray[ixmin-1]);
+      } else if (xbins->fN == 0) {
+         p2 = new TProfile2D(name,title,ny,&ybins->fArray[iymin-1]
+                             ,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
+      } else {
+         p2 = new TProfile2D(name,title,ny,&ybins->fArray[iymin-1],nx,&xbins->fArray[ixmin-1]);
+      }
+   }
 
-               case 6:
-                  // "xz"
-                  if (iybin < iymin || iybin > iymax) continue;
-                  e1       = h2->GetCellError(iz,ix);
-                  if (cont) h2->Fill(fZaxis.GetBinCenter(izbin),fXaxis.GetBinCenter(ixbin), cont);
-                  if (computeErrors) {
-                     e        = GetBinError(bin);
-                     newerror = TMath::Sqrt(e*e + e1*e1);
-                     h2->SetCellError(iz,ix,newerror);
-                  }
-                  break;
+   // Set references to the axis, so that the loop has no branches.
+   TAxis* outAxis = 0;
+   if ( projX != GetXaxis() && projY != GetXaxis() ) {
+      outAxis = GetXaxis();
+   } else if ( projX != GetYaxis() && projY != GetYaxis() ) {
+      outAxis = GetYaxis();
+   } else {
+      outAxis = GetZaxis();
+   }
 
-               case 7:
-                  // "zx"
-                  if (iybin < iymin || iybin > iymax) continue;
-                  e1       = h2->GetCellError(ix,iz);
-                  if (cont) h2->Fill(fXaxis.GetBinCenter(ixbin),fZaxis.GetBinCenter(izbin), cont);
-                  if (computeErrors) {
-                     e        = GetBinError(bin);
-                     newerror = TMath::Sqrt(e*e + e1*e1);
-                     h2->SetCellError(ix,iz,newerror);
-                  }
-                  break;
+   // Weights management
+   bool useWeights = (GetSumw2N() > 0); 
+   if (useWeights ) p2->Sumw2(); // store sum of w2 in profile if histo is weighted
+   
+   // Set references to the bins, so that the loop has no branches.
+   Int_t *refX = 0, *refY = 0, *refZ = 0;
+   Int_t ixbin, iybin, outbin;
+   if ( projX == GetXaxis() && projY == GetYaxis() ) { refX = &ixbin;  refY = &iybin;  refZ = &outbin; }
+   if ( projX == GetYaxis() && projY == GetXaxis() ) { refX = &iybin;  refY = &ixbin;  refZ = &outbin; }
+   if ( projX == GetXaxis() && projY == GetZaxis() ) { refX = &ixbin;  refY = &outbin; refZ = &iybin;  }
+   if ( projX == GetZaxis() && projY == GetXaxis() ) { refX = &iybin;  refY = &outbin; refZ = &ixbin;  }
+   if ( projX == GetYaxis() && projY == GetZaxis() ) { refX = &outbin; refY = &ixbin;  refZ = &iybin;  }
+   if ( projX == GetZaxis() && projY == GetYaxis() ) { refX = &outbin; refY = &iybin;  refZ = &ixbin;  }
 
-               case 8:
-                  // "yz"
-                  if (ixbin < ixmin || ixbin > ixmax) continue;
-                  e1       = h2->GetCellError(iz,iy);
-                  if (cont) h2->Fill(fZaxis.GetBinCenter(izbin),fYaxis.GetBinCenter(iybin), cont);
-                  if (computeErrors) {
-                     e        = GetBinError(bin);
-                     newerror = TMath::Sqrt(e*e + e1*e1);
-                     h2->SetCellError(iz,iy,newerror);
-                  }
-                  break;
+   // Call specific method for the projection
+   for (ixbin=0;ixbin<=1+projX->GetNbins();ixbin++){
+      if ( (ixbin < ixmin || ixbin > ixmax) && projX->TestBit(TAxis::kAxisRange)) continue;
+      for ( iybin=0;iybin<=1+projY->GetNbins();iybin++){
+         if ( (iybin < iymin || iybin > iymax) && projX->TestBit(TAxis::kAxisRange)) continue;
+         for (outbin=outAxis->GetFirst() - ( useUF && !outAxis->TestBit(TAxis::kAxisRange) );
+              outbin<=outAxis->GetLast() + ( useOF && !outAxis->TestBit(TAxis::kAxisRange) );
+              ++outbin){
+            Int_t bin = GetBin(*refX,*refY,*refZ);
 
-               case 9:
-                  // "zy"
-                  if (ixbin < ixmin || ixbin > ixmax) continue;
-                  e1       = h2->GetCellError(iy,iz);
-                  if (cont) h2->Fill(fYaxis.GetBinCenter(iybin),fZaxis.GetBinCenter(izbin), cont);
-                  if (computeErrors) {
-                     e        = GetBinError(bin);
-                     newerror = TMath::Sqrt(e*e + e1*e1);
-                     h2->SetCellError(iy,iz,newerror);
-                  }
-                  break;
-            }
-            if (cont) {
-               if (computeErrors) {
-                  e   = GetBinError(bin);
-                  Double_t e2 = e * e;
-                  if (e2 > 0) entries += cont*cont/e2;
-               }
-               else
-                  entries += cont;
-            }
+            //DoFillProfileProjection(p2, *projY, *projX, *outAxis, iybin, ixbin, outbin, bin, useWeights); 
+
+            Double_t cont = GetBinContent(bin); 
+            if (!cont) continue; 
+
+            TArrayD & binSumw2 = *(p2->GetBinSumw2()); 
+            if (useWeights && binSumw2.fN <= 0) useWeights = false;  
+
+            // the following fill update wrongly the fBinSumw2- need to save it before
+            Int_t outBin = p2->FindBin(projY->GetBinCenter(iybin), projX->GetBinCenter(ixbin));
+
+            Double_t tmp = 0;
+            if ( useWeights ) tmp = binSumw2.fArray[outBin];            
+            p2->Fill( projY->GetBinCenter(iybin) , projX->GetBinCenter(ixbin), outAxis->GetBinCenter(outbin), cont);
+            if (useWeights ) binSumw2.fArray[outBin] = tmp + fSumw2.fArray[bin];
+  
          }
       }
    }
-   h->SetEntries(entries);
-   return h;
+
+   // recompute statistics for the projected profiles 
+   // forget about preserving old statistics
+   bool resetStats = true; 
+   Double_t stats[kNstat];
+   // reset statistics 
+   if (resetStats) 
+      for (Int_t i=0;i<kNstat;i++) stats[i] = 0;
+
+   p2->PutStats(stats);
+   Double_t entries = fEntries; 
+   // recalculate the statistics
+   if (resetStats) { 
+      p2->GetStats(stats); 
+      entries = stats[0]; 
+      // calculate effective entries in case of weighted profile
+//       if (useWeights & stats[1] > 0) 
+//          entries = stats[0] * stats[0] / stats[1];
+   }
+
+   p2->SetEntries(entries);
+
+   return p2;
 }
 
 //______________________________________________________________________________
@@ -2099,6 +2462,7 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    // option = "zx" return the z versus x projection into a TProfile2D histogram
    // option = "yz" return the y versus z projection into a TProfile2D histogram
    // option = "zy" return the z versus y projection into a TProfile2D histogram
+   // NB: the notation "a vs b" means "a" vertical and "b" horizontal
    //
    // The projection is made for the selected bins only.
    // To select a bin range along an axis, use TAxis::SetRange, eg
@@ -2121,15 +2485,6 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    //  To exclude underflow and/or overflow (for both axis in case of a projection to a 1D histogram) use option "UF" and/or "OF"
 
    TString opt = option; opt.ToLower();
-   Int_t ixmin = fXaxis.GetFirst();
-   Int_t ixmax = fXaxis.GetLast();
-   Int_t iymin = fYaxis.GetFirst();
-   Int_t iymax = fYaxis.GetLast();
-   Int_t izmin = fZaxis.GetFirst();
-   Int_t izmax = fZaxis.GetLast();
-   Int_t nx = ixmax-ixmin+1;
-   Int_t ny = iymax-iymin+1;
-   Int_t nz = izmax-izmin+1;
    Int_t pcase = 0;
    if (opt.Contains("xy")) pcase = 4;
    if (opt.Contains("yx")) pcase = 5;
@@ -2137,6 +2492,15 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    if (opt.Contains("zx")) pcase = 7;
    if (opt.Contains("yz")) pcase = 8;
    if (opt.Contains("zy")) pcase = 9;
+
+   bool useUF = opt.Contains("uf");
+   bool useOF = opt.Contains("of");
+
+   bool originalRange = false;
+   if ( opt.Contains("nof") || opt.Contains("of") )
+      originalRange = (opt.CountChar('o') > 1);
+   else
+      originalRange = (opt.Contains('o'));
 
    // Create the projection histogram
    TProfile2D *p2 = 0;
@@ -2147,194 +2511,47 @@ TProfile2D *TH3::Project3DProfile(Option_t *option) const
    char *title = new char[nch];
    sprintf(title,"%s_p%s",GetTitle(),option);
    delete gROOT->FindObject(name);
-   const TArrayD *xbins;
-   const TArrayD *ybins;
-   const TArrayD *zbins;
+
+   // Call the method with the specific projected axes.
    switch (pcase) {
       case 4:
          // "xy"
-         xbins = fXaxis.GetXbins();
-         ybins = fYaxis.GetXbins();
-         if (xbins->fN == 0 && ybins->fN == 0) {
-            p2 = new TProfile2D(name,title,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax)
-               ,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax));
-         } else if (ybins->fN == 0) {
-            p2 = new TProfile2D(name,title,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax)
-               ,nx,&xbins->fArray[ixmin-1]);
-         } else if (xbins->fN == 0) {
-            p2 = new TProfile2D(name,title,ny,&ybins->fArray[iymin-1]
-            ,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax));
-         } else {
-            p2 = new TProfile2D(name,title,ny,&ybins->fArray[iymin-1],nx,&xbins->fArray[ixmin-1]);
-         }
+         p2 = DoProjectProfile2D(title, name, GetXaxis(), GetYaxis(), originalRange, useUF, useOF);
          break;
 
       case 5:
          // "yx"
-         xbins = fXaxis.GetXbins();
-         ybins = fYaxis.GetXbins();
-         if (xbins->fN == 0 && ybins->fN == 0) {
-            p2 = new TProfile2D(name,title,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax)
-               ,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax));
-         } else if (xbins->fN == 0) {
-            p2 = new TProfile2D(name,title,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax)
-               ,ny,&ybins->fArray[iymin-1]);
-         } else if (ybins->fN == 0) {
-            p2 = new TProfile2D(name,title,nx,&xbins->fArray[ixmin-1]
-            ,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax));
-         } else {
-            p2 = new TProfile2D(name,title,nx,&xbins->fArray[ixmin-1],ny,&ybins->fArray[iymin-1]);
-         }
+         p2 = DoProjectProfile2D(title, name, GetYaxis(), GetXaxis(), originalRange, useUF, useOF);
          break;
 
       case 6:
          // "xz"
-         xbins = fXaxis.GetXbins();
-         zbins = fZaxis.GetXbins();
-         if (xbins->fN == 0 && zbins->fN == 0) {
-            p2 = new TProfile2D(name,title,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax)
-               ,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax));
-         } else if (zbins->fN == 0) {
-            p2 = new TProfile2D(name,title,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax)
-               ,nx,&xbins->fArray[ixmin-1]);
-         } else if (xbins->fN == 0) {
-            p2 = new TProfile2D(name,title,nz,&zbins->fArray[izmin-1]
-            ,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax));
-         } else {
-            p2 = new TProfile2D(name,title,nz,&zbins->fArray[izmin-1],nx,&xbins->fArray[ixmin-1]);
-         }
+         p2 = DoProjectProfile2D(title, name, GetXaxis(), GetZaxis(), originalRange, useUF, useOF);
          break;
 
       case 7:
          // "zx"
-         xbins = fXaxis.GetXbins();
-         zbins = fZaxis.GetXbins();
-         if (xbins->fN == 0 && zbins->fN == 0) {
-            p2 = new TProfile2D(name,title,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax)
-               ,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax));
-         } else if (xbins->fN == 0) {
-            p2 = new TProfile2D(name,title,nx,fXaxis.GetBinLowEdge(ixmin),fXaxis.GetBinUpEdge(ixmax)
-               ,nz,&zbins->fArray[izmin-1]);
-         } else if (zbins->fN == 0) {
-            p2 = new TProfile2D(name,title,nx,&xbins->fArray[ixmin-1]
-            ,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax));
-         } else {
-            p2 = new TProfile2D(name,title,nx,&xbins->fArray[ixmin-1],nz,&zbins->fArray[izmin-1]);
-         }
+         p2 = DoProjectProfile2D(title, name, GetZaxis(), GetXaxis(), originalRange, useUF, useOF);
          break;
 
       case 8:
          // "yz"
-         ybins = fYaxis.GetXbins();
-         zbins = fZaxis.GetXbins();
-         if (ybins->fN == 0 && zbins->fN == 0) {
-            p2 = new TProfile2D(name,title,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax)
-               ,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax));
-         } else if (zbins->fN == 0) {
-            p2 = new TProfile2D(name,title,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax)
-               ,ny,&ybins->fArray[iymin-1]);
-         } else if (ybins->fN == 0) {
-            p2 = new TProfile2D(name,title,nz,&zbins->fArray[izmin-1]
-            ,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax));
-         } else {
-            p2 = new TProfile2D(name,title,nz,&zbins->fArray[izmin-1],ny,&ybins->fArray[iymin-1]);
-         }
+         p2 = DoProjectProfile2D(title, name, GetYaxis(), GetZaxis(), originalRange, useUF, useOF);
          break;
 
       case 9:
          // "zy"
-         ybins = fYaxis.GetXbins();
-         zbins = fZaxis.GetXbins();
-         if (ybins->fN == 0 && zbins->fN == 0) {
-            p2 = new TProfile2D(name,title,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax)
-               ,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax));
-         } else if (ybins->fN == 0) {
-            p2 = new TProfile2D(name,title,ny,fYaxis.GetBinLowEdge(iymin),fYaxis.GetBinUpEdge(iymax)
-               ,nz,&zbins->fArray[izmin-1]);
-         } else if (zbins->fN == 0) {
-            p2 = new TProfile2D(name,title,ny,&ybins->fArray[iymin-1]
-            ,nz,fZaxis.GetBinLowEdge(izmin),fZaxis.GetBinUpEdge(izmax));
-         } else {
-            p2 = new TProfile2D(name,title,ny,&ybins->fArray[iymin-1],nz,&zbins->fArray[izmin-1]);
-         }
+         p2 = DoProjectProfile2D(title, name, GetZaxis(), GetYaxis(), originalRange, useUF, useOF);
          break;
 
    }
 
    delete [] name;
    delete [] title;
-   if (p2 == 0) return 0;
 
-   bool useUF = opt.Contains("uf");
-   bool useOF = opt.Contains("of");
-   // Fill the projected histogram taking into accounts underflow/overflows
-   if (!fXaxis.TestBit(TAxis::kAxisRange)) {
-      if (useUF) ixmin--; 
-      if (useOF) ixmax++; 
-   }
-   if (!fYaxis.TestBit(TAxis::kAxisRange)) {
-      if (useUF) iymin--; 
-      if (useOF) iymax++;
-   }
-   if (!fZaxis.TestBit(TAxis::kAxisRange)) {
-      if (useUF) izmin--; 
-      if (useOF) izmax++;
-   }
-   Double_t cont;
-   Double_t entries  = 0;
-   for (Int_t ixbin=0;ixbin<=1+fXaxis.GetNbins();ixbin++){
-      for (Int_t iybin=0;iybin<=1+fYaxis.GetNbins();iybin++){
-         for (Int_t izbin=0;izbin<=1+fZaxis.GetNbins();izbin++){
-            Int_t bin = GetBin(ixbin,iybin,izbin);
-            cont = GetBinContent(bin);
-            switch (pcase) {
-               case 4:
-                  // "xy"
-                  if (izbin < izmin || izbin > izmax) continue;
-                  if (cont) p2->Fill(fYaxis.GetBinCenter(iybin),fXaxis.GetBinCenter(ixbin),fZaxis.GetBinCenter(izbin), cont);
-                  break;
-
-               case 5:
-                  // "yx"
-                  if (izbin < izmin || izbin > izmax) continue;
-                  if (cont) p2->Fill(fXaxis.GetBinCenter(ixbin),fYaxis.GetBinCenter(iybin),fZaxis.GetBinCenter(izbin), cont);
-                  break;
-
-               case 6:
-                  // "xz"
-                  if (iybin < iymin || iybin > iymax) continue;
-                  if (cont) p2->Fill(fZaxis.GetBinCenter(izbin),fXaxis.GetBinCenter(ixbin),fYaxis.GetBinCenter(iybin), cont);
-                  break;
-
-               case 7:
-                  // "zx"
-                  if (iybin < iymin || iybin > iymax) continue;
-                  if (cont) p2->Fill(fXaxis.GetBinCenter(ixbin),fZaxis.GetBinCenter(izbin),fYaxis.GetBinCenter(iybin), cont);
-                  break;
-
-               case 8:
-                  // "yz"
-                  if (ixbin < ixmin || ixbin > ixmax) continue;
-                  if (cont) p2->Fill(fZaxis.GetBinCenter(izbin),fYaxis.GetBinCenter(iybin),fXaxis.GetBinCenter(ixbin), cont);
-                  break;
-
-               case 9:
-                  // "zy"
-                  if (ixbin < ixmin || ixbin > ixmax) continue;
-                  if (cont) p2->Fill(fYaxis.GetBinCenter(iybin),fZaxis.GetBinCenter(izbin),fXaxis.GetBinCenter(ixbin), cont);
-                  break;
-            }
-            if (cont) {
-               // count total effective entries of the profile
-               Double_t err = GetBinError(bin);
-               entries += cont*cont/(err*err);
-            }
-         }
-      }
-   }
-   p2->SetEntries(entries);
    return p2;
 }
+
 
 //______________________________________________________________________________
 void TH3::PutStats(Double_t *stats)
@@ -2573,6 +2790,7 @@ void TH3::SetShowProjection(const char *option,Int_t nbins)
    // the xy projection using the draw option "box" do
    //   myhist.SetShowProjection("xy box");
    // This function is typically called from the context menu.
+   // NB: the notation "a vs b" means "a" vertical and "b" horizontal
 
    GetPainter();
 

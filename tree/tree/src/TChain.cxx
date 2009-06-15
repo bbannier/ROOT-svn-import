@@ -82,6 +82,8 @@ TChain::TChain()
    fTreeOffset[0]  = 0;
    gDirectory->Remove(this);
    gROOT->GetListOfSpecials()->Add(this);
+   fFile = 0;
+   fDirectory = 0;
 
    // Reset PROOF-related bits
    ResetBit(kProofUptodate);
@@ -148,6 +150,8 @@ TChain::TChain(const char* name, const char* title)
    fTreeOffset[0]  = 0;
    gDirectory->Remove(this);
    gROOT->GetListOfSpecials()->Add(this);
+   fFile = 0;
+   fDirectory = 0;
 
    // Reset PROOF-related bits
    ResetBit(kProofUptodate);
@@ -176,12 +180,6 @@ TChain::~TChain()
    delete[] fTreeOffset;
    fTreeOffset = 0;
 
-   if (fEntryList){
-      if (fEntryList->TestBit(kCanDelete)){
-         delete fEntryList;
-         fEntryList = 0;
-      }
-   }
    gROOT->GetListOfSpecials()->Remove(this);
 
    // Remove from the global list
@@ -241,8 +239,9 @@ Int_t TChain::Add(const char* name, Long64_t nentries /* = kBigNumber */)
    //   //machine/file_name.root/subdir/tree_name
    // machine, subdir and tree_name are optional. If tree_name is missing,
    // the chain name will be assumed.
-   // Name may use the wildcarding notation, eg "xxx*.root" means all files
-   // starting with xxx in the current file system directory.
+   // In the file name part (but not in preceding directories) wildcarding
+   // notation may be used, eg. specifying "xxx*.root" adds all files starting
+   // with xxx in the current file system directory.
    // NB. To add all the files of a TChain to a chain, use Add(TChain *chain).
    //
    //    A- if nentries <= 0, the file is connected and the tree header read
@@ -266,6 +265,7 @@ Int_t TChain::Add(const char* name, Long64_t nentries /* = kBigNumber */)
    //       a chain with this default, GetEntriesFast will return kBigNumber!
    //       TChain::GetEntries will force of the Tree headers in the chain to be
    //       read to read the number of entries in each Tree.
+   //
    //
    //    D- The TChain data structure
    //       Each TChainElement has a name equal to the tree name of this TChain
@@ -1009,6 +1009,7 @@ TObjArray* TChain::GetListOfBranches()
    //
    // Warning: May set current tree!
    //
+   // Returns 1 on success and 0 on failure.
 
    if (fProofChain && !(fProofChain->TestBit(kProofLite))) {
       // Make sure the element list is uptodate
@@ -1854,7 +1855,7 @@ Long64_t TChain::Merge(TFile* file, Int_t basketsize, Option_t* option)
                }
             }
          }
-         TTreeCloner cloner(GetTree(), newTree, option);
+         TTreeCloner cloner(GetTree(), newTree, option, TTreeCloner::kNoWarnings);
          if (cloner.IsValid()) {
             newTree->SetEntries(newTree->GetEntries() + GetTree()->GetEntries());
             cloner.Exec();
@@ -1862,10 +1863,25 @@ Long64_t TChain::Merge(TFile* file, Int_t basketsize, Option_t* option)
                newTree->GetTreeIndex()->Append(GetTree()->GetTreeIndex(),kTRUE);
             }
          } else {
-            if (GetFile()) {
-               Warning("Merge", "Skipped file %s\n", GetFile()->GetName());
+            if (cloner.NeedConversion()) {
+               TTree *localtree = GetTree();
+               Long64_t tentries = localtree->GetEntries();
+               for (Long64_t ii = 0; ii < tentries; ii++) {
+                  if (localtree->GetEntry(ii) <= 0) {
+                     break;
+                  }
+                  newTree->Fill();
+               }
+               if (newTree->GetTreeIndex()) {
+                  newTree->GetTreeIndex()->Append(GetTree()->GetTreeIndex(), kTRUE);
+               }
             } else {
-               Warning("Merge", "Skipped file number %d\n", fTreeNumber);
+               Warning("Merge",cloner.GetWarning());
+               if (GetFile()) {
+                  Warning("Merge", "Skipped file %s\n", GetFile()->GetName());
+               } else {
+                  Warning("Merge", "Skipped file number %d\n", fTreeNumber);
+               }
             }
          }
       }
@@ -2197,10 +2213,13 @@ void TChain::SetEntryList(TEntryList *elist, Option_t *opt)
       //check, if the chain is the owner of the previous entry list
       //(it happens, if the previous entry list was created from a user-defined
       //TEventList in SetEventList() function)
-      if (fEntryList->TestBit(kCanDelete)){
-         delete fEntryList;
+      if (fEntryList->TestBit(kCanDelete)) {
+         TEntryList *tmp = fEntryList;
+         fEntryList = 0; // Avoid problem with RecursiveRemove.
+         delete tmp;
+      } else {
+         fEntryList = 0;
       }
-      fEntryList = 0;
    }
    if (!elist){
       fEntryList = 0;
@@ -2287,10 +2306,13 @@ void TChain::SetEntryListFile(const char *filename, Option_t * /*opt*/)
       //check, if the chain is the owner of the previous entry list
       //(it happens, if the previous entry list was created from a user-defined
       //TEventList in SetEventList() function)
-      if (fEntryList->TestBit(kCanDelete)){
-         delete fEntryList;
+      if (fEntryList->TestBit(kCanDelete)) {
+         TEntryList *tmp = fEntryList;
+         fEntryList = 0; // Avoid problem with RecursiveRemove.
+         delete tmp;
+      } else {
+         fEntryList = 0;
       }
-      fEntryList = 0;
    }
 
    fEventList = 0;
@@ -2307,6 +2329,7 @@ void TChain::SetEntryListFile(const char *filename, Option_t * /*opt*/)
    }
    fEntryList = new TEntryListFromFile(basename.Data(), behind_dot_root.Data(), fNtrees);
    fEntryList->SetBit(kCanDelete, kTRUE);
+   fEntryList->SetDirectory(0);
    ((TEntryListFromFile*)fEntryList)->SetFileNames(fFiles);
 }
 
@@ -2326,10 +2349,14 @@ void TChain::SetEventList(TEventList *evlist)
 //any more and will not be deleted with it.
 
    fEventList = evlist;
-   if (fEntryList){
-      if (fEntryList->TestBit(kCanDelete))
-         delete fEntryList;
-      fEntryList=0;
+   if (fEntryList) {
+      if (fEntryList->TestBit(kCanDelete)) {
+         TEntryList *tmp = fEntryList;
+         fEntryList = 0; // Avoid problem with RecursiveRemove.
+         delete tmp;
+      } else {
+         fEntryList = 0;
+      }
    }
 
    if (!evlist) {
@@ -2345,14 +2372,20 @@ void TChain::SetEventList(TEventList *evlist)
          //(it happens, if the previous entry list was created from a user-defined
          //TEventList in SetEventList() function)
          if (fEntryList->TestBit(kCanDelete)){
-            delete fEntryList;
+            TEntryList *tmp = fEntryList;
+            fEntryList = 0; // Avoid problem with RecursiveRemove.
+            delete tmp;
+         } else {
+            fEntryList = 0;
          }
-         fEntryList = 0;
       }
       return;
    }
 
-   TEntryList *enlist = new TEntryList(evlist->GetName(), evlist->GetTitle());
+   char enlistname[100];
+   sprintf(enlistname, "%s_%s", evlist->GetName(), "entrylist");
+   TEntryList *enlist = new TEntryList(enlistname, evlist->GetTitle());
+   enlist->SetDirectory(0);
 
    Int_t nsel = evlist->GetN();
    Long64_t globalentry, localentry;

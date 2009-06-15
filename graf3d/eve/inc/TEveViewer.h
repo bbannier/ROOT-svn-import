@@ -18,6 +18,8 @@
 class TGWindow;
 class TGedEditor;
 class TGLViewer;
+class TGLSAViewer;
+class TGLEmbeddedViewer;
 class TGLPhysicalShape;
 
 class TEveScene;
@@ -37,7 +39,7 @@ protected:
    TGFrame   *fGLViewerFrame;
 
 public:
-   TEveViewer(const Text_t* n="TEveViewer", const Text_t* t="");
+   TEveViewer(const char* n="TEveViewer", const char* t="");
    virtual ~TEveViewer();
 
    virtual void PreUndock();
@@ -45,8 +47,10 @@ public:
 
    TGLViewer* GetGLViewer() const { return fGLViewer; }
    void SetGLViewer(TGLViewer* viewer, TGFrame* frame);
-   void SpawnGLViewer(TGedEditor* ged);
-   void SpawnGLEmbeddedViewer(Int_t border=0);
+
+   TGLSAViewer*       SpawnGLViewer(TGedEditor* ged);
+   TGLEmbeddedViewer* SpawnGLEmbeddedViewer(Int_t border=0);
+
    void Redraw(Bool_t resetCameras=kFALSE);
 
    virtual void AddScene(TEveScene* scene);
@@ -77,8 +81,11 @@ private:
 protected:
    Bool_t       fShowTooltip;
 
+   Float_t     fBrightness;
+   Bool_t      fUseLightColorSet;
+
 public:
-   TEveViewerList(const Text_t* n="TEveViewerList", const Text_t* t="");
+   TEveViewerList(const char* n="TEveViewerList", const char* t="");
    virtual ~TEveViewerList() {}
 
    virtual void AddElement(TEveElement* el);
@@ -91,6 +98,7 @@ public:
 
    void RepaintChangedViewers(Bool_t resetCameras, Bool_t dropLogicals);
    void RepaintAllViewers(Bool_t resetCameras, Bool_t dropLogicals);
+   void DeleteAnnotations();
 
    void SceneDestructing(TEveScene* scene);
 
@@ -103,6 +111,12 @@ public:
 
    Bool_t GetShowTooltip()   const { return fShowTooltip; }
    void   SetShowTooltip(Bool_t x) { fShowTooltip = x; }
+
+   Float_t GetColorBrightness() const { return fBrightness; }
+   void     SetColorBrightness(Float_t b);
+  
+   Bool_t UseLightColorSet() const { return fUseLightColorSet; }
+   void    SwitchColorSet();
 
    ClassDef(TEveViewerList, 0); // List of Viewers providing common operations on TEveViewer collections.
 };

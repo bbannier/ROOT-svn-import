@@ -12,6 +12,7 @@
 #include "TClassDocOutput.h"
 
 #include "TBaseClass.h"
+#include "TClassEdit.h"
 #include "TDataMember.h"
 #include "TMethodArg.h"
 #include "TDataType.h"
@@ -316,7 +317,8 @@ void  TClassDocOutput::ListDataMembers(std::ostream& classFile)
             if (access < 3) {
                if (member->Property() & G__BIT_ISSTATIC)
                   classFile << "static ";
-               fParser->DecorateKeywords(classFile, member->GetFullTypeName());
+               std::string shortTypeName(fHtml->ShortType(member->GetFullTypeName()));
+               fParser->DecorateKeywords(classFile, shortTypeName.c_str());
             }
 
          TString mangled(member->GetClass()->GetName());
@@ -1189,7 +1191,7 @@ void TClassDocOutput::CreateSourceOutputStream(std::ostream& out, const char* ex
    TString title(fCurrentClass->GetName());
    title += " - source file";
    WriteHtmlHeader(out, title, "../", fCurrentClass);
-   out << "<pre class=\"code\">" << std::endl;
+   out << "<div id=\"codeAndLineNumbers\"><pre class=\"listing\">" << std::endl;
 }
 
 //______________________________________________________________________________
@@ -1454,9 +1456,9 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
    TString modulename;
    fHtml->GetModuleNameForClass(modulename, fCurrentClass);
    TModuleDocInfo* module = (TModuleDocInfo*) fHtml->GetListOfModules()->FindObject(modulename);
-   WriteTopLinks(classFile, module, fCurrentClass->GetName());
+   WriteTopLinks(classFile, module, fCurrentClass->GetName(), kFALSE);
 
-   classFile << "<div class=\"descrhead\">" << endl
+   classFile << "<div class=\"descrhead\"><div class=\"descrheadcontent\">" << endl // descrhead line 3
       << "<span class=\"descrtitle\">Source:</span>" << endl;
 
    // make a link to the '.cxx' file
@@ -1470,10 +1472,16 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
    if (headerFileName.Length())
       classFile << "<a class=\"descrheadentry\" href=\"src/" << classFileName
                 << ".h.html\">header file</a>" << endl;
+   else
+      classFile << "<a class=\"descrheadentry\" href=\"src/" << classFileName
+                << ".h.html\"></a>" << endl;
 
    if (sourceFileName.Length())
       classFile << "<a class=\"descrheadentry\" href=\"src/" << classFileName
                 << ".cxx.html\">source file</a>" << endl;
+   else
+      classFile << "<a class=\"descrheadentry\" href=\"src/" << classFileName
+                << ".cxx.html\"></a>" << endl;
 
    if (!fHtml->IsNamespace(fCurrentClass) && !fHtml->HaveDot()) {
       // make a link to the inheritance tree (postscript)
@@ -1515,13 +1523,15 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
          if (mustReplace) link.ReplaceAll("%f", sHeader);
          else link += sHeader;
          classFile << "<a class=\"descrheadentry\" href=\"" << link << "\">viewVC header</a> ";
-      }
+      } else
+         classFile << "<a class=\"descrheadentry\"> </a> ";
       if (sourceFileName.Length()) {
          TString link(viewCVSLink);
          if (mustReplace) link.ReplaceAll("%f", sourceFileName);
          else link += sourceFileName;
          classFile << "<a class=\"descrheadentry\" href=\"" << link << "\">viewVC source</a> ";
-      }
+      } else
+         classFile << "<a class=\"descrheadentry\"> </a> ";
    }
 
    TString currClassNameMangled(fCurrentClass->GetName());
@@ -1534,9 +1544,9 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
       classFile << "<a class=\"descrheadentry\" href=\"" << wikiLink << "\">wiki</a> ";
    }
 
-   classFile << endl << "</div>" << endl;
+   classFile << endl << "</div></div>" << endl; // descrhead line 3
 
-   classFile << "<div class=\"descrhead\">" << endl
+   classFile << "<div class=\"descrhead\"><div class=\"descrheadcontent\">" << endl // descrhead line 4
       << "<span class=\"descrtitle\">Sections:</span>" << endl
       << "<a class=\"descrheadentry\" href=\"#" << currClassNameMangled;
    if (fHtml->IsNamespace(fCurrentClass))
@@ -1547,8 +1557,10 @@ void TClassDocOutput::WriteClassDocHeader(std::ostream& classFile)
       << "<a class=\"descrheadentry\" href=\"#" << currClassNameMangled << ":Function_Members\">function members</a>" << endl
       << "<a class=\"descrheadentry\" href=\"#" << currClassNameMangled << ":Data_Members\">data members</a>" << endl
       << "<a class=\"descrheadentry\" href=\"#" << currClassNameMangled << ":Class_Charts\">class charts</a>" << endl
-      << "</div>" << endl
-      << "</div>" << endl;
+      << "</div></div>" << endl // descrhead line 4
+      << "</div>" << endl; // toplinks, from TDocOutput::WriteTopLinks
+
+   WriteLocation(classFile, module, fCurrentClass->GetName());
 }
 
 

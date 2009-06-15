@@ -47,10 +47,15 @@ public:
    TRootContextMenu(TContextMenu *c = 0, const char *name = "ROOT Context Menu");
    virtual ~TRootContextMenu();
 
-   virtual void DisplayPopup(Int_t x, Int_t y);
-   virtual void Dialog(TObject *object, TMethod *method);
-   virtual void Dialog(TObject *object, TFunction *function);
-   TRootDialog *GetDialog() const { return fDialog; };
+   virtual void   DisplayPopup(Int_t x, Int_t y);
+   virtual void   Dialog(TObject *object, TMethod *method);
+   virtual void   Dialog(TObject *object, TFunction *function);
+   virtual void   DrawEntry(TGMenuEntry *entry);
+   TRootDialog   *GetDialog() const { return fDialog; };
+   virtual Bool_t HandleButton(Event_t *event);
+   virtual Bool_t HandleCrossing(Event_t *event);
+   virtual Bool_t HandleMotion(Event_t *event);
+   virtual void   OnlineHelp();
 
    Bool_t ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2);
 

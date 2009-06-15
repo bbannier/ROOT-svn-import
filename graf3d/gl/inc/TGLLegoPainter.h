@@ -25,7 +25,7 @@
 #include "TString.h"
 #endif
 
-class TGLOrthoCamera;
+class TGLPlotCamera;
 class TAxis;
 class TH1;
 
@@ -63,7 +63,7 @@ private:
    TGLLegoPainter &operator = (const TGLLegoPainter &);
 
 public:
-   TGLLegoPainter(TH1 *hist, TGLOrthoCamera *camera, TGLPlotCoordinates *coord, TGLPaintDevice *dev = 0);
+   TGLLegoPainter(TH1 *hist, TGLPlotCamera *camera, TGLPlotCoordinates *coord);
 
    //TGLPlotPainter's final-overriders
    char        *GetPlotInfo(Int_t px, Int_t py);
@@ -81,6 +81,8 @@ private:
    Bool_t       InitGeometrySpherical();
    //Overriders
    void         InitGL()const;
+   void         DeInitGL()const;
+   
    void         DrawPlot()const;
 
    void         DrawLegoCartesian()const;

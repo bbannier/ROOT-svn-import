@@ -89,6 +89,7 @@ protected:
    TGLLightSet         *fLightSet;             //!
    // Clipping
    TGLClipSet          *fClipSet;              //!
+   Bool_t               fClipAutoUpdate;       //!
    // Selected physical
    TGLSelectRecord      fCurrentSelRec;        //! select record in use as selected
    TGLSelectRecord      fSelRec;               //! select record from last select (should go to context)
@@ -103,7 +104,7 @@ protected:
    // Mouse ineraction
 public:
    enum EPushAction   { kPushStd,
-                        kPushCamCenter };
+                        kPushCamCenter, kPushAnnotate };
    enum EDragAction   { kDragNone,
                         kDragCameraRotate, kDragCameraTruck, kDragCameraDolly,
                         kDragOverlay };
@@ -117,8 +118,8 @@ protected:
    Float_t              fMaxSceneDrawTimeLQ; //! max time for scene rendering at high LOD (in ms)
 
    TGLRect        fViewport;       //! viewport - drawn area
-   Color_t        fClearColor;     //! clear-color
-   Float_t        fClearColorRGB[3]; //! clear-color cache
+   TGLColorSet    fDarkColorSet;   //! color-set with dark background
+   TGLColorSet    fLightColorSet;  //! color-set with dark background
    Int_t          fAxesType;       //! axes type
    Bool_t         fAxesDepthTest;  //! remove guides hidden-lines
    Bool_t         fReferenceOn;    //! reference marker on?
@@ -134,6 +135,10 @@ protected:
    Bool_t         fIsPrinting;           //!
    TString        fPictureFileName;      //! default file-name for SavePicture()
    Float_t        fFader;                //! fade the view (0 - no fade/default, 1 - full fade/no rendering done)
+
+   static TGLColorSet fgDefaultColorSet;                 //! a shared, default color-set
+   static Bool_t      fgUseDefaultColorSetForNewViewers; //! name says it all
+
 
    ///////////////////////////////////////////////////////////////////////
    // Methods
@@ -165,6 +170,8 @@ public:
    TGLViewer(TVirtualPad* pad, Int_t x, Int_t y, Int_t width, Int_t height);
    TGLViewer(TVirtualPad* pad);
    virtual ~TGLViewer();
+
+   void ResetInitGL();
 
    // TVirtualViewer3D interface ... mostly a facade
 
@@ -198,13 +205,29 @@ public:
    virtual void  DestroyGLWidget() {}
 
    Int_t   GetDev()          const           { return fGLDevice; }
-   Color_t GetClearColor()   const           { return fClearColor; }
-   void    SetClearColor(Color_t col)        { fClearColor = col; }
    Bool_t  GetSmartRefresh() const           { return fSmartRefresh; }
    void    SetSmartRefresh(Bool_t smart_ref) { fSmartRefresh = smart_ref; }
 
+   TGLColorSet& RefDarkColorSet()  { return fDarkColorSet;  }
+   TGLColorSet& RefLightColorSet() { return fLightColorSet; }
+   TGLColorSet& ColorSet()         { return * fRnrCtx->GetBaseColorSet(); }
+   void         UseDarkColorSet();
+   void         UseLightColorSet();
+   void         SwitchColorSet();
+
+   void         UseDefaultColorSet(Bool_t x);
+   Bool_t       IsUsingDefaultColorSet() const;
+
+   void         SetClearColor(Color_t col);
+
+   static TGLColorSet& GetDefaultColorSet();
+   static void         UseDefaultColorSetForNewViewers(Bool_t x);
+   static Bool_t       IsUsingDefaultColorSetForNewViewers();
+
    TGLLightSet* GetLightSet() const { return fLightSet; }
    TGLClipSet * GetClipSet()  const { return fClipSet; }
+   Bool_t GetClipAutoUpdate() const   { return fClipAutoUpdate; }
+   void   SetClipAutoUpdate(Bool_t x) { fClipAutoUpdate = x; }
 
    // External GUI component interface
    TGLCamera & CurrentCamera() const { return *fCurrentCamera; }
@@ -219,6 +242,7 @@ public:
    void SetDrawCameraCenter(Bool_t x);
    Bool_t GetDrawCameraCenter() { return fDrawCameraCenter; }
    void   PickCameraCenter()    { fPushAction = kPushCamCenter; RefreshPadEditor(this); }
+   void   PickAnnotate()        { fPushAction = kPushAnnotate;  RefreshPadEditor(this); }
    TGLCameraOverlay* GetCameraOverlay() const { return fCameraOverlay; }
    void SetCameraOverlay(TGLCameraOverlay* m) { fCameraOverlay = m; }
 
@@ -284,6 +308,8 @@ public:
 
    TGEventHandler *GetEventHandler() const { return fEventHandler; }
    virtual void    SetEventHandler(TGEventHandler *handler);
+
+   virtual void RemoveOverlayElement(TGLOverlayElement* el);
 
    TGLSelectRecord&    GetSelRec()    { return fSelRec; }
    TGLOvlSelectRecord& GetOvlSelRec() { return fOvlSelRec; }

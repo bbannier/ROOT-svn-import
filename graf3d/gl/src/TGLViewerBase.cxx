@@ -14,12 +14,14 @@
 #include "TGLSceneBase.h"
 #include "TGLSceneInfo.h"
 
-#include <TGLRnrCtx.h>
+#include "TGLRnrCtx.h"
 #include "TGLCamera.h"
-#include <TGLOverlay.h>
-#include <TGLSelectBuffer.h>
-#include <TGLSelectRecord.h>
-#include <TGLUtil.h>
+#include "TGLOverlay.h"
+#include "TGLSelectBuffer.h"
+#include "TGLSelectRecord.h"
+#include "TGLAnnotation.h"
+#include "TGLUtil.h"
+
 #include "TGLContext.h"
 #include "TGLIncludes.h"
 
@@ -69,6 +71,8 @@ TGLViewerBase::~TGLViewerBase()
       (*i)->GetScene()->RemoveViewer(this);
       delete *i;
    }
+
+   DeleteOverlayElements(TGLOverlayElement::kAll);
 
    delete fRnrCtx;
 }
@@ -189,9 +193,37 @@ void TGLViewerBase::AddOverlayElement(TGLOverlayElement* el)
 void TGLViewerBase::RemoveOverlayElement(TGLOverlayElement* el)
 {
    // Remove overlay element.
-   std::vector<TGLOverlayElement*>::iterator it = std::find(fOverlay.begin(), fOverlay.end(), el);
-   if(it != fOverlay.end())
+
+   OverlayElmVec_i it = std::find(fOverlay.begin(), fOverlay.end(), el);
+   if (it != fOverlay.end())
       fOverlay.erase(it);
+   Changed();
+}
+
+//______________________________________________________________________
+void TGLViewerBase::DeleteOverlayAnnotations()
+{
+   // Delete overlay elements that are annotations.
+
+   DeleteOverlayElements(TGLOverlayElement::kAnnotation);
+}
+
+//______________________________________________________________________
+void TGLViewerBase::DeleteOverlayElements(TGLOverlayElement::ERole role)
+{
+   // Delete overlay elements.
+
+   OverlayElmVec_t ovl;
+   fOverlay.swap(ovl);
+
+   for (OverlayElmVec_i i = ovl.begin(); i != ovl.end(); ++i)
+   {
+      if (role == TGLOverlayElement::kAll || (*i)->GetRole() == role)
+         delete *i;
+      else
+         fOverlay.push_back(*i);
+   }
+
    Changed();
 }
 
@@ -199,6 +231,7 @@ void TGLViewerBase::RemoveOverlayElement(TGLOverlayElement* el)
 // SceneInfo update / check
 /**************************************************************************/
 
+//______________________________________________________________________________
 void TGLViewerBase::ResetSceneInfos()
 {
    // Force rebuild of view-dependent scene-info structures.
@@ -214,6 +247,7 @@ void TGLViewerBase::ResetSceneInfos()
    }
 }
 
+//______________________________________________________________________________
 void TGLViewerBase::MergeSceneBBoxes(TGLBoundingBox& bbox)
 {
    // Merge bounding-boxes of all active registered scenes.

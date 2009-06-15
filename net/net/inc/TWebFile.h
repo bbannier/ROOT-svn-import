@@ -40,21 +40,27 @@ friend class TWebSocket;
 private:
    mutable Long64_t  fSize;         // file size
    TSocket          *fSocket;       // socket for HTTP/1.1 (stays alive between calls)
+   TUrl              fProxy;        // proxy URL
    Bool_t            fHasModRoot;   // true if server has mod_root installed
-   Bool_t            fHTTP11;
+   Bool_t            fHTTP11;       // true if server support HTTP/1.1
+   Bool_t            fNoProxy;      // don't use proxy
+
+   static TUrl       fgProxy;       // globally set proxy URL
 
    TWebFile() : fSocket(0) { }
-   void   Init(Bool_t);
-   Int_t  GetHead();
-   Int_t  GetLine(TSocket *s, char *line, Int_t size);
-   Int_t  GetFromWeb(char *buf, Int_t len, const TString &msg);
-   Int_t  GetFromWeb10(char *buf, Int_t len, const TString &msg);
-   Bool_t ReadBuffer10(char *buf, Int_t len);
-   Bool_t ReadBuffers10(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf);
+   void    Init(Bool_t);
+   void    CheckProxy();
+   TString BasicAuthentication();
+   Int_t   GetHead();
+   Int_t   GetLine(TSocket *s, char *line, Int_t size);
+   Int_t   GetFromWeb(char *buf, Int_t len, const TString &msg);
+   Int_t   GetFromWeb10(char *buf, Int_t len, const TString &msg);
+   Bool_t  ReadBuffer10(char *buf, Int_t len);
+   Bool_t  ReadBuffers10(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf);
 
 public:
-   TWebFile(const char *url);
-   TWebFile(TUrl url);
+   TWebFile(const char *url, Option_t *opt="");
+   TWebFile(TUrl url, Option_t *opt="");
    virtual ~TWebFile();
 
    Long64_t GetSize() const;
@@ -63,6 +69,9 @@ public:
    Bool_t   ReadBuffer(char *buf, Int_t len);
    Bool_t   ReadBuffers(char *buf, Long64_t *pos, Int_t *len, Int_t nbuf);
    void     Seek(Long64_t offset, ERelativeTo pos = kBeg);
+
+   static void        SetProxy(const char *url);
+   static const char *GetProxy();
 
    ClassDef(TWebFile,1)  //A ROOT file that reads via a http server
 };

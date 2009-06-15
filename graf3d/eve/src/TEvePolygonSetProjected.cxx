@@ -11,7 +11,7 @@
 
 #include "TEvePolygonSetProjected.h"
 #include "TEveVSDStructs.h"
-#include "TEveGeoNode.h"
+#include "TEveGeoShape.h"
 #include "TEveProjectionManager.h"
 
 #include "TBuffer3D.h"
@@ -49,7 +49,7 @@ typedef std::list<Seg_t>::iterator LSegIt_t;
 ClassImp(TEvePolygonSetProjected);
 
 //______________________________________________________________________________
-TEvePolygonSetProjected::TEvePolygonSetProjected(const Text_t* n, const Text_t* t) :
+TEvePolygonSetProjected::TEvePolygonSetProjected(const char* n, const char* t) :
    TEveElementList(n, t),
 
    fBuff(0),

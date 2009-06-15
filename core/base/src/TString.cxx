@@ -19,11 +19,6 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
-// silence warning about gNullRef cast
-#if defined(__GNUC__) && __GNUC__ >= 4 && __GNUC_MINOR__ == 2 && __GNUC_PATCHLEVEL__ >= 1
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#endif
-
 #include "RConfig.h"
 #include <stdlib.h>
 #include <ctype.h>
@@ -57,12 +52,13 @@ const UInt_t kHashShift = 5;
 // loader will set to zero
 
 static long gNullRef[(sizeof(TStringRef)+1)/sizeof(long) + 1];
+static void *gNullRefTmp = gNullRef;
 
 // Use macro in stead of the following to side-step compilers (e.g. DEC)
 // that generate pre-main code for the initialization of address constants.
 // static TStringRef* const gNullStringRef = (TStringRef*)gNullRef;
 
-#define gNullStringRef ((TStringRef*)gNullRef)
+#define gNullStringRef ((TStringRef*)gNullRefTmp)
 
 // ------------------------------------------------------------------------
 //
@@ -892,6 +888,14 @@ Ssiz_t TString::AdjustCapacity(Ssiz_t nc)
    if (nc <= ic) return ic;
    Ssiz_t rs = GetResizeIncrement();
    return (nc - ic + rs - 1) / rs * rs + ic;
+}
+
+//______________________________________________________________________________
+void TString::Clear()
+{
+   // Clear string without changing its capacity.
+
+   Clobber(Capacity());
 }
 
 //______________________________________________________________________________
@@ -1818,7 +1822,7 @@ void TString::FormImp(const char *fmt, va_list ap)
    // Formats a string using a printf style format descriptor.
    // Existing string contents will be overwritten.
 
-   Ssiz_t buflen = 20 * strlen(fmt);    // pick a number, any number
+   Ssiz_t buflen = 20 + 20 * strlen(fmt);    // pick a number, any strictly positive number
    Clobber(buflen);
 
    va_list sap;

@@ -41,7 +41,7 @@ namespace ROOT { namespace Cintex {
    };
 
    StubContext_t::StubContext_t(const Member& mem, const Type& cl )
-      :  fMethodCode(0), fMember(mem), fClass(cl), fNewdelfuncs(0), fInitialized(false)
+      :  fMethodCode(0), fClass(cl), fNewdelfuncs(0), fInitialized(false)
    {
       // Push back a context.
       StubContexts::Instance().push_back(this);
@@ -143,7 +143,7 @@ namespace ROOT { namespace Cintex {
 
    void* StubContext_t::GetReturnAddress(G__value* result) const {
       // Extract the memory location of the return value given the return type of fMethod
-      Type ret = fMember.TypeOf().ReturnType().FinalType();
+      Type ret = fFunction.ReturnType().FinalType();
       if (ret.IsPointer())
          return &result->obj.i;
       if (ret.IsReference())
@@ -307,14 +307,14 @@ namespace ROOT { namespace Cintex {
                obj = context->fNewdelfuncs->fNewArray(nary, 0);
             }
             else {
-               obj = new char[size * nary];
+               obj = ::operator new( nary * size);
                long p = (long)obj; 
                for( long i = 0; i < nary; ++i, p += size )
                   (*context->fStub)(0, (void*)p, context->fParam, 0);
             }
          }
          else {
-            obj = new char[size];
+            obj = ::operator new( size );
             (*context->fStub)(0, obj, context->fParam, 0);
          }
       }
@@ -323,12 +323,12 @@ namespace ROOT { namespace Cintex {
          errtxt += e.what();
          errtxt += " (C++ exception)";
          G__genericerror(errtxt.c_str());
-         delete [] (char *)(obj);
+         ::operator delete (obj);
          obj = 0; 
       } 
       catch (...) {
          G__genericerror("Exception: Unknown C++ exception");
-         delete [] (char *)(obj);
+         ::operator delete (obj);
          obj = 0; 
       }
      
@@ -359,7 +359,7 @@ namespace ROOT { namespace Cintex {
             size_t size = context->fClass.SizeOf();
             for(int i = G__getaryconstruct()-1; i>=0 ; i--)
                (*context->fStub)(0, (char*)obj + size*i, context->fParam, 0);
-            ::operator delete [] (obj);
+            ::operator delete (obj);
          }
       }
       else {
@@ -368,7 +368,7 @@ namespace ROOT { namespace Cintex {
          (*context->fStub)(0, obj, context->fParam, 0);
          G__setgvp(g__Xtmp);
          if( !(long(obj) == G__getgvp() && G__PVOID != G__getgvp()) )  {
-            ::operator delete [] (obj); //G__operator_delete(obj);
+            ::operator delete (obj); //G__operator_delete(obj);
          }
       }
       G__setnull(result);

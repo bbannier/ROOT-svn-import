@@ -44,7 +44,7 @@ FitResult::FitResult() :
    // Default constructor implementation.
 }
 
-      FitResult::FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, const IModelFunction * func,  bool isValid,  unsigned int sizeOfData, bool binnedFit, const  ROOT::Math::IMultiGenFunction * chi2func, bool minosErr, unsigned int ncalls ) : 
+FitResult::FitResult(ROOT::Math::Minimizer & min, const FitConfig & fconfig, const IModelFunction * func,  bool isValid,  unsigned int sizeOfData, bool binnedFit, const  ROOT::Math::IMultiGenFunction * chi2func, unsigned int ncalls ) : 
    fValid(isValid),
    fNormalized(false),
    fNFree(min.NFree() ),
@@ -55,10 +55,19 @@ FitResult::FitResult() :
    fEdm (min.Edm()), 
    fChi2(-1),
    fFitFunc(0), 
-   fParams(std::vector<double>(min.X(), min.X() + min.NDim() ) )
+   fParams(std::vector<double>( min.NDim() ) )
 {
    // Constructor from a minimizer, fill the data. ModelFunction  is passed as non const 
    // since it will be managed by the FitResult
+   const unsigned int npar = fParams.size();
+
+   if (min.X() ) std::copy(min.X(), min.X() + npar, fParams.begin());
+   else { 
+      // case minimizer does not provide minimum values (it failed) take from configuration
+      for (unsigned int i = 0; i < npar; ++i ) {
+         fParams[i] = ( fconfig.ParSettings(i).Value() );
+      }
+   }
 
    if (sizeOfData >  min.NFree() ) fNdf = sizeOfData - min.NFree(); 
 
@@ -72,7 +81,6 @@ FitResult::FitResult() :
    }
    else { 
       // when no fFitFunc is present take parameters from FitConfig
-      unsigned int npar = fParams.size();
       fParNames.reserve( npar );
       for (unsigned int i = 0; i < npar; ++i ) {
          fParNames.push_back( fconfig.ParSettings(i).Name() );
@@ -80,10 +88,10 @@ FitResult::FitResult() :
    }
 
    if (min.Errors() != 0) 
-      fErrors = std::vector<double>(min.Errors(), min.Errors() + min.NDim() ) ; 
+      fErrors = std::vector<double>(min.Errors(), min.Errors() + npar ) ; 
 
    // check for fixed or limited parameters
-   for (unsigned int ipar = 0; ipar < fParams.size(); ++ipar) { 
+   for (unsigned int ipar = 0; ipar < npar; ++ipar) { 
       const ParameterSettings & par = fconfig.ParSettings(ipar); 
       if (par.IsFixed() ) fFixedParams.push_back(ipar); 
       if (par.IsBound() ) fBoundParams.push_back(ipar); 
@@ -101,37 +109,34 @@ FitResult::FitResult() :
    // replace ncalls if given (they are taken from the FitMethodFunction)
    if (ncalls !=0) fNCalls = ncalls;
 
-   unsigned int n  = min.NDim(); 
       
-//    // fill error matrix
+   // fill error matrix
    // cov matrix rank 
    if (fValid) { 
 
-      unsigned int r = n * (  n + 1 )/2;  
+      unsigned int r = npar * (  npar + 1 )/2;  
       fCovMatrix.reserve(r);
-      for (unsigned int i = 0; i < n; ++i) 
+      for (unsigned int i = 0; i < npar; ++i) 
          for (unsigned int j = 0; j <= i; ++j)
             fCovMatrix.push_back(min.CovMatrix(i,j) );
       
       assert (fCovMatrix.size() == r ); 
 
-      // normalize errors if requested in configuration
-      if (fconfig.NormalizeErrors() ) NormalizeErrors();
-
       // minos errors 
-      if (minosErr) { 
-         fMinosErrors.reserve(n);
-         for (unsigned int i = 0; i < n; ++i) { 
-            double elow, eup; 
-            bool ret = min.GetMinosError(0, elow, eup); 
-            if (ret) fMinosErrors.push_back(std::make_pair(elow,eup) );
-            else fMinosErrors.push_back(std::make_pair(0.,0.) );
+      if (fconfig.MinosErrors()) { 
+         const std::vector<unsigned int> & ipars = fconfig.MinosParams(); 
+         unsigned int n = (ipars.size() > 0) ? ipars.size() : npar; 
+         for (unsigned int i = 0; i < n; ++i) {
+          double elow, eup;
+          unsigned int index = (ipars.size() > 0) ? ipars[i] : i; 
+          bool ret = min.GetMinosError(index, elow, eup);
+          if (ret) SetMinosError(index, elow, eup); 
          }
       }
 
       // globalCC
-      fGlobalCC.reserve(n);
-      for (unsigned int i = 0; i < n; ++i) { 
+      fGlobalCC.reserve(npar);
+      for (unsigned int i = 0; i < npar; ++i) { 
          double globcc = min.GlobalCC(i); 
          if (globcc < 0) break; // it is not supported by that minimizer
          fGlobalCC.push_back(globcc); 
@@ -198,7 +203,67 @@ FitResult & FitResult::operator = (const FitResult &rhs) {
 
 }  
 
+bool FitResult::Update(const ROOT::Math::Minimizer & min, bool isValid, unsigned int ncalls) { 
+   // update fit result with new status from minimizer 
 
+   const unsigned int npar = fParams.size();
+   if (min.NDim() != npar ) { 
+      MATH_ERROR_MSG("FitResult::Update","Wrong minimizer status ");
+      return false; 
+   }
+   if (min.X() == 0 ) { 
+      MATH_ERROR_MSG("FitResult::Update","Invalid minimizer status ");
+      return false; 
+   }
+   //fNFree = min.NFree(); 
+   if (fNFree != min.NFree() ) { 
+      MATH_ERROR_MSG("FitResult::Update","Configuration has changed  ");
+      return false; 
+   }
+
+   fValid = isValid; 
+   // update minimum value
+   fVal = min.MinValue(); 
+   fEdm = min.Edm(); 
+   fStatus = min.Status(); 
+   // update number of function calls
+   if (ncalls != 0)    fNCalls += min.NCalls(); 
+   else fNCalls += ncalls; 
+
+   // copy parameter value and errors 
+   std::copy(min.X(), min.X() + npar, fParams.begin());
+
+   if (min.Errors() != 0)  std::copy(min.Errors(), min.Errors() + npar, fErrors.begin() ) ; 
+
+   // set parameters  in fit model function 
+   if (fFitFunc) fFitFunc->SetParameters(&fParams.front());
+   
+   if (fValid) { 
+
+      // update error matrix
+      unsigned int r = npar * (  npar + 1 )/2;  
+      if (fCovMatrix.size() != r) fCovMatrix.resize(r);
+      unsigned int l = 0; 
+      for (unsigned int i = 0; i < npar; ++i) {
+         for (unsigned int j = 0; j <= i; ++j)  
+            fCovMatrix[l++] = min.CovMatrix(i,j);
+      }
+               
+      // update global CC       
+      if (fGlobalCC.size() != npar) fGlobalCC.resize(npar);
+      for (unsigned int i = 0; i < npar; ++i) { 
+         double globcc = min.GlobalCC(i); 
+         if (globcc < 0) { 
+            break; // it is not supported by that minimizer
+            fGlobalCC.clear(); 
+         }
+         fGlobalCC[i] = globcc; 
+      }
+    
+   }
+   return true;
+}
+ 
 void FitResult::NormalizeErrors() { 
    // normalize errors and covariance matrix according to chi2 value
    if (fNdf == 0 || fChi2 <= 0) return; 
@@ -212,14 +277,34 @@ void FitResult::NormalizeErrors() {
    fNormalized = true; 
 } 
 
+
 double FitResult::Prob() const { 
    // fit probability
    return ROOT::Math::chisquared_cdf_c(fChi2, static_cast<double>(fNdf) ); 
 }
 
+double FitResult::LowerError(unsigned int i) const { 
+   // return lower Minos error for parameter i 
+   //  return the parabolic error if Minos error has not been calculated for the parameter i 
+   std::map<unsigned int, std::pair<double,double> >::const_iterator itr = fMinosErrors.find(i); 
+   return ( itr != fMinosErrors.end() ) ? itr->second.first : Error(i) ;  
+}
+
+double FitResult::UpperError(unsigned int i) const { 
+   // return upper Minos error for parameter i
+   //  return the parabolic error if Minos error has not been calculated for the parameter i 
+   std::map<unsigned int, std::pair<double,double> >::const_iterator itr = fMinosErrors.find(i); 
+   return ( itr != fMinosErrors.end() ) ? itr->second.second : Error(i) ;  
+}
+
+void FitResult::SetMinosError(unsigned int i, double elow, double eup) { 
+   // set the Minos error for parameter i 
+   fMinosErrors[i] = std::make_pair(elow,eup);
+}
+
 int FitResult::Index(const std::string & name) const { 
-   if (! fFitFunc) return -1;
    // find index for given parameter name
+   if (! fFitFunc) return -1;
    unsigned int npar = fParams.size(); 
    for (unsigned int i = 0; i < npar; ++i) 
       if ( fFitFunc->ParameterName(i) == name) return i; 
@@ -386,7 +471,7 @@ void FitResult::GetConfidenceIntervals(unsigned int n, unsigned int stride1, uns
       vsum.assign(npar,0.0);
       for (unsigned int ipar = 0; ipar < npar; ++ipar) { 
          for (unsigned int jpar = 0; jpar < npar; ++jpar) {
-            vsum[ipar] += CovMatrix(ipar,jpar) * grad[jpar]; 
+             vsum[ipar] += CovMatrix(ipar,jpar) * grad[jpar]; 
          }
       }
       // multiply gradient by vsum

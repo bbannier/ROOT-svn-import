@@ -49,12 +49,15 @@ It provides several functionalities:
 <li><a href="#L11"> Examples</a></li>
 </ul>
 
+When the font precision (see <tt>TAttText</tt>) is low (ie 0), TLatex is 
+painted as a normal TText, the control characters are not interpreted.
+
 <a name="L1"></a><h3>Subscripts and Superscripts</h3>
 Subscripts and superscripts are made with the <tt>_</tt> and <tt>^</tt> 
 commands. These commands can be combined to make complicated subscript and
 superscript expressions. You may choose how to display subscripts and
 superscripts using the 2 functions <tt>SetIndiceSize(Double_t)</tt> and
-<tt>SetLimitindiceSize(Int_t)</tt>.
+<tt>SetLimitIndiceSize(Int_t)</tt>.
 <p>Examples:
 End_Html
    x^{2y} :    Begin_Latex x^{2y}    End_Latex x_{2y} :    Begin_Latex x^{2y}    End_Latex
@@ -1614,6 +1617,8 @@ void TLatex::PaintLatex(Double_t x, Double_t y, Double_t angle, Double_t size, c
 
    // Do not use Latex if font is low precision.
    if (fTextFont%10 < 2) {
+      if (gVirtualX) gVirtualX->SetTextAngle(angle);
+      if (gVirtualPS) gVirtualPS->SetTextAngle(angle);
       gPad->PaintText(x,y,text1);
       return;
    }

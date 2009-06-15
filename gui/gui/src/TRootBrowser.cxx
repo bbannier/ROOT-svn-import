@@ -187,8 +187,8 @@ void TRootBrowser::CreateBrowser(const char *name)
    fPreMenuFrame = new TGHorizontalFrame(fTopMenuFrame, 0, 20, kRaisedFrame);
    fMenuBar   = new TGMenuBar(fPreMenuFrame, 10, 10, kHorizontalFrame);
    fMenuFile  = new TGPopupMenu(gClient->GetDefaultRoot());
-   fMenuFile->AddEntry("&Browse...             Ctrl+B", kBrowse);
-   fMenuFile->AddEntry("&Open...                 Ctrl+O", kOpenFile);
+   fMenuFile->AddEntry("&Browse...\tCtrl+B", kBrowse);
+   fMenuFile->AddEntry("&Open...\tCtrl+O", kOpenFile);
    fMenuFile->AddSeparator();
    
    fMenuHelp = new TGPopupMenu(fClient->GetRoot());
@@ -204,21 +204,21 @@ void TRootBrowser::CreateBrowser(const char *name)
    fMenuFile->AddPopup("Browser Help...", fMenuHelp);
    
    fMenuFile->AddSeparator();
-   fMenuFile->AddEntry("&Clone                   Ctrl+N", kClone);
+   fMenuFile->AddEntry("&Clone\tCtrl+N", kClone);
    fMenuFile->AddSeparator();
-   fMenuFile->AddEntry("New &Editor          Ctrl+E", kNewEditor);
-   fMenuFile->AddEntry("New &Canvas       Ctrl+C", kNewCanvas);
-   fMenuFile->AddEntry("New &HTML          Ctrl+H", kNewHtml);
+   fMenuFile->AddEntry("New &Editor\tCtrl+E", kNewEditor);
+   fMenuFile->AddEntry("New &Canvas\tCtrl+C", kNewCanvas);
+   fMenuFile->AddEntry("New &HTML\tCtrl+H", kNewHtml);
    fMenuFile->AddSeparator();
    fMenuExecPlugin = new TGPopupMenu(fClient->GetRoot());
    fMenuExecPlugin->AddEntry("&Macro...", kExecPluginMacro);
    fMenuExecPlugin->AddEntry("&Command...", kExecPluginCmd);
    fMenuFile->AddPopup("Execute &Plugin...", fMenuExecPlugin);
    fMenuFile->AddSeparator();
-   fMenuFile->AddEntry("Close &Tab           Ctrl+T", kCloseTab);
-   fMenuFile->AddEntry("Close &Window   Ctrl+W", kCloseWindow);
+   fMenuFile->AddEntry("Close &Tab\tCtrl+T", kCloseTab);
+   fMenuFile->AddEntry("Close &Window\tCtrl+W", kCloseWindow);
    fMenuFile->AddSeparator();
-   fMenuFile->AddEntry("&Quit Root             Ctrl+Q", kQuitRoot);
+   fMenuFile->AddEntry("&Quit Root\tCtrl+Q", kQuitRoot);
    fMenuBar->AddPopup("&Browser", fMenuFile, fLH1);
    fMenuFile->Connect("Activated(Int_t)", "TRootBrowser", this,
                       "HandleMenu(Int_t)");
@@ -504,15 +504,16 @@ Long_t TRootBrowser::ExecPlugin(const char *name, const char *fname,
    StartEmbedding(pos, subpos);
    if (cmd && strlen(cmd)) {
       command = cmd;
-      pname = name ? name : Form("Plugin %d", fPlugins.GetSize());
-      p = new TBrowserPlugin(pname, command.Data(), pos, subpos);
+      if (name) pname = name;
+      else pname = TString::Format("Plugin %d", fPlugins.GetSize());
+      p = new TBrowserPlugin(pname.Data(), command.Data(), pos, subpos);
    }
    else if (fname && strlen(fname)) {
       pname = name ? name : gSystem->BaseName(fname);
       Ssiz_t t = pname.Last('.');
       if (t > 0) pname.Remove(t);
       command.Form("gROOT->Macro(\"%s\");", gSystem->UnixPathName(fname));
-      p = new TBrowserPlugin(pname, command.Data(), pos, subpos);
+      p = new TBrowserPlugin(pname.Data(), command.Data(), pos, subpos);
    }
    else return 0;
    fPlugins.Add(p);
@@ -521,7 +522,7 @@ Long_t TRootBrowser::ExecPlugin(const char *name, const char *fname,
       pname = gPad->GetName();
       p->SetName(pname.Data());
    }
-   SetTabTitle(pname, pos, subpos);
+   SetTabTitle(pname.Data(), pos, subpos);
    StopEmbedding();
    return retval;
 }
@@ -797,45 +798,47 @@ void TRootBrowser::InitPlugins(Option_t *opt)
 
    // --- Right main area
 
-   // Editor plugin...
-   if (strchr(opt, 'E')) {
-      cmd.Form("new TGTextEditor((const char *)0, gClient->GetRoot());");
-      ExecPlugin("Editor 1", 0, cmd.Data(), 1);
-      ++fNbInitPlugins;
-   }
+   Int_t i, len = strlen(opt);
+   for (i=0; i<len; ++i) {
+      // Editor plugin...
+      if (opt[i] == 'E') {
+         cmd.Form("new TGTextEditor((const char *)0, gClient->GetRoot());");
+         ExecPlugin("Editor 1", 0, cmd.Data(), 1);
+         ++fNbInitPlugins;
+      }
 
-   // HTML plugin...
-   if (strchr(opt, 'H')) {
-      if (gSystem->Load("libGuiHtml") >= 0) {
-         cmd.Form("new TGHtmlBrowser(\"%s\", gClient->GetRoot());", 
-                  gEnv->GetValue("Browser.StartUrl",
-                  "http://root.cern.ch/root/html/ClassIndex.html"));
-         ExecPlugin("HTML", 0, cmd.Data(), 1);
+      // HTML plugin...
+      if (opt[i] == 'H') {
+         if (gSystem->Load("libGuiHtml") >= 0) {
+            cmd.Form("new TGHtmlBrowser(\"%s\", gClient->GetRoot());", 
+                     gEnv->GetValue("Browser.StartUrl",
+                     "http://root.cern.ch/root/html/ClassIndex.html"));
+            ExecPlugin("HTML", 0, cmd.Data(), 1);
+            ++fNbInitPlugins;
+         }
+      }
+   
+      // Canvas plugin...
+      if (opt[i] == 'C') {
+         cmd.Form("new TCanvas();");
+         ExecPlugin("c1", 0, cmd.Data(), 1);
+         ++fNbInitPlugins;
+      }
+
+      // GLViewer plugin...
+      if (opt[i] == 'G') {
+         cmd.Form("new TGLSAViewer(gClient->GetRoot(), 0);");
+         ExecPlugin("OpenGL", 0, cmd.Data(), 1);
+         ++fNbInitPlugins;
+      }
+
+      // PROOF plugin...
+      if (opt[i] == 'P') {
+         cmd.Form("new TSessionViewer();");
+         ExecPlugin("PROOF", 0, cmd.Data(), 1);
          ++fNbInitPlugins;
       }
    }
-
-   // Canvas plugin...
-   if (strchr(opt, 'C')) {
-      cmd.Form("new TCanvas();");
-      ExecPlugin("c1", 0, cmd.Data(), 1);
-      ++fNbInitPlugins;
-   }
-
-   // GLViewer plugin...
-   if (strchr(opt, 'G')) {
-      cmd.Form("new TGLSAViewer(gClient->GetRoot(), 0);");
-      ExecPlugin("OpenGL", 0, cmd.Data(), 1);
-      ++fNbInitPlugins;
-   }
-
-   // PROOF plugin...
-   if (strchr(opt, 'P')) {
-      cmd.Form("new TSessionViewer();");
-      ExecPlugin("PROOF", 0, cmd.Data(), 1);
-      ++fNbInitPlugins;
-   }
-
    // --- Right bottom area
 
    // Command plugin...

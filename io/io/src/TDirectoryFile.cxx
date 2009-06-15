@@ -735,7 +735,7 @@ TObject *TDirectoryFile::FindObjectAny(const char *aname) const
    // use FindKeyAny(aname)->ReadObj().
 
    //object may be already in the list of objects in memory
-   TObject *obj = fList->FindObject(aname);
+   TObject *obj = TDirectory::FindObjectAny(aname);
    if (obj) return obj;
 
    TDirectory *dirsav = gDirectory;
@@ -789,7 +789,7 @@ TObject *TDirectoryFile::Get(const char *namecycle)
 //  is the actual type of the object).
 //
 //  NOTE:
-//  The method GetObject offer better protection and avoid the need
+//  The method GetObject offers better protection and avoids the need
 //  for any cast:
 //      MyClass *obj;
 //      directory->GetObject("some object",obj);

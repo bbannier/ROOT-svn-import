@@ -71,46 +71,46 @@ Reflex::Scope Reflex::Scope::ByName( const std::string & name ) {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Member Reflex::Scope::DataMemberAt( size_t nth ) const {
+Reflex::Member Reflex::Scope::DataMemberAt( size_t nth, EMEMBERQUERY inh ) const {
 //-------------------------------------------------------------------------------
 // Return the nth data member of this scope.
-   if ( * this ) return fScopeName->fScopeBase->DataMemberAt( nth ); 
+   if ( * this ) return fScopeName->fScopeBase->DataMemberAt( nth, inh ); 
    return Dummy::Member();
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Member Reflex::Scope::DataMemberByName( const std::string & name ) const {
+Reflex::Member Reflex::Scope::DataMemberByName( const std::string & name, EMEMBERQUERY inh ) const {
 //-------------------------------------------------------------------------------
 // Return a data member by it's name.
-   if ( * this ) return fScopeName->fScopeBase->DataMemberByName( name ); 
+   if ( * this ) return fScopeName->fScopeBase->DataMemberByName( name, inh ); 
    return Dummy::Member();
 }
 
 
 //-------------------------------------------------------------------------------
-size_t Reflex::Scope::DataMemberSize() const {
+size_t Reflex::Scope::DataMemberSize(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return number of data mebers of this scope.
-   if ( * this ) return fScopeName->fScopeBase->DataMemberSize(); 
+   if ( * this ) return fScopeName->fScopeBase->DataMemberSize(inh);
    return 0;
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Member Reflex::Scope::FunctionMemberAt( size_t nth ) const {
+Reflex::Member Reflex::Scope::FunctionMemberAt( size_t nth, EMEMBERQUERY inh ) const {
 //------------------------------------------------------------------------------- 
 // Return nth function member of this socpe.
-   if ( * this ) return fScopeName->fScopeBase->FunctionMemberAt(nth); 
+   if ( * this ) return fScopeName->fScopeBase->FunctionMemberAt(nth, inh); 
    return Dummy::Member();
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Member Reflex::Scope::FunctionMemberByName( const std::string & name ) const {
+Reflex::Member Reflex::Scope::FunctionMemberByName( const std::string & name, EMEMBERQUERY inh ) const {
 //------------------------------------------------------------------------------- 
 // Return a function member by it's name.
-   if ( * this ) return fScopeName->fScopeBase->FunctionMemberByName( name, Type(), 0 ); 
+   if ( * this ) return fScopeName->fScopeBase->FunctionMemberByName( name, Type(), 0, inh ); 
    return Dummy::Member();
 }
 
@@ -118,10 +118,11 @@ Reflex::Member Reflex::Scope::FunctionMemberByName( const std::string & name ) c
 //-------------------------------------------------------------------------------
 Reflex::Member Reflex::Scope::FunctionMemberByName( const std::string & name,
                                                     const Type & signature,
-                                                    unsigned int modifiers_mask) const {
+                                                    unsigned int modifiers_mask,
+                                                    EMEMBERQUERY inh) const {
 //------------------------------------------------------------------------------- 
 // Return a function member by it's name, qualified by it's signature type.
-   if ( * this ) return fScopeName->fScopeBase->FunctionMemberByName( name, signature, modifiers_mask ); 
+   if ( * this ) return fScopeName->fScopeBase->FunctionMemberByName( name, signature, modifiers_mask, inh ); 
    return Dummy::Member();
 }
 
@@ -129,20 +130,54 @@ Reflex::Member Reflex::Scope::FunctionMemberByName( const std::string & name,
 //-------------------------------------------------------------------------------
 Reflex::Member Reflex::Scope::FunctionMemberByNameAndSignature( const std::string & name,
                                                                 const Type & signature,
-                                                                unsigned int modifiers_mask) const {
+                                                                unsigned int modifiers_mask,
+                                                                EMEMBERQUERY inh) const {
 //------------------------------------------------------------------------------- 
 // Return a function member by it's name, qualified by it's signature type.
-   if ( * this ) return fScopeName->fScopeBase->FunctionMemberByNameAndSignature( name, signature, modifiers_mask ); 
+   if ( * this ) return fScopeName->fScopeBase->FunctionMemberByNameAndSignature( name, signature, modifiers_mask, inh ); 
    return Dummy::Member();
 }
 
 
 //-------------------------------------------------------------------------------
-size_t Reflex::Scope::FunctionMemberSize() const {
+size_t Reflex::Scope::FunctionMemberSize(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return number of function members of this scope.
-   if ( * this ) return fScopeName->fScopeBase->FunctionMemberSize(); 
+   if ( * this ) return fScopeName->fScopeBase->FunctionMemberSize(inh);
    return 0;
+}
+
+
+//-------------------------------------------------------------------------------
+bool Reflex::Scope::HasBase( const Type & cl ) const {
+//-------------------------------------------------------------------------------
+   // Return base info if type has base cl.
+   if ( * this ) return fScopeName->fScopeBase->HasBase(cl);
+   return false;
+}
+
+
+//-------------------------------------------------------------------------------
+bool Reflex::Scope::IsPrivate() const {
+//-------------------------------------------------------------------------------
+// True if the the type's access is private.
+   return operator Type().IsPrivate(); 
+}
+
+
+//-------------------------------------------------------------------------------
+bool Reflex::Scope::IsProtected() const {
+//-------------------------------------------------------------------------------
+// True if the the type's access is protected.
+   return operator Type().IsProtected(); 
+}
+
+
+//-------------------------------------------------------------------------------
+bool Reflex::Scope::IsPublic() const {
+//-------------------------------------------------------------------------------
+// True if the the type is publicly accessible.
+   return operator Type().IsPublic(); 
 }
 
 
@@ -178,10 +213,10 @@ Reflex::Scope::LookupScope( const std::string & nam ) const {
 
 //-------------------------------------------------------------------------------
 Reflex::Member 
-Reflex::Scope::MemberByName( const std::string & name ) const {
+Reflex::Scope::MemberByName( const std::string & name, EMEMBERQUERY inh ) const {
 //-------------------------------------------------------------------------------
 // Return a member from this scope, by name.
-   if ( * this ) return fScopeName->fScopeBase->MemberByName(name, Type()); 
+   if ( * this ) return fScopeName->fScopeBase->MemberByName(name, Type(), inh); 
    return Dummy::Member();
 }
 
@@ -189,55 +224,56 @@ Reflex::Scope::MemberByName( const std::string & name ) const {
 //-------------------------------------------------------------------------------
 Reflex::Member 
 Reflex::Scope::MemberByName( const std::string & name,
-                             const Type & signature ) const {
+                             const Type & signature,
+                             EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return a member in this scope, looked up by name and signature (for functions)
-   if ( * this ) return fScopeName->fScopeBase->MemberByName(name, signature); 
+   if ( * this ) return fScopeName->fScopeBase->MemberByName(name, signature, inh); 
    return Dummy::Member();
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Member_Iterator Reflex::Scope::Member_Begin() const {
+Reflex::Member_Iterator Reflex::Scope::Member_Begin(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return the begin iterator of member container.
-   if ( * this ) return fScopeName->fScopeBase->Member_Begin();
+   if ( * this ) return fScopeName->fScopeBase->Member_Begin(inh);
    return Dummy::MemberCont().begin();
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Member_Iterator Reflex::Scope::Member_End() const {
+Reflex::Member_Iterator Reflex::Scope::Member_End(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return the end iterator of member container.
-   if ( * this ) return fScopeName->fScopeBase->Member_End();
+   if ( * this ) return fScopeName->fScopeBase->Member_End(inh);
    return Dummy::MemberCont().end();
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Reverse_Member_Iterator Reflex::Scope::Member_RBegin() const {
+Reflex::Reverse_Member_Iterator Reflex::Scope::Member_RBegin(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return the rbegin iterator of member container.
-   if ( * this ) return fScopeName->fScopeBase->Member_RBegin();
+   if ( * this ) return fScopeName->fScopeBase->Member_RBegin(inh);
    return Dummy::MemberCont().rbegin();
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Reverse_Member_Iterator Reflex::Scope::Member_REnd() const {
+Reflex::Reverse_Member_Iterator Reflex::Scope::Member_REnd(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return the rend iterator of member container.
-   if ( * this ) return fScopeName->fScopeBase->Member_REnd();
+   if ( * this ) return fScopeName->fScopeBase->Member_REnd(inh);
    return Dummy::MemberCont().rend();
 }
 
 
 //-------------------------------------------------------------------------------
-Reflex::Member Reflex::Scope::MemberAt( size_t nth ) const {
+Reflex::Member Reflex::Scope::MemberAt( size_t nth, EMEMBERQUERY inh ) const {
 //-------------------------------------------------------------------------------
 // Return the nth member of this scope.
-   if ( * this ) return fScopeName->fScopeBase->MemberAt(nth); 
+   if ( * this ) return fScopeName->fScopeBase->MemberAt(nth, inh); 
    return Dummy::Member();
 }
 
@@ -331,8 +367,7 @@ Reflex::Type Reflex::Scope::SubTypeByName( const std::string & nam ) const {
 Reflex::Type Reflex::Scope::TemplateArgumentAt( size_t nth ) const {
 //-------------------------------------------------------------------------------
 // Return the nth template argument of this scope (ie. class).
-   if ( * this ) return fScopeName->fScopeBase->TemplateArgumentAt( nth );
-   return Dummy::Type();
+   return operator Type().TemplateArgumentAt( nth );
 }
 
 
@@ -340,8 +375,7 @@ Reflex::Type Reflex::Scope::TemplateArgumentAt( size_t nth ) const {
 Reflex::TypeTemplate Reflex::Scope::TemplateFamily() const {
 //-------------------------------------------------------------------------------
 // Return the template family related to this scope.
-   if ( * this ) return fScopeName->fScopeBase->TemplateFamily();
-   return Dummy::TypeTemplate();
+   return operator Type().TemplateFamily();
 }
 
 
@@ -381,16 +415,17 @@ void Reflex::Scope::AddDataMember( const Member & dm ) const {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Scope::AddDataMember( const char * name,
+Reflex::Member Reflex::Scope::AddDataMember( const char * name,
                                    const Type & type,
                                    size_t offset,
-                                   unsigned int modifiers ) const {
+                                   unsigned int modifiers /* = 0 */,
+                                   char* interpreterOffset /* = 0 */ ) const {
 //-------------------------------------------------------------------------------
 // Add data member to this scope.
-   if ( * this ) fScopeName->fScopeBase->AddDataMember( name, 
-                                                        type, 
-                                                        offset, 
-                                                        modifiers );
+   if ( * this ) {
+      return fScopeName->fScopeBase->AddDataMember( name, type, offset, modifiers, interpreterOffset );
+   }
+   return Dummy::Member();
 }
 
 
@@ -411,20 +446,18 @@ void Reflex::Scope::AddFunctionMember( const Member & fm ) const {
 
 
 //-------------------------------------------------------------------------------
-void Reflex::Scope::AddFunctionMember( const char * nam,
-                                             const Type & typ,
-                                             StubFunction stubFP,
-                                             void * stubCtx,
-                                             const char * params,
-                                             unsigned int modifiers ) const {
+Reflex::Member Reflex::Scope::AddFunctionMember( const char * nam,
+                                           const Type & typ,
+                                           StubFunction stubFP,
+                                           void * stubCtx,
+                                           const char * params,
+                                           unsigned int modifiers ) const {
 //-------------------------------------------------------------------------------
 // Add function member to this scope.
-   if ( * this ) fScopeName->fScopeBase->AddFunctionMember( nam, 
-                                                            typ, 
-                                                            stubFP, 
-                                                            stubCtx, 
-                                                            params, 
-                                                            modifiers );
+   if ( * this ) {
+      return fScopeName->fScopeBase->AddFunctionMember( nam, typ, stubFP, stubCtx, params, modifiers );
+   }
+   return Dummy::Member();
 }
 
 
@@ -501,6 +534,46 @@ void Reflex::Scope::RemoveSubTypeTemplate( const TypeTemplate & tt ) const {
 
 
 //-------------------------------------------------------------------------------
+size_t Reflex::Scope::TemplateArgumentSize() const {
+//-------------------------------------------------------------------------------
+// Return the number of template arguments.
+   return operator Type().TemplateArgumentSize();
+}
+
+
+//-------------------------------------------------------------------------------
+Reflex::Type_Iterator Reflex::Scope::TemplateArgument_Begin() const {
+//-------------------------------------------------------------------------------
+// Return the 'begin' of the iterator on the template arguments.
+   return operator Type().TemplateArgument_Begin();
+}
+
+
+//-------------------------------------------------------------------------------
+Reflex::Type_Iterator Reflex::Scope::TemplateArgument_End() const {
+//-------------------------------------------------------------------------------
+// Return the 'end' of the iterator on the template arguments.
+   return operator Type().TemplateArgument_End();
+}
+
+
+//-------------------------------------------------------------------------------
+Reflex::Reverse_Type_Iterator Reflex::Scope::TemplateArgument_RBegin() const {
+//-------------------------------------------------------------------------------
+// Return the 'begin' of the reverse iterator on the template arguments.
+   return operator Type().TemplateArgument_RBegin();
+}
+
+
+//-------------------------------------------------------------------------------
+Reflex::Reverse_Type_Iterator Reflex::Scope::TemplateArgument_REnd() const {
+//-------------------------------------------------------------------------------
+// Return the 'end' of the reverse iterator on the template arguments.
+   return operator Type().TemplateArgument_REnd();
+}
+
+
+//-------------------------------------------------------------------------------
 void Reflex::Scope::GenerateDict( DictionaryGenerator & generator) const {
 //-------------------------------------------------------------------------------
 // Generate Dictionary information about itself.
@@ -513,6 +586,17 @@ void Reflex::Scope::Unload() const {
 //-------------------------------------------------------------------------------
 // Unload a scope, i.e. delete the ScopeName's ScopeBase object.
    if ( * this ) delete fScopeName->fScopeBase;
+}
+
+
+//-------------------------------------------------------------------------------
+void Reflex::Scope::UpdateMembers() const {
+//-------------------------------------------------------------------------------
+// UpdateMembers will update the list of Function/Data/Members with all
+// members of base classes currently availabe in the system, switching
+// INHERITEDMEMBERS_DEFAULT to INHERITEDMEMBERS_ALSO.
+
+   if ( * this ) fScopeName->fScopeBase->UpdateMembers();
 }
 
 

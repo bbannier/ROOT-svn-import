@@ -122,18 +122,18 @@ TProofProgressDialog::TProofProgressDialog(TProof *proof,
    fDialog->DontCallClose();
 
    // Title label
-   char buf[256];
-   sprintf(buf, "Executing on PROOF cluster \"%s\" with %d parallel workers:",
+   TString buf;
+   buf = TString::Format("Executing on PROOF cluster \"%s\" with %d parallel workers:",
            fProof ? fProof->GetMaster() : "<dummy>",
            fProof ? fProof->GetParallel() : 0);
    fTitleLab = new TGLabel(fDialog, buf),
    fDialog->AddFrame(fTitleLab,
                      new TGLayoutHints(kLHintsNormal, 10, 10, 20, 0));
-   sprintf(buf,"Selector: %s", selector);
+   buf = TString::Format("Selector: %s", selector);
    fSelector = new TGLabel(fDialog, buf);
    fDialog->AddFrame(fSelector,
                      new TGLayoutHints(kLHintsNormal, 10, 10, 5, 0));
-   sprintf(buf, "%d files, number of events %lld, starting event %lld",
+   buf = TString::Format("%d files, number of events %lld, starting event %lld",
            fFiles, fEntries, fFirst);
    fFilesEvents = new TGLabel(fDialog, buf);
    fDialog->AddFrame(fFilesEvents, new TGLayoutHints(kLHintsNormal, 10, 10, 5, 0));
@@ -184,6 +184,18 @@ TProofProgressDialog::TProofProgressDialog(TProof *proof,
    TGHorizontalFrame *hf3 = new TGHorizontalFrame(fDialog, 60, 20, kFixedWidth);
 
    UInt_t  nb1 = 0, width1 = 0, height1 = 0;
+
+   fAsyn = new TGTextButton(hf3, "&Run in background");
+   if (fProof->GetRemoteProtocol() >= 22) {
+      fAsyn->SetToolTipText("Continue running in the background (asynchronous mode), releasing the ROOT prompt");
+   } else {
+      fAsyn->SetToolTipText("Switch to asynchronous mode disabled: functionality not supported by the server");
+      fAsyn->SetState(kButtonDisabled);
+   }
+   fAsyn->Connect("Clicked()", "TProofProgressDialog", this, "DoAsyn()");
+   hf3->AddFrame(fAsyn, new TGLayoutHints(kLHintsCenterY | kLHintsExpandX, 7, 7, 0, 0));
+   height1 = TMath::Max(height1, fAsyn->GetDefaultHeight());
+   width1  = TMath::Max(width1, fAsyn->GetDefaultWidth()); ++nb1;
 
    fStop = new TGTextButton(hf3, "&Stop");
    fStop->SetToolTipText("Stop processing, Terminate() will be executed");
@@ -241,8 +253,8 @@ TProofProgressDialog::TProofProgressDialog(TProof *proof,
    // Only enable if master supports it
    if (!PPD_SRV_NEWER_REV(gSVNMemPlot)) {
       fMemPlot->SetState(kButtonDisabled);
-      TString tip = Form("Not supported by the master: required SVN revision %d > %d",
-                         gSVNMemPlot, fSVNRev);
+      TString tip = TString::Format("Not supported by the master: required SVN revision %d > %d",
+                                    gSVNMemPlot, fSVNRev);
       fMemPlot->SetToolTipText(tip.Data());
    } else {
       fMemPlot->SetToolTipText("Show memory consumption");
@@ -267,6 +279,7 @@ TProofProgressDialog::TProofProgressDialog(TProof *proof,
                       "TProofProgressDialog", this,
                       "ResetProgressDialog(const char*,Int_t,Long64_t,Long64_t)");
       fProof->Connect("CloseProgressDialog()", "TProofProgressDialog", this, "DoClose()");
+      fProof->Connect("DisableGoAsyn()", "TProofProgressDialog", this, "DisableAsyn()");
    }
 
    // Set dialog title
@@ -298,8 +311,6 @@ TProofProgressDialog::TProofProgressDialog(TProof *proof,
 
    gVirtualX->TranslateCoordinates(main->GetId(), main->GetId(),
                           (mw - width), (mh - height) >> 1, ax, ay, wdum);
-   fDialog->Move(ax-5, ay - mh/4);
-   fDialog->SetWMPosition(ax-5, ay - mh/4);
 
    // Make the message box non-resizable
    fDialog->SetWMSize(width, height);
@@ -311,6 +322,8 @@ TProofProgressDialog::TProofProgressDialog(TProof *proof,
                                        kMWMFuncMinimize,
                         kMWMInputModeless);
 
+   fDialog->Move(ax-10, ay - mh/4);
+   fDialog->SetWMPosition(ax-10, ay - mh/4);
    // Popup dialog and wait till user replies
    fDialog->MapWindow();
 
@@ -323,10 +336,10 @@ void TProofProgressDialog::ResetProgressDialog(const char *selec,
                                                Long64_t entries)
 {
    // Reset dialog box preparing for new query
-   char buf[512];
+   TString buf;
 
    // Update title
-   sprintf(buf, "Executing on PROOF cluster \"%s\" with %d parallel workers:",
+   buf = TString::Format("Executing on PROOF cluster \"%s\" with %d parallel workers:",
            fProof ? fProof->GetMaster() : "<dummy>",
            fProof ? fProof->GetParallel() : 0);
    fTitleLab->SetText(buf);
@@ -340,14 +353,14 @@ void TProofProgressDialog::ResetProgressDialog(const char *selec,
    fStatus        = kRunning;
 
    // Update selector name
-   sprintf(buf,"Selector: %s", selec);
+   buf = TString::Format("Selector: %s", selec);
    fSelector->SetText(buf);
 
    // Reset 'processed' text
    fProcessed->SetText("Estimated time left:");
 
    // Update numbers
-   sprintf(buf, "%d files, number of events %lld, starting event %lld",
+   buf = TString::Format("%d files, number of events %lld, starting event %lld",
            fFiles, fEntries, fFirst);
    fFilesEvents->SetText(buf);
 
@@ -359,6 +372,11 @@ void TProofProgressDialog::ResetProgressDialog(const char *selec,
    fStop->SetState(kButtonUp);
    fAbort->SetState(kButtonUp);
    fClose->SetState(kButtonDisabled);
+   if (fProof->IsSync() && fProof->GetRemoteProtocol() >= 22) {
+      fAsyn->SetState(kButtonUp);
+   } else {
+      fAsyn->SetState(kButtonDisabled);
+   }
 
    // Reconnect the slots
    if (fProof) {
@@ -369,6 +387,7 @@ void TProofProgressDialog::ResetProgressDialog(const char *selec,
                       "Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)");
       fProof->Connect("StopProcess(Bool_t)", "TProofProgressDialog", this,
                       "IndicateStop(Bool_t)");
+      fProof->Connect("DisableGoAsyn()", "TProofProgressDialog", this, "DisableAsyn()");
    }
 
    // Reset start time
@@ -390,13 +409,13 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed)
 
    Long_t tt;
    UInt_t hh=0, mm=0, ss=0;
-   char buf[256];
+   TString buf;
    char stm[256];
    static const char *cproc[] = { "running", "done",
                                   "STOPPED", "ABORTED", "***EVENTS SKIPPED***"};
 
    // Update title
-   sprintf(buf, "Executing on PROOF cluster \"%s\" with %d parallel workers:",
+   buf = TString::Format("Executing on PROOF cluster \"%s\" with %d parallel workers:",
            fProof ? fProof->GetMaster() : "<dummy>",
            fProof ? fProof->GetParallel() : 0);
    fTitleLab->SetText(buf);
@@ -415,7 +434,7 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed)
 
    if (fEntries != total) {
       fEntries = total;
-      sprintf(buf, "%d files, number of events %lld, starting event %lld",
+      buf = TString::Format("%d files, number of events %lld, starting event %lld",
               fFiles, fEntries, fFirst);
       fFilesEvents->SetText(buf);
    }
@@ -445,7 +464,7 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed)
       else
          sprintf(stm, "%d sec", ss);
       fProcessed->SetText("Processed:");
-      sprintf(buf, "%lld events in %s", total, stm);
+      buf = TString::Format("%lld events in %s", total, stm);
       fTotal->SetText(buf);
 
       if (fProof) {
@@ -453,9 +472,11 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed)
                             "Progress(Long64_t,Long64_t)");
          fProof->Disconnect("StopProcess(Bool_t)", this,
                             "IndicateStop(Bool_t)");
+         fProof->Disconnect("DisableGoAsyn()", this, "DisableAsyn()");
       }
 
       // Set button state
+      fAsyn->SetState(kButtonDisabled);
       fStop->SetState(kButtonDisabled);
       fAbort->SetState(kButtonDisabled);
       fClose->SetState(kButtonUp);
@@ -488,18 +509,19 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed)
       else
          sprintf(stm, "%d sec", ss);
       if (fStatus > kDone) {
-         sprintf(buf, "%s (%lld events of %lld processed) - %s",
+         buf = TString::Format("%s (%lld events of %lld processed) - %s",
                       stm, evproc, total, cproc[fStatus]);
       } else {
-         sprintf(buf, "%s (%lld events of %lld processed)",
+         buf = TString::Format("%s (%lld events of %lld processed)",
                       stm, evproc, total);
       }
       fTotal->SetText(buf);
-      sprintf(buf, "%.1f events/sec", Float_t(evproc)/Long_t(tdiff)*1000.);
+      buf = TString::Format("%.1f events/sec", Float_t(evproc)/Long_t(tdiff)*1000.);
       fRate->SetText(buf);
 
       if (processed < 0) {
          // And we disable the buttons
+         fAsyn->SetState(kButtonDisabled);
          fStop->SetState(kButtonDisabled);
          fAbort->SetState(kButtonDisabled);
          fClose->SetState(kButtonUp);
@@ -524,20 +546,20 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
 
    Long_t tt;
    UInt_t hh=0, mm=0, ss=0;
-   char buf[256];
+   TString buf;
    char stm[256];
    static const char *cproc[] = { "running", "done",
                                   "STOPPED", "ABORTED", "***EVENTS SKIPPED***"};
 
    // Update title
-   sprintf(buf, "Executing on PROOF cluster \"%s\" with %d parallel workers:",
+   buf = TString::Format("Executing on PROOF cluster \"%s\" with %d parallel workers:",
            fProof ? fProof->GetMaster() : "<dummy>",
            fProof ? fProof->GetParallel() : 0);
    fTitleLab->SetText(buf);
 
    if (initTime >= 0.) {
       // Set init time
-      sprintf(buf, "%.1f secs", initTime);
+      buf = TString::Format("%.1f secs", initTime);
       fInit->SetText(buf);
       fDialog->Layout();
    }
@@ -560,7 +582,7 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
 
    if (fEntries != total) {
       fEntries = total;
-      sprintf(buf, "%d files, number of events %lld, starting event %lld",
+      buf = TString::Format("%d files, number of events %lld, starting event %lld",
               fFiles, fEntries, fFirst);
       fFilesEvents->SetText(buf);
    }
@@ -592,7 +614,7 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
          fStatus = kIncomplete;
          // We use a different color to highlight incompletion
          fBar->SetBarColor("magenta");
-         st = Form(" %s", cproc[fStatus]);
+         st = TString::Format(" %s", cproc[fStatus]);
       }
 
       tt = (Long_t)fProcTime;
@@ -608,10 +630,10 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
       else
          sprintf(stm, "%d sec", ss);
       fProcessed->SetText("Processed:");
-      sprintf(buf, "%lld events (%.2f MBs) in %s %s",
+      buf = TString::Format("%lld events (%.2f MBs) in %s %s",
               std::max(fPrevProcessed, processed), fAvgMBRate*fProcTime, stm, st.Data());
       fTotal->SetText(buf);
-      sprintf(buf, "%.1f evts/sec (%.1f MBs/sec)", fAvgRate, fAvgMBRate);
+      buf = TString::Format("%.1f evts/sec (%.1f MBs/sec)", fAvgRate, fAvgMBRate);
       fRate->SetText(buf);
       // Fill rate graph
       Bool_t useAvg = gEnv->GetValue("Proof.RatePlotUseAvg", 0);
@@ -633,11 +655,12 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
          fProof->Disconnect("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)",
                             this,
                             "Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)");
-         fProof->Disconnect("StopProcess(Bool_t)", this,
-                            "IndicateStop(Bool_t)");
+         fProof->Disconnect("StopProcess(Bool_t)", this, "IndicateStop(Bool_t)");
+         fProof->Disconnect("DisableGoAsyn()", this, "DisableAsyn()");
       }
 
       // Set button state
+      fAsyn->SetState(kButtonDisabled);
       fStop->SetState(kButtonDisabled);
       fAbort->SetState(kButtonDisabled);
       fClose->SetState(kButtonUp);
@@ -670,27 +693,28 @@ void TProofProgressDialog::Progress(Long64_t total, Long64_t processed,
       else
          sprintf(stm, "%d sec", ss);
       if (fStatus > kDone) {
-         sprintf(buf, "%s (processed %lld events out of %lld - %.2f MBs of data) - %s",
+         buf = TString::Format("%s (processed %lld events out of %lld - %.2f MBs of data) - %s",
                       stm, evproc, total, mbsproc, cproc[fStatus]);
       } else {
-         sprintf(buf, "%s (processed %lld events out of %lld - %.2f MBs of data)",
+         buf = TString::Format("%s (processed %lld events out of %lld - %.2f MBs of data)",
                       stm, evproc, total, mbsproc);
       }
       fTotal->SetText(buf);
 
       // Post
       if (evtrti > 0.) {
-         sprintf(buf, "%.1f evts/sec (%.1f MBs/sec) - avg: %.1f evts/sec (%.1f MBs/sec)",
+         buf = TString::Format("%.1f evts/sec (%.1f MBs/sec) - avg: %.1f evts/sec (%.1f MBs/sec)",
                       evtrti, mbrti, fAvgRate, fAvgMBRate);
          fRatePoints->Fill(procTime, evtrti, mbrti);
          fRatePlot->SetState(kButtonUp);
       } else {
-         sprintf(buf, "avg: %.1f evts/sec (%.1f MBs/sec)", fAvgRate, fAvgMBRate);
+         buf = TString::Format("avg: %.1f evts/sec (%.1f MBs/sec)", fAvgRate, fAvgMBRate);
       }
       fRate->SetText(buf);
 
       if (processed < 0) {
          // And we disable the buttons
+         fAsyn->SetState(kButtonDisabled);
          fStop->SetState(kButtonDisabled);
          fAbort->SetState(kButtonDisabled);
          fClose->SetState(kButtonUp);
@@ -715,10 +739,8 @@ TProofProgressDialog::~TProofProgressDialog()
       fProof->Disconnect("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)",
                          this,
                          "Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)");
-      fProof->Disconnect("StopProcess(Bool_t)", this,
-                         "IndicateStop(Bool_t)");
-      //fProof->Disconnect("LogMessage(const char*,Bool_t)", this,
-      //                   "LogMessage(const char*,Bool_t)");
+      fProof->Disconnect("StopProcess(Bool_t)", this, "IndicateStop(Bool_t)");
+      fProof->Disconnect("DisableGoAsyn()", this, "DisableAsyn()");
       fProof->Disconnect("ResetProgressDialog(const char*,Int_t,Long64_t,Long64_t)",
                          this,
                          "ResetProgressDialog(const char*,Int_t,Long64_t,Long64_t)");
@@ -745,6 +767,15 @@ void TProofProgressDialog::CloseWindow()
 }
 
 //______________________________________________________________________________
+void TProofProgressDialog::DisableAsyn()
+{
+   // Disable the asyn switch when an external request for going asynchronous is issued
+
+   fProof->Disconnect("DisableGoAsyn()", this, "DisableAsyn()");
+   fAsyn->SetState(kButtonDisabled);
+}
+
+//______________________________________________________________________________
 void TProofProgressDialog::IndicateStop(Bool_t aborted)
 {
    // Indicate that Cancel or Stop was clicked.
@@ -760,9 +791,10 @@ void TProofProgressDialog::IndicateStop(Bool_t aborted)
       fProof->Disconnect("Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)",
                          this,
                          "Progress(Long64_t,Long64_t,Long64_t,Float_t,Float_t,Float_t,Float_t)");
-      fProof->Disconnect("StopProcess(Bool_t)", this,
-                         "IndicateStop(Bool_t)");
+      fProof->Disconnect("StopProcess(Bool_t)", this, "IndicateStop(Bool_t)");
+      fProof->Disconnect("DisableGoAsyn()", this, "DisableAsyn()");
       // These buttons are meaningless at this point
+      fAsyn->SetState(kButtonDisabled);
       fStop->SetState(kButtonDisabled);
       fAbort->SetState(kButtonDisabled);
    }
@@ -856,6 +888,7 @@ void TProofProgressDialog::DoStop()
    fStatus = kStopped;
 
    // Set buttons states
+   fAsyn->SetState(kButtonDisabled);
    fStop->SetState(kButtonDisabled);
    fAbort->SetState(kButtonDisabled);
    fClose->SetState(kButtonUp);
@@ -870,9 +903,21 @@ void TProofProgressDialog::DoAbort()
    fStatus = kAborted;
 
    // Set buttons states
+   fAsyn->SetState(kButtonDisabled);
    fStop->SetState(kButtonDisabled);
    fAbort->SetState(kButtonDisabled);
    fClose->SetState(kButtonUp);
+}
+
+//______________________________________________________________________________
+void TProofProgressDialog::DoAsyn()
+{
+   // Handle Asyn button.
+
+   fProof->GoAsynchronous();
+
+   // Set buttons states
+   fAsyn->SetState(kButtonDisabled);
 }
 
 //______________________________________________________________________________

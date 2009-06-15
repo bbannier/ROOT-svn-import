@@ -19,7 +19,7 @@ dnl   for solaris
 CC=$CXX
 
 dnl disable static building
-AM_DISABLE_STATIC
+dnl AM_DISABLE_STATIC
 AM_PROG_LIBTOOL
 
 dnl Checks for libraries.
@@ -42,7 +42,7 @@ AC_PROG_RANLIB
 
 AC_OPENMP
 CFLAGS="$CFLAGS $OPENMP_CFLAGS"
-CXXFLAGS="$CFLAGS $OPENMP_CXXFLAGS"
+CXXFLAGS="$CXXFLAGS $OPENMP_CXXFLAGS"
 
 dnl files to be generated 
 AC_OUTPUT(Makefile inc/Makefile inc/Minuit2/Makefile inc/Math/Makefile src/Makefile 

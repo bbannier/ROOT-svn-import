@@ -255,9 +255,16 @@ void TEveCaloVizEditor::SetModel(TObject* obj)
       fM->GetData()->GetPhiLimits(min, max);
       fPhi->SetLimits(min, max, 101, TGNumberFormat::kNESRealTwo);
       fPhi->SetValue(fM->fPhi);
-      fPhi->SetToolTip("Center angle in radians");
-
-      fPhiOffset->SetLimits(0, TMath::Pi(), 101, TGNumberFormat::kNESRealTwo);
+      if ( fM->GetData()->GetWrapTwoPi())
+      {
+         fPhi->SetToolTip("Center angle in radians");
+         fPhiOffset->SetLimits(1e-3, TMath::Pi(), 101, TGNumberFormat::kNESRealTwo);
+      }
+      else
+      {
+         Float_t d = (max-min)*0.5;
+         fPhiOffset->SetLimits(1e-3, d, 101, TGNumberFormat::kNESRealTwo);
+      }
       fPhiOffset->SetValue(fM->fPhiOffset);
       fPhiOffset->SetToolTip("Phi range in radians");
 
@@ -349,5 +356,59 @@ void TEveCaloVizEditor::DoSliceColor(Pixel_t pixel)
 
    TGColorSelect *cs = (TGColorSelect *) gTQSender;
    fM->SetDataSliceColor(cs->WidgetId(), Color_t(TColor::GetColor(pixel)));
+   Update();
+}
+
+/**************************************************************************/
+/**************************************************************************/
+/**************************************************************************/
+//______________________________________________________________________________
+// GUI editor for TEveCalo3DEditor.
+//
+
+ClassImp(TEveCalo3DEditor);
+
+//______________________________________________________________________________
+TEveCalo3DEditor::TEveCalo3DEditor(const TGWindow *p, Int_t width, Int_t height,
+                                       UInt_t options, Pixel_t back) :
+   TGedFrame(p, width, height, options | kVerticalFrame, back),
+   fM(0),
+   fFrameTransparency(0)
+{
+   // Constructor.
+
+   MakeTitle("TEveCalo3D");
+
+   TGHorizontalFrame* f = new TGHorizontalFrame(this);
+   TGLabel* lab = new TGLabel(f, "Frame transparency: ");
+   f->AddFrame(lab, new TGLayoutHints(kLHintsLeft|kLHintsBottom, 1, 1, 1, 1));
+
+   fFrameTransparency = new TGNumberEntry(f, 0., 2, -1,
+                                     TGNumberFormat::kNESInteger, TGNumberFormat::kNEANonNegative,
+                                     TGNumberFormat::kNELLimitMinMax, 0, 100);
+    
+   fFrameTransparency->SetHeight(18);
+   fFrameTransparency->GetNumberEntry()->SetToolTipText("Transparency: 0 is opaque, 100 fully transparent.");
+   f->AddFrame(fFrameTransparency, new TGLayoutHints(kLHintsLeft, 0, 0, 0, 0));
+   fFrameTransparency->Connect("ValueSet(Long_t)","TEveCalo3DEditor", this, "DoFrameTransparency()");
+
+   AddFrame(f, new TGLayoutHints(kLHintsTop, 1, 1, 1, 0));
+}
+
+//______________________________________________________________________________
+void TEveCalo3DEditor::SetModel(TObject* obj)
+{
+   // Set model object.
+
+   fM = dynamic_cast<TEveCalo3D*>(obj);
+   fFrameTransparency->SetNumber(fM->GetFrameTransparency());
+}
+
+//______________________________________________________________________________
+void TEveCalo3DEditor::DoFrameTransparency()
+{
+   // Slot for frame transparency.
+
+   fM->SetFrameTransparency((UChar_t)(fFrameTransparency->GetNumber()));
    Update();
 }

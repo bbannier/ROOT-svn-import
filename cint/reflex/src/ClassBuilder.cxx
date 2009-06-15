@@ -39,25 +39,54 @@
 Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, TYPE typ)
 : fClass(0)
 , fLastMember()
+, fNewClass(true)
+, fCallbackEnabled(true)
 {
    // -- Construct a class information (internal).
    std::string nam2(nam);
-   const Type& c = Type::ByName(nam2);
+   Type c = Type::ByName(nam2);
    if (c) {
       // We found a typedef to a class with the same name
       if (c.IsTypedef()) {
          nam2 += " @HIDDEN@";
+         c = Dummy::Type();
       }
       // Class already exists. Check if it was a class.
       else if (!c.IsClass()) {
-         throw RuntimeError("Attempt to replace a non-class type with a class"); // FIXME: We should not throw!
+         throw RuntimeError("Attempt to replace a non-class type with a class");
       }
    }
-   if (Tools::IsTemplated(nam)) {
-      fClass = new ClassTemplateInstance(nam2.c_str(), size, ti, modifiers);
-   }
-   else {
-      fClass = new Class(nam2.c_str(), size, ti, modifiers, typ);
+   if (!c) {
+      if (Tools::IsTemplated(nam)) {
+         fClass = new ClassTemplateInstance(nam2.c_str(), size, ti, modifiers);
+      }
+      else {
+         fClass = new Class(nam2.c_str(), size, ti, modifiers, typ);
+      }
+   } else {
+      fNewClass = false;
+      fClass = const_cast<Class*>(dynamic_cast<const Class*>( c.ToTypeBase() ));
+      if (!fClass) {
+         throw RuntimeError("Attempt to replace a non-class type with a class");         
+      }
+      if (fClass->SizeOf() == 0) {
+         fClass->SetSize(size);
+      } else if (fClass->SizeOf() != size) {
+         throw RuntimeError(std::string("Attempt to change the size of the class ")+std::string(nam));                  
+      }
+      if ( 0==(strcmp(fClass->TypeInfo().name(),typeid(Reflex::UnnamedClass).name())) ) {
+         fClass->SetTypeInfo( ti );
+      } else if ( 0!= strcmp(ti.name(),typeid(Reflex::UnnamedClass).name())
+                 && 0!= strcmp(ti.name(),fClass->TypeInfo().name()) ) {
+         throw RuntimeError(std::string("Attempt to change the type_info of the class ")+std::string(nam));                           
+      }
+      if (modifiers != 0) {
+         if ( 0==fClass->Modifiers() ) {
+            fClass->SetModifiers(modifiers);
+         } else if ( fClass->Modifiers() != modifiers ) {
+            throw RuntimeError(std::string("Attempt to change the modifiers of the class ")+std::string(nam));                                       
+         }
+      }
    }
 }
 
@@ -65,13 +94,26 @@ Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info
 Reflex::ClassBuilderImpl::~ClassBuilderImpl()
 {
    // -- ClassBuilderImpl destructor. Used for call back functions (e.g. Cintex).
-   FireClassCallback(fClass->ThisType());
+   if (fCallbackEnabled) {
+      FireClassCallback(fClass->ThisType());
+   }
 }
 
 //______________________________________________________________________________
 void Reflex::ClassBuilderImpl::AddBase(const Type& bas, OffsetFunction offsFP, unsigned int modifiers)
 {
    // -- Add base class information (internal).
+   if (!fNewClass) {
+      for(Reflex::Base_Iterator iter = fClass->Base_Begin(); iter != fClass->Base_End() ; ++iter ) {
+         if ( iter->Name() == bas.Name() ) {
+            // Already entered, ignore.
+            return;
+//            if ( offsFP != iter->Offset() ) {
+//               throw RuntimeError(std::string("Attempt to change the offset of a base class (")+bas.Name()+" of the class \"")+fClass.Name());                                                      
+//            }
+         }
+      }
+   }
    fClass->AddBase(bas, offsFP, modifiers);
 }
 
@@ -79,6 +121,19 @@ void Reflex::ClassBuilderImpl::AddBase(const Type& bas, OffsetFunction offsFP, u
 void Reflex::ClassBuilderImpl::AddDataMember(const char* nam, const Type& typ, size_t offs, unsigned int modifiers)
 {
    // -- Add data member info (internal).
+   if (!fNewClass) {
+      for(Reflex::Member_Iterator iter = fClass->DataMember_Begin(); iter != fClass->DataMember_End() ; ++iter ) {
+         if ( iter->Name() == nam ) {
+            if (offs!=0 && iter->Offset() != offs) {
+               throw RuntimeError(std::string("Attempt to change the offset of a data member (")+nam+") of the class "+fClass->Name());
+            }
+            if (typ && typ != iter->TypeOf()) {
+               throw RuntimeError(std::string("Attempt to change the type of a data member (")+nam+") of the class "+fClass->Name());
+            }
+            return;
+         }
+      }
+   }
    fLastMember = Member(new DataMember(nam, typ, offs, modifiers));
    fClass->AddDataMember(fLastMember);
 }
@@ -87,6 +142,13 @@ void Reflex::ClassBuilderImpl::AddDataMember(const char* nam, const Type& typ, s
 void Reflex::ClassBuilderImpl::AddFunctionMember(const char* nam, const Type& typ, StubFunction stubFP, void* stubCtx, const char* params, unsigned int modifiers)
 {
    // -- Add function member info (internal).
+   if (!fNewClass) {
+      for(Reflex::Member_Iterator iter = fClass->DataMember_Begin(); iter != fClass->DataMember_End() ; ++iter ) {
+         if ( iter->Name() == nam && typ && typ == iter->TypeOf()) {
+            return;
+         }
+      }
+   }
    if (Tools::IsTemplated(nam)) {
       fLastMember = Member(new FunctionMemberTemplateInstance(nam, typ, stubFP, stubCtx, params, modifiers, *(dynamic_cast<ScopeBase*>(fClass))));
    }
@@ -164,6 +226,15 @@ void Reflex::ClassBuilderImpl::AddProperty(const char* key, Any value)
    else {
       fClass->Properties().AddProperty(key, value);
    }
+}
+
+//______________________________________________________________________________
+void Reflex::ClassBuilderImpl::EnableCallback(bool enable /*= true*/)
+{
+   // Enable (or disable) the calling of the callback when this object is 
+   // destructed.
+
+   fCallbackEnabled = enable;
 }
 
 //______________________________________________________________________________
@@ -259,6 +330,16 @@ Reflex::ClassBuilder& Reflex::ClassBuilder::addUnion(const char* nam, const char
   return *this;
 }
 */
+
+//______________________________________________________________________________
+Reflex::ClassBuilder& Reflex::ClassBuilder::EnableCallback(bool enable /*=true*/)
+{
+   // Enable (or disable) the calling of the callback when this object is 
+   // destructed.
+
+   fClassBuilderImpl.EnableCallback(enable);
+   return *this;
+}
 
 //______________________________________________________________________________
 Reflex::ClassBuilder& Reflex::ClassBuilder::SetSizeOf(size_t size)

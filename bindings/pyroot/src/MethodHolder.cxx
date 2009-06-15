@@ -32,6 +32,8 @@
 
 
 //- data and local helpers ---------------------------------------------------
+R__EXTERN PyObject* gRootModule;
+
 namespace {
 
 // CINT temp level guard
@@ -227,13 +229,13 @@ void PyROOT::TMethodHolder< T, M >::CreateSignature_()
 
       fSignature += fMethod.TypeOf().FunctionParameterAt( iarg ).Name( ROOT::Reflex::QUALIFIED );
 
-      std::string parname = fMethod.FunctionParameterNameAt( iarg );
+      const std::string& parname = fMethod.FunctionParameterNameAt( iarg );
       if ( ! parname.empty() ) {
          fSignature += " ";
          fSignature += parname;
       }
 
-      std::string defvalue = fMethod.FunctionParameterDefaultAt( iarg );
+      const std::string& defvalue = fMethod.FunctionParameterDefaultAt( iarg );
       if ( ! defvalue.empty() ) {
          fSignature += " = ";
          fSignature += defvalue;
@@ -418,6 +420,63 @@ Int_t TMethodHolder< ROOT::Reflex::Scope, ROOT::Reflex::Member >::GetPriority()
 
 //____________________________________________________________________________
 template< class T, class M >
+Int_t PyROOT::TMethodHolder< T, M >::GetMaxArgs()
+{
+   return fMethod.FunctionParameterSize();
+}
+
+//____________________________________________________________________________
+template< class T, class M>
+PyObject* PyROOT::TMethodHolder< T, M >::GetArgSpec( Int_t iarg )
+{
+   if ( iarg >= (int)fMethod.FunctionParameterSize() )
+      return 0;
+
+   std::string argrep = fMethod.TypeOf().FunctionParameterAt( iarg ).Name( ROOT::Reflex::Q );
+
+   const std::string& parname = fMethod.FunctionParameterNameAt( iarg );
+   if ( ! parname.empty() ) {
+      argrep += " ";
+      argrep += parname;
+   }
+
+   return PyString_FromString( argrep.c_str() );
+}
+
+//____________________________________________________________________________
+template< class T, class M>
+PyObject* PyROOT::TMethodHolder< T, M >::GetArgDefault( Int_t iarg )
+{
+   if ( iarg >= (int)fMethod.FunctionParameterSize() )
+      return 0;
+
+   const std::string& defvalue = fMethod.FunctionParameterDefaultAt( iarg ).c_str();
+   if ( ! defvalue.empty() ) {
+
+   // attempt to evaluate the string representation (will work for all builtin types)
+      PyObject* pyval = (PyObject*)PyRun_String(
+          (char*)defvalue.c_str(), Py_eval_input, gRootModule, gRootModule );
+      if ( ! pyval && PyErr_Occurred() ) {
+         PyErr_Clear();
+         return PyString_FromString( defvalue.c_str() );
+      }
+
+      return pyval;
+   }
+
+   return 0;
+}
+
+//____________________________________________________________________________
+template< class T, class M>
+PyObject* PyROOT::TMethodHolder< T, M >::GetScope()
+{
+   return MakeRootClassFromString< TScopeAdapter, TBaseAdapter, TMemberAdapter >(
+      fMethod.DeclaringScope().Name( ROOT::Reflex::SCOPED | ROOT::Reflex::FINAL ) );
+}
+
+//____________________________________________________________________________
+template< class T, class M >
 Bool_t PyROOT::TMethodHolder< T, M >::Initialize()
 {
 // done if cache is already setup
@@ -476,7 +535,7 @@ PyObject* PyROOT::TMethodHolder< T, M >::FilterArgs( ObjectProxy*& self, PyObjec
 
 //____________________________________________________________________________
 template< class T, class M >
-Bool_t PyROOT::TMethodHolder< T, M >::SetMethodArgs( PyObject* args )
+Bool_t PyROOT::TMethodHolder< T, M >::SetMethodArgs( PyObject* args, Long_t user )
 {
 // clean slate
    if ( fMethodCall )
@@ -497,8 +556,9 @@ Bool_t PyROOT::TMethodHolder< T, M >::SetMethodArgs( PyObject* args )
    }
 
 // convert the arguments to the method call array
-   for ( int i = 0; i < argc; i++ ) {
-      if ( ! fConverters[ i ]->SetArg( PyTuple_GET_ITEM( args, i ), fParameters[i], fMethodCall ) ) {
+   for ( int i = 0; i < argc; ++i ) {
+      if ( ! fConverters[ i ]->SetArg(
+              PyTuple_GET_ITEM( args, i ), fParameters[i], fMethodCall, user ) ) {
          SetPyError_( PyString_FromFormat( "could not convert argument %d", i+1 ) );
          return kFALSE;
       }
@@ -577,7 +637,7 @@ PyObject* PyROOT::TMethodHolder< T, M >::Execute( void* self )
 //____________________________________________________________________________
 template< class T, class M >
 PyObject* PyROOT::TMethodHolder< T, M >::operator()(
-      ObjectProxy* self, PyObject* args, PyObject* kwds )
+      ObjectProxy* self, PyObject* args, PyObject* kwds, Long_t user )
 {
 // setup as necessary
    if ( ! Initialize() )
@@ -588,7 +648,7 @@ PyObject* PyROOT::TMethodHolder< T, M >::operator()(
       return 0;
 
 // translate the arguments
-   Bool_t bConvertOk = SetMethodArgs( args );
+   Bool_t bConvertOk = SetMethodArgs( args, user );
    Py_DECREF( args );
 
    if ( bConvertOk == kFALSE )

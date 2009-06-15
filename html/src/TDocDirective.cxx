@@ -16,6 +16,7 @@
 #include "TSystem.h"
 #include "TVirtualPad.h"
 #include "TVirtualMutex.h"
+#include <typeinfo>
 #include <fstream>
 #include <sstream>
 #include <stdlib.h>
@@ -405,7 +406,7 @@ Bool_t TDocMacroDirective::GetResult(TString& result)
          dparser = new TDocParser(*(TClassDocOutput*)GetDocOutput(), GetDocParser()->GetCurrentClass());
       else dparser = new TDocParser(*GetDocOutput());
       std::stringstream ssConverted;
-      dparser->Convert(ssConverted, ssRaw, "./", kFALSE /*no code*/);
+      dparser->Convert(ssConverted, ssRaw, "./", kTRUE /*code*/, kFALSE /*process directives*/);
       delete dparser;
 
       fMacro->GetListOfLines()->Delete();
@@ -489,7 +490,7 @@ Bool_t TDocMacroDirective::GetResult(TString& result)
                "<a id=\"" + id + "_A1\" class=\"tab\" href=\"#\" onclick=\"javascript:return SetDiv('" + id + "',1);\">Source</a>\n"
                "<br /></div><div class=\"tabcontent\">\n"
                "<div id=\"" + id + "_0\" class=\"tabvisible\">" + result + "</div>\n"
-               "<div id=\"" + id + "_1\" class=\"tabhidden\"><div class=\"code\"><pre class=\"code\">");
+               "<div id=\"" + id + "_1\" class=\"tabhidden\"><div class=\"listing\"><pre class=\"code\">");
             TIter iLine(fMacro->GetListOfLines());
             TObjString* osLine = 0;
             while ((osLine = (TObjString*) iLine()))
@@ -636,6 +637,10 @@ void TDocLatexDirective::CreateLatex(const char* filename)
       // add magic batch vs. gui canvas sizes (4, 28)
       fBBCanvas = (TVirtualPad*)gROOT->ProcessLineFast(
          Form("new TCanvas(\"R__TDocLatexDirective_BBCanvas\",\"fBBCanvas\",%g,%g);", -(canvSize + 4.), canvSize + 28.));
+   if (!fBBCanvas) {
+      Error("CreateLatex", "Cannot create a TCanvas via the interpreter!");
+      return;
+   }
    fBBCanvas->SetBorderMode(0);
    fBBCanvas->SetFillColor(kWhite);
 

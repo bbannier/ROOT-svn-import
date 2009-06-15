@@ -54,7 +54,7 @@ TDirectory::TDirectory(const char *name, const char *title, Option_t * /*classna
 //*-*-*-*-*-*-*-*-*-*-*-* Create a new Directory *-*-*-*-*-*-*-*-*-*-*-*-*-*
 //*-*                     ======================
 //  A new directory with name,title is created in the current directory
-//  The directory header information is immediatly saved on the file
+//  The directory header information is immediately saved in the file
 //  A new key is added in the parent directory
 //
 //  When this constructor is called from a class directly derived
@@ -85,7 +85,7 @@ TDirectory::TDirectory(const char *name, const char *title, Option_t * /*classna
 TDirectory::TDirectory(const TDirectory &directory) : TNamed(directory)
 {
    // Copy constructor.
-   ((TDirectory&)directory).Copy(*this);
+   directory.Copy(*this);
 }
 
 //______________________________________________________________________________
@@ -260,7 +260,7 @@ TObject *TDirectory::CloneObject(const TObject *obj, Bool_t autoadd /* = kTRUE *
    TBuffer *buffer = (TBuffer*)gROOT->ProcessLine(Form("new TBufferFile(%d,10000);",TBuffer::kWrite));
    if (!buffer) return 0;
    buffer->MapObject(obj);  //register obj in map to handle self reference
-   ((TObject*)obj)->Streamer(*buffer);
+   const_cast<TObject*>(obj)->Streamer(*buffer);
 
    // read new object from buffer
    buffer->SetReadMode();
@@ -609,7 +609,21 @@ TObject *TDirectory::FindObjectAny(const char *aname) const
    // use FindKeyAny(aname)->ReadObj().
 
    //object may be already in the list of objects in memory
-   return fList->FindObject(aname);
+   TObject *obj =  fList->FindObject(aname);
+   if (obj) return obj;
+   
+   //try with subdirectories
+   TIter next(fList);
+   while( (obj = next()) ) {
+      if (obj->IsA()->InheritsFrom(TDirectory::Class())) {
+         TDirectory* subdir = dynamic_cast<TDirectory*>(obj);
+         TObject *subobj = subdir->TDirectory::FindObjectAny(aname); // Explicitly recurse into _this_ exact function.
+         if (subobj) {
+            return subobj;
+         }
+      }
+   }
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -704,7 +718,7 @@ void *TDirectory::GetObjectUnchecked(const char *namecycle)
 //
 //  VERY IMPORTANT NOTE:
 //  The calling application must cast the returned object to
-//  the final type, eg
+//  the final type, e.g.
 //      MyClass *obj = (MyClass*)directory->GetObject("some object of MyClass");
 
    return GetObjectChecked(namecycle,(TClass*)0);
@@ -973,7 +987,7 @@ TObject *TDirectory::Remove(TObject* obj)
 void TDirectory::rmdir(const char *name)
 {
    // Removes subdirectory from the directory
-   // When diredctory is deleted, all keys in all subdirectories will be
+   // When directory is deleted, all keys in all subdirectories will be
    // read first and deleted from file (if exists)
    // Equivalent call is Delete("name;*");
 
@@ -1112,7 +1126,7 @@ void TDirectory::TContext::CdNull()
 {
    // Set the current directory to null.
    // This is called from the TContext destructor.  Since the destructor is
-   // inline, we do no want to have it use directly a global variable.
+   // inline, we do not want to have it directly use a global variable.
 
    gDirectory = 0;
 }

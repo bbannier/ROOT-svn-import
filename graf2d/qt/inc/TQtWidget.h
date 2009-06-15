@@ -33,6 +33,7 @@
 #     include <QPaintEvent>
 #     include <QPaintDevice>
 #     include <QSize>
+#     include <QPoint>
 #  endif
 #  include <qpixmap.h>
 #else
@@ -53,6 +54,7 @@
   class QSizePolicy;
   class QContextMenuEvent;
   class QSize;
+  class QPoint;
 #endif
   class TApplication;
 //
@@ -80,9 +82,10 @@ private:
    bool  fIsImage;
 public:
    TQtWidgetBuffer(const QWidget *w, bool clear=false);
+   TQtWidgetBuffer(const TQtWidgetBuffer &b);
    const QPaintDevice  *Buffer() const  { return fBuffer; }
    QPaintDevice  *Buffer()  { return fBuffer; }
-   ~TQtWidgetBuffer(){}
+   ~TQtWidgetBuffer();
    void Clear();
    bool PaintingActive(){ return fBuffer ? fBuffer->paintingActive() : false; }
    QRect Rect () const { return fWidget->rect();                }
@@ -130,8 +133,6 @@ public:
   QPixmap  *GetOffScreenBuffer()  const;
 
   // overloaded methods
-  void Resize (int w, int h);
-  void Resize (const QSize &size);
   virtual void Erase ();
   bool    IsDoubleBuffered() const { return fDoubleBufferOn; }
   void    SetDoubleBuffer(bool on=TRUE);
@@ -139,6 +140,7 @@ public:
 
 protected:
    friend class TGQt;
+   friend class TQtFeedBackWidget;
    TCanvas           *fCanvas;
    TQtWidgetBuffer   *fPixmapID;     // Double buffer of this widget
    TQtWidgetBuffer   *fPixmapScreen; // Double buffer for no-double buffer operation
@@ -149,6 +151,10 @@ protected:
    QSize       fSizeHint;
    QWidget    *fWrapper;
    QString     fSaveFormat;
+   bool        fInsidePaintEvent;
+   QPoint      fOldMousePos;
+   int         fIgnoreLeaveEnter;
+
 
    void SetRootID(QWidget *wrapper);
    QWidget *GetRootID() const;
@@ -158,6 +164,8 @@ protected:
    void AdjustBufferSize();
 
    bool PaintingActive () const;
+   void SetIgnoreLeaveEnter(int ignore=1);
+
 
    virtual void enterEvent       ( QEvent *      );
 #if (QT_VERSION > 0x039999)
@@ -242,9 +250,7 @@ signals:
 #endif
 
 #ifndef Q_MOC_RUN
-//MOC_SKIP_BEGIN
    ClassDef(TQtWidget,0) // QWidget to back ROOT TCanvas (Can be used with Qt designer)
-//MOC_SKIP_END
 #endif
 };
 
@@ -299,5 +305,6 @@ inline void   TQtWidget::EnableSignalEvents  (UInt_t f){ SetBit  (f); }
 inline void   TQtWidget::DisableSignalEvents (UInt_t f){ ResetBit(f); }
 inline Bool_t TQtWidget::IsSignalEventEnabled(UInt_t f) const { return TestBit (f); }
 inline void   TQtWidget::EmitSignal(UInt_t f)  {if (IsSignalEventEnabled(f)) EmitTestedSignal();}
+inline void   TQtWidget::SetIgnoreLeaveEnter(int ignore) { fIgnoreLeaveEnter = ignore; }
 
 #endif

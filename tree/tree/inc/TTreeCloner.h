@@ -37,7 +37,11 @@ class TBranch;
 class TTree;
 
 class TTreeCloner {
+   TString    fWarningMsg;       //Text of the error message lead to an 'invalid' state
+
    Bool_t     fIsValid;
+   Bool_t     fNeedConversion;   //True if the fast merge is not possible but a slow merge might possible.
+   UInt_t     fOptions;
    TTree     *fFromTree;
    TTree     *fToTree;
    Option_t  *fMethod;
@@ -63,9 +67,14 @@ class TTreeCloner {
       kSortBasketsByOffset = 2,
       kSortBasketsByEntry  = 3
    };
-   
+
 public:
-   TTreeCloner(TTree *from, TTree *to, Option_t *method);
+   enum EClonerOptions {
+      kNone       = 0,
+      kNoWarnings = BIT(1)
+   };
+
+   TTreeCloner(TTree *from, TTree *to, Option_t *method, UInt_t options = kNone);
    virtual ~TTreeCloner();
 
    void   CloseOutWriteBaskets();
@@ -76,8 +85,10 @@ public:
    void   CopyMemoryBaskets();
    void   CopyStreamerInfos();
    void   CopyProcessIds();
+   const char *GetWarning() const { return fWarningMsg; }
    Bool_t Exec();
    Bool_t IsValid() { return fIsValid; }
+   Bool_t NeedConversion() { return fNeedConversion; }
    void   SortBaskets();
    void   WriteBaskets();
 

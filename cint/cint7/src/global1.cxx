@@ -34,8 +34,20 @@ void (*G__atpause)();
 
 }
 
+// Keep track of whether the constructor for G__struct was run.       
+int G__tagtable::inited  = false;
+
+G__tagtable::G__tagtable() 
+{
+   // Construtor for the 'singleton' G__struct.
+   // Keep track of whether the constructor for G__struct was run.       
+
+   G__tagtable::inited = true;
+}
+
 namespace Cint {
    namespace Internal {
+
 
 /***********************************************************************
 * EH_env and err_env are only variable name which isn't escaped by 'G__' 
@@ -118,7 +130,7 @@ int G__asm_noverflow=0; /* When this is set to 1, compilation starts.
 int G__asm_dbg=0; /* p-code debugging flag, only valid when compiled with
                    * G__ASM_DBG */
 #ifdef G__ASM_DBG
-char *G__LOOPCOMPILEABORT="LOOP COMPILE ABORTED";
+const char *G__LOOPCOMPILEABORT="LOOP COMPILE ABORTED";
 #endif
 
 #endif /* G__ASM */
@@ -179,12 +191,12 @@ struct G__Definetemplatefunc G__definedtemplatefunc;
 FILE *G__mfp;
 fpos_t G__nextmacro;
 int G__mline;
-char *G__macro="tmpfile";
+const char *G__macro="tmpfile";
 struct G__Deffuncmacro G__deffuncmacro;
 char G__macros[G__LONGLINE];
 char G__ppopt[G__ONELINE];
 char *G__allincludepath=(char*)NULL;
-char *G__undeflist="";
+const char *G__undeflist="";
 
 /**************************************************************************
 * Macro constant

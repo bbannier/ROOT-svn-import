@@ -89,6 +89,9 @@
 
 ClassImp(TGLViewer);
 
+TGLColorSet TGLViewer::fgDefaultColorSet;
+Bool_t      TGLViewer::fgUseDefaultColorSetForNewViewers = kFALSE;
+
 //______________________________________________________________________________
 TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
                      Int_t width, Int_t height) :
@@ -107,6 +110,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
 
    fLightSet          (0),
    fClipSet           (0),
+   fClipAutoUpdate    (kTRUE),
    fSelectedPShapeRef (0),
    fCurrentOvlElm     (0),
 
@@ -115,7 +119,6 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
    fRedrawTimer(0),
    fMaxSceneDrawTimeHQ(5000),
    fMaxSceneDrawTimeLQ(100),
-   fClearColor(1),
    fAxesType(TGLUtil::kAxesNone),
    fAxesDepthTest(kTRUE),
    fReferenceOn(kFALSE),
@@ -163,6 +166,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
 
    fLightSet          (0),
    fClipSet           (0),
+   fClipAutoUpdate    (kTRUE),
    fSelectedPShapeRef (0),
    fCurrentOvlElm     (0),
 
@@ -171,7 +175,6 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
    fRedrawTimer(0),
    fMaxSceneDrawTimeHQ(5000),
    fMaxSceneDrawTimeLQ(100),
-   fClearColor(1),
    fAxesType(TGLUtil::kAxesNone),
    fAxesDepthTest(kTRUE),
    fReferenceOn(kFALSE),
@@ -216,10 +219,25 @@ void TGLViewer::InitSecondaryObjects()
    // Common initialization.
 
    fLightSet = new TGLLightSet;
-   fClipSet  = new TGLClipSet;  fOverlay.push_back(fClipSet);
+   fClipSet  = new TGLClipSet;
+   AddOverlayElement(fClipSet);
 
-   fSelectedPShapeRef = new TGLManipSet; fOverlay.push_back(fSelectedPShapeRef);
+   fSelectedPShapeRef = new TGLManipSet;
    fSelectedPShapeRef->SetDrawBBox(kTRUE);
+   AddOverlayElement(fSelectedPShapeRef);
+
+   fLightColorSet.StdLightBackground();
+   if (fgUseDefaultColorSetForNewViewers) {
+      fRnrCtx->ChangeBaseColorSet(&fgDefaultColorSet);
+   } else {
+      if (fPad) {
+         fRnrCtx->ChangeBaseColorSet(&fLightColorSet);
+         fLightColorSet.Background().SetColor(fPad->GetFillColor());
+         fLightColorSet.Foreground().SetColor(fPad->GetLineColor());
+      } else {
+         fRnrCtx->ChangeBaseColorSet(&fDarkColorSet);
+      }
+   }
 
    fCameraOverlay = new TGLCameraOverlay(kFALSE, kFALSE);
    AddOverlayElement(fCameraOverlay);
@@ -233,9 +251,7 @@ TGLViewer::~TGLViewer()
    // Destroy viewer object.
 
    delete fLightSet;
-   delete fClipSet;
-   delete fSelectedPShapeRef;
-   delete fCameraOverlay;
+   // fClipSet, fSelectedPShapeRef and fCameraOverlay deleted via overlay.
 
    delete fContextMenu;
    delete fRedrawTimer;
@@ -361,6 +377,14 @@ void TGLViewer::PostSceneBuildSetup(Bool_t resetCameras)
 /**************************************************************************/
 /**************************************************************************/
 
+void TGLViewer::ResetInitGL()
+{
+   // Reset GL initialization flag.
+   // This is needed if GL-context is destroyed from outside.
+
+   fInitGL = kFALSE;
+}
+
 //______________________________________________________________________________
 void TGLViewer::InitGL()
 {
@@ -444,7 +468,11 @@ void TGLViewer::PreRender()
 
    // Setup lighting
    fLightSet->StdSetupLights(fOverallBoundingBox, *fCamera, fDebugMode);
-   fClipSet->SetupClips(fOverallBoundingBox);
+   // Setup clip object.
+   if (fClipAutoUpdate)
+      fClipSet->SetupCurrentClip(fOverallBoundingBox);
+   else
+      fClipSet->SetupCurrentClipIfInvalid(fOverallBoundingBox);
 }
 
 //______________________________________________________________________________
@@ -551,15 +579,15 @@ Bool_t TGLViewer::SavePicture(const TString &fileName)
    // can be covered by other windows.
    // Returns false if something obvious goes wrong, true otherwise.
 
-   if (fileName.EndsWith(".gif") || fileName.Contains("gif+") ||
-            fileName.EndsWith(".jpg") || fileName.EndsWith(".png"))
+   if (fileName.EndsWith(".gif") || fileName.EndsWith(".gif+") ||
+       fileName.EndsWith(".jpg") || fileName.EndsWith(".png"))
    {
       if ( ! TakeLock(kDrawLock)) {
          Error("TGLViewer::SavePicture", "viewer locked - try later.");
          return kFALSE;
       }
 
-      std::auto_ptr<TImage>gif(TImage::Create());
+      std::auto_ptr<TImage> image(TImage::Create());
 
       fRnrCtx->SetGrabImage(kTRUE);
 
@@ -570,13 +598,13 @@ Bool_t TGLViewer::SavePicture(const TString &fileName)
       else
          DoDraw();
 
-      gif->FromGLBuffer(fRnrCtx->GetGrabbedImage(), fViewport.Width(), fViewport.Height());
+      image->FromGLBuffer(fRnrCtx->GetGrabbedImage(), fViewport.Width(), fViewport.Height());
 
       fRnrCtx->SetGrabImage(kFALSE);
       delete [] fRnrCtx->GetGrabbedImage();
       fRnrCtx->SetGrabbedImage(0);
 
-      gif->WriteImage(fileName.Data());
+      image->WriteImage(fileName.Data());
    }
    else if (fileName.EndsWith(".eps"))
    {
@@ -679,14 +707,17 @@ void TGLViewer::PreDraw()
    }
 
    // For embedded gl clear color must be pad's background color.
-   Color_t ci = (fGLDevice != -1) ? gPad->GetFillColor() : fClearColor;
-   TColor *color = gROOT->GetColor(ci);
-   if (color)
-      color->GetRGB(fClearColorRGB[0], fClearColorRGB[1], fClearColorRGB[2]);
-   else
-      fClearColorRGB[0] = fClearColorRGB[1] = fClearColorRGB[2] = 1.0f;
+   {
+      Color_t ci = (fGLDevice != -1) ? gPad->GetFillColor() : fRnrCtx->ColorSet().Background().GetColorIndex();
+      TColor *color = gROOT->GetColor(ci);
+      Float_t rgb[3];
+      if (color)
+         color->GetRGB(rgb[0], rgb[1], rgb[2]);
+      else
+         rgb[0] = rgb[1] = rgb[2] = 0.0f;
 
-   glClearColor(fClearColorRGB[0], fClearColorRGB[1], fClearColorRGB[2], 1.0f);
+      glClearColor(rgb[0], rgb[1], rgb[2], 1.0f);
+   }
 
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -728,7 +759,7 @@ void TGLViewer::FadeView(Float_t alpha)
       TGLCapabilitySwitch blend(GL_BLEND,    kTRUE);
       TGLCapabilitySwitch light(GL_LIGHTING, kFALSE);
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-      glColor4f(fClearColorRGB[0], fClearColorRGB[1], fClearColorRGB[2], alpha);
+      TGLUtil::Color(fRnrCtx->ColorSet().Background(), alpha);
       glBegin(GL_QUADS);
       glVertex3f(-1, -1, z);  glVertex3f( 1, -1, z);
       glVertex3f( 1,  1, z);  glVertex3f(-1,  1, z);
@@ -1037,6 +1068,101 @@ void TGLViewer::AutoFade(Float_t fade, Float_t time, Int_t steps)
    TGLFaderHelper* fh = new TGLFaderHelper(this, fade, time, steps);
    fh->MakeFadeStep();
 }
+
+//______________________________________________________________________________
+void TGLViewer::UseDarkColorSet()
+{
+   // Use the dark color-set.
+
+   fRnrCtx->ChangeBaseColorSet(&fDarkColorSet);
+   RefreshPadEditor(this);
+}
+
+//______________________________________________________________________________
+void TGLViewer::UseLightColorSet()
+{
+   // Use the light color-set.
+
+   fRnrCtx->ChangeBaseColorSet(&fLightColorSet);
+   RefreshPadEditor(this);
+}
+
+//______________________________________________________________________________
+void TGLViewer::SwitchColorSet()
+{
+   // Swtich between dark and light colorsets.
+
+   if (IsUsingDefaultColorSet())
+   {
+      Info("SwitchColorSet()", "Global color-set is in use, switch not supported.");
+      return;
+   }
+
+   if (fRnrCtx->GetBaseColorSet() == &fLightColorSet)
+      UseDarkColorSet();
+   else
+      UseLightColorSet();
+}
+
+//______________________________________________________________________________
+void TGLViewer::UseDefaultColorSet(Bool_t x)
+{
+   // Set usage of the default color set.
+
+   if (x)
+      fRnrCtx->ChangeBaseColorSet(&fgDefaultColorSet);
+   else
+      fRnrCtx->ChangeBaseColorSet(&fDarkColorSet);
+   RefreshPadEditor(this);
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::IsUsingDefaultColorSet() const
+{
+   // Check if the viewer is using the default color set.
+   // If yes, some operations might be disabled.
+
+   return fRnrCtx->GetBaseColorSet() == &fgDefaultColorSet;
+}
+
+//______________________________________________________________________________
+void TGLViewer::SetClearColor(Color_t col)
+{
+   // Set background method.
+   // Deprecated method - set background color in the color-set.
+
+   fRnrCtx->GetBaseColorSet()->Background().SetColor(col);
+}
+
+//______________________________________________________________________________
+TGLColorSet& TGLViewer::GetDefaultColorSet()
+{
+   // Returns reference to the default color-set.
+   // Static function.
+
+   return fgDefaultColorSet;
+}
+
+//______________________________________________________________________________
+void TGLViewer::UseDefaultColorSetForNewViewers(Bool_t x)
+{
+   // Sets static flag that determines if new viewers should use the
+   // default color-set.
+   // This is false at startup.
+
+   fgUseDefaultColorSetForNewViewers = x;
+}
+
+//______________________________________________________________________________
+Bool_t TGLViewer::IsUsingDefaultColorSetForNewViewers()
+{
+   // Returns the value of the static flag that determines if new
+   // viewers should use the default color-set.
+   // This is false at startup.
+
+   return fgUseDefaultColorSetForNewViewers;
+}
+
 
 /**************************************************************************/
 // Viewport
@@ -1437,6 +1563,18 @@ void TGLViewer::SetEventHandler(TGEventHandler *handler)
    fEventHandler = handler;
    if (fGLWidget)
       fGLWidget->SetEventHandler(fEventHandler);
+}
+
+//______________________________________________________________________________
+void  TGLViewer::RemoveOverlayElement(TGLOverlayElement* el)
+{
+   // Remove overlay element.
+
+   if (el == fCurrentOvlElm)
+   {
+      fCurrentOvlElm = 0;
+   }
+   TGLViewerBase::RemoveOverlayElement(el);
 }
 
 //______________________________________________________________________________

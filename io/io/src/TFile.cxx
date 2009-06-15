@@ -366,7 +366,7 @@ TFile::TFile(const char *fname1, Option_t *option, const char *ftitle, Int_t com
    const char *fname;
    if ((fname = gSystem->ExpandPathName(fname1))) {
       SetName(fname);
-      delete [] (char*)fname;
+      delete [] fname;
       fRealName = GetName();
       fname = fRealName.Data();
    } else {
@@ -442,11 +442,11 @@ zombie:
 }
 
 //______________________________________________________________________________
-TFile::TFile(const TFile &file) : TDirectoryFile(), fInfoCache(0)
+TFile::TFile(const TFile &) : TDirectoryFile(), fInfoCache(0)
 {
-   // Copy constructor.
+   // TFile objects can not be copied.
 
-   ((TFile&)file).Copy(*this);
+   MayNotUse("TFile::TFile(const TFile &)"); 
 }
 
 //______________________________________________________________________________
@@ -1931,6 +1931,7 @@ void TFile::WriteFree()
       nbytes += afree->Sizeof();
    }
    if (!nbytes) return;
+
    TKey *key    = new TKey(fName,fTitle,IsA(),nbytes,this);
    if (key->GetSeekKey() == 0) {
       delete key;
@@ -2316,7 +2317,10 @@ void TFile::ReadStreamerInfo()
          info = (TStreamerInfo*)lnk->GetObject();
 
          if (info->IsA() != TStreamerInfo::Class()) {
-            Warning("ReadStreamerInfo","%s: not a TStreamerInfo object", GetName());
+            if (mode==1) {
+               Warning("ReadStreamerInfo","%s: not a TStreamerInfo object", GetName());
+            }
+            lnk = lnk->Next();
             continue;
          }
          // This is a quick way (instead of parsing the name) to see if this is
@@ -2376,8 +2380,8 @@ void TFile::ShowStreamerInfo()
 //______________________________________________________________________________
 UShort_t TFile::WriteProcessID(TProcessID *pidd)
 {
-   // Check if the ProcessID pidd is already in the file.
-   // if not, add it and return the index  number in the local file list
+   // Check if the ProcessID pidd is already in the file,
+   // if not, add it and return the index  number in the local file list.
 
    TProcessID *pid = pidd;
    if (!pid) pid = TProcessID::GetPID();
@@ -2395,7 +2399,7 @@ UShort_t TFile::WriteProcessID(TProcessID *pidd)
    this->WriteTObject(pid,name);
    this->IncrementProcessIDs();
    if (gDebug > 0) {
-      printf("WriteProcessID, name=%s, file=%s\n",name,GetName());
+      Info("WriteProcessID", "name=%s, file=%s", name, GetName());
    }
    return (UShort_t)npids;
 }
@@ -2692,15 +2696,15 @@ TFile *TFile::Open(const char *url, Option_t *option, const char *ftitle,
    }
 
    // Try sequentially all names in 'names'
-   TString name;
+   TString name, n;
    Ssiz_t from = 0;
-   while (namelist.Tokenize(name, from, "|") && !f) {
+   while (namelist.Tokenize(n, from, "|") && !f) {
 
       // check if we read through a file cache
       if (!strcasecmp(option, "CACHEREAD") ||
          ((!strcasecmp(option,"READ") || !strlen(option)) && fgCacheFileForce)) {
          // Try opening the file from the cache
-         if ((f = TFile::OpenFromCache(name, option, ftitle, compress, netopt)))
+         if ((f = TFile::OpenFromCache(n, option, ftitle, compress, netopt)))
             return f;
       }
 
@@ -2708,7 +2712,7 @@ TFile *TFile::Open(const char *url, Option_t *option, const char *ftitle,
 
       // change names from e.g. /castor/cern.ch/alice/file.root to
       // castor:/castor/cern.ch/alice/file.root as recognized by the plugin manager
-      TUrl urlname(name, kTRUE);
+      TUrl urlname(n, kTRUE);
       name = urlname.GetUrl();
       // Check first if a pending async open request matches this one
       if (fgAsyncOpenRequests && (fgAsyncOpenRequests->GetSize() > 0)) {
@@ -2744,7 +2748,7 @@ TFile *TFile::Open(const char *url, Option_t *option, const char *ftitle,
          if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name))) {
             if (h->LoadPlugin() == -1)
                return 0;
-            f = (TFile*) h->ExecPlugin(1, name.Data());
+            f = (TFile*) h->ExecPlugin(2, name.Data(), option);
          }
 
       } else if (type == kFile) {
@@ -2856,13 +2860,13 @@ TFileOpenHandle *TFile::AsyncOpen(const char *url, Option_t *option,
    }
 
    // Try sequentially all names in 'names'
-   TString name;
+   TString name, n;
    Ssiz_t from = 0;
-   while (namelist.Tokenize(name, from, "|") && !f) {
+   while (namelist.Tokenize(n, from, "|") && !f) {
 
       // change names from e.g. /castor/cern.ch/alice/file.root to
       // castor:/castor/cern.ch/alice/file.root as recognized by the plugin manager
-      TUrl urlname(name, kTRUE);
+      TUrl urlname(n, kTRUE);
       name = urlname.GetUrl();
 
       // Resolve the file type; this also adjusts names
@@ -2929,6 +2933,9 @@ TFile *TFile::Open(TFileOpenHandle *fh)
 
    // Note that the request may have failed
    if (fh && fgAsyncOpenRequests) {
+      // Remove it from the pending list: we need to do it at this level to avoid
+      // recursive calls in the standard TFile::Open
+      fgAsyncOpenRequests->Remove(fh);
       // Was asynchronous open functionality implemented?
       if ((f = fh->GetFile()) && !(f->IsZombie())) {
          // Yes: wait for the completion of the open phase, if needed
@@ -2945,9 +2952,6 @@ TFile *TFile::Open(TFileOpenHandle *fh)
       // Adopt the handle instance in the TFile instance so that it gets
       // automatically cleaned up
       f->fAsyncHandle = fh;
-
-      // Remove it from the pending list
-      fgAsyncOpenRequests->Remove(fh);
    }
 
    // We are done
@@ -3225,7 +3229,7 @@ Bool_t TFile::Matches(const char *url)
    // Return kTRUE if 'url' matches the coordinates of this file.
    // The check is implementation dependent and may need to be overload
    // by each TFile implememtation relying on this check.
-   // The default implementation checks teh file name only.
+   // The default implementation checks the file name only.
 
    // Check the full URL, including port and FQDN.
    TUrl u(url);
@@ -3326,7 +3330,7 @@ TFile::EFileType TFile::GetType(const char *name, Option_t *option, TString *pre
             // If option "READ" test existence and access
             TString opt = option;
             Bool_t read = (opt.IsNull() ||
-                          !opt.CompareTo("READ",TString::kIgnoreCase)) ? kTRUE : kFALSE;
+                          !opt.CompareTo("READ", TString::kIgnoreCase)) ? kTRUE : kFALSE;
             if (read) {
                char *fn;
                if ((fn = gSystem->ExpandPathName(TUrl(lfname).GetFile()))) {
@@ -3483,10 +3487,10 @@ Bool_t TFile::Cp(const char *src, const char *dst, Bool_t progressbar,
    if (opt != "") opt += "&";
    opt += raw;
    // Netx-related options:
-   //    cachesz = 2*buffersize   -> 2 buffers as peak mem usage
-   //    readaheadsz = buffersize -> Keep buffersize bytes outstanding
-   //    rmpolicy = 1             -> Remove from the cache the blk with the least offset
-   opt += Form("&cachesz=%d&readaheadsz=%d&rmpolicy=1", 2*buffersize, buffersize);
+   //    cachesz = 4*buffersize     -> 4 buffers as peak mem usage
+   //    readaheadsz = 2*buffersize -> Keep at max 4*buffersize bytes outstanding when reading
+   //    rmpolicy = 1               -> Remove from the cache the blk with the least offset
+   opt += Form("&cachesz=%d&readaheadsz=%d&rmpolicy=1", 4*buffersize, 2*buffersize);
    sURL.SetOptions(opt);
 
    // Set optimization options for the destination file
@@ -3589,12 +3593,6 @@ Bool_t TFile::Cp(const char *src, const char *dst, Bool_t progressbar,
 
    success = kTRUE;
 
-   if (sfile->GetBytesRead() != dfile->GetBytesWritten()) {
-      ::Error("TFile::Cp", "read and written bytes differ (%lld != %lld)",
-                           sfile->GetBytesRead(), dfile->GetBytesWritten());
-      success = kFALSE;
-   }
-
 copyout:
    if (sfile) sfile->Close();
    if (dfile) dfile->Close();
@@ -3604,7 +3602,7 @@ copyout:
    if (copybuffer) delete[] copybuffer;
 
    if (rmdestiferror && (success != kTRUE))
-     gSystem->Unlink(dst);
+      gSystem->Unlink(dst);
 
    watch.Stop();
    watch.Reset();

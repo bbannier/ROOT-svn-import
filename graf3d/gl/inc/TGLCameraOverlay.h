@@ -1,5 +1,5 @@
 // @(#)root/eve:$Id$
-// Author: Matevz Tadel 2007
+// Author: Alja Mrak-Tadel 2007
 
 /*************************************************************************
  * Copyright (C) 1995-2007, Rene Brun and Fons Rademakers.               *
@@ -12,9 +12,15 @@
 #ifndef ROOT_TGLCameraOverlay
 #define ROOT_TGLCameraOverlay
 
-#include "TGLOverlay.h"
-#include "TGLAxisPainter.h"
 #include "TAttAxis.h"
+#include "TGLOverlay.h"
+#include "TGLUtil.h"
+
+class TGLAxisPainter;
+class TGLFont;
+
+class TAttAxis;
+class TAxis;
 
 class TGLCameraOverlay : public TGLOverlayElement
 {
@@ -25,6 +31,8 @@ private:
    TGLCameraOverlay(const TGLCameraOverlay&);            // Not implemented
    TGLCameraOverlay& operator=(const TGLCameraOverlay&); // Not implemented
 
+   Double_t       fFrustum[4];
+
 protected:
    Bool_t         fShowOrthographic;
    Bool_t         fShowPerspective;
@@ -32,32 +40,26 @@ protected:
    EMode          fOrthographicMode;
    EMode          fPerspectiveMode;
 
-   TGLAxisPainter fAxisPainter;
-   TGLAxisAttrib   fAxisAtt;
+   TGLAxisPainter *fAxisPainter;
+   TAxis          *fAxis;
+   Float_t         fAxisExtend;
 
-   Float_t          fAxisExtend;
-   TGLPlane      fExternalRefPlane;
-   Bool_t           fUseExternalRefPlane;
+   TGLPlane       fExternalRefPlane;
+   Bool_t         fUseExternalRefPlane;
 
-  Double_t         fFrustum[4]; // cached
-
-   void    RenderPlaneIntersect(TGLRnrCtx& rnrCtx, const TGLFont &font);
+   void    RenderPlaneIntersect(TGLRnrCtx& rnrCtx);
    void    RenderAxis(TGLRnrCtx& rnrCtx);
-   void    RenderBar(TGLRnrCtx& rnrCtx, const TGLFont &font);
+   void    RenderBar(TGLRnrCtx& rnrCtx);
 
 public:
    TGLCameraOverlay(Bool_t showOrtho=kTRUE, Bool_t showPersp=kFALSE);
-   virtual ~TGLCameraOverlay() {}
+   virtual ~TGLCameraOverlay();
 
    virtual  void   Render(TGLRnrCtx& rnrCtx);
 
-   TGLAxisAttrib&  RefAxisAttrib() { return fAxisAtt; }
-   Float_t GetAxisExtend() const { return fAxisExtend; }
-   void    SetAxisExtend(Float_t x) { fAxisExtend = x; }
-
    TGLPlane& RefExternalRefPlane() { return fExternalRefPlane; }
-   void  UseExternalRefPlane(Bool_t x) { fUseExternalRefPlane=x; }
-   Bool_t GetUseExternalRefPlane() const { return fUseExternalRefPlane; }
+   void      UseExternalRefPlane(Bool_t x) { fUseExternalRefPlane=x; }
+   Bool_t    GetUseExternalRefPlane() const { return fUseExternalRefPlane; }
 
    Int_t    GetPerspectiveMode() const { return fPerspectiveMode;}
    void     SetPerspectiveMode(EMode m) {fPerspectiveMode = m;}
@@ -69,6 +71,7 @@ public:
    Bool_t   GetShowPerspective() const { return fShowPerspective; }
    void     SetShowPerspective(Bool_t x) {fShowPerspective =x;}
 
+   TAttAxis* GetAttAxis();
 
    ClassDef(TGLCameraOverlay, 1); // Show coorinates of current camera frustum.
 };

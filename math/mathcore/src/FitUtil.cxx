@@ -20,6 +20,8 @@
 #include "Math/Integrator.h"
 #include "Math/IntegratorMultiDim.h"
 #include "Math/WrappedFunction.h"
+#include "Math/OneDimFunctionAdapter.h"
+#include "Math/RichardsonDerivator.h"
 
 #include "Math/Error.h"
 #include "Math/Util.h"  // for safe log(x)
@@ -344,6 +346,7 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
    bool useBinIntegral = fitOpt.fIntegral; 
    IntegralEvaluator<> igEval( func, p, useBinIntegral); 
 
+   double maxResValue = std::numeric_limits<double>::max() /n;
 
    for (unsigned int i = 0; i < n; ++ i) { 
 
@@ -377,10 +380,12 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
 
 
       // avoid inifinity or nan in chi2 values due to wrong function values 
-      if ( resval < std::numeric_limits<double>::max() )  
+      if ( resval < maxResValue )  
          chi2 += resval; 
-      else 
-         nRejected++; 
+      else {  
+         //nRejected++; 
+         chi2 += maxResValue;
+      }
 
       
    }
@@ -421,14 +426,18 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
    //func.SetParameters(p); 
 
    unsigned int ndim = func.NDim();
-   SimpleGradientCalculator gradCalc(ndim, func );  
-   std::vector<double> grad( ndim ); 
+
+   // use Richardson derivator
+   ROOT::Math::RichardsonDerivator derivator;
+
+   double maxResValue = std::numeric_limits<double>::max() /n;
+
 
 
    for (unsigned int i = 0; i < n; ++ i) { 
 
 
-      double y = 0; 
+      double y = 0;
       const double * x = data.GetPoint(i,y);
 
       double fval = func( x, p );
@@ -454,11 +463,23 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
       while ( j < ndim && ex[j] == 0.)  { j++; } 
       // if j is less ndim some elements are not zero
       if (j < ndim) { 
+         // need an adapter from a multi-dim function to a one-dimensional
+         ROOT::Math::OneDimMultiFunctionAdapter<const IModelFunction &> f1D(func,x,0,p);
+         // select optimal step size  (use 10--3 by default as was done in TF1:
+         double kEps = 0.001;
+         double kPrecision = 1.E-8;
          for (unsigned int icoord = 0; icoord < ndim; ++icoord) { 
-            if (ex[icoord] != 0) 
-               gradCalc.Gradient(x, p, fval, &grad[0]);
-            double edx = ex[icoord] * grad[icoord]; 
-            e2 += edx * edx;  
+            // calculate derivative for each coordinate 
+            if (ex[icoord] > 0) {               
+               //gradCalc.Gradient(x, p, fval, &grad[0]);
+               f1D.SetCoord(icoord);
+               // optimal spep size (maybe should take average or  range in points) 
+               double x0= x[icoord];
+               double h = std::max( kEps* std::abs(x0), 8.0*kPrecision*(std::abs(x0) + kPrecision) );
+               double deriv = derivator.Derivative1(f1D, x[icoord], h);  
+               double edx = ex[icoord] * deriv; 
+               e2 += edx * edx;  
+            }
          } 
       }
       double w2 = (e2 > 0) ? 1.0/e2 : 0;  
@@ -473,10 +494,11 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
       
       // avoid (infinity and nan ) in the chi2 sum 
       // eventually add possibility of excluding some points (like singularity) 
-      if ( resval < std::numeric_limits<double>::max() )  
+      if ( resval < maxResValue )  
          chi2 += resval; 
       else 
-         nRejected++; 
+         chi2 += maxResValue;
+      //nRejected++; 
       
    }
    
@@ -635,13 +657,13 @@ void FitUtil::EvaluateChi2Gradient(const IModelFunction & f, const BinData & dat
       } 
 
       // loop on the parameters
-      for (unsigned int ipar = 0; ipar < npar ; ++ipar) { 
+      unsigned int ipar = 0; 
+      for ( ; ipar < npar ; ++ipar) { 
 
          // avoid singularity in the function (infinity and nan ) in the chi2 sum 
          // eventually add possibility of excluding some points (like singularity) 
          double dfval = gradFunc[ipar];
          if ( !CheckValue(dfval) ) { 
-               nRejected++; 
                break; // exit loop on parameters
          } 
  
@@ -651,10 +673,21 @@ void FitUtil::EvaluateChi2Gradient(const IModelFunction & f, const BinData & dat
       
       }
 
+      if ( ipar < npar ) { 
+          // case loop was broken for an overflow in the gradient calculation  
+         nRejected++; 
+         continue;
+      } 
+
+
    } 
 
    // correct the number of points
-   if (nRejected != 0)  nPoints = n - nRejected;
+   if (nRejected != 0)  {
+      assert(nRejected <= n);
+      nPoints = n - nRejected;
+      if (nPoints < npar)  MATH_ERROR_MSG("FitUtil::EvaluateChi2Gradient","Error - too many points rejected for overflow in gradient calculation");
+   }
 
    // copy result 
    std::copy(g.begin(), g.end(), grad);
@@ -727,7 +760,7 @@ double FitUtil::EvaluateLogL(const IModelFunction & func, const UnBinData & data
 #endif
 
    double logl = 0;
-   int nRejected = 0; 
+   unsigned int nRejected = 0; 
 
    for (unsigned int i = 0; i < n; ++ i) { 
       const double * x = data.Coords(i);
@@ -742,16 +775,18 @@ double FitUtil::EvaluateLogL(const IModelFunction & func, const UnBinData & data
          std::cout << p[ipar] << "\t";
       std::cout << "\tfval = " << fval << std::endl; 
 #endif
-      if (fval < 0) { 
-         nRejected++; // reject points with negative pdf (cannot exist)
-      }
-      else 
-         logl += ROOT::Math::Util::EvalLog( fval); 
-      
+      // function EvalLog protects against negative or too small values of fval
+      logl += ROOT::Math::Util::EvalLog( fval);       
    }
    
    // reset the number of fitting data points
-   if (nRejected != 0)  nPoints = n - nRejected;
+   if (nRejected != 0)  { 
+      assert(nRejected <= n);
+      nPoints = n - nRejected;
+      if ( nPoints < func.NPar() ) 
+         MATH_ERROR_MSG("FitUtil::EvaluateLogL","Error too many points rejected because of bad pdf values");
+
+   }
 
 #ifdef DEBUG
    std::cout << "Logl = " << logl << " np = " << nPoints << std::endl;
@@ -777,13 +812,21 @@ void FitUtil::EvaluateLogLGradient(const IModelFunction & f, const UnBinData & d
    for (unsigned int i = 0; i < n; ++ i) { 
       const double * x = data.Coords(i);
       double fval = func ( x , p); 
-      if (fval > 0) { 
-         func.ParameterGradient( x, p, &gradFunc[0] );
-         for (unsigned int kpar = 0; kpar < npar; ++ kpar) { 
+      func.ParameterGradient( x, p, &gradFunc[0] );
+      for (unsigned int kpar = 0; kpar < npar; ++ kpar) { 
+         if (fval > 0)  
             g[kpar] -= 1./fval * gradFunc[ kpar ]; 
+         else if (gradFunc [ kpar] != 0) { 
+            const double kdmax1 = std::sqrt( std::numeric_limits<double>::max() );
+            const double kdmax2 = std::numeric_limits<double>::max() / (4*n);
+            double gg = kdmax1 * gradFunc[ kpar ];  
+            if ( gg > 0) gg = std::min( gg, kdmax2);
+            else gg = std::max(gg, - kdmax2);
+            g[kpar] -= gg;
          }
-            
+         // if func derivative is zero term is also zero so do not add in g[kpar]
       }
+            
     // copy result 
    std::copy(g.begin(), g.end(), grad);
    }
@@ -812,6 +855,7 @@ double FitUtil::EvaluatePoissonBinPdf(const IModelFunction & func, const BinData
    }
 
    // logPdf for Poisson: ignore constant term depending on N
+   fval = std::max(fval, 0.0);  // avoid negative or too small values 
    double logPdf =   y * ROOT::Math::Util::EvalLog( fval) - fval;  
    // need to return the pdf contribution (not the log)
 
@@ -845,7 +889,14 @@ double FitUtil::EvaluatePoissonBinPdf(const IModelFunction & func, const BinData
    }
    // correct g[] do be derivative of poisson term 
    for (unsigned int k = 0; k < npar; ++k) {
-      g[k] *= ( y/fval - 1.) ;//* pdfval; 
+      if ( fval > 0) 
+         g[k] *= ( y/fval - 1.) ;//* pdfval; 
+      else if (y > 0) { 
+         const double kdmax1 = std::sqrt( std::numeric_limits<double>::max() );
+         g[k] *= kdmax1; 
+      }
+      else   // y == 0 cannot have  negative y
+         g[k] *= -1;         
    }       
      
 
@@ -860,7 +911,7 @@ double FitUtil::EvaluatePoissonBinPdf(const IModelFunction & func, const BinData
    return logPdf;
 }
 
-double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData & data, const double * p, unsigned int &nPoints) {  
+double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData & data, const double * p, unsigned int &   nPoints ) {  
    // evaluate the Poisson Log Likelihood
    // for binned likelihood fits
 
@@ -882,21 +933,21 @@ double FitUtil::EvaluatePoissonLogL(const IModelFunction & func, const BinData &
       if (!fitOpt.fIntegral )
          fval = func ( x, p ); 
       else { 
-         // calculate normalized integral (divided by bin volume)
          fval = igEval( x, data.Coords(i+1) ) ; 
       }
-
-
+      
+      // EvalLog protects against 0 values of fval but don't want to add in the -log sum 
+      // negative values of fval 
+      fval = std::max(fval, 0.0);
       loglike +=  fval - y * ROOT::Math::Util::EvalLog( fval);  
-      
-      
+
    }
    
    // reset the number of fitting data points
    if (nRejected != 0)  nPoints = n - nRejected;
 
 #ifdef DEBUG
-   std::cout << "Loglikelihood  = " << loglike << " np = " << nPoints << std::endl;
+   std::cout << "Loglikelihood  = " << loglike << std::endl;
 #endif
    
    return loglike;  
@@ -932,19 +983,27 @@ void FitUtil::EvaluatePoissonLogLGradient(const IModelFunction & f, const BinDat
          fval = igEval( x, x2 ) ; 
       }
       
-      if (fval > 0) { 
-         if (!useBinIntegral ) 
-            func.ParameterGradient(  x , p, &gradFunc[0] ); 
-         else 
-            CalculateGradientIntegral( func, x, x2, p, &gradFunc[0]); 
-
-         for (unsigned int kpar = 0; kpar < npar; ++ kpar) { 
-            // df/dp * (1.  - y/f )
+      if (!useBinIntegral ) 
+         func.ParameterGradient(  x , p, &gradFunc[0] ); 
+      else 
+         CalculateGradientIntegral( func, x, x2, p, &gradFunc[0]); 
+      
+      for (unsigned int kpar = 0; kpar < npar; ++ kpar) { 
+         // df/dp * (1.  - y/f )
+         if (fval > 0)  
             g[kpar] += gradFunc[ kpar ] * ( 1. - y/fval ); 
-         }            
-      }
-    // copy result 
-   std::copy(g.begin(), g.end(), grad);
+         else if (gradFunc [ kpar] != 0) { 
+            const double kdmax1 = std::sqrt( std::numeric_limits<double>::max() );
+            const double kdmax2 = std::numeric_limits<double>::max() / (4*n);
+            double gg = kdmax1 * gradFunc[ kpar ];  
+            if ( gg > 0) gg = std::min( gg, kdmax2);
+            else gg = std::max(gg, - kdmax2);
+            g[kpar] -= gg;
+         }
+      }            
+
+      // copy result 
+      std::copy(g.begin(), g.end(), grad);
    }
 }
    

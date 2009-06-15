@@ -67,7 +67,7 @@ void XrdProofWorker::Reset(const char *str)
    fExport = "";
    fType = 'W';
    fHost = "";
-   fPort = -1;
+   fPort = XPD_DEF_PORT;
    fPerfIdx = 100;
    fImage = "";
    fWorkDir = "";
@@ -131,7 +131,7 @@ void XrdProofWorker::Reset(const char *str)
          // Performance index
          tok.replace("perf=","");
          fPerfIdx = strtol(tok.c_str(), (char **)0, 10);
-      } else {
+      } else if (!tok.beginswith("repeat=")){
          // Unknown
          TRACE(XERR, "ignoring unknown option '"<<tok<<"'");
       }
@@ -170,11 +170,11 @@ bool XrdProofWorker::Matches(XrdProofWorker *wrk)
 }
 
 //______________________________________________________________________________
-const char *XrdProofWorker::Export()
+const char *XrdProofWorker::Export(const char *ord)
 {
    // Export current content in a form understood by parsing algorithms
    // inside the PROOF session, i.e.
-   // <type>|<user@host>|<port>|-|-|<perfidx>|<img>|<workdir>|<msd>
+   // <type>|<user@host>|<port>|<ord>|-|<perfidx>|<img>|<workdir>|<msd>
    XPDLOC(NMGR, "Worker::Export")
 
    fExport = fType;
@@ -192,8 +192,16 @@ const char *XrdProofWorker::Export()
    } else
       fExport += "|-";
 
-   // No ordinal and ID at this level
-   fExport += "|-|-";
+   // Ordinal only if passed as argument
+   if (ord && strlen(ord) > 0) {
+      // Add ordinal
+      fExport += '|' ; fExport += ord;
+   } else {
+      // No ordinal at this level
+      fExport += "|-";
+   }
+   // ID at this level
+   fExport += "|-";
 
    // Add performance index
    fExport += '|' ; fExport += fPerfIdx;

@@ -9,8 +9,8 @@ namespace PyROOT {
 
 /** Python callable object interface
       @author  WLAV
-      @date    08/10/2004
-      @version 3.0
+      @date    01/27/2009
+      @version 4.0
  */
 
    class ObjectProxy;
@@ -25,8 +25,14 @@ namespace PyROOT {
       virtual PyObject* GetDocString() { return GetPrototype(); }
       virtual Int_t GetPriority() { return 0; }
 
+      virtual Int_t GetMaxArgs() { return 0; }
+      virtual PyObject* GetArgSpec( Int_t /* iarg */ ) { return 0; }
+      virtual PyObject* GetArgDefault( Int_t /* iarg */ ) { return 0; }
+      virtual PyObject* GetScope() { return 0; }
+
    public:
-      virtual PyObject* operator()( ObjectProxy* self, PyObject* args, PyObject* kwds ) = 0;
+      virtual PyObject* operator()(
+         ObjectProxy* self, PyObject* args, PyObject* kwds, Long_t user = 0 ) = 0;
    };
 
 } // namespace PyROOT

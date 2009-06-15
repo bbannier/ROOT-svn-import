@@ -125,6 +125,7 @@ int XrdXrootdProtocol::Configure(char *parms, XrdProtocol_Config *pi)
    SI           = new XrdXrootdStats(pi->Stats);
    Sched        = pi->Sched;
    BPool        = pi->BPool;
+   hailWait     = pi->hailWait;
    readWait     = pi->readWait;
    Port         = pi->Port;
    myInst       = pi->myInst;
@@ -660,7 +661,9 @@ int XrdXrootdProtocol::xlog(XrdOucStream &Config)
 
    Purpose:  Parse directive: monitor [all] [mbuff <sz>] 
                                       [flush <sec>] [window <sec>]
-                                      dest [files] [info] [io] <host:port>
+                                      dest [Events] <host:port>
+
+   Events: [files] [info] [io] [stage] [user] <host:port>
 
          all                enables monitoring for all connections.
          mbuff  <sz>        size of message buffer.
@@ -671,6 +674,7 @@ int XrdXrootdProtocol::xlog(XrdOucStream &Config)
          files              only monitors file open/close events.
          info               monitors client appid and info requests.
          io                 monitors I/O requests, and files open/close events.
+         stage              monitors file stage operations
          user               monitors user login and disconnect events.
          <host:port>        where monitor records are to be sentvia UDP.
 
@@ -720,6 +724,7 @@ int XrdXrootdProtocol::xmon(XrdOucStream &Config)
                    if (!strcmp("files",val)) monMode[i] |=  XROOTD_MON_FILE;
               else if (!strcmp("info", val)) monMode[i] |=  XROOTD_MON_INFO;
               else if (!strcmp("io",   val)) monMode[i] |=  XROOTD_MON_IO;
+              else if (!strcmp("stage",val)) monMode[i] |=  XROOTD_MON_STAGE;
               else if (!strcmp("user", val)) monMode[i] |=  XROOTD_MON_USER;
               else break;
           if (!val) {eDest.Emsg("Config","monitor dest value not specified");

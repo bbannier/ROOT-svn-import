@@ -156,6 +156,7 @@ TXNetFile::~TXNetFile()
    if (IsOpen())
       Close(0);
 
+   SafeDelete(fClient);
    SafeDelete(fInitMtx);
 }
 
@@ -240,9 +241,7 @@ void TXNetFile::CreateXClient(const char *url, Option_t *option, Int_t netopt,
 {
    // The real creation work is done here.
 
-#ifndef OLDXRDLOCATE
    Int_t cachesz = -1, readaheadsz = -1, rmpolicy = -1, mxredir = -1, np = 0;
-#endif
 
    fClient = 0;
    fNetopt = netopt;
@@ -284,7 +283,6 @@ void TXNetFile::CreateXClient(const char *url, Option_t *option, Int_t netopt,
       goto zombie;
    }
 
-#ifndef OLDXRDLOCATE
    // Get client (cache, redir) parameters, if any
    np = ParseOptions(TUrl(url).GetOptions(),
                      cachesz, readaheadsz, rmpolicy, mxredir);
@@ -304,17 +302,7 @@ void TXNetFile::CreateXClient(const char *url, Option_t *option, Int_t netopt,
                                "rmpolicy = %d",
                                cachesz, readaheadsz, rmpolicy);
       fClient->SetCacheParameters(cachesz, readaheadsz, rmpolicy);
-   } else {
-      // Set cache and readahead off for raw files
-      if (IsRaw())
-         fClient->SetCacheParameters(0, 0, 0);
    }
-#else
-   if (IsRaw()) {
-     // Set cache and readahead off for raw files
-     EnvPutInt(NAME_READAHEADSIZE, 0);
-   }
-#endif
 
    //
    // Now try opening the file
@@ -619,11 +607,7 @@ Bool_t TXNetFile::ReadBuffer(char *buffer, Int_t bufferLength)
       // The data chunk was not prefetched.
       // Set the read ahead (again) at its default value
       Int_t rAheadsiz = gEnv->GetValue("XNet.ReadAheadSize", DFLT_READAHEADSIZE);
-#ifndef OLDXRDLOCATE
       fClient->SetCacheParameters(-1, rAheadsiz, -1);
-#else
-      EnvPutInt(NAME_READAHEADSIZE, rAheadsiz);
-#endif
    }
 
    // Read from the remote xrootd
@@ -983,7 +967,6 @@ void TXNetFile::Close(const Option_t *opt)
 
    if (IsOpen())
       fClient->Close();
-   SafeDelete(fClient);
 
    fD = -1;  // so TFile::IsOpen() returns false when in TFile::~TFile
 }
@@ -1044,17 +1027,10 @@ Int_t TXNetFile::SysStat(Int_t fd, Long_t *id, Long64_t *size, Long_t *flags,
       return TNetFile::SysStat(fd, id, size, flags, modtime);
    }
 
-   if (!IsOpen()) {
-      if (gDebug > 1)
-         Info("SysStat", "could not stat remote file, file not open");
-      *id = -1;
-      return 1;
-   }
-
    // Return file stat information. The interface and return value is
    // identical to TSystem::GetPathInfo().
    struct XrdClientStatInfo stinfo;
-   if (fClient->Stat(&stinfo)) {
+   if (fClient && fClient->Stat(&stinfo)) {
       *id = (Long_t)(stinfo.id);
       *size = (Long64_t)(stinfo.size);
       *flags = (Long_t)(stinfo.flags);
@@ -1063,8 +1039,14 @@ Int_t TXNetFile::SysStat(Int_t fd, Long_t *id, Long64_t *size, Long_t *flags,
          Info("SysStat", "got stats = %ld %lld %ld %ld",
                          *id, *size, *flags, *modtime);
    } else {
-      if (gDebug > 1)
-         Info("SysStat", "could not stat remote file");
+
+      if (gDebug > 1) {
+         if (!IsOpen()) Info("SysStat", "could not stat remote file. Not opened.");
+         else
+            Info("SysStat", "could not stat remote file");
+      }
+
+
       *id = -1;
       return 1;
    }
@@ -1199,6 +1181,11 @@ void TXNetFile::SetEnv()
                                         DFLT_MULTISTREAMCNT);
    EnvPutInt(NAME_MULTISTREAMCNT, parStreamsCnt);
 
+   // Change the TCP window size (0 means 'scaling' on some platforms)
+   Int_t tcpWindowSize = gEnv->GetValue("XNet.DfltTcpWindowSize",
+                                        DFLT_DFLTTCPWINDOWSIZE);
+   EnvPutInt(NAME_DFLTTCPWINDOWSIZE, tcpWindowSize);
+
    // Whether to activate automatic rootd backward-compatibility
    // (We override XrdClient default)
    fgRootdBC = gEnv->GetValue("XNet.RootdFallback", 1);
@@ -1215,9 +1202,12 @@ void TXNetFile::SetEnv()
       EnvPutInt(NAME_SOCKS4PORT, socks4Port);
    }
 
+   const char *cenv = 0;
+
    // For password-based authentication
    TString autolog = gEnv->GetValue("XSec.Pwd.AutoLogin","1");
-   if (autolog.Length() > 0)
+   if (autolog.Length() > 0 &&
+      (!(cenv = gSystem->Getenv("XrdSecPWDAUTOLOG")) || strlen(cenv) <= 0))
       gSystem->Setenv("XrdSecPWDAUTOLOG",autolog.Data());
 
    // Old style netrc file
@@ -1230,7 +1220,8 @@ void TXNetFile::SetEnv()
       gSystem->Setenv("XrdSecPWDALOGFILE",alogfile.Data());
 
    TString verisrv = gEnv->GetValue("XSec.Pwd.VerifySrv","1");
-   if (verisrv.Length() > 0)
+   if (verisrv.Length() > 0 &&
+      (!(cenv = gSystem->Getenv("XrdSecPWDVERIFYSRV")) || strlen(cenv) <= 0))
       gSystem->Setenv("XrdSecPWDVERIFYSRV",verisrv.Data());
 
    TString srvpuk = gEnv->GetValue("XSec.Pwd.ServerPuk","");
@@ -1267,7 +1258,8 @@ void TXNetFile::SetEnv()
       gSystem->Setenv("XrdSecGSIPROXYVALID",valid.Data());
 
    TString deplen = gEnv->GetValue("XSec.GSI.ProxyForward","0");
-   if (deplen.Length() > 0)
+   if (deplen.Length() > 0 &&
+      (!(cenv = gSystem->Getenv("XrdSecGSIPROXYDEPLEN")) || strlen(cenv) <= 0))
       gSystem->Setenv("XrdSecGSIPROXYDEPLEN",deplen.Data());
 
    TString pxybits = gEnv->GetValue("XSec.GSI.ProxyKeyBits","");
@@ -1275,15 +1267,18 @@ void TXNetFile::SetEnv()
       gSystem->Setenv("XrdSecGSIPROXYKEYBITS",pxybits.Data());
 
    TString crlcheck = gEnv->GetValue("XSec.GSI.CheckCRL","1");
-   if (crlcheck.Length() > 0)
+   if (crlcheck.Length() > 0 &&
+      (!(cenv = gSystem->Getenv("XrdSecGSICRLCHECK")) || strlen(cenv) <= 0))
       gSystem->Setenv("XrdSecGSICRLCHECK",crlcheck.Data());
 
    TString delegpxy = gEnv->GetValue("XSec.GSI.DelegProxy","0");
-   if (delegpxy.Length() > 0)
+   if (delegpxy.Length() > 0 &&
+      (!(cenv = gSystem->Getenv("XrdSecGSIDELEGPROXY")) || strlen(cenv) <= 0))
       gSystem->Setenv("XrdSecGSIDELEGPROXY",delegpxy.Data());
 
    TString signpxy = gEnv->GetValue("XSec.GSI.SignProxy","1");
-   if (signpxy.Length() > 0)
+   if (signpxy.Length() > 0 &&
+      (!(cenv = gSystem->Getenv("XrdSecGSISIGNPROXY")) || strlen(cenv) <= 0))
       gSystem->Setenv("XrdSecGSISIGNPROXY",signpxy.Data());
 
    // Using ROOT mechanism to IGNORE SIGPIPE signal
@@ -1297,7 +1292,6 @@ void TXNetFile::SynchronizeCacheSize()
    // Alternative purging policy
 
    fClient->UseCache(TRUE);
-#ifndef OLDXRDLOCATE
    Int_t size;
    Long64_t bytessubmitted, byteshit, misscount, readreqcnt;
    Float_t  missrate, bytesusefulness;
@@ -1314,10 +1308,6 @@ void TXNetFile::SynchronizeCacheSize()
    }
 
    fClient->SetCacheParameters(newbsz, 0, XrdClientReadCache::kRmBlk_FIFO);
-
-#else
-   EnvPutInt(NAME_READAHEADSIZE, 0);
-#endif
 }
 
 //_____________________________________________________________________________
@@ -1334,7 +1324,6 @@ Int_t TXNetFile::GetBytesToPrefetch() const
 {
    // Max number of bytes to prefetch.
 
-#ifndef OLDXRDLOCATE
    Int_t size;
    Long64_t bytessubmitted, byteshit, misscount, readreqcnt;
    Float_t  missrate, bytesusefulness;
@@ -1344,42 +1333,33 @@ Int_t TXNetFile::GetBytesToPrefetch() const
                                         missrate, readreqcnt,
                                         bytesusefulness) )
    bytes = size;
-#else
-   Int_t bytes = gEnv->GetValue("XNet.ReadCacheSize", 0)/2;
-#endif
    return ((bytes < 0) ? 0 : bytes);
 }
-
 
 //______________________________________________________________________________
 void TXNetFile::Print(Option_t *option) const
 {
    // Print the local statistics.
 
-#ifndef OLDXRDLOCATE
-  Printf("TXNetFile caching information:\n");
+   Printf("TXNetFile caching information:");
 
-  int size;
-  long long bytessubmitted, byteshit, misscount, readreqcnt;
-  float	missrate, bytesusefulness;
+   Int_t size;
+   Long64_t bytessubmitted, byteshit, misscount, readreqcnt;
+   Float_t  missrate, bytesusefulness;
 
-
-  if ( fClient && fClient->GetCacheInfo(size, bytessubmitted,
+   if (fClient && fClient->GetCacheInfo(size, bytessubmitted,
                                         byteshit, misscount,
                                         missrate, readreqcnt,
-                                        bytesusefulness) ) {
-    Printf(" Max size:                  %ld\n", size);
-    Printf(" Bytes submitted:           %lld\n", bytessubmitted);
-    Printf(" Bytes hit (estimation):    %lld\n", byteshit);
-    Printf(" Miss count:                %lld\n", misscount);
-    Printf(" Miss rate:                 %f\n", missrate);
-    Printf(" Read requests count:       %lld\n", readreqcnt);
-    Printf(" Bytes usefulness:          %f\n\n", bytesusefulness);
-  }
-  else
-    Printf(" -- No Xrd client instance allocated --\n\n");
-#endif
+                                        bytesusefulness)) {
+      Printf(" Max size:                  %ld", size);
+      Printf(" Bytes submitted:           %lld", bytessubmitted);
+      Printf(" Bytes hit (estimation):    %lld", byteshit);
+      Printf(" Miss count:                %lld", misscount);
+      Printf(" Miss rate:                 %f", missrate);
+      Printf(" Read requests count:       %lld", readreqcnt);
+      Printf(" Bytes usefulness:          %f\n", bytesusefulness);
+   } else
+      Printf(" -- No Xrd client instance allocated --\n");
 
-  TFile::Print(option);
-
+   TFile::Print(option);
 }

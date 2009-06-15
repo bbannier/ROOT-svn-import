@@ -27,7 +27,7 @@ ifeq ($(subst msvc,,$(G__CFG_ARCH)),$(G__CFG_ARCH))
   ALLDLLS += longlong.cintdll ipc.cintdll posix.cintdll
 endif
 
-BUILDDLL = chmod a+x setup; PATH=../../../bin:$$PATH LD_LIBRARY_PATH=../../../lib:$$LD_LIBRARY_PATH DYLD_LIBRARY_PATH=../../../lib:$$DYLD_LIBRARY_PATH ./setup
+BUILDDLL = chmod a+x setup; PATH=../../../bin:../../../lib:$$PATH LD_LIBRARY_PATH=../../../lib:$$LD_LIBRARY_PATH DYLD_LIBRARY_PATH=../../../lib:$$DYLD_LIBRARY_PATH ./setup
 MKTYPES  = $(G__CFG_COREVERSION)/lib/posix/mktypes$(G__CFG_EXEEXT)
 MAKEINCL = $(G__CFG_COREVERSION)/include/mkincld$(G__CFG_EXEEXT)
 IOSENUMH = $(G__CFG_COREVERSION)/include/iosenum.h
@@ -62,10 +62,10 @@ $(MAKECINT): $(MAKECINTO)
 ##############################################################
 ifeq ($(LINKSTATIC),yes)
 $(CINT) : $(CINTLIBSTATIC)
-LINKCINTLIB=$(G__CFG_LIBP)lib $(subst @imp@,cint_static,$(G__CFG_LIBL))
+LINKCINTLIB=$(G__CFG_LIBP)lib $(subst @imp@,Cint_static,$(G__CFG_LIBL))
 else
 $(CINT) : $(CINTLIBSHARED)
-LINKCINTLIB=$(G__CFG_LIBP)lib $(subst @imp@,cint,$(G__CFG_LIBL))
+LINKCINTLIB=$(G__CFG_LIBP)lib $(subst @imp@,Cint,$(G__CFG_LIBL))
 endif
 
 $(CINT): $(SETUPO) $(MAINO) $(G__CFG_READLINELIB) $(REFLEXLIBDEP)
@@ -88,7 +88,7 @@ clean::
 	  $(MAKECINTO) $(MAKECINTO:$(G__CFG_OBJEXT)=.d) \
 	  $(CINT) $(MAKECINT) $(MAKEINCL) \
 	  $(G__CFG_COREVERSION)/include/stdio.h $(G__CFG_COREVERSION)/include/iosenum.h \
-	  libcint.* libcint_static.* done
+	  lib/libCint.* bin/libCint.* lib/libCint_static.* done
 # NEVER ever remove "core"! It's our src subdir!
 
 

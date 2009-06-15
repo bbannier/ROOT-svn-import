@@ -202,7 +202,7 @@ Double_t TGeoEltu::DistFromInside(Double_t *point, Double_t *dir, Int_t iact, Do
    Double_t w=point[0]*point[0]*b2+point[1]*point[1]*a2-a2*b2;
    Double_t d=v*v-u*w;
    if (d<0) return snxt;
-   if (u==0) return snxt;
+   if (TGeoShape::IsSameWithinTolerance(u,0)) return snxt;
    Double_t sd=TMath::Sqrt(d);
    Double_t tau1=(-v+sd)/u;
    Double_t tau2=(-v+sd)/u;
@@ -255,8 +255,9 @@ Double_t TGeoEltu::DistFromOutside(Double_t *point, Double_t *dir, Int_t iact, D
    Double_t sdist = TGeoBBox::DistFromOutside(point,dir, fDX, fDY, fDZ, fOrigin, step);
    if (sdist>=step) return TGeoShape::Big();
    Double_t zi;
-   if (dir[2]!=0) {
+   if (!TGeoShape::IsSameWithinTolerance(dir[2],0)) {
       Double_t u=dir[0]*dir[0]*b2+dir[1]*dir[1]*a2;
+      if (TGeoShape::IsSameWithinTolerance(u,0)) return TGeoShape::Big();
       Double_t v=point[0]*dir[0]*b2+point[1]*dir[1]*a2;
       Double_t w=point[0]*point[0]*b2+point[1]*point[1]*a2-a2*b2;
       Double_t d=v*v-u*w;
@@ -276,6 +277,7 @@ Double_t TGeoEltu::DistFromOutside(Double_t *point, Double_t *dir, Int_t iact, D
    // do z
    zi=TGeoShape::Big();
    if (safz>0) {
+      if (TGeoShape::IsSameWithinTolerance(dir[2],0)) return TGeoShape::Big();
       if (point[2]>0) zi=fDz;
       if (point[2]<0) zi=-fDz;     
       Double_t tauz=(zi-point[2])/dir[2];
@@ -357,16 +359,16 @@ Double_t TGeoEltu::Safety(Double_t *point, Bool_t in) const
       y1 = fRmax*TMath::Sqrt(1.-(x0*x0)/(fRmin*fRmin));
       dx = x1-x0;
       dy = y1-y0;
-      if (dx==0) return 0;
+      if (TMath::Abs(dx)<TGeoShape::Tolerance()) return 0;
       safr = dx*dy/TMath::Sqrt(dx*dx+dy*dy);
       safz = fDz - TMath::Abs(point[2]);
       return TMath::Min(safr,safz);
    }   
 
-   if (x0==0) {
+   if (TMath::Abs(x0)<TGeoShape::Tolerance()) {
       safr = y0 - fRmax;
    } else {
-      if (y0==0) {
+      if (TMath::Abs(y0)<TGeoShape::Tolerance()) {
          safr = x0 - fRmin;
       } else {
          Double_t f = fRmin*fRmax/TMath::Sqrt(x0*x0*fRmax*fRmax+y0*y0*fRmin*fRmin);

@@ -18,7 +18,7 @@
 //                                                                      //
 // Author: G. Ganis, CERN, 2007                                         //
 //                                                                      //
-// Class mapping manager fonctionality.                                 //
+// Class mapping manager functionality.                                 //
 // On masters it keeps info about the available worker nodes and allows //
 // communication with them. In particular, it reads the proof.conf file //
 // when working with static resources.                                  //
@@ -69,7 +69,7 @@ class XrdProofdManager : public XrdProofdConfig {
 
    int               ResolveKeywords(XrdOucString &s, XrdProofdClient *pcl);
 
-   int               GetWorkers(XrdOucString &workers, XrdProofdProofServ *);
+   int               GetWorkers(XrdOucString &workers, XrdProofdProofServ *, const char *);
 
    const char       *AdminPath() const { return fAdminPath.c_str(); }
    const char       *BareLibPath() const { return fBareLibPath.c_str(); }
@@ -89,6 +89,8 @@ class XrdProofdManager : public XrdProofdConfig {
    int               SrvType() const { return fSrvType; }
    const char       *TMPdir() const { return fTMPdir.c_str(); }
    const char       *WorkDir() const { return fWorkDir.c_str(); }
+
+   std::list<XrdProofdDSInfo *> *DataSetSrcs() { return &fDataSetSrcs; }
 
    // Services
    XrdProofdClientMgr *ClientMgr() const { return fClientMgr; }
@@ -145,11 +147,13 @@ class XrdProofdManager : public XrdProofdConfig {
 
    //
    // Lists
-   std::list<XrdOucString *> fMastersAllowed;          // list of master (domains) allowed
+   std::list<XrdOucString *> fMastersAllowed; // list of master (domains) allowed
+   std::list<XrdProofdDSInfo *> fDataSetSrcs; // sources of dataset info
 
    int               DoDirectiveAllow(char *, XrdOucStream *, bool);
    int               DoDirectiveAllowedGroups(char *, XrdOucStream *, bool);
    int               DoDirectiveAllowedUsers(char *, XrdOucStream *, bool);
+   int               DoDirectiveDataSetSrc(char *, XrdOucStream *, bool);
    int               DoDirectiveGroupfile(char *, XrdOucStream *, bool);
    int               DoDirectiveMaxOldLogs(char *, XrdOucStream *, bool);
    int               DoDirectiveMultiUser(char *, XrdOucStream *, bool);
@@ -165,6 +169,7 @@ class XrdProofdManager : public XrdProofdConfig {
 typedef struct {
    XrdProofdClientMgr    *fClientMgr;
    XrdProofdProofServMgr *fSessionMgr;
+   XrdProofSched         *fProofSched;
 } XpdManagerCron_t;
 
 #endif

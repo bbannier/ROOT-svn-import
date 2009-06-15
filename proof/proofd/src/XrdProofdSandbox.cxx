@@ -67,13 +67,13 @@ XrdProofdSandbox::XrdProofdSandbox(XrdProofUI ui, bool full, bool changeown)
          fDir = ui.fHomeDir;
          if (!fDir.endswith('/'))
             fDir += "/";
-         fDir += "proof";
+         fDir += ".proof";
       } else {
          // ~daemon_owner/proof/<user>
          fDir = fgUI.fHomeDir;
          if (!fDir.endswith('/'))
             fDir += "/";
-         fDir += "proof/";
+         fDir += ".proof/";
          fDir += ui.fUser;
       }
    }
@@ -433,7 +433,7 @@ int XrdProofdSandbox::GuessTag(XrdOucString &tag, int ridx)
                int itag = ridx;
                // Reiterate back
                std::list<XrdOucString *>::iterator i;
-               for (i = staglst.end(); i != staglst.begin(); --i) {
+               for (i = staglst.begin(); i != staglst.end(); i++) {
                   if (itag == 0) {
                      tag = (*i)->c_str();
                      found = 1;

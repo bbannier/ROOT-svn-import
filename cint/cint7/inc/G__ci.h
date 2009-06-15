@@ -29,10 +29,10 @@
 #define G__CINT_VER6  1
 #endif
 
-#define G__CINTVERSION_BC     60010017
-#define G__CINTVERSIONSTR_BC  "6.1.17, December 12, 2006"
-#define G__CINTVERSION        70010000
-#define G__CINTVERSIONSTR     "7.1.0, December 12, 2006"
+#define G__CINTVERSION_BC     60030000
+#define G__CINTVERSIONSTR_BC  "6.3.00, December 21, 2008"
+#define G__CINTVERSION        70030000
+#define G__CINTVERSIONSTR     "7.3.00, December 21, 2008"
 
 #define G__ALWAYS
 /* #define G__NEVER */
@@ -365,7 +365,7 @@
 #endif
   
 /* added by Fons Radamakers in 2000 Oct 2 */
-#if defined(__linux) || defined(__linux__) || defined(linux)
+#if (defined(__linux) || defined(__linux__) || defined(linux)) && ! defined(__CINT__)
 #   include <features.h>
 #   if __GLIBC__ == 2 && __GLIBC_MINOR__ >= 2
 #      define G__NONSCALARFPOS2
@@ -387,6 +387,8 @@ typedef unsigned long long G__uint64;
 /***********************************************************************
  * Something that depends on platform
  ***********************************************************************/
+
+#define ENABLE_CPP_EXCEPTIONS 1
 
 /* Exception */
 #if defined(G__WIN32) && !defined(G__STD_EXCEPTION)
@@ -826,6 +828,7 @@ struct G__DUMMY_FOR_CINT5 {
    // Stuff we removed from Cint5
    int type;
    int tagnum;
+   int typenum;
 #ifndef G__OLDIMPLEMENTATION1259
    G__SIGNEDCHAR_T isconst;
 #endif
@@ -917,7 +920,7 @@ typedef struct {
 
 
 #ifndef G__ANSI
-#if (__GNUC__>=3)  /* ||defined(__SUNPRO_CC)||defined(__SUNPRO_C) */
+#if (__GNUC__>=3) || defined(_STLPORT_VERSION)
 #define G__ANSI
 #endif
 #endif
@@ -1288,12 +1291,12 @@ typedef void G__parse_hook_t ();
 # ifndef G__MULTITHREADLIBCINT
 #  ifdef __cplusplus
 #    define G__DUMMYTOCHECKFORDUPLICATES_CONCAT(A,B) A##B
-#    define G__DUMMYTOCHECKFORDUPLICATES(IDX) ;namespace{class G__DUMMYTOCHECKFORDUPLICATES_CONCAT(this_API_function_index_occurs_more_than_once_,IDX) {};}
+#    define G__DUMMYTOCHECKFORDUPLICATES(IDX) namespace{class G__DUMMYTOCHECKFORDUPLICATES_CONCAT(this_API_function_index_occurs_more_than_once_,IDX) {};}
 #  else
-#    define G__DUMMYTOCHECKFORDUPLICATES(IDX)
+#    define G__DUMMYTOCHECKFORDUPLICATES(IDX) 
 #  endif
 #  define G__DECL_API(IDX, RET, NAME, ARGS) \
-   G__EXPORT RET NAME ARGS G__DUMMYTOCHECKFORDUPLICATES(IDX)
+   G__EXPORT RET NAME ARGS ; G__DUMMYTOCHECKFORDUPLICATES(IDX)
 # else
 #  define G__DUMMYTOCHECKFORDUPLICATES(IDX)
 #  define G__DECL_API(IDX, RET, NAME, ARGS) \
@@ -1328,8 +1331,7 @@ G__EXPORT void G__SET_CINT_API_POINTERS_FUNCNAME (void *a[G__NUMBER_OF_API_FUNCT
  **************************************************************************/
 
 #endif /* __CINT__ */
-
-
+   
 #endif /* __MAKECINT__ */
 /**************************************************************************
 * endif #ifndef G__MAKECINT
@@ -1346,5 +1348,32 @@ typedef struct {
 } /* extern "C" */
 #endif
 
+/***********************************************************************/
+#if defined(__cplusplus) && !defined(__CINT__)
+   // Helper class to avoid compiler warning about casting function pointer
+   // to void pointer.
+   class G__func2void {
+      typedef void (*funcptr_t)();
+      
+      union funcptr_and_voidptr {
+         typedef void (*funcptr_t)();
+         funcptr_and_voidptr(void *val) : _read(val) {}         
+         void *_read;
+         funcptr_t _write;
+      };
+      
+      funcptr_and_voidptr _tmp;
+   public:
+      template <typename T>
+      G__func2void( T vfp ) : _tmp(0) {
+         _tmp._write = ( funcptr_t )vfp;
+      }
+      
+      operator void* () const {
+         return _tmp._read;
+      }
+   };
+#endif
+   
 #endif /* G__CI_H */
 

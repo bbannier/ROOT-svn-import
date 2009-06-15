@@ -25,7 +25,6 @@
 #include "TObjString.h"
 #include "TVirtualHistPainter.h"
 
-
 ClassImp(TH2)
 
 //______________________________________________________________________________
@@ -259,7 +258,7 @@ Int_t TH2::Fill(Double_t x,Double_t y)
    //*-*
    //*-* If the storage of the sum of squares of weights has been triggered,
    //*-* via the function Sumw2, then the sum of the squares of weights is incremented
-   //*-* by 1in the cell corresponding to x,y.
+   //*-* by 1 in the cell corresponding to x,y.
    //*-*
    //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
@@ -587,6 +586,66 @@ void TH2::FillRandom(TH1 *h, Int_t ntimes)
    }
 }
 
+
+//______________________________________________________________________________
+Int_t TH2::FindFirstBinAbove(Double_t threshold, Int_t axis) const
+{
+   //find first bin with content > threshold for axis (1=x, 2=y, 3=z)
+   //if no bins with content > threshold is found the function returns -1.
+   
+   if (axis < 1 || axis > 2) {
+      Warning("FindFirstBinAbove","Invalid axis number : %d, axis x assumed\n",axis);
+      axis = 1;
+   }
+   Int_t nbinsx = fXaxis.GetNbins();
+   Int_t nbinsy = fYaxis.GetNbins();
+   Int_t binx, biny;
+   if (axis == 1) {
+      for (binx=1;binx<=nbinsx;binx++) {
+         for (biny=1;biny<=nbinsy;biny++) {
+            if (GetBinContent(binx,biny) > threshold) return binx;
+         }
+      }
+   } else {
+      for (biny=1;biny<=nbinsy;biny++) {
+         for (binx=1;binx<=nbinsx;binx++) {
+            if (GetBinContent(binx,biny) > threshold) return biny;
+         }
+      }
+   }
+   return -1;
+}
+
+
+//______________________________________________________________________________
+Int_t TH2::FindLastBinAbove(Double_t threshold, Int_t axis) const
+{
+   //find last bin with content > threshold for axis (1=x, 2=y, 3=z)
+   //if no bins with content > threshold is found the function returns -1.
+   
+   if (axis < 1 || axis > 2) {
+      Warning("FindLastBinAbove","Invalid axis number : %d, axis x assumed\n",axis);
+      axis = 1;
+   }
+   Int_t nbinsx = fXaxis.GetNbins();
+   Int_t nbinsy = fYaxis.GetNbins();
+   Int_t binx, biny;
+   if (axis == 1) {
+      for (binx=nbinsx;binx>=1;binx--) {
+         for (biny=1;biny<=nbinsy;biny++) {
+            if (GetBinContent(binx,biny) > threshold) return binx;
+         }
+      }
+   } else {
+      for (biny=nbinsy;biny>=1;biny--) {
+         for (binx=1;binx<=nbinsx;binx++) {
+            if (GetBinContent(binx,biny) > threshold) return biny;
+         }
+      }
+   }
+   return -1;
+}
+
 //______________________________________________________________________________
 void TH2::DoFitSlices(bool onX,
                       TF1 *f1, Int_t firstbin, Int_t lastbin, Int_t cut, Option_t *option, TObjArray* arr)
@@ -655,7 +714,7 @@ void TH2::DoFitSlices(bool onX,
 
    //Loop on all bins in Y, generate a projection along X
    Int_t bin;
-   Int_t nentries;
+   Long64_t nentries;
    for (bin=firstbin;bin<=lastbin;bin += ngroup) {
       TH1D *hp;
       if (onX)
@@ -663,7 +722,7 @@ void TH2::DoFitSlices(bool onX,
       else
          hp= ProjectionY("_temp",bin,bin+ngroup-1,"e");
       if (hp == 0) continue;
-      nentries = Int_t(hp->GetEntries());
+      nentries = Long64_t(hp->GetEntries());
       if (nentries == 0 || nentries < cut) {delete hp; continue;}
       f1->SetParameters(parsave);
       hp->Fit(f1,opt.Data());
@@ -934,7 +993,7 @@ void TH2::GetStats(Double_t *stats) const
    Int_t bin, binx, biny;
    Double_t w,err;
    Double_t x,y;
-   if (fTsumw == 0 || fXaxis.TestBit(TAxis::kAxisRange) || fYaxis.TestBit(TAxis::kAxisRange)) {
+   if ((fTsumw == 0 && fEntries > 0) || fXaxis.TestBit(TAxis::kAxisRange) || fYaxis.TestBit(TAxis::kAxisRange)) {
       for (bin=0;bin<7;bin++) stats[bin] = 0;
 
       Int_t firstBinX = fXaxis.GetFirst();
@@ -1663,31 +1722,63 @@ TH2 *TH2::Rebin2D(Int_t nxgroup, Int_t nygroup, const char *newname)
       hnew->SetBinContent(0,0,oldBins[0]);
       hnew->SetBinContent(0,newybins+1,oldBins[nybins+1]);
       hnew->SetBinContent(newxbins+1,0,oldBins[(nxbins+1)*(nybins+2)]);
+      if (oldErrors) { 
+         hnew->SetBinError(newxbins+1,newybins+1,oldErrors[(nxbins+1)*(nybins+2)+(nybins+1)]);
+         hnew->SetBinError(0,0,oldErrors[0]);
+         hnew->SetBinError(0,newybins+1,oldErrors[nybins+1]);
+         hnew->SetBinError(newxbins+1,0,oldErrors[(nxbins+1)*(nybins+2)]);
+      }
 
+      //  recompute under/overflow contents in y for the new  x bins 
       Double_t binContent0, binContent2;
+      Double_t binError0, binError2;
       oldxbin = 1;
       for (xbin = 1; xbin<=newxbins; xbin++) {
          binContent0 = binContent2 = 0;
+         binError0 = binError2 = 0;
          for (i=0; i<nxgroup; i++) {
             if (oldxbin+i > nxbins) break;
-            binContent0 += oldBins[(oldxbin+i)*(nybins+2)];
-            binContent2 += oldBins[(oldxbin+i)*(nybins+2)+(nybins+1)];
+            //N.B  convention used for index is opposite than TH1::GetBin(ix,iy)
+            Int_t ufbin = (oldxbin+i)*(nybins+2);   // index for y underflow bins 
+            Int_t ofbin = (oldxbin+i)*(nybins+2) + (nybins+1);   // index for y overflow bins 
+            binContent0 += oldBins[ufbin];
+            binContent2 += oldBins[ofbin];
+            if (oldErrors)  { 
+               binError0 += oldErrors[ufbin] * oldErrors[ufbin];
+               binError2 += oldErrors[ofbin] * oldErrors[ofbin];
+            }
          }
          hnew->SetBinContent(xbin,0,binContent0);
          hnew->SetBinContent(xbin,newybins+1,binContent2);
+         if (oldErrors) { 
+            hnew->SetBinError(xbin,0,TMath::Sqrt(binError0));
+            hnew->SetBinError(xbin,newybins+1,TMath::Sqrt(binError2) );
+         }
          oldxbin += nxgroup;
       }
 
+      //  recompute under/overflow contents in x for the new y bins
       Int_t oldybin = 1;
       for (ybin = 1; ybin<=newybins; ybin++) {
          binContent0 = binContent2 = 0;
+         binError0 = binError2 = 0;
          for (i=0; i<nygroup; i++) {
             if (oldybin+i > nybins) break;
-            binContent0 += oldBins[(oldybin+i)];
-            binContent2 += oldBins[(nxbins+1)*(nybins+2)+(oldybin+i)];
+            Int_t ufbin = (oldybin+i);   // global index for x underflow bins 
+            Int_t ofbin = (nxbins+1)*(nybins+2) + (oldybin+i);   // global index for x overflow bins 
+            binContent0 += oldBins[ufbin];
+            binContent2 += oldBins[ofbin];
+            if (oldErrors)  { 
+               binError0 += oldErrors[ufbin] * oldErrors[ufbin];
+               binError2 += oldErrors[ofbin] * oldErrors[ofbin];
+            }
          }
          hnew->SetBinContent(0,ybin,binContent0);
          hnew->SetBinContent(newxbins+1,ybin,binContent2);
+         if (oldErrors) { 
+            hnew->SetBinError(0,ybin, TMath::Sqrt(binError0));
+            hnew->SetBinError(newxbins+1, ybin, TMath::Sqrt(binError2));
+         }
          oldybin += nygroup;
       }
    }
@@ -1730,13 +1821,30 @@ TH2 *TH2::Rebin2D(Int_t nxgroup, Int_t nygroup, const char *newname)
 TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastbin, Option_t *option) const
 {
    TString opt = option;
+   opt.ToLower();
+   bool originalRange = opt.Contains("o");
 
    const TAxis& outAxis = ( onX ? fXaxis : fYaxis );
    const TAxis&  inAxis = ( onX ? fYaxis : fXaxis );
-   Int_t outN = outAxis.GetNbins();
    Int_t  inN = inAxis.GetNbins();
    const char *expectedName = ( onX ? "_pfx" : "_pfy" );
 
+   Int_t firstOutBin, lastOutBin;
+   firstOutBin = outAxis.GetFirst();
+   lastOutBin = outAxis.GetLast();
+
+   if ( lastbin < firstbin && inAxis.TestBit(TAxis::kAxisRange) ) {
+      firstbin = inAxis.GetFirst();
+      lastbin = inAxis.GetLast();
+      // For special case of TAxis::SetRange, when first == 1 and last
+      // = N and the range bit has been set, the TAxis will return 0
+      // for both.
+      if (firstbin == 0 && lastbin == 0) 
+      {
+         firstbin = 1;
+         lastbin = inAxis.GetNbins();
+      }
+   } 
    if (firstbin < 0) firstbin = 1;
    if (lastbin  < 0) lastbin  = inN;
    if (lastbin  > inN+1) lastbin  = inN;
@@ -1752,9 +1860,7 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
    //check if a profile with identical name exist
    TObject *h1obj = gROOT->FindObject(pname);
    if (h1obj && h1obj->InheritsFrom("TProfile")) {
-      h1 = (TProfile*)h1obj;
-      // tb.d. check if number of bin is consistent ?
-      h1->Reset();
+      delete h1obj;
    }
 
    Int_t ncuts = 0;
@@ -1767,9 +1873,14 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
    if (!h1) {
       const TArrayD *bins = outAxis.GetXbins();
       if (bins->fN == 0) {
-         h1 = new TProfile(pname,GetTitle(),outN,outAxis.GetXmin(),outAxis.GetXmax(),option);
+         if ( originalRange ) 
+            h1 = new TProfile(pname,GetTitle(),outAxis.GetNbins(),outAxis.GetXmin(),outAxis.GetXmax(),option);
+         else
+            h1 = new TProfile(pname,GetTitle(),lastOutBin-firstOutBin+1,
+                              outAxis.GetBinLowEdge(firstOutBin),
+                              outAxis.GetBinUpEdge(lastOutBin));
       } else {
-         h1 = new TProfile(pname,GetTitle(),outN,bins->fArray,option);
+         h1 = new TProfile(pname,GetTitle(),outAxis.GetNbins(),bins->fArray,option);
       }
    }
    if (pname != name)  delete [] pname;
@@ -1781,24 +1892,51 @@ TProfile *TH2::DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastb
    h1->SetMarkerColor(this->GetMarkerColor());
    h1->SetMarkerStyle(this->GetMarkerStyle());
 
-   //
+   // check if histogram is weighted
+   // in case need to store sum of weight square/bin for the profile
+   bool useWeights = (GetSumw2N() > 0); 
+   if (useWeights) h1->Sumw2(); 
+
    // Fill the profile histogram
+   // no entries/bin is available so can fill only using bin content as weight
    Double_t cont;
-   for (Int_t outBin =0;outBin<=outN+1;outBin++) {
+   Double_t totcont = 0; 
+   TArrayD & binSumw2 = *(h1->GetBinSumw2()); 
+   for (Int_t outBin =0;outBin<=h1->GetNbinsX()+1;outBin++) {
+      if ( outBin < firstOutBin && originalRange && outAxis.TestBit(TAxis::kAxisRange) ) continue;
+      if ( outBin > lastOutBin && originalRange && outAxis.TestBit(TAxis::kAxisRange) ) continue;
+      if ( firstOutBin > 1 && outBin == 0 ) continue;
+      if ( lastOutBin < outAxis.GetNbins() && outBin == h1->GetNbinsX() + 1 ) continue;
       for (Int_t inBin=firstbin;inBin<=lastbin;inBin++) {
-         Int_t& binx = (onX ? outBin :  inBin );
-         Int_t& biny = (onX ?  inBin : outBin );
+         Int_t binx = (onX ? outBin  + (originalRange?0:(firstOutBin - 1)) :  inBin );
+         Int_t biny = (onX ?  inBin : outBin + (originalRange?0:(firstOutBin - 1)) );
+         Int_t bin = GetBin(binx,biny); 
          if (ncuts) {
             if (!fPainter->IsInside(binx,biny)) continue;
          }
-         cont =  GetCellContent(binx,biny);
+         cont =  GetBinContent(bin);
 
          if (cont) {
-            h1->Fill(outAxis.GetBinCenter(outBin),inAxis.GetBinCenter(inBin), cont );
+            Double_t tmp = 0; 
+            // the following fill update wrongly the fBinSumw2- need to save it before
+            if ( useWeights ) tmp = binSumw2.fArray[outBin];            
+            h1->Fill(h1->GetXaxis()->GetBinCenter(outBin),inAxis.GetBinCenter(inBin), cont );
+            if ( useWeights ) binSumw2.fArray[outBin] = tmp + fSumw2.fArray[bin];
+            totcont += cont; 
          }
+
       }
    }
-   if ((firstbin <=1 && lastbin >= inN) && !ncuts) h1->SetEntries(fEntries);
+
+
+   // the statistics must be recalculated since by using the Fill method the total sum of weight^2 is 
+   // not computed correctly
+   // for a profile does not much sense to re-use statistics of original TH2 
+   h1->ResetStats();
+   // Also we need to set the entries since they have not been correctly calculated during the projection
+   // we can only set them to the effective entries
+   h1->SetEntries( h1->GetEffectiveEntries() ); 
+
 
    if (opt.Contains("d")) {
       TVirtualPad *padsav = gPad;
@@ -1899,35 +2037,46 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
    // called by ProjectionX or ProjectionY
 
    const char *expectedName = 0;
-   Int_t outNbin, inNbin;
+   Int_t inNbin;
+   Int_t firstOutBin, lastOutBin;
    TAxis* outAxis;
+   TAxis* inAxis;
 
+
+   TString opt = option;
+   opt.ToLower();  //must be called after MakeCuts
+   bool originalRange = opt.Contains("o");
 
    if ( onX )
    {
       expectedName = "_px";
-      outNbin = fXaxis.GetNbins();
       inNbin = fYaxis.GetNbins();
       outAxis = GetXaxis();
+      inAxis = GetYaxis();
    }
    else
    {
       expectedName = "_py";
-      outNbin = fYaxis.GetNbins();
       inNbin = fXaxis.GetNbins();
       outAxis = GetYaxis();
+      inAxis = GetXaxis();
    }
 
+   firstOutBin = outAxis->GetFirst();
+   lastOutBin = outAxis->GetLast();
    
-   Double_t th2Stats[7];
-   GetStats(th2Stats);
-   Double_t th1Stats[4];
-   th1Stats[0] = th2Stats[0];
-   th1Stats[1] = th2Stats[1];
-   th1Stats[2] = th2Stats[(onX) ? 2 : 4];
-   th1Stats[3] = th2Stats[(onX) ? 3 : 5];
-
-   TString opt = option;
+   if ( lastbin < firstbin && inAxis->TestBit(TAxis::kAxisRange) ) {
+      firstbin = inAxis->GetFirst();
+      lastbin = inAxis->GetLast();
+      // For special case of TAxis::SetRange, when first == 1 and last
+      // = N and the range bit has been set, the TAxis will return 0
+      // for both.
+      if (firstbin == 0 && lastbin == 0) 
+      {
+         firstbin = 1;
+         lastbin = inAxis->GetNbins();
+      }
+   } 
    if (firstbin < 0) firstbin = 0;
    if (lastbin  < 0) lastbin  = inNbin + 1;
    if (lastbin  > inNbin+1) lastbin  = inNbin + 1;
@@ -1943,8 +2092,7 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
    //check if histogram with identical name exist
    TObject *h1obj = gROOT->FindObject(pname);
    if (h1obj && h1obj->InheritsFrom("TH1D")) {
-      h1 = (TH1D*)h1obj;
-      h1->Reset();
+      delete h1obj;
    }
 
    Int_t ncuts = 0;
@@ -1952,14 +2100,17 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
       ((TH2 *)this)->GetPainter();
       if (fPainter) ncuts = fPainter->MakeCuts((char*)opt.Data());
    }
-   opt.ToLower();  //must be called after MakeCuts
 
    if (!h1) {
       const TArrayD *bins = outAxis->GetXbins();
       if (bins->fN == 0) {
-         h1 = new TH1D(pname,GetTitle(),outNbin,outAxis->GetXmin(),outAxis->GetXmax());
+         if ( originalRange ) 
+            h1 = new TH1D(pname,GetTitle(),outAxis->GetNbins(),outAxis->GetXmin(),outAxis->GetXmax());
+         else
+            h1 = new TH1D(pname,GetTitle(),lastOutBin-firstOutBin+1,
+                          outAxis->GetBinLowEdge(firstOutBin),outAxis->GetBinUpEdge(lastOutBin));
       } else {
-         h1 = new TH1D(pname,GetTitle(),outNbin,bins->fArray);
+         h1 = new TH1D(pname,GetTitle(),outAxis->GetNbins(),bins->fArray);
       }
       if (opt.Contains("e") || GetSumw2N() ) h1->Sumw2();
    }
@@ -1985,14 +2136,21 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
 
    // Fill the projected histogram
    Double_t cont,err2;
-   Double_t entries = 0;
-   for (Int_t binOut =0;binOut<=outNbin+1;binOut++) {
+   Double_t totcont = 0;
+
+   for (Int_t binOut=0;binOut<=h1->GetNbinsX() + 1;binOut++) {
       err2 = 0;
       cont = 0;
+      // when the range is set in the out axis, overflow and underflow
+      // are not considered
+      if ( binOut < firstOutBin && originalRange && outAxis->TestBit(TAxis::kAxisRange) ) continue;
+      if ( binOut > lastOutBin && originalRange && outAxis->TestBit(TAxis::kAxisRange) ) continue;
+      if ( firstOutBin > 1 && binOut == 0 ) continue;
+      if ( lastOutBin < outAxis->GetNbins() && binOut == h1->GetNbinsX() + 1 ) continue;
       for (Int_t binIn=firstbin;binIn<=lastbin;binIn++) {
          Int_t binx, biny;
-         if ( onX ) { binx = binOut; biny = binIn;  }
-         else       { binx = binIn;  biny = binOut; }
+         if ( onX ) { binx = binOut + (originalRange?0:(firstOutBin - 1)); biny = binIn;  }
+         else       { binx = binIn;  biny = binOut + (originalRange?0:(firstOutBin - 1)); }
 
          if (ncuts) {
             if (!fPainter->IsInside(binx,biny)) continue;
@@ -2002,13 +2160,43 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
          Double_t exy2 = exy*exy;
          cont  += cxy;
          err2 += exy2;
-         // count all effective entries bin by bin
-         if (cxy && exy2 > 0) entries += cxy*cxy/exy2;
+         // sum  all content
+//         if (cxy && exy2 > 0) entries += cxy*cxy/exy2;
+         if (cxy ) totcont += cxy;
       }
       h1->SetBinContent(binOut,cont);
       if (h1->GetSumw2N()) h1->SetBinError(binOut,TMath::Sqrt(err2));
    }
-   h1->SetEntries(entries);
+
+   // check if we can re-use the original statistics from  the previous histogram 
+   bool reuseStats = false; 
+   if ( ( fgStatOverflows == false && firstbin == 1 && lastbin == inNbin     ) ||
+        ( fgStatOverflows == true  && firstbin == 0 && lastbin == inNbin + 1 ) )
+      reuseStats = true; 
+   else {
+      // also if total content match we can re-use 
+      double eps = 1.E-12;
+      if (IsA() == TH2F::Class() ) eps = 1.E-6;
+      if (fTsumw != 0 && TMath::Abs( fTsumw - totcont) <  TMath::Abs(fTsumw) * eps) 
+         reuseStats = true; 
+   }
+   // retrieve  the statistics and set in projected histogram if we can re-use it 
+   if (reuseStats) { 
+      Double_t stats[kNstat];
+      GetStats(stats);
+      if (!onX) {  // case of projection on Y 
+         stats[2] = stats[4]; 
+         stats[3] = stats[5]; 
+      }
+      h1->PutStats(stats);
+      h1->SetEntries(fEntries); 
+   }
+   else { 
+      // the statistics is automatically recalulated since it is reset by the call to SetBinContent
+      // we just need to set the entries since they have not been correctly calculated during the projection
+      // we can only set them to the effective entries
+      h1->SetEntries( h1->GetEffectiveEntries() ); 
+   }
 
    if (opt.Contains("d")) {
       TVirtualPad *padsav = gPad;
@@ -2018,18 +2206,13 @@ TH1D *TH2::DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbi
       strcpy(optin,opt.Data());
       char *d = (char*)strstr(optin,"d"); if (d) {*d = ' '; if (*(d+1) == 0) *d=0;}
       char *e = (char*)strstr(optin,"e"); if (e) {*e = ' '; if (*(e+1) == 0) *e=0;}
-      if (!gPad->FindObject(h1)) {
+      if (!gPad || !gPad->FindObject(h1)) {
          h1->Draw(optin);
       } else {
          h1->Paint(optin);
       }
       if (padsav) padsav->cd();
    }
-
-
-   if ( ( fgStatOverflows == false && firstbin == 1 && lastbin == inNbin     ) ||
-        ( fgStatOverflows == true  && firstbin == 0 && lastbin == inNbin + 1 ) )
-   h1->PutStats(&th1Stats[0]);
 
    return h1;
 }

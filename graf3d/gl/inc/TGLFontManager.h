@@ -1,5 +1,5 @@
 // @(#)root/gl:$Id$
-// Author:  Olivier Couet 12/04/2007
+// Author: Alja Mrak-Tadel 2008
 
 /*************************************************************************
  * Copyright (C) 1995-2007, Rene Brun and Fons Rademakers.               *
@@ -64,19 +64,26 @@ public:
 
    void  SetFont(FTFont *f) { fFont =f;}
    const FTFont* GetFont() const { return fFont; }
-   void  SetManager(TGLFontManager *mng) {fManager = mng;}
+   void  SetManager(TGLFontManager *mng)    { fManager = mng;  }
    const TGLFontManager* GetManager() const { return fManager; }
 
-   Float_t GetDepth() const { return fDepth;}
-   void  SetDepth(Float_t d) { fDepth = d; }
+   Float_t GetDepth()    const { return fDepth; }
+   void    SetDepth(Float_t d) { fDepth = d;    }
 
    // FTGL wrapper functions
-   void  BBox(const Text_t* txt,
-               Float_t& llx, Float_t& lly, Float_t& llz,
-               Float_t& urx, Float_t& ury, Float_t& urz) const;
+   Float_t GetAscent() const;
+   Float_t GetDescent() const;
+   Float_t GetLineHeight() const;
+   void    MeasureBaseLineParams(Float_t& ascent, Float_t& descent, Float_t& line_height,
+                                 const char* txt="Xj") const;
 
-   void  Render(const Text_t* txt) const;
-   void  RenderBitmap(const Text_t* txt, Float_t x, Float_t y, Float_t zs, ETextAlign_e align) const;
+   void  BBox(const char* txt,
+              Float_t& llx, Float_t& lly, Float_t& llz,
+              Float_t& urx, Float_t& ury, Float_t& urz) const;
+
+   void  Render(const char* txt) const;
+   void  Render(const char* txt, Double_t x, Double_t y, Double_t angle, Double_t mgn) const;
+   void  RenderBitmap(const char* txt, Float_t x, Float_t y, Float_t zs, ETextAlign_e align) const;
 
    // helper gl draw functions
    virtual void PreRender(Bool_t autoLight=kTRUE, Bool_t lightOn=kFALSE) const;
@@ -131,13 +138,14 @@ public:
    virtual ~TGLFontManager();
 
    void   RegisterFont(Int_t size, Int_t file, TGLFont::EMode mode, TGLFont& out);
-   void   RegisterFont(Int_t size, const Text_t* name, TGLFont::EMode mode, TGLFont& out);
+   void   RegisterFont(Int_t size, const char* name, TGLFont::EMode mode, TGLFont& out);
    void   ReleaseFont(TGLFont& font);
 
    static TObjArray*        GetFontFileArray();
    static FontSizeVec_t*    GetFontSizeArray();
 
-   static Int_t             GetFontSize(Float_t ds, Int_t min = -1, Int_t max = -1);
+   static Int_t             GetFontSize(Float_t ds);
+   static Int_t             GetFontSize(Float_t ds, Int_t min, Int_t max);
    static const char*       GetFontNameFromId(Int_t);
 
    void   ClearFontTrash();

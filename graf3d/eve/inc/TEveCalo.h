@@ -67,7 +67,7 @@ protected:
    virtual void BuildCellIdCache() = 0;
 
 public:
-   TEveCaloViz(TEveCaloData* data=0, const Text_t* n="TEveCaloViz", const Text_t* t="");
+   TEveCaloViz(TEveCaloData* data=0, const char* n="TEveCaloViz", const char* t="");
 
    virtual ~TEveCaloViz();
 
@@ -157,15 +157,18 @@ protected:
    virtual void BuildCellIdCache();
 
 public:
-   TEveCalo3D(TEveCaloData* d=0, const Text_t* n="TEveCalo3D", const Text_t* t="xx");
+   TEveCalo3D(TEveCaloData* d=0, const char* n="TEveCalo3D", const char* t="xx");
    virtual ~TEveCalo3D() {}
    virtual void ComputeBBox();
 
-   virtual Bool_t CanEditMainColor() const  { return kTRUE; }
+   virtual Bool_t CanEditMainColor()        const { return kTRUE; }
    virtual Bool_t CanEditMainTransparency() const { return kTRUE; }
 
    void SetRnrFrame(Bool_t e, Bool_t b)         { fRnrEndCapFrame = e; fRnrBarrelFrame = b; }
    void GetRnrFrame(Bool_t &e, Bool_t &b) const { e = fRnrEndCapFrame; b = fRnrBarrelFrame; }
+
+   virtual void SetFrameTransparency(UChar_t x) { fFrameTransparency = x; }
+   UChar_t GetFrameTransparency() const { return fFrameTransparency; }
 
    ClassDef(TEveCalo3D, 0); // Class for 3D visualization of calorimeter event data.
 };
@@ -190,8 +193,8 @@ protected:
    virtual void BuildCellIdCache();
 
 public:
-   TEveCalo2D(const Text_t* n="TEveCalo2D", const Text_t* t="");
-   virtual ~TEveCalo2D(){}
+   TEveCalo2D(const char* n="TEveCalo2D", const char* t="");
+   virtual ~TEveCalo2D();
 
    virtual void SetProjection(TEveProjectionManager* proj, TEveProjectable* model);
    virtual void UpdateProjection();
@@ -246,7 +249,7 @@ protected:
    virtual void BuildCellIdCache();
 
 public:
-   TEveCaloLego(TEveCaloData* data=0, const Text_t* n="TEveCaloLego", const Text_t* t="");
+   TEveCaloLego(TEveCaloData* data=0, const char* n="TEveCaloLego", const char* t="");
 
    virtual ~TEveCaloLego(){}
 

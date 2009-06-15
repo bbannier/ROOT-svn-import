@@ -264,7 +264,7 @@ int Cint::Internal::G__include_file()
 }
 
 //______________________________________________________________________________
-extern "C" char* G__getmakeinfo(char* item)
+extern "C" const char* G__getmakeinfo(const char* item)
 {
    G__StrBuf makeinfo_sb(G__MAXFILENAME);
    char* makeinfo = makeinfo_sb;
@@ -369,21 +369,13 @@ extern "C" char* G__getmakeinfo(char* item)
 }
 
 //______________________________________________________________________________
-extern "C" char* G__getmakeinfo1(char* item)
+extern "C" const char* G__getmakeinfo1(const char* item)
 {
-   char* buf = G__getmakeinfo(item);
-#ifndef G__HAVE_CONFIG
-   char* p = buf;
-   while (*p && !isspace(*p)) {
-      ++p;
-   }
-   *p = 0;
-#endif // G__HAVE_CONFIG
-   return buf;
+   return G__getmakeinfo(item);
 }
 
 //______________________________________________________________________________
-extern "C" void G__SetCINTSYSDIR(char *cintsysdir)
+extern "C" void G__SetCINTSYSDIR(const char *cintsysdir)
 {
    strcpy(G__cintsysdir, cintsysdir);
 }
@@ -400,7 +392,7 @@ extern "C" void G__SetUseCINTSYSDIR(int UseCINTSYSDIR)
 //______________________________________________________________________________
 int Cint::Internal::G__getcintsysdir()
 {
-   char* env = 0;
+   const char* env = 0;
    if (G__cintsysdir[0] != '*') {
       return EXIT_SUCCESS;
    }
@@ -408,10 +400,7 @@ int Cint::Internal::G__getcintsysdir()
 
 #ifdef G__ROOT
 # ifdef ROOTBUILD
-   env = getenv("CINTSYSDIR");
-   if (!env) {
-      env = "cint";
-   }
+   env = "cint";
 # else // ROOTBUILD
 #  ifdef CINTINCDIR
    env = CINTINCDIR;
@@ -649,14 +638,14 @@ int Cint::Internal::G__matchfilename(int i1, const char* filename)
 }
 
 //______________________________________________________________________________
-extern "C" char* G__stripfilename(char* filename)
+extern "C" const char* G__stripfilename(const char* filename)
 {
    if (!filename) {
       return "";
    }
-   char* filenamebase = G__strrstr(filename, "./");
+   const char* filenamebase = G__strrstr(filename, "./");
    if (filenamebase) {
-      char* parentdir = G__strrstr(filename, "../");
+      const char* parentdir = G__strrstr(filename, "../");
       G__StrBuf buf_sb(G__ONELINE);
       char* buf = buf_sb;
 #ifdef G__WIN32
@@ -699,7 +688,7 @@ void Cint::Internal::G__smart_unload(int ifn)
    struct G__dictposition* hasonlyfunc = G__srcfile[ifn].hasonlyfunc;
    if (G__nfile == hasonlyfunc->nfile) {
       ::Reflex::Scope var = ::Reflex::Scope::GlobalScope();
-      if ((var == hasonlyfunc->var) && (var.DataMemberSize() == hasonlyfunc->ig15)) {
+      if ((var == hasonlyfunc->var) && ( ((int)var.DataMemberSize()) == hasonlyfunc->ig15)) {
          G__scratch_upto(G__srcfile[ifn].dictpos);
          return;
       }
@@ -931,22 +920,21 @@ static int G__isbinaryfile(char* filename)
 //______________________________________________________________________________
 static void G__checkIfOnlyFunction(int fentry)
 {
-   int tagflag = 0;
    G__dictposition* dictpos = G__srcfile[fentry].dictpos;
-   if (dictpos->tagnum == G__struct.alltag) {
-      tagflag = 1;
-      if (dictpos->ptype && (dictpos->ptype != (char*) G__PVOID)) {
-         for (int i = 0; i < G__struct.alltag; ++i) {
-            if (dictpos->ptype[i] != G__struct.type[i]) {
-               tagflag = 0;
-               break;
-            }
-         }
-      }
+
+   // Sum the number of G__struct slot used by any of the file
+   // we enclosed:
+   int nSubdefined = 0;
+   for(int filecur = fentry+1; filecur < G__nfile; ++filecur) {
+     nSubdefined += G__srcfile[filecur].definedStruct;
    }
+   G__srcfile[fentry].definedStruct = G__struct.nactives - dictpos->nactives - nSubdefined;
+   
+   int tagflag = ( G__srcfile[fentry].definedStruct == 0 ); 
+  
    int varflag = 1;
    ::Reflex::Scope var = ::Reflex::Scope::GlobalScope();
-   if (dictpos->var == var && dictpos->ig15 == var.DataMemberSize()) {
+   if (dictpos->var == var && dictpos->ig15 == ((int)var.DataMemberSize())) {
       varflag = 1;
    }
    else {
@@ -984,7 +972,6 @@ static void G__checkIfOnlyFunction(int fentry)
       (definedtemplatefunc == dictpos->definedtemplatefunc)
    ) {
       G__srcfile[fentry].hasonlyfunc = (G__dictposition*) malloc(sizeof(G__dictposition));
-      G__srcfile[fentry].hasonlyfunc->ptype = (char*) G__PVOID;
       G__store_dictposition(G__srcfile[fentry].hasonlyfunc);
    }
 }
@@ -1054,7 +1041,6 @@ int Cint::Internal::G__loadfile_tmpfile(FILE* fp)
    sprintf(G__ifile.name, "(tmp%d)", fentry);
    G__hash(G__ifile.name, hash, temp);
    G__srcfile[fentry].dictpos = (G__dictposition*) malloc(sizeof(G__dictposition));
-   G__srcfile[fentry].dictpos->ptype =  0;
    G__store_dictposition(G__srcfile[fentry].dictpos);
    G__srcfile[fentry].hdrprop = hdrprop;
    store_security = G__security;
@@ -1274,8 +1260,8 @@ int Cint::Internal::G__statfilename(const char *filenamein, struct stat *statBuf
        * try $CINTSYSDIR/stl
        **********************************************/
       if('\0'!=G__cintsysdir[0]) {
-         sprintf(workname,"%s/%s/stl/%s%s",G__cintsysdir,G__CFG_COREVERSION
-                 ,filename,addpost[i2]);
+         sprintf(workname,"%s%s%s%sstl%s%s%s",G__cintsysdir,G__psep,G__CFG_COREVERSION
+                 ,G__psep,G__psep,filename,addpost[i2]);
          res = stat( workname, statBuf );         
          if (res==0) return res;
       }
@@ -1285,8 +1271,8 @@ int Cint::Internal::G__statfilename(const char *filenamein, struct stat *statBuf
        **********************************************/
       /* G__getcintsysdir(); */
       if('\0'!=G__cintsysdir[0]) {
-         sprintf(workname,"%s/%s/lib/%s%s",G__cintsysdir,G__CFG_COREVERSION
-                 ,filename,addpost[i2]);
+         sprintf(workname,"%s%s%s%slib%s%s%s",G__cintsysdir,G__psep,G__CFG_COREVERSION
+                 ,G__psep,G__psep,filename,addpost[i2]);
          res = stat( workname, statBuf );         
          if (res==0) return res;
       }
@@ -1400,7 +1386,7 @@ extern "C" int G__loadfile(const char* filenamein)
    //  9)                                        return 0
    FILE* tmpfp;
    int external_compiler = 0;
-   char* compiler_option = "";
+   const char* compiler_option = "";
    int store_prerun;
    int i1 = 0;
    ::Reflex::Scope store_p_local;
@@ -1423,8 +1409,10 @@ extern "C" int G__loadfile(const char* filenamein)
    int temp;
    int store_macroORtemplateINfile;
    int len;
+#ifdef G__SHAREDLIB
    int len1;
-   char* dllpost;
+   const char* dllpost;
+#endif
    short store_iscpp;
    G__UINT32 store_security;
    char addpost[3][8];
@@ -1598,10 +1586,10 @@ extern "C" int G__loadfile(const char* filenamein)
                }
             }
             bool cintdlls = false;
-            int len = strlen(filename);
+            int local_len = strlen(filename);
             for (unsigned int i = 0; !cintdlls && (i < excludelistsize); ++i) {
-               if (len >= excludelen[i]) {
-                  cintdlls = !strncmp(filename + len - excludelen[i], excludelist[i], excludelen[i]);
+               if (local_len >= excludelen[i]) {
+                  cintdlls = !strncmp(filename + local_len - excludelen[i], excludelist[i], excludelen[i]);
                }
             }
             if (!cintdlls) {
@@ -1630,7 +1618,7 @@ extern "C" int G__loadfile(const char* filenamein)
    //
    // Get actual open file name.
    //
-   int pres = G__preprocessor(prepname, filename, G__cpp, G__macros, G__undeflist, G__ppopt, G__allincludepath);
+   int pres = G__preprocessor(prepname, filename, G__cpp, G__macros, /*FIXME*/(char*)G__undeflist, G__ppopt, G__allincludepath);
    if (pres) {
       G__fprinterr(G__serr, "Error: external preprocessing failed.");
       G__genericerror(0);
@@ -1824,7 +1812,8 @@ extern "C" int G__loadfile(const char* filenamein)
          //
          G__getcintsysdir();
          if (G__cintsysdir[0]) {
-            sprintf(G__ifile.name, "%s/%s/include/%s%s", G__cintsysdir, G__CFG_COREVERSION, filename, addpost[i2]);
+            sprintf(G__ifile.name,"%s%s%s%sinclude%s%s%s",G__cintsysdir,G__psep,G__CFG_COREVERSION
+                    ,G__psep,G__psep,filename,addpost[i2]);
 #ifndef G__WIN32
             G__ifile.fp = fopen(G__ifile.name, "r");
 #else // G__WIN32
@@ -1845,7 +1834,8 @@ extern "C" int G__loadfile(const char* filenamein)
          //
          G__getcintsysdir();
          if (G__cintsysdir[0]) {
-            sprintf(G__ifile.name, "%s/%s/stl/%s%s", G__cintsysdir, G__CFG_COREVERSION, filename, addpost[i2]);
+            sprintf(G__ifile.name,"%s%s%s%sstl%s%s%s",G__cintsysdir, G__psep, G__CFG_COREVERSION,
+                    G__psep, G__psep, filename,addpost[i2]);
 #ifndef G__WIN32
             G__ifile.fp = fopen(G__ifile.name, "r");
 #else // G__WIN32
@@ -1865,7 +1855,8 @@ extern "C" int G__loadfile(const char* filenamein)
          // try $CINTSYSDIR/lib
          //
          if (G__cintsysdir[0]) {
-            sprintf(G__ifile.name, "%s/%s/lib/%s%s", G__cintsysdir, G__CFG_COREVERSION, filename, addpost[i2]);
+            sprintf(G__ifile.name,"%s%s%s%slib%s%s%s",G__cintsysdir, G__psep, G__CFG_COREVERSION,
+                    G__psep, G__psep,filename,addpost[i2]);
 #ifndef G__WIN32
             G__ifile.fp = fopen(G__ifile.name, "r");
 #else // G__WIN32
@@ -2121,7 +2112,6 @@ extern "C" int G__loadfile(const char* filenamein)
    // so update G__ifile to point to fentry:
    G__ifile.filenum = fentry;
    G__srcfile[fentry].dictpos = (G__dictposition*) malloc(sizeof(G__dictposition));
-   G__srcfile[fentry].dictpos->ptype = 0;
    G__store_dictposition(G__srcfile[fentry].dictpos);
    if (null_entry == -1) {
       ++G__nfile;
@@ -2418,7 +2408,6 @@ int G__setfilecontext(const char* filename, G__input_file* ifile)
          fentry = G__nfile;
       }
       G__srcfile[fentry].dictpos = (G__dictposition*) malloc(sizeof(G__dictposition));
-      G__srcfile[fentry].dictpos->ptype = 0;
       G__store_dictposition(G__srcfile[fentry].dictpos);
       if (null_entry == -1) {
          ++G__nfile;
@@ -2465,8 +2454,6 @@ int Cint::Internal::G__preprocessor(char* outname, char* inname, int cppflag, ch
    // Use C/C++ preprocessor prior to interpretation.
    // Name of preprocessor must be defined in $CINTSYSDIR/MAKEINFO file as
    // CPPPREP and CPREP.
-   G__StrBuf temp_sb(G__LARGEBUF);
-   char* temp = temp_sb;
    G__StrBuf tmpfilen_sb(G__MAXFILENAME);
    char* tmpfilen = tmpfilen_sb;
    int tmplen;
@@ -2668,15 +2655,16 @@ int Cint::Internal::G__preprocessor(char* outname, char* inname, int cppflag, ch
       }
 #endif // G__SYMANTEC && !G__TMPFILE
 
+      G__StrBuf temp_sb(G__LARGEBUF);
 #ifdef G__SYMANTEC
       //
       // preprocessor statement for Symantec C++
       //
       if (G__cintsysdir[0]) {
-         sprintf(temp, "%s %s %s -I. %s %s -D__CINT__ -I%s/include -I%s/stl -I%s/lib %s -o%s", G__ccom, macros, undeflist, ppopt, includepath, G__cintsysdir, G__cintsysdir, G__cintsysdir, tmpfilen, outname);
+         temp_sb.Format("%s %s %s -I. %s %s -D__CINT__ -I%s/include -I%s/stl -I%s/lib %s -o%s", G__ccom, macros, undeflist, ppopt, includepath, G__cintsysdir, G__cintsysdir, G__cintsysdir, tmpfilen, outname);
       }
       else {
-         sprintf(temp, "%s %s %s %s -I. %s -D__CINT__ %s -o%s", G__ccom, macros, undeflist, ppopt, includepath, tmpfilen, outname);
+         temp_sb.Format("%s %s %s %s -I. %s -D__CINT__ %s -o%s", G__ccom, macros, undeflist, ppopt, includepath, tmpfilen, outname);
       }
 #elif defined(G__BORLAND)
       strcat(outname, ".i");
@@ -2685,10 +2673,10 @@ int Cint::Internal::G__preprocessor(char* outname, char* inname, int cppflag, ch
          corecintsysdir += "/";
          corecintsysdir += G__CFG_COREVERSION;
          corecintsysdir += "/";
-         sprintf(temp, "%s %s %s -I. %s %s -D__CINT__ -I%s/include -I%s/stl -I%s/lib -o%s %s", G__ccom, macros, undeflist, ppopt, includepath, corecintsysdir.c_str(), corecintsysdir.c_str(), corecintsysdir.c_str(), outname, tmpfilen);
+         temp_sb.Format("%s %s %s -I. %s %s -D__CINT__ -I%s/include -I%s/stl -I%s/lib -o%s %s", G__ccom, macros, undeflist, ppopt, includepath, corecintsysdir.c_str(), corecintsysdir.c_str(), corecintsysdir.c_str(), outname, tmpfilen);
       }
       else {
-         sprintf(temp, "%s %s %s %s -I. %s -D__CINT__ -o%s %s" , G__ccom, macros, undeflist, ppopt, includepath, outname, tmpfilen);
+         temp_sb.Format("%s %s %s %s -I. %s -D__CINT__ -o%s %s" , G__ccom, macros, undeflist, ppopt, includepath, outname, tmpfilen);
       }
 #else
       //
@@ -2699,16 +2687,16 @@ int Cint::Internal::G__preprocessor(char* outname, char* inname, int cppflag, ch
          corecintsysdir += "/";
          corecintsysdir += G__CFG_COREVERSION;
          corecintsysdir += "/";
-         sprintf(temp, "%s %s %s -I. %s %s -D__CINT__ -I%s/include -I%s/stl -I%s/lib %s > %s", G__ccom, macros, undeflist, ppopt , includepath, corecintsysdir.c_str(), corecintsysdir.c_str(), corecintsysdir.c_str(), tmpfilen, outname);
+         temp_sb.Format("%s %s %s -I. %s %s -D__CINT__ -I%s/include -I%s/stl -I%s/lib %s > %s", G__ccom, macros, undeflist, ppopt , includepath, corecintsysdir.c_str(), corecintsysdir.c_str(), corecintsysdir.c_str(), tmpfilen, outname);
       }
       else {
-         sprintf(temp, "%s %s %s %s -I. %s -D__CINT__ %s > %s", G__ccom, macros, undeflist, ppopt, includepath, tmpfilen, outname);
+         temp_sb.Format("%s %s %s %s -I. %s -D__CINT__ %s > %s", G__ccom, macros, undeflist, ppopt, includepath, tmpfilen, outname);
       }
 #endif
       if (G__debugtrace || G__steptrace || G__step || G__asm_dbg) {
-         G__fprinterr(G__serr, " %s\n", temp);
+         G__fprinterr(G__serr, " %s\n", temp_sb.data());
       }
-      int pres = system(temp);
+      int pres = system(temp_sb);
       if (tmplen) {
          remove(tmpfilen);
       }
@@ -3010,7 +2998,8 @@ extern "C" G__input_file* G__get_ifile()
 int Cint::Internal::G__register_sharedlib(const char *libname)
 {
    // Register (if not already registered) in G__srcfile a library that
-   // is indirectly loaded (via a hard link) and has a CINT dictionary.
+   // is indirectly loaded (via a hard link) and has a CINT dictionary
+   // and return the filenum (index in G__srcfile).
    
    int null_entry = -1;
    int i1 = 0;
@@ -3057,34 +3046,12 @@ int Cint::Internal::G__register_sharedlib(const char *libname)
       if(G__matchfilename(i1,libname)
          &&G__get_tagnum(G__get_envtagnum())==G__srcfile[i1].parent_tagnum
          ){
-         if(G__prerun==0 || G__debugtrace)
-            if(G__dispmsg>=G__DISPNOTE) {
-               static const char *excludelist [] = {
-                  "stdfunc.dll","stdcxxfunc.dll","posix.dll","ipc.dll","posix.dll"
-                  "string.dll","vector.dll","vectorbool.dll","list.dll","deque.dll",
-                  "map.dll", "map2.dll","set.dll","multimap.dll","multimap2.dll",
-                  "multiset.dll","stack.dll","queue.dll","valarray.dll",
-               "exception.dll","stdexcept.dll","complex.dll","climits.dll" };
-               static const unsigned int excludelistsize = sizeof(excludelist)/sizeof(excludelist[0]);
-               static int excludelen[excludelistsize] = {-1};
-               if (excludelen[0] == -1) {
-                  for (unsigned int i = 0; i < excludelistsize; ++i)
-                     excludelen[i] = strlen(excludelist[i]);
-               }
-               bool cintdlls = false;
-               int len = strlen(libname);
-               for (unsigned int i = 0; !cintdlls && i < excludelistsize; ++i) {
-                  if (len>=excludelen[i]) {
-                     cintdlls = (!strncmp(libname+len-excludelen[i], excludelist[i], excludelen[i]));
-                  }
-               }
-            }
          /******************************************************
           * restore input file information to G__ifile
           * and reset G__eof to 0.
           ******************************************************/
          G__UnlockCriticalSection();
-         return(G__LOADFILE_DUPLICATE);
+         return i1;
       }
       else {
          ++i1;
@@ -3101,7 +3068,6 @@ int Cint::Internal::G__register_sharedlib(const char *libname)
    
    G__srcfile[fentry].dictpos
    = (struct G__dictposition*)malloc(sizeof(struct G__dictposition));
-   G__srcfile[fentry].dictpos->ptype = (char*)NULL;
    G__store_dictposition(G__srcfile[fentry].dictpos);
    
    G__srcfile[fentry].hdrprop = G__NONCINTHDR;

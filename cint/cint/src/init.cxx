@@ -23,7 +23,9 @@
 #include <libgen.h> //needed for basename
 #endif
 
+#ifdef G__SHAREDLIB
 extern std::list<G__DLLINIT>* G__initpermanentsl;
+#endif //G__SHAREDLIB
 
 extern "C" {
 
@@ -132,9 +134,11 @@ int G__call_setup_funcs()
    int i, k = 0;
    G__var_array* store_p_local = G__p_local; // changed by setupfuncs
    G__LockCriticalSection();
+#ifdef G__SHAREDLIB
    if (!G__initpermanentsl) {
       G__initpermanentsl = new std::list<G__DLLINIT>;
    }
+#endif //G__SHAREDLIB
    // Call G__RegisterLibrary() again, after it got called already
    // in G__init_setup_funcs(), because G__scratchall might have been
    // called in between.
@@ -151,7 +155,9 @@ int G__call_setup_funcs()
       if (G__setup_func_list[i] && !G__setup_func_list[i]->inited) {
          (G__setup_func_list[i]->func)();
          G__setup_func_list[i]->inited = 1;
+#ifdef G__SHAREDLIB
          G__initpermanentsl->push_back(G__setup_func_list[i]->func);
+#endif //G__SHAREDLIB
          k++;
 #ifdef G__DEBUG
          fprintf(G__sout, "Dictionary for %s initialized\n", G__setup_func_list[i]->libname); /* only for debug */
@@ -544,7 +550,6 @@ int G__main(int argc, char** argv)
    static char clnull[1] = "";
    struct G__dictposition stubbegin;
    char* icom = 0;
-   stubbegin.ptype = (char*) G__PVOID;
    /*****************************************************************
     * Setting STDIOs.  May need to modify here.
     *  init.c, end.c, scrupto.c, pause.c
@@ -1219,7 +1224,6 @@ int G__main(int argc, char** argv)
          continue;
       }
       else if (strcmp(sourcefile, "+STUB") == 0) {
-         stubbegin.ptype = (char*)G__PVOID;
          G__store_dictposition(&stubbegin);
          continue;
       }
@@ -1728,7 +1732,7 @@ int G__init_globals()
 #ifdef SIGUSR2
    G__SIGUSR2 = 0;
 #endif
-#endif
+#endif //G__SIGNAL
 
 #ifdef G__SHAREDLIB
    G__allsl = 0;
@@ -2158,6 +2162,10 @@ void G__platformMacro()
 #ifdef __SUNPRO_C   /* Sun C compiler */
    G__DEFINE_MACRO_C(__SUNPRO_C);
 #endif
+#ifdef _STLPORT_VERSION
+   // stlport version, used on e.g. SUN
+   G__DEFINE_MACRO_C(_STLPORT_VERSION);
+#endif
 #ifdef G__VISUAL    /* Microsoft Visual C++ compiler */
    if (G__globalcomp == G__NOLINK) {
       sprintf(temp, "G__VISUAL=%ld", (long)G__VISUAL);
@@ -2170,6 +2178,16 @@ void G__platformMacro()
       G__add_macro(temp);
    }
    G__DEFINE_MACRO_C(_MSC_VER);
+   if (G__globalcomp == G__NOLINK) {
+#ifdef _HAS_ITERATOR_DEBUGGING
+      sprintf(temp, "G__HAS_ITERATOR_DEBUGGING=%d", _HAS_ITERATOR_DEBUGGING);
+      G__add_macro(temp);
+#endif
+#ifdef _SECURE_SCL
+      sprintf(temp, "G__SECURE_SCL=%d", _SECURE_SCL);
+      G__add_macro(temp);
+#endif
+   }
 #endif
 #ifdef __SC__       /* Symantec C/C++ compiler */
    G__DEFINE_MACRO_N_C(__SC__, "G__SYMANTEC");

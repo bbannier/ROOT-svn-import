@@ -113,6 +113,8 @@ static void G__close_inputfiles_upto(G__dictposition* pos)
       G__dump_tracecoverage(G__dumpfile);
    }
 #endif // // G__DUMPFILE
+   std::string fullname;
+   Reflex::Type cl;
    int nfile = pos->nfile;
    while (G__nfile > nfile) {
       --G__nfile;
@@ -120,6 +122,9 @@ static void G__close_inputfiles_upto(G__dictposition* pos)
       for (int itag = 0; itag < pos->tagnum; ++itag) {
          if (G__struct.filenum[itag] == G__nfile) {
             // -- Keep name, libname and parent_tagnum; reset everything else.
+
+            fullname = G__fulltagname( itag, 0 );
+            
             char* name = G__struct.name[itag];
             int hash = G__struct.hash[itag];
             char* libname = G__struct.libname[itag];
@@ -130,13 +135,14 @@ static void G__close_inputfiles_upto(G__dictposition* pos)
             G__struct.alltag = itag + 1; // to only free itag
             G__free_struct_upto(itag);
             G__struct.alltag = alltag;
+            --G__struct.nactives;
+
             G__struct.name[itag] = name;
             G__struct.libname[itag] = libname;
             G__struct.type[itag] = 'a';
             G__struct.hash[itag] = hash;
             G__struct.size[itag] = 0;
-            G__struct.baseclass[itag] = (struct G__inheritance*) malloc(sizeof(struct G__inheritance));
-            memset(G__struct.baseclass[itag], 0, sizeof(struct G__inheritance));
+            G__struct.baseclass[itag] = new G__inheritance();
             G__struct.virtual_offset[itag] = (char*) -1;
             G__struct.globalcomp[itag] = 0;
             G__struct.iscpplink[itag] = G__default_link ? G__globalcomp : G__NOLINK;
@@ -149,8 +155,6 @@ static void G__close_inputfiles_upto(G__dictposition* pos)
             G__struct.istypedefed[itag] = 0;
             G__struct.istrace[itag] = 0;
             G__struct.isbreak[itag] = 0;
-            G__struct.comment[itag].p.com = 0;
-            G__struct.comment[itag].filenum = -1;
             G__struct.friendtag[itag] = 0;
             // Clean up G__setup_memfunc and G__setup_memvar pointers list
             if (G__struct.incsetup_memvar[itag])
@@ -414,7 +418,7 @@ static int G__free_struct_upto(int tagnum)
       G__free_friendtag(G__struct.friendtag[G__struct.alltag]);
 #endif // G__FRIEND
       // freeing class inheritance table
-      free((void*) G__struct.baseclass[G__struct.alltag]);
+      delete G__struct.baseclass[G__struct.alltag];
       G__struct.baseclass[G__struct.alltag] = 0;
 
       // Free member functions
@@ -649,27 +653,6 @@ static int G__scratch_upto_work(G__dictposition* dictpos, int doall)
       // --
    }
    else {
-      // --
-#ifndef G__OLDIMPLEMENTATION2190
-      {
-         int nfile = G__nfile;
-         while (nfile > dictpos->nfile) {
-            struct G__dictposition* dictposx = G__srcfile[nfile].dictpos;
-            if (dictposx && dictposx->ptype && (dictposx->ptype != (char*) G__PVOID)) {
-               free((void*) dictposx->ptype);
-               dictposx->ptype = 0;
-            }
-            --nfile;
-         }
-      }
-#endif // G__OLDIMPLEMENTATION2190
-      if (dictpos->ptype && (dictpos->ptype != (char*) G__PVOID)) {
-         for (int i = 0; i < G__struct.alltag; ++i) {
-            G__struct.type[i] = dictpos->ptype[i];
-         }
-         free((void*) dictpos->ptype);
-         dictpos->ptype = 0;
-      }
       // Close input files.
       G__close_inputfiles_upto(dictpos);
       G__tagdefining = ::Reflex::Scope();
@@ -768,16 +751,18 @@ int Cint::Internal::G__destroy_upto(::Reflex::Scope& scope, int global, int inde
                )
             )
          ) || // or
-         (index >= 0) && // We are *not* handling function local variables, and
+         (
+            (index >= 0) && // We are *not* handling function local variables, and
 #endif // G__ASM_WHOLEFUNC
-         (
-            (G__get_properties(var)->statictype != G__LOCALSTATIC) || // Not a static variable, or
-            (global == G__GLOBAL_VAR) // We are destroying globals,
-         ) && // and,
-         (
-            (G__get_properties(var)->statictype != G__COMPILEDGLOBAL) // Not precompiled
-         ) && // and,
-         !G__get_properties(var)->isFromUsing 
+            (
+               (G__get_properties(var)->statictype != G__LOCALSTATIC) || // Not a static variable, or
+               (global == G__GLOBAL_VAR) // We are destroying globals,
+            ) && // and,
+            (
+               (G__get_properties(var)->statictype != G__COMPILEDGLOBAL) // Not precompiled
+            ) && // and,
+            !G__get_properties(var)->isFromUsing
+         )
       ) {
          //G__fprinterr(G__serr, "\nG__destroy_upto: Destroying variable! scope: '%s' var: '%s' ary: %d  %s:%d\n", scope.Name().c_str(), var.Name().c_str(), G__get_varlabel(var, 1) /* number of elements */, __FILE__, __LINE__);
          // Default to variable is not of a precompiled class type.
@@ -969,16 +954,7 @@ extern "C" void G__store_dictposition(G__dictposition* dictpos)
    while (dictpos->definedtemplatefunc->next) {
       dictpos->definedtemplatefunc = dictpos->definedtemplatefunc->next;
    }
-   if (dictpos->ptype && (dictpos->ptype != (char*) G__PVOID)) {
-      free((void*) dictpos->ptype);
-      dictpos->ptype = 0;
-   }
-   if (!dictpos->ptype) {
-      dictpos->ptype = (char*) malloc(G__struct.alltag + 1);
-      for (int i = 0; i < G__struct.alltag; ++i) {
-         dictpos->ptype[i] = G__struct.type[i];
-      }
-   }
+   dictpos->nactives = G__struct.nactives;
    G__UnlockCriticalSection();
 }
 
@@ -993,13 +969,6 @@ extern "C" int G__close_inputfiles()
    }
 #endif // G__DUMPFILE
    for (iarg = 0; iarg < G__nfile; ++iarg) {
-      if (G__srcfile[iarg].dictpos) {
-         if (G__srcfile[iarg].dictpos->ptype && (G__srcfile[iarg].dictpos->ptype != (char*) G__PVOID)) {
-            free((void*)G__srcfile[iarg].dictpos->ptype);
-         }
-         free((void*) G__srcfile[iarg].dictpos);
-         G__srcfile[iarg].dictpos = 0;
-      }
       if (G__srcfile[iarg].hasonlyfunc) {
          free((void*) G__srcfile[iarg].hasonlyfunc);
          G__srcfile[iarg].hasonlyfunc = 0;

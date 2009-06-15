@@ -32,8 +32,9 @@ typedef std::vector< Reflex::Type > TypeVec_t;
 static Name2Type_t & sTypes() {
 //-------------------------------------------------------------------------------
 // Static wrapper for type map.
-   static Name2Type_t m;
-   return m;
+   static Name2Type_t* m = 0;
+   if (!m) m = new Name2Type_t;
+   return *m;
 }
 
 
@@ -41,8 +42,9 @@ static Name2Type_t & sTypes() {
 static TypeId2Type_t & sTypeInfos() {
 //-------------------------------------------------------------------------------
 // Static wrapper for type map (type_infos).
-   static TypeId2Type_t m;
-   return m;
+   static TypeId2Type_t* m;
+   if (!m) m = new TypeId2Type_t;
+   return *m;
 }
 
 
@@ -50,8 +52,9 @@ static TypeId2Type_t & sTypeInfos() {
 static TypeVec_t & sTypeVec() {
 //-------------------------------------------------------------------------------
 // Static wrapper for type vector.
-   static TypeVec_t m;
-   return m;
+   static TypeVec_t* m = 0;
+   if (!m) m = new TypeVec_t;
+   return *m;
 }
 
 
@@ -113,10 +116,14 @@ Reflex::Type
 Reflex::TypeName::ByName( const std::string & key ) {
 //-------------------------------------------------------------------------------
 // Lookup a type by name.
-   size_t pos =  key.substr(0,2) == "::" ?  2 : 0;
-   const std::string & k = key.substr(pos);
+   Name2Type_t::const_iterator it;
    const Name2Type_t& n2t = sTypes();
-   Name2Type_t::const_iterator it = n2t.find(&k);
+   if (key.size()>2 && key[0]==':' && key[1]==':') {
+      const std::string & k = key.substr(2);
+      it = n2t.find(&k);
+   } else {
+      it = n2t.find(&key); 
+   }
    if( it != n2t.end() ) return it->second->ThisType();
    else                  return Dummy::Type();
 }

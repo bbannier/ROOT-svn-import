@@ -153,6 +153,16 @@ TXProofServ::TXProofServ(Int_t *argc, char **argv, FILE *flog)
    fInterruptHandler = 0;
    fInputHandler = 0;
    fTerminated = kFALSE;
+
+   // TODO:
+   //    Int_t useFIFO = 0;
+/*   if (GetParameter(fProof->GetInputList(), "PROOF_UseFIFO", useFIFO) != 0) {
+      if (useFIFO == 1)
+         Info("", "enablig use of FIFO (if allowed by the server)");
+      else
+         Warning("", "unsupported strategy index (%d): ignore", strategy);
+   }
+*/
 }
 
 //______________________________________________________________________________
@@ -174,7 +184,7 @@ Int_t TXProofServ::CreateServer()
          Error("CreateServer", "resolving the log file description number");
          return -1;
       }
-      // Hide the session start-up logs unless we are in verbose mode 
+      // Hide the session start-up logs unless we are in verbose mode
       if (gProofDebugLevel <= 0)
          lseek(fLogFileDes, (off_t) 0, SEEK_END);
    }
@@ -225,6 +235,8 @@ Int_t TXProofServ::CreateServer()
       Error("CreateServer", "Failed to open connection to XrdProofd coordinator");
       return -1;
    }
+   // Set compression level, if any
+   fSocket->SetCompressionLevel(fCompressMsg);
 
    // Set the title for debugging
    TString tgt("client");
@@ -409,6 +421,16 @@ Int_t TXProofServ::CreateServer()
       // Check activity on socket every 5 mins
       fShutdownTimer = new TShutdownTimer(this, 300000);
       fShutdownTimer->Start(-1, kFALSE);
+   }
+
+   // Check if schema evolution is effective: clients running versions <=17 do not
+   // support that: send a warning message
+   if (fProtocol <= 17) {
+      TString msg;
+      msg.Form("Warning: client version is too old: automatic schema evolution is ineffective.\n"
+               "         This may generate compatibility problems between streamed objects.\n"
+               "         The advise is to move to ROOT >= 5.21/02 .");
+      SendAsynMessage(msg.Data());
    }
 
    // Done
@@ -685,16 +707,11 @@ Int_t TXProofServ::Setup()
 
 //______________________________________________________________________________
 TProofServ::EQueryAction TXProofServ::GetWorkers(TList *workers,
-                                                 Int_t & /* prioritychange */)
+                                                 Int_t & /* prioritychange */,
+                                                 Bool_t resume)
 {
    // Get list of workers to be used from now on.
-   // The list must be provide by the caller.
-
-   // Needs a list where to store the info
-   if (!workers) {
-      Error("GetWorkers", "output list undefined");
-      return kQueryStop;
-   }
+   // The list must be provided by the caller.
 
    TProofServ::EQueryAction rc = kQueryStop;
 
@@ -705,14 +722,30 @@ TProofServ::EQueryAction TXProofServ::GetWorkers(TList *workers,
          return rc;
    }
 
+   // seqnum of the query for which we call getworkers
+   Bool_t dynamicStartup = gEnv->GetValue("Proof.DynamicStartup", kFALSE);
+   TString seqnum = (dynamicStartup) ? "" : XPD_GW_Static;
+   if (!fWaitingQueries->IsEmpty()) {
+      if (resume) {
+         seqnum += ((TProofQueryResult *)(fWaitingQueries->First()))->GetSeqNum();
+      } else {
+         seqnum += ((TProofQueryResult *)(fWaitingQueries->Last()))->GetSeqNum();
+      }
+   }
    // Send request to the coordinator
-   TObjString *os = ((TXSocket *)fSocket)->SendCoordinator(TXSocket::kGetWorkers);
+   TObjString *os =
+      ((TXSocket *)fSocket)->SendCoordinator(kGetWorkers, seqnum.Data());
 
    // The reply contains some information about the master (image, workdir)
    // followed by the information about the workers; the tokens for each node
    // are separated by '&'
    if (os) {
       TString fl(os->GetName());
+      if (fl.BeginsWith(XPD_GW_QueryEnqueued)) {
+         SendAsynMessage("+++ Query cannot be processed now: enqueued");
+         return kQueryEnqueued;
+      }
+
       TString tok;
       Ssiz_t from = 0;
       if (fl.Tokenize(tok, from, "&")) {
@@ -730,7 +763,8 @@ TProofServ::EQueryAction TXProofServ::GetWorkers(TList *workers,
             // Now the workers
             while (fl.Tokenize(tok, from, "&")) {
                if (!tok.IsNull()) {
-                  workers->Add(new TProofNodeInfo(tok));
+                  if (workers)
+                     workers->Add(new TProofNodeInfo(tok));
                   // We have the minimal set of information to start
                   rc = kQueryOK;
                }
@@ -1010,5 +1044,5 @@ void TXProofServ::ReleaseWorker(const char *ord)
 
    Info("ReleaseWorker","releasing: %s", ord);
 
-   ((TXSocket *)fSocket)->SendCoordinator(TXSocket::kReleaseWorker, ord);
+   ((TXSocket *)fSocket)->SendCoordinator(kReleaseWorker, ord);
 }

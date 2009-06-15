@@ -33,8 +33,11 @@
 #include "TLeafI.h"
 #include "TLeafL.h"
 
-TTreeCloner::TTreeCloner(TTree *from, TTree *to, Option_t *method) :
+TTreeCloner::TTreeCloner(TTree *from, TTree *to, Option_t *method, UInt_t options) :
+   fWarningMsg(),
    fIsValid(kTRUE),
+   fNeedConversion(kFALSE),
+   fOptions(options),
    fFromTree(from),
    fToTree(to),
    fMethod(method),
@@ -52,12 +55,12 @@ TTreeCloner::TTreeCloner(TTree *from, TTree *to, Option_t *method) :
    // Constructor.  This object would transfer the data from
    // 'from' to 'to' using the method indicated in method.
    //
-   // The value of the parameter 'method' determines in which 
+   // The value of the parameter 'method' determines in which
    // order the branches' baskets are written to the output file.
    //
    // When a TTree is filled the data is stored in the individual
-   // branches' basket.  Each basket is written individually to 
-   // the disk as soon as it is full.  In consequence the baskets 
+   // branches' basket.  Each basket is written individually to
+   // the disk as soon as it is full.  In consequence the baskets
    // of branches that contain 'large' data chunk are written to
    // the disk more often.
    //
@@ -71,18 +74,18 @@ TTreeCloner::TTreeCloner(TTree *from, TTree *to, Option_t *method) :
    // (i.e. the basket are sorted on their offset in the original
    // file; Usually this also means that the baskets are sorted
    // on the index/number of the _last_ entry they contain)
-   // 
-   // When using SortBasketsByBranch all the baskets of each 
-   // individual branches are stored contiguously.  This tends to 
-   // optimize reading speed when reading a small number (1->5) of 
-   // branches, since all their baskets will be clustered together 
+   //
+   // When using SortBasketsByBranch all the baskets of each
+   // individual branches are stored contiguously.  This tends to
+   // optimize reading speed when reading a small number (1->5) of
+   // branches, since all their baskets will be clustered together
    // instead of being spread across the file.  However it might
-   // decrease the performance when reading more branches (or the full 
+   // decrease the performance when reading more branches (or the full
    // entry).
-   // 
+   //
    // When using SortBasketsByEntry the baskets with the lowest
-   // starting entry are written first.  (i.e. the baskets are 
-   // sorted on the index/number of the first entry they contain). 
+   // starting entry are written first.  (i.e. the baskets are
+   // sorted on the index/number of the first entry they contain).
    // This means that on the file the baskets will be in the order
    // in which they will be needed when reading the whole tree
    // sequentially.
@@ -140,8 +143,7 @@ void TTreeCloner::CloseOutWriteBaskets()
    }
 }
 
-UInt_t TTreeCloner::CollectBranches(TBranch *from, TBranch *to)
-{
+UInt_t TTreeCloner::CollectBranches(TBranch *from, TBranch *to) {
    // Fill the array of branches, adding the branch 'from' and 'to',
    // and matching the sub-branches of the 'from' and 'to' branches.
    // Returns the total number of baskets in all the from branch and
@@ -151,59 +153,85 @@ UInt_t TTreeCloner::CollectBranches(TBranch *from, TBranch *to)
 
    UInt_t numBaskets = 0;
    if (from->InheritsFrom(TBranchClones::Class())) {
-      TBranchClones *fromclones = (TBranchClones*)from;
-      TBranchClones *toclones = (TBranchClones*)to;
-      numBaskets += CollectBranches(fromclones->fBranchCount,toclones->fBranchCount);
-   
+      TBranchClones *fromclones = (TBranchClones*) from;
+      TBranchClones *toclones = (TBranchClones*) to;
+      numBaskets += CollectBranches(fromclones->fBranchCount, toclones->fBranchCount);
+
    } else if (from->InheritsFrom(TBranchElement::Class())) {
       Int_t nb = from->GetListOfLeaves()->GetEntries();
-      Int_t fnb= to->GetListOfLeaves()->GetEntries();
-      if (nb!=fnb && (nb==0 || fnb==0)) {
+      Int_t fnb = to->GetListOfLeaves()->GetEntries();
+      if (nb != fnb && (nb == 0 || fnb == 0)) {
          // We might be in the case where one branch is split
          // while the other is not split.  We must reject this match.
-         Error("TTreeCloner::CollectBranches",
-               "The export branch and the import branch do not have the same split level. (The branch name is %s.)", 	 
-               from->GetName());
+         fWarningMsg.Form("The export branch and the import branch do not have the same split level. (The branch name is %s.)",
+                          from->GetName());
+         if (!(fOptions & kNoWarnings)) {
+            Warning("TTreeCloner::CollectBranches", fWarningMsg.Data());
+         }
+         fNeedConversion = kTRUE;
          fIsValid = kFALSE;
          return 0;
       }
-
-      TBranchElement *fromelem = (TBranchElement*)from;
-      TBranchElement *toelem   = (TBranchElement*)to;
+      if (((TBranchElement*) from)->GetStreamerType() != ((TBranchElement*) to)->GetStreamerType()) {
+         fWarningMsg.Form("The export branch and the import branch do not have the same streamer type. (The branch name is %s.)",
+                          from->GetName());
+         if (!(fOptions & kNoWarnings)) {
+            Warning("TTreeCloner::CollectBranches",fWarningMsg.Data());
+         }
+         fIsValid = kFALSE;
+         return 0;
+      }
+      TBranchElement *fromelem = (TBranchElement*) from;
+      TBranchElement *toelem = (TBranchElement*) to;
       if (fromelem->fMaximum > toelem->fMaximum) toelem->fMaximum = fromelem->fMaximum;
    } else {
 
       Int_t nb = from->GetListOfLeaves()->GetEntries();
-      Int_t fnb= to->GetListOfLeaves()->GetEntries();
-      if (nb!=fnb) {
-         Error("TTreeCloner::CollectBranches",
-            "The export branch and the import branch (%s) do not have the same number of leaves (%d vs %d)",
-            from->GetName(), fnb,nb);
+      Int_t fnb = to->GetListOfLeaves()->GetEntries();
+      if (nb != fnb) {
+         fWarningMsg.Form("The export branch and the import branch (%s) do not have the same number of leaves (%d vs %d)",
+                          from->GetName(), fnb, nb);
+         if (!(fOptions & kNoWarnings)) {
+            Error("TTreeCloner::CollectBranches",fWarningMsg.Data());
+         }
          fIsValid = kFALSE;
          return 0;
       }
       for (Int_t i=0;i<nb;i++)  {
+
          TLeaf *fromleaf_gen = (TLeaf*)from->GetListOfLeaves()->At(i);
+         TLeaf *toleaf_gen = (TLeaf*)to->GetListOfLeaves()->At(i);
+         if (toleaf_gen->IsA() != fromleaf_gen->IsA() ) {
+            // The data type do not match, we can not do a fast merge.
+            fWarningMsg.Form("The export leaf and the import leaf (%s.%s) do not have the data type (%s vs %s)",
+                              from->GetName(),fromleaf_gen->GetName(),fromleaf_gen->GetTypeName(),toleaf_gen->GetTypeName());
+            if (! (fOptions & kNoWarnings) ) {
+               Warning("TTreeCloner::CollectBranches",fWarningMsg.Data());
+            }
+            fIsValid = kFALSE;
+            fNeedConversion = kTRUE;
+            return 0;
+         }
          if (fromleaf_gen->IsA()==TLeafI::Class()) {
-            TLeafI *fromleaf = (TLeafI*)from->GetListOfLeaves()->At(i);
-            TLeafI *toleaf   = (TLeafI*)to->GetListOfLeaves()->At(i);
-            if (fromleaf->GetMaximum() > toleaf->GetMaximum()) 
+            TLeafI *fromleaf = (TLeafI*)fromleaf_gen;
+            TLeafI *toleaf   = (TLeafI*)toleaf_gen;
+            if (fromleaf->GetMaximum() > toleaf->GetMaximum())
                toleaf->SetMaximum( fromleaf->GetMaximum() );
-            if (fromleaf->GetMinimum() < toleaf->GetMinimum()) 
+            if (fromleaf->GetMinimum() < toleaf->GetMinimum())
                toleaf->SetMinimum( fromleaf->GetMinimum() );
          } else if (fromleaf_gen->IsA()==TLeafL::Class()) {
-            TLeafL *fromleaf = (TLeafL*)from->GetListOfLeaves()->At(i);
-            TLeafL *toleaf   = (TLeafL*)to->GetListOfLeaves()->At(i);
-            if (fromleaf->GetMaximum() > toleaf->GetMaximum()) 
+            TLeafL *fromleaf = (TLeafL*)fromleaf_gen;
+            TLeafL *toleaf   = (TLeafL*)toleaf_gen;
+            if (fromleaf->GetMaximum() > toleaf->GetMaximum())
                toleaf->SetMaximum( fromleaf->GetMaximum() );
-            if (fromleaf->GetMinimum() < toleaf->GetMinimum()) 
+            if (fromleaf->GetMinimum() < toleaf->GetMinimum())
                toleaf->SetMinimum( fromleaf->GetMinimum() );
          } else if (fromleaf_gen->IsA()==TLeafB::Class()) {
-            TLeafB *fromleaf = (TLeafB*)from->GetListOfLeaves()->At(i);
-            TLeafB *toleaf   = (TLeafB*)to->GetListOfLeaves()->At(i);
-            if (fromleaf->GetMaximum() > toleaf->GetMaximum()) 
+            TLeafB *fromleaf = (TLeafB*)fromleaf_gen;
+            TLeafB *toleaf   = (TLeafB*)toleaf_gen;
+            if (fromleaf->GetMaximum() > toleaf->GetMaximum())
                toleaf->SetMaximum( fromleaf->GetMaximum() );
-            if (fromleaf->GetMinimum() < toleaf->GetMinimum()) 
+            if (fromleaf->GetMinimum() < toleaf->GetMinimum())
                toleaf->SetMinimum( fromleaf->GetMinimum() );
          }
       }
@@ -241,14 +269,14 @@ UInt_t TTreeCloner::CollectBranches(TObjArray *from, TObjArray *to)
       Int_t firstfi = fi;
       while (strcmp(fb->GetName(), tb->GetName())) {
          ++fi;
+         if (fi >= fnb) {
+            // continue at the beginning
+            fi = 0;
+         }
          if (fi==firstfi) {
             // We tried all the branches and there is not match.
             fb = 0;
             break;
-         }
-         if (fi >= fnb) {
-            // continue at the beginning
-            fi = 0;
          }
          fb = (TBranch*) from->UncheckedAt(fi);
       }
@@ -258,6 +286,13 @@ UInt_t TTreeCloner::CollectBranches(TObjArray *from, TObjArray *to)
          if (fi >= fnb) {
            fi = 0;
          }
+      } else {
+         fWarningMsg.Form("One of the export branch (%s) is not present in the import TTree.",
+                          tb->GetName());
+         if (!(fOptions & kNoWarnings)) {
+            Error("TTreeCloner::CollectBranches",fWarningMsg.Data());
+         }         
+         fIsValid = kFALSE;
       }
       ++ti;
    }
@@ -404,7 +439,7 @@ void TTreeCloner::CopyProcessIds()
             pid->Write(name);
             tofile->IncrementProcessIDs();
             if (gDebug > 0) {
-               printf("WriteProcessID, name=%s, file=%s\n",name,tofile->GetName());
+               Info("WriteProcessID", "name=%s, file=%s", name, tofile->GetName());
             }
             if (dirsav) dirsav->cd();
             out = (UShort_t)npids;

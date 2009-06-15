@@ -96,7 +96,13 @@ extern "C" G__int64 G__expr_strtoll(const char *nptr, char **endptr, register in
     * Set any if any `digits' consumed; make it negative to indicate
     * overflow.
     */
-   cutoff = neg ? - (G__uint64)(LONG_LONG_MIN) : LONG_LONG_MAX;
+   if (neg) {
+      // -(-2147483648) is not a valid long long, but -(-2147483648 + 42) is!
+      cutoff = -(LONG_LONG_MIN + 42);
+      cutoff += 42; // fixup offset for unary -
+   } else {
+      cutoff = LONG_LONG_MAX;
+   }
    cutlim = (int)(cutoff % (G__uint64) base);
    cutoff /= (G__uint64) base;
    for (acc = 0, any = 0;; c = *s++) {
@@ -191,8 +197,10 @@ extern "C" G__uint64 G__expr_strtoull(const char *nptr, char **endptr, register 
       acc = ULONG_LONG_MAX;
       errno = ERANGE;
    }
-   else if (neg)
-      acc = -acc;
+   else if (neg) {
+      // IGNORE - we're unsigned!
+      // acc = -acc;
+   }
    if (endptr != 0)
       *endptr = (char *)(any ? s - 1 : nptr);
    return (acc);
@@ -292,7 +300,7 @@ int Cint::Internal::G__more_pause(FILE *fp, int len)
 }
 
 //______________________________________________________________________________
-int Cint::Internal::G__more(FILE *fp, char *msg)
+int Cint::Internal::G__more(FILE *fp, const char *msg)
 {
    // --
 #ifndef G__OLDIMPLEMENTATION1485
@@ -335,7 +343,7 @@ static int G__display_friend(FILE *fp, const ::Reflex::Member &func)
 }
 
 //______________________________________________________________________________
-int Cint::Internal::G__listfunc(FILE *fp, int access, char *fname, const ::Reflex::Scope &ifunc)
+int Cint::Internal::G__listfunc(FILE *fp, int access, const char *fname, const ::Reflex::Scope &ifunc)
 {
    return G__listfunc_pretty(fp, access, fname, ifunc, 0);
 }
@@ -659,7 +667,7 @@ struct G__dictposition* Cint::Internal::G__get_dictpos(char *fname)
 }
 
 //______________________________________________________________________________
-int Cint::Internal::G__display_newtypes(FILE *fout, char *fname)
+int Cint::Internal::G__display_newtypes(FILE *fout, const char *fname)
 {
    struct G__dictposition *dict = (struct G__dictposition*)NULL;
    int i;
@@ -714,9 +722,9 @@ int Cint::Internal::G__display_string(FILE *fout)
 }
 
 //______________________________________________________________________________
-static int G__display_classinheritance(FILE *fout, int tagnum, char *space)
+static int G__display_classinheritance(FILE *fout, int tagnum, const char *space)
 {
-   int i;
+   size_t i;
    struct G__inheritance *baseclass;
    char addspace[50];
    G__StrBuf temp_sb(G__ONELINE);
@@ -730,31 +738,30 @@ static int G__display_classinheritance(FILE *fout, int tagnum, char *space)
 
    sprintf(addspace, "%s  ", space);
 
-   for (i = 0;i < baseclass->basen;i++) {
-      if (baseclass->property[i]&G__ISDIRECTINHERIT) {
-         sprintf(msg, "%s0x%-8lx ", space , (size_t)baseclass->baseoffset[i]);
+   for (i = 0;i < baseclass->vec.size();i++) {
+      if (baseclass->vec[i].property&G__ISDIRECTINHERIT) {
+         sprintf(msg, "%s0x%-8lx ", space , (unsigned long)baseclass->vec[i].baseoffset);
          if (G__more(fout, msg)) return(1);
-         if (baseclass->property[i]&G__ISVIRTUALBASE) {
+         if (baseclass->vec[i].property&G__ISVIRTUALBASE) {
             sprintf(msg, "virtual ");
             if (G__more(fout, msg)) return(1);
          }
-         if (baseclass->property[i]&G__ISINDIRECTVIRTUALBASE) {
+         if (baseclass->vec[i].property&G__ISINDIRECTVIRTUALBASE) {
             sprintf(msg, "(virtual) ");
             if (G__more(fout, msg)) return(1);
          }
          sprintf(msg, "%s %s"
-                 , G__access2string(baseclass->baseaccess[i])
-                 , G__fulltagname(baseclass->basetagnum[i], 0));
+                 , G__access2string(baseclass->vec[i].baseaccess)
+                 , G__fulltagname(baseclass->vec[i].basetagnum, 0));
          if (G__more(fout, msg)) return(1);
          temp[0] = '\0';
-         G__getcomment(temp, &G__struct.comment[baseclass->basetagnum[i]]
-                       , baseclass->basetagnum[i]);
+         G__getcomment(temp, baseclass->vec[i].basetagnum);
          if (temp[0]) {
             sprintf(msg, " //%s", temp);
             if (G__more(fout, msg)) return(1);
          }
          if (G__more(fout, "\n")) return(1);
-         if (G__display_classinheritance(fout, baseclass->basetagnum[i], addspace))
+         if (G__display_classinheritance(fout, baseclass->vec[i].basetagnum, addspace))
             return(1);
       }
    }
@@ -765,14 +772,14 @@ static int G__display_classinheritance(FILE *fout, int tagnum, char *space)
 static int G__display_membervariable(FILE *fout, int tagnum, int base)
 {
    struct G__inheritance *baseclass;
-   int i;
+   size_t i;
    baseclass = G__struct.baseclass[tagnum];
 
    if (base) {
-      for (i = 0;i < baseclass->basen;i++) {
+      for (i = 0;i < baseclass->vec.size();i++) {
          if (!G__browsing) return(0);
-         if (baseclass->property[i]&G__ISDIRECTINHERIT) {
-            if (G__display_membervariable(fout, baseclass->basetagnum[i], base))
+         if (baseclass->vec[i].property&G__ISDIRECTINHERIT) {
+            if (G__display_membervariable(fout, baseclass->vec[i].basetagnum, base))
                return(1);
          }
       }
@@ -795,15 +802,15 @@ static int G__display_memberfunction(FILE *fout, int tagnum, int access, int bas
    ::Reflex::Scope store_ifunc;
    int store_exec_memberfunc;
    struct G__inheritance *baseclass;
-   int i;
+   size_t i;
    int tmp;
    baseclass = G__struct.baseclass[tagnum];
 
    if (base) {
-      for (i = 0;i < baseclass->basen;i++) {
+      for (i = 0;i < baseclass->vec.size();i++) {
          if (!G__browsing) return(0);
-         if (baseclass->property[i]&G__ISDIRECTINHERIT) {
-            if (G__display_memberfunction(fout, baseclass->basetagnum[i]
+         if (baseclass->vec[i].property&G__ISDIRECTINHERIT) {
+            if (G__display_memberfunction(fout, baseclass->vec[i].basetagnum
                                           , access, base)) return(1);
          }
       }
@@ -830,7 +837,7 @@ static int G__display_memberfunction(FILE *fout, int tagnum, int access, int bas
 }
 
 //______________________________________________________________________________
-int Cint::Internal::G__display_typedef(FILE *fout, char *name, int startin)
+int Cint::Internal::G__display_typedef(FILE *fout, const char *name, int startin)
 {
    int k;
    ::Reflex::Type_Iterator start, stop;
@@ -926,7 +933,7 @@ int Cint::Internal::G__display_typedef(FILE *fout, char *name, int startin)
          for (::Reflex::Type arrayType = *iTypedef;
                arrayType.IsArray();
                arrayType = arrayType.ToType()) {
-            sprintf(msg, "[%lu]", arrayType.ArrayLength());
+            sprintf(msg, "[%lu]", (unsigned long)arrayType.ArrayLength());
 
             if (G__more(fout, msg)) return(1);
          }
@@ -1139,7 +1146,7 @@ static int G__display_eachtemplatefunc(FILE *fout, G__Definetemplatefunc *deftmp
 }
 
 //______________________________________________________________________________
-int Cint::Internal::G__display_template(FILE *fout, char *name)
+int Cint::Internal::G__display_template(FILE *fout, const char *name)
 {
    int i /* ,j */;
    struct G__Definedtemplateclass *deftmplt;
@@ -1188,7 +1195,7 @@ extern "C" int G__display_includepath(FILE *fout)
 }
 
 //______________________________________________________________________________
-int Cint::Internal::G__display_macro(FILE *fout, char *name)
+int Cint::Internal::G__display_macro(FILE *fout, const char *name)
 {
    struct G__Deffuncmacro *deffuncmacro;
    struct G__Charlist *charlist;
@@ -1445,21 +1452,21 @@ int Cint::Internal::G__dump_tracecoverage(FILE *fout)
 }
 
 //______________________________________________________________________________
-int Cint::Internal::G__objectmonitor(FILE *fout, char *pobject, const ::Reflex::Type &tagnum, char *addspace)
+int Cint::Internal::G__objectmonitor(FILE *fout, char *pobject, const ::Reflex::Type &tagnum, const char *addspace)
 {
    struct G__inheritance *baseclass;
    G__StrBuf space_sb(G__ONELINE);
    char *space = space_sb;
    G__StrBuf msg_sb(G__LONGLINE);
    char *msg = msg_sb;
-   int i;
+   size_t i;
 
    sprintf(space, "%s  ", addspace);
 
    baseclass = G__struct.baseclass[G__get_tagnum(tagnum)];
-   for (i = 0;i < baseclass->basen;i++) {
-      if (baseclass->property[i]&G__ISDIRECTINHERIT) {
-         if (baseclass->property[i]&G__ISVIRTUALBASE) {
+   for (i = 0;i < baseclass->vec.size();i++) {
+      if (baseclass->vec[i].property&G__ISDIRECTINHERIT) {
+         if (baseclass->vec[i].property&G__ISVIRTUALBASE) {
             if (0 > G__getvirtualbaseoffset(pobject, G__get_tagnum(tagnum), baseclass, i)) {
                sprintf(msg, "%s-0x%-7lx virtual ", space
                        , -1*G__getvirtualbaseoffset(pobject, G__get_tagnum(tagnum), baseclass, i));
@@ -1470,7 +1477,7 @@ int Cint::Internal::G__objectmonitor(FILE *fout, char *pobject, const ::Reflex::
             }
             if (G__more(fout, msg)) return(1);
             msg[0] = 0;
-            switch (baseclass->baseaccess[i]) {
+            switch (baseclass->vec[i].baseaccess) {
                case G__PRIVATE:
                   sprintf(msg, "private: ");
                   break;
@@ -1482,20 +1489,20 @@ int Cint::Internal::G__objectmonitor(FILE *fout, char *pobject, const ::Reflex::
                   break;
             }
             if (G__more(fout, msg)) return(1);
-            sprintf(msg, "%s\n", G__fulltagname(baseclass->basetagnum[i], 1));
+            sprintf(msg, "%s\n", G__fulltagname(baseclass->vec[i].basetagnum, 1));
             if (G__more(fout, msg)) return(1);
 #ifdef G__NEVER_BUT_KEEP
             if (G__objectmonitor(fout
-                                 , pobject + (*(long*)(pobject + baseclass->baseoffset[i]))
-                                 , baseclass->basetagnum[i], space))
+                                 , pobject + (*(long*)(pobject + baseclass->vec[i].baseoffset))
+                                 , baseclass->vec[i].basetagnum, space))
                return(1);
 #endif
          }
          else {
-            sprintf(msg, "%s0x%-8lx ", space , (size_t)baseclass->baseoffset[i]);
+            sprintf(msg, "%s0x%-8lx ", space , (unsigned long)baseclass->vec[i].baseoffset);
             if (G__more(fout, msg)) return(1);
             msg[0] = 0;
-            switch (baseclass->baseaccess[i]) {
+            switch (baseclass->vec[i].baseaccess) {
                case G__PRIVATE:
                   sprintf(msg, "private: ");
                   break;
@@ -1507,11 +1514,11 @@ int Cint::Internal::G__objectmonitor(FILE *fout, char *pobject, const ::Reflex::
                   break;
             }
             if (G__more(fout, msg)) return(1);
-            sprintf(msg, "%s\n", G__fulltagname(baseclass->basetagnum[i], 1));
+            sprintf(msg, "%s\n", G__fulltagname(baseclass->vec[i].basetagnum, 1));
             if (G__more(fout, msg)) return(1);
             if (G__objectmonitor(fout
-                                 , pobject + (size_t)baseclass->baseoffset[i]
-                                 , G__Dict::GetDict().GetType(baseclass->basetagnum[i]), space))
+                                 , pobject + (size_t)baseclass->vec[i].baseoffset
+                                 , G__Dict::GetDict().GetType(baseclass->vec[i].basetagnum), space))
                return(1);
          }
       }
@@ -1601,7 +1608,7 @@ int Cint::Internal::G__varmonitor(FILE* fout, const ::Reflex::Scope scope, const
       //
       //  Print out member address.
       //
-      sprintf(msg, "0x%-8lx ", (size_t)addr);
+      sprintf(msg, "0x%-8lx ", (unsigned long)addr);
       if (G__more(fout, msg)) {
          return 1;
       }
@@ -1732,7 +1739,7 @@ int Cint::Internal::G__varmonitor(FILE* fout, const ::Reflex::Scope scope, const
       //  Print any member bitfield width.
       //
       if (G__get_bitfield_width(mbr)) {
-         sprintf(msg, " : %ld (%ld)", G__get_bitfield_width(mbr), G__get_bitfield_start(mbr));
+         sprintf(msg, " : %ld (%ld)", (long)G__get_bitfield_width(mbr), (long)G__get_bitfield_start(mbr));
          if (G__more(fout, msg)) {
             return 1;
          }
@@ -1780,7 +1787,7 @@ int Cint::Internal::G__varmonitor(FILE* fout, const ::Reflex::Scope scope, const
                   //
                   //  Print size of member's class.
                   //
-                  sprintf(msg, " , size=%ld", mbr.TypeOf().RawType().SizeOf());
+                  sprintf(msg, " , size=%ld", (long)mbr.TypeOf().RawType().SizeOf());
                   if (G__more(fout, msg)) {
                      return 1;
                   }
@@ -1923,10 +1930,10 @@ int Cint::Internal::G__varmonitor(FILE* fout, const ::Reflex::Scope scope, const
                   //  Print the member address and the char string.
                   //
                   if (isprint(*(char*)addr)) {
-                     sprintf(msg, "=0x%lx=\"%s\"", (size_t)addr, (char*) addr); // FIXME: This can fail, a char array may not be zero terminated!  And we do not check the whole array for printability.
+                     sprintf(msg, "=0x%lx=\"%s\"", (unsigned long)addr, (char*) addr); // FIXME: This can fail, a char array may not be zero terminated!  And we do not check the whole array for printability.
                   }
                   else {
-                     sprintf(msg, "=0x%lx", (size_t)addr);
+                     sprintf(msg, "=0x%lx", (unsigned long)addr);
                   }
                   if (G__more(fout, msg)) {
                      return 1;
@@ -1937,7 +1944,7 @@ int Cint::Internal::G__varmonitor(FILE* fout, const ::Reflex::Scope scope, const
                   //
                   //  Print the member address only.
                   //
-                  sprintf(msg, "=0x%lx", (size_t)addr);
+                  sprintf(msg, "=0x%lx", (unsigned long)addr);
                   if (G__more(fout, msg)) {
                      return 1;
                   }
@@ -1970,7 +1977,7 @@ int Cint::Internal::G__varmonitor(FILE* fout, const ::Reflex::Scope scope, const
             //  Print size of member's class.
             //
             ::Reflex::Type mbr_class = mbr.TypeOf().RawType();
-            sprintf(msg, " , size=%ld", mbr_class.SizeOf());
+            sprintf(msg, " , size=%ld", (unsigned long)mbr_class.SizeOf());
             //sprintf(msg, " , size=%ld  ::%s", mbr_class.SizeOf(), mbr_class.Name(::Reflex::SCOPED).c_str());
             if (G__more(fout, msg)) {
                return 1;
@@ -2390,11 +2397,12 @@ extern "C" int G__FreeConsole()
 #endif /* G__WIN32 */
 
 //______________________________________________________________________________
-extern "C" int G__display_class(FILE *fout, char *name, int base, int start)
+extern "C" int G__display_class(FILE *fout, const char *in_name, int base, int start)
 {
    using namespace ::Cint::Internal;
    int tagnum;
-   int i, j;
+   int i;
+   size_t j;
    struct G__inheritance *baseclass;
    G__StrBuf temp_sb(G__ONELINE);
    char *temp = temp_sb;
@@ -2405,6 +2413,10 @@ extern "C" int G__display_class(FILE *fout, char *name, int base, int start)
    int store_iscpp;
 
    G__browsing = 1;
+
+   G__StrBuf name_sb(strlen(in_name)+2);
+   char *name = name_sb;
+   strcpy(name,in_name);
 
    i = 0;
    while (isspace(name[i])) i++;
@@ -2481,15 +2493,15 @@ extern "C" int G__display_class(FILE *fout, char *name, int base, int start)
          if (G__more(fout, msg)) return(1);
          baseclass = G__struct.baseclass[i];
          if (baseclass) {
-            for (j = 0;j < baseclass->basen;j++) {
-               if (baseclass->property[j]&G__ISDIRECTINHERIT) {
-                  if (baseclass->property[j]&G__ISVIRTUALBASE) {
+            for (j = 0;j < baseclass->vec.size();j++) {
+               if (baseclass->vec[j].property&G__ISDIRECTINHERIT) {
+                  if (baseclass->vec[j].property&G__ISVIRTUALBASE) {
                      sprintf(msg, "virtual ");
                      if (G__more(fout, msg)) return(1);
                   }
                   sprintf(msg, "%s%s "
-                          , G__access2string(baseclass->baseaccess[j])
-                          , G__fulltagname(baseclass->basetagnum[j], 0));
+                          , G__access2string(baseclass->vec[j].baseaccess)
+                          , G__fulltagname(baseclass->vec[j].basetagnum, 0));
                   if (G__more(fout, msg)) return(1);
                }
             }
@@ -2499,7 +2511,7 @@ extern "C" int G__display_class(FILE *fout, char *name, int base, int start)
             if (G__more(fout, msg)) return(1);
          }
          temp[0] = '\0';
-         G__getcomment(temp, &G__struct.comment[i], i);
+         G__getcomment(temp, i);
          if (temp[0]) {
             sprintf(msg, " //%s", temp);
             if (G__more(fout, msg)) return(1);
@@ -2546,7 +2558,7 @@ extern "C" int G__display_class(FILE *fout, char *name, int base, int start)
    sprintf(msg, "%s", G__fulltagname(tagnum, 0));
    if (G__more(fout, msg)) return(1);
    temp[0] = '\0';
-   G__getcomment(temp, &G__struct.comment[tagnum], tagnum);
+   G__getcomment(temp, tagnum);
    if (temp[0]) {
       sprintf(msg, " //%s", temp);
       if (G__more(fout, msg)) return(1);
@@ -2561,8 +2573,8 @@ extern "C" int G__display_class(FILE *fout, char *name, int base, int start)
    }
    if (G__more(fout, msg)) return(1);
    sprintf(msg
-           , " (tagnum=%d,voffset=%d,isabstract=%d,parent=%d,gcomp=%d:%d,d21=~cd=%x)"
-           , tagnum , G__struct.virtual_offset[tagnum]
+           , " (tagnum=%d,voffset=%ld,isabstract=%d,parent=%d,gcomp=%d:%d,d21=~cd=%x)"
+           , tagnum , (long)G__struct.virtual_offset[tagnum]
            , G__struct.isabstract[tagnum] , G__struct.parent_tagnum[tagnum]
            , G__struct.globalcomp[tagnum], G__struct.iscpplink[tagnum]
            , G__struct.funcs[tagnum]);

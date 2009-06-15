@@ -2,7 +2,7 @@ from __future__ import generators
 # @(#)root/pyroot:$Id$
 # Author: Wim Lavrijsen (WLavrijsen@lbl.gov)
 # Created: 02/20/03
-# Last: 11/07/08
+# Last: 05/11/09
 
 """PyROOT user module.
 
@@ -15,12 +15,12 @@ from __future__ import generators
 
 """
 
-__version__ = '5.2.0'
+__version__ = '6.0.1'
 __author__  = 'Wim Lavrijsen (WLavrijsen@lbl.gov)'
 
 
 ### system and interpreter setup ------------------------------------------------
-import os, sys
+import os, sys, types
 import string as pystring
 
 ## there's no version_info in 1.5.2
@@ -95,12 +95,33 @@ if sys.version[0:3] == '2.2':
    import copy_reg
    copy_reg.constructor( _root._ObjectProxy__expand__ )
 
+## convince inspect that PyROOT method proxies are possible drop-ins for python
+## methods and classes for pydoc
+import inspect
+
+inspect._old_isfunction = inspect.isfunction
+def isfunction( object ):
+   if type(object) == _root.MethodProxy and not object.im_class:
+      return True
+   return inspect._old_isfunction( object )
+inspect.isfunction = isfunction
+
+inspect._old_ismethod = inspect.ismethod
+def ismethod( object ):
+   if type(object) == _root.MethodProxy:
+      return True
+   return inspect._old_ismethod( object )
+inspect.ismethod = ismethod
+
+del isfunction, ismethod
+
 
 ### configuration ---------------------------------------------------------------
 class _Configuration( object ):
-   __slots__ = [ 'StartGuiThread', '_gts' ]
+   __slots__ = [ 'IgnoreCommandLineOptions', 'StartGuiThread', '_gts' ]
 
    def __init__( self ):
+      self.IgnoreCommandLineOptions = 0
       self.StartGuiThread = 1
       self._gts = []
 
@@ -281,11 +302,11 @@ def _displayhook( v ):
 ### helper to prevent GUIs from starving
 def _processRootEvents( controller ):
    import time
-   gSystem = _root.gSystem
+   gSystemProcessEvents = _root.gSystem.ProcessEvents
 
    while controller.keeppolling:
       try:
-         gSystem.ProcessEvents()
+         gSystemProcessEvents()
          if PyConfig.GUIThreadScheduleOnce:
             for guicall in PyConfig.GUIThreadScheduleOnce:
                guicall()
@@ -296,8 +317,10 @@ def _processRootEvents( controller ):
 
 
 ### allow loading ROOT classes as attributes ------------------------------------
-class ModuleFacade( object ):
+class ModuleFacade( types.ModuleType ):
    def __init__( self, module ):
+      types.ModuleType.__init__( self, 'ROOT' )
+
       self.__dict__[ 'module' ]   = module
 
       self.__dict__[ '__doc__'  ] = self.module.__doc__
@@ -423,11 +446,18 @@ class ModuleFacade( object ):
 
     # normally, you'll want a ROOT application; don't init any further if
     # one pre-exists from some C++ code somewhere
+      if PyConfig.IgnoreCommandLineOptions:
+         argv = sys.argv
+         sys.argv = []
+
       appc = _root.MakeRootClass( 'PyROOT::TPyROOTApplication' )
       if appc.CreatePyROOTApplication():
          appc.InitROOTGlobals()
          appc.InitCINTMessageCallback();
          appc.InitROOTMessageCallback();
+
+      if PyConfig.IgnoreCommandLineOptions:
+         sys.argv = argv
 
     # must be called after gApplication creation:
       if __builtins__.has_key( '__IPYTHON__' ):
@@ -525,16 +555,13 @@ def cleanup():
  # destroy facade
    del sys.modules[ __name__ ], facade
 
- # run the gROOT shutdown sequence ... running it here ensures that it
- # is done before any ROOT libraries are off-loaded, with unspecified
- # order of static object destruction 
+ # run part the gROOT shutdown sequence ... running it here ensures that
+ # it is done before any ROOT libraries are off-loaded, with unspecified
+ # order of static object destruction; so far it only seemed needed for
+ # sockets with PROOF, whereas files should not be touched this early ...
    gROOT = sys.modules[ 'libPyROOT' ].gROOT
-   if gROOT.GetListOfFiles():
-      gROOT.GetListOfFiles().Delete( 'slow' )
    if gROOT.GetListOfSockets():
       gROOT.GetListOfSockets().Delete()
-   if gROOT.GetListOfMappedFiles():
-      gROOT.GetListOfMappedFiles().Delete( 'slow' )
    del gROOT
 
  # cleanup cached python strings

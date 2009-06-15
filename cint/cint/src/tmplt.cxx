@@ -233,11 +233,16 @@ int G__settemplatealias(const char *tagnamein,char *tagname,int tagnum
   while(charlist->next) {
     if(defpara->default_parameter) {
 	  char oldp = *(p-1);
+	  char oldp2 = *(p-2);
 	  if (oldp == '<') // all template args have defaults
 	    *(p-1) = 0;
 	  else {
-		*(p-1) = '>'; 
-		*p = 0;
+             if (oldp2 == '>') {
+                *(p-1) = ' ';
+                ++p;
+             }
+             *(p-1) = '>';
+             *p = 0;
 	  }
       if(0!=strcmp(tagnamein,tagname) && -1==G__defined_typename(tagname)) {
         int typenum=G__newtype.alltype++;
@@ -259,7 +264,10 @@ int G__settemplatealias(const char *tagnamein,char *tagname,int tagnum
           G__newtype.parent_tagnum[typenum] = G__struct.parent_tagnum[tagnum];
         }
       }
-      *(p-1)=oldp;
+      if (oldp2 == '>') {
+         --p;
+      }
+      *(p-1) = oldp;
     }
     strcpy(p,charlist->string);
     p+=strlen(charlist->string);
@@ -299,6 +307,10 @@ int G__cattemplatearg(char *tagname,G__Charlist *charlist)
     charlist=charlist->next;
     if(charlist->next) {
       *p=','; ++p;
+    } else {
+       if (*(p-1) == '>') {
+          *p = ' '; ++p;
+       }
     }
   }
   *p='>'; ++p;
@@ -1452,9 +1464,12 @@ void G__declare_template()
           This should be removed from the func name (what we are looking for)
           anything preceding combinations of *,& and const. */
        c = G__fgetname_template(temp2,"*&(;=");
-       if (!strncmp(temp2,"operator",strlen("operator"))
+       size_t len = strlen(temp2);
+       static size_t oplen( strlen( "::operator" ) );
+       
+       if ((  !strncmp(temp2,"operator",strlen("operator"))
+              ||(len>=oplen && !strncmp(temp2+(len-oplen),"::operator",oplen)))
            && strchr("&*=", c)) {
-          size_t len = strlen(temp2);
           while (c=='&'||c=='*'||c=='=') {
              temp2[len + 1] = 0;
              temp2[len] = c;
@@ -1576,8 +1591,21 @@ void G__declare_template()
     /* Do nothing */
   }
   else if(isspace(c) && strcmp(temp,"operator")==0) {
-    temp[8] = ' ';
-    c=G__fgetname_template(temp+9,"(");
+    unsigned int len = 8;
+    do {
+       temp[len++] = ' ';
+       temp[len] = '\0';
+
+       char* ptr = temp + len;
+       c=G__fgetname_template(ptr,"(");
+       len = strlen(temp);
+	   if (len >= G__LONGLINE)
+	   {
+		   temp[G__LONGLINE-1] = '\0';
+		   G__fprinterr(G__serr,"line too long. '%s'\n", temp);
+		   break;
+	   }
+    } while (c != '(');
   } 
   else if (c == '(' && strstr(temp,"::")) {
      // template<..> inline A::A(T a,S b) { ... }
@@ -2114,6 +2142,9 @@ static int G__generate_template_dict(const char* tagname,G__Definedtemplateclass
   //getting 'vector' header file
   int fileNum = deftmpclass->filenum;
   if( fileNum < 0 ) return -1;
+  if (G__srcfile[fileNum].filename[0] == '{')
+     // ignore "{CINTEX dictionary translator}"
+     return -4;
   fileNum = G__getIndex(fileNum,-1, headers);
   if( fileNum < 0 ) return fileNum;
   //headers.push_back( G__srcfile[ fileNum ].filename );
@@ -2125,6 +2156,9 @@ static int G__generate_template_dict(const char* tagname,G__Definedtemplateclass
       int index = gValue.tagnum;
       index = G__struct.filenum[index];
       if( index < 0 ) return -3;
+      if (G__srcfile[index].filename[0] == '{')
+         // ignore "{CINTEX dictionary translator}"
+         return -4;
       index = G__getIndex(index, gValue.tagnum, headers);
       if( index < 0 ) return index;
       //it = find( headers.begin(), headers.end(),G__srcfile[ index ].filename  );

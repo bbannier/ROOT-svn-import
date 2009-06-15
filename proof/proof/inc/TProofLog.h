@@ -20,10 +20,12 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#ifndef ROOT_TDatime
+#include "TDatime.h"
+#endif
 #ifndef ROOT_TNamed
 #include "TNamed.h"
 #endif
-
 #ifndef ROOT_TQObject
 #include "TQObject.h"
 #endif
@@ -43,6 +45,7 @@ private:
    TProofMgr  *fMgr;   // parent TProofMgr
    void       *fFILE;  // pointer logging file, if any
    TList      *fElem;  // list of TProofLogElem objects
+   TDatime     fStartTime; // Time at which this session started
 
    TProofLogElem *Add(const char *ord, const char *url);
 
@@ -66,6 +69,8 @@ public:
                   TProofLog::ERetrieveOpt opt = TProofLog::kTrailing,
                   const char *fname = 0, const char *pattern = 0);
    Int_t  Save(const char *ord = "*", const char *fname = 0, Option_t *opt="w");
+
+   TDatime StartTime() { return fStartTime; }
 
    // Where to log
    void SetLogToBox(Bool_t lgbox = kFALSE) { SetBit(kLogToBox, lgbox); }
@@ -101,6 +106,9 @@ public:
    TMacro *GetMacro() const { return fMacro; }
    const char *    GetRole() { return fRole.Data(); }
    Int_t   Grep(const char *txt, TString &res, Int_t from = 0);
+   Bool_t  IsMaster() const { return (fRole == "master") ? kTRUE : kFALSE; }
+   Bool_t  IsSubMaster() const { return (fRole == "submaster") ? kTRUE : kFALSE; }
+   Bool_t  IsWorker() const { return (fRole == "worker") ? kTRUE : kFALSE; }
    void    Print(Option_t *opt = 0) const;
    void    Prt(const char *what);
    Int_t   Retrieve(TProofLog::ERetrieveOpt opt = TProofLog::kTrailing,

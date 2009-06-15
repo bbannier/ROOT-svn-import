@@ -337,15 +337,19 @@ void stressProof(const char *url, Int_t nwrks,
    // Set verbosity
    gverbose = verbose;
 
-   // Check url
-   TUrl uu(url), udef(urldef);
-   if (strcmp(uu.GetHost(), udef.GetHost()) || (uu.GetPort() != udef.GetPort())) {
-      if (gDynamicStartup) {
+   // Notify/warn about the dynamic startup option, if any
+   if (gDynamicStartup) {
+      // Check url
+      TUrl uu(url), udef(urldef);
+      if (strcmp(uu.GetHost(), udef.GetHost()) || (uu.GetPort() != udef.GetPort())) {
          printf("*   WARNING: request to run a test with per-job scheduling on    *\n");
          printf("*            an external cluster: %s .\n", url);
          printf("*            Make sure the dynamic option is set.                *\n");
          printf("******************************************************************\n");
          gDynamicStartup = kFALSE;
+      } else {
+         printf("*  Runnning in dynamic mode (per-job scheduling)                 *\n");
+         printf("******************************************************************\n");
       }
    }
 
@@ -394,6 +398,10 @@ void stressProof(const char *url, Int_t nwrks,
       printf("*  PROOF-Lite session (test 12 skipped)                         **\n");
       printf("******************************************************************\n");
    }
+   //
+   // Reset dataset settings
+   gEnv->SetValue("Proof.DataSetManager","");
+
    //
    // Register tests
    //
@@ -621,7 +629,7 @@ Int_t PT_Open(void *args)
 
    // Get the PROOF Session
    PutPoint();
-   TProof *p = getProof(PToa->url, PToa->nwrks, tutdir.Data(), "force", gDynamicStartup);
+   TProof *p = getProof(PToa->url, PToa->nwrks, tutdir.Data(), "force", gDynamicStartup, kTRUE);
    if (!p || !(p->IsValid())) {
       printf("\n >>> Test failure: could not start the session\n");
       return -1;

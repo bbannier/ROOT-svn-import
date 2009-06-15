@@ -32,6 +32,7 @@ Reflex::Type Reflex::TypeBuilder( const char * n,
                                               unsigned int modifiers ) {
 //-------------------------------------------------------------------------------
 // Construct the type information for a type.
+   Reflex::Instance initialize_reflex;
    const Type & ret = Type::ByName(n);
    if ( ret.Id() ) return Type(ret, modifiers);
    else {
@@ -141,7 +142,8 @@ Reflex::Type Reflex::EnumTypeBuilder( const char * nam,
 
 //-------------------------------------------------------------------------------
 Reflex::Type Reflex::TypedefTypeBuilder(const char * nam, 
-                                                    const Type & t) {
+                                        const Type & t,
+                                        REPRESTYPE represType) {
 //-------------------------------------------------------------------------------
 // Construct a typedef type.
    Type ret = Type::ByName(nam);
@@ -152,17 +154,22 @@ Reflex::Type Reflex::TypedefTypeBuilder(const char * nam,
    // We found the typedef type
    else if ( ret ) return ret;
    // Create a new typedef
-   return (new Typedef( nam , t ))->ThisType();        
+   return (new Typedef(nam , t, Reflex::TYPEDEF, Reflex::Dummy::Type(), represType))->ThisType();        
 }
 
 
 //-------------------------------------------------------------------------------
 Reflex::Type Reflex::FunctionTypeBuilder( const Type & r,
-                                                      const std::vector<Type> & p,
-                                                      const std::type_info & ti ) {
+                                          const std::vector<Type> & p,
+                                          const std::type_info & ti ) {
 //-------------------------------------------------------------------------------
 // Construct a function type.
-   return (new Function( r, p, ti))->ThisType();
+   const Type & ret = Type::ByName(Function::BuildTypeName(r,p));
+   if ( ret && ret.TypeInfo() == ti ) {
+      return ret;
+   } else {
+      return (new Function( r, p, ti))->ThisType();
+   }
 }
 
 

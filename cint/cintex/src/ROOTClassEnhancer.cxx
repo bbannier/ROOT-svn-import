@@ -148,6 +148,10 @@ namespace ROOT { namespace Cintex {
       }
    }
 
+   TClass* ROOTClassEnhancer::Default_CreateClass(Type typ, ROOT::TGenericClassInfo* info) {
+      // forward to ROOTClassEnhancerInfo
+      return ROOTClassEnhancerInfo::Default_CreateClass(typ, info);
+   }
 
    /// Access streamer info from a void (polymorph) pointer
    TClass* accessType(const TClass* cl, const void* /* ptr */)  {
@@ -195,9 +199,12 @@ namespace ROOT { namespace Cintex {
             cout << "Cintex: ROOTClassEnhancer: setting class version of " << nam << " to " << fVersion << endl;
          }
       }
-      if ( ! IsSTLext(nam) && (IsSTL(nam) || IsSTLinternal(nam)) )  {
+      if ( ! IsSTLext(nam) && (IsSTL(nam) || IsSTLinternal(nam))) {
          //--- create TGenericClassInfo Instance
          //createInfo();
+         return;
+      }
+      else if (TypeGet().Properties().HasProperty("ClassDef")) {
          return;
       }
       else    {
@@ -228,6 +235,7 @@ namespace ROOT { namespace Cintex {
       VoidFuncPtr_t dict = TClassTable::GetDict(Name().c_str());
       if ( dict ) return;
 
+      ::ROOT::TGenericClassInfo* info = 0;
       void* context = this;
 #if ROOT_VERSION_CODE >= ROOT_VERSION(5,1,1)
       fIsa_func = new IsAProxy(this);
@@ -236,26 +244,26 @@ namespace ROOT { namespace Cintex {
 #endif
       fDictionary_func = Allocate_void_function(context, Stub_Dictionary);
 
-      ::ROOT::TGenericClassInfo* info = new ::ROOT::TGenericClassInfo(
-                                                                      Name().c_str(),                     // Class Name
-                                                                      Version(),                           // class version
-                                                                      "",                              // declaration file Name
-                                                                      1,                                  // declaration line number
-                                                                      TypeGet().TypeInfo(),                  // typeid
-                                                                      ROOT::DefineBehavior(0,0),          // default behavior
-                                                                      0,                                  // show members function
-                                                                      fDictionary_func,                  // dictionary function
-                                                                      fIsa_func,                         // IsA function
-                                                                      0,                                  // pragma bits
-                                                                      TypeGet().SizeOf()                     // sizeof
-                                                                      );
-      info->SetImplFile("", 1);
+      info = new ::ROOT::TGenericClassInfo(
+                                           Name().c_str(),           // Class Name
+                                           Version(),                // class version
+                                           "",                       // declaration file Name
+                                           1,                        // declaration line number
+                                           TypeGet().TypeInfo(),     // typeid
+                                           ROOT::DefineBehavior(0,0),// default behavior
+                                           0,                        // show members function
+                                           fDictionary_func,         // dictionary function
+                                           fIsa_func,                // IsA function
+                                           0,                        // pragma bits
+                                           TypeGet().SizeOf()        // sizeof
+                                           );
+
+      if (info) info->SetImplFile("", 1);
       //----Fill the New and Deletete functions
-      Member getfuncs = TypeGet().MemberByName("__getNewDelFunctions");
+      Member getfuncs = TypeGet().MemberByName("__getNewDelFunctions", Reflex::Type(), INHERITEDMEMBERS_NO);
       if( getfuncs ) {
          NewDelFunctions_t* newdelfunc = 0;
-         ValueObject voNewDelFunc = ValueObject::Create(newdelfunc);
-         getfuncs.Invoke(&voNewDelFunc);
+         getfuncs.Invoke(newdelfunc);
 
          if ( newdelfunc ) {
             info->SetNew(newdelfunc->fNew);
@@ -387,6 +395,9 @@ namespace ROOT { namespace Cintex {
          case TClassEdit::kMultiSet:
             cl_info.SetVersion(4);
             break;
+         case TClassEdit::kBitSet:
+            cl_info.SetVersion(2);
+            break;
          case TClassEdit::kNotSTL:
          case TClassEdit::kEnd:
             cl_info.SetVersion(1);
@@ -409,8 +420,9 @@ namespace ROOT { namespace Cintex {
          case TClassEdit::kMultiMap:
          case TClassEdit::kSet:
          case TClassEdit::kMultiSet:
+         case TClassEdit::kBitSet:
             {
-               Member method = typ.MemberByName("createCollFuncTable");
+               Member method = typ.MemberByName("createCollFuncTable", Reflex::Type(), INHERITEDMEMBERS_NO);
                if ( !method )   {
                   if ( Cintex::Debug() )  {
                      cout << "Cintex: " << Name << "' Setup failed to create this class! "
@@ -420,9 +432,7 @@ namespace ROOT { namespace Cintex {
                   return 0;
                }
                CollFuncTable* m = 0;
-               static Type tCollFuncTable = PointerBuilder(Type::ByTypeInfo(typeid(CollFuncTable)));
-               Object ret(tCollFuncTable, (void*)(&m));
-               method.Invoke(&ret);
+               method.Invoke(m);
 
                ::ROOT::TCollectionProxyInfo cpinfo(tid,
                                                    m->iter_size,
@@ -436,7 +446,8 @@ namespace ROOT { namespace Cintex {
                                                    m->construct_func,
                                                    m->destruct_func,
                                                    m->feed_func,
-                                                   m->collect_func);
+                                                   m->collect_func,
+                                                   m->create_env);
                root_class->SetCollectionProxy(cpinfo);
 
                root_class->SetBit(TClass::kIsForeign);
@@ -519,8 +530,8 @@ namespace ROOT { namespace Cintex {
       int ncp = ::strlen(par);
       // Loop over data members
       if ( IsSTL(cl.Name(SCOPED)) || cl.IsArray() ) return;
-      for ( size_t m = 0; m < cl.DataMemberSize(); m++) {
-         Member mem = cl.DataMemberAt(m);
+      for ( size_t m = 0; m < cl.DataMemberSize(INHERITEDMEMBERS_NO); m++) {
+         Member mem = cl.DataMemberAt(m, INHERITEDMEMBERS_NO);
          if ( ! mem.IsTransient() ) {
             Type typ = mem.TypeOf();
             string nam = mem.Properties().HasProperty("ioname") ?

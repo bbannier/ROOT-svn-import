@@ -55,6 +55,7 @@ const char * TGLSAViewer::fgHelpText1 = "\
 DIRECT SCENE INTERACTIONS\n\n\
    Press:\n\
    \tw          --- wireframe mode\n\
+   \te          --- switch between dark / light color-set\n\
    \tr          --- filled polygons mode\n\
    \tt          --- outline mode\n\
    \tj          --- ZOOM in\n\
@@ -75,8 +76,8 @@ DIRECT SCENE INTERACTIONS\n\n\
    SELECT a shape with Shift+Left mouse button click.\n\n\
    SELECT the viewer with Shift+Left mouse button click on a free space.\n\n\
    MOVE a selected shape using Shift+Mid mouse drag.\n\n\
-   Invoke the CONTEXT menu with Shift+Right mouse click.\n\n\
-   Secondary selection and direct render object interaction is initiated\n\
+   Invoke the CONTEXT menu with Shift+Right mouse click.\n\n"
+   "Secondary selection and direct render object interaction is initiated\n\
    by Alt+Left mouse click (Mod1, actually). Only few classes support this option.\n\n\
 CAMERA\n\n\
    The \"Camera\" menu is used to select the different projections from \n\
@@ -106,8 +107,8 @@ SCENE CLIPPING\n\n\
    In the Scene-Clipping tabs select a 'Clip Type': None, Plane, Box\n\n\
    For 'Plane' and 'Box' the lower pane shows the relevant parameters:\n\n\
 \tPlane: Equation coefficients of form aX + bY + cZ + d = 0\n\
-\tBox: Center X/Y/Z and Length X/Y/Z\n\n\
-   For Box checking the 'Show / Edit' checkbox shows the clip box (in light blue)\n\
+\tBox: Center X/Y/Z and Length X/Y/Z\n\n"
+   "For Box checking the 'Show / Edit' checkbox shows the clip box (in light blue)\n\
    in viewer. It also attaches the current manipulator to the box - enabling\n\
    direct editing in viewer.\n\n\
 MANIPULATORS\n\n\
@@ -150,6 +151,7 @@ const Int_t TGLSAViewer::fgInitH = 670;
 const char *gGLSaveAsTypes[] = {"Encapsulated PostScript", "*.eps",
                                 "PDF",                     "*.pdf",
                                 "GIF",                     "*.gif",
+                                "Animated GIF",            "*.gif+",
                                 "JPEG",                    "*.jpg",
                                 "PNG",                     "*.png",
                                 0, 0};
@@ -274,6 +276,8 @@ void TGLSAViewer::CreateGLWidget()
       return;
    }
 
+   ResetInitGL();
+
    fGLWidget = TGLWidget::Create(fRightVerticalFrame, kTRUE, kTRUE, 0, 10, 10);
    fGLWidget->SetEventHandler(fEventHandler);
 
@@ -294,7 +298,10 @@ void TGLSAViewer::DestroyGLWidget()
       return;
    }
 
+   ResetInitGL();
+
    fGLWidget->UnmapWindow();
+   fGLWidget->SetEventHandler(0);
 
    fRightVerticalFrame->RemoveFrame(fGLWidget);
    fGLWidget->DeleteWindow();
@@ -541,8 +548,21 @@ Bool_t TGLSAViewer::ProcessFrameMessage(Long_t msg, Long_t parm1, Long_t)
                fOverwrite = fi.fOverwrite;
 
                TString file = fi.fFilename;
-               if (ft.Index(".") != kNPOS)
+               Bool_t  match = kFALSE;
+               const char** fin = gGLSaveAsTypes; ++fin;
+               while (*fin != 0)
+               {
+                  if (file.EndsWith(*fin + 1))
+                  {
+                     match = kTRUE;
+                     break;
+                  }
+                  fin += 2;
+               }
+               if ( ! match)
+               {
                   file += ft(ft.Index("."), ft.Length());
+               }
                SavePicture(file);
             }
             break;
@@ -631,6 +651,9 @@ void TGLSAViewer::ToggleOrthoRotate()
    fOrthoXOYCamera.SetEnableRotate(state);
    fOrthoXOZCamera.SetEnableRotate(state);
    fOrthoZOYCamera.SetEnableRotate(state);
+   fOrthoXnOYCamera.SetEnableRotate(state);
+   fOrthoXnOZCamera.SetEnableRotate(state);
+   fOrthoZnOYCamera.SetEnableRotate(state);
 }
 
 //______________________________________________________________________________

@@ -61,14 +61,16 @@ static const char *gLeadDevelopers[] = {
 };
 
 static const char *gRootDevelopers[] = {
-   "Ilka Antcheva",
-   "Maarten Ballintijn",
    "Bertrand Bellenot",
    "Olivier Couet",
-   "Valery Fine",
    "Gerardo Ganis",
-   "Eddy Offermann",
-   "Valeriy Onuchin",
+   "Andrei Gheata",
+   "David Gonzalez",
+   "Jan Iwaszkiewicz",
+   "Lorenzo Moneta",
+   "Axel Naumann",
+   "Paul Russo",
+   "Matevz Tadel",
    0
 };
 
@@ -79,7 +81,6 @@ static const char *gCintDevelopers[] = {
 
 static const char *gRootDocumentation[] = {
    "Ilka Antcheva",
-   "Suzanne Panacek",
    0
 };
 

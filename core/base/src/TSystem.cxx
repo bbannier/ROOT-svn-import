@@ -16,7 +16,7 @@
 // Abstract base class defining a generic interface to the underlying   //
 // Operating System.                                                    //
 // This is not an ABC in the strict sense of the (C++) word. For        //
-// every member function their is an implementation (often not more     //
+// every member function there is an implementation (often not more     //
 // than a call to AbstractMethod() which prints a warning saying        //
 // that the method should be overridden in a derived class), which      //
 // allows a simple partial implementation for new OS'es.                //
@@ -654,6 +654,33 @@ int TSystem::ClosePipe(FILE*)
 }
 
 //______________________________________________________________________________
+TString TSystem::GetFromPipe(const char *command)
+{
+   // Execute command and return output in TString.
+
+   TString out;
+
+   FILE *pipe = OpenPipe(command, "r");
+   if (!pipe) {
+      SysError("GetFromPipe", "cannot run command \"%s\"", command);
+      return out;
+   }
+
+   TString line;
+   while (line.Gets(pipe)) {
+      if (out != "")
+         out += "\n";
+      out += line;
+   }
+
+   Int_t r = ClosePipe(pipe);
+   if (r) {
+      Error("GetFromPipe", "command \"%s\" returned %d", command, r);
+   }
+   return out;
+}
+
+//______________________________________________________________________________
 int TSystem::GetPid()
 {
    // Get process id.
@@ -932,7 +959,7 @@ const char *TSystem::DirName(const char *pathname)
          buf = new char [len+1];
       }
       strcpy(buf, pathname);
-      
+
       char *r = buf+pathlen-1;
       // First skip the trailing '/'
       while ( r>buf && *(r)=='/') { --r; }
@@ -940,10 +967,10 @@ const char *TSystem::DirName(const char *pathname)
       while ( r>buf && *(r)!='/') { --r; }
       // Then skip duplicate slashes
       // Note the 'r>buf' is a strict comparison to allows '/topdir' to return '/'
-      while ( r>buf && *(r)=='/') { --r; }            
+      while ( r>buf && *(r)=='/') { --r; }
       // And finally terminate the string to drop off the filename
       *(r+1) = '\0';
-      
+
       return buf;
    }
    return ".";
@@ -990,7 +1017,8 @@ const char *TSystem::ExpandFileName(const char *fname)
 
    const int   kBufSize = kMAXPATHLEN;
    int         n, ier, iter, lx, ncopy;
-   char       *inp, *out, *c, *b, *e, *x, *t, buff[kBufSize*3];
+   char       *inp, *out, *x, *t, buff[kBufSize*4];
+   const char *b, *c, *e;
    const char *p;
    static char xname[kBufSize];
 
@@ -998,7 +1026,7 @@ const char *TSystem::ExpandFileName(const char *fname)
 
    iter = 0; xname[0] = 0; inp = buff + kBufSize; out = inp + kBufSize;
    inp[-1] = ' '; inp[0] = 0; out[-1] = ' ';
-   c = (char *)fname + strspn(fname, " \t\f\r");
+   c = fname + strspn(fname, " \t\f\r");
    //VP  if (isalnum(c[0])) { strcpy(inp, WorkingDirectory()); strcat(inp, "/"); } // add $cwd
 
    strcat(inp, c);
@@ -1074,18 +1102,25 @@ again:
 #endif
             x++[0] = c[0];
          } else {                       // It is OK, copy result
-            strcpy(x,p); x += strlen(p); c = (b==c+1) ? e-1 : e;
+            int lp = strlen(p);
+            if (lp >= kBufSize) {
+               // make sure lx will be >= kBufSize (see below)
+               strncpy(x, p, kBufSize);
+               x += kBufSize;
+               break;
+            } else
+               strcpy(x,p); x += lp; c = (b==c+1) ? e-1 : e;
          }
       }
    }
 
    x[0] = 0; lx = x - out;
-   if (ier && iter < 3) { strcpy(inp,out); goto again; }
+   if (ier && iter < 3) { strcpy(inp, out); goto again; }
    ncopy = (lx >= kBufSize) ? kBufSize-1 : lx;
-   xname[0] = 0; strncat(xname,out,ncopy);
+   xname[0] = 0; strncat(xname, out, ncopy);
 
    if (ier || ncopy != lx)
-      Error("ExpandFileName", "input: %s, output: %s", fname, xname);
+      ::Error("TSystem::ExpandFileName", "input: %s, output: %s", fname, xname);
 
    return xname;
 }
@@ -1880,28 +1915,81 @@ const char *TSystem::GetLibraries(const char *regexp, const char *options,
    Bool_t so2dylib = (opt.First('L') != kNPOS);
    if (so2dylib)
       opt.ReplaceAll("L", "");
+   
    if (opt.IsNull() || opt.First('D') != kNPOS)
       libs += gInterpreter->GetSharedLibs();
 
-   if (opt.IsNull() || opt.First('S') != kNPOS) {
-      if (!libs.IsNull()) libs.Append(" ");
-      const char *linked;
-      if ((linked = GetLinkedLibraries())) {
-         if (fLinkedLibs != LINKEDLIBS) {
-            // This is not the default value, we need to keep the custom part.
-            TString custom = fLinkedLibs;
-            custom.ReplaceAll(LINKEDLIBS,linked);
-            if (custom == fLinkedLibs) {
-               // no replacement done, let's append linked
-               libs.Append(linked);
-               libs.Append(" ");
-            }
-            libs.Append(custom);
-         } else {
-            libs.Append(linked);
+   // Cint currently register all libraries that
+   // are loaded and have a dictionary in them, this
+   // includes all the libraries that are included 
+   // in the list of (hard) linked libraries.
+   
+   TString slinked;
+   const char *linked;
+   if ((linked = GetLinkedLibraries())) {
+      if (fLinkedLibs != LINKEDLIBS) {
+         // This is not the default value, we need to keep the custom part.
+         TString custom = fLinkedLibs;
+         custom.ReplaceAll(LINKEDLIBS,linked);
+         if (custom == fLinkedLibs) {
+            // no replacement done, let's append linked
+            slinked.Append(linked);
+            slinked.Append(" ");
          }
-      } else
-         libs.Append(fLinkedLibs);
+         slinked.Append(custom);
+      } else {
+         slinked.Append(linked);
+      }
+   } else {
+      slinked.Append(fLinkedLibs);
+   }
+
+   if (opt.IsNull() || opt.First('S') != kNPOS) {
+      // We are done, the statically linked library
+      // are already included.
+      if (libs.Length() == 0) {
+         libs = slinked;
+      } else {
+         // We need to add the missing linked library
+         TRegexp separator("[^ \\t\\s]+");
+         Ssiz_t start, index, end;
+         start = index = end = 0;
+         
+         while ((start < slinked.Length()) && (index != kNPOS)) {
+            index = slinked.Index(separator,&end,start);
+            if (index >= 0) {
+               TString sub = slinked(index,end);
+               if (sub[0]=='-' && sub[1]=='L') {
+                  libs.Prepend(" ");
+                  libs.Prepend(sub);
+               } else {
+                  if (libs.Index(sub) == kNPOS) {
+                     libs.Prepend(" ");
+                     libs.Prepend(sub);
+                  }                     
+               }
+            }
+            start += end+1;
+         }
+      }
+   } else if (libs.Length() != 0) {
+      // Let remove the statically linked library 
+      // from the list.
+      TRegexp separator("[^ \\t\\s]+");
+      Ssiz_t start, index, end;
+      start = index = end = 0;
+      
+      while ((start < slinked.Length()) && (index != kNPOS)) {
+         index = slinked.Index(separator,&end,start);
+         if (index >= 0) {
+            TString sub = slinked(index,end);
+            if (sub[0]!='-' && sub[1]!='L') {
+               libs.ReplaceAll(sub,"");
+            }
+         }
+         start += end+1;
+      }
+      libs = libs.Strip(TString::kBoth);         
    }
 
    // Select according to regexp
@@ -2220,6 +2308,96 @@ static void R__FixLink(TString &cmd)
 }
 #endif
 
+#ifndef WIN32
+static void R__WriteDependencyFile(const TString & /* build_loc */, const TString &depfilename, const TString &filename, const TString &library, const TString &libname, 
+                                   const TString &extension, const char *version_var_prefix, const TString &includes, const TString &defines, const TString &incPath) {
+#else
+static void R__WriteDependencyFile(const TString &build_loc, const TString &depfilename, const TString &filename, const TString &library, const TString &libname, 
+                                   const TString &extension, const char *version_var_prefix, const TString &includes, const TString &defines, const TString &incPath) {
+#endif
+   // Generate the dependency via standard output, not searching the
+   // standard include directories,
+
+#ifndef WIN32
+   const char * stderrfile = "/dev/null";
+#else
+   TString stderrfile;
+   AssignAndDelete( stderrfile, gSystem->ConcatFileName(build_loc,"stderr.tmp") );
+#endif   
+   TString bakdepfilename = depfilename + ".bak";
+   
+#ifdef WIN32
+   TString touch = "echo # > "; touch += "\"" + depfilename + "\"";
+#else
+   TString touch = "echo > "; touch += "\"" + depfilename + "\"";
+#endif
+   TString builddep = "rmkdepend \"-f";
+   builddep += depfilename;
+   builddep += "\" -o_" + extension + "." + gSystem->GetSoExt() + " ";
+   builddep += " -Y -- ";
+#ifndef ROOTINCDIR
+   TString rootsys = gSystem->Getenv("ROOTSYS");
+#else
+   TString rootsys = ROOTINCDIR;
+#endif
+   builddep += " \"-I"+rootsys+"/include\" "; // cflags
+   builddep += includes;
+   builddep += defines;
+   builddep += " -- \"";
+   builddep += filename;
+   builddep += "\" > ";
+   builddep += stderrfile;
+   builddep += " 2>&1 ";
+   
+   TString adddictdep = "echo ";
+   adddictdep += library;
+   adddictdep += ": ";
+   {
+      char *cintdictversion = gSystem->Which(incPath,"cintdictversion.h");
+      if (cintdictversion) {
+         adddictdep += cintdictversion;
+         adddictdep += " ";
+         delete [] cintdictversion;
+      } else {
+         adddictdep += rootsys+"/include/cintdictversion.h ";
+      }
+   }
+   {
+      char *rootVersion = gSystem->Which(incPath,"RVersion.h");
+      if (rootVersion) {
+         adddictdep += rootVersion;
+         adddictdep += " ";                  
+         delete [] rootVersion;
+      } else {
+         adddictdep += rootsys+"/include/RVersion.h ";
+      }
+   }
+   adddictdep += " >> \""+depfilename+"\"";
+   
+   TString addversiondep( "echo ");
+   addversiondep += libname + version_var_prefix + " \"" + ROOT_RELEASE + "\" >> \""+depfilename+"\"";
+   
+   if (gDebug > 4)  {
+      ::Info("ACLiC",touch.Data());
+      ::Info("ACLiC",builddep.Data());
+      ::Info("ACLiC",adddictdep.Data());
+   }
+   
+   Int_t depbuilt = !gSystem->Exec(touch);
+   if (depbuilt) depbuilt = !gSystem->Exec(builddep);
+   if (depbuilt) depbuilt = !gSystem->Exec(adddictdep);
+   if (depbuilt) depbuilt = !gSystem->Exec(addversiondep);   
+   
+   if (!depbuilt) {
+      ::Warning("ACLiC","Failed to generate the dependency file for %s",
+                library.Data());
+   } else {
+#ifdef WIN32
+      gSystem->Unlink(stderrfile);
+#endif
+      gSystem->Unlink(bakdepfilename);
+   }
+}   
 
 //______________________________________________________________________________
 int TSystem::CompileMacro(const char *filename, Option_t *opt,
@@ -2262,7 +2440,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    // directive fMakeExe to do so.
    // For both directives, before passing them to TSystem::Exec, it expands the
    // variables $SourceFiles, $SharedLib, $LibName, $IncludePath, $LinkedLibs,
-   // $DepLibs, $ExeName and $ObjectFiles. See SetMakeSharedLib() for more 
+   // $DepLibs, $ExeName and $ObjectFiles. See SetMakeSharedLib() for more
    // information on those variables.
    //
    // This method is used to implement the following feature:
@@ -2334,6 +2512,8 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    // shorten this comment).
    //
 
+   static const char *version_var_prefix = "__ROOTBUILDVERSION=";
+
    // ======= Analyze the options
    Bool_t keep = kFALSE;
    Bool_t recompile = kFALSE;
@@ -2360,7 +2540,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
          mode=kDebug;
       }
    }
-   
+
    // if non-zero, build_loc indicates where to build the shared library.
    TString build_loc = ExpandFileName(GetBuildDir());
    if (build_dir && strlen(build_dir)) build_loc = build_dir;
@@ -2455,9 +2635,9 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
             build_loc = build_loc_store;
             mkdirFailed = kFALSE;
          } else if (!mkdirFailed && dirmode!=0) {
-            Chmod(build_loc,dirmode); 
+            Chmod(build_loc,dirmode);
          }
-      } 
+      }
    }
 
    // ======= Check if the library need to loaded or compiled
@@ -2468,7 +2648,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       ::Info("ACLiC","script has already been loaded in interpreted mode");
       ::Info("ACLiC","unloading %s and compiling it", filename);
 
-      if ( gInterpreter->UnloadFile( (char*) filename ) != 0 ) {
+      if ( gInterpreter->UnloadFile( filename ) != 0 ) {
          // We can not unload it.
          return kFALSE;
       }
@@ -2527,7 +2707,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       incPath.ReplaceAll(" :",":");
    }
    incPath.Prepend(file_location+":.:");
-   
+
    // Extract the -D for the dependency generation.
    TString defines = " ";
    {
@@ -2550,27 +2730,21 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    } else {
       emergency_loc = TempDirectory();
    }
-   
+
    Bool_t canWrite = !gSystem->AccessPathName(build_loc,kWritePermission);
 
    Bool_t modified = kFALSE;
+   
+   // Generate the dependency filename
+   TString depdir = build_loc;
+   TString depfilename;
+   AssignAndDelete( depfilename, ConcatFileName(depdir, BaseName(libname_noext)) );
+   depfilename += "_" + extension + ".d";
+   
    if ( !recompile ) {
-      // Generate the dependency filename
-      TString depdir = build_loc;
-      TString depfilename;
-      AssignAndDelete( depfilename, ConcatFileName(depdir, BaseName(libname_noext)) );
-      depfilename += "_" + extension + ".d";
-      TString bakdepfilename = depfilename + ".bak";
 
       Long_t lib_time, file_time;
-
-#ifndef WIN32
-      const char * stderrfile = "/dev/null";
-#else
-      TString stderrfile;
-      AssignAndDelete( stderrfile, ConcatFileName(build_loc,"stderr.tmp") );
-#endif
-
+      
       if ((gSystem->GetPathInfo( library, 0, (Long_t*)0, 0, &lib_time ) != 0) ||
           (gSystem->GetPathInfo( filename, 0, (Long_t*)0, 0, &file_time ) == 0 &&
           (lib_time < file_time))) {
@@ -2581,86 +2755,19 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 
       } else {
 
-         // If the library exist and the dependency file is either older or
-         // does  not exist we regenerate it
-
-         Bool_t needDependencies;
-         if ( gSystem->GetPathInfo( depfilename, 0,(Long_t*) 0, 0, &file_time ) == 0 ) {
-            needDependencies = ( file_time < lib_time );
-         } else {
-            needDependencies = true;
-         }
-
-         if (needDependencies) {
+         if ( gSystem->GetPathInfo( depfilename, 0,(Long_t*) 0, 0, &file_time ) != 0 ) {
             if (!canWrite) {
                depdir = emergency_loc;
                AssignAndDelete( depfilename, ConcatFileName(depdir, BaseName(libname_noext)) );
                depfilename += "_" + extension + ".d";
-               bakdepfilename = depfilename + ".bak";
             }
-            gSystem->Unlink(depfilename);
-
-            // Generate the dependency via standard output, not searching the
-            // standard include directories,
-#ifdef WIN32
-            TString touch = "echo # > "; touch += "\"" + depfilename + "\"";
-#else
-            TString touch = "echo > "; touch += "\"" + depfilename + "\"";
-#endif
-            TString builddep = "rmkdepend \"-f";
-            builddep += depfilename;
-            builddep += "\" -Y -- ";
-#ifndef ROOTINCDIR
-            TString rootsys = gSystem->Getenv("ROOTSYS");
-#else
-            TString rootsys = ROOTINCDIR;
-#endif
-            builddep += " \"-I"+rootsys+"/include\" "; // cflags
-            builddep += includes;
-            builddep += defines;
-            builddep += " -- \"";
-            builddep += filename;
-            builddep += "\" > ";
-            builddep += stderrfile;
-            builddep += " 2>&1 ";
-            
-            TString adddictdep = "echo ";
-            adddictdep += filename;
-            adddictdep += ": ";
-            {
-               char *cintdictversion = Which(incPath,"cintdictversion.h");
-               if (cintdictversion) {
-                  adddictdep += cintdictversion;
-                  delete [] cintdictversion;
-               } else {
-                  adddictdep += rootsys+"/include/cintdictversion.h ";
-               }
-            }
-            adddictdep += " >> \""+depfilename+"\"";
-
-            if (gDebug > 4)  {
-               ::Info("ACLiC",touch.Data());
-               ::Info("ACLiC",builddep.Data());
-               ::Info("ACLiC",adddictdep.Data());
-            }
-            
-            Int_t depbuilt = !gSystem->Exec(touch);
-            if (depbuilt) depbuilt = !gSystem->Exec(builddep);
-            if (depbuilt) depbuilt = !gSystem->Exec(adddictdep);
-
-
-            if (!depbuilt) {
-               ::Warning("ACLiC","Failed to generate the dependency file for %s",
-                         library.Data());
-            } else {
-#ifdef WIN32
-               gSystem->Unlink(stderrfile);
-#endif
-               gSystem->Unlink(bakdepfilename);
-            }
+            R__WriteDependencyFile(build_loc, depfilename, filename, library, libname, extension, version_var_prefix, includes, defines, incPath);
          }
-
-         // Parse the depdency file
+      }
+      
+      if (!modified) {
+         
+         // We need to check the dependencies
          FILE * depfile = fopen(depfilename.Data(),"r");
          if (depfile==0) {
             // there is no acessible dependency file, let's assume the library has been
@@ -2670,6 +2777,8 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 
          } else {
 
+            TString version_var = libname + version_var_prefix;
+            
             Int_t sz = 256;
             char *line = new char[sz];
             line[0] = 0;
@@ -2677,6 +2786,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
             char c;
             Int_t current = 0;
             Int_t nested = 0;
+            Bool_t hasversion = false;
 
             while ((c = fgetc(depfile)) != EOF) {
                if (c=='#') {
@@ -2688,14 +2798,23 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
                   }
                   continue;
                }
-               if (isspace(c) && !nested) {
+               if (current && line[current-1]=='=' && strncmp(version_var.Data(),line,current)==0) {
+                  
+                  // The next word will be the version number.
+                  hasversion = kTRUE;
+                  line[0] = 0;
+                  current = 0;
+               } else if (isspace(c) && !nested) {
                   if (current) {
                      if (line[current-1]!=':') {
                         // ignore target
                         line[current] = 0;
 
                         Long_t filetime;
-                        if ( gSystem->GetPathInfo( line, 0, (Long_t*)0, 0, &filetime ) == 0 ) {
+                        if (hasversion) {
+                           modified |= strcmp(ROOT_RELEASE,line)!=0;
+                           hasversion = kFALSE;
+                        } else if ( gSystem->GetPathInfo( line, 0, (Long_t*)0, 0, &filetime ) == 0 ) {
                            modified |= ( lib_time <= filetime );
                         }
                      }
@@ -2745,7 +2864,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 
          ::Info("ACLiC","%s has been modified and will be reloaded",
                 libname.Data());
-         if ( gInterpreter->UnloadFile( (char*) library.Data() ) != 0 ) {
+         if ( gInterpreter->UnloadFile( library.Data() ) != 0 ) {
             // The library is being used. We can not unload it.
             return kFALSE;
          }
@@ -2775,7 +2894,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
          // core dump at termination.
 
          ::Info("ACLiC","it will be regenerated and reloaded!");
-         if ( gInterpreter->UnloadFile( (char*) library.Data() ) != 0 ) {
+         if ( gInterpreter->UnloadFile( library.Data() ) != 0 ) {
             // The library is being used. We can not unload it.
             return kFALSE;
          }
@@ -2832,7 +2951,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
                 build_loc.Data());
       } else {
          ::Warning("ACLiC","%s is not writeable!",
-                   build_loc.Data());         
+                   build_loc.Data());
       }
       if (emergency_loc == build_dir ) {
          ::Error("ACLiC","%s is the last resort location (i.e. temp location)",build_loc.Data());
@@ -2844,6 +2963,8 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    }
 
    Info("ACLiC","creating shared library %s",library.Data());
+
+   R__WriteDependencyFile(build_loc, depfilename, filename, library, libname, extension, version_var_prefix, includes, defines, incPath);
 
    // ======= Select the dictionary name
    TString dict = libname + "_ACLiC_dict";
@@ -2922,6 +3043,12 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    mapfile += "_ACLiC_map";
    TString mapfilein = mapfile + ".in";
    TString mapfileout = mapfile + ".out";
+
+   Bool_t needLoadMap = kFALSE;
+   if (gInterpreter->GetSharedLibDeps(libname) !=0 ) {
+       gInterpreter->UnloadLibraryMap(libname);
+      needLoadMap = kTRUE;
+   }
 
    ofstream mapfileStream( mapfilein, ios::out );
    {
@@ -3007,7 +3134,7 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
 
    Bool_t result = !dictResult;
    TString depLibraries;
-   
+
    // ======= Load the library the script might depend on
    if (result) {
       TString linkedlibs = GetLibraries("", "S");
@@ -3083,15 +3210,16 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    cmd.ReplaceAll("$IncludePath",includes);
    cmd.ReplaceAll("$SharedLib","\"$SharedLib\"");
    cmd.ReplaceAll("$SharedLib",library);
-   if (linkDepLibraries) { 
+   if (linkDepLibraries) {
       if (produceRootmap) {
          cmd.ReplaceAll("$DepLibs",depLibraries);
       } else {
-         cmd.ReplaceAll("$DepLibs",linkLibraries);         
+         cmd.ReplaceAll("$DepLibs",linkLibraries);
       }
    }
    cmd.ReplaceAll("$LinkedLibs",linkLibraries);
    cmd.ReplaceAll("$LibName",libname);
+   cmd.ReplaceAll("\"$BuildDir","$BuildDir");
    cmd.ReplaceAll("$BuildDir","\"$BuildDir\"");
    cmd.ReplaceAll("$BuildDir",build_loc);
    if (mode==kDebug) {
@@ -3249,9 +3377,8 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
       // by the library are present.
       gInterpreter->SetRTLD_NOW();
 #endif
-      if (gInterpreter->GetSharedLibDeps(libname) !=0 ) {
-         gInterpreter->UnloadLibraryMap(libmapfilename);
-         gInterpreter->LoadLibraryMap(libmapfilename);
+      if (needLoadMap) {
+          gInterpreter->LoadLibraryMap(libmapfilename);
       }
       if (gDebug>3)  ::Info("ACLiC","loading the shared library");
       if (loadLib) result = !gSystem->Load(library);

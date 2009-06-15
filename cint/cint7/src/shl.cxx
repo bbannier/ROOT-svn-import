@@ -13,10 +13,15 @@
  *
  ************************************************************************/
 
+#if defined(TRU64)
+#define __EXTENSIONS__
+#endif
+
 #include "common.h"
 #include "dllrev.h"
 #include "Dict.h"
 #include <vector>
+#include "Reflex/Builder/TypeBuilder.h"
 
 using namespace Cint::Internal;
 
@@ -91,13 +96,19 @@ typedef void* G__SHLHANDLE;
     sharedlib_func=(int (*)())G__shl_findsym(&G__sl_handle[allsl].handle,setupfunc,TYPE_PROCEDURE);   \
     if(sharedlib_func!=NULL) (*sharedlib_func)()
 
+int Cint::Internal::G__ispermanentsl = 0;
+std::list<G__DLLINIT>* Cint::Internal::G__initpermanentsl = 0;
+
 #else /* G__SHAREDLIB */
 
 typedef void* G__SHLHANDLE;
 
 #endif /* G__SHAREDLIB */
 
+#ifdef G__SHAREDLIB
 short Cint::Internal::G__allsl=0;
+#endif
+
 struct G__CintSlHandle {
     G__CintSlHandle(G__SHLHANDLE h = 0, bool p = false) : handle(h),ispermanent(p) {}
     G__SHLHANDLE handle;
@@ -117,8 +128,8 @@ extern "C" void G__set_sym_underscore(int x) { G__sym_underscore=x; }
 extern "C" int G__get_sym_underscore() { return(G__sym_underscore); }
 
 #ifndef __CINT__
-extern "C" G__SHLHANDLE G__dlopen(char *path);
-extern "C" void *G__shl_findsym(G__SHLHANDLE *phandle,char *sym,short type);
+extern "C" G__SHLHANDLE G__dlopen(const char *path);
+extern "C" void *G__shl_findsym(G__SHLHANDLE *phandle,const char *sym,short type);
 extern "C" int G__dlclose(G__SHLHANDLE handle);
 #endif
 
@@ -161,9 +172,6 @@ extern "C" int G__dlclose(G__SHLHANDLE handle);
 static int G__RTLD_flag = G__RTLD_LAZY;
 #endif
 
-
-int Cint::Internal::G__ispermanentsl = 0;
-std::list<G__DLLINIT>* Cint::Internal::G__initpermanentsl = 0;
 
 /**************************************************************************
 * G__loadsystemfile
@@ -218,7 +226,7 @@ extern "C" void G__Set_RTLD_LAZY() {
 * G__dlopen()
 *
 ***********************************************************************/
-extern "C" G__SHLHANDLE G__dlopen(char *path)
+extern "C" G__SHLHANDLE G__dlopen(const char *path)
 {
   G__SHLHANDLE handle;
 #ifdef G__SHAREDLIB
@@ -307,9 +315,9 @@ TYPE_PROCEDURE);
 *
 ***********************************************************************/
 #if defined(__hpux) || defined(_HIUX_SOURCE)
-extern "C" void *G__shl_findsym(G__SHLHANDLE *phandle,char *sym,short type)
+extern "C" void *G__shl_findsym(G__SHLHANDLE *phandle,const char *sym,short type)
 #else
-extern "C" void *G__shl_findsym(G__SHLHANDLE *phandle,char *sym,short /* type */)
+extern "C" void *G__shl_findsym(G__SHLHANDLE *phandle,const char *sym,short /* type */)
 #endif
 {
   void *func = (void*)NULL;
@@ -606,7 +614,7 @@ extern int G__call_setup_funcs();
 /**************************************************************************
  * G__show_dllrev
  **************************************************************************/
-extern "C" void G__show_dllrev(char *shlfile,int (*sharedlib_func)())
+extern "C" void G__show_dllrev(const char *shlfile,int (*sharedlib_func)())
 {
   G__fprinterr(G__serr,"%s:DLLREV=%d\n",shlfile,(*sharedlib_func)());
   G__fprinterr(G__serr,"  This cint accepts DLLREV=%d~%d and creates %d\n"
@@ -618,7 +626,7 @@ extern "C" void G__show_dllrev(char *shlfile,int (*sharedlib_func)())
 * G__SetCIntApiPointers
 *
 **************************************************************************/
-extern "C" void G__SetCintApiPointers(G__SHLHANDLE *pslhandle,char *fname)
+extern "C" void G__SetCintApiPointers(G__SHLHANDLE *pslhandle,const char *fname)
 {
   typedef void (*G__SetCintApiPointers_t)(void* a[G__NUMBER_OF_API_FUNCTIONS]);
   G__SetCintApiPointers_t SetCintApi = \
@@ -628,7 +636,7 @@ extern "C" void G__SetCintApiPointers(G__SHLHANDLE *pslhandle,char *fname)
 #undef G__DECL_API
 #undef G__DUMMYTOCHECKFORDUPLICATES
 #define G__DECL_API(IDX, RET, NAME, ARGS) \
-   a[IDX] = (void*) NAME
+   a[IDX] = (void*) NAME;
 #define G__DUMMYTOCHECKFORDUPLICATES(X)
 #include "G__ci_fproto.h"
 
@@ -642,6 +650,7 @@ extern "C" void G__SetCintApiPointers(G__SHLHANDLE *pslhandle,char *fname)
 *
 * Comment:
 *  This function can handle both old and new style DLL.
+*  This function will modify the input string.
 **************************************************************************/
 int Cint::Internal::G__shl_load(char *shlfile)
 {
@@ -1143,24 +1152,6 @@ G__value Cint::Internal::G__pointer2func(G__value *obj_p2f,char *parameter0 ,cha
 }
 
 /******************************************************************
-* G__removetagid()
-******************************************************************/
-static void G__removetagid(std::string &buf)
-{
-   int i;
-   if(strncmp("class ",buf.c_str(),6)==0 || strncmp("union ",buf.c_str(),6)==0) {
-      i=6;
-   }
-   else if(strncmp("struct ",buf.c_str(),7)==0) {
-      i=7;
-   }
-   else if(strncmp("enum ",buf.c_str(),5)==0) {
-      i=5;
-   }
-   buf.replace(0,i,"");
-}
-
-/******************************************************************
 * G__getp2ftype()
 ******************************************************************/
 static ::Reflex::Type G__getp2ftype(const ::Reflex::Member &func)
@@ -1299,7 +1290,7 @@ bool Cint::Internal::G__search_func(char *funcname,G__value *buf)
 
 char *Cint::Internal::G__search_next_member(char *text,int state)
 {
-   static int list_index,len,index_item  /* ,cbp */;
+   static unsigned int list_index,len,index_item  /* ,cbp */;
    static char completionbuf[G__ONELINE];
    std::string name;
    char *result;
@@ -1409,7 +1400,7 @@ char *Cint::Internal::G__search_next_member(char *text,int state)
          switch(index_item) {
          case 0: /* struct member */
             G__ASSERT(varscope);
-            if(list_index<varscope.DataMemberSize()) {
+            if(list_index< varscope.DataMemberSize()) {
                name = varscope.DataMemberAt(list_index).Name();
                break;
             }
@@ -1430,7 +1421,7 @@ char *Cint::Internal::G__search_next_member(char *text,int state)
                funcscope = ::Reflex::Scope();
             }
          case 2: /* class name */
-            if(list_index<G__struct.alltag) {
+            if(list_index<((unsigned int)G__struct.alltag)) {
                if(scope) {
                   name =(char*)NULL;
                   do {
@@ -1438,7 +1429,7 @@ char *Cint::Internal::G__search_next_member(char *text,int state)
                         name = G__struct.name[list_index];
                         break;
                      }
-                  } while(list_index++<G__struct.alltag) ;
+                  } while(list_index++<((unsigned int)G__struct.alltag)) ;
                }
                else {
                   name = G__struct.name[list_index];
@@ -1585,7 +1576,7 @@ char *Cint::Internal::G__search_next_member(char *text,int state)
                /* don't break */
             }
          case 4: /* class name */
-            if(list_index<G__struct.alltag) {
+            if(list_index<((unsigned int)G__struct.alltag)) {
                name = G__struct.name[list_index];
                break;
             }
@@ -1907,7 +1898,8 @@ void* Cint::Internal::G__FindSym(const char *filename,const char *funcname)
 
 static const char *G__dladdr(void (*func)())
 {
-   // Wrapper around dladdr (and friends)
+#ifdef G__SHAREDLIB
+	// Wrapper around dladdr (and friends)
 #if defined(__CYGWIN__) && defined(__GNUC__)
    return 0;
 #elif defined(G__WIN32)
@@ -1935,12 +1927,18 @@ static const char *G__dladdr(void (*func)())
       return info.dli_fname;
    }
 #endif 
+
+#else // G__SHAREDLIB
+   return 0;
+#endif //G__SHAREDLIB
 }
 
 // G__RegisterLibrary
-void *Cint::Internal::G__RegisterLibrary(void (*func)()) {
+int Cint::Internal::G__RegisterLibrary(void (*func)()) 
+{
    // This function makes sure that the library that contains 'func' is
-   // known to have been loaded by the CINT system.
+   // known to have been loaded by the CINT system and return 
+   // the filenum (i.e. index in G__srcfile).
    
    const char *libname = G__dladdr( func );
    if (libname && libname[0]) {
@@ -1960,19 +1958,19 @@ void *Cint::Internal::G__RegisterLibrary(void (*func)()) {
          --cutat;
          sbLibName[cutat + 1] = 0;
       }
-      G__register_sharedlib( sbLibName );
+      return G__register_sharedlib( sbLibName );
    }
-   return 0;
+   return -1;
 }   
 
-// G__RegisterLibrary
-void *Cint::Internal::G__UnregisterLibrary(void (*func)()) {
+// G__UnregisterLibrary
+int Cint::Internal::G__UnregisterLibrary(void (*func)()) {
    // This function makes sure that the library that contains 'func' is
    // known to have been laoded by the CINT system.
    
    const char *libname = G__dladdr( func );
    if (libname) {
-      G__unregister_sharedlib( libname );
+      return G__unregister_sharedlib( libname );
    }
    return 0;
 }   

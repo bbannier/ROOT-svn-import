@@ -33,11 +33,11 @@ EVEH1     := TEveBrowser TEveChunkManager TEveCompound \
              TEveUtil TEveVSD TEveViewer TEveWindow
 
 EVEH2     := TEveArrow TEveBoxSet TEveCalo \
-             TEveDigitSet TEveFrameBox TEveGeoNode TEveGeoShapeExtract \
-             TEveGridStepper TEveLegoEventHandler TEveLegoOverlay \
+             TEveDigitSet TEveFrameBox TEveGeo \
+             TEveGridStepper TEveLegoEventHandler \
              TEveLine TEvePointSet TEvePolygonSetProjected TEveQuadSet \
              TEveRGBAPalette TEveScalableStraightLineSet TEveStraightLineSet \
-             TEveText TEveTrack TEveTriangleSet 
+             TEveText TEveTrack TEveTriangleSet TEveJetCone
 
 EVEH1     := $(foreach stem, $(EVEH1), $(wildcard $(MODDIRI)/$(stem)*.h))
 EVEH2     := $(foreach stem, $(EVEH2), $(wildcard $(MODDIRI)/$(stem)*.h))
@@ -65,10 +65,10 @@ INCLUDEFILES += $(EVEDEP)
 include/%.h:    $(EVEDIRI)/%.h
 		cp $< $@
 
-$(EVELIB):      $(EVEO) $(EVEDO) $(ORDER_) $(MAINLIBS) $(EVELIBDEP)
+$(EVELIB):      $(EVEO) $(EVEDO) $(ORDER_) $(MAINLIBS) $(EVELIBDEP) $(FTGLLIB) $(GLEWLIB)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libEve.$(SOEXT) $@ "$(EVEO) $(EVEDO)" \
-		   "$(EVELIBEXTRA) $(FTGLLIBDIR) $(FTGLLIBS) $(GLLIBS)"
+		   "$(EVELIBEXTRA) $(FTGLLIBDIR) $(FTGLLIBS) $(GLEWLIBDIR) $(GLEWLIBS) $(GLLIBS)"
 
 $(EVEDS1):      $(EVEH1) $(EVEL1) $(ROOTCINTTMPDEP)
 		@echo "Generating dictionary $@..."

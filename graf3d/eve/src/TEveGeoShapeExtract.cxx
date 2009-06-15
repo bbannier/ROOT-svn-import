@@ -11,6 +11,7 @@
 
 #include "TEveGeoShapeExtract.h"
 #include "TEveGeoNode.h"
+#include "TEveGeoShape.h"
 
 #include "TList.h"
 #include "TGeoManager.h"
@@ -31,7 +32,7 @@
 ClassImp(TEveGeoShapeExtract);
 
 //______________________________________________________________________________
-TEveGeoShapeExtract::TEveGeoShapeExtract(const Text_t* n, const Text_t* t) :
+TEveGeoShapeExtract::TEveGeoShapeExtract(const char* n, const char* t) :
    TNamed       (n,t),
 
    fRnrSelf     (kTRUE),

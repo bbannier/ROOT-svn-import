@@ -51,9 +51,11 @@ class genDictionary(object) :
     self.globalNamespaceID = ''
     self.typedefs_for_usr = []
     self.gccxmlvers = gccxmlvers
+    self.split = opts.get('split', '')
     # The next is to avoid a known problem with gccxml that it generates a
     # references to id equal '_0' which is not defined anywhere
     self.xref['_0'] = {'elem':'Unknown', 'attrs':{'id':'_0','name':''}, 'subelems':[]}
+    self.TObject_id = ''
 #----------------------------------------------------------------------------------
   def addTemplateToName(self, attrs):
     if attrs['name'].find('>') == -1 and 'demangled' in attrs :
@@ -87,8 +89,8 @@ class genDictionary(object) :
       if postmplt != -1:
         postmplt += 1
         postmpltend -= 1
-        # replace template argument "12u" by "12":
-        rep = re.sub(r"\b([\d]+)u\b", '\\1', name[postmplt:postmpltend])
+        # replace template argument "12u" or "12ul" by "12":
+        rep = re.sub(r"\b([\d]+)ul?\b", '\\1', name[postmplt:postmpltend])
         # replace -0x00000000000000001 by -1
         rep = re.sub(r"-0x0*([1-9A-Fa-f][0-9A-Fa-f]*)\b", '-\\1', rep)
         name = name[:postmplt] + rep + name[postmpltend:]
@@ -106,6 +108,8 @@ class genDictionary(object) :
     elif name in ('Class','Struct') :
       self.patchTemplateName(attrs, name)
       self.classes.append(attrs)
+      if 'name' in attrs and attrs['name'] == 'TObject' :
+        self.TObject_id = attrs['id']
     elif name in ('Function',) :
       self.addTemplateToName(attrs)
       self.patchTemplateName(attrs, name)
@@ -373,6 +377,20 @@ class genDictionary(object) :
                 print '--->> genreflex: INFO: Using typedef %s to select class %s' % (t['fullname'], self.genTypeName(catt['id']))
               selec.append(catt)
               self.typedefs_for_usr.append(t)
+              if match[0].has_key('fields') :
+                # copy all fields selection attrs over to the underlying class, see sav #49472
+                # this part is needed for selfields which checks the selection, not the class's attrs
+                clsname = self.genTypeName(catt['id'])
+                newselattrs = {'name': clsname, 'n_name': self.selector.genNName(clsname)}
+                self.selector.sel_classes.append({'fields': match[0]['fields'], 'attrs': newselattrs, 'used': 1, 'methods':[]})
+            elif match[0].has_key('fields') :
+              # copy all fields selection attrs over to the underlying class, see sav #49472
+              clname = self.genTypeName(catt['id'])
+              for c in self.selector.sel_classes :
+                attrs = c['attrs']
+                if 'n_name' in attrs and attrs['n_name'] == clname \
+                      or 'n_pattern' in attrs and self.selector.matchpattern(clname, attrs['n_pattern']) :
+                  c['fields'] += match[0]['fields']
       if self.resolvettd :
         newselector = self.resolveSelectorTypedefs( self.selector.sel_classes )
         if newselector:
@@ -542,8 +560,32 @@ class genDictionary(object) :
         f.write( '#include <%s>\n' % (inc,) )
       f.write( '\n' )
 
+  
+    #------------------------------------------------------------------------------
+    # Process ClassDef implementation before writing: sets 'extra' properties
+    #------------------------------------------------------------------------------
+    classDefImpl = ClassDefImplementation(selclasses, self)
+
     f_buffer = ''
-    f_shadow =  '\n// Shadow classes to obtain the data member offsets \n'
+    # Need to specialize templated class's functions (e.g. A<T>::Class())
+    # before first instantiation (stubs), so classDefImpl before stubs.
+    if self.split.find('classdef') >= 0:
+      posExt = file.rfind('.')
+      if posExt > 0:
+        cdFileName = file[0:posExt] + '_classdef' + file[posExt:]
+      else:
+        cdFileName = file + '_classdef.cpp'
+      cdFile = open(cdFileName, 'w')
+      cdFile.write(self.genHeaders(cppinfo))
+      cdFile.write('\n')
+      cdFile.write('namespace {' )
+      cdFile.write(classDefImpl)
+      cdFile.write('} // unnamed namespace\n')
+    else :
+      f_buffer += classDefImpl
+
+    f_shadow =  '\n#ifndef __CINT__\n'
+    f_shadow +=  '\n// Shadow classes to obtain the data member offsets \n'
     f_shadow += 'namespace __shadow__ {\n'
     for c in selclasses :
       if 'incomplete' not in c :
@@ -568,8 +610,8 @@ class genDictionary(object) :
         f_buffer += scons
         f_shadow += self.genClassShadow(c)
     f_shadow += '}\n\n'
+    f_shadow +=  '\n#endif // __CINT__\n'
     f_buffer += self.genFunctionsStubs( selfunctions )
-    f_buffer += ClassDefImplementation(selclasses, self)
     f_buffer += self.genInstantiateDict(selclasses, selfunctions, selenums, selvariables)
     f.write('namespace {\n')
     f.write(self.genNamespaces(selclasses + selfunctions + selenums + selvariables))
@@ -707,7 +749,8 @@ class genDictionary(object) :
   def tmplclasses(self, local):
     import re
     result = []
-    lc_patterns = map(lambda lc: re.compile("\\b%s\\b" % lc['name']) , local)
+    lc_patterns = map(lambda lc: re.compile("\\b%s\\b" % lc['name']) ,
+                      filter(lambda l: 'name' in l, local))
     for c in self.classes :
       if not 'name' in c: continue
       name = c['name']
@@ -798,7 +841,7 @@ class genDictionary(object) :
     c += '#include "%s"\n' % self.hfile
     c += '#include "Reflex/Builder/ReflexBuilder.h"\n'
     c += '#include <typeinfo>\n'
-    c += 'using namespace ::Reflex;\n\n'
+    c += '\n'
     return c
 #----------------------------------------------------------------------------------
   def genInstantiateDict( self, selclasses, selfunctions, selenums, selvariables) :
@@ -1054,12 +1097,12 @@ class genDictionary(object) :
     bases = self.getBases( attrs['id'] )
     if 'members' in attrs : members = string.split(attrs['members'])
     mod = self.genModifier(attrs,None)
-    typ = self.xref[attrs['id']]['elem'].upper()
-    if attrs.has_key('abstract') : mod += ' | ABSTRACT'
+    typ = '::Reflex::' + self.xref[attrs['id']]['elem'].upper()
+    if attrs.has_key('abstract') : mod += ' | ::Reflex::ABSTRACT'
     if self.vtables :
-      if attrs['id'] in self.vtables : mod += ' | VIRTUAL'
+      if attrs['id'] in self.vtables : mod += ' | ::Reflex::VIRTUAL'
     else :  # new in version 0.6.0
-      if self.isClassVirtual(attrs) :  mod += ' | VIRTUAL'
+      if self.isClassVirtual(attrs) :  mod += ' | ::Reflex::VIRTUAL'
     members = filter(self.memberfilter, members)  # Eliminate problematic members
 
     # Fill the different streams sc: constructor, ss: stub functions
@@ -1101,22 +1144,25 @@ class genDictionary(object) :
       cid = getContainerId(clf)[0]
     notAccessibleType = self.checkAccessibleType(self.xref[attrs['id']])
     if self.isUnnamedType(clf) : 
-      sc += '  ClassBuilder("%s", typeid(Unnamed%s), sizeof(%s), %s, %s)' % ( cls, self.xref[attrs['id']]['elem'], '__shadow__::'+ string.translate(str(clf),self.transtable), mod, typ )
+      sc += '  ::Reflex::ClassBuilder("%s", typeid(::Reflex::Unnamed%s), sizeof(%s), %s, %s)' % ( cls, self.xref[attrs['id']]['elem'], '__shadow__::'+ string.translate(str(clf),self.transtable), mod, typ )
     elif notAccessibleType :
-      sc += '  ClassBuilder("%s", typeid(%s%s), sizeof(%s), %s, %s)' % ( cls, self.xref[notAccessibleType]['attrs']['access'].title(), self.xref[attrs['id']]['elem'], '__shadow__::'+ string.translate(str(clf),self.transtable), mod, typ )
+      sc += '  ::Reflex::ClassBuilder("%s", typeid(%s%s), sizeof(%s), %s, %s)' % ( cls, '::Reflex::' + self.xref[notAccessibleType]['attrs']['access'].title(), self.xref[attrs['id']]['elem'], '__shadow__::'+ string.translate(str(clf),self.transtable), mod, typ )
     else :
       typeidtype = '::' + cls
       # a funny bug in MSVC7.1: sizeof(::namesp::cl) doesn't work
       if sys.platform == 'win32':
          typeidtype = 'MSVC71_typeid_bug_workaround'
          sc += '  typedef ::%s %s;\n' % (cls, typeidtype)
-      sc += '  ClassBuilder("%s", typeid(%s), sizeof(::%s), %s, %s)' \
+      sc += '  ::Reflex::ClassBuilder("%s", typeid(%s), sizeof(::%s), %s, %s)' \
             % (cls, typeidtype, cls, mod, typ)
     if 'extra' in attrs :
       for pname, pval in attrs['extra'].items() :
-        if pname not in ('name','pattern','n_name','file_name','file_pattern') :
+        if pname not in ('name','pattern','n_name','file_name','file_pattern','fields') :
           if pname == 'id' : pname = 'ClassID'
-          sc += '\n  .AddProperty("%s", "%s")' % (pname, pval)
+          if pval[:5] == '!RAW!' :
+            sc += '\n  .AddProperty("%s", %s)' % (pname, pval[5:])
+          else :
+            sc += '\n  .AddProperty("%s", "%s")' % (pname, pval)
 
     if ioReadRules:
       sc += '\n  .AddProperty("ioread", readrules )'
@@ -1266,7 +1312,7 @@ class genDictionary(object) :
         for demangledMethod in allBasesMethods.keys() :
           member = allBasesMethods[demangledMethod]
           if len(member['bases']) > 1:
-            ret = self.genTypeName(member['returns'])
+            ret = self.genTypeName(member['returns'], enum=False, const=False, colon=True)
             if '(' not in ret:
               # skip functions returning functions; we don't get the prototype right easily:
               cmem = '  virtual %s %s throw();' % (ret, demangledMethod)
@@ -1361,6 +1407,7 @@ class genDictionary(object) :
       elif colon  : s = '::'
     return s
 #----------------------------------------------------------------------------------
+# const is CONST VETO!!!
   def genTypeName(self, id, enum=False, const=False, colon=False, alltempl=False, _useCache=True, _cache={}) :
     if _useCache:
       key = (self,id,enum,const,colon,alltempl)
@@ -1419,7 +1466,9 @@ class genDictionary(object) :
       if (attrs.get('volatile') == '1') : s += ' volatile'
     elif elem == 'ArrayType' :
       max = attrs['max'].rstrip('u')
-      arr = '[%s]' % str(int(max)+1)
+      arr = '[]'
+      if len(max):
+        arr = '[%s]' % str(int(max)+1)
       typ = self.genTypeName(attrs['type'], enum, const, colon)
       if typ[-1] == ']' :
         pos = typ.find('[')
@@ -1465,8 +1514,8 @@ class genDictionary(object) :
         for a in args : self.genTypeID(a['type'])
       elif elem in ('OperatorMethod', 'Method', 'Constructor', 'Converter', 'Destructor', 
                     'Function', 'OperatorFunction' ) :
-        if 'returns' in attrs : c = 'FunctionTypeBuilder(' + self.genTypeID(attrs['returns'])
-        else                  : c = 'FunctionTypeBuilder(type_void'
+        if 'returns' in attrs : c = '::Reflex::FunctionTypeBuilder(' + self.genTypeID(attrs['returns'])
+        else                  : c = '::Reflex::FunctionTypeBuilder(type_void'
         args = self.xref[id]['subelems']
         for a in args : c += ', '+ self.genTypeID(a['type'])
         c += ')'
@@ -1481,40 +1530,40 @@ class genDictionary(object) :
 #----------------------------------------------------------------------------------
   def genAllTypes(self) :
     self.typeids += self.fktypeids
-    c = '  Type type_void = TypeBuilder("void");\n'
+    c = '  ::Reflex::Type type_void = ::Reflex::TypeBuilder("void");\n'
     for id in self.typeids :      
-      c += '  Type type%s = ' % id
+      c += '  ::Reflex::Type type%s = ' % id
       if id[-1] == 'c':
-        c += 'ConstBuilder(type'+id[:-1]+');\n'
+        c += '::Reflex::ConstBuilder(type'+id[:-1]+');\n'
       elif id[-1] == 'v':
-        c += 'VolatileBuilder(type'+id[:-1]+');\n'
+        c += '::Reflex::VolatileBuilder(type'+id[:-1]+');\n'
       else : 
         elem  = self.xref[id]['elem']
         attrs = self.xref[id]['attrs']
         if elem == 'PointerType' :
-          c += 'PointerBuilder(type'+attrs['type']+');\n'
+          c += '::Reflex::PointerBuilder(type'+attrs['type']+');\n'
         elif elem == 'ReferenceType' :
-          c += 'ReferenceBuilder(type'+attrs['type']+');\n'
+          c += '::Reflex::ReferenceBuilder(type'+attrs['type']+');\n'
         elif elem == 'ArrayType' :
           mx = attrs['max'].rstrip('u')
           # check if array is bound (max='fff...' for unbound arrays)
           if mx.isdigit() : len = str(int(mx)+1)
           else            : len = '0' 
-          c += 'ArrayBuilder(type'+attrs['type']+', '+ len +');\n'
+          c += '::Reflex::ArrayBuilder(type'+attrs['type']+', '+ len +');\n'
         elif elem == 'Typedef' :
           sc = self.genTypeName(attrs['context'])
           if sc : sc += '::'
-          c += 'TypedefTypeBuilder("'+sc+attrs['name']+'", type'+ attrs['type']+');\n'
+          c += '::Reflex::TypedefTypeBuilder("'+sc+attrs['name']+'", type'+ attrs['type']+');\n'
         elif elem == 'OffsetType' :
-          c += 'TypeBuilder("%s");\n' % self.genTypeName(attrs['id'])
+          c += '::Reflex::TypeBuilder("%s");\n' % self.genTypeName(attrs['id'])
         elif elem == 'FunctionType' :
-          if 'returns' in attrs : c += 'FunctionTypeBuilder(type'+attrs['returns']
-          else                  : c += 'FunctionTypeBuilder(type_void'
+          if 'returns' in attrs : c += '::Reflex::FunctionTypeBuilder(type'+attrs['returns']
+          else                  : c += '::Reflex::FunctionTypeBuilder(type_void'
           args = self.xref[id]['subelems']
           for a in args : c += ', type'+ a['type']
           c += ');\n'
         elif elem == 'MethodType' :
-          c += 'TypeBuilder("%s");\n' % self.genTypeName(attrs['id'])
+          c += '::Reflex::TypeBuilder("%s");\n' % self.genTypeName(attrs['id'])
         elif elem in ('OperatorMethod', 'Method', 'Constructor', 'Converter', 'Destructor',
                       'Function', 'OperatorFunction') :
           pass
@@ -1524,7 +1573,7 @@ class genDictionary(object) :
           # items = self.xref[id]['subelems']
           # values = string.join([ item['name'] + '=' + item['init'] for item in items],';"\n  "')          
           #c += 'EnumTypeBuilder("' + sc + attrs['name'] + '", "' + values + '");\n'
-          c += 'EnumTypeBuilder("' + sc + attrs['name'] + '");\n'
+          c += '::Reflex::EnumTypeBuilder("' + sc + attrs['name'] + '");\n'
         else :
          name = ''
          if 'name' not in attrs and 'demangled' in attrs : name = attrs.get('demangled')
@@ -1535,7 +1584,7 @@ class genDictionary(object) :
            if 'name' in attrs :
              name += attrs['name']
          name = normalizeClass(name,False)
-         c += 'TypeBuilder("'+name+'");\n'
+         c += '::Reflex::TypeBuilder("'+name+'");\n'
     return c 
 #----------------------------------------------------------------------------------
   def genNamespaces(self, selected ) :
@@ -1546,7 +1595,7 @@ class genDictionary(object) :
     idx = 0
     for ns in self.namespaces :
       if ns['id'] in used_context and 'name' in ns and  ns['name'] != '::' :
-        s += '  NamespaceBuilder nsb%d( "%s" );\n' % (idx, self.genTypeName(ns['id']))
+        s += '  ::Reflex::NamespaceBuilder nsb%d( "%s" );\n' % (idx, self.genTypeName(ns['id']))
         idx += 1
     return s
 #----------------------------------------------------------------------------------
@@ -1563,45 +1612,59 @@ class genDictionary(object) :
       if not demangled or not len(demangled):
         demangled = name
       if not self.quiet : print  'function '+ demangled
-      s += 'static void '
       retaddrpar=''
       if returns != 'void': retaddrpar=' retaddr'
       argspar=''
       if len(args) : argspar=' arg'
-      s +=  'function%s( void*%s, void*, const std::vector<void*>&%s, void*)\n{\n' % (id, retaddrpar, argspar)
+      head =  'static void function%s( void*%s, void*, const std::vector<void*>&%s, void*)\n{\n' % (id, retaddrpar, argspar)
       ndarg = self.getDefaultArgs(args)
       narg  = len(args)
       if ndarg : iden = '  '
       else     : iden = ''
+      body = ''
       for n in range(narg-ndarg, narg+1) :
         if ndarg :
-          if n == narg-ndarg :  s += '  if ( arg.size() == %d ) {\n' % n
-          else               :  s += '  else if ( arg.size() == %d ) { \n' % n
+          if n == narg-ndarg :  body += '  if ( arg.size() == %d ) {\n' % n
+          else               :  body += '  else if ( arg.size() == %d ) { \n' % n
         if returns == 'void' :
-          first = iden + '  %s(' % ( name, )
-          s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
+          body += iden + '  %s(' % ( name, )
+          head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+          body += ');\n'
         else :
           if returns[-1] in ('*',')' ) and returns.find('::*') == -1:
-            first = iden + '  if (retaddr) *(void**)retaddr = (void*)%s(' % ( name, )
-            s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
-            first = iden + '  else %s(' % ( name, )
-            s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
+            body += iden + '  if (retaddr) *(void**)retaddr = (void*)%s(' % ( name, )
+            head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+            body += ');\n'
+            body += iden + '  else %s(' % ( name, )
+            head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+            body += ');\n'
           elif returns[-1] == '&' :
-            first = iden + '  if (retaddr) *(void**)retaddr = (void*)&%s(' % ( name, )
-            s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
-            first = iden + '  else %s(' % ( name, )
-            s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
+            body += iden + '  if (retaddr) *(void**)retaddr = (void*)&%s(' % ( name, )
+            head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+            body += ');\n'
+            # The seemingly useless '&' below is to work around Microsoft's
+            # compiler 7.1-9 odd complaint C2027 if the reference has only
+            # been forward declared.
+            if sys.platform == 'win32':
+              body += iden + '  else &%s(' % ( name, )
+            else:
+              # but '&' will trigger an "unused value" warning on != MSVC
+              body += iden + '  else %s(' % ( name, )
+            head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+            body += ');\n'
           else :
-            first = iden + '  if (retaddr) new (retaddr) (%s)(%s(' % ( returns, name )
-            s += first + self.genMCOArgs(args, n, len(first)) + '));\n'
-            first = iden + '  else %s(' % ( name )
-            s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
+            body += iden + '  if (retaddr) new (retaddr) (%s)(%s(' % ( returns, name )
+            head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+            body += '));\n'
+            body += iden + '  else %s(' % ( name )
+            head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+            body += ');\n'
         if ndarg : 
-          if n != narg : s += '  }\n'
+          if n != narg : body += '  }\n'
           else :
-            if returns == 'void' : s += '  }\n'
-            else :                 s += '  }\n'
-      s += '}\n'
+            if returns == 'void' : body += '  }\n'
+            else :                 body += '  }\n'
+      s += head + body + '}\n'
     return s  
 #----------------------------------------------------------------------------------
   def genFunctions(self, selfunctions) :
@@ -1614,8 +1677,8 @@ class genDictionary(object) :
       if args : params  = '"'+ string.join( map(self.genParameter, args),';')+'"'
       else    : params  = '0'
       mod = self.genModifier(f, None)
-      s += '      Type t%s = %s;' % (i, self.genTypeID(id))
-      s += '      FunctionBuilder(t%s, "%s", function%s, 0, %s, %s);\n' % (i, name, id, params, mod)
+      s += '      ::Reflex::Type t%s = %s;' % (i, self.genTypeID(id))
+      s += '      ::Reflex::FunctionBuilder(t%s, "%s", function%s, 0, %s, %s);\n' % (i, name, id, params, mod)
       i += 1;
     return s
 #----------------------------------------------------------------------------------
@@ -1623,12 +1686,15 @@ class genDictionary(object) :
     s = ''
     i = 0;
     for e in selenums :
+      # Do not generate dictionaries for unnamed enums; we cannot reference them anyway.
+      if not e.has_key('name') or len(e['name']) == 0 or e['name'][0] == '.':
+        continue
       id   = e['id']
       cname = self.genTypeName(id, colon=True)
       name  = self.genTypeName(id)
       mod = self.genModifier(self.xref[id]['attrs'], None)
       if not self.quiet : print 'enum ' + name
-      s += '      EnumBuilder("%s",typeid(%s), %s)' % (name, cname, mod)
+      s += '      ::Reflex::EnumBuilder("%s",typeid(%s), %s)' % (name, cname, mod)
       items = self.xref[id]['subelems']
       for item in items :
         s += '\n        .AddItem("%s",%s)' % (item['name'], item['init'])
@@ -1644,7 +1710,7 @@ class genDictionary(object) :
       name  = self.genTypeName(id)
       mod   = self.genModifier(v, None)
       if not self.quiet : print 'variable ' + name 
-      s += '      VariableBuilder("%s", %s, (size_t)&%s, %s );\n' % (name, self.genTypeID(v['type']),self.genTypeName(id), mod)
+      s += '      ::Reflex::VariableBuilder("%s", %s, (size_t)&%s, %s );\n' % (name, self.genTypeID(v['type']),self.genTypeName(id), mod)
     return s
  #----------------------------------------------------------------------------------
   def countColonsForOffset(self, name) :
@@ -1684,11 +1750,11 @@ class genDictionary(object) :
     else             : xattrs = None
     mod = self.genModifier(attrs,xattrs)
     if attrs['type'][-1] == 'c' :
-      if mod : mod += ' | CONST'
-      else   : mod =  'CONST'
+      if mod : mod += ' | ::Reflex::CONST'
+      else   : mod =  '::Reflex::CONST'
     if attrs['type'][-1] == 'v' :
-      if mod : mod += ' | VOLATILE'
-      else   : mod = 'VOLATILE'
+      if mod : mod += ' | ::Reflex::VOLATILE'
+      else   : mod = '::Reflex::VOLATILE'
     shadow = '__shadow__::' + string.translate( str(cl), self.transtable)
     c = '  .AddDataMember(%s, "%s", OffsetOf(%s, %s), %s)' % (self.genTypeID(attrs['type']), name, shadow, name, mod)
     c += self.genCommentProperty(attrs)
@@ -1697,6 +1763,49 @@ class genDictionary(object) :
       for pname, pval in xattrs.items() : 
         if pname not in ('name', 'transient', 'pattern') :
           c += '\n  .AddProperty("%s","%s")' % (pname, pval)     
+    return c
+#----------------------------------------------------------------------------------
+  def genVariableBuild(self, attrs, childs):
+    if 'access' in attrs and attrs['access'] in ('private','protected') : return ''
+    type   = self.genTypeName(attrs['type'], enum=False, const=False)
+    cl     = self.genTypeName(attrs['context'],colon=True)
+    cls    = self.genTypeName(attrs['context'])
+    name = attrs['name']
+    if not name :
+      ftype = self.xref[attrs['type']]
+      # if the member type is an unnamed union we try to take the first member of the union as name
+      if ftype['elem'] == 'Union':
+        firstMember = ftype['attrs']['members'].split()[0]
+        if firstMember : name = self.xref[firstMember]['attrs']['name']
+        else           : return ''       # then this must be an unnamed union without members
+    if type[-1] == '&' :
+      print '--->> genreflex: WARNING: References are not supported as data members (%s %s::%s)' % ( type, cls, name )
+      self.warnings += 1
+      return ''
+    if 'bits' in attrs:
+      print '--->> genreflex: WARNING: Bit-fields are not supported as data members (%s %s::%s:%s)' % ( type, cls, name, attrs['bits'] )
+      self.warnings += 1
+      return ''
+    if self.selector : xattrs = self.selector.selfield( cls,name)
+    else             : xattrs = None
+    mod = self.genModifier(attrs,xattrs)
+    if mod : mod += ' | Reflex::STATIC'
+    else   : mod =  'Reflex::STATIC'
+    if attrs['type'][-1] == 'c' :
+      if mod : mod += ' | Reflex::CONST'
+      else   : mod =  'Reflex::CONST'
+    if attrs['type'][-1] == 'v' :
+      if mod : mod += ' | Reflex::VOLATILE'
+      else   : mod = 'Reflex::VOLATILE'
+    c = ''
+    if not attrs.has_key('init'):
+      c = '  .AddDataMember(%s, "%s", (size_t)&%s::%s, %s)' % (self.genTypeID(attrs['type']), name, cls, name, mod)
+      c += self.genCommentProperty(attrs)
+      # Other properties
+      if xattrs : 
+        for pname, pval in xattrs.items() : 
+          if pname not in ('name', 'transient', 'pattern') :
+            c += '\n  .AddProperty("%s","%s")' % (pname, pval)     
     return c
 #----------------------------------------------------------------------------------    
   def genCommentProperty(self, attrs):
@@ -1735,13 +1844,13 @@ class genDictionary(object) :
     return c
 #----------------------------------------------------------------------------------
   def genModifier(self, attrs, xattrs ):
-    if   attrs.get('access') == 'public' or 'access' not in attrs : mod = 'PUBLIC'
-    elif attrs['access'] == 'private'   : mod = 'PRIVATE'
-    elif attrs['access'] == 'protected' : mod = 'PROTECTED'
-    else                                : mod = 'NONE'
-    if 'virtual' in attrs : mod += ' | VIRTUAL'
-    if 'pure_virtual' in attrs : mod += ' | ABSTRACT'
-    if 'static'  in attrs : mod += ' | STATIC'
+    if   attrs.get('access') == 'public' or 'access' not in attrs : mod = '::Reflex::PUBLIC'
+    elif attrs['access'] == 'private'   : mod = '::Reflex::PRIVATE'
+    elif attrs['access'] == 'protected' : mod = '::Reflex::PROTECTED'
+    else                                : mod = '::Reflex::NONE'
+    if 'virtual' in attrs : mod += ' | ::Reflex::VIRTUAL'
+    if 'pure_virtual' in attrs : mod += ' | ::Reflex::ABSTRACT'
+    if 'static'  in attrs : mod += ' | ::Reflex::STATIC'
     # Extra modifiers
     xtrans = ''
     etrans = ''
@@ -1751,8 +1860,8 @@ class genDictionary(object) :
     if 'extra' in attrs:
       etrans = attrs['extra'].get('transient')
       if etrans : etrans = etrans.lower()
-    if xtrans == 'true' or etrans == 'true' : mod += ' | TRANSIENT'
-    if 'artificial' in attrs : mod += ' | ARTIFICIAL' 
+    if xtrans == 'true' or etrans == 'true' : mod += ' | ::Reflex::TRANSIENT'
+    if 'artificial' in attrs : mod += ' | ::Reflex::ARTIFICIAL' 
     return mod
 #----------------------------------------------------------------------------------
   def genMCODecl( self, type, name, attrs, args ) :
@@ -1765,10 +1874,10 @@ class genDictionary(object) :
     if type == 'constructor' : returns  = 'void'
     else                     : returns  = self.genTypeName(attrs['returns'])
     mod = self.genModifier(attrs, None)
-    if   type == 'constructor' : mod += ' | CONSTRUCTOR'
-    elif type == 'operator' :    mod += ' | OPERATOR'
-    elif type == 'converter' :   mod += ' | CONVERTER'
-    if attrs.get('const')=='1' : mod += ' | CONST'
+    if   type == 'constructor' : mod += ' | ::Reflex::CONSTRUCTOR'
+    elif type == 'operator' :    mod += ' | ::Reflex::OPERATOR'
+    elif type == 'converter' :   mod += ' | ::Reflex::CONVERTER'
+    if attrs.get('const')=='1' : mod += ' | ::Reflex::CONST'
     if args : params  = '"'+ string.join( map(self.genParameter, args),';')+'"'
     else    : params  = '0'
     s = '  .AddFunctionMember(%s, "%s", %s%s, 0, %s, %s)' % (self.genTypeID(id), name, type, id, params, mod)
@@ -1785,7 +1894,6 @@ class genDictionary(object) :
     if narg : argspar = ' arg'
     retaddrpar = ''
 
-    s = 'static void '
     # If we construct a conversion operator to pointer to function member the name
     # will contain TDF_<attrs['id']>
     tdfname = 'TDF%s'%attrs['id']
@@ -1797,35 +1905,50 @@ class genDictionary(object) :
 
     if returns != 'void': retaddrpar=' retaddr'
                 
-    s +=  '%s%s( void*%s, void* o, const std::vector<void*>&%s, void*)\n{\n' %( type, id, retaddrpar, argspar )
-    s += tdfdecl
+    head =  'static void %s%s( void*%s, void* o, const std::vector<void*>&%s, void*)\n{\n' %( type, id, retaddrpar, argspar )
+    head += tdfdecl
     ndarg = self.getDefaultArgs(args)
     if ndarg : iden = '  '
     else     : iden = ''
     if 'const' in attrs : cl = 'const '+ cl
+    body = ''
     for n in range(narg-ndarg, narg+1) :
       if ndarg :
-        if n == narg-ndarg :  s += '  if ( arg.size() == %d ) {\n' % n
-        else               :  s += '  else if ( arg.size() == %d ) { \n' % n
+        if n == narg-ndarg :  body += '  if ( arg.size() == %d ) {\n' % n
+        else               :  body += '  else if ( arg.size() == %d ) { \n' % n
       if returns != 'void' :
         if returns[-1] in ('*',')') and returns.find('::*') == -1 :
-          first = iden + '  if (retaddr) *(void**)retaddr = (void*)(((%s*)o)->%s)(' % ( cl, name )
-          s += first + self.genMCOArgs(args, n, len(first)) + ');\n' + iden + 'else '
+          body += iden + '  if (retaddr) *(void**)retaddr = (void*)(((%s*)o)->%s)(' % ( cl, name )
+          head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+          body += ');\n' + iden + 'else '
         elif returns[-1] == '&' :
-          first = iden + '  if (retaddr) *(void**)retaddr = (void*)&(((%s*)o)->%s)(' % ( cl, name )
-          s += first + self.genMCOArgs(args, n, len(first)) + ');\n' + iden + 'else '
+          body += iden + '  if (retaddr) *(void**)retaddr = (void*)&(((%s*)o)->%s)(' % ( cl, name )
+          head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+          body += ');\n' + iden + 'else '
         else :
-          first = iden + '  if (retaddr) new (retaddr) (%s)((((%s*)o)->%s)(' % ( returns, cl, name )
-          s += first + self.genMCOArgs(args, n, len(first)) + '));\n' + iden + 'else '
-      first = iden + '  (((%s*)o)->%s)(' % ( cl, name )
-      s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
+          body += iden + '  if (retaddr) new (retaddr) (%s)((((%s*)o)->%s)(' % ( returns, cl, name )
+          head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+          body += '));\n' + iden + 'else '
+      if returns[-1] == '&' :
+        # The seemingly useless '&' below is to work around Microsoft's
+        # compiler 7.1-9 odd complaint C2027 if the reference has only
+        # been forward declared.
+        if sys.platform == 'win32':
+          body += iden + '  &(((%s*)o)->%s)(' % ( cl, name )
+        else:
+          # but '&' will trigger an "unused value" warning on != MSVC
+          body += iden + '  (((%s*)o)->%s)(' % ( cl, name )
+      else: 
+        body += iden + '  (((%s*)o)->%s)(' % ( cl, name )
+      head, body = self.genMCOArgs(args, n, len(iden)+2, head, body)
+      body += ');\n'
       if ndarg : 
-        if n != narg : s += '  }\n'
+        if n != narg : body += '  }\n'
         else :
-          if returns == 'void' : s += '  }\n'
-          else :                 s += '  }\n'
-    s += '}\n'
-    return s
+          if returns == 'void' : body += '  }\n'
+          else :                 body += '  }\n'
+    body += '}\n'
+    return head + body;
 #----------------------------------------------------------------------------------
   def getDefaultArgs(self, args):
     n = 0
@@ -1833,12 +1956,26 @@ class genDictionary(object) :
       if 'default' in a : n += 1
     return n
 #----------------------------------------------------------------------------------
-  def genMCOArgs(self, args, narg, pad):
+  def genMCOArgs(self, args, narg, pad, head, body):
     s = ''
+    td = ''
     for i in range(narg) :
       a = args[i]
       #arg = self.genArgument(a, 0);
       arg = self.genTypeName(a['type'],colon=True)
+      if arg.find('[') != -1:
+        if arg[-1] == '*' :
+          argnoptr = arg[:-1]
+          argptr = '*'
+        elif len(arg) > 7 and arg[-7:] == '* const':
+          argnoptr = arg[:-7]
+          argptr = '* const'
+        else :
+          argnoptr = arg
+          argptr = ''
+        td += pad*' ' + 'typedef %s RflxDict_arg_td%d%s;\n' % (argnoptr[:argnoptr.index('[')], i, argnoptr[argnoptr.index('['):])
+        arg = 'RflxDict_arg_td%d' % i
+        arg += argptr;
       if arg[-1] == '*' or len(arg) > 7 and arg[-7:] == '* const':
         if arg[-2:] == ':*' or arg[-8:] == ':* const' : # Pointer to data member
           s += '*(%s*)arg[%d]' % (arg, i )
@@ -1857,8 +1994,8 @@ class genDictionary(object) :
         s += '*(%s*)arg[%d]' % (arg[:-1], i )
       else :
         s += '*(%s*)arg[%d]' % (arg, i )
-      if i != narg - 1 : s += ',\n' + pad*' '
-    return s
+      if i != narg - 1 : s += ',\n' + (pad+2)*' '
+    return head + td, body + s
 #----------------------------------------------------------------------------------
   def genMethodDecl(self, attrs, args):
     return self.genMCODecl( 'method', '', attrs, args )
@@ -1883,26 +2020,29 @@ class genDictionary(object) :
     id  = attrs['id']
     paramargs = ''
     if len(args): paramargs = ' arg'
-    s = 'static void constructor%s( void* retaddr, void* mem, const std::vector<void*>&%s, void*) {\n' %( id, paramargs )
+    head = 'static void constructor%s( void* retaddr, void* mem, const std::vector<void*>&%s, void*) {\n' %( id, paramargs )
+    body = ''
     if 'pseudo' in attrs :
-      s += '  if (retaddr) *(void**)retaddr =  ::new(mem) %s( *(__void__*)0 );\n' % ( cl )
-      s += '  else ::new(mem) %s( *(__void__*)0 );\n' % ( cl )
+      head += '  if (retaddr) *(void**)retaddr =  ::new(mem) %s( *(__void__*)0 );\n' % ( cl )
+      head += '  else ::new(mem) %s( *(__void__*)0 );\n' % ( cl )
     else :
       ndarg = self.getDefaultArgs(args)
       narg  = len(args)
       for n in range(narg-ndarg, narg+1) :
         if ndarg :
-          if n == narg-ndarg :  s += '  if ( arg.size() == %d ) {\n  ' % n
-          else               :  s += '  else if ( arg.size() == %d ) { \n  ' % n
-        first = '  if (retaddr) *(void**)retaddr = ::new(mem) %s(' % ( cl )
-        s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
-        first = '  else ::new(mem) %s(' % ( cl )
-        s += first + self.genMCOArgs(args, n, len(first)) + ');\n'
+          if n == narg-ndarg :  body += '  if ( arg.size() == %d ) {\n  ' % n
+          else               :  body += '  else if ( arg.size() == %d ) { \n  ' % n
+        body += '  if (retaddr) *(void**)retaddr = ::new(mem) %s(' % ( cl )
+        head, body = self.genMCOArgs(args, n, 4, head, body)
+        body += ');\n'
+        body += '  else ::new(mem) %s(' % ( cl )
+        head, body = self.genMCOArgs(args, n, 4, head, body)
+        body += ');\n'
         if ndarg : 
-          if n != narg : s += '  }\n'
-          else :         s += '  }\n'
-    s += '}\n'
-    return s
+          if n != narg : body += '  }\n'
+          else :         body += '  }\n'
+    body += '}\n'
+    return head + body
 #----------------------------------------------------------------------------------
   def genDestructorDef(self, attrs, childs):
     cl = self.genTypeName(attrs['context'])
@@ -1913,7 +2053,7 @@ class genDictionary(object) :
        self.checkAccessibleType(self.xref[attrs['context']]) : return ''
     mod = self.genModifier(attrs,None)
     id       = attrs['id']
-    s = '  .AddFunctionMember(%s, "~%s", destructor%s, 0, 0, %s | DESTRUCTOR )' % (self.genTypeID(id), attrs['name'], attrs['id'], mod)
+    s = '  .AddFunctionMember(%s, "~%s", destructor%s, 0, 0, %s | ::Reflex::DESTRUCTOR )' % (self.genTypeID(id), attrs['name'], attrs['id'], mod)
     s += self.genCommentProperty(attrs)
     return s
 #----------------------------------------------------------------------------------
@@ -1954,9 +2094,9 @@ class genDictionary(object) :
     return '%s = %s' % (attrs['name'], attrs['init'])
 #----------------------------------------------------------------------------------
   def genBaseClassBuild(self, clf, b ):
-    mod = b['access'].upper()
-    if 'virtual' in b and b['virtual'] == '1' : mod = 'VIRTUAL | ' + mod
-    return '  .AddBase(%s, BaseOffset< %s, %s >::Get(), %s)' %  (self.genTypeID(b['type']), clf, self.genTypeName(b['type'],colon=True), mod)
+    mod = '::Reflex::' + b['access'].upper()
+    if 'virtual' in b and b['virtual'] == '1' : mod = '::Reflex::VIRTUAL | ' + mod
+    return '  .AddBase(%s, ::Reflex::BaseOffset< %s, %s >::Get(), %s)' %  (self.genTypeID(b['type']), clf, self.genTypeName(b['type'],colon=True), mod)
 #----------------------------------------------------------------------------------
   def enhanceClass(self, attrs):
     if self.isUnnamedType(attrs.get('demangled')) or self.checkAccessibleType(self.xref[attrs['id']]) : return
@@ -2017,10 +2157,16 @@ class genDictionary(object) :
     cl       = self.genTypeName(attrs['context'], colon=True)
     clt      = string.translate(str(cl), self.transtable)
     t        = getTemplateArgs(cl)[0]
-    s  = 'static void method%s( void* retaddr, void*, const std::vector<void*>&, void*)\n{\n' %( attrs['id'], )
-    s += '  if (retaddr) *(void**) retaddr = ::Reflex::Proxy< %s >::Generate();\n' % (cl,)
-    s += '  else ::Reflex::Proxy< %s >::Generate();\n' % (cl,)
-    s += '}\n'
+    if cl[:13] == '::std::bitset'  :
+      s  = 'static void method%s( void* retaddr, void*, const std::vector<void*>&, void*)\n{\n' %( attrs['id'], )
+      s += '  if (retaddr) *(void**) retaddr = ::Reflex::Proxy< ::Reflex::StdBitSetHelper< %s > >::Generate();\n' % (cl,)
+      s += '  else ::Reflex::Proxy< ::Reflex::StdBitSetHelper< %s > >::Generate();\n' % (cl,)
+      s += '}\n'
+    else:
+      s  = 'static void method%s( void* retaddr, void*, const std::vector<void*>&, void*)\n{\n' %( attrs['id'], )
+      s += '  if (retaddr) *(void**) retaddr = ::Reflex::Proxy< %s >::Generate();\n' % (cl,)
+      s += '  else ::Reflex::Proxy< %s >::Generate();\n' % (cl,)
+      s += '}\n'
     return s
 #----BasesMap stuff--------------------------------------------------------
   def genGetBasesTableDecl( self, attrs, args ) :
@@ -2075,21 +2221,22 @@ class genDictionary(object) :
   def genGetNewDelFunctionsDecl( self, attrs, args ) :
     return 'static void method%s( void*, void*, const std::vector<void*>&, void* ); ' % (attrs['id'])
   def genGetNewDelFunctionsBuild( self, attrs, args ) :
+    cid      = attrs['context']
     mod = self.genModifier(attrs, None)  
-    return '  .AddFunctionMember<void*(void)>("__getNewDelFunctions", method%s, 0, 0, %s)' % (attrs['id'], mod)
+    return '  .AddFunctionMember<void*(void)>("__getNewDelFunctions", method_newdel%s, 0, 0, %s)' % (cid, mod)
   def genGetNewDelFunctionsDef( self, attrs, args ) :
     cid      = attrs['context']
     cl       = self.genTypeName(cid, colon=True)
     clt      = string.translate(str(cl), self.transtable)
     (newc, newa) = self.checkOperators(cid)
-    s  = 'static void method%s( void* retaddr, void*, const std::vector<void*>&, void*)\n{\n' %( attrs['id'] )
-    s += '  static NewDelFunctions s_funcs;\n'
-    s += '  s_funcs.fNew         = NewDelFunctionsT< %s >::new%s_T;\n' % (cl, newc)
-    s += '  s_funcs.fNewArray    = NewDelFunctionsT< %s >::newArray%s_T;\n' % (cl, newa)
-    s += '  s_funcs.fDelete      = NewDelFunctionsT< %s >::delete_T;\n' % cl
-    s += '  s_funcs.fDeleteArray = NewDelFunctionsT< %s >::deleteArray_T;\n' % cl
-    s += '  s_funcs.fDestructor  = NewDelFunctionsT< %s >::destruct_T;\n' % cl
-    s += '  if (retaddr) *(NewDelFunctions**)retaddr = &s_funcs;\n'
+    s  = 'static void method_newdel%s( void* retaddr, void*, const std::vector<void*>&, void*)\n{\n' %( cid )
+    s += '  static ::Reflex::NewDelFunctions s_funcs;\n'
+    s += '  s_funcs.fNew         = ::Reflex::NewDelFunctionsT< %s >::new%s_T;\n' % (cl, newc)
+    s += '  s_funcs.fNewArray    = ::Reflex::NewDelFunctionsT< %s >::newArray%s_T;\n' % (cl, newa)
+    s += '  s_funcs.fDelete      = ::Reflex::NewDelFunctionsT< %s >::delete_T;\n' % cl
+    s += '  s_funcs.fDeleteArray = ::Reflex::NewDelFunctionsT< %s >::deleteArray_T;\n' % cl
+    s += '  s_funcs.fDestructor  = ::Reflex::NewDelFunctionsT< %s >::destruct_T;\n' % cl
+    s += '  if (retaddr) *(::Reflex::NewDelFunctions**)retaddr = &s_funcs;\n'
     s += '}\n'
     return s
 #----------------------------------------------------------------------------------
@@ -2113,8 +2260,8 @@ class genDictionary(object) :
       if id not in [ bid[0] for bid in bases] :
         if access == 'public' : access = b['access']
         if not virtual : virtual = ( b['virtual'] == '1' )
-        mod = access.upper()
-        if virtual : mod = 'VIRTUAL |' + mod
+        mod = '::Reflex::' + access.upper()
+        if virtual : mod = '::Reflex::VIRTUAL |' + mod
         bases.append( [id,  mod, level] )
         self.getAllBases( id, bases, level+1, access, virtual )
 #----------------------------------------------------------------------------------
@@ -2217,6 +2364,7 @@ def getContainerId(c):
   elif c[:21] == 'stdext::hash_multiset':    return ('HASHMULTISET','set')
   elif c[:10] == 'std::stack'   :            return ('STACK','stack')
   elif c[:11] == 'std::vector'  :            return ('VECTOR','vector')
+  elif c[:11] == 'std::bitset'  :            return ('BITSET','bitset')
   else : return ('NOCONTAINER','')
 #---------------------------------------------------------------------------------------
 stldeftab = {}
@@ -2354,81 +2502,153 @@ def ClassDefImplementation(selclasses, self) :
       break
   if haveRtypes == 0: return ''
   
-  returnValue  = '#include "TClass.h"\n'
+  returnValue  = '#ifndef G__DICTIONARY\n' # for RtypesImp.h
+  returnValue += '# define G__DICTIONARY\n'
+  returnValue += '#endif\n'
+  returnValue += '#include "TClass.h"\n'
   returnValue += '#include "TMemberInspector.h"\n'
+  returnValue += '#include "RtypesImp.h"\n' # for GenericShowMembers etc
+  returnValue += '#include "TIsAProxy.h"\n'
   haveClassDef = 0
 
   for attrs in selclasses :
     members = attrs.get('members','')
     membersList = members.split()
 
-    listOfMembers = ""
+    listOfMembers = []
     for ml in membersList:
       if ml[1].isdigit() :
-        listOfMembers += self.xref[ml]['attrs']['name']
+        listOfMembers.append(self.xref[ml]['attrs']['name'])
 
-    if  "fgIsA" in listOfMembers \
-      and "Class" in listOfMembers \
-      and "Class_Name" in listOfMembers  \
-      and "Class_Version" in listOfMembers  \
-      and "Dictionary" in listOfMembers  \
-      and "IsA" in listOfMembers  \
-      and "ShowMembers" in listOfMembers  \
-      and "Streamer" in listOfMembers  \
-      and "StreamerNVirtual" in listOfMembers \
-      and "DeclFileName" in listOfMembers \
-      and "ImplFileLine" in listOfMembers \
-      and "ImplFileName" in listOfMembers :
+    allbases = []
+    self.getAllBases(attrs['id'], allbases)
 
-         haveClassDef = 1
+    # If the class inherits from TObject it MUST use ClassDef; check that:
+    derivesFromTObject = 0
+    if len(self.TObject_id) :
+      if len( filter( lambda b: b[0] == self.TObject_id, allbases ) ) :
+        derivesFromTObject = 1
 
-         clname = '::' + attrs['fullname']
-         returnValue += 'TClass* ' + clname + '::fgIsA = 0;\n'
-         returnValue += 'TClass* ' + clname + '::Class() {\n'
-         returnValue += '   if (!fgIsA)\n'
-         returnValue += '      fgIsA = TClass::GetClass("' + clname[2:] + '");\n'
-         returnValue += '   return fgIsA;\n'
-         returnValue += '}\n'
-         returnValue += 'const char * ' + clname + '::Class_Name() {return "' + clname[2:]  + '";}\n'
-         returnValue += 'void ' + clname + '::Dictionary() {}\n'
-         returnValue += 'const char *' + clname  + '::ImplFileName() {return "";}\n'
+    if "fgIsA" in listOfMembers \
+           and "Class" in listOfMembers \
+           and "Class_Name" in listOfMembers  \
+           and "Class_Version" in listOfMembers  \
+           and "Dictionary" in listOfMembers  \
+           and "IsA" in listOfMembers  \
+           and "ShowMembers" in listOfMembers  \
+           and "Streamer" in listOfMembers  \
+           and "StreamerNVirtual" in listOfMembers \
+           and "DeclFileName" in listOfMembers \
+           and "ImplFileLine" in listOfMembers \
+           and "ImplFileName" in listOfMembers :
 
-         returnValue += 'int ' + clname + '::ImplFileLine() {return 0;}\n'
+      clname = '::' + attrs['fullname']
 
-         returnValue += 'void '+ clname  +'::ShowMembers(TMemberInspector &R__insp, char *R__parent) {\n'
-         returnValue += '   TClass *R__cl = ' + clname  + '::IsA();\n'
-         returnValue += '   Int_t R__ncp = strlen(R__parent);\n'
-         returnValue += '   if (R__ncp || R__cl || R__insp.IsA()) { }\n'
+      haveClassDef = 1
+      extraval = '!RAW!' + str(derivesFromTObject)
+      if attrs.has_key('extra') : attrs['extra']['ClassDef'] = extraval
+      else                      : attrs['extra'] = {'ClassDef': extraval}
+      id = attrs['id']
+      template = ""
+      if clname.find('<') != -1: template = "template<> "
 
-         for ml in membersList:
-           if ml[1].isdigit() :
-             if self.xref[ml]['elem'] == 'Field' :
-               mattrs = self.xref[ml]['attrs']
-               varname  = mattrs['name']
-               tt = self.xref[mattrs['type']]
-               te = tt['elem']
-               if te == 'PointerType' :
-                 varname1 = '*' + varname
-               elif te == 'ArrayType' :
-                 t = self.genTypeName(mattrs['type'],colon=True,const=True)
-                 arraytype = t[t.find('['):]
-                 varname1 = varname + arraytype
-               else :
-                 varname1 = varname
-               returnValue += '   R__insp.Inspect(R__cl, R__parent, "' + varname1 + '", &' + varname + ');\n'
+      returnValue += template + 'TClass* ' + clname + '::Class() {\n'
+      returnValue += '   if (!fgIsA)\n'
+      returnValue += '      fgIsA = TClass::GetClass("' + clname[2:] + '");\n'
+      returnValue += '   return fgIsA;\n'
+      returnValue += '}\n'
+      returnValue += template + 'const char * ' + clname + '::Class_Name() {return "' + clname[2:]  + '";}\n'
+      haveNewDel = 0
+      if 'GetNewDelFunctions' in listOfMembers:
+        haveNewDel = 1
+        # need to fwd decl newdel wrapper because ClassDef is before stubs
+        returnValue += 'namespace {\n'
+        returnValue += '   static void method_newdel' + id + '(void*, void*, const std::vector<void*>&, void*);\n'
+        returnValue += '}\n'
+      returnValue += template + 'void ' + clname + '::Dictionary() {}\n'
+      returnValue += template + 'const char *' + clname  + '::ImplFileName() {return "";}\n'
 
-         if 'bases' in attrs :
-           for b in attrs['bases'].split() :
-             returnValue +=  '   ' + self.xref[b]['attrs']['name'] + '::ShowMembers(R__insp,R__parent);\n'
+      returnValue += template + 'int ' + clname + '::ImplFileLine() {return 1;}\n'
 
-         returnValue += '}\n'
+      returnValue += template + 'void '+ clname  +'::ShowMembers(TMemberInspector &R__insp, char *R__parent) {\n'
+      returnValue += '   TClass *R__cl = ' + clname  + '::IsA();\n'
+      returnValue += '   Int_t R__ncp = strlen(R__parent);\n'
+      returnValue += '   if (R__ncp || R__cl || R__insp.IsA()) { }\n'
 
-         returnValue += 'void '+ clname  +'::Streamer(TBuffer &b) {\n   if (b.IsReading()) {\n'
-         returnValue += '      b.ReadClassBuffer(' + clname + '::Class(),this);\n'
-         returnValue += '   } else {\n'
-         returnValue += '      b.WriteClassBuffer(' + clname  + '::Class(),this);\n'
-         returnValue += '   }\n'
-         returnValue += '}\n'
+      for ml in membersList:
+        if ml[1].isdigit() :
+          if self.xref[ml]['elem'] == 'Field' :
+            mattrs = self.xref[ml]['attrs']
+            varname  = mattrs['name']
+            tt = self.xref[mattrs['type']]
+            te = tt['elem']
+            if te == 'PointerType' :
+              varname1 = '*' + varname
+            elif te == 'ArrayType' :
+              t = self.genTypeName(mattrs['type'],colon=True,const=True)
+              arraytype = t[t.find('['):]
+              varname1 = varname + arraytype
+            else :
+              varname1 = varname
+            # rootcint adds a cast to void* here for the address of the member, as in:
+            # returnValue += '   R__insp.Inspect(R__cl, R__parent, "' + varname1 + '", (void*)&' + varname + ');\n'
+            # but only for struct-type members. CVS log from 2001:
+            #  "add explicit cast to (void*) in call to Inspect() only for object data"
+            #  "members not having a ShowMembers() method. Needed on ALPHA to be able to"
+            #  "compile G__Thread.cxx."
+            returnValue += '   R__insp.Inspect(R__cl, R__parent, "' + varname1 + '", &' + varname + ');\n'
+            # if struct: recurse!
+            if te in ('Class','Struct') :
+              memtypeid = mattrs['type']
+              memDerivesFromTObject = (memtypeid == self.TObject_id)
+              if not memDerivesFromTObject :
+                allmembases = []
+                self.getAllBases(memtypeid, allmembases)
+                if len( filter( lambda b: b[0] == self.TObject_id, allmembases ) ) :
+                  memDerivesFromTObject = 1
+              if memDerivesFromTObject :
+                returnValue +=  '   %s.ShowMembers(R__insp, strcat(R__parent,"%s.")); R__parent[R__ncp] = 0;\n' % (varname, varname)
+              else :
+                # TODO: the "false" parameter signals that it's a non-transient (i.e. a persistent) member.
+                # We have the knowledge to properly pass true or false, and we should do that at some point...
+                returnValue +=  '   ::ROOT::GenericShowMembers("%s", (void*)&%s, R__insp, strcat(R__parent,"%s."), %s);\n' \
+                               % (self.genTypeName(memtypeid), varname, varname, "false")
+                # tt['attrs']['fullname']
+                returnValue +=  '   R__parent[R__ncp] = 0;\n'
+
+      if 'bases' in attrs :
+        for b in attrs['bases'].split() :
+          poscol = b.find(':')
+          if poscol == -1 : baseid = b
+          else            : baseid = b[poscol + 1:]
+          basename = self.genTypeName(baseid)
+          basemem = self.xref[baseid]['attrs']['members']
+          baseMembersList = basemem.split()
+          baseHasShowMembers = 0
+          for ml in baseMembersList:
+            if ml[1].isdigit() :
+              if self.xref[ml]['attrs']['name'] == 'ShowMembers' :
+                baseHasShowMembers = 1
+                break
+          # basename = self.xref[baseid]['attrs']['fullname']
+          if baseHasShowMembers :
+            returnValue +=  '   %s::ShowMembers(R__insp,R__parent);\n' % basename
+          else :
+            returnValue +=  '   ::ROOT::GenericShowMembers("%s", ( ::%s *)(this), R__insp, R__parent, false);\n' % (basename, basename)
+
+      returnValue += '}\n'
+
+      returnValue += template + 'void '+ clname  +'::Streamer(TBuffer &b) {\n   if (b.IsReading()) {\n'
+      returnValue += '      b.ReadClassBuffer(' + clname + '::Class(),this);\n'
+      returnValue += '   } else {\n'
+      returnValue += '      b.WriteClassBuffer(' + clname  + '::Class(),this);\n'
+      returnValue += '   }\n'
+      returnValue += '}\n'
+      returnValue += template + 'TClass* ' + clname + '::fgIsA = 0;\n'
+    elif derivesFromTObject :
+      # no fgIsA etc members but derives from TObject!
+      print '--->> genreflex: ERROR: class %s derives from TObject but does not use ClassDef!' % attrs['fullname']
+      print '--->>                   You MUST put ClassDef(%s, 1); into the class definition.' % attrs['fullname']
 
   if haveClassDef == 1 :
     return "} // unnamed namespace\n\n" + returnValue + "\nnamespace {\n"

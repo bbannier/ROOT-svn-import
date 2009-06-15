@@ -11,7 +11,7 @@ UTILSDIRI    := $(UTILSDIR)/inc
 
 ##### rootcint #####
 ROOTCINTS    := $(UTILSDIRS)/rootcint.cxx \
-                $(filter-out %_tmp.cxx,$(wildcard $(UTILSDIRS)/R*.cxx))
+                $(filter-out %7.cxx,$(filter-out %_tmp.cxx,$(wildcard $(UTILSDIRS)/R*.cxx)))
 ROOTCINTTMPO := $(ROOTCINTS:.cxx=_tmp.o)
 
 ROOTCINTTMPEXE:= $(UTILSDIRS)/rootcint_tmp$(EXEEXT)
@@ -23,10 +23,10 @@ ROOTCINTTMPDEP = $(ROOTCINTTMPO) $(ORDER_) $(ROOTCINTTMPEXE)
 
 ##### rootcint7 #####
 ifneq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean),)
-BUILDCINT7    := yes
+BUILDBOTHCINT := yes
 endif
-ifneq ($(BUILDCINT7),)
-ROOTCINT7S    := $(subst rootcint.cxx,rootcint7.cxx,$(ROOTCINTS))
+ifneq ($(BUILDBOTHCINT),)
+ROOTCINT7S    := $(patsubst %.cxx,%7.cxx,$(ROOTCINTS))
 ROOTCINT7TMPO := $(ROOTCINT7S:.cxx=_tmp.o)
 
 ROOTCINT7TMPEXE:= $(UTILSDIRS)/rootcint7_tmp$(EXEEXT)
@@ -34,6 +34,8 @@ ROOTCINT7EXE  := bin/rootcint7$(EXEEXT)
 ROOTCINT7TMP  ?= $(ROOTCINT7TMPEXE) -$(ROOTDICTTYPE)
 
 ROOTCINT7TMPDEP = $(ROOTCINT7TMPO) $(ORDER_) $(ROOTCINT7TMPEXE)
+else
+ROOTCINT7TMPDEP = $(ROOTCINTTMPO) $(ORDER_) $(ROOTCINTTMPEXE)
 endif
 
 ##### rlibmap #####

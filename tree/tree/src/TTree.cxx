@@ -13,14 +13,13 @@
 //                                                                      //
 // TTree                                                                //
 //                                                                      //
-//  a TTree object has a header with a name and a title.
+//  A TTree object has a header with a name and a title.
 //  It consists of a list of independent branches (TBranch). Each branch
 //  has its own definition and list of buffers. Branch buffers may be
 //  automatically written to disk or kept in memory until the Tree attribute
-//  fMaxVirtualSize is reached.
-//  Variables of one branch are written to the same buffer.
-//  A branch buffer is automatically compressed if the file compression
-//  attribute is set (default).
+//  fMaxVirtualSize is reached. Variables of one branch are written to the
+//  same buffer. A branch buffer is automatically compressed if the file
+//  compression attribute is set (default).
 //
 //  Branches may be written to different files (see TBranch::SetFile).
 //
@@ -37,8 +36,8 @@
 //     Creates a Tree with name and title.
 //
 //     Various kinds of branches can be added to a tree:
-//       A - simple structures or list of variables. (may be for C or Fortran structures)
-//       B - any object (inheriting from TObject). (we expect this option be the most frequent)
+//       A - simple structures or list of variables. (maybe for C or Fortran structures)
+//       B - any object inheriting from TObject. (expected be most frequently used)
 //       C - a ClonesArray. (a specialized object for collections of same class objects)
 //
 //  ==> Case A
@@ -130,7 +129,7 @@
 //
 //  ==> Case E
 //      ======
-//     TBranch *branch = tree->Branch( branchname, STLcollection, buffsize, splitlevel );
+//     TBranch *branch = tree->Branch( branchname, STLcollection, buffsize, splitlevel);
 //         STLcollection is the address of a pointer to std::vector, std::list,
 //         std::deque, std::set or std::multiset containing pointers to objects.
 //         If the splitlevel is a value bigger than 100 then the collection
@@ -161,32 +160,33 @@
 // are saved.
 //
 // void tree3AddBranch(){
-//   TFile f("tree3.root","update");
+//   TFile f("tree3.root", "update");
 //
 //   Float_t new_v;
 //   TTree *t3 = (TTree*)f->Get("t3");
-//   TBranch *newBranch = t3->Branch("new_v",&new_v,"new_v/F");
+//   TBranch *newBranch = t3->Branch("new_v", &new_v, "new_v/F");
 //
 //   //read the number of entries in the t3
 //   Long64_t nentries = t3->GetEntries();
 //
 //   for (Long64_t i = 0; i < nentries; i++){
-//     new_v= gRandom->Gaus(0,1);
+//     new_v= gRandom->Gaus(0, 1);
 //     newBranch->Fill();
 //   }
 //   // save only the new version of the tree
-//   t3->Write("",TObject::kOverwrite);
+//   t3->Write("", TObject::kOverwrite);
 // }
 // Adding a branch is often not possible because the tree is in a read-only
 // file and you do not have permission to save the modified tree with the
-// new branch. Even if you do have the permission, you risk loosing the
+// new branch. Even if you do have the permission, you risk losing the
 // original tree with an unsuccessful attempt to save  the modification.
 // Since trees are usually large, adding a branch could extend it over the
-// 2GB  limit. In this case, the attempt to write the tree fails, and the
+// 2GB limit. In this case, the attempt to write the tree fails, and the
 // original data is erased.
 // In addition, adding a branch to a tree enlarges the tree and increases
 // the amount of memory needed to read an entry, and therefore decreases
 // the performance.
+//
 // For these reasons, ROOT offers the concept of friends for trees (and chains).
 // We encourage you to use TTree::AddFriend rather than adding a branch manually.
 //
@@ -688,12 +688,15 @@ TTree::~TTree()
       // Note: fClones does not own its content.
       delete fClones;
       fClones = 0;
-   if (fEntryList){
-      if (fEntryList->TestBit(kCanDelete)){
+   }
+   if (fEntryList) {
+      if (fEntryList->TestBit(kCanDelete) && fEntryList->GetDirectory()==0) {
+         // Delete the entry list if it is marked to be deleted and it is not also 
+         // owned by a directory.  (Otherwise we would need to make sure that a 
+         // TDirectoryFile that has a TTree in it does a 'slow' TList::Delete.
          delete fEntryList;
          fEntryList=0;
       }
-   }
    }
    delete fTreeIndex;
    fTreeIndex = 0;
@@ -707,7 +710,8 @@ TTree::~TTree()
 //______________________________________________________________________________
 void TTree::AddClone(TTree* clone)
 {
-   // Add a cloned tree to our list of trees to be notified whenever we change our branch addresses or when we are deleted.
+   // Add a cloned tree to our list of trees to be notified whenever we change
+   //  our branch addresses or when we are deleted.
    if (!fClones) {
       fClones = new TList();
       fClones->SetOwner(false);
@@ -1919,6 +1923,9 @@ TBranch* TTree::BronchExec(const char* name, const char* classname, void* addr, 
          if (element->IsA() == TStreamerArtificial::Class()) {
             continue;
          }
+         if (element->TestBit(TStreamerElement::kRepeat)) {
+            continue;
+         }
          char* pointer = (char*) (objptr + element->GetOffset());
          // FIXME: This is not good enough, an STL container can be
          //        a base, and the test will fail.
@@ -2010,6 +2017,15 @@ void TTree::Browse(TBrowser* b)
    // Browse content of the TTree.
 
    fBranches.Browse(b);
+   if (fUserInfo) {
+      if (strcmp("TList",fUserInfo->GetName())==0) {
+         fUserInfo->SetName("UserInfo");
+         b->Add(fUserInfo);
+         fUserInfo->SetName("TList");
+      } else {
+         b->Add(fUserInfo);
+      }
+   }
 }
 
 //______________________________________________________________________________
@@ -2196,8 +2212,9 @@ TFile* TTree::ChangeFile(TFile* file)
 //______________________________________________________________________________
 Bool_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataType datatype, Bool_t isptr)
 {
-   // Check whether or not the address described by the last 3 parameters matches the content of the branch.
-   // If a Data Model Evolution conversion is involved, reset the fInfo of the branch.
+   // Check whether or not the address described by the last 3 parameters
+   // matches the content of the branch. If a Data Model Evolution conversion
+   // is involved, reset the fInfo of the branch.
 
    if (GetMakeClass()) {
       // If we are in MakeClass mode so we do not really use classes.
@@ -2533,10 +2550,10 @@ TTree* TTree::CloneTree(Long64_t nentries /* = -1 */, Option_t* option /* = "" *
                }
             }
          }
-         TTreeCloner t(GetTree(), newtree, option);
-         if (t.IsValid()) {
+         TTreeCloner cloner(GetTree(), newtree, option, TTreeCloner::kNoWarnings);
+         if (cloner.IsValid()) {
             newtree->SetEntries(newtree->GetEntries() + GetTree()->GetEntries());
-            t.Exec();
+            cloner.Exec();
          } else {
             if (!i) {
                Error("CloneTree", "Tree has not been cloned\n");
@@ -2544,10 +2561,25 @@ TTree* TTree::CloneTree(Long64_t nentries /* = -1 */, Option_t* option /* = "" *
                newtree = 0;
                return 0;
             } else {
-               if (GetCurrentFile()) {
-                  Warning("CloneTree", "Skipped file %s\n", GetCurrentFile()->GetName());
+               if (cloner.NeedConversion()) {
+                  TTree *localtree = GetTree();
+                  Long64_t tentries = localtree->GetEntries();
+                  for (Long64_t j = 0; j < tentries; j++) {
+                     if (localtree->GetEntry(j) <= 0) {
+                        break;
+                     }
+                     newtree->Fill();
+                  }
+                  if (newtree->GetTreeIndex()) {
+                     newtree->GetTreeIndex()->Append(GetTree()->GetTreeIndex(), kTRUE);
+                  }
                } else {
-                  Warning("Merge", "Skipped file number %d\n", GetTreeNumber());
+                  Warning("CloneTree",cloner.GetWarning());
+                  if (GetCurrentFile()) {
+                     Warning("CloneTree", "Skipped file %s\n", GetCurrentFile()->GetName());
+                  } else {
+                     Warning("CloneTree", "Skipped file number %d\n", GetTreeNumber());
+                  }
                }
             }
          }
@@ -2842,7 +2874,8 @@ void TTree::Delete(Option_t* option /* = "" */)
  //______________________________________________________________________________
 void TTree::DirectoryAutoAdd(TDirectory* dir)
 {
-   // Called by TKey and TObject::Clone to automatically add us to a directory when we are read from a file.
+   // Called by TKey and TObject::Clone to automatically add us to a directory
+   // when we are read from a file.
 
    if (fDirectory == dir) return;
    if (fDirectory) fDirectory->Remove(this);
@@ -3132,7 +3165,8 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //    tree.Draw("myvar","Entry$%2==0");
    //
    //  Entry$      : return the current entry number (== TTree::GetReadEntry())
-   //  LocalEntry$ : return the current entry number in the current tree of a chain (== GetTree()->GetReadEntry())
+   //  LocalEntry$ : return the current entry number in the current tree of a 
+   //                chain (== GetTree()->GetReadEntry())
    //  Entries$    : return the total number of entries (== TTree::GetEntries())
    //  Length$     : return the total number of element of this formula for this
    //                 entry (==TTreeFormula::GetNdata())
@@ -3317,11 +3351,11 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //
    //   Important note: By default TTree::Draw creates the arrays obtained
    //    with GetV1, GetV2, GetV3, GetW with a length corresponding to the
-   //    parameter fEstimate. By default fEstimate=10000 and can be modified
+   //    parameter fEstimate. By default fEstimate=1000000 and can be modified
    //    via TTree::SetEstimate. A possible recipee is to do
    //       tree->SetEstimate(tree->GetEntries());
    //    You must call SetEstimate if the expected number of selected rows
-   //    is greater than 10000.
+   //    is greater than 1000000.
    //
    //    You can use the option "goff" to turn off the graphics output
    //    of TTree::Draw in the above example.
@@ -3977,7 +4011,8 @@ Long64_t TTree::GetEntries(const char *selection)
 //______________________________________________________________________________
 Long64_t TTree::GetEntriesFriend() const
 {
-   // Return number of entries of this tree if not zero, otherwise return the number of entries in the first friend tree.
+   // Return pointer to the 1st Leaf named name in any Branch of this Tree or
+   // any branch in the list of friend trees.
 
    if (fEntries) return fEntries;
    if (!fFriends) return 0;
@@ -4111,9 +4146,13 @@ Int_t TTree::GetEntry(Long64_t entry, Int_t getall)
    while ((fe = (TFriendElement*)nextf())) {
       TTree *t = fe->GetTree();
       if (t) {
-         if ( t->LoadTreeFriend(entry,this) >= 0 ) {
+         if (fe->TestBit(TFriendElement::kFromChain)) {
             nb = t->GetEntry(t->GetReadEntry(),getall);
-         } else nb = 0;
+         } else {
+            if ( t->LoadTreeFriend(entry,this) >= 0 ) {
+               nb = t->GetEntry(t->GetReadEntry(),getall);
+            } else nb = 0;
+         }
          if (nb < 0) return nb;
          nbytes += nb;
       }
@@ -4125,18 +4164,7 @@ Int_t TTree::GetEntry(Long64_t entry, Int_t getall)
 TEntryList* TTree::GetEntryList()
 {
 //Returns the entry list, set to this tree
-//
-//The returned object is not owned by the tree, even if the entry list was created
-//by the SetEventList() function (see also comments of SetEventList())
 
-   if (!fEntryList) return 0;
-
-   //check, if the entry list is owned by the tree.
-   //This lack of "constness" is caused by the SetEventList() function
-   //creating an entry list.
-   if (fEntryList->TestBit(kCanDelete) == kTRUE){
-      fEntryList->SetBit(kCanDelete, kFALSE);
-   }
    return fEntryList;
 }
 
@@ -4545,6 +4573,7 @@ TList* TTree::GetUserInfo()
 
    if (!fUserInfo) {
       fUserInfo = new TList();
+      fUserInfo->SetName("UserInfo");
    }
    return fUserInfo;
 }
@@ -4861,12 +4890,12 @@ Int_t TTree::MakeProxy(const char* proxyClassname, const char* macrofilename, co
    // Concretely, with the script named h1analysisProxy.C,
    //
    // The method         calls the method (if it exist)
-   // Begin           -> h1analysisProxy_Begin
-   // SlaveBegin      -> h1analysisProxy_SlaveBegin
-   // Notify          -> h1analysisProxy_Notify
-   // Process         -> h1analysisProxy_Process
-   // SlaveTerminate  -> h1analysisProxy_SlaveTerminate
-   // Terminate       -> h1analysisProxy_Terminate
+   // Begin           -> void h1analysisProxy_Begin(TTree*);
+   // SlaveBegin      -> void h1analysisProxy_SlaveBegin(TTree*);
+   // Notify          -> Bool_t h1analysisProxy_Notify();
+   // Process         -> Bool_t h1analysisProxy_Process(Long64_t);
+   // SlaveTerminate  -> void h1analysisProxy_SlaveTerminate();
+   // Terminate       -> void h1analysisProxy_Terminate();
    //
    // If a file name macrofilename.h (or .hh, .hpp, .hxx, .hPP, .hXX) exist
    // it is included before the declaration of the proxy class.  This can
@@ -4986,7 +5015,7 @@ TTree* TTree::MergeTrees(TList* li, Option_t* /* option */)
          newtree->GetTreeIndex()->Append(tree->GetTreeIndex(),kTRUE);
       }
    }
-   if (newtree->GetTreeIndex()) {
+   if (newtree && newtree->GetTreeIndex()) {
       newtree->GetTreeIndex()->Append(0,kFALSE); // Force the sorting
    }
    return newtree;
@@ -5337,6 +5366,13 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
    //
    // A TBranch object is created for each variable in the expression.
    // The total number of rows read from the file is returned.
+   //
+   // FILLING a TTree WITH MULTIPLE INPUT TEXT FILES
+   // ----------------------------------------------
+   // To fill a TTree with multiple input text files, proceed as indicated above 
+   // for the first input file and omit the second argument for subsequent calls
+   //    T.ReadFile("file1.dat","branch descriptor");
+   //    T.ReadFile("file2.dat");
 
    gTree = this;
    std::ifstream in;
@@ -5347,54 +5383,60 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
    }
 
    TBranch *branch;
-   char *bdname = new char[1000];
-   char *bd = new char[10000];
-   Int_t nch = 0;
-   if (branchDescriptor) nch = strlen(branchDescriptor);
-   // branch Descriptor is null, read its definition from the first line in the file
-   if (!nch) {
-      in >> bd;
-      if (!in.good()) {
-         Error("ReadFile","Error reading file: %s",filename);
-         return 0;
+   Int_t nbranches = fBranches.GetEntries();
+   if (nbranches == 0) {
+      char *bdname = new char[1000];
+      char *bd = new char[10000];
+      Int_t nch = 0;
+      if (branchDescriptor) nch = strlen(branchDescriptor);
+      // branch Descriptor is null, read its definition from the first line in the file
+      if (!nch) {
+         in >> bd;
+         if (!in.good()) {
+            Error("ReadFile","Error reading file: %s",filename);
+            return 0;
+         }
+         in.ignore(8192,'\n');
+         nch = strlen(bd);
+      } else {
+         strcpy(bd,branchDescriptor);
       }
-      in.ignore(8192,'\n');
-      nch = strlen(bd);
-   } else {
-      strcpy(bd,branchDescriptor);
-   }
 
-   //parse the branch descriptor and create a branch for each element
-   //separated by ":"
-   void *address = &bd[9000];
-   char *bdcur = bd;
-   TString desc="", olddesc="F";
-   while (bdcur) {
-      char *colon = strchr(bdcur,':');
-      if (colon) *colon = 0;
-      strcpy(bdname,bdcur);
-      char *slash = strchr(bdname,'/');
-      if (slash) {
-         *slash = 0;
-         desc = bdcur;
-         olddesc = slash+1;
-      } else {
-         desc = Form("%s/%s",bdname,olddesc.Data());
+      //parse the branch descriptor and create a branch for each element
+      //separated by ":"
+      void *address = &bd[9000];
+      char *bdcur = bd;
+      TString desc="", olddesc="F";
+      while (bdcur) {
+         char *colon = strchr(bdcur,':');
+         if (colon) *colon = 0;
+         strcpy(bdname,bdcur);
+         char *slash = strchr(bdname,'/');
+         if (slash) {
+            *slash = 0;
+            desc = bdcur;
+            olddesc = slash+1;
+         } else {
+            desc = Form("%s/%s",bdname,olddesc.Data());
+         }
+         branch = new TBranch(this,bdname,address,desc.Data(),32000);
+         if (branch->IsZombie()) {
+            delete branch;
+            Warning("ReadFile","Illegal branch definition: %s",bdcur);
+         } else {
+            fBranches.Add(branch);
+            branch->SetAddress(0);
+         }
+         if (!colon)break;
+         bdcur = colon+1;
       }
-      branch = new TBranch(this,bdname,address,desc.Data(),32000);
-      if (branch->IsZombie()) {
-         delete branch;
-         Warning("ReadFile","Illegal branch definition: %s",bdcur);
-      } else {
-         fBranches.Add(branch);
-         branch->SetAddress(0);
-      }
-      if (!colon)break;
-      bdcur = colon+1;
+      delete [] bdname;
+      delete [] bd;
+
    }
 
    //loop on all lines in the file
-   Int_t nbranches = fBranches.GetEntries();
+   nbranches = fBranches.GetEntries();
    Int_t status = 1;
    Long64_t nlines = 0;
    while(status > 0) {
@@ -5419,9 +5461,35 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor)
       in.ignore(8192,'\n');
    }
 
-   delete [] bdname;
-   delete [] bd;
    return nlines;
+}
+
+void TTree::RecursiveRemove(TObject *obj)
+{
+   // Make sure that obj (which is being deleted or will soon be) is no
+   // longer referenced by this TTree.
+
+   if (obj == fEventList) {
+      fEventList = 0;
+   }
+   if (obj == fEntryList) {
+      fEntryList = 0;
+   }
+   if (fUserInfo) {
+      fUserInfo->RecursiveRemove(obj);
+   }
+   if (fPlayer == obj) {
+      fPlayer = 0;
+   }
+   if (fTreeIndex == obj) {
+      fTreeIndex = 0;
+   }
+   if (fAliases) {
+      fAliases->RecursiveRemove(obj);
+   }
+   if (fFriends) {
+      fFriends->RecursiveRemove(obj);
+   }
 }
 
 //______________________________________________________________________________
@@ -6078,14 +6146,17 @@ void TTree::SetEventList(TEventList *evlist)
 {
 //This function transfroms the given TEventList into a TEntryList
 //The new TEntryList is owned by the TTree and gets deleted when the tree
-//is deleted. This TEntryList can be returned by GetEntryList() function, and after
-//GetEntryList() function is called, the TEntryList is not owned by the tree
-//any more.
+//is deleted. This TEntryList can be returned by GetEntryList() function.
 
    fEventList = evlist;
    if (fEntryList){
-      if (fEntryList->TestBit(kCanDelete))
-         delete fEntryList;
+      if (fEntryList->TestBit(kCanDelete)) {
+         TEntryList *tmp = fEntryList;
+         fEntryList = 0; // Avoid problem with RecursiveRemove.
+         delete tmp;
+      } else {
+         fEntryList = 0;
+      }
    }
 
    if (!evlist) {
@@ -6098,6 +6169,7 @@ void TTree::SetEventList(TEventList *evlist)
    char enlistname[100];
    sprintf(enlistname, "%s_%s", evlist->GetName(), "entrylist");
    fEntryList = new TEntryList(enlistname, evlist->GetTitle());
+   fEntryList->SetDirectory(0); // We own this.
    Int_t nsel = evlist->GetN();
    fEntryList->SetTree(this);
    Long64_t entry;

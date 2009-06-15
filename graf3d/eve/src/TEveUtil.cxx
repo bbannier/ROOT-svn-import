@@ -133,7 +133,7 @@ void ChompTail(TString& s, char c='.')
 }
 
 //______________________________________________________________________________
-Bool_t TEveUtil::CheckMacro(const Text_t* mac)
+Bool_t TEveUtil::CheckMacro(const char* mac)
 {
    // Checks if macro 'mac' is loaded.
 
@@ -158,7 +158,7 @@ Bool_t TEveUtil::CheckMacro(const Text_t* mac)
 }
 
 //______________________________________________________________________________
-void TEveUtil::AssertMacro(const Text_t* mac)
+void TEveUtil::AssertMacro(const char* mac)
 {
    // Load and execute macro 'mac' if it has not been loaded yet.
 
@@ -168,7 +168,7 @@ void TEveUtil::AssertMacro(const Text_t* mac)
 }
 
 //______________________________________________________________________________
-void TEveUtil::Macro(const Text_t* mac)
+void TEveUtil::Macro(const char* mac)
 {
    // Execute macro 'mac'. Do not reload the macro.
 
@@ -180,7 +180,7 @@ void TEveUtil::Macro(const Text_t* mac)
 }
 
 //______________________________________________________________________________
-void TEveUtil::LoadMacro(const Text_t* mac)
+void TEveUtil::LoadMacro(const char* mac)
 {
    // Makes sure that macro 'mac' is loaded, but do not reload it.
 
@@ -200,18 +200,20 @@ void TEveUtil::ColorFromIdx(Color_t ci, UChar_t col[4], Bool_t alpha)
    // is true, set alpha component of col to 255.
    // ROOT's indexed color palette does not support transparency.
 
-   if (ci < 0) {
-      // Set to magenta.
-      col[0] = 255; col[1] = 0; col[2] = 255;
-      if (alpha) col[3] = 255;
-      return;
-   }
    TColor* c = gROOT->GetColor(ci);
-   if (c) {
+   if (c)
+   {
       col[0] = (UChar_t)(255*c->GetRed());
       col[1] = (UChar_t)(255*c->GetGreen());
       col[2] = (UChar_t)(255*c->GetBlue());
       if (alpha) col[3] = 255;
+   }
+   else
+   {
+      // Set to magenta.
+      col[0] = 255; col[1] = 0; col[2] = 255;
+      if (alpha) col[3] = 255;
+      return;
    }
 }
 
@@ -222,17 +224,20 @@ void TEveUtil::ColorFromIdx(Color_t ci, UChar_t col[4], UChar_t transparency)
    // ROOT's indexed color palette does not support transparency.
 
    UChar_t alpha = (255*(100 - transparency))/100;
-   if (ci < 0) {
-      // Set to magenta.
-      col[0] = 255; col[1] = 0; col[2] = 255; col[3] = alpha;
-      return;
-   }
-   TColor* c = gROOT->GetColor(ci);
-   if (c) {
+
+   TColor* c = gROOT->GetColor(ci);   
+   if (c)
+   {
       col[0] = (UChar_t)(255*c->GetRed());
       col[1] = (UChar_t)(255*c->GetGreen());
       col[2] = (UChar_t)(255*c->GetBlue());
       col[3] = alpha;
+   }
+   else
+   {
+      // Set to magenta.
+      col[0] = 255; col[1] = 0; col[2] = 255; col[3] = alpha;
+      return;
    }
 }
 
@@ -255,7 +260,7 @@ void TEveUtil::ColorFromIdx(Float_t f1, Color_t c1, Float_t f2, Color_t c2,
 }
 
 //______________________________________________________________________________
-Color_t* TEveUtil::FindColorVar(TObject* obj, const Text_t* varname)
+Color_t* TEveUtil::FindColorVar(TObject* obj, const char* varname)
 {
    // Find address of Color_t data-member with name varname in object
    // obj.
@@ -272,17 +277,18 @@ Color_t* TEveUtil::FindColorVar(TObject* obj, const Text_t* varname)
    return (Color_t*) (((char*)obj) + off);
 }
 
+//______________________________________________________________________________
 void TEveUtil::SetColorBrightness(Float_t value, Bool_t full_redraw)
 {
    // Tweak all ROOT colors to become brighter (if value > 0) or
    // darker (value < 0). Reasonable values for the value argument are
-   // from -0.5 to 0.5 (error will be printed otherwise).
+   // from -2.5 to 2.5 (error will be printed otherwise).
    // If value is zero, the original colors are restored.
    //
    // You should call TEveManager::FullRedraw3D() afterwards or set
    // the argument full_redraw to true (default is false).
 
-   if (value < -0.5 || value > 0.5)
+   if (value < -2.5 || value > 2.5)
    {
       Error("TEveUtil::SetColorBrightness", "value '%f' out of range [-0.5, 0.5].", value);
       return;
@@ -318,13 +324,17 @@ void TEveUtil::SetColorBrightness(Float_t value, Bool_t full_redraw)
          {
             cdef->Copy(*croot);
          }
+
          Float_t r, g, b;
          croot->GetRGB(r, g, b);
-         if (r < 0.01 && g < 0.01 && b < 0.01) continue; // skip black
-         if (r > 0.99 && g > 0.99 && b > 0.99) continue; // skip white
-         r = TMath::Min(r + value, 1.0f);
-         g = TMath::Min(g + value, 1.0f);
-         b = TMath::Min(b + value, 1.0f);
+         r = TMath::Power( r, (2.5 - value)/2.5);
+         g = TMath::Power(g, (2.5 - value)/2.5);
+         b = TMath::Power(b, (2.5 - value)/2.5);
+
+         r = TMath::Min(r, 1.0f);
+         g = TMath::Min(g, 1.0f);
+         b = TMath::Min(b, 1.0f);
+
          croot->SetRGB(r, g, b);
       }
       else

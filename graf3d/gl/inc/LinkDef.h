@@ -1,4 +1,4 @@
-// @(#)root/gl:$Id: LinkDef.h,v 1.1.1.1
+// @(#)root/gl:$Id$
 
 /*************************************************************************
  * Copyright (C) 1995-2000, Rene Brun and Fons Rademakers.               *
@@ -20,6 +20,8 @@
 #pragma link C++ class TGLRect;
 #pragma link C++ class TGLPlane;
 #pragma link C++ class TGLMatrix;
+#pragma link C++ class TGLColor;
+#pragma link C++ class TGLColorSet;
 #pragma link C++ class TGLUtil;
 #pragma link C++ class TGLUtil::TColorLocker;
 #pragma link C++ class TGLUtil::TDrawQualityModifier;
@@ -55,6 +57,7 @@
 #pragma link C++ class TGLOrthoCamera;
 #pragma link C++ class TGLPerspectiveCamera;
 #pragma link C++ class TGLCameraOverlay;
+#pragma link C++ class TGLPlotCamera+;
 
 #pragma link C++ class TGLSceneBase+;
 #pragma link C++ class TGLScene+;
@@ -64,6 +67,7 @@
 #pragma link C++ class TGLOverlayElement+;
 #pragma link C++ class TGLOverlayList+;
 #pragma link C++ class TGLOverlayButton+;
+#pragma link C++ class TGLAnnotation+;
 
 #pragma link C++ class TGLViewerBase+;
 #pragma link C++ class TGLViewer+;
@@ -92,8 +96,8 @@
 #pragma link C++ class TGLSphere;
 #pragma link C++ class TGLText;
 #pragma link C++ class TGLAxis;
-#pragma link C++ class TGLAxisAttrib;
-#pragma link C++ class TGLAxisPainter;
+#pragma link C++ class TGLAxisPainter+;
+#pragma link C++ class TGLAxisPainterBox+;
 
 #pragma link C++ class TGLSelectionBuffer;
 #pragma link C++ class TGLPlotCoordinates;
@@ -114,11 +118,17 @@
 #pragma link C++ class TGLContextIdentity;
 #pragma link C++ class TGLFormat;
 #pragma link C++ class TGLAdapter;
-#pragma link C++ class TF2GL;
-#pragma link C++ class TH2GL;
+#pragma link C++ class TF2GL+;
+#pragma link C++ class TH2GL+;
+#pragma link C++ class TH3GL+;
 #pragma link C++ class TGLParametricEquationGL;
 #pragma link C++ class TGLEmbeddedViewer;
 #pragma link C++ class TGLEventHandler;
+#pragma link C++ class TGLPadPainter;
+#pragma link C++ class TKDEFGT;
+#pragma link C++ class TGL5DDataSet;
+#pragma link C++ class TGL5DPainter;
+#pragma link C++ class TGL5DDataSetEditor;
 
 #ifndef _WIN32
 #pragma link C++ class TX11GLManager;

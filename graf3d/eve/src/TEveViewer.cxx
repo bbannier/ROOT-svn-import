@@ -43,7 +43,7 @@
 ClassImp(TEveViewer);
 
 //______________________________________________________________________________
-TEveViewer::TEveViewer(const Text_t* n, const Text_t* t) :
+TEveViewer::TEveViewer(const char* n, const char* t) :
    TEveWindowFrame(0, n, t),
    fGLViewer      (0),
    fGLViewerFrame (0)
@@ -120,7 +120,7 @@ void TEveViewer::SetGLViewer(TGLViewer* viewer, TGFrame* frame)
 }
 
 //______________________________________________________________________________
-void TEveViewer::SpawnGLViewer(TGedEditor* ged)
+TGLSAViewer* TEveViewer::SpawnGLViewer(TGedEditor* ged)
 {
    // Spawn new GLViewer and adopt it.
 
@@ -136,10 +136,12 @@ void TEveViewer::SpawnGLViewer(TGedEditor* ged)
 
    if (fEveFrame == 0)
       PreUndock();
+
+   return v;
 }
 
 //______________________________________________________________________________
-void TEveViewer::SpawnGLEmbeddedViewer(Int_t border)
+TGLEmbeddedViewer* TEveViewer::SpawnGLEmbeddedViewer(Int_t border)
 {
    // Spawn new GLViewer and adopt it.
 
@@ -156,6 +158,8 @@ void TEveViewer::SpawnGLEmbeddedViewer(Int_t border)
 
    if (fEveFrame == 0)
       PreUndock();
+
+   return v;
 }
 
 //______________________________________________________________________________
@@ -247,9 +251,12 @@ Bool_t TEveViewer::HandleElementPaste(TEveElement* el)
 ClassImp(TEveViewerList);
 
 //______________________________________________________________________________
-TEveViewerList::TEveViewerList(const Text_t* n, const Text_t* t) :
+TEveViewerList::TEveViewerList(const char* n, const char* t) :
    TEveElementList(n, t),
-   fShowTooltip   (kTRUE)
+   fShowTooltip   (kTRUE),
+
+   fBrightness(0),
+  fUseLightColorSet(kFALSE)
 {
    // Constructor.
 
@@ -348,6 +355,18 @@ void TEveViewerList::RepaintAllViewers(Bool_t resetCameras, Bool_t dropLogicals)
    }
 }
 
+//______________________________________________________________________________
+void TEveViewerList::DeleteAnnotations()
+{
+   // Delete annotations from all viewers.
+
+   for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i)
+   {
+      TGLViewer* glv = ((TEveViewer*)*i)->GetGLViewer();
+      glv->DeleteOverlayAnnotations();
+   }
+}
+
 /******************************************************************************/
 
 //______________________________________________________________________________
@@ -440,4 +459,30 @@ void TEveViewerList::OnClicked(TObject *obj, UInt_t button, UInt_t state)
    if (el && !el->IsPickable())
       el = 0;
    gEve->GetSelection()->UserPickedElement(el, state & kKeyControlMask);
+}
+
+//______________________________________________________________________________
+void TEveViewerList::SetColorBrightness(Float_t b)
+{
+   // Set color brightness.
+
+   TEveUtil::SetColorBrightness(b, 1);
+}
+
+//______________________________________________________________________________
+void TEveViewerList::SwitchColorSet()
+{
+   // Switch background color.
+
+   fUseLightColorSet = ! fUseLightColorSet;
+   for (List_i i=fChildren.begin(); i!=fChildren.end(); ++i)
+   {  
+      TGLViewer* glv = ((TEveViewer*)*i)->GetGLViewer();
+      if ( fUseLightColorSet)
+         glv->UseLightColorSet();
+      else 
+         glv->UseDarkColorSet();
+
+      glv->RequestDraw(TGLRnrCtx::kLODHigh);
+   }
 }
