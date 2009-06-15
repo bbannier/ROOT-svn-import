@@ -40,7 +40,7 @@ namespace RooStats {
 
     void AddSamplingDistribution(const SamplingDistribution *samplingDist, Option_t *drawOptions);
 
-    void Draw(Option_t *options);
+    void Draw(const Option_t *options);
 
     void SetLineColor(const Color_t color, const SamplingDistribution *samplDist = 0);
     void SetLineWidth(const Width_t lwidth, const SamplingDistribution *samplDist = 0);
@@ -50,27 +50,29 @@ namespace RooStats {
     void SetMarkerStyle(const Style_t style, const SamplingDistribution *samplDist = 0);
     void SetMarkerSize(const Size_t size, const SamplingDistribution *samplDist = 0);
 
-    void SetAxisTitle(char *varName) {_fVarName = TString(varName);}
+    void RebinDistribution(const Int_t rebinFactor, const SamplingDistribution *samplDist = 0);
+
+    void SetAxisTitle(char *varName) {fVarName = TString(varName);}
 
   private:
 
     std::vector<Double_t> fSamplingDistr;
     std::vector<Double_t> fSampleWeights;
 
-    Bool_t isWeighted;
+    Bool_t fIsWeighted;
 
-    Int_t _fbins;
-    Int_t _fMarkerType;
-    Int_t _fColor;
+    Int_t fbins;
+    Int_t fMarkerType;
+    Int_t fColor;
 
-    TString _fVarName;
+    TString fVarName;
 
   protected:
 
-    TH1F* _hist;
+    TH1F* fhist;
 
-    RooList _items;
-    TIterator* _iterator;
+    RooList fItems;
+    TIterator* fIterator;
 
     void SetSampleWeights(const SamplingDistribution *samplingDist);
 

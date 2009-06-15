@@ -62,7 +62,7 @@ void rs101_limitexample()
   // a toy dataset
   RooDataSet* data = modelWithConstraints->generate(*obs, 1);
   cout << "----------" << endl;
-
+  
   // make a plot of the -log likelihood ratio and -log profile likelihood ratio
   RooPlot* frame = s->frame();
   RooAbsReal* nll = modelWithConstraints->createNLL(*data, Constrain(constrainedParams) );
@@ -94,6 +94,10 @@ void rs101_limitexample()
   plc.SetParameters( paramOfInterest );
   plc.SetTestSize(.1);
   ConfInterval* lrint = plc.GetInterval();  // that was easy.
+
+  LikelihoodIntervalPlot plotInt((LikelihoodInterval*)lrint);
+  plotInt.SetTitle("Parameters contour plot");
+  plotInt.Draw();
 
   cout << "----------" << endl;
 

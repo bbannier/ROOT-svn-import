@@ -99,10 +99,6 @@ void rs401c_debuggingSamplingDist()
   plotSampl.AddSamplingDistribution(samp,"");
   plotSampl.AddSamplingDistribution(samp1,"");
 
-  plotSampl.SetLineColor(kGreen,samp);
-
-  //plotSampl.SetAxisTitle("Whaterveryouwant");
-
   TCanvas *samplCanvas = new TCanvas("samplCanvas");
   samplCanvas->cd();
   plotSampl.Draw();

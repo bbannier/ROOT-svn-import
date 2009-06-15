@@ -35,6 +35,7 @@ class RooArgSet ;
 class RooCategory ;
 class RooAbsReal ;
 class RooAbsBinning ;
+class RooAbsCollection ;
 class RooAbsPdf ;
 class RooConstVar ;
 class RooRealVar ;
