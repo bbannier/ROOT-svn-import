@@ -1193,34 +1193,6 @@ Double_t TF1::Derivative(Double_t x, Double_t *params, Double_t eps) const
    gErrorTF1 = rd.Error();
    return der;
 
-// #ifdef OTHER
-//    double * oldParams  = 0; 
-//    if ( params ) {
-//       oldParams = new Double_t[fNpar];
-//       std::copy(GetParameters(), GetParameters() + fNpar,oldParams);
-//       ((TF1*)this)->SetParameters( params );
-//    }
-
-
-//    //ROOT::Math::WrappedTF1 wf1(*( const_cast<TF1 *> (this) )); 
-
-//    ROOT::Math::WrappedFunction<const TF1 & > wf1(*this);
-
-//    ROOT::Math::RichardsonDerivator rd;
-//    double xmin, xmax;
-//    GetRange(xmin, xmax);
-//    rd.SetFunction(wf1, xmin, xmax);
-//    rd.SetRelTolerance(eps);
-//    double der = rd.Derivative1(x);
-//    gErrorTF1 = rd.Error();
-//    // restore old function parameters 
-//    if (oldParams) {
-//       ((TF1*)this)->SetParameters(oldParams);
-//       delete [] oldParams;
-//    return der;
-//    }
-// #endif
-
 }
 
 

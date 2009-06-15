@@ -1408,9 +1408,7 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
       hnew->SetBins(newbins,xmin,xmax);
    }
 
-   if (fBinSumw2.fN) hnew->Sumw2();
-
-   // copy merged bin contents (ignore under/overflows)
+   // merge bin contents ignoring now underflow/overflows
    if (fBinSumw2.fN) hnew->Sumw2();
 
    Double_t *cu2 = hnew->GetW();
@@ -1447,8 +1445,7 @@ TH1 *TProfile::Rebin(Int_t ngroup, const char*newname, const Double_t *xbins)
       if (fBinSumw2.fN) ew2[bin] = binSumw2;
       oldbin += imax;
    }
-
-
+   // set bin statistics for underflow/overflow bins by copying intact from original histogram
    hnew->fArray[0] = oldBins[0];
    hnew->fArray[newbins+1] = oldBins[nbins+1];
    hnew->fBinEntries[0] = oldCount[0];

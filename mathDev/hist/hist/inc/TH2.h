@@ -109,9 +109,6 @@ public:
    virtual void     Smooth(Int_t ntimes=1, Option_t *option=""); // *MENU*
            
    ClassDef(TH2,4)  //2-Dim histogram base class
-
-      protected:
-   TH1D      *Projection(const char *name, bool onX, Int_t firstbin, Int_t lastbin, Option_t *option) const;
 };
 
 
