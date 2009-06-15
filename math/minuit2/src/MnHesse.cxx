@@ -266,7 +266,7 @@ L30:
 
    }
    
-   mpiprocOffDiagonal.SyncMatrix(vhmat);
+   mpiprocOffDiagonal.SyncSymMatrixOffDiagonal(vhmat);
 
    //verify if matrix pos-def (still 2nd derivative)
 

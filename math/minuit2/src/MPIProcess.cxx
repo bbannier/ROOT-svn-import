@@ -14,140 +14,141 @@
 
 namespace ROOT {
 
-  unsigned int MPIProcess::_globalSize = 1;
-   unsigned int MPIProcess::_globalRank = 0;
+   unsigned int MPIProcess::fGlobalSize = 1;
+   unsigned int MPIProcess::fGlobalRank = 0;
 
    // By default all procs are for X
-   unsigned int MPIProcess::_cartSizeX = 0;
-   unsigned int MPIProcess::_cartSizeY = 0;
-   unsigned int MPIProcess::_cartDimension = 0;
-   bool MPIProcess::_newCart = true;
+   unsigned int MPIProcess::fCartSizeX = 0;
+   unsigned int MPIProcess::fCartSizeY = 0;
+   unsigned int MPIProcess::fCartDimension = 0;
+   bool MPIProcess::fNewCart = true;
 
 #ifdef MPIPROC
-   MPI::Intracomm* MPIProcess::_communicator = 0;
-   int MPIProcess::_indexComm = -1; // -1 for no-initialization
-   MPI::Intracomm* MPIProcess::_communicators[2] = {0};
-   unsigned int MPIProcess::_indecesComm[2] = {0};
+   MPI::Intracomm* MPIProcess::fCommunicator = 0;
+   int MPIProcess::fIndexComm = -1; // -1 for no-initialization
+   MPI::Intracomm* MPIProcess::fCommunicators[2] = {0};
+   unsigned int MPIProcess::fIndecesComm[2] = {0};
 #endif
 
    MPIProcess::MPIProcess(unsigned int nelements, unsigned int indexComm) :
-      _nelements(nelements), _size(1), _rank(0)
+      fNelements(nelements), fSize(1), fRank(0)
    {
-#ifdef MPIPROC
-
-      StartMPI();
 
       // check local requested index for communicator, valid values are 0 and 1
       indexComm = (indexComm==0) ? 0 : 1;
 
-      if (_globalSize==_cartDimension && 
-          _cartSizeX!=_cartDimension && _cartSizeY!=_cartDimension) {
+#ifdef MPIPROC
+
+      StartMPI();
+
+      if (fGlobalSize==fCartDimension && 
+          fCartSizeX!=fCartDimension && fCartSizeY!=fCartDimension) {
          //declare the cartesian topology
 
-         if (_communicator==0 && _indexComm<0 && _newCart) {
+         if (fCommunicator==0 && fIndexComm<0 && fNewCart) {
             // first call, declare the topology
-            std::cout << "MPIProcess:: Declare cartesian Topology (" 
-                      << _cartSizeX << "x" << _cartSizeY << ")" << std::endl;
+            std::cout << "Info --> MPIProcess::MPIProcess: Declare cartesian Topology (" 
+                      << fCartSizeX << "x" << fCartSizeY << ")" << std::endl;
       
-            int color = _globalRank / _cartSizeY;
-            int key = _globalRank % _cartSizeY;
+            int color = fGlobalRank / fCartSizeY;
+            int key = fGlobalRank % fCartSizeY;
 
-            _communicators[0] = new MPI::Intracomm(MPI::COMM_WORLD.Split(key,color)); // rows for Minuit
-            _communicators[1] = new MPI::Intracomm(MPI::COMM_WORLD.Split(color,key)); // columns for NLL
+            fCommunicators[0] = new MPI::Intracomm(MPI::COMM_WORLD.Split(key,color)); // rows for Minuit
+            fCommunicators[1] = new MPI::Intracomm(MPI::COMM_WORLD.Split(color,key)); // columns for NLL
 
-            _newCart = false;
+            fNewCart = false;
 
          }
 
-         _indexComm++;
+         fIndexComm++;
 
-         if (_indexComm>1 || _communicator==(&(MPI::COMM_WORLD))) { // Remember, no more than 2 dimensions in the topology!
-            std::cerr << "MPIProcess:: Error: Requiring more than 2 dimensions in the topology!" << std::endl;
+         if (fIndexComm>1 || fCommunicator==(&(MPI::COMM_WORLD))) { // Remember, no more than 2 dimensions in the topology!
+            std::cerr << "Error --> MPIProcess::MPIProcess: Requiring more than 2 dimensions in the topology!" << std::endl;
             MPI::COMM_WORLD.Abort(-1);
          } 
 
          // requiring columns as first call. In this case use all nodes
-         if (((unsigned int)_indexComm)<indexComm)
-            _communicator = &(MPI::COMM_WORLD);
+         if (((unsigned int)fIndexComm)<indexComm)
+            fCommunicator = &(MPI::COMM_WORLD);
          else {
-            _indecesComm[_indexComm] = indexComm;
-            _communicator = _communicators[_indecesComm[_indexComm]];
+            fIndecesComm[fIndexComm] = indexComm;
+            fCommunicator = fCommunicators[fIndecesComm[fIndexComm]];
          }
 
       }
       else {
          // no cartesian topology
-         if (_cartDimension!=0 && _globalSize!=_cartDimension) {
-            std::cout << "MPIProcess:: Cartesian dimension doesn't correspond to # total procs!" << std::endl;
-            std::cout << "MPIProcess:: Ignoring topology, use all procs for X." << std::endl;
-            std::cout << "MPIProcess:: Resetting topology..." << std::endl;
-            _cartSizeX = _globalSize;
-            _cartSizeY = 1;
-            _cartDimension = _globalSize;
+         if (fCartDimension!=0 && fGlobalSize!=fCartDimension) {
+            std::cout << "Warning --> MPIProcess::MPIProcess: Cartesian dimension doesn't correspond to # total procs!" << std::endl;
+            std::cout << "Warning --> MPIProcess::MPIProcess: Ignoring topology, use all procs for X." << std::endl;
+            std::cout << "Warning --> MPIProcess::MPIProcess: Resetting topology..." << std::endl;
+            fCartSizeX = fGlobalSize;
+            fCartSizeY = 1;
+            fCartDimension = fGlobalSize;
          }
 
-         if (_indexComm<0) {
-            if (_cartSizeX==_cartDimension) {
-               _communicators[0] = &(MPI::COMM_WORLD);
-               _communicators[1] = 0;
+         if (fIndexComm<0) {
+            if (fCartSizeX==fCartDimension) {
+               fCommunicators[0] = &(MPI::COMM_WORLD);
+               fCommunicators[1] = 0;
             }
             else {
-               _communicators[0] = 0;
-               _communicators[1] = &(MPI::COMM_WORLD);
+               fCommunicators[0] = 0;
+               fCommunicators[1] = &(MPI::COMM_WORLD);
             }
          }
 
-         _indexComm++;
+         fIndexComm++;
 
-         if (_indexComm>1) { // Remember, no more than 2 nested MPI calls!
-            std::cerr << "MPIProcess:: Error: More that 2 nested MPI calls!" << std::endl;
+         if (fIndexComm>1) { // Remember, no more than 2 nested MPI calls!
+            std::cerr << "Error --> MPIProcess::MPIProcess: More than 2 nested MPI calls!" << std::endl;
             MPI::COMM_WORLD.Abort(-1);
          }
 
-         _indecesComm[_indexComm] = indexComm;
+         fIndecesComm[fIndexComm] = indexComm;
 
          // require 2 nested communicators
-         if (_communicator!=0 && _communicators[indexComm]!=0) {
-            std::cerr << "MPIProcess:: Requiring 2 nested MPI calls!" << std::endl;
-            std::cout << "MPIProcess:: Ignoring second call." << std::endl;
-            _indecesComm[_indexComm] = (indexComm==0) ? 1 : 0;
+         if (fCommunicator!=0 && fCommunicators[indexComm]!=0) {
+            std::cout << "Warning --> MPIProcess::MPIProcess: Requiring 2 nested MPI calls!" << std::endl;
+            std::cout << "Warning --> MPIProcess::MPIProcess: Ignoring second call." << std::endl;
+            fIndecesComm[fIndexComm] = (indexComm==0) ? 1 : 0;
          } 
 
-         _communicator = _communicators[_indecesComm[_indexComm]];
+         fCommunicator = fCommunicators[fIndecesComm[fIndexComm]];
 
       }
 
       // set size and rank
-      if (_communicator!=0) {
-         _size = _communicator->Get_size();
-         _rank = _communicator->Get_rank();
+      if (fCommunicator!=0) {
+         fSize = fCommunicator->Get_size();
+         fRank = fCommunicator->Get_rank();
       }
       else {
          // no MPI calls
-         _size = 1;
-         _rank = 0;
+         fSize = 1;
+         fRank = 0;
       }
     
 
-      if (_size>_nelements) {
-         std::cerr << "MPIProcess:: Error: more processors than elements!" << std::endl;
+      if (fSize>fNelements) {
+         std::cerr << "Error --> MPIProcess::MPIProcess: more processors than elements!" << std::endl;
          MPI::COMM_WORLD.Abort(-1);
       }
 
 #endif
 
-      _numElements4JobIn = _nelements/_size;
-      _numElements4JobOut = _nelements%_size;
+      fNumElements4JobIn = fNelements / fSize;
+      fNumElements4JobOut = fNelements % fSize;
 
    }
 
    MPIProcess::~MPIProcess()
    {
 #ifdef MPIPROC  
-      _communicator = 0;
-      _indexComm--; 
-      if (_indexComm==0)
-         _communicator = _communicators[_indecesComm[_indexComm]];
+      fCommunicator = 0;
+      fIndexComm--; 
+      if (fIndexComm==0)
+         fCommunicator = fCommunicators[fIndecesComm[fIndexComm]];
     
 #endif
 
@@ -157,11 +158,17 @@ namespace ROOT {
    {
     
       // In case of just one job, don't need sync, just go
-      if (_size<2)
+      if (fSize<2)
          return false;
+
+      if (mnvector.size()!=fNelements) {
+         std::cerr << "Error --> MPIProcess::SyncVector: # defined elements different from # requested elements!" << std::endl;
+         std::cerr << "Error --> MPIProcess::SyncVector: no MPI syncronization is possible!" << std::endl;
+         exit(-1);
+      }
     
 #ifdef MPIPROC
-      unsigned int numElements4ThisJob = NumElements4Job(_rank);
+      unsigned int numElements4ThisJob = NumElements4Job(fRank);
       unsigned int startElementIndex = StartElementIndex();
       unsigned int endElementIndex = EndElementIndex();
 
@@ -169,10 +176,10 @@ namespace ROOT {
       for(unsigned int i = startElementIndex; i<endElementIndex; i++)
          dvectorJob[i-startElementIndex] = mnvector(i);
 
-      double dvector[_nelements];
+      double dvector[fNelements];
       MPISyncVector(dvectorJob,numElements4ThisJob,dvector);
 
-      for (unsigned int i = 0; i<_nelements; i++) {
+      for (unsigned int i = 0; i<fNelements; i++) {
          mnvector(i) = dvector[i];
       }                             
 
@@ -180,52 +187,57 @@ namespace ROOT {
 
 #else
 
-      std::cerr << "Error: no MPI syncronization is possible!" << std::endl;
+      std::cerr << "Error --> MPIProcess::SyncVector: no MPI syncronization is possible!" << std::endl;
       exit(-1);
 
 #endif
 
-      return true;
    }
   
 
-   bool MPIProcess::SyncMatrix(ROOT::Minuit2::MnAlgebraicSymMatrix &mnmatrix)
+   bool MPIProcess::SyncSymMatrixOffDiagonal(ROOT::Minuit2::MnAlgebraicSymMatrix &mnmatrix)
    {
   
       // In case of just one job, don't need sync, just go
-      if (_size<2)
+      if (fSize<2)
          return false;
     
+      if (mnmatrix.size()-mnmatrix.Nrow()!=fNelements) {
+         std::cerr << "Error --> MPIProcess::SyncSymMatrixOffDiagonal: # defined elements different from # requested elements!" << std::endl;
+         std::cerr << "Error --> MPIProcess::SyncSymMatrixOffDiagonal: no MPI syncronization is possible!" << std::endl;
+         exit(-1);
+      }
+
 #ifdef MPIPROC
-      unsigned int numElements4ThisJob = NumElements4Job(_rank);
+      unsigned int numElements4ThisJob = NumElements4Job(fRank);
       unsigned int startElementIndex = StartElementIndex();
       unsigned int endElementIndex = EndElementIndex();
-      unsigned int n = mnmatrix.Nrow();
+      unsigned int nrow = mnmatrix.Nrow();
 
       unsigned int offsetVect = 0;
       for (unsigned int i = 0; i<startElementIndex; i++)
-         if ((i+offsetVect)%(n-1)==0) offsetVect += (i+offsetVect)/(n-1);
+         if ((i+offsetVect)%(nrow-1)==0) offsetVect += (i+offsetVect)/(nrow-1);
 
       double dvectorJob[numElements4ThisJob];
       for(unsigned int i = startElementIndex; i<endElementIndex; i++) {
 
-         int x = (i+offsetVect)/(n-1);
-         if ((i+offsetVect)%(n-1)==0) offsetVect += x;
-         int y = (i+offsetVect)%(n-1)+1;
+         int x = (i+offsetVect)/(nrow-1);
+         if ((i+offsetVect)%(nrow-1)==0) offsetVect += x;
+         int y = (i+offsetVect)%(nrow-1)+1;
 
          dvectorJob[i-startElementIndex] = mnmatrix(x,y);
       
       }
 
-      double dvector[_nelements];
+      double dvector[fNelements];
       MPISyncVector(dvectorJob,numElements4ThisJob,dvector);
 
       offsetVect = 0;
-      for (unsigned int i = 0; i<_nelements; i++) {
+      for (unsigned int i = 0; i<fNelements; i++) {
     
-         int x = (i+offsetVect)/(n-1);
-         if ((i+offsetVect)%(n-1)==0) offsetVect += x;
-         int y = (i+offsetVect)%(n-1)+1;
+         int x = (i+offsetVect)/(nrow-1);
+         if ((i+offsetVect)%(nrow-1)==0) offsetVect += x;
+         int y = (i+offsetVect)%(nrow-1)+1;
 
          mnmatrix(x,y) = dvector[i];
 
@@ -235,58 +247,57 @@ namespace ROOT {
 
 #else
 
-      std::cerr << "Error: no MPI syncronization is possible!" << std::endl;
+      std::cerr << "Error --> MPIProcess::SyncMatrix: no MPI syncronization is possible!" << std::endl;
       exit(-1);
 
 #endif
 
-      return true;
    }
 
 #ifdef MPIPROC
    void MPIProcess::MPISyncVector(double *ivector, int svector, double *ovector)
    {
-      int offsets[_size];
-      int nconts[_size];
+      int offsets[fSize];
+      int nconts[fSize];
       nconts[0] = NumElements4Job(0);
       offsets[0] = 0;
-      for (unsigned int i = 1; i<_size; i++) {
+      for (unsigned int i = 1; i<fSize; i++) {
          nconts[i] = NumElements4Job(i);
          offsets[i] = nconts[i-1] + offsets[i-1];
       }
 
-      _communicator->Allgatherv(ivector,svector,MPI::DOUBLE,
+      fCommunicator->Allgatherv(ivector,svector,MPI::DOUBLE,
                                 ovector,nconts,offsets,MPI::DOUBLE); 
     
    }
 
    bool MPIProcess::SetCartDimension(unsigned int dimX, unsigned int dimY)  
    {
-      if (_communicator!=0 || _indexComm>=0) {
-         std::cout << "MPIProcess:: MPIProcess already declared! Ignoring command..." << std::endl;
+      if (fCommunicator!=0 || fIndexComm>=0) {
+         std::cout << "Warning --> MPIProcess::SetCartDimension: MPIProcess already declared! Ignoring command..." << std::endl;
          return false;
       }
       if (dimX*dimY<=0) {
-         std::cout << "MPIProcess:: Invalid topology! Ignoring command..." << std::endl;
+         std::cout << "Warning --> MPIProcess::SetCartDimension: Invalid topology! Ignoring command..." << std::endl;
          return false;
       }
 
       StartMPI();
 
-      if (_globalSize!=dimX*dimY) {
-         std::cout << "MPIProcess:: Cartesian dimension doesn't correspond to # total procs!" << std::endl;
-         std::cout << "MPIProcess:: Ignoring command..." << std::endl;
+      if (fGlobalSize!=dimX*dimY) {
+         std::cout << "Warning --> MPIProcess::SetCartDimension: Cartesian dimension doesn't correspond to # total procs!" << std::endl;
+         std::cout << "Warning --> MPIProcess::SetCartDimension: Ignoring command..." << std::endl;
          return false;
       }
 
-      if (_cartSizeX!=dimX || _cartSizeY!=dimY) {
-         _cartSizeX = dimX; _cartSizeY = dimY; 
-         _cartDimension = _cartSizeX*_cartSizeY;
-         _newCart = true;
+      if (fCartSizeX!=dimX || fCartSizeY!=dimY) {
+         fCartSizeX = dimX; fCartSizeY = dimY; 
+         fCartDimension = fCartSizeX * fCartSizeY;
+         fNewCart = true;
 
-         if (_communicators[0]!=0 && _communicators[1]!=0) {
-            delete _communicators[0]; _communicators[0] = 0; _indecesComm[0] = 0;
-            delete _communicators[1]; _communicators[1] = 0; _indecesComm[1] = 0;
+         if (fCommunicators[0]!=0 && fCommunicators[1]!=0) {
+            delete fCommunicators[0]; fCommunicators[0] = 0; fIndecesComm[0] = 0;
+            delete fCommunicators[1]; fCommunicators[1] = 0; fIndecesComm[1] = 0;
          }
       }
 
@@ -301,9 +312,9 @@ namespace ROOT {
 
       bool ret;
       if (doFirstMPICall)
-         ret = SetCartDimension(_globalSize,1);
+         ret = SetCartDimension(fGlobalSize,1);
       else
-         ret = SetCartDimension(1,_globalSize);
+         ret = SetCartDimension(1,fGlobalSize);
 
       return ret;
 

@@ -23,13 +23,12 @@
 
 namespace ROOT {
 
-
    class MPITerminate {
    public:
       ~MPITerminate() { 
 #ifdef MPIPROC
          if (MPI::Is_initialized() && !(MPI::Is_finalized())) {
-            std::cout << "MPIProcess:: End MPI on #"
+            std::cout << "Info --> MPITerminate:: End MPI on #"
                       << MPI::COMM_WORLD.Get_rank() << " processor"
                       << std::endl;
 
@@ -46,48 +45,50 @@ namespace ROOT {
       MPIProcess(unsigned int nelements, unsigned int indexComm);
       ~MPIProcess();
 
-      inline unsigned int NumElements4JobIn() const { return _numElements4JobIn; }
-      inline unsigned int NumElements4JobOut() const { return _numElements4JobOut; }
+      inline unsigned int NumElements4JobIn() const { return fNumElements4JobIn; }
+      inline unsigned int NumElements4JobOut() const { return fNumElements4JobOut; }
 
       inline unsigned int NumElements4Job(unsigned int rank) const
       { return NumElements4JobIn()+((rank<NumElements4JobOut()) ? 1 : 0); }
 
       inline unsigned int StartElementIndex() const 
-      { return ((_rank<NumElements4JobOut()) ? (_rank*NumElements4Job(_rank)) :
-                (_nelements-(_size-_rank)*NumElements4Job(_rank))); }
+      { return ((fRank<NumElements4JobOut()) ? (fRank*NumElements4Job(fRank)) :
+                (fNelements-(fSize-fRank)*NumElements4Job(fRank))); }
 
       inline unsigned int EndElementIndex() const
-      { return StartElementIndex()+NumElements4Job(_rank); }
+      { return StartElementIndex()+NumElements4Job(fRank); }
 
-      inline unsigned int GetMPISize() const { return _size; }
-      inline unsigned int GetMPIRank() const { return _rank; }
+      inline unsigned int GetMPISize() const { return fSize; }
+      inline unsigned int GetMPIRank() const { return fRank; }
 
       bool SyncVector(ROOT::Minuit2::MnAlgebraicVector &mnvector);  
-      bool SyncMatrix(ROOT::Minuit2::MnAlgebraicSymMatrix &mnmatrix);  
+      bool SyncSymMatrixOffDiagonal(ROOT::Minuit2::MnAlgebraicSymMatrix &mnmatrix);  
 
-      static unsigned int GetMPIGlobalRank() { StartMPI(); return _globalRank; }
-      static unsigned int GetMPIGlobalSize() { StartMPI(); return _globalSize; }
+      static unsigned int GetMPIGlobalRank() { StartMPI(); return fGlobalRank; }
+      static unsigned int GetMPIGlobalSize() { StartMPI(); return fGlobalSize; }
       static inline void StartMPI() {
 #ifdef MPIPROC  
          if (!(MPI::Is_initialized())) {    
             MPI::Init();    
-            std::cout << "MPIProcess:: Start MPI on #" << MPI::COMM_WORLD.Get_rank() << " processor"
+            std::cout << "Info --> MPIProcess::StartMPI: Start MPI on #" 
+                      << MPI::COMM_WORLD.Get_rank() << " processor"
                       << std::endl;
          }
-         _globalSize = MPI::COMM_WORLD.Get_size();
-         _globalRank = MPI::COMM_WORLD.Get_rank();
+         fGlobalSize = MPI::COMM_WORLD.Get_size();
+         fGlobalRank = MPI::COMM_WORLD.Get_rank();
 #endif
       }
 
       static void TerminateMPI() { 
 #ifdef MPIPROC
-         if (_communicators[0]!=0 && _communicators[1]!=0) {
-            delete _communicators[0]; _communicators[0] = 0; _indecesComm[0] = 0;
-            delete _communicators[1]; _communicators[1] = 0; _indecesComm[1] = 0;
+         if (fCommunicators[0]!=0 && fCommunicators[1]!=0) {
+            delete fCommunicators[0]; fCommunicators[0] = 0; fIndecesComm[0] = 0;
+            delete fCommunicators[1]; fCommunicators[1] = 0; fIndecesComm[1] = 0;
          }
-#endif
-
+      
          MPITerminate terminate; 
+
+#endif
       }
 
       static bool SetCartDimension(unsigned int dimX, unsigned int dimY);
@@ -97,8 +98,8 @@ namespace ROOT {
          total = sub;
 
 #ifdef MPIPROC
-         if (_size>1) {
-            _communicator->Allreduce(&sub,&total,1,MPI::DOUBLE,MPI::SUM);
+         if (fSize>1) {
+            fCommunicator->Allreduce(&sub,&total,1,MPI::DOUBLE,MPI::SUM);
          }
 #endif
       }
@@ -110,26 +111,26 @@ namespace ROOT {
 #endif
 
    private:
-      unsigned int _nelements;
-      unsigned int _size;
-      unsigned int _rank;  
+      unsigned int fNelements;
+      unsigned int fSize;
+      unsigned int fRank;  
 
-      static unsigned int _globalSize;
-      static unsigned int _globalRank;  
+      static unsigned int fGlobalSize;
+      static unsigned int fGlobalRank;  
 
-      static unsigned int _cartSizeX;
-      static unsigned int _cartSizeY;
-      static unsigned int _cartDimension;
-      static bool _newCart;
+      static unsigned int fCartSizeX;
+      static unsigned int fCartSizeY;
+      static unsigned int fCartDimension;
+      static bool fNewCart;
 
-      unsigned int _numElements4JobIn;
-      unsigned int _numElements4JobOut;
+      unsigned int fNumElements4JobIn;
+      unsigned int fNumElements4JobOut;
 
 #ifdef MPIPROC
-      static MPI::Intracomm *_communicator;
-      static int _indexComm; // maximum 2 communicators, so index can be 0 and 1
-      static MPI::Intracomm *_communicators[2]; // maximum 2 communicators
-      static unsigned int _indecesComm[2];
+      static MPI::Intracomm *fCommunicator;
+      static int fIndexComm; // maximum 2 communicators, so index can be 0 and 1
+      static MPI::Intracomm *fCommunicators[2]; // maximum 2 communicators
+      static unsigned int fIndecesComm[2];
 #endif
 
    };
