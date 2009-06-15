@@ -23,6 +23,9 @@ objects.
 
 #include "RooStats/SamplingDistPlot.h"
 
+#include "RooRealVar.h"
+#include "RooPlot.h"
+
 #include <algorithm>
 #include <iostream>
 
@@ -33,47 +36,47 @@ using namespace RooStats;
 
 //_______________________________________________________
 SamplingDistPlot::SamplingDistPlot() :
-  _hist(0) , _items()
+ fhist(0) ,fItems()
 {
-   // SamplingDistPlot default constructor
-  _iterator= _items.MakeIterator();
-  _fbins = 0;
-  _fMarkerType = 20;
-  _fColor = 1;
+  // SamplingDistPlot default constructor
+  fIterator = fItems.MakeIterator();
+  fbins = 100;
+  fMarkerType = 20;
+  fColor = 1;
 }
 
 //_______________________________________________________
 SamplingDistPlot::SamplingDistPlot(const Int_t nbins) :
-  _hist(0) , _items()
+ fhist(0) ,fItems()
 {
-   // SamplingDistPlot default constructor with bin size
-  _iterator= _items.MakeIterator();
-  _fbins = nbins;
-  _fMarkerType = 20;
-  _fColor = 1;
+  // SamplingDistPlot default constructor with bin size
+  fIterator = fItems.MakeIterator();
+  fbins = nbins;
+  fMarkerType = 20;
+  fColor = 1;
 }
 
 
 //_______________________________________________________
 SamplingDistPlot::SamplingDistPlot(const char* name, const char* title, Int_t nbins, Double_t xmin, Double_t xmax) :
-  _hist(0) , _items()
+ fhist(0) ,fItems()
 {
   // SamplingDistPlot constructor
-  _hist = new TH1F(name, title, nbins, xmin, xmax);
-  _fbins = nbins;
-  _fMarkerType = 20;
-  _fColor = 1;
+  fhist = new TH1F(name, title, nbins, xmin, xmax);
+  fbins = nbins;
+  fMarkerType = 20;
+  fColor = 1;
 }
 
 //_______________________________________________________
 SamplingDistPlot::~SamplingDistPlot()
 {
-   // SamplingDistPlot destructor
+  // SamplingDistPlot destructor
 
-   fSamplingDistr.clear();
-   fSampleWeights.clear();
+  fSamplingDistr.clear();
+  fSampleWeights.clear();
 
-   _items.Clear();
+  fItems.Clear();
 }
 
 //_______________________________________________________
@@ -86,30 +89,38 @@ void SamplingDistPlot::AddSamplingDistribution(const SamplingDistribution *sampl
   TString options(drawOptions);
   options.ToUpper();
   if(!options.Contains("SAME")) options.Append("SAME");
+  if(!options.Contains("E1")) options.Append("E1");
 
   const Double_t xlow = *(std::min_element(fSamplingDistr.begin(),fSamplingDistr.end()));
   const Double_t xup  = *(std::max_element(fSamplingDistr.begin(),fSamplingDistr.end()));
 
-  _hist = new TH1F(samplingDist->GetName(),samplingDist->GetTitle(),_fbins,xlow,xup);
+  fhist = new TH1F(samplingDist->GetName(),samplingDist->GetTitle(),fbins,xlow,xup);
 
-  _hist->GetXaxis()->SetTitle(samplingDist->GetVarName().Data());
+  fhist->GetXaxis()->SetTitle(samplingDist->GetVarName().Data());
+
+  fVarName = samplingDist->GetVarName().Data();
 
   std::vector<Double_t>::iterator valuesIt = fSamplingDistr.begin();
 
   for(int w_idx = 0; valuesIt != fSamplingDistr.end(); ++valuesIt, ++w_idx)
     {
-      if(isWeighted) _hist->Fill(*valuesIt,fSampleWeights[w_idx]);
-      else _hist->Fill(*valuesIt);
+      if(fIsWeighted) fhist->Fill(*valuesIt,fSampleWeights[w_idx]);
+      else fhist->Fill(*valuesIt);
     }
 
-  //some basic aesthetics
-  _hist->SetMarkerStyle(_fMarkerType);
-  _fMarkerType++;
-  _hist->SetMarkerColor(_fColor);
-  _hist->SetLineColor(_fColor);
-  _fColor++;
+  fhist->Sumw2() ;
 
-  addObject(_hist,options.Data());
+  //some basic aesthetics
+  fhist->SetMarkerStyle(fMarkerType);
+  fhist->SetMarkerColor(fColor);
+  fhist->SetLineColor(fColor);
+
+  fMarkerType++;
+  fColor++;
+
+  fhist->SetStats(kFALSE);
+
+  addObject(fhist,options.Data());
 
   return;
 }
@@ -119,10 +130,10 @@ void SamplingDistPlot::SetSampleWeights(const SamplingDistribution* samplingDist
 {
   //Determine if the sampling distribution has weights and store them
 
-  isWeighted = kFALSE;
+  fIsWeighted = kFALSE;
 
   if(samplingDist->GetSampleWeights().size() != 0){
-    isWeighted = kTRUE;
+    fIsWeighted = kTRUE;
     fSampleWeights = samplingDist->GetSampleWeights();
   }  
 
@@ -141,13 +152,13 @@ void SamplingDistPlot::addObject(TObject *obj, Option_t *drawOptions)
     return;
   }
 
-  _items.Add(obj,drawOptions);
+  fItems.Add(obj,drawOptions);
 
   return;
 }
 
 //_____________________________________________________________________________
-void SamplingDistPlot::Draw(Option_t *options) 
+void SamplingDistPlot::Draw(const Option_t *options) 
 {
   // Draw this plot and all of the elements it contains. The specified options
   // only apply to the drawing of our frame. The options specified in our add...()
@@ -157,20 +168,18 @@ void SamplingDistPlot::Draw(Option_t *options)
 
   GetAbsoluteInterval(theMin,theMax,theYMax);
 
-  TH1F *drawHist = new TH1F("name","",_fbins,theMin,theMax);
-  drawHist->SetMaximum(theYMax);
+  RooRealVar xaxis("xaxis",fVarName.Data(),theMin,theMax);
+  RooPlot* frame = xaxis.frame();
+  frame->SetTitle("");
+  frame->SetMaximum(theYMax);
 
-  if(!_fVarName.IsNull()) drawHist->GetXaxis()->SetTitle(_fVarName.Data());
+  fIterator->Reset();
+  TH1F *obj = 0;
+  while((obj= (TH1F*)fIterator->Next()))
+    //obj->Draw(fIterator->GetOption());
+    frame->addTH1(obj,fIterator->GetOption());
 
-  drawHist->Draw(options);
-  //_hist->Draw(options);
-  _iterator->Reset();
-  TObject *obj = 0;
-  while((obj= _iterator->Next()))
-      obj->Draw(_iterator->GetOption());
-
-  if(!_fVarName.IsNull()) _hist->GetXaxis()->SetTitle(_fVarName.Data());
-  _hist->Draw("AXISSAME");
+  frame->Draw();
 
   return;
 }
@@ -183,9 +192,9 @@ void SamplingDistPlot::GetAbsoluteInterval(Float_t &theMin, Float_t &theMax, Flo
   Float_t tmpYmax = -999.;
 
 
-  _iterator->Reset();
+  fIterator->Reset();
   TH1F *obj = 0;
-  while((obj = (TH1F*)_iterator->Next())) {
+  while((obj = (TH1F*)fIterator->Next())) {
     if(obj->GetXaxis()->GetXmin() < tmpmin) tmpmin = obj->GetXaxis()->GetXmin();
     if(obj->GetXaxis()->GetXmax() > tmpmax) tmpmax = obj->GetXaxis()->GetXmax();
     if(obj->GetMaximum() > tmpYmax) tmpYmax = obj->GetMaximum() + 0.1*obj->GetMaximum();
@@ -202,12 +211,12 @@ void SamplingDistPlot::GetAbsoluteInterval(Float_t &theMin, Float_t &theMax, Flo
 void SamplingDistPlot::SetLineColor(const Color_t color, const SamplingDistribution *samplDist)
 {
   if(samplDist == 0){
-    _hist->SetLineColor(color);
+    fhist->SetLineColor(color);
   }
   else{
-    _iterator->Reset();
+    fIterator->Reset();
     TH1F *obj = 0;
-    while((obj = (TH1F*)_iterator->Next())) {
+    while((obj = (TH1F*)fIterator->Next())) {
       if(!strcmp(obj->GetName(),samplDist->GetName())){
 	obj->SetLineColor(color);
 	break;
@@ -222,12 +231,12 @@ void SamplingDistPlot::SetLineColor(const Color_t color, const SamplingDistribut
 void SamplingDistPlot::SetLineWidth(const Width_t lwidth, const SamplingDistribution *samplDist)
 {
   if(samplDist == 0){
-    _hist->SetLineWidth(lwidth);
+    fhist->SetLineWidth(lwidth);
   }
   else{
-    _iterator->Reset();
+    fIterator->Reset();
     TH1F *obj = 0;
-    while((obj = (TH1F*)_iterator->Next())) {
+    while((obj = (TH1F*)fIterator->Next())) {
       if(!strcmp(obj->GetName(),samplDist->GetName())){
 	obj->SetLineWidth(lwidth);
 	break;
@@ -242,12 +251,12 @@ void SamplingDistPlot::SetLineWidth(const Width_t lwidth, const SamplingDistribu
 void SamplingDistPlot::SetLineStyle(const Style_t style, const SamplingDistribution *samplDist)
 {
   if(samplDist == 0){
-    _hist->SetLineStyle(style);
+    fhist->SetLineStyle(style);
   }
   else{
-    _iterator->Reset();
+    fIterator->Reset();
     TH1F *obj = 0;
-    while((obj = (TH1F*)_iterator->Next())) {
+    while((obj = (TH1F*)fIterator->Next())) {
       if(!strcmp(obj->GetName(),samplDist->GetName())){
 	obj->SetLineStyle(style);
 	break;
@@ -262,12 +271,12 @@ void SamplingDistPlot::SetLineStyle(const Style_t style, const SamplingDistribut
 void SamplingDistPlot::SetMarkerStyle(const Style_t style, const SamplingDistribution *samplDist)
 {
   if(samplDist == 0){
-    _hist->SetMarkerStyle(style);
+    fhist->SetMarkerStyle(style);
   }
   else{
-    _iterator->Reset();
+    fIterator->Reset();
     TH1F *obj = 0;
-    while((obj = (TH1F*)_iterator->Next())) {
+    while((obj = (TH1F*)fIterator->Next())) {
       if(!strcmp(obj->GetName(),samplDist->GetName())){
 	obj->SetMarkerStyle(style);
 	break;
@@ -282,12 +291,12 @@ void SamplingDistPlot::SetMarkerStyle(const Style_t style, const SamplingDistrib
 void SamplingDistPlot::SetMarkerColor(const Color_t color, const SamplingDistribution *samplDist)
 {
   if(samplDist == 0){
-    _hist->SetMarkerColor(color);
+    fhist->SetMarkerColor(color);
   }
   else{
-    _iterator->Reset();
+    fIterator->Reset();
     TH1F *obj = 0;
-    while((obj = (TH1F*)_iterator->Next())) {
+    while((obj = (TH1F*)fIterator->Next())) {
       if(!strcmp(obj->GetName(),samplDist->GetName())){
 	obj->SetMarkerColor(color);
 	break;
@@ -302,14 +311,34 @@ void SamplingDistPlot::SetMarkerColor(const Color_t color, const SamplingDistrib
 void SamplingDistPlot::SetMarkerSize(const Size_t size, const SamplingDistribution *samplDist)
 {
   if(samplDist == 0){
-    _hist->SetMarkerSize(size);
+    fhist->SetMarkerSize(size);
   }
   else{
-    _iterator->Reset();
+    fIterator->Reset();
     TH1F *obj = 0;
-    while((obj = (TH1F*)_iterator->Next())) {
+    while((obj = (TH1F*)fIterator->Next())) {
       if(!strcmp(obj->GetName(),samplDist->GetName())){
 	obj->SetMarkerSize(size);
+	break;
+      }
+    }
+  }
+
+  return;
+}
+
+//_____________________________________________________________________________
+void SamplingDistPlot::RebinDistribution(const Int_t rebinFactor, const SamplingDistribution *samplDist)
+{
+  if(samplDist == 0){
+    fhist->Rebin(rebinFactor);
+  }
+  else{
+    fIterator->Reset();
+    TH1F *obj = 0;
+    while((obj = (TH1F*)fIterator->Next())) {
+      if(!strcmp(obj->GetName(),samplDist->GetName())){
+	obj->Rebin(rebinFactor);
 	break;
       }
     }
