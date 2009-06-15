@@ -65,7 +65,6 @@ protected:
   RooAbsReal* _funcClone ; // Pointer to internal clone of input function
   RooArgSet*  _projDeps ; // Set of projected observable
   Bool_t      _ownData  ; // Do we own the dataset
-  RooRealProxy _dataVersion ; // Dataset version meta-parameter
 
   ClassDef(RooAbsOptTestStatistic,2) // Abstract base class for optimized test statistics
 };

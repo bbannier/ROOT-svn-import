@@ -116,29 +116,25 @@ public:
       topic &= ~oldTopic ;
     }
 
-    private:
 
-      friend class RooMsgService ;
-
-      Bool_t match(RooFit::MsgLevel level, RooFit::MsgTopic facility, const RooAbsArg* obj) ;
-      Bool_t match(RooFit::MsgLevel level, RooFit::MsgTopic facility, const TObject* obj) ;
-
-      Bool_t active ;
-      Bool_t universal ;
-
-      RooFit::MsgLevel minLevel ;
-      Int_t    topic ;
-      std::string objectName ;
-      std::string className ;
-      std::string baseClassName ;
-      std::string tagName ;
-      Color_t color ;
-      Bool_t prefix ;
-
-    ostream* os ;
-
+    friend class RooMsgService ;
     
-
+    Bool_t match(RooFit::MsgLevel level, RooFit::MsgTopic facility, const RooAbsArg* obj) ;
+    Bool_t match(RooFit::MsgLevel level, RooFit::MsgTopic facility, const TObject* obj) ;
+    
+    Bool_t active ;
+    Bool_t universal ;
+    
+    RooFit::MsgLevel minLevel ;
+    Int_t    topic ;
+    std::string objectName ;
+    std::string className ;
+    std::string baseClassName ;
+    std::string tagName ;
+    Color_t color ;
+    Bool_t prefix ;
+    
+    ostream* os ;
 
   } ;
 

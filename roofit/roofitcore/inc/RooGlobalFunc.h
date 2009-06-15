@@ -41,6 +41,7 @@ class RooRealVar ;
 class RooAbsCategory ;
 class RooNumIntConfig ;
 class RooArgList ;
+class RooAbsCollection ;
 class TH1 ;
 class TF1 ;
 class TF2 ;
@@ -173,6 +174,7 @@ RooCmdArg EvalErrorWall(Bool_t flag) ;
 RooCmdArg SumW2Error(Bool_t flag) ;
 RooCmdArg CloneData(Bool_t flag) ;
 RooCmdArg Integrate(Bool_t flag) ;
+RooCmdArg Minimizer(const char* type, const char* alg=0) ;
 
 // RooAbsPdf::paramOn arguments
 RooCmdArg Label(const char* str) ;

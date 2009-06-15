@@ -2363,7 +2363,7 @@ RooPlot* RooAbsReal::plotOnWithErrorBand(RooPlot* frame,const RooFitResult& fr, 
     
     // Generate 100 random parameter points distributed according to fit result covariance matrix
     RooAbsPdf* paramPdf = fr.createHessePdf(*errorParams) ;
-    Int_t n = Int_t(100./TMath::Erfc(Z/sqrt(2))) ;
+    Int_t n = Int_t(100./TMath::Erfc(Z/sqrt(2.))) ;
     if (n<100) n=100 ;
     
     coutI(Plotting) << "RooAbsReal::plotOn(" << GetName() << ") INFO: visualizing " << Z << "-sigma uncertainties in parameters " 
