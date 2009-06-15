@@ -44,7 +44,7 @@ namespace RooStats {
     void SetLineColor(const Color_t color) {fLineColor = color;}
     void SetMaximum(const Double_t theMaximum) {fMaximum = theMaximum;}
 
-    void Draw(const Option_t *options);
+    void Draw(const Option_t *options=0);
 
   private:
 
@@ -60,7 +60,7 @@ namespace RooStats {
 
   protected:
 
-    ClassDef(LikelihoodIntervalPlot,1)  // Class containing the results of the HybridCalculator
+    ClassDef(LikelihoodIntervalPlot,1)  // Class containing the results of the IntervalCalculator
   };
 }
 

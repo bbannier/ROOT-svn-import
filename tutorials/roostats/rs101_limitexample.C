@@ -20,6 +20,7 @@
 #include "RooStats/NumberCountingPdfFactory.h"
 #include "RooStats/ConfInterval.h"
 #include "RooStats/LikelihoodInterval.h"
+#include "RooStats/LikelihoodIntervalPlot.h"
 #include "RooProfileLL.h"
 #include "RooAbsPdf.h"
 #include "RooStats/HypoTestResult.h"
@@ -59,6 +60,12 @@ void rs101_limitexample()
   RooRealVar* ratioBkgEff = wspace->var("ratioBkgEff"); // get uncertaint parameter to constrain
   RooArgSet constrainedParams(*ratioSigEff, *ratioBkgEff); // need to constrain these in the fit (should change default behavior)
 
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  // temp for debugging
+  //ratioSigEff->setConstant();
+  //      ratioBkgEff->setConstant();
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
   // a toy dataset
   RooDataSet* data = modelWithConstraints->generate(*obs, 1);
   cout << "----------" << endl;
@@ -74,11 +81,6 @@ void rs101_limitexample()
   cout << "----------" << endl;
 
 
-  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-  // temp for debugging
-  //  ratioSigEff->setConstant();
-  //  ratioBkgEff->setConstant();
-  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
   // Now let's make some confidence intervals for s, our parameter of interest
   RooArgSet paramOfInterest(*s);
@@ -124,6 +126,7 @@ void rs101_limitexample()
   // Now let's check some specific points to see if they are in the interval
 
   s->setVal(55);
+  cout << "for reference, local profile = " << profile->getVal() << endl;
   if( lrint->IsInInterval(paramOfInterest) ) 
     cout << "s = " << s->getVal() << " is in interval" << endl;
   else
