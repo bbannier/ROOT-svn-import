@@ -1691,7 +1691,16 @@ void RooAbsArg::printCompactTree(ostream& os, const char* indent, const char* na
   // of the client-server links. It should be zero in calls initiated by users.
 
   if ( !namePat || TString(GetName()).Contains(namePat)) {
-    os << indent << this << " " << IsA()->GetName() << "::" << GetName() << " (" << GetTitle() << ") " ;
+    os << indent << this ;
+    if (client) {
+      os << "/" ;
+      if (isValueServer(*client)) os << "V" ; else os << "-" ;
+      if (isShapeServer(*client)) os << "S" ; else os << "-" ;
+    }
+    os << " " ;
+
+    os << IsA()->GetName() << "::" << GetName() <<  " = " ;
+    printValue(os) ;
 
     if (_serverList.GetSize()>0) {
       switch(operMode()) {
@@ -1699,10 +1708,6 @@ void RooAbsArg::printCompactTree(ostream& os, const char* indent, const char* na
       case AClean: os << " [ACLEAN] " ; break ;
       case ADirty: os << " [ADIRTY] " ; break ;
       }
-    }
-    if (client) {
-      if (isValueServer(*client)) os << "V" ;
-      if (isShapeServer(*client)) os << "S" ;
     }
     os << endl ;
 
