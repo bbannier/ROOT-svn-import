@@ -36,6 +36,7 @@
 #include "RooStats/PointSetInterval.h"
 #endif
 
+#include "RooRealVar.h"
 #include "RooDataSet.h"
 #include "RooDataHist.h"
 
@@ -107,15 +108,25 @@ Bool_t PointSetInterval::IsInInterval(RooArgSet &parameterPoint)
       return false;
   }
   else if( tree ){
-    //RooArgSet* thisPoint = 0;
+    const RooArgSet* thisPoint = 0;
     // need to check if the parameter point is the same as any point in tree. 
     for(Int_t i = 0; i<tree->numEntries(); ++i){
       // This method is not complete
-      // thisPoint = tree->get(i); 
-      // if ( parameterPoint == *thisPoint)
-      //    return true; 
-      return false;
+      thisPoint = tree->get(i); 
+      bool samePoint = true;
+      TIter it = parameterPoint.createIterator();
+      RooRealVar *myarg; 
+      while ( samePoint && (myarg = (RooRealVar *)it.Next())) { 
+	if(!myarg) continue;
+	if(myarg->getVal() != thisPoint->getRealValue(myarg->GetName()))
+	  samePoint = false;
+      }
+      if(samePoint) 
+	return true;
+
+      //      delete thisPoint;
     }
+    return false; // didn't find a good point
   }
   else {
       std::cout << "dataset is not initialized properly" << std::endl;
@@ -145,4 +156,29 @@ Bool_t PointSetInterval::CheckParameters(RooArgSet &parameterPoint) const
       return false;
    }
    return true;
+}
+
+
+//____________________________________________________________________
+Double_t PointSetInterval::UpperLimit(RooRealVar& param ) 
+{  
+  RooDataSet*  tree = dynamic_cast<RooDataSet*>(  fParameterPointsInInterval );
+  Double_t low, high;
+  if( tree ){
+    tree->getRange(param, low, high);
+    return high;
+ }
+  return param.getMax();
+}
+
+//____________________________________________________________________
+Double_t PointSetInterval::LowerLimit(RooRealVar& param ) 
+{  
+  RooDataSet*  tree = dynamic_cast<RooDataSet*>(  fParameterPointsInInterval );
+  Double_t low, high;
+  if( tree ){
+    tree->getRange(param, low, high);
+    return low;
+ }
+  return param.getMin();
 }

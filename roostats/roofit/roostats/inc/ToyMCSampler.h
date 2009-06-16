@@ -128,7 +128,7 @@ namespace RooStats {
      
 
       //      cout << " generated sampling dist " << endl;
-      return new SamplingDistribution( MakeName(allParameters),
+      return new SamplingDistribution( "temp",//MakeName(allParameters).c_str(),
 				       "Sampling Distribution of Test Statistic", testStatVec, fVarName );
     } 
 
@@ -188,7 +188,7 @@ namespace RooStats {
      }
 
      // helper method to create meaningful names for sampling dist
-     const char* MakeName(RooArgSet& /*params*/){
+     string MakeName(RooArgSet& /*params*/){
        /*
        std::string name;
        TIter      itr = params.createIterator();
@@ -205,7 +205,7 @@ namespace RooStats {
        std::stringstream str;
        str<<"SamplingDist_"<< fCounter;
        fCounter++;
-       return str.str().c_str();
+       return str.str();
        
      }
 

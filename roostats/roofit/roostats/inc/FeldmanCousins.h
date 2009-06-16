@@ -119,6 +119,7 @@ namespace RooStats {
       bool fAdaptiveSampling; // controls use of adaptive sampling algorithm
       Int_t fNbins; // number of samples per variable
       Bool_t fFluctuateData;  // tell ToyMCSampler to fluctuate number of entries in dataset
+      Bool_t fDoProfileConstruction; // instead of full construction over nuisance parametrs, do profile
    protected:
       ClassDef(FeldmanCousins,1)   // Interface for tools setting limits (producing confidence intervals)
    };

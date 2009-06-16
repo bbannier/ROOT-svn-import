@@ -19,6 +19,7 @@
 #include "RooStats/FeldmanCousins.h"
 #include "RooStats/NumberCountingPdfFactory.h"
 #include "RooStats/ConfInterval.h"
+#include "RooStats/PointSetInterval.h"
 #include "RooStats/LikelihoodInterval.h"
 #include "RooStats/LikelihoodIntervalPlot.h"
 #include "RooProfileLL.h"
@@ -111,7 +112,7 @@ void rs101_limitexample()
   fc.SetParameters( paramOfInterest );
   fc.UseAdaptiveSampling(true);
   fc.FluctuateNumDataEntries(false); // number counting analysis: dataset always has 1 entry with N events observed
-  fc.SetNBins(3); // number of points to test per parameter
+  fc.SetNBins(30); // number of points to test per parameter
   fc.SetTestSize(.1);
   ConfInterval* fcint = 0;
   fcint = fc.GetInterval();  // that was easy.
@@ -126,7 +127,7 @@ void rs101_limitexample()
   // Now let's check some specific points to see if they are in the interval
 
   s->setVal(55);
-  cout << "for reference, local profile = " << profile->getVal() << endl;
+  //  cout << "for reference, local profile = " << profile->getVal() << endl;
   if( lrint->IsInInterval(paramOfInterest) ) 
     cout << "s = " << s->getVal() << " is in interval" << endl;
   else
@@ -171,7 +172,10 @@ void rs101_limitexample()
 
   //  cout << "ll = " << ((LikelihoodInterval*) lrint)->LowerLimit(*s) << endl;
   //  cout << "ul = " << ((LikelihoodInterval*) lrint)->UpperLimit(*s) << endl;
-  // now use a tool
+
+  cout << "FC lower limit on s = " << ((PointSetInterval*) fcint)->LowerLimit(*s) << endl;
+  cout << "FC upper limit on s = " << ((PointSetInterval*) fcint)->UpperLimit(*s) << endl;
+
 
   delete wspace;
   delete lrint;
