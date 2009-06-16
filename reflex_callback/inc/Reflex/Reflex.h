@@ -26,6 +26,7 @@
 #include "Reflex/Tools.h"
 
 #include "Reflex/Callback.h"
+#include "Reflex/Catalog.h"
 
 /** \defgroup Ref Reflex */
 

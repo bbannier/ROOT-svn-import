@@ -14,6 +14,7 @@
 
 // Include files
 #include "Reflex/Kernel.h"
+#include "Reflex/Catalog.h"
 #include <string>
 #include <typeinfo>
 
@@ -38,8 +39,9 @@ namespace Reflex {
 
       /** default constructor */
       TypeName( const char * nnam,
-         TypeBase * typeBas,
-         const std::type_info * ti = 0 );
+                TypeBase * typeBas,
+                const std::type_info * ti = 0,
+                const Catalog& catalog = Catalog::Instance());
 
 
       /**
@@ -60,9 +62,7 @@ namespace Reflex {
       static Type ByTypeInfo( const std::type_info & ti );
 
 
-      static void CleanUp();
-
-
+      Catalog InCatalog() const { return fCatalog; }
 
       /**
       * DeleteType will call the destructor of the TypeBase this TypeName is
@@ -157,6 +157,11 @@ namespace Reflex {
       * @clientCardinality 1
       */
       Type * fThisType;
+
+      /**
+      * Catalog that this type is registered with.
+      */
+      Catalog fCatalog;
 
    }; // class TypeName
 

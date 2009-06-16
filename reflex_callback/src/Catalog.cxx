@@ -102,6 +102,51 @@ Reflex::Catalog::Type_Begin() const {
 
 
 //-------------------------------------------------------------------------------
+Reflex::Type_Iterator
+Reflex::Catalog::Type_End() const {
+//-------------------------------------------------------------------------------
+// iterator access
+   return fImpl->Types().TypeVec().end();
+}
+
+
+//-------------------------------------------------------------------------------
+Reflex::Reverse_Type_Iterator
+Reflex::Catalog::Type_RBegin() const {
+//-------------------------------------------------------------------------------
+// iterator access
+   return fImpl->Types().TypeVec().rbegin();
+}
+
+
+//-------------------------------------------------------------------------------
+Reflex::Reverse_Type_Iterator
+Reflex::Catalog::Type_REnd() const {
+//-------------------------------------------------------------------------------
+// iterator access
+   return fImpl->Types().TypeVec().rend();
+}
+
+
+//-------------------------------------------------------------------------------
+Reflex::Type
+Reflex::Catalog::TypeAt(size_t nth) const {
+//-------------------------------------------------------------------------------
+   if (ScopeSize() > nth)
+      return fImpl->Types().TypeVec()[nth];
+   return Dummy::Type();
+}
+
+
+//-------------------------------------------------------------------------------
+size_t
+Reflex::Catalog::TypeSize() const {
+//-------------------------------------------------------------------------------
+   return fImpl->Types().TypeVec().size();
+}
+
+
+//-------------------------------------------------------------------------------
 Reflex::Scope_Iterator
 Reflex::Catalog::Scope_Begin() const {
 //-------------------------------------------------------------------------------
@@ -153,26 +198,11 @@ Reflex::Catalog::ScopeSize() const {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Catalog::UnregisterCallback(const Callback<Type>& cb) const {
+Reflex::Catalog::UnregisterCallback(const Callback& cb) const {
 //-------------------------------------------------------------------------------
    return fImpl->UnregisterCallback(cb);
 }
 
-
-//-------------------------------------------------------------------------------
-void
-Reflex::Catalog::UnregisterCallback(const Callback<Scope>& cb) const {
-//-------------------------------------------------------------------------------
-   return fImpl->UnregisterCallback(cb);
-}
-
-
-//-------------------------------------------------------------------------------
-void
-Reflex::Catalog::UnregisterCallback(const Callback<Member>& cb) const {
-//-------------------------------------------------------------------------------
-   return fImpl->UnregisterCallback(cb);
-}
 
 //-------------------------------------------------------------------------------
 void

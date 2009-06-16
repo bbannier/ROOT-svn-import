@@ -54,6 +54,10 @@ namespace Reflex {
       static Scope ByName( const std::string & name );
 
 
+      /**
+      * InCatalog returns the catalog this scope is registered with.
+      * @return Catalog containing this scope
+      */
       Catalog InCatalog() const { return fCatalog; }
 
       /**

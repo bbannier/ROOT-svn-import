@@ -19,7 +19,7 @@ namespace Reflex {
       class CatalogImpl;
    }
 
-   template <typename T> class Callback;
+   class Callback;
 
    class RFLX_API Catalog {
    public:
@@ -58,9 +58,7 @@ namespace Reflex {
       Scope __NIRVANA__() const;
 
       // Callbacks
-      void UnregisterCallback(const Callback<Type>&) const;
-      void UnregisterCallback(const Callback<Scope>&) const;
-      void UnregisterCallback(const Callback<Member>&) const;
+      void UnregisterCallback(const Callback&) const;
 
       void Unload();
 

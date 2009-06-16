@@ -24,6 +24,7 @@ namespace Reflex {
 
    // forward declarations
    class Base;
+   class Catalog;
    class Member;
    class Object;
    class PropertyList;
@@ -448,6 +449,13 @@ namespace Reflex {
       * @return unique identifier
       */
       void * Id() const;
+
+
+      /**
+      * InCatalog returns the catalog this type is registered with.
+      * @return Catalog containing this type
+      */
+      Catalog InCatalog() const;
 
 
       /**

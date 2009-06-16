@@ -49,7 +49,7 @@ namespace Reflex {
          void Remove(TypeName& type);
 
          // Callbacks
-         void UnregisterCallback(const Callback<Type>& cb) {
+         void UnregisterCallback(const Callback& cb) {
             fCallbacks.remove(cb);
          }
 
@@ -59,7 +59,7 @@ namespace Reflex {
          Name2TypeNameMap_t       fName2TypeNameMap;
          TypeIdName2TypeNameMap_t fTypeIdName2TypeNameMap;
          TypeVec_t                fTypeVec;
-         std::list<Callback<Type> >  fCallbacks;
+         std::list<Callback>      fCallbacks;
       };
    }
 }

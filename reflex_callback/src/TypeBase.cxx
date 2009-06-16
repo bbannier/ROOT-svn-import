@@ -62,7 +62,7 @@ Reflex::TypeBase::TypeBase( const char * nam,
 // Construct the dictinary info for a type.
    Type t = catalog.TypeByName( nam );
    if ( t.Id() == 0 ) { 
-      fTypeName = new TypeName( nam, this, &ti ); 
+      fTypeName = new TypeName( nam, this, &ti, catalog ); 
    }
    else {
       fTypeName = (TypeName*)t.Id();

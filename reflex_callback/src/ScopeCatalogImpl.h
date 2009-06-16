@@ -48,7 +48,7 @@ namespace Reflex {
          ScopeName* __NIRVANA__() const { return fNirvana; }
 
          // Callbacks
-         void UnregisterCallback(const Callback<Scope>& cb) {
+         void UnregisterCallback(const Callback& cb) {
             fCallbacks.remove(cb);
          }
 
@@ -58,7 +58,7 @@ namespace Reflex {
          ScopeVec_t           fScopeVec;
          ScopeName*           fGlobalScope;
          ScopeName*           fNirvana;
-         std::list<Callback<Scope> >  fCallbacks;
+         std::list<Callback>  fCallbacks;
       };
    }
 }
