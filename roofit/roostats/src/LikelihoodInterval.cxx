@@ -100,9 +100,8 @@ LikelihoodInterval::LikelihoodInterval(const char* name, RooAbsReal* lr, RooArgS
    ConfInterval(name,name)
 {
    // Alternate constructor
-  //   fLikelihoodRatio = lr;
-    fLikelihoodRatio = (RooAbsReal*) lr->clone("dummy");
-   fParameters = params;
+  fLikelihoodRatio = lr;
+  fParameters = params;
 }
 
 //____________________________________________________________________
@@ -110,9 +109,8 @@ LikelihoodInterval::LikelihoodInterval(const char* name, const char* title, RooA
    ConfInterval(name,title)
 {
    // Alternate constructor
-  //   fLikelihoodRatio = lr;
-  fLikelihoodRatio = (RooAbsReal*) lr->clone("dummy");
-   fParameters = params;
+  fLikelihoodRatio = lr;
+  fParameters = params;
 }
 
 //____________________________________________________________________
