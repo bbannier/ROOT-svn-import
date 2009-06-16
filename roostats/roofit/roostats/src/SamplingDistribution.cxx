@@ -28,6 +28,7 @@ The class supports merging.
 #include "math.h"
 #include <algorithm>
 #include <iostream>
+using namespace std ;
 
 /// ClassImp for building the THtml documentation of the class 
 ClassImp(RooStats::SamplingDistribution)
@@ -43,6 +44,9 @@ SamplingDistribution::SamplingDistribution( const char *name, const char *title,
   fSamplingDist = samplingDist;
   // need to check STL stuff here.  Will this = operator work as wanted, or do we need:
   //  std::copy(samplingDist.begin(), samplingDist.end(), fSamplingDist.begin());
+
+  // WVE must fill sampleWeights vector here otherwise append behavior potentially undefined
+  fSampleWeights.resize(fSamplingDist.size(),1.0) ;  
 
   fVarName = varName;
 }
