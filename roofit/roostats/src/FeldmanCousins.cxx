@@ -45,6 +45,7 @@ END_HTML
 
 #include "RooStats/ProfileLikelihoodTestStat.h"
 #include "RooStats/NeymanConstruction.h"
+#include "RooStats/RooStatsUtils.h"
 
 #include "RooDataSet.h"
 #include "RooDataHist.h"
@@ -69,6 +70,7 @@ FeldmanCousins::FeldmanCousins() {
   fPointsToTest = 0;
   fNbins = 10;
   fFluctuateData=true;
+  fDoProfileConstruction=true;
 }
 
 //_______________________________________________________
@@ -130,7 +132,7 @@ void FeldmanCousins::CreateParameterPoints() const{
     // get parameters (params of interest + nuisance)
     RooArgSet* parameters = pdf->getParameters(data);
     RemoveConstantParameters(parameters);
-
+    
     TIter it = parameters->createIterator();
     RooRealVar *myarg; 
     while ((myarg = (RooRealVar *)it.Next())) { 
@@ -138,8 +140,62 @@ void FeldmanCousins::CreateParameterPoints() const{
       myarg->setBins(fNbins);
     }
 
-    fPointsToTest= new RooDataHist("parameterScan", "", *parameters);
-    cout << "# points to test = " << fPointsToTest->numEntries() << endl;
+    //    fPointsToTest= new RooDataHist("parameterScan", "", *fPOI);
+
+
+    if( ! fPOI->equals(*parameters) && fDoProfileConstruction ) {
+      // if parameters include nuisance parameters, do profile construction
+      cout << " nuisance parameters, will do profile construction" << endl;
+
+      TIter it = fPOI->createIterator();
+      RooRealVar *myarg; 
+      while ((myarg = (RooRealVar *)it.Next())) { 
+	if(!myarg) continue;
+	myarg->setBins(fNbins);
+      }
+
+      RooDataHist* parameterScan = new RooDataHist("parameterScan", "", *fPOI);
+      cout << "# points to test = " << parameterScan->numEntries() << endl;
+      // make profile construction
+      RooArgSet* tmpPoint;
+      // loop over points to test
+      RooFit::MsgLevel previous  = RooMsgService::instance().globalKillBelow();
+      RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL) ;
+      RooAbsReal* nll = pdf->createNLL(*data, Constrain(*parameters));
+      RooAbsReal* profile = nll->createProfile(*fPOI);
+      
+      RooDataSet* profileConstructionPoints = new RooDataSet("profileConstruction",
+							     "profileConstruction",
+							     *parameters);
+
+
+      for(Int_t i=0; i<parameterScan->numEntries(); ++i){
+	// get a parameter point from the list of points to test.
+	tmpPoint = (RooArgSet*) parameterScan->get(i)->clone("temp");
+	
+	RooStats::SetParameters(tmpPoint, parameters);
+	profile->getVal();
+	profileConstructionPoints->add(*parameters);
+	//	parameters->Print("v");
+	
+	delete tmpPoint;
+      }   
+      RooMsgService::instance().setGlobalKillBelow(previous) ;
+      delete profile; 
+      delete nll;
+      fPointsToTest = profileConstructionPoints;
+      cout << "# points to test = " << fPointsToTest->numEntries() << endl;
+      delete parameterScan;
+    } else{
+      cout << " no nuisance parameters" << endl;
+      RooDataHist* parameterScan = new RooDataHist("parameterScan", "", *parameters);
+      cout << "# points to test = " << parameterScan->numEntries() << endl;
+
+      fPointsToTest = parameterScan;
+    }
+
+    delete parameters;
+
   }
 }
 

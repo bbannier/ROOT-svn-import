@@ -152,7 +152,7 @@ void ConfidenceBelt::AddAcceptanceRegion(RooArgSet& parameterPoint,
 
     tree->add( parameterPoint ); // assume it's unique for now
     int index = tree->numEntries() - 1; //check that last point added has index nEntries -1
-    cout << "tree index = " << index << endl;
+    //    cout << "tree index = " << index << endl;
 
     // allocate memory if necessary.  numEntries is overkill?
     if((Int_t)fSamplingSummaries.size() < index) fSamplingSummaries.reserve( tree->numEntries()  ); 
