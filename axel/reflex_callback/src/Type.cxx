@@ -182,6 +182,15 @@ bool Reflex::Type::HasBase( const Type & cl ) const {
 
 
 //-------------------------------------------------------------------------------
+Reflex::Catalog Reflex::Type::InCatalog() const {
+//-------------------------------------------------------------------------------
+   // Return the Type's catalog
+   if ( fTypeName ) return fTypeName->InCatalog();
+   return Dummy::Get<Catalog>();
+}
+
+
+//-------------------------------------------------------------------------------
 bool Reflex::Type::IsEquivalentTo( const Type & typ, unsigned int modifiers_mask ) const {
 //-------------------------------------------------------------------------------
 // Check if two types are equivalent. It will compare the information of the type

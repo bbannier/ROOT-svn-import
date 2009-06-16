@@ -48,13 +48,14 @@ namespace Internal {
       const std::string& Name() { return fName; }
 
       // Callbacks
-      void UnregisterCallback(const Callback<Type>& cb) {
-         Types().UnregisterCallback(cb);
+      void UnregisterCallback(const Callback& cb) {
+         if (cb.What() & kNotifyType)
+            Types().UnregisterCallback(cb);
+         //if (cb.What() & kNotifyMember)
+         //   Members().UnregisterCallback(cb);
+         if (cb.What() & kNotifyScope)
+            Scopes().UnregisterCallback(cb);
       }
-      void UnregisterCallback(const Callback<Scope>& cb) {
-         Scopes().UnregisterCallback(cb);
-      }
-      void UnregisterCallback(const Callback<Member>&) {}
 
    private:
       // default constructor for the static instance

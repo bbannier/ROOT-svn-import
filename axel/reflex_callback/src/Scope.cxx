@@ -157,6 +157,15 @@ bool Reflex::Scope::HasBase( const Type & cl ) const {
 
 
 //-------------------------------------------------------------------------------
+Reflex::Catalog Reflex::Scope::InCatalog() const {
+//-------------------------------------------------------------------------------
+   // Return the scope's catalog
+   if ( fScopeName ) return fScopeName->InCatalog();
+   return Dummy::Get<Catalog>();
+}
+
+
+//-------------------------------------------------------------------------------
 bool Reflex::Scope::IsPrivate() const {
 //-------------------------------------------------------------------------------
 // True if the the type's access is private.

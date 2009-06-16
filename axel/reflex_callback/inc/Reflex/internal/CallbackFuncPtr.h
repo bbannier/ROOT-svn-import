@@ -12,8 +12,10 @@
 #ifndef Reflex_CallbackFuncPtr
 #define Reflex_CallbackFuncPtr
 
+#include "Reflex/NotifyInfo.h"
 
 namespace Reflex {
+   
    namespace Internal {
       class RefCounted {
       public:
@@ -32,11 +34,10 @@ namespace Reflex {
    } // namespace Internal
 
 
-   template <class WHAT>
    class CallbackInterface: public Internal::RefCounted {
    public:
-      virtual int Invoke(const WHAT&) const = 0;
-      virtual bool IsEqual(const CallbackInterface* other) const = 0;
+      virtual int Invoke(const NotifyInfo&) const = 0;
+      virtual bool IsEqual(const CallbackInterface* other) const { return this == other; }
    };
 
    namespace Internal {
@@ -44,32 +45,33 @@ namespace Reflex {
       template <typename T /* e.g. deriving from RefCounted*/ >
       class RefCountedPtr {
       public:
-         RefCountedPtr(T* ptr, bool owned): fPtr(ptr) { if (owned) fPtr->SetOwned(owned); fPtr->IncRef(); }
+         explicit RefCountedPtr(const T* ptr): fPtr(const_cast<T*>(ptr)) { fPtr->IncRef(); }
+         explicit RefCountedPtr(T* ptr): fPtr(ptr) { fPtr->SetOwned(); fPtr->IncRef(); }
          RefCountedPtr(const RefCountedPtr& other): fPtr(other.fPtr) { fPtr->IncRef(); }
          ~RefCountedPtr() { if (fPtr->IsOwned() && !fPtr->DecRef()) delete fPtr; }
 
          bool operator==(const RefCountedPtr<T>& other) const {
             return fPtr->IsEqual(other.fPtr);
          }
+         operator const T*() const { return fPtr; }
 
       private:
          T* fPtr;
       };
 
-      template <class WHAT>
-      class CallbackFreeFuncPtr: public CallbackInterface<WHAT> {
+      class CallbackFreeFuncPtr: public CallbackInterface {
       public:
-         typedef int (*FuncPtr_t)(const WHAT&);
-         CallbackFreeFuncPtr(const FuncPtr_t& ptr): fFuncPtr(ptr) {}
+         typedef int (*FuncPtr_t)(const NotifyInfo&);
+         CallbackFreeFuncPtr(FuncPtr_t ptr): fFuncPtr(ptr) {}
 
-         int Invoke(const WHAT& w) const { return fFuncPtr(w); }
+         int Invoke(const NotifyInfo& ni) const { return fFuncPtr(ni); }
 
-         bool IsEqual(const CallbackInterface<WHAT>* other) const {
+         bool IsEqual(const CallbackInterface* other) const {
             const CallbackFreeFuncPtr* cbo = dynamic_cast<const CallbackFreeFuncPtr*>(other);
             if (cbo) return *this == *cbo;
             return false;
          }
-         bool operator==(const CallbackFreeFuncPtr<WHAT>& other) const {
+         bool operator==(const CallbackFreeFuncPtr& other) const {
             return fFuncPtr == other.fFuncPtr;
          }
 
@@ -77,21 +79,21 @@ namespace Reflex {
          FuncPtr_t fFuncPtr;
       };
 
-      template <class MEMBEROF, class WHAT>
-      class CallbackMemFuncPtr: public CallbackInterface<WHAT>  {
+      template <class MEMBEROF>
+      class CallbackMemFuncPtr: public CallbackInterface  {
       public:
-         typedef int (MEMBEROF::*FuncPtr_t)(const WHAT&);
+         typedef int (MEMBEROF::*FuncPtr_t)(const NotifyInfo&);
          CallbackMemFuncPtr(const MEMBEROF obj, const FuncPtr_t& ptr): fObj(obj), fFuncPtr(ptr) {}
 
-         int Invoke(const WHAT& w) { return (fObj.*fFuncPtr)(w); }
+         int Invoke(const NotifyInfo& ni) { return (fObj.*fFuncPtr)(ni); }
 
-         bool IsEqual(const CallbackInterface<WHAT>* other) const {
+         bool IsEqual(const CallbackInterface* other) const {
             const CallbackMemFuncPtr* cbo = dynamic_cast<const CallbackMemFuncPtr*>(other);
             if (cbo) return *this == *cbo;
             return false;
          }
-         bool operator==(const CallbackFreeFuncPtr<WHAT>& other) const {
-            return fObj == other->fObj && fFuncPtr == other.fFuncPtr;
+         bool operator==(const CallbackMemFuncPtr& other) const {
+            return fObj == other.fObj && fFuncPtr == other.fFuncPtr;
          }
 
       private:
@@ -101,21 +103,21 @@ namespace Reflex {
 
       // Specialization for pointer-to-object construction,
       // where the object is not copied.
-      template <class MEMBEROF, class WHAT>
-      class CallbackMemFuncPtr<MEMBEROF*, WHAT>: public CallbackInterface<WHAT>  {
+      template <class MEMBEROF>
+      class CallbackMemFuncPtr<MEMBEROF*>: public CallbackInterface {
       public:
-         typedef int (MEMBEROF::* FuncPtr_t)(const WHAT&);
+         typedef int (MEMBEROF::* FuncPtr_t)(const NotifyInfo&);
          CallbackMemFuncPtr(MEMBEROF* obj, const FuncPtr_t& ptr): fObjPtr(obj), fFuncPtr(ptr) {}
 
-         int Invoke(const WHAT& w) const { return (fObjPtr->*fFuncPtr)(w); }
+         int Invoke(const NotifyInfo& ni) const { return (fObjPtr->*fFuncPtr)(ni); }
 
-         bool IsEqual(const CallbackInterface<WHAT>* other) const {
+         bool IsEqual(const CallbackInterface* other) const {
             const CallbackMemFuncPtr* cbo = dynamic_cast<const CallbackMemFuncPtr*>(other);
             if (cbo) return *this == *cbo;
             return false;
          }
-         bool operator==(const CallbackFreeFuncPtr<WHAT>& other) const {
-            return fObjPtr == other->fObjPtr && fFuncPtr == other.fFuncPtr;
+         bool operator==(const CallbackMemFuncPtr& other) const {
+            return fObjPtr == other.fObjPtr && fFuncPtr == other.fFuncPtr;
          }
 
       private:
