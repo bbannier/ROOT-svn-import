@@ -28,6 +28,11 @@
 #include "RooRealVar.h"
 #include "RooPlot.h"
 #include "RooDataSet.h"
+#include "RooTreeDataStore.h"
+#include "TTree.h"
+#include "TCanvas.h"
+#include "TLine.h"
+#include "TStopwatch.h"
 
 #include "RooStats/RooStatsUtils.h"
 
@@ -41,6 +46,10 @@ void rs101_limitexample()
   /////////////////////////////////////////
   // An example of setting a limit in a number counting experiment with uncertainty on background and signal
   /////////////////////////////////////////
+
+  // to time the macro
+  TStopwatch t;
+  t.Start();
 
   /////////////////////////////////////////
   // The Model building stage
@@ -61,33 +70,17 @@ void rs101_limitexample()
   RooRealVar* ratioBkgEff = wspace->var("ratioBkgEff"); // get uncertaint parameter to constrain
   RooArgSet constrainedParams(*ratioSigEff, *ratioBkgEff); // need to constrain these in the fit (should change default behavior)
 
-  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-  // temp for debugging
-  //ratioSigEff->setConstant();
-  //      ratioBkgEff->setConstant();
-  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-  // a toy dataset
-  RooDataSet* data = modelWithConstraints->generate(*obs, 1);
-  cout << "----------" << endl;
-  
-  // make a plot of the -log likelihood ratio and -log profile likelihood ratio
-  RooPlot* frame = s->frame();
-  RooAbsReal* nll = modelWithConstraints->createNLL(*data, Constrain(constrainedParams) );
-  RooAbsReal* profile = nll->createProfile(*s);
-  nll->plotOn(frame, LineColor(kRed), ShiftToZero());
-  profile->plotOn(frame);
-  frame->Draw();
-
-  cout << "----------" << endl;
+  // Create an example dataset with 160 observed events
+  obs->setVal(160.);
+  RooDataSet* data = new RooDataSet("exampleData", "exampleData", RooArgSet(*obs));
+  data->add(*obs);
 
 
+  // not necessary
+  modelWithConstraints->fitTo(*data, RooFit::Constrain(RooArgSet(*ratioSigEff, *ratioBkgEff)));
 
   // Now let's make some confidence intervals for s, our parameter of interest
   RooArgSet paramOfInterest(*s);
-
-
-  cout << "----------" << endl;
 
   // First, let's use a Calculator based on the Profile Likelihood Ratio
   ProfileLikelihoodCalculator plc;
@@ -98,11 +91,6 @@ void rs101_limitexample()
   plc.SetTestSize(.1);
   ConfInterval* lrint = plc.GetInterval();  // that was easy.
 
-  LikelihoodIntervalPlot plotInt((LikelihoodInterval*)lrint);
-  plotInt.SetTitle("Parameters contour plot");
-  plotInt.Draw();
-
-  cout << "----------" << endl;
 
   // Second, use a Calculator based on the Feldman Cousins technique
   FeldmanCousins fc;
@@ -112,74 +100,52 @@ void rs101_limitexample()
   fc.SetParameters( paramOfInterest );
   fc.UseAdaptiveSampling(true);
   fc.FluctuateNumDataEntries(false); // number counting analysis: dataset always has 1 entry with N events observed
-  fc.SetNBins(30); // number of points to test per parameter
+  fc.SetNBins(100); // number of points to test per parameter
   fc.SetTestSize(.1);
   ConfInterval* fcint = 0;
   fcint = fc.GetInterval();  // that was easy.
 
 
-  s->setVal(55);
-  if( lrint->IsInInterval(paramOfInterest) ) 
-    cout << "s = " << s->getVal() << " is in interval" << endl;
-  else
-    cout << "s = " << s->getVal() << " is NOT in interval" << endl;
+  // Let's make a plot
+  TCanvas* dataCanvas = new TCanvas("dataCanvas");
+  dataCanvas->Divide(2,1);
 
-  // Now let's check some specific points to see if they are in the interval
-
-  s->setVal(55);
-  //  cout << "for reference, local profile = " << profile->getVal() << endl;
-  if( lrint->IsInInterval(paramOfInterest) ) 
-    cout << "s = " << s->getVal() << " is in interval" << endl;
-  else
-    cout << "s = " << s->getVal() << " is NOT in interval" << endl;
-
-  if(fcint){
-    if( fcint->IsInInterval(paramOfInterest) ) 
-      cout << "s = " << s->getVal() << " is in FC interval" << endl;
-    else
-      cout << "s = " << s->getVal() << " is NOT in FC interval" << endl;
-  }
+  dataCanvas->cd(1);
+  LikelihoodIntervalPlot plotInt((LikelihoodInterval*)lrint);
+  plotInt.SetTitle("Parameters contour plot");
+  plotInt.Draw();
 
 
-  // if fcint is not commented out the profile in the lrint doesn't work properly
-  ratioBkgEff->setVal(1.33);
-  ratioSigEff->setVal(1.06);
-  s->setVal(55);
-  if( lrint->IsInInterval(paramOfInterest) ) 
-    cout << "s = " << s->getVal() << " is in interval" << endl;
-  else
-    cout << "s = " << s->getVal() << " is NOT in interval" << endl;
+  // Get Lower and Upper limits from Profile Calculator
+  cout << "Profile lower limit on s = " << ((LikelihoodInterval*) lrint)->LowerLimit(*s) << endl;
+  cout << "Profile upper limit on s = " << ((LikelihoodInterval*) lrint)->UpperLimit(*s) << endl;
 
-  if(fcint){
-    if( fcint->IsInInterval(paramOfInterest) ) 
-      cout << "s = " << s->getVal() << " is in FC interval" << endl;
-    else
-      cout << "s = " << s->getVal() << " is NOT in FC interval" << endl;
-  }
-  
-  
-  s->setVal(20);
-  if( lrint->IsInInterval(paramOfInterest) ) 
-    cout << "s = " << s->getVal() << " is in interval" << endl;
-  else
-    cout << "s = " << s->getVal() << " is NOT in interval" << endl;
+  // Get Lower and Upper limits from FeldmanCousins with profile construction
+  double fcul = ((PointSetInterval*) fcint)->UpperLimit(*s);
+  double fcll = ((PointSetInterval*) fcint)->LowerLimit(*s);
+  cout << "FC lower limit on s = " << fcll << endl;
+  cout << "FC upper limit on s = " << fcul << endl;
+  TLine* fcllLine = new TLine(fcll, 0, fcll, 1);
+  TLine* fculLine = new TLine(fcul, 0, fcul, 1);
+  fcllLine->SetLineColor(kRed);
+  fculLine->SetLineColor(kRed);
+  fcllLine->Draw("same");
+  fculLine->Draw("same");
+  dataCanvas->Update();
 
-  s->setVal(80);
-  if( lrint->IsInInterval(paramOfInterest) ) 
-    cout << "s = " << s->getVal() << " is in interval" << endl;
-  else
-    cout << "s = " << s->getVal() << " is NOT in interval" << endl;
-
-  //  cout << "ll = " << ((LikelihoodInterval*) lrint)->LowerLimit(*s) << endl;
-  //  cout << "ul = " << ((LikelihoodInterval*) lrint)->UpperLimit(*s) << endl;
-
-  cout << "FC lower limit on s = " << ((PointSetInterval*) fcint)->LowerLimit(*s) << endl;
-  cout << "FC upper limit on s = " << ((PointSetInterval*) fcint)->UpperLimit(*s) << endl;
+  // plot the points used in the profile construction
+  dataCanvas->cd(2);
+  TTree& parameterScan =  ((RooTreeDataStore*) fc.GetPointsToScan()->store())->tree();
+  parameterScan.SetMarkerStyle(20);
+  parameterScan.Draw("s:ratioSigEff:ratioBkgEff","","");
 
 
   delete wspace;
   delete lrint;
   delete fcint;
   delete data;
-  //  delete frame;
+
+  /// print timing info
+  t.Stop();
+  t.Print();
 }

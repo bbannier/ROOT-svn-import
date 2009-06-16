@@ -164,9 +164,7 @@ void FeldmanCousins::CreateParameterPoints() const{
       RooAbsReal* nll = pdf->createNLL(*data, Constrain(*parameters));
       RooAbsReal* profile = nll->createProfile(*fPOI);
       
-      RooDataSet* profileConstructionPoints = new RooDataSet("profileConstruction",
-							     "profileConstruction",
-							     *parameters);
+      RooDataSet* profileConstructionPoints = 0;
 
 
       for(Int_t i=0; i<parameterScan->numEntries(); ++i){
@@ -175,8 +173,14 @@ void FeldmanCousins::CreateParameterPoints() const{
 	
 	RooStats::SetParameters(tmpPoint, parameters);
 	profile->getVal();
+	RooStats::SetParameters(tmpPoint, parameters);
+	profile->getVal();
+	// when creating, current values are the first point will be in dataset
+	if(!profileConstructionPoints)
+	  profileConstructionPoints = new RooDataSet("profileConstruction",
+						     "profileConstruction",
+						     *parameters);
 	profileConstructionPoints->add(*parameters);
-	//	parameters->Print("v");
 	
 	delete tmpPoint;
       }   
