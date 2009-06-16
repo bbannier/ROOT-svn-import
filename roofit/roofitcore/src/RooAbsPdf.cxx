@@ -656,7 +656,8 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, RooCmdArg arg1, RooCmdArg arg
   // SplitRange(Bool_t flag)         -- Use separate fit ranges in a simultaneous fit. Actual range name for each
   //                                    subsample is assumed to by rangeName_{indexState} where indexState
   //                                    is the state of the master index category of the simultaneous fit
-  // Constrain(const RooArgSet&pars) -- Include constraints to listed parameters in likelihood using internal constrains in p.d.f
+  // Constrained()                   -- Apply all constrained contained in the p.d.f. in the likelihood 
+  // Constrain(const RooArgSet&pars) -- Apply constraints to listed parameters in likelihood using internal constrains in p.d.f
   // ExternalConstraints(const RooArgSet& ) -- Include given external constraints to likelihood
   // Verbose(Bool_t flag)           -- Constrols RooFit informational messages in likelihood construction
   // CloneData(Bool flag)           -- Use clone of dataset in NLL (default is true)
@@ -843,7 +844,8 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, RooCmdArg arg1, RooCmdArg arg2,
   // SplitRange(Bool_t flag)         -- Use separate fit ranges in a simultaneous fit. Actual range name for each
   //                                    subsample is assumed to by rangeName_{indexState} where indexState
   //                                    is the state of the master index category of the simultaneous fit
-  // Contrain(const RooArgSet&pars)  -- Include constraints to listed parameters in likelihood using internal constrains in p.d.f
+  // Constrained()                   -- Apply all constrained contained in the p.d.f. in the likelihood 
+  // Contrain(const RooArgSet&pars)  -- Apply constraints to listed parameters in likelihood using internal constrains in p.d.f
   // ExternalConstraints(const RooArgSet& ) -- Include given external constraints to likelihood
   //
   // Options to control flow of fit procedure
@@ -915,7 +917,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
   RooCmdConfig pc(Form("RooAbsPdf::fitTo(%s)",GetName())) ;
 
   RooLinkedList fitCmdList(cmdList) ;
-  RooLinkedList nllCmdList = pc.filterCmdList(fitCmdList,"ProjectedObservables,Extended,Range,RangeWithName,SumCoefRange,NumCPU,Optimize,SplitRange,Constrain,ExternalConstraints,CloneData") ;
+  RooLinkedList nllCmdList = pc.filterCmdList(fitCmdList,"ProjectedObservables,Extended,Range,RangeWithName,SumCoefRange,NumCPU,Optimize,SplitRange,Constrained,Constrain,ExternalConstraints,CloneData") ;
 
   pc.defineString("fitOpt","FitOptions",0,"") ;
   pc.defineInt("optConst","Optimize",0,1) ;
