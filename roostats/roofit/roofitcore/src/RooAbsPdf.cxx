@@ -701,8 +701,10 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   pc.defineInt("cloneData","CloneData",0,0) ;
   pc.defineObject("projDepSet","ProjectedObservables",0,0) ;
   pc.defineObject("cPars","Constrain",0,0) ;
+  pc.defineInt("constrAll","Constrained",0,0) ;
   pc.defineSet("extCons","ExternalConstraints",0,0) ;
   pc.defineMutex("Range","RangeWithName") ;
+  pc.defineMutex("Constrain","Constrained") ;
   
   // Process and check varargs 
   pc.process(cmdList) ;
@@ -720,6 +722,10 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
   Int_t optConst = pc.getInt("optConst") ;
   Bool_t cloneData = pc.getInt("cloneData") ;
   const RooArgSet* cPars = static_cast<RooArgSet*>(pc.getObject("cPars")) ;
+  Bool_t constrAll = pc.getInt("constrAll") ;
+  if (constrAll) {
+    cPars = getParameters(data) ;
+  }
   const RooArgSet* extCons = pc.getSet("extCons") ;
 
   // Process automatic extended option
@@ -803,6 +809,9 @@ RooAbsReal* RooAbsPdf::createNLL(RooAbsData& data, const RooLinkedList& cmdList)
     nll->constOptimizeTestStatistic(RooAbsArg::Activate) ;
   }
 
+  if (constrAll) {
+    delete cPars ;
+  }
   return nll ;
 }
 
