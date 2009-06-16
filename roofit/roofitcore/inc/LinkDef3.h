@@ -96,6 +96,8 @@
 #pragma link C++ class RooAbsDataStore+ ;
 #pragma link C++ class RooTreeDataStore+ ;
 #pragma link C++ class RooTreeData+ ;
+#pragma link C++ class RooMinimizer+ ;
+#pragma link C++ class RooMinimizerFcn+ ;
 #pragma link C++ namespace RooCintUtils+ ;
 #pragma link off class RooErrorHandler+ ;
 #pragma link off class RooNag+ ;

@@ -149,6 +149,7 @@
 #include "RooCachedReal.h"
 #include "RooXYChi2Var.h"
 #include "RooChi2Var.h"
+#include "RooMinimizer.h"
 #include <string>
 
 ClassImp(RooAbsPdf) 
@@ -991,145 +992,294 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
 
   RooFitResult *ret = 0 ;    
 
+  // Instantiate MINUIT
+  if (minType) {
 
-  RooMinuit m(*nll) ;
-  
-  m.setEvalErrorWall(doEEWall) ;
-  if (doWarn==0) {
-    m.setNoWarn() ;
-  }
-  
-  m.setPrintEvalErrors(numee) ;
-  if (plevel!=1) {
+    RooMinimizer m(*nll) ;
+
+    m.setMinimizerType(minType) ;
+    
+    m.setEvalErrorWall(doEEWall) ;
+    if (doWarn==0) {
+      // m.setNoWarn() ; WVE FIX THIS
+    }
+    
+    m.setPrintEvalErrors(numee) ;
+    if (plevel!=1) {
       m.setPrintLevel(plevel) ;
-  }
-  
-  if (optConst) {
-    // Activate constant term optimization
-    m.optimizeConst(1) ;
-  }
-  
-  if (fitOpt) {
-    
-    // Play fit options as historically defined
-    ret = m.fit(fitOpt) ;
-    
-  } else {
-    
-    if (verbose) {
-      // Activate verbose options
-      m.setVerbose(1) ;
-    }
-    if (doTimer) {
-      // Activate timer options
-      m.setProfile(1) ;
     }
     
-    if (strat!=1) {
-      // Modify fit strategy
-      m.setStrategy(strat) ;
+    if (optConst) {
+      // Activate constant term optimization
+      m.optimizeConst(1) ;
     }
     
-    if (initHesse) {
-      // Initialize errors with hesse
-      m.hesse() ;
-    }
-    
-    // Minimize using migrad
-    m.migrad() ;
-    
-    if (hesse) {
-      // Evaluate errors with Hesse
-      m.hesse() ;
-    }
-    
-    if (doSumW2==1) {
+    if (fitOpt) {
       
-      // Make list of RooNLLVar components of FCN
-      list<RooNLLVar*> nllComponents ;
-      RooArgSet* comps = nll->getComponents() ;
-      RooAbsArg* arg ;
-      TIterator* citer = comps->createIterator() ;
-      while((arg=(RooAbsArg*)citer->Next())) {
-	RooNLLVar* nllComp = dynamic_cast<RooNLLVar*>(arg) ;
-	if (nllComp) {
-	  nllComponents.push_back(nllComp) ;
-	}
+      // Play fit options as historically defined
+      ret = m.fit(fitOpt) ;
+      
+    } else {
+      
+      if (verbose) {
+	// Activate verbose options
+	m.setVerbose(1) ;
       }
-      delete citer ;
-      delete comps ;  
-	
-      // Calculated corrected errors for weighted likelihood fits
-      RooFitResult* rw = m.save() ;
-      for (list<RooNLLVar*>::iterator iter1=nllComponents.begin() ; iter1!=nllComponents.end() ; iter1++) {
-	(*iter1)->applyWeightSquared(kTRUE) ;
-      }
-      coutI(Fitting) << "RooAbsPdf::fitTo(" << GetName() << ") Calculating sum-of-weights-squared correction matrix for covariance matrix" << endl ;
-      m.hesse() ;
-      RooFitResult* rw2 = m.save() ;
-      for (list<RooNLLVar*>::iterator iter2=nllComponents.begin() ; iter2!=nllComponents.end() ; iter2++) {
-	(*iter2)->applyWeightSquared(kFALSE) ;
+      if (doTimer) {
+	// Activate timer options
+	m.setProfile(1) ;
       }
       
-      // Apply correction matrix
-      const TMatrixDSym& V = rw->covarianceMatrix() ;
-      TMatrixDSym  C = rw2->covarianceMatrix() ;
+      if (strat!=1) {
+	// Modify fit strategy
+	m.setStrategy(strat) ;
+      }
       
-      // Invert C
-      Double_t det(0) ;
-      C.Invert(&det) ;
-      if (det==0) {
-	coutE(Fitting) << "RooAbsPdf::fitTo(" << GetName() 
-		       << ") ERROR: Cannot apply sum-of-weights correction to covariance matrix: correction matrix calculated with weight-squared is singular" <<endl ;
-      } else {
+      if (initHesse) {
+	// Initialize errors with hesse
+	m.hesse() ;
+      }
+      
+      // Minimize using chosen algorithm
+      m.minimize(minType,minAlg) ;
+      
+      if (hesse) {
+	// Evaluate errors with Hesse
+	m.hesse() ;
+      }
+      
+      if (doSumW2==1) {
 	
-	// Calculate corrected covariance matrix = V C-1 V
-	TMatrixD VCV(V,TMatrixD::kMult,TMatrixD(C,TMatrixD::kMult,V)) ; 
-	
-	// Make matrix explicitly symmetric
-	Int_t n = VCV.GetNrows() ;
-	TMatrixDSym VCVsym(n) ;
-	for (Int_t i=0 ; i<n ; i++) {
-	  for (Int_t j=i ; j<n ; j++) {
-	    if (i==j) {
-	      VCVsym(i,j) = VCV(i,j) ;
-	    }
-	    if (i!=j) {
-	      Double_t deltaRel = (VCV(i,j)-VCV(j,i))/sqrt(VCV(i,i)*VCV(j,j)) ;
-	      if (fabs(deltaRel)>1e-3) {
-		coutW(Fitting) << "RooAbsPdf::fitTo(" << GetName() << ") WARNING: Corrected covariance matrix is not (completely) symmetric: V[" << i << "," << j << "] = " 
-			       << VCV(i,j) << " V[" << j << "," << i << "] = " << VCV(j,i) << " explicitly restoring symmetry by inserting average value" << endl ;
-	      }
-	      VCVsym(i,j) = (VCV(i,j)+VCV(j,i))/2 ;
-	    }
+	// Make list of RooNLLVar components of FCN
+	list<RooNLLVar*> nllComponents ;
+	RooArgSet* comps = nll->getComponents() ;
+	RooAbsArg* arg ;
+	TIterator* citer = comps->createIterator() ;
+	while((arg=(RooAbsArg*)citer->Next())) {
+	  RooNLLVar* nllComp = dynamic_cast<RooNLLVar*>(arg) ;
+	  if (nllComp) {
+	    nllComponents.push_back(nllComp) ;
 	  }
 	}
+	delete citer ;
+	delete comps ;  
 	
-	// Propagate corrected errors to parameters objects
-	m.applyCovarianceMatrix(VCVsym) ;
+	// Calculated corrected errors for weighted likelihood fits
+	RooFitResult* rw = m.save() ;
+	for (list<RooNLLVar*>::iterator iter1=nllComponents.begin() ; iter1!=nllComponents.end() ; iter1++) {
+	  (*iter1)->applyWeightSquared(kTRUE) ;
+	}
+	coutI(Fitting) << "RooAbsPdf::fitTo(" << GetName() << ") Calculating sum-of-weights-squared correction matrix for covariance matrix" << endl ;
+	m.hesse() ;
+	RooFitResult* rw2 = m.save() ;
+	for (list<RooNLLVar*>::iterator iter2=nllComponents.begin() ; iter2!=nllComponents.end() ; iter2++) {
+	  (*iter2)->applyWeightSquared(kFALSE) ;
+	}
+	
+	// Apply correction matrix
+	const TMatrixDSym& V = rw->covarianceMatrix() ;
+	TMatrixDSym  C = rw2->covarianceMatrix() ;
+	
+	// Invert C
+	Double_t det(0) ;
+	C.Invert(&det) ;
+	if (det==0) {
+	  coutE(Fitting) << "RooAbsPdf::fitTo(" << GetName() 
+			 << ") ERROR: Cannot apply sum-of-weights correction to covariance matrix: correction matrix calculated with weight-squared is singular" <<endl ;
+	} else {
+	  
+	  // Calculate corrected covariance matrix = V C-1 V
+	  TMatrixD VCV(V,TMatrixD::kMult,TMatrixD(C,TMatrixD::kMult,V)) ; 
+	  
+	  // Make matrix explicitly symmetric
+	  Int_t n = VCV.GetNrows() ;
+	  TMatrixDSym VCVsym(n) ;
+	  for (Int_t i=0 ; i<n ; i++) {
+	    for (Int_t j=i ; j<n ; j++) {
+	      if (i==j) {
+		VCVsym(i,j) = VCV(i,j) ;
+	      }
+	      if (i!=j) {
+		Double_t deltaRel = (VCV(i,j)-VCV(j,i))/sqrt(VCV(i,i)*VCV(j,j)) ;
+		if (fabs(deltaRel)>1e-3) {
+		  coutW(Fitting) << "RooAbsPdf::fitTo(" << GetName() << ") WARNING: Corrected covariance matrix is not (completely) symmetric: V[" << i << "," << j << "] = " 
+				 << VCV(i,j) << " V[" << j << "," << i << "] = " << VCV(j,i) << " explicitly restoring symmetry by inserting average value" << endl ;
+		}
+		VCVsym(i,j) = (VCV(i,j)+VCV(j,i))/2 ;
+	      }
+	    }
+	  }
+	  
+	  // Propagate corrected errors to parameters objects
+	  m.applyCovarianceMatrix(VCVsym) ;
+	}
+	
+	delete rw ;
+	delete rw2 ;
       }
       
-      delete rw ;
-      delete rw2 ;
-    }
-    
-    if (minos) {
-      // Evaluate errs with Minos
-      if (minosSet) {
-	m.minos(*minosSet) ;
-      } else {
-	m.minos() ;
+      if (minos) {
+	// Evaluate errs with Minos
+	if (minosSet) {
+	  m.minos(*minosSet) ;
+	} else {
+	  m.minos() ;
+	}
       }
+      
+      // Optionally return fit result
+      if (doSave) {
+	string name = Form("fitresult_%s_%s",GetName(),data.GetName()) ;
+	string title = Form("Result of fit of p.d.f. %s to dataset %s",GetName(),data.GetName()) ;
+	ret = m.save(name.c_str(),title.c_str()) ;
+      } 
+      
     }
     
-    // Optionally return fit result
-    if (doSave) {
-      string name = Form("fitresult_%s_%s",GetName(),data.GetName()) ;
-      string title = Form("Result of fit of p.d.f. %s to dataset %s",GetName(),data.GetName()) ;
-      ret = m.save(name.c_str(),title.c_str()) ;
-    } 
+
+  } else {
+
+    RooMinuit m(*nll) ;
     
+    m.setEvalErrorWall(doEEWall) ;
+    if (doWarn==0) {
+      m.setNoWarn() ;
     }
+    
+    m.setPrintEvalErrors(numee) ;
+    if (plevel!=1) {
+      m.setPrintLevel(plevel) ;
+    }
+    
+    if (optConst) {
+      // Activate constant term optimization
+      m.optimizeConst(1) ;
+    }
+    
+    if (fitOpt) {
+      
+      // Play fit options as historically defined
+      ret = m.fit(fitOpt) ;
+      
+    } else {
+      
+      if (verbose) {
+	// Activate verbose options
+	m.setVerbose(1) ;
+      }
+      if (doTimer) {
+	// Activate timer options
+	m.setProfile(1) ;
+      }
+      
+      if (strat!=1) {
+	// Modify fit strategy
+	m.setStrategy(strat) ;
+      }
+      
+      if (initHesse) {
+	// Initialize errors with hesse
+	m.hesse() ;
+      }
+      
+      // Minimize using migrad
+      m.migrad() ;
+      
+      if (hesse) {
+	// Evaluate errors with Hesse
+	m.hesse() ;
+      }
+      
+      if (doSumW2==1) {
+	
+	// Make list of RooNLLVar components of FCN
+	list<RooNLLVar*> nllComponents ;
+	RooArgSet* comps = nll->getComponents() ;
+	RooAbsArg* arg ;
+	TIterator* citer = comps->createIterator() ;
+	while((arg=(RooAbsArg*)citer->Next())) {
+	  RooNLLVar* nllComp = dynamic_cast<RooNLLVar*>(arg) ;
+	  if (nllComp) {
+	    nllComponents.push_back(nllComp) ;
+	  }
+	}
+	delete citer ;
+	delete comps ;  
+	
+	// Calculated corrected errors for weighted likelihood fits
+	RooFitResult* rw = m.save() ;
+	for (list<RooNLLVar*>::iterator iter1=nllComponents.begin() ; iter1!=nllComponents.end() ; iter1++) {
+	  (*iter1)->applyWeightSquared(kTRUE) ;
+	}
+	coutI(Fitting) << "RooAbsPdf::fitTo(" << GetName() << ") Calculating sum-of-weights-squared correction matrix for covariance matrix" << endl ;
+	m.hesse() ;
+	RooFitResult* rw2 = m.save() ;
+	for (list<RooNLLVar*>::iterator iter2=nllComponents.begin() ; iter2!=nllComponents.end() ; iter2++) {
+	  (*iter2)->applyWeightSquared(kFALSE) ;
+	}
+	
+	// Apply correction matrix
+	const TMatrixDSym& V = rw->covarianceMatrix() ;
+	TMatrixDSym  C = rw2->covarianceMatrix() ;
+	
+	// Invert C
+	Double_t det(0) ;
+	C.Invert(&det) ;
+	if (det==0) {
+	  coutE(Fitting) << "RooAbsPdf::fitTo(" << GetName() 
+			 << ") ERROR: Cannot apply sum-of-weights correction to covariance matrix: correction matrix calculated with weight-squared is singular" <<endl ;
+	} else {
+	  
+	  // Calculate corrected covariance matrix = V C-1 V
+	  TMatrixD VCV(V,TMatrixD::kMult,TMatrixD(C,TMatrixD::kMult,V)) ; 
+	  
+	  // Make matrix explicitly symmetric
+	  Int_t n = VCV.GetNrows() ;
+	  TMatrixDSym VCVsym(n) ;
+	  for (Int_t i=0 ; i<n ; i++) {
+	    for (Int_t j=i ; j<n ; j++) {
+	      if (i==j) {
+		VCVsym(i,j) = VCV(i,j) ;
+	      }
+	      if (i!=j) {
+		Double_t deltaRel = (VCV(i,j)-VCV(j,i))/sqrt(VCV(i,i)*VCV(j,j)) ;
+		if (fabs(deltaRel)>1e-3) {
+		  coutW(Fitting) << "RooAbsPdf::fitTo(" << GetName() << ") WARNING: Corrected covariance matrix is not (completely) symmetric: V[" << i << "," << j << "] = " 
+				 << VCV(i,j) << " V[" << j << "," << i << "] = " << VCV(j,i) << " explicitly restoring symmetry by inserting average value" << endl ;
+		}
+		VCVsym(i,j) = (VCV(i,j)+VCV(j,i))/2 ;
+	      }
+	    }
+	  }
+	  
+	  // Propagate corrected errors to parameters objects
+	  m.applyCovarianceMatrix(VCVsym) ;
+	}
+	
+	delete rw ;
+	delete rw2 ;
+      }
+      
+      if (minos) {
+	// Evaluate errs with Minos
+	if (minosSet) {
+	  m.minos(*minosSet) ;
+	} else {
+	  m.minos() ;
+	}
+      }
+      
+      // Optionally return fit result
+      if (doSave) {
+	string name = Form("fitresult_%s_%s",GetName(),data.GetName()) ;
+	string title = Form("Result of fit of p.d.f. %s to dataset %s",GetName(),data.GetName()) ;
+	ret = m.save(name.c_str(),title.c_str()) ;
+      } 
+      
+    }
+    
+  }
+
 
   
   // Cleanup
