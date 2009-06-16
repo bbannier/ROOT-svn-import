@@ -247,7 +247,7 @@ Double_t LikelihoodInterval::LowerLimit(RooRealVar& param )
   double step = thisArgVal - myarg->getMin();
   double lastDiff = newProfile->getVal() - target, diff=lastDiff;
   int nIterations = 0, maxIterations = 20;
-  std::cout << "about to do binary search" << std::endl;
+  //  std::cout << "about to do binary search" << std::endl;
   while(fabs(diff) > 0.01 && nIterations < maxIterations){
     nIterations++;
     if(diff<0)

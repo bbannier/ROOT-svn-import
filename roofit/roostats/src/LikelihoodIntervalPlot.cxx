@@ -179,7 +179,7 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
     hist2D->Draw("cont2,list,same");
 
     // get TGraphs and add them
-    gROOT->GetListOfSpecials()->Print();
+    //    gROOT->GetListOfSpecials()->Print();
     TObjArray *contours = (TObjArray*) gROOT->GetListOfSpecials()->FindObject("contours"); 
     if(contours){
       TList *list = (TList*)contours->At(0); 
