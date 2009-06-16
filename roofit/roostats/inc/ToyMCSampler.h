@@ -189,24 +189,15 @@ namespace RooStats {
 
      // helper method to create meaningful names for sampling dist
      string MakeName(RooArgSet& /*params*/){
-       /*
-       std::string name;
-       TIter      itr = params.createIterator();
-       RooRealVar* myarg;
-       while ((myarg = (RooRealVar *)itr.Next())) { 
-	 name += myarg->GetName();
-	 std::stringstream str;
-	 str<<"_"<< myarg->getVal() << "__";
-
-	 name += str.str();
-       }
-       */
-
        std::stringstream str;
        str<<"SamplingDist_"<< fCounter;
        fCounter++;
-       return str.str();
-       
+
+       // WVE -- Return pointer to static buffer
+       static char buf[1024] ;
+       strcpy(buf,str.str().c_str()) ;
+
+       return buf ;       
      }
 
       // Main interface to evaluate the test statistic on a dataset
