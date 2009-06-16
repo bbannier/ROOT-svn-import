@@ -247,6 +247,7 @@ void rs401d_FeldmanCousins(bool doFeldmanCousins=false)
   RooDataHist* parameterScan = (RooDataHist*) fc.GetPointsToScan();
   TH2F* hist = (TH2F*) parameterScan->createHistogram("sinSq2theta:deltaMSq",30,30);
   //  hist->Draw();
+  TH2F* forContour = (TH2F*)hist->Clone();
 
   // now loop through the points and put a marker if it's in the interval
   RooArgSet* tmpPoint;
@@ -262,7 +263,7 @@ void rs401d_FeldmanCousins(bool doFeldmanCousins=false)
 	mark->Draw("s");
       }
     }
-    
+      
 
     // mark for ProfileLikelihood
     TMarker* plcMark = new TMarker(tmpPoint->getRealValue("sinSq2theta"), tmpPoint->getRealValue("deltaMSq"), 22);
@@ -280,8 +281,19 @@ void rs401d_FeldmanCousins(bool doFeldmanCousins=false)
       if(plcInterval->IsInInterval( *tmpPoint ) ) {
 	plcMark->SetMarkerColor(kGreen);
 	plcMark->Draw("s");
+	forContour->SetBinContent( hist->FindBin(tmpPoint->getRealValue("sinSq2theta"), 
+						  tmpPoint->getRealValue("deltaMSq")),	 1);
+      }else{
+	forContour->SetBinContent( hist->FindBin(tmpPoint->getRealValue("sinSq2theta"), 
+						  tmpPoint->getRealValue("deltaMSq")),	 0);
       }
+
+      
     }
+    Double_t level=0.5;
+    forContour->SetContour(1,&level);
+    forContour->Draw("cont2,same");
+
     delete tmpPoint;
   }
 
