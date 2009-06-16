@@ -169,6 +169,7 @@ RooCmdArg Minos(const RooArgSet& minosArgs) ;
 RooCmdArg SplitRange(Bool_t flag=kTRUE) ;
 RooCmdArg SumCoefRange(const char* rangeName) ;
 RooCmdArg Constrain(const RooArgSet& params) ;
+RooCmdArg Constrained() ;
 RooCmdArg ExternalConstraints(const RooArgSet& constraintPdfs) ;
 RooCmdArg PrintEvalErrors(Int_t numErrors) ;
 RooCmdArg EvalErrorWall(Bool_t flag) ;
