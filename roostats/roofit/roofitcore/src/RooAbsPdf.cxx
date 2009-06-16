@@ -2662,9 +2662,9 @@ RooAbsReal* RooAbsPdf::createCdf(const RooArgSet& iset, const RooCmdArg arg1, co
   //
   // SupNormSet(const RooArgSet&)         -- Observables over which should be normalized _in_addition_ to the
   //                                         integration observables
-  // ScanNum()                            -- Apply scanning technique if cdf integral involves numeric integration [ default ] 
-  // ScanAll()                            -- Always apply scanning technique 
-  // ScanNone()                           -- Never apply scanning technique                  
+  // ScanNumCdf()                         -- Apply scanning technique if cdf integral involves numeric integration [ default ] 
+  // ScanAllCdf()                         -- Always apply scanning technique 
+  // ScanNoCdf()                          -- Never apply scanning technique                  
   // ScanParameters(Int_t nbins,          -- Parameters for scanning technique of making CDF: number
   //                Int_t intOrder)          of sampled bins and order of interpolation applied on numeric cdf
 
