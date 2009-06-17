@@ -87,7 +87,6 @@ public:
 
    /// clone:  not supported (since auto_ptr used in the fVariables)
    IMultiGenFunction * Clone() const { 
-      assert(false); 
       return 0; 
    }
 
