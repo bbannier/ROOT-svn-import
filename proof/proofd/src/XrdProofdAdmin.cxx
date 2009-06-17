@@ -548,7 +548,6 @@ int XrdProofdAdmin::QueryLogPaths(XrdProofdProtocol *p)
             rmsg += fMgr->Port(); rmsg += '/';
             rmsg += sdir; rmsg += '/'; rmsg += ent->d_name;
             found = 1;
-            break;
          }
       }
    }
@@ -720,7 +719,7 @@ int XrdProofdAdmin::CleanupSessions(XrdProofdProtocol *p)
 
    // Additional waiting (max 10 secs) depends on the activity of the session manager
    int twait = 10;
-   while (twait > 0 &&
+   while (twait-- > 0 &&
           fMgr->SessionMgr()->CheckCounter(XrdProofdProofServMgr::kCleanSessionsCnt) > 0) {
       if (twait < 7) {
          XPDFORM(cmsg, "CleanupSessions: %s: wait %d more seconds for completion ...", lab, twait);
