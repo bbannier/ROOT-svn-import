@@ -1,6 +1,12 @@
 // @(#)root/mathmore:$Id$
 // Author: L. Moneta 2009
 
+/**********************************************************************
+ *                                                                    *
+ * Copyright (c) 2006  LCG ROOT Math Team, CERN/PH-SFT                *
+ *                                                                    *
+ *                                                                    *
+ **********************************************************************/
 // Header file for class MinimizerVariable
 
 #ifndef ROOT_Math_MinimizerVariable
@@ -75,6 +81,7 @@ public:
       fTransform(trafo), fLower(upper), fUpper(upper) 
    {}
 
+   // copy constructor 
    MinimizerVariable (const MinimizerVariable & rhs) : 
       fFix(rhs.fFix), fLowBound(rhs.fLowBound), fUpBound(rhs.fUpBound), fBounds(rhs.fBounds), 
       fLower(rhs.fLower), fUpper(rhs.fUpper)
@@ -83,7 +90,19 @@ public:
       fTransform.reset( const_cast<MinimizerVariable &>( rhs).fTransform.release() ) ;      
    }
 
+   // assignment 
+   MinimizerVariable & operator= (const MinimizerVariable & rhs) {
+      if (&rhs == this) return *this; 
+      fFix = rhs.fFix;
+      fLowBound = rhs.fLowBound;  
+      fUpBound  = rhs.fUpBound; 
+      fBounds   = rhs.fBounds;  
+      fLower = rhs.fLower;  fUpper = rhs.fUpper;
 
+      // swap auto_ptr
+      fTransform.reset( const_cast<MinimizerVariable &>( rhs).fTransform.release() ) ;     
+      return *this;
+   }
    
 
    bool IsFixed() const { return fFix; }
