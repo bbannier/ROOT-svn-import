@@ -5,7 +5,7 @@
 // (implementations taken from minuit2 classes) 
 
 
-#include "Math/MinimizerVariableTRansformation.h"
+#include "Math/MinimizerVariableTransformation.h"
 #include <cmath>
 #include <limits>
 
