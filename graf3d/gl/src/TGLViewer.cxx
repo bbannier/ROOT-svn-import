@@ -110,6 +110,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad, Int_t x, Int_t y,
 
    fLightSet          (0),
    fClipSet           (0),
+   fClipAutoUpdate    (kTRUE),
    fSelectedPShapeRef (0),
    fCurrentOvlElm     (0),
 
@@ -165,6 +166,7 @@ TGLViewer::TGLViewer(TVirtualPad * pad) :
 
    fLightSet          (0),
    fClipSet           (0),
+   fClipAutoUpdate    (kTRUE),
    fSelectedPShapeRef (0),
    fCurrentOvlElm     (0),
 
@@ -217,16 +219,25 @@ void TGLViewer::InitSecondaryObjects()
    // Common initialization.
 
    fLightSet = new TGLLightSet;
-   fClipSet  = new TGLClipSet;  fOverlay.push_back(fClipSet);
+   fClipSet  = new TGLClipSet;
+   AddOverlayElement(fClipSet);
 
-   fSelectedPShapeRef = new TGLManipSet; fOverlay.push_back(fSelectedPShapeRef);
+   fSelectedPShapeRef = new TGLManipSet;
    fSelectedPShapeRef->SetDrawBBox(kTRUE);
+   AddOverlayElement(fSelectedPShapeRef);
 
    fLightColorSet.StdLightBackground();
-   if (fgUseDefaultColorSetForNewViewers)
+   if (fgUseDefaultColorSetForNewViewers) {
       fRnrCtx->ChangeBaseColorSet(&fgDefaultColorSet);
-   else
-      fRnrCtx->ChangeBaseColorSet(&fDarkColorSet);
+   } else {
+      if (fPad) {
+         fRnrCtx->ChangeBaseColorSet(&fLightColorSet);
+         fLightColorSet.Background().SetColor(fPad->GetFillColor());
+         fLightColorSet.Foreground().SetColor(fPad->GetLineColor());
+      } else {
+         fRnrCtx->ChangeBaseColorSet(&fDarkColorSet);
+      }
+   }
 
    fCameraOverlay = new TGLCameraOverlay(kFALSE, kFALSE);
    AddOverlayElement(fCameraOverlay);
@@ -240,9 +251,7 @@ TGLViewer::~TGLViewer()
    // Destroy viewer object.
 
    delete fLightSet;
-   delete fClipSet;
-   delete fSelectedPShapeRef;
-   delete fCameraOverlay;
+   // fClipSet, fSelectedPShapeRef and fCameraOverlay deleted via overlay.
 
    delete fContextMenu;
    delete fRedrawTimer;
@@ -459,7 +468,11 @@ void TGLViewer::PreRender()
 
    // Setup lighting
    fLightSet->StdSetupLights(fOverallBoundingBox, *fCamera, fDebugMode);
-   fClipSet->SetupClips(fOverallBoundingBox);
+   // Setup clip object.
+   if (fClipAutoUpdate)
+      fClipSet->SetupCurrentClip(fOverallBoundingBox);
+   else
+      fClipSet->SetupCurrentClipIfInvalid(fOverallBoundingBox);
 }
 
 //______________________________________________________________________________
