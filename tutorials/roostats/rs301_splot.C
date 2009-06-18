@@ -35,6 +35,7 @@
 #include "RooProduct.h"
 #include "TCanvas.h"
 #include "RooAbsPdf.h"
+#include "RooConstVar.h"
 #include "RooFit.h"
 #include "RooFitResult.h"
 #include "RooWorkspace.h"
