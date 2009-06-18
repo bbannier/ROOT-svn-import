@@ -40,6 +40,11 @@
 #pragma link C++ class RooStats::CombinedCalculator+; // interface, not concrete
 #pragma link C++ class RooStats::ProfileLikelihoodCalculator+; 
 
+#pragma link C++ class RooStats::MCMCCalculator+; 
+#pragma link C++ class RooStats::MCMCInterval+; 
+#pragma link C++ class RooStats::ProposalFunction+; 
+#pragma link C++ class RooStats::UniformProposal+; 
+
 #pragma link C++ class RooStats::HybridCalculator+;
 #pragma link C++ class RooStats::HybridPlot+;
 #pragma link C++ class RooStats::HybridResult+;
