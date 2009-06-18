@@ -24,15 +24,15 @@ void UniformProposal::Propose(RooAbsCollection& xPrime)
 // Determine whether or not the proposal density is symmetric for
 // points x1 and x2 - that is, whether the probabilty of reaching x2
 // from x1 is equal to the probability of reaching x1 from x2
-Bool_t UniformProposal::IsSymmetric(RooAbsCollection& x1,
-                                     RooAbsCollection& x2)
+Bool_t UniformProposal::IsSymmetric(RooAbsCollection& /* x1 */ ,
+                                    RooAbsCollection& /* x2 */)
 {
    return true;
 }
 
 // Return the probability of proposing the point xPrime given the starting
 // point x
-Double_t UniformProposal::GetProposalDensity(RooAbsCollection& xPrime,
+Double_t UniformProposal::GetProposalDensity(RooAbsCollection& /* xPrime */,
                                               RooAbsCollection& x)
 {
    // For a uniform proposal, all points have equal probability and the

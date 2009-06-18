@@ -17,6 +17,7 @@
 #include "RooDataSet.h"
 #include <cstdlib>
 #include <string>
+#include <algorithm>
 #include "TIterator.h"
 #include "TH1.h"
 #include "TFile.h"
@@ -73,16 +74,19 @@ MCMCInterval::MCMCInterval(const char* name, const char* title,
    fIsStrict = true;
 }
 
-static Int_t CompareBins(TH1* hist, const Int_t* bin1, const Int_t* bin2)
-{
-   // bins must have content >= 0, so this is safe:
-   Double_t n1 = hist->GetBinContent(*bin1);
-   Double_t n2 = hist->GetBinContent(*bin2);
+struct CompareBins { 
 
-   if      (n1 < n2) return -1;
-   else if (n1 > n2) return  1;
-   else              return  0;
-}
+   CompareBins( TH1 * hist) : fHist(hist) {}
+   bool operator() ( Int_t bin1 , Int_t bin2 ) { 
+      // bins must have content >= 0, so this is safe:
+      Double_t n1 = fHist->GetBinContent(bin1);
+      Double_t n2 = fHist->GetBinContent(bin2);
+      
+      return    (n1 < n2) ;
+   }
+   TH1 * fHist; 
+};
+
 
 Bool_t MCMCInterval::IsInInterval(RooArgSet& point) 
 {
@@ -151,13 +155,14 @@ void MCMCInterval::DetermineInterval()
    //fHist->Write();
    //chainHistFile.Close();
 
-   Int_t bins[numBins];
+   std::vector<Int_t> bins(numBins);
    // index 1 to numBins because TH1 uses bin 0 for underflow and 
    // bin numBins+1 for overflow
-   for (Int_t i = 1; i <= numBins; i++)
-      bins[i - 1] = i;
-   qsort_r(bins, (size_t)numBins, sizeof(Int_t), fHist,
-          (int (*)(void*, const void*, const void*)) CompareBins);
+   for (Int_t ibin = 1; ibin <= numBins; ibin++)
+      bins[ibin - 1] = ibin;
+   std::stable_sort( bins.begin(), bins.end(), CompareBins(fHist) );
+//    qsort_r(bins, (size_t)numBins, sizeof(Int_t), fHist,
+//           (int (*)(void*, const void*, const void*)) CompareBins);
 
    Double_t nEntries = fHist->GetSumOfWeights();
    Double_t sum = 0;
