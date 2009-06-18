@@ -20,6 +20,8 @@
 #include "RooConstVar.h"
 #include "RooAddition.h"
 
+#include "RooDataHist.h"
+
 #include "RooPoisson.h"
 #include "RooPlot.h"
 

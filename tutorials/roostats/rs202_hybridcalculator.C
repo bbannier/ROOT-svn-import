@@ -7,6 +7,7 @@
 #include "RooDataSet.h"
 #include "RooExtendPdf.h"
 #include "RooWorkspace.h"
+#include "RooConstVar.h"
 
 #ifndef __CINT__  // problem including this file with CINT
 #include "RooGlobalFunc.h"
