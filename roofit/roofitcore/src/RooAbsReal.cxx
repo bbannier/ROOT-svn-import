@@ -89,6 +89,7 @@
 #include "TF3.h"
 #include "TMatrixD.h"
 #include "TVector.h"
+#include "TSystem.h"
 
 #include <sstream>
 
@@ -3091,6 +3092,39 @@ Double_t RooAbsReal::maxVal(Int_t /*code*/) const
 }
 
 
+void RooAbsReal::logEvalError(const RooAbsReal* originator, const char* origName, const char* message, const char* serverValueString) 
+{
+  // Interface to insert remote error logging messages received by RooRealMPFE into current error loggin stream
+
+  static Bool_t inLogEvalError = kFALSE ;  
+
+  if (inLogEvalError) {
+    return ;
+  }
+  inLogEvalError = kTRUE ;
+
+  EvalError ee ;
+  ee.setMessage(message) ;
+
+  if (serverValueString) {
+    ee.setServerValues(serverValueString) ;
+  } 
+
+  if (!_doLogEvalError) {
+   oocoutE((TObject*)0,Eval) << "RooAbsReal::logEvalError(" << "<STATIC>" << ") evaluation error, " << endl 
+		   << " origin       : " << origName << endl 
+		   << " message      : " << ee._msg << endl
+		   << " server values: " << ee._srvval << endl ;
+  } else {
+    _evalErrorList[originator].first = origName ;
+    _evalErrorList[originator].second.push_back(ee) ;
+  }
+
+
+  inLogEvalError = kFALSE ;
+}
+
+
 
 //_____________________________________________________________________________
 void RooAbsReal::logEvalError(const char* message, const char* serverValueString) const
@@ -3107,6 +3141,13 @@ void RooAbsReal::logEvalError(const char* message, const char* serverValueString
   // reported through this method are passed for immediate printing through RooMsgService.
   // A string with server names and values is constructed automatically for error logging
   // purposes, unless a custom string with similar information is passed as argument.
+
+  static Bool_t inLogEvalError = kFALSE ;  
+
+  if (inLogEvalError) {
+    return ;
+  }
+  inLogEvalError = kTRUE ;
 
   EvalError ee ;
   ee.setMessage(message) ;
@@ -3142,7 +3183,8 @@ void RooAbsReal::logEvalError(const char* message, const char* serverValueString
     _evalErrorList[this].first = oss2.str().c_str() ;
     _evalErrorList[this].second.push_back(ee) ;
   }
-    
+
+  inLogEvalError = kFALSE ;
   //coutE(Tracing) << "RooAbsReal::logEvalError(" << GetName() << ") message = " << message << endl ;
 }
 
