@@ -176,7 +176,7 @@ enum EFitPanel {
    
    kFP_LMIN,  kFP_LMIN2, kFP_LFUM,  kFP_LGSL,  kFP_MIGRAD,kFP_SIMPLX,kFP_FUMILI, 
    kFP_COMBINATION, kFP_MINMETHOD, 
-   kFP_GSLFR, kFP_GSLPR, kFP_BFGS,  kFP_GSLSA,
+   kFP_GSLFR, kFP_GSLPR, kFP_BFGS,  kFP_GSLLM, kFP_GSLSA,
    kFP_SCAN,  kFP_MERR,  kFP_MTOL,  kFP_MITR,
    
    kFP_FIT,   kFP_RESET, kFP_CLOSE,
@@ -1537,6 +1537,7 @@ void TFitEditor::FillMinMethodList(Int_t)
       fMinMethodList->AddEntry("Fletcher-Reeves conjugate gradient" , kFP_GSLFR);
       fMinMethodList->AddEntry("Polak-Ribiere conjugate gradient" ,   kFP_GSLPR);
       fMinMethodList->AddEntry("BFGS conjugate gradient" ,            kFP_BFGS);
+      fMinMethodList->AddEntry("Levenberg-Marquardt" ,                kFP_GSLLM);
       fMinMethodList->AddEntry("Simulated Annealing" ,                kFP_GSLSA);
       fMinMethodList->Select(kFP_GSLFR, kFALSE);
       fStatusBar->SetText("CONJFR",2);
@@ -2616,6 +2617,8 @@ void TFitEditor::DoMinMethod(Int_t )
       fStatusBar->SetText("CONJPR",2);
    else if ( fMinMethodList->GetSelected() == kFP_BFGS )
       fStatusBar->SetText("BFGS2",2);
+   else if ( fMinMethodList->GetSelected() == kFP_GSLLM )
+      fStatusBar->SetText("GSLLM",2);
    else if ( fMinMethodList->GetSelected() == kFP_GSLSA)
       fStatusBar->SetText("SimAn",2);
 
@@ -2750,6 +2753,10 @@ void TFitEditor::RetrieveOptions(Foption_t& fitOpts, TString& drawOpts, ROOT::Ma
       minOpts.SetMinimizerAlgorithm( "conjugatepr" );
    else if ( fMinMethodList->GetSelected() == kFP_BFGS )
       minOpts.SetMinimizerAlgorithm( "bfgs2" );
+   else if ( fMinMethodList->GetSelected() == kFP_GSLLM ) {
+      minOpts.SetMinimizerType ("GSLMultiFit" );
+      minOpts.SetMinimizerAlgorithm( "" );
+   }
    else if ( fMinMethodList->GetSelected() == kFP_GSLSA) {
       minOpts.SetMinimizerType ("GSLSimAn" );
       minOpts.SetMinimizerAlgorithm( "" );
