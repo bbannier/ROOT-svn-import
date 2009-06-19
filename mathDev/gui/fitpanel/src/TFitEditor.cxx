@@ -154,6 +154,7 @@
 #include "TTree.h"
 #include "TTreeInput.h"
 #include "TAdvancedGraphicsDialog.h"
+#include "RConfigure.h"
 
 #include <sstream>
 #include <vector>
@@ -2585,7 +2586,7 @@ void TFitEditor::DoLibrary(Bool_t on)
             fLibMinuit2->SetState(kButtonUp);
             fLibFumili->SetState(kButtonUp);
             fLibGSL->SetState(kButtonDown);
-            fStatusBar->SetText("LIB Minuit2", 1);
+            fStatusBar->SetText("LIB Mathmore", 1);
          }
       }
       default:
