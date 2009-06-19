@@ -32,6 +32,7 @@ object.
 #include "TObjArray.h"
 #include "TList.h"
 #include "TGraph.h"
+#include "TPad.h"
 
 #include "RooRealVar.h"
 #include "RooPlot.h"
@@ -176,7 +177,9 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
     if(!tmpOpt.Contains("LIST")) tmpOpt.Append("LIST"); // if you want the contour TGraphs
 
     hist2D->Draw(tmpOpt.Data());
-    hist2D->Draw("cont2,list,same");
+    //    hist2D->Draw("cont2,list,same");
+
+    gPad->Update();  // needed for get list of specials 
 
     // get TGraphs and add them
     //    gROOT->GetListOfSpecials()->Print();
@@ -184,7 +187,7 @@ void LikelihoodIntervalPlot::Draw(const Option_t *options)
     if(contours){
       TList *list = (TList*)contours->At(0); 
       TGraph *gr1 = (TGraph*)list->First();
-      gr1->SetLineColor(kBlue);
+      gr1->SetLineColor(kBlack);
       gr1->SetLineStyle(kDashed);
       gr1->Draw("same");
     } else{
