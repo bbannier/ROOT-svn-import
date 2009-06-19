@@ -104,19 +104,6 @@ SPlot::SPlot(const char* name, const char* title):
 }
 
 //___________________________________________________________________
-SPlot::SPlot(const TString& name, const TString& title):
-  TNamed(name, title)
-{
-
-  RooArgList Args;
-
-  fSWeightVars = Args;
-
-  fSData = NULL;
-
-}
-
-//___________________________________________________________________
 SPlot::SPlot(const char* name, const char* title, const RooDataSet &data):
   TNamed(name, title)
 {
@@ -149,7 +136,7 @@ SPlot::SPlot(const SPlot &other):
 //______________________________________________________________________
 SPlot::SPlot(const char* name, const char* title, RooDataSet& data, RooAbsPdf* pdf, 
 	     const RooArgList &yieldsList, const RooArgSet &projDeps, 
-	     bool includeWeights, bool cloneData, char* newName):
+	     bool includeWeights, bool cloneData, const char* newName):
   TNamed(name, title)
 {
   if(cloneData == 1)
@@ -182,7 +169,7 @@ RooDataSet* SPlot::GetSDataSet() const
 }  
 
 //____________________________________________________________________________
-Double_t SPlot::GetSWeight(Int_t numEvent, char* sVariable)
+Double_t SPlot::GetSWeight(Int_t numEvent, const char* sVariable) const
 {
 
   if(numEvent > fSData->numEntries() )
@@ -228,7 +215,7 @@ Double_t SPlot::GetSWeight(Int_t numEvent, char* sVariable)
 
 
 //____________________________________________________________________
-Double_t SPlot::GetSumOfEventSWeight(Int_t numEvent)
+Double_t SPlot::GetSumOfEventSWeight(Int_t numEvent) const
 {
 
   //Sum the SWeights for a particular event.
@@ -262,7 +249,7 @@ Double_t SPlot::GetSumOfEventSWeight(Int_t numEvent)
 
 
 //_________________________________________________________________
-Double_t SPlot::GetYieldFromSWeight(char* sVariable)
+Double_t SPlot::GetYieldFromSWeight(const char* sVariable) const
 {
 
 

@@ -18,9 +18,6 @@ class RooFitResult;
 class RooRealVar;
 class RooSimultaneous;
 
-#ifndef ROOT_TH1
-#include "TH1.h"
-#endif
 
 #ifndef ROO_MSG_SERVICE
 #include "RooMsgService.h"
@@ -42,11 +39,10 @@ namespace RooStats{
     SPlot();
     SPlot(const SPlot &other);
     SPlot(const char* name, const char* title);
-    SPlot(const TString& name, const TString& title);
     SPlot(const char* name, const char* title, const RooDataSet &data);
     SPlot(const char* name, const char* title,RooDataSet& data, RooAbsPdf* pdf, 
 	  const RooArgList &yieldsList,const RooArgSet &projDeps=RooArgSet(), 
-	  bool includeWeights=kTRUE, bool copyDataSet = kFALSE, char* newName = "");
+	  bool includeWeights=kTRUE, bool copyDataSet = kFALSE, const char* newName = "");
     
     RooDataSet* SetSData(RooDataSet* data);
 
@@ -59,11 +55,11 @@ namespace RooStats{
     void AddSWeight(RooAbsPdf* pdf, const RooArgList &yieldsTmp,
 		    const RooArgSet &projDeps=RooArgSet(), bool includeWeights=kTRUE);
     
-    Double_t GetSumOfEventSWeight(Int_t numEvent);
+    Double_t GetSumOfEventSWeight(Int_t numEvent) const;
     
-    Double_t GetYieldFromSWeight(char* sVariable);
+    Double_t GetYieldFromSWeight(const char* sVariable) const;
 
-    Double_t GetSWeight(Int_t numEvent, char* sVariable);
+    Double_t GetSWeight(Int_t numEvent, const char* sVariable) const;
 
     
   protected:
