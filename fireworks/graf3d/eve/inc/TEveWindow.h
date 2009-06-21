@@ -133,7 +133,8 @@ public:
    void SomeWindowClosed(TEveWindow* w);
    void MainFrameClosed();
 
-   TEveWindow* GetOriginalSlot() {return fOriginalSlot;}
+   TEveWindow* GetOriginalSlot() const { return fOriginalSlot; }
+   TEveWindow* GetOriginalContainer() const { return fOriginalContainer; }
 
    ClassDef(TEveCompositeFrameInMainFrame, 0); // Eve-composite-frame that is contained in one tab of a TGTab.
 };
@@ -277,7 +278,6 @@ public:
 
    static void            SwapWindows(TEveWindow* w1, TEveWindow* w2);
 
-   
    // Access to static data-members.
 
    static UInt_t  GetMainFrameDefWidth()  { return fgMainFrameDefWidth;  }
