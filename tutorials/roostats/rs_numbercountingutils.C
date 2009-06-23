@@ -24,7 +24,10 @@
 /////////////////////////////////////////////////////////////////////////
 
 
+#ifndef __CINT__
 #include "RooStats/NumberCountingUtils.h"
+#endif
+
 #include <iostream>
 
 using namespace RooFit ;
