@@ -15,7 +15,8 @@
 #include "Reflex/internal/TypeName.h"
 #include "Reflex/Callback.h"
 
-#include <list>
+#include <set>
+#include <vector>
 #include "stl_hash.h"
 
 namespace Reflex {
@@ -35,11 +36,10 @@ namespace Reflex {
 
          void Init();
 
-         //const Name2TypeNameMap_t& Name2TypeNameMap() const { return fName2TypeNameMap; }
-         //const TypeIdName2TypeNameMap_t& TypeIdName2TypeNameMap() const { return fTypeIdName2TypeNameMap; }
          const TypeVec_t& TypeVec() const { return fTypeVec; }
 
          Type ByName(const std::string& name) const;
+         TypeName* ByTypeName(const std::string& name) const;
          Type ByTypeInfo(const std::type_info & ti) const;
          void CleanUp() const;
 
@@ -49,19 +49,31 @@ namespace Reflex {
          void Remove(TypeName& type);
 
          // Callbacks
-         void UnregisterCallback(const Callback& cb) {
-            fCallbacks.remove(cb);
-         }
+         void RegisterCallback(const Callback& cb);
+         void UnregisterCallback(const Callback& cb);
 
       private:
+         void NofifyAnonymous(NotifyInfo& ni);
 
          const CatalogImpl*       fCatalog;
          Name2TypeNameMap_t       fName2TypeNameMap;
          TypeIdName2TypeNameMap_t fTypeIdName2TypeNameMap;
          TypeVec_t                fTypeVec;
-         std::list<Callback>      fCallbacks;
+         std::set<Callback*>      fAnonymousCallbacks; // unnamed callbacks
+         std::map<std::string, std::set<Callback*> > fOrphanedCallbacks; // named callbacks for unknown type
       };
    }
 }
+
+//-------------------------------------------------------------------------------
+inline Reflex::Type
+Reflex::Internal::TypeCatalogImpl::ByName(const std::string & name) const {
+//-------------------------------------------------------------------------------
+// Lookup a type by name.
+   TypeName* tn = ByTypeName(name);
+   if (tn) return tn->ThisType();
+   return Dummy::Type();
+}
+
 
 #endif // Reflex_TypeCatalogImpl

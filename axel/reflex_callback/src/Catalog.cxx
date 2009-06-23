@@ -65,6 +65,25 @@ Reflex::Catalog::Instance() {
    return sCatalog;
 }
 
+//-------------------------------------------------------------------------------
+const Reflex::Callback&
+Reflex::Catalog::RegisterCallback(const CallbackInterface* ci,
+                                  const NotifySelection& ns) const {
+//-------------------------------------------------------------------------------
+// Register a callback object deriving from CallbackInterface.
+// ns selects when the callback should be invoked.
+   fImpl->RegisterCallback(new Callback(ci, ns));
+}
+
+//-------------------------------------------------------------------------------
+const Reflex::Callback&
+Reflex::Catalog::RegisterCallback(Callback::FreeCallbackFunc_t callback,
+                                  const NotifySelection& ns, void* userData) const {
+//-------------------------------------------------------------------------------
+// Register a callback function.
+// ns selects when the callback should be invoked.
+   fImpl->RegisterCallback(new Callback(callback, ns, userData));
+}
 
 //-------------------------------------------------------------------------------
 Reflex::Type
@@ -200,7 +219,8 @@ Reflex::Catalog::ScopeSize() const {
 void
 Reflex::Catalog::UnregisterCallback(const Callback& cb) const {
 //-------------------------------------------------------------------------------
-   return fImpl->UnregisterCallback(cb);
+   Callback* cbP = const_cast<Callback*>(&cb);
+   fImpl->UnregisterCallback(cbP);
 }
 
 

@@ -15,7 +15,9 @@
 // Include files
 #include "Reflex/Kernel.h"
 #include "Reflex/Catalog.h"
+
 #include <string>
+#include <set>
 #include <typeinfo>
 
 namespace Reflex {
@@ -23,6 +25,7 @@ namespace Reflex {
    // forward declarations 
    class TypeBase;
    class Type;
+   class Callback;
 
    /** 
    * class TypeName TypeName.h Reflex/TypeName.h
@@ -97,6 +100,16 @@ namespace Reflex {
       const char * Name_c_str() const;
 
 
+      /**
+       * Register a callback with this type.
+       **/
+      void RegisterCallback(const Callback& cb);
+
+      /**
+       * Remove a callback from this type.
+       **/
+      void UnregisterCallback(const Callback& cb);
+
       /** 
       * At returns the At object of this TypeName
       * @return corresponding Type to this TypeName
@@ -162,6 +175,8 @@ namespace Reflex {
       * Catalog that this type is registered with.
       */
       Catalog fCatalog;
+
+      std::set<Callback*>* fCallbacks;
 
    }; // class TypeName
 

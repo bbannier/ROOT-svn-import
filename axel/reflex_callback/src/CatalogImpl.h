@@ -15,6 +15,8 @@
 #include <string>
 #include <string.h>
 #include <typeinfo>
+#include <set>
+
 #include "Reflex/Kernel.h"
 #include "Reflex/Type.h"
 #include "Reflex/Scope.h"
@@ -33,7 +35,7 @@ namespace Internal {
    class CatalogImpl {
    public:
       CatalogImpl(const std::string& name);
-      ~CatalogImpl() {}
+      ~CatalogImpl();
 
       static CatalogImpl& Instance();
 
@@ -48,14 +50,8 @@ namespace Internal {
       const std::string& Name() { return fName; }
 
       // Callbacks
-      void UnregisterCallback(const Callback& cb) {
-         if (cb.What() & kNotifyType)
-            Types().UnregisterCallback(cb);
-         //if (cb.What() & kNotifyMember)
-         //   Members().UnregisterCallback(cb);
-         if (cb.What() & kNotifyScope)
-            Scopes().UnregisterCallback(cb);
-      }
+      void RegisterCallback(Callback* cb);
+      void UnregisterCallback(Callback* cb);
 
    private:
       // default constructor for the static instance
@@ -66,6 +62,7 @@ namespace Internal {
       TypeCatalogImpl  fTypes;
       std::string      fName;
       Catalog          fCatalog;
+      std::set<Callback*> fCallbacks;
    };
 }}
 
