@@ -46,14 +46,12 @@
 #ifndef ROOT_TMVA_Types
 #include "TMVA/Types.h"
 #endif
-#ifndef ROOT_TMVA_MsgLogger
-#include "TMVA/MsgLogger.h"
-#endif
 
 namespace TMVA {
      
    class IFitterTarget;
    class Interval;
+   class MsgLogger;
 
    class GeneticAlgorithm {
 
@@ -61,7 +59,7 @@ namespace TMVA {
     
       GeneticAlgorithm( IFitterTarget& target, Int_t populationSize, 
                         const std::vector<TMVA::Interval*>& ranges, UInt_t seed = 0 );
-      virtual ~GeneticAlgorithm() {}
+      virtual ~GeneticAlgorithm();
 
       void Init();
 
@@ -106,8 +104,9 @@ namespace TMVA {
       GeneticPopulation fPopulation;      // contains and controls the "individual"
       Double_t fBestFitness;
 
-      mutable MsgLogger fLogger;          // message logger
-      
+      mutable MsgLogger* fLogger;         // message logger
+      MsgLogger& log() const { return *fLogger; }          
+
       ClassDef(GeneticAlgorithm, 0)  // Genetic algorithm controller
    };
    

@@ -33,7 +33,9 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#ifndef ROOT_Rtypes
 #include "Rtypes.h"
+#endif
 #include <vector>
 
 namespace TMVA {
@@ -51,7 +53,7 @@ namespace TMVA {
       void SetFitness(Double_t fitness) { fFitness = fitness; }
       Double_t GetFitness() { return fFitness; }
       
-      friend bool operator <(const GeneticGenes&, const GeneticGenes&);
+      friend Bool_t operator <(const GeneticGenes&, const GeneticGenes&);
       
    private:
       
@@ -61,7 +63,7 @@ namespace TMVA {
       ClassDef(GeneticGenes,0) // Genes definition for genetic algorithm
    };
 
-   bool operator <(const GeneticGenes&, const GeneticGenes&);
+   Bool_t operator <(const GeneticGenes&, const GeneticGenes&);
 
 } // namespace TMVA
 

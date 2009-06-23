@@ -45,7 +45,7 @@ TMVA::GeneticFitter::GeneticFitter( IFitterTarget& target,
 {
    // constructor
 
-   // default parameters settings for Genetic Algorithm  
+   // default parameters settings for Genetic Algorithm
    DeclareOptions();
    ParseOptions();
 }            
@@ -64,9 +64,9 @@ void TMVA::GeneticFitter::DeclareOptions()
    DeclareOptionRef( fConvCrit=0.001, "ConvCrit",   "Convergence criteria" );  
 
    DeclareOptionRef( fSaveBestFromGeneration=1, "SaveBestGen", 
-                     "Saves the best n results from each generation; these are included in the last cycle" );  
+                     "Saves the best n results from each generation. They are included in the last cycle" );  
    DeclareOptionRef( fSaveBestFromCycle=10,     "SaveBestCycle", 
-                     "Saves the best n results from each cycle; these are included in the last cycle" );  
+                     "Saves the best n results from each cycle. They are included in the last cycle. The value should be set to at least 1.0" );  
    
    DeclareOptionRef( fTrim=kFALSE, "Trim", 
                      "Trim the population to PopSize after assessing the fitness of each individual" );  
@@ -96,11 +96,13 @@ void TMVA::GeneticFitter::SetParameters(  Int_t cycles,
 Double_t TMVA::GeneticFitter::Run( std::vector<Double_t>& pars )
 {
    // Execute fitting
-   fLogger << kINFO << "<GeneticFitter> Optimisation, please be patient "
-           << "... (note: inaccurate progress timing for GA)" << Endl;
+   log() << kINFO << "<GeneticFitter> Optimisation, please be patient "
+           << "... (inaccurate progress timing for GA)" << Endl;
+
+   GetFitterTarget().ProgressNotifier( "GA", "init" );
 
    GeneticAlgorithm gstore( GetFitterTarget(),  fPopSize, fRanges);
-   gstore.SetMakeCopies(kTRUE);
+//   gstore.SetMakeCopies(kTRUE);  // commented out, because it reduces speed
 
    // timing of GA
    Timer timer( 100*(fCycles), GetName() ); 
@@ -109,24 +111,29 @@ Double_t TMVA::GeneticFitter::Run( std::vector<Double_t>& pars )
    Double_t progress = 0.;
 
    for (Int_t cycle = 0; cycle < fCycles; cycle++) {
+      GetFitterTarget().ProgressNotifier( "GA", "cycle" );
       // ---- perform series of fits to achieve best convergence
          
       // "m_ga_spread" times the number of variables
       GeneticAlgorithm ga( GetFitterTarget(), fPopSize, fRanges, fSeed ); 
-      ga.SetMakeCopies(kTRUE);
+//      ga.SetMakeCopies(kTRUE);  // commented out, because it reduces speed
 
       if ( pars.size() == fRanges.size() ){
           ga.GetGeneticPopulation().GiveHint( pars, 0.0 );
       }
       if (cycle==fCycles-1) {
+	 GetFitterTarget().ProgressNotifier( "GA", "last" );
          ga.GetGeneticPopulation().AddPopulation( gstore.GetGeneticPopulation() );
       }
+
+      GetFitterTarget().ProgressNotifier( "GA", "iteration" );
 
       ga.CalculateFitness();
       ga.GetGeneticPopulation().TrimPopulation();
 
       Double_t n=0.;
       do {
+	 GetFitterTarget().ProgressNotifier( "GA", "iteration" );
          ga.Init();
          ga.CalculateFitness();
          if ( fTrim ) ga.GetGeneticPopulation().TrimPopulation();
@@ -156,12 +163,13 @@ Double_t TMVA::GeneticFitter::Run( std::vector<Double_t>& pars )
    }
 
    // get elapsed time   
-   fLogger << kINFO << "Elapsed time: " << timer.GetElapsedTime() 
+   log() << kINFO << "Elapsed time: " << timer.GetElapsedTime() 
            << "                            " << Endl;  
 
    Double_t fitness = gstore.CalculateFitness();
    gstore.GetGeneticPopulation().Sort();
    pars.swap( gstore.GetGeneticPopulation().GetGenes(0)->GetFactors() );
 
+   GetFitterTarget().ProgressNotifier( "GA", "stop" );
    return fitness;
 }

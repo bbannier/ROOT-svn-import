@@ -24,7 +24,6 @@
 
 #include "TMVA/GeneticGenes.h"
 #include "TMVA/GeneticPopulation.h"
-#include "Riostream.h"
 
 //_______________________________________________________________________
 //                                                                      
@@ -42,7 +41,7 @@ TMVA::GeneticGenes::GeneticGenes( std::vector<Double_t> & f  )
    fFitness = 0;
 }
 
-bool TMVA::operator <(const TMVA::GeneticGenes& first, const TMVA::GeneticGenes& second)
+Bool_t TMVA::operator <(const TMVA::GeneticGenes& first, const TMVA::GeneticGenes& second)
 {
    return first.fFitness < second.fFitness;
 }
