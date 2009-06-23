@@ -5157,6 +5157,82 @@ bool testInterpolation3D()
    return status; 
 }
 
+bool testScale1DProf()
+{
+   TProfile* p1 = new TProfile("scD1-p1", "p1-Title", numberOfBins, minRange, maxRange);
+   TProfile* p2 = new TProfile("scD1-p2", "p2=c1*p1", numberOfBins, minRange, maxRange);
+
+   Double_t c1 = r.Rndm();
+
+   for ( Int_t e = 0; e < nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x,      y, 1.0);
+      p2->Fill(x, c1 * y, 1.0);
+   }
+
+   p1->Scale(c1);
+
+   int status = equals("testScale Prof 1D", p1, p2, cmpOptStats);
+   delete p1;
+   return status;
+}
+
+bool testScale2DProf()
+{
+   TProfile2D* p1 = new TProfile2D("scD2-p1", "p1", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
+
+   TProfile2D* p2 = new TProfile2D("scD2-p2", "p2=c1*p1", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
+   Double_t c1 = r.Rndm();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z     , 1.0);
+      p2->Fill(x, y, c1 * z, 1.0);
+   }
+
+   p1->Scale(c1);
+
+   int status = equals("testScale Prof 2D", p1, p2, cmpOptStats);
+   delete p1;
+   return status;
+}
+
+bool testScale3DProf()
+{
+   TProfile3D* p1 = new TProfile3D("scD3-p1", "p1", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
+
+   TProfile3D* p2 = new TProfile3D("scD3-p2", "p2=c1*p1", 
+                                   numberOfBins, minRange, maxRange,
+                                   numberOfBins + 1, minRange, maxRange,
+                                   numberOfBins + 2, minRange, maxRange);
+   Double_t c1 = r.Rndm();
+
+   for ( Int_t e = 0; e < nEvents * nEvents; ++e ) {
+      Double_t x = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t y = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t z = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      Double_t t = r.Uniform(0.9 * minRange, 1.1 * maxRange);
+      p1->Fill(x, y, z, t     , 1.0);
+      p2->Fill(x, y, z, c1 * t, 1.0);
+   }
+
+   p1->Scale(c1);
+
+   int status = equals("testScale Prof 3D", p1, p2, cmpOptStats);
+   delete p1;
+   return status;
+}
+
 bool testRefRead1D()
 {
    // Tests consistency with a reference file for 1D Histogram
@@ -6604,8 +6680,19 @@ int stressHistogram()
                                                 "Interpolation tests for Histograms...............................",
                                                 interpolationTestPointer };
 
+   // Test 12
+   // Scale Tests
+   const unsigned int numberOfScale = 3;
+   pointer2Test scaleTestPointer[numberOfScale] = { testScale1DProf,
+                                                    testScale2DProf,
+                                                    testScale3DProf
+   };
+   struct TTestSuite scaleTestSuite = { numberOfScale, 
+                                        "Scale tests for Profiles.........................................",
+                                        scaleTestPointer };
+
    // Combination of tests
-   const unsigned int numberOfSuits = 9;
+   const unsigned int numberOfSuits = 10;
    struct TTestSuite* testSuite[numberOfSuits];
    testSuite[0] = &rebinTestSuite;
    testSuite[1] = &addTestSuite;
@@ -6616,6 +6703,7 @@ int stressHistogram()
    testSuite[6] = &mergeTestSuite;
    testSuite[7] = &labelTestSuite;
    testSuite[8] = &interpolationTestSuite;
+   testSuite[9] = &scaleTestSuite;
 
    status = 0;
    for ( unsigned int i = 0; i < numberOfSuits; ++i ) {
@@ -6630,7 +6718,7 @@ int stressHistogram()
    }
    GlobalStatus += status;
 
-   // Test 12
+   // Test 13
    // Reference Tests
    const unsigned int numberOfRefRead = 7;
    pointer2Test refReadTestPointer[numberOfRefRead] = { testRefRead1D,  testRefReadProf1D,
