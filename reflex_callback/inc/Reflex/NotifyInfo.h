@@ -70,10 +70,12 @@ namespace Reflex {
 
    class NotifySelection {
    public:
-      NotifySelection():
-         fWhat(kNotifyEverything),
-         fWhen(kNotifyAfter),
-         fTransition(kNotifyFullyDeclared | kNotifyUnloaded)
+      NotifySelection(int what = kNotifyEverything,
+                      int when = kNotifyAfter,
+                      int transition = kNotifyFullyDeclared | kNotifyUnloaded):
+         fWhat(what),
+         fWhen(when),
+         fTransition(transition)
       {}
 
       char What() const { return fWhat; }
@@ -86,10 +88,17 @@ namespace Reflex {
       char fTransition; // (combination of) ENotifyTransition
    };
 
+   template <typename T> class NotifyInfoT;
+
    struct NotifyInfo {
       NotifyInfo(const std::string& name, ENotifyWhat what, ENotifyWhen when, ENotifyTransition trans):
          fName(name), fWhat(what), fWhen(when), fTransition(trans) {}
 
+      template <class ELEM>
+      const ELEM &
+      Element() const {
+         return reinterpret_cast< const NotifyInfoT<ELEM>& >(*this).fElem;
+      }
       const std::string& fName;
       ENotifyWhat fWhat;
       ENotifyWhen fWhen;

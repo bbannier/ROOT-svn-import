@@ -58,6 +58,8 @@ namespace Reflex {
       Scope __NIRVANA__() const;
 
       // Callbacks
+      const Callback& RegisterCallback(const CallbackInterface* ci, const NotifySelection& ns) const;
+      const Callback& RegisterCallback(Callback::FreeCallbackFunc_t callback, const NotifySelection& ns, void* userData = 0) const;
       void UnregisterCallback(const Callback&) const;
 
       void Unload();

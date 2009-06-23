@@ -18,46 +18,59 @@
 #include "Reflex/Member.h"
 #include "Reflex/NotifyInfo.h"
 
-#include "Reflex/internal/CallbackFuncPtr.h"
-
 /************************************************************************************
  *
- * Callbacks to be notified of changes in Reflex data.
+ * Callbacks to be notified of changes in Reflex data as an observer.
  *
- * Given the example (user provided) functions
- *    class MyClass {
- *       int MemberCallback(const Type& t); // or Scope or Member
- *    };
- *    MyClass myObject;
+ * Example:
+ *   int MyFunc(const NotifyInfo& ni, void* userData);
  *
- *    int MyCallback(const Type& t); // or Scope or Member
+ *   class MyClass: public Callback {
+ *   public:
+ *      int Invoke(const NotifyInfo& ni) const {
+ *      // print the name of the changed type
+ *         if (ni.fWhat == kNotifyType)
+ *            printf("%s\n", ni.Elem<Type>().Name());
+ *         return kCallbackReturnNothing;
+ *      }
+ *   };
+ *   MyClass obj;
  *
  * The main use cases are
- *    Type::RegisterCallback(&MyCallback);
- *    // copy myObject into the callback:
- *    Type::RegisterCallback(MakeCallback(myObject, &MyClass::MyCallback));
- *    // share myObject with the callback, caller must ensure that the object stays valid:
- *    Type::RegisterCallback(MakeCallback(&myObject, &MyClass::MyCallback));
+ *    Catalog::RegisterCallback(&MyFunc, NotifySelection(kNotifyMember, kNotifyBefore,
+ *                                                       kNotifyAllTransitions));
+ *    Catalog::RegisterCallback(&obj);
  *
- * The return value is an OR-ed set of bits as defined by ECallbackReturn.
+ * The callbacks' return value is an OR-ed set of bits as defined by ECallbackReturn.
  *
  ************************************************************************************/
 
 
 namespace Reflex {
 
-   /** 
-    * Common functionality for callbacks: registration and
-    * notifyMask selection.
+   class CallbackInterface {
+   public:
+      virtual int Invoke(const NotifyInfo& ni) const = 0;
+   };
+
+   /**
+    * Wrapper object around the actual CallbackBase-derived implementation
     */
 
-   class RFLX_API CallbackBase: public NotifySelection {
+   class RFLX_API Callback: public NotifySelection {
    public:
+      typedef int (*FreeCallbackFunc_t)(const NotifyInfo& ni, void* userData);
 
-      /** constructor */
-      CallbackBase(const NotifySelection& ni = NotifySelection()):
-         NotifySelection(ni),
-         fRefCount(0)
+      Callback(const CallbackInterface* ci, const NotifySelection& ns):
+         NotifySelection(ns),
+         fFuncPtr(&CallbackInterfaceProxy),
+         fUserData(ci)
+         {}
+
+      Callback(FreeCallbackFunc_t callback, const NotifySelection& ns, void* userData = 0):
+         NotifySelection(ns),
+         fFuncPtr(callback),
+         fUserData(userData)
          {}
 
       bool IsEnabled() const { return !(fWhen & kNotifyDisabled); }
@@ -65,68 +78,18 @@ namespace Reflex {
       void Enable() { fWhen &= ~kNotifyDisabled; }
       void Disable() { fWhen |= kNotifyDisabled; }
 
-      size_t IncRef() { return ++fRefCount; }
-      size_t DecRef() { return --fRefCount; }
+      bool operator==(const Callback& other) const {
+         return fFuncPtr == other.fFuncPtr && fUserData == other.fUserData; }
+
+      int Invoke(const NotifyInfo& ni) { return (*fFuncPtr)(ni, fUserData); }
 
    private:
-      size_t fRefCount; // counter of referencing Callback objects
-   }; // class CallbackBase
-
-
-   /**
-    * Wrapper object around the actual CallbackBase-derived implementation
-    */
-
-   class RFLX_API Callback: public CallbackBase {
-   public:
-      Callback(const CallbackInterface* ci,
-               const NotifySelection& ni): // don't copy the interface object
-         CallbackBase(ni),
-         fCallbackImplPtr(ci)
-         {}
-
-      typedef int (*FreeCallbackFunc_t)(const NotifyInfo&);
-      Callback(FreeCallbackFunc_t callback, const NotifySelection& ni):
-         CallbackBase(ni),
-         fCallbackImplPtr((CallbackInterface*)new Internal::CallbackFreeFuncPtr(callback))
-         {}
-
-      template <class MEMBEROF>
-      Callback(const MEMBEROF& obj, int (MEMBEROF::* &ptr)(const NotifyInfo&),
-               const NotifySelection& ni):
-         CallbackBase(ni),
-         fCallbackImplPtr((CallbackInterface*)new Internal::CallbackMemFuncPtr<MEMBEROF>(obj, ptr))
-         {}
-
-      template <class MEMBEROF>
-      Callback(const MEMBEROF* objptr, int (MEMBEROF::* &ptr)(const NotifyInfo&),
-               const NotifySelection& ni):
-         CallbackBase(ni),
-         fCallbackImplPtr((CallbackInterface*)new Internal::CallbackMemFuncPtr<MEMBEROF>(objptr, ptr))
-         {}
-
-      const CallbackInterface* Get() const { return fCallbackImplPtr; }
-
-      bool operator==(const Callback& other) { return fCallbackImplPtr == other.fCallbackImplPtr; }
-
-   private:
-      Internal::RefCountedPtr<CallbackInterface> fCallbackImplPtr;
+      static int CallbackInterfaceProxy(const NotifyInfo& ni, void* userData) {
+         return const_cast<CallbackInterface*>(reinterpret_cast<const CallbackInterface*>(userData))->Invoke(ni);
+      }
+      FreeCallbackFunc_t fFuncPtr;
+      const void* fUserData;
    };
-
-   template <class MEMBEROF>
-   Callback
-   MakeCallback(const MEMBEROF& obj, int (MEMBEROF::* &ptr)(const NotifyInfo&),
-                const NotifySelection& ni = NotifySelection()) {
-      return Callback(obj, ptr, ni);
-   }
-
-   template <class MEMBEROF>
-   Callback
-   MakeCallback(const MEMBEROF* objptr, int (MEMBEROF::* &ptr)(const NotifyInfo&),
-                const NotifySelection& ni = NotifySelection()) {
-      return Callback(objptr, ptr, ni);
-   }
-
 
    /** 
    * Callback class for backward compatibility; derive from CallbackInterface instead
@@ -146,10 +109,10 @@ namespace Reflex {
 
       int Invoke(const NotifyInfo& ni) const {
          if (ni.fWhat == kNotifyType)
-            const_cast<ICallback*>(this)->operator()(reinterpret_cast< const NotifyInfoT<Type>& >(ni).fElem);
+            const_cast<ICallback*>(this)->operator()(ni.Element<Type>());
          else //if (ni.fWhat == kNotifyMember)
-            const_cast<ICallback*>(this)->operator()(reinterpret_cast< const NotifyInfoT<Member>& >(ni).fElem);
-            return kCallbackReturnNothing;
+            const_cast<ICallback*>(this)->operator()(ni.Element<Member>());
+         return kCallbackReturnNothing;
       }
 
    }; // class ICallback
