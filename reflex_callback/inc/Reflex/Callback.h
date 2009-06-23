@@ -14,8 +14,6 @@
 
 // Include files
 #include "Reflex/Kernel.h"
-#include "Reflex/Type.h"
-#include "Reflex/Member.h"
 #include "Reflex/NotifyInfo.h"
 
 /************************************************************************************
@@ -64,7 +62,7 @@ namespace Reflex {
       Callback(const CallbackInterface* ci, const NotifySelection& ns):
          NotifySelection(ns),
          fFuncPtr(&CallbackInterfaceProxy),
-         fUserData(ci)
+         fCallbackInterface(ci)
          {}
 
       Callback(FreeCallbackFunc_t callback, const NotifySelection& ns, void* userData = 0):
@@ -81,16 +79,29 @@ namespace Reflex {
       bool operator==(const Callback& other) const {
          return fFuncPtr == other.fFuncPtr && fUserData == other.fUserData; }
 
-      int Invoke(const NotifyInfo& ni) { return (*fFuncPtr)(ni, fUserData); }
+      int Invoke(const NotifyInfo& ni) {
+         if (IsEnabled())
+            return (*fFuncPtr)(ni, fUserData);
+         return kCallbackReturnNothing;
+      }
 
    private:
       static int CallbackInterfaceProxy(const NotifyInfo& ni, void* userData) {
-         return const_cast<CallbackInterface*>(reinterpret_cast<const CallbackInterface*>(userData))->Invoke(ni);
+         return reinterpret_cast<const CallbackInterface*>(userData)->Invoke(ni);
       }
-      FreeCallbackFunc_t fFuncPtr;
-      const void* fUserData;
-   };
 
+      FreeCallbackFunc_t fFuncPtr;
+      union {
+         void* fUserData;
+         const CallbackInterface* fCallbackInterface;
+      };
+   };
+} // namespace Reflex
+
+#include "Reflex/Type.h"
+#include "Reflex/Member.h"
+
+namespace Reflex {
    /** 
    * Callback class for backward compatibility; derive from CallbackInterface instead
    */

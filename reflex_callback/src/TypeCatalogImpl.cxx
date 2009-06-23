@@ -150,8 +150,8 @@ Reflex::Internal::TypeCatalogImpl::Init() {
 
 
 //-------------------------------------------------------------------------------
-Reflex::Type
-Reflex::Internal::TypeCatalogImpl::ByName(const std::string & name) const {
+Reflex::TypeName*
+Reflex::Internal::TypeCatalogImpl::ByTypeName(const std::string & name) const {
 //-------------------------------------------------------------------------------
 // Lookup a type by name.
    Name2TypeNameMap_t::const_iterator it;
@@ -162,9 +162,9 @@ Reflex::Internal::TypeCatalogImpl::ByName(const std::string & name) const {
       it = fName2TypeNameMap.find(&name);
    }
    if (it != fName2TypeNameMap.end())
-      return it->second->ThisType();
+      return it->second;
 
-   return Dummy::Type();
+   return 0;
 }
 
 
@@ -199,9 +199,38 @@ void
 Reflex::Internal::TypeCatalogImpl::Add(Reflex::TypeName& type, const std::type_info * ti) {
 //-------------------------------------------------------------------------------
 // Add a type_info to the map.
-   fName2TypeNameMap[&type.Name()] = &type;
-   if (ti) fTypeIdName2TypeNameMap[ti->name()] = &type;
-   fTypeVec.push_back(type.ThisType());
+   NotifyInfo ni(type.Name(), kNotifyType, kNotifyBefore, kNotifyNameCreated);
+   std::map<std::string, Callback*>::iterator iCallback = fOrphanedCallbacks.find(type.Name());
+   bool handled = false;
+   bool vetoed = false;
+   if (iCallback != fOrphanedCallbacks.end()) {
+      for(std::set<Callback*>::iterator i = iCallback->second.begin(),
+             e = iCallback->second.end(); i != e; ++i) {
+         type.RegisterCallback(*i);
+         if (!handled && (i->Transition() & kNotifyNameCreated) && (i->When() & kNotifyBefore)) {
+            int ret = i->Invoke(ni);
+            handled = ret & kCallbackReturnHandled;
+            vetoed |= ret & kCallbackReturnVetoed;
+         }
+      }
+   }
+
+   if (!vetoed) {
+      fName2TypeNameMap[&type.Name()] = &type;
+      if (ti) fTypeIdName2TypeNameMap[ti->name()] = &type;
+      fTypeVec.push_back(type.ThisType());
+      if (iCallback != fOrphanedCallbacks.end()) {
+         handled = false;
+         ni.fWhen = kNotifyAfter;
+         for(std::set<Callback*>::iterator i = iCallback->second.begin(),
+                e = iCallback->second.end(); i != e; ++i) {
+            if (!handled && (i->Transition() & kNotifyNameCreated) && (i->When() & kNotifyBefore)) {
+               int ret = i->Invoke(ni);
+               handled = ret & kCallbackReturnHandled;
+            }
+         }
+      }
+   }
 }
 
 //-------------------------------------------------------------------------------
@@ -218,6 +247,34 @@ Reflex::Internal::TypeCatalogImpl::Remove(Reflex::TypeName& type) {
       if (iTIN2TNM != fTypeIdName2TypeNameMap.end() && iTIN2TNM->second == &type)
          fTypeIdName2TypeNameMap.erase(iTIN2TNM);
       fTypeVec.erase(iTV);
+   }
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Internal::TypeCatalogImpl::RegisterCallback(const Callback& cb) {
+//-------------------------------------------------------------------------------
+   if (cb.Name().empty())
+      fAnonymousCallbacks.insert(&cb);
+   else {
+      TypeName* tn = ByTypeName(cb.Name());
+      if (tn) tn->RegisterCallback(cb);
+      else fOrphanedCallbacks[cb.Name()].insert(&cb);
+   }
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Internal::TypeCatalogImpl::UnegisterCallback(const Callback& cb) {
+//-------------------------------------------------------------------------------
+   if (cb.Name().empty())
+      fAnonymousCallbacks.remove(&cb);
+   else {
+      TypeName* tn = ByTypeName(cb.Name());
+      if (tn) tn->UnregisterCallback(cb);      
+      else fOrphanedCallbacks[cb.Name()].insert(&cb);
    }
 }
 

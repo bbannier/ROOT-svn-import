@@ -64,25 +64,29 @@ namespace Reflex {
     */
    enum ECallbackReturn {
       kCallbackReturnNothing = 0, // default
-      kCallbackReturnHandled = 1, // stop processing other callbacks
+      kCallbackReturnHandled = 1, // stop processing other callbacks of the same NotifyInfo
       kCallbackReturnVeto    = 2, // for kNotifyBefore: veto the action that should follow (e.g. unloading)
    };
 
    class NotifySelection {
    public:
-      NotifySelection(int what = kNotifyEverything,
+      NotifySelection(std::string name = "",
+                      int what = kNotifyEverything,
                       int when = kNotifyAfter,
                       int transition = kNotifyFullyDeclared | kNotifyUnloaded):
+         fName(name),
          fWhat(what),
          fWhen(when),
          fTransition(transition)
       {}
 
+      const std::string& Name() const { return fName; }
       char What() const { return fWhat; }
       char When() const { return fWhen; }
       char Transition() const { return fTransition; }
 
    protected:
+      std::string fName; // name this should trigger on
       char fWhat; // (combination of) ENotifyWhat
       char fWhen; // (combination of) ENotifyWhen
       char fTransition; // (combination of) ENotifyTransition

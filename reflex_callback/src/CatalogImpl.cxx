@@ -50,6 +50,51 @@ Reflex::Internal::CatalogImpl::CatalogImpl(const std::string& name):
    // fTypes.Init();
 }
 
+
+//-------------------------------------------------------------------------------
+Reflex::Internal::CatalogImpl::~CatalogImpl() {
+//-------------------------------------------------------------------------------
+// Destructs callbacks
+   for (std::set<Callback*>::iterator i = fCallbacks.begin(), e = fCallbacks.end();
+        i != e; ++i)
+      delete *i;
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Internal::CatalogImpl::RegisterCallback(Callback* cb) {
+//-------------------------------------------------------------------------------
+   // Register a new callback; takes ownership of cb.
+   fCallbacks.insert(cb);
+   if (cb->What() & kNotifyType)
+      Types().RegisterCallback(*cb);
+   //if (cb->What() & kNotifyMember)
+   //   Members().RegisterCallback(*cb);
+   if (cb->What() & kNotifyScope)
+      Scopes().RegisterCallback(*cb);
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Internal::CatalogImpl::UnregisterCallback(Callback* cb) {
+//-------------------------------------------------------------------------------
+   // Remove a new callback
+   std::set<Callback*>::iterator iCallback = fCallbacks.find(cb);
+   if (iCallback != fCallbacks.end()) {
+      if (cb->What() & kNotifyType)
+         Types().RegisterCallback(*cb);
+      //if (cb->What() & kNotifyMember)
+      //   Members().UnregisterCallback(*cb);
+      if (cb->What() & kNotifyScope)
+         Scopes().RegisterCallback(*cb);
+      fCallbacks.erase(iCallback);
+      delete cb;
+   }
+}
+
+
 #ifdef _MSC_VER
 # pragma warning(pop)
 #endif

@@ -13,16 +13,21 @@
 #define Reflex_Catalog
 
 #include "Kernel.h"
+#include "NotifyInfo.h"
 
 namespace Reflex {
+
+   class Callback;
+   class CallbackInterface;
+
    namespace Internal {
       class CatalogImpl;
    }
 
-   class Callback;
-
    class RFLX_API Catalog {
    public:
+      typedef int (*FreeCallbackFunc_t)(const NotifyInfo& ni, void* userData);
+
       Catalog();
       Catalog(const std::string& name);
       Catalog(Internal::CatalogImpl*);
@@ -59,7 +64,7 @@ namespace Reflex {
 
       // Callbacks
       const Callback& RegisterCallback(const CallbackInterface* ci, const NotifySelection& ns) const;
-      const Callback& RegisterCallback(Callback::FreeCallbackFunc_t callback, const NotifySelection& ns, void* userData = 0) const;
+      const Callback& RegisterCallback(FreeCallbackFunc_t callback, const NotifySelection& ns, void* userData = 0) const;
       void UnregisterCallback(const Callback&) const;
 
       void Unload();

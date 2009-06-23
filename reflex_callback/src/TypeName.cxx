@@ -23,43 +23,6 @@
 #include "stl_hash.h"
 #include <vector>
 
-/*
-//-------------------------------------------------------------------------------
-typedef __gnu_cxx::hash_map<const std::string *, Reflex::TypeName * > Name2Type_t;
-typedef __gnu_cxx::hash_map<const char *, Reflex::TypeName * > TypeId2Type_t;
-typedef std::vector< Reflex::Type > TypeVec_t;
-
-
-//-------------------------------------------------------------------------------
-static Name2Type_t & sTypes() {
-//-------------------------------------------------------------------------------
-// Static wrapper for type map.
-   static Name2Type_t* m = 0;
-   if (!m) m = new Name2Type_t;
-   return *m;
-}
-
-
-//-------------------------------------------------------------------------------
-static TypeId2Type_t & sTypeInfos() {
-//-------------------------------------------------------------------------------
-// Static wrapper for type map (type_infos).
-   static TypeId2Type_t* m;
-   if (!m) m = new TypeId2Type_t;
-   return *m;
-}
-
-
-//-------------------------------------------------------------------------------
-static TypeVec_t & sTypeVec() {
-//-------------------------------------------------------------------------------
-// Static wrapper for type vector.
-   static TypeVec_t* m = 0;
-   if (!m) m = new TypeVec_t;
-   return *m;
-}
-*/
-
 //-------------------------------------------------------------------------------
 Reflex::TypeName::TypeName( const char * nam,
                             TypeBase * typeBas,
@@ -67,7 +30,8 @@ Reflex::TypeName::TypeName( const char * nam,
                             const Catalog& catalog)
    : fName( nam ),
      fTypeBase( typeBas ),
-     fCatalog(catalog)
+     fCatalog(catalog),
+     fCallbacks(0)
 {
 //-------------------------------------------------------------------------------
 // Construct a type name.
