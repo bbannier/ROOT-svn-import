@@ -24,17 +24,20 @@
 
 #include <iostream>
 #include <iomanip>
-#include "TMVA/GeneticPopulation.h"
-#include "TMVA/GeneticGenes.h"
-#include "Riostream.h"
+
 #include "Rstrstream.h"
 #include "TSystem.h"
 #include "TRandom3.h"
 #include "TH1.h"
 #include <algorithm>
 
+#include "TMVA/GeneticPopulation.h"
+#include "TMVA/GeneticGenes.h"
+#include "TMVA/MsgLogger.h"
 
 ClassImp(TMVA::GeneticPopulation)
+
+using namespace std;
    
 //_______________________________________________________________________
 //                                                                      
@@ -42,8 +45,10 @@ ClassImp(TMVA::GeneticPopulation)
 //_______________________________________________________________________
 
 //_______________________________________________________________________
-   TMVA::GeneticPopulation::GeneticPopulation(const std::vector<Interval*>& ranges, Int_t size, UInt_t seed)
-      : fGenePool(size), fRanges(ranges.size()), fLogger( "GeneticPopulation" )
+TMVA::GeneticPopulation::GeneticPopulation(const std::vector<Interval*>& ranges, Int_t size, UInt_t seed) :
+   fGenePool(size),
+   fRanges(ranges.size()),
+   fLogger( new MsgLogger("GeneticPopulation") )
 {
    // Constructor
    
@@ -66,6 +71,18 @@ ClassImp(TMVA::GeneticPopulation)
    }
 
    fPopulationSizeLimit = size;
+}
+
+//_______________________________________________________________________
+TMVA::GeneticPopulation::~GeneticPopulation() 
+{
+   // destructor
+   if (fRandomGenerator != NULL) delete fRandomGenerator;
+
+   std::vector<GeneticRange*>::iterator it = fRanges.begin();
+   for (;it!=fRanges.end(); it++) delete *it;
+
+   delete fLogger;
 }
 
 
@@ -141,10 +158,10 @@ void TMVA::GeneticPopulation::Mutate( Double_t probability , Int_t startIndex,
    //                     than indicated by "startIndex". This means: if "startIndex==3", the first (and best)
    //                     three individuals are not mutaded. This allows to preserve the best result of the 
    //                     current Generation for the next generation. 
-   //         bool near : if true, the mutation will produce a new coefficient which is "near" the old one
+   //         Bool_t near : if true, the mutation will produce a new coefficient which is "near" the old one
    //                     (gaussian around the current value)
    //         double spread : if near==true, spread gives the sigma of the gaussian
-   //         bool mirror : if the new value obtained would be outside of the given constraints
+   //         Bool_t mirror : if the new value obtained would be outside of the given constraints
    //                    the value is mapped between the constraints again. This can be done either
    //                    by a kind of periodic boundary conditions or mirrored at the boundary.
    //                    (mirror = true seems more "natural")
@@ -192,12 +209,12 @@ void TMVA::GeneticPopulation::Print( Int_t untilIndex )
          if (untilIndex == -1 ) return;
          untilIndex--;
       }
-      fLogger << "fitness: " << fGenePool[it].GetFitness() << "    ";
+      log() << "fitness: " << fGenePool[it].GetFitness() << "    ";
       for (vector< Double_t >::iterator vec = fGenePool[it].GetFactors().begin(); 
            vec < fGenePool[it].GetFactors().end(); vec++ ) {
-         fLogger << "f_" << n++ << ": " << (*vec) << "     ";
+         log() << "f_" << n++ << ": " << (*vec) << "     ";
       }
-      fLogger << endl;
+      log() << Endl;
    }
 }
 
@@ -208,8 +225,7 @@ void TMVA::GeneticPopulation::Print( ostream & out, Int_t untilIndex )
    // this means, .. write out the best "untilIndex" individuals.
    //
 
-   for ( unsigned int it = 0; it < fGenePool.size(); ++it )
-   {
+   for ( unsigned int it = 0; it < fGenePool.size(); ++it ) {
       Int_t n=0;
       if (untilIndex >= -1 ) {
          if (untilIndex == -1 ) return;
@@ -242,12 +258,7 @@ TH1F* TMVA::GeneticPopulation::VariableDistribution( Int_t varNumber, Int_t bins
    histName.str("v");
    histName << varNumber;
    TH1F *hist = new TH1F( histName.str().c_str(),histName.str().c_str(), bins,min,max );
-//    hist->SetBit(TH1::kCanRebin);
 
-//    multimap<Double_t, TMVA::GeneticGenes >::iterator it;
-//    for (it = fGenePool->begin(); it != fGenePool->end(); it++) {
-//       hist->Fill( it->second.GetFactors().at(varNumber));
-//    }
     return hist;
 }
 
@@ -260,27 +271,15 @@ vector<Double_t> TMVA::GeneticPopulation::VariableDistribution( Int_t /*varNumbe
    cout << "FAILED! TMVA::GeneticPopulation::VariableDistribution" << endl;
 
    vector< Double_t > varDist;
-//    multimap<Double_t, TMVA::GeneticGenes >::iterator it;
-//    for (it = fGenePool->begin(); it != fGenePool->end(); it++) {
-//       varDist.push_back( it->second.GetFactors().at( varNumber ) );
-//    }
+
    return varDist;
-}
-
-//_______________________________________________________________________
-TMVA::GeneticPopulation::~GeneticPopulation() 
-{
-   // destructor
-   if (fRandomGenerator != NULL) delete fRandomGenerator;
-
-   std::vector<GeneticRange*>::iterator it = fRanges.begin();
-   for (;it!=fRanges.end(); it++) delete *it;
 }
 
 //_______________________________________________________________________
 void TMVA::GeneticPopulation::AddPopulation( GeneticPopulation *strangers )
 {
-   for (std::vector<TMVA::GeneticGenes>::iterator it = strangers->fGenePool.begin(); it != strangers->fGenePool.end(); it++ ) {
+   for (std::vector<TMVA::GeneticGenes>::iterator it = strangers->fGenePool.begin(); 
+        it != strangers->fGenePool.end(); it++ ) {
       GiveHint( it->GetFactors(), it->GetFitness() );
    }
 }

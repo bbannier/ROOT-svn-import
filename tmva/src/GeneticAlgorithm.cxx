@@ -28,17 +28,18 @@
 //_______________________________________________________________________
 
 #include <iostream>
+#include <algorithm>
 #include <float.h>
 
 #ifdef _GLIBCXX_PARALLEL
 #include <omp.h>
 #endif
 
-#include "Riostream.h"
-
 #include "TMVA/GeneticAlgorithm.h"
 #include "TMVA/Interval.h"
 #include "TMVA/IFitterTarget.h"
+
+#include "TMVA/MsgLogger.h"
 
 namespace TMVA {
    const Bool_t GeneticAlgorithm__DEBUG__ = kFALSE;
@@ -60,7 +61,7 @@ TMVA::GeneticAlgorithm::GeneticAlgorithm( IFitterTarget& target, Int_t populatio
      fPopulationSize(populationSize),
      fRanges( ranges ),
      fPopulation(ranges, populationSize, seed),
-     fLogger( "GeneticAlgorithm" )
+     fLogger( new MsgLogger("GeneticAlgorithm") )
 {
    // Constructor
    // Parameters: 
@@ -73,6 +74,11 @@ TMVA::GeneticAlgorithm::GeneticAlgorithm( IFitterTarget& target, Int_t populatio
    //     Creates a random population with individuals of the size ranges.size()
    fPopulation.SetRandomSeed( seed );
 }
+
+TMVA::GeneticAlgorithm::~GeneticAlgorithm() {
+   delete fLogger;
+}
+
 
 //_______________________________________________________________________
 void TMVA::GeneticAlgorithm::Init()
@@ -137,7 +143,7 @@ Double_t TMVA::GeneticAlgorithm::CalculateFitness()
       }
    }
    
-   fBestFitness = *min_element(bests, bests+nt);
+   fBestFitness = *std::min_element(bests, bests+nt);
 
 #else 
 
@@ -213,14 +219,14 @@ Double_t TMVA::GeneticAlgorithm::SpreadControl( Int_t ofSteps, Int_t successStep
       fSuccessList.pop_back();
       if ( sum > successSteps ) { // too much success
          fSpread /= factor;
-         if (GeneticAlgorithm__DEBUG__) fLogger << kINFO << ">" << flush;
+         if (GeneticAlgorithm__DEBUG__) log() << kINFO << ">" << std::flush;
       }
       else if ( sum == successSteps ) { // on the optimal path
-         if (GeneticAlgorithm__DEBUG__) fLogger << "=" << flush;
+         if (GeneticAlgorithm__DEBUG__) log() << "=" << std::flush;
       }
       else {        // not very successful
          fSpread *= factor;
-         if (GeneticAlgorithm__DEBUG__) fLogger << "<" << flush;
+         if (GeneticAlgorithm__DEBUG__) log() << "<" << std::flush;
       }
    }
 
@@ -246,7 +252,7 @@ Bool_t TMVA::GeneticAlgorithm::HasConverged( Int_t steps, Double_t improvement )
       fConvCounter = 0;
       fConvValue = fBestFitness;
    }
-   if (GeneticAlgorithm__DEBUG__) fLogger << "." << flush;
+   if (GeneticAlgorithm__DEBUG__) log() << "." << std::flush;
    if (fConvCounter < steps) return kFALSE;
    return kTRUE;
 }

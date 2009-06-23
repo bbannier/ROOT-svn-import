@@ -20,6 +20,8 @@
 #include "RooConstVar.h"
 #include "RooAddition.h"
 
+#include "RooDataHist.h"
+
 #include "RooPoisson.h"
 #include "RooPlot.h"
 
@@ -78,7 +80,8 @@ void rs401c_FeldmanCousins()
   // use the Feldman-Cousins tool
   ConfInterval* interval = fc.GetInterval();
 
-  ConfidenceBelt* belt = fc.GetConfidenceBelt();
+  ConfidenceBelt* belt = 0;
+  //  belt = fc.GetConfidenceBelt();
 
   // make a canvas for plots
   TCanvas* intervalCanvas =  new TCanvas("intervalCanvas");
@@ -98,7 +101,7 @@ void rs401c_FeldmanCousins()
   //  hist->Draw();
 
   RooDataHist* parameterScan = (RooDataHist*) fc.GetPointsToScan();
-  parameterScan->Draw("mu");
+  //  parameterScan->Draw("mu");
 
  
   RooArgSet* tmpPoint;
@@ -108,8 +111,9 @@ void rs401c_FeldmanCousins()
      // get a parameter point from the list of points to test.
     tmpPoint = (RooArgSet*) parameterScan->get(i)->clone("temp");
 
-    if(false){
+    if(belt){ 
       // use belt
+      cout << "belt = " << belt << endl;
       cout << "belt:" << tmpPoint->getRealValue("mu")
 	   << belt->GetAcceptanceRegionMin(*tmpPoint) 
 	   << " - " 

@@ -36,6 +36,9 @@
 #include <string>
 #include <vector>
 
+#ifndef ROOT_Riosfwd
+#include "Riosfwd.h"
+#endif
 #ifndef ROOT_TMVA_GeneticGenes
 #include "TMVA/GeneticGenes.h"
 #endif
@@ -45,13 +48,12 @@
 #ifndef ROOT_TMVA_GeneticRange
 #include "TMVA/GeneticRange.h"
 #endif
-#ifndef ROOT_TMVA_MsgLogger
-#include "TMVA/MsgLogger.h"
-#endif
 
 class TH1F;
 
 namespace TMVA {
+
+   class MsgLogger;
 
    class GeneticPopulation {
 
@@ -83,7 +85,7 @@ namespace TMVA {
       // GeneticFitter class.
      
       void MakeCopies( int number );
-      void NextGeneration() {};
+      void NextGeneration() {}
       void AddPopulation( GeneticPopulation *strangers );
       void AddPopulation( GeneticPopulation &strangers );
       void TrimPopulation();
@@ -98,9 +100,10 @@ namespace TMVA {
       std::vector<TMVA::GeneticGenes>  fGenePool;    // the "genePool" where the individuals of the current generation are stored
       std::vector<TMVA::GeneticRange*> fRanges;      // contains the ranges inbetween the values of the coefficients have to be
 
-      TRandom *fRandomGenerator;    // random Generator for this population
+      TRandom3*fRandomGenerator;    // random Generator for this population
 
-      mutable MsgLogger fLogger;    // message logger      
+      mutable MsgLogger* fLogger;   // message logger
+      MsgLogger& log() const { return *fLogger; }    
 
       Int_t fPopulationSizeLimit;
 
