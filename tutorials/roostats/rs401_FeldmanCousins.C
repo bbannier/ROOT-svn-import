@@ -21,6 +21,8 @@
 
 #include "TCanvas.h"
 #include "TTree.h"
+#include "TH2F.h"
+#include "RooDataHist.h"
 #include "TMarker.h"
 #include "TStopwatch.h"
 
@@ -77,19 +79,9 @@ void rs401_FeldmanCousins()
   std::cout << "is this point in the interval? " << 
     interval->IsInInterval(parameters) << std::endl;
   
-  // make a plot
-  //  RooPlot plot(param1, param2);
-  //  parameterScan.plotOn(&plot);
-  //  plot.Draw();
-
-  //  TTree* tree = const_cast<TTree*> (&parameterScan.tree());
-  //  tree->Print();
-  //  tree->Draw("param1:param2 >> hist");
-  //  TH2F* hist = (TH2F*) gROOT->Get("hist");
-  //  hist->Draw();
-
   RooDataHist* parameterScan = (RooDataHist*) fc.GetPointsToScan();
-  parameterScan->Draw("mu:sigma");
+  TH2F* hist = (TH2F*) parameterScan->createHistogram("sigma:mu",30,30);
+  hist->Draw();
 
  
   RooArgSet* tmpPoint;

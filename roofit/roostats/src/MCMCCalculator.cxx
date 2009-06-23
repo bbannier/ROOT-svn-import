@@ -1,6 +1,6 @@
 // @(#)root/roostats:$Id: MCMCCalculator.cxx 28978 2009-06-17 14:33:31Z kbelasco $
-// Author: Kevin Belasco        17/06/2009
-
+// Authors: Kevin Belasco        17/06/2009
+// Authors: Kyle Cranmer         17/06/2009
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
@@ -81,7 +81,7 @@ MCMCCalculator::MCMCCalculator()
    fPdfName = NULL;
    fDataName = NULL;
    fNumIters = 0;
-   fNumBins = DEFAULT_NUM_BINS;
+   fNumBins = 50;
    fAxes = NULL;
 }
 
@@ -98,7 +98,7 @@ MCMCCalculator::MCMCCalculator(RooWorkspace& ws, RooAbsData& data,
    SetTestSize(size);
    SetProposalFunction(proposalFunction);
    fNumIters = numIters;
-   fNumBins = DEFAULT_NUM_BINS;
+   fNumBins = 50;
    fAxes = axes;
 }
 
@@ -115,7 +115,7 @@ MCMCCalculator::MCMCCalculator(RooAbsData& data, RooAbsPdf& pdf,
    SetTestSize(size);
    SetProposalFunction(proposalFunction);
    fNumIters = numIters;
-   fNumBins = DEFAULT_NUM_BINS;
+   fNumBins = 50;
    fAxes = axes;
 }
 
