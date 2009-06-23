@@ -1,5 +1,6 @@
 // @(#)root/roostats:$Id: MCMCInterval.cxx 26805 2009-06-17 14:31:02Z kbelasco $
-// Author: Kevin Belasco        17/06/2009
+// Authors: Kevin Belasco        17/06/2009
+// Authors: Kyle Cranmer         17/06/2009
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
@@ -42,16 +43,21 @@ END_HTML
 #endif
 
 #include "RooStats/MCMCInterval.h"
+
 #include "RooRealVar.h"
 #include "RooArgList.h"
 #include "RooDataSet.h"
+#include "TIterator.h"
+#include "TH1.h"
+#include "RooMsgService.h"
+#include "RooMsgService.h"
+#include "TObject.h"
+//#include "TFile.h"
+
 #include <cstdlib>
 #include <string>
 #include <algorithm>
-#include "TIterator.h"
-#include "TH1.h"
-#include "TFile.h"
-#include "RooMsgService.h"
+
 
 ClassImp(RooStats::MCMCInterval);
 
@@ -61,7 +67,7 @@ using namespace std;
 
 MCMCInterval::MCMCInterval() : ConfInterval()
 {
-   fPreferredNumBins = DEFAULT_NUM_BINS;
+  fPreferredNumBins = 50;
    fConfidenceLevel = 0.0;
    fData = NULL;
    fAxes = NULL;
@@ -75,7 +81,7 @@ MCMCInterval::MCMCInterval() : ConfInterval()
 
 MCMCInterval::MCMCInterval(const char* name) : ConfInterval(name, name)
 {
-   fPreferredNumBins = DEFAULT_NUM_BINS;
+   fPreferredNumBins = 50;
    fConfidenceLevel = 0.0;
    fData = NULL;
    fAxes = NULL;
@@ -90,7 +96,7 @@ MCMCInterval::MCMCInterval(const char* name) : ConfInterval(name, name)
 MCMCInterval::MCMCInterval(const char* name, const char* title)
    : ConfInterval(name, title)
 {
-   fPreferredNumBins = DEFAULT_NUM_BINS;
+   fPreferredNumBins = 50;
    fConfidenceLevel = 0.0;
    fData = NULL;
    fAxes = NULL;
@@ -105,7 +111,7 @@ MCMCInterval::MCMCInterval(const char* name, const char* title)
 MCMCInterval::MCMCInterval(const char* name, const char* title,
         RooArgSet& parameters, RooDataSet& chain) : ConfInterval(name, title)
 {
-   fPreferredNumBins = DEFAULT_NUM_BINS;
+   fPreferredNumBins = 50;
    fNumBins = NULL;
    fConfidenceLevel = 0.0;
    fAxes = NULL;

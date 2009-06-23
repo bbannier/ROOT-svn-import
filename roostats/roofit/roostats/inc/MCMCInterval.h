@@ -1,5 +1,6 @@
 // @(#)root/roostats:$Id: MCMCInterval.h 26805 2009-06-17 14:31:02Z kbelasco $
-// Author: Kevin Belasco        17/06/2009
+// Authors: Kevin Belasco        17/06/2009
+// Authors: Kyle Cranmer         17/06/2009
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
@@ -27,15 +28,12 @@
 #include "RooRealVar.h"
 #include "RooDataSet.h"
 #include "TH1.h"
-#include "RooMsgService.h"
-#include "TIterator.h"
-#include "TObject.h"
 
-enum {DEFAULT_NUM_BINS = 50};
 
 namespace RooStats {
 
    class MCMCInterval : public ConfInterval {
+
 
    public:
       MCMCInterval();
