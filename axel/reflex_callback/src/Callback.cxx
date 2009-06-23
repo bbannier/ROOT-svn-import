@@ -80,3 +80,4 @@ void Reflex::FireFunctionCallback( const Reflex::Member & mem ) {
       (**i)(mem);
    }
 }
+
