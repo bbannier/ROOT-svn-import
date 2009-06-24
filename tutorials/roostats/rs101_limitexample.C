@@ -15,6 +15,7 @@
 #ifndef __CINT__
 #include "RooGlobalFunc.h"
 #endif
+
 #include "RooStats/ProfileLikelihoodCalculator.h"
 #include "RooStats/MCMCCalculator.h"
 #include "RooStats/UniformProposal.h"
