@@ -45,7 +45,9 @@ namespace Reflex {
       kNotifyUnloaded = 0x10, // transition 2 -> 1
       kNotifyAllUnload = 0xf0, // any transition in <- direction
 
-      kNotifyAllTransitions = kNotifyAllLoad | kNotifyAllUnload
+      kNotifyAllTransitions = kNotifyAllLoad | kNotifyAllUnload,
+
+      kNotifyNumTransitions = 8 // -> and -<
    };
 
    /**

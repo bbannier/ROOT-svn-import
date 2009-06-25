@@ -12,12 +12,14 @@
 #ifndef Reflex_TypeCatalogImpl
 #define Reflex_TypeCatalogImpl
 
+#include "stl_hash.h"
+
 #include "Reflex/internal/TypeName.h"
 #include "Reflex/Callback.h"
 
-#include <set>
 #include <vector>
-#include "stl_hash.h"
+#include <map>
+#include <set>
 
 namespace Reflex {
    namespace Internal {
@@ -49,8 +51,8 @@ namespace Reflex {
          void Remove(TypeName& type);
 
          // Callbacks
-         void RegisterCallback(const Callback& cb);
-         void UnregisterCallback(const Callback& cb);
+         void RegisterCallback(Callback& cb);
+         void UnregisterCallback(Callback& cb);
 
       private:
          void NofifyAnonymous(NotifyInfo& ni);
@@ -59,7 +61,7 @@ namespace Reflex {
          Name2TypeNameMap_t       fName2TypeNameMap;
          TypeIdName2TypeNameMap_t fTypeIdName2TypeNameMap;
          TypeVec_t                fTypeVec;
-         std::set<Callback*>      fAnonymousCallbacks; // unnamed callbacks
+         std::set<Callback*>      fAnonymousCallbacks[kNotifyNumTransitions]; // unnamed callbacks; array over transitions
          std::map<std::string, std::set<Callback*> > fOrphanedCallbacks; // named callbacks for unknown type
       };
    }

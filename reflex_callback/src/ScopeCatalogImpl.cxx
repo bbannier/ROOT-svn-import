@@ -44,8 +44,42 @@ void
 Reflex::Internal::ScopeCatalogImpl::Add(Reflex::ScopeName& scope) {
 //-------------------------------------------------------------------------------
 // Add a scope to the map.
-   fName2ScopeMap[&scope.Name()] = scope.ThisScope();
-   fScopeVec.push_back(scope.ThisScope());
+   NotifyInfoT<Scope> ni(scope.ThisScope(), kNotifyType, kNotifyBefore, kNotifyNameCreated);
+   std::map<std::string, std::set<Callback*> >::iterator iCallback = fOrphanedCallbacks.find(scope.Name());
+   bool handled = false;
+   bool vetoed = false;
+   if (iCallback != fOrphanedCallbacks.end()) {
+      for(std::set<Callback*>::iterator i = iCallback->second.begin(),
+             e = iCallback->second.end(); i != e; ++i) {
+         // Whatever the selection: it has scope's name so we register it
+         scope.RegisterCallback(*(*i));
+         if (!handled && ((*i)->Transition() & kNotifyNameCreated) && ((*i)->When() & kNotifyBefore)) {
+            int ret = (*i)->Invoke(ni);
+            handled = ret & kCallbackReturnHandled;
+            vetoed |= ret & kCallbackReturnVeto;
+         }
+      }
+   }
+
+   if (!vetoed) {
+      fName2ScopeMap[&scope.Name()] = scope.ThisScope();
+      fScopeVec.push_back(scope.ThisScope());
+      if (iCallback != fOrphanedCallbacks.end()) {
+         handled = false;
+         ni.fWhen = kNotifyAfter;
+         for(std::set<Callback*>::iterator i = iCallback->second.begin(),
+                e = iCallback->second.end(); i != e;) {
+            if (!handled && ((*i)->Transition() & kNotifyNameCreated) && ((*i)->When() & kNotifyBefore)) {
+               int ret = (*i)->Invoke(ni);
+               handled = ret & kCallbackReturnHandled;
+            }
+            // Whatever the selection: it has scope's name so we remove it
+            std::set<Callback*>::iterator curr = i;
+            ++i;
+            iCallback->second.erase(curr);
+         }
+      }
+   }
 }
 
 
@@ -89,3 +123,64 @@ Reflex::Internal::ScopeCatalogImpl::Remove(Reflex::ScopeName& scope) {
       fScopeVec.erase(std::find(fScopeVec.begin(), fScopeVec.end(), scope.ThisScope()));
    }
 }
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Internal::ScopeCatalogImpl::RegisterCallback(Callback& cb) {
+//-------------------------------------------------------------------------------
+   if (cb.Name().empty()) {
+      for (int i = 0; i < kNotifyNumTransitions / 2; ++i) {
+         if (cb.Transition() & (1 << i)) // ->
+            fAnonymousCallbacks[i].insert(&cb);
+         if (cb.Transition() & (10 << i)) // <-
+            fAnonymousCallbacks[i + kNotifyNumTransitions / 2].insert(&cb);
+      }
+   } else {
+      Name2ScopeMap_t::const_iterator iScope = fName2ScopeMap.find(&cb.Name());
+      if (iScope != fName2ScopeMap.end()) {
+         ScopeName* tn = (ScopeName*) iScope->second.Id();
+         if (tn) tn->RegisterCallback(cb);
+         else fOrphanedCallbacks[cb.Name()].insert(&cb);
+      } else {
+         fOrphanedCallbacks[cb.Name()].insert(&cb);
+      }
+   }
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Internal::ScopeCatalogImpl::UnregisterCallback(Callback& cb) {
+//-------------------------------------------------------------------------------
+   if (cb.Name().empty()) {
+      for (int i = 0; i < kNotifyNumTransitions / 2; ++i) {
+         std::set<Callback*>::iterator iC;
+         if (cb.Transition() & (1 << i))  { // ->
+            iC = fAnonymousCallbacks[i].find(&cb);
+            if (iC != fAnonymousCallbacks[i].end())
+               fAnonymousCallbacks[i].erase(iC);
+         }
+         if (cb.Transition() & (10 << i)) { // <-
+            int idx = i + kNotifyNumTransitions / 2;
+            iC = fAnonymousCallbacks[idx].find(&cb);
+            if (iC != fAnonymousCallbacks[idx].end())
+               fAnonymousCallbacks[idx].erase(iC);
+         }
+      }
+   } else {
+      Name2ScopeMap_t::const_iterator iScope = fName2ScopeMap.find(&cb.Name());
+      ScopeName* sn = 0;
+      if (iScope != fName2ScopeMap.end())
+         sn = (ScopeName*) iScope->second.Id();
+      if (sn) sn->UnregisterCallback(cb);
+      else {
+         std::set<Callback*>& cbSet = fOrphanedCallbacks[cb.Name()];
+         std::set<Callback*>::iterator iC = cbSet.find(&cb);
+         if (iC != cbSet.end()) {
+            cbSet.erase(iC);
+         }
+      }
+   }
+}
+
+

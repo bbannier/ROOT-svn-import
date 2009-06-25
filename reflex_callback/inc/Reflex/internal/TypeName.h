@@ -101,14 +101,14 @@ namespace Reflex {
 
 
       /**
-       * Register a callback with this type.
+       * Register a callback with this type
        **/
-      void RegisterCallback(const Callback& cb);
+      void RegisterCallback(Callback& cb);
 
       /**
-       * Remove a callback from this type.
+       * Remove a callback from this type
        **/
-      void UnregisterCallback(const Callback& cb);
+      void UnregisterCallback(Callback& cb);
 
       /** 
       * At returns the At object of this TypeName
@@ -176,6 +176,9 @@ namespace Reflex {
       */
       Catalog fCatalog;
 
+      /**
+       * Callbacks notified for changes
+       */
       std::set<Callback*>* fCallbacks;
 
    }; // class TypeName

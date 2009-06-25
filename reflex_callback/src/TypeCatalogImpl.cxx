@@ -199,18 +199,19 @@ void
 Reflex::Internal::TypeCatalogImpl::Add(Reflex::TypeName& type, const std::type_info * ti) {
 //-------------------------------------------------------------------------------
 // Add a type_info to the map.
-   NotifyInfo ni(type.Name(), kNotifyType, kNotifyBefore, kNotifyNameCreated);
-   std::map<std::string, Callback*>::iterator iCallback = fOrphanedCallbacks.find(type.Name());
+   NotifyInfoT<Type> ni(type.ThisType(), kNotifyType, kNotifyBefore, kNotifyNameCreated);
+   std::map<std::string, std::set<Callback*> >::iterator iCallback = fOrphanedCallbacks.find(type.Name());
    bool handled = false;
    bool vetoed = false;
    if (iCallback != fOrphanedCallbacks.end()) {
       for(std::set<Callback*>::iterator i = iCallback->second.begin(),
              e = iCallback->second.end(); i != e; ++i) {
-         type.RegisterCallback(*i);
-         if (!handled && (i->Transition() & kNotifyNameCreated) && (i->When() & kNotifyBefore)) {
-            int ret = i->Invoke(ni);
+         // Whatever the selection: it has type's name so we register it
+         type.RegisterCallback(*(*i));
+         if (!handled && ((*i)->Transition() & kNotifyNameCreated) && ((*i)->When() & kNotifyBefore)) {
+            int ret = (*i)->Invoke(ni);
             handled = ret & kCallbackReturnHandled;
-            vetoed |= ret & kCallbackReturnVetoed;
+            vetoed |= ret & kCallbackReturnVeto;
          }
       }
    }
@@ -223,11 +224,15 @@ Reflex::Internal::TypeCatalogImpl::Add(Reflex::TypeName& type, const std::type_i
          handled = false;
          ni.fWhen = kNotifyAfter;
          for(std::set<Callback*>::iterator i = iCallback->second.begin(),
-                e = iCallback->second.end(); i != e; ++i) {
-            if (!handled && (i->Transition() & kNotifyNameCreated) && (i->When() & kNotifyBefore)) {
-               int ret = i->Invoke(ni);
+                e = iCallback->second.end(); i != e;) {
+            if (!handled && ((*i)->Transition() & kNotifyNameCreated) && ((*i)->When() & kNotifyBefore)) {
+               int ret = (*i)->Invoke(ni);
                handled = ret & kCallbackReturnHandled;
             }
+            // Whatever the selection: it has type's name so we remove it
+            std::set<Callback*>::iterator curr = i;
+            ++i;
+            iCallback->second.erase(curr);
          }
       }
    }
@@ -253,11 +258,16 @@ Reflex::Internal::TypeCatalogImpl::Remove(Reflex::TypeName& type) {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Internal::TypeCatalogImpl::RegisterCallback(const Callback& cb) {
+Reflex::Internal::TypeCatalogImpl::RegisterCallback(Callback& cb) {
 //-------------------------------------------------------------------------------
-   if (cb.Name().empty())
-      fAnonymousCallbacks.insert(&cb);
-   else {
+   if (cb.Name().empty()) {
+      for (int i = 0; i < kNotifyNumTransitions / 2; ++i) {
+         if (cb.Transition() & (1 << i)) // ->
+            fAnonymousCallbacks[i].insert(&cb);
+         if (cb.Transition() & (10 << i)) // <-
+            fAnonymousCallbacks[i + kNotifyNumTransitions / 2].insert(&cb);
+      }
+   } else {
       TypeName* tn = ByTypeName(cb.Name());
       if (tn) tn->RegisterCallback(cb);
       else fOrphanedCallbacks[cb.Name()].insert(&cb);
@@ -267,14 +277,33 @@ Reflex::Internal::TypeCatalogImpl::RegisterCallback(const Callback& cb) {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::Internal::TypeCatalogImpl::UnegisterCallback(const Callback& cb) {
+Reflex::Internal::TypeCatalogImpl::UnregisterCallback(Callback& cb) {
 //-------------------------------------------------------------------------------
-   if (cb.Name().empty())
-      fAnonymousCallbacks.remove(&cb);
-   else {
+   if (cb.Name().empty()) {
+      for (int i = 0; i < kNotifyNumTransitions / 2; ++i) {
+         std::set<Callback*>::iterator iC;
+         if (cb.Transition() & (1 << i))  { // ->
+            iC = fAnonymousCallbacks[i].find(&cb);
+            if (iC != fAnonymousCallbacks[i].end())
+               fAnonymousCallbacks[i].erase(iC);
+         }
+         if (cb.Transition() & (10 << i)) { // <-
+            int idx = i + kNotifyNumTransitions / 2;
+            iC = fAnonymousCallbacks[idx].find(&cb);
+            if (iC != fAnonymousCallbacks[idx].end())
+               fAnonymousCallbacks[idx].erase(iC);
+         }
+      }
+   } else {
       TypeName* tn = ByTypeName(cb.Name());
       if (tn) tn->UnregisterCallback(cb);      
-      else fOrphanedCallbacks[cb.Name()].insert(&cb);
+      else {
+         std::set<Callback*>& cbSet = fOrphanedCallbacks[cb.Name()];
+         std::set<Callback*>::iterator iC = cbSet.find(&cb);
+         if (iC != cbSet.end()) {
+            cbSet.erase(iC);
+         }
+      }
    }
 }
 
