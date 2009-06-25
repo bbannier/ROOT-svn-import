@@ -166,3 +166,25 @@ Reflex::Reverse_Type_Iterator Reflex::TypeName::Type_REnd() {
 }
 
 
+//-------------------------------------------------------------------------------
+void
+Reflex::TypeName::RegisterCallback(Callback& cb) {
+//-------------------------------------------------------------------------------
+// Register a callback for this type
+   if (!fCallbacks) fCallbacks = new std::set<Callback*>;
+   fCallbacks->insert(&cb);
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::TypeName::UnregisterCallback(Callback& cb) {
+//-------------------------------------------------------------------------------
+// Remove a callback for this type
+   if (fCallbacks) {
+      std::set<Callback*>::iterator i = fCallbacks->find(&cb);
+      if (i != fCallbacks->end())
+         fCallbacks->erase(i);
+   }
+}
+

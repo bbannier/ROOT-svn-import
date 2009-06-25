@@ -170,3 +170,25 @@ Reflex::Reverse_Scope_Iterator Reflex::ScopeName::Scope_REnd() {
 }
 
 
+//-------------------------------------------------------------------------------
+void
+Reflex::ScopeName::RegisterCallback(Callback& cb) {
+//-------------------------------------------------------------------------------
+// Register a callback for this type
+   if (!fCallbacks) fCallbacks = new std::set<Callback*>;
+   fCallbacks->insert(&cb);
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::ScopeName::UnregisterCallback(Callback& cb) {
+//-------------------------------------------------------------------------------
+// Remove a callback for this type
+   if (fCallbacks) {
+      std::set<Callback*>::iterator i = fCallbacks->find(&cb);
+      if (i != fCallbacks->end())
+         fCallbacks->erase(i);
+   }
+}
+

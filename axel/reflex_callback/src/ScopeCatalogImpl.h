@@ -12,12 +12,15 @@
 #ifndef Reflex_ScopeCatalogImpl
 #define Reflex_ScopeCatalogImpl
 
+#include "stl_hash.h"
+
 #include "Reflex/Scope.h"
 
 #include "Reflex/Callback.h"
 
-#include <list>
-#include "stl_hash.h"
+#include <vector>
+#include <map>
+#include <set>
 
 namespace Reflex {
    namespace Internal {
@@ -48,9 +51,8 @@ namespace Reflex {
          ScopeName* __NIRVANA__() const { return fNirvana; }
 
          // Callbacks
-         void UnregisterCallback(const Callback& cb) {
-            fCallbacks.remove(cb);
-         }
+         void RegisterCallback(Callback& cb);
+         void UnregisterCallback(Callback& cb);
 
       private:
          const CatalogImpl*   fCatalog;
@@ -58,7 +60,8 @@ namespace Reflex {
          ScopeVec_t           fScopeVec;
          ScopeName*           fGlobalScope;
          ScopeName*           fNirvana;
-         std::list<Callback>  fCallbacks;
+         std::set<Callback*>  fAnonymousCallbacks[kNotifyNumTransitions]; // unnamed callbacks; array over transitions
+         std::map<std::string, std::set<Callback*> > fOrphanedCallbacks; // named callbacks for unknown type
       };
    }
 }

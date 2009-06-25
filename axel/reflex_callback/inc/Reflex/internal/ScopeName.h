@@ -16,6 +16,7 @@
 #include "Reflex/Kernel.h"
 #include "Reflex/Catalog.h"
 #include <string>
+#include <set>
 
 namespace Reflex {
 
@@ -85,6 +86,17 @@ namespace Reflex {
       const char * Name_c_str() const;
 
 
+      /**
+       * Register a callback with this scope
+       **/
+      void RegisterCallback(Callback& cb);
+
+      /**
+       * Remove a callback from this scope
+       **/
+      void UnregisterCallback(Callback& cb);
+
+
       /** 
       * ThisScope will return the unqualified Scope object of this ScopeName
       * @return corresponding Scope
@@ -133,7 +145,15 @@ namespace Reflex {
       */
       Scope * fThisScope;
 
+      /**
+      * Catalog that this scope is registered with.
+      */
       Catalog fCatalog;
+
+      /**
+       * Callbacks notified for changes
+       */
+      std::set<Callback*>* fCallbacks;
 
    }; // class ScopeName
 } // namespace Reflex
