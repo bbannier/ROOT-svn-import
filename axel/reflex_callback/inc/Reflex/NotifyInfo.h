@@ -116,6 +116,10 @@ namespace Reflex {
       NotifyInfoT(ELEM elem, ENotifyWhat what, ENotifyWhen when, ENotifyTransition trans):
          NotifyInfo(elem.Name(), what, when, trans),
          fElem(elem) {}
+      // Overload for cases where the ELEM is not yet setup (TypeName::Add etc)
+      NotifyInfoT(ELEM elem, const std::string& name, ENotifyWhat what, ENotifyWhen when, ENotifyTransition trans):
+         NotifyInfo(name, what, when, trans),
+         fElem(elem) {}
 
       ELEM fElem;
    };
