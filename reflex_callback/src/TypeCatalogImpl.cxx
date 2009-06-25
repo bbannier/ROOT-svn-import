@@ -199,7 +199,7 @@ void
 Reflex::Internal::TypeCatalogImpl::Add(Reflex::TypeName& type, const std::type_info * ti) {
 //-------------------------------------------------------------------------------
 // Add a type_info to the map.
-   NotifyInfoT<Type> ni(type.ThisType(), kNotifyType, kNotifyBefore, kNotifyNameCreated);
+   NotifyInfoT<Type> ni(type.ThisType(), type.Name(), kNotifyType, kNotifyBefore, kNotifyNameCreated);
    std::map<std::string, std::set<Callback*> >::iterator iCallback = fOrphanedCallbacks.find(type.Name());
    bool handled = false;
    bool vetoed = false;

@@ -44,7 +44,7 @@ void
 Reflex::Internal::ScopeCatalogImpl::Add(Reflex::ScopeName& scope) {
 //-------------------------------------------------------------------------------
 // Add a scope to the map.
-   NotifyInfoT<Scope> ni(scope.ThisScope(), kNotifyType, kNotifyBefore, kNotifyNameCreated);
+   NotifyInfoT<Scope> ni(scope.ThisScope(), scope.Name(), kNotifyType, kNotifyBefore, kNotifyNameCreated);
    std::map<std::string, std::set<Callback*> >::iterator iCallback = fOrphanedCallbacks.find(scope.Name());
    bool handled = false;
    bool vetoed = false;
