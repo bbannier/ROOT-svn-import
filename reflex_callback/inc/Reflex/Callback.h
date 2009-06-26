@@ -40,6 +40,7 @@
  *    Catalog::RegisterCallback(&obj);
  *
  * The callbacks' return value is an OR-ed set of bits as defined by ECallbackReturn.
+ * Callbacks must not modify the reflection database.
  *
  ************************************************************************************/
 
@@ -55,26 +56,25 @@ namespace Reflex {
     * Wrapper object around the actual CallbackBase-derived implementation
     */
 
-   class RFLX_API Callback: public NotifySelection {
+   class RFLX_API Callback {
    public:
-      typedef int (*FreeCallbackFunc_t)(const NotifyInfo& ni, void* userData);
 
       Callback(const CallbackInterface* ci, const NotifySelection& ns):
-         NotifySelection(ns),
+         fSelection(ns),
          fFuncPtr(&CallbackInterfaceProxy),
          fCallbackInterface(ci)
          {}
 
       Callback(FreeCallbackFunc_t callback, const NotifySelection& ns, void* userData = 0):
-         NotifySelection(ns),
+         fSelection(ns),
          fFuncPtr(callback),
          fUserData(userData)
          {}
 
-      bool IsEnabled() const { return !(fWhen & kNotifyDisabled); }
+      bool IsEnabled() const { return !(When() & kNotifyDisabled); }
 
-      void Enable() { fWhen &= ~kNotifyDisabled; }
-      void Disable() { fWhen |= kNotifyDisabled; }
+      void Enable() { fSelection.fWhen &= ~kNotifyDisabled; }
+      void Disable() { fSelection.fWhen |= kNotifyDisabled; }
 
       bool operator==(const Callback& other) const {
          return fFuncPtr == other.fFuncPtr && fUserData == other.fUserData; }
@@ -85,11 +85,17 @@ namespace Reflex {
          return kCallbackReturnNothing;
       }
 
+      const std::string& Name() const { return fSelection.fName; }
+      char What() const { return fSelection.fWhat; }
+      char When() const { return fSelection.fWhen; }
+      char Transition() const { return fSelection.fTransition; }
+
    private:
       static int CallbackInterfaceProxy(const NotifyInfo& ni, void* userData) {
          return reinterpret_cast<const CallbackInterface*>(userData)->Invoke(ni);
       }
 
+      NotifySelection fSelection;
       FreeCallbackFunc_t fFuncPtr;
       union {
          void* fUserData;

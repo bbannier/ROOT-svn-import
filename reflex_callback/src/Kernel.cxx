@@ -38,6 +38,7 @@ namespace {
 
 //-------------------------------------------------------------------------------
 Reflex::Instance* Reflex::Instance::fgSingleton = 0;
+bool Reflex::Instance::fgHasShutdown = false;
 //-------------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------------
@@ -54,6 +55,13 @@ Reflex::Instance::Instance() {
 //-------------------------------------------------------------------------------
 // Ensure that Reflex is properly initialized.
    CreateReflexInstance();
+}
+
+//-------------------------------------------------------------------------------
+bool Reflex::Instance::HasShutdown() {
+//-------------------------------------------------------------------------------
+// Return true, if we shutdown Reflex (i.e. delete all the containers)
+   return fgHasShutdown;
 }
 
 //-------------------------------------------------------------------------------
@@ -78,6 +86,8 @@ void Reflex::Instance::Shutdown() {
    TypeTemplateName::CleanUp();
 
    Catalog::Instance().Unload();
+
+   fgHasShutdown = true;
 }
 
 
@@ -88,8 +98,8 @@ Reflex::Instance::~Instance() {
 // Destructor.  This will shutdown Reflex only if this instance is the 'main'
 // instance.
 
-   if (fgSingleton == this)
-      Shutdown();
+    if (fgSingleton == this)
+       Shutdown();
 }
 
 

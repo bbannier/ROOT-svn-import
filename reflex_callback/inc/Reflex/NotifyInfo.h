@@ -25,25 +25,21 @@ namespace Reflex {
 
    /**
     * Enum for bit mask defining what a callback should be called for.
-    * The states of types / scopes / members are
-    *   1) unknown
-    *   2) only name known (e.g. TypeName, but no TypeBase)
-    *   3) forward declaration exists (TypeBase without type's data, e.g. "class" but no scope yet)
-    *   4) type fully declared (sizeof etc)
-    *   5) fully declared (incl. scope)
     */
    enum ENotifyTransition {
-      kNotifyNameCreated = 0x01, // transition 1 -> 2
-      kNotifyNameResolved = 0x02, // transition 2 -> 3
-      kNotifyTypeDeclared = 0x04, // transition 3 -> 4
-      kNotifyFullyDeclared = 0x08, // transition 4 -> 5
-      kNotifyAllLoad = 0x0f, // any transition in -> direction
+      kNotifyNameCreated = 0x01, // A TypeName / ScopeName object has been created. Event does not exist for Members.
+      kNotifyDeclared = 0x02, // A TypeBase / ScopeBase / MemberBase object has been created.
+      kNotifyAddDataMembers = 0x04, // Data members have been added to the ScopeBase.
+      kNotifyAddFunctionMembers = 0x08, // Function members have been added to the ScopeBase.
+      kNotifyAddMembers = 0x04 | 0x08, // Members have been added to the ScopeBase - note this might be called twice, once for data, once for function members.
+      kNotifyAllLoad = 0x0f, // any transition in declaring direction
 
-      kNotifyPartiallyUndeclared = 0x80, // transition 5 -> 4
-      kNotifyTypeUndeclared = 0x40, // transition 4 -> 3
-      kNotifyUnresolved = 0x20, // transition 3 -> 2
-      kNotifyUnloaded = 0x10, // transition 2 -> 1
-      kNotifyAllUnload = 0xf0, // any transition in <- direction
+      kNotifyMembersUnloaded = 0x40 | 0x80, // Members have been removed from the ScopeBase - note this might be called twice, once for data, once for function members.
+      kNotifyFunctionMembersUnloaded = 0x80, // Function members have been removed from the ScopeBase.
+      kNotifyDataMembersUnloaded = 0x40, // Function members have been removed from the ScopeBase.
+      kNotifyUnresolved = 0x20, // A TypeBase / ScopeBase / MemberBase object has been deleted.
+      kNotifyNameUnloaded = 0x10, // A TypeName / ScopeName object has been removed from the database. Event does not exist for Members.
+      kNotifyAllUnload = 0xf0, // any transition in unloading direction
 
       kNotifyAllTransitions = kNotifyAllLoad | kNotifyAllUnload,
 
@@ -72,10 +68,11 @@ namespace Reflex {
 
    class NotifySelection {
    public:
+      // Name is the fully qualified name
       NotifySelection(std::string name = "",
                       int what = kNotifyEverything,
                       int when = kNotifyAfter,
-                      int transition = kNotifyFullyDeclared | kNotifyUnloaded):
+                      int transition = kNotifyDeclared | kNotifyNameUnloaded):
          fName(name),
          fWhat(what),
          fWhen(when),
@@ -87,7 +84,6 @@ namespace Reflex {
       char When() const { return fWhen; }
       char Transition() const { return fTransition; }
 
-   protected:
       std::string fName; // name this should trigger on
       char fWhat; // (combination of) ENotifyWhat
       char fWhen; // (combination of) ENotifyWhen
@@ -113,10 +109,6 @@ namespace Reflex {
 
    template <class ELEM> // Type, Scope, or Member
    struct NotifyInfoT: NotifyInfo {
-      NotifyInfoT(ELEM elem, ENotifyWhat what, ENotifyWhen when, ENotifyTransition trans):
-         NotifyInfo(elem.Name(), what, when, trans),
-         fElem(elem) {}
-      // Overload for cases where the ELEM is not yet setup (TypeName::Add etc)
       NotifyInfoT(ELEM elem, const std::string& name, ENotifyWhat what, ENotifyWhen when, ENotifyTransition trans):
          NotifyInfo(name, what, when, trans),
          fElem(elem) {}
