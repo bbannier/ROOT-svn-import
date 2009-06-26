@@ -151,6 +151,7 @@ namespace Reflex {
    class PropertyList;
    class TypeTemplate;
    class MemberTemplate;
+   class NotifyInfo;
 
    typedef std::vector<std::string> StdString_Cont_Type_t;
    typedef StdString_Cont_Type_t::const_iterator StdString_Iterator;
@@ -183,7 +184,6 @@ namespace Reflex {
    typedef std::vector< MemberTemplate > MemberTemplate_Cont_Type_t;
    typedef MemberTemplate_Cont_Type_t::const_iterator MemberTemplate_Iterator;
    typedef MemberTemplate_Cont_Type_t::const_reverse_iterator Reverse_MemberTemplate_Iterator;
-
 
    namespace Dummy {
       RFLX_API const StdString_Cont_Type_t & StdStringCont();
@@ -221,11 +221,15 @@ namespace Reflex {
       /** destructor */
       ~Instance();
 
+      /** return true if Reflex has shutdown (end of process) */
+      static bool HasShutdown();
+
    private:
       Instance(Instance* createSingleton);
       static Instance& CreateReflexInstance();
 
       static Instance* fgSingleton;
+      static bool fgHasShutdown;
       void Shutdown();
       /** default constructor */
    }; // struct Reflex
@@ -364,6 +368,9 @@ namespace Reflex {
 
    /** typedef for function for Offset calculation */
    typedef size_t (* OffsetFunction) ( void * );
+
+   /** typedef for free callback function */
+   typedef int (*FreeCallbackFunc_t)(const NotifyInfo& ni, void* userData);
 
    /** dummy types for type_info purposes */
    class RFLX_API NullType {};

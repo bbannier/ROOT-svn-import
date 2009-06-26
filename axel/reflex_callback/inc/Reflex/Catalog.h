@@ -26,8 +26,6 @@ namespace Reflex {
 
    class RFLX_API Catalog {
    public:
-      typedef int (*FreeCallbackFunc_t)(const NotifyInfo& ni, void* userData);
-
       Catalog();
       Catalog(const std::string& name);
       Catalog(Internal::CatalogImpl*);

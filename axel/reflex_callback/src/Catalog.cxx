@@ -72,17 +72,21 @@ Reflex::Catalog::RegisterCallback(const CallbackInterface* ci,
 //-------------------------------------------------------------------------------
 // Register a callback object deriving from CallbackInterface.
 // ns selects when the callback should be invoked.
-   fImpl->RegisterCallback(new Callback(ci, ns));
+   Callback* ret = new Callback(ci, ns);
+   fImpl->RegisterCallback(ret);
+   return *ret;
 }
 
 //-------------------------------------------------------------------------------
 const Reflex::Callback&
-Reflex::Catalog::RegisterCallback(Callback::FreeCallbackFunc_t callback,
+Reflex::Catalog::RegisterCallback(FreeCallbackFunc_t callback,
                                   const NotifySelection& ns, void* userData) const {
 //-------------------------------------------------------------------------------
 // Register a callback function.
 // ns selects when the callback should be invoked.
-   fImpl->RegisterCallback(new Callback(callback, ns, userData));
+   Callback* ret = new Callback(callback, ns, userData);
+   fImpl->RegisterCallback(ret);
+   return *ret;
 }
 
 //-------------------------------------------------------------------------------
