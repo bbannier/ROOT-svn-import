@@ -58,6 +58,7 @@ END_HTML
 #include "RooDataSet.h"
 #include "RooArgSet.h"
 #include "RooArgList.h"
+#include "RooMsgService.h"
 #include "TRandom.h"
 #include "TH1.h"
 #include "TMath.h"
@@ -136,8 +137,10 @@ MCMCInterval* MCMCCalculator::GetInterval() const
    RooArgSet* parameters = pdf->getParameters(data);
    RemoveConstantParameters(parameters);
    x.addClone(*parameters);
+   RandomizeCollection(x);
    x.addOwned(*w);
    xPrime.addClone(*parameters);
+   RandomizeCollection(xPrime);
 
    RooDataSet* points = new RooDataSet("points", "Markov Chain", x, WeightVar(*w));
 
@@ -148,13 +151,14 @@ MCMCInterval* MCMCCalculator::GetInterval() const
 
    RooArgSet* nllParams = nll->getParameters(*data);
    Int_t weight = 0;
+   Int_t numAccepted = 0;
 
    for (int i = 0; i < fNumIters; i++) {
      //       cout << "Iteration # " << i << endl;
-     if (i % 100 == 0){
-       fprintf(stdout, ".");
-       fflush(NULL);
-     }
+      if (i % 100 == 0){
+         fprintf(stdout, ".");
+         fflush(NULL);
+      }
 
       fPropFunc->Propose(xPrime, x);
 
@@ -177,6 +181,7 @@ MCMCInterval* MCMCCalculator::GetInterval() const
          // reset the weight and go to xPrime
          weight = 1;
          RooStats::SetParameters(&xPrime, &x);
+         numAccepted++;
       }
       else {
          // generate numbers on a log distribution to decide
@@ -191,6 +196,7 @@ MCMCInterval* MCMCCalculator::GetInterval() const
             // reset the weight and go to xPrime
             weight = 1;
             RooStats::SetParameters(&xPrime, &x);
+            numAccepted++;
          } else {
             // stay at current point x
             weight++;
@@ -201,6 +207,10 @@ MCMCInterval* MCMCCalculator::GetInterval() const
    printf("\n");
    // make sure to add the last point
    points->addFast(x, (Double_t)weight);
+
+   coutI(Eval) << "Proposal acceptance rate: " <<
+                   numAccepted/(Float_t)fNumIters * 100 << "%" << endl;
+   coutI(Eval) << "Number of steps in chain: " << numAccepted << endl;
 
    //TFile chainDataFile("chainData.root", "recreate");
    //points->Write();

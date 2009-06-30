@@ -129,7 +129,7 @@ MCMCInterval::MCMCInterval(const char* name, const char* title,
    SetParameters(parameters);
 }
 
-struct CompareBins { 
+struct CompareBins {
 
    CompareBins( TH1 * hist) : fHist(hist) {}
    bool operator() ( Int_t bin1 , Int_t bin2 ) { 

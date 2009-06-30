@@ -44,6 +44,7 @@
 #pragma link C++ class RooStats::MCMCInterval+; 
 #pragma link C++ class RooStats::ProposalFunction+; 
 #pragma link C++ class RooStats::UniformProposal+; 
+#pragma link C++ class RooStats::PdfProposal+; 
 
 #pragma link C++ class RooStats::HybridCalculator+;
 #pragma link C++ class RooStats::HybridPlot+;
