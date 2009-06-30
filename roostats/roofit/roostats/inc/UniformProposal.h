@@ -40,9 +40,9 @@ namespace RooStats {
       // from x1 is equal to the probability of reaching x1 from x2
       virtual Bool_t IsSymmetric(RooArgSet& x1, RooArgSet& x2);
 
-      // Return the probability of proposing the point xPrime given the starting
-      // point x
-      virtual Double_t GetProposalDensity(RooArgSet& xPrime, RooArgSet& x);
+      // Return the probability of proposing the point x1 given the starting
+      // point x2
+      virtual Double_t GetProposalDensity(RooArgSet& x1, RooArgSet& x2);
 
       virtual ~UniformProposal() {}
 

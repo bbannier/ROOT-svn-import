@@ -25,6 +25,7 @@ END_HTML
 #include "Rtypes.h"
 #endif
 
+#include "RooStats/RooStatsUtils.h"
 #include "RooStats/UniformProposal.h"
 #include "RooArgSet.h"
 #include "RooMsgService.h"
@@ -41,7 +42,7 @@ void UniformProposal::Propose(RooArgSet& xPrime, RooArgSet& /* x */)
 {
    // kbelasco: remember xPrime and x have not been checked for containing
    // only RooRealVars
-   randomizeSet(xPrime);
+   RooStats::RandomizeCollection(xPrime);
 }
 
 // Determine whether or not the proposal density is symmetric for
@@ -52,16 +53,16 @@ Bool_t UniformProposal::IsSymmetric(RooArgSet& /* x1 */ , RooArgSet& /* x2 */)
    return true;
 }
 
-// Return the probability of proposing the point xPrime given the starting
-// point x
-Double_t UniformProposal::GetProposalDensity(RooArgSet& /* xPrime */,
-                                              RooArgSet& x)
+// Return the probability of proposing the point x1 given the starting
+// point x2
+Double_t UniformProposal::GetProposalDensity(RooArgSet& /* x1 */,
+                                              RooArgSet& x2)
 {
    // For a uniform proposal, all points have equal probability and the
    // value of the proposal density function is:
    // 1 / (N-dimensional volume of interval)
    Double_t volume = 1.0;
-   TIterator* it = x.createIterator();
+   TIterator* it = x2.createIterator();
    RooRealVar* var;
    while ((var = (RooRealVar*)it->Next()) != NULL)
       volume *= (var->getMax() - var->getMin());

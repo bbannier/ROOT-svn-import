@@ -22,6 +22,8 @@
 
 #include "RooArgSet.h"
 #include "RooRealVar.h"
+#include "RooAbsCollection.h"
+#include "TIterator.h"
 
 namespace RooStats {
 
@@ -62,6 +64,18 @@ namespace RooStats {
     set->remove(constSet);
   }
 
+  // Assuming all values in set are RooRealVars, randomize their values.
+  // Do not 
+  inline void RandomizeCollection(RooAbsCollection& set,
+                                  Bool_t randomizeConstants = kTRUE)
+  {
+    TIterator* it = set.createIterator();
+    RooRealVar* var;
+  
+    while ((var = (RooRealVar*)it->Next()) != NULL)
+      if (!var->isConstant() || randomizeConstants)
+         var->randomize();
+  }
 
 }
 

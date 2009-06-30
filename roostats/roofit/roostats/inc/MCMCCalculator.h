@@ -1,5 +1,6 @@
 // @(#)root/roostats:$Id: MCMCCalculator.h 26805 2009-06-17 14:31:02Z kbelasco $
-// Author: Kevin Belasco        17/06/2009
+// Authors: Kevin Belasco        17/06/2009
+// Authors: Kyle Cranmer         17/06/2009
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
@@ -15,6 +16,7 @@
 #include "Rtypes.h"
 #endif
 
+#include "TObject.h"
 #include "RooAbsPdf.h"
 #include "RooAbsData.h"
 #include "RooArgSet.h"
@@ -26,7 +28,7 @@
 
 namespace RooStats {
 
-   class MCMCCalculator : public IntervalCalculator {
+   class MCMCCalculator : public IntervalCalculator, public TObject {
 
    public:
       // default constructor
