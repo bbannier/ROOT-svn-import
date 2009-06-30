@@ -21,11 +21,10 @@
 #include "TPluginManager.h"
 #include "TStopwatch.h"
 
-#ifndef __CINT__
+#if not defined(__CINT__) || defined(__MAKECINT__)
 #include "TMVA/Tools.h"
 #include "TMVA/Reader.h"
 #endif
-
 
 using namespace TMVA;
 
@@ -33,6 +32,10 @@ void TMVARegressionApplication( TString myMethodList = "" )
 {
    //---------------------------------------------------------------
    // default MVA methods to be trained + tested
+
+   // this loads the library
+   TMVA::Tools::Instance();
+
    std::map<std::string,int> Use;
 
    Use["PDERS"]           = 1;

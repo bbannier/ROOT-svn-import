@@ -56,19 +56,30 @@ namespace RooStats {
       }
 
       // Set the DataSet, add to the the workspace if not already there
-      virtual void SetData(RooAbsData& data) {
-	if(&data){
-	  fWS->import(data);
-	  fDataName = data.GetName();
-	  //	  fWS->Print();
-	}
+      virtual void SetData(RooAbsData& data) {      
+         if (!fWS) {
+            fWS = new RooWorkspace();
+            fOwnsWorkspace = true; 
+         }
+         if (! fWS->data(data.GetName()) ) {
+	   RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
+            fWS->import(data);
+	    RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
+         }
+         SetData(data.GetName());
       }
+
       // Set the Pdf, add to the the workspace if not already there
-      virtual void SetPdf(RooAbsPdf& pdf) { 
-	if(&pdf){
-	  fWS->import(pdf);
-	  fPdfName = pdf.GetName();
-	}
+      virtual void SetPdf(RooAbsPdf& pdf) { 	
+         if (!fWS) 
+            fWS = new RooWorkspace();
+         if (! fWS->pdf( pdf.GetName() ))
+         {
+            RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
+            fWS->import(pdf);
+            RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
+         }
+         SetPdf(pdf.GetName());
       }
 
       // specify the name of the dataset in the workspace to be used
@@ -97,6 +108,12 @@ namespace RooStats {
       void SetNBins(Int_t bins) {fNbins = bins;}
 
       void FluctuateNumDataEntries(bool flag=true){fFluctuateData = flag;}
+
+      void SaveBeltToFile(bool flag=true){
+	fSaveBeltToFile = flag;
+	if(flag) fCreateBelt = true;
+      }
+      void CreateConfBelt(bool flag=true){fCreateBelt = flag;}
       
    private:
 
@@ -120,6 +137,9 @@ namespace RooStats {
       Int_t fNbins; // number of samples per variable
       Bool_t fFluctuateData;  // tell ToyMCSampler to fluctuate number of entries in dataset
       Bool_t fDoProfileConstruction; // instead of full construction over nuisance parametrs, do profile
+      bool fSaveBeltToFile; // controls use if ConfidenceBelt should be saved to a TFile
+      bool fCreateBelt; // controls use if ConfidenceBelt should be saved to a TFile
+
    protected:
       ClassDef(FeldmanCousins,1)   // Interface for tools setting limits (producing confidence intervals)
    };

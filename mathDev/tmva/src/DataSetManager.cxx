@@ -45,6 +45,9 @@ using std::endl;
 #endif
 
 TMVA::DataSetManager* TMVA::DataSetManager::fgDSManager = 0;
+TMVA::DataSetManager& TMVA::DataSetManager::Instance() { return *fgDSManager; }      
+void TMVA::DataSetManager::CreateInstance( DataInputHandler& dataInput ) { fgDSManager = new DataSetManager(dataInput); }
+void TMVA::DataSetManager::DestroyInstance() { if (fgDSManager) { delete fgDSManager; fgDSManager=0; } }
 
 //_______________________________________________________________________
 TMVA::DataSetManager::DataSetManager( DataInputHandler& dataInput ) 
@@ -71,7 +74,7 @@ TMVA::DataSet* TMVA::DataSetManager::CreateDataSet( const TString& dsiName )
 {
    // Creates the singleton dataset 
    DataSetInfo* dsi = GetDataSetInfo( dsiName );
-   if (!dsi) log() << kFATAL << "DataSetInfo object '" << dsiName << "' not found" << Endl;
+   if (!dsi) Log() << kFATAL << "DataSetInfo object '" << dsiName << "' not found" << Endl;
 
    // factory to create dataset from datasetinfo and datainput
    return TMVA::DataSetFactory::Instance().CreateDataSet( *dsi, fDataInput );

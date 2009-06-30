@@ -39,7 +39,7 @@
 
 #include "TMVARegGui.C"
 
-#ifndef __CINT__
+#if not defined(__CINT__) || defined(__MAKECINT__)
 #include "TMVA/Tools.h"
 #include "TMVA/Factory.h"
 #endif
@@ -56,6 +56,9 @@ void TMVARegression( TString myMethodList = "" )
    //
    // mylinux~> root -l TMVARegression.C\(\"myMethod1,myMethod2,myMethod3\"\)
    //
+
+   // this loads the library
+   TMVA::Tools::Instance();
 
    //---------------------------------------------------------------
    // default MVA methods to be trained + tested
