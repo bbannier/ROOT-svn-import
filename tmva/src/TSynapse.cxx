@@ -57,7 +57,9 @@ TMVA::TSynapse::TSynapse()
 
 
 //______________________________________________________________________________
-TMVA::TSynapse::~TSynapse() {
+TMVA::TSynapse::~TSynapse()
+{
+   // destructor
    delete fLogger;
 }
 
@@ -73,7 +75,7 @@ Double_t TMVA::TSynapse::GetWeightedValue()
 {
    // get output of pre-neuron weighted by synapse weight
    if (fPreNeuron == NULL) 
-      log() << kFATAL << "<GetWeightedValue> synapse not connected to neuron" << Endl;
+      Log() << kFATAL << "<GetWeightedValue> synapse not connected to neuron" << Endl;
 
    return (fWeight * fPreNeuron->GetActivationValue());
 }
@@ -84,7 +86,7 @@ Double_t TMVA::TSynapse::GetWeightedDelta()
    // get error field of post-neuron weighted by synapse weight
 
    if (fPostNeuron == NULL) 
-      log() << kFATAL << "<GetWeightedDelta> synapse not connected to neuron" << Endl;
+      Log() << kFATAL << "<GetWeightedDelta> synapse not connected to neuron" << Endl;
 
    return fWeight * fPostNeuron->GetDelta();
 }

@@ -241,29 +241,29 @@ L30:
 
    unsigned int offsetVect = 0;
    for (unsigned int in = 0; in<startParIndexOffDiagonal; in++)
-     if ((in+offsetVect)%(n-1)==0) offsetVect += (in+offsetVect)/(n-1);
+      if ((in+offsetVect)%(n-1)==0) offsetVect += (in+offsetVect)/(n-1);
 
    for (unsigned int in = startParIndexOffDiagonal;
         in<endParIndexOffDiagonal; in++) {
 
-     int i = (in+offsetVect)/(n-1);
-     if ((in+offsetVect)%(n-1)==0) offsetVect += i;
-     int j = (in+offsetVect)%(n-1)+1;
+      int i = (in+offsetVect)/(n-1);
+      if ((in+offsetVect)%(n-1)==0) offsetVect += i;
+      int j = (in+offsetVect)%(n-1)+1;
 
-     if ((i+1)==j || in==startParIndexOffDiagonal)
-       x(i) += dirin(i);
-
-     x(j) += dirin(j);
-
-     double fs1 = mfcn(x);
-     double elem = (fs1 + amin - yy(i) - yy(j))/(dirin(i)*dirin(j));
-     vhmat(i,j) = elem;
-
-     x(j) -= dirin(j);
-
-     if (j%(n-1)==0 || in==endParIndexOffDiagonal-1)
-       x(i) -= dirin(i);
-
+      if ((i+1)==j || in==startParIndexOffDiagonal)
+         x(i) += dirin(i);
+      
+      x(j) += dirin(j);
+      
+      double fs1 = mfcn(x);
+      double elem = (fs1 + amin - yy(i) - yy(j))/(dirin(i)*dirin(j));
+      vhmat(i,j) = elem;
+      
+      x(j) -= dirin(j);
+      
+      if (j%(n-1)==0 || in==endParIndexOffDiagonal-1)
+         x(i) -= dirin(i);
+      
    }
    
    mpiprocOffDiagonal.SyncSymMatrixOffDiagonal(vhmat);
@@ -305,18 +305,18 @@ L30:
    }
    
    FunctionGradient gr(grd, g2, gst);
-   
-   // needed this ? (if posdef and inversion ok continue. it is like this in the Fortran version
-   //   if(tmp.IsMadePosDef()) {
-   //     std::cout<<"MnHesse: matrix is invalid!"<<std::endl;
-   //     std::cout<<"MnHesse: matrix is not pos. def.!"<<std::endl;
-   //     std::cout<<"MnHesse: matrix was forced pos. def."<<std::endl;
-   //     return MinimumState(st.Parameters(), MinimumError(vhmat, MinimumError::MnMadePosDef()), gr, st.Edm(), mfcn.NumOfCalls());    
-   //   }
-   
-   //calculate edm
-   MinimumError err(vhmat, 0.);
    VariableMetricEDMEstimator estim;
+   
+   // if matrix is made pos def returns anyway edm
+   if(tmpErr.IsMadePosDef()) {
+      MinimumError err(vhmat, MinimumError::MnMadePosDef() );
+      double edm = estim.Estimate(gr, err);
+      MN_INFO_MSG("MnHesse: matrix was forced pos. def. ");
+      return MinimumState(st.Parameters(), err, gr, edm, mfcn.NumOfCalls());
+   }
+   
+   //calculate edm for good errors
+   MinimumError err(vhmat, 0.);
    double edm = estim.Estimate(gr, err);
 
 #ifdef DEBUG

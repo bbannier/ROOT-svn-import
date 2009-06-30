@@ -45,6 +45,7 @@ ClassImp(TMVA::VariableIdentityTransform)
 //_______________________________________________________________________
 void TMVA::VariableIdentityTransform::Initialize()
 {
+   // nothing to initialize
 }
 
 //_______________________________________________________________________
@@ -55,7 +56,7 @@ Bool_t TMVA::VariableIdentityTransform::PrepareTransformation( const std::vector
 
    if (!IsEnabled() || IsCreated()) return kTRUE;
 
-   log() << kINFO << "Preparing the Identity transformation..." << Endl;
+   Log() << kINFO << "Preparing the Identity transformation..." << Endl;
 
    SetNVariables(events[0]->GetNVariables());
 
@@ -65,24 +66,31 @@ Bool_t TMVA::VariableIdentityTransform::PrepareTransformation( const std::vector
 }
 
 //_______________________________________________________________________
-void TMVA::VariableIdentityTransform::AttachXMLTo(void* /*parent*/) {
-   log() << kFATAL << "Please implement writing of transformation as XML" << Endl;
+void TMVA::VariableIdentityTransform::AttachXMLTo(void* ) 
+{
+   // identity transformation to write to XML
+   //Log() << kFATAL << "Please implement writing of transformation as XML" << Endl;
 }
 
 //_______________________________________________________________________
-void TMVA::VariableIdentityTransform::ReadFromXML( void* /*trfnode*/ ) {
+void TMVA::VariableIdentityTransform::ReadFromXML( void* ) 
+{
+   // reding the identity transformation from XML
    return;
 }
 
 //_______________________________________________________________________
-const TMVA::Event* TMVA::VariableIdentityTransform::Transform(const TMVA::Event* const ev, Int_t /*cls*/) const 
+const TMVA::Event* TMVA::VariableIdentityTransform::Transform(const TMVA::Event* const ev, Int_t) const 
 {
+   // identity transform returns same event
    return ev;
 }
 
 //_______________________________________________________________________
-void TMVA::VariableIdentityTransform::MakeFunction(std::ostream& fout, const TString& fncName, Int_t /*part*/, UInt_t trCounter, Int_t /*cls*/ ) 
+void TMVA::VariableIdentityTransform::MakeFunction(std::ostream& fout, const TString& fncName, Int_t , UInt_t trCounter, Int_t ) 
 {
+   // creates C++ code fragment of the indentity transform for inclusion in standalone C++ class
+
    fout << "inline void " << fncName << "::InitTransform_Identity_" << trCounter << "() {}" << std::endl;
    fout << std::endl;
    fout << "inline void " << fncName << "::Transform_Identity_" << trCounter << "(const std::vector<double> &, int) const {}" << std::endl;

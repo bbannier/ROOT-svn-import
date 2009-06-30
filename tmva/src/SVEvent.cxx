@@ -50,7 +50,7 @@ TMVA::SVEvent::SVEvent()
 
 //_______________________________________________________________________	 
 TMVA::SVEvent::SVEvent( const Event* event, const Float_t C_par )
-	: fDataVector(event->GetValues()),
+   : fDataVector(event->GetValues()),
      fCweight(C_par*event->GetWeight()),
      fAlpha(0),
      fAlpha_p(0),
@@ -63,6 +63,7 @@ TMVA::SVEvent::SVEvent( const Event* event, const Float_t C_par )
      fLine(0),
      fTarget((event->GetNTargets() > 0 ? event->GetTarget(0) : 0))
 {
+   // constructor
 }
 
 //_______________________________________________________________________
@@ -80,44 +81,50 @@ TMVA::SVEvent::SVEvent( const std::vector<Float_t>* svector, Float_t alpha, cons
      fLine(0),
      fTarget(0)
 {
+   // constructor
 }
+
 //_______________________________________________________________________
-TMVA::SVEvent::SVEvent( const std::vector<Float_t>* svector, Float_t alpha, Float_t alpha_p)
+TMVA::SVEvent::SVEvent( const std::vector<Float_t>* svector, Float_t alpha, Float_t alpha_p,const Int_t typeFlag)
    : fDataVector(*svector),
      fCweight(-1.),
      fAlpha(alpha),
      fAlpha_p(alpha_p),
      fErrorCache(-1.),
      fNVar(svector->size()),
-     fTypeFlag(-1),
+     fTypeFlag(typeFlag),
      fIdx(-1),
-     fNs(-1),
+     fNs(0),
      fIsShrinked(0),
      fLine(0),
      fTarget(0)
 {
+   // constructor
 }
+
 //_______________________________________________________________________
 TMVA::SVEvent::~SVEvent()
 {
    // destructor
    if (fLine != 0) {
-       delete fLine; 
-       fLine = 0;
-    }
+      delete fLine; 
+      fLine = 0;
+   }
 }
 
 //_______________________________________________________________________
 void TMVA::SVEvent::Print( std::ostream& os ) const
 {
-  os << "type::" << fTypeFlag <<" target::"<< fTarget << " alpha::" << fAlpha <<" alpha_p::"<< fAlpha_p<< " values::" ;
-  for (UInt_t j =0; j < fDataVector.size();j++) os<<fDataVector.at(j)<<" ";
-  os << std::endl;
+   // printout 
+   os << "type::" << fTypeFlag <<" target::"<< fTarget << " alpha::" << fAlpha <<" alpha_p::"<< fAlpha_p<< " values::" ;
+   for (UInt_t j =0; j < fDataVector.size();j++) os<<fDataVector.at(j)<<" ";
+   os << std::endl;
 }
 
 //_______________________________________________________________________
 void TMVA::SVEvent::PrintData()
 {
+   // printout 
    for (UInt_t i = 0; i < fNVar; i++) std::cout<<fDataVector.at(i)<<" ";
    std::cout<<std::endl;
 }

@@ -1,5 +1,6 @@
 // @(#)root/roostats:$Id: MCMCInterval.h 26805 2009-06-17 14:31:02Z kbelasco $
-// Author: Kevin Belasco        17/06/2009
+// Authors: Kevin Belasco        17/06/2009
+// Authors: Kyle Cranmer         17/06/2009
 /*************************************************************************
  * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
@@ -23,15 +24,16 @@
 #include "RooArgSet.h"
 #endif
 
+#include "RooArgList.h"
 #include "RooRealVar.h"
 #include "RooDataSet.h"
 #include "TH1.h"
 
-enum {DEFAULT_NUM_BINS = 50};
 
 namespace RooStats {
 
    class MCMCInterval : public ConfInterval {
+
 
    public:
       MCMCInterval();
@@ -40,18 +42,27 @@ namespace RooStats {
       MCMCInterval(const char* name, const char* title, RooArgSet& parameters,
                    RooDataSet& chain);
 
+      enum {DEFAULT_NUM_BINS = 50};
+
       virtual ~MCMCInterval()
       {
          delete[] fAxes;
          delete fHist;
          delete fData;
-         delete fNumBins;
+         delete[] fNumBins;
       }
         
       // determine whether this point is in the confidence interval
       virtual Bool_t IsInInterval(RooArgSet& point);
+
       // set the desired confidence level (see GetActualConfidenceLevel())
+      // Note: calling this function triggers the algorithm that determines
+      // the interval, so call this after initializing all other aspects
+      // of this IntervalCalculator
+      // Also, calling this function again with a different confidence level
+      // retriggers the calculation of the interval
       virtual void SetConfidenceLevel(Double_t cl);
+
       // get the desired confidence level (see GetActualConfidenceLevel())
       virtual Double_t ConfidenceLevel() const {return fConfidenceLevel;}
  
@@ -77,11 +88,38 @@ namespace RooStats {
       // check if parameters are correct. (dummy implementation to start)
       Bool_t CheckParameters(RooArgSet& point) const;
 
+      // Set the parameters of interest for this interval
+      // and change other internal data members accordingly
+      virtual void SetParameters(RooArgSet& parameters);
+
+      // Set which parameters go on which axis.  The first list element
+      // goes on the x axis, second (if it exists) on y, third (if it
+      // exists) on z.
+      virtual void SetAxes(RooArgList& axes);
+
+      // get the lower limit of param in the confidence interval
+      // Note that this works better for some distributions (ones with exactly
+      // one maximum) than others, and sometimes has little value.
       virtual Double_t LowerLimit(RooRealVar& param);
+
+      // get the upper limit of param in the confidence interval
+      // Note that this works better for some distributions (ones with exactly
+      // one maximum) than others, and sometimes has little value.
       virtual Double_t UpperLimit(RooRealVar& param);
 
+      // set the number of steps in the chain to discard as burn-in,
+      // starting from the first
+      virtual void SetNumBurnInSteps(Int_t numBurnInSteps)
+      { fNumBurnInSteps = numBurnInSteps; }
 
+      // set the number of bins to use (same for all axes, for now)
+      virtual void SetNumBins(Int_t numBins);
+
+      // Get a clone of the histogram of the posterior
       virtual TH1* GetPosteriorHist();
+
+      // Get the markov chain on which this interval is based
+      virtual const RooDataSet* GetChain() { return fData; }
 
    protected:
       // data members
@@ -94,14 +132,17 @@ namespace RooStats {
                         // for the actual confidence level (strict), or a 
                         // ceiling (not strict)
       Int_t fDimension; // number of variables
+      Int_t fNumBurnInSteps; // number of steps to discard as burn in, starting from the first
       Int_t* fNumBins; // number of bins for each dimension
       Double_t fIntervalSum; // sum of heights of bins in the interval
       RooRealVar** fAxes; // array of pointers to RooRealVars representing
                           // the axes of the histogram
                           // fAxes[0] represents x-axis, [1] y, [2] z
+      Int_t fPreferredNumBins; // number of bins client wants
 
       // functions
       virtual void DetermineInterval();
+      virtual void CreateHistogram();
 
       ClassDef(MCMCInterval,1)  // Concrete implementation of a ConfInterval based on MCMC calculation
       

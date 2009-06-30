@@ -50,9 +50,6 @@
 
 #include <iostream>
 
-// debugging
-//#include "RooStats/ProfileLikelihoodTestStat.h"
-
 // PDF class created for this macro
 #include "NuMuToNuE_Oscillation.h"
 #include "NuMuToNuE_Oscillation.cxx" // so that it can be executed directly
@@ -64,7 +61,7 @@ using namespace RooStats ;
 
 void rs401d_FeldmanCousins(bool doFeldmanCousins=false, bool doMCMC = true)
 {
-  
+
   // to time the macro
   TStopwatch t;
   t.Start();
@@ -232,7 +229,6 @@ void rs401d_FeldmanCousins(bool doFeldmanCousins=false, bool doMCMC = true)
   plc.SetData(*data);
   
   ConfInterval* plcInterval = plc.GetInterval();
-  //ConfInterval* plcInterval = 0;
 
   ///////////////////////////////////////////////////////////////////
   ///////// show use of MCMCCalculator utility in RooStats
@@ -242,13 +238,12 @@ void rs401d_FeldmanCousins(bool doFeldmanCousins=false, bool doMCMC = true)
       TStopwatch mcmcWatch;
       mcmcWatch.Start();
       cout << "========================= MCMC =========================" << endl;
-      UniformProposal up(parameters);
+      UniformProposal up;
 
-      MCMCCalculator mc(*data, model, parameters, up, 5000);
+      RooArgList axisList(sinSq2theta, deltaMSq);
+      MCMCCalculator mc(*data, model, parameters, up, 10000);
       mc.SetTestSize(.1);
-      //mc.SetPdf(model);
-      //mc.SetParameters(parameters);
-      //mc.SetData(*data);
+      mc.SetAxes(axisList); // set which is x and y axis in posterior histogram
       mcmcInterval = mc.GetInterval();
 
       mcmcWatch.Stop();
@@ -260,12 +255,10 @@ void rs401d_FeldmanCousins(bool doFeldmanCousins=false, bool doMCMC = true)
 
   dataCanvas->cd(4);
   LikelihoodIntervalPlot plotInt((LikelihoodInterval*)plcInterval);
-  plotInt.SetTitle("Parameters contour plot");
+  plotInt.SetTitle("90% Confidence Intervals");
   plotInt.Draw();
   dataCanvas->Update();
 
-
-  
   // first plot a small dot for every point tested
   RooDataHist* parameterScan = (RooDataHist*) fc.GetPointsToScan();
   TH2F* hist = (TH2F*) parameterScan->createHistogram("sinSq2theta:deltaMSq",30,30);
@@ -279,11 +272,8 @@ void rs401d_FeldmanCousins(bool doFeldmanCousins=false, bool doMCMC = true)
      // get a parameter point from the list of points to test.
     tmpPoint = (RooArgSet*) parameterScan->get(i)->clone("temp");
 
-    //    TMarker* mark = new TMarker(tmpPoint->getRealValue("sinSq2theta"), tmpPoint->getRealValue("deltaMSq"), 25);
     if (interval){
       if (interval->IsInInterval( *tmpPoint ) ) {
-	//mark->SetMarkerColor(kBlue);
-	//	mark->Draw("s");
 	forContour->SetBinContent( hist->FindBin(tmpPoint->getRealValue("sinSq2theta"), 
 						  tmpPoint->getRealValue("deltaMSq")),	 1);
       }else{
@@ -292,18 +282,6 @@ void rs401d_FeldmanCousins(bool doFeldmanCousins=false, bool doMCMC = true)
       }
     }
 
-
-    /*
-    TMarker* mcmcMark = new TMarker(tmpPoint->getRealValue("sinSq2theta"), tmpPoint->getRealValue("deltaMSq"), 22);
-    parameters=*tmpPoint;
-
-    if (mcmcInterval){
-      if(mcmcInterval->IsInInterval( *tmpPoint ) ) {
-	mcmcMark->SetMarkerColor(kMagenta);
-	mcmcMark->Draw("s");
-      }
-    }
-    */
 
     delete tmpPoint;
   }
@@ -319,31 +297,14 @@ void rs401d_FeldmanCousins(bool doFeldmanCousins=false, bool doMCMC = true)
 
   if (mcmcInterval){
     // most of this code is just to switch x/y axes in the histogram
-    TH1* temp = ((MCMCInterval*)mcmcInterval)->GetPosteriorHist();
-    TH2* posterior = new TH2F("posterior","",
-			      temp->GetYaxis()->GetNbins(),
-			      temp->GetYaxis()->GetXmin(),
-			      temp->GetYaxis()->GetXmax(),
-			      temp->GetXaxis()->GetNbins(),
-			      temp->GetXaxis()->GetXmin(),
-			      temp->GetXaxis()->GetXmax());
-    posterior->GetXaxis()->SetTitle(temp->GetYaxis()->GetTitle());
-    posterior->GetYaxis()->SetTitle(temp->GetXaxis()->GetTitle());
-    for(int i=0; i<temp->GetNbinsX(); ++i){
-      for(int j=0; j<temp->GetNbinsY(); ++j){
-	posterior->SetBinContent(j,i,temp->GetBinContent(i,j));
-      }
-    }
-    if(!posterior){
-      cout << "posterior is null"<<endl;
-    }else{
-      Double_t mcmclevel = ((MCMCInterval*)mcmcInterval)->GetCutoff();
-      cout << "posterior is ok, level at " << mcmclevel <<endl;
-      posterior->SetContour(1,&mcmclevel);
-      posterior->SetLineColor(kMagenta);
-      posterior->SetLineWidth(2);
-      posterior->Draw("cont2,same");
-    }
+    TH1* posterior = ((MCMCInterval*)mcmcInterval)->GetPosteriorHist();
+
+    Double_t mcmclevel = ((MCMCInterval*)mcmcInterval)->GetCutoff();
+    posterior->SetContour(1,&mcmclevel);
+    posterior->SetLineColor(kMagenta);
+    posterior->SetLineWidth(2);
+    posterior->Draw("cont2,same");
+  
   }
   dataCanvas->Update();
   

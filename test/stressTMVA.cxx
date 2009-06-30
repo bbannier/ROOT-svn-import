@@ -21,6 +21,7 @@
 
 #include "TString.h"
 #include "TFile.h"
+#include "TH1.h"
 #include "TMath.h"
 #include "TH1.h"
 #include "TSystem.h"

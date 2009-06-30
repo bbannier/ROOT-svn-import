@@ -81,10 +81,19 @@ namespace TMVA {
    class PDEFoamMaxwt;
    class MsgLogger;
 
-   enum EKernel { kNone, kGaus };
+   enum EKernel { kNone, kGaus, kLinN };
    enum ETargetSelection { kMean, kMpv };
    enum ECellType { kAll, kActive, kInActive };
    enum EFoamType { kSeparate, kDiscr, kMonoTarget, kMultiTarget };
+   // possible values, saved in foam cells
+   // kNev           : number of events (saved in cell element 0)
+   // kDiscriminator : discriminator (saved in cell element 0)
+   // kTarget0       : target 0 (saved in cell element 0)
+   // kMeanValue     : mean sampling value (saved in fIntegral)
+   // kRms           : rms of sampling distribution (saved in fDriver)
+   // kRmsOvMean     : rms/mean of sampling distribution (saved in fDriver and fIntegral)
+   // kDensity       : number of events/cell volume
+   enum ECellValue { kNev, kDiscriminator, kTarget0, kMeanValue, kRms, kRmsOvMean, kDensity };
    // options for filling density (used in Density() to build up foam)
    // kEVENT_DENSITY : use event density for foam buildup
    // kDISCRIMINATOR : use N_sig/(N_sig + N_bg) for foam buildup
@@ -141,7 +150,7 @@ namespace TMVA {
       Int_t fBackgroundClass;  // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
 
       mutable MsgLogger* fLogger;                     //! message logger
-      MsgLogger& log() const { return *fLogger; }                       
+      MsgLogger& Log() const { return *fLogger; }                       
 
    public:
       TFDISTR();
@@ -181,7 +190,7 @@ namespace TMVA {
      
       // density build-up functions
       void Initialize(Int_t ndim = 2);
-      void FillBinarySearchTree( const Event* ev, Float_t SigBgRatio, EFoamType ft, Bool_t NoNegWeights=kFALSE );
+      void FillBinarySearchTree( const Event* ev, EFoamType ft, Bool_t NoNegWeights=kFALSE );
      
       // Dominik Dannheim 10.Jan.2008
       // new method to fill edge histograms directly, without MC sampling
@@ -299,7 +308,7 @@ namespace TMVA {
       Int_t fSignalClass;      // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
       Int_t fBackgroundClass;  // TODO: intermediate solution to keep IsSignal() of Event working. TODO: remove IsSignal() from Event
       mutable MsgLogger* fLogger;                     //! message logger
-      MsgLogger& log() const { return *fLogger; }                       
+      MsgLogger& Log() const { return *fLogger; }                       
 
       //////////////////////////////////////////////////////////////////////////////////////////////
       //                                     METHODS                                              //
@@ -311,8 +320,9 @@ namespace TMVA {
       // override  PDEFoam::OutputGrow(Bool_t) for nicer TMVA output
       virtual void OutputGrow(Bool_t finished = false ); 
 
-      // weight result from function with gaus kernel
+      // weight result from function with kernel
       Double_t WeightGaus(PDEFoamCell*, std::vector<Float_t>, UInt_t dim=0); 
+      Double_t WeightLinNeighbors( std::vector<Float_t> txvec, ECellValue cv );
 
    public:
       PDEFoam();                  // Default constructor (used only by ROOT streamer)
@@ -459,7 +469,7 @@ namespace TMVA {
       }
       
       // projection method
-      virtual TH2D* Project2(Int_t idim1, Int_t idim2, const char *opt="mean", const char *ker="kNone", UInt_t maxbins=0);
+      virtual TH2D* Project2(Int_t idim1, Int_t idim2, const char *opt="nev", const char *ker="kNone", UInt_t maxbins=0);
 
       // Project foam by creating MC events
       virtual TH2D* ProjectMC(Int_t idim1, Int_t idim2, Int_t nevents, Int_t nbin);  
@@ -484,7 +494,7 @@ namespace TMVA {
       void DisplayCellContent(void); // debug function
 
       // functions to fill created cells with certain values
-      void FillFoamCells(const Event* ev, Float_t SigBgRatio, EFoamType ft, Bool_t NoNegWeights=kFALSE);
+      void FillFoamCells(const Event* ev, EFoamType ft, Bool_t NoNegWeights=kFALSE);
       
       // functions to calc discriminators/ mean targets for every cell
       // using filled cell values
@@ -536,7 +546,7 @@ namespace TMVA {
       // get VolFrac from PDEFoam
       Double_t GetPDEFoamVolumeFraction() const { return fVolFrac; }
       void SetVolumeFraction(Double_t);    // set VolFrac to TFDISTR
-      void FillBinarySearchTree( const Event* ev, Float_t SigBgRatio, EFoamType ft, Bool_t NoNegWeights=kFALSE );
+      void FillBinarySearchTree( const Event* ev, EFoamType ft, Bool_t NoNegWeights=kFALSE );
       void Create(Bool_t CreateCellElements=false); // create PDEFoam
       void Init();                    // initialize TFDISTR
       void PrintDensity();            // debug output
@@ -659,7 +669,7 @@ namespace TMVA {
 
    protected:
       mutable MsgLogger* fLogger;                     //! message logger
-      MsgLogger& log() const { return *fLogger; }                          
+      MsgLogger& Log() const { return *fLogger; }                          
    
    public:
 
@@ -703,7 +713,7 @@ namespace TMVA {
 
    protected:
       mutable MsgLogger* fLogger;                     //! message logger
-      MsgLogger& log() const { return *fLogger; }                       
+      MsgLogger& Log() const { return *fLogger; }                       
 
    public:
       // constructor
