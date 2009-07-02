@@ -28,6 +28,7 @@ class RooMultiVarGaussian : public RooAbsPdf {
 public:
 
   RooMultiVarGaussian() {} ;
+  RooMultiVarGaussian(const char *name, const char *title, const RooArgList& xvec, const RooArgList& mu, const TMatrixDSym& covMatrix) ;
   RooMultiVarGaussian(const char *name, const char *title, const RooArgList& xvec, const TVectorD& mu, const TMatrixDSym& covMatrix) ;
   RooMultiVarGaussian(const char *name, const char *title, const RooArgList& xvec,const TMatrixDSym& covMatrix) ;
   void setAnaIntZ(Double_t z) { _z = z ; }
@@ -40,6 +41,7 @@ public:
   Double_t analyticalIntegral(Int_t code, const char* rangeName=0) const ; 
 
   Int_t getGenerator(const RooArgSet& directVars, RooArgSet &generateVars, Bool_t staticInitOK=kTRUE) const; 
+  void initGenerator(Int_t code) ;
   void generateEvent(Int_t code); 
   
   class AnaIntData {
@@ -72,11 +74,14 @@ protected:
   mutable map<int,GenData> _genCache ; //!
 
   RooListProxy _x ;
-  TVectorD    _mu ;
+  RooListProxy _mu ;
   TMatrixDSym _cov ;
   TMatrixDSym _covI ;
   Double_t    _det ; 
   Double_t    _z ; 
+
+  void syncMuVec() const ;
+  mutable TVectorD _muVec ; //! Do not persist
 
   Double_t evaluate() const ;
 
