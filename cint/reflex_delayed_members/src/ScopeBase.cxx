@@ -25,6 +25,7 @@
 #include "Reflex/internal/InternalTools.h"
 #include "Reflex/Tools.h"
 #include "Reflex/DictionaryGenerator.h"
+#include "Reflex/Builder/OnDemandBuilder.h"
 
 #include "Class.h"
 #include "Namespace.h"
@@ -1023,5 +1024,19 @@ Reflex::ScopeBase::GenerateDict(DictionaryGenerator& generator) const {
 //    for( Scope_Iterator subScopes = SubScope_Begin(); subScopes!= SubScope_End(); ++subScopes ) {
          (*subScopes).GenerateDict(generator);
       }
+   }
+}
+
+//-------------------------------------------------------------------------------
+void
+Reflex::ScopeBase::RegisterOnDemandBuilder(OnDemandBuilder* builder, int buildsWhat) {
+//-------------------------------------------------------------------------------
+// Add a on demand builder that can expand this scope's reflection data; see
+// OnDemandBuilder. buildsWhat is an ORed set of bits, defining what the builder
+// might modify.
+   if (buildsWhat & OnDemandBuilder::kBuildFunctionMembers) {
+      fFunctionMemberBuilder.Insert(builder);
+   } else if (buildsWhat & OnDemandBuilder::kBuildDataMembers) {
+      fDataMemberBuilder.Insert(builder);
    }
 }
