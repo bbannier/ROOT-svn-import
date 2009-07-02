@@ -17,6 +17,7 @@
 
 #include "Reflex/Scope.h"
 #include "Reflex/internal/OwnedPropertyList.h"
+#include "Reflex/internal/BuilderContainer.h"
 #include <vector>
 
 #ifdef _WIN32
@@ -37,6 +38,7 @@ class MemberTemplate;
 class OwnedMemberTemplate;
 class Type;
 class DictionaryGenerator;
+class OnDemandBuilder;
 
 
 /**
@@ -642,6 +644,8 @@ public:
        Returns false if one of the bases is not complete. */
    virtual bool UpdateMembers() const;
 
+   void RegisterOnDemandBuilder(OnDemandBuilder* builder, int buildsWhat);
+
 protected:
    /** The MemberByName work-horse: find a member called name in members,
        if signature also compare its signature, and if matchReturnType
@@ -651,6 +655,17 @@ protected:
                         const Type* signature = 0,
                         unsigned int modifiers_mask = 0,
                         bool matchReturnType = true) const;
+
+
+   void ExecuteFunctionMemberDelayLoad() const {
+      if (!fFunctionMemberBuilder.Empty())
+         fFunctionMemberBuilder.Build();
+   }
+
+   void ExecuteDataMemberDelayLoad() const {
+      if (!fDataMemberBuilder.Empty())
+         fDataMemberBuilder.Build();
+   }
 
 private:
    /* no copying */
@@ -784,6 +799,18 @@ private:
     * The position where the unscoped Name starts in the scopename
     */
    size_t fBasePosition;
+
+   /**
+    * The head of the function member on-demand builders.
+    */
+   mutable
+   BuilderContainer fFunctionMemberBuilder;
+
+   /**
+    * The head of the data member on-demand builders.
+    */
+   mutable
+   BuilderContainer fDataMemberBuilder;
 
 };    // class ScopeBase
 } //namespace Reflex
