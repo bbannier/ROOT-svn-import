@@ -479,6 +479,7 @@ Reflex::Class::Base_REnd() const {
 inline Reflex::Member_Iterator
 Reflex::Class::DataMember_Begin(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
+   ExecuteDataMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return fInherited->fDataMembers.begin();
@@ -492,6 +493,7 @@ Reflex::Class::DataMember_Begin(EMEMBERQUERY inh) const {
 inline Reflex::Member_Iterator
 Reflex::Class::DataMember_End(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
+   ExecuteDataMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return fInherited->fDataMembers.end();
@@ -505,6 +507,7 @@ Reflex::Class::DataMember_End(EMEMBERQUERY inh) const {
 inline Reflex::Reverse_Member_Iterator
 Reflex::Class::DataMember_RBegin(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
+   ExecuteDataMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return const_cast<const std::vector<Member>&>(fInherited->fDataMembers).rbegin();
@@ -518,6 +521,7 @@ Reflex::Class::DataMember_RBegin(EMEMBERQUERY inh) const {
 inline Reflex::Reverse_Member_Iterator
 Reflex::Class::DataMember_REnd(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
+   ExecuteDataMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return const_cast<const std::vector<Member>&>(fInherited->fDataMembers).rend();
@@ -533,6 +537,7 @@ Reflex::Class::DataMemberAt(size_t nth,
                             EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return nth data member info.
+   ExecuteDataMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers() && nth < fInherited->fDataMembers.size()) {
          return fInherited->fDataMembers[nth];
@@ -552,6 +557,7 @@ Reflex::Class::DataMemberByName(const std::string& nam,
                                 EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return function member by name and signature including the return type.
+   ExecuteDataMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return MemberByName2(fInherited->fDataMembers, nam);
@@ -566,6 +572,7 @@ inline size_t
 Reflex::Class::DataMemberSize(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return number of data members.
+   ExecuteDataMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return fInherited->fDataMembers.size();
@@ -579,6 +586,7 @@ Reflex::Class::DataMemberSize(EMEMBERQUERY inh) const {
 inline Reflex::Member_Iterator
 Reflex::Class::FunctionMember_Begin(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
+   ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return fInherited->fFunctionMembers.begin();
@@ -592,6 +600,7 @@ Reflex::Class::FunctionMember_Begin(EMEMBERQUERY inh) const {
 inline Reflex::Member_Iterator
 Reflex::Class::FunctionMember_End(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
+   ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return fInherited->fFunctionMembers.end();
@@ -605,6 +614,7 @@ Reflex::Class::FunctionMember_End(EMEMBERQUERY inh) const {
 inline Reflex::Reverse_Member_Iterator
 Reflex::Class::FunctionMember_RBegin(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
+   ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return const_cast<const std::vector<Member>&>(fInherited->fFunctionMembers).rbegin();
@@ -618,6 +628,7 @@ Reflex::Class::FunctionMember_RBegin(EMEMBERQUERY inh) const {
 inline Reflex::Reverse_Member_Iterator
 Reflex::Class::FunctionMember_REnd(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
+   ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return const_cast<const std::vector<Member>&>(fInherited->fFunctionMembers).rend();
@@ -633,6 +644,7 @@ Reflex::Class::FunctionMemberAt(size_t nth,
                                 EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return nth data member info.
+   ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers() && nth < fInherited->fFunctionMembers.size()) {
          return fInherited->fFunctionMembers[nth];
@@ -654,6 +666,7 @@ Reflex::Class::FunctionMemberByName(const std::string& nam,
                                     EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return function member by name and signature including the return type.
+   ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return MemberByName2(fInherited->fFunctionMembers, nam, &signature, modifiers_mask);
@@ -671,6 +684,7 @@ Reflex::Class::FunctionMemberByNameAndSignature(const std::string& nam,
                                                 EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return function member by name and signature excluding the return type.
+   ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return MemberByName2(fInherited->fFunctionMembers, nam, &signature, modifiers_mask, false);
@@ -685,6 +699,7 @@ inline size_t
 Reflex::Class::FunctionMemberSize(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return number of data members.
+   ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return fInherited->fFunctionMembers.size();
@@ -698,6 +713,8 @@ Reflex::Class::FunctionMemberSize(EMEMBERQUERY inh) const {
 inline Reflex::Member_Iterator
 Reflex::Class::Member_Begin(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
+   ExecuteDataMemberDelayLoad();
+   ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return fInherited->fMembers.begin();
@@ -711,6 +728,8 @@ Reflex::Class::Member_Begin(EMEMBERQUERY inh) const {
 inline Reflex::Member_Iterator
 Reflex::Class::Member_End(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
+   ExecuteDataMemberDelayLoad();
+   ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return fInherited->fMembers.end();
@@ -724,6 +743,8 @@ Reflex::Class::Member_End(EMEMBERQUERY inh) const {
 inline Reflex::Reverse_Member_Iterator
 Reflex::Class::Member_RBegin(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
+   ExecuteDataMemberDelayLoad();
+   ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return const_cast<const std::vector<Member>&>(fInherited->fMembers).rbegin();
@@ -737,6 +758,8 @@ Reflex::Class::Member_RBegin(EMEMBERQUERY inh) const {
 inline Reflex::Reverse_Member_Iterator
 Reflex::Class::Member_REnd(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
+   ExecuteDataMemberDelayLoad();
+   ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return const_cast<const std::vector<Member>&>(fInherited->fMembers).rend();
@@ -752,6 +775,8 @@ Reflex::Class::MemberAt(size_t nth,
                         EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return nth data member info.
+   ExecuteDataMemberDelayLoad();
+   ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers() && nth < fInherited->fMembers.size()) {
          return fInherited->fMembers[nth];
@@ -772,6 +797,8 @@ Reflex::Class::MemberByName(const std::string& nam,
                             EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return function member by name and signature including the return type.
+   ExecuteDataMemberDelayLoad();
+   ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return MemberByName2(fInherited->fMembers, nam, &signature);
@@ -786,6 +813,8 @@ inline size_t
 Reflex::Class::MemberSize(EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return number of data members.
+   ExecuteDataMemberDelayLoad();
+   ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return fInherited->fMembers.size();

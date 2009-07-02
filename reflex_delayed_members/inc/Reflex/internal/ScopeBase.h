@@ -841,6 +841,7 @@ Reflex::ScopeBase::DeclaringScope() const {
 inline Reflex::Member_Iterator
 Reflex::ScopeBase::DataMember_Begin(EMEMBERQUERY) const {
 //-------------------------------------------------------------------------------
+   ExecuteDataMemberDelayLoad();
    return fDataMembers.begin();
 }
 
@@ -849,6 +850,7 @@ Reflex::ScopeBase::DataMember_Begin(EMEMBERQUERY) const {
 inline Reflex::Member_Iterator
 Reflex::ScopeBase::DataMember_End(EMEMBERQUERY) const {
 //-------------------------------------------------------------------------------
+   ExecuteDataMemberDelayLoad();
    return fDataMembers.end();
 }
 
@@ -857,6 +859,7 @@ Reflex::ScopeBase::DataMember_End(EMEMBERQUERY) const {
 inline Reflex::Reverse_Member_Iterator
 Reflex::ScopeBase::DataMember_RBegin(EMEMBERQUERY) const {
 //-------------------------------------------------------------------------------
+   ExecuteDataMemberDelayLoad();
    return ((const std::vector<Member> &)fDataMembers).rbegin();
 }
 
@@ -865,6 +868,7 @@ Reflex::ScopeBase::DataMember_RBegin(EMEMBERQUERY) const {
 inline Reflex::Reverse_Member_Iterator
 Reflex::ScopeBase::DataMember_REnd(EMEMBERQUERY) const {
 //-------------------------------------------------------------------------------
+   ExecuteDataMemberDelayLoad();
    return ((const std::vector<Member> &)fDataMembers).rend();
 }
 
@@ -873,6 +877,7 @@ Reflex::ScopeBase::DataMember_REnd(EMEMBERQUERY) const {
 inline Reflex::Member_Iterator
 Reflex::ScopeBase::FunctionMember_Begin(EMEMBERQUERY) const {
 //-------------------------------------------------------------------------------
+   ExecuteFunctionMemberDelayLoad();
    return fFunctionMembers.begin();
 }
 
@@ -881,6 +886,7 @@ Reflex::ScopeBase::FunctionMember_Begin(EMEMBERQUERY) const {
 inline Reflex::Member_Iterator
 Reflex::ScopeBase::FunctionMember_End(EMEMBERQUERY) const {
 //-------------------------------------------------------------------------------
+   ExecuteFunctionMemberDelayLoad();
    return fFunctionMembers.end();
 }
 
@@ -889,6 +895,7 @@ Reflex::ScopeBase::FunctionMember_End(EMEMBERQUERY) const {
 inline Reflex::Reverse_Member_Iterator
 Reflex::ScopeBase::FunctionMember_RBegin(EMEMBERQUERY) const {
 //-------------------------------------------------------------------------------
+   ExecuteFunctionMemberDelayLoad();
    return ((const std::vector<Member> &)fFunctionMembers).rbegin();
 }
 
@@ -897,6 +904,7 @@ Reflex::ScopeBase::FunctionMember_RBegin(EMEMBERQUERY) const {
 inline Reflex::Reverse_Member_Iterator
 Reflex::ScopeBase::FunctionMember_REnd(EMEMBERQUERY) const {
 //-------------------------------------------------------------------------------
+   ExecuteFunctionMemberDelayLoad();
    return ((const std::vector<Member> &)fFunctionMembers).rend();
 }
 
