@@ -74,6 +74,6 @@ Reflex::BuilderContainer::Build() {
    bool changed = false;
    for (OnDemandBuilder* odb = fFirst; odb; odb = odb->Next())
       changed |= odb->Build();
-   return changed;
    Clear();
+   return changed;
 }
