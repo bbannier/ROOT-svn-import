@@ -1035,9 +1035,9 @@ Reflex::ScopeBase::RegisterOnDemandBuilder(OnDemandBuilder* builder, int buildsW
 // OnDemandBuilder. buildsWhat is an ORed set of bits, defining what the builder
 // might modify.
    BuilderContainer* cont = 0;
-   if (buildsWhat & OnDemandBuilder::kBuildFunctionMembers) {
+   if (buildsWhat == OnDemandBuilder::kBuildFunctionMembers) {
       cont = &fFunctionMemberBuilder;
-   } else if (buildsWhat & OnDemandBuilder::kBuildDataMembers) {
+   } else if (buildsWhat == OnDemandBuilder::kBuildDataMembers) {
       cont = &fDataMemberBuilder;
    }
    if (cont) {

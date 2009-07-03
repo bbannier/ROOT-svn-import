@@ -62,17 +62,20 @@ Reflex::BuilderContainer::Clear() {
       odb->UpdateRegistrationInfo(0, 0);
       odb->SetNext(0);
    }
+   fFirst = 0;
 }
 
 //-------------------------------------------------------------------------------
-bool
+void
 Reflex::BuilderContainer::Build() {
 //-------------------------------------------------------------------------------
    // Call Build() on all on demand builders and clears the container.
    // Returns true if the builders have changed the reflection data.
-   bool changed = false;
-   for (OnDemandBuilder* odb = fFirst; odb; odb = odb->Next())
-      changed |= odb->Build();
+   OnDemandBuilder* oldFirst = fFirst;
+   // prevent recursive invocation of builders
+   fFirst = 0;
+   for (OnDemandBuilder* odb = oldFirst; odb; odb = odb->Next())
+      odb->Build();
+   fFirst = oldFirst;
    Clear();
-   return changed;
 }

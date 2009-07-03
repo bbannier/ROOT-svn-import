@@ -1120,6 +1120,10 @@ class genDictionary(object) :
       sc += self.processIoReadRawFunctions( cls, clt, ioReadRawRules, memberTypeMap )
 
     sc += '//------Dictionary for class %s -------------------------------\n' % cl
+    sc += 'void %s_db_datamem(Reflex::Class*);\n' % (clt,)
+    sc += 'void %s_db_funcmem(Reflex::Class*);\n' % (clt,)
+    sc += 'Reflex::GenreflexMemberBuilder %s_datamem_bld(Reflex::OnDemandBuilder::kBuildDataMembers, &%s_db_datamem);\n' % (clt, clt)
+    sc += 'Reflex::GenreflexMemberBuilder %s_funcmem_bld(Reflex::OnDemandBuilder::kBuildFunctionMembers, %s_db_funcmem);\n' % (clt, clt)
     sc += 'void %s_dict() {\n' % (clt,)
 
     # Write the schema evolution rules
@@ -1143,6 +1147,7 @@ class genDictionary(object) :
     else :
       cid = getContainerId(clf)[0]
     notAccessibleType = self.checkAccessibleType(self.xref[attrs['id']])
+    
     if self.isUnnamedType(clf) : 
       sc += '  ::Reflex::ClassBuilder("%s", typeid(::Reflex::Unnamed%s), sizeof(%s), %s, %s)' % ( cls, self.xref[attrs['id']]['elem'], '__shadow__::'+ string.translate(str(clf),self.transtable), mod, typ )
     elif notAccessibleType :
@@ -1171,12 +1176,50 @@ class genDictionary(object) :
 
     for b in bases :
       sc += '\n' + self.genBaseClassBuild( clf, b )
+
+    # on demand builder:
+    # data member, prefix
+    odbdp = '//------Delayed data member builder for class %s -------------------\n' % cl
+    odbd = ''
+    # function member, prefix
+    odbfp = '//------Delayed function member builder for class %s -------------------\n' % cl
+    odbf = ''
+
     for m in members :
       funcname = 'gen'+self.xref[m]['elem']+'Build'
       if funcname in dir(self) :
         line = self.__class__.__dict__[funcname](self, self.xref[m]['attrs'], self.xref[m]['subelems'])
-        if line : sc += '\n' + line 
+        if line :
+          if not self.xref[m]['attrs'].get('artificial') in ('true', '1') :
+            if funcname == 'genFieldBuild' :
+              odbd += '\n' + line
+            else :
+              odbf += '\n' + line
+          else :
+            sc += '\n' + line
+    if len(odbd) :
+      sc += '\n  .AddOnDemandBuilder(&%s_datamem_bld, Reflex::OnDemandBuilder::kBuildDataMembers)' % (clt)
+      odbdp += 'void %s_db_datamem(Reflex::Class* cl) {\n' % (clt,)
+      odbdp += ' printf("DEBUG: CALLED datamember setup %s\\n");\n' % (clt)
+      odbdp += '  ::Reflex::ClassBuilder(cl)'
+      odbd += ';'
+    else :
+      odbdp += 'void %s_db_datamem(Reflex::Class*) {\n' % (clt,)
+      odbdp += ' printf("DEBUG: CALLED empty datamember setup %s\\n");\n' % (clt)
+    if len(odbf) :
+      sc += '\n  .AddOnDemandBuilder(&%s_funcmem_bld, Reflex::OnDemandBuilder::kBuildFunctionMembers)' % (clt)
+      odbfp += 'void %s_db_funcmem(Reflex::Class* cl) {\n' % (clt,)
+      odbfp += ' printf("DEBUG: CALLED funcmember setup %s\\n");\n' % (clt)
+      odbfp += '  ::Reflex::ClassBuilder(cl)'
+      odbf += ';'
+    else :
+      odbfp += 'void %s_db_funcmem(Reflex::Class*) {\n' % (clt,)
+      odbfp += ' printf("DEBUG: CALLED empty funcmember setup %s\\n");\n' % (clt)
     sc += ';\n}\n\n'
+
+    sc += odbdp + odbd + '\n}\n'
+    sc += odbfp + odbf + '\n}\n'
+
     ss = ''
     if not self.isUnnamedType(clf) and not notAccessibleType:
       ss = '//------Stub functions for class %s -------------------------------\n' % cl

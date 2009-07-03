@@ -17,15 +17,13 @@
 #include "Class.h"
 
 //-------------------------------------------------------------------------------
-bool
+void
 Reflex::GenreflexMemberBuilder::Build() {
 //-------------------------------------------------------------------------------
    // Build the members, return if we added something
 
-   // reinterp_cast is used to cast void* to vtable class, can use anything.
-   Class* sb = dynamic_cast<Class*>(reinterpret_cast<OnDemandBuilder*>(Context()));
+   Class* sb = dynamic_cast<Class*>(reinterpret_cast<ScopeBase*>(Context()));
    if (sb) {
-      return fFunc(sb);
+      fFunc(sb);
    }
-   return false;
 }

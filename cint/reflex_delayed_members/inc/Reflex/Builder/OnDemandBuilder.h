@@ -32,7 +32,7 @@ public:
    virtual ~OnDemandBuilder();
 
    // return whether the builder has changed reflection data
-   virtual bool Build() = 0;
+   virtual void Build() = 0;
 
    void Unregister();
 
