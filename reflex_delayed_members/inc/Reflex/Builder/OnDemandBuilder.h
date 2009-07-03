@@ -22,12 +22,13 @@ class RFLX_API OnDemandBuilder {
 public:
 
    enum EBuilderKind {
-      kBuildDataMembers = 0x01,
-      kBuildFunctionMembers = 0x02,
-      kBuildMembers = kBuildDataMembers | kBuildFunctionMembers
+      kBuildDataMembers,
+      kBuildFunctionMembers,
+
+      kNumBuilderKinds
    };
 
-   OnDemandBuilder(): fRegisteredWhere(0) {}
+   OnDemandBuilder(): fContext(0), fRegisteredWhere(0), fNext(0) {}
    virtual ~OnDemandBuilder();
 
    // return whether the builder has changed reflection data
@@ -35,14 +36,17 @@ public:
 
    void Unregister();
 
-   void UpdateRegistrationInfo(BuilderContainer* cont);
+   void UpdateRegistrationInfo(BuilderContainer* cont, void* context);
    void SetNext(OnDemandBuilder* next) { fNext = next; }
 
    OnDemandBuilder* Next() const { return fNext; }
 
+   void* Context() const { return fContext; }
+
 private:
+   void* fContext; // registration context, e.g. ScopeBase*
    BuilderContainer* fRegisteredWhere; // where the builder is registered
-   OnDemandBuilder* fNext;
+   OnDemandBuilder* fNext; // next builder in chain
 };
 } // namespace Reflex
 

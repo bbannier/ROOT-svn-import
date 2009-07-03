@@ -35,12 +35,13 @@ Reflex::OnDemandBuilder::Unregister() {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::OnDemandBuilder::UpdateRegistrationInfo(BuilderContainer* h) {
+Reflex::OnDemandBuilder::UpdateRegistrationInfo(BuilderContainer* h, void* context) {
 //-------------------------------------------------------------------------------
    // Called from the registrar.
    if (fRegisteredWhere && fRegisteredWhere != h) {
       throw RuntimeError("Attempt to register OnDemandBuilder twice!");
    }
    fRegisteredWhere = h;
+   fContext = context;
 }
 

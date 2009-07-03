@@ -1,0 +1,34 @@
+// @(#)root/reflex:$Id$
+// Author: Axel Naumann, 2009
+
+// Copyright CERN, CH-1211 Geneva 23, 2004-2009, All rights reserved.
+//
+// Permission to use, copy, modify, and distribute this software for any
+// purpose is hereby granted without fee, provided that this copyright and
+// permissions notice appear in all copies and derivatives.
+//
+// This software is provided "as is" without express or implied warranty.
+
+#ifndef Reflex_GenreflexMemberBuilder
+#define Reflex_GenreflexMemberBuilder
+
+#include "Reflex/Builder/OnDemandBuilder.h"
+
+namespace Reflex {
+class Class;
+
+class RFLX_API GenreflexMemberBuilder: public OnDemandBuilder {
+public:
+   typedef bool (*SetupFunc_t)(Class* sb);
+   GenreflexMemberBuilder(EBuilderKind kind, SetupFunc_t func): fKind(kind), fFunc(func) {}
+   virtual ~GenreflexMemberBuilder() {}
+
+   bool Build();
+
+private:
+   EBuilderKind fKind;
+   SetupFunc_t  fFunc;
+};
+} // namespace Reflex
+
+#endif // Reflex_OnDemandBuilder
