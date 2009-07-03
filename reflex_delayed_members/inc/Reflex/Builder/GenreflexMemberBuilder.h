@@ -19,11 +19,11 @@ class Class;
 
 class RFLX_API GenreflexMemberBuilder: public OnDemandBuilder {
 public:
-   typedef bool (*SetupFunc_t)(Class* sb);
+   typedef void (*SetupFunc_t)(Class* sb);
    GenreflexMemberBuilder(EBuilderKind kind, SetupFunc_t func): fKind(kind), fFunc(func) {}
    virtual ~GenreflexMemberBuilder() {}
 
-   bool Build();
+   void Build();
 
 private:
    EBuilderKind fKind;
