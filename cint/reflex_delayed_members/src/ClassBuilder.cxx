@@ -37,12 +37,9 @@
 
 //______________________________________________________________________________
 Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, TYPE typ):
-   fClass(0)
-   ,
-   fLastMember()
-   ,
-   fNewClass(true)
-   ,
+   fClass(0),
+   fLastMember(),
+   fNewClass(true),
    fCallbackEnabled(true) {
    // -- Construct a class information (internal).
    std::string nam2(nam);
@@ -98,11 +95,20 @@ Reflex::ClassBuilderImpl::ClassBuilderImpl(const char* nam, const std::type_info
 
 
 //______________________________________________________________________________
+Reflex::ClassBuilderImpl::ClassBuilderImpl(Class* cl):
+   fClass(cl),
+   fLastMember(),
+   fNewClass(false),
+   fCallbackEnabled(true) {  
+}
+
+//______________________________________________________________________________
 Reflex::ClassBuilderImpl::~ClassBuilderImpl() {
    // -- ClassBuilderImpl destructor. Used for call back functions (e.g. Cintex).
    if (fCallbackEnabled) {
       FireClassCallback(fClass->ThisType());
    }
+   
 }
 
 
@@ -268,6 +274,18 @@ Reflex::ClassBuilderImpl::EnableCallback(bool enable /*= true*/) {
 }
 
 
+//-------------------------------------------------------------------------------
+void
+Reflex::ClassBuilderImpl::AddOnDemandBuilder(OnDemandBuilder* odb,
+                                             OnDemandBuilder::EBuilderKind kind) {
+//-------------------------------------------------------------------------------
+// Register an on demand builder with this class.
+// The builder odb is able to provide on demand building for elements
+// specified by kind.
+   fClass->RegisterOnDemandBuilder(odb, kind);
+}
+
+
 //______________________________________________________________________________
 void
 Reflex::ClassBuilderImpl::SetSizeOf(size_t size) {
@@ -295,6 +313,13 @@ Reflex::ClassBuilderImpl::ToType() {
 //______________________________________________________________________________
 Reflex::ClassBuilder::ClassBuilder(const char* nam, const std::type_info& ti, size_t size, unsigned int modifiers, TYPE typ):
    fClassBuilderImpl(nam, ti, size, modifiers, typ) {
+   // -- Constructor
+}
+
+
+//______________________________________________________________________________
+Reflex::ClassBuilder::ClassBuilder(Class* cl):
+   fClassBuilderImpl(cl) {
    // -- Constructor
 }
 
@@ -382,6 +407,18 @@ Reflex::ClassBuilder::AddEnum(const char* nam,
    return *this;
    }
  */
+
+//-------------------------------------------------------------------------------
+Reflex::ClassBuilder&
+Reflex::ClassBuilder::AddOnDemandBuilder(OnDemandBuilder* odb,
+                                         OnDemandBuilder::EBuilderKind kind) {
+//-------------------------------------------------------------------------------
+// Register an on demand builder with this class.
+// The builder odb is able to provide on demand building for elements
+// specified by kind.
+   fClassBuilderImpl.AddOnDemandBuilder(odb, kind);
+   return *this;
+}
 
 //______________________________________________________________________________
 Reflex::ClassBuilder&

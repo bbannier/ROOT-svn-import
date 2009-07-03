@@ -1034,9 +1034,14 @@ Reflex::ScopeBase::RegisterOnDemandBuilder(OnDemandBuilder* builder, int buildsW
 // Add a on demand builder that can expand this scope's reflection data; see
 // OnDemandBuilder. buildsWhat is an ORed set of bits, defining what the builder
 // might modify.
+   BuilderContainer* cont = 0;
    if (buildsWhat & OnDemandBuilder::kBuildFunctionMembers) {
-      fFunctionMemberBuilder.Insert(builder);
+      cont = &fFunctionMemberBuilder;
    } else if (buildsWhat & OnDemandBuilder::kBuildDataMembers) {
-      fDataMemberBuilder.Insert(builder);
+      cont = &fDataMemberBuilder;
+   }
+   if (cont) {
+      cont->Insert(builder);
+      builder->UpdateRegistrationInfo(cont, this);
    }
 }

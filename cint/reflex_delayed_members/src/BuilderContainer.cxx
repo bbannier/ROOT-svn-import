@@ -28,7 +28,6 @@ void
 Reflex::BuilderContainer::Insert(OnDemandBuilder* odb) {
 //-------------------------------------------------------------------------------
    // Register a builder
-   odb->UpdateRegistrationInfo(this);
    odb->SetNext(fFirst);
    fFirst = odb;
 }
@@ -49,7 +48,7 @@ Reflex::BuilderContainer::Remove(OnDemandBuilder* odb) {
       }
    }
    odb->SetNext(0);
-   odb->UpdateRegistrationInfo(0);
+   odb->UpdateRegistrationInfo(0, 0);
 }
 
 //-------------------------------------------------------------------------------
@@ -60,7 +59,7 @@ Reflex::BuilderContainer::Clear() {
    OnDemandBuilder* next = 0;
    for (OnDemandBuilder* odb = fFirst; odb; odb = next) {
       next = odb->Next();
-      odb->UpdateRegistrationInfo(0);
+      odb->UpdateRegistrationInfo(0, 0);
       odb->SetNext(0);
    }
 }
