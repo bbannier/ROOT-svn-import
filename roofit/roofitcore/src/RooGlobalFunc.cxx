@@ -23,6 +23,7 @@
 #include "RooCategory.h"
 #include "RooRealConstant.h"
 #include "RooDataSet.h"
+#include "RooDataHist.h"
 #include "RooNumIntConfig.h"
 #include "RooRealVar.h"
 #include "RooFitResult.h"
@@ -89,10 +90,11 @@ namespace RooFit {
   RooCmdArg Rescale(Double_t factor)              { return RooCmdArg("Rescale",0,0,factor,0,0,0,0,0) ; }
 
   // RooDataHist::ctor arguments
-  RooCmdArg Weight(Double_t wgt)                  { return RooCmdArg("Weight",0,0,wgt,0,0,0,0,0) ; }
-  RooCmdArg Index(RooCategory& icat)              { return RooCmdArg("IndexCat",0,0,0,0,0,0,&icat,0) ; }
-  RooCmdArg Import(const char* state, TH1& histo) { return RooCmdArg("ImportHistoSlice",0,0,0,0,state,0,&histo,0) ; }
-  RooCmdArg Import(TH1& histo)                    { return RooCmdArg("ImportHisto",0,0,0,0,0,0,&histo,0) ; }
+  RooCmdArg Weight(Double_t wgt)                          { return RooCmdArg("Weight",0,0,wgt,0,0,0,0,0) ; }
+  RooCmdArg Index(RooCategory& icat)                      { return RooCmdArg("IndexCat",0,0,0,0,0,0,&icat,0) ; }
+  RooCmdArg Import(const char* state, TH1& histo)         { return RooCmdArg("ImportHistoSlice",0,0,0,0,state,0,&histo,0) ; }
+  RooCmdArg Import(const char* state, RooDataHist& dhist) { return RooCmdArg("ImportDataHistSlice",0,0,0,0,state,0,&dhist,0) ; }
+  RooCmdArg Import(TH1& histo)                            { return RooCmdArg("ImportHisto",0,0,0,0,0,0,&histo,0) ; }
   
   // RooDataSet::ctor arguments
   RooCmdArg WeightVar(const char* name)                 { return RooCmdArg("WeightVarName",0,0,0,0,name,0,0,0) ; }
