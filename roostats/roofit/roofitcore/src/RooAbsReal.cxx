@@ -3092,6 +3092,8 @@ Double_t RooAbsReal::maxVal(Int_t /*code*/) const
 }
 
 
+
+//_____________________________________________________________________________
 void RooAbsReal::logEvalError(const RooAbsReal* originator, const char* origName, const char* message, const char* serverValueString) 
 {
   // Interface to insert remote error logging messages received by RooRealMPFE into current error loggin stream
