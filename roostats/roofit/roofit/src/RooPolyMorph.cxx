@@ -143,18 +143,20 @@ void RooPolyMorph::initialize()
 //_____________________________________________________________________________
 void RooPolyMorph::constructMorphPdf() const
 {
-  vector<RooAbsReal*> meanrv(nPdf*nVar,0);
-  vector<RooAbsReal*> sigmarv(nPdf*nVar,0); 
-  vector<RooAbsReal*> myrms(nVar,0);      
-  vector<RooAbsReal*> mypos(nVar,0);      
-  vector<RooAbsReal*> slope(nPdf*nVar,0); 
-  vector<RooAbsReal*> offset(nPdf*nVar,0); 
-  vector<RooAbsReal*> transVar(nPdf*nVar,0); 
-  vector<RooAbsReal*> transPdf(nPdf,0);      
-
-  RooArgSet ownedComps ;
   Int_t nVar = _varList.getSize();
   Int_t nPdf = _pdfList.getSize();
+
+  RooAbsReal* null = 0 ;
+  vector<RooAbsReal*> meanrv(nPdf*nVar,null);
+  vector<RooAbsReal*> sigmarv(nPdf*nVar,null); 
+  vector<RooAbsReal*> myrms(nVar,null);      
+  vector<RooAbsReal*> mypos(nVar,null);      
+  vector<RooAbsReal*> slope(nPdf*nVar,null); 
+  vector<RooAbsReal*> offset(nPdf*nVar,null); 
+  vector<RooAbsReal*> transVar(nPdf*nVar,null); 
+  vector<RooAbsReal*> transPdf(nPdf,null);      
+
+  RooArgSet ownedComps ;
 
   // fraction parameters
   RooArgList coefList("coefList");
@@ -170,8 +172,8 @@ void RooPolyMorph::constructMorphPdf() const
   for (Int_t i=0; i<nPdf; ++i) {
     for (Int_t j=0; j<nVar; ++j) {
 
-      std::string meanName = Form("meanrv_%d_%d",i,j);
-      std::string sigmaName = Form("sigmarv_%d_%d",i,j);      
+      std::string meanName = Form("%s_mean_%d_%d",GetName(),i,j);
+      std::string sigmaName = Form("%s_sigma_%d_%d",GetName(),i,j);      
       RooMoment* mom = new RooMoment(sigmaName.c_str(),sigmaName.c_str(),(RooAbsPdf&)*_pdfList.at(i),(RooRealVar&)*_varList.at(j),2,kTRUE) ;
       sigmarv[ij(i,j)] = mom ;
       meanrv[ij(i,j)]  = mom->mean() ;
@@ -187,8 +189,8 @@ void RooPolyMorph::constructMorphPdf() const
       meanList.add(*meanrv[ij(i,j)]);
       rmsList.add(*sigmarv[ij(i,j)]);
     }
-    std::string myrmsName = Form("myrms_%d",j);
-    std::string myposName = Form("mypos_%d",j);
+    std::string myrmsName = Form("%s_rms_%d",GetName(),j);
+    std::string myposName = Form("%s_pos_%d",GetName(),j);
     myrms[j] = new RooAddition(myrmsName.c_str(),myrmsName.c_str(),rmsList,coefList2);
     mypos[j] = new RooAddition(myposName.c_str(),myposName.c_str(),meanList,coefList2);
     ownedComps.add(RooArgSet(*myrms[j],*mypos[j])) ;
@@ -208,14 +210,14 @@ void RooPolyMorph::constructMorphPdf() const
 
     for (Int_t j=0; j<nVar; ++j) {
       // slope and offset formulas
-      std::string slopeName = Form("slope_%d_%d",i,j);
-      std::string offsetName = Form("offset_%d_%d",i,j);
+      std::string slopeName = Form("%s_slope_%d_%d",GetName(),i,j);
+      std::string offsetName = Form("%s_offset_%d_%d",GetName(),i,j);
       slope[ij(i,j)]  = new RooFormulaVar(slopeName.c_str(),"@0/@1",RooArgList(*sigmarv[ij(i,j)],*myrms[j]));
       offset[ij(i,j)] = new RooFormulaVar(offsetName.c_str(),"@0-(@1*@2)",RooArgList(*meanrv[ij(i,j)],*mypos[j],*slope[ij(i,j)]));
       ownedComps.add(RooArgSet(*slope[ij(i,j)],*offset[ij(i,j)])) ;
       // linear transformations, so pdf can be renormalized
       var = (RooRealVar*)(_varItr->Next());
-      std::string transVarName = Form("transVar_%d_%d",i,j);
+      std::string transVarName = Form("%s_transVar_%d_%d",GetName(),i,j);
       transVar[ij(i,j)] = new RooFormulaVar(transVarName.c_str(),transVarName.c_str(),"@0*@1+@2",RooArgList(*var,*slope[ij(i,j)],*offset[ij(i,j)]));
       ownedComps.add(*transVar[ij(i,j)]) ;
       cust.replaceArg(*var,*transVar[ij(i,j)]);
@@ -225,11 +227,14 @@ void RooPolyMorph::constructMorphPdf() const
     ownedComps.add(*transPdf[i]) ;
   }
   // sum pdf
-  _sumPdf = new RooAddPdf("sumPdf","sumPdf",transPdfList,coefList);
+  
+  std::string sumpdfName = Form("%s_sumpdf",GetName());
+  _sumPdf = new RooAddPdf(sumpdfName.c_str(),sumpdfName.c_str(),transPdfList,coefList);
   _sumPdf->addOwnedComponents(ownedComps) ;
 
   // change tracker for fraction parameters
-  _tracker = new RooChangeTracker("frac_tracker","frac_tracker",m.arg(),kTRUE) ;
+  std::string trackerName = Form("%s_frac_tracker",GetName()) ;
+  _tracker = new RooChangeTracker(trackerName.c_str(),trackerName.c_str(),m.arg(),kTRUE) ;
 }
 
 
