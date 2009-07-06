@@ -37,6 +37,8 @@ class RooFunctor ;
 class RooGenFunction ;
 class RooMultiGenFunction ;
 class RooFitResult ;
+class RooMoment ;
+class RooDerivative ;
 
 class TH1;
 class TH1F;
@@ -265,7 +267,8 @@ public:
   RooFunctor* functor(const RooArgList& obs, const RooArgList& pars=RooArgList(), const RooArgSet& nset=RooArgSet()) const ;
   TF1* asTF(const RooArgList& obs, const RooArgList& pars=RooArgList(), const RooArgSet& nset=RooArgSet()) const ;
 
-  RooAbsReal* derivative(RooRealVar& obs, Int_t order=1, Double_t eps=0.001) ;
+  RooDerivative* derivative(RooRealVar& obs, Int_t order=1, Double_t eps=0.001) ;
+  RooMoment* moment(RooRealVar& obs, Int_t order, Bool_t central) ;
 
 
 protected:

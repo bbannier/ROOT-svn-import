@@ -59,6 +59,7 @@
 #include "RooNLLVar.h"
 #include "RooRealSumPdf.h"
 #include "RooConstVar.h"
+#include "RooDerivative.h"
 #include "TROOT.h"
 
 using namespace RooFit ;
