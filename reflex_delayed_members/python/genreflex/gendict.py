@@ -1122,8 +1122,8 @@ class genDictionary(object) :
     sc += '//------Dictionary for class %s -------------------------------\n' % cl
     sc += 'void %s_db_datamem(Reflex::Class*);\n' % (clt,)
     sc += 'void %s_db_funcmem(Reflex::Class*);\n' % (clt,)
-    sc += 'Reflex::GenreflexMemberBuilder %s_datamem_bld(Reflex::OnDemandBuilder::kBuildDataMembers, &%s_db_datamem);\n' % (clt, clt)
-    sc += 'Reflex::GenreflexMemberBuilder %s_funcmem_bld(Reflex::OnDemandBuilder::kBuildFunctionMembers, %s_db_funcmem);\n' % (clt, clt)
+    sc += 'Reflex::GenreflexMemberBuilder %s_datamem_bld(Reflex::OnDemandBuilderForScope::kBuildDataMembers, &%s_db_datamem);\n' % (clt, clt)
+    sc += 'Reflex::GenreflexMemberBuilder %s_funcmem_bld(Reflex::OnDemandBuilderForScope::kBuildFunctionMembers, %s_db_funcmem);\n' % (clt, clt)
     sc += 'void %s_dict() {\n' % (clt,)
 
     # Write the schema evolution rules
@@ -1193,28 +1193,26 @@ class genDictionary(object) :
           if not self.xref[m]['attrs'].get('artificial') in ('true', '1') :
             if funcname == 'genFieldBuild' :
               odbd += '\n' + line
-            else :
+            elif funcname == 'genMethodBuild' : # put c'tors and d'tors into non-delayed part
               odbf += '\n' + line
+            else :
+              sc += '\n' + line
           else :
             sc += '\n' + line
     if len(odbd) :
-      sc += '\n  .AddOnDemandBuilder(&%s_datamem_bld, Reflex::OnDemandBuilder::kBuildDataMembers)' % (clt)
+      sc += '\n  .AddOnDemandBuilder(&%s_datamem_bld, Reflex::OnDemandBuilderForScope::kBuildDataMembers)' % (clt)
       odbdp += 'void %s_db_datamem(Reflex::Class* cl) {\n' % (clt,)
-      odbdp += ' printf("DEBUG: CALLED datamember setup %s\\n");\n' % (clt)
       odbdp += '  ::Reflex::ClassBuilder(cl)'
       odbd += ';'
     else :
       odbdp += 'void %s_db_datamem(Reflex::Class*) {\n' % (clt,)
-      odbdp += ' printf("DEBUG: CALLED empty datamember setup %s\\n");\n' % (clt)
     if len(odbf) :
-      sc += '\n  .AddOnDemandBuilder(&%s_funcmem_bld, Reflex::OnDemandBuilder::kBuildFunctionMembers)' % (clt)
+      sc += '\n  .AddOnDemandBuilder(&%s_funcmem_bld, Reflex::OnDemandBuilderForScope::kBuildFunctionMembers)' % (clt)
       odbfp += 'void %s_db_funcmem(Reflex::Class* cl) {\n' % (clt,)
-      odbfp += ' printf("DEBUG: CALLED funcmember setup %s\\n");\n' % (clt)
       odbfp += '  ::Reflex::ClassBuilder(cl)'
       odbf += ';'
     else :
       odbfp += 'void %s_db_funcmem(Reflex::Class*) {\n' % (clt,)
-      odbfp += ' printf("DEBUG: CALLED empty funcmember setup %s\\n");\n' % (clt)
     sc += ';\n}\n\n'
 
     sc += odbdp + odbd + '\n}\n'

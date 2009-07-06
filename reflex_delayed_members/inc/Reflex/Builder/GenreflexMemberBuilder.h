@@ -12,18 +12,18 @@
 #ifndef Reflex_GenreflexMemberBuilder
 #define Reflex_GenreflexMemberBuilder
 
-#include "Reflex/Builder/OnDemandBuilder.h"
+#include "Reflex/Builder/OnDemandBuilderForScope.h"
 
 namespace Reflex {
 class Class;
 
-class RFLX_API GenreflexMemberBuilder: public OnDemandBuilder {
+class RFLX_API GenreflexMemberBuilder: public OnDemandBuilderForScope {
 public:
    typedef void (*SetupFunc_t)(Class* sb);
    GenreflexMemberBuilder(EBuilderKind kind, SetupFunc_t func): fKind(kind), fFunc(func) {}
    virtual ~GenreflexMemberBuilder() {}
 
-   void Build();
+   void BuildAll();
 
 private:
    EBuilderKind fKind;

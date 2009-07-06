@@ -18,7 +18,7 @@
 #include "Reflex/Member.h"
 #include "Reflex/Callback.h"
 #include "Reflex/Builder/TypeBuilder.h"
-#include "Reflex/Builder/OnDemandBuilder.h"
+#include "Reflex/Builder/OnDemandBuilderForScope.h"
 
 // Forward declaration for 'friendship' purpose.
 namespace Cint { namespace Internal {} }
@@ -115,8 +115,8 @@ public:
     * The builder odb is able to provide on demand building for elements
     * specified by kind.
     */
-   void AddOnDemandBuilder(OnDemandBuilder* odb,
-                           OnDemandBuilder::EBuilderKind kind);
+   void AddOnDemandBuilder(OnDemandBuilderForScope* odb,
+                           OnDemandBuilderForScope::EBuilderKind kind);
 
    /** SetSizeOf will set the SizeOf property for this class.
     * It currently ignore all actual content.
@@ -253,8 +253,8 @@ public:
     * The builder odb is able to provide on demand building for elements
     * specified by kind.
     */
-   ClassBuilder& AddOnDemandBuilder(OnDemandBuilder* odb,
-                                    OnDemandBuilder::EBuilderKind kind);
+   ClassBuilder& AddOnDemandBuilder(OnDemandBuilderForScope* odb,
+                                    OnDemandBuilderForScope::EBuilderKind kind);
 
    /** SetSizeOf will set the SizeOf property for this class.
     * It currently ignore all actual content.
@@ -398,8 +398,8 @@ public:
     * The builder odb is able to provide on demand building for elements
     * specified by kind.
     */
-   void AddOnDemandBuilder(OnDemandBuilder* odb,
-                           OnDemandBuilder::EBuilderKind kind);
+   void AddOnDemandBuilder(OnDemandBuilderForScope* odb,
+                           OnDemandBuilderForScope::EBuilderKind kind);
 
 
    /** SetSizeOf will set the SizeOf property for this class.
@@ -693,8 +693,8 @@ Reflex::ClassBuilderT<C>::ToType() {
 
 //-------------------------------------------------------------------------------
 template <class C> inline void
-Reflex::ClassBuilderT<C>::AddOnDemandBuilder(OnDemandBuilder* odb,
-                                             OnDemandBuilder::EBuilderKind kind) {
+Reflex::ClassBuilderT<C>::AddOnDemandBuilder(OnDemandBuilderForScope* odb,
+                                             OnDemandBuilderForScope::EBuilderKind kind) {
 //-------------------------------------------------------------------------------
 // Register an on demand builder with this class.
 // The builder odb is able to provide on demand building for elements

@@ -28,20 +28,19 @@ void
 Reflex::OnDemandBuilder::Unregister() {
 //-------------------------------------------------------------------------------
    // Unregister the builder
-   if (fRegisteredWhere) {
-      fRegisteredWhere->Remove(this);
+   if (fContainer) {
+      fContainer->Remove(this);
    }
 }
 
 //-------------------------------------------------------------------------------
 void
-Reflex::OnDemandBuilder::UpdateRegistrationInfo(BuilderContainer* h, void* context) {
+Reflex::OnDemandBuilder::SetContainer(BuilderContainer* cont) {
 //-------------------------------------------------------------------------------
    // Called from the registrar.
-   if (h && fRegisteredWhere && fRegisteredWhere != h) {
+   if (cont && fContainer && fContainer != cont) {
       throw RuntimeError("Attempt to register OnDemandBuilder twice!");
    }
-   fRegisteredWhere = h;
-   fContext = context;
+   fContainer = cont;
 }
 

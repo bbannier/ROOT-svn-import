@@ -25,7 +25,7 @@
 #include "Reflex/internal/InternalTools.h"
 #include "Reflex/Tools.h"
 #include "Reflex/DictionaryGenerator.h"
-#include "Reflex/Builder/OnDemandBuilder.h"
+#include "Reflex/Builder/OnDemandBuilderForScope.h"
 
 #include "Class.h"
 #include "Namespace.h"
@@ -1029,19 +1029,19 @@ Reflex::ScopeBase::GenerateDict(DictionaryGenerator& generator) const {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::ScopeBase::RegisterOnDemandBuilder(OnDemandBuilder* builder, int buildsWhat) {
+Reflex::ScopeBase::RegisterOnDemandBuilder(OnDemandBuilderForScope* builder, int buildsWhat) {
 //-------------------------------------------------------------------------------
 // Add a on demand builder that can expand this scope's reflection data; see
 // OnDemandBuilder. buildsWhat is an ORed set of bits, defining what the builder
 // might modify.
    BuilderContainer* cont = 0;
-   if (buildsWhat == OnDemandBuilder::kBuildFunctionMembers) {
+   if (buildsWhat == OnDemandBuilderForScope::kBuildFunctionMembers) {
       cont = &fFunctionMemberBuilder;
-   } else if (buildsWhat == OnDemandBuilder::kBuildDataMembers) {
+   } else if (buildsWhat == OnDemandBuilderForScope::kBuildDataMembers) {
       cont = &fDataMemberBuilder;
    }
    if (cont) {
       cont->Insert(builder);
-      builder->UpdateRegistrationInfo(cont, this);
+      builder->SetContext(ThisScope());
    }
 }
