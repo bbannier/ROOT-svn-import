@@ -25,6 +25,7 @@
 #include "Enum.h"
 #include "DataMember.h"
 #include "FunctionMemberTemplateInstance.h"
+#include "Reflex/Builder/OnDemandBuilderForScope.h"
 
 
 //______________________________________________________________________________
@@ -276,13 +277,25 @@ Reflex::ClassBuilderImpl::EnableCallback(bool enable /*= true*/) {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::ClassBuilderImpl::AddOnDemandBuilder(OnDemandBuilderForScope* odb,
-                                             OnDemandBuilderForScope::EBuilderKind kind) {
+Reflex::ClassBuilderImpl::AddOnDemandFunctionMemberBuilder(OnDemandBuilderForScope* odb) {
 //-------------------------------------------------------------------------------
 // Register an on demand builder with this class.
 // The builder odb is able to provide on demand building for elements
 // specified by kind.
-   fClass->RegisterOnDemandBuilder(odb, kind);
+   fClass->RegisterOnDemandBuilder(odb, ScopeBase::kBuildFunctionMembers);
+   odb->SetContext(fClass);
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::ClassBuilderImpl::AddOnDemandDataMemberBuilder(OnDemandBuilderForScope* odb) {
+//-------------------------------------------------------------------------------
+// Register an on demand builder with this class.
+// The builder odb is able to provide on demand building for elements
+// specified by kind.
+   fClass->RegisterOnDemandBuilder(odb, ScopeBase::kBuildDataMembers);
+   odb->SetContext(fClass);
 }
 
 
@@ -410,13 +423,19 @@ Reflex::ClassBuilder::AddEnum(const char* nam,
 
 //-------------------------------------------------------------------------------
 Reflex::ClassBuilder&
-Reflex::ClassBuilder::AddOnDemandBuilder(OnDemandBuilderForScope* odb,
-                                         OnDemandBuilderForScope::EBuilderKind kind) {
+Reflex::ClassBuilder::AddOnDemandDataMemberBuilder(OnDemandBuilderForScope* odb) {
 //-------------------------------------------------------------------------------
 // Register an on demand builder with this class.
-// The builder odb is able to provide on demand building for elements
-// specified by kind.
-   fClassBuilderImpl.AddOnDemandBuilder(odb, kind);
+   fClassBuilderImpl.AddOnDemandDataMemberBuilder(odb);
+   return *this;
+}
+
+//-------------------------------------------------------------------------------
+Reflex::ClassBuilder&
+Reflex::ClassBuilder::AddOnDemandFunctionMemberBuilder(OnDemandBuilderForScope* odb) {
+//-------------------------------------------------------------------------------
+// Register an on demand builder with this class.
+   fClassBuilderImpl.AddOnDemandFunctionMemberBuilder(odb);
    return *this;
 }
 

@@ -1124,8 +1124,8 @@ class genDictionary(object) :
     sc += '//------Dictionary for class %s -------------------------------\n' % cl
     sc += 'void %s_db_datamem(Reflex::Class*);\n' % (clt,)
     sc += 'void %s_db_funcmem(Reflex::Class*);\n' % (clt,)
-    sc += 'Reflex::GenreflexMemberBuilder %s_datamem_bld(Reflex::OnDemandBuilderForScope::kBuildDataMembers, &%s_db_datamem);\n' % (clt, clt)
-    sc += 'Reflex::GenreflexMemberBuilder %s_funcmem_bld(Reflex::OnDemandBuilderForScope::kBuildFunctionMembers, %s_db_funcmem);\n' % (clt, clt)
+    sc += 'Reflex::GenreflexMemberBuilder %s_datamem_bld(&%s_db_datamem);\n' % (clt, clt)
+    sc += 'Reflex::GenreflexMemberBuilder %s_funcmem_bld(&%s_db_funcmem);\n' % (clt, clt)
     sc += 'void %s_dict() {\n' % (clt,)
 
     # Write the schema evolution rules
@@ -1202,14 +1202,14 @@ class genDictionary(object) :
           else :
             sc += '\n' + line
     if len(odbd) :
-      sc += '\n  .AddOnDemandBuilder(&%s_datamem_bld, Reflex::OnDemandBuilderForScope::kBuildDataMembers)' % (clt)
+      sc += '\n  .AddOnDemandDataMemberBuilder(&%s_datamem_bld)' % (clt)
       odbdp += 'void %s_db_datamem(Reflex::Class* cl) {\n' % (clt,)
       odbdp += '  ::Reflex::ClassBuilder(cl)'
       odbd += ';'
     else :
       odbdp += 'void %s_db_datamem(Reflex::Class*) {\n' % (clt,)
     if len(odbf) :
-      sc += '\n  .AddOnDemandBuilder(&%s_funcmem_bld, Reflex::OnDemandBuilderForScope::kBuildFunctionMembers)' % (clt)
+      sc += '\n  .AddOnDemandFunctionMemberBuilder(&%s_funcmem_bld)' % (clt)
       odbfp += 'void %s_db_funcmem(Reflex::Class* cl) {\n' % (clt,)
       odbfp += '  ::Reflex::ClassBuilder(cl)'
       odbf += ';'

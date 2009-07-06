@@ -20,28 +20,20 @@ class OnDemandBuilder;
 class RFLX_API BuilderContainer {
 public:
 
-   BuilderContainer(): fFirstBuilder(0) {}
-   ~BuilderContainer();
+   BuilderContainer(): fFirst(0) {}
+   ~BuilderContainer() { Clear(); }
 
    void Insert(OnDemandBuilder* odb);
    void Remove(OnDemandBuilder* odb);
    void Clear();
 
-   OnDemandBuilder* First() const { return (OnDemandBuilder*)(fFirstBuilderBits & (~((size_t)1))); }
-   bool Empty() const { return !fFirstBuilder; }
+   OnDemandBuilder* First() const { return fFirst; }
+   bool Empty() const { return !fFirst; }
 
    void BuildAll();
 
-   void Enable() { fFirstBuilderBits &= ~((size_t)1); }
-   void Disable() { fFirstBuilderBits |= 1; }
-
-   bool IsEnabled() const { return !(fFirstBuilderBits & 1); }
-
 private:
-   union {
-      size_t fFirstBuilderBits;
-      OnDemandBuilder* fFirstBuilder;
-   };
+   OnDemandBuilder* fFirst;
 };
 } // namespace Reflex
 

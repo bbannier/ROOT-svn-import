@@ -23,13 +23,6 @@ class ScopeBase;
 class RFLX_API OnDemandBuilderForScope: public OnDemandBuilder {
 public:
 
-   enum EBuilderKind {
-      kBuildDataMembers,
-      kBuildFunctionMembers,
-
-      kNumBuilderKinds
-   };
-
    OnDemandBuilderForScope() {}
    OnDemandBuilderForScope(ScopeBase* scope): fContext(scope) {}
    virtual ~OnDemandBuilderForScope() {}

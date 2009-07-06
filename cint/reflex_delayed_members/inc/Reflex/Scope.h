@@ -233,7 +233,8 @@ public:
     * @return reflection information of the function member
     */
    Member FunctionMemberByName(const std::string& name,
-                               EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
+                               EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT,
+                               EDELAYEDLOADSETTING allowDelayedLoad = DELAYEDLOAD_ON) const;
 
 
    /**
@@ -248,7 +249,8 @@ public:
    Member FunctionMemberByName(const std::string& name,
                                const Type& signature,
                                unsigned int modifers_mask = 0,
-                               EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
+                               EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT,
+                               EDELAYEDLOADSETTING allowDelayedLoad = DELAYEDLOAD_ON) const;
 
 
    /**
@@ -263,7 +265,8 @@ public:
    Member FunctionMemberByNameAndSignature(const std::string& name,
                                            const Type& signature,
                                            unsigned int modifers_mask = 0,
-                                           EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
+                                           EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT,
+                                           EDELAYEDLOADSETTING allowDelayedLoad = DELAYEDLOAD_ON) const;
 
 
    /**
@@ -1037,21 +1040,6 @@ public:
 
    /** */
    const ScopeBase* ToScopeBase() const;
-
-   /** Disable on demand member building for functions*/
-   void DisableOnDemandFunctionMemberBuilders() const;
-
-   /** Re-enable on demand member building for functions */
-   void EnableOnDemandFunctionMemberBuilders() const;
-
-   /** Disable on demand building for data members.
-    */
-   void DisableOnDemandDataMemberBuilders() const;
-   
-   /** Re-enable on demand building for data members.
-    */
-   void EnableOnDemandDataMemberBuilders() const;
-   
 
 public:
    /**
