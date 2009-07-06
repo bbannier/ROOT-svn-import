@@ -71,6 +71,7 @@
 #include "RooMinuit.h"
 #include "RooChi2Var.h"
 #include "RooFitResult.h"
+#include "RooMoment.h"
 
 #include "Riostream.h"
 
@@ -3625,12 +3626,24 @@ TF1* RooAbsReal::asTF(const RooArgList& obs, const RooArgList& pars, const RooAr
 
 
 //_____________________________________________________________________________
-RooAbsReal* RooAbsReal::derivative(RooRealVar& obs, Int_t order, Double_t eps) 
+RooDerivative* RooAbsReal::derivative(RooRealVar& obs, Int_t order, Double_t eps) 
 {
   // Return function representing first, second or third order derivative of this function
   string name=Form("%s_DERIV_%s",GetName(),obs.GetName()) ;
   string title=Form("Derivative of %s w.r.t %s ",GetName(),obs.GetName()) ;
   return new RooDerivative(name.c_str(),title.c_str(),*this,obs,order,eps) ;
+}
+
+
+
+//_____________________________________________________________________________
+RooMoment* RooAbsReal::moment(RooRealVar& obs, Int_t order, Bool_t central) 
+{
+  // Return function representing moment of function of given order. If central is
+  // true, the central moment is given <(x-<x>)^2>
+  string name=Form("%s_MOMENT_%d%s_%s",GetName(),order,(central?"C":""),obs.GetName()) ;
+  string title=Form("%sMoment of order %d of %s w.r.t %s ",(central?"Central ":""),order,GetName(),obs.GetName()) ;
+  return new RooMoment(name.c_str(),title.c_str(),*this,obs,order,central) ;
 }
 
 

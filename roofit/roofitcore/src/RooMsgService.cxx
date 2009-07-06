@@ -116,6 +116,8 @@ RooMsgService::RooMsgService()
   _topicNames[ObjectHandling]="ObjectHandling" ;
   _topicNames[InputArguments]="InputArguments" ;
   _topicNames[Tracing]="Tracing" ;
+  _topicNames[Contents]="Contents" ;
+  _topicNames[DataHandling]="DataHandling" ;
   _topicNames[NumIntegration]="NumericIntegration" ;
 
   _instance = this ;
