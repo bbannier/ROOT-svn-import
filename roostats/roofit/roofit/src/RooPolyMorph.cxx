@@ -46,9 +46,8 @@ RooPolyMorph::RooPolyMorph(const char *name, const char *title,
   RooAbsArg* var ;
   for (Int_t i=0; (var = (RooAbsArg*)varItr->Next()); ++i) {
     if (!dynamic_cast<RooAbsReal*>(var)) {
-      coutE(InputArguments) << "RooPolyMorph::ctor(" << GetName() << ") ERROR: variable " << var->GetName() 
-			    << " is not of type RooAbsReal" << endl ;
-      assert(0) ;
+      coutE(InputArguments) << "RooPolyMorph::ctor(" << GetName() << ") ERROR: variable " << var->GetName() << " is not of type RooAbsReal" << endl ;
+      throw string("RooPolyMorh::ctor() ERROR variable is not of type RooAbsReal") ;
     }
     _varList.add(*var) ;
   }
@@ -59,15 +58,80 @@ RooPolyMorph::RooPolyMorph(const char *name, const char *title,
   RooAbsPdf* pdf ;
   for (Int_t i=0; (pdf = dynamic_cast<RooAbsPdf*>(pdfItr->Next())); ++i) {
     if (!pdf) {
-      coutE(InputArguments) << "RooPolyMorph::ctor(" << GetName() << ") ERROR: pdf " << pdf->GetName() 
-                            << " is not of type RooAbsPdf" << endl ;
-      assert(0) ;
+      coutE(InputArguments) << "RooPolyMorph::ctor(" << GetName() << ") ERROR: pdf " << pdf->GetName() << " is not of type RooAbsPdf" << endl ;
+      throw string("RooPolyMorh::ctor() ERROR pdf is not of type RooAbsPdf") ;
+    }
+    _pdfList.add(*pdf) ;
+  }
+  delete pdfItr ;
+
+  _mref      = new TVectorD(mrefpoints);
+  _varItr    = _varList.createIterator() ;
+  _pdfItr    = _pdfList.createIterator() ; 
+
+  // initialization
+  initialize();
+} 
+
+
+
+//_____________________________________________________________________________
+RooPolyMorph::RooPolyMorph(const char *name, const char *title, 
+                           RooAbsReal& _m,
+                           const RooArgList& varList,
+                           const RooArgList& pdfList,
+                           const RooArgList& mrefList,
+                           const Setting& setting) :
+  RooAbsPdf(name,title), 
+  _sumPdf(0),
+  _tracker(0),
+  m("m","m",this,_m),
+  _varList("varList","List of variables",this),
+  _pdfList("pdfList","List of pdfs",this),
+  _setting(setting)
+{ 
+  // CTOR
+
+  // observables
+  TIterator* varItr = varList.createIterator() ;
+  RooAbsArg* var ;
+  for (Int_t i=0; (var = (RooAbsArg*)varItr->Next()); ++i) {
+    if (!dynamic_cast<RooAbsReal*>(var)) {
+      coutE(InputArguments) << "RooPolyMorph::ctor(" << GetName() << ") ERROR: variable " << var->GetName() << " is not of type RooAbsReal" << endl ;
+      throw string("RooPolyMorh::ctor() ERROR variable is not of type RooAbsReal") ;
+    }
+    _varList.add(*var) ;
+  }
+  delete varItr ;
+
+  // reference p.d.f.s
+  TIterator* pdfItr = pdfList.createIterator() ;
+  RooAbsPdf* pdf ;
+  for (Int_t i=0; (pdf = dynamic_cast<RooAbsPdf*>(pdfItr->Next())); ++i) {
+    if (!pdf) {
+      coutE(InputArguments) << "RooPolyMorph::ctor(" << GetName() << ") ERROR: pdf " << pdf->GetName() << " is not of type RooAbsPdf" << endl ;
+      throw string("RooPolyMorh::ctor() ERROR pdf is not of type RooAbsPdf") ;
     }
     _pdfList.add(*pdf) ;
   }
   delete pdfItr ;
   
-  _mref      = new TVectorD(mrefpoints);
+  // reference points in m
+  _mref      = new TVectorD(mrefList.getSize());
+  TIterator* mrefItr = mrefList.createIterator() ;
+  RooAbsReal* mref ;
+  for (Int_t i=0; (mref = dynamic_cast<RooAbsReal*>(mrefItr->Next())); ++i) {
+    if (!mref) {
+      coutE(InputArguments) << "RooPolyMorph::ctor(" << GetName() << ") ERROR: mref " << mref->GetName() << " is not of type RooAbsReal" << endl ;
+      throw string("RooPolyMorh::ctor() ERROR mref is not of type RooAbsReal") ;
+    }
+    if (!dynamic_cast<RooConstVar*>(mref)) {
+      coutW(InputArguments) << "RooPolyMorph::ctor(" << GetName() << ") WARNING mref point " << i << " is not a constant, taking a snapshot of its value" << endl ;
+    }
+    (*_mref)[i] = mref->getVal() ;
+  }
+  delete mrefItr ;
+  
   _varItr    = _varList.createIterator() ;
   _pdfItr    = _pdfList.createIterator() ; 
 
@@ -174,6 +238,7 @@ void RooPolyMorph::constructMorphPdf() const
 
       std::string meanName = Form("%s_mean_%d_%d",GetName(),i,j);
       std::string sigmaName = Form("%s_sigma_%d_%d",GetName(),i,j);      
+      
       RooMoment* mom = new RooMoment(sigmaName.c_str(),sigmaName.c_str(),(RooAbsPdf&)*_pdfList.at(i),(RooRealVar&)*_varList.at(j),2,kTRUE) ;
       sigmarv[ij(i,j)] = mom ;
       meanrv[ij(i,j)]  = mom->mean() ;
