@@ -417,7 +417,8 @@ void RooDataHist::importTH1Set(const RooArgList& vars, RooCategory& indexCat, ma
   }
   
   // Copy bins and ranges from THx to dimension observables
-  adjustBinning(vars,*histo) ;
+  Int_t offset[3] ;
+  adjustBinning(vars,*histo,offset) ;
   
   // Initialize internal data structure
   if (!init) {
@@ -434,15 +435,15 @@ void RooDataHist::importTH1Set(const RooArgList& vars, RooCategory& indexCat, ma
   // Transfer contents
   Int_t xmin(0),ymin(0),zmin(0) ;
   RooArgSet vset(*xvar) ;
-  xmin = xvar->getBinning().rawBinNumber(xvar->getMin()+1e-6) ;
+  xmin = offset[0] ;
 
   if (yvar) {
     vset.add(*yvar) ;
-    ymin = yvar->getBinning().rawBinNumber(yvar->getMin()+1e-6) ;
+    ymin = offset[1] ;
   }
   if (zvar) {
     vset.add(*zvar) ;
-    zmin = zvar->getBinning().rawBinNumber(zvar->getMin()+1e-6) ;
+    zmin = offset[2] ;
   }
 
   
@@ -475,7 +476,7 @@ void RooDataHist::importTH1Set(const RooArgList& vars, RooCategory& indexCat, ma
 
 
 //_____________________________________________________________________________
-void RooDataHist::importDHistSet(const RooArgList& vars, RooCategory& indexCat, std::map<std::string,RooDataHist*> dmap, Double_t initWgt) 
+void RooDataHist::importDHistSet(const RooArgList& /*vars*/, RooCategory& indexCat, std::map<std::string,RooDataHist*> dmap, Double_t initWgt) 
 {
   // Import data from given set of TH1/2/3 into this RooDataHist. The category indexCat labels the sources
   // in the constructed RooDataHist. The stl map provides the mapping between the indexCat state labels
@@ -503,7 +504,6 @@ void RooDataHist::importDHistSet(const RooArgList& vars, RooCategory& indexCat, 
 
     RooDataHist* dhist = diter->second ;
 
-    cout << "now processing state " << diter->first << endl ;
     icat->setLabel(diter->first.c_str()) ;
 
     // Transfer contents
