@@ -18,6 +18,7 @@
 #include "Reflex/Scope.h"
 #include "Reflex/internal/OwnedPropertyList.h"
 #include "Reflex/internal/BuilderContainer.h"
+#include "Reflex/Builder/OnDemandBuilderForScope.h"
 #include <vector>
 
 #ifdef _WIN32
@@ -38,8 +39,6 @@ class MemberTemplate;
 class OwnedMemberTemplate;
 class Type;
 class DictionaryGenerator;
-class OnDemandBuilderForScope;
-
 
 /**
  * @class ScopeBase ScopeBase.h Reflex/ScopeBase.h
@@ -644,7 +643,16 @@ public:
        Returns false if one of the bases is not complete. */
    virtual bool UpdateMembers() const;
 
-   void RegisterOnDemandBuilder(OnDemandBuilderForScope* builder, int buildsWhat);
+   void RegisterOnDemandBuilder(OnDemandBuilderForScope* builder,
+                                OnDemandBuilderForScope::EBuilderKind kind);
+
+   /** Turn off on demand building for elements specified by kind.
+    */
+   void DisableOnDemandBuilders(OnDemandBuilderForScope::EBuilderKind kind);
+
+   /** Re-enable on demand building for elements specified by kind.
+    */
+   void EnableOnDemandBuilders(OnDemandBuilderForScope::EBuilderKind kind);
 
 protected:
    /** The MemberByName work-horse: find a member called name in members,
@@ -658,16 +666,18 @@ protected:
 
 
    void ExecuteFunctionMemberDelayLoad() const {
-      if (!fFunctionMemberBuilder.Empty()) {
-         fFunctionMemberBuilder.BuildAll();
-         fFunctionMemberBuilder.Clear();
+      if (!fOnDemandBuilder[OnDemandBuilderForScope::kBuildFunctionMembers].Empty()
+          && fOnDemandBuilder[OnDemandBuilderForScope::kBuildFunctionMembers].IsEnabled()) {
+         fOnDemandBuilder[OnDemandBuilderForScope::kBuildFunctionMembers].BuildAll();
+         fOnDemandBuilder[OnDemandBuilderForScope::kBuildFunctionMembers].Clear();
       }
    }
 
    void ExecuteDataMemberDelayLoad() const {
-      if (!fDataMemberBuilder.Empty()) {
-         fDataMemberBuilder.BuildAll();
-         fDataMemberBuilder.Clear();
+      if (!fOnDemandBuilder[OnDemandBuilderForScope::kBuildDataMembers].Empty()
+          && fOnDemandBuilder[OnDemandBuilderForScope::kBuildFunctionMembers].IsEnabled()) {
+         fOnDemandBuilder[OnDemandBuilderForScope::kBuildDataMembers].BuildAll();
+         fOnDemandBuilder[OnDemandBuilderForScope::kBuildDataMembers].Clear();
       }
    }
 
@@ -805,16 +815,10 @@ private:
    size_t fBasePosition;
 
    /**
-    * The head of the function member on-demand builders.
+    * Containers for on-demand builders of function and data members.
     */
    mutable
-   BuilderContainer fFunctionMemberBuilder;
-
-   /**
-    * The head of the data member on-demand builders.
-    */
-   mutable
-   BuilderContainer fDataMemberBuilder;
+   BuilderContainer fOnDemandBuilder[2];
 
 };    // class ScopeBase
 } //namespace Reflex

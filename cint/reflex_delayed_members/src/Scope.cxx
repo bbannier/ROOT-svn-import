@@ -753,6 +753,50 @@ Reflex::Scope::UpdateMembers() const {
 }
 
 
+//-------------------------------------------------------------------------------
+void
+Reflex::Scope::DisableOnDemandFunctionMemberBuilders() const {
+//-------------------------------------------------------------------------------
+// Disable on demand member building for functions
+   if (*this) {
+      fScopeName->fScopeBase->DisableOnDemandBuilders(OnDemandBuilderForScope::kBuildFunctionMembers);
+   }
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Scope::EnableOnDemandFunctionMemberBuilders() const {
+//-------------------------------------------------------------------------------
+// Enable on demand member building for functions
+   if (*this) {
+      fScopeName->fScopeBase->EnableOnDemandBuilders(OnDemandBuilderForScope::kBuildFunctionMembers);
+   }
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Scope::DisableOnDemandDataMemberBuilders() const {
+//-------------------------------------------------------------------------------
+// Disable on demand member building for data members
+   if (*this) {
+      fScopeName->fScopeBase->DisableOnDemandBuilders(OnDemandBuilderForScope::kBuildDataMembers);
+   }
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::Scope::EnableOnDemandDataMemberBuilders() const {
+//-------------------------------------------------------------------------------
+// Enable on demand member building for data members
+   if (*this) {
+      fScopeName->fScopeBase->EnableOnDemandBuilders(OnDemandBuilderForScope::kBuildDataMembers);
+   }
+}
+
+
 #ifdef REFLEX_CINT_MERGE
 bool
 Reflex::Scope::operator &&(const Scope& right) const

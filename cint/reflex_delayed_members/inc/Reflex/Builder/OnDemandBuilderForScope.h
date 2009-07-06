@@ -13,12 +13,12 @@
 #define Reflex_OnDemandBuilderForScope
 
 #include "Reflex/Kernel.h"
-#include "Reflex/Scope.h"
 #include "Reflex/Builder/OnDemandBuilder.h"
 
 namespace Reflex {
 // not part of the interface
 class BuilderContainer;
+class ScopeBase;
 
 class RFLX_API OnDemandBuilderForScope: public OnDemandBuilder {
 public:
@@ -31,17 +31,17 @@ public:
    };
 
    OnDemandBuilderForScope() {}
-   OnDemandBuilderForScope(Scope scope): fContext(scope) {}
+   OnDemandBuilderForScope(ScopeBase* scope): fContext(scope) {}
    virtual ~OnDemandBuilderForScope() {}
 
    // return whether the builder has changed reflection data
    virtual void BuildAll() = 0;
 
-   void SetContext(Scope scope) { fContext = scope; }
-   Scope Context() const { return fContext; }
+   void SetContext(ScopeBase* scope) { fContext = scope; }
+   ScopeBase* Context() const { return fContext; }
 
 private:
-   Scope fContext; // which scope to build for
+   ScopeBase* fContext; // which scope to build for
 };
 } // namespace Reflex
 

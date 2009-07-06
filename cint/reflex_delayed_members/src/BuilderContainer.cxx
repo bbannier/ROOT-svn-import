@@ -28,9 +28,11 @@ void
 Reflex::BuilderContainer::Insert(OnDemandBuilder* odb) {
 //-------------------------------------------------------------------------------
    // Register a builder
-   odb->SetNext(fFirst);
+   bool enabled = IsEnabled();
+   odb->SetNext(First());
    odb->SetContainer(this);
-   fFirst = odb;
+   fFirstBuilder = odb;
+   if (!enabled) Disable();
 }
 
 //-------------------------------------------------------------------------------
@@ -38,10 +40,12 @@ void
 Reflex::BuilderContainer::Remove(OnDemandBuilder* odb) {
 //-------------------------------------------------------------------------------
    // Unregister a builder
-   if (odb == fFirst) {
-      fFirst = odb->Next();
+   if (odb == First()) {
+      bool enabled = IsEnabled();
+      fFirstBuilder = odb->Next();
+      if (!enabled) Disable();
    } else {
-      OnDemandBuilder* prev = fFirst;
+      OnDemandBuilder* prev = First();
       while (prev && prev->Next() != odb)
          prev = prev->Next();
       if (prev) {
@@ -58,12 +62,14 @@ Reflex::BuilderContainer::Clear() {
 //-------------------------------------------------------------------------------
    // Unregister all builders
    OnDemandBuilder* next = 0;
-   for (OnDemandBuilder* odb = fFirst; odb; odb = next) {
+   for (OnDemandBuilder* odb = First(); odb; odb = next) {
       next = odb->Next();
       odb->SetContainer(0);
       odb->SetNext(0);
    }
-   fFirst = 0;
+   bool enabled = IsEnabled();
+   fFirstBuilder = 0;
+   if (!enabled) Disable();
 }
 
 //-------------------------------------------------------------------------------
@@ -72,10 +78,12 @@ Reflex::BuilderContainer::BuildAll() {
 //-------------------------------------------------------------------------------
    // Call Build() on all on demand builders and clears the container.
    // Returns true if the builders have changed the reflection data.
-   OnDemandBuilder* oldFirst = fFirst;
+   if (!IsEnabled())
+      return;
+   OnDemandBuilder* oldFirst = fFirstBuilder;
    // prevent recursive invocation of builders
-   fFirst = 0;
+   fFirstBuilder = 0;
    for (OnDemandBuilder* odb = oldFirst; odb; odb = odb->Next())
       odb->BuildAll();
-   fFirst = oldFirst;
+   fFirstBuilder = oldFirst;
 }
