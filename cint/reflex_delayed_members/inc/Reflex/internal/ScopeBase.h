@@ -38,7 +38,7 @@ class MemberTemplate;
 class OwnedMemberTemplate;
 class Type;
 class DictionaryGenerator;
-class OnDemandBuilder;
+class OnDemandBuilderForScope;
 
 
 /**
@@ -644,7 +644,7 @@ public:
        Returns false if one of the bases is not complete. */
    virtual bool UpdateMembers() const;
 
-   void RegisterOnDemandBuilder(OnDemandBuilder* builder, int buildsWhat);
+   void RegisterOnDemandBuilder(OnDemandBuilderForScope* builder, int buildsWhat);
 
 protected:
    /** The MemberByName work-horse: find a member called name in members,
@@ -658,13 +658,17 @@ protected:
 
 
    void ExecuteFunctionMemberDelayLoad() const {
-      if (!fFunctionMemberBuilder.Empty())
-         fFunctionMemberBuilder.Build();
+      if (!fFunctionMemberBuilder.Empty()) {
+         fFunctionMemberBuilder.BuildAll();
+         fFunctionMemberBuilder.Clear();
+      }
    }
 
    void ExecuteDataMemberDelayLoad() const {
-      if (!fDataMemberBuilder.Empty())
-         fDataMemberBuilder.Build();
+      if (!fDataMemberBuilder.Empty()) {
+         fDataMemberBuilder.BuildAll();
+         fDataMemberBuilder.Clear();
+      }
    }
 
 private:

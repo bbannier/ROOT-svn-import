@@ -18,11 +18,11 @@
 
 //-------------------------------------------------------------------------------
 void
-Reflex::GenreflexMemberBuilder::Build() {
+Reflex::GenreflexMemberBuilder::BuildAll() {
 //-------------------------------------------------------------------------------
    // Build the members, return if we added something
 
-   Class* sb = dynamic_cast<Class*>(reinterpret_cast<ScopeBase*>(Context()));
+   Class* sb = dynamic_cast<Class*>(const_cast<ScopeBase*>(Context().ToScopeBase()));
    if (sb) {
       fFunc(sb);
    }

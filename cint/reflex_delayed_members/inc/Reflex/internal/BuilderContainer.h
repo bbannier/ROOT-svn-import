@@ -30,7 +30,7 @@ public:
    OnDemandBuilder* First() const { return fFirst; }
    bool Empty() const { return !fFirst; }
 
-   void Build();
+   void BuildAll();
 
 private:
    OnDemandBuilder* fFirst;

@@ -276,8 +276,8 @@ Reflex::ClassBuilderImpl::EnableCallback(bool enable /*= true*/) {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::ClassBuilderImpl::AddOnDemandBuilder(OnDemandBuilder* odb,
-                                             OnDemandBuilder::EBuilderKind kind) {
+Reflex::ClassBuilderImpl::AddOnDemandBuilder(OnDemandBuilderForScope* odb,
+                                             OnDemandBuilderForScope::EBuilderKind kind) {
 //-------------------------------------------------------------------------------
 // Register an on demand builder with this class.
 // The builder odb is able to provide on demand building for elements
@@ -410,8 +410,8 @@ Reflex::ClassBuilder::AddEnum(const char* nam,
 
 //-------------------------------------------------------------------------------
 Reflex::ClassBuilder&
-Reflex::ClassBuilder::AddOnDemandBuilder(OnDemandBuilder* odb,
-                                         OnDemandBuilder::EBuilderKind kind) {
+Reflex::ClassBuilder::AddOnDemandBuilder(OnDemandBuilderForScope* odb,
+                                         OnDemandBuilderForScope::EBuilderKind kind) {
 //-------------------------------------------------------------------------------
 // Register an on demand builder with this class.
 // The builder odb is able to provide on demand building for elements

@@ -29,6 +29,7 @@ Reflex::BuilderContainer::Insert(OnDemandBuilder* odb) {
 //-------------------------------------------------------------------------------
    // Register a builder
    odb->SetNext(fFirst);
+   odb->SetContainer(this);
    fFirst = odb;
 }
 
@@ -48,7 +49,7 @@ Reflex::BuilderContainer::Remove(OnDemandBuilder* odb) {
       }
    }
    odb->SetNext(0);
-   odb->UpdateRegistrationInfo(0, 0);
+   odb->SetContainer(0);
 }
 
 //-------------------------------------------------------------------------------
@@ -59,7 +60,7 @@ Reflex::BuilderContainer::Clear() {
    OnDemandBuilder* next = 0;
    for (OnDemandBuilder* odb = fFirst; odb; odb = next) {
       next = odb->Next();
-      odb->UpdateRegistrationInfo(0, 0);
+      odb->SetContainer(0);
       odb->SetNext(0);
    }
    fFirst = 0;
@@ -67,7 +68,7 @@ Reflex::BuilderContainer::Clear() {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::BuilderContainer::Build() {
+Reflex::BuilderContainer::BuildAll() {
 //-------------------------------------------------------------------------------
    // Call Build() on all on demand builders and clears the container.
    // Returns true if the builders have changed the reflection data.
@@ -75,7 +76,6 @@ Reflex::BuilderContainer::Build() {
    // prevent recursive invocation of builders
    fFirst = 0;
    for (OnDemandBuilder* odb = oldFirst; odb; odb = odb->Next())
-      odb->Build();
+      odb->BuildAll();
    fFirst = oldFirst;
-   Clear();
 }
