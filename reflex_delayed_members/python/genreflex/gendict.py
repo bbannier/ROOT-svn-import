@@ -1195,7 +1195,7 @@ class genDictionary(object) :
           if not self.xref[m]['attrs'].get('artificial') in ('true', '1') :
             if funcname == 'genFieldBuild' :
               odbd += '\n' + line
-            elif funcname == 'genMethodBuild' : # put c'tors and d'tors into non-delayed part
+            elif funcname in ('genMethodBuild','genOperatorMethodBuild','genConverterBuild') : # put c'tors and d'tors into non-delayed part
               odbf += '\n' + line
             else :
               sc += '\n' + line
