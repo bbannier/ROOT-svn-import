@@ -666,12 +666,7 @@ Reflex::Class::FunctionMemberByName(const std::string& nam,
                                     EMEMBERQUERY inh) const {
 //-------------------------------------------------------------------------------
 // Return function member by name and signature including the return type.
-   if (nam != "__getBasesTable" && nam != "getBasesTable"
-       && nam != "__getNewDelFunctions"
-       && nam != "createCollFuncTable")
-      // hack to avoid Cintex's early triggering of delayed loading:
-      // getBasesTable is available before delayed loading anyway.
-      ExecuteFunctionMemberDelayLoad();
+   ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return MemberByName2(fInherited->fFunctionMembers, nam, &signature, modifiers_mask);

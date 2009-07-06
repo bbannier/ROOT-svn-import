@@ -22,7 +22,7 @@ Reflex::GenreflexMemberBuilder::BuildAll() {
 //-------------------------------------------------------------------------------
    // Build the members, return if we added something
 
-   Class* sb = dynamic_cast<Class*>(const_cast<ScopeBase*>(Context().ToScopeBase()));
+   Class* sb = dynamic_cast<Class*>(Context());
    if (sb) {
       fFunc(sb);
    }

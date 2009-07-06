@@ -1038,6 +1038,21 @@ public:
    /** */
    const ScopeBase* ToScopeBase() const;
 
+   /** Disable on demand member building for functions*/
+   void DisableOnDemandFunctionMemberBuilders() const;
+
+   /** Re-enable on demand member building for functions */
+   void EnableOnDemandFunctionMemberBuilders() const;
+
+   /** Disable on demand building for data members.
+    */
+   void DisableOnDemandDataMemberBuilders() const;
+   
+   /** Re-enable on demand building for data members.
+    */
+   void EnableOnDemandDataMemberBuilders() const;
+   
+
 public:
    /**
     * @label __NIRVANA__
@@ -1851,7 +1866,6 @@ operator ||(char* c,
             const Reflex::Scope& rh) {
    return c || rh.operator bool();
 }
-
 
 #endif
 

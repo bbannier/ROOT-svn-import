@@ -1029,19 +1029,29 @@ Reflex::ScopeBase::GenerateDict(DictionaryGenerator& generator) const {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::ScopeBase::RegisterOnDemandBuilder(OnDemandBuilderForScope* builder, int buildsWhat) {
+Reflex::ScopeBase::RegisterOnDemandBuilder(OnDemandBuilderForScope* builder,
+                                           OnDemandBuilderForScope::EBuilderKind kind) {
 //-------------------------------------------------------------------------------
 // Add a on demand builder that can expand this scope's reflection data; see
-// OnDemandBuilder. buildsWhat is an ORed set of bits, defining what the builder
-// might modify.
-   BuilderContainer* cont = 0;
-   if (buildsWhat == OnDemandBuilderForScope::kBuildFunctionMembers) {
-      cont = &fFunctionMemberBuilder;
-   } else if (buildsWhat == OnDemandBuilderForScope::kBuildDataMembers) {
-      cont = &fDataMemberBuilder;
-   }
-   if (cont) {
-      cont->Insert(builder);
-      builder->SetContext(ThisScope());
-   }
+// OnDemandBuilder. kind defines what the builder might modify.
+   fOnDemandBuilder[kind].Insert(builder);
+   builder->SetContext(this);
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::ScopeBase::DisableOnDemandBuilders(OnDemandBuilderForScope::EBuilderKind kind) {
+//-------------------------------------------------------------------------------
+//  Turn off on demand building for elements specified by kind.
+   fOnDemandBuilder[kind].Disable();
+}
+
+
+//-------------------------------------------------------------------------------
+void
+Reflex::ScopeBase::EnableOnDemandBuilders(OnDemandBuilderForScope::EBuilderKind kind) {
+//-------------------------------------------------------------------------------
+//  Re-enable on demand building for elements specified by kind.
+   fOnDemandBuilder[kind].Enable();
 }
