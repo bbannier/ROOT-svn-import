@@ -25,7 +25,6 @@
 #include "Reflex/internal/InternalTools.h"
 #include "Reflex/Tools.h"
 #include "Reflex/DictionaryGenerator.h"
-#include "Reflex/Builder/OnDemandBuilderForScope.h"
 
 #include "Class.h"
 #include "Namespace.h"
@@ -223,10 +222,12 @@ Reflex::Member
 Reflex::ScopeBase::FunctionMemberByName(const std::string& name,
                                         const Type& signature,
                                         unsigned int modifiers_mask,
-                                        EMEMBERQUERY) const {
+                                        EMEMBERQUERY,
+                                        EDELAYEDLOADSETTING allowDelayedLoad) const {
 //-------------------------------------------------------------------------------
 // Return function member by name and signature including the return type.
-   ExecuteFunctionMemberDelayLoad();
+   if (allowDelayedLoad == DELAYEDLOAD_ON)
+      ExecuteFunctionMemberDelayLoad();
    return MemberByName2(fFunctionMembers, name, &signature, modifiers_mask, true);
 }
 
@@ -275,10 +276,12 @@ Reflex::Member
 Reflex::ScopeBase::FunctionMemberByNameAndSignature(const std::string& name,
                                                     const Type& signature,
                                                     unsigned int modifiers_mask,
-                                                    EMEMBERQUERY) const {
+                                                    EMEMBERQUERY,
+                                                    EDELAYEDLOADSETTING allowDelayedLoad) const {
 //-------------------------------------------------------------------------------
 // Return function member by name and signature excluding the return type.
-   ExecuteFunctionMemberDelayLoad();
+   if (allowDelayedLoad == DELAYEDLOAD_ON)
+      ExecuteFunctionMemberDelayLoad();
    return MemberByName2(fFunctionMembers, name, &signature, modifiers_mask, false);
 }
 
@@ -1029,29 +1032,11 @@ Reflex::ScopeBase::GenerateDict(DictionaryGenerator& generator) const {
 
 //-------------------------------------------------------------------------------
 void
-Reflex::ScopeBase::RegisterOnDemandBuilder(OnDemandBuilderForScope* builder,
-                                           OnDemandBuilderForScope::EBuilderKind kind) {
+Reflex::ScopeBase::RegisterOnDemandBuilder(OnDemandBuilder* builder,
+                                           EBuilderKind kind) {
 //-------------------------------------------------------------------------------
 // Add a on demand builder that can expand this scope's reflection data; see
 // OnDemandBuilder. kind defines what the builder might modify.
-   fOnDemandBuilder[kind].Insert(builder);
-   builder->SetContext(this);
-}
-
-
-//-------------------------------------------------------------------------------
-void
-Reflex::ScopeBase::DisableOnDemandBuilders(OnDemandBuilderForScope::EBuilderKind kind) {
-//-------------------------------------------------------------------------------
-//  Turn off on demand building for elements specified by kind.
-   fOnDemandBuilder[kind].Disable();
-}
-
-
-//-------------------------------------------------------------------------------
-void
-Reflex::ScopeBase::EnableOnDemandBuilders(OnDemandBuilderForScope::EBuilderKind kind) {
-//-------------------------------------------------------------------------------
-//  Re-enable on demand building for elements specified by kind.
-   fOnDemandBuilder[kind].Enable();
+   if (kind < kNumBuilderKinds)
+      fOnDemandBuilder[kind].Insert(builder);
 }

@@ -18,7 +18,6 @@
 #include "Reflex/Scope.h"
 #include "Reflex/internal/OwnedPropertyList.h"
 #include "Reflex/internal/BuilderContainer.h"
-#include "Reflex/Builder/OnDemandBuilderForScope.h"
 #include <vector>
 
 #ifdef _WIN32
@@ -39,6 +38,7 @@ class MemberTemplate;
 class OwnedMemberTemplate;
 class Type;
 class DictionaryGenerator;
+class OnDemandBuilder;
 
 /**
  * @class ScopeBase ScopeBase.h Reflex/ScopeBase.h
@@ -48,6 +48,13 @@ class DictionaryGenerator;
  */
 class RFLX_API ScopeBase {
 public:
+   enum EBuilderKind {
+      kBuildDataMembers,
+      kBuildFunctionMembers,
+
+      kNumBuilderKinds
+   };
+
    /** constructor within a At*/
    ScopeBase(const char* scope,
              TYPE scopeType);
@@ -150,7 +157,8 @@ public:
    virtual Member FunctionMemberByName(const std::string& name,
                                        const Type& signature,
                                        unsigned int modifiers_mask = 0,
-                                       EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
+                                       EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT,
+                                       EDELAYEDLOADSETTING allowDelayedLoad = DELAYEDLOAD_ON) const;
 
 
    /**
@@ -164,7 +172,8 @@ public:
    virtual Member FunctionMemberByNameAndSignature(const std::string& name,
                                                    const Type& signature,
                                                    unsigned int modifiers_mask = 0,
-                                                   EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
+                                                   EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT,
+                                                   EDELAYEDLOADSETTING allowDelayedLoad = DELAYEDLOAD_ON) const;
 
 
    /**
@@ -643,16 +652,8 @@ public:
        Returns false if one of the bases is not complete. */
    virtual bool UpdateMembers() const;
 
-   void RegisterOnDemandBuilder(OnDemandBuilderForScope* builder,
-                                OnDemandBuilderForScope::EBuilderKind kind);
-
-   /** Turn off on demand building for elements specified by kind.
-    */
-   void DisableOnDemandBuilders(OnDemandBuilderForScope::EBuilderKind kind);
-
-   /** Re-enable on demand building for elements specified by kind.
-    */
-   void EnableOnDemandBuilders(OnDemandBuilderForScope::EBuilderKind kind);
+   void RegisterOnDemandBuilder(OnDemandBuilder* builder,
+                                EBuilderKind kind);
 
 protected:
    /** The MemberByName work-horse: find a member called name in members,
@@ -666,19 +667,13 @@ protected:
 
 
    void ExecuteFunctionMemberDelayLoad() const {
-      if (!fOnDemandBuilder[OnDemandBuilderForScope::kBuildFunctionMembers].Empty()
-          && fOnDemandBuilder[OnDemandBuilderForScope::kBuildFunctionMembers].IsEnabled()) {
-         fOnDemandBuilder[OnDemandBuilderForScope::kBuildFunctionMembers].BuildAll();
-         fOnDemandBuilder[OnDemandBuilderForScope::kBuildFunctionMembers].Clear();
-      }
+      if (!fOnDemandBuilder[kBuildFunctionMembers].Empty())
+         fOnDemandBuilder[kBuildFunctionMembers].BuildAll();
    }
 
    void ExecuteDataMemberDelayLoad() const {
-      if (!fOnDemandBuilder[OnDemandBuilderForScope::kBuildDataMembers].Empty()
-          && fOnDemandBuilder[OnDemandBuilderForScope::kBuildFunctionMembers].IsEnabled()) {
-         fOnDemandBuilder[OnDemandBuilderForScope::kBuildDataMembers].BuildAll();
-         fOnDemandBuilder[OnDemandBuilderForScope::kBuildDataMembers].Clear();
-      }
+      if (!fOnDemandBuilder[kBuildDataMembers].Empty())
+         fOnDemandBuilder[kBuildDataMembers].BuildAll();
    }
 
 private:
@@ -818,7 +813,7 @@ private:
     * Containers for on-demand builders of function and data members.
     */
    mutable
-   BuilderContainer fOnDemandBuilder[2];
+   BuilderContainer fOnDemandBuilder[kNumBuilderKinds];
 
 };    // class ScopeBase
 } //namespace Reflex

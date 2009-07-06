@@ -133,7 +133,8 @@ public:
    Member FunctionMemberByName(const std::string& name,
                                const Type& signature,
                                unsigned int modifiers_mask = 0,
-                               EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
+                               EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT,
+                               EDELAYEDLOADSETTING allowDelayedLoad = DELAYEDLOAD_ON) const;
 
 
    /**
@@ -147,7 +148,8 @@ public:
    Member FunctionMemberByNameAndSignature(const std::string& name,
                                            const Type& signature,
                                            unsigned int modifiers_mask = 0,
-                                           EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT) const;
+                                           EMEMBERQUERY inh = INHERITEDMEMBERS_DEFAULT,
+                                           EDELAYEDLOADSETTING allowDelayedLoad = DELAYEDLOAD_ON) const;
 
 
    /**
@@ -663,10 +665,12 @@ inline Reflex::Member
 Reflex::Class::FunctionMemberByName(const std::string& nam,
                                     const Type& signature,
                                     unsigned int modifiers_mask,
-                                    EMEMBERQUERY inh) const {
+                                    EMEMBERQUERY inh,
+                                    EDELAYEDLOADSETTING allowDelayedLoad) const {
 //-------------------------------------------------------------------------------
 // Return function member by name and signature including the return type.
-   ExecuteFunctionMemberDelayLoad();
+   if (allowDelayedLoad == DELAYEDLOAD_ON)
+      ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return MemberByName2(fInherited->fFunctionMembers, nam, &signature, modifiers_mask);
@@ -681,10 +685,12 @@ inline Reflex::Member
 Reflex::Class::FunctionMemberByNameAndSignature(const std::string& nam,
                                                 const Type& signature,
                                                 unsigned int modifiers_mask,
-                                                EMEMBERQUERY inh) const {
+                                                EMEMBERQUERY inh,
+                                                EDELAYEDLOADSETTING allowDelayedLoad) const {
 //-------------------------------------------------------------------------------
 // Return function member by name and signature excluding the return type.
-   ExecuteFunctionMemberDelayLoad();
+   if (allowDelayedLoad == DELAYEDLOAD_ON)
+      ExecuteFunctionMemberDelayLoad();
    if (inh == INHERITEDMEMBERS_ALSO || (inh == INHERITEDMEMBERS_DEFAULT && fInherited)) {
       if (Class::UpdateMembers()) {
          return MemberByName2(fInherited->fFunctionMembers, nam, &signature, modifiers_mask, false);

@@ -20,13 +20,12 @@ class Class;
 class RFLX_API GenreflexMemberBuilder: public OnDemandBuilderForScope {
 public:
    typedef void (*SetupFunc_t)(Class* sb);
-   GenreflexMemberBuilder(EBuilderKind kind, SetupFunc_t func): fKind(kind), fFunc(func) {}
+   GenreflexMemberBuilder(SetupFunc_t func): fFunc(func) {}
    virtual ~GenreflexMemberBuilder() {}
 
    void BuildAll();
 
 private:
-   EBuilderKind fKind;
    SetupFunc_t  fFunc;
 };
 } // namespace Reflex
