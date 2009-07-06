@@ -28,27 +28,25 @@ public:
   enum Setting { Linear, NonLinear, NonLinearPosFractions, NonLinearLinFractions } ;
 
   RooPolyMorph() {} ; 
-  RooPolyMorph(const char *name, const char *title,
-	       RooAbsReal& _m,
-	       const RooArgList& varList,
-	       const RooArgList& pdfList,
-               const TVectorD& mrefpoints,
-               const Setting& setting = NonLinearPosFractions
-              );
+  RooPolyMorph(const char *name, const char *title, RooAbsReal& _m, const RooArgList& varList,
+	       const RooArgList& pdfList, const RooArgList& mrefList, const Setting& setting = NonLinearPosFractions);
+  RooPolyMorph(const char *name, const char *title, RooAbsReal& _m, const RooArgList& varList,
+	       const RooArgList& pdfList, const TVectorD& mrefpoints, const Setting& setting = NonLinearPosFractions );
   RooPolyMorph(const RooPolyMorph& other, const char* name=0) ;
   virtual TObject* clone(const char* newname) const { return new RooPolyMorph(*this,newname); }
   virtual ~RooPolyMorph();
 
-  void     calculateFractions(Bool_t verbose=kTRUE) const;
   void     setMode(const Setting& setting) { _setting = setting; }
 
-  Bool_t redirectServersHook(const RooAbsCollection& /*newServerList*/, Bool_t /*mustReplaceAll*/, Bool_t /*nameChange*/, Bool_t /*isRecursive*/) ;  
 
 protected:
+
+  Bool_t redirectServersHook(const RooAbsCollection& /*newServerList*/, Bool_t /*mustReplaceAll*/, Bool_t /*nameChange*/, Bool_t /*isRecursive*/) ;  
 
   Double_t evaluate() const ;
 
   void     initialize();
+  void     calculateFractions(Bool_t verbose=kTRUE) const;
   void     constructMorphPdf() const ;
 
   inline   const Int_t ij(const Int_t& i, const Int_t& j) const { return (i*_varList.getSize()+j); }
