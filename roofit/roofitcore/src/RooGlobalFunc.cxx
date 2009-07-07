@@ -190,6 +190,9 @@ namespace RooFit {
   RooCmdArg AutoSymBinning(Int_t nbins, Double_t marginFactor) { return RooCmdArg("AutoRangeData",1,nbins,marginFactor,0,0,0,0,0) ; }
   RooCmdArg AutoBinning(Int_t nbins, Double_t marginFactor) { return RooCmdArg("AutoRangeData",0,nbins,marginFactor,0,0,0,0,0) ; }
 
+  // RooAbsReal::fillHistogram arguments
+  RooCmdArg IntegratedObservables(const RooArgSet& intObs) {  return RooCmdArg("IntObs",0,0,0,0,0,0,0,0,0,0,&intObs,0) ; } ;  
+ 
   // RooAbsReal::createIntegral arguments
   RooCmdArg NormSet(const RooArgSet& nset)           { return RooCmdArg("NormSet",0,0,0,0,0,0,&nset,0) ; }
   RooCmdArg NumIntConfig(const RooNumIntConfig& cfg) { return RooCmdArg("NumIntConfig",0,0,0,0,0,0,&cfg,0) ; }

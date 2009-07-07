@@ -147,6 +147,8 @@ RooCmdArg AutoRange(const RooAbsData& data, Double_t marginFactor=0.1) ;
 RooCmdArg AutoSymBinning(Int_t nbins=100, Double_t marginFactor=0.1) ; 
 RooCmdArg AutoBinning(Int_t nbins=100, Double_t marginFactor=0.1) ;
 
+// RooAbsReal::fillHistogram arguments
+RooCmdArg IntegratedObservables(const RooArgSet& intObs) ;
 
 // RooAbsData::reduce arguments
 RooCmdArg SelectVars(const RooArgSet& vars) ;

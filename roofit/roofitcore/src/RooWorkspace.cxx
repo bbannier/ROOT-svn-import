@@ -187,20 +187,20 @@ RooWorkspace::RooWorkspace(const RooWorkspace& other) :
   delete iter2 ;
 
   // Copy named sets
-  for (map<string,RooArgSet>::const_iterator iter = other._namedSets.begin() ; iter != other._namedSets.end() ; ++iter) {
+  for (map<string,RooArgSet>::const_iterator iter3 = other._namedSets.begin() ; iter3 != other._namedSets.end() ; ++iter3) {
     // Make RooArgSet with equivalent content of this workspace
-    RooArgSet* tmp = (RooArgSet*) _allOwnedNodes.selectCommon(iter->second) ;
-    _namedSets[iter->first].add(*tmp) ;
+    RooArgSet* tmp = (RooArgSet*) _allOwnedNodes.selectCommon(iter3->second) ;
+    _namedSets[iter3->first].add(*tmp) ;
     delete tmp ;
   }
 
   // Copy generic objects
-  TIterator* iter3 = other._genObjects.MakeIterator() ;
+  TIterator* iter4 = other._genObjects.MakeIterator() ;
   TObject* gobj ;
-  while((gobj=iter3->Next())) {
+  while((gobj=iter4->Next())) {
     _genObjects.Add(gobj->Clone()) ;
   }
-  delete iter3 ;
+  delete iter4 ;
   
 }
 
@@ -2087,21 +2087,21 @@ void RooWorkspace::exportToCint(const char* nsname)
 
   // Export present contents of workspace to CINT
   TIterator* iter = _allOwnedNodes.createIterator() ;
-  TObject* obj ;
-  while((obj=iter->Next())) {
-    exportObj(obj) ;
+  TObject* wobj ;
+  while((wobj=iter->Next())) {
+    exportObj(wobj) ;
   }  
   delete iter ;
   iter = _dataList.MakeIterator() ;
-  while((obj=iter->Next())) {
-    exportObj(obj) ;
+  while((wobj=iter->Next())) {
+    exportObj(wobj) ;
   }  
   delete iter ;
 }
 
 
 //_____________________________________________________________________________
-void RooWorkspace::exportObj(TObject* obj)
+void RooWorkspace::exportObj(TObject* wobj)
 {
   // Export reference to given workspace object to CINT
 
@@ -2109,7 +2109,7 @@ void RooWorkspace::exportObj(TObject* obj)
   if (!_doExport) return ;
 
   // Do not export RooConstVars
-  if (obj->IsA() == RooConstVar::Class()) {
+  if (wobj->IsA() == RooConstVar::Class()) {
     return ;
   }
 
@@ -2117,13 +2117,13 @@ void RooWorkspace::exportObj(TObject* obj)
   // Determine if object name is a valid C++ identifier name
 
   // Do not export objects that have names that are not valid C++ identifiers
-  if (!isValidCPPID(obj->GetName())) {
-    cxcoutD(ObjectHandling) << "RooWorkspace::exportObj(" << GetName() << ") INFO: Workspace object name " << obj->GetName() << " is not a valid C++ identifier and is not exported to CINT" << endl ;
+  if (!isValidCPPID(wobj->GetName())) {
+    cxcoutD(ObjectHandling) << "RooWorkspace::exportObj(" << GetName() << ") INFO: Workspace object name " << wobj->GetName() << " is not a valid C++ identifier and is not exported to CINT" << endl ;
     return ;
   }
 
   // Declare correctly typed reference to object in CINT in the namespace associated with this workspace
-  string cintExpr = Form("namespace %s { %s& %s = *(%s *)0x%x ; }",_exportNSName.c_str(),obj->IsA()->GetName(),obj->GetName(),obj->IsA()->GetName(),obj) ;
+  string cintExpr = Form("namespace %s { %s& %s = *(%s *)0x%x ; }",_exportNSName.c_str(),wobj->IsA()->GetName(),wobj->GetName(),wobj->IsA()->GetName(),wobj) ;
   gROOT->ProcessLine(cintExpr.c_str()) ;  
 }
 
@@ -2154,10 +2154,10 @@ void RooWorkspace::unExport()
   // Delete exported reference in CINT namespace 
   char buf[1024] ;
   TIterator* iter = _allOwnedNodes.createIterator() ;
-  TObject* obj ;
-  while((obj=iter->Next())) {
-    if (isValidCPPID(obj->GetName())) {
-      strcpy(buf,Form("%s::%s",_exportNSName.c_str(),obj->GetName())) ;
+  TObject* wobj ;
+  while((wobj=iter->Next())) {
+    if (isValidCPPID(wobj->GetName())) {
+      strcpy(buf,Form("%s::%s",_exportNSName.c_str(),wobj->GetName())) ;
       G__deletevariable(buf) ;
     }
   }
