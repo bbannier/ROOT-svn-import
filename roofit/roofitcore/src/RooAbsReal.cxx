@@ -90,7 +90,6 @@
 #include "TF3.h"
 #include "TMatrixD.h"
 #include "TVector.h"
-#include "TSystem.h"
 
 #include <sstream>
 
@@ -756,7 +755,7 @@ const RooAbsReal* RooAbsReal::createPlotProjection(const RooArgSet& depVars, con
 
 //_____________________________________________________________________________
 const RooAbsReal *RooAbsReal::createPlotProjection(const RooArgSet &dependentVars, const RooArgSet *projectedVars,
-					       RooArgSet *&cloneSet, const char* rangeName) const 
+						   RooArgSet *&cloneSet, const char* rangeName, const RooArgSet* condObs) const 
 {
   // Utility function for plotOn() that creates a projection of a function or p.d.f 
   // to be plotted on a RooPlot. 
@@ -857,7 +856,10 @@ const RooAbsReal *RooAbsReal::createPlotProjection(const RooArgSet &dependentVar
   // Create the set of normalization variables to use in the projection integrand
   RooArgSet normSet(dependentVars);
   if(0 != projectedVars) normSet.add(*projectedVars);
-
+  if(0 != condObs) {
+    normSet.remove(*condObs,kTRUE,kTRUE) ;
+  }
+  
   // Try to create a valid projection integral. If no variables are to be projected,
   // create a null projection anyway to bind our normalization over the dependents
   // consistently with the way they would be bound with a non-trivial projection.
@@ -895,7 +897,8 @@ const RooAbsReal *RooAbsReal::createPlotProjection(const RooArgSet &dependentVar
 
 //_____________________________________________________________________________
 TH1 *RooAbsReal::fillHistogram(TH1 *hist, const RooArgList &plotVars,
-			       Double_t scaleFactor, const RooArgSet *projectedVars, Bool_t scaleForDensity) const 
+			       Double_t scaleFactor, const RooArgSet *projectedVars, Bool_t scaleForDensity,
+			       const RooArgSet* condObs) const 
 {
   // Fill the ROOT histogram 'hist' with values sampled from this
   // function at the bin centers.  Our value is calculated by first
@@ -955,7 +958,9 @@ TH1 *RooAbsReal::fillHistogram(TH1 *hist, const RooArgList &plotVars,
 
   // Call checkObservables
   RooArgSet allDeps(plotClones) ;
-  if (projectedVars) allDeps.add(*projectedVars) ;
+  if (projectedVars) {
+    allDeps.add(*projectedVars) ;
+  }
   if (checkObservables(&allDeps)) {
     coutE(InputArguments) << "RooAbsReal::fillHistogram(" << GetName() << ") error in checkObservables, abort" << endl ;
     return hist ;
@@ -963,9 +968,8 @@ TH1 *RooAbsReal::fillHistogram(TH1 *hist, const RooArgList &plotVars,
 
   // Create a standalone projection object to use for calculating bin contents
   RooArgSet *cloneSet = 0;
-  const RooAbsReal *projected= createPlotProjection(plotClones,projectedVars,cloneSet);
+  const RooAbsReal *projected= createPlotProjection(plotClones,projectedVars,cloneSet,0,condObs);
   cxcoutD(Plotting) << "RooAbsReal::fillHistogram(" << GetName() << ") plot projection object is " << projected->GetName() << endl ;
-
 
   // Prepare to loop over the histogram bins
   Int_t xbins(0),ybins(1),zbins(1);
@@ -1238,19 +1242,15 @@ TH1* RooAbsReal::createHistogram(const char *name, const RooAbsRealLValue& xvar,
   }
 
   RooArgSet* projObs = static_cast<RooArgSet*>(pc.getObject("projObs")) ;
+  RooArgSet* intObs = 0 ;
 
   Bool_t doScaling = pc.getInt("scaling") ;
 
-  // Strip any 'Scaling' commands from list forwarded to createHistogram
-  RooLinkedList l2 ;
-  for (Int_t i=0 ; i<argList.GetSize() ; i++) {
-    if (TString(argList.At(i)->GetName()).CompareTo("Scaling")) {
-      l2.Add(argList.At(i)) ;
-    }
-  }
+  RooLinkedList argListCreate(argList) ;
+  pc.stripCmdList(argListCreate,"Scaling,ProjectedObservables") ;
 
-  TH1* histo = xvar.createHistogram(name,l2) ;
-  fillHistogram(histo,vars,1.0,projObs,doScaling) ;
+  TH1* histo = xvar.createHistogram(name,argListCreate) ;
+  fillHistogram(histo,vars,1.0,intObs,doScaling,projObs) ;
 
   return histo ;
 }
@@ -2372,6 +2372,8 @@ RooPlot* RooAbsReal::plotOnWithErrorBand(RooPlot* frame,const RooFitResult& fr, 
 		  << *errorParams << " from fit result " << fr.GetName() << " using " << n << " samplings." << endl ;
     
     // Generate variation curves with above set of parameter values
+    Double_t ymin = frame->GetMinimum() ;
+    Double_t ymax = frame->GetMaximum() ;
     RooDataSet* d = paramPdf->generate(*errorParams,n) ;
     vector<RooCurve*> cvec ;
     for (int i=0 ; i<d->numEntries() ; i++) {
@@ -2381,6 +2383,8 @@ RooPlot* RooAbsReal::plotOnWithErrorBand(RooPlot* frame,const RooFitResult& fr, 
       cvec.push_back(frame->getCurve()) ;
       frame->remove(0,kFALSE) ;
     }
+    frame->SetMinimum(ymin) ;
+    frame->SetMaximum(ymax) ;
     
     
     // Generate upper and lower curve points from 68% interval around each point of central curve
@@ -2405,51 +2409,102 @@ RooPlot* RooAbsReal::plotOnWithErrorBand(RooPlot* frame,const RooFitResult& fr, 
     //   Where F(a) = (f(x,a+da) - f(x,a-da))/2
     //   and C_aa' is the correlation matrix
 
-    const TMatrixDSym& C = fr.correlationMatrix() ;
     // Clone self for internal use
     RooAbsReal* cloneFunc = (RooAbsReal*) cloneTree() ;
     RooArgSet* cloneParams = cloneFunc->getObservables(fr.floatParsFinal()) ;
     RooArgSet* errorParams = params?((RooArgSet*)cloneParams->selectCommon(*params)):cloneParams ;    
+    
 
     // Make list of parameter instances of cloneFunc in order of error matrix
     RooArgList paramList ;
     const RooArgList& fpf = fr.floatParsFinal() ;
+    vector<int> fpf_idx ;
     for (Int_t i=0 ; i<fpf.getSize() ; i++) {
       RooAbsArg* par = errorParams->find(fpf[i].GetName()) ;
       if (par) {
 	paramList.add(*par) ;
+	fpf_idx.push_back(i) ;
       }
     }
-    // Create vector of plus,minus variations for each parameter
-    
+
     vector<RooCurve*> plusVar, minusVar ;    
-    for (Int_t ivar=0 ; ivar<paramList.getSize() ; ivar++) {
 
-      RooRealVar& rrv = (RooRealVar&)fpf[ivar] ;
+    if (!params) {
+      
+      // Create vector of plus,minus variations for each parameter
 
-      Double_t cenVal = rrv.getVal() ;
-      Double_t errVal = rrv.getError() ;
-  
-      // Make Plus variation
-      ((RooRealVar*)paramList.at(ivar))->setVal(cenVal+Z*errVal) ;
-      RooLinkedList tmp2(plotArgList) ;
-      cloneFunc->plotOn(frame,tmp2) ;
-      plusVar.push_back(frame->getCurve()) ;
-      frame->remove(0,kFALSE) ;
+      const TMatrixDSym& V = fr.covarianceMatrix() ;
+      
+      for (Int_t ivar=0 ; ivar<paramList.getSize() ; ivar++) {
+	
+	RooRealVar& rrv = (RooRealVar&)fpf[ivar] ;
+	
+	Double_t cenVal = rrv.getVal() ;
+	Double_t errVal = sqrt(V(ivar,ivar)) ;
 
-      // Make Minus variation
-      ((RooRealVar*)paramList.at(ivar))->setVal(cenVal-Z*errVal) ;
-      RooLinkedList tmp3(plotArgList) ;
-      cloneFunc->plotOn(frame,tmp3) ;
-      minusVar.push_back(frame->getCurve()) ;
-      frame->remove(0,kFALSE) ;
+	// Make Plus variation
+	((RooRealVar*)paramList.at(ivar))->setVal(cenVal+Z*errVal) ;
+	RooLinkedList tmp2(plotArgList) ;
+	cloneFunc->plotOn(frame,tmp2) ;
+	plusVar.push_back(frame->getCurve()) ;
+	frame->remove(0,kFALSE) ;
+	
+	// Make Minus variation
+	((RooRealVar*)paramList.at(ivar))->setVal(cenVal-Z*errVal) ;
+	RooLinkedList tmp3(plotArgList) ;
+	cloneFunc->plotOn(frame,tmp3) ;
+	minusVar.push_back(frame->getCurve()) ;
+	frame->remove(0,kFALSE) ;
+	
+	((RooRealVar*)paramList.at(ivar))->setVal(cenVal) ;
+      }
+      
+      const TMatrixDSym& C = fr.correlationMatrix() ;
+      band = cenCurve->makeErrorBand(plusVar,minusVar,C,Z) ;    
+      
+    } else {
+      
+      // Create vector of plus,minus variations for each parameter
+      
+      TMatrixDSym Vred(fr.reducedCovarianceMatrix(paramList)) ;
+      TMatrixDSym Cred(paramList.getSize()) ;
+      
+      vector<double> errVec(paramList.getSize()) ;
+      for (int i=0 ; i<paramList.getSize() ; i++) {
+	errVec[i] = sqrt(Vred(i,i)) ;
+	for (int j=i ; j<paramList.getSize() ; j++) {
+	  Cred(i,j) = Vred(i,j)/sqrt(Vred(i,i)*Vred(j,j)) ;
+	  Cred(j,i) = Cred(i,j) ;
+	}
+      }
 
-      ((RooRealVar*)paramList.at(ivar))->setVal(cenVal) ;
+      for (Int_t ivar=0 ; ivar<paramList.getSize() ; ivar++) {
+	
+	RooRealVar& rrv = (RooRealVar&)fpf[fpf_idx[ivar]] ;
+
+	Double_t cenVal = rrv.getVal() ;
+	Double_t errVal = errVec[ivar] ;
+	
+	// Make Plus variation
+	((RooRealVar*)paramList.at(ivar))->setVal(cenVal+Z*errVal) ;
+	RooLinkedList tmp2(plotArgList) ;
+	cloneFunc->plotOn(frame,tmp2) ;
+	plusVar.push_back(frame->getCurve()) ;
+	frame->remove(0,kFALSE) ;
+	
+	// Make Minus variation
+	((RooRealVar*)paramList.at(ivar))->setVal(cenVal-Z*errVal) ;
+	RooLinkedList tmp3(plotArgList) ;
+	cloneFunc->plotOn(frame,tmp3) ;
+	minusVar.push_back(frame->getCurve()) ;
+	frame->remove(0,kFALSE) ;
+	
+	((RooRealVar*)paramList.at(ivar))->setVal(cenVal) ;
+      }
+
+     band = cenCurve->makeErrorBand(plusVar,minusVar,Cred,Z) ;    
+     
     }
-
-    //                                        T
-    // Generate error bands according to F*C*F   where F = (plusVar-minusVar)/2 
-    band = cenCurve->makeErrorBand(plusVar,minusVar,C,Z) ;
     
     // Cleanup 
     delete cloneFunc ;
@@ -3190,6 +3245,7 @@ void RooAbsReal::logEvalError(const char* message, const char* serverValueString
   inLogEvalError = kFALSE ;
   //coutE(Tracing) << "RooAbsReal::logEvalError(" << GetName() << ") message = " << message << endl ;
 }
+
 
 
 
