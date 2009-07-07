@@ -1344,7 +1344,12 @@ void RooAbsArg::printMultiline(ostream& os, Int_t /*contents*/, Bool_t /*verbose
     
     if (proxy->IsA()->InheritsFrom(RooArgProxy::Class())) {
       os << indent << "    " << proxy->name() << " -> " ;
-      ((RooArgProxy*)proxy)->absArg()->printStream(os,kName,kSingleLine) ;
+      RooAbsArg* parg = ((RooArgProxy*)proxy)->absArg() ;
+      if (parg) {
+	parg->printStream(os,kName,kSingleLine) ;
+      } else {
+	os << " (empty)" << endl ; ;
+      }
     } else {
       os << indent << "    " << proxy->name() << " -> " ;
       os << endl ;
