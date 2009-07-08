@@ -1390,6 +1390,7 @@ void TFitEditor::DoNoSelection()
    fSetParam->SetEnabled(kFALSE);
    fFitButton->SetEnabled(kFALSE);
    fResetButton->SetEnabled(kFALSE);
+   fDrawAdvanced->SetState(kButtonDisabled);
 }
 
 //______________________________________________________________________________
@@ -2656,19 +2657,19 @@ TF1* TFitEditor::HasFitFunction()
    // found in the list of functions, it will be returned
    
    TList *lf = GetFitObjectListOfFunctions();
-   TF1 *func = 0;
 
    if ( lf ) {
       if ( !fTypeFit->FindEntry("Prev. Fit") )
          fTypeFit->InsertEntry("Prev. Fit",kFP_PREVFIT, kFP_UFUNC);
       fTypeFit->Select(kFP_PREVFIT);
       FillFunctionList();
+      fDrawAdvanced->SetState(kButtonUp);
 
       TObject *obj2;
       TIter next(lf, kIterBackward);
       while ((obj2 = next())) {
          if (obj2->InheritsFrom(TF1::Class())) {
-            func = (TF1 *)obj2;
+            TF1* func = (TF1 *)obj2;
             TGLBEntry *le = fFuncList->FindEntry(func->GetName());
             if (le) {
                fFuncList->Select(le->EntryId(), kTRUE);
@@ -2677,6 +2678,8 @@ TF1* TFitEditor::HasFitFunction()
          }
       }
    }
+
+   fDrawAdvanced->SetState(kButtonDisabled);
    return 0;
 }
 
