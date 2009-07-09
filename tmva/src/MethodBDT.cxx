@@ -714,7 +714,7 @@ void  TMVA::MethodBDT::ReadWeightsFromStream( istream& istr )
 
    // and read the Weights (BDT coefficients)  
    istr >> dummy >> fNTrees;
-   fLogger << kINFO << "Read " << fNTrees << " Decision trees" << Endl;
+   //fLogger << kINFO << "Read " << fNTrees << " Decision trees" << Endl;
   
    for (UInt_t i=0;i<fForest.size();i++) delete fForest[i];
    fForest.clear();
