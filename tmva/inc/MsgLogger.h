@@ -63,9 +63,9 @@ namespace TMVA {
 
    public:
 
-      MsgLogger( const TObject* source, EMsgType minType = kINFO );
-      MsgLogger( const std::string& source, EMsgType minType = kINFO );
-      MsgLogger( EMsgType minType = kINFO );
+      MsgLogger( const TObject* source, EMsgType minType = kSILENT );
+      MsgLogger( const std::string& source, EMsgType minType = kSILENT );
+      MsgLogger( EMsgType minType = kSILENT );
       MsgLogger( const MsgLogger& parent );
       ~MsgLogger();
 
