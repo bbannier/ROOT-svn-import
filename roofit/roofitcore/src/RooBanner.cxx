@@ -22,4 +22,4 @@ Int_t doBanner()
   return 0 ;
 }
 
-static Int_t dummy = doBanner() ;
+//static Int_t dummy = doBanner() ;
