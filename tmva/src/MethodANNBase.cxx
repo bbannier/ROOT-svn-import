@@ -229,7 +229,7 @@ void TMVA::MethodANNBase::BuildNetwork(vector<Int_t>* layout, vector<Double_t>* 
    // build network given a layout (number of neurons in each layer)
    // and optional weights array
 
-   fLogger << kINFO << "Building Network" << Endl;
+   // Shut up! fLogger << kINFO << "Building Network" << Endl;
 
    DeleteNetwork();
    InitANNBase();
@@ -351,7 +351,7 @@ void TMVA::MethodANNBase::AddPreLinks(TNeuron* neuron, TObjArray* prevLayer)
 void TMVA::MethodANNBase::InitWeights()
 {
    // initialize the synapse weights randomly
-   PrintMessage("Initializing weights");
+// Shut up!   PrintMessage("Initializing weights");
    
    // init synapse weights
    Int_t numSynapses = fSynapses->GetEntriesFast();
@@ -366,7 +366,7 @@ void TMVA::MethodANNBase::InitWeights()
 void TMVA::MethodANNBase::ForceWeights(vector<Double_t>* weights)
 {
    // force the synapse weights
-   PrintMessage("Forcing weights");
+   // Shut up! PrintMessage("Forcing weights");
 
    Int_t numSynapses = fSynapses->GetEntriesFast();
    TSynapse* synapse;
