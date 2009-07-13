@@ -1856,17 +1856,10 @@ TH1 *TH3::DoProject1D(char* title, char* name, TAxis* projX,
    // if specified in the option (by default they considered)
    Double_t cont,e,e1;
    Double_t totcont  = 0;
-//   Double_t toterr2  = 0;
    Double_t newerror = 0;
-   Int_t ix = 0;
 
    for (ixbin=0;ixbin<=1+projX->GetNbins();ixbin++){
-      ix = ixbin-ixmin;
-      if (ixmin>0) ix +=1;
-      if (ix < 0) ix=0; if (ix > nx+1) ix = nx+1;
-      if ( ix == 0 && projX->TestBit(TAxis::kAxisRange)) continue;
-      if ( ix == nx+1 && projX->TestBit(TAxis::kAxisRange)) continue;
-      if ( originalRange && projX->TestBit(TAxis::kAxisRange) && ( ixbin < ixmin || ixbin > ixmax )) continue;
+      if ( projX->TestBit(TAxis::kAxisRange) && ( ixbin < ixmin || ixbin > ixmax )) continue;
       for (out1bin= out1->GetFirst() - ( useUF && !out1->TestBit(TAxis::kAxisRange) ); 
            out1bin <= out1->GetLast() + ( useOF && !out1->TestBit(TAxis::kAxisRange) );
            out1bin++){
@@ -1878,21 +1871,17 @@ TH1 *TH3::DoProject1D(char* title, char* name, TAxis* projX,
             cont = GetBinContent(bin);
 
             // "x"
+            int ix = h1->FindBin( projX->GetBinCenter(ixbin) );
             e1       = h1->GetBinError(ix);
-            if (cont) h1->Fill(projX->GetBinCenter(ixbin), cont);
+            double c1 = h1->GetBinContent(ix);
+            if (cont) h1->SetBinContent(ix, cont + c1);
             if (computeErrors) {
                e        = GetBinError(bin);
                newerror = TMath::Sqrt(e*e + e1*e1);
-               //h1->SetBinError(ix,newerror);
-               h1->SetBinError( h1->FindBin( projX->GetBinCenter(ixbin) ) ,newerror);
+               h1->SetBinError(ix,newerror);
             }
 
             if (cont)   totcont += cont;
-//             if (computeErrors) {
-//                e   = GetBinError(bin);
-//                Double_t e2 = e * e;
-//                toterr2 += e2;
-//             }
          }
       }
    }
@@ -2051,20 +2040,10 @@ TH2 *TH3::DoProject2D(char* title, char* name, TAxis* projX, TAxis* projY,
    Double_t totcont  = 0;
    Double_t newerror = 0;
    for (ixbin=0;ixbin<=1+projX->GetNbins();ixbin++){
-      Int_t ix = ixbin-ixmin;
-      if (ixmin>0) ix +=1;
-      if (ix < 0) ix=0; if (ix > nx+1) ix = nx+1;
-      if ( ix == 0 && projX->TestBit(TAxis::kAxisRange)) continue;
-      if ( ix == nx+1 && projX->TestBit(TAxis::kAxisRange)) continue;
-      if ( originalRange && projX->TestBit(TAxis::kAxisRange) && ( ixbin < ixmin || ixbin > ixmax )) continue;
+      if ( projX->TestBit(TAxis::kAxisRange) && ( ixbin < ixmin || ixbin > ixmax )) continue;
 
       for (iybin=0;iybin<=1+projY->GetNbins();iybin++){
-         Int_t iy = iybin-iymin;
-         if (iymin>0) iy +=1;
-         if (iy < 0) iy=0; if (iy > ny+1) iy = ny+1;
-         if ( iy == 0 && projY->TestBit(TAxis::kAxisRange)) continue;
-         if ( iy == ny+1 && projY->TestBit(TAxis::kAxisRange)) continue;
-         if ( originalRange && projY->TestBit(TAxis::kAxisRange) && ( iybin < iymin || iybin > iymax )) continue;
+         if ( projY->TestBit(TAxis::kAxisRange) && ( iybin < iymin || iybin > iymax )) continue;
 
          for (outbin=out->GetFirst() - ( useUF && !out->TestBit(TAxis::kAxisRange) );
               outbin <= out->GetLast() + ( useOF && !out->TestBit(TAxis::kAxisRange) );
@@ -2074,6 +2053,8 @@ TH2 *TH3::DoProject2D(char* title, char* name, TAxis* projX, TAxis* projY,
             cont = GetBinContent(bin);
 
             // "xy"
+            int iy = h2->GetXaxis()->FindBin( projY->GetBinCenter(iybin) );
+            int ix = h2->GetYaxis()->FindBin( projX->GetBinCenter(ixbin) );
             e1       = h2->GetCellError(iy,ix);
             if (cont) h2->Fill(projY->GetBinCenter(iybin),projX->GetBinCenter(ixbin), cont);
             if (computeErrors) {
@@ -2081,7 +2062,6 @@ TH2 *TH3::DoProject2D(char* title, char* name, TAxis* projX, TAxis* projY,
                newerror = TMath::Sqrt(e*e + e1*e1);
                h2->SetCellError(iy,ix,newerror);
             }
-
             if (cont) totcont += cont; 
          }
       }
