@@ -1885,7 +1885,8 @@ TH1 *TH3::DoProject1D(char* title, char* name, TAxis* projX,
             if (computeErrors) {
                e        = GetBinError(bin);
                newerror = TMath::Sqrt(e*e + e1*e1);
-               h1->SetBinError(ix,newerror);
+               //h1->SetBinError(ix,newerror);
+               h1->SetBinError( h1->FindBin( projX->GetBinCenter(ixbin) ) ,newerror);
             }
 
             if (cont)   totcont += cont;
