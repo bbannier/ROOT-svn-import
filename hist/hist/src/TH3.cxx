@@ -1794,23 +1794,21 @@ TH1 *TH3::DoProject1D(char* title, char* name, TAxis* projX,
    // Create the histogram, either reseting a preexisting one or
    // creating one from scratch.
    if (h1obj && h1obj->InheritsFrom("TH1D")) {
-      h1 = (TH1D*)h1obj;
-      h1->Reset();
-   } else {
-      const TArrayD *bins = projX->GetXbins();
-      if ( originalRange )
-      {
-         if (bins->fN == 0) {
-            h1 = new TH1D(name,title,projX->GetNbins(),projX->GetXmin(),projX->GetXmax());
-         } else {
-            h1 = new TH1D(name,title,projX->GetNbins(),bins->fArray);
-         }
+      delete h1obj;
+   }
+   const TArrayD *bins = projX->GetXbins();
+   if ( originalRange )
+   {
+      if (bins->fN == 0) {
+         h1 = new TH1D(name,title,projX->GetNbins(),projX->GetXmin(),projX->GetXmax());
       } else {
-         if (bins->fN == 0) {
-            h1 = new TH1D(name,title,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
-         } else {
-            h1 = new TH1D(name,title,nx,&bins->fArray[ixmin-1]);
-         }
+         h1 = new TH1D(name,title,projX->GetNbins(),bins->fArray);
+      }
+   } else {
+      if (bins->fN == 0) {
+         h1 = new TH1D(name,title,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
+      } else {
+         h1 = new TH1D(name,title,nx,&bins->fArray[ixmin-1]);
       }
    }
 
@@ -1962,36 +1960,35 @@ TH2 *TH3::DoProject2D(char* title, char* name, TAxis* projX, TAxis* projY,
    // creating one from scratch.
    if (h1obj && h1obj->InheritsFrom("TH2D")) {
       delete h1obj;
-   } else {
-      const TArrayD *xbins = projX->GetXbins();
-      const TArrayD *ybins = projY->GetXbins();
-      if ( originalRange )
-      {
-         if (xbins->fN == 0 && ybins->fN == 0) {
-            h2 = new TH2D(name,title,projY->GetNbins(),projY->GetXmin(),projY->GetXmax()
-                          ,projX->GetNbins(),projX->GetXmin(),projX->GetXmax());
-         } else if (ybins->fN == 0) {
-            h2 = new TH2D(name,title,projY->GetNbins(),projY->GetXmin(),projY->GetXmax()
-                          ,projX->GetNbins(),&xbins->fArray[ixmin-1]);
-         } else if (xbins->fN == 0) {
-            h2 = new TH2D(name,title,projY->GetNbins(),&ybins->fArray[iymin-1]
-                          ,projX->GetNbins(),projX->GetXmin(),projX->GetXmax());
-         } else {
-            h2 = new TH2D(name,title,projY->GetNbins(),&ybins->fArray[iymin-1],projX->GetNbins(),&xbins->fArray[ixmin-1]);
-         }
+   }
+   const TArrayD *xbins = projX->GetXbins();
+   const TArrayD *ybins = projY->GetXbins();
+   if ( originalRange )
+   {
+      if (xbins->fN == 0 && ybins->fN == 0) {
+         h2 = new TH2D(name,title,projY->GetNbins(),projY->GetXmin(),projY->GetXmax()
+                       ,projX->GetNbins(),projX->GetXmin(),projX->GetXmax());
+      } else if (ybins->fN == 0) {
+         h2 = new TH2D(name,title,projY->GetNbins(),projY->GetXmin(),projY->GetXmax()
+                       ,projX->GetNbins(),&xbins->fArray[ixmin-1]);
+      } else if (xbins->fN == 0) {
+         h2 = new TH2D(name,title,projY->GetNbins(),&ybins->fArray[iymin-1]
+                       ,projX->GetNbins(),projX->GetXmin(),projX->GetXmax());
       } else {
-         if (xbins->fN == 0 && ybins->fN == 0) {
-            h2 = new TH2D(name,title,ny,projY->GetBinLowEdge(iymin),projY->GetBinUpEdge(iymax)
-                          ,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
-         } else if (ybins->fN == 0) {
-            h2 = new TH2D(name,title,ny,projY->GetBinLowEdge(iymin),projY->GetBinUpEdge(iymax)
-                          ,nx,&xbins->fArray[ixmin-1]);
-         } else if (xbins->fN == 0) {
-            h2 = new TH2D(name,title,ny,&ybins->fArray[iymin-1]
-                          ,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
-         } else {
-            h2 = new TH2D(name,title,ny,&ybins->fArray[iymin-1],nx,&xbins->fArray[ixmin-1]);
-         }
+         h2 = new TH2D(name,title,projY->GetNbins(),&ybins->fArray[iymin-1],projX->GetNbins(),&xbins->fArray[ixmin-1]);
+      }
+   } else {
+      if (xbins->fN == 0 && ybins->fN == 0) {
+         h2 = new TH2D(name,title,ny,projY->GetBinLowEdge(iymin),projY->GetBinUpEdge(iymax)
+                       ,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
+      } else if (ybins->fN == 0) {
+         h2 = new TH2D(name,title,ny,projY->GetBinLowEdge(iymin),projY->GetBinUpEdge(iymax)
+                       ,nx,&xbins->fArray[ixmin-1]);
+      } else if (xbins->fN == 0) {
+         h2 = new TH2D(name,title,ny,&ybins->fArray[iymin-1]
+                       ,nx,projX->GetBinLowEdge(ixmin),projX->GetBinUpEdge(ixmax));
+      } else {
+         h2 = new TH2D(name,title,ny,&ybins->fArray[iymin-1],nx,&xbins->fArray[ixmin-1]);
       }
    }
 
