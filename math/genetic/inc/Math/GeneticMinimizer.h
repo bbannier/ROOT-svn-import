@@ -33,7 +33,7 @@ class GeneticMinimizer: public ROOT::Math::Minimizer {
 
 public: 
 
-   GeneticMinimizer ();
+   GeneticMinimizer (int = 0);
    virtual ~GeneticMinimizer ();
 
    virtual void Clear();
