@@ -29,7 +29,7 @@ public:
    }
 };
 
-GeneticMinimizer::GeneticMinimizer(): fFitness(0)
+GeneticMinimizer::GeneticMinimizer(int ): fFitness(0)
 {
    fNsteps=40;
    fPopSize=300;
