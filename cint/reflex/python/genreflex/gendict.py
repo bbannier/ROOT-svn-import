@@ -837,6 +837,8 @@ class genDictionary(object) :
     c += '#ifdef _WIN32\n'
     c += '#pragma warning ( disable : 4786 )\n'
     c += '#pragma warning ( disable : 4345 )\n'
+    c += '#elif defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ == 3\n'
+    c += '# pragma GCC diagnostic ignored "-Warray-bounds"\n'
     c += '#endif\n'
     c += '#include "%s"\n' % self.hfile
     c += '#include "Reflex/Builder/ReflexBuilder.h"\n'
@@ -1120,6 +1122,10 @@ class genDictionary(object) :
       sc += self.processIoReadRawFunctions( cls, clt, ioReadRawRules, memberTypeMap )
 
     sc += '//------Dictionary for class %s -------------------------------\n' % cl
+    sc += 'void %s_db_datamem(Reflex::Class*);\n' % (clt,)
+    sc += 'void %s_db_funcmem(Reflex::Class*);\n' % (clt,)
+    sc += 'Reflex::GenreflexMemberBuilder %s_datamem_bld(&%s_db_datamem);\n' % (clt, clt)
+    sc += 'Reflex::GenreflexMemberBuilder %s_funcmem_bld(&%s_db_funcmem);\n' % (clt, clt)
     sc += 'void %s_dict() {\n' % (clt,)
 
     # Write the schema evolution rules
@@ -1143,6 +1149,7 @@ class genDictionary(object) :
     else :
       cid = getContainerId(clf)[0]
     notAccessibleType = self.checkAccessibleType(self.xref[attrs['id']])
+    
     if self.isUnnamedType(clf) : 
       sc += '  ::Reflex::ClassBuilder("%s", typeid(::Reflex::Unnamed%s), sizeof(%s), %s, %s)' % ( cls, self.xref[attrs['id']]['elem'], '__shadow__::'+ string.translate(str(clf),self.transtable), mod, typ )
     elif notAccessibleType :
@@ -1171,12 +1178,48 @@ class genDictionary(object) :
 
     for b in bases :
       sc += '\n' + self.genBaseClassBuild( clf, b )
+
+    # on demand builder:
+    # data member, prefix
+    odbdp = '//------Delayed data member builder for class %s -------------------\n' % cl
+    odbd = ''
+    # function member, prefix
+    odbfp = '//------Delayed function member builder for class %s -------------------\n' % cl
+    odbf = ''
+
     for m in members :
       funcname = 'gen'+self.xref[m]['elem']+'Build'
       if funcname in dir(self) :
         line = self.__class__.__dict__[funcname](self, self.xref[m]['attrs'], self.xref[m]['subelems'])
-        if line : sc += '\n' + line 
+        if line :
+          if not self.xref[m]['attrs'].get('artificial') in ('true', '1') :
+            if funcname == 'genFieldBuild' :
+              odbd += '\n' + line
+            elif funcname in ('genMethodBuild','genOperatorMethodBuild','genConverterBuild') : # put c'tors and d'tors into non-delayed part
+              odbf += '\n' + line
+            else :
+              sc += '\n' + line
+          else :
+            sc += '\n' + line
+    if len(odbd) :
+      sc += '\n  .AddOnDemandDataMemberBuilder(&%s_datamem_bld)' % (clt)
+      odbdp += 'void %s_db_datamem(Reflex::Class* cl) {\n' % (clt,)
+      odbdp += '  ::Reflex::ClassBuilder(cl)'
+      odbd += ';'
+    else :
+      odbdp += 'void %s_db_datamem(Reflex::Class*) {\n' % (clt,)
+    if len(odbf) :
+      sc += '\n  .AddOnDemandFunctionMemberBuilder(&%s_funcmem_bld)' % (clt)
+      odbfp += 'void %s_db_funcmem(Reflex::Class* cl) {\n' % (clt,)
+      odbfp += '  ::Reflex::ClassBuilder(cl)'
+      odbf += ';'
+    else :
+      odbfp += 'void %s_db_funcmem(Reflex::Class*) {\n' % (clt,)
     sc += ';\n}\n\n'
+
+    sc += odbdp + odbd + '\n}\n'
+    sc += odbfp + odbf + '\n}\n'
+
     ss = ''
     if not self.isUnnamedType(clf) and not notAccessibleType:
       ss = '//------Stub functions for class %s -------------------------------\n' % cl
@@ -2551,15 +2594,35 @@ def ClassDefImplementation(selclasses, self) :
       if attrs.has_key('extra') : attrs['extra']['ClassDef'] = extraval
       else                      : attrs['extra'] = {'ClassDef': extraval}
       id = attrs['id']
-      template = ""
-      if clname.find('<') != -1: template = "template<> "
+      template = ''
+      namespacelevel = 0
+      if clname.find('<') != -1:
+        template = 'template<> '
+        # specialization of A::B::f() needs namespace A { template<> B<...>::f(){} }
+        specclname = attrs['name']
+        enclattrs = attrs
+        while 'context' in enclattrs:
+          if self.xref[enclattrs['id']]['elem'] == 'Namespace' :
+            namespname = ''
+            if 'fullname' in enclattrs :
+              namespname = enclattrs['fullname']
+            else :
+              namespname = self.genTypeName(enclattrs['id'])
+            namespacelevel = namespname.count('::') + 1
+            returnValue += 'namespace ' + namespname.replace('::', ' { namespace ')
+            returnValue += ' { \n'
+            break
+          specclname = enclattrs['name'] + '::' + specclname
+          enclattrs = self.xref[enclattrs['context']]['attrs']
+      else :
+        specclname = clname
 
-      returnValue += template + 'TClass* ' + clname + '::Class() {\n'
+      returnValue += template + 'TClass* ' + specclname + '::Class() {\n'
       returnValue += '   if (!fgIsA)\n'
       returnValue += '      fgIsA = TClass::GetClass("' + clname[2:] + '");\n'
       returnValue += '   return fgIsA;\n'
       returnValue += '}\n'
-      returnValue += template + 'const char * ' + clname + '::Class_Name() {return "' + clname[2:]  + '";}\n'
+      returnValue += template + 'const char * ' + specclname + '::Class_Name() {return "' + clname[2:]  + '";}\n'
       haveNewDel = 0
       if 'GetNewDelFunctions' in listOfMembers:
         haveNewDel = 1
@@ -2567,12 +2630,12 @@ def ClassDefImplementation(selclasses, self) :
         returnValue += 'namespace {\n'
         returnValue += '   static void method_newdel' + id + '(void*, void*, const std::vector<void*>&, void*);\n'
         returnValue += '}\n'
-      returnValue += template + 'void ' + clname + '::Dictionary() {}\n'
-      returnValue += template + 'const char *' + clname  + '::ImplFileName() {return "";}\n'
+      returnValue += template + 'void ' + specclname + '::Dictionary() {}\n'
+      returnValue += template + 'const char *' + specclname  + '::ImplFileName() {return "";}\n'
 
-      returnValue += template + 'int ' + clname + '::ImplFileLine() {return 1;}\n'
+      returnValue += template + 'int ' + specclname + '::ImplFileLine() {return 1;}\n'
 
-      returnValue += template + 'void '+ clname  +'::ShowMembers(TMemberInspector &R__insp, char *R__parent) {\n'
+      returnValue += template + 'void '+ specclname  +'::ShowMembers(TMemberInspector &R__insp, char *R__parent) {\n'
       returnValue += '   TClass *R__cl = ' + clname  + '::IsA();\n'
       returnValue += '   Int_t R__ncp = strlen(R__parent);\n'
       returnValue += '   if (R__ncp || R__cl || R__insp.IsA()) { }\n'
@@ -2640,13 +2703,14 @@ def ClassDefImplementation(selclasses, self) :
 
       returnValue += '}\n'
 
-      returnValue += template + 'void '+ clname  +'::Streamer(TBuffer &b) {\n   if (b.IsReading()) {\n'
+      returnValue += template + 'void '+ specclname  +'::Streamer(TBuffer &b) {\n   if (b.IsReading()) {\n'
       returnValue += '      b.ReadClassBuffer(' + clname + '::Class(),this);\n'
       returnValue += '   } else {\n'
       returnValue += '      b.WriteClassBuffer(' + clname  + '::Class(),this);\n'
       returnValue += '   }\n'
       returnValue += '}\n'
-      returnValue += template + 'TClass* ' + clname + '::fgIsA = 0;\n'
+      returnValue += template + 'TClass* ' + specclname + '::fgIsA = 0;\n'
+      returnValue += namespacelevel * '}' + '\n'
     elif derivesFromTObject :
       # no fgIsA etc members but derives from TObject!
       print '--->> genreflex: ERROR: class %s derives from TObject but does not use ClassDef!' % attrs['fullname']

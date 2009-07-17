@@ -1540,7 +1540,8 @@ TString TTabCom::DeterminePath(const TString & fileName,
    if (PathIsSpecifiedInFileName(fileName)) {
       TString path = fileName;
       gSystem->ExpandPathName(path);
-      if (path.Length()>0 && path[path.Length()-1]!='/' && path[path.Length()-1]!='\\') {
+      Int_t end = path.Length()-1;
+      if (end>0 && path[end]!='/' && path[end]!='\\') {
          path = gSystem->DirName(path);
       }
       return path;
@@ -1548,9 +1549,9 @@ TString TTabCom::DeterminePath(const TString & fileName,
       TString newBase;
       TString extendedPath;
       if (fileName.Contains("/")) {
-	 Int_t n = fileName.Length();
-         if (fileName[n-1] != '/' && fileName[n-1] != '\\') {
-	    newBase = gSystem->DirName(fileName);
+         Int_t end = fileName.Length()-1;
+         if (fileName[end] != '/' && fileName[end] != '\\') {
+            newBase = gSystem->DirName(fileName);
          } else {
             newBase = fileName;
          }
@@ -1653,9 +1654,8 @@ Int_t TTabCom::Hook(char *buf, int *pLoc)
    case kCINT_stderr:
    case kCINT_stdin:
       {
-         TString fileName = s3("[^ ><]*$");
-         gSystem->ExpandPathName(fileName);
-         const TString filePath = gSystem->DirName(fileName);
+         const TString fileName = s3("[^ ><]*$");
+         const TString filePath = DeterminePath(fileName,0);
          const TSeqCollection *pListOfFiles =
              GetListOfFilesInPath(filePath.Data());
 
@@ -1725,11 +1725,7 @@ Int_t TTabCom::Hook(char *buf, int *pLoc)
       {
          const TString fileName = s3("[^\"]*$");
 //             const TString  dynamicPath  = DeterminePath( fileName, TROOT::GetDynamicPath() ); /* should use this one */
-         const TString dynamicPath = DeterminePath(fileName,
-                                                   gEnv->
-                                                   GetValue
-                                                   ("Root.DynamicPath",
-                                                    (char *) 0));
+         const TString dynamicPath = DeterminePath(fileName,gEnv->GetValue("Root.DynamicPath",(char *) 0));
          const TSeqCollection *pListOfFiles = GetListOfFilesInPath(dynamicPath);
 
 //             pos = Complete( "[^\"/]*$", pListOfFiles, "\");" );
@@ -1739,13 +1735,10 @@ Int_t TTabCom::Hook(char *buf, int *pLoc)
 
    case kSYS_FileName:
       {
-         TString fileName = s3("[^ \"]*$");
-         gSystem->ExpandPathName(fileName);
-         const TString filePath = gSystem->DirName(fileName);
-         const TSeqCollection *pListOfFiles =
-             GetListOfFilesInPath(filePath.Data());
+         const TString fileName = s3("[^ \"]*$");
+         const TString filePath = DeterminePath(fileName,0);
+         const TSeqCollection *pListOfFiles = GetListOfFilesInPath(filePath.Data());
 
-//             pos = Complete( "[^\" /]*$", pListOfFiles, "\"" );
          pos = Complete("[^\" /]*$", pListOfFiles, "filename\"");
       }
       break;
@@ -2407,13 +2400,19 @@ TClass *TTabCom::MakeClassFromVarName(const char varName[],
          }
       }
 
+      TClass *pclass;
       // Can be "." or "->"
-      if (varName[cut] == '.') memberName = varName+cut+1;
-      else memberName = varName+cut+2;
-
-      if (0) printf("Member/method is [%s]\n", memberName.Data());
-
-      TClass *pclass = MakeClassFromVarName(parentName.Data(), context, iter+1);
+      if (varName[cut] == '.') {
+         memberName = varName+cut+1;
+         if (0) printf("Member/method is [%s]\n", memberName.Data());
+         EContext_t subcontext = kCXX_DirectMember;
+         pclass = MakeClassFromVarName(parentName.Data(), subcontext, iter+1);
+      } else {
+         memberName = varName+cut+2;
+         if (0) printf("Member/method is [%s]\n", memberName.Data());         
+         EContext_t subcontext = kCXX_IndirectMember;
+         pclass = MakeClassFromVarName(parentName.Data(), subcontext, iter+1);
+      }
 
       if (0) printf("I got [%s] from MakeClassFromVarName()\n", pclass->GetName());
 

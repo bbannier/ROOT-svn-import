@@ -2536,8 +2536,7 @@ void TBranchElement::InitializeOffsets()
                offset = rd->GetThisOffset();
             } else {
                // -- No dictionary meta info for this data member, it must no longer exist.
-               // FIXME: Enable this warning!
-               //Warning("InitializeOffsets", "Class '%s' version %d checksum %08x has no data member named '%s', assuming offset is zero!", pClass->GetName(), pClass->GetClassVersion(), pClass->GetCheckSum(), dataName.Data());
+               localOffset = TStreamerInfo::kMissing;
             }
          } else {
             // -- We have no data member name, ok for a base class, not good otherwise.
@@ -2567,7 +2566,11 @@ void TBranchElement::InitializeOffsets()
             // the beginning of the data member described by the current branch.
             //
             // Compensate for the i/o routines adding our local offset later.
-            subBranch->fOffset = offset - localOffset;
+            if (subBranch->fObject == 0 && localOffset == TStreamerInfo::kMissing) {
+               subBranch->fOffset = TStreamerInfo::kMissing;
+            } else {
+               subBranch->fOffset = offset - localOffset;
+            }
          } else {
             // -- Set fBranchOffset for sub-branch.
             Int_t numOfSubSubBranches = subBranch->GetListOfBranches()->GetEntriesFast();

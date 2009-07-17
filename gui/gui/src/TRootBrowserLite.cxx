@@ -76,6 +76,7 @@
 
 // Browser menu command ids
 enum ERootBrowserCommands {
+   kFileNewBrowserLite,
    kFileNewBrowser,
    kFileNewCanvas,
    kFileNewBuilder,
@@ -977,12 +978,13 @@ void TRootBrowserLite::CreateBrowser(const char *name)
    // Create menus
    fFileMenu = new TGPopupMenu(fClient->GetDefaultRoot());
    fFileMenu->AddEntry("&New Browser",        kFileNewBrowser);
+   fFileMenu->AddEntry("New Browser &Lite",   kFileNewBrowserLite);
    fFileMenu->AddEntry("New Canvas",          kFileNewCanvas);
-   fFileMenu->AddEntry("Gui &Builder",        kFileNewBuilder);
+   fFileMenu->AddEntry("&Gui Builder",        kFileNewBuilder);
    fFileMenu->AddEntry("&Open...",            kFileOpen);
    fFileMenu->AddSeparator();
    fFileMenu->AddEntry("&Save",               kFileSave);
-   fFileMenu->AddEntry("Save As...",          kFileSaveAs);
+   fFileMenu->AddEntry("Save &As...",         kFileSaveAs);
    fFileMenu->AddSeparator();
    fFileMenu->AddEntry("&Print...",           kFilePrint);
    fFileMenu->AddSeparator();
@@ -1205,13 +1207,14 @@ void TRootBrowserLite::CreateBrowser(const char *name)
    fTextEdit = 0;
 
    // Misc
-   SetWindowName(name);
-   SetIconName(name);
+   TString bname(name);
+   bname.Prepend("Old ");
+   SetWindowName(bname.Data());
+   SetIconName(bname.Data());
    fIconPic = SetIconPixmap("rootdb_s.xpm");
    SetClassHints("Browser", "Browser");
 
    SetWMSizeHints(600, 350, 10000, 10000, 2, 2);
-   SetIconName("ROOT Browser");
 
    fListLevel = 0;
    fTreeLock  = kFALSE;
@@ -1228,6 +1231,10 @@ void TRootBrowserLite::CreateBrowser(const char *name)
    SetDefaults();
    Resize();
    ShowMacroButtons(kFALSE);
+
+   printf("\n You are using the old ROOT browser! A new version is available. To use it:\n");
+   printf(" Select the \"New Browser\" entry from the \"File\" menu in the browser, or change\n");
+   printf(" \"Browser.Name:\" from \"TRootBrowserLite\" to \"TRootBrowser\" in system.rootrc\n\n");
 
    Connect(fLt, "Checked(TObject*, Bool_t)", "TRootBrowserLite",
            this, "Checked(TObject *,Bool_t)");
@@ -1462,6 +1469,19 @@ void TRootBrowserLite::BrowseObj(TObject *obj)
 
    TGPosition pos = fIconBox->GetPagePosition();
    Emit("BrowseObj(TObject*)", (Long_t)obj);
+
+   if (obj != gROOT) {
+      if (!fLt->FindItemByObj(fLt->GetFirstItem(), obj)) {
+         fListLevel = 0;
+         Add(obj);
+         fListLevel = fLt->FindItemByObj(fLt->GetFirstItem(), obj);
+         fLt->HighlightItem(fListLevel);
+         if (obj->IsFolder())
+            fLt->OpenItem(fListLevel);
+         fLt->ClearViewPort();
+         fLt->AdjustPosition(fListLevel);
+      }
+   }
 
    if (obj->IsFolder()) fIconBox->RemoveAll();
    obj->Browse(fBrowser);
@@ -1735,8 +1755,13 @@ Bool_t TRootBrowserLite::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
 
                switch (parm1) {
                   // Handle File menu items...
-                  case kFileNewBrowser:
+                  case kFileNewBrowserLite:
                      new TBrowser("Browser", "ROOT Object Browser");
+                     break;
+                  case kFileNewBrowser:
+                     gEnv->SetValue("Browser.Name", "TRootBrowser");
+                     new TBrowser();
+                     gEnv->SetValue("Browser.Name", "TRootBrowserLite");
                      break;
                   case kFileNewCanvas:
                      gROOT->MakeDefCanvas();

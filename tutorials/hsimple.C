@@ -32,8 +32,9 @@ TFile *hsimple(Int_t get=0)
    if (get) {
       // if the argument get =1 return the file "hsimple.root"
       // if the file does not exist, it is created
-      if (!gSystem->AccessPathName(dir+"hsimple.root",kFileExists)) {
-         hfile = TFile::Open(dir+"hsimple.root"); //in $ROOTSYS/tutorials
+      TString fullPath = dir+"hsimple.root";
+      if (!gSystem->AccessPathName(fullPath,kFileExists)) {
+	 hfile = TFile::Open(fullPath); //in $ROOTSYS/tutorials
          if (hfile) return hfile;
       }
       //otherwise try $PWD/hsimple.root
