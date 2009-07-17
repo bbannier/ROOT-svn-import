@@ -15,6 +15,7 @@
 
 #include "common.h"
 #include "Api.h"
+#include "DataMemberHandle.h"
 #include <string>
 
 extern "C" {
@@ -278,15 +279,13 @@ int G__using_namespace()
          // Allocate a variable array entry which shares value storage with the found variable.
          int store_globalvarpointer = G__globalvarpointer;
          G__globalvarpointer = var->p[ig15];
-         G__letvariable(varname, G__null, &G__global, G__p_local);
+         Cint::G__DataMemberHandle member;
+         G__letvariable(varname, G__null, &G__global, G__p_local, member);
          G__globalvarpointer = store_globalvarpointer;
          // Now find the variable array entry we just created.
-         int ahash = 0;
          int aig15 = 0;
-         G__hash(varname, ahash, aig15);
-         long astruct_offset = 0;
-         long astore_struct_offset = 0;
-         struct G__var_array* avar = G__searchvariable(varname, ahash, G__p_local, &G__global, &astruct_offset, &astore_struct_offset, &aig15, 0);
+         struct G__var_array* avar = member.GetVarArray();
+         aig15 = member.GetIndex();
          // copy variable information
          if (avar && ((avar != var) || (aig15 != ig15))) {
             G__savestring(&avar->varnamebuf[aig15], var->varnamebuf[ig15]);
@@ -503,11 +502,15 @@ int G__class_autoloading(int* ptagnum)
                // being requested but vector<long long> being loaded:
                std::string origName(G__struct.name[tagnum]);
                std::string fullName(G__fulltagname(tagnum,0));
-               if (G__struct.name[tagnum][0])
+               if (G__struct.name[tagnum][0]) {
+                  G__struct.namerange->Remove(G__struct.name[tagnum], tagnum);
                   G__struct.name[tagnum][0] = '@';
+               }
                int found_tagnum = G__defined_tagname(fullName.c_str(),3);
-               if (G__struct.name[tagnum][0])
+               if (G__struct.name[tagnum][0]) {
                   G__struct.name[tagnum][0] = origName[0];
+                  G__struct.namerange->Insert(G__struct.name[tagnum], tagnum);
+               }
                G__def_tagnum = store_def_tagnum;
                G__tagdefining = store_tagdefining;
                if (found_tagnum != -1) {
@@ -517,6 +520,7 @@ int G__class_autoloading(int* ptagnum)
                   // to the real type (aka mytemp<Long64_t> vs mytemp<long long> or the
                   // stl containers with or without their (default) allocators.
                   char *old = G__struct.name[tagnum];
+                  G__struct.namerange->Remove(old, tagnum);
 
                   G__struct.name[tagnum] = (char*)malloc(strlen(old)+50);
                   strcpy(G__struct.name[tagnum],"@@ ex autload entry @@");
@@ -1112,7 +1116,8 @@ void G__define_struct(char type)
                   store_decl = G__decl;
                   G__decl = 1;
                }
-               G__letvariable(memname, enumval, &G__global , G__p_local);
+               G__DataMemberHandle member;
+               G__letvariable(memname, enumval, &G__global , G__p_local, member);
                if (-1 != store_tagnum) {
                   G__def_struct_member = store_def_struct_member;
                   G__static_alloc = 0;
@@ -1440,6 +1445,7 @@ void G__set_class_autoloading_table(char* classname, char* libname)
          }
          G__struct.libname[tagnum] = 0;
       } else if (G__struct.name[tagnum][0]) {
+         G__struct.namerange->Remove(G__struct.name[tagnum], tagnum);
          G__struct.name[tagnum][0] = '@';
       }
       G__enable_autoloading = store_enable_autoloading;
@@ -1642,39 +1648,44 @@ int G__defined_tagname(const char* tagname, int noerror)
    len = strlen(atom_tagname);
    int candidateTag = -1;
 try_again:
-   for (i = G__struct.alltag - 1; i >= 0; --i) {
-      if ((len == G__struct.hash[i]) && !strcmp(atom_tagname, G__struct.name[i])) {
-         if ((!p && (enclosing || env_tagnum == -1) && (G__struct.parent_tagnum[i] == -1)) || (env_tagnum == G__struct.parent_tagnum[i])) {
-            if (noerror < 3) {
-               G__class_autoloading(&i);
+   NameMap::Range nameRange = G__struct.namerange->Find(atom_tagname);
+   if (nameRange) {
+      for (i = nameRange.Last(); i >= nameRange.First(); --i) {
+         if ((len == G__struct.hash[i]) && !strcmp(atom_tagname, G__struct.name[i])) {
+            if ((!p && (enclosing || env_tagnum == -1) && (G__struct.parent_tagnum[i] == -1)) || (env_tagnum == G__struct.parent_tagnum[i])) {
+               if (noerror < 3) {
+                  G__class_autoloading(&i);
+               }
+               return i;
             }
-            return i;
-         }
-         if (
-            // --
-            (candidateTag == -1) &&
-            (
+            if (
+                // --
+                (candidateTag == -1) &&
+                (
 #ifdef G__VIRTUALBASE
-               (G__isanybase(G__struct.parent_tagnum[i], env_tagnum, G__STATICRESOLUTION) != -1) ||
+                 (G__isanybase(G__struct.parent_tagnum[i], env_tagnum, G__STATICRESOLUTION) != -1) ||
 #else // G__VIRTUALBASE
-               (G__isanybase(G__struct.parent_tagnum[i], env_tagnum) != -1) ||
+                 (G__isanybase(G__struct.parent_tagnum[i], env_tagnum) != -1) ||
 #endif // G__VIRTUALBASE
-               (enclosing && G__isenclosingclass(G__struct.parent_tagnum[i], env_tagnum)) ||
-               (enclosing && G__isenclosingclassbase(G__struct.parent_tagnum[i], env_tagnum)) ||
-               (!p && (G__tmplt_def_tagnum == G__struct.parent_tagnum[i]))
+                 (enclosing && G__isenclosingclass(G__struct.parent_tagnum[i], env_tagnum)) ||
+                 (enclosing && G__isenclosingclassbase(G__struct.parent_tagnum[i], env_tagnum)) ||
+                 (!p && (G__tmplt_def_tagnum == G__struct.parent_tagnum[i]))
 #ifdef G__VIRTUALBASE
-               || -1 != G__isanybase(G__struct.parent_tagnum[i], G__tmplt_def_tagnum, G__STATICRESOLUTION)
+                 || -1 != G__isanybase(G__struct.parent_tagnum[i], G__tmplt_def_tagnum, G__STATICRESOLUTION)
 #else // G__VIRTUALBASE
-               || -1 != G__isanybase(G__struct.parent_tagnum[i], G__tmplt_def_tagnum)
+                 || -1 != G__isanybase(G__struct.parent_tagnum[i], G__tmplt_def_tagnum)
 #endif // G__VIRTUALBASE
-               || (enclosing && G__isenclosingclass(G__struct.parent_tagnum[i], G__tmplt_def_tagnum))
-               || (enclosing && G__isenclosingclassbase(G__struct.parent_tagnum[i], G__tmplt_def_tagnum))
-            )
-         ) {
-            // --
-            candidateTag = i;
+                 || (enclosing && G__isenclosingclass(G__struct.parent_tagnum[i], G__tmplt_def_tagnum))
+                 || (enclosing && G__isenclosingclassbase(G__struct.parent_tagnum[i], G__tmplt_def_tagnum))
+                 )
+                ) {
+               // --
+               candidateTag = i;
+            }
          }
       }
+   } else {
+      i = -1;
    }
    if (!len) {
       strcpy(atom_tagname, "$");
@@ -1695,7 +1706,6 @@ try_again:
          G__genericerror(0);
          G__fprinterr(G__serr, "Add following line in header for making dictionary\n");
          G__fprinterr(G__serr, "   #pragma link C++ class %s;\n", tagname);
-         G__exit(EXIT_FAILURE);
          return -1;
       }
       // CAUTION: tagname may be modified in following function.
@@ -1853,6 +1863,7 @@ int G__search_tagname(const char* tagname, int type)
       G__struct.userparam[i] = 0;
       G__struct.name[i] = (char*) malloc((size_t)(len + 1));
       strcpy(G__struct.name[i], atom_tagname);
+      G__struct.namerange->Insert(G__struct.name[i], i);
       G__struct.hash[i] = len;
       G__struct.size[i] = 0;
       G__struct.type[i] = type; // 's' struct ,'u' union ,'e' enum , 'c' class

@@ -33,7 +33,7 @@
 
 #include "common.h"
 #include "Api.h"
-#include "strbuf.h"
+#include "FastAllocString.h"
 
 #ifndef G__TESTMAIN
 #include <sys/stat.h>
@@ -1632,7 +1632,9 @@ int G__loadfile(const char *filenamein)
   /**********************************************
   * Get actual open file name.
   **********************************************/
-  int pres= G__preprocessor(prepname,filename,G__cpp,G__macros,G__undeflist
+  std::string macros(G__macros);
+  macros += " -DG__EXTERNAL_CPP ";
+  int pres= G__preprocessor(prepname,filename,G__cpp,macros.c_str(),G__undeflist
                             ,G__ppopt,G__allincludepath);
   if (pres!=0) {
      G__fprinterr(G__serr,"Error: external preprocessing failed.");
@@ -2640,7 +2642,7 @@ int G__preprocessor(      char *outname,const char *inname,int cppflag
     }
 #endif
 
-    G__StrBuf temp(G__LARGEBUF);
+    G__FastAllocString temp(G__LARGEBUF);
 #if defined(G__SYMANTEC)
     /**************************************************************
      * preprocessor statement for Symantec C++
