@@ -106,7 +106,7 @@ map<const RooAbsArg*,pair<string,list<RooAbsReal::EvalError> > > RooAbsReal::_ev
 
 
 //_____________________________________________________________________________
-RooAbsReal::RooAbsReal() : _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE)
+RooAbsReal::RooAbsReal() : _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE), _lastNSet(0)
 {
   // Default constructor
 }
@@ -116,7 +116,7 @@ RooAbsReal::RooAbsReal() : _specIntegratorConfig(0), _treeVar(kFALSE), _selectCo
 //_____________________________________________________________________________
 RooAbsReal::RooAbsReal(const char *name, const char *title, const char *unit) : 
   RooAbsArg(name,title), _plotMin(0), _plotMax(0), _plotBins(100), 
-  _value(0),  _unit(unit), _forceNumInt(kFALSE), _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE)
+  _value(0),  _unit(unit), _forceNumInt(kFALSE), _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE), _lastNSet(0)
 {
   // Constructor with unit label
   setValueDirty() ;
@@ -130,7 +130,7 @@ RooAbsReal::RooAbsReal(const char *name, const char *title, const char *unit) :
 RooAbsReal::RooAbsReal(const char *name, const char *title, Double_t inMinVal,
 		       Double_t inMaxVal, const char *unit) :
   RooAbsArg(name,title), _plotMin(inMinVal), _plotMax(inMaxVal), _plotBins(100),
-  _value(0), _unit(unit), _forceNumInt(kFALSE), _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE)
+  _value(0), _unit(unit), _forceNumInt(kFALSE), _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE), _lastNSet(0)
 {
   // Constructor with plot range and unit label
   setValueDirty() ;
@@ -144,7 +144,7 @@ RooAbsReal::RooAbsReal(const char *name, const char *title, Double_t inMinVal,
 RooAbsReal::RooAbsReal(const RooAbsReal& other, const char* name) : 
   RooAbsArg(other,name), _plotMin(other._plotMin), _plotMax(other._plotMax), 
   _plotBins(other._plotBins), _value(other._value), _unit(other._unit), _forceNumInt(other._forceNumInt), 
-  _treeVar(other._treeVar), _selectComp(other._selectComp)
+  _treeVar(other._treeVar), _selectComp(other._selectComp), _lastNSet(0)
 {
   // Copy constructor
 
@@ -206,15 +206,20 @@ TString RooAbsReal::getTitle(Bool_t appendUnit) const
 
 
 //_____________________________________________________________________________
-Double_t RooAbsReal::getVal(const RooArgSet* set) const
+Double_t RooAbsReal::getVal(const RooArgSet* nset) const
 {
   // Return value of object. If the cache is clean, return the
   // cached value, otherwise recalculate on the fly and refill
   // the cache
 
+  if (nset && nset!=_lastNSet) {
+    ((RooAbsReal*) this)->setProxyNormSet(nset) ;    
+    _lastNSet = (RooArgSet*) nset ;
+  }
+
   if (isValueDirty() || isShapeDirty()) {
 
-    _value = traceEval(set) ;
+    _value = traceEval(nset) ;
 
     clearValueDirty() ; 
     clearShapeDirty() ; 
@@ -222,7 +227,7 @@ Double_t RooAbsReal::getVal(const RooArgSet* set) const
   } else if (_cacheCheck) {
     
     // Check if cache contains value that evaluate() gives now
-    Double_t checkValue = traceEval(set);
+    Double_t checkValue = traceEval(nset);
 
     if (checkValue != _value) {
       // If not, print warning
