@@ -428,6 +428,8 @@ protected:
   Bool_t _selectComp ;               //! Component selection flag for RooAbsPdf::plotCompOn
   static Bool_t _globalSelectComp ;  // Global activation switch for component selection
 
+  mutable RooArgSet* _lastNSet ; //!
+
 
   ClassDef(RooAbsReal,2) // Abstract real-valued variable
 };
