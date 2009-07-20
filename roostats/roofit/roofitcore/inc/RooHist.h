@@ -45,8 +45,9 @@ public:
                          Double_t scaleFactor=1.0);
   // add a datapoint for the asymmetry (n1-n2)/(n1+n2), using a binomial error
   void addAsymmetryBin(Axis_t binCenter, Int_t n1, Int_t n2, Double_t binWidth= 0, Double_t xErrorFrac=1.0, Double_t scaleFactor=1.0);
+
   // add a datapoint for the efficiency (n1)/(n1+n2), using a binomial error
-  void addEfficiencyBin(Axis_t binCenter, Int_t n1, Int_t n2, Double_t binWidth= 0, Double_t xErrorFrac=1.0, Double_t scaleFactor=1.0);
+  void addEfficiencyBin(Axis_t binCenter, Double_t n1, Double_t n2, Double_t binWidth= 0, Double_t xErrorFrac=1.0, Double_t scaleFactor=1.0);
 
   virtual void printName(ostream& os) const ;
   virtual void printTitle(ostream& os) const ;

@@ -165,7 +165,8 @@ RooHist::RooHist(const TH1 &data1, const TH1 &data2, Double_t nominalBinWidth, D
     if (!efficiency) {
       addAsymmetryBin(x,roundBin(y1),roundBin(y2),data1.GetBinWidth(bin),xErrorFrac,scaleFactor);
     } else {
-      addEfficiencyBin(x,roundBin(y1),roundBin(y2),data1.GetBinWidth(bin),xErrorFrac,scaleFactor);
+      //addEfficiencyBin(x,roundBin(y1),roundBin(y2),data1.GetBinWidth(bin),xErrorFrac,scaleFactor);
+      addEfficiencyBin(x,y1,y2,data1.GetBinWidth(bin),xErrorFrac,scaleFactor);
     }
   }
   // we do not have a meaningful number of entries
@@ -436,7 +437,7 @@ void RooHist::addAsymmetryBin(Axis_t binCenter, Int_t n1, Int_t n2, Double_t bin
 
 
 //_____________________________________________________________________________
-void RooHist::addEfficiencyBin(Axis_t binCenter, Int_t n1, Int_t n2, Double_t binWidth, Double_t xErrorFrac, Double_t scaleFactor) 
+void RooHist::addEfficiencyBin(Axis_t binCenter, Double_t n1, Double_t n2, Double_t binWidth, Double_t xErrorFrac, Double_t scaleFactor) 
 {
   // Add a bin to this histogram with the value n1/(n1+n2)
   // using an error bar calculated with Binomial statistics.
@@ -445,14 +446,25 @@ void RooHist::addEfficiencyBin(Axis_t binCenter, Int_t n1, Int_t n2, Double_t bi
   if(binWidth > 0) scale= _nominalBinWidth/binWidth;
   Int_t index= GetN();
 
+  Double_t a= (Double_t)(n1)/(n1+n2);
+
   // calculate Binomial errors for this bin
   Double_t ym,yp,dx(0.5*binWidth);
-  if(!RooHistError::instance().getBinomialIntervalEff(n1,n2,ym,yp,_nSigma)) {
-    coutE(Plotting) << "RooHist::addEfficiencyBin: unable to calculate binomial error for bin with " << n1 << "," << n2 << " events" << endl;
-    return;
+  Int_t in1 = (Int_t) n1 ;
+  Int_t in2 = (Int_t) n2 ;
+  if (fabs(n1-in1)>1e-6 || fabs(n2-in2)>1e-6) {
+    coutW(Plotting) << "RooHist::addEfficiencyBin: WARNING input numbers are non-integer x= " << binCenter << " n1=" << n1 << " n2=" << n2 
+		    << ", unable to calculate binomial error, omitting error bar for this point " << endl ;
+
+    ym=a ;
+    yp=a ;
+  } else {
+    if(!RooHistError::instance().getBinomialIntervalEff(in1,in2,ym,yp,_nSigma)) {
+      coutE(Plotting) << "RooHist::addEfficiencyBin: unable to calculate binomial error for bin with " << in1 << "," << in2 << " events" << endl;
+      return;
+    }  
   }
 
-  Double_t a= (Double_t)(n1)/(n1+n2);
   SetPoint(index,binCenter,a*scaleFactor);
   SetPointError(index,dx*xErrorFrac,dx*xErrorFrac,(a-ym)*scaleFactor,(yp-a)*scaleFactor);
   updateYAxisLimits(scale*yp);
