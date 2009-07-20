@@ -25,6 +25,9 @@
 #include "RooAbsCollection.h"
 #include "TIterator.h"
 
+#include <iostream>
+using namespace std ;
+
 namespace RooStats {
 
   // returns one-sided significance corresponding to a p-value
@@ -41,16 +44,7 @@ namespace RooStats {
 
 
   inline void SetParameters(const RooArgSet* desiredVals, RooArgSet* paramsToChange){
-    TIter it = desiredVals->createIterator();
-    RooRealVar *myarg; 
-    RooRealVar *mytarget; 
-    while ((myarg = (RooRealVar *)it.Next())) { 
-      if(!myarg) continue;
-      mytarget = (RooRealVar*) paramsToChange->find(myarg->GetName());
-      if(!mytarget) continue;
-      mytarget->setVal( myarg->getVal() );
-      mytarget->setConstant(myarg->isConstant());
-    }
+    *paramsToChange=*desiredVals ;
   }
 
   inline void RemoveConstantParameters(RooArgSet* set){
