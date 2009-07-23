@@ -184,12 +184,6 @@ RooCategory* RooFactoryWSTool::createCategory(const char* name, const char* stat
   // can be of the form 'name1,name2,name3' or of the form 'name1=id1,name2=id2,name3=id3'
 
 
-  // First check if variable already exists
-  if (_ws->cat(name)) {
-    coutE(ObjectHandling) << "RooFactoryWSTool::createFactory() ERROR: category with name '" << name << "' already exists" << endl ;
-    logError() ;
-    return 0 ;
-  }
 
   // Create variable
   RooCategory cat(name,name) ;
@@ -214,6 +208,8 @@ RooCategory* RooFactoryWSTool::createCategory(const char* name, const char* stat
     }
     delete[] tmp ;
   }
+
+  cat.setStringAttribute("factory_tag",Form("%s[%s]",name,stateNameList)) ;
 
   // Put in workspace
   if (_ws->import(cat,Silence())) logError() ;  
@@ -392,6 +388,8 @@ RooAbsArg* RooFactoryWSTool::createArg(const char* className, const char* objNam
 
   // Call CINT to perform constructor call. Catch any error thrown by argument conversion method
   RooAbsArg* arg = (RooAbsArg*) gROOT->ProcessLineFast(cintExpr.c_str()) ;
+
+  arg->setStringAttribute("factory_tag",Form("%s::%s(%s)",className,objName,varList)) ;
 
   if (arg) {
     if (_ws->import(*arg,Silence())) logError() ;
@@ -1176,6 +1174,23 @@ TClass* RooFactoryWSTool::resolveClassName(const char* className)
 
 
 
+//_____________________________________________________________________________
+string RooFactoryWSTool::varTag(string& func, vector<string>& args)
+{
+  string ret ;
+  ret += func ;
+  ret += "[" ;
+  for (vector<string>::iterator iter = args.begin() ; iter!=args.end() ; ++iter) {
+    if (iter!=args.begin()) {
+      ret += "," ;
+    }
+    ret += *iter ;
+  }
+  ret += "]" ;
+  return ret ;
+}
+
+
 
 
 //_____________________________________________________________________________
@@ -1204,7 +1219,10 @@ string RooFactoryWSTool::processCreateVar(string& func, vector<string>& args)
       Double_t xinit = atof((ai)->c_str()) ;
       cxcoutD(ObjectHandling) << "CREATE variable " << func << " xinit = " << xinit << endl ;
       RooRealVar tmp(func.c_str(),func.c_str(),xinit) ;
-      if (_ws->import(tmp,Silence())) logError() ;
+      tmp.setStringAttribute("factory_tag",varTag(func,args).c_str()) ;
+      if (_ws->import(tmp,Silence())) {
+	logError() ;
+      }
 
     } else if (args.size()==2) {
 
@@ -1213,7 +1231,10 @@ string RooFactoryWSTool::processCreateVar(string& func, vector<string>& args)
       Double_t xhi = atof(ai->c_str()) ;
       cxcoutD(ObjectHandling) << "CREATE variable " << func << " xlo = " << xlo << " xhi = " << xhi << endl ;
       RooRealVar tmp(func.c_str(),func.c_str(),xlo,xhi) ;
-      if (_ws->import(tmp,Silence())) logError() ;
+      tmp.setStringAttribute("factory_tag",varTag(func,args).c_str()) ;
+      if (_ws->import(tmp,Silence())) {
+	logError() ;
+      }
 
     } else if (args.size()==3) {
 
@@ -1223,7 +1244,10 @@ string RooFactoryWSTool::processCreateVar(string& func, vector<string>& args)
       Double_t xhi = atof(ai->c_str()) ;
       cxcoutD(ObjectHandling) << "CREATE variable " << func << " xinit = " << xinit << " xlo = " << xlo << " xhi = " << xhi << endl ;
       RooRealVar tmp(func.c_str(),func.c_str(),xinit,xlo,xhi) ;
-      if (_ws->import(tmp,Silence())) logError() ;
+      tmp.setStringAttribute("factory_tag",varTag(func,args).c_str()) ;
+      if (_ws->import(tmp,Silence())) {
+	logError() ;
+      }
     }
   } else {
 
@@ -1236,6 +1260,7 @@ string RooFactoryWSTool::processCreateVar(string& func, vector<string>& args)
       allStates += *ai ;
     }
     createCategory(func.c_str(),allStates.c_str()) ;
+
   }
   return func ;
 }
@@ -1285,7 +1310,7 @@ string RooFactoryWSTool::processCreateArg(string& func, vector<string>& args)
     return iface->create(*this, className,instName,pargv) ;
   }
 
-  createArg(className,instName,pargs) ;
+  RooAbsArg* arg = createArg(className,instName,pargs) ;
 
   return string(instName) ;
 }
