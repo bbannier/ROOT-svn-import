@@ -1013,7 +1013,7 @@ const TMatrixDSym& RooFitResult::covarianceMatrix() const
 
 
 //_____________________________________________________________________________
-TMatrixDSym RooFitResult::reducedCovarianceMatrix(const RooArgSet& params) const 
+TMatrixDSym RooFitResult::reducedCovarianceMatrix(const RooArgList& params) const 
 {
   // Return a reduced covariance matrix, which is calculated as
   //        ___                   -1
@@ -1026,6 +1026,7 @@ TMatrixDSym RooFitResult::reducedCovarianceMatrix(const RooArgSet& params) const
   // (Note that Vred is _not_ a simple sub-matrix of V)
 
   const TMatrixDSym& V = covarianceMatrix() ;
+
   Double_t det = V.Determinant() ;
 
   if (det<=0) {
