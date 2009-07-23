@@ -151,6 +151,8 @@ public:
 
 protected:
 
+  std::string RooFactoryWSTool::varTag(std::string& func, std::vector<std::string>& args) ;
+
   std::stack<std::string> _autoNamePrefix ; 
   std::map<std::string,std::string> _typeAliases ;
 
