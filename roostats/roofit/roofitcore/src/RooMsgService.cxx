@@ -126,9 +126,6 @@ RooMsgService::RooMsgService()
   // Old-style streams
   addStream(RooFit::PROGRESS) ;
   addStream(RooFit::INFO,Topic(RooFit::Eval|RooFit::Plotting|RooFit::Fitting|RooFit::Minimization|RooFit::Caching|RooFit::ObjectHandling|RooFit::NumIntegration|RooFit::InputArguments|RooFit::DataHandling)) ;
-  addStream(RooFit::INFO,Topic(RooFit::NumIntegration|RooFit::Generation)) ;
-
-
 }
 
 
