@@ -48,6 +48,7 @@ Int_t RooTreeDataStore::_defTreeBufSize = 4096 ;
 RooTreeDataStore::RooTreeDataStore() :
   _tree(0),
   _cacheTree(0),
+  _cacheOwner(0),
   _defCtor(kTRUE)
 {
 }
@@ -59,6 +60,7 @@ RooTreeDataStore::RooTreeDataStore(TTree* t, const RooArgSet& vars) :
   RooAbsDataStore("blah","blah",vars),
   _tree(t),
   _cacheTree(0),
+  _cacheOwner(0),
   _defCtor(kTRUE)
 {
   // Constructor to facilitate reading of legacy RooDataSets
@@ -71,7 +73,8 @@ RooTreeDataStore::RooTreeDataStore(TTree* t, const RooArgSet& vars) :
 RooTreeDataStore::RooTreeDataStore(const char* name, const char* title, const RooArgSet& vars) :
   RooAbsDataStore(name,title,vars),
   _tree(0),
-  _cacheTree(0),
+  _cacheTree(0), 
+  _cacheOwner(0),
   _defCtor(kFALSE)
 {
   initialize() ;  
@@ -85,6 +88,7 @@ RooTreeDataStore::RooTreeDataStore(const char* name, const char* title, const Ro
   RooAbsDataStore(name,title,vars),
   _tree(0),
   _cacheTree(0),
+  _cacheOwner(0),
   _defCtor(kFALSE)
 {
   initialize() ;  
@@ -98,6 +102,7 @@ RooTreeDataStore::RooTreeDataStore(const char* name, const char* title, const Ro
   RooAbsDataStore(name,title,vars),
   _tree(0),
   _cacheTree(0),
+  _cacheOwner(0),
   _defCtor(kFALSE)
 {
   initialize() ;  
@@ -118,6 +123,7 @@ RooTreeDataStore::RooTreeDataStore(const char* name, const char* title, const Ro
   RooAbsDataStore(name,title,vars),
   _tree(0),
   _cacheTree(0),
+  _cacheOwner(0),
   _defCtor(kFALSE)
 {
   initialize() ;  
@@ -131,6 +137,7 @@ RooTreeDataStore::RooTreeDataStore(const char* name, const char* title, const Ro
   RooAbsDataStore(name,title,vars),
   _tree(0),
   _cacheTree(0),
+  _cacheOwner(0),
   _defCtor(kFALSE)
 {
   initialize() ;  
@@ -154,7 +161,6 @@ RooTreeDataStore::RooTreeDataStore(const char *name, const char *title, RooAbsDa
   RooAbsDataStore(name,title,vars), _defCtor(kFALSE)
 {
   // Protected constructor for internal use only
-
   _tree = 0 ;
   _cacheTree = 0 ;
   createTree(name,title) ;
@@ -168,11 +174,14 @@ RooTreeDataStore::RooTreeDataStore(const char *name, const char *title, RooAbsDa
 
   // Constructor from existing data set with list of variables that preserves the cache
   initialize();
-  initCache(((RooTreeDataStore&)tds)._cachedVars) ;
-  
-  loadValues(&tds,cloneVar,cutRange,nStart,nStop);
+
+  attachCache(0,((RooTreeDataStore&)tds)._cachedVars) ;
 
   // WVE copy values of cached variables here!!!
+  _cacheTree->CopyEntries(((RooTreeDataStore&)tds)._cacheTree) ;
+  _cacheOwner = 0 ;
+  
+  loadValues(&tds,cloneVar,cutRange,nStart,nStop);
 
   if (cloneVar) delete cloneVar ;
 }
@@ -182,7 +191,7 @@ RooTreeDataStore::RooTreeDataStore(const char *name, const char *title, RooAbsDa
 
 
 //_____________________________________________________________________________
-void RooTreeDataStore::initCache(const RooArgSet& cachedVars) 
+void RooTreeDataStore::attachCache(const RooAbsArg* newOwner, const RooArgSet& cachedVars) 
 {
   // Initialize cache of dataset: attach variables of cache ArgSet
   // to the corresponding TTree branches
@@ -196,6 +205,8 @@ void RooTreeDataStore::initCache(const RooArgSet& cachedVars)
     _cachedVars.add(*var) ;
   }
   delete iter ;
+  _cacheOwner = newOwner ;
+
 }
 
 
@@ -785,7 +796,7 @@ void RooTreeDataStore::reset()
 
 
 //_____________________________________________________________________________
-void RooTreeDataStore::cacheArgs(RooArgSet& newVarSet, const RooArgSet* nset) 
+void RooTreeDataStore::cacheArgs(const RooAbsArg* owner, RooArgSet& newVarSet, const RooArgSet* nset) 
 {
   // Cache given RooAbsArgs with this tree: The tree is
   // given direct write access of the args internal cache
@@ -793,6 +804,8 @@ void RooTreeDataStore::cacheArgs(RooArgSet& newVarSet, const RooArgSet* nset)
   // in this data collection. Upon a get() call, the
   // internal cache of 'newVar' will be loaded with the
   // precalculated value and it's dirty flag will be cleared.
+
+  _cacheOwner = owner ;
 
   TIterator *iter = newVarSet.createIterator() ;
   RooAbsArg *arg ;
@@ -916,6 +929,13 @@ Int_t RooTreeDataStore::GetEntry(Int_t entry, Int_t getall)
    if (!ret1) return 0 ;
    _cacheTree->GetEntry(entry,getall) ; 
    return ret1 ;
+}
+
+
+//_____________________________________________________________________________
+void RooTreeDataStore::Draw(Option_t* option) 
+{ 
+  _tree->Draw(option) ; 
 }
 
 
