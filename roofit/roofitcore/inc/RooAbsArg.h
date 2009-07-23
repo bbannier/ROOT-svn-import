@@ -142,21 +142,23 @@ public:
     return kFALSE; 
   }
 
+  void addParameters(RooArgSet& params, const RooArgSet* nset=0, Bool_t stripDisconnected=kTRUE)  const ; 
+
   // Parameter & observable interpretation of servers
   friend class RooProdPdf ;
   friend class RooAddPdf ;
   friend class RooAddPdfOrig ;
-  RooArgSet* getVariables() const ;
-  RooArgSet* getParameters(const RooAbsData* data) const ;
-  RooArgSet* getParameters(const RooAbsData& data) const { 
+  RooArgSet* getVariables(Bool_t stripDisconnected=kTRUE) const ;
+  RooArgSet* getParameters(const RooAbsData* data, Bool_t stripDisconnected=kTRUE) const ;
+  RooArgSet* getParameters(const RooAbsData& data, Bool_t stripDisconnected=kTRUE) const { 
     // Return the parameters of this p.d.f when used in conjuction with dataset 'data'
-    return getParameters(&data) ; 
+    return getParameters(&data,stripDisconnected) ; 
   }
-  RooArgSet* getParameters(const RooArgSet& set) const { 
+  RooArgSet* getParameters(const RooArgSet& set, Bool_t stripDisconnected=kTRUE) const { 
     // Return the parameters of the p.d.f given the provided set of observables
-    return getParameters(&set) ; 
+    return getParameters(&set,stripDisconnected) ; 
   }
-  virtual RooArgSet* getParameters(const RooArgSet* depList) const ;
+  virtual RooArgSet* getParameters(const RooArgSet* depList, Bool_t stripDisconnected=kTRUE) const ;
   RooArgSet* getObservables(const RooArgSet& set, Bool_t valueOnly=kTRUE) const { 
     // Return the observables of _this_ pdf given a set of observables
     return getObservables(&set,valueOnly) ; 
@@ -337,7 +339,7 @@ public:
 
   virtual Bool_t isValid() const ;
 
-  virtual void getParametersHook(const RooArgSet* /*nset*/, RooArgSet* /*list*/) const {} ;
+  virtual void getParametersHook(const RooArgSet* /*nset*/, RooArgSet* /*list*/, Bool_t /*stripDisconnected*/) const {} ;
   virtual void getObservablesHook(const RooArgSet* /*nset*/, RooArgSet* /*list*/) const {} ;
 
   // Dirty state modifiers
