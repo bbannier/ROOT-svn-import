@@ -172,7 +172,7 @@ RooMCStudy::RooMCStudy(const RooAbsPdf& model, const RooArgSet& observables,
   RooArgSet allConstraints ;
   RooArgSet consPars ;
   if (cPars) {
-    RooArgSet* constraints = model.getConstraints(observables,*cPars) ;
+    RooArgSet* constraints = model.getConstraints(observables,*cPars,kTRUE) ;
     allConstraints.add(*constraints) ;
     delete constraints ;
   }
