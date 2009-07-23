@@ -877,7 +877,7 @@ RooDataHist::RooDataHist(const char* name, const char* title, RooDataHist* h, co
 
 
 //_____________________________________________________________________________
-RooAbsData* RooDataHist::cacheClone(const RooArgSet* newCacheVars, const char* newName) 
+RooAbsData* RooDataHist::cacheClone(const RooAbsArg* newCacheOwner, const RooArgSet* newCacheVars, const char* newName) 
 {
   // Construct a clone of this dataset that contains only the cached variables
   checkInit() ;
@@ -885,7 +885,7 @@ RooAbsData* RooDataHist::cacheClone(const RooArgSet* newCacheVars, const char* n
   RooDataHist* dhist = new RooDataHist(newName?newName:GetName(),GetTitle(),this,*get(),0,0,0,2000000000,kTRUE) ; 
 
   RooArgSet* selCacheVars = (RooArgSet*) newCacheVars->selectCommon(dhist->_cachedVars) ;
-  dhist->initCache(*selCacheVars) ;
+  dhist->attachCache(newCacheOwner, *selCacheVars) ;
   delete selCacheVars ;
 
   return dhist ;
@@ -1355,6 +1355,7 @@ void RooDataHist::set(const RooArgSet& row, Double_t wgt, Double_t wgtErr)
   _wgt[idx] = wgt ;  
   _errLo[idx] = wgtErr ;  
   _errHi[idx] = wgtErr ;  
+  _sumw2[idx] = wgtErr*wgtErr ;
 }
 
 

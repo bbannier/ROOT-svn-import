@@ -151,7 +151,7 @@ protected:
   void importTH1Set(const RooArgList& vars, RooCategory& indexCat, std::map<std::string,TH1*> hmap, Double_t initWgt) ;
   void importDHistSet(const RooArgList& vars, RooCategory& indexCat, std::map<std::string,RooDataHist*> dmap, Double_t initWgt) ;
 
-  virtual RooAbsData* cacheClone(const RooArgSet* newCacheVars, const char* newName=0) ;
+  virtual RooAbsData* cacheClone(const RooAbsArg* newCacheOwner, const RooArgSet* newCacheVars, const char* newName=0) ;
 
 
   Int_t       _arrSize ; //  Size of the weight array
