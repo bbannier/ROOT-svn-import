@@ -739,7 +739,7 @@ RooAbsReal* RooRealIntegral::createIntegral(const RooArgSet& iset, const RooArgS
   } else if (nset && _funcNormSet) {
     RooArgSet* tmp = new RooArgSet ;
     tmp->add(*nset) ;
-    tmp->add(*_funcNormSet) ;
+    tmp->add(*_funcNormSet,kTRUE) ;
     newNormSet = tmp ;
   } 
   return _function.arg().createIntegral(isetAll,newNormSet,cfg,rangeName) ;
