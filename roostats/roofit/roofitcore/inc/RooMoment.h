@@ -28,8 +28,9 @@ class RooMoment : public RooAbsReal {
 public:
 
   RooMoment() ;
-  RooMoment(const char *name, const char *title, RooAbsReal& func, RooRealVar& x, Int_t order=1, Bool_t central=kFALSE) ;
-  RooMoment(const char *name, const char *title, RooAbsReal& func, RooRealVar& x, const RooArgSet& nset, Int_t order=1, Bool_t central=kFALSE) ;
+  RooMoment(const char *name, const char *title, RooAbsReal& func, RooRealVar& x, Int_t order=1, Bool_t central=kFALSE, Bool_t takeRoot=kFALSE) ;
+  RooMoment(const char *name, const char *title, RooAbsReal& func, RooRealVar& x, const RooArgSet& nset, Int_t order=1, Bool_t central=kFALSE, Bool_t takeRoot=kFALSE,
+	    Bool_t intNSet=kFALSE) ;
   virtual ~RooMoment() ;
 
   RooMoment(const RooMoment& other, const char* name = 0);
@@ -43,6 +44,7 @@ public:
 protected:
 
   Int_t _order ;                         // Moment order
+  Int_t _takeRoot ;                      // Return n-order root of moment
   RooSetProxy  _nset ;                   // Normalization set (optional)
   RooRealProxy _func ;                   // Input function
   RooRealProxy _x     ;                  // Observable

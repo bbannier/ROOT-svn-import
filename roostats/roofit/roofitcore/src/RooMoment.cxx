@@ -59,9 +59,10 @@ RooMoment::RooMoment()
 
 
 //_____________________________________________________________________________
-RooMoment::RooMoment(const char* name, const char* title, RooAbsReal& func, RooRealVar& x, Int_t orderIn, Bool_t centr) :
+RooMoment::RooMoment(const char* name, const char* title, RooAbsReal& func, RooRealVar& x, Int_t orderIn, Bool_t centr, Bool_t takeRoot) :
   RooAbsReal(name, title),
   _order(orderIn),
+  _takeRoot(takeRoot),
   _nset("nset","nset",this,kFALSE,kFALSE),
   _func("function","function",this,func,kFALSE,kFALSE),
   _x("x","x",this,x,kFALSE,kFALSE),
@@ -94,9 +95,11 @@ RooMoment::RooMoment(const char* name, const char* title, RooAbsReal& func, RooR
 }
 
 //_____________________________________________________________________________
-RooMoment::RooMoment(const char* name, const char* title, RooAbsReal& func, RooRealVar& x, const RooArgSet& nset, Int_t orderIn, Bool_t centr) :
+RooMoment::RooMoment(const char* name, const char* title, RooAbsReal& func, RooRealVar& x, const RooArgSet& nset, 
+		     Int_t orderIn, Bool_t centr, Bool_t takeRoot, Bool_t intNSet) :
   RooAbsReal(name, title),
   _order(orderIn),
+  _takeRoot(takeRoot),
   _nset("nset","nset",this,kFALSE,kFALSE),
   _func("function","function",this,func),
   _x("x","x",this,x),
@@ -112,7 +115,7 @@ RooMoment::RooMoment(const char* name, const char* title, RooAbsReal& func, RooR
   if (centr) {
     string formula=Form("pow((@0-@1),%d)*@2",_order) ;
     string m1name=Form("%s_moment1",GetName()) ;
-    RooAbsReal* mom1 = new RooMoment(m1name.c_str(),m1name.c_str(),func,x,1,kFALSE) ;
+    RooAbsReal* mom1 = new RooMoment(m1name.c_str(),m1name.c_str(),func,x,1,kFALSE,intNSet) ;
     XF = new RooFormulaVar(pname.c_str(),formula.c_str(),RooArgList(x,*mom1,func)) ;
     addOwnedComponents(*mom1) ;
     _mean.setArg(*mom1) ;
@@ -121,8 +124,11 @@ RooMoment::RooMoment(const char* name, const char* title, RooAbsReal& func, RooR
     XF = new RooFormulaVar(pname.c_str(),formula.c_str(),RooArgSet(x,func)) ;
   }
 
-  RooAbsReal* intXF = XF->createIntegral(x,&_nset) ;
-  RooAbsReal* intF =  func.createIntegral(x,&_nset) ;
+  RooArgSet intSet(x) ;
+  if (intNSet) intSet.add(_nset,kTRUE) ;
+
+  RooAbsReal* intXF = XF->createIntegral(intSet,&_nset) ;
+  RooAbsReal* intF =  func.createIntegral(intSet,&_nset) ;
   _xf.setArg(*XF) ;
   _ixf.setArg(*intXF) ;
   _if.setArg(*intF) ;
@@ -159,7 +165,8 @@ RooMoment::~RooMoment()
 Double_t RooMoment::evaluate() const 
 {
   // Calculate value  
-  return _ixf / _if ;
+  Double_t ratio = _ixf / _if ;
+  return _takeRoot ? pow(ratio,1.0/_order) : ratio ;
 }
 
 
