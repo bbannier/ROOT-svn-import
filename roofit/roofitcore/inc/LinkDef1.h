@@ -18,6 +18,7 @@
 #pragma link C++ class RooAbsMCStudyModule+ ;
 #pragma link C++ class RooAbsOptTestStatistic+ ;
 #pragma link C++ class RooAbsPdf+ ;
+#pragma link C++ class RooAbsPdf::GenSpec+ ;
 #pragma link C++ class RooAbsProxy+ ;
 #pragma link C++ class RooAbsReal+ ;
 #pragma link C++ class RooAbsRealLValue+ ;
