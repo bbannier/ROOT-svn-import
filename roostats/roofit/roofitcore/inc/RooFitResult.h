@@ -113,7 +113,7 @@ public:
 
   
   const TMatrixDSym& covarianceMatrix() const ;
-  TMatrixDSym reducedCovarianceMatrix(const RooArgSet& params) const ;
+  TMatrixDSym reducedCovarianceMatrix(const RooArgList& params) const ;
   const TMatrixDSym& correlationMatrix() const ;
 
 
@@ -174,10 +174,10 @@ protected:
   mutable RooArgList *_randomPars; //! List of floating parameters with most recent random perturbation applied
   mutable TMatrixF* _Lt;            //! triangular matrix used for generate random perturbations
 
-  TMatrixDSym* _CM ;  // Correlation matrix ;
-  TMatrixDSym* _VM ;  // Covariance matrix ;
+  TMatrixDSym* _CM ;  //! Correlation matrix ;
+  TMatrixDSym* _VM ;  //! Covariance matrix ;
 
-  ClassDef(RooFitResult,2) // Container class for fit result
+  ClassDef(RooFitResult,3) // Container class for fit result
 };
 
 #endif
