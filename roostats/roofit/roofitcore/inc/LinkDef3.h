@@ -99,6 +99,12 @@
 #pragma link C++ class RooMinimizer+ ;
 #pragma link C++ class RooMinimizerFcn+ ;
 #pragma link C++ class RooMoment+ ;
+#pragma link C++ class RooStudyManager+ ;
+#pragma link C++ class RooStudyPackage+ ;
+#pragma link C++ class RooAbsStudy+ ;
+#pragma link C++ class RooGenFitStudy+ ;
+#pragma link C++ class RooProofDriverSelector+ ;
+#pragma link C++ class list<RooAbsStudy*>+ ;
 #pragma link C++ namespace RooCintUtils+ ;
 #pragma link off class RooErrorHandler+ ;
 #pragma link off class RooNag+ ;
