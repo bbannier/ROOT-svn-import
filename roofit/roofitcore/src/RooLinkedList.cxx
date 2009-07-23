@@ -54,7 +54,7 @@ RooLinkedList::RooLinkedList(Int_t htsize) :
 
 //_____________________________________________________________________________
 RooLinkedList::RooLinkedList(const RooLinkedList& other) :
-   TObject(other), _hashThresh(other._hashThresh), _size(0), _first(0), _last(0), _htableName(0), _htableLink(0)
+  TObject(other), _hashThresh(other._hashThresh), _size(0), _first(0), _last(0), _htableName(0), _htableLink(0), _name(other._name)
 {
   // Copy constructor
 
@@ -523,8 +523,9 @@ void RooLinkedList::Streamer(TBuffer &R__b)
   // Custom streaming handling schema evolution w.r.t past implementations
 
   if (R__b.IsReading()) {
-    //Version_t v = R__b.ReadVersion();
-    R__b.ReadVersion();
+
+    Version_t v = R__b.ReadVersion();
+    //R__b.ReadVersion();
     TObject::Streamer(R__b);
 
     Int_t size ;
@@ -534,6 +535,10 @@ void RooLinkedList::Streamer(TBuffer &R__b)
     while(size--) {
       R__b >> arg ;
       Add(arg) ;      
+    }
+
+    if (v>1) {
+      R__b >> _name ;
     }
 
   } else {
@@ -546,6 +551,8 @@ void RooLinkedList::Streamer(TBuffer &R__b)
       R__b << ptr->_arg ;
       ptr = ptr->_next ;
     } 
+
+    R__b << _name ;
   }
 }
 

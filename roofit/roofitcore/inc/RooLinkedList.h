@@ -16,7 +16,7 @@
 #ifndef ROO_LINKED_LIST
 #define ROO_LINKED_LIST
 
-#include "TObject.h"
+#include "TNamed.h"
 #include "RooLinkedListElem.h"
 #include "RooHashTable.h"
 class RooLinkedListIter ;
@@ -63,6 +63,10 @@ public:
 
   void Print(const char* opt) const ;
   void Sort(Bool_t ascend=kTRUE) ;
+  
+  const char* GetName() const { return _name.Data() ; }
+  void SetName(const char* name) { _name = name ; }
+
 
 protected:  
 
@@ -81,7 +85,9 @@ protected:
   RooHashTable*       _htableName ; //! Hash table by name 
   RooHashTable*       _htableLink ; //! Hash table by link pointer
 
-  ClassDef(RooLinkedList,1) // Doubly linked list for storage of RooAbsArg objects
+  TString             _name ; 
+
+  ClassDef(RooLinkedList,2) // Doubly linked list for storage of RooAbsArg objects
 };
 
 
