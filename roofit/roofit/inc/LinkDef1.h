@@ -39,6 +39,7 @@
 #pragma link C++ class RooBernstein+ ;
 #pragma link C++ class RooChiSquarePdf+ ;
 #pragma link C++ class RooPolyMorph+ ;
+#pragma link C++ class RooUniform+ ;
 #pragma link C++ class RooFunctorBinding+ ;
 #pragma link C++ class RooFunctor1DBinding+ ;
 #pragma link C++ class RooFunctorPdfBinding+ ;
