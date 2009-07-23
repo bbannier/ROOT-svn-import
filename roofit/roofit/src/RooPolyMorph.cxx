@@ -239,7 +239,7 @@ void RooPolyMorph::constructMorphPdf() const
       std::string meanName = Form("%s_mean_%d_%d",GetName(),i,j);
       std::string sigmaName = Form("%s_sigma_%d_%d",GetName(),i,j);      
       
-      RooMoment* mom = new RooMoment(sigmaName.c_str(),sigmaName.c_str(),(RooAbsPdf&)*_pdfList.at(i),(RooRealVar&)*_varList.at(j),2,kTRUE) ;
+      RooMoment* mom = new RooMoment(sigmaName.c_str(),sigmaName.c_str(),(RooAbsPdf&)*_pdfList.at(i),(RooRealVar&)*_varList.at(j),2,kTRUE,kTRUE) ;
       sigmarv[ij(i,j)] = mom ;
       meanrv[ij(i,j)]  = mom->mean() ;
 
