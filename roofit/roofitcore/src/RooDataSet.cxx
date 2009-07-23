@@ -480,6 +480,7 @@ RooDataSet::RooDataSet(const char *name, const char *title, RooDataSet *dset,
   // Protected constructor for internal use only
 
   _dstore = new RooTreeDataStore(name,title,*dset->_dstore,_vars,cutVar,cutRange,nStart,nStop,copyCache) ;
+  _cachedVars.add(_dstore->cachedVars()) ;
 
   appendToDir(this,kTRUE) ;
   initialize(dset->_wgtVar?dset->_wgtVar->GetName():0) ;
@@ -501,7 +502,7 @@ RooArgSet RooDataSet::addWgtVar(const RooArgSet& origVars, const RooAbsArg* wgtV
 
 
 //_____________________________________________________________________________
-RooAbsData* RooDataSet::cacheClone(const RooArgSet* newCacheVars, const char* newName) 
+RooAbsData* RooDataSet::cacheClone(const RooAbsArg* newCacheOwner, const RooArgSet* newCacheVars, const char* newName) 
 {
   // Return a clone of this dataset containing only the cached variables
 
@@ -509,7 +510,7 @@ RooAbsData* RooDataSet::cacheClone(const RooArgSet* newCacheVars, const char* ne
   if (_wgtVar) dset->setWeightVar(_wgtVar->GetName()) ;
 
   RooArgSet* selCacheVars = (RooArgSet*) newCacheVars->selectCommon(dset->_cachedVars) ;
-  dset->initCache(*selCacheVars) ;
+  dset->attachCache(newCacheOwner, *selCacheVars) ;
   delete selCacheVars ;
 
   return dset ;
