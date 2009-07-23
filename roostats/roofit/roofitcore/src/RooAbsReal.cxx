@@ -2150,8 +2150,8 @@ RooPlot* RooAbsReal::plotAsymOn(RooPlot *frame, const RooAbsCategoryLValue& asym
   asymNeg->setIndex(-1) ;
   RooCustomizer* custPos = new RooCustomizer(*this,"pos") ;
   RooCustomizer* custNeg = new RooCustomizer(*this,"neg") ;
-  custPos->setOwning(kTRUE) ;
-  custNeg->setOwning(kTRUE) ;
+  //custPos->setOwning(kTRUE) ;
+  //custNeg->setOwning(kTRUE) ;
   custPos->replaceArg(asymCat,*asymPos) ;
   custNeg->replaceArg(asymCat,*asymNeg) ;
   RooAbsReal* funcPos = (RooAbsReal*) custPos->build() ;
@@ -2305,6 +2305,8 @@ RooPlot* RooAbsReal::plotAsymOn(RooPlot *frame, const RooAbsCategoryLValue& asym
   // Cleanup
   delete custPos ;
   delete custNeg ;
+  delete funcPos ;
+  delete funcNeg ;
   delete posProjCompList ;
   delete negProjCompList ;
   delete asymPos ;
@@ -2434,82 +2436,48 @@ RooPlot* RooAbsReal::plotOnWithErrorBand(RooPlot* frame,const RooFitResult& fr, 
 
     vector<RooCurve*> plusVar, minusVar ;    
 
-    if (!params) {
+    // Create vector of plus,minus variations for each parameter
+    
+    TMatrixDSym V(paramList.getSize()==fr.floatParsFinal().getSize()?
+		  fr.covarianceMatrix():
+		  fr.reducedCovarianceMatrix(paramList)) ;
+    
+    for (Int_t ivar=0 ; ivar<paramList.getSize() ; ivar++) {
       
-      // Create vector of plus,minus variations for each parameter
-
-      const TMatrixDSym& V = fr.covarianceMatrix() ;
+      RooRealVar& rrv = (RooRealVar&)fpf[fpf_idx[ivar]] ;
       
-      for (Int_t ivar=0 ; ivar<paramList.getSize() ; ivar++) {
-	
-	RooRealVar& rrv = (RooRealVar&)fpf[ivar] ;
-	
-	Double_t cenVal = rrv.getVal() ;
-	Double_t errVal = sqrt(V(ivar,ivar)) ;
-
-	// Make Plus variation
-	((RooRealVar*)paramList.at(ivar))->setVal(cenVal+Z*errVal) ;
-	RooLinkedList tmp2(plotArgList) ;
-	cloneFunc->plotOn(frame,tmp2) ;
-	plusVar.push_back(frame->getCurve()) ;
-	frame->remove(0,kFALSE) ;
-	
-	// Make Minus variation
-	((RooRealVar*)paramList.at(ivar))->setVal(cenVal-Z*errVal) ;
-	RooLinkedList tmp3(plotArgList) ;
-	cloneFunc->plotOn(frame,tmp3) ;
-	minusVar.push_back(frame->getCurve()) ;
-	frame->remove(0,kFALSE) ;
-	
-	((RooRealVar*)paramList.at(ivar))->setVal(cenVal) ;
-      }
+      Double_t cenVal = rrv.getVal() ;
+      Double_t errVal = sqrt(V(ivar,ivar)) ;
       
-      const TMatrixDSym& C = fr.correlationMatrix() ;
-      band = cenCurve->makeErrorBand(plusVar,minusVar,C,Z) ;    
+      // Make Plus variation
+      ((RooRealVar*)paramList.at(ivar))->setVal(cenVal+Z*errVal) ;
+      RooLinkedList tmp2(plotArgList) ;
+      cloneFunc->plotOn(frame,tmp2) ;
+      plusVar.push_back(frame->getCurve()) ;
+      frame->remove(0,kFALSE) ;
       
-    } else {
+      // Make Minus variation
+      ((RooRealVar*)paramList.at(ivar))->setVal(cenVal-Z*errVal) ;
+      RooLinkedList tmp3(plotArgList) ;
+      cloneFunc->plotOn(frame,tmp3) ;
+      minusVar.push_back(frame->getCurve()) ;
+      frame->remove(0,kFALSE) ;
       
-      // Create vector of plus,minus variations for each parameter
-      
-      TMatrixDSym Vred(fr.reducedCovarianceMatrix(paramList)) ;
-      TMatrixDSym Cred(paramList.getSize()) ;
-      
-      vector<double> errVec(paramList.getSize()) ;
-      for (int i=0 ; i<paramList.getSize() ; i++) {
-	errVec[i] = sqrt(Vred(i,i)) ;
-	for (int j=i ; j<paramList.getSize() ; j++) {
-	  Cred(i,j) = Vred(i,j)/sqrt(Vred(i,i)*Vred(j,j)) ;
-	  Cred(j,i) = Cred(i,j) ;
-	}
-      }
-
-      for (Int_t ivar=0 ; ivar<paramList.getSize() ; ivar++) {
-	
-	RooRealVar& rrv = (RooRealVar&)fpf[fpf_idx[ivar]] ;
-
-	Double_t cenVal = rrv.getVal() ;
-	Double_t errVal = errVec[ivar] ;
-	
-	// Make Plus variation
-	((RooRealVar*)paramList.at(ivar))->setVal(cenVal+Z*errVal) ;
-	RooLinkedList tmp2(plotArgList) ;
-	cloneFunc->plotOn(frame,tmp2) ;
-	plusVar.push_back(frame->getCurve()) ;
-	frame->remove(0,kFALSE) ;
-	
-	// Make Minus variation
-	((RooRealVar*)paramList.at(ivar))->setVal(cenVal-Z*errVal) ;
-	RooLinkedList tmp3(plotArgList) ;
-	cloneFunc->plotOn(frame,tmp3) ;
-	minusVar.push_back(frame->getCurve()) ;
-	frame->remove(0,kFALSE) ;
-	
-	((RooRealVar*)paramList.at(ivar))->setVal(cenVal) ;
-      }
-
-     band = cenCurve->makeErrorBand(plusVar,minusVar,Cred,Z) ;    
-     
+      ((RooRealVar*)paramList.at(ivar))->setVal(cenVal) ;
     }
+    
+    TMatrixDSym C(paramList.getSize()) ;      
+    vector<double> errVec(paramList.getSize()) ;
+    for (int i=0 ; i<paramList.getSize() ; i++) {
+      errVec[i] = sqrt(V(i,i)) ;
+      for (int j=i ; j<paramList.getSize() ; j++) {
+	C(i,j) = V(i,j)/sqrt(V(i,i)*V(j,j)) ;
+	C(j,i) = C(i,j) ;
+      }
+    }
+    
+    band = cenCurve->makeErrorBand(plusVar,minusVar,C,Z) ;    
+    
     
     // Cleanup 
     delete cloneFunc ;
@@ -3698,6 +3666,17 @@ RooDerivative* RooAbsReal::derivative(RooRealVar& obs, Int_t order, Double_t eps
 
 
 //_____________________________________________________________________________
+RooDerivative* RooAbsReal::derivative(RooRealVar& obs, const RooArgSet& normSet, Int_t order, Double_t eps) 
+{
+  // Return function representing first, second or third order derivative of this function
+  string name=Form("%s_DERIV_%s",GetName(),obs.GetName()) ;
+  string title=Form("Derivative of %s w.r.t %s ",GetName(),obs.GetName()) ;
+  return new RooDerivative(name.c_str(),title.c_str(),*this,obs,normSet,order,eps) ;
+}
+
+
+
+//_____________________________________________________________________________
 RooMoment* RooAbsReal::moment(RooRealVar& obs, Int_t order, Bool_t central) 
 {
   // Return function representing moment of function of given order. If central is
@@ -3705,6 +3684,18 @@ RooMoment* RooAbsReal::moment(RooRealVar& obs, Int_t order, Bool_t central)
   string name=Form("%s_MOMENT_%d%s_%s",GetName(),order,(central?"C":""),obs.GetName()) ;
   string title=Form("%sMoment of order %d of %s w.r.t %s ",(central?"Central ":""),order,GetName(),obs.GetName()) ;
   return new RooMoment(name.c_str(),title.c_str(),*this,obs,order,central) ;
+}
+
+
+//_____________________________________________________________________________
+RooMoment* RooAbsReal::moment(RooRealVar& obs, const RooArgSet& normObs, Int_t order, Bool_t central, Bool_t intNormObs) 
+{
+  // Return function representing moment of p.d.f (normalized w.r.t given observables) of given order. If central is
+  // true, the central moment is given <(x-<x>)^2>. If intNormObs is true, the moment of the function integrated over
+  // all normalization observables is returned.
+  string name=Form("%s_MOMENT_%d%s_%s",GetName(),order,(central?"C":""),obs.GetName()) ;
+  string title=Form("%sMoment of order %d of %s w.r.t %s ",(central?"Central ":""),order,GetName(),obs.GetName()) ;
+  return new RooMoment(name.c_str(),title.c_str(),*this,obs,normObs,order,central,0,intNormObs) ;
 }
 
 

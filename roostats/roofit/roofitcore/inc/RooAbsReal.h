@@ -269,7 +269,10 @@ public:
   TF1* asTF(const RooArgList& obs, const RooArgList& pars=RooArgList(), const RooArgSet& nset=RooArgSet()) const ;
 
   RooDerivative* derivative(RooRealVar& obs, Int_t order=1, Double_t eps=0.001) ;
+  RooDerivative* derivative(RooRealVar& obs, const RooArgSet& normSet, Int_t order, Double_t eps=0.001) ; 
+
   RooMoment* moment(RooRealVar& obs, Int_t order, Bool_t central) ;
+  RooMoment* moment(RooRealVar& obs, const RooArgSet& normObs, Int_t order, Bool_t central, Bool_t intNormObs) ;
 
 
 protected:
