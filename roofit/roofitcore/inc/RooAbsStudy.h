@@ -41,7 +41,7 @@ public:
   virtual Bool_t attach(RooWorkspace& /*w*/) { return kFALSE ; } ;
   virtual Bool_t initialize() { return kFALSE ; } ;
   virtual Bool_t execute() { return kFALSE ; } ;
-  virtual RooDataSet* finalize() { return 0 ; } ;
+  virtual Bool_t finalize() { return 0 ; } ;
   void storeDetailedOutput(Bool_t flag) { _storeDetails = flag ; }
   
   RooDataSet* summaryData() { return _summaryData ; }

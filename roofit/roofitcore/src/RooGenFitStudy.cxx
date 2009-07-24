@@ -206,7 +206,7 @@ Bool_t RooGenFitStudy::execute()
 
 
 //_____________________________________________________________________________
-RooDataSet* RooGenFitStudy::finalize() 
+Bool_t RooGenFitStudy::finalize() 
 { 
   // Finalization of study
   delete _params ;
@@ -221,7 +221,7 @@ RooDataSet* RooGenFitStudy::finalize()
   _genSpec = 0 ;
   
 
-  return 0 ; 
+  return kFALSE ; 
 } 
 
 
